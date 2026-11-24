@@ -29,6 +29,9 @@ type Deps struct {
 	// NoLoneColleague refuses, while individual performance is off, an answer
 	// that one colleague's deals make up.
 	NoLoneColleague func(ctx context.Context, tx pgx.Tx, groups [][]ids.UUID) error
+	// ThinForAnyReader answers, per group of owners, whether the floor holds the
+	// group's figure back from some reader while individual performance is off.
+	ThinForAnyReader func(ctx context.Context, tx pgx.Tx, groups [][]ids.UUID) ([]bool, error)
 	// MayAssertAbout answers whether the reader may see a population's frozen
 	// forecasts, the rule every snapshot read follows.
 	MayAssertAbout func(ctx context.Context, tx pgx.Tx, scope forecasting.Scope) (bool, error)

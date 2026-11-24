@@ -295,7 +295,7 @@ export const RetrievalUnavailable: Story = {
   render: askCard("how long are captured messages kept", () =>
     jsonResponse(RETRIEVAL_UNAVAILABLE),
   ),
-  play: seeAnswer(/Nothing was searched/),
+  play: seeAnswer(/nothing was searched/),
 };
 
 // Neither an answer nor a refusal: the search found these passages and nothing

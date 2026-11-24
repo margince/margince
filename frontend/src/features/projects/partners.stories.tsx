@@ -3,6 +3,7 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, within } from "storybook/test";
+import { READS_RECORDS } from "../../testing/mefixture";
 import { phoneRow } from "../../testing/phonerow";
 import {
   installFetchStub,
@@ -41,7 +42,7 @@ const partner = {
 export const NotYetPartner: Story = {
   render: () => {
     installFetchStub({
-      "GET /me": meRoute({}),
+      "GET /me": meRoute(READS_RECORDS),
       "GET /companies/o-1/partner": () =>
         jsonResponse({ title: "Not found", detail: "no partner" }, 404),
     });
@@ -95,7 +96,7 @@ const sourcedDeal = {
 export const ExistingPartner: Story = {
   render: () => {
     installFetchStub({
-      "GET /me": meRoute({}),
+      "GET /me": meRoute(READS_RECORDS),
       "GET /companies/o-1/partner": () => jsonResponse(partner),
       "GET /companies/cust-1": () =>
         jsonResponse({ id: "cust-1", display_name: "Northgate GmbH" }),
@@ -119,7 +120,7 @@ export const ExistingPartner: Story = {
 export const WithheldMarginTier: Story = {
   render: () => {
     installFetchStub({
-      "GET /me": meRoute({}),
+      "GET /me": meRoute(READS_RECORDS),
       "GET /companies/o-1/partner": () =>
         jsonResponse({
           ...partner,
@@ -141,7 +142,7 @@ export const WithheldMarginTier: Story = {
 export const PartnersList: Story = {
   render: () => {
     installFetchStub({
-      "GET /me": meRoute({}),
+      "GET /me": meRoute(READS_RECORDS),
       "GET /partners": () =>
         jsonResponse({
           data: [partner, { ...partner, company_id: "o-2" }],
@@ -163,7 +164,7 @@ export const PartnersListPhone: Story = {
   tags: ["uat-phone"],
   render: () => {
     installFetchStub({
-      "GET /me": meRoute({}),
+      "GET /me": meRoute(READS_RECORDS),
       "GET /partners": () =>
         jsonResponse({
           data: [

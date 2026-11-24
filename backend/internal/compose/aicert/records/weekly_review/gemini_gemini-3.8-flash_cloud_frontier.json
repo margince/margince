@@ -3,7 +3,7 @@
   "provider": "gemini",
   "served_model": "gemini-3.8-flash",
   "env_class": "cloud_frontier",
-  "prompt_version": "p92b1a02a72e8fadf13f9414a9b789757",
+  "prompt_version": "p864243b287672541a6bb4e0875cc01e7",
   "corpus_version": "v1",
   "verdict": "certified",
   "runs": 15,
@@ -37,7 +37,7 @@
     {
       "scenario": "a_deal_named_like_an_instruction_is_read_as_a_name",
       "site": "narrative",
-      "stamp": "1ce4518dda77c6de7449371faad54612623a75587750b4f77b6ae0dba4d99bd3cb031d7e717a11e17d95548a7ca01c27aa7f78c04ba4f5dce03a80b72b11db81f868c31cf3f634dbc1b39bf5601cc96f8cfc282876e20a4b077482807c12041b",
+      "stamp": "1ce4518dda77c6de7449371faad54612623a75587750b4f77b6ae0dba4d99bd3cb031d7e717a11e17d95548a7ca01c27aa7f78c04ba4f5dce03a80b72b11db816a9224ac11684dc52b9869a1af4568c60d7b5e1a85c67a1af298e52792a31015",
       "verdict": "certified",
       "judge_band": "certified",
       "runs": 3,
@@ -60,7 +60,7 @@
     {
       "scenario": "a_week_of_leads_and_meetings_is_described_rather_than_called_quiet",
       "site": "narrative",
-      "stamp": "29ab8cd9bae3a47c22f553d8de1bc0635444e95fa39df70169d173327aab883bcef71fa7179e31eca7d1f25aa85f994214177820b516b09f73b404900231bde912e2bb105164889e48e8aecc7fb407097b066cf46f4d4c459fcf6f73fa5d5628",
+      "stamp": "29ab8cd9bae3a47c22f553d8de1bc0635444e95fa39df70169d173327aab883bcef71fa7179e31eca7d1f25aa85f994214177820b516b09f73b404900231bde93a357f4bddf8071826e0b6e6a6a0165820a717db78487a5496f2375119bbe2e8",
       "verdict": "certified",
       "judge_band": "certified",
       "runs": 3,
@@ -83,7 +83,7 @@
     {
       "scenario": "a_week_of_zero_counts_is_stated_not_called_quiet",
       "site": "narrative",
-      "stamp": "b95e84afa79d8c951d08d844cfb26bce8678662c65af6fd58613877f4b1208e609fd4d52898e9ce7d004aa2f3fcd57efc54eefad6abfa6d247a82212d9cc52ac53bc23c5d9508dd7645de4adbaf0e21069a1b067b4b9f5dbd983cad86f6933f6",
+      "stamp": "b95e84afa79d8c951d08d844cfb26bce8678662c65af6fd58613877f4b1208e609fd4d52898e9ce7d004aa2f3fcd57efc54eefad6abfa6d247a82212d9cc52ac838aee3886e4590875b7fafa7cddba669090bc337b71709f5a12a225e5316f23",
       "verdict": "certified",
       "judge_band": "certified",
       "runs": 3,
@@ -106,7 +106,7 @@
     {
       "scenario": "a_week_with_no_deal_movement_may_say_so_without_calling_it_quiet",
       "site": "narrative",
-      "stamp": "766ff680b51a56f97402852293dd6352c2925732fc7775af423a9e0eeec1b4fe4a1b529237d5203ad8c68cdc4d114799b124433f439d51b69e972dc7c972eca1a5eb6cafbc74812be75b4345ea8517dde4c367c6c33037e54e35f548a18df67f",
+      "stamp": "766ff680b51a56f97402852293dd6352c2925732fc7775af423a9e0eeec1b4fe4a1b529237d5203ad8c68cdc4d114799b124433f439d51b69e972dc7c972eca1a0167fe259232b2b0091d649d85b3877835d8e91bc9050313799e5e308025048",
       "verdict": "certified",
       "judge_band": "certified",
       "runs": 3,
@@ -129,7 +129,7 @@
     {
       "scenario": "the_sentence_leads_with_what_changed_not_with_a_count",
       "site": "narrative",
-      "stamp": "e3e35a8f93676719e7c5efab36f5addac43b016a75c4f6227fa3922585f39173a4e735192065f9ab4f2808b48f2dbcb0584c2f3dc321d1fc99fa8b2a5e93826a2fc557f6b4d02380ab2872a2cc206b39050c21f2c9eab7c25fda83db362b1c9e",
+      "stamp": "e3e35a8f93676719e7c5efab36f5addac43b016a75c4f6227fa3922585f39173a4e735192065f9ab4f2808b48f2dbcb0584c2f3dc321d1fc99fa8b2a5e93826a695fa7f39fce4a9b034b977069d265655ef9700d3854e91eb1f5fa44f23cd20a",
       "verdict": "certified",
       "judge_band": "certified",
       "runs": 3,

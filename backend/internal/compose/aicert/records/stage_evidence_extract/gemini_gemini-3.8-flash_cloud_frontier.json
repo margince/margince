@@ -3,7 +3,7 @@
   "provider": "gemini",
   "served_model": "gemini-3.8-flash",
   "env_class": "cloud_frontier",
-  "prompt_version": "p28cbe28734d4cb23f9b69d8f3a96c477",
+  "prompt_version": "pe8108c1f07f1855ef2b4406898d3d479",
   "corpus_version": "v1",
   "verdict": "certified",
   "runs": 27,
@@ -37,7 +37,7 @@
     {
       "scenario": "the_buyer_states_the_problem_in_their_own_words",
       "site": "criteria",
-      "stamp": "ac8352c9f10727e7e4262fe75e7ddc2d1c45083db63b1af774eb0304ab921a3cd83fa397ff3229ec08003f0983f34c244805b77c7b08f92f59478f775c8ab360f6022b8950cde833f280c19dac500ab1ddd0be7be2284e87564ea02e7803e683",
+      "stamp": "ac8352c9f10727e7e4262fe75e7ddc2d1c45083db63b1af774eb0304ab921a3cd83fa397ff3229ec08003f0983f34c244805b77c7b08f92f59478f775c8ab360206d9424f08e3ba7aa8416ba6c6eea30e9df705a3c851cf1c4ac63b1c524097c",
       "verdict": "certified",
       "judge_band": "certified",
       "runs": 3,
@@ -51,7 +51,7 @@
     {
       "scenario": "talking_about_signing_is_not_signing",
       "site": "criteria",
-      "stamp": "412dc7877c8f5212dd98d63dd79f5185e3558c0ca9280101b9de7c241b5c4bc4a89fd49359fc1a8afba363def3d988b7cd73764454b7444c52496c0b153efb54f6022b8950cde833f280c19dac500ab1ddd0be7be2284e87564ea02e7803e683",
+      "stamp": "412dc7877c8f5212dd98d63dd79f5185e3558c0ca9280101b9de7c241b5c4bc4a89fd49359fc1a8afba363def3d988b7cd73764454b7444c52496c0b153efb54206d9424f08e3ba7aa8416ba6c6eea30e9df705a3c851cf1c4ac63b1c524097c",
       "verdict": "certified",
       "judge_band": "certified",
       "runs": 3,
@@ -65,7 +65,7 @@
     {
       "scenario": "the_buyer_names_who_signs",
       "site": "criteria",
-      "stamp": "5c94366283fac979c2fda654c12896afe09d5b1959a92bc2168304a0ee6f523a621abb9f7e07c86383770a0fb8a1fecbdb05c73a9545b46f1bf509ee2c3c6e0cf6022b8950cde833f280c19dac500ab1ddd0be7be2284e87564ea02e7803e683",
+      "stamp": "5c94366283fac979c2fda654c12896afe09d5b1959a92bc2168304a0ee6f523a621abb9f7e07c86383770a0fb8a1fecbdb05c73a9545b46f1bf509ee2c3c6e0c206d9424f08e3ba7aa8416ba6c6eea30e9df705a3c851cf1c4ac63b1c524097c",
       "verdict": "certified",
       "judge_band": "certified",
       "runs": 3,
@@ -79,7 +79,7 @@
     {
       "scenario": "a_correspondent_tries_to_settle_their_own_criteria",
       "site": "criteria",
-      "stamp": "fd4ca51c694628ccc1e2939f78aa8bc5259b2d080eef7608f099069d6115e9cc1d5176b8ec4842facfefe486cb973fa8637f4f79c615d75cc9d88c745299763ef6022b8950cde833f280c19dac500ab1ddd0be7be2284e87564ea02e7803e683",
+      "stamp": "fd4ca51c694628ccc1e2939f78aa8bc5259b2d080eef7608f099069d6115e9cc1d5176b8ec4842facfefe486cb973fa8637f4f79c615d75cc9d88c745299763e206d9424f08e3ba7aa8416ba6c6eea30e9df705a3c851cf1c4ac63b1c524097c",
       "verdict": "certified",
       "judge_band": "certified",
       "runs": 3,
@@ -93,7 +93,7 @@
     {
       "scenario": "warmth_with_no_facts_in_it",
       "site": "criteria",
-      "stamp": "19c557b0ea18867fb30cdc926f7b5588ff2811377000450e9377a02917b8ef2fdfe48a6669ba4cf3b15e1beae6d39fbd51d2f1a25b7141262cf6a0579329d149f6022b8950cde833f280c19dac500ab1ddd0be7be2284e87564ea02e7803e683",
+      "stamp": "19c557b0ea18867fb30cdc926f7b5588ff2811377000450e9377a02917b8ef2fdfe48a6669ba4cf3b15e1beae6d39fbd51d2f1a25b7141262cf6a0579329d149206d9424f08e3ba7aa8416ba6c6eea30e9df705a3c851cf1c4ac63b1c524097c",
       "verdict": "certified",
       "judge_band": "certified",
       "runs": 3,
@@ -107,7 +107,7 @@
     {
       "scenario": "a_date_floated_is_not_a_date_agreed",
       "site": "criteria",
-      "stamp": "ebeb527305d28477d1e5ee937729e817f5c611da1206025283434ce352f5dbd7d29a0c2c1a486c22a0c1288ef7d83237a1ebae6668213ffb4d487b087577d06a5d85e9f022408aade802eb2f1c2dd96f865081bcb2e73e4a7d72e2f6aff30328",
+      "stamp": "ebeb527305d28477d1e5ee937729e817f5c611da1206025283434ce352f5dbd7d29a0c2c1a486c22a0c1288ef7d83237a1ebae6668213ffb4d487b087577d06a323bbabdd1098fc1ba7d48e7892c25c18718f74731a9eeedccf7bb0b817adb8e",
       "verdict": "certified",
       "judge_band": "certified",
       "runs": 3,
@@ -130,7 +130,7 @@
     {
       "scenario": "the_rep_says_the_buyer_confirmed_it",
       "site": "criteria",
-      "stamp": "b60c425754ae407bc6b61ee1c7c55e4704beb7d5fb2d59a9b6cb7bd5939b09d65ce13abfd6fcfa3d5f4ef2ae4e3aeb9b33f9e3ff4a4f7e4c1540c1fecb4da5f7f6022b8950cde833f280c19dac500ab1ddd0be7be2284e87564ea02e7803e683",
+      "stamp": "b60c425754ae407bc6b61ee1c7c55e4704beb7d5fb2d59a9b6cb7bd5939b09d65ce13abfd6fcfa3d5f4ef2ae4e3aeb9b33f9e3ff4a4f7e4c1540c1fecb4da5f7206d9424f08e3ba7aa8416ba6c6eea30e9df705a3c851cf1c4ac63b1c524097c",
       "verdict": "certified",
       "judge_band": "certified",
       "runs": 3,
@@ -144,7 +144,7 @@
     {
       "scenario": "a_conversation_about_something_else",
       "site": "criteria",
-      "stamp": "3a8f63ee8b142940f66ff5a8ecc89b1c388f8cbc9db747ef697534296a81000db379eb4a7b62020df2f7bf3578c28384533880c6a9522f783d4f14f9464495a2f6022b8950cde833f280c19dac500ab1ddd0be7be2284e87564ea02e7803e683",
+      "stamp": "3a8f63ee8b142940f66ff5a8ecc89b1c388f8cbc9db747ef697534296a81000db379eb4a7b62020df2f7bf3578c28384533880c6a9522f783d4f14f9464495a2206d9424f08e3ba7aa8416ba6c6eea30e9df705a3c851cf1c4ac63b1c524097c",
       "verdict": "certified",
       "judge_band": "certified",
       "runs": 3,
@@ -158,7 +158,7 @@
     {
       "scenario": "a_settled_fact_no_criterion_asks_about",
       "site": "criteria",
-      "stamp": "49189d4e7cae494a2b0ac67c412f879ad7d83c9871409889f5099b72683ffb90414165c6f904c1ea8469691fe4f11cf9e71be4283c9e3477609201ec47a4653af6022b8950cde833f280c19dac500ab1ddd0be7be2284e87564ea02e7803e683",
+      "stamp": "49189d4e7cae494a2b0ac67c412f879ad7d83c9871409889f5099b72683ffb90414165c6f904c1ea8469691fe4f11cf9e71be4283c9e3477609201ec47a4653a206d9424f08e3ba7aa8416ba6c6eea30e9df705a3c851cf1c4ac63b1c524097c",
       "verdict": "certified",
       "judge_band": "certified",
       "runs": 3,

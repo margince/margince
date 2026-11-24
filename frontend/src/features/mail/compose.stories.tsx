@@ -6,6 +6,7 @@ import { expect, screen, userEvent, within } from "storybook/test";
 import type { components } from "../../api/schema";
 import { browserZone } from "../../format/timezone";
 import type { Transport } from "../../lib/contacttransports";
+import { CONNECTED_ROSTER } from "../../testing/mailroster.testkit";
 import {
   allowedPreview,
   previewedAddresses,
@@ -119,6 +120,7 @@ function composeStory(routes: RouteMap) {
       // which fails every grant closed and draws a branch no story is named
       // for.
       "GET /me": meRoute({}),
+      "GET /connectors": () => jsonResponse(CONNECTED_ROSTER),
       "GET /consent-purposes": () => jsonResponse(PURPOSES),
       "GET /activities/act-1": () =>
         jsonResponse({
@@ -289,11 +291,33 @@ export const ColleaguesMailbox: Story = {
   },
 };
 
+// The review a refused send names, as GET /communication-reviews/{id} serves it.
+function reviewOf(
+  id: string,
+  refusals: components["schemas"]["CommunicationReview"]["refusals"],
+) {
+  return jsonResponse({
+    id,
+    state: "needs_context",
+    kind: "single",
+    reason_code: refusals[0]?.reason_code ?? "no_compatible_evidence",
+    refusals,
+  });
+}
+
 // A filled, confirmed send comes back 409 consent_not_granted. The modal stays
 // open, and the send status shows the engine's reason for the refused address
 // with the action the server offers this rep.
 export const ConsentBlocked: Story = {
   render: composeStory({
+    "GET /communication-reviews/01a0aaaa-bbbb-7ccc-8ddd-eeeeffff0001": () =>
+      reviewOf("01a0aaaa-bbbb-7ccc-8ddd-eeeeffff0001", [
+        {
+          address: "buyer@acme.test",
+          reason_code: "no_marketing_consent",
+          category: "marketing",
+        },
+      ]),
     "POST /activities/act-1/send-email": () =>
       jsonResponse(
         {
@@ -329,6 +353,8 @@ export const ConsentBlocked: Story = {
 // safe. Without this story that fallback was never looked at.
 export const ConsentBlockedUnknownAction: Story = {
   render: composeStory({
+    "GET /communication-reviews/01a0aaaa-bbbb-7ccc-8ddd-eeeeffff0002": () =>
+      reviewOf("01a0aaaa-bbbb-7ccc-8ddd-eeeeffff0002", []),
     "POST /activities/act-1/send-email": () =>
       jsonResponse(
         {

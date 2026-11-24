@@ -85,7 +85,7 @@ export const InvalidTyped: Story = {
     await expect(box.getAttribute("aria-invalid")).toBe("true");
     await expect(
       await within(canvasElement).findByRole("alert"),
-    ).toHaveTextContent("Enter a date as DD/MM/YYYY.");
+    ).toHaveTextContent("There is no 31/02/2026 in the calendar.");
   },
 };
 

@@ -1,5 +1,5 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { expect, screen, userEvent } from "storybook/test";
+import { expect, screen, userEvent, waitFor } from "storybook/test";
 import { StoryProviders } from "../../testing/story-utils";
 import { EmploymentEdit } from "./employmentedit";
 
@@ -35,9 +35,8 @@ export const UnknownDates: Story = {
   play: async () => {
     const user = userEvent.setup();
     await user.click(await screen.findByRole("button", { name: "Save" }));
-    expect(
-      await screen.findByText("Employment status is required."),
-    ).toBeVisible();
+    const refusal = await screen.findByText("Employment status is required.");
+    await waitFor(() => expect(refusal).toBeVisible());
     await user.click(
       screen.getByRole("combobox", { name: "Employment status" }),
     );

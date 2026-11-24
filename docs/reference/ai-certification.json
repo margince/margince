@@ -1,9 +1,9 @@
 {
   "totals": {
     "sites": 63,
-    "sites_best_current": 55,
+    "sites_best_current": 54,
     "sites_best_partial": 1,
-    "sites_best_stale": 6,
+    "sites_best_stale": 7,
     "sites_absent": 1,
     "scenarios": 348,
     "records": 401,
@@ -9878,7 +9878,7 @@
       "usable_with_care": 4,
       "not_reliable_yet": 0,
       "too_few_runs": 17,
-      "recheck_pending": 6,
+      "recheck_pending": 7,
       "judges": [
         "claude-sonnet-5-5"
       ],
@@ -9890,9 +9890,9 @@
             "env": "cloud_frontier"
           },
           "sites": 55,
-          "sites_current": 48,
+          "sites_current": 47,
           "sites_partial": 1,
-          "sites_stale": 6,
+          "sites_stale": 7,
           "runs": 1428,
           "passed": 1381,
           "reliability": 0.9670868347338936,
@@ -9916,9 +9916,9 @@
             "thinking_level": "low"
           },
           "sites": 52,
-          "sites_current": 47,
+          "sites_current": 46,
           "sites_partial": 1,
-          "sites_stale": 4,
+          "sites_stale": 5,
           "runs": 981,
           "passed": 979,
           "reliability": 0.9979612640163099,
@@ -10373,7 +10373,7 @@
             "env": "cloud_frontier"
           },
           "band": "certified",
-          "state": "current",
+          "state": "stale",
           "runs": 27,
           "passed": 27,
           "records": 2,
@@ -12721,9 +12721,9 @@
         "env": "cloud_frontier"
       },
       "sites": 58,
-      "sites_current": 48,
+      "sites_current": 47,
       "sites_partial": 1,
-      "sites_stale": 9,
+      "sites_stale": 10,
       "runs": 1587,
       "passed": 1523,
       "reliability": 0.9596723377441714,
@@ -12874,9 +12874,9 @@
         "thinking_level": "low"
       },
       "sites": 52,
-      "sites_current": 47,
+      "sites_current": 46,
       "sites_partial": 1,
-      "sites_stale": 4,
+      "sites_stale": 5,
       "runs": 981,
       "passed": 979,
       "reliability": 0.9979612640163099,
@@ -25085,9 +25085,15 @@
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": "4 scenarios it scored have changed since (the prompt this build sends): contact_fields_from_a_mail_signature, every_number_a_signature_lists, signature_prints_the_family_name_first, signature_prints_the_given_name_first",
+          "stale_reason": "4 scenarios it scored have changed since (the prompt this build sends and how a run is graded): contact_fields_from_a_mail_signature, every_number_a_signature_lists, signature_prints_the_family_name_first, signature_prints_the_given_name_first",
           "stale_cause": {
             "prompt_changed": [
+              "contact_fields_from_a_mail_signature",
+              "every_number_a_signature_lists",
+              "signature_prints_the_family_name_first",
+              "signature_prints_the_given_name_first"
+            ],
+            "grader_changed": [
               "contact_fields_from_a_mail_signature",
               "every_number_a_signature_lists",
               "signature_prints_the_family_name_first",
@@ -25958,23 +25964,8 @@
         "offer",
         "market"
       ],
-      "best_state": "current",
-      "recommended": {
-        "binding": {
-          "provider": "gemini",
-          "model": "gemini-3.1-flash-lite",
-          "env": "cloud_frontier"
-        },
-        "band": "certified",
-        "runs": 27,
-        "passed": 27,
-        "reliability": 1,
-        "reliability_interval": {
-          "lower": 0.942655,
-          "upper": 1
-        },
-        "state": "current"
-      },
+      "best_state": "stale",
+      "recommended": null,
       "scenarios": [
         {
           "name": "nl_search_bounds_a_score_and_a_start_date",
@@ -26038,10 +26029,10 @@
             "model": "gemini-3.1-flash-lite",
             "env": "cloud_frontier"
           },
-          "state": "current",
+          "state": "stale",
           "band": "certified",
           "judge": "claude-sonnet-5-5",
-          "scenarios_measured": 9,
+          "scenarios_measured": 0,
           "scenarios_total": 9,
           "runs": 27,
           "passed": 27,
@@ -26058,7 +26049,20 @@
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": ""
+          "stale_reason": "9 scenarios it scored have changed since (how a run is graded): nl_search_bounds_a_score_and_a_start_date, nl_search_keeps_an_or_across_two_fields, nl_search_names_back_a_prediction_it_cannot_express, nl_search_reads_a_custom_field_by_its_label, nl_search_reads_a_list_of_countries_as_membership, nl_search_reads_german_input and 3 more",
+          "stale_cause": {
+            "grader_changed": [
+              "nl_search_bounds_a_score_and_a_start_date",
+              "nl_search_keeps_an_or_across_two_fields",
+              "nl_search_names_back_a_prediction_it_cannot_express",
+              "nl_search_reads_a_custom_field_by_its_label",
+              "nl_search_reads_a_list_of_countries_as_membership",
+              "nl_search_reads_german_input",
+              "nl_search_reads_not_as_a_negation",
+              "nl_search_reads_vietnamese_input",
+              "nl_search_refuses_a_value_outside_a_picklist"
+            ]
+          }
         },
         {
           "binding": {
@@ -26230,10 +26234,10 @@
             "env": "cloud_frontier",
             "thinking_level": "low"
           },
-          "state": "current",
+          "state": "stale",
           "band": "certified",
           "judge": "claude-sonnet-5-5",
-          "scenarios_measured": 9,
+          "scenarios_measured": 0,
           "scenarios_total": 9,
           "runs": 27,
           "passed": 27,
@@ -26250,7 +26254,20 @@
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": ""
+          "stale_reason": "9 scenarios it scored have changed since (how a run is graded): nl_search_bounds_a_score_and_a_start_date, nl_search_keeps_an_or_across_two_fields, nl_search_names_back_a_prediction_it_cannot_express, nl_search_reads_a_custom_field_by_its_label, nl_search_reads_a_list_of_countries_as_membership, nl_search_reads_german_input and 3 more",
+          "stale_cause": {
+            "grader_changed": [
+              "nl_search_bounds_a_score_and_a_start_date",
+              "nl_search_keeps_an_or_across_two_fields",
+              "nl_search_names_back_a_prediction_it_cannot_express",
+              "nl_search_reads_a_custom_field_by_its_label",
+              "nl_search_reads_a_list_of_countries_as_membership",
+              "nl_search_reads_german_input",
+              "nl_search_reads_not_as_a_negation",
+              "nl_search_reads_vietnamese_input",
+              "nl_search_refuses_a_value_outside_a_picklist"
+            ]
+          }
         },
         {
           "binding": {

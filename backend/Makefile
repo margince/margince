@@ -513,8 +513,8 @@ e2e-ai: composition ## Certify AI tasks (paid: real model + network; opt-in). RO
 e2e-ai-report: ## Print the certification readiness report — every shipped site, its band, and whether its record is current, stale or absent — from internal/compose/aicert/{corpus,records}/.
 	$(GO) run ./internal/compose/aicert/reportcmd
 
-e2e-ai-restamp: ## Grade stored certification records again after a grading-rule bump that moved no prompt, with no new runs. FROM=<old rule> (required); WRITE=1 writes, otherwise it only reports.
-	$(GO) run ./internal/compose/aicert/restampcmd -from '$(FROM)' $(if $(WRITE),-write)
+e2e-ai-restamp: ## Grade stored certification records again after a grading-rule bump or a site-check hash change that moved no prompt, with no new runs. FROM=<old rule> or SITE_CHECKS_FROM=<old site_checks.golden>; WRITE=1 writes, otherwise it only reports.
+	$(GO) run ./internal/compose/aicert/restampcmd $(if $(FROM),-from '$(FROM)') $(if $(SITE_CHECKS_FROM),-site-checks-from '$(SITE_CHECKS_FROM)') $(if $(WRITE),-write)
 
 # ai-probe drives ONE invocation site against input an operator supplies, through
 # the same certification case `make e2e-ai` drives. It answers a different
