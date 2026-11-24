@@ -1791,7 +1791,7 @@ A check is `object.action`, or `object.a|b` for any one of them. `*.action` is t
 | Health, data tasks and repair | `read_workspace.extension_ingest_health` | `read_extension_ingest_health` | `job_health.read` |
 | Health, data tasks and repair | `read_workspace.job_health` | `read_job_health` | `job_health.read` |
 | Health, data tasks and repair | `read_workspace.recovery_health` | `read_recovery_health` | `job_health.read` |
-| Health, data tasks and repair | `read_workspace.system_health` | `read_system_health` | `ai_diagnostics.read` `data_task.read` `job_health.read` `job_health.read,data_task.read,embedding_reindex.read,installation_settings.update` |
+| Health, data tasks and repair | `read_workspace.system_health` | `read_system_health` | `ai_diagnostics.read` `data_task.read` `installation_settings.update` `job_health.read` `job_health.read,data_task.read,embedding_reindex.read,installation_settings.update` |
 | Health, data tasks and repair | `run_research.preview_home_repair` | `preview_home_repair` | `activity.read` `data_task.read` |
 | Search index | `read_workspace.embed_reindex_identities` | `embed_reindex_identities` | `embedding_reindex.read` |
 | Search index | `read_workspace.embed_reindex_preview` | `embed_reindex_preview` | `embedding_reindex.read` |

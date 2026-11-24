@@ -39,6 +39,25 @@ func (cfg RoutingConfig) validateTaskLadders() error {
 	return nil
 }
 
+// retiredTasks are tasks a release removed. A binding written before then, in
+// the store or the environment, may still order one, and refusing it would
+// leave the installation with no models. Any other unknown name is refused.
+var retiredTasks = []Task{"extension_task"}
+
+// RetiredTasks lists them for the activity contract, whose filter keeps a
+// retired name while rows written under it are still served.
+func RetiredTasks() []Task { return slices.Clone(retiredTasks) }
+
+// withoutRetiredTaskLadders drops the order of a retired task.
+func (cfg RoutingConfig) withoutRetiredTaskLadders() RoutingConfig {
+	kept := maps.Clone(cfg.TaskLadders)
+	maps.DeleteFunc(kept, func(task Task, _ []Tier) bool { return slices.Contains(retiredTasks, task) })
+	if len(kept) < len(cfg.TaskLadders) {
+		cfg.TaskLadders = kept
+	}
+	return cfg
+}
+
 // WithStockTaskLadders gives a stored binding that reorders no task the task
 // order of the committed preset it binds tier for tier. Tier for tier means the
 // provider, model and thinking level match on every tier; location may differ. A binding an

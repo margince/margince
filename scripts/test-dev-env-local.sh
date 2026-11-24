@@ -124,10 +124,10 @@ echo "dev.sh: the posture is this stack's, and it says so"
 check "dev" "$(resolved MARGINCE_ENV MARGINCE_ENV=production)" \
       "MARGINCE_ENV=production does not boot a production posture through \`make dev\`"
 check yes \
-      "$( ( export MARGINCE_ENV=production; resolve_stack_environment 29000 ) | grep -q 'runs as dev regardless' && echo yes || echo no)" \
+      "$( ( export MARGINCE_ENV=production; resolve_stack_environment 29000 ) | grep 'runs as dev regardless' >/dev/null && echo yes || echo no)" \
       "and the override is announced rather than applied in silence"
 check no \
-      "$( ( unset MARGINCE_ENV; resolve_stack_environment 29000 ) | grep -q 'runs as dev regardless' && echo yes || echo no)" \
+      "$( ( unset MARGINCE_ENV; resolve_stack_environment 29000 ) | grep 'runs as dev regardless' >/dev/null && echo yes || echo no)" \
       "with nothing set there is nothing to announce"
 
 echo "dev.sh: the launch cannot take the choice back"
@@ -141,7 +141,7 @@ echo "dev.sh: the launch cannot take the choice back"
 for var in MARGINCE_ENV MARGINCE_BLOBSTORE_ENDPOINT MARGINCE_BLOBSTORE_ACCESS_KEY \
            MARGINCE_BLOBSTORE_SECRET_KEY MARGINCE_BLOBSTORE_REGION MARGINCE_BLOBSTORE_BUCKET \
            MARGINCE_PUBLIC_BASE_URL MARGINCE_API_BASE_URL MARGINCE_AI_FAKE; do
-    check no "$(grep -E "^[[:space:]]*${var}=" "$dev" | grep -qv ':-' && echo yes || echo no)" \
+    check no "$(grep -E "^[[:space:]]*${var}=" "$dev" | grep -v ':-' >/dev/null && echo yes || echo no)" \
           "nothing re-assigns $var outside the resolver"
 done
 
@@ -150,8 +150,8 @@ echo "dev.sh: .env.local is read before anything asks the environment a question
 # `|| true` on both: a grep that matches nothing exits non-zero, and under
 # `set -e` that would end this script with no finding printed — which reads
 # exactly like a clean run of a test that never ran.
-sourced_at="$(grep -n '^read_env_local$' "$dev" | head -1 | cut -d: -f1 || true)"
-first_default="$(grep -nE '^[A-Z_]+="\$\{[A-Z_]+:-' "$dev" | head -1 | cut -d: -f1 || true)"
+sourced_at="$(grep -n '^read_env_local$' "$dev" | sed -n 1p | cut -d: -f1 || true)"
+first_default="$(grep -nE '^[A-Z_]+="\$\{[A-Z_]+:-' "$dev" | sed -n 1p | cut -d: -f1 || true)"
 check yes "$([[ -n "$sourced_at" ]] && echo yes || echo no)" \
       "the script calls read_env_local at all"
 check yes "$([[ -n "$first_default" ]] && echo yes || echo no)" \

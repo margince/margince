@@ -183,7 +183,7 @@ long_out="$(PATH="$shim:$PATH" REVIEW_COVERAGE_HEAD=c000200 REVIEW_COVERAGE_HIST
 awk_calls="$(grep -c . "$shim/calls" || true)"
 if ! grep -qF "199 commit(s) landed after cubic" <<<"$long_out"; then
 	echo "FAIL: a 200-commit branch was not counted correctly" >&2
-	printf '%s\n' "$long_out" | head -3 >&2
+	printf '%s\n' "$long_out" | sed -n 1,3p >&2
 	failures=$((failures + 1))
 elif (( awk_calls > 10 )); then
 	echo "FAIL: the report read the history $awk_calls times for a 200-commit branch — it is re-reading per commit, so a long-lived pull request will get no report at all" >&2

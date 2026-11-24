@@ -11,8 +11,10 @@ package main
 import (
 	"encoding/json"
 	"fmt"
+	"maps"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 )
 
@@ -50,17 +52,23 @@ type unitFrontend struct {
 	// subpath would change one and not the other.
 	Package string
 	Export  string
+	// RuntimeDeps are the packages the unit needs at run time and the range
+	// it declares for each. pinUnitRuntimeDeps checks them against the core
+	// lockfile and fills Pins with the version each is installed at.
+	RuntimeDeps map[string]string
+	Pins        map[string]string
 }
 
 // unitPackageJSON is the subset of a package manifest this composer judges.
 // Everything else about the package is the unit author's business.
 type unitPackageJSON struct {
-	Name             string            `json:"name"`
-	Private          bool              `json:"private"`
-	Main             string            `json:"main"`
-	Dependencies     map[string]string `json:"dependencies"`
-	PeerDependencies map[string]string `json:"peerDependencies"`
-	Scripts          map[string]string `json:"scripts"`
+	Name                 string            `json:"name"`
+	Private              bool              `json:"private"`
+	Main                 string            `json:"main"`
+	Dependencies         map[string]string `json:"dependencies"`
+	OptionalDependencies map[string]string `json:"optionalDependencies"`
+	PeerDependencies     map[string]string `json:"peerDependencies"`
+	Scripts              map[string]string `json:"scripts"`
 }
 
 // installScripts are the lifecycle scripts pnpm runs for a workspace member on
@@ -113,6 +121,10 @@ func collectUnitFrontend(name, dir string) (*unitFrontend, error) {
 				name, frontendLayer, dep)
 		}
 	}
+	if len(pkg.OptionalDependencies) > 0 {
+		return nil, fmt.Errorf("extensions/%s: %s/package.json declares optionalDependencies — a unit may not, because pnpm installs them without a licence check; use packages the main app already ships as dependencies",
+			name, frontendLayer)
+	}
 	// An absolute main is refused by name rather than left to the check below.
 	// filepath.Join swallows the leading separator, so an absolute path would
 	// be stat'd as <layer>/etc/... and reported as merely missing — while Node
@@ -143,7 +155,7 @@ func collectUnitFrontend(name, dir string) (*unitFrontend, error) {
 		return nil, fmt.Errorf("extensions/%s: %s/%s does not exist, and it is the module the composed registry imports",
 			name, frontendLayer, pkg.Main)
 	}
-	return &unitFrontend{Package: pkg.Name, Export: pkg.Name}, nil
+	return &unitFrontend{Package: pkg.Name, Export: pkg.Name, RuntimeDeps: runtimeDeps(pkg)}, nil
 }
 
 // screenIdent turns a unit name into the JavaScript identifier the generated
@@ -208,4 +220,22 @@ func unitCamel(unit string) string {
 		b.WriteString(part[1:])
 	}
 	return b.String()
+}
+
+// hostLinkedPeers are the peers the composed workspace links from the host,
+// so they never resolve to an installed package.
+var hostLinkedPeers = append([]string{"@margince/frontend", "@types/react"}, hostedFrameworkDeps...)
+
+// runtimeDeps returns the unit's dependencies and peers other than the ones
+// linked from the host. pnpm installs a peer the host does not link, so it
+// is held to the same rule as a dependency.
+func runtimeDeps(pkg unitPackageJSON) map[string]string {
+	out := map[string]string{}
+	for dep, rng := range pkg.PeerDependencies {
+		if !slices.Contains(hostLinkedPeers, dep) {
+			out[dep] = rng
+		}
+	}
+	maps.Copy(out, pkg.Dependencies)
+	return out
 }

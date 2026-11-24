@@ -118,6 +118,7 @@ func dependencyWithholders() map[string]func(*JobRunnerConfig) {
 		"AccountScanBrain":       func(c *JobRunnerConfig) { c.AccountScanBrain = nil },
 		"AgentScheduler.Service": func(c *JobRunnerConfig) { c.AgentScheduler.Service = nil },
 		"Blobstore":              func(c *JobRunnerConfig) { c.Blobstore = nil },
+		"JournalBlobstore":       func(c *JobRunnerConfig) { c.JournalBlobstore = nil },
 		"ChannelVault":           func(c *JobRunnerConfig) { c.ChannelVault = nil },
 		"ClassifyBrain":          func(c *JobRunnerConfig) { c.ClassifyBrain = nil },
 		"DeepReadBrain":          func(c *JobRunnerConfig) { c.DeepReadBrain = nil },

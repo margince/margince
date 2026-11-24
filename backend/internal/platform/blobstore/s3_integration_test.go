@@ -14,6 +14,9 @@ import (
 	"testing"
 	"time"
 
+	"github.com/minio/minio-go/v7"
+	"github.com/minio/minio-go/v7/pkg/credentials"
+
 	"github.com/margince/margince/backend/internal/platform/blobstore"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
@@ -199,6 +202,73 @@ func TestS3StoreDeletePrefixRemovesOnlyThatPrefix(t *testing.T) {
 	}
 	if _, _, err := store.Get(ctx, keyB); err != nil {
 		t.Errorf("an object outside the prefix was deleted: %v", err)
+	}
+}
+
+// TestS3StoreDeletePrefixLeavesNoVersionOnAVersionedBucket proves the erasure
+// reaches every version and delete marker. It owns a throwaway bucket because
+// enabling versioning on the shared test bucket would change what every other
+// test in the lane leaves behind.
+func TestS3StoreDeletePrefixLeavesNoVersionOnAVersionedBucket(t *testing.T) {
+	ctx := t.Context()
+	endpoint := os.Getenv("MARGINCE_TEST_BLOBSTORE_ENDPOINT")
+	if endpoint == "" {
+		t.Fatal("MARGINCE_TEST_BLOBSTORE_ENDPOINT not set — run `make db-up` (integration tests fail loudly, they never skip)")
+	}
+	cfg := blobstore.Config{
+		Endpoint:  endpoint,
+		AccessKey: os.Getenv("MARGINCE_TEST_BLOBSTORE_ACCESS_KEY"),
+		SecretKey: os.Getenv("MARGINCE_TEST_BLOBSTORE_SECRET_KEY"),
+		Bucket:    "versioned-" + ids.New[ids.WorkspaceKind]().String(),
+		Region:    testRegion,
+	}
+	store, err := blobstore.New(ctx, cfg)
+	if err != nil {
+		t.Fatalf("blobstore.New: %v", err)
+	}
+	raw, err := minio.New(cfg.Endpoint, &minio.Options{
+		Creds:  credentials.NewStaticV4(cfg.AccessKey, cfg.SecretKey, ""),
+		Region: cfg.Region,
+	})
+	if err != nil {
+		t.Fatalf("minio.New: %v", err)
+	}
+	t.Cleanup(func() {
+		if err := raw.RemoveBucket(context.Background(), cfg.Bucket); err != nil {
+			t.Errorf("cleanup RemoveBucket: %v", err)
+		}
+	})
+	if err := raw.EnableVersioning(ctx, cfg.Bucket); err != nil {
+		t.Fatalf("EnableVersioning: %v", err)
+	}
+
+	// Two versions per page, against five versions and a marker below: an
+	// implementation that deletes only the first page leaves the rest.
+	blobstore.WithListPageSize(store, 2)
+	ws := ids.New[ids.WorkspaceKind]()
+	overwritten := blobstore.WorkspaceKey(ws, "attachment", "overwritten")
+	deleted := blobstore.WorkspaceKey(ws, "attachment", "deleted")
+	for _, put := range []struct{ key, body string }{{overwritten, "v1"}, {overwritten, "v2"}, {overwritten, "v3"}, {overwritten, "v4"}, {deleted, "gone"}} {
+		if err := store.Put(ctx, put.key, bytes.NewReader([]byte(put.body)), int64(len(put.body)), ""); err != nil {
+			t.Fatalf("Put %s: %v", put.key, err)
+		}
+	}
+	if err := store.Delete(ctx, deleted); err != nil {
+		t.Fatalf("Delete: %v", err)
+	}
+
+	got, err := store.DeletePrefix(ctx, ws.String()+"/")
+	if err != nil {
+		t.Fatalf("DeletePrefix: %v", err)
+	}
+	if got != 2 {
+		t.Errorf("deleted = %d, want 2 distinct keys", got)
+	}
+	for obj := range raw.ListObjects(ctx, cfg.Bucket, minio.ListObjectsOptions{Prefix: ws.String() + "/", Recursive: true, WithVersions: true}) {
+		if obj.Err != nil {
+			t.Fatalf("listing versions: %v", obj.Err)
+		}
+		t.Errorf("version %q of %q (delete marker: %v) is still stored", obj.VersionID, obj.Key, obj.IsDeleteMarker)
 	}
 }
 

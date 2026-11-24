@@ -53,7 +53,7 @@ expect() {
 		echo "FAIL: $name"
 		echo "  exit  want $want_exit got $status"
 		echo "  stale want $want_stale got $stale"
-		printf '  output: %s\n' "$out" | head -20
+		printf '  output: %s\n' "$out" | sed -n 1,20p
 		failures=$((failures + 1))
 	else
 		echo "ok: $name"

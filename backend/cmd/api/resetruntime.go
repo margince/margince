@@ -115,15 +115,7 @@ func (l *resetLane) listen(ctx context.Context, modelPath *compose.ModelPath) {
 		return
 	}
 	flush := l.flush(modelPath)
-	go func() {
-		// A subscription that ends is not cosmetic: this process would serve
-		// pre-reset cached answers until it restarts. The filter is ctx.Err()
-		// rather than the returned error, so a shutdown cancellation is the ONLY
-		// quiet case — the subscription-closed sentinel stays loud.
-		if err := events.SubscribeReset(ctx, l.rdb, l.log, flush); err != nil && ctx.Err() == nil {
-			l.log.Error("data reset: the control channel stopped; this process serves stale caches until it restarts", "err", err)
-		}
-	}()
+	go events.SubscribeReset(ctx, l.rdb, l.log, flush)
 }
 
 // flush is what this process drops when a reset is announced: what the Server

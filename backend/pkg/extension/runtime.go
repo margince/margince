@@ -180,9 +180,6 @@ type Runtime interface {
 	// OAuthApps. It does not revoke the grant at the vendor.
 	OAuthDisconnect(ctx context.Context, provider OAuthProvider) error
 
-	// AI runs this unit's declared AI tasks through the core's AI path. See AI.
-	AI() AI
-
 	// Deals, Authority, Directory, Activities, SetAside, Companies and MailContent are system reads for a job tick
 	// or a bus delivery, and answer ErrAttendedRead anywhere else. See
 	// systemread.go.

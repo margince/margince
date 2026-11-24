@@ -36,7 +36,6 @@ internal/compose/canceledmeetingclocks_integration_test.go 1
 internal/compose/canceledmeetingfolds_integration_test.go 6
 internal/compose/captureenrich_integration_test.go 1
 internal/compose/capturehealth_integration_test.go 4
-internal/compose/capturepurgereceipt_test.go 1
 internal/compose/capturesweepreceipt_integration_test.go 3
 internal/compose/closedate_integration_test.go 3
 internal/compose/cohortpromotegen_integration_test.go 2
@@ -274,6 +273,7 @@ internal/compose/owedanswer_integration_test.go 10
 internal/compose/privacyqueuenames_integration_test.go 5
 internal/compose/providerselect_test.go 5
 internal/compose/publicoriginprobe_test.go 7
+internal/compose/purgerun/kept_test.go 1
 internal/compose/qualifiedinteraction_integration_test.go 1
 internal/compose/rateproposals_integration_test.go 3
 internal/compose/reconcile_integration_test.go 3
