@@ -252,6 +252,21 @@ func ActivityAudienceArm(ctx context.Context, alias string, arg func(any) int) (
 	return activityContentAudienceArm(p, alias, arg), nil
 }
 
+// ActivitySourceAudienceArm is ActivityAudienceArm for a row that is no task
+// standing for a source message, such as the message a reply channel reads. It
+// refuses a task row and drops the task hops, which would plan a second full
+// message gate into every statement that carries it.
+func ActivitySourceAudienceArm(ctx context.Context, alias string, arg func(any) int) (string, error) {
+	p, err := rbacActor(ctx)
+	if err != nil {
+		return "", err
+	}
+	if p.Type == principal.PrincipalSystem {
+		return ActivityAudienceArm(ctx, alias, arg)
+	}
+	return taskFreeSQL(alias) + " AND " + activityAudienceArm(p, alias, arg) + agentRestrictionArm(p, alias), nil
+}
+
 // activityAudienceArm renders the audience membership test for one human (or
 // the human behind an agent). The participant arms hold for every audience:
 // a contact on a conversation always reads it, limited or not.

@@ -261,7 +261,7 @@ func renderActivityColumns(ctx context.Context, contentArm string, arg func(any)
 	// A count reads no column, so gate the source kind only in a payload read.
 	sourceAudience := ""
 	if gatePayload {
-		if sourceAudience, err = auth.ActivityAudienceArm(ctx, "s", arg); err != nil {
+		if sourceAudience, err = auth.ActivitySourceAudienceArm(ctx, "s", arg); err != nil {
 			return "", err
 		}
 	}
