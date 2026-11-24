@@ -17,6 +17,7 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"slices"
 	"strings"
 	"unicode"
 	"unicode/utf8"
@@ -61,17 +62,28 @@ var errPageOlderThanQuestion = &apperrors.VersionSkewError{
 }
 
 // servedQuestionTx resolves the question this link pinned, in the link's
-// language, with its fields filled.
+// language, with its fields filled. A pin with no published row is served in
+// this build's wording for the pinned key, so a correspondence link never falls
+// back to the page's advertising sentence; its bound row stays zero.
 func (s *Store) servedQuestionTx(ctx context.Context, tx pgx.Tx, ref ConfirmRef) (ServedQuestion, boundQuestion, bool, error) {
 	bound, found, err := publishedQuestionForLinkTx(ctx, tx, ref)
-	if err != nil || !found {
+	if err != nil {
 		return ServedQuestion{}, boundQuestion{}, false, err
+	}
+	served := ServedQuestion{Version: bound.Version}
+	if !found {
+		if !slices.Contains(publishedQuestionKeys(), ref.QuestionKey) || !mailcopy.Known(ref.QuestionLocale) {
+			return ServedQuestion{}, boundQuestion{}, false, nil
+		}
+		bound.Text = RenderQuestion(ref.QuestionKey, ref.QuestionLocale)
+		served.Version = fmt.Sprintf("v%d", marketingQuestionVersion)
 	}
 	fields, err := s.questionFieldsTx(ctx, tx, ref)
 	if err != nil {
 		return ServedQuestion{}, boundQuestion{}, false, err
 	}
-	return ServedQuestion{Version: bound.Version, Text: fillQuestion(bound.Text, fields)}, bound, true, nil
+	served.Text = fillQuestion(bound.Text, fields)
+	return served, bound, true, nil
 }
 
 // servedQuestionFor is the question a confirm page shows for this link, absent
@@ -89,7 +101,8 @@ func (s *Store) servedQuestionFor(ctx context.Context, ref ConfirmRef) (*ServedQ
 }
 
 // wordingForGrantTx decides what an answer through a confirm link records: the
-// served question where the link pinned one, else the client's sentence. Both
+// served question where the link pinned one, else the client's sentence. A
+// served question with no published row names no version. Both
 // confirm-link doors call it. A withdrawal is never refused over its words.
 func (s *Store) wordingForGrantTx(
 	ctx context.Context, tx pgx.Tx, ref ConfirmRef, in ConfirmSubmission,
@@ -103,6 +116,9 @@ func (s *Store) wordingForGrantTx(
 	}
 	if in.MarketingChoice == string(StateGranted) && in.MarketingWording != served.Text {
 		return GrantWording{}, errPageOlderThanQuestion
+	}
+	if bound.VersionID.IsZero() {
+		return GrantWording{Text: served.Text}, nil
 	}
 	version := bound.Version
 	return GrantWording{Text: served.Text, Version: &version, VersionID: bound.VersionID}, nil
@@ -254,7 +270,7 @@ type boundQuestion struct {
 // the other case: this installation asked a question it never published, or
 // publishing has not run. The grant still stands — the subject clicked a real
 // link and answered a real question — but it is logged rather than folded in
-// with the expected case.
+// with the expected case, and servedQuestionTx asks it in this build's words.
 func publishedQuestionForLinkTx(
 	ctx context.Context, tx pgx.Tx, ref ConfirmRef,
 ) (boundQuestion, bool, error) {

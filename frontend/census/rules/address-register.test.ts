@@ -3,8 +3,10 @@
 
 import { describe, expect, it } from "vitest";
 import { READ_BY_AN_OUTSIDER } from "../../scripts/lib/german-catalogs";
-import { plantedFindings } from "../tree";
+import { join } from "node:path";
+import { plantedFindings as planted, srcDir, treeOf } from "../tree";
 import {
+  buyerPageFiles,
   buyerPageFindings,
   registerFindings,
   rule,
@@ -96,11 +98,36 @@ describe("the buyer's page, over planted catalogs", () => {
   });
 });
 
+describe("the buyer's page is its entry and the deal files it imports", () => {
+  const deals = join(srcDir, "features", "deals");
+  const file = (name: string, text: string) => ({
+    path: join(deals, name),
+    area: "src" as const,
+    text,
+  });
+
+  it("follows an import into a shared deal file, and stops outside deals", () => {
+    const tree = treeOf([
+      file("buyerroom.tsx", 'import { Board } from "./dealroomthreads";'),
+      file(
+        "dealroomthreads.tsx",
+        'import { x } from "../../lib/problem";\nt("threads.readOnly");',
+      ),
+      file("dealroom.tsx", 't("threads.readOnly");'),
+      { path: join(srcDir, "lib", "problem.ts"), area: "src", text: "" },
+    ]);
+    expect(buyerPageFiles(tree).map((found) => found.rel)).toEqual([
+      "src/features/deals/buyerroom.tsx",
+      "src/features/deals/dealroomthreads.tsx",
+    ]);
+  });
+});
+
 describe("the address-register rule", () => {
   it("reports a planted value through its own corpus and across", () => {
     const text = 'export const de = { "a.b": "Speichern Sie." };\n';
     expect(
-      plantedFindings(rule, [{ path: coreCatalog, area: "src", text }]),
+      planted(rule, [{ path: coreCatalog, area: "src", text }]),
     ).toContain(
       'addresses the reader as Sie or Ihr: frontend/src/i18n/de.ts a.b: "Sie" mid-sentence in Speichern Sie.',
     );

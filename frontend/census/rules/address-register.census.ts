@@ -8,12 +8,13 @@
 //    "Sie" opening a sentence as she or they is rephrased, never waived.
 // 2. A du-pronoun is capitalised only where a sentence begins. Mid-sentence it
 //    is the formal register wearing the informal word.
-// 3. The buyer's page speaks Sie throughout, so every key its files name from
-//    outside the outsider families carries no du-pronoun.
+// 3. The buyer's page speaks Sie throughout, so no key its own files name from
+//    outside the outsider families carries a du-pronoun.
 //
 // The mechanics of German copy are the copy-style-de rule's; both read the
 // catalogs it derives.
 
+import { dirname, resolve } from "node:path";
 import {
   LETTER,
   READ_BY_AN_OUTSIDER,
@@ -23,7 +24,7 @@ import {
   catalogEntries,
   type LocaleCopy,
 } from "../../scripts/lib/locale-catalogs";
-import type { CensusRule } from "../tree";
+import type { CensusFile, CensusRule, CensusTree } from "../tree";
 import { coreCatalog, germanCopies } from "./copy-style-de.census";
 
 // Longest first: the alternation is what gets reported, and "Ihr" would match
@@ -38,9 +39,30 @@ const DU_ANY_CASE = new RegExp(
   "i",
 );
 
-// The files of the page a buyer opens. Stories and tests render planted copy.
-const BUYER_PAGE = /^src\/features\/deals\/buyerroom[a-z]*\.tsx$/;
+// The buyer's page: its entry file and every file under src/features/deals it
+// imports, followed through each import. Stories and tests are not imported.
+const BUYER_ENTRY = "src/features/deals/buyerroom.tsx";
+const BUYER_FEATURE = "src/features/deals/";
+const RELATIVE_IMPORT = /from\s+"(\.[^"]+)"/g;
 const QUOTED = /"([a-z][A-Za-z0-9]*\.[A-Za-z0-9_.]+)"/g;
+
+/** The files of the buyer's page, entry first. */
+export function buyerPageFiles(tree: CensusTree): CensusFile[] {
+  const entry = tree.files.find((file) => file.rel === BUYER_ENTRY);
+  const reached = entry ? [entry] : [];
+  for (const file of reached) {
+    for (const [, specifier] of file.text.matchAll(RELATIVE_IMPORT)) {
+      const base = resolve(dirname(file.path), specifier);
+      const next = [".tsx", ".ts"]
+        .map((extension) => tree.at(base + extension))
+        .find((found) => found !== undefined);
+      if (next?.rel.startsWith(BUYER_FEATURE) && !reached.includes(next)) {
+        reached.push(next);
+      }
+    }
+  }
+  return reached;
+}
 
 /** Every du-pronoun the buyer's page would show through a key it names. */
 export function buyerPageFindings(
@@ -106,22 +128,21 @@ export function registerFindings(copies: readonly LocaleCopy[]): string[] {
 
 export const rule: CensusRule = {
   name: "address-register",
-  corpus: (tree) =>
-    tree.files.filter(
-      (file) => file.path === coreCatalog || BUYER_PAGE.test(file.rel),
-    ),
-  floors: (corpus) =>
-    corpus.some((file) => BUYER_PAGE.test(file.rel))
+  corpus: (tree) => tree.files.filter((file) => file.path === coreCatalog),
+  floors: (_corpus, tree) =>
+    buyerPageFiles(tree).length > 1
       ? []
-      : ["the buyer's page is a file under src/features/deals/buyerroom*.tsx"],
-  across: (corpus) => {
-    const core = corpus.find((file) => file.path === coreCatalog)?.source;
+      : [`the buyer's page is ${BUYER_ENTRY} and the files it imports`],
+  across: (corpus, tree) => {
+    const core = corpus[0]?.source;
     if (!core) {
       return [];
     }
     const copies = germanCopies(core);
-    const pages = corpus.filter((file) => BUYER_PAGE.test(file.rel));
-    return [...registerFindings(copies), ...buyerPageFindings(copies, pages)];
+    return [
+      ...registerFindings(copies),
+      ...buyerPageFindings(copies, buyerPageFiles(tree)),
+    ];
   },
   advice:
     "German copy speaks to its reader as du. Rewrite a formal Sie or Ihr, or " +

@@ -127,3 +127,49 @@ func TestAnAdvertisingConsentStatesItsFrequency(t *testing.T) {
 		t.Errorf("the advertising consent page states no frequency: %q", served.Text)
 	}
 }
+
+// A correspondence link whose pinned question has no published row is still
+// asked the correspondence question, never the page's advertising fallback, and
+// its grant records those words with no published row named.
+func TestAnUnpublishedPinStillAsksTheCorrespondenceQuestion(t *testing.T) {
+	e := setupResolve(t)
+	seedDefaultCatalog(t, e.owner)
+	var correspondence ids.PurposeID
+	if err := e.owner.QueryRow(context.Background(),
+		`SELECT id FROM consent_purpose WHERE key = $1`, string(ClassBusinessCorrespondence)).Scan(&correspondence); err != nil {
+		t.Fatal(err)
+	}
+	_, _, issued := askedQuestion(t, e, e.store, correspondence)
+	if _, err := e.owner.Exec(context.Background(), `UPDATE confirm_token SET question_version = 999`); err != nil {
+		t.Fatalf("pinning a version nothing published: %v", err)
+	}
+
+	ctx := withContactUpdate(e.ctx)
+	ref, err := e.store.ResolveConfirmToken(ctx, issued.Token, FetchByAHuman)
+	if err != nil {
+		t.Fatal(err)
+	}
+	served, err := e.store.servedQuestionFor(ctx, ref)
+	if err != nil || served == nil {
+		t.Fatalf("an unpublished pin served no question: %v, %v", served, err)
+	}
+	if _, found := promisesASubscription(served.Text); found || statesFrequency(served.Text) {
+		t.Errorf("an unpublished correspondence pin was asked the advertising question: %q", served.Text)
+	}
+	if _, err := e.store.SubmitConfirmation(ctx, issued.Token, ConfirmSubmission{
+		MarketingChoice: string(StateGranted), MarketingWording: served.Text,
+	}); err != nil {
+		t.Fatalf("confirming: %v", err)
+	}
+	var recorded string
+	var versionID *string
+	if err := e.owner.QueryRow(context.Background(), `
+		SELECT policy_text, consent_text_version_id::text FROM consent_event
+		 WHERE contact_id = $1 AND purpose_id = $2 AND new_state = 'granted'`,
+		e.contact, correspondence).Scan(&recorded, &versionID); err != nil {
+		t.Fatalf("reading the grant: %v", err)
+	}
+	if recorded != served.Text || versionID != nil {
+		t.Errorf("the grant recorded %q naming row %v, want the served %q naming none", recorded, versionID, served.Text)
+	}
+}
