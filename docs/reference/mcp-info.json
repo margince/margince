@@ -10,16 +10,16 @@
   "totals": {
     "tools": 48,
     "resources": 14,
-    "tool_catalog_bytes": 248620,
+    "tool_catalog_bytes": 248857,
     "resource_catalog_bytes": 5622,
-    "approx_wire_tokens_total": 63560,
+    "approx_wire_tokens_total": 63619,
     "largest_tool_bytes": 16204,
     "largest_tool": "read_details",
     "tool_catalog_composition": {
       "description_bytes": 52248,
-      "input_schema_bytes": 150053,
+      "input_schema_bytes": 150290,
       "output_schema_bytes": 34465,
-      "description_plus_input_schema_bytes": 202301
+      "description_plus_input_schema_bytes": 202538
     }
   },
   "tools": {
@@ -482,6 +482,11 @@
             },
             "channel_provider": {
               "description": "log only: Required for kind \"message\", else refused; one the workspace's channel providers name.",
+              "type": "string"
+            },
+            "confirm_code": {
+              "description": "relink, relink_many only: Only after the user said yes to this call's preview: the confirm_code that preview answered. Never invent one; call without it to get a preview.",
+              "maxLength": 1024,
               "type": "string"
             },
             "content_base64": {
@@ -11645,6 +11650,11 @@
                 "format": "uuid",
                 "type": "string"
               },
+              "confirm_code": {
+                "description": "Only after the user said yes to this call's preview: the confirm_code that preview answered. Never invent one; call without it to get a preview.",
+                "maxLength": 1024,
+                "type": "string"
+              },
               "entity_id": {
                 "description": "The record to link it to",
                 "format": "uuid",
@@ -11693,6 +11703,11 @@
               "approval_id": {
                 "description": "Set on approved retry",
                 "format": "uuid",
+                "type": "string"
+              },
+              "confirm_code": {
+                "description": "Only after the user said yes to this call's preview: the confirm_code that preview answered. Never invent one; call without it to get a preview.",
+                "maxLength": 1024,
                 "type": "string"
               },
               "entity_id": {
@@ -22206,6 +22221,11 @@
                 "format": "uuid",
                 "type": "string"
               },
+              "confirm_code": {
+                "description": "Only after the user said yes to this call's preview: the confirm_code that preview answered. Never invent one; call without it to get a preview.",
+                "maxLength": 1024,
+                "type": "string"
+              },
               "preview_token": {
                 "minLength": 1,
                 "type": "string"
@@ -22650,6 +22670,11 @@
               "company_id": {
                 "description": "The company to make a partner",
                 "format": "uuid",
+                "type": "string"
+              },
+              "confirm_code": {
+                "description": "Only after the user said yes to this call's preview: the confirm_code that preview answered. Never invent one; call without it to get a preview.",
+                "maxLength": 1024,
                 "type": "string"
               },
               "next_step": {

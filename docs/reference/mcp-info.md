@@ -15,9 +15,9 @@ input and output schema in folds below it. What a tool may do and whether a huma
 |---|---:|
 | Tools | 48 |
 | Resources | 14 |
-| Tool catalog | 242.8 KB |
+| Tool catalog | 243.0 KB |
 | Resource catalog | 5.5 KB |
-| Approx. wire tokens | 63560 |
+| Approx. wire tokens | 63619 |
 | Largest tool | `read_details` (15.8 KB) |
 | Scopes rendered | `read`, `draft`, `write`, `send`, `enrich` |
 
@@ -33,10 +33,10 @@ tool adds to that listing, and what it costs each scheduled agent, agent by agen
 | Part | Bytes | Share | In a run's prompt? |
 |---|---:|---:|---|
 | Output schemas | 33.7 KB | 13% | **No**: a result's shape, never listed to a model |
-| Descriptions (incl. governance clause) | 51.0 KB | 21% | Yes, every step |
-| Input schemas | 146.5 KB | 60% | Yes, every step |
+| Descriptions (incl. governance clause) | 51.0 KB | 20% | Yes, every step |
+| Input schemas | 146.8 KB | 60% | Yes, every step |
 | _Names, annotations, punctuation_ | 11.6 KB | 4% | Partly |
-| **Description + input schema** | **197.6 KB** | **81%** | **the recurring cost** |
+| **Description + input schema** | **197.8 KB** | **81%** | **the recurring cost** |
 
 Output schemas are the largest part of the total and are never sent to a model;
 descriptions and input schemas are what each step pays for.
@@ -68,7 +68,7 @@ descriptions and input schemas are what each step pays for.
 | [`archive_record`](#archive_record) | Archive a record |  |  | 300 |
 | [`bulk_update_records`](#bulk_update_records) | Change many records at once |  |  | 892 |
 | [`change_access`](#change_access) | Share records and set up members and teams |  |  | 1152 |
-| [`change_activities`](#change_activities) | Log, plan and file activities |  |  | 2918 |
+| [`change_activities`](#change_activities) | Log, plan and file activities |  |  | 2977 |
 | [`change_attention`](#change_attention) | Act on proposals, notices and the weekly plan |  |  | 1842 |
 | [`change_capture`](#change_capture) | Decide what comes into the CRM |  |  | 1891 |
 | [`change_compliance`](#change_compliance) | Record consent, stops, holds and privacy work |  |  | 1274 |
@@ -79,7 +79,7 @@ descriptions and input schemas are what each step pays for.
 | [`change_relationships`](#change_relationships) | Work a company's relationships and briefs |  |  | 816 |
 | [`change_reports`](#change_reports) | Work saved reports and the forecast |  |  | 2014 |
 | [`change_settings`](#change_settings) | Change how the workspace is set up |  |  | 3239 |
-| [`change_state`](#change_state) | Move a lead, deal, project or partner |  |  | 2301 |
+| [`change_state`](#change_state) | Move a lead, deal, project or partner |  |  | 2365 |
 | [`change_tags`](#change_tags) | Change tags |  |  | 652 |
 | [`check_availability`](#check_availability) | Check calendar availability | yes |  | 375 |
 | [`commit_import`](#commit_import) | Commit an import |  |  | 275 |
@@ -900,6 +900,11 @@ archive_document, assign_inquiry.)
     },
     "channel_provider": {
       "description": "log only: Required for kind \"message\", else refused; one the workspace's channel providers name.",
+      "type": "string"
+    },
+    "confirm_code": {
+      "description": "relink, relink_many only: Only after the user said yes to this call's preview: the confirm_code that preview answered. Never invent one; call without it to get a preview.",
+      "maxLength": 1024,
       "type": "string"
     },
     "content_base64": {

@@ -148,7 +148,7 @@ func (r *Registry) routerRunSpec(routerName, action string) (mcp.ToolSpec, bool)
 	if !known {
 		return mcp.ToolSpec{}, false
 	}
-	return target.Spec(), true
+	return withConfirmCode(target.Spec()), true
 }
 
 // routeTarget is one registered target's own spec, refused unless a router may
@@ -161,9 +161,10 @@ func (r *Registry) routeTarget(routerName, name string) mcp.ToolSpec {
 	r.mu.RUnlock()
 	// The target's own spec: the registered one carries the members the
 	// surface adds, such as the retry key, which the router gains by itself.
+	// confirm_code is the exception, since only some actions take it.
 	var spec mcp.ToolSpec
 	if ok {
-		spec = t.Spec()
+		spec = withConfirmCode(t.Spec())
 	}
 	var why string
 	switch _, isRouter := t.(router); {

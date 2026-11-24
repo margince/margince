@@ -159,7 +159,7 @@ func (r *Registry) routerSchemaFor(rt router, field string, choices []string, ra
 	r.mu.RLock()
 	for i, choice := range choices {
 		if target, ok := r.tools[rt.routeTargets()[choice]]; ok {
-			targets[i] = target.Spec()
+			targets[i] = withConfirmCode(target.Spec())
 		}
 	}
 	r.mu.RUnlock()

@@ -202,3 +202,28 @@ func TestARareActionsRefusalSaysWhereItsArgumentsGo(t *testing.T) {
 		}
 	}
 }
+
+// An action whose call its user confirms in the conversation takes confirm_code,
+// so the router lists it for that action. The surface splices it into the
+// target, so the router must read it from there.
+func TestARouterListsConfirmCodeForTheActionsThatTakeIt(t *testing.T) {
+	r := NewRegistry(nil, auth.NewGate(fullSeatAuthority{}))
+	waits := &argsTool{spec: targetSpec("waits_for_user", principal.ScopeWrite, mcp.TierConfirmationRequired)}
+	waits.spec.WaitsEvenForItsUser = true
+	r.Register(waits)
+	r.Register(&argsTool{spec: targetSpec("runs_now", principal.ScopeWrite, mcp.TierAutoExecute)})
+	r.Register(fakeRouter{name: "fake_confirm", targets: map[string]string{"confirm": "waits_for_user", "run": "runs_now"}})
+	spec, _ := r.Spec("fake_confirm")
+	var doc struct {
+		Properties map[string]struct {
+			Description string `json:"description"`
+		} `json:"properties"`
+	}
+	if err := json.Unmarshal(spec.InputSchema, &doc); err != nil {
+		t.Fatal(err)
+	}
+	code, listed := doc.Properties[confirmCodeArg]
+	if !listed || !strings.HasPrefix(code.Description, "confirm only") {
+		t.Errorf("the router lists confirm_code as %+v (listed %v), want it scoped to the confirm action", code, listed)
+	}
+}
