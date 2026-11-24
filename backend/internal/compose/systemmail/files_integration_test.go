@@ -60,8 +60,8 @@ func (e filesEnv) files(unit string) Files {
 	return Files{Unit: unit, ActAs: ids.NewV7(), Blob: e.blob, Pool: e.Pool}
 }
 
-// published answers err as a unit sees it, and fails the test on a core fault.
-func published(t *testing.T, err error) error {
+// publishedOrFail answers err as a unit sees it, and fails the test on a core fault.
+func publishedOrFail(t *testing.T, err error) error {
 	t.Helper()
 	if seen := Published(err); seen != nil || err == nil {
 		return seen
@@ -73,13 +73,13 @@ func published(t *testing.T, err error) error {
 func (e filesEnv) open(ctx context.Context, t *testing.T, files Files, id ids.UUID) (extension.MailAttachmentFile, error) {
 	t.Helper()
 	got, err := files.Open(ctx, id)
-	return got, published(t, err)
+	return got, publishedOrFail(t, err)
 }
 
 func (e filesEnv) list(ctx context.Context, t *testing.T, files Files, mail ids.UUID) ([]extension.MailAttachment, error) {
 	t.Helper()
 	got, err := files.List(ctx, mail)
-	return got, published(t, err)
+	return got, publishedOrFail(t, err)
 }
 
 // exports counts the export rows of one kind that the mirror unit left.
