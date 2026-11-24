@@ -13,8 +13,8 @@ import (
 )
 
 // A waiting list adds no content gate of its own to the waiting set. The reply
-// channel projection gates the source row it reads by its audience alone: a
-// message has no task hops, so that gate holds no copy of the content gate.
+// channel gates the source row it reads by its audience alone. A message has no
+// task hops, so that gate holds no copy of the content gate.
 func TestAWaitingListCarriesOnlyTheGatesOfItsWaitingSet(t *testing.T) {
 	asOf := clocktest.Now(t)
 	in := ListActivitiesInput{WaitingReplyAsOf: &asOf}

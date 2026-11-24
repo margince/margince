@@ -60,8 +60,8 @@ func TestTheContentGateTestsInternalMailOncePerRowItReads(t *testing.T) {
 	}
 }
 
-// A reply channel reads only the kind of a message, which has no task hops, so
-// its gate holds no copy of the content gate and tests internal mail once.
+// A reply channel reads only the kind of a message, which has no task hops.
+// Its gate holds no copy of the content gate and tests internal mail once.
 func TestTheSourceAudienceArmHoldsNoTaskHops(t *testing.T) {
 	for _, scope := range []principal.RowScope{principal.RowScopeOwn, principal.RowScopeTeam, principal.RowScopeAll} {
 		ctx := principal.WithActor(context.Background(), human(scope))
