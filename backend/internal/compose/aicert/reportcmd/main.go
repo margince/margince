@@ -23,6 +23,7 @@ import (
 	"os"
 
 	"github.com/margince/margince/backend/internal/compose"
+	"github.com/margince/margince/backend/internal/compose/agentloope2e/live"
 	"github.com/margince/margince/backend/internal/compose/aicert"
 	"github.com/margince/margince/backend/internal/compose/aitasks"
 )
@@ -34,6 +35,9 @@ func main() {
 		"directory of certification scenarios, read to tell a current record from a stale one")
 	presetDir := flag.String("presets", "../config/presets",
 		"directory of deploy presets, read to report each task's first rung and fallback per preset")
+	repoRoot := flag.String("repo", "..", "the repository root (relative to backend/), read to tell a current agent loop verdict from a stale one")
+	agentLoopDir := flag.String("agentloop", "internal/compose/aicert/records/agent_loop_e2e",
+		"directory of the agent loop live lane's verdicts")
 	flag.Parse()
 
 	// The census is what says which sites SHOULD have a record: an absent
@@ -84,6 +88,13 @@ func main() {
 		os.Exit(1)
 	}
 	fmt.Print(renderPresets(reports)) //nolint:forbidigo // the report's third table, printed for the same reason
+
+	verdicts, err := live.Lines(*repoRoot, *agentLoopDir, "")
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "reportcmd: %v\n", err)
+		os.Exit(1)
+	}
+	fmt.Print(renderAgentLoop(verdicts)) //nolint:forbidigo // the report's fourth section, printed for the same reason
 }
 
 // presetReports reads the rung states of the presets under dir over the committed records.

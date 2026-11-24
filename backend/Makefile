@@ -150,7 +150,7 @@ TEST_SHUFFLE_NOTE = $(if $(TEST_SHUFFLE_SEED),@echo "$@: test order -shuffle=$(T
 
 .DEFAULT_GOAL := help
 
-.PHONY: preflight-gates mcp-inaccessible perfdoc config-gen extdoc-gen extdoc-check messaging-rules-drift policy-refresh help check check-static build fetch-test-deps test test-cached test-uncached test-v test-cover test-integration e2e-siteread e2e-ai e2e-ai-report e2e-ai-restamp ai-probe ai-eval test-db-up test-it test-roles test-integration-serial lint lint-base lint-strict lint-modules lint-tool arch-lint vet gen gen-workflow mcp-apps-vocab drift generators-twice composition check-composition test-extensions db-up db-init db-wait seed-reset seed-dev-db migrate migrate-up migrate-down run psql redis-cli tidy dev infra-down infra-logs infra-reset clean vuln vendor-live tools tools-go hooks
+.PHONY: preflight-gates mcp-inaccessible perfdoc config-gen extdoc-gen extdoc-check messaging-rules-drift policy-refresh help check check-static build fetch-test-deps test test-cached test-uncached test-v test-cover test-integration e2e-siteread e2e-ai e2e-ai-report e2e-agent-loop e2e-ai-restamp ai-probe ai-eval test-db-up test-it test-roles test-integration-serial lint lint-base lint-strict lint-modules lint-tool arch-lint vet gen gen-workflow mcp-apps-vocab drift generators-twice composition check-composition test-extensions db-up db-init db-wait seed-reset seed-dev-db migrate migrate-up migrate-down run psql redis-cli tidy dev infra-down infra-logs infra-reset clean vuln vendor-live tools tools-go hooks
 
 help: ## List targets with their descriptions (the default goal)
 	@grep -hE '^[a-zA-Z][a-zA-Z0-9_-]*:.*## ' $(MAKEFILE_LIST) | awk -F':.*## ' '{printf "  %-18s %s\n", $$1, $$2}'
@@ -512,6 +512,27 @@ e2e-ai: composition ## Certify AI tasks (paid: real model + network; opt-in). RO
 
 e2e-ai-report: ## Print the certification readiness report — every shipped site, its band, and whether its record is current, stale or absent — from internal/compose/aicert/{corpus,records}/.
 	$(GO) run ./internal/compose/aicert/reportcmd
+
+# The live agent_loop lane: the two scheduled agents run on a seeded Postgres
+# through the worker's own Tick path, on the real model route, and a judge reads
+# what they wrote. It is PAID, manual and sequential, and it needs `make db-up`.
+# The -timeout allows every case its full per-case deadline (15 minutes) for every
+# run, so a stuck model costs the deadline and never the whole pass.
+#
+# TIER= picks the model a deployment binds at that tier of PRESET= (premium by
+# default; cheap_cloud is the lower tier); MODEL=provider:model names one outright.
+# PRESET= (a path from the repository root) names another preset than gemini_cloud.
+# The judge is e2e/llm/judge.py: E2E_LLM_JUDGE defaults to `live`.
+AGENT_LOOP_CASES := $(words $(wildcard internal/compose/agentloope2e/scenarios/*.yaml))
+e2e-agent-loop: composition ## The live agent_loop lane (paid: real model + judge; opt-in; needs db-up): TIER=premium|cheap_cloud or MODEL=prov:model, RUNS=3, SCENARIO=<regexp>, STALE_ONLY=0 to re-measure a current verdict, TRACE= to turn the trace off. Verdicts go to internal/compose/aicert/records/agent_loop_e2e/. Keys auto-loaded from .env.local; the judge needs E2E_LLM_JUDGE_VIA and its key or the claude CLI
+	@$(LOAD_ENV_LOCAL) E2E_AGENT_LOOP=1 \
+	  E2E_AGENT_LOOP_RUNS=$(or $(RUNS),3) E2E_AGENT_LOOP_SCENARIO='$(SCENARIO)' \
+	  E2E_AGENT_LOOP_TIER=$(TIER) E2E_AGENT_LOOP_MODEL=$(MODEL) E2E_AGENT_LOOP_BASE_URL=$(BASE_URL) \
+	  E2E_AGENT_LOOP_STALE_ONLY=$(STALE_ONLY) E2E_AGENT_LOOP_PRESET=$(if $(PRESET),$(CURDIR)/../$(PRESET)) \
+	  E2E_AGENT_LOOP_TRACE=$(if $(TRACE),$(CURDIR)/../.tmp/agentloop) \
+	  E2E_LLM_JUDGE="$${E2E_LLM_JUDGE:-live}" IT_TAGS=integration,e2e_agent_loop \
+	  INTEGRATION_TIMEOUT=$$(( $(AGENT_LOOP_CASES) * $(or $(RUNS),3) * 900 + 600 ))s \
+	  $(GOWORK_COMPOSED) bash ../scripts/test-integration-one.sh backend/internal/compose/integration/jobfanout '^TestE2EAgentLoopLive$$'
 
 e2e-ai-restamp: ## Grade stored certification records again after a grading-rule bump or a site-check hash change that moved no prompt, with no new runs. FROM=<old rule> or SITE_CHECKS_FROM=<old site_checks.golden>; WRITE=1 writes, otherwise it only reports.
 	$(GO) run ./internal/compose/aicert/restampcmd $(if $(FROM),-from '$(FROM)') $(if $(SITE_CHECKS_FROM),-site-checks-from '$(SITE_CHECKS_FROM)') $(if $(WRITE),-write)

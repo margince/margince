@@ -18,7 +18,7 @@ instead. The lane is never part of a request path.
 > certified record. Read it before you pay for a run.
 
 See also [ai-runtime.md](../explanation/ai-runtime.md), [connect-a-cloud-model-provider.md](connect-a-cloud-model-provider.md), [add-an-ai-task.md](add-an-ai-task.md),
-[certify-a-decision-site.md](certify-a-decision-site.md) (the decisions lane) and [reference/ai-certification.md](../reference/ai-certification.md), the page these records fill.
+[certify-a-decision-site.md](certify-a-decision-site.md) (decisions), [run-the-agent-loop-lane.md](run-the-agent-loop-lane.md) (scheduled agents) and [reference/ai-certification.md](../reference/ai-certification.md).
 
 ## Prerequisites
 
