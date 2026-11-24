@@ -10,7 +10,6 @@ import (
 	"slices"
 	"strings"
 
-	"github.com/margince/margince/backend/internal/compose"
 	"github.com/margince/margince/backend/internal/compose/agentloope2e"
 	"github.com/margince/margince/backend/internal/compose/mcpe2e"
 )
@@ -46,18 +45,8 @@ func JudgeName(root, named string) (string, error) {
 	return mcpe2e.JudgeModel(root)
 }
 
-// toolFacts is what a model reads of a tool and what bounds its use. The spec
-// itself holds functions and cannot be encoded, so the fields a window turns on
-// are named here.
-type toolFacts struct {
-	Name         string          `json:"name"`
-	Description  string          `json:"description"`
-	Scope        string          `json:"scope"`
-	Tier         string          `json:"tier"`
-	ReadOnly     bool            `json:"read_only"`
-	InputSchema  json.RawMessage `json:"input_schema"`
-	OutputSchema json.RawMessage `json:"output_schema"`
-}
+// toolFacts is what a model reads of a tool and what bounds its use.
+type toolFacts = ToolFact
 
 // windowOf is the digest of what the agent is asked and what it may use.
 func windowOf(goal string, tools []toolFacts) (string, error) {
@@ -74,23 +63,11 @@ func windowOf(goal string, tools []toolFacts) (string, error) {
 // windowDigest is the window of one scheduled agent: its goal and the published
 // spec of each tool it is allowed.
 func windowDigest(agent agentloope2e.Agent) (string, error) {
-	spec, ok := compose.ScheduledAgentSpecByName(string(agent))
-	if !ok {
-		return "", fmt.Errorf("live: the runner catalog schedules no agent %q", agent)
+	goal, tools, err := ToolFacts(string(agent))
+	if err != nil {
+		return "", err
 	}
-	registry := compose.NewRegistry(nil, compose.SendPath{})
-	var tools []toolFacts
-	for _, name := range spec.Tools {
-		tool, known := registry.Spec(name)
-		if !known {
-			return "", fmt.Errorf("live: agent %s may use %s, which the tool registry does not serve", agent, name)
-		}
-		tools = append(tools, toolFacts{
-			Name: name, Description: tool.Description, Scope: string(tool.RequiredScope), Tier: fmt.Sprint(tool.Tier),
-			ReadOnly: tool.ReadOnly(), InputSchema: tool.InputSchema, OutputSchema: tool.OutputSchema,
-		})
-	}
-	return windowOf(spec.Goal, tools)
+	return windowOf(goal, tools)
 }
 
 // harnessDigest is the digest of the files that build the world and grade a run.

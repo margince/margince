@@ -105,7 +105,7 @@ func (e *CounterpartyVerdictEngine) strayAgainstItsOwnHistory(
 	if !createsARecord(answer.Verdict) {
 		return false, 0, nil
 	}
-	settled, err := e.pending.TimesJudgedNotAContact(ctx, row.Email)
+	settled, err := e.ledgerOf().TimesJudgedNotAContact(ctx, row.Email)
 	if err != nil {
 		return false, 0, err
 	}
@@ -131,7 +131,7 @@ func (e *CounterpartyVerdictEngine) askAboutAStrayAnswer(
 	}
 	reason := fmt.Sprintf(
 		"answered %q against %d settled answers naming no contact at this address", kind, settled)
-	if err := e.pending.Retire(ctx, row, reason, lastMeasurement(nil, answers)); err != nil {
+	if err := e.ledgerOf().Retire(ctx, row, reason, lastMeasurement(nil, answers)); err != nil {
 		return 0, err
 	}
 	return 1, nil
@@ -152,7 +152,7 @@ func (e *CounterpartyVerdictEngine) askAHumanInstead(
 	ctx context.Context, row capture.PendingCounterparty,
 ) (int, error) {
 	// No measurement: there was no model to ask.
-	if err := e.pending.Retire(ctx, row, "no model is configured to judge this sender",
+	if err := e.ledgerOf().Retire(ctx, row, "no model is configured to judge this sender",
 		capture.VerdictMeasurement{}); err != nil {
 		return 0, err
 	}

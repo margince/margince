@@ -14,8 +14,7 @@ expect:
   outcome: accepted
   answer:
     - meeting
-    - label: meeting
-      not_reply: negative
+    - meeting
   rubric: >
     Two chat messages, each one line of a conversation the model does not see,
     with a channel line and no subject. The first asks for a time, so it is
@@ -24,7 +23,9 @@ expect:
     second turns down one slot and offers another: still "meeting". Its "no"
     refuses Monday, not the deal, and the prompt asks for no reply verdict on
     any chat message, so null is right and "negative" is the worst answer,
-    since a negative verdict can close the customer's deal as lost.
+    since a negative verdict can close the customer's deal as lost. The pass
+    stores no reply verdict for a chat line, so the replies the model gave are
+    the only place that failure can show: score them.
   bands:
     certified_min: 70
     degraded_min: 50

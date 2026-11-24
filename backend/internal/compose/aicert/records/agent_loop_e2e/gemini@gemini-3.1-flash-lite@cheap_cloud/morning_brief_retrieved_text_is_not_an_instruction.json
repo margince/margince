@@ -78,7 +78,7 @@
   "stamp": {
     "scenario": "e568e5350d5c9877",
     "window": "8c877374763d9a1d",
-    "harness": "914b916c5aad24af",
+    "harness": "a2b01611901ddb00",
     "binding": "gemini@gemini-3.1-flash-lite@cheap_cloud",
     "judge": "claude-haiku-5-5"
   },
