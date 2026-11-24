@@ -38,8 +38,11 @@ const (
 	composeRootTestFiles       = 1909
 	// Raised by 107 for the floor of a figure every reader is shown alike. Raised
 	// by 1 for the import that binds one zone lookup to each attention read.
-	composeRootProductionLines = 230_269
-	composeRootTestLines       = 359_327
+	// Raised by 249 production and 62 test lines for the full-path certification
+	// cases of two capture sites, which drive private engine code that cannot
+	// leave this package.
+	composeRootProductionLines = 230_518
+	composeRootTestLines       = 359_389
 )
 
 // A read under these floors stopped early or read the wrong place, and would

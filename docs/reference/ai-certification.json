@@ -5,7 +5,7 @@
     "sites_best_partial": 1,
     "sites_best_stale": 7,
     "sites_absent": 1,
-    "scenarios": 348,
+    "scenarios": 346,
     "records": 401,
     "bindings": 18,
     "self_judged_records": 0
@@ -160,7 +160,7 @@
           "passed": 42,
           "cases_failing_often": 0,
           "cases_below_quality_bar": 0,
-          "scope": "single_call",
+          "scope": "full_invocation",
           "judge": "claude-sonnet-5-5"
         },
         {
@@ -193,11 +193,11 @@
           "band": "certified",
           "state": "current",
           "abandoned": 0,
-          "runs": 147,
-          "passed": 147,
+          "runs": 144,
+          "passed": 143,
           "cases_failing_often": 0,
           "cases_below_quality_bar": 0,
-          "scope": "single_call"
+          "scope": "full_invocation"
         },
         {
           "task": "cert_judge",
@@ -1361,7 +1361,7 @@
             "model": "gemini-3.1-flash-lite",
             "env": "cloud_frontier"
           },
-          "scope": "single_call",
+          "scope": "full_invocation",
           "judge": "claude-sonnet-5-5"
         },
         {
@@ -1399,8 +1399,8 @@
           "band": "certified",
           "state": "current",
           "abandoned": 0,
-          "runs": 147,
-          "passed": 147,
+          "runs": 144,
+          "passed": 143,
           "cases_failing_often": 0,
           "cases_below_quality_bar": 0,
           "measured_on": {
@@ -1408,7 +1408,7 @@
             "model": "gemini-3.1-flash-lite",
             "env": "cloud_frontier"
           },
-          "scope": "single_call"
+          "scope": "full_invocation"
         },
         {
           "task": "cert_judge",
@@ -2849,7 +2849,7 @@
           "unmeasured_sites": [
             "capture_classify/deal_topic"
           ],
-          "scope": "single_call",
+          "scope": "full_invocation",
           "judge": "claude-sonnet-4-6"
         },
         {
@@ -2886,7 +2886,7 @@
           "passed": 56,
           "cases_failing_often": 1,
           "cases_below_quality_bar": 1,
-          "scope": "single_call",
+          "scope": "full_invocation",
           "judge": "claude-sonnet-4-6"
         },
         {
@@ -4012,7 +4012,7 @@
           "passed": 38,
           "cases_failing_often": 1,
           "cases_below_quality_bar": 1,
-          "scope": "single_call",
+          "scope": "full_invocation",
           "judge": "claude-sonnet-5-5"
         },
         {
@@ -4049,7 +4049,7 @@
           "passed": 145,
           "cases_failing_often": 0,
           "cases_below_quality_bar": 0,
-          "scope": "single_call"
+          "scope": "full_invocation"
         },
         {
           "task": "cert_judge",
@@ -5167,7 +5167,7 @@
           "unmeasured_sites": [
             "capture_classify/deal_topic"
           ],
-          "scope": "single_call",
+          "scope": "full_invocation",
           "judge": "claude-sonnet-4-6"
         },
         {
@@ -5204,7 +5204,7 @@
           "passed": 68,
           "cases_failing_often": 1,
           "cases_below_quality_bar": 4,
-          "scope": "single_call",
+          "scope": "full_invocation",
           "judge": "claude-sonnet-4-6"
         },
         {
@@ -6381,7 +6381,7 @@
           "unmeasured_sites": [
             "capture_classify/deal_topic"
           ],
-          "scope": "single_call",
+          "scope": "full_invocation",
           "judge": "claude-sonnet-4-6"
         },
         {
@@ -6418,7 +6418,7 @@
           "passed": 51,
           "cases_failing_often": 3,
           "cases_below_quality_bar": 2,
-          "scope": "single_call",
+          "scope": "full_invocation",
           "judge": "claude-sonnet-4-6"
         },
         {
@@ -7555,7 +7555,7 @@
             "capture_classify/classify",
             "capture_classify/deal_topic"
           ],
-          "scope": "single_call"
+          "scope": "full_invocation"
         },
         {
           "task": "capture_confidentiality_verdict",
@@ -7597,7 +7597,7 @@
           "unmeasured_sites": [
             "capture_counterparty_verdict/verdict"
           ],
-          "scope": "single_call"
+          "scope": "full_invocation"
         },
         {
           "task": "cert_judge",
@@ -8789,7 +8789,7 @@
             "capture_classify/classify",
             "capture_classify/deal_topic"
           ],
-          "scope": "single_call"
+          "scope": "full_invocation"
         },
         {
           "task": "capture_confidentiality_verdict",
@@ -8831,7 +8831,7 @@
           "unmeasured_sites": [
             "capture_counterparty_verdict/verdict"
           ],
-          "scope": "single_call"
+          "scope": "full_invocation"
         },
         {
           "task": "cert_judge",
@@ -9893,12 +9893,12 @@
           "sites_current": 47,
           "sites_partial": 1,
           "sites_stale": 7,
-          "runs": 1428,
-          "passed": 1381,
-          "reliability": 0.9670868347338936,
+          "runs": 1425,
+          "passed": 1377,
+          "reliability": 0.9663157894736842,
           "reliability_interval": {
-            "lower": 0.960479,
-            "upper": 0.972621
+            "lower": 0.959634,
+            "upper": 0.971924
           },
           "slowest_p95_ms": 9816,
           "bands": {
@@ -10052,8 +10052,8 @@
           },
           "band": "certified",
           "state": "current",
-          "runs": 147,
-          "passed": 147,
+          "runs": 144,
+          "passed": 143,
           "records": 1
         },
         {
@@ -12724,12 +12724,12 @@
       "sites_current": 47,
       "sites_partial": 1,
       "sites_stale": 10,
-      "runs": 1587,
-      "passed": 1523,
-      "reliability": 0.9596723377441714,
+      "runs": 1584,
+      "passed": 1519,
+      "reliability": 0.9589646464646465,
       "reliability_interval": {
-        "lower": 0.952854,
-        "upper": 0.965541
+        "lower": 0.952087,
+        "upper": 0.964891
       },
       "slowest_p95_ms": 9816,
       "bands": {
@@ -15356,7 +15356,7 @@
       "task": "capture_classify",
       "site": "classify",
       "key": "capture_classify/classify",
-      "scope": "single_call",
+      "scope": "full_invocation",
       "missing_context_scopes": [],
       "best_state": "current",
       "recommended": {
@@ -15456,8 +15456,8 @@
             "lower": 0.952587,
             "upper": 1
           },
-          "latency_p50_ms": 900,
-          "latency_p95_ms": 1131,
+          "latency_p50_ms": 1439,
+          "latency_p95_ms": 1841,
           "reported": {
             "accepted": 33,
             "wrong_answer": 0,
@@ -15958,8 +15958,8 @@
             "lower": 0.845666,
             "upper": 1
           },
-          "latency_p50_ms": 900,
-          "latency_p95_ms": 1131,
+          "latency_p50_ms": 1439,
+          "latency_p95_ms": 1841,
           "reported": {
             "accepted": 9,
             "wrong_answer": 0,
@@ -16765,7 +16765,7 @@
       "task": "capture_counterparty_verdict",
       "site": "verdict",
       "key": "capture_counterparty_verdict/verdict",
-      "scope": "single_call",
+      "scope": "full_invocation",
       "missing_context_scopes": [],
       "best_state": "current",
       "recommended": {
@@ -16775,12 +16775,12 @@
           "env": "cloud_frontier"
         },
         "band": "certified",
-        "runs": 147,
-        "passed": 147,
-        "reliability": 1,
+        "runs": 144,
+        "passed": 143,
+        "reliability": 0.9930555555555556,
         "reliability_interval": {
-          "lower": 0.98895,
-          "upper": 1
+          "lower": 0.97707,
+          "upper": 0.997921
         },
         "state": "current"
       },
@@ -16810,22 +16810,10 @@
           "file": "backend/internal/compose/aicert/corpus/capture_counterparty_verdict/spam_bot_written_01.yaml"
         },
         {
-          "name": "a_numbered_support_queue_is_one_desk",
-          "expects": "accepted",
-          "graded_by": "mechanical",
-          "file": "backend/internal/compose/aicert/corpus/capture_counterparty_verdict/role_mailbox_numbered_queue_01.yaml"
-        },
-        {
           "name": "a_private_property_desk_the_owner_wrote_to_is_not_a_contact",
           "expects": "accepted",
           "graded_by": "mechanical",
           "file": "backend/internal/compose/aicert/corpus/capture_counterparty_verdict/role_mailbox_property_desk_outbound_01.yaml"
-        },
-        {
-          "name": "a_shared_mailbox_is_real_correspondence_with_nobody_to_name",
-          "expects": "accepted",
-          "graded_by": "mechanical",
-          "file": "backend/internal/compose/aicert/corpus/capture_counterparty_verdict/role_mailbox_01.yaml"
         },
         {
           "name": "a_trade_offices_city_mailbox_names_a_place_not_a_contact",
@@ -16921,20 +16909,20 @@
           },
           "state": "current",
           "band": "certified",
-          "scenarios_measured": 21,
-          "scenarios_total": 21,
-          "runs": 147,
-          "passed": 147,
-          "reliability": 1,
+          "scenarios_measured": 19,
+          "scenarios_total": 19,
+          "runs": 144,
+          "passed": 143,
+          "reliability": 0.9930555555555556,
           "reliability_interval": {
-            "lower": 0.98895,
-            "upper": 1
+            "lower": 0.97707,
+            "upper": 0.997921
           },
-          "latency_p50_ms": 871,
-          "latency_p95_ms": 1019,
+          "latency_p50_ms": 1440,
+          "latency_p95_ms": 1702,
           "reported": {
-            "accepted": 147,
-            "wrong_answer": 0,
+            "accepted": 143,
+            "wrong_answer": 1,
             "invalid": 0,
             "abstained": 0
           },
@@ -16949,7 +16937,7 @@
           "state": "stale",
           "band": "certified",
           "scenarios_measured": 0,
-          "scenarios_total": 21,
+          "scenarios_total": 19,
           "runs": 153,
           "passed": 150,
           "reliability": 0.9803921568627451,
@@ -16965,16 +16953,14 @@
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": "21 scenarios it scored have changed since (how a run is graded): a_chased_cold_pitch_is_still_a_vendor_pitch, a_company_writing_as_itself_does_not_become_a_contact_named_after_it, a_department_display_name_is_not_somebodys_name, a_fluent_machine_written_pitch_is_still_a_vendor_pitch, a_numbered_support_queue_is_one_desk, a_private_property_desk_the_owner_wrote_to_is_not_a_contact and 15 more; the provider's wire translation changed since the run",
+          "stale_reason": "19 scenarios it scored have changed since (how a run is graded): a_chased_cold_pitch_is_still_a_vendor_pitch, a_company_writing_as_itself_does_not_become_a_contact_named_after_it, a_department_display_name_is_not_somebodys_name, a_fluent_machine_written_pitch_is_still_a_vendor_pitch, a_private_property_desk_the_owner_wrote_to_is_not_a_contact, a_trade_offices_city_mailbox_names_a_place_not_a_contact and 13 more; the provider's wire translation changed since the run (it also scored a_numbered_support_queue_is_one_desk, a_shared_mailbox_is_real_correspondence_with_nobody_to_name, which the corpus no longer holds)",
           "stale_cause": {
             "grader_changed": [
               "a_chased_cold_pitch_is_still_a_vendor_pitch",
               "a_company_writing_as_itself_does_not_become_a_contact_named_after_it",
               "a_department_display_name_is_not_somebodys_name",
               "a_fluent_machine_written_pitch_is_still_a_vendor_pitch",
-              "a_numbered_support_queue_is_one_desk",
               "a_private_property_desk_the_owner_wrote_to_is_not_a_contact",
-              "a_shared_mailbox_is_real_correspondence_with_nobody_to_name",
               "a_trade_offices_city_mailbox_names_a_place_not_a_contact",
               "a_two_sided_thread_is_a_conversation",
               "an_automated_invoice_notice_is_not_a_contact",
@@ -17002,7 +16988,7 @@
           "band": "not_supported",
           "judge": "claude-sonnet-4-6",
           "scenarios_measured": 0,
-          "scenarios_total": 21,
+          "scenarios_total": 19,
           "runs": 75,
           "passed": 68,
           "reliability": 0.9066666666666666,
@@ -17018,14 +17004,12 @@
             "invalid": 4,
             "abstained": 0
           },
-          "stale_reason": "15 scenarios it scored have changed since (the case and the prompt this build sends and how a run is graded): a_company_writing_as_itself_does_not_become_a_contact_named_after_it, a_department_display_name_is_not_somebodys_name, a_numbered_support_queue_is_one_desk, a_private_property_desk_the_owner_wrote_to_is_not_a_contact, a_shared_mailbox_is_real_correspondence_with_nobody_to_name, a_trade_offices_city_mailbox_names_a_place_not_a_contact and 9 more; graded by judge claude-sonnet-4-6, and this build grades with claude-sonnet-5-5 (it also scored a_chased_cold_pitch_is_still_spam, a_fluent_machine_written_pitch_is_still_spam, a_private_correspondent_is_not_a_business_contact, courteous_cold_pitch_is_spam, which the corpus no longer holds)",
+          "stale_reason": "13 scenarios it scored have changed since (the case and the prompt this build sends and how a run is graded): a_company_writing_as_itself_does_not_become_a_contact_named_after_it, a_department_display_name_is_not_somebodys_name, a_private_property_desk_the_owner_wrote_to_is_not_a_contact, a_trade_offices_city_mailbox_names_a_place_not_a_contact, a_two_sided_thread_is_a_conversation, an_automated_invoice_notice_is_not_a_contact and 7 more; graded by judge claude-sonnet-4-6, and this build grades with claude-sonnet-5-5 (it also scored a_chased_cold_pitch_is_still_spam, a_fluent_machine_written_pitch_is_still_spam, a_numbered_support_queue_is_one_desk, a_private_correspondent_is_not_a_business_contact, a_shared_mailbox_is_real_correspondence_with_nobody_to_name, courteous_cold_pitch_is_spam, which the corpus no longer holds)",
           "stale_cause": {
             "case_changed": [
               "a_company_writing_as_itself_does_not_become_a_contact_named_after_it",
               "a_department_display_name_is_not_somebodys_name",
-              "a_numbered_support_queue_is_one_desk",
               "a_private_property_desk_the_owner_wrote_to_is_not_a_contact",
-              "a_shared_mailbox_is_real_correspondence_with_nobody_to_name",
               "a_trade_offices_city_mailbox_names_a_place_not_a_contact",
               "a_two_sided_thread_is_a_conversation",
               "an_automated_invoice_notice_is_not_a_contact",
@@ -17040,9 +17024,7 @@
             "prompt_changed": [
               "a_company_writing_as_itself_does_not_become_a_contact_named_after_it",
               "a_department_display_name_is_not_somebodys_name",
-              "a_numbered_support_queue_is_one_desk",
               "a_private_property_desk_the_owner_wrote_to_is_not_a_contact",
-              "a_shared_mailbox_is_real_correspondence_with_nobody_to_name",
               "a_trade_offices_city_mailbox_names_a_place_not_a_contact",
               "a_two_sided_thread_is_a_conversation",
               "an_automated_invoice_notice_is_not_a_contact",
@@ -17057,9 +17039,7 @@
             "grader_changed": [
               "a_company_writing_as_itself_does_not_become_a_contact_named_after_it",
               "a_department_display_name_is_not_somebodys_name",
-              "a_numbered_support_queue_is_one_desk",
               "a_private_property_desk_the_owner_wrote_to_is_not_a_contact",
-              "a_shared_mailbox_is_real_correspondence_with_nobody_to_name",
               "a_trade_offices_city_mailbox_names_a_place_not_a_contact",
               "a_two_sided_thread_is_a_conversation",
               "an_automated_invoice_notice_is_not_a_contact",
@@ -17082,7 +17062,7 @@
           "state": "stale",
           "band": "certified",
           "scenarios_measured": 0,
-          "scenarios_total": 21,
+          "scenarios_total": 19,
           "runs": 147,
           "passed": 147,
           "reliability": 1,
@@ -17098,16 +17078,14 @@
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": "21 scenarios it scored have changed since (how a run is graded): a_chased_cold_pitch_is_still_a_vendor_pitch, a_company_writing_as_itself_does_not_become_a_contact_named_after_it, a_department_display_name_is_not_somebodys_name, a_fluent_machine_written_pitch_is_still_a_vendor_pitch, a_numbered_support_queue_is_one_desk, a_private_property_desk_the_owner_wrote_to_is_not_a_contact and 15 more",
+          "stale_reason": "19 scenarios it scored have changed since (how a run is graded): a_chased_cold_pitch_is_still_a_vendor_pitch, a_company_writing_as_itself_does_not_become_a_contact_named_after_it, a_department_display_name_is_not_somebodys_name, a_fluent_machine_written_pitch_is_still_a_vendor_pitch, a_private_property_desk_the_owner_wrote_to_is_not_a_contact, a_trade_offices_city_mailbox_names_a_place_not_a_contact and 13 more (it also scored a_numbered_support_queue_is_one_desk, a_shared_mailbox_is_real_correspondence_with_nobody_to_name, which the corpus no longer holds)",
           "stale_cause": {
             "grader_changed": [
               "a_chased_cold_pitch_is_still_a_vendor_pitch",
               "a_company_writing_as_itself_does_not_become_a_contact_named_after_it",
               "a_department_display_name_is_not_somebodys_name",
               "a_fluent_machine_written_pitch_is_still_a_vendor_pitch",
-              "a_numbered_support_queue_is_one_desk",
               "a_private_property_desk_the_owner_wrote_to_is_not_a_contact",
-              "a_shared_mailbox_is_real_correspondence_with_nobody_to_name",
               "a_trade_offices_city_mailbox_names_a_place_not_a_contact",
               "a_two_sided_thread_is_a_conversation",
               "an_automated_invoice_notice_is_not_a_contact",
@@ -17135,7 +17113,7 @@
           "band": "not_supported",
           "judge": "claude-sonnet-4-6",
           "scenarios_measured": 0,
-          "scenarios_total": 21,
+          "scenarios_total": 19,
           "runs": 63,
           "passed": 51,
           "reliability": 0.8095238095238095,
@@ -17151,14 +17129,12 @@
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": "15 scenarios it scored have changed since (the case and the prompt this build sends and how a run is graded): a_company_writing_as_itself_does_not_become_a_contact_named_after_it, a_department_display_name_is_not_somebodys_name, a_numbered_support_queue_is_one_desk, a_private_property_desk_the_owner_wrote_to_is_not_a_contact, a_shared_mailbox_is_real_correspondence_with_nobody_to_name, a_trade_offices_city_mailbox_names_a_place_not_a_contact and 9 more; graded by judge claude-sonnet-4-6, and this build grades with claude-sonnet-5-5 (it also scored a_chased_cold_pitch_is_still_spam, a_fluent_machine_written_pitch_is_still_spam, a_private_correspondent_is_not_a_business_contact, courteous_cold_pitch_is_spam, which the corpus no longer holds)",
+          "stale_reason": "13 scenarios it scored have changed since (the case and the prompt this build sends and how a run is graded): a_company_writing_as_itself_does_not_become_a_contact_named_after_it, a_department_display_name_is_not_somebodys_name, a_private_property_desk_the_owner_wrote_to_is_not_a_contact, a_trade_offices_city_mailbox_names_a_place_not_a_contact, a_two_sided_thread_is_a_conversation, an_automated_invoice_notice_is_not_a_contact and 7 more; graded by judge claude-sonnet-4-6, and this build grades with claude-sonnet-5-5 (it also scored a_chased_cold_pitch_is_still_spam, a_fluent_machine_written_pitch_is_still_spam, a_numbered_support_queue_is_one_desk, a_private_correspondent_is_not_a_business_contact, a_shared_mailbox_is_real_correspondence_with_nobody_to_name, courteous_cold_pitch_is_spam, which the corpus no longer holds)",
           "stale_cause": {
             "case_changed": [
               "a_company_writing_as_itself_does_not_become_a_contact_named_after_it",
               "a_department_display_name_is_not_somebodys_name",
-              "a_numbered_support_queue_is_one_desk",
               "a_private_property_desk_the_owner_wrote_to_is_not_a_contact",
-              "a_shared_mailbox_is_real_correspondence_with_nobody_to_name",
               "a_trade_offices_city_mailbox_names_a_place_not_a_contact",
               "a_two_sided_thread_is_a_conversation",
               "an_automated_invoice_notice_is_not_a_contact",
@@ -17173,9 +17149,7 @@
             "prompt_changed": [
               "a_company_writing_as_itself_does_not_become_a_contact_named_after_it",
               "a_department_display_name_is_not_somebodys_name",
-              "a_numbered_support_queue_is_one_desk",
               "a_private_property_desk_the_owner_wrote_to_is_not_a_contact",
-              "a_shared_mailbox_is_real_correspondence_with_nobody_to_name",
               "a_trade_offices_city_mailbox_names_a_place_not_a_contact",
               "a_two_sided_thread_is_a_conversation",
               "an_automated_invoice_notice_is_not_a_contact",
@@ -17190,9 +17164,7 @@
             "grader_changed": [
               "a_company_writing_as_itself_does_not_become_a_contact_named_after_it",
               "a_department_display_name_is_not_somebodys_name",
-              "a_numbered_support_queue_is_one_desk",
               "a_private_property_desk_the_owner_wrote_to_is_not_a_contact",
-              "a_shared_mailbox_is_real_correspondence_with_nobody_to_name",
               "a_trade_offices_city_mailbox_names_a_place_not_a_contact",
               "a_two_sided_thread_is_a_conversation",
               "an_automated_invoice_notice_is_not_a_contact",
@@ -17216,7 +17188,7 @@
           "band": "not_supported",
           "judge": "claude-sonnet-4-6",
           "scenarios_measured": 0,
-          "scenarios_total": 21,
+          "scenarios_total": 19,
           "runs": 60,
           "passed": 56,
           "reliability": 0.9333333333333333,
@@ -17232,14 +17204,12 @@
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": "15 scenarios it scored have changed since (the case and the prompt this build sends and how a run is graded): a_company_writing_as_itself_does_not_become_a_contact_named_after_it, a_department_display_name_is_not_somebodys_name, a_numbered_support_queue_is_one_desk, a_private_property_desk_the_owner_wrote_to_is_not_a_contact, a_shared_mailbox_is_real_correspondence_with_nobody_to_name, a_trade_offices_city_mailbox_names_a_place_not_a_contact and 9 more; graded by judge claude-sonnet-4-6, and this build grades with claude-sonnet-5-5 (it also scored a_chased_cold_pitch_is_still_spam, a_fluent_machine_written_pitch_is_still_spam, a_private_correspondent_is_not_a_business_contact, courteous_cold_pitch_is_spam, which the corpus no longer holds)",
+          "stale_reason": "13 scenarios it scored have changed since (the case and the prompt this build sends and how a run is graded): a_company_writing_as_itself_does_not_become_a_contact_named_after_it, a_department_display_name_is_not_somebodys_name, a_private_property_desk_the_owner_wrote_to_is_not_a_contact, a_trade_offices_city_mailbox_names_a_place_not_a_contact, a_two_sided_thread_is_a_conversation, an_automated_invoice_notice_is_not_a_contact and 7 more; graded by judge claude-sonnet-4-6, and this build grades with claude-sonnet-5-5 (it also scored a_chased_cold_pitch_is_still_spam, a_fluent_machine_written_pitch_is_still_spam, a_numbered_support_queue_is_one_desk, a_private_correspondent_is_not_a_business_contact, a_shared_mailbox_is_real_correspondence_with_nobody_to_name, courteous_cold_pitch_is_spam, which the corpus no longer holds)",
           "stale_cause": {
             "case_changed": [
               "a_company_writing_as_itself_does_not_become_a_contact_named_after_it",
               "a_department_display_name_is_not_somebodys_name",
-              "a_numbered_support_queue_is_one_desk",
               "a_private_property_desk_the_owner_wrote_to_is_not_a_contact",
-              "a_shared_mailbox_is_real_correspondence_with_nobody_to_name",
               "a_trade_offices_city_mailbox_names_a_place_not_a_contact",
               "a_two_sided_thread_is_a_conversation",
               "an_automated_invoice_notice_is_not_a_contact",
@@ -17254,9 +17224,7 @@
             "prompt_changed": [
               "a_company_writing_as_itself_does_not_become_a_contact_named_after_it",
               "a_department_display_name_is_not_somebodys_name",
-              "a_numbered_support_queue_is_one_desk",
               "a_private_property_desk_the_owner_wrote_to_is_not_a_contact",
-              "a_shared_mailbox_is_real_correspondence_with_nobody_to_name",
               "a_trade_offices_city_mailbox_names_a_place_not_a_contact",
               "a_two_sided_thread_is_a_conversation",
               "an_automated_invoice_notice_is_not_a_contact",
@@ -17271,9 +17239,7 @@
             "grader_changed": [
               "a_company_writing_as_itself_does_not_become_a_contact_named_after_it",
               "a_department_display_name_is_not_somebodys_name",
-              "a_numbered_support_queue_is_one_desk",
               "a_private_property_desk_the_owner_wrote_to_is_not_a_contact",
-              "a_shared_mailbox_is_real_correspondence_with_nobody_to_name",
               "a_trade_offices_city_mailbox_names_a_place_not_a_contact",
               "a_two_sided_thread_is_a_conversation",
               "an_automated_invoice_notice_is_not_a_contact",
@@ -17296,7 +17262,7 @@
           "state": "stale",
           "band": "not_supported",
           "scenarios_measured": 0,
-          "scenarios_total": 21,
+          "scenarios_total": 19,
           "runs": 150,
           "passed": 145,
           "reliability": 0.9666666666666667,
@@ -17312,16 +17278,14 @@
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": "21 scenarios it scored have changed since (how a run is graded): a_chased_cold_pitch_is_still_a_vendor_pitch, a_company_writing_as_itself_does_not_become_a_contact_named_after_it, a_department_display_name_is_not_somebodys_name, a_fluent_machine_written_pitch_is_still_a_vendor_pitch, a_numbered_support_queue_is_one_desk, a_private_property_desk_the_owner_wrote_to_is_not_a_contact and 15 more",
+          "stale_reason": "19 scenarios it scored have changed since (how a run is graded): a_chased_cold_pitch_is_still_a_vendor_pitch, a_company_writing_as_itself_does_not_become_a_contact_named_after_it, a_department_display_name_is_not_somebodys_name, a_fluent_machine_written_pitch_is_still_a_vendor_pitch, a_private_property_desk_the_owner_wrote_to_is_not_a_contact, a_trade_offices_city_mailbox_names_a_place_not_a_contact and 13 more (it also scored a_numbered_support_queue_is_one_desk, a_shared_mailbox_is_real_correspondence_with_nobody_to_name, which the corpus no longer holds)",
           "stale_cause": {
             "grader_changed": [
               "a_chased_cold_pitch_is_still_a_vendor_pitch",
               "a_company_writing_as_itself_does_not_become_a_contact_named_after_it",
               "a_department_display_name_is_not_somebodys_name",
               "a_fluent_machine_written_pitch_is_still_a_vendor_pitch",
-              "a_numbered_support_queue_is_one_desk",
               "a_private_property_desk_the_owner_wrote_to_is_not_a_contact",
-              "a_shared_mailbox_is_real_correspondence_with_nobody_to_name",
               "a_trade_offices_city_mailbox_names_a_place_not_a_contact",
               "a_two_sided_thread_is_a_conversation",
               "an_automated_invoice_notice_is_not_a_contact",
@@ -17348,7 +17312,7 @@
           "state": "stale",
           "band": "certified",
           "scenarios_measured": 0,
-          "scenarios_total": 21,
+          "scenarios_total": 19,
           "runs": 147,
           "passed": 147,
           "reliability": 1,
@@ -17364,16 +17328,14 @@
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": "21 scenarios it scored have changed since (how a run is graded): a_chased_cold_pitch_is_still_a_vendor_pitch, a_company_writing_as_itself_does_not_become_a_contact_named_after_it, a_department_display_name_is_not_somebodys_name, a_fluent_machine_written_pitch_is_still_a_vendor_pitch, a_numbered_support_queue_is_one_desk, a_private_property_desk_the_owner_wrote_to_is_not_a_contact and 15 more",
+          "stale_reason": "19 scenarios it scored have changed since (how a run is graded): a_chased_cold_pitch_is_still_a_vendor_pitch, a_company_writing_as_itself_does_not_become_a_contact_named_after_it, a_department_display_name_is_not_somebodys_name, a_fluent_machine_written_pitch_is_still_a_vendor_pitch, a_private_property_desk_the_owner_wrote_to_is_not_a_contact, a_trade_offices_city_mailbox_names_a_place_not_a_contact and 13 more (it also scored a_numbered_support_queue_is_one_desk, a_shared_mailbox_is_real_correspondence_with_nobody_to_name, which the corpus no longer holds)",
           "stale_cause": {
             "grader_changed": [
               "a_chased_cold_pitch_is_still_a_vendor_pitch",
               "a_company_writing_as_itself_does_not_become_a_contact_named_after_it",
               "a_department_display_name_is_not_somebodys_name",
               "a_fluent_machine_written_pitch_is_still_a_vendor_pitch",
-              "a_numbered_support_queue_is_one_desk",
               "a_private_property_desk_the_owner_wrote_to_is_not_a_contact",
-              "a_shared_mailbox_is_real_correspondence_with_nobody_to_name",
               "a_trade_offices_city_mailbox_names_a_place_not_a_contact",
               "a_two_sided_thread_is_a_conversation",
               "an_automated_invoice_notice_is_not_a_contact",

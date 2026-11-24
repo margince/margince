@@ -16,8 +16,6 @@
   "certified_scope": "single_call",
   "context_applied": false,
   "context_scopes": null,
-  "judge_score_p50": 0,
-  "judge_score_min": 0,
   "latency_p50": 991,
   "latency_p95": 1618,
   "mean_tokens": 717,
