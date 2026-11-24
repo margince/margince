@@ -117,11 +117,45 @@ type wireConfirmCode struct {
 	Args       string `json:"args"`
 	// The record the call acts on, and the rows the preview pinned as a staging
 	// of the call would have.
-	TargetType string                  `json:"tt,omitempty"`
-	TargetID   ids.UUID                `json:"tid,omitzero"`
-	Pins       auth.ReleasedRecordPins `json:"pins"`
-	Once       string                  `json:"n"`
-	Exp        int64                   `json:"exp"`
+	TargetType string   `json:"tt,omitempty"`
+	TargetID   ids.UUID `json:"tid,omitzero"`
+	Pins       wirePins `json:"p,omitzero"`
+	Once       string   `json:"n"`
+	Exp        int64    `json:"exp"`
+}
+
+// wirePins are a release's pins in the code. The keys are short because the
+// model copies the code back by hand.
+type wirePins struct {
+	Target   *wirePin `json:"t,omitempty"`
+	CoTarget *wirePin `json:"c,omitempty"`
+}
+
+type wirePin struct {
+	Type    string   `json:"t"`
+	ID      ids.UUID `json:"i"`
+	Version int64    `json:"v"`
+	Context string   `json:"x,omitempty"`
+}
+
+func pinsOnWire(pins auth.ReleasedRecordPins) wirePins {
+	one := func(pin *auth.ReleasedRecordPin) *wirePin {
+		if pin == nil {
+			return nil
+		}
+		return &wirePin{Type: pin.EntityType, ID: pin.EntityID, Version: pin.Version, Context: pin.ContextDigest}
+	}
+	return wirePins{Target: one(pins.Target), CoTarget: one(pins.CoTarget)}
+}
+
+func (w wirePins) released() auth.ReleasedRecordPins {
+	one := func(pin *wirePin) *auth.ReleasedRecordPin {
+		if pin == nil {
+			return nil
+		}
+		return &auth.ReleasedRecordPin{EntityType: pin.Type, EntityID: pin.ID, Version: pin.Version, ContextDigest: pin.Context}
+	}
+	return auth.ReleasedRecordPins{Target: one(w.Target), CoTarget: one(w.CoTarget)}
 }
 
 // codeIdentity is who a code is for: every part of the caller a code may not
@@ -197,7 +231,7 @@ func (c conversationConfirm) spend(ctx context.Context, tool, diffHash, code str
 // markConfirmed marks ctx released as a redeemed approval would be, so every
 // writer honours it and re-checks the previewed pins under its own row lock.
 func markConfirmed(ctx context.Context, claim wireConfirmCode) context.Context {
-	marked, _, _ := markReleased(ctx, claim.Pins)
+	marked, _, _ := markReleased(ctx, claim.Pins.released())
 	return marked
 }
 

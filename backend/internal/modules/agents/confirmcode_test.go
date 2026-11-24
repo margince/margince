@@ -474,3 +474,27 @@ func TestAConfirmCodeNeedsACaller(t *testing.T) {
 		t.Errorf("spending with no caller → %v, want refused", err)
 	}
 }
+
+// The pins survive the trip through the code, context digest included, so the
+// writer re-checks what the preview pinned.
+func TestThePinsSurviveTheCode(t *testing.T) {
+	pins := auth.ReleasedRecordPins{
+		Target:   &auth.ReleasedRecordPin{EntityType: "lead", EntityID: ids.NewV7(), Version: 3, ContextDigest: "facts"},
+		CoTarget: &auth.ReleasedRecordPin{EntityType: "company", EntityID: ids.NewV7(), Version: 9},
+	}
+	encoded, err := json.Marshal(pinsOnWire(pins))
+	if err != nil {
+		t.Fatal(err)
+	}
+	var decoded wirePins
+	if err := json.Unmarshal(encoded, &decoded); err != nil {
+		t.Fatal(err)
+	}
+	got := decoded.released()
+	if *got.Target != *pins.Target || *got.CoTarget != *pins.CoTarget {
+		t.Errorf("after the code the pins are %+v / %+v, want %+v / %+v", got.Target, got.CoTarget, pins.Target, pins.CoTarget)
+	}
+	if empty := (wirePins{}).released(); empty.Target != nil || empty.CoTarget != nil {
+		t.Error("a code with no pins must release no pins")
+	}
+}
