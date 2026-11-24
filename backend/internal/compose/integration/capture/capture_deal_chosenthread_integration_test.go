@@ -171,3 +171,22 @@ func TestALaterChoiceLeavesOlderMailOfTheConversationAlone(t *testing.T) {
 	}
 	wantDeals(t, e, "old1@partner.example")
 }
+
+// A colleague who relinks a mail onto the deal the machine already filed it on
+// confirms that deal by hand. The link stays one row, marked theirs, and the
+// rest of the conversation follows it.
+func TestARelinkOntoTheMachinesDealIsAColleaguesChoice(t *testing.T) {
+	env := newCaptureEnv(t)
+	e := env.e
+	w, _, deal := partnerWorld(t, env)
+
+	env.syncFiledUnderDeal(t, map[string][]ids.UUID{"conf1@partner.example": {deal}},
+		authenticated(mailFrom(partnerAddress, "conf1@partner.example", "", "project"), "partner.example"))
+	relinkAsColleague(t, e, w, activityOf(t, e, "conf1@partner.example"), "deal", deal)
+	wantDeals(t, e, "conf1@partner.example", deal)
+	wantMark(t, e, "conf1@partner.example", deal, "relevant/human")
+
+	env.syncSent(t, map[string]bool{"conf2@myco.example": true},
+		email(captureOwner, "", partnerAddress, "conf2@myco.example", "conf1@partner.example"))
+	wantDeals(t, e, "conf2@myco.example", deal)
+}

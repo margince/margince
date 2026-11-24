@@ -167,3 +167,15 @@ func writeDealMarkTx(ctx context.Context, tx pgx.Tx, id ids.ActivityID, deal ids
 		ChangedFields: relinkedChangedFields(linkEntityDeal, deal),
 	})
 }
+
+// confirmDealByHand records a colleague's relink onto a deal the activity is
+// already linked to as their mark on that link. The link row stays one row,
+// and capture reads the mark as the colleague's choice of the deal.
+func confirmDealByHand(ctx context.Context, tx pgx.Tx, id ids.ActivityID, in RelinkActivityInput) error {
+	actor, ok := principal.Actor(ctx)
+	if !ok || !actor.HumanOrItsAgent() || in.EntityType != linkEntityDeal || in.relevance != "" {
+		return nil
+	}
+	_, err := writeDealMarkTx(ctx, tx, id, in.EntityID, dealMark{relevance: relstrength.DealRelevant, source: relstrength.RelevanceByHuman})
+	return err
+}
