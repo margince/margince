@@ -114,7 +114,7 @@ func RegisterRouteVerbs(r *Registry, verbs []RouteVerb, run RouteRunner) {
 	if len(verbs) == 0 {
 		return
 	}
-	r.Register(describeRouterActions{verbs: verbs, runs: r.routerRunSpec})
+	r.Register(describeRouterActions{verbs: verbs, runs: r.routerRunSpec, choices: r.routerChoices, offered: r.offeredActions})
 	r.mu.Lock()
 	r.routeActions[readWorkspaceName] = map[string]string{routeActionsTopic: describeRouterActionsName}
 	r.mu.Unlock()
@@ -407,6 +407,11 @@ type describeRouterActions struct {
 	verbs []RouteVerb
 	// runs finds an action the router runs in process, which has no route.
 	runs func(router, action string) (mcp.ToolSpec, bool)
+	// choices names every action of a router, routed or run in process.
+	choices func(router string) []string
+	// offered says which of a router's actions the caller's tools/list offers,
+	// and false when it offers the router not at all.
+	offered func(ctx context.Context, router string) (func(action string) bool, bool)
 }
 
 func (d describeRouterActions) routers() []string {
@@ -426,11 +431,13 @@ func (d describeRouterActions) Spec() mcp.ToolSpec {
 			"router's whole list is long.",
 		RequiredScope: principal.ScopeRead, Tier: mcp.TierAutoExecute, Unlisted: true,
 		OpenAPIOp: "describeRouterActions",
-		OutputSchema: schema(`{"type":"object","required":["router","actions"],"properties":{` +
-			`"router":{"type":"string"},"ask_user_first_means":{"type":"string"},"actions":{"type":"array","items":{"type":"object",` +
+		OutputSchema: schema(`{"type":"object","required":["router","actions","how_to_call"],"properties":{` +
+			`"router":{"type":"string"},"ask_user_first_means":{"type":"string"},"how_to_call":{"type":"string"},"actions":{"type":"array","items":{"type":"object",` +
 			`"required":["action","does","route"],"properties":{"action":{"type":"string"},` +
 			`"does":{"type":"string"},"route":{"type":"string"},"ids":{"type":"array","items":{"type":"string"}},` +
-			`"query":{"type":"array","items":{"type":"string"}},"if_version":{"type":"boolean"},` +
+			`"query":{"type":"array","items":{"type":"object","required":["name","type"],"properties":{"name":{"type":"string"},` +
+			`"type":{"type":"string"},"required":{"type":"boolean"},"enum":{"type":"array","items":{"type":"string"}},` +
+			`"format":{"type":"string"}}}},"if_version":{"type":"boolean"},` +
 			`"ask_user_first":{"type":"boolean"},"uploads_a_file":{"type":"boolean"},"body":{"type":"object"}}}}}}`),
 		InputSchema: schema(`{"type":"object","required":["router"],"properties":{"router":{"type":"string","enum":` +
 			mustJSON(d.routers()) + `},"action":{"type":"string","description":"One action to describe; leave it out for all of them"}},"additionalProperties":false}`),
@@ -439,14 +446,14 @@ func (d describeRouterActions) Spec() mcp.ToolSpec {
 
 // routerRunRoute stands in the route column for an action the router runs in
 // process: the arguments go to the router itself, beside its action field.
-const routerRunRoute = "in process: call the router with these arguments"
+const routerRunRoute = "in process: send body's members at the top level, beside action"
 
 type routeActionShape struct {
 	Action       string          `json:"action"`
 	Does         string          `json:"does"`
 	Route        string          `json:"route"`
 	IDs          []string        `json:"ids,omitempty"`
-	Query        []string        `json:"query,omitempty"`
+	Query        []ViewQuery     `json:"query,omitempty"`
 	IfVersion    bool            `json:"if_version,omitempty"`
 	AskUserFirst bool            `json:"ask_user_first,omitempty"`
 	Body         json.RawMessage `json:"body,omitempty"`
@@ -455,7 +462,9 @@ type routeActionShape struct {
 	UploadsAFile bool `json:"uploads_a_file,omitempty"`
 }
 
-func (d describeRouterActions) Handle(_ context.Context, in json.RawMessage) (json.RawMessage, error) {
+// Handle answers for the caller: a router or action its tools/list does not
+// offer is refused as one the catalog does not have.
+func (d describeRouterActions) Handle(ctx context.Context, in json.RawMessage) (json.RawMessage, error) {
 	var args struct {
 		Router string `json:"router"`
 		Action string `json:"action"`
@@ -463,5 +472,13 @@ func (d describeRouterActions) Handle(_ context.Context, in json.RawMessage) (js
 	if err := json.Unmarshal(in, &args); err != nil {
 		return nil, &BadArgsError{Field: catalogRouterArg, Cause: err}
 	}
-	return d.catalog(args.Router, args.Action)
+	if d.offered == nil {
+		return d.catalog(args.Router, args.Action, nil)
+	}
+	seen, offered := d.offered(ctx, args.Router)
+	if !offered {
+		visible := slices.DeleteFunc(d.routers(), func(router string) bool { _, ok := d.offered(ctx, router); return !ok })
+		return nil, &BadArgsError{Field: catalogRouterArg, Cause: fmt.Errorf("router must be one of %s", strings.Join(visible, ", "))}
+	}
+	return d.catalog(args.Router, args.Action, seen)
 }

@@ -54304,22 +54304,30 @@ export interface components {
         AgentToolListResponse: {
             data: components["schemas"]["AgentTool"][];
         };
-        /** @description The actions of one MCP router whose actions run REST routes. */
+        /** @description The actions of one MCP router, with the arguments each takes. */
         RouterActions: {
             router: string;
             /** @description What ask_user_first asks of the model; present when an action here has it. */
             ask_user_first_means?: string;
+            /** @description Where an action's arguments go in the router call: top-level members beside action, a routed body in request_body. */
+            how_to_call: string;
             actions: {
                 /** @description The value the router's action argument takes. */
                 action: string;
-                /** @description The route's summary. */
+                /** @description What the action does. */
                 does: string;
                 /** @description The method and route, for example POST /v1/record-grants. */
                 route: string;
                 /** @description The path ids the action takes as arguments. */
                 ids?: string[];
-                /** @description The query parameters it takes as arguments. */
-                query?: string[];
+                /** @description The query parameters it takes as arguments, each with its type and any closed values. */
+                query?: {
+                    name: string;
+                    type: string;
+                    required?: boolean;
+                    enum?: string[];
+                    format?: string;
+                }[];
                 /** @description Whether it takes if_version: the version you last read. */
                 if_version?: boolean;
                 /** @description Whether the app asks its user to confirm it first. */
@@ -54327,7 +54335,9 @@ export interface components {
                 /** @description Whether it takes filename, content_type and content_base64. */
                 uploads_a_file?: boolean;
                 /** @description The JSON schema of its body argument. */
-                body?: Record<string, never>;
+                body?: {
+                    [key: string]: unknown;
+                };
             }[];
         };
         /**

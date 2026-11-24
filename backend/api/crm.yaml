@@ -74690,11 +74690,12 @@ components:
 
     RouterActions:
       type: object
-      description: The actions of one MCP router whose actions run REST routes.
-      required: [router, actions]
+      description: The actions of one MCP router, with the arguments each takes.
+      required: [router, actions, how_to_call]
       properties:
         router: { type: string }
         ask_user_first_means: { type: string, description: 'What ask_user_first asks of the model; present when an action here has it.' }
+        how_to_call: { type: string, description: 'Where an action''s arguments go in the router call: top-level members beside action, a routed body in request_body.' }
         actions:
           type: array
           items:
@@ -74702,14 +74703,25 @@ components:
             required: [action, does, route]
             properties:
               action: { type: string, description: 'The value the router''s action argument takes.' }
-              does: { type: string, description: 'The route''s summary.' }
+              does: { type: string, description: 'What the action does.' }
               route: { type: string, description: 'The method and route, for example POST /v1/record-grants.' }
               ids: { type: array, items: { type: string }, description: The path ids the action takes as arguments. }
-              query: { type: array, items: { type: string }, description: The query parameters it takes as arguments. }
+              query:
+                type: array
+                description: The query parameters it takes as arguments, each with its type and any closed values.
+                items:
+                  type: object
+                  required: [name, type]
+                  properties:
+                    name: { type: string }
+                    type: { type: string }
+                    required: { type: boolean }
+                    enum: { type: array, items: { type: string } }
+                    format: { type: string }
               if_version: { type: boolean, description: 'Whether it takes if_version: the version you last read.' }
               ask_user_first: { type: boolean, description: Whether the app asks its user to confirm it first. }
               uploads_a_file: { type: boolean, description: 'Whether it takes filename, content_type and content_base64.' }
-              body: { type: object, description: The JSON schema of its body argument. }
+              body: { type: object, additionalProperties: true, description: The JSON schema of its body argument. }
 
     AgentAdmissionPolicy:
       type: object
