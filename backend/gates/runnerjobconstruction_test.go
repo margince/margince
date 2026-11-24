@@ -111,6 +111,7 @@ func isRunnerJob(expr ast.Expr) bool {
 // The walk reads backend/ only. runner sits under backend/internal/, so Go's
 // internal rule keeps every module outside backend/ from naming runner.Job.
 func TestOnlySanctionedFilesBuildARunnerJob(t *testing.T) {
+	t.Parallel()
 	root := "."
 	var offenders []string
 	seen := map[string]bool{}
@@ -168,6 +169,7 @@ func TestOnlySanctionedFilesBuildARunnerJob(t *testing.T) {
 
 // Each form is one a scan of composite literals alone would miss.
 func TestTheJobConstructionScanSeesEveryFormOfIt(t *testing.T) {
+	t.Parallel()
 	for _, tc := range []struct {
 		name string
 		src  string
