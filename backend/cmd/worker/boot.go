@@ -167,7 +167,9 @@ func startEventLanes(laneCtx context.Context, background *sync.WaitGroup, cfg wo
 	}
 	// Before the runner lane: an offer a Surface-B run changes reclaims its
 	// retired rendering from this store.
-	lanes.blob = blob
+	if err := lanes.bindStores(laneCtx, cfg.settings, blob, stdout); err != nil {
+		return lanes, err
+	}
 	// What a unit's Models and Objects reach on a job tick or a bus delivery.
 	compose.BindExtensionModels(modelPath.ExtensionTasks)
 	laneCtx = originalstore.Bind(laneCtx, compose.InstallationDB(pool), blob)

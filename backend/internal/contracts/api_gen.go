@@ -35461,9 +35461,9 @@ type AiFeatureRoute struct {
 	BudgetExempt bool `json:"budget_exempt"`
 
 	// Certification The certification grade of the model that answers this feature first (the lead of
-	// `normal_candidates`), read from the committed certification records by the readiness
+	// `effective_candidates`), read from the committed certification records by the readiness
 	// report's rule: the worst grade over every site the feature ships, and not measured when
-	// any site has no record for that model. Absent when no model is bound, and for embeddings.
+	// any site has no record for that model. Absent when no model is bound or the budget blocks the feature, and for embeddings.
 	Certification *AiTaskCertification `json:"certification,omitempty"`
 
 	// Decides The task declares a decision form, so a decision model may answer it first and its decision timeout applies.
@@ -36022,7 +36022,7 @@ type AiProviderSettings struct {
 
 // AiRouteCandidate defines model for AiRouteCandidate.
 type AiRouteCandidate struct {
-	// Certification What the certification records say about this model for this task. Absent on a candidate no record measured, which the screen reads as not certified.
+	// Certification What the certification records say about this model for this task, read by the same rule as the feature's `certification` grade, so the lead candidate and the feature never disagree. Absent on a candidate that grade calls not_measured.
 	Certification *AiRouteCertification `json:"certification,omitempty"`
 	Model         string                `json:"model"`
 	Processing    string                `json:"processing"`
@@ -36030,7 +36030,7 @@ type AiRouteCandidate struct {
 	Tier          string                `json:"tier"`
 }
 
-// AiRouteCertification What the certification records say about this model for this task. Absent on a candidate no record measured, which the screen reads as not certified.
+// AiRouteCertification What the certification records say about this model for this task, read by the same rule as the feature's `certification` grade, so the lead candidate and the feature never disagree. Absent on a candidate that grade calls not_measured.
 type AiRouteCertification struct {
 	// Current Every record behind the verdict still describes the prompts this build sends.
 	Current bool `json:"current"`
@@ -36202,9 +36202,9 @@ type AiStatus struct {
 type AiTask string
 
 // AiTaskCertification The certification grade of the model that answers this feature first (the lead of
-// `normal_candidates`), read from the committed certification records by the readiness
+// `effective_candidates`), read from the committed certification records by the readiness
 // report's rule: the worst grade over every site the feature ships, and not measured when
-// any site has no record for that model. Absent when no model is bound, and for embeddings.
+// any site has no record for that model. Absent when no model is bound or the budget blocks the feature, and for embeddings.
 type AiTaskCertification struct {
 	// Grade ready — clears the certification bar, so rely on it; usable_with_care — mostly right, so have someone look over what it produces; not_reliable — wrong too often or below the quality bar; not_measured — no record grades this model on every site of the feature. docs/reference/ai-certification.md states the bars.
 	Grade string `json:"grade"`
