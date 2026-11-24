@@ -463,7 +463,7 @@ for ns in $all_namespaces; do
     comm -12 - <(echo "$fork_rows" | cut -d' ' -f1 | sort -u))"
   if [[ -n "$vanished" ]]; then
     for v in $vanished; do
-      vname="$(echo "$base_rows" | awk -v v="$v" '$1==v {print $2}' | head -n1)"
+      vname="$(echo "$base_rows" | awk -v v="$v" '$1==v {print $2}' | sed -n 1p)"
       # A declared renumber whose SQL is unchanged, or changed to a checked
       # equivalent, is moved forward by `migrate up`, so it has not vanished.
       vnew="$(echo "$tree_rows" | awk -v n="$vname" '$2==n {print $1}' | tail -n1)"

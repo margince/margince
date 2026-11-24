@@ -14877,6 +14877,7 @@ func (e HealthFindingUnit) Valid() bool {
 
 // Defines values for HealthFooterGapMissing.
 const (
+	HealthFooterGapMissingAdvertisement      HealthFooterGapMissing = "advertisement"
 	HealthFooterGapMissingAdvertiserContact  HealthFooterGapMissing = "advertiser_contact"
 	HealthFooterGapMissingControllerIdentity HealthFooterGapMissing = "controller_identity"
 	HealthFooterGapMissingEntityName         HealthFooterGapMissing = "entity_name"
@@ -14887,6 +14888,8 @@ const (
 // Valid indicates whether the value is a known member of the HealthFooterGapMissing enum.
 func (e HealthFooterGapMissing) Valid() bool {
 	switch e {
+	case HealthFooterGapMissingAdvertisement:
+		return true
 	case HealthFooterGapMissingAdvertiserContact:
 		return true
 	case HealthFooterGapMissingControllerIdentity:

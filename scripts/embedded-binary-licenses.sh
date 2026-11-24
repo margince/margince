@@ -119,13 +119,14 @@ while IFS='|' read -r module file; do
     [[ -n ${module} ]] || continue
     # The fields are compared as copies. Assigning to $1 or $2 would make awk
     # rebuild the record with its output separator and drop the pipes the
-    # license below is read with.
+    # license below is read with. awk reads to the end instead of exiting, so
+    # printf never writes into a closed pipe.
     line="$(printf '%s\n' "${declared}" | awk -F'|' -v m="${module}" -v f="${file}" '
         {
             mod = $1; emb = $2
             gsub(/^[[:space:]]+|[[:space:]]+$/, "", mod)
             gsub(/^[[:space:]]+|[[:space:]]+$/, "", emb)
-            if (mod == m && emb == f) { print; exit }
+            if (!found && mod == m && emb == f) { print; found = 1 }
         }
     ')"
     if [[ -z ${line} ]]; then

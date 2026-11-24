@@ -216,9 +216,13 @@ func (s ToolSpec) ReadOnly() bool {
 // looking for one should find the other beside it. What holds it to that and
 // stops it drifting into the frame is the runner's assertion that the frame
 // states nothing about a member the listing still renders per tool.
+//
+// ReservedConfirmCodeArg is the one-time code a call's own preview answered,
+// sent back when the user said yes in the conversation (agents/confirmcode.go).
 const (
 	ReservedApprovalIDArg     = "approval_id"
 	ReservedIdempotencyKeyArg = "idempotency_key"
+	ReservedConfirmCodeArg    = "confirm_code"
 )
 
 // ReservedIdempotencyKeyRule is what the retry key MEANS, stated once for a

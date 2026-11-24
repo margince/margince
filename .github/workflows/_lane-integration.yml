@@ -242,7 +242,13 @@ jobs:
           psql -c "ALTER SYSTEM SET shared_preload_libraries = 'auto_explain'" \
             -c "ALTER SYSTEM SET track_activity_query_size = 32768"
           docker restart "$container"
-          docker compose -f docker-compose.dev.yml up -d --wait postgres
+          # Compose is not asked to wait: without the PG_FSYNC the stack was
+          # started with, it would recreate this container and drop its id.
+          for _ in $(seq 1 60); do
+            docker exec "$container" pg_isready -U margince_owner -d postgres -q && break
+            sleep 1
+          done
+          docker exec "$container" pg_isready -U margince_owner -d postgres -q
           # Postgres knows the auto_explain settings only once the library is loaded.
           psql -c "ALTER SYSTEM SET auto_explain.log_min_duration = '10s'" \
             -c "ALTER SYSTEM SET auto_explain.log_nested_statements = on" -c "SELECT pg_reload_conf()"

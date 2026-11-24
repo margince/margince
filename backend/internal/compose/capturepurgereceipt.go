@@ -20,6 +20,12 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
+// The receipt keys the audit row shares with the purge answer's JSON fields.
+const (
+	receiptReleased = "released"
+	receiptSkipped  = "skipped"
+)
+
 // auditPurgeReceipt records what the purge did and returns the struct the owner
 // is told it from. The trail and the screen state one set of numbers.
 //
@@ -38,8 +44,8 @@ func (p *CapturePurger) auditPurgeReceipt(ctx context.Context, run, ruleID ids.U
 	_, err := purgerun.WriteReceipt(ctx, p.pool, purgerun.Rule(ruleID), run, func(t purgerun.Tally) map[string]any {
 		outcome.Destroyed, outcome.Released, outcome.Anonymised = t.Destroyed, t.Released, t.Anonymised
 		return map[string]any{
-			"destroyed": outcome.Destroyed, "released": outcome.Released,
-			"skipped": outcome.Skipped, "anonymised": outcome.Anonymised,
+			"destroyed": outcome.Destroyed, receiptReleased: outcome.Released,
+			receiptSkipped: outcome.Skipped, "anonymised": outcome.Anonymised,
 			"kept_held": outcome.Kept.Held, "kept_under_statute": outcome.Kept.UnderStatute,
 			"kept_under_request":            outcome.Kept.UnderRequest,
 			"kept_under_undetermined_floor": outcome.Kept.UnderUndeterminedFloor,
