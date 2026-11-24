@@ -100,6 +100,10 @@ func paidLane(t *testing.T, root string) (liveLane, []agentloope2e.Scenario) {
 	if err != nil {
 		t.Fatalf("harness: the model route is not configured: %v", err)
 	}
+	if envPresetSet := os.Getenv(envPreset); envPresetSet != "" && filepath.Clean(envPresetSet) != filepath.Join(root, live.DefaultPreset) {
+		// A tier read from another preset cannot be checked against the default one.
+		choice.Binding.Tier = live.NamedTier
+	}
 	if _, err := choice.ModelPath(&live.Recorder{}); err != nil {
 		t.Fatalf("harness: the model route is not configured: %v", err)
 	}
