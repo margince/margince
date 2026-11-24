@@ -24549,7 +24549,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Jede Firmenangabe, die die Rechtspakete verlangen, ist eingetragen.",
   "health.footerMissing": "Fehlende Angaben",
   "health.footerHeldByUser":
-    "Seit der letzten Änderung zurückgehaltene Sendungen von Nutzern",
+    "Seit der letzten Änderung zurückgehaltene Sendungen von Mitgliedern",
   "health.footerHeldInBackground":
     "Seit der letzten Änderung zurückgehaltene oder entfallene Sendungen im Hintergrund",
   "health.footerDetail.controller_identity": "Firmenname und Postanschrift",
