@@ -34,12 +34,12 @@ func (s *Server) wireSystemOfRecordReads(pool *pgxpool.Pool) {
 	// Its nil model lane is bound by WithCompanyBrief; unbound, it serves its floor.
 	s.contactsStore = newContactsStore(InstallationDB(pool)).WithFieldCatalog(customfields.NewService(pool, nil))
 	s.blockedDomainHandlers = blockedDomainHandlers{contacts: s.contactsStore}
-	s.captureExclusionHandlers = captureExclusionHandlers{store: capture.NewExclusionStore(InstallationDB(pool))}
+	s.captureExclusionHandlers = captureExclusionHandlers{store: newExclusionStore(pool)}
 	// Both stores: keeping a domain question settles the triage ledger, and
 	// discarding it writes the caller's own capture exclusion.
 	s.domainQuestionHandlers = domainQuestionHandlers{
 		contacts:   s.contactsStore,
-		exclusions: capture.NewExclusionStore(InstallationDB(pool)),
+		exclusions: newExclusionStore(pool),
 	}
 	s.threadAudience = NewThreadAudienceSetter(pool)
 	s.captureSenderHandlers = captureSenderHandlers{

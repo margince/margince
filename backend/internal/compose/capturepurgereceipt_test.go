@@ -104,3 +104,12 @@ func TestTheContractOmitsAStatutoryRuleThatKeptNothing(t *testing.T) {
 		t.Fatalf("anchor = %v, want the year-end anchor carried", named.StatutoryFromYearEnd)
 	}
 }
+
+// Every reason the receipt states reaches the wire, so a dialog never shows a
+// count of zero for a reason the purge did record.
+func TestTheContractCarriesEveryKeptReason(t *testing.T) {
+	got := keptContract(KeptBreakdown{Held: 1, UnderStatute: 2, UnderRequest: 3, UnderUndeterminedFloor: 4})
+	if got.Held != 1 || got.UnderStatute != 2 || got.UnderRequest != 3 || got.UnderUndeterminedFloor != 4 {
+		t.Fatalf("got %+v, want 1/2/3/4 on the wire", got)
+	}
+}

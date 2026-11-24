@@ -253,15 +253,23 @@ func (w *counterpartyVerdictWorker) judgeWorkspace(ctx context.Context, workspac
 	if w.purger == nil {
 		return nil
 	}
-	// Before the personal purge, so a failure there does not hold back a
-	// receipt a stopped owner purge is owed.
-	receipts, err := w.purger.SweepMissingReceipts(wsCtx, purgeReceiptGrace)
+	if err := w.sweepPurges(ctx, wsCtx, workspace); err != nil {
+		return err
+	}
+	return w.stripPrivateThreads(ctx, wsCtx, workspace)
+}
+
+// sweepPurges certifies purges that stopped before their receipt, then destroys
+// the personal mail whose window closed. The receipts come first, so a failure
+// in the personal purge does not hold back a receipt an owner's purge is owed.
+func (w *counterpartyVerdictWorker) sweepPurges(ctx, wsCtx context.Context, workspace ids.UUID) error {
+	repaired, err := w.purger.SweepMissingReceipts(wsCtx)
 	if err != nil {
 		return err
 	}
-	if receipts > 0 && w.log != nil {
+	if (repaired.Written > 0 || repaired.Unattributed > 0) && w.log != nil {
 		w.log.InfoContext(ctx, "capture purge: wrote the receipt of purges that stopped before it",
-			"workspace", workspace.String(), "receipts", receipts)
+			"workspace", workspace.String(), "receipts", repaired.Written, "unattributed_runs", repaired.Unattributed)
 	}
 	destroyed, err := w.purger.SweepPersonalMail(wsCtx, capture.DefaultPersonalPurgeWindows())
 	if err != nil {
@@ -271,7 +279,7 @@ func (w *counterpartyVerdictWorker) judgeWorkspace(ctx context.Context, workspac
 		w.log.InfoContext(ctx, "counterparty verdict: destroyed personal mail past its window",
 			"workspace", workspace.String(), "messages", destroyed)
 	}
-	return w.stripPrivateThreads(ctx, wsCtx, workspace)
+	return nil
 }
 
 // stripPrivateThreads withholds the files of personal-thread mail past the

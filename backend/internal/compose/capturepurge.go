@@ -28,6 +28,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/compose/capturepurgebind"
 	"github.com/margince/margince/backend/internal/compose/personalsweep"
+	"github.com/margince/margince/backend/internal/compose/purgerun"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/modules/contacts"
@@ -99,7 +100,25 @@ func (p *CapturePurger) Purge(ctx context.Context, exclusionID ids.UUID, preview
 	if !actor.SeatType.CanMutate() {
 		return PurgeOutcome{}, apperrors.ErrPermissionDenied
 	}
-	rule, workspaceScoped, err := p.purgeableRule(ctx, exclusionID, actor.UserID)
+	if preview {
+		return p.plan(ctx, exclusionID, actor.UserID, true, ids.Nil)
+	}
+	// One run of a rule at a time, selection included. A second purge selects
+	// after the first has finished and certified, not from a stale list.
+	var outcome PurgeOutcome
+	err := purgerun.Hold(ctx, p.pool, purgerun.Rule(exclusionID), func(ctx context.Context, run ids.UUID) error {
+		var err error
+		outcome, err = p.plan(ctx, exclusionID, actor.UserID, false, run)
+		return err
+	})
+	return outcome, err
+}
+
+// plan selects what the rule matches and answers it, or, when run is a real
+// run, carries it out. The rule is read again here, under the run's lock, so a
+// rule removed while this waited is not purged for.
+func (p *CapturePurger) plan(ctx context.Context, exclusionID, seat ids.UUID, preview bool, run ids.UUID) (PurgeOutcome, error) {
+	rule, workspaceScoped, err := p.purgeableRule(ctx, exclusionID, seat)
 	if err != nil {
 		return PurgeOutcome{}, err
 	}
@@ -113,7 +132,7 @@ func (p *CapturePurger) Purge(ctx context.Context, exclusionID ids.UUID, preview
 		if workspaceScoped {
 			subject, err = capture.SelectWorkspacePurgeSubjectTx(ctx, tx, rule.Kind, rule.Value, floor)
 		} else {
-			subject, err = capture.SelectPurgeSubjectTx(ctx, tx, actor.UserID, rule.Kind, rule.Value, floor)
+			subject, err = capture.SelectPurgeSubjectTx(ctx, tx, seat, rule.Kind, rule.Value, floor)
 		}
 		if err != nil {
 			return err
@@ -128,7 +147,7 @@ func (p *CapturePurger) Purge(ctx context.Context, exclusionID ids.UUID, preview
 	// rule's mail, and anonymising workspace-wide is the erasure lane's job.
 	var minted []ids.UUID
 	if !workspaceScoped {
-		if minted, err = p.purgeableContacts(ctx, actor.UserID, rule); err != nil {
+		if minted, err = p.purgeableContacts(ctx, seat, rule); err != nil {
 			return PurgeOutcome{}, err
 		}
 	}
@@ -151,33 +170,30 @@ func (p *CapturePurger) Purge(ctx context.Context, exclusionID ids.UUID, preview
 	if err := capturepurgebind.Check(ctx, outcome.Destroyed, outcome.Released, outcome.Anonymised); err != nil {
 		return PurgeOutcome{}, err
 	}
-	return p.destroy(ctx, exclusionID, actor.UserID, rule, workspaceScoped, subject, minted, outcome)
+	return p.destroy(ctx, run, exclusionID, seat, rule, workspaceScoped, subject, minted, outcome)
 }
 
 // destroy runs the cascade for a selection the caller confirmed and then
-// writes the receipt.
-func (p *CapturePurger) destroy(ctx context.Context, exclusionID, seat ids.UUID, rule capture.Exclusion, workspaceScoped bool, subject capture.PurgeSubject, minted []ids.UUID, outcome PurgeOutcome) (PurgeOutcome, error) {
-	ctx, err := p.cascade(ctx, exclusionID, seat, rule, workspaceScoped, subject, minted)
-	if err != nil {
+// writes the receipt of the run.
+func (p *CapturePurger) destroy(ctx context.Context, run, exclusionID, seat ids.UUID, rule capture.Exclusion, workspaceScoped bool, subject capture.PurgeSubject, minted []ids.UUID, outcome PurgeOutcome) (PurgeOutcome, error) {
+	if err := p.cascade(ctx, seat, rule, workspaceScoped, subject, minted); err != nil {
 		return PurgeOutcome{}, err
 	}
 	// After the cascade: carryOut commits per item, so a receipt written first
 	// would certify a plan and not an act. If this write fails, the per-item
-	// rows still hold the trail and SweepMissingReceipts writes the receipt.
-	return p.auditPurgeReceipt(ctx, exclusionID, outcome)
+	// rows still hold the trail and the receipt sweep writes the receipt.
+	return p.auditPurgeReceipt(ctx, run, exclusionID, outcome)
 }
 
-// cascade carries the selection out with every audit row it writes stamped
-// with the rule's id as batch_id, which is how the receipt and the sweep find
-// the rows of one purge. It returns the stamped context for the receipt.
-func (p *CapturePurger) cascade(ctx context.Context, exclusionID, seat ids.UUID, rule capture.Exclusion, workspaceScoped bool, subject capture.PurgeSubject, minted []ids.UUID) (context.Context, error) {
+// cascade carries the selection out under the run's context, so every audit
+// row it writes carries the run id.
+func (p *CapturePurger) cascade(ctx context.Context, seat ids.UUID, rule capture.Exclusion, workspaceScoped bool, subject capture.PurgeSubject, minted []ids.UUID) error {
 	reason := privacy.PurgeOwnerRule
 	if workspaceScoped {
 		reason = privacy.PurgeWorkspaceRule
 	}
-	ctx = storekit.WithBatch(ctx, exclusionID)
 	_, err := p.carryOut(ctx, subject, minted, p.stillPurgeable(seat, rule), seat, reason)
-	return ctx, err
+	return err
 }
 
 // purgeableContacts is what a seat's rule purge anonymises. Only this seat's

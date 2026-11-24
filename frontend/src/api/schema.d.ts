@@ -53381,7 +53381,7 @@ export interface components {
             on_behalf_of_name?: string | null;
             /**
              * Format: uuid
-             * @description The bulk change that wrote this row; null for a change made on its own.
+             * @description The operation group that wrote this row: a bulk change, or one run of a capture purge. Null for a change made on its own.
              */
             batch_id?: string | null;
             action: components["schemas"]["AuditAction"];
@@ -93699,7 +93699,7 @@ export interface operations {
                 actor?: string;
                 entity_type?: string;
                 entity_id?: string;
-                /** @description Only the rows one bulk change wrote (`executeBulkChange` answers the id). */
+                /** @description Only the rows one operation group wrote: a bulk change (`executeBulkChange` answers the id) or one run of a capture purge. */
                 batch_id?: string;
                 /** @description One of the AuditLogEntry.action values. */
                 action?: string;
