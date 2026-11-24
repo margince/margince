@@ -1329,6 +1329,7 @@ SystemReads: []extension.SystemRead{
 	extension.SystemReadSetAside, // SetAside().Contact and Contacts
 	extension.SystemReadCompanies, // Companies().Get and List (as actAs)
 	extension.SystemReadMailContent, // MailContent().Get (as actAs)
+	extension.SystemReadMailAttachments, // Activities().Attachments and OpenAttachment (as actAs)
 },
 ```
 
@@ -1363,9 +1364,11 @@ mail, err := rt.Activities().Mail(ctx, member, d.Entity.ID, extension.MailQuery{
   list was cut. A key that names no role adds nobody and is no error. The core logs which keys you asked for.
 - **`Mail` answers the emails of one deal.** It tells a unit if a mail is sent and if a reply is in. Each
   `MailSummary` holds the id, the direction, the time, what kind of sender wrote it (empty for a human) and the
-  deal id. It holds no subject, body, address or file. It leaves out mail kept private to its senders and
-  receivers, archived mail unless you set `IncludeArchived`, and mail held back from reading. It gives pages,
-  newest first, of at most `extension.MaxReadPage`.
+  deal id. It holds no subject, body, address or file.
+
+  It leaves out mail kept private to its senders and
+  receivers, archived mail unless you set `IncludeArchived`, and mail held back from reading. It also leaves out
+  mail under a restriction of processing (Art. 18). It gives pages, newest first, of at most `extension.MaxReadPage`.
 
   You name the member it answers for. A deal that member cannot open answers `ErrNotFound`.
 - **`SetAside` reads who put a contact aside.** A colleague can put a contact aside for up to 90 days, or for
@@ -1399,7 +1402,23 @@ mail, err := rt.Activities().Mail(ctx, member, d.Entity.ID, extension.MailQuery{
   or body was taken out answers the content state `withheld` and gives neither. The body stops at
   `extension.MaxMailBody` characters, and `BodyTruncated` says so. Ask `Authority().CanRead` before you show a
   colleague what you kept from it.
-- **Name the seat: `actAs`.** `Companies`, `MailContent().Get` and `ByRole` take `actAs` right after `ctx`.
+- **`Attachments` and `OpenAttachment` read mail files.** `Activities().Attachments(ctx, actAs, mailID)`
+  lists the files sent with one email, oldest first. Each `MailAttachment` holds the id, the mail id, the file
+  name, the stored type, the size and the time. `Activities().OpenAttachment(ctx, actAs, attachmentID)` also gives
+  the bytes, with the type the bytes show.
+
+  Both run as `actAs` under the rule `MailContent().Get` applies to the mail. A mail that read refuses answers
+  `ErrNotFound` here too. So does a file that was archived or whose bytes were withheld. A list leaves such a file
+  out. Only files sent with an email are read, never a file a user uploaded.
+
+  A file of more than `extension.MaxInboundFileBytes` bytes answers `ErrInvalid`. An open checks the file again
+  after it reads the bytes. A file withheld or archived in that time answers `ErrNotFound`.
+
+  Each list and each open writes an `export` row to the system log, which names your unit and `actAs`. An open that
+  fails writes no row and does not count. A unit may open `extension.MaxAttachmentOpensPerDay` (200) files in a workspace per UTC day. The next open answers
+  `extension.ErrAttachmentCapReached` until the next UTC day starts. A list does not count.
+- **Name the seat: `actAs`.** `Companies`, `MailContent().Get`, the reads of mail files and `ByRole` take
+  `actAs` right after `ctx`.
   It must be the unit's own service member, the one the core made for it (see
   [declare-a-service-member.md](declare-a-service-member.md)). That member must have filed one of the unit's
   user secrets.

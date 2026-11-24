@@ -28,3 +28,5 @@ github.com/margince/margince/backend/pkg/extension: ErrAIUnavailable: removed # 
 github.com/margince/margince/backend/pkg/extension: Extension.AITasks: removed # Runtime.AI was never in a release tag and no unit calls it; Runtime.Models is the one AI port, ratified in #13234
 github.com/margince/margince/backend/pkg/extension: MaxAIPromptBytes: removed # Runtime.AI was never in a release tag and no unit calls it; Runtime.Models is the one AI port, ratified in #13234
 github.com/margince/margince/backend/pkg/extension: Runtime.AI: removed # Runtime.AI was never in a release tag and no unit calls it; Runtime.Models is the one AI port, ratified in #13234
+github.com/margince/margince/backend/pkg/extension: Activities.Attachments: added # a background job lists the files of one mail; only the core implements Activities, so no outside code breaks (#8294)
+github.com/margince/margince/backend/pkg/extension: Activities.OpenAttachment: added # a background job reads one mail file's bytes; only the core implements Activities, so no outside code breaks (#8294)

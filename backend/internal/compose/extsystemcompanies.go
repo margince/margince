@@ -16,6 +16,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/compose/systemmail"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/platform/auth"
@@ -71,7 +72,7 @@ func (c systemCompanies) List(ctx context.Context, actAs extension.UserID, q ext
 	if err != nil {
 		return extension.Page[extension.CompanySummary]{}, err
 	}
-	limit, err := mailPageLimit(q.Limit)
+	limit, err := systemmail.PageLimit(q.Limit)
 	if err != nil {
 		return extension.Page[extension.CompanySummary]{}, err
 	}
