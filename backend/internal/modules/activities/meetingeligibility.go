@@ -87,8 +87,8 @@ func appendAwaitingOutcomeClause(ctx context.Context, in ListActivitiesInput, ar
 }
 
 // awaitingOutcomeClause is a live customer meeting with no result recorded that
-// took place by asOf. The outcome lane filters on it and every Activity read
-// stamps it (stampAwaitingOutcome).
+// took place by asOf and is not travel logistics. The outcome lane filters on it
+// and every Activity read stamps it (stampAwaitingOutcome).
 func awaitingOutcomeClause(ctx context.Context, asOf time.Time, arg func(any) int, outsideParty func(func(any) int) (string, error)) (string, error) {
 	open, tookPlace, err := openCustomerMeeting(ctx, asOf, arg)
 	if err != nil {
@@ -101,7 +101,11 @@ func awaitingOutcomeClause(ctx context.Context, asOf time.Time, arg func(any) in
 	if err != nil {
 		return "", err
 	}
-	return "(a.archived_at IS NULL AND " + open + " AND " + tookPlace + " AND " + outside + ")", nil
+	travel, err := travelLogisticsClause(ctx, arg)
+	if err != nil {
+		return "", err
+	}
+	return "(a.archived_at IS NULL AND " + open + " AND " + tookPlace + " AND " + outside + " AND NOT " + travel + ")", nil
 }
 
 // UpcomingMeetingClause is a live customer meeting under alias a with no
