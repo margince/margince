@@ -370,6 +370,7 @@ func newCaptureSink(pool *pgxpool.Pool, cfg CaptureConfig) *capture.Sink {
 		).
 		WithMeetingMover(activities.MoveCapturedMeetingFor(capture.SeatHoldsActivityTx)).
 		WithMeetingFolder(foldCapturedMeeting(activities.NewStore(InstallationDB(pool)))).
+		WithReplacedSeries(activities.ReplacedSeriesMeetingsTx).
 		WithMeetingHostKeeper(keepOrganizerHost(activities.NewStore(InstallationDB(pool)))).
 		WithCalendarInvitations(resolveCapturedInvitation).
 		// Writing a connector's own reading of a message over a row an importer
