@@ -4,8 +4,8 @@ worklist: [heat_recovery_retrofit, boiler_room_controls]
 criteria:
   - Does the finding for Heat Recovery Retrofit say the customer's CFO signs off on Thursday and asks for the final quote with the two-year service option by Wednesday?
   - Does the finding for Heat Recovery Retrofit give sending that quote by Wednesday as the next move?
-  - Does the finding for Boiler Room Controls say the deal has been quiet since a discovery call that asked for a site visit with no date agreed?
-  - Does the finding for Boiler Room Controls give proposing a date for that site visit as the next move?
+  - Does the finding for Boiler Room Controls say a discovery call asked for a site visit and no date is agreed?
+  - Does the finding for Boiler Room Controls make getting that site visit scheduled its next move, where asking the facility manager to set or confirm a date counts?
   - Is every fact in the findings one the seeded records carry, with no invented price change, meeting or competitor?
 seed:
   deals:

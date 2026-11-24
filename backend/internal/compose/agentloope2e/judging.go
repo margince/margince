@@ -36,6 +36,7 @@ func FactSheet(sc Scenario, seededAt time.Time) string {
 			fmt.Fprintf(&b, "  Email of %s (%d days earlier), subject %q: %s\n", date, activity.DaysAgo, activity.Subject, activity.Body)
 		}
 	}
+	b.WriteString("The workspace's own tools also serve risk signals they compute from these records, such as a deal that rests on too few engaged contacts (single-threaded). A cause that names such a signal is one the records carry.\n")
 	return b.String()
 }
 
