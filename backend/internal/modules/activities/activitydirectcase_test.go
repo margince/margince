@@ -28,7 +28,7 @@ func TestDirectCaseGatesOnlyBodyRawAndTheReplyChannelSource(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			sourceAudience, err := auth.ActivityAudienceArm(ctx, "s", arg)
+			sourceAudience, err := auth.ActivitySourceAudienceArm(ctx, "s", arg)
 			if err != nil {
 				t.Fatal(err)
 			}
