@@ -6,6 +6,8 @@ import { expect, userEvent, waitFor, within } from "storybook/test";
 import {
   installFetchStub,
   jsonResponse,
+  meRoute,
+  type RouteMap,
   StoryProviders,
 } from "../../testing/story-utils";
 import { VCardImportPage } from "./vcard-import";
@@ -25,6 +27,14 @@ type Story = StoryObj<typeof VCardImportPage>;
 
 const ROUTE = "POST /contacts/vcard-import";
 
+// The page waits for the session before it offers a write.
+function stubSession(routes: RouteMap) {
+  installFetchStub({
+    "GET /me": meRoute({ contact: ["read", "create", "update"] }),
+    ...routes,
+  });
+}
+
 async function arrive(canvasElement: HTMLElement) {
   const canvas = within(canvasElement);
   await canvas.findByRole("heading", { level: 1 });
@@ -35,7 +45,7 @@ async function arrive(canvasElement: HTMLElement) {
  * written straight in rather than queued. */
 export const Empty: Story = {
   render: () => {
-    installFetchStub({});
+    stubSession({});
     return (
       <StoryProviders locale="de">
         <VCardImportPage />
@@ -63,7 +73,7 @@ export const EmptyDark: Story = {
  * nowhere, one carried no name at all. */
 export const MixedReport: Story = {
   render: () => {
-    installFetchStub({
+    stubSession({
       [ROUTE]: () =>
         jsonResponse({
           results: [
@@ -145,7 +155,7 @@ export const MixedReport: Story = {
  * that refuses. */
 export const Refused: Story = {
   render: () => {
-    installFetchStub({
+    stubSession({
       [ROUTE]: () =>
         jsonResponse(
           {

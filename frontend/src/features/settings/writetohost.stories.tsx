@@ -5,6 +5,7 @@ import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, userEvent, waitFor, within } from "storybook/test";
 import { Button } from "../../design-system/atoms";
 import { useWriteTo } from "../../lib/writeto";
+import { CONNECTED_ROSTER } from "../../testing/mailroster.testkit";
 import {
   installFetchStub,
   jsonResponse,
@@ -39,7 +40,7 @@ function host(connected: boolean) {
     "GET /me": meRoute({ contact: ["read"] }),
     "GET /connectors": () =>
       jsonResponse({
-        data: connected ? [{ provider: "gmail", status: "connected" }] : [],
+        data: connected ? CONNECTED_ROSTER.data : [],
         providers: [],
       }),
   });

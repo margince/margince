@@ -289,7 +289,9 @@ jobs:
     runs-on: ubuntu-latest
     # This runs the integration lane too, on one
     # runner rather than across the shards ci.yml splits it into.
-    timeout-minutes: 90
+    # Nine slices at 15 minutes plus 30s kill grace, and eight 60s gaps, take
+    # up to 148 minutes; the rest covers setup and the clock restore.
+    timeout-minutes: 170
     permissions:
       contents: read
     outputs:
@@ -328,6 +330,8 @@ jobs:
         run: make -C backend fetch-test-deps
       # Keep the clock jump, suites and recovery in one shell: the runner's
       # control-plane credentials must be valid before it starts another step.
+      # The script moves the clock once per suite slice and restores it after each,
+      # so the runner agent sees real time between slices.
       # outcome=calendar only on the line scripts/backend-clock-drift.sh prints
       # after the suites failed under a shift it proved still in force.
       - name: The backend suites at the moved clock

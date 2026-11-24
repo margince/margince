@@ -153,7 +153,7 @@ export const BaseCurrencyLockedDark: Story = {
   globals: { theme: "dark" },
   render: story(RATE_SHEET_LOCK, MANAGER),
   play: async ({ canvasElement }) => {
-    await openFrom(canvasElement, /edit base currency/i);
+    await openFrom(canvasElement, /edit company time zone/i);
   },
 };
 
