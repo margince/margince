@@ -23,6 +23,7 @@ import {
   compilerTests,
   shuffledTests,
 } from "./scripts/vitest-shards.ts";
+import { bookingSlugFromPath } from "./src/lib/bookingaddress.ts";
 import { TEST_TIMEOUT_MS } from "./vitest.budget.ts";
 
 // The composition alias — the runtime half of the two-lane type story whose
@@ -336,11 +337,19 @@ export default defineConfig({
           path.replace(/^\/r\//, "/v1/public/record-previews/"),
       },
       // A booking page's path, as nginx.conf answers it: every fetch, a
-      // browser's navigation included, gets the api's booking card.
+      // browser's navigation included, gets the api's booking card. A path
+      // naming a host control or a guest token is a 404, never proxied.
       "/book": {
         target: proxyTarget,
         changeOrigin: false,
         secure: false,
+        bypass: (request) => {
+          const { pathname } = new URL(request.url ?? "/", "http://dev");
+          return pathname.startsWith("/book/") &&
+            bookingSlugFromPath(pathname) === null
+            ? false
+            : undefined;
+        },
         rewrite: (path) =>
           path.replace(
             /^\/book\/([A-Za-z0-9_-]+)\/?(\?.*)?$/,

@@ -12,7 +12,7 @@ import { useToast } from "../../design-system/toast";
 import { acquisitionKindLabel } from "../../format/acquisitionkind";
 import { formatDate } from "../../format/format";
 import { type Translator, useLocale, useT } from "../../i18n";
-import { actorAttribution } from "../../lib/auditactor";
+import { actorAttribution, qualifierPhrase } from "../../lib/auditactor";
 import { useViewerId } from "../../lib/session";
 import {
   SOURCE_ANSWER_LABEL,
@@ -125,10 +125,7 @@ function confirmedByLine(
   if (who.labelKey === "audit.you") {
     return t("notice.source.confirmedByYou", { date });
   }
-  const qualifier =
-    who.qualifierName !== undefined
-      ? t("audit.viaNamed", { client: who.qualifierName })
-      : who.qualifierKey && t(who.qualifierKey);
+  const qualifier = qualifierPhrase(who, t);
   const actor = [
     who.name ?? (who.labelKey ? t(who.labelKey) : who.identifier),
     qualifier,

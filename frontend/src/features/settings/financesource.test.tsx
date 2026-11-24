@@ -183,14 +183,17 @@ describe("FinanceSourceCard", () => {
     expect(options).toEqual(["Reads the ledger books.", "Other Books"]);
   });
 
-  it("calls a connected source with no name the accounting source", async () => {
+  it("calls a connected source with no name or description Unnamed source", async () => {
     backend({
       "GET /finance/source": () =>
-        jsonResponse({ available: AVAILABLE, connection: CONNECTION }),
+        jsonResponse({
+          available: [{ provider: "ledger_books" }],
+          connection: CONNECTION,
+        }),
       "GET /finance/source/customers": () => jsonResponse({ data: [], page }),
     });
     render(<FinanceSourceCard />);
-    expect(await screen.findByText("Active")).toBeTruthy();
+    expect(await screen.findByText("Unnamed source")).toBeTruthy();
     expect(screen.queryByText("ledger_books")).toBeNull();
   });
 

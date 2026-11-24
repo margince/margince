@@ -18224,6 +18224,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "ownDomains.confirmLabel": "Xác nhận {domain}",
 
   "financeSource.title": "Nguồn kế toán",
+  "financeSource.unnamed": "Nguồn chưa đặt tên",
   "financeSource.sub":
     "Margince đọc hóa đơn và khoản thanh toán từ hệ thống kế toán và hiển thị chúng trong tab Tài chính của từng công ty. Margince không bao giờ ghi vào nguồn này.",
   "financeSource.readOnly":

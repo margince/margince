@@ -21,10 +21,12 @@ export function financeProvenance(
 }
 
 // A source named in a list or a row: its declared name, else what its unit says
-// it is for, else "Accounting source". Never its key.
+// it is for, else "Unnamed source". Never its key.
 export function financeSourceName(
   t: Translator,
   source: Readonly<{ provider_name?: string | null; description?: string }>,
 ): string {
-  return source.provider_name || source.description || t("financeSource.title");
+  return (
+    source.provider_name || source.description || t("financeSource.unnamed")
+  );
 }

@@ -41,8 +41,8 @@ export function currentDueFields(
 }
 
 /**
- * Moving a task's deadline from any verb: the confirmation names the new
- * deadline and its Undo puts the old one back, as Done's does. The promise
+ * Moving a task's deadline: the confirmation names the new deadline and its
+ * Undo puts the old one back, as Done's does. The promise
  * answers whether the task moved; a refusal stays on `update`.
  */
 export function useMoveTask(update: ReturnType<typeof useTaskUpdate>) {

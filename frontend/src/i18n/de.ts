@@ -18726,6 +18726,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "ownDomains.confirmLabel": "{domain} bestätigen",
 
   "financeSource.title": "Buchhaltungsquelle",
+  "financeSource.unnamed": "Unbenannte Quelle",
   "financeSource.sub":
     "Margince liest Rechnungen und Zahlungen aus einem Buchhaltungssystem und zeigt sie im Tab Finanzen jedes Unternehmens. In die Quelle schreibt Margince nie.",
   "financeSource.readOnly":

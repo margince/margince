@@ -18539,6 +18539,7 @@ export const en = {
   "ownDomains.confirmLabel": "Confirm {domain}",
 
   "financeSource.title": "Accounting source",
+  "financeSource.unnamed": "Unnamed source",
   "financeSource.sub":
     "Margince reads invoices and payments from an accounting system and shows them on each company’s Finance tab. It never writes to the source.",
   "financeSource.readOnly":
