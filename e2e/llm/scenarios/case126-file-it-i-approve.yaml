@@ -1,9 +1,10 @@
 # CASE 126 — The same move, with the user's yes in the prompt.
 #
-# The mirror of case 125. The move onto the project stages, and the user has
-# already said yes, so the agent may release its own staged call and must then
-# repeat the call with the approval's id: approving alone moves nothing. The end
-# state reads the mail on the project.
+# The mirror of case 122. The user has already said yes. On a connected client the
+# move answers a preview and a confirm_code, and the agent repeats the call with
+# it. On a passport with no connection it stages, and the agent releases its own
+# undoable move. Either way the end state reads the mail on the project and
+# nothing pending.
 name: case126_file_it_i_approve
 title: File it on the project, I approve
 criteria: [1]

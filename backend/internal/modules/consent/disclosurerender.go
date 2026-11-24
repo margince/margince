@@ -234,6 +234,9 @@ func particularFor(kind messagingrules.DisclosureKind, p ControllerParticulars) 
 		// reporting it met would tell an operator their configuration is
 		// complete when a supervisory authority would say otherwise.
 		return bothParticulars(p.LegalName, p.PostalAddress)
+	case messagingrules.Advertisement:
+		// The legal name alone; layoutDisclosures turns it into the sentence.
+		return strings.TrimSpace(p.LegalName)
 	case messagingrules.PrivacyContact:
 		return strings.TrimSpace(p.PrivacyContact)
 	case messagingrules.ObjectionRoute:
