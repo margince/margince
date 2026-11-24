@@ -18,7 +18,10 @@ set -euo pipefail
 
 [[ "${DB_RECREATE:-}" == 1 ]] && exit 0
 
-read -r -a compose <<<"${COMPOSE:-docker compose -f docker-compose.dev.yml}"
+# The compose command arrives as arguments, so the caller's shell has already
+# removed its quotes: a file path with a space stays one word.
+compose=("$@")
+((${#compose[@]} > 0)) || compose=(docker compose -f docker-compose.dev.yml)
 
 wanted="$("${compose[@]}" config --hash '*')"
 drifted=()

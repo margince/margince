@@ -18,7 +18,7 @@ mkdir -p "$work/bin"
 cat >"$work/bin/docker" <<'STUB'
 #!/usr/bin/env bash
 case "$*" in
-*" config --hash *") cat "$STUB_DIR/wanted" ;;
+*" config --hash *") [[ "$3" == "dir with space/x.yml" ]] || { echo "stub: compose file split into words: $*" >&2; exit 65; }; cat "$STUB_DIR/wanted" ;;
 *" ps -q --status running "*) grep -qx "${*: -1}" "$STUB_DIR/running" && echo "id-${*: -1}" || true ;;
 "inspect "*) grep "^${*: -1} " "$STUB_DIR/labels" | cut -d' ' -f2 ;;
 *) echo "stub: unexpected docker $*" >&2; exit 64 ;;
@@ -38,8 +38,8 @@ stack() {
 expect() {
 	local name="$1" want="$2" pattern="$3" got=0
 	shift 3
-	env PATH="$work/bin:$PATH" STUB_DIR="$work" COMPOSE="docker compose -f x.yml" "$@" \
-		bash "$guard" 2>"$work/err" || got=$?
+	env PATH="$work/bin:$PATH" STUB_DIR="$work" DB_RECREATE= "$@" \
+		bash "$guard" docker compose -f "dir with space/x.yml" 2>"$work/err" || got=$?
 	if [[ "$got" != "$want" ]] ||
 		{ [[ -z "$pattern" ]] && [[ -s "$work/err" ]]; } ||
 		{ [[ -n "$pattern" ]] && ! grep -qE "$pattern" "$work/err"; }; then
