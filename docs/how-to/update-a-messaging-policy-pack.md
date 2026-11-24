@@ -15,6 +15,7 @@ code:
 - `extensions/eu/policy/<code>/`: the EU member states. Each one lists the shared layer
   `extensions/eu/policy/regional/eu.md` first.
 - `extensions/apac/policy/<code>/`: the Asia-Pacific countries. Each one lists its own layer only.
+- `extensions/us/policy/us/`: the United States, which lists its own layer only.
 
 A country folder holds `index.md`, its country layer `<code>.md`, and its own `fixtures/`. The top of
 a unit's `policy/` holds what its packs share: `fallback.md`, `regional/`, `fixtures/` and
@@ -89,6 +90,10 @@ fixtures:
 - `marketing-exceptions` lists the routes to advertising without consent. `[]` states that there is
   none. An `existing_customer` entry names each condition it needs, such as
   `requires-sale-evidence`.
+- `marketing-mode` is `opt_in` or `opt_out`. Leave it out for `opt_in`: advertising needs the
+  recipient's consent or an exception the pack grants. `opt_out` allows advertising until the
+  recipient refuses, and a refusal on record always stops it. A layer may tighten `opt_out` to
+  `opt_in` and may not loosen it back, and `opt_out` with `consent-only` is refused.
 - `consent-only` adds that no one-message exception a sender records stands in for consent.
 - `disclosures` are what a first message carries. `marketing-only` limits one to advertising, and
   `means` asks the text to name a web page, an email address or a phone number.
@@ -126,7 +131,8 @@ finding depends on wording, as the `(광고)` pair does.
 4. Regenerate the unit's `messagingrules_gen.go`: run `go generate` in `extensions/<unit>`, or
    `make -C backend gen` for every unit.
 5. Update the unit's own test where it pins the rule: `extensions/eu/eu_test.go`,
-   `extensions/eu/de_test.go`, `extensions/apac/apac_test.go` or `extensions/apac/vn_test.go`.
+   `extensions/eu/de_test.go`, `extensions/apac/apac_test.go`, `extensions/apac/vn_test.go` or
+   `extensions/us/us_test.go`.
 6. Run the checks below.
 
 These checks catch a mistake:

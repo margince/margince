@@ -36126,6 +36126,7 @@ components:
             - no_consent_exception_not_offered
             - no_consent
             - existing_customer
+            - opt_out_allowed
         reason_at:
           type: [string, 'null']
           format: date-time
@@ -43314,6 +43315,14 @@ components:
             their consent nor an agreement with them. A privacy notice they were sent is neither.
             Not a refusal: a surface shows a warning and records the sender's confirmation through
             `POST /lawful-basis-confirmations` before the send. Absent or false otherwise.
+        ask_country:
+          type: boolean
+          description: |-
+            The record states no country for this recipient, the refusal is for want of marketing
+            consent, and an installed pack allows advertising until the recipient refuses. A composer
+            asks the sender for the country, saves it on the contact with `PATCH /contacts/{id}`
+            (`address_country`) and asks the preview again. Absent or false when no answer could
+            change the decision, and for a recipient the caller cannot read.
         consent_purpose_id:
           type: string
           format: uuid

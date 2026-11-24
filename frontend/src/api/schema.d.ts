@@ -38423,7 +38423,7 @@ export interface components {
              *     `reason_at` when the date is known.
              * @enum {string}
              */
-            reason_code: "objection" | "suppressed_objection" | "suppressed_restricted" | "suppressed_subject_request" | "suppressed_hard_bounce" | "suppressed" | "contract_notice" | "no_call_path" | "said_we_may_write" | "unconfirmed_double_opt_in" | "no_connection" | "qualifying_event" | "consent_confirmed" | "consent_withdrawn" | "no_consent_exception_not_offered" | "no_consent" | "existing_customer";
+            reason_code: "objection" | "suppressed_objection" | "suppressed_restricted" | "suppressed_subject_request" | "suppressed_hard_bounce" | "suppressed" | "contract_notice" | "no_call_path" | "said_we_may_write" | "unconfirmed_double_opt_in" | "no_connection" | "qualifying_event" | "consent_confirmed" | "consent_withdrawn" | "no_consent_exception_not_offered" | "no_consent" | "existing_customer" | "opt_out_allowed";
             /**
              * Format: date-time
              * @description When the objection behind an `objection` reason was recorded, when the record carries it.
@@ -46351,6 +46351,14 @@ export interface components {
              *     `POST /lawful-basis-confirmations` before the send. Absent or false otherwise.
              */
             lawful_basis_missing?: boolean;
+            /**
+             * @description The record states no country for this recipient, the refusal is for want of marketing
+             *     consent, and an installed pack allows advertising until the recipient refuses. A composer
+             *     asks the sender for the country, saves it on the contact with `PATCH /contacts/{id}`
+             *     (`address_country`) and asks the preview again. Absent or false when no answer could
+             *     change the decision, and for a recipient the caller cannot read.
+             */
+            ask_country?: boolean;
             /**
              * Format: uuid
              * @description For a recipient marked `lawful_basis_missing`: the purpose a consent request would ask

@@ -3839,6 +3839,8 @@ export const en = {
   "consent.reason.no_consent": "No consent recorded",
   "consent.reason.existing_customer":
     "They bought from you and were told then that they may object to advertising",
+  "consent.reason.opt_out_allowed":
+    "Advertising is allowed here until they refuse, and no refusal is on file",
   "consent.reason.qualifying.inbound_message": "They wrote to you on {date}",
   "consent.reason.qualifying.inquiry": "They made an inquiry on {date}",
   "consent.reason.qualifying.in_person":
@@ -8591,6 +8593,14 @@ export const en = {
   "sendPermission.appliesToSome_other":
     "This applies to {count} of {total} recipients.",
   "sendPermission.checking": "Checking whether this message can be sent…",
+  "countryQuestion.title": "Which country is {address} in?",
+  "countryQuestion.body":
+    "Some countries allow advertising until the contact unsubscribes. This contact has no country, so Margince asks for the consent it needs everywhere else. Your answer is saved on the contact.",
+  "countryQuestion.label": "Country",
+  "countryQuestion.none": "Choose a country",
+  "countryQuestion.save": "Save country",
+  "countryQuestion.alreadySet":
+    "This contact has a country now. The check was asked again.",
   "lawfulBasis.title": "No valid basis recorded",
   "lawfulBasis.body":
     "No valid basis under Vietnamese law is recorded for this contact: neither their consent nor a case where the law allows processing without it. Sending is at your own risk.",
@@ -19975,6 +19985,7 @@ export const en = {
   "contact.strip.days": "{count} days",
   "contact.consent.fact.existingCustomer":
     "Existing customer, marketing allowed",
+  "contact.consent.fact.optOutAllowed": "Advertising allowed until they refuse",
   "contact.consent.fact.saidWeMayWrite": "Permission to write recorded",
   "contact.consent.fact.businessContact": "Recent business contact recorded",
   "contact.consent.fact.serviceMessages": "Service messages allowed",
