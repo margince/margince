@@ -5,6 +5,7 @@ import type { Meta, StoryObj } from "@storybook/react-vite";
 import { screen, userEvent, waitFor, within } from "storybook/test";
 import { ToastProvider, ToastRegion } from "../../design-system/toast";
 import { en } from "../../i18n/en";
+import { FIXTURE_TIMEZONE } from "../../testing/mefixture";
 import {
   jsonResponse,
   StoryProviders,
@@ -136,7 +137,7 @@ export const ConfirmedNotice: Story = {
               rule: "none",
               notice_required: false,
               due_at: null,
-              timezone: "UTC",
+              timezone: FIXTURE_TIMEZONE,
               deadline_is_upper_bound: false,
             }),
           "POST /privacy/notice-case-reviews/case-source/source": () =>

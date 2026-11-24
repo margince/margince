@@ -62,7 +62,7 @@ function UnsavedProbe() {
   );
 }
 
-function renderCard() {
+async function renderCard() {
   vi.stubGlobal("fetch", backend());
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false } },
@@ -81,13 +81,15 @@ function renderCard() {
       </LocaleProvider>
     </QueryClientProvider>,
   );
+  await screen.findByRole("button", { name: "Edit business context" });
 }
 
+// The card is on screen once renderCard resolves, so opening it waits on nothing.
 async function openEditor(user: ReturnType<typeof userEvent.setup>) {
   await user.click(
-    await screen.findByRole("button", { name: "Edit business context" }),
+    screen.getByRole("button", { name: "Edit business context" }),
   );
-  return screen.findByRole("dialog");
+  return screen.getByRole("dialog");
 }
 
 const companyName = (dialog: HTMLElement) =>
@@ -104,7 +106,7 @@ afterEach(() => {
 describe("Edit business context", () => {
   it("discards the draft on Cancel, so reopening shows the saved profile and leaving asks nothing", async () => {
     const user = userEvent.setup();
-    renderCard();
+    await renderCard();
 
     let dialog = await openEditor(user);
     await user.clear(companyName(dialog));
@@ -121,7 +123,7 @@ describe("Edit business context", () => {
 
   it("asks before Escape throws away a changed draft, and closes at once when nothing changed", async () => {
     const user = userEvent.setup();
-    renderCard();
+    await renderCard();
 
     await openEditor(user);
     await user.keyboard("{Escape}");

@@ -8818,6 +8818,7 @@ export const en = {
   "tasks.moveTo": "Move to",
   "tasks.move": "Move",
   "tasks.moveAnyway": "Move anyway",
+  "tasks.moveSame": "The task is already due then. Pick another day or time.",
   "tasks.movePastTitle": "Date in the past",
   "tasks.movePastBody": "Moving the task to this date makes it overdue.",
   "tasks.movedTo": "Moved to {when}",

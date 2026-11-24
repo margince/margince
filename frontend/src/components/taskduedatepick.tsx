@@ -6,6 +6,7 @@ import type { components } from "../api/schema";
 import { Button, Field } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
 import { DateInput } from "../design-system/dateinput";
+import { useFieldFaults } from "../design-system/savepage";
 import { undoAction, useToast } from "../design-system/toast";
 import { dueDayBounds } from "../format/calendarday";
 import { isoOrBlank } from "../format/datepattern";
@@ -13,6 +14,7 @@ import { formatDueCompact } from "../format/format";
 import { useNow } from "../format/now";
 import { useLocale, useT } from "../i18n";
 import { taskDueChoice, taskDueFields } from "../lib/activitybody";
+import { blankRequired } from "../lib/blankrequired";
 import { useViewerZone } from "../lib/viewerzone";
 import { dueDayChange, TaskTimeField } from "./followuptaskfields";
 import type { useTaskUpdate } from "./taskwrite";
@@ -109,6 +111,7 @@ export function TaskDueDatePick({
   update: ReturnType<typeof useTaskUpdate>;
 }>) {
   const t = useT();
+  const { locale } = useLocale();
   const pending = update.isPending;
   const readerZone = useViewerZone();
   const now = useNow(60_000);
@@ -119,7 +122,9 @@ export function TaskDueDatePick({
   const [draft, setDraft] = useState<MoveDraft | null>(null);
   const day = draft?.day ?? choice.day;
   const time = draft?.time ?? choice.time;
-  const edit = (change: Readonly<{ day?: string; time?: string }>) =>
+  const [faults, faultsRoot] = useFieldFaults<HTMLDivElement>();
+  const edit = (change: Readonly<{ day?: string; time?: string }>) => {
+    faults.edited("day");
     setDraft((held) => ({
       day: held?.day ?? choice.day,
       time: held?.time ?? choice.time,
@@ -130,15 +135,32 @@ export function TaskDueDatePick({
           : held.back,
       ...change,
     }));
+  };
+  const changed =
+    draft !== null && (day !== choice.day || time !== choice.time);
   const to =
-    draft !== null && day !== "" && (day !== choice.day || time !== choice.time)
-      ? taskDueFields(day, time, choice.zone)
-      : null;
+    changed && day !== "" ? taskDueFields(day, time, choice.zone) : null;
   const past = to !== null && Date.parse(to.due_at) < now;
+  const press = () => {
+    if (faults.show(blankRequired(locale, { day: [t("tasks.moveTo"), day] })))
+      return;
+    if (draft === null || to === null) {
+      faults.show(new Map([["day", t("tasks.moveSame")]]));
+      return;
+    }
+    void move({
+      id: activityId,
+      version: draft.version,
+      to,
+      back: draft.back,
+    }).then((moved) => {
+      if (moved) setDraft(null);
+    });
+  };
   return (
     <>
-      <div className="task-detail-due">
-        <Field label={t("tasks.moveTo")}>
+      <div className="task-detail-due" ref={faultsRoot}>
+        <Field label={t("tasks.moveTo")} error={faults.of("day")}>
           {(field) => (
             <DateInput
               {...field}
@@ -155,21 +177,7 @@ export function TaskDueDatePick({
           value={time}
           onChange={(nextTime) => edit({ time: nextTime })}
         />
-        <Button
-          disabled={to === null}
-          pending={pending && to !== null}
-          onClick={() => {
-            if (draft === null || to === null) return;
-            void move({
-              id: activityId,
-              version: draft.version,
-              to,
-              back: draft.back,
-            }).then((moved) => {
-              if (moved) setDraft(null);
-            });
-          }}
-        >
+        <Button pending={pending && to !== null} onClick={press}>
           {past ? t("tasks.moveAnyway") : t("tasks.move")}
         </Button>
       </div>

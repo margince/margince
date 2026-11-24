@@ -10,7 +10,7 @@ import { ToastProvider, ToastRegion } from "../../design-system/toast";
 import { LocaleProvider } from "../../i18n";
 import { ViewerZoneProvider } from "../../lib/viewerzone";
 import { jsonResponse } from "../../testing/company.fixtures";
-import { meFixture } from "../../testing/mefixture";
+import { FIXTURE_TIMEZONE, meFixture } from "../../testing/mefixture";
 import { project, project360 } from "../../testing/projects.fixtures";
 import { RecordShell } from "../../testing/recordshell.testkit";
 import { ProjectScreen } from "./project360";
@@ -33,7 +33,7 @@ const NEXT = {
   subject: "Confirm the depot slot",
   due_at: "2026-09-11T13:00:00.000Z",
   due_has_time: true,
-  due_intent: { wall_clock: "2026-09-11T15:00", timezone: "Europe/Berlin" },
+  due_intent: { wall_clock: "2026-09-11T15:00", timezone: FIXTURE_TIMEZONE },
   version: 7,
   assignee_id: null,
   assignee_name: null,
@@ -73,7 +73,7 @@ function renderProject(): Write[] {
   render(
     <QueryClientProvider client={client}>
       <LocaleProvider initial="en">
-        <ViewerZoneProvider zone="Europe/Berlin">
+        <ViewerZoneProvider zone={FIXTURE_TIMEZONE}>
           <ToastProvider>
             <RecordShell>
               <ProjectScreen id={project().id} />

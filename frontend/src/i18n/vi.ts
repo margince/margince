@@ -8599,6 +8599,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "tasks.moveTo": "Chuyển sang",
   "tasks.move": "Chuyển",
   "tasks.moveAnyway": "Vẫn chuyển",
+  "tasks.moveSame":
+    "Việc cần làm đã có hạn vào lúc này. Chọn ngày hoặc giờ khác.",
   "tasks.movePastTitle": "Ngày đã qua",
   "tasks.movePastBody": "Chuyển sang ngày này sẽ làm việc cần làm bị quá hạn.",
   "tasks.movedTo": "Đã chuyển sang {when}",

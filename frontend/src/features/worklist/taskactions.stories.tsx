@@ -13,6 +13,7 @@ import { ToastProvider, ToastRegion } from "../../design-system/toast";
 import { en } from "../../i18n/en";
 import { taskWriteKeys } from "../../lib/activitykeys";
 import { ViewerZoneProvider } from "../../lib/viewerzone";
+import { FIXTURE_TIMEZONE } from "../../testing/mefixture";
 import { SourceHost } from "../../testing/sourcehost";
 import {
   installFetchStub,
@@ -318,7 +319,7 @@ function MoveVerbs() {
   });
   return (
     <StoryProviders>
-      <ViewerZoneProvider zone="Europe/Berlin">
+      <ViewerZoneProvider zone={FIXTURE_TIMEZONE}>
         <ToastProvider>
           <MoveBody />
           <ToastRegion />

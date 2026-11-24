@@ -283,12 +283,28 @@ describe("moving a task to a callback time", () => {
     });
   });
 
-  it("holds Move until a day or time differs from the deadline", async () => {
+  it("says the task is already due then when Move is pressed with nothing changed, and sends nothing", async () => {
     const user = userEvent.setup();
     renderVerbs(DUE_AT);
-    expect(moveButton().hasAttribute("disabled")).toBe(true);
-    await user.type(timeBox(), "09:00{Enter}");
-    expect(moveButton().hasAttribute("disabled")).toBe(false);
+    await user.click(moveButton());
+
+    expect(
+      screen.getByText(
+        "The task is already due then. Pick another day or time.",
+      ),
+    ).toBeTruthy();
+    expect(picker().getAttribute("aria-invalid")).toBe("true");
+    expect(sent).toHaveLength(0);
+  });
+
+  it("asks for a day when Move is pressed on an undated task", async () => {
+    const user = userEvent.setup();
+    renderVerbs(null);
+    await user.click(moveButton());
+
+    expect(picker().getAttribute("aria-invalid")).toBe("true");
+    expect(screen.getByText(/Move to is required/)).toBeTruthy();
+    expect(sent).toHaveLength(0);
   });
 
   it("waits for a day on an undated task", () => {

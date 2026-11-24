@@ -8830,6 +8830,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "tasks.moveTo": "Verschieben auf",
   "tasks.move": "Verschieben",
   "tasks.moveAnyway": "Trotzdem verschieben",
+  "tasks.moveSame":
+    "Die Aufgabe ist schon dann fällig. Wähle einen anderen Tag oder eine andere Uhrzeit.",
   "tasks.movePastTitle": "Datum in der Vergangenheit",
   "tasks.movePastBody": "Mit diesem Datum ist die Aufgabe überfällig.",
   "tasks.movedTo": "Verschoben auf {when}",

@@ -12,6 +12,7 @@ import {
 } from "../../components/taskactions";
 import { ToastProvider, ToastRegion } from "../../design-system/toast";
 import { ViewerZoneProvider } from "../../lib/viewerzone";
+import { FIXTURE_TIMEZONE } from "../../testing/mefixture";
 import {
   installFetchStub,
   jsonResponse,
@@ -53,7 +54,7 @@ function recordWrites(): Write[] {
 const DATED = {
   dueAt: "2026-09-01T13:00:00.000Z",
   dueHasTime: true,
-  dueIntent: { wall_clock: "2026-09-01T15:00", timezone: "Europe/Berlin" },
+  dueIntent: { wall_clock: "2026-09-01T15:00", timezone: FIXTURE_TIMEZONE },
 };
 const DATED_BACK = {
   due_at: DATED.dueAt,
@@ -75,7 +76,7 @@ function DatedTask() {
 function renderDated() {
   render(
     <StoryProviders>
-      <ViewerZoneProvider zone="Europe/Berlin">
+      <ViewerZoneProvider zone={FIXTURE_TIMEZONE}>
         <ToastProvider>
           <DatedTask />
           <ToastRegion />
