@@ -10,7 +10,12 @@ import {
   waitingEmailRow,
 } from "../../testing/brief.fixtures";
 import { expectDialPlacement } from "../../testing/briefheadchecks";
-import { StoryProviders } from "../../testing/story-utils";
+import { READS_RECORDS } from "../../testing/mefixture";
+import {
+  installFetchStub,
+  meRoute,
+  StoryProviders,
+} from "../../testing/story-utils";
 import { BriefDials } from "./brief.dials";
 import { BriefGlance } from "./brief.glance";
 
@@ -18,11 +23,15 @@ const meta: Meta<typeof BriefGlance> = {
   title: "Shell/Home/Agenda summary",
   component: BriefGlance,
   decorators: [
-    (Story) => (
-      <StoryProviders>
-        <Story />
-      </StoryProviders>
-    ),
+    (Story) => {
+      // The dials ask the session which views this reader may open.
+      installFetchStub({ "GET /me": meRoute(READS_RECORDS) });
+      return (
+        <StoryProviders>
+          <Story />
+        </StoryProviders>
+      );
+    },
   ],
 };
 export default meta;

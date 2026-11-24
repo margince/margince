@@ -113,20 +113,20 @@ func (s *Store) PendingChangesOwnedBy(ctx context.Context, since *time.Time) (Ch
 		}
 		query := storekit.SQLf(`
 			WITH waiting AS (
-			  SELECT c.deal_id, c.audit_log_id, c.correction, c.applied_at,
+			  SELECT c.deal_id, c.audit_log_id, c.correction, c.applied_at, `+correctionListedSQL+` AS listed_at,
 			         (%s AND %s) AS undoable
 			    FROM deal_correction c
 			    JOIN deal d ON d.id = c.deal_id
 			    JOIN audit_log a ON a.id = c.audit_log_id AND a.entity_type = 'deal' AND a.entity_id = c.deal_id
 			   WHERE c.correction = ANY($%d) AND c.accepted_at IS NULL AND c.reversed_at IS NULL
-			     AND ($%d::timestamptz IS NULL OR c.applied_at >= $%d) AND c.applied_at >= $%d
+			     AND ($%d::timestamptz IS NULL OR `+correctionListedSQL+` >= $%d) AND `+correctionListedSQL+` >= $%d
 			     AND d.owner_id = $%d AND d.archived_at IS NULL%s),
 			bundle AS (
 			  SELECT w.deal_id,
 			         array_agg(w.audit_log_id ORDER BY w.applied_at DESC, w.audit_log_id DESC) AS audits,
 			         coalesce(array_agg(w.audit_log_id ORDER BY w.applied_at DESC, w.audit_log_id DESC) FILTER (WHERE w.undoable), '{}') AS undoable,
 			         array_agg(DISTINCT w.correction) AS kinds,
-			         max(w.applied_at) AS latest
+			         max(w.listed_at) AS latest
 			    FROM waiting w
 			   GROUP BY w.deal_id)
 			SELECT b.deal_id, d.name, d.version, b.audits, b.undoable, b.kinds, b.latest, %s,
@@ -134,7 +134,7 @@ func (s *Store) PendingChangesOwnedBy(ctx context.Context, since *time.Time) (Ch
 			  FROM bundle b JOIN deal d ON d.id = b.deal_id
 			 ORDER BY 8 DESC NULLS LAST, b.latest DESC, b.deal_id
 			 LIMIT $%d`,
-			correctionFieldsStillAppliedSQL("to_jsonb(d)"), correctionStageStillNewestSQL(stagePos),
+			correctionFieldsUntouchedSQL(), correctionStageStillNewestSQL(stagePos),
 			heldPos, sincePos, sincePos, listedFromPos, ownerPos, where, value, counts, capPos)
 		rows, err := tx.Query(ctx, query, args...)
 		if err != nil {
@@ -172,10 +172,19 @@ type ChangeCursor struct {
 	AuditLogID ids.UUID
 }
 
+// DealChangeFilter narrows a deal's changes to the ones a page is about. It
+// names the change that wrote one stage move, the changes History notes
+// report, or changes of given correction kinds. The zero value narrows nothing.
+type DealChangeFilter struct {
+	StageHistoryID *ids.UUID
+	NoteActivityID []ids.UUID
+	Kinds          []string
+}
+
 // DealChanges reads every change Margince made to one deal, newest first and
 // paged, whether accepted, undone or still open. It answers 404 for a deal
 // the reader may not see.
-func (s *Store) DealChanges(ctx context.Context, dealID ids.DealID, after *ChangeCursor, limit int) ([]CorrectionReceipt, bool, error) {
+func (s *Store) DealChanges(ctx context.Context, dealID ids.DealID, after *ChangeCursor, limit int, only DealChangeFilter) ([]CorrectionReceipt, bool, error) {
 	if err := auth.Require(ctx, "deal", principal.ActionRead); err != nil {
 		return nil, false, err
 	}
@@ -191,6 +200,15 @@ func (s *Store) DealChanges(ctx context.Context, dealID ids.DealID, after *Chang
 			return err
 		}
 		query += " WHERE c.deal_id = $1"
+		if only.StageHistoryID != nil {
+			query += storekit.SQLf(" AND c.stage_history_id = $%d", arg(*only.StageHistoryID))
+		}
+		if len(only.NoteActivityID) > 0 {
+			query += storekit.SQLf(" AND c.note_activity_id = ANY($%d)", arg(only.NoteActivityID))
+		}
+		if len(only.Kinds) > 0 {
+			query += storekit.SQLf(" AND c.correction = ANY($%d)", arg(only.Kinds))
+		}
 		if after != nil {
 			query += storekit.SQLf(" AND (c.applied_at, c.audit_log_id) < ($%d, $%d)", arg(after.AppliedAt), arg(after.AuditLogID))
 		}
@@ -373,7 +391,7 @@ func PendingChangesFingerprintTx(ctx context.Context, tx pgx.Tx, owner ids.UUID,
 		return 0, err
 	}
 	const changes = `FROM deal_correction c JOIN deal d ON d.id = c.deal_id
-		WHERE c.correction = ANY($1) AND c.applied_at >= $2 AND d.owner_id = $3`
+		WHERE c.correction = ANY($1) AND ` + correctionListedSQL + ` >= $2 AND d.owner_id = $3`
 	if lock {
 		if _, err := tx.Exec(ctx, `SELECT 1 `+changes+` FOR SHARE OF c`, heldCorrections, since, owner); err != nil {
 			return 0, fmt.Errorf("deals: holding the changes a morning counts: %w", err)

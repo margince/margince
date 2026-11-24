@@ -95,6 +95,17 @@ Follow this checklist. Fitness tests check several of these rules, so a missed o
    `1787968162_a_brief_names_the_currency_it_normalized_against.up.sql` and
    `1787968163_the_brief_currency_check_is_validated.up.sql` are the worked pair. The second one explains
    why it is a file of its own.
+
+   A `CHECK` that older rows may break needs a `VALIDATE` that runs only when no row breaks it.
+   PostgreSQL checks a `NOT VALID` rule again on every update of a row. So a row that breaks it can
+   no longer change.
+
+   That file counts the rows that break each rule. It runs `VALIDATE` on the ones with none.
+   For the others it drops the rule and prints a notice with its name and the count. It touches no data.
+
+   On such an installation the code holds the list until the rows are fixed. The approval staging,
+   the notice insert and the edition write each refuse a value outside it.
+   `1795363398_an_approval_with_an_old_type_stays_updatable.up.sql` is the worked example.
 5. **Reach the erase and SAR paths** if the table holds personal data (`piicoverage_test.go`).
    A column that stores the hash of a token is `token_hash bytea` with `CHECK (octet_length(token_hash) = 32)`.
    Its writers and readers hash through `storekit.TokenHashBytes` (`backend/gates/tokenhashformat_test.go`).

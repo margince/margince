@@ -80,6 +80,10 @@ func TestMarginceOpensADealForTheCompanyOwnerAndUndoArchivesIt(t *testing.T) {
 		 WHERE l.deal_id = $1 AND a.subject = 'Margince opened a deal for Acme GmbH'`, deal); n != 1 {
 		t.Error("the opening is not on the deal's timeline")
 	}
+	if n := e.WsCount(t, `SELECT count(*) FROM deal_correction c JOIN activity a ON a.id = c.note_activity_id
+		 WHERE c.id = $1 AND a.subject = 'Margince opened a deal for Acme GmbH'`, correction.ID); n != 1 {
+		t.Error("the opening's correction does not name its note")
+	}
 	if n := e.stored(t, acme, deals.SuggestionAccepted); n != 1 {
 		t.Errorf("%d accepted suggestions, want the one the deal came from", n)
 	}

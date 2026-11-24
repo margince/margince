@@ -30,6 +30,12 @@ const (
 
 const criterionKeyField = "key"
 
+// ProposalSentCriterionKey is the key of the question "did our side send the
+// customer a proposal with this message". The stage-evidence reading offers it
+// beside a stage's own criteria. It holds a colon, which the key shape of a
+// stage criterion refuses, so no stored or future criterion can share it.
+const ProposalSentCriterionKey = "margince:proposal_sent"
+
 // criterionRequiredColumn is the requiredness column's one spelling, shared by
 // the patch and the audit image so the two name the same field.
 const criterionRequiredColumn = "required"

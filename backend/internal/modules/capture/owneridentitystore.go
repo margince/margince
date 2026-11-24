@@ -77,7 +77,10 @@ type OwnerIdentity struct {
 
 // OwnerIdentityStore reads and writes the per-seat identity list.
 type OwnerIdentityStore struct {
-	db *database.DB
+	db             *database.DB
+	addressClaimed AddressClaimHook
+	// addressWithdrawn undoes addressClaimed when the claim is withdrawn.
+	addressWithdrawn AddressWithdrawnHook
 }
 
 // NewOwnerIdentityStore builds the store over the app pool.
@@ -202,6 +205,9 @@ func (s *OwnerIdentityStore) AddConfirmed(ctx context.Context, kind, raw string,
 		if err := retirePendingForIdentityTx(ctx, tx, actor.UserID, out); err != nil {
 			return err
 		}
+		if err := s.addressClaimedTx(ctx, tx, out); err != nil {
+			return err
+		}
 		// Audit-only, like the exclusion list and the own-domain list beside
 		// it: this is capture configuration, and the closed event catalog
 		// (events.md) carries no type for it.
@@ -250,6 +256,9 @@ func (s *OwnerIdentityStore) Remove(ctx context.Context, id ids.UUID) error {
 			return err
 		}
 		withdrawn.auditID, withdrawn.withdrawnBy = auditID, actor.ID
+		if err := s.addressWithdrawnTx(ctx, tx, withdrawn.OwnerIdentity); err != nil {
+			return err
+		}
 		return keepWithdrawalTx(ctx, tx, withdrawn)
 	})
 }

@@ -121,6 +121,8 @@ type dealFiling struct {
 	filer           DealFiler
 	hooks           MailHooks
 	topic           *dealTopicState
+	// admit is one closed deal the filing may still write to; zero for none.
+	admit ids.UUID
 }
 
 // fileOnDeal locks the activity row first, as the human relink locks it

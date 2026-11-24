@@ -60,8 +60,9 @@ type CloseLostInput struct {
 	// StillDue asks again, under the deal row lock, whether the deal should
 	// close. The evidence it reads is not this module's.
 	StillDue func(ctx context.Context, tx pgx.Tx) (bool, error)
-	// Record writes the entry on the deal's timeline, in the close's transaction.
-	Record func(ctx context.Context, tx pgx.Tx, correction ids.UUID) error
+	// Record writes the entry on the deal's timeline, in the close's transaction,
+	// and answers the id of the note it wrote.
+	Record func(ctx context.Context, tx pgx.Tx) (ids.UUID, error)
 	// AsOwner binds the owner's agent as of the close's transaction, so a
 	// role change or suspension that committed before the close stops it.
 	AsOwner OwnerAuthorityTx
@@ -122,7 +123,11 @@ func (s *Store) closeAsLostTx(ctx context.Context, tx pgx.Tx, in CloseLostInput,
 	if err != nil {
 		return false, err
 	}
-	if err := in.Record(ctx, tx, correction); err != nil {
+	note, err := in.Record(ctx, tx)
+	if err != nil {
+		return false, err
+	}
+	if err := linkCorrectionNote(ctx, tx, []ids.UUID{correction}, note); err != nil {
 		return false, err
 	}
 	return true, nil

@@ -39,7 +39,10 @@ func (e *CounterpartyVerdictEngine) ReconcileLedgerWorkspace(ctx context.Context
 // StageReviewsWorkspace withdraws automatic uncertainty offers; sender correction is optional.
 func (e *CounterpartyVerdictEngine) StageReviewsWorkspace(ctx context.Context, maxRows int) error {
 	if maxRows <= 0 {
-		maxRows = verdictCatchUpCap
+		var err error
+		if maxRows, err = e.caps.Verdict(ctx); err != nil {
+			return err
+		}
 	}
 	return e.inWorkspace(ctx, func(wsCtx context.Context, _ ids.UUID) error {
 		rows, err := e.pending.AwaitingReview(wsCtx, maxRows)

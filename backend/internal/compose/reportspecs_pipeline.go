@@ -100,7 +100,7 @@ const (
 // It is deals.BaseValueSQL, rendered for the report engine's alias and
 // against the frame's own as-of, so this report and the forecast price a deal
 // identically.
-var pipelineBaseValueExpr = deals.BaseValueSQL(reportAsOfToken, reportBaseCurrencyToken, "t")
+var pipelineBaseValueExpr = deals.BaseValueAtSQL(reportAsOfToken, reportRatesAtToken, reportBaseCurrencyToken, "t")
 
 // pipelineWeightedBaseExpr weights that base value by the chance the forecast
 // uses for the deal (reportChanceToken), rounded per deal.

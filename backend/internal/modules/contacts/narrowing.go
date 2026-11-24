@@ -44,6 +44,9 @@ const (
 	NarrowedAdvisor NarrowingReason = "advisor"
 	// NarrowedHumanDecided means a human made the contact private.
 	NarrowedHumanDecided NarrowingReason = "human_decided"
+	// NarrowedSharedMailbox means a verdict minted it off mail only a shared
+	// mailbox captured, for that mailbox's backup owner.
+	NarrowedSharedMailbox NarrowingReason = "shared_mailbox"
 )
 
 // NarrowingReasons lists every value the column accepts. NULL is not among
@@ -52,6 +55,7 @@ const (
 func NarrowingReasons() []NarrowingReason {
 	return []NarrowingReason{
 		NarrowedAwaitingVerdict, NarrowedOutboundNoAnswer, NarrowedConfidentialityHold, NarrowedAdvisor, NarrowedHumanDecided,
+		NarrowedSharedMailbox,
 	}
 }
 

@@ -5,10 +5,16 @@ import { loadLocale } from "./src/i18n/catalogs";
 import { settleFirstScreen } from "./src/lib/journeymarks";
 import { forgetListAddresses } from "./src/lib/listreturn";
 import { fetchTheNetwork } from "./src/testing/no-network";
-import { takeUnroutedSessionProbes } from "./src/testing/unrouted-session";
+import {
+  quietEmptyListAnswers,
+  takeEmptyListAnswers,
+  takeUnroutedSessionProbes,
+} from "./src/testing/unrouted-session";
 import { ASYNC_UTIL_TIMEOUT_MS } from "./vitest.budget";
 
 await Promise.all([loadLocale("en"), loadLocale("de"), loadLocale("vi")]);
+
+quietEmptyListAnswers();
 
 // A test renders one surface at a time; none waits on Home's first paint.
 settleFirstScreen();
@@ -277,6 +283,19 @@ globalThis.fetch = (input: RequestInfo | URL, init?: RequestInit) => {
 // any suite that imports it, and a guard that skips where it thinks the defect
 // cannot be is how a census stops seeing its subject.
 //
+// The guessed routes are cleared before each case. They print only for a
+// failing case, after every afterEach, so a throwing hook cannot leak them.
+beforeEach(({ onTestFailed }) => {
+  takeEmptyListAnswers();
+  onTestFailed(() => {
+    const answered = takeEmptyListAnswers();
+    if (answered.length === 0) return;
+    console.error(
+      `the fetch stub answered ${answered.join(", ")} with an empty list because no route was given; if the failure reads a body that is not a list, route it.`,
+    );
+  });
+});
+
 // Read AFTER the case rather than watched during it, because the probe can fire
 // from a render the case kicked off and never awaited — which is exactly the
 // case that would otherwise pass.

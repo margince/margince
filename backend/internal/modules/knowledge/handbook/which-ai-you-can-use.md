@@ -15,21 +15,21 @@ AI works with Margince in two ways. **Margince AI** is the AI inside the product
 | How we test it | Each feature, on the product's real prompts, many tries | Everyday jobs, done from start to end, several tries |
 
 ### Which AI model should I choose for Margince?
-For Margince AI, choose the model setup with the most features ready. Today that is **Google Gemini**, with 26 of its 38 features ready. A model setup says which model does which kind of work, and the table below shows each one we tested. Your administrator sets it up under **Settings**, then **AI models**.
+For Margince AI, choose the model setup with the most features ready. Today that is **Google Gemini**, with 26 of its 39 features ready. A model setup says which model does which kind of work, and the table below shows each one we tested. Your administrator sets it up under **Settings**, then **AI models**.
 Also called: which model should I use, best model, recommended model, which LLM, which provider, model tiers.
 
 | Model setup | Where your data goes | Ready | Usable with care | Not reliable yet | Not measured |
 |---|---|---:|---:|---:|---:|
-| Google Gemini | global cloud | 26 | 12 | 0 | 0 |
-| Google Gemini in the EU, through Vertex AI | EU-hosted cloud | 26 | 12 | 0 | 0 |
-| OpenAI GPT-6, through OpenRouter | global cloud | 19 | 3 | 3 | 13 |
-| Open models from OpenAI and Mistral, through OpenRouter | global cloud | 12 | 12 | 8 | 6 |
-| Gemma 4 you could run yourself, through OpenRouter | global cloud | 1 | 0 | 4 | 33 |
-| Mistral models in the EU, through OpenRouter | EU-hosted cloud | 11 | 2 | 12 | 13 |
-| Gemma 4 on your own server, through Ollama | your own servers | 0 | 0 | 0 | 38 |
-| Qwen3 on your own server, through vLLM | your own servers | 0 | 0 | 0 | 38 |
+| Google Gemini | global cloud | 26 | 12 | 0 | 1 |
+| Google Gemini in the EU, through Vertex AI | EU-hosted cloud | 26 | 12 | 0 | 1 |
+| OpenAI GPT-6, through OpenRouter | global cloud | 19 | 3 | 3 | 14 |
+| Open models from OpenAI and Mistral, through OpenRouter | global cloud | 12 | 12 | 8 | 7 |
+| Gemma 4 you could run yourself, through OpenRouter | global cloud | 1 | 0 | 4 | 34 |
+| Mistral models in the EU, through OpenRouter | EU-hosted cloud | 11 | 2 | 12 | 14 |
+| Gemma 4 on your own server, through Ollama | your own servers | 0 | 0 | 0 | 39 |
+| Qwen3 on your own server, through vLLM | your own servers | 0 | 0 | 0 | 39 |
 
-93 of these 163 grades were measured on an older version of Margince and wait for a re-check.
+97 of these 163 grades were measured on an older version of Margince and wait for a re-check.
 
 ### What does a grade of a Margince AI feature mean?
 A grade of a Margince AI feature says how often it was right. **Ready** means right in at least 90 of every 100 tries: turn it on. **Usable with care** means right in most tries: have someone look over what it makes. **Not reliable yet** means wrong too often: leave it off. **Not measured** means nobody has tested that feature on that model yet.
@@ -50,6 +50,6 @@ Yes. An AI assistant that is not in the table can still connect to Margince. It 
 Also called: untested assistant, another AI tool, my own agent.
 
 ### What did you test, and what not?
-For Margince AI we ran 343 test cases. Each one is an example with a known right answer, in one of the 62 places in the product where a feature calls a model. For your AI assistant, we wrote 83 everyday jobs on a test company. The table counts the jobs each assistant has run, and a job not run yet is not counted as failed. A model setup or an assistant missing from the tables above is not tested yet.
+For Margince AI we ran 348 test cases. Each one is an example with a known right answer, in one of the 63 places in the product where a feature calls a model. For your AI assistant, we wrote 83 everyday jobs on a test company. The table counts the jobs each assistant has run, and a job not run yet is not counted as failed. A model setup or an assistant missing from the tables above is not tested yet.
 Also called: how is the AI tested, test coverage, certification.
 

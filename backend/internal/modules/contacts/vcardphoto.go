@@ -6,8 +6,6 @@ package contacts
 import (
 	"context"
 	"errors"
-
-	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
 // AwaitsApproval reports whether the card goes to the approval queue instead of
@@ -34,5 +32,5 @@ func (s *Store) ProposeCardsFromPhoto(ctx context.Context, entries []VCardEntry)
 			return nil, errors.New("contacts: a card from a photo must be marked as read by a model")
 		}
 	}
-	return s.importCardsFrom(ctx, entries, ids.Nil)
+	return s.importCardsFrom(ctx, entries, cardTarget{})
 }

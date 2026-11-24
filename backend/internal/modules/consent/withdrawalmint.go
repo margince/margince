@@ -32,9 +32,8 @@ import (
 // that address regardless, and an opt-out is about where the mail went; a
 // recipient we cannot name is exactly the one least able to ask a human.
 //
-// ok is false only when a credential already covers this address and scope, in
-// which case the previous link still works and there is nothing new to write
-// into the mail. The caller keeps the header it would otherwise have built.
+// ok is false only for an empty address, which names nobody to give a link.
+// A credential that already covers the address and scope is reused.
 //
 // purpose is the key the links must name: the catalogued key for a named
 // credential, and empty for an all-marketing one. A link naming a key the

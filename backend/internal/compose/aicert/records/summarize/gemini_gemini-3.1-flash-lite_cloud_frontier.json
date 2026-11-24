@@ -3,7 +3,7 @@
   "provider": "gemini",
   "served_model": "gemini-3.1-flash-lite",
   "env_class": "cloud_frontier",
-  "prompt_version": "p9b792c6d76d1ddc03b090af2ee603dfd",
+  "prompt_version": "p07789dacde34ef6402a4c822118baaa2",
   "corpus_version": "v1",
   "verdict": "supported_degraded",
   "runs": 114,
@@ -38,7 +38,7 @@
     {
       "scenario": "ask_meeting_prep_stays_silent_about_a_withheld_section",
       "site": "company_ask",
-      "stamp": "216409853b0b18ec506506b33b139fe8ef646cc637a70a5f9f5e41048a8c2cb1c1448c54d8cb2af7b21f73c7521dc630f92e90abcf6dea77f77aa0f8e3e9d810d5219c31d167cd695c535fb4a9a806b270f092fc43bdf0366bddfca06cc8f6af",
+      "stamp": "216409853b0b18ec506506b33b139fe8ef646cc637a70a5f9f5e41048a8c2cb1c1448c54d8cb2af7b21f73c7521dc630f92e90abcf6dea77f77aa0f8e3e9d8101f1da80828ed6b67d3f56c0c98e23dc1d0038c4ccc8c10d077dc7d4c46830732",
       "verdict": "certified",
       "judge_band": "certified",
       "runs": 15,
@@ -75,7 +75,7 @@
     {
       "scenario": "ask_whats_open_answers_the_pipeline_not_the_history",
       "site": "company_ask",
-      "stamp": "f26b36025165dcaf20b93cea153906434f1dc1e1a84a396bb71311c30b4eb7f962ffa7f04997c5038939244ec80236017360efdb1b7b3fd108aee4429c9dbcf1373228fe5bff8a211c9cae7df48d3e4d80a107cd75d9b34494347b4f30e053f8",
+      "stamp": "f26b36025165dcaf20b93cea153906434f1dc1e1a84a396bb71311c30b4eb7f962ffa7f04997c5038939244ec80236017360efdb1b7b3fd108aee4429c9dbcf17d5747422ff41d376bb2fd7f1f212c578c5341d4c09637bfecaff21d748fae69",
       "verdict": "certified",
       "judge_band": "certified",
       "runs": 3,
@@ -98,7 +98,7 @@
     {
       "scenario": "ask_whats_open_names_the_promise_each_side_owes",
       "site": "company_ask",
-      "stamp": "6a32dd5ec5a2fd043e6f35358a3d7f6daee424f82525d1a33d43193c2ed66fe2f9b1e8cc1c46edd36d6b7bc728aba2dc3e2f6b2bed761430b5f0680e7569fa1f7d15e2430a72f77a4865b4916c4a747f898cb8efb531527dc1c955ebdd64955b",
+      "stamp": "6a32dd5ec5a2fd043e6f35358a3d7f6daee424f82525d1a33d43193c2ed66fe2f9b1e8cc1c46edd36d6b7bc728aba2dc3e2f6b2bed761430b5f0680e7569fa1f733bcca90d655e86fd02c04ebeada02ffa8f60d1166b00218d30cc69c3b4038e",
       "verdict": "certified",
       "judge_band": "certified",
       "runs": 9,
@@ -127,7 +127,7 @@
     {
       "scenario": "contact_brief_reads_what_was_said",
       "site": "contact_brief",
-      "stamp": "254a0bb3d24a0cb291062b5c8e5a8064b4c679969840d501ba23df3ff10cb61889e20d69cb3e415dcb87503c9175f6005e33bfbe7be74cc9de2c3fba0ad60a02fb763895a8ce5eab21b982c9650353e005592b30cc7cad110e82eab63ec6f970",
+      "stamp": "254a0bb3d24a0cb291062b5c8e5a8064b4c679969840d501ba23df3ff10cb61889e20d69cb3e415dcb87503c9175f6005e33bfbe7be74cc9de2c3fba0ad60a0248f31292477659f1deb128ed41794639f93345a1f3d5a4fbb4b9e6e970f1dfe8",
       "verdict": "certified",
       "judge_band": "certified",
       "runs": 6,
@@ -153,7 +153,7 @@
     {
       "scenario": "contact_brief_states_the_promised_date",
       "site": "contact_brief",
-      "stamp": "e89a8abfeb4efb093a570497e998c8b0c4a9a909c8491b2aa1b5843c994d64fdf92cce888ab7e636992da2cb3c99e34d81a5574b91a93184dfec3b5ecf88528b426d4dce308ed72837c2f7e51b1ab6951c1bd946dbcf177933d29a6f50d39bdb",
+      "stamp": "e89a8abfeb4efb093a570497e998c8b0c4a9a909c8491b2aa1b5843c994d64fdf92cce888ab7e636992da2cb3c99e34d81a5574b91a93184dfec3b5ecf88528bd3e8888f887be769f342fa203a21610831e3eeb45c205907fa6a43ef3046ef50",
       "verdict": "certified",
       "judge_band": "certified",
       "runs": 6,
@@ -179,7 +179,7 @@
     {
       "scenario": "contact_brief_stays_silent_about_what_the_reader_may_not_see",
       "site": "contact_brief",
-      "stamp": "c57dea3a660e55db3e1409b29028e8c96d99949860f1997c56ba1c5f2d1dc179511e6a3fabf28e9e5322ce8d8df768294efefc4a8a715f5982db57d07827579ff4c0f04053b6dd73f041f19d93b50f3f95c205e58fe223cc36b62de267c5c649",
+      "stamp": "c57dea3a660e55db3e1409b29028e8c96d99949860f1997c56ba1c5f2d1dc179511e6a3fabf28e9e5322ce8d8df768294efefc4a8a715f5982db57d07827579fc8863ec93856aeba590a2504381907320f8fed5997acb7e1b136bb3ed7ce6e98",
       "verdict": "certified",
       "judge_band": "certified",
       "runs": 15,
@@ -216,7 +216,7 @@
     {
       "scenario": "deal_room_brief_names_the_buyer_who_set_it",
       "site": "deal_room_brief",
-      "stamp": "e3bcc04ff5fd63e8dbbd4196246d4fb995fcc051a1eddfeb5266b8798b447136cf0e182cdb1219036fc161a95f5e081450be572b288143fdffb3ff5fe9b9c6db9bcfb0546aa2bb64f57b0b9094e915de26cded8b70f9d2dd3632b802b393dde7",
+      "stamp": "e3bcc04ff5fd63e8dbbd4196246d4fb995fcc051a1eddfeb5266b8798b447136cf0e182cdb1219036fc161a95f5e081450be572b288143fdffb3ff5fe9b9c6db09f63233bb36cce9110253fa93ce28a741229f6de1054e3ba67abc716d62de6d",
       "verdict": "supported_degraded",
       "judge_band": "supported_degraded",
       "runs": 12,
@@ -248,7 +248,7 @@
     {
       "scenario": "deal_room_brief_only_routine_asks",
       "site": "deal_room_brief",
-      "stamp": "125a9758f408f786021de041deb881e2089db88193ebe7d3e8d7e6cf6afdd0ca73ece6ad3071b9f056eca1d16ab7fbc4073be4906b5a5f2cf2b2cee777fa74cef07a31ccf83472fb5bcc0ecf5872234e392a46270472f09b9cbfb22a322d0e59",
+      "stamp": "125a9758f408f786021de041deb881e2089db88193ebe7d3e8d7e6cf6afdd0ca73ece6ad3071b9f056eca1d16ab7fbc4073be4906b5a5f2cf2b2cee777fa74ce01ab59ce9668ca3056c375cc835f9fd96edc256c8c814956f026c97c9ca2d7cf",
       "verdict": "certified",
       "judge_band": "certified",
       "runs": 3,
@@ -271,7 +271,7 @@
     {
       "scenario": "deal_room_brief_reads_the_blocker",
       "site": "deal_room_brief",
-      "stamp": "e600136afe994feb5055fcdb3d8617756770eb34740602f71041ec6251c6585acb636ff131ab09f1bdcea1e722f70e232e0533b92c238b155acb873932e9b33c1f10d2baf0e6a4bd1328114fa2ed71612c1f17b043833f899126ad54d590a3a6",
+      "stamp": "e600136afe994feb5055fcdb3d8617756770eb34740602f71041ec6251c6585acb636ff131ab09f1bdcea1e722f70e232e0533b92c238b155acb873932e9b33cb88604f1899e3fd79df216be3d76e77bc79f362252315ea2c4d56e00b010d9f4",
       "verdict": "certified",
       "judge_band": "certified",
       "runs": 3,
@@ -294,7 +294,7 @@
     {
       "scenario": "deal_room_brief_resolved_condition",
       "site": "deal_room_brief",
-      "stamp": "c93006605d5e9d3dbe78ab285bf53cba17469f96a2b2e8c585db852005997cfb7c549f6601713f8631b083d7bff98869c01132d5f8718ee8ab1d3f65f72de0356585dc6d06c3f8fff821c4fd81006ba08e28dd1409a0f53d1f91735288dd177f",
+      "stamp": "c93006605d5e9d3dbe78ab285bf53cba17469f96a2b2e8c585db852005997cfb7c549f6601713f8631b083d7bff98869c01132d5f8718ee8ab1d3f65f72de0352edc7bb621f97af4937395676c185b2654ab51b2d176aaea2b4eaeb0b25eaa76",
       "verdict": "certified",
       "judge_band": "certified",
       "runs": 3,
@@ -317,7 +317,7 @@
     {
       "scenario": "deal_room_brief_seller_wrote_the_condition",
       "site": "deal_room_brief",
-      "stamp": "99722777c70acc8e484bf0d94426da688290598966e089f505667bc39686a4b25e11dced0fc8a7b631110d5045f906229b5e5430f946e1b883dc71b07cd031fd19bc3511c9d4102eb87abe1a124f71e0be400f8caa96be1a4607e299a9897908",
+      "stamp": "99722777c70acc8e484bf0d94426da688290598966e089f505667bc39686a4b25e11dced0fc8a7b631110d5045f906229b5e5430f946e1b883dc71b07cd031fd010757173de4377349421b6ae9c0e665ac0dbb65c79c7544f59bf9480c882e8f",
       "verdict": "supported_degraded",
       "judge_band": "supported_degraded",
       "runs": 9,
@@ -346,7 +346,7 @@
     {
       "scenario": "dossier_describes_the_company_not_the_relationship",
       "site": "company_dossier",
-      "stamp": "1e8127bc8b1742898698b80a8235ad643c8a813e3bced174f317de60236fa7b647d05ceb8dd48714f4580af1b95807f0bd9e30bd3a02b572fd9d8f6bd70d77a0c5ec5d5836df8be53871f505bd4eba27b654d76970da68bd726acf158abb25db",
+      "stamp": "1e8127bc8b1742898698b80a8235ad643c8a813e3bced174f317de60236fa7b647d05ceb8dd48714f4580af1b95807f0bd9e30bd3a02b572fd9d8f6bd70d77a0633530620eada0d317695469e363a6e016522680802213d26dbc8b06e4f6ebf0",
       "verdict": "certified",
       "judge_band": "certified",
       "runs": 3,
@@ -369,7 +369,7 @@
     {
       "scenario": "meeting_brief_reads_the_thread_that_matters",
       "site": "meeting_brief",
-      "stamp": "a1807122f025496aa7fe96ec9a7da528754a554e02d1f300e39aa6c8838d90a09439ac0184dea4bb02536683adc6e75139a257604c485cdc9c47f9539bd0747a729798e6868151cd850a88e4b35cb92bfa91c522c95e131431c6132e452f6f67",
+      "stamp": "a1807122f025496aa7fe96ec9a7da528754a554e02d1f300e39aa6c8838d90a09439ac0184dea4bb02536683adc6e75139a257604c485cdc9c47f9539bd0747a500d310a455b18f7f6e6605cfcb63756a13e1d6e267056f17e1810352ebb9af1",
       "verdict": "certified",
       "judge_band": "certified",
       "runs": 3,
@@ -392,7 +392,7 @@
     {
       "scenario": "meeting_plan_reads_the_thread_that_matters",
       "site": "meeting_plan",
-      "stamp": "60e703f24b4644941ba6c2aefbdbbe2394765deb8229db0bf96c0ffcbafb18322e43167ad63fe3c49ab4d4b6cfee13dcbd23566bac8b8af84f215006718f8a1039930e494ef347866069ff41c0b0aaf18200cd2b165afd92db2cc6cce55f12e0",
+      "stamp": "60e703f24b4644941ba6c2aefbdbbe2394765deb8229db0bf96c0ffcbafb18322e43167ad63fe3c49ab4d4b6cfee13dcbd23566bac8b8af84f215006718f8a10c9637c57261f98cb8b241008ff977ebe4cab22f3bb4aaeb8b61a7e2de6bc4a3c",
       "verdict": "supported_degraded",
       "judge_band": "supported_degraded",
       "runs": 3,
@@ -415,7 +415,7 @@
     {
       "scenario": "meeting_plan_serves_the_meetings_deal",
       "site": "meeting_plan",
-      "stamp": "024722e0fd5b4e4bb6bc4696082ea6d4709662a56b7a6c8c179592a9869f80838d39711369abfed43af6e8f46ebdd8967e9ba8b5dee09b89d5276302289d3b99bdd5a8d0bdcfb70adcc994bf642f7105e41a42bcdbd06a6d65d504e34fac7dcb",
+      "stamp": "024722e0fd5b4e4bb6bc4696082ea6d4709662a56b7a6c8c179592a9869f80838d39711369abfed43af6e8f46ebdd8967e9ba8b5dee09b89d5276302289d3b99c8a6389fe653dd51d9f08a721820029c8d2214a9c5ae0389e3ae79f70bdc5d12",
       "verdict": "certified",
       "judge_band": "certified",
       "runs": 3,
@@ -438,7 +438,7 @@
     {
       "scenario": "brief_stays_silent_about_a_withheld_section",
       "site": "company_brief",
-      "stamp": "5c2888a5387af338f45baede573ccf21f943654ada3629db1553495697137597e871fcb28f109fb7851a4f4a59f2775b5d843cfc851484480f3cdee0b7da46373182a115eb7d70918322492a3502c9868473ad3368e44fdf64ed2630d446b734",
+      "stamp": "5c2888a5387af338f45baede573ccf21f943654ada3629db1553495697137597e871fcb28f109fb7851a4f4a59f2775b5d843cfc851484480f3cdee0b7da4637eb0da64ef2490b0fabce88cf93b1760219f403d1aff8490723c7093c7603c53b",
       "verdict": "certified",
       "judge_band": "certified",
       "runs": 15,
@@ -475,7 +475,7 @@
     {
       "scenario": "brief_names_the_stalled_deal_and_the_last_touch",
       "site": "company_brief",
-      "stamp": "1e07b2fa67ce36a71d72b04812e210fc4946968c1cbde6cadf6ee996a285aa01f8d0fb5377842a6c08674714e9b67d111c27b82e87501cf9031a483b53d05596eb30065cb8aa9e47302c833f450304525cc82c14e6e7aa0cbeac43229575c5ef",
+      "stamp": "1e07b2fa67ce36a71d72b04812e210fc4946968c1cbde6cadf6ee996a285aa01f8d0fb5377842a6c08674714e9b67d111c27b82e87501cf9031a483b53d05596c19b4c6c458bfd853539756f592d6cd8cbf8f4f410c178011a7ba20753f36c80",
       "verdict": "certified",
       "judge_band": "certified",
       "runs": 3,

@@ -63,7 +63,7 @@ test.beforeAll(async () => {
       response.setHeader("Content-Type", "application/json");
       response.setHeader("Server-Timing", "fixture;dur=7");
       response.setHeader(
-        "X-Correlation-ID",
+        "X-Request-Id",
         "11111111-1111-4111-8111-111111111111",
       );
       response.setHeader("Cache-Control", "no-store");

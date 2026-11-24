@@ -84,6 +84,11 @@ func writeActivitySatellites(
 	if err := insertActivityLinks(ctx, tx, id, in, in.inheritedProject); err != nil {
 		return err
 	}
+	// The guests come first, because a held transition keeps the seats credited
+	// when it is recorded. Link admission already checked their parent visibility.
+	if err := stampLoggedParticipants(ctx, tx, id, in); err != nil {
+		return err
+	}
 	// The first transition, where this capture named a status. A meeting
 	// arrives `booked` far more often than not, and that booking is the fact
 	// every "how many did we book this period" question counts.
@@ -95,10 +100,6 @@ func writeActivitySatellites(
 		SourceSystem: in.SourceSystem,
 		SourceID:     in.SourceID,
 	}); err != nil {
-		return err
-	}
-	// Link admission already checked the participants' parent visibility.
-	if err := stampLoggedParticipants(ctx, tx, id, in); err != nil {
 		return err
 	}
 	if err := recordImportedProvenance(ctx, tx, id, in, by); err != nil {

@@ -26,6 +26,9 @@
 // further down are about the call rather than the lead — the AI usage meter
 // and the model-call audit row.
 //
+// The model also receives the installation's own company profile, which every
+// member may read, as it does for every contact draft.
+//
 // Everything but the caller's own intent is untrusted text — the lead's name,
 // the company they wrote from, the body of a captured email — and rides inside
 // contactdraft's fence with the rest.

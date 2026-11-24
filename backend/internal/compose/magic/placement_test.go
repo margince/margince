@@ -61,13 +61,16 @@ func TestTheUndoJudgeIsAskedAboutTheAuditedType(t *testing.T) {
 	}
 }
 
-// Every placed child has a sentence for each verb a placement reads, so no
-// placed row falls silently into housekeeping for want of one.
+// Every placed child has sentences, each for a verb the read admits. A
+// sentence for any other verb is one no reader is ever shown.
 func TestEveryPlacedChildHasItsSentences(t *testing.T) {
 	for _, p := range placements {
-		for _, action := range []string{actionCreate, actionUpdate, actionArchive} {
-			if placedSentences[p.child][action] == "" {
-				t.Errorf("%s has no sentence for %s", p.child, action)
+		if len(placedSentences[p.child]) == 0 {
+			t.Errorf("%s is placed with no sentence", p.child)
+		}
+		for action := range placedSentences[p.child] {
+			if _, ok := admitted[action]; !ok {
+				t.Errorf("%s has a sentence for %s, which the read never admits", p.child, action)
 			}
 		}
 		if recordLabels[p.parent] == "" {

@@ -227,7 +227,7 @@ _AGY_SPILL = re.compile(r"/\.gemini/antigravity-cli/brain/([^/]+)/\.system_gener
 _AGY_LOOKS = {"read_file", "view_file", "list_dir", "find_by_name", "grep_search"}
 
 
-def _inside(workspace, params):
+def _agy_inside(workspace, params):
     paths = [os.path.realpath(v) for v in params.values() if isinstance(v, str) and v.startswith("/")]
     root = os.path.realpath(workspace) if workspace else ""
     return bool(root and paths) and all(p == root or p.startswith(root + os.sep) for p in paths)
@@ -239,7 +239,7 @@ def _agy_tool(out, step, conversation, workspace=""):
     info = step.get("tool_info") or {}
     params = info.get("parameters") or {}
     path = str(params.get("Path") or "")
-    if name in _AGY_LOOKS and _inside(workspace, params):
+    if name in _AGY_LOOKS and _agy_inside(workspace, params):
         return ""
     if name == "read_file" and _AGY_SCHEMA_DIR in path:
         return ""

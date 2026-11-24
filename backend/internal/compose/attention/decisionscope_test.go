@@ -124,8 +124,8 @@ func TestPersonalDecisionsDoNotDependOnUnassignedProducerReads(t *testing.T) {
 	}
 }
 
-// Each scope reads the duplicate pairs narrowed to the owners it is for, list
-// and count alike. The team view reads them all.
+// Each scope reads the duplicate pairs narrowed to the owners it is for, the
+// list and its count in one read. The team view reads them all.
 func TestPairReadsReceiveTheScopeOwners(t *testing.T) {
 	named := ids.NewV7()
 	reader := pageReader()
@@ -150,8 +150,8 @@ func TestPairReadsReceiveTheScopeOwners(t *testing.T) {
 			if _, _, err := service.decisionsToDepth(reader, needsYouPage); err != nil {
 				t.Fatal(err)
 			}
-			if len(asked) != 2 {
-				t.Fatalf("the pair store was read %d times, want a list and a count", len(asked))
+			if len(asked) != 1 {
+				t.Fatalf("the pair store was read %d times, want one read for the list and its count", len(asked))
 			}
 			for _, got := range asked {
 				if !reflect.DeepEqual(got, tc.owners) {

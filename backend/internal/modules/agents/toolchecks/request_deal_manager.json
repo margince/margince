@@ -1,0 +1,9 @@
+{
+  "verb": "request_deal_manager",
+  "checks": [
+    "deal.update"
+  ],
+  "takes": [
+    "deal"
+  ]
+}

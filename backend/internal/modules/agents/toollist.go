@@ -129,23 +129,28 @@ func DescribeForClient(spec mcp.ToolSpec) string {
 	return fmt.Sprintf("%s (Governance: %s%s; %s.)", spec.Description, tier, askUserFirst(spec), scope)
 }
 
+// What a client tells the user before the yes: a write's change, a read's disclosure.
+const (
+	askConsequenceWrite = "what the call will change"
+	askConsequenceRead  = "what the call will surface"
+)
+
 // askUserFirst is for an MCP client's model only, never the loop agent, which has no one to ask.
 // The server cannot check the yes, and a call a human approves already has it.
 func askUserFirst(spec mcp.ToolSpec) string {
-	return askUserAbout(spec, "what the call will change")
+	return askUserAbout(spec, askConsequenceWrite)
 }
 
 // askUserReading is askUserFirst for a read. A read changes nothing, so the
 // client is told what the call surfaces, not a change it never makes.
 func askUserReading(spec mcp.ToolSpec) string {
-	return askUserAbout(spec, "what the call will surface")
+	return askUserAbout(spec, askConsequenceRead)
 }
 
 // askUserAbout renders the ask-first sentence. consequence is what the client
 // describes to the user before the yes: a write's change, a read's disclosure.
 func askUserAbout(spec mcp.ToolSpec, consequence string) string {
-	ask := "; the user's yes is needed for %s, so tell them " + consequence + " and " +
-		"get it before calling, unless they asked for this call themselves"
+	ask := "; the user's yes is needed for %s, so tell them " + consequence + " and " + askFirstGetYes
 	if len(spec.Actions) == 0 {
 		if !spec.AskUserFirst || spec.Tier == mcp.TierConfirmationRequired {
 			return ""

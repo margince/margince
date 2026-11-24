@@ -32,6 +32,10 @@ type DealRefileScope struct {
 	// Recheck also asks the topic check about the rule's older suggested
 	// links; only the recovery sweep sets it, beside All.
 	Recheck bool `json:"recheck,omitempty"`
+	// Backfill adds the one-time pass over a deal's stakeholders' old mail
+	// (stakeholderbackfill.go) after the recheck. Only the recovery sweep sets
+	// it, and only until that pass has finished.
+	Backfill bool `json:"backfill,omitempty"`
 }
 
 // Empty prevents an unscoped trigger from becoming a full sweep.
@@ -92,36 +96,67 @@ func (r DealRepair) Refile(ctx context.Context, db TxRunner, activity ids.Activi
 	if err := auth.RequireSystem(ctx); err != nil {
 		return false, err
 	}
-	return checkedFiling(ctx, db, r.Check, func(tx pgx.Tx, topic *dealTopicState) (*topicQuestion, error) {
-		return r.refileTx(ctx, tx, activity, asOf, topic)
-	})
+	plan := refilePlan{
+		eligible:   func(arg func(any) int) string { return refileHorizonSQL(asOf, arg) },
+		candidates: r.Candidates, ask: r.Ask,
+	}
+	result, err := r.checkedRefile(ctx, db, activity, plan)
+	return result.Asked, err
 }
 
-// refileTx is one transaction of Refile.
-func (r DealRepair) refileTx(ctx context.Context, tx pgx.Tx, activity ids.ActivityID, asOf time.Time, topic *dealTopicState) (*topicQuestion, error) {
+// refilePlan is what varies between the refile passes. It names which mail may
+// be filed, which deals it may be filed on, and whether a question may be
+// raised. The guards and the decision are one path (refileTx).
+type refilePlan struct {
+	// eligible is a SQL condition over activity alias a, binding its values
+	// through arg.
+	eligible   func(arg func(any) int) string
+	candidates DealCandidates
+	// admit is one closed deal the mail may be filed on; zero for none.
+	admit ids.UUID
+	ask   AskWhichDeal
+}
+
+// checkedRefile runs refileTx with the topic check between its transactions.
+// It reports whether the model was asked, whether the last decision filed the
+// mail, and whether the check was deferred.
+func (r DealRepair) checkedRefile(ctx context.Context, db TxRunner, activity ids.ActivityID, plan refilePlan) (BackfillResult, error) {
+	var outcome DealOutcome
+	var deferred bool
+	asked, err := checkedFiling(ctx, db, r.Check, func(tx pgx.Tx, topic *dealTopicState) (*topicQuestion, error) {
+		question, decided, err := r.refileTx(ctx, tx, activity, plan, topic)
+		outcome = decided
+		deferred = topic != nil && topic.answer != nil && topic.answer.deferred
+		return question, err
+	})
+	return BackfillResult{Asked: asked, Filed: outcome == DealLinked, Deferred: deferred}, err
+}
+
+// refileTx is one transaction of a refile pass.
+func (r DealRepair) refileTx(ctx context.Context, tx pgx.Tx, activity ids.ActivityID, plan refilePlan, topic *dealTopicState) (*topicQuestion, DealOutcome, error) {
 	if live, err := lockForDeal(ctx, tx, activity); err != nil || !live {
-		return nil, err
+		return nil, DealNone, err
 	}
 	args := []any{activity}
 	arg := func(value any) int { args = append(args, value); return len(args) }
-	horizon := refileHorizonSQL(asOf, arg)
 	var eligible bool
-	if err := tx.QueryRow(ctx, `SELECT EXISTS (SELECT 1 FROM activity a WHERE a.id=$1
- AND a.kind IN ('email','meeting') AND `+capturedConnectorActivitySQL+` AND `+horizon+`)`, args...).Scan(&eligible); err != nil || !eligible {
-		return nil, err
+	query := `SELECT EXISTS (SELECT 1 FROM activity a WHERE a.id=$1
+ AND a.kind IN ('email','meeting') AND ` + capturedConnectorActivitySQL + ` AND ` + plan.eligible(arg) + `)`
+	if err := tx.QueryRow(ctx, query, args...).Scan(&eligible); err != nil || !eligible {
+		return nil, DealNone, err
 	}
 	links, _, human, _, err := readDealProvenance(ctx, tx, activity)
 	if err != nil || human || links > 0 {
-		return nil, err
+		return nil, DealNone, err
 	}
 	var question *topicQuestion
-	_, err = r.asMailbox(ctx, tx, activity, dealRefileReason, func(f dealFiling) (DealOutcome, error) {
-		f.topic = topic
-		verdict, asked, err := fileOnDeal(f, tx, activity, r.Candidates, nil)
+	outcome, err := r.asMailbox(ctx, tx, activity, dealRefileReason, func(f dealFiling) (DealOutcome, error) {
+		f.topic, f.admit = topic, plan.admit
+		verdict, asked, err := fileOnDeal(f, tx, activity, plan.candidates, plan.ask)
 		question = asked
 		return verdict.Outcome, err
 	})
-	return question, err
+	return question, outcome, err
 }
 
 func refileHorizonSQL(asOf time.Time, arg func(any) int) string {

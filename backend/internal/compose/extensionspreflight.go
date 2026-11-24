@@ -4,6 +4,7 @@
 package compose
 
 import (
+	"github.com/margince/margince/backend/internal/compose/extai"
 	"github.com/margince/margince/backend/internal/compose/extcapability"
 	"github.com/margince/margince/backend/pkg/extension"
 )
@@ -30,6 +31,9 @@ func preflightDeclarations(e extension.Extension) error {
 		return err
 	}
 	if err := preflightSystemReads(e); err != nil {
+		return err
+	}
+	if err := extai.Preflight(e); err != nil {
 		return err
 	}
 	if err := extcapability.Preflight(e); err != nil {

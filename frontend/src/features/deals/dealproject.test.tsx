@@ -470,8 +470,12 @@ describe("the deal form's company picker", () => {
   });
 });
 
-// The delivery offer sits above the History tab's chronology, not on the
-// Overview.
+// The delivery offer sits on the Overview the deal opens on, so a check for
+// it waits until that tab has drawn its cards.
+async function overviewDrawn() {
+  await screen.findByRole("heading", { name: "Offers" });
+}
+
 async function openHistory() {
   await userEvent
     .setup()
@@ -512,7 +516,7 @@ describe("the deal page", () => {
       projects: [project({ id: "pr-1", name: "CRM rollout", version: 3 })],
     });
     render(<DealScreen id="d1" />);
-    await openHistory();
+    await overviewDrawn();
     const start = await screen.findByTestId("deal-start-delivery");
     expect(
       screen.getByText(/Attach it to CRM rollout and move the project/),
@@ -548,7 +552,7 @@ describe("the deal page", () => {
       projects: [project({ id: "pr-1", name: "CRM rollout" })],
     });
     render(<DealScreen id="d1" />);
-    await openHistory();
+    await overviewDrawn();
     expect(screen.queryByTestId("deal-start-delivery")).toBeNull();
     cleanup();
 
@@ -564,7 +568,7 @@ describe("the deal page", () => {
       projects: [project({ id: "pr-1", name: "CRM rollout" })],
     });
     render(<DealScreen id="d1" />);
-    await openHistory();
+    await overviewDrawn();
     expect(screen.queryByTestId("deal-start-delivery")).toBeNull();
   });
 
@@ -583,7 +587,7 @@ describe("the deal page", () => {
       afterPatch: (row) => ({ ...row, project_id: "pr-1", version: 8 }),
     });
     render(<DealScreen id="d1" />);
-    await openHistory();
+    await overviewDrawn();
     await user.click(await screen.findByTestId("deal-start-delivery"));
     // The PATCH landed, the advance did not: the deal re-reads as attached,
     // and the offer now says only the project is still owed.
@@ -596,15 +600,17 @@ describe("the deal page", () => {
     expect(writes.filter((write) => write.method === "PATCH")).toHaveLength(1);
   });
 
-  it("keeps the delivery offer off the Overview", async () => {
+  it("draws the delivery offer once, on the Overview and not on History", async () => {
     dealBackend({
       deals: [deal({ status: "won", stage_id: "s3", project_id: null })],
       projects: [project({ id: "pr-1", name: "CRM rollout" })],
     });
     render(<DealScreen id="d1" />);
-    await screen.findByRole("heading", { name: "Fleet retrofit" });
-    await screen.findByRole("heading", { name: "Offers" });
-    expect(screen.queryByTestId("deal-start-delivery")).toBeNull();
+    expect(await screen.findAllByTestId("deal-start-delivery")).toHaveLength(1);
+    await openHistory();
+    await waitFor(() =>
+      expect(screen.queryByTestId("deal-start-delivery")).toBeNull(),
+    );
   });
 
   it("makes no offer when the company has two open projects", async () => {
@@ -616,7 +622,7 @@ describe("the deal page", () => {
       ],
     });
     render(<DealScreen id="d1" />);
-    await openHistory();
+    await overviewDrawn();
     expect(screen.queryByTestId("deal-start-delivery")).toBeNull();
   });
 

@@ -69,6 +69,8 @@ const meetingNotesReadable = `
 	    l.entity_type = 'activity' AND l.entity_id = a.id AND l.category = '` + categoryLink + `'
 	AND l.archived_at IS NULL AND l.external_source_id = '` + meetingDocumentSource + `' || a.id::text
 	AND a.kind = 'meeting' AND a.archived_at IS NULL AND a.restricted_at IS NULL
+	AND NOT EXISTS (SELECT 1 FROM activity n WHERE n.source_activity_id = a.id AND n.archived_at IS NULL
+	                 AND n.source_system = '` + transcriptSourceSystem + `' AND n.source = '` + meetingNotesMailSource + `')
 	AND EXISTS (SELECT 1 FROM activity_participant o WHERE o.activity_id = a.id AND o.user_id = @owner)
 	AND EXISTS (SELECT 1 FROM activity_participant g
 	             WHERE g.activity_id = a.id AND g.role = 'organizer'

@@ -361,6 +361,7 @@ func relinkProviderPurchases(ctx context.Context, tx pgx.Tx, sourceID, targetID 
 // and a digest of (user, contact, address, channel_user_id). Two rows that differ only
 // by the merged contact are one party recorded twice, and the source's row is dropped.
 // Rows differing by address or by account are two ways to reach one party and both repoint.
+// A sweep by contact takes no meeting's attendee lock; the hourly evidence pass corrects it.
 func relinkParticipantRows(ctx context.Context, tx pgx.Tx, sourceID, targetID ids.ContactID) error {
 	if _, err := tx.Exec(ctx, `
 		DELETE FROM activity_participant ap

@@ -12,6 +12,8 @@ import (
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
+
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
 // A verdict's write holds every cited activity before it checks the evidence.
@@ -35,7 +37,7 @@ func TestAVerdictHoldsItsCitedActivitiesFromTheCheckToTheCommit(t *testing.T) {
 			_, moving = e.owner.Exec(t.Context(), `SELECT 1 FROM activity WHERE id = $1 FOR UPDATE NOWAIT`, meeting)
 			return false, nil
 		},
-		Record: func(context.Context, pgx.Tx, []VerdictChange) error { return nil },
+		Record: func(context.Context, pgx.Tx, []VerdictChange) (ids.UUID, error) { return ids.Nil, nil },
 	})
 	if err != nil {
 		t.Fatalf("applying the verdict: %v", err)

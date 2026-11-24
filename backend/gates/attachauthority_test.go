@@ -190,6 +190,7 @@ var carrySetters = gatekit.Waive(map[string]string{
 	"activities.outboundMessage.activity":        "the sent row takes the continuation anchorThreading derived, never the caller's anchor",
 	"activities.emailRequestTaskInput":           "a reminder to answer a request is filed where the request message is; the message id is the source the store read",
 	"activities.Store.LandMeetingNotesTx":        "a capture transcript is filed where its meeting is; the meeting comes from the calendar sync, not a request",
+	"activities.Store.LandMeetingNotesMailTx":    "a capture transcript is filed where its meeting is; the meeting is the one a Google mail names for the mailbox owner, not a request",
 	"activities.LogActivityInput.ContinueFiling": "the one exported setter; its callers are listed here too",
 	"compose.writeCommitmentTask":                "a commitment task is filed where the message it was read from is; the message id is the extractor's",
 })

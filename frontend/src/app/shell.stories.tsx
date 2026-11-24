@@ -25,7 +25,7 @@ import type { Locale } from "../i18n";
 import { en } from "../i18n/en";
 import type { Route } from "../lib/router";
 import { SETTINGS_PAGES } from "../lib/settingscatalog";
-import type { GrantSpec } from "../testing/mefixture";
+import { type GrantSpec, READS_DESTINATIONS } from "../testing/mefixture";
 import {
   installFetchStub,
   jsonResponse,
@@ -787,7 +787,11 @@ export const PhoneMoreMenu: Story = {
     await expect(menu.querySelector(".railhead")).toBeNull();
   },
   render: () => {
-    stubEntitlement(WITHIN_CAP);
+    // The menu lists only the destinations this reader may read.
+    stubSession(
+      { ...READS_DESTINATIONS, license: ["read"] },
+      { "GET /installation/license": () => jsonResponse(WITHIN_CAP) },
+    );
     return (
       <StoryProviders>
         <SeedInstallation>

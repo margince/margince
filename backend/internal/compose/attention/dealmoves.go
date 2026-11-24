@@ -110,6 +110,9 @@ func needsDealMove(item crmcontracts.WorklistItem) (ids.UUID, bool) {
 // TestAMeetingFollowUpReachesTheRowAsAFreshMessage (dealmoves_test.go)
 func worklistMoveOf(decided crmcontracts.DealStatusCardMove) *crmcontracts.WorklistMove {
 	out := &crmcontracts.WorklistMove{Action: crmcontracts.WorklistMoveAction(decided.Action), Basis: decided.Basis, MailCoverage: decided.MailCoverage, Recommendation: decided.Recommendation}
+	if out.Action == crmcontracts.WorklistMoveActionBringInManager {
+		out.Reason = &decided.Reason
+	}
 	if decided.Arguments == nil {
 		return out
 	}

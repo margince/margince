@@ -2,8 +2,8 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { components } from "../../api/schema";
-import { formatPercent } from "../../format/format";
-import type { Locale, Translator } from "../../i18n";
+import { formatAnalyticsNumber, formatPercent } from "../../format/format";
+import { type Locale, type Translator, translatePlural } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import { labelFor } from "../../lib/labelfor";
 
@@ -91,6 +91,7 @@ type ReasonDeal = Pick<
   | "stage_win_probability"
   | "win_probability_set_by_user_id"
   | "win_probability_set_by_name"
+  | "win_chance"
 >;
 
 type ReasonContext = Readonly<{
@@ -159,8 +160,76 @@ function openReason(
         editable && t("deal.winProbability.reason.clear"),
       ];
     default:
-      return [t("deal.winProbability.reason.stage", { stage }), override];
+      return deal.win_chance
+        ? [...winChanceSentences(deal, stage, t, locale), override]
+        : [t("deal.winProbability.reason.stage", { stage }), override];
   }
+}
+
+const SIGNAL_WORDS: Record<string, MessageKey> = {
+  quiet: "deal.winChance.signal.quiet",
+  close_pushed: "deal.winChance.signal.close_pushed",
+  no_next_step: "deal.winChance.signal.no_next_step",
+  stuck: "deal.winChance.signal.stuck",
+};
+
+// How the one win chance was made, from the structured parts the server sends.
+// They are the typed stage figure, what closed deals from the stage show, the
+// risk effect, and the result.
+function winChanceSentences(
+  deal: ReasonDeal,
+  stage: string,
+  t: Translator,
+  locale: Locale,
+): (string | false | undefined)[] {
+  const chance = deal.win_chance;
+  if (!chance || deal.win_probability == null) {
+    return [];
+  }
+  const percent = (value: number) => formatPercent(value / 100, locale);
+  let learned: string | false = false;
+  if (!chance.self_correcting) {
+    learned = t("deal.winChance.learningOff");
+  } else if (chance.evidence_n && chance.won_share != null) {
+    learned = translatePlural(
+      locale,
+      "deal.winChance.evidence",
+      chance.evidence_n,
+      {
+        count: formatAnalyticsNumber(chance.evidence_n, locale),
+        percent: percent(chance.won_share),
+      },
+    );
+  }
+  return [
+    t("deal.winChance.typed", { stage, percent: percent(chance.typed) }),
+    learned,
+    effectSentence(chance, deal.win_probability, t, locale),
+    t("deal.winChance.result", { percent: percent(deal.win_probability) }),
+  ];
+}
+
+function effectSentence(
+  chance: NonNullable<Deal["win_chance"]>,
+  result: number,
+  t: Translator,
+  locale: Locale,
+): string | false {
+  const signalKey = chance.effect_signal && SIGNAL_WORDS[chance.effect_signal];
+  if (!signalKey) {
+    return false;
+  }
+  const signal = t(signalKey, {
+    days: formatAnalyticsNumber(chance.effect_days ?? 0, locale),
+  });
+  if (!chance.effect_learned) {
+    return t("deal.winChance.effect.halved", { signal });
+  }
+  const count = chance.effect_sample ?? 0;
+  const params = { signal, count: formatAnalyticsNumber(count, locale) };
+  return result > chance.in_use
+    ? translatePlural(locale, "deal.winChance.effect.raises", count, params)
+    : translatePlural(locale, "deal.winChance.effect.lowers", count, params);
 }
 
 function setterSentence(

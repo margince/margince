@@ -1083,6 +1083,10 @@
                       "type": "string",
                       "format": "uuid"
                     },
+                    "stage_id": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
                     "tagged": {
                       "type": "boolean"
                     },
@@ -1108,6 +1112,10 @@
                       "type": "boolean"
                     },
                     "owner_id": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "stage_id": {
                       "type": "string",
                       "format": "uuid"
                     },
@@ -5245,6 +5253,9 @@
         ],
         "properties": {
           "router": {
+            "type": "string"
+          },
+          "ask_user_first_means": {
             "type": "string"
           },
           "actions": {
@@ -18175,6 +18186,12 @@
                 "id",
                 "record_type"
               ]
+            }
+          },
+          "types_timed_out": {
+            "type": "array",
+            "items": {
+              "type": "string"
             }
           },
           "types_with_more": {

@@ -28,10 +28,3 @@ func parseSiteChecks(golden string) map[string]string {
 	}
 	return checks
 }
-
-// siteCheck is the digest of the check that grades task/site's replies. A site
-// the golden does not name, as in a test's own census, reads empty; the gate
-// fails a shipped site the golden misses.
-func siteCheck(task, site string) string {
-	return siteChecks[task+"/"+site]
-}

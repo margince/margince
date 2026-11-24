@@ -18,11 +18,14 @@ export function OtherHostFields({
   other,
   typed,
   disabled,
+  guide = true,
   onChange,
 }: Readonly<{
   other: OtherHost;
   typed: string;
   disabled: boolean;
+  // The cloud-provider guide, which a local server's host has no use for.
+  guide?: boolean;
   onChange: (host: string) => void;
 }>) {
   const t = useT();
@@ -39,14 +42,16 @@ export function OtherHostFields({
           />
         )}
       </Field>
-      <a
-        className="t-caption"
-        href={HOST_GUIDE}
-        target="_blank"
-        rel="noreferrer"
-      >
-        {t("aiProviderSettings.host.guide")}
-      </a>
+      {guide && (
+        <a
+          className="t-caption"
+          href={HOST_GUIDE}
+          target="_blank"
+          rel="noreferrer"
+        >
+          {t("aiProviderSettings.host.guide")}
+        </a>
+      )}
     </>
   );
 }

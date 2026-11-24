@@ -427,7 +427,7 @@ func (d describeRouterActions) Spec() mcp.ToolSpec {
 		RequiredScope: principal.ScopeRead, Tier: mcp.TierAutoExecute, Unlisted: true,
 		OpenAPIOp: "describeRouterActions",
 		OutputSchema: schema(`{"type":"object","required":["router","actions"],"properties":{` +
-			`"router":{"type":"string"},"actions":{"type":"array","items":{"type":"object",` +
+			`"router":{"type":"string"},"ask_user_first_means":{"type":"string"},"actions":{"type":"array","items":{"type":"object",` +
 			`"required":["action","does","route"],"properties":{"action":{"type":"string"},` +
 			`"does":{"type":"string"},"route":{"type":"string"},"ids":{"type":"array","items":{"type":"string"}},` +
 			`"query":{"type":"array","items":{"type":"string"}},"if_version":{"type":"boolean"},` +

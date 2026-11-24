@@ -78,6 +78,8 @@ export type Routes = Record<
 // report went with Brief's open-pipeline panel — and a read that arrives by
 // accident is named rather than quietly served an empty page.
 const DEFAULTS: Routes = {
+  // Every decision card reads the stage names to show them in the reader's language.
+  "GET /pipelines": () => jsonResponse({ data: [] }),
   "GET /teams": () => jsonResponse({ data: [], page: { has_more: false } }),
   "GET /finance/customer-payments": () => jsonResponse(noCustomerPayments),
   "GET /link-suggestions": () => jsonResponse({ data: [] }),

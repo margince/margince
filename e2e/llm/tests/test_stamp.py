@@ -19,7 +19,8 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 import check  # noqa: E402
 
 CHECK = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "check.py")
-STAMP = {"scenario": "a1", "tools": "b2", "instructions": "c3", "judge": "", "harness": "d4"}
+STAMP = {"scenario": "a1", "tools": "b2", "instructions": "c3", "judge": "", "harness": "d4",
+         "parsers": {"gpt:cli": "e5", "gemini:cli": "f6"}}
 
 
 def written(text, suffix):

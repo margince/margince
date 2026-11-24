@@ -221,7 +221,9 @@ func countWeekLeads(
 // Only tasks created from the meeting before the week closed count.
 //
 // meetingIsTheirsSQL is "this meeting is that rep's" for the weekly figures:
-// the meeting credit rule analytics counts by, over alias `m`. Filing a
+// the meeting credit rule analytics counts by, over the alias the caller names.
+// The caller says which held transition it reads, so a week already read keeps
+// the guests the meeting was held with. Filing a
 // meeting, importing a copy, or an invitation nobody accepted credits nobody.
 // A meeting two reps attended is in both their weeks: both spent the time.
 //
@@ -231,9 +233,13 @@ func countWeekLeads(
 // still holds the time.
 //
 // Held by: TestTheMeetingAttributionHasOneSpelling (meetingattribution_test.go)
-func meetingIsTheirsSQL(seat string) string {
-	return storekit.MeetingCreditSQL("m", seat)
+func meetingIsTheirsSQL(credit storekit.HeldCredit, meeting, seat string) string {
+	return credit.CreditsSQL(meeting, seat)
 }
+
+// transitionCredit reads the history row h as the transition a funnel counts.
+// A meeting is then credited as it stood at that change.
+var transitionCredit = storekit.HeldCredit{Legacy: "h.host_id_at_change IS NULL", Host: "h.host_id_at_change", Kept: "h.credited_seats_at_change"}
 
 // NextStepTaskSQL is NextStepTaskAtSQL for the meeting as it reads today.
 func NextStepTaskSQL(task, meeting string) string {
@@ -292,7 +298,7 @@ func countWeekMeetings(
 		    FROM activity m `+transition.Join+`
 		   WHERE m.kind = 'meeting' AND m.archived_at IS NULL
 		     AND `+status+` = '`+meetingoutcome.Held+`'
-		     AND `+meetingIsTheirsSQL("$%[3]d")+`
+		     AND `+meetingIsTheirsSQL(storekit.AsOfHeldCredit(transition.Legacy), "m", "$%[3]d")+`
 		     AND `+within+`),
 		next_step AS MATERIALIZED (
 		  SELECT task.id, held_meeting.id AS meeting_id

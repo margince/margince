@@ -99,12 +99,12 @@ func (h marginceChangeHandlers) GetPendingMarginceChanges(w http.ResponseWriter,
 // ListDealMarginceChanges answers one page of a deal's changes, drawn as the
 // receipts Home shows.
 func (h marginceChangeHandlers) ListDealMarginceChanges(w http.ResponseWriter, r *http.Request, id crmcontracts.Id, params crmcontracts.ListDealMarginceChangesParams) {
-	after, ok := decodeChangeCursor(params.Cursor)
+	only, after, ok := dealChangeFilter(params)
 	if !ok {
 		httperr.Write(w, r, httperr.Validation("cursor", "invalid_cursor", "start again from the first page"))
 		return
 	}
-	rows, more, err := h.deals.DealChanges(r.Context(), ids.From[ids.DealKind](ids.UUID(id)), after, dealChangesPage)
+	rows, more, err := h.deals.DealChanges(r.Context(), ids.From[ids.DealKind](ids.UUID(id)), after, dealChangesPage, only)
 	if err != nil {
 		httperr.Write(w, r, err)
 		return
@@ -127,6 +127,26 @@ func (h marginceChangeHandlers) ListDealMarginceChanges(w http.ResponseWriter, r
 		out.NextCursor = &next
 	}
 	httperr.WriteJSON(w, http.StatusOK, out)
+}
+
+// dealChangeFilter reads the narrowing a client asked the deal's list for, and
+// the cursor the next page of that narrowed list starts after. It reports false
+// for a cursor this server did not mint.
+func dealChangeFilter(params crmcontracts.ListDealMarginceChangesParams) (deals.DealChangeFilter, *deals.ChangeCursor, bool) {
+	after, ok := decodeChangeCursor(params.Cursor)
+	var only deals.DealChangeFilter
+	if params.StageHistoryId != nil {
+		only.StageHistoryID = new(ids.UUID(*params.StageHistoryId))
+	}
+	if params.NoteActivityId != nil {
+		for _, note := range *params.NoteActivityId {
+			only.NoteActivityID = append(only.NoteActivityID, ids.UUID(note))
+		}
+	}
+	if params.ChangeKind != nil {
+		only.Kinds = *params.ChangeKind
+	}
+	return only, after, ok
 }
 
 // GetTeamMarginceChanges answers what Margince changed on the caller's team's

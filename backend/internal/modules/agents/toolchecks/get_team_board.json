@@ -5,7 +5,6 @@
     "company.read",
     "contact.read",
     "deal.read",
-    "installation_settings.read",
     "project.read",
     "relationship.read",
     "scope:team"

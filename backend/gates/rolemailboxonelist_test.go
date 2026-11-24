@@ -90,6 +90,8 @@ var notRoleMailboxLists = gatekit.Waive(map[string]string{
 		"connection works in; no address reaches it",
 	"internal/compose/company360/introdraftaccount.go": "names those functions in an ask for an " +
 		"introduction; no address reaches it",
+	"internal/modules/agents/recordshapes_gen.go": "lists every contract enum's values for tool schemas, " +
+		"among them the job functions of a LinkedIn count; no address reaches it",
 })
 
 func TestOnlyOnePackageDeclaresRoleMailboxes(t *testing.T) {

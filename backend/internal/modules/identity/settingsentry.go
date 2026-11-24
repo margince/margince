@@ -355,12 +355,13 @@ func BaseCurrencyOf(ctx context.Context, tx pgx.Tx) (string, error) {
 	return settings.ReadForDecision(ctx, tx, BaseCurrency)
 }
 
-// TimezoneOf resolves the installation's IANA zone inside a transaction the
-// caller already holds: the zone a "today" is computed in.
+// timezoneOf is the gated read of the installation's IANA zone, used by the
+// calendar change on the settings surface. It is unexported so any other
+// derivation of a day or window uses TimezoneAppliedTx.
 //
 // RequireTx, like BaseCurrencyOf: an absent row is an error, never a silent UTC.
 // storekit.EffectiveZone says when a stored name Go cannot load reads as UTC.
-func TimezoneOf(ctx context.Context, tx pgx.Tx) (string, error) {
+func timezoneOf(ctx context.Context, tx pgx.Tx) (string, error) {
 	stored, err := settings.RequireTx(ctx, tx, Timezone)
 	if err != nil {
 		return "", err
@@ -379,7 +380,7 @@ func BaseCurrencyAppliedTx(ctx context.Context, tx pgx.Tx) (string, error) {
 // derivation — a "today" computed while executing an operation the caller is
 // already authorized for — WITHOUT the installation_settings.read gate.
 //
-// ApplyTx, not the gated TimezoneOf: deriving which calendar day it is is
+// ApplyTx, not the gated timezoneOf: deriving which calendar day it is is
 // infrastructure, not the settings-management surface the object gate protects.
 // A contract writer holds `contract`, not `installation_settings`, and the zone
 // is disclosed by every date it is ever shown anyway — WorkingHoursOf reads it

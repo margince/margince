@@ -44,8 +44,8 @@
     ),
     linear-gradient(
       180deg,
-      color-mix(in srgb, var(--accent) 5%, var(--bgElevated)) 0%,
-      var(--bgElevated) 100%
+      color-mix(in srgb, var(--accent) 5%, var(--bgField)) 0%,
+      var(--bgField) 100%
     );
 }
 

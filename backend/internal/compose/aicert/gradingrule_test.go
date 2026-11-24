@@ -15,6 +15,8 @@ import (
 	"go/parser"
 	"go/token"
 	"os"
+	"path/filepath"
+	"slices"
 	"strings"
 	"testing"
 )
@@ -39,7 +41,7 @@ var gradingRuleOwners = []struct {
 		"caseVerdict", "caseMechanicalBand", "caseJudgeBand",
 	}},
 	{"stats.go", []string{"wilsonBounds", "meanBounds", "meanAndSD", "tQuantile"}},
-	{"adaptive.go", []string{"runRounds", "roundsOf", "firstRunCounts", "nextRunCounts", "caseBorderline", "poolUndecided"}},
+	{"adaptive.go", []string{"runRounds", "roundsOf", "firstRunCounts", "nextRunCounts", "caseBorderline", "poolUndecided", "extendsCase"}},
 	{"run.go", []string{"runEntry"}},
 	{"taskdriver.go", []string{"caseSeeds"}},
 	{"judge.go", []string{"judgeScore", "wantsAnotherOpinion", "nearABand", "absDiff", "foldOpinions", "judgeVerdict"}},
@@ -54,11 +56,32 @@ var gradingRuleOwners = []struct {
 
 // gradingRuleDigest hashes each owner's gofmt'd source with comments and blank
 // lines dropped, so rewording a doc comment does not demand a new rule version.
+// Beyond the named owners it hashes what they call, however deep. That means a
+// function called by name, a method called through a selector, and each
+// constant they name. Variables are not walked. The site checks live in one,
+// and they are stamped beside the rule.
 func gradingRuleDigest(t *testing.T) string {
 	t.Helper()
+	digest, _ := gradingRuleClosure(t)
+	return digest
+}
+
+// gradingRuleClosure is the digest and the sorted names it covers.
+func gradingRuleClosure(t *testing.T) (digest string, names []string) {
+	t.Helper()
+	fset := token.NewFileSet()
+	index := indexPackage(t, fset)
 	var material strings.Builder
+	hashed := map[string]bool{}
+	var pending []*ast.FuncDecl
+	write := func(label string, node ast.Node) {
+		var src bytes.Buffer
+		if err := format.Node(&src, fset, node); err != nil {
+			t.Fatalf("formatting %s: %v", label, err)
+		}
+		fmt.Fprintf(&material, "%s\n%s\n", label, dropBlankLines(src.String()))
+	}
 	for _, owner := range gradingRuleOwners {
-		fset := token.NewFileSet()
 		file, err := parser.ParseFile(fset, owner.file, nil, parser.SkipObjectResolution)
 		if err != nil {
 			t.Fatalf("parsing %s: %v", owner.file, err)
@@ -69,15 +92,117 @@ func gradingRuleDigest(t *testing.T) string {
 				t.Fatalf("%s no longer declares %s; move it in gradingRuleOwners to where it lives now, "+
 					"or bump gradingRule if the grading rule lost it", owner.file, name)
 			}
-			var src bytes.Buffer
-			if err := format.Node(&src, fset, node); err != nil {
-				t.Fatalf("formatting %s.%s: %v", owner.file, name, err)
+			write(owner.file+"."+name, node)
+			hashed[name] = true
+			if fn, ok := node.(*ast.FuncDecl); ok && !strings.HasPrefix(owner.file, "..") {
+				pending = append(pending, fn)
 			}
-			fmt.Fprintf(&material, "%s.%s\n%s\n", owner.file, name, dropBlankLines(src.String()))
 		}
 	}
+	take := func(label, name, key string, decls []*ast.FuncDecl) {
+		hashed[key] = true
+		for i, decl := range decls {
+			write(fmt.Sprintf("%s.%s.%d", label, name, i), decl)
+			pending = append(pending, decl)
+		}
+	}
+	for len(pending) > 0 {
+		fn := pending[0]
+		pending = pending[1:]
+		ast.Inspect(fn, func(n ast.Node) bool {
+			switch node := n.(type) {
+			case *ast.CallExpr:
+				switch callee := node.Fun.(type) {
+				case *ast.Ident:
+					if !hashed[callee.Name] && index.funcs[callee.Name] != nil {
+						take("callee", callee.Name, callee.Name, index.funcs[callee.Name])
+					}
+				case *ast.SelectorExpr:
+					if !hashed["."+callee.Sel.Name] && index.methods[callee.Sel.Name] != nil {
+						take("method", callee.Sel.Name, "."+callee.Sel.Name, index.methods[callee.Sel.Name])
+					}
+				}
+			case *ast.Ident:
+				if spec := index.consts[node.Name]; spec != nil && !hashed[node.Name] {
+					hashed[node.Name] = true
+					write("const."+node.Name, spec)
+				}
+			}
+			return true
+		})
+	}
+	for name := range hashed {
+		names = append(names, name)
+	}
+	slices.Sort(names)
 	sum := sha256.Sum256([]byte(material.String()))
-	return hex.EncodeToString(sum[:])
+	return hex.EncodeToString(sum[:]), names
+}
+
+// packageIndex is this package's non-test declarations by name, for the walk
+// from the owners to what they use.
+type packageIndex struct {
+	funcs, methods map[string][]*ast.FuncDecl
+	consts         map[string]ast.Node
+}
+
+func indexPackage(t *testing.T, fset *token.FileSet) packageIndex {
+	t.Helper()
+	paths, err := filepath.Glob("*.go")
+	if err != nil {
+		t.Fatalf("listing the package: %v", err)
+	}
+	index := packageIndex{funcs: map[string][]*ast.FuncDecl{}, methods: map[string][]*ast.FuncDecl{}, consts: map[string]ast.Node{}}
+	for _, path := range paths {
+		if strings.HasSuffix(path, "_test.go") {
+			continue
+		}
+		file, err := parser.ParseFile(fset, path, nil, parser.SkipObjectResolution)
+		if err != nil {
+			t.Fatalf("parsing %s: %v", path, err)
+		}
+		for _, decl := range file.Decls {
+			switch d := decl.(type) {
+			case *ast.FuncDecl:
+				if d.Recv == nil {
+					index.funcs[d.Name.Name] = append(index.funcs[d.Name.Name], d)
+				} else {
+					index.methods[d.Name.Name] = append(index.methods[d.Name.Name], d)
+				}
+			case *ast.GenDecl:
+				for _, spec := range d.Specs {
+					if value, ok := spec.(*ast.ValueSpec); ok && d.Tok == token.CONST {
+						for _, ident := range value.Names {
+							index.consts[ident.Name] = value
+						}
+					}
+				}
+			}
+		}
+	}
+	return index
+}
+
+// The walk follows calls, not mentions. A built-in that shares a method's name
+// then cannot drag the runner, the journal or the report into the grading rule.
+// A change to any of those would otherwise ask for a bump, and a bump stales
+// every record.
+func TestTheGradingRuleDigestCoversWhatGradingCallsAndNothingMore(t *testing.T) {
+	_, names := gradingRuleClosure(t)
+	for _, want := range []string{"shortOnlyOfScores", "asFloats", "VerdictCertified"} {
+		if !slices.Contains(names, want) {
+			t.Errorf("the digest does not cover %s, which grading uses", want)
+		}
+	}
+	for _, unrelated := range []string{"Run", "LoadRecords", "WriteRecord", "Readiness", "scenarioStampsUnder", "main"} {
+		if slices.Contains(names, unrelated) {
+			t.Errorf("the digest covers %s, so editing it would stale every record", unrelated)
+		}
+	}
+	if len(names) > 150 {
+		t.Errorf("the digest covers %d declarations; the walk has grown past the grading code", len(names))
+	}
+	t.Logf("the digest covers %d declarations", len(names))
 }
 
 // findTopLevelDecl answers the function or the single const/var/type spec named

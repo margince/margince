@@ -12,6 +12,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log/slog"
 	"strconv"
 	"strings"
 	"time"
@@ -70,20 +71,10 @@ func PoolConfig(dsn string) (*pgxpool.Config, error) {
 	if !namesDSNParam(dsn, "pool_health_check_period") {
 		cfg.HealthCheckPeriod = time.Minute
 	}
-	// JIT is off for this workload, and the row-scope predicates are why.
-	// Every list, search and timeline query composes the caller's
-	// visibility clause — nested EXISTS over contact, company, deal,
-	// activity_link and record_grant — which inflates the plan's ESTIMATED
-	// cost past jit_above_cost while the query itself stays an indexed
-	// OLTP read. Postgres then spends longer in LLVM than in the query:
-	// the /search union measured 12ms of work behind 475ms of JIT
-	// generation, inlining, optimization and emission.
-	//
-	// What crosses the threshold is the row-scope TIER, not data volume,
-	// so a rep pays it on a query an unbounded admin runs for free. JIT
-	// earns its keep on long analytical scans; this product runs none on
-	// the request path. A DSN that names jit itself still wins.
-	setRuntimeParam(cfg, dsn, "jit", "off")
+	// JIT is off: the row-scope predicates price a search statement past
+	// jit_above_cost, and compiling it cost seconds for 12ms of work. A DSN
+	// cannot turn it back on.
+	forceJITOff(cfg)
 	// Nothing else bounds how long one statement may hold a connection.
 	// http.Server's WriteTimeout ends the RESPONSE without cancelling the
 	// handler, so a query that has stopped making progress keeps its slot in a
@@ -128,6 +119,25 @@ func setSessionUTC(cfg *pgxpool.Config) {
 		}
 	}
 	cfg.ConnConfig.RuntimeParams["timezone"] = "UTC"
+}
+
+// forceJITOff sets jit=off on every connection and replaces a DSN's own
+// jit setting, whatever its spelling. It warns when the DSN asked for JIT, so
+// an operator who set it learns it was not applied.
+func forceJITOff(cfg *pgxpool.Config) {
+	if cfg.ConnConfig.RuntimeParams == nil {
+		cfg.ConnConfig.RuntimeParams = map[string]string{}
+	}
+	for name, value := range cfg.ConnConfig.RuntimeParams {
+		if !strings.EqualFold(name, "jit") {
+			continue
+		}
+		if !strings.EqualFold(value, "off") {
+			slog.Warn("the database DSN sets jit; the pool keeps jit=off, because row-scope predicates make JIT compile for seconds", "jit", value)
+		}
+		delete(cfg.ConnConfig.RuntimeParams, name)
+	}
+	cfg.ConnConfig.RuntimeParams["jit"] = "off"
 }
 
 // setRuntimeParam fills in a Postgres runtime parameter the DSN left unset.

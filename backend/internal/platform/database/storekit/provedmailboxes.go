@@ -11,6 +11,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/platform/mailidentity"
+	"github.com/margince/margince/backend/internal/platform/mailrole"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -50,6 +51,19 @@ func provedMailboxClause(alias string) string {
 // alias or a delivered-to sighting proves nothing here either. An address two
 // seats proved belongs to neither.
 func ProvedMailSeatIdentitiesSQL(ctx context.Context, tx pgx.Tx, bind func(any) int) (string, error) {
+	return provedSeatIdentitiesSQL(ctx, tx, bind, false)
+}
+
+// ProvedPersonalSeatIdentitiesSQL is ProvedMailSeatIdentitiesSQL without role
+// mailboxes (sales@, info@, a helpdesk queue). A calendar roster binds a guest
+// to a seat through it. An answer given for a role mailbox a member connected
+// credits that member with nothing, because only their own answer proves they
+// attended. A shared mailbox has no seat to bind.
+func ProvedPersonalSeatIdentitiesSQL(ctx context.Context, tx pgx.Tx, bind func(any) int) (string, error) {
+	return provedSeatIdentitiesSQL(ctx, tx, bind, true)
+}
+
+func provedSeatIdentitiesSQL(ctx context.Context, tx pgx.Tx, bind func(any) int, withoutRoles bool) (string, error) {
 	labels, err := ProvedMailboxLabels(ctx, tx)
 	if err != nil {
 		return "", err
@@ -57,6 +71,9 @@ func ProvedMailSeatIdentitiesSQL(ctx context.Context, tx pgx.Tx, bind func(any) 
 	holders := map[string]map[ids.UUID]bool{}
 	for seat, values := range labels {
 		for _, label := range values {
+			if _, role := mailrole.Match(label); withoutRoles && role {
+				continue
+			}
 			// Keyed by the folded address, so two seats proving one mailbox in two
 			// spellings collide, as they do in UnambiguousMailSeatIdentities.
 			address := mailidentity.SeatAddressKey(label, "")

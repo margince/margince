@@ -318,6 +318,9 @@ func (cfg RoutingConfig) validate() error {
 	if err := validateVertexPlacement("the embeddings lane", cfg.Embeddings.ProviderConfig); err != nil {
 		return err
 	}
+	if err := validateAzurePlacement("the embeddings lane", cfg.Profile, cfg.Embeddings.ProviderConfig); err != nil {
+		return err
+	}
 	// The embed lane dials an operator-supplied host like any chat tier, so it
 	// carries the same egress rule on every profile.
 	if err := requireDialableEndpoint("the embeddings lane", cfg.Embeddings.Provider, cfg.Embeddings.BaseURL); err != nil {
@@ -331,9 +334,7 @@ func (cfg RoutingConfig) validate() error {
 	// The rule itself is the chat tiers': SelectBrain builds this lane's client
 	// too, and refuses openai_compatible without a host.
 	if chatHostMissing(cfg.Embeddings.Provider, cfg.Embeddings.BaseURL) {
-		return missingHostError{provider: cfg.Embeddings.Provider, reason: "ai: routing config: the embeddings lane binds openai_compatible with no base_url: " +
-			"give it the vendor host root, with no version segment (the adapter adds /v1), " +
-			"e.g. https://openrouter.ai/api"}
+		return missingHostError{provider: cfg.Embeddings.Provider, reason: noHostReason("the embeddings lane", cfg.Embeddings.Provider)}
 	}
 	return cfg.validateDecisionsLane()
 }
@@ -388,6 +389,9 @@ func ValidateTierBinding(profile Profile, tier Tier, binding ProviderConfig) err
 	if err := validateVertexPlacement(fmt.Sprintf("tier %s", tier), binding); err != nil {
 		return err
 	}
+	if err := validateAzurePlacement(fmt.Sprintf("tier %s", tier), profile, binding); err != nil {
+		return err
+	}
 	// EVERY profile, not only sovereign. base_url is the address this server
 	// dials, and outside the sovereign branch above nothing looked at it at
 	// all: any string that parsed was persisted and later handed to the
@@ -404,9 +408,7 @@ func ValidateTierBinding(profile Profile, tier Tier, binding ProviderConfig) err
 	// operator sees "saved" and no change, with the reason in a log they are not
 	// reading.
 	if chatHostMissing(binding.Provider, binding.BaseURL) {
-		return missingHostError{provider: binding.Provider, reason: fmt.Sprintf("ai: routing config: tier %s binds openai_compatible with no base_url: "+
-			"give it the vendor host root, with no version segment (the adapter adds /v1), "+
-			"e.g. https://openrouter.ai/api", tier)}
+		return missingHostError{provider: binding.Provider, reason: noHostReason(fmt.Sprintf("tier %s", tier), binding.Provider)}
 	}
 	return validateInput(fmt.Sprintf("tier %s", tier), binding.Input)
 }

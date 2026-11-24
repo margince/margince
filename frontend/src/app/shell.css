@@ -48,7 +48,7 @@
   z-index: 100;
   transform: translateY(-250%);
   padding: var(--space-2) var(--space-3);
-  background: var(--bgElevated);
+  background: var(--bgField);
   color: var(--textPrimary);
   border: 1px solid var(--accent);
   border-radius: var(--r-sm);
@@ -1196,7 +1196,7 @@
 }
 .palette-tile-ai {
   border-color: var(--borderNoticeAi);
-  background: var(--aiLight);
+  background-image: linear-gradient(var(--aiLight), var(--aiLight));
   color: var(--aiText);
 }
 /* Held in place on every row, so statuses line up; shown on the active one. */
@@ -1809,7 +1809,7 @@
   padding-inline: calc(var(--space-2) + 16px + var(--space-1)) var(--space-2);
   border: 1px solid var(--borderStrong);
   border-radius: var(--r-sm);
-  background: var(--bgElevated);
+  background: var(--bgField);
   color: var(--textPrimary);
   font-family: var(--fontFamilyBody);
   /* A hand-rolled field, wearing the floor the design system's own fields wear

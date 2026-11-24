@@ -6,7 +6,8 @@ import { Panel, PanelBody } from "../../design-system/panel";
 import { monthName } from "../../format/format";
 import { useLocale, useT } from "../../i18n";
 import { unwrap } from "../../lib/problem";
-import { AnswerTable, QuestionFailure } from "./analytics.questions.answer";
+import { AnswerTable } from "./analytics.questions.answer";
+import { QuestionFailure } from "./analytics.questions.failure";
 import {
   type AnalyticsQuery,
   customLabels,

@@ -16,6 +16,7 @@ import (
 	"errors"
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/jackc/pgx/v5"
 
@@ -54,9 +55,10 @@ import (
 // What survives is a field nobody has taken over: written by the signature pass,
 // never restored, never corrected. That is the only kind this is entitled to.
 func RetractSignatureFieldsTx(ctx context.Context, tx pgx.Tx, activityID ids.UUID) error {
+	ref := "activity:" + activityID.String()
 	rows, err := tx.Query(ctx, `
-		SELECT id FROM contact_profile_field WHERE source_ref = $1 AND source = $2`,
-		"activity:"+activityID.String(), enrichSource)
+		SELECT id FROM contact_profile_field WHERE (source_ref = $1 OR signature_support ? $1) AND source = $2`,
+		ref, enrichSource)
 	if err != nil {
 		return fmt.Errorf("contacts: finding the narrowed message's signature fields: %w", err)
 	}
@@ -64,8 +66,15 @@ func RetractSignatureFieldsTx(ctx context.Context, tx pgx.Tx, activityID ids.UUI
 	if err != nil {
 		return fmt.Errorf("contacts: finding the narrowed message's signature fields: %w", err)
 	}
-	_, err = takeBackSignatureFieldsTx(ctx, tx, fields, "the mail it was read from was narrowed",
-		func(ctx context.Context, tx pgx.Tx) (bool, error) { return sourceStillNarrowedTx(ctx, tx, activityID) })
+	// A value another mail still states loses only this mail's support.
+	_, err = takeBackSignatureFieldsTx(ctx, tx, fields, "the mail it was read from was narrowed", ref,
+		func(ctx context.Context, tx pgx.Tx) (bool, error) {
+			narrowed, err := sourceStillNarrowedTx(ctx, tx, activityID)
+			if err != nil || !narrowed {
+				return false, err
+			}
+			return true, dropSignatureSupportTx(ctx, tx, ref)
+		})
 	return err
 }
 
@@ -155,16 +164,17 @@ func (s *Store) RetractMisattributedSignatureFields(ctx context.Context) (int64,
 // predicates RetractSignatureFieldsTx explains). A value a human has since
 // changed stays, and only its evidence goes. The count it returns is logged.
 func RetractSignatureFieldsByIDTx(ctx context.Context, tx pgx.Tx, fields []ids.UUID, reason string) (int64, error) {
-	return takeBackSignatureFieldsTx(ctx, tx, fields, reason, nil)
+	return takeBackSignatureFieldsTx(ctx, tx, fields, reason, "", nil)
 }
 
 // takeBackSignatureFieldsTx is RetractSignatureFieldsByIDTx with an optional
-// question asked once the contacts are held: owed false takes nothing back.
+// question asked once the contacts are held: owed false takes nothing back. A
+// non-empty sourceRef takes back only rows still sourced from that mail.
 //
 // The contacts are locked first, in id order, then the evidence rows. That is
 // the signature writer's order (applySignature), so the two wait instead of
 // deadlocking.
-func takeBackSignatureFieldsTx(ctx context.Context, tx pgx.Tx, fields []ids.UUID, reason string,
+func takeBackSignatureFieldsTx(ctx context.Context, tx pgx.Tx, fields []ids.UUID, reason, sourceRef string,
 	owed func(context.Context, pgx.Tx) (bool, error),
 ) (int64, error) {
 	if len(fields) == 0 {
@@ -186,16 +196,16 @@ func takeBackSignatureFieldsTx(ctx context.Context, tx pgx.Tx, fields []ids.UUID
 		}
 	}
 	rows, err := tx.Query(ctx, `
-		SELECT f.id, f.contact_id, f.field, f.value, f.superseded_value, f.value_key
+		SELECT f.id, f.contact_id, f.field, f.value, f.superseded_value, f.value_key, f.created_at
 		  FROM contact_profile_field f
-		 WHERE f.id = ANY($1) AND f.source = $2
+		 WHERE f.id = ANY($1) AND f.source = $2 AND ($3 = '' OR f.source_ref = $3)
 		   AND NOT EXISTS (
 		     SELECT 1 FROM ai_feedback
 		      WHERE subject_type = 'contact' AND subject_id = f.contact_id
 		        AND claim_kind = 'profile_field' AND verdict = 'corrected'
 		        AND claim_key = encode(sha256(('profile_field:' || f.field)::bytea), 'hex'))
 		 ORDER BY f.id
-		 FOR UPDATE OF f`, fields, enrichSource)
+		 FOR UPDATE OF f`, fields, enrichSource, sourceRef)
 	if err != nil {
 		return 0, fmt.Errorf("contacts: reading the signature fields to take back: %w", err)
 	}
@@ -252,6 +262,7 @@ type retractedField struct {
 	Value      string
 	Superseded *string
 	ValueKey   string
+	FilledAt   time.Time
 }
 
 // withdrawValue takes the field's value off the contact, as a compare and swap
@@ -262,8 +273,16 @@ type retractedField struct {
 // replaced (superseded_value, NULL when nothing). A phone is a row of its own:
 // the one this read added is archived, and the number it replaced comes back.
 func (f retractedField) withdrawValue(ctx context.Context, tx pgx.Tx) (bool, error) {
-	if f.Field == fieldPhone {
+	switch f.Field {
+	case fieldPhone:
 		return true, withdrawSignatureNumber(ctx, tx, f.ContactID, f.ValueKey)
+	case fieldEmail:
+		return true, withdrawSignatureEmail(ctx, tx, f.ContactID, f.ValueKey)
+	case fieldAddress:
+		if err := withdrawEmployerStreetTx(ctx, tx, f.Value, f.ContactID); err != nil {
+			return false, err
+		}
+		return true, withdrawSignatureAddress(ctx, tx, f.ContactID, f.Value, f.FilledAt)
 	}
 	column, mirrored := observedFieldColumn(f.Field)
 	if !mirrored {

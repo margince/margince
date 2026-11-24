@@ -503,7 +503,7 @@
         color-mix(in srgb, var(--arTone) 14%, transparent),
         transparent 72%
       ),
-      var(--bgElevated);
+      var(--bgField);
     box-shadow: var(--shadow-pop);
   }
   /* Around the well rather than the ball inside it: the well is the control's
@@ -635,7 +635,7 @@
     border-right: 1px solid var(--borderSubtle);
     border-bottom: 1px solid var(--borderSubtle);
     border-bottom-right-radius: var(--r-xs); /* the notch's own tip */
-    background: var(--bgElevated);
+    background: var(--bgField);
     z-index: 28;
     /* Opacity alone. The notch already carries `rotate` and `translate` of its
        own, and `transform` composes AFTER both — so the panel's 6px rise would

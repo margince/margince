@@ -161,9 +161,9 @@ func TestACompanyNameOfThisUploadCountsAsOneMoreHolder(t *testing.T) {
 		hit  employerCandidate
 		want linkAnswer
 	}{
-		{"new co", employerCandidate{}, linkAnswer{Pending: true}},
+		{"new co", employerCandidate{}, linkAnswer{Pending: true, PendingRef: employerRef("new co")}},
 		{"twin ag", estate, linkAnswer{Why: ambiguousEmployerWhy("twin ag")}},
-		{"kept ltd", estate, linkAnswer{Pending: true}},
+		{"kept ltd", estate, linkAnswer{Pending: true, PendingRef: employerRef("kept ltd")}},
 		{"elsewhere", estate, linkAnswer{ID: estate.id.UUID, Found: true}},
 	} {
 		if got := employerAnswer(r.names[tc.name].over(tc.hit), tc.name); !reflect.DeepEqual(got, tc.want) {

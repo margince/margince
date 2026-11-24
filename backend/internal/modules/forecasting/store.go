@@ -63,8 +63,9 @@ const (
 
 // Store owns the forecast tables.
 type Store struct {
-	db   *database.DB
-	lens SnapshotLens
+	db           *database.DB
+	lens         SnapshotLens
+	focusActions FocusActionsFunc
 }
 
 // SnapshotLens narrows a frozen snapshot to what the caller may see: it refuses

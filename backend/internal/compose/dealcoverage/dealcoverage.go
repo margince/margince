@@ -14,6 +14,9 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/moneytotal"
 )
 
+// AmountSQL is a deal's own amount in a report over deals, aliased t.
+const AmountSQL = "t.amount_minor"
+
 // Key is the row key a report puts its coverage under.
 const Key = "coverage"
 
@@ -89,7 +92,7 @@ func Attach(covered []string, baseValueSQL, currencySQL string, selects, columns
 	if len(covered) == 0 {
 		return selects, columns
 	}
-	terms := moneytotal.CoverageTerms(baseValueSQL, "t.amount_minor", currencySQL, "TRUE")
+	terms := moneytotal.CoverageTerms(baseValueSQL, AmountSQL, currencySQL, "TRUE")
 	return append(slices.Clip(selects), terms...),
 		append(slices.Clip(columns), colNoValue, colNoRate, colCurrencies)
 }
@@ -101,21 +104,30 @@ func Fold(rows []map[string]any, aggregates []string) {
 		return
 	}
 	for _, row := range rows {
-		noValue, noRate := count(row[colNoValue]), count(row[colNoRate])
-		currencies := []string{}
-		if listed, ok := row[colCurrencies].(string); ok && listed != "" {
-			currencies = strings.Split(listed, ",")
-		}
+		noValue, noRate, currencies := row[colNoValue], row[colNoRate], row[colCurrencies]
 		delete(row, colNoValue)
 		delete(row, colNoRate)
 		delete(row, colCurrencies)
-		row[Key] = map[string]any{
-			"aggregates":         aggregates,
-			"partial":            noValue+noRate > 0,
-			"no_value_deals":     noValue,
-			"no_rate_deals":      noRate,
-			"missing_currencies": currencies,
-		}
+		row[Key] = Object(noValue, noRate, currencies, aggregates)
+	}
+}
+
+// Object states what the three coverage terms read back as the wire's coverage
+// object, with their values as a scan left them.
+//
+//craft:ignore naked-any a driver value of unknown integer width
+func Object(noValue, noRate, currencies any, aggregates []string) map[string]any {
+	missing := []string{}
+	if listed, ok := currencies.(string); ok && listed != "" {
+		missing = strings.Split(listed, ",")
+	}
+	values, rates := count(noValue), count(noRate)
+	return map[string]any{
+		"aggregates":         aggregates,
+		"partial":            values+rates > 0,
+		"no_value_deals":     values,
+		"no_rate_deals":      rates,
+		"missing_currencies": missing,
 	}
 }
 

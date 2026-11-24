@@ -61,8 +61,14 @@ type Store struct {
 	ensureProjectAttachable EnsureProjectAttachable
 	startDeliveryForWonDeal StartDeliveryForWonDeal
 
+	// winChances and winChanceSQL are the installation's win chance reads; nil
+	// keeps the stored probability.
+	winChances   WinChanceReader
+	winChanceSQL WinChanceSQL
+
 	// followOwner hands pending proposals to a deal's new owner (ownerfollow.go).
-	followOwner FollowOwner
+	followOwner   FollowOwner
+	managerOwners ManagerOwners
 	// ownDomains, when bound, lets the stage-move check judge activity
 	// evidence against the current own domains (WithOwnDomains).
 	ownDomains OwnDomainReader
@@ -104,11 +110,9 @@ type Installation struct {
 	// KnownCountry answers whether a code is an assigned ISO 3166-1 alpha-2
 	// country. `contacts` owns the list.
 	KnownCountry KnownCountry
-	// Timezone is the IANA zone a "today" is computed in.
-	Timezone InstallationValue
-	// BaseCurrencyApplied and TimezoneApplied answer the same two values
-	// without the installation_settings gate, for a read that only orders by
-	// them (the deal list's Value sort).
+	// BaseCurrencyApplied and TimezoneApplied answer the base currency and the
+	// zone a "today" is computed in. They skip the installation_settings gate,
+	// so counting days and ordering by value need no settings grant.
 	BaseCurrencyApplied InstallationValue
 	TimezoneApplied     InstallationValue
 	// StampCorrespondence shields the correspondence a concluded deal turns
@@ -134,9 +138,17 @@ type Installation struct {
 	// FollowOwner hands a deal's pending proposals to its new owner, in the
 	// transaction that reassigns it (ownerfollow.go).
 	FollowOwner FollowOwner
+	// ManagerOwners answers which owners the caller manages. `identity` owns
+	// teams and leads, so the edge is injected here.
+	ManagerOwners ManagerOwners
 	// ContractVisible is the contracts module's row rule, which stage
 	// evidence asks before it calls a cited contract openable.
 	ContractVisible ContractVisibleClause
+	// WinChances and WinChanceSQL read the one win chance of an open deal and
+	// of every deal in a filter (winchance.go). Unset, a read keeps the stored
+	// probability, which is what a store built outside the composition reads.
+	WinChances   WinChanceReader
+	WinChanceSQL WinChanceSQL
 	// AuthorEntity and IssuerEntity answer which legal entity an offer is
 	// issued by, and what it prints about it. `contacts` owns the entities.
 	AuthorEntity AuthorEntity
@@ -158,6 +170,9 @@ func NewStore(db *database.DB, inst Installation) *Store {
 		ensureProjectAttachable: inst.EnsureProjectAttachable,
 		startDeliveryForWonDeal: inst.StartDeliveryForWonDeal,
 		followOwner:             inst.FollowOwner,
+		winChances:              inst.WinChances,
+		winChanceSQL:            inst.WinChanceSQL,
+		managerOwners:           inst.ManagerOwners,
 	}
 }
 
@@ -169,7 +184,7 @@ func NewStore(db *database.DB, inst Installation) *Store {
 // craft gate's panic-in-domain rule).
 func (i Installation) orRefusing() Installation {
 	for name, f := range map[string]*InstallationValue{
-		"Name": &i.Name, "BaseCurrency": &i.BaseCurrency, "Timezone": &i.Timezone,
+		"Name": &i.Name, "BaseCurrency": &i.BaseCurrency,
 		"IssuerLegalName": &i.IssuerLegalName, "BaseCurrencyApplied": &i.BaseCurrencyApplied,
 		"TimezoneApplied": &i.TimezoneApplied, "Country": &i.Country,
 	} {
@@ -197,6 +212,11 @@ func (i Installation) orRefusing() Installation {
 	}
 	if i.ContractVisible == nil {
 		i.ContractVisible = refusingContractVisible()
+	}
+	if i.ManagerOwners == nil {
+		i.ManagerOwners = func(context.Context, pgx.Tx, []ids.UUID, *ids.UUID) (map[ids.UUID]bool, error) {
+			return nil, errEntitySeamUnwired("ManagerOwners")
+		}
 	}
 	if i.KnownCountry == nil {
 		i.KnownCountry = func(string) (bool, error) {
@@ -231,7 +251,7 @@ func refusing(field string) InstallationValue {
 	return func(context.Context, pgx.Tx) (string, error) {
 		return "", errors.New("deals: the installation " + field + " seam was not injected; " +
 			"construct this store with installseam.Deals(), which binds identity's " +
-			"NameOf/BaseCurrencyOf/TimezoneOf and contacts's ConfirmedIssuerLegalName")
+			"NameOf/BaseCurrencyOf/TimezoneAppliedTx and contacts's ConfirmedIssuerLegalName")
 	}
 }
 

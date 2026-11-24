@@ -167,7 +167,7 @@ func (s *Store) advanceOnTx(
 			if err := storekit.EnsureIfMatch(ctx, tx, dealTable, id.UUID, in.IfVersion); err != nil {
 				return err
 			}
-			out.Deal, err = readDealForCaller(ctx, tx, id, storekit.LiveOnly, active)
+			out.Deal, err = s.readDealStamped(ctx, tx, id, storekit.LiveOnly, active)
 			return err
 		}
 		semantic, winProbability, err := resolveMoveTarget(ctx, tx, &in, current)
@@ -229,8 +229,11 @@ func (s *Store) advanceOnTx(
 		if err := s.onDealWon(ctx, tx, id, status, by, p); err != nil {
 			return err
 		}
-		if out.Deal, err = readDealForCaller(ctx, tx, id, storekit.LiveOnly, active); err != nil {
+		if out.Deal, err = s.readDealStamped(ctx, tx, id, storekit.LiveOnly, active); err != nil {
 			return fmt.Errorf("read advanced deal: %w", err)
+		}
+		if out.WinChance != nil && out.WinProbability != nil {
+			out.Probability = newProbabilitySet(*out.WinProbability, readerName)
 		}
 		return nil
 	}()
@@ -390,6 +393,11 @@ func (s *Store) buildStageAdvance(ctx context.Context, tx pgx.Tx, id ids.DealID,
 	p, status, err := s.stageTransitionPatch(ctx, tx, current, in, semantic)
 	if err != nil {
 		return nil, "", err
+	}
+	if DealStatus(status) != DealOpen && DealStatus(current.Status) == DealOpen {
+		if err := dropManagerRequest(ctx, tx, p, ids.UUID(current.Id)); err != nil {
+			return nil, "", err
+		}
 	}
 	stored, storedBy := storedWinProbability(current)
 	setWinProbability(p, stored, storedBy, nil, SourceStage)

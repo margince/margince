@@ -252,20 +252,23 @@ describe("DealsScreen", () => {
     });
   });
 
-  // The server treats every advance as a transition. It writes a stage-history
-  // row and emits deal.stage_changed without asking whether anything moved. So
-  // a row already in the target stage is never sent, or velocity reports read
-  // a move that never happened.
-  it("moving to a stage skips the rows already in it", async () => {
+  // A stage move is one preview and one change on the server, which leaves a
+  // deal already on the stage alone. The browser names every selected deal with
+  // its own version and sends no advance of its own.
+  it("a bulk stage move previews and runs once, with each row's own version", async () => {
+    const bulk: { path: string; body: unknown }[] = [];
     const advances: string[] = [];
     vi.stubGlobal(
       "fetch",
       stubBackend(
         [
-          deal({ id: "d1", name: "Already there", stage_id: "s2" }),
-          deal({ id: "d2", name: "Needs moving", stage_id: "s1" }),
+          deal({ id: "d1", name: "Already there", stage_id: "s2", version: 3 }),
+          deal({ id: "d2", name: "Needs moving", stage_id: "s1", version: 9 }),
         ],
-        { onAdvance: (_body, _ifMatch) => advances.push("advance") },
+        {
+          onAdvance: () => advances.push("advance"),
+          onBulk: (path, body) => bulk.push({ path, body }),
+        },
       ),
     );
     const user = userEvent.setup();
@@ -284,14 +287,25 @@ describe("DealsScreen", () => {
       "Proposal",
     );
     await user.click(screen.getByRole("button", { name: "Move" }));
+    const dialog = await screen.findByRole("dialog");
     await user.click(
-      within(await screen.findByRole("dialog")).getByRole("button", {
-        name: "Move",
-      }),
+      await within(dialog).findByRole("button", { name: "Move" }),
     );
 
-    // One write, for the row that moves.
-    await waitFor(() => expect(advances.length).toBe(1));
+    await waitFor(() => expect(bulk).toHaveLength(2));
+    expect(bulk.map((call) => call.path)).toEqual([
+      "/v1/bulk/preview",
+      "/v1/bulk/execute",
+    ]);
+    expect(bulk[1].body).toMatchObject({
+      verb: "move_stage",
+      stage_id: "s2",
+      items: [
+        { id: "d1", version: 3 },
+        { id: "d2", version: 9 },
+      ],
+    });
+    expect(advances).toEqual([]);
   });
 
   // A closed deal takes no bulk write: archiving it is done or meaningless.

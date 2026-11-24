@@ -8272,7 +8272,7 @@
     },
     {
       "name": "read_details",
-      "tokens": 4494,
+      "tokens": 4600,
       "agents": [],
       "required_by_cases": [],
       "required_as_one_of_a_set_by_cases": [],
@@ -8319,6 +8319,54 @@
       "graded_by_certification_tasks": [],
       "near_miss_in_certification_tasks": [],
       "measured_by_model": {}
+    },
+    {
+      "name": "read_reports",
+      "tokens": 3353,
+      "agents": [],
+      "required_by_cases": [
+        "case49_who_can_introduce_us"
+      ],
+      "required_as_one_of_a_set_by_cases": [
+        "case62_held_meetings_to_opportunities"
+      ],
+      "permitted_in_cases": [
+        "case20_put_it_in_the_board_pack",
+        "case22_can_i_trust_the_numbers"
+      ],
+      "called_in_held_runs": [
+        "case113_after_the_sales_review",
+        "case20_put_it_in_the_board_pack",
+        "case22_can_i_trust_the_numbers",
+        "case49_who_can_introduce_us",
+        "case62_held_meetings_to_opportunities"
+      ],
+      "driven": true,
+      "required_only_as_one_of_a_set": false,
+      "graded_by_certification_tasks": [],
+      "near_miss_in_certification_tasks": [],
+      "measured_by_model": {
+        "claude-sonnet-5-5@claude-cli": {
+          "runs": 2,
+          "passed": 2,
+          "reliability": 1,
+          "cases_below_their_bar": []
+        },
+        "gemini-4-hydrogen-medium@agy-cli": {
+          "runs": 2,
+          "passed": 2,
+          "reliability": 1,
+          "cases_below_their_bar": []
+        },
+        "gpt-5.6-sol@codex-cli": {
+          "runs": 3,
+          "passed": 1,
+          "reliability": 0.3333333333333333,
+          "cases_below_their_bar": [
+            "case49_who_can_introduce_us"
+          ]
+        }
+      }
     },
     {
       "name": "change_settings",
@@ -8432,54 +8480,6 @@
           "passed": 2,
           "reliability": 1,
           "cases_below_their_bar": []
-        }
-      }
-    },
-    {
-      "name": "read_reports",
-      "tokens": 2831,
-      "agents": [],
-      "required_by_cases": [
-        "case49_who_can_introduce_us"
-      ],
-      "required_as_one_of_a_set_by_cases": [
-        "case62_held_meetings_to_opportunities"
-      ],
-      "permitted_in_cases": [
-        "case20_put_it_in_the_board_pack",
-        "case22_can_i_trust_the_numbers"
-      ],
-      "called_in_held_runs": [
-        "case113_after_the_sales_review",
-        "case20_put_it_in_the_board_pack",
-        "case22_can_i_trust_the_numbers",
-        "case49_who_can_introduce_us",
-        "case62_held_meetings_to_opportunities"
-      ],
-      "driven": true,
-      "required_only_as_one_of_a_set": false,
-      "graded_by_certification_tasks": [],
-      "near_miss_in_certification_tasks": [],
-      "measured_by_model": {
-        "claude-sonnet-5-5@claude-cli": {
-          "runs": 2,
-          "passed": 2,
-          "reliability": 1,
-          "cases_below_their_bar": []
-        },
-        "gemini-4-hydrogen-medium@agy-cli": {
-          "runs": 2,
-          "passed": 2,
-          "reliability": 1,
-          "cases_below_their_bar": []
-        },
-        "gpt-5.6-sol@codex-cli": {
-          "runs": 3,
-          "passed": 1,
-          "reliability": 0.3333333333333333,
-          "cases_below_their_bar": [
-            "case49_who_can_introduce_us"
-          ]
         }
       }
     },
@@ -8652,7 +8652,7 @@
     },
     {
       "name": "find_records",
-      "tokens": 2041,
+      "tokens": 2057,
       "agents": [
         "morning_brief",
         "overnight_at_risk_sweep"
@@ -8809,6 +8809,44 @@
       "measured_by_model": {}
     },
     {
+      "name": "change_reports",
+      "tokens": 2014,
+      "agents": [],
+      "required_by_cases": [
+        "case113_after_the_sales_review"
+      ],
+      "required_as_one_of_a_set_by_cases": [],
+      "permitted_in_cases": [],
+      "called_in_held_runs": [
+        "case113_after_the_sales_review",
+        "case20_put_it_in_the_board_pack"
+      ],
+      "driven": true,
+      "required_only_as_one_of_a_set": false,
+      "graded_by_certification_tasks": [],
+      "near_miss_in_certification_tasks": [],
+      "measured_by_model": {
+        "claude-sonnet-5-5@claude-cli": {
+          "runs": 2,
+          "passed": 2,
+          "reliability": 1,
+          "cases_below_their_bar": []
+        },
+        "gemini-4-hydrogen-medium@agy-cli": {
+          "runs": 2,
+          "passed": 2,
+          "reliability": 1,
+          "cases_below_their_bar": []
+        },
+        "gpt-5.6-sol@codex-cli": {
+          "runs": 2,
+          "passed": 2,
+          "reliability": 1,
+          "cases_below_their_bar": []
+        }
+      }
+    },
+    {
       "name": "read_view",
       "tokens": 1921,
       "agents": [],
@@ -8845,7 +8883,7 @@
     },
     {
       "name": "change_capture",
-      "tokens": 1870,
+      "tokens": 1891,
       "agents": [],
       "required_by_cases": [],
       "required_as_one_of_a_set_by_cases": [],
@@ -8865,7 +8903,7 @@
     },
     {
       "name": "change_attention",
-      "tokens": 1775,
+      "tokens": 1842,
       "agents": [],
       "required_by_cases": [
         "case104_mark_it_seen"
@@ -8945,42 +8983,28 @@
       }
     },
     {
-      "name": "change_reports",
-      "tokens": 1599,
+      "name": "read_analytics",
+      "tokens": 1373,
       "agents": [],
-      "required_by_cases": [
-        "case113_after_the_sales_review"
+      "required_by_cases": [],
+      "required_as_one_of_a_set_by_cases": [
+        "case62_held_meetings_to_opportunities"
       ],
-      "required_as_one_of_a_set_by_cases": [],
-      "permitted_in_cases": [],
+      "permitted_in_cases": [
+        "case20_put_it_in_the_board_pack",
+        "case49_who_can_introduce_us"
+      ],
       "called_in_held_runs": [
-        "case113_after_the_sales_review",
-        "case20_put_it_in_the_board_pack"
+        "case20_put_it_in_the_board_pack",
+        "case22_can_i_trust_the_numbers",
+        "case45_move_the_deal_on",
+        "case62_held_meetings_to_opportunities"
       ],
       "driven": true,
       "required_only_as_one_of_a_set": false,
       "graded_by_certification_tasks": [],
       "near_miss_in_certification_tasks": [],
-      "measured_by_model": {
-        "claude-sonnet-5-5@claude-cli": {
-          "runs": 2,
-          "passed": 2,
-          "reliability": 1,
-          "cases_below_their_bar": []
-        },
-        "gemini-4-hydrogen-medium@agy-cli": {
-          "runs": 2,
-          "passed": 2,
-          "reliability": 1,
-          "cases_below_their_bar": []
-        },
-        "gpt-5.6-sol@codex-cli": {
-          "runs": 2,
-          "passed": 2,
-          "reliability": 1,
-          "cases_below_their_bar": []
-        }
-      }
+      "measured_by_model": {}
     },
     {
       "name": "run_research",
@@ -9082,30 +9106,6 @@
       "measured_by_model": {}
     },
     {
-      "name": "read_analytics",
-      "tokens": 1067,
-      "agents": [],
-      "required_by_cases": [],
-      "required_as_one_of_a_set_by_cases": [
-        "case62_held_meetings_to_opportunities"
-      ],
-      "permitted_in_cases": [
-        "case20_put_it_in_the_board_pack",
-        "case49_who_can_introduce_us"
-      ],
-      "called_in_held_runs": [
-        "case20_put_it_in_the_board_pack",
-        "case22_can_i_trust_the_numbers",
-        "case45_move_the_deal_on",
-        "case62_held_meetings_to_opportunities"
-      ],
-      "driven": true,
-      "required_only_as_one_of_a_set": false,
-      "graded_by_certification_tasks": [],
-      "near_miss_in_certification_tasks": [],
-      "measured_by_model": {}
-    },
-    {
       "name": "preview_import",
       "tokens": 1012,
       "agents": [],
@@ -9147,6 +9147,26 @@
         "case22_can_i_trust_the_numbers",
         "case45_move_the_deal_on",
         "case50_what_moved_my_quarter",
+        "case65_clear_out_the_dead_deals"
+      ],
+      "driven": true,
+      "required_only_as_one_of_a_set": false,
+      "graded_by_certification_tasks": [],
+      "near_miss_in_certification_tasks": [],
+      "measured_by_model": {}
+    },
+    {
+      "name": "bulk_update_records",
+      "tokens": 892,
+      "agents": [],
+      "required_by_cases": [
+        "case131_no_to_the_hand_over"
+      ],
+      "required_as_one_of_a_set_by_cases": [],
+      "permitted_in_cases": [
+        "case47_tidy_the_fair_list"
+      ],
+      "called_in_held_runs": [
         "case65_clear_out_the_dead_deals"
       ],
       "driven": true,
@@ -9241,26 +9261,6 @@
           "cases_below_their_bar": []
         }
       }
-    },
-    {
-      "name": "bulk_update_records",
-      "tokens": 798,
-      "agents": [],
-      "required_by_cases": [
-        "case131_no_to_the_hand_over"
-      ],
-      "required_as_one_of_a_set_by_cases": [],
-      "permitted_in_cases": [
-        "case47_tidy_the_fair_list"
-      ],
-      "called_in_held_runs": [
-        "case65_clear_out_the_dead_deals"
-      ],
-      "driven": true,
-      "required_only_as_one_of_a_set": false,
-      "graded_by_certification_tasks": [],
-      "near_miss_in_certification_tasks": [],
-      "measured_by_model": {}
     },
     {
       "name": "read_lists",
@@ -9456,7 +9456,7 @@
     },
     {
       "name": "schedule_meeting",
-      "tokens": 487,
+      "tokens": 515,
       "agents": [],
       "required_by_cases": [
         "case46_get_us_in_a_room"

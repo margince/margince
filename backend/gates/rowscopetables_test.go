@@ -616,7 +616,8 @@ const (
 	// find the contact ids held by a live lead's historical or identity links.
 	// The data task runs as the system principal over the workspace. A unique id
 	// goes only into promoteLeadTx, which locks both records and rechecks the
-	// promotion; several ids leave the lead untouched. No id reaches a caller.
+	// promotion. Several ids leave the lead untouched and go to the duplicate
+	// review. No id reaches a caller.
 	//
 	// 145-146: contacts.retractUnsupportedPhones reads contact ids to lock and
 	// audit unsupported signature numbers. Its caller requires the system actor;
@@ -688,5 +689,9 @@ const (
 	// 168: contacts.autoMove reads the contact id of a claim it moves as the
 	// system principal (auth.RequireSystem in the sweep's entry points). The id
 	// goes to the claim's audit row and is returned to no caller.
-	modulesTierUnscopedCeiling = 168
+	//
+	// 169: forecasting.addTeamStandings reads a team freeze's deal ids and hands
+	// them to the snapshot lens before any caller sees one. The lens applies the
+	// reader's deal row scope and the team's assertion check, as FocusLists does.
+	modulesTierUnscopedCeiling = 169
 )

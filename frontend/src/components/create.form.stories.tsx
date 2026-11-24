@@ -62,7 +62,7 @@ export const UnreadableDay: Story = {
     await userEvent.type(close, "31/02/2027");
     await userEvent.click(canvas.getByRole("button", { name: "Create" }));
     await expect(
-      await canvas.findByText("Enter a date as DD/MM/YYYY."),
+      await canvas.findByText("There is no 31/02/2027 in the calendar."),
     ).toBeVisible();
     await expect(close).toHaveAttribute("aria-invalid", "true");
     await expect(close).toHaveFocus();

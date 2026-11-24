@@ -154,7 +154,7 @@ func admitForecastVintages(
 }
 
 func forecastEvaluationZone(ctx context.Context, tx pgx.Tx) (*time.Location, error) {
-	name, err := identity.TimezoneOf(ctx, tx)
+	name, err := identity.TimezoneAppliedTx(ctx, tx)
 	if err != nil {
 		return nil, err
 	}

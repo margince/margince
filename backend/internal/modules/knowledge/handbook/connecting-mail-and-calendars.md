@@ -1,5 +1,5 @@
 <!-- prose:plain -->
-<!-- describes: backend/internal/modules/capture/health.go frontend/src/app/capturehealthbanner.tsx frontend/src/features/capture/connectors.tsx frontend/src/features/capture/imap-connect-form.tsx frontend/src/features/capture/imap-send-fields.tsx frontend/src/features/capture/connectors.telegram.tsx frontend/src/features/capture/backfill.tsx backend/internal/modules/capture/registry_connections.go backend/internal/modules/capture/oauthflow backend/internal/modules/capture/backfill.go backend/internal/modules/capture/historybaseline.go frontend/src/features/capture/connection-service.tsx frontend/src/features/capture/connection-stop.tsx backend/internal/modules/capture/gdocs backend/internal/modules/capture/meetingnotes.go backend/internal/modules/capture/meetingnotesread.go backend/internal/modules/activities/meetingnotes.go backend/internal/compose/connectors_sharedconsent.go backend/internal/compose/connectors_picture.go -->
+<!-- describes: backend/internal/modules/capture/health.go frontend/src/app/capturehealthbanner.tsx frontend/src/features/capture/connectors.tsx frontend/src/features/capture/imap-connect-form.tsx frontend/src/features/capture/imap-send-fields.tsx frontend/src/features/capture/connectors.telegram.tsx frontend/src/features/capture/backfill.tsx backend/internal/modules/capture/registry_connections.go backend/internal/modules/capture/oauthflow backend/internal/modules/capture/backfill.go backend/internal/modules/capture/historybaseline.go frontend/src/features/capture/connection-service.tsx frontend/src/features/capture/connection-stop.tsx backend/internal/modules/capture/gdocs backend/internal/modules/capture/meetingnotes.go backend/internal/modules/capture/meetingnotesread.go backend/internal/modules/capture/meetingnotesmail.go backend/internal/modules/activities/meetingnotes.go backend/internal/modules/activities/meetingnotesmail.go backend/internal/compose/connectors_sharedconsent.go backend/internal/compose/connectors_picture.go -->
 # Connecting your mailbox and calendar
 
 Capture reads mail and meetings only from an account you connect. This page
@@ -92,6 +92,13 @@ To stop it, choose **Stop reading meeting notes** in the row. Mail and calendar 
 A meeting with notes waiting to be read offers **Connect meeting notes** in its **Files** panel.
 It says when your Google accounts differ. The message leaves once the transcript lands or the reading window ends.
 
+### What happens to the "Notes by Gemini" email?
+Google emails the notes to the guests of the meeting. Margince keeps that email private to those guests. It files the email under no contact, so the contact with your own address does not hold every set of notes.
+
+When the subject names one of your meetings, Margince puts the notes on that meeting as its transcript. The meeting must have started in the 24 hours before the email, and the title must be the same, in any case. The contacts and readers of the meeting get it, and Margince suggests the tasks it finds.
+
+Margince adds nothing if two meetings fit, or if the meeting already has a transcript. It does the same for a forwarded email, or one sent to someone else. It does this only for email Gmail confirms came from Google. This needs no Meeting notes connection, only your connected mailbox and calendar.
+
 Also called: Google Docs, Meet transcripts, Gemini notes, meeting minutes.
 
 ### Who a meeting from your calendar shows
@@ -111,6 +118,8 @@ A guest added to the invitation later joins the meeting at the next calendar syn
 If someone set who can see the meeting by hand, a colleague added later is shown but cannot read it unless they are picked. A meeting you imported from another CRM gets its guests from your calendar the same way.
 
 An invitation with more than 50 guests is a mailing list to Margince. It keeps your colleagues on it and names up to 200 outside guests by the name or address on the invitation. Those guests are not linked to a contact, no contact is made for them, and the meeting does not count as contact with anyone. Past 200, the meeting says how many more guests it does not list.
+
+When whoever set up the meeting hides the guest list, your copy of the invitation names only that host and you. Margince files that meeting, and only you and the host can read it. It shows on a guest's record once the host's calendar is connected, because that copy names every guest. Margince does not take guests from an invitation email, because the sender types that list.
 
 ## What you can connect
 

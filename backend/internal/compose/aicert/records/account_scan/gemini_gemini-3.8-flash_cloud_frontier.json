@@ -3,7 +3,7 @@
   "provider": "gemini",
   "served_model": "gemini-3.8-flash",
   "env_class": "cloud_frontier",
-  "prompt_version": "pc0917ac4742e82440a26eba6b2a31719",
+  "prompt_version": "pcbfe069030c6e7bc1f12a0a381be998c",
   "corpus_version": "v1",
   "verdict": "certified",
   "runs": 18,
@@ -40,7 +40,7 @@
     {
       "scenario": "scan_reads_the_thread_past_an_answered_ask",
       "site": "company_scan",
-      "stamp": "f1f068d4bbf3b8db562bfa284017f85aa71ed5e64aa8154e97d516992e2732a0f38d4232f7af045b5f0e394cfce5ba385c6d9dd533a7a4330bbd57cd449eda5b796f2117e3caf4442a534ce479d60ed5404866b3c91f320b75f89713a06dd8a8",
+      "stamp": "f1f068d4bbf3b8db562bfa284017f85aa71ed5e64aa8154e97d516992e2732a0f38d4232f7af045b5f0e394cfce5ba385c6d9dd533a7a4330bbd57cd449eda5ba1603e6618acbeb769edc836195d4d7d62f4ae3c85e2fca71f609b4571f20b82",
       "verdict": "certified",
       "judge_band": "certified",
       "runs": 6,
@@ -66,7 +66,7 @@
     {
       "scenario": "scan_finds_the_promise_we_did_not_keep",
       "site": "company_scan",
-      "stamp": "da80f10d083d0102f77c8fc54f297c1e9c8c088bb35663661e3da154a2093fd591c0ec6a2c02b9c51752b4ea6bae5e2b9450c23cfef19e05d2f290f14e7170ead852954dbb80a8dec461a9d859c172822933db8cf69c6fafdfb30fc5bc05ef1b",
+      "stamp": "da80f10d083d0102f77c8fc54f297c1e9c8c088bb35663661e3da154a2093fd591c0ec6a2c02b9c51752b4ea6bae5e2b9450c23cfef19e05d2f290f14e7170eae65d58873a025c3a8b99d87ddccd864230a7ad23eb6ec5e623b1676f6acdee50",
       "verdict": "certified",
       "judge_band": "certified",
       "runs": 6,
@@ -92,7 +92,7 @@
     {
       "scenario": "scan_finds_the_question_nobody_answered",
       "site": "company_scan",
-      "stamp": "02abd724d62c1287296db7f8dfa7aa23e9754cfe8e3c1d842c0f8beb83667670a57ad60e478c8e2d89b3faf53c019cb2b2dc26af9ea79553a878f91f20f71fda8a6c506c37f5ad937adfb4666b2849cd0e516102e9362656120647c8d9e89d2c",
+      "stamp": "02abd724d62c1287296db7f8dfa7aa23e9754cfe8e3c1d842c0f8beb83667670a57ad60e478c8e2d89b3faf53c019cb2b2dc26af9ea79553a878f91f20f71fdaa01a6b309f845b22d356ce9aa1c3b483b0cab3ebdbf0cb9bc5eac711b7a0a00d",
       "verdict": "certified",
       "judge_band": "certified",
       "runs": 6,

@@ -17,7 +17,7 @@ import (
 func (w *weeklyGenerateWorker) weeklyHelpMail(ctx context.Context, member weekly.TeamRep, week time.Time, words mailcopy.Copy) (emailview.Content, error) {
 	var body emailview.Content
 	body.Heading(words.MailHelp + " · " + mailcopy.OneLine(member.DisplayName))
-	plan, err := weeklyPlanStore(w.pool).PlanFor(ctx, member.UserID, week)
+	plan, err := WeeklyPlanStore(w.pool).PlanFor(ctx, member.UserID, week)
 	switch {
 	case errors.Is(err, apperrors.ErrNotFound) || errors.Is(err, apperrors.ErrPermissionDenied):
 		body.Paragraph(words.MailMissing)

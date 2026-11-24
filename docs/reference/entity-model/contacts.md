@@ -6,7 +6,7 @@ The 49 tables owned by `contacts`, as the migrations build them. [Back to the en
 
 ## company
 
-47 columns · primary key `(id)` · referenced by 49 foreign keys
+46 columns · primary key `(id)` · referenced by 49 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -42,7 +42,6 @@ The 49 tables owned by `contacts`, as the migrations build them. [Back to the en
 | `owner_id` | `uuid` |  | Points at `app_user.id`. |
 | `parent_company_id` | `uuid` |  | Single-level hierarchy FK; no cycles. |
 | `phone` | `text` |  | The company's main number, in E.164 form (for example +49301234567). |
-| `quarantined_at` | `timestamp with time zone` |  |  |
 | `size_band` | `text` |  | One of `1-10`, `11-50`, `51-200`, `201-500`, `501-1000`, `1001-5000` and 1 more. |
 | `source_author_id` | `uuid` |  | Points at `app_user.id`. |
 | `source_author_name` | `text` |  |  |
@@ -610,7 +609,7 @@ The 49 tables owned by `contacts`, as the migrations build them. [Back to the en
 | `last_activity_at` | `timestamp with time zone` |  | When something last happened with this contact: the newest `occurred_at` at or before now of an activity linked to it, so a booked meeting counts once it starts. |
 | `last_name` | `text` |  |  |
 | `merged_into_id` | `uuid` |  | Set when this row was merged away. |
-| `narrowing_reason` | `text` |  | One of `awaiting_verdict`, `outbound_no_answer`, `confidentiality_hold`, `advisor`, `human_decided`. |
+| `narrowing_reason` | `text` |  | One of `awaiting_verdict`, `outbound_no_answer`, `confidentiality_hold`, `advisor`, `human_decided`, `shared_mailbox`. |
 | `owner_id` | `uuid` |  | Points at `app_user.id`. |
 | `photo_object_key` | `text` |  |  |
 | `photo_origin` | `text` |  |  |
@@ -655,7 +654,7 @@ The 49 tables owned by `contacts`, as the migrations build them. [Back to the en
 **Rules**
 
 - `contact_greeting_register_check`: `CHECK ((greeting_register = ANY (ARRAY['formal', 'familiar'])))`
-- `contact_narrowing_reason_check`: `CHECK ((narrowing_reason = ANY (ARRAY['awaiting_verdict', 'outbound_no_answer', 'confidentiality_hold', 'advisor', 'human_decided'])))`
+- `contact_narrowing_reason_check`: `CHECK ((narrowing_reason = ANY (ARRAY['awaiting_verdict', 'outbound_no_answer', 'confidentiality_hold', 'advisor', 'human_decided', 'shared_mailbox'])))`
 - `contact_narrowing_reason_only_when_owner`: `CHECK (((narrowing_reason IS NULL) OR (visibility = 'owner')))`
 - `contact_owner_private_names_its_owner`: `CHECK (((visibility <> 'owner') OR (owner_id IS NOT NULL)))`
 - `contact_quarantine_cleared_by_pairs`: `CHECK (((quarantine_cleared_at IS NULL) = (quarantine_cleared_by IS NULL)))`
@@ -723,7 +722,7 @@ The 49 tables owned by `contacts`, as the migrations build them. [Back to the en
 | `request_retracted_at` | `timestamp with time zone` |  |  |
 | `request_retracted_by` | `text` |  |  |
 | `source_entity_id` | `uuid` |  |  |
-| `source_entity_type` | `text` |  |  |
+| `source_entity_type` | `text` |  | One of `activity`, `deal`. |
 | `stated_source` | `text` |  | One of `met_in_person`, `business_card`, `referral`, `website`, `other`. |
 | `captured_by` | `text` | yes | Who or what wrote the row. Stamped by the server from the authenticated principal, never taken from the request body. |
 
@@ -737,6 +736,7 @@ The 49 tables owned by `contacts`, as the migrations build them. [Back to the en
 **Rules**
 
 - `contact_acquisition_evidence_kind`: `CHECK ((kind = ANY (ARRAY['subject_initiated', 'customer_contract', 'requested_quote_or_meeting', 'in_person_permission', 'referral', 'event_or_form', 'public_or_business_source', 'purchased_or_imported', 'unknown_legacy', 'crm_migration', 'mailbox_history'])))`
+- `contact_acquisition_evidence_source_entity_type_check`: `CHECK ((source_entity_type = ANY (ARRAY['activity', 'deal'])))`
 - `contact_acquisition_evidence_source_shape`: `CHECK (((source_entity_type IS NULL) = (source_entity_id IS NULL)))`
 - `contact_acquisition_evidence_stated_source_check`: `CHECK ((stated_source = ANY (ARRAY['met_in_person', 'business_card', 'referral', 'website', 'other'])))`
 
@@ -934,7 +934,7 @@ The 49 tables owned by `contacts`, as the migrations build them. [Back to the en
 
 ## contact_profile_field
 
-17 columns · primary key `(id)` · referenced by 0 foreign keys
+18 columns · primary key `(id)` · referenced by 0 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -942,14 +942,15 @@ The 49 tables owned by `contacts`, as the migrations build them. [Back to the en
 | `confidence` | `numeric(4,3)` |  |  |
 | `contact_id` | `uuid` | yes | Points at `contact.id`. |
 | `evidence_snippet` | `text` | yes | The verbatim source text the value was read from, so the reader can check the claim against its own source. |
-| `field` | `text` | yes | One of `title`, `phone`, `role`, `linkedin`, `company_name`, `address` and 3 more. |
+| `field` | `text` | yes | One of `title`, `phone`, `role`, `linkedin`, `company_name`, `address` and 4 more. |
 | `observed_at` | `timestamp with time zone`, default `now()` | yes | When the source stated this value: the mail's own date, rather than when the pass read it. |
+| `signature_support` | `jsonb`, default `'{}'::jsonb` | yes |  |
 | `source_ref` | `text` | yes | What was read, as `activity:<uuid>` for a signature or `site_read:<url>` for a page. |
 | `superseded_captured_by` | `text` |  |  |
 | `superseded_observed_at` | `timestamp with time zone` |  | When the replaced value was itself stated, so a reader can see which of the two is older. |
 | `superseded_value` | `text` |  | What this field held before a newer statement replaced it. |
 | `value` | `text` | yes |  |
-| `value_key` | `text`, default `''::text` | yes | What tells two rows of one field apart: the E.164 number for a `phone` row, empty for every other field. |
+| `value_key` | `text`, default `''::text` | yes | What tells two rows of one field apart: the E.164 number for a `phone` row, the lowercased address for an `email` row, empty for every other field. |
 | `captured_by` | `text` | yes | `agent:enrich` until a human edits the field, `human:<uuid>` after; this is how the page says "corrected by you". |
 | `created_at` | `timestamp with time zone`, default `now()` | yes | When the row was created. Set once. |
 | `source` | `text` | yes | The channel that produced it, e.g. `capture_enrich` or `site_read`. |
@@ -965,8 +966,8 @@ The 49 tables owned by `contacts`, as the migrations build them. [Back to the en
 **Rules**
 
 - `contact_profile_field_confidence_check`: `CHECK (((confidence IS NULL) OR ((confidence >= (0)::numeric) AND (confidence <= (1)::numeric))))`
-- `contact_profile_field_field_check`: `CHECK ((field = ANY (ARRAY['title', 'phone', 'role', 'linkedin', 'company_name', 'address', 'website', 'first_name', 'last_name'])))`
-- `contact_profile_field_value_key_cardinality`: `CHECK (((field = 'phone') = (value_key <> '')))`
+- `contact_profile_field_field_check`: `CHECK ((field = ANY (ARRAY['title', 'phone', 'role', 'linkedin', 'company_name', 'address', 'website', 'first_name', 'last_name', 'email'])))`
+- `contact_profile_field_value_key_cardinality`: `CHECK (((field = ANY (ARRAY['phone', 'email'])) = (value_key <> '')))`
 - `contact_profile_field_version_js_safe`: `CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))`
 - `uq_contact_profile_field`: `UNIQUE (contact_id, field, value_key)`
 
@@ -1417,7 +1418,7 @@ The 49 tables owned by `contacts`, as the migrations build them. [Back to the en
 | `origin` | `lead_origin` | the parent cannot be deleted while this row points at it |
 | `owner_id` | `app_user` | deleting the parent keeps this row and clears the link |
 | `partner_company_id` | `company` | deleting the parent keeps this row and clears the link |
-| `product_id` | `product` | the parent cannot be deleted while this row points at it |
+| `product_id` | `product` | deleting the parent keeps this row and clears the link |
 | `project_id` | `project` | deleting the parent keeps this row and clears the link |
 | `promoted_contact_id` | `contact` | deleting the parent keeps this row and clears the link |
 | `qualified_deal_id` | `deal` | deleting the parent keeps this row and clears the link |
@@ -2187,7 +2188,7 @@ The 49 tables owned by `contacts`, as the migrations build them. [Back to the en
 
 | Columns | Table | When the parent goes |
 |---|---|---|
-| `assigned_to` | `app_user` | the parent cannot be deleted while this row points at it |
+| `assigned_to` | `app_user` | deleting the parent keeps this row and clears the link |
 | `company_id` | `company` | deleting the parent keeps this row and clears the link |
 | `contact_id` | `contact` | deleting the parent deletes this row |
 | `deal_id` | `deal` | the parent cannot be deleted while this row points at it |

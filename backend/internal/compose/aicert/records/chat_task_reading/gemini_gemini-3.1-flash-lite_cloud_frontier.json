@@ -3,7 +3,7 @@
   "provider": "gemini",
   "served_model": "gemini-3.1-flash-lite",
   "env_class": "cloud_frontier",
-  "prompt_version": "pbed88a7834f1669d43a960c207831550",
+  "prompt_version": "pf3f991945a8b7ffe0e498acab618e9e6",
   "corpus_version": "v1",
   "verdict": "supported_degraded",
   "runs": 30,
@@ -36,7 +36,7 @@
     {
       "scenario": "booked_slot_closes_the_task",
       "site": "chat_tasks",
-      "stamp": "3adc58c3c8c989f47bebfe43613bebb11eed3dad2e5068caee52828d7ab2a38755ea3050a2a64e27d7736ee7496d46943db9aee61251a309bcee4e8ec7e615a924ddbc31843810cd85fb614731c0e03f8dc243463121a792f9b6ffeb05add41d",
+      "stamp": "3adc58c3c8c989f47bebfe43613bebb11eed3dad2e5068caee52828d7ab2a38755ea3050a2a64e27d7736ee7496d46943db9aee61251a309bcee4e8ec7e615a99bb495dfbeb47ae29b6419faa571c2a639b2e2603e22844c013f5b2d3b910898",
       "verdict": "certified",
       "judge_band": "certified",
       "runs": 9,
@@ -65,7 +65,7 @@
     {
       "scenario": "next_week_moves_the_task",
       "site": "chat_tasks",
-      "stamp": "2b5f5c2e0a0856c3af3f79873ffa7d889a1d3190766a57c1155c9d4e6d6034b8fb37687dc348a06817937f1fb718cfe9ad80622f3096c18e5f4c58a8db6e1317cb16493d1c4ab7e88393745b21e43ee2e9bc12325dac75f1ab774014eeb0d995",
+      "stamp": "2b5f5c2e0a0856c3af3f79873ffa7d889a1d3190766a57c1155c9d4e6d6034b8fb37687dc348a06817937f1fb718cfe9ad80622f3096c18e5f4c58a8db6e1317061808e85d4849a647b6d7d8fbe2e2ac1bc77f040a2d92f6965cf2cd3a4f78b6",
       "verdict": "certified",
       "judge_band": "certified",
       "runs": 9,
@@ -94,7 +94,7 @@
     {
       "scenario": "unrelated_chat_changes_nothing",
       "site": "chat_tasks",
-      "stamp": "6fe4468d49f0861a6bfcd795b1fe7378c4bc065b5756de2af9192a6c5988ef95c84ac4f8f7a58bfa10e1195e4a4e6ae62b28a7cdb7d971464d35f833b97a9f58a58d568c1801d55c1cffe5d5aef0ee3fd7ca19d985c0d53784a8d6fc85b88f1f",
+      "stamp": "6fe4468d49f0861a6bfcd795b1fe7378c4bc065b5756de2af9192a6c5988ef95c84ac4f8f7a58bfa10e1195e4a4e6ae62b28a7cdb7d971464d35f833b97a9f584c9bcfb8ccb520ed17839e4697b06208f6988a73332e90b0747a39fa96cbc454",
       "verdict": "supported_degraded",
       "judge_band": "supported_degraded",
       "runs": 12,

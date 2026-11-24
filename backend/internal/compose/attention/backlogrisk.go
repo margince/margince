@@ -164,7 +164,7 @@ func (s *Service) dealsWaitingPastTheScan(ctx context.Context, day crmcontracts.
 // absorb the deal's at-risk row on the ranked page. Each task is drawn and
 // judged by the ranked page's own rule (absorbsRisk).
 func (s *Service) dealsWithNearTask(ctx context.Context, asOf time.Time, deals []ids.UUID) (map[ids.UUID]bool, error) {
-	near := TaskWindow{AsOf: asOf, Until: nearTaskCutoff(asOf), Scope: s.taskScope, Owner: s.taskOwner, Team: s.rosterSeats()}
+	near := TaskWindow{AsOf: asOf, Until: nearTaskCutoff(asOf), Scope: s.taskScope, Zone: dayZoneOf(s.taskScope, s.backlog.zone), Owner: s.taskOwner, Team: s.rosterSeats()}
 	tasks, err := s.backlog.tasks.TasksOnDeals(ctx, near, deals)
 	if err != nil {
 		return nil, err

@@ -156,7 +156,7 @@ func (o scoutDealOpener) openOne(ctx context.Context, s openableSuggestion) (ids
 			mode, err := approvals.AutoApplyModeTx(ctx, tx, s.owner, deals.DealOpenKind)
 			return mode == approvals.ModeAuto, err
 		},
-		Record: func(ctx context.Context, tx pgx.Tx, deal, _ ids.UUID, fill deals.DealPrefill) error {
+		Record: func(ctx context.Context, tx pgx.Tx, deal ids.UUID, fill deals.DealPrefill) (ids.UUID, error) {
 			return o.recordOnTimeline(ctx, tx, deal, suggestion.CompanyName, scoutBasis(suggestion, fill.Withheld))
 		},
 		AsOwner: ownersAgentTx(o.users, s.owner, marginceActorID),
@@ -181,16 +181,16 @@ func scoutBasis(s deals.Suggestion, withheld bool) string {
 
 // recordOnTimeline writes the opening on the deal's timeline as a note. Its
 // origin keeps it out of every recency clock.
-func (o scoutDealOpener) recordOnTimeline(ctx context.Context, tx pgx.Tx, deal ids.UUID, company, basis string) error {
+func (o scoutDealOpener) recordOnTimeline(ctx context.Context, tx pgx.Tx, deal ids.UUID, company, basis string) (ids.UUID, error) {
 	subject := fmt.Sprintf(systemtext.Copy("deal.opened", textlang.English), company)
 	body := fmt.Sprintf(systemtext.Copy("deal.opened_body", textlang.English), basis)
-	_, _, err := o.activities.LogActivityTx(ctx, tx, activities.LogActivityInput{
+	note, _, err := o.activities.LogActivityTx(ctx, tx, activities.LogActivityInput{
 		SystemText: &systemtext.Message{Subject: systemtext.Sentence("deal.opened", systemtext.Text(company)), Body: systemtext.Sentence("deal.opened_body", systemtext.Excerpt(0, utf8.RuneCountInString(basis)))},
 		Kind:       string(crmcontracts.ActivityKindNote), Subject: &subject, Body: &body, Origin: activities.OriginSystemRemediation,
 		Links: []activities.ActivityLinkInput{{EntityType: entityTypeDeal, EntityID: deal}},
 	})
 	if err != nil {
-		return fmt.Errorf("compose: writing the opening on the deal's timeline: %w", err)
+		return ids.Nil, fmt.Errorf("compose: writing the opening on the deal's timeline: %w", err)
 	}
-	return nil
+	return ids.UUID(note.Id), nil
 }

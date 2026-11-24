@@ -373,11 +373,10 @@ func winLossSpec() reportSpec {
 		// at the same revenue looked identical to one that was not.
 		measures: map[string]string{
 			fieldAmountMinor:     colAmountMinor,
-			fieldAmountBaseMinor: wonSalesValueSQL(reportAsOfToken, reportBaseCurrencyToken, "t"),
+			fieldAmountBaseMinor: wonSalesValueAtSQL(reportAsOfToken, reportRatesAtToken, reportBaseCurrencyToken, "t"),
 			fieldDaysToClose:     daysToCloseExpr,
 		},
-		sumCoverage:    baseMoneyCoverage(fieldAmountBaseMinor),
-		nativeMeasures: nativeMoney(fieldAmountMinor),
+		sumCoverage: baseMoneyCoverage(fieldAmountBaseMinor),
 		// Every dimension also filters (REPORT-VOCAB-1): the period grains
 		// included, so "won deals in 2026" is one call rather than a group-by
 		// the caller then has to sift.

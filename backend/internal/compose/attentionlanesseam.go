@@ -276,9 +276,9 @@ func rankReconnects(lapsed []attention.QuietRelationship) []attention.QuietRelat
 type attentionDealFacts struct{ store *deals.Store }
 
 func (f attentionDealFacts) Figures(
-	ctx context.Context, dealIDs []ids.UUID,
+	ctx context.Context, dealIDs []ids.UUID, zone *time.Location,
 ) (map[ids.UUID]attention.DealFigures, error) {
-	found, err := f.store.Figures(ctx, dealIDs)
+	found, err := f.store.FiguresIn(ctx, dealIDs, zone)
 	if err != nil {
 		return nil, err
 	}
@@ -390,9 +390,9 @@ func taskLoadMap(rows []activities.OverdueLoad, err error) (map[ids.UUID]int, er
 // cannot come to answer different questions. A second statement, which is what a
 // true total beside a bounded page costs and what needs_you has always paid.
 func (t attentionTasks) CountOpenForViewer(
-	ctx context.Context, asOf, until time.Time, scope attention.TaskScope, owner ids.UUID, team []ids.UUID,
+	ctx context.Context, asOf, until time.Time, scope attention.TaskScope, zone string, owner ids.UUID, team []ids.UUID,
 ) (int, error) {
-	in, ok := openTasksDueBy(ctx, asOf, until, scope, owner, team)
+	in, ok := openTasksDueBy(ctx, asOf, until, scope, zone, owner, team)
 	if !ok {
 		return 0, nil
 	}

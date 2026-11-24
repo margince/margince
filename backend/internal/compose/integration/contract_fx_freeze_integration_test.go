@@ -37,7 +37,7 @@ func seedRate(t *testing.T, e *Env, from, to string, rate string, on time.Time) 
 		_, err := tx.Exec(context.Background(),
 			`INSERT INTO fx_rate (from_currency, to_currency, rate, rate_date)
 			 VALUES ($1, $2, $3::numeric, $4)
-			 ON CONFLICT (from_currency, to_currency, rate_date) DO UPDATE SET rate = EXCLUDED.rate`,
+			 ON CONFLICT (from_currency, to_currency, rate_date) WHERE superseded_at IS NULL DO UPDATE SET rate = EXCLUDED.rate`,
 			from, to, rate, on.UTC().Truncate(24*time.Hour))
 		return err
 	}); err != nil {

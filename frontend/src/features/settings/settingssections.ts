@@ -218,6 +218,9 @@ export const SETTINGS_SECTIONS = {
       "mailSharing.sharedPosture.label",
       "captureMailSync.interval.label",
       "captureReview.passCap.label",
+      "captureReview.verdictCap.label",
+      "captureReview.classifyCap.label",
+      "captureReview.owedCap.label",
     ],
     domains: [
       "settings.part.capture.domains",

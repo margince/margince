@@ -49,15 +49,11 @@ type Sink struct {
 	meetingNotes MeetingNotesWriter
 	// now dates the meeting-notes window. Nil is the wall clock.
 	now func() time.Time
-	// projectKeys resolves the subject-line rung of the project attribution
-	// ladder. Nil is a role that attributes nothing — messages still land, and
-	// none of them is filed under a project.
-	projectKeys ProjectKeyMatcher
-	// stampProject classifies the correspondence a project link qualifies. It
-	// arrives with projectKeys in one ProjectAttribution value. attributesProject
-	// checks both anyway: a ladder that files without classifying is the one
-	// outcome this must never reach.
-	stampProject StampProjectCorrespondence
+	// projectAttribution is the project attribution ladder. An incomplete value
+	// is a role that attributes nothing: messages still land, and none of them is
+	// filed under a project. attributesProject checks every part, because a
+	// ladder that files without classifying must never run.
+	projectAttribution ProjectAttribution
 	// taskAssignee refuses a task filed for a seat that cannot hold work. Nil
 	// is a role that lands no task for anyone: such a record is refused.
 	taskAssignee TaskAssigneeCheck

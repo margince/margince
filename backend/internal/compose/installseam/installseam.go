@@ -46,7 +46,9 @@ func Deals() deals.Installation {
 		KnownCountry: func(code string) (bool, error) {
 			return contacts.IsAssignedCountry(code), nil
 		},
-		Timezone: identity.TimezoneOf,
+		// identity owns teams and leads, so whose requests a caller manages is
+		// read there and the edge is injected here.
+		ManagerOwners: identity.ManagerOwnersTx,
 		// The Value sort reads both ungated: a seat that may read deals may
 		// order them, whatever its installation_settings grant.
 		BaseCurrencyApplied: identity.BaseCurrencyAppliedTx,

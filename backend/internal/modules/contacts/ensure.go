@@ -114,11 +114,13 @@ type EnsureCounterpartyInput struct {
 	// decision that made it, or whoever edited it, stands.
 	RelationshipMark relationshipmark.Mark
 
-	// LinkOnly files the activity under a record the address already names
-	// and creates nothing, for a mailbox no seat owns.
+	// LinkOnly files the activity under a record the address already names,
+	// for a mailbox no seat owns. It creates nothing unless OwnerID is set.
 	LinkOnly bool
-	// ReaderTeam reads the mailbox a link-only ensure files for.
-	ReaderTeam ids.UUID
+	// ReaderTeam reads the mailbox a link-only ensure files for, and
+	// ReaderAuthority reads each member's authority to ask what they may read.
+	ReaderTeam      ids.UUID
+	ReaderAuthority MemberAuthority
 }
 
 // EnsureCounterpartyResult reports what the ensure did — every flag maps to
@@ -235,7 +237,12 @@ func (s *Store) ensureCapturedCounterparty(ctx context.Context, tx pgx.Tx, in En
 		return EnsureCounterpartyResult{}, ErrCounterpartyIsSeat
 	}
 	if in.LinkOnly {
-		return s.linkExistingCounterparty(ctx, tx, in)
+		// A link-only ensure carries an owner only when the ladder said create
+		// for a shared mailbox's backup owner, and then only an unnamed address mints.
+		linked, named, err := s.linkExistingCounterparty(ctx, tx, in)
+		if err != nil || named || in.OwnerID.IsZero() {
+			return linked, err
+		}
 	}
 	if err := s.ensureContact(ctx, tx, in, &res); err != nil {
 		return EnsureCounterpartyResult{}, err

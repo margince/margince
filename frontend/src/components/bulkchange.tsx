@@ -18,7 +18,11 @@ import { Heading } from "../design-system/heading";
 import { useToast } from "../design-system/toast";
 import { formatNumber } from "../format/format";
 import { type PluralBase, useLocale, usePlural, useT } from "../i18n";
-import { dealRecordKeys, derivedRecordKeys } from "../lib/activitykeys";
+import {
+  dealRecordKeys,
+  dealStageMoveKeys,
+  derivedRecordKeys,
+} from "../lib/activitykeys";
 import { LISTS_KEY } from "../lib/lists.queries";
 import { executeBulkChange, previewBulkChange } from "./bulkchangeapi";
 import { BulkUndoContext } from "./bulkundo";
@@ -56,6 +60,8 @@ export type BulkChangeRequest = Readonly<{
   tag?: Readonly<{ id: string; name: string }>;
   /** The task create_task files under every record. */
   task?: BulkTask;
+  /** The open stage move_stage moves deals to, and its name. */
+  stage?: Readonly<{ id: string; name: string }>;
   openId: string;
   /** Set when this press undoes the change with that batch id. */
   undoOf?: string;
@@ -92,10 +98,12 @@ function tagKeys(request: BulkChangeRequest): QueryKey[] {
   ];
 }
 
-function recordKeysOf(kind: RecordKind, id: string) {
-  return kind.record === "deal"
-    ? dealRecordKeys(id)
-    : [[kind.record, id], ...derivedRecordKeys(kind.record, id)];
+// A stage move, and its undo, also change the deal's stage history.
+function recordKeysOf(kind: RecordKind, id: string, verb: BulkVerb) {
+  if (kind.record !== "deal") {
+    return [[kind.record, id], ...derivedRecordKeys(kind.record, id)];
+  }
+  return verb === "move_stage" ? dealStageMoveKeys(id) : dealRecordKeys(id);
 }
 
 function PreviewBody({
@@ -220,7 +228,7 @@ export function useBulkOutcome() {
   const refresh = async (request: BulkChangeRequest) => {
     const kind = RECORD_KINDS[request.recordType];
     for (const row of request.rows) {
-      for (const queryKey of recordKeysOf(kind, row.id)) {
+      for (const queryKey of recordKeysOf(kind, row.id, request.verb)) {
         queryClient.invalidateQueries({ queryKey });
       }
     }
