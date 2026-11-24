@@ -165,7 +165,7 @@ type SARPackage struct {
 	StageEvidence []map[string]any `json:"stage_evidence"`
 	// ConversationClaims is what a colleague or a model read out of a message
 	// about the subject: a promise, a question, an objection. Each row carries
-	// the reading next to the quoted words and is marked derived, so the subject
+	// the reading next to the quoted words and is marked derived. So the subject
 	// can tell what they wrote from what we concluded. Who wrote it stays out.
 	ConversationClaims []map[string]any `json:"conversation_claims"`
 	// Handoffs is each time this contact was passed from one seat to another as a

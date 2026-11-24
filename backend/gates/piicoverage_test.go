@@ -320,9 +320,7 @@ var piiTables = map[string]piiHandling{
 	// subject's own words held outside the message. It goes when the body goes,
 	// and the contact foreign key cannot do it: Art. 17 anonymizes that
 	// row in place, so nothing cascades.
-	//
-	// Art. 15 returns the reading with the words, on the reply verdicts' ground:
-	// a conclusion about the subject is theirs. Who wrote it is a colleague's
+	// Art. 15 returns the reading with the words; who wrote it is a colleague's
 	// data, so the three user columns stay out.
 	"conversation_claim": {
 		erasureWrite: true,

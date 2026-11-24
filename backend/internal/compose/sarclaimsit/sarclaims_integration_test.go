@@ -4,8 +4,8 @@
 //go:build integration
 
 // Package sarclaimsit_test holds what the access export hands a subject about
-// the claims read out of their messages: the reading beside the words, and
-// never the colleague who wrote it.
+// the claims read out of their messages. It gives the reading beside the words,
+// and never the colleague who wrote it.
 package sarclaimsit_test
 
 import (
