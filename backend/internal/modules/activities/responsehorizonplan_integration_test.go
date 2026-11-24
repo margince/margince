@@ -24,6 +24,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/platform/clocktest"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
 var planCopySuffix = regexp.MustCompile(`_\d+$`)
@@ -74,21 +75,25 @@ const (
 // figure the neighbouring tests measure.
 func seedMailbox(ctx context.Context, t *testing.T, tx pgx.Tx, shape mailboxShape) {
 	t.Helper()
+	// The package runs in parts on one database. A part that seeds the same ids
+	// and addresses waits on the unique index until the other part's transaction
+	// ends. A salt makes each seed its own.
+	salt := ids.NewV7()
 	if _, err := tx.Exec(ctx, `
 	INSERT INTO contact (id, full_name, source, captured_by)
-	  SELECT md5('customer'||g)::uuid, 'Customer '||g, 'manual', 'human:seed' FROM generate_series(1, 400) g;
+	  SELECT md5(@salt||'customer'||g)::uuid, 'Customer '||g, 'manual', 'human:seed' FROM generate_series(1, 400) g;
 	CREATE TEMP TABLE mailbox_customer AS SELECT id, row_number() OVER () n FROM contact WHERE full_name LIKE 'Customer %';
 	INSERT INTO contact_email (contact_id, email, is_primary, source, captured_by)
-	  SELECT id, 'c'||n||'@customers.example', true, 'manual', 'human:seed' FROM mailbox_customer;
+	  SELECT id, 'c'||n||@domain, true, 'manual', 'human:seed' FROM mailbox_customer;
 	CREATE TEMP TABLE mailbox_inbound AS
-	  SELECT md5('inbound'||g)::uuid id, g, (1 + (g - 1) % 400)::int n,
+	  SELECT md5(@salt||'inbound'||g)::uuid id, g, (1 + (g - 1) % 400)::int n,
 	         @at::timestamptz - (g * 37 % 364) * interval '1 day' - interval '1 hour' at_time
 	    FROM generate_series(1, 1500) g;
 	INSERT INTO activity (id, kind, subject, occurred_at, direction, source, captured_by, thread_key, counterparty_email)
-	  SELECT id, 'email', 'Topic '||g, at_time, 'inbound', 'manual', 'human:seed', 'in'||g, 'c'||n||'@customers.example'
+	  SELECT id, 'email', 'Topic '||g, at_time, 'inbound', 'manual', 'human:seed', 'in'||g, 'c'||n||@domain
 	    FROM mailbox_inbound;
 	INSERT INTO activity_participant (activity_id, address, contact_id, role)
-	  SELECT i.id, 'c'||i.n||'@customers.example', c.id, 'from' FROM mailbox_inbound i JOIN mailbox_customer c ON c.n = i.n;
+	  SELECT i.id, 'c'||i.n||@domain, c.id, 'from' FROM mailbox_inbound i JOIN mailbox_customer c ON c.n = i.n;
 	INSERT INTO activity_participant (activity_id, address, role)
 	  SELECT id, 'seat@work.test', 'to' FROM mailbox_inbound;
 	`+seedReplicaRole+`
@@ -96,15 +101,16 @@ func seedMailbox(ctx context.Context, t *testing.T, tx pgx.Tx, shape mailboxShap
 	  SELECT i.id, 'contact', c.id FROM mailbox_inbound i JOIN mailbox_customer c ON c.n = i.n;
 	`+seedOriginRole+`
 	INSERT INTO activity (kind, subject, occurred_at, direction, source, captured_by, thread_key, counterparty_email, counterparty_outbound_attested)
-	  SELECT 'email', 'Re: Topic '||g, at_time + interval '2 days', 'outbound', 'manual', 'human:seed', 'reply'||g, 'c'||n||'@customers.example', true
+	  SELECT 'email', 'Re: Topic '||g, at_time + interval '2 days', 'outbound', 'manual', 'human:seed', 'reply'||g, 'c'||n||@domain, true
 	    FROM mailbox_inbound WHERE g % 100 < @reply_percent;
 	INSERT INTO activity (kind, subject, occurred_at, direction, source, captured_by, thread_key, counterparty_email, counterparty_outbound_attested)
 	  SELECT 'email', 'Update '||g, @at::timestamptz - (g * 53 % 364) * interval '1 day', 'outbound', 'manual', 'human:seed', 'out'||g,
-	         'c'||(1 + (g - 1) % 400)::int||'@customers.example', true
+	         'c'||(1 + (g - 1) % 400)::int||@domain, true
 	    FROM generate_series(1, @stray) g;
 	ANALYZE activity; ANALYZE activity_participant; ANALYZE activity_link`,
 		pgx.QueryExecModeSimpleProtocol, pgx.NamedArgs{
 			"at": clocktest.Now(t), "reply_percent": int(shape.replyShare * 100), "stray": shape.strayOutbound,
+			"salt": salt.String(), "domain": "@" + salt.String()[:8] + ".customers.example",
 		}); err != nil {
 		t.Fatalf("seeding the mailbox: %v", err)
 	}
