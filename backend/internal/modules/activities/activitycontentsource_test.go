@@ -65,17 +65,9 @@ func TestActivityContentSourceKeepsCollapsedDecisionsInTheirExistingSource(t *te
 	}
 }
 
-func TestActivityCountColumnsCarryTheDecisionOnce(t *testing.T) {
-	ctx := principal.WithActor(context.Background(), principal.Principal{Type: principal.PrincipalSystem})
+func TestActivityCountColumnsCarryOnlyTheDecision(t *testing.T) {
 	decision := "a.audience = 'workspace'"
-	columns, err := activityCountColumns(ctx, decision, func(any) int { return 1 })
-	if err != nil {
-		t.Fatal(err)
-	}
-	if strings.Count(columns, decision) != 1 || strings.Contains(columns, "THEN a.body") || strings.Contains(columns, "THEN a.raw") {
-		t.Fatal("the count projection repeats the audience test in columns it never reads")
-	}
-	if !strings.HasSuffix(columns, "("+decision+") AS content_available") {
-		t.Fatal("the count projection lost the decision column that binds its arguments")
+	if got, want := activityCountColumns(decision), "("+decision+") AS content_available"; got != want {
+		t.Fatalf("the count projection is %q, want only the decision that binds its arguments, %q", got, want)
 	}
 }

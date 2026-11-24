@@ -49,22 +49,19 @@ func offThreadAnswerArms(inbound, until string) []answerArm {
 	}
 	sameSubject := NormalisedSubjectSQL(inbound+".subject") + ` <> ''
 	    AND ` + NormalisedSubjectSQL("answer_mail.subject") + ` = ` + NormalisedSubjectSQL(inbound+".subject")
-	ourMail := `answer_mail.kind = ` + inbound + `.kind
-	    AND answer_mail.channel_provider IS NOT DISTINCT FROM ` + inbound + `.channel_provider
-	    AND answer_mail.direction = 'outbound'
-	    AND answer_mail.counterparty_outbound_attested
-	    AND ` + deliveredSQL("answer_mail") + `
-	    AND ` + everyoneReads("answer_mail") + `
-	    AND ` + later("answer_mail") + `
-	    AND ` + sameSubject
 	// The subject is matched inside the address probe, where
-	// idx_activity_answer_mail_subject takes it as a key column.
+	// idx_activity_answer_mail_subject takes it as a key column. A probe's rows
+	// then need only the rest of ourMail, as Postgres plans every copy.
 	ourMailIndexed := `answer_mail.kind = ` + inbound + `.kind
 	       AND answer_mail.direction = 'outbound'
 	       AND answer_mail.counterparty_outbound_attested
 	       AND ` + everyoneReads("answer_mail") + `
 	       AND ` + later("answer_mail") + `
 	       AND ` + sameSubject
+	ourMailBeyondIndexed := `answer_mail.channel_provider IS NOT DISTINCT FROM ` + inbound + `.channel_provider
+	    AND ` + deliveredSQL("answer_mail")
+	ourMail := ourMailIndexed + `
+	    AND ` + ourMailBeyondIndexed
 	asker := `answer_asker.activity_id = ` + inbound + `.id AND answer_asker.role = 'from'`
 	senderAddresses := `CROSS JOIN LATERAL (
 	    SELECT lower(btrim(answer_asker.address)) AS address
@@ -86,7 +83,7 @@ func offThreadAnswerArms(inbound, until string) []answerArm {
 	     WHERE answer_mail.counterparty_email = answer_address.address
 	       AND ` + ourMailIndexed + ` OFFSET 0) answer_mail
 	  WHERE ` + asker + `
-	    AND ` + ourMail},
+	    AND ` + ourMailBeyondIndexed},
 		{at: "answer_mail.occurred_at", id: "answer_mail.id", from: `FROM activity_participant answer_asker
 	  ` + senderAddresses + `
 	  CROSS JOIN LATERAL (SELECT ` + answerMailColumns + ` FROM activity_participant answer_told
@@ -95,9 +92,13 @@ func offThreadAnswerArms(inbound, until string) []answerArm {
 	       AND answer_told.role IN ('to', 'cc') OFFSET 0) answer_mail
 	  WHERE ` + asker + `
 	    AND ` + ourMail},
+		// One arm walks both ways to the sender's touches, so the touch test is
+		// planned once. A `UNION ALL` keeps a touch reached both ways twice, as
+		// two arms did.
 		touchAnswerArm(asker, touch, `SELECT answer_link.activity_id FROM activity_link answer_link
-	     WHERE answer_link.contact_id = answer_asker.contact_id`),
-		touchAnswerArm(asker, touch, `SELECT answer_attendee.activity_id FROM activity_participant answer_attendee
+	     WHERE answer_link.contact_id = answer_asker.contact_id
+	   UNION ALL
+	   SELECT answer_attendee.activity_id FROM activity_participant answer_attendee
 	     WHERE answer_attendee.contact_id = answer_asker.contact_id`),
 	}
 }
