@@ -41,21 +41,27 @@ func LowercaseParticipantAddressesTx(ctx context.Context, tx pgx.Tx, after ids.U
 	if err := auth.RequireSystem(ctx); err != nil {
 		return nil, 0, err
 	}
-	rows, err := tx.Query(ctx, `SELECT id `+addressRowsToLowercase+` AND id > $1 ORDER BY id LIMIT $2`, after, limit)
+	rows, err := tx.Query(ctx, `SELECT id, activity_id `+addressRowsToLowercase+` AND id > $1 ORDER BY id LIMIT $2`, after, limit)
 	if err != nil {
 		return nil, 0, fmt.Errorf("activities: reading participant addresses to lowercase: %w", err)
 	}
-	inspected, err := pgx.CollectRows(rows, pgx.RowTo[ids.UUID])
+	page, err := pgx.CollectRows(rows, pgx.RowToStructByPos[struct{ ID, Activity ids.UUID }])
 	if err != nil {
 		return nil, 0, fmt.Errorf("activities: reading participant addresses to lowercase: %w", err)
 	}
-	if len(inspected) == 0 {
+	if len(page) == 0 {
 		return nil, 0, nil
+	}
+	inspected, activities := make([]ids.UUID, len(page)), make([]ids.UUID, len(page))
+	for i, row := range page {
+		inspected[i], activities[i] = row.ID, row.Activity
+	}
+	if err := storekit.LockMeetingAttendeeWrites(ctx, tx, activities...); err != nil {
+		return nil, 0, err
 	}
 	// Every row of the batch's activities is locked. The two counts below are
 	// then of one set of rows, and differ only by what this batch folded.
-	rows, err = tx.Query(ctx, `SELECT id FROM activity_participant
-		 WHERE activity_id IN (SELECT activity_id FROM activity_participant WHERE id = ANY($1)) ORDER BY id FOR UPDATE`, inspected)
+	rows, err = tx.Query(ctx, `SELECT id FROM activity_participant WHERE activity_id = ANY($1) ORDER BY id FOR UPDATE`, activities)
 	if err != nil {
 		return nil, 0, fmt.Errorf("activities: locking the participant rows of activities to lowercase: %w", err)
 	}
