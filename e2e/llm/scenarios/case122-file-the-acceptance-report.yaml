@@ -18,8 +18,8 @@ prompt: |
   The mail with the signed Abnahmeprotokoll for Leitstand Goslar ended up on
   Harzer Steuerungstechnik. File it under the Leitstand Goslar project, please.
 
-# The preview is the outcome under test, and a preview counts as a call that
-# worked.
+# The question to the user is the outcome under test. A preview or a staging
+# counts as a call that worked.
 must_call:
   - relink_activity|relink_activities
 
