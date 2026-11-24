@@ -41,6 +41,9 @@ const BUYER_ENTRY = "src/features/deals/buyerroom.tsx";
 const BUYER_FEATURE = "src/features/deals/";
 const RELATIVE_IMPORT = /from\s+"(\.[^"]+)"/g;
 const QUOTED = /"([a-z][A-Za-z0-9]*\.[A-Za-z0-9_.]+)"/g;
+// The banner a seller sees while previewing the buyer's page speaks to that
+// seller, a user of this installation, so it says du.
+const SELLER_PREVIEW = "room.preview";
 
 /** The files of the buyer's page, entry first. */
 export function buyerPageFiles(tree: CensusTree): CensusFile[] {
@@ -70,6 +73,7 @@ export function buyerPageFindings(
     const named = new Set([...page.text.matchAll(QUOTED)].map((m) => m[1]));
     return entries
       .filter(([, key]) => named.has(key) && !readByAnOutsider(key))
+      .filter(([, key]) => !key.startsWith(SELLER_PREVIEW))
       .filter(([, , value]) => value.match(ANY_DU) !== null)
       .map(
         ([source, key, value]) =>

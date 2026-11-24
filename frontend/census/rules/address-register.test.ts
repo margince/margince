@@ -80,6 +80,7 @@ describe("the buyer's page, over planted catalogs", () => {
         "threads.empty": "Noch keine Nachrichten.",
         "buyer.previewBanner": "Du kannst alles lesen.",
         "common.retry": "Versuche es, bevor du gehst.",
+        "room.previewBanner": "Du siehst eine Vorschau.",
       },
       english: {},
     },
@@ -100,11 +101,13 @@ describe("the buyer's page, over planted catalogs", () => {
     ]);
   });
 
-  it("passes neutral copy, and a buyer. key, and a key the page never names", () => {
+  it("passes neutral copy, a buyer. key, the seller's preview banner, and a key the page never names", () => {
     expect(
       buyerPageFindings(
         copies,
-        page('t("threads.empty"); t("buyer.previewBanner");'),
+        page(
+          't("threads.empty"); t("buyer.previewBanner"); t("room.previewBanner");',
+        ),
       ),
     ).toEqual([]);
   });
