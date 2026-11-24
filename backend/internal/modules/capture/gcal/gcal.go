@@ -122,7 +122,7 @@ func (c *Connector) Sync(ctx context.Context, auth connector.Auth, cursor connec
 		// backfilling and overwriting the watermark.
 		return nil, err
 	}
-	events, nextToken, relisted, err := c.selectEvents(ctx, access, prior)
+	events, listed, nextToken, relisted, err := c.selectEvents(ctx, access, prior)
 	if err != nil {
 		return nil, err
 	}
@@ -138,7 +138,7 @@ func (c *Connector) Sync(ctx context.Context, auth connector.Auth, cursor connec
 		return nil, err
 	}
 	if relisted {
-		if relisted, err = retireUnlisted(ctx, sink, events, c.now(), edge); err != nil {
+		if relisted, err = retireUnlisted(ctx, sink, listed, c.now(), edge); err != nil {
 			return nil, err
 		}
 	}
@@ -158,7 +158,8 @@ func (c *Connector) Sync(ctx context.Context, auth connector.Auth, cursor connec
 
 // selectEvents resolves which events to pull and the syncToken to advance to,
 // choosing the initial-backfill or the incremental path, and reports whether it
-// re-listed.
+// re-listed. listed is the full list alone, which retirement reads: a drained
+// token's events may name what the full list left out since.
 //
 // It re-lists on THREE conditions: no cursor (a fresh calendar), a token Google
 // no longer honors, and a list gone stale. The third is not an error path — the
@@ -169,27 +170,29 @@ func (c *Connector) Sync(ctx context.Context, auth connector.Auth, cursor connec
 // reaches back 90 days, so a change still waiting in the old token — a decline
 // on a meeting that ended four months ago — would otherwise be dropped with the
 // token it was waiting in.
-func (c *Connector) selectEvents(ctx context.Context, access string, cur cursorState) ([][]byte, string, bool, error) {
+func (c *Connector) selectEvents(
+	ctx context.Context, access string, cur cursorState,
+) (events, listed [][]byte, next string, relisted bool, err error) {
 	if cur.SyncToken == "" {
-		events, next, err := c.api.ListInitial(ctx, access)
-		return events, next, true, err
+		listed, next, err = c.api.ListInitial(ctx, access)
+		return listed, listed, next, true, err
 	}
-	events, next, err := c.api.ListIncremental(ctx, access, cur.SyncToken)
+	events, next, err = c.api.ListIncremental(ctx, access, cur.SyncToken)
 	if errors.Is(err, ErrSyncTokenGone) {
-		events, next, err = c.api.ListInitial(ctx, access)
-		return events, next, true, err
+		listed, next, err = c.api.ListInitial(ctx, access)
+		return listed, listed, next, true, err
 	}
 	if err != nil {
-		return nil, "", false, err
+		return nil, nil, "", false, err
 	}
 	if c.listIsStale(cur.ListedAt) {
-		listed, fresh, err := c.api.ListInitial(ctx, access)
+		listed, next, err = c.api.ListInitial(ctx, access)
 		if err != nil {
-			return nil, "", false, err
+			return nil, nil, "", false, err
 		}
-		return append(events, listed...), fresh, true, nil
+		return append(events, listed...), listed, next, true, nil
 	}
-	return events, next, false, nil
+	return events, nil, next, false, nil
 }
 
 // Normalize maps ONE raw Calendar event resource to its meeting activity — the

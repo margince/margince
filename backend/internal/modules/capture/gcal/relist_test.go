@@ -49,6 +49,7 @@ func TestOnlyAFullySettledRelistRetiresWhatItLeftOut(t *testing.T) {
 		api     func(t *testing.T) *fakeAPI
 		failOn  string
 		fails   bool
+		stale   bool
 		retired [][]string
 	}{
 		{name: "an expired token re-lists", retired: [][]string{{"evt-1", "evt-2"}}, api: func(t *testing.T) *fakeAPI {
@@ -63,6 +64,10 @@ func TestOnlyAFullySettledRelistRetiresWhatItLeftOut(t *testing.T) {
 		{name: "an event of the listing fails to land", failOn: "evt-1", fails: true, api: func(t *testing.T) *fakeAPI {
 			return &fakeAPI{owner: gcalOwner, deltaErr: ErrSyncTokenGone, initialToken: "fresh", initial: listing(t)}
 		}},
+		{name: "a stale list drains the token and retires against the full list alone", stale: true, retired: [][]string{{"evt-1", "evt-2"}}, api: func(t *testing.T) *fakeAPI {
+			drained := eventJSON(t, "evt-9", "confirmed", "Moved", "2026-07-18T10:00:00Z", gcalOwner, "client@acme.com")
+			return &fakeAPI{owner: gcalOwner, deltaToken: "next", delta: [][]byte{drained}, initialToken: "fresh", initial: listing(t)}
+		}},
 		{name: "an event names no id", api: func(t *testing.T) *fakeAPI {
 			return &fakeAPI{owner: gcalOwner, deltaErr: ErrSyncTokenGone, initialToken: "fresh", initial: append(listing(t), []byte(`{"status":"confirmed"}`))}
 		}},
@@ -73,6 +78,9 @@ func TestOnlyAFullySettledRelistRetiresWhatItLeftOut(t *testing.T) {
 			c.now = func() time.Time { return now }
 			sink := &retiringSink{failOn: tc.failOn}
 			listedBefore := now.Add(-time.Hour)
+			if tc.stale {
+				listedBefore = now.Add(-relistAfter)
+			}
 			prior, err := json.Marshal(cursorState{SyncToken: "sync-abc", ListedAt: listedBefore})
 			if err != nil {
 				t.Fatal(err)
