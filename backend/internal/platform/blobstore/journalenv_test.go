@@ -21,23 +21,33 @@ func TestTheJournalStoreSettingsAreAllOrNothing(t *testing.T) {
 		wantStore bool
 	}{
 		{what: "none set keeps the main store", env: nil},
-		{what: "a bucket alone is an error naming what is missing", env: []string{blobstore.EnvJournalBucket + "=j"},
-			wantErr: blobstore.EnvJournalEndpoint},
-		{what: "an endpoint without bucket and region names both", env: []string{blobstore.EnvJournalEndpoint + "=localhost:9000"},
-			wantErr: blobstore.EnvJournalBucket + ", " + blobstore.EnvJournalRegion},
+		{
+			what: "a bucket alone is an error naming what is missing", env: []string{blobstore.EnvJournalBucket + "=j"},
+			wantErr: blobstore.EnvJournalEndpoint,
+		},
+		{
+			what: "an endpoint without bucket and region names both", env: []string{blobstore.EnvJournalEndpoint + "=localhost:9000"},
+			wantErr: blobstore.EnvJournalBucket + ", " + blobstore.EnvJournalRegion,
+		},
 		{what: "a path is a complete set", env: []string{blobstore.EnvJournalPath + "=" + dir}, wantStore: true},
-		{what: "the same folder as the main store is refused",
+		{
+			what:    "the same folder as the main store is refused",
 			env:     []string{blobstore.EnvJournalPath + "=" + dir, blobstore.EnvPath + "=" + dir},
-			wantErr: "same place as the main object store"},
-		{what: "another folder than the main store is fine",
+			wantErr: "same place as the main object store",
+		},
+		{
+			what:      "another folder than the main store is fine",
 			env:       []string{blobstore.EnvJournalPath + "=" + dir, blobstore.EnvPath + "=" + other},
-			wantStore: true},
-		{what: "the same endpoint and bucket as the main store is refused",
+			wantStore: true,
+		},
+		{
+			what: "the same endpoint and bucket as the main store is refused",
 			env: []string{
 				blobstore.EnvJournalEndpoint + "=h:9000", blobstore.EnvJournalBucket + "=b", blobstore.EnvJournalRegion + "=r",
 				blobstore.EnvEndpoint + "=h:9000", blobstore.EnvBucket + "=b", blobstore.EnvRegion + "=r",
 			},
-			wantErr: "same place as the main object store"},
+			wantErr: "same place as the main object store",
+		},
 	} {
 		settings, err := configtest.Load(t, "", c.env, nil, blobstore.Settings()...)
 		if err != nil {
