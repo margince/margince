@@ -8587,6 +8587,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "sendPermission.footer.phone": "einer Telefonnummer",
   "sendPermission.footer.web": "einer Website oder einem Social-Media-Link",
   "sendPermission.footer.privacy": "Datenschutz-Kontaktangaben",
+  "sendPermission.footer.advertisement":
+    "die Zeile, die sie als Werbung kennzeichnet",
   "sendPermission.footer.advertiser":
     "Kontaktangaben des werbenden Unternehmens",
   "sendPermission.footer.identity": "Name und Anschrift des Unternehmens",
@@ -24610,6 +24612,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "health.footerDetail.controller_identity": "Firmenname und Postanschrift",
   "health.footerDetail.privacy_contact": "Datenschutzkontakt",
   "health.footerDetail.objection_route": "Weg zum Widerspruch",
+  "health.footerDetail.advertisement": "Werbekennzeichnung",
   "health.footerDetail.advertiser_contact": "Kontakt des Werbenden",
   "health.footerDetail.entity_name": "Firmenname",
   "health.measure.messages_one": "{count} Nachricht",

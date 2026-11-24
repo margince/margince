@@ -187,7 +187,7 @@ the digest tells which policy text produced the rules.
 
 `extensions/us/policy/us/us.md` states the CAN-SPAM Act (15 U.S.C. 7701 et seq.) and the Federal
 Trade Commission's rule under it (16 CFR Part 316). It is opt-out, grants no exception and sets no
-cap. It asks for the subject label `ADV:`, the stricter reading of 7704(a)(5)(A)(i). A commercial message owes a way to decline and the sender's postal address. The
+cap. It identifies advertising by a footer line, the `advertisement` disclosure ("This is an advertisement from" and the sender's legal name), the stricter reading of 7704(a)(5)(A)(i). It asks for no subject label. A commercial message owes a way to decline and the sender's postal address. The
 postal address is the legal name and address of `controller_identity`, which the pack owes on
 advertising only. `owedDisclosures` in `backend/internal/modules/consent/disclosurerender.go` reads
 that disclosure from a recipient's pack when it is advertising-only, so a sender from a country

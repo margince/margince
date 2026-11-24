@@ -302,12 +302,15 @@ const (
 	// address, website — which some jurisdictions require on advertising
 	// beyond the controller's identity.
 	AdvertiserContact DisclosureKind = "advertiser_contact"
+	// Advertisement is the sentence that identifies a message as advertising,
+	// naming the sender. It needs only the controller's legal name.
+	Advertisement DisclosureKind = "advertisement"
 )
 
 // Validate enforces membership in the closed set.
 func (k DisclosureKind) Validate() error {
 	switch k {
-	case ControllerIdentity, PrivacyContact, ObjectionRoute, AdvertiserContact:
+	case ControllerIdentity, PrivacyContact, ObjectionRoute, AdvertiserContact, Advertisement:
 		return nil
 	}
 	return fmt.Errorf("disclosure %q is not one this contract defines", string(k))

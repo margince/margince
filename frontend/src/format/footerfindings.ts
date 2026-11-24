@@ -50,6 +50,8 @@ function footerKindText(kind: string, t: Translator): string {
       return t("sendPermission.footer.privacy");
     case "advertiser_contact":
       return t("sendPermission.footer.advertiser");
+    case "advertisement":
+      return t("sendPermission.footer.advertisement");
     case "objection_route":
       return t("sendPermission.footer.objection");
     case "recipient_private_link":
