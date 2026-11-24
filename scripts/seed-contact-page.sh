@@ -59,7 +59,7 @@ echo "== seed-contact-page: the account =="
 company_id=""
 status="$(api GET '/companies?q=Glazed%20Frog&limit=10')"
 [[ "$status" = "200" ]] || fail "GET /v1/companies returned HTTP $status"
-company_id="$(jq -r '.data[] | select(.display_name == "Glazed Frog") | .id' "$workdir/body" | head -1)"
+company_id="$(jq -r '.data[] | select(.display_name == "Glazed Frog") | .id' "$workdir/body" | sed -n 1p)"
 if [[ -z "$company_id" ]]; then
   status="$(api POST /companies '{"display_name":"Glazed Frog","domains":[{"domain":"glazedfrog.com","is_primary":true}],"source":"seed"}')"
   [[ "$status" = "201" ]] || { cat "$workdir/body" >&2; fail "create company returned HTTP $status"; }
@@ -78,7 +78,7 @@ ensure_contact() { # ensure_contact <full_name> <title> <email> — prints the i
   local name="$1" title="$2" email="$3" id status
   status="$(api GET "/contacts?q=$(printf '%s' "$name" | jq -sRr @uri)&limit=10")"
   [[ "$status" = "200" ]] || fail "GET /v1/contacts returned HTTP $status"
-  id="$(jq -r --arg n "$name" '.data[] | select(.full_name == $n) | .id' "$workdir/body" | head -1)"
+  id="$(jq -r --arg n "$name" '.data[] | select(.full_name == $n) | .id' "$workdir/body" | sed -n 1p)"
   if [[ -n "$id" ]]; then
     echo "$id"
     return
@@ -143,7 +143,7 @@ fi
 
 status="$(api GET '/deals?limit=100')"
 [[ "$status" = "200" ]] || fail "GET /v1/deals returned HTTP $status"
-deal_id="$(jq -r '.data[] | select(.name == "Expansion — Phase 2") | .id' "$workdir/body" | head -1)"
+deal_id="$(jq -r '.data[] | select(.name == "Expansion — Phase 2") | .id' "$workdir/body" | sed -n 1p)"
 if [[ -z "$deal_id" ]]; then
   status="$(api POST /deals "$(jq -n --arg p "$pipeline_id" --arg s "$stage_proposal" --arg o "$company_id" --arg c "$close_date" \
     '{name:"Expansion — Phase 2",pipeline_id:$p,stage_id:$s,company_id:$o,
@@ -245,7 +245,7 @@ activity_id() { # activity_id <contact-id> <subject> — prints the id, empty if
   local contact="$1" subject="$2" status
   status="$(api GET "/activities?entity_type=contact&entity_id=$contact&limit=50")"
   [[ "$status" = "200" ]] || fail "GET /v1/activities returned HTTP $status"
-  jq -r --arg s "$subject" '.data[] | select(.subject == $s) | .id' "$workdir/body" | head -1
+  jq -r --arg s "$subject" '.data[] | select(.subject == $s) | .id' "$workdir/body" | sed -n 1p
 }
 
 claim() { # claim <contact-id> <kind> <body> <source-subject> <quote> [due-at]

@@ -51,11 +51,12 @@ gitleaks="$(gitleaks_bin)"
 work="$(mktemp -d)"
 single="$(mktemp -d)"
 probe="$(mktemp -d)"
-trap 'rm -rf "$work" "$single" "$probe" "$work.tar"' EXIT
+work_tar="$(mktemp)"
+trap 'rm -rf "$work" "$single" "$probe" "$work_tar"' EXIT
 # Through a file, not a pipe: bsdtar stops at the end marker, and git's write
 # of the padding after it dies of SIGPIPE under pipefail.
-git archive --output="$work.tar" HEAD
-tar -x -f "$work.tar" -C "$work"
+git archive --output="$work_tar" HEAD
+tar -x -f "$work_tar" -C "$work"
 
 failures=0
 fail() {
@@ -143,7 +144,8 @@ shape_gate() {
 
 	# gitleaks honours a repo-root .gitleaksignore: a fingerprint exemption list
 	# outside this policy entirely, and one the scan of the export would read.
-	if git ls-tree -r --name-only HEAD | grep -qx '\.gitleaksignore'; then
+	tracked_files="$(git ls-tree -r --name-only HEAD)"
+	if grep -qx '\.gitleaksignore' <<<"$tracked_files"; then
 		note "a tracked .gitleaksignore exempts findings outside .gitleaks.toml, and nothing here reads it."
 	fi
 

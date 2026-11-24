@@ -104,7 +104,7 @@ expect_actions() {
 		echo "FAIL: $name"
 		echo "  exit    want 0 got $status"
 		echo "  actions want '$want' got '$got'"
-		printf '  output: %s\n' "$out" | head -5
+		printf '  output: %s\n' "$out" | sed -n 1,5p
 		failures=$((failures + 1))
 		return
 	fi
@@ -143,7 +143,7 @@ expect_llm() {
 		echo "FAIL: $name"
 		echo "  exit    want 0 got $status"
 		echo "  actions want 'create $want_title' got '$got'"
-		printf '  output: %s\n' "$out" | head -5
+		printf '  output: %s\n' "$out" | sed -n 1,5p
 		failures=$((failures + 1))
 		return
 	fi
@@ -454,7 +454,7 @@ expect_health() {
 		echo "FAIL: $name"
 		echo "  exit    want 0 got $status"
 		echo "  actions want '$want' got '$got'"
-		printf '  output: %s\n' "$out" | head -5
+		printf '  output: %s\n' "$out" | sed -n 1,5p
 		failures=$((failures + 1))
 		return
 	fi
@@ -557,7 +557,7 @@ expect_merge() {
 		echo "FAIL: $name"
 		echo "  exit    want 0 got $status"
 		echo "  actions want 'create $want_title' got '$got'"
-		printf '  output: %s\n' "$out" | head -5
+		printf '  output: %s\n' "$out" | sed -n 1,5p
 		failures=$((failures + 1))
 		return
 	fi
@@ -993,7 +993,7 @@ if [[ "$label_status" -ne 0 ]] || [[ "$got_labels" != "$want_labels" ]]; then
 	echo "FAIL: a filed issue does not carry its axes"
 	echo "  exit   want 0 got $label_status"
 	echo "  labels want '$want_labels' got '$got_labels'"
-	printf '  output: %s\n' "$label_out" | head -3
+	printf '  output: %s\n' "$label_out" | sed -n 1,3p
 	failures=$((failures + 1))
 else
 	echo "ok: a filed issue carries one priority, one area and its provenance"
@@ -1153,7 +1153,7 @@ noref_status=$?
 set -e
 if [[ "$noref_status" -eq 0 ]]; then
 	echo "FAIL: the reporter ran with no DEFAULT_BRANCH, so it cannot know whose issues it files"
-	printf '  output: %s\n' "$noref_out" | head -3
+	printf '  output: %s\n' "$noref_out" | sed -n 1,3p
 	failures=$((failures + 1))
 else
 	echo "ok: the reporter refuses to run without DEFAULT_BRANCH"

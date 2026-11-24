@@ -24,11 +24,12 @@ cd "$root"
 gitleaks="$(gitleaks_bin)"
 
 export_dir="$(mktemp -d)"
-trap 'rm -rf "$export_dir" "$export_dir.tar"' EXIT
+export_tar="$(mktemp)"
+trap 'rm -rf "$export_dir" "$export_tar"' EXIT
 # Through a file, not a pipe: bsdtar stops at the end marker, and git's write
 # of the padding after it dies of SIGPIPE under pipefail.
-git archive --output="$export_dir.tar" HEAD
-tar -x -f "$export_dir.tar" -C "$export_dir"
+git archive --output="$export_tar" HEAD
+tar -x -f "$export_tar" -C "$export_dir"
 
 # --redact: findings print as file:line with the value masked. This repo is
 # public and CI logs are public with it, so a real leak must not be echoed into
