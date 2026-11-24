@@ -1062,6 +1062,7 @@
   "scheduling.readOnlyCalendar": "Your calendar is connected for reading events. Reconnect it and allow invitation access to create, reschedule and cancel meetings.",
   "scheduling.readOnlyBadge": "Read-only calendar",
   "scheduling.location": "Location or meeting link",
+  "book.lengthNotOffered": "This meeting length is no longer offered. Choose another length.",
   "aiAdmin.decisionSkip.unbound": "Decision model not used: none is bound.",
   "brief.weekly.leadsUnavailable": "Lead figures are unavailable for this week.",
   "brief.weekly.notRecorded": "Not recorded",

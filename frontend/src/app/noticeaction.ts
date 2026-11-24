@@ -108,3 +108,15 @@ export function noticeAction(
   if (!route || !isEntityKind(target.type)) return undefined;
   return { href: routeHash(route), label: labelFor(OPEN_RECORD, target.type) };
 }
+
+/**
+ * The move a notice about no record offers, by its kind: a colleague named on a
+ * booking link answers under Settings, Meetings.
+ */
+export function noticeKindAction(kind: string): NoticeAction | undefined {
+  if (kind !== "meeting_team_request") return undefined;
+  return {
+    href: routeHash(settingsHref("meetings")),
+    label: "scheduling.settings",
+  };
+}

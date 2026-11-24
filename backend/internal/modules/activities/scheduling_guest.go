@@ -59,7 +59,9 @@ func (h Handlers) GetPublicSchedulingProfile(w http.ResponseWriter, r *http.Requ
 		return
 	}
 	profile = h.store.brandSchedulingProfile(r.Context(), page.HostUserID, profile)
-	httperr.WriteJSON(w, http.StatusOK, publicProfile(bookingLength(profile, params.L), nil))
+	out := publicProfile(bookingLength(profile, params.L), nil)
+	out.OfferedLengths = new(bookingLengths(profile))
+	httperr.WriteJSON(w, http.StatusOK, out)
 }
 
 // GetPublicMeetingInvitation withholds provider URLs from the guest projection.
@@ -118,7 +120,11 @@ func (h Handlers) reservePublicInvitation(w http.ResponseWriter, r *http.Request
 	if !ok {
 		return crmcontracts.MeetingInvitation{}, false
 	}
-	profile = bookingLength(profile, length)
+	profile, err := chosenLength(profile, length)
+	if err != nil {
+		httperr.Write(w, r, err)
+		return crmcontracts.MeetingInvitation{}, false
+	}
 	if req.End.Sub(req.Start) != time.Duration(profile.DurationMinutes)*time.Minute {
 		httperr.Write(w, r, apperrors.ErrPermissionDenied)
 		return crmcontracts.MeetingInvitation{}, false
