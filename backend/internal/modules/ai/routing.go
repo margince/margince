@@ -208,7 +208,7 @@ func (cfg RoutingConfig) finalize() (RoutingConfig, error) {
 // RoutingVersion is empty — and that value is a cache key, so every brief in
 // the installation would fingerprint against nothing.
 func FromStored(stored RoutingConfig, keys config.Lookup) (RoutingConfig, error) {
-	cfg, err := stored.finalize()
+	cfg, err := stored.withoutUndeclaredTaskLadders().finalize()
 	if err != nil {
 		return RoutingConfig{}, err
 	}
