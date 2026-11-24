@@ -171,5 +171,6 @@ export const footerDetails: Readonly<
   privacy_contact: "health.footerDetail.privacy_contact",
   objection_route: "health.footerDetail.objection_route",
   advertiser_contact: "health.footerDetail.advertiser_contact",
+  advertisement: "health.footerDetail.advertisement",
   entity_name: "health.footerDetail.entity_name",
 };

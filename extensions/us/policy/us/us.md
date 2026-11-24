@@ -15,8 +15,9 @@ reply-window: 8760h
 deal-follow-up-window: 4368h
 marketing-mode: opt_out
 marketing-exceptions: []
-subject-prefix: "ADV:"
 disclosures:
+  - kind: advertisement
+    marketing-only: true
   - kind: controller_identity
     marketing-only: true
   - kind: objection_route
@@ -25,8 +26,8 @@ fixtures:
   - finding: controller_identity
     triggers: us/fixtures/advertising-without-postal-address.md
     clears: us/fixtures/advertising-complete.md
-  - finding: subject_prefix
-    triggers: us/fixtures/advertising-without-label.md
+  - finding: advertisement
+    triggers: us/fixtures/advertising-without-legal-name.md
     clears: us/fixtures/advertising-complete.md
   - finding: objection_route
     triggers: us/fixtures/advertising-without-objection-route.md
@@ -44,11 +45,7 @@ citations:
     territorial-test: any_sender
     instrument: "CAN-SPAM Act of 2003 (15 U.S.C. 7701 et seq.)"
     provision: "15 U.S.C. 7704(a)(5)(A)(iii)"
-  - code: subject_prefix
-    territorial-test: any_sender
-    instrument: "CAN-SPAM Act of 2003 (15 U.S.C. 7701 et seq.)"
-    provision: "15 U.S.C. 7704(a)(5)(A)(i)"
-  - code: subject_label_missing
+  - code: advertisement
     territorial-test: any_sender
     instrument: "CAN-SPAM Act of 2003 (15 U.S.C. 7701 et seq.)"
     provision: "15 U.S.C. 7704(a)(5)(A)(i)"
@@ -80,9 +77,10 @@ here as they do everywhere, and no setting turns that off.
 ## What the message must carry
 
 - 15 U.S.C. 7704(a)(5)(A)(i): clear and conspicuous identification of the message as an
-  advertisement. The Act asks for it unless the recipient gave prior affirmative consent, and the
-  engine cannot tell the two cases apart, so the pack asks for the subject label `ADV:` on every
-  advertisement (`subject-prefix`). That is the stricter reading.
+  advertisement. The Act asks for it unless the recipient gave prior affirmative consent. The engine
+  cannot tell the two cases apart, so the pack asks for it on every advertisement. The identification
+  is a line in the footer, "This is an advertisement from" and the sender's legal name
+  (`advertisement`). That is the stricter reading. The pack asks for no subject label.
 - 15 U.S.C. 7704(a)(5)(A)(ii) and (a)(3): a working way to decline further email, free and with no
   barrier (`objection_route`, on advertising).
 - 15 U.S.C. 7704(a)(5)(A)(iii): a valid physical postal address of the sender. The pack asks for
@@ -104,7 +102,7 @@ rules for the lawful basis, because the stricter pack wins there.
 
 ## Where this layer takes the stricter reading
 
-- The advertisement label is asked for on every advertisement, not only where there is no consent.
+- The advertisement line is asked for on every advertisement, not only where there is no consent.
 - Replies and deal follow-ups keep the core windows. The Act sets none.
 - State laws on top of the federal Act, such as a state's own commercial-email rules, are not
   stated. The layer follows the federal Act alone.

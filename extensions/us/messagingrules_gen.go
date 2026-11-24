@@ -29,13 +29,15 @@ func messagingRules() []messaging.Rules {
 		DealFollowUpWindow: 4368 * time.Hour,
 		MarketingMode:      "opt_out",
 		Disclosures: []messaging.Disclosure{{
+			Kind:          "advertisement",
+			MarketingOnly: true,
+		}, {
 			Kind:          "controller_identity",
 			MarketingOnly: true,
 		}, {
 			Kind:          "objection_route",
 			MarketingOnly: true,
 		}},
-		SubjectPrefix: "ADV:",
 		Provenance: messaging.Provenance{
 			CreatedAt: time.Date(2026, time.November, 24, 0, 0, 0, 0, time.UTC),
 		},
@@ -52,11 +54,7 @@ func messagingRules() []messaging.Rules {
 			Instrument: "CAN-SPAM Act of 2003 (15 U.S.C. 7701 et seq.)",
 			Provision:  "15 U.S.C. 7704(a)(5)(A)(iii)",
 		}, {
-			Code:       "subject_prefix",
-			Instrument: "CAN-SPAM Act of 2003 (15 U.S.C. 7701 et seq.)",
-			Provision:  "15 U.S.C. 7704(a)(5)(A)(i)",
-		}, {
-			Code:       "subject_label_missing",
+			Code:       "advertisement",
 			Instrument: "CAN-SPAM Act of 2003 (15 U.S.C. 7701 et seq.)",
 			Provision:  "15 U.S.C. 7704(a)(5)(A)(i)",
 		}, {
@@ -68,6 +66,6 @@ func messagingRules() []messaging.Rules {
 			Instrument: "CAN-SPAM Act of 2003 (15 U.S.C. 7701 et seq.)",
 			Provision:  "15 U.S.C. 7704(a)(4)(A)",
 		}},
-		Digest: "edbf24f1e55afdb7fbefebf586d3a2d7ddc821564584a74cd7cae7f0e32803ac",
+		Digest: "b41bc796c045d1d66d9611bb48ace6929ab97a85187f1db7248fbd74163a0837",
 	}}
 }
