@@ -15,11 +15,9 @@ import (
 	"github.com/margince/margince/backend/pkg/extension"
 )
 
-// A unit reads attachments only when it declares the group, only where no user
-// gets the answer, and only as a seat it names.
+// A unit reads attachments only when declared, unattended and as a seat it names.
 func TestTheAttachmentReadsNeedTheirDeclarationAnUnattendedCallAndASeat(t *testing.T) {
-	ctx := principal.WithWorkspaceID(context.Background(), ids.NewV7())
-	binding := extensionRuntimeBinding{pool: &pgxpool.Pool{}}
+	ctx, binding := principal.WithWorkspaceID(context.Background(), ids.NewV7()), extensionRuntimeBinding{pool: &pgxpool.Pool{}}
 	seat, id := extension.UserID(ids.NewV7().String()), ids.NewV7().String()
 	expect := func(what string, rt extension.Runtime, actAs extension.UserID, want error) {
 		t.Helper()
@@ -33,7 +31,6 @@ func TestTheAttachmentReadsNeedTheirDeclarationAnUnattendedCallAndASeat(t *testi
 	undeclared := deliveryRuntimeFor(ctx, "dealmirror", "1.0.0", "subscription/mirror", binding)
 	defer undeclared.release()
 	expect("an undeclared read", undeclared, seat, extension.ErrUndeclaredRead)
-
 	composeReader(t, extension.SystemReadMailAttachments)
 	attended := runtimeFor(ctx, "dealmirror", "1.0.0", "tool/probe", binding)
 	defer attended.release()
