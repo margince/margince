@@ -3069,6 +3069,7 @@
   "sendPermission.footer.phone": "einer Telefonnummer",
   "sendPermission.footer.web": "einer Website oder einem Social-Media-Link",
   "sendPermission.footer.privacy": "Datenschutz-Kontaktangaben",
+  "sendPermission.footer.advertisement": "die Zeile, die sie als Werbung kennzeichnet",
   "sendPermission.footer.advertiser": "Kontaktangaben des werbenden Unternehmens",
   "sendPermission.footer.identity": "Name und Anschrift des Unternehmens",
   "sendPermission.footer.unknown": "ein Teil der Unternehmensangaben",

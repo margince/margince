@@ -465,11 +465,13 @@ def read_run(path):
     return Run(called, "\n".join(said), calls, final, worked, refused)
 
 
-# A confirm-first write comes back as an error that staged it for a human, and
-# staging is the call doing its job. The words are the server's own
-# (stagedExplanation in backend/internal/modules/agents/explain.go); a result
-# carries no other mark of it.
-_STAGED = re.compile(r"confirm-first \(🟡\)|already approved this exact call", re.IGNORECASE)
+# A confirm-first write comes back as an error that staged it for a human, or
+# that asks its user's yes in the conversation, and either is the call doing its
+# job. The words are the server's own (stagedExplanation in
+# backend/internal/modules/agents/explain.go, confirmInConversationLead in
+# confirmcode.go); a result carries no other mark of it.
+_STAGED = re.compile(
+    r"confirm-first \(🟡\)|already approved this exact call|needs the user's yes in this conversation", re.IGNORECASE)
 
 
 def staged(content):

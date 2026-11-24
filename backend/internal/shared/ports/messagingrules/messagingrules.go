@@ -72,6 +72,8 @@ const (
 	ObjectionRoute = pub.ObjectionRoute
 	// AdvertiserContact is the advertiser's own reachability.
 	AdvertiserContact = pub.AdvertiserContact
+	// Advertisement identifies the message as advertising.
+	Advertisement = pub.Advertisement
 	// MeansWeb is a web page or a social-network link.
 	MeansWeb = pub.MeansWeb
 	// MeansEmail is an email address.

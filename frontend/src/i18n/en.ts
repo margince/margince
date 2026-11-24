@@ -8577,6 +8577,8 @@ export const en = {
   "sendPermission.footer.phone": "a phone number",
   "sendPermission.footer.web": "a website or social link",
   "sendPermission.footer.privacy": "privacy contact information",
+  "sendPermission.footer.advertisement":
+    "the line that identifies it as an advertisement",
   "sendPermission.footer.advertiser": "advertiser contact information",
   "sendPermission.footer.identity": "the company name and address",
   "sendPermission.footer.unknown": "some company footer text",
@@ -14317,6 +14319,7 @@ export const en = {
   "buyer.previewReadOnly":
     "A preview is read-only. Close this tab to return to the Deal Room page.",
   "buyer.closedNote": "This room is now read-only.",
+  "buyer.readOnly": "Your access to this room is read-only.",
   "buyer.stewardUnknown": "your contact",
   "buyer.signOut": "Sign out",
   "buyer.signedInAs": "Signed in as {name}.",
@@ -14409,7 +14412,6 @@ export const en = {
   "threads.newLabel": "New thread",
   "threads.requireChangeLabel": "This document needs a change",
   "threads.open": "Post",
-  "threads.readOnly": "Your access is read-only.",
   "deal360.blocker": "Blockers",
   "deal360.buyer": "What the buyer wants",
   "deal360.verdict.live": "On track",
@@ -24243,6 +24245,7 @@ export const en = {
   "health.footerDetail.controller_identity": "Legal name and postal address",
   "health.footerDetail.privacy_contact": "Privacy contact",
   "health.footerDetail.objection_route": "How to object",
+  "health.footerDetail.advertisement": "Advertisement line",
   "health.footerDetail.advertiser_contact": "Advertiser contact",
   "health.footerDetail.entity_name": "Company name",
   "health.measure.messages_one": "{count} message",

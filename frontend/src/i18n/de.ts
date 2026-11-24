@@ -8587,6 +8587,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "sendPermission.footer.phone": "einer Telefonnummer",
   "sendPermission.footer.web": "einer Website oder einem Social-Media-Link",
   "sendPermission.footer.privacy": "Datenschutz-Kontaktangaben",
+  "sendPermission.footer.advertisement":
+    "die Zeile, die sie als Werbung kennzeichnet",
   "sendPermission.footer.advertiser":
     "Kontaktangaben des werbenden Unternehmens",
   "sendPermission.footer.identity": "Name und Anschrift des Unternehmens",
@@ -14367,6 +14369,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "buyer.previewReadOnly":
     "Eine Vorschau ist schreibgeschützt. Schließe diesen Tab, um zur Seite des Deal Rooms zurückzukehren.",
   "buyer.closedNote": "Dieser Raum ist jetzt schreibgeschützt.",
+  "buyer.readOnly": "Sie haben für diesen Raum nur Lesezugriff.",
   "buyer.stewardUnknown": "Ihre Ansprechperson",
   "buyer.signOut": "Abmelden",
   "buyer.signedInAs": "Angemeldet als {name}.",
@@ -14463,7 +14466,6 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "threads.newLabel": "Neuer Thread",
   "threads.requireChangeLabel": "Dieses Dokument muss geändert werden",
   "threads.open": "Absenden",
-  "threads.readOnly": "Du hast nur Lesezugriff.",
   "deal360.blocker": "Blocker",
   "deal360.buyer": "Was die Käuferseite will",
   "deal360.verdict.live": "Im Plan",
@@ -24625,6 +24627,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "health.footerDetail.controller_identity": "Firmenname und Postanschrift",
   "health.footerDetail.privacy_contact": "Datenschutzkontakt",
   "health.footerDetail.objection_route": "Weg zum Widerspruch",
+  "health.footerDetail.advertisement": "Werbekennzeichnung",
   "health.footerDetail.advertiser_contact": "Kontakt des Werbenden",
   "health.footerDetail.entity_name": "Firmenname",
   "health.measure.messages_one": "{count} Nachricht",
