@@ -112,12 +112,22 @@ func recordColumn(kind string) (string, error) {
 
 // liveLinkOf reads the record's live link, or ErrLinkNotFound.
 func liveLinkOf(ctx context.Context, tx pgx.Tx, kind string, id ids.UUID) (Link, error) {
+	return readLiveLink(ctx, tx, kind, id, "")
+}
+
+// heldLiveLinkOf is liveLinkOf holding the row until tx ends, so the version
+// it read is still the row's when the caller writes under it.
+func heldLiveLinkOf(ctx context.Context, tx pgx.Tx, kind string, id ids.UUID) (Link, error) {
+	return readLiveLink(ctx, tx, kind, id, " FOR UPDATE")
+}
+
+func readLiveLink(ctx context.Context, tx pgx.Tx, kind string, id ids.UUID, lock string) (Link, error) {
 	column, err := recordColumn(kind)
 	if err != nil {
 		return Link{}, err
 	}
 	link, err := scanLink(tx.QueryRow(ctx, `SELECT `+linkColumns+` FROM chat_link
-		WHERE `+column+` = $1 AND archived_at IS NULL`, id))
+		WHERE `+column+` = $1 AND archived_at IS NULL`+lock, id))
 	if err == pgx.ErrNoRows {
 		return Link{}, ErrLinkNotFound
 	}

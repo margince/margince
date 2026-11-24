@@ -192,7 +192,7 @@ func chatItemLine(item chatlinks.Item, shared sharedText) string {
 }
 
 var chatEventLines = map[string]string{
-	"deal.archived":      "Deal archived",
+	eventDealArchived:    "Deal archived",
 	"deal.restored":      "Deal restored",
 	"deal.owner_changed": "Owner changed",
 	"offer.created":      "Offer drafted",
@@ -203,7 +203,7 @@ var chatEventLines = map[string]string{
 	"contract.created":   "Contract created",
 	"contract.updated":   "Contract edited",
 	"contract.archived":  "Contract archived",
-	"project.archived":   "Project archived",
+	eventProjectArchived: "Project archived",
 }
 
 func activityLine(item chatlinks.Item, shared sharedText) string {

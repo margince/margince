@@ -31,7 +31,7 @@ func (s *Store) ReleaseArchived(ctx context.Context, kind string, id ids.UUID) e
 		if err != nil || live {
 			return err
 		}
-		before, err := liveLinkOf(ctx, tx, kind, id)
+		before, err := heldLiveLinkOf(ctx, tx, kind, id)
 		if errors.Is(err, ErrLinkNotFound) {
 			return nil
 		}
@@ -50,7 +50,7 @@ func (s *Store) ReleaseArchived(ctx context.Context, kind string, id ids.UUID) e
 			return err
 		}
 		after, err := scanLink(tx.QueryRow(ctx, `UPDATE chat_link SET `+column+` = NULL
-			WHERE id = $1 AND archived_at IS NULL RETURNING `+linkColumns, before.ID))
+			WHERE id = $1 AND version = $2 AND archived_at IS NULL RETURNING `+linkColumns, before.ID, before.Version))
 		if errors.Is(err, pgx.ErrNoRows) {
 			return nil
 		}
@@ -91,11 +91,11 @@ func recordLive(ctx context.Context, tx pgx.Tx, kind string, id ids.UUID) (bool,
 	return live, err
 }
 
-// retireLink archives a live link, which frees its channel and its records,
-// and audits it. A link no longer live answers ErrLinkNotFound.
+// retireLink archives a live link the caller holds, which frees its channel
+// and its records, and audits it. A link no longer live answers ErrLinkNotFound.
 func retireLink(ctx context.Context, tx pgx.Tx, link Link) error {
 	tag, err := tx.Exec(ctx, `UPDATE chat_link SET archived_at = now()
-		WHERE id = $1 AND archived_at IS NULL`, link.ID)
+		WHERE id = $1 AND version = $2 AND archived_at IS NULL`, link.ID, link.Version)
 	if err != nil {
 		return err
 	}

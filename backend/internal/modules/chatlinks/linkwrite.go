@@ -163,7 +163,7 @@ func (s *Store) Unlink(ctx context.Context, kind string, id ids.UUID) error {
 		if err := auth.EnsureRetractable(ctx, tx, kind, id); err != nil {
 			return err
 		}
-		before, err := liveLinkOf(ctx, tx, kind, id)
+		before, err := heldLiveLinkOf(ctx, tx, kind, id)
 		if err != nil {
 			return err
 		}

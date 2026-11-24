@@ -256,21 +256,23 @@ func chatTier(env events.Envelope) (string, map[string]any, bool) {
 
 // The event types and changed fields the tiers and the lines both name.
 const (
-	eventDealUpdated    = "deal.updated"
-	eventProjectUpdated = "project.updated"
-	detailFields        = "fields"
-	fieldCurrency       = "currency"
-	fieldName           = "name"
+	eventDealUpdated     = "deal.updated"
+	eventDealArchived    = "deal.archived"
+	eventProjectArchived = "project.archived"
+	eventProjectUpdated  = "project.updated"
+	detailFields         = "fields"
+	fieldCurrency        = "currency"
+	fieldName            = "name"
 )
 
 // chatReleasingEvents may leave a deal or project archived. A retention
 // policy archives a deal under retention.applied, not deal.archived.
-var chatReleasingEvents = map[string]bool{"deal.archived": true, "project.archived": true, "retention.applied": true}
+var chatReleasingEvents = map[string]bool{eventDealArchived: true, eventProjectArchived: true, "retention.applied": true}
 
 // chatMilestones are the steps every level but silent posts.
 var chatMilestones = map[string]string{
 	"deal.stage_changed":      chatlinks.TierMilestone,
-	"deal.archived":           chatlinks.TierMilestone,
+	eventDealArchived:         chatlinks.TierMilestone,
 	"deal.restored":           chatlinks.TierMilestone,
 	"offer.sent":              chatlinks.TierMilestone,
 	"offer.accepted":          chatlinks.TierMilestone,
