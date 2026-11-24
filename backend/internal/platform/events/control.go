@@ -8,9 +8,11 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"time"
 
 	"github.com/redis/go-redis/v9"
 
+	"github.com/margince/margince/backend/internal/shared/kernel/backoff"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -41,12 +43,46 @@ func PublishReset(ctx context.Context, rdb *redis.Client, ws ids.UUID) error {
 }
 
 // SubscribeReset runs until ctx is canceled, invoking fn for every reset
-// announcement. An unparseable payload is logged and skipped rather than
-// killing the loop, because a control channel that dies on one bad message
-// stops flushing caches for the life of the process — but the skip is never
-// silent, so an encoding drift between publishers is observable.
-func SubscribeReset(ctx context.Context, rdb *redis.Client, log *slog.Logger, fn func(ids.UUID)) error {
-	return subscribeResetWithReady(ctx, rdb, log, fn, nil)
+// announcement. A subscription that fails or drops is logged and reopened after
+// a backoff. Announcements published meanwhile are lost, and the caches' own
+// TTLs retire what they held.
+//
+// An unparseable payload is logged and skipped, so one bad publisher cannot
+// stop cache flushing for the process.
+func SubscribeReset(ctx context.Context, rdb *redis.Client, log *slog.Logger, fn func(ids.UUID)) {
+	superviseReset(ctx, log, func(ctx context.Context, ready chan<- struct{}) error {
+		return subscribeResetWithReady(ctx, rdb, log, fn, ready)
+	}, backoff.Sleep)
+}
+
+const (
+	resubscribeBase    = time.Second
+	resubscribeCeiling = 30 * time.Second
+)
+
+// superviseReset reopens a subscription until ctx ends. A confirmed subscription
+// restarts the failure count, so a drop after hours of uptime retries quickly.
+// sleep is injected so tests do not wait.
+func superviseReset(ctx context.Context, log *slog.Logger, run func(context.Context, chan<- struct{}) error, sleep func(context.Context, time.Duration) error) {
+	failures := 0
+	for ctx.Err() == nil {
+		ready := make(chan struct{})
+		err := run(ctx, ready)
+		if ctx.Err() != nil {
+			return
+		}
+		select {
+		case <-ready:
+			failures = 0
+		default:
+		}
+		delay := backoff.Jittered(failures, resubscribeBase, resubscribeCeiling)
+		failures++
+		log.Error("bus: the reset control subscription ended; resubscribing", "error", err, "retry_in", delay)
+		if sleep(ctx, delay) != nil {
+			return
+		}
+	}
 }
 
 // errSubscriptionClosed distinguishes "the Redis subscription channel closed

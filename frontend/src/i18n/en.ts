@@ -11219,8 +11219,6 @@ export const en = {
   "settings.resetDataConfirmName": "Type this company name:",
   "settings.resetDataResult":
     "Cleared: tables {tables}, job rows {jobs}, event streams {streams}, cache keys {keys}, stored files {objects}.",
-  "settings.resetDataDrainWarning":
-    "A background job was running when the reset began. It fails against the deleted data and logs one harmless error.",
 
   "settings.jobs": "Background jobs",
   "settings.jobsSub": "Queued background jobs and failed jobs by owner.",
