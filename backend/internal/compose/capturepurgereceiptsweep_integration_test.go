@@ -5,9 +5,6 @@
 
 package compose
 
-// The purge receipt counts what its own run deleted. The tests that need no
-// unexported part of the purger are in purgerun.
-
 import (
 	"context"
 	"encoding/json"
@@ -27,18 +24,15 @@ import (
 
 const sweepAddress = "gegner@example.test"
 
-const destroyedReceipts = `SELECT count(*) FROM audit_log WHERE entity_type = 'capture_exclusion'
-	AND entity_id = $1 AND (evidence->>'destroyed')::int = $2`
+const destroyedReceipts = `SELECT count(*) FROM audit_log WHERE entity_type = 'capture_exclusion' AND entity_id = $1 AND (evidence->>'destroyed')::int = $2`
 
-// A message the cascade skips is not certified as destroyed, whatever the
-// selection said.
+// A message the cascade skips is not certified as destroyed.
 func TestTheReceiptCountsWhatTheCascadeDeleted(t *testing.T) {
 	e := integration.Setup(t)
 	gone := seedPurgeableMail(t, e, sweepAddress, "Eins", e.Rep1)
 	skipped := seedPurgeableMail(t, e, sweepAddress, "Zwei", e.Rep1)
 	restrict(t, e, skipped)
 	rule := seedOwnExclusion(t, e, e.Rep1, capture.ExclusionKindAddress, sweepAddress)
-
 	var outcome PurgeOutcome
 	err := purgerun.Hold(purgeCtx(e, e.Rep1), e.Pool, purgerun.Rule(rule), func(ctx context.Context, run ids.UUID) error {
 		var err error
@@ -52,8 +46,7 @@ func TestTheReceiptCountsWhatTheCascadeDeleted(t *testing.T) {
 	}
 }
 
-// A purge run shares the bulk change's batch column and nothing else: it has
-// no bulk_operation row, so the undo refuses it.
+// A purge run has no bulk_operation row, so the undo refuses it.
 func TestAPurgeRunCannotBeUndoneAsABulkChange(t *testing.T) {
 	e := integration.Setup(t)
 	seedPurgeableMail(t, e, sweepAddress, "Eins", e.Rep1)
@@ -61,19 +54,16 @@ func TestAPurgeRunCannotBeUndoneAsABulkChange(t *testing.T) {
 	runPurge(t, e, e.Rep1, rule, false)
 	run := ids.MustParse(e.WsScalar(t, `SELECT batch_id::text FROM audit_log
 		WHERE entity_type = 'capture_exclusion' AND entity_id = $1 AND evidence ? 'destroyed'`, rule))
-
 	if _, err := bulkEngineFor(e).Undo(e.Admin(), run, ""); !errors.Is(err, apperrors.ErrNotFound) {
 		t.Fatalf("undoing a purge run → %v, want it refused as no such bulk change", err)
 	}
 }
 
-// The endpoint answers the numbers the trail stores.
 func TestThePurgeEndpointAnswersWhatTheReceiptStores(t *testing.T) {
 	e := integration.Setup(t)
 	restrict(t, e, seedPurgeableMail(t, e, sweepAddress, "Klage", e.Rep1))
 	seedPurgeableMail(t, e, sweepAddress, "Zweite", e.Rep1)
 	rule := seedOwnExclusion(t, e, e.Rep1, capture.ExclusionKindAddress, sweepAddress)
-
 	rec := httptest.NewRecorder()
 	captureExclusionHandlers{purger: purgerFor(t, e)}.PurgeCaptureExclusion(rec,
 		httptest.NewRequest(http.MethodPost, "/", nil).WithContext(purgeCtx(e, e.Rep1)),
@@ -93,23 +83,16 @@ func TestThePurgeEndpointAnswersWhatTheReceiptStores(t *testing.T) {
 	}
 }
 
-// The verdict worker's pass runs the receipt sweep.
 func TestTheVerdictWorkerCertifiesAStoppedPurge(t *testing.T) {
 	e := integration.Setup(t)
 	mail := seedPurgeableMail(t, e, sweepAddress, "Eins", e.Rep1)
-	rule := seedOwnExclusion(t, e, e.Rep1, capture.ExclusionKindAddress, sweepAddress)
-	purger := purgerFor(t, e)
-	if err := purgerun.Hold(purgeCtx(e, e.Rep1), e.Pool, purgerun.Rule(rule), func(ctx context.Context, _ ids.UUID) error {
+	rule, purger := seedOwnExclusion(t, e, e.Rep1, capture.ExclusionKindAddress, sweepAddress), purgerFor(t, e)
+	err := purgerun.Hold(purgeCtx(e, e.Rep1), e.Pool, purgerun.Rule(rule), func(ctx context.Context, _ ids.UUID) error {
 		_, err := purger.retention.PurgeActivities(ctx, []ids.UUID{mail}, privacy.PurgeOwnerRule)
 		return err
-	}); err != nil {
-		t.Fatalf("stopped purge: %v", err)
-	}
+	})
 	worker := &counterpartyVerdictWorker{pool: e.Pool, purger: purger}
-	if err := worker.sweepPurges(purgeCtx(e, e.Rep1)); err != nil {
-		t.Fatalf("worker pass: %v", err)
-	}
-	if e.WsCount(t, destroyedReceipts, rule, 1) != 1 {
-		t.Fatal("no receipt of the stopped run after the worker pass")
+	if err != nil || worker.sweepPurges(purgeCtx(e, e.Rep1)) != nil || e.WsCount(t, destroyedReceipts, rule, 1) != 1 {
+		t.Fatalf("stopped purge err = %v, want the worker pass to write its receipt", err)
 	}
 }
