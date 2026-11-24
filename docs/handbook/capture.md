@@ -151,7 +151,7 @@ filling it".
 Margince puts a captured email on a deal by itself only when one deal, and no other, fits it:
 
 1. **The project.** An email filed under a project goes on that project's one open deal. If the project has no open deal, or several, the email goes on no deal. The company's deals are not asked.
-2. **A deal a colleague chose.** A colleague or an agent put an earlier email of the conversation on an open deal by hand. The reply goes on that deal, whatever company its people work at, such as a partner on a deal at the customer. If they chose two different deals, the reply goes on neither. A choice that was taken back, or marked **Not about this deal**, no longer counts.
+2. **A deal a colleague chose.** A colleague or an agent put an earlier email of the conversation on an open deal by hand. The reply goes on that deal, whatever company its contacts work at. A partner on a deal at the customer is the common case. If they chose two different deals, the reply goes on neither. A choice that was taken back, or marked **Not about this deal**, no longer counts.
 3. **Your thread.** Your own sent email in the thread is on a deal. The reply goes on that deal if it is the reply's company's deal.
 4. **The company.** If none of these fits, the company's one open deal is suggested. With several open deals, a stakeholder on only one of them suggests it. An AI check reads the email and files it only when it is fully sure it is about that deal. Without an AI answer, the email waits for a later pass.
 5. **A stakeholder at another company.** If the company has no open deal, a seat on one open deal at another company suggests it. The AI check applies as in step 4. The contact must have sent the email, with the mail server confirming it, or a colleague wrote to them. A contact only on Cc files nothing.
@@ -177,8 +177,7 @@ To put an email on a deal yourself, [use **Relink**](#how-do-i-move-an-email-to-
 
 ## How a message finds its project
 
-If you use projects, a captured message is filed against one by three fixed
-rules, and the first match wins. No AI model is used in any of them.
+If you use projects, a captured message is filed against one by three fixed rules, and the first match wins. No AI model is used in any of them.
 
 **1. The conversation.** A reply to a thread already filed goes under the same project. Matching stays within one channel, so an email cannot be filed under a chat conversation.
 
@@ -192,8 +191,7 @@ reply in your mailbox.
 A message may point two ways: two different keys in one subject, or two deals
 in two different projects. Then that rule files nothing, and the next one is tried.
 
-If nothing matches, nothing happens: no link, and no question raised. Margince
-does not file by guessing. Every rule above is either a true match or
+If nothing matches, nothing happens: no link, and no question raised. Margince does not file by guessing. Every rule above is either a true match or
 confirmed by a human.
 
 A message that arrives before its project exists is not filed again later on
@@ -254,7 +252,9 @@ Also called: open an email, read a conversation, forward an email.
 
 ### How do I move an email to the right contact or deal?
 To move a captured email that was filed on the wrong record, choose **Relink** on it in the timeline. Search for the right contact, company, deal, lead or project.
-Tick **Replace existing link** to replace it instead of adding a second link, and choose **Relink**. Tick **Move rest of thread** to move the whole conversation. After you put an email on a deal, Margince asks whether to add the email's outside people who are not yet stakeholders on the deal. Colleagues are not listed. Untick anyone who is not part of the deal and choose **Add to deal**, or choose **Not now**. As stakeholders, their next new conversation goes on the deal by itself. The question does not show when everyone on the email is already on the deal.
+Tick **Replace existing link** to replace it instead of adding a second link, and choose **Relink**. Tick **Move rest of thread** to move the whole conversation.
+
+After you put an email on a deal, Margince asks whether to add the email's outside contacts who are not yet stakeholders on the deal. Colleagues are not listed. Untick anyone who is not part of the deal and choose **Add to deal**, or choose **Not now**. As stakeholders, their next new conversation goes on the deal by itself. The question does not show when everyone on the email is already on the deal.
 Also called: email on the wrong deal, refile an email, change which deal an email belongs to, remove an email from a deal.
 
 ## What capture refuses to do

@@ -415,18 +415,19 @@ func conversationDeals(ctx context.Context, tx pgx.Tx, activityID ids.ActivityID
 			*clause = sqlUnscoped
 		}
 	}
-	rows, err := tx.Query(ctx, `
+	query := `
 		SELECT DISTINCT d.id
 		  FROM activity self
-		  JOIN activity a ON a.id <> self.id AND `+correspondence.ConversationSQL("a", "self")+`
-		  JOIN activity_link l ON l.activity_id = a.id AND l.entity_type = 'deal' AND `+relstrength.DealLinkStandsSQL("l")+`
+		  JOIN activity a ON a.id <> self.id AND ` + correspondence.ConversationSQL("a", "self") + `
+		  JOIN activity_link l ON l.activity_id = a.id AND l.entity_type = 'deal' AND ` + relstrength.DealLinkStandsSQL("l") + `
 		  JOIN deal d ON d.id = l.deal_id
-		 WHERE self.id = $1 AND `+correspondence.ProvenSQL("self")+`
-		   AND a.restricted_at IS NULL AND (`+siblingScope+`)
-		   AND d.status = 'open' AND d.archived_at IS NULL AND (`+dealScope+`)
-		   AND `+sibling(arg)+`
+		 WHERE self.id = $1 AND ` + correspondence.ProvenSQL("self") + `
+		   AND a.restricted_at IS NULL AND (` + siblingScope + `)
+		   AND d.status = 'open' AND d.archived_at IS NULL AND (` + dealScope + `)
+		   AND ` + sibling(arg) + `
 		 ORDER BY d.id
-		 LIMIT 2`, args...)
+		 LIMIT 2`
+	rows, err := tx.Query(ctx, query, args...)
 	if err != nil {
 		return nil, fmt.Errorf("capture: reading the conversation's deals: %w", err)
 	}

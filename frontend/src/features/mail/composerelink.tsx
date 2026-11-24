@@ -172,7 +172,7 @@ export function RelinkModal({
       // The email drawer can still be open behind this dialog, naming the
       // records the message was filed under before the move.
       queryClient.invalidateQueries({ queryKey: emailDetailKey(activityId) });
-      // A mail filed on a deal by hand is the moment to seat its people there.
+      // A mail filed on a deal by hand is the moment to seat its contacts there.
       if (kindOf(target.id) === "deal") {
         await stakeholders.offer(activityId, target.id, onClose);
         return;

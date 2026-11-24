@@ -148,7 +148,7 @@ const added = (sent: readonly Sent[]) =>
   sent.filter((request) => request.key === "POST /relationships");
 
 describe("useDealStakeholderOffer", () => {
-  it("adds every ticked person as a stakeholder on the deal", async () => {
+  it("adds every ticked contact as a stakeholder on the deal", async () => {
     const user = userEvent.setup();
     const sent = stubServer(presentation({ to: [partner, second, seated] }), [
       seat("c-alice"),

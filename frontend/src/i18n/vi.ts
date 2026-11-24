@@ -3358,10 +3358,10 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "rel.add": "Thêm quan hệ",
   "rel.seatOnDeal": "Thêm vào deal",
   "rel.addStakeholder": "Thêm bên liên quan",
-  "rel.stakeholderOffer.title": "Thêm những người trong thư này vào giao dịch?",
+  "rel.stakeholderOffer.title": "Thêm các liên hệ trong thư này vào giao dịch?",
   "rel.stakeholderOffer.body":
     "Khi là bên liên quan, thư tiếp theo của họ sẽ tự vào giao dịch. Bỏ chọn người không thuộc giao dịch.",
-  "rel.stakeholderOffer.legend": "Người trong thư này",
+  "rel.stakeholderOffer.legend": "Liên hệ trong thư này",
   "rel.stakeholderOffer.confirm": "Thêm vào giao dịch",
   "rel.stakeholderOffer.decline": "Để sau",
   "rel.stakeholderOffer.added": "Đã thêm vào giao dịch",

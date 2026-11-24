@@ -16,14 +16,14 @@ import { invalidateAfterEdge } from "./relationships.edges";
 
 type EmailPresentation = components["schemas"]["EmailPresentation"];
 
-/** A person on the mail who could become a stakeholder on the deal. */
+/** A contact on the mail who could become a stakeholder on the deal. */
 export type StakeholderCandidate = Readonly<{
   contactId: string;
   name: string;
 }>;
 
 /**
- * The mail's people the offer names: contacts outside the workspace who hold
+ * The mail's contacts the offer names: those outside the workspace who hold
  * no seat on the deal yet. A party with a seat is a colleague, and a party with
  * no contact the reader may see has nobody to add.
  */
@@ -84,13 +84,13 @@ async function readDealStakeholders(deal: string): Promise<Relationship[]> {
 
 type Offer = Readonly<{
   deal: string;
-  people: readonly StakeholderCandidate[];
+  contacts: readonly StakeholderCandidate[];
   done: OfferDone;
 }>;
 
 /**
  * After a colleague links a mail to a deal by hand, offers to make the mail's
- * people stakeholders, so their next mail lands on the deal by the stakeholder
+ * contacts stakeholders, so their next mail lands on the deal by the stakeholder
  * rule. `offer` resolves once it knows whether to ask; `done` runs when the
  * offer is answered, or at once when nobody is left to offer.
  */
@@ -103,24 +103,24 @@ export function useDealStakeholderOffer(): Readonly<{
   const toast = useToast();
   const [open, setOpen] = useState<Offer | null>(null);
   const offer = async (mail: string, deal: string, done: OfferDone) => {
-    let people: StakeholderCandidate[];
+    let contacts: StakeholderCandidate[];
     try {
       const [presentation, stakeholders] = await Promise.all([
         readEmailPresentation(mail),
         readDealStakeholders(deal),
       ]);
-      people = stakeholderCandidates(presentation, stakeholders);
+      contacts = stakeholderCandidates(presentation, stakeholders);
     } catch {
-      // The link itself landed. Without the mail's people there is nobody to
+      // The link itself landed. Without the mail's contacts there is nobody to
       // name, so the reader hears that instead of seeing no offer.
       toast.show(t("rel.stakeholderOffer.unread"), { tone: "warning" });
-      people = [];
+      contacts = [];
     }
-    if (people.length === 0) {
+    if (contacts.length === 0) {
       await done();
       return;
     }
-    setOpen({ deal, people, done });
+    setOpen({ deal, contacts, done });
   };
   const element = open ? (
     <StakeholderOfferDialog
@@ -142,16 +142,16 @@ function StakeholderOfferDialog({
   const t = useT();
   const toast = useToast();
   const queryClient = useQueryClient();
-  const [people, setPeople] = useState(offer.people);
+  const [contacts, setContacts] = useState(offer.contacts);
   const [chosen, setChosen] = useState<readonly string[]>(() =>
-    offer.people.map((person) => person.contactId),
+    offer.contacts.map((contact) => contact.contactId),
   );
-  // Each person is their own write, as the deal page's Add stakeholder makes
+  // Each contact is their own write, as the deal page's Add stakeholder makes
   // it. The ones that landed leave the list, so a retry adds only the rest.
   const add = useMutation({
-    mutationFn: async (contacts: readonly string[]) => {
+    mutationFn: async (ticked: readonly string[]) => {
       const results = await Promise.allSettled(
-        contacts.map(async (contactId) => {
+        ticked.map(async (contactId) => {
           unwrap(
             await api.POST("/relationships", {
               body: {
@@ -171,7 +171,7 @@ function StakeholderOfferDialog({
         ),
       );
       if (added.size > 0) invalidateAfterEdge(queryClient, true);
-      setPeople((left) => left.filter((p) => !added.has(p.contactId)));
+      setContacts((left) => left.filter((p) => !added.has(p.contactId)));
       setChosen((left) => left.filter((id) => !added.has(id)));
       const refused = results.find((result) => result.status === "rejected");
       if (refused) throw refused.reason;
@@ -198,16 +198,16 @@ function StakeholderOfferDialog({
       <p>{t("rel.stakeholderOffer.body")}</p>
       <fieldset className="field-multiselect">
         <legend className="t-name">{t("rel.stakeholderOffer.legend")}</legend>
-        {people.map((person) => (
+        {contacts.map((contact) => (
           <Checkbox
-            key={person.contactId}
-            label={person.name}
-            checked={chosen.includes(person.contactId)}
+            key={contact.contactId}
+            label={contact.name}
+            checked={chosen.includes(contact.contactId)}
             onChange={(event) =>
               setChosen((now) =>
                 event.target.checked
-                  ? [...now, person.contactId]
-                  : now.filter((id) => id !== person.contactId),
+                  ? [...now, contact.contactId]
+                  : now.filter((id) => id !== contact.contactId),
               )
             }
           />

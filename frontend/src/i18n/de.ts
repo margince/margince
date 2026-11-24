@@ -3456,10 +3456,10 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "rel.add": "Beziehung hinzufügen",
   "rel.seatOnDeal": "Zu einem Deal hinzufügen",
   "rel.addStakeholder": "Stakeholder hinzufügen",
-  "rel.stakeholderOffer.title": "Die Personen dieser Mail zum Deal hinzufügen?",
+  "rel.stakeholderOffer.title": "Die Kontakte dieser Mail zum Deal hinzufügen?",
   "rel.stakeholderOffer.body":
     "Als Stakeholder landet ihre nächste Mail von selbst beim Deal. Entferne den Haken bei allen, die nicht dazugehören.",
-  "rel.stakeholderOffer.legend": "Personen auf dieser Mail",
+  "rel.stakeholderOffer.legend": "Kontakte auf dieser Mail",
   "rel.stakeholderOffer.confirm": "Zum Deal hinzufügen",
   "rel.stakeholderOffer.decline": "Jetzt nicht",
   "rel.stakeholderOffer.added": "Zum Deal hinzugefügt",

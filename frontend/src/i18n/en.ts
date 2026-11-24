@@ -3364,10 +3364,10 @@ export const en = {
   "rel.add": "Add relationship",
   "rel.seatOnDeal": "Add to a deal",
   "rel.addStakeholder": "Add stakeholder",
-  "rel.stakeholderOffer.title": "Add the people on this mail to the deal?",
+  "rel.stakeholderOffer.title": "Add this mail’s contacts to the deal?",
   "rel.stakeholderOffer.body":
     "As stakeholders, their next mail goes onto the deal by itself. Untick anyone who is not part of it.",
-  "rel.stakeholderOffer.legend": "People on this mail",
+  "rel.stakeholderOffer.legend": "Contacts on this mail",
   "rel.stakeholderOffer.confirm": "Add to deal",
   "rel.stakeholderOffer.decline": "Not now",
   "rel.stakeholderOffer.added": "Added to the deal",

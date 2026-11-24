@@ -6,7 +6,7 @@
 package capture
 
 // A deal a colleague chose for one mail of a conversation is followed by the
-// rest of it, whatever company its people work at. The common case is a
+// rest of it, whatever company its contacts work at. The common case is a
 // partner: the deal sits on the end customer, and the mail goes back and forth
 // with the partner.
 
