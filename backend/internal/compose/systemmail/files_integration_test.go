@@ -25,15 +25,12 @@ type filesEnv struct {
 	blob blobstore.Store
 }
 
-// mail adds a mail with the audience given, and runs extra as its UPDATE.
-func (e filesEnv) mail(t *testing.T, audience, extra string) ids.UUID {
+// mail adds a mail with the audience given.
+func (e filesEnv) mail(t *testing.T, audience string) ids.UUID {
 	t.Helper()
 	id := ids.NewV7()
 	e.WsExec(t, `INSERT INTO activity (id, kind, subject, body, source, captured_by, audience, audience_reason)
 		VALUES ($1, 'email', 'Quote', 'Hello', 'system', 'system', $2, CASE WHEN $2 = 'workspace' THEN NULL ELSE 'manual' END)`, id, audience)
-	if extra != "" {
-		e.WsExec(t, `UPDATE activity SET `+extra+` WHERE id = $1`, id)
-	}
 	return id
 }
 
@@ -73,39 +70,39 @@ func published(t *testing.T, err error) error {
 	return nil
 }
 
-func (e filesEnv) open(t *testing.T, ctx context.Context, files Files, id ids.UUID) (extension.MailAttachmentFile, error) {
+func (e filesEnv) open(ctx context.Context, t *testing.T, files Files, id ids.UUID) (extension.MailAttachmentFile, error) {
 	t.Helper()
 	got, err := files.Open(ctx, id)
 	return got, published(t, err)
 }
 
-func (e filesEnv) list(t *testing.T, ctx context.Context, files Files, mail ids.UUID) ([]extension.MailAttachment, error) {
+func (e filesEnv) list(ctx context.Context, t *testing.T, files Files, mail ids.UUID) ([]extension.MailAttachment, error) {
 	t.Helper()
 	got, err := files.List(ctx, mail)
 	return got, published(t, err)
 }
 
-// exports counts the export rows of one kind that a unit left.
-func (e filesEnv) exports(t *testing.T, kind, unit string) int {
+// exports counts the export rows of one kind that the mirror unit left.
+func (e filesEnv) exports(t *testing.T, kind string) int {
 	t.Helper()
-	return e.WsCount(t, `SELECT count(*) FROM system_log WHERE action = 'export' AND detail->>'kind' = $1 AND detail->>'extension' = $2`, kind, unit)
+	return e.WsCount(t, `SELECT count(*) FROM system_log WHERE action = 'export' AND detail->>'kind' = $1 AND detail->>'extension' = 'mirror'`, kind)
 }
 
 func TestAWorkspaceMailsFileListsOpensAndReadsItsBytes(t *testing.T) {
 	e := setupFiles(t)
-	mail := e.mail(t, "workspace", "")
+	mail := e.mail(t, "workspace")
 	quote := e.file(t, mail, "quote.bin")
 	ctx, files := e.reader(t, principal.RowScopeAll), e.files("mirror")
-	listed, err := e.list(t, ctx, files, mail)
+	listed, err := e.list(ctx, t, files, mail)
 	if err != nil || len(listed) != 1 || listed[0].ID != quote.String() || listed[0].MailID != mail.String() || listed[0].Filename != "quote.bin" {
 		t.Fatalf("List = %+v, %v; want the one file of the mail", listed, err)
 	}
-	opened, err := e.open(t, ctx, files, quote)
+	opened, err := e.open(ctx, t, files, quote)
 	if err != nil || string(opened.Content) != "%PDF-1.4 quote.bin" || opened.ContentType != "application/pdf" {
 		t.Errorf("Open = %q as %q, %v; want the stored bytes typed by what they hold", opened.Content, opened.ContentType, err)
 	}
 	for kind, want := range map[string]int{"extension_read": 1, Opened: 1} {
-		if rows := e.exports(t, kind, "mirror"); rows != want {
+		if rows := e.exports(t, kind); rows != want {
 			t.Errorf("%d export rows of kind %s, want %d", rows, kind, want)
 		}
 	}
@@ -114,7 +111,7 @@ func TestAWorkspaceMailsFileListsOpensAndReadsItsBytes(t *testing.T) {
 // heldMail is a mail under a statutory hold, with the evidence the table asks for.
 func (e filesEnv) heldMail(t *testing.T) ids.UUID {
 	t.Helper()
-	id := e.mail(t, "workspace", "")
+	id := e.mail(t, "workspace")
 	e.WsExec(t, `INSERT INTO activity_retention_evidence (activity_id, basis, decided_by_name, reason, qualified_at)
 		VALUES ($1, 'controller_pin', 'Test Controller', 'statutory retention under test', now())`, id)
 	return id
@@ -124,7 +121,7 @@ func (e filesEnv) heldMail(t *testing.T) ids.UUID {
 // participants.
 func (e filesEnv) restrictedMail(t *testing.T) ids.UUID {
 	t.Helper()
-	mail, contact := e.mail(t, "workspace", ""), ids.NewV7()
+	mail, contact := e.mail(t, "workspace"), ids.NewV7()
 	e.WsExec(t, `INSERT INTO contact (id, full_name, source, captured_by, visibility) VALUES ($1, 'Restricted', 'manual', 'system', 'workspace')`, contact)
 	e.WsExec(t, `INSERT INTO activity_participant (activity_id, contact_id, role) VALUES ($1, $2, 'attendee')`, mail, contact)
 	e.WsExec(t, `INSERT INTO communication_suppression (contact_id, kind, source, captured_by, decided_by_level)
@@ -135,11 +132,11 @@ func (e filesEnv) restrictedMail(t *testing.T) ids.UUID {
 func TestEveryHiddenFileAnswersAsOneThatDoesNotExist(t *testing.T) {
 	e := setupFiles(t)
 	hidden := map[string]ids.UUID{
-		"participants-only":  e.mail(t, "participants", ""),
-		"archived mail":      e.mail(t, "workspace", ""),
+		"participants-only":  e.mail(t, "participants"),
+		"archived mail":      e.mail(t, "workspace"),
 		"held":               e.heldMail(t),
 		"Art. 18 restricted": e.restrictedMail(t),
-		"not an email":       e.mail(t, "workspace", ""),
+		"not an email":       e.mail(t, "workspace"),
 	}
 	files := map[string]ids.UUID{}
 	for name, mail := range hidden {
@@ -150,7 +147,7 @@ func TestEveryHiddenFileAnswersAsOneThatDoesNotExist(t *testing.T) {
 	e.WsExec(t, `UPDATE activity SET kind = 'note' WHERE id = $1`, hidden["not an email"])
 	e.WsExec(t, `UPDATE activity SET retention_class = 'commercial_correspondence', retention_class_at = now(), restricted_at = now(),
 		restricted_reason = 'statutory retention', restricted_until = now() + interval '6 years', archived_at = now() WHERE id = $1`, hidden["held"])
-	open := e.mail(t, "workspace", "")
+	open := e.mail(t, "workspace")
 	files["withheld file"], files["archived file"] = e.file(t, open, "withheld"), e.file(t, open, "archived")
 	e.WsExec(t, `UPDATE attachment SET bytes_withheld = true WHERE id = $1`, files["withheld file"])
 	e.WsExec(t, `UPDATE attachment SET archived_at = now() WHERE id = $1`, files["archived file"])
@@ -160,16 +157,16 @@ func TestEveryHiddenFileAnswersAsOneThatDoesNotExist(t *testing.T) {
 
 	ctx, reader := e.reader(t, principal.RowScopeAll), e.files("mirror")
 	for name, id := range files {
-		if _, err := e.open(t, ctx, reader, id); !errors.Is(err, extension.ErrNotFound) {
+		if _, err := e.open(ctx, t, reader, id); !errors.Is(err, extension.ErrNotFound) {
 			t.Errorf("opening the %s: err = %v, want ErrNotFound", name, err)
 		}
 	}
 	for name, mail := range hidden {
-		if _, err := e.list(t, ctx, reader, mail); !errors.Is(err, extension.ErrNotFound) {
+		if _, err := e.list(ctx, t, reader, mail); !errors.Is(err, extension.ErrNotFound) {
 			t.Errorf("listing the %s mail: err = %v, want ErrNotFound", name, err)
 		}
 	}
-	if left, err := e.list(t, ctx, reader, open); err != nil || len(left) != 0 {
+	if left, err := e.list(ctx, t, reader, open); err != nil || len(left) != 0 {
 		t.Errorf("a mail whose files are withheld, archived or uploaded listed %+v, %v; want none", left, err)
 	}
 	if rows := e.WsCount(t, `SELECT count(*) FROM system_log WHERE detail->>'kind' = $1`, Opened); rows != 0 {
@@ -183,7 +180,7 @@ func TestAFileOutsideTheReadersScopeAnswersAsOneThatDoesNotExist(t *testing.T) {
 	seat, _ := principal.Actor(ctx)
 	type mailFile struct{ mail, file ids.UUID }
 	onCompanyOf := func(owner ids.UUID, name string) mailFile {
-		company, mail := ids.NewV7(), e.mail(t, "workspace", "")
+		company, mail := ids.NewV7(), e.mail(t, "workspace")
 		e.WsExec(t, `INSERT INTO company (id, display_name, source, captured_by, owner_id, visibility)
 			VALUES ($1, $2, 'system', 'system', $3, 'owner')`, company, name, owner)
 		e.WsExec(t, `INSERT INTO activity_link (activity_id, entity_type, company_id) VALUES ($1, 'company', $2)`, mail, company)
@@ -191,46 +188,46 @@ func TestAFileOutsideTheReadersScopeAnswersAsOneThatDoesNotExist(t *testing.T) {
 	}
 	mine, theirs := onCompanyOf(seat.UserID, "Mine GmbH"), onCompanyOf(e.Rep1, "Theirs GmbH")
 	reader := e.files("mirror")
-	if _, err := e.open(t, ctx, reader, theirs.file); !errors.Is(err, extension.ErrNotFound) {
+	if _, err := e.open(ctx, t, reader, theirs.file); !errors.Is(err, extension.ErrNotFound) {
 		t.Errorf("opening a colleague's file: err = %v, want ErrNotFound", err)
 	}
-	if _, err := e.list(t, ctx, reader, theirs.mail); !errors.Is(err, extension.ErrNotFound) {
+	if _, err := e.list(ctx, t, reader, theirs.mail); !errors.Is(err, extension.ErrNotFound) {
 		t.Errorf("listing a colleague's mail: err = %v, want ErrNotFound", err)
 	}
-	if _, err := e.open(t, ctx, reader, mine.file); err != nil {
+	if _, err := e.open(ctx, t, reader, mine.file); err != nil {
 		t.Errorf("opening a file on the reader's own company: err = %v, want it opened", err)
 	}
-	if listed, err := e.list(t, ctx, reader, mine.mail); err != nil || len(listed) != 1 {
+	if listed, err := e.list(ctx, t, reader, mine.mail); err != nil || len(listed) != 1 {
 		t.Errorf("listing the reader's own mail: %+v, %v; want its file", listed, err)
 	}
 }
 
 func TestAUnitPastItsDailyOpensIsRefusedAndAnotherUnitIsNot(t *testing.T) {
 	e := setupFiles(t)
-	file := e.file(t, e.mail(t, "workspace", ""), "quote")
+	file := e.file(t, e.mail(t, "workspace"), "quote")
 	ctx := e.reader(t, principal.RowScopeAll)
 	capped, other := e.files("mirror"), e.files("other")
 	for i := range extension.MaxAttachmentOpensPerDay {
-		if _, err := e.open(t, ctx, capped, file); err != nil {
+		if _, err := e.open(ctx, t, capped, file); err != nil {
 			t.Fatalf("open %d of the day: %v", i+1, err)
 		}
 	}
-	if _, err := e.open(t, ctx, capped, file); !errors.Is(err, extension.ErrAttachmentCapReached) {
+	if _, err := e.open(ctx, t, capped, file); !errors.Is(err, extension.ErrAttachmentCapReached) {
 		t.Errorf("one open past the cap: err = %v, want ErrAttachmentCapReached", err)
 	}
-	if _, err := e.open(t, ctx, capped, ids.NewV7()); !errors.Is(err, extension.ErrAttachmentCapReached) {
+	if _, err := e.open(ctx, t, capped, ids.NewV7()); !errors.Is(err, extension.ErrAttachmentCapReached) {
 		t.Errorf("an unknown file past the cap: err = %v, want the cap, which tells nothing about the file", err)
 	}
-	if _, err := e.open(t, ctx, other, file); err != nil {
+	if _, err := e.open(ctx, t, other, file); err != nil {
 		t.Errorf("another unit's first open: err = %v, want it opened", err)
 	}
 }
 
 func TestAFileOverTheBoundIsRefused(t *testing.T) {
 	e := setupFiles(t)
-	file := e.file(t, e.mail(t, "workspace", ""), "huge")
+	file := e.file(t, e.mail(t, "workspace"), "huge")
 	e.WsExec(t, `UPDATE attachment SET byte_size = $2 WHERE id = $1`, file, extension.MaxInboundFileBytes+1)
-	if _, err := e.open(t, e.reader(t, principal.RowScopeAll), e.files("mirror"), file); !errors.Is(err, extension.ErrInvalid) {
+	if _, err := e.open(e.reader(t, principal.RowScopeAll), t, e.files("mirror"), file); !errors.Is(err, extension.ErrInvalid) {
 		t.Errorf("a file over the bound: err = %v, want ErrInvalid", err)
 	}
 }
