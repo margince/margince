@@ -58,17 +58,6 @@ function isEntityName(name: string): name is EntityName {
   return Object.hasOwn(ENTITY_LABEL_KEY, name);
 }
 
-/**
- * The money measures kept in each deal's OWN currency. Every other `_minor`
- * measure was converted into the base currency before it was summed.
- * Mirrors nativeMoney() in backend/internal/compose/reportnativemoney.go;
- * backend/gates/analyticsvocabularylabels_test.go holds the two equal.
- */
-export const NATIVE_CURRENCY_MEASURES = [
-  "amount_minor",
-  "weighted_amount_minor",
-] as const;
-
 // How many groups a question asks for. Sent rather than defaulted, so "only
 // the first N are shown" states the number the server actually applied.
 export const QUESTION_LIMIT = 100;
@@ -333,100 +322,6 @@ export function columnLabel(
   return measure
     ? measureLabel(t, measure, custom)
     : analyticsFieldLabel(t, column, custom);
-}
-
-export function isMoneyField(field: string): boolean {
-  return field.endsWith("_minor");
-}
-
-export function isNativeMoneyField(field: string): boolean {
-  return NATIVE_CURRENCY_MEASURES.some((native) => native === field);
-}
-
-// The one currency a question's filters pin every record to, if any.
-type FilterLike = Readonly<{ field: string; op: string; value?: unknown }>;
-
-// The one currency a question's filters pin every record to, if any.
-function pinnedCurrency(filters: readonly FilterLike[]): string | null {
-  const pinned = filters.find((f) => f.field === "currency" && f.op === "eq");
-  return typeof pinned?.value === "string" && pinned.value.trim() !== ""
-    ? pinned.value.trim()
-    : null;
-}
-
-/**
- * The currency an amount compared by a filter is in: the base currency for a
- * converted measure, the pinned currency for one kept in each deal's own.
- * Null when neither is known, undefined for a field that is not money. The
- * reader types major units and the engine compares minor ones, so no money
- * filter is sent without this.
- */
-export function filterAmountCurrency(
-  field: string,
-  filters: readonly FilterLike[],
-  baseCurrency: string | null,
-): string | null | undefined {
-  if (!isMoneyField(field)) {
-    return undefined;
-  }
-  return isNativeMoneyField(field)
-    ? pinnedCurrency(filters)
-    : baseCurrency || null;
-}
-
-/**
- * How one measure cell reads: a plain number, an amount in one currency, or
- * an amount over several currencies that no single figure can state.
- */
-export type MeasureReading =
-  | Readonly<{ kind: "number" }>
-  | Readonly<{ kind: "money"; currency: string }>
-  | Readonly<{ kind: "mixed" }>
-  | Readonly<{ kind: "noBase" }>;
-
-export function measureReading(
-  measure: AnalyticsMeasure,
-  row: AnswerRow,
-  query: AnalyticsQuery,
-  baseCurrency: string | null,
-): MeasureReading {
-  const field = measure.field ?? "";
-  if (measure.fn === "count_distinct" || !isMoneyField(field)) {
-    return { kind: "number" };
-  }
-  const currency = moneyCurrency(field, row, query, baseCurrency);
-  if (currency) {
-    return { kind: "money", currency };
-  }
-  // A converted amount with no base currency to state it in is not a mix of
-  // currencies, and grouping by currency would not give it one.
-  return isNativeMoneyField(field) ? { kind: "mixed" } : { kind: "noBase" };
-}
-
-/**
- * The currency a money field's value on this row is in, null when no single
- * one applies, and undefined for a field that is not money at all. A native
- * amount is in the row's own currency, or the one a filter pinned; a
- * converted one is in the base currency.
- */
-export function moneyCurrency(
-  field: string,
-  row: AnswerRow,
-  query: AnalyticsQuery,
-  baseCurrency: string | null,
-): string | null | undefined {
-  if (!isMoneyField(field)) {
-    return undefined;
-  }
-  if (!isNativeMoneyField(field)) {
-    return baseCurrency || null;
-  }
-  return rowText(row, "currency") ?? pinnedCurrency(query.filters ?? []);
-}
-
-function rowText(row: AnswerRow, column: string): string | null {
-  const value = row[column];
-  return typeof value === "string" && value !== "" ? value : null;
 }
 
 export function isWithheldRow(row: AnswerRow): boolean {

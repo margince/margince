@@ -101,6 +101,35 @@ function PostureSwitch({
   );
 }
 
+// One row per model pass of the capture pipeline, in the order mail moves
+// through them: label, sender verdict, owed reply, then the privacy review.
+const REVIEW_ROWS: readonly Readonly<{
+  property: keyof typeof MAIL_REVIEW_BOUNDS;
+  copy: "classifyCap" | "verdictCap" | "owedCap" | "passCap";
+  testId: string;
+}>[] = [
+  {
+    property: "classify_pass_cap",
+    copy: "classifyCap",
+    testId: "capture-classify-pass-cap",
+  },
+  {
+    property: "verdict_pass_cap",
+    copy: "verdictCap",
+    testId: "capture-verdict-pass-cap",
+  },
+  {
+    property: "owed_classify_pass_cap",
+    copy: "owedCap",
+    testId: "capture-owed-pass-cap",
+  },
+  {
+    property: "confidentiality_pass_cap",
+    copy: "passCap",
+    testId: "capture-review-pass-cap",
+  },
+];
+
 export function MailSharingCard() {
   const t = useT();
   const canManage = useCanWrite("capture_settings", "update");
@@ -183,27 +212,30 @@ export function MailSharingCard() {
                       : sync.mutate({ mail_sync_interval_seconds: next })
                   }
                 />
-                <NumberSettingRow
-                  label={t("captureReview.passCap.label")}
-                  description={t("captureReview.passCap.help")}
-                  testId="capture-review-pass-cap"
-                  value={settings.confidentiality_pass_cap}
-                  {...MAIL_REVIEW_BOUNDS.confidentiality_pass_cap}
-                  refusal={t("captureReview.passCap.refusal")}
-                  disabled={!canManage || sync.isPending}
-                  reason={lockReasonOr(
-                    settings.locks,
-                    "capture.confidentiality_pass_cap",
-                    t,
-                    notAdmin,
-                  )}
-                  describedBy={syncRefused}
-                  onCommit={(next) =>
-                    inPage
-                      ? sync.mutateAsync({ confidentiality_pass_cap: next })
-                      : sync.mutate({ confidentiality_pass_cap: next })
-                  }
-                />
+                {REVIEW_ROWS.map((row) => (
+                  <NumberSettingRow
+                    key={row.property}
+                    label={t(`captureReview.${row.copy}.label`)}
+                    description={t(`captureReview.${row.copy}.help`)}
+                    testId={row.testId}
+                    value={settings[row.property]}
+                    {...MAIL_REVIEW_BOUNDS[row.property]}
+                    refusal={t(`captureReview.${row.copy}.refusal`)}
+                    disabled={!canManage || sync.isPending}
+                    reason={lockReasonOr(
+                      settings.locks,
+                      `capture.${row.property}`,
+                      t,
+                      notAdmin,
+                    )}
+                    describedBy={syncRefused}
+                    onCommit={(next) =>
+                      inPage
+                        ? sync.mutateAsync({ [row.property]: next })
+                        : sync.mutate({ [row.property]: next })
+                    }
+                  />
+                ))}
               </SettingList>
               <PostureCosts sharingOn={sharingOn} sharedOn={sharedOn} />
             </>

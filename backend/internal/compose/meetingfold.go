@@ -17,6 +17,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/platform/auth"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -56,6 +57,9 @@ func foldMeetingDuplicateTx(
 // deadlock, and answers whether both are still live and unrestricted. The
 // checks after it judge rows that stay as read until the fold commits.
 func lockFoldPair(ctx context.Context, tx pgx.Tx, duplicate, survivor ids.ActivityID) (bool, error) {
+	if err := storekit.LockMeetingAttendeeWrites(ctx, tx, duplicate.UUID, survivor.UUID); err != nil {
+		return false, err
+	}
 	rows, err := tx.Query(ctx, `
 		SELECT archived_at IS NULL AND restricted_at IS NULL FROM activity
 		 WHERE id IN ($1, $2) ORDER BY id FOR UPDATE`, duplicate, survivor)

@@ -754,6 +754,16 @@ paths:
         Needs the passport permission Change records.
 
         Runs at once.
+      parameters:
+        - name: company_id
+          in: query
+          required: false
+          schema: {type: string, format: uuid}
+          description: |-
+            The company every contact the import creates works for. Each created contact and its
+            current employment edge to this company land in one transaction, and the company a card
+            names is not used. A card that matches a contact already held updates it and does not
+            move its employer. A company the caller cannot read answers 422 naming `company_id`.
       requestBody:
         required: true
         content:
@@ -2120,6 +2130,9 @@ paths:
         past 120 characters (`too_long`), the limit of every company name typed by hand.
         A `parent_company_id` that names a company the caller cannot read answers 422 naming
         `parent_company_id`, the same for a missing record and for one hidden by row scope.
+        A parent that already sits below this company answers 422 `parent_company_below` on
+        `parent_company_id`, with `params.name` naming that company. A parent that is the company itself
+        answers 422 `parent_company_self` on `parent_company_id`.
 
         Needs the passport permission Change records.
 
@@ -2303,8 +2316,8 @@ paths:
             image/png:
               schema: {type: string, format: binary}
         '401': {$ref: '#/components/responses/Unauthorized'}
-        '403': {$ref: '#/components/responses/Forbidden'}
-        '404': {$ref: '#/components/responses/NotFound'}
+        '403': {$ref: '#/components/responses/FileForbidden'}
+        '404': {$ref: '#/components/responses/FileNotFound'}
         '422': {$ref: '#/components/responses/ValidationError'}
         '501':
           description: The deployment has no object store configured, so no logo can be stored or served.
@@ -2330,8 +2343,8 @@ paths:
             image/png:
               schema: {type: string, format: binary}
         '401': {$ref: '#/components/responses/Unauthorized'}
-        '403': {$ref: '#/components/responses/Forbidden'}
-        '404': {$ref: '#/components/responses/NotFound'}
+        '403': {$ref: '#/components/responses/FileForbidden'}
+        '404': {$ref: '#/components/responses/FileNotFound'}
         '422': {$ref: '#/components/responses/ValidationError'}
         '501':
           description: The deployment has no object store configured, so no logo can be stored or served.
@@ -3435,8 +3448,8 @@ paths:
           content:
             application/pdf:
               schema: {type: string, format: binary}
-        '403': {$ref: '#/components/responses/Forbidden'}
-        '404': {$ref: '#/components/responses/NotFound'}
+        '403': {$ref: '#/components/responses/FileForbidden'}
+        '404': {$ref: '#/components/responses/FileNotFound'}
         '422': {$ref: '#/components/responses/ValidationError'}
         '429':
           description: The caller fetched 20 invoice documents in the current one-minute window.
@@ -5489,8 +5502,8 @@ paths:
         leads, each with the `version` it was shown, and one verb: `reassign_owner` (with
         `owner_id`), `archive`, `add_to_list` / `remove_from_list` (with the Shortlist's `list_id`,
         while lists are switched on), `add_tag` / `remove_tag` (with `tag_id`), or `create_task`
-        (with `task`). Or it names up to 500 Worklist tasks and promises (`worklist_item`) and the
-        verb `complete`. The answer says which records the change would alter (`affected`), which it
+        (with `task`). Or it names up to 500 deals and the verb `move_stage` (with `stage_id`). Or it
+        names up to 500 Worklist tasks and promises (`worklist_item`) and the verb `complete`. The answer says which records the change would alter (`affected`), which it
         would leave alone and why (`excluded`), and up to three before/after rows to show the user.
 
         Needs the passport permission Change records.
@@ -6414,6 +6427,21 @@ paths:
           required: false
           schema: {type: string}
           description: The `next_cursor` of the page before. A token this server did not mint is refused with 422.
+        - name: stage_history_id
+          in: query
+          required: false
+          schema: {type: string, format: uuid}
+          description: Only the change that wrote this stage-history row. A client asks for the close the deal is on without paging for it.
+        - name: note_activity_id
+          in: query
+          required: false
+          schema: {type: array, maxItems: 100, items: {type: string, format: uuid}}
+          description: Only the changes that these History notes report.
+        - name: change_kind
+          in: query
+          required: false
+          schema: {type: array, maxItems: 10, items: {type: string}}
+          description: Only changes of these correction kinds, such as close_lost, deal_open or deal_revive.
       responses:
         '200':
           description: One page of the deal's changes.
@@ -10887,9 +10915,9 @@ paths:
         '401':
           $ref: '#/components/responses/Unauthorized'
         '403':
-          $ref: '#/components/responses/Forbidden'
+          $ref: '#/components/responses/FileForbidden'
         '404':
-          $ref: '#/components/responses/NotFound'
+          $ref: '#/components/responses/FileNotFound'
         '422':
           $ref: '#/components/responses/ValidationError'
       parameters:
@@ -11029,8 +11057,8 @@ paths:
             text/csv:
               schema: {type: string}
         '401': {$ref: '#/components/responses/Unauthorized'}
-        '403': {$ref: '#/components/responses/Forbidden'}
-        '404': {$ref: '#/components/responses/NotFound'}
+        '403': {$ref: '#/components/responses/FileForbidden'}
+        '404': {$ref: '#/components/responses/FileNotFound'}
         '422': {$ref: '#/components/responses/ValidationError'}
       description: Export this edition's permitted frozen metrics, chart readings and kept question answers.
   /search/data-answer:
@@ -13903,7 +13931,7 @@ paths:
           in: query
           schema: {type: integer, minimum: 1, maximum: 20}
           description: >-
-            Answer GROUPED instead of as one ranked list: up to this many hits of EACH type, each type's best first. Relevance is not comparable across types — a message naming an account ten times outranks the account itself — so a short ranked list can hold nothing but messages, while a grouped answer carries every type that matched. `data` holds each type's hits together, best first. The page is the whole answer, so it takes no `cursor` and no `limit`; `types_with_more` names the types holding more than it carries, and asking again without `per_type`, with `types` set to one of them, pages through the rest.
+            Answer GROUPED instead of as one ranked list: up to this many hits of EACH type, each type's best first. Relevance is not comparable across types — a message naming an account ten times outranks the account itself — so a short ranked list can hold nothing but messages, while a grouped answer carries every type that matched. `data` holds each type's hits together, best first. The page is the whole answer, so it takes no `cursor` and no `limit`; `types_with_more` names the types holding more than it carries, and asking again without `per_type`, with `types` set to one of them, pages through the rest. A type the time budget stopped is left out of `data` and named in `types_timed_out`.
         - name: with_employees
           in: query
           schema: {type: boolean, default: false}
@@ -14602,8 +14630,8 @@ paths:
             image/png:
               schema: {type: string, format: binary}
         '401': {$ref: '#/components/responses/Unauthorized'}
-        '403': {$ref: '#/components/responses/Forbidden'}
-        '404': {$ref: '#/components/responses/NotFound'}
+        '403': {$ref: '#/components/responses/FileForbidden'}
+        '404': {$ref: '#/components/responses/FileNotFound'}
         '422': {$ref: '#/components/responses/ValidationError'}
         '501':
           description: The deployment has no object store configured, so no logo can be stored or served.
@@ -14748,8 +14776,8 @@ paths:
             image/png:
               schema: {type: string, format: binary}
         '401': {$ref: '#/components/responses/Unauthorized'}
-        '403': {$ref: '#/components/responses/Forbidden'}
-        '404': {$ref: '#/components/responses/NotFound'}
+        '403': {$ref: '#/components/responses/FileForbidden'}
+        '404': {$ref: '#/components/responses/FileNotFound'}
         '422': {$ref: '#/components/responses/ValidationError'}
         '501':
           description: The deployment has no object store configured, so no logo can be stored or served.
@@ -15311,8 +15339,10 @@ paths:
       summary: Declare another address as your own.
       description: |-
         Takes a user or their agent and nothing more: claiming your own address needs no grant, and the claim
-        binds only your own mail. Not retroactive — mail already captured under the old reading
-        stays, and a contact already minted from an alias stays until it is merged or removed.
+        binds only your own mail. Mail already captured stays. When the address is one of your connected
+        mailboxes, the contact capture minted from it is also archived and its mail is taken off it and
+        kept as yours. Withdrawing the claim puts both back. A typed address proves nothing, so it
+        archives nothing. A contact a colleague owns or shares, or one with other mail on it, stays.
         Idempotent on the folded value.
 
         Needs the passport permission Change records.
@@ -16271,8 +16301,8 @@ paths:
             application/octet-stream:
               schema: {type: string, format: binary}
         '401': {$ref: '#/components/responses/Unauthorized'}
-        '403': {$ref: '#/components/responses/Forbidden'}
-        '404': {$ref: '#/components/responses/NotFound'}
+        '403': {$ref: '#/components/responses/FileForbidden'}
+        '404': {$ref: '#/components/responses/FileNotFound'}
   /capture/activity:
     get:
       tags: [Capture]
@@ -22717,7 +22747,7 @@ paths:
           content:
             application/pdf:
               schema: {type: string, format: binary}
-        '404': {$ref: '#/components/responses/NotFound'}
+        '404': {$ref: '#/components/responses/FileNotFound'}
         '422': {$ref: '#/components/responses/ValidationError'}
         '501':
           description: >-
@@ -23225,7 +23255,8 @@ paths:
         Per open stage: the typed chance, how many deals recorded entering the stage in the last
         two years have closed, the estimated share of them won, and the chance the forecast uses.
         Computed over the whole installation, so every reader sees the same chance; only counts
-        are returned. Only moves made in this installation count. Imported moves and
+        are returned. `accuracy` sets what the forecast said about closed deals and finished
+        quarters against what happened. Only moves made in this installation count. Imported moves and
         moves saved before their origin was kept count for nothing. Deals still open are
         counted as open until today, so a stage with many young deals is not read as losing.
       responses:
@@ -23669,8 +23700,8 @@ paths:
             text/csv:
               schema: {type: string, format: binary}
         '401': {$ref: '#/components/responses/Unauthorized'}
-        '403': {$ref: '#/components/responses/Forbidden'}
-        '404': {$ref: '#/components/responses/NotFound'}
+        '403': {$ref: '#/components/responses/FileForbidden'}
+        '404': {$ref: '#/components/responses/FileNotFound'}
   /analytics/context:
     get:
       tags: [Reports]
@@ -24961,6 +24992,53 @@ paths:
         '403': {$ref: '#/components/responses/Forbidden'}
         '404': {$ref: '#/components/responses/NotFound'}
         '422': {$ref: '#/components/responses/ValidationError'}
+  /deals/{id}/manager-request:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+    post:
+      tags: [Deals]
+      operationId: requestDealManager
+      security: [{bearerAuth: []}]
+      summary: Ask the team's manager to look at this deal.
+      description: |-
+        Accepting the Worklist's "bring in the manager" move. The deal then carries when it was
+        asked, by whom and why, and the team's leads see it on their focus list. It is one fact on
+        the deal, not a task per lead. Asking again changes nothing. A deal that is not open, or
+        one the caller may not change, answers 404.
+
+        Needs the passport permission Change records.
+
+        Runs at once.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/RequestDealManagerRequest'}
+      responses:
+        '204': {description: Asked.}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '422': {$ref: '#/components/responses/ValidationError'}
+    delete:
+      tags: [Deals]
+      operationId: clearDealManagerRequest
+      security: [{bearerAuth: []}]
+      summary: Mark the manager request on this deal as handled.
+      description: |-
+        Clears the request. A team lead, or a seat with oversight of every team, may clear it. A
+        request also leaves the focus list by itself once the deal is no longer open. Idempotent:
+        a deal with no request answers the same success.
+
+        Needs the passport permission Change records.
+
+        Runs at once.
+      responses:
+        '204': {description: 'Cleared, or there was none.'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '422': {$ref: '#/components/responses/ValidationError'}
   /deals/{id}/coverage:
     get:
       tags: [Deals]
@@ -25773,7 +25851,7 @@ paths:
           content:
             application/octet-stream:
               schema: {type: string, format: binary}
-        '404': {$ref: '#/components/responses/NotFound'}
+        '404': {$ref: '#/components/responses/FileNotFound'}
         '422': {$ref: '#/components/responses/ValidationError'}
     delete:
       tags: [Attachments]
@@ -26047,7 +26125,7 @@ paths:
             application/zip:
               schema: {type: string, format: binary}
         '401': {$ref: '#/components/responses/Unauthorized'}
-        '403': {$ref: '#/components/responses/PermissionDenied'}
+        '403': {$ref: '#/components/responses/FileForbidden'}
   /imports/{id}:
     parameters:
       - {name: id, in: path, required: true, schema: {type: string, format: uuid}}
@@ -26219,8 +26297,8 @@ paths:
             text/csv:
               schema: {type: string}
         '401': {$ref: '#/components/responses/Unauthorized'}
-        '403': {$ref: '#/components/responses/PermissionDenied'}
-        '404': {$ref: '#/components/responses/NotFound'}
+        '403': {$ref: '#/components/responses/FileForbidden'}
+        '404': {$ref: '#/components/responses/FileNotFound'}
         '409': {$ref: '#/components/responses/Conflict'}
         '422': {$ref: '#/components/responses/ValidationError'}
   /imports/{id}/approve:
@@ -26942,8 +27020,8 @@ paths:
             application/octet-stream:
               schema: {type: string, format: binary}
         '401': {$ref: '#/components/responses/Unauthorized'}
-        '403': {$ref: '#/components/responses/PermissionDenied'}
-        '404': {$ref: '#/components/responses/NotFound'}
+        '403': {$ref: '#/components/responses/FileForbidden'}
+        '404': {$ref: '#/components/responses/FileNotFound'}
         '422': {$ref: '#/components/responses/ValidationError'}
   /knowledge/corpora/{id}/ask:
     parameters:
@@ -27036,7 +27114,7 @@ components:
       required: true
       schema:
         type: string
-        enum: [first_name, last_name, title, phone, role, linkedin, company_name, address, website]
+        enum: [first_name, last_name, title, phone, role, linkedin, company_name, address, website, email]
       description: The profile field's key — the same closed vocabulary `ContactProfileField.field` carries.
     ProfileFieldKey:
       name: field
@@ -27147,9 +27225,10 @@ components:
       description: |-
         Only the members of this list — a Shortlist's chosen records, or the records a Live List's
         filter selects now — narrowed before sorting and paging, so the page is the list's members
-        in the record list's own columns. The list must be one the caller may find and of this
-        record type; otherwise `404` or `422`. Sharing a list never widens what the read shows:
-        the caller's row scope still applies to every row.
+        in the record list's own columns. A list the caller cannot find, or any list while lists
+        are off, narrows to no rows, as an unknown `tag_id` or `owner_id` does. A list of another
+        record type answers `422`. Sharing a list never widens what the read shows: the caller's
+        row scope still applies to every row.
     IncludeArchived:
       name: include_archived
       in: query
@@ -27266,6 +27345,32 @@ components:
       content:
         application/problem+json:
           schema: {$ref: '#/components/schemas/Problem'}
+    FileNotFound:
+      description: |-
+        No such file in this workspace, or out of RBAC scope. A browser tab that opened the file's
+        link (an `Accept` that prefers `text/html`) reads a short page in the reader's language
+        instead of the problem; every other caller gets the problem.
+      content:
+        application/problem+json:
+          schema: {$ref: '#/components/schemas/Problem'}
+          examples:
+            notFound:
+              value: {type: 'https://errors.gradion.com/not_found', title: Not found, status: 404, code: not_found, detail: Resource not found.}
+        text/html:
+          schema: {type: string}
+    FileForbidden:
+      description: |-
+        Authenticated, but the role lacks the grant for this file (`code: permission_denied`). A
+        browser tab that opened the file's link (an `Accept` that prefers `text/html`) reads a short
+        page in the reader's language instead of the problem; every other caller gets the problem.
+      content:
+        application/problem+json:
+          schema: {$ref: '#/components/schemas/Problem'}
+          examples:
+            denied:
+              value: {type: 'https://errors.gradion.com/permission_denied', title: Forbidden, status: 403, code: permission_denied, detail: Your role does not permit this action.}
+        text/html:
+          schema: {type: string}
     NotFound:
       description: No such resource in this workspace (or out of RBAC scope).
       content:
@@ -28261,8 +28366,10 @@ components:
           description: |-
             The location ladder. `sovereign` means zero egress by construction: a cloud
             provider on any tier is refused, and so is a local provider pointed at another host.
-            `eu_hosted` and `cloud_frontier` refuse no binding on residency grounds: where a lane is served is the
-            connection's and the location's to say.
+            `cloud_frontier` refuses no binding on residency grounds. `eu_hosted` refuses an
+            `azure_openai` binding whose Azure region is outside the EU; the United Kingdom, Norway and
+            Switzerland count as outside it. Elsewhere, where a lane is served is the connection's and
+            the location's to say.
         tiers:
           type: object
           additionalProperties: {$ref: '#/components/schemas/AiTierBinding'}
@@ -28299,17 +28406,18 @@ components:
         base_url:
           type: string
           description: >-
-            Where the provider is reached. Required on `openai_compatible` while a lane binds it, and on `jev_compatible` while the decisions lane binds it (the FULL decision endpoint, posted to as written). Optional elsewhere; empty means the adapter's compiled default. Refused on `gemini_vertex`, whose host follows from `location`.
+            Where the provider is reached. Required on `openai_compatible` while a lane binds it, and on `jev_compatible` while the decisions lane binds it (the FULL decision endpoint, posted to as written). Optional elsewhere; empty means the adapter's compiled default. Refused on `gemini_vertex`, whose host follows from `location`. On `azure_openai` it is required while a lane binds it and is the resource endpoint, `https://<resource>.openai.azure.com`.
         upstream:
           $ref: '#/components/schemas/AiOpenRouterUpstream'
         location:
           type: string
-          pattern: '^(global|us|eu|[a-z]+-[a-z]+[0-9]{1,2})$'
           description: |-
-            The Vertex AI location a `gemini_vertex` provider is served from, which is where Google
-            processes the call: `eu`, `us`, `global`, or a region such as `europe-west4`. Required
-            while a lane binds `gemini_vertex`, and refused on every other provider. Moving it asks
-            Google about each bound model at the new location first; one it does not serve is a 422.
+            Where the provider processes the call. On `gemini_vertex` the Vertex AI location: `eu`,
+            `us`, `global`, or a region such as `europe-west4`. Moving it asks Google about each
+            bound model at the new location first; one it does not serve is a 422. On `azure_openai`
+            the Azure region of the resource, such as `swedencentral`; a region this build does not
+            know is a 422, and under the `eu_hosted` profile so is a region outside the EU.
+            Required while a lane binds either provider, and refused on every other provider.
     AiOpenRouterUpstream:
       type: object
       additionalProperties: false
@@ -28335,7 +28443,7 @@ components:
           type: string
           description: |-
             The adapter serving this tier: fake | anthropic | ollama | vllm | openai_compatible
-            | openai | gemini | gemini_vertex. The credential is never part of this document.
+            | openai | gemini | gemini_vertex | azure_openai. The credential is never part of this document.
         model: {type: string, description: The provider-native model id.}
         base_url:
           type: string
@@ -28346,13 +28454,12 @@ components:
             embeddings server for that lane alone. Empty means the provider's host.
         location:
           type: string
-          pattern: '^(global|us|eu|[a-z]+-[a-z]+[0-9]{1,2})$'
           description: |-
-            On a tier, the `gemini_vertex` provider's location as resolved from `providers`; on write
+            On a tier, the `gemini_vertex` or `azure_openai` provider's location as resolved from `providers`; on write
             it is accepted only when empty or equal to the provider's, and a different one is a 422
             `moved_to_provider`. On the embeddings lane it is a live override: Vertex serves an
             embedding model at fewer locations than a chat model, so the lane may sit elsewhere.
-            Refused on every provider but `gemini_vertex`.
+            Refused on every provider but `gemini_vertex` and `azure_openai`.
         input:
           type: array
           items: {type: string}
@@ -30801,6 +30908,14 @@ components:
         provider: {type: string}
         model: {type: string}
         processing: {type: string, enum: [cloud_provider, configured_endpoint]}
+        certification: {$ref: '#/components/schemas/AiRouteCertification'}
+    AiRouteCertification:
+      type: object
+      required: [verdict, current]
+      description: 'What the certification records say about this model for this task. Absent on a candidate no record measured, which the screen reads as not certified.'
+      properties:
+        verdict: {type: string, enum: [certified, supported_degraded, not_supported], description: 'The worst verdict across the task''s sites and across the records of this model.'}
+        current: {type: boolean, description: 'Every record behind the verdict still describes the prompts this build sends.'}
     AiFeatureRoute:
       type: object
       required: [task, display_name, execution_mode, normal_candidates, effective_candidates, impact, budget_exempt, leading_tier, decision_first]
@@ -33658,6 +33773,13 @@ components:
       properties:
         entity_type: {type: string, enum: [company, fact, profile_field]}
         entity_id: {type: string, format: uuid}
+        claim_version:
+          type: integer
+          format: int64
+          description: |-
+            The version of the stored claim this receipt was built from, the same number the claim's
+            list read carries. A verdict sent with it as `If-Match` answers for exactly what the
+            receipt shows.
         source_kind:
           type: string
           enum: [site_read, connector, human, migration, rule]
@@ -34016,13 +34138,21 @@ components:
       required: [provider, description]
       properties:
         provider: {type: string, description: "The source's key, stored on every mirrored row."}
+        provider_name:
+          type: string
+          description: >-
+            The source's name for a reader, as its unit declares it. Absent when the unit declares none; a client then names it another way, never by the key.
         description: {type: string, description: "What the extension unit supplying it says it is for."}
     FinanceConnection:
       type: object
       required: [id, provider, status, connected_at]
       properties:
         id: {type: string, format: uuid}
-        provider: {type: string}
+        provider: {type: string, description: "The source's key. Show `provider_name` to a reader."}
+        provider_name:
+          type: string
+          description: >-
+            The source's name for a reader, as its unit declares it. Absent when the unit declares none; a client then names it another way, never by the key.
         status:
           type: string
           enum: [connecting, active, error]
@@ -34064,7 +34194,11 @@ components:
         access_scope:
           type: string
           description: Opaque revision of readable companies and the imported snapshot. Pages with different revisions must not be combined.
-        provider: {type: string}
+        provider: {type: string, description: 'The accounting source''s key. Show `provider_name` to a reader.'}
+        provider_name:
+          type: string
+          description: >-
+            The accounting source's name for a reader, as its unit declares it. Absent when the unit declares none; a client then names no source rather than show the key.
         last_synced_at: {type: string, format: date-time}
         linked_companies:
           type: integer
@@ -34129,7 +34263,11 @@ components:
         provider:
           type: [string, 'null']
           description: >-
-            Which accounting source this came from, in the source's own words ("offline_demo"). Rendered as a label beside the figures so a reader knows what they are looking at; absent when nothing is connected.
+            Which accounting source this came from, by its key ("offline_demo"). A key, not a name for a reader: show `provider_name`. Absent when nothing is connected.
+        provider_name:
+          type: [string, 'null']
+          description: >-
+            The accounting source's name for a reader ("Demo accounting"), as the unit that supplies it declares it. Absent when nothing is connected, or when that unit declares no name; a client then names no source rather than show the key.
         last_synced_at:
           type: [string, 'null']
           format: date-time
@@ -35069,18 +35207,19 @@ components:
       type: object
       description: |-
         One enriched field with the evidence it was read from. Evidence-or-omit: a row
-        exists only where a verbatim snippet was captured. A phone is a list, so a contact
-        has one `phone` row per number, told apart by `value_key`; every other field has at
-        most one row.
+        exists only where a verbatim snippet was captured. A phone and an email are lists,
+        so a contact has one `phone` row per number and one `email` row per further address,
+        told apart by `value_key`; every other field has at most one row.
       required: [field, value, evidence_snippet, source, captured_by, captured_at]
       properties:
-        field: {type: string, enum: [first_name, last_name, title, phone, role, linkedin, company_name, address, website]}
+        field: {type: string, enum: [first_name, last_name, title, phone, role, linkedin, company_name, address, website, email]}
         value: {type: string}
         value_key:
           type: string
           description: |-
-            What tells two rows of one field apart: the E.164 number for a `phone` row, empty
-            for every other field. Pass it to the restore to name which number to undo.
+            What tells two rows of one field apart: the E.164 number for a `phone` row, the
+            lowercased address for an `email` row, empty for every other field. Pass it to the
+            restore to name which number to undo.
         superseded_value:
           type: [string, 'null']
           description: |-
@@ -35410,6 +35549,8 @@ components:
           type: array
           description: Unresolved disclosure work for this contact, in deadline order. Absent when privacy-request read authority is withheld.
           items: {$ref: '#/components/schemas/ContactNoticeDuty'}
+        privacy_confirmed_source:
+          $ref: '#/components/schemas/ContactConfirmedSource'
         consent:
           type: object
           description: Per-purpose state. The proof log stays at `GET /contacts/{id}/consent` — this is the guard, not the ledger.
@@ -36686,7 +36827,7 @@ components:
       properties:
         kind:
           type: string
-          enum: [draft_reply, schedule_meeting, complete_task, log_activity, open_record, open_meeting_brief, open_research, ask_colleague]
+          enum: [draft_reply, schedule_meeting, complete_task, log_activity, open_record, open_meeting_brief, open_research, ask_colleague, call]
         label: {type: string}
         destination:
           description: Where the action goes. Absent for an action that opens no surface of its own.
@@ -39220,6 +39361,27 @@ components:
       properties:
         data: {type: array, items: {$ref: '#/components/schemas/Relationship'}}
         page: {$ref: '#/components/schemas/PageInfo'}
+    DealWinChance:
+      type: object
+      description: >-
+        The parts of one deal's win chance. `explanation` is the same fact as one English line for a tool or a brief; a screen words it from the fields.
+      required: [typed, in_use, self_correcting, explanation]
+      properties:
+        typed: {type: integer, minimum: 0, maximum: 100, description: "The chance typed on the deal's stage."}
+        in_use: {type: integer, minimum: 0, maximum: 100, description: 'The typed chance moved by the stage outcomes, before any risk effect.'}
+        evidence_n: {type: [integer, 'null'], minimum: 0, description: 'How many deals that entered the stage have closed. Null while learning is off or the probability was set on the deal.'}
+        won_share: {type: [integer, 'null'], minimum: 0, maximum: 100, description: 'The percent of those closed deals that were won.'}
+        effect_signal:
+          type: [string, 'null']
+          enum: [close_pushed, no_next_step, quiet, stuck, null]
+          description: The risk signal that moved the chance. Null when none did.
+        effect_days: {type: [integer, 'null'], minimum: 0, description: 'How many days the signal has held, where it has a length.'}
+        effect_learned:
+          type: [boolean, 'null']
+          description: 'True when the effect comes from this installation''s own closed deals; false when it is the fixed halving used while too few have closed.'
+        effect_sample: {type: [integer, 'null'], minimum: 0, description: 'How many closed deals the learned effect rests on.'}
+        self_correcting: {type: boolean, description: 'False while the installation switched learning off, so every chance stays the typed one.'}
+        explanation: {type: string, description: 'The one-line reason for the chance, in English.'}
     DealLastEmail:
       type: object
       description: The newest workspace-visible email on a deal, as `Deal.last_email` carries it.
@@ -39335,13 +39497,13 @@ components:
           maximum: 100
           readOnly: true
           description: >-
-            The chance this deal is won, in percent: the deal's own probability where somebody set one, else its stage's. Won deals read 100 and lost deals 0 through their stage. Moving the deal to another stage sets it back to that stage's probability.
+            The chance this deal is won, in percent. An open deal that follows its stage reads the stage's typed chance moved by what this installation's closed deals show and by the risk effect of the deal's strongest signal; `win_chance` says how. A probability set on the deal stands as set. Won deals read 100 and lost deals 0 through their stage. Moving the deal to another stage sets it back to that stage's probability.
         win_probability_source:
           type: string
           enum: [stage, human, margince]
           readOnly: true
           description: >-
-            Where `win_probability` comes from: `stage` while the deal follows its stage, `human` when a colleague set it, `margince` when Margince lowered it on a deal nobody touched.
+            Where `win_probability` comes from: `stage` while the deal follows its stage, `human` when a colleague set it, `margince` when Margince set it on a deal.
         win_probability_set_by_user_id:
           type: [string, 'null']
           format: uuid
@@ -39358,6 +39520,11 @@ components:
           maximum: 100
           readOnly: true
           description: The probability of the deal's current stage, so a client can show it beside a probability set on the deal.
+        win_chance:
+          allOf: [{$ref: '#/components/schemas/DealWinChance'}]
+          readOnly: true
+          description: >-
+            How `win_probability` of an open deal was made, from the one function every screen, report and tool reads. Absent on a won or lost deal.
         expected_close_date: {type: [string, 'null'], format: date, description: 'An open deal may not have a close date in the past: saving one is rejected with 422 close_date_past, and a date that ages into the past is corrected by the nightly run.'}
         close_date_provisional: {type: boolean, readOnly: true, description: 'True while the close date is a machine-computed replacement awaiting human confirmation; a provisional deal stays out of the Likely forecast. Cleared when a human sets the date.'}
         wait_until: {type: [string, 'null'], format: date, description: "'Customer asked us to wait until' date; suppresses the stalled flag but not the overdue close-date flag."}
@@ -40073,6 +40240,21 @@ components:
       properties:
         data: {type: array, items: {$ref: '#/components/schemas/Project360PhaseTransition'}}
         phase_durations: {type: array, items: {$ref: '#/components/schemas/Project360PhaseDuration'}}
+    ContactConfirmedSource:
+      type: object
+      description: |-
+        The source a reviewer last confirmed for this contact, from the newest confirmed
+        privacy-notice case. Absent when no source was ever confirmed, and withheld with the
+        privacy_notice_duties section.
+      required: [case_id, source_kind, source_obtained_at, confirmed_at]
+      properties:
+        case_id: {type: string, format: uuid}
+        source_kind: {type: string, description: 'The confirmed kind: one of `AssessNoticeSource.kind`.'}
+        source_obtained_at: {type: [string, 'null'], format: date-time, description: 'The acquisition date the reviewer confirmed; null when they confirmed none.'}
+        confirmed_at: {type: string, format: date-time}
+        confirmed_by:
+          allOf: [{$ref: '#/components/schemas/PrincipalAttribution'}]
+          description: Read from the confirm's audit row. Absent for an agent reader, and when that row no longer exists.
     PrincipalAttribution:
       type: object
       description: |-
@@ -40299,8 +40481,9 @@ components:
       type: string
       description: |-
         The kind of record a bulk change acts on. One change acts on one kind. A lead takes every
-        verb but `archive` and `complete`: a lead leaves the queue by being disqualified, which has
-        no bulk verb.
+        verb but `archive`, `move_stage` and `complete`: a lead leaves the queue by being
+        disqualified, which has no bulk verb. A contact and a company take neither `move_stage` nor
+        `complete`.
         A `worklist_item` is a task or a promise (a conversation claim) as the Worklist lists it,
         named by the id its row carries; `complete` is its only verb, and no other kind takes it.
       enum: [contact, company, deal, lead, worklist_item]
@@ -40313,10 +40496,13 @@ components:
         `addListMember` and `removeListMember` do, and change nothing on the record itself.
         `add_tag` and `remove_tag` put the tag `tag_id` names on the record or take it off, exactly
         as `applyTag` and `removeTag` do. `create_task` files one new task, described by `task`,
-        under each record, exactly as `createTask` does. `complete` marks a `worklist_item` done:
+        under each record, exactly as `createTask` does. `move_stage` moves each deal to the open
+        stage `stage_id` names, exactly as `advanceDeal` does, and only deals take it. A deal that is
+        won or lost, or whose pipeline does not hold the stage, is left alone; closing a deal asks for
+        its own reason and stays a single-record move. `complete` marks a `worklist_item` done:
         a task exactly as `updateActivity` with `is_done: true` does, a promise exactly as
         `settleConversationClaim` with `outcome: done` does.
-      enum: [reassign_owner, archive, add_to_list, remove_from_list, add_tag, remove_tag, create_task, complete]
+      enum: [reassign_owner, archive, add_to_list, remove_from_list, add_tag, remove_tag, create_task, move_stage, complete]
     BulkTask:
       type: object
       description: The task `create_task` files under every record of the selection.
@@ -40349,6 +40535,7 @@ components:
         note: {type: string, maxLength: 500, description: 'Why, for `add_to_list` and `remove_from_list`: recorded on every membership change the batch makes.'}
         tag_id: {type: string, format: uuid, description: 'The tag. Required for `add_tag` and `remove_tag` and refused for every other verb.'}
         task: {$ref: '#/components/schemas/BulkTask'}
+        stage_id: {type: string, format: uuid, description: 'The open stage to move the deals to. Required for `move_stage` and refused for every other verb.'}
     BulkChangeExecuteRequest:
       type: object
       required: [record_type, verb, items]
@@ -40365,6 +40552,7 @@ components:
         note: {type: string, maxLength: 500, description: 'Why, for `add_to_list` and `remove_from_list`: recorded on every membership change the batch makes.'}
         tag_id: {type: string, format: uuid, description: 'The tag. Required for `add_tag` and `remove_tag` and refused for every other verb.'}
         task: {$ref: '#/components/schemas/BulkTask'}
+        stage_id: {type: string, format: uuid, description: 'The open stage to move the deals to. Required for `move_stage` and refused for every other verb.'}
         confirm_token: {type: string, description: 'The token a preview of exactly this selection returned. Required above 10 records.'}
     BulkSkipReason:
       type: string
@@ -40404,6 +40592,7 @@ components:
         tagged: {type: boolean, description: 'For a tag verb, whether the record carries the tag.'}
         task_id: {type: string, format: uuid, description: 'For `create_task`, the task filed under the record, once the change ran.'}
         done: {type: boolean, description: 'For `complete`, whether the task or promise is done.'}
+        stage_id: {type: string, format: uuid, description: 'For `move_stage`, the stage the deal stands on.'}
     BulkSampleRow:
       type: object
       description: One record the change would alter, as it is and as it would be.
@@ -40478,6 +40667,7 @@ components:
         list_id: {type: string, format: uuid, description: 'The Shortlist a list verb named.'}
         tag_id: {type: string, format: uuid, description: 'The tag a tag verb named.'}
         task: {$ref: '#/components/schemas/BulkTask'}
+        stage_id: {type: string, format: uuid, description: 'The stage a stage move named.'}
         changed: {type: integer, description: The number of records changed.}
         skipped:
           type: array
@@ -41025,7 +41215,7 @@ components:
       type: object
       required: [entity_type, entity_id]
       properties:
-        entity_type: {type: string, enum: [contact, company, deal, lead, project]}
+        entity_type: {type: string, enum: [contact, company, deal, lead, project], description: The kind of record the meeting is filed on.}
         entity_id: {type: string, format: uuid}
     MeetingAvailability:
       type: object
@@ -45990,6 +46180,9 @@ components:
             - team
             - workspace
             - managed_teams
+          description: |-
+            Whose figures the report counts: one `owner`, one `team`, or the whole `workspace`, with `id`
+            naming the owner or team. `managed_teams` is only ever answered, when a request names no scope.
         id:
           type: string
           format: uuid
@@ -46023,6 +46216,10 @@ components:
     ReportingValueBasis:
       type: string
       enum: [all, software, implementation]
+      description: |-
+        Which part of a won deal's value the won-value figures count. `all` is the whole deal and
+        the default, `software` and `implementation` count only that component of it. Open figures
+        take only `all`.
     ReportingSelection:
       type: object
       additionalProperties: false
@@ -46064,6 +46261,7 @@ components:
           enum:
             - month
             - fiscal_quarter
+          description: Which target period the figures are measured against, a calendar `month` or a `fiscal_quarter`.
         close_window:
           type: string
           enum:
@@ -46320,6 +46518,9 @@ components:
     ReportingCoverage:
       type: object
       additionalProperties: false
+      description: |-
+        How much of the population the figure could be computed for. A `partial` reading with a
+        `priced_count` of 0 priced nothing, so its figure is not one to report.
       required:
         - status
         - withheld
@@ -48055,7 +48256,7 @@ components:
           type: array
           uniqueItems: true
           description: Distinct configured provider keys, sorted; fake is never returned.
-          items: {type: string, enum: [anthropic, gemini, gemini_vertex, ollama, openai, openai_compatible, vllm]}
+          items: {type: string, enum: [anthropic, azure_openai, gemini, gemini_vertex, ollama, openai, openai_compatible, vllm]}
         configured_models:
           type: array
           description: Authenticated tier-to-model bindings. Credentials and endpoints never appear here.
@@ -48070,7 +48271,7 @@ components:
           enum: [local_small, cheap_cloud, premium, frontier, local_large]
         provider:
           type: string
-          enum: [anthropic, gemini, gemini_vertex, ollama, openai, openai_compatible, vllm]
+          enum: [anthropic, azure_openai, gemini, gemini_vertex, ollama, openai, openai_compatible, vllm]
         model: {type: string}
     BriefDelivery:
       type: object
@@ -48113,7 +48314,13 @@ components:
         routine_mail_team_id:
           type: string
           format: uuid
-          description: The selected live team for team or combined scope. Personal scope ignores a retained selection.
+          description: >-
+            The selected live team for team or combined scope. Personal scope ignores a retained selection. A team that does not exist, is archived or is not one the caller may review is refused with 422 `delivery_team_gone` on this field.
+        clear_routine_mail_team:
+          type: boolean
+          writeOnly: true
+          description: >-
+            True removes the selected team, and a team or combined scope falls back to `personal`. Sent together with `routine_mail_team_id` it is refused with 422.
         weekly_delivery_day:
           type: integer
           minimum: 1
@@ -48355,6 +48562,38 @@ components:
           type: array
           description: One entry per team with a daily freeze this quarter, ordered by team id.
           items: {$ref: '#/components/schemas/ForecastFocusTeam'}
+        requests:
+          type: array
+          description: >-
+            Open deals a seller asked the team's manager to look at, oldest request first, next to the frozen lists. Empty for a reader who leads no team, and while individual performance is off. A deal the caller may not read is left out.
+          items: {$ref: '#/components/schemas/ForecastFocusRequested'}
+    RequestDealManagerRequest:
+      type: object
+      required: [reasons]
+      properties:
+        reasons:
+          type: array
+          minItems: 1
+          maxItems: 3
+          items:
+            type: string
+            enum: [big_deal, single_contact, stuck]
+          description: >-
+            Why the manager is asked, as the move named them: `big_deal` is a value above the team's median, `single_contact` is one engaged contact, `stuck` is a deal stuck in its stage. A client words them.
+      additionalProperties: false
+    ForecastFocusRequested:
+      type: object
+      required: [deal_id, deal_name, requested_at, reasons]
+      properties:
+        deal_id: {type: string, format: uuid}
+        deal_name: {type: string}
+        owner_id: {type: string, format: uuid, description: Absent when individual performance is off.}
+        requested_by: {type: string, format: uuid, description: Absent when individual performance is off.}
+        requested_at: {type: string, format: date-time}
+        reasons:
+          type: array
+          items: {type: string, enum: [big_deal, single_contact, stuck]}
+      additionalProperties: false
     ForecastFocusTeam:
       type: object
       required: [team_id, snapshot_id, taken_at, base_currency, status, deals, masked_count]
@@ -48402,6 +48641,51 @@ components:
         signals:
           type: array
           items: {$ref: '#/components/schemas/ForecastRiskSignal'}
+    ForecastAccuracy:
+      type: object
+      description: |-
+        How accurate the forecast has been: two comparisons of what it said with what happened,
+        read from the frozen daily forecasts of the whole installation. Only counts and sums are
+        returned.
+      required: [calibration, landings]
+      additionalProperties: false
+      properties:
+        calibration: {$ref: '#/components/schemas/ForecastCalibration'}
+        landings:
+          type: array
+          items: {$ref: '#/components/schemas/ForecastAccuracyLanding'}
+    ForecastCalibration:
+      type: object
+      required: [deals, floor, lead_days, bands]
+      additionalProperties: false
+      properties:
+        deals: {type: integer, minimum: 0, description: 'How many closed deals the bands hold in all.'}
+        floor: {type: integer, minimum: 1, description: 'The fewest deals a band needs before it states a share.'}
+        lead_days: {type: integer, minimum: 1, description: 'How many days before the close the chance was read.'}
+        bands:
+          type: array
+          items: {$ref: '#/components/schemas/ForecastCalibrationBand'}
+    ForecastCalibrationBand:
+      type: object
+      required: [from_percent, to_percent, deals]
+      additionalProperties: false
+      properties:
+        from_percent: {type: integer, minimum: 0, maximum: 100}
+        to_percent: {type: integer, minimum: 0, maximum: 100}
+        deals: {type: integer, minimum: 1}
+        mean_percent: {type: [integer, 'null'], minimum: 0, maximum: 100, description: 'The mean chance of the deals in the band. Null below the floor.'}
+        won_percent: {type: [integer, 'null'], minimum: 0, maximum: 100, description: 'The share of the deals that were won. Null below the floor.'}
+    ForecastAccuracyLanding:
+      type: object
+      required: [period_start, period_end, currency, said_minor, landed_minor, said_on]
+      additionalProperties: false
+      properties:
+        period_start: {type: string, format: date}
+        period_end: {type: string, format: date}
+        currency: {type: string, pattern: '^[A-Z]{3}$'}
+        said_minor: {type: integer, format: int64, description: 'Won plus weighted open pipeline in the last freeze at least four weeks before the period ended.'}
+        landed_minor: {type: integer, format: int64, description: 'What was won in the period, as the first freeze after it ended says.'}
+        said_on: {type: string, format: date, description: 'The day of the freeze `said_minor` was read from.'}
     ForecastStageChances:
       type: object
       required: [self_correcting, evidence_cutoff, prior_strength, stages]
@@ -48419,6 +48703,7 @@ components:
         stages:
           type: array
           items: {$ref: '#/components/schemas/ForecastStageChance'}
+        accuracy: {$ref: '#/components/schemas/ForecastAccuracy'}
       additionalProperties: false
     ForecastStageChance:
       type: object
@@ -48817,6 +49102,49 @@ components:
           type: array
           description: One row per deal that moved, each in exactly one bucket.
           items: {$ref: '#/components/schemas/ForecastMovementDeal'}
+        focus_actions:
+          allOf: [{$ref: '#/components/schemas/ForecastMovementFocusActions'}]
+          description: >-
+            How much of the change came from deals on the opening snapshot's stored focus list that were worked between the two snapshots. Absent when no listed deal was worked. It is a cause beside the buckets, not a bucket, so the buckets still add up.
+      additionalProperties: false
+    ForecastMovementFocusActions:
+      type: object
+      required: [amount_minor, deals]
+      properties:
+        amount_minor:
+          type: integer
+          format: int64
+          description: The change of the worked focus-list deals, in the reading drawn.
+        share_bps:
+          type: integer
+          description: >-
+            That change as a share of the whole change, in basis points. Absent when the whole change is zero.
+        deals:
+          type: array
+          description: The worked deals, largest change first, each with links to what was done.
+          items: {$ref: '#/components/schemas/ForecastMovementFocusDeal'}
+      additionalProperties: false
+    ForecastMovementFocusDeal:
+      type: object
+      required: [deal_id, amount_minor, actions]
+      properties:
+        deal_id: {type: string, format: uuid}
+        amount_minor: {type: integer, format: int64}
+        actions:
+          type: array
+          description: Up to five of the actions, oldest first.
+          items: {$ref: '#/components/schemas/ForecastMovementFocusAction'}
+      additionalProperties: false
+    ForecastMovementFocusAction:
+      type: object
+      required: [activity_id, kind, at]
+      properties:
+        activity_id: {type: string, format: uuid}
+        kind:
+          type: string
+          enum: [task_done, mail_sent, meeting_held]
+        at: {type: string, format: date-time}
+        subject: {type: string}
       additionalProperties: false
     ForecastMovementBucket:
       type: object
@@ -48854,7 +49182,7 @@ components:
             Every change this deal went through between the two snapshots, in drawing order. `bucket` is the one cause its money is counted under, so a deal whose amount, stage and close date all moved is one row.
           items:
             type: string
-            enum: [new, pulled_in, pushed_out, amount, category, stage_weight, record_changed, won, lost, reopened_or_archived, fx]
+            enum: [new, pulled_in, pushed_out, amount, category, stage_weight, record_changed, won, lost, reopened_or_archived, fx, focus_actions]
       additionalProperties: false
     NewForecastCall:
       type: object
@@ -49075,7 +49403,7 @@ components:
       additionalProperties: false
     AnalyticsEntity:
       type: object
-      required: [name, group_by, measures]
+      required: [name, group_by, measures, money]
       properties:
         name: {type: string, description: "The population, by name."}
         group_by:
@@ -49086,6 +49414,16 @@ components:
           type: array
           items: {type: string}
           description: The fields this population can be aggregated over.
+        money:
+          type: object
+          additionalProperties:
+            type: string
+            enum: [row_currency, base_currency]
+          description: |-
+            The measures that are amounts in minor units, and the currency each is in:
+            `row_currency` in each record's own currency, which a sum across currencies
+            refuses, or `base_currency` converted to the installation's base currency. A
+            measure not named here is a plain number, whatever its name.
         custom_fields:
           type: array
           items: {$ref: '#/components/schemas/AnalyticsCustomField'}
@@ -49218,7 +49556,7 @@ components:
             type: object
             additionalProperties: true
           description: >-
-            One object per group, marked `_withheld` when the floor kept it back. A withheld row carries null for every column INCLUDING its group keys: keeping the keys turned a grouping by identity into a paginated dump of every record's identity with only the measures blanked. The row itself stays so the answer's row count is not a signal of its own.
+            One object per group, marked `_withheld` when the floor kept it back. A row holding a sum over a converted amount that adds only the deals that convert also carries `_coverage` (ReportRowCoverage), naming those sums in its `aggregates` and counting the deals it leaves out: no value, no exchange rate, and the currencies without one. A sum that no deal converts into is null, and its `_coverage` says why. A withheld row carries no `_coverage`. A withheld row carries null for every column INCLUDING its group keys: keeping the keys turned a grouping by identity into a paginated dump of every record's identity with only the measures blanked. The row itself stays so the answer's row count is not a signal of its own.
         withheld:
           type: boolean
           description: >-
@@ -50462,10 +50800,7 @@ components:
       required: [entity_type, action, count]
       properties:
         entity_type: {type: string}
-        action:
-          type: string
-          description: >-
-            The audit action, or for a list membership or a tagging the link it filed: `added`, `removed` or `applied`.
+        action: {type: string, description: The audit action.}
         count: {type: integer, minimum: 1}
     HealthFinding:
       type: object
@@ -51021,7 +51356,7 @@ components:
       additionalProperties: false
       required: [kind]
       properties:
-        kind: {type: string, enum: [owner, team, workspace]}
+        kind: {type: string, enum: [owner, team, workspace], description: 'Whose figures the report covers: one owner, one team, or the whole workspace. id names the owner or team.'}
         id: {type: string, format: uuid}
     RunReportRequest:
       type: object
@@ -51275,6 +51610,11 @@ components:
           items: {type: string, pattern: '^(contact|company|deal|activity|lead|project|product|offer_template|tag)$|^ext:[a-z0-9]+(-[a-z0-9]+)*:[a-z][a-z0-9_]{0,31}$'}
           description: >-
             On a `per_type` answer only: the types that matched more hits than the page carries for them. Absent on a ranked answer, whose `page.has_more` says the same thing for the list as a whole.
+        types_timed_out:
+          type: array
+          items: {type: string, pattern: '^(contact|company|deal|activity|lead|project|product|offer_template|tag)$|^ext:[a-z0-9]+(-[a-z0-9]+)*:[a-z][a-z0-9_]{0,31}$'}
+          description: >-
+            On a `per_type` answer only: the types whose search did not finish within the time budget. `data` holds no hits of these types, and none of them is in `types_with_more`. Empty when every type answered. Absent on a ranked answer, which answers 422 `query_too_broad` instead.
         near_matches:
           type: array
           maxItems: 5
@@ -51335,6 +51675,7 @@ components:
         - document_extract
         - draft_reply
         - enrich
+        - extension_task
         - growth_fit
         - nl_search
         - offer_draft
@@ -51360,7 +51701,7 @@ components:
         - weekly_review
     AiActivityKind:
       type: string
-      enum: [morning_brief, overnight_at_risk_sweep, document_extract, site_read, brief_ranking, capture_classify, capture_confidentiality_verdict, capture_counterparty_verdict, cert_judge, cold_start, deal_health, draft_reply, enrich, growth_fit, nl_search, offer_draft, rate_extract, signal_extract, site_extract, site_fact_extract, site_triage, stage_evidence_extract, summarize, transcript, transcript_propose, voice_build, corpus_ask, weekly_review, weekly_learnings, propose_roles, owed_verdict, request_settlement, account_scan, tag_suggest, report_setup, report_interpret, reader_rendering, deal_verdict, rewrite, chat_summary, chat_task_reading]
+      enum: [morning_brief, overnight_at_risk_sweep, document_extract, site_read, brief_ranking, capture_classify, capture_confidentiality_verdict, capture_counterparty_verdict, cert_judge, cold_start, deal_health, draft_reply, enrich, extension_task, growth_fit, nl_search, offer_draft, rate_extract, signal_extract, site_extract, site_fact_extract, site_triage, stage_evidence_extract, summarize, transcript, transcript_propose, voice_build, corpus_ask, weekly_review, weekly_learnings, propose_roles, owed_verdict, request_settlement, account_scan, tag_suggest, report_setup, report_interpret, reader_rendering, deal_verdict, rewrite, chat_summary, chat_task_reading]
       description: |-
         What kind of AI work an occurrence is. Every AI task this build can run reports here,
         because a task that reports nothing is AI work the product performed and then denied.
@@ -51421,6 +51762,21 @@ components:
           type: [string, 'null']
           format: uuid
           description: That record's id, so the name can link to it.
+        processed:
+          type: [integer, 'null']
+          minimum: 0
+          description: |-
+            How much of its work a LIVE occurrence has finished so far, in the unit its source
+            counts (a website read counts pages). Null while unknown, which is not zero: most
+            kinds report no position, and a client then draws an unmeasured ring. A settled
+            item carries none.
+        total:
+          type: [integer, 'null']
+          minimum: 1
+          description: |-
+            How much the occurrence expects to finish in all, in the unit of `processed`. A
+            client draws a measured arc only when both counts are present; with `processed`
+            alone the ring stays unmeasured, and no percentage is ever derived from elapsed time.
     AgentTool:
       type: object
       required: [name, title, description, tier, egress]
@@ -57222,6 +57578,15 @@ components:
         can_undo: {type: boolean}
         can_accept: {type: boolean, deprecated: true, description: Whether the deprecated accept route would take this change.}
         writable: {type: boolean, description: Whether this reader may write this deal.}
+        note_activity_id:
+          type: [string, 'null']
+          format: uuid
+          description: The History note that reports this change. Null for a change made before notes were linked.
+        stage_history_id:
+          type: [string, 'null']
+          format: uuid
+          description: >-
+            The stage-history row this change wrote, for a change that moved the stage. It equals the deal's `closing_occurrence_id` while the deal is on the close Margince made.
     CloseDateEstimateBasis:
       type: object
       description: Observed sales history recorded when this estimate was made, not a reconstruction from current pipeline values.
@@ -57450,6 +57815,8 @@ components:
             The exact number of admitted items in this category for this read's scope and
             owner. Absent when that population has not been counted exactly; a client then
             reads `considered` with `more_available` as today. Absent never means zero.
+            For `decisions` it counts only what this reader can settle, as the readings'
+            `review` does, so a duplicate pair without verbs is left out.
     WorklistSummary:
       type: object
       description: |-
@@ -58653,13 +59020,17 @@ components:
           description: The deal recommendation's evidence basis, preserved across surfaces.
         action:
           type: string
-          enum: [draft_reply, draft_email, create_task, open_task, open_meeting_brief, reconnect, none]
+          enum: [draft_reply, draft_email, create_task, open_task, open_meeting_brief, reconnect, bring_in_manager, none]
           description: |-
             `draft_reply` answers the message in `activity_id` — offered only where the
             reader may READ that message, because there is no replying to words they
             cannot see. It survives beside `draft_email` because the two reach different
             composers: collapsing them would answer a waiting buyer with a fresh message
             and no thread behind it.
+        reason:
+          type: string
+          description: >-
+            One sentence saying why this move is offered. Carried by `bring_in_manager`, whose reasons are facts about the deal; the other verbs leave it absent and the row's own reason stands.
         activity_id:
           type: string
           format: uuid

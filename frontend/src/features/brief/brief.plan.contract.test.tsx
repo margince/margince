@@ -1,5 +1,5 @@
 /** @vitest-environment happy-dom */
-import { cleanup, screen } from "@testing-library/react";
+import { cleanup, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it } from "vitest";
 import { en } from "../../i18n/en";
@@ -91,8 +91,13 @@ describe("what the contract form sends", () => {
       />,
     );
     await userEvent.click(screen.getAllByText(en["plan.contract.edit"])[0]);
+    expect(
+      screen.getByRole("dialog", { name: en["plan.contract.risks"] }),
+    ).toBeTruthy();
     await userEvent.type(screen.getByRole("textbox"), "Sponsor risk");
-    await userEvent.click(screen.getByText(en["plan.contract.save"]));
+    await userEvent.click(
+      screen.getByRole("button", { name: en["record.save"] }),
+    );
 
     const sent = writes(calls).find((c) =>
       c.path.endsWith("/weekly-plans/current/contract"),
@@ -103,5 +108,19 @@ describe("what the contract form sends", () => {
     // key under its own row lock, and a stale value sent here would undo a
     // save somebody else made in the meantime.
     expect(Object.keys(sent?.body ?? {})).toEqual(["risks"]);
+  });
+
+  it("saves an empty answer on a half nobody has written, as nothing to name", async () => {
+    const calls = stubApi({
+      "PUT /weekly-plans/current/contract": () => jsonResponse({}, 200),
+    });
+    render(<PlanContract plan={planWith({ risks: null })} editable />);
+    await userEvent.click(screen.getAllByText(en["plan.contract.edit"])[0]);
+    await userEvent.click(
+      screen.getByRole("button", { name: en["record.save"] }),
+    );
+
+    await waitFor(() => expect(writes(calls)).toHaveLength(1));
+    expect(writes(calls)[0].body).toEqual({ risks: "" });
   });
 });

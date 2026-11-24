@@ -47,14 +47,10 @@ import (
 // undecided ghosts count, because a workspace whose queue is clear should cost
 // one query rather than one query per member.
 //
-// UNDECIDED means the MATCHER has not settled it — `unmatched` or `suggested`.
-// It deliberately does not mean "no human has settled it", and the difference
-// matters: the ghost row records only the matcher's outcome plus `confirmed`,
-// which the accept effect writes back. A REFUSAL is not written here at all —
-// it lives in the approval, which is where this design puts the pending state,
-// and StageUnlessDeclined is what consults it. So this enumeration also reaches
-// members whose every question has already been refused, and the staging pass it
-// feeds correctly proposes nothing for them.
+// UNDECIDED means the row is `unmatched` or `suggested`. A refusal writes
+// `rejected` and an accept writes `confirmed`, so both leave this enumeration.
+// A suggestion whose contact was archived is released to `unmatched` by the
+// next match pass, which is why `suggested` stays in the list.
 //
 // Enumerating `unmatched` alone was narrower than the work. An owner whose
 // ghosts had ALL been matched to `suggested` was never reached, so a suggestion

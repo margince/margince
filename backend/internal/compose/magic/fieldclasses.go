@@ -52,6 +52,7 @@ var internalColumns = map[string]map[string]bool{
 	typeDeal: setOf(
 		"amount_minor_base", "arr_source_offer_id", "close_date_provisional", "closed_at",
 		"commercial_mode", "commercial_revision", "lost_reason_basis", "lost_reason_code",
+		"manager_request_reasons", "manager_requested_at", "manager_requested_by",
 		"pipeline_id", "priority_rank", "win_probability_set_by",
 		"won_without_contract_detail", "won_without_contract_reason",
 	),

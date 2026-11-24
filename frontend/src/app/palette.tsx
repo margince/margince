@@ -19,7 +19,11 @@ import { type Translator, useT } from "../i18n";
 import { isImeCommit } from "../lib/imecommit";
 import type { ShortcutId } from "../lib/keymap";
 import { navigate, type Route } from "../lib/router";
-import type { CoreSearchHitType, SearchHitGroup } from "../lib/searchkinds";
+import {
+  type CoreSearchHitType,
+  type SearchHitGroup,
+  searchTimedOutLines,
+} from "../lib/searchkinds";
 import { pressShortcut } from "../lib/shortcuts";
 import { openAsk, type UrlParams } from "../lib/urlstate";
 import { PaletteAnswer, usePaletteAsk } from "./paletteanswer";
@@ -400,6 +404,11 @@ export function CommandPalette({
               {search.failure}
             </Callout>
           )}
+          {/* A kind the server ran out of time on is named, and the hits of the
+              other kinds are listed as usual. */}
+          {searchTimedOutLines(search.timedOut, t, []).map((line) => (
+            <Callout key={line} tone="warning" kind="outcome" title={line} />
+          ))}
           {/* Held back until the wait is real (SEARCH_PENDING_DELAY_MS): a bar
               that flashed on every keystroke would report work already done.
               The clock runs from the moment the bar appears and is NOT restarted

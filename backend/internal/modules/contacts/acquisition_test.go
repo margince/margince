@@ -77,6 +77,7 @@ func TestNoAcquisitionKindIsALawfulBasis(t *testing.T) {
 		AcquiredPublicOrBusinessSource, AcquiredPurchasedOrImported, AcquiredUnknownLegacy,
 		AcquiredCRMMigration, AcquiredMailboxHistory,
 	}
+	// Hand list: commsauthz declares the bases as bare constants with no list to range over.
 	// The basis vocabulary lives in shared/ports/commsauthz. These are facts;
 	// those are conclusions argued from facts, and a value appearing in both
 	// would be a creation door granting itself permission.
@@ -84,7 +85,7 @@ func TestNoAcquisitionKindIsALawfulBasis(t *testing.T) {
 		"contract": true, "precontract_request": true, "consent": true,
 		"legitimate_interests": true, "legal_obligation": true,
 		"existing_customer_exception": true, "vital_or_security_interest": true,
-		"subject_initiated_correspondence": true, "vn_subject_agreement": true,
+		"subject_initiated_correspondence": true,
 	}
 	for _, k := range kinds {
 		if bases[k] {

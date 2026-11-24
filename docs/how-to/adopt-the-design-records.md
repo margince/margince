@@ -20,7 +20,7 @@ later page copies what it decides. Files: `companies.tsx` (over the limit: new z
   `PageAsideToggle` leaves `actions` for the `trailing` slot of the tab strip.
 - Facts line: domain · industry · size · owner · **way in** · last contact. Restore the way in: the contact
   the relationship runs through, as the `WithWayIn` story in `companyheader.stories.tsx` draws it. The lifecycle
-  control stays a control on the name line (`CompanyLifecycleControl`), with each relationship badge beside it.
+  is edited in the side rail only; the name line carries each relationship badge.
 - The live dot: `"In conversation"` from the pulse of the 360. It is absent when the pulse section is withheld.
 - Archived: `record.archivedReadOnly` once, before the verbs. The create verbs are removed.
 

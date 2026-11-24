@@ -130,7 +130,7 @@ func TestMarginceMovesADealForwardAndUndoMovesItBack(t *testing.T) {
 		v.deal, deals.VerdictStageMoveCorrection, v.next, marginceActorID); n != 1 {
 		t.Fatalf("stage-move corrections naming Margince's history row = %d, want 1", n)
 	}
-	changes, _, err := v.Deals.DealChanges(v.owner(t), ids.From[ids.DealKind](v.deal), nil, 10)
+	changes, _, err := v.Deals.DealChanges(v.owner(t), ids.From[ids.DealKind](v.deal), nil, 10, deals.DealChangeFilter{})
 	if err != nil {
 		t.Fatal(err)
 	}

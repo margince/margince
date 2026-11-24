@@ -32,7 +32,7 @@ func (s *Store) InvoiceReference(ctx context.Context, id ids.UUID) (ids.CompanyI
 		if err != nil {
 			return err
 		}
-		return auth.EnsureVisible(ctx, tx, "company", company.UUID)
+		return ensureLedgerVisible(ctx, tx, company.UUID, false)
 	})
 	if err != nil {
 		return ids.CompanyID{}, "", err

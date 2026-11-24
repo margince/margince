@@ -126,7 +126,7 @@ export const SuppressingAnswer: Story = {
     await userEvent.click(
       dialog.getByRole("radio", { name: /Value is correct/ }),
     );
-    await expect(await dialog.findByLabelText("Why")).toBeInTheDocument();
+    await expect(await dialog.findByLabelText(/^Why/)).toBeInTheDocument();
     await expect(
       await dialog.findByLabelText("Expires on"),
     ).toBeInTheDocument();

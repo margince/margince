@@ -57,7 +57,9 @@ func (said momentCopy) openPromiseMoment(ctx context.Context, now time.Time, pag
 	}
 	switch promise := next.Ref.(type) {
 	case crmcontracts.Activity:
-		return said.openPromiseFrom(ctx, now, promise), true
+		card := said.openPromiseFrom(ctx, now, promise)
+		said.callsBack(&card, promise, page.Contact)
+		return card, true
 	case crmcontracts.ConversationClaim:
 		return said.openClaimCard(now, promise), true
 	default:
@@ -205,7 +207,9 @@ func (said momentCopy) overduePromiseMoment(ctx context.Context, now time.Time, 
 	}
 	switch promise := slipped.Ref.(type) {
 	case crmcontracts.Activity:
-		return said.overdueTaskCard(ctx, now, promise), true
+		card := said.overdueTaskCard(ctx, now, promise)
+		said.callsBack(&card, promise, page.Contact)
+		return card, true
 	case crmcontracts.ConversationClaim:
 		return said.overdueClaimCard(now, promise), true
 	default:

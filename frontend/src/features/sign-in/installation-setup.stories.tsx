@@ -296,7 +296,23 @@ export const ChoosingThePlatform: Story = {
 // The wait reads the last element's own opacity rather than sleeping, so the day
 // a beat moves it still knows what "finished" means.
 export const TheIgnition: Story = {
-  ...BindingTheModel,
+  render: () => {
+    installFetchStub({
+      ...setup([
+        { step: "ai_models", configured: false },
+        { step: "oauth_app", configured: false },
+      ]),
+      "PUT /ai/provider-keys/gemini": () => new Response(null, { status: 204 }),
+      "POST /ai/provider-keys/gemini/test": () =>
+        jsonResponse({ provider: "gemini", ok: true, model_count: 3 }),
+      "PUT /ai/routing": () => new Response(null, { status: 204 }),
+    });
+    return (
+      <StoryProviders>
+        <InstallationSetup />
+      </StoryProviders>
+    );
+  },
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     await userEvent.type(

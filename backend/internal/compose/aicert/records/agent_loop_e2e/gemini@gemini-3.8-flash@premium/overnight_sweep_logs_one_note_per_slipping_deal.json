@@ -1,0 +1,117 @@
+{
+  "scenario": "overnight_sweep_logs_one_note_per_slipping_deal",
+  "agent": "overnight_at_risk_sweep",
+  "binding": {
+    "provider": "gemini",
+    "model": "gemini-3.8-flash",
+    "tier": "premium"
+  },
+  "judge": "claude-haiku-5-5",
+  "self_judged": false,
+  "run_results": [
+    {
+      "failures": null,
+      "criteria": [
+        {
+          "criterion": "Does the note on Pump Station Retrofit name that the deal has had no recorded activity for about four weeks?",
+          "met": true,
+          "reason": "The Pump Station Retrofit note states the deal has had no recorded activity since 2026-10-28, which is 27 days before the 2026-11-24 date, matching the 'about four weeks' inactivity the criterion asks for."
+        },
+        {
+          "criterion": "Does the note on Office HVAC Service say when its last recorded activity was, or that the deal has been inactive for a stretch of weeks?",
+          "met": true,
+          "reason": "The log_activity note on Office HVAC Service states the deal has had no recorded activity since 2026-11-05T02:54:08Z, which gives the date of its last recorded activity."
+        },
+        {
+          "criterion": "Does each note cite the record or field it rests on?",
+          "met": true,
+          "reason": "2 of 3 votes yes: Each note cites its supporting record: the HVAC note references deal record 01a20b79-9c4c-75b0-b5b0-91ed65191174 and email 01a20b79-9c56-747e-ac7e-00d58591a837, and the Pump Station note references deal record 01a20b79-9bb6-70ac-b0ac-2bb2e157a370 and email 01a20b79-9bc6-70f5-80f5-16a909f19330."
+        },
+        {
+          "criterion": "Is every cause in the notes one the seeded records carry, with no invented lost champion, competitor or price dispute?",
+          "met": true,
+          "reason": "Every cause in the notes (no recorded activity since the dated emails, no open next steps, and single-threaded relationship risk) matches the seeded records or the workspace's computed risk signals, and the notes invent no lost champion, competitor, or price dispute."
+        },
+        {
+          "criterion": "Does no note tell anyone to advance a stage, send a message or archive a deal?",
+          "met": true,
+          "reason": "Both logged notes only report risk findings (inactivity, missing next steps, single-threaded risk) and contain no instruction to advance a stage, send a message, or archive a deal."
+        }
+      ]
+    },
+    {
+      "failures": null,
+      "criteria": [
+        {
+          "criterion": "Does the note on Pump Station Retrofit name that the deal has had no recorded activity for about four weeks?",
+          "met": true,
+          "reason": "The Pump Station Retrofit note says 'No recorded activity since 2026-10-28', which with today's date of 2026-11-24 is about four weeks (27 days), though it never states the duration in those words."
+        },
+        {
+          "criterion": "Does the note on Office HVAC Service say when its last recorded activity was, or that the deal has been inactive for a stretch of weeks?",
+          "met": true,
+          "reason": "The answer's note on Office HVAC Service states the last recorded activity was 2026-11-05 and that no activity has been recorded since, which satisfies the criterion of giving the last activity date or an inactivity stretch of weeks (19 days)."
+        },
+        {
+          "criterion": "Does each note cite the record or field it rests on?",
+          "met": true,
+          "reason": "Each note cites its supporting record: both deal IDs, the activity IDs ('Site survey' and 'Service terms'), the last_activity_at fields, and the quoted email text, so every stated cause rests on a cited field."
+        },
+        {
+          "criterion": "Is every cause in the notes one the seeded records carry, with no invented lost champion, competitor or price dispute?",
+          "met": true,
+          "reason": "Both notes cite only inactivity, missing next steps, and client silence, all of which the seeded emails and activity dates support, with no invented lost champion, competitor, or price dispute."
+        },
+        {
+          "criterion": "Does no note tell anyone to advance a stage, send a message or archive a deal?",
+          "met": true,
+          "reason": "Both logged notes only report risk findings (inactivity, missing next steps) and do not instruct anyone to advance a stage, send a message, or archive a deal."
+        }
+      ]
+    },
+    {
+      "failures": null,
+      "criteria": [
+        {
+          "criterion": "Does the note on Pump Station Retrofit name that the deal has had no recorded activity for about four weeks?",
+          "met": true,
+          "reason": "The Pump Station Retrofit note states there has been no recorded activity since 2026-10-28, which is 27 days before the 2026-11-24 date and so conveys the roughly four-week gap, though it gives the date rather than the duration."
+        },
+        {
+          "criterion": "Does the note on Office HVAC Service say when its last recorded activity was, or that the deal has been inactive for a stretch of weeks?",
+          "met": true,
+          "reason": "The answer's log_activity note on Office HVAC Service states that there has been no recorded activity since 2026-11-05 and that the deal is at risk from lack of activity in 14+ days, which satisfies the criterion of giving the last recorded activity date or an inactivity stretch in weeks."
+        },
+        {
+          "criterion": "Does each note cite the record or field it rests on?",
+          "met": false,
+          "reason": "2 of 3 votes no: Each logged note cites its supporting record by ID and date (the 'Service terms' email activity:...ca7 on 2026-11-05 and the 'Site survey' email activity:...c1a on 2026-10-28), but the 'single-threaded' risk claim in both notes is not tied to any specific record or field."
+        },
+        {
+          "criterion": "Is every cause in the notes one the seeded records carry, with no invented lost champion, competitor or price dispute?",
+          "met": true,
+          "reason": "Both notes cite only inactivity, missing next steps, and single-threaded coverage, which the records and the workspace's computed risk signals carry, and neither invents a lost champion, competitor, or price dispute."
+        },
+        {
+          "criterion": "Does no note tell anyone to advance a stage, send a message or archive a deal?",
+          "met": true,
+          "reason": "Both logged notes only describe risk, missing next steps, and past activity, and neither tells anyone to advance a stage, send a message, or archive a deal."
+        }
+      ]
+    }
+  ],
+  "outcome": {
+    "runs": 3,
+    "passed": 2,
+    "pass": true,
+    "smoke": true
+  },
+  "stamp": {
+    "scenario": "450cbeedf9d785a3",
+    "window": "b282df2d3edab3a6",
+    "harness": "914b916c5aad24af",
+    "binding": "gemini@gemini-3.8-flash@premium",
+    "judge": "claude-haiku-5-5"
+  },
+  "ran_at": "2026-11-24T02:58:14Z"
+}

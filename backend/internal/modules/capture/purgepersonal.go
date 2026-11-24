@@ -155,10 +155,10 @@ func personalPurgeDue(seatCol string) string {
 // scope above replaces it: inbound, connector-captured, unlinked, and inside
 // the verdict's reach. A verdict no human confirmed also waits four times as long.
 //
-// Read-only, and shaped like SelectPurgeSubjectTx so a preview and the sweep
-// itself get the same answer: the statutory shield is a COLUMN rather than a
-// filter, because an owner told their mail is gone must not find it still
-// there.
+// Read-only. Unlike SelectPurgeSubjectTx the shields are a filter here, so the
+// batch limit counts only mail the sweep may destroy. Otherwise a seat whose
+// oldest due mail is all held would spend every batch on it. CountPersonalKeptTx
+// reports what the shields keep, so the receipt does not depend on the batch.
 func SelectPersonalPurgeTx(
 	ctx context.Context, tx pgx.Tx, user ids.UUID, windows PersonalPurgeWindows, floor StatutoryFloor, limit int, activities ...ids.UUID,
 ) (PurgeSubject, error) {
@@ -180,14 +180,14 @@ func SelectPersonalPurgeTx(
 		selected = " AND a.id = ANY($" + strconv.Itoa(len(args)) + ")"
 	}
 	rows, err := tx.Query(ctx, `
-		SELECT a.id,
-		       `+withheldReason(shielded, floor.shieldedAs())+` AS withheld,
-		       `+importersOfActivity+` AS importers
+		SELECT a.id, '' AS withheld, `+importersOfActivity+` AS importers
 		  FROM activity a
 		  JOIN capture_import i ON i.activity_id = a.id AND i.user_id = $3
 		  JOIN capture_pending_counterparty p
 		    ON p.email = a.counterparty_email AND p.owner_id = $3
-		 WHERE `+personalPurgeDue("$3")+selected+`
+		 WHERE `+personalPurgeDue("$3")+`
+		   AND a.restricted_at IS NULL
+		   AND NOT `+personalKeptByShield(shielded)+selected+`
 		 ORDER BY a.id
 		 LIMIT `+limitAt, args...)
 	if err != nil {

@@ -12,12 +12,15 @@
 // open, nobody replied — which is the judgment a brief exists to make and which
 // the claim's own nature label governs separately.
 //
-// What is checkable is deliberately narrow: DATES, PERCENTAGES and the
-// CURRENCY a figure is in. Counts and money magnitudes are not, because they
-// are routinely derived rather than read — three open deals, fourteen days, a
-// pipeline worth the sum of its rows — and the payload holds the parts. See
-// numbers.go, which states the case; the product's own deterministic floor is
-// the proof.
+// What In and Missing check is narrow: DATES, PERCENTAGES and the CURRENCY a
+// figure is in. Counts and bare money magnitudes are not, because they are
+// routinely derived rather than read. Examples are three open deals, fourteen
+// days, and a pipeline worth the sum of its rows. See numbers.go.
+//
+// A sum of money is held separately, by MoneyMissing, as one (currency, value)
+// pair against the pairs the source states. It suits a source that carries every
+// total the product itself calculated, so a derived sum is refused unless the
+// product computed it.
 //
 // The comparison is on canonical VALUES, never on substrings, because the
 // product writes in the reader's language: 2 June, 2. Juni, 2026-06-02 and

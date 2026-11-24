@@ -31,6 +31,10 @@ const (
 // timestamp cell named a day without a time. It is no column of the file.
 const activityTypedPrecision = "occurred_precision"
 
+// activityPendingLinks is the typed key that carries the refs of the upload's
+// own rows a dry run has linked. The commit finds those rows, so never sets it.
+const activityPendingLinks = "pending_links"
+
 // activityStoredColumns names the stored activity's JSON field for each target
 // the file spells differently. The duration is compared in seconds, the unit
 // the cell check typed it in.

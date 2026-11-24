@@ -9,7 +9,6 @@ import (
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
-	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -21,11 +20,7 @@ func (h Handlers) WithListMembers(resolve storekit.ListMemberFilterResolver) Han
 	return h
 }
 
-// memberFilter resolves a list_id parameter the caller sent for one record type. With lists
-// switched off a list id names nothing, so it answers not found.
+// memberFilter resolves a list_id parameter the caller sent for one record type.
 func (h Handlers) memberFilter(ctx context.Context, listID openapi_types.UUID, entityType string) (storekit.ListMemberFilter, error) {
-	if h.listMembers == nil {
-		return nil, apperrors.ErrNotFound
-	}
-	return h.listMembers(ctx, ids.UUID(listID), entityType)
+	return storekit.ResolveListMembership(ctx, new(ids.UUID(listID)), h.listMembers, entityType)
 }

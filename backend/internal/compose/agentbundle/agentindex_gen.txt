@@ -258,6 +258,8 @@ Every call a passport can make, grouped by area. Find the operationId in openapi
 | `GET /deals/{id}/status` | getDealStatus | Where the deal stands, what could lose it, and the one thing to do next. | Read records | at once |
 | `POST /deals/{id}/move/dismiss` | dismissDealMove | Set the deal card's move aside for me until it changes. | Change records | at once |
 | `DELETE /deals/{id}/move/dismiss` | restoreDealMove | Put a set-aside move back on the deal card, the undo behind "Not now". | Change records | at once |
+| `POST /deals/{id}/manager-request` | requestDealManager | Ask the team's manager to look at this deal. | Change records | at once |
+| `DELETE /deals/{id}/manager-request` | clearDealManagerRequest | Mark the manager request on this deal as handled. | Change records | at once |
 | `GET /deals/{id}/coverage` | getDealCoverage | Who covers this deal, and what is wrong with how it is covered. | Read records | at once |
 | `GET /deals/{id}/commitments` | getDealCommitments | What the customer committed to that this deal waits on. | Read records | at once |
 | `POST /deals/{id}/role-proposals` | proposeDealRoles | Read the buying roles out of what this deal's contacts have written. | Use AI and buy data | at once |

@@ -58,8 +58,8 @@ func (s *Store) AcceptAppliedChange(ctx context.Context, dealID ids.DealID, chan
 		if err := stampChangeAccepted(ctx, tx, dealID, changeID); err != nil {
 			return err
 		}
-		before := map[string]any{"applied_change": acceptedChangeAudit{ID: changeID.String(), Accepted: false}}
-		after := map[string]any{"applied_change": acceptedChangeAudit{ID: changeID.String(), Accepted: true}}
+		before := map[string]any{auditAppliedChange: acceptedChangeAudit{ID: changeID.String(), Accepted: false}}
+		after := map[string]any{auditAppliedChange: acceptedChangeAudit{ID: changeID.String(), Accepted: true}}
 		auditID, err := storekit.Audit(ctx, tx, "update", "deal", dealID.UUID, before, after)
 		if err != nil {
 			return err

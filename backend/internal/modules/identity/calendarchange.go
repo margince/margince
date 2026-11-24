@@ -53,7 +53,7 @@ func (s *InstallationSettingsStore) changeCalendarTx(ctx context.Context, tx pgx
 	}
 	var before ReportingCalendar
 	var err error
-	if before.Timezone, err = TimezoneOf(ctx, tx); err != nil {
+	if before.Timezone, err = timezoneOf(ctx, tx); err != nil {
 		return err
 	}
 	if before.FiscalYearStartMonth, err = FiscalYearStartMonthOf(ctx, tx); err != nil {

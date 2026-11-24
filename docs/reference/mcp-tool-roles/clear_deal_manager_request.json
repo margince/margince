@@ -1,0 +1,19 @@
+{
+  "tool": "change_attention",
+  "action": "clear_deal_manager_request",
+  "verb": "clear_deal_manager_request",
+  "allowed_for": [
+    "admin",
+    "management",
+    "manager"
+  ],
+  "refused_for": [
+    "ops",
+    "read_only",
+    "rep"
+  ],
+  "colleague_record": {
+    "manager": "refused",
+    "rep": "refused"
+  }
+}

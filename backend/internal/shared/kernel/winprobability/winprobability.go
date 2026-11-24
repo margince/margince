@@ -7,11 +7,31 @@
 // other.
 package winprobability
 
-import "fmt"
+import (
+	"fmt"
+	"strings"
+)
 
 // SQL is the deal's effective win probability over a deal alias. A scalar
 // subquery, so a caller needs no join.
 func SQL(deal string) string {
 	return fmt.Sprintf("COALESCE(%[1]s.win_probability_override, "+
 		"(SELECT wp_stage.win_probability FROM stage wp_stage WHERE wp_stage.id = %[1]s.stage_id))", deal)
+}
+
+// Rebind replaces the stored-probability expression over a deal alias in sql
+// with another expression, such as the win chance. A statement built from SQL
+// stays valid when nothing rebinds it: it then reads the stored probability.
+// bind runs only when the statement holds the expression, so a caller adds
+// operands for a chance it uses.
+func Rebind(sql, deal string, bind func() (string, error)) (string, error) {
+	stored := SQL(deal)
+	if !strings.Contains(sql, stored) {
+		return sql, nil
+	}
+	expr, err := bind()
+	if err != nil {
+		return "", err
+	}
+	return strings.ReplaceAll(sql, stored, "("+expr+")"), nil
 }

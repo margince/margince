@@ -170,6 +170,39 @@ func movementToWire(reading Reading, in Movement) crmcontracts.ForecastMovement 
 		wire.Causes = &causes
 		out.Deals = append(out.Deals, wire)
 	}
+	out.FocusActions = focusActionsToWire(in.FocusActions)
+	return out
+}
+
+// focusActionsToWire renders the attribution; nil stays absent.
+func focusActionsToWire(in *FocusAttribution) *crmcontracts.ForecastMovementFocusActions {
+	if in == nil {
+		return nil
+	}
+	out := &crmcontracts.ForecastMovementFocusActions{
+		AmountMinor: in.AmountMinor, ShareBps: in.ShareBps,
+		Deals: make([]crmcontracts.ForecastMovementFocusDeal, 0, len(in.Deals)),
+	}
+	for _, deal := range in.Deals {
+		wire := crmcontracts.ForecastMovementFocusDeal{
+			AmountMinor: deal.AmountMinor,
+			Actions:     make([]crmcontracts.ForecastMovementFocusAction, 0, len(deal.Actions)),
+		}
+		if parsed, err := ids.Parse(deal.DealID); err == nil {
+			wire.DealId = openapi_types.UUID(parsed)
+		}
+		for _, action := range deal.Actions {
+			row := crmcontracts.ForecastMovementFocusAction{
+				ActivityId: openapi_types.UUID(action.ActivityID),
+				Kind:       crmcontracts.ForecastMovementFocusActionKind(action.Kind), At: action.At,
+			}
+			if action.Subject != "" {
+				row.Subject = &action.Subject
+			}
+			wire.Actions = append(wire.Actions, row)
+		}
+		out.Deals = append(out.Deals, wire)
+	}
 	return out
 }
 

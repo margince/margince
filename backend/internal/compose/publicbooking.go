@@ -18,6 +18,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/margince/margince/backend/internal/compose/readerlocale"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/platform/httperr"
@@ -132,7 +133,7 @@ func publicBooking(store *activities.Store, svc *identity.Service, limits public
 				return
 			}
 			ctx := principal.WithWorkspaceID(r.Context(), wsID.UUID)
-			ctx = systemtext.WithLocale(ctx, publicPreviewLocale(r))
+			ctx = systemtext.WithLocale(ctx, readerlocale.Anonymous(r))
 			ctx = principal.WithActor(ctx, principal.Principal{
 				Type: principal.PrincipalSystem,
 				ID:   "system:public_booking",

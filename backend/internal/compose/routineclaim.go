@@ -30,7 +30,7 @@ type routineClaim struct {
 }
 
 func routineBriefEngine(pool *pgxpool.Pool) *briefs.BriefEngine {
-	return briefs.NewBriefEngine(pool, contacts.NewStore(InstallationDB(pool)))
+	return briefs.NewBriefEngine(pool, contacts.NewStore(InstallationDB(pool))).WithWinChances(chances.WinChances)
 }
 
 // routineBriefWorker is the morning writer the weekly and digest sends borrow

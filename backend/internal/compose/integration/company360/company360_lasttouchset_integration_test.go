@@ -212,3 +212,49 @@ func setMeeting(t *testing.T, owner *pgx.Conn, id ids.UUID, status string) {
 		t.Fatalf("making activity %s a %s meeting: %v", id, status, err)
 	}
 }
+
+// Each company's direction clocks come from its own current employees, in one
+// read over several companies. A contact who left an account for another one
+// moves the new account's clocks and no longer moves the old one's.
+func TestTheSetLastTouchReadsEachCompanysOwnRoster(t *testing.T) {
+	e := integration.Setup(t)
+	owner := integration.OwnerConn(t)
+	rep := e.As(e.Rep1, []ids.UUID{e.Team1}, integration.AccountRepPerms)
+
+	oldAccount := e.SeedCompany(t, "Former Employer GmbH", &e.Rep1)
+	newAccount := e.SeedCompany(t, "New Employer AG", &e.Rep1)
+	stayer := e.SeedContact(t, "Sam Stayer", &e.Rep1)
+	mover := e.SeedContact(t, "Mia Mover", &e.Rep1)
+	left := time.Date(2026, 3, 1, 0, 0, 0, 0, time.UTC)
+	employAt(t, e, stayer, oldAccount, nil)
+	employAt(t, e, mover, oldAccount, &left)
+	employAt(t, e, mover, newAccount, nil)
+
+	stayerReply := integration.AccountMailDirectedAt(t, owner, e.WS, "stayer reply", "inbound", company360Clock.Add(-30*time.Hour))
+	integration.LinkActivity(t, owner, stayerReply, "contact", stayer)
+	integration.LinkActivitySender(t, owner, stayerReply, stayer)
+	ourNudge := integration.AccountMailDirectedAt(t, owner, e.WS, "nudge to stayer", "outbound", company360Clock.Add(-2*time.Hour))
+	integration.LinkActivity(t, owner, ourNudge, "contact", stayer)
+	moverOnOldAccount := integration.AccountMailDirectedAt(t, owner, e.WS, "mover writes about the old account", "inbound", company360Clock.Add(-3*time.Hour))
+	integration.LinkToCompany(t, e, moverOnOldAccount, oldAccount)
+	integration.LinkActivitySender(t, owner, moverOnOldAccount, mover)
+	moverReply := integration.AccountMailDirectedAt(t, owner, e.WS, "mover reply", "inbound", company360Clock.Add(-1*time.Hour))
+	integration.LinkActivity(t, owner, moverReply, "contact", mover)
+	integration.LinkActivitySender(t, owner, moverReply, mover)
+
+	touched := lastTouchFor(rep, t, e, []ids.UUID{oldAccount, newAccount})
+	old := touched[ids.From[ids.CompanyKind](oldAccount)]
+	if old.InboundAt == nil || !old.InboundAt.Equal(company360Clock.Add(-30*time.Hour)) {
+		t.Errorf("former employer's last inbound = %v, want the stayer's reply at -30h: a contact who left moved its clock", old.InboundAt)
+	}
+	if old.OutboundAt == nil || !old.OutboundAt.Equal(company360Clock.Add(-2*time.Hour)) {
+		t.Errorf("former employer's last outbound = %v, want the nudge at -2h", old.OutboundAt)
+	}
+	fresh := touched[ids.From[ids.CompanyKind](newAccount)]
+	if fresh.InboundAt == nil || !fresh.InboundAt.Equal(company360Clock.Add(-1*time.Hour)) {
+		t.Errorf("new employer's last inbound = %v, want the mover's reply at -1h", fresh.InboundAt)
+	}
+	if fresh.OutboundAt != nil {
+		t.Errorf("new employer's last outbound = %v, want none: the stayer's nudge belongs to the other account", fresh.OutboundAt)
+	}
+}

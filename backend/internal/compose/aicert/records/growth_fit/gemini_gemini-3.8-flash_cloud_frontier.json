@@ -3,7 +3,7 @@
   "provider": "gemini",
   "served_model": "gemini-3.8-flash",
   "env_class": "cloud_frontier",
-  "prompt_version": "pe109d99a962e70b2489d94bfc098bd38",
+  "prompt_version": "p18b55d74b768b01eb1e54f107b375b33",
   "corpus_version": "v1",
   "verdict": "certified",
   "runs": 12,
@@ -42,7 +42,7 @@
     {
       "scenario": "growth_fit_reads_their_facts_against_our_offering",
       "site": "growth_fit",
-      "stamp": "5f45d7b1fd0c2d01637ecaa95a245f513e1536e58ef1a2b729f092f6422e1582d7d71df40df42563f3ba31cadaee9b55f1beedba2415823f7f7f69a16fef918f57f7d51f37dfca3e5c0985694c2808edbf12d5f9686cc4f6a77b70652174ce95",
+      "stamp": "5f45d7b1fd0c2d01637ecaa95a245f513e1536e58ef1a2b729f092f6422e1582d7d71df40df42563f3ba31cadaee9b55f1beedba2415823f7f7f69a16fef918f57465fe6fd77819d767948f95fb9e8fec082f54d3e306a25fd8b26c979fa7305",
       "verdict": "certified",
       "judge_band": "certified",
       "runs": 6,
@@ -68,7 +68,7 @@
     {
       "scenario": "growth_fit_calls_a_company_outside_our_market_weak",
       "site": "growth_fit",
-      "stamp": "aada1330e0a60630ed627dadccb6ac6b523ef14b502aa544fa729057ccbd033cc10424df5c113e2dc04e64a8a092ae124d033a80bc9f1b53f22bd7d7401532b174e863a5b69583b3e204686efda9c29412b574e7a19dfba67d17d266be96b2f1",
+      "stamp": "aada1330e0a60630ed627dadccb6ac6b523ef14b502aa544fa729057ccbd033cc10424df5c113e2dc04e64a8a092ae124d033a80bc9f1b53f22bd7d7401532b17c8f07e1053c3dc6decf5077a127850f8276cf4c201e23004be53f3dbd778cd3",
       "verdict": "certified",
       "judge_band": "certified",
       "runs": 6,

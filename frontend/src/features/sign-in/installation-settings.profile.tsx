@@ -95,6 +95,7 @@ export function InstallationProfileDialog({
   blanketError: string | null;
   describe: (control: FieldControl) => string | undefined;
   onChange: (next: InstallationSettings) => void;
+  /** Discards the draft. Cancel calls it at once; the X, Escape and the backdrop ask first. */
   onClose: () => void;
   onSubmit: () => void;
 }>) {
@@ -125,7 +126,13 @@ export function InstallationProfileDialog({
     asked.current?.focus();
   }, [focus]);
   return (
-    <Modal open onClose={onClose} labelledBy={titleId} intent="drawer">
+    <Modal
+      open
+      onClose={onClose}
+      labelledBy={titleId}
+      intent="drawer"
+      unsaved={dirty}
+    >
       <DrawerHead>
         <Heading size="large" id={titleId} className="t-h2">
           {t(

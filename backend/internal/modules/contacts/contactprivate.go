@@ -12,6 +12,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 // RetractCaptureOnlyContactTx archives a contact capture created, once the
@@ -96,10 +97,7 @@ func (s *Store) RetractCaptureOnlyContactTx(
 		     AND p.archived_at IS NULL
 		     AND p.owner_id = $2
 		     AND (p.captured_by LIKE 'connector:%' OR p.captured_by LIKE 'agent:%')
-		     AND NOT EXISTS (
-		           SELECT 1 FROM audit_log a
-		            WHERE a.entity_type = 'contact' AND a.entity_id = p.id
-		              AND (a.actor_type = 'human' OR a.on_behalf_of IS NOT NULL))
+		     AND `+contactNotWorkedOnSQL("p")+`
 		     AND NOT EXISTS (
 		           SELECT 1 FROM capture_sender_override o
 		            JOIN contact_email pe ON pe.contact_id = p.id AND pe.archived_at IS NULL
@@ -125,7 +123,7 @@ func (s *Store) RetractCaptureOnlyContactTx(
 	// The one spelling of archiving a contact inside a transaction: it lands the
 	// write shape — the audit row and the satellites — so a retraction is
 	// recoverable and auditable exactly like a human's archive.
-	if err := archiveContactRows(ctx, tx, id, time.Now().UTC(), nil); err != nil {
+	if err := archiveContactRows(ctx, tx, id, time.Now().UTC(), nil, nil); err != nil {
 		return false, fmt.Errorf("contacts: retracting a captured contact: %w", err)
 	}
 	return true, nil
@@ -220,4 +218,16 @@ func lockSenderOverridesTx(ctx context.Context, tx pgx.Tx, id ids.ContactID, own
 		}
 	}
 	return nil
+}
+
+// contactNotWorkedOnSQL holds when no user, agent or approval has acted on the
+// contact. Capture's connector names the mailbox owner in on_behalf_of too, so
+// its own rows are no evidence of anybody's work. contact is a compile-time
+// literal alias.
+func contactNotWorkedOnSQL(contact string) string {
+	return `NOT EXISTS (
+		           SELECT 1 FROM audit_log a
+		            WHERE a.entity_type = 'contact' AND a.entity_id = ` + contact + `.id
+		              AND (a.actor_type = 'human'
+		                   OR (a.on_behalf_of IS NOT NULL AND a.actor_type <> '` + string(principal.PrincipalConnector) + `')))`
 }

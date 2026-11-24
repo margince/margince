@@ -325,8 +325,8 @@ function conversationRefusal(
 function PreviewBanner() {
   const t = useT();
   return (
-    <Callout tone="info" kind="standing" title={t("buyer.previewBannerTitle")}>
-      {t("buyer.previewBanner")}
+    <Callout tone="info" kind="standing" title={t("room.previewBannerTitle")}>
+      {t("room.previewBanner")}
     </Callout>
   );
 }

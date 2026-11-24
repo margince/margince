@@ -37,7 +37,7 @@
 // Two more tables back the undo of an owner identity.
 // capture_owner_identity_withdrawn holds a withdrawn identity for the ten
 // minutes of its undo. capture_alias_refused holds a learned alias the seat
-// withdrew, which discovery never claims again.
+// withdrew, or an address it said it does not receive. Discovery never claims it.
 //
 // Imports shared + platform only; never a sibling module.
 package capture

@@ -35,6 +35,9 @@ func NameBirthRosterTx(ctx context.Context, tx pgx.Tx, activityID ids.ActivityID
 	if seat == ids.Nil || len(addresses) == 0 {
 		return 0, nil
 	}
+	if err := storekit.LockMeetingAttendeeWrites(ctx, tx, activityID.UUID); err != nil {
+		return 0, err
+	}
 	tag, err := tx.Exec(ctx, `
 		UPDATE activity_participant ap SET `+storekit.StoreRosterSeatsSQL("ARRAY[$2::uuid]")+`
 		  FROM activity a

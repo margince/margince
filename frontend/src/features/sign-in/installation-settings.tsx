@@ -286,11 +286,13 @@ function InstallationSettingsForm({
   };
 
   const dirty = EDITABLE_FACTS.some((fact) => draft[fact] !== settings[fact]);
-  // The claim the Save button's own condition was already making privately.
-  // It outlives the dialog on purpose: dismissing the dialog does not destroy
-  // what was typed (the draft is still here, and reopening Edit shows it), so
-  // an unsaved edit is still an unsaved edit on the way out of the page.
   useUnsavedGuard(dirty);
+  const discard = () => {
+    setDraft(settings);
+    faults.show(new Map());
+    update.reset();
+    setEditing(null);
+  };
 
   // Only changed fields are sent: the patch is sparse, and sending an
   // unchanged base currency would ask the server to write a value that may be
@@ -467,7 +469,7 @@ function InstallationSettingsForm({
           blanketError={blanket}
           describe={describe}
           onChange={edit}
-          onClose={() => setEditing(null)}
+          onClose={discard}
           onSubmit={submit}
         />
       )}

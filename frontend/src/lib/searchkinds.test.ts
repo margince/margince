@@ -21,6 +21,7 @@ import {
   searchHitGroup,
   searchHitHasCard,
   searchHitRoute,
+  searchTimedOutLines,
 } from "./searchkinds";
 
 // Where a hit goes, asked of the one place that knows.
@@ -262,5 +263,27 @@ describe("bestIdentifierMatch", () => {
         { type: "lead", id: "old", title: "Lena", score: 1 },
       ]),
     ).toBeUndefined();
+  });
+});
+
+describe("searchTimedOutLines", () => {
+  const t: Translator = (key, params) => translate("en", key, params);
+
+  it("names a type by the label of its Show only pill", () => {
+    expect(searchTimedOutLines(["activity"], t, [])).toEqual([
+      "Emails and activities could not be searched for this word in time. Add another word to search them.",
+    ]);
+  });
+
+  it("labels an extension kind from the directory and skips a type it does not know", () => {
+    const lines = searchTimedOutLines(["ext:hotel:room", "mystery"], t, [
+      { name: "ext:hotel:room", display_name: "Room" },
+    ]);
+    expect(lines).toHaveLength(1);
+    expect(lines[0]).toMatch(/^Room could not be searched/);
+  });
+
+  it("is empty when no type timed out", () => {
+    expect(searchTimedOutLines([], t, [])).toEqual([]);
   });
 });

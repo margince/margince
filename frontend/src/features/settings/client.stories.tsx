@@ -46,7 +46,7 @@ function searchPage(hits: readonly unknown[]) {
 async function lookUpSender({ canvasElement }: { canvasElement: HTMLElement }) {
   const canvas = within(canvasElement);
   const user = userEvent.setup();
-  await user.type(canvas.getByLabelText("Sender"), "bettina@brandt.example");
+  await user.type(canvas.getByLabelText(/^Sender/), "bettina@brandt.example");
   await user.click(canvas.getByRole("button", { name: "Look up" }));
 }
 

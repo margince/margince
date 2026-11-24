@@ -31,6 +31,7 @@
     "DELETE /v1/deals/{id}": "archive_record",
     "DELETE /v1/deals/{id}/documents/{attachmentId}/hide": "unhide_deal_document",
     "DELETE /v1/deals/{id}/lines/{lineId}": "remove_deal_line",
+    "DELETE /v1/deals/{id}/manager-request": "clear_deal_manager_request",
     "DELETE /v1/deals/{id}/move/dismiss": "restore_deal_move",
     "DELETE /v1/finance/source": "disconnect_finance_source",
     "DELETE /v1/finance/source/customers/{external_id}/link": "unlink_finance_customer",
@@ -687,6 +688,7 @@
     "POST /v1/deals/{id}/legal-reviews": "request_legal_review",
     "POST /v1/deals/{id}/lines": "add_deal_line",
     "POST /v1/deals/{id}/lines/estimate": "use_deal_estimate",
+    "POST /v1/deals/{id}/manager-request": "request_deal_manager",
     "POST /v1/deals/{id}/move-pipeline": "move_deal_pipeline",
     "POST /v1/deals/{id}/move/dismiss": "dismiss_deal_move",
     "POST /v1/deals/{id}/offers": "create_record",
@@ -1254,6 +1256,7 @@
       "note",
       "owner_id",
       "record_type",
+      "stage_id",
       "tag_id",
       "task",
       "verb"
@@ -1348,6 +1351,9 @@
     "clear_activity_disposition": [
       "id",
       "scope"
+    ],
+    "clear_deal_manager_request": [
+      "id"
     ],
     "clear_lead_manual_signal": [
       "factor",
@@ -2131,6 +2137,7 @@
       "filename"
     ],
     "import_vcards": [
+      "company_id",
       "content_base64",
       "content_type",
       "filename"
@@ -2333,8 +2340,11 @@
       "id"
     ],
     "list_deal_margince_changes": [
+      "change_kind",
       "cursor",
-      "id"
+      "id",
+      "note_activity_id",
+      "stage_history_id"
     ],
     "list_deal_products": [
       "id"
@@ -3164,6 +3174,10 @@
     ],
     "request_company_vat_check": [
       "id"
+    ],
+    "request_deal_manager": [
+      "id",
+      "request_body"
     ],
     "request_details_confirmation": [
       "id",

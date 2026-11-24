@@ -51,6 +51,7 @@ var readReportsCopy = toolCopy{
 		"and won companies gone silent. report_run_cell_records, analytics_cell_records and " +
 		"question_card_records name the records behind one figure.",
 	Limits: "Read only. Every figure names its coverage and when it was captured; quote both. " +
+		"A partial coverage with nothing priced is not a figure to report. " +
 		"read_workspace topic report_vocabulary names what each run report takes.",
 	Instead: "For a written section a reader keeps, such as a board pack, use read_analytics: " +
 		"query with save, then compose. Use read_forecast for what a period is expected to close, and " +

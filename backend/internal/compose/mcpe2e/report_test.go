@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"os"
 	"path/filepath"
+	"reflect"
 	"slices"
 	"strings"
 	"testing"
@@ -121,7 +122,7 @@ func TestTheStampsTheLaneFilesAreWrittenWhole(t *testing.T) {
 	if err := json.Unmarshal(body, &written); err != nil {
 		t.Fatal(err)
 	}
-	if len(written) != 2 || written["case1_log"] != stampsAt(t, root, DoorREST)["case1_log"] {
+	if len(written) != 2 || !reflect.DeepEqual(written["case1_log"], stampsAt(t, root, DoorREST)["case1_log"]) {
 		t.Errorf("wrote %v", written)
 	}
 }
@@ -173,5 +174,46 @@ func TestAnOlderVerdictsToolsCountOnlyWhenEveryRunPassed(t *testing.T) {
 	}
 	if got := (Verdict{Passed: 2, Runs: 3, ToolsCalled: tools}).PassingTools(); got != nil {
 		t.Errorf("a run failed: PassingTools() = %v, want none, since the union may hold its tools", got)
+	}
+}
+
+// A parser fix is read against the driver a verdict ran through. The report and
+// the newly-stale list name the gpt verdict, and the claude one stays current.
+func TestAParserFixStalesOnlyTheVerdictsOfItsDriver(t *testing.T) {
+	base, head := tree(t), tree(t)
+	stamp := RecordedStamp{Stamp: stampsOf(t, base)["case2_read"], Commit: "c"}
+	for _, root := range []string{base, head} {
+		for folder, driver := range map[string]string{"gpt": "gpt:cli", "claude": "claude:cli"} {
+			dir := filepath.Join(root, VerdictTrees[DoorMCP], folder)
+			if err := os.MkdirAll(dir, 0o750); err != nil {
+				t.Fatal(err)
+			}
+			body, err := json.Marshal(map[string]any{"scenario": "case2_read", "driver": driver, "stamp": stamp})
+			if err != nil {
+				t.Fatal(err)
+			}
+			if err := os.WriteFile(filepath.Join(dir, "case2_read.json"), body, 0o600); err != nil {
+				t.Fatal(err)
+			}
+		}
+	}
+	edit(t, head, transcriptFile, "return 'codex'", "return 'codex, fixed'")
+	lines, err := Report(head)
+	if err != nil {
+		t.Fatal(err)
+	}
+	stale := map[string][]string{}
+	for _, line := range lines {
+		stale[line.Folder] = line.Why
+	}
+	if !slices.Equal(stale["gpt"], []string{"transcript parser"}) || len(stale["claude"]) != 0 {
+		t.Errorf("report = %v, want gpt stale for its parser and claude current", stale)
+	}
+	newly, err := NewlyStale(base, head)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(newly) != 1 || newly[0].Folder != "gpt" {
+		t.Errorf("newly stale = %+v, want only the gpt verdict", newly)
 	}
 }

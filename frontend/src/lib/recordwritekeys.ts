@@ -57,6 +57,8 @@ const RECORD_WRITE_KEYS: Record<EntityKind, (id: string) => QueryKey[]> = {
     ["account-scan", id],
     // The fit's completeness counts the profile fields and facts a write changes.
     ["company-growth-fit", id],
+    // The dossier's prose cites the profile fields and facts a write changes.
+    ["company-dossier", id],
     ...derivedRecordKeys("company", id),
   ],
   deal: (id) => dealRecordKeys(id),

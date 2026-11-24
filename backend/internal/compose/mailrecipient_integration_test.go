@@ -276,7 +276,7 @@ func TestProductionHelpAndPartialWeekPreviews(t *testing.T) {
 	// A week already closed: the meeting row's created_at is the database's now(),
 	// after the week, so its occurred_at alone sets the partial boundary.
 	start := previewWeek(t).AddDate(0, 0, -21)
-	plan := weeklyPlanStore(e.Pool)
+	plan := WeeklyPlanStore(e.Pool)
 	commitment, err := plan.AddCommitment(e.repCtx, start, weeklyplan.NewCommitment{Label: "Northstar renewal", DueOn: &start})
 	if err != nil {
 		t.Fatal(err)

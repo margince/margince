@@ -16,6 +16,7 @@ import (
 
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	"github.com/margince/margince/backend/internal/compose/extai"
 	"github.com/margince/margince/backend/internal/modules/agents/runner"
 	"github.com/margince/margince/backend/internal/modules/ai"
 	"github.com/margince/margince/backend/internal/modules/contacts"
@@ -85,7 +86,7 @@ type ModelPath struct {
 	GrowthFit       completer
 	DraftReply      completer               // activity-anchored email reply drafting
 	Rewrite         completer               // the rewrite verbs over a rep's own words, premium first
-	ExtensionTask   func(ai.Task) completer // one task a unit declared in api/ai-tasks.yaml
+	ExtensionTasks  func(ai.Task) completer // one task a unit declared in api/ai-tasks.yaml, for Runtime.Models
 	ChatSummary     completer               // judges and summarises a linked chat channel's talk
 	ChatTaskReading completer               // reads a filed chat screenshot against its record's open tasks
 	OfferDraft      completer               // the offer regenerate-from-signal drafting call
@@ -162,7 +163,8 @@ type ModelPath struct {
 	// it has to be able to ask what its binding can carry before it sends any.
 	DocumentExtract documentCompleter
 	// Enrich is the §2.9 evidence-or-omit signature field extraction lane.
-	Enrich completer
+	Enrich        completer
+	ExtensionTask extai.Lane // the lane every Runtime.AI call rides; no unit holds a provider client
 	// ProposeRoles reads a deal's buying roles out of what its contacts wrote.
 	// The one lane in this struct with NO floor behind it: every other absent
 	// lane degrades to a deterministic answer, and a buying role has none —
@@ -360,7 +362,7 @@ func modelPathForRouter(router *ai.Router, companyContext *companyContextProvide
 		GrowthFit:                     brain(ai.TaskGrowthFit),
 		DraftReply:                    brain(ai.TaskDraftReply),
 		Rewrite:                       brain(ai.TaskRewrite),
-		ExtensionTask:                 func(task ai.Task) completer { return brain(task) },
+		ExtensionTasks:                func(task ai.Task) completer { return brain(task) },
 		ChatSummary:                   brain(ai.TaskChatSummary),
 		ChatTaskReading:               brain(ai.TaskChatTaskReading),
 		OfferDraft:                    brain(ai.TaskOfferDraft),
@@ -369,6 +371,7 @@ func modelPathForRouter(router *ai.Router, companyContext *companyContextProvide
 		RequestSettlement:             brain(ai.TaskRequestSettlement),
 		DealVerdict:                   brain(ai.TaskDealVerdict),
 		TagSuggest:                    brain(ai.TaskTagSuggest),
+		ExtensionTask:                 brain(ai.TaskExtensionTask),
 		CaptureCounterpartyVerdict:    brain(ai.TaskCaptureCounterpartyVerdict),
 		CaptureConfidentialityVerdict: brain(ai.TaskCaptureConfidentialityVerdict),
 		SignalExtract:                 brain(ai.TaskSignalExtract),

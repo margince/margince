@@ -414,6 +414,7 @@ export function companyEditFields(
       required: true,
       label: "company.lifecycle",
       type: "select",
+      hint: t("company.lifecycle.live.help"),
       options: LIFECYCLE_OPTIONS.map((value) => ({
         value,
         label: t(labelFor(LIFECYCLE_LABELS, value)),

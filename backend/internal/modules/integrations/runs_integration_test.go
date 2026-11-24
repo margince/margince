@@ -127,6 +127,14 @@ func setupRuns(t *testing.T, cfg runsConfig) *runsEnv {
 			t.Fatal(err)
 		}
 	}
+	// The package's tests share one database: a contact left live would take a
+	// place in the next test's sweep.
+	t.Cleanup(func() {
+		if _, err := owner.Exec(context.Background(), `UPDATE contact SET archived_at = now() WHERE id = ANY($1)`,
+			[]ids.ContactID{e.mine, e.theirs, e.theirsInBook}); err != nil {
+			t.Errorf("archiving the environment's contacts: %v", err)
+		}
+	})
 
 	// provider_connection is unique per provider — it is installation-owned,
 	// so there is exactly one row per provider for the whole database. Upsert

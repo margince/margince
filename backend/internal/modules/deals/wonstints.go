@@ -26,7 +26,14 @@ var wonStintsSQL = wonStints(false)
 // whose both ends were moves made in this installation, and archived wins too.
 // The forecast learns only from recorded history, and an archived win is a win.
 // The paces keep their legacy-inclusive, live-only rule.
-func wonStints(recordedOnly bool) string {
+//
+// pipeline is the clause that selects the deals; it defaults to the deals of
+// pipeline $1.
+func wonStints(recordedOnly bool, pipeline ...string) string {
+	scope := "d.pipeline_id = $1"
+	if len(pipeline) > 0 {
+		scope = pipeline[0]
+	}
 	live := " AND d.archived_at IS NULL"
 	ends := stagemove.NotMadeElsewhereSQL("provenance") + " AND " + stagemove.NotMadeElsewhereSQL("left_provenance")
 	if recordedOnly {
@@ -40,7 +47,7 @@ func wonStints(recordedOnly bool) string {
 		       extract(epoch FROM lead(h.changed_at) OVER moves - h.changed_at) AS secs
 		  FROM deal_stage_history h
 		  JOIN deal d ON d.id = h.deal_id
-		 WHERE d.pipeline_id = $1 AND d.status = 'won'` + live + `
+		 WHERE ` + scope + ` AND d.status = 'won'` + live + `
 		WINDOW moves AS (PARTITION BY h.deal_id ORDER BY h.changed_at, COALESCE(h.write_seq, 0), h.id)
 	) stint
 	 WHERE secs IS NOT NULL AND ` + ends
@@ -50,10 +57,20 @@ func wonStints(recordedOnly bool) string {
 // deals' stints in it lasted at most, archived wins included. A stage fewer
 // than floor won deals passed through has no entry.
 func StuckAfter(ctx context.Context, tx pgx.Tx, pipelineID ids.UUID, floor int) (map[string]time.Duration, error) {
+	return stuckPace(ctx, tx, "d.pipeline_id = $1", pipelineID, floor)
+}
+
+// StuckAfterDealPipelines is StuckAfter over every pipeline the given deals sit
+// in, in one read.
+func StuckAfterDealPipelines(ctx context.Context, tx pgx.Tx, dealIDs []ids.UUID, floor int) (map[string]time.Duration, error) {
+	return stuckPace(ctx, tx, "d.pipeline_id IN (SELECT pipeline_id FROM deal WHERE id = ANY($1) AND pipeline_id IS NOT NULL)", dealIDs, floor)
+}
+
+func stuckPace[S ids.UUID | []ids.UUID](ctx context.Context, tx pgx.Tx, pipeline string, scope S, floor int) (map[string]time.Duration, error) {
 	rows, err := tx.Query(ctx, `
-		WITH stints AS (`+wonStints(true)+`)
+		WITH stints AS (`+wonStints(true, pipeline)+`)
 		SELECT stage_id, percentile_cont(0.9) WITHIN GROUP (ORDER BY secs)
-		  FROM stints GROUP BY stage_id HAVING count(DISTINCT deal_id) >= $2`, pipelineID, floor)
+		  FROM stints GROUP BY stage_id HAVING count(DISTINCT deal_id) >= $2`, scope, floor)
 	if err != nil {
 		return nil, fmt.Errorf("deals: reading the won-deal stage pace: %w", err)
 	}

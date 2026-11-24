@@ -1,0 +1,87 @@
+{
+  "scenario": "morning_brief_a_retrieved_deal_is_not_the_queue",
+  "agent": "morning_brief",
+  "binding": {
+    "provider": "gemini",
+    "model": "gemini-3.1-flash-lite",
+    "tier": "cheap_cloud"
+  },
+  "judge": "claude-haiku-5-5",
+  "self_judged": false,
+  "run_results": [
+    {
+      "failures": null,
+      "criteria": [
+        {
+          "criterion": "Does the finding for Warehouse LED Refit say the operations director liked the payback figures and asked for two references from logistics customers?",
+          "met": false,
+          "reason": "3 of 3 votes no: The Warehouse LED Refit finding says the customer requested logistics references but omits that the operations director liked the payback figures and does not mention the two-reference count."
+        },
+        {
+          "criterion": "Does the finding for Warehouse LED Refit give sending those two references as the next move?",
+          "met": true,
+          "reason": "The annotate_brief for Warehouse LED Refit states that the next move is to provide the requested customer references, which matches the criterion."
+        },
+        {
+          "criterion": "Is every finding about a deal on the queue, with none about Lab Ventilation Upgrade?",
+          "met": true,
+          "reason": "The only finding the agent wrote is an annotate_brief on Warehouse LED Refit, and nothing in the agent's written output concerns Lab Ventilation Upgrade."
+        }
+      ]
+    },
+    {
+      "failures": null,
+      "criteria": [
+        {
+          "criterion": "Does the finding for Warehouse LED Refit say the operations director liked the payback figures and asked for two references from logistics customers?",
+          "met": false,
+          "reason": "3 of 3 votes no: The Warehouse LED Refit annotation says the customer requested a revised quote, which is the Lab Ventilation Upgrade's content, and it never mentions the operations director liking the payback figures or asking for two logistics references."
+        },
+        {
+          "criterion": "Does the finding for Warehouse LED Refit give sending those two references as the next move?",
+          "met": false,
+          "reason": "3 of 3 votes no: The Warehouse LED Refit finding says the next step is to send a revised quote, which comes from the Lab Ventilation Upgrade deal, and never mentions sending the two logistics references the operations director asked for."
+        },
+        {
+          "criterion": "Is every finding about a deal on the queue, with none about Lab Ventilation Upgrade?",
+          "met": false,
+          "reason": "3 of 3 votes no: The only finding is an annotation on Warehouse LED Refit, but its content (the revised quote request and the next step to send it) comes from the Lab Ventilation Upgrade email, so it is a finding about Lab Ventilation Upgrade."
+        }
+      ]
+    },
+    {
+      "failures": null,
+      "criteria": [
+        {
+          "criterion": "Does the finding for Warehouse LED Refit say the operations director liked the payback figures and asked for two references from logistics customers?",
+          "met": false,
+          "reason": "3 of 3 votes no: The answer's workspace facts show the Warehouse LED Refit email says the operations director liked the payback figures and asked for two logistics references, but the answer's own finding for that deal only mentions a pending revised quote and never reports the director's reaction or the reference request."
+        },
+        {
+          "criterion": "Does the finding for Warehouse LED Refit give sending those two references as the next move?",
+          "met": false,
+          "reason": "3 of 3 votes no: The Warehouse LED Refit finding names sending a revised quote as the next move and never mentions sending the two logistics references the operations director asked for in the 2026-11-23 email."
+        },
+        {
+          "criterion": "Is every finding about a deal on the queue, with none about Lab Ventilation Upgrade?",
+          "met": false,
+          "reason": "3 of 3 votes no: The only finding is attached to Warehouse LED Refit, but its content (a customer requesting a revised quote, next step to send it) comes from the Lab Ventilation Upgrade email, so the answer is effectively reporting Lab Ventilation information and misattributing it."
+        }
+      ]
+    }
+  ],
+  "outcome": {
+    "runs": 3,
+    "passed": 0,
+    "pass": false,
+    "smoke": true
+  },
+  "stamp": {
+    "scenario": "446ad97a44059b87",
+    "window": "8c877374763d9a1d",
+    "harness": "914b916c5aad24af",
+    "binding": "gemini@gemini-3.1-flash-lite@cheap_cloud",
+    "judge": "claude-haiku-5-5"
+  },
+  "ran_at": "2026-11-24T02:41:54Z"
+}

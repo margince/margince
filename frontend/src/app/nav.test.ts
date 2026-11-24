@@ -141,6 +141,12 @@ describe("a row that leads to a record instead of being one", () => {
     expect(primary.ancestor).toBe(false);
   });
 
+  it("marks Companies as the section on the Partners page, which belongs to it", () => {
+    const [primary] = railTrail({ screen: "partners" });
+    expect(primary.activeId).toBe("companies");
+    expect(primary.ancestor).toBe(true);
+  });
+
   it("steps back on the import page, which is a page below the list", () => {
     const [primary] = railTrail(parseHash("#/contacts/import"));
     expect(primary.activeId).toBe("contacts");

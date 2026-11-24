@@ -108,6 +108,8 @@ const KEPT_IN_ENGLISH = new Set<string>([
   "aiProviders.name.anthropic",
   "aiProviders.name.openai",
   "aiProviders.name.gemini",
+  "aiProviders.name.azureOpenai",
+  "aiRouting.azureRegion.placeholder",
   "aiProviders.name.jev",
   "aiProviders.name.geminiDecision",
   "aiProviders.name.ollama",
@@ -148,9 +150,6 @@ const KEPT_IN_ENGLISH = new Set<string>([
   "co.tech.lane.dns",
   // Vietnamese uses "Email" for the noun; German has its own spelling and
   // carries it. Only the vi value matches English, and it is the right word.
-  // Same word, same reason, on the generic record mail box every other page
-  // shares.
-  "recordmail.title",
   // Same word, same reason: the exchange kind on the account's recent list.
   "co.recent.kind.email",
   // And on the record's chronology, for the same reason again.
@@ -182,6 +181,8 @@ const KEPT_IN_ENGLISH = new Set<string>([
   "aiRouting.baseUrl.placeholder.gemini",
   "aiRouting.baseUrl.placeholder.anthropic",
   "aiRouting.baseUrl.placeholder.openai",
+  "aiRouting.baseUrl.placeholder.ollama",
+  "aiRouting.baseUrl.placeholder.vllm",
   // A pattern of placeholders with no words in it, and the EU's own
   // abbreviation, which Vietnamese writes the same way.
   "aiRouting.location.option",

@@ -86,12 +86,16 @@ func (g groupedShape) statement(branches []unionBranch, within string, arg func(
 
 // page drops each type's overfetched row and names the types it came from.
 // Each type's rows arrive best first, so the one dropped is its worst.
-func (g groupedShape) page(hits []Hit) Page {
+func (g groupedShape) page(hits []Hit) Page { return g.pageWith(hits, nil) }
+
+// pageWith is page for a page whose timedOut types ran out of time and hold no
+// hits.
+func (g groupedShape) pageWith(hits []Hit, timedOut []string) Page {
 	seen := map[string]int{}
 	more := map[string]bool{}
 	// Non-nil even when nothing was cut: an empty list on a grouped page says
 	// every type is whole, where nil says the page was never grouped.
-	page := Page{Hits: make([]Hit, 0, len(hits)), TypesWithMore: []string{}}
+	page := Page{Hits: make([]Hit, 0, len(hits)), TypesWithMore: []string{}, TypesTimedOut: []string{}}
 	for _, hit := range hits {
 		seen[hit.Type]++
 		if seen[hit.Type] > g.perType {
@@ -100,16 +104,32 @@ func (g groupedShape) page(hits []Hit) Page {
 		}
 		page.Hits = append(page.Hits, hit)
 	}
-	for _, branch := range searchBranches {
-		if more[branch.entity] {
-			page.TypesWithMore = append(page.TypesWithMore, branch.entity)
-		}
-	}
-	// Declared kinds follow the core types, by name: they are no branch row.
-	for _, kind := range extensionTypes() {
-		if more[kind] {
-			page.TypesWithMore = append(page.TypesWithMore, kind)
-		}
-	}
+	page.TypesWithMore = typesIn(more)
+	page.TypesTimedOut = typesIn(timedOutSet(timedOut))
 	return page
+}
+
+func timedOutSet(types []string) map[string]bool {
+	set := make(map[string]bool, len(types))
+	for _, t := range types {
+		set[t] = true
+	}
+	return set
+}
+
+// typesIn lists the members of set in one order everywhere: core types in
+// searchBranches order, then declared kinds by name. Never nil.
+func typesIn(set map[string]bool) []string {
+	types := []string{}
+	for _, branch := range searchBranches {
+		if set[branch.entity] {
+			types = append(types, branch.entity)
+		}
+	}
+	for _, kind := range extensionTypes() {
+		if set[kind] {
+			types = append(types, kind)
+		}
+	}
+	return types
 }

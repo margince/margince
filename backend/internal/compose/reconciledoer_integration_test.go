@@ -77,7 +77,7 @@ func assertOnlyInMine(reader context.Context, t *testing.T, e *reconcileEnv, due
 	now, until := clocktest.Now(t).UTC(), due.Add(48*time.Hour)
 	tasks := attentionTasks{store: e.Activities}
 	for scope, want := range map[attention.TaskScope]int{attention.TasksMine: 1, attention.TasksUnassigned: 0} {
-		got, err := tasks.CountOpenForViewer(reader, now, until, scope, ids.Nil, nil)
+		got, err := tasks.CountOpenForViewer(reader, now, until, scope, "", ids.Nil, nil)
 		if err != nil {
 			t.Fatal(err)
 		}

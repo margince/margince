@@ -43,6 +43,9 @@ type bulkUndoPlan struct {
 	taggings map[openapi_types.UUID]openapi_types.UUID
 	// removals is the audit row remove_tag or remove_from_list wrote per record.
 	removals map[openapi_types.UUID]openapi_types.UUID
+	// stageMoves is the stage move_stage took each deal from and the history
+	// row it wrote, which the undo puts back and marks as reversed.
+	stageMoves map[openapi_types.UUID]bulkStageBefore
 }
 
 // removalOf answers the removal an undo restores a record's link from. A
@@ -123,6 +126,7 @@ func (e *bulkEngine) undoChange(ctx context.Context, batchID ids.UUID) (bulkChan
 		tasks:        map[openapi_types.UUID]bulkCreatedTask{},
 		taggings:     map[openapi_types.UUID]openapi_types.UUID{},
 		removals:     map[openapi_types.UUID]openapi_types.UUID{},
+		stageMoves:   map[openapi_types.UUID]bulkStageBefore{},
 	}
 	items := make([]crmcontracts.BulkItem, len(op.result.Changed))
 	for i, outcome := range op.result.Changed {
@@ -133,6 +137,9 @@ func (e *bulkEngine) undoChange(ctx context.Context, batchID ids.UUID) (bulkChan
 		}
 		if outcome.RemovalID != nil {
 			plan.removals[outcome.ID] = *outcome.RemovalID
+		}
+		if outcome.StageBefore != nil && outcome.StageHistoryID != nil {
+			plan.stageMoves[outcome.ID] = bulkStageBefore{stage: ids.UUID(*outcome.StageBefore), history: ids.UUID(*outcome.StageHistoryID)}
 		}
 		if outcome.TaggableID != nil {
 			plan.taggings[outcome.ID] = *outcome.TaggableID
@@ -159,6 +166,8 @@ func undoOne(
 		return applyTagging(ctx, tx, target, change, item, change.verb == crmcontracts.BulkVerbRemoveTag)
 	case change.verb == crmcontracts.BulkVerbCreateTask:
 		return undoTask(ctx, tx, target, change, item)
+	case change.verb == crmcontracts.BulkVerbMoveStage:
+		return undoStageMove(ctx, tx, target, change, item)
 	}
 	switch change.verb {
 	case crmcontracts.BulkVerbReassignOwner:

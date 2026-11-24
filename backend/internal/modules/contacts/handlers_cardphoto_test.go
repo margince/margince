@@ -13,6 +13,7 @@ import (
 	"strings"
 	"testing"
 
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/imagenorm"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -91,7 +92,7 @@ func TestAVCardOverTheCeilingNamesTheLimit(t *testing.T) {
 		req.Header.Set("Content-Type", contentType)
 		rec := httptest.NewRecorder()
 		req.Body = http.MaxBytesReader(rec, req.Body, ceiling)
-		Handlers{}.ImportVCards(rec, req)
+		Handlers{}.ImportVCards(rec, req, crmcontracts.ImportVCardsParams{})
 		return rec
 	}
 	var large bytes.Buffer

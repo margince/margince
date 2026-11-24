@@ -77,6 +77,7 @@ var taskSourceWriters = map[string][]string{
 	"modules/deals/handlers_deal.go:ListDeals":                            {writesNoTask},
 	"compose/dealroomtimeline.go:write":                                   {writesNoTask},
 	"compose/chatsync/summary.go:fileNote":                                {writesNoTask},
+	"compose/jobs_dealbackfill.go:recordOfferedBack":                      {writesNoTask},
 	"compose/dealcloselost.go:recordOnTimeline":                           {writesNoTask},
 	"compose/dealscoutopen.go:recordOnTimeline":                           {writesNoTask},
 	"compose/dealscoutrevive.go:recordRevivalOnTimeline":                  {writesNoTask},
@@ -114,12 +115,14 @@ var taskSourceWriters = map[string][]string{
 	"modules/activities/outboundmessage.go:activity":                      {writesNoTask},
 	"modules/activities/meetingnotesrepair.go:connectMeetingNotesTx":      {writesNoTask},
 	"modules/activities/meetingnotes.go:LandMeetingNotesTx":               {writesNoTask},
+	"modules/activities/meetingnotesmail.go:LandMeetingNotesMailTx":       {writesNoTask},
 }
 
 // openTaskReadersElsewhere is each reader of open tasks that does not apply
 // storekit.CurrentTaskClause itself, with why.
 // gatekit:fixture the declared readers of another population, checked both ways below
 var openTaskReadersElsewhere = map[string]string{
+	"modules/activities/dealactions.go:DealActionsBetweenTx":          "Lists tasks that were finished inside a window, never open ones, so the forecast movement can name the work done on a deal. It surfaces no open work.",
 	"modules/activities/systemtaskopen.go:lockOpenSystemTask":         "Finds the record's open task of one source, current or stale, so an arrival keeps or repoints it instead of filing a second. It surfaces no open work.",
 	"modules/activities/duplicatesystemtasks.go:duplicateLeadTaskSQL": "Duplicate repair compares all open source tasks, current or stale, to preserve one newest task per lead. It returns no worklist rows.",
 

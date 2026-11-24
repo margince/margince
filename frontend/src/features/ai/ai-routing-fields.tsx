@@ -22,6 +22,7 @@ import {
   VERTEX_PROVIDER,
   VertexLocationField,
 } from "../../components/vertex-location";
+import { AZURE_PROVIDER } from "./ai-azure-region";
 import { useVertexModelProbe } from "./vertex-model-probe";
 
 type Routing = components["schemas"]["AiRouting"];
@@ -34,6 +35,7 @@ type ProviderSettings = components["schemas"]["AiProviderSettings"];
 export const PROVIDERS = [
   "gemini",
   "gemini_vertex",
+  "azure_openai",
   "anthropic",
   "openai",
   "openai_compatible",
@@ -69,6 +71,7 @@ export const OPENROUTER_DECISION_PRESET = {
 // refusal stays the hard check, so a drift here costs only the early notice.
 const NEEDS_HOST: ReadonlySet<string> = new Set([
   "openai_compatible",
+  "azure_openai",
   "jev_compatible",
 ]);
 
@@ -297,6 +300,9 @@ export function AdapterFields<B extends TierBindingLike>({
         label={t("aiRouting.model.label")}
         hint={
           hint?.text ??
+          (binding.provider === AZURE_PROVIDER
+            ? t("aiRouting.model.help.azure")
+            : undefined) ??
           (asking
             ? t("aiRouting.models.askingLocation", { location })
             : undefined) ??

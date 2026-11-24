@@ -131,7 +131,7 @@ ready before we need it, because the first date comes 24 hours after we learn of
 - [run-import-jobs.md](how-to/run-import-jobs.md): run the import worker, and read an import that
   has stopped.
 - [connect-a-cloud-model-provider.md](how-to/connect-a-cloud-model-provider.md): use your own key for a
-  cloud model provider.
+  cloud model provider, or [Azure OpenAI](how-to/connect-azure-openai.md).
 - [recover-after-a-provider-outage.md](how-to/recover-after-a-provider-outage.md): what to do after a
   model provider goes down.
 - [back-up-an-installation.md](how-to/back-up-an-installation.md): which data to copy, when, and who does
@@ -255,8 +255,7 @@ ready before we need it, because the first date comes 24 hours after we learn of
   programs and start them on a host without images.
 - [ai-egress.md](reference/ai-egress.md): which AI tasks can send data out of the installation.
   Generated.
-- [ai-provider-outages.md](reference/ai-provider-outages.md): what each AI task does while its provider
-  is down. Generated.
+- [ai-provider-outages.md](reference/ai-provider-outages.md): what each AI task does while its provider is down. Generated.
 - [glossary.md](reference/glossary.md): what each technical name in the plain pages means.
 - [record-vocabulary.md](reference/record-vocabulary.md): one name for each kind of record, in the app and in the code.
 - [administered-lists.md](reference/administered-lists.md): the two shapes of a list an admin changes, and when to use each.

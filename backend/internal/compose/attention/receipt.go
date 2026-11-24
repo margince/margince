@@ -26,6 +26,9 @@ type Receipt struct {
 	Summary         string
 	SummaryParts    *crmcontracts.ApprovalSummaryParts
 	OccurredAt      time.Time
+	// ListedAt is when the receipt joined the reader's list; zero means
+	// OccurredAt. A close offered back lists later than it happened.
+	ListedAt time.Time
 	// The record the decision was about, carried from the approval it came
 	// from. A reader told the system sent something on their behalf wants the
 	// account it went to, and the card offers `open` only when this names one.

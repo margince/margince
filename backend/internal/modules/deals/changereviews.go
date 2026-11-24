@@ -79,13 +79,13 @@ func readAppliedChangeReviews(ctx context.Context, tx pgx.Tx, keys []AppliedChan
 	}
 	query := storekit.SQLf(`
  WITH requested AS (SELECT * FROM unnest($%d::uuid[], $%d::uuid[]) AS r(deal_id, change_id)),
- visible AS (SELECT d.id, d.version, d.stage_id, to_jsonb(d) AS fields, (%s) AS writable FROM deal d WHERE (%s) AND d.id = ANY($%d::uuid[]))
+ visible AS (SELECT d.id, d.version, d.stage_id, (%s) AS writable FROM deal d WHERE (%s) AND d.id = ANY($%d::uuid[]))
  SELECT c.deal_id, c.audit_log_id, CASE WHEN c.correction = ANY($%d::text[]) THEN 'close_date' WHEN c.correction = 'close_lost' THEN 'close_lost' WHEN c.correction = 'deal_amount' THEN 'amount' WHEN c.correction = 'deal_probability' THEN 'probability' WHEN c.correction = 'stage_move' THEN 'stage' WHEN c.correction = 'deal_open' THEN 'deal_open' WHEN c.correction = 'deal_revive' THEN 'deal_revive' END, c.accepted_at IS NOT NULL, c.reversed_at IS NOT NULL,
         d.version, c.reversed_at IS NULL AND %s,
-        c.reversed_at IS NULL AND %s, d.writable
+        c.reversed_at IS NULL AND %s, d.writable, c.note_activity_id, c.stage_history_id
  FROM deal_correction c JOIN visible d ON d.id = c.deal_id JOIN audit_log a ON a.id = c.audit_log_id AND a.entity_type = 'deal' AND a.entity_id = c.deal_id
  JOIN requested r ON r.deal_id = c.deal_id AND r.change_id = c.audit_log_id
- WHERE c.correction = ANY($%d::text[]) OR c.correction IN ('close_lost', 'deal_amount', 'deal_probability', 'stage_move', 'deal_open', 'deal_revive')`, dealsPos, changesPos, writable, scope, dealsPos, closeDatePos, correctionStageStillNewestSQL(stagePos), correctionFieldsStillAppliedSQL("d.fields"), closeDatePos)
+ WHERE c.correction = ANY($%d::text[]) OR c.correction IN ('close_lost', 'deal_amount', 'deal_probability', 'stage_move', 'deal_open', 'deal_revive')`, dealsPos, changesPos, writable, scope, dealsPos, closeDatePos, correctionStageStillNewestSQL(stagePos), correctionFieldsUntouchedSQL(), closeDatePos)
 	rows, err := tx.Query(ctx, query, args...)
 	if err != nil {
 		return nil, err
@@ -95,7 +95,7 @@ func readAppliedChangeReviews(ctx context.Context, tx pgx.Tx, keys []AppliedChan
 	for rows.Next() {
 		var key AppliedChangeKey
 		var review crmcontracts.AppliedDealChangeReview
-		if err := rows.Scan(&key.DealID.UUID, &key.ChangeID, &review.Kind, &review.Accepted, &review.Reversed, &review.Version, &review.CanUndo, &review.CanAccept, &review.Writable); err != nil {
+		if err := rows.Scan(&key.DealID.UUID, &key.ChangeID, &review.Kind, &review.Accepted, &review.Reversed, &review.Version, &review.CanUndo, &review.CanAccept, &review.Writable, &review.NoteActivityId, &review.StageHistoryId); err != nil {
 			return nil, err
 		}
 		review.CanUndo = review.CanUndo && review.CanAccept
@@ -104,12 +104,21 @@ func readAppliedChangeReviews(ctx context.Context, tx pgx.Tx, keys []AppliedChan
 	return out, rows.Err()
 }
 
-// correctionFieldsStillAppliedSQL holds while the deal still carries every
-// value correction c wrote in its audit entry a. Acceptance and Undo both
-// need it, and the pending summary counts by it.
-func correctionFieldsStillAppliedSQL(dealFields string) string {
-	return "NOT EXISTS (SELECT 1 FROM jsonb_each(a.after) f WHERE f.key = ANY(c.fields) AND " +
-		dealFields + "->f.key IS DISTINCT FROM f.value)"
+// correctionFieldsUntouchedSQL holds while no later write has touched a field
+// that correction c (audit entry a) changed. It reads the audit trail, because
+// a value compare cannot see a field edited away and back. fieldsTouchedSince
+// asks the same on the write path.
+func correctionFieldsUntouchedSQL() string {
+	return "NOT EXISTS (" + laterWriteOnFieldsSQL("c", "a") + ")"
+}
+
+// laterWriteOnFieldsSQL selects the audit rows after the correction's own that
+// changed one of its fields. cAlias names the deal_correction row and aAlias
+// its audit row.
+func laterWriteOnFieldsSQL(cAlias, aAlias string) string {
+	return storekit.SQLf(`SELECT 1 FROM audit_log later
+ WHERE later.entity_type = 'deal' AND later.entity_id = %[1]s.deal_id AND later.id > %[2]s.id
+   AND later.source_xid <> %[2]s.source_xid AND later.after ?| %[1]s.fields`, cAlias, aAlias)
 }
 
 // correctionStageStillNewestSQL holds for a correction c that moved no stage,

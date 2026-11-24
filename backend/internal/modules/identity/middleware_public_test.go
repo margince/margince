@@ -63,11 +63,13 @@ func TestIsOIDCLoginRequest(t *testing.T) {
 }
 
 func TestStatusIsExplicitlyPublic(t *testing.T) {
-	if !isPublicRequest(httptest.NewRequest(http.MethodGet, "/v1/status", nil)) {
-		t.Fatal("the status probe must pass the session gate for external uptime monitors")
+	for _, method := range []string{http.MethodGet, http.MethodHead} {
+		if !isPublicRequest(httptest.NewRequest(method, "/v1/status", nil)) {
+			t.Fatalf("the status probe must pass the session gate for an uptime monitor sending %s", method)
+		}
 	}
 	if isPublicRequest(httptest.NewRequest(http.MethodPost, "/v1/status", nil)) {
-		t.Fatal("the status probe must expose GET anonymously, not every method on its path")
+		t.Fatal("the status probe must expose GET and HEAD anonymously, not every method on its path")
 	}
 }
 

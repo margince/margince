@@ -125,7 +125,7 @@ func (p *pairEnv) creditOf(t *testing.T, meeting ids.UUID) ([]ids.UUID, ids.UUID
 		t.Fatalf("reading the credited seats: %v", err)
 	}
 	var listed ids.UUID
-	if err := p.env.e.Owner.QueryRow(ctx, `SELECT `+storekit.MeetingCreditedSeatSQL("m")+
+	if err := p.env.e.Owner.QueryRow(ctx, `SELECT `+storekit.MeetingCreditedSeatAtChangeSQL("m", "true", "NULL::uuid")+
 		` FROM activity m WHERE m.id = $1`, meeting).Scan(&listed); err != nil {
 		t.Fatalf("reading the seat the meeting is listed under: %v", err)
 	}

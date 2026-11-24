@@ -6,7 +6,7 @@ The 1 table owned by `aiactivity`, as the migrations build them. [Back to the en
 
 ## ai_task_run
 
-22 columns · primary key `(id)` · referenced by 0 foreign keys
+24 columns · primary key `(id)` · referenced by 0 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -20,6 +20,8 @@ The 1 table owned by `aiactivity`, as the migrations build them. [Back to the en
 | `kind` | `text` | yes |  |
 | `occurrence_key` | `text` | yes |  |
 | `passport_id` | `uuid` |  | Points at `passport.id`. |
+| `progress_processed` | `integer` |  |  |
+| `progress_total` | `integer` |  |  |
 | `quantity` | `integer` |  |  |
 | `quantity_unit` | `text` |  | One of `messages`, `records`, `contacts`, `documents`. |
 | `queued_at` | `timestamp with time zone` | yes |  |
@@ -45,6 +47,8 @@ The 1 table owned by `aiactivity`, as the migrations build them. [Back to the en
 - `ai_task_run_actor_scope_check`: `CHECK ((actor_scope = ANY (ARRAY['personal', 'workspace'])))`
 - `ai_task_run_attempt_check`: `CHECK ((attempt >= 1))`
 - `ai_task_run_identity`: `UNIQUE (source, occurrence_key)`
+- `ai_task_run_progress_processed_check`: `CHECK (((progress_processed IS NULL) OR (progress_processed >= 0)))`
+- `ai_task_run_progress_total_check`: `CHECK (((progress_total IS NULL) OR ((progress_total >= 1) AND (progress_processed IS NOT NULL) AND (progress_processed <= progress_total))))`
 - `ai_task_run_quantity_check`: `CHECK (((quantity IS NULL) OR (quantity >= 0)))`
 - `ai_task_run_quantity_unit_check`: `CHECK (((quantity_unit IS NULL) OR (quantity_unit = ANY (ARRAY['messages', 'records', 'contacts', 'documents']))))`
 - `ai_task_run_queued_has_no_start`: `CHECK (((state = 'queued') = (started_at IS NULL)))`

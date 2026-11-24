@@ -31,7 +31,7 @@
    --aiMed is --ai at 30%, about 1.5:1 against the card at this size, and a
    10px mark with no word on it needs the 3:1 a graphic is owed. */
 .magic-mark[data-kind="waiting"] {
-  --mark: var(--bgElevated);
+  --mark: var(--bgField);
   border: 1.5px dashed var(--ai);
 }
 

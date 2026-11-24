@@ -32,6 +32,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `approvalfieldlabels_test.go` | H2 | An approval names a withheld field with the label the record's history panel gives it. |
 | `approvalpreviewwords_test.go` | H2 | An approval's email and read\_approval word a preview's effects and states as the approval card does. |
 | `approvalreadingcatalog_test.go` | H2 | Every change that can make the approval reading catalog stale runs fe-drift. |
+| `approvaltargettypes_test.go` | H3 | enumsync\_test.go holds the CHECK on approval.target\_entity\_type equal to targettype.Type. |
 | `appviewfixtures_test.go` | H2 | Each MCP App view's test fixture has the member names of the Go result its tool returns. |
 | `attachmenttypes_test.go` | H3 | The file picker offers the kinds of file the server keeps, no more and no fewer, by ending and by declared media type. |
 | `auditcoherence_test.go` | H3 | The audit\_log action and actor\_type vocabularies in crm.yaml match the table's CHECK constraints. |
@@ -241,6 +242,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `textlimitparity_test.go` | H2 | Each text cap a module applies is a hand-typed mirror of a number `api/crm.yaml` publishes, because the generated server enforces no string length. |
 | `transcriptmarker_test.go` | H3 | One value, spelled once. |
 | `uniqueitemscontract_test.go` | H3 | Every list the contract declares `uniqueItems: true` must reach the request decoders as a tagged generated field. |
+| `upkeeptypes_test.go` | H2 | Each upkeep and maintenance subject is a record type some audit writer is called with. |
 | `vietnamesedatawords_test.go` | H3 | The search box picks a Vietnamese data question by its own word list. |
 | `voicereasoncoverage_test.go` | H3 | The forwarding method's argument is checked at every call above. |
 | `webhookeventsdoc_test.go` | H3 | eventSchema is the part of a public-events.yaml schema the reference prints. |
@@ -305,6 +307,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `childsetaudit_test.go` | H2 | Every writer of a child set moves the parent record's version. |
 | `claimedspelling_test.go` | H3 | A constant whose doc comment says it is spelled once is making a checkable statement, and until now nothing checked it. |
 | `clearablefields_test.go` | H2 | The fields a restore says it can clear are the fields the stores clear. |
+| `commsbasisnocountry_test.go` | H2 | The communication basis vocabulary is closed and names no market. |
 | `communityhealth_test.go` | H1 | The community-health files GitHub resolves from the repository root. |
 | `companyreaders_test.go` | H2 | `company` is an RBAC object, and until this gate nothing held the object half of that anywhere outside the module that owns it. |
 | `confidencecolumntype_test.go` | H2 | Every confidence column is numeric(4,3). |
@@ -402,6 +405,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `linktargetvisiblecallers_test.go` | H3 | A read that shows the caller where an activity is filed asks auth.LinkTargetReadableClause, which also requires the read grant on the linked record's type. |
 | `lintbuildtagreach_test.go` | H2 | Every Go file in this repository is compiled by a pass the merge gate runs, analysed by one that lints, and read by both lint configs or neither. |
 | `listedmailfilesingle_test.go` | H2 | The rules that keep a mail file off a Documents list are spelled once. |
+| `localdayrule_test.go` | H2 | One shared rule answers "which day is it for this reader". |
 | `machineryapplied_test.go` | H2 | Every setting read through an ungated machinery reader (settings.ApplyTx or settings.ApplyManyTx) is declared MachineryApplied. |
 | `magicfieldcensus_test.go` | H2 | Every column of a record a reader edits is shown on a receipt or declared internal. |
 | `mailboxproofwriters_test.go` | H2 | A MailboxProof is set in one place, and that place spends the token that earns it. |
@@ -414,6 +418,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `mcpfaultcoverage_test.go` | H2 | A module's typed refusal must be legible on every surface that can reach it, including the ones it was not written for. |
 | `mcpparity_test.go` | H2 | docs/reference/mcp-parity.{json,md} match the contract, the web app and the handlers' grants, and give each operation one place. |
 | `mcpparitygrants_test.go` | H2 | The grants a handler checks, read from the Go source. |
+| `meetingattendeelock_test.go` | H2 | A judge of a meeting's attendees holds storekit.LockMeetingAttendeeChecks. |
 | `meetinghistorywriters_test.go` | H2 | Every statement that writes activity.meeting\_status also records the transition. |
 | `meetingoverspelling_test.go` | H2 | When a meeting ENDS is spelled once, in occurredday.EndSQL. |
 | `meetingresponsibility_test.go` | H3 | Every reader of "whose meeting is this" asks storekit.MeetingResponsibilitySQL or UnclaimedMeetingSQL, or the meeting credit rule built on it. |
@@ -539,6 +544,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `vocabularycensus_test.go` | H3 | Every closed text vocabulary that a Go constant set mirrors is held to that set by a gate. |
 | `winevidencedoors_test.go` | H3 | Every door that moves a deal carries the caller's win-evidence claim. |
 | `wordingdigest_test.go` | H3 | One way to reduce a subject line and a body to a digest. |
+| `workflowrunwriters_test.go` | H2 | workflowRunWrite matches a SQL string literal that writes workflow\_run. |
 | `worklistdestination_test.go` | H2 | Every source the worklist can emit has one screen it belongs on. |
 | `worklistreasonkinds_test.go` | H2 | Every reason a row gives is one the contract declares and a client can render. |
 | `writtenbyhuman_test.go` | H3 | Every reader of "which activity is an exchange" asks relstrength.InteractionCountsSQL, which carries who wrote the row. |
@@ -664,6 +670,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `forkheadcheckout_test.go` | H2 | Code from a pull request's own branch never runs with a token GitHub has not downgraded. |
 | `formulafieldscope_test.go` | H3 | No contract operation accepts a writable formula\_sql in its request body, because a formula field is generated by the database and ComputedField.formula\_sql is a response-only display field. |
 | `fxconversioncallers_test.go` | H2 | Converting money to the base currency happens in one place, and this fails when a second appears. |
+| `fxrateversion_test.go` | H2 | A correction supersedes a day's rate and appends a new row, so the table holds several rows for one day. |
 | `googleconnectorregistration_test.go` | H2 | The Google connectors are built for the registry in one function, because putting one into the registry is a decision about reachability and that decision has been wrong once. |
 | `guardedversion_test.go` | H2 | A nil version is the request's answer, never the call site's. |
 | `handlercheckarm_test.go` | H2 | A handler answers only the CHECK it names. |
@@ -711,6 +718,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `rlsclaims_test.go` | H1 | Source comments may not name row-level security as a control on what a read reaches, because no table carries it. |
 | `rulebookdirection_test.go` | H1 | The reference direction is one-way: AGENTS.md links down into docs/, and nothing under docs/ links back up to a rulebook. |
 | `rulebooktally_test.go` | H1 | A rulebook must not spell out a tally of anything the tree can be asked for. |
+| `runnerjobconstruction_test.go` | H2 | Where a runner.Job may be built. |
 | `runtimeddlwholerow_test.go` | H1 | A table an administrator can ALTER at runtime is never read whole-row. |
 | `samecommitcancel_test.go` | H2 | No pull request workflow that also runs without a new commit cancels a run in flight. |
 | `seatfixturepick_test.go` | H1 | A fixture that needs this session's seat does not pick one out of app\_user. |

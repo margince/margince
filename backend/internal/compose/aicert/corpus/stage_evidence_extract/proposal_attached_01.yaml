@@ -1,0 +1,27 @@
+name: our_mail_says_the_quote_is_attached
+task: stage_evidence_extract
+site: criteria
+source: hand_authored
+sanitized_by: hand_authored/claude-opus-5
+fixture:
+  criteria:
+    - key: problem_confirmed
+      label: The buyer has stated the problem in their own words
+    - key: margince:proposal_sent
+      label: Our side sends the customer a proposal, quote or offer attached to this message
+  spans:
+    - source_id: 01a07100-0000-7000-8000-000000000011
+      lines:
+        - 'Hi Ines, please find our quote for the Hanoi depot attached.'
+        - 'Happy to walk you through it on Thursday.'
+expect:
+  outcome: accepted
+  answer:
+    - criterion_key: margince:proposal_sent
+      met: true
+      settled_by: our quote for the Hanoi depot attached
+  judge: none
+  judge_none_reason: >
+    The claim's criterion and direction are checked exactly, and its quote must
+    contain the phrase that says the quote is attached. The buyer's problem is
+    not stated in our own mail, so any claim on it fails.

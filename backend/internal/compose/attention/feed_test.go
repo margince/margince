@@ -99,21 +99,15 @@ func (s stubDuplicates) within(owners *storekit.OwnerSet) []DuplicatePair {
 	return kept
 }
 
-func (s stubDuplicates) OpenCandidates(_ context.Context, _ int, owners *storekit.OwnerSet) ([]DuplicatePair, error) {
+func (s stubDuplicates) OpenCandidates(_ context.Context, _ int, owners *storekit.OwnerSet) ([]DuplicatePair, int, error) {
 	if !s.holds(owners) {
-		return nil, nil
-	}
-	return s.within(owners), s.err
-}
-
-func (s stubDuplicates) CountOpen(_ context.Context, owners *storekit.OwnerSet) (int, error) {
-	if !s.holds(owners) {
-		return 0, nil
+		return nil, 0, nil
 	}
 	if s.byOwner {
-		return len(s.within(owners)), s.err
+		kept := s.within(owners)
+		return kept, len(kept), s.err
 	}
-	return s.open, s.err
+	return s.pairs, s.open, s.err
 }
 
 func (s stubDuplicates) DescribeMany(
@@ -197,7 +191,7 @@ type stubTasks struct {
 }
 
 func (s *stubTasks) CountOpenForViewer(
-	_ context.Context, _, _ time.Time, _ TaskScope, _ ids.UUID, _ []ids.UUID,
+	_ context.Context, _, _ time.Time, _ TaskScope, _ string, _ ids.UUID, _ []ids.UUID,
 ) (int, error) {
 	if s.countErr != nil {
 		return 0, s.countErr

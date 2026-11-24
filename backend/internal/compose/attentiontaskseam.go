@@ -53,13 +53,13 @@ type attentionTasks struct {
 // The false answer means "no reader to answer for", which is a page of nothing
 // rather than a refusal.
 func openTasksDueBy(
-	ctx context.Context, asOf, until time.Time, scope attention.TaskScope, owner ids.UUID, team []ids.UUID,
+	ctx context.Context, asOf, until time.Time, scope attention.TaskScope, zone string, owner ids.UUID, team []ids.UUID,
 ) (activities.ListActivitiesInput, bool) {
 	// A task row is drawn from its own columns and its links (taskFromActivity),
 	// so the page skips the enrichment an activity list shows.
 	in := activities.ListActivitiesInput{
 		OpenAndDueBy: &until, IncludeEmailRequests: true, IncludeWebsiteInquiries: true, WorklistAsOf: &asOf, ReadableOnly: true, TeamQueueOf: team,
-		LinkedFactsOnly: true,
+		LinkedFactsOnly: true, DayZone: zone,
 	}
 	switch scope {
 	case attention.TasksMine:
@@ -98,14 +98,14 @@ func openTasksDueBy(
 func (t attentionTasks) PlannedForViewer(ctx context.Context, ask attention.PlannedAsk) (attention.PlannedTasks, error) {
 	w := ask.Window
 	var day, upcoming, reminders []crmcontracts.Activity
-	if in, ok := openTasksDueBy(ctx, w.AsOf, w.Until, w.Scope, w.Owner, w.Team); ok {
+	if in, ok := openTasksDueBy(ctx, w.AsOf, w.Until, w.Scope, w.Zone, w.Owner, w.Team); ok {
 		in.Limit = &ask.DayLimit
 		var err error
 		if day, err = t.listOpenTasks(ctx, in); err != nil {
 			return attention.PlannedTasks{}, err
 		}
 	}
-	if in, ok := openTasksDueBy(ctx, w.AsOf, ask.Horizon, w.Scope, w.Owner, w.Team); ok {
+	if in, ok := openTasksDueBy(ctx, w.AsOf, ask.Horizon, w.Scope, w.Zone, w.Owner, w.Team); ok {
 		in.OpenAndDueAfter, in.Limit = &w.Until, &ask.UpcomingLimit
 		var err error
 		if upcoming, err = t.listOpenTasks(ctx, in); err != nil {
@@ -199,7 +199,7 @@ func (t attentionTasks) listOpenTasks(ctx context.Context, in activities.ListAct
 // CountTasks counts a later task window whole, under the lane's own
 // narrowing (openTasksDueBy), without the reader's due reminders.
 func (t attentionTasks) CountTasks(ctx context.Context, window attention.TaskWindow) (int, error) {
-	in, ok := openTasksDueBy(ctx, window.AsOf, window.Until, window.Scope, window.Owner, window.Team)
+	in, ok := openTasksDueBy(ctx, window.AsOf, window.Until, window.Scope, window.Zone, window.Owner, window.Team)
 	if !ok {
 		return 0, nil
 	}
@@ -214,7 +214,7 @@ func (t attentionTasks) CountTasks(ctx context.Context, window attention.TaskWin
 func (t attentionTasks) TasksAfter(
 	ctx context.Context, window attention.TaskWindow, after string, limit int,
 ) ([]attention.Positioned[attention.Task], bool, error) {
-	in, ok := openTasksDueBy(ctx, window.AsOf, window.Until, window.Scope, window.Owner, window.Team)
+	in, ok := openTasksDueBy(ctx, window.AsOf, window.Until, window.Scope, window.Zone, window.Owner, window.Team)
 	if !ok {
 		return nil, false, nil
 	}
@@ -279,7 +279,7 @@ func (t attentionTasks) everyTask(
 	ctx context.Context, window attention.TaskWindow, among activities.ListActivitiesInput,
 	draw func(context.Context, []crmcontracts.Activity, attention.TaskScope, time.Time) ([]attention.Task, error),
 ) ([]attention.Task, error) {
-	in, ok := openTasksDueBy(ctx, window.AsOf, window.Until, window.Scope, window.Owner, window.Team)
+	in, ok := openTasksDueBy(ctx, window.AsOf, window.Until, window.Scope, window.Zone, window.Owner, window.Team)
 	if !ok {
 		return nil, nil
 	}

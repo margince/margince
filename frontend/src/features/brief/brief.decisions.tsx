@@ -2,7 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { AppLink } from "../../design-system/applink";
 import type {
   DecisionCardLabels,
@@ -33,6 +33,7 @@ import {
 import type { MessageKey } from "../../i18n/en";
 import { summaryWords } from "../../lib/approvalpreviewfields";
 import { invalidateApprovalViews } from "../../lib/approvals.queries";
+import { useReaderApproval } from "../../lib/approvalstagenames";
 import { approvalDotTier, useAgentTierMap } from "../../lib/autonomy";
 import { hideHomeRows } from "../../lib/homerows";
 import { fromHere } from "../../lib/navigatefrom";
@@ -213,7 +214,7 @@ const LISTED = 3;
 
 /** The deck and its tray: the staged verdicts, and the one act that sends them. */
 export function DecisionsSection({
-  items,
+  items: storedItems,
   nowMs,
   state,
   onAlreadyDecided,
@@ -232,6 +233,16 @@ export function DecisionsSection({
   const plural = usePlural();
   const { locale } = useLocale();
   const stagedDay = stagedDayFormatter(locale, readerZone);
+  const readerApproval = useReaderApproval();
+  const items = useMemo(
+    () =>
+      storedItems.map((item) =>
+        item.kind === "single"
+          ? { ...item, approval: readerApproval(item.approval) }
+          : { ...item, members: item.members.map(readerApproval) },
+      ),
+    [storedItems, readerApproval],
+  );
   const approvalNames = useApprovalNames(
     items.flatMap((item) =>
       item.kind === "single" ? [item.approval] : item.members,
