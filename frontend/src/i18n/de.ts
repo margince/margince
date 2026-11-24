@@ -1926,7 +1926,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Ihr bisheriger Termin bleibt reserviert, bis der Kalender die Änderung bestätigt.",
   "book.meetingChanged":
     "Der Termin wurde geändert. Prüfen Sie die aktuellen Details und versuchen Sie es erneut.",
-  "book.cancelConfirm": "Möchten Sie diesen Termin absagen?",
+  "book.cancelConfirm": "Der Termin wird abgesagt.",
   "conversationSuggestions.title":
     "In dieser Unterhaltung, noch nicht in Margince",
   "conversationSuggestions.add": "Als Kontakt hinzufügen",
@@ -3548,7 +3548,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Das LinkedIn-Profil wurde hier nicht gespeichert, da ein anderer Lead es schon hat.",
   "common.linkedinProfileInvalid":
     "Das ist keine LinkedIn-Profiladresse. Gib eine ein, etwa https://www.linkedin.com/in/dein-name.",
-  "common.duplicate.slotTaken": "Dieser Zeitpunkt ist nicht mehr verfügbar.",
+  "common.duplicate.slotTaken":
+    "Dieser Zeitpunkt ist nicht mehr verfügbar. Einen anderen Zeitpunkt auswählen.",
   "common.retry": "Erneut versuchen",
   "common.goneBackToAnalytics": "Zurück zu Analytics",
   "reporting.sharedForecastGone":

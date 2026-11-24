@@ -1878,7 +1878,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Giờ hiện tại vẫn được giữ cho đến khi lịch xác nhận thay đổi.",
   "book.meetingChanged":
     "Cuộc họp đã thay đổi. Xem lại thông tin mới và thử lại.",
-  "book.cancelConfirm": "Hủy cuộc họp này?",
+  "book.cancelConfirm": "Cuộc họp sẽ bị hủy.",
   "conversationSuggestions.title":
     "Trong cuộc trò chuyện, chưa có trong Margince",
   "conversationSuggestions.add": "Thêm làm liên hệ",

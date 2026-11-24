@@ -1852,7 +1852,7 @@ export const en = {
     "Your current time stays reserved until the calendar confirms the change.",
   "book.meetingChanged":
     "The meeting changed. Review the updated details and try again.",
-  "book.cancelConfirm": "Cancel this meeting?",
+  "book.cancelConfirm": "The meeting will be canceled.",
   "conversationSuggestions.title": "On this conversation, not in Margince yet",
   "conversationSuggestions.add": "Add as contact",
   "conversationSuggestions.limited":
