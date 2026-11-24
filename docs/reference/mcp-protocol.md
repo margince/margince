@@ -98,7 +98,7 @@ as its user. Over MCP, when that user is in the conversation, the call does not 
 that says what would change and carries a `confirm_code`, in the text and under `_meta` `margince/confirm` with
 `next_steps`. After the user says yes, the agent sends the same call again with `confirm_code`. It runs once.
 
-The code is signed with the `connector_state_key`. It holds the caller's principal, passport and connection, the
+The code is signed with the `connector_state_key`. It binds the caller's principal, passport and connection, the
 tool, the argument digest and the rows a staging would pin. A code for another caller or call, a used code, or one
 older than 15 minutes is refused, and the agent asks for a new preview. Redis makes each code single-use, and a failed
 run spends it too.

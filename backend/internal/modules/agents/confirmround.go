@@ -55,8 +55,8 @@ func (r *Registry) previewInConversation(ctx context.Context, t mcp.Tool, spec m
 		return err
 	}
 	c, _ := conversationConfirmFrom(ctx)
-	code, expires, err := c.mint(ctx, wireConfirmCode{
-		Tool: spec.Name, Args: diffHash, TargetType: info.TargetType, TargetID: info.TargetID, Pins: pinsOnWire(pins),
+	code, expires, err := c.mint(ctx, confirmedCall{
+		Tool: spec.Name, Args: diffHash, TargetType: info.TargetType, TargetID: info.TargetID, Pins: pins,
 	})
 	if err != nil {
 		return err

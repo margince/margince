@@ -18,11 +18,13 @@ package agents
 import (
 	"context"
 	"crypto/rand"
+	"crypto/sha256"
 	"encoding/base64"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"log/slog"
+	"strings"
 	"time"
 
 	"github.com/margince/margince/backend/internal/platform/auth"
@@ -107,74 +109,84 @@ func confirmsInConversation(ctx context.Context, waitsEvenForItsUser bool, refus
 	return ok && !principal.ConversationUser(ctx, p).IsZero()
 }
 
-// wireConfirmCode is what a code claims.
+// confirmedCall is the call a code confirms. It names the tool, its argument
+// digest, the record it acts on and the pins a staging of it would take.
+type confirmedCall struct {
+	Tool, Args string
+	TargetType string
+	TargetID   ids.UUID
+	Pins       auth.ReleasedRecordPins
+	// Once is the code's one-use id, which the audit rows of its run name.
+	Once string
+}
+
+// wireConfirmCode is what a code carries. The model copies it back by hand, so
+// the keys are short. The caller and the call travel as one digest under the
+// signature, and the spend recomputes it.
 type wireConfirmCode struct {
-	Typ        string `json:"t"`
-	Sub        string `json:"sub"`
-	Passport   string `json:"pp"`
-	Connection string `json:"conn"`
-	Tool       string `json:"tool"`
-	Args       string `json:"args"`
-	// The record the call acts on, and the rows the preview pinned as a staging
-	// of the call would have.
+	Typ        string   `json:"t"`
+	Bind       string   `json:"b"`
 	TargetType string   `json:"tt,omitempty"`
-	TargetID   ids.UUID `json:"tid,omitzero"`
-	Pins       wirePins `json:"p,omitzero"`
+	TargetID   ids.UUID `json:"ti,omitzero"`
+	Target     *wirePin `json:"p,omitempty"`
+	CoTarget   *wirePin `json:"c,omitempty"`
 	Once       string   `json:"n"`
-	Exp        int64    `json:"exp"`
+	Exp        int64    `json:"e"`
 }
 
-// wirePins are a release's pins in the code. The keys are short because the
-// model copies the code back by hand.
-type wirePins struct {
-	Target   *wirePin `json:"t,omitempty"`
-	CoTarget *wirePin `json:"c,omitempty"`
-}
-
+// wirePin is one pin. The target's own type and id are the code's, so its pin
+// carries only the version and context.
 type wirePin struct {
-	Type    string   `json:"t"`
-	ID      ids.UUID `json:"i"`
+	Type    string   `json:"t,omitempty"`
+	ID      ids.UUID `json:"i,omitzero"`
 	Version int64    `json:"v"`
 	Context string   `json:"x,omitempty"`
 }
 
-func pinsOnWire(pins auth.ReleasedRecordPins) wirePins {
-	one := func(pin *auth.ReleasedRecordPin) *wirePin {
-		if pin == nil {
-			return nil
-		}
-		return &wirePin{Type: pin.EntityType, ID: pin.EntityID, Version: pin.Version, Context: pin.ContextDigest}
+func pinOnWire(pin *auth.ReleasedRecordPin, own bool) *wirePin {
+	if pin == nil {
+		return nil
 	}
-	return wirePins{Target: one(pins.Target), CoTarget: one(pins.CoTarget)}
+	out := &wirePin{Version: pin.Version, Context: pin.ContextDigest}
+	if !own {
+		out.Type, out.ID = pin.EntityType, pin.EntityID
+	}
+	return out
 }
 
-func (w wirePins) released() auth.ReleasedRecordPins {
-	one := func(pin *wirePin) *auth.ReleasedRecordPin {
-		if pin == nil {
-			return nil
-		}
-		return &auth.ReleasedRecordPin{EntityType: pin.Type, EntityID: pin.ID, Version: pin.Version, ContextDigest: pin.Context}
+func (w *wirePin) released(entityType string, id ids.UUID) *auth.ReleasedRecordPin {
+	if w == nil {
+		return nil
 	}
-	return auth.ReleasedRecordPins{Target: one(w.Target), CoTarget: one(w.CoTarget)}
+	if w.Type != "" {
+		entityType, id = w.Type, w.ID
+	}
+	return &auth.ReleasedRecordPin{EntityType: entityType, EntityID: id, Version: w.Version, ContextDigest: w.Context}
 }
 
-// codeIdentity is who a code is for: every part of the caller a code may not
-// travel between.
-func codeIdentity(ctx context.Context) (wireConfirmCode, bool) {
+// call is the confirmed call a verified code names.
+func (w wireConfirmCode) call(tool, args string) confirmedCall {
+	return confirmedCall{Tool: tool, Args: args, TargetType: w.TargetType, TargetID: w.TargetID, Pins: auth.ReleasedRecordPins{
+		Target: w.Target.released(w.TargetType, w.TargetID), CoTarget: w.CoTarget.released("", ids.UUID{}),
+	}}
+}
+
+// codeBinding digests who a code is for and the call it confirms: every part a
+// code may not travel between. It answers false with no caller.
+func codeBinding(ctx context.Context, tool, args string) (string, bool) {
 	p, ok := principal.Actor(ctx)
 	if !ok || p.ID == "" {
-		return wireConfirmCode{}, false
+		return "", false
 	}
-	return wireConfirmCode{
-		Typ: confirmCodeTyp, Sub: p.ID,
-		Passport: p.PassportID.String(), Connection: p.ConnectionID.String(),
-	}, true
+	sum := sha256.Sum256([]byte(strings.Join([]string{
+		confirmCodeTyp, p.ID, p.PassportID.String(), p.ConnectionID.String(), tool, args,
+	}, "\x00")))
+	return base64.RawURLEncoding.EncodeToString(sum[:confirmOnceBytes]), true
 }
 
 // mint signs a code for one previewed call, and answers when it stops working.
-// call names the tool, the argument digest, the target and the pins.
-func (c conversationConfirm) mint(ctx context.Context, call wireConfirmCode) (string, time.Time, error) {
-	claim, ok := codeIdentity(ctx)
+func (c conversationConfirm) mint(ctx context.Context, call confirmedCall) (string, time.Time, error) {
+	bind, ok := codeBinding(ctx, call.Tool, call.Args)
 	if !ok {
 		return "", time.Time{}, errConfirmCodeRefused
 	}
@@ -183,9 +195,12 @@ func (c conversationConfirm) mint(ctx context.Context, call wireConfirmCode) (st
 		return "", time.Time{}, fmt.Errorf("draw a confirm code: %w", err)
 	}
 	expires := c.now().Add(confirmCodeTTL)
-	claim.Tool, claim.Args = call.Tool, call.Args
-	claim.TargetType, claim.TargetID, claim.Pins = call.TargetType, call.TargetID, call.Pins
-	claim.Once, claim.Exp = base64.RawURLEncoding.EncodeToString(once), expires.Unix()
+	ownTarget := call.Pins.Target != nil && call.Pins.Target.EntityType == call.TargetType && call.Pins.Target.EntityID == call.TargetID
+	claim := wireConfirmCode{
+		Typ: confirmCodeTyp, Bind: bind, TargetType: call.TargetType, TargetID: call.TargetID,
+		Target: pinOnWire(call.Pins.Target, ownTarget), CoTarget: pinOnWire(call.Pins.CoTarget, false),
+		Once: base64.RawURLEncoding.EncodeToString(once), Exp: expires.Unix(),
+	}
 	payload, err := json.Marshal(claim)
 	if err != nil {
 		return "", time.Time{}, err
@@ -193,46 +208,38 @@ func (c conversationConfirm) mint(ctx context.Context, call wireConfirmCode) (st
 	return c.signer.seal(payload), expires, nil
 }
 
-// spend checks a presented code against this very call and spends it, answering
-// ctx marked released at the pinned versions and what the code claimed. Any
-// mismatch is the same refusal. The guard is asked last, so a code that does not
-// match spends nothing.
-func (c conversationConfirm) spend(ctx context.Context, tool, diffHash, code string) (context.Context, wireConfirmCode, error) {
+// spend checks a presented code against this very call and spends it. It answers
+// ctx marked released at the pinned versions, and the call the code confirmed.
+// Any mismatch is the same refusal. The guard is asked last, so a code that does
+// not match spends nothing.
+func (c conversationConfirm) spend(ctx context.Context, tool, diffHash, code string) (context.Context, confirmedCall, error) {
 	payload, ok := c.signer.open(code)
 	if !ok {
-		return ctx, wireConfirmCode{}, errConfirmCodeRefused
+		return ctx, confirmedCall{}, errConfirmCodeRefused
 	}
 	var got wireConfirmCode
 	if err := json.Unmarshal(payload, &got); err != nil {
-		return ctx, wireConfirmCode{}, errConfirmCodeRefused
+		return ctx, confirmedCall{}, errConfirmCodeRefused
 	}
-	want, ok := codeIdentity(ctx)
-	if !ok {
-		return ctx, wireConfirmCode{}, errConfirmCodeRefused
-	}
+	bind, ok := codeBinding(ctx, tool, diffHash)
 	left := time.Unix(got.Exp, 0).Sub(c.now())
-	if got.Typ != want.Typ || got.Sub != want.Sub || got.Passport != want.Passport ||
-		got.Connection != want.Connection || got.Tool != tool || got.Args != diffHash || left <= 0 || got.Once == "" {
-		return ctx, wireConfirmCode{}, errConfirmCodeRefused
+	if !ok || got.Typ != confirmCodeTyp || got.Bind != bind || left <= 0 || got.Once == "" {
+		return ctx, confirmedCall{}, errConfirmCodeRefused
 	}
 	first, err := c.guard.FirstUse(ctx, confirmCodeTyp+":"+got.Once, confirmCodeTTL+confirmGuardMargin)
 	if err != nil {
 		// Fail closed: a guard that cannot answer cannot prove this is the
 		// first use. Its own words stay in the log, never in the answer.
 		slog.Default().ErrorContext(ctx, "mcp: the confirm code's one-use check could not be made", "err", err)
-		return ctx, wireConfirmCode{}, errConfirmCodeRefused
+		return ctx, confirmedCall{}, errConfirmCodeRefused
 	}
 	if !first {
-		return ctx, wireConfirmCode{}, errConfirmCodeRefused
+		return ctx, confirmedCall{}, errConfirmCodeRefused
 	}
-	return markConfirmed(ctx, got), got, nil
-}
-
-// markConfirmed marks ctx released as a redeemed approval would be, so every
-// writer honours it and re-checks the previewed pins under its own row lock.
-func markConfirmed(ctx context.Context, claim wireConfirmCode) context.Context {
-	marked, _, _ := markReleased(ctx, claim.Pins.released())
-	return marked
+	confirmed := got.call(tool, diffHash)
+	confirmed.Once = got.Once
+	marked, _, _ := markReleased(ctx, confirmed.Pins)
+	return marked, confirmed, nil
 }
 
 // ConfirmInConversationError is round 1's answer: nothing changed, and the
