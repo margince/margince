@@ -343,7 +343,7 @@ func linkHost(dir string) error {
 // The file set is REPLACED on every call, so a unit removed from extensions/
 // stops being a member. An accumulating list would leave the next install
 // resolving a member that is not there.
-func emitComposedFrontendWorkspace(dir string, unitDirs []string) error {
+func emitComposedFrontendWorkspace(dir string, unitDirs []string, pins map[string]string) error {
 	if err := os.MkdirAll(dir, 0o755); err != nil { // #nosec G301 -- build output stays readable to another UID
 		return err
 	}
@@ -412,6 +412,17 @@ func emitComposedFrontendWorkspace(dir string, unitDirs []string) error {
 		{"@types/react", host + "/node_modules/@types/react"},
 	} {
 		fmt.Fprintf(&b, "  %q: %q\n", override[0], override[1])
+	}
+	// A unit's runtime dependency is installed at the version the core lockfile
+	// resolved, because this workspace's own lockfile is not frozen and a range
+	// alone could drift to a release nobody licence-checked.
+	pinned := make([]string, 0, len(pins))
+	for dep := range pins {
+		pinned = append(pinned, dep)
+	}
+	sort.Strings(pinned)
+	for _, dep := range pinned {
+		fmt.Fprintf(&b, "  %q: %q\n", dep, pins[dep])
 	}
 	return os.WriteFile(filepath.Join(dir, "pnpm-workspace.yaml"), []byte(b.String()), 0o644) // #nosec G306 -- generated build artifact
 }

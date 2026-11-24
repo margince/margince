@@ -50,6 +50,9 @@ type unitFrontend struct {
 	// subpath would change one and not the other.
 	Package string
 	Export  string
+	// Pins maps each runtime dependency to the core-locked version it is
+	// installed at.
+	Pins map[string]string
 }
 
 // unitPackageJSON is the subset of a package manifest this composer judges.
@@ -114,7 +117,8 @@ func collectUnitFrontend(name, dir string) (*unitFrontend, error) {
 				name, frontendLayer, dep)
 		}
 	}
-	if err := checkUnitRuntimeDeps(name, dir, pkg); err != nil {
+	pins, err := checkUnitRuntimeDeps(name, dir, pkg)
+	if err != nil {
 		return nil, err
 	}
 	// An absolute main is refused by name rather than left to the check below.
@@ -147,7 +151,7 @@ func collectUnitFrontend(name, dir string) (*unitFrontend, error) {
 		return nil, fmt.Errorf("extensions/%s: %s/%s does not exist, and it is the module the composed registry imports",
 			name, frontendLayer, pkg.Main)
 	}
-	return &unitFrontend{Package: pkg.Name, Export: pkg.Name}, nil
+	return &unitFrontend{Package: pkg.Name, Export: pkg.Name, Pins: pins}, nil
 }
 
 // screenIdent turns a unit name into the JavaScript identifier the generated

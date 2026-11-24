@@ -289,7 +289,7 @@ func TestStubMatchesVanillaRefusesAnEditToAnyStub(t *testing.T) {
 // writes only there and never touches the tracked root lockfile.
 func TestEmitsAComposedFrontendWorkspace(t *testing.T) {
 	dir := t.TempDir()
-	if err := emitComposedFrontendWorkspace(dir, []string{"extensions/notes", "extensions/relay-probe"}); err != nil {
+	if err := emitComposedFrontendWorkspace(dir, []string{"extensions/notes", "extensions/relay-probe"}, nil); err != nil {
 		t.Fatalf("emit: %v", err)
 	}
 	for _, want := range []string{"package.json", "pnpm-workspace.yaml"} {
@@ -342,7 +342,7 @@ func TestEmitsAComposedFrontendWorkspace(t *testing.T) {
 // this holds the emitter to writing exactly what it was given.
 func TestTheWorkspaceNamesOnlyTheUnitsItWasGiven(t *testing.T) {
 	dir := t.TempDir()
-	if err := emitComposedFrontendWorkspace(dir, []string{"extensions/notes"}); err != nil {
+	if err := emitComposedFrontendWorkspace(dir, []string{"extensions/notes"}, nil); err != nil {
 		t.Fatalf("emit: %v", err)
 	}
 	ws, err := os.ReadFile(filepath.Join(dir, "pnpm-workspace.yaml"))
@@ -366,7 +366,7 @@ func TestTheWorkspaceNamesOnlyTheUnitsItWasGiven(t *testing.T) {
 // This is the regression a laptop on pnpm 10 cannot see.
 func TestTheOverridesAreWhereBothPnpmVersionsReadThem(t *testing.T) {
 	dir := t.TempDir()
-	if err := emitComposedFrontendWorkspace(dir, []string{"extensions/notes"}); err != nil {
+	if err := emitComposedFrontendWorkspace(dir, []string{"extensions/notes"}, nil); err != nil {
 		t.Fatalf("emit: %v", err)
 	}
 	ws, err := os.ReadFile(filepath.Join(dir, "pnpm-workspace.yaml"))
@@ -392,10 +392,10 @@ func TestTheOverridesAreWhereBothPnpmVersionsReadThem(t *testing.T) {
 // install resolves a member that is not there.
 func TestReEmittingTheWorkspaceReplacesTheMembers(t *testing.T) {
 	dir := t.TempDir()
-	if err := emitComposedFrontendWorkspace(dir, []string{"extensions/notes", "extensions/relay-probe"}); err != nil {
+	if err := emitComposedFrontendWorkspace(dir, []string{"extensions/notes", "extensions/relay-probe"}, nil); err != nil {
 		t.Fatalf("emit: %v", err)
 	}
-	if err := emitComposedFrontendWorkspace(dir, []string{"extensions/notes"}); err != nil {
+	if err := emitComposedFrontendWorkspace(dir, []string{"extensions/notes"}, nil); err != nil {
 		t.Fatalf("re-emit: %v", err)
 	}
 	ws, err := os.ReadFile(filepath.Join(dir, "pnpm-workspace.yaml"))
@@ -416,7 +416,7 @@ func TestReEmittingTheWorkspaceReplacesTheMembers(t *testing.T) {
 // difference, which is what this test is for.
 func TestNoOverrideTargetClimbsOutOfTheWorkspace(t *testing.T) {
 	dir := t.TempDir()
-	if err := emitComposedFrontendWorkspace(dir, []string{"extensions/notes"}); err != nil {
+	if err := emitComposedFrontendWorkspace(dir, []string{"extensions/notes"}, nil); err != nil {
 		t.Fatalf("emit: %v", err)
 	}
 	ws, err := os.ReadFile(filepath.Join(dir, "pnpm-workspace.yaml"))
@@ -458,7 +458,7 @@ func TestNoOverrideTargetClimbsOutOfTheWorkspace(t *testing.T) {
 // resolves somewhere nobody chose.
 func TestTheWorkspaceLinksTheHostSPA(t *testing.T) {
 	dir := t.TempDir()
-	if err := emitComposedFrontendWorkspace(dir, []string{"extensions/notes"}); err != nil {
+	if err := emitComposedFrontendWorkspace(dir, []string{"extensions/notes"}, nil); err != nil {
 		t.Fatalf("emit: %v", err)
 	}
 	link := filepath.Join(dir, hostLinkName)
@@ -479,7 +479,7 @@ func TestTheWorkspaceLinksTheHostSPA(t *testing.T) {
 	if err := os.Symlink("somewhere-else", link); err != nil {
 		t.Fatal(err)
 	}
-	if err := emitComposedFrontendWorkspace(dir, []string{"extensions/notes"}); err != nil {
+	if err := emitComposedFrontendWorkspace(dir, []string{"extensions/notes"}, nil); err != nil {
 		t.Fatalf("re-emit: %v", err)
 	}
 	if again, err := os.Readlink(link); err != nil || again != target {

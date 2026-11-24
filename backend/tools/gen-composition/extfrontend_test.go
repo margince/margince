@@ -419,10 +419,12 @@ func TestCollectUnitFrontendRuntimeDependenciesMustBeTheMainAppsOwn(t *testing.T
 		},
 		"a range other than the core's": {
 			deps: `"dependencies":{"date-fns":"^3.0.0"}`,
-			want: "the main app uses it at",
+			want: "the main app locks 4.1.0",
 		},
-		"a dependency the lockfile has": {deps: `"dependencies":{"date-fns":"^4.1.0"}`},
-		"peer and dev dependencies":     {deps: `"devDependencies":{"left-pad":"^1.3.0"},"peerDependencies":{"react":"^19.0.0"}`},
+		"a dependency the lockfile has":                                      {deps: `"dependencies":{"date-fns":"^4.1.0"}`},
+		"the locked version itself":                                          {deps: `"dependencies":{"date-fns":"4.1.0"}`},
+		"a range the locked version satisfies but the core does not declare": {deps: `"dependencies":{"date-fns":"^4.0.0"}`, want: "the main app locks 4.1.0"},
+		"peer and dev dependencies":                                          {deps: `"devDependencies":{"left-pad":"^1.3.0"},"peerDependencies":{"react":"^19.0.0"}`},
 	} {
 		t.Run(name, func(t *testing.T) {
 			root := t.TempDir()
@@ -440,5 +442,27 @@ func TestCollectUnitFrontendRuntimeDependenciesMustBeTheMainAppsOwn(t *testing.T
 				t.Fatalf("err = %v, want one mentioning %q and the missing licence check", err, tc.want)
 			}
 		})
+	}
+}
+
+func TestComposedWorkspacePinsUnitRuntimeDependenciesToTheLockedVersion(t *testing.T) {
+	root := t.TempDir()
+	writeCoreLockfile(t, root, "      date-fns:\n        specifier: ^4.1.0\n        version: 4.1.0(react@19.2.0)\n")
+	dir := filepath.Join(root, "extensions", "demo")
+	writeFrontendLayer(t, dir, `{"name":"@margince-ext/demo","private":true,"main":"screen.tsx","dependencies":{"date-fns":"^4.1.0"}}`)
+	unit, err := collectUnitFrontend("demo", dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	out := t.TempDir()
+	if err := emitComposedFrontendWorkspace(out, []string{"extensions/demo"}, unit.Pins); err != nil {
+		t.Fatal(err)
+	}
+	raw, err := os.ReadFile(filepath.Join(out, "pnpm-workspace.yaml"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if want := `"date-fns": "4.1.0"`; !strings.Contains(string(raw), want) {
+		t.Fatalf("pnpm-workspace.yaml does not override the unit's dependency to the locked version (%s):\n%s", want, raw)
 	}
 }
