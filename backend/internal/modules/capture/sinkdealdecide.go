@@ -382,11 +382,12 @@ func threadDeals(ctx context.Context, tx pgx.Tx, activityID ids.ActivityID, comp
 }
 
 // chosenThreadDeals is the open deals at any company that a human or an agent
-// filed mail of this mail's conversation on. Their choice is the proof, so the
-// sibling need not be proven itself.
+// filed earlier mail of this mail's conversation on. Their choice is the
+// proof, so the sibling need not be proven itself. A later choice never
+// reroutes older mail.
 func chosenThreadDeals(ctx context.Context, tx pgx.Tx, activityID ids.ActivityID) ([]ids.UUID, error) {
 	return conversationDeals(ctx, tx, activityID, func(func(any) int) string {
-		return provenance.HumanChoseDealSQL("a.id", "d.id")
+		return `(a.occurred_at, a.id) < (self.occurred_at, self.id) AND ` + provenance.HumanChoseDealSQL("a.id", "d.id")
 	})
 }
 

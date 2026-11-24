@@ -12,7 +12,7 @@ import { useToast } from "../design-system/toast";
 import { useT } from "../i18n";
 import { problemMessageOf, unwrap } from "../lib/problem";
 import type { Relationship } from "./relationships";
-import { fetchRelationships, invalidateAfterEdge } from "./relationships.edges";
+import { invalidateAfterEdge } from "./relationships.edges";
 
 type EmailPresentation = components["schemas"]["EmailPresentation"];
 
@@ -49,6 +49,39 @@ export function stakeholderCandidates(
 /** What runs once the offer is settled; the hook waits for it. */
 type OfferDone = () => unknown;
 
+/** Every stakeholder seat on deal, page by page, so no seat is offered twice. */
+async function readDealStakeholders(deal: string): Promise<Relationship[]> {
+  const seats: Relationship[] = [];
+  const seen = new Set<string>();
+  let cursor: string | undefined;
+  do {
+    const page = unwrap(
+      await api.GET("/relationships", {
+        params: {
+          query: {
+            deal_id: deal,
+            kind: "deal_stakeholder",
+            cursor,
+            limit: 200,
+          },
+        },
+      }),
+    );
+    seats.push(...page.data);
+    cursor = page.page.has_more
+      ? (page.page.next_cursor ?? undefined)
+      : undefined;
+    if (page.page.has_more && !cursor) {
+      throw new Error("The deal's stakeholder list is incomplete.");
+    }
+    if (cursor && seen.has(cursor)) {
+      throw new Error("The deal's stakeholder list did not finish.");
+    }
+    if (cursor) seen.add(cursor);
+  } while (cursor);
+  return seats;
+}
+
 type Offer = Readonly<{
   deal: string;
   people: readonly StakeholderCandidate[];
@@ -74,7 +107,7 @@ export function useDealStakeholderOffer(): Readonly<{
     try {
       const [presentation, stakeholders] = await Promise.all([
         readEmailPresentation(mail),
-        fetchRelationships({ deal_id: deal }),
+        readDealStakeholders(deal),
       ]);
       people = stakeholderCandidates(presentation, stakeholders);
     } catch {

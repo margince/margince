@@ -100,8 +100,15 @@ function stubServer(mail: EmailPresentation, seats: Relationship[]) {
       switch (key) {
         case "GET /activities/m-1/email-presentation":
           return json(mail);
-        case "GET /relationships":
-          return json({ data: seats, page: { has_more: false } });
+        case "GET /relationships": {
+          // One seat per page, so a seat past the first page is read too.
+          const at = Number(url.searchParams.get("cursor") ?? "0");
+          const more = at + 1 < seats.length;
+          return json({
+            data: seats.slice(at, at + 1),
+            page: { has_more: more, next_cursor: more ? String(at + 1) : null },
+          });
+        }
         case "POST /relationships":
           return json({ id: "r-new", ...(body as object) }, 201);
         default:
@@ -182,9 +189,10 @@ describe("useDealStakeholderOffer", () => {
 
   it("asks nothing when everyone on the mail is already on the deal", async () => {
     const user = userEvent.setup();
-    const sent = stubServer(presentation({ from: [colleague], to: [seated] }), [
-      seat("c-alice"),
-    ]);
+    const sent = stubServer(
+      presentation({ from: [colleague], to: [seated, partner] }),
+      [seat("c-alice"), seat("c-pat")],
+    );
     const done = vi.fn();
     renderHarness(done);
 

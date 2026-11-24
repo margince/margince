@@ -153,3 +153,21 @@ func TestAChoiceOnMailTheCapturingSeatCannotReadIsNotFollowed(t *testing.T) {
 	env.sync(t, partnerReply("hid2@partner.example", "hid1@myco.example"))
 	wantDeals(t, e, "hid2@partner.example")
 }
+
+// A choice leads only the mail after it. A colleague who files a later mail
+// does not move an older one of the conversation, for the repair either.
+func TestALaterChoiceLeavesOlderMailOfTheConversationAlone(t *testing.T) {
+	env := newCaptureEnv(t)
+	e := env.e
+	w, _, deal := partnerWorld(t, env)
+
+	env.sync(t, authenticated(mailFrom(partnerAddress, "old1@partner.example", "", "project"), "partner.example"))
+	env.syncSent(t, map[string]bool{"old2@myco.example": true},
+		email(captureOwner, "", partnerAddress, "old2@myco.example", "old1@partner.example"))
+	relinkAsColleague(t, e, w, activityOf(t, e, "old2@myco.example"), "deal", deal)
+
+	if changed := newRepairer(e, w).run(t); changed != 0 {
+		t.Fatalf("the repair changed %d mails, want the older mail left off the deal", changed)
+	}
+	wantDeals(t, e, "old1@partner.example")
+}
