@@ -148,3 +148,28 @@ func TestAPassportWithoutAConnectionStillWaitsInTheInbox(t *testing.T) {
 		t.Error("a script's waiting call must stage into the approval inbox")
 	}
 }
+
+// The yes covers the activity as the preview read it. An edit in between moves
+// its version, so the confirmed write is refused and files nothing.
+func TestAConfirmedFilingRefusesAnActivityThatMovedSinceThePreview(t *testing.T) {
+	e := setupConfirm(t)
+	access, _ := e.connect(t)
+	args, activity := e.fileOnProject(t, access)
+	asked := e.call(t, access, "relink_activity", args)
+	meta, _ := asked["_meta"].(map[string]any)
+	fields, _ := meta["margince/confirm"].(map[string]any)
+	code, _ := fields["confirm_code"].(string)
+	if code == "" {
+		t.Fatalf("round 1 → %v, want a confirm_code", asked)
+	}
+	if _, err := e.Owner.Exec(context.Background(), `UPDATE activity SET version = version + 1 WHERE id = $1`, activity); err != nil {
+		t.Fatalf("editing the activity: %v", err)
+	}
+	withCode := strings.TrimSuffix(args, "}") + `,"confirm_code":"` + code + `"}`
+	if done := e.call(t, access, "relink_activity", withCode); done["isError"] != true {
+		t.Fatalf("a yes on an activity that moved → %v, want it refused", done)
+	}
+	if n := e.count(t, `SELECT count(*) FROM activity_link WHERE activity_id = $1 AND project_id = $2`, activity, e.project); n != 0 {
+		t.Errorf("the refused yes filed %d link(s), want none", n)
+	}
+}

@@ -149,8 +149,8 @@ about where your data goes, so it waits.
 
 When you work with your AI assistant in a chat, it asks you there. It tells you
 what would change and acts only after you say yes. Nothing appears in your
-approvals. A change that cannot be undone, and anything a scheduled agent does with
-nobody watching, still waits in your approvals.
+approvals. A change that cannot be undone still waits in your approvals. So does
+any such change a scheduled agent makes with nobody watching.
 
 The waits below apply only to automatic work with no passport behind it.
 **Folding one tag into another.** A merge renames a word on every record
