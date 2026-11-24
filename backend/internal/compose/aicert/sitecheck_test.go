@@ -66,6 +66,7 @@ func TestEverySiteCheckIsStamped(t *testing.T) {
 			t.Errorf("site %s has no scenario to prepare its case from, so its check cannot be found", key)
 			continue
 		}
+		index.declared = declaredDependencies(t, site)
 		lines = append(lines, key+" "+index.checkDigest(t, root))
 	}
 	slices.Sort(lines)
@@ -81,6 +82,31 @@ func TestEverySiteCheckIsStamped(t *testing.T) {
 			"run this test with -update-site-checks, which turns that site's records stale:\n%s",
 			siteChecksPath, firstLineDiff(siteChecksGolden, want))
 	}
+}
+
+// declaredDependencies are the functions a site's check takes as one dependency.
+// The replay of an agent_loop run reads the tool surface through the specs the
+// registry publishes, so the registry's builder is hashed as those specs. Walking
+// it instead reaches every store and service the registry wires, which no
+// grading depends on.
+func declaredDependencies(t *testing.T, site aitasks.Site) map[string]string {
+	t.Helper()
+	if site.Kind != ai.SiteKindAgentLoop {
+		return nil
+	}
+	goal, tools, err := compose.AgentToolFacts(site.Variant)
+	if err != nil {
+		t.Fatalf("site %s/%s: %v", site.Task, site.Variant, err)
+	}
+	body, err := json.Marshal(struct {
+		Goal  string                  `json:"goal"`
+		Tools []compose.AgentToolFact `json:"tools"`
+	}{goal, tools})
+	if err != nil {
+		t.Fatal(err)
+	}
+	sum := sha256.Sum256(body)
+	return map[string]string{modulePath + "/internal/compose.agentLoopRegistry": hex.EncodeToString(sum[:])}
 }
 
 // caseTypeOf prepares site's case from its first scenario and answers the
@@ -137,6 +163,14 @@ type sourcePackage struct {
 type sourceIndex struct {
 	fset *token.FileSet
 	pkgs map[string]*sourcePackage
+	// declared names a function the walk takes as one dependency: its body is
+	// not walked, and the digest it maps to is hashed in its place, as
+	// "package.name". A tool registry builder is one, since a check reads the
+	// tools only through the specs they publish.
+	declared map[string]string
+	// overlay serves a file's text from here instead of from disk, by the path
+	// load reads it at, so a test can change a function and watch a digest.
+	overlay map[string]string
 }
 
 func newSourceIndex(t *testing.T) *sourceIndex {
@@ -169,7 +203,11 @@ func (x *sourceIndex) load(t *testing.T, path string) *sourcePackage {
 		if entry.IsDir() || !strings.HasSuffix(name, ".go") || strings.HasSuffix(name, "_test.go") {
 			continue
 		}
-		file, err := parser.ParseFile(x.fset, filepath.Join(dir, name), nil, parser.SkipObjectResolution)
+		var text any
+		if over, ok := x.overlay[filepath.Join(dir, name)]; ok {
+			text = over
+		}
+		file, err := parser.ParseFile(x.fset, filepath.Join(dir, name), text, parser.SkipObjectResolution)
 		if err != nil {
 			t.Fatalf("parsing %s: %v", name, err)
 		}
@@ -220,12 +258,12 @@ func (x *sourceIndex) checkDigest(t *testing.T, root reflect.Type) string {
 	return x.digestOf(t, pkg, named.Name())
 }
 
-// digestOf is the digest of what the Evaluate of typeName in pkg reaches.
-func (x *sourceIndex) digestOf(t *testing.T, pkg *sourcePackage, typeName string) string {
+// walkOf is everything the Evaluate of typeName in pkg reaches.
+func (x *sourceIndex) walkOf(t *testing.T, pkg *sourcePackage, typeName string) *checkWalk {
 	t.Helper()
-	walk := checkWalk{
+	walk := &checkWalk{
 		index: x, seen: map[ast.Node]string{}, types: map[string]bool{}, selected: map[string]bool{},
-		fieldTypes: map[string][]string{}, fieldCalls: map[string]map[string]bool{},
+		fieldTypes: map[string][]string{}, fieldCalls: map[string]map[string]bool{}, declaredHit: map[string]string{},
 	}
 	for _, method := range pkg.methods["Evaluate"] {
 		if receiverName(method) == typeName {
@@ -237,6 +275,19 @@ func (x *sourceIndex) digestOf(t *testing.T, pkg *sourcePackage, typeName string
 	}
 	walk.visitFuncFields(t, pkg, typeName)
 	walk.resolveMethods(t)
+	return walk
+}
+
+// digestOf is the digest of what the Evaluate of typeName in pkg reaches.
+func (x *sourceIndex) digestOf(t *testing.T, pkg *sourcePackage, typeName string) string {
+	t.Helper()
+	return x.hashWalk(t, x.walkOf(t, pkg, typeName))
+}
+
+// hashWalk is the digest of every declaration a walk reached and every
+// dependency it took as declared.
+func (x *sourceIndex) hashWalk(t *testing.T, walk *checkWalk) string {
+	t.Helper()
 	var material []string
 	for node, id := range walk.seen {
 		var src bytes.Buffer
@@ -244,6 +295,9 @@ func (x *sourceIndex) digestOf(t *testing.T, pkg *sourcePackage, typeName string
 			t.Fatalf("formatting %s: %v", id, err)
 		}
 		material = append(material, id+"\n"+src.String())
+	}
+	for key, digest := range walk.declaredHit {
+		material = append(material, "declared "+key+"\n"+digest)
 	}
 	slices.Sort(material)
 	sum := sha256.Sum256([]byte(strings.Join(material, "\n")))
@@ -279,6 +333,9 @@ type checkWalk struct {
 	fieldTypes map[string][]string
 	fieldCalls map[string]map[string]bool
 	selected   map[string]bool
+	// declaredHit holds the declared dependencies the walk reached, with their
+	// digests; each is hashed into the check.
+	declaredHit map[string]string
 }
 
 func (w *checkWalk) visit(t *testing.T, pkg *sourcePackage, node ast.Node) {
@@ -398,6 +455,10 @@ func (w *checkWalk) visitName(t *testing.T, pkg *sourcePackage, name string) {
 	t.Helper()
 	// The blank name declares nothing a check can call.
 	if name == "_" {
+		return
+	}
+	if digest, declared := w.index.declared[pkg.path+"."+name]; declared {
+		w.declaredHit[pkg.path+"."+name] = digest
 		return
 	}
 	if fn, ok := pkg.funcs[name]; ok {
@@ -613,4 +674,10 @@ func TestAnEditToAMethodTheCaseCallsThroughAFieldMovesTheSiteCheck(t *testing.T)
 	if fixtureDigest(t, edited) == before {
 		t.Error("an edit to the field's method Evaluate judges through left the digest unchanged")
 	}
+}
+
+// readSource is a source file's text.
+func readSource(path string) (string, error) {
+	body, err := os.ReadFile(path)
+	return string(body), err
 }
