@@ -242,10 +242,13 @@ func TestS3StoreDeletePrefixLeavesNoVersionOnAVersionedBucket(t *testing.T) {
 		t.Fatalf("EnableVersioning: %v", err)
 	}
 
+	// Two versions per page, against five versions and a marker below: an
+	// implementation that deletes only the first page leaves the rest.
+	blobstore.WithListPageSize(store, 2)
 	ws := ids.New[ids.WorkspaceKind]()
 	overwritten := blobstore.WorkspaceKey(ws, "attachment", "overwritten")
 	deleted := blobstore.WorkspaceKey(ws, "attachment", "deleted")
-	for _, put := range []struct{ key, body string }{{overwritten, "v1"}, {overwritten, "v2"}, {deleted, "gone"}} {
+	for _, put := range []struct{ key, body string }{{overwritten, "v1"}, {overwritten, "v2"}, {overwritten, "v3"}, {overwritten, "v4"}, {deleted, "gone"}} {
 		if err := store.Put(ctx, put.key, bytes.NewReader([]byte(put.body)), int64(len(put.body)), ""); err != nil {
 			t.Fatalf("Put %s: %v", put.key, err)
 		}

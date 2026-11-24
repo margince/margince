@@ -5,6 +5,7 @@ package blobstore
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"strings"
@@ -31,7 +32,10 @@ type Config struct {
 // isolation lives in the workspace-prefixed key the caller supplies.
 type s3Store struct {
 	client *minio.Client
-	bucket string
+	// listPageSize is the S3 page size of a version listing; zero is the
+	// server's default. Tests lower it to cross a page boundary.
+	listPageSize int
+	bucket       string
 }
 
 // New builds an S3-compatible store and ensures its bucket exists. It
@@ -174,12 +178,13 @@ func (s *s3Store) DeletePrefix(ctx context.Context, prefix string) (int, error) 
 		Prefix:       prefix,
 		Recursive:    true,
 		WithVersions: true,
+		MaxKeys:      s.listPageSize,
 	}) {
 		if obj.Err != nil {
-			return deleted, fmt.Errorf("blobstore: listing %s: %w", prefix, obj.Err)
+			return deleted, versionAccessErr(fmt.Errorf("blobstore: listing %s: %w", prefix, obj.Err), obj.Err)
 		}
 		if err := s.client.RemoveObject(ctx, s.bucket, obj.Key, minio.RemoveObjectOptions{VersionID: obj.VersionID}); err != nil {
-			return deleted, fmt.Errorf("blobstore: removing %s: %w", obj.Key, err)
+			return deleted, versionAccessErr(fmt.Errorf("blobstore: removing %s: %w", obj.Key, err), err)
 		}
 		if !obj.IsDeleteMarker && obj.Key != lastCounted {
 			deleted++
@@ -187,6 +192,21 @@ func (s *s3Store) DeletePrefix(ctx context.Context, prefix string) (int, error) 
 		}
 	}
 	return deleted, nil
+}
+
+// ErrVersionPermissionsMissing reports that the store's credentials may not
+// list or delete object versions, which DeletePrefix needs so that no version
+// outlives an erasure. It is never answered by deleting only the current
+// objects: that would leave versions behind and report success.
+var ErrVersionPermissionsMissing = errors.New("blobstore: the object store credentials lack s3:ListBucketVersions or s3:DeleteObjectVersion on the bucket; grant both so erasure can remove every version")
+
+// versionAccessErr wraps wrapped with ErrVersionPermissionsMissing when cause
+// is an access-denied answer from the store, and returns it unchanged otherwise.
+func versionAccessErr(wrapped, cause error) error {
+	if minio.ToErrorResponse(cause).Code == "AccessDenied" {
+		return fmt.Errorf("%w: %w", ErrVersionPermissionsMissing, wrapped)
+	}
+	return wrapped
 }
 
 func (s *s3Store) Health(ctx context.Context) error {

@@ -83,7 +83,7 @@ var (
 	})
 	bucketSetting = config.Define(config.Spec[string]{
 		Key: "blobstore_bucket", Env: EnvBucket, Type: config.String, Roles: storeRoles,
-		Doc: "Bucket attachments are written to.",
+		Doc: "Bucket attachments are written to. Its credentials need s3:PutObject, s3:GetObject, s3:DeleteObject, s3:ListBucket, and for erasure also s3:ListBucketVersions and s3:DeleteObjectVersion, so that no version of a deleted object stays behind.",
 	})
 	regionSetting = config.Define(config.Spec[string]{
 		Key: "blobstore_region", Env: EnvRegion, Type: config.String, Roles: storeRoles,
