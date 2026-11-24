@@ -22,6 +22,7 @@ import (
 	"github.com/margince/margince/backend/internal/compose/integration"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/activities"
+	"github.com/margince/margince/backend/internal/modules/notices"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
@@ -209,5 +210,53 @@ func TestATeamRequestThatMovedAfterItsReadRefusesTheReservation(t *testing.T) {
 	err := env.e.DB().Tx(ctx, func(tx pgx.Tx) error { return holdSendBasisTx(ctx, tx, basis, time.Now) })
 	if !errors.Is(err, errSendBasisChanged) {
 		t.Fatalf("holding a request renamed since its read → %v, want %v", err, errSendBasisChanged)
+	}
+}
+
+// noticeOn is Rep2's team request notice on one team link.
+func (env *teamRequestMailEnv) noticeOn(t *testing.T, link ids.UUID) ids.UUID {
+	t.Helper()
+	var notice ids.UUID
+	key := notices.TeamRequestNoticeKey(link, ids.From[ids.UserKind](env.e.Rep2))
+	if err := integration.OwnerConn(t).QueryRow(context.Background(), `SELECT id FROM notice WHERE dedupe_key = $1`, key).Scan(&notice); err != nil {
+		t.Fatalf("reading the team request notice on %s: %v", link, err)
+	}
+	return notice
+}
+
+// Each mail is checked against its own team link. A colleague taken off one of
+// a host's two links hears nothing more about it, and is still told of the other.
+func TestEachTeamRequestMailReadsItsOwnTeamLink(t *testing.T) {
+	env := setupTeamRequestMail(t)
+	env.saveLink(t, "Intro call", env.e.Rep2)
+	first := env.link
+	second, err := env.store.CreateSchedulingTeamLink(env.as(env.e.Rep1), crmcontracts.SchedulingTeamLinkRequest{
+		Title: "Renewal call", TeamMembers: []crmcontracts.SchedulingTeamMember{{UserId: openapi_types.UUID(env.e.Rep2)}},
+	})
+	if err != nil {
+		t.Fatalf("making Rep1's second team link: %v", err)
+	}
+	ctx := principal.WithActor(principal.WithWorkspaceID(context.Background(), env.e.WS),
+		principal.Principal{Type: principal.PrincipalSystem, ID: notificationMailActor})
+	claim := func(notice ids.UUID) notices.EmailAttempt {
+		attempt, claimed, err := env.worker.notices.ClaimEmailAttempt(ctx, notice)
+		if err != nil || !claimed {
+			t.Fatalf("claiming the mail → claimed=%v, err=%v", claimed, err)
+		}
+		return attempt
+	}
+	onFirst, onSecond := claim(env.noticeOn(t, first)), claim(env.noticeOn(t, ids.UUID(second.Id)))
+
+	env.saveLink(t, "Intro call")
+	for _, attempt := range []notices.EmailAttempt{onFirst, onSecond} {
+		if err := env.worker.deliver(ctx, attempt, false); err != nil {
+			t.Fatalf("delivering a claimed mail: %v", err)
+		}
+	}
+	if env.relay.count() != 1 {
+		t.Fatalf("the relay was handed %d mails, want only the one for the link Rep2 is still on", env.relay.count())
+	}
+	if body := env.relay.bodies[0]; !strings.Contains(body, "Renewal call") || strings.Contains(body, "Intro call") {
+		t.Errorf("the mail does not name the link it is about:\n%s", body)
 	}
 }
