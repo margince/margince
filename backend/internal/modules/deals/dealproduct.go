@@ -271,7 +271,7 @@ func (s *Store) ListDealProducts(ctx context.Context, dealID ids.DealID) ([]crmc
 	}
 	var out []crmcontracts.DealProduct
 	err := s.Tx(ctx, func(tx pgx.Tx) error {
-		if err := auth.EnsureVisible(ctx, tx, dealTable, dealID.UUID); err != nil {
+		if err := auth.EnsureVisibleExisting(ctx, tx, dealTable, dealID.UUID); err != nil {
 			return err
 		}
 		var err error

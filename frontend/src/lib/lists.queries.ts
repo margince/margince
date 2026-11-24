@@ -14,6 +14,7 @@ import {
 import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { recordListsKey } from "./activitykeys";
+import { LISTS_KEY } from "./listkeys";
 import { throwProblem, unwrap } from "./problem";
 import { useMe } from "./session";
 import type { MutationOutcome } from "./undoableremoval";
@@ -58,9 +59,6 @@ export type ListLinkedValue = components["schemas"]["ListLinkedValue"];
 export type ListClauseVerdict = components["schemas"]["ListClauseVerdict"];
 export type ListVisit = components["schemas"]["ListVisit"];
 export type ListMember = components["schemas"]["ListMember"];
-
-/** Every cache entry a list write can make stale starts with this key. */
-export const LISTS_KEY = "lists";
 
 /**
  * Whether this installation has lists switched on. The server answers 404 on

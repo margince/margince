@@ -682,12 +682,17 @@
 }
 
 /* The details card's panes, closer than a feed's stack: a detail is a glance.
-   The narrow inset leaves the panes most of the card's width. */
+   Only a phone's card keeps its edge, so only there do the panes stand in. */
 .record-aside {
   display: flex;
   flex-direction: column;
   gap: var(--space-3);
-  padding: var(--space-3);
+  padding: var(--space-3) 0;
+}
+@media (max-width: 700px) {
+  .record-aside {
+    padding-inline: var(--space-3);
+  }
 }
 
 /* The dials above the chronology: the cuts, then the narrowing. Its own
@@ -797,7 +802,6 @@
   inline-size: 0.5rem;
   block-size: 0.5rem;
   border-radius: var(--r-full);
-  corner-shape: round;
   background: var(--borderStrong);
   border: 1px solid var(--borderStrong);
 }
@@ -853,7 +857,6 @@
   width: 24px;
   height: 24px;
   border-radius: var(--r-full);
-  corner-shape: round;
   background: var(--ground);
   border: 1px solid var(--borderStrong);
   display: grid;
@@ -1170,7 +1173,6 @@
   width: 28px;
   height: 28px;
   border-radius: var(--r-full);
-  corner-shape: round;
   background: var(--ground);
   border: 1px solid var(--borderStrong);
 }

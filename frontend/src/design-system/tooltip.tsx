@@ -302,10 +302,8 @@ function useTip<T extends HTMLElement>(
   const close = useCallback(() => setOpen(false), []);
   const frame = useTipFrame(anchor, box, open, close);
 
-  // Measured after every render rather than when `text` changes: the width the
-  // string has to fit in moves for reasons this hook never sees — a rail that
-  // narrowed, a sibling badge that appeared — and re-reading it is one property
-  // read. Setting the same answer twice is a no-op, so this cannot loop.
+  // Measured after every render, not when `text` changes: the room for the text
+  // moves with things this hook never sees. Setting the same answer is a no-op.
   useLayoutEffect(() => {
     if (earnsTabStop) {
       setReachable(worthShowing(anchor.current));
@@ -323,9 +321,19 @@ function useTip<T extends HTMLElement>(
     // A late web font can rewrap the text with no resize and no render.
     document.fonts?.ready.then(measure, measure);
     globalThis.addEventListener("resize", measure);
+    // A narrower column or a folded rail resizes the box with no render here:
+    // a list table's rows do not re-render on a width change.
+    const boxResized =
+      typeof ResizeObserver === "undefined"
+        ? null
+        : new ResizeObserver(measure);
+    if (anchor.current) {
+      boxResized?.observe(anchor.current);
+    }
     return () => {
       live = false;
       globalThis.removeEventListener("resize", measure);
+      boxResized?.disconnect();
     };
   }, [earnsTabStop, worthShowing]);
 

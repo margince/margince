@@ -164,13 +164,11 @@ describe("a unit's app in the home side drawer", () => {
     expect(link.getAttribute("href")).toMatch(/#\/ext\/notes$/);
   });
 
-  it("names the page by the app's own words, with no Settings trail", async () => {
+  it("names the tab by the app's own words, with no Settings above it", async () => {
     window.location.hash = "#/app/notes";
     renderApp();
     await screen.findByRole("heading", { name: "Notes app screen" });
-    const trail = screen.getByRole("navigation", { name: /breadcrumb/i });
-    expect(within(trail).queryByText("Settings")).toBeNull();
-    expect(within(trail).getByText("Other accounts")).toBeTruthy();
+    expect(document.title).toBe("Other accounts · Margince");
   });
 
   it("shows the fallback card at the sub-setting address when the unit ships no default export", async () => {

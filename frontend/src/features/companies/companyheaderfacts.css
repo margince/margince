@@ -1,0 +1,9 @@
+/* The way in names a contact inside a sentence, so the link is underlined as a
+   bare link in prose is (base.css): its ink alone sits too close to the words'. */
+.co-headline-way .entity-link {
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+.co-headline-way .entity-link:hover {
+  text-decoration-thickness: 2px;
+}

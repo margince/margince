@@ -99,7 +99,6 @@
   inset-inline-start: 0;
   block-size: 3px;
   border-radius: var(--r-full);
-  corner-shape: round;
   background: var(--accent);
 }
 .standing-timeline-spine.is-waiting {
@@ -122,7 +121,6 @@
   inline-size: 12px;
   block-size: 12px;
   border-radius: var(--r-full);
-  corner-shape: round;
   transform: translate(-50%, -50%);
   background: var(--accent);
 }
@@ -177,7 +175,6 @@
   inline-size: 10px;
   block-size: 10px;
   border-radius: var(--r-full);
-  corner-shape: round;
   background: var(--standing-timeline-flag-tone);
   transform: translate(-50%, 50%);
 }
@@ -229,7 +226,6 @@
   block-size: var(--space-6);
   padding-inline: var(--space-3);
   border-radius: var(--r-full);
-  corner-shape: round;
   background: var(--textPrimary);
   color: var(--textInverse);
   font: var(--fontHeadingXXSmall);
@@ -290,7 +286,6 @@
   padding: 0;
   border: 1px solid var(--borderStrong);
   border-radius: var(--r-full);
-  corner-shape: round;
   background: var(--ground);
   color: var(--textSecondary);
   cursor: pointer;
@@ -326,7 +321,6 @@
   inline-size: 12px;
   block-size: 12px;
   border-radius: var(--r-full);
-  corner-shape: round;
   background: var(--accent);
   color: var(--textOnAccentControl);
 }
@@ -342,7 +336,6 @@
   min-inline-size: 14px;
   padding-inline: 3px;
   border-radius: var(--r-full);
-  corner-shape: round;
   background: var(--textPrimary);
   color: var(--textInverse);
   font: var(--fontBodySmall);

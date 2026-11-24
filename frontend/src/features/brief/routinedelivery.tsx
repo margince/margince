@@ -223,10 +223,24 @@ export function RoutineDeliveryRows({
                   )}
                   value={settings.routine_mail_team_id ?? ""}
                   placeholder={t("teamweekly.pickTeam")}
-                  options={teamOptions}
+                  options={[
+                    { value: "", label: t("delivery.noTeam") },
+                    ...teamOptions,
+                  ]}
                   onChange={(value) => {
-                    if (teamOptions.some((team) => team.value === value))
-                      save({ routine_mail_team_id: value });
+                    if (value === "") {
+                      save({
+                        routine_mail_team_id: undefined,
+                        clear_routine_mail_team: true,
+                        ...(selectedScope === "personal"
+                          ? null
+                          : { routine_mail_scope: "personal" }),
+                      });
+                    } else if (teamOptions.some((team) => team.value === value))
+                      save({
+                        routine_mail_team_id: value,
+                        clear_routine_mail_team: undefined,
+                      });
                   }}
                 />
               ) : (

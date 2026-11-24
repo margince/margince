@@ -4,7 +4,6 @@
   width: 7px;
   height: 7px;
   border-radius: 50%;
-  corner-shape: round;
   display: inline-block;
   flex: none;
 }

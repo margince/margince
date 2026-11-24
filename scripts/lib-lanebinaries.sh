@@ -125,6 +125,7 @@ lane_bin_wait() { # attempt budget
   local attempt="$1" budget="$2" spent=0 interval names listed seen="" earlier="" carried=""
   local poll="${LANE_BIN_POLL_SECONDS:-5}" rest_at="${LANE_BIN_REST_AFTER:-360}" rest_calls=0 build
   (( attempt == 1 )) || rest_at=0
+  LANE_BIN_UNSERVED=""
   while :; do
     interval="$poll" listed=""
     if names="$(lane_bin_artifacts)"; then
@@ -137,9 +138,12 @@ lane_bin_wait() { # attempt budget
         return 1
       fi
       if grep -qx "$LANE_BIN_ARTIFACT-$attempt" <<<"$names"; then
-        echo "test-binaries: attempt $attempt built them; ${spent}s waited, $rest_calls REST call(s)" >&2
-        echo "$LANE_BIN_ARTIFACT-$attempt"
-        return 0
+        if lane_bin_served "$LANE_BIN_ARTIFACT-$attempt"; then
+          echo "test-binaries: attempt $attempt built them; ${spent}s waited, $rest_calls REST call(s)" >&2
+          echo "$LANE_BIN_ARTIFACT-$attempt"
+          return 0
+        fi
+        lane_bin_note_unserved "$LANE_BIN_ARTIFACT-$attempt" "$spent"
       fi
       earlier="$(sed -n "s/^$LANE_BIN_ARTIFACT-\([0-9][0-9]*\)\$/\1/p" <<<"$names" | LC_ALL=C sort -n | tail -n1)"
     else
@@ -163,15 +167,22 @@ lane_bin_wait() { # attempt budget
     fi
     # Decided on a list read in this round, never on an older one.
     if [[ -n "$carried" && -n "$listed" ]]; then
-      if [[ -n "$earlier" ]]; then
+      if [[ -n "$earlier" ]] && lane_bin_served "$LANE_BIN_ARTIFACT-$earlier"; then
         echo "test-binaries: attempt $attempt does not run the build again, so it runs the binaries of attempt $earlier; $rest_calls REST call(s)" >&2
         echo "$LANE_BIN_ARTIFACT-$earlier"
         return 0
       fi
-      echo "FAIL: attempt $attempt does not run the integration build again, and it lists no test binaries of an earlier attempt" >&2
-      return 1
+      if [[ -z "$earlier" ]]; then
+        echo "FAIL: attempt $attempt does not run the integration build again, and it lists no test binaries of an earlier attempt" >&2
+        return 1
+      fi
+      lane_bin_note_unserved "$LANE_BIN_ARTIFACT-$earlier" "$spent"
     fi
     if (( spent + interval > budget )); then
+      if [[ -n "${LANE_BIN_UNSERVED:-}" ]]; then
+        echo "FAIL: $LANE_BIN_UNSERVED is listed, but download-artifact's lookups by name and by id still did not serve it after ${spent}s" >&2
+        return 1
+      fi
       echo "FAIL: no test binaries from the integration build of attempt $attempt after ${spent}s. The build's own time limit is shorter, so it ended without leaving them." >&2
       return 1
     fi
@@ -181,29 +192,61 @@ lane_bin_wait() { # attempt budget
 }
 
 # lane_bin_artifacts — the names of this run's artifacts, of every attempt, one
-# per line. Asks the results service the artifact actions use, with
-# ACTIONS_RUNTIME_TOKEN and ACTIONS_RESULTS_URL (.github/actions/results-service-env).
+# per line.
 lane_bin_artifacts() {
-  local payload ids reply code
+  local reply
+  reply="$(lane_bin_list '{}')" || return 1
+  jq -r '.artifacts[]?.name' <<<"$reply"
+}
+
+# lane_bin_served NAME — do download-artifact's own two lookups find NAME yet?
+# It asks ListArtifacts by name, then by the newest match's id, and fails on an
+# empty answer to either. Both are filtered views, and they can lag the
+# unfiltered list for a moment after an upload is finalized, so a name being
+# listed is not yet a name it can download.
+lane_bin_served() { # name
+  local name="$1" reply id
+  reply="$(lane_bin_list "$(jq -nc --arg n "$name" '{name_filter: $n}')")" || return 1
+  id="$(jq -r --arg n "$name" '[.artifacts[]? | select(.name == $n) | .database_id | tonumber] | max // empty' <<<"$reply")"
+  [[ -n "$id" ]] || return 1
+  reply="$(lane_bin_list "$(jq -nc --arg id "$id" '{id_filter: $id}')")" || return 1
+  jq -e --arg id "$id" 'any(.artifacts[]?; (.database_id | tostring) == $id)' <<<"$reply" > /dev/null
+}
+
+# lane_bin_note_unserved NAME SPENT — say once that NAME is listed but not yet
+# served, and remember it for the timeout message.
+lane_bin_note_unserved() { # name spent
+  [[ "${LANE_BIN_UNSERVED:-}" == "$1" ]] && return 0
+  LANE_BIN_UNSERVED="$1"
+  echo "test-binaries: after ${2}s $1 is listed, but download-artifact's lookups by name and by id do not serve it yet" >&2
+}
+
+# lane_bin_list FILTER-JSON — the ListArtifacts reply for this run, narrowed by
+# FILTER-JSON ({} for all). Asks the results service the artifact actions use,
+# with ACTIONS_RUNTIME_TOKEN and ACTIONS_RESULTS_URL
+# (.github/actions/results-service-env).
+lane_bin_list() { # filter-json
+  local filter="$1" payload ids reply code
   # The token's `scp` claim names the run and the job: Actions.Results:RUN:JOB.
   payload="$(cut -d. -f2 <<<"${ACTIONS_RUNTIME_TOKEN:?}" | tr '_-' '/+')"
   while (( ${#payload} % 4 )); do payload+="="; done
   ids="$(base64 -d <<<"$payload" 2>/dev/null | jq -r '.scp // empty' | tr ' ' '\n' \
-    | sed -n 's/^Actions\.Results:\([^:]*\):\([^:]*\)$/{"workflow_run_backend_id":"\1","workflow_job_run_backend_id":"\2"}/p' | head -n1)"
+    | sed -n 's/^Actions\.Results:\([^:]*\):\([^:]*\)$/{"workflow_run_backend_id":"\1","workflow_job_run_backend_id":"\2"}/p' | sed -n 1p)"
   if [[ -z "$ids" ]]; then
     echo "test-binaries: the runtime token names no run for the results service" >&2
     return 1
   fi
   reply="$(mktemp)"
   code=$(curl -sS -o "$reply" -w '%{http_code}' -X POST --max-time 30 \
-    -H "Authorization: Bearer $ACTIONS_RUNTIME_TOKEN" -H 'Content-Type: application/json' --data "$ids" \
+    -H "Authorization: Bearer $ACTIONS_RUNTIME_TOKEN" -H 'Content-Type: application/json' \
+    --data "$(jq -c --argjson f "$filter" '. + $f' <<<"$ids")" \
     "${ACTIONS_RESULTS_URL%/}/twirp/github.actions.results.api.v1.ArtifactService/ListArtifacts" 2>/dev/null) || code=000
   if [[ "$code" != 200 ]]; then
     echo "test-binaries: the artifact list answered $code: $(head -c 200 "$reply")" >&2
     rm -f "$reply"
     return 1
   fi
-  jq -r '.artifacts[]?.name' "$reply"
+  cat "$reply"
   rm -f "$reply"
 }
 

@@ -153,7 +153,9 @@ A colleague can choose **Leave** at any time. Remove them from the list to take 
 
 The Margince booking page shows your name from **Settings → Account**, and the name and logo of the company you work for. An Admin sets that company under **Legal entities**. Unless an Admin sets one, that is your company profile. A company with no logo shows its name only. When new meetings get a video call, it names the video app: Google Meet or Microsoft Teams. Guests never see which calendar provider you use, your calendar names, or other guests.
 
-Your booking link has the form `https://<your Margince address>/book/<code>`. With a short address it is `/book/<your short address>`, and the long form still works. A short address works in capital or small letters. A link in the old form, with `/#/book/` in it, still opens the same page. The page and the guest's own meeting page do not promote Margince. The browser tab names you: "Book a meeting with" and your name.
+Your booking link has the form `https://<your Margince address>/book/<code>`. With a short address it is `/book/<your short address>`, and the long form still works. A short address works in capital or small letters. A link in the old form, with `/#/book/` in it, still opens the same page.
+
+The page and the guest's own meeting page do not promote Margince. The browser tab names you: "Book a meeting with" and your name. The tab shows the company logo when there is one.
 
 When you paste the link into chat or email, the preview card shows your name and the company name. It also shows the meeting title and how long the meeting takes. It shows the company logo when there is one. Without a logo the card is text only.
 

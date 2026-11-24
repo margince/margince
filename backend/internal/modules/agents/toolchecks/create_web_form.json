@@ -1,0 +1,6 @@
+{
+  "verb": "create_web_form",
+  "checks": [
+    "integrations.create"
+  ]
+}

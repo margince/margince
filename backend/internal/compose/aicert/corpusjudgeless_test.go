@@ -271,8 +271,6 @@ func counterpartyProofs() map[string]judgelessProof {
 		"the_owners_own_clinic_is_not_the_businesss_correspondent":             {"personal", "contact"}, //nolint:misspell // the scenario name spells the business's possessive
 		"family_writing_from_a_consumer_mailbox_is_not_a_business_contact":     {"personal", "contact"},
 		"a_department_display_name_is_not_somebodys_name":                      {"role_mailbox", "contact"},
-		"a_shared_mailbox_is_real_correspondence_with_nobody_to_name":          {"role_mailbox", "contact"},
-		"a_numbered_support_queue_is_one_desk":                                 {"role_mailbox", "contact"},
 		"a_private_property_desk_the_owner_wrote_to_is_not_a_contact":          {"personal", "contact"},
 		"courteous_cold_pitch_is_a_vendor_pitch":                               {"vendor_pitch", "contact"},
 		"a_chased_cold_pitch_is_still_a_vendor_pitch":                          {"vendor_pitch", "contact"},

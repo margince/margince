@@ -198,8 +198,8 @@ func TestE2ECertify(t *testing.T) {
 		t.Log("no record written: every candidate's record is current (STALE_ONLY=0 to re-measure)")
 	}
 	for _, r := range records {
-		t.Logf("%s: %s (reliability=%s judge_score_p50=%d self_judged=%v)",
-			r.Task, r.Verdict, aicert.ReliabilityCell(r.Passed, r.Runs), r.JudgeScoreP50, r.SelfJudged)
+		t.Logf("%s: %s (reliability=%s judge_score_p50=%s self_judged=%v)",
+			r.Task, r.Verdict, aicert.ReliabilityCell(r.Passed, r.Runs), aicert.JudgeScoreCell(r.JudgeScoreP50), r.SelfJudged)
 	}
 }
 

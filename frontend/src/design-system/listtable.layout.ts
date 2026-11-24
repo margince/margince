@@ -16,15 +16,15 @@ import {
 } from "react";
 import { readStoredJson, STORAGE_KEYS, writeStored } from "../lib/storage";
 import { MIN_COLUMN_WIDTH } from "./listheader";
-import { useNumericFloors } from "./listtable.floors";
+import { useColumnFloors } from "./listtable.floors";
 
 /**
  * How the table divides its width when the reader has not resized anything.
  * Sized to its content, a name column with an avatar and a badge takes half
  * the page. So each column takes a share weighted by what it holds.
  *
- * The minimum binds per column, and a header longer than its column wraps. A
- * `share` of null takes its minimum in pixels: a column of translated buttons.
+ * The minimum binds per column, and a header longer than its column wraps
+ * between its words. A `share` of null takes its minimum in pixels: a column of translated buttons.
  */
 type ColumnSize = Readonly<{
   share: number | null;
@@ -37,6 +37,8 @@ type ColumnSize = Readonly<{
   first?: number;
 }>;
 
+// The minimums let the seven default columns of Contacts or Companies, German
+// headers included, fit a 1024px window with the rail folded and a scrollbar.
 const COLUMN_SIZES: Readonly<
   Record<
     | "identity"
@@ -50,7 +52,7 @@ const COLUMN_SIZES: Readonly<
     ColumnSize
   >
 > = {
-  identity: { share: 2.4, min: 200, first: 400 },
+  identity: { share: 2.4, min: 180, first: 400 },
   numeric: { share: 0.9, min: 110, max: 200 },
   // "28. Sept. 2027" in German, the longest abbreviated date this tree ships.
   date: { share: 0.8, min: 120, max: 150 },
@@ -58,7 +60,7 @@ const COLUMN_SIZES: Readonly<
   colleague: { share: 1, min: 150, max: 240 },
   // A score of up to three digits under a one-word header and its sort arrow.
   score: { share: null, min: 80 },
-  standard: { share: 1.3, min: 130 },
+  standard: { share: 1.3, min: 120 },
   // Two labelled ghost buttons side by side in the longest locale this tree
   // ships: German turns "Edit product" into "Produkt bearbeiten".
   verbs: { share: null, min: 320 },
@@ -92,8 +94,8 @@ export function widthWorthAdopting(
 }
 
 /**
- * A column's size, raised to its floor. The floor is the widest figure a
- * numeric column holds, so no figure is cut short to fit a share.
+ * A column's size, raised to its floor: the widest figure a numeric column
+ * holds, or its header's longest word. No figure or word is cut to fit a share.
  */
 function boundsOf(column: SizedColumn, floors: Widths): ColumnSize {
   const size = sizeOf(column);
@@ -156,7 +158,7 @@ function widthsIn(value: unknown): Record<string, number> | null {
   );
 }
 
-function floorsIn(value: unknown): NumericFloors {
+function floorsIn(value: unknown): ColumnFloors {
   if (typeof value !== "object" || value === null) {
     return NO_FLOORS;
   }
@@ -179,12 +181,13 @@ function writeWidths(key: string | undefined, widths: Record<string, number>) {
 type Widths = Readonly<Record<string, number>>;
 
 /**
- * The widest figure of each numeric column: held since the table mounted, and
- * on screen now. A dragged width answers only to the figures on screen.
+ * Each column's floor held since the table mounted, from its figures and its
+ * header, and each numeric column's widest figure on screen now. A dragged
+ * width answers only to the figures on screen.
  */
-export type NumericFloors = Readonly<{ held: Widths; onScreen: Widths }>;
+export type ColumnFloors = Readonly<{ held: Widths; onScreen: Widths }>;
 
-const NO_FLOORS: NumericFloors = { held: {}, onScreen: {} };
+const NO_FLOORS: ColumnFloors = { held: {}, onScreen: {} };
 
 /** Every shown column's width, and where the row stops shrinking. */
 export type ColumnLayout = Readonly<{
@@ -206,7 +209,7 @@ export function columnLayout(
   shown: readonly SizedColumn[],
   widths: Widths,
   available: number,
-  floors: NumericFloors = NO_FLOORS,
+  floors: ColumnFloors = NO_FLOORS,
 ): ColumnLayout {
   const boundsAt = (column: SizedColumn) => boundsOf(column, floors.held);
   const fixedWidth = (column: SizedColumn) => {
@@ -407,7 +410,7 @@ export function useColumnWidths(
   };
   const { widths, ...resize } = useResizedWidths(widthsKey, measured);
   const available = useAvailableWidth(refs.scroller, drawsOwnTable);
-  const floorsRead = useNumericFloors(shown, refs.head);
+  const floorsRead = useColumnFloors(shown, refs.head);
   const floors = useMemo(() => floorsIn(JSON.parse(floorsRead)), [floorsRead]);
   return { ...columnLayout(shown, widths, available, floors), ...resize };
 }
@@ -415,10 +418,10 @@ export function useColumnWidths(
 /**
  * The frozen identity column's edge. It casts a shadow only once columns have
  * slid under it, since a shadow over open space reads as a seam. CSS cannot
- * know where the frozen column ends or how tall the body is, so both are set.
+ * know where the frozen column ends or how tall the rows are, so both are set.
  */
 export function useFrozenEdge(
-  scroller: RefObject<HTMLDivElement | null>,
+  body: HTMLDivElement | null,
   shownCount: number,
   dense: boolean,
 ) {
@@ -427,15 +430,21 @@ export function useFrozenEdge(
   // the effect reads.
   // biome-ignore lint/correctness/useExhaustiveDependencies: trigger-only deps
   useEffect(() => {
-    const body = scroller.current;
     if (!body) {
       return;
     }
+    // On the shadow, since one set on the scroller restyles every cell. Reads
+    // come before writes, so no write forces a layout.
+    const edge = body.querySelector<HTMLElement>(":scope > .lt-freeze");
+    const table = body.querySelector(":scope > table");
     const measure = () => {
       const frozen = body.querySelector("thead .lt-identity");
       const width = frozen ? frozen.getBoundingClientRect().width : 0;
-      body.style.setProperty("--lt-freeze", `${Math.round(width)}px`);
-      body.style.setProperty("--lt-body", `${body.clientHeight}px`);
+      // The rows' height, not the box's: the shade stops where the rows do.
+      const rows = table ? table.getBoundingClientRect().height : 0;
+      const height = Math.min(body.clientHeight, rows);
+      edge?.style.setProperty("--lt-freeze", `${Math.round(width)}px`);
+      edge?.style.setProperty("--lt-body", `${height}px`);
     };
     measure();
     // Without an observer the numbers stay right for this render and stop
@@ -445,12 +454,15 @@ export function useFrozenEdge(
     }
     const observer = new ResizeObserver(measure);
     observer.observe(body);
+    if (table) {
+      observer.observe(table);
+    }
     const frozen = body.querySelector("thead .lt-identity");
     if (frozen) {
       observer.observe(frozen);
     }
     return () => observer.disconnect();
-  }, [shownCount, dense]);
+  }, [body, shownCount, dense]);
   return {
     shifted,
     onScroll: (event: UIEvent<HTMLDivElement>) => {

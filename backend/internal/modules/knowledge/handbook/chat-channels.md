@@ -72,3 +72,7 @@ Click **Unlink**, then give the record a new channel.
 ### How do I stop it?
 Open the card's menu and click **Unlink**. Margince stops posting. The channel and its messages stay
 in the chat.
+
+### What happens when I archive a deal or project?
+Margince stops posting and frees the channel for another deal or project. A deal and its project keep
+a shared channel while one of them is still open. If you restore the record, link a channel again.

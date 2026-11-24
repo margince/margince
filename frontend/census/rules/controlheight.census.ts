@@ -233,7 +233,10 @@ export const ACCEPTED = new Map<string, string>([
       "and its summary need",
   ],
   ["stat-card", "a card: the strip's tile, and the tile filling its cell"],
-  ["arhit", "the agent orb's hit area, sized to the orb rather than to a verb"],
+  [
+    "arhit",
+    "the agent's rail row: its line and its spend, two lines beside the orb",
+  ],
   ["fdz", "a drop ZONE is an area to aim at, not a control"],
   ["fdz-input", "the invisible file input covering that zone"],
   ["filterpill", "chip-shaped, and the chip is its own rung on the toolbar"],

@@ -30,8 +30,8 @@ import { useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import { downloadBytes, filenameFromDisposition } from "../../lib/download";
 import { useHealthScope } from "../../lib/healthscope";
+import { LISTS_KEY } from "../../lib/listkeys";
 import {
-  LISTS_KEY,
   type List,
   type ListMember,
   type ListRecordType,

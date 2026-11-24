@@ -3,6 +3,7 @@ import { cleanup, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { SignatureHtml } from "../../components/signaturehtml";
+import { PageSaveBar, SavePageProvider } from "../../design-system/savepage";
 import { useToast } from "../../design-system/toast";
 import { meFixture } from "../../testing/mefixture";
 import { jsonResponse, render } from "../../testing/settings.testkit";
@@ -116,12 +117,21 @@ describe("a member under a workspace template", () => {
   });
 });
 
+function TemplatePage() {
+  return (
+    <SavePageProvider>
+      <SignatureTemplateCard />
+      <PageSaveBar />
+    </SavePageProvider>
+  );
+}
+
 describe("the template card", () => {
-  it("saves the admin's layout through one PUT", async () => {
+  it("saves the admin's layout through the page's save bar, in one PUT", async () => {
     const user = userEvent.setup();
     const calls: Call[] = [];
     vi.stubGlobal("fetch", backend(calls, true));
-    render(<SignatureTemplateCard />);
+    render(<TemplatePage />);
 
     const box = await screen.findByRole("textbox", { name: "Template (HTML)" });
     await user.type(box, " Gradion");
@@ -138,12 +148,35 @@ describe("the template card", () => {
     await user.click(screen.getByRole("button", { name: "Save" }));
     await waitFor(() =>
       expect(
-        calls.some(
+        calls.filter(
           (c) =>
             c.method === "PUT" && c.url.endsWith("/email-signature-template"),
         ),
-      ).toBe(true),
+      ).toEqual([
+        expect.objectContaining({
+          body: { template: "<p><b>{name}</b><br>{title}</p> Gradion" },
+        }),
+      ]),
     );
+  });
+
+  it("holds a typed layout as an unsaved change, and Discard puts the saved one back", async () => {
+    const user = userEvent.setup();
+    const calls: Call[] = [];
+    vi.stubGlobal("fetch", backend(calls, true));
+    render(<TemplatePage />);
+
+    const box = await screen.findByRole("textbox", { name: "Template (HTML)" });
+    expect(screen.queryByRole("button", { name: "Save" })).toBeNull();
+    await user.type(box, " Gradion");
+    expect(await screen.findByText("Unsaved changes")).toBeTruthy();
+    await user.click(screen.getByRole("button", { name: "Discard" }));
+
+    expect((box as HTMLTextAreaElement).value).toBe(
+      "<p><b>{name}</b><br>{title}</p>",
+    );
+    expect(screen.queryByRole("button", { name: "Save" })).toBeNull();
+    expect(calls.some((c) => c.method === "PUT")).toBe(false);
   });
 });
 

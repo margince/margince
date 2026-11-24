@@ -218,7 +218,7 @@ export function BookingGuestScreen({
           },
         }),
       );
-      if (!data.invitation) throw new Error(t("scheduling.deliveryUnknown"));
+      if (!data.invitation) throw new Error(t("book.deliveryUnknown"));
       return data.invitation;
     },
     onMutate: fromHere,
@@ -256,7 +256,7 @@ export function BookingGuestScreen({
     if (!next.startsWith(monthKey)) setMonth(monthOf(next));
   };
   const publicUnavailable = !preview && profile.data?.paused !== false;
-  useBookingTitle(preview ? null : guestTitle(t, profile.data));
+  useBookingTitle(preview ? null : guestTitle(t, profile.data), profile.data);
   return (
     <div className="book-guest-page">
       <div className="book-guest-column">
@@ -304,7 +304,7 @@ export function BookingGuestScreen({
                           <>
                             <p>{host.proposal.description}</p>
                             <p className="t-caption">
-                              {t("scheduling.personalGuest")}
+                              {t("book.personalGuest")}
                             </p>
                           </>
                         )}
@@ -461,7 +461,7 @@ function GuestTimes({
               label: formatDateTime(slot.start, locale, zone),
             }))}
             onSelect={onSelect}
-            empty={t("scheduling.noTimes")}
+            empty={t("book.noTimes")}
           />
         </div>
       )}
@@ -479,11 +479,7 @@ function GuestTimes({
                 label: formatTimeOfDay(slot.start, locale, zone),
               }))}
               onSelect={onSelect}
-              empty={t(
-                monthHasTimes
-                  ? "scheduling.noTimesDay"
-                  : "scheduling.noTimesMonth",
-              )}
+              empty={t(monthHasTimes ? "book.noTimesDay" : "book.noTimesMonth")}
             />
           )}
         </QueryGate>

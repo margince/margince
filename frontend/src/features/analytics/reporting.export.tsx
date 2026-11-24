@@ -39,7 +39,7 @@ export function ReportingExportButton({
           params: { path: { id: editionId } },
           parseAs: "text",
         });
-        if (result.error) throwProblem(result.error);
+        if (result.error !== undefined) throwProblem(result.error);
         return { csv: result.data, filename: csvName(result.response) };
       }
       const figures = await evaluationCsv(evaluation);
@@ -110,7 +110,7 @@ async function evaluationCsv(
     },
     parseAs: "text",
   });
-  if (result.error) throwProblem(result.error);
+  if (result.error !== undefined) throwProblem(result.error);
   return { csv: result.data, filename: csvName(result.response) };
 }
 
