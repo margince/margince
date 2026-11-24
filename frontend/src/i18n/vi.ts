@@ -4343,6 +4343,10 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "finance.moreInvoices": "Còn hóa đơn khác trong hệ thống kế toán",
   "finance.syncedFrom": "Từ {provider} · đồng bộ {when}",
   "finance.fromNeverSynced": "Từ {provider} · chưa đồng bộ",
+  "finance.syncedFromAccounting":
+    "Từ hệ thống kế toán của bạn · đồng bộ {when}",
+  "finance.fromAccountingNeverSynced":
+    "Từ hệ thống kế toán của bạn · chưa đồng bộ",
   "finance.status.draft": "Bản nháp",
   "finance.status.open": "Chưa thanh toán",
   "finance.status.partiallyPaid": "Thanh toán một phần",
@@ -7554,6 +7558,11 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Giá trị này đã bị xóa theo yêu cầu của chủ sở hữu và không thể lưu lại.",
   "create.linkedinMalformed":
     "Đây không phải là đường liên kết. Hãy dán địa chỉ của trang LinkedIn.",
+  "create.domainMalformed":
+    "Đây không phải là tên miền. Hãy nhập một tên miền, ví dụ example.com.",
+  "create.parentCompanyBelow": "{name} đã nằm dưới công ty này.",
+  "create.parentCompanySelf":
+    "Một công ty không thể là công ty mẹ của chính nó. Hãy chọn công ty khác.",
   "create.linkedinNotLinkedin":
     "Hãy nhập đường liên kết tới một trang trên linkedin.com.",
   "create.linkedinNotProfile":
@@ -8594,6 +8603,14 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "tasks.completeNamed": "Đánh dấu {subject} đã xong",
   "tasks.snooze": "Tạm hoãn 1 ngày",
   "tasks.moveTo": "Chuyển sang",
+  "tasks.move": "Chuyển",
+  "tasks.moveAnyway": "Vẫn chuyển",
+  "tasks.moveSame":
+    "Việc cần làm đã có hạn vào lúc này. Chọn ngày hoặc giờ khác.",
+  "tasks.movePastTitle": "Ngày đã qua",
+  "tasks.movePastBody": "Chuyển sang ngày này sẽ làm việc cần làm bị quá hạn.",
+  "tasks.movedTo": "Đã chuyển sang {when}",
+  "tasks.moveUndoFailed": "Không thể chuyển việc cần làm về hạn cũ. Thử lại.",
   "tasks.remind.menu": "Nhắc tôi",
   "tasks.remind.inAnHour": "Sau 1 giờ",
   "tasks.remind.tomorrowMorning": "Sáng mai",
@@ -9570,6 +9587,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "delivery.scope.combined": "Việc của tôi và nhóm đã chọn",
   "delivery.teamHelp":
     "Chọn nhóm trước khi bật chế độ xem. Quyền truy cập được kiểm tra lại khi gửi.",
+  "delivery.noTeam": "Không có nhóm",
+  "delivery.teamGone": "Nhóm này không còn tồn tại. Hãy chọn nhóm khác.",
   "delivery.weekday1": "Thứ Hai",
   "delivery.weekday2": "Thứ Ba",
   "delivery.weekday3": "Thứ Tư",
@@ -11501,6 +11520,11 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Chưa ai xác nhận nguồn đã ghi nhận của thông tin liên hệ này.",
   "notice.source.onRecord": "Đã ghi nhận",
   "notice.source.needsConfirmation": "Cần xác nhận nguồn",
+  "notice.source.confirmedSource": "{source} ngày {date}",
+  "notice.source.confirmedBy": "{actor} đã xác nhận ngày {date}",
+  "notice.source.confirmedByYou": "Bạn đã xác nhận ngày {date}",
+  "notice.source.confirmedAt": "Đã xác nhận ngày {date}",
+  "notice.source.saved": "Đã xác nhận nguồn",
   "notice.source.contactExplanation":
     "Bộ phận phụ trách quyền riêng tư sẽ xác nhận thông tin của họ đến từ đâu.",
   "notice.rule.art13": "Thông báo theo Điều 13",
@@ -18210,6 +18234,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "ownDomains.confirmLabel": "Xác nhận {domain}",
 
   "financeSource.title": "Nguồn kế toán",
+  "financeSource.unnamed": "Nguồn chưa đặt tên",
   "financeSource.sub":
     "Margince đọc hóa đơn và khoản thanh toán từ hệ thống kế toán và hiển thị chúng trong tab Tài chính của từng công ty. Margince không bao giờ ghi vào nguồn này.",
   "financeSource.readOnly":
@@ -20906,6 +20931,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "deal.editDetails": "Sửa chi tiết",
   "deal.meetNeedsCompany":
     "Deal này chưa có công ty. Thêm công ty trong “Sửa chi tiết” để đặt lịch họp.",
+  "deal.meetCompanyWithheld":
+    "Công ty của deal này không được chia sẻ với bạn, nên không thể đặt lịch họp từ đây.",
   "deal.committee.card": "Hội đồng mua",
   "deal.committee.change": "Sửa hoặc gỡ bên liên quan",
   "deal.links.card": "Liên kết",

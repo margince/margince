@@ -291,6 +291,28 @@ export const EverySectionGranted: Story = {
   render: () => rail(granted),
 };
 
+// A source a reviewer confirmed: the Source section stays and says what was
+// confirmed, when it was obtained, and who confirmed it.
+export const SourceConfirmed: Story = {
+  name: "Source confirmed",
+  render: () =>
+    rail({
+      ...granted,
+      privacy_source_reviews: [],
+      privacy_confirmed_source: {
+        case_id: "case-source",
+        source_kind: "in_person_permission",
+        source_obtained_at: "2026-11-15T12:00:00Z",
+        confirmed_at: "2026-11-16T12:00:00Z",
+        confirmed_by: {
+          actor_type: "human",
+          actor_id: "human:u-admin",
+          actor_name: "Demo Admin",
+        },
+      },
+    }),
+};
+
 // On one Shortlist, for a seat that may change lists: the chip, Add to
 // Shortlist and the way to every list.
 export const Lists: Story = {

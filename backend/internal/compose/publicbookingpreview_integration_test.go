@@ -49,10 +49,14 @@ func fetchBookingPreview(t *testing.T, server http.Handler, method, slug string)
 
 func expectNoMarginceOrHost(t *testing.T, body string) {
 	t.Helper()
-	for _, banned := range []string{"Margince", "margince.com", "Ada", "Acme", "og:image"} {
+	for _, banned := range []string{"Margince", "margince.com", "Ada", "Acme", "og:image", "icon.svg", "company-logo"} {
 		if strings.Contains(body, banned) {
 			t.Fatalf("card carries %q:\n%s", banned, body)
 		}
+	}
+	// HEAD has no body; a GET card claims a blank tab icon, so a browser never asks for the app's.
+	if body != "" && !strings.Contains(body, `<link rel="icon" href="data:,">`) {
+		t.Fatalf("card leaves the tab icon to /favicon.ico:\n%s", body)
 	}
 }
 
@@ -80,6 +84,7 @@ func TestBookingPreviewNamesTheHostAndCompanyWithTheirLogoAndNoMargince(t *testi
 		`<meta property="og:site_name" content="Acme GmbH">`,
 		`<meta property="og:image" content="` + previewOrigin + `/v1/public/booking/company-logo">`,
 		`<meta name="twitter:image" content="` + previewOrigin + `/v1/public/booking/company-logo">`,
+		`<link rel="icon" href="` + previewOrigin + `/v1/public/booking/company-logo">`,
 		`<meta name="twitter:card" content="summary">`,
 		`Tea &amp; &lt;script&gt;alert(1)&lt;/script&gt;: a 45-minute meeting with Ada &lt;script&gt;alert(&#34;Host&#34;)&lt;/script&gt; of Acme GmbH.`,
 		`<a id="record" href="/#/book/` + slug + `">Open booking page</a>`,
@@ -88,10 +93,18 @@ func TestBookingPreviewNamesTheHostAndCompanyWithTheirLogoAndNoMargince(t *testi
 			t.Fatalf("preview lacks %s:\n%s", want, body)
 		}
 	}
-	for _, banned := range []string{"Margince", "margince.com", "<script>alert", `"Host"`} {
+	for _, banned := range []string{"Margince", "margince.com", "icon.svg", "<script>alert", `"Host"`} {
 		if strings.Contains(body, banned) {
 			t.Fatalf("preview carries %q:\n%s", banned, body)
 		}
+	}
+	// nginx sends a browser's navigation here too, so its head is this same card.
+	navigation := httptest.NewRequest(http.MethodGet, "/v1/public/booking/"+slug+"/preview", nil)
+	navigation.Header.Set("Sec-Fetch-Dest", "document")
+	browser := httptest.NewRecorder()
+	server.ServeHTTP(browser, navigation)
+	if browser.Code != http.StatusOK || browser.Body.String() != body {
+		t.Fatalf("a browser's fetch reads another head: %d\n%s", browser.Code, browser.Body.String())
 	}
 
 	head := fetchBookingPreview(t, server, http.MethodHead, slug)
@@ -112,7 +125,7 @@ func TestBookingPreviewNamesTheHostAndCompanyWithTheirLogoAndNoMargince(t *testi
 		t.Fatal(err)
 	}
 	after := fetchBookingPreview(t, server, http.MethodGet, slug).Body.String()
-	if !strings.Contains(after, `content="Renamed GmbH"`) || strings.Contains(after, "Acme") || strings.Contains(after, "og:image") {
+	if !strings.Contains(after, `content="Renamed GmbH"`) || strings.Contains(after, "Acme") || strings.Contains(after, "og:image") || !strings.Contains(after, `<link rel="icon" href="data:,">`) {
 		t.Fatalf("preview did not follow the company change:\n%s", after)
 	}
 }
@@ -189,6 +202,21 @@ func TestRevokedAndMissingBookingPreviewsAre404WithNoHost(t *testing.T) {
 	}
 	if live := fetchBookingPreview(t, server, http.MethodGet, *replaced.Slug); live.Code != http.StatusOK {
 		t.Fatalf("replacement page: %d", live.Code)
+	}
+}
+
+func TestAGuestTokenRouteHasNoPreviewCard(t *testing.T) {
+	e := integration.Setup(t)
+	theCompanyExists(t, e)
+	hostWithBookingPage(t, e, true)
+	server := New(e.Pool, slog.New(slog.NewTextHandler(io.Discard, nil)), withConnectedCalendar(), WithPublicBaseURL(previewOrigin))
+	for _, path := range []string{"/v1/public/meeting/private-token/preview", "/v1/public/proposal/private-token/preview"} {
+		response := httptest.NewRecorder()
+		server.ServeHTTP(response, httptest.NewRequest(http.MethodGet, path, nil))
+		body := response.Body.String()
+		if response.Code != http.StatusNotFound || strings.Contains(body, "<html") || strings.Contains(body, "Ada") || strings.Contains(body, "Acme") {
+			t.Fatalf("%s: %d %s", path, response.Code, body)
+		}
 	}
 }
 

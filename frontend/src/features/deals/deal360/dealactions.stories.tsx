@@ -101,6 +101,12 @@ const actions = (
 /** An open deal a rep may write to: every verb live. */
 export const Open: Story = { render: () => actions() };
 
+/** A deal whose company is not shared with this reader: Meet says so, rather
+ * than claiming the deal has no company. */
+export const CompanyWithheld: Story = {
+  render: () => actions({ company_id: null, masked_fields: ["company_id"] }),
+};
+
 /**
  * A seat that may read the deal but not log against it. The two recording verbs
  * keep their place and point at one sentence — withholding twelve buttons

@@ -247,7 +247,14 @@ func Duplicate(code, existingID string) *DetailedError {
 // codeInternal is the wire code of every opaque 500.
 const codeInternal = "internal"
 
+// sessionChallenge is what a 401 names when its writer named no scheme of its
+// own. RFC 9110 requires a challenge, and /v1 takes a passport as a bearer.
+const sessionChallenge = `Bearer realm="margince"`
+
 func writeProblem(w http.ResponseWriter, p problem) {
+	if p.Status == http.StatusUnauthorized && w.Header().Get("WWW-Authenticate") == "" {
+		w.Header().Set("WWW-Authenticate", sessionChallenge)
+	}
 	if p.Type == "" {
 		p.Type = problemTypeBase + p.Code
 	}

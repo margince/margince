@@ -1627,7 +1627,7 @@ smallest one to copy:
 
 ```go
 FinanceSources: []extension.FinanceSource{{
-	Provider: "books", Check: check, Customers: customers, InvoicesFor: invoicesFor,
+	Provider: "books", DisplayName: "Books", Check: check, Customers: customers, InvoicesFor: invoicesFor,
 }},
 Secrets: []extension.SecretsRequest{{Key: "books_token", Scope: extension.SecretScopeWorkspace}},
 ```
@@ -1637,6 +1637,9 @@ func check(ctx context.Context, rt extension.Runtime, conn accounting.Connection
 func customers(ctx context.Context, rt extension.Runtime, conn accounting.Connection) ([]accounting.Customer, error)
 func invoicesFor(ctx context.Context, rt extension.Runtime, conn accounting.Connection, customerID string) (accounting.Ledger, error)
 ```
+
+`DisplayName` is the name a reader sees on the finance card ("From Books"). Without it, the page says
+"your accounting system", and never shows the `Provider` key.
 
 The core does the rest. An admin connects your source on **Settings → Integrations**, and the core
 calls `Check` first. An error there refuses the connect and stores nothing. The sync then reads

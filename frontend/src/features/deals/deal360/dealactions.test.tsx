@@ -146,6 +146,18 @@ describe("the deal header's Meet verb", () => {
     );
   });
 
+  it("says the company is not shared, not missing, when it is withheld", async () => {
+    mount(grants, { company_id: null, masked_fields: ["company_id"] });
+
+    await waitFor(() =>
+      expect(meet()).toHaveAccessibleDescription(
+        en["deal.meetCompanyWithheld"],
+      ),
+    );
+    expect(meet()).toBeDisabled();
+    expect(meet()).not.toHaveAccessibleDescription(en["deal.meetNeedsCompany"]);
+  });
+
   it("offers Meet with no refusal on a deal with a company", async () => {
     mount(grants, { company_id: "01a02000-0000-7000-8000-000000000001" });
 

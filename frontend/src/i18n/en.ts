@@ -4421,6 +4421,9 @@ export const en = {
   "finance.moreInvoices": "More invoices in the accounting system",
   "finance.syncedFrom": "From {provider} · synced {when}",
   "finance.fromNeverSynced": "From {provider} · not yet synced",
+  "finance.syncedFromAccounting": "From your accounting system · synced {when}",
+  "finance.fromAccountingNeverSynced":
+    "From your accounting system · not yet synced",
   "finance.status.draft": "Draft",
   "finance.status.open": "Open",
   "finance.status.partiallyPaid": "Partially paid",
@@ -6333,6 +6336,8 @@ export const en = {
   "deal.editDetails": "Edit details",
   "deal.meetNeedsCompany":
     "This deal has no company yet. Add one under Edit details to book a meeting.",
+  "deal.meetCompanyWithheld":
+    "The company on this deal is not shared with you, so a meeting cannot be booked from here.",
   "deal.committee.card": "Committee",
   "deal.committee.change": "Change or remove stakeholders",
   "deal.links.card": "Links",
@@ -7756,6 +7761,11 @@ export const en = {
     "This value was erased at its owner’s request and cannot be stored again.",
   "create.linkedinMalformed":
     "This is not a link. Paste the address of the LinkedIn page.",
+  "create.domainMalformed":
+    "This is not a domain. Enter one such as example.com.",
+  "create.parentCompanyBelow": "{name} is already below this company.",
+  "create.parentCompanySelf":
+    "A company cannot be its own parent. Choose another.",
   "create.linkedinNotLinkedin": "Enter a link to a page on linkedin.com.",
   "create.linkedinNotProfile":
     "Enter a link to someone’s own profile, such as linkedin.com/in/name.",
@@ -8810,6 +8820,13 @@ export const en = {
   "tasks.completeNamed": "Mark {subject} done",
   "tasks.snooze": "Snooze 1 day",
   "tasks.moveTo": "Move to",
+  "tasks.move": "Move",
+  "tasks.moveAnyway": "Move anyway",
+  "tasks.moveSame": "The task is already due then. Pick another day or time.",
+  "tasks.movePastTitle": "Date in the past",
+  "tasks.movePastBody": "Moving the task to this date makes it overdue.",
+  "tasks.movedTo": "Moved to {when}",
+  "tasks.moveUndoFailed": "Task was not moved back. Retry.",
   "tasks.remind.menu": "Remind me",
   "tasks.remind.inAnHour": "In 1 hour",
   "tasks.remind.tomorrowMorning": "Tomorrow morning",
@@ -9778,6 +9795,8 @@ export const en = {
   "delivery.scope.combined": "My work and selected team",
   "delivery.teamHelp":
     "Choose a team before enabling its view. Access is checked again when mail is sent.",
+  "delivery.noTeam": "No team",
+  "delivery.teamGone": "This team no longer exists. Choose another.",
   "delivery.weekday1": "Monday",
   "delivery.weekday2": "Tuesday",
   "delivery.weekday3": "Wednesday",
@@ -11783,6 +11802,11 @@ export const en = {
     "Nobody has confirmed the recorded source of this contact’s details yet.",
   "notice.source.onRecord": "On record",
   "notice.source.needsConfirmation": "Source needs confirmation",
+  "notice.source.confirmedSource": "{source} on {date}",
+  "notice.source.confirmedBy": "Confirmed by {actor} on {date}",
+  "notice.source.confirmedByYou": "Confirmed by you on {date}",
+  "notice.source.confirmedAt": "Confirmed on {date}",
+  "notice.source.saved": "Source confirmed",
   "notice.source.contactExplanation":
     "A privacy officer confirms where their details came from.",
   "notice.rule.art13": "Art. 13 notice",
@@ -18522,6 +18546,7 @@ export const en = {
   "ownDomains.confirmLabel": "Confirm {domain}",
 
   "financeSource.title": "Accounting source",
+  "financeSource.unnamed": "Unnamed source",
   "financeSource.sub":
     "Margince reads invoices and payments from an accounting system and shows them on each company’s Finance tab. It never writes to the source.",
   "financeSource.readOnly":

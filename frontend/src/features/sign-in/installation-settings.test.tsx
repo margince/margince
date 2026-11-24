@@ -11,6 +11,7 @@ import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, type MockInstance, vi } from "vitest";
 import { DateFormatsProvider } from "../../app/dateformats";
+import { UnsavedGuard, useHasUnsavedChanges } from "../../components/unsaved";
 import { pickOption } from "../../design-system/select-testing";
 import { formatDate } from "../../format/format";
 import { LocaleProvider, useLocale } from "../../i18n";
@@ -132,6 +133,14 @@ async function openFrom(
   const edit = await screen.findByRole("button", { name: fact });
   await user.click(edit);
   return screen.getByRole("dialog");
+}
+
+function UnsavedProbe() {
+  return (
+    <span data-testid="unsaved-probe">
+      {useHasUnsavedChanges() ? "dirty" : "clean"}
+    </span>
+  );
 }
 
 afterEach(() => {
@@ -334,6 +343,71 @@ describe("InstallationSettingsCard", () => {
       /company time zone/i,
     ) as HTMLInputElement;
     expect(zone.disabled).toBe(false);
+  });
+
+  it("discards the dialog's draft on Cancel, so reopening shows the saved value and leaving asks nothing", async () => {
+    const user = userEvent.setup();
+    const { fetchMock, patch } = backendFor(SETTINGS_EDITOR);
+    vi.stubGlobal("fetch", fetchMock);
+    render(
+      <UnsavedGuard address="settings" onKeep={() => undefined}>
+        {() => (
+          <>
+            <InstallationSettingsCard />
+            <UnsavedProbe />
+          </>
+        )}
+      </UnsavedGuard>,
+    );
+
+    let dialog = await openFrom(user, /edit company time zone/i);
+    const zone = within(dialog).getByLabelText(/company time zone/i);
+    await user.clear(zone);
+    await user.type(zone, "Europe/Vienna");
+    expect(screen.getByTestId("unsaved-probe").textContent).toBe("dirty");
+    await user.click(within(dialog).getByRole("button", { name: "Cancel" }));
+
+    expect(screen.queryByRole("dialog")).toBeNull();
+    expect(screen.getByTestId("unsaved-probe").textContent).toBe("clean");
+    dialog = await openFrom(user, /edit company time zone/i);
+    expect(
+      (within(dialog).getByLabelText(/company time zone/i) as HTMLInputElement)
+        .value,
+    ).toBe("Europe/Berlin");
+    expect(patch()).toBeNull();
+  });
+
+  it("asks before Escape throws away a changed draft, and closes at once when nothing changed", async () => {
+    const user = userEvent.setup();
+    const { fetchMock } = backendFor(SETTINGS_EDITOR);
+    vi.stubGlobal("fetch", fetchMock);
+    render(<InstallationSettingsCard />);
+
+    await openFrom(user, /edit company time zone/i);
+    await user.keyboard("{Escape}");
+    expect(screen.queryByRole("dialog")).toBeNull();
+
+    const dialog = await openFrom(user, /edit company time zone/i);
+    const zone = within(dialog).getByLabelText(/company time zone/i);
+    await user.clear(zone);
+    await user.type(zone, "Europe/Vienna");
+    await user.keyboard("{Escape}");
+    const question = await screen.findByRole("dialog", {
+      name: "Discard unsaved changes?",
+    });
+    await user.click(
+      within(question).getByRole("button", { name: "Discard changes" }),
+    );
+
+    await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+    const reopened = await openFrom(user, /edit company time zone/i);
+    expect(
+      (
+        within(reopened).getByLabelText(
+          /company time zone/i,
+        ) as HTMLInputElement
+      ).value,
+    ).toBe("Europe/Berlin");
   });
 
   it("opens a dialog with only the tab's own facts, titled for the tab", async () => {

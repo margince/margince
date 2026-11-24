@@ -322,6 +322,7 @@ func WithVatChecking(inserter *jobs.Runner) Option {
 		s.contactsStore = s.contactsStore.WithVatCheckEnqueue(enqueue)
 		//nolint:staticcheck // QF1008: the embedded name is load-bearing — s.Handlers resolves to briefs.Handlers, a different embedded type
 		s.contactsHandlers = s.contactsHandlers.WithVatCheckEnqueue(enqueue)
+		s.authHandlers = s.WithVatRegisterAvailable(true)
 		// And every store compose builds from a pool — the approval effects,
 		// the capture sink, the verdict engine — which is where a site read's
 		// accepted VAT number actually lands.

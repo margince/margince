@@ -328,3 +328,27 @@ describe("the card offers no way to connect a source it cannot connect", () => {
     expect(screen.queryByRole("button", { name: /connect/i })).toBeNull();
   });
 });
+
+describe("the card names its accounting source the way a reader knows it", () => {
+  it("says the source's name, never its key", async () => {
+    stub({
+      ...CONNECTED,
+      provider_name: "Demo accounting",
+      last_synced_at: "2026-11-02T09:00:00Z",
+    });
+    render(<CompanyFinanceCard companyId="o-1" lifecycle="customer" />);
+    expect(
+      await screen.findByText(/^From Demo accounting · synced/),
+    ).toBeTruthy();
+    expect(screen.queryByText(/offline_demo/)).toBeNull();
+  });
+
+  it("names no source when the source declares no name", async () => {
+    stub(CONNECTED);
+    render(<CompanyFinanceCard companyId="o-1" lifecycle="customer" />);
+    expect(
+      await screen.findByText("From your accounting system · not yet synced"),
+    ).toBeTruthy();
+    expect(screen.queryByText(/offline_demo/)).toBeNull();
+  });
+});

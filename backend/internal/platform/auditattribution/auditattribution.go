@@ -49,6 +49,11 @@ const AgentClientNameJoin = `
 		LEFT JOIN oauth_grant g ON g.id = p.oauth_grant_id
 		LEFT JOIN oauth_client oc ON oc.client_id = g.client_id`
 
+// AttributionColumns selects an Attribution from an audit row aliased `a`
+// under ActorNameJoins and AgentClientNameJoin, in the order ScanTargets reads.
+const AttributionColumns = `a.actor_type, a.actor_id, a.on_behalf_of, a.passport_id,
+		       ` + ActorNameColumn + `, obo.display_name, oc.client_name`
+
 // Attribution is who an audit row is attributed to.
 type Attribution struct {
 	ActorType      string
@@ -58,6 +63,11 @@ type Attribution struct {
 	OnBehalfOfName *string
 	PassportID     *ids.UUID
 	AgentClient    *string
+}
+
+// ScanTargets are the destinations of AttributionColumns, in its order.
+func (a *Attribution) ScanTargets() []any {
+	return []any{&a.ActorType, &a.ActorID, &a.OnBehalfOf, &a.PassportID, &a.ActorName, &a.OnBehalfOfName, &a.AgentClient}
 }
 
 // Wire carries the attribution onto the contract, so every surface that names
@@ -79,6 +89,14 @@ func (a Attribution) Wire() *crmcontracts.PrincipalAttribution {
 		out.PassportId = &id
 	}
 	return out
+}
+
+// RecordWire is Wire for a record read. A passport id names a credential, and a
+// record read needs only its tool.
+func (a Attribution) RecordWire() *crmcontracts.PrincipalAttribution {
+	wire := a.Wire()
+	wire.PassportId = nil
+	return wire
 }
 
 // FirstCreateSQL is the create audit row a record's creator is read from. It is
@@ -108,8 +126,7 @@ func creatorsSQL(entityType string) (string, error) {
 		return "", fmt.Errorf("auditattribution: %q is not a record type", entityType)
 	}
 	return `
-		SELECT named.id, a.actor_type, a.actor_id, a.on_behalf_of, a.passport_id,
-		       ` + ActorNameColumn + `, obo.display_name, oc.client_name
+		SELECT named.id, ` + AttributionColumns + `
 		FROM unnest($1::uuid[]) AS named(id)
 		CROSS JOIN LATERAL (` + FirstCreateSQL("'"+entityType+"'", "named.id") + `) a` + ActorNameJoins + AgentClientNameJoin, nil
 }
@@ -138,8 +155,7 @@ func CreatorsTx(ctx context.Context, tx pgx.Tx, entityType string, entityIDs []i
 	for rows.Next() {
 		var entityID ids.UUID
 		var who Attribution
-		if err := rows.Scan(&entityID, &who.ActorType, &who.ActorID, &who.OnBehalfOf, &who.PassportID,
-			&who.ActorName, &who.OnBehalfOfName, &who.AgentClient); err != nil {
+		if err := rows.Scan(append([]any{&entityID}, who.ScanTargets()...)...); err != nil {
 			return nil, fmt.Errorf("auditattribution: reading a creator: %w", err)
 		}
 		out[entityID] = who
@@ -179,10 +195,7 @@ func StampCreators[T any](ctx context.Context, tx pgx.Tx, entityType string, pag
 	}
 	for i := range page {
 		if creator, found := creators[id(page[i])]; found {
-			wire := creator.Wire()
-			// A passport id names a credential, and a record read needs only its tool.
-			wire.PassportId = nil
-			set(&page[i], wire)
+			set(&page[i], creator.RecordWire())
 		}
 	}
 	return nil

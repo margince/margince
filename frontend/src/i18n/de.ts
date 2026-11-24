@@ -4474,6 +4474,10 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "finance.moreInvoices": "Weitere Rechnungen im Buchhaltungssystem",
   "finance.syncedFrom": "Aus {provider} · synchronisiert {when}",
   "finance.fromNeverSynced": "Aus {provider} · noch nicht synchronisiert",
+  "finance.syncedFromAccounting":
+    "Aus deinem Buchhaltungssystem · synchronisiert {when}",
+  "finance.fromAccountingNeverSynced":
+    "Aus deinem Buchhaltungssystem · noch nicht synchronisiert",
   "finance.status.draft": "Entwurf",
   "finance.status.open": "Offen",
   "finance.status.partiallyPaid": "Teilweise bezahlt",
@@ -7740,6 +7744,11 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Dieser Wert wurde auf Wunsch der betroffenen Person gelöscht und kann nicht wieder gespeichert werden.",
   "create.linkedinMalformed":
     "Das ist kein Link. Füge die Adresse der LinkedIn-Seite ein.",
+  "create.domainMalformed":
+    "Das ist keine Domain. Gib eine ein, zum Beispiel example.com.",
+  "create.parentCompanyBelow": "{name} steht bereits unter diesem Unternehmen.",
+  "create.parentCompanySelf":
+    "Ein Unternehmen kann nicht sein eigenes übergeordnetes Unternehmen sein. Wähle ein anderes.",
   "create.linkedinNotLinkedin":
     "Gib einen Link zu einer Seite auf linkedin.com ein.",
   "create.linkedinNotProfile":
@@ -8825,6 +8834,15 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "tasks.completeNamed": "{subject} erledigen",
   "tasks.snooze": "1 Tag zurückstellen",
   "tasks.moveTo": "Verschieben auf",
+  "tasks.move": "Verschieben",
+  "tasks.moveAnyway": "Trotzdem verschieben",
+  "tasks.moveSame":
+    "Die Aufgabe ist schon dann fällig. Wähle einen anderen Tag oder eine andere Uhrzeit.",
+  "tasks.movePastTitle": "Datum in der Vergangenheit",
+  "tasks.movePastBody": "Mit diesem Datum ist die Aufgabe überfällig.",
+  "tasks.movedTo": "Verschoben auf {when}",
+  "tasks.moveUndoFailed":
+    "Die Aufgabe wurde nicht zurückverschoben. Versuche es erneut.",
   "tasks.remind.menu": "Erinnerung",
   "tasks.remind.inAnHour": "In 1 Stunde",
   "tasks.remind.tomorrowMorning": "Morgen früh",
@@ -9835,6 +9853,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "delivery.scope.combined": "Meine Arbeit und gewähltes Team",
   "delivery.teamHelp":
     "Wähle ein Team, bevor du seine Ansicht aktivierst. Der Zugriff wird beim Versand erneut geprüft.",
+  "delivery.noTeam": "Kein Team",
+  "delivery.teamGone": "Dieses Team gibt es nicht mehr. Wähle ein anderes.",
   "delivery.weekday1": "Montag",
   "delivery.weekday2": "Dienstag",
   "delivery.weekday3": "Mittwoch",
@@ -11822,6 +11842,11 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Die erfasste Quelle der Daten dieses Kontakts hat noch niemand bestätigt.",
   "notice.source.onRecord": "Erfasst",
   "notice.source.needsConfirmation": "Quelle muss bestätigt werden",
+  "notice.source.confirmedSource": "{source} am {date}",
+  "notice.source.confirmedBy": "Bestätigt von {actor} am {date}",
+  "notice.source.confirmedByYou": "Von dir am {date} bestätigt",
+  "notice.source.confirmedAt": "Bestätigt am {date}",
+  "notice.source.saved": "Quelle bestätigt",
   "notice.source.contactExplanation":
     "Wer für den Datenschutz zuständig ist, bestätigt, woher die Daten stammen.",
   "notice.rule.art13": "Information nach Art. 13",
@@ -18711,6 +18736,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "ownDomains.confirmLabel": "{domain} bestätigen",
 
   "financeSource.title": "Buchhaltungsquelle",
+  "financeSource.unnamed": "Unbenannte Quelle",
   "financeSource.sub":
     "Margince liest Rechnungen und Zahlungen aus einem Buchhaltungssystem und zeigt sie im Tab Finanzen jedes Unternehmens. In die Quelle schreibt Margince nie.",
   "financeSource.readOnly":
@@ -21466,6 +21492,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "deal.editDetails": "Details bearbeiten",
   "deal.meetNeedsCompany":
     "Dieser Deal hat noch kein Unternehmen. Trage es unter „Details bearbeiten“ ein, um einen Termin zu buchen.",
+  "deal.meetCompanyWithheld":
+    "Das Unternehmen dieses Deals ist nicht mit dir geteilt, daher kann hier kein Termin gebucht werden.",
   "deal.committee.card": "Gremium",
   "deal.committee.change": "Stakeholder ändern oder entfernen",
   "deal.links.card": "Verknüpfungen",

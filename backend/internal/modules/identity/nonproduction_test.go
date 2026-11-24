@@ -63,3 +63,15 @@ func TestHandlersDefaultToNoDataReset(t *testing.T) {
 		t.Fatal("WithDataResetAvailable(true) did not set the field")
 	}
 }
+
+func TestMeSaysWhetherTheVatRegisterIsConsulted(t *testing.T) {
+	id := Identity{Roles: []string{"admin"}}
+	unwired := NewHandlers(&Service{}).meResponse(context.Background(), id)
+	if got := unwired.SettingsAvailability.VatRegister; got == nil || *got {
+		t.Fatalf("an installation that wired no VAT check reported vat_register = %v, want false", got)
+	}
+	wired := NewHandlers(&Service{}).WithVatRegisterAvailable(true).meResponse(context.Background(), id)
+	if got := wired.SettingsAvailability.VatRegister; got == nil || !*got {
+		t.Fatalf("an installation that wired the VAT check reported vat_register = %v, want true", got)
+	}
+}

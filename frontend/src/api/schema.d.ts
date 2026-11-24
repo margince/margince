@@ -117,7 +117,12 @@ export interface paths {
         post?: never;
         delete?: never;
         options?: never;
-        head?: never;
+        /**
+         * Reachability probe for a monitor that sends HEAD.
+         * @description `getStatus` without a body, for a monitor that probes with HEAD. It answers what
+         *     `getStatus` answers, and does no more work.
+         */
+        head: operations["headStatus"];
         patch?: never;
         trace?: never;
     };
@@ -2359,6 +2364,9 @@ export interface paths {
          *     past 120 characters (`too_long`), the limit of every company name typed by hand.
          *     A `parent_company_id` that names a company the caller cannot read answers 422 naming
          *     `parent_company_id`, the same for a missing record and for one hidden by row scope.
+         *     A parent that already sits below this company answers 422 `parent_company_below` on
+         *     `parent_company_id`, with `params.name` naming that company. A parent that is the company itself
+         *     answers 422 `parent_company_self` on `parent_company_id`.
          */
         patch: operations["updateCompany"];
         trace?: never;
@@ -36448,13 +36456,18 @@ export interface components {
         FinanceSourceOption: {
             /** @description The source's key, stored on every mirrored row. */
             provider: string;
+            /** @description The source's name for a reader, as its unit declares it. Absent when the unit declares none; a client then names it another way, never by the key. */
+            provider_name?: string;
             /** @description What the extension unit supplying it says it is for. */
             description: string;
         };
         FinanceConnection: {
             /** Format: uuid */
             id: string;
+            /** @description The source's key. Show `provider_name` to a reader. */
             provider: string;
+            /** @description The source's name for a reader, as its unit declares it. Absent when the unit declares none; a client then names it another way, never by the key. */
+            provider_name?: string;
             /**
              * @description `connecting` until the first sync finishes; `error` when the last one failed.
              * @enum {string}
@@ -36493,7 +36506,10 @@ export interface components {
             state: components["schemas"]["FinanceSummaryState"];
             /** @description Opaque revision of readable companies and the imported snapshot. Pages with different revisions must not be combined. */
             access_scope: string;
+            /** @description The accounting source's key. Show `provider_name` to a reader. */
             provider?: string;
+            /** @description The accounting source's name for a reader, as its unit declares it. Absent when the unit declares none; a client then names no source rather than show the key. */
+            provider_name?: string;
             /** Format: date-time */
             last_synced_at?: string;
             /** @description Readable, live linked companies eligible for the payment overview. */
@@ -36553,8 +36569,10 @@ export interface components {
              *     Absent when the caller lacks the contact or relationship grant, so an empty array means nobody is named rather than nobody may be seen. Contacts outside the caller's row scope are not listed, and no count says how many were withheld.
              */
             billing_contacts?: components["schemas"]["BillingContact"][];
-            /** @description Which accounting source this came from, in the source's own words ("offline_demo"). Rendered as a label beside the figures so a reader knows what they are looking at; absent when nothing is connected. */
+            /** @description Which accounting source this came from, by its key ("offline_demo"). A key, not a name for a reader: show `provider_name`. Absent when nothing is connected. */
             provider?: string | null;
+            /** @description The accounting source's name for a reader ("Demo accounting"), as the unit that supplies it declares it. Absent when nothing is connected, or when that unit declares no name; a client then names no source rather than show the key. */
+            provider_name?: string | null;
             /**
              * Format: date-time
              * @description When the last successful sync finished. Null when none has.
@@ -37834,6 +37852,7 @@ export interface components {
             privacy_source_reviews?: string[];
             /** @description Unresolved disclosure work for this contact, in deadline order. Absent when privacy-request read authority is withheld. */
             privacy_notice_duties?: components["schemas"]["ContactNoticeDuty"][];
+            privacy_confirmed_source?: components["schemas"]["ContactConfirmedSource"];
             /** @description Per-purpose state. The proof log stays at `GET /contacts/{id}/consent` — this is the guard, not the ledger. */
             consent?: {
                 state: components["schemas"]["ContactConsentState"][];
@@ -42603,6 +42622,26 @@ export interface components {
         Project360PhaseHistory: {
             data: components["schemas"]["Project360PhaseTransition"][];
             phase_durations: components["schemas"]["Project360PhaseDuration"][];
+        };
+        /**
+         * @description The source a reviewer last confirmed for this contact, from the newest confirmed
+         *     privacy-notice case. Absent when no source was ever confirmed, and withheld with the
+         *     privacy_notice_duties section.
+         */
+        ContactConfirmedSource: {
+            /** Format: uuid */
+            case_id: string;
+            /** @description The confirmed kind: one of `AssessNoticeSource.kind`. */
+            source_kind: string;
+            /**
+             * Format: date-time
+             * @description The acquisition date the reviewer confirmed; null when they confirmed none.
+             */
+            source_obtained_at: string | null;
+            /** Format: date-time */
+            confirmed_at: string;
+            /** @description Read from the confirm's audit row. Absent for an agent reader, and when that row no longer exists. */
+            confirmed_by?: components["schemas"]["PrincipalAttribution"];
         };
         /**
          * @description Who a recorded change is attributed to, read from the audit row the change
@@ -51071,9 +51110,11 @@ export interface components {
             routine_mail_scope?: "personal" | "team" | "combined";
             /**
              * Format: uuid
-             * @description The selected live team for team or combined scope. Personal scope ignores a retained selection.
+             * @description The selected live team for team or combined scope. Personal scope ignores a retained selection. A team that does not exist, is archived or is not one the caller may review is refused with 422 `delivery_team_gone` on this field.
              */
             routine_mail_team_id?: string;
+            /** @description True removes the selected team, and a team or combined scope falls back to `personal`. Sent together with `routine_mail_team_id` it is refused with 422. */
+            clear_routine_mail_team?: boolean;
             /** @description Earliest weekday, Monday 1 through Sunday 7. A non-working choice rolls to the next working weekday; later workdays allow catch-up. */
             weekly_delivery_day?: number;
             /** @description Combine eligible notices and current actions with the weekly message when it is ready, using one routine email per reporting day. Defaults to false; class opt-outs remain effective. */
@@ -52528,6 +52569,8 @@ export interface components {
             disabled_features?: components["schemas"]["CoreFeature"][];
             /** @description Whether reporting is enabled in this installation. */
             reporting?: boolean;
+            /** @description True when this installation consults the EU VAT register, so `POST /companies/{id}/vat-check` can queue a check. Absent or false means that request answers 404, and a client offers no check. */
+            vat_register?: boolean;
             /** @description True when Live Lists and Shortlists are on (`lists.enabled`, on by default). False when an operator has switched them off: the `/lists` routes answer 404, no agent tool reaches them, and no screen offers them. */
             lists?: boolean;
             /** @description True when an embeddings model is bound, so the reindex surface (`/embeddings/reindex*`) exists. False is the posture under which those routes answer 501: `--ai-fake`, or a routing document that binds no embeddings model. Bound or unbound only — deliberately not which model, which is the reindex status's own answer to a caller who may read it. */
@@ -65007,6 +65050,34 @@ export interface components {
                 "application/problem+json": components["schemas"]["Problem"];
             };
         };
+        /**
+         * @description No such file in this workspace, or out of RBAC scope. A browser tab that opened the file's
+         *     link (an `Accept` that prefers `text/html`) reads a short page in the reader's language
+         *     instead of the problem; every other caller gets the problem.
+         */
+        FileNotFound: {
+            headers: {
+                [name: string]: unknown;
+            };
+            content: {
+                "application/problem+json": components["schemas"]["Problem"];
+                "text/html": string;
+            };
+        };
+        /**
+         * @description Authenticated, but the role lacks the grant for this file (`code: permission_denied`). A
+         *     browser tab that opened the file's link (an `Accept` that prefers `text/html`) reads a short
+         *     page in the reader's language instead of the problem; every other caller gets the problem.
+         */
+        FileForbidden: {
+            headers: {
+                [name: string]: unknown;
+            };
+            content: {
+                "application/problem+json": components["schemas"]["Problem"];
+                "text/html": string;
+            };
+        };
         /** @description No such resource in this workspace (or out of RBAC scope). */
         NotFound: {
             headers: {
@@ -65232,9 +65303,10 @@ export interface components {
         /**
          * @description Only the members of this list — a Shortlist's chosen records, or the records a Live List's
          *     filter selects now — narrowed before sorting and paging, so the page is the list's members
-         *     in the record list's own columns. The list must be one the caller may find and of this
-         *     record type; otherwise `404` or `422`. Sharing a list never widens what the read shows:
-         *     the caller's row scope still applies to every row.
+         *     in the record list's own columns. A list the caller cannot find, or any list while lists
+         *     are off, narrows to no rows, as an unknown `tag_id` or `owner_id` does. A list of another
+         *     record type answers `422`. Sharing a list never widens what the read shows: the caller's
+         *     row scope still applies to every row.
          */
         ListMembershipFilter: string;
         /** @description Include soft-deleted (archived) rows. Default false. */
@@ -65458,6 +65530,34 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["ServiceStatus"];
                 };
+            };
+            /** @description The installation is not bootstrapped yet. */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    headStatus: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The api is reachable through the public path. */
+            200: {
+                headers: {
+                    "Cache-Control"?: "no-store";
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
             /** @description The installation is not bootstrapped yet. */
             503: {
@@ -66422,7 +66522,7 @@ export interface operations {
                 };
             };
             401: components["responses"]["Unauthorized"];
-            403: components["responses"]["Forbidden"];
+            403: components["responses"]["FileForbidden"];
         };
     };
     getAgentOpenAPIDocument: {
@@ -66590,9 +66690,10 @@ export interface operations {
                 /**
                  * @description Only the members of this list — a Shortlist's chosen records, or the records a Live List's
                  *     filter selects now — narrowed before sorting and paging, so the page is the list's members
-                 *     in the record list's own columns. The list must be one the caller may find and of this
-                 *     record type; otherwise `404` or `422`. Sharing a list never widens what the read shows:
-                 *     the caller's row scope still applies to every row.
+                 *     in the record list's own columns. A list the caller cannot find, or any list while lists
+                 *     are off, narrows to no rows, as an unknown `tag_id` or `owner_id` does. A list of another
+                 *     record type answers `422`. Sharing a list never widens what the read shows: the caller's
+                 *     row scope still applies to every row.
                  */
                 list_id?: components["parameters"]["ListMembershipFilter"];
                 /**
@@ -68665,9 +68766,10 @@ export interface operations {
                 /**
                  * @description Only the members of this list — a Shortlist's chosen records, or the records a Live List's
                  *     filter selects now — narrowed before sorting and paging, so the page is the list's members
-                 *     in the record list's own columns. The list must be one the caller may find and of this
-                 *     record type; otherwise `404` or `422`. Sharing a list never widens what the read shows:
-                 *     the caller's row scope still applies to every row.
+                 *     in the record list's own columns. A list the caller cannot find, or any list while lists
+                 *     are off, narrows to no rows, as an unknown `tag_id` or `owner_id` does. A list of another
+                 *     record type answers `422`. Sharing a list never widens what the read shows: the caller's
+                 *     row scope still applies to every row.
                  */
                 list_id?: components["parameters"]["ListMembershipFilter"];
                 /**
@@ -69305,8 +69407,8 @@ export interface operations {
                 };
             };
             401: components["responses"]["Unauthorized"];
-            403: components["responses"]["Forbidden"];
-            404: components["responses"]["NotFound"];
+            403: components["responses"]["FileForbidden"];
+            404: components["responses"]["FileNotFound"];
             422: components["responses"]["ValidationError"];
             /** @description The deployment has no object store configured, so no logo can be stored or served. */
             501: {
@@ -69341,8 +69443,8 @@ export interface operations {
                 };
             };
             401: components["responses"]["Unauthorized"];
-            403: components["responses"]["Forbidden"];
-            404: components["responses"]["NotFound"];
+            403: components["responses"]["FileForbidden"];
+            404: components["responses"]["FileNotFound"];
             422: components["responses"]["ValidationError"];
             /** @description The deployment has no object store configured, so no logo can be stored or served. */
             501: {
@@ -70723,8 +70825,8 @@ export interface operations {
                     "application/pdf": string;
                 };
             };
-            403: components["responses"]["Forbidden"];
-            404: components["responses"]["NotFound"];
+            403: components["responses"]["FileForbidden"];
+            404: components["responses"]["FileNotFound"];
             422: components["responses"]["ValidationError"];
             /** @description The caller fetched 20 invoice documents in the current one-minute window. */
             429: {
@@ -71893,9 +71995,10 @@ export interface operations {
                 /**
                  * @description Only the members of this list — a Shortlist's chosen records, or the records a Live List's
                  *     filter selects now — narrowed before sorting and paging, so the page is the list's members
-                 *     in the record list's own columns. The list must be one the caller may find and of this
-                 *     record type; otherwise `404` or `422`. Sharing a list never widens what the read shows:
-                 *     the caller's row scope still applies to every row.
+                 *     in the record list's own columns. A list the caller cannot find, or any list while lists
+                 *     are off, narrows to no rows, as an unknown `tag_id` or `owner_id` does. A list of another
+                 *     record type answers `422`. Sharing a list never widens what the read shows: the caller's
+                 *     row scope still applies to every row.
                  */
                 list_id?: components["parameters"]["ListMembershipFilter"];
                 /**
@@ -77558,7 +77661,7 @@ export interface operations {
                     "image/png": string;
                 };
             };
-            404: components["responses"]["NotFound"];
+            404: components["responses"]["FileNotFound"];
             422: components["responses"]["ValidationError"];
             /** @description The logo could not be read. */
             default: {
@@ -79100,7 +79203,7 @@ export interface operations {
                 };
             };
             401: components["responses"]["Unauthorized"];
-            404: components["responses"]["NotFound"];
+            404: components["responses"]["FileNotFound"];
             422: components["responses"]["ValidationError"];
             /** @description Rate-limited. */
             429: {
@@ -79782,9 +79885,10 @@ export interface operations {
                 /**
                  * @description Only the members of this list — a Shortlist's chosen records, or the records a Live List's
                  *     filter selects now — narrowed before sorting and paging, so the page is the list's members
-                 *     in the record list's own columns. The list must be one the caller may find and of this
-                 *     record type; otherwise `404` or `422`. Sharing a list never widens what the read shows:
-                 *     the caller's row scope still applies to every row.
+                 *     in the record list's own columns. A list the caller cannot find, or any list while lists
+                 *     are off, narrows to no rows, as an unknown `tag_id` or `owner_id` does. A list of another
+                 *     record type answers `422`. Sharing a list never widens what the read shows: the caller's
+                 *     row scope still applies to every row.
                  */
                 list_id?: components["parameters"]["ListMembershipFilter"];
                 /**
@@ -82938,8 +83042,8 @@ export interface operations {
                 };
             };
             401: components["responses"]["Unauthorized"];
-            403: components["responses"]["Forbidden"];
-            404: components["responses"]["NotFound"];
+            403: components["responses"]["FileForbidden"];
+            404: components["responses"]["FileNotFound"];
             409: components["responses"]["Conflict"];
             422: components["responses"]["ValidationError"];
         };
@@ -82966,8 +83070,8 @@ export interface operations {
                 };
             };
             401: components["responses"]["Unauthorized"];
-            403: components["responses"]["Forbidden"];
-            404: components["responses"]["NotFound"];
+            403: components["responses"]["FileForbidden"];
+            404: components["responses"]["FileNotFound"];
             422: components["responses"]["ValidationError"];
         };
     };
@@ -84626,7 +84730,7 @@ export interface operations {
                 };
             };
             401: components["responses"]["Unauthorized"];
-            403: components["responses"]["PermissionDenied"];
+            403: components["responses"]["FileForbidden"];
         };
     };
     listChannelConnections: {
@@ -87518,8 +87622,8 @@ export interface operations {
                 };
             };
             401: components["responses"]["Unauthorized"];
-            403: components["responses"]["Forbidden"];
-            404: components["responses"]["NotFound"];
+            403: components["responses"]["FileForbidden"];
+            404: components["responses"]["FileNotFound"];
             422: components["responses"]["ValidationError"];
             /** @description The deployment has no object store configured, so no logo can be stored or served. */
             501: {
@@ -87739,8 +87843,8 @@ export interface operations {
                 };
             };
             401: components["responses"]["Unauthorized"];
-            403: components["responses"]["Forbidden"];
-            404: components["responses"]["NotFound"];
+            403: components["responses"]["FileForbidden"];
+            404: components["responses"]["FileNotFound"];
             422: components["responses"]["ValidationError"];
             /** @description The deployment has no object store configured, so no logo can be stored or served. */
             501: {
@@ -90706,8 +90810,8 @@ export interface operations {
                 };
             };
             401: components["responses"]["Unauthorized"];
-            403: components["responses"]["Forbidden"];
-            404: components["responses"]["NotFound"];
+            403: components["responses"]["FileForbidden"];
+            404: components["responses"]["FileNotFound"];
         };
     };
     getLicenseEntitlement: {
@@ -97158,8 +97262,8 @@ export interface operations {
                 content?: never;
             };
             401: components["responses"]["Unauthorized"];
-            403: components["responses"]["Forbidden"];
-            404: components["responses"]["NotFound"];
+            403: components["responses"]["FileForbidden"];
+            404: components["responses"]["FileNotFound"];
             422: components["responses"]["ValidationError"];
             /** @description The deployment has no object store configured, so no picture can be stored or served. */
             501: {
@@ -101231,7 +101335,7 @@ export interface operations {
                     "application/pdf": string;
                 };
             };
-            404: components["responses"]["NotFound"];
+            404: components["responses"]["FileNotFound"];
             422: components["responses"]["ValidationError"];
             /** @description The object store (blobstore) is not wired on this deployment — the same unwired-by-omission posture as renderOffer. */
             501: {
@@ -102352,8 +102456,8 @@ export interface operations {
                 };
             };
             401: components["responses"]["Unauthorized"];
-            403: components["responses"]["Forbidden"];
-            404: components["responses"]["NotFound"];
+            403: components["responses"]["FileForbidden"];
+            404: components["responses"]["FileNotFound"];
         };
     };
     getAnalyticsContext: {
@@ -105130,7 +105234,7 @@ export interface operations {
                     "application/octet-stream": string;
                 };
             };
-            404: components["responses"]["NotFound"];
+            404: components["responses"]["FileNotFound"];
             422: components["responses"]["ValidationError"];
         };
     };
@@ -105526,7 +105630,7 @@ export interface operations {
                 };
             };
             401: components["responses"]["Unauthorized"];
-            403: components["responses"]["PermissionDenied"];
+            403: components["responses"]["FileForbidden"];
         };
     };
     getImportRun: {
@@ -105704,8 +105808,8 @@ export interface operations {
                 };
             };
             401: components["responses"]["Unauthorized"];
-            403: components["responses"]["PermissionDenied"];
-            404: components["responses"]["NotFound"];
+            403: components["responses"]["FileForbidden"];
+            404: components["responses"]["FileNotFound"];
             409: components["responses"]["Conflict"];
             422: components["responses"]["ValidationError"];
         };
@@ -106755,8 +106859,8 @@ export interface operations {
                 };
             };
             401: components["responses"]["Unauthorized"];
-            403: components["responses"]["PermissionDenied"];
-            404: components["responses"]["NotFound"];
+            403: components["responses"]["FileForbidden"];
+            404: components["responses"]["FileNotFound"];
             422: components["responses"]["ValidationError"];
         };
     };

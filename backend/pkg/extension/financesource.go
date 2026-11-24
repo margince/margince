@@ -27,6 +27,10 @@ type FinanceSource struct {
 	// (`^[a-z][a-z0-9_]*$`, 32 runes) and is unique across the composed set.
 	Provider string
 
+	// DisplayName is the source's name as a reader knows it ("Demo accounting"),
+	// shown wherever the core names the source. Empty names no source.
+	DisplayName string
+
 	// Check answers whether the source can be read now, without reading the
 	// ledger. Nil means yes. The core calls it when an administrator connects
 	// the source, so wrong credentials show at once rather than six hours later.

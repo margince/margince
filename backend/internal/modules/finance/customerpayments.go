@@ -52,6 +52,7 @@ func (s *Store) CustomerPayments(ctx context.Context, cursor *string, limit *int
 			return httperr.Validation("cursor", "cursor_param_mismatch", "the accounting source changed; restart the list")
 		}
 		out.State, out.Provider, out.LastSyncedAt = connectionState(conn, s.now()), &conn.provider, conn.lastSuccessAt
+		out.ProviderName = s.sourceOption(conn.provider).readerName()
 		return s.readCustomerPayments(ctx, tx, conn.id, after, storekit.ClampLimit(limit), &out)
 	})
 	if err != nil {

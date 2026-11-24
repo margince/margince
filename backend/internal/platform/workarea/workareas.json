@@ -1468,6 +1468,7 @@
     "getWorklist": "worklist",
     "handOverUserWork": "members",
     "handleExistingWebFormInquiries": "web_forms",
+    "headStatus": "sign_in",
     "hideDealDocument": "documents",
     "importCardPhoto": "contacts",
     "importLinkedInConnections": "own_profile",

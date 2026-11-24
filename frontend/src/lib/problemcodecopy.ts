@@ -97,6 +97,11 @@ export const PROBLEM_CODE_COPY = new Map<string, MessageKey>([
   ["linkedin_url_not_linkedin", "create.linkedinNotLinkedin"],
   ["linkedin_url_not_profile", "create.linkedinNotProfile"],
   ["invalid_date_range", "create.dateRangeReversed"],
+  ["domain_malformed", "create.domainMalformed"],
+  // params.name names the chosen parent, which already sits below the company.
+  ["parent_company_below", "create.parentCompanyBelow"],
+  ["parent_company_self", "create.parentCompanySelf"],
+  ["delivery_team_gone", "delivery.teamGone"],
   ["invalid_country_code", "legalEntities.invalidCountry"],
   // A Deal Room refusal: the detail is an English API sentence.
   ["deal_room_document_already_present", "room.docs.alreadyPresent"],
