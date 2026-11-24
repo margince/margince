@@ -68,8 +68,8 @@ func TestAHeldSendWarnsAdminsUntilTheCompanyDetailIsStated(t *testing.T) {
 	if warning == nil || !slices.Contains(warning.FooterGap.Missing, objection) {
 		t.Fatalf("no warning names the missing objection route: %+v", warning)
 	}
-	if warning.FooterGap.HeldByPerson != 1 || warning.FooterGap.HeldInBackground != 0 || !warning.RequiresAction {
-		t.Errorf("warning %+v, want one held send by a person that needs an admin", warning.FooterGap)
+	if warning.FooterGap.HeldByUser != 1 || warning.FooterGap.HeldInBackground != 0 || !warning.RequiresAction {
+		t.Errorf("warning %+v, want one held send by a user that needs an admin", warning.FooterGap)
 	}
 	if warning.Action.Destination != crmcontracts.HealthActionDestinationDisclosures {
 		t.Errorf("the warning opens %s, want the disclosure page", warning.Action.Destination)

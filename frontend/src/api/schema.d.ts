@@ -53233,8 +53233,8 @@ export interface components {
             is_default: boolean;
             /** @description The owed disclosure kinds with no text, then `entity_name` for a default entity with neither a display name nor a legal name. */
             missing: ("controller_identity" | "privacy_contact" | "objection_route" | "advertiser_contact" | "entity_name")[];
-            /** @description Sends a person pressed that were held for this since the details last changed. */
-            held_by_person: number;
+            /** @description Sends a user pressed that were held for this since the details last changed. */
+            held_by_user: number;
             /** @description Background sends, such as a meeting reminder, that were held or dropped for this since the details last changed. */
             held_in_background: number;
         };

@@ -10,8 +10,10 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/config"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/ports/messagingrules"
 )
 
@@ -22,9 +24,9 @@ type FooterGap struct {
 	// Missing lists the owed kinds with no text, in the order the send names
 	// them. Empty when the entity's footer is complete.
 	Missing []string
-	// HeldByPerson and HeldInBackground count the messages held for
+	// HeldByUser and HeldInBackground count the messages held for
 	// footer_incomplete since the details last changed.
-	HeldByPerson, HeldInBackground int
+	HeldByUser, HeldInBackground int
 }
 
 // footerHoldLookback bounds how far back a hold still names a missing kind.
@@ -35,7 +37,11 @@ const footerHoldLookback = "90 days"
 // obligation DisclosuresFor reports missing for a first message from that
 // entity, or a kind a recent held send recorded whose particular is still
 // empty. The send asks the same two questions, so the answers cannot differ.
+// Only a seat that may change the particulars is told.
 func (s *Store) FooterGapsTx(ctx context.Context, tx pgx.Tx) ([]FooterGap, error) {
+	if err := auth.Require(ctx, controllerParticularsObject, principal.ActionUpdate); err != nil {
+		return nil, err
+	}
 	gaps, err := footerHoldsTx(ctx, tx)
 	if err != nil {
 		return nil, err
@@ -75,11 +81,11 @@ func (s *Store) FooterGapsTx(ctx context.Context, tx pgx.Tx) ([]FooterGap, error
 // installation's particulars last changed. A message pressed twice counts once.
 func footerHoldsTx(ctx context.Context, tx pgx.Tx) ([]FooterGap, error) {
 	rows, err := tx.Query(ctx, `
-		SELECT le.id, le.is_default, held.person, held.background, held.kinds
+		SELECT le.id, le.is_default, held.by_user, held.background, held.kinds
 		  FROM legal_entity le
 		 CROSS JOIN LATERAL (
 		       SELECT count(DISTINCT coalesce(l.detail->>'intent_id', l.id::text))
-		                FILTER (WHERE l.detail->>'background' = 'false' AND l.occurred_at > changed.at) AS person,
+		                FILTER (WHERE l.detail->>'background' = 'false' AND l.occurred_at > changed.at) AS by_user,
 		              count(DISTINCT coalesce(l.detail->>'intent_id', l.id::text))
 		                FILTER (WHERE l.detail->>'background' = 'true' AND l.occurred_at > changed.at) AS background,
 		              coalesce(array_agg(DISTINCT k.kind) FILTER (WHERE k.kind IS NOT NULL), '{}') AS kinds
@@ -96,7 +102,7 @@ func footerHoldsTx(ctx context.Context, tx pgx.Tx) ([]FooterGap, error) {
 	}
 	return pgx.CollectRows(rows, func(row pgx.CollectableRow) (FooterGap, error) {
 		var gap FooterGap
-		err := row.Scan(&gap.Entity, &gap.IsDefault, &gap.HeldByPerson, &gap.HeldInBackground, &gap.Missing)
+		err := row.Scan(&gap.Entity, &gap.IsDefault, &gap.HeldByUser, &gap.HeldInBackground, &gap.Missing)
 		return gap, err
 	})
 }

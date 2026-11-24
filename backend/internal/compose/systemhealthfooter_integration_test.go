@@ -51,32 +51,7 @@ func TestADroppedBackgroundSendCountsInTheFooterWarning(t *testing.T) {
 		t.Fatalf("no footer warning for the default entity: %+v %+v", source, findings)
 	}
 	gap := findings[i].FooterGap
-	if gap.HeldInBackground != 1 || gap.HeldByPerson != 0 || !slices.Contains(gap.Missing, crmcontracts.HealthFooterGapMissing(messagingrules.ObjectionRoute)) {
+	if gap.HeldInBackground != 1 || gap.HeldByUser != 0 || !slices.Contains(gap.Missing, crmcontracts.HealthFooterGapMissing(messagingrules.ObjectionRoute)) {
 		t.Errorf("footer gap %+v, want one background send missing the objection route", gap)
-	}
-}
-
-// A default entity whose company states no name is incomplete, because every
-// contact without an entity of its own falls back to it. Naming the company
-// ends the warning.
-//
-// Mutation: drop the entity_name rule from footerGapsTx and this fails.
-func TestAnUnnamedDefaultEntityWarnsUntilTheCompanyIsNamed(t *testing.T) {
-	e := integration.Setup(t)
-	ctx := e.Admin()
-	e.WsExec(t, `DELETE FROM company WHERE is_anchor`)
-	server := Server{jobHealthHandlers: jobHealthHandlers{pool: e.Pool}}
-	_, findings, err := server.footerSummary(ctx)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if len(findings) != 1 || !slices.Equal(findings[0].FooterGap.Missing, []crmcontracts.HealthFooterGapMissing{footerDetailEntityName}) ||
-		findings[0].Action.Destination != crmcontracts.HealthActionDestinationCompanyProfile {
-		t.Fatalf("an unnamed default entity raised %+v, want one name gap leading to the company profile", findings)
-	}
-
-	e.WsExec(t, `INSERT INTO company (display_name, is_anchor, source, captured_by) VALUES ('Beispiel GmbH', true, 'manual', 'human:x')`)
-	if _, findings, err = server.footerSummary(ctx); err != nil || len(findings) != 0 {
-		t.Errorf("a named company still warns: %+v %v", findings, err)
 	}
 }

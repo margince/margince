@@ -16,6 +16,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/margince/margince/backend/internal/compose/adminadmit"
+	"github.com/margince/margince/backend/internal/compose/footerhealth"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database"
@@ -199,7 +200,7 @@ func (s Server) healthReads() []healthRead {
 		{"providers", "ai_diagnostics", s.providersSummary, read},
 		{healthUnplacedID, "ai_diagnostics", s.unplacedSummary, read},
 		// Who may fill in the company details is who is told they are missing.
-		{healthFooterID, healthFooterObject, s.footerSummary, principal.ActionUpdate},
+		{footerhealth.SourceID, footerhealth.Object, s.footerSummary, principal.ActionUpdate},
 	}
 }
 

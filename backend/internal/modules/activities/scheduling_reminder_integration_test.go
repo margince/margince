@@ -137,7 +137,8 @@ func TestARefusedMeetingReminderTellsItsHost(t *testing.T) {
 	f, meeting, _ := reminderFixture(t)
 	told := &attentionRecorder{}
 	f.store = f.store.WithInvitationAttention(told)
-	stager := &unheldRecordingStager{recordingStager: recordingStager{err: apperrors.ErrConsentNotGranted}}
+	stager := &unheldRecordingStager{}
+	stager.err = apperrors.ErrConsentNotGranted
 	if err := f.store.SendMeetingReminder(f.ctx, ids.UUID(meeting.Id), stubConsentGate{}, stager); err != nil {
 		t.Fatalf("a refused reminder failed the job run: %v", err)
 	}

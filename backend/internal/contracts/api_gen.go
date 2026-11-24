@@ -53677,8 +53677,8 @@ type HealthFindingUnit string
 
 // HealthFooterGap A legal entity whose mail owes a company detail nobody stated. A send that owes it is held for review with `footer_incomplete`, and a background send is dropped. The finding goes once the details are complete.
 type HealthFooterGap struct {
-	// HeldByPerson Sends a person pressed that were held for this since the details last changed.
-	HeldByPerson int `json:"held_by_person" minimum:"0"`
+	// HeldByUser Sends a user pressed that were held for this since the details last changed.
+	HeldByUser int `json:"held_by_user" minimum:"0"`
 
 	// HeldInBackground Background sends, such as a meeting reminder, that were held or dropped for this since the details last changed.
 	HeldInBackground int                `json:"held_in_background" minimum:"0"`

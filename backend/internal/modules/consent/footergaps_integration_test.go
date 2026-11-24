@@ -6,11 +6,13 @@
 package consent
 
 import (
+	"errors"
 	"slices"
 	"testing"
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/ports/commsauthz"
 	"github.com/margince/margince/backend/internal/shared/ports/messagingrules"
@@ -19,8 +21,9 @@ import (
 func footerGaps(t *testing.T, e *channelConsentEnv, store *Store) map[ids.UUID]FooterGap {
 	t.Helper()
 	out := map[ids.UUID]FooterGap{}
-	if err := store.db.Tx(e.ctx, func(tx pgx.Tx) error {
-		gaps, err := store.FooterGapsTx(e.ctx, tx)
+	ctx := operatorCtx(e)
+	if err := store.db.Tx(ctx, func(tx pgx.Tx) error {
+		gaps, err := store.FooterGapsTx(ctx, tx)
 		for _, gap := range gaps {
 			out[gap.Entity] = gap
 		}
@@ -54,6 +57,17 @@ func recordHold(t *testing.T, e *channelConsentEnv, store *Store, set commsauthz
 // the gap.
 //
 // Mutation: drop the DisclosuresFor answer from FooterGapsTx and this fails.
+func TestOnlyASeatThatMayChangeTheParticularsReadsTheGaps(t *testing.T) {
+	e := setupChannelConsent(t)
+	err := e.store.db.Tx(e.ctx, func(tx pgx.Tx) error {
+		_, err := e.store.FooterGapsTx(e.ctx, tx)
+		return err
+	})
+	if !errors.Is(err, apperrors.ErrPermissionDenied) {
+		t.Errorf("a seat without installation_settings update read the gaps: %v", err)
+	}
+}
+
 func TestAMissingCompanyDetailIsAGapUntilItIsStated(t *testing.T) {
 	e := setupChannelConsent(t)
 	store := inJurisdiction(t, e, "xa",
@@ -73,7 +87,7 @@ func TestAMissingCompanyDetailIsAGapUntilItIsStated(t *testing.T) {
 }
 
 // A held send records its entity and the details it owed, split into sends a
-// person pressed and background sends. A message pressed twice counts once. A
+// user pressed and background sends. A message pressed twice counts once. A
 // marketing-only kind is owed per recipient, so the hold is what names it. An
 // edit to another detail starts the count again and keeps the gap; stating the
 // detail ends it.
@@ -103,18 +117,18 @@ func TestAHeldSendCountsInItsEntitysGapUntilTheDetailsChange(t *testing.T) {
 	if !slices.Equal(gap.Missing, []string{string(messagingrules.ObjectionRoute)}) {
 		t.Errorf("missing %v, want the objection route alone: a stop link is no company detail", gap.Missing)
 	}
-	if gap.HeldInBackground != 1 || gap.HeldByPerson != 1 {
-		t.Errorf("held %d in the background and %d by a person, want 1 and 1", gap.HeldInBackground, gap.HeldByPerson)
+	if gap.HeldInBackground != 1 || gap.HeldByUser != 1 {
+		t.Errorf("held %d in the background and %d by a user, want 1 and 1", gap.HeldInBackground, gap.HeldByUser)
 	}
 
 	stateParticulars(t, e, ControllerParticulars{PrivacyContact: "privacy@beispiel.test"})
 	gap = footerGaps(t, e, store)[home]
-	if !slices.Equal(gap.Missing, []string{string(messagingrules.ObjectionRoute)}) || gap.HeldInBackground+gap.HeldByPerson != 0 {
+	if !slices.Equal(gap.Missing, []string{string(messagingrules.ObjectionRoute)}) || gap.HeldInBackground+gap.HeldByUser != 0 {
 		t.Errorf("after another detail changed the gap is %+v, want the objection route with a fresh count", gap)
 	}
 
 	stateParticulars(t, e, ControllerParticulars{PrivacyContact: "privacy@beispiel.test", ObjectionRoute: "Reply STOP."})
-	if gap := footerGaps(t, e, store)[home]; len(gap.Missing) != 0 || gap.HeldInBackground+gap.HeldByPerson != 0 {
+	if gap := footerGaps(t, e, store)[home]; len(gap.Missing) != 0 || gap.HeldInBackground+gap.HeldByUser != 0 {
 		t.Errorf("after the details changed the gap is %+v, want none", gap)
 	}
 }

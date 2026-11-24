@@ -23890,7 +23890,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "health.recovery.footer":
     "Mọi thông tin công ty mà các gói quy định yêu cầu đều đã được điền.",
   "health.footerMissing": "Thông tin còn thiếu",
-  "health.footerHeldByPerson":
+  "health.footerHeldByUser":
     "Thư do người gửi bị giữ lại từ lần thay đổi gần nhất",
   "health.footerHeldInBackground":
     "Thư chạy nền bị giữ lại hoặc bị bỏ từ lần thay đổi gần nhất",

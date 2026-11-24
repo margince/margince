@@ -12,6 +12,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/compose/capturehealth"
+	"github.com/margince/margince/backend/internal/compose/footerhealth"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/modules/comms"
@@ -360,4 +361,26 @@ func (s Server) receiptsSummary(ctx context.Context) (crmcontracts.HealthSource,
 	f.Impact = crmcontracts.HealthFindingImpactMeasured
 	f.Urgency = 1
 	return source, []crmcontracts.HealthFinding{f}, nil
+}
+
+// footerSummary raises one finding per live legal entity whose mail must show
+// a company detail nobody stated (footerhealth).
+func (s Server) footerSummary(ctx context.Context) (crmcontracts.HealthSource, []crmcontracts.HealthFinding, error) {
+	source := healthSource(footerhealth.SourceID, footerhealth.Object)
+	store := newDisclosureAdapter(InstallationDB(s.jobHealthHandlers.pool)).store
+	gaps, err := healthTx(ctx, s.jobHealthHandlers.pool, func(ctx context.Context, tx pgx.Tx) ([]footerhealth.Gap, error) {
+		return footerhealth.GapsTx(ctx, tx, store)
+	})
+	if err != nil {
+		return source, nil, err
+	}
+	now := utcNow()
+	source.ObservedAt, source.Condition, source.Code = &now, healthClear, "footer_complete"
+	findings := make([]crmcontracts.HealthFinding, 0, len(gaps))
+	for _, gap := range gaps {
+		base := healthFinding(source, footerhealth.IncompleteCode, healthWaitingHuman, gap.HeldByUser+gap.HeldInBackground, "messages")
+		findings = append(findings, footerhealth.Finding(ctx, base, gap))
+		source.Condition, source.Code = healthWaitingHuman, footerhealth.IncompleteCode
+	}
+	return source, findings, nil
 }

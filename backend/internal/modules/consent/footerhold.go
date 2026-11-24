@@ -20,7 +20,7 @@ import (
 const FooterHeldAction = "send.footer_held"
 
 // RecordFooterHoldTx writes one row for each sending entity this decision set
-// holds for ReasonFooterIncomplete. background says no person pressed send.
+// holds for ReasonFooterIncomplete. background says no user pressed send.
 // intent is the held message, zero when none is held; FooterGapsTx counts one
 // held message once however often it was pressed. A set held for another
 // reason writes nothing.

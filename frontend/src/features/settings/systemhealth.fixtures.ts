@@ -154,7 +154,7 @@ export const footerFinding: components["schemas"]["HealthFinding"] = {
     legal_entity_name: "Beispiel GmbH",
     is_default: true,
     missing: ["privacy_contact", "objection_route"],
-    held_by_person: 2,
+    held_by_user: 2,
     held_in_background: 1,
   },
   action: { destination: "disclosures", available: true },

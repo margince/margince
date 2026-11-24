@@ -24548,7 +24548,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "health.recovery.footer":
     "Jede Firmenangabe, die die Rechtspakete verlangen, ist eingetragen.",
   "health.footerMissing": "Fehlende Angaben",
-  "health.footerHeldByPerson":
+  "health.footerHeldByUser":
     "Seit der letzten Änderung zurückgehaltene Sendungen von Personen",
   "health.footerHeldInBackground":
     "Seit der letzten Änderung zurückgehaltene oder entfallene Sendungen im Hintergrund",

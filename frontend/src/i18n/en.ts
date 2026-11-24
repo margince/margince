@@ -24177,7 +24177,7 @@ export const en = {
   "health.recovery.footer":
     "Every company detail the jurisdiction packs require is stated.",
   "health.footerMissing": "Missing details",
-  "health.footerHeldByPerson": "Sends by people held since the last change",
+  "health.footerHeldByUser": "Sends by people held since the last change",
   "health.footerHeldInBackground":
     "Background sends held or dropped since the last change",
   "health.footerDetail.controller_identity": "Legal name and postal address",

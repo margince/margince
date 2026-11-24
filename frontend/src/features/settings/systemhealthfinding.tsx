@@ -348,9 +348,9 @@ function footerFacts(
         .join(", "),
     },
     {
-      key: "footer-person",
-      term: t("health.footerHeldByPerson"),
-      value: count(gap.held_by_person),
+      key: "footer-user",
+      term: t("health.footerHeldByUser"),
+      value: count(gap.held_by_user),
     },
     {
       key: "footer-background",

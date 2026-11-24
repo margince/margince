@@ -38,7 +38,9 @@ const (
 	composeRootTestFiles       = 1909
 	// Raised by 107 for the floor of a figure every reader is shown alike. Raised
 	// by 1 for the import that binds one zone lookup to each attention read.
-	composeRootProductionLines = 230_269
+	// Raised by 45 for the footer warning's wiring: the health source, its
+	// grant, and the stager recording a held send. Its logic is footerhealth.
+	composeRootProductionLines = 230_314
 	composeRootTestLines       = 359_327
 )
 
