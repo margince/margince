@@ -34,10 +34,11 @@ const composeRootDir = "internal/compose"
 // The ceilings below hold develop and main together: each side's additions
 // stayed under its own ceilings, and the two sets of additions sum to these.
 const (
-	composeRootProductionFiles = 1383
+	composeRootProductionFiles = 1384
 	// Raised by 2 files for the extension mail-file read cases and the purge
-	// receipt cases, which drive this package's unexported seams.
-	composeRootTestFiles = 1911
+	// receipt cases, which drive this package's unexported seams. Raised by 1
+	// production and 1 test file for the series-split fold and its cases.
+	composeRootTestFiles = 1912
 	// Raised by 107 for the floor of a figure every reader is shown alike. Raised
 	// by 1 for the import that binds one zone lookup to each attention read.
 	// Raised by 249 production and 62 test lines for the full-path certification
@@ -51,8 +52,10 @@ const (
 	// team-request mail cases, which drive this package's unexported mail worker
 	// and send basis. Raised by 2 production and 52 test lines for the booking length
 	// card cases, which drive the unexported bookingCard and the booking page fixtures.
-	composeRootProductionLines = 230_550
-	composeRootTestLines       = 359_812
+	// Raised by 140 production and 269 test lines for the series-split fold and
+	// repair task. Their cases drive the unexported Home meeting lane and fold.
+	composeRootProductionLines = 230_690
+	composeRootTestLines       = 360_081
 )
 
 // A read under these floors stopped early or read the wrong place, and would
