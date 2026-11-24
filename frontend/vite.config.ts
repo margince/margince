@@ -344,7 +344,7 @@ export default defineConfig({
         changeOrigin: false,
         secure: false,
         bypass: (request) => {
-          const { pathname } = new URL(request.url ?? "/", "http://dev");
+          const pathname = (request.url ?? "/").split("?")[0];
           return pathname.startsWith("/book/") &&
             bookingSlugFromPath(pathname) === null
             ? false
