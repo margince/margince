@@ -72,7 +72,7 @@ func (s seriesSplit) sync(t *testing.T, uid, organizer string, guests ...string)
 	slot := map[string]string{"dateTime": s.slot.Format(time.RFC3339)}
 	raw, err := json.Marshal(map[string]any{
 		"id": uid + "_" + s.slot.Format("20060102T150405Z"), "iCalUID": uid, "recurringEventId": uid,
-		"status": "confirmed", "summary": "Weekly sync", "start": slot, "originalStartTime": slot,
+		"status": "confirmed", "summary": "Meeting " + uid, "start": slot, "originalStartTime": slot,
 		"organizer": map[string]string{"email": organizer}, "attendees": attendees,
 	})
 	if err != nil {
@@ -101,10 +101,17 @@ func (s seriesSplit) onHome(t *testing.T) []attention.Meeting {
 	return shown
 }
 
+// The series Google split off weeklyUID at the slot, named as Google names it.
+func (s seriesSplit) splitUID() string {
+	return "weekly_R" + s.slot.Format("20060102T150405") + "@google.com"
+}
+
+const weeklyUID = "weekly@google.com"
+
 func TestASeriesSplitByTheOrganizerShowsOneMeetingPerSlot(t *testing.T) {
 	s := newSeriesSplit(t)
-	old := s.sync(t, "uid-a", splitHost, splitBuyer)
-	current := s.sync(t, "uid-b", splitHost, splitPeer, splitBuyer)
+	old := s.sync(t, weeklyUID, splitHost, splitBuyer)
+	current := s.sync(t, s.splitUID(), splitHost, splitPeer, splitBuyer)
 
 	shown := s.onHome(t)
 	if len(shown) != 1 {
@@ -116,38 +123,39 @@ func TestASeriesSplitByTheOrganizerShowsOneMeetingPerSlot(t *testing.T) {
 	if got := s.e.WsCount(t, `SELECT count(*) FROM activity WHERE id = $1 AND archived_at IS NOT NULL`, old); got != 1 {
 		t.Error("the old series' meeting is still live")
 	}
-	if again := s.sync(t, "uid-a", splitHost, splitBuyer); again != current {
+	if again := s.sync(t, weeklyUID, splitHost, splitBuyer); again != current {
 		t.Errorf("the old series synced again reached %s, want the new series' meeting", again)
 	}
 }
 
 func TestASeriesSplitFoldsWhicheverSeriesArrivesFirst(t *testing.T) {
 	s := newSeriesSplit(t)
-	s.sync(t, "uid-b", splitHost, splitPeer, splitBuyer)
-	s.sync(t, "uid-a", splitHost, splitBuyer)
+	current := s.sync(t, s.splitUID(), splitHost, splitPeer, splitBuyer)
+	s.sync(t, weeklyUID, splitHost, splitBuyer)
 
-	if shown := s.onHome(t); len(shown) != 1 {
-		t.Fatalf("Home lists %d meetings at the slot, want one", len(shown))
+	shown := s.onHome(t)
+	if len(shown) != 1 || shown[0].ID != current {
+		t.Fatalf("Home lists %v at the slot, want the new series' meeting alone", shown)
 	}
 }
 
 func TestTwoSeriesAtOneSlotStayTwoMeetingsWhenTheyAreNotOne(t *testing.T) {
 	cases := map[string]struct {
 		organizers [2]string
-		guests     [2]string
+		split      bool
 	}{
-		"another organizer":                 {organizers: [2]string{splitHost, splitPeer}, guests: [2]string{splitBuyer, splitBuyer}},
-		"only the calendar owner in common": {organizers: [2]string{"", ""}, guests: [2]string{splitBuyer, splitPeer}},
+		"a split series of another organizer":       {organizers: [2]string{splitHost, splitPeer}, split: true},
+		"an unrelated series of the same organizer": {organizers: [2]string{splitHost, splitHost}},
 	}
 	for name, c := range cases {
 		t.Run(name, func(t *testing.T) {
 			s := newSeriesSplit(t)
-			for i, uid := range []string{"uid-a", "uid-b"} {
-				organizer := c.organizers[i]
-				if organizer == "" {
-					organizer = s.owner
-				}
-				s.sync(t, uid, organizer, c.guests[i])
+			second := "pricing@google.com"
+			if c.split {
+				second = s.splitUID()
+			}
+			for i, uid := range []string{weeklyUID, second} {
+				s.sync(t, uid, c.organizers[i], splitBuyer)
 			}
 			if shown := s.onHome(t); len(shown) != 2 {
 				t.Errorf("Home lists %d meetings at the slot, want both", len(shown))

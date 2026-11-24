@@ -5,7 +5,6 @@ package capture
 
 import (
 	"context"
-	"log/slog"
 
 	"github.com/jackc/pgx/v5"
 
@@ -13,42 +12,25 @@ import (
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
 )
 
-// ReplacedSeriesFinder answers the live meetings of seat's calendar that a
-// split series replaced at meeting's slot. activities owns the rule; compose
-// injects it.
-type ReplacedSeriesFinder func(ctx context.Context, tx pgx.Tx, meeting ids.ActivityID, seat ids.UUID) ([]ids.ActivityID, error)
+// SeriesSplitFolder folds the meetings a split series replaced at meeting's
+// slot on seat's calendar onto the split series' meeting. activities owns the
+// rule; compose injects it.
+type SeriesSplitFolder func(ctx context.Context, tx pgx.Tx, meeting ids.ActivityID, seat ids.UUID) error
 
-// WithReplacedSeries returns a copy that retires the meetings a split series
+// WithReplacedSeries returns a copy that folds the meetings a split series
 // replaced.
-func (s *Sink) WithReplacedSeries(find ReplacedSeriesFinder) *Sink {
+func (s *Sink) WithReplacedSeries(fold SeriesSplitFolder) *Sink {
 	c := *s
-	c.replacedSeries = find
+	c.replacedSeries = fold
 	return &c
 }
 
-// foldReplacedSeries folds the meetings a split series replaced onto the new
-// meeting. Only the old row folds: the new row is the one later syncs of the
-// series move and cancel. An old row that does not retire cleanly, such as
-// one a human worked, stays, and the pair is logged.
+// foldReplacedSeries folds a split series' meetings at a new meeting's slot.
+// Google sends nothing for the old series' instances a split replaced.
 func (s *Sink) foldReplacedSeries(ctx context.Context, tx pgx.Tx, meeting ids.ActivityID, rec connector.NormalizedRecord) error {
 	fields, isActivity := rec.Fields.(ActivityFields)
-	if s.replacedSeries == nil || s.foldMeeting == nil || !isActivity || fields.Kind != meetingKind ||
-		!rec.CrossDoorIdentity.Stated() {
+	if s.replacedSeries == nil || !isActivity || fields.Kind != meetingKind || !rec.CrossDoorIdentity.Stated() {
 		return nil
 	}
-	replaced, err := s.replacedSeries(ctx, tx, meeting, actorUserID(ctx))
-	if err != nil {
-		return err
-	}
-	for _, old := range replaced {
-		folded, err := s.foldMeeting(ctx, tx, old, meeting, true)
-		if err != nil {
-			return err
-		}
-		if !folded {
-			slog.WarnContext(ctx, "capture: a meeting split into a new series stays stored twice because the old row does not retire cleanly",
-				"old", old.String(), "new", meeting.String())
-		}
-	}
-	return nil
+	return s.replacedSeries(ctx, tx, meeting, actorUserID(ctx))
 }

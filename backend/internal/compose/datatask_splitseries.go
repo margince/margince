@@ -45,8 +45,8 @@ var seriesMeetingsSQL = `
 	  AND a.archived_at IS NULL AND a.restricted_at IS NULL
 	  AND ` + auth.ConnectorSeatSQL("a") + ` IS NOT NULL`
 
-// foldReplacedSeriesBatch folds, for each meeting after the cursor, the older
-// rows its series replaced at its slot onto it.
+// foldReplacedSeriesBatch folds each split each meeting after the cursor is
+// a side of.
 func foldReplacedSeriesBatch(
 	ctx context.Context, tx pgx.Tx, meetings *activities.Store, in datatask.BatchIn,
 ) (datatask.BatchOut, error) {
@@ -74,20 +74,11 @@ func foldReplacedSeriesBatch(
 	folded := 0
 	for _, m := range page {
 		scanned = append(scanned, m.meeting)
-		survivor := ids.From[ids.ActivityKind](m.meeting)
-		replaced, err := activities.ReplacedSeriesMeetingsTx(ctx, tx, survivor, m.seat)
+		done, err := foldSeriesSplitsTx(ctx, tx, meetings, ids.From[ids.ActivityKind](m.meeting), m.seat)
 		if err != nil {
 			return datatask.BatchOut{}, err
 		}
-		for _, old := range replaced {
-			done, err := foldMeetingDuplicateTx(ctx, tx, meetings, old, survivor, m.seat, "")
-			if err != nil {
-				return datatask.BatchOut{}, err
-			}
-			if done {
-				folded++
-			}
-		}
+		folded += done
 	}
 	return datatask.AdvanceUUID(in, scanned, folded)
 }
