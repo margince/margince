@@ -2649,6 +2649,8 @@ export const en = {
   "history.field.qualifying_event_retracted": "Recorded exchange withdrawn",
   "history.field.acquisition_request_retracted":
     "Acquisition request withdrawn",
+  "history.field.impersonation_warning_raised":
+    "Impersonation warning raised by a later email",
   "history.field.impersonation_warning_cleared":
     "Impersonation warning cleared",
   "history.field.impersonation_warning_carried":

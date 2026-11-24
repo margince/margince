@@ -369,11 +369,10 @@ func (s *Store) ensureContact(ctx context.Context, tx pgx.Tx, in EnsureCounterpa
 				return err
 			}
 		}
-		if impersonationSign(in.DisplayName, in.Domain) != "" {
-			// The header carries a sign of impersonation. A new record would be
-			// made with the warning. An existing one is left as it stands, and
-			// nothing is learned from this message. The activity is captured either way.
-			return nil
+		if sign := impersonationSign(in.DisplayName, in.Domain); sign != "" {
+			// Nothing is learned from a message that shows a sign. It labels a
+			// contact with no verdict yet, and the activity is captured either way.
+			return raiseImpersonationWarningTx(ctx, tx, match.ContactID, sign)
 		}
 		return fillMissingContactName(ctx, tx, match.ContactID, parsed, res)
 	}
