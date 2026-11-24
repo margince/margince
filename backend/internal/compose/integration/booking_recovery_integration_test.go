@@ -26,8 +26,8 @@ func TestPublicBookingPendingCancellationAndPausedPage(t *testing.T) {
 	if status := publicCall(t, e, "GET", base+"/availability"+query+"&duration_minutes=60", nil, nil, nil); status != http.StatusUnprocessableEntity {
 		t.Fatalf("unsupported legacy duration: %d", status)
 	}
-	if status := publicCall(t, e, "GET", base+"/availability"+query+"&l=60", nil, nil, nil); status != http.StatusOK {
-		t.Fatalf("unknown length should use the default: %d", status)
+	if status := publicCall(t, e, "GET", base+"/availability"+query+"&l=60", nil, nil, nil); status != http.StatusUnprocessableEntity {
+		t.Fatalf("a length the page does not offer should be refused: %d", status)
 	}
 	if status := publicCall(t, e, "POST", base, body, map[string]string{"Idempotency-Key": "guessable"}, nil); status != http.StatusUnprocessableEntity {
 		t.Fatalf("weak recovery capability: %d", status)
