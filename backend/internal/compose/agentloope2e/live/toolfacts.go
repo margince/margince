@@ -1,17 +1,19 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-package compose
+package live
 
 import (
 	"encoding/json"
 	"fmt"
+
+	"github.com/margince/margince/backend/internal/compose"
 )
 
-// AgentToolFact is what a model reads of one tool and what bounds its use. The
+// ToolFact is what a model reads of one tool and what bounds its use. The
 // spec itself holds functions and cannot be encoded, so the fields a window
 // turns on are named here.
-type AgentToolFact struct {
+type ToolFact struct {
 	Name         string          `json:"name"`
 	Description  string          `json:"description"`
 	Scope        string          `json:"scope"`
@@ -21,22 +23,22 @@ type AgentToolFact struct {
 	OutputSchema json.RawMessage `json:"output_schema"`
 }
 
-// AgentToolFacts is the goal of a scheduled agent and the published spec of each
+// ToolFacts is the goal of a scheduled agent and the published spec of each
 // tool it may use. A check that replays a run reads the tools only through
 // these. So it hashes them, and never walks the registry's builder and every
 // store behind it.
-func AgentToolFacts(agent string) (goal string, tools []AgentToolFact, err error) {
-	spec, ok := ScheduledAgentSpecByName(agent)
+func ToolFacts(agent string) (goal string, tools []ToolFact, err error) {
+	spec, ok := compose.ScheduledAgentSpecByName(agent)
 	if !ok {
-		return "", nil, fmt.Errorf("compose: the runner catalog schedules no agent %q", agent)
+		return "", nil, fmt.Errorf("live: the runner catalog schedules no agent %q", agent)
 	}
-	registry := NewRegistry(nil, SendPath{})
+	registry := compose.NewRegistry(nil, compose.SendPath{})
 	for _, name := range spec.Tools {
 		tool, known := registry.Spec(name)
 		if !known {
-			return "", nil, fmt.Errorf("compose: agent %s may use %s, which the tool registry does not serve", agent, name)
+			return "", nil, fmt.Errorf("live: agent %s may use %s, which the tool registry does not serve", agent, name)
 		}
-		tools = append(tools, AgentToolFact{
+		tools = append(tools, ToolFact{
 			Name: name, Description: tool.Description, Scope: string(tool.RequiredScope), Tier: fmt.Sprint(tool.Tier),
 			ReadOnly: tool.ReadOnly(), InputSchema: tool.InputSchema, OutputSchema: tool.OutputSchema,
 		})

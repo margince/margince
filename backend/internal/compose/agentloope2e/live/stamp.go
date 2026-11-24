@@ -10,7 +10,6 @@ import (
 	"slices"
 	"strings"
 
-	"github.com/margince/margince/backend/internal/compose"
 	"github.com/margince/margince/backend/internal/compose/agentloope2e"
 	"github.com/margince/margince/backend/internal/compose/mcpe2e"
 )
@@ -47,7 +46,7 @@ func JudgeName(root, named string) (string, error) {
 }
 
 // toolFacts is what a model reads of a tool and what bounds its use.
-type toolFacts = compose.AgentToolFact
+type toolFacts = ToolFact
 
 // windowOf is the digest of what the agent is asked and what it may use.
 func windowOf(goal string, tools []toolFacts) (string, error) {
@@ -64,9 +63,9 @@ func windowOf(goal string, tools []toolFacts) (string, error) {
 // windowDigest is the window of one scheduled agent: its goal and the published
 // spec of each tool it is allowed.
 func windowDigest(agent agentloope2e.Agent) (string, error) {
-	goal, tools, err := compose.AgentToolFacts(string(agent))
+	goal, tools, err := ToolFacts(string(agent))
 	if err != nil {
-		return "", fmt.Errorf("live: %w", err)
+		return "", err
 	}
 	return windowOf(goal, tools)
 }

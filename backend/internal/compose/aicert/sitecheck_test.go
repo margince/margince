@@ -30,6 +30,7 @@ import (
 	"testing"
 
 	"github.com/margince/margince/backend/internal/compose"
+	"github.com/margince/margince/backend/internal/compose/agentloope2e/live"
 	"github.com/margince/margince/backend/internal/compose/aitasks"
 	"github.com/margince/margince/backend/internal/modules/ai"
 )
@@ -109,15 +110,15 @@ func declaredDependencies(t *testing.T, site aitasks.Site) map[string]string {
 // step budget, which the replay of its run reads.
 func agentToolSpecsDigest(t *testing.T, agent string) string {
 	t.Helper()
-	goal, tools, err := compose.AgentToolFacts(agent)
+	goal, tools, err := live.ToolFacts(agent)
 	if err != nil {
 		t.Fatalf("agent %s: %v", agent, err)
 	}
 	spec, _ := compose.ScheduledAgentSpecByName(agent)
 	body, err := json.Marshal(struct {
-		Goal   string                  `json:"goal"`
-		Budget any                     `json:"budget"`
-		Tools  []compose.AgentToolFact `json:"tools"`
+		Goal   string          `json:"goal"`
+		Budget any             `json:"budget"`
+		Tools  []live.ToolFact `json:"tools"`
 	}{goal, spec.Budget, tools})
 	if err != nil {
 		t.Fatal(err)
