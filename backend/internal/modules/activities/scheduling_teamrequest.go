@@ -30,19 +30,19 @@ type TeamRequestStanding struct {
 // ReadTeamRequestTx reads the acting colleague's request on host's link, so a
 // delayed message about it says what is true when it leaves.
 func ReadTeamRequestTx(ctx context.Context, tx pgx.Tx, host, member ids.UserID) (TeamRequestStanding, error) {
-	return readTeamRequestTx(ctx, tx, host, member, "")
+	return readTeamRequestStandingTx(ctx, tx, host, member, "")
 }
 
 // HoldTeamRequestTx is ReadTeamRequestTx holding the link until commit, so an
 // answer or a removal waits for the send reserved against it.
 func HoldTeamRequestTx(ctx context.Context, tx pgx.Tx, host, member ids.UserID) (TeamRequestStanding, error) {
-	return readTeamRequestTx(ctx, tx, host, member, " FOR SHARE OF p")
+	return readTeamRequestStandingTx(ctx, tx, host, member, " FOR SHARE OF p")
 }
 
 // teamRequestSeed keys the fingerprint. A read and its hold run in one process.
 var teamRequestSeed = maphash.MakeSeed()
 
-func readTeamRequestTx(ctx context.Context, tx pgx.Tx, host, member ids.UserID, lock string) (TeamRequestStanding, error) {
+func readTeamRequestStandingTx(ctx context.Context, tx pgx.Tx, host, member ids.UserID, lock string) (TeamRequestStanding, error) {
 	if actor, ok := principal.Actor(ctx); !ok || actor.UserID != member.UUID {
 		return TeamRequestStanding{}, apperrors.ErrPermissionDenied
 	}
@@ -68,6 +68,6 @@ func readTeamRequestTx(ctx context.Context, tx pgx.Tx, host, member ids.UserID, 
 	standing.Request.HostName, standing.Request.Title = schedulingDisplayName(name), stored.Title
 	standing.Pending = state == crmcontracts.SchedulingTeamMemberStatePending
 	words := strings.Join([]string{page.String(), string(state), standing.Request.HostName, standing.Request.Title}, "\x00")
-	standing.Fingerprint = int64(maphash.String(teamRequestSeed, words)) //nolint:gosec // A fingerprint compares equal or not; the wrap changes nothing.
+	standing.Fingerprint = int64(maphash.String(teamRequestSeed, words))
 	return standing, nil
 }

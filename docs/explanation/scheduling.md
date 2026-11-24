@@ -45,10 +45,10 @@ transaction, through `compose/teamrequestnotice.go`. The notice is in the approv
 mailed as an approval is, unless the member chose otherwise. A member kept on the list gets no second
 notice.
 
-Answering, or being taken off the list, takes the notice back, and a notice taken back is never mailed.
-The mail reads the link again when it leaves. It names the current title, and it is not sent once the
-member is no longer pending. The send holds the link until the mail is set to go, so an answer waits for
-it. Naming a member again opens the same notice, with the current title.
+Answering, or being taken off the list, takes the notice back. The mail reads the link again when it
+leaves. It names the current title, and it is not sent if the member is no longer pending at that check.
+The send holds the link until the mail is set to go, so an answer waits for it. An answer that commits
+after the mail is set to go cannot stop that mail. Naming a member again opens the same notice, with the current title.
 
 Confirming is a consent to share free time with a public page, so an agent cannot give it. Until every member has confirmed
 and has a calendar Margince can read, the page's `blocker` is `team_not_ready` and the page is
