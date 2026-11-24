@@ -40,6 +40,7 @@ func (e ResumeFailed) Error() string {
 
 func (ResumeFailed) Unwrap() error { return apperrors.ErrConflict }
 
+// MessageFault answers a reset whose queues could not be started again.
 func (e ResumeFailed) MessageFault() (code, message string) {
 	state := "The reset did not finish."
 	if e.Completed {
