@@ -26,8 +26,8 @@ func TestPublicBookingPendingCancellationAndPausedPage(t *testing.T) {
 	if status := publicCall(t, e, "GET", base+"/availability"+query+"&duration_minutes=60", nil, nil, nil); status != http.StatusUnprocessableEntity {
 		t.Fatalf("unsupported legacy duration: %d", status)
 	}
-	// An unknown length opens the page at its default, but free times refuse
-	// it, so a guest is never booked at a length the page did not show.
+	// An unknown length opens the page at its default. Free times refuse it, so
+	// a guest is never booked at a length the page did not show.
 	var page, unknownLength struct {
 		DurationMinutes int `json:"duration_minutes"`
 	}
