@@ -6,11 +6,9 @@ package consent
 import "github.com/margince/margince/backend/internal/shared/ports/commsauthz"
 
 // countryCouldChangeTheAnswer says whether the composer should ask the rep for
-// this recipient's country. It asks only when an answer can matter: a contact
-// whose record states no country, who was not cleared by the sender for this
-// message, is refused for want of marketing consent, and an installed pack
-// allows advertising until a refusal. A country that cannot move the decision
-// is never asked for.
+// this recipient's country, and only when an answer can matter. That is a
+// contact with no stated country, whom the sender did not clear. The contact
+// is refused for want of marketing consent while an installed pack is opt-out.
 func countryCouldChangeTheAnswer(d commsauthz.Decision, country RecipientCountry, optOutInstalled bool) bool {
 	if country.Known() || country.Source == CountryClearedBySender || d.SubjectKind != entityContact {
 		return false

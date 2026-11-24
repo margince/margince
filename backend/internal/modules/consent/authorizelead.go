@@ -257,7 +257,7 @@ func (g *Gate) decideLeadOnItsRecord(ctx context.Context, tx pgx.Tx, r connector
 		return commsauthz.Decision{}, nil, err
 	}
 	if d.ReasonCode != commsauthz.ReasonConsentWithdrawn && purpose.Class == ClassMarketing && packRulesFor(country).optOut {
-		d.Verdict, d.ReasonCode = commsauthz.VerdictAllow, commsauthz.ReasonAllowed
+		d.Verdict, d.ReasonCode = commsauthz.VerdictAllow, commsauthz.ReasonOptOutAllowed
 	}
 	return d, &purposeID, nil
 }

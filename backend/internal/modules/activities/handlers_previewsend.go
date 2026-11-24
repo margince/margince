@@ -155,7 +155,7 @@ func previewResponse(preview SendPreview) crmcontracts.SendAuthorizationPreview 
 			missing := true
 			entry.LawfulBasisMissing = &missing
 		}
-		if d.AsksCountry && entry.EvidenceSubject != nil {
+		if d.AsksCountry && preview.writableSubjects[previewSubject{kind: d.SubjectKind, id: d.SubjectID}] {
 			ask := true
 			entry.AskCountry = &ask
 		}

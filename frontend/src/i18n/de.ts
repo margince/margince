@@ -8609,6 +8609,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "countryQuestion.label": "Land",
   "countryQuestion.none": "Land wählen",
   "countryQuestion.save": "Land speichern",
+  "countryQuestion.alreadySet":
+    "Der Kontakt hat inzwischen ein Land. Die Prüfung wurde erneut gestellt.",
   "countryQuestion.failed":
     "Das Land wurde nicht gespeichert. Versuche es erneut.",
   "lawfulBasis.title": "Keine gültige Grundlage erfasst",

@@ -110,7 +110,7 @@ type Rules struct {
 
 	// MarketingMode says whether advertising here needs the recipient's prior
 	// consent or is allowed until they object. The empty value is MarketingOptIn,
-	// so a pack that states nothing keeps requiring consent. An objection, an
+	// so a pack that states nothing keeps requiring consent. It applies to recipients in this country, whatever country the sender is in. An objection, an
 	// unsubscribe or a withdrawal stops advertising in either mode.
 	MarketingMode MarketingMode
 
@@ -218,31 +218,6 @@ type Rules struct {
 	// lower-case hex. Empty for a pack written by hand. A decision records it.
 	Digest string
 }
-
-// MarketingMode is how a jurisdiction treats advertising to a recipient who has
-// said nothing. Closed: Validate refuses any other value.
-type MarketingMode string
-
-const (
-	// MarketingOptIn needs the recipient's prior consent, or an exception the
-	// pack grants. It is the meaning of the empty value.
-	MarketingOptIn MarketingMode = "opt_in"
-	// MarketingOptOut allows advertising until the recipient refuses. A refusal
-	// already on record still stops it.
-	MarketingOptOut MarketingMode = "opt_out"
-)
-
-// Validate refuses a mode the engine does not know. The empty value is valid.
-func (m MarketingMode) Validate() error {
-	switch m {
-	case "", MarketingOptIn, MarketingOptOut:
-		return nil
-	}
-	return fmt.Errorf("marketing mode %q is unknown: write %q or %q", string(m), string(MarketingOptIn), string(MarketingOptOut))
-}
-
-// OptOut reports whether advertising is allowed until the recipient refuses.
-func (m MarketingMode) OptOut() bool { return m == MarketingOptOut }
 
 // ExceptionKind names a route to lawful advertising without consent. Closed:
 // the engine implements each kind, so a pack naming one nothing implements

@@ -34,8 +34,8 @@ func TestAnOptOutCountryAllowsAdvertisingUntilARefusal(t *testing.T) {
 	e.livesIn(t, "zo")
 
 	d := e.decide(t, commsauthz.Request{LegacyPurposeKey: "newsletter"})
-	if d.Verdict != commsauthz.VerdictAllow || d.ReasonCode != commsauthz.ReasonAllowed {
-		t.Fatalf("decision = %s %q, want advertising allowed where the recipient has not refused", d.Verdict, d.ReasonCode)
+	if d.Verdict != commsauthz.VerdictAllow || d.ReasonCode != commsauthz.ReasonOptOutAllowed {
+		t.Fatalf("decision = %s %q, want advertising allowed with reason %q", d.Verdict, d.ReasonCode, commsauthz.ReasonOptOutAllowed)
 	}
 	if d.Basis != "" {
 		t.Errorf("basis = %q, want none: no recorded basis names allowed until refused", d.Basis)
@@ -48,8 +48,8 @@ func TestAnOptOutCountryAllowsAdvertisingUntilARefusal(t *testing.T) {
 	}
 }
 
-// An opt-in pack, stated or left to its default, and a country no pack covers
-// keep requiring consent, so the mode changes nothing where it is not declared.
+// An opt-in pack, stated or by default, and a country no pack covers keep
+// requiring consent. The mode changes nothing where it is not declared.
 //
 // Mutation: make packRulesFor read optOut from any pack and the first case allows.
 func TestAnOptInCountryStillRequiresConsent(t *testing.T) {
@@ -85,8 +85,8 @@ func TestTheMarketingModeLeavesTransactionalMailAlone(t *testing.T) {
 	}
 }
 
-// The composer asks for a country only while an opt-out pack could turn the
-// refusal into an allow, and the answer, once saved on the contact, does.
+// The composer asks for a country while an opt-out pack could turn the refusal
+// into an allow. Once the answer is saved on the contact, it does.
 //
 // Mutation: drop the AsksCountry assignment in decidePreviewTx and the first
 // check fails.
@@ -158,7 +158,31 @@ func TestALeadInAnOptOutCountryIsWrittenToUntilARefusal(t *testing.T) {
 	if err != nil {
 		t.Fatalf("deciding: %v", err)
 	}
-	if d.Verdict != commsauthz.VerdictAllow {
+	if d.Verdict != commsauthz.VerdictAllow || d.ReasonCode != commsauthz.ReasonOptOutAllowed {
 		t.Fatalf("decision = %s %q, want a lead in an opt-out country allowed", d.Verdict, d.ReasonCode)
+	}
+}
+
+// A lead takes its country from the selector a contact uses, through its
+// company. With no company it has no country and needs consent.
+func TestALeadWithNoCountryIsNotWrittenToWithoutConsent(t *testing.T) {
+	testMessagingRules(t, messagingrules.Rules{Jurisdiction: "zo", Version: 1, MarketingMode: messagingrules.MarketingOptOut})
+	e := setupLeadConsent(t)
+	tx, err := e.store.db.Pool().Begin(e.ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func() {
+		if err := tx.Rollback(context.Background()); err != nil && !errors.Is(err, pgx.ErrTxClosed) {
+			t.Errorf("rolling back: %v", err)
+		}
+	}()
+	d, err := NewGate(e.store).decideOne(e.ctx, tx, connector.Recipient{Email: e.leadEmail},
+		commsauthz.Request{LegacyPurposeKey: "newsletter"}, commsauthz.PhaseTransmit)
+	if err != nil {
+		t.Fatalf("deciding: %v", err)
+	}
+	if d.Verdict == commsauthz.VerdictAllow {
+		t.Fatalf("a lead with no country was allowed: %s %q", d.Verdict, d.ReasonCode)
 	}
 }

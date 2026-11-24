@@ -35,6 +35,7 @@ func messagingRules() []messaging.Rules {
 			Kind:          "objection_route",
 			MarketingOnly: true,
 		}},
+		SubjectPrefix: "ADV:",
 		Provenance: messaging.Provenance{
 			CreatedAt: time.Date(2026, time.November, 24, 0, 0, 0, 0, time.UTC),
 		},
@@ -51,6 +52,14 @@ func messagingRules() []messaging.Rules {
 			Instrument: "CAN-SPAM Act of 2003 (15 U.S.C. 7701 et seq.)",
 			Provision:  "15 U.S.C. 7704(a)(5)(A)(iii)",
 		}, {
+			Code:       "subject_prefix",
+			Instrument: "CAN-SPAM Act of 2003 (15 U.S.C. 7701 et seq.)",
+			Provision:  "15 U.S.C. 7704(a)(5)(A)(i)",
+		}, {
+			Code:       "subject_label_missing",
+			Instrument: "CAN-SPAM Act of 2003 (15 U.S.C. 7701 et seq.)",
+			Provision:  "15 U.S.C. 7704(a)(5)(A)(i)",
+		}, {
 			Code:       "marketing_objection",
 			Instrument: "CAN-SPAM Act of 2003 (15 U.S.C. 7701 et seq.)",
 			Provision:  "15 U.S.C. 7704(a)(4)(A)",
@@ -59,6 +68,6 @@ func messagingRules() []messaging.Rules {
 			Instrument: "CAN-SPAM Act of 2003 (15 U.S.C. 7701 et seq.)",
 			Provision:  "15 U.S.C. 7704(a)(4)(A)",
 		}},
-		Digest: "02210e99cb5e0d1c28475ef10c24841aae9df136377cffeda69abe5bf503d66f",
+		Digest: "edbf24f1e55afdb7fbefebf586d3a2d7ddc821564584a74cd7cae7f0e32803ac",
 	}}
 }

@@ -423,7 +423,7 @@ func (g *Gate) legacyVerdictFor(ctx context.Context, tx pgx.Tx, contactID string
 		// No lawful-basis value names "allowed until refused", so the row
 		// records none and its reason code says why the send was allowed.
 		if verdict.ReasonCode == ReasonOptOutAllowed {
-			d.Basis = ""
+			d.Basis, d.ReasonCode = "", commsauthz.ReasonOptOutAllowed
 		}
 	case VerdictBlocked:
 		d.Verdict = commsauthz.VerdictDeny

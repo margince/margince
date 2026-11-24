@@ -28,14 +28,18 @@ func TestTheUnitHoldsOnePackAndOneRuleSetForTheUnitedStates(t *testing.T) {
 }
 
 // The United States is an opt-out market with no route to name: advertising
-// needs no consent, so there is no exception, no label and no cap.
+// needs no consent, so there is no exception and no cap. It does carry the
+// advertisement label of 7704(a)(5)(A)(i).
 func TestTheUnitedStatesAllowsAdvertisingUntilARefusal(t *testing.T) {
 	r := New().Messaging[0]
 	if r.MarketingMode != messaging.MarketingOptOut {
 		t.Errorf("marketing mode %q, want %q", r.MarketingMode, messaging.MarketingOptOut)
 	}
-	if r.ConsentOnly || len(r.MarketingExceptions) != 0 || r.SubjectPrefix != "" || r.FrequencyCap != nil {
-		t.Errorf("rules %+v state a consent rule, exception, label or cap the Act does not", r)
+	if r.ConsentOnly || len(r.MarketingExceptions) != 0 || r.FrequencyCap != nil {
+		t.Errorf("rules %+v state a consent rule, exception or cap the Act does not", r)
+	}
+	if r.SubjectPrefix != "ADV:" {
+		t.Errorf("subject prefix %q, want ADV:", r.SubjectPrefix)
 	}
 }
 
@@ -57,7 +61,8 @@ func TestAnAdvertisementOwesTheSenderAddressAndAWayToDecline(t *testing.T) {
 
 func TestTheUnitedStatesKeepsOneTaxRecordFloorAndNoCorrespondenceFloor(t *testing.T) {
 	classes := New().Jurisdictions[0].Retention().Classes()
-	if len(classes) != 1 || classes[0].Name != jurisdiction.AccountingRecords || classes[0].Law == "" {
+	if len(classes) != 1 || classes[0].Name != jurisdiction.AccountingRecords || classes[0].Law == "" ||
+		classes[0].Keep.Years != 8 || classes[0].Anchor != jurisdiction.AnchorCalendarYearEnd {
 		t.Errorf("retention %+v, want one accounting floor naming its law", classes)
 	}
 }

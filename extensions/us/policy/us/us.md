@@ -15,6 +15,7 @@ reply-window: 8760h
 deal-follow-up-window: 4368h
 marketing-mode: opt_out
 marketing-exceptions: []
+subject-prefix: "ADV:"
 disclosures:
   - kind: controller_identity
     marketing-only: true
@@ -23,6 +24,9 @@ disclosures:
 fixtures:
   - finding: controller_identity
     triggers: us/fixtures/advertising-without-postal-address.md
+    clears: us/fixtures/advertising-complete.md
+  - finding: subject_prefix
+    triggers: us/fixtures/advertising-without-label.md
     clears: us/fixtures/advertising-complete.md
   - finding: objection_route
     triggers: us/fixtures/advertising-without-objection-route.md
@@ -40,6 +44,14 @@ citations:
     territorial-test: any_sender
     instrument: "CAN-SPAM Act of 2003 (15 U.S.C. 7701 et seq.)"
     provision: "15 U.S.C. 7704(a)(5)(A)(iii)"
+  - code: subject_prefix
+    territorial-test: any_sender
+    instrument: "CAN-SPAM Act of 2003 (15 U.S.C. 7701 et seq.)"
+    provision: "15 U.S.C. 7704(a)(5)(A)(i)"
+  - code: subject_label_missing
+    territorial-test: any_sender
+    instrument: "CAN-SPAM Act of 2003 (15 U.S.C. 7701 et seq.)"
+    provision: "15 U.S.C. 7704(a)(5)(A)(i)"
   - code: marketing_objection
     territorial-test: any_sender
     instrument: "CAN-SPAM Act of 2003 (15 U.S.C. 7701 et seq.)"
@@ -67,6 +79,10 @@ here as they do everywhere, and no setting turns that off.
 
 ## What the message must carry
 
+- 15 U.S.C. 7704(a)(5)(A)(i): clear and conspicuous identification of the message as an
+  advertisement. The Act asks for it unless the recipient gave prior affirmative consent, and the
+  engine cannot tell the two cases apart, so the pack asks for the subject label `ADV:` on every
+  advertisement (`subject-prefix`). That is the stricter reading.
 - 15 U.S.C. 7704(a)(5)(A)(ii) and (a)(3): a working way to decline further email, free and with no
   barrier (`objection_route`, on advertising).
 - 15 U.S.C. 7704(a)(5)(A)(iii): a valid physical postal address of the sender. The pack asks for
@@ -78,8 +94,6 @@ here as they do everywhere, and no setting turns that off.
   advertising when the refusal is recorded, which meets it.
 - 7704(a)(2): a subject line must not mislead. The engine cannot judge that, so the layer states no
   key for it.
-- 7704(a)(5)(A)(i): the message identifies itself as an advertisement. The Act sets no label, so the
-  layer states no `subject-prefix`.
 
 ## Data protection
 
@@ -90,9 +104,14 @@ rules for the lawful basis, because the stricter pack wins there.
 
 ## Where this layer takes the stricter reading
 
+- The advertisement label is asked for on every advertisement, not only where there is no consent.
 - Replies and deal follow-ups keep the core windows. The Act sets none.
 - State laws on top of the federal Act, such as a state's own commercial-email rules, are not
   stated. The layer follows the federal Act alone.
+- The retention floor, in `retention.go`, is 7 years after the end of the calendar year following
+  the record's year, so it never releases before 7 years after the return's filing. That is the
+  longest common federal period, for bad-debt and worthless-security claims. State law is not
+  modelled.
 
 ## Review
 

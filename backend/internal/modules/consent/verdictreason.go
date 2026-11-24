@@ -32,7 +32,7 @@ const (
 	ReasonNoConsentExceptionNotOffered = "no_consent_exception_not_offered"
 	ReasonNoConsent                    = "no_consent"
 	ReasonExistingCustomer             = "existing_customer"
-	ReasonOptOutAllowed                = "opt_out_allowed"
+	ReasonOptOutAllowed                = commsauthz.ReasonOptOutAllowed
 )
 
 // said fills a verdict's sentence from its code.

@@ -117,7 +117,7 @@ var shippedOutcomes = map[string]packOutcome{
 	"tw": apacOutcome(nil, commsauthz.ReasonNoMarketingConsent, ""),
 	"us": {
 		reply: 365 * 24 * time.Hour, dealFollow: 182 * 24 * time.Hour,
-		unconsentedReason: commsauthz.ReasonNoMarketingConsent, optOut: true,
+		unconsentedReason: commsauthz.ReasonNoMarketingConsent, optOut: true, prefix: "ADV:",
 	},
 }
 
@@ -222,15 +222,17 @@ func TestTheShippedPacksFlagTheDraftsTheyFlaggedBeforeTheyWereCompiled(t *testin
 			},
 		},
 		{"vn", "vn", "Hóa đơn", vietnameseOffer, false, ControllerParticulars{}, []string{"controller_identity", "privacy_contact"}},
-		{"us", "us", "Offer", "Hello", true, full, nil},
+		{"us", "us", "ADV: Offer", "Hello", true, full, nil},
+		// A plain offer is not identified as an advertisement (7704(a)(5)(A)(i)).
+		{"us", "us", "Offer", "Hello", true, full, []string{"subject_prefix"}},
 		{
-			"us", "us", "Offer", "Hello", true,
+			"us", "us", "ADV: Offer", "Hello", true,
 			ControllerParticulars{LegalName: "Acme Inc.", ObjectionRoute: "https://acme.example/stop"},
 			[]string{"controller_identity"},
 		},
 		// A sender whose own country has no pack still owes the postal address.
 		{
-			"us", "kr", "Offer", "Hello", true,
+			"us", "kr", "ADV: Offer", "Hello", true,
 			ControllerParticulars{LegalName: "Acme Inc.", ObjectionRoute: "https://acme.example/stop"},
 			[]string{"controller_identity"},
 		},

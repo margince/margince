@@ -72,9 +72,9 @@ func TestThePreviewMarksTheAddressTheSendWouldFile(t *testing.T) {
 	}
 }
 
-// The country question reaches the wire only for a recipient the caller can
-// read, because the answer is saved on that record.
-func TestThePreviewAsksForACountryOnlyForARecipientTheCallerCanRead(t *testing.T) {
+// The country question reaches the wire only for a contact the caller may
+// update, because the answer is saved on that record.
+func TestThePreviewAsksForACountryOnlyForAContactTheCallerMayUpdate(t *testing.T) {
 	t.Parallel()
 	contact := ids.NewV7()
 	asking := commsauthz.Decision{
@@ -84,9 +84,17 @@ func TestThePreviewAsksForACountryOnlyForARecipientTheCallerCanRead(t *testing.T
 	readable := previewResponse(SendPreview{
 		Decisions:        commsauthz.DecisionSet{Decisions: []commsauthz.Decision{asking}},
 		readableSubjects: map[previewSubject]bool{{kind: "contact", id: contact}: true},
+		writableSubjects: map[previewSubject]bool{{kind: "contact", id: contact}: true},
 	})
 	if got := readable.Recipients[0].AskCountry; got == nil || !*got {
-		t.Errorf("ask_country for a readable contact = %v, want true", got)
+		t.Errorf("ask_country for a contact the caller may update = %v, want true", got)
+	}
+	readOnly := previewResponse(SendPreview{
+		Decisions:        commsauthz.DecisionSet{Decisions: []commsauthz.Decision{asking}},
+		readableSubjects: map[previewSubject]bool{{kind: "contact", id: contact}: true},
+	})
+	if got := readOnly.Recipients[0].AskCountry; got != nil {
+		t.Errorf("ask_country for a contact the caller may read but not update = %v, want absent", *got)
 	}
 	unreadable := previewResponse(SendPreview{Decisions: commsauthz.DecisionSet{Decisions: []commsauthz.Decision{asking}}})
 	if got := unreadable.Recipients[0].AskCountry; got != nil {

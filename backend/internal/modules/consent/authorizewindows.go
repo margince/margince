@@ -80,6 +80,7 @@ func packRulesFor(country RecipientCountry) packRules {
 	if !applicable {
 		return out
 	}
+	// Marketing mode follows the recipient's pack alone, never the sender's.
 	out.optOut = rules.MarketingMode.OptOut()
 	// THE EXCEPTION IS THE PACK'S TO DECLARE, and a jurisdiction that declares
 	// none grants none. A declared one still grants nothing today: the verdict

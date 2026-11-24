@@ -254,10 +254,9 @@ type Decision struct {
 	// recipient would ask about, zero when none can be asked.
 	ConsentPurpose ids.UUID
 
-	// AsksCountry says the record states no country for this recipient, the
-	// refusal is for want of marketing consent, and an installed pack allows
-	// advertising until a refusal. The recipient's country could therefore turn
-	// it into an allow. Only a preview fills it.
+	// AsksCountry says the recipient's country could turn this refusal into an
+	// allow. The record states none, the refusal is for want of marketing
+	// consent, and an installed pack is opt-out. Only a preview fills it.
 	AsksCountry bool
 
 	// Citations are the provisions shown for each code, resolved when the

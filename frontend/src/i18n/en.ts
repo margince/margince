@@ -8599,6 +8599,8 @@ export const en = {
   "countryQuestion.label": "Country",
   "countryQuestion.none": "Choose a country",
   "countryQuestion.save": "Save country",
+  "countryQuestion.alreadySet":
+    "This contact has a country now. The check was asked again.",
   "countryQuestion.failed": "The country was not saved. Try again.",
   "lawfulBasis.title": "No valid basis recorded",
   "lawfulBasis.body":

@@ -268,8 +268,8 @@ func stricter(a, b Rules) Rules {
 	}
 	out.FrequencyCap = tighterCap(a.FrequencyCap, b.FrequencyCap)
 	out.ConsentOnly = a.ConsentOnly || b.ConsentOnly
-	// Opt-out only where both sides allow it: a country that wants consent keeps
-	// asking for it in a send both govern.
+	// Opt-out only where both sides allow it. The send decision does not read this
+	// fold: its mode is the recipient's pack alone (packRulesFor).
 	if !a.MarketingMode.OptOut() || !b.MarketingMode.OptOut() {
 		out.MarketingMode = ""
 	}

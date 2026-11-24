@@ -8393,6 +8393,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "countryQuestion.label": "Quốc gia",
   "countryQuestion.none": "Chọn quốc gia",
   "countryQuestion.save": "Lưu quốc gia",
+  "countryQuestion.alreadySet":
+    "Liên hệ này đã có quốc gia. Việc kiểm tra đã được hỏi lại.",
   "countryQuestion.failed": "Chưa lưu được quốc gia. Hãy thử lại.",
   "lawfulBasis.title": "Chưa ghi nhận căn cứ hợp lệ",
   "lawfulBasis.body":

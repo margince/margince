@@ -15,10 +15,9 @@ import { useLocale, useT } from "../i18n";
 import { problemMessageOf, unwrap } from "../lib/problem";
 import { SEND_PERMISSION_KEY } from "../lib/usesendpermission";
 
-// The question the preview asks when a recipient's country is unknown and an
-// installed rule could turn the refusal into an allow. The answer is saved on
-// the contact through the ordinary contact edit, so it is audited like any
-// other change, and the preview is asked again.
+// The question the preview asks when an unknown country could turn a refusal
+// into an allow. The answer is saved through the ordinary contact edit, so it
+// is audited, and the preview is asked again.
 
 type Preview = components["schemas"]["SendAuthorizationPreview"];
 
@@ -47,6 +46,8 @@ export function CountryQuestion({
   );
 }
 
+class CountryAlreadySet extends Error {}
+
 function CountryAsk({ asked }: Readonly<{ asked: Asked }>) {
   const t = useT();
   const { locale } = useLocale();
@@ -57,13 +58,18 @@ function CountryAsk({ asked }: Readonly<{ asked: Asked }>) {
     label: option.label,
   }));
   const save = useMutation({
-    mutationFn: async () => {
+    mutationFn: async ({ country }: Readonly<{ country: string }>) => {
       // The address is written whole, so the rest of it is read first.
       const contact = unwrap(
         await api.GET("/contacts/{id}", {
           params: { path: { id: asked.contactId } },
         }),
       );
+      // The preview asked because no country was stored. One stored since is
+      // not overwritten with an answer to a question that is no longer true.
+      if (contact.address?.country) {
+        throw new CountryAlreadySet();
+      }
       if (contact.version === undefined) {
         throw new Error("the contact read carries no version to write against");
       }
@@ -77,7 +83,7 @@ function CountryAsk({ asked }: Readonly<{ asked: Asked }>) {
         }),
       );
     },
-    onSuccess: () =>
+    onSettled: () =>
       client.invalidateQueries({ queryKey: [...SEND_PERMISSION_KEY] }),
   });
   return (
@@ -90,7 +96,7 @@ function CountryAsk({ asked }: Readonly<{ asked: Asked }>) {
         <Button
           disabled={country === ""}
           pending={save.isPending}
-          onClick={() => save.mutate()}
+          onClick={() => save.mutate({ country })}
         >
           {t("countryQuestion.save")}
         </Button>
@@ -110,7 +116,9 @@ function CountryAsk({ asked }: Readonly<{ asked: Asked }>) {
       </Field>
       {save.error ? (
         <p role="alert" className="t-caption">
-          {problemMessageOf(save.error, t, t("countryQuestion.failed"))}
+          {save.error instanceof CountryAlreadySet
+            ? t("countryQuestion.alreadySet")
+            : problemMessageOf(save.error, t, t("countryQuestion.failed"))}
         </p>
       ) : null}
     </Callout>

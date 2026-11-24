@@ -71,13 +71,13 @@ recipient's pack alone, and `marketingVerdict` in `backend/internal/modules/cons
 and `decideLeadOnItsRecord` in `backend/internal/modules/consent/authorizelead.go` apply it. An
 objection, an unsubscribe, a withdrawal and a suppression block before the mode is read, so they win
 in either mode. Mail that is not advertising never reads it. An opt-out allow records no lawful
-basis, because none of the recorded values names "allowed until refused". Its reason code is
-`opt_out_allowed`. `Strictest` keeps opt-out only where every pack that binds a send states it.
+basis, because none of the recorded values names "allowed until refused". Its decision row carries
+the reason code `opt_out_allowed`. A lead takes its country from the same selector a contact does. `Strictest` keeps opt-out only where every pack that binds a send states it.
 
 A recipient with no usable country gets no pack and so needs consent. Where an installed pack is
 opt-out, that refusal could become an allow. The preview then sets `ask_country` on the recipient
 (`countryCouldChangeTheAnswer` in `backend/internal/modules/consent/countryquestion.go`), and the
-composer asks the sender for the country. The answer is saved on the contact through the ordinary
+composer asks the sender for the country, only when the reader may update that contact. The answer is saved on the contact through the ordinary
 contact edit, so it is audited like any other change, and the preview is asked again. No question
 shows when the record states a country, when the sender cleared or stated one for the message, when
 the refusal is not for want of consent, or when no installed pack is opt-out.
@@ -187,7 +187,7 @@ the digest tells which policy text produced the rules.
 
 `extensions/us/policy/us/us.md` states the CAN-SPAM Act (15 U.S.C. 7701 et seq.) and the Federal
 Trade Commission's rule under it (16 CFR Part 316). It is opt-out, grants no exception and sets no
-label or cap. A commercial message owes a way to decline and the sender's postal address. The
+cap. It asks for the subject label `ADV:`, the stricter reading of 7704(a)(5)(A)(i). A commercial message owes a way to decline and the sender's postal address. The
 postal address is the legal name and address of `controller_identity`, which the pack owes on
 advertising only. `owedDisclosures` in `backend/internal/modules/consent/disclosurerender.go` reads
 that disclosure from a recipient's pack when it is advertising-only, so a sender from a country

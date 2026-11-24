@@ -118,4 +118,50 @@ describe("the question for an unknown recipient country", () => {
       address: { line1: "1 Main Street", country: "US" },
     });
   });
+
+  it("does not overwrite a country stored since the preview asked", async () => {
+    const methods: string[] = [];
+    vi.spyOn(globalThis, "fetch").mockImplementation(async (input) => {
+      methods.push((input as Request).method);
+      return json({ id: CONTACT, version: 8, address: { country: "DE" } });
+    });
+    draw(preview(refused({ ask_country: true })));
+    const user = userEvent.setup();
+    await pickOption(
+      user,
+      screen.getByRole("combobox", { name: "Country" }),
+      "United States",
+    );
+    await user.click(screen.getByRole("button", { name: "Save country" }));
+
+    expect(
+      await screen.findByText(translate("en", "countryQuestion.alreadySet")),
+    ).toBeVisible();
+    expect(methods).not.toContain("PATCH");
+  });
+
+  it("says so when the contact changed between the read and the write", async () => {
+    vi.spyOn(globalThis, "fetch").mockImplementation(async (input) => {
+      if ((input as Request).method === "PATCH") {
+        return new Response(
+          JSON.stringify({ title: "Version skew", code: "version_skew" }),
+          {
+            status: 409,
+            headers: { "Content-Type": "application/problem+json" },
+          },
+        );
+      }
+      return json({ id: CONTACT, version: 7, address: { country: null } });
+    });
+    draw(preview(refused({ ask_country: true })));
+    const user = userEvent.setup();
+    await pickOption(
+      user,
+      screen.getByRole("combobox", { name: "Country" }),
+      "United States",
+    );
+    await user.click(screen.getByRole("button", { name: "Save country" }));
+
+    expect(await screen.findByRole("alert")).toBeVisible();
+  });
 });
