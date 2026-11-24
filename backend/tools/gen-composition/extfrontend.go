@@ -55,12 +55,13 @@ type unitFrontend struct {
 // unitPackageJSON is the subset of a package manifest this composer judges.
 // Everything else about the package is the unit author's business.
 type unitPackageJSON struct {
-	Name             string            `json:"name"`
-	Private          bool              `json:"private"`
-	Main             string            `json:"main"`
-	Dependencies     map[string]string `json:"dependencies"`
-	PeerDependencies map[string]string `json:"peerDependencies"`
-	Scripts          map[string]string `json:"scripts"`
+	Name                 string            `json:"name"`
+	Private              bool              `json:"private"`
+	Main                 string            `json:"main"`
+	Dependencies         map[string]string `json:"dependencies"`
+	OptionalDependencies map[string]string `json:"optionalDependencies"`
+	PeerDependencies     map[string]string `json:"peerDependencies"`
+	Scripts              map[string]string `json:"scripts"`
 }
 
 // installScripts are the lifecycle scripts pnpm runs for a workspace member on
@@ -112,6 +113,9 @@ func collectUnitFrontend(name, dir string) (*unitFrontend, error) {
 			return nil, fmt.Errorf("extensions/%s: %s/package.json lists %s as a dependency — it must be a peerDependency, or the unit ships a second copy of state the host owns and its screen fails at RUN TIME, with an error naming neither the unit nor the cause",
 				name, frontendLayer, dep)
 		}
+	}
+	if err := checkUnitRuntimeDeps(name, dir, pkg); err != nil {
+		return nil, err
 	}
 	// An absolute main is refused by name rather than left to the check below.
 	// filepath.Join swallows the leading separator, so an absolute path would
