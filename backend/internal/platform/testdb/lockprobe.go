@@ -278,16 +278,18 @@ type LongRunning struct {
 
 // LongestRunning answers the oldest active statement of this database, other
 // than the caller's, that has run longer than after. pgx.ErrNoRows means none.
+// The age is read against statement_timestamp(), because now() stays at the
+// start of a transaction the caller may have open.
 func LongestRunning(ctx context.Context, conn Prober, after time.Duration) (LongRunning, error) {
 	if _, err := conn.Exec(ctx, `SELECT pg_stat_clear_snapshot()`); err != nil {
 		return LongRunning{}, fmt.Errorf("clearing the stats snapshot before looking for a long statement: %w", err)
 	}
 	var out LongRunning
-	err := conn.QueryRow(ctx, `SELECT query, extract(epoch FROM now() - query_start)::float8,
+	err := conn.QueryRow(ctx, `SELECT query, extract(epoch FROM statement_timestamp() - query_start)::float8,
 		  octet_length(query) >= pg_size_bytes(current_setting('track_activity_query_size')) - 1,
 		  COALESCE(wait_event_type || ':' || wait_event, ''), cardinality(pg_blocking_pids(pid))
 		  FROM pg_stat_activity WHERE datname = current_database() AND state = 'active'
-		  AND pid <> pg_backend_pid() AND now() - query_start > make_interval(secs => $1)
+		  AND pid <> pg_backend_pid() AND statement_timestamp() - query_start > make_interval(secs => $1)
 		  ORDER BY query_start LIMIT 1`, after.Seconds()).Scan(&out.Query, &out.Seconds, &out.Cut, &out.WaitsOn, &out.Blockers)
 	return out, err
 }
