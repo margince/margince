@@ -265,16 +265,19 @@ const confirmInConversationLead = "Needs the user's yes in this conversation."
 // text that says the same, for a client or view that reads fields.
 const confirmMeta = "margince/confirm"
 
+// confirmFieldNextSteps names the calls that follow round 1, in order.
+const confirmFieldNextSteps = "next_steps"
+
 // confirmMetaOf is round 1 as fields: what would change, the code, and the next
 // calls in order.
 func confirmMetaOf(ask *ConfirmInConversationError) map[string]any {
 	return map[string]any{
-		"status":            "needs_confirmation",
+		fieldStatus:         "needs_confirmation",
 		"tool":              ask.Tool,
 		"what_would_change": ask.Summary,
 		confirmCodeArg:      ask.Code,
 		"expires_at":        ask.ExpiresAt.UTC().Format(time.RFC3339),
-		"next_steps": []string{
+		confirmFieldNextSteps: []string{
 			"Tell the user what_would_change in your own words and ask them.",
 			"Only after they say yes: repeat this exact call with " + confirmCodeArg + ".",
 			"If they say no: do not call it again; nothing changed.",

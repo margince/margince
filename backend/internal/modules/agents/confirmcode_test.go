@@ -132,7 +132,7 @@ func (f *confirmFixture) armed(ctx context.Context) context.Context {
 }
 
 // preview runs round 1 and answers the code it handed out.
-func (f *confirmFixture) preview(t *testing.T, ctx context.Context, args string) string {
+func (f *confirmFixture) preview(ctx context.Context, t *testing.T, args string) string {
 	t.Helper()
 	_, err := f.reg.Invoke(ctx, f.tool.name, json.RawMessage(args))
 	ask, asks := errors.AsType[*ConfirmInConversationError](err)
@@ -153,7 +153,7 @@ func TestAWaitingCallIsConfirmedInTheConversationAndStagesNothing(t *testing.T) 
 	f := newConfirmFixture(t)
 	ctx := f.armed(f.user)
 	args := `{"to":"resellers"}`
-	code := f.preview(t, ctx, args)
+	code := f.preview(ctx, t, args)
 	if len(f.tool.runs) != 0 || len(f.approvals.staged) != 0 {
 		t.Fatalf("round 1 ran the tool %d time(s) and staged %d approval(s), want neither", len(f.tool.runs), len(f.approvals.staged))
 	}
@@ -182,7 +182,7 @@ func TestAConfirmCodeIsGoodOnce(t *testing.T) {
 	f := newConfirmFixture(t)
 	ctx := f.armed(f.user)
 	args := `{"to":"resellers"}`
-	code := f.preview(t, ctx, args)
+	code := f.preview(ctx, t, args)
 	if _, err := f.reg.Invoke(ctx, f.tool.name, withCode(args, code)); err != nil {
 		t.Fatalf("first use: %v", err)
 	}
@@ -235,7 +235,7 @@ func TestAConfirmCodeConfirmsOnlyItsOwnCall(t *testing.T) {
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
 			f := newConfirmFixture(t)
-			code := f.preview(t, f.armed(f.user), args)
+			code := f.preview(f.armed(f.user), t, args)
 			if err := tc.use(f, code); !errors.Is(err, apperrors.ErrApprovalTokenInvalid) {
 				t.Fatalf("answered %v, want the code refused", err)
 			}
@@ -281,7 +281,7 @@ func TestWithoutAConversationTheCallStagesIntoTheInboxAsBefore(t *testing.T) {
 func TestAConfirmCodeWhereNoConversationCanConfirmIsRefused(t *testing.T) {
 	f := newConfirmFixture(t)
 	args := `{"to":"resellers"}`
-	code := f.preview(t, f.armed(f.user), args)
+	code := f.preview(f.armed(f.user), t, args)
 	if _, err := f.reg.Invoke(f.user, f.tool.name, withCode(args, code)); !errors.Is(err, apperrors.ErrApprovalTokenInvalid) {
 		t.Fatalf("answered %v, want the code refused off the MCP conversation", err)
 	}
@@ -296,7 +296,7 @@ func TestAFailedRunSpendsTheCode(t *testing.T) {
 	f := newConfirmFixture(t)
 	ctx := f.armed(f.user)
 	args := `{"to":"resellers"}`
-	code := f.preview(t, ctx, args)
+	code := f.preview(ctx, t, args)
 	f.tool.fail = true
 	if _, err := f.reg.Invoke(ctx, f.tool.name, withCode(args, code)); err == nil {
 		t.Fatal("the failing run answered success")
@@ -324,7 +324,7 @@ func TestACodeForACallNoLongerReleasableIsRefused(t *testing.T) {
 	f := newConfirmFixture(t)
 	ctx := f.armed(f.user)
 	args := `{"to":"resellers"}`
-	code := f.preview(t, ctx, args)
+	code := f.preview(ctx, t, args)
 	f.approvals.releasable = false
 	if _, err := f.reg.Invoke(ctx, f.tool.name, withCode(args, code)); !errors.Is(err, errConfirmCodeNoLonger) {
 		t.Fatalf("answered %v, want the code refused for a call no longer releasable", err)
@@ -339,7 +339,7 @@ func TestAGuardThatCannotAnswerRefusesTheCode(t *testing.T) {
 	f := newConfirmFixture(t)
 	ctx := f.armed(f.user)
 	args := `{"to":"resellers"}`
-	code := f.preview(t, ctx, args)
+	code := f.preview(ctx, t, args)
 	f.guard.err = errors.New("NOAUTH the replay store wants a password")
 	_, err := f.reg.Invoke(ctx, f.tool.name, withCode(args, code))
 	if !errors.Is(err, apperrors.ErrApprovalTokenInvalid) {
@@ -404,7 +404,7 @@ func TestTheMCPDoorAsksInTheConversationAndRunsOnTheCode(t *testing.T) {
 	meta, _ := asked["_meta"].(map[string]any)
 	fields, _ := meta[confirmMeta].(map[string]any)
 	code, _ := fields[confirmCodeArg].(string)
-	if code == "" || fields["what_would_change"] != "set up a partner program" || fields["next_steps"] == nil {
+	if code == "" || fields["what_would_change"] != "set up a partner program" || fields[confirmFieldNextSteps] == nil {
 		t.Fatalf("round 1 _meta %v, want the code, what would change and the next steps", meta)
 	}
 	text, _ := json.Marshal(asked["content"])
