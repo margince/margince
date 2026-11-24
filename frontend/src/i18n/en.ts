@@ -8577,7 +8577,8 @@ export const en = {
   "sendPermission.footer.phone": "a phone number",
   "sendPermission.footer.web": "a website or social link",
   "sendPermission.footer.privacy": "privacy contact information",
-  "sendPermission.footer.advertisement": "the line that identifies it as an advertisement",
+  "sendPermission.footer.advertisement":
+    "the line that identifies it as an advertisement",
   "sendPermission.footer.advertiser": "advertiser contact information",
   "sendPermission.footer.identity": "the company name and address",
   "sendPermission.footer.unknown": "some company footer text",

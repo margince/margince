@@ -8587,7 +8587,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "sendPermission.footer.phone": "einer Telefonnummer",
   "sendPermission.footer.web": "einer Website oder einem Social-Media-Link",
   "sendPermission.footer.privacy": "Datenschutz-Kontaktangaben",
-  "sendPermission.footer.advertisement": "die Zeile, die sie als Werbung kennzeichnet",
+  "sendPermission.footer.advertisement":
+    "die Zeile, die sie als Werbung kennzeichnet",
   "sendPermission.footer.advertiser":
     "Kontaktangaben des werbenden Unternehmens",
   "sendPermission.footer.identity": "Name und Anschrift des Unternehmens",
