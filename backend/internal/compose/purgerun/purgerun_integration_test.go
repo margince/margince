@@ -172,14 +172,12 @@ func TestTwoConcurrentPurgesOfOneRuleGetTheirOwnReceipts(t *testing.T) {
 	outcomes := make([]compose.PurgeOutcome, 2)
 	var wg sync.WaitGroup
 	for i := range outcomes {
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
+		wg.Go(func() {
 			var err error
 			if outcomes[i], err = purgerFor(e).Purge(ctxFor(e, e.Rep1), rule, false); err != nil {
 				t.Errorf("purge %d: %v", i, err)
 			}
-		}()
+		})
 	}
 	wg.Wait()
 
