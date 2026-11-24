@@ -703,3 +703,26 @@ func TestARescheduleTakesItsLocksInTheBookingsOrder(t *testing.T) {
 		t.Fatalf("the move: %v", err)
 	}
 }
+
+// A colleague reads only their own request, as it stands on the live link.
+func TestOnlyTheNamedColleagueReadsTheirRequest(t *testing.T) {
+	f := newTeamFixture(t)
+	member := f.colleague(t, "Member")
+	f.name(t, false, member)
+	read := func(ctx context.Context) (TeamRequestStanding, error) {
+		var standing TeamRequestStanding
+		err := f.store.tx(ctx, func(tx pgx.Tx) error {
+			var err error
+			standing, err = ReadTeamRequestTx(ctx, tx, f.host, member)
+			return err
+		})
+		return standing, err
+	}
+	standing, err := read(f.as(member))
+	if err != nil || !standing.Pending || standing.Request.Title == "" || standing.Request.HostName == "" {
+		t.Fatalf("the member read %+v, %v; want their pending request with its words", standing, err)
+	}
+	if _, err := read(f.ctx); !errors.Is(err, apperrors.ErrPermissionDenied) {
+		t.Fatalf("the host read the member's request → %v, want %v", err, apperrors.ErrPermissionDenied)
+	}
+}

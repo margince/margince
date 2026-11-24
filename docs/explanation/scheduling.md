@@ -44,7 +44,9 @@ The save that names a new member also gives them a notice of kind `meeting_team_
 transaction, through `compose/teamrequestnotice.go`. The notice sits in the approval notification class,
 so it is mailed as an approval is unless the member chose otherwise. A member kept on the list gets no
 second notice. Answering, or being taken off the list, takes the notice back, and a notice taken back is
-never mailed.
+never mailed. The mail reads the link again when it leaves. It names the current title, and it is not sent
+once the member is no longer pending. The send holds the link while it reserves, so an answer or a removal
+waits for it. Naming a member again opens the same notice, with the current title.
 
 Confirming is a consent to share free time with a public page, so an agent cannot give it. Until every member has confirmed
 and has a calendar Margince can read, the page's `blocker` is `team_not_ready` and the page is

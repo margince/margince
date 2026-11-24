@@ -49,8 +49,10 @@ const maxMailErrorRunes = 500
 // is a different question from anything the centre displays.
 type EmailAttempt struct {
 	ApprovalID *ids.ApprovalID
-	Notice     Notice
-	Recipient  ids.UserID
+	// TeamRequestHost is the host whose booking link a team request names.
+	TeamRequestHost *ids.UserID
+	Notice          Notice
+	Recipient       ids.UserID
 	// ClaimedAt is the stamp this claim wrote. A release matches it, so a
 	// claim another attempt took since is never freed.
 	ClaimedAt time.Time
@@ -120,6 +122,9 @@ func scanClaimedNotice(row pgx.Row) (EmailAttempt, time.Time, error) {
 	if approval, ok := approvalOfNoticeKey(attempt.Notice.Kind, noticeKey); ok {
 		typed := ids.From[ids.ApprovalKind](approval)
 		attempt.ApprovalID = &typed
+	}
+	if host, ok := hostOfTeamRequestKey(attempt.Notice.Kind, noticeKey); ok {
+		attempt.TeamRequestHost = &host
 	}
 	attempt.Notice.ID = id
 	attempt.Recipient = ids.From[ids.UserKind](recipient)
