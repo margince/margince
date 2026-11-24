@@ -348,7 +348,6 @@ Available tools:
 // COMPLETE BULLET LINES, leading dash included, so the constant reads alone and
 // a new sentence needs punctuation in one place rather than two.
 const surfaceSchemaRules = "- An argument no tool declares is refused by name, never stored or ignored: send only the members its input schema lists.\n" +
-	"- " + mcp.RouterArgumentsRule + "\n" +
 	"- " + mcp.ReservedIdempotencyKeyRule + "\n"
 
 // SystemFrameTokens is what the system prompt costs BEFORE any tool is listed:

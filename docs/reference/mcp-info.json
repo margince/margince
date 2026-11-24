@@ -10,16 +10,16 @@
   "totals": {
     "tools": 48,
     "resources": 14,
-    "tool_catalog_bytes": 248314,
+    "tool_catalog_bytes": 248272,
     "resource_catalog_bytes": 5622,
-    "approx_wire_tokens_total": 63484,
+    "approx_wire_tokens_total": 63473,
     "largest_tool_bytes": 16204,
     "largest_tool": "read_details",
     "tool_catalog_composition": {
       "description_bytes": 52231,
-      "input_schema_bytes": 149764,
+      "input_schema_bytes": 149722,
       "output_schema_bytes": 34465,
-      "description_plus_input_schema_bytes": 201995
+      "description_plus_input_schema_bytes": 201953
     }
   },
   "tools": {
@@ -1745,12 +1745,12 @@
                   "type": "string"
                 },
                 "pipeline_id": {
-                  "description": "Choose from the workspace's pipeline list with read_workspace with topic=pipelines.",
+                  "description": "Choose from the workspace's pipeline list with list_pipelines.",
                   "format": "uuid",
                   "type": "string"
                 },
                 "stage_id": {
-                  "description": "Choose an open stage from the workspace's pipeline list with read_workspace with topic=pipelines.",
+                  "description": "Choose an open stage from the workspace's pipeline list with list_pipelines.",
                   "format": "uuid",
                   "type": "string"
                 }

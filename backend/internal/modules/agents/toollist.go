@@ -168,7 +168,12 @@ const governanceDefaults = "A tool whose description names no governance runs im
 	"names no passport scope needs \"read\" if it only reads and \"write\" if it changes anything. " +
 	"Where a description says to " + askFirstOpening + ", for the whole tool or for the actions it names, " +
 	"the user's yes is needed: tell them " + askConsequenceWrite + ", or for a tool that only reads, " +
-	askConsequenceRead + ", and " + askFirstGetYes + ". " + mcp.RouterArgumentsRule + " " + mcp.ReservedIdempotencyKeyRule
+	askConsequenceRead + ", and " + askFirstGetYes + ". " + routerArgumentsRule + " " + mcp.ReservedIdempotencyKeyRule
+
+// routerArgumentsRule says where a router action's arguments are when the MCP
+// listing leaves them out (Registry.ForListing).
+const routerArgumentsRule = "Where a tool's input schema does not name an action's arguments, read_workspace " +
+	"with topic=actions and router=<that tool> lists them."
 
 // actionGovernance says which of a router's actions run at once, which wait for
 // a human and which decide per call. Empty for a tool with no actions.
@@ -210,6 +215,7 @@ func (s *Dispatcher) toolList(ctx context.Context, fr framing) []map[string]any 
 	tools := make([]map[string]any, 0, len(specs))
 	actionTools := apps.ActionTools()
 	for _, spec := range specs {
+		spec = s.registry.ForListing(spec)
 		tool := map[string]any{
 			fieldName: spec.Name,
 			// Top-level title outranks annotations.title for display, and both

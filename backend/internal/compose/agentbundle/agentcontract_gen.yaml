@@ -51732,7 +51732,7 @@ components:
               if_version: {type: boolean, description: 'Whether it takes if_version: the version you last read.'}
               ask_user_first: {type: boolean, description: Whether the app asks its user to confirm it first.}
               uploads_a_file: {type: boolean, description: 'Whether it takes filename, content_type and content_base64.'}
-              body: {type: object, description: The JSON schema of its body argument.}
+              body: {type: object, additionalProperties: true, description: The JSON schema of its body argument.}
     ColdStartField:
       type: object
       description: |-

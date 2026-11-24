@@ -58,8 +58,10 @@ that `read_workspace topic=actions` describes, only the actions the use-case lan
 an action a scenario requires, or one a recorded MCP run called.
 `listedActions` in `internal/modules/agents/routerlisting.go` names them.
 
-A model reads any other action's arguments from `read_workspace topic=actions`, and the server
-instructions tell it so. A call still hands every argument to the hidden tool, which checks them against
+Only the MCP `tools/list` leaves arguments out (`Registry.ForListing`); the in-app runner keeps every
+one. A model reads any other action's arguments from `read_workspace topic=actions`, and the server
+instructions tell it so. That catalog lists only the routers and actions the caller's own `tools/list`
+offers. A call still hands every argument to the hidden tool, which checks them against
 its own schema.
 `TestTheToolListNamesTheArgumentsOfEveryActionTheLaneUses`
 (`internal/compose/mcpe2e/listedactions_test.go`) holds the set to the scenarios and the recorded runs.

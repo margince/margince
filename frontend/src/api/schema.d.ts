@@ -54278,7 +54278,9 @@ export interface components {
                 /** @description Whether it takes filename, content_type and content_base64. */
                 uploads_a_file?: boolean;
                 /** @description The JSON schema of its body argument. */
-                body?: Record<string, never>;
+                body?: {
+                    [key: string]: unknown;
+                };
             }[];
         };
         /**

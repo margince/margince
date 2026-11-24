@@ -231,12 +231,6 @@ const ReservedIdempotencyKeyRule = "A tool that LISTS `" + ReservedIdempotencyKe
 	"you choose, and a retry without it may repeat the write. Same key, same result; a key reused with " +
 	"other arguments is refused."
 
-// RouterArgumentsRule says where a router action's arguments are when the
-// router's input schema leaves them out. The MCP server instructions and the
-// runner's frame both state it, since both serve the same listing.
-const RouterArgumentsRule = "Where a tool's input schema does not name an action's arguments, read_workspace " +
-	"with topic=actions and router=<that tool> lists them."
-
 // ConflictingSourcesRule is what a model does when two things it was given
 // disagree. Without it a model smooths: measured on the use-case lane, the
 // strongest model invented a second customer complaint so that a September

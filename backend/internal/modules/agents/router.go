@@ -98,14 +98,12 @@ func (r *Registry) routedSpec(rt router) mcp.ToolSpec {
 		panic(fmt.Sprintf("crmagents: router %s must pick its target either by one argument or by the arguments named", spec.Name))
 	}
 	spec.ActionField = field
-	schema, err := routedSchema(spec.Name, field, choices, r.actionSentences(spec.Name, field, choices, targets), spec.InputSchema, targets,
-		r.rareActions(spec.Name, field))
+	schema, err := routedSchema(spec.Name, field, choices, r.actionSentences(spec.Name, field, choices, targets), spec.InputSchema, targets, nil)
 	if err != nil {
 		//craft:ignore panic-in-domain composition-time registration assertion — fires only while cmd wiring runs, never on a request path
 		panic("crmagents: " + err.Error())
 	}
 	spec.InputSchema = schema
-	spec.UnkeyedArguments = listedUnkeyed(spec.UnkeyedArguments, schema)
 	spec.OutputSchema = nil
 	if spec.UI != nil {
 		spec.OutputSchema = targetsOutput(spec.Name, targets)

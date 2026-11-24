@@ -92,8 +92,11 @@ func (r *Registry) holdsChecks(p principal.Principal, verb string) bool {
 // derive it, through routedSchema, which derives the registered one. An
 // argument only hidden actions take is gone. The route enum, the choices named
 // as taking an argument, a united enum and a bound note name only kept ones.
-// A member the surface added, such as the retry key, stays.
-func (r *Registry) narrowedRouterSchema(name string, served json.RawMessage, kept []mcp.ToolAction, hidden []string) (json.RawMessage, error) {
+// A member the surface added, such as the retry key, stays. A rare filter,
+// when set, also leaves out what only rare actions take.
+func (r *Registry) narrowedRouterSchema(name string, served json.RawMessage, kept []mcp.ToolAction, hidden []string,
+	rare func(string) bool,
+) (json.RawMessage, error) {
 	r.mu.RLock()
 	rt, ok := r.tools[name].(router)
 	r.mu.RUnlock()
@@ -104,7 +107,7 @@ func (r *Registry) narrowedRouterSchema(name string, served json.RawMessage, kep
 	if !byField {
 		return nil, fmt.Errorf("%s picks its action by the arguments named, so no enum narrows it", name)
 	}
-	every, err := r.routerSchemaFor(rt, field, slices.Sorted(maps.Keys(rt.routeTargets())))
+	every, err := r.routerSchemaFor(rt, field, slices.Sorted(maps.Keys(rt.routeTargets())), nil)
 	if err != nil {
 		return nil, err
 	}
@@ -112,7 +115,7 @@ func (r *Registry) narrowedRouterSchema(name string, served json.RawMessage, kep
 	for i, action := range kept {
 		choices[i] = action.Action
 	}
-	narrowed, err := r.routerSchemaFor(rt, field, choices)
+	narrowed, err := r.routerSchemaFor(rt, field, choices, rare)
 	if err != nil {
 		return nil, err
 	}
@@ -151,7 +154,7 @@ func (r *Registry) narrowedRouterSchema(name string, served json.RawMessage, kep
 // routerSchemaFor is routedSchema over choices, read back member by member.
 // Router wording for an argument no chosen target takes is left out, as that
 // argument is.
-func (r *Registry) routerSchemaFor(rt router, field string, choices []string) (routedObject, error) {
+func (r *Registry) routerSchemaFor(rt router, field string, choices []string, rare func(string) bool) (routedObject, error) {
 	targets := make([]mcp.ToolSpec, len(choices))
 	r.mu.RLock()
 	for i, choice := range choices {
@@ -164,8 +167,7 @@ func (r *Registry) routerSchemaFor(rt router, field string, choices []string) (r
 	if err != nil {
 		return routedObject{}, err
 	}
-	raw, err := routedSchema(rt.Spec().Name, field, choices, r.actionSentences(rt.Spec().Name, field, choices, targets), own, targets,
-		r.rareActions(rt.Spec().Name, field))
+	raw, err := routedSchema(rt.Spec().Name, field, choices, r.actionSentences(rt.Spec().Name, field, choices, targets), own, targets, rare)
 	if err != nil {
 		return routedObject{}, err
 	}

@@ -13,6 +13,7 @@ import (
 	"testing"
 
 	"github.com/margince/margince/backend/internal/platform/auth"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/ports/mcp"
 )
@@ -55,9 +56,14 @@ func newRareListingFixture(t *testing.T) *rareListingFixture {
 	return f
 }
 
-func (f *rareListingFixture) listedSchema(t *testing.T) map[string]json.RawMessage {
+// properties are the members of the router's schema, as the MCP listing shows
+// it, or as every other reader gets it.
+func (f *rareListingFixture) properties(t *testing.T, listed bool) map[string]json.RawMessage {
 	t.Helper()
 	spec, _ := f.r.Spec(f.router)
+	if listed {
+		spec = f.r.ForListing(spec)
+	}
 	var doc map[string]json.RawMessage
 	if err := json.Unmarshal(spec.InputSchema, &doc); err != nil {
 		t.Fatal(err)
@@ -72,13 +78,18 @@ func (f *rareListingFixture) listedSchema(t *testing.T) map[string]json.RawMessa
 	return properties
 }
 
-// An argument only rare actions take is left out of the listing. One a listed
-// action takes stays with the shape every action that takes it gives it.
+// An argument only rare actions take is left out of the MCP listing. One a
+// listed action takes stays with the shape every action that takes it gives it.
+// The registered schema, which the in-app runner reads, keeps them all.
 func TestARouterListsOnlyTheArgumentsItsListedActionsTake(t *testing.T) {
-	properties := newRareListingFixture(t).listedSchema(t)
+	f := newRareListingFixture(t)
+	properties, registered := f.properties(t, true), f.properties(t, false)
 	for _, gone := range []string{"rare_only", "route_only", "if_version", "id"} {
 		if _, listed := properties[gone]; listed {
 			t.Errorf("%s, which only rare actions take, is listed: %s", gone, properties[gone])
+		}
+		if _, kept := registered[gone]; !kept {
+			t.Errorf("%s is left out of the registered schema, so the in-app runner cannot send it", gone)
 		}
 	}
 	if _, listed := properties["listed_only"]; !listed {
@@ -134,8 +145,31 @@ func TestTheActionCatalogNamesEveryActionsArguments(t *testing.T) {
 		}
 	}
 	describe, _ := f.r.tools[describeRouterActionsName].(describeRouterActions)
-	one, err := describe.catalog(f.router, rareInProcess)
+	one, err := describe.catalog(f.router, rareInProcess, nil)
 	if err != nil || !strings.Contains(string(one), `"rare_only"`) || strings.Contains(string(one), "listed_only") {
 		t.Errorf("the catalog for %s alone = %s, %v", rareInProcess, one, err)
+	}
+}
+
+// A caller reads the catalog of what its own tools/list offers. A read-only
+// passport is offered no write router, so asking for one is refused as a
+// router the catalog does not have.
+func TestTheActionCatalogAnswersOnlyForWhatTheCallerIsOffered(t *testing.T) {
+	f := newRareListingFixture(t)
+	describe, _ := f.r.tools[describeRouterActionsName].(describeRouterActions)
+	readOnly := principal.WithActor(principal.WithWorkspaceID(context.Background(), ids.NewV7()), principal.Principal{
+		Type: principal.PrincipalAgent, ID: "agent:r", OnBehalfOf: ids.NewV7(), SeatType: principal.SeatFull,
+		Scopes: principal.NewScopeSet(principal.ScopeRead), Permissions: everyRecordedGrant(),
+	})
+	if slices.ContainsFunc(f.r.Offered(readOnly), func(spec mcp.ToolSpec) bool { return spec.Name == f.router }) {
+		t.Fatalf("a read-only passport is offered the write router %s, so this case tests nothing", f.router)
+	}
+	var bad *BadArgsError
+	if _, err := describe.Handle(readOnly, json.RawMessage(`{"router":"`+f.router+`"}`)); !errors.As(err, &bad) || bad.Field != catalogRouterArg {
+		t.Errorf("a read-only passport asking for %s's actions answered %v, want the refusal for a router it is not offered", f.router, err)
+	}
+	out, err := describe.Handle(agentCtx(), json.RawMessage(`{"router":"`+f.router+`"}`))
+	if err != nil || !strings.Contains(string(out), rareInProcess) {
+		t.Errorf("a write passport asking for %s's actions = %s, %v", f.router, out, err)
 	}
 }

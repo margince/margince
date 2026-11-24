@@ -114,7 +114,7 @@ func RegisterRouteVerbs(r *Registry, verbs []RouteVerb, run RouteRunner) {
 	if len(verbs) == 0 {
 		return
 	}
-	r.Register(describeRouterActions{verbs: verbs, runs: r.routerRunSpec, choices: r.routerChoices})
+	r.Register(describeRouterActions{verbs: verbs, runs: r.routerRunSpec, choices: r.routerChoices, offered: r.offeredActions})
 	r.mu.Lock()
 	r.routeActions[readWorkspaceName] = map[string]string{routeActionsTopic: describeRouterActionsName}
 	r.mu.Unlock()
@@ -409,6 +409,9 @@ type describeRouterActions struct {
 	runs func(router, action string) (mcp.ToolSpec, bool)
 	// choices names every action of a router, routed or run in process.
 	choices func(router string) []string
+	// offered says which of a router's actions the caller's tools/list offers,
+	// and false when it offers the router not at all.
+	offered func(ctx context.Context, router string) (func(action string) bool, bool)
 }
 
 func (d describeRouterActions) routers() []string {
@@ -459,7 +462,9 @@ type routeActionShape struct {
 	UploadsAFile bool `json:"uploads_a_file,omitempty"`
 }
 
-func (d describeRouterActions) Handle(_ context.Context, in json.RawMessage) (json.RawMessage, error) {
+// Handle answers for the caller: a router or action its tools/list does not
+// offer is refused as one the catalog does not have.
+func (d describeRouterActions) Handle(ctx context.Context, in json.RawMessage) (json.RawMessage, error) {
 	var args struct {
 		Router string `json:"router"`
 		Action string `json:"action"`
@@ -467,5 +472,13 @@ func (d describeRouterActions) Handle(_ context.Context, in json.RawMessage) (js
 	if err := json.Unmarshal(in, &args); err != nil {
 		return nil, &BadArgsError{Field: catalogRouterArg, Cause: err}
 	}
-	return d.catalog(args.Router, args.Action)
+	if d.offered == nil {
+		return d.catalog(args.Router, args.Action, nil)
+	}
+	seen, offered := d.offered(ctx, args.Router)
+	if !offered {
+		visible := slices.DeleteFunc(d.routers(), func(router string) bool { _, ok := d.offered(ctx, router); return !ok })
+		return nil, &BadArgsError{Field: catalogRouterArg, Cause: fmt.Errorf("router must be one of %s", strings.Join(visible, ", "))}
+	}
+	return d.catalog(args.Router, args.Action, seen)
 }

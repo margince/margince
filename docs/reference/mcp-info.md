@@ -17,7 +17,7 @@ input and output schema in folds below it. What a tool may do and whether a huma
 | Resources | 14 |
 | Tool catalog | 242.5 KB |
 | Resource catalog | 5.5 KB |
-| Approx. wire tokens | 63484 |
+| Approx. wire tokens | 63473 |
 | Largest tool | `read_details` (15.8 KB) |
 | Scopes rendered | `read`, `draft`, `write`, `send`, `enrich` |
 
@@ -34,9 +34,9 @@ tool adds to that listing, and what it costs each scheduled agent, agent by agen
 |---|---:|---:|---|
 | Output schemas | 33.7 KB | 13% | **No**: a result's shape, never listed to a model |
 | Descriptions (incl. governance clause) | 51.0 KB | 21% | Yes, every step |
-| Input schemas | 146.3 KB | 60% | Yes, every step |
+| Input schemas | 146.2 KB | 60% | Yes, every step |
 | _Names, annotations, punctuation_ | 11.6 KB | 4% | Partly |
-| **Description + input schema** | **197.3 KB** | **81%** | **the recurring cost** |
+| **Description + input schema** | **197.2 KB** | **81%** | **the recurring cost** |
 
 Output schemas are the largest part of the total and are never sent to a model;
 descriptions and input schemas are what each step pays for.
@@ -67,20 +67,20 @@ descriptions and input schemas are what each step pays for.
 | [`annotate_brief`](#annotate_brief) | Write findings onto the morning brief |  |  | 417 |
 | [`archive_record`](#archive_record) | Archive a record |  |  | 300 |
 | [`bulk_update_records`](#bulk_update_records) | Change many records at once |  |  | 892 |
-| [`change_access`](#change_access) | Share records and set up members and teams |  |  | 1044 |
-| [`change_activities`](#change_activities) | Log, plan and file activities |  |  | 2653 |
-| [`change_attention`](#change_attention) | Act on proposals, notices and the weekly plan |  |  | 1656 |
-| [`change_capture`](#change_capture) | Decide what comes into the CRM |  |  | 1615 |
-| [`change_compliance`](#change_compliance) | Record consent, stops, holds and privacy work |  |  | 1188 |
+| [`change_access`](#change_access) | Share records and set up members and teams |  |  | 1152 |
+| [`change_activities`](#change_activities) | Log, plan and file activities |  |  | 2918 |
+| [`change_attention`](#change_attention) | Act on proposals, notices and the weekly plan |  |  | 1842 |
+| [`change_capture`](#change_capture) | Decide what comes into the CRM |  |  | 1891 |
+| [`change_compliance`](#change_compliance) | Record consent, stops, holds and privacy work |  |  | 1274 |
 | [`change_lists`](#change_lists) | Make and change lists |  |  | 620 |
-| [`change_my_settings`](#change_my_settings) | Change the user's own preferences and voice |  |  | 709 |
-| [`change_offers`](#change_offers) | Work offers, contracts and deal rooms |  |  | 1008 |
+| [`change_my_settings`](#change_my_settings) | Change the user's own preferences and voice |  |  | 867 |
+| [`change_offers`](#change_offers) | Work offers, contracts and deal rooms |  |  | 1096 |
 | [`change_record_parts`](#change_record_parts) | Change the parts of a record |  |  | 1017 |
-| [`change_relationships`](#change_relationships) | Work a company's relationships and briefs |  |  | 601 |
-| [`change_reports`](#change_reports) | Work saved reports and the forecast |  |  | 799 |
-| [`change_settings`](#change_settings) | Change how the workspace is set up |  |  | 3087 |
-| [`change_state`](#change_state) | Move a lead, deal, project or partner |  |  | 1953 |
-| [`change_tags`](#change_tags) | Change tags |  |  | 639 |
+| [`change_relationships`](#change_relationships) | Work a company's relationships and briefs |  |  | 816 |
+| [`change_reports`](#change_reports) | Work saved reports and the forecast |  |  | 2014 |
+| [`change_settings`](#change_settings) | Change how the workspace is set up |  |  | 3209 |
+| [`change_state`](#change_state) | Move a lead, deal, project or partner |  |  | 2301 |
+| [`change_tags`](#change_tags) | Change tags |  |  | 652 |
 | [`check_availability`](#check_availability) | Check calendar availability | yes |  | 375 |
 | [`commit_import`](#commit_import) | Commit an import |  |  | 275 |
 | [`create_record`](#create_record) | Create a record |  | [`ui://margince/create-followups.html`](#create_followups_view) | 891 |
@@ -95,7 +95,7 @@ descriptions and input schemas are what each step pays for.
 | [`read_approval`](#read_approval) | Read one staged action in full | yes | [`ui://margince/approval.html`](#approval_view) | 154 |
 | [`read_attention`](#read_attention) | See what needs attention | yes | [`ui://margince/attention.html`](#attention_view) | 365 |
 | [`read_context`](#read_context) | Get the story so far | yes | [`ui://margince/context.html`](#context_view) | 413 |
-| [`read_details`](#read_details) | Read a record's panels and the day's lists | yes |  | 4027 |
+| [`read_details`](#read_details) | Read a record's panels and the day's lists | yes |  | 4600 |
 | [`read_forecast`](#read_forecast) | Read the forecast and how it moved | yes | [`ui://margince/forecast.html`](#forecast_view) | 978 |
 | [`read_import`](#read_import) | Read an import run or the import format | yes |  | 235 |
 | [`read_lists`](#read_lists) | Find and read lists | yes |  | 797 |
@@ -107,7 +107,7 @@ descriptions and input schemas are what each step pays for.
 | [`read_view`](#read_view) | Read a view | yes |  | 1921 |
 | [`read_workspace`](#read_workspace) | Read how this workspace is set up | yes |  | 2779 |
 | [`resolve_duplicates`](#resolve_duplicates) | Merge two records or dismiss a flagged pair |  |  | 618 |
-| [`run_research`](#run_research) | Run AI work for your user |  |  | 1206 |
+| [`run_research`](#run_research) | Run AI work for your user |  |  | 1365 |
 | [`schedule_meeting`](#schedule_meeting) | Invite to a meeting |  |  | 515 |
 | [`send_outbound`](#send_outbound) | Send a message |  |  | 1678 |
 | [`update_record`](#update_record) | Update a record |  | [`ui://margince/update.html`](#update_view) | 626 |
@@ -2266,12 +2266,12 @@ actions decide_commission, disqualify, transfer_projects.)
           "type": "string"
         },
         "pipeline_id": {
-          "description": "Choose from the workspace's pipeline list with read_workspace with topic=pipelines.",
+          "description": "Choose from the workspace's pipeline list with list_pipelines.",
           "format": "uuid",
           "type": "string"
         },
         "stage_id": {
-          "description": "Choose an open stage from the workspace's pipeline list with read_workspace with topic=pipelines.",
+          "description": "Choose an open stage from the workspace's pipeline list with list_pipelines.",
           "format": "uuid",
           "type": "string"
         }

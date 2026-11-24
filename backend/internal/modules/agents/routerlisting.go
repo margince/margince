@@ -4,10 +4,11 @@
 package agents
 
 import (
-	"encoding/json"
+	"log/slog"
 	"maps"
 	"slices"
-	"strings"
+
+	"github.com/margince/margince/backend/internal/shared/ports/mcp"
 )
 
 // listedActions are the router actions whose arguments tools/list names. Every
@@ -64,22 +65,22 @@ func (r *Registry) rareActions(routerName, field string) func(choice string) boo
 	return func(choice string) bool { return !slices.Contains(listed, choice) }
 }
 
-// listedUnkeyed keeps the unkeyed paths under an argument the router lists. A
-// path under an argument only rare actions take is not in the listing at all.
-func listedUnkeyed(unkeyed map[string]string, schema json.RawMessage) map[string]string {
-	listed, err := readObjectSchema("router", schema)
-	if err != nil || unkeyed == nil {
-		return unkeyed
+// ForListing is spec as an MCP client's tools/list shows it: a router's input
+// schema leaves out the arguments only its rare actions take. Every other
+// reader keeps the registered schema with all of them. The in-app runner is one,
+// and it has no action catalog to read them from.
+func (r *Registry) ForListing(spec mcp.ToolSpec) mcp.ToolSpec {
+	rare := r.rareActions(spec.Name, spec.ActionField)
+	if rare == nil {
+		return spec
 	}
-	maps.DeleteFunc(unkeyed, func(path, _ string) bool {
-		argument, _, _ := strings.Cut(strings.TrimPrefix(path, "$."), ".")
-		_, kept := listed.Properties[argument]
-		return !kept
-	})
-	if len(unkeyed) == 0 {
-		return nil
+	schema, err := r.narrowedRouterSchema(spec.Name, spec.InputSchema, spec.Actions, nil, rare)
+	if err != nil {
+		slog.Warn("router schema could not be shortened, so it is listed whole", "tool", spec.Name, "err", err)
+		return spec
 	}
-	return unkeyed
+	spec.InputSchema = schema
+	return spec
 }
 
 // routerChoices names every action of a router, and none for a tool that is

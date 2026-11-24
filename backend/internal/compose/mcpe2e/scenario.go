@@ -68,10 +68,11 @@ func readScenario(path string) (scenario, error) {
 	}, nil
 }
 
-// RequiredCalls names, per scenario file in dir, every call a check requires a
-// run to make. Each alternative counts, since a run may make any of them. A
-// must_call_with alternative keeps its tool.argument=value; a must_call_matching
-// one keeps only its tool.
+// RequiredCalls names, per scenario, every call a check requires a run to make.
+// Each alternative counts, since a run may make any of them. A must_call_with
+// alternative keeps its tool.argument=value. A must_call_matching one keeps its
+// tool, plus tool.argument=value for each "argument": "value" in its pattern.
+// So an action pinned only by a pattern is still seen.
 func RequiredCalls(dir string) (map[string][]string, error) {
 	paths, err := filepath.Glob(filepath.Join(dir, "*.yaml"))
 	if err != nil {
@@ -87,18 +88,30 @@ func RequiredCalls(dir string) (map[string][]string, error) {
 			shape := toolKeys[key]
 			for _, entry := range sc.lists[key] {
 				for alternative := range strings.SplitSeq(entry, shape.anyOf) {
-					call := strings.TrimSpace(alternative)
-					if shape.nameEnd == "~" {
-						call, _, _ = strings.Cut(call, shape.nameEnd)
-					}
-					if call != "" {
-						out[filepath.Base(path)] = append(out[filepath.Base(path)], call)
-					}
+					out[sc.name] = append(out[sc.name], requiredCall(strings.TrimSpace(alternative), shape.nameEnd)...)
 				}
 			}
 		}
 	}
 	return out, nil
+}
+
+// patternMember is one "argument": "value" a must_call_matching pattern spells.
+var patternMember = regexp.MustCompile(`"([a-z_]+)":\s*"([a-z_]+)"`)
+
+func requiredCall(alternative, nameEnd string) []string {
+	if alternative == "" {
+		return nil
+	}
+	if nameEnd != "~" {
+		return []string{alternative}
+	}
+	tool, pattern, _ := strings.Cut(alternative, nameEnd)
+	calls := []string{tool}
+	for _, member := range patternMember.FindAllStringSubmatch(pattern, -1) {
+		calls = append(calls, tool+"."+member[1]+"="+member[2])
+	}
+	return calls
 }
 
 // scenarioReader is the state of one pass over a scenario file: the key a
