@@ -222,21 +222,21 @@ func TestTheShippedPacksFlagTheDraftsTheyFlaggedBeforeTheyWereCompiled(t *testin
 			},
 		},
 		{"vn", "vn", "Hóa đơn", vietnameseOffer, false, ControllerParticulars{}, []string{"controller_identity", "privacy_contact"}},
-		{"us", "us", "ADV: Offer", "Hello", true, full, nil},
+		{"us", "us", "ADV: Offer", "Here is the price list.", true, full, nil},
 		// A plain offer is not identified as an advertisement (7704(a)(5)(A)(i)).
-		{"us", "us", "Offer", "Hello", true, full, []string{"subject_prefix"}},
+		{"us", "us", "Our price list", "Here is the price list.", true, full, []string{"subject_prefix"}},
 		{
-			"us", "us", "ADV: Offer", "Hello", true,
+			"us", "us", "ADV: Offer", "Here is the price list.", true,
 			ControllerParticulars{LegalName: "Acme Inc.", ObjectionRoute: "https://acme.example/stop"},
 			[]string{"controller_identity"},
 		},
 		// A sender whose own country has no pack still owes the postal address.
 		{
-			"us", "kr", "ADV: Offer", "Hello", true,
+			"us", "kr", "ADV: Offer", "Here is the price list.", true,
 			ControllerParticulars{LegalName: "Acme Inc.", ObjectionRoute: "https://acme.example/stop"},
 			[]string{"controller_identity"},
 		},
-		{"us", "us", "Invoice", "Hello", false, ControllerParticulars{}, nil},
+		{"us", "us", "Payment due", "Here is the price list.", false, ControllerParticulars{}, nil},
 	} {
 		got := sendFindings(t, shippedSend{
 			country: tc.country, sender: tc.sender, subject: tc.subject, body: tc.body,

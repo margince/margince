@@ -10,7 +10,7 @@ surface, and the build composes it in. The plain tree, with no add-ons of its ow
 |---|---|
 | `extensions/eu` | The packs of the 27 EU member states: each one's outbound messaging rules on a shared EU layer, and the German legal floors on retention |
 | `extensions/apac` | The packs of `au`, `cn`, `hk`, `id`, `in`, `jp`, `kr`, `my`, `nz`, `ph`, `sg`, `th`, `tw` and `vn`: each one's outbound messaging rules, the request deadlines of `vn`, and no retention floor |
-| `extensions/us` | The pack of `us`: its outbound messaging rules, the first with opt-out advertising, and its tax-record retention floor |
+| `extensions/us` | The pack of `us`: its outbound messaging rules, the first with opt-out advertising, and its retention floor for accounting records |
 | `extensions/openchannel` | The reference unit. It uses every capability the tier has: its own tables, governed agent tools, an inbound edge with no sign-in that checks a signature, a job that empties a queue, a subscription, ingress with a merge key, a transport it carries replies out on, and its own screen |
 
 Read this page for the whole tier. To *build* a unit, go to [how-to/add-an-extension.md](../how-to/add-an-extension.md).
