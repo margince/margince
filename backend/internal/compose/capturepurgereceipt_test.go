@@ -10,6 +10,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/margince/margince/backend/internal/compose/purgerun"
 	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/modules/privacy"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -26,7 +27,7 @@ func ids2(n int) []ids.UUID {
 
 // The three reasons are counted apart, because they lift on different days.
 func TestTheBreakdownCountsEachReasonApart(t *testing.T) {
-	got := keptBreakdown(capture.PurgeSubject{
+	got := purgerun.BreakdownOf(capture.PurgeSubject{
 		Held:         ids2(2),
 		UnderStatute: ids2(3),
 		UnderRequest: ids2(1),
@@ -43,14 +44,14 @@ func TestTheStatutoryRuleIsNamedOnlyWhenItKeptSomething(t *testing.T) {
 	sixYears := privacy.FloorPolicy{Current: jurisdiction.RetentionClass{
 		Name: jurisdiction.CommercialCorrespondence, Keep: jurisdiction.Period{Years: 6}, Anchor: jurisdiction.AnchorCalendarYearEnd,
 	}}
-	quiet := keptBreakdown(capture.PurgeSubject{Held: ids2(1)}, sixYears)
+	quiet := purgerun.BreakdownOf(capture.PurgeSubject{Held: ids2(1)}, sixYears)
 	if quiet.StatutoryClass != "" || quiet.StatutoryYears != 0 {
 		t.Fatalf("got %+v, want the statutory rule unnamed when it shielded nothing", quiet)
 	}
 
 	// With something shielded, the class of the policy the selection used is
 	// named, never one resolved afresh.
-	named := keptBreakdown(capture.PurgeSubject{UnderStatute: ids2(1)}, sixYears)
+	named := purgerun.BreakdownOf(capture.PurgeSubject{UnderStatute: ids2(1)}, sixYears)
 	if named.UnderStatute != 1 || named.StatutoryClass != "commercial_correspondence" || named.StatutoryYears != 6 || !named.StatutoryFromYearEnd {
 		t.Fatalf("got %+v, want the shielded message counted under the policy's six-year class", named)
 	}
@@ -63,7 +64,7 @@ func TestTheReceiptNamesTheCarriedFloorWhenItIsStricter(t *testing.T) {
 		Class:  jurisdiction.RetentionClass{Name: jurisdiction.CommercialCorrespondence, Keep: jurisdiction.Period{Years: 6}},
 		Before: time.Now(),
 	}}
-	got := keptBreakdown(capture.PurgeSubject{UnderStatute: ids2(1)}, policy)
+	got := purgerun.BreakdownOf(capture.PurgeSubject{UnderStatute: ids2(1)}, policy)
 	if got.StatutoryClass != "commercial_correspondence" || got.StatutoryYears != 6 {
 		t.Fatalf("got %+v, want the carried six-year class named", got)
 	}
@@ -102,14 +103,5 @@ func TestTheContractOmitsAStatutoryRuleThatKeptNothing(t *testing.T) {
 	// The difference between "six years" and "up to seven".
 	if named.StatutoryFromYearEnd == nil || !*named.StatutoryFromYearEnd {
 		t.Fatalf("anchor = %v, want the year-end anchor carried", named.StatutoryFromYearEnd)
-	}
-}
-
-// Every reason the receipt states reaches the wire, so a dialog never shows a
-// count of zero for a reason the purge did record.
-func TestTheContractCarriesEveryKeptReason(t *testing.T) {
-	got := keptContract(KeptBreakdown{Held: 1, UnderStatute: 2, UnderRequest: 3, UnderUndeterminedFloor: 4})
-	if got.Held != 1 || got.UnderStatute != 2 || got.UnderRequest != 3 || got.UnderUndeterminedFloor != 4 {
-		t.Fatalf("got %+v, want 1/2/3/4 on the wire", got)
 	}
 }

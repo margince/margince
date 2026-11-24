@@ -36,12 +36,10 @@ const composeRootDir = "internal/compose"
 const (
 	composeRootProductionFiles = 1383
 	composeRootTestFiles       = 1909
-	// Raised by 56 production and 247 test lines for the purge run's lock, the
-	// worker stage that repairs missing receipts and the tests that hold them;
-	// the run mechanism itself lives in compose/purgerun. Raised by 107 for the floor of a figure every reader is shown alike. Raised
+	// Raised by 107 for the floor of a figure every reader is shown alike. Raised
 	// by 1 for the import that binds one zone lookup to each attention read.
-	composeRootProductionLines = 230_325
-	composeRootTestLines       = 359_574
+	composeRootProductionLines = 230_269
+	composeRootTestLines       = 359_327
 )
 
 // A read under these floors stopped early or read the wrong place, and would

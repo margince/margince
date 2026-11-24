@@ -15,77 +15,10 @@ package compose
 
 import (
 	"context"
-	"time"
-
-	"github.com/jackc/pgx/v5"
-	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/margince/margince/backend/internal/compose/purgerun"
-	"github.com/margince/margince/backend/internal/modules/capture"
-	"github.com/margince/margince/backend/internal/modules/privacy"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
-	"github.com/margince/margince/backend/internal/shared/ports/jurisdiction"
 )
-
-// KeptBreakdown is the skipped count, by the reason each message survived.
-// The four are disjoint and sum to Skipped.
-type KeptBreakdown struct {
-	// Held is how many an erasure or a controller pinned by hand.
-	Held int `json:"held"`
-	// UnderStatute is how many sit inside their commercial-retention window.
-	UnderStatute int `json:"under_statute"`
-	// UnderRequest is how many a data-subject request is still about.
-	UnderRequest int `json:"under_request"`
-	// UnderUndeterminedFloor is how many were kept because this installation
-	// could not say what the law requires of them. Apart from UnderStatute
-	// because the shield is the same and the BASIS is not: reported together,
-	// the receipt tells an owner a retention window applies when none was
-	// measured.
-	UnderUndeterminedFloor int `json:"under_undetermined_floor"`
-	// StatutoryClass names the retention class that shielded them and for how
-	// long — empty when nothing was shielded by it, so a reader is never shown
-	// a rule that kept nothing.
-	StatutoryClass string `json:"statutory_class,omitempty"`
-	// StatutoryYears is how long that class keeps its records, in whole years,
-	// and zero when the packs declare a period that is not whole years — a
-	// screen that rounded one would misstate how long somebody's mail is held.
-	// ISO 8601 deliberately does NOT travel: "P6Y" is a machine's spelling, and
-	// this number is read by a colleague.
-	StatutoryYears int `json:"statutory_years,omitempty"`
-	// StatutoryFromYearEnd says the period counts from the end of the calendar
-	// year rather than from the message's own date, which is the difference
-	// between "six years" and "up to seven".
-	StatutoryFromYearEnd bool `json:"statutory_from_year_end,omitempty"`
-}
-
-// keptBreakdown says why a purge left what it left.
-//
-// The statutory class is named only when it actually kept something. A reader
-// shown "commercial correspondence, six years" beside a zero would reasonably
-// read it as the rule that applied to their deletion, when in fact nothing of
-// theirs was a Handelsbrief.
-func keptBreakdown(subject capture.PurgeSubject, policy privacy.FloorPolicy) KeptBreakdown {
-	kept := KeptBreakdown{
-		Held:                   len(subject.Held),
-		UnderStatute:           len(subject.UnderStatute),
-		UnderRequest:           len(subject.UnderRequest),
-		UnderUndeterminedFloor: len(subject.UnderUndeterminedFloor),
-	}
-	if kept.UnderStatute > 0 {
-		class := policy.StrictestClass(time.Now())
-		keep := class.Keep
-		kept.StatutoryClass = string(class.Name)
-		kept.StatutoryFromYearEnd = class.Anchor == jurisdiction.AnchorCalendarYearEnd
-		// Only a whole-year period is reported. A class declared in months or
-		// days has no number this copy can say truthfully, and rounding it
-		// would tell somebody their mail is held for longer or shorter than it
-		// is — so the sentence falls back to naming the class alone.
-		if keep.Months == 0 && keep.Days == 0 {
-			kept.StatutoryYears = keep.Years
-		}
-	}
-	return kept
-}
 
 // auditPurgeReceipt records what the purge did and returns the struct the owner
 // is told it from. The trail and the screen state one set of numbers.
@@ -113,21 +46,4 @@ func (p *CapturePurger) auditPurgeReceipt(ctx context.Context, run, ruleID ids.U
 		}
 	})
 	return outcome, err
-}
-
-// SweepMissingReceipts writes the receipt of every purge run that has
-// per-message rows and no receipt, because the process stopped in between.
-// It skips a rule whose purge is still running.
-func (p *CapturePurger) SweepMissingReceipts(ctx context.Context) (purgerun.SweepResult, error) {
-	return purgerun.Sweep(ctx, p.pool)
-}
-
-// newExclusionStore is the exclusion store with the removal step that keeps a
-// removed rule's purge runs certified.
-func newExclusionStore(pool *pgxpool.Pool) *capture.ExclusionStore {
-	return capture.NewExclusionStore(InstallationDB(pool)).
-		WithRemovalRepair(func(ctx context.Context, tx pgx.Tx, id ids.UUID) error {
-			_, err := purgerun.RepairTx(ctx, tx, purgerun.Rule(id))
-			return err
-		})
 }

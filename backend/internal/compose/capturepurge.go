@@ -42,6 +42,9 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
+// KeptBreakdown is the skipped count, by the reason each message survived.
+type KeptBreakdown = purgerun.KeptBreakdown
+
 // PurgeOutcome is what a purge did, or what a preview says it would do.
 type PurgeOutcome struct {
 	// Destroyed is how many messages are gone: text, provider original,
@@ -114,9 +117,8 @@ func (p *CapturePurger) Purge(ctx context.Context, exclusionID ids.UUID, preview
 	return outcome, err
 }
 
-// plan selects what the rule matches and answers it, or, when run is a real
-// run, carries it out. The rule is read again here, under the run's lock, so a
-// rule removed while this waited is not purged for.
+// plan answers what the rule matches, or carries it out as run. It reads the
+// rule under the run's lock, so a rule removed meanwhile is not purged for.
 func (p *CapturePurger) plan(ctx context.Context, exclusionID, seat ids.UUID, preview bool, run ids.UUID) (PurgeOutcome, error) {
 	rule, workspaceScoped, err := p.purgeableRule(ctx, exclusionID, seat)
 	if err != nil {
@@ -157,7 +159,7 @@ func (p *CapturePurger) plan(ctx context.Context, exclusionID, seat ids.UUID, pr
 		Skipped:    len(subject.Restricted),
 		Anonymised: len(minted),
 		Preview:    preview,
-		Kept:       keptBreakdown(subject, policy),
+		Kept:       purgerun.BreakdownOf(subject, policy),
 	}
 	// After the selection, because the contact grant depends on whether it found
 	// contacts to anonymise.
@@ -173,20 +175,17 @@ func (p *CapturePurger) plan(ctx context.Context, exclusionID, seat ids.UUID, pr
 	return p.destroy(ctx, run, exclusionID, seat, rule, workspaceScoped, subject, minted, outcome)
 }
 
-// destroy runs the cascade for a selection the caller confirmed and then
-// writes the receipt of the run.
+// destroy carries the selection out under the run's context, so every audit
+// row it writes carries the run id, and then writes the run's receipt. A receipt
+// written first would certify a plan and not an act. If this write fails, the
+// receipt sweep writes it from the run's rows.
 func (p *CapturePurger) destroy(ctx context.Context, run, exclusionID, seat ids.UUID, rule capture.Exclusion, workspaceScoped bool, subject capture.PurgeSubject, minted []ids.UUID, outcome PurgeOutcome) (PurgeOutcome, error) {
 	if err := p.cascade(ctx, seat, rule, workspaceScoped, subject, minted); err != nil {
 		return PurgeOutcome{}, err
 	}
-	// After the cascade: carryOut commits per item, so a receipt written first
-	// would certify a plan and not an act. If this write fails, the per-item
-	// rows still hold the trail and the receipt sweep writes the receipt.
 	return p.auditPurgeReceipt(ctx, run, exclusionID, outcome)
 }
 
-// cascade carries the selection out under the run's context, so every audit
-// row it writes carries the run id.
 func (p *CapturePurger) cascade(ctx context.Context, seat ids.UUID, rule capture.Exclusion, workspaceScoped bool, subject capture.PurgeSubject, minted []ids.UUID) error {
 	reason := privacy.PurgeOwnerRule
 	if workspaceScoped {

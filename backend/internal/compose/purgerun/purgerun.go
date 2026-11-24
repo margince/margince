@@ -300,3 +300,19 @@ func closeLease(ctx context.Context, lease *database.SessionLease) {
 	defer cancel()
 	lease.Close(cleanup)
 }
+
+// RepairRule is the step a rule's removal runs before it deletes the rule.
+func RepairRule(ctx context.Context, tx pgx.Tx, rule ids.UUID) error {
+	_, err := RepairTx(ctx, tx, Subject{Entity: EntityRule, ID: rule})
+	return err
+}
+
+// SweepAndLog runs Sweep and reports what it repaired.
+func SweepAndLog(ctx context.Context, pool *pgxpool.Pool, log *slog.Logger) error {
+	result, err := Sweep(ctx, pool)
+	if (result.Written > 0 || result.Unattributed > 0) && log != nil {
+		log.InfoContext(ctx, "capture purge: wrote the receipt of purges that stopped before it",
+			"receipts", result.Written, "unattributed_runs", result.Unattributed)
+	}
+	return err
+}

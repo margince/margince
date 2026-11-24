@@ -18,6 +18,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/riverqueue/river"
 
+	"github.com/margince/margince/backend/internal/compose/purgerun"
 	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/platform/jobs"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -253,23 +254,10 @@ func (w *counterpartyVerdictWorker) judgeWorkspace(ctx context.Context, workspac
 	if w.purger == nil {
 		return nil
 	}
-	if err := w.sweepPurges(ctx, wsCtx, workspace); err != nil {
+	// Receipts first, so a failure below does not hold back one an owner's
+	// stopped purge is owed.
+	if err := w.sweepPurges(wsCtx); err != nil {
 		return err
-	}
-	return w.stripPrivateThreads(ctx, wsCtx, workspace)
-}
-
-// sweepPurges certifies purges that stopped before their receipt, then destroys
-// the personal mail whose window closed. The receipts come first, so a failure
-// in the personal purge does not hold back a receipt an owner's purge is owed.
-func (w *counterpartyVerdictWorker) sweepPurges(ctx, wsCtx context.Context, workspace ids.UUID) error {
-	repaired, err := w.purger.SweepMissingReceipts(wsCtx)
-	if err != nil {
-		return err
-	}
-	if (repaired.Written > 0 || repaired.Unattributed > 0) && w.log != nil {
-		w.log.InfoContext(ctx, "capture purge: wrote the receipt of purges that stopped before it",
-			"workspace", workspace.String(), "receipts", repaired.Written, "unattributed_runs", repaired.Unattributed)
 	}
 	destroyed, err := w.purger.SweepPersonalMail(wsCtx, capture.DefaultPersonalPurgeWindows())
 	if err != nil {
@@ -279,7 +267,11 @@ func (w *counterpartyVerdictWorker) sweepPurges(ctx, wsCtx context.Context, work
 		w.log.InfoContext(ctx, "counterparty verdict: destroyed personal mail past its window",
 			"workspace", workspace.String(), "messages", destroyed)
 	}
-	return nil
+	return w.stripPrivateThreads(ctx, wsCtx, workspace)
+}
+
+func (w *counterpartyVerdictWorker) sweepPurges(ctx context.Context) error {
+	return purgerun.SweepAndLog(ctx, w.pool, w.log)
 }
 
 // stripPrivateThreads withholds the files of personal-thread mail past the
