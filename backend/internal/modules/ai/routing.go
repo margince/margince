@@ -176,7 +176,7 @@ func (cfg RoutingConfig) finalize() (RoutingConfig, error) {
 	if firstLiftOf(cfg.Revision()) {
 		log = slog.Default()
 	}
-	cfg = cfg.liftLaneProviderFields(log)
+	cfg = cfg.liftLaneProviderFields(log).withoutRetiredTaskLadders()
 	if err := cfg.validateProviderEntries(); err != nil {
 		return RoutingConfig{}, err
 	}
