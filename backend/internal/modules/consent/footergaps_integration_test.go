@@ -18,6 +18,14 @@ import (
 	"github.com/margince/margince/backend/internal/shared/ports/messagingrules"
 )
 
+// inFreeJurisdiction is inJurisdiction under a code the package allocates, so
+// no other test's rules can take it first.
+func inFreeJurisdiction(t *testing.T, e *channelConsentEnv, ds ...messagingrules.Disclosure) *Store {
+	t.Helper()
+	code := testMessagingRules(t, messagingrules.Rules{Version: 1, Disclosures: ds})
+	return inJurisdiction(t, e, string(code), ds...)
+}
+
 func footerGaps(t *testing.T, e *channelConsentEnv, store *Store) map[ids.UUID]FooterGap {
 	t.Helper()
 	out := map[ids.UUID]FooterGap{}
@@ -70,7 +78,7 @@ func TestOnlyASeatThatMayChangeTheParticularsReadsTheGaps(t *testing.T) {
 
 func TestAMissingCompanyDetailIsAGapUntilItIsStated(t *testing.T) {
 	e := setupChannelConsent(t)
-	store := inJurisdiction(t, e, "xa",
+	store := inFreeJurisdiction(t, e,
 		messagingrules.Disclosure{Kind: messagingrules.ControllerIdentity},
 		messagingrules.Disclosure{Kind: messagingrules.PrivacyContact})
 	home := defaultEntity(t, e)
@@ -94,7 +102,7 @@ func TestAMissingCompanyDetailIsAGapUntilItIsStated(t *testing.T) {
 // window or the particularFor filter, and this fails.
 func TestAHeldSendCountsInItsEntitysGapUntilTheDetailsChange(t *testing.T) {
 	e := setupChannelConsent(t)
-	store := inJurisdiction(t, e, "xb", messagingrules.Disclosure{Kind: messagingrules.ObjectionRoute, MarketingOnly: true})
+	store := inFreeJurisdiction(t, e, messagingrules.Disclosure{Kind: messagingrules.ObjectionRoute, MarketingOnly: true})
 	home := defaultEntity(t, e)
 	if gap := footerGaps(t, e, store)[home]; len(gap.Missing) != 0 {
 		t.Fatalf("an invoice owes no objection route, yet the gap is %+v", gap)
