@@ -52,9 +52,8 @@ const (
 	// team-request mail cases, which drive this package's unexported mail worker
 	// and send basis. Raised by 2 production and 52 test lines for the booking length
 	// card cases, which drive the unexported bookingCard and the booking page fixtures.
-	// Raised by 140 production and 269 test lines for the series-split
-	// fold, repair task and their cases, which drive the unexported Home meeting
-	// lane and the meeting fold that sync and repair share.
+	// Raised by 140 production and 269 test lines for the series-split fold and
+	// repair task. Their cases drive the unexported Home meeting lane and fold.
 	composeRootProductionLines = 230_690
 	composeRootTestLines       = 360_081
 )
