@@ -240,13 +240,18 @@ it("drops the picked time when a profile read moves the page to another length",
 });
 
 it("explains a booking refused for its length in the guest's language", async () => {
-  await pickFirstTime();
+  const { server } = await pickFirstTime();
+  server.offered = [30, 60];
   await userEvent.type(screen.getByLabelText("Your name"), "Nina Weber");
   await userEvent.type(screen.getByLabelText("Your email"), "nina@x.example");
   await userEvent.click(screen.getByRole("checkbox"));
   await userEvent.click(screen.getByRole("button", { name: CONFIRM }));
+  // The profile read after the refusal moves the page to 30 minutes, which
+  // drops the picked time and its form; the refusal still says why.
+  await waitFor(() => expect(pressed("30 min")).toBe("true"));
+  expect(screen.queryByRole("button", { name: CONFIRM })).toBeNull();
   expect(
-    await screen.findByText(translate("en", "book.lengthNotOffered")),
+    screen.getByText(translate("en", "book.lengthNotOffered")),
   ).toBeTruthy();
   expect(screen.queryByText("English server text")).toBeNull();
 });

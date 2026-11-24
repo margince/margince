@@ -5,6 +5,7 @@ import type { components } from "../../api/schema";
 import { GoneNotice } from "../../components/gonenotice";
 import { Calendar, type ISODay } from "../../design-system/calendar";
 import { CompanyLogo } from "../../design-system/companylogo";
+import { ErrorLine } from "../../design-system/errorline";
 import { Heading } from "../../design-system/heading";
 import { Panel, PanelBody } from "../../design-system/panel";
 import { QueryGate, type QueryLike } from "../../design-system/querystates";
@@ -70,6 +71,12 @@ function bookedLength(
   if (requested !== undefined && page?.lengths.includes(requested))
     return requested;
   return page?.duration_minutes;
+}
+
+// A booking refused for its length drops the picked time with the form that
+// showed why, so the refusal stays above the times of the length now on offer.
+function LengthRefusal({ error }: Readonly<{ error: unknown }>) {
+  return lengthNotOffered(error) ? <ErrorLine error={error} /> : null;
 }
 
 // A time holds only at the length it was picked at. A profile read that moves
@@ -407,17 +414,20 @@ export function BookingGuestScreen({
                             }}
                           />
                         ) : (
-                          <GuestTimes
-                            offered={host.proposal?.options ?? []}
-                            day={day}
-                            days={days}
-                            times={dayTimes}
-                            monthKey={monthKey}
-                            zone={zone}
-                            needsCalendar={needsCalendar}
-                            slots={dayRead}
-                            onSelect={setSelected}
-                          />
+                          <>
+                            <LengthRefusal error={book.error} />
+                            <GuestTimes
+                              offered={host.proposal?.options ?? []}
+                              day={day}
+                              days={days}
+                              times={dayTimes}
+                              monthKey={monthKey}
+                              zone={zone}
+                              needsCalendar={needsCalendar}
+                              slots={dayRead}
+                              onSelect={setSelected}
+                            />
+                          </>
                         )}
                       </section>
                     </div>
