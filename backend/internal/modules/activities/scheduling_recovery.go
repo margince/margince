@@ -70,7 +70,7 @@ func (s *Store) validateInvitationMove(ctx context.Context, host ids.UserID, id 
 	if overlapsAny(slot{Start: start, End: end}, busy) {
 		return 0, &SlotTakenError{Start: start}
 	}
-	team, err := s.teamOf(ctx, host, row.Team)
+	team, err := s.teamOf(ctx, host, row.Page, row.Team)
 	if err != nil {
 		return 0, err
 	}
@@ -148,7 +148,7 @@ func (s *Store) invitationAvailability(ctx context.Context, host ids.UserID, id 
 	if err != nil {
 		return nil, false, err
 	}
-	team, err := s.teamOf(ctx, host, row.Team)
+	team, err := s.teamOf(ctx, host, row.Page, row.Team)
 	if err != nil {
 		return nil, false, err
 	}

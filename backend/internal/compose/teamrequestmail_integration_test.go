@@ -23,6 +23,7 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/notices"
+	"github.com/margince/margince/backend/internal/platform/clocktest"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
@@ -183,18 +184,19 @@ func TestATeamRequestThatMovedAfterItsReadRefusesTheReservation(t *testing.T) {
 	env := setupTeamRequestMail(t)
 	env.saveLink(t, "Intro call", env.e.Rep2)
 	ctx := principal.WithWorkspaceID(context.Background(), env.e.WS)
+	now := func() time.Time { return clocktest.Now(t) }
 	refs := sendRefs{teamRequests: []teamRequestRef{{notice: env.requestNotice(t), page: env.link, member: ids.From[ids.UserKind](env.e.Rep2)}}}
 	var basis sendBasis
 	if err := env.e.DB().Tx(ctx, func(tx pgx.Tx) error {
 		var err error
-		basis, err = readSendBasis(ctx, tx, env.e.Rep2, nil, refs, time.Now())
+		basis, err = readSendBasis(ctx, tx, env.e.Rep2, nil, refs, now())
 		return err
 	}); err != nil || len(basis.rows) != 1 || len(basis.excluded) != 0 {
 		t.Fatalf("reading the basis → %+v, %v; want the pending request held", basis, err)
 	}
 	// While the reservation holds, the host cannot change the link under it.
 	if err := env.e.DB().Tx(ctx, func(tx pgx.Tx) error {
-		if err := holdSendBasisTx(ctx, tx, basis, time.Now); err != nil {
+		if err := holdSendBasisTx(ctx, tx, basis, now); err != nil {
 			return err
 		}
 		_, err := integration.OwnerConn(t).Exec(context.Background(),
@@ -207,7 +209,7 @@ func TestATeamRequestThatMovedAfterItsReadRefusesTheReservation(t *testing.T) {
 		t.Fatalf("holding the unchanged request: %v", err)
 	}
 	env.saveLink(t, "Renewal call", env.e.Rep2)
-	err := env.e.DB().Tx(ctx, func(tx pgx.Tx) error { return holdSendBasisTx(ctx, tx, basis, time.Now) })
+	err := env.e.DB().Tx(ctx, func(tx pgx.Tx) error { return holdSendBasisTx(ctx, tx, basis, now) })
 	if !errors.Is(err, errSendBasisChanged) {
 		t.Fatalf("holding a request renamed since its read → %v, want %v", err, errSendBasisChanged)
 	}

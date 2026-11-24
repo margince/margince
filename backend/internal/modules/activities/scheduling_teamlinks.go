@@ -154,7 +154,8 @@ func (s *Store) ownTeamLink(ctx context.Context, host ids.UserID, page ids.UUID)
 }
 
 // teamLinkSettings is what a request may set on a team link. Only each
-// member's user_id is read: their answer is theirs to give.
+// member's user_id is read: their answer is theirs to give. An absent switch
+// reads as on; an update keeps the stored one instead.
 func teamLinkSettings(req crmcontracts.SchedulingTeamLinkRequest) (crmcontracts.SchedulingProfile, error) {
 	title := strings.TrimSpace(req.Title)
 	if err := validateSchedulingTitle(title); err != nil {
@@ -239,6 +240,9 @@ func (s *Store) UpdateSchedulingTeamLink(ctx context.Context, page ids.UUID, req
 			return err
 		}
 		before := link.Policy
+		if req.Enabled == nil {
+			next.Enabled = before.Enabled
+		}
 		next.TeamMembers = mergeTeam(&before, next.TeamMembers)
 		after := storedSchedulingProfile{SchedulingProfile: next}
 		args := schedulingArgs{}

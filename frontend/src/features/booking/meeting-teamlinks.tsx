@@ -41,6 +41,7 @@ const PAUSED: LinkStatus = {
   kind: "failure",
   key: "scheduling.teamLinks.paused",
 };
+const OFF: LinkStatus = { kind: "neutral", key: "scheduling.teamLinks.off" };
 
 /** The default name of a team link: the host and each colleague on it. */
 export function teamLinkTitle(
@@ -49,11 +50,11 @@ export function teamLinkTitle(
   host: string,
   names: readonly string[],
 ): string {
-  const people = listFormat(locale, { type: "conjunction" }).format([
+  const everyone = listFormat(locale, { type: "conjunction" }).format([
     host,
     ...names,
   ]);
-  return t("scheduling.teamLinks.defaultTitle", { names: people });
+  return t("scheduling.teamLinks.defaultTitle", { names: everyone });
 }
 
 type LinkWrite = Readonly<{ id?: string; title: string; members: string[] }>;
@@ -204,7 +205,9 @@ function nameOf(member: Member, candidates: readonly Candidate[] | undefined) {
   );
 }
 
+// A link switched off takes no bookings whatever its blocker says.
 function linkStatus(link: Link): LinkStatus {
+  if (!link.enabled) return OFF;
   return LINK_STATUS[link.blocker] ?? PAUSED;
 }
 

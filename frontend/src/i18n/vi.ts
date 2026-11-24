@@ -22737,6 +22737,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "scheduling.teamLinks.createHelp":
     "Chọn một đồng nghiệp để tạo liên kết mới có địa chỉ riêng. Chỉ hiện những đồng nghiệp đã kết nối lịch. Mỗi đồng nghiệp phải xác nhận trước khi liên kết nhận lượt đặt lịch.",
   "scheduling.teamLinks.defaultTitle": "Gặp {names}",
+  "scheduling.teamLinks.off": "Tắt: không nhận đặt lịch",
   "scheduling.teamLinks.ready": "Đang nhận đặt lịch",
   "scheduling.teamLinks.waiting": "Đang chờ đồng nghiệp",
   "scheduling.teamLinks.paused":

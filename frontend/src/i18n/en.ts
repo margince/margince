@@ -23025,6 +23025,7 @@ export const en = {
   "scheduling.teamLinks.createHelp":
     "Choose a colleague to make a new link with its own address. Only colleagues with a connected calendar are offered. Each colleague confirms before the link takes bookings.",
   "scheduling.teamLinks.defaultTitle": "Meet {names}",
+  "scheduling.teamLinks.off": "Off: takes no bookings",
   "scheduling.teamLinks.ready": "Takes bookings",
   "scheduling.teamLinks.waiting": "Waiting for colleagues",
   "scheduling.teamLinks.paused": "Paused: your calendar cannot take meetings",

@@ -62,7 +62,10 @@ A team stored on a personal page moves onto a new team link with a new address, 
 
 Confirming is a consent to share free time with a public page, so an agent cannot give it. Until every member has confirmed
 and has a calendar Margince can read, the page's `blocker` is `team_not_ready` and the page is
-paused. Home tells the owner through a booking card for that link.
+paused. Home tells the owner through a booking card for that link, which names the link.
+
+A booking reads its page again under the page lock before it commits. A team link switched off since
+the guest opened it, or a team that changed since, refuses the booking as a paused page does.
 
 A member's calendar is read through the calendars of their own booking settings. The page keeps
 the same free time around their meetings as around the host's. A read-only grant is enough, because a member's
@@ -77,8 +80,9 @@ the page lock and reads each member's answer again under it. So two links cannot
 twice, and each member's own page stops offering the time.
 
 Each member is invited on the one event, and the booking closes each member's own open tasks on the
-booked record. A meeting does not record which link booked it. So a move checks every member again who is
-still confirmed on one of the host's live links. A member who left the link or
+booked record. A meeting records the link that booked it in `meeting_invitation.booking_page_id`. A move
+checks every member again who is still confirmed on that link, and none once the link is deleted. A
+meeting booked before the column existed checks the members confirmed on any of the host's live links. A member who left the link or
 the workspace is left out.
 
 A member whose calendar cannot be read refuses the move, as the host's own calendar would. The member's copy of

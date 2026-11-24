@@ -43,6 +43,10 @@ func (teamRequestNotice) TeamRequestSettledTx(ctx context.Context, tx pgx.Tx, pa
 	return err
 }
 
+func (teamRequestNotice) TeamRequestRetitledTx(ctx context.Context, tx pgx.Tx, request activities.TeamRequest) error {
+	return notices.NewStore(nil).RewordLiveTx(ctx, tx, teamRequestLine(request))
+}
+
 // teamRequestLine is the request in words: when it is written, and again from
 // the link as it stands when its mail leaves.
 func teamRequestLine(request activities.TeamRequest) notices.NewNotice {

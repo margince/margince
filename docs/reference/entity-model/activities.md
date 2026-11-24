@@ -1084,7 +1084,7 @@ The 32 tables owned by `activities`, as the migrations build them. [Back to the 
 
 ## booking_page
 
-8 columns · primary key `(id)` · referenced by 1 foreign key
+8 columns · primary key `(id)` · referenced by 2 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -1237,7 +1237,7 @@ The 32 tables owned by `activities`, as the migrations build them. [Back to the 
 
 ## meeting_invitation
 
-22 columns · primary key `(activity_id)` · referenced by 1 foreign key
+23 columns · primary key `(activity_id)` · referenced by 1 foreign key
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -1246,6 +1246,7 @@ The 32 tables owned by `activities`, as the migrations build them. [Back to the 
 | `attempts` | `integer`, default `0` | yes |  |
 | `attention_episode` | `uuid` |  |  |
 | `attention_reason` | `text` |  | Why a `needs_attention` invitation waits. |
+| `booking_page_id` | `uuid` |  | Points at `booking_page.id`. |
 | `calendar_id` | `text` | yes |  |
 | `cleanup_complete` | `boolean`, default `false` | yes |  |
 | `command` | `text`, default `'create'::text` | yes | One of `create`, `update`, `cancel`. |
@@ -1269,6 +1270,7 @@ The 32 tables owned by `activities`, as the migrations build them. [Back to the 
 | Columns | Table | When the parent goes |
 |---|---|---|
 | `activity_id` | `activity` | deleting the parent deletes this row |
+| `booking_page_id` | `booking_page` | deleting the parent keeps this row and clears the link |
 | `host_user_id` | `app_user` | the parent cannot be deleted while this row points at it |
 
 **Rules**
@@ -1283,6 +1285,7 @@ The 32 tables owned by `activities`, as the migrations build them. [Back to the 
 
 **Indexes**
 
+- `meeting_invitation_booking_page_idx`: `btree (booking_page_id)`
 - `meeting_invitation_due`: `btree (next_attempt_at) WHERE (status = ANY (ARRAY['pending', 'rescheduling', 'canceling']))`
 - `meeting_invitation_management_hash_key`: `unique, btree (management_hash)`
 - `meeting_invitation_pkey`: `unique, btree (activity_id)`

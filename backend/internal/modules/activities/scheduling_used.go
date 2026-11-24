@@ -22,9 +22,11 @@ import (
 )
 
 // BookingPageConcern is a used, switched-on booking page that takes no bookings.
+// Title names a team link, and is empty for the host's personal page.
 type BookingPageConcern struct {
 	PageID  ids.UUID
 	Blocker crmcontracts.SchedulingProfileBlocker
+	Title   string
 }
 
 // bookingPageUse is the audited value of a page's first use.
@@ -136,7 +138,11 @@ func (s *Store) BookingPageConcerns(ctx context.Context) ([]BookingPageConcern, 
 			continue
 		}
 		named[blocker] = blocker != crmcontracts.SchedulingProfileBlockerTeamNotReady
-		out = append(out, BookingPageConcern{PageID: page.ID, Blocker: blocker})
+		concern := BookingPageConcern{PageID: page.ID, Blocker: blocker}
+		if page.TeamLink {
+			concern.Title = profile.Title
+		}
+		out = append(out, concern)
 	}
 	return out, nil
 }

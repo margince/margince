@@ -8,6 +8,7 @@ import (
 	"crypto/rand"
 	"errors"
 	"fmt"
+	"slices"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -23,8 +24,9 @@ import (
 )
 
 // TeamLinksDataTask moves each team a personal page names onto a team link of
-// its own. The personal page then offers its host's own free time again.
-func TeamLinksDataTask(now func() time.Time) datatask.Task {
+// its own. The personal page then offers its host's own free time again. The
+// store's team request notice asks each member still pending on the new link.
+func TeamLinksDataTask(store *Store, now func() time.Time) datatask.Task {
 	return datatask.Task{
 		ID: "core/1795540594_teams_move_to_team_links", Version: 1,
 		Title:    systemtext.Literal("datatask.title.core.1795540594_teams_move_to_team_links"),
@@ -33,7 +35,7 @@ func TeamLinksDataTask(now func() time.Time) datatask.Task {
 			Name: "move_teams", Limit: 100, MinLimit: 5,
 			Audit:    datatask.AuditPolicy{PerRecord: true},
 			Estimate: CountPersonalPagesWithTeams, Batch: func(ctx context.Context, tx pgx.Tx, in datatask.BatchIn) (datatask.BatchOut, error) {
-				return MoveTeamsToTeamLinksTx(ctx, tx, in, now())
+				return store.MoveTeamsToTeamLinksTx(ctx, tx, in, now())
 			},
 			EmptyWhenDone: true,
 		}},
@@ -60,7 +62,7 @@ func CountPersonalPagesWithTeams(ctx context.Context, q datatask.Querier, maximu
 
 // MoveTeamsToTeamLinksTx moves one batch of teams. Each member keeps their own
 // answer, and the personal page keeps its address, alias and settings.
-func MoveTeamsToTeamLinksTx(ctx context.Context, tx pgx.Tx, in datatask.BatchIn, now time.Time) (datatask.BatchOut, error) {
+func (s *Store) MoveTeamsToTeamLinksTx(ctx context.Context, tx pgx.Tx, in datatask.BatchIn, now time.Time) (datatask.BatchOut, error) {
 	if err := auth.RequireSystem(ctx); err != nil {
 		return datatask.BatchOut{}, err
 	}
@@ -79,7 +81,7 @@ func MoveTeamsToTeamLinksTx(ctx context.Context, tx pgx.Tx, in datatask.BatchIn,
 	}
 	changed := 0
 	for _, page := range pages {
-		moved, err := moveTeamToLinkTx(ctx, tx, page, now)
+		moved, err := s.moveTeamToLinkTx(ctx, tx, page, now)
 		if err != nil {
 			return datatask.BatchOut{}, err
 		}
@@ -91,9 +93,10 @@ func MoveTeamsToTeamLinksTx(ctx context.Context, tx pgx.Tx, in datatask.BatchIn,
 }
 
 // moveTeamToLinkTx gives a personal page's team a new team link with a new
-// address, then clears the team from the personal page. It answers false when
+// address, then clears the team from the personal page. A member still pending
+// is asked again on the new link, which waits for them. It answers false when
 // the page no longer names a team.
-func moveTeamToLinkTx(ctx context.Context, tx pgx.Tx, page ids.UUID, now time.Time) (bool, error) {
+func (s *Store) moveTeamToLinkTx(ctx context.Context, tx pgx.Tx, page ids.UUID, now time.Time) (bool, error) {
 	stored, err := lockLivePageTx(ctx, tx, page)
 	if errors.Is(err, apperrors.ErrNotFound) || (err == nil && (stored == nil || len(teamMembers(stored.SchedulingProfile)) == 0)) {
 		return false, nil
@@ -128,6 +131,12 @@ func moveTeamToLinkTx(ctx context.Context, tx pgx.Tx, page ids.UUID, now time.Ti
 		return false, err
 	}
 	if err := storekit.EmitEvent(ctx, tx, audit, linkID, crmcontracts.InternalEventBookingPageUpdated{Enabled: link.Enabled}); err != nil {
+		return false, err
+	}
+	pending := slices.DeleteFunc(slices.Clone(teamMembers(link.SchedulingProfile)), func(m crmcontracts.SchedulingTeamMember) bool {
+		return memberState(m) != crmcontracts.SchedulingTeamMemberStatePending
+	})
+	if err := s.tellTeamChanges(ctx, tx, host, linkID, nil, crmcontracts.SchedulingProfile{Title: link.Title, TeamMembers: &pending}); err != nil {
 		return false, err
 	}
 	before := teamAudit{TeamMembers: teamMembers(stored.SchedulingProfile)}

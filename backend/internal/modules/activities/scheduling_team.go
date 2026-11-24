@@ -33,6 +33,9 @@ const (
 type TeamRequestNotice interface {
 	TeamRequestTx(ctx context.Context, tx pgx.Tx, request TeamRequest) error
 	TeamRequestSettledTx(ctx context.Context, tx pgx.Tx, page ids.UUID, member ids.UserID) error
+	// TeamRequestRetitledTx rewords a pending member's live line after the
+	// link's title changed, so it names the link as it is now.
+	TeamRequestRetitledTx(ctx context.Context, tx pgx.Tx, request TeamRequest) error
 }
 
 // TeamRequest is a host's request that a colleague join one of their team links.
@@ -266,9 +269,11 @@ func (s *Store) tellTeamChanges(ctx context.Context, tx pgx.Tx, host ids.UserID,
 			}
 		}
 	}
+	retitled := before != nil && before.Title != after.Title
 	hostName := ""
 	for _, m := range named {
-		if slices.ContainsFunc(was, sameMember(m)) {
+		kept := slices.ContainsFunc(was, sameMember(m))
+		if kept && (!retitled || memberState(m) != crmcontracts.SchedulingTeamMemberStatePending) {
 			continue
 		}
 		if hostName == "" {
@@ -279,7 +284,11 @@ func (s *Store) tellTeamChanges(ctx context.Context, tx pgx.Tx, host ids.UserID,
 			hostName = name
 		}
 		request := TeamRequest{Page: page, Host: host, Member: memberUser(m), HostName: hostName, Title: after.Title}
-		if err := s.teamRequests.TeamRequestTx(ctx, tx, request); err != nil {
+		tell := s.teamRequests.TeamRequestTx
+		if kept {
+			tell = s.teamRequests.TeamRequestRetitledTx
+		}
+		if err := tell(ctx, tx, request); err != nil {
 			return err
 		}
 	}

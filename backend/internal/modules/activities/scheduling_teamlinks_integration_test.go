@@ -195,7 +195,7 @@ func (f *teamFixture) moveTeams(t *testing.T) datatask.BatchOut {
 	var out datatask.BatchOut
 	err := f.store.tx(system, func(tx pgx.Tx) error {
 		var err error
-		out, err = MoveTeamsToTeamLinksTx(system, tx, datatask.BatchIn{Limit: 10}, monday(6))
+		out, err = f.store.MoveTeamsToTeamLinksTx(system, tx, datatask.BatchIn{Limit: 10}, monday(6))
 		return err
 	})
 	if err != nil {
@@ -224,6 +224,9 @@ func TestTheDataTaskMovesAPersonalTeamOntoATeamLink(t *testing.T) {
 	if states := memberStates(links[0].TeamMembers); !slices.Equal(states, []string{"confirmed", "pending"}) || links[0].Slug == slug {
 		t.Fatalf("the moved team link reads %+v", links[0])
 	}
+	if asked := f.requests.askedOf(pending); len(asked) != 1 || asked[0].Page != ids.UUID(links[0].Id) || len(f.requests.askedOf(confirmed)) != 0 {
+		t.Fatalf("the move asked %+v, want the pending member asked once on the new link", f.requests.asked)
+	}
 	personal := f.resolve(t, slug)
 	if personal.TeamLink || f.personalSlug(t, f.host) != slug {
 		t.Fatalf("the old address no longer names the personal page: %+v", personal)
@@ -233,5 +236,122 @@ func TestTheDataTaskMovesAPersonalTeamOntoATeamLink(t *testing.T) {
 	}
 	if out := f.moveTeams(t); out.Changed != 0 {
 		t.Fatalf("a second run moved %d teams again", out.Changed)
+	}
+}
+
+func (f *teamFixture) bookings(t *testing.T) int {
+	t.Helper()
+	var count int
+	if err := f.env.owner.QueryRow(f.ctx, `SELECT count(*) FROM meeting_invitation WHERE host_user_id=$1`, f.host.UUID).Scan(&count); err != nil {
+		t.Fatal(err)
+	}
+	return count
+}
+
+// A guest books the team the page offered when they opened it. The booking is
+// refused when, before it commits, the host switched the link off or named a
+// colleague who has not confirmed.
+func TestABookingRefusesALinkThatChangedAfterItOpened(t *testing.T) {
+	for name, change := range map[string]func(f *teamFixture, member ids.UserID){
+		"switched off": func(f *teamFixture, member ids.UserID) {
+			request := teamLinkRequest(member)
+			request.Enabled = new(false)
+			if _, err := f.store.UpdateSchedulingTeamLink(f.ctx, f.link, request); err != nil {
+				t.Fatal(err)
+			}
+		},
+		"a pending member added": func(f *teamFixture, member ids.UserID) {
+			f.name(t, false, member, f.colleague(t, "Newcomer"))
+		},
+	} {
+		t.Run(name, func(t *testing.T) {
+			f := newTeamFixture(t)
+			member := f.colleague(t, "Member")
+			f.name(t, true, member)
+			team := f.openTeam(t)
+			change(f, member)
+			request := f.request
+			request.Start, request.End = monday(11), monday(11).Add(30*time.Minute)
+			_, err := f.store.reserveAndQueueInvitation(f.door(), f.host, request, invitationIntent{DescriptionFromBooker: true, Team: team, Page: f.link})
+			if !errors.Is(err, apperrors.ErrNotFound) {
+				t.Fatalf("a booking on a link that changed after it opened: %v", err)
+			}
+			if got := f.bookings(t); got != 0 {
+				t.Fatalf("%d meetings were booked, want none", got)
+			}
+		})
+	}
+}
+
+// A meeting reads the calendars of the link that booked it. A colleague who
+// left that link is not read for a move, though another link still names them.
+func TestAMoveReadsOnlyTheLinkThatBookedTheMeeting(t *testing.T) {
+	f := newTeamFixture(t)
+	alice := f.colleague(t, "Alice")
+	f.name(t, true, alice)
+	sales := f.link
+	support, err := f.store.CreateSchedulingTeamLink(f.ctx, teamLinkRequest(alice))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := f.store.AnswerSchedulingTeamRequest(f.as(alice), ids.UUID(support.Id), crmcontracts.SchedulingTeamAnswerStateConfirmed); err != nil {
+		t.Fatal(err)
+	}
+	meeting := f.bookAndDeliver(t, monday(11))
+	if row := f.invitationRow(t, ids.UUID(meeting.Id)); row.Page == nil || *row.Page != sales {
+		t.Fatalf("the meeting names page %v, want the link that booked it", row.Page)
+	}
+	f.calendar.busyOf[alice] = []connector.CalendarInterval{{Start: monday(13), End: monday(14)}}
+	if err := f.store.AnswerSchedulingTeamRequest(f.as(alice), sales, crmcontracts.SchedulingTeamAnswerStateLeft); err != nil {
+		t.Fatal(err)
+	}
+	free, _, err := f.store.invitationAvailability(f.ctx, f.host, ids.UUID(meeting.Id), monday(12), monday(15))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !slices.ContainsFunc(starts(free), monday(13).Equal) {
+		t.Fatalf("a colleague who left the booking link still holds the move back: %v", starts(free))
+	}
+}
+
+// Taking an omitted switch as on would turn a link the host switched off back on.
+func TestAnUpdateWithoutTheSwitchKeepsItOff(t *testing.T) {
+	f := newTeamFixture(t)
+	member := f.colleague(t, "Member")
+	f.name(t, true, member)
+	off := teamLinkRequest(member)
+	off.Enabled = new(false)
+	if _, err := f.store.UpdateSchedulingTeamLink(f.ctx, f.link, off); err != nil {
+		t.Fatal(err)
+	}
+	renamed := teamLinkRequest(member)
+	renamed.Title = "Renamed"
+	link, err := f.store.UpdateSchedulingTeamLink(f.ctx, f.link, renamed)
+	if err != nil || link.Enabled || link.Title != "Renamed" {
+		t.Fatalf("an update that left out the switch reads %+v, %v; want it still off", link, err)
+	}
+}
+
+// A pending member's line follows the link's name; a confirmed member's does not.
+func TestARenamedLinkRewordsOnlyThePendingRequests(t *testing.T) {
+	f := newTeamFixture(t)
+	confirmed, pending := f.colleague(t, "Confirmed"), f.colleague(t, "Pending")
+	f.name(t, false, confirmed, pending)
+	if err := f.store.AnswerSchedulingTeamRequest(f.as(confirmed), f.link, crmcontracts.SchedulingTeamAnswerStateConfirmed); err != nil {
+		t.Fatal(err)
+	}
+	renamed := teamLinkRequest(confirmed, pending)
+	renamed.Title = "Renewal call"
+	if _, err := f.store.UpdateSchedulingTeamLink(f.ctx, f.link, renamed); err != nil {
+		t.Fatal(err)
+	}
+	if got := f.requests.retitled; len(got) != 1 || got[0].Member != pending || got[0].Title != "Renewal call" || got[0].Page != f.link {
+		t.Fatalf("the rename reworded %+v, want only the pending member's line", got)
+	}
+	if _, err := f.store.UpdateSchedulingTeamLink(f.ctx, f.link, renamed); err != nil {
+		t.Fatal(err)
+	}
+	if len(f.requests.retitled) != 1 {
+		t.Fatalf("a save that kept the name reworded again: %+v", f.requests.retitled)
 	}
 }

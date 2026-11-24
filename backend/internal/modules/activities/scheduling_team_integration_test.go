@@ -50,8 +50,9 @@ func (c *teamCalendarFake) Blocker(ctx context.Context, user ids.UserID, provide
 
 // teamRequestLog records who a save asks to confirm, and whose request settles.
 type teamRequestLog struct {
-	asked   []TeamRequest
-	settled []ids.UserID
+	asked    []TeamRequest
+	settled  []ids.UserID
+	retitled []TeamRequest
 }
 
 func (l *teamRequestLog) TeamRequestTx(_ context.Context, _ pgx.Tx, request TeamRequest) error {
@@ -61,6 +62,11 @@ func (l *teamRequestLog) TeamRequestTx(_ context.Context, _ pgx.Tx, request Team
 
 func (l *teamRequestLog) TeamRequestSettledTx(_ context.Context, _ pgx.Tx, _ ids.UUID, member ids.UserID) error {
 	l.settled = append(l.settled, member)
+	return nil
+}
+
+func (l *teamRequestLog) TeamRequestRetitledTx(_ context.Context, _ pgx.Tx, request TeamRequest) error {
+	l.retitled = append(l.retitled, request)
 	return nil
 }
 

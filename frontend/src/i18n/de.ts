@@ -23371,6 +23371,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "scheduling.teamLinks.createHelp":
     "Wähle ein Teammitglied, um einen neuen Link mit eigener Adresse anzulegen. Angeboten werden nur Mitglieder mit verbundenem Kalender. Jedes Teammitglied bestätigt, bevor der Link Buchungen annimmt.",
   "scheduling.teamLinks.defaultTitle": "Treffen mit {names}",
+  "scheduling.teamLinks.off": "Aus: nimmt keine Buchungen an",
   "scheduling.teamLinks.ready": "Nimmt Buchungen an",
   "scheduling.teamLinks.waiting": "Wartet auf Teammitglieder",
   "scheduling.teamLinks.paused":

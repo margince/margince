@@ -61,6 +61,8 @@ type BookingConcern struct {
 	// Blocker is the profile's own reason: no_calendar, calendar_read_only,
 	// calendar_unavailable or team_not_ready.
 	Blocker string
+	// Title names a team link, and is empty for the reader's personal page.
+	Title string
 }
 
 // AIWork is the reader's own AI runs that went wrong — failed inside the

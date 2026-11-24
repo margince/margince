@@ -62,6 +62,16 @@ it("shows each team link with its colleagues and where they stand", async () => 
   expect(screen.getByText("Waiting for colleagues")).toBeTruthy();
 });
 
+it("shows a switched-off link as off, not as taking bookings", async () => {
+  mount({
+    "GET /scheduling/team-links": () =>
+      jsonResponse([{ ...link, enabled: false, blocker: "none" }]),
+    "GET /scheduling/team-candidates": () => jsonResponse(candidates),
+  });
+  expect(await screen.findByText("Off: takes no bookings")).toBeTruthy();
+  expect(screen.queryByText("Takes bookings")).toBeNull();
+});
+
 it("creates a team link named for the host and the chosen colleague", async () => {
   const user = userEvent.setup();
   const created: unknown[] = [];

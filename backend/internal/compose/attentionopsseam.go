@@ -147,7 +147,7 @@ func (b attentionBookingHealth) BookingConcerns(ctx context.Context) ([]attentio
 	concerns, err := b.store.BookingPageConcerns(ctx)
 	out := make([]attention.BookingConcern, 0, len(concerns))
 	for _, concern := range concerns {
-		out = append(out, attention.BookingConcern{PageID: concern.PageID, Blocker: string(concern.Blocker)})
+		out = append(out, attention.BookingConcern{PageID: concern.PageID, Blocker: string(concern.Blocker), Title: concern.Title})
 	}
 	return out, err
 }
