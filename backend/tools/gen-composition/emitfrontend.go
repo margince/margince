@@ -413,9 +413,8 @@ func emitComposedFrontendWorkspace(dir string, unitDirs []string, pins map[strin
 	} {
 		fmt.Fprintf(&b, "  %q: %q\n", override[0], override[1])
 	}
-	// A unit's runtime dependency is installed at the version the core lockfile
-	// resolved, because this workspace's own lockfile is not frozen and a range
-	// alone could drift to a release nobody licence-checked.
+	// This workspace's lockfile is not frozen. The pin stops a range drifting
+	// to a release the core never vetted.
 	pinned := make([]string, 0, len(pins))
 	for dep := range pins {
 		pinned = append(pinned, dep)

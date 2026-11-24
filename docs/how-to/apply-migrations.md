@@ -200,9 +200,10 @@ Change such an index in two releases:
 2. Release 2 drops the old index in a new migration and updates `migrations/testdata/head_catalog.txt`.
 
 If the old index keys off a `COALESCE(col, 'literal')` sentinel, `TestNoUniqueKeyFakesANullWithASentinel`
-reports it in release 1. Declare it in `sentinelIndexesBeingRetired` (`backend/gates/nullsentinelindex_test.go`)
-with a reason that names the release that drops it. The test fails once the declared index is gone, so
-remove the declaration in release 2.
+reports it in release 1. Declare it as `<schema>.<table>.<index>` in `sentinelIndexesBeingRetired`
+(`backend/gates/nullsentinelindex_test.go`), with a reason that names the release that drops it. The test
+then requires another unique `NULLS NOT DISTINCT` index on the same table with the same key columns and
+predicate. It fails once the declared index is gone, so remove the declaration in release 2.
 
 ## Why no one edits a shipped migration
 
