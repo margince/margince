@@ -90,7 +90,9 @@ Each model and each AI tool a user can connect has a test score in
 - A hosted service or many companies in one installation. One installation serves one company.
 
 Open work is in [GitHub issues](https://github.com/margince/margince/issues), and past releases are on the
-[releases page](https://github.com/margince/margince/releases).
+[releases page](https://github.com/margince/margince/releases). The
+[roadmap](https://github.com/orgs/margince/projects/2) groups the issues of each dated milestone into
+Now, Next and Later.
 
 ## Security
 
