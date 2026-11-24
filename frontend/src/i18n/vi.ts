@@ -13957,6 +13957,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "buyer.previewReadOnly":
     "Bản xem trước chỉ đọc. Đóng tab này để quay lại trang Deal Room.",
   "buyer.closedNote": "Deal Room này hiện chỉ đọc.",
+  "buyer.readOnly": "Quý khách chỉ có quyền đọc Deal Room này.",
   "buyer.stewardUnknown": "người liên hệ",
   "buyer.signOut": "Đăng xuất",
   "buyer.signedInAs": "Đã đăng nhập với tên {name}.",
@@ -14047,7 +14048,6 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "threads.newLabel": "Chủ đề mới",
   "threads.requireChangeLabel": "Tài liệu này cần sửa",
   "threads.open": "Đăng",
-  "threads.readOnly": "Bạn chỉ có quyền đọc.",
   "deal360.blocker": "Trở ngại",
   "deal360.buyer": "Điều người mua muốn",
   "deal360.verdict.live": "Đúng tiến độ",

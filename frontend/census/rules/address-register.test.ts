@@ -4,7 +4,11 @@
 import { describe, expect, it } from "vitest";
 import { READ_BY_AN_OUTSIDER } from "../../scripts/lib/german-catalogs";
 import { plantedFindings } from "../tree";
-import { registerFindings, rule } from "./address-register.census";
+import {
+  buyerPageFindings,
+  registerFindings,
+  rule,
+} from "./address-register.census";
 import { coreCatalog } from "./copy-style-de.census";
 
 // Every exempt family carries one key, so the prefix check stays quiet.
@@ -50,6 +54,45 @@ describe("the address checks, over planted catalogs", () => {
     expect(
       registerFindings([{ source: "de.ts", catalog: {}, english: {} }]),
     ).toContain(`every exempt prefix names a key the catalogs carry: ${first}`);
+  });
+});
+
+describe("the buyer's page, over planted catalogs", () => {
+  const copies = [
+    {
+      source: "de.ts",
+      catalog: {
+        "threads.readOnly": "Du hast nur Lesezugriff.",
+        "threads.empty": "Noch keine Nachrichten.",
+        "buyer.previewBanner": "Du kannst alles lesen.",
+        "common.retry": "Versuche es, bevor du gehst.",
+      },
+      english: {},
+    },
+  ];
+  const page = (text: string) => [
+    { rel: "src/features/deals/buyerroom.tsx", text },
+  ];
+
+  it("names a du line the page shows from another family, in any case", () => {
+    expect(
+      buyerPageFindings(
+        copies,
+        page('t("threads.readOnly"); t("common.retry");'),
+      ),
+    ).toEqual([
+      "says du on the buyer's page: src/features/deals/buyerroom.tsx names de.ts threads.readOnly: Du hast nur Lesezugriff.",
+      "says du on the buyer's page: src/features/deals/buyerroom.tsx names de.ts common.retry: Versuche es, bevor du gehst.",
+    ]);
+  });
+
+  it("passes neutral copy, and a buyer. key, and a key the page never names", () => {
+    expect(
+      buyerPageFindings(
+        copies,
+        page('t("threads.empty"); t("buyer.previewBanner");'),
+      ),
+    ).toEqual([]);
   });
 });
 

@@ -147,7 +147,7 @@ export const NoDocumentsYet: Story = { render: board([], []) };
 export const ReadOnlySeat: Story = {
   render: board(DOCUMENTS, THREADS, {
     mayWrite: false,
-    refusalKey: "threads.readOnly",
+    refusalKey: "buyer.readOnly",
   }),
 };
 

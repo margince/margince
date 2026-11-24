@@ -8,6 +8,8 @@
 //    "Sie" opening a sentence as she or they is rephrased, never waived.
 // 2. A du-pronoun is capitalised only where a sentence begins. Mid-sentence it
 //    is the formal register wearing the informal word.
+// 3. The buyer's page speaks Sie throughout, so every key its files name from
+//    outside the outsider families carries no du-pronoun.
 //
 // The mechanics of German copy are the copy-style-de rule's; both read the
 // catalogs it derives.
@@ -30,6 +32,33 @@ const FORMAL = new RegExp(
   `(?<![${LETTER}])(Ihnen|Ihres|Ihrem|Ihren|Ihrer|Ihre|Ihr|Sie)(?![${LETTER}])`,
   "g",
 );
+
+const DU_ANY_CASE = new RegExp(
+  `(?<![${LETTER}])(deines|deinem|deinen|deiner|deine|dein|dich|dir|du)(?![${LETTER}])`,
+  "i",
+);
+
+// The files of the page a buyer opens. Stories and tests render planted copy.
+const BUYER_PAGE = /^src\/features\/deals\/buyerroom[a-z]*\.tsx$/;
+const QUOTED = /"([a-z][A-Za-z0-9]*\.[A-Za-z0-9_.]+)"/g;
+
+/** Every du-pronoun the buyer's page would show through a key it names. */
+export function buyerPageFindings(
+  copies: readonly LocaleCopy[],
+  pages: readonly Readonly<{ rel: string; text: string }>[],
+): string[] {
+  const entries = catalogEntries(copies);
+  return pages.flatMap((page) => {
+    const named = new Set([...page.text.matchAll(QUOTED)].map((m) => m[1]));
+    return entries
+      .filter(([, key]) => named.has(key) && !readByAnOutsider(key))
+      .filter(([, , value]) => DU_ANY_CASE.test(value))
+      .map(
+        ([source, key, value]) =>
+          `says du on the buyer's page: ${page.rel} names ${source} ${key}: ${value}`,
+      );
+  });
+}
 
 const DU = new RegExp(
   `(?<![${LETTER}])(Deines|Deinem|Deinen|Deiner|Deine|Dein|Dich|Dir|Du)(?![${LETTER}])`,
@@ -77,13 +106,26 @@ export function registerFindings(copies: readonly LocaleCopy[]): string[] {
 
 export const rule: CensusRule = {
   name: "address-register",
-  corpus: (tree) => tree.files.filter((file) => file.path === coreCatalog),
+  corpus: (tree) =>
+    tree.files.filter(
+      (file) => file.path === coreCatalog || BUYER_PAGE.test(file.rel),
+    ),
+  floors: (corpus) =>
+    corpus.some((file) => BUYER_PAGE.test(file.rel))
+      ? []
+      : ["the buyer's page is a file under src/features/deals/buyerroom*.tsx"],
   across: (corpus) => {
-    const core = corpus[0]?.source;
-    return core ? registerFindings(germanCopies(core)) : [];
+    const core = corpus.find((file) => file.path === coreCatalog)?.source;
+    if (!core) {
+      return [];
+    }
+    const copies = germanCopies(core);
+    const pages = corpus.filter((file) => BUYER_PAGE.test(file.rel));
+    return [...registerFindings(copies), ...buyerPageFindings(copies, pages)];
   },
   advice:
     "German copy speaks to its reader as du. Rewrite a formal Sie or Ihr, or " +
     "a du-pronoun capitalised mid-sentence; only the families in " +
-    "READ_BY_AN_OUTSIDER (scripts/lib/german-catalogs.ts) keep Sie.",
+    "READ_BY_AN_OUTSIDER (scripts/lib/german-catalogs.ts) keep Sie. A du " +
+    "line on the buyer's page moves into a buyer. key, written in Sie.",
 };

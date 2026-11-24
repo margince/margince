@@ -147,8 +147,12 @@ func (s *Store) questionFieldsTx(ctx context.Context, tx pgx.Tx, ref ConfirmRef)
 
 // fillQuestion puts the fields into a published question. A purpose or
 // frequency with no value keeps its placeholder. The controller is "the sender"
-// when the installation has stated no name, and the privacy page is empty.
+// when the installation has stated no name, and with no privacy page the
+// sentence that points to it is left out rather than printed with no link.
 func fillQuestion(text string, f questionFields) string {
+	if f.privacyPage == "" {
+		text = withoutRightsSentence(text)
+	}
 	controller := f.controller
 	if controller == "" {
 		controller = f.words.ControllerFallback
@@ -165,6 +169,25 @@ func fillQuestion(text string, f questionFields) string {
 		}
 	}
 	return strings.NewReplacer(pairs...).Replace(text)
+}
+
+// withoutRightsSentence drops the sentence that holds the privacy page
+// placeholder. frontend/src/features/privacy/privacypage.ts drops it the same
+// way for a link that pinned no question.
+func withoutRightsSentence(text string) string {
+	at := strings.Index(text, privacyPagePlaceholder)
+	if at < 0 {
+		return text
+	}
+	end := at + len(privacyPagePlaceholder)
+	if strings.HasPrefix(text[end:], ".") {
+		end++
+	}
+	start := strings.LastIndex(text[:at], ". ")
+	if start < 0 {
+		return strings.TrimSpace(text[end:])
+	}
+	return text[:start+1] + text[end:]
 }
 
 // frequencyName is a purpose's frequency as the question's language says it.

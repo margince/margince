@@ -14293,6 +14293,7 @@ export const en = {
   "buyer.previewReadOnly":
     "A preview is read-only. Close this tab to return to the Deal Room page.",
   "buyer.closedNote": "This room is now read-only.",
+  "buyer.readOnly": "Your access to this room is read-only.",
   "buyer.stewardUnknown": "your contact",
   "buyer.signOut": "Sign out",
   "buyer.signedInAs": "Signed in as {name}.",
@@ -14385,7 +14386,6 @@ export const en = {
   "threads.newLabel": "New thread",
   "threads.requireChangeLabel": "This document needs a change",
   "threads.open": "Post",
-  "threads.readOnly": "Your access is read-only.",
   "deal360.blocker": "Blockers",
   "deal360.buyer": "What the buyer wants",
   "deal360.verdict.live": "On track",
