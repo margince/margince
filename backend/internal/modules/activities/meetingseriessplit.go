@@ -38,14 +38,10 @@ func seriesSplitSQL(parent, child, seat string) string {
 	                WHERE po.activity_id = ` + p + `.id AND po.role = 'organizer')
 	   AND EXISTS (SELECT 1 FROM activity_identity pi
 	                 JOIN activity_identity ci ON ci.activity_id = ` + c + `.id AND ci.identity_kind = 'meeting'
-	                 CROSS JOIN LATERAL (SELECT ` + meetingUIDOfKeySQL("pi.identity_key") + ` AS parent_uid,
-	                                            ` + meetingUIDOfKeySQL("ci.identity_key") + ` AS child_uid) uid
-	                 CROSS JOIN LATERAL (SELECT split_part(uid.parent_uid, '@', 1) AS parent_local,
-	                                            split_part(uid.child_uid, '@', 1) AS child_local) part
 	                WHERE pi.activity_id = ` + p + `.id AND pi.identity_kind = 'meeting'
-	                  AND substr(uid.parent_uid, length(part.parent_local) + 1) = substr(uid.child_uid, length(part.child_local) + 1)
-	                  AND left(part.child_local, length(part.parent_local) + 2) = part.parent_local || '_R'
-	                  AND substr(part.child_local, length(part.parent_local) + 3) ~ '^[0-9]{8}T[0-9]{6}Z?$')`
+	                  AND ` + meetingUIDOfKeySQL("ci.identity_key") + ` <> ` + meetingUIDOfKeySQL("pi.identity_key") + `
+	                  AND regexp_replace(` + meetingUIDOfKeySQL("ci.identity_key") + `, '_R[0-9]{8}T[0-9]{6}Z?(?=@|$)', '')
+	                      = ` + meetingUIDOfKeySQL("pi.identity_key") + `)`
 }
 
 // SeriesSplitsTx answers each split that meeting is either side of on seat's

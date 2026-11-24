@@ -12,6 +12,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/occurredday"
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
 )
 
@@ -74,7 +75,7 @@ func unlistedMeetingsTx(
 	}
 	rows, err := tx.Query(ctx, `
 		WITH conn AS (SELECT `+storekit.MailboxMarkSQL("c")+` || ':' AS mark FROM capture_connection c
-		               WHERE c.id = $3 AND c.user_id = $1 AND c.provider = $2)
+		               WHERE c.id = $3 AND c.user_id IS NOT NULL AND c.user_id = $1 AND c.provider = $2)
 		SELECT DISTINCT ON (a.id) a.id, substr(k.key, length(conn.mark) + 1), a.occurred_at,
 		       EXISTS (SELECT 1 FROM capture_connection c2, unnest(i.provider_message_ids) o(key)
 		                WHERE c2.user_id = $1 AND c2.id <> $3 AND c2.archived_at IS NULL
@@ -88,7 +89,8 @@ func unlistedMeetingsTx(
 		 WHERE starts_with(k.key, conn.mark) AND a.kind = 'meeting'
 		   AND a.archived_at IS NULL AND a.restricted_at IS NULL
 		   AND (a.meeting_status IS NULL OR a.meeting_status = 'booked')
-		   AND a.occurred_at > $4 AND a.occurred_at <= $5
+		   AND `+occurredday.AheadSQL("a", "$4::timestamptz")+`
+		   AND a.occurred_at <= $5 -- occurred_at raw: the capture horizon, which capture bounds stored starts by
 		   AND NOT EXISTS (SELECT 1 FROM unnest(i.provider_message_ids) l(key)
 		                    WHERE starts_with(l.key, conn.mark) AND substr(l.key, length(conn.mark) + 1) = ANY($6::text[]))
 		 ORDER BY a.id`, actorUserID(ctx), sourceSystem, *run, from, until, listed)

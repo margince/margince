@@ -47,9 +47,11 @@ const (
 	// test lines for the data reset cases of a timed-out job drain. Raised by 72
 	// test lines for the extension mail-file and purge receipt cases. Raised by 30
 	// production and 21 test lines for the approvals adapter and server option that
-	// confirm a call in the conversation.
+	// confirm a call in the conversation. Raised by 246 test lines for the
+	// series-split cases, which drive the unexported Home meeting lane, split fold
+	// and repair task.
 	composeRootProductionLines = 230_548
-	composeRootTestLines       = 359_569
+	composeRootTestLines       = 359_815
 )
 
 // A read under these floors stopped early or read the wrong place, and would

@@ -26,6 +26,13 @@ import (
 
 const relistOrganizer = "host@customer.test"
 
+// wallDay is the hour days from the wall clock. The connector judges which
+// meetings are ahead by its own wall clock. A moved fixture clock would put
+// them on the wrong side of it.
+func wallDay(days int) time.Time {
+	return time.Now().UTC().AddDate(0, 0, days).Truncate(time.Hour)
+}
+
 // relistCalendar is a stubbed Google Calendar whose token can expire and whose
 // full listing can fail.
 type relistCalendar struct {
@@ -74,11 +81,11 @@ type relistEnv struct {
 func newRelistEnv(t *testing.T) relistEnv {
 	t.Helper()
 	env := newCaptureEnv(t)
-	ahead := time.Now().UTC().AddDate(0, 0, 7).Truncate(time.Hour)
+	ahead := wallDay(7)
 	event := func(id string, start time.Time) map[string]any {
 		return lateGuestEvent(id, "confirmed", start, relistOrganizer, selfEntry(captureOwner, "accepted"), guestEntry(relistOrganizer, "accepted"))
 	}
-	r := relistEnv{env: env, kept: event("evt-kept", ahead), past: event("evt-past", time.Now().UTC().AddDate(0, 0, -2).Truncate(time.Hour))}
+	r := relistEnv{env: env, kept: event("evt-kept", ahead), past: event("evt-past", wallDay(-2))}
 	r.cal = &relistCalendar{items: []map[string]any{r.kept, event("evt-dropped", ahead.Add(2*time.Hour)), r.past}}
 	stub := r.cal.serve(t)
 	oauth := gmail.NewOAuth(gmail.OAuthConfig{ClientID: "cid", ClientSecret: "sec", TokenURL: stub.URL + "/token"})
@@ -231,7 +238,7 @@ func (p *pairEnv) cancelled(t *testing.T, meeting ids.UUID) bool {
 // calendar stored, under an event id of its own.
 func TestARelistTakesTheSeatOffAMeetingAnotherSeatStored(t *testing.T) {
 	p := newPairEnv(t)
-	p.bookOrganizedBy(time.Now().UTC().AddDate(0, 0, 5).Truncate(time.Hour), relistOrganizer)
+	p.bookOrganizedBy(wallDay(5), relistOrganizer)
 	p.sync(t, "b")
 	p.sync(t, "a")
 	meeting := p.rowOf(t, "b")
@@ -253,7 +260,7 @@ func TestARelistTakesTheSeatOffAMeetingAnotherSeatStored(t *testing.T) {
 // another seat's calendar holds it.
 func TestAnOrganizersRelistDoesNotCancelAMeetingAnotherSeatHolds(t *testing.T) {
 	p := newPairEnv(t)
-	p.book(time.Now().UTC().AddDate(0, 0, 5).Truncate(time.Hour))
+	p.book(wallDay(5))
 	p.sync(t, "a")
 	p.sync(t, "b")
 	meeting := p.rowOf(t, "a")
@@ -272,7 +279,7 @@ func TestAnOrganizersRelistDoesNotCancelAMeetingAnotherSeatHolds(t *testing.T) {
 // still lists it.
 func TestARelistOfOneOfASeatsCalendarsKeepsWhatTheOtherHolds(t *testing.T) {
 	p := newPairEnv(t)
-	start := time.Now().UTC().AddDate(0, 0, 5).Truncate(time.Hour)
+	start := wallDay(5)
 	p.bookOrganizedBy(start, relistOrganizer)
 	p.connectSecondCalendar(t, start, relistOrganizer)
 	p.sync(t, "a")
