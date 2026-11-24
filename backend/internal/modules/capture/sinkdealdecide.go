@@ -36,6 +36,9 @@ type dealFacts struct {
 	provenContacts []ids.UUID
 	companies      []ids.UUID
 	thread         []ids.UUID
+	// chosen is the open deals a colleague filed earlier mail of the
+	// conversation on, at any company.
+	chosen []ids.UUID
 	// hooks are the extension changes already made to contacts and companies.
 	hooks []HookChange
 	// topicMemo is the digest of the topic question last answered for it.
@@ -85,9 +88,13 @@ func readDealFacts(ctx context.Context, tx pgx.Tx, activityID ids.ActivityID, re
 	if err = hooks.adjustParties(ctx, tx, &facts); err != nil {
 		return facts, err
 	}
-	if kind == kindEmail && len(facts.companies) == 1 {
-		facts.thread, err = threadDeals(ctx, tx, activityID, facts.companies[0])
+	if kind != kindEmail {
+		return facts, nil
 	}
+	if facts.chosen, err = chosenThreadDeals(ctx, tx, activityID); err != nil || len(facts.companies) != 1 {
+		return facts, err
+	}
+	facts.thread, err = threadDeals(ctx, tx, activityID, facts.companies[0])
 	return facts, err
 }
 
@@ -182,6 +189,15 @@ func decideByRule(ctx context.Context, tx pgx.Tx, facts dealFacts, candidates De
 		deals, err := candidates.OpenDealsOfProject(ctx, tx, facts.project)
 		return withBasis(oneDeal(deals, WhichDeal{ProjectID: facts.project}), DealBasisProject, DealBasisProject), err
 	}
+	// A colleague's choice for the conversation outranks every company rung,
+	// because a partner's mail is often about a deal at the customer. Two
+	// choices disagree, and the machine picks neither.
+	switch len(facts.chosen) {
+	case 1:
+		return DealVerdict{Outcome: DealLinked, Deal: facts.chosen[0], Basis: DealBasisChosenThread}, nil
+	case 2:
+		return DealVerdict{Outcome: DealNone, Basis: DealBasisChosenThread}, nil
+	}
 	verdict, err := decideByCompany(ctx, tx, facts, candidates)
 	if err != nil || verdict.Outcome != DealNone || len(facts.contacts) == 0 {
 		return verdict, err
@@ -222,8 +238,8 @@ func decideByCompany(ctx context.Context, tx pgx.Tx, facts dealFacts, candidates
 		return DealVerdict{Outcome: DealNone}, nil
 	}
 	// The thread a mail claims is typed by its sender, so a sibling's deal
-	// counts only when the mail's own company corroborates it. A deal at
-	// another company is no clue about this one.
+	// the machine chose counts only when the mail's own company corroborates
+	// it. Only a colleague's choice crosses companies (decideByRule).
 	switch len(facts.thread) {
 	case 1:
 		return DealVerdict{Outcome: DealLinked, Deal: facts.thread[0], Basis: DealBasisThread}, nil
@@ -357,16 +373,33 @@ func mailCompanies(ctx context.Context, tx pgx.Tx, activityID ids.ActivityID, co
 }
 
 // threadDeals is the open deals of company that proven mail of this mail's
-// conversation is filed under. It answers at most two, after the whole
-// population is filtered. The conversation and the proof are correspondence's, as the deal
-// answer and the request settlement read them. The mail itself must be proven
-// too: a reply anyone could have typed follows no deal. Only siblings and
-// deals the capturing seat may read count.
+// conversation is filed under. The conversation and the proof are
+// correspondence's, as the deal answer and the request settlement read them.
 func threadDeals(ctx context.Context, tx pgx.Tx, activityID ids.ActivityID, company ids.UUID) ([]ids.UUID, error) {
+	return conversationDeals(ctx, tx, activityID, func(arg func(any) int) string {
+		return correspondence.ProvenSQL("a") + fmt.Sprintf(` AND d.company_id = $%d`, arg(company))
+	})
+}
+
+// chosenThreadDeals is the open deals at any company that a human or an agent
+// filed mail of this mail's conversation on. Their choice is the proof, so the
+// sibling need not be proven itself.
+func chosenThreadDeals(ctx context.Context, tx pgx.Tx, activityID ids.ActivityID) ([]ids.UUID, error) {
+	return conversationDeals(ctx, tx, activityID, func(func(any) int) string {
+		return provenance.HumanChoseDealSQL("a.id", "d.id")
+	})
+}
+
+// conversationDeals is the open deals that other mail of this mail's
+// conversation is filed under and that sibling passes. It answers at most two,
+// after the whole population is filtered. The mail itself must be proven: a
+// reply anyone could have typed follows no deal. Only unrestricted siblings
+// and deals the capturing seat may read count.
+func conversationDeals(ctx context.Context, tx pgx.Tx, activityID ids.ActivityID, sibling func(arg func(any) int) string) ([]ids.UUID, error) {
 	if !auth.ReadGranted(ctx, "deal") {
 		return nil, nil
 	}
-	args := []any{activityID, company}
+	args := []any{activityID}
 	arg := func(v any) int { args = append(args, v); return len(args) }
 	siblingScope, err := auth.ActivityContentClause(ctx, "a", arg)
 	if err != nil {
@@ -388,9 +421,9 @@ func threadDeals(ctx context.Context, tx pgx.Tx, activityID ids.ActivityID, comp
 		  JOIN activity_link l ON l.activity_id = a.id AND l.entity_type = 'deal' AND `+relstrength.DealLinkStandsSQL("l")+`
 		  JOIN deal d ON d.id = l.deal_id
 		 WHERE self.id = $1 AND `+correspondence.ProvenSQL("self")+`
-		   AND `+correspondence.ProvenSQL("a")+`
 		   AND a.restricted_at IS NULL AND (`+siblingScope+`)
-		   AND d.company_id = $2 AND d.status = 'open' AND d.archived_at IS NULL AND (`+dealScope+`)
+		   AND d.status = 'open' AND d.archived_at IS NULL AND (`+dealScope+`)
+		   AND `+sibling(arg)+`
 		 ORDER BY d.id
 		 LIMIT 2`, args...)
 	if err != nil {

@@ -3364,6 +3364,15 @@ export const en = {
   "rel.add": "Add relationship",
   "rel.seatOnDeal": "Add to a deal",
   "rel.addStakeholder": "Add stakeholder",
+  "rel.stakeholderOffer.title": "Add the people on this mail to the deal?",
+  "rel.stakeholderOffer.body":
+    "As stakeholders, their next mail goes onto the deal by itself. Untick anyone who is not part of it.",
+  "rel.stakeholderOffer.legend": "People on this mail",
+  "rel.stakeholderOffer.confirm": "Add to deal",
+  "rel.stakeholderOffer.decline": "Not now",
+  "rel.stakeholderOffer.added": "Added to the deal",
+  "rel.stakeholderOffer.unread":
+    "The mail is on the deal. Margince could not read who is on it, so it offers nobody to add.",
   "rel.dealStakeholders": "Stakeholders",
   "rel.dealStakeholdersEmpty": "No stakeholders on this deal",
   "rel.employerUnavailable":
@@ -15598,6 +15607,8 @@ export const en = {
   "captureActivity.filing.core.retracted":
     "The CRM took its deal link back: {reason}",
   "captureActivity.filing.basis.project": "the mail’s project",
+  "captureActivity.filing.basis.chosen_thread":
+    "a deal a colleague chose for an earlier mail in the thread",
   "captureActivity.filing.basis.thread": "an earlier mail in the thread",
   "captureActivity.filing.basis.sole_open_deal": "the company’s only open deal",
   "captureActivity.filing.basis.stakeholder": "a stakeholder on the deal",

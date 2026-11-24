@@ -3456,6 +3456,15 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "rel.add": "Beziehung hinzufügen",
   "rel.seatOnDeal": "Zu einem Deal hinzufügen",
   "rel.addStakeholder": "Stakeholder hinzufügen",
+  "rel.stakeholderOffer.title": "Die Personen dieser Mail zum Deal hinzufügen?",
+  "rel.stakeholderOffer.body":
+    "Als Stakeholder landet ihre nächste Mail von selbst beim Deal. Entferne den Haken bei allen, die nicht dazugehören.",
+  "rel.stakeholderOffer.legend": "Personen auf dieser Mail",
+  "rel.stakeholderOffer.confirm": "Zum Deal hinzufügen",
+  "rel.stakeholderOffer.decline": "Jetzt nicht",
+  "rel.stakeholderOffer.added": "Zum Deal hinzugefügt",
+  "rel.stakeholderOffer.unread":
+    "Die Mail ist beim Deal. Margince konnte nicht lesen, wer auf ihr steht, und schlägt daher niemanden vor.",
   "rel.dealStakeholders": "Stakeholder",
   "rel.dealStakeholdersEmpty": "Keine Stakeholder zu diesem Deal",
   "rel.employerUnavailable":
@@ -15684,6 +15693,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "captureActivity.filing.core.retracted":
     "Das CRM hat die Deal-Zuordnung zurückgenommen: {reason}",
   "captureActivity.filing.basis.project": "das Projekt der Mail",
+  "captureActivity.filing.basis.chosen_thread":
+    "ein Deal, den ein Mitglied für eine frühere Mail im Thread gewählt hat",
   "captureActivity.filing.basis.thread": "eine frühere Mail im Thread",
   "captureActivity.filing.basis.sole_open_deal":
     "der einzige offene Deal des Unternehmens",
