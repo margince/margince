@@ -307,7 +307,7 @@ type JobRunnerConfig struct {
 	// It also holds the uploads an import commits from. Nil registers the
 	// import jobs anyway, and a commit then fails with that cause.
 	Blobstore        blobstore.Store
-	JournalBlobstore blobstore.Store // ResolveJournalStore's answer; nil is a role with neither
+	JournalBlobstore blobstore.Store // blobstore.ResolveJournal's answer; nil is a role with neither
 	// ImportUploadCap is the deployment's ceiling for an import upload, so a
 	// commit reads a stored ZIP under the limits its upload was accepted with.
 	ImportUploadCap int64

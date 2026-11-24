@@ -47,7 +47,7 @@ func runReplayErasures(
 	if err != nil {
 		return fmt.Errorf("replay-erasures: blobstore: %w", err)
 	}
-	journal, separate, err := compose.ResolveJournalStore(ctx, settings, blob)
+	journal, separate, err := blobstore.ResolveJournal(ctx, settings, blob)
 	if err != nil {
 		return fmt.Errorf("replay-erasures: %w", err)
 	}

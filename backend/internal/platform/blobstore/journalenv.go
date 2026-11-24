@@ -28,35 +28,43 @@ const (
 
 var journalRoles = []config.Role{config.RoleWorker}
 
+var journalEndpointSetting = config.Define(config.Spec[string]{
+	Key: "erasure_journal_endpoint", Env: EnvJournalEndpoint, Type: config.String, Roles: journalRoles,
+	Doc: "Endpoint of a separate object store for the erasure journal, so a restore of the main store never rolls it back; it wins over `MARGINCE_ERASURE_JOURNAL_PATH`, and with both unset the journal stays in the main store.",
+})
+
+var journalAccessKeySetting = config.Define(config.Spec[string]{
+	Key: "erasure_journal_access_key", Env: EnvJournalAccessKey, Type: config.String, Secret: true, Roles: journalRoles,
+	Doc: "Access key for the erasure journal's object store.",
+})
+
+var journalSecretKeySetting = config.Define(config.Spec[string]{
+	Key: "erasure_journal_secret_key", Env: EnvJournalSecretKey, Type: config.String, Secret: true, Roles: journalRoles,
+	Doc: "Secret key for the erasure journal's object store.",
+})
+
+var journalBucketSetting = config.Define(config.Spec[string]{
+	Key: "erasure_journal_bucket", Env: EnvJournalBucket, Type: config.String, Roles: journalRoles,
+	Doc: "Bucket the erasure journal is written to.",
+})
+
+var journalRegionSetting = config.Define(config.Spec[string]{
+	Key: "erasure_journal_region", Env: EnvJournalRegion, Type: config.String, Roles: journalRoles,
+	Doc: "Region the erasure journal's bucket lives in.",
+})
+
+var journalUseSSLSetting = config.Define(config.Spec[bool]{
+	Key: "erasure_journal_use_ssl", Env: EnvJournalUseSSL, Type: config.Bool, Default: config.Some(false), Roles: journalRoles,
+	Doc: "Reach the erasure journal's object store over TLS.",
+})
+
+var journalPathSetting = config.Define(config.Spec[string]{
+	Key: "erasure_journal_path", Env: EnvJournalPath, Type: config.String, Roles: journalRoles,
+	Doc: "Directory the erasure journal is written to when there is no object storage service for it; ignored when `MARGINCE_ERASURE_JOURNAL_ENDPOINT` is set.",
+})
+
 var journalStore = storeSettings{
-	endpoint: config.Define(config.Spec[string]{
-		Key: "erasure_journal_endpoint", Env: EnvJournalEndpoint, Type: config.String, Roles: journalRoles,
-		Doc: "Endpoint of a separate object store for the erasure journal, so a restore of the main store never rolls it back; it wins over `MARGINCE_ERASURE_JOURNAL_PATH`, and with both unset the journal stays in the main store.",
-	}),
-	accessKey: config.Define(config.Spec[string]{
-		Key: "erasure_journal_access_key", Env: EnvJournalAccessKey, Type: config.String, Secret: true, Roles: journalRoles,
-		Doc: "Access key for the erasure journal's object store.",
-	}),
-	secretKey: config.Define(config.Spec[string]{
-		Key: "erasure_journal_secret_key", Env: EnvJournalSecretKey, Type: config.String, Secret: true, Roles: journalRoles,
-		Doc: "Secret key for the erasure journal's object store.",
-	}),
-	bucket: config.Define(config.Spec[string]{
-		Key: "erasure_journal_bucket", Env: EnvJournalBucket, Type: config.String, Roles: journalRoles,
-		Doc: "Bucket the erasure journal is written to.",
-	}),
-	region: config.Define(config.Spec[string]{
-		Key: "erasure_journal_region", Env: EnvJournalRegion, Type: config.String, Roles: journalRoles,
-		Doc: "Region the erasure journal's bucket lives in.",
-	}),
-	useSSL: config.Define(config.Spec[bool]{
-		Key: "erasure_journal_use_ssl", Env: EnvJournalUseSSL, Type: config.Bool, Default: config.Some(false), Roles: journalRoles,
-		Doc: "Reach the erasure journal's object store over TLS.",
-	}),
-	path: config.Define(config.Spec[string]{
-		Key: "erasure_journal_path", Env: EnvJournalPath, Type: config.String, Roles: journalRoles,
-		Doc: "Directory the erasure journal is written to when there is no object storage service for it; ignored when `MARGINCE_ERASURE_JOURNAL_ENDPOINT` is set.",
-	}),
+	endpoint: journalEndpointSetting, accessKey: journalAccessKeySetting, secretKey: journalSecretKeySetting, bucket: journalBucketSetting, region: journalRegionSetting, useSSL: journalUseSSLSetting, path: journalPathSetting,
 }
 
 func journalSettings() []config.Any {
@@ -125,4 +133,21 @@ func sameLocation(c *config.Config, set storeSettings, endpoint, path string) bo
 	default:
 		return false
 	}
+}
+
+// ResolveJournal answers the store the suppression journal lives in: the
+// separate one when any journal setting is set, else main. separate says which.
+// The export job and the replay command both call it, so the writer and the
+// reader never name different places.
+//
+//nolint:ireturn // the store seam is an interface by design.
+func ResolveJournal(ctx context.Context, c *config.Config, main Store) (store Store, separate bool, err error) {
+	store, separate, err = JournalFromConfig(ctx, c)
+	if err != nil {
+		return nil, false, fmt.Errorf("erasure journal store: %w", err)
+	}
+	if !separate {
+		return main, false, nil
+	}
+	return store, true, nil
 }

@@ -8,7 +8,6 @@ import (
 	"fmt"
 	"io"
 
-	"github.com/margince/margince/backend/internal/compose"
 	"github.com/margince/margince/backend/internal/platform/blobstore"
 	"github.com/margince/margince/backend/internal/platform/config"
 )
@@ -19,7 +18,7 @@ func (l *workerLanes) bindStores(
 	ctx context.Context, settings *config.Config, blob blobstore.Store, stdout io.Writer,
 ) error {
 	l.blob = blob
-	journal, separate, err := compose.ResolveJournalStore(ctx, settings, blob)
+	journal, separate, err := blobstore.ResolveJournal(ctx, settings, blob)
 	if err != nil {
 		return fmt.Errorf("worker: %w", err)
 	}

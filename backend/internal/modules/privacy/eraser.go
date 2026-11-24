@@ -99,6 +99,8 @@ func (e *Eraser) WithJournalStore(journal blobstore.Store) *Eraser {
 
 // journalStore is where the export writes and the replay reads the journal.
 // Every journal access goes through it, so the two never disagree.
+//
+//nolint:ireturn // the store seam is an interface by design.
 func (e *Eraser) journalStore() blobstore.Store {
 	if e.journal != nil {
 		return e.journal

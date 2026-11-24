@@ -136,9 +136,7 @@ func configDependencies(cfg JobRunnerConfig) map[string]bool {
 		// The part sweep proves an attachment's bytes are durable before it
 		// removes them from the provider original, so a role with no object
 		// store has nothing to prove with and no business reading the table.
-		"Blobstore": cfg.Blobstore != nil,
-		// The RESOLVED journal store (ResolveJournalStore): the separate one or
-		// the main one, so a journal-only setup still exports.
+		"Blobstore":        cfg.Blobstore != nil,
 		"JournalBlobstore": cfg.JournalBlobstore != nil,
 		"ChannelVault":     cfg.ChannelVault != nil,
 		"ClassifyBrain":    cfg.ClassifyBrain != nil,

@@ -62,7 +62,7 @@ func TestTheJournalStoreIsTheSeparateOneWhenSet(t *testing.T) {
 	if err != nil {
 		t.Fatalf("loading settings: %v", err)
 	}
-	journal, separate, err := compose.ResolveJournalStore(t.Context(), settings, main)
+	journal, separate, err := blobstore.ResolveJournal(t.Context(), settings, main)
 	if err != nil || !separate || journal == main {
 		t.Fatalf("got separate=%v err=%v, want a store other than the main one", separate, err)
 	}
@@ -71,7 +71,7 @@ func TestTheJournalStoreIsTheSeparateOneWhenSet(t *testing.T) {
 	if err != nil {
 		t.Fatalf("loading settings: %v", err)
 	}
-	fallback, separate, err := compose.ResolveJournalStore(t.Context(), unset, main)
+	fallback, separate, err := blobstore.ResolveJournal(t.Context(), unset, main)
 	if err != nil || separate || fallback != main {
 		t.Fatalf("got separate=%v err=%v, want the main store when none is set", separate, err)
 	}
