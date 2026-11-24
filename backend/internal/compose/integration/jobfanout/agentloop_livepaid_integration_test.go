@@ -38,8 +38,7 @@ const (
 	envStaleOnly = "E2E_AGENT_LOOP_STALE_ONLY"
 	envTrace     = "E2E_AGENT_LOOP_TRACE"
 
-	defaultRuns   = 3
-	defaultPreset = "config/presets/gemini_cloud.yaml"
+	defaultRuns = 3
 )
 
 func TestE2EAgentLoopLive(t *testing.T) {
@@ -95,7 +94,7 @@ func paidLane(t *testing.T, root string) (liveLane, []agentloope2e.Scenario) {
 	}
 	preset := os.Getenv(envPreset)
 	if preset == "" {
-		preset = filepath.Join(root, defaultPreset)
+		preset = filepath.Join(root, live.DefaultPreset)
 	}
 	choice, err := live.ResolveChoice(preset, os.Getenv(envTier), os.Getenv(envModel), os.Getenv(envBaseURL))
 	if err != nil {
@@ -103,6 +102,9 @@ func paidLane(t *testing.T, root string) (liveLane, []agentloope2e.Scenario) {
 	}
 	if _, err := choice.ModelPath(&live.Recorder{}); err != nil {
 		t.Fatalf("harness: the model route is not configured: %v", err)
+	}
+	if via := os.Getenv("E2E_LLM_JUDGE"); via != "live" {
+		t.Fatalf("harness: E2E_LLM_JUDGE=%q would let a planted or replayed answer file a verdict as a live judge's; the paid lane takes only \"live\"", via)
 	}
 	judge := agentloope2e.CommandJudge{Root: root}
 	if err := judge.Ready(context.Background()); err != nil {

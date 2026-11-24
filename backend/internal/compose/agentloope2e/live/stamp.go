@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"path/filepath"
 	"slices"
+	"strings"
 
 	"github.com/margince/margince/backend/internal/compose"
 	"github.com/margince/margince/backend/internal/compose/agentloope2e"
@@ -28,7 +29,12 @@ const (
 )
 
 // judgeFiles hold the judge and the door the lane asks it through.
-var judgeFiles = []string{"e2e/llm/judge.py", "e2e/llm/judge_cli.py"}
+var judgeFiles = []string{"e2e/llm/judge.py", "e2e/llm/judge_cli.py", "e2e/llm/candidates.py"}
+
+// runnerDir holds the code that frames every step the agent takes: the system
+// prompt, the step schema, the fence and the step and token budgets. The window
+// digest names the goal and the tools, so a change here moves the harness.
+const runnerDir = "backend/internal/modules/agents/runner"
 
 // JudgeName is the judge model a verdict is filed under. A run that used another
 // than the pinned judge passes its name, which CommandJudge.Model reads from
@@ -97,12 +103,17 @@ func harnessDigest(root string) (string, error) {
 		filepath.Join(lanePackage, "*.go"),
 		filepath.Join(lanePackage, "live", "*.go"),
 		filepath.Join(HarnessDir, "agentloop_*_test.go"),
+		filepath.Join(HarnessDir, "runner_integration_test.go"),
+		filepath.Join(runnerDir, "*.go"),
 	} {
 		found, err := filepath.Glob(filepath.Join(root, pattern))
 		if err != nil {
 			return "", err
 		}
 		for _, path := range found {
+			if strings.HasSuffix(path, "_test.go") && strings.HasPrefix(pattern, filepath.Join(runnerDir)) {
+				continue
+			}
 			rel, err := filepath.Rel(root, path)
 			if err != nil {
 				return "", err

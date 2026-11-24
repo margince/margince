@@ -106,13 +106,14 @@ func TestTheModelPathBuildsOnlyWithTheProvidersKey(t *testing.T) {
 
 func TestTheLocalDatabaseCheckRefusesAnyOtherHost(t *testing.T) {
 	for dsn, ok := range map[string]bool{
-		"postgres://u:p@localhost:15432/margince":       true,
-		"postgres://u:p@127.0.0.1:5432/margince":        true,
-		"postgres://u:p@[::1]:5432/margince":            true,
-		"host=/var/run/postgresql dbname=margince":      true,
-		"postgres://u:p@db.internal.example:5432/m":     false,
-		"postgres://u:p@10.0.0.5:5432/margince":         false,
-		"postgres://u:p@localhost.example.com/margince": false,
+		"postgres://u:p@localhost:15432/margince":                    true,
+		"postgres://u:p@127.0.0.1:5432/margince":                     true,
+		"postgres://u:p@[::1]:5432/margince":                         true,
+		"host=/var/run/postgresql dbname=margince":                   true,
+		"postgres://u:p@db.internal.example:5432/m":                  false,
+		"postgres://u:p@10.0.0.5:5432/margince":                      false,
+		"postgres://u:p@localhost.example.com/margince":              false,
+		"postgres://u:p@localhost:1,db.shared.example:5432/margince": false,
 		"": false,
 	} {
 		err := RequireLocalDSN(dsn)

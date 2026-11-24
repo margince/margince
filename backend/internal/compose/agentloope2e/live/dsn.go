@@ -25,11 +25,26 @@ func RequireLocalDSN(dsn string) error {
 	if cfg.Host == "" {
 		return errors.New("live: the database address names no host")
 	}
-	if cfg.Host[0] == '/' || cfg.Host == "localhost" {
-		return nil
+	hosts := []string{cfg.Host}
+	for _, fallback := range cfg.Fallbacks {
+		hosts = append(hosts, fallback.Host)
 	}
-	if ip := net.ParseIP(cfg.Host); ip != nil && ip.IsLoopback() {
-		return nil
+	for _, host := range hosts {
+		if !isLocalHost(host) {
+			return fmt.Errorf("live: the database host %q is not this machine; the lane writes workspaces and runs only on a local database", host)
+		}
 	}
-	return fmt.Errorf("live: the database host %q is not this machine; the lane writes workspaces and runs only on a local database", cfg.Host)
+	return nil
+}
+
+// isLocalHost is true for a socket directory, localhost or a loopback address.
+func isLocalHost(host string) bool {
+	if host == "" {
+		return false
+	}
+	if host[0] == '/' || host == "localhost" {
+		return true
+	}
+	ip := net.ParseIP(host)
+	return ip != nil && ip.IsLoopback()
 }

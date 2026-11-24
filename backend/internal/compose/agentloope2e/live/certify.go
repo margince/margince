@@ -12,7 +12,9 @@ import (
 	"slices"
 	"time"
 
+	"github.com/margince/margince/backend/internal/compose"
 	"github.com/margince/margince/backend/internal/compose/agentloope2e"
+	"github.com/margince/margince/backend/internal/modules/ai"
 )
 
 // Observed is the end state of one run, as the harness read it back from the
@@ -101,6 +103,10 @@ func Lines(root, dir, judgeModel string) ([]Line, error) {
 	if err != nil {
 		return nil, err
 	}
+	routing, err := compose.RoutingFromDeployConfig(filepath.Join(root, DefaultPreset))
+	if err != nil {
+		return nil, err
+	}
 	var lines []Line
 	for _, verdict := range verdicts {
 		i := slices.IndexFunc(scenarios, func(sc agentloope2e.Scenario) bool { return sc.Name == verdict.Scenario })
@@ -112,7 +118,11 @@ func Lines(root, dir, judgeModel string) ([]Line, error) {
 		if err != nil {
 			return nil, err
 		}
-		lines = append(lines, Line{Verdict: verdict, Moved: verdict.Stamp.Moved(current)})
+		moved := verdict.Stamp.Moved(current)
+		if !slices.Contains(moved, "binding") && !presetStillBinds(routing, verdict.Binding) {
+			moved = append(moved, "binding")
+		}
+		lines = append(lines, Line{Verdict: verdict, Moved: moved})
 	}
 	return lines, nil
 }
@@ -134,4 +144,17 @@ func IsCurrent(root, dir, judgeModel string, sc agentloope2e.Scenario, binding a
 		}
 	}
 	return false, nil
+}
+
+// DefaultPreset is the preset a tier is read from unless the run names another.
+const DefaultPreset = "config/presets/gemini_cloud.yaml"
+
+// presetStillBinds says whether the preset still binds this model at the tier a
+// verdict was filed under. A verdict for a named model has no tier to compare.
+func presetStillBinds(routing ai.RoutingConfig, binding agentloope2e.Binding) bool {
+	if binding.Tier == NamedTier {
+		return true
+	}
+	bound, ok := routing.Tiers[ai.Tier(binding.Tier)]
+	return ok && bound.Provider == binding.Provider && bound.Model == binding.Model
 }

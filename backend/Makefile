@@ -530,7 +530,7 @@ e2e-agent-loop: composition ## The live agent_loop lane (paid: real model + judg
 	  E2E_AGENT_LOOP_TIER=$(TIER) E2E_AGENT_LOOP_MODEL=$(MODEL) E2E_AGENT_LOOP_BASE_URL=$(BASE_URL) \
 	  E2E_AGENT_LOOP_STALE_ONLY=$(STALE_ONLY) E2E_AGENT_LOOP_PRESET=$(if $(PRESET),$(CURDIR)/../$(PRESET)) \
 	  E2E_AGENT_LOOP_TRACE=$(if $(TRACE),$(CURDIR)/../.tmp/agentloop) \
-	  E2E_LLM_JUDGE="$${E2E_LLM_JUDGE:-live}" IT_TAGS=integration,e2e_agent_loop \
+	  E2E_LLM_JUDGE=live IT_TAGS=integration,e2e_agent_loop \
 	  INTEGRATION_TIMEOUT=$$(( $(AGENT_LOOP_CASES) * $(or $(RUNS),3) * 900 + 600 ))s \
 	  $(GOWORK_COMPOSED) bash ../scripts/test-integration-one.sh backend/internal/compose/integration/jobfanout '^TestE2EAgentLoopLive$$'
 

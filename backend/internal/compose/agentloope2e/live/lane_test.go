@@ -42,7 +42,8 @@ func labRoot(t *testing.T) string {
 	t.Helper()
 	source, lab := repoRoot(t), t.TempDir()
 	patterns := []string{
-		"e2e/llm/candidates.json", "e2e/llm/judge.py", "e2e/llm/judge_cli.py",
+		"e2e/llm/candidates.json", "e2e/llm/candidates.py", "e2e/llm/judge.py", "e2e/llm/judge_cli.py", DefaultPreset,
+		runnerDir + "/window.go", HarnessDir + "/runner_integration_test.go",
 		lanePackage + "/*.go", lanePackage + "/live/*.go",
 		HarnessDir + "/agentloop_*_test.go", ScenarioDir + "/*.yaml",
 	}
@@ -126,6 +127,8 @@ func TestEachStampPartMovesWithItsOwnInput(t *testing.T) {
 			"the live package":   func(lab string) { appendTo(t, filepath.Join(lab, lanePackage, "live", "certify.go")) },
 			"the judge":          func(lab string) { appendTo(t, filepath.Join(lab, "e2e/llm/judge.py")) },
 			"the judge's door":   func(lab string) { appendTo(t, filepath.Join(lab, "e2e/llm/judge_cli.py")) },
+			"the runner frame":   func(lab string) { appendTo(t, filepath.Join(lab, runnerDir, "window.go")) },
+			"the runner wiring":  func(lab string) { appendTo(t, filepath.Join(lab, HarnessDir, "runner_integration_test.go")) },
 			"a new harness file": func(lab string) {
 				writeFile(t, filepath.Join(lab, HarnessDir, "agentloop_extra_integration_test.go"), "package jobfanout\n")
 			},
@@ -322,6 +325,24 @@ func TestAVerdictGoesStaleNamingThePartThatMoved(t *testing.T) {
 	}
 	if lines, err = Lines(root, dir, ""); err != nil || !slices.Equal(lines[0].Moved, []string{"scenario removed"}) {
 		t.Errorf("a verdict for a removed scenario = %+v, %v", lines, err)
+	}
+}
+
+func TestAVerdictGoesStaleWhenThePresetBindsAnotherModelAtItsTier(t *testing.T) {
+	root, dir := labRoot(t), filepath.Join(t.TempDir(), "verdicts")
+	sc := briefIn(t, root)
+	if _, err := Certify(context.Background(), certifyConfig(root, dir, &stubJudge{}, 1), sc, func(int) (Observed, error) { return goodRun(sc), nil }); err != nil {
+		t.Fatal(err)
+	}
+	preset := filepath.Join(root, DefaultPreset)
+	body, err := os.ReadFile(preset)
+	if err != nil {
+		t.Fatal(err)
+	}
+	writeFile(t, preset, strings.ReplaceAll(string(body), testBinding.Model, "gemini-9-flash"))
+	lines, err := Lines(root, dir, "")
+	if err != nil || len(lines) != 1 || !slices.Equal(lines[0].Moved, []string{"binding"}) {
+		t.Fatalf("lines = %+v, %v; want one stale on the binding", lines, err)
 	}
 }
 

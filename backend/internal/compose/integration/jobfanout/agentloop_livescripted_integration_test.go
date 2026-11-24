@@ -13,6 +13,7 @@ package jobfanout
 import (
 	"os"
 	"path/filepath"
+	"regexp"
 	"slices"
 	"strings"
 	"testing"
@@ -112,7 +113,7 @@ func TestLiveLaneFilesAPassingVerdictFromAScriptedRoute(t *testing.T) {
 			t.Errorf("the judge was not shown %q", want)
 		}
 	}
-	if strings.Contains(judged, `"summary":"done"`) {
+	if regexp.MustCompile(`\bdone\b`).MatchString(judged) {
 		t.Errorf("the judge was shown the agent's own final summary")
 	}
 }

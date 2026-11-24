@@ -23,6 +23,7 @@ import (
 	"os"
 
 	"github.com/margince/margince/backend/internal/compose"
+	"github.com/margince/margince/backend/internal/compose/agentloope2e"
 	"github.com/margince/margince/backend/internal/compose/agentloope2e/live"
 	"github.com/margince/margince/backend/internal/compose/aicert"
 	"github.com/margince/margince/backend/internal/compose/aitasks"
@@ -89,7 +90,11 @@ func main() {
 	}
 	fmt.Print(renderPresets(reports)) //nolint:forbidigo // the report's third table, printed for the same reason
 
-	verdicts, err := live.Lines(*repoRoot, *agentLoopDir, "")
+	judgeModel, err := agentloope2e.CommandJudge{Root: *repoRoot}.Model(context.Background())
+	if err != nil {
+		judgeModel = "" // a machine with no judge door still reports, on the pinned judge
+	}
+	verdicts, err := live.Lines(*repoRoot, *agentLoopDir, judgeModel)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "reportcmd: %v\n", err)
 		os.Exit(1)
