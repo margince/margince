@@ -281,15 +281,7 @@ func startResetLane(ctx context.Context, allowed bool, rdb *redis.Client, modelP
 		return
 	}
 	flush := resetFlush(modelPath)
-	background.Go(func() {
-		// The filter is ctx.Err() rather than the returned error, so a shutdown
-		// cancellation is the ONLY quiet case — the dead-subscription sentinel
-		// stays loud, because nothing will flush this role's caches again
-		// until it restarts.
-		if err := events.SubscribeReset(ctx, rdb, logger, flush); err != nil && ctx.Err() == nil {
-			logger.Error("data reset: the control channel stopped; this process serves stale caches until it restarts", "err", err)
-		}
-	})
+	background.Go(func() { events.SubscribeReset(ctx, rdb, logger, flush) })
 }
 
 // startRunnerLane builds the Surface-B runner and starts the subscriber that

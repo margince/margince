@@ -349,10 +349,6 @@ type Extension struct {
 	// connect and callback routes are core routes, not the unit's own.
 	OAuthApps []OAuthApp
 
-	// AITasks are the AI tasks the unit runs through Runtime.AI. A task not
-	// listed is refused. The manifest publishes the list.
-	AITasks []AITask
-
 	// SystemReads are the system reads the unit's jobs and subscriptions make
 	// (see systemread.go). A read not listed answers ErrUndeclaredRead. The list
 	// is published in manifest.generated.json, so an operator sees what the unit

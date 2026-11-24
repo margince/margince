@@ -41,9 +41,10 @@ const (
 	// Raised by 249 production and 62 test lines for the full-path certification
 	// cases of two capture sites, which drive private engine code that cannot
 	// leave this package. Raised by 58 test lines for the system health footer
-	// cases, which read this package's unexported health sources.
+	// cases, which read this package's unexported health sources. Raised by 29
+	// test lines for the data reset cases of a timed-out job drain.
 	composeRootProductionLines = 230_518
-	composeRootTestLines       = 359_447
+	composeRootTestLines       = 359_476
 )
 
 // A read under these floors stopped early or read the wrong place, and would
