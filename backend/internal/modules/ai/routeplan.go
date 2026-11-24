@@ -140,13 +140,12 @@ func wireCandidates(plan []plannedBinding) []crmcontracts.AiRouteCandidate {
 	return out
 }
 
-// withCertification stamps each candidate with the verdict the certification
-// records give the model it names for task. A model no record measured keeps no
-// stamp, which the screen reads as not certified.
+// withCertification stamps each candidate with the verdict CertificationFor
+// gives the model it names for task. A model that is not measured keeps no stamp.
 func withCertification(candidates []crmcontracts.AiRouteCandidate, plan []plannedBinding, task Task, profile Profile) {
 	for i, binding := range plan {
-		if cert, ok := TierCertificationFor(task, binding.config, profile); ok {
-			candidates[i].Certification = &crmcontracts.AiRouteCertification{Verdict: cert.Verdict, Current: cert.Current}
+		if cert := CertificationFor(task, binding.config, profile); cert.Verdict != "" {
+			candidates[i].Certification = &crmcontracts.AiRouteCertification{Verdict: cert.Verdict, Current: !cert.RecheckPending}
 		}
 	}
 }
