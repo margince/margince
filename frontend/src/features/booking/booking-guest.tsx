@@ -73,8 +73,8 @@ function bookedLength(
   return page?.duration_minutes;
 }
 
-// A booking refused for its length drops the picked time with the form that
-// showed why, so the refusal stays above the times of the length now on offer.
+// A booking refused for its length drops the picked time and the form that
+// showed why. The refusal stays above the times of the length now on offer.
 function LengthRefusal({ error }: Readonly<{ error: unknown }>) {
   return lengthNotOffered(error) ? <ErrorLine error={error} /> : null;
 }

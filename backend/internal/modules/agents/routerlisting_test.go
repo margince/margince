@@ -230,8 +230,8 @@ func TestARouterListsConfirmCodeForTheActionsThatTakeIt(t *testing.T) {
 	}
 }
 
-// The MCP listing names a target verb the way every other listing does: as its
-// router's action, never as a tool the listing does not offer.
+// The MCP listing names a target verb as its router's action, as every other
+// listing does. It never names a tool the listing does not offer.
 func TestTheShortenedListingNamesATargetVerbAsItsRoutersAction(t *testing.T) {
 	f := newRareListingFixture(t)
 	spec, _ := f.r.Spec(f.router)

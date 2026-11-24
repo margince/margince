@@ -114,8 +114,10 @@ func RegisterRouteVerbs(r *Registry, verbs []RouteVerb, run RouteRunner) {
 	if len(verbs) == 0 {
 		return
 	}
-	r.Register(describeRouterActions{verbs: verbs, runs: r.routerRunSpec, choices: r.routerChoices, offered: r.offeredActions, wording: r.lister,
-		selector: r.actionField})
+	r.Register(describeRouterActions{
+		verbs: verbs, runs: r.routerRunSpec, choices: r.routerChoices, offered: r.offeredActions,
+		wording: r.lister, selector: r.actionField,
+	})
 	r.mu.Lock()
 	r.routeActions[readWorkspaceName] = map[string]string{routeActionsTopic: describeRouterActionsName}
 	r.mu.Unlock()
