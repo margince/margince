@@ -40,9 +40,10 @@ const (
 	// by 1 for the import that binds one zone lookup to each attention read.
 	// Raised by 249 production and 62 test lines for the full-path certification
 	// cases of two capture sites, which drive private engine code that cannot
-	// leave this package.
+	// leave this package. Raised by 58 test lines for the system health footer
+	// cases, which read this package's unexported health sources.
 	composeRootProductionLines = 230_518
-	composeRootTestLines       = 359_389
+	composeRootTestLines       = 359_447
 )
 
 // A read under these floors stopped early or read the wrong place, and would
