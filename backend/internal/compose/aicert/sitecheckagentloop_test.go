@@ -73,6 +73,10 @@ func TestOnlyAGradingChangeMovesTheAgentLoopCheck(t *testing.T) {
 		"a routing field": {"modules/ai/routing.go": replaceOnce("type RoutingConfig struct {", "type RoutingConfig struct {\n\tTaskLadders map[string]string")},
 		"an operator definition": {"shared/kernel/systemtext/operatorcopy.go": replaceOnce(
 			"var operatorDefinitions = map[string]Definition{", "var operatorDefinitions = map[string]Definition{\n\t\"zz.added\": {},")},
+		"a data-task registration": {"compose/datataskengine.go": replaceOnce(
+			"rolemailboxseats.DataTask(),", "rolemailboxseats.DataTask(), rolemailboxseats.DataTask(),")},
+		"a database error the store classifies": {"platform/database/storekit/sqlstate.go": replaceOnce(
+			`pgDeadlockDetected    = "40P01"`, `pgDeadlockDetected    = "40P02"`)},
 	} {
 		if got := walkDigest(t, agentLoopWalk(t, edits)); got != base {
 			t.Errorf("%s moved the agent_loop check, and no grading reads it", name)
@@ -149,6 +153,11 @@ func TestAFloorOrADatabaseChangeMovesTheFullPathChecksAsItShould(t *testing.T) {
 			"the verdict floor", counterparty, "counterpartyVerdictCase",
 			map[string]func(string) string{"compose/captureverdict.go": replaceOnce("verdictConfidenceFloor = 0.7", "verdictConfidenceFloor = 0.9")},
 			true,
+		},
+		{
+			"the stored setting read", classify, "captureClassifyCase",
+			map[string]func(string) string{"platform/settings/memo.go": replaceOnce("SELECT value FROM setting WHERE key = $1", "SELECT value FROM setting WHERE key = $1 ")},
+			false,
 		},
 		{
 			"the database apply", counterparty, "counterpartyVerdictCase",

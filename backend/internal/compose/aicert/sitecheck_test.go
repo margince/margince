@@ -29,6 +29,8 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/jackc/pgx/v5"
+
 	"github.com/margince/margince/backend/internal/compose"
 	"github.com/margince/margince/backend/internal/compose/agentloope2e/live"
 	"github.com/margince/margince/backend/internal/compose/aitasks"
@@ -291,6 +293,7 @@ func (x *sourceIndex) walkOf(t *testing.T, pkg *sourcePackage, typeName string) 
 	walk := &checkWalk{
 		index: x, seen: map[ast.Node]string{}, types: map[string]bool{}, selected: map[string]bool{},
 		fieldTypes: map[string][]string{}, fieldCalls: map[string]map[string]bool{}, declaredHit: map[string]string{},
+		storage: map[ast.Node]bool{},
 	}
 	for _, name := range append([]string{"Evaluate"}, runWalked[typeName]...) {
 		for _, method := range pkg.methods[name] {
@@ -365,11 +368,21 @@ type checkWalk struct {
 	// declaredHit holds the declared dependencies the walk reached, with their
 	// digests; each is hashed into the check.
 	declaredHit map[string]string
+	// storage holds the functions and values the walk stopped at because they
+	// reach the database driver. None is hashed.
+	storage map[ast.Node]bool
 }
 
 func (w *checkWalk) visit(t *testing.T, pkg *sourcePackage, node ast.Node) {
 	t.Helper()
 	if _, done := w.seen[node]; done {
+		return
+	}
+	if w.storage[node] {
+		return
+	}
+	if namesTheDriver(pkg, node) {
+		w.storage[node] = true
 		return
 	}
 	w.seen[node] = pkg.path + "." + declName(node)
@@ -405,6 +418,75 @@ func (w *checkWalk) visit(t *testing.T, pkg *sourcePackage, node ast.Node) {
 		}
 		return true
 	})
+}
+
+// driverPath is the import path of the database driver; its subpackages share
+// it as a prefix.
+var driverPath = reflect.TypeFor[pgx.Tx]().PkgPath()
+
+// namesTheDriver answers whether a function or value declaration reaches the
+// database driver: it names a driver package, or calls through a receiver field
+// of a driver type. A certification run builds no database, so such code only
+// stores or loads rows and cannot change what the model is asked or how its
+// answer is graded. A type declaration is not storage by this rule: a case's
+// engine may hold a pool that no run uses.
+func namesTheDriver(pkg *sourcePackage, node ast.Node) bool {
+	file := pkg.fileOf[node]
+	var recv string
+	var fields map[string]bool
+	switch d := node.(type) {
+	case *ast.ValueSpec:
+	case *ast.FuncDecl:
+		if d.Recv != nil && len(d.Recv.List[0].Names) > 0 {
+			recv, fields = d.Recv.List[0].Names[0].Name, driverFields(pkg, receiverName(d))
+		}
+	default:
+		return false
+	}
+	found := false
+	ast.Inspect(node, func(n ast.Node) bool {
+		if sel, ok := n.(*ast.SelectorExpr); ok && !found {
+			if ident, ok := sel.X.(*ast.Ident); ok {
+				found = isDriver(importPath(file, ident.Name)) || (ident.Name == recv && fields[sel.Sel.Name])
+			}
+		}
+		return !found
+	})
+	return found
+}
+
+// driverFields are the fields of typeName in pkg whose type a driver package
+// declares, through a pointer.
+func driverFields(pkg *sourcePackage, typeName string) map[string]bool {
+	spec, ok := pkg.values[typeName].(*ast.TypeSpec)
+	if !ok {
+		return nil
+	}
+	fields, ok := spec.Type.(*ast.StructType)
+	if !ok {
+		return nil
+	}
+	found := map[string]bool{}
+	for _, field := range fields.Fields.List {
+		expr := field.Type
+		if star, isPointer := expr.(*ast.StarExpr); isPointer {
+			expr = star.X
+		}
+		sel, isSelector := expr.(*ast.SelectorExpr)
+		if !isSelector {
+			continue
+		}
+		if ident, isIdent := sel.X.(*ast.Ident); isIdent && isDriver(importPath(pkg.fileOf[spec], ident.Name)) {
+			for _, name := range field.Names {
+				found[name.Name] = true
+			}
+		}
+	}
+	return found
+}
+
+func isDriver(path string) bool {
+	return path == driverPath || strings.HasPrefix(path, driverPath+"/")
 }
 
 // noteFieldTypes keeps the named type of each field of spec, through a pointer.
@@ -596,6 +678,17 @@ func declName(node ast.Node) string {
 	return fmt.Sprintf("%T", node)
 }
 
+// defaultImportName is the name an unaliased import of path binds. A major
+// version element names no package, so the element before it does.
+func defaultImportName(path string) string {
+	elems := strings.Split(path, "/")
+	last := elems[len(elems)-1]
+	if major, isVersion := strings.CutPrefix(last, "v"); isVersion && len(elems) > 1 && major != "" && strings.Trim(major, "0123456789") == "" {
+		last = elems[len(elems)-2]
+	}
+	return last
+}
+
 // importPath is the path name imports in file, or empty when it names none.
 func importPath(file *ast.File, name string) string {
 	if file == nil {
@@ -603,7 +696,7 @@ func importPath(file *ast.File, name string) string {
 	}
 	for _, spec := range file.Imports {
 		path := strings.Trim(spec.Path.Value, `"`)
-		alias := path[strings.LastIndex(path, "/")+1:]
+		alias := defaultImportName(path)
 		if spec.Name != nil {
 			alias = spec.Name.Name
 		}
@@ -702,6 +795,36 @@ func TestAnEditToAMethodTheCaseCallsThroughAFieldMovesTheSiteCheck(t *testing.T)
 	edited := strings.Replace(fieldMethodFixture, "return got > s.rows", "return got >= s.rows", 1)
 	if fixtureDigest(t, edited) == before {
 		t.Error("an edit to the field's method Evaluate judges through left the digest unchanged")
+	}
+}
+
+// A case that judges through a store method which loads its rows through the
+// driver, and through a helper of its own.
+const storageFixture = `
+import "github.com/jackc/pgx/v5"
+const loadRows = "SELECT rows FROM store"
+type store struct{ db pgx.Tx }
+func (s store) load() string { return s.db.Conn().Config().Database + loadRows }
+type judgeCase struct {
+	want  int
+	cache store
+}
+func (c judgeCase) Evaluate(got int) bool { return c.cache.load() != "" && sameRows(c.want, got) }
+func sameRows(want, got int) bool { return want == got }
+`
+
+func TestAStatementTheStoreRunsMovesNoSiteCheckAndTheJudgingCodeStillDoes(t *testing.T) {
+	before := fixtureDigest(t, storageFixture)
+	for name, edited := range map[string]string{
+		"the statement":    strings.Replace(storageFixture, "SELECT rows FROM store", "SELECT pages FROM store", 1),
+		"the store's body": strings.Replace(storageFixture, "Config().Database + loadRows", "Config().User + loadRows", 1),
+	} {
+		if fixtureDigest(t, edited) != before {
+			t.Errorf("an edit to %s, which only the driver runs, moved the digest", name)
+		}
+	}
+	if fixtureDigest(t, strings.Replace(storageFixture, "return want == got", "return want <= got", 1)) == before {
+		t.Error("an edit to the helper Evaluate judges through left the digest unchanged")
 	}
 }
 

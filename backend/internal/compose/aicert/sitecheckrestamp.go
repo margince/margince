@@ -16,10 +16,12 @@ import (
 // one that replaced it. A pair is listed when the replacement changed how a
 // check is hashed and not the code that judges an answer. A reviewer who read
 // that change adds the pair. The narrowed walk of sitecheck_test.go is the
-// first pair. The methods it resolves on field types are the second.
+// first pair. The methods it resolves on field types are the second. The walk
+// stopping at code that names the database driver is the third.
 var restampableSiteChecks = map[string]string{
 	"6ffebf8729e96d9254947a06603e04fc241ce290b27b46e5975a486c20de174a": "dee6b81ecea0a0559db06bb0f561afcdaff4c88e36b210a20cba50a13cda03d0",
 	"dee6b81ecea0a0559db06bb0f561afcdaff4c88e36b210a20cba50a13cda03d0": "0afcd88ef36cddac2602acb21f071c5ec0ab31938eff80015e15de7f15b9b6c7",
+	"5491494882c83fe3c48e1179e0c53363273fca1426fe42a671b1c0800975fcf2": "01613950798623b2cdb69051f68ec8a683eca8933c3baf0de5c6f74cca2375a6",
 }
 
 // goldenDigest names one site_checks.golden by its bytes.
