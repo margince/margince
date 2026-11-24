@@ -162,6 +162,7 @@ internal/compose/integration/idempotency_integration_test.go 2
 internal/compose/integration/installation_integration_test.go 1
 internal/compose/integration/installationseam_integration_test.go 1
 internal/compose/integration/introadvance_integration_test.go 5
+internal/compose/integration/jobfanout/agentloop_world_integration_test.go 1
 internal/compose/integration/jobfanout/agentscheduler_integration_test.go 1
 internal/compose/integration/jobfanout/runner_integration_test.go 2
 internal/compose/integration/jobfanout/runnerreap_integration_test.go 1
@@ -248,7 +249,7 @@ internal/compose/integration/workflow_integration_test.go 4
 internal/compose/invitedtaskassignee_integration_test.go 1
 internal/compose/jobs_storedobject_integration_test.go 1
 internal/compose/lastcontact_integration_test.go 1
-internal/compose/leadladder_manual_integration_test.go 2
+internal/compose/integration/leadladder_manual_integration_test.go 2
 internal/compose/listevaluate_switch_integration_test.go 1
 internal/compose/magic/describe_test.go 17
 internal/compose/magic/fieldmask_test.go 1

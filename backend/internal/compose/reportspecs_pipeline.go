@@ -58,6 +58,7 @@ func pipelineCurrentSpec() reportSpec {
 			colPartnerCompanyID: tableCompany,
 			colCompanyID:        tableCompany,
 		},
+		drillColumns: dealCompanyDrillColumn,
 		// By STAGE alone. deals-by-stage groups by stage and currency, so a
 		// stage trading in three currencies draws three rows and no total —
 		// which is honest while the money is unconverted and pointless once it
@@ -72,6 +73,10 @@ func pipelineCurrentSpec() reportSpec {
 		},
 	}
 }
+
+// dealCompanyDrillColumn puts the deal's own company on a drill-through row
+// beside its partner company, so the partner is not read as the deal's company.
+var dealCompanyDrillColumn = map[string]string{fieldCompanyID: colCompanyID}
 
 // fieldCloseMonth groups open deals by the month they are expected to close.
 // A DATE has no zone, and a month is the same under every fiscal start, so it
@@ -95,7 +100,7 @@ const (
 // It is deals.BaseValueSQL, rendered for the report engine's alias and
 // against the frame's own as-of, so this report and the forecast price a deal
 // identically.
-var pipelineBaseValueExpr = deals.BaseValueSQL(reportAsOfToken, reportBaseCurrencyToken, "t")
+var pipelineBaseValueExpr = deals.BaseValueAtSQL(reportAsOfToken, reportRatesAtToken, reportBaseCurrencyToken, "t")
 
 // pipelineWeightedBaseExpr weights that base value by the chance the forecast
 // uses for the deal (reportChanceToken), rounded per deal.

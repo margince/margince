@@ -44,7 +44,7 @@ and `degrade_to` reaches rungs that the ladder never names.
 For example, the ladder of `draft_reply` is `[cheap_cloud, premium]`, and `cheap_cloud` degrades to
 `local_small`. So a model bound at `local_small` can end up serving `draft_reply`.
 `ai.ServableTiers(task)` is the full set: the ladder, plus every rung `degrade_to` reaches, step by step,
-with the ladder rungs first. `ai.LeadingTier(task)` is the first rung: what serves when nothing has failed.
+with the ladder rungs first. The first rung of `RoutingConfig.Ladder(task)` is what serves when nothing has failed.
 To ask which of your bound models could answer a task, use the full set. The ladder by itself gives too
 small an answer.
 

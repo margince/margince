@@ -293,21 +293,6 @@ func TestOverdueIsAskedInTheInstallationsZone(t *testing.T) {
 	}
 }
 
-// The downgrade tier halves a quiet deal's probability, floored to a multiple
-// of five, and nothing under ten survives.
-func TestAQuietDealsProbabilityDropsOneNotchANight(t *testing.T) {
-	t.Parallel()
-	ladder := []int{90, 45, 20, 10, 5, 0, 0}
-	for i := 0; i+1 < len(ladder); i++ {
-		if got := lowerWinProbability(ladder[i]); got != ladder[i+1] {
-			t.Errorf("a deal at %d%% drops to %d%%, want %d%%", ladder[i], got, ladder[i+1])
-		}
-	}
-	if got := lowerWinProbability(75); got != 35 {
-		t.Errorf("a deal at 75%% drops to %d%%, want 35%%", got)
-	}
-}
-
 // A write that sets the probability the deal already holds leaves the patch
 // empty. So a quiet deal sitting at zero writes no audit row night after night.
 func TestAnUnchangedWinProbabilityIsNotWritten(t *testing.T) {
@@ -323,7 +308,7 @@ func TestAnUnchangedWinProbabilityIsNotWritten(t *testing.T) {
 	}{
 		{"already at the floor", &zero, &margince, &zero, false},
 		{"a stage deal gets its own probability", nil, nil, &twenty, true},
-		{"a real notch down still writes", &twenty, &margince, &zero, true},
+		{"a changed probability still writes", &twenty, &margince, &zero, true},
 		{"back to the stage from an override", &twenty, &margince, nil, true},
 		{"back to the stage on a deal that follows it", nil, nil, nil, false},
 	}

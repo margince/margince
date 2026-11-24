@@ -3,9 +3,11 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { ExtensionDescriptor } from "@composition/extensions";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { LocaleProvider } from "../../i18n";
+import { type GrantSpec, meFixture } from "../../testing/mefixture";
 import { ExtensionUnitsCard } from "./extension-units";
 
 // The card reads the COMPOSED registry, which is empty in this lane and in
@@ -30,12 +32,19 @@ vi.mock("../../lib/extensions", async (importOriginal) => ({
 
 // A unit's copy as gen-composition merges it, so a title resolves as it would composed.
 vi.mock("@composition/copy", () => ({
-  extensionCopy: { en: { "extDispactConnector.title": "Dispact" } },
+  extensionCopy: {
+    en: {
+      "extDispactConnector.title": "Dispact",
+      "extDispactConnector.summary": "Files team chat messages on the CRM.",
+    },
+  },
+  extensionOverrides: {},
 }));
 
 const DISPACT: ExtensionDescriptor = {
   name: "dispact-connector",
   title: "extDispactConnector.title",
+  summary: "",
   secretScope: "user",
   panels: [],
   verbs: [],
@@ -72,6 +81,16 @@ describe("the units offered on a settings page", () => {
     );
   });
 
+  it("says under the name what the unit does, when its copy says it", () => {
+    unitsForSecretScope.mockReturnValue([
+      { ...DISPACT, summary: "extDispactConnector.summary" },
+    ]);
+    renderCard("user");
+    expect(
+      screen.getByText("Files team chat messages on the CRM."),
+    ).toBeTruthy();
+  });
+
   it("opens the unit from a press anywhere on its row", () => {
     unitsForSecretScope.mockReturnValue([DISPACT]);
     renderCard("user");
@@ -85,6 +104,7 @@ describe("the units offered on a settings page", () => {
       {
         name: "open_notes",
         title: "",
+        summary: "",
         secretScope: "user",
         panels: [],
         verbs: [],
@@ -115,12 +135,45 @@ describe("the units offered on a settings page", () => {
     expect(container.innerHTML).toBe("");
   });
 
+  it("links a unit that declares an app to it, for a reader who may open it", () => {
+    const withApp: ExtensionDescriptor = {
+      ...DISPACT,
+      app: {
+        icon: "plug",
+        label: "extUnits.user.title",
+        group: "work",
+        object: "ext_dispact_connector_x",
+        export: "DispactApp",
+      },
+    };
+    unitsForSecretScope.mockReturnValue([withApp]);
+    const renderFor = (allow: GrantSpec) => {
+      const client = new QueryClient();
+      client.setQueryData(["me"], meFixture({ allow }));
+      return render(
+        <QueryClientProvider client={client}>
+          <LocaleProvider>
+            <ExtensionUnitsCard scope="user" />
+          </LocaleProvider>
+        </QueryClientProvider>,
+      );
+    };
+    renderFor({ ext_dispact_connector_x: ["read"] });
+    expect(
+      screen.getByRole("link", { name: "Open Dispact" }).getAttribute("href"),
+    ).toBe("/#/app/dispact-connector");
+    cleanup();
+    renderFor({});
+    expect(screen.queryByRole("link", { name: "Open Dispact" })).toBeNull();
+  });
+
   it("gives every offered unit its own row", () => {
     unitsForSecretScope.mockReturnValue([
       DISPACT,
       {
         name: "notes",
         title: "",
+        summary: "",
         secretScope: "user",
         verbs: [],
         entries: [],

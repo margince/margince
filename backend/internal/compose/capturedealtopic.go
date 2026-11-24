@@ -134,7 +134,11 @@ func (c dealTopicChecker) Check(ctx context.Context, mail ids.ActivityID, deals 
 		return capture.DealTopic{}, nil
 	}
 	if sweepPaused(err) || errors.Is(err, ai.ErrSubjectRestricted) {
-		return capture.DealTopic{}, fmt.Errorf("%w: %w", capture.ErrTopicAbstained, err)
+		abstained := fmt.Errorf("%w: %w", capture.ErrTopicAbstained, err)
+		if ai.IsDeferral(err) {
+			abstained = errors.Join(abstained, capture.ErrTopicDeferred)
+		}
+		return capture.DealTopic{}, abstained
 	}
 	if err != nil {
 		return capture.DealTopic{}, err
@@ -209,6 +213,10 @@ func dealTopicShapeValid(in dealTopicInput) ai.Validator {
 // validateDealTopicPayload names the first violation. A deal may be
 // unanswered or answered twice, or named by a ref the prompt never showed. A
 // verdict may fall outside the closed set, or a confidence outside [0,1].
+//
+// A bad confidence fails the reply here. The other batched sites drop the one
+// answer. This reply is one joint judgement of a mail against every deal, and a
+// dropped deal would read as ruled out.
 func validateDealTopicPayload(payload dealTopicPayload, in dealTopicInput) string {
 	refs := dealtopicprompt.Refs(in)
 	if msg := checkBatchFidelity(payload.Results, refs.All()); msg != "" {

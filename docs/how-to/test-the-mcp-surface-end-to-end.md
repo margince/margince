@@ -208,8 +208,7 @@ model wrote on the way, or a call the server refused, does not count. A send tha
 refuses by design still counts when the case lists its tool under `counts_when_refused:`.
 
 The checks that rule something out read every word and every call: `must_not_mention` and
-`must_not_call_with`. `check.py --lint` runs before the stack boots. It refuses an unknown key, a
-line it cannot place, a pattern that does not compile and a value of the wrong shape.
+`must_not_call_with`. `e2e/llm/scenariolint.py` runs before the stack boots. It refuses an unknown key, a line it cannot place, a pattern that does not compile and a value of the wrong shape. It also refuses a judged criterion that needs a tool's answer to check, and a pin that reads `not` but no short form of it.
 
 A scenario that fails lists what failed to hold. That can be a tool it never called,
 a fact it never said, or something it must not say. It can be a judged criterion, with the
@@ -321,8 +320,8 @@ cd backend && go test ./internal/compose/ -run TestTheMCPToolCoverageIsPublished
 Each verdict carries a `stamp` of what it measured. It holds a short hash of the scenario file and
 of the published entries of the tools its checks name (`docs/reference/mcp-info.json`). For a
 router, that entry includes the bodies `read_workspace topic=actions` serves. It also holds
-a hash of the server instructions and of the grading harness, the judge model, the commit and the
-time. Before it runs, the lane checks that `mcp-info.json` is what the tree serves.
+a hash of the server instructions, each resource text and the harness, with each parser, the judge, the
+commit and the time. The lane first checks that `mcp-info.json` is what the tree serves.
 
 To grade saved transcripts again, run `check.py --record` with `E2E_LLM_COMMIT` and `E2E_LLM_RAN_AT` set to the run's commit and time, and `E2E_LLM_GRADED_COMMIT` to the commit that grades.
 The stamp then holds `graded_commit` and `graded_at` too. Where the two commits differ, `make e2e-llm-report` and the coverage page say `re-graded`.

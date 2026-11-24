@@ -126,6 +126,7 @@ var dealPicklists = map[string]string{
 	"deal_commercial_motion_check":     "commercial_motion",
 	"deal_partner_attribution_check":   partnerAttributionField,
 	"deal_status_check":                filterStatus,
+	"deal_source_check":                sourceColumn,
 	"deal_won_without_contract_reason": wonWithoutContractReasonField,
 }
 

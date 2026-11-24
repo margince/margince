@@ -222,12 +222,12 @@ export const EmptyOneVendorUnwiredAdminDark: Story = {
 async function openAddDialog(canvasElement: HTMLElement) {
   const body = within(canvasElement.ownerDocument.body);
   await userEvent.click(
-    await body.findByRole("button", { name: "Add account" }),
+    await body.findByRole("button", { name: "Add another mailbox" }),
   );
   await body.findByRole("dialog", { name: "Connect mail and calendar" });
 }
 
-// "Add account" opens the connect dialog on its first step: the account, as
+// "Add another mailbox" opens the connect dialog on its first step: the account, as
 // three plates. The dialog's own steps have their stories beside it
 // (connect-flow.stories.tsx); these show it over the card it starts from.
 export const AddAccountDialog: Story = {

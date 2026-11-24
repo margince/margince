@@ -71,11 +71,11 @@ type ApprovalQuery struct {
 // every morning. An id the reader may not see is simply ABSENT from the answer,
 // which is what its refusal meant.
 //
-// OpenCandidates answers UP TO its limit and says nothing about what it left:
-// the dedupe queue pages, and its own page maximum is smaller than the census
-// this lane reads to. So CountOpen is what says whether the lane finished, and
-// unseen.go reads the two together — a page judged by its own length reported a
-// complete day over every pair past the first one.
+// OpenCandidates answers up to its limit and, beside it, how many pairs the
+// reader may see in all, from the same statement. The queue pages, and its page
+// maximum is smaller than the census this lane reads to. So the count says
+// whether the lane finished, and unseen.go reads the two together. A page
+// judged by its own length reported a complete day over every pair past it.
 //
 // DecidableSubset asks the OTHER question about the same records: not whether
 // this reader may see them, but whether they could change them. Settling a pair
@@ -83,8 +83,7 @@ type ApprovalQuery struct {
 // side's write authority has no verb to be offered — and the card is where they
 // should learn that, rather than from a refusal after the press.
 type Duplicates interface {
-	OpenCandidates(ctx context.Context, limit int, owners *storekit.OwnerSet) ([]DuplicatePair, error)
-	CountOpen(ctx context.Context, owners *storekit.OwnerSet) (int, error)
+	OpenCandidates(ctx context.Context, limit int, owners *storekit.OwnerSet) ([]DuplicatePair, int, error)
 	DescribeMany(ctx context.Context, entityType string, rowIDs []ids.UUID) (map[ids.UUID]RecordFace, error)
 	DecidableSubset(ctx context.Context, entityType string, rowIDs []ids.UUID) (map[ids.UUID]bool, error)
 	// SettleablePairs asks the PAIR's own question, which authority cannot:
@@ -162,7 +161,7 @@ type Tasks interface {
 	// which is not the page length: the lane is capped at a dozen, so a badge
 	// showing the cap tells a reader with thirteen that they have twelve, and
 	// there is no second page to reach the thirteenth by.
-	CountOpenForViewer(ctx context.Context, asOf, until time.Time, scope TaskScope, owner ids.UUID, team []ids.UUID) (int, error)
+	CountOpenForViewer(ctx context.Context, asOf, until time.Time, scope TaskScope, zone string, owner ids.UUID, team []ids.UUID) (int, error)
 }
 
 // PlannedAsk is the planned lane's question. The day's work is due by
@@ -431,7 +430,8 @@ type Commitment struct {
 // same refusal shape Names uses: the row keeps its name and loses its figures,
 // and the id still travels because naming the deal was the producer's claim.
 type DealFacts interface {
-	Figures(ctx context.Context, dealIDs []ids.UUID) (map[ids.UUID]DealFigures, error)
+	// zone is the day rule's zone for this page. Nil is the installation's.
+	Figures(ctx context.Context, dealIDs []ids.UUID, zone *time.Location) (map[ids.UUID]DealFigures, error)
 }
 
 // DealFigures is what a card needs to state a deal's commercial case: what it

@@ -7,6 +7,7 @@ import type { components } from "../api/schema";
 import { LocaleProvider } from "../i18n";
 import { usePipeline } from "./deals.queries";
 import {
+  inPositionOrder,
   pipelinesOptions,
   stageNames,
   usePipelines,
@@ -172,4 +173,26 @@ it("names each stage by its id across every pipeline, archived ones included", (
     ["s-2", "Proposal"],
     ["s-3", "Retired step"],
   ]);
+});
+
+it("puts stages in position order, keeps ties as listed, and leaves its input alone", () => {
+  const listed = [
+    { id: "won", position: 3 },
+    { id: "proposal", position: 2 },
+    { id: "lost", position: 3 },
+    { id: "intro", position: 1 },
+  ];
+  expect(inPositionOrder(listed).map((each) => each.id)).toEqual([
+    "intro",
+    "proposal",
+    "won",
+    "lost",
+  ]);
+  expect(listed.map((each) => each.id)).toEqual([
+    "won",
+    "proposal",
+    "lost",
+    "intro",
+  ]);
+  expect(inPositionOrder([])).toEqual([]);
 });

@@ -4,7 +4,7 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, userEvent, within } from "storybook/test";
 import { removeStored, STORAGE_KEYS } from "../lib/storage";
-import { meFixture } from "../testing/mefixture";
+import { meFixture, READS_RECORDS } from "../testing/mefixture";
 import { recordNamesRoutes } from "../testing/recordnames.testkit";
 import {
   installFetchStub,
@@ -89,7 +89,7 @@ const type =
   (query: string) =>
   async ({ canvasElement }: { canvasElement: HTMLElement }) => {
     const canvas = within(canvasElement);
-    await userEvent.type(canvas.getByRole("searchbox"), query);
+    await userEvent.type(canvas.getByRole("combobox"), query);
   };
 
 // Opened, nothing typed: the whole command list, which is what ⌘K shows first.
@@ -124,7 +124,10 @@ function CreatePalette() {
 export const CreateOnly: Story = {
   render: () => {
     removeStored(STORAGE_KEYS.paletteRecents);
-    installFetchStub({ "GET /search": noHits, "GET /me": meRoute({}) });
+    installFetchStub({
+      "GET /search": noHits,
+      "GET /me": meRoute(READS_RECORDS),
+    });
     return (
       <StoryProviders>
         <CreatePalette />
@@ -141,7 +144,7 @@ export const CreateOnly: Story = {
       "New project",
     ]) {
       await expect(
-        await canvas.findByRole("button", { name: new RegExp(label) }),
+        await canvas.findByRole("option", { name: new RegExp(label) }),
       ).toBeInTheDocument();
     }
     await expect(canvas.queryByText("Ask your documents")).toBeNull();
@@ -331,7 +334,7 @@ export const IdentifierBestMatch: Story = {
     ),
   play: async ({ canvasElement }) => {
     await userEvent.type(
-      within(canvasElement).getByRole("searchbox"),
+      within(canvasElement).getByRole("combobox"),
       "lena@exam",
     );
     await within(canvasElement).findByText("Best match");

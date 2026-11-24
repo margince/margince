@@ -91,9 +91,9 @@ func (h Handlers) Search(w http.ResponseWriter, r *http.Request, params crmcontr
 	httperr.WriteJSON(w, http.StatusOK, wirePage(page))
 }
 
-// wirePage renders a page as the contract's response. `types_with_more` is
-// present on a grouped page alone, empty when every type fit, so a client can
-// tell "nothing more of any type" from "this was a ranked page".
+// wirePage renders a page as the contract's response. `types_with_more` and
+// `types_timed_out` are present on a grouped page alone. They are empty when
+// every type fit, so a client can tell "nothing more of any type" from "this was a ranked page".
 func wirePage(page Page) crmcontracts.SearchResponse {
 	pageInfo := crmcontracts.PageInfo{HasMore: page.HasMore}
 	if page.NextCursor != "" {
@@ -103,6 +103,10 @@ func wirePage(page Page) crmcontracts.SearchResponse {
 	if page.TypesWithMore != nil {
 		more := slices.Clone(page.TypesWithMore)
 		response.TypesWithMore = &more
+	}
+	if page.TypesTimedOut != nil {
+		timedOut := slices.Clone(page.TypesTimedOut)
+		response.TypesTimedOut = &timedOut
 	}
 	if len(page.NearMatches) > 0 {
 		response.NearMatches = wireNearMatches(page.NearMatches)

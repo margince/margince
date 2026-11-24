@@ -32,6 +32,11 @@ type Input struct {
 	Provisional       bool
 	Probability       int
 	ProbabilitySource string
+	// WinChance is the win chance the deal shows and the forecast weights by,
+	// and WinChanceLine says how it was made. Both are empty and zero for a
+	// deal with none, such as a test input.
+	WinChance     int
+	WinChanceLine string
 	// StageProbability is the deal's stage's own probability, the most
 	// Margince may raise the deal's to.
 	StageProbability int

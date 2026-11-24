@@ -39,11 +39,12 @@ type placedFixture struct {
 	e                      *Env
 	deal, company, contact ids.UUID
 	stage                  ids.StageID
+	ledger                 *ledgerSync
 }
 
 // placedGrants are the child grants a placed reader or writer holds on top of
 // a fixture's own.
-var placedGrants = []string{"offer", "contract", "deal_room", "introduction", objCompany, objActivity}
+var placedGrants = []string{"offer", "contract", "deal_room", "introduction", grantFinanceObject, objCompany, objActivity}
 
 func withPlacedGrants(perms principal.Permissions, grant principal.ObjectGrant) principal.Permissions {
 	perms.Objects = maps.Clone(perms.Objects)
@@ -60,12 +61,13 @@ func newPlacedFixture(t *testing.T) placedFixture {
 	company := e.SeedCompany(t, "Placed Co", &e.Rep1)
 	companyID, owner := ids.From[ids.CompanyKind](company), ids.From[ids.UserKind](e.Rep1)
 	deal, err := e.Deals.CreateDeal(e.Admin(), deals.CreateDealInput{
-		Name: "Placed rollout", PipelineID: pipeline, StageID: open, CompanyID: &companyID, OwnerID: &owner,
+		Source: "manual",
+		Name:   "Placed rollout", PipelineID: pipeline, StageID: open, CompanyID: &companyID, OwnerID: &owner,
 	})
 	if err != nil {
 		t.Fatal(err)
 	}
-	return placedFixture{e: e, deal: ids.UUID(deal.Id), company: company, stage: open, contact: e.SeedContact(t, "Placed Contact", &e.Rep1)}
+	return placedFixture{e: e, deal: ids.UUID(deal.Id), company: company, stage: open, contact: e.SeedContact(t, "Placed Contact", &e.Rep1), ledger: &ledgerSync{}}
 }
 
 func (f placedFixture) writer(t *testing.T) context.Context {
@@ -77,7 +79,7 @@ func (f placedFixture) writer(t *testing.T) context.Context {
 // and name the sentence and the parent the line must show.
 func placedWriters(f placedFixture) map[string]func(t *testing.T) (key string, parent ids.UUID) {
 	e := f.e
-	return map[string]func(t *testing.T) (string, ids.UUID){
+	writers := map[string]func(t *testing.T) (string, ids.UUID){
 		"offer": func(t *testing.T) (string, ids.UUID) {
 			description, price, tax := "Rollout", int64(4_000_000), "0.00"
 			_, err := e.Deals.CreateOffer(f.writer(t), ids.From[ids.DealKind](f.deal), deals.CreateOfferInput{
@@ -148,6 +150,8 @@ func placedWriters(f placedFixture) map[string]func(t *testing.T) (key string, p
 			return "magic.action.create_introduction", f.contact
 		},
 	}
+	maps.Copy(writers, ledgerWriters(f))
+	return writers
 }
 
 // writeEvidence records one stage-evidence claim on the deal through the
@@ -212,6 +216,7 @@ func placedLines(ctx context.Context, t *testing.T, e *Env) (home, worklist map[
 var placedChildren = []string{
 	"offer", "contract", "deal_room", "record_assignment", "record_assignment on a company",
 	"attachment", "attachment on a deal", "deal_stage_evidence", "intro_request",
+	"deal_suggestion", "finance_invoice", "finance_payment",
 }
 
 func TestDoneForYouPlacesEachChildOnTheRecordItBelongsTo(t *testing.T) {
@@ -366,8 +371,8 @@ func TestAPlacedChildLeavesTheUnplacedCount(t *testing.T) {
 	for _, change := range changes {
 		got[change.EntityType+"/"+change.Action] = change.Count
 	}
-	if got["offer/update"] != 0 || got["offer/assign"] != 1 || got["product/update"] != 1 {
-		t.Fatalf("the breakdown is %v, want the product update and the offer's unsentenced verb counted and the placed offer update not", got)
+	if got["offer/update"] != 0 || got["offer/assign"] != 1 || got["relationship/update"] != 1 {
+		t.Fatalf("the breakdown is %v, want the relationship update and the offer's unsentenced verb counted and the placed offer update not", got)
 	}
 	home, _ := placedLines(f.e.As(f.e.Rep1, []ids.UUID{f.e.Team1}, withPlacedGrants(RepPerms, principal.ObjectGrant{Read: true})), t, f.e)
 	if home["magic.action.update_offer"] != f.deal {

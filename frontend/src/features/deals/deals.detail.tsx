@@ -1,8 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { type ReactNode, useId, useState } from "react";
+import { useId, useState } from "react";
 import { api } from "../../api/client";
 import { useIdempotencyKey } from "../../api/idempotencykey";
-import { EditAccessRequest } from "../../components/editaccessrequest";
 import {
   LatestInboundLine,
   useLatestInbound,
@@ -26,8 +25,10 @@ import { useTargetApprovals } from "../../lib/approvals.queries";
 import { useDeal } from "../../lib/dealread";
 import { usePipeline } from "../../lib/deals.queries";
 import { useLegalReviewAvailable } from "../../lib/legalreviews.queries";
+import { useDealChangesWhere } from "../../lib/marginchanges";
 import { fromHere } from "../../lib/navigatefrom";
 import { useOpenEmail } from "../../lib/openemail";
+import { inPositionOrder } from "../../lib/pipelines.queries";
 import { unwrap } from "../../lib/problem";
 import type { RecordTabId } from "../../lib/recordtaborder";
 import { scrollPageToTop } from "../../lib/reveal";
@@ -47,10 +48,11 @@ import {
   type PendingAdvance,
 } from "./deal360/confirmadvance";
 import { DealActions } from "./deal360/dealactions";
+import { dealBand } from "./deal360/dealband";
 import { DealSubtitle } from "./deal360/dealheaderfacts";
 import { DealHistoryTab, DealLatestInbound } from "./deal360/dealhistorytab";
 import { DealLegalTab } from "./deal360/deallegaltab";
-import { ArchivedDealBand } from "./deal360/dealrestore";
+import { marginceLineOf } from "./deal360/dealmarginceline";
 import { DealRoomTab } from "./deal360/dealroomtab";
 import { useDealTabCounts } from "./deal360/dealtabcounts";
 import { currentReplyTarget } from "./deal360/dealwaiting";
@@ -62,7 +64,6 @@ import { DealFiles } from "./dealfiles";
 import { DealReferralLine } from "./dealpartner";
 import { DealProjectLine } from "./dealproject";
 import type { Deal, Offer, Stage } from "./deals";
-import { stagesInOrder } from "./deals.columns";
 import { DealDetailsDrawer } from "./deals.details";
 import { DealOverviewPane } from "./deals.overview";
 import { DealPulsePills } from "./deals.pulsepills";
@@ -122,35 +123,6 @@ function DealTabs({
   );
 }
 
-// One sentence for why this deal takes no changes, whichever reason applies,
-// said once across the header so every refused control can point at it. An
-// archived deal's band also offers the way back.
-// Absent while the deal is live and the reader's: `undefined`, not an element
-// that renders null, because RecordView reserves space for anything it is
-// handed. A line always reserved would read as a record with nothing said.
-function dealBand({
-  deal,
-  reason,
-  reasonId,
-}: Readonly<{
-  deal: Deal;
-  reason: string | undefined;
-  reasonId: string;
-}>): ReactNode | undefined {
-  if (reason === undefined) {
-    return undefined;
-  }
-  if (deal.archived_at) {
-    return <ArchivedDealBand deal={deal} reason={reason} reasonId={reasonId} />;
-  }
-  return (
-    <>
-      <p id={reasonId}>{reason}</p>
-      <EditAccessRequest kind="deal" record={deal} />
-    </>
-  );
-}
-
 export function DealScreen({ id }: Readonly<{ id: string }>) {
   const t = useT();
   const { locale } = useLocale();
@@ -180,6 +152,17 @@ export function DealScreen({ id }: Readonly<{ id: string }>) {
   const dealQuery = useDeal(id);
   const pipelineQuery = usePipeline(dealQuery.data?.pipeline_id);
   const pipelineRetired = Boolean(pipelineQuery.data?.archived_at);
+  // Asked for by what the header line is about, so it is found however many
+  // other changes the deal has. A closed deal asks for the close it is on, an
+  // open one for the opening or reopening Margince may still take back.
+  const closingOccurrence = dealQuery.data?.closing_occurrence_id;
+  const marginceReceipts = useDealChangesWhere(
+    id,
+    closingOccurrence
+      ? { stageHistoryId: closingOccurrence }
+      : { changeKinds: ["deal_open", "deal_revive"] },
+    dealQuery.isSuccess,
+  );
   // Every write affordance on this page answers one question, asked once. An
   // archived deal takes no changes, and its verbs stay, refused. One this
   // caller cannot write takes none from them, so its verbs are left out.
@@ -276,7 +259,7 @@ export function DealScreen({ id }: Readonly<{ id: string }>) {
         gone={<RecordGone kind="deal" />}
       >
         {(deal) => {
-          const stages = stagesInOrder(pipelineQuery.data?.stages ?? []);
+          const stages = inPositionOrder(pipelineQuery.data?.stages ?? []);
           const openStages = stages.filter(
             (stage) => stage.semantic === "open",
           );
@@ -349,6 +332,13 @@ export function DealScreen({ id }: Readonly<{ id: string }>) {
                 deal,
                 reason: readOnlyReason,
                 reasonId: readOnlyReasonId,
+                marginceLine: marginceLineOf({
+                  deal,
+                  receipts: marginceReceipts,
+                  openStages,
+                  pipelineRetired,
+                  refusedReasonId,
+                }),
               })}
               tabs={
                 <DealTabs

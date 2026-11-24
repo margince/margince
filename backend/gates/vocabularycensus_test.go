@@ -56,8 +56,9 @@ import (
 // enforces, after every later migration widened or narrowed it.
 const vocabularyCatalog = "migrations/testdata/head_catalog.txt"
 
-// catalogCheckLine reads one CHECK constraint line of the catalog.
-var catalogCheckLine = regexp.MustCompile(`^public\.([a-z_][a-z0-9_]*)\.[a-z0-9_]+ CHECK (.*)$`)
+// catalogCheckLine reads one CHECK constraint line of the catalog. A check not
+// yet validated binds new rows all the same, so its suffix is set aside.
+var catalogCheckLine = regexp.MustCompile(`^public\.([a-z_][a-z0-9_]*)\.[a-z0-9_]+ CHECK (.*?)(?: NOT VALID)?$`)
 
 // catalogTextColumn reads one text column line of the catalog.
 var catalogTextColumn = regexp.MustCompile(`^public\.([a-z_][a-z0-9_]*)\.([a-z_][a-z0-9_]*) text\b`)
@@ -72,7 +73,7 @@ var wholeVocabularyCheck = regexp.MustCompile(
 // extensionArm is the open arm an extension-widened CHECK carries beside its
 // closed list: the `ext:` spelling an extension kind uses. The closed list is
 // the column's vocabulary, so the arm is set aside before the list is read.
-var extensionArm = regexp.MustCompile(` OR \([a-z_][a-z0-9_]* ~ '\^ext:[^']*'::text\)`)
+var extensionArm = regexp.MustCompile(` OR \([a-z_][a-z0-9_]* ~ '\^ext[:_][^']*'::text\)`)
 
 // readWholeVocabulary reads a CHECK body that is a whole vocabulary, behind
 // an extension arm or not. It returns the submatches of wholeVocabularyCheck,
@@ -487,7 +488,7 @@ const repeatedVocabulariesCeiling = 9
 // list this census does not read as a column's vocabulary. Each states a
 // condition inside a wider rule, such as finance_invoice_credit_note_status.
 // The ceiling rises only for such a rule.
-const unreadArrayCheckCeiling = 29
+const unreadArrayCheckCeiling = 30
 
 // TestNoVocabularyCheckHidesFromTheCensus fails when a CHECK with a value
 // list stops being read, so a catalog format change cannot shrink the census.

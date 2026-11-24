@@ -110,6 +110,13 @@ func readVerdictDeal(ctx context.Context, tx pgx.Tx, deal ids.UUID, read *dealVe
 	}
 	read.in.AmountMinor, read.in.Currency, read.in.CloseDate = seen.AmountMinor, seen.Currency, seen.CloseDate
 	read.in.Provisional = seen.Provisional
+	chances, err := chances.WinChances(ctx, tx, read.in.ReadAt, []ids.UUID{deal})
+	if err != nil {
+		return err
+	}
+	if chance, ok := chances[deal]; ok {
+		read.in.WinChance, read.in.WinChanceLine = chance.Percent, chance.Line()
+	}
 	return nil
 }
 

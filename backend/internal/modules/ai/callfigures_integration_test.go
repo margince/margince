@@ -112,7 +112,7 @@ func TestCallStatsCountsFailuresTimeoutsAndCost(t *testing.T) {
 func TestTaskFlowCountsTheUnansweredLogicalCall(t *testing.T) {
 	f := seedFigures(t)
 
-	flow, err := f.reader.TaskFlow(f.ctx, f.task, 7*24*time.Hour)
+	flow, err := f.reader.TaskFlow(f.ctx, f.task, TaskLadder(f.task), 7*24*time.Hour)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -136,7 +136,7 @@ func TestAnEmptyWindowReturnsNoRows(t *testing.T) {
 	if err != nil || rows == nil || len(rows) != 0 {
 		t.Fatalf("rows = %+v (%v), want an empty list", rows, err)
 	}
-	flow, err := f.reader.TaskFlow(f.ctx, f.task, 30*24*time.Hour)
+	flow, err := f.reader.TaskFlow(f.ctx, f.task, TaskLadder(f.task), 30*24*time.Hour)
 	if err != nil || flow.Total != 0 || flow.Unanswered != 0 || len(flow.Steps) != 0 {
 		t.Fatalf("flow = %+v (%v), want nothing", flow, err)
 	}
@@ -194,7 +194,7 @@ func TestARefusedLadderIsUnansweredInTheFlowButNoProviderFailure(t *testing.T) {
 	}
 	reader, reading := NewCallReadStore(env.dbFor(ws)), diagnosticsReader(ws)
 
-	flow, err := reader.TaskFlow(reading, task, 7*24*time.Hour)
+	flow, err := reader.TaskFlow(reading, task, TaskLadder(task), 7*24*time.Hour)
 	if err != nil {
 		t.Fatal(err)
 	}

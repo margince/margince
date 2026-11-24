@@ -74,7 +74,7 @@ and the record marks that run as self judged. The default judge is `claude_cli:c
 
 ```
  try 1 ─┐
- try 2 ─┼─► close to a threshold? ──yes──► 3 more tries (up to 9)
+ try 2 ─┼─► close to a threshold? ──yes──► 3 more tries (up to 12)
  try 3 ─┘            │
                      no
                      ▼
@@ -82,9 +82,16 @@ and the record marks that run as self judged. The default judge is `claude_cli:c
 ```
 
 Models change from run to run, so every scenario gets **3 tries**. If its result sits near a threshold,
-it gets **3 more, up to 9**. Clear cases stop early; cases near the line get more evidence, so chance does
-not settle them. A feature with a single scenario always runs to 9, because 3 out of 3 is not
-yet enough evidence.
+it gets **3 more, up to 12**. Clear cases stop early; cases near the line get more evidence, so chance does
+not settle them.
+
+A feature is never ✅ on fewer than **12 tries** in all. One that looks ready sooner gets more tries
+first, so a feature with a single scenario always runs to 12. With 12 right of 12, the low end of the
+margin is over 80% by the exact formula too. With 9 of 9 it is not.
+
+A scenario of a site that holds fewer than 12 tries in all has no grade of its own on the site's row. When
+every scenario of it is right on its own, the row reads `too_few_runs`, and the feature's pooled grade
+counts its tries.
 
 ## What each scenario must clear
 
@@ -114,10 +121,11 @@ row that leaked. A leak is not an error rate that the pool may average away.
                           │
      ┌────────────────────┼─────────────────────┐
      ▼                    ▼                     ▼
- ≥90% right,          average quality        no scenario
+ ≥90% right of ≥12,   average quality        no scenario
  and ≥80% even        above each             vetoed
  at the cautious      scenario's bar,
- end of the margin    with a margin
+ end of the margin    with a margin, and
+                      ≥3 scores a scenario
      └────────────────────┼─────────────────────┘
                           ▼
          ✅ Ready             all three hold
@@ -141,8 +149,9 @@ A pool allows a single miss, while the gates per scenario and the block above st
   (`backend/internal/compose/aicert/records/`). It names the model, the judge, the thinking level and
   when it was run.
 - The certification page is generated from the records.
-- When the prompt, a scenario or the grading rule changes, the record reads **`re-check pending`** until
-  someone runs it again. A grade always describes the prompt that was measured, never a later one.
+- The record reads **`re-check pending`** when the prompt, a scenario, the grading rule or the check of a
+  site changes. It does too when a judge other than the default graded it. A grade always describes the
+  prompt that was measured, never a later one.
 
 ## When a feature fails: fix in this order
 
@@ -157,6 +166,6 @@ A pool allows a single miss, while the gates per scenario and the block above st
 
 Every try costs one candidate call and one to three judge calls. That is about 1.4 judge calls on
 average, and three only on a close score where the two first scores disagree. A scenario near the line
-can run up to 9 tries, so the judge is still most of the cost. On the default `claude_cli` judge that is
+can run up to 12 tries, so the judge is still most of the cost. On the default `claude_cli` judge that is
 use of a subscription, not money. The subscription's session limit is shared with all else that uses
 it, so keep a sweep to two or three tasks at the same time.

@@ -9,6 +9,8 @@ import (
 	"testing"
 
 	"golang.org/x/sync/semaphore"
+
+	"github.com/margince/margince/backend/internal/shared/ports/connector"
 )
 
 func TestRawReservationsStayHeldUntilConsumptionEnds(t *testing.T) {
@@ -19,7 +21,7 @@ func TestRawReservationsStayHeldUntilConsumptionEnds(t *testing.T) {
 	finish := make(chan struct{})
 	result := make(chan error, 1)
 	go func() {
-		result <- inOrder(ctx, 3, func(ctx context.Context, i int) (Message, error) {
+		result <- inOrder(ctx, connector.BackfillTuning{}, 3, func(ctx context.Context, i int) (Message, error) {
 			reserveResponse(ctx, 128)
 			return Message{RFC822: []byte{byte(i)}}, nil
 		}, func(i int, msg Message, err error) error {
@@ -52,7 +54,7 @@ func TestStoppedWalksReturnAllRawReservations(t *testing.T) {
 			ctx, cancel := context.WithCancel(t.Context())
 			defer cancel()
 			sinkError := errors.New("sink failed")
-			err := inOrder(ctx, 8, func(ctx context.Context, _ int) (Message, error) {
+			err := inOrder(ctx, connector.BackfillTuning{}, 8, func(ctx context.Context, _ int) (Message, error) {
 				reserveResponse(ctx, 128)
 				return Message{RFC822: []byte("mail")}, nil
 			}, func(_ int, _ Message, _ error) error {
@@ -86,7 +88,7 @@ func TestAPanickingConsumerReturnsItsReservation(t *testing.T) {
 				panicked = true
 			}
 		}()
-		if err := inOrder(t.Context(), 1, func(context.Context, int) (Message, error) {
+		if err := inOrder(t.Context(), connector.BackfillTuning{}, 1, func(context.Context, int) (Message, error) {
 			return Message{RFC822: []byte("mail")}, nil
 		}, func(int, Message, error) error { panic("consumer failed") }, budget, rawFetchReservation); err != nil {
 			t.Fatal(err)

@@ -3,6 +3,7 @@
 
 import type { components } from "../../api/schema";
 import { activityHasHappened } from "../../format/activitywhen";
+import { inPositionOrder } from "../../lib/pipelines.queries";
 
 // What the four Overview cards list, read off the 360 alone and dated by its
 // `as_of`, never by the clock.
@@ -74,9 +75,9 @@ export function stageRank(
     return undefined;
   }
   for (const pipeline of pipelines) {
-    const open = (pipeline.stages ?? [])
-      .filter((stage) => stage.semantic === "open")
-      .sort((a, b) => a.position - b.position);
+    const open = inPositionOrder(
+      (pipeline.stages ?? []).filter((stage) => stage.semantic === "open"),
+    );
     const at = open.findIndex((stage) => stage.id === stageId);
     if (at >= 0) {
       return { rank: at + 1, of: open.length };

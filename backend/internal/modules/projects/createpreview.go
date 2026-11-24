@@ -12,9 +12,13 @@ import (
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/kernel/provenance"
 )
 
 func admitProjectCreation(ctx context.Context, tx pgx.Tx, in CreateProjectInput, fallback *ids.UserID) (CreateProjectInput, error) {
+	if err := provenance.AdmitRecordSource(in.Source); err != nil {
+		return CreateProjectInput{}, err
+	}
 	owner, err := storekit.NewRecordOwnerWithDefault(ctx, tx, in.OwnerID, fallback)
 	if err != nil {
 		return CreateProjectInput{}, err

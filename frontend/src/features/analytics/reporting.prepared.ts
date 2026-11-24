@@ -4,6 +4,7 @@
 import type { components } from "../../api/schema";
 import type { MessageKey } from "../../i18n/en";
 import type { Section } from "../../lib/analytics.address";
+import { readsFiscalQuarter } from "./reporting.selection";
 import {
   presetRequest,
   type ReportingView,
@@ -162,7 +163,9 @@ export function preparedSelection(
       ? pipelineId
       : undefined,
     period: report.period,
-    target_basis: report.period === "this_quarter" ? "fiscal_quarter" : "month",
+    target_basis: readsFiscalQuarter(report.period)
+      ? "fiscal_quarter"
+      : "month",
     close_window: "fiscal_quarter",
     metrics: offered.map((metric) => metric.id),
     blocks,

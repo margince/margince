@@ -23,7 +23,6 @@ import (
 	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
-	"github.com/margince/margince/backend/internal/platform/jobs"
 	"github.com/margince/margince/backend/internal/shared/kernel/dealrole"
 	"github.com/margince/margince/backend/internal/shared/kernel/dealseat"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -166,9 +165,48 @@ func AssuranceSubjects(
 }
 
 // assuranceSubjects is AssuranceSubjects, narrowed to the deals in only when it
-// is not nil. A review answer and the forecast's risk signals read the same
-// evidence the nightly pass reads.
+// is not nil. Each open deal carries its one win chance, and Likely is read
+// from it.
 func assuranceSubjects(
+	ctx context.Context, tx pgx.Tx, asOf time.Time, coverage []assurance.SourceCoverage, only []ids.UUID,
+) ([]assurance.Subject, error) {
+	subjects, err := assuranceEvidenceSubjects(ctx, tx, asOf, coverage, only)
+	if err != nil {
+		return nil, err
+	}
+	dealIDs := make([]ids.UUID, 0, len(subjects))
+	for _, s := range subjects {
+		id, err := ids.Parse(s.DealID)
+		if err != nil {
+			return nil, fmt.Errorf("compose: a subject deal id %q does not parse: %w", s.DealID, err)
+		}
+		dealIDs = append(dealIDs, id)
+	}
+	if len(dealIDs) == 0 {
+		return subjects, nil
+	}
+	chances, err := chances.WinChances(ctx, tx, asOf, dealIDs)
+	if err != nil {
+		return nil, err
+	}
+	threshold, err := identity.ForecastLikelyThresholdTx(ctx, tx)
+	if err != nil {
+		return nil, err
+	}
+	for i := range subjects {
+		if chance, ok := chances[dealIDs[i]]; ok {
+			subjects[i].WinProbability = chance.Percent
+			subjects[i].Likely = chance.Percent >= threshold
+		}
+	}
+	return subjects, nil
+}
+
+// assuranceEvidenceSubjects reads the evidence the nightly pass reads, with the
+// stored probability. The risk signals that feed the win chance read this and
+// never the chance, which keeps the chance from depending on itself. No signal
+// reads WinProbability or Likely.
+func assuranceEvidenceSubjects(
 	ctx context.Context, tx pgx.Tx, asOf time.Time, coverage []assurance.SourceCoverage, only []ids.UUID,
 ) ([]assurance.Subject, error) {
 	now := asOf.UTC()
@@ -254,7 +292,7 @@ func scanAssuranceSubject(
 	assessed := deals.AssessViability(evidence, asOf, zone)
 	out.Viability = &assurance.SubjectViability{
 		Outcome: assessed.Outcome, Reasons: assessed.Reasons, SilentDays: assessed.SilentDays,
-		NextChange: assessed.NextChange, Fingerprint: fingerprint,
+		Fingerprint: fingerprint,
 	}
 	return out, nil
 }
@@ -304,22 +342,24 @@ func customerRefusalAnyAudienceSQL(alias, deal, asOf string) string {
 // night the mail is read, but the answers stay. A deal somebody answered is not
 // asked again before its answer ends. The answer was about one silence:
 // once the customer moved the deal after it, a later silence is a new one. A
-// reminder holds at most as long as any answer may hide a finding.
+// reminder holds at most as long as any answer may hide a finding. The outcomes
+// are literals: a bound outcome reads as a partial-index predicate to the plan
+// reuse check.
 func earlierAnswerSQL(deal, asOf string, arg func(any) int) string {
 	capped := assurance.LiveRemindAtSQL("r", fmt.Sprintf("$%d", arg(assurance.MaxSuppressionDays())))
 	return fmt.Sprintf(`(SELECT CASE
 		    WHEN EXISTS (SELECT 1 FROM activity pa JOIN activity_link pl ON pl.activity_id = pa.id
 		                  WHERE pl.deal_id = %[1]s.id AND pa.archived_at IS NULL
 		                    AND NOT %[8]s AND %[7]s) THEN NULL
-		    WHEN r.outcome = $%[3]d AND `+capped+` > %[2]s THEN `+capped+`
-		    WHEN r.outcome IN ($%[4]d, $%[5]d) AND r.expires_at > %[2]s THEN r.expires_at END
+		    WHEN r.outcome = '%[3]s' AND `+capped+` > %[2]s THEN `+capped+`
+		    WHEN r.outcome IN ('%[4]s', '%[5]s') AND r.expires_at > %[2]s THEN r.expires_at END
 		  FROM assurance_resolution r
 		  JOIN assurance_exception x ON x.id = r.exception_id
 		 WHERE x.subject_kind = 'deal' AND x.subject_id = %[1]s.id AND x.type = $%[6]d
 		 ORDER BY r.created_at DESC, r.id DESC
 		 LIMIT 1)`,
-		deal, asOf, arg(assurance.OutcomeRemindLater), arg(assurance.OutcomeValueCorrect),
-		arg(assurance.OutcomeNotRelevant), arg(assurance.TypeBuyerSilent), customerProgressSQL("pa", "pl.deal_id", asOf),
+		deal, asOf, assurance.OutcomeRemindLater, assurance.OutcomeValueCorrect,
+		assurance.OutcomeNotRelevant, arg(assurance.TypeBuyerSilent), customerProgressSQL("pa", "pl.deal_id", asOf),
 		occurredday.BegunSQL("pa", "r.created_at"))
 }
 
@@ -369,17 +409,6 @@ func sourceChecked(coverage []assurance.SourceCoverage, source string) bool {
 		}
 	}
 	return false
-}
-
-// AssuranceConfig is the check's configuration, with a receipt lifetime taken
-// from the job catalog: one cadence plus one run's deadline. A receipt older
-// than that has outlived the check that should have replaced it.
-func AssuranceConfig() assurance.Config {
-	cfg := assurance.DefaultConfig()
-	if spec, ok := jobs.SpecFor(AssuranceSweepArgs{}.Kind()); ok {
-		cfg.ReceiptLifetime = spec.Cadence.Fixed + spec.Timeout.Duration()
-	}
-	return cfg
 }
 
 // AssuranceCoverage answers which sources the run could reach.

@@ -77,7 +77,7 @@ describe("DealsCard: the account's deals as one table", () => {
 
     const open = within(rowOf("Fleet retrofit"));
     expect(open.getByText("Solution Discovery")).toBeTruthy();
-    expect(open.getByText("€48,000.00")).toBeTruthy();
+    expect(open.getByText("€48,000")).toBeTruthy();
     expect(open.getByText("30 Sept")).toBeTruthy();
     expect(open.getByText("Open")).toBeTruthy();
     expect(open.getByText("Stalled")).toBeTruthy();

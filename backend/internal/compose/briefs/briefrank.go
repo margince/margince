@@ -17,6 +17,7 @@ package briefs
 import (
 	"context"
 	"errors"
+	"fmt"
 	"log/slog"
 	"time"
 
@@ -30,6 +31,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/kernel/winprobability"
 )
 
 // BriefRanking is one deterministic ranking pass: the honest-short queue
@@ -67,6 +69,19 @@ type BriefEngine struct {
 	strength briefStrengthSource
 	ranker   *briefL2Ranker
 	log      *slog.Logger
+	// winChances is the one win chance of a deal; nil keeps the stored
+	// probability, which is what a test engine reads.
+	winChances WinChanceReader
+}
+
+// WinChanceReader answers the win chance of each given open deal as of `at`.
+type WinChanceReader func(ctx context.Context, tx pgx.Tx, at time.Time, dealIDs []ids.UUID) (map[ids.UUID]winprobability.Chance, error)
+
+// WithWinChances makes the queue weigh each deal by its one win chance, the
+// number the deal shows, instead of the probability stored on it.
+func (e *BriefEngine) WithWinChances(read WinChanceReader) *BriefEngine {
+	e.winChances = read
+	return e
 }
 
 func NewBriefEngine(pool *pgxpool.Pool, strength briefStrengthSource) *BriefEngine {
@@ -131,7 +146,7 @@ func (e *BriefEngine) gather(ctx context.Context, now time.Time, userID ids.UUID
 
 		// The installation-zone day the timing factor measures against,
 		// resolved in this transaction so it is the same day the run is stamped.
-		out.today, err = localDay(ctx, tx, now)
+		out.today, err = localDay(ctx, tx, userID, now)
 		if err != nil {
 			return err
 		}
@@ -153,6 +168,9 @@ func (e *BriefEngine) gather(ctx context.Context, now time.Time, userID ids.UUID
 		out.revenueNormCurrency = base
 
 		if err := briefCandidates(ctx, tx, userID, now, base, out.facts, &out.order); err != nil {
+			return err
+		}
+		if err := e.restateWinChances(ctx, tx, now, out.facts, out.order); err != nil {
 			return err
 		}
 		out.seatsReadable, err = briefEvidenceRows(ctx, tx, lastView, now, out.facts, out.order, out.stakeholders)
@@ -273,4 +291,23 @@ func briefUser(ctx context.Context) (ids.UUID, error) {
 		return ids.Nil, apperrors.ErrPermissionDenied
 	}
 	return p.UserID, nil
+}
+
+// restateWinChances gives each candidate its one win chance in place of the
+// stored probability, so the queue ranks by the number the deal shows.
+func (e *BriefEngine) restateWinChances(ctx context.Context, tx pgx.Tx, now time.Time, facts map[ids.UUID]briefDealFacts, order []ids.UUID) error {
+	if e.winChances == nil || len(order) == 0 {
+		return nil
+	}
+	chances, err := e.winChances(ctx, tx, now, order)
+	if err != nil {
+		return fmt.Errorf("briefs: reading the win chance of the candidates: %w", err)
+	}
+	for id, chance := range chances {
+		if f, ok := facts[id]; ok {
+			f.winProbability = chance.Percent
+			facts[id] = f
+		}
+	}
+	return nil
 }

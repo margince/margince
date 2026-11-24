@@ -29,7 +29,6 @@ export const BASIS_LABEL: Readonly<
   legal_obligation: "privacynotice.basis.legalObligation",
   vital_or_security_interest: "privacynotice.basis.vitalOrSecurity",
   existing_customer_exception: "privacynotice.basis.existingCustomer",
-  vn_subject_agreement: "privacynotice.basis.vnAgreement",
   none: "privacynotice.basis.none",
 };
 

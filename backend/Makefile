@@ -9,9 +9,8 @@ DB_NAME   ?= margince
 
 # The database THIS worktree's stack runs against, resolved by the same code
 # scripts/dev.sh uses. SEPARATE from DB_NAME on purpose: DB_NAME also feeds
-# db-init and db-wait, which run before dev.sh has created the per-stack database
-# and must target one that already exists — pointing them at margince_dev_<slug>
-# made `make dev` fail at db-init with "database does not exist".
+# db-wait, which runs before dev.sh has created the per-stack database and must
+# target one that already exists. db-init runs in `postgres` whatever DB_NAME is.
 #
 # Lazy (`?=` makes a recursively expanded variable), so the git calls only happen
 # for a target that reads it. Through a script reached by a RELATIVE path, because
@@ -151,7 +150,7 @@ TEST_SHUFFLE_NOTE = $(if $(TEST_SHUFFLE_SEED),@echo "$@: test order -shuffle=$(T
 
 .DEFAULT_GOAL := help
 
-.PHONY: preflight-gates mcp-inaccessible perfdoc config-gen extdoc-gen extdoc-check messaging-rules-drift policy-refresh help check check-static build fetch-test-deps test test-cached test-uncached test-v test-cover test-integration e2e-siteread e2e-ai e2e-ai-report ai-probe ai-eval test-db-up test-it test-roles test-integration-serial lint lint-base lint-strict lint-modules lint-tool arch-lint vet gen gen-workflow mcp-apps-vocab drift generators-twice composition check-composition test-extensions db-up db-init db-wait seed-reset seed-dev-db migrate migrate-up migrate-down run psql redis-cli tidy dev infra-down infra-logs infra-reset clean vuln vendor-live tools tools-go hooks
+.PHONY: preflight-gates mcp-inaccessible perfdoc config-gen extdoc-gen extdoc-check messaging-rules-drift policy-refresh help check check-static build fetch-test-deps test test-cached test-uncached test-v test-cover test-integration e2e-siteread e2e-ai e2e-ai-report e2e-ai-restamp ai-probe ai-eval test-db-up test-it test-roles test-integration-serial lint lint-base lint-strict lint-modules lint-tool arch-lint vet gen gen-workflow mcp-apps-vocab drift generators-twice composition check-composition test-extensions db-up db-init db-wait seed-reset seed-dev-db migrate migrate-up migrate-down run psql redis-cli tidy dev infra-down infra-logs infra-reset clean vuln vendor-live tools tools-go hooks
 
 help: ## List targets with their descriptions (the default goal)
 	@grep -hE '^[a-zA-Z][a-zA-Z0-9_-]*:.*## ' $(MAKEFILE_LIST) | awk -F':.*## ' '{printf "  %-18s %s\n", $$1, $$2}'
@@ -496,8 +495,8 @@ AICERT_TIMEOUT ?= 90m
 # Cost ceiling: the judge grades a run once, again within 10 points of a band or
 # anywhere below the floor plus 10, and a third time when those two differ by more
 # than 5 — about 1.4 calls a run, more on a model that scores low. A
-# borderline scenario extends from 3 runs to at most 9, so one scenario costs at
-# most 9 candidate and 27 judge calls; a settled one 3 runs and about 4.
+# borderline scenario extends from 3 runs to at most 12, so one scenario costs at
+# most 12 candidate and 36 judge calls; a settled one 3 runs and about 4.
 e2e-ai: composition ## Certify AI tasks (paid: real model + network; opt-in). ROUTING=config/margince.dev.yaml certifies what a deployment binds, per task; or MODEL=prov:model for one candidate. One judge grades the run: JUDGE=claude_cli:claude-sonnet-5-5 by default, through `claude -p` on CLAUDE_CODE_OAUTH_TOKEN (refuses Claude candidates; MAX_THINKING_TOKENS=<n> caps its thinking); JUDGE=openai_compatible:anthropic/claude-sonnet-4.6 JUDGE_UPSTREAM='{}' pays OpenRouter for the same model, JUDGE=gemini:gemini-3.1-flash-lite where the run certifies no Gemini model. BYOK key auto-loaded from .env.local. TASK=x RUNS=<n> BASE_URL=... UPSTREAM='{"quantizations":["bf16"]}' JUDGE_UPSTREAM='{}' (the broker's own routing for the judge) PROFILE=cloud_frontier (ignored under ROUTING) AICERT_TIMEOUT=90m RESUME= to re-pay for every run. PARALLEL=4 runs of a task in flight at once (1 = one after another). SITE=<variant> and SCENARIO=<regexp> measure part of a task and merge its rows into the committed record. Under ROUTING= every distinct rung of a task's ladder is certified, fallback included; STALE_ONLY=0 re-measures records already current
 	$(LOAD_ENV_LOCAL) MARGINCE_AICERT=1 MARGINCE_AICERT_TASK=$(TASK) \
 	  MARGINCE_AICERT_ROUTING=$(if $(ROUTING),$(CURDIR)/../$(ROUTING),$(MARGINCE_AICERT_ROUTING)) \
@@ -513,6 +512,9 @@ e2e-ai: composition ## Certify AI tasks (paid: real model + network; opt-in). RO
 
 e2e-ai-report: ## Print the certification readiness report — every shipped site, its band, and whether its record is current, stale or absent — from internal/compose/aicert/{corpus,records}/.
 	$(GO) run ./internal/compose/aicert/reportcmd
+
+e2e-ai-restamp: ## Grade stored certification records again after a grading-rule bump or a site-check hash change that moved no prompt, with no new runs. FROM=<old rule> or SITE_CHECKS_FROM=<old site_checks.golden>; WRITE=1 writes, otherwise it only reports.
+	$(GO) run ./internal/compose/aicert/restampcmd $(if $(FROM),-from '$(FROM)') $(if $(SITE_CHECKS_FROM),-site-checks-from '$(SITE_CHECKS_FROM)') $(if $(WRITE),-write)
 
 # ai-probe drives ONE invocation site against input an operator supplies, through
 # the same certification case `make e2e-ai` drives. It answers a different
@@ -623,42 +625,28 @@ bench-perf: composition ## PERF-3/PERF-7 benchmark harness, writing a record; mi
 	     $(GO) test -tags "integration bench" -run TestPerfBudgetsHoldOnSeededVolumeTier -count=1 -v -timeout $(BENCH_PERF_TIMEOUT) ./internal/compose/integration'
 	@if [ -n "$(BENCH_RENDER)" ]; then $(MAKE) --no-print-directory perfdoc; fi
 
-# The SMB budgets, recording NOTHING: a drift check, run by hand, without
-# touching the published page.
+# The budgets of one tier, recording NOTHING: a drift check that leaves the
+# published page alone. BENCH_PERF_CHECK_TIER picks the tier (smb by default;
+# the weekly workflow also runs mid_market, where the PERF-7 SLO binds).
 #
-# SMB ONLY, and the omission is the honest half of this target. Mid-market is
-# where the PERF-7 SLO binds, so a drift alarm would ideally watch it. What
-# used to rule it out was the seed: 250k contacts, 500k activities and 50k
-# relationships did not finish inside `go test`'s budget at all. That was the
-# seed planning its denormalisation triggers against an unanalysed database,
-# not the volume, and it is fixed in seedBenchTier — measured on a fast laptop
-# afterwards: SMB 12.4s, mid-market 151.4s.
-#
-# The remaining reason is a budget, not a clock: mid-market's PERF-3 p95 lands
-# at 181ms against a 200ms budget on that laptop — 9% of headroom. What the
-# runner would measure is unknown, and not safe to guess in either direction:
-# the same laptop reads SMB's search_fts at 35.7ms where the 2026-09-07 CI run
-# read 6.1ms, so a laptop number is not even a conservative one. A weekly job
-# that breaches on measurement spread files an issue saying a budget is
-# breaching, which would be a fabricated finding — so which tier the alarm
-# gates on is a call somebody has to make on the runner's own numbers, not a
-# default to drift into.
-#
-# So the alarm watches SMB, which is what most installations look like, and
-# drift there is real drift. Mid-market stays with `bench-perf`, by hand, where
-# a contact is watching the numbers — and a PERF-7 row measured below
-# mid-market renders `inconclusive` in the published page rather than claiming
-# a bound it did not test.
+# BENCH_PERF_GATE=0 measures without failing on a breach: the harness still
+# prints every p50/p95/p99 and says which budget it would have failed. The
+# scheduled workflow's measure-only dispatch uses it to read the spread between
+# runners. The weekly run keeps the gate on.
 #
 # MARGINCE_BENCH_RECORD is cleared rather than merely left unset: "writes
 # nothing" must be a property of the target, not of whatever the caller's shell
 # happened to export. A developer with it set from an earlier `bench-perf` would
-# otherwise have this target rewrite the published record from the SMB tier.
-bench-perf-check: composition ## PERF-3/PERF-7 on the SMB tier, no record written (needs db-up)
+# otherwise have this target rewrite the published record.
+BENCH_PERF_CHECK_TIER    ?= smb
+BENCH_PERF_GATE          ?= 1
+BENCH_PERF_CHECK_TIMEOUT ?= 20m
+bench-perf-check: composition ## PERF-3/PERF-7 on one tier (BENCH_PERF_CHECK_TIER, smb by default), no record written; BENCH_PERF_GATE=0 reports without failing (needs db-up)
 	@$(GOWORK_COMPOSED) bash -c 'cd .. && source scripts/lib-testdb.sh && parse_test_dsn && bench_db $(BENCH_DB_NAME) \
-	  && cd backend && MARGINCE_BENCH_TIER=smb MARGINCE_BENCH_RECORD= \
+	  && cd backend && MARGINCE_BENCH_TIER=$(BENCH_PERF_CHECK_TIER) \
+	     MARGINCE_BENCH_GATE=$(BENCH_PERF_GATE) MARGINCE_BENCH_RECORD= \
 	     MARGINCE_TEST_DSN="$$BENCH_OWNER_DSN" MARGINCE_TEST_APP_DSN="$$BENCH_APP_DSN" \
-	     $(GO) test -tags "integration bench" -run TestPerfBudgetsHoldOnSeededVolumeTier -count=1 -v -timeout 20m ./internal/compose/integration'
+	     $(GO) test -tags "integration bench" -run TestPerfBudgetsHoldOnSeededVolumeTier -count=1 -v -timeout $(BENCH_PERF_CHECK_TIMEOUT) ./internal/compose/integration'
 
 # The `bench` lane: measurements run BY HAND, never by a merge gate.
 #
@@ -666,8 +654,8 @@ bench-perf-check: composition ## PERF-3/PERF-7 on the SMB tier, no record writte
 # runs any of them. `make vet` and both golangci passes still TYPE-CHECK them,
 # which is the only thing standing between a by-hand lane and rot.
 #
-# bench-perf above is the one exception to "by hand": the scheduled workflow
-# runs it weekly on the SMB tier, because PERF-3/PERF-7 lost its standing
+# bench-perf above and bench-perf-check are the exceptions to "by hand": the
+# scheduled workflow runs them weekly, because PERF-3/PERF-7 lost its standing
 # merge-gate canary and drift nobody looks for is drift nobody finds.
 #
 # Separate targets rather than one, because they measure unrelated promises and
@@ -905,6 +893,7 @@ gen: mcp-apps-vocab handbook-embed ## Regenerate everything derived from the con
 		echo "gen: approval reading catalog not regenerated (no frontend toolchain); fe-drift checks it"; \
 	fi
 	$(GOWORK_ROOT) $(GO) run ./tools/gen-composition $(COMPOSITION_FLAGS)
+	$(GOWORK_ROOT) $(GO) run ./tools/gen-aitasks -validate -contract ../build/composition/api/ai-tasks.yaml
 	$(GOWORK_ROOT) $(GO) generate ./internal/contracts
 	$(GOWORK_ROOT) $(GO) generate ./pkg/extension/crm
 	$(GOWORK_ROOT) $(GO) run ./tools/gen-stubs
@@ -921,8 +910,10 @@ gen: mcp-apps-vocab handbook-embed ## Regenerate everything derived from the con
 		-out-kinds internal/compose/jobkinds_gen.go
 	$(GOWORK_ROOT) $(GO) run ./tools/gen-worklist -contract api/worklist-kinds.yaml \
 		-out-go internal/compose/attention/kinds_gen.go -out-frontend ../frontend/src/lib/worklistkinds.gen.ts
-	$(GOWORK_ROOT) $(GO) run ./internal/compose/aicert/decisioncertcmd -out internal/modules/ai/decisioncert_gen.go
+	$(GOWORK_ROOT) $(GO) run ./internal/compose/aicert/decisioncertcmd -out internal/modules/ai/decisioncert_gen.go -tier-out internal/modules/ai/tiercert_gen.go
 	$(GOWORK_ROOT) $(GO) run ./internal/compose/aicert/attemptlimitcmd -out internal/modules/ai/attemptlimits_gen.go
+	$(GOWORK_ROOT) $(GO) run ./internal/compose/aicert/taskgradecmd -out internal/modules/ai/taskgrades_gen.go
+	$(GOWORK_ROOT) $(GO) run ./tools/gen-modelsetups -out ../frontend/src/lib/modelsetups.gen.ts -out-go internal/modules/ai/stockpresets_gen.go
 	$(GOWORK_ROOT) $(GO) run ./tools/gen-messaging-rules -root ..
 
 # Every file the settings registry is the source of: the settings tables in
@@ -968,7 +959,7 @@ drift: messaging-rules-drift ## Fail when a committed generated file drifted fro
 	# page went on publishing an older machine's numbers under a date no record
 	# held. A page that is merely stale says so; one that disagrees with its own
 	# source reads as current and is believed.
-	git diff --exit-code -- '*_gen.go' '*_gen.json' internal/compose/agentbundle/agentcontract_gen.yaml internal/compose/agentbundle/agentindex_gen.txt internal/contracts/ ../config/margince.schema.json ../config/margince.example.yaml ../config/margince.defaults.yaml ../.env.example ../docs/reference/configuration.md '../extensions/*/manifest.generated.json' internal/modules/agents/apps/forbidden.json internal/modules/agents/apps/actions.json 'internal/modules/knowledge/handbook/*.md' ../docs/reference/performance-budgets.md ../docs/reference/benchmark.md ../docs/reference/ai-provider-outages.md ../frontend/src/lib/worklistkinds.gen.ts '../extensions/*/messagingrules_gen.go'
+	git diff --exit-code -- '*_gen.go' '*_gen.json' internal/compose/agentbundle/agentcontract_gen.yaml internal/compose/agentbundle/agentindex_gen.txt internal/contracts/ ../config/margince.schema.json ../config/margince.example.yaml ../config/margince.defaults.yaml ../.env.example ../docs/reference/configuration.md '../extensions/*/manifest.generated.json' internal/modules/agents/apps/forbidden.json internal/modules/agents/apps/actions.json 'internal/modules/knowledge/handbook/*.md' ../docs/reference/performance-budgets.md ../docs/reference/benchmark.md ../docs/reference/ai-provider-outages.md ../frontend/src/lib/worklistkinds.gen.ts ../frontend/src/lib/modelsetups.gen.ts '../extensions/*/messagingrules_gen.go'
 	# Untracked generated outputs are absent from git diff, including files a
 	# generator recreates after a committed deletion.
 	@u="$$(git ls-files --others --exclude-standard -- '../extensions/*/manifest.generated.json' '../extensions/*/messagingrules_gen.go' '*_gen.json')"; \
@@ -1105,7 +1096,7 @@ db-up: ## Start the dev stack (docker-compose.dev.yml) and create the app role
 PSQL = bash ../scripts/dev-psql.sh $(PG_PORT)
 
 db-init: ## (Re)apply scripts/db-init.sql to the running Postgres
-	$(PSQL) $(DB_NAME) -v ON_ERROR_STOP=1 < ../scripts/db-init.sql
+	$(PSQL) postgres -v ON_ERROR_STOP=1 < ../scripts/db-init.sql
 
 seed-reset: ## Clear the demo RECORDS, keeping the installation and its config (scripts/seed-reset.sql); make seed-dev refills it, no restart needed
 	$(PSQL) $(DEV_DB_NAME) -v ON_ERROR_STOP=1 < ../scripts/seed-reset.sql

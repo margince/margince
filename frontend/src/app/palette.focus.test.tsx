@@ -79,7 +79,7 @@ describe("the palette hands focus back before it hides its overlay", () => {
     renderWithQueryClient(<PaletteFromButton />);
     const opener = screen.getByRole("button", { name: "Search" });
     await user.click(opener);
-    expect(document.activeElement).toBe(screen.getByRole("searchbox"));
+    expect(document.activeElement).toBe(screen.getByRole("combobox"));
     return { user, opener };
   }
 
@@ -101,7 +101,7 @@ describe("the palette hands focus back before it hides its overlay", () => {
 
   it("on Enter, running the selected row", async () => {
     const { user, opener } = await openFromButton();
-    await user.type(screen.getByRole("searchbox"), "deals");
+    await user.type(screen.getByRole("combobox"), "deals");
     await user.keyboard("{Enter}");
     expect(window.location.hash).toBe("#/deals");
     hiding.expectHiddenAfterFocusLeft(overlay());
@@ -119,7 +119,7 @@ describe("the palette hands focus back before it hides its overlay", () => {
     const opener = screen.getByRole("button", { name: "Search" });
     opener.focus();
     rerender(page(true));
-    expect(document.activeElement).toBe(screen.getByRole("searchbox"));
+    expect(document.activeElement).toBe(screen.getByRole("combobox"));
 
     rerender(page(false));
 

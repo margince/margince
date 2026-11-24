@@ -126,7 +126,7 @@ func createEachRecord(ctx context.Context, t *testing.T, e *Env) (contact, compa
 	if err != nil {
 		t.Fatalf("creating the company: %v", err)
 	}
-	createdDeal, err := e.Deals.CreateDeal(ctx, deals.CreateDealInput{Name: "Fair Follow-up", PipelineID: pipeline, StageID: open})
+	createdDeal, err := e.Deals.CreateDeal(ctx, deals.CreateDealInput{Source: "manual", Name: "Fair Follow-up", PipelineID: pipeline, StageID: open})
 	if err != nil {
 		t.Fatalf("creating the deal: %v", err)
 	}

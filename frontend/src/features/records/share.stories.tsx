@@ -3,9 +3,12 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, userEvent, waitFor, within } from "storybook/test";
+import type { GrantSpec } from "../../testing/mefixture";
 import {
   installFetchStub,
   jsonResponse,
+  meRoute,
+  type RouteMap,
   StoryProviders,
 } from "../../testing/story-utils";
 import { ShareScreen } from "./share";
@@ -27,9 +30,22 @@ export default meta;
 
 type Story = StoryObj;
 
+// Sharing a record asks the reader for that record kind's update.
+const MAY_SHARE: GrantSpec = {
+  contact: ["read", "update"],
+  company: ["read", "update"],
+  deal: ["read", "update"],
+  lead: ["read", "update"],
+  project: ["read", "update"],
+};
+
+function stubShare(routes: RouteMap) {
+  installFetchStub({ "GET /me": meRoute(MAY_SHARE), ...routes });
+}
+
 export const CompanyContacts: Story = {
   render: () => {
-    installFetchStub({
+    stubShare({
       "GET /users": () => jsonResponse(usersPage),
       "GET /teams": () => jsonResponse(teamsPage),
       "GET /companies": () =>
@@ -94,7 +110,11 @@ const teamsPage = {
 // story shows the bare id, which isn't reviewable. Stub the record read so the
 // name resolves exactly as it would in the app.
 const deal = () =>
-  jsonResponse({ id: "d-1", name: "BÄR Pharma — Packaging QA" });
+  jsonResponse({
+    id: "d-1",
+    name: "BÄR Pharma — Packaging QA",
+    writable: true,
+  });
 
 const grant = {
   id: "g-1",
@@ -144,7 +164,7 @@ async function pickHolder(canvas: ReturnType<typeof within>) {
 
 export const EmptyRoster: Story = {
   render: () => {
-    installFetchStub({
+    stubShare({
       "GET /users": () =>
         jsonResponse({
           data: [],
@@ -174,7 +194,7 @@ export const EmptyRoster: Story = {
 // missing, Retry sits under it, and the team that did load can still be picked.
 export const RosterFailed: Story = {
   render: () => {
-    installFetchStub({
+    stubShare({
       "GET /users": () =>
         jsonResponse({ title: "Server error", status: 500 }, 500),
       "GET /teams": () => jsonResponse(teamsPage),
@@ -200,7 +220,7 @@ export const RosterFailed: Story = {
 
 export const WithAccessList: Story = {
   render: () => {
-    installFetchStub({
+    stubShare({
       "GET /users": () => jsonResponse(usersPage),
       "GET /teams": () => jsonResponse(teamsPage),
       "GET /deals/d-1": deal,
@@ -220,7 +240,7 @@ export const WithAccessList: Story = {
 
 export const RevokeConfirmOpen: Story = {
   render: () => {
-    installFetchStub({
+    stubShare({
       "GET /users": () => jsonResponse(usersPage),
       "GET /teams": () => jsonResponse(teamsPage),
       "GET /deals/d-1": deal,
@@ -248,7 +268,7 @@ export const RevokeConfirmOpen: Story = {
 // on the compose defaults.
 export const HolderPicked: Story = {
   render: () => {
-    installFetchStub(reassertRoutes(writeGrant));
+    stubShare(reassertRoutes(writeGrant));
     return (
       <StoryProviders>
         <ShareScreen recordType="deal" recordId="d-1" />
@@ -264,7 +284,7 @@ export const HolderPicked: Story = {
 // actor may not have meant.
 export const ReduceAccessConfirm: Story = {
   render: () => {
-    installFetchStub(reassertRoutes(writeGrant));
+    stubShare(reassertRoutes(writeGrant));
     return (
       <StoryProviders>
         <ShareScreen recordType="deal" recordId="d-1" />
@@ -283,7 +303,7 @@ export const ReduceAccessConfirm: Story = {
 // the screen says so instead of letting silence read as a change that landed.
 export const NothingChanged: Story = {
   render: () => {
-    installFetchStub(reassertRoutes(grant));
+    stubShare(reassertRoutes(grant));
     return (
       <StoryProviders>
         <ShareScreen recordType="deal" recordId="d-1" />
@@ -302,7 +322,7 @@ export const NothingChanged: Story = {
 // actor's own.
 export const SeatCeilingRefusal: Story = {
   render: () => {
-    installFetchStub({
+    stubShare({
       ...reassertRoutes(grant),
       "POST /record-grants": () =>
         jsonResponse(

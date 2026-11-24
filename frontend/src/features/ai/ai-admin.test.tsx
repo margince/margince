@@ -145,6 +145,9 @@ it("previews both fields before writing the allowance with its revision", async 
   await user.click(
     await screen.findByRole("button", { name: "Edit allowance" }),
   );
+  expect(
+    screen.getByRole("dialog", { name: "Monthly AI allowance" }),
+  ).toBeTruthy();
   const field = screen.getByLabelText("Tokens per full user per month");
   await user.clear(field);
   await user.type(field, "20000000");
@@ -158,6 +161,7 @@ it("previews both fields before writing the allowance with its revision", async 
   expect(writes).toHaveLength(0);
   await user.click(screen.getByRole("button", { name: "Save allowance" }));
   await screen.findByText("Allowance saved");
+  expect(screen.queryByRole("dialog")).toBeNull();
   expect(writes).toEqual([
     {
       config: { tokens_per_full_user: 20000000, company_monthly_tokens: null },
@@ -442,6 +446,51 @@ it("puts decision-first rows on top, then rows that declare a skip, then the res
       first,
     );
   }
+});
+
+it("says per task what the records say about the model a tier serves", async () => {
+  const user = userEvent.setup({ delay: null });
+  const [lead] = feature.effective_candidates;
+  if (!lead) throw new Error("the feature fixture carries no candidate");
+  const withCertification = (
+    task: string,
+    certification?: {
+      verdict: "certified" | "supported_degraded" | "not_supported";
+      current: boolean;
+    },
+  ) => ({
+    ...feature,
+    task,
+    display_name: `Activity ${task}`,
+    effective_candidates: [{ ...lead, model: "m-1", certification }],
+  });
+  render(
+    <LocaleProvider initial="en">
+      <AiFeatureTable
+        rows={[
+          withCertification("a", { verdict: "certified", current: true }),
+          withCertification("b", { verdict: "not_supported", current: true }),
+          withCertification("c", {
+            verdict: "supported_degraded",
+            current: false,
+          }),
+          withCertification("d"),
+        ]}
+      />
+    </LocaleProvider>,
+  );
+  expect(await openTaskDetails(user, "Activity a")).toHaveTextContent(
+    "m-1 is certified for this task.",
+  );
+  expect(await openTaskDetails(user, "Activity b")).toHaveTextContent(
+    "m-1 is not certified for this task. It is still used",
+  );
+  expect(await openTaskDetails(user, "Activity c")).toHaveTextContent(
+    "reduced quality. The record predates the current prompts.",
+  );
+  expect(await openTaskDetails(user, "Activity d")).toHaveTextContent(
+    "m-1 has not been measured for this task with these settings.",
+  );
 });
 
 it("shows a badge only for a departure, and no disclosure for a single candidate", async () => {

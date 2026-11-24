@@ -23,6 +23,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/kernel/provenance"
 	"github.com/margince/margince/backend/internal/shared/kernel/values"
 	"github.com/margince/margince/backend/internal/shared/ports/fieldcatalog"
 )
@@ -298,6 +299,9 @@ func (s *Store) clearedForBirth(ctx context.Context, tx pgx.Tx, in CreateDealInp
 }
 
 func (s *Store) clearedForBirthWithOwner(ctx context.Context, tx pgx.Tx, in CreateDealInput, pastCloseAllowed bool, fallback *ids.UserID) (CreateDealInput, error) {
+	if err := provenance.AdmitRecordSource(in.Source); err != nil {
+		return in, err
+	}
 	// A decided owner arrives already settled: the qualify seam carries the
 	// LEAD's owner over rather than assigning one, and the suggestion seam
 	// asks auth.EnsureAssignee itself before it decides.
@@ -416,7 +420,7 @@ func (s *Store) createDealInTx(ctx context.Context, tx pgx.Tx, in CreateDealInpu
 	if err := storekit.EmitEvent(ctx, tx, auditID, id.UUID, crmcontracts.PublicEventDealCreated{Name: in.Name, Imported: imported, ImportRunId: importRun}); err != nil {
 		return crmcontracts.Deal{}, fmt.Errorf("emit deal.created: %w", err)
 	}
-	out, err := readDealForCaller(ctx, tx, id, storekit.LiveOnly, active)
+	out, err := s.readDealStamped(ctx, tx, id, storekit.LiveOnly, active)
 	if err != nil {
 		return crmcontracts.Deal{}, fmt.Errorf("read created deal: %w", err)
 	}

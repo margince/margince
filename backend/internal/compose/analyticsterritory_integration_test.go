@@ -73,7 +73,8 @@ func (b territoryBook) deal(t *testing.T, territory string, euros int64, win boo
 		custom[b.column] = territory
 	}
 	created, err := b.store.CreateDeal(b.e.Admin(), deals.CreateDealInput{
-		Name: fmt.Sprintf("%s deal", territory), PipelineID: b.pipeline, StageID: b.open,
+		Source: "manual",
+		Name:   fmt.Sprintf("%s deal", territory), PipelineID: b.pipeline, StageID: b.open,
 		AmountMinor: &amount, Currency: &currency, CustomFields: custom,
 	})
 	if err != nil {

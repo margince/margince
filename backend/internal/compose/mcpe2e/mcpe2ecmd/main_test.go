@@ -39,7 +39,7 @@ func TestTheReportCountsEveryCommittedVerdictFolder(t *testing.T) {
 
 func TestStampsAreWrittenPerDoor(t *testing.T) {
 	declareTree(t)
-	stamps := map[string]map[string]map[string]string{}
+	stamps := map[string]map[string]map[string]json.RawMessage{}
 	for _, door := range []string{"mcp", "rest"} {
 		path := filepath.Join(t.TempDir(), "stamps.json")
 		if err := run([]string{"stamps", "-root", repoRoot, "-door", door, "-out", path}, &strings.Builder{}); err != nil {
@@ -49,7 +49,7 @@ func TestStampsAreWrittenPerDoor(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		byName := map[string]map[string]string{}
+		byName := map[string]map[string]json.RawMessage{}
 		if err := json.Unmarshal(body, &byName); err != nil {
 			t.Fatal(err)
 		}
@@ -57,7 +57,7 @@ func TestStampsAreWrittenPerDoor(t *testing.T) {
 	}
 	for name, mcp := range stamps["mcp"] {
 		rest := stamps["rest"][name]
-		if mcp["scenario"] != rest["scenario"] || mcp["tools"] == rest["tools"] {
+		if string(mcp["scenario"]) != string(rest["scenario"]) || string(mcp["tools"]) == string(rest["tools"]) {
 			t.Errorf("%s: one scenario through two doors must share its scenario digest and differ in tool copy: %v %v",
 				name, mcp, rest)
 		}

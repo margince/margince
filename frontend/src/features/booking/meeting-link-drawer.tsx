@@ -16,9 +16,11 @@ import { Heading } from "../../design-system/heading";
 import { Modal } from "../../design-system/modal";
 import { ProviderMark } from "../../design-system/provider-mark";
 import { Select, type SelectOption } from "../../design-system/select";
+import { formatNumber } from "../../format/format";
 import {
   type PluralTranslator,
   type Translator,
+  useLocale,
   usePlural,
   useT,
 } from "../../i18n";
@@ -32,6 +34,13 @@ import { useConnectors } from "../../lib/connectors";
 import { usePatchSchedulingProfile } from "../../lib/scheduling-profile-query";
 import { BookingAliasField } from "./booking-alias";
 import { HoursSummary, ReplaceAddressConfirm } from "./meeting-link-actions";
+import {
+  lengthsProblem,
+  MAX_MINUTES,
+  MAX_OFFERED,
+  MIN_MINUTES,
+  parseLengths,
+} from "./meetinglengths";
 import "./meeting-cards.css";
 
 export { ReplaceAddressConfirm } from "./meeting-link-actions";
@@ -41,9 +50,6 @@ type Profile = components["schemas"]["SchedulingProfile"];
 // The limits crm.yaml gives SchedulingProfile.title and .location.
 const TITLE_MAX = 200;
 const LOCATION_MAX = 1000;
-const MIN_MINUTES = 15;
-const MAX_MINUTES = 480;
-const MAX_OFFERED = 16;
 const LENGTHS = ["15", "30", "45", "60", "90", "other"] as const;
 type Length = (typeof LENGTHS)[number];
 
@@ -109,27 +115,6 @@ function draftOf(profile: Profile): LinkDraft {
     video: videoOf(profile),
     location: profile.location,
   };
-}
-
-function parseLengths(value: string): number[] {
-  return value
-    .split(",")
-    .map((part) => part.trim())
-    .filter(Boolean)
-    .map(Number);
-}
-
-function validLengths(lengths: number[]): boolean {
-  return (
-    lengths.length <= MAX_OFFERED &&
-    new Set(lengths).size === lengths.length &&
-    lengths.every(
-      (length) =>
-        Number.isInteger(length) &&
-        length >= MIN_MINUTES &&
-        length <= MAX_MINUTES,
-    )
-  );
 }
 
 function minutesOf(draft: LinkDraft): number {
@@ -223,6 +208,7 @@ function LinkForm({
 }>) {
   const t = useT();
   const plural = usePlural();
+  const { locale } = useLocale();
   const [draft, setDraft] = useState(() => draftOf(profile));
   const [replacing, setReplacing] = useState(false);
   const save = usePatchSchedulingProfile();
@@ -240,7 +226,7 @@ function LinkForm({
   const minutesInput = useRef<HTMLInputElement>(null);
   const offeredInput = useRef<HTMLInputElement>(null);
   const locationInput = useRef<HTMLInputElement>(null);
-  const offeredError = !validLengths(parseLengths(draft.offered ?? ""));
+  const offeredProblem = lengthsProblem(parseLengths(draft.offered ?? ""));
   const locationError =
     draft.video === "own" && draft.location.trim() === ""
       ? t("scheduling.locationRequired")
@@ -262,7 +248,7 @@ function LinkForm({
       !Number.isInteger(minutes) ||
       minutes < MIN_MINUTES ||
       minutes > MAX_MINUTES ||
-      !validLengths(parseLengths(submitted.offered ?? "")) ||
+      lengthsProblem(parseLengths(submitted.offered ?? "")) !== undefined ||
       (submitted.video === "own" && !submitted.location.trim())
     )
       return;
@@ -352,7 +338,10 @@ function LinkForm({
         <Field
           label={t("scheduling.offeredLengths")}
           hint={t("scheduling.offeredLengthsHelp")}
-          error={offeredError ? t("scheduling.lengthInvalid") : undefined}
+          error={
+            offeredProblem &&
+            t(offeredProblem, { max: formatNumber(MAX_OFFERED, locale) })
+          }
         >
           {(control) => (
             <TextInput

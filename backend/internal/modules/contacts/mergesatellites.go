@@ -26,12 +26,16 @@ import (
 )
 
 // relinkStrandedSatellites is the one call the merge makes for both halves
-// below, so relinkContactReferences names this concern once rather than twice.
+// below and the LinkedIn connections, so relinkContactReferences names this
+// concern once.
 func relinkStrandedSatellites(ctx context.Context, tx pgx.Tx, sourceID, targetID ids.ContactID) error {
 	if err := relinkReaderJudgements(ctx, tx, sourceID, targetID); err != nil {
 		return err
 	}
-	return relinkWorkInFlight(ctx, tx, sourceID, targetID)
+	if err := relinkWorkInFlight(ctx, tx, sourceID, targetID); err != nil {
+		return err
+	}
+	return relinkLinkedInConnections(ctx, tx, sourceID, targetID)
 }
 
 // relinkReaderJudgements moves what a READER decided about this contact, and

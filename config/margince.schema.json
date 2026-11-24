@@ -276,6 +276,18 @@
             "${file:/run/secrets/name}"
           ]
         },
+        "provider_keys_azure_openai": {
+          "description": "BYOK API key for the azure_openai provider (the Azure OpenAI resource's static key); required only when a binding names it.",
+          "type": [
+            "string",
+            "null"
+          ],
+          "pattern": "^\\s*$|^\\s*\\$\\{(env|file):[^}]*[^}\\s][^}]*\\}\\s*$",
+          "examples": [
+            "${env:VARIABLE_NAME}",
+            "${file:/run/secrets/name}"
+          ]
+        },
         "provider_keys_gemini": {
           "description": "BYOK API key for the Gemini provider, also sent by gemini_decision; required only when a binding names either.",
           "type": [
@@ -551,6 +563,16 @@
           "maximum": 20000,
           "default": 500
         },
+        "classify_pass_cap": {
+          "description": "Captured messages one labeling run may handle; the rest wait for the next run.",
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 1,
+          "maximum": 2500,
+          "default": 500
+        },
         "confidentiality_pass_cap": {
           "description": "Held mail threads one review pass may judge; the rest wait for the next pass.",
           "type": [
@@ -605,6 +627,14 @@
           ],
           "default": 1
         },
+        "history_fetch_workers": {
+          "description": "Messages one history page downloads at once. 0 keeps the built-in 4 for Gmail and 2 for Microsoft. Microsoft allows four requests at once per mailbox, so it never uses more than 4. Memory held by Gmail downloads stays bounded at any value.",
+          "type": [
+            "integer",
+            "null"
+          ],
+          "default": 0
+        },
         "history_hold": {
           "description": "Accept queued history requests without starting another page. Stop older history workers before starting workers with a new admission protocol.",
           "type": [
@@ -612,6 +642,30 @@
             "null"
           ],
           "default": false
+        },
+        "history_lookahead": {
+          "description": "How many messages a history page may download before the earlier ones are saved. 0 means twice the fetch workers; a value under the workers is raised to match.",
+          "type": [
+            "integer",
+            "null"
+          ],
+          "default": 0
+        },
+        "history_page_delay": {
+          "description": "How long a history import waits after saving a page before it starts the next. 0 starts it at once. A longer wait lowers the load on the database and the worker and slows the import. Applies to Gmail and Microsoft.",
+          "type": [
+            "string",
+            "null"
+          ],
+          "default": "0s"
+        },
+        "history_page_size": {
+          "description": "Messages one history page lists, and so how many it works through before it saves its place. 0 keeps the built-in 100 for Gmail and for Microsoft.",
+          "type": [
+            "integer",
+            "null"
+          ],
+          "default": 0
         },
         "mail_sharing": {
           "description": "Let every colleague who can see a contact read the email captured with them; off keeps new mail to those on it.",
@@ -638,6 +692,16 @@
             "null"
           ],
           "default": 0
+        },
+        "owed_classify_pass_cap": {
+          "description": "New messages one owed-reply run may judge; the rest wait for the next run.",
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 1,
+          "maximum": 2500,
+          "default": 500
         },
         "shared_posture_allowed": {
           "description": "Allow a seat to share their mailbox with colleagues as mail lands; turn it on only where a works agreement allows it.",
@@ -720,6 +784,16 @@
           "items": {
             "type": "string"
           }
+        },
+        "verdict_pass_cap": {
+          "description": "Unresolved senders one counterparty review run may judge; the rest wait for the next run.",
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 1,
+          "maximum": 1000,
+          "default": 200
         }
       }
     },
@@ -2387,6 +2461,24 @@
           "description": "The decision-model lane. Optional: absent, every call is the task's own ladder. Present, a task that declares a decision form is asked it first, with or without a certification record, and falls back to its ladder whenever the answer does not stand.",
           "$ref": "#/$defs/decisionsBinding"
         },
+        "task_ladders": {
+          "description": "A task to the order its rungs are walked in under this binding, for a task walked otherwise than the task contract does. The order names exactly the task's own rungs; anything else is refused. A task left out keeps its contract order.",
+          "type": "object",
+          "additionalProperties": {
+            "type": "array",
+            "minItems": 1,
+            "uniqueItems": true,
+            "items": {
+              "enum": [
+                "cheap_cloud",
+                "frontier",
+                "local_large",
+                "local_small",
+                "premium"
+              ]
+            }
+          }
+        },
         "providers": {
           "description": "Provider name to what that provider is configured with, independent of any lane: its host and the broker's upstream pins. Every lane binding a provider reads them from here, so a host is written once. A lane's own base_url or pins (the older spelling) are lifted here when the provider names none.",
           "type": "object",
@@ -2399,8 +2491,17 @@
               "openai_compatible",
               "openai",
               "gemini",
-              "gemini_vertex"
+              "gemini_vertex",
+              "azure_openai"
             ]
+          },
+          "properties": {
+            "gemini_vertex": {
+              "$ref": "#/$defs/providerSettingsVertex"
+            },
+            "azure_openai": {
+              "$ref": "#/$defs/providerSettingsAzure"
+            }
           },
           "additionalProperties": {
             "$ref": "#/$defs/providerSettings"
@@ -2415,16 +2516,47 @@
       "properties": {
         "base_url": {
           "type": "string",
-          "description": "Where the provider is reached. REQUIRED on openai_compatible while a lane binds it (the vendor host root, NO /v1), and on jev_compatible while the decisions lane binds it (the FULL decision endpoint, posted to as written). Empty ⇒ the adapter's compiled default."
+          "description": "Where the provider is reached. REQUIRED on openai_compatible while a lane binds it (the vendor host root, NO /v1), on azure_openai while a lane binds it (the resource endpoint, https://<resource>.openai.azure.com), and on jev_compatible while the decisions lane binds it (the FULL decision endpoint, posted to as written). Empty ⇒ the adapter's compiled default."
         },
         "upstream": {
           "description": "openai_compatible on an OpenRouter host only: which upstream hosts may read this provider's requests, and under what privacy — only, ignore, allow_fallbacks, zdr, data_collection, enforce_distillable_text. Every lane on the provider is served under them; how each tier is served (sort, quantizations, latency) stays on its own routing.",
           "$ref": "#/$defs/connectionUpstream"
+        }
+      }
+    },
+    "providerSettingsVertex": {
+      "description": "A gemini_vertex provider's configuration: its location is a Vertex AI location, and its host follows from it.",
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "base_url": {
+          "$ref": "#/$defs/providerSettings/properties/base_url"
+        },
+        "upstream": {
+          "$ref": "#/$defs/providerSettings/properties/upstream"
         },
         "location": {
           "type": "string",
           "pattern": "^(global|us|eu|[a-z]+-[a-z]+[0-9]{1,2})$",
-          "description": "gemini_vertex only, and REQUIRED while a lane binds it: the Vertex AI location that serves the call and processes the prompt — eu, us, global, or a region such as europe-west4."
+          "description": "REQUIRED while a lane binds gemini_vertex: the Vertex AI location that serves the call and processes the prompt — eu, us, global, or a region such as europe-west4."
+        }
+      }
+    },
+    "providerSettingsAzure": {
+      "description": "An azure_openai provider's configuration: its location is an Azure region, which the parser also checks against the regions this build knows.",
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "base_url": {
+          "$ref": "#/$defs/providerSettings/properties/base_url"
+        },
+        "upstream": {
+          "$ref": "#/$defs/providerSettings/properties/upstream"
+        },
+        "location": {
+          "type": "string",
+          "pattern": "^[A-Za-z][A-Za-z0-9]{2,30}$",
+          "description": "REQUIRED while a lane binds azure_openai: the Azure region of the resource (such as swedencentral). A region this build does not know is blocked."
         }
       }
     },
@@ -2436,7 +2568,7 @@
       ],
       "properties": {
         "provider": {
-          "description": "fake | anthropic | ollama | vllm | openai_compatible | openai | gemini | gemini_vertex. The only place vendor names appear.",
+          "description": "fake | anthropic | ollama | vllm | openai_compatible | openai | gemini | gemini_vertex | azure_openai. The only place vendor names appear.",
           "enum": [
             "fake",
             "anthropic",
@@ -2445,7 +2577,8 @@
             "openai_compatible",
             "openai",
             "gemini",
-            "gemini_vertex"
+            "gemini_vertex",
+            "azure_openai"
           ]
         },
         "model": {
@@ -2458,8 +2591,7 @@
         },
         "location": {
           "type": "string",
-          "pattern": "^(global|us|eu|[a-z]+-[a-z]+[0-9]{1,2})$",
-          "description": "Deprecated here: set the location on providers.gemini_vertex.location. Still accepted, and lifted onto the provider when it names none."
+          "description": "Deprecated here: set the location on providers.gemini_vertex.location or providers.azure_openai.location. Still accepted, and lifted onto the provider when it names none."
         },
         "input": {
           "description": "What the bound model can be GIVEN. On openai_compatible/vllm it is the whole answer (the carriage depends on which model was bound). On every other provider it NARROWS the carriage fixed in that adapter's wire — at most what the wire carries, at most what is declared — so it can take image away from a gemini tier and can never add a lane a wire lacks. Omit to take whatever the provider carries; write [text] to send it no attachments. Must include text.",
@@ -2518,7 +2650,50 @@
           "then": {
             "properties": {
               "provider": {
+                "enum": [
+                  "gemini_vertex",
+                  "azure_openai"
+                ]
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "provider": {
                 "const": "gemini_vertex"
+              }
+            },
+            "required": [
+              "provider",
+              "location"
+            ]
+          },
+          "then": {
+            "properties": {
+              "location": {
+                "pattern": "^(global|us|eu|[a-z]+-[a-z]+[0-9]{1,2})$"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "provider": {
+                "const": "azure_openai"
+              }
+            },
+            "required": [
+              "provider",
+              "location"
+            ]
+          },
+          "then": {
+            "properties": {
+              "location": {
+                "pattern": "^[A-Za-z][A-Za-z0-9]{2,30}$"
               }
             }
           }
@@ -2960,7 +3135,7 @@
       ],
       "properties": {
         "provider": {
-          "description": "fake | anthropic | ollama | vllm | openai_compatible | openai | gemini | gemini_vertex. The only place vendor names appear.",
+          "description": "fake | anthropic | ollama | vllm | openai_compatible | openai | gemini | gemini_vertex | azure_openai. The only place vendor names appear.",
           "enum": [
             "fake",
             "anthropic",
@@ -2969,7 +3144,8 @@
             "openai_compatible",
             "openai",
             "gemini",
-            "gemini_vertex"
+            "gemini_vertex",
+            "azure_openai"
           ]
         },
         "model": {
@@ -2982,8 +3158,7 @@
         },
         "location": {
           "type": "string",
-          "pattern": "^(global|us|eu|[a-z]+-[a-z]+[0-9]{1,2})$",
-          "description": "gemini_vertex only: a location of this lane's own, since Vertex serves an embedding model at fewer locations than a chat model. Empty ⇒ the provider's (providers.gemini_vertex.location)."
+          "description": "gemini_vertex or azure_openai only: a location of this lane's own, since Vertex serves an embedding model at fewer locations than a chat model. Empty ⇒ the provider's (providers.gemini_vertex.location)."
         },
         "dimensions": {
           "type": "integer",
@@ -3024,7 +3199,50 @@
           "then": {
             "properties": {
               "provider": {
+                "enum": [
+                  "gemini_vertex",
+                  "azure_openai"
+                ]
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "provider": {
                 "const": "gemini_vertex"
+              }
+            },
+            "required": [
+              "provider",
+              "location"
+            ]
+          },
+          "then": {
+            "properties": {
+              "location": {
+                "pattern": "^(global|us|eu|[a-z]+-[a-z]+[0-9]{1,2})$"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "provider": {
+                "const": "azure_openai"
+              }
+            },
+            "required": [
+              "provider",
+              "location"
+            ]
+          },
+          "then": {
+            "properties": {
+              "location": {
+                "pattern": "^[A-Za-z][A-Za-z0-9]{2,30}$"
               }
             }
           }

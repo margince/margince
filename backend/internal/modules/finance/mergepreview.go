@@ -52,7 +52,7 @@ func (s *Store) MergeReference(ctx context.Context, kind string, id ids.UUID) (M
 			}
 			return fmt.Errorf("read finance merge reference: %w", err)
 		}
-		return auth.EnsureVisible(ctx, tx, "company", out.CompanyID)
+		return ensureLedgerVisible(ctx, tx, out.CompanyID, false)
 	})
 	if err != nil {
 		return MergeReference{}, err

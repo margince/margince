@@ -189,7 +189,7 @@ export function WorklistHeader({
       {/* Drawn only when there is a choice: a rep who can see only their
         own work is never offered a switch that would refuse when
         pressed. */}
-      {scopes.length > 1 && owner === "" && (
+      {scopes.length > 1 && (
         <SegmentedControl
           options={scopes}
           value={scope}
@@ -205,9 +205,9 @@ export function WorklistHeader({
       )}
       {/* Whose queue. Offered on the same tier the server admits a named
           owner on — `team` in the options means this reader reaches past
-          themselves — so the control and the refusal cannot disagree. It
-          replaces the scope switch rather than sitting beside it: a named
-          owner outranks the scope word, and the pair is a 422. */}
+          themselves — so the control and the refusal cannot disagree. The
+          scope switch stays beside it: pressing a scope clears the owner, so
+          the request never carries both. */}
       {scopes.includes("team") && (
         <OwnerPicker owner={owner} onOwner={onOwner} scope={scope} />
       )}

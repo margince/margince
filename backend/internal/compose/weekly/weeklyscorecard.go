@@ -240,7 +240,7 @@ func scoreLeads(
 		    FROM activity_meeting_history h
 		    JOIN activity m ON m.id = h.activity_id
 		   WHERE m.kind = 'meeting'
-		     AND `+meetingIsTheirsSQL("$%[3]d")+`
+		     AND `+meetingIsTheirsSQL(transitionCredit, "m", "$%[3]d")+`
 		     AND m.archived_at IS NULL
 		     AND h.effective_at >= $%[1]d AND h.effective_at < $%[2]d
 		     AND NOT `+activities.ReversedCancellationSQL("h")+`
@@ -329,7 +329,7 @@ func scoreDeals(
 	// The reporting zone, because expected_close_date is a DATE and the window
 	// is an instant: cast without it and Postgres uses the session zone, which
 	// puts a deal closing near midnight on the wrong side of the boundary.
-	zone, err := identity.TimezoneOf(ctx, tx)
+	zone, err := identity.TimezoneAppliedTx(ctx, tx)
 	if err != nil {
 		return nil, err
 	}

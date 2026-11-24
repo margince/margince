@@ -30,6 +30,11 @@ func SchemaVersion(entities map[string]Entity) string {
 			sum.Write([]byte(entity.Fields[field].Kind))
 			sum.Write([]byte(entity.Fields[field].Predicate))
 			writeCustomMeaning(sum, entity.Fields[field])
+			if entity.Fields[field].PartialSum {
+				// A partial sum answers where it once answered null, so a client
+				// that predates the coverage must see the vocabulary change.
+				sum.Write([]byte("partial-sum:" + CoverageColumnName))
+			}
 			if money := entity.Fields[field].Currency; money != nil {
 				sum.Write([]byte("currency:" + money.By + ":" + money.Base))
 			}
@@ -47,6 +52,9 @@ func DescribeSchema(schema Schema) string {
 	for _, name := range schema.EntityNames() {
 		entity := schema.Entities[name]
 		out.WriteString(name)
+		if entity.Rows != "" {
+			out.WriteString("\n  rows:     " + entity.Rows)
+		}
 		out.WriteString("\n  group by: ")
 		out.WriteString(strings.Join(entity.FieldNames(KindDimension), ", "))
 		out.WriteString("\n  measure:  ")

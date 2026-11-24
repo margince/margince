@@ -11,6 +11,7 @@ import {
 } from "../../../components/listquery";
 import { NewContactAction } from "../../../components/newcontact";
 import { QuickCaptureAction } from "../../../components/quickcapture";
+import { CompanyVCardImport } from "../../../components/vcardimportlink";
 import { Badge } from "../../../design-system/atoms";
 import {
   type ActivityMoment,
@@ -19,11 +20,11 @@ import {
 } from "../../../format/activitywhen";
 import { useLocale, useT } from "../../../i18n";
 import { bucketLabel } from "../../../lib/bucketlabel";
+import { companyContactsListKey } from "../../../lib/companycontacts.keys";
 import { labelFor } from "../../../lib/labelfor";
 import { throwProblem } from "../../../lib/problem";
 import { useViewerZone } from "../../../lib/viewerzone";
 import { CoverageExplorer } from "../../contacts/coverageexplorer";
-import { companyContactsListKey } from "./contacts.keys";
 import { DomainContactsCallout } from "./domaincontacts";
 
 // The company's contacts, as a list a rep works from rather than a roster they
@@ -186,6 +187,7 @@ export function CompanyContactsList({
             <Fragment key={companyId}>
               <QuickCaptureAction company={home} />
               <NewContactAction company={home} />
+              <CompanyVCardImport companyId={companyId} />
             </Fragment>
           ) : undefined
         }

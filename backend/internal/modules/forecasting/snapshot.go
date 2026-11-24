@@ -70,10 +70,9 @@ type NewSnapshot struct {
 	// ForwardMeasure is the measure the installation was set to build its
 	// landing from when this was taken. Empty stores NULL: not recorded.
 	ForwardMeasure ForwardMeasure
-	// SelfCorrecting, EvidenceCutoff and RiskSignalsVersion are the basis the
-	// chances stood on. A nil SelfCorrecting stores NULL: not recorded.
+	// SelfCorrecting and RiskSignalsVersion are the basis the chances stood
+	// on. A nil SelfCorrecting stores NULL: not recorded.
 	SelfCorrecting     *bool
-	EvidenceCutoff     *time.Time
 	RiskSignalsVersion string
 	// FocusGoal is the team's goal for the period. With one, the snapshot
 	// ranks the deals that close the gap to the landing it freezes.
@@ -84,7 +83,6 @@ type NewSnapshot struct {
 // Every snapshot writer calls it with the assembly its readings came from.
 func (s *NewSnapshot) StampChances(from Assembly) {
 	s.SelfCorrecting = new(from.SelfCorrecting)
-	s.EvidenceCutoff = new(from.EvidenceCutoff)
 	s.RiskSignalsVersion = from.RiskSignalsVersion
 }
 
@@ -427,7 +425,7 @@ func (s *Store) MovementTx(
 			Message: "a movement compares two readings in the same base currency",
 		}
 	}
-	return Classify(reading, opening, closing), nil
+	return s.attributed(ctx, tx, opening, closing, Classify(reading, opening, closing))
 }
 
 func sameID(a, b *ids.UUID) bool {

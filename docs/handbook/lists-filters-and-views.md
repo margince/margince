@@ -1,5 +1,5 @@
 <!-- prose:plain -->
-<!-- describes: frontend/src/components/listquery.tsx frontend/src/design-system/listviewmenu.tsx frontend/src/design-system/listtoolbar.tsx frontend/src/design-system/listsearch.tsx frontend/src/components/listqueryviews.ts frontend/src/components/bulkverbs.tsx frontend/src/features/lists backend/internal/modules/collections backend/internal/modules/search/queryvocab.go backend/internal/compose/datatask_machineaddress.go frontend/src/features/contacts/contacts.tsx backend/internal/platform/auth/sharedwith.go frontend/src/features/records/recordlists.tsx frontend/src/components/addtoshortlist.tsx frontend/src/features/companies/companyrail.tsx frontend/src/features/contacts/contactrail.tsx frontend/src/features/deals/dealaside.tsx frontend/src/features/leads/leaddetails.tsx -->
+<!-- describes: frontend/src/components/listquery.tsx frontend/src/design-system/listviewmenu.tsx frontend/src/design-system/listtoolbar.tsx frontend/src/design-system/listsearch.tsx frontend/src/components/listqueryviews.ts frontend/src/components/bulkverbs.tsx frontend/src/features/lists backend/internal/modules/collections backend/internal/modules/search/queryvocab.go backend/internal/compose/datatask_machineaddress.go frontend/src/features/contacts/contacts.tsx backend/internal/platform/auth/sharedwith.go frontend/src/features/records/recordlists.tsx frontend/src/components/addtoshortlist.tsx frontend/src/features/companies/companyrail.tsx frontend/src/features/contacts/contactrail.tsx frontend/src/features/deals/dealaside.tsx frontend/src/features/deals/deals.listtools.tsx frontend/src/features/deals/deals.rangefilters.tsx frontend/src/features/deals/deal360/dealfilterchips.ts frontend/src/features/leads/leaddetails.tsx -->
 # Lists, filters and views
 
 The list screens in Margince are **Contacts**, **Companies**, **Leads**, **Deals** and **Projects** in the sidebar. How to create and edit a single record is in [Contacts, companies, leads, deals and projects](records.md) and [Leads, deals and projects](leads-deals-and-projects.md).
@@ -18,19 +18,19 @@ What each list offers:
 
 | List | Search | Filters | Tabs | Table and board | Bulk actions |
 |---|---|---|---|---|---|
-| **Contacts** | name, or exact email | Owner, Team, Tags | All, Mine, Shared with me | table only | Assign owner, Add or Remove tag, Create task, Add to Shortlist, Archive |
-| **Companies** | name, or exact domain | Owner, Team, Company size, Tags, Lifecycle, Relationship type, Partner kinds, Relationship stage and Stage meaning (if you may see partners) | All, Mine, Customers, Prospects | table only | Assign owner, Add or Remove tag, Create task, Add to Shortlist, Archive |
-| **Leads** | name, exact email or LinkedIn URL | Status, Score, Response, Origin, Owner, Team, Tags, **Industry**, **Country**, **Company size** | Mine, All, Unassigned, New and unassigned, New, Contacted, Engaged, Hot, Overdue | both | Assign, Disqualify |
-| **Deals** | name or description | Owner, Team, Stage, Company, Tags, Stalled only, Partner-sourced, Forecast, Motion, Priority, Source, Partner | Newest | both, opens on Board | Assign owner, Move to stage, Add or Remove tag, Create task, Add to Shortlist, Archive |
+| **Contacts** | name or job title, or exact email | Owner, Team, Tags | All, Mine, Shared with me | table only | Assign owner, Add or Remove tag, Create task, Add to Shortlist, Archive |
+| **Companies** | name, legal name or industry, or exact domain | Owner, Team, **Employees**, Partner kinds, Relationship stage and Stage meaning (if you may see partners), Tags, Lifecycle, Relationship type, Activity | All, Mine, Customers, Prospects | table only | Assign owner, Add or Remove tag, Create task, Add to Shortlist, Archive |
+| **Leads** | name, company name or job title, or exact email or LinkedIn URL | Status, Score, Response, Origin, Owner, Team, Tags, **Industry**, **Country**, **Company size** | Mine, All, Unassigned, New and unassigned, New, Contacted, Engaged, Hot, Overdue | both | Assign, Disqualify |
+| **Deals** | name or description | Owner, Team, Stage, Company, Tags, Close date, Value, Currency, **Country**, Status, Stalled only, Partner-sourced, Probability, Motion, Priority, Linked as, Source, Partner | All, Mine | both, opens on Board | Assign owner, Move to stage, Add or Remove tag, Create task, Add to Shortlist, Archive |
 | **Projects** | name or project key | Owner, Team, Phase | All, In delivery | table only | none |
 
-**Response** on Leads shows only while a target for the first answer is turned on, and so does the **Overdue** tab. **Industry**, **Country** and **Company size** on Leads read the company the lead is linked to. A lead counts under its own typed **Industry** in three cases. It has no linked company, that company has no industry, or you cannot open that company. They show only if you may open companies. **Source** and **Partner** on Deals show only when there is something to pick.
+**Response** on Leads shows only while a target for the first answer is turned on, and so does the **Overdue** tab. **Industry**, **Country** and **Company size** on Leads read the company the lead is linked to. A lead counts under its own typed **Industry** in three cases. It has no linked company, that company has no industry, or you cannot open that company. They show only if you may open companies. On Deals, **Value** shows once your company has a main currency, and **Linked as**, **Source** and **Partner** only when there is something to pick.
 
 ## Searching and filtering a list
 ### How do I search a list?
 To search a list in Margince, open the list in the sidebar (**Contacts**, **Companies**, **Leads**, **Deals** or **Projects**). Type in the **Search** box at the left of the toolbar.
 1. Type part of a name. The list gets shorter as you type.
-2. Or type a whole email address (Contacts, Leads), domain (Companies), LinkedIn URL (Leads) or project key (Projects).
+2. Or type a whole word of a job title (Contacts, Leads), company name (Leads), legal name or industry (Companies). A whole email address (Contacts, Leads), domain (Companies), LinkedIn URL (Leads) or project key (Projects) finds its record too.
 3. Clear the box to see everything again.
 
 Search also offers filters from the list’s filter options. Choose one to apply it and clear the text. It stays in the address and saved view, like a filter chosen through **View**. Arrow keys and Enter choose a filter. Enter with no choice keeps the text search; Escape closes the choices.
@@ -57,7 +57,7 @@ On the **Mine** tab, an empty list says "No contacts owned by you." with **Show 
 Also called: reset filters, show everything again, remove filter.
 
 ### How do I see only my records, or the records I own?
-To see only the records you own in Margince, open **Contacts**, **Companies** or **Leads** and press the **Mine** tab in the header row. On **Deals** and **Projects**, press **View** → **Filters** → **Owner** → **Owned by you**.
+To see only the records you own in Margince, open **Contacts**, **Companies** or **Leads** and press the **Mine** tab in the header row. **Deals** has it too. On **Projects**, press **View** → **Filters** → **Owner** → **Owned by you**.
 1. The **Owner** filter lists **Owned by you**, then every active colleague by name, then **Unassigned**.
 2. **Leads** opens on **Mine** for a user who sees only their own leads. It opens on **All** for one who can see the team's or everyone's.
 Also called: my contacts, my deals, my accounts, assigned to me, owned by me.
@@ -97,7 +97,7 @@ Also called: contacts at an account, everyone at a customer, staff of a client.
 
 ### How do I filter a list by tag?
 To filter a list by tag in Margince, open **Contacts**, **Companies** or **Deals**, press **View** → **Filters** → **Tags**, and pick the tag.
-One tag at a time: a second tag takes the place of the first. **Any tag** takes the filter off. To see every record with a tag across all record types, open the tag's own page. Use the **Tags** panel on any record that has it.
+One tag at a time: a second tag takes the place of the first. **Any tag** takes the filter off. To see every record with a tag across all record types, open the tag's own page. A record shows its tags under **Tags**; see [Tags](records.md#tags).
 Also called: filter by label, show tagged records, segment by tag.
 
 ### Why are some contacts tagged `machine-address`?
@@ -105,9 +105,10 @@ Margince does not make a contact from an address that belongs to a sending syste
 Also called: contacts made from notification mail, automatic senders.
 
 ### How do I filter by date?
-**Deals** has a **Close date** filter, shown in the next question. The other lists have no date filter, so sort them by date.
-
-Last activity is the date of the newest email, chat message, meeting, call or note. A task never changes it, and neither does a newsletter. **Filters and views** has the date choices **is after**, **is on or after**, **is before** and **is on or before**. They show only for date custom fields your company has added, so created and expected close dates are not there.
+On **Deals**, use **View** → **Filters** → **Close date**, shown in the next question. The list screens have no other date filter, so sort them by date, or build a filter on **Filters and views**. Its date fields are **Created** (every type), **Last activity** (contacts, companies and deals), **Expected close** (deals) and date custom fields.
+1. Press **New filter**, pick the record type, press **Add condition** and pick a date field.
+2. Pick **is after**, **is on or after**, **is before** or **is on or before**. Give the value **On a date**, or as **Days ago** to count back from today.
+Last activity is the date of the newest email, chat message, meeting, call or note. A task never changes it, and neither does a newsletter.
 Also called: created this month, filter by created date, date range.
 
 ### How do I find deals closing this month?
@@ -160,8 +161,7 @@ Also called: page size, see all records, load more.
 ## Archived records on a list
 
 ### How do I see archived records?
-To see archived records in Margince, open the list (**Contacts**, **Companies**, **Leads**, **Deals** or **Projects**). Press **View**, then press **Show archived**.
-
+To see archived records in Margince, open the list (**Contacts**, **Companies**, **Leads**, **Deals** or **Projects**) and press **View** → **Show archived**.
 Archived rows show with the live ones, with an **Archived** mark, until you press **Show archived** again. On **Leads**, disqualified and qualified leads are the archived ones, and the **Status** filter set to **Qualified** or **Disqualified** lists them without **Show archived**. An archived record opens read-only, and **Undo** on its archive entry in its history brings back a contact, company or deal. See [Contacts, companies, leads, deals and projects](records.md).
 Also called: show deleted, find an archived contact, closed records, inactive.
 
@@ -265,9 +265,9 @@ On **Leads**, pick the colleague under **Choose owner** and press **Assign**.
 Also called: bulk reassign, hand over accounts, transfer deals, a colleague left, reassign all their contacts.
 
 ### What can I do to several records at once?
-The bar for many rows on **Contacts**, **Companies** and **Deals** offers **Assign owner**, **Add tag**, **Remove tag**, **Create task**, **Add to Shortlist** and **Archive**. On **Deals** it also offers **Move to stage** (open stages only). On **Leads** it offers **Assign** and **Disqualify** (with a **Reason**). **Add to Shortlist** shows only when there is a Shortlist of that record type you may change. Every change first shows what it will do. Your own company is never archived.
+The bar for many rows on **Contacts**, **Companies** and **Deals** offers **Assign owner**, **Add tag**, **Remove tag**, **Create task**, **Add to Shortlist** and **Archive**. On **Deals** it also offers **Move to stage**: pick an open stage under **Pick a stage** and press **Move**. On **Leads** it offers **Assign** and **Disqualify** (with a **Reason**). **Add to Shortlist** shows only when there is a Shortlist of that record type you may change. Every change first shows what it will do. Your own company is never archived.
 
-A change of more than 10 records shows a "Large change" warning. On **Leads**, **Assign** and **Disqualify** ask first and name how many leads change, with the same warning above 10. You cannot win or lose many deals at once or change custom fields on many records at once. After a change, the message that says how many changed has an **Undo** button. **Move to stage** and **Disqualify** have no bulk **Undo**. **Move to stage** names the stage and says how many deals move and how many are already there before it moves anything.
+A change of more than 10 records shows a "Large change" warning. On **Leads**, **Assign** and **Disqualify** ask first and name how many leads change, with the same warning above 10. You cannot win or lose many deals at once or change custom fields on many records at once. After a change, the message that says how many changed has an **Undo** button, which opens a window where **Undo change** puts it back. **Disqualify** has no bulk **Undo**. **Move to stage** lists the deals it leaves alone first, and its **Undo** moves each deal back as a new move in the stage history.
 
 Also called: bulk actions, mass archive, bulk disqualify.
 

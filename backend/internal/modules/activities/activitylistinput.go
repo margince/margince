@@ -27,6 +27,8 @@ type ListActivitiesInput struct {
 	ClockDirection     string
 	DirectionClockAsOf *time.Time
 	mailIdentities     map[string][]string
+	// countOnly builds the filter for a count: no sort, so no sort arguments.
+	countOnly bool
 	// foldBounds replaces the collapsed fold's bounds; a test reads the
 	// unbounded fold with []int{0} to compare it with the bounded one.
 	foldBounds []int
@@ -260,6 +262,9 @@ type ListActivitiesInput struct {
 	// work for a given instant. Paired with OpenAndDueAfter, the later window
 	// carries that undated backlog instead.
 	OpenAndDueBy *time.Time
+	// DayZone is the IANA zone a chosen due date is judged in. Empty is the
+	// installation's zone. Only a member's own list sets it (dayrule).
+	DayZone string
 	// IncludeEmailRequests adds undated captured requests and undated commitments
 	// to the execution queue, not overdue counts.
 	IncludeEmailRequests    bool

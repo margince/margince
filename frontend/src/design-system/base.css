@@ -235,7 +235,7 @@
    ink. Not transparent: a see-through button reads as a label, and four of
    them as a sentence. */
 .btn-ghost {
-  background: var(--pane);
+  background: var(--bgControl);
   /* The hairline, not the control boundary: an outlined verb is a pane with
      a word on it, and the darker edge drew a row of them as a strip of
      cartoon buttons. The word is what identifies the control (WCAG 1.4.11
@@ -303,7 +303,7 @@
      and this is one of the two places such a label arrives. */
   border-radius: var(--r-control);
   border-color: var(--borderControl);
-  background: var(--bgElevated);
+  background: var(--bgField);
   color: var(--textPrimary);
 }
 /* The mark is another company's logo rather than one of our icons, so it keeps

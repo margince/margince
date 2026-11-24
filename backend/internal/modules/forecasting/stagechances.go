@@ -33,6 +33,7 @@ type StageChances struct {
 	SelfCorrecting bool
 	EvidenceCutoff time.Time
 	Stages         []StageChance
+	Accuracy       Accuracy
 }
 
 // StageChancesFunc reads the stage chances as of an instant. Injected, because
@@ -81,5 +82,7 @@ func stageChancesToWire(in StageChances) crmcontracts.ForecastStageChances {
 		}
 		out.Stages = append(out.Stages, row)
 	}
+	accuracy := AccuracyToWire(in.Accuracy)
+	out.Accuracy = &accuracy
 	return out
 }

@@ -1,11 +1,17 @@
 import { useCallback, useState } from "react";
+import { keyedIntents } from "./intentkeys";
 
 // One key per create attempt, kept across retries and renewed once the record
 // exists. A repeated press then reaches the server as the same request, which
-// answers the first result and makes no second record.
-export function useIdempotencyKey(): { key: string; renew: () => void } {
+// answers the first result and makes no second record. `renew` returns the new
+// key, so a handler can send it before the state update renders.
+export function useIdempotencyKey(): { key: string; renew: () => string } {
   const [key, setKey] = useState(() => crypto.randomUUID());
-  const renew = useCallback(() => setKey(crypto.randomUUID()), []);
+  const renew = useCallback(() => {
+    const next = crypto.randomUUID();
+    setKey(next);
+    return next;
+  }, []);
   return { key, renew };
 }
 
@@ -15,29 +21,19 @@ function settled(status: number, code: unknown): boolean {
   return status < 500 && code !== "idempotency_key_in_progress";
 }
 
-// Keys for send intents, one per request body. A retry of a request still
-// open reuses its key even after other requests, so the server replays the
-// first answer. A settled request drops its key. The map holds at most
-// `limit` open requests, oldest dropped first.
+// Keys for send intents, one per request body: see keyedIntents.
 export type IntentKeys = <T extends { response: Response; error?: unknown }>(
   intent: unknown,
   call: (key: string) => Promise<T>,
 ) => Promise<T>;
 
 export function intentKeys(limit = 16): IntentKeys {
-  const open = new Map<string, string>();
-  return async (intent, call) => {
-    const text = JSON.stringify(intent);
-    let key = open.get(text);
-    if (key === undefined) {
-      key = crypto.randomUUID();
-      open.set(text, key);
-      const oldest = open.keys().next().value;
-      if (open.size > limit && oldest !== undefined) open.delete(oldest);
-    }
-    const result = await call(key);
-    const code = (result.error as { code?: unknown } | undefined)?.code;
-    if (settled(result.response.status, code)) open.delete(text);
-    return result;
-  };
+  return keyedIntents(
+    (result: { response: Response; error?: unknown }) =>
+      settled(
+        result.response.status,
+        (result.error as { code?: unknown } | undefined)?.code,
+      ),
+    limit,
+  ) as IntentKeys;
 }

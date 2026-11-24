@@ -92,11 +92,18 @@ func nextRunCounts(sets []ScenarioRuns, maxRuns int) []int {
 	counts := make([]int, len(cases))
 	for i, c := range cases {
 		counts[i] = c.runs
-		if c.runs < maxRuns && (everyCase || caseBorderline(c)) {
+		if extendsCase(c, everyCase, maxRuns) {
 			counts[i] = min(c.runs+adaptiveRound, maxRuns)
 		}
 	}
 	return counts
+}
+
+// extendsCase says the rounds give c more runs: it is under the cap, and either
+// the pool or the case is in doubt. A record's rows are read against the same
+// answer, so a rule that would extend one is not what produced them.
+func extendsCase(c caseStats, poolInDoubt bool, maxRuns int) bool {
+	return c.runs < maxRuns && (poolInDoubt || caseBorderline(c))
 }
 
 // caseBorderline says a threshold a case is graded against is still in doubt:
@@ -104,7 +111,9 @@ func nextRunCounts(sets []ScenarioRuns, maxRuns int) []int {
 //	pass rate:  |k/n − ½| ≤ ½/√n, the binomial standard error AT the half the
 //	            case must pass and the veto line, i.e. (2k − n)² ≤ n
 //	judge mean: TLower(scores) ≤ bar ≤ TUpper(scores) for bar = certified_min or
-//	            degraded_min, over its m ≥ 2 graded scores
+//	            degraded_min, over its m graded scores
+//	scores:     a judged case with 0 < m < minJudgeScores that would certify
+//	            but for the count (shortOnlyOfScores)
 //
 // The judge test reads the interval the verdict reads (meanBounds), so a case
 // extends exactly while more runs could move its grade. The pass-rate test is
@@ -112,6 +121,9 @@ func nextRunCounts(sets []ScenarioRuns, maxRuns int) []int {
 func caseBorderline(c caseStats) bool {
 	off := 2*c.passed - c.runs
 	if off*off <= c.runs {
+		return true
+	}
+	if shortOnlyOfScores(c) {
 		return true
 	}
 	if len(c.scores) < 2 {
@@ -126,10 +138,23 @@ func caseBorderline(c caseStats) bool {
 	return false
 }
 
+// shortOnlyOfScores says the count of judge scores is all that keeps c below
+// certified: its pass rate and the scores it has clear the bars. A case with no
+// score is not one. Its runs went ungraded because the judge refused or the
+// candidate was withheld; the runner already re-drives a judge call that failed.
+// More runs would pay for candidates no judge grades. One score has a
+// zero-width bound, so it cannot rule out that a second would lift the mean.
+func shortOnlyOfScores(c caseStats) bool {
+	return !c.mechanical && len(c.scores) > 0 && len(c.scores) < minJudgeScores &&
+		caseMechanicalBand(c) == VerdictCertified && !underFloor(c) &&
+		(len(c.scores) < 2 || judgeUpper(c) >= float64(c.bands.CertifiedMin))
+}
+
 // poolUndecided says the pooled evidence meets a certified bar on its point
-// estimate but not on its bound: pass rate ≥ certifiedPassPercent with a Wilson
-// lower bound under certifiedPassBoundPercent, or a mean certified_min margin
-// ≥ 0 with a lower bound under 0.
+// estimate but not on its bound. One case is a pass rate ≥ certifiedPassPercent
+// whose Wilson lower bound is under certifiedPassBoundPercent. Another is the
+// same rate on fewer than certifiedMinRuns runs. The last is a mean
+// certified_min margin ≥ 0 whose lower bound is under 0.
 func poolUndecided(cases []caseStats) bool {
 	runs, passed := 0, 0
 	for _, c := range cases {
@@ -137,7 +162,7 @@ func poolUndecided(cases []caseStats) bool {
 		passed += c.passed
 	}
 	lower, _ := wilsonBounds(passed, runs)
-	if passed*100 >= certifiedPassPercent*runs && lower*100 < certifiedPassBoundPercent {
+	if passed*100 >= certifiedPassPercent*runs && (lower*100 < certifiedPassBoundPercent || runs < certifiedMinRuns) {
 		return true
 	}
 	margins := marginsOver(cases, func(b Bands) int { return b.CertifiedMin })

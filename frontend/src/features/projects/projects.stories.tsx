@@ -3,6 +3,7 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, screen, within } from "storybook/test";
+import { WRITES_RECORDS } from "../../testing/mefixture";
 import { phoneRow } from "../../testing/phonerow";
 import { COMPANY, project } from "../../testing/projects.fixtures";
 import {
@@ -50,7 +51,7 @@ const rows = [
 // row whose owner and company are simply blank.
 function installList(projects: unknown[]) {
   installFetchStub({
-    "GET /me": meRoute({}),
+    "GET /me": meRoute(WRITES_RECORDS),
     "GET /projects": () =>
       jsonResponse({
         data: projects,

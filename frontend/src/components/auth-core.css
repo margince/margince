@@ -82,7 +82,7 @@
       color-mix(in srgb, var(--coreLight) 70%, transparent),
       transparent 68%
     ),
-    var(--bgElevated);
+    var(--bgField);
 }
 .auth-surface-wide {
   --authMeasure: 560px;

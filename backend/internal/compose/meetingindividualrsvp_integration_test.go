@@ -254,7 +254,7 @@ func TestRemovingAnAttendeesCalendarCopyKeepsTheOrganizersMeeting(t *testing.T) 
 			if status, set := readMeetingStatus(t, e, ref.ID); set {
 				t.Fatalf("attendee removal set shared status %s", status)
 			}
-			if n := e.WsCount(t, `SELECT count(*) FROM activity_participant WHERE activity_id=$1 AND user_id=$2 AND roster_seat=$2`, ref.ID, e.Rep2); n != 0 {
+			if n := e.WsCount(t, `SELECT count(*) FROM activity_participant WHERE activity_id=$1 AND user_id=$2 AND $2=ANY(roster_seats)`, ref.ID, e.Rep2); n != 0 {
 				t.Fatalf("removal kept %d own calendar rows", n)
 			}
 			if err := sink.RemoveCalendarMeeting(connectorOwnerCtx(e, e.Rep1, provider), rec.NaturalKey, rec.CrossDoorIdentity, start); err != nil {

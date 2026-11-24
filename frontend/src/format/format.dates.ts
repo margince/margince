@@ -297,6 +297,31 @@ export function formatDateTime(
 }
 
 /**
+ * An instant as a record page writes it: `formatDateAbbrev` with the time
+ * after it, as "16 Nov 2026, 13:49", so a dated row reads like the page's
+ * other dates. A fixed date format writes `formatDateTime`'s numeric form.
+ */
+export function formatDateTimeAbbrev(
+  utcIso: string,
+  locale: Locale,
+  zone: string,
+): string {
+  assertIanaZone(zone);
+  if (dateTimePreferences().dateFormat !== "locale") {
+    return formatDateTime(utcIso, locale, zone);
+  }
+  return dateTimeFormat(locale, {
+    timeZone: zone,
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+    hourCycle: hourCycle(),
+  }).format(new Date(utcIso));
+}
+
+/**
  * calendarDaysBetween counts whole days between two instants by the calendar of
  * a named zone. It is the frontend spelling of the backend's
  * shared/kernel/elapsed.Days. The zone is required so a caller cannot count in

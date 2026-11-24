@@ -395,7 +395,7 @@ func TestTheSelectListAndTheScanAgreeOnLength(t *testing.T) {
 	// count while selecting something else. The reply channel is substituted per
 	// query with the caller's audience on the source, so its gated form is what
 	// the list names.
-	sourceAudience, err := auth.ActivityAudienceArm(ctx, "s", func(any) int { return 1 })
+	sourceAudience, err := auth.ActivitySourceAudienceArm(ctx, "s", func(any) int { return 1 })
 	if err != nil {
 		t.Fatal(err)
 	}

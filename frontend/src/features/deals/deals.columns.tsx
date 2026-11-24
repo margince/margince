@@ -16,14 +16,10 @@ import {
 import type { Locale, useT } from "../../i18n";
 import { closeDayOf } from "../../lib/closeday";
 import type { StageTotals } from "../../lib/deals.queries";
+import { inPositionOrder } from "../../lib/pipelines.queries";
 import type { CompanyNaming } from "./dealcompanymarks";
 import { lastMailColumn } from "./dealmailaside";
 import type { Deal, Stage } from "./deals";
-
-/** A pipeline's stages by `position`, which is not the order the server lists. */
-export function stagesInOrder(stages: readonly Stage[]): Stage[] {
-  return [...stages].sort((a, b) => a.position - b.position);
-}
 
 export function buildColumns(
   stages: Stage[],
@@ -40,7 +36,7 @@ export function buildColumns(
   // Why a card's deal has its probability, shown on hover over its ring.
   probabilityReason?: (deal: Deal, stageName: string) => string | undefined,
 ): BoardMoneyColumn[] {
-  return stagesInOrder(stages).map((stage) => {
+  return inPositionOrder(stages).map((stage) => {
     const stageDeals = deals.filter((deal) => deal.stage_id === stage.id);
     const stageTotals = totals.get(stage.id);
     return {

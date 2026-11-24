@@ -57,6 +57,9 @@ const CAPTURE_SETTINGS: Schemas["CaptureSettings"] = {
   site_read: { max_pages: 60, max_mib: 32, wall_seconds: 240 },
   mail_sync_interval_seconds: 120,
   confidentiality_pass_cap: 40,
+  verdict_pass_cap: 200,
+  classify_pass_cap: 500,
+  owed_classify_pass_cap: 500,
 };
 
 export const INSTALLATION_SETTINGS: Schemas["InstallationSettings"] = {

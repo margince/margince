@@ -45,10 +45,19 @@ const routingDefsTemplate = `{
     "description": "The decision-model lane. Optional: absent, every call is the task's own ladder. Present, a task that declares a decision form is asked it first, with or without a certification record, and falls back to its ladder whenever the answer does not stand.",
     "$ref": "#/$defs/decisionsBinding"
   },
+  "task_ladders": {
+    "description": "A task to the order its rungs are walked in under this binding, for a task walked otherwise than the task contract does. The order names exactly the task's own rungs; anything else is refused. A task left out keeps its contract order.",
+    "type": "object",
+    "additionalProperties": {"type": "array", "minItems": 1, "uniqueItems": true, "items": {"enum": [__TIERS__]}}
+  },
   "providers": {
     "description": "Provider name to what that provider is configured with, independent of any lane: its host and the broker's upstream pins. Every lane binding a provider reads them from here, so a host is written once. A lane's own base_url or pins (the older spelling) are lifted here when the provider names none.",
     "type": "object",
     "propertyNames": { "enum": [__PROVIDERS__] },
+    "properties": {
+      "gemini_vertex": { "$ref": "#/$defs/providerSettingsVertex" },
+      "azure_openai": { "$ref": "#/$defs/providerSettingsAzure" }
+    },
     "additionalProperties": { "$ref": "#/$defs/providerSettings" }
   }
 }
@@ -59,9 +68,28 @@ const routingDefsTemplate = `{
     "type": "object",
     "additionalProperties": false,
     "properties": {
-      "base_url": { "type": "string", "description": "Where the provider is reached. REQUIRED on openai_compatible while a lane binds it (the vendor host root, NO /v1), and on jev_compatible while the decisions lane binds it (the FULL decision endpoint, posted to as written). Empty ⇒ the adapter's compiled default." },
-      "upstream": { "description": "openai_compatible on an OpenRouter host only: which upstream hosts may read this provider's requests, and under what privacy — only, ignore, allow_fallbacks, zdr, data_collection, enforce_distillable_text. Every lane on the provider is served under them; how each tier is served (sort, quantizations, latency) stays on its own routing.", "$ref": "#/$defs/connectionUpstream" },
-      "location": { "type": "string", "pattern": "^(global|us|eu|[a-z]+-[a-z]+[0-9]{1,2})$", "description": "gemini_vertex only, and REQUIRED while a lane binds it: the Vertex AI location that serves the call and processes the prompt — eu, us, global, or a region such as europe-west4." }
+      "base_url": { "type": "string", "description": "Where the provider is reached. REQUIRED on openai_compatible while a lane binds it (the vendor host root, NO /v1), on azure_openai while a lane binds it (the resource endpoint, https://<resource>.openai.azure.com), and on jev_compatible while the decisions lane binds it (the FULL decision endpoint, posted to as written). Empty ⇒ the adapter's compiled default." },
+      "upstream": { "description": "openai_compatible on an OpenRouter host only: which upstream hosts may read this provider's requests, and under what privacy — only, ignore, allow_fallbacks, zdr, data_collection, enforce_distillable_text. Every lane on the provider is served under them; how each tier is served (sort, quantizations, latency) stays on its own routing.", "$ref": "#/$defs/connectionUpstream" }
+    }
+  },
+  "providerSettingsVertex": {
+    "description": "A gemini_vertex provider's configuration: its location is a Vertex AI location, and its host follows from it.",
+    "type": "object",
+    "additionalProperties": false,
+    "properties": {
+      "base_url": { "$ref": "#/$defs/providerSettings/properties/base_url" },
+      "upstream": { "$ref": "#/$defs/providerSettings/properties/upstream" },
+      "location": { "type": "string", "pattern": "^(global|us|eu|[a-z]+-[a-z]+[0-9]{1,2})$", "description": "REQUIRED while a lane binds gemini_vertex: the Vertex AI location that serves the call and processes the prompt — eu, us, global, or a region such as europe-west4." }
+    }
+  },
+  "providerSettingsAzure": {
+    "description": "An azure_openai provider's configuration: its location is an Azure region, which the parser also checks against the regions this build knows.",
+    "type": "object",
+    "additionalProperties": false,
+    "properties": {
+      "base_url": { "$ref": "#/$defs/providerSettings/properties/base_url" },
+      "upstream": { "$ref": "#/$defs/providerSettings/properties/upstream" },
+      "location": { "type": "string", "pattern": "^[A-Za-z][A-Za-z0-9]{2,30}$", "description": "REQUIRED while a lane binds azure_openai: the Azure region of the resource (such as swedencentral). A region this build does not know is blocked." }
     }
   },
 
@@ -71,12 +99,12 @@ const routingDefsTemplate = `{
     "required": ["provider"],
     "properties": {
       "provider": {
-        "description": "fake | anthropic | ollama | vllm | openai_compatible | openai | gemini | gemini_vertex. The only place vendor names appear.",
-        "enum": ["fake", "anthropic", "ollama", "vllm", "openai_compatible", "openai", "gemini", "gemini_vertex"]
+        "description": "fake | anthropic | ollama | vllm | openai_compatible | openai | gemini | gemini_vertex | azure_openai. The only place vendor names appear.",
+        "enum": ["fake", "anthropic", "ollama", "vllm", "openai_compatible", "openai", "gemini", "gemini_vertex", "azure_openai"]
       },
       "model":    { "type": "string", "description": "Provider-native model id. ollama/vllm default to a Gemma-class model when omitted (A23)." },
       "base_url": { "type": "string", "description": "Deprecated here: set the host on providers.<name>.base_url. Still accepted, and lifted onto the provider when it names none." },
-      "location": { "type": "string", "pattern": "^(global|us|eu|[a-z]+-[a-z]+[0-9]{1,2})$", "description": "Deprecated here: set the location on providers.gemini_vertex.location. Still accepted, and lifted onto the provider when it names none." },
+      "location": { "type": "string", "description": "Deprecated here: set the location on providers.gemini_vertex.location or providers.azure_openai.location. Still accepted, and lifted onto the provider when it names none." },
       "input": {
         "description": "What the bound model can be GIVEN. On openai_compatible/vllm it is the whole answer (the carriage depends on which model was bound). On every other provider it NARROWS the carriage fixed in that adapter's wire — at most what the wire carries, at most what is declared — so it can take image away from a gemini tier and can never add a lane a wire lacks. Omit to take whatever the provider carries; write [text] to send it no attachments. Must include text.",
         "type": "array",
@@ -99,7 +127,15 @@ const routingDefsTemplate = `{
       },
       {
         "if":   { "required": ["location"] },
-        "then": { "properties": { "provider": { "const": "gemini_vertex" } } }
+        "then": { "properties": { "provider": { "enum": ["gemini_vertex", "azure_openai"] } } }
+      },
+      {
+        "if":   { "properties": { "provider": { "const": "gemini_vertex" } }, "required": ["provider", "location"] },
+        "then": { "properties": { "location": { "pattern": "^(global|us|eu|[a-z]+-[a-z]+[0-9]{1,2})$" } } }
+      },
+      {
+        "if":   { "properties": { "provider": { "const": "azure_openai" } }, "required": ["provider", "location"] },
+        "then": { "properties": { "location": { "pattern": "^[A-Za-z][A-Za-z0-9]{2,30}$" } } }
       },
       {
         "if":   { "required": ["thinking_level"] },
@@ -341,12 +377,12 @@ const routingDefsTemplate = `{
     "required": ["provider"],
     "properties": {
       "provider": {
-        "description": "fake | anthropic | ollama | vllm | openai_compatible | openai | gemini | gemini_vertex. The only place vendor names appear.",
-        "enum": ["fake", "anthropic", "ollama", "vllm", "openai_compatible", "openai", "gemini", "gemini_vertex"]
+        "description": "fake | anthropic | ollama | vllm | openai_compatible | openai | gemini | gemini_vertex | azure_openai. The only place vendor names appear.",
+        "enum": ["fake", "anthropic", "ollama", "vllm", "openai_compatible", "openai", "gemini", "gemini_vertex", "azure_openai"]
       },
       "model":    { "type": "string", "description": "Provider-native model id. ollama/vllm default to a Gemma-class model when omitted (A23)." },
       "base_url": { "type": "string", "description": "A separate embeddings server for this lane alone (vLLM serves one model per process). Empty ⇒ the provider's host (providers.<name>.base_url)." },
-      "location": { "type": "string", "pattern": "^(global|us|eu|[a-z]+-[a-z]+[0-9]{1,2})$", "description": "gemini_vertex only: a location of this lane's own, since Vertex serves an embedding model at fewer locations than a chat model. Empty ⇒ the provider's (providers.gemini_vertex.location)." },
+      "location": { "type": "string", "description": "gemini_vertex or azure_openai only: a location of this lane's own, since Vertex serves an embedding model at fewer locations than a chat model. Empty ⇒ the provider's (providers.gemini_vertex.location)." },
       "dimensions": { "type": "integer", "minimum": 0, "maximum": 2000, "description": "Vector width the provider is asked to emit. Optional; 0 or omitted defaults to 1536." },
       "routing": { "$ref": "#/$defs/embeddingsRouting" }
     },
@@ -358,7 +394,15 @@ const routingDefsTemplate = `{
       },
       {
         "if":   { "required": ["location"] },
-        "then": { "properties": { "provider": { "const": "gemini_vertex" } } }
+        "then": { "properties": { "provider": { "enum": ["gemini_vertex", "azure_openai"] } } }
+      },
+      {
+        "if":   { "properties": { "provider": { "const": "gemini_vertex" } }, "required": ["provider", "location"] },
+        "then": { "properties": { "location": { "pattern": "^(global|us|eu|[a-z]+-[a-z]+[0-9]{1,2})$" } } }
+      },
+      {
+        "if":   { "properties": { "provider": { "const": "azure_openai" } }, "required": ["provider", "location"] },
+        "then": { "properties": { "location": { "pattern": "^[A-Za-z][A-Za-z0-9]{2,30}$" } } }
       }
     ]
   },
@@ -399,7 +443,7 @@ func routingDefs() (json.RawMessage, error) {
 	for i, t := range tiers {
 		names[i] = string(t)
 	}
-	raw := strings.Replace(routingDefsTemplate, "__TIERS__", quotedList(names), 1)
+	raw := strings.ReplaceAll(routingDefsTemplate, "__TIERS__", quotedList(names))
 	raw = strings.Replace(raw, "__DECISION_PROVIDERS__", quotedList(ai.DecisionProviders()), 1)
 	raw = strings.Replace(raw, "__PROVIDERS__", quotedList(ai.KnownProviders()), 1)
 	// Validated here so a substitution bug fails generation rather than shipping

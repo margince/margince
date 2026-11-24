@@ -355,12 +355,18 @@ func newCaptureEnvAt(t *testing.T, now time.Time) captureEnv {
 
 func newCaptureEnvWithBlob(t *testing.T, now time.Time, blob blobstore.Store) captureEnv {
 	t.Helper()
+	return newCaptureEnvConfigured(t, now, compose.CaptureConfig{Blob: blob})
+}
+
+// newCaptureEnvConfigured is the harness on a registry configured by cfg. The
+// clock and the deal topic model are the harness's own and replace cfg's.
+func newCaptureEnvConfigured(t *testing.T, now time.Time, cfg compose.CaptureConfig) captureEnv {
+	t.Helper()
 	e := integration.SetupSearch(t)
 	conn := &mailBatchConnector{}
 	topic := &topicModel{}
-	registry := compose.NewCaptureRegistry(e.Pool, newTestKeyvault(t, e), compose.CaptureConfig{
-		Now: func() time.Time { return now }, DealTopicBrain: topic, Blob: blob,
-	})
+	cfg.Now, cfg.DealTopicBrain = func() time.Time { return now }, topic
+	registry := compose.NewCaptureRegistry(e.Pool, newTestKeyvault(t, e), cfg)
 	registry.Register(conn)
 
 	seedCaptureRole(t, e)

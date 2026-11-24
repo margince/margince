@@ -89,7 +89,8 @@ func (v *viabilityEnv) commitDeal(
 	owner := ids.From[ids.UserKind](v.Rep1)
 	currency := "EUR"
 	created, err := v.Deals.CreateDeal(v.Admin(), deals.CreateDealInput{
-		Name: name, PipelineID: pipeline, StageID: stage, OwnerID: &owner,
+		Source: "manual",
+		Name:   name, PipelineID: pipeline, StageID: stage, OwnerID: &owner,
 		AmountMinor: &amount, Currency: &currency, ExpectedClose: &v.closeDate,
 	})
 	if err != nil {

@@ -20,7 +20,6 @@ import (
 	"time"
 
 	"github.com/margince/margince/backend/internal/compose/dealcoverage"
-	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/corefeatures"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
@@ -178,19 +177,9 @@ type reportSpec struct {
 	// rowMoments are the dimensions that differ for every row but order the
 	// rows: a timestamp. No group of one can answer, but a range over them
 	// can. The typed vocabulary offers them to narrow by, never to group by.
-	rowMoments []string
-	// nativeMeasures are the measures denominated in the ROW's own currency
-	// rather than in one the whole answer shares. Summing one across a grouping
-	// that does not split by currency adds euros to dollars and returns a plain
-	// integer — a number with no unit, which data-semantics §1 r4 forbids.
-	//
-	// Declared rather than inferred from the `_minor` / `_base_minor` naming
-	// convention. The convention is real and the frontend leans on it, but a
-	// convention is not a rule: the next measure that breaks it is named by
-	// whoever adds it, and nothing would notice.
-	nativeMeasures map[string]bool
-	defaultBy      []string
-	defaultAggs    []reportAggregate
+	rowMoments  []string
+	defaultBy   []string
+	defaultAggs []reportAggregate
 	// population says whose records this report measures, as against which
 	// rows its reader may see at all. See populationRule: the zero value
 	// measures the caller's own.
@@ -207,6 +196,9 @@ type reportSpec struct {
 	// silently included those deals under a null key would still disclose that
 	// somebody's partner brought them.
 	referenceScopes map[string]string
+	// drillColumns are shown on the drill-through's rows and nowhere else: never
+	// grouped by. A reference among them is blanked like a dimension's.
+	drillColumns map[string]string
 	// customFields are the reportable custom fields this spec was extended
 	// with in one installation, keyed by their SQL expression. Empty on every
 	// prebuilt entry; analyticsCatalog fills it per request.
@@ -254,9 +246,10 @@ type reportSpec struct {
 	grants map[string]string
 }
 
-// colWinProbability is the deal's effective win probability, the figure the
-// forecast weights by and the deal list filters on.
-var colWinProbability = deals.WinProbabilitySQL("t")
+// colWinProbability is the deal's win chance, the figure the forecast weights
+// by and the deal list filters on. A token, bound per request to the one win
+// chance (forecastchancetable.go).
+const colWinProbability = reportDealChanceToken
 
 // winProbabilityBandExpr groups deals into the bands the analytics tiles draw.
 // 90_plus is Likely at the shipped threshold.
@@ -305,6 +298,8 @@ type reportOutcome struct {
 	// length, so a reader can tell a whole answer from the top of one.
 	TotalRows   int
 	GeneratedAt time.Time
+	// RatesAt is the rate-sheet revision the figures were computed from.
+	RatesAt time.Time
 	// The reading's frame, resolved in the same transaction that ran it. A
 	// number without them is not wrong so much as unplaceable: the reader
 	// cannot tell which zone cut the day, which currency the money is in, or
@@ -406,6 +401,7 @@ func (e *reportEngine) runSpec(ctx context.Context, report string, spec reportSp
 		// rate sheet effective in that gap would make the label name a moment
 		// the arithmetic did not use.
 		GeneratedAt: frame.AsOf,
+		RatesAt:     frame.RatesAt,
 
 		Timezone:             frame.Timezone,
 		BaseCurrency:         frame.BaseCurrency,

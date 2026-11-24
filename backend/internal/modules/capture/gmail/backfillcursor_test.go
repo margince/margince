@@ -142,7 +142,7 @@ func TestHistoryFailureStreakRemainsRetryableAcrossCheckpointBoundary(t *testing
 }
 
 func TestHistoryRejectsInvalidProviderListingsBeforeSaving(t *testing.T) {
-	for _, ids := range [][]string{{""}, {"duplicate", "duplicate"}, make([]string, backfillPageSize+1)} {
+	for _, ids := range [][]string{{""}, {"duplicate", "duplicate"}, make([]string, MaxBackfillPageSize+1)} {
 		api := &pagedAPI{pages: map[string][]string{"": ids}}
 		saved := &savedHistoryPage{}
 		ctx := connector.WithBackfillProgress(t.Context(), saved)

@@ -33,6 +33,7 @@ function bulkBody(request: BulkChangeRequest) {
     list_id: request.list?.id,
     tag_id: request.tag?.id,
     task: request.verb === "create_task" ? request.task : undefined,
+    stage_id: request.verb === "move_stage" ? request.stage?.id : undefined,
   };
 }
 

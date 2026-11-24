@@ -29,11 +29,13 @@ expect:
     passage) and usp, buying_intents (groundable in the second) were proposed
     with the RIGHT citing passage id and a value drawn from that passage's own
     words. offer_summary, value_proposition and customer_pains are stated in
-    the first passage too and cost nothing. buying_center "operations teams" is
-    a defensible reading of whom the page says it serves: neither credit nor
-    penalty. Penalize any field this page does not state (industry, or any of
-    the legal trio — this page is not a legal notice and names no registered
-    entity). The expected answer pins only display_name, the one value with a
+    the first passage too and cost nothing, and so does industry "software":
+    the company "builds inventory-forecasting software", and the prompt names
+    software as the sector of a company that sells software to another one.
+    buying_center "operations teams" is a defensible reading of whom the page
+    says it serves: neither credit nor penalty. Penalize any field this page
+    does not state (any of the legal trio: this page is not a legal notice and
+    names no registered entity). The expected answer pins only display_name, the one value with a
     single right wording; it is not the whole answer.
   bands:
     certified_min: 70

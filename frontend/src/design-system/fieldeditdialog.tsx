@@ -35,6 +35,11 @@ export type FieldEditDialogProps = Readonly<{
   label: string;
   /** The stored value. Each opening starts the draft from it. */
   value: string;
+  /**
+   * No value is stored, so `value` is only the empty draft. Saving it as typed,
+   * empty included, is an edit: "nothing to name" differs from never written.
+   */
+  absent?: boolean;
   /** A function hint speaks for the draft, so it can follow the pick. */
   hint?: ReactNode | ((draft: string) => ReactNode);
   onClose: () => void;
@@ -80,6 +85,7 @@ export function FieldEditDialog({
   open,
   label,
   value,
+  absent = false,
   hint,
   onClose,
   onSave,
@@ -93,6 +99,7 @@ export function FieldEditDialog({
   const [draft, setDraft] = useState(value);
   const [saving, setSaving] = useState(false);
   const [failure, setFailure] = useState<string | null>(null);
+  const [refusals, setRefusals] = useState(0);
   const [openedOn, setOpenedOn] = useState(false);
   if (open !== openedOn) {
     setOpenedOn(open);
@@ -101,6 +108,14 @@ export function FieldEditDialog({
       setFailure(null);
     }
   }
+  // A refusal, local or from the server, returns the caret to the field it is about.
+  useEffect(() => {
+    if (refusals === 0) return;
+    document
+      .getElementById(formId)
+      ?.querySelector<HTMLElement>("input, textarea, button")
+      ?.focus();
+  }, [refusals, formId]);
   // Set in the press, so an Enter that lands before `saving` renders is refused.
   const inFlight = useRef(false);
   const dirty = open && (saving || settle(draft) !== value);
@@ -111,13 +126,14 @@ export function FieldEditDialog({
   const save = async () => {
     const next = settle(draft);
     // Storing what is already stored writes an audit row for no change.
-    if (next === value) {
+    if (next === value && !absent) {
       onClose();
       return;
     }
     const refused = check?.(next);
     if (refused) {
       setFailure(refused);
+      setRefusals((count) => count + 1);
       return;
     }
     inFlight.current = true;
@@ -128,6 +144,7 @@ export function FieldEditDialog({
       onClose();
     } catch (err) {
       setFailure(problemMessageOf(err, t));
+      setRefusals((count) => count + 1);
     } finally {
       inFlight.current = false;
       setSaving(false);

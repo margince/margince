@@ -24,9 +24,9 @@ import (
 // Zone answers the installation's timezone, which is what decides when "today"
 // ends for this feed.
 //
-// A SEAM rather than a read of its own: this package binds no module and opens
-// no transaction, and the installation's timezone is a fact the composition
-// root already resolves for the morning brief through identity.TimezoneOf.
+// A seam rather than a read of its own, because this package binds no module
+// and opens no transaction. Compose resolves the zone through
+// identity.TimezoneAppliedTx, as it does for the morning brief.
 type Zone func(ctx context.Context) (*time.Location, error)
 
 // Option adjusts a service after its seams are bound.
@@ -44,6 +44,22 @@ type Option func(*Service)
 // shipped wiring binds it, which is what makes the difference visible.
 func WithZone(z Zone) Option {
 	return func(s *Service) { s.zone = z }
+}
+
+// WithZones is WithZone plus the zone a member's own list measures its day in
+// (dayrule.Zone). A list that combines several colleagues stays on the installation
+// zone. With no personal zone bound, a personal list reads the installation's.
+func WithZones(installation, personal Zone) Option {
+	return func(s *Service) { s.zone, s.personalZone = installation, personal }
+}
+
+// dayZoneOf is the zone name a task read counts its chosen due dates in.
+// It is the reader's own zone on their own list, and empty elsewhere.
+func dayZoneOf(scope TaskScope, loc *time.Location) string {
+	if scope != TasksMine || loc == nil {
+		return ""
+	}
+	return loc.String()
 }
 
 // WithMeetingsAwaitingOutcome binds the lane of meetings that already happened.

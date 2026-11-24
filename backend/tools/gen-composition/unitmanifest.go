@@ -95,16 +95,16 @@ type unitManifest struct {
 
 	// Entries are the places on core screens that offer a way into the unit.
 	Entries []declaredEntry `json:"entries,omitempty"`
-
 	// Settings are the values an admin can change, drawn on the unit's card.
 	Settings     []declaredSetting     `json:"settings,omitempty"`
 	CompanyTypes []declaredCompanyType `json:"company_types,omitempty"`
 	RecordKinds  []declaredRecordKind  `json:"record_kinds,omitempty"`
 	LinkTypes    []declaredLinkType    `json:"link_types,omitempty"`
+	AITasks      []declaredAITask      `json:"ai_tasks,omitempty"`
 	reportDecls
 	// Panels are the places on core pages that draw the unit's own component.
 	Panels []declaredPanel `json:"panels,omitempty"`
-
+	appDecl
 	// Instrumentation says what the unit observes of the whole process.
 	Instrumentation *unitInstrumentation `json:"instrumentation,omitempty"`
 
@@ -113,9 +113,9 @@ type unitManifest struct {
 	// consent asks for, and the endpoint that receives the client secret.
 	// omitempty for the reason the fields above have it.
 	OAuthApps []declaredOAuthApp `json:"oauth_apps,omitempty"`
-
 	// SystemReads are the deals and colleagues' details the unit reads.
-	SystemReads []string `json:"system_reads,omitempty"`
+	SystemReads []string       `json:"system_reads,omitempty"`
+	Needs       []declaredNeed `json:"needs,omitempty"`
 }
 
 // inboundEndpoint is one declared anonymous edge (see

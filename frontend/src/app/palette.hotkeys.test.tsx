@@ -77,7 +77,7 @@ const commands: Command[] = [
 // Every row button except "Ask your documents", which is not a command.
 function destinationRows(): HTMLElement[] {
   return screen
-    .getAllByRole("button")
+    .getAllByRole("option")
     .filter((button) => !button.classList.contains("palette-ask"));
 }
 
@@ -135,12 +135,12 @@ describe("the palette before setup is finished", () => {
     const view = render(<ShellBeforeSetup available />);
     const user = userEvent.setup();
     await user.keyboard("{Meta>}k{/Meta}");
-    expect(await screen.findByRole("searchbox")).toBeTruthy();
+    expect(await screen.findByRole("combobox")).toBeTruthy();
 
     view.rerender(<ShellBeforeSetup available={false} />);
-    await waitFor(() => expect(screen.queryByRole("searchbox")).toBeNull());
+    await waitFor(() => expect(screen.queryByRole("combobox")).toBeNull());
     view.rerender(<ShellBeforeSetup available />);
-    expect(screen.queryByRole("searchbox")).toBeNull();
+    expect(screen.queryByRole("combobox")).toBeNull();
   });
 
   it("opens on none of its keys", async () => {
@@ -150,7 +150,7 @@ describe("the palette before setup is finished", () => {
     await user.keyboard("{Meta>}k{/Meta}");
     await user.keyboard("/");
     await user.keyboard("c");
-    expect(screen.queryByRole("searchbox")).toBeNull();
+    expect(screen.queryByRole("combobox")).toBeNull();
   });
 });
 
@@ -162,7 +162,7 @@ describe("the palette hotkey", () => {
     const user = userEvent.setup();
 
     await user.keyboard("{Meta>}k{/Meta}");
-    expect(screen.queryByRole("searchbox")).toBeNull();
+    expect(screen.queryByRole("combobox")).toBeNull();
     // The browser's own ⌘K is still withheld: the chord belongs to the product.
     expect(fireEvent.keyDown(document.body, { key: "k", metaKey: true })).toBe(
       false,
@@ -177,9 +177,9 @@ describe("the palette hotkey", () => {
     const user = userEvent.setup();
 
     await user.keyboard("{Meta>}k{/Meta}");
-    expect(screen.getByRole("searchbox")).toBeTruthy();
+    expect(screen.getByRole("combobox")).toBeTruthy();
     await user.keyboard("{Meta>}k{/Meta}");
-    expect(screen.queryByRole("searchbox")).toBeNull();
+    expect(screen.queryByRole("combobox")).toBeNull();
   });
 
   it("opens the palette again while its own exit is still playing", async () => {
@@ -192,7 +192,7 @@ describe("the palette hotkey", () => {
       expect(document.querySelector(".palette-overlay[inert]")).not.toBeNull();
 
       await user.keyboard("{Meta>}k{/Meta}");
-      const input = screen.getByRole("searchbox");
+      const input = screen.getByRole("combobox");
       expect(input.closest("[inert]")).toBeNull();
     } finally {
       exits.mockRestore();
@@ -211,7 +211,7 @@ describe("the palette hotkey", () => {
     const user = userEvent.setup();
 
     await user.keyboard("{Meta>}k{/Meta}");
-    expect(screen.queryByRole("searchbox")).toBeNull();
+    expect(screen.queryByRole("combobox")).toBeNull();
   });
 
   it("closes when Back moves the page under it", async () => {
@@ -219,13 +219,13 @@ describe("the palette hotkey", () => {
     render(<ShellWithDialog dialogOpen={false} />);
     const user = userEvent.setup();
     await user.keyboard("{Meta>}k{/Meta}");
-    expect(screen.getByRole("searchbox")).toBeTruthy();
+    expect(screen.getByRole("combobox")).toBeTruthy();
 
     act(() => {
       window.location.hash = "#/deals";
       window.dispatchEvent(new HashChangeEvent("hashchange"));
     });
-    expect(screen.queryByRole("searchbox")).toBeNull();
+    expect(screen.queryByRole("combobox")).toBeNull();
   });
 
   it("stays open while only the view of the page changes", async () => {
@@ -238,7 +238,7 @@ describe("the palette hotkey", () => {
       window.location.hash = "#/contacts?sort=-created_at";
       window.dispatchEvent(new HashChangeEvent("hashchange"));
     });
-    expect(screen.getByRole("searchbox")).toBeTruthy();
+    expect(screen.getByRole("combobox")).toBeTruthy();
   });
 
   it("opens over a dialog that is already on its way out", async () => {
@@ -250,7 +250,7 @@ describe("the palette hotkey", () => {
       const user = userEvent.setup();
 
       await user.keyboard("{Meta>}k{/Meta}");
-      expect(screen.getByRole("searchbox")).toBeTruthy();
+      expect(screen.getByRole("combobox")).toBeTruthy();
     } finally {
       exits.mockRestore();
     }
@@ -263,7 +263,7 @@ describe("the palette's single keys", () => {
     const user = userEvent.setup();
 
     await user.keyboard("/");
-    expect(screen.getByRole("searchbox")).toHaveProperty("value", "");
+    expect(screen.getByRole("combobox")).toHaveProperty("value", "");
   });
 
   it.each([...CREATE_SCREENS])(
@@ -275,7 +275,7 @@ describe("the palette's single keys", () => {
 
       await user.keyboard("c");
       expect(window.location.hash).toBe(`#/${listScreen}/${CREATE_ID}`);
-      expect(screen.queryByRole("searchbox")).toBeNull();
+      expect(screen.queryByRole("combobox")).toBeNull();
     },
   );
 
@@ -320,7 +320,7 @@ describe("the palette's single keys", () => {
 
     await user.keyboard("c");
     expect(window.location.hash).toBe("#/contacts");
-    expect(screen.getByRole("searchbox")).toBeTruthy();
+    expect(screen.getByRole("combobox")).toBeTruthy();
   });
 
   it("lists only what creates on C where the screen has no form", async () => {
@@ -365,7 +365,7 @@ describe("the palette C opens", () => {
     const user = userEvent.setup();
     expect(screen.queryByText("Ask your documents")).toBeNull();
 
-    await user.type(screen.getByRole("searchbox"), "deal");
+    await user.type(screen.getByRole("combobox"), "deal");
     expect(destinationRows().map((row) => row.textContent)).toEqual([
       expect.stringContaining("New deal"),
     ]);

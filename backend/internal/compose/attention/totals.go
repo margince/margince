@@ -84,9 +84,16 @@ func withTotals(
 	}
 	// Keyed by the row's own category, which countsOf counts under; a bounded
 	// source with no row left is filed by categoryOfSource, as countsOf files it.
+	// A decisions row the reader cannot settle is seen and not counted, so the
+	// source stays in the map and its bound still holds.
 	read := map[totalKey]int{}
 	for _, row := range considered {
-		read[totalKey{row.item.Source, crmcontracts.WorklistCountCategory(row.item.Category)}]++
+		at := totalKey{row.item.Source, crmcontracts.WorklistCountCategory(row.item.Category)}
+		counted := 0
+		if row.item.Category != categoryDecisions || readerSettles(row.item) {
+			counted = 1
+		}
+		read[at] += counted
 	}
 	for source := range bounds {
 		at := totalKey{source, crmcontracts.WorklistCountCategory(categoryOfSource(source))}

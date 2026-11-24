@@ -1,0 +1,19 @@
+name: reads_a_total_into_the_declared_schema
+task: extension_task
+site: run
+source: hand_authored
+sanitized_by: hand_authored/claude-sonnet-5-5
+fixture:
+  prompt: Read the invoice text and return its total amount and currency as JSON.
+  schema: '{"type":"object","required":["total","currency"],"properties":{"total":{"type":"number"},"currency":{"type":"string"}}}'
+  input_text: |
+    Invoice 2027-0042 from Example Supply Ltd. Two crates of widgets, 120.50 EUR
+    in total, due in 30 days.
+expect:
+  outcome: accepted
+  answer:
+    contains: ["120.5", "EUR"]
+  judge: none
+  judge_none_reason: >
+    The check requires the named words in the answer, and a rubric could only
+    rank answers that miss them, which the check already fails outright.

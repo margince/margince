@@ -32,6 +32,7 @@ export const AUDIT_KIND_LABEL: Readonly<Record<string, MessageKey>> = {
   capture_connection: "audit.kind.capture_connection",
   capture_exclusion: "audit.kind.capture_exclusion",
   capture_pending_counterparty: "audit.kind.capture_pending_counterparty",
+  capture_personal_sweep: "audit.kind.capture_personal_sweep",
   capture_settings: "audit.kind.capture_settings",
   channel_connection: "audit.kind.channel_connection",
   chat_link: "audit.kind.chat_link",

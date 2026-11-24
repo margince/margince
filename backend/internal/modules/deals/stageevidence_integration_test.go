@@ -50,7 +50,8 @@ func evidenceFixture(t *testing.T, e *configEnv, kind CriterionKind) (ids.DealID
 	// production proves nothing about production.
 	owner := ids.From[ids.UserKind](e.admin)
 	deal, err := e.store.CreateDeal(e.asDealWriter(), CreateDealInput{
-		Name: "Warehouse rollout", PipelineID: pipelineID, StageID: stageID,
+		Source: "manual",
+		Name:   "Warehouse rollout", PipelineID: pipelineID, StageID: stageID,
 		OwnerID: &owner, OwnerExact: true,
 	})
 	if err != nil {

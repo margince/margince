@@ -210,6 +210,8 @@
      "Confirmation destination",
     "confirmed":
      "confirmed",
+    "consent":
+     "consent",
     "consent_contact":
      "Consent contact",
     "consent_policy_version":
@@ -418,6 +420,10 @@
      "href",
     "html_body":
      "Formatted message",
+    "impersonation_warning_carried":
+     "Impersonation warning kept from merged contact",
+    "impersonation_warning_cleared":
+     "Impersonation warning cleared",
     "import_apply_tag":
      "Add tag",
     "import_close_deal":
@@ -1326,8 +1332,6 @@
      "Visibility",
     "vital_or_security_interest":
      "vital or security interest",
-    "vn_subject_agreement":
-     "vn subject agreement",
     "wait_until":
      "Waiting until",
     "win_probability":
@@ -3488,6 +3492,26 @@
      "Unknown",
     "confirmed/boolean/true":
      "Yes",
+    "consent/lifecycle/customer":
+     "Customer",
+    "consent/lifecycle/disqualified":
+     "Disqualified",
+    "consent/lifecycle/former_customer":
+     "Former customer",
+    "consent/lifecycle/live":
+     "Live",
+    "consent/lifecycle/onboarding":
+     "Onboarding",
+    "consent/lifecycle/opportunity":
+     "Opportunity",
+    "consent/lifecycle/prospect":
+     "Prospect",
+    "consent/lifecycle/target":
+     "Target",
+    "consent/lifecycle/unknown":
+     "Unknown",
+    "consent/boolean/true":
+     "Yes",
     "consent_contact/lifecycle/customer":
      "Customer",
     "consent_contact/lifecycle/disqualified":
@@ -5559,6 +5583,46 @@
     "html_body/lifecycle/unknown":
      "Unknown",
     "html_body/boolean/true":
+     "Yes",
+    "impersonation_warning_carried/lifecycle/customer":
+     "Customer",
+    "impersonation_warning_carried/lifecycle/disqualified":
+     "Disqualified",
+    "impersonation_warning_carried/lifecycle/former_customer":
+     "Former customer",
+    "impersonation_warning_carried/lifecycle/live":
+     "Live",
+    "impersonation_warning_carried/lifecycle/onboarding":
+     "Onboarding",
+    "impersonation_warning_carried/lifecycle/opportunity":
+     "Opportunity",
+    "impersonation_warning_carried/lifecycle/prospect":
+     "Prospect",
+    "impersonation_warning_carried/lifecycle/target":
+     "Target",
+    "impersonation_warning_carried/lifecycle/unknown":
+     "Unknown",
+    "impersonation_warning_carried/boolean/true":
+     "Yes",
+    "impersonation_warning_cleared/lifecycle/customer":
+     "Customer",
+    "impersonation_warning_cleared/lifecycle/disqualified":
+     "Disqualified",
+    "impersonation_warning_cleared/lifecycle/former_customer":
+     "Former customer",
+    "impersonation_warning_cleared/lifecycle/live":
+     "Live",
+    "impersonation_warning_cleared/lifecycle/onboarding":
+     "Onboarding",
+    "impersonation_warning_cleared/lifecycle/opportunity":
+     "Opportunity",
+    "impersonation_warning_cleared/lifecycle/prospect":
+     "Prospect",
+    "impersonation_warning_cleared/lifecycle/target":
+     "Target",
+    "impersonation_warning_cleared/lifecycle/unknown":
+     "Unknown",
+    "impersonation_warning_cleared/boolean/true":
      "Yes",
     "import_apply_tag/lifecycle/customer":
      "Customer",
@@ -9350,6 +9414,10 @@
      "History",
     "merge_profile_field/text/icp":
      "Ideal customer profile",
+    "merge_profile_field/text/impersonation_warning_carried":
+     "Impersonation warning kept from merged contact",
+    "merge_profile_field/text/impersonation_warning_cleared":
+     "Impersonation warning cleared",
     "merge_profile_field/text/industry":
      "Industry",
     "merge_profile_field/text/invitation_status":
@@ -9710,6 +9778,10 @@
      "History",
     "merge_profile_field/lifecycle/icp":
      "Ideal customer profile",
+    "merge_profile_field/lifecycle/impersonation_warning_carried":
+     "Impersonation warning kept from merged contact",
+    "merge_profile_field/lifecycle/impersonation_warning_cleared":
+     "Impersonation warning cleared",
     "merge_profile_field/lifecycle/industry":
      "Industry",
     "merge_profile_field/lifecycle/invitation_status":
@@ -11796,6 +11868,8 @@
      "Unknown",
     "promotion_basis_from/boolean/true":
      "Yes",
+    "promotion_basis_kind/text/consent":
+     "Recipient agreement",
     "promotion_basis_kind/text/contract":
      "Contract",
     "promotion_basis_kind/text/existing_customer_exception":
@@ -11810,7 +11884,7 @@
      "Correspondence initiated by the recipient",
     "promotion_basis_kind/text/vital_or_security_interest":
      "Vital or security interest",
-    "promotion_basis_kind/text/vn_subject_agreement":
+    "promotion_basis_kind/lifecycle/consent":
      "Recipient agreement",
     "promotion_basis_kind/lifecycle/contract":
      "Contract",
@@ -11826,8 +11900,6 @@
      "Correspondence initiated by the recipient",
     "promotion_basis_kind/lifecycle/vital_or_security_interest":
      "Vital or security interest",
-    "promotion_basis_kind/lifecycle/vn_subject_agreement":
-     "Recipient agreement",
     "promotion_basis_kind/boolean/true":
      "Yes",
     "promotion_basis_until/lifecycle/customer":
@@ -15984,26 +16056,6 @@
      "Unknown",
     "vital_or_security_interest/boolean/true":
      "Yes",
-    "vn_subject_agreement/lifecycle/customer":
-     "Customer",
-    "vn_subject_agreement/lifecycle/disqualified":
-     "Disqualified",
-    "vn_subject_agreement/lifecycle/former_customer":
-     "Former customer",
-    "vn_subject_agreement/lifecycle/live":
-     "Live",
-    "vn_subject_agreement/lifecycle/onboarding":
-     "Onboarding",
-    "vn_subject_agreement/lifecycle/opportunity":
-     "Opportunity",
-    "vn_subject_agreement/lifecycle/prospect":
-     "Prospect",
-    "vn_subject_agreement/lifecycle/target":
-     "Target",
-    "vn_subject_agreement/lifecycle/unknown":
-     "Unknown",
-    "vn_subject_agreement/boolean/true":
-     "Yes",
     "wait_until/lifecycle/customer":
      "Customer",
     "wait_until/lifecycle/disqualified":
@@ -16816,6 +16868,12 @@
      "Not set",
     "confirmed/execution":
      "Set when applied",
+    "consent/boolean":
+     "No",
+    "consent/empty":
+     "Not set",
+    "consent/execution":
+     "Set when applied",
     "consent_contact/boolean":
      "No",
     "consent_contact/empty":
@@ -17439,6 +17497,18 @@
     "html_body/empty":
      "Not set",
     "html_body/execution":
+     "Set when applied",
+    "impersonation_warning_carried/boolean":
+     "No",
+    "impersonation_warning_carried/empty":
+     "Not set",
+    "impersonation_warning_carried/execution":
+     "Set when applied",
+    "impersonation_warning_cleared/boolean":
+     "No",
+    "impersonation_warning_cleared/empty":
+     "Not set",
+    "impersonation_warning_cleared/execution":
      "Set when applied",
     "import_apply_tag/boolean":
      "No",
@@ -20228,12 +20298,6 @@
      "Not set",
     "vital_or_security_interest/execution":
      "Set when applied",
-    "vn_subject_agreement/boolean":
-     "No",
-    "vn_subject_agreement/empty":
-     "Not set",
-    "vn_subject_agreement/execution":
-     "Set when applied",
     "wait_until/boolean":
      "No",
     "wait_until/empty":
@@ -20520,6 +20584,8 @@
      "Zieladresse der Bestätigung",
     "confirmed":
      "confirmed",
+    "consent":
+     "consent",
     "consent_contact":
      "Kontakt der Einwilligung",
     "consent_policy_version":
@@ -20728,6 +20794,10 @@
      "href",
     "html_body":
      "Formatierte Nachricht",
+    "impersonation_warning_carried":
+     "Warnung vor möglicher Täuschung aus Zusammenführung übernommen",
+    "impersonation_warning_cleared":
+     "Warnung vor möglicher Täuschung aufgehoben",
     "import_apply_tag":
      "Tag hinzufügen",
     "import_close_deal":
@@ -21636,8 +21706,6 @@
      "Sichtbarkeit",
     "vital_or_security_interest":
      "vital or security interest",
-    "vn_subject_agreement":
-     "vn subject agreement",
     "wait_until":
      "Wartet bis",
     "win_probability":
@@ -23798,6 +23866,26 @@
      "Unbekannt",
     "confirmed/boolean/true":
      "Ja",
+    "consent/lifecycle/customer":
+     "Kunde",
+    "consent/lifecycle/disqualified":
+     "Disqualifiziert",
+    "consent/lifecycle/former_customer":
+     "Ehemaliger Kunde",
+    "consent/lifecycle/live":
+     "Live",
+    "consent/lifecycle/onboarding":
+     "Onboarding",
+    "consent/lifecycle/opportunity":
+     "Chance",
+    "consent/lifecycle/prospect":
+     "Interessent",
+    "consent/lifecycle/target":
+     "Zielunternehmen",
+    "consent/lifecycle/unknown":
+     "Unbekannt",
+    "consent/boolean/true":
+     "Ja",
     "consent_contact/lifecycle/customer":
      "Kunde",
     "consent_contact/lifecycle/disqualified":
@@ -25869,6 +25957,46 @@
     "html_body/lifecycle/unknown":
      "Unbekannt",
     "html_body/boolean/true":
+     "Ja",
+    "impersonation_warning_carried/lifecycle/customer":
+     "Kunde",
+    "impersonation_warning_carried/lifecycle/disqualified":
+     "Disqualifiziert",
+    "impersonation_warning_carried/lifecycle/former_customer":
+     "Ehemaliger Kunde",
+    "impersonation_warning_carried/lifecycle/live":
+     "Live",
+    "impersonation_warning_carried/lifecycle/onboarding":
+     "Onboarding",
+    "impersonation_warning_carried/lifecycle/opportunity":
+     "Chance",
+    "impersonation_warning_carried/lifecycle/prospect":
+     "Interessent",
+    "impersonation_warning_carried/lifecycle/target":
+     "Zielunternehmen",
+    "impersonation_warning_carried/lifecycle/unknown":
+     "Unbekannt",
+    "impersonation_warning_carried/boolean/true":
+     "Ja",
+    "impersonation_warning_cleared/lifecycle/customer":
+     "Kunde",
+    "impersonation_warning_cleared/lifecycle/disqualified":
+     "Disqualifiziert",
+    "impersonation_warning_cleared/lifecycle/former_customer":
+     "Ehemaliger Kunde",
+    "impersonation_warning_cleared/lifecycle/live":
+     "Live",
+    "impersonation_warning_cleared/lifecycle/onboarding":
+     "Onboarding",
+    "impersonation_warning_cleared/lifecycle/opportunity":
+     "Chance",
+    "impersonation_warning_cleared/lifecycle/prospect":
+     "Interessent",
+    "impersonation_warning_cleared/lifecycle/target":
+     "Zielunternehmen",
+    "impersonation_warning_cleared/lifecycle/unknown":
+     "Unbekannt",
+    "impersonation_warning_cleared/boolean/true":
      "Ja",
     "import_apply_tag/lifecycle/customer":
      "Kunde",
@@ -29660,6 +29788,10 @@
      "Geschichte",
     "merge_profile_field/text/icp":
      "Ideales Kundenprofil",
+    "merge_profile_field/text/impersonation_warning_carried":
+     "Warnung vor möglicher Täuschung aus Zusammenführung übernommen",
+    "merge_profile_field/text/impersonation_warning_cleared":
+     "Warnung vor möglicher Täuschung aufgehoben",
     "merge_profile_field/text/industry":
      "Branche",
     "merge_profile_field/text/invitation_status":
@@ -30020,6 +30152,10 @@
      "Geschichte",
     "merge_profile_field/lifecycle/icp":
      "Ideales Kundenprofil",
+    "merge_profile_field/lifecycle/impersonation_warning_carried":
+     "Warnung vor möglicher Täuschung aus Zusammenführung übernommen",
+    "merge_profile_field/lifecycle/impersonation_warning_cleared":
+     "Warnung vor möglicher Täuschung aufgehoben",
     "merge_profile_field/lifecycle/industry":
      "Branche",
     "merge_profile_field/lifecycle/invitation_status":
@@ -32106,6 +32242,8 @@
      "Unbekannt",
     "promotion_basis_from/boolean/true":
      "Ja",
+    "promotion_basis_kind/text/consent":
+     "Zustimmung der empfangenden Person",
     "promotion_basis_kind/text/contract":
      "Vertrag",
     "promotion_basis_kind/text/existing_customer_exception":
@@ -32120,7 +32258,7 @@
      "Von der empfangenden Person begonnene Korrespondenz",
     "promotion_basis_kind/text/vital_or_security_interest":
      "Lebenswichtiges Interesse oder Sicherheitsinteresse",
-    "promotion_basis_kind/text/vn_subject_agreement":
+    "promotion_basis_kind/lifecycle/consent":
      "Zustimmung der empfangenden Person",
     "promotion_basis_kind/lifecycle/contract":
      "Vertrag",
@@ -32136,8 +32274,6 @@
      "Von der empfangenden Person begonnene Korrespondenz",
     "promotion_basis_kind/lifecycle/vital_or_security_interest":
      "Lebenswichtiges Interesse oder Sicherheitsinteresse",
-    "promotion_basis_kind/lifecycle/vn_subject_agreement":
-     "Zustimmung der empfangenden Person",
     "promotion_basis_kind/boolean/true":
      "Ja",
     "promotion_basis_until/lifecycle/customer":
@@ -36294,26 +36430,6 @@
      "Unbekannt",
     "vital_or_security_interest/boolean/true":
      "Ja",
-    "vn_subject_agreement/lifecycle/customer":
-     "Kunde",
-    "vn_subject_agreement/lifecycle/disqualified":
-     "Disqualifiziert",
-    "vn_subject_agreement/lifecycle/former_customer":
-     "Ehemaliger Kunde",
-    "vn_subject_agreement/lifecycle/live":
-     "Live",
-    "vn_subject_agreement/lifecycle/onboarding":
-     "Onboarding",
-    "vn_subject_agreement/lifecycle/opportunity":
-     "Chance",
-    "vn_subject_agreement/lifecycle/prospect":
-     "Interessent",
-    "vn_subject_agreement/lifecycle/target":
-     "Zielunternehmen",
-    "vn_subject_agreement/lifecycle/unknown":
-     "Unbekannt",
-    "vn_subject_agreement/boolean/true":
-     "Ja",
     "wait_until/lifecycle/customer":
      "Kunde",
     "wait_until/lifecycle/disqualified":
@@ -37126,6 +37242,12 @@
      "Nicht gesetzt",
     "confirmed/execution":
      "Wird beim Anwenden festgelegt",
+    "consent/boolean":
+     "Nein",
+    "consent/empty":
+     "Nicht gesetzt",
+    "consent/execution":
+     "Wird beim Anwenden festgelegt",
     "consent_contact/boolean":
      "Nein",
     "consent_contact/empty":
@@ -37749,6 +37871,18 @@
     "html_body/empty":
      "Nicht gesetzt",
     "html_body/execution":
+     "Wird beim Anwenden festgelegt",
+    "impersonation_warning_carried/boolean":
+     "Nein",
+    "impersonation_warning_carried/empty":
+     "Nicht gesetzt",
+    "impersonation_warning_carried/execution":
+     "Wird beim Anwenden festgelegt",
+    "impersonation_warning_cleared/boolean":
+     "Nein",
+    "impersonation_warning_cleared/empty":
+     "Nicht gesetzt",
+    "impersonation_warning_cleared/execution":
      "Wird beim Anwenden festgelegt",
     "import_apply_tag/boolean":
      "Nein",
@@ -40538,12 +40672,6 @@
      "Nicht gesetzt",
     "vital_or_security_interest/execution":
      "Wird beim Anwenden festgelegt",
-    "vn_subject_agreement/boolean":
-     "Nein",
-    "vn_subject_agreement/empty":
-     "Nicht gesetzt",
-    "vn_subject_agreement/execution":
-     "Wird beim Anwenden festgelegt",
     "wait_until/boolean":
      "Nein",
     "wait_until/empty":
@@ -40830,6 +40958,8 @@
      "Địa chỉ nhận xác nhận",
     "confirmed":
      "confirmed",
+    "consent":
+     "consent",
     "consent_contact":
      "Liên hệ đồng ý",
     "consent_policy_version":
@@ -41038,6 +41168,10 @@
      "href",
     "html_body":
      "Nội dung có định dạng",
+    "impersonation_warning_carried":
+     "Giữ cảnh báo mạo danh từ liên hệ đã gộp",
+    "impersonation_warning_cleared":
+     "Đã gỡ cảnh báo mạo danh",
     "import_apply_tag":
      "Thêm thẻ",
     "import_close_deal":
@@ -41946,8 +42080,6 @@
      "Phạm vi hiển thị",
     "vital_or_security_interest":
      "vital or security interest",
-    "vn_subject_agreement":
-     "vn subject agreement",
     "wait_until":
      "Chờ đến",
     "win_probability":
@@ -44108,6 +44240,26 @@
      "Chưa rõ",
     "confirmed/boolean/true":
      "Có",
+    "consent/lifecycle/customer":
+     "Khách hàng",
+    "consent/lifecycle/disqualified":
+     "Đã loại",
+    "consent/lifecycle/former_customer":
+     "Khách hàng cũ",
+    "consent/lifecycle/live":
+     "Đang vận hành",
+    "consent/lifecycle/onboarding":
+     "Đang triển khai",
+    "consent/lifecycle/opportunity":
+     "Cơ hội",
+    "consent/lifecycle/prospect":
+     "Tiềm năng",
+    "consent/lifecycle/target":
+     "Mục tiêu",
+    "consent/lifecycle/unknown":
+     "Chưa rõ",
+    "consent/boolean/true":
+     "Có",
     "consent_contact/lifecycle/customer":
      "Khách hàng",
     "consent_contact/lifecycle/disqualified":
@@ -46179,6 +46331,46 @@
     "html_body/lifecycle/unknown":
      "Chưa rõ",
     "html_body/boolean/true":
+     "Có",
+    "impersonation_warning_carried/lifecycle/customer":
+     "Khách hàng",
+    "impersonation_warning_carried/lifecycle/disqualified":
+     "Đã loại",
+    "impersonation_warning_carried/lifecycle/former_customer":
+     "Khách hàng cũ",
+    "impersonation_warning_carried/lifecycle/live":
+     "Đang vận hành",
+    "impersonation_warning_carried/lifecycle/onboarding":
+     "Đang triển khai",
+    "impersonation_warning_carried/lifecycle/opportunity":
+     "Cơ hội",
+    "impersonation_warning_carried/lifecycle/prospect":
+     "Tiềm năng",
+    "impersonation_warning_carried/lifecycle/target":
+     "Mục tiêu",
+    "impersonation_warning_carried/lifecycle/unknown":
+     "Chưa rõ",
+    "impersonation_warning_carried/boolean/true":
+     "Có",
+    "impersonation_warning_cleared/lifecycle/customer":
+     "Khách hàng",
+    "impersonation_warning_cleared/lifecycle/disqualified":
+     "Đã loại",
+    "impersonation_warning_cleared/lifecycle/former_customer":
+     "Khách hàng cũ",
+    "impersonation_warning_cleared/lifecycle/live":
+     "Đang vận hành",
+    "impersonation_warning_cleared/lifecycle/onboarding":
+     "Đang triển khai",
+    "impersonation_warning_cleared/lifecycle/opportunity":
+     "Cơ hội",
+    "impersonation_warning_cleared/lifecycle/prospect":
+     "Tiềm năng",
+    "impersonation_warning_cleared/lifecycle/target":
+     "Mục tiêu",
+    "impersonation_warning_cleared/lifecycle/unknown":
+     "Chưa rõ",
+    "impersonation_warning_cleared/boolean/true":
      "Có",
     "import_apply_tag/lifecycle/customer":
      "Khách hàng",
@@ -49970,6 +50162,10 @@
      "Lịch sử",
     "merge_profile_field/text/icp":
      "Hồ sơ khách hàng lý tưởng",
+    "merge_profile_field/text/impersonation_warning_carried":
+     "Giữ cảnh báo mạo danh từ liên hệ đã gộp",
+    "merge_profile_field/text/impersonation_warning_cleared":
+     "Đã gỡ cảnh báo mạo danh",
     "merge_profile_field/text/industry":
      "Ngành",
     "merge_profile_field/text/invitation_status":
@@ -50330,6 +50526,10 @@
      "Lịch sử",
     "merge_profile_field/lifecycle/icp":
      "Hồ sơ khách hàng lý tưởng",
+    "merge_profile_field/lifecycle/impersonation_warning_carried":
+     "Giữ cảnh báo mạo danh từ liên hệ đã gộp",
+    "merge_profile_field/lifecycle/impersonation_warning_cleared":
+     "Đã gỡ cảnh báo mạo danh",
     "merge_profile_field/lifecycle/industry":
      "Ngành",
     "merge_profile_field/lifecycle/invitation_status":
@@ -52416,6 +52616,8 @@
      "Chưa rõ",
     "promotion_basis_from/boolean/true":
      "Có",
+    "promotion_basis_kind/text/consent":
+     "Sự đồng ý của người nhận",
     "promotion_basis_kind/text/contract":
      "Hợp đồng",
     "promotion_basis_kind/text/existing_customer_exception":
@@ -52430,7 +52632,7 @@
      "Trao đổi do người nhận bắt đầu",
     "promotion_basis_kind/text/vital_or_security_interest":
      "Lợi ích thiết yếu hoặc an ninh",
-    "promotion_basis_kind/text/vn_subject_agreement":
+    "promotion_basis_kind/lifecycle/consent":
      "Sự đồng ý của người nhận",
     "promotion_basis_kind/lifecycle/contract":
      "Hợp đồng",
@@ -52446,8 +52648,6 @@
      "Trao đổi do người nhận bắt đầu",
     "promotion_basis_kind/lifecycle/vital_or_security_interest":
      "Lợi ích thiết yếu hoặc an ninh",
-    "promotion_basis_kind/lifecycle/vn_subject_agreement":
-     "Sự đồng ý của người nhận",
     "promotion_basis_kind/boolean/true":
      "Có",
     "promotion_basis_until/lifecycle/customer":
@@ -56604,26 +56804,6 @@
      "Chưa rõ",
     "vital_or_security_interest/boolean/true":
      "Có",
-    "vn_subject_agreement/lifecycle/customer":
-     "Khách hàng",
-    "vn_subject_agreement/lifecycle/disqualified":
-     "Đã loại",
-    "vn_subject_agreement/lifecycle/former_customer":
-     "Khách hàng cũ",
-    "vn_subject_agreement/lifecycle/live":
-     "Đang vận hành",
-    "vn_subject_agreement/lifecycle/onboarding":
-     "Đang triển khai",
-    "vn_subject_agreement/lifecycle/opportunity":
-     "Cơ hội",
-    "vn_subject_agreement/lifecycle/prospect":
-     "Tiềm năng",
-    "vn_subject_agreement/lifecycle/target":
-     "Mục tiêu",
-    "vn_subject_agreement/lifecycle/unknown":
-     "Chưa rõ",
-    "vn_subject_agreement/boolean/true":
-     "Có",
     "wait_until/lifecycle/customer":
      "Khách hàng",
     "wait_until/lifecycle/disqualified":
@@ -57436,6 +57616,12 @@
      "Chưa đặt",
     "confirmed/execution":
      "Được xác định khi áp dụng",
+    "consent/boolean":
+     "Không",
+    "consent/empty":
+     "Chưa đặt",
+    "consent/execution":
+     "Được xác định khi áp dụng",
     "consent_contact/boolean":
      "Không",
     "consent_contact/empty":
@@ -58059,6 +58245,18 @@
     "html_body/empty":
      "Chưa đặt",
     "html_body/execution":
+     "Được xác định khi áp dụng",
+    "impersonation_warning_carried/boolean":
+     "Không",
+    "impersonation_warning_carried/empty":
+     "Chưa đặt",
+    "impersonation_warning_carried/execution":
+     "Được xác định khi áp dụng",
+    "impersonation_warning_cleared/boolean":
+     "Không",
+    "impersonation_warning_cleared/empty":
+     "Chưa đặt",
+    "impersonation_warning_cleared/execution":
      "Được xác định khi áp dụng",
     "import_apply_tag/boolean":
      "Không",
@@ -60847,12 +61045,6 @@
     "vital_or_security_interest/empty":
      "Chưa đặt",
     "vital_or_security_interest/execution":
-     "Được xác định khi áp dụng",
-    "vn_subject_agreement/boolean":
-     "Không",
-    "vn_subject_agreement/empty":
-     "Chưa đặt",
-    "vn_subject_agreement/execution":
      "Được xác định khi áp dụng",
     "wait_until/boolean":
      "Không",

@@ -230,7 +230,6 @@ var foreignKeyNoIndexNeeded = map[string]string{
 	"relationship":               "a relationship is archived or ended in place",
 	"record_role":                "append-only: a role assignment is who could do what, when",
 	"report_schedule":            "append-only in practice: a schedule is retired by its own flags rather than removed",
-	"agent_run":                  "append-only: the run is how an outcome was reached",
 	"comms_outbound":             "append-only: the ledger of what was sent",
 	"weekly_review":              "append-only: a review is what a reader saw that week",
 	"app_user": "nothing deletes an app_user row. A member is retired by setting " +

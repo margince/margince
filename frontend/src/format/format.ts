@@ -18,6 +18,7 @@ export {
   formatDateAbbrev,
   formatDateAbbrevRange,
   formatDateTime,
+  formatDateTimeAbbrev,
   formatDayLong,
   formatDayMonth,
   formatDayMonthNearYear,
@@ -371,34 +372,7 @@ function byteScale(bytes: number): [number, "byte" | "kilobyte" | "megabyte"] {
   return [bytes, "byte"];
 }
 
-/**
- * relativeDays reads a timestamp the way a contact says it: today, yesterday,
- * or "N days".
- *
- * `never` is reserved for a read that HAPPENED and found nothing — the caller
- * decides that by passing null only when the section was readable. A withheld
- * section is not "never"; it is unknown, and its card says so.
- *
- * It lives here because three screens wanted it and each wrote its own: two
- * private copies in contactstrip.tsx and contactrail.tsx, byte-equivalent and
- * both counting milliseconds. format.ts's own INTL_LOCALE comment had been
- * pointing at this gap since it was written — "exported because a relative-time
- * formatter needs the same mapping".
- */
-export function relativeDays(
-  at: string | null | undefined,
-  t: Translator,
-  locale: Locale,
-  zone: string,
-  now: Date = new Date(),
-): string {
-  if (!at) {
-    return t("contact.strip.never");
-  }
-  return daysAgoText(calendarDaysBetween(new Date(at), now, zone), t, locale);
-}
-
-/** A count of dates since a moment, as relativeDays says it. */
+/** A count of calendar days since a moment, said the way a contact says it. */
 export function daysAgoText(
   days: number,
   t: Translator,

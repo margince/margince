@@ -1,6 +1,6 @@
 import { type ReactNode, useId, useState } from "react";
 import { Button } from "../../design-system/atoms";
-import { formatDateTime } from "../../format/format";
+import { formatDateTimeAbbrev } from "../../format/format";
 import { useLocale, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import { historyFieldLabel } from "../../lib/historyfieldlabels";
@@ -149,7 +149,7 @@ export function ReversalPairRow({
         <span className="tl-meta">
           {/* The REVERSAL's time: the pair sits where its newest member sits,
               so nothing appears to have happened earlier than it did. */}
-          <span>{formatDateTime(row.atIso, locale, readerZone)}</span>
+          <span>{formatDateTimeAbbrev(row.atIso, locale, readerZone)}</span>
         </span>
         {row.whollyUndone ? (
           <SettledFace row={row} currency={currency} />

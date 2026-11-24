@@ -6,6 +6,7 @@ import { type FormEvent, type ReactNode, useState } from "react";
 import { api, FIRST_PAGE } from "../../api/client";
 import type { components } from "../../api/schema";
 import { Button, EmptyState, SearchField } from "../../design-system/atoms";
+import { Callout } from "../../design-system/callout";
 import { FilterPills } from "../../design-system/filterpills";
 import { Panel, PanelBody } from "../../design-system/panel";
 import {
@@ -29,6 +30,7 @@ import {
   searchGroupHeading,
   searchGroupType,
   searchHitHasCard,
+  searchTimedOutLines,
 } from "../../lib/searchkinds";
 import { useUrlParams } from "../../lib/urlstate";
 import { SearchHit } from "./searchhit";
@@ -189,6 +191,7 @@ function GroupedResults({
   onNarrow: (type: SearchHitType) => void;
 }>) {
   const t = useT();
+  const directory = useRecordKindDirectory().data?.data ?? [];
   const readerScope = useHealthScope();
   const query = useQuery({
     queryKey: ["search", q, ALL_TYPES, readerScope ?? ""],
@@ -209,20 +212,34 @@ function GroupedResults({
   });
   return (
     <QueryGate query={query} pendingLabel={t("search.pending")}>
-      {(data) =>
-        data.data.length === 0 ? (
+      {(data) => {
+        const timedOut = searchTimedOutLines(
+          data.types_timed_out ?? [],
+          t,
+          directory,
+        );
+        return (
           <>
-            <EmptyState>{t("search.empty", { q })}</EmptyState>
-            <NearMatches matches={data.near_matches} />
+            {timedOut.map((line) => (
+              <Callout key={line} tone="warning" kind="outcome" title={line} />
+            ))}
+            {data.data.length === 0 ? (
+              <>
+                {timedOut.length === 0 && (
+                  <EmptyState>{t("search.empty", { q })}</EmptyState>
+                )}
+                <NearMatches matches={data.near_matches} />
+              </>
+            ) : (
+              <SearchGroups
+                results={data.data}
+                onOpen={onOpen}
+                more={{ types: data.types_with_more ?? [], onNarrow }}
+              />
+            )}
           </>
-        ) : (
-          <SearchGroups
-            results={data.data}
-            onOpen={onOpen}
-            more={{ types: data.types_with_more ?? [], onNarrow }}
-          />
-        )
-      }
+        );
+      }}
     </QueryGate>
   );
 }

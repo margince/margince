@@ -66,6 +66,15 @@ type bulkArchiver interface {
 	restore(ctx context.Context, tx pgx.Tx, id ids.UUID, version int64, pending []storekit.LeftBehind) (storekit.RestoreReport, error)
 }
 
+// bulkStageMover is the share of a record type that sits on a pipeline stage.
+// Only a deal does, so the move_stage verb is refused for every other type.
+type bulkStageMover interface {
+	checkStage(ctx context.Context, stage ids.UUID) error
+	// moveStage moves one record to stage, conditioned on version. reversalOf
+	// names the history row an undo's move puts back.
+	moveStage(ctx context.Context, tx pgx.Tx, id ids.UUID, stage ids.UUID, version int64, reversalOf *ids.UUID) (deals.BulkStageMove, error)
+}
+
 // bulkTargets builds the four record adapters over the stores the REST
 // handlers use; the Worklist's own adapter is bulkworklist.go's.
 func bulkTargets(contactsStore *contacts.Store, dealsStore *deals.Store) map[crmcontracts.BulkRecordType]bulkTarget {
@@ -156,6 +165,16 @@ func (t dealBulkTarget) reassign(ctx context.Context, tx pgx.Tx, id ids.UUID, ow
 
 func (t dealBulkTarget) reassignHeld(ctx context.Context, tx pgx.Tx, held storekit.RowLock, owner ids.UserID, version int64) error {
 	return t.store.ReassignHeldDealTx(ctx, tx, held, owner, &version)
+}
+
+func (t dealBulkTarget) checkStage(ctx context.Context, stage ids.UUID) error {
+	return t.store.CheckBulkStage(ctx, ids.From[ids.StageKind](stage))
+}
+
+func (t dealBulkTarget) moveStage(
+	ctx context.Context, tx pgx.Tx, id, stage ids.UUID, version int64, reversalOf *ids.UUID,
+) (deals.BulkStageMove, error) {
+	return t.store.MoveStageForBulkTx(ctx, tx, ids.From[ids.DealKind](id), ids.From[ids.StageKind](stage), version, reversalOf)
 }
 
 func (t dealBulkTarget) archive(ctx context.Context, tx pgx.Tx, id ids.UUID, version int64) error {

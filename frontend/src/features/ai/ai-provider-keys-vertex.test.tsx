@@ -101,7 +101,7 @@ async function openRow(user: ReturnType<typeof userEvent.setup>) {
   await user.click(
     within(row).getByRole("button", { name: /^(add|replace)$/i }),
   );
-  return row;
+  return screen.findByRole("dialog", { name: /service-account key/i });
 }
 
 afterEach(() => {
@@ -117,7 +117,7 @@ describe("a service-account provider key", () => {
 
     const row = await openRow(user);
     expect(
-      within(row).getByText("Service account key configured"),
+      screen.getByText("Service account key configured"),
     ).toBeInTheDocument();
     const box = within(row).getByLabelText("Service-account key (JSON)");
     expect(box.tagName).toBe("TEXTAREA");

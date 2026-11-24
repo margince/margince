@@ -20,7 +20,6 @@ import (
 
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
-	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/ports/model"
 )
 
@@ -82,22 +81,6 @@ func newAttemptTrace(ctx context.Context, task Task, reason string, req model.Re
 	}
 	withAmbientIdentity(ctx, &trace)
 	return trace
-}
-
-// withAmbientIdentity stamps the ids a trace row is joined on from the call's
-// context: the correlation id, the agent run and the subject. Every attempt
-// trace — a completion's and a decision's — reads them here, so one logical
-// call cannot file its rows under two correlations.
-func withAmbientIdentity(ctx context.Context, trace *Call) {
-	if cid, ok := principal.CorrelationID(ctx); ok {
-		trace.CorrelationID = &cid
-	}
-	if rid, ok := principal.AgentRunID(ctx); ok {
-		trace.AgentRunID = &rid
-	}
-	if subject, ok := SubjectOf(ctx); ok {
-		trace.Subject = subject
-	}
 }
 
 // finalizeAttempt completes trace from this attempt's outcome — latency,

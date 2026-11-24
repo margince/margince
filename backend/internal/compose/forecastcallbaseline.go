@@ -174,7 +174,7 @@ func assuranceDealSubjects(
 
 // assuranceScanner is the input check as every caller runs it.
 func assuranceScanner(pool *pgxpool.Pool, store *assurance.Store) *assurance.Scanner {
-	return assurance.NewScanner(store, AssuranceSubjects, AssuranceCoverage, AssuranceConfig()).
+	return assurance.NewScanner(store, AssuranceSubjects, AssuranceCoverage, assurance.DefaultConfig()).
 		WithSignalSubjects(AssuranceSignalSubjects).
 		WithCallSubjects(assuranceCallSubjects(pool)).
 		WithDealSubjects(assuranceDealSubjects)

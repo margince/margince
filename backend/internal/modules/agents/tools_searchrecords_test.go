@@ -318,3 +318,18 @@ func TestANearMatchIsReadBackAndANoteSaysItIsNoMatch(t *testing.T) {
 		t.Errorf("an unreadable near match leaked: %s", raw)
 	}
 }
+
+func TestATypeThatRanOutOfTimeLowersCoverage(t *testing.T) {
+	engine := &rankingProbe{page: RecordSearchPage{TypesWithMore: []string{}, TypesTimedOut: []string{"activity"}}}
+	raw, err := searchRecordsOver(nil, engine).Handle(searchReader(), json.RawMessage(`{"q":"Acme","per_type":2}`))
+	if err != nil {
+		t.Fatal(err)
+	}
+	page := searchedPage(t, raw)
+	if page.Coverage != CoveragePartialDegraded || !hasNote(page.Notes, CodeTypesTimedOut) || len(page.Notes) != 1 {
+		t.Errorf("coverage %q with notes %+v, want partial_degraded and one types_timed_out note", page.Coverage, page.Notes)
+	}
+	if page.TypesTimedOut == nil || len(*page.TypesTimedOut) != 1 || (*page.TypesTimedOut)[0] != "activity" {
+		t.Errorf("types_timed_out = %v, want [activity]", page.TypesTimedOut)
+	}
+}

@@ -57,7 +57,9 @@ func (said momentCopy) openPromiseMoment(ctx context.Context, now time.Time, pag
 	}
 	switch promise := next.Ref.(type) {
 	case crmcontracts.Activity:
-		return said.openPromiseFrom(ctx, now, promise), true
+		card := said.openPromiseFrom(ctx, now, promise)
+		said.callsBack(&card, promise, page.Contact)
+		return card, true
 	case crmcontracts.ConversationClaim:
 		return said.openClaimCard(now, promise), true
 	default:
@@ -185,7 +187,7 @@ func (said momentCopy) openPromiseWhyNow(now time.Time, task crmcontracts.Activi
 		logged := occurredday.DateIn(occurredday.Moment{At: task.OccurredAt, DateOnly: occurredday.IsDay(task.OccurredPrecision)}, said.zone)
 		return fmt.Sprintf(said.Say(momentWords.TaskUndated), logged.Format(time.DateOnly))
 	}
-	return owedwork.DeadlineWords(*task.DueAt, now, string(said.Lang()))
+	return owedwork.DeadlineWords(*task.DueAt, now, said.zone, string(said.Lang()))
 }
 
 // overduePromiseMoment: we are past the date on something we said we would
@@ -205,7 +207,9 @@ func (said momentCopy) overduePromiseMoment(ctx context.Context, now time.Time, 
 	}
 	switch promise := slipped.Ref.(type) {
 	case crmcontracts.Activity:
-		return said.overdueTaskCard(ctx, now, promise), true
+		card := said.overdueTaskCard(ctx, now, promise)
+		said.callsBack(&card, promise, page.Contact)
+		return card, true
 	case crmcontracts.ConversationClaim:
 		return said.overdueClaimCard(now, promise), true
 	default:
@@ -296,9 +300,7 @@ func (said momentCopy) overdueTaskCard(ctx context.Context, now time.Time, task 
 // overdueClaimCard is the card for a promise read out of a conversation. It
 // carries the quote it was read from, which a task has nothing to match.
 func (said momentCopy) overdueClaimCard(now time.Time, claim crmcontracts.ConversationClaim) crmcontracts.ContactMoment {
-	// Deliberately not owedwork.LateWords: a claim names the date the
-	// SPEAKER promised, so its sentence keeps that framing, and its count is
-	// elapsed calendar days rather than whole days behind.
+	// Not owedwork.LateWords: a claim keeps the speaker's framing, "promised for".
 	whyNow := said.Say(momentWords.PromisedToday)
 	if overdue := elapsed.Days(*claim.DueAt, now, said.zone); overdue > 0 {
 		whyNow = fmt.Sprintf(said.Say(momentWords.PromisedAgo), overdue)
@@ -390,7 +392,7 @@ func (said momentCopy) openClaimWhyNow(now time.Time, claim crmcontracts.Convers
 	if claim.DueAt == nil {
 		return said.Say(momentWords.ClaimUndated)
 	}
-	return owedwork.UpcomingWords(*claim.DueAt, now, string(said.Lang()))
+	return owedwork.UpcomingWords(*claim.DueAt, now, said.zone, string(said.Lang()))
 }
 
 // claimMomentKey names WHICH promise a card is about, not merely that it is a

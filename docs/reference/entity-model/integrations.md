@@ -35,7 +35,7 @@ The 5 tables owned by `integrations`, as the migrations build them. [Back to the
 
 | Columns | Table | When the parent goes |
 |---|---|---|
-| `connected_by` | `app_user` | the parent cannot be deleted while this row points at it |
+| `connected_by` | `app_user` | deleting the parent keeps this row and clears the link |
 
 **Rules**
 
@@ -133,7 +133,7 @@ The 5 tables owned by `integrations`, as the migrations build them. [Back to the
 | Columns | Table | When the parent goes |
 |---|---|---|
 | `contact_id` | `contact` | deleting the parent deletes this row |
-| `requested_by` | `app_user` | the parent cannot be deleted while this row points at it |
+| `requested_by` | `app_user` | deleting the parent keeps this row and clears the link |
 
 **Rules**
 
@@ -199,14 +199,12 @@ The 5 tables owned by `integrations`, as the migrations build them. [Back to the
 
 ## provider_run_reservation
 
-6 columns · primary key `(run_id, pool)` · referenced by 0 foreign keys
+4 columns · primary key `(run_id, pool)` · referenced by 0 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
 | `actual_credits` | `integer` |  |  |
 | `pool` | `text` | yes |  |
-| `reconciled_at` | `timestamp with time zone` |  |  |
-| `reserved_at` | `timestamp with time zone`, default `now()` | yes |  |
 | `reserved_credits` | `integer` | yes |  |
 | `run_id` | `uuid` | yes | Points at `provider_run.id`. |
 

@@ -6,7 +6,7 @@ The 2 tables owned by `chatlinks`, as the migrations build them. [Back to the en
 
 ## chat_link
 
-20 columns · primary key `(id)` · referenced by 1 foreign key
+18 columns · primary key `(id)` · referenced by 1 foreign key
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -14,13 +14,11 @@ The 2 tables owned by `chatlinks`, as the migrations build them. [Back to the en
 | `backfill_requested` | `boolean`, default `false` | yes |  |
 | `card_fingerprint` | `text` |  |  |
 | `card_message_id` | `text` |  |  |
-| `channel_external_key` | `text` |  |  |
 | `channel_name` | `text` | yes |  |
 | `channel_slug` | `text` | yes |  |
 | `connection_id` | `uuid` | yes | Points at `channel_connection.id`. |
 | `deal_id` | `uuid` |  | Points at `deal.id`. |
 | `history_cursor` | `bigint` |  |  |
-| `history_synced_at` | `timestamp with time zone` |  |  |
 | `linked_by` | `uuid` | yes | Points at `app_user.id`. |
 | `project_id` | `uuid` |  | Points at `project.id`. |
 | `provider` | `text` | yes | Always `dispact`: the column exists for the values it may hold later. |
@@ -61,30 +59,25 @@ The 2 tables owned by `chatlinks`, as the migrations build them. [Back to the en
 
 **Triggers**
 
-- `text_bound_insert`: `AFTER INSERT FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL, '{"status": 20000, "provider": 20000, "verbosity": 20000, "channel_name": 500, "channel_slug": 500, "card_message_id": 500, "card_fingerprint": 120, "channel_external_key": 500}')) EXECUTE FUNCTION refuse_oversized_text('{"card_fingerprint":120,"card_message_id":500,"channel_external_key":500,"channel_name":500,"channel_slug":500,"provider":20000,"status":20000,"verbosity":20000}')`
-- `text_bound_update`: `AFTER UPDATE FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"status": 20000, "provider": 20000, "verbosity": 20000, "channel_name": 500, "channel_slug": 500, "card_message_id": 500, "card_fingerprint": 120, "channel_external_key": 500}')) EXECUTE FUNCTION refuse_oversized_text('{"card_fingerprint":120,"card_message_id":500,"channel_external_key":500,"channel_name":500,"channel_slug":500,"provider":20000,"status":20000,"verbosity":20000}')`
-- `trg_chat_link_updated`: `BEFORE UPDATE FOR EACH ROW WHEN (((to_jsonb(old.*) - ARRAY['history_cursor', 'history_synced_at', 'card_message_id', 'card_fingerprint']) IS DISTINCT FROM (to_jsonb(new.*) - ARRAY['history_cursor', 'history_synced_at', 'card_message_id', 'card_fingerprint']))) EXECUTE FUNCTION set_updated_at_bump_version()`
+- `text_bound_insert`: `AFTER INSERT FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL, '{"status": 20000, "provider": 20000, "verbosity": 20000, "channel_name": 500, "channel_slug": 500, "card_message_id": 500, "card_fingerprint": 120}')) EXECUTE FUNCTION refuse_oversized_text('{"card_fingerprint":120,"card_message_id":500,"channel_name":500,"channel_slug":500,"provider":20000,"status":20000,"verbosity":20000}')`
+- `text_bound_update`: `AFTER UPDATE FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"status": 20000, "provider": 20000, "verbosity": 20000, "channel_name": 500, "channel_slug": 500, "card_message_id": 500, "card_fingerprint": 120}')) EXECUTE FUNCTION refuse_oversized_text('{"card_fingerprint":120,"card_message_id":500,"channel_name":500,"channel_slug":500,"provider":20000,"status":20000,"verbosity":20000}')`
+- `trg_chat_link_updated`: `BEFORE UPDATE FOR EACH ROW WHEN (((to_jsonb(old.*) - ARRAY['history_cursor', 'card_message_id', 'card_fingerprint']) IS DISTINCT FROM (to_jsonb(new.*) - ARRAY['history_cursor', 'card_message_id', 'card_fingerprint']))) EXECUTE FUNCTION set_updated_at_bump_version()`
 
 ## chat_post_item
 
-16 columns · primary key `(id)` · referenced by 0 foreign keys
+11 columns · primary key `(id)` · referenced by 0 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
 | `id` | `uuid`, default `uuidv7()` | yes | Primary key. |
 | `activity_id` | `uuid` |  |  |
-| `attempts` | `integer`, default `0` | yes |  |
 | `detail` | `jsonb`, default `'{}'::jsonb` | yes |  |
-| `entity_id` | `uuid` | yes |  |
-| `entity_type` | `text` | yes |  |
 | `event_id` | `uuid` | yes |  |
 | `event_type` | `text` | yes |  |
-| `last_error` | `text` |  |  |
 | `link_id` | `uuid` | yes | Points at `chat_link.id`. |
 | `message_id` | `text` |  |  |
 | `post_id` | `uuid` |  |  |
 | `posted_at` | `timestamp with time zone` |  |  |
-| `tier` | `text` | yes | One of `milestone`, `important`, `everything`. |
 | `withdrawn_at` | `timestamp with time zone` |  |  |
 | `created_at` | `timestamp with time zone`, default `now()` | yes | When the row was created. Set once. |
 
@@ -96,9 +89,7 @@ The 2 tables owned by `chatlinks`, as the migrations build them. [Back to the en
 
 **Rules**
 
-- `chat_post_item_attempts_check`: `CHECK ((attempts >= 0))`
 - `chat_post_item_posted_check`: `CHECK (((posted_at IS NULL) OR (post_id IS NOT NULL)))`
-- `chat_post_item_tier_check`: `CHECK ((tier = ANY (ARRAY['milestone', 'important', 'everything'])))`
 
 **Indexes**
 
@@ -110,5 +101,5 @@ The 2 tables owned by `chatlinks`, as the migrations build them. [Back to the en
 
 **Triggers**
 
-- `text_bound_insert`: `AFTER INSERT FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL, '{"tier": 20000, "event_type": 20000, "last_error": 500, "message_id": 500, "entity_type": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"entity_type":20000,"event_type":20000,"last_error":500,"message_id":500,"tier":20000}')`
-- `text_bound_update`: `AFTER UPDATE FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"tier": 20000, "event_type": 20000, "last_error": 500, "message_id": 500, "entity_type": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"entity_type":20000,"event_type":20000,"last_error":500,"message_id":500,"tier":20000}')`
+- `text_bound_insert`: `AFTER INSERT FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL, '{"event_type": 20000, "message_id": 500}')) EXECUTE FUNCTION refuse_oversized_text('{"event_type":20000,"message_id":500}')`
+- `text_bound_update`: `AFTER UPDATE FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"event_type": 20000, "message_id": 500}')) EXECUTE FUNCTION refuse_oversized_text('{"event_type":20000,"message_id":500}')`

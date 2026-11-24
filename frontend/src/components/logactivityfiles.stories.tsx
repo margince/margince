@@ -67,9 +67,15 @@ export const RefusedAsDropped: Story = {
   render: Pdf.render,
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
-    fireEvent.drop(await canvas.findByLabelText("Attach files"), {
-      dataTransfer: { files: [new File(["MZ"], "setup.exe")] },
-    });
+    // A browser builds a DragEvent only from a real DataTransfer.
+    const dataTransfer = new DataTransfer();
+    dataTransfer.items.add(
+      new File(["MZ"], "setup.exe", { type: "application/x-msdownload" }),
+    );
+    fireEvent(
+      await canvas.findByLabelText("Attach files"),
+      new DragEvent("drop", { dataTransfer, bubbles: true, cancelable: true }),
+    );
     await expect(
       await canvas.findByText(/^setup\.exe was not added\./),
     ).toBeVisible();

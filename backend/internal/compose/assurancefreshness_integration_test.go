@@ -290,7 +290,7 @@ func TestAPassThatMissedASourceKeepsTheReadingOutOfDate(t *testing.T) {
 			offerCoverage(e.at),
 		}
 	}
-	scanner := assurance.NewScanner(e.store, AssuranceSubjects, mailUnread, AssuranceConfig())
+	scanner := assurance.NewScanner(e.store, AssuranceSubjects, mailUnread, assurance.DefaultConfig())
 	result, err := scanner.Scan(e.passCtx(), e.at.Add(time.Minute))
 	if err != nil || result.Status != assurance.StatusIncomplete || result.EligibleDeals == 0 {
 		t.Fatalf("the pass = %+v, %v; want an incomplete run that read the deals", result, err)
@@ -335,7 +335,7 @@ func (e *freshnessEnv) scan(t *testing.T) error {
 }
 
 func (e *freshnessEnv) scanner(subjects assurance.SubjectsFunc) *assurance.Scanner {
-	return assurance.NewScanner(e.store, subjects, AssuranceCoverage, AssuranceConfig())
+	return assurance.NewScanner(e.store, subjects, AssuranceCoverage, assurance.DefaultConfig())
 }
 
 func (e *freshnessEnv) passCtx() context.Context {

@@ -173,6 +173,69 @@ describe("DealHistoryTab", () => {
     );
   });
 
+  // The note Margince writes for a change names it, so the note offers the
+  // Undo the change has, and an older note carries none. The change is asked
+  // for by its note and sits behind an empty first page, as one older than
+  // twenty others would.
+  it("offers Undo on the note that reports a change Margince made, however old", async () => {
+    const note = (id: string, subject: string) => ({
+      ...CALL_ACTIVITY,
+      id,
+      kind: "note",
+      subject,
+      captured_by: "system",
+    });
+    const requested: URL[] = [];
+    const close = {
+      id: "h-9",
+      kind: "deal_close_lost",
+      summary: "Closed the deal as lost",
+      occurred_at: "2026-08-11T12:00:00Z",
+      subject: { type: "deal", id: "d-1", label: "Fleet retrofit" },
+      undo: { audit_log_id: "h-9", version: 3, reversed: false },
+      review: {
+        kind: "close_lost",
+        accepted: false,
+        reversed: false,
+        version: 3,
+        can_undo: true,
+        can_accept: true,
+        writable: true,
+        note_activity_id: "a-close",
+      },
+    };
+    stubWithSession(
+      {
+        "GET /activities": () =>
+          jsonResponse({
+            data: [
+              note("a-close", "Margince closed this deal as lost"),
+              note("a-older", "An older note"),
+            ],
+            page: { has_more: false },
+          }),
+        "GET /deals/d-1/margince-changes": (_body, url) => {
+          requested.push(url);
+          return url.searchParams.has("cursor")
+            ? jsonResponse({ changes: [close] })
+            : jsonResponse({ changes: [], next_cursor: "page-2" });
+        },
+      },
+      { deal: ["read", "update"], activity: ["read"] },
+    );
+    withProviders(<DealHistoryTab deal={DEAL} onOpenEmail={() => {}} />);
+
+    await screen.findByText("An older note");
+    await waitFor(() =>
+      expect(screen.getAllByRole("button", { name: "Undo" })).toHaveLength(1),
+    );
+    expect(
+      requested.some((url) =>
+        url.searchParams.getAll("note_activity_id").includes("a-close"),
+      ),
+    ).toBe(true);
+  });
+
   it("says there is nothing yet rather than drawing an empty list silently", async () => {
     stubWithSession({}, {});
     withProviders(<DealHistoryTab deal={DEAL} onOpenEmail={() => {}} />);

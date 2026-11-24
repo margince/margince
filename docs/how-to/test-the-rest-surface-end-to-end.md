@@ -47,7 +47,7 @@ names. For `create_record` and `update_record` the body goes under `fields`, as 
 
 Some checks pin an argument that only MCP has, or one that REST picks by route, such as
 `create_record.offer_tag` or `bulk_update_records.mode`. A scenario lists those under `mcp_only:`,
-and a REST run is graded on its other checks. `check.py --lint` refuses an `mcp_only` entry that
+and a REST run is graded on its other checks. `e2e/llm/scenariolint.py` refuses an `mcp_only` entry that
 is not one of the file's own checks. Read the transcript before you add one.
 
 ## The verdicts

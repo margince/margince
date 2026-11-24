@@ -72,6 +72,7 @@ func profileFieldEvidence(in Input, entityID openapi_types.UUID, lang string) (c
 			capturedBy:  field.CapturedBy,
 			retrievedAt: field.RetrievedAt,
 			verifiedAt:  field.VerifiedAt,
+			version:     field.Version,
 		}), nil
 	}
 	// Not in the caller's own input means either no such row or one they may
@@ -96,6 +97,7 @@ func factEvidence(in Input, entityID openapi_types.UUID) (crmcontracts.ClaimEvid
 			capturedBy:  fact.CapturedBy,
 			retrievedAt: fact.RetrievedAt,
 			verifiedAt:  fact.VerifiedAt,
+			version:     fact.Version,
 		}), nil
 	}
 	return crmcontracts.ClaimEvidence{}, apperrors.ErrNotFound
@@ -116,6 +118,7 @@ type receiptRow struct {
 	capturedBy  *string
 	retrievedAt *time.Time
 	verifiedAt  *time.Time
+	version     *int64
 }
 
 func receipt(row receiptRow) crmcontracts.ClaimEvidence {
@@ -143,6 +146,7 @@ func receipt(row receiptRow) crmcontracts.ClaimEvidence {
 		Excerpt:        quoted(row.excerpt),
 		RetrievedAt:    row.retrievedAt,
 		LastVerifiedAt: row.verifiedAt,
+		ClaimVersion:   row.version,
 	}
 	if len(gaps) > 0 {
 		out.Gaps = &gaps

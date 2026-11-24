@@ -67,9 +67,6 @@ type SubjectViability struct {
 	Outcome    viability.Outcome
 	Reasons    []viability.Reason
 	SilentDays int
-	// NextChange is when the answer changes by the clock alone; nil when only
-	// new evidence can change it.
-	NextChange *time.Time
 	// Fingerprint is what the assessment read. The freshness check compares it
 	// with the deal's current one to find the deals worth checking again.
 	Fingerprint string
@@ -201,9 +198,6 @@ func lacksNextStep(s Subject) bool {
 
 // Config is what an installation decides rather than the product.
 type Config struct {
-	// ReceiptLifetime is how long a viability receipt stands before the next
-	// scheduled check should have replaced it.
-	ReceiptLifetime time.Duration
 	// MaterialMinor is the amount below which a discrepancy is not worth a
 	// contact's morning.
 	MaterialMinor int64

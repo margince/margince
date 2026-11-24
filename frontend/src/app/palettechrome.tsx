@@ -4,6 +4,7 @@
 import { ArrowDown, ArrowUp, ChevronRight, Sparkles } from "lucide-react";
 import {
   Badge,
+  Button,
   EmptyState,
   Kbd,
   SegmentedControl,
@@ -68,6 +69,36 @@ export function PaletteFilter({
         label={t("palette.filter")}
       />
     </div>
+  );
+}
+
+/**
+ * The heading over the recent rows, with the button that forgets them; none
+ * without an `id`. It stands above the listbox, which holds options only, and
+ * names their group by that `id`.
+ */
+export function PaletteRecentHeading({
+  id,
+  onClear,
+}: Readonly<{ id: string | undefined; onClear: () => void }>) {
+  const t = useT();
+  if (id === undefined) {
+    return null;
+  }
+  return (
+    <Eyebrow
+      as="h2"
+      id={id}
+      size="xxsmall"
+      className="palette-group"
+      action={
+        <Button variant="link" onClick={onClear}>
+          {t("palette.clearRecent")}
+        </Button>
+      }
+    >
+      {t("palette.recent")}
+    </Eyebrow>
   );
 }
 
@@ -144,12 +175,23 @@ export function PaletteEmpty({
   query: string;
   nothingFound: boolean;
   listed: number;
-  search: Readonly<{ pending: boolean; failed: boolean }>;
+  search: Readonly<{
+    pending: boolean;
+    failed: boolean;
+    timedOut: readonly string[];
+  }>;
 }>) {
   const t = useT();
   if (nothingFound) {
     return <EmptyState>{t("search.empty", { q: query })}</EmptyState>;
   }
-  if (listed > 0 || search.pending || search.failed) return null;
+  if (
+    listed > 0 ||
+    search.pending ||
+    search.failed ||
+    search.timedOut.length > 0
+  ) {
+    return null;
+  }
   return <EmptyState>{t("palette.empty")}</EmptyState>;
 }

@@ -5,6 +5,7 @@ package consent
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"strings"
 	"time"
@@ -14,7 +15,6 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database"
-	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -179,15 +179,30 @@ func (s *Store) CreatePurpose(ctx context.Context, key, label string, requiresDO
 		err := tx.QueryRow(ctx, `
 			INSERT INTO consent_purpose (key, label, requires_double_opt_in, frequency)
 			VALUES ($1, $2, $3, $4)
+			ON CONFLICT ON CONSTRAINT consent_purpose_key_unique DO NOTHING
 			RETURNING id, key, label, requires_double_opt_in, class, frequency, created_at`,
 			key, label, requiresDOI, frequency).
 			Scan(&p.ID, &p.Key, &p.Label, &p.RequiresDoubleOptIn, &p.Class, &p.Frequency, &p.CreatedAt)
-		if constraint, ok := storekit.UniqueViolation(err); ok && constraint == "consent_purpose_key_unique" {
-			return fmt.Errorf("purpose %q: %w", key, apperrors.ErrConflict)
+		if !errors.Is(err, pgx.ErrNoRows) {
+			return err
 		}
-		return err
+		return purposeKeyTaken(ctx, tx, key)
 	})
 	return p, err
+}
+
+// purposeKeyTaken explains a refused key. An archived purpose keeps its key
+// because its consent history stays attached to it, so no second purpose takes it.
+func purposeKeyTaken(ctx context.Context, tx pgx.Tx, key string) error {
+	var archived bool
+	if err := tx.QueryRow(ctx,
+		`SELECT archived_at IS NOT NULL FROM consent_purpose WHERE key = $1`, key).Scan(&archived); err != nil {
+		return fmt.Errorf("consent: reading the purpose that holds key %q: %w", key, err)
+	}
+	if archived {
+		return fmt.Errorf("%w: the key %q belongs to an archived purpose and its consent history stays with it; restore that purpose instead of creating another", apperrors.ErrConflict, key)
+	}
+	return fmt.Errorf("%w: a purpose with the key %q already exists", apperrors.ErrConflict, key)
 }
 
 // ContactConsent reads one contact's per-purpose state plus the full

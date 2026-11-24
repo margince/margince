@@ -59,6 +59,9 @@ type Handlers struct {
 	// so a rebind moves the rows with it. Nil on a role that resolved no model
 	// path, where every attempt stays on its tier.
 	boundModels func() map[Tier]ModelRef
+	// ladderOf is the order the router walks a task's rungs in now. Nil on a
+	// role that resolved no model path, which reads the contract's order.
+	ladderOf func(Task) []Tier
 }
 
 // NewHandlers wires the module's stores onto one pool; budget is the

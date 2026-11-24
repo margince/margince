@@ -1,0 +1,7 @@
+{
+  "verdict": "yes",
+  "reason": "The answer names Körber Sensorik Rollout and Reply Deutschland Verlängerung as the thin or cold open deals and does not list any other deal as at risk; Nordwind Armaturen is mentioned only as a possible introduction, not as a risk.",
+  "model": "claude-haiku-5-5",
+  "criterion": "Criterion 2. The answer names Körber Sensorik Rollout and Reply Deutschland Verlängerung as the open deals resting on one person or gone cold, and lists no other deal as at risk. Answer no if it names neither, or names another deal as resting on one person or gone cold.",
+  "answer": "Booked this quarter: the standard bookings report answered with an error, so I have no official figure to give you. Thin or cold open deals: Körber Sensorik Rollout and Reply Deutschland Verlängerung. On price: one logged inbound mail supports it — Körber's 'Re: Angebot Sensorik', where the customer calls price the biggest obstacle; the tool states no share, so I will not quote one. Nordwind Armaturen: Sofia Meier knows Heike Brandt there and could make the introduction."
+}

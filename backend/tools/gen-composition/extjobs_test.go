@@ -235,7 +235,7 @@ func TestTheEmittedJobLiteralsAreCanonicalAndReadable(t *testing.T) {
 	if err != nil {
 		t.Fatalf("extensionJobs: %v", err)
 	}
-	src := extensionsGen([]extensionUnit{{Name: "demo", ModulePath: "example.test/ext/demo"}}, nil, decls)
+	src := extensionsGen([]extensionUnit{{Name: "demo", ModulePath: "example.test/ext/demo"}}, nil, decls, nil)
 	if _, err := canonicalGoSource("extensions_gen.go", src); err != nil {
 		t.Fatalf("the emitted composition is not canonical gofmt: %v\n%s", err, src)
 	}
@@ -265,7 +265,7 @@ func TestTheEmittedJobLiteralsAreCanonicalAndReadable(t *testing.T) {
 // only where there are jobs, so the committed stub — which is compared byte for
 // byte against the empty-tree output — stays what it is.
 func TestTheVanillaCompositionImportsNoTime(t *testing.T) {
-	src := string(extensionsGen(nil, nil, nil))
+	src := string(extensionsGen(nil, nil, nil, nil))
 	for _, unwanted := range []string{`"time"`, "mustDuration"} {
 		if strings.Contains(src, unwanted) {
 			t.Errorf("the vanilla composition carries %s:\n%s", unwanted, src)

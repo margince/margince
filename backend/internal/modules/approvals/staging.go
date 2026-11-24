@@ -372,6 +372,12 @@ func (s *Service) insertProposalInTx(ctx context.Context, tx pgx.Tx, in StageInp
 	// the agent or an inbound sender could have written. Sanitizing at the
 	// one place every staging passes through means no stager can bypass it.
 	in = prepareSystemSummary(ctx, in)
+	if err := requireKnownTargetType("target type", in.TargetType); err != nil {
+		return ids.ApprovalID{}, err
+	}
+	if err := requireKnownTargetType("co-target type", in.CoTargetType); err != nil {
+		return ids.ApprovalID{}, err
+	}
 
 	summaryParts, err := marshalSystemSummary(ctx, in.Summary, in.SummaryParts, in.SystemText, in.EffectSystemText)
 	if err != nil {

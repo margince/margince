@@ -142,6 +142,55 @@ func TestAValueSortCursorFromAnotherDayIsRefused(t *testing.T) {
 	}
 }
 
+// A correction to a rate the page was converted with changes the order.
+// A cursor minted before it is refused, so no deal is skipped or repeated.
+func TestAValueSortCursorFromBeforeARateCorrectionIsRefused(t *testing.T) {
+	e := Setup(t)
+	e.Deals.SetClock(func() time.Time { return fxTestNow })
+	day := fxTestNow.Truncate(24 * time.Hour)
+	pipeline := seedValueSortDeals(t, e, day, valueSortRates(), valueSortDeals)
+
+	sort, limit := "-amount_minor", 2
+	_, page, err := e.Deals.ListDeals(e.Admin(), deals.ListDealsInput{PipelineID: &pipeline, Sort: &sort, Limit: &limit})
+	if err != nil || !page.HasMore {
+		t.Fatalf("first page: has more %t, err %v", page.HasMore, err)
+	}
+	if _, err := e.Deals.SetFxRate(e.Admin(), deals.SetFxRateInput{FromCurrency: "JPY", Rate: "0.007", EffectiveDate: day}); err != nil {
+		t.Fatalf("correcting the JPY rate: %v", err)
+	}
+	_, _, err = e.Deals.ListDeals(e.Admin(), deals.ListDealsInput{
+		PipelineID: &pipeline, Sort: &sort, Limit: &limit, Cursor: &page.NextCursor,
+	})
+	if _, ok := errors.AsType[*storekit.CursorSortMismatchError](err); !ok {
+		t.Errorf("a cursor from before the correction → %v, want CursorSortMismatchError", err)
+	}
+}
+
+// A correction to a currency no open deal is held in changes no order, so a
+// cursor minted before it still continues the page.
+func TestAValueSortCursorSurvivesACorrectionToAnUnusedCurrency(t *testing.T) {
+	e := Setup(t)
+	e.Deals.SetClock(func() time.Time { return fxTestNow })
+	day := fxTestNow.Truncate(24 * time.Hour)
+	rates := valueSortRates()
+	rates["GBP"] = "1.2"
+	pipeline := seedValueSortDeals(t, e, day, rates, valueSortDeals)
+
+	sort, limit := "-amount_minor", 2
+	_, page, err := e.Deals.ListDeals(e.Admin(), deals.ListDealsInput{PipelineID: &pipeline, Sort: &sort, Limit: &limit})
+	if err != nil || !page.HasMore {
+		t.Fatalf("first page: has more %t, err %v", page.HasMore, err)
+	}
+	if _, err := e.Deals.SetFxRate(e.Admin(), deals.SetFxRateInput{FromCurrency: "GBP", Rate: "1.3", EffectiveDate: day}); err != nil {
+		t.Fatalf("correcting the GBP rate: %v", err)
+	}
+	if _, _, err = e.Deals.ListDeals(e.Admin(), deals.ListDealsInput{
+		PipelineID: &pipeline, Sort: &sort, Limit: &limit, Cursor: &page.NextCursor,
+	}); err != nil {
+		t.Errorf("a cursor after a correction to an unused currency → %v, want the next page", err)
+	}
+}
+
 // seedValueSortDeals sets each rate effective on rateDay and creates the deals
 // in one fresh pipeline, all through the real writers.
 func seedValueSortDeals(
@@ -157,7 +206,8 @@ func seedValueSortDeals(
 	pipeline, open, _ := DealFixture(t, e)
 	for _, seed := range seeds {
 		if _, err := e.Deals.CreateDeal(admin, deals.CreateDealInput{
-			Name: seed.name, PipelineID: pipeline, StageID: open,
+			Source: "manual",
+			Name:   seed.name, PipelineID: pipeline, StageID: open,
 			AmountMinor: &seed.amountMinor, Currency: &seed.currency,
 		}); err != nil {
 			t.Fatalf("creating %s: %v", seed.name, err)

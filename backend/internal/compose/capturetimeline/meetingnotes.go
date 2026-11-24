@@ -41,3 +41,10 @@ func (w NotesWriter) LandTx(ctx context.Context, tx pgx.Tx, in capture.MeetingNo
 		Title: in.Title, Revision: in.Revision, Text: in.Text,
 	})
 }
+
+// LandMailTx lands a Gemini notes mail as the transcript of the meeting it names.
+func (w NotesWriter) LandMailTx(ctx context.Context, tx pgx.Tx, in capture.MeetingNotesMail) (bool, error) {
+	return w.Store.LandMeetingNotesMailTx(ctx, tx, activities.MeetingNotesMailInput{
+		MessageID: in.MessageID, Owner: in.Owner, Subject: in.Subject, SentAt: in.SentAt, Text: in.Text,
+	})
+}

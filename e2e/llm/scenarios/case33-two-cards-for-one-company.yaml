@@ -143,7 +143,7 @@ must_not_mention:
   - "(?:I|we) (?:have )?(?:deleted|purged|discarded)[^.]{0,40}(?:Ostfriesen|Sauerland|the (?:duplicate|emails))|emails were (?:lost|deleted|discarded)"
   # The capability denial, in the family case 7 guards: a product that merges
   # and archives must not be reported as one that cannot.
-  - "cannot (?:be )?merge(?:d)?[^.]{0,25}record|no way to (?:merge|combine) (?:two )?(?:records|companies)|(?:CRM|workspace) (?:does not|doesn't) support (?:merging|archiving)"
+  - "(?:cannot|can['’]?t) (?:be )?merge(?:d)?[^.]{0,25}record|no way to (?:merge|combine) (?:two )?(?:records|companies)|(?:CRM|workspace) (?:does not|doesn't) support (?:merging|archiving)"
 
 # Archived leaves the day-to-day list. Either Ostfriesen card may survive the
 # merge, so no entry names the survivor or its owner.

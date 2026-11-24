@@ -42,7 +42,8 @@ export function readJsonCatalog(path: string): Catalog {
   return catalog;
 }
 
-// Listed by git, so a unit catalog in any layer counts.
+// Listed by git, so a unit catalog in any layer counts. An override layer
+// rewrites core keys and has no English twin, so it is not unit copy.
 function listedUnitCatalogs(locale: string): string[] {
   const listed = execFileSync(
     "git",
@@ -59,7 +60,12 @@ function listedUnitCatalogs(locale: string): string[] {
   const catalog = new RegExp(`(?:^|/)frontend/(?:.+/)?${locale}\\.json$`);
   return listed
     .split("\0")
-    .filter((path) => catalog.test(path) && !path.includes("/node_modules/"));
+    .filter(
+      (path) =>
+        catalog.test(path) &&
+        !path.includes("/node_modules/") &&
+        !path.includes("/i18n-overrides/"),
+    );
 }
 
 /** Each unit's `<locale>.json`, with the en.json beside it. */

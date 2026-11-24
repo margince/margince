@@ -125,7 +125,7 @@ The 14 tables owned by `reporting`, as the migrations build them. [Back to the e
 
 ## report_edition_contribution
 
-9 columns · primary key `(edition_id, metric, context_id, contribution_key)` · referenced by 0 foreign keys
+7 columns · primary key `(edition_id, metric, context_id, contribution_key)` · referenced by 0 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -133,17 +133,19 @@ The 14 tables owned by `reporting`, as the migrations build them. [Back to the e
 | `contribution_key` | `text` | yes |  |
 | `edition_id` | `uuid` | yes | Points at `report_edition.id`. |
 | `fact` | `jsonb` | yes |  |
-| `group_key` | `text` | yes |  |
 | `metric` | `text` | yes |  |
-| `owner_id` | `uuid` |  |  |
 | `source_id` | `uuid` | yes |  |
-| `source_type` | `text` | yes |  |
+| `source_type` | `text` | yes | One of `deal`, `activity`, `lead`, `company`, `sdr_handoff`, `intro_request` and 1 more. |
 
 **Points at**
 
 | Columns | Table | When the parent goes |
 |---|---|---|
 | `edition_id` | `report_edition` | deleting the parent deletes this row |
+
+**Rules**
+
+- `report_edition_contribution_source_type_check`: `CHECK ((source_type = ANY (ARRAY['deal', 'activity', 'lead', 'company', 'sdr_handoff', 'intro_request', 'forecast_projection'])))`
 
 **Indexes**
 
@@ -152,8 +154,8 @@ The 14 tables owned by `reporting`, as the migrations build them. [Back to the e
 
 **Triggers**
 
-- `text_bound_insert`: `AFTER INSERT FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL, '{"metric": 20000, "group_key": 20000, "context_id": 20000, "source_type": 20000, "contribution_key": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"context_id":20000,"contribution_key":20000,"group_key":20000,"metric":20000,"source_type":20000}')`
-- `text_bound_update`: `AFTER UPDATE FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"metric": 20000, "group_key": 20000, "context_id": 20000, "source_type": 20000, "contribution_key": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"context_id":20000,"contribution_key":20000,"group_key":20000,"metric":20000,"source_type":20000}')`
+- `text_bound_insert`: `AFTER INSERT FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL, '{"metric": 20000, "context_id": 20000, "source_type": 20000, "contribution_key": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"context_id":20000,"contribution_key":20000,"metric":20000,"source_type":20000}')`
+- `text_bound_update`: `AFTER UPDATE FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"metric": 20000, "context_id": 20000, "source_type": 20000, "contribution_key": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"context_id":20000,"contribution_key":20000,"metric":20000,"source_type":20000}')`
 
 ## report_edition_question
 
@@ -247,7 +249,7 @@ The 14 tables owned by `reporting`, as the migrations build them. [Back to the e
 |---|---|---|
 | `owner_id` | `app_user` | the parent cannot be deleted while this row points at it |
 | `report_id, report_revision` | `report_definition_revision` | the parent cannot be deleted while this row points at it |
-| `schedule_id` | `report_schedule` | the parent cannot be deleted while this row points at it |
+| `schedule_id` | `report_schedule` | deleting the parent keeps this row and clears the link |
 
 **Rules**
 

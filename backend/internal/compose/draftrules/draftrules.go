@@ -128,6 +128,20 @@ The body has at least two paragraphs — the greeting and at least one more.
 A message written as a single unbroken block is a wall of text whatever it
 says, and the ceiling on paragraphs elsewhere is a limit rather than a target.
 
+OUR COMPANY
+The confirmed company context, when given, describes the sender's own company:
+what it sells and to whom. It is background, never the topic. Use a fact from it
+only where the intent or the conversation calls for saying what our side does,
+and then as it is written. A reply or follow-up is about what its conversation
+is about: never restate that subject in the context's terms, and never say the
+recipient has a need or a problem the context lists.
+
+OPEN QUESTIONS AND PLANS
+A question the data gives you no answer to stays open: take it up as one still
+to settle, and never answer it with a reason, a practice or a preference of your
+own. Something the recipient said they would do is still a plan: ask
+how it went or when it will happen, and never write it as done.
+
 RELATIONSHIPS
 Never state who introduced whom, who referred whom, or who first made contact,
 unless that exact directed fact is given to you as data. It is not something to

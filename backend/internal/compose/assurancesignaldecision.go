@@ -108,7 +108,7 @@ func coveredSuggestions(ctx context.Context, tx pgx.Tx, signal ids.UUID, linkExi
 	}
 	var args []any
 	arg := func(value any) int { args = append(args, value); return len(args) }
-	visible, err := deals.ReadableSuggestionClause(ctx, arg)
+	visible, err := deals.ReadableSuggestionClause(ctx, "s", arg)
 	if err != nil {
 		return nil, err
 	}

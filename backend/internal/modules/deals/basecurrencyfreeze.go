@@ -141,14 +141,14 @@ func ratesPricedAgainstBase(ctx context.Context, tx pgx.Tx, settingKey string) (
 		// question "is anything priced against the outgoing base" cannot be
 		// answered more narrowly, and the safe answer is the conservative one.
 		var priced int
-		if err := tx.QueryRow(ctx, `SELECT count(*) FROM fx_rate`).Scan(&priced); err != nil {
+		if err := tx.QueryRow(ctx, `SELECT count(*) FROM fx_rate /* every version */`).Scan(&priced); err != nil {
 			return 0, "", fmt.Errorf("counting rates on the sheet: %w", err)
 		}
 		return priced, "", nil
 	}
 	var priced int
 	if err := tx.QueryRow(ctx,
-		`SELECT count(*) FROM fx_rate WHERE to_currency = $1`, *base).Scan(&priced); err != nil {
+		`SELECT count(*) FROM fx_rate /* every version */ WHERE to_currency = $1`, *base).Scan(&priced); err != nil {
 		return 0, "", fmt.Errorf("counting rates priced against the current base: %w", err)
 	}
 	return priced, *base, nil

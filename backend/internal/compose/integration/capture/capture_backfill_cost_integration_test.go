@@ -92,8 +92,10 @@ func TestHistoryImportReportsItsDatabaseWork(t *testing.T) {
 // Thread membership and mailbox generation are checked before each message write.
 // It includes one statement per filed message that names the linked contact as
 // the sender when the stated address proves them (stampProvenSenders).
+// Every writer of a meeting's attendees takes the meeting lock first, in one
+// statement, and those locks cost about seven round trips per imported message.
 const (
-	historyExchangesPerMessage    = 165
+	historyExchangesPerMessage    = 171
 	historyTransactionsPerMessage = 5.15
 )
 

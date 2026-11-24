@@ -151,6 +151,12 @@ never becomes a company record either; Margince only reads from it. The tab is
 missing while the company is a target, prospect or opportunity: an account
 nobody has ever invoiced has no money to report.
 
+You need finance read access to see the tab. It shows only on a company that
+you own or that someone shared with you, not on one a teammate owns. An admin
+who reads every record sees it on every company. An invoice can carry
+what someone is paid, so reading the company is not enough. The same rule decides who sees an
+invoice or payment on Home, in the Worklist and in a merge review.
+
 ### How do I create an invoice?
 You cannot create an invoice in Margince: it has no invoice form, no "New invoice" button and no invoicing API. Invoices exist only in your accounting system, and the company's **Finance** tab shows a read-only mirror of them.
 To bill a customer, raise the invoice in your accounting system. It shows under **Recent invoices** on the **Finance** tab once it syncs, if an admin has linked its customer to the company.
@@ -189,7 +195,7 @@ past customer the card is titled "Finance · historical".
 ### The overdue warning
 
 When a company has overdue invoices, a warning stands at the top of its page,
-over every tab. It reads, for example, "€12,400.00 overdue on 3 invoices" and
+over every tab. It reads, for example, "€12,400 overdue on 3 invoices" and
 "The oldest is 41 days past due."
 
 If your accounting system tells Margince how many payment reminders it has
@@ -200,7 +206,7 @@ A disputed invoice still counts as **Open** on the **Finance** tab. It is left
 out of the warning and of every overdue figure, its reminders too.
 
 If the last sync is old or failed, the warning still shows the last figures.
-It then reads "€12,400.00 was overdue on 3 invoices" and "As of the last
+It then reads "€12,400 was overdue on 3 invoices" and "As of the last
 accounting sync on {date}." An invoice paid since then leaves the warning at
 the next good sync. The payment line under **How it
 stands** follows the same rule.

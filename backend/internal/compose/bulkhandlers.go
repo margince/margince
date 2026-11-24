@@ -58,6 +58,7 @@ func (h bulkHandlers) PreviewBulkChange(w http.ResponseWriter, r *http.Request) 
 	out, err := h.engine.Preview(r.Context(), bulkChange{
 		recordType: body.RecordType, verb: body.Verb, items: body.Items, ownerID: bulkOwner(body.OwnerId),
 		listID: bulkOwner(body.ListId), note: body.Note, tagID: bulkOwner(body.TagId), task: body.Task,
+		stageID: bulkOwner(body.StageId),
 	})
 	if err != nil {
 		httperr.Write(w, r, err)
@@ -76,6 +77,7 @@ func (h bulkHandlers) ExecuteBulkChange(w http.ResponseWriter, r *http.Request, 
 	change := bulkChange{
 		recordType: body.RecordType, verb: body.Verb, items: body.Items, ownerID: bulkOwner(body.OwnerId),
 		listID: bulkOwner(body.ListId), note: body.Note, tagID: bulkOwner(body.TagId), task: body.Task,
+		stageID: bulkOwner(body.StageId),
 	}
 	if body.ConfirmToken != nil {
 		change.confirmToken = *body.ConfirmToken

@@ -113,7 +113,8 @@ func (sc *ScenarioRecord) foldConfidence(r *ConfidenceRange) {
 // CertifiedScope is read off the CASE rather than the scenario's name for the
 // site, because the case is what drives the invocation and so what knows how
 // much of it a run reaches. ContextApplied says the case served the company
-// context production prepends, read off the request it built.
+// context production prepends, read off the request it built, and ContextOwed
+// that production prepends any to that request.
 //
 // The json tags are the resume journal's on-disk shape — see RunResult, which
 // this embeds.
@@ -126,6 +127,7 @@ type runOutcome struct {
 	CertifiedScope       string `json:"certified_scope"`
 	JudgeDegraded        bool   `json:"judge_degraded"`
 	ContextApplied       bool   `json:"context_applied"`
+	ContextOwed          bool   `json:"context_owed,omitempty"`
 }
 
 // runOnce drives exactly one prepared case and its judge score, cache off, so
@@ -259,7 +261,10 @@ func scoreAnswer(ctx context.Context, prepared aitasks.PreparedCase, scope strin
 	})
 	outcome.Leak = entry.leak
 	outcome.AnswerConfidence = keptConfidence(prepared, caseTrace, entry.passed)
-	outcome.ContextApplied = len(caseTrace.Requests) > 0 && caseTrace.Requests[0].ContextFingerprint != ""
+	if len(caseTrace.Requests) > 0 {
+		outcome.ContextOwed = requestOwesContext(task, caseTrace.Requests[0])
+		outcome.ContextApplied = caseTrace.Requests[0].ContextFingerprint != ""
+	}
 	if !entry.graded {
 		log.WarnContext(ctx, "aicert: this run has no whole answer, so it fails and is not sent to the judge",
 			"task", string(task), "scenario", sc.Name, "site", sc.Site, "withheld", pooled.Withheld, "abandoned", pooled.Abandoned, "truncated", pooled.Truncated)

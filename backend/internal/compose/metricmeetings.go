@@ -97,7 +97,7 @@ func heldMeetingSource(ctx context.Context, b *reportingBindings, at, from, to t
  AND ` + held.Recorded + `
  AND COALESCE(held.status,a.meeting_status)='` + meetingoutcome.Held + `' AND (` + eligible + `)
  AND ` + within + " AND " + orUnnarrowed(visible) + " AND " + fieldScope,
-		seats:      storekit.MeetingCreditedSeatsAtChangeSQL("a", legacy, "held.host_id_at_change"),
+		seats:      storekit.AsOfHeldCredit(legacy).Seats("a"),
 		seat:       storekit.MeetingCreditedSeatAtChangeSQL("a", legacy, "held.host_id_at_change"),
 		start:      start,
 		precision:  precision,

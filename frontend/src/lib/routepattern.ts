@@ -13,10 +13,10 @@ export function routePattern(
   route: Route,
   unitNames: readonly string[] = extensions.map((unit) => unit.name),
 ): string {
-  if (route.screen === "ext") {
+  if (route.screen === "ext" || route.screen === "app") {
     return route.id && unitNames.includes(route.id)
-      ? `ext/${route.id}`
-      : "ext/:unit";
+      ? `${route.screen}/${route.id}`
+      : `${route.screen}/:unit`;
   }
   if (route.screen === "x") {
     return "x/:key";
