@@ -115,7 +115,8 @@ their tool `ask_user_first`. Who acts on that mark depends on the surface.
   directly, and only the MCP server sets a call up for a form. So no form can reach a run, and a change
   to many records goes ahead as it does for a client that cannot show one.
 
-A tool marked `WaitsEvenForItsUser` asks its user over MCP in the conversation, not in the approval inbox.
+A tool marked `WaitsEvenForItsUser`, called from a live MCP conversation, asks its user there. It needs the
+signing key and Redis.
 The first call changes nothing and answers a preview and a `confirm_code`. The same call with that code runs
 once (`internal/modules/agents/confirmcode.go`). Only the MCP `Dispatcher` arms this, so REST calls and the
 runner still stage into the inbox. The code is offered only where `ReleasableByCaller` says the passport could
