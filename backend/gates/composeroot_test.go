@@ -54,8 +54,10 @@ const (
 	// card cases, which drive the unexported bookingCard and the booking page fixtures.
 	// Raised by 140 production and 269 test lines for the series-split fold and
 	// repair task. Their cases drive the unexported Home meeting lane and fold.
+	// Raised by 43 test lines for the refold cases of a transaction still open,
+	// which drive the unexported clock refold worker.
 	composeRootProductionLines = 230_690
-	composeRootTestLines       = 360_081
+	composeRootTestLines       = 360_124
 )
 
 // A read under these floors stopped early or read the wrong place, and would
