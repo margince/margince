@@ -13,8 +13,10 @@ import {
 import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
-import { LocaleProvider } from "../../i18n";
-import { bookingProfile } from "../../testing/book.testkit";
+import { formatTimeOfDay } from "../../format/format";
+import { browserZone } from "../../format/timezone";
+import { LocaleProvider, translate } from "../../i18n";
+import { bookingProfile, bookingSlots } from "../../testing/book.testkit";
 import { installFetchStub, jsonResponse } from "../../testing/story-utils";
 import { useBookingTitle } from "./booking-common";
 import { BookingGuestScreen } from "./booking-guest";
@@ -47,6 +49,7 @@ beforeEach(() => {
 afterEach(() => {
   cleanup();
   vi.unstubAllGlobals();
+  vi.useRealTimers();
   globalThis.history.replaceState(null, "", "/");
 });
 
@@ -146,9 +149,11 @@ function mountGuest(address: string, offered = [30, 45, 60]) {
       const length = url.searchParams.get("l");
       server.asked.push(length);
       return server.offered.includes(Number(length))
-        ? jsonResponse({ slots: [], truncated: false })
+        ? jsonResponse({ slots: bookingSlots, truncated: false })
         : jsonResponse(notOffered, 422);
     },
+    "POST /public/booking/host": () =>
+      jsonResponse({ ...notOffered, detail: "English server text" }, 422),
   });
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false } },
@@ -212,4 +217,36 @@ it("never shows the last host's page while the next host's page loads", async ()
     expect(screen.queryByText(bookingProfile.title)).toBeNull(),
   );
   expect(screen.queryByRole("button", { name: "45 min" })).toBeNull();
+});
+
+// The fixture's free times fall in October 2026, so the page opens that month.
+async function pickFirstTime() {
+  vi.useFakeTimers({ toFake: ["Date"] });
+  vi.setSystemTime(new Date("2026-10-01T12:00:00Z"));
+  const view = mountGuest("/book/host?l=45");
+  const time = formatTimeOfDay(bookingSlots[0].start, "en", browserZone());
+  await userEvent.click(await screen.findByRole("button", { name: time }));
+  expect(screen.getByRole("button", { name: CONFIRM })).toBeTruthy();
+  return view;
+}
+const CONFIRM = /^Confirm \d/;
+
+it("drops the picked time when a profile read moves the page to another length", async () => {
+  const { server, client } = await pickFirstTime();
+  server.offered = [30, 60];
+  await client.invalidateQueries({ queryKey: ["public-booking-profile"] });
+  await waitFor(() => expect(pressed("30 min")).toBe("true"));
+  expect(screen.queryByRole("button", { name: CONFIRM })).toBeNull();
+});
+
+it("explains a booking refused for its length in the guest's language", async () => {
+  await pickFirstTime();
+  await userEvent.type(screen.getByLabelText("Your name"), "Nina Weber");
+  await userEvent.type(screen.getByLabelText("Your email"), "nina@x.example");
+  await userEvent.click(screen.getByRole("checkbox"));
+  await userEvent.click(screen.getByRole("button", { name: CONFIRM }));
+  expect(
+    await screen.findByText(translate("en", "book.lengthNotOffered")),
+  ).toBeTruthy();
+  expect(screen.queryByText("English server text")).toBeNull();
 });

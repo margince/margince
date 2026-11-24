@@ -72,6 +72,20 @@ function bookedLength(
   return page?.duration_minutes;
 }
 
+// A time holds only at the length it was picked at. A profile read that moves
+// the page to another length drops it.
+function useSlotAtLength(length: number | undefined) {
+  const [picked, pick] = useState<{
+    slot: GuestSlot;
+    length?: number;
+  } | null>(null);
+  const slot = picked && picked.length === length ? picked.slot : null;
+  return [
+    slot,
+    (next: GuestSlot | null) => pick(next && { slot: next, length }),
+  ] as const;
+}
+
 export function BookingGuestScreen({
   hostSlug,
   proposalToken,
@@ -96,7 +110,6 @@ export function BookingGuestScreen({
     return new Date(today.getFullYear(), today.getMonth(), 1);
   });
   const [pickedDay, setPickedDay] = useState<ISODay | "">("");
-  const [selected, setSelected] = useState<GuestSlot | null>(null);
   const [details, setDetails] = useState(NO_DETAILS);
   const profile = useQuery({
     queryKey: preview
@@ -150,6 +163,7 @@ export function BookingGuestScreen({
     profile.isSuccess &&
     !("provider" in profile.data && profile.data.provider);
   const length = bookedLength(profile.data, requestedLength);
+  const [selected, setSelected] = useSlotAtLength(length);
   const visible = monthWindow(month, zone, now);
   const read = async (from: string, to: string) => {
     if (preview) {
