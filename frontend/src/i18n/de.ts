@@ -3462,6 +3462,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "rel.stakeholderOffer.legend": "Kontakte auf dieser Mail",
   "rel.stakeholderOffer.confirm": "Zum Deal hinzufügen",
   "rel.stakeholderOffer.decline": "Jetzt nicht",
+  "rel.stakeholderOffer.noneTicked":
+    "Setze bei mindestens einem Kontakt einen Haken.",
   "rel.stakeholderOffer.added": "Zum Deal hinzugefügt",
   "rel.stakeholderOffer.unread":
     "Die Mail ist beim Deal. Margince konnte nicht lesen, wer auf ihr steht, und schlägt daher niemanden vor.",

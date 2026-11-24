@@ -3370,6 +3370,7 @@ export const en = {
   "rel.stakeholderOffer.legend": "Contacts on this mail",
   "rel.stakeholderOffer.confirm": "Add to deal",
   "rel.stakeholderOffer.decline": "Not now",
+  "rel.stakeholderOffer.noneTicked": "Tick at least one contact to add.",
   "rel.stakeholderOffer.added": "Added to the deal",
   "rel.stakeholderOffer.unread":
     "The mail is on the deal. Margince could not read who is on it, so it offers nobody to add.",

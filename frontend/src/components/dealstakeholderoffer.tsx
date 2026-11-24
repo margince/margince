@@ -190,7 +190,9 @@ function StakeholderOfferDialog({
       title={t("rel.stakeholderOffer.title")}
       confirmLabel={t("rel.stakeholderOffer.confirm")}
       cancelLabel={t("rel.stakeholderOffer.decline")}
-      confirmDisabled={chosen.length === 0}
+      confirmReason={
+        chosen.length === 0 ? t("rel.stakeholderOffer.noneTicked") : undefined
+      }
       onConfirm={() => add.mutate(chosen)}
       pending={add.isPending}
       error={add.isError ? problemMessageOf(add.error, t) : null}

@@ -3360,10 +3360,11 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "rel.addStakeholder": "Thêm bên liên quan",
   "rel.stakeholderOffer.title": "Thêm các liên hệ trong thư này vào giao dịch?",
   "rel.stakeholderOffer.body":
-    "Khi là bên liên quan, thư tiếp theo của họ sẽ tự vào giao dịch. Bỏ chọn người không thuộc giao dịch.",
+    "Khi là bên liên quan, thư tiếp theo của họ sẽ tự vào giao dịch. Bỏ chọn liên hệ không thuộc giao dịch.",
   "rel.stakeholderOffer.legend": "Liên hệ trong thư này",
   "rel.stakeholderOffer.confirm": "Thêm vào giao dịch",
   "rel.stakeholderOffer.decline": "Để sau",
+  "rel.stakeholderOffer.noneTicked": "Chọn ít nhất một liên hệ để thêm.",
   "rel.stakeholderOffer.added": "Đã thêm vào giao dịch",
   "rel.stakeholderOffer.unread":
     "Thư đã ở trong giao dịch. Margince không đọc được những ai có trong thư, nên không đề xuất ai để thêm.",
