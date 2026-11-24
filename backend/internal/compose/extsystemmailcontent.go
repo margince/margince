@@ -18,6 +18,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/compose/systemmail"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
@@ -34,7 +35,7 @@ type systemMailContent struct{ rt *callRuntime }
 const mailContentQuery = `
 	SELECT a.subject, a.body, a.audience, a.capture_label, a.bulk_mail_attested, a.source_id, a.occurred_at, a.redacted_fields
 	  FROM activity a
-	 WHERE a.id = $1 AND a.kind = 'email' AND a.audience = 'workspace' AND a.archived_at IS NULL AND %s AND NOT %s`
+	 WHERE a.id = $1 AND %s`
 
 func (m systemMailContent) Get(ctx context.Context, actAs extension.UserID, mailID string) (extension.MailContent, error) {
 	seatCtx, seat, err := m.rt.seatRead(ctx, extension.SystemReadMailContent, actAs)
@@ -61,7 +62,7 @@ func (m systemMailContent) Get(ctx context.Context, actAs extension.UserID, mail
 			redacted                     []string
 			at                           time.Time
 		)
-		query := fmt.Sprintf(mailContentQuery, auth.ActivityAvailableClause("a"), auth.ActivityRestrictedSQL("a.id"))
+		query := fmt.Sprintf(mailContentQuery, systemmail.ReadableMail("a"))
 		err := tx.QueryRow(seatCtx, query, id).Scan(&subject, &body, &out.Audience, &label, &out.BulkMail, &source, &at, &redacted)
 		if err != nil {
 			return err
