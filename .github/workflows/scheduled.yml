@@ -328,6 +328,8 @@ jobs:
         run: make -C backend fetch-test-deps
       # Keep the clock jump, suites and recovery in one shell: the runner's
       # control-plane credentials must be valid before it starts another step.
+      # The script moves the clock once per suite slice and restores it after each,
+      # so the runner agent sees real time between slices.
       # outcome=calendar only on the line scripts/backend-clock-drift.sh prints
       # after the suites failed under a shift it proved still in force.
       - name: The backend suites at the moved clock
