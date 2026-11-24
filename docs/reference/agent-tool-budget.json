@@ -31,9 +31,9 @@
   "catalog": {
     "tools": 48,
     "system_frame_tokens": 764,
-    "tokens": 45583,
-    "median_tool_tokens": 627,
-    "mean_tool_tokens": 949
+    "tokens": 49504,
+    "median_tool_tokens": 674,
+    "mean_tool_tokens": 1030
   },
   "agents": [
     {
@@ -84,28 +84,32 @@
   ],
   "tool_cost": [
     {
+      "name": "read_details",
+      "tokens": 4027
+    },
+    {
       "name": "read_reports",
       "tokens": 3353
     },
     {
-      "name": "read_details",
-      "tokens": 3067
+      "name": "change_settings",
+      "tokens": 3087
     },
     {
       "name": "read_workspace",
       "tokens": 2779
     },
     {
-      "name": "change_settings",
-      "tokens": 2766
-    },
-    {
       "name": "change_activities",
-      "tokens": 2493
+      "tokens": 2653
     },
     {
       "name": "find_records",
       "tokens": 2057
+    },
+    {
+      "name": "change_state",
+      "tokens": 1953
     },
     {
       "name": "read_view",
@@ -117,19 +121,27 @@
     },
     {
       "name": "change_attention",
-      "tokens": 1521
+      "tokens": 1656
+    },
+    {
+      "name": "change_capture",
+      "tokens": 1615
     },
     {
       "name": "read_analytics",
       "tokens": 1373
     },
     {
-      "name": "change_capture",
-      "tokens": 1346
+      "name": "run_research",
+      "tokens": 1206
     },
     {
-      "name": "run_research",
-      "tokens": 1027
+      "name": "change_compliance",
+      "tokens": 1188
+    },
+    {
+      "name": "change_access",
+      "tokens": 1044
     },
     {
       "name": "change_record_parts",
@@ -140,20 +152,12 @@
       "tokens": 1012
     },
     {
+      "name": "change_offers",
+      "tokens": 1008
+    },
+    {
       "name": "read_forecast",
       "tokens": 978
-    },
-    {
-      "name": "change_state",
-      "tokens": 949
-    },
-    {
-      "name": "change_compliance",
-      "tokens": 920
-    },
-    {
-      "name": "change_access",
-      "tokens": 911
     },
     {
       "name": "bulk_update_records",
@@ -172,12 +176,12 @@
       "tokens": 797
     },
     {
-      "name": "change_offers",
-      "tokens": 745
+      "name": "change_my_settings",
+      "tokens": 709
     },
     {
-      "name": "change_my_settings",
-      "tokens": 628
+      "name": "change_tags",
+      "tokens": 639
     },
     {
       "name": "update_record",
@@ -202,10 +206,6 @@
     {
       "name": "schedule_meeting",
       "tokens": 515
-    },
-    {
-      "name": "change_tags",
-      "tokens": 493
     },
     {
       "name": "list_approvals",

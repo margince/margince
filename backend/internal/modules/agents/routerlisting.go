@@ -13,14 +13,31 @@ import (
 // listedActions are the router actions whose arguments tools/list names. Every
 // other action of a router the action catalog describes keeps its enum line,
 // and a model reads its arguments from read_workspace topic=actions. The set is
-// what the use-case scenarios require; a compose test holds the two together.
+// what the use-case lane uses: actions a scenario requires or a recorded MCP
+// run called. A test in compose/mcpe2e holds the two together.
 var listedActions = map[string][]string{
-	"change_access":     {"share"},
-	"change_activities": {"check_send", "log", "relink", "relink_many"},
-	"change_attention":  {"acknowledge_company_view"},
-	"change_reports":    {"record_decision"},
-	"change_settings":   {"create_stage", "upload_company_logo"},
-	"change_tags":       {"update"},
+	"change_access":      {"add_team_member", "share"},
+	"change_activities":  {"attach", "check_send", "log", "relink", "relink_many", "save_draft"},
+	"change_attention":   {"acknowledge_company_view", "create_signal"},
+	"change_capture":     {"add_exclusion", "import_vcards"},
+	"change_compliance":  {"open_data_subject_request", "place_legal_hold", "suppress_contact"},
+	"change_my_settings": {"create_voice_profile", "save_locale", "save_timezone", "save_working_hours"},
+	"change_offers":      {"record_contract", "set_contract_status"},
+	"change_reports":     {"record_decision"},
+	"change_settings":    {"create_stage", "reorder_stages", "update_automation", "upload_company_logo"},
+	"change_state": {
+		"demote", "disqualify", "move_deal", "move_deal_pipeline", "move_project", "promote", "qualify",
+		"record_project_health",
+	},
+	"change_tags": {"apply", "merge", "remove", "update"},
+	"read_details": {
+		"company_brief", "company_contracts", "company_linkedin_reach", "company_logo", "contact_brief",
+		"contact_consent", "contact_consent_guard", "contact_optout_records", "contact_overrides", "contact_stops",
+		"deal_lines", "deal_margince_changes", "dossier", "field_history", "intro_requests", "job_health_history",
+		"lead_promotion_preview", "magic", "mail_draft", "notice_case_review", "notice_source_evidence",
+		"notice_source_preview", "notices", "scheduled_sends",
+	},
+	"run_research": {"draft_intro_request"},
 }
 
 // ListedActions is listedActions, router by router.

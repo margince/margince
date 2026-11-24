@@ -20,10 +20,10 @@ import (
 // routerAction is one action of one listed router.
 type routerAction struct{ Router, Action string }
 
-// requiredRouterActions names the router actions some scenario requires, each
-// with the scenarios that require it. A scenario names an action by its verb,
-// which the lane grades a router call as, or as router.action=<name>.
-func requiredRouterActions(t *testing.T, specs []mcp.ToolSpec) map[routerAction][]string {
+// usedRouterActions names the router actions the lane uses, each with where.
+// A scenario uses an action it requires, by its verb or as
+// router.action=<name>. A recorded MCP run uses the verbs it called.
+func usedRouterActions(t *testing.T, specs []mcp.ToolSpec) map[routerAction][]string {
 	t.Helper()
 	byVerb, fields := map[string]routerAction{}, map[string]string{}
 	for _, spec := range specs {
@@ -39,7 +39,12 @@ func requiredRouterActions(t *testing.T, specs []mcp.ToolSpec) map[routerAction]
 	if err != nil {
 		t.Fatalf("reading the scenarios: %v", err)
 	}
-	required := map[routerAction][]string{}
+	used := map[routerAction][]string{}
+	note := func(action routerAction, where string) {
+		if !slices.Contains(used[action], where) {
+			used[action] = append(used[action], where)
+		}
+	}
 	for file, names := range calls {
 		for _, name := range names {
 			tool, pinned, _ := strings.Cut(name, ".")
@@ -48,40 +53,58 @@ func requiredRouterActions(t *testing.T, specs []mcp.ToolSpec) map[routerAction]
 			if !fronted && pins && fields[tool] != "" && fields[tool] == argument {
 				action, fronted = routerAction{tool, value}, true
 			}
-			if fronted && !slices.Contains(required[action], file) {
-				required[action] = append(required[action], file)
+			if fronted {
+				note(action, file)
 			}
 		}
 	}
-	return required
+	verdicts, err := mcpe2e.ReadVerdicts(filepath.Join("..", "..", "..", ".."))
+	if err != nil {
+		t.Fatalf("reading the verdicts: %v", err)
+	}
+	for _, v := range verdicts {
+		if v.Door != mcpe2e.DoorMCP {
+			continue
+		}
+		called := slices.Clone(v.ToolsCalled)
+		for _, run := range v.ToolsByRun {
+			called = append(called, run.Tools...)
+		}
+		for _, verb := range called {
+			if action, fronted := byVerb[verb]; fronted {
+				note(action, "a recorded run of "+v.Scenario)
+			}
+		}
+	}
+	return used
 }
 
-// Every router action a scenario requires keeps its arguments in tools/list,
-// so the lane measures the listing a client meets. Any other action keeps only
+// Every router action the lane uses keeps its arguments in tools/list: one a
+// scenario requires, or one a recorded run called. Any other action keeps only
 // its enum line, and a model reads its arguments from the action catalog. The
-// set names nothing a scenario has stopped requiring, so it cannot go stale.
-func TestTheToolListNamesTheArgumentsOfEveryActionAScenarioRequires(t *testing.T) {
+// set names nothing the lane has stopped using, so it cannot go stale.
+func TestTheToolListNamesTheArgumentsOfEveryActionTheLaneUses(t *testing.T) {
 	specs := compose.NewRegistry(nil, compose.SendPath{}).Specs()
-	required := requiredRouterActions(t, specs)
-	if len(required) == 0 {
-		t.Fatal("no scenario requires a router action, so this gate would hold nothing")
+	used := usedRouterActions(t, specs)
+	if len(used) == 0 {
+		t.Fatal("no scenario or recorded run uses a router action, so this gate would hold nothing")
 	}
 	served := map[string]mcp.ToolSpec{}
 	for _, spec := range specs {
 		served[spec.Name] = spec
 	}
-	for action, scenarios := range required {
+	for action, scenarios := range used {
 		sort.Strings(scenarios)
 		router := served[action.Router]
 		i := slices.IndexFunc(router.Actions, func(a mcp.ToolAction) bool { return a.Action == action.Action })
 		if i < 0 {
-			t.Errorf("%s requires %s action %s, which the router does not have", scenarios[0], action.Router, action.Action)
+			t.Errorf("%s names %s action %s, which the router does not have", scenarios[0], action.Router, action.Action)
 			continue
 		}
 		listed := propertyNames(t, router.InputSchema)
 		for _, argument := range propertyNames(t, served[router.Actions[i].Verb].InputSchema) {
 			if !slices.Contains(listed, argument) {
-				t.Errorf("%s requires %s action %s, whose argument %s tools/list leaves out. "+
+				t.Errorf("%s uses %s action %s, whose argument %s tools/list leaves out. "+
 					"Add the action to listedActions in backend/internal/modules/agents/routerlisting.go.",
 					strings.Join(scenarios, ", "), action.Router, action.Action, argument)
 			}
@@ -89,9 +112,9 @@ func TestTheToolListNamesTheArgumentsOfEveryActionAScenarioRequires(t *testing.T
 	}
 	for router, actions := range agents.ListedActions() {
 		for _, action := range actions {
-			if _, needed := required[routerAction{router, action}]; !needed {
-				t.Errorf("listedActions keeps the arguments of %s action %s, which no scenario in %s requires. "+
-					"Remove it from backend/internal/modules/agents/routerlisting.go.", router, action, mcpe2e.ScenarioDir)
+			if _, needed := used[routerAction{router, action}]; !needed {
+				t.Errorf("listedActions keeps the arguments of %s action %s, which no scenario requires and no "+
+					"recorded MCP run called. Remove it from backend/internal/modules/agents/routerlisting.go.", router, action)
 			}
 		}
 	}

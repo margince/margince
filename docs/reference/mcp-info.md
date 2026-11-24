@@ -15,10 +15,10 @@ input and output schema in folds below it. What a tool may do and whether a huma
 |---|---:|
 | Tools | 48 |
 | Resources | 14 |
-| Tool catalog | 227.1 KB |
+| Tool catalog | 242.5 KB |
 | Resource catalog | 5.5 KB |
-| Approx. wire tokens | 59548 |
-| Largest tool | `read_reports` (13.3 KB) |
+| Approx. wire tokens | 63484 |
+| Largest tool | `read_details` (15.8 KB) |
 | Scopes rendered | `read`, `draft`, `write`, `send`, `enrich` |
 
 Those are the bytes on the wire: they carry each tool's output schema and the
@@ -32,11 +32,11 @@ tool adds to that listing, and what it costs each scheduled agent, agent by agen
 
 | Part | Bytes | Share | In a run's prompt? |
 |---|---:|---:|---|
-| Output schemas | 33.7 KB | 14% | **No**: a result's shape, never listed to a model |
-| Descriptions (incl. governance clause) | 51.0 KB | 22% | Yes, every step |
-| Input schemas | 130.9 KB | 57% | Yes, every step |
-| _Names, annotations, punctuation_ | 11.6 KB | 5% | Partly |
-| **Description + input schema** | **181.9 KB** | **80%** | **the recurring cost** |
+| Output schemas | 33.7 KB | 13% | **No**: a result's shape, never listed to a model |
+| Descriptions (incl. governance clause) | 51.0 KB | 21% | Yes, every step |
+| Input schemas | 146.3 KB | 60% | Yes, every step |
+| _Names, annotations, punctuation_ | 11.6 KB | 4% | Partly |
+| **Description + input schema** | **197.3 KB** | **81%** | **the recurring cost** |
 
 Output schemas are the largest part of the total and are never sent to a model;
 descriptions and input schemas are what each step pays for.
@@ -67,20 +67,20 @@ descriptions and input schemas are what each step pays for.
 | [`annotate_brief`](#annotate_brief) | Write findings onto the morning brief |  |  | 417 |
 | [`archive_record`](#archive_record) | Archive a record |  |  | 300 |
 | [`bulk_update_records`](#bulk_update_records) | Change many records at once |  |  | 892 |
-| [`change_access`](#change_access) | Share records and set up members and teams |  |  | 911 |
-| [`change_activities`](#change_activities) | Log, plan and file activities |  |  | 2493 |
-| [`change_attention`](#change_attention) | Act on proposals, notices and the weekly plan |  |  | 1521 |
-| [`change_capture`](#change_capture) | Decide what comes into the CRM |  |  | 1346 |
-| [`change_compliance`](#change_compliance) | Record consent, stops, holds and privacy work |  |  | 920 |
+| [`change_access`](#change_access) | Share records and set up members and teams |  |  | 1044 |
+| [`change_activities`](#change_activities) | Log, plan and file activities |  |  | 2653 |
+| [`change_attention`](#change_attention) | Act on proposals, notices and the weekly plan |  |  | 1656 |
+| [`change_capture`](#change_capture) | Decide what comes into the CRM |  |  | 1615 |
+| [`change_compliance`](#change_compliance) | Record consent, stops, holds and privacy work |  |  | 1188 |
 | [`change_lists`](#change_lists) | Make and change lists |  |  | 620 |
-| [`change_my_settings`](#change_my_settings) | Change the user's own preferences and voice |  |  | 628 |
-| [`change_offers`](#change_offers) | Work offers, contracts and deal rooms |  |  | 745 |
+| [`change_my_settings`](#change_my_settings) | Change the user's own preferences and voice |  |  | 709 |
+| [`change_offers`](#change_offers) | Work offers, contracts and deal rooms |  |  | 1008 |
 | [`change_record_parts`](#change_record_parts) | Change the parts of a record |  |  | 1017 |
 | [`change_relationships`](#change_relationships) | Work a company's relationships and briefs |  |  | 601 |
 | [`change_reports`](#change_reports) | Work saved reports and the forecast |  |  | 799 |
-| [`change_settings`](#change_settings) | Change how the workspace is set up |  |  | 2766 |
-| [`change_state`](#change_state) | Move a lead, deal, project or partner |  |  | 949 |
-| [`change_tags`](#change_tags) | Change tags |  |  | 493 |
+| [`change_settings`](#change_settings) | Change how the workspace is set up |  |  | 3087 |
+| [`change_state`](#change_state) | Move a lead, deal, project or partner |  |  | 1953 |
+| [`change_tags`](#change_tags) | Change tags |  |  | 639 |
 | [`check_availability`](#check_availability) | Check calendar availability | yes |  | 375 |
 | [`commit_import`](#commit_import) | Commit an import |  |  | 275 |
 | [`create_record`](#create_record) | Create a record |  | [`ui://margince/create-followups.html`](#create_followups_view) | 891 |
@@ -95,7 +95,7 @@ descriptions and input schemas are what each step pays for.
 | [`read_approval`](#read_approval) | Read one staged action in full | yes | [`ui://margince/approval.html`](#approval_view) | 154 |
 | [`read_attention`](#read_attention) | See what needs attention | yes | [`ui://margince/attention.html`](#attention_view) | 365 |
 | [`read_context`](#read_context) | Get the story so far | yes | [`ui://margince/context.html`](#context_view) | 413 |
-| [`read_details`](#read_details) | Read a record's panels and the day's lists | yes |  | 3067 |
+| [`read_details`](#read_details) | Read a record's panels and the day's lists | yes |  | 4027 |
 | [`read_forecast`](#read_forecast) | Read the forecast and how it moved | yes | [`ui://margince/forecast.html`](#forecast_view) | 978 |
 | [`read_import`](#read_import) | Read an import run or the import format | yes |  | 235 |
 | [`read_lists`](#read_lists) | Find and read lists | yes |  | 797 |
@@ -107,7 +107,7 @@ descriptions and input schemas are what each step pays for.
 | [`read_view`](#read_view) | Read a view | yes |  | 1921 |
 | [`read_workspace`](#read_workspace) | Read how this workspace is set up | yes |  | 2779 |
 | [`resolve_duplicates`](#resolve_duplicates) | Merge two records or dismiss a flagged pair |  |  | 618 |
-| [`run_research`](#run_research) | Run AI work for your user |  |  | 1027 |
+| [`run_research`](#run_research) | Run AI work for your user |  |  | 1206 |
 | [`schedule_meeting`](#schedule_meeting) | Invite to a meeting |  |  | 515 |
 | [`send_outbound`](#send_outbound) | Send a message |  |  | 1678 |
 | [`update_record`](#update_record) | Update a record |  | [`ui://margince/update.html`](#update_view) | 626 |
@@ -768,6 +768,10 @@ remove_member, remove_team_member.)
       ],
       "type": "string"
     },
+    "id": {
+      "description": "add_team_member, assign_legal_entity, change_role, claim_record, deactivate_member, end_assignment, hand_over_work, offer_ownership, reactivate_member, remove_member, remove_team_member, request_edit_access, request_ownership, share_contacts, unshare, update_assignment, update_member, update_record_role, update_team, withdraw_edit_access_request, withdraw_ownership_offer, withdraw_ownership_request only",
+      "type": "string"
+    },
     "idempotency_key": {
       "maxLength": 255,
       "type": "string"
@@ -775,6 +779,10 @@ remove_member, remove_team_member.)
     "request_body": {
       "description": "assign, assign_legal_entity, change_role, create_former_member, create_record_role, create_team, deactivate_member, hand_over_work, offer_ownership, remove_member, request_ownership, share, share_contacts, update_assignment, update_member, update_record_role, update_team only: The chosen action's request body; read_workspace topic actions lists its shape",
       "type": "object"
+    },
+    "userId": {
+      "description": "add_team_member, remove_team_member only",
+      "type": "string"
     }
   },
   "required": [
@@ -894,6 +902,19 @@ archive_document, assign_inquiry.)
       "description": "log only: Required for kind \"message\", else refused; one the workspace's channel providers name.",
       "type": "string"
     },
+    "content_base64": {
+      "description": "attach only: The whole file, standard base64 with = padding",
+      "type": "string"
+    },
+    "content_type": {
+      "description": "attach only: The file's media type, e.g. application/pdf",
+      "type": "string"
+    },
+    "contract_id": {
+      "description": "attach only: The agreement this file is paper for, when it is one",
+      "format": "uuid",
+      "type": "string"
+    },
     "direction": {
       "description": "log only",
       "enum": [
@@ -922,6 +943,10 @@ archive_document, assign_inquiry.)
         "lead",
         "project"
       ],
+      "type": "string"
+    },
+    "filename": {
+      "description": "attach only: The file's name, with its extension",
       "type": "string"
     },
     "follow_up_task": {
@@ -973,6 +998,10 @@ archive_document, assign_inquiry.)
     "idempotency_key": {
       "maxLength": 255,
       "type": "string"
+    },
+    "if_version": {
+      "description": "assign_inquiry, reschedule_send, save_draft, set_audience only: The version the caller read; the write is refused as skew if the record moved since",
+      "type": "integer"
     },
     "kind": {
       "description": "log only",
@@ -1146,6 +1175,10 @@ archive_signal, visit_list.)
     "idempotency_key": {
       "maxLength": 255,
       "type": "string"
+    },
+    "request_body": {
+      "description": "accept_deal_suggestion, acknowledge_failed_approval, add_commitment, answer_teammate, ask_for_help, create_signal, dismiss_company_suggestion, dismiss_contact_moment, dismiss_deal_move, dismiss_deal_suggestion, dismiss_nudge, dismiss_nudges, edit_commitment, mark_rows_done, pin_row, reopen_rows, request_deal_manager, set_commitment_state, set_weekly_plan, snooze_brief_item, update_signal only: The chosen action's request body; read_workspace topic actions lists its shape",
+      "type": "object"
     }
   },
   "required": [
@@ -1235,9 +1268,30 @@ withdraw_owner_identity.)
       ],
       "type": "string"
     },
+    "company_id": {
+      "description": "import_vcards only",
+      "format": "uuid",
+      "type": "string"
+    },
+    "content_base64": {
+      "description": "import_linkedin_connections, import_vcards, upload_corpus_document only: The whole file, standard base64 with = padding",
+      "type": "string"
+    },
+    "content_type": {
+      "description": "import_linkedin_connections, import_vcards, upload_corpus_document only: The file's media type, e.g. image/png",
+      "type": "string"
+    },
+    "filename": {
+      "description": "import_linkedin_connections, import_vcards, upload_corpus_document only: The file's name, with its extension",
+      "type": "string"
+    },
     "idempotency_key": {
       "maxLength": 255,
       "type": "string"
+    },
+    "request_body": {
+      "description": "add_consumer_mail_domain, add_counterparty_hold, add_exclusion, add_owner_identity, add_workspace_email_domain, create_corpus, dismiss_mailbox_silence, keep_domain_as_company, set_blocked_domain, set_channel_verbosity, set_context_tag, set_history_baseline, set_mail_posture, set_sender_decision, set_signature_enrichment, update_corpus, update_import_run, validate_import_run only: The chosen action's request body; read_workspace topic actions lists its shape",
+      "type": "object"
     }
   },
   "required": [
@@ -1305,9 +1359,25 @@ retract_qualifying_event, revoke_override, suppress_contact, update_data_subject
       ],
       "type": "string"
     },
+    "entityType": {
+      "description": "place_legal_hold only",
+      "type": "string"
+    },
+    "id": {
+      "description": "assign_notice_case, assign_notice_case_review, confirm_notice_source, lift_lead_suppression, lift_suppression, record_communication_context, record_consent, record_lead_qualifying_event, record_qualifying_event, resolve_confirm_submission, retract_acquisition_request, retract_lead_qualifying_event, retract_qualifying_event, revoke_override, suppress_contact, update_data_subject_request only",
+      "type": "string"
+    },
     "idempotency_key": {
       "maxLength": 255,
       "type": "string"
+    },
+    "recordId": {
+      "description": "place_legal_hold only",
+      "type": "string"
+    },
+    "request_body": {
+      "description": "assign_notice_case, assign_notice_case_review, confirm_notice_source, lift_lead_suppression, lift_suppression, open_data_subject_request, pin_activity_to_floor, place_legal_hold, record_communication_context, record_consent, record_lead_qualifying_event, record_qualifying_event, resolve_confirm_submission, revoke_override, suppress_contact, update_data_subject_request only: The chosen action's request body; read_workspace topic actions lists its shape",
+      "type": "object"
     }
   },
   "required": [
@@ -1540,6 +1610,10 @@ save_working_hours.)
     "idempotency_key": {
       "maxLength": 255,
       "type": "string"
+    },
+    "request_body": {
+      "description": "add_voice_source, create_voice_profile, save_display_name, save_greeting_name, save_locale, save_onboarding_state, save_timezone, save_working_hours, update_voice_profile, update_voice_source only: The chosen action's request body; read_workspace topic actions lists its shape",
+      "type": "object"
     }
   },
   "required": [
@@ -1599,9 +1673,21 @@ archive_contract, archive_room, cancel_contract, reject_offer, send_offer.)
       ],
       "type": "string"
     },
+    "id": {
+      "description": "accept_offer, add_deal_line, archive_contract, archive_room, cancel_contract, close_room, pause_room, refresh_offer_from_deal, reject_offer, remove_deal_line, render_offer, renew_contract, resolve_room_thread, revoke_room_participant, send_offer, set_contract_status, set_deal_products, update_contract, update_deal_line, update_room_participant, use_deal_estimate only",
+      "type": "string"
+    },
     "idempotency_key": {
       "maxLength": 255,
       "type": "string"
+    },
+    "if_version": {
+      "description": "accept_offer, archive_room, cancel_contract, refresh_offer_from_deal, reject_offer, renew_contract, send_offer, set_contract_status, update_contract only: The version the caller read; the write is refused as skew if the record moved since",
+      "type": "integer"
+    },
+    "request_body": {
+      "description": "add_deal_line, cancel_contract, record_contract, refresh_offer_from_deal, reject_offer, renew_contract, set_contract_status, set_deal_products, update_contract, update_deal_line, update_room_participant, use_deal_estimate only: The chosen action's request body; read_workspace topic actions lists its shape",
+      "type": "object"
     }
   },
   "required": [
@@ -2070,9 +2156,17 @@ upsert_partner.)
       "description": "upload_company_logo, upload_company_logo_icon, upload_legal_entity_logo only: The file's name, with its extension",
       "type": "string"
     },
+    "id": {
+      "description": "archive_automation, archive_exit_criterion, archive_legal_entity, archive_pipeline, archive_saved_view, archive_stage, archive_web_form, create_exit_criterion, delete_disqualify_reason, delete_lead_origin, delete_lead_source, handle_website_inquiries, put_product_translation, remove_legal_entity_logo, rename_custom_field, reorder_stages, restore_pipeline, retire_custom_field, retry_automation_run, update_acquisition_source, update_automation, update_custom_field_options, update_disqualify_reason, update_exit_criterion, update_lead_origin, update_lead_source, update_legal_entity, update_loss_reason, update_partner_stage, update_pipeline, update_review_template, update_saved_view, update_stage, update_web_form, upload_legal_entity_logo, upsert_partner only",
+      "type": "string"
+    },
     "idempotency_key": {
       "maxLength": 255,
       "type": "string"
+    },
+    "if_version": {
+      "description": "archive_exit_criterion, archive_legal_entity, archive_pipeline, archive_stage, remove_legal_entity_logo, rename_custom_field, reorder_stages, update_acquisition_source, update_automation, update_exit_criterion, update_legal_entity, update_loss_reason, update_saved_view, update_stage, update_web_form, upload_legal_entity_logo, upsert_partner only: The version the caller read; the write is refused as skew if the record moved since",
+      "type": "integer"
     },
     "request_body": {
       "description": "activate_home_repair, apply_legacy_loss_reasons, confirm_site_read, control_data_task, create_acquisition_source, create_automation, create_custom_field, create_disqualify_reason, create_exit_criterion, create_lead_origin, create_lead_source, create_legal_entity, create_loss_reason, create_partner_stage, create_pipeline, create_review_template, create_saved_view, create_stage, decide_legacy_loss_reason, handle_website_inquiries, link_finance_customer, put_product_translation, record_tax_rate, rename_custom_field, reorder_pipelines, reorder_stages, save_booking_alias, save_booking_page, save_my_linkedin, save_own_company, set_ai_model_rate, set_ai_price_sync, set_fx_rate, update_acquisition_source, update_automation, update_custom_field_options, update_disqualify_reason, update_duplicate_settings, update_exit_criterion, update_follow_up_settings, update_lead_origin, update_lead_settings, update_lead_source, update_legal_entity, update_legal_review_settings, update_loss_reason, update_partner_stage, update_pipeline, update_review_template, update_saved_view, update_stage, update_web_form, upsert_partner only: The chosen action's request body; read_workspace topic actions lists its shape",
@@ -2149,8 +2243,150 @@ actions decide_commission, disqualify, transfer_projects.)
       ],
       "type": "string"
     },
+    "approval_id": {
+      "description": "demote, disqualify, merge_member_accounts, move_deal, move_project, promote, set_up_partner only: Set on approved retry",
+      "format": "uuid",
+      "type": "string"
+    },
+    "create_company": {
+      "description": "promote only",
+      "type": "boolean"
+    },
+    "deal": {
+      "additionalProperties": false,
+      "description": "promote only",
+      "properties": {
+        "amount_minor": {
+          "type": "integer"
+        },
+        "currency": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "pipeline_id": {
+          "description": "Choose from the workspace's pipeline list with read_workspace with topic=pipelines.",
+          "format": "uuid",
+          "type": "string"
+        },
+        "stage_id": {
+          "description": "Choose an open stage from the workspace's pipeline list with read_workspace with topic=pipelines.",
+          "format": "uuid",
+          "type": "string"
+        }
+      },
+      "type": "object"
+    },
+    "deal_id": {
+      "description": "move_deal only",
+      "format": "uuid",
+      "type": "string"
+    },
+    "evidence_note": {
+      "description": "promote only",
+      "type": "string"
+    },
+    "existing_deal_id": {
+      "description": "promote only",
+      "format": "uuid",
+      "type": "string"
+    },
+    "id": {
+      "description": "accept_partner_lead, clear_lead_signal, correct_close_day, correct_project_health, decide_commission, decide_legal_review, link_lead_company, move_deal_pipeline, publish_contact, record_project_health, reopen_lead, request_legal_review, review_outcome, set_lead_signal, withdraw_legal_review only",
+      "type": "string"
+    },
     "idempotency_key": {
       "maxLength": 255,
+      "type": "string"
+    },
+    "if_version": {
+      "description": "correct_close_day, decide_commission, move_deal, move_deal_pipeline, move_project only: The version the caller read; the write is refused as skew if the record moved since",
+      "type": "integer"
+    },
+    "lead_id": {
+      "description": "The lead",
+      "format": "uuid",
+      "type": "string"
+    },
+    "lost_reason": {
+      "description": "move_deal only: A free note explaining a loss",
+      "type": "string"
+    },
+    "lost_reason_code": {
+      "description": "move_deal only: An active loss reason key, expected when the target stage closes the deal as lost. A loss with only a note is recorded as unmapped",
+      "type": "string"
+    },
+    "note": {
+      "description": "disqualify, move_deal only: Optional: why, in words",
+      "type": "string"
+    },
+    "project_id": {
+      "description": "move_project only",
+      "format": "uuid",
+      "type": "string"
+    },
+    "reason": {
+      "description": "demote, required: why the promotion is reversed, recorded in the audit trail. move_project: required when to_phase is closed; read_project overview lists each phase move with its reason",
+      "minLength": 1,
+      "type": "string"
+    },
+    "reason_id": {
+      "description": "disqualify only: Optional: an active reason's id from read_view lead_disqualify_reasons",
+      "format": "uuid",
+      "type": "string"
+    },
+    "request_body": {
+      "description": "correct_close_day, correct_project_health, decide_commission, decide_legal_review, link_lead_company, move_deal_pipeline, record_project_health, request_legal_review, review_outcome, set_lead_signal, transfer_projects only: The chosen action's request body; read_workspace topic actions lists its shape",
+      "type": "object"
+    },
+    "settle": {
+      "description": "move_deal only: What becomes of the deal's open tasks when this move closes it. Omitted keeps them",
+      "enum": [
+        "complete",
+        "keep"
+      ],
+      "type": "string"
+    },
+    "to_phase": {
+      "description": "move_project only",
+      "enum": [
+        "initiative",
+        "pursuing",
+        "delivering",
+        "closed"
+      ],
+      "type": "string"
+    },
+    "to_stage_id": {
+      "description": "move_deal only: The target stage, by id — obtain it from the workspace's pipeline list, since a deal you have read carries only the stage it is already IN. That stage's semantic decides what happens next: open executes immediately, won or lost is staged for a human's approval.",
+      "format": "uuid",
+      "type": "string"
+    },
+    "trigger": {
+      "description": "promote only, required: the genuine engagement justifying it; cold outreach with no reply never promotes",
+      "enum": [
+        "inbound_reply",
+        "meeting_booked",
+        "meeting_held",
+        "human_qualify"
+      ],
+      "type": "string"
+    },
+    "won_without_contract_detail": {
+      "description": "move_deal only: What the reason was, required when it is other",
+      "maxLength": 500,
+      "type": "string"
+    },
+    "won_without_contract_reason": {
+      "description": "move_deal only: Why this win has no contract behind it. Omit when the deal has a signed contract with its paper attached; a win claiming neither is refused.",
+      "enum": [
+        "imported",
+        "purchase_order",
+        "verbal",
+        "renewal_by_email",
+        "other"
+      ],
       "type": "string"
     }
   },
@@ -2198,6 +2434,11 @@ archive.)
       ],
       "type": "string"
     },
+    "approval_id": {
+      "description": "merge only: Set on approved retry",
+      "format": "uuid",
+      "type": "string"
+    },
     "color": {
       "description": "create and update; none clears it (update only)",
       "enum": [
@@ -2221,15 +2462,41 @@ archive.)
       "maxLength": 255,
       "type": "string"
     },
+    "into_tag_id": {
+      "description": "merge only: The word that survives",
+      "format": "uuid",
+      "type": "string"
+    },
     "name": {
       "description": "create, update only",
       "maxLength": 64,
       "minLength": 1,
       "type": "string"
     },
+    "record_id": {
+      "description": "apply, remove only",
+      "format": "uuid",
+      "type": "string"
+    },
+    "record_type": {
+      "description": "apply, remove only",
+      "enum": [
+        "company",
+        "contact",
+        "deal",
+        "lead",
+        "project"
+      ],
+      "type": "string"
+    },
     "tag_id": {
       "description": "apply, archive, merge, remove, update only",
       "format": "uuid",
+      "type": "string"
+    },
+    "tag_name": {
+      "description": "apply, remove only: Instead of tag_id: the name of a tag the workspace ALREADY has. An unknown name is refused, never created",
+      "maxLength": 64,
       "type": "string"
     }
   },
@@ -6909,6 +7176,147 @@ read_attention for what needs the user now, and read_record for a record's own f
         "win_evidence"
       ],
       "type": "string"
+    },
+    "actor_type": {
+      "description": "field_history only",
+      "enum": [
+        "human",
+        "agent",
+        "system",
+        "connector",
+        "buyer"
+      ],
+      "type": "string"
+    },
+    "anchor_id": {
+      "description": "mail_draft only",
+      "format": "uuid",
+      "type": "string"
+    },
+    "anchor_type": {
+      "description": "mail_draft only",
+      "enum": [
+        "activity",
+        "forward",
+        "contact",
+        "company",
+        "deal",
+        "lead",
+        "project"
+      ],
+      "type": "string"
+    },
+    "change_kind": {
+      "description": "deal_margince_changes only",
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "create_company": {
+      "description": "lead_promotion_preview only",
+      "type": "boolean"
+    },
+    "cursor": {
+      "description": "company_contracts, contact_overrides, deal_margince_changes, deal_suggestions, field_history, handled_for_you, job_health_history, lead_score, legal_reviews, magic_line_records, my_linkedin_reach, notice_source_evidence, notices only",
+      "type": "string"
+    },
+    "days": {
+      "description": "job_health_history, response_metrics only",
+      "type": "integer"
+    },
+    "deals_cursor": {
+      "description": "lead_promotion_preview only",
+      "type": "string"
+    },
+    "entity_id": {
+      "description": "field_history only",
+      "format": "uuid",
+      "type": "string"
+    },
+    "entity_type": {
+      "description": "field_history only",
+      "enum": [
+        "contact",
+        "company",
+        "deal",
+        "lead",
+        "project",
+        "activity"
+      ],
+      "type": "string"
+    },
+    "field": {
+      "description": "field_history only",
+      "type": "string"
+    },
+    "id": {
+      "description": "activity_pipeline, automation_preview, capture_triage, channel_link, communication_review, company_brief, company_contracts, company_linkedin_reach, company_logo, company_logo_icon, company_scan, contact_brief, contact_consent, contact_consent_guard, contact_optout_records, contact_overrides, contact_profile_fields, contact_stops, contract, controller_mail_preview, deal_legal_reviews, deal_lines, deal_margince_changes, deal_products, deal_room_brief, deal_suggestion, document_extraction, dossier, edit_access_request, enrichment_run, evidence, finance_invoice_pdf, growth_fit, handoff_assignee, import_problems, intro_requests, knowledge_document, lead_promotion_preview, lead_score, lead_signals, lead_stops, legal_entity_logo, legal_review, link_candidates, magic_line_records, meeting_availability, notice_case, notice_case_review, notice_source_evidence, notice_source_preview, offer_pdf, offered_values, ownership_offer, ownership_offer_candidates, ownership_request, product_translations, project_filing, relationship_nudge, scheduled_send, tag_suggestion, voice_source_preview, website_inquiry_preview, win_evidence only",
+      "type": "string"
+    },
+    "kind": {
+      "description": "controller_mail_preview, job_health_history only",
+      "type": "string"
+    },
+    "limit": {
+      "description": "company_contracts, contact_overrides, deal_suggestions, field_history, lead_score, legal_reviews, magic, magic_line_records, my_linkedin_reach, notices only",
+      "type": "integer"
+    },
+    "note_activity_id": {
+      "description": "deal_margince_changes only",
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "project_id": {
+      "description": "company_brief only",
+      "format": "uuid",
+      "type": "string"
+    },
+    "request_body": {
+      "description": "ai_budget_preview, ai_routing_preview, ai_task_overrides_preview, automation_preview, backfill_preview, filter_preview, mail_deal_repair_preview, notice_source_preview, voice_source_preview, website_inquiry_preview only: The chosen action's request body; read_workspace topic actions lists its shape",
+      "type": "object"
+    },
+    "since": {
+      "description": "magic, magic_line_records, team_margince_changes only",
+      "format": "date-time",
+      "type": "string"
+    },
+    "stage_history_id": {
+      "description": "deal_margince_changes only",
+      "format": "uuid",
+      "type": "string"
+    },
+    "state": {
+      "description": "job_health_history only",
+      "enum": [
+        "retryable",
+        "discarded",
+        "cancelled"
+      ],
+      "type": "string"
+    },
+    "status": {
+      "description": "company_contracts, legal_reviews, scheduled_sends only",
+      "enum": [
+        "active",
+        "cancelled",
+        "decided",
+        "draft",
+        "expired",
+        "held",
+        "open",
+        "released",
+        "scheduled",
+        "sent",
+        "superseded"
+      ],
+      "type": "string"
+    },
+    "under_contract_only": {
+      "description": "company_contracts only",
+      "type": "boolean"
     }
   },
   "required": [
@@ -9669,9 +10077,17 @@ start_backfill, start_search_reindex; requires passport scope "enrich".)
       ],
       "type": "string"
     },
+    "id": {
+      "description": "ask_about_company, ask_corpus, build_voice_profile, draft_intro_note, draft_intro_request, enrich_contact_from_provider, propose_deal_roles, refresh_company_brief, refresh_contact_brief, refresh_dossier, refresh_growth_fit, refresh_scan, regenerate_offer, research_contact only",
+      "type": "string"
+    },
     "idempotency_key": {
       "maxLength": 255,
       "type": "string"
+    },
+    "request_body": {
+      "description": "ask_about_company, ask_corpus, ask_site_read, assess_sales_review, build_voice_profile, draft_intro_note, draft_intro_request, enrich_contact_from_provider, preview_home_repair, propose_filter, propose_report_setup, refresh_scan, start_backfill, start_search_reindex only: The chosen action's request body; read_workspace topic actions lists its shape",
+      "type": "object"
     }
   },
   "required": [

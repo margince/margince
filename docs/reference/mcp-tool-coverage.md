@@ -666,11 +666,11 @@ Every run of every case requiring this tool passed, for the model named.
 | `create_record` | 1.00 | 2 | `case56_not_the_same` |
 | `change_reports` | 1.00 | 2 | `case113_after_the_sales_review` |
 | `change_my_settings` | 1.00 | 2 | `case102_shorter_in_my_voice` |
+| `change_tags` | 1.00 | 2 | `case32_two_words_for_one_thing` |
 | `update_record` | 1.00 | 2 | `case33_two_cards_for_one_company` |
 | `resolve_duplicates` | 1.00 | 4 | `case33_two_cards_for_one_company`, `case56_not_the_same` |
 | `draft_outbound` | 1.00 | 2 | `case60_send_one_draft_one` |
 | `schedule_meeting` | 1.00 | 2 | `case46_get_us_in_a_room` |
-| `change_tags` | 1.00 | 2 | `case32_two_words_for_one_thing` |
 | `check_availability` | 1.00 | 2 | `case23_find_us_a_slot` |
 
 ### `gemini-4-hydrogen-medium@agy-cli`
@@ -678,8 +678,8 @@ Every run of every case requiring this tool passed, for the model named.
 | Tool | Reliability | Runs | Required by |
 |---|---:|---:|---|
 | `read_reports` | 1.00 | 2 | `case49_who_can_introduce_us` |
-| `read_workspace` | 1.00 | 2 | `case111_how_is_the_workspace_doing` |
 | `change_settings` | 1.00 | 4 | `case116_the_rate_and_the_logo`, `case91_add_a_review_stage` |
+| `read_workspace` | 1.00 | 2 | `case111_how_is_the_workspace_doing` |
 | `change_activities` | 1.00 | 2 | `case9_filed_in_the_wrong_place` |
 | `send_outbound` | 1.00 | 2 | `case44_chase_what_is_slipping` |
 | `change_attention` | 1.00 | 2 | `case104_mark_it_seen` |
@@ -687,19 +687,19 @@ Every run of every case requiring this tool passed, for the model named.
 | `create_record` | 1.00 | 2 | `case56_not_the_same` |
 | `change_reports` | 1.00 | 2 | `case113_after_the_sales_review` |
 | `change_my_settings` | 1.00 | 2 | `case102_shorter_in_my_voice` |
+| `change_tags` | 1.00 | 2 | `case32_two_words_for_one_thing` |
 | `update_record` | 1.00 | 2 | `case33_two_cards_for_one_company` |
 | `resolve_duplicates` | 1.00 | 4 | `case33_two_cards_for_one_company`, `case56_not_the_same` |
 | `draft_outbound` | 1.00 | 2 | `case60_send_one_draft_one` |
 | `schedule_meeting` | 1.00 | 2 | `case46_get_us_in_a_room` |
-| `change_tags` | 1.00 | 2 | `case32_two_words_for_one_thing` |
 | `check_availability` | 1.00 | 2 | `case23_find_us_a_slot` |
 
 ### `gpt-5.6-sol@codex-cli`
 
 | Tool | Reliability | Runs | Required by |
 |---|---:|---:|---|
-| `read_workspace` | 1.00 | 2 | `case111_how_is_the_workspace_doing` |
 | `change_settings` | 1.00 | 4 | `case116_the_rate_and_the_logo`, `case91_add_a_review_stage` |
+| `read_workspace` | 1.00 | 2 | `case111_how_is_the_workspace_doing` |
 | `change_activities` | 1.00 | 2 | `case9_filed_in_the_wrong_place` |
 | `send_outbound` | 1.00 | 2 | `case44_chase_what_is_slipping` |
 | `change_attention` | 1.00 | 2 | `case104_mark_it_seen` |
@@ -707,10 +707,10 @@ Every run of every case requiring this tool passed, for the model named.
 | `create_record` | 1.00 | 2 | `case56_not_the_same` |
 | `change_reports` | 1.00 | 2 | `case113_after_the_sales_review` |
 | `change_my_settings` | 1.00 | 2 | `case102_shorter_in_my_voice` |
+| `change_tags` | 1.00 | 2 | `case32_two_words_for_one_thing` |
 | `update_record` | 1.00 | 2 | `case33_two_cards_for_one_company` |
 | `resolve_duplicates` | 1.00 | 4 | `case33_two_cards_for_one_company`, `case56_not_the_same` |
 | `draft_outbound` | 1.00 | 2 | `case60_send_one_draft_one` |
-| `change_tags` | 1.00 | 2 | `case32_two_words_for_one_thing` |
 | `check_availability` | 1.00 | 2 | `case23_find_us_a_slot` |
 
 ## 2. What is failing now
