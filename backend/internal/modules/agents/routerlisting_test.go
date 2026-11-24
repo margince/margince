@@ -138,8 +138,10 @@ func TestTheActionCatalogNamesEveryActionsArguments(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	for _, says := range []string{`"action":"` + rareInProcess + `"`, `"rare_only"`, `"action":"` + f.listed + `"`, `"listed_only"`,
-		`"action":"` + rareRouted + `"`, `"name":"route_only"`, `"enum":["x","y"]`} {
+	for _, says := range []string{
+		`"action":"` + rareInProcess + `"`, `"rare_only"`, `"action":"` + f.listed + `"`, `"listed_only"`,
+		`"action":"` + rareRouted + `"`, `"name":"route_only"`, `"enum":["x","y"]`,
+	} {
 		if !strings.Contains(string(whole), says) {
 			t.Errorf("the catalog %s does not name %s", whole, says)
 		}
