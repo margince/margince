@@ -27037,7 +27037,7 @@ paths:
         - { name: actor, in: query, schema: { type: string }, description: 'Typed principal filter, e.g. human:<uuid> or agent:sdr.' }
         - { name: entity_type, in: query, schema: { type: string } }
         - { name: entity_id, in: query, schema: { type: string, format: uuid } }
-        - { name: batch_id, in: query, schema: { type: string, format: uuid }, description: 'Only the rows one bulk change wrote (`executeBulkChange` answers the id).' }
+        - { name: batch_id, in: query, schema: { type: string, format: uuid }, description: 'Only the rows one operation group wrote: a bulk change (`executeBulkChange` answers the id) or one run of a capture purge.' }
         - { name: action, in: query, schema: { type: string }, description: 'One of the AuditLogEntry.action values.' }
         - { name: from, in: query, schema: { type: string, format: date-time } }
         - { name: to, in: query, schema: { type: string, format: date-time } }
@@ -73296,7 +73296,7 @@ components:
             when no user row resolves — a deactivated or deleted member still has
             audit rows, and an honest identifier is better than an invented name.
         on_behalf_of_name: { type: [string, 'null'], description: Resolved display name for on_behalf_of. }
-        batch_id: { type: [string, 'null'], format: uuid, description: 'The bulk change that wrote this row; null for a change made on its own.' }
+        batch_id: { type: [string, 'null'], format: uuid, description: 'The operation group that wrote this row: a bulk change, or one run of a capture purge. Null for a change made on its own.' }
         action:
           $ref: '#/components/schemas/AuditAction'
         entity_type: { type: string }

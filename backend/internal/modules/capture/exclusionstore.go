@@ -107,11 +107,22 @@ func ruleMailboxTx(ctx context.Context, tx pgx.Tx, user *ids.UUID, kind, value s
 // ExclusionStore reads and writes the exclusion lists.
 type ExclusionStore struct {
 	db *database.DB
+	// beforeRemove runs inside a removal, with the rule's purge lock held.
+	// Compose supplies it, because the purge receipts live there and this
+	// module cannot import compose.
+	beforeRemove func(ctx context.Context, tx pgx.Tx, id ids.UUID) error
 }
 
 // NewExclusionStore builds the store over the app pool.
 func NewExclusionStore(db *database.DB) *ExclusionStore {
 	return &ExclusionStore{db: db}
+}
+
+// WithRemovalRepair sets the step a removal runs, under the rule's purge lock,
+// before it deletes the rule.
+func (s *ExclusionStore) WithRemovalRepair(f func(ctx context.Context, tx pgx.Tx, id ids.UUID) error) *ExclusionStore {
+	s.beforeRemove = f
+	return s
 }
 
 // List answers the workspace's rules and the caller's own: a reader learns
@@ -253,6 +264,16 @@ func (s *ExclusionStore) Remove(ctx context.Context, id ids.UUID) error {
 		}
 		if err := refuseAgentOverAUsersDecision(actor, &createdBy, "this exclusion"); err != nil {
 			return err
+		}
+		// Wait for a running purge of this rule, then certify its runs. After
+		// the delete nothing could say which rule their rows belong to.
+		if err := storekit.LockPurgeSubjectTx(ctx, tx, id); err != nil {
+			return err
+		}
+		if s.beforeRemove != nil {
+			if err := s.beforeRemove(ctx, tx, id); err != nil {
+				return err
+			}
 		}
 		if _, err := tx.Exec(ctx, `DELETE FROM capture_exclusion WHERE id = $1`, id); err != nil {
 			return fmt.Errorf("capture: removing an exclusion: %w", err)

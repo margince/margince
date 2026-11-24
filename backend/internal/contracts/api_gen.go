@@ -38744,7 +38744,7 @@ type AuditLogEntry struct {
 	// AuthorizationRule Which RBAC/scope rule allowed it.
 	AuthorizationRule *string `json:"authorization_rule,omitempty"`
 
-	// BatchId The bulk change that wrote this row; null for a change made on its own.
+	// BatchId The operation group that wrote this row: a bulk change, or one run of a capture purge. Null for a change made on its own.
 	BatchId *openapi_types.UUID `json:"batch_id,omitempty"`
 
 	// Before The record image before the change. For an `activity` row this read
@@ -77858,7 +77858,7 @@ type ListAuditLogParams struct {
 	EntityType *string             `form:"entity_type,omitempty" json:"entity_type,omitempty"`
 	EntityId   *openapi_types.UUID `form:"entity_id,omitempty" json:"entity_id,omitempty"`
 
-	// BatchId Only the rows one bulk change wrote (`executeBulkChange` answers the id).
+	// BatchId Only the rows one operation group wrote: a bulk change (`executeBulkChange` answers the id) or one run of a capture purge.
 	BatchId *openapi_types.UUID `form:"batch_id,omitempty" json:"batch_id,omitempty"`
 
 	// Action One of the AuditLogEntry.action values.
