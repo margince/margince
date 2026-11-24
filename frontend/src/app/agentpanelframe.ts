@@ -91,11 +91,13 @@ function overTheBar(well: DOMRect, bar: DOMRect | undefined): PanelFrame {
  */
 function besideTheCard(card: DOMRect): PanelFrame {
   const height = globalThis.innerHeight;
+  const bottom = Math.max(PANEL_MARGIN, height - card.bottom);
   return {
     left: card.right + PANEL_GAP,
-    bottom: Math.max(PANEL_MARGIN, height - card.bottom),
+    bottom,
     width: PANEL_WIDTH,
-    maxHeight: height - PANEL_MARGIN * 2,
+    // Measured from where the panel stands, so its head never passes the top.
+    maxHeight: height - bottom - PANEL_MARGIN,
   };
 }
 
@@ -122,7 +124,6 @@ export function usePanelFrame(
   // Before paint, so the panel is never shown at the wrong place for one frame.
   useLayoutEffect(() => {
     if (!open) {
-      setFrame(null);
       return;
     }
     const place = () => {
@@ -147,10 +148,13 @@ export function usePanelFrame(
     // than being measured once at open.
     globalThis.addEventListener("resize", place);
     globalThis.addEventListener("scroll", place, true);
+    // Dropped on close, so a reopen mounts the panel a commit after `open`, as
+    // the first open does. The panel's own focus then has the last word.
     return () => {
       globalThis.removeEventListener("resize", place);
       globalThis.removeEventListener("scroll", place, true);
+      setFrame(null);
     };
   }, [bar, card, well, open, phone]);
-  return frame;
+  return open ? frame : null;
 }

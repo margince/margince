@@ -2833,7 +2833,6 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "shell.companyLogoAria": "Home von {company}, läuft mit Margince",
   "shell.poweredBy": "Läuft mit Margince",
   "shell.searchEverything": "Suchen oder Margince fragen",
-  "shell.breadcrumbAria": "Navigationspfad",
   "shell.back": "Zurück",
   "shell.backToSetup": "Zurück zur Einrichtung",
   "shell.license.none": "Keine Lizenz",
@@ -3565,7 +3564,6 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "common.loading": "Wird geladen…",
   "ref.nameLoadFailed": "Name wurde nicht geladen",
   "ref.memberLeft": "{name} (ausgeschieden)",
-  "ref.leadUnnamed": "Lead ohne Namen",
   "roster.failedUsers": "Die Teammitglieder konnten nicht geladen werden.",
   "roster.failedTeams": "Die Teams konnten nicht geladen werden.",
   "owner.rosterFailed":
@@ -7670,7 +7668,6 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Eine .vcf-Datei, das Exportformat für Kontakte aus Telefonen und E-Mail-Programmen, oder ein Foto von einer oder mehreren Visitenkarten. Eine vCard stammt vom Kontakt selbst, daher brauchen importierte vCards keine Freigabe. Ein Foto liest ein Modell und kann sich irren, deshalb wartet jede aus einem Foto gelesene Karte auf deine Freigabe.",
   "vcardImport.choose": "Datei oder Foto auswählen",
   "vcardImport.working": "Karten werden gelesen…",
-  "vcardImport.back": "Zurück zu den Kontakten",
   "vcardImport.noCards": "Die Datei enthält keine Karten.",
   "vcardImport.failed": "Die Karten wurden nicht importiert.",
   "vcardImport.outcome.created": "Hinzugefügt",
@@ -7683,7 +7680,6 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "vcardImport.field.kept": "Wert im Datensatz behalten",
   "vcardImport.field.notInCard": "Nicht auf der Karte",
   "vcardImport.next": "Nächste vCard",
-  "vcardImport.backToCompany": "Zurück zum Unternehmen",
   "vcardImport.forCompany": "Aus diesen Karten angelegte Kontakte arbeiten bei",
   "vcardImport.companyPhotoTitle": "Fotos werden keinem Unternehmen zugeordnet",
   "vcardImport.companyPhoto":

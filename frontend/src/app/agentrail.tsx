@@ -1,13 +1,14 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import { ChevronRight } from "lucide-react";
 import {
+  type KeyboardEvent,
   type MouseEvent,
   type RefObject,
   Suspense,
   useCallback,
   useEffect,
+  useId,
   useRef,
   useState,
 } from "react";
@@ -16,17 +17,14 @@ import {
   MarginceCoreScene,
   type MarginceCoreState,
 } from "../design-system/margince-core";
-import { usePrefersReducedMotion } from "../design-system/motion";
 import { usePortalPanelFocus } from "../design-system/portalfocus";
-import { formatMoney } from "../format/format";
 import { useNow } from "../format/now";
 import { type Translator, useLocale, usePlural, useT } from "../i18n";
 import { useClosesWithPage } from "../lib/pageleave";
 import { usePhoneViewport } from "../lib/viewport";
 import { clearAgentEdge, publishAgentEdge } from "./agent-edge-signal";
 import { useAgentFault } from "./agent-fault";
-import { RUNNING } from "./agentrail-copy";
-import { RailLine } from "./agentrail-line";
+import { RUNNING, STATE_WORD, spendFigure } from "./agentrail-copy";
 import type { Signals } from "./agentrail-reads";
 import { useAiSpend, useLastCall, useSignals } from "./agentrail-reads";
 import {
@@ -36,9 +34,11 @@ import {
   stillNews,
   useRestingLine,
 } from "./agentrail-resting";
+import { RailSaying } from "./agentrail-saying";
 import { useAgentTicker } from "./agentrail-ticker";
 import { useAiActivity } from "./ai-activity";
-import { plain, type SpokenLine, speak, spokenText } from "./ai-activity-speak";
+import { plain, speak, spokenText } from "./ai-activity-speak";
+import { NavTip, useNavTip } from "./navtip";
 import { usePopoverDismiss } from "./popover";
 import { TrialOrbRing, TrialPill } from "./trialpill";
 import "./agentrail.css";
@@ -184,74 +184,37 @@ function railHitLabel(
     : name;
 }
 
-/**
- * The one line under the orb, changing without a cut.
- *
- * This slot changes on its own — one reading every `IDLE_HOLD_MS` at rest,
- * several a second while the agent works — and a sentence replaced in place is
- * a hard cut in the corner of somebody's eye all day. So the two sentences
- * overlap: the outgoing one stays for a `--dur-enter`, fading, over the
- * incoming one fading in. Opacity only, and the outgoing layer is out of the
- * flow, so the two-line room holds still and nothing under it moves.
- *
- * A sentence is the SAME sentence when its words are, not when its object is.
- * The block re-renders on every read this tab makes, and identity by object
- * would fade the same four words at a reader several times a second.
- *
- * At most one outgoing layer, ever. A change arriving mid-fade drops whatever
- * was leaving and gives the slot to the sentence that was on screen: the
- * working state ticks faster than the fade is long, and a queue of them would
- * still be playing this second's news a minute from now.
- *
- * Reduced motion gets the END state, which for a crossfade is the new sentence
- * by itself: no outgoing layer is mounted at all, so there is none to retire.
- */
-export function RailSaying({ line }: Readonly<{ line: SpokenLine }>) {
-  const said = spokenText(line);
-  const reduced = usePrefersReducedMotion();
-  const [held, setHeld] = useState({ said, line });
-  const [leaving, setLeaving] = useState<SpokenLine | null>(null);
-  if (held.said !== said) {
-    // Adjusted while rendering rather than in an effect: both layers have to be
-    // in the DOM in the SAME commit, and an effect would paint one frame of the
-    // new sentence alone first — which is the cut this exists to remove.
-    setLeaving(reduced ? null : held.line);
-    setHeld({ said, line });
-  } else if (reduced && leaving !== null) {
-    // The preference turned on WHILE a fade was running, which is a re-render
-    // the words did not change in. What retires the outgoing layer is its own
-    // animation ending, and `@media (prefers-reduced-motion: reduce)` in
-    // agentrail.css has just set `animation: none` on it — so no
-    // `animationend` is ever delivered and the old sentence would stand over
-    // the new one for the rest of the session. Snapping is this preference's
-    // end state, so drop the layer here rather than wait for an event the
-    // stylesheet has cancelled.
-    setLeaving(null);
-  }
+/** Folded, the tip says the hidden line and figure; open, a line the clamp
+ *  cut. Never over the open panel, which stands where the tip would. */
+function useAgentTip(block: RefObject<HTMLElement | null>, open: boolean) {
+  const { tip, onTip } = useNavTip(false, block);
+  const [folded, setFolded] = useState(false);
+  const raise = useCallback(
+    (by: "pointer" | "focus") => {
+      const shut =
+        block.current?.closest(".rail")?.classList.contains("collapsed") ??
+        false;
+      const line = block.current?.querySelector(".arline");
+      const cut = line ? line.scrollHeight > line.clientHeight + 1 : false;
+      setFolded(shut);
+      if (shut || cut) {
+        onTip("agent", by);
+      }
+    },
+    [block, onTip],
+  );
+  const hide = useCallback(() => onTip(null), [onTip]);
+  return { shown: tip !== null && !open, folded, raise, hide };
+}
+
+/** Shift+Tab from the panel's title goes back to the orb: the title is no tab
+ *  stop, so the shared handler would let it fall to the end of the page. */
+function isBackFromTitle(event: KeyboardEvent<HTMLElement>): boolean {
   return (
-    <span className="arswap">
-      {/* Keyed on the words: a new element is what replays the fade, the same
-          way an inserted block arrives in design-system/enter.css. */}
-      <span className="arline" key={said}>
-        <RailLine line={line} />
-      </span>
-      {leaving !== null && (
-        <span
-          className="argone"
-          key={spokenText(leaving)}
-          // Announced once, by the layer underneath. `inert` as well as
-          // `aria-hidden`, because the sentence on its way out can carry the
-          // record's link and a hidden control that still takes Tab is a trap.
-          aria-hidden="true"
-          inert
-          // The fade ending is what retires it, so the duration lives in the
-          // stylesheet alone and no timer here can disagree with it.
-          onAnimationEnd={() => setLeaving(null)}
-        >
-          <RailLine line={leaving} />
-        </span>
-      )}
-    </span>
+    event.key === "Tab" &&
+    event.shiftKey &&
+    event.target instanceof Element &&
+    event.target.classList.contains("arptitle")
   );
 }
 
@@ -324,12 +287,26 @@ export function AgentRail({
     panel,
   });
   const focusMovedOn = useFocusMovedOn(open, panel);
+  const looseFocus = {
+    ...panelFocus,
+    onKeyDown: (event: KeyboardEvent<HTMLElement>) => {
+      if (isBackFromTitle(event)) {
+        event.preventDefault();
+        trigger.current?.focus();
+        return;
+      }
+      panelFocus.onKeyDown(event);
+    },
+  };
+  const panelId = useId();
+  const sayingId = useId();
+  const tip = useAgentTip(block, open);
 
   const frame = usePanelFrame(block, well, bar, open, phone);
   const money =
     spend.minor === undefined
       ? ""
-      : formatMoney(spend.minor, spend.currency, locale);
+      : spendFigure(spend.minor, spend.currency, locale);
   const hitLabel = railHitLabel(open, spend, money, t);
   // Above the early return with every other hook: a screen this section draws
   // nothing on is still a render it has to make the same calls in.
@@ -367,15 +344,8 @@ export function AgentRail({
     state === "idle"
       ? resting
       : barLine(state, signals, t("auth.coreDevelopment"), agentLine, said);
-  // ONE line under the orb, whoever is talking. While this tab is fetching
-  // something it can name, that sentence is the orb's line — "Loading Acme" is
-  // the status a reader is waiting on at that moment — and the agent's own line
-  // has the slot back the instant the read settles. Two stacked lines read as
-  // two statuses, and a reader asked which one was the status.
-  //
-  // A fault keeps the slot regardless: the colour and the caption are always
-  // about the same thing, and an amber orb captioned "Loading pipeline"
-  // tells a reader the pipeline is the fault.
+  // One line under the orb: a named read in flight holds it, since two lines
+  // read as two statuses. A fault keeps it, so colour and caption agree.
   const holdsFault = state === "warning" || state === "error";
   const [latest] = ticker;
   const shown = latest !== undefined && !holdsFault ? plain(latest.said) : line;
@@ -397,11 +367,12 @@ export function AgentRail({
             className="arloose"
             data-core-state={state}
             style={looseStyle(frame)}
-            {...panelFocus}
+            {...looseFocus}
           >
             <Suspense fallback={null}>
               <AgentPanel
                 state={state}
+                progress={ring}
                 signals={signals}
                 model={model}
                 panel={panel}
@@ -412,6 +383,7 @@ export function AgentRail({
                 unnamed={server.unnamed}
                 settled={server.answered ? server.recent : undefined}
                 spend={spend}
+                id={panelId}
               />
             </Suspense>
           </div>,
@@ -424,14 +396,26 @@ export function AgentRail({
           (the same reason the CTA underneath keeps its own row). The pointer
           still gets the whole block through `useHit`; the keyboard gets the
           button. */}
-      {/* biome-ignore lint/a11y/noStaticElementInteractions: the button inside is the interactive element; this only widens its pointer target to the words and chevron beside it */}
+      {/* biome-ignore lint/a11y/noStaticElementInteractions: the button inside is the interactive element; this only widens its pointer target to the words beside it */}
       {/* biome-ignore lint/a11y/useKeyWithClickEvents: the keyboard's toggle is the button's, whose Enter and Space arrive here as the same click */}
-      <div className="arhit" onClick={hit} ref={well}>
+      <div
+        className="arhit"
+        data-core-wake=""
+        onClick={hit}
+        onPointerEnter={() => tip.raise("pointer")}
+        onPointerLeave={tip.hide}
+        ref={well}
+      >
         <button
           type="button"
           className="artoggle"
           ref={trigger}
           aria-expanded={open}
+          aria-controls={open ? panelId : undefined}
+          // The state and its line, which the phone bar draws nowhere else.
+          aria-describedby={sayingId}
+          onFocus={() => tip.raise("focus")}
+          onBlur={tip.hide}
           // The spend joins the NAME, not only the box.
           //
           // An `aria-label` replaces everything inside the button, and on the
@@ -450,6 +434,21 @@ export function AgentRail({
           />
           <TrialOrbRing />
         </button>
+        {/* The agent's own line, as the panel pairs them: what this tab has in
+            flight is the reader's work, and "idle" would head it falsely. */}
+        <span id={sayingId} hidden>
+          {`${t(STATE_WORD[state])}. ${spokenText(line)}`}
+        </span>
+        {tip.shown && (
+          <NavTip>
+            <span className="artip">
+              {spokenText(shown)}
+              {tip.folded && spend.allowed && spend.minor !== undefined && (
+                <span className="t-num">{`${money} ${t("agent.thisMonth")}`}</span>
+              )}
+            </span>
+          </NavTip>
+        )}
         {/* Hidden by the stylesheet on the collapsed rail, where the orb and the
             count are the whole report and the button's name carries the rest. */}
         <span className="arwords">
@@ -457,37 +456,18 @@ export function AgentRail({
               agent's own sentence otherwise. The panel keeps the agent's line
               regardless, because it is the agent's report. */}
           <RailSaying line={shown} />
-        </span>
-        {/* The block's last line, and it exists whether or not there is a figure
-            on it: the chevron reports whether the panel is open, which is a fact
-            about the block rather than about the spend, so a row that came and
-            went with the money would take the disclosure with it. */}
-        {/* The same reading as the panel's head, in the width a rail has:
-            small, secondary and tabular, with the figure in the primary ink.
-            The classes are the type; this file only places the row. */}
-        <span className="arlast t-caption t-num">
           {/* The spend sits in the bar and not only in the panel: it is the one
               figure somebody is accountable for, and a number nobody opens a
               panel to see is a number nobody sees. Absent when this seat may not
               read it, and absent again when nothing in the month carried a
               price. */}
           {spend.allowed && spend.minor !== undefined && (
-            <span className="arspend">
+            <span className="arspend t-caption t-num">
               <b>{money}</b>
-              {/* The scope beside the figure, in the slot the stylesheet
-                  reserved for it (`.arspend > .arscope`, "the money, and the
-                  scope it was spent in, on one line"): a bare currency amount
-                  names nothing. The expanded panel says "Cost this month";
-                  this is the same fact in the space a rail has, from the same
-                  string. */}
+              {/* A bare currency amount names nothing. */}
               <span className="arscope">{t("agent.thisMonth")}</span>
             </span>
           )}
-          <ChevronRight
-            size={15}
-            className={open ? "archev open" : "archev"}
-            aria-hidden="true"
-          />
         </span>
       </div>
       {/* Beside the hit area, not in it: its press opens the dialog to the

@@ -119,3 +119,19 @@ export const TwoLines: Story = {
     </IdentityMeta>
   ),
 };
+
+/**
+ * On a phone each fact takes its own line and the dots go. A dotted line
+ * wrapped at 390px would open its second row on a stray dot.
+ */
+export const PhoneStack: Story = {
+  globals: { viewport: { value: "phone" } },
+  render: () => (
+    <IdentityMeta>
+      <IdentityLine>
+        <IdentityFact>jo.ziethen@brandt-automotive.de</IdentityFact>
+        <IdentityFact quiet>Brandt Automotive GmbH</IdentityFact>
+      </IdentityLine>
+    </IdentityMeta>
+  ),
+};

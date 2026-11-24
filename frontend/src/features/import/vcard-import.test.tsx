@@ -109,15 +109,14 @@ describe("VCardImport", () => {
     );
   });
 
-  it("leads back to the contact list", () => {
+  // The top bar's Back leads to the contact list, so the page draws no second one.
+  it("opens on its title with no way back of its own", () => {
     render(<VCardImportPage />);
     const title = screen.getByRole("heading", { level: 1 });
     expect(title).toHaveTextContent("Import business cards");
     // The link that opened the page is gone, so the title holds focus.
     expect(title).toHaveFocus();
-    expect(
-      screen.getByRole("link", { name: "Back to contacts" }),
-    ).toHaveAttribute("href", "/#/contacts");
+    expect(screen.queryByRole("link", { name: /back/i })).toBeNull();
   });
 
   describe("for one company", () => {
@@ -125,14 +124,12 @@ describe("VCardImport", () => {
       window.location.hash = "#/contacts/import?company=co-acme";
     });
 
-    it("leads back to the company's Contacts tab", () => {
+    it("names the company and draws no way back of its own", () => {
       render(<VCardImportPage />);
-      expect(
-        screen.getByRole("link", { name: en["vcardImport.backToCompany"] }),
-      ).toHaveAttribute("href", "/#/companies/co-acme?tab=contacts");
       expect(screen.getByTestId("vcard-import-company")).toHaveTextContent(
         en["vcardImport.forCompany"],
       );
+      expect(screen.queryByRole("link", { name: /back/i })).toBeNull();
     });
 
     it("names the company in the import request", async () => {

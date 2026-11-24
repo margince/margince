@@ -40,7 +40,6 @@
   display: grid;
   place-items: center;
   border-radius: var(--r-full);
-  corner-shape: round;
   background: var(--bgChip);
   font: var(--fontBodySmall);
   font-weight: var(--fontWeightMedium);
@@ -141,7 +140,6 @@
   display: flex;
   align-items: flex-start;
   border-radius: var(--r-md);
-  corner-shape: round;
   background: var(--bgWell);
 }
 .pn-chain-node {
@@ -185,7 +183,6 @@
 .pn-chain-link[data-strength="strong"] .pn-chain-link-line,
 .pn-chain-link[data-strength="moderate"] .pn-chain-link-line {
   border-radius: var(--r-full);
-  corner-shape: round;
 }
 .pn-chain-link[data-strength="strong"] {
   --pn-line-width: 4px;
@@ -267,7 +264,6 @@
   display: flex;
   height: 6px;
   border-radius: var(--r-full);
-  corner-shape: round;
   overflow: hidden;
   background: var(--borderSubtle);
 }
@@ -293,7 +289,6 @@
   width: 8px;
   height: 8px;
   border-radius: var(--r-full);
-  corner-shape: round;
   margin-right: var(--space-1);
   vertical-align: middle;
   background: var(--accent);
@@ -352,7 +347,6 @@
   width: 26px;
   height: 26px;
   border-radius: 50%;
-  corner-shape: round;
   display: grid;
   place-items: center;
   border: 2px solid var(--borderStrong);
@@ -376,7 +370,6 @@
   margin: var(--space-4) 0 0;
   padding: var(--space-2) var(--space-3);
   border-radius: var(--r-control);
-  corner-shape: round;
   background: var(--bgChip);
   color: var(--textPrimary);
 }
@@ -426,7 +419,6 @@
   inline-size: var(--space-2);
   block-size: var(--space-2);
   border-radius: var(--r-full);
-  corner-shape: round;
   background: var(--borderStrong);
 }
 .pn-moment:not(:last-child) .pn-moment-body::after {

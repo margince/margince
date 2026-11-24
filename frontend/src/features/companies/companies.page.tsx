@@ -19,7 +19,6 @@ import { navigate } from "../../lib/router";
 import { useViewerZone } from "../../lib/viewerzone";
 import { OpenEmailDrawer } from "../mail/openemaildrawer";
 import { RecordHistoryTab } from "../records/history";
-import { WorklistReturnLink } from "../worklist/worklist.return";
 import type { Company, Company360View } from "./companies";
 import {
   CompanyRecordBody,
@@ -179,7 +178,6 @@ export function CompanyPage({
   };
   return (
     <RecordView
-      back={<WorklistReturnLink />}
       name={company.display_name}
       rename={rename}
       identity={company.id}

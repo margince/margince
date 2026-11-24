@@ -61,3 +61,15 @@
   gap: var(--space-1);
   min-width: 0;
 }
+
+/* A phone has no width for a sentence of facts, so each fact takes its own line
+   and the line break is the separator. */
+@media (max-width: 700px) {
+  .identity-line {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  .identity-dot {
+    display: none;
+  }
+}

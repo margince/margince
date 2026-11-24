@@ -33,7 +33,6 @@
   min-inline-size: var(--space-5);
   padding: 0 var(--space-2);
   border-radius: var(--r-full);
-  corner-shape: round;
   background: var(--ground);
   color: var(--accentText);
   text-align: center;
@@ -183,9 +182,9 @@
     --brief-ring-angle: 360deg;
   }
 }
+/* A rise without a fade, as the day block it stands in (brief.css). */
 @keyframes brief-card-open {
   from {
-    opacity: 0.6;
     transform: translateY(var(--space-1));
   }
 }
@@ -462,7 +461,6 @@
 .brief-task-tick .icon-action .btn.btn-icon {
   border-color: transparent;
   border-radius: var(--r-full);
-  corner-shape: round;
   background: none;
   box-shadow: none;
 }
@@ -549,7 +547,6 @@
 }
 @keyframes brief-caughtup-ring {
   from {
-    opacity: 0;
     scale: 0.92;
   }
 }

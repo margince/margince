@@ -229,7 +229,6 @@
 .rmap-legend-strong {
   border-block-start: 3px solid var(--success);
   border-radius: var(--r-full);
-  corner-shape: round;
 }
 
 .rmap-legend-developing {

@@ -4,13 +4,11 @@
 import type { ReactNode } from "react";
 import type { components } from "../../api/schema";
 import { Badge } from "../../design-system/atoms";
-import { IdentityLine } from "../../design-system/identityline";
 import { RecordView } from "../../design-system/recordview";
 import { useT } from "../../i18n";
 import { useViewerZone } from "../../lib/viewerzone";
 import { ArchivedRecordHistory } from "../records/history";
 import { RecordAccess } from "../records/recordaccess";
-import { WorklistReturnLink } from "../worklist/worklist.return";
 import { ContactActions } from "./contactactions";
 import { ContactFacts } from "./contactfacts";
 import "./contact360.css";
@@ -37,14 +35,13 @@ export function ArchivedContactPage({
   return (
     <div className="wrap">
       <RecordView
-        back={<WorklistReturnLink />}
         name={contact.full_name}
         identity={contact.id}
         pulse={
-          <IdentityLine separator="space">
+          <>
             <Badge tone="warning">{t("record.archived")}</Badge>
             <RecordAccess key={contact.id} kind="contact" record={contact} />
-          </IdentityLine>
+          </>
         }
         badges={<ContactFacts contact={contact} />}
         actions={

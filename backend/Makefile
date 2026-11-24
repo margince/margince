@@ -1105,6 +1105,7 @@ COMPOSE ?= docker compose -f ../docker-compose.dev.yml
 
 db-up: ## Start the dev stack (docker-compose.dev.yml) and create the app role
 	@docker rm -f fable-pg16 fable-redis 2>/dev/null || true
+	@bash ../scripts/compose-recreate-guard.sh $(COMPOSE)
 	$(COMPOSE) up -d --wait
 	$(MAKE) db-init
 # Every ad-hoc statement goes through PSQL, which resolves the container from
