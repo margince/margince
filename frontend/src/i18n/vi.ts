@@ -8395,7 +8395,6 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "countryQuestion.save": "Lưu quốc gia",
   "countryQuestion.alreadySet":
     "Liên hệ này đã có quốc gia. Việc kiểm tra đã được hỏi lại.",
-  "countryQuestion.failed": "Chưa lưu được quốc gia. Hãy thử lại.",
   "lawfulBasis.title": "Chưa ghi nhận căn cứ hợp lệ",
   "lawfulBasis.body":
     "Chưa ghi nhận căn cứ hợp lệ theo pháp luật Việt Nam cho liên hệ này: không có sự đồng ý của họ, cũng không có trường hợp pháp luật cho phép xử lý mà không cần sự đồng ý. Nếu gửi, bạn tự chịu rủi ro.",

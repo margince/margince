@@ -8611,8 +8611,6 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "countryQuestion.save": "Land speichern",
   "countryQuestion.alreadySet":
     "Der Kontakt hat inzwischen ein Land. Die Prüfung wurde erneut gestellt.",
-  "countryQuestion.failed":
-    "Das Land wurde nicht gespeichert. Versuche es erneut.",
   "lawfulBasis.title": "Keine gültige Grundlage erfasst",
   "lawfulBasis.body":
     "Für diesen Kontakt ist keine nach vietnamesischem Recht gültige Grundlage erfasst: weder seine Einwilligung noch ein Fall, in dem das Gesetz die Verarbeitung ohne sie erlaubt. Du sendest auf eigenes Risiko.",

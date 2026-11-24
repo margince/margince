@@ -164,4 +164,15 @@ describe("the question for an unknown recipient country", () => {
 
     expect(await screen.findByRole("alert")).toBeVisible();
   });
+
+  it("names the missing country when Save is pressed with none chosen", async () => {
+    const fetched = vi.spyOn(globalThis, "fetch");
+    draw(preview(refused({ ask_country: true })));
+    await userEvent
+      .setup()
+      .click(screen.getByRole("button", { name: "Save country" }));
+
+    expect(await screen.findByRole("alert")).toBeVisible();
+    expect(fetched).not.toHaveBeenCalled();
+  });
 });

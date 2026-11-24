@@ -8,11 +8,13 @@ import type { components } from "../api/schema";
 import { ifMatch } from "../api/version";
 import { Button } from "../design-system/button";
 import { Callout } from "../design-system/callout";
+import { ErrorLine } from "../design-system/errorline";
 import { Field } from "../design-system/field";
+import { useFieldFaults } from "../design-system/savepage";
 import { Select } from "../design-system/select";
 import { countryOptions } from "../format/assignedcountries";
 import { useLocale, useT } from "../i18n";
-import { problemMessageOf, unwrap } from "../lib/problem";
+import { blankRequired, unwrap } from "../lib/problem";
 import { SEND_PERMISSION_KEY } from "../lib/usesendpermission";
 
 // The question the preview asks when an unknown country could turn a refusal
@@ -53,6 +55,7 @@ function CountryAsk({ asked }: Readonly<{ asked: Asked }>) {
   const { locale } = useLocale();
   const client = useQueryClient();
   const [country, setCountry] = useState("");
+  const [faults, faultsRoot] = useFieldFaults<HTMLDivElement>();
   const options = countryOptions(locale).map((option) => ({
     value: option.value.toUpperCase(),
     label: option.label,
@@ -94,33 +97,41 @@ function CountryAsk({ asked }: Readonly<{ asked: Asked }>) {
       title={t("countryQuestion.title", { address: asked.address })}
       actions={
         <Button
-          disabled={country === ""}
           pending={save.isPending}
-          onClick={() => save.mutate({ country })}
+          onClick={() => {
+            const blank = blankRequired(locale, {
+              country: [t("countryQuestion.label"), country],
+            });
+            if (faults.show(blank)) return;
+            save.mutate({ country });
+          }}
         >
           {t("countryQuestion.save")}
         </Button>
       }
     >
-      <p className="t-body">{t("countryQuestion.body")}</p>
-      <Field label={t("countryQuestion.label")}>
-        {(control) => (
-          <Select
-            {...control}
-            value={country}
-            placeholder={t("countryQuestion.none")}
-            options={options}
-            onChange={setCountry}
-          />
+      <div className="form-stack" ref={faultsRoot}>
+        <p className="t-body">{t("countryQuestion.body")}</p>
+        <Field label={t("countryQuestion.label")} error={faults.of("country")}>
+          {(control) => (
+            <Select
+              {...control}
+              value={country}
+              placeholder={t("countryQuestion.none")}
+              options={options}
+              onChange={(code) => {
+                faults.edited("country");
+                setCountry(code);
+              }}
+            />
+          )}
+        </Field>
+        {save.error instanceof CountryAlreadySet ? (
+          <ErrorLine>{t("countryQuestion.alreadySet")}</ErrorLine>
+        ) : (
+          <ErrorLine error={save.error} />
         )}
-      </Field>
-      {save.error ? (
-        <p role="alert" className="t-caption">
-          {save.error instanceof CountryAlreadySet
-            ? t("countryQuestion.alreadySet")
-            : problemMessageOf(save.error, t, t("countryQuestion.failed"))}
-        </p>
-      ) : null}
+      </div>
     </Callout>
   );
 }
