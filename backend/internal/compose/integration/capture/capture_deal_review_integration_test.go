@@ -147,9 +147,8 @@ func waitForActivityRowLock(t *testing.T, e *integration.SearchEnv) {
 
 // The conversation is one correspondent's. Our mail to alice filed on one
 // deal is no clue for bob's reply on the same References root. The company's
-// two deals leave bob's mail on none. Siblings filed on two of alice's
-// company's deals make her authenticated reply ambiguous, though a third
-// company's deal sorts between them.
+// two deals leave bob's mail on none. Colleagues filed alice's siblings on two
+// deals, one at another company, so the two choices leave her reply on none.
 func TestTheThreadRungReadsOneWholeConversation(t *testing.T) {
 	env := newCaptureEnv(t)
 	e := env.e
@@ -178,7 +177,7 @@ func TestTheThreadRungReadsOneWholeConversation(t *testing.T) {
 	env.sync(t, authenticated(mailFrom("bob@acme.example", "bob1@acme.example", "one1@myco.example", "Re: project"), "acme.example"))
 	wantDeals(t, e, "bob1@acme.example")
 	env.sync(t, authenticated(mailFrom("alice@acme.example", "ali1@acme.example", "one1@myco.example", "Re: project"), "acme.example"))
-	wantDeals(t, e, "ali1@acme.example", first)
+	wantDeals(t, e, "ali1@acme.example")
 
 	file("one3@myco.example", second)
 	env.sync(t, authenticated(mailFrom("alice@acme.example", "ali2@acme.example", "one1@myco.example", "Re: project"), "acme.example"))

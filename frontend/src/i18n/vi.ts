@@ -3358,6 +3358,16 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "rel.add": "Thêm quan hệ",
   "rel.seatOnDeal": "Thêm vào deal",
   "rel.addStakeholder": "Thêm bên liên quan",
+  "rel.stakeholderOffer.title": "Thêm các liên hệ trong thư này vào giao dịch?",
+  "rel.stakeholderOffer.body":
+    "Khi là bên liên quan, thư tiếp theo của họ sẽ tự vào giao dịch. Bỏ chọn liên hệ không thuộc giao dịch.",
+  "rel.stakeholderOffer.legend": "Liên hệ trong thư này",
+  "rel.stakeholderOffer.confirm": "Thêm vào giao dịch",
+  "rel.stakeholderOffer.decline": "Để sau",
+  "rel.stakeholderOffer.noneTicked": "Chọn ít nhất một liên hệ để thêm.",
+  "rel.stakeholderOffer.added": "Đã thêm vào giao dịch",
+  "rel.stakeholderOffer.unread":
+    "Thư đã ở trong giao dịch. Margince không đọc được những ai có trong thư, nên không đề xuất ai để thêm.",
   "rel.dealStakeholders": "Bên liên quan",
   "rel.dealStakeholdersEmpty": "Deal này chưa có bên liên quan nào",
   "rel.employerUnavailable":
@@ -15254,6 +15264,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "captureActivity.filing.core.retracted":
     "CRM đã rút lại liên kết giao dịch: {reason}",
   "captureActivity.filing.basis.project": "dự án của thư",
+  "captureActivity.filing.basis.chosen_thread":
+    "giao dịch mà đồng nghiệp đã chọn cho một thư trước đó trong chuỗi",
   "captureActivity.filing.basis.thread": "một thư trước đó trong chuỗi",
   "captureActivity.filing.basis.sole_open_deal":
     "giao dịch mở duy nhất của công ty",
