@@ -39,7 +39,8 @@ const (
 	// Raised by 107 for the floor of a figure every reader is shown alike. Raised
 	// by 1 for the import that binds one zone lookup to each attention read.
 	composeRootProductionLines = 230_269
-	composeRootTestLines       = 359_327
+	// Raised by 13 when two branches, each under it, merged on one day.
+	composeRootTestLines = 359_340
 )
 
 // A read under these floors stopped early or read the wrong place, and would
