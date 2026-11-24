@@ -15,9 +15,9 @@ input and output schema in folds below it. What a tool may do and whether a huma
 |---|---:|
 | Tools | 48 |
 | Resources | 14 |
-| Tool catalog | 282.6 KB |
+| Tool catalog | 257.5 KB |
 | Resource catalog | 5.5 KB |
-| Approx. wire tokens | 73757 |
+| Approx. wire tokens | 67324 |
 | Largest tool | `read_details` (18.0 KB) |
 | Scopes rendered | `read`, `draft`, `write`, `send`, `enrich` |
 
@@ -32,11 +32,11 @@ tool adds to that listing, and what it costs each scheduled agent, agent by agen
 
 | Part | Bytes | Share | In a run's prompt? |
 |---|---:|---:|---|
-| Output schemas | 51.7 KB | 18% | **No**: a result's shape, never listed to a model |
-| Descriptions (incl. governance clause) | 54.4 KB | 19% | Yes, every step |
-| Input schemas | 164.7 KB | 58% | Yes, every step |
-| _Names, annotations, punctuation_ | 11.8 KB | 4% | Partly |
-| **Description + input schema** | **219.1 KB** | **77%** | **the recurring cost** |
+| Output schemas | 33.7 KB | 13% | **No**: a result's shape, never listed to a model |
+| Descriptions (incl. governance clause) | 51.0 KB | 19% | Yes, every step |
+| Input schemas | 161.2 KB | 62% | Yes, every step |
+| _Names, annotations, punctuation_ | 11.6 KB | 4% | Partly |
+| **Description + input schema** | **212.3 KB** | **82%** | **the recurring cost** |
 
 Output schemas are the largest part of the total and are never sent to a model;
 descriptions and input schemas are what each step pays for.
@@ -419,8 +419,7 @@ ranking. Every evidence id you cite must be one the brief already recorded for t
 anything else refuses the whole write, so cite from what read_context with about=brief gave you
 rather than from memory. Use change_activities with action=log to record something that happened on
 a deal, which belongs on the record itself and outlives today's brief. Calling it again replaces
-what you wrote before, so a second pass is a correction rather than an addition. (Runs immediately;
-requires passport scope "write".)
+what you wrote before, so a second pass is a correction rather than an addition.
 ```
 
 <details><summary>Input schema</summary>
@@ -430,7 +429,6 @@ requires passport scope "write".)
   "additionalProperties": false,
   "properties": {
     "idempotency_key": {
-      "description": "A retry without it may repeat the write. Same key, same result; a key reused with other arguments is refused.",
       "maxLength": 255,
       "type": "string"
     },
@@ -477,112 +475,6 @@ requires passport scope "write".)
 
 </details>
 
-<details><summary>Output schema</summary>
-
-```json
-{
-  "properties": {
-    "data": {
-      "properties": {
-        "items_annotated": {
-          "type": "integer"
-        },
-        "narrative_written": {
-          "type": "boolean"
-        }
-      },
-      "required": [
-        "items_annotated",
-        "narrative_written"
-      ],
-      "type": "object"
-    },
-    "evidence": {
-      "items": {
-        "properties": {
-          "captured_by": {
-            "type": "string"
-          },
-          "record_id": {
-            "format": "uuid",
-            "type": "string"
-          },
-          "record_type": {
-            "type": "string"
-          },
-          "source": {
-            "type": "string"
-          },
-          "web_url": {
-            "type": "string"
-          }
-        },
-        "required": [
-          "record_id",
-          "record_type"
-        ],
-        "type": "object"
-      },
-      "type": "array"
-    },
-    "freshness": {
-      "properties": {
-        "authoritative": {
-          "type": "boolean"
-        },
-        "last_synced_at": {
-          "format": "date-time",
-          "type": "string"
-        }
-      },
-      "required": [
-        "authoritative"
-      ],
-      "type": "object"
-    },
-    "schema_version": {
-      "type": "string"
-    },
-    "trace_id": {
-      "type": "string"
-    },
-    "trust": {
-      "type": "string"
-    },
-    "warnings": {
-      "items": {
-        "properties": {
-          "code": {
-            "type": "string"
-          },
-          "message": {
-            "type": "string"
-          }
-        },
-        "required": [
-          "code",
-          "message"
-        ],
-        "type": "object"
-      },
-      "type": "array"
-    }
-  },
-  "required": [
-    "data",
-    "evidence",
-    "freshness",
-    "schema_version",
-    "trace_id",
-    "trust",
-    "warnings"
-  ],
-  "type": "object"
-}
-```
-
-</details>
-
 ### archive_record
 
 **Archive a record**
@@ -596,9 +488,7 @@ that survives, and change_state with action=disqualify to close out a lead going
 lead's own transition records the reason where archiving would not. By default the record is
 archived when this call answers; where an installation has raised this verb to confirm first, the
 answer is a staged approval and you must not report the record as archived until the retry that
-carries their approval has answered. (Runs immediately; the user's yes is needed for it, so tell
-them what the call will change and get it before calling, unless they asked for this call
-themselves; requires passport scope "write".)
+carries their approval has answered. (Ask the user first.)
 ```
 
 <details><summary>Input schema</summary>
@@ -617,7 +507,6 @@ themselves; requires passport scope "write".)
       "type": "string"
     },
     "idempotency_key": {
-      "description": "A retry without it may repeat the write. Same key, same result; a key reused with other arguments is refused.",
       "maxLength": 255,
       "type": "string"
     },
@@ -646,117 +535,6 @@ themselves; requires passport scope "write".)
 
 </details>
 
-<details><summary>Output schema</summary>
-
-```json
-{
-  "properties": {
-    "data": {
-      "properties": {
-        "archived": {
-          "type": "boolean"
-        },
-        "id": {
-          "format": "uuid",
-          "type": "string"
-        },
-        "record_type": {
-          "type": "string"
-        }
-      },
-      "required": [
-        "archived",
-        "id",
-        "record_type"
-      ],
-      "type": "object"
-    },
-    "evidence": {
-      "items": {
-        "properties": {
-          "captured_by": {
-            "type": "string"
-          },
-          "record_id": {
-            "format": "uuid",
-            "type": "string"
-          },
-          "record_type": {
-            "type": "string"
-          },
-          "source": {
-            "type": "string"
-          },
-          "web_url": {
-            "type": "string"
-          }
-        },
-        "required": [
-          "record_id",
-          "record_type"
-        ],
-        "type": "object"
-      },
-      "type": "array"
-    },
-    "freshness": {
-      "properties": {
-        "authoritative": {
-          "type": "boolean"
-        },
-        "last_synced_at": {
-          "format": "date-time",
-          "type": "string"
-        }
-      },
-      "required": [
-        "authoritative"
-      ],
-      "type": "object"
-    },
-    "schema_version": {
-      "type": "string"
-    },
-    "trace_id": {
-      "type": "string"
-    },
-    "trust": {
-      "type": "string"
-    },
-    "warnings": {
-      "items": {
-        "properties": {
-          "code": {
-            "type": "string"
-          },
-          "message": {
-            "type": "string"
-          }
-        },
-        "required": [
-          "code",
-          "message"
-        ],
-        "type": "object"
-      },
-      "type": "array"
-    }
-  },
-  "required": [
-    "data",
-    "evidence",
-    "freshness",
-    "schema_version",
-    "trace_id",
-    "trust",
-    "warnings"
-  ],
-  "type": "object"
-}
-```
-
-</details>
-
 ### bulk_update_records
 
 **Change many records at once**
@@ -773,9 +551,7 @@ answer, and call undo after they agree; a change is undone once, and records cha
 alone. A stage move skips a deal that is won or lost, and its undo moves each deal back as a new
 move. Ask in words even when the host also shows a form. update_record and archive_record change one
 record. Above 10 records, execute and undo need the confirm_token their preview answered; it is good
-once. Keep batch_id from the answer: undo names the change by it. (Runs immediately; the user's yes
-is needed for it, so tell them what the call will change and get it before calling, unless they
-asked for this call themselves; requires passport scope "write".)
+once. Keep batch_id from the answer: undo names the change by it. (Ask the user first.)
 ```
 
 <details><summary>Input schema</summary>
@@ -809,7 +585,6 @@ asked for this call themselves; requires passport scope "write".)
       "type": "string"
     },
     "idempotency_key": {
-      "description": "A retry without it may repeat the write. Same key, same result; a key reused with other arguments is refused.",
       "maxLength": 255,
       "type": "string"
     },
@@ -937,292 +712,6 @@ asked for this call themselves; requires passport scope "write".)
 
 </details>
 
-<details><summary>Output schema</summary>
-
-```json
-{
-  "properties": {
-    "data": {
-      "properties": {
-        "affected": {
-          "items": {
-            "format": "uuid",
-            "type": "string"
-          },
-          "type": "array"
-        },
-        "batch_id": {
-          "format": "uuid",
-          "type": "string"
-        },
-        "changed": {
-          "type": "integer"
-        },
-        "confirm_token": {
-          "type": "string"
-        },
-        "count": {
-          "type": "integer"
-        },
-        "excluded": {
-          "items": {
-            "properties": {
-              "id": {
-                "format": "uuid",
-                "type": "string"
-              },
-              "message": {
-                "type": "string"
-              },
-              "reason": {
-                "type": "string"
-              }
-            },
-            "required": [
-              "id",
-              "reason"
-            ],
-            "type": "object"
-          },
-          "type": "array"
-        },
-        "expires_at": {
-          "format": "date-time",
-          "type": "string"
-        },
-        "left_behind": {
-          "items": {
-            "properties": {
-              "id": {
-                "format": "uuid",
-                "type": "string"
-              },
-              "kind": {
-                "type": "string"
-              },
-              "ref_id": {
-                "format": "uuid",
-                "type": "string"
-              }
-            },
-            "required": [
-              "id",
-              "kind",
-              "ref_id"
-            ],
-            "type": "object"
-          },
-          "type": "array"
-        },
-        "record_type": {
-          "type": "string"
-        },
-        "requires_confirmation": {
-          "type": "boolean"
-        },
-        "sample": {
-          "items": {
-            "properties": {
-              "after": {
-                "properties": {
-                  "archived": {
-                    "type": "boolean"
-                  },
-                  "done": {
-                    "type": "boolean"
-                  },
-                  "listed": {
-                    "type": "boolean"
-                  },
-                  "owner_id": {
-                    "format": "uuid",
-                    "type": "string"
-                  },
-                  "stage_id": {
-                    "format": "uuid",
-                    "type": "string"
-                  },
-                  "tagged": {
-                    "type": "boolean"
-                  },
-                  "task_id": {
-                    "format": "uuid",
-                    "type": "string"
-                  }
-                },
-                "required": [
-                  "archived"
-                ],
-                "type": "object"
-              },
-              "before": {
-                "properties": {
-                  "archived": {
-                    "type": "boolean"
-                  },
-                  "done": {
-                    "type": "boolean"
-                  },
-                  "listed": {
-                    "type": "boolean"
-                  },
-                  "owner_id": {
-                    "format": "uuid",
-                    "type": "string"
-                  },
-                  "stage_id": {
-                    "format": "uuid",
-                    "type": "string"
-                  },
-                  "tagged": {
-                    "type": "boolean"
-                  },
-                  "task_id": {
-                    "format": "uuid",
-                    "type": "string"
-                  }
-                },
-                "required": [
-                  "archived"
-                ],
-                "type": "object"
-              },
-              "id": {
-                "format": "uuid",
-                "type": "string"
-              },
-              "label": {
-                "type": "string"
-              }
-            },
-            "required": [
-              "after",
-              "before",
-              "id",
-              "label"
-            ],
-            "type": "object"
-          },
-          "type": "array"
-        },
-        "skipped": {
-          "items": {
-            "properties": {
-              "id": {
-                "format": "uuid",
-                "type": "string"
-              },
-              "message": {
-                "type": "string"
-              },
-              "reason": {
-                "type": "string"
-              }
-            },
-            "required": [
-              "id",
-              "reason"
-            ],
-            "type": "object"
-          },
-          "type": "array"
-        },
-        "undo_of": {
-          "format": "uuid",
-          "type": "string"
-        },
-        "verb": {
-          "type": "string"
-        }
-      },
-      "type": "object"
-    },
-    "evidence": {
-      "items": {
-        "properties": {
-          "captured_by": {
-            "type": "string"
-          },
-          "record_id": {
-            "format": "uuid",
-            "type": "string"
-          },
-          "record_type": {
-            "type": "string"
-          },
-          "source": {
-            "type": "string"
-          },
-          "web_url": {
-            "type": "string"
-          }
-        },
-        "required": [
-          "record_id",
-          "record_type"
-        ],
-        "type": "object"
-      },
-      "type": "array"
-    },
-    "freshness": {
-      "properties": {
-        "authoritative": {
-          "type": "boolean"
-        },
-        "last_synced_at": {
-          "format": "date-time",
-          "type": "string"
-        }
-      },
-      "required": [
-        "authoritative"
-      ],
-      "type": "object"
-    },
-    "schema_version": {
-      "type": "string"
-    },
-    "trace_id": {
-      "type": "string"
-    },
-    "trust": {
-      "type": "string"
-    },
-    "warnings": {
-      "items": {
-        "properties": {
-          "code": {
-            "type": "string"
-          },
-          "message": {
-            "type": "string"
-          }
-        },
-        "required": [
-          "code",
-          "message"
-        ],
-        "type": "object"
-      },
-      "type": "array"
-    }
-  },
-  "required": [
-    "data",
-    "evidence",
-    "freshness",
-    "schema_version",
-    "trace_id",
-    "trust",
-    "warnings"
-  ],
-  "type": "object"
-}
-```
-
-</details>
-
 ### change_access
 
 **Share records and set up members and teams**
@@ -1236,10 +725,9 @@ changes its own user's role or teams, never acts on a member who is an admin, ne
 colleague's work to its own user and never changes a member's email; those are refused. Role
 definitions and declaring or retiring a service member are done in the app. Use send_outbound to
 invite a member or send their sign-in link again, update_record to change a record's owner field
-directly, and read_workspace topic colleagues to find a member's id. (Runs immediately; the user's
-yes is needed for the actions change_role, create_former_member, deactivate_member, end_assignment,
-hand_over_work, remove_member, remove_team_member, so tell them what the call will change and get it
-before calling, unless they asked for this call themselves; requires passport scope "write".)
+directly, and read_workspace topic colleagues to find a member's id. (Ask the user first for the
+actions change_role, create_former_member, deactivate_member, end_assignment, hand_over_work,
+remove_member, remove_team_member.)
 ```
 
 <details><summary>Input schema</summary>
@@ -1285,7 +773,6 @@ before calling, unless they asked for this call themselves; requires passport sc
       "type": "string"
     },
     "idempotency_key": {
-      "description": "A retry without it may repeat the write. Same key, same result; a key reused with other arguments is refused.",
       "maxLength": 255,
       "type": "string"
     },
@@ -1343,9 +830,8 @@ bring_back, cancel_send, check_new_send, check_send, deal_relevance, decline_dea
 file_channel_message, hide_document, log, preview_inquiry_assignment, preview_sign_off,
 read_document_fields, read_transcript, ready, request_document_access, reschedule_send, save_draft,
 set_aside, set_audience, set_document_details, set_thread_audience, show_document, task, unready;
-decided per call from its arguments for relink, relink_many; the user's yes is needed for the
-actions archive_document, assign_inquiry, so tell them what the call will change and get it before
-calling, unless they asked for this call themselves; requires passport scope "write".)
+decided per call from its arguments for relink, relink_many; ask the user first for the actions
+archive_document, assign_inquiry.)
 ```
 
 <details><summary>Input schema</summary>
@@ -1535,7 +1021,6 @@ calling, unless they asked for this call themselves; requires passport scope "wr
       "type": "string"
     },
     "idempotency_key": {
-      "description": "A retry without it may repeat the write. Same key, same result; a key reused with other arguments is refused.",
       "maxLength": 255,
       "type": "string"
     },
@@ -1687,9 +1172,8 @@ signal, and mark a list, company or contact as seen, which spends the user's own
 so ask first. Each action changes what the user sees next; only accepting a suggestion changes the
 record it is about, because it runs what the suggestion proposes, as the app's Accept does. Use
 update_record or change_record_parts to change a record yourself, and change_activities to log or
-plan work. (Runs immediately; the user's yes is needed for the actions acknowledge_company_view,
-acknowledge_contact_view, archive_signal, visit_list, so tell them what the call will change and get
-it before calling, unless they asked for this call themselves; requires passport scope "write".)
+plan work. (Ask the user first for the actions acknowledge_company_view, acknowledge_contact_view,
+archive_signal, visit_list.)
 ```
 
 <details><summary>Input schema</summary>
@@ -1764,7 +1248,6 @@ it before calling, unless they asked for this call themselves; requires passport
       "type": "string"
     },
     "idempotency_key": {
-      "description": "A retry without it may repeat the write. Same key, same result; a key reused with other arguments is refused.",
       "maxLength": 255,
       "type": "string"
     },
@@ -1818,13 +1301,12 @@ stays in the app. Ask the user first where the action is marked so: a vCard writ
 and says the contact handed the card over. Use read_workspace topics capture_senders, held_threads,
 counterparty_holds and corpora to read first, run_research start_backfill to bring in old mail,
 run_research ask_corpus to ask a corpus, preview_import and commit_import to start an import, and
-change_tags to tag a record. (Runs immediately; the user's yes is needed for the actions
-add_consumer_mail_domain, add_owner_identity, add_workspace_email_domain, archive_corpus,
-disconnect_channel, disconnect_mailbox, import_vcards, lift_counterparty_hold, lift_exclusion,
+change_tags to tag a record. (Ask the user first for the actions add_consumer_mail_domain,
+add_owner_identity, add_workspace_email_domain, archive_corpus, disconnect_channel,
+disconnect_mailbox, import_vcards, lift_counterparty_hold, lift_exclusion,
 remove_consumer_mail_domain, remove_workspace_email_domain, set_blocked_domain, set_mail_posture,
 set_sender_decision, share_counterparty_hold_history, undo_import_run, unlink_channel,
-withdraw_owner_identity, so tell them what the call will change and get it before calling, unless
-they asked for this call themselves; requires passport scope "write".)
+withdraw_owner_identity.)
 ```
 
 <details><summary>Input schema</summary>
@@ -1912,7 +1394,6 @@ they asked for this call themselves; requires passport scope "write".)
       "type": "string"
     },
     "idempotency_key": {
-      "description": "A retry without it may repeat the write. Same key, same result; a key reused with other arguments is refused.",
       "maxLength": 255,
       "type": "string"
     },
@@ -1957,13 +1438,11 @@ done in the app. Use send_outbound double_opt_in, privacy_notice or details_conf
 contact, read_details contact_consent, contact_consent_guard or contact_stops to check a contact
 before you record, read_workspace topics data_subject_requests, notice_cases, audit_log, legal_holds
 and restricted_records to read the queues, and read_workspace topic record_history for one record's
-trail. (Runs immediately; the user's yes is needed for the actions confirm_notice_source,
-lift_lead_suppression, lift_suppression, open_data_subject_request, pin_activity_to_floor,
-place_legal_hold, record_communication_context, record_consent, record_lead_qualifying_event,
-record_qualifying_event, resolve_confirm_submission, retract_acquisition_request,
-retract_lead_qualifying_event, retract_qualifying_event, revoke_override, suppress_contact,
-update_data_subject_request, so tell them what the call will change and get it before calling,
-unless they asked for this call themselves; requires passport scope "write".)
+trail. (Ask the user first for the actions confirm_notice_source, lift_lead_suppression,
+lift_suppression, open_data_subject_request, pin_activity_to_floor, place_legal_hold,
+record_communication_context, record_consent, record_lead_qualifying_event, record_qualifying_event,
+resolve_confirm_submission, retract_acquisition_request, retract_lead_qualifying_event,
+retract_qualifying_event, revoke_override, suppress_contact, update_data_subject_request.)
 ```
 
 <details><summary>Input schema</summary>
@@ -2013,7 +1492,6 @@ unless they asked for this call themselves; requires passport scope "write".)
       "type": "string"
     },
     "idempotency_key": {
-      "description": "A retry without it may repeat the write. Same key, same result; a key reused with other arguments is refused.",
       "maxLength": 255,
       "type": "string"
     },
@@ -2054,7 +1532,7 @@ why. Only the steward of a list or a list admin may change it. A change must car
 read; a list changed since is refused. An archived list is read-only. A Live List's members follow
 its filter and cannot be added or removed by hand. Preview a filter with read_lists before saving
 it. bulk_update_records adds or removes many records at once, with a confirmation. Keep the list id
-and its new version from the answer. (Runs immediately; requires passport scope "write".)
+and its new version from the answer.
 ```
 
 <details><summary>Input schema</summary>
@@ -2144,7 +1622,6 @@ and its new version from the answer. (Runs immediately; requires passport scope 
       "type": "string"
     },
     "idempotency_key": {
-      "description": "A retry without it may repeat the write. Same key, same result; a key reused with other arguments is refused.",
       "maxLength": 255,
       "type": "string"
     },
@@ -2218,112 +1695,6 @@ and its new version from the answer. (Runs immediately; requires passport scope 
 
 </details>
 
-<details><summary>Output schema</summary>
-
-```json
-{
-  "properties": {
-    "data": {
-      "properties": {
-        "mode": {
-          "type": "string"
-        },
-        "result": {
-          "type": "object"
-        }
-      },
-      "required": [
-        "mode",
-        "result"
-      ],
-      "type": "object"
-    },
-    "evidence": {
-      "items": {
-        "properties": {
-          "captured_by": {
-            "type": "string"
-          },
-          "record_id": {
-            "format": "uuid",
-            "type": "string"
-          },
-          "record_type": {
-            "type": "string"
-          },
-          "source": {
-            "type": "string"
-          },
-          "web_url": {
-            "type": "string"
-          }
-        },
-        "required": [
-          "record_id",
-          "record_type"
-        ],
-        "type": "object"
-      },
-      "type": "array"
-    },
-    "freshness": {
-      "properties": {
-        "authoritative": {
-          "type": "boolean"
-        },
-        "last_synced_at": {
-          "format": "date-time",
-          "type": "string"
-        }
-      },
-      "required": [
-        "authoritative"
-      ],
-      "type": "object"
-    },
-    "schema_version": {
-      "type": "string"
-    },
-    "trace_id": {
-      "type": "string"
-    },
-    "trust": {
-      "type": "string"
-    },
-    "warnings": {
-      "items": {
-        "properties": {
-          "code": {
-            "type": "string"
-          },
-          "message": {
-            "type": "string"
-          }
-        },
-        "required": [
-          "code",
-          "message"
-        ],
-        "type": "object"
-      },
-      "type": "array"
-    }
-  },
-  "required": [
-    "data",
-    "evidence",
-    "freshness",
-    "schema_version",
-    "trace_id",
-    "trust",
-    "warnings"
-  ],
-  "type": "object"
-}
-```
-
-</details>
-
 ### change_my_settings
 
 **Change the user's own preferences and voice**
@@ -2338,10 +1709,9 @@ with source agent, never chosen. What the product sends them and where, what the
 voice, replacing or putting back a sample they filed or left out, and removing samples for good are
 done in the app. Use change_settings for what every colleague shares, read_workspace topics
 my_working_hours and my_brief_delivery to read their settings, and run_research to build the voice.
-(Runs immediately; the user's yes is needed for the actions apply_voice_version,
-archive_voice_profile, reject_voice_version, rollback_voice_version, save_display_name,
-save_greeting_name, save_timezone, save_working_hours, so tell them what the call will change and
-get it before calling, unless they asked for this call themselves; requires passport scope "write".)
+(Ask the user first for the actions apply_voice_version, archive_voice_profile,
+reject_voice_version, rollback_voice_version, save_display_name, save_greeting_name, save_timezone,
+save_working_hours.)
 ```
 
 <details><summary>Input schema</summary>
@@ -2374,7 +1744,6 @@ get it before calling, unless they asked for this call themselves; requires pass
       "type": "string"
     },
     "idempotency_key": {
-      "description": "A retry without it may repeat the write. Same key, same result; a key reused with other arguments is refused.",
       "maxLength": 255,
       "type": "string"
     },
@@ -2415,10 +1784,8 @@ offer fixes its version and its exchange rate from then on. What a buyer reads i
 reaches them at once, so inviting them or resending their invitation, writing to them, adding,
 changing or removing a document, editing the room's words, setting its expiry and resuming it are
 send_outbound's. Use change_record_parts to change an offer's line items, change_state to move the
-deal itself, and run_research to regenerate an offer. (Runs immediately; the user's yes is needed
-for the actions archive_contract, archive_room, cancel_contract, reject_offer, send_offer, so tell
-them what the call will change and get it before calling, unless they asked for this call
-themselves; requires passport scope "write".)
+deal itself, and run_research to regenerate an offer. (Ask the user first for the actions
+archive_contract, archive_room, cancel_contract, reject_offer, send_offer.)
 ```
 
 <details><summary>Input schema</summary>
@@ -2464,7 +1831,6 @@ themselves; requires passport scope "write".)
       "type": "string"
     },
     "idempotency_key": {
-      "description": "A retry without it may repeat the write. Same key, same result; a key reused with other arguments is refused.",
       "maxLength": 255,
       "type": "string"
     },
@@ -2507,8 +1873,7 @@ Change what is kept under a record: an offer's line items, a company's facts and
 project's companies and stakeholders. Prices are in minor units; read a product for its
 unit_price_minor rather than inventing one. An offer's totals are computed from its lines and cannot
 be supplied, and a sent or accepted offer keeps its lines. Use update_record for a record's own
-fields, and create_record with record_type offer to make an offer with its first lines. (Runs
-immediately; requires passport scope "write".)
+fields, and create_record with record_type offer to make an offer with its first lines.
 ```
 
 <details><summary>Input schema</summary>
@@ -2604,7 +1969,6 @@ immediately; requires passport scope "write".)
       "type": "string"
     },
     "idempotency_key": {
-      "description": "A retry without it may repeat the write. Same key, same result; a key reused with other arguments is refused.",
       "maxLength": 255,
       "type": "string"
     },
@@ -2703,100 +2067,6 @@ immediately; requires passport scope "write".)
 
 </details>
 
-<details><summary>Output schema</summary>
-
-```json
-{
-  "properties": {
-    "data": {
-      "type": "object"
-    },
-    "evidence": {
-      "items": {
-        "properties": {
-          "captured_by": {
-            "type": "string"
-          },
-          "record_id": {
-            "format": "uuid",
-            "type": "string"
-          },
-          "record_type": {
-            "type": "string"
-          },
-          "source": {
-            "type": "string"
-          },
-          "web_url": {
-            "type": "string"
-          }
-        },
-        "required": [
-          "record_id",
-          "record_type"
-        ],
-        "type": "object"
-      },
-      "type": "array"
-    },
-    "freshness": {
-      "properties": {
-        "authoritative": {
-          "type": "boolean"
-        },
-        "last_synced_at": {
-          "format": "date-time",
-          "type": "string"
-        }
-      },
-      "required": [
-        "authoritative"
-      ],
-      "type": "object"
-    },
-    "schema_version": {
-      "type": "string"
-    },
-    "trace_id": {
-      "type": "string"
-    },
-    "trust": {
-      "type": "string"
-    },
-    "warnings": {
-      "items": {
-        "properties": {
-          "code": {
-            "type": "string"
-          },
-          "message": {
-            "type": "string"
-          }
-        },
-        "required": [
-          "code",
-          "message"
-        ],
-        "type": "object"
-      },
-      "type": "array"
-    }
-  },
-  "required": [
-    "data",
-    "evidence",
-    "freshness",
-    "schema_version",
-    "trace_id",
-    "trust",
-    "warnings"
-  ],
-  "type": "object"
-}
-```
-
-</details>
-
 ### change_relationships
 
 **Work a company's relationships and briefs**
@@ -2807,8 +2077,7 @@ decide, complete or cancel an introduction and record one that happened; record,
 a promise made in a conversation; save what research found. Each act runs as the app does it, on the
 records the user may open. Use run_research to ask about a company, refresh a brief, dossier, growth
 fit or scan, or research a contact, read_details to read one that is already there, and
-update_record to change a company's or contact's fields. (Runs immediately; requires passport scope
-"write".)
+update_record to change a company's or contact's fields.
 ```
 
 <details><summary>Input schema</summary>
@@ -2847,7 +2116,6 @@ update_record to change a company's or contact's fields. (Runs immediately; requ
       "type": "string"
     },
     "idempotency_key": {
-      "description": "A retry without it may repeat the write. Same key, same result; a key reused with other arguments is refused.",
       "maxLength": 255,
       "type": "string"
     },
@@ -2881,10 +2149,8 @@ one. publish_draft, discard_draft, restore_revision, archive_report, publish_fra
 launch_initiative change what colleagues see: ask the user first. Use read_reports to read reports
 and their metric catalog, run_research for the sales review's assessment or a report set up from a
 description, and change_state move_deal to move a deal. Keep the report id and draft_revision to
-preview the draft with read_reports. (Runs immediately; the user's yes is needed for the actions
-archive_report, discard_draft, launch_initiative, publish_draft, publish_framework,
-restore_revision, so tell them what the call will change and get it before calling, unless they
-asked for this call themselves; requires passport scope "write".)
+preview the draft with read_reports. (Ask the user first for the actions archive_report,
+discard_draft, launch_initiative, publish_draft, publish_framework, restore_revision.)
 ```
 
 <details><summary>Input schema</summary>
@@ -2932,7 +2198,6 @@ asked for this call themselves; requires passport scope "write".)
       "type": "string"
     },
     "idempotency_key": {
-      "description": "A retry without it may repeat the write. Same key, same result; a key reused with other arguments is refused.",
       "maxLength": 255,
       "type": "string"
     },
@@ -3237,15 +2502,13 @@ Which model runs, the plan's budget, stage-move trust, what closes a deal, a sta
 order while a transition is trusted, a seeded automation, a rule's owner, a form's secret, origins
 and consent, retention and permanent deletes are done in the app. Use change_my_settings for the
 user's own name, language, time zone, hours or voice, change_state to move one lead or deal, and
-update_record to change one record. (Runs immediately; the user's yes is needed for the actions
-activate_home_repair, apply_legacy_loss_reasons, archive_automation, archive_exit_criterion,
-archive_legal_entity, archive_pipeline, archive_saved_view, archive_stage, archive_web_form,
-control_data_task, create_custom_field, create_web_form, disconnect_finance_source,
-disconnect_provider, handle_website_inquiries, link_finance_customer, record_tax_rate,
-reorder_stages, retire_custom_field, set_ai_model_rate, set_fx_rate, update_automation,
-update_custom_field_options, update_exit_criterion, update_web_form, upsert_partner, so tell them
-what the call will change and get it before calling, unless they asked for this call themselves;
-requires passport scope "write".)
+update_record to change one record. (Ask the user first for the actions activate_home_repair,
+apply_legacy_loss_reasons, archive_automation, archive_exit_criterion, archive_legal_entity,
+archive_pipeline, archive_saved_view, archive_stage, archive_web_form, control_data_task,
+create_custom_field, create_web_form, disconnect_finance_source, disconnect_provider,
+handle_website_inquiries, link_finance_customer, record_tax_rate, reorder_stages,
+retire_custom_field, set_ai_model_rate, set_fx_rate, update_automation, update_custom_field_options,
+update_exit_criterion, update_web_form, upsert_partner.)
 ```
 
 <details><summary>Input schema</summary>
@@ -3364,7 +2627,6 @@ requires passport scope "write".)
       "type": "string"
     },
     "idempotency_key": {
-      "description": "A retry without it may repeat the write. Same key, same result; a key reused with other arguments is refused.",
       "maxLength": 255,
       "type": "string"
     },
@@ -3424,9 +2686,8 @@ correct_close_day, correct_project_health, decide_commission, decide_legal_revie
 disqualify, link_lead_company, move_deal_pipeline, move_project, promote, publish_contact, qualify,
 record_project_health, reopen_lead, request_legal_review, review_outcome, set_lead_signal,
 transfer_projects, withdraw_legal_review; a human approves first for merge_member_accounts,
-set_up_partner; decided per call from its arguments for move_deal; the user's yes is needed for the
-actions decide_commission, disqualify, transfer_projects, so tell them what the call will change and
-get it before calling, unless they asked for this call themselves; requires passport scope "write".)
+set_up_partner; decided per call from its arguments for move_deal; ask the user first for the
+actions decide_commission, disqualify, transfer_projects.)
 ```
 
 <details><summary>Input schema</summary>
@@ -3531,7 +2792,6 @@ get it before calling, unless they asked for this call themselves; requires pass
       "type": "string"
     },
     "idempotency_key": {
-      "description": "A retry without it may repeat the write. Same key, same result; a key reused with other arguments is refused.",
       "maxLength": 255,
       "type": "string"
     },
@@ -3698,9 +2958,8 @@ restore brings back. create and update need tag grants an ordinary seat lacks. u
 the fields it is sent, and sends no version, so read the tag right before editing; it changes what a
 word is called, never what carries it. Removing a tag that is not there succeeds. archive retires a
 word for every record; the records keep it. (Governance: runs immediately for apply, archive,
-create, remove, restore, update; a human approves first for merge; the user's yes is needed for the
-action archive, so tell them what the call will change and get it before calling, unless they asked
-for this call themselves; requires passport scope "write".)
+create, remove, restore, update; a human approves first for merge; ask the user first for the action
+archive.)
 ```
 
 <details><summary>Input schema</summary>
@@ -3750,7 +3009,6 @@ for this call themselves; requires passport scope "write".)
       "type": "string"
     },
     "idempotency_key": {
-      "description": "A retry without it may repeat the write. Same key, same result; a key reused with other arguments is refused.",
       "maxLength": 255,
       "type": "string"
     },
@@ -3860,133 +3118,6 @@ time.
 
 </details>
 
-<details><summary>Output schema</summary>
-
-```json
-{
-  "properties": {
-    "data": {
-      "properties": {
-        "calendar_backing": {
-          "type": "string"
-        },
-        "slots": {
-          "items": {
-            "properties": {
-              "end": {
-                "format": "date-time",
-                "type": "string"
-              },
-              "start": {
-                "format": "date-time",
-                "type": "string"
-              }
-            },
-            "required": [
-              "end",
-              "start"
-            ],
-            "type": "object"
-          },
-          "type": "array"
-        },
-        "truncated": {
-          "type": "boolean"
-        }
-      },
-      "required": [
-        "calendar_backing",
-        "slots",
-        "truncated"
-      ],
-      "type": "object"
-    },
-    "evidence": {
-      "items": {
-        "properties": {
-          "captured_by": {
-            "type": "string"
-          },
-          "record_id": {
-            "format": "uuid",
-            "type": "string"
-          },
-          "record_type": {
-            "type": "string"
-          },
-          "source": {
-            "type": "string"
-          },
-          "web_url": {
-            "type": "string"
-          }
-        },
-        "required": [
-          "record_id",
-          "record_type"
-        ],
-        "type": "object"
-      },
-      "type": "array"
-    },
-    "freshness": {
-      "properties": {
-        "authoritative": {
-          "type": "boolean"
-        },
-        "last_synced_at": {
-          "format": "date-time",
-          "type": "string"
-        }
-      },
-      "required": [
-        "authoritative"
-      ],
-      "type": "object"
-    },
-    "schema_version": {
-      "type": "string"
-    },
-    "trace_id": {
-      "type": "string"
-    },
-    "trust": {
-      "type": "string"
-    },
-    "warnings": {
-      "items": {
-        "properties": {
-          "code": {
-            "type": "string"
-          },
-          "message": {
-            "type": "string"
-          }
-        },
-        "required": [
-          "code",
-          "message"
-        ],
-        "type": "object"
-      },
-      "type": "array"
-    }
-  },
-  "required": [
-    "data",
-    "evidence",
-    "freshness",
-    "schema_version",
-    "trace_id",
-    "trust",
-    "warnings"
-  ],
-  "type": "object"
-}
-```
-
-</details>
-
 ### commit_import
 
 **Commit an import**
@@ -4000,9 +3131,7 @@ to get a file in is not a review of it: unless the asker says they have already 
 rows, show the counts and the mapping and wait for their go-ahead. Use read_import for the report
 first: numbers nobody read are not a check. The write goes on after this answers. Read read_import's
 report until its state is complete or failed, then report what landed: the counts and the mapping
-the run used, each column by the field it went to. (Runs immediately; the user's yes is needed for
-it, so tell them what the call will change and get it before calling, unless they asked for this
-call themselves; requires passport scope "write".)
+the run used, each column by the field it went to. (Ask the user first.)
 ```
 
 <details><summary>Input schema</summary>
@@ -4017,7 +3146,6 @@ call themselves; requires passport scope "write".)
       "type": "string"
     },
     "idempotency_key": {
-      "description": "A retry without it may repeat the write. Same key, same result; a key reused with other arguments is refused.",
       "maxLength": 255,
       "type": "string"
     },
@@ -4028,123 +3156,6 @@ call themselves; requires passport scope "write".)
   },
   "required": [
     "run_id"
-  ],
-  "type": "object"
-}
-```
-
-</details>
-
-<details><summary>Output schema</summary>
-
-```json
-{
-  "properties": {
-    "data": {
-      "properties": {
-        "checkpoint": {
-          "type": "integer"
-        },
-        "error": {
-          "type": "string"
-        },
-        "object": {
-          "type": "string"
-        },
-        "run_id": {
-          "type": "string"
-        },
-        "state": {
-          "type": "string"
-        }
-      },
-      "required": [
-        "checkpoint",
-        "object",
-        "run_id",
-        "state"
-      ],
-      "type": "object"
-    },
-    "evidence": {
-      "items": {
-        "properties": {
-          "captured_by": {
-            "type": "string"
-          },
-          "record_id": {
-            "format": "uuid",
-            "type": "string"
-          },
-          "record_type": {
-            "type": "string"
-          },
-          "source": {
-            "type": "string"
-          },
-          "web_url": {
-            "type": "string"
-          }
-        },
-        "required": [
-          "record_id",
-          "record_type"
-        ],
-        "type": "object"
-      },
-      "type": "array"
-    },
-    "freshness": {
-      "properties": {
-        "authoritative": {
-          "type": "boolean"
-        },
-        "last_synced_at": {
-          "format": "date-time",
-          "type": "string"
-        }
-      },
-      "required": [
-        "authoritative"
-      ],
-      "type": "object"
-    },
-    "schema_version": {
-      "type": "string"
-    },
-    "trace_id": {
-      "type": "string"
-    },
-    "trust": {
-      "type": "string"
-    },
-    "warnings": {
-      "items": {
-        "properties": {
-          "code": {
-            "type": "string"
-          },
-          "message": {
-            "type": "string"
-          }
-        },
-        "required": [
-          "code",
-          "message"
-        ],
-        "type": "object"
-      },
-      "type": "array"
-    }
-  },
-  "required": [
-    "data",
-    "evidence",
-    "freshness",
-    "schema_version",
-    "trace_id",
-    "trust",
-    "warnings"
   ],
   "type": "object"
 }
@@ -4179,7 +3190,7 @@ filed, unresolved until the reviewer decides. When the user says where they met 
 that word as offer_tag, also when they want to decide on the tag themselves: it puts no tag on the
 record and stores nothing, the answer says whether that tag already exists, and change_tags still
 needs their yes. The new record's id comes back in the result; keep it for anything that links to
-it. (Runs immediately; requires passport scope "write".)
+it.
 ```
 
 Renders its result in [`ui://margince/create-followups.html`](#create_followups_view), visible to `model`.
@@ -4200,7 +3211,6 @@ Renders its result in [`ui://margince/create-followups.html`](#create_followups_
       "type": "object"
     },
     "idempotency_key": {
-      "description": "A retry without it may repeat the write. Same key, same result; a key reused with other arguments is refused.",
       "maxLength": 255,
       "type": "string"
     },
@@ -4522,10 +3532,8 @@ merge, no schema change, no send; the rest is theirs to release in the CRM. An i
 answered, or lapsed, is reported as such and nothing is written; each bundle member is answered and
 reported on its own, and a bundle holding none of theirs reads as not found. read_approval when they
 have not seen what it holds; list_approvals is where both ids come from. If the proposal is your OWN
-refused call, approving does not perform it — re-issue that same call with approval_id set. (Runs
-immediately; the user's yes is needed for the actions bundle, one, so tell them what the call will
-change and get it before calling, unless they asked for this call themselves; requires passport
-scope "write".)
+refused call, approving does not perform it — re-issue that same call with approval_id set. (Ask
+the user first for the actions bundle, one.)
 ```
 
 <details><summary>Input schema</summary>
@@ -4546,7 +3554,6 @@ scope "write".)
       "type": "string"
     },
     "idempotency_key": {
-      "description": "A retry without it may repeat the write. Same key, same result; a key reused with other arguments is refused.",
       "maxLength": 255,
       "type": "string"
     },
@@ -4583,7 +3590,7 @@ because they keep an unsent draft of their own, is not saved, so show it in full
 covers the deals read_attention with view=slipping reports, at most 25. send_outbound sends an email
 once it is written. Keep the subject, body, to, the activity_id or links, and the
 communication_context a message echoes; the send takes them unchanged. Each follow-up comes back
-with its deal_id and draft_activity_id. (Runs immediately; requires passport scope "draft".)
+with its deal_id and draft_activity_id. (Requires passport scope "draft".)
 ```
 
 <details><summary>Input schema</summary>
@@ -4605,7 +3612,6 @@ with its deal_id and draft_activity_id. (Runs immediately; requires passport sco
       "type": "string"
     },
     "idempotency_key": {
-      "description": "A retry without it may repeat the write. Same key, same result; a key reused with other arguments is refused.",
       "maxLength": 255,
       "type": "string"
     },
@@ -4710,7 +3716,6 @@ it runs; requires passport scope "enrich".)
       "type": "string"
     },
     "idempotency_key": {
-      "description": "A retry without it may repeat the write. Same key, same result; a key reused with other arguments is refused.",
       "maxLength": 255,
       "type": "string"
     },
@@ -4722,100 +3727,6 @@ it runs; requires passport scope "enrich".)
   },
   "required": [
     "company_id"
-  ],
-  "type": "object"
-}
-```
-
-</details>
-
-<details><summary>Output schema</summary>
-
-```json
-{
-  "properties": {
-    "data": {
-      "type": "object"
-    },
-    "evidence": {
-      "items": {
-        "properties": {
-          "captured_by": {
-            "type": "string"
-          },
-          "record_id": {
-            "format": "uuid",
-            "type": "string"
-          },
-          "record_type": {
-            "type": "string"
-          },
-          "source": {
-            "type": "string"
-          },
-          "web_url": {
-            "type": "string"
-          }
-        },
-        "required": [
-          "record_id",
-          "record_type"
-        ],
-        "type": "object"
-      },
-      "type": "array"
-    },
-    "freshness": {
-      "properties": {
-        "authoritative": {
-          "type": "boolean"
-        },
-        "last_synced_at": {
-          "format": "date-time",
-          "type": "string"
-        }
-      },
-      "required": [
-        "authoritative"
-      ],
-      "type": "object"
-    },
-    "schema_version": {
-      "type": "string"
-    },
-    "trace_id": {
-      "type": "string"
-    },
-    "trust": {
-      "type": "string"
-    },
-    "warnings": {
-      "items": {
-        "properties": {
-          "code": {
-            "type": "string"
-          },
-          "message": {
-            "type": "string"
-          }
-        },
-        "required": [
-          "code",
-          "message"
-        ],
-        "type": "object"
-      },
-      "type": "array"
-    }
-  },
-  "required": [
-    "data",
-    "evidence",
-    "freshness",
-    "schema_version",
-    "trace_id",
-    "trust",
-    "warnings"
   ],
   "type": "object"
 }
@@ -6071,7 +4982,7 @@ such as a contact's `company_ref` names a company's ref. read_import with view f
 file's columns. create_record for one record you already know, and change_capture to import a vCard
 file. Keep the run_id. The counts its report answers — created, duplicates, skipped — and the
 mapping it settled on are what the user weighs, so report both: a column this placed by a name they
-did not write is a decision they did not make. (Runs immediately; requires passport scope "write".)
+did not write is a decision they did not make.
 ```
 
 <details><summary>Input schema</summary>
@@ -6126,7 +5037,6 @@ did not write is a decision they did not make. (Runs immediately; requires passp
       "type": "array"
     },
     "idempotency_key": {
-      "description": "A retry without it may repeat the write. Same key, same result; a key reused with other arguments is refused.",
       "maxLength": 255,
       "type": "string"
     },
@@ -6168,495 +5078,6 @@ did not write is a decision they did not make. (Runs immediately; requires passp
       "type": "string"
     }
   },
-  "type": "object"
-}
-```
-
-</details>
-
-<details><summary>Output schema</summary>
-
-```json
-{
-  "properties": {
-    "data": {
-      "properties": {
-        "columns": {
-          "items": {
-            "type": "string"
-          },
-          "type": "array"
-        },
-        "files": {
-          "items": {
-            "properties": {
-              "columns": {
-                "items": {
-                  "type": "string"
-                },
-                "type": "array"
-              },
-              "mapping": {
-                "additionalProperties": {
-                  "type": "string"
-                },
-                "type": "object"
-              },
-              "name": {
-                "type": "string"
-              },
-              "object": {
-                "type": "string"
-              },
-              "part": {
-                "type": "string"
-              },
-              "unmapped": {
-                "items": {
-                  "type": "string"
-                },
-                "type": "array"
-              }
-            },
-            "required": [
-              "columns",
-              "mapping",
-              "name",
-              "object",
-              "part"
-            ],
-            "type": "object"
-          },
-          "type": "array"
-        },
-        "mapping": {
-          "additionalProperties": {
-            "type": "string"
-          },
-          "type": "object"
-        },
-        "next": {
-          "type": "string"
-        },
-        "report": {
-          "properties": {
-            "disposition": {
-              "properties": {
-                "created": {
-                  "minimum": 0,
-                  "type": "integer"
-                },
-                "duplicates": {
-                  "minimum": 0,
-                  "type": "integer"
-                },
-                "skipped": {
-                  "minimum": 0,
-                  "type": "integer"
-                },
-                "unchanged": {
-                  "minimum": 0,
-                  "type": "integer"
-                },
-                "updated": {
-                  "minimum": 0,
-                  "type": "integer"
-                }
-              },
-              "required": [
-                "created",
-                "skipped",
-                "unchanged",
-                "updated"
-              ],
-              "type": "object"
-            },
-            "estimated_duration_seconds": {
-              "type": "integer"
-            },
-            "issues": {
-              "items": {
-                "properties": {
-                  "column": {
-                    "type": "string"
-                  },
-                  "file": {
-                    "type": "string"
-                  },
-                  "kind": {
-                    "type": "string"
-                  },
-                  "line": {
-                    "minimum": 1,
-                    "type": "integer"
-                  },
-                  "params": {
-                    "additionalProperties": {
-                      "type": "string"
-                    },
-                    "type": "object"
-                  },
-                  "reason": {
-                    "type": "string"
-                  },
-                  "reason_code": {
-                    "type": "string"
-                  },
-                  "value": {
-                    "type": "string"
-                  }
-                },
-                "required": [
-                  "reason"
-                ],
-                "type": "object"
-              },
-              "type": "array"
-            },
-            "links": {
-              "properties": {
-                "applied": {
-                  "minimum": 0,
-                  "type": "integer"
-                },
-                "offered": {
-                  "minimum": 0,
-                  "type": "integer"
-                },
-                "unresolved": {
-                  "items": {
-                    "properties": {
-                      "from": {
-                        "type": "string"
-                      },
-                      "params": {
-                        "additionalProperties": {
-                          "type": "string"
-                        },
-                        "type": "object"
-                      },
-                      "reason": {
-                        "type": "string"
-                      },
-                      "reason_code": {
-                        "type": "string"
-                      },
-                      "to": {
-                        "type": "string"
-                      }
-                    },
-                    "required": [
-                      "from",
-                      "reason",
-                      "to"
-                    ],
-                    "type": "object"
-                  },
-                  "type": "array"
-                }
-              },
-              "required": [
-                "applied",
-                "offered"
-              ],
-              "type": "object"
-            },
-            "mapping": {
-              "additionalProperties": {
-                "type": "string"
-              },
-              "type": "object"
-            },
-            "parts": {
-              "items": {
-                "properties": {
-                  "closed_lost": {
-                    "minimum": 1,
-                    "type": "integer"
-                  },
-                  "closed_won": {
-                    "minimum": 1,
-                    "type": "integer"
-                  },
-                  "disposition": {
-                    "properties": {
-                      "created": {
-                        "minimum": 0,
-                        "type": "integer"
-                      },
-                      "duplicates": {
-                        "minimum": 0,
-                        "type": "integer"
-                      },
-                      "skipped": {
-                        "minimum": 0,
-                        "type": "integer"
-                      },
-                      "unchanged": {
-                        "minimum": 0,
-                        "type": "integer"
-                      },
-                      "updated": {
-                        "minimum": 0,
-                        "type": "integer"
-                      }
-                    },
-                    "required": [
-                      "created",
-                      "skipped",
-                      "unchanged",
-                      "updated"
-                    ],
-                    "type": "object"
-                  },
-                  "file": {
-                    "type": "string"
-                  },
-                  "object": {
-                    "type": "string"
-                  },
-                  "rows_read": {
-                    "minimum": 0,
-                    "type": "integer"
-                  }
-                },
-                "required": [
-                  "disposition",
-                  "file",
-                  "object",
-                  "rows_read"
-                ],
-                "type": "object"
-              },
-              "type": "array"
-            },
-            "rows_read": {
-              "minimum": 0,
-              "type": "integer"
-            },
-            "run_id": {
-              "format": "uuid",
-              "type": "string"
-            },
-            "source_key_used": {
-              "type": "string"
-            },
-            "status": {
-              "type": "string"
-            },
-            "undo": {
-              "properties": {
-                "errored": {
-                  "items": {
-                    "properties": {
-                      "id": {
-                        "format": "uuid",
-                        "type": "string"
-                      },
-                      "object": {
-                        "type": "string"
-                      },
-                      "reason": {
-                        "type": "string"
-                      },
-                      "reason_code": {
-                        "type": "string"
-                      }
-                    },
-                    "required": [
-                      "id",
-                      "object",
-                      "reason"
-                    ],
-                    "type": "object"
-                  },
-                  "type": "array"
-                },
-                "kept": {
-                  "items": {
-                    "properties": {
-                      "id": {
-                        "format": "uuid",
-                        "type": "string"
-                      },
-                      "object": {
-                        "type": "string"
-                      },
-                      "params": {
-                        "additionalProperties": {
-                          "type": "string"
-                        },
-                        "type": "object"
-                      },
-                      "reason": {
-                        "type": "string"
-                      },
-                      "reason_code": {
-                        "type": "string"
-                      }
-                    },
-                    "required": [
-                      "id",
-                      "object"
-                    ],
-                    "type": "object"
-                  },
-                  "type": "array"
-                },
-                "reversed_count": {
-                  "minimum": 0,
-                  "type": "integer"
-                },
-                "run_id": {
-                  "format": "uuid",
-                  "type": "string"
-                },
-                "status": {
-                  "type": "string"
-                },
-                "updates_not_reversed": {
-                  "minimum": 0,
-                  "type": "integer"
-                }
-              },
-              "required": [
-                "errored",
-                "kept",
-                "reversed_count",
-                "run_id",
-                "status"
-              ],
-              "type": "object"
-            }
-          },
-          "required": [
-            "disposition",
-            "issues",
-            "rows_read",
-            "run_id",
-            "source_key_used",
-            "status"
-          ],
-          "type": "object"
-        },
-        "run": {
-          "properties": {
-            "checkpoint": {
-              "type": "integer"
-            },
-            "error": {
-              "type": "string"
-            },
-            "object": {
-              "type": "string"
-            },
-            "run_id": {
-              "type": "string"
-            },
-            "state": {
-              "type": "string"
-            }
-          },
-          "required": [
-            "checkpoint",
-            "object",
-            "run_id",
-            "state"
-          ],
-          "type": "object"
-        },
-        "unmapped": {
-          "items": {
-            "type": "string"
-          },
-          "type": "array"
-        }
-      },
-      "required": [
-        "run"
-      ],
-      "type": "object"
-    },
-    "evidence": {
-      "items": {
-        "properties": {
-          "captured_by": {
-            "type": "string"
-          },
-          "record_id": {
-            "format": "uuid",
-            "type": "string"
-          },
-          "record_type": {
-            "type": "string"
-          },
-          "source": {
-            "type": "string"
-          },
-          "web_url": {
-            "type": "string"
-          }
-        },
-        "required": [
-          "record_id",
-          "record_type"
-        ],
-        "type": "object"
-      },
-      "type": "array"
-    },
-    "freshness": {
-      "properties": {
-        "authoritative": {
-          "type": "boolean"
-        },
-        "last_synced_at": {
-          "format": "date-time",
-          "type": "string"
-        }
-      },
-      "required": [
-        "authoritative"
-      ],
-      "type": "object"
-    },
-    "schema_version": {
-      "type": "string"
-    },
-    "trace_id": {
-      "type": "string"
-    },
-    "trust": {
-      "type": "string"
-    },
-    "warnings": {
-      "items": {
-        "properties": {
-          "code": {
-            "type": "string"
-          },
-          "message": {
-            "type": "string"
-          }
-        },
-        "required": [
-          "code",
-          "message"
-        ],
-        "type": "object"
-      },
-      "type": "array"
-    }
-  },
-  "required": [
-    "data",
-    "evidence",
-    "freshness",
-    "schema_version",
-    "trace_id",
-    "trust",
-    "warnings"
-  ],
   "type": "object"
 }
 ```
@@ -10519,112 +8940,6 @@ change, and next_cursor to read the next page.
 
 </details>
 
-<details><summary>Output schema</summary>
-
-```json
-{
-  "properties": {
-    "data": {
-      "properties": {
-        "mode": {
-          "type": "string"
-        },
-        "result": {
-          "type": "object"
-        }
-      },
-      "required": [
-        "mode",
-        "result"
-      ],
-      "type": "object"
-    },
-    "evidence": {
-      "items": {
-        "properties": {
-          "captured_by": {
-            "type": "string"
-          },
-          "record_id": {
-            "format": "uuid",
-            "type": "string"
-          },
-          "record_type": {
-            "type": "string"
-          },
-          "source": {
-            "type": "string"
-          },
-          "web_url": {
-            "type": "string"
-          }
-        },
-        "required": [
-          "record_id",
-          "record_type"
-        ],
-        "type": "object"
-      },
-      "type": "array"
-    },
-    "freshness": {
-      "properties": {
-        "authoritative": {
-          "type": "boolean"
-        },
-        "last_synced_at": {
-          "format": "date-time",
-          "type": "string"
-        }
-      },
-      "required": [
-        "authoritative"
-      ],
-      "type": "object"
-    },
-    "schema_version": {
-      "type": "string"
-    },
-    "trace_id": {
-      "type": "string"
-    },
-    "trust": {
-      "type": "string"
-    },
-    "warnings": {
-      "items": {
-        "properties": {
-          "code": {
-            "type": "string"
-          },
-          "message": {
-            "type": "string"
-          }
-        },
-        "required": [
-          "code",
-          "message"
-        ],
-        "type": "object"
-      },
-      "type": "array"
-    }
-  },
-  "required": [
-    "data",
-    "evidence",
-    "freshness",
-    "schema_version",
-    "trace_id",
-    "trust",
-    "warnings"
-  ],
-  "type": "object"
-}
-```
-
-</details>
-
 ### read_project
 
 **Read a project or its handover**
@@ -10718,202 +9033,6 @@ is refused rather than silently overwriting a change made in between. Its `owner
   "required": [
     "record_type",
     "id"
-  ],
-  "type": "object"
-}
-```
-
-</details>
-
-<details><summary>Output schema</summary>
-
-```json
-{
-  "properties": {
-    "data": {
-      "properties": {
-        "facts": {
-          "items": {
-            "properties": {
-              "category": {
-                "type": "string"
-              },
-              "confirmed": {
-                "type": "boolean"
-              },
-              "fact_key": {
-                "type": "string"
-              },
-              "field": {
-                "type": "string"
-              },
-              "source": {
-                "type": "string"
-              },
-              "value": {
-                "type": "string"
-              }
-            },
-            "required": [
-              "category",
-              "confirmed",
-              "fact_key",
-              "field",
-              "source",
-              "value"
-            ],
-            "type": "object"
-          },
-          "type": "array"
-        },
-        "fields": {
-          "type": "object"
-        },
-        "id": {
-          "format": "uuid",
-          "type": "string"
-        },
-        "owner": {
-          "properties": {
-            "id": {
-              "format": "uuid",
-              "type": "string"
-            },
-            "is_you": {
-              "type": "boolean"
-            },
-            "name": {
-              "type": "string"
-            }
-          },
-          "required": [
-            "id",
-            "is_you"
-          ],
-          "type": "object"
-        },
-        "profile_fields": {
-          "items": {
-            "properties": {
-              "confirmed": {
-                "type": "boolean"
-              },
-              "field": {
-                "type": "string"
-              },
-              "source": {
-                "type": "string"
-              },
-              "value": {
-                "type": "string"
-              }
-            },
-            "required": [
-              "confirmed",
-              "field",
-              "source",
-              "value"
-            ],
-            "type": "object"
-          },
-          "type": "array"
-        },
-        "record_type": {
-          "type": "string"
-        },
-        "trust_tier": {
-          "type": "string"
-        },
-        "version": {
-          "type": "integer"
-        }
-      },
-      "required": [
-        "fields",
-        "id",
-        "record_type"
-      ],
-      "type": "object"
-    },
-    "evidence": {
-      "items": {
-        "properties": {
-          "captured_by": {
-            "type": "string"
-          },
-          "record_id": {
-            "format": "uuid",
-            "type": "string"
-          },
-          "record_type": {
-            "type": "string"
-          },
-          "source": {
-            "type": "string"
-          },
-          "web_url": {
-            "type": "string"
-          }
-        },
-        "required": [
-          "record_id",
-          "record_type"
-        ],
-        "type": "object"
-      },
-      "type": "array"
-    },
-    "freshness": {
-      "properties": {
-        "authoritative": {
-          "type": "boolean"
-        },
-        "last_synced_at": {
-          "format": "date-time",
-          "type": "string"
-        }
-      },
-      "required": [
-        "authoritative"
-      ],
-      "type": "object"
-    },
-    "schema_version": {
-      "type": "string"
-    },
-    "trace_id": {
-      "type": "string"
-    },
-    "trust": {
-      "type": "string"
-    },
-    "warnings": {
-      "items": {
-        "properties": {
-          "code": {
-            "type": "string"
-          },
-          "message": {
-            "type": "string"
-          }
-        },
-        "required": [
-          "code",
-          "message"
-        ],
-        "type": "object"
-      },
-      "type": "array"
-    }
-  },
-  "required": [
-    "data",
-    "evidence",
-    "freshness",
-    "schema_version",
-    "trace_id",
-    "trust",
-    "warnings"
   ],
   "type": "object"
 }
@@ -11969,100 +10088,6 @@ find_records to find or list records, and read_reports for the standard metrics 
 
 </details>
 
-<details><summary>Output schema</summary>
-
-```json
-{
-  "properties": {
-    "data": {
-      "type": "object"
-    },
-    "evidence": {
-      "items": {
-        "properties": {
-          "captured_by": {
-            "type": "string"
-          },
-          "record_id": {
-            "format": "uuid",
-            "type": "string"
-          },
-          "record_type": {
-            "type": "string"
-          },
-          "source": {
-            "type": "string"
-          },
-          "web_url": {
-            "type": "string"
-          }
-        },
-        "required": [
-          "record_id",
-          "record_type"
-        ],
-        "type": "object"
-      },
-      "type": "array"
-    },
-    "freshness": {
-      "properties": {
-        "authoritative": {
-          "type": "boolean"
-        },
-        "last_synced_at": {
-          "format": "date-time",
-          "type": "string"
-        }
-      },
-      "required": [
-        "authoritative"
-      ],
-      "type": "object"
-    },
-    "schema_version": {
-      "type": "string"
-    },
-    "trace_id": {
-      "type": "string"
-    },
-    "trust": {
-      "type": "string"
-    },
-    "warnings": {
-      "items": {
-        "properties": {
-          "code": {
-            "type": "string"
-          },
-          "message": {
-            "type": "string"
-          }
-        },
-        "required": [
-          "code",
-          "message"
-        ],
-        "type": "object"
-      },
-      "type": "array"
-    }
-  },
-  "required": [
-    "data",
-    "evidence",
-    "freshness",
-    "schema_version",
-    "trace_id",
-    "trust",
-    "warnings"
-  ],
-  "type": "object"
-}
-```
-
-</details>
-
 ### read_workspace
 
 **Read how this workspace is set up**
@@ -12088,10 +10113,8 @@ of the name topics is a prerequisite: each tool refuses an unknown name with the
 find_records to find a customer contact; colleagues are seats here. Use read_forecast with
 view=input_sources to learn whether a number can be trusted: how complete and current the data is.
 user_id is what assignee_id and owner_id take; never assign to an is_agent seat. Keep pipeline_id
-and stage_id for a deal. Take every name verbatim; a custom field is spelled cf_<slug>. (Runs
-immediately; the user's yes is needed for the actions ai_call, ai_calls, member_retirement, so tell
-them what the call will surface and get it before calling, unless they asked for this call
-themselves.)
+and stage_id for a deal. Take every name verbatim; a custom field is spelled cf_<slug>. (Ask the
+user first for the actions ai_call, ai_calls, member_retirement.)
 ```
 
 <details><summary>Input schema</summary>
@@ -12596,9 +10619,8 @@ merge a contact case read through read_view in one step; preview true answers wh
 writes nothing. A merge archives the source and redirects it to the target; it cannot be reversed by
 merging the other way round, and by default nothing holds it. A merged pair cannot be reopened. Use
 archive_record when the extra record has nothing worth keeping. target_id is the record that
-survives and source_id the one merged away — read both records before choosing. (Runs immediately;
-the user's yes is needed for the action merge, so tell them what the call will change and get it
-before calling, unless they asked for this call themselves; requires passport scope "write".)
+survives and source_id the one merged away — read both records before choosing. (Ask the user
+first for the action merge.)
 ```
 
 <details><summary>Input schema</summary>
@@ -12630,7 +10652,6 @@ before calling, unless they asked for this call themselves; requires passport sc
       "type": "string"
     },
     "idempotency_key": {
-      "description": "A retry without it may repeat the write. Same key, same result; a key reused with other arguments is refused.",
       "maxLength": 255,
       "type": "string"
     },
@@ -12701,10 +10722,8 @@ panel first through read_details; run this only when it is out of date. Ask the 
 buying a contact's details, and before rebuilding the search index for the whole workspace. Buying
 needs a daily limit and a healthy connection, skips a contact already looked up, and buys a priced
 detail only when you name its category. Use read_details to read a panel, and enrich to fill a
-company's fields from its website. (Runs immediately; the user's yes is needed for the actions
-enrich_contact_from_provider, start_backfill, start_search_reindex, so tell them what the call will
-change and get it before calling, unless they asked for this call themselves; requires passport
-scope "enrich".)
+company's fields from its website. (Ask the user first for the actions enrich_contact_from_provider,
+start_backfill, start_search_reindex; requires passport scope "enrich".)
 ```
 
 <details><summary>Input schema</summary>
@@ -12763,7 +10782,6 @@ scope "enrich".)
       "type": "string"
     },
     "idempotency_key": {
-      "description": "A retry without it may repeat the write. Same key, same result; a key reused with other arguments is refused.",
       "maxLength": 255,
       "type": "string"
     },
@@ -12844,7 +10862,6 @@ passport scope "send".)
       "type": "string"
     },
     "idempotency_key": {
-      "description": "A retry without it may repeat the write. Same key, same result; a key reused with other arguments is refused.",
       "maxLength": 255,
       "type": "string"
     },
@@ -12943,14 +10960,12 @@ approval instead. chat_reply cannot start a conversation or choose a channel. Us
 first when the message does not exist yet, and change_activities with action=log to record that
 something was said rather than say it. Send the subject, body and activity_id or links the draft
 produced, and keep the staged approval id: the approval binds that exact message, so changed text
-needs a new one. email_new answers with the new conversation's activity_id. (Runs immediately; the
-user's yes is needed for the actions add_room_document, answer_invitation, change_invitation,
-chat_reply, deal_room_invite, deal_room_resend, details_confirmation, double_opt_in, email_new,
-email_reply, invite_member, link_channel, meeting_proposal, my_signature, open_room_thread,
-privacy_notice, remove_room_document, reply_room_thread, resend_member_invite, resume_room,
-set_room_expiry, signature_template, update_room, update_room_document, so tell them what the call
-will change and get it before calling, unless they asked for this call themselves; requires passport
-scope "send".)
+needs a new one. email_new answers with the new conversation's activity_id. (Ask the user first for
+the actions add_room_document, answer_invitation, change_invitation, chat_reply, deal_room_invite,
+deal_room_resend, details_confirmation, double_opt_in, email_new, email_reply, invite_member,
+link_channel, meeting_proposal, my_signature, open_room_thread, privacy_notice,
+remove_room_document, reply_room_thread, resend_member_invite, resume_room, set_room_expiry,
+signature_template, update_room, update_room_document; requires passport scope "send".)
 ```
 
 <details><summary>Input schema</summary>
@@ -13058,7 +11073,6 @@ scope "send".)
       "type": "string"
     },
     "idempotency_key": {
-      "description": "A retry without it may repeat the write. Same key, same result; a key reused with other arguments is refused.",
       "maxLength": 255,
       "type": "string"
     },
@@ -13170,7 +11184,7 @@ says the meeting took place. Use change_state with action=move_deal to move a de
 change_activities with action=relink to change what an activity is about, and change_compliance when
 a contact gave consent or asked to stop; none is a field edit. Send if_version with the version you
 read. If the call comes back staged, keep its approval id to retry the same change once a human has
-released it. (Runs immediately; requires passport scope "write".)
+released it.
 ```
 
 Renders its result in [`ui://margince/update.html`](#update_view), visible to `model`, `app`.
@@ -13195,7 +11209,6 @@ Renders its result in [`ui://margince/update.html`](#update_view), visible to `m
       "type": "string"
     },
     "idempotency_key": {
-      "description": "A retry without it may repeat the write. Same key, same result; a key reused with other arguments is refused.",
       "maxLength": 255,
       "type": "string"
     },
@@ -13435,127 +11448,6 @@ answered, where locale is absent until this contact chooses one.
 {
   "additionalProperties": false,
   "properties": {},
-  "type": "object"
-}
-```
-
-</details>
-
-<details><summary>Output schema</summary>
-
-```json
-{
-  "properties": {
-    "data": {
-      "properties": {
-        "acting_user_id": {
-          "format": "uuid",
-          "type": "string"
-        },
-        "display_name": {
-          "type": "string"
-        },
-        "email": {
-          "type": "string"
-        },
-        "locale": {
-          "type": "string"
-        },
-        "prose_language": {
-          "type": "string"
-        },
-        "timezone": {
-          "type": "string"
-        }
-      },
-      "required": [
-        "acting_user_id",
-        "display_name",
-        "email",
-        "prose_language"
-      ],
-      "type": "object"
-    },
-    "evidence": {
-      "items": {
-        "properties": {
-          "captured_by": {
-            "type": "string"
-          },
-          "record_id": {
-            "format": "uuid",
-            "type": "string"
-          },
-          "record_type": {
-            "type": "string"
-          },
-          "source": {
-            "type": "string"
-          },
-          "web_url": {
-            "type": "string"
-          }
-        },
-        "required": [
-          "record_id",
-          "record_type"
-        ],
-        "type": "object"
-      },
-      "type": "array"
-    },
-    "freshness": {
-      "properties": {
-        "authoritative": {
-          "type": "boolean"
-        },
-        "last_synced_at": {
-          "format": "date-time",
-          "type": "string"
-        }
-      },
-      "required": [
-        "authoritative"
-      ],
-      "type": "object"
-    },
-    "schema_version": {
-      "type": "string"
-    },
-    "trace_id": {
-      "type": "string"
-    },
-    "trust": {
-      "type": "string"
-    },
-    "warnings": {
-      "items": {
-        "properties": {
-          "code": {
-            "type": "string"
-          },
-          "message": {
-            "type": "string"
-          }
-        },
-        "required": [
-          "code",
-          "message"
-        ],
-        "type": "object"
-      },
-      "type": "array"
-    }
-  },
-  "required": [
-    "data",
-    "evidence",
-    "freshness",
-    "schema_version",
-    "trace_id",
-    "trust",
-    "warnings"
-  ],
   "type": "object"
 }
 ```
