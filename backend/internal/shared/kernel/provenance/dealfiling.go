@@ -32,6 +32,16 @@ func HumanDealFilingSQL(activity string) string {
 	   AND marked.entity_type = 'deal' AND marked.relevance_source = '` + relstrength.RelevanceByHuman + `'))`
 }
 
+// HumanChoseDealSQL is the test that a human or an agent chose deal for
+// activity. Their latest decision about that deal files the activity there, or
+// a colleague marked the link. Both arguments are compile-time SQL expressions.
+func HumanChoseDealSQL(activity, deal string) string {
+	return `(` + humanFilingSQL(activity, `'deal'`, deal) + ` AND h.after->>'entity_id' = (` + deal + `)::text
+	   AND NOT ` + DeclineRowSQL("h") + latestDealDecisionSQL(activity) + `)
+	 OR EXISTS (SELECT 1 FROM activity_link marked WHERE marked.activity_id = ` + activity + `
+	   AND marked.entity_type = 'deal' AND marked.deal_id = ` + deal + ` AND marked.relevance_source = '` + relstrength.RelevanceByHuman + `'))`
+}
+
 // DealDeclinedSQL is the test that the latest human or agent decision about
 // activity and deal is "not about this deal". No automatic pass files the
 // activity on that deal while it holds; a colleague's relink lifts it. Both

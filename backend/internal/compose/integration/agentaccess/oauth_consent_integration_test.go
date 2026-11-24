@@ -220,19 +220,27 @@ func (o *oauthEnv) mcpTools(t *testing.T, bearer string) []map[string]any {
 	return tools
 }
 
-// toolRequiresScope reads a tool's required scope off the description that
-// tools/list serves, which is the text a client reads. A
-// description naming no scope is a read tool's: read is the default it omits.
+// toolRequiresScope reads a tool's required scope the way a client does: off
+// the description when it names one. Otherwise it is the default the server
+// instructions state: read for a tool that only reads, write for the rest.
 func toolRequiresScope(t *testing.T, tool map[string]any, scope string) bool {
 	t.Helper()
 	description, _ := tool["description"].(string)
 	if description == "" {
 		t.Fatalf("tool %v carries no description to read its required scope from", tool)
 	}
-	if scope == "read" && !strings.Contains(description, "requires passport scope") {
-		return true
+	if strings.Contains(description, "passport scope") {
+		return strings.Contains(description, fmt.Sprintf("passport scope %q", scope))
 	}
-	return strings.Contains(description, fmt.Sprintf("requires passport scope %q", scope))
+	annotations, _ := tool["annotations"].(map[string]any)
+	readOnly, stated := annotations["readOnlyHint"].(bool)
+	if !stated {
+		t.Fatalf("tool %v states no readOnlyHint, so its default scope cannot be read", tool)
+	}
+	if readOnly {
+		return scope == "read"
+	}
+	return scope == "write"
 }
 
 // TestAHumanWithNoPassportCanConnectAClient is the case that has never

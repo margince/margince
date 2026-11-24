@@ -16,6 +16,8 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/margince/margince/backend/internal/compose/adminadmit"
+	"github.com/margince/margince/backend/internal/compose/footerhealth"
+	"github.com/margince/margince/backend/internal/compose/healthrank"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database"
@@ -125,7 +127,7 @@ func composeHealth(ctx context.Context, reads []healthRead, now func() time.Time
 	if !out.Complete && out.Assessment != crmcontracts.SystemHealthAssessmentAttention {
 		out.Assessment = crmcontracts.SystemHealthAssessmentIncomplete
 	}
-	sort.SliceStable(out.Findings, func(i, j int) bool { return healthFindingLess(out.Findings[i], out.Findings[j]) })
+	sort.SliceStable(out.Findings, func(i, j int) bool { return healthrank.FindingLess(out.Findings[i], out.Findings[j]) })
 	return out
 }
 
@@ -140,8 +142,8 @@ func gradeHealthRead(ctx context.Context, result healthReadResult) (crmcontracts
 		return source, []crmcontracts.HealthFinding{finding}
 	}
 	for _, finding := range result.findings {
-		priority := healthConditionPriority(crmcontracts.HealthSourceCondition(finding.Condition))
-		current := healthConditionPriority(source.Condition)
+		priority := healthrank.ConditionPriority(crmcontracts.HealthSourceCondition(finding.Condition))
+		current := healthrank.ConditionPriority(source.Condition)
 		if priority < current || (priority == current && finding.Code < source.Code) {
 			source.Condition = crmcontracts.HealthSourceCondition(finding.Condition)
 			source.Code = finding.Code
@@ -195,60 +197,8 @@ func (s Server) healthReads() []healthRead {
 		{"updates", healthDataTasks, s.updatesSummary},
 		{"providers", "ai_diagnostics", s.providersSummary},
 		{healthUnplacedID, "ai_diagnostics", s.unplacedSummary},
+		{footerhealth.SourceID, footerhealth.Object, s.footerSummary},
 	}
-}
-
-func healthConditionPriority(condition crmcontracts.HealthSourceCondition) int {
-	switch condition {
-	case healthTechnical:
-		return 0
-	case healthUnverified:
-		return 1
-	case healthWaitingHuman:
-		return 2
-	case healthRetrying:
-		return 3
-	case healthUnknown:
-		return 4
-	case healthProcessing:
-		return 5
-	default:
-		return 6
-	}
-}
-
-func healthFindingLess(a, b crmcontracts.HealthFinding) bool {
-	if a.Urgency != b.Urgency {
-		return a.Urgency < b.Urgency
-	}
-	if a.Source != b.Source {
-		return a.Source < b.Source
-	}
-	if a.Scope != b.Scope {
-		return a.Scope < b.Scope
-	}
-	unit := func(f crmcontracts.HealthFinding) string {
-		if f.Unit == nil {
-			return ""
-		}
-		return string(*f.Unit)
-	}
-	if unit(a) != unit(b) {
-		return unit(a) < unit(b)
-	}
-	if (a.Count == nil) != (b.Count == nil) {
-		return a.Count != nil
-	}
-	if a.Count != nil && b.Count != nil && *a.Count != *b.Count {
-		return *a.Count > *b.Count
-	}
-	if a.FirstObservedAt != nil && b.FirstObservedAt != nil && !a.FirstObservedAt.Equal(*b.FirstObservedAt) {
-		return a.FirstObservedAt.Before(*b.FirstObservedAt)
-	}
-	if (a.FirstObservedAt == nil) != (b.FirstObservedAt == nil) {
-		return a.FirstObservedAt != nil
-	}
-	return a.Id < b.Id
 }
 
 type healthReadResult struct {

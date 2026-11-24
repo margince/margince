@@ -329,7 +329,7 @@ Available tools:
 	return b.String()
 }
 
-// surfaceSchemaRules states, ONCE, what CompactSchema stops printing per tool.
+// surfaceSchemaRules states what no listed schema says per tool.
 //
 // Every sentence here is true of the whole surface, which is the test for
 // belonging in this block: the retry key has one definition spliced into every
@@ -338,32 +338,17 @@ Available tools:
 // own description, where it is paid for once by the tool that needs it.
 //
 // The retry-key line is keyed on what the LISTING shows, not on what the tool
-// is. "Any mutating tool accepts one" would be false for an extension unit's
-// mutating tool, which is refused the argument outright (refuseUnkeyableCall) —
-// and before this change the sentence only ever appeared beside a tool that
-// carried the member, so no run could read a claim about a tool that refuses it.
-// A frame sentence has no such context, so it has to be true of the whole
-// surface on its own terms.
+// is. An extension unit's mutating tool is refused the argument outright
+// (refuseUnkeyableCall), so "any mutating tool accepts one" would be false.
 //
 // It is paid once per run against what the compaction saves on every listing.
-// No figure is written here: both numbers are derived and published as
-// system_frame_tokens and catalog.tokens in docs/reference/agent-tool-budget.json,
-// and a hand-typed count in a change whose subject IS token counts is the first
-// thing to go stale.
-//
-// The retry key's meaning comes from mcp.ReservedIdempotencyKeyRule, which the
-// member's own schema description also reads. Two copies of one rule drift with
-// nothing failing, and every check on it matches the text.
+// Both numbers are published as system_frame_tokens and catalog.tokens in
+// docs/reference/agent-tool-budget.json.
 //
 // COMPLETE BULLET LINES, leading dash included, so the constant reads alone and
 // a new sentence needs punctuation in one place rather than two.
-//
-// One line per omission, and no more: the schema-equivalence gate asserts the
-// other direction too — the frame states nothing about a member the compaction
-// leaves in place.
 const surfaceSchemaRules = "- An argument no tool declares is refused by name, never stored or ignored: send only the members its input schema lists.\n" +
-	"- A tool that LISTS `" + mcp.ReservedIdempotencyKeyArg + "` takes it as a string you choose, and a retry without it may repeat the write. " +
-	mcp.ReservedIdempotencyKeyRule + "\n"
+	"- " + mcp.ReservedIdempotencyKeyRule + "\n"
 
 // SystemFrameTokens is what the system prompt costs BEFORE any tool is listed:
 // the output contract, the rules — surfaceSchemaRules included — and the prompt

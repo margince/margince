@@ -25,7 +25,7 @@ func TestACallRecordsTheExtensionItWasMadeFor(t *testing.T) {
 	calls := []Call{
 		{
 			LogicalCallID: extensionCall, Attempt: 1, IsTerminal: true, Kind: callKindCompletion,
-			Task: TaskExtensionTask, Tier: TierCheapCloud, Extension: "books/summarise",
+			Task: Task("ext_books_summarise"), Tier: TierCheapCloud, Extension: "books",
 		},
 		{
 			LogicalCallID: coreCall, Attempt: 1, IsTerminal: true, Kind: callKindCompletion,
@@ -38,7 +38,7 @@ func TestACallRecordsTheExtensionItWasMadeFor(t *testing.T) {
 		}
 	}
 
-	for logical, want := range map[ids.UUID]string{extensionCall: "books/summarise", coreCall: ""} {
+	for logical, want := range map[ids.UUID]string{extensionCall: "books", coreCall: ""} {
 		var got string
 		err := db.Pool().QueryRow(ctx, `SELECT extension FROM ai_call WHERE logical_call_id = $1`, logical).Scan(&got)
 		if err != nil {

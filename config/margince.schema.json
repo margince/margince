@@ -491,7 +491,7 @@
       ]
     },
     "blobstore_bucket": {
-      "description": "Bucket attachments are written to.",
+      "description": "Bucket attachments are written to. Its credentials need `s3:PutObject`, `s3:GetObject`, `s3:DeleteObject` and `s3:ListBucket`. Erasure also needs `s3:ListBucketVersions` and `s3:DeleteObjectVersion`, so no version of a deleted object stays behind.",
       "type": [
         "string",
         "null"

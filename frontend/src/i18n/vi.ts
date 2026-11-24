@@ -3358,6 +3358,16 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "rel.add": "Thêm quan hệ",
   "rel.seatOnDeal": "Thêm vào deal",
   "rel.addStakeholder": "Thêm bên liên quan",
+  "rel.stakeholderOffer.title": "Thêm các liên hệ trong thư này vào giao dịch?",
+  "rel.stakeholderOffer.body":
+    "Khi là bên liên quan, thư tiếp theo của họ sẽ tự vào giao dịch. Bỏ chọn liên hệ không thuộc giao dịch.",
+  "rel.stakeholderOffer.legend": "Liên hệ trong thư này",
+  "rel.stakeholderOffer.confirm": "Thêm vào giao dịch",
+  "rel.stakeholderOffer.decline": "Để sau",
+  "rel.stakeholderOffer.noneTicked": "Chọn ít nhất một liên hệ để thêm.",
+  "rel.stakeholderOffer.added": "Đã thêm vào giao dịch",
+  "rel.stakeholderOffer.unread":
+    "Thư đã ở trong giao dịch. Margince không đọc được những ai có trong thư, nên không đề xuất ai để thêm.",
   "rel.dealStakeholders": "Bên liên quan",
   "rel.dealStakeholdersEmpty": "Deal này chưa có bên liên quan nào",
   "rel.employerUnavailable":
@@ -10929,8 +10939,6 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "settings.resetDataConfirmName": "Nhập tên công ty này:",
   "settings.resetDataResult":
     "Đã xóa: bảng {tables}, dòng tác vụ {jobs}, luồng sự kiện {streams}, khóa bộ nhớ đệm {keys}, tệp đã lưu {objects}.",
-  "settings.resetDataDrainWarning":
-    "Một tác vụ nền đang chạy khi bắt đầu đặt lại. Tác vụ này sẽ bị lỗi do dữ liệu đã bị xóa và ghi một lỗi vô hại vào nhật ký.",
 
   "settings.jobs": "Tác vụ nền",
   "settings.jobsSub":
@@ -15254,6 +15262,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "captureActivity.filing.core.retracted":
     "CRM đã rút lại liên kết giao dịch: {reason}",
   "captureActivity.filing.basis.project": "dự án của thư",
+  "captureActivity.filing.basis.chosen_thread":
+    "giao dịch mà đồng nghiệp đã chọn cho một thư trước đó trong chuỗi",
   "captureActivity.filing.basis.thread": "một thư trước đó trong chuỗi",
   "captureActivity.filing.basis.sole_open_deal":
     "giao dịch mở duy nhất của công ty",
@@ -23283,7 +23293,6 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "aiTask.name.document_extract": "Trích xuất tài liệu",
   "aiTask.name.draft_reply": "Soạn bản nháp trả lời",
   "aiTask.name.enrich": "Bổ sung thông tin từ chữ ký",
-  "aiTask.name.extension_task": "Tác vụ AI của tiện ích mở rộng",
   "aiTask.name.growth_fit": "Đánh giá mức độ phù hợp của công ty",
   "aiTask.name.nl_search": "Tìm kiếm bằng ngôn ngữ tự nhiên",
   "aiTask.name.offer_draft": "Soạn bản nháp báo giá",
@@ -23877,6 +23886,33 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "health.openModels": "Mở Mô hình",
   "health.openConnections": "Mở Kết nối",
   "health.openRegional": "Mở Khu vực và lịch",
+  "health.source.footer": "Thông tin công ty ở chân thư",
+  "health.code.footer_complete":
+    "Mọi chân thư đều có đủ thông tin công ty cần hiển thị",
+  "health.code.footer_incomplete": "Chân thư thiếu thông tin công ty",
+  "health.footerIncompleteFor": "{entity}: chân thư thiếu thông tin công ty",
+  "health.footerDefaultEntity": "Pháp nhân mặc định",
+  "health.effect.footer":
+    "Thư phải hiển thị các thông tin này sẽ bị giữ lại để xem xét. Tác giả thư vẫn có thể gửi kèm lý do. Thư gửi chạy nền, ví dụ lời nhắc cuộc họp, sẽ bị bỏ.",
+  "health.footerNext":
+    "Điền các thông tin còn thiếu. Cảnh báo sẽ biến mất khi đã đủ.",
+  "health.recovery.footer":
+    "Mọi thông tin công ty mà các gói quy định yêu cầu đều đã được điền.",
+  "health.footerMissing": "Thông tin còn thiếu",
+  "health.footerHeldByUser":
+    "Thư do thành viên gửi bị giữ lại từ lần thay đổi gần nhất",
+  "health.footerHeldInBackground":
+    "Thư chạy nền bị giữ lại hoặc bị bỏ từ lần thay đổi gần nhất",
+  "health.footerDetail.controller_identity": "Tên pháp lý và địa chỉ bưu chính",
+  "health.footerDetail.privacy_contact": "Liên hệ về quyền riêng tư",
+  "health.footerDetail.objection_route": "Cách từ chối",
+  "health.footerDetail.advertiser_contact": "Liên hệ của bên quảng cáo",
+  "health.footerDetail.entity_name": "Tên công ty",
+  "health.measure.messages_one": "{count} thư",
+  "health.measure.messages_other": "{count} thư",
+  "health.openLegalEntities": "Mở Pháp nhân",
+  "health.openCompanyProfile": "Mở Hồ sơ công ty",
+  "health.openDisclosures": "Mở Khu vực pháp lý",
   "health.unit.runs": "lần chạy",
   "health.history": "Lịch sử lỗi còn lưu",
   "health.historyWindow":

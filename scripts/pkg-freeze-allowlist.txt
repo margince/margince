@@ -15,11 +15,18 @@
 # so the gate only warns about it; remove it with the next edit here.
 # Package removals are never allowlistable (deprecate-then-major cycle,
 # ADR-0120 §3).
-github.com/margince/margince/backend/pkg/extension: Runtime.AI: added # Runtime is implemented only by the core and by unit test fakes, so only fakes must add one method; ratified in #8293
-github.com/margince/margince/backend/pkg/extension: Runtime.Models: added # an extension unit calls the core's AI models; only the core implements Runtime, so no outside code breaks (#11447)
-github.com/margince/margince/backend/pkg/extension: Runtime.Objects: added # an extension unit reads and writes the core's file store; only the core implements Runtime, so no outside code breaks (#11447)
-github.com/margince/margince/backend/pkg/extension: Runtime.Companies: added # a background job reads companies visible to the workspace; only the core implements Runtime, so no outside code breaks (#11449)
-github.com/margince/margince/backend/pkg/extension: Runtime.MailContent: added # a background job reads one mail's subject and body; only the core implements Runtime, so no outside code breaks (#11449)
-github.com/margince/margince/backend/pkg/extension: Directory.ByRole: added # a job finds members by role key; only the core implements Directory, so no outside code breaks (#11449)
+github.com/margince/margince/backend/pkg/extension: AI: removed # Runtime.AI was never in a release tag and no unit calls it; Runtime.Models is the one AI port, ratified in #13234
+github.com/margince/margince/backend/pkg/extension: AIDocument: removed # Runtime.AI was never in a release tag and no unit calls it; Runtime.Models is the one AI port, ratified in #13234
+github.com/margince/margince/backend/pkg/extension: AIInput: removed # Runtime.AI was never in a release tag and no unit calls it; Runtime.Models is the one AI port, ratified in #13234
+github.com/margince/margince/backend/pkg/extension: AIResult: removed # Runtime.AI was never in a release tag and no unit calls it; Runtime.Models is the one AI port, ratified in #13234
+github.com/margince/margince/backend/pkg/extension: AITask: removed # Runtime.AI was never in a release tag and no unit calls it; Runtime.Models is the one AI port, ratified in #13234
+github.com/margince/margince/backend/pkg/extension: AITaskName: removed # Runtime.AI was never in a release tag and no unit calls it; Runtime.Models is the one AI port, ratified in #13234
+github.com/margince/margince/backend/pkg/extension: ErrAIDocumentType: removed # Runtime.AI was never in a release tag and no unit calls it; Runtime.Models is the one AI port, ratified in #13234
+github.com/margince/margince/backend/pkg/extension: ErrAIScannedDocument: removed # Runtime.AI was never in a release tag and no unit calls it; Runtime.Models is the one AI port, ratified in #13234
+github.com/margince/margince/backend/pkg/extension: ErrAITaskUndeclared: removed # Runtime.AI was never in a release tag and no unit calls it; Runtime.Models is the one AI port, ratified in #13234
+github.com/margince/margince/backend/pkg/extension: ErrAIUnavailable: removed # Runtime.AI was never in a release tag and no unit calls it; Runtime.Models is the one AI port, ratified in #13234
+github.com/margince/margince/backend/pkg/extension: Extension.AITasks: removed # Runtime.AI was never in a release tag and no unit calls it; Runtime.Models is the one AI port, ratified in #13234
+github.com/margince/margince/backend/pkg/extension: MaxAIPromptBytes: removed # Runtime.AI was never in a release tag and no unit calls it; Runtime.Models is the one AI port, ratified in #13234
+github.com/margince/margince/backend/pkg/extension: Runtime.AI: removed # Runtime.AI was never in a release tag and no unit calls it; Runtime.Models is the one AI port, ratified in #13234
 github.com/margince/margince/backend/pkg/extension: Activities.Attachments: added # a background job lists the files of one mail; only the core implements Activities, so no outside code breaks (#8294)
 github.com/margince/margince/backend/pkg/extension: Activities.OpenAttachment: added # a background job reads one mail file's bytes; only the core implements Activities, so no outside code breaks (#8294)
