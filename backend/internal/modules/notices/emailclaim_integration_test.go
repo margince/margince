@@ -18,6 +18,7 @@ import (
 	"context"
 	"errors"
 	"testing"
+	"time"
 
 	"github.com/jackc/pgx/v5"
 
@@ -152,5 +153,41 @@ func TestARetractedNoticeIsNotMailed(t *testing.T) {
 	}
 	if _, claimed, err := e.store.ClaimEmailAttempt(e.engineCtx(), id); err != nil || claimed {
 		t.Fatalf("claiming a retracted notice's mail → claimed=%v, err=%v; want nothing claimed", claimed, err)
+	}
+}
+
+// A burst claims the recipient's other live approval mails and leaves a
+// retracted one unclaimed.
+func TestABurstLeavesARetractedApprovalUnclaimed(t *testing.T) {
+	e := setupNotices(t)
+	keys := []string{ApprovalNoticeKey(ids.NewV7()), ApprovalNoticeKey(ids.NewV7()), ApprovalNoticeKey(ids.NewV7())}
+	notices := make([]ids.UUID, len(keys))
+	for i, key := range keys {
+		id, err := e.store.Create(e.engineCtx(), NewNotice{Recipient: e.recipient, Kind: KindApprovalPending, Subject: "Approve " + key, DedupeKey: key})
+		if err != nil {
+			t.Fatalf("recording the notice: %v", err)
+		}
+		notices[i] = id
+	}
+	if err := e.store.db.Tx(e.engineCtx(), func(tx pgx.Tx) error {
+		_, err := e.store.Retract(e.engineCtx(), tx, keys[2])
+		return err
+	}); err != nil {
+		t.Fatalf("taking one approval back: %v", err)
+	}
+	first, claimed, err := e.store.ClaimEmailAttempt(e.engineCtx(), notices[0])
+	if err != nil || !claimed {
+		t.Fatalf("claiming the first mail → claimed=%v, err=%v", claimed, err)
+	}
+	burst, err := e.store.ClaimApprovalBurst(e.engineCtx(), first, time.Hour)
+	if err != nil {
+		t.Fatalf("claiming the burst: %v", err)
+	}
+	if len(burst) != 1 || burst[0].Notice.ID != notices[1] {
+		t.Fatalf("the burst claimed %+v, want only the live approval", burst)
+	}
+	var attempted *time.Time
+	if err := e.owner.QueryRow(context.Background(), `SELECT email_attempted_at FROM notice WHERE id = $1`, notices[2]).Scan(&attempted); err != nil || attempted != nil {
+		t.Fatalf("the retracted approval's mail was claimed: %v %v", attempted, err)
 	}
 }
