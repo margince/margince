@@ -106,24 +106,21 @@
         "name": "claude-sonnet-5-5",
         "trust": "⚪ Not enough tested yet",
         "cases_with_a_committed_run": 20,
-        "cases_that_reached_their_bar": 15,
-        "cases_below_their_bar": 5,
+        "cases_that_reached_their_bar": 18,
+        "cases_below_their_bar": 2,
         "runs": 42,
-        "passed": 32,
-        "reliability": 0.7619047619047619,
+        "passed": 38,
+        "reliability": 0.9047619047619048,
         "cases_below_their_bar_named": [
-          "case10_finish_the_import",
           "case20_put_it_in_the_board_pack",
-          "case5_before_the_meeting",
-          "case64_catch_me_up_and_the_brief",
-          "case6_ask_the_company"
+          "case64_catch_me_up_and_the_brief"
         ],
         "route": "Claude Code CLI",
         "self_judged": true,
-        "calls_per_case": "13.25 over 20",
+        "calls_per_case": "14 over 20",
         "slow_cases": [],
-        "median_calls_per_case": "13.25",
-        "median_turns_per_case": "14.25"
+        "median_calls_per_case": "14",
+        "median_turns_per_case": "15"
       }
     ],
     "cases": [
@@ -154,17 +151,16 @@
             "efficiency": {
               "runs": 2,
               "calls": {
-                "median": 25.5,
-                "min": 24,
-                "max": 27
+                "median": 25,
+                "min": 25,
+                "max": 25
               },
               "turns": {
-                "median": 26.5,
-                "min": 25,
-                "max": 28
+                "median": 26,
+                "min": 26,
+                "max": 26
               }
-            },
-            "regraded": true
+            }
           }
         ]
       },
@@ -182,25 +178,26 @@
           {
             "model": "claude-sonnet-5-5@claude-cli",
             "runs": 3,
-            "passed": 1,
+            "passed": 3,
             "pass_at": 2,
-            "held": false,
+            "held": true,
             "driver": "claude:cli",
             "search": "semantic",
             "self_judged": true,
             "efficiency": {
               "runs": 3,
               "calls": {
-                "median": 14,
-                "min": 14,
-                "max": 17
-              },
-              "turns": {
                 "median": 15,
                 "min": 15,
-                "max": 18
+                "max": 15
+              },
+              "turns": {
+                "median": 16,
+                "min": 16,
+                "max": 16
               }
-            }
+            },
+            "regraded": true
           }
         ]
       },
@@ -237,8 +234,7 @@
                 "min": 7,
                 "max": 8
               }
-            },
-            "regraded": true
+            }
           }
         ]
       },
@@ -266,13 +262,13 @@
               "runs": 2,
               "calls": {
                 "median": 9.5,
-                "min": 9,
-                "max": 10
+                "min": 8,
+                "max": 11
               },
               "turns": {
                 "median": 10.5,
-                "min": 10,
-                "max": 11
+                "min": 9,
+                "max": 12
               }
             }
           }
@@ -303,17 +299,16 @@
             "efficiency": {
               "runs": 2,
               "calls": {
-                "median": 11.5,
-                "min": 11,
-                "max": 12
+                "median": 9.5,
+                "min": 9,
+                "max": 10
               },
               "turns": {
-                "median": 12.5,
-                "min": 12,
-                "max": 13
+                "median": 10.5,
+                "min": 10,
+                "max": 11
               }
-            },
-            "regraded": true
+            }
           }
         ]
       },
@@ -340,17 +335,16 @@
             "efficiency": {
               "runs": 2,
               "calls": {
-                "median": 20.5,
+                "median": 19.5,
                 "min": 19,
-                "max": 22
+                "max": 20
               },
               "turns": {
-                "median": 21.5,
+                "median": 20.5,
                 "min": 20,
-                "max": 23
+                "max": 21
               }
-            },
-            "regraded": true
+            }
           }
         ]
       },
@@ -377,17 +371,16 @@
             "efficiency": {
               "runs": 2,
               "calls": {
-                "median": 10.5,
+                "median": 9.5,
                 "min": 9,
-                "max": 12
+                "max": 10
               },
               "turns": {
-                "median": 11.5,
+                "median": 10.5,
                 "min": 10,
-                "max": 13
+                "max": 11
               }
-            },
-            "regraded": true
+            }
           }
         ]
       },
@@ -415,14 +408,14 @@
             "efficiency": {
               "runs": 2,
               "calls": {
-                "median": 22,
-                "min": 21,
-                "max": 23
+                "median": 26,
+                "min": 24,
+                "max": 28
               },
               "turns": {
-                "median": 23,
-                "min": 22,
-                "max": 24
+                "median": 27,
+                "min": 25,
+                "max": 29
               }
             }
           }
@@ -451,17 +444,16 @@
             "efficiency": {
               "runs": 2,
               "calls": {
-                "median": 18,
-                "min": 18,
-                "max": 18
+                "median": 17.5,
+                "min": 16,
+                "max": 19
               },
               "turns": {
-                "median": 19,
-                "min": 19,
-                "max": 19
+                "median": 18.5,
+                "min": 17,
+                "max": 20
               }
-            },
-            "regraded": true
+            }
           }
         ]
       },
@@ -490,17 +482,16 @@
             "efficiency": {
               "runs": 2,
               "calls": {
-                "median": 14.5,
+                "median": 14,
                 "min": 14,
-                "max": 15
+                "max": 14
               },
               "turns": {
-                "median": 15.5,
+                "median": 15,
                 "min": 15,
-                "max": 16
+                "max": 15
               }
-            },
-            "regraded": true
+            }
           }
         ]
       },
@@ -520,26 +511,25 @@
           {
             "model": "claude-sonnet-5-5@claude-cli",
             "runs": 2,
-            "passed": 0,
+            "passed": 2,
             "pass_at": 2,
-            "held": false,
+            "held": true,
             "driver": "claude:cli",
             "search": "semantic",
             "self_judged": true,
             "efficiency": {
               "runs": 2,
               "calls": {
-                "median": 12.5,
-                "min": 12,
-                "max": 13
+                "median": 14,
+                "min": 14,
+                "max": 14
               },
               "turns": {
-                "median": 13.5,
-                "min": 13,
-                "max": 14
+                "median": 15,
+                "min": 15,
+                "max": 15
               }
-            },
-            "regraded": true
+            }
           }
         ]
       },
@@ -565,17 +555,16 @@
             "efficiency": {
               "runs": 2,
               "calls": {
-                "median": 14.5,
-                "min": 13,
-                "max": 16
+                "median": 17,
+                "min": 16,
+                "max": 18
               },
               "turns": {
-                "median": 15.5,
-                "min": 14,
-                "max": 17
+                "median": 18,
+                "min": 17,
+                "max": 19
               }
-            },
-            "regraded": true
+            }
           }
         ]
       },
@@ -594,26 +583,25 @@
           {
             "model": "claude-sonnet-5-5@claude-cli",
             "runs": 2,
-            "passed": 0,
+            "passed": 2,
             "pass_at": 2,
-            "held": false,
+            "held": true,
             "driver": "claude:cli",
             "search": "semantic",
             "self_judged": true,
             "efficiency": {
               "runs": 2,
               "calls": {
-                "median": 24.5,
-                "min": 22,
-                "max": 27
+                "median": 14.5,
+                "min": 14,
+                "max": 15
               },
               "turns": {
-                "median": 25.5,
-                "min": 23,
-                "max": 28
+                "median": 15.5,
+                "min": 15,
+                "max": 16
               }
-            },
-            "regraded": true
+            }
           }
         ]
       },
@@ -639,17 +627,16 @@
             "efficiency": {
               "runs": 2,
               "calls": {
-                "median": 7.5,
-                "min": 7,
-                "max": 8
+                "median": 15.5,
+                "min": 14,
+                "max": 17
               },
               "turns": {
-                "median": 8.5,
-                "min": 8,
-                "max": 9
+                "median": 16.5,
+                "min": 15,
+                "max": 18
               }
-            },
-            "regraded": true
+            }
           }
         ]
       },
@@ -681,17 +668,16 @@
             "efficiency": {
               "runs": 2,
               "calls": {
-                "median": 9,
-                "min": 9,
-                "max": 9
+                "median": 11.5,
+                "min": 8,
+                "max": 15
               },
               "turns": {
-                "median": 10,
-                "min": 10,
-                "max": 10
+                "median": 12.5,
+                "min": 9,
+                "max": 16
               }
-            },
-            "regraded": true
+            }
           }
         ]
       },
@@ -717,17 +703,16 @@
             "efficiency": {
               "runs": 2,
               "calls": {
-                "median": 7.5,
-                "min": 7,
+                "median": 8,
+                "min": 8,
                 "max": 8
               },
               "turns": {
-                "median": 8.5,
-                "min": 8,
+                "median": 9,
+                "min": 9,
                 "max": 9
               }
-            },
-            "regraded": true
+            }
           }
         ]
       },
@@ -753,14 +738,14 @@
             "efficiency": {
               "runs": 3,
               "calls": {
-                "median": 14,
+                "median": 13,
                 "min": 11,
-                "max": 16
+                "max": 14
               },
               "turns": {
-                "median": 15,
+                "median": 14,
                 "min": 12,
-                "max": 17
+                "max": 15
               }
             }
           }
@@ -788,17 +773,16 @@
             "efficiency": {
               "runs": 2,
               "calls": {
-                "median": 10.5,
-                "min": 10,
+                "median": 9,
+                "min": 7,
                 "max": 11
               },
               "turns": {
-                "median": 11.5,
-                "min": 11,
+                "median": 10,
+                "min": 8,
                 "max": 12
               }
-            },
-            "regraded": true
+            }
           }
         ]
       },
@@ -828,17 +812,16 @@
             "efficiency": {
               "runs": 2,
               "calls": {
-                "median": 19,
+                "median": 19.5,
                 "min": 18,
-                "max": 20
+                "max": 21
               },
               "turns": {
-                "median": 20,
+                "median": 20.5,
                 "min": 19,
-                "max": 21
+                "max": 22
               }
-            },
-            "regraded": true
+            }
           }
         ]
       },
@@ -866,17 +849,16 @@
             "efficiency": {
               "runs": 2,
               "calls": {
-                "median": 9.5,
+                "median": 10.5,
                 "min": 9,
-                "max": 10
+                "max": 12
               },
               "turns": {
-                "median": 10.5,
+                "median": 11.5,
                 "min": 10,
-                "max": 11
+                "max": 13
               }
-            },
-            "regraded": true
+            }
           }
         ]
       }
@@ -1055,7 +1037,8 @@
               "min": 5,
               "max": 5
             }
-          }
+          },
+          "regraded": true
         },
         {
           "model": "gemini-4-hydrogen-medium@agy-cli",
@@ -9413,6 +9396,43 @@
       }
     },
     {
+      "name": "schedule_meeting",
+      "tokens": 527,
+      "agents": [],
+      "required_by_cases": [
+        "case46_get_us_in_a_room"
+      ],
+      "required_as_one_of_a_set_by_cases": [],
+      "permitted_in_cases": [],
+      "called_in_held_runs": null,
+      "driven": true,
+      "required_only_as_one_of_a_set": false,
+      "graded_by_certification_tasks": [],
+      "near_miss_in_certification_tasks": [],
+      "measured_by_model": {
+        "claude-sonnet-5-5@claude-cli": {
+          "runs": 2,
+          "passed": 2,
+          "reliability": 1,
+          "cases_below_their_bar": []
+        },
+        "gemini-4-hydrogen-medium@agy-cli": {
+          "runs": 2,
+          "passed": 2,
+          "reliability": 1,
+          "cases_below_their_bar": []
+        },
+        "gpt-5.6-sol@codex-cli": {
+          "runs": 3,
+          "passed": 1,
+          "reliability": 0.3333333333333333,
+          "cases_below_their_bar": [
+            "case46_get_us_in_a_room"
+          ]
+        }
+      }
+    },
+    {
       "name": "draft_outbound",
       "tokens": 524,
       "agents": [],
@@ -9451,43 +9471,6 @@
           "passed": 2,
           "reliability": 1,
           "cases_below_their_bar": []
-        }
-      }
-    },
-    {
-      "name": "schedule_meeting",
-      "tokens": 515,
-      "agents": [],
-      "required_by_cases": [
-        "case46_get_us_in_a_room"
-      ],
-      "required_as_one_of_a_set_by_cases": [],
-      "permitted_in_cases": [],
-      "called_in_held_runs": null,
-      "driven": true,
-      "required_only_as_one_of_a_set": false,
-      "graded_by_certification_tasks": [],
-      "near_miss_in_certification_tasks": [],
-      "measured_by_model": {
-        "claude-sonnet-5-5@claude-cli": {
-          "runs": 2,
-          "passed": 2,
-          "reliability": 1,
-          "cases_below_their_bar": []
-        },
-        "gemini-4-hydrogen-medium@agy-cli": {
-          "runs": 2,
-          "passed": 2,
-          "reliability": 1,
-          "cases_below_their_bar": []
-        },
-        "gpt-5.6-sol@codex-cli": {
-          "runs": 3,
-          "passed": 1,
-          "reliability": 0.3333333333333333,
-          "cases_below_their_bar": [
-            "case46_get_us_in_a_room"
-          ]
         }
       }
     },

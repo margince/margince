@@ -44,7 +44,7 @@ One row per everyday job, one column per assistant. ✅ did it reliably, ❌ not
 | Before the meeting | A briefing arrives without naming a record<br>The attendees on the other side are named<br>An empty calendar answer is not an empty diary<br>The unkept promise is noticed | an admin | ✅ | - | ✅ re-graded | ✅ |
 | Ask the company | The past cases are found without being named<br>The record's date wins over the prose recalling it<br>The disagreement between note and record is pointed out | an admin | ✅ | - | ✅ re-graded | ✅ re-graded |
 | Filed in the wrong place | A misfiled message is moved off the wrong record<br>A picked set moves as one act<br>History is re-filed with its content unchanged | an admin | ✅ | - | ✅ re-graded | ✅ re-graded |
-| Finish the import | A pre-authorized import is actually committed<br>What landed is reported from the run's own report | an admin | ✅ | - | ✅ re-graded | ❌ re-graded |
+| Finish the import | A pre-authorized import is actually committed<br>What landed is reported from the run's own report | an admin | ✅ re-graded | - | ✅ re-graded | ❌ re-graded |
 | Put it in the board pack | Every figure in the document is the database's<br>A refused literal is not a missing capability | an admin | ✅ | - | ✅ re-graded | ✅ re-graded |
 | Can I trust the numbers | Source health is read rather than assumed<br>An unread source is not reported as a quiet one | an admin | ✅ | - | ✅ re-graded | ✅ re-graded |
 | Find us a slot | Real openings, from the host's own calendar<br>The other side's calendar is not claimed to be known | an admin | ✅ | - | ✅ re-graded | ✅ re-graded |
@@ -132,30 +132,30 @@ An assistant can also reach Margince through the REST API, with the downloadable
 
 | Assistant | How we connected it | Jobs tried | Reliable on |
 |---|---|---:|---:|
-| `claude-sonnet-5-5` | Claude Code CLI, REST | 20 of 83 | 15 |
+| `claude-sonnet-5-5` | Claude Code CLI, REST | 20 of 83 | 18 |
 
 | Job | What a good answer does | Who asks | `claude-sonnet-5-5`<br>Claude Code CLI |
 |---|---|---|:---:|
-| Log it while it is fresh | Promises come back as suggestions | an admin | ✅ re-graded |
-| Use the moment | Nearby is worked out to be a distance search<br>Check with the owner before turning up | an admin | ✅ re-graded |
-| Before the meeting | A briefing arrives without naming a record<br>The attendees on the other side are named<br>An empty calendar answer is not an empty diary<br>The unkept promise is noticed | an admin | ❌ re-graded |
-| Ask the company | The past cases are found without being named<br>The record's date wins over the prose recalling it<br>The disagreement between note and record is pointed out | an admin | ❌ re-graded |
-| Filed in the wrong place | A misfiled message is moved off the wrong record<br>A picked set moves as one act<br>History is re-filed with its content unchanged | an admin | ✅ re-graded |
-| Finish the import | A pre-authorized import is actually committed<br>What landed is reported from the run's own report | an admin | ❌ |
+| Log it while it is fresh | Promises come back as suggestions | an admin | ✅ |
+| Use the moment | Nearby is worked out to be a distance search<br>Check with the owner before turning up | an admin | ✅ |
+| Before the meeting | A briefing arrives without naming a record<br>The attendees on the other side are named<br>An empty calendar answer is not an empty diary<br>The unkept promise is noticed | an admin | ✅ |
+| Ask the company | The past cases are found without being named<br>The record's date wins over the prose recalling it<br>The disagreement between note and record is pointed out | an admin | ✅ |
+| Filed in the wrong place | A misfiled message is moved off the wrong record<br>A picked set moves as one act<br>History is re-filed with its content unchanged | an admin | ✅ |
+| Finish the import | A pre-authorized import is actually committed<br>What landed is reported from the run's own report | an admin | ✅ re-graded |
 | Put it in the board pack | Every figure in the document is the database's<br>A refused literal is not a missing capability | an admin | ❌ |
-| Find us a slot | Real openings, from the host's own calendar<br>The other side's calendar is not claimed to be known | an admin | ✅ re-graded |
-| The word that should not be on this one | The retired word on the record is reported<br>One record loses the word and the word survives | an admin | ✅ re-graded |
+| Find us a slot | Real openings, from the host's own calendar<br>The other side's calendar is not claimed to be known | an admin | ✅ |
+| The word that should not be on this one | The retired word on the record is reported<br>One record loses the word and the word survives | an admin | ✅ |
 | Sort the lead queue | The record decides which verb applies<br>What was filled and what is still missing are both reported<br>A terminal verb lands on the lead it belongs to | an admin | ✅ |
-| The fair leads are prospects now | All four change at once, with nothing waiting<br>The value that was replaced is reported | an admin | ✅ re-graded |
-| Move the deal on | The deal moves to the stage the call named<br>The move leaves its reason on the deal<br>The forecast change is explained from what was read<br>A deal moves on the deal tools | an admin | ✅ re-graded |
-| A word from the fair, offered and not claimed | A tag is offered and not claimed | an admin | ✅ re-graded |
-| What have I promised | Promised and still open is the commitments view | an admin | ✅ re-graded |
-| Held meetings that became opportunities | A figure only a named report carries is run by name | an admin | ✅ re-graded |
-| Is she already here | Is this contact already here is the identify engine | an admin | ✅ re-graded |
+| The fair leads are prospects now | All four change at once, with nothing waiting<br>The value that was replaced is reported | an admin | ✅ |
+| Move the deal on | The deal moves to the stage the call named<br>The move leaves its reason on the deal<br>The forecast change is explained from what was read<br>A deal moves on the deal tools | an admin | ✅ |
+| A word from the fair, offered and not claimed | A tag is offered and not claimed | an admin | ✅ |
+| What have I promised | Promised and still open is the commitments view | an admin | ✅ |
+| Held meetings that became opportunities | A figure only a named report carries is run by name | an admin | ✅ |
+| Is she already here | Is this contact already here is the identify engine | an admin | ✅ |
 | Catch me up, and show me the brief | Catch-up and the brief each use their own view | an admin | ❌ |
-| Record her yes to our mail | A marketing yes waits for the contact's own link | an admin | ✅ re-graded |
-| Add a review stage to the pipeline | A new stage is pipeline setup | an admin | ✅ re-graded |
-| Mark that company as seen | Marking seen when asked | an admin | ✅ re-graded |
+| Record her yes to our mail | A marketing yes waits for the contact's own link | an admin | ✅ |
+| Add a review stage to the pipeline | A new stage is pipeline setup | an admin | ✅ |
+| Mark that company as seen | Marking seen when asked | an admin | ✅ |
 
 ---
 
@@ -265,7 +265,7 @@ One row per case per model that ran it. A case nobody has run appears once, mark
 | [case1_log_it](../../e2e/llm/scenarios/case1-log-it.yaml) | `claude-sonnet-5-5@claude-cli` | pass | 2/2 | 2 | 10 (9–11) | 11 (10–12) | **8** Promises come back as suggestions | `change_activities` or `create_record` |
 | [case1_log_it](../../e2e/llm/scenarios/case1-log-it.yaml) | `gemini-4-hydrogen-medium@agy-cli` | pass, re-graded | 2/2 | 2 | 13 (12–14) | 9.5 (9–10) | **8** Promises come back as suggestions | `change_activities` or `create_record` |
 | [case1_log_it](../../e2e/llm/scenarios/case1-log-it.yaml) | `gpt-5.6-sol@codex-cli` | pass, re-graded | 2/3 | 2 | 12 (10–14) | - | **8** Promises come back as suggestions | `change_activities` or `create_record` |
-| [case10_finish_the_import](../../e2e/llm/scenarios/case10-finish-the-import.yaml) | `claude-sonnet-5-5@claude-cli` | pass | 2/2 | 2 | 4 | 5 | **1** A pre-authorized import is actually committed<br>**2** What landed is reported from the run's own report | - |
+| [case10_finish_the_import](../../e2e/llm/scenarios/case10-finish-the-import.yaml) | `claude-sonnet-5-5@claude-cli` | pass, re-graded | 2/2 | 2 | 4 | 5 | **1** A pre-authorized import is actually committed<br>**2** What landed is reported from the run's own report | - |
 | [case10_finish_the_import](../../e2e/llm/scenarios/case10-finish-the-import.yaml) | `gemini-4-hydrogen-medium@agy-cli` | pass, re-graded | 2/2 | 2 | 6 | 10.5 (10–11) | **1** A pre-authorized import is actually committed<br>**2** What landed is reported from the run's own report | - |
 | [case10_finish_the_import](../../e2e/llm/scenarios/case10-finish-the-import.yaml) | `gpt-5.6-sol@codex-cli` | **FAIL**, re-graded | 0/2 | 2 | 12.5 (6–19) | - | **1** A pre-authorized import is actually committed<br>**2** What landed is reported from the run's own report | - |
 | [case102_shorter_in_my_voice](../../e2e/llm/scenarios/case102-shorter-in-my-voice.yaml) | `claude-sonnet-5-5@claude-cli` | pass | 2/2 | 2 | 3 | 4 | **1** The voice is the user's own | `change_my_settings` |
@@ -672,8 +672,8 @@ Every run of every case requiring this tool passed, for the model named.
 | `change_tags` | 1.00 | 2 | `case32_two_words_for_one_thing` |
 | `update_record` | 1.00 | 2 | `case33_two_cards_for_one_company` |
 | `resolve_duplicates` | 1.00 | 4 | `case33_two_cards_for_one_company`, `case56_not_the_same` |
-| `draft_outbound` | 1.00 | 2 | `case60_send_one_draft_one` |
 | `schedule_meeting` | 1.00 | 2 | `case46_get_us_in_a_room` |
+| `draft_outbound` | 1.00 | 2 | `case60_send_one_draft_one` |
 | `check_availability` | 1.00 | 2 | `case23_find_us_a_slot` |
 
 ### `claude-sonnet-5-5@claude-sdk`
@@ -699,8 +699,8 @@ Every run of every case requiring this tool passed, for the model named.
 | `change_tags` | 1.00 | 2 | `case32_two_words_for_one_thing` |
 | `update_record` | 1.00 | 2 | `case33_two_cards_for_one_company` |
 | `resolve_duplicates` | 1.00 | 4 | `case33_two_cards_for_one_company`, `case56_not_the_same` |
-| `draft_outbound` | 1.00 | 2 | `case60_send_one_draft_one` |
 | `schedule_meeting` | 1.00 | 2 | `case46_get_us_in_a_room` |
+| `draft_outbound` | 1.00 | 2 | `case60_send_one_draft_one` |
 | `check_availability` | 1.00 | 2 | `case23_find_us_a_slot` |
 
 ### `gpt-5.6-sol@codex-cli`
