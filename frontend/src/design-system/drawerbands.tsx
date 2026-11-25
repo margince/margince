@@ -15,20 +15,16 @@ export function DrawerHead({
   className,
   mark,
 }: Band & Readonly<{ mark?: ReactNode }>) {
+  const band = ["drawer-head", className ?? ""].filter(Boolean).join(" ");
+  if (!mark) return <div className={band}>{children}</div>;
   const [title, ...rest] = Children.toArray(children);
   return (
-    <div className={["drawer-head", className ?? ""].filter(Boolean).join(" ")}>
-      {mark ? (
-        <>
-          <div className="drawer-head-line">
-            {title}
-            {mark}
-          </div>
-          {rest}
-        </>
-      ) : (
-        children
-      )}
+    <div className={band}>
+      <div className="drawer-head-line">
+        {title}
+        {mark}
+      </div>
+      {rest}
     </div>
   );
 }

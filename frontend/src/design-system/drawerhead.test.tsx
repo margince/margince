@@ -3,6 +3,7 @@
 import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
 import { DrawerHead } from "./drawerbands";
+import { Heading } from "./heading";
 
 afterEach(cleanup);
 
@@ -10,7 +11,7 @@ describe("DrawerHead", () => {
   it("draws the mark on the title's line and the rest of the head below it", () => {
     render(
       <DrawerHead mark={<span>Public sources only</span>}>
-        <h2>Research on Anna Brandt</h2>
+        <Heading size="medium">Research on Anna Brandt</Heading>
         <p>Read on 14 Nov</p>
       </DrawerHead>,
     );
@@ -26,7 +27,7 @@ describe("DrawerHead", () => {
   it("keeps the title a direct child of the band without a mark", () => {
     render(
       <DrawerHead>
-        <h2>Map a claim</h2>
+        <Heading size="medium">Map a claim</Heading>
       </DrawerHead>,
     );
 
