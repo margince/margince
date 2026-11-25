@@ -12,6 +12,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"slices"
+	"strings"
 	"testing"
 	"time"
 
@@ -191,6 +192,90 @@ func TestExtensionInventoryListsWhatAUnitBorrowsFromTheCore(t *testing.T) {
 	want := []crmcontracts.ComposedExtensionNeed{{Capability: "models", Reason: "Writes."}, {Capability: "objects", Reason: "Keeps."}}
 	if got[1].Needs == nil || !slices.Equal(*got[1].Needs, want) {
 		t.Errorf("needs = %+v, want %+v sorted by capability", got[1].Needs, want)
+	}
+}
+
+func TestASetupItemIsMissingUntilItsValueIsStored(t *testing.T) {
+	t.Parallel()
+	unit := extension.Extension{
+		Name: "feed",
+		Secrets: []extension.SecretsRequest{
+			{Key: "api-key", Scope: extension.SecretScopeWorkspace},
+			{Key: "personal-token", Scope: extension.SecretScopeUser},
+			{Key: "signing", Scope: extension.SecretScopeWorkspace},
+		},
+		OAuthApps: []extension.OAuthApp{{Provider: "acme", Title: "Acme CRM"}},
+	}
+	all := setupVisibility{secrets: true, apps: true}
+	got := unitSetupMissing(unit, all, map[string]bool{"signing": true}, map[string]bool{})
+	want := []crmcontracts.ComposedExtensionSetupItem{
+		{Kind: crmcontracts.ComposedExtensionSetupItemKindWorkspaceSecret, Name: "api-key"},
+		{Kind: crmcontracts.ComposedExtensionSetupItemKindOauthApp, Name: "Acme CRM"},
+	}
+	if !slices.Equal(got, want) {
+		t.Errorf("missing = %+v, want the unset workspace key and the unstored app, not the user's own token", got)
+	}
+	if got := unitSetupMissing(unit, all, map[string]bool{"api-key": true, "signing": true}, map[string]bool{"acme": true}); len(got) != 0 {
+		t.Errorf("with everything stored, missing = %+v, want none", got)
+	}
+}
+
+// A unit that declares nothing to set up is ready, and the list says so with an
+// empty array rather than leaving the field out.
+func TestAUnitWithNothingToSetUpIsListedReady(t *testing.T) {
+	t.Cleanup(func() { setComposedExtensions(nil) })
+	setComposedExtensions([]extension.Extension{{Name: "plain", Version: "1.0.0"}})
+	ctx := principal.WithActor(context.Background(), principal.Principal{
+		Type: principal.PrincipalHuman, Permissions: principal.Permissions{Objects: map[string]principal.ObjectGrant{"extension_access": {Read: true}}},
+	})
+	rec := httptest.NewRecorder()
+	extensionsHandlers{}.ListExtensions(rec, httptest.NewRequest(http.MethodGet, "/v1/extensions", nil).WithContext(ctx))
+	if rec.Code != http.StatusOK || !strings.Contains(rec.Body.String(), `"setup_missing":[]`) {
+		t.Errorf("list → %d %s, want the unit with an empty setup_missing", rec.Code, rec.Body.String())
+	}
+}
+
+func TestASetupPartTheCallerMayNotReadIsLeftOut(t *testing.T) {
+	t.Parallel()
+	unit := extension.Extension{
+		Name:      "feed",
+		Secrets:   []extension.SecretsRequest{{Key: "api-key", Scope: extension.SecretScopeWorkspace}},
+		OAuthApps: []extension.OAuthApp{{Provider: "acme", Title: "Acme CRM"}},
+	}
+	appsOnly := setupVisibility{apps: true}
+	got := unitSetupMissing(unit, appsOnly, nil, nil)
+	if len(got) != 1 || got[0].Kind != crmcontracts.ComposedExtensionSetupItemKindOauthApp {
+		t.Errorf("a capture_settings reader who is no admin sees %+v, want the app only", got)
+	}
+	secretsOnly := setupVisibility{secrets: true}
+	got = unitSetupMissing(unit, secretsOnly, nil, nil)
+	if len(got) != 1 || got[0].Kind != crmcontracts.ComposedExtensionSetupItemKindWorkspaceSecret {
+		t.Errorf("an admin without capture_settings.read sees %+v, want the secret only", got)
+	}
+	if !appsOnly.hides(unit) || !secretsOnly.hides(unit) || (setupVisibility{secrets: true, apps: true}).hides(unit) {
+		t.Error("hides must report a declared part the caller may not read, and only then")
+	}
+	if (setupVisibility{}).hides(extension.Extension{Name: "plain"}) {
+		t.Error("a unit with nothing to set up hides nothing")
+	}
+}
+
+// A reader with the inventory grant alone may read neither part, so the list
+// cannot call the unit ready and leaves the field out.
+func TestAnInventoryReaderIsNotToldWhetherAUnitIsReady(t *testing.T) {
+	t.Cleanup(func() { setComposedExtensions(nil) })
+	setComposedExtensions([]extension.Extension{{
+		Name: "feed", Version: "1.0.0",
+		Secrets:   []extension.SecretsRequest{{Key: "api-key", Scope: extension.SecretScopeWorkspace}},
+		OAuthApps: []extension.OAuthApp{{Provider: "acme", Title: "Acme CRM"}},
+	}})
+	ctx := principal.WithActor(context.Background(), principal.Principal{
+		Type: principal.PrincipalHuman, Permissions: principal.Permissions{Objects: map[string]principal.ObjectGrant{"extension_access": {Read: true}}},
+	})
+	rec := httptest.NewRecorder()
+	extensionsHandlers{}.ListExtensions(rec, httptest.NewRequest(http.MethodGet, "/v1/extensions", nil).WithContext(ctx))
+	if rec.Code != http.StatusOK || strings.Contains(rec.Body.String(), "setup_missing") {
+		t.Errorf("list → %d %s, want no setup_missing for a reader of neither setting", rec.Code, rec.Body.String())
 	}
 }
 

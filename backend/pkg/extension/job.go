@@ -96,8 +96,12 @@ type JobDeclaration struct {
 	// rides a pool the installation already declared rather than allocating
 	// one. See the composer's ownership rule.
 	Queue string
-	// Cadence is the dispatcher's tick interval, the contract's `every:`.
+	// Cadence is the dispatcher's tick interval, the contract's `cadence:`.
+	// Zero when At is set; a job has one of the two, never both.
 	Cadence time.Duration
+	// At is the local clock time the dispatcher ticks at instead, the
+	// contract's `at:` and `days:`.
+	At *TimeOfDay
 	// DispatcherTimeout and Timeout are the two kinds' wall clocks. Two
 	// numbers because they bound two different things — enumerating the fleet
 	// and running one tenant's tick — and River applies a timeout per kind.
@@ -172,8 +176,8 @@ func (d JobDeclaration) Validate() error {
 	if strings.TrimSpace(d.Queue) == "" {
 		return fmt.Errorf("extension %q, job %q declares no queue — a kind on no queue gets no workers and never runs", d.Unit, d.Job)
 	}
-	if d.Cadence <= 0 {
-		return fmt.Errorf("extension %q, job %q declares cadence %s — a dispatcher with no positive tick either never fires or fires as fast as Postgres accepts an insert", d.Unit, d.Job, d.Cadence)
+	if err := d.validateSchedule(); err != nil {
+		return err
 	}
 	for _, clock := range []struct {
 		what string
@@ -191,6 +195,24 @@ func (d JobDeclaration) Validate() error {
 	}
 	if err := d.RequestedScope.Validate(); err != nil {
 		return fmt.Errorf("extension %q, job %q: %w", d.Unit, d.Job, err)
+	}
+	return nil
+}
+
+// validateSchedule holds a job to one schedule: a positive interval or a
+// clock time.
+func (d JobDeclaration) validateSchedule() error {
+	if d.At != nil {
+		if d.Cadence != 0 {
+			return fmt.Errorf("extension %q, job %q declares both a cadence and a time of day — two clocks would each decide when it runs", d.Unit, d.Job)
+		}
+		if err := d.At.Validate(); err != nil {
+			return fmt.Errorf("extension %q, job %q: %w", d.Unit, d.Job, err)
+		}
+		return nil
+	}
+	if d.Cadence <= 0 {
+		return fmt.Errorf("extension %q, job %q declares cadence %s — a dispatcher with no positive tick either never fires or fires as fast as Postgres accepts an insert", d.Unit, d.Job, d.Cadence)
 	}
 	return nil
 }

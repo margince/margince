@@ -37,6 +37,9 @@ type Setting struct {
 	Label string
 	Hint  string
 	Kind  SettingKind
+	// Initial is the value before an admin changes it. Empty means the kind's
+	// own start: off for a switch, an empty line for text.
+	Initial string
 }
 
 // Validate checks what one declaration can show on its own.
@@ -53,11 +56,19 @@ func (s Setting) Validate() error {
 	if err := oneLine("hint", s.Hint, maxSettingHint, false); err != nil {
 		return fmt.Errorf("%w: setting %q: %v", ErrInvalid, s.Key, err)
 	}
+	if s.Initial != "" {
+		if err := s.CheckValue(s.Initial); err != nil {
+			return fmt.Errorf("the initial value does not fit: %w", err)
+		}
+	}
 	return nil
 }
 
 // Default is the value of a setting nobody has changed.
 func (s Setting) Default() string {
+	if s.Initial != "" {
+		return s.Initial
+	}
 	if s.Kind == SettingSwitch {
 		return "false"
 	}
