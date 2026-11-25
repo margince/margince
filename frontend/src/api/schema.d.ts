@@ -48160,7 +48160,10 @@ export interface components {
             status: "open" | "acknowledged" | "resolved" | "dismissed";
             /** Format: date-time */
             detected_at: string;
+            /** @description The channel this signal arrived by: `api`, `automation`, `capture`, `import`, `manual` or `webform`. An older signal can show another value until the background correction reaches it. */
             source: string;
+            /** @description The producer that wrote the signal, such as `signal-scan` or the name of an extension. Empty when a member or an API client filed it. */
+            readonly source_system?: string | null;
             /** @description Server-stamped from the authenticated principal; never client-supplied. */
             readonly captured_by: string;
             version?: components["schemas"]["RowVersion"];
@@ -48357,7 +48360,11 @@ export interface components {
              * @description When the underlying observation happened (defaults to now).
              */
             detected_at?: string | null;
-            source: string;
+            /**
+             * @description The channel this signal arrived by. A client that files it for a member sends `manual`; an integration sends `api`. Any other value is 422 `invalid_source`.
+             * @enum {string}
+             */
+            source: "api" | "automation" | "capture" | "import" | "manual" | "webform";
         };
         /**
          * @description Triage and correction. A `status` move to acknowledged/resolved/dismissed appends the human-outcome
@@ -62160,6 +62167,8 @@ export interface components {
             /** @description On a task row: true when `due_at` names an agreed time of day, false when the task is due by that day. Absent on other rows. */
             due_has_time?: boolean;
             due_intent?: components["schemas"]["IntentTime"];
+            /** @description On a task row: the kind of work it asks for, so a card names it without reading the task. Absent on other rows. */
+            task_type?: components["schemas"]["TaskType"];
             /** @description Past due at the read instant, resolved server-side so every surface agrees. */
             overdue?: boolean;
             /**
@@ -63905,6 +63914,8 @@ export interface components {
             /** @description On a task row: true when `due_at` names an agreed time of day, false when the task is due by that day. Absent on other rows. */
             due_has_time?: boolean;
             due_intent?: components["schemas"]["IntentTime"];
+            /** @description On a task row: the kind of work it asks for, so a card names it without reading the task. Absent on other rows. */
+            task_type?: components["schemas"]["TaskType"];
             /** @description Past due at the read instant, resolved server-side so every surface agrees. */
             overdue?: boolean;
             /**
