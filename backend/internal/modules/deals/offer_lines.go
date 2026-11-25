@@ -270,7 +270,8 @@ func (s *Store) UpdateOfferLineItem(ctx context.Context, offerID ids.OfferID, li
 		if err := validPatchedIntervalCount(ctx, tx, lineID, in); err != nil {
 			return err
 		}
-		if len(sets) == 0 {
+		// A line sent back as it stands moves no figure and no total.
+		if moved, _ := storekit.ChangedColumns(lineBefore, lineAfter); len(sets) == 0 || len(moved) == 0 {
 			out, err = readOfferWithLines(ctx, tx, offerID, storekit.LiveOnly)
 			return err
 		}

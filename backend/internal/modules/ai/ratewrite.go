@@ -322,8 +322,13 @@ func (s *RateStore) writeModelRate(ctx context.Context, tx pgx.Tx, p preparedMod
 	// fx_rate sibling). The verb is the SAME word the gate above demanded, so
 	// authorization_rule attributes the grant that actually admitted the write
 	// rather than a plausible-looking one.
-	if _, err := storekit.Audit(ctx, tx, string(action), auditentity.ModelRate, id, before,
-		modelRateImage(p, effDate)); err != nil {
+	// The day's price sent again as it stands rewrites the same row and leaves
+	// no audit entry: the sheet has no version, so the entry is the only trace.
+	after := modelRateImage(p, effDate)
+	if moved, _ := storekit.ChangedColumns(before, after); replacing && len(moved) == 0 {
+		return out, nil
+	}
+	if _, err := storekit.Audit(ctx, tx, string(action), auditentity.ModelRate, id, before, after); err != nil {
 		return ModelRateRow{}, fmt.Errorf("audit ai_model_rate %s: %w", action, err)
 	}
 	return out, nil

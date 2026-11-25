@@ -140,6 +140,9 @@ func (s *Store) UpdateReviewTemplate(ctx context.Context, id ids.UUID, req crmco
 		if before.Version == nil || *before.Version != req.Version {
 			return apperrors.ErrConflict
 		}
+		if raw, err = unlessStoredQuestions(ctx, tx, id, raw); err != nil {
+			return err
+		}
 		// The audit pair holds only the fields the request changed.
 		was, now := map[string]any{}, map[string]any{}
 		if raw != nil {
@@ -172,6 +175,23 @@ func (s *Store) UpdateReviewTemplate(ctx context.Context, id ids.UUID, req crmco
 		return recordReviewTemplateUpdate(ctx, tx, id, was, now)
 	})
 	return result, err
+}
+
+// unlessStoredQuestions is raw, or nil when the template already holds those
+// questions, compared as JSON values so key order is no change.
+func unlessStoredQuestions(ctx context.Context, tx pgx.Tx, id ids.UUID, raw []byte) ([]byte, error) {
+	if raw == nil {
+		return nil, nil
+	}
+	var same bool
+	if err := tx.QueryRow(ctx, `SELECT questions = $2::jsonb FROM activity_review_template WHERE id = $1`,
+		id, raw).Scan(&same); err != nil {
+		return nil, fmt.Errorf("compare template questions: %w", err)
+	}
+	if same {
+		return nil, nil
+	}
+	return raw, nil
 }
 
 func reviewQuestionsFromWire(wire []crmcontracts.ReviewQuestion) []ReviewQuestion {

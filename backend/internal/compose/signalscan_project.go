@@ -26,8 +26,8 @@ import (
 	"github.com/margince/margince/backend/internal/modules/projects"
 	"github.com/margince/margince/backend/internal/modules/signals"
 	"github.com/margince/margince/backend/internal/platform/auth"
-	"github.com/margince/margince/backend/internal/shared/kernel/elapsed"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/occurredday"
 )
 
 // kindProjectGoneQuiet is spelled once: the fingerprint, the INSERT and the
@@ -51,6 +51,8 @@ type quietProject struct {
 	// what keys the finding to ONE quiet episode: a new activity moves it, and
 	// a later silence is a new finding rather than the old one re-raised.
 	QuietSince time.Time
+	// QuietSinceDateOnly says QuietSince is a day entry, counted from its date.
+	QuietSinceDateOnly bool
 }
 
 // scanQuietProjects lists the projects in flight that have been silent for
@@ -62,7 +64,7 @@ type quietProject struct {
 // a finding nobody can act on.
 func scanQuietProjects(ctx context.Context, tx pgx.Tx, now time.Time) ([]quietProject, error) {
 	rows, err := tx.Query(ctx, `
-		SELECT p.id, pc.company_id, p.name, `+projects.ProjectQuietAnchorSQL("p")+`
+		SELECT p.id, pc.company_id, p.name, `+projects.ProjectQuietAnchorSQL("p")+`, `+projects.LastActivityDaySQL("p")+`
 		  FROM project p
 		  JOIN relationship pc ON pc.kind = '`+auth.ProjectCompanyKind+`' AND pc.project_id = p.id
 		                      AND pc.archived_at IS NULL
@@ -78,7 +80,7 @@ func scanQuietProjects(ctx context.Context, tx pgx.Tx, now time.Time) ([]quietPr
 	var out []quietProject
 	for rows.Next() {
 		var found quietProject
-		if err := rows.Scan(&found.ProjectID, &found.CompanyID, &found.Name, &found.QuietSince); err != nil {
+		if err := rows.Scan(&found.ProjectID, &found.CompanyID, &found.Name, &found.QuietSince, &found.QuietSinceDateOnly); err != nil {
 			return nil, err
 		}
 		out = append(out, found)
@@ -107,7 +109,7 @@ func WriteProjectQuietSignals(ctx context.Context, tx pgx.Tx, now time.Time) (Gh
 	lang := identity.BaseLanguageForRecord(ctx, tx)
 	pass := GhostedPass{Considered: len(found)}
 	for _, project := range found {
-		days := max(elapsed.Days(project.QuietSince, now, loc), 0)
+		days := max(occurredday.DaysSince(occurredday.Moment{At: project.QuietSince, DateOnly: project.QuietSinceDateOnly}, now, loc), 0)
 		parts := projectQuietParts{Project: project.Name, Days: projects.DefaultProjectQuietDays}
 		summary := parts.worded(lang)
 		params, err := json.Marshal(parts)

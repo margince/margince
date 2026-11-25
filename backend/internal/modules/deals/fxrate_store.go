@@ -221,6 +221,11 @@ func (s *Store) writeFxRate(ctx context.Context, tx pgx.Tx, from string, in SetF
 		out  FxRateRow
 		fxID ids.UUID
 	)
+	// The day's rate sent again appends no version: older figures need no
+	// second copy of the one they already price from.
+	if same, held, err := heldFxRate(ctx, tx, from, base, effDate, rate); err != nil || held {
+		return same, err
+	}
 	// A correction supersedes the day's row and appends a version, so older
 	// figures stay reproducible. One instant stamps both, so no read sees neither.
 	var changedAt time.Time
@@ -253,6 +258,24 @@ func (s *Store) writeFxRate(ctx context.Context, tx pgx.Tx, from string, in SetF
 		return FxRateRow{}, fmt.Errorf("audit fx_rate %s: %w", action, err)
 	}
 	return out, nil
+}
+
+// heldFxRate is the day's current row when it already holds rate, compared as
+// numbers so a different spelling of the same rate is the same rate.
+func heldFxRate(ctx context.Context, tx pgx.Tx, from, base string, effDate time.Time, rate string) (FxRateRow, bool, error) {
+	var out FxRateRow
+	err := tx.QueryRow(ctx, `
+		SELECT from_currency, to_currency, rate::text, rate_date FROM fx_rate
+		WHERE from_currency = $1 AND to_currency = $2 AND rate_date = $3
+		  AND `+RateVersionSQL("", "")+` AND rate = $4::numeric`,
+		from, base, effDate, rate).Scan(&out.FromCurrency, &out.ToCurrency, &out.Rate, &out.RateDate)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return FxRateRow{}, false, nil
+	}
+	if err != nil {
+		return FxRateRow{}, false, fmt.Errorf("compare the day's fx_rate: %w", err)
+	}
+	return out, true, nil
 }
 
 // refuseRewritingHistory keeps the sheet append-forward with one exception: a

@@ -45,12 +45,11 @@ var notAnActivityTime = gatekit.Waive(map[string]string{
 // storedClockStillCounted: callers that count from a stored activity clock
 // without its precision yet, each with the reader it serves.
 var storedClockStillCounted = gatekit.Waive(map[string]string{
-	"internal/compose/signalscan_project.go:WriteProjectQuietSignals": storedClock,
-	"internal/shared/kernel/convstate/convstate.go:Classify":          storedClock,
-	"internal/shared/kernel/dormancy/dormancy.go:Read":                storedClock,
-	"internal/modules/deals/quietreason.go:quietFor":                  storedClock,
-	"internal/modules/deals/viability.go:AssessViability":             storedClock,
-	"internal/compose/dealcloselost.go:daysSince":                     "the newest customer progress, read without the precision of the activity it names",
+	"internal/shared/kernel/convstate/convstate.go:Classify": storedClock,
+	"internal/shared/kernel/dormancy/dormancy.go:Read":       storedClock,
+	"internal/modules/deals/quietreason.go:quietFor":         storedClock,
+	"internal/modules/deals/viability.go:AssessViability":    storedClock,
+	"internal/compose/dealcloselost.go:daysSince":            "the newest customer progress, read without the precision of the activity it names",
 })
 
 func TestEveryDayCountFromATimeSaysWhetherItIsAnActivitysTime(t *testing.T) {

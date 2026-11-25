@@ -18,6 +18,7 @@ package contacts
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"time"
 
@@ -142,6 +143,17 @@ func recordHumanDomainAdmissionTx(
 	// surface exists to answer. Without it admission_source says "human"
 	// but never WHICH human, and admission_at is overwritten on every
 	// change.
+	// A decision that repeats the stored one changes nothing. Writing it would
+	// restamp admission_at and, for an unblock, ask about the domain again.
+	current, err := readDomainAdmissionTx(ctx, tx, domain)
+	switch {
+	case errors.Is(err, pgx.ErrNoRows):
+	case err != nil:
+		return BlockedDomain{}, err
+	case current.Admission == admission && current.Source == DomainDecisionSource(ctx) &&
+		current.Reason == reason.Text && current.ReasonCode == string(reason.Code):
+		return current, nil
+	}
 	before, applied, err := setDomainAdmissionTx(ctx, tx, domain, admission, reason, DomainDecisionSource(ctx))
 	if err != nil {
 		return BlockedDomain{}, err

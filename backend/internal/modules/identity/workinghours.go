@@ -186,32 +186,37 @@ func (s *Service) SaveMyWorkingHours(ctx context.Context, in WorkingHours) (Work
 		}
 	}
 	err = s.db.Tx(ctx, func(tx pgx.Tx) error {
-		before, _, err := WorkingHoursOf(ctx, tx, ids.From[ids.UserKind](human))
+		before, own, err := WorkingHoursOf(ctx, tx, ids.From[ids.UserKind](human))
 		if err != nil {
 			return err
 		}
 		normalized.Timezone = before.Timezone
-		days := weekdayColumn(normalized.Days)
-		tag, err := tx.Exec(ctx, `
-			UPDATE app_user
-			   SET work_start_minute = $2, work_end_minute = $3, work_days = $4
-			 WHERE id = $1 AND `+LiveMemberSQL(""),
-			human, minuteColumn(normalized.StartMinute), minuteColumn(normalized.EndMinute),
-			days)
-		if err != nil {
-			return fmt.Errorf("identity: saving working hours: %w", err)
-		}
-		if tag.RowsAffected() == 0 {
-			return apperrors.ErrNotFound
-		}
-		// Audit-only: the closed event catalog carries no working-hours verb,
-		// and there is nothing downstream waiting on one — availability reads
-		// the row on the next question, which no subscriber could do sooner.
-		// The images carry both windows, which is what answers "why did my
-		// bookings halve".
-		if _, err := storekit.Audit(ctx, tx, "update", "user", human,
-			workingHoursImage(before), workingHoursImage(normalized)); err != nil {
-			return err
+		// The member's own window sent again as it stands writes neither the row
+		// nor history. A first save of the fallback still writes: it makes the
+		// fallback the member's own decision.
+		if moved, _ := storekit.ChangedColumns(workingHoursImage(before), workingHoursImage(normalized)); !own || len(moved) > 0 {
+			days := weekdayColumn(normalized.Days)
+			tag, err := tx.Exec(ctx, `
+				UPDATE app_user
+				   SET work_start_minute = $2, work_end_minute = $3, work_days = $4
+				 WHERE id = $1 AND `+LiveMemberSQL(""),
+				human, minuteColumn(normalized.StartMinute), minuteColumn(normalized.EndMinute),
+				days)
+			if err != nil {
+				return fmt.Errorf("identity: saving working hours: %w", err)
+			}
+			if tag.RowsAffected() == 0 {
+				return apperrors.ErrNotFound
+			}
+			// Audit-only: the closed event catalog carries no working-hours verb,
+			// and there is nothing downstream waiting on one — availability reads
+			// the row on the next question, which no subscriber could do sooner.
+			// The images carry both windows, which is what answers "why did my
+			// bookings halve".
+			if _, err := storekit.Audit(ctx, tx, "update", "user", human,
+				workingHoursImage(before), workingHoursImage(normalized)); err != nil {
+				return err
+			}
 		}
 		if in.Timezone == "" {
 			return nil
