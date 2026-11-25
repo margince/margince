@@ -156,7 +156,7 @@ describe("the figures under How it stands", () => {
         view({
           state_strip: {
             ...customer,
-            account: { ...customer.account, lifecycle },
+            account: { ...customer.account, status: lifecycle },
           },
         }),
       );

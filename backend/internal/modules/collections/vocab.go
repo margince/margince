@@ -266,11 +266,11 @@ var segmentEngines = map[string]storekit.Query{
 		// export built on one can carry it.
 		BaseWhere: whereArchivedNull + " AND NOT t.is_anchor",
 		Fields: withFields(standardFields[typeCompany], map[string]storekit.Field{
-			ownerIDField:     {Expr: colOwnerID, Type: storekit.FieldID, References: storekit.RefAppUser},
-			ownerTeamIDField: ownerTeamField,
-			"industry":       {Expr: "t.industry", Type: storekit.FieldPicklist, Options: industryValues},
-			"size_band":      {Expr: "t.size_band", Type: storekit.FieldPicklist, Options: sizeBandValues},
-			"status":         {Expr: "t.status", Type: storekit.FieldPicklist, Options: lifecycleValues},
+			ownerIDField:        {Expr: colOwnerID, Type: storekit.FieldID, References: storekit.RefAppUser},
+			ownerTeamIDField:    ownerTeamField,
+			"industry":          {Expr: "t.industry", Type: storekit.FieldPicklist, Options: industryValues},
+			"size_band":         {Expr: "t.size_band", Type: storekit.FieldPicklist, Options: sizeBandValues},
+			companyStatusColumn: {Expr: "t.status", Type: storekit.FieldPicklist, Options: lifecycleValues},
 			// The name status had before its rename, kept so a saved segment
 			// that says it still evaluates. Named in retiredCoreFields below.
 			"lifecycle": {Expr: "t.status", Type: storekit.FieldPicklist},
