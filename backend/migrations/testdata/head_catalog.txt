@@ -169,6 +169,7 @@ public.activity.source_activity_id uuid gen=- def=-
 public.activity.source_author_id uuid gen=- def=-
 public.activity.source_author_name text gen=- def=-
 public.activity.source_id text gen=- def=-
+public.activity.source_revision timestamp with time zone gen=- def=-
 public.activity.source_system text gen=- def=-
 public.activity.subject text gen=- def=-
 public.activity.system_text jsonb gen=- def=-

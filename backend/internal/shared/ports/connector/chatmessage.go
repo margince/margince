@@ -133,6 +133,9 @@ type ChatMessage struct {
 	Body         string
 	// OccurredAt is when the provider says the message was sent.
 	OccurredAt time.Time
+	// Revision is the provider's edit time when this report already carries an
+	// edited text, as a restated message does. It is zero for an original.
+	Revision time.Time
 	// StoredOriginal names the raw_capture row the adapter already wrote. Raw
 	// carries the bytes when it has not.
 	StoredOriginal ids.UUID
