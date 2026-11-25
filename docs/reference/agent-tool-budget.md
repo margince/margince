@@ -21,9 +21,9 @@ The heaviest menu is `overnight_at_risk_sweep`: 6711 of the window's 32768 token
 
 | Agent | Tools | Of served | Listing | Step schema | Per step | Of the window | Headroom | Dangling refs | Temptation |
 |---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
-| `morning_brief` | 5 | 5 of 48 | 2055 | 1653 | 4439 | 13% | 18771 | 0 | 4 |
-| `overnight_at_risk_sweep` | 7 | 7 of 48 | 3357 | 2623 | 6711 | 20% | 16499 | 4 | 4 |
-| _whole served catalog's listing, for scale; no run is offered it_ | 48 |  | 53758 |  |  | 164% |  |  |  |
+| `morning_brief` | 5 | 5 of 48 | 2055 | 1653 | 4439 | 13% | 11945 | 0 | 4 |
+| `overnight_at_risk_sweep` | 7 | 7 of 48 | 3357 | 2623 | 6711 | 20% | 9673 | 4 | 5 |
+| _whole served catalog's listing, for scale; no run is offered it_ | 48 |  | 53743 |  |  | 164% |  |  |  |
 
 ### `morning_brief`
 
@@ -41,7 +41,7 @@ saved: correct it before claiming completion.
 ```
 
 Attaches 5 tools and pays 4439 tokens on every step (2055 listing, 1653 step schema), leaving
-18771 of its budget and 28329 tokens of the
+11945 of its budget and 28329 tokens of the
 window for the goal, the grounding and everything it reads.
 
 - `annotate_brief`
@@ -66,7 +66,7 @@ refused. Do not advance stages, send anything, or archive anything.
 ```
 
 Attaches 7 tools and pays 6711 tokens on every step (3357 listing, 2623 step schema), leaving
-16499 of its budget and 26057 tokens of the
+9673 of its budget and 26057 tokens of the
 window for the goal, the grounding and everything it reads.
 
 - `at_risk_relationships`
@@ -100,7 +100,7 @@ the site's `tools:` are the only tools that run is offered. Read the numbers bel
 before adding one.
 
 The window is 32768 tokens. What an agent's step pays before its transcript (the frame,
-the listing and the step schema) may take 23210 of them (17/24).
+the listing and the step schema) may take 16384 of them (1/2).
 
 ## No run is offered the whole catalog
 
@@ -145,7 +145,7 @@ menu. Lowering it is not always an improvement either: a tool its goal needs rai
 this count whenever its copy names a neighbour.
 
 **Temptation weight** sums, over an agent's tools, how many of that agent's own
-certification scenarios (of 7 in the corpus) name the tool as the wrong reach. Each
+certification scenarios (of 8 in the corpus) name the tool as the wrong reach. Each
 scenario certifies one scheduled agent's window (its goal and its tools), so a near
 miss is a tool that run can see and reach for.
 
