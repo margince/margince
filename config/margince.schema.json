@@ -1951,7 +1951,7 @@
       "additionalProperties": false,
       "properties": {
         "call_log": {
-          "description": "File the api adds one JSON line to for each /mcp call: caller, tool, arguments, outcome and the answer, secrets stripped. It holds personal data; unset writes none.",
+          "description": "Dev and debugging only, refused in production: a file the api adds one JSON line to for each /mcp call, with caller, tool, arguments, outcome and answer, secrets stripped. It holds personal data, and nothing caps or ages it; unset writes none.",
           "type": [
             "string",
             "null"

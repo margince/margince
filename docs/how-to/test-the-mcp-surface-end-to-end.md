@@ -217,7 +217,7 @@ reason of the judge in one sentence. It can also be a record that the run put in
 
 ### The server's record of each call
 
-The lane starts its stack with `mcp.call_log` set to a file in its work folder. The api writes one JSON line there for each `/mcp` call, with secrets stripped. A line holds the caller, the tool, the arguments, the outcome and the answer. Each run's lines are cut out beside its transcript as `<transcript>.calls`, and both are kept in `e2e/llm/records/`.
+The lane starts its stack with `mcp.call_log` set to a file in its work folder. The setting is for dev and debugging only: a production install refuses to boot with it. The api writes one JSON line there for each `/mcp` call, with secrets stripped. A line holds the caller, the tool, the arguments, the outcome and the answer. Each run's lines are cut out beside its transcript as `<transcript>.calls`, and both are kept in `e2e/llm/records/`.
 
 Where that file is there, `check.py` reads from it which calls were made, which worked and what each answered. A client that drops `isError` or moves a long answer to a file can then no longer change a verdict. The judge also reads the server's answers, cut to size, to tell whether what the answer states is true. The REST way in writes no such file, so its runs are graded from the transcript as before. Each line's `correlation_id` is the one in the `trace` of its `event_outbox` rows, which name their `audit_log` rows. So a write can be followed after a restore.
 

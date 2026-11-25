@@ -13,6 +13,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/config"
 	"github.com/margince/margince/backend/internal/platform/corefeatures"
 	"github.com/margince/margince/backend/internal/shared/kernel/values"
+	"github.com/margince/margince/backend/internal/shared/runtimeenv"
 )
 
 // The margince.yaml switches a program reads at boot. They carry no flag: a
@@ -28,7 +29,7 @@ var (
 	})
 	MCPCallLog = config.Define(config.Spec[string]{
 		Key: "mcp.call_log", Env: "MARGINCE_MCP_CALL_LOG", Type: config.String, Roles: apiOnly,
-		Doc: "File the api adds one JSON line to for each /mcp call: caller, tool, arguments, outcome and the answer, secrets stripped. It holds personal data; unset writes none.",
+		Doc: "Dev and debugging only, refused in production: a file the api adds one JSON line to for each /mcp call, with caller, tool, arguments, outcome and answer, secrets stripped. It holds personal data, and nothing caps or ages it; unset writes none.",
 	})
 	MCPConnector = config.Define(config.Spec[bool]{
 		Key: "mcp.connector_enabled", Env: "MARGINCE_MCP_CONNECTOR_ENABLED", Type: config.Bool, Default: config.Some(false), Roles: apiOnly,
@@ -111,6 +112,17 @@ func distinctCurrencies(codes []string) error {
 		seen[code] = true
 	}
 	return nil
+}
+
+// CallLogFault refuses mcp.call_log in production. Its file holds personal data
+// that no retention policy or erasure reaches, and nothing caps its size.
+func CallLogFault(c *config.Config, posture runtimeenv.Environment) error {
+	path, origin := config.ValWithSource(c, MCPCallLog)
+	if path == "" || posture != runtimeenv.Production {
+		return nil
+	}
+	return fmt.Errorf("mcp.call_log from %s is for dev and debugging only, and %s is production: unset it",
+		origin, runtimeenv.EnvVar)
 }
 
 // FileSettings lists the margince.yaml switches above.
