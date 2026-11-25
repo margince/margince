@@ -262,6 +262,8 @@
 1795603730_a_settings_list_holds_each_name_once.up.sql | * | the procedural body renames only the second and later spellings of one name in nine settings lists, which an admin keeps by hand, so the set is empty or a handful of rows
 1795603731_a_lead_name_holds_at_most_a_label.up.sql | * | replaces the two text-bound triggers on lead, which act on later writes only; no existing row is changed
 1795603731_a_lead_name_holds_at_most_a_label.down.sql | * | restores the two text-bound triggers on lead as they stood before; no existing row is changed
+1795616131_the_text_limits_follow_the_unread_deal_and_sales_columns.up.sql | * | replaces the two text-bound triggers on four tables and drops them from two tables left with no limited text; triggers act on later writes only, and no existing row is changed
+1795616131_the_text_limits_follow_the_unread_deal_and_sales_columns.down.sql | * | restores the two text-bound triggers on six tables as they stood before; no existing row is changed
 1795607704_an_edition_reader_key_is_validated.up.sql | * | the procedural body validates or drops the two report_edition keys the file before added; it reads editions and changes no row
 1795607704_an_edition_reader_key_is_validated.down.sql | * | the down migration is a single SELECT 1 that changes nothing
 1795608587_the_array_vocabularies_are_validated.up.sql | * | the procedural body validates or drops the seven array checks the file before added; it reads those tables and changes no row

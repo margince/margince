@@ -547,12 +547,11 @@ The 42 tables owned by `compose`, as the migrations build them. [Back to the ent
 
 ## deal_move_dismissal
 
-4 columns · primary key `(user_id, deal_id)` · referenced by 0 foreign keys
+3 columns · primary key `(user_id, deal_id)` · referenced by 0 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
 | `deal_id` | `uuid` | yes | Points at `deal.id`. |
-| `dismissed_at` | `timestamp with time zone`, default `now()` | yes |  |
 | `fingerprint` | `text` | yes |  |
 | `user_id` | `uuid` | yes | Points at `app_user.id`. |
 
