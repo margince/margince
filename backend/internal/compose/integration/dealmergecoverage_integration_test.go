@@ -12,6 +12,9 @@ package integration
 // deal's own paths, floor and waivers.
 
 import (
+	"io/fs"
+	"path/filepath"
+	"slices"
 	"testing"
 
 	"github.com/margince/margince/backend/internal/shared/gatekit"
@@ -31,6 +34,26 @@ var dealMergePathFiles = []string{
 	"internal/platform/recordmerge/pair.go",
 	"internal/platform/recordmerge/kindid.go",
 	"internal/modules/identity/grantmerge.go",
+}
+
+// dealMergeSeamFiles are the owning modules' seams, found by name so a module
+// that gains one is read without anyone adding it to a list. Finding none
+// would pass every table as unwritten, so the census refuses an empty answer.
+func dealMergeSeamFiles(t *testing.T) []string {
+	t.Helper()
+	var found []string
+	err := filepath.WalkDir("../../../internal", func(path string, d fs.DirEntry, err error) error {
+		if err == nil && !d.IsDir() && d.Name() == "mergedealrefs.go" {
+			rel, relErr := filepath.Rel("../../..", path)
+			found = append(found, filepath.ToSlash(rel))
+			return relErr
+		}
+		return err
+	})
+	if err != nil || len(found) < 8 {
+		t.Fatalf("found %d owner seams (%v), want the eight modules that keep rows about a deal", len(found), err)
+	}
+	return found
 }
 
 // dealFKsTheMergeLeaves are the deal-pointing columns the merge does not move.
@@ -63,7 +86,7 @@ func TestEveryDealForeignKeyJoinsTheMerge(t *testing.T) {
 
 	assertEveryForeignKeyJoinsTheMerge(t, mergeCensus{
 		table: "deal", floor: theDealFKFloor, leaves: dealFKsTheMergeLeaves,
-		written: tablesTheMergeWrites(t, dealMergePathFiles, reach.Deal),
+		written: tablesTheMergeWrites(t, append(slices.Clone(dealMergePathFiles), dealMergeSeamFiles(t)...), reach.Deal),
 		moveIn:  "internal/modules/deals/dealmergerelink.go", leavesName: "dealFKsTheMergeLeaves",
 	})
 }
@@ -73,7 +96,7 @@ func TestEveryDealForeignKeyJoinsTheMerge(t *testing.T) {
 func TestEveryDealKindIDReferenceJoinsTheMerge(t *testing.T) {
 	defer dealKindIDPairsTheMergeLeaves.AssertAllMatched(t)
 
-	assertEveryKindIDReferenceJoinsTheMerge(t, reach.Deal, dealMergePathFiles, dealKindIDPairsTheMergeLeaves)
+	assertEveryKindIDReferenceJoinsTheMerge(t, reach.Deal, append(slices.Clone(dealMergePathFiles), dealMergeSeamFiles(t)...), dealKindIDPairsTheMergeLeaves)
 }
 
 // dealKindIDPairsTheMergeLeaves are the pairs only a deal can sit in, because
