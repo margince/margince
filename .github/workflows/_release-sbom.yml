@@ -40,9 +40,15 @@ jobs:
           ref: ${{ inputs.ref }}
           persist-credentials: false
       # `make check` leaves the release scripts' tests out, so the release
-      # proves the scripts it calls before it uses them.
+      # proves the scripts it calls before it uses them. release.yml can serve
+      # a tag cut before the lane existed; that tag's own `make check` ran the
+      # tests, and its Makefile has no check-release target.
       - name: The release scripts pass their own tests
-        run: make check-release
+        run: |
+          set -euo pipefail
+          if grep -q '^check-release:' Makefile; then
+            make check-release
+          fi
       # The version is given, so the shallow checkout needs no tags for git describe.
       # Make expands SBOM_VERSION inside a recipe, so only a tag in the release grammar may reach it.
       - name: Generate the SBOMs at the release commit

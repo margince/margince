@@ -319,7 +319,7 @@ nobody can get. So a newer run takes over only before signing starts, while `sbo
 `_release-dist.yml` cuts a server release in a dist service: `dist.test.margince.com` or `dist.margince.com`.
 `release-tag.yml` calls it on a plain `vX.Y.Z` tag push, with target `test`. `release.yml` is a manual dispatch
 with a required `tag` input, such as `v1.0.0`, and a `target` input, `test` or `production`. Each run calls
-`_release-sbom.yml` first and hands its artifact to the dist lane. `make check` does not test the release scripts, so each release workflow runs `make check-release` before any job calls one.
+`_release-sbom.yml` first and hands its artifact to the dist lane. `make check` does not test the release scripts, so each release workflow runs `make check-release` before any job calls one. A tag cut before that target existed skips the step, because its own `make check` ran those tests.
 
 `scripts/release-dist-version.sh` refuses a pre-release part, build metadata or a leading zero
 (`make test-release-dist-version`). The dist version is the tag without its `v`. Either way the run builds the

@@ -196,11 +196,13 @@ type releaseStep struct {
 // whether it calls one at all.
 func testsFirst(job releaseJob) (tested, calls bool) {
 	for _, step := range job.Steps {
-		if strings.Contains(step.Run, releaseLaneMake) {
-			return true, true
-		}
-		if releaseScriptCall.MatchString(step.Run) {
+		lane := strings.Index(step.Run, releaseLaneMake)
+		call := releaseScriptCall.FindStringIndex(step.Run)
+		switch {
+		case call != nil && (lane < 0 || call[0] < lane):
 			return false, true
+		case lane >= 0:
+			return true, true
 		}
 	}
 	return false, false
@@ -280,12 +282,14 @@ func TestTheOrderingCheckRefusesAJobThatCallsFirst(t *testing.T) {
 		"early":     {Steps: steps("bash scripts/release-tag-version.sh v1.0.0", releaseLaneMake)},
 		"orphan":    {Needs: stringList{"early"}, Steps: steps("python3 scripts/release_notes.py")},
 		"unrelated": {Steps: steps("make sbom")},
+		"sameStep":  {Steps: steps(releaseLaneMake + "\nbash scripts/release-bundle.sh")},
+		"callFirst": {Steps: steps("bash scripts/release-bundle.sh\n" + releaseLaneMake)},
 	}
 	untested, calls := untestedReleaseJobs(jobs)
-	if want := []string{"early", "orphan"}; !slices.Equal(untested, want) {
+	if want := []string{"callFirst", "early", "orphan"}; !slices.Equal(untested, want) {
 		t.Errorf("untested = %v, want %v", untested, want)
 	}
-	if calls != 4 {
-		t.Errorf("calls = %d, want 4", calls)
+	if calls != 6 {
+		t.Errorf("calls = %d, want 6", calls)
 	}
 }
