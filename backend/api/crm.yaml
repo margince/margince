@@ -72768,6 +72768,7 @@ components:
         kind:
           type: string
           enum: [workspace_secret, oauth_app]
+          x-extensible-enum: true
           description: >-
             `workspace_secret` is a key the installation shares, set on Settings → Integrations.
             `oauth_app` is a vendor app whose client an admin stores on Settings → Sign-in and

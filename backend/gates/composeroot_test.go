@@ -74,8 +74,11 @@ const (
 	// extractor and transcript proposer.
 	// Raised by 244 test lines for the data reset cases of an event the sweep
 	// orphaned, which drive the unexported reset handlers.
-	composeRootProductionLines = 230_745
-	composeRootTestLines       = 360_931
+	// Raised by 239 production and 255 test lines for the extension card's setup
+	// state and the schedule book's time zone. Both drive the unexported
+	// inventory handler, schedule book and catch-up schedule.
+	composeRootProductionLines = 230_984
+	composeRootTestLines       = 361_186
 )
 
 // A read under these floors stopped early or read the wrong place, and would

@@ -17,6 +17,8 @@ import (
 
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/riverqueue/river"
+
+	"github.com/margince/margince/backend/internal/compose/clocktime"
 )
 
 // startupSpread bounds the delay a pass's first run takes after a start. A
@@ -45,7 +47,7 @@ func (s *catchUpSchedule) Next(current time.Time) time.Time {
 	if !s.armed.CompareAndSwap(true, false) {
 		return s.every.Next(current)
 	}
-	if clock, ok := s.every.(clockTimeSchedule); ok {
+	if clock, ok := s.every.(clocktime.Schedule); ok {
 		return s.firstClockRun(clock, current)
 	}
 	first := current
@@ -64,13 +66,13 @@ const replayedSlotMargin = 5 * time.Second
 // firstClockRun is a clock-time pass's first run after a start: at most one
 // catch-up, for a slot missed while the worker was down. A pass that never ran,
 // or whose last run is after its latest slot, waits for its next slot.
-func (s *catchUpSchedule) firstClockRun(clock clockTimeSchedule, current time.Time) time.Time {
-	now := clock.now()
+func (s *catchUpSchedule) firstClockRun(clock clocktime.Schedule, current time.Time) time.Time {
+	now := clock.Now()
 	if current.Before(now.Add(-replayedSlotMargin)) {
 		// River restored a stored slot and enqueued it; that run is the catch-up.
 		return clock.Next(current)
 	}
-	missed := !s.lastRun.IsZero() && !clock.slotAfter(s.lastRun).After(now)
+	missed := !s.lastRun.IsZero() && !clock.SlotAfter(s.lastRun).After(now)
 	if !missed {
 		return clock.Next(current)
 	}

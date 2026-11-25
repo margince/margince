@@ -892,6 +892,18 @@ describe("ExtensionAccessCard", () => {
 // and three empty sections leave an admin deciding about "de" with no idea what
 // it is.
 describe("ExtensionAccessCard unit identity", () => {
+  it("says a unit is ready, or names what it still needs, and nothing for an older server", async () => {
+    vi.stubGlobal("fetch", backend([]));
+    render(<ExtensionAccessCard />);
+    const setup = async (name: string) =>
+      (await screen.findByText(name))
+        .closest("section.panel")
+        ?.querySelector("p[data-testid=ext-unit-setup]")?.textContent;
+    expect(await setup("Quiet")).toBe(en["extAccess.setupReady"]);
+    expect(await setup("Stale")).toBeUndefined();
+    expect(await setup("Notes")).toMatch(/^Needs setup.*“signing”.*“Acme CRM”/);
+  });
+
   it("says what each unit is for, from the unit's own declaration", async () => {
     vi.stubGlobal("fetch", backend([]));
     render(<ExtensionAccessCard />);
@@ -928,30 +940,6 @@ describe("ExtensionAccessCard unit identity", () => {
       screen.queryByRole("link", {
         name: en["extAccess.openUnit"].replace("{name}", "Quiet"),
       }),
-    ).toBeNull();
-  });
-});
-
-describe("ExtensionAccessCard setup state", () => {
-  it("says a unit is ready, or names what it still needs, and nothing for an older server", async () => {
-    vi.stubGlobal("fetch", backend([]));
-    render(<ExtensionAccessCard />);
-
-    const quiet = (await screen.findByText("Quiet")).closest("section.panel");
-    expect(
-      within(quiet as HTMLElement).getByText(en["extAccess.setupReady"]),
-    ).toBeTruthy();
-    const notes = screen.getByText("Notes").closest("section.panel");
-    const setup = within(notes as HTMLElement).getByTestId("ext-unit-setup");
-    expect(setup.textContent).toContain(en["extAccess.needsSetup"]);
-    expect(setup.textContent).toContain("“signing”");
-    expect(setup.textContent).toContain("“Acme CRM”");
-    const stale = screen.getByText("Stale").closest("section.panel");
-    expect(
-      within(stale as HTMLElement).queryByText(en["extAccess.setupReady"]),
-    ).toBeNull();
-    expect(
-      within(stale as HTMLElement).queryByTestId("ext-unit-setup"),
     ).toBeNull();
   });
 });

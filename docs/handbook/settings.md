@@ -184,13 +184,9 @@ The Integrations page in Settings (group **Data**) shows what the installation i
 
 ## Extensions
 
-The Extensions page in Settings (group **System**) lists the add-ons your installation was built with, and what each may reach. You cannot add one from inside the app. Each add-on names what it is for, its release, and the kinds of record it adds.
+The Extensions page in Settings (group **System**) lists the add-ons your installation was built with, and what each may reach. You cannot add one from inside the app. Each add-on names what it is for, its release, and the kinds of record it adds. It also says **Ready** or **Needs setup**. Admin and Ops both reach the page.
 
-Each add-on also says **Ready** or **Needs setup**.
-
-Needs setup names what is still missing. That is a key the whole company shares, set in Settings under **Integrations**. Or it is an app the add-on signs in to, set under **Sign-in and security**. A key each person connects for their own account does not count, because nobody sets it for the company. An add-on with nothing to set up says Ready. Removing an add-on from the build does not delete the keys stored for it.
-
-If an add-on's screen shows nothing, give a role access to it here with its switches. The built-in roles start with no access to an add-on's records. An add-on that adds no records, such as a set of rules for one place, is listed with nothing to give. Admin and Ops both reach the page.
+Needs setup names what is missing: a company key under **Integrations**, or the add-on's sign-in app under **Sign-in and security**. A key each person connects for their own account does not count. Removing an add-on does not delete its keys. If an add-on's screen shows nothing, give a role access to it here with its switches. The built-in roles start with no access to an add-on's records. An add-on that adds no records, such as a set of rules for one place, is listed with nothing to give.
 
 ## Mail capture
 

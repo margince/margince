@@ -17,6 +17,7 @@ package main
 // ext_<ns>_<job> and ext_<ns>_<job>_ws.
 
 import (
+	"errors"
 	"fmt"
 	"slices"
 	"sort"
@@ -315,13 +316,13 @@ func declarationFrom(dispatcher, child namedExtKind, queues []string) (extension
 func parseJobSchedule(def extJobKind) (time.Duration, *extension.TimeOfDay, error) {
 	if def.At == "" {
 		if len(def.Days) > 0 {
-			return 0, nil, fmt.Errorf("declares days without at — days narrow a time of day")
+			return 0, nil, errors.New("declares days without at — days narrow a time of day")
 		}
 		cadence, err := parseJobDuration("cadence", def.Cadence)
 		return cadence, nil, err
 	}
 	if def.Cadence != "" {
-		return 0, nil, fmt.Errorf("declares both cadence and at — a job runs on one schedule")
+		return 0, nil, errors.New("declares both cadence and at — a job runs on one schedule")
 	}
 	clock, err := time.Parse("15:04", def.At)
 	if err != nil || clock.Format("15:04") != def.At {

@@ -29,13 +29,22 @@ export function UnitSetup({
     return null;
   }
   if (missing.length === 0) {
-    return <Badge tone="success">{t("extAccess.setupReady")}</Badge>;
+    return (
+      <p data-testid="ext-unit-setup">
+        <Badge tone="success">{t("extAccess.setupReady")}</Badge>
+      </p>
+    );
   }
-  const items = missing.map((item) =>
-    item.kind === "oauth_app"
-      ? t("extAccess.setupApp", { name: item.name })
-      : t("extAccess.setupSecret", { name: item.name }),
-  );
+  // The kind list is open: a kind a newer server adds is named as it is.
+  const items = missing.map((item) => {
+    if (item.kind === "oauth_app") {
+      return t("extAccess.setupApp", { name: item.name });
+    }
+    if (item.kind === "workspace_secret") {
+      return t("extAccess.setupSecret", { name: item.name });
+    }
+    return item.name;
+  });
   return (
     <p data-testid="ext-unit-setup">
       <Badge tone="warning">{t("extAccess.needsSetup")}</Badge>{" "}
