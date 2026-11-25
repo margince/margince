@@ -403,7 +403,7 @@ function UnitBrings({ unit }: Readonly<{ unit: ExtensionUnit }>) {
           value: list(unit.jobs),
         },
         needsFact(unit.needs, t("extAccess.brings.needs")),
-        ...mailHooksFacts(unit.mail_hooks, t),
+        ...mailHooksFacts(unit.mail_hooks, t("extAccess.brings.mail")),
       ]}
     />
   );

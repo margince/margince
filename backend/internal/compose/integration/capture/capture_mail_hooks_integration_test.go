@@ -246,14 +246,52 @@ func TestADealHookChangeWithoutADeclaredReasonIsIgnored(t *testing.T) {
 	w.employee(t, "alice@acme.example", w.customer)
 	only := w.deal(t, "Acme rollout")
 	registerMailHooks(t, extension.MailHooks{Deal: func(_ context.Context, _ extension.MailView, d extension.MailDeal) (extension.MailDeal, error) {
-		return extension.MailDeal{Outcome: "none", Reason: "not declared"}, nil
+		return extension.MailDeal{Outcome: "none", Reason: "alice@acme.example wrote: invoice"}, nil
 	}})
 	env.sync(t, mailFrom("alice@acme.example", "hook8@acme.example", "", "invoice"))
 	wantDeals(t, e, "hook8@acme.example", only)
 	mail := activityOf(t, e, "hook8@acme.example")
-	wantFiling(t, e, mail, "ignored", "not declared")
+	wantFiling(t, e, mail, "ignored", "alice@acme.example wrote: invoice")
 	// Core's own link was written, and its audit row names no refused answer.
-	wantHookLog(t, e, mail, "ignored", "not declared", 1)
+	// The lasting row keeps a marker, never the hook's text, which may be mail.
+	wantHookLog(t, e, mail, "ignored", "undeclared", 1)
+	if n := countRows(t, e, `SELECT count(*) FROM system_log WHERE action = 'extension_mail_hook'
+		AND detail::text LIKE '%alice@acme.example%'`); n != 0 {
+		t.Fatalf("%d system log rows keep the hook's undeclared reason", n)
+	}
+}
+
+// A repair decides a mail once per mailbox that imported it, in one
+// transaction. A hook that fails for both leaves one lasting row, not two.
+func TestARepairAcrossTwoMailboxesLogsAHookAnswerOnce(t *testing.T) {
+	env := newCaptureEnv(t)
+	e := env.e
+	w := newDealWorld(t, e)
+	w.employee(t, "alice@acme.example", w.customer)
+	only := w.deal(t, "Acme rollout")
+	colleague := secondSentMailbox(t, e, e.Rep3)
+	raw := mailFrom("alice@acme.example", "hook11@acme.example", "", "invoice")
+	env.sync(t, raw)
+	colleague(t, nil, nil, raw)
+	wantDeals(t, e, "hook11@acme.example", only)
+	mail := activityOf(t, e, "hook11@acme.example")
+	if n := countRows(t, e, `SELECT count(DISTINCT user_id) FROM capture_import WHERE activity_id = '`+mail.String()+`'`); n != 2 {
+		t.Fatalf("the mail came from %d mailboxes, want 2 for this test to hold anything", n)
+	}
+
+	var calls atomic.Int32
+	registerMailHooks(t, extension.MailHooks{Deal: func(_ context.Context, _ extension.MailView, d extension.MailDeal) (extension.MailDeal, error) {
+		calls.Add(1)
+		return d, errors.New("the ledger is down")
+	}})
+	r := newRepairer(e, w)
+	r.repair.Hooks = mailhooks.New(compose.ComposedExtensions, e.Pool)
+	r.run(t)
+	wantDeals(t, e, "hook11@acme.example", only)
+	if calls.Load() < 2 {
+		t.Fatalf("the hook ran %d times, want once per mailbox", calls.Load())
+	}
+	wantHookLog(t, e, mail, "failed", "", 1)
 }
 
 // A hook now answers `none` on a mail the rule filed, and the repair takes the

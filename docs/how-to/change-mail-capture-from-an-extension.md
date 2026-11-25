@@ -42,7 +42,7 @@ A lookup cannot write. It runs in its own read-only transaction as the unit role
 
 ## What the operator sees
 
-The unit's `manifest.generated.json` names the hooks under `mail_hooks`: which hooks are set, what each mail gives them (`subject`, `addresses`, `body`), how many characters of the text, and the declared reasons. The "Extensions and access" screen in Settings shows a "Captured mail" row for the unit. Your unit may send what a hook read to its own provider, so the operator learns of the hooks before the unit runs. `make gen` refuses the reasons that the server refuses at start.
+The unit's `manifest.generated.json` names the hooks under `mail_hooks`: which hooks are set, what each mail gives them (`subject`, `addresses`, `body`), how many characters of the text, and the declared reasons. The "Extensions and access" screen in Settings shows a "Reads from captured mail" row for the unit, with the parts and the number of characters. Your unit may send what a hook read to its own provider, so the operator learns of the hooks before the unit runs. `make gen` refuses the reasons that the server refuses at start.
 
 ## What core promises
 
@@ -52,7 +52,7 @@ The unit's `manifest.generated.json` names the hooks under `mail_hooks`: which h
 - A hook cannot change what a colleague decided. A mail that is already filed never reaches a hook. A deal a colleague said the mail is "Not about" is dropped from the answer, and core files by its own rule instead.
 - A deal you link is filed without the model's topic check, because you decided it by your own rules.
 - Core records the change. The audit row of a deal link names each unit, the hook and its reason under `extension_hooks`. So does the audit row of an unlink, when a repair takes a link back because of your answer.
-- An answer that leaves no such audit row is kept in the system log as an `extension_mail_hook` row, with the mail's id, the unit, the hook, the reason and the result. That covers a `none` answer, a failure, and an ignored answer. These rows are not swept.
+- An answer that leaves no such audit row is kept in the system log as an `extension_mail_hook` row, with the mail's id, the unit, the hook, the reason and the result. That covers a `none` answer, a failure, and an ignored answer. A reason you did not declare is stored as `undeclared`, because its text could hold the mail. A repair that decides a mail for several mailboxes writes one row per answer. These rows are not swept.
 - Settings > Capture shows who filed each mail: core with the rule it used, or your unit with your reason. It also shows when your hook answered `none`, took a link away, failed, or was ignored, and when a later repair moved or took back a link.
 
 An answer core cannot use is dropped as a whole. That covers an id that is not a live record, a third company, a candidate the rule did not offer, and an `ambiguous` answer where core found none. It also covers a contact, company or deal the mailbox owner cannot see. The trace files such an answer as ignored.

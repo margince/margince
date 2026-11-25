@@ -94,7 +94,7 @@ const EXTENSIONS = {
         parties: false,
         deal: true,
         reads: ["subject", "addresses", "body"],
-        body_characters: 8000,
+        body_characters: 1234,
         reasons: ["po_number"],
       },
     },
@@ -359,13 +359,18 @@ describe("ExtensionAccessCard", () => {
       "File storage — Keeps the summaries it writes.",
     ]);
 
-    // A unit with a mail hook says so; a unit without one has no mail row.
+    // A unit with a mail hook lists what it reads, with the server's count.
+    const mail = screen
+      .getByText("Reads from captured mail")
+      .closest(".factlist-row");
     expect(
-      screen.getByText("Captured mail").closest(".factlist-row")?.textContent,
-    ).toContain(
-      "Reads the subject, the addresses and the start of the text of every captured mail.",
-    );
-    expect(screen.getAllByText("Captured mail")).toHaveLength(1);
+      [...(mail?.querySelectorAll("li") ?? [])].map((item) => item.textContent),
+    ).toEqual([
+      "The subject",
+      "The participants' addresses",
+      "The first 1,234 characters of the text",
+    ]);
+    expect(screen.getAllByText("Reads from captured mail")).toHaveLength(1);
 
     // The grants, read straight off the fixture: admin reads and creates the
     // note object and does neither of the other two verbs.

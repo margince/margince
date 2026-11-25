@@ -40,12 +40,14 @@ const (
 )
 
 // HookChange is one extension's change to a result, and its reason. Reason is
-// the key the unit declared for it, or empty when the hook failed.
+// what the hook answered, empty when it failed. Declared says the unit declared
+// it as a key; an undeclared reason is the hook's own text and may be mail.
 type HookChange struct {
-	Unit   string
-	Hook   string
-	Reason string
-	Result HookResult
+	Unit     string
+	Hook     string
+	Reason   string
+	Declared bool
+	Result   HookResult
 }
 
 // hookFailed is whether any hook failed. A failed hook decided nothing.

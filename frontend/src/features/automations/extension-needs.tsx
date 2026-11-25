@@ -2,7 +2,8 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { components } from "../../api/schema";
-import { useT } from "../../i18n";
+import { formatNumber } from "../../format/format";
+import { useLocale, usePlural, useT } from "../../i18n";
 
 type Need = components["schemas"]["ComposedExtensionNeed"];
 type MailHooks = components["schemas"]["ComposedExtensionMailHooks"];
@@ -63,21 +64,43 @@ export function needsFact(needs: readonly Need[] | undefined, term: string) {
 }
 
 /**
+ * What of each captured mail a unit's hooks read, as the server reports it. A
+ * part this screen has no word for shows as its own name, as a need does.
+ */
+function UnitMailReads({ hooks }: Readonly<{ hooks: MailHooks }>) {
+  const t = useT();
+  const plural = usePlural();
+  const { locale } = useLocale();
+  const label = (read: string) => {
+    switch (read) {
+      case "subject":
+        return t("extAccess.mail.subject");
+      case "addresses":
+        return t("extAccess.mail.addresses");
+      case "body":
+        return plural("extAccess.mail.body", hooks.body_characters, {
+          count: formatNumber(hooks.body_characters, locale),
+        });
+      default:
+        return read;
+    }
+  };
+  return (
+    <ul className="ext-brings-list">
+      {hooks.reads.map((read) => (
+        <li key={read}>{label(read)}</li>
+      ))}
+    </ul>
+  );
+}
+
+/**
  * The mail row of a unit's "brings" list, present only for a unit with a mail
  * hook. The unit may send what its hooks read to its own provider, so the admin
  * learns of it before granting the unit anything.
  */
-export function mailHooksFacts(
-  hooks: MailHooks | undefined,
-  t: ReturnType<typeof useT>,
-) {
+export function mailHooksFacts(hooks: MailHooks | undefined, term: string) {
   return hooks
-    ? [
-        {
-          key: "mail",
-          term: t("extAccess.brings.mail"),
-          value: t("extAccess.mail.reads"),
-        },
-      ]
+    ? [{ key: "mail", term, value: <UnitMailReads hooks={hooks} /> }]
     : [];
 }
