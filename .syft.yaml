@@ -40,7 +40,7 @@ file:
       - sha256
       - sha512
 
-# No `exclude:` list on purpose. The constellation dist release gate rejects a
+# No `exclude:` list on purpose. The publisher's release gate rejects a
 # release unless the SBOM attests every file the release patch adds or modifies,
 # and the patch (create-patch) is a full committed-tree diff with no excludes. So
 # the SBOM file set must equal the whole committed tree: excluding any committed

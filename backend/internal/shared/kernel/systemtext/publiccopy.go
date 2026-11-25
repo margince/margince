@@ -10,6 +10,14 @@ var publicDefinitions = map[string]Definition{
 	"booking.meeting":   {Words: langcopy.Phrase{En: "Meeting", De: "Besprechung", Vi: "Cuộc họp"}},
 	"booking.proposed":  {Words: langcopy.Phrase{En: "Meeting proposed: %s", De: "Vorgeschlagener Termin: %s", Vi: "Đề xuất cuộc họp: %s"}, Arguments: []string{argumentText}},
 
+	"webform.thanks":          {Words: langcopy.Phrase{En: "Thank you. Your message has been received.", De: "Danke. Die Nachricht ist angekommen.", Vi: "Cảm ơn. Tin nhắn đã được nhận."}, Arguments: []string{}},
+	"webform.unavailable_now": {Words: langcopy.Phrase{En: "This form could not be sent right now. Please try again later.", De: "Das Formular konnte gerade nicht gesendet werden. Bitte später erneut versuchen.", Vi: "Hiện không thể gửi biểu mẫu này. Vui lòng thử lại sau."}, Arguments: []string{}},
+	"webform.needs_email":     {Words: langcopy.Phrase{En: "This form could not be sent because the email address is missing or not valid. Please go back and enter it.", De: "Das Formular konnte nicht gesendet werden, da die E-Mail-Adresse fehlt oder ungültig ist. Bitte zurückgehen und sie eingeben.", Vi: "Không thể gửi biểu mẫu vì địa chỉ email bị thiếu hoặc không hợp lệ. Vui lòng quay lại và nhập địa chỉ email."}, Arguments: []string{}},
+	"webform.needs_consent":   {Words: langcopy.Phrase{En: "This form could not be sent because the consent box is not ticked. Please go back and tick it.", De: "Das Formular konnte nicht gesendet werden, da die Einwilligung nicht angekreuzt ist. Bitte zurückgehen und sie ankreuzen.", Vi: "Không thể gửi biểu mẫu vì ô đồng ý chưa được đánh dấu. Vui lòng quay lại và đánh dấu ô này."}, Arguments: []string{}},
+	"webform.gone":            {Words: langcopy.Phrase{En: "This form is no longer available.", De: "Dieses Formular ist nicht mehr verfügbar.", Vi: "Biểu mẫu này không còn khả dụng."}, Arguments: []string{}},
+	"webform.paused":          {Words: langcopy.Phrase{En: "This form is not taking submissions right now.", De: "Dieses Formular nimmt derzeit keine Anfragen an.", Vi: "Biểu mẫu này hiện không nhận lượt gửi mới."}, Arguments: []string{}},
+	"webform.too_many":        {Words: langcopy.Phrase{En: "This form receives too many submissions right now. Wait %d seconds and send it again.", De: "Dieses Formular erhält gerade zu viele Anfragen. Bitte %d Sekunden warten und erneut senden.", Vi: "Biểu mẫu này đang nhận quá nhiều lượt gửi. Vui lòng đợi %d giây rồi gửi lại."}, Arguments: []string{argumentCount}},
+
 	"file.unavailable_title":    {Words: langcopy.Phrase{En: "File not available", De: "Datei nicht verfügbar", Vi: "Tệp không khả dụng"}, Arguments: []string{}},
 	"file.unavailable_sentence": {Words: langcopy.Phrase{En: "This file was deleted or you no longer have access.", De: "Diese Datei wurde gelöscht oder du hast keinen Zugriff mehr darauf.", Vi: "Tệp này đã bị xóa hoặc bạn không còn quyền truy cập."}, Arguments: []string{}},
 

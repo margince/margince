@@ -240,6 +240,7 @@ function FormRow({
                     <ArchiveAction
                       requires={{ object: "integrations", action: "delete" }}
                       label={t("webForms.archive")}
+                      title={t("webForms.archiveTitle", { name: form.name })}
                       confirmText={t("webForms.archiveConfirm")}
                       archivedMessage={t("webForms.archiveDone")}
                       invalidate={WEB_FORMS_KEY}

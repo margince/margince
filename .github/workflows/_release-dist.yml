@@ -264,13 +264,13 @@ jobs:
             }
           skip-extraction: ${{ steps.mount-cache.outputs.cache-hit }}
       # ghcr only for pulling the release-management CLI image; the baked
-      # images go to the constellation registry as the registry publisher.
+      # images go to the publisher's registry as the registry publisher.
       - name: Log in to ghcr.io
         env:
           GHCR_TOKEN: ${{ secrets.RELEASE_TOOL_GHCR_TOKEN }}
           GHCR_USER: ${{ vars.RELEASE_TOOL_GHCR_USER }}
         run: echo "$GHCR_TOKEN" | docker login ghcr.io -u "$GHCR_USER" --password-stdin
-      - name: Log in to the constellation registry
+      - name: Log in to the publisher's registry
         env:
           PUBLISHER_TOKEN: ${{ inputs.target == 'production' && secrets.MARGINCE_PRODUCTION_AUTH_PUBLISHER_TOKEN || inputs.target != 'production' && secrets.MARGINCE_AUTH_PUBLISHER_TOKEN || '' }}
         run: |

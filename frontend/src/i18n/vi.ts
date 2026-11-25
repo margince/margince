@@ -3191,6 +3191,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
 
   "merge.contact": "Gộp liên hệ",
   "merge.company": "Gộp công ty",
+  "merge.deal": "Gộp deal",
   "merge.searchPlaceholder": "Tìm kiếm…",
   "merge.pickTarget": "Chọn hồ sơ giữ lại",
   "merge.confirm":
@@ -6332,7 +6333,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "deal.standing.risk.replyOwed": "Phản hồi của nhóm còn chờ xử lý",
   "deal.standing.risk.closePassed": "Quá hạn chốt",
   "deal.details.closingFootnote":
-    "Các giai đoạn chốt sẽ hỏi trước: Thắng và Thua mở một hộp thoại ngắn.",
+    "Giai đoạn chốt sẽ hỏi trước và mở một hộp thoại ngắn.",
   "deal.timeline.empty": "Chưa có hoạt động nào trên deal này.",
   "legalEntities.title": "Pháp nhân",
   "legalEntities.sub":
@@ -7864,6 +7865,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "docs.category.message": "Tệp đính kèm tin nhắn",
   "docs.category.other": "Khác",
   "docs.category.link": "Liên kết đã gửi",
+  "docs.source.upload": "Đã tải lên",
+  "docs.source.link": "Đã thêm liên kết",
   "docs.view.label": "Hiển thị tài liệu dưới dạng",
   "docs.view.grid": "Lưới",
   "docs.view.list": "Danh sách",
@@ -14607,6 +14610,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "cf.removedFromReports": "Đã gỡ “{label}” khỏi báo cáo",
   "cf.audit.title": "Thay đổi trường gần đây",
   "audit.kind.customField": "Trường tùy chỉnh",
+  "audit.kind.activity_retention_evidence": "Bằng chứng lưu giữ",
   "audit.kind.activity_review_template": "Mẫu đánh giá hoạt động",
   "audit.kind.agent_standing_grant": "Quyền thường trực của trợ lý AI",
   "audit.kind.ai_feedback": "Phản hồi về AI",
@@ -14639,12 +14643,14 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "audit.kind.confirm_token": "Liên kết xác nhận",
   "audit.kind.consent_text_version": "Phiên bản nội dung đồng ý",
   "audit.kind.contact_acquisition_evidence": "Bằng chứng nguồn liên hệ",
+  "audit.kind.commission_entry": "Khoản hoa hồng",
   "audit.kind.contract": "Hợp đồng",
   "audit.kind.data_subject_request": "Yêu cầu của chủ thể dữ liệu",
   "audit.kind.deal_acquisition_source": "Nguồn deal",
   "audit.kind.deal_loss_reason": "Lý do thua",
   "audit.kind.deal_loss_reason_mapping": "Ánh xạ lý do thua",
   "audit.kind.deal_risk_day": "Kiểm tra rủi ro deal",
+  "audit.kind.deal_document_hide": "Tệp deal bị ẩn",
   "audit.kind.deal_room": "Trang Deal Room",
   "audit.kind.deal_room_comment": "Bình luận trong Deal Room",
   "audit.kind.deal_room_document": "Tài liệu trong Deal Room",
@@ -18326,6 +18332,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "webForms.rotateConfirm.body":
     "Khóa hiện tại ngừng hoạt động ngay và khóa mới chỉ hiện một lần. Hãy dán nó vào chỗ của khóa cũ ngay.",
   "webForms.archive": "Lưu trữ",
+  "webForms.archiveTitle": "Lưu trữ {name}?",
   "webForms.archiveConfirm":
     "Sau khi lưu trữ, biểu mẫu này không nhận bài gửi nữa. Không thể hoàn tác.",
   "webForms.archiveDone": "Đã lưu trữ biểu mẫu trang web",
@@ -18708,7 +18715,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Các trường của deal thay đổi, trừ giai đoạn và người chịu trách nhiệm.",
   "webhooks.event.deal.stage_changed.label": "Deal đã chuyển giai đoạn",
   "webhooks.event.deal.stage_changed.when":
-    "Deal chuyển sang giai đoạn mới, kể cả Thắng và Thua.",
+    "Deal chuyển sang giai đoạn mới, kể cả các giai đoạn chốt.",
   "webhooks.event.deal.owner_changed.label": "Đã giao lại deal",
   "webhooks.event.deal.owner_changed.when":
     "Deal được giao cho người chịu trách nhiệm khác.",

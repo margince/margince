@@ -190,6 +190,9 @@ func decideBirthTx(
 	// against its threads — and a channel transport has no row in it. Giving one
 	// a posture of its own is a product question about what a member may ask of
 	// their own transport, not a gap to fill in with mail's answer.
+	if fields.memberOwned {
+		return memberChatPostureTx(ctx, tx, decision)
+	}
 	if fields.Kind != kindEmail {
 		return decision, nil
 	}

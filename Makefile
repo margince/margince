@@ -1997,7 +1997,7 @@ sbom-supplement:
 	@python3 scripts/third_party_files.py supplement $(SBOM_DIR) third-party-files.txt
 
 ## sbom-normalize — reconcile syft's three writers so all three SBOMs describe one
-## tree, the invariant the constellation dist gate enforces. syft scans the export
+## tree, the invariant the publisher's release gate enforces. syft scans the export
 ## at /src/$(SBOM_SRC), and its writers then disagree: CycloneDX names every file
 ## with that absolute scan-root prefix while SPDX names are repo-relative, and the
 ## SPDX writers additionally emit a pseudo-entry per directory (lone zero SHA1) plus
