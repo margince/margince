@@ -21,6 +21,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/platform/httperr"
+	"github.com/margince/margince/backend/internal/platform/recordmerge"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -42,7 +43,7 @@ func (s *Store) MergeCompany(ctx context.Context, sourceID, targetID ids.Company
 		return crmcontracts.Company{}, err
 	}
 	if sourceID == targetID {
-		return crmcontracts.Company{}, &MergeSelfError{}
+		return crmcontracts.Company{}, &recordmerge.MergeSelfError{}
 	}
 
 	var out crmcontracts.Company
@@ -79,14 +80,18 @@ func (s *Store) mergeCompanyTx(
 	// The pair lock keeps BOTH endpoints held to commit: without it a
 	// concurrent merge(target→elsewhere) archives the survivor
 	// mid-merge and the relinked children point at a dead record.
+	if err := screenPairMerge(ctx, tx, "company", sourceID.UUID, targetID.UUID); err != nil {
+		return crmcontracts.Company{}, err
+	}
 	_, tgtLock, err := storekit.LockPair(ctx, tx, "company", sourceID.UUID, targetID.UUID)
+	err = recordmerge.MissingIsConflict(err)
 	if err != nil {
 		return crmcontracts.Company{}, err
 	}
 	if ctx, err = admitDuplicatePairMerge(ctx, tx, entityCompany, sourceID.UUID, targetID.UUID); err != nil {
 		return crmcontracts.Company{}, err
 	}
-	src, tgt, err := mergePair(ctx, tx, "company", sourceID, targetID, ifVersion, readCompanyMergeState)
+	src, tgt, err := recordmerge.Pair(ctx, tx, "company", sourceID, targetID, ifVersion, readCompanyMergeState)
 	if err != nil {
 		return crmcontracts.Company{}, err
 	}
@@ -107,7 +112,7 @@ func (s *Store) mergeCompanyTx(
 	if err := s.carryGrantsTx(ctx, tx, "company", sourceID.UUID, targetID.UUID); err != nil {
 		return crmcontracts.Company{}, fmt.Errorf("carry the merged-away company's grants: %w", err)
 	}
-	if err := archiveMergedAway(ctx, tx, "company", sourceID.UUID, targetID.UUID); err != nil {
+	if err := recordmerge.ArchiveMergedAway(ctx, tx, "company", sourceID.UUID, targetID.UUID); err != nil {
 		return crmcontracts.Company{}, fmt.Errorf("retire merged-away company: %w", err)
 	}
 	filled, err := fillCompanySurvivorship(ctx, tx, src, tgt, targetIsPartner, tgtLock)
@@ -161,7 +166,7 @@ func relinkCompanyAssociations(ctx context.Context, tx pgx.Tx, sourceID, targetI
 	if err := relinkCompanyEdges(ctx, tx, sourceID, targetID); err != nil {
 		return false, fmt.Errorf("relink relationships: %w", err)
 	}
-	if _, err := relinkLinkRows(ctx, tx, "company", sourceID.UUID, targetID.UUID); err != nil {
+	if _, err := recordmerge.RelinkLinkRows(ctx, tx, "company", sourceID.UUID, targetID.UUID); err != nil {
 		return false, fmt.Errorf("relink activity/list/tag rows: %w", err)
 	}
 	// The survivor ends up with the UNION of both companies' relationship

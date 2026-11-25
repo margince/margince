@@ -213,7 +213,10 @@ The `license:` block points at the license token of the installation. Margince c
 `backend/internal/platform/licensecheck/module/`. It makes no call out of any kind. So an
 installation with no network proves its license the same way a connected one does. The tools of
 the publisher install the module, its pin and its digest together, and nobody edits them by hand.
-A blob that stops matching its recorded digest fails `make check`.
+
+The `VERSION` file names the release tag on its first line and, on its second, the digest of the
+blob that tag was written for. A blob that stops matching its recorded digest, or a `VERSION`
+written for another blob, fails `make check`.
 
 | field | default | what it does |
 |---|---|---|

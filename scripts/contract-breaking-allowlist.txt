@@ -84,3 +84,5 @@ a8463929c42388452e8a52750c438099ad7779a1 ec124a84e3c6a1f346da51e506bb4fec5d1ffd5
 5ce723da0e509a3b167166ffbade43cdcaad8228 ec124a84e3c6a1f346da51e506bb4fec5d1ffd5b ratified-main-s-signal-source-of-six-channels-carried-into-develop-in-the-back-sync
 5b91459388982e3951aba811d2669c0f54338943 66e94e0036aa15f2214b7dd2bb5e162a0e67e8b3 ratified-develop-s-company-status-and-chat-business-accounts-carried-into-develop-in-the-back-sync
 a0d9e91c17fd307fdee4e1dc3c7d993eb3527a6e 66e94e0036aa15f2214b7dd2bb5e162a0e67e8b3 ratified-main-s-signal-source-and-update-why-carried-into-develop-in-the-back-sync
+26b95b4eda08202007a7d925e49e44834815a4a8 abd3f2ea96d9ceac4bdc8e31c08fd828caf96ff6 ratified-develop-s-company-status-carried-into-develop-in-the-back-sync
+1ed7352e2f2239fd8010a4dafeb276f305c904d6 abd3f2ea96d9ceac4bdc8e31c08fd828caf96ff6 ratified-main-s-contract-changes-carried-into-develop-in-the-back-sync

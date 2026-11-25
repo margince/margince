@@ -135,6 +135,7 @@ var satelliteLifecyclePaths = []satellitePath{
 // asks about is reported as unmatched, so a ratification cannot outlive the
 // reason for it.
 var carriedElsewhere = gatekit.Waive(map[string]string{
+	"activity_link":             "the contact merge moves the timeline links in platform/recordmerge (RelinkLinkRows), the one statement the contact, company and deal merges share, so a link the survivor already holds stands and the retired copy is dropped. The call sits in relinkContactReferences; the SQL does not",
 	"contact_address_country":   "a check of the merged-away contact's own postal code and city, which says nothing about the survivor's address. The survivor keeps its own check, and the trigger deletes it when the merge moves the survivor's address; the next sweep checks the address the survivor ends with",
 	"tag_suggestion":            "a tag suggestion is the tag scout's reading of ONE record's evidence. The merge archives the merged-away contact, which the next scout pass reads as a suggestion that no longer stands (superseded); the activities the merge relinks raise the survivor's own suggestion. Moving the row could collide with the survivor's own open suggestion of the same tag",
 	"lawful_basis_confirmation": "a user's confirmation that lasts 15 minutes and is spent once by the next send to that record. The merge leaves it on the merged-away contact, where it expires unspent; a send to the survivor shows the warning and asks again. Moving it would let one confirmation answer a send to a different record than the one the user confirmed",

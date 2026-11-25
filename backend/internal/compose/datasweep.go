@@ -240,10 +240,10 @@ func clearWorkspaceOutbox(ctx context.Context, tx pgx.Tx) error {
 // streams are purged are re-published seconds later into streams that were just
 // emptied, and a subscriber then works events against rows the sweep is deleting.
 //
-// It narrows the window rather than closing it. The relay claims a batch FOR
-// UPDATE SKIP LOCKED, so this DELETE waits on whatever is in flight — but that
-// batch has already XADDed, and rows any concurrent request commits afterwards
-// still reach the bus. The residual is one relay batch wide, not seconds wide.
+// It narrows the window rather than closing it. An event a request commits
+// after this DELETE and before the sweep survives the reset and names a row the
+// sweep deletes. Its consumers answer events.ErrUnactionable for the missing
+// record, so the subscriber acks it once instead of retrying it forever.
 //
 // Running in its own transaction has a price the sweep's did not: a reset that
 // fails later has already dropped this workspace's staged events, and they are

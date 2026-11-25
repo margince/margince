@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-package contacts
+package recordmerge
 
 // Re-homing the rows that name a record by kind and id.
 
@@ -17,10 +17,10 @@ import (
 	"github.com/margince/margince/backend/pkg/extension/reach"
 )
 
-// moveKindIDRows moves the polymorphic references of a merged-away contact or
+// MoveKindIDRows moves the polymorphic references of a merged-away contact or
 // company. They carry no foreign key, so the schema cannot stop an
 // (entity_type, entity_id) pair from pointing at an archived record.
-func moveKindIDRows(ctx context.Context, tx pgx.Tx, entityType string, sourceID, targetID ids.UUID) error {
+func MoveKindIDRows(ctx context.Context, tx pgx.Tx, entityType string, sourceID, targetID ids.UUID) error {
 	if err := moveKindIDSingles(ctx, tx, entityType, sourceID, targetID); err != nil {
 		return err
 	}

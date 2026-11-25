@@ -21809,7 +21809,7 @@
     "site":
      "site",
     "size_band":
-     "Mitarbeitende",
+     "Beschäftigtenzahl",
     "skip":
      "skip",
     "skip_reason":
@@ -30293,7 +30293,7 @@
     "merge_profile_field/text/score_override_reason":
      "Grund für die Score-Anpassung",
     "merge_profile_field/text/size_band":
-     "Mitarbeitende",
+     "Beschäftigtenzahl",
     "merge_profile_field/text/social":
      "Social-Profile",
     "merge_profile_field/text/source":
@@ -30659,7 +30659,7 @@
     "merge_profile_field/lifecycle/score_override_reason":
      "Grund für die Score-Anpassung",
     "merge_profile_field/lifecycle/size_band":
-     "Mitarbeitende",
+     "Beschäftigtenzahl",
     "merge_profile_field/lifecycle/social":
      "Social-Profile",
     "merge_profile_field/lifecycle/source":

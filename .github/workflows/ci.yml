@@ -244,6 +244,7 @@ jobs:
               - 'tools/**'
               - 'user-guide/**'
               - 'Dockerfile*'
+              - 'docker-bake.hcl'
               - 'package.json'
               - 'pnpm-lock.yaml'
               - 'renovate.json'

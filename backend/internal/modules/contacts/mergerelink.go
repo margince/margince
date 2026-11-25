@@ -13,14 +13,13 @@ package contacts
 
 import (
 	"context"
-	"errors"
 	"fmt"
 
 	"github.com/jackc/pgx/v5"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
-	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/platform/recordmerge"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
@@ -80,10 +79,10 @@ func relinkContactReferences(ctx context.Context, tx pgx.Tx, sourceID, targetID 
 	if counts.Relationships, err = relinkContactEdges(ctx, tx, sourceID, targetID); err != nil {
 		return counts, fmt.Errorf("relink relationships: %w", err)
 	}
-	if counts.ActivityLinks, err = relinkLinkRows(ctx, tx, contactEntity, sourceID.UUID, targetID.UUID); err != nil {
+	if counts.ActivityLinks, err = recordmerge.RelinkLinkRows(ctx, tx, contactEntity, sourceID.UUID, targetID.UUID); err != nil {
 		return counts, fmt.Errorf("relink activity/list/tag rows: %w", err)
 	}
-	if err := moveKindIDRows(ctx, tx, contactEntity, sourceID.UUID, targetID.UUID); err != nil {
+	if err := recordmerge.MoveKindIDRows(ctx, tx, contactEntity, sourceID.UUID, targetID.UUID); err != nil {
 		return counts, err
 	}
 	if err := relinkParticipantRows(ctx, tx, sourceID, targetID); err != nil {
@@ -161,107 +160,6 @@ func readContactMergeState(ctx context.Context, tx pgx.Tx, id ids.ContactID) (cr
 		return p, nil, nil
 	}
 	return crmcontracts.Contact{}, (*ids.UUID)(p.MergedIntoId), apperrors.ErrNotFound
-}
-
-// mergePair resolves and validates both ends. A merge CHANGES both of them —
-// the source is archived onto the survivor, the survivor absorbs it — so both
-// ends carry the write-authority probe rather than the visibility one: a
-// colleague handed a `read` share of either record may not spend it on a merge.
-//
-// The source must be live and writable; a source that was already merged away
-// answers 409 with the pointer (the caller just proved they can address the
-// row, so the outcome discloses nothing new — the AlreadyPromoted precedent).
-// The target must be live and writable too (ensureMergeTarget). An archived
-// target can survive nothing.
-func mergePair[T any, K ids.EntityKind](ctx context.Context, tx pgx.Tx, kind string, sourceID, targetID ids.ID[K],
-	ifVersion *int64,
-	read func(context.Context, pgx.Tx, ids.ID[K]) (T, *ids.UUID, error),
-) (source, target T, err error) {
-	var zero T
-	if err := auth.EnsureWritable(ctx, tx, kind, sourceID.UUID); err != nil {
-		return zero, zero, err
-	}
-	source, mergedInto, err := read(ctx, tx, sourceID)
-	if err != nil {
-		if mergedInto != nil && !mergedInto.IsZero() {
-			return zero, zero, &AlreadyMergedError{Kind: kind, IntoID: *mergedInto}
-		}
-		return zero, zero, err
-	}
-
-	if err := requireSourceVersion(ctx, tx, kind, sourceID.UUID, ifVersion); err != nil {
-		return zero, zero, err
-	}
-
-	if err := ensureMergeTarget(ctx, tx, kind, targetID.UUID); err != nil {
-		return zero, zero, err
-	}
-	target, _, err = read(ctx, tx, targetID)
-	if err != nil {
-		if errors.Is(err, apperrors.ErrNotFound) {
-			return zero, zero, &MergedTargetError{Kind: kind}
-		}
-		return zero, zero, err
-	}
-	for _, id := range []ids.UUID{sourceID.UUID, targetID.UUID} {
-		if err := storekit.EnsureReleasedVersion(ctx, tx, kind, id); err != nil {
-			return zero, zero, err
-		}
-	}
-	return source, target, nil
-}
-
-// ensureMergeTarget refuses a target the caller cannot change. One they cannot
-// see answers the bare conflict, since merging returns the survivor and the
-// refusal must not confirm that it exists. One they may read answers 403 with
-// the reason, which a retry with a fresh version can never cure.
-func ensureMergeTarget(ctx context.Context, tx pgx.Tx, kind string, targetID ids.UUID) error {
-	writable, err := auth.WritableBy(ctx, tx, kind, targetID)
-	if err != nil || writable {
-		return err
-	}
-	visible, err := auth.VisibleTo(ctx, tx, kind, targetID)
-	switch {
-	case err != nil:
-		return err
-	case visible:
-		return errMergeTargetReadOnly
-	}
-	return apperrors.ErrConflict
-}
-
-// errMergeTargetReadOnly refuses a merge into a record the caller may read but
-// not change. Its sentence is the one the merge picker shows for that record.
-var errMergeTargetReadOnly = &mergeTargetReadOnlyError{}
-
-type mergeTargetReadOnlyError struct{}
-
-func (*mergeTargetReadOnlyError) Error() string {
-	return "contacts: the merge target is read-only to the caller, so it cannot survive a merge"
-}
-
-func (*mergeTargetReadOnlyError) MessageFault() (code, message string) {
-	return "merge_target_read_only", "You can only read the record to keep, so it cannot be kept. Keep a record you can change, or ask its owner to merge."
-}
-
-func (*mergeTargetReadOnlyError) Unwrap() error { return apperrors.ErrPermissionDenied }
-
-// requireSourceVersion refuses the merge when the source's version differs from
-// the caller's If-Match. The pair lock is already held, so the version checked
-// is the one merged. Nil means no precondition.
-func requireSourceVersion(ctx context.Context, tx pgx.Tx, kind string, sourceID ids.UUID, ifVersion *int64) error {
-	if ifVersion == nil {
-		return nil
-	}
-	var current int64
-	err := tx.QueryRow(ctx, "SELECT version FROM "+pgx.Identifier{kind}.Sanitize()+" WHERE id = $1", sourceID).Scan(&current)
-	if err != nil {
-		return err
-	}
-	if current != *ifVersion {
-		return apperrors.ErrVersionSkew
-	}
-	return nil
 }
 
 // relinkDemotingPrimary runs a relink UPDATE whose SET clause demotes the

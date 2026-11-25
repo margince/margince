@@ -79,9 +79,10 @@ export interface paths {
          * Which authentication methods are operational (drives the login UI).
          * @description Anonymous, minimal capability probe (ADR-0061). The login UI renders exactly
          *     the methods reported here — a disabled provider button or a dead "Forgot password?"
-         *     link is a misleading affordance. `password_reset` is true only when the operator's
-         *     system-email channel (ADR-0056) is configured and healthy. An OIDC provider is
-         *     listed only when its end-to-end flow is wired and healthy. Discloses nothing beyond
+         *     link is a misleading affordance. `password_reset` is true when password sign-in is on
+         *     and the operator's system-email channel (ADR-0056) is configured: a mailer and a link
+         *     base URL are set. Nothing checks that the channel delivers mail. An OIDC provider is
+         *     listed when the admin policy enables it and a client is configured for it. Discloses nothing beyond
          *     what the login UI needs — no secrets, endpoints, allowlists, or bootstrap state.
          *
          *     It also reports the release this api was built from, which a client compares
@@ -4782,6 +4783,43 @@ export interface paths {
          *     nothing. An `Idempotency-Key` header is taken as that key.
          */
         post: operations["progressDeal"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/deals/{id}/merge": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Merge this deal into a target deal.
+         * @description Merge A->B moves the facts about the opportunity from A to B and archives A with
+         *     `merged_into_id = B`, in one transaction under both rows' locks. Moved: offers, activity
+         *     links, stakeholders, contracts, brief items, qualified leads, list and tag membership,
+         *     grants and assignments, and the rest of the rows that name the deal. Not moved: the
+         *     stage and forecast history and the closing review, which describe the path A took and stay
+         *     on A so B's stage age is not read younger. A scalar B leaves empty is filled from A.
+         *
+         *     The caller must be able to change both deals. The merge is refused with `409` when the
+         *     deals name different companies (merge the companies first), when both hold a live
+         *     commission, an open legal review, a live chat link or an open Deal Room, or when A is
+         *     already merged away (the answer names where it went). It answers `422` for a merge into
+         *     itself or into a deal that is archived.
+         *
+         *     **Not reversible.** A merged-away deal cannot be restored: its offers and contracts now
+         *     belong to the survivor.
+         */
+        post: operations["mergeDeal"];
         delete?: never;
         options?: never;
         head?: never;
@@ -41905,6 +41943,11 @@ export interface components {
             expected_arr_minor?: number | null;
             /**
              * Format: uuid
+             * @description Set when this deal was merged away into another, and null otherwise. It separates a merged-away deal from one that was only archived: both are hidden from lists, but a merged one cannot be restored, and its id names the surviving deal to read instead. `contact`, `company` and `lead` carry the same field for the same reason.
+             */
+            readonly merged_into_id?: string | null;
+            /**
+             * Format: uuid
              * @description The accepted offer `expected_arr_minor` came from, or null where a human set the figure. While it is set the recurring figure is the offer's to state: an ordinary edit that would change or clear it is refused, and accepting another offer replaces both together.
              */
             readonly arr_source_offer_id?: string | null;
@@ -51259,7 +51302,7 @@ export interface components {
         AuthCapabilities: {
             /** @description Email + password login is enabled. */
             password: boolean;
-            /** @description The A74 reset flow can complete end to end (outbound email configured + healthy). */
+            /** @description Password sign-in is on and the reset mail channel is configured. Nothing checks that mail is delivered. */
             password_reset: boolean;
             /** @description Whether this installation has yet to finish its setup, so an unconfigured one can be greeted rather than only asked for credentials. Deliberately readable without a session, which is the narrowest form of a fact `/installation/setup` reports in full to a human session: it says that setup is unfinished and nothing else. It names no account, no step, no configured value, and says nothing about any credential. */
             first_run: boolean;
@@ -72981,6 +73024,89 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ProgressDealResult"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    mergeDeal: {
+        parameters: {
+            query?: never;
+            header?: {
+                /**
+                 * @description Client-supplied key making a mutation safe to retry — an update exactly as much as a
+                 *     create (API-CC-6). **Scope:** the key is unique within
+                 *     `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
+                 *     returns the original status + body. A connected agent's principal is its connection, so a
+                 *     retry on a refreshed token replays too. An agent tool that runs this route takes the same
+                 *     key as its `idempotency_key`. Reusing the same key with a *different* request body
+                 *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
+                 *     do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
+                 *     means the first request under the key is still running and carries `Retry-After`;
+                 *     resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
+                 *     request under the key failed after it had started, so check whether it took effect before
+                 *     retrying under a new key.
+                 *     A request the server stopped for time answers `503 code: request_timed_out` with
+                 *     `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+                 *     If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
+                 *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
+                 *     answer lost": without it the blind retry answers `409 version_skew`, because the first
+                 *     attempt already bumped the version.
+                 *     **Precedence vs natural keys:** on `logActivity`/`createLead`, the Idempotency-Key (transport
+                 *     retry-safety) is checked first; if absent, the `(source_system, source_id)` natural key
+                 *     (data-model dedupe) governs. The two never both create a row. **Declaring this parameter is
+                 *     what makes an operation replay-safe** — an operation that omits it ignores the header rather
+                 *     than half-honouring it, so read this contract, not the client, to know which calls are safe
+                 *     to retry blind.
+                 */
+                "Idempotency-Key"?: components["parameters"]["IdempotencyKey"];
+                /**
+                 * @description The id of the approval that authorizes this one 🟡 call — the id the `403 approval_required`
+                 *     answer named. MCP takes the same id as `approval_id`. The server checks it against the
+                 *     stored approval: same tool, same diff hash, same staging passport, decided as approved,
+                 *     not yet used, and within 15 minutes of the decision. Anything else is refused with
+                 *     `403 code: approval_token_invalid`. Required when an AGENT principal repeats a 🟡 call; a
+                 *     human's direct call is itself the approval.
+                 */
+                "X-Approval-Token"?: components["parameters"]["ApprovalToken"];
+                /**
+                 * @description Optional optimistic-concurrency precondition for a mutating request (PATCH/advance/merge):
+                 *     the last-seen entity `version`. If the row's current `version` differs, the write is
+                 *     rejected with `409 code: version_skew` (ErrVersionSkew) and no change is made — re-read,
+                 *     re-apply, retry. Omitting it is last-write-wins (discouraged for agent/automated writers).
+                 *     Accepted on every native (SoR-mode) mutating endpoint that returns a versioned entity.
+                 */
+                "If-Match"?: components["parameters"]["IfMatch"];
+            };
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /**
+                     * Format: uuid
+                     * @description The surviving deal (B). This row (A) is archived.
+                     */
+                    target_id: string;
+                };
+            };
+        };
+        responses: {
+            /** @description The surviving (target) deal after the merge. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Deal"];
                 };
             };
             401: components["responses"]["Unauthorized"];

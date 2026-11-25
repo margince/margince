@@ -30,6 +30,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/platform/generatedsummary"
+	"github.com/margince/margince/backend/internal/platform/recordmerge"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -66,7 +67,7 @@ func relinkCompanySatellites(ctx context.Context, tx pgx.Tx, sourceID, targetID 
 	if err := repointLinkedLeads(ctx, tx, sourceID, targetID); err != nil {
 		return err
 	}
-	return moveKindIDRows(ctx, tx, "company", sourceID.UUID, targetID.UUID)
+	return recordmerge.MoveKindIDRows(ctx, tx, "company", sourceID.UUID, targetID.UUID)
 }
 
 // repointCompanyReferences moves the rows whose only tie to a company is the

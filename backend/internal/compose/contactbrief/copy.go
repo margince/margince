@@ -88,7 +88,7 @@ var floor = briefPhrases{
 	},
 	IdentityBare: phrase{
 		En: "%s is recorded here with no title or employer.",
-		De: "%s ist hier ohne Position und ohne Arbeitgeber erfasst.",
+		De: "%s ist hier ohne Jobtitel und ohne Arbeitgeber erfasst.",
 		Vi: "%s được ghi nhận ở đây mà không có chức danh hay nơi làm việc.",
 	},
 
@@ -141,7 +141,7 @@ var floor = briefPhrases{
 	},
 	OnDealNoRole: phrase{
 		En: "They sit on %s, with no buying role recorded.",
-		De: "Beteiligt an %s, ohne erfasste Rolle im Kaufprozess.",
+		De: "Beteiligt an %s. Eine Rolle im Buying Center ist nicht erfasst.",
 		Vi: "Có tham gia %s, nhưng chưa ghi nhận vai trò mua hàng.",
 	},
 
@@ -152,39 +152,39 @@ var floor = briefPhrases{
 	},
 	CaresObjection: phrase{
 		En: "They have %s still unresolved.",
-		De: "Offen ist weiterhin %s.",
+		De: "Noch nicht geklärt ist %s.",
 		Vi: "Họ vẫn còn vướng mắc về %s.",
 	},
 	CaresBoth: phrase{
 		En: "They are focused on %s, with %s still unresolved.",
-		De: "Im Mittelpunkt steht %s, offen ist weiterhin %s.",
+		De: "Im Mittelpunkt steht %s. Noch nicht geklärt ist %s.",
 		Vi: "Họ đang tập trung vào %s, và vẫn còn vướng mắc về %s.",
 	},
 
 	WithheldMessage: phrase{
 		En: "The most recent message on this contact is one you may not read.",
-		De: "Die jüngste Nachricht zu diesem Kontakt dürfen Sie nicht lesen.",
+		De: "Auf die jüngste Nachricht zu diesem Kontakt hast du keinen Zugriff.",
 		Vi: "Tin nhắn gần đây nhất của liên hệ này là tin bạn không được phép đọc.",
 	},
 
 	TheyWroteLastOpen: phrase{
 		En: "They wrote last, %s, and it is unanswered.",
-		De: "Zuletzt kam eine Nachricht von dort, %s, und sie ist unbeantwortet.",
+		De: "Die letzte Nachricht kam vom Kontakt (%s) und ist noch unbeantwortet.",
 		Vi: "Họ là bên viết gần đây nhất, %s, và vẫn chưa được trả lời.",
 	},
 	TheyWroteLastClosed: phrase{
 		En: "They wrote last, %s.",
-		De: "Zuletzt kam eine Nachricht von dort, %s.",
+		De: "Die letzte Nachricht kam vom Kontakt (%s).",
 		Vi: "Họ là bên viết gần đây nhất, %s.",
 	},
 	YouWroteLastOpen: phrase{
 		En: "You wrote last, %s, with no reply yet.",
-		De: "Zuletzt ging eine Nachricht von hier hinaus, %s, bisher ohne Antwort.",
+		De: "Die letzte Nachricht ging an den Kontakt (%s). Eine Antwort steht noch aus.",
 		Vi: "Bạn là bên viết gần đây nhất, %s, và chưa có hồi âm.",
 	},
 	YouWroteLastClosed: phrase{
 		En: "You wrote last, %s.",
-		De: "Zuletzt ging eine Nachricht von hier hinaus, %s.",
+		De: "Die letzte Nachricht ging an den Kontakt (%s).",
 		Vi: "Bạn là bên viết gần đây nhất, %s.",
 	},
 	LastCaptured: phrase{
