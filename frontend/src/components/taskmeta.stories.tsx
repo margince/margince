@@ -42,7 +42,7 @@ const withContact: WorklistItem = {
 };
 
 /** The task's type, then the contact and their company as chips. */
-export const TypedWithPeople: Story = { render: line(withContact) };
+export const TypedWithContacts: Story = { render: line(withContact) };
 
 /** A late task's due day says by how much, in the danger tone. */
 export const Late: Story = {
@@ -64,7 +64,7 @@ export const KindWithoutType: Story = {
   }),
 };
 
-export const TypedWithPeopleDark: Story = {
-  ...TypedWithPeople,
+export const TypedWithContactsDark: Story = {
+  ...TypedWithContacts,
   globals: { theme: "dark" },
 };
