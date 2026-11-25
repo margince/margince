@@ -10,9 +10,8 @@ import (
 )
 
 // SignalKindPrefix opens every signal kind a unit declares. The spelling is
-// permanent once a row carries it, because the signal table's kind CHECK
-// accepts it as a pattern.
-const SignalKindPrefix = "ext:"
+// permanent once a row carries it. It is QualifiedPrefix.
+const SignalKindPrefix = QualifiedPrefix
 
 // SignalFieldType is the type of one evidence field.
 type SignalFieldType string
@@ -71,20 +70,20 @@ type SignalSubject struct {
 // SignalKindName is the stored and wire form of a unit's signal kind. It is the
 // one place the form is built, so a unit can only name a kind under its own name.
 func SignalKindName(unit Name, kind string) string {
-	return SignalKindPrefix + string(unit) + ":" + kind
+	return QualifiedName(unit, kind)
 }
 
 // Validate refuses a type core could not carry.
 func (d SignalTypeDeclaration) Validate() error {
-	if !recordKindGrammar.MatchString(d.Kind) || len(d.Kind) > maxRecordKindLength {
-		return fmt.Errorf("signal type %q is not a valid name (a lower-case letter, then lower-case letters, digits and underscores, at most %d characters)", d.Kind, maxRecordKindLength)
+	if !shortNameGrammar.MatchString(d.Kind) || len(d.Kind) > maxShortNameLength {
+		return fmt.Errorf("signal type %q is not a valid name (a lower-case letter, then lower-case letters, digits and underscores, at most %d characters)", d.Kind, maxShortNameLength)
 	}
 	if strings.TrimSpace(d.Label) == "" {
 		return fmt.Errorf("signal type %q has no label", d.Kind)
 	}
 	seen := make(map[string]bool, len(d.Evidence))
 	for _, f := range d.Evidence {
-		if !recordKindGrammar.MatchString(f.Name) || len(f.Name) > maxRecordKindLength {
+		if !shortNameGrammar.MatchString(f.Name) || len(f.Name) > maxShortNameLength {
 			return fmt.Errorf("signal type %q: %q is not a valid evidence field name", d.Kind, f.Name)
 		}
 		if seen[f.Name] {
