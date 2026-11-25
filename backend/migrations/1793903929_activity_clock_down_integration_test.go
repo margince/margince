@@ -28,6 +28,9 @@ func TestActivityClockRollbackRespectsAnEarlierInstalledAdvance(t *testing.T) {
 	// keeps, so each case first rewinds the schema to before them.
 	statementTriggers := namespaceThroughVersion(t, core, "1795596652")
 	rewind := statementTriggers.Migrations[len(statementTriggers.Migrations)-1]
+	// By name: each case creates the function anew, and a cached plan would
+	// keep the regprocedure OID of the case before.
+	const clockFunctionSource = `SELECT prosrc FROM pg_proc WHERE proname = 'trg_activity_link_last_activity' AND pronargs = 0`
 	for _, previous := range []bool{false, true} {
 		t.Run(fmt.Sprintf("earlier_advance=%t", previous), func(t *testing.T) {
 			ctx := context.Background()
@@ -55,7 +58,7 @@ func TestActivityClockRollbackRespectsAnEarlierInstalledAdvance(t *testing.T) {
 				t.Fatal(err)
 			}
 			var body string
-			if err := tx.QueryRow(ctx, `SELECT prosrc FROM pg_proc WHERE oid='trg_activity_link_last_activity()'::regprocedure`).Scan(&body); err != nil {
+			if err := tx.QueryRow(ctx, clockFunctionSource).Scan(&body); err != nil {
 				t.Fatal(err)
 			}
 			if got := strings.Contains(body, "advance_last_activity"); got != previous {
@@ -64,7 +67,7 @@ func TestActivityClockRollbackRespectsAnEarlierInstalledAdvance(t *testing.T) {
 			if _, err := tx.Exec(ctx, migration.UpSQL); err != nil {
 				t.Fatal(err)
 			}
-			if err := tx.QueryRow(ctx, `SELECT prosrc FROM pg_proc WHERE oid='trg_activity_link_last_activity()'::regprocedure`).Scan(&body); err != nil {
+			if err := tx.QueryRow(ctx, clockFunctionSource).Scan(&body); err != nil {
 				t.Fatal(err)
 			}
 			if !strings.Contains(body, "advance_last_activity") {
