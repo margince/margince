@@ -391,3 +391,31 @@ func TestATeamLinkOffersThePersonalPagesLengths(t *testing.T) {
 		t.Fatalf("a length the team link does not offer answered %d %s", refused.Code, refused.Body.String())
 	}
 }
+
+// A meeting the personal page booked while it still held a team keeps its
+// colleagues after the team moves to a team link. A move still waits on them.
+func TestAMeetingBookedOnTheOldPersonalTeamKeepsItsColleaguesAfterTheMove(t *testing.T) {
+	f := newTeamFixture(t)
+	alice := f.colleague(t, "Alice")
+	yes := crmcontracts.SchedulingTeamMemberStateConfirmed
+	f.legacyTeam(t, []crmcontracts.SchedulingTeamMember{{UserId: openapi_types.UUID(alice.UUID), State: &yes}})
+	personal := f.resolve(t, f.personalSlug(t, f.host))
+	code, booked := f.bookOn(t, personal, monday(11))
+	if code != http.StatusCreated {
+		t.Fatalf("booking on the personal page answered %d", code)
+	}
+	if err := f.store.DeliverInvitations(f.ctx); err != nil {
+		t.Fatal(err)
+	}
+	if out := f.moveTeams(t); out.Changed != 1 {
+		t.Fatalf("the task moved %d teams, want 1", out.Changed)
+	}
+	f.calendar.busyOf[alice] = []connector.CalendarInterval{{Start: monday(13), End: monday(14)}}
+	free, _, err := f.store.invitationAvailability(f.ctx, f.host, ids.UUID(booked.Id), monday(12), monday(15))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if slices.ContainsFunc(starts(free), monday(13).Equal) {
+		t.Fatalf("a move offers a time the booked colleague is busy in: %v", starts(free))
+	}
+}
