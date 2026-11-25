@@ -231,11 +231,14 @@ describe("a text field's resting edge", () => {
         ".e .f:focus-within { border-color: var(--accent); }",
         `.e > .f { border: ${faint}; }`,
         ".e > .f .box { border: 0; }",
+        ".g > .h:focus-within { border-color: var(--accent); }",
+        ".g .h .box { border: 0; }",
       ]),
     ).toEqual([
       `${SHEET}: .a .b draws ${faint}`,
       bare(".a .b"),
       `${SHEET}: .e > .f draws ${faint}`,
+      bare(".g .h .box"),
     ]);
   });
 
@@ -310,6 +313,21 @@ describe("a text field's resting edge", () => {
         ".y .box { border-top-color: transparent; border-bottom-color: var(--borderControl); }",
       ]),
     ).toEqual([bare(".box"), bare(".y .box")]);
+  });
+
+  it("starts a field's foot only from its bare classes or bare element", () => {
+    const control = "1px solid var(--borderControl)";
+    const recolour =
+      "border-color: transparent; border-bottom-color: var(--borderControl);";
+    expect(
+      findings(markup('<input className="box" />'), [
+        `.box[data-size="lg"] { border: ${control}; }`,
+        `.q .box { ${recolour} }`,
+        `input { border: ${control}; }`,
+        `.y input { ${recolour} }`,
+        `.y textarea { ${recolour} }`,
+      ]),
+    ).toEqual([bare(".q .box"), bare(".y textarea")]);
   });
 
   it("reads a colour box list side by side", () => {

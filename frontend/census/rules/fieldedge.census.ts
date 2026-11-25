@@ -14,10 +14,12 @@ import {
   declaredValues,
   joined,
   type Rule,
+  simpleSelectorsOf,
   splitTopLevel,
   subjectOf,
 } from "../../scripts/lib/css-rules";
 import { typeValues } from "../../scripts/lib/input-type";
+import { PSEUDO_ELEMENT, TYPE } from "../../scripts/lib/surface-sheets";
 import { classVariants } from "../../src/testing/classnames";
 import {
   type CensusFile,
@@ -58,7 +60,6 @@ const EDGES = INKED.concat(
 );
 // A longhand names its sides as a box list; a shorthand draws one line.
 const LONGHAND = /-(?:color|width|style)$/;
-const PSEUDO_ELEMENT = /::[\w-]+|:(?:before|after)\b/;
 const CONTROL = "var(--borderControl)";
 const DRAWN = /^\d+(?:\.\d+)?px\s+(?:solid|dashed|dotted)\s+(.+)$/;
 const FOOT_SIDES = ["border-bottom", "border-block-end"];
@@ -101,14 +102,14 @@ const runsEndingAt = (selector: string, end: number) => {
 };
 const wholeRun = (selector: string) =>
   runsEndingAt(selector, compounds(selector).length - 1)[0];
-// Child and descendant steps compare alike: reading more boxes as framed
-// fields only widens what is checked.
+// A run read with child steps as descendant steps. Only the run side is
+// loosened, so a frame lit for a child step never excuses a descendant.
 const loose = (selector: string) => selector.replaceAll(" > ", " ");
 
 type Frames = {
   /** Classes a field carries wherever it is written. */
   fields: ReadonlySet<string>;
-  /** Loosened whole selectors of fields a focus rule lights only in some context. */
+  /** Whole selectors of fields a focus rule names only inside some context. */
   framed: ReadonlySet<string>;
   /** Whole selectors of rows ruled in the control token. */
   rows: ReadonlySet<string>;
@@ -251,7 +252,9 @@ function enclosed(alternative: string, { fields, framed, rows }: Frames) {
       ownClasses(compound).some((name) => fields.has(name)),
     ) ||
     ancestors.some((_, at) =>
-      runsEndingAt(alternative, at).some((run) => framed.has(loose(run))),
+      runsEndingAt(alternative, at).some(
+        (run) => framed.has(run) || framed.has(loose(run)),
+      ),
     )
   ) {
     return true;
@@ -358,16 +361,22 @@ const rulesFoot = ({ width, style, color }: Side) =>
   color === CONTROL;
 const ruled = (rule: Rule) => rulesFoot(footOf(rule, UNDRAWN));
 
-// A field's rule starts from the foot its own rest rules leave, or from none.
+// A field's rule starts from the foot its bare classes or bare element leave,
+// or from none. A base under an at-rule still counts.
 function startOf(rules: readonly Rule[], rule: Rule, subject: string): Side {
   const own = ownClasses(subject);
+  const element = TYPE.exec(subject)?.[0];
   const base = (alternative: string) => {
-    const named = ownClasses(alternative);
+    const simple = [...simpleSelectorsOf(alternative)];
+    const type = TYPE.exec(alternative)?.[0];
     return (
       compounds(alternative).length === 1 &&
       atRest(alternative) &&
-      named.length > 0 &&
-      named.every((name) => own.includes(name))
+      (type === undefined || type === element) &&
+      simple.length + (type ? 1 : 0) > 0 &&
+      simple.every(
+        (name) => /^\.[\w-]+$/.test(name) && own.includes(name.slice(1)),
+      )
     );
   };
   return rules
@@ -410,8 +419,8 @@ function weakEdges(
   rules: readonly Rule[],
   { fields, framed }: Omit<Frames, "rows">,
 ) {
+  const frames = { fields, framed, rows: ruledRows(rules) };
   const litInContext = new Set([...framed].map(loose));
-  const frames = { fields, framed: litInContext, rows: ruledRows(rules) };
   return rules.flatMap((rule) =>
     alternativesOf(rule.selector).flatMap((alternative) => {
       const subject = subjectOf(alternative);
