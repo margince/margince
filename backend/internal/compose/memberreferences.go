@@ -21,13 +21,10 @@ import (
 const (
 	memberScopeColumn    = "scope_id"
 	memberSourceArgument = "source_id"
-)
-
-const (
-	referenceRetain   = "retain"
-	referenceHandover = "handover"
-	referenceResolve  = "resolve"
-	memberLiveRows    = "archived_at IS NULL"
+	referenceRetain      = "retain"
+	referenceHandover    = "handover"
+	referenceResolve     = "resolve"
+	memberLiveRows       = "archived_at IS NULL"
 )
 
 type memberReference struct {
