@@ -62,7 +62,7 @@ const (
 	// Raised by 2 production lines for the stage-evidence prompt rule on a
 	// document a criterion asks to be sent, which is the site's own prompt text.
 	composeRootProductionLines = 230_699
-	composeRootTestLines       = 360_128
+	composeRootTestLines       = 360_140
 )
 
 // A read under these floors stopped early or read the wrong place, and would

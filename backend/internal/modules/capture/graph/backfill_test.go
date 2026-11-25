@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
+	"github.com/margince/margince/backend/internal/shared/ports/datasource"
 )
 
 func TestEstimateBackfillAsksProviderForTheWindow(t *testing.T) {
@@ -287,5 +288,55 @@ func TestBackfillFetchesThroughTheListedFolderAndSkipsAMovedMessage(t *testing.T
 	}
 	if res.Skipped != 1 || res.Captured != 1 || len(sink.recs) != 1 {
 		t.Fatalf("tally = %+v with %d records, want the moved message skipped", res, len(sink.recs))
+	}
+}
+
+// pickySink refuses the records whose subject is listed, as a capture does for
+// a row it cannot write.
+type pickySink struct {
+	recordingSink
+	refuse string
+}
+
+func (s *pickySink) Upsert(ctx context.Context, rec connector.NormalizedRecord) (datasource.EntityRef, error) {
+	if rec.Counterparty.Email == s.refuse {
+		return datasource.EntityRef{}, errors.New("capture refused the message")
+	}
+	return s.recordingSink.Upsert(ctx, rec)
+}
+
+// One message the capture refuses is counted as failed and walked past, so the
+// good messages around it are stored and the page commits.
+func TestBackfillWalksPastAMessageTheCaptureRefuses(t *testing.T) {
+	api := &fakeAPI{
+		listIDs: []string{"m1", "m2", "m3"},
+		raws: map[string][]byte{
+			"m1": rawMsg("a@mail.example", "good@acme.com"),
+			"m2": rawMsg("bad@mail.example", "bad@acme.com"),
+			"m3": rawMsg("c@mail.example", "good@acme.com"),
+		},
+	}
+	sink := &pickySink{refuse: "bad@acme.com"}
+	res, err := pinnedConn(api).BackfillPage(context.Background(), authBytes(t), time.Time{}, "", sink)
+	if err != nil {
+		t.Fatalf("one refused message must not fail the page: %v", err)
+	}
+	if res.Scanned != 3 || res.Captured != 2 || res.Failed != 1 || res.Skipped != 0 {
+		t.Fatalf("tally = %+v, want scanned=3 captured=2 failed=1", res)
+	}
+	if len(sink.recs) != 2 {
+		t.Fatalf("sink stored %d records, want the 2 good ones", len(sink.recs))
+	}
+}
+
+// A run of refusals is the database, not the messages, and ends the page.
+func TestBackfillEndsThePageWhenEveryMessageIsRefused(t *testing.T) {
+	api := &fakeAPI{listIDs: []string{"m1", "m2", "m3", "m4", "m5", "m6"}, raws: map[string][]byte{}}
+	for _, id := range api.listIDs {
+		api.raws[id] = rawMsg("bad@mail.example", "bad@acme.com")
+	}
+	sink := &pickySink{refuse: "bad@acme.com"}
+	if _, err := pinnedConn(api).BackfillPage(context.Background(), authBytes(t), time.Time{}, "", sink); err == nil {
+		t.Fatal("a run of refused messages should end the page")
 	}
 }
