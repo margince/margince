@@ -32,6 +32,11 @@ import (
 // the merge's transaction.
 type CarryGrants func(ctx context.Context, tx pgx.Tx, recordType string, from, to ids.UUID) error
 
+// MoveDealRefs moves what one module keeps about a merged-away deal onto its
+// survivor, in the merge's transaction. The owner writes its own rows and their
+// audit rows and answers the ids it moved.
+type MoveDealRefs func(ctx context.Context, tx pgx.Tx, from, to ids.UUID) ([]recordmerge.Moved, error)
+
 // MergeRefusedError maps to 409: the two deals cannot be merged as they stand.
 // Message says what to change first.
 type MergeRefusedError struct {
@@ -62,13 +67,19 @@ type mergeTally struct {
 	ActivityLinks int64
 	Stakeholders  int64
 	Contracts     int64
+	// Moved counts the rows each owning module moved, by table.
+	Moved map[string]int64
 }
 
 func (t mergeTally) audit() map[string]any {
-	return map[string]any{
+	out := map[string]any{
 		"relinked_offers": t.Offers, "relinked_activity_links": t.ActivityLinks,
 		"relinked_stakeholders": t.Stakeholders, "relinked_contracts": t.Contracts,
 	}
+	if len(t.Moved) > 0 {
+		out["moved_by_owner"] = t.Moved
+	}
+	return out
 }
 
 // MergeDeal merges deal source into target and returns the survivor.
@@ -107,7 +118,8 @@ func (s *Store) mergeDealTx(ctx context.Context, tx pgx.Tx, sourceID, targetID i
 	if err := recordmerge.Screen(ctx, tx, dealTable, sourceID.UUID, targetID.UUID); err != nil {
 		return crmcontracts.Deal{}, err
 	}
-	srcLock, tgtLock, err := recordmerge.LockPair(ctx, tx, dealTable, sourceID.UUID, targetID.UUID)
+	srcLock, tgtLock, err := storekit.LockPair(ctx, tx, dealTable, sourceID.UUID, targetID.UUID)
+	err = recordmerge.MissingIsConflict(err)
 	if err != nil {
 		return crmcontracts.Deal{}, err
 	}

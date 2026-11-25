@@ -10,7 +10,6 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/platform/auth"
-	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
@@ -34,12 +33,11 @@ func Screen(ctx context.Context, tx pgx.Tx, kind string, sourceID, targetID ids.
 	return nil
 }
 
-// LockPair locks both ends in id order. A row that vanished since Screen
-// answers the same conflict a target out of scope does.
-func LockPair(ctx context.Context, tx pgx.Tx, kind string, sourceID, targetID ids.UUID) (source, target storekit.RowLock, err error) {
-	source, target, err = storekit.LockPair(ctx, tx, kind, sourceID, targetID)
+// MissingIsConflict maps the not-found storekit.LockPair answers for a row that
+// vanished since Screen to the conflict an out-of-scope target answers.
+func MissingIsConflict(err error) error {
 	if errors.Is(err, apperrors.ErrNotFound) {
-		return storekit.RowLock{}, storekit.RowLock{}, apperrors.ErrConflict
+		return apperrors.ErrConflict
 	}
-	return source, target, err
+	return err
 }

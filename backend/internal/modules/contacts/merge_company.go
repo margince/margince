@@ -83,7 +83,8 @@ func (s *Store) mergeCompanyTx(
 	if err := screenPairMerge(ctx, tx, "company", sourceID.UUID, targetID.UUID); err != nil {
 		return crmcontracts.Company{}, err
 	}
-	_, tgtLock, err := recordmerge.LockPair(ctx, tx, "company", sourceID.UUID, targetID.UUID)
+	_, tgtLock, err := storekit.LockPair(ctx, tx, "company", sourceID.UUID, targetID.UUID)
+	err = recordmerge.MissingIsConflict(err)
 	if err != nil {
 		return crmcontracts.Company{}, err
 	}

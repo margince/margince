@@ -1,5 +1,5 @@
 <!-- prose:plain -->
-<!-- describes: frontend/src/features/deals/deal360/dealmerge.action.tsx backend/internal/modules/deals/dealmerge.go backend/internal/modules/deals/dealmergerelink.go -->
+<!-- describes: frontend/src/features/deals/deal360/dealactions.tsx backend/internal/modules/deals/dealmerge.go backend/internal/modules/deals/dealmergerelink.go -->
 # Merging two deals
 
 Two deals of one opportunity can be merged into one. The duplicate is archived and points to the deal that stays.

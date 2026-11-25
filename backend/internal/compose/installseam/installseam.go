@@ -19,12 +19,17 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/compose/briefs"
 	"github.com/margince/margince/backend/internal/compose/editaccess"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/approvals"
+	"github.com/margince/margince/backend/internal/modules/assignments"
+	"github.com/margince/margince/backend/internal/modules/chatlinks"
+	"github.com/margince/margince/backend/internal/modules/commissions"
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/contracts"
+	"github.com/margince/margince/backend/internal/modules/dealrooms"
 	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/modules/projects"
@@ -52,6 +57,13 @@ func Deals() deals.Installation {
 		// identity owns the grants, so the carry onto a merge's survivor lives
 		// there and the edge is injected here.
 		CarryGrants: identity.CarryGrantsTx,
+		// Each module that keeps rows about a deal moves its own onto a merge
+		// survivor, so the deals module writes none of them.
+		MoveDealRefs: []deals.MoveDealRefs{
+			contacts.MoveDealRefsTx, contracts.MoveDealRefsTx, assignments.MoveDealRefsTx,
+			activities.MoveDealRefsTx, dealrooms.MoveDealRefsTx, chatlinks.MoveDealRefsTx,
+			commissions.MoveDealRefsTx, briefs.MoveDealRefsTx,
+		},
 		// The Value sort reads both ungated: a seat that may read deals may
 		// order them, whatever its installation_settings grant.
 		BaseCurrencyApplied: identity.BaseCurrencyAppliedTx,

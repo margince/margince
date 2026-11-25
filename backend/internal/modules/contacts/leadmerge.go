@@ -72,7 +72,8 @@ func (s *Store) mergeLeadTx(ctx context.Context, tx pgx.Tx, sourceID, targetID i
 	if err := screenPairMerge(ctx, tx, entityLead, sourceID.UUID, targetID.UUID); err != nil {
 		return crmcontracts.Lead{}, err
 	}
-	_, tgtLock, err := recordmerge.LockPair(ctx, tx, entityLead, sourceID.UUID, targetID.UUID)
+	_, tgtLock, err := storekit.LockPair(ctx, tx, entityLead, sourceID.UUID, targetID.UUID)
+	err = recordmerge.MissingIsConflict(err)
 	if err != nil {
 		return crmcontracts.Lead{}, err
 	}

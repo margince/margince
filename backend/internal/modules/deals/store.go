@@ -13,6 +13,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/platform/recordmerge"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/ports/fieldcatalog"
 )
@@ -156,6 +157,10 @@ type Installation struct {
 	// CarryGrants moves the shares on a merged-away deal onto its survivor.
 	// `identity` owns the grants, so the edge is injected here.
 	CarryGrants CarryGrants
+	// MoveDealRefs are the owning modules' seams that move their rows onto a
+	// merge survivor: contacts, contracts, assignments, activities, dealrooms,
+	// chatlinks, commissions and the briefs.
+	MoveDealRefs []MoveDealRefs
 }
 
 // EnsurePartner answers whether a company may be named as a deal's
@@ -235,6 +240,11 @@ func (i Installation) orRefusing() Installation {
 		i.IssuerEntity = func(context.Context, pgx.Tx, *ids.LegalEntityID) (IssuerEntity, error) {
 			return IssuerEntity{}, errEntitySeamUnwired("IssuerEntity")
 		}
+	}
+	if len(i.MoveDealRefs) == 0 {
+		i.MoveDealRefs = []MoveDealRefs{func(context.Context, pgx.Tx, ids.UUID, ids.UUID) ([]recordmerge.Moved, error) {
+			return nil, errEntitySeamUnwired("MoveDealRefs")
+		}}
 	}
 	if i.CarryGrants == nil {
 		i.CarryGrants = func(context.Context, pgx.Tx, string, ids.UUID, ids.UUID) error {

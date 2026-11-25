@@ -32,13 +32,10 @@ func (s *Store) relinkDealReferences(ctx context.Context, tx pgx.Tx, sourceID, t
 	if tally.ActivityLinks, err = recordmerge.RelinkLinkRows(ctx, tx, dealTable, sourceID.UUID, targetID.UUID); err != nil {
 		return tally, fmt.Errorf("relink activity, list and tag rows: %w", err)
 	}
-	if tally.Stakeholders, err = relinkStakeholders(ctx, tx, sourceID, targetID); err != nil {
+	if err := s.moveOwnedRefs(ctx, tx, sourceID, targetID, &tally); err != nil {
 		return tally, err
 	}
-	if tally.Contracts, err = moveMerge(ctx, tx, `UPDATE contract SET deal_id = $2 WHERE deal_id = $1`, sourceID, targetID); err != nil {
-		return tally, err
-	}
-	if err := relinkDealOwnedRows(ctx, tx, sourceID, targetID); err != nil {
+	if _, err = moveMerge(ctx, tx, `UPDATE legal_review SET deal_id = $2 WHERE deal_id = $1`, sourceID, targetID); err != nil {
 		return tally, err
 	}
 	if err := s.installation.CarryGrants(ctx, tx, dealTable, sourceID.UUID, targetID.UUID); err != nil {
@@ -50,54 +47,21 @@ func (s *Store) relinkDealReferences(ctx context.Context, tx pgx.Tx, sourceID, t
 	return tally, nil
 }
 
-// relinkStakeholders archives a stakeholder edge the survivor already holds
-// (same contact, same role) and moves the rest, archived ones included so the
-// provenance travels.
-func relinkStakeholders(ctx context.Context, tx pgx.Tx, sourceID, targetID ids.DealID) (int64, error) {
-	if err := execMerge(ctx, tx, `UPDATE relationship a SET archived_at = now()
- WHERE a.deal_id = $1 AND a.archived_at IS NULL AND EXISTS (
-   SELECT 1 FROM relationship b
-    WHERE b.deal_id = $2 AND b.kind = a.kind AND b.archived_at IS NULL
-      AND b.contact_id IS NOT DISTINCT FROM a.contact_id AND b.role IS NOT DISTINCT FROM a.role)`, sourceID, targetID); err != nil {
-		return 0, err
-	}
-	return moveMerge(ctx, tx, `UPDATE relationship SET deal_id = $2 WHERE deal_id = $1`, sourceID, targetID)
-}
-
-// relinkDealOwnedRows moves the rows other modules keep about one deal. Each
-// pair is a drop of the retired copy where the survivor holds the same unique
-// key, then the move.
-func relinkDealOwnedRows(ctx context.Context, tx pgx.Tx, sourceID, targetID ids.DealID) error {
-	for _, stmt := range []string{
-		`DELETE FROM brief_item a WHERE a.deal_id = $1 AND EXISTS (
-   SELECT 1 FROM brief_item b WHERE b.deal_id = $2 AND b.brief_run_id = a.brief_run_id)`,
-		`UPDATE brief_item SET deal_id = $2 WHERE deal_id = $1`,
-		`UPDATE lead SET qualified_deal_id = $2 WHERE qualified_deal_id = $1`,
-		`UPDATE record_assignment a SET archived_at = now()
- WHERE a.deal_id = $1 AND a.archived_at IS NULL AND EXISTS (
-   SELECT 1 FROM record_assignment b
-    WHERE b.deal_id = $2 AND b.role_id = a.role_id AND b.archived_at IS NULL
-      AND ((a.user_id IS NOT NULL AND b.user_id = a.user_id) OR (a.team_id IS NOT NULL AND b.team_id = a.team_id)))`,
-		`UPDATE record_assignment SET deal_id = $2 WHERE deal_id = $1`,
-		`DELETE FROM activity_retention_evidence a WHERE a.deal_id = $1 AND EXISTS (
-   SELECT 1 FROM activity_retention_evidence b
-    WHERE b.deal_id = $2 AND b.activity_id = a.activity_id AND b.basis = a.basis
-      AND b.deal_name IS NOT DISTINCT FROM a.deal_name AND b.project_id IS NOT DISTINCT FROM a.project_id
-      AND b.project_name IS NOT DISTINCT FROM a.project_name)`,
-		`UPDATE activity_retention_evidence SET deal_id = $2 WHERE deal_id = $1`,
-		`DELETE FROM deal_document_hide a WHERE a.deal_id = $1 AND EXISTS (
-   SELECT 1 FROM deal_document_hide b WHERE b.deal_id = $2 AND b.attachment_id = a.attachment_id)`,
-		`UPDATE deal_document_hide SET deal_id = $2 WHERE deal_id = $1`,
-		`UPDATE sdr_handoff SET deal_id = $2 WHERE deal_id = $1`,
-		`UPDATE deal_room SET deal_id = $2 WHERE deal_id = $1`,
-		`UPDATE chat_link SET deal_id = $2 WHERE deal_id = $1`,
-		`UPDATE commission_entry SET deal_id = $2 WHERE deal_id = $1`,
-		`UPDATE legal_review SET deal_id = $2 WHERE deal_id = $1`,
-	} {
-		if err := execMerge(ctx, tx, stmt, sourceID, targetID); err != nil {
-			return err
+// moveOwnedRefs asks every module that keeps rows about a deal to move them,
+// and records what each moved. A module writes only its own tables, so each
+// owner's seam does its own statements and audit rows.
+func (s *Store) moveOwnedRefs(ctx context.Context, tx pgx.Tx, sourceID, targetID ids.DealID, tally *mergeTally) error {
+	tally.Moved = map[string]int64{}
+	for _, move := range s.installation.MoveDealRefs {
+		moved, err := move(ctx, tx, sourceID.UUID, targetID.UUID)
+		if err != nil {
+			return fmt.Errorf("move what another module keeps about the merged-away deal: %w", err)
+		}
+		for _, rows := range moved {
+			tally.Moved[rows.Table] += int64(len(rows.IDs))
 		}
 	}
+	tally.Stakeholders, tally.Contracts = tally.Moved["relationship"], tally.Moved["contract"]
 	return nil
 }
 
