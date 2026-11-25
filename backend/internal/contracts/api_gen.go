@@ -11649,6 +11649,7 @@ const (
 	DealCommercialAmountBasisEstimate          DealCommercialAmountBasis = "estimate"
 	DealCommercialAmountBasisLinesNetCommitted DealCommercialAmountBasis = "lines_net_committed"
 	DealCommercialAmountBasisOfferGross        DealCommercialAmountBasis = "offer_gross"
+	DealCommercialAmountBasisOfferNet          DealCommercialAmountBasis = "offer_net"
 	DealCommercialAmountBasisUnknown           DealCommercialAmountBasis = "unknown"
 )
 
@@ -11660,6 +11661,8 @@ func (e DealCommercialAmountBasis) Valid() bool {
 	case DealCommercialAmountBasisLinesNetCommitted:
 		return true
 	case DealCommercialAmountBasisOfferGross:
+		return true
+	case DealCommercialAmountBasisOfferNet:
 		return true
 	case DealCommercialAmountBasisUnknown:
 		return true
@@ -49389,7 +49392,7 @@ type DealAdvancedWonWithoutContractReason string
 // excluding tax, with each recurring line counted for its committed periods. It is null until
 // every line is complete; `known_committed_net_minor` is the part already known.
 type DealCommercial struct {
-	// AmountBasis What the deal's amount means. Null while the deal has no amount.
+	// AmountBasis What the deal's amount means. `offer_net` is an accepted offer's figure without tax. `offer_gross` is an older amount that took an accepted offer's gross with tax. Null while the deal has no amount.
 	AmountBasis *DealCommercialAmountBasis `json:"amount_basis,omitempty"`
 	ArrMinor    *int64                     `json:"arr_minor,omitempty"`
 
@@ -49417,7 +49420,7 @@ type DealCommercial struct {
 	Writable bool `json:"writable"`
 }
 
-// DealCommercialAmountBasis What the deal's amount means. Null while the deal has no amount.
+// DealCommercialAmountBasis What the deal's amount means. `offer_net` is an accepted offer's figure without tax. `offer_gross` is an older amount that took an accepted offer's gross with tax. Null while the deal has no amount.
 type DealCommercialAmountBasis string
 
 // DealCommercialMissing defines model for DealCommercial.Missing.
@@ -103448,7 +103451,7 @@ type ServerInterface interface {
 	// Update offer header fields — allowed only while status=draft.
 	// (PATCH /offers/{id})
 	UpdateOffer(w http.ResponseWriter, r *http.Request, id Id, params UpdateOfferParams)
-	// Record the buyer's acceptance — syncs the deal's amount from the offer's gross.
+	// Record the buyer's acceptance — syncs the deal's amount from the offer's net.
 	// (POST /offers/{id}/accept)
 	AcceptOffer(w http.ResponseWriter, r *http.Request, id Id, params AcceptOfferParams)
 	// Add a line item to a draft offer (position defaults to next; totals recomputed).
@@ -109256,7 +109259,7 @@ func (_ Unimplemented) UpdateOffer(w http.ResponseWriter, r *http.Request, id Id
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
-// Record the buyer's acceptance — syncs the deal's amount from the offer's gross.
+// Record the buyer's acceptance — syncs the deal's amount from the offer's net.
 // (POST /offers/{id}/accept)
 func (_ Unimplemented) AcceptOffer(w http.ResponseWriter, r *http.Request, id Id, params AcceptOfferParams) {
 	w.WriteHeader(http.StatusNotImplemented)

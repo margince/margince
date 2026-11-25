@@ -2464,7 +2464,7 @@ type PublicEventNotificationPreferenceChanged struct {
 	Class string `json:"class"`
 }
 
-// PublicEventOfferAccepted Payload for offer.accepted — a sent offer was accepted. The deal's headline amount is synced from this offer's gross in the same transaction (see deal.updated on the paired deal entity).
+// PublicEventOfferAccepted Payload for offer.accepted: a sent offer was accepted. The deal's headline amount is synced from this offer's net, the figure without tax, in the same transaction. The paired deal.updated carries that net. This payload still states the offer's own gross.
 type PublicEventOfferAccepted struct {
 	// Currency The currency of gross_minor (ISO 4217), so the amount can be printed.
 	Currency *string `json:"currency,omitempty"`
