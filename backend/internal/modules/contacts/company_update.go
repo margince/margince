@@ -113,6 +113,11 @@ func (s *Store) ReplaceUnitCompanyTypesTx(
 	if err := auth.Require(ctx, companyEntity, principal.ActionUpdate); err != nil {
 		return crmcontracts.Company{}, err
 	}
+	// Lock the row before reading the set, so two writers take turns and
+	// neither loses the other's types.
+	if _, err := tx.Exec(ctx, `SELECT 1 FROM company WHERE id = $1 AND archived_at IS NULL FOR UPDATE`, id); err != nil {
+		return crmcontracts.Company{}, fmt.Errorf("lock company for type edit: %w", err)
+	}
 	all, err := readLiveRelationshipTypes(ctx, tx, id)
 	if err != nil {
 		return crmcontracts.Company{}, err
@@ -167,7 +172,7 @@ func (s *Store) writeCompanyInTx(
 	if err := stageAdoptedSource(ctx, tx, id, p, in.AdoptSource); err != nil {
 		return none, err
 	}
-	if err := storekit.SetCustomFieldPatch(p, active, in.CustomFields, current.AdditionalProperties); err != nil {
+	if err := storekit.SetCustomFieldPatchIn(ctx, tx, p, active, in.CustomFields, current.AdditionalProperties); err != nil {
 		return none, err
 	}
 

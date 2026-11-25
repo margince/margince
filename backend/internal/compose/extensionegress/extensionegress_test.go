@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-package compose
+package extensionegress
 
 import (
 	"context"
@@ -19,9 +19,9 @@ import (
 func TestOnlyTheDevelopmentPostureLetsAUnitDialLoopback(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {}))
 	defer server.Close()
-	t.Cleanup(func() { BindExtensionEgress(runtimeenv.Production) })
+	t.Cleanup(func() { Bind(runtimeenv.Production) })
 	for _, posture := range []string{"dev", "test", "production", "staging", ""} {
-		BindExtensionEgress(runtimeenv.Parse(posture))
+		Bind(runtimeenv.Parse(posture))
 		request, err := http.NewRequestWithContext(context.Background(), http.MethodGet, server.URL, nil)
 		if err != nil {
 			t.Fatal(err)
@@ -41,8 +41,8 @@ func TestOnlyTheDevelopmentPostureLetsAUnitDialLoopback(t *testing.T) {
 // A unit's request carries the extension identity the core declares, so the
 // provider's operator sees one name for every unit's call.
 func TestAUnitsRequestCarriesTheDeclaredExtensionIdentity(t *testing.T) {
-	t.Cleanup(func() { BindExtensionEgress(runtimeenv.Production) })
-	BindExtensionEgress(runtimeenv.Production)
+	t.Cleanup(func() { Bind(runtimeenv.Production) })
+	Bind(runtimeenv.Production)
 	request, err := extension.NewRequest(context.Background(), http.MethodGet, "https://provider.example.test", nil)
 	if err != nil {
 		t.Fatal(err)

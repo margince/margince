@@ -55,7 +55,7 @@ func insertLoggedActivityRow(ctx context.Context, tx pgx.Tx, in LogActivityInput
 	precisionCol, precisionHolder, args := precisionInsertFragment(in.OccurredPrecision, args)
 	languageCol, languageHolder, args := languageInsertFragment(in, args)
 	assistedCol, assistedHolder, args := aiAssistedInsertFragment(in.AIAssisted, args)
-	cfCols, cfHolders, args, err := storekit.InsertFragments(in.customColumns, in.CustomFields, args)
+	cfCols, cfHolders, args, err := storekit.InsertFragmentsIn(ctx, tx, in.customColumns, in.CustomFields, args)
 	if err != nil {
 		return ids.ActivityID{}, time.Time{}, err
 	}

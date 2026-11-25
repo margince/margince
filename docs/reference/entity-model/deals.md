@@ -164,6 +164,7 @@ The 26 tables owned by `deals`, as the migrations build them. [Back to the entit
 - `deal_lost_reason_basis_check`: `CHECK ((((lost_reason_code IS NULL) = (lost_reason_basis IS NULL)) AND ((lost_reason_basis IS NULL) OR (lost_reason_basis = ANY (ARRAY['recorded', 'mapped'])))))`
 - `deal_lost_reason_code_only_when_lost`: `CHECK (((lost_reason_code IS NULL) OR (status = 'lost')))`
 - `deal_lost_reason_only_when_lost`: `CHECK (((lost_reason IS NULL) OR (status = 'lost')))`
+- `deal_manager_request_reasons_vocabulary`: `CHECK ((manager_request_reasons <@ ARRAY['big_deal', 'single_contact', 'stuck']))`
 - `deal_money_currency_pair`: `CHECK ((((amount_minor IS NULL) AND (expected_arr_minor IS NULL)) = (currency IS NULL)))`
 - `deal_partner_attribution_check`: `CHECK (((partner_attribution IS NULL) OR (partner_attribution = ANY (ARRAY['sourced', 'influenced']))))`
 - `deal_partner_attribution_pairing`: `CHECK (((partner_company_id IS NULL) = (partner_attribution IS NULL)))`

@@ -2304,7 +2304,7 @@ paths:
       security: [{bearerAuth: []}]
       summary: Stream a company's logo image.
       description: |-
-        The bytes behind `Company.logo_url` (A55): the company logo resolved from its
+        The bytes behind `Company.logo_url`: the company logo resolved from its
         own website during enrichment or uploaded by a contact, normalized once at store time
         to PNG. Resolved site marks are square; uploaded wordmarks keep their aspect ratio.
         The response is always `image/png` — whatever the source format was, what is served
@@ -3166,7 +3166,7 @@ paths:
       operationId: deepReadCompany
       summary: Read the company's WHOLE site in the background — a crawl that ends in staged proposals.
       description: |-
-        The deep read (founder ratification R2, the A102 crawl seam): discovers up to 12 pages of the
+        The deep read: discovers up to 12 pages of the
         company's own site — well-known paths, sitemap, same-registrable-domain nav links, every
         one robots-checked and SSRF-guarded, discovery is deterministic code and NEVER model-chosen —
         extracts each page through the shared evidence gate, and stages the merged findings as
@@ -5452,7 +5452,7 @@ paths:
         `PUT /projects/{id}/companies`; this one is required because a project starts with a client.
         `key` is optional. Without it the server mints one from the name: the initials alone
         (`ERA`) when no live project uses those letters, else the letters plus the lowest free
-        number from 2 (`ERA-2`). `getProjectKeyPreview` answers the key a create would mint.
+        number from 2. `getProjectKeyPreview` answers the key a create would mint.
         A sent key is stored in upper case and is refused with 422 naming `key` when it does not
         fit the key shape (`invalid_key`), is a word often bracketed in subject lines
         (`key_is_common_word`), is a word of a colleague's name (`key_is_colleague_name`), or is
@@ -13517,7 +13517,7 @@ paths:
     post:
       tags: [Reports]
       operationId: runReport
-      summary: Run a report (the `run_report` MCP verb) and return aggregate rows.
+      summary: Run a report (the `run_report` MCP verb) and return aggregate rows. It keeps nothing; to keep figures others can reopen, ask runAnalyticsQuery with `save`.
       description: |-
         Executes a validated, typed query plan (NOT free-form SQL). Every aggregate cell is
         reconcilable via the `derivation` for "Explain This Number".
@@ -14895,7 +14895,7 @@ paths:
       operationId: listConnectors
       summary: List the calling user's capture connections + sync state.
       description: |-
-        The per-user mail/calendar connections this user has established (RC-8), each with its
+        The per-user mail/calendar connections this user has established, each with its
         status and sync watermark. Never returns the credential — it lives encrypted in the vault
         (`credential_ref`); this row carries only status + cursor.
       security: [{bearerAuth: []}]
@@ -15469,7 +15469,7 @@ paths:
       summary: Disconnect the calling user's mail/calendar capture.
       description: |-
         Disconnects the caller's connection: capture stops immediately (the connection flips to
-        `disconnected`, RC-8) and the poller no longer selects it. No upstream token revocation is
+        `disconnected`) and the poller no longer selects it. No upstream token revocation is
         performed — the user removes the grant at the provider themselves. The stored credential
         IS deleted from the vault as part of this call, not merely retired for a later sweep.
         Idempotent. Already-captured activities are retained — they are real history; capture
@@ -17214,7 +17214,7 @@ paths:
         `merge` requires `winner_id` (one of the pair) and executes `mergeContact`/
         `mergeCompany` server-side — one merge in the system, no second verb.
         `not_a_duplicate` flips the row and suppresses the pair from every future
-        sweep (AC-dedupe-7). `409 already_disposed`; `422` when `winner_id` is not
+        sweep. `409 already_disposed`; `422` when `winner_id` is not
         one of the pair. Deciding a pair CHANGES both records, so the caller needs
         write authority over each of them and not merely the object grant — a seat
         that can read the pair but change neither gets `403`.
@@ -18195,7 +18195,7 @@ paths:
       summary: Read the human+agent-attributable audit log (Settings governance view).
       description: |-
         Powers
-        AC-settings-16 — the live-filterable audit view. Every entry attributes the actor
+        The live-filterable audit view. Every entry attributes the actor
         (`human:*` / `agent:*` + `passport_id`), the action, and the target. Admin/compliance scope;
         read-only.
       parameters:
@@ -23038,7 +23038,7 @@ paths:
     get:
       tags: [Brief]
       operationId: getMorningBrief
-      summary: The acting rep's latest Morning-Brief run (the on-open read-model re-read; never re-ranks).
+      summary: Your morning brief for today, its ranked items. 404 means none has been made yet; generateMorningBrief makes one.
       responses:
         '200':
           description: The latest brief run with its ranked queue.
@@ -23052,7 +23052,7 @@ paths:
           content:
             application/problem+json:
               schema: {$ref: '#/components/schemas/Problem'}
-      description: The acting rep's latest Morning-Brief run (the on-open read-model re-read; never re-ranks).
+      description: Your morning brief for today, its ranked items. 404 means none has been made yet; generateMorningBrief makes one.
     post:
       tags: [Brief]
       operationId: generateMorningBrief
@@ -23931,7 +23931,7 @@ paths:
     post:
       tags: [Reports]
       operationId: runAnalyticsQuery
-      summary: Answer a question nobody wrote a report for.
+      summary: Answer a question nobody wrote a report for. With `save` the answer is kept as a saved question, which `GET /analytics/runs` lists and others reopen by its `run_id`.
       description: |-
         A typed query over the vocabulary `/analytics/schema` returns. The caller names a
         population, what to group by, what to measure and how to narrow — never SQL, and
@@ -24635,7 +24635,7 @@ paths:
       tags: [Brief]
       operationId: snoozeBriefItem
       security: [{bearerAuth: []}]
-      summary: Snooze a brief item (A77/AC-home-6) — hidden until `snoozed_until` passes, then it re-surfaces as actionable.
+      summary: Snooze a brief item — hidden until `snoozed_until` passes, then it re-surfaces as actionable.
       description: |-
         Sets the item to `state=snoozed` with the given `snoozed_until`. While the instant has not
         passed, the item is hidden from the home read AND the deal is suppressed from freshly
@@ -25612,7 +25612,7 @@ paths:
       tags: [Contracts]
       operationId: getContract
       security: [{bearerAuth: []}]
-      summary: One contract.
+      summary: One agreement with a company, with its terms, value, dates and status.
       parameters:
         - $ref: '#/components/parameters/Id'
       responses:
@@ -25624,7 +25624,7 @@ paths:
         '401': {$ref: '#/components/responses/Unauthorized'}
         '404': {$ref: '#/components/responses/NotFound'}
         '422': {$ref: '#/components/responses/ValidationError'}
-      description: One contract.
+      description: One agreement with a company, with its terms, value, dates and status.
     patch:
       tags: [Contracts]
       operationId: updateContract
@@ -27169,7 +27169,7 @@ components:
       required: true
       schema: {type: string, enum: [gmail, gcal, gdocs, graph, graphcal, imap, test_mailbox]}
       description: |-
-        The mail/calendar provider (A51 email+calendar parity). Every provider connects through
+        The mail/calendar provider. Every provider connects through
         the same operation; gmail/gcal/gdocs/graph/graphcal authorize by OAuth redirect, imap by
         credential submission, and test_mailbox connects immediately with neither (a QC-only
         connector, reachable only when the deployment armed operations.allow_test_mailbox — a
@@ -28882,7 +28882,7 @@ components:
       required: [id, provider, status, scopes, can_backfill]
       properties:
         id: {type: string, format: uuid}
-        provider: {type: string, enum: [gmail, gcal, gdocs, graph, graphcal, imap, test_mailbox], description: The mail/calendar/meeting-notes provider (A51 email+calendar parity).}
+        provider: {type: string, enum: [gmail, gcal, gdocs, graph, graphcal, imap, test_mailbox], description: The mail/calendar/meeting-notes provider.}
         can_backfill:
           type: boolean
           description: |-
@@ -31927,7 +31927,7 @@ components:
             Rows this run corrected rather than created, which undo leaves corrected. A row count, from the run's own report: two rows naming one record count twice. Absent or zero means the run corrected nothing, and what it did reverse is `reversed_count`, `kept` and `errored`.
         kept:
           type: array
-          description: 'Import-created rows left in place: a human edited them since import (A93), or a live record still names the company.'
+          description: 'Import-created rows left in place: a human edited them since import, or a live record still names the company.'
           items:
             type: object
             required: [object, id]
@@ -33422,7 +33422,7 @@ components:
           type: [string, 'null']
           readOnly: true
           description: |-
-            Where to fetch the company's logo image (A55) — the `getCompanyLogo`
+            Where to fetch the company's logo image — the `getCompanyLogo`
             path for this record, cookie-authenticated and same-origin. A revision query changes
             with the stored image so a replacement cannot remain hidden behind an older cached
             response. The key is ABSENT entirely (not null) when no logo is stored, which is the
@@ -34450,7 +34450,7 @@ components:
     Company360Health:
       type: object
       description: |-
-        How the relationship stands, in the parts a reader can act on (AC-company-3).
+        How the relationship stands, in the parts a reader can act on.
       properties:
         relationship:
           allOf: [{$ref: '#/components/schemas/HealthDimension'}]
@@ -34963,7 +34963,7 @@ components:
           type: [object, 'null']
           description: |-
             What performing this advice means, named by the server rather than inferred by the
-            client from the evidence order (AC-company-14). A rule that cannot name an action
+            client from the evidence order. A rule that cannot name an action
             carries null and the card advises without offering a button, which is honest — a
             control that does nothing teaches the reader to stop pressing them.
           required: [kind]
@@ -35235,7 +35235,7 @@ components:
         logo_url:
           type: [string, 'null']
           description: |-
-            The company node's resolved logo (A55), same value `Company.logo_url` carries.
+            The company node's resolved logo, same value `Company.logo_url` carries.
             Absent on a company with no resolved logo and on every contact or deal node —
             a client draws the node's monogram or its token-coloured circle instead.
     ContactProfileField:
@@ -38528,7 +38528,7 @@ components:
             `deal_stakeholder` — the contact holds a stakeholder seat on the deal.
             `parent_of` — `from` is the parent company of `to` (the account's parent
             points at it; the account points at each child).
-            `partner_of` / `referred_by` / `co_sell_with` — the A41 partner edges, from
+            `partner_of` / `referred_by` / `co_sell_with` — the partner edges, from
             the company that records the edge to its counterparty.
             `owns` — `from` is the workspace member who owns the account.
             `in_contact_with` — `from` is the workspace member who has been IN recorded
@@ -39919,7 +39919,7 @@ components:
         signed_on:
           type: [string, 'null']
           format: date
-          description: 'When a human asserts it was signed. Never derived from a deal close time, and never a signing ceremony — in-product e-signature stays removed (A94).'
+          description: 'When a human asserts it was signed. Never derived from a deal close time, and never a signing ceremony — in-product e-signature stays removed.'
         cancellation_notice_on: {type: [string, 'null'], format: date}
         cancellation_effective_on:
           type: [string, 'null']
@@ -42667,7 +42667,8 @@ components:
             `AttachmentExtraction` the human was actually shown. Required, and not
             inferable: resolving "the newest reading" instead would let a reading started
             by someone else between the display and the click decide what gets written,
-            which is precisely the divergence storing the fields exists to prevent. A reading belonging to another attachment, or one that never
+            which is precisely the divergence storing the fields exists to prevent.
+            A reading belonging to another attachment, or one that never
             existed, is a 404. A reading not read for deal facts is a 422 `not_deal_facts`.
         field_keys:
           type: array
@@ -42872,7 +42873,7 @@ components:
           type: string
           enum: [intent, recipient, relationship, deal, commitment, conversation, dossier]
           description: |-
-            Which grounding input this came from, in A132's order.
+            Which grounding input this came from, in the grounding order.
         label:
           type: string
           description: The reason in the reader's words, short enough to render as a chip.
@@ -48046,6 +48047,12 @@ components:
         blockers:
           type: array
           items: {$ref: '#/components/schemas/MemberRetirementBlocker'}
+        blocking_records:
+          type: array
+          description: |-
+            The records behind each blocker that is about records, such as `deal_rooms` or
+            `webhooks`. A blocker that is a state, such as `deactivate_first`, has no entry.
+          items: {$ref: '#/components/schemas/MemberRetirementBlockingRecords'}
         consequences:
           type: array
           items: {$ref: '#/components/schemas/MemberRetirementConsequence'}
@@ -48054,6 +48061,30 @@ components:
         source_email: {type: string, format: email}
         survivor_name: {type: string}
         survivor_email: {type: string, format: email}
+    MemberRetirementBlockingRecords:
+      type: object
+      description: |-
+        The records that hold one blocker. `total` counts every one of them. `records` lists the
+        ones you may open, up to 25, and `visible` says how many those are in all. A record kept
+        to its owner, or one with no screen you may open, counts in `total` only.
+      required: [blocker, total, visible, records]
+      properties:
+        blocker: {$ref: '#/components/schemas/MemberRetirementBlocker'}
+        total: {type: integer, minimum: 0}
+        visible: {type: integer, minimum: 0}
+        records:
+          type: array
+          maxItems: 25
+          items: {$ref: '#/components/schemas/MemberRetirementBlockingRecord'}
+    MemberRetirementBlockingRecord:
+      type: object
+      required: [id, name]
+      properties:
+        id: {type: string, format: uuid}
+        name: {type: string}
+        web_url:
+          type: string
+          description: Where the record opens in the app, such as the deal a Deal Room belongs to. Absent when it has no page of its own.
     MergeMembersRequest:
       type: object
       additionalProperties: false
