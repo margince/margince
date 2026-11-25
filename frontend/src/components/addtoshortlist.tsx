@@ -13,6 +13,7 @@ import { Button, Field, Textarea, TextInput } from "../design-system/atoms";
 import { ConfirmModal } from "../design-system/confirmmodal";
 import { useFieldFaults } from "../design-system/savepage";
 import { Select } from "../design-system/select";
+import { useToast } from "../design-system/toast";
 import { useLocale, useT } from "../i18n";
 import { recordListsKey } from "../lib/activitykeys";
 import { useCanWrite } from "../lib/capability";
@@ -122,6 +123,7 @@ export function AddToShortlistDialog({
   const t = useT();
   const { locale } = useLocale();
   const client = useQueryClient();
+  const toast = useToast();
   const mayCreate = useCanWrite("list", "create");
   const shortlists = useLists({ entityType, listType: "static" });
   const create = useCreateList();
@@ -175,27 +177,32 @@ export function AddToShortlistDialog({
   };
 
   const add = async (input: AddInput) => {
-    const listId =
+    const list =
       input.choice === NEW_LIST
-        ? (
-            await create.mutateAsync(
-              {
-                name: input.newName.trim(),
-                entityType,
-                listType: "static",
-                sharing: input.sharing,
-              },
-              {
-                onError: (error) => faults.show(nameRefusal(error).byField),
-              },
-            )
-          ).id
-        : input.choice;
+        ? await create.mutateAsync(
+            {
+              name: input.newName.trim(),
+              entityType,
+              listType: "static",
+              sharing: input.sharing,
+            },
+            {
+              onError: (error) => faults.show(nameRefusal(error).byField),
+            },
+          )
+        : editable.find((shortlist) => shortlist.id === input.choice);
+    const listId = list?.id ?? input.choice;
     await change.mutateAsync(
       { listId, entityType, entityId, note: input.note },
       { onError: (error) => faults.show(memberRefusal(error).byField) },
     );
     onClose();
+    // A Shortlist the picker offered can leave its read while the add runs.
+    toast.show(
+      list
+        ? t("lists.addedTo", { name: list.name })
+        : t("lists.addedToShortlist"),
+    );
   };
 
   return (

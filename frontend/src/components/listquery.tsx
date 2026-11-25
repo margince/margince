@@ -413,8 +413,8 @@ export function useTagChips(): readonly ListChip[] {
       // that exists is indistinguishable from one that does not — and a reader
       // who cannot find a word in a dial concludes the workspace lacks it.
       label: vocabulary.data?.truncated
-        ? t("tags.columnHeaderPartial")
-        : t("tags.columnHeader"),
+        ? t("tags.filterLabelPartial")
+        : t("tags.filterLabel"),
       allLabel: t("tags.filterAll"),
       options: words.map((tag) => ({ value: tag.id, label: tag.name })),
     },

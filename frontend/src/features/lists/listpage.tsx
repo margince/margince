@@ -14,6 +14,7 @@ import { ErrorLine } from "../../design-system/errorline";
 import { Heading } from "../../design-system/heading";
 import { Panel, PanelBody } from "../../design-system/panel";
 import { Fact, RecordFacts } from "../../design-system/recordfacts";
+import { useToast } from "../../design-system/toast";
 import { formatDateTime, formatNumber } from "../../format/format";
 import { useLocale, usePlural, useT } from "../../i18n";
 import { ENTITY } from "../../lib/entity";
@@ -361,6 +362,7 @@ function ListNotices({ list }: Readonly<{ list: List }>) {
   const me = useMe();
   const update = useUpdateList();
   const archive = useArchiveList();
+  const toast = useToast();
   const notice = noticeOf(list);
   if (notice === "archived") {
     return (
@@ -371,7 +373,12 @@ function ListNotices({ list }: Readonly<{ list: List }>) {
           list.can_edit ? (
             <Button
               pending={archive.isPending}
-              onClick={() => archive.mutate({ id: list.id, archive: false })}
+              onClick={() =>
+                archive.mutate(
+                  { id: list.id, archive: false },
+                  { onSuccess: () => toast.show(t("lists.restored")) },
+                )
+              }
             >
               {t("lists.restore")}
             </Button>

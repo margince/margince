@@ -18,10 +18,10 @@ What each list offers:
 
 | List | Search | Filters | Tabs | Table and board | Bulk actions |
 |---|---|---|---|---|---|
-| **Contacts** | name or job title, or exact email | Owner, Team, Tags | All, Mine, Shared with me | table only | Assign owner, Add or Remove tag, Create task, Add to Shortlist, Archive |
-| **Companies** | name, legal name or industry, or exact domain | Owner, Team, **Employees**, Partner kinds, Relationship stage and Stage meaning (if you may see partners), Tags, Lifecycle, Relationship type, Activity | All, Mine, Customers, Prospects | table only | Assign owner, Add or Remove tag, Create task, Add to Shortlist, Archive |
-| **Leads** | name, company name or job title, or exact email or LinkedIn URL | Status, Score, Response, Origin, Owner, Team, Tags, **Industry**, **Country**, **Company size** | Mine, All, Unassigned, New and unassigned, New, Contacted, Engaged, Hot, Overdue | both | Assign, Disqualify |
-| **Deals** | name or description | Owner, Team, Stage, Company, Tags, Close date, Value, Currency, **Country**, Status, Stalled only, Partner-sourced, Probability, Motion, Priority, Linked as, Source, Partner | All, Mine | both, opens on Board | Assign owner, Move to stage, Add or Remove tag, Create task, Add to Shortlist, Archive |
+| **Contacts** | name or job title, or exact email | Owner, Team, Tag | All, Mine, Shared with me | table only | Assign owner, Add or Remove tag, Create task, Add to Shortlist, Archive |
+| **Companies** | name, legal name or industry, or exact domain | Owner, Team, **Employees**, Partner kinds, Relationship stage and Stage meaning (if you may see partners), Tag, Lifecycle, Relationship type, Activity | All, Mine, Customers, Prospects | table only | Assign owner, Add or Remove tag, Create task, Add to Shortlist, Archive |
+| **Leads** | name, company name or job title, or exact email or LinkedIn URL | Status, Score, Response, Origin, Owner, Team, Tag, **Industry**, **Country**, **Company size** | Mine, All, Unassigned, New and unassigned, New, Contacted, Engaged, Hot, Overdue | both | Assign, Disqualify |
+| **Deals** | name or description | Owner, Team, Stage, Company, Tag, Close date, Value, Currency, **Country**, Status, Stalled only, Partner-sourced, Probability, Motion, Priority, Linked as, Source, Partner | All, Mine | both, opens on Board | Assign owner, Move to stage, Add or Remove tag, Create task, Add to Shortlist, Archive |
 | **Projects** | name or project key | Owner, Team, Phase | All, In delivery | table only | none |
 
 **Response** on Leads shows only while a target for the first answer is turned on, and so does the **Overdue** tab. **Industry**, **Country** and **Company size** on Leads read the company the lead is linked to. A lead counts under its own typed **Industry** in three cases. It has no linked company, that company has no industry, or you cannot open that company. They show only if you may open companies. On Deals, **Value** shows once your company has a main currency, and **Linked as**, **Source** and **Partner** only when there is something to pick.
@@ -45,8 +45,8 @@ Also called: look up by email, search by email, who is this address, find a send
 ### How do I filter a list?
 To filter a list in Margince, open the list and press **View** → **Filters**. Pick what to filter by, then pick the value.
 1. Press **View**, then **Filters**; **Search attributes** makes the list of choices shorter.
-2. Pick a field, such as **Owner** or **Tags**, then a value, such as **Owned by you**.
-3. The filter stands under the search as a chip ("Owner is Owned by you"). Add another from **View** → **Filters**.
+2. Pick a field, such as **Owner** or **Tag**, then a value, such as **You**.
+3. The filter stands under the search as a chip ("Owner is You"). Add another from **View** → **Filters**.
 4. Press the chip to change its value. Its **⋮** button, then **Delete filter**, takes it off.
 A row must match every filter, and each filter holds one value.
 Also called: narrow down, refine, facet, filter by.
@@ -57,8 +57,8 @@ On the **Mine** tab, an empty list says "No contacts owned by you." with **Show 
 Also called: reset filters, show everything again, remove filter.
 
 ### How do I see only my records, or the records I own?
-To see only the records you own in Margince, open **Contacts**, **Companies** or **Leads** and press the **Mine** tab in the header row. **Deals** has it too. On **Projects**, press **View** → **Filters** → **Owner** → **Owned by you**.
-1. The **Owner** filter lists **Owned by you**, then every active colleague by name, then **Unassigned**.
+To see only the records you own in Margince, open **Contacts**, **Companies** or **Leads** and press the **Mine** tab in the header row. **Deals** has it too. On **Projects**, press **View** → **Filters** → **Owner** → **You**.
+1. The **Owner** filter lists **You**, then every active colleague by name, then **Unassigned**.
 2. **Leads** opens on **Mine** for a user who sees only their own leads. It opens on **All** for one who can see the team's or everyone's.
 Also called: my contacts, my deals, my accounts, assigned to me, owned by me.
 
@@ -96,7 +96,7 @@ You can sort the **Company** column on **Contacts**, so sorting by it groups con
 Also called: contacts at an account, everyone at a customer, staff of a client.
 
 ### How do I filter a list by tag?
-To filter a list by tag in Margince, open **Contacts**, **Companies** or **Deals**, press **View** → **Filters** → **Tags**, and pick the tag. One tag at a time: a second tag takes the place of the first. **Any tag** takes the filter off. To see every record with a tag across all record types, open the tag's own page. A record shows its tags under **Tags**; see [Tags](records.md#tags).
+To filter a list by tag in Margince, open **Contacts**, **Companies** or **Deals**, press **View** → **Filters** → **Tag**, and pick the tag. One tag at a time: a second tag takes the place of the first. **Any tag** takes the filter off. To see every record with a tag across all record types, open the tag's own page. A record shows its tags under **Tags**; see [Tags](records.md#tags).
 Also called: filter by label, show tagged records, segment by tag.
 
 ### Why are some contacts tagged `machine-address`?
@@ -274,16 +274,16 @@ Also called: bulk actions, mass archive, bulk disqualify.
 
 ### Can I tag several records at once?
 Yes. To tag many records in Margince, tick them on the **Contacts**, **Companies** or **Deals** table. Choose **Pick a tag** in the bar for many rows, and press **Add tag** or **Remove tag**.
-1. A window shows how many records will change, and each record left as it is with its reason. For example "Already has or lacks this tag" or "No permission to change".
+1. A window shows how many records will change, and each record left as it is with its reason. For example "Already has this tag" or "No permission to change".
 2. Press **Add tag** or **Remove tag** to confirm. **Undo** in the message takes the tag off only the records it just tagged.
-To work with the tagged records after that, use **View** → **Filters** → **Tags** on the list.
+To work with the tagged records after that, use **View** → **Filters** → **Tag** on the list.
 Also called: bulk tag, mass tag, tag many contacts, label several deals at once.
 
 ### Can I create a task for several records at once?
 Yes. Tick the records on the **Contacts**, **Companies** or **Deals** table and press **Create task** in the bar for many rows.
 1. Fill in **What has to be done**, and if you want a **Due date** and an **Assignee**. Without an assignee the tasks are yours.
 2. Press **Preview**, check the window, and press **Create tasks**. Each record gets its own task.
-**Undo** in the message archives the tasks it just created. A task someone has completed or edited since is left as it is.
+The message says how many were created, such as "5 tasks created.", and its **Undo** archives them. A task someone has completed or edited since is left as it is.
 Also called: bulk task, follow up with many, mass follow-up.
 
 ## Live Lists and Shortlists
@@ -304,7 +304,7 @@ To start a Shortlist in Margince, open **Filters and views** and press **New Sho
 1. Type a **Name**, pick the **Record type**, and if you like say **What it is for**. **Who can find it** starts on **A team**; pick **Only me** to keep it to yourself. If you are in no team, it starts on **Only me**, and you cannot pick **A team**.
 2. Press **Create list**.
 3. Add records from a record's page: press **Add to Shortlist** and pick the Shortlist (or **A new Shortlist…**).
-Add a note under **Why (optional)** and press **Add**. To add many records at once, tick them on the list screen. Pick the Shortlist under **Add to Shortlist** in the bar for many rows. On a contact, company, deal or lead page, **Lists** also holds **Add to Shortlist** and **All lists**.
+Add a note under **Why (optional)** and press **Add**, and the message says "Added to" with the Shortlist's name. To add many records at once, tick them on the list screen. Pick the Shortlist under **Add to Shortlist** in the bar for many rows. On a contact, company, deal or lead page, **Lists** also holds **Add to Shortlist** and **All lists**.
 Also called: static list, hand-picked list, target list, account list.
 
 ### Who can find a list?
@@ -365,9 +365,9 @@ If someone changed the list after you opened it, Margince says so and saves noth
 Also called: edit a list's criteria, change a segment, update a smart list.
 
 ### How do I rename, archive or restore a list?
-To change a list in Margince, open it, press **⋯** beside its name and choose **Edit list**. Change the **Name**, **What it is for** and **Who can find it**, then press **Save**. Only whoever may change the list (see [What is a list's steward?](#what-is-a-lists-steward)) sees **⋯**.
-- **Archive list**, last under the same **⋯**, makes the list read-only. Its members and history are kept, and **Restore** on the list's page brings it back.
-- If an automation uses the list, archiving it names the automations first. They pause, and restoring the list does not start them again.
+To change a list in Margince, open it, press **⋯** beside its name and choose **Edit list**. Change the **Name**, **What it is for** and **Who can find it**, then press **Save**, and "List saved" shows. Only whoever may change the list (see [What is a list's steward?](#what-is-a-lists-steward)) sees **⋯**.
+- **Archive list**, last under the same **⋯**, makes the list read-only at once, and the message offers **Undo**. Its members and history are kept, and **Restore** on the list's page brings it back.
+- If an automation uses the list, archiving it names the automations first and offers no **Undo**. They pause, and restoring the list does not start them again.
 Also called: delete a list, rename a list, change who can see a list.
 
 ### Can an automation act on a Live List?
