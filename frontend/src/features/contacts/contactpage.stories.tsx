@@ -767,10 +767,19 @@ const owedCallMoment: components["schemas"]["ContactMoment"] = {
     },
   ],
   recommended_action: {
-    kind: "draft_reply",
-    label: "Write to them",
+    kind: "call",
+    label: "Call them",
     state: "available",
+    destination: { surface: "activity_log" },
   },
+  secondary_actions: [
+    {
+      kind: "draft_reply",
+      label: "Write to them",
+      state: "will_confirm",
+      destination: { surface: "composer" },
+    },
+  ],
 };
 
 export const LeadMomentFromCall: Story = {
@@ -778,13 +787,6 @@ export const LeadMomentFromCall: Story = {
   render: () => {
     installFetchStub({
       "GET /me": meRoute({ activity: ["read", "update"] }),
-      "GET /activities/call-7": () =>
-        jsonResponse({
-          id: "call-7",
-          kind: "call",
-          content_state: "available",
-          occurred_at: "2026-08-09T15:00:00Z",
-        }),
     });
     return (
       <StoryProviders>
@@ -799,7 +801,8 @@ export const LeadMomentFromCall: Story = {
     );
   },
   play: async () => {
-    await screen.findByRole("link", { name: en["record.verb.call"] });
+    const call = await screen.findByRole("link", { name: "Call them" });
+    await expect(call.getAttribute("href")).toMatch(/^tel:/);
   },
 };
 
