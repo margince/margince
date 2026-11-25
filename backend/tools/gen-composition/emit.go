@@ -16,13 +16,14 @@ import (
 
 	"golang.org/x/mod/modfile"
 
+	"github.com/margince/margince/backend/internal/platform/unitset"
 	"github.com/margince/margince/backend/pkg/extension"
 )
 
 // compositionModule is the constant import path the role binaries wire
 // (backend/go.mod resolves it to the committed vanilla stub; the
 // generated go.work overrides it with build/composition/backend).
-const compositionModule = "github.com/margince/margince/composition"
+const compositionModule = unitset.CompositionModule
 
 // extensionsGenHeader is shared by the vanilla stub and every composed
 // output — the vanilla body below it must stay byte-identical to
@@ -299,7 +300,12 @@ func composedFiles(root string) (composition, error) {
 	if err != nil {
 		return composition{}, err
 	}
+	unitList, err := composedUnitList(root, units)
+	if err != nil {
+		return composition{}, err
+	}
 	files := map[string][]byte{
+		unitListFile:                     unitList,
 		goWorkFile:                       work,
 		"backend/go.mod":                 composedGoMod(goVersion),
 		"backend/extensions_gen.go":      wiring,

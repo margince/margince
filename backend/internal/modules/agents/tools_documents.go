@@ -272,6 +272,11 @@ func (listDocuments) routeTargets() map[string]string {
 	return map[string]string{listDocumentsChoice: listRecordDocumentsName}
 }
 
+// pickedBy covers the download verb registration adds, which a file's id picks.
+func (listDocuments) pickedBy() map[string]string {
+	return map[string]string{listDocumentsChoice: "entity_type and entity_id", "download": routeIDArg}
+}
+
 //nolint:unparam // the error belongs to targetChooser: other routers refuse a call here.
 func (listDocuments) chooseTarget(members map[string]json.RawMessage) (string, error) {
 	dropNullMembers(members, routeIDArg)

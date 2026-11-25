@@ -62,11 +62,11 @@ func (s *Store) MarkWorklistRowsDone(ctx context.Context, rows []WorklistRowRef)
 		var args []any
 		arg := func(v any) int { args = append(args, v); return len(args) }
 		query := sprintf(`
-			INSERT INTO worklist_done (reader_id, source, row_id, done_at, set_by)
-			VALUES ($%[1]d, $%[2]d, $%[3]d, $%[4]d, $%[5]d)
+			INSERT INTO worklist_done (reader_id, source, row_id, done_at)
+			VALUES ($%[1]d, $%[2]d, $%[3]d, $%[4]d)
 			ON CONFLICT (reader_id, source, row_id)
-			DO UPDATE SET done_at = EXCLUDED.done_at, set_by = EXCLUDED.set_by`,
-			arg(reader), arg(row.Source), arg(row.RowID), arg(s.now().UTC()), arg(capturedBy))
+			DO UPDATE SET done_at = EXCLUDED.done_at`,
+			arg(reader), arg(row.Source), arg(row.RowID), arg(s.now().UTC()))
 		if _, err := tx.Exec(ctx, query, args...); err != nil {
 			return fmt.Errorf("activities: marking a worklist row done: %w", err)
 		}

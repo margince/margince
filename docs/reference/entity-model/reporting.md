@@ -93,9 +93,9 @@ The 14 tables owned by `reporting`, as the migrations build them. [Back to the e
 | `expired_at` | `timestamp with time zone` |  |  |
 | `intended_due_at` | `timestamp with time zone` | yes |  |
 | `manifest` | `jsonb` | yes |  |
-| `owner_id` | `uuid` | yes |  |
+| `owner_id` | `uuid` | yes | Points at `app_user.id`. |
 | `publication_audience` | `text` | yes |  |
-| `publication_team_id` | `uuid` |  |  |
+| `publication_team_id` | `uuid` |  | Points at `team.id`. |
 | `redacted_at` | `timestamp with time zone` |  |  |
 | `report_id` | `uuid` | yes | Points at `report_definition.id`. |
 | `report_revision` | `bigint` | yes |  |
@@ -105,6 +105,8 @@ The 14 tables owned by `reporting`, as the migrations build them. [Back to the e
 | Columns | Table | When the parent goes |
 |---|---|---|
 | `execution_id` | `report_execution` | the parent cannot be deleted while this row points at it |
+| `owner_id` | `app_user` | the parent cannot be deleted while this row points at it |
+| `publication_team_id` | `team` | the parent cannot be deleted while this row points at it |
 | `report_id` | `report_definition` | the parent cannot be deleted while this row points at it |
 
 **Rules**
@@ -487,13 +489,12 @@ The 14 tables owned by `reporting`, as the migrations build them. [Back to the e
 
 ## sales_target_revision
 
-5 columns · primary key `(target_id, revision)` · referenced by 0 foreign keys
+4 columns · primary key `(target_id, revision)` · referenced by 0 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
 | `created_by` | `uuid` | yes | Points at `app_user.id`. |
 | `definition` | `jsonb` | yes |  |
-| `effective_at` | `timestamp with time zone` | yes |  |
 | `revision` | `bigint` | yes |  |
 | `target_id` | `uuid` | yes | Points at `sales_target.id`. |
 

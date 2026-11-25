@@ -381,13 +381,13 @@ func TestTheQuietRungMintsAVerbTheWithholdingCovers(t *testing.T) {
 	}
 
 	reader := quiet
-	momentaction.Withhold(as(map[string]principal.ObjectGrant{"contact": {Read: true}}), "en", &reader)
+	momentaction.Withhold(as(map[string]principal.ObjectGrant{"contact": {Read: true}}), "en", "contact", &reader)
 	if reader.RecommendedAction.State != crmcontracts.ContactMomentActionStateBlocked {
 		t.Errorf("state = %q for a caller without activity.create, want blocked", reader.RecommendedAction.State)
 	}
 
 	writer := quiet
-	momentaction.Withhold(as(map[string]principal.ObjectGrant{"contact": {Read: true}, "activity": {Create: true}}), "en", &writer)
+	momentaction.Withhold(as(map[string]principal.ObjectGrant{"contact": {Read: true}, "activity": {Create: true}}), "en", "contact", &writer)
 	if writer.RecommendedAction.State != crmcontracts.ContactMomentActionStateAvailable || writer.RecommendedAction.Destination == nil {
 		t.Errorf("a caller holding activity.create got %q with destination %v, want the action untouched", writer.RecommendedAction.State, writer.RecommendedAction.Destination)
 	}

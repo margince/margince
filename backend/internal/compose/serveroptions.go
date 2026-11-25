@@ -85,21 +85,27 @@ func WithMCPResource(resource string) Option {
 // WithMCPInputStateKey lets a tool ask the user in the chat, signing each
 // question with the deployment's HMAC key. Without one no tool asks.
 func WithMCPInputStateKey(key string) Option {
-	return func(s *Server, _ *pgxpool.Pool) { s.mcpChat.inputStateKey = key }
+	return func(s *Server, _ *pgxpool.Pool) { s.mcpDoor.inputStateKey = key }
 }
 
-// mcpChatSettings signs the questions a tool asks in the chat, and spends each
-// answer and confirm code once.
-type mcpChatSettings struct {
+// mcpDoorSettings sign the questions a tool asks in the chat and spend each
+// answer and confirm code once. callLog records each call when it is set.
+type mcpDoorSettings struct {
 	inputStateKey string
 	replayGuard   agents.ReplayGuard
+	callLog       agents.CallLog
+}
+
+// WithMCPCallLog records every /mcp exchange in log.
+func WithMCPCallLog(log agents.CallLog) Option {
+	return func(s *Server, _ *pgxpool.Pool) { s.mcpDoor.callLog = log }
 }
 
 // WithMCPReplayGuard spends each confirm code and each answered chat question
 // once. Without it no tool asks in the chat, and a call that waits for its own
 // user stages into the approval inbox.
 func WithMCPReplayGuard(guard agents.ReplayGuard) Option {
-	return func(s *Server, _ *pgxpool.Pool) { s.mcpChat.replayGuard = guard }
+	return func(s *Server, _ *pgxpool.Pool) { s.mcpDoor.replayGuard = guard }
 }
 
 // WithMCPConnector turns the remote MCP connector on: the /mcp transport,

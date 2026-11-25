@@ -24,7 +24,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
-const seatlessLinkMigration = "../../../../migrations/core/1795620144_a_business_link_without_a_seat_waits_for_approval.up.sql"
+const seatlessLinkMigration = "../../../../migrations/core/1795639497_a_business_link_without_a_seat_waits_for_approval.up.sql"
 
 func TestTheSharedMailboxRoutesAnswerNotFoundForAChatSeat(t *testing.T) {
 	c := setupTelegramConnected(t)

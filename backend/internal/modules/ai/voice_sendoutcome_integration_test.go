@@ -160,8 +160,8 @@ func (e *sendOutcomeEnv) seedDraft(t *testing.T, opts draftOptions) draftFixture
 	if err := e.owner.QueryRow(ctx, `
 		INSERT INTO voice_learning_signal
 		  (voice_profile_id, draft_ref_hash, outcome, generated_original,
-		   retention_until, content_erased_at, archived_at, source, captured_by)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, 'draft', $8) RETURNING id`,
+		   retention_until, content_erased_at, archived_at, captured_by)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING id`,
 		profile, hash[:], outcome, generated, draftRetentionUntil,
 		erasedAt, archivedAt, "human:"+profileOwner.String()).Scan(&signal); err != nil {
 		t.Fatal(err)

@@ -24,43 +24,22 @@ import {
   type AssignedRecord,
   assignedRecord,
 } from "../../components/recordassignments.queries";
-import {
-  Button,
-  Field,
-  SegmentedControl,
-  Textarea,
-} from "../../design-system/atoms";
-import { Panel, PanelBody } from "../../design-system/panel";
+import { Button, Field } from "../../design-system/atoms";
 import { Select } from "../../design-system/select";
 import { useToast } from "../../design-system/toast";
 import { useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import { labelFor } from "../../lib/labelfor";
-import { problemCodeOf } from "../../lib/problem";
 import { useMe } from "../../lib/session";
 import { InquiryAssignmentDialog } from "./worklist.inquiryassignment";
 import {
   subjectAcceptsAnOwner,
   type TeamException,
-  useCoachTeammate,
   useReassignTask,
   useTakeOwnership,
   type WorklistItem,
   type WorklistScope,
 } from "./worklist.queries";
-
-// COACH_KINDS is the contract's vocabulary, spelled once. A kind the server
-// gains and this list does not is simply not offered, which is the same
-// promise the verb map above the row makes: a control that would refuse when
-// pressed is never drawn.
-const COACH_KINDS = [
-  "coach_reply_aging",
-  "coach_deal_needs_next_step",
-  "coach_review_backlog",
-  "coach_general",
-] as const;
-
-type CoachKind = (typeof COACH_KINDS)[number];
 
 // Whose queue this page is answering.
 //
@@ -226,162 +205,6 @@ function TaskReassignForm({
       </Button>
       <RosterFailedLine kind="user" roster={roster} />
     </div>
-  );
-}
-
-// Leave a note on this contact's queue.
-//
-// The KIND carries the headline and the note is the coach's own words, which is
-// why the kind is a control and the note is a plain field: the recipient reads
-// a sentence the product wrote either way, and the coach adds to it rather than
-// composing from nothing.
-//
-// A PANEL, and the same panel in both states. It was a bare ghost button
-// floating under the readings that turned into an unchrome'd stack of controls
-// on the press — so pressing it changed the page's shape, and the two states
-// read as two different features. It is also the reason a lead opened somebody
-// else's queue at all, which is why it stands at the head of that day rather
-// than among the panels below it.
-export function CoachControl({
-  owner,
-  name,
-}: Readonly<{
-  owner: string;
-  /**
-   * Whose day this is, by name, from the roster the page has already read.
-   *
-   * Absent for a roster that cannot name the id — and for a caller that has no
-   * roster at all — which is a real state rather than a loading nicety: a
-   * heading reading "A note for undefined" is worse than one that names
-   * nobody, and the write itself is addressed by id either way.
-   */
-  name?: string | null;
-}>) {
-  const t = useT();
-  const toast = useToast();
-  const [open, setOpen] = useState(false);
-  const [kind, setKind] = useState<CoachKind>("coach_general");
-  const [note, setNote] = useState("");
-  const coach = useCoachTeammate();
-  const title = name
-    ? t("worklist.manager.coachTitle", { name })
-    : t("worklist.manager.coachTitleUnnamed");
-
-  if (!open) {
-    return (
-      <Panel
-        className="worklist-coach"
-        title={title}
-        // What a note DOES, before the reader spends a press finding out. The
-        // verb alone said only that something could be left somewhere.
-        actions={
-          <Button variant="primary" onClick={() => setOpen(true)}>
-            {t("worklist.manager.coach")}
-          </Button>
-        }
-      >
-        <PanelBody>
-          <p className="t-body">{t("worklist.manager.coachIntro")}</p>
-        </PanelBody>
-      </Panel>
-    );
-  }
-  return (
-    <Panel
-      className="worklist-coach"
-      title={title}
-      actions={
-        <>
-          <Button variant="ghost" onClick={() => setOpen(false)}>
-            {t("worklist.manager.cancel")}
-          </Button>
-          <Button
-            variant="primary"
-            disabled={coach.isPending}
-            onClick={() => {
-              coach.mutate(
-                { recipientUserId: owner, kind, note },
-                {
-                  onSuccess: () => {
-                    setOpen(false);
-                    setNote("");
-                    toast.show(t("worklist.manager.coached"));
-                  },
-                  onError: (failure) => coachRefused(failure, name, t, toast),
-                },
-              );
-            }}
-          >
-            {t("worklist.manager.coachConfirm")}
-          </Button>
-        </>
-      }
-    >
-      {/* `.form-stack` is the tree's own field rhythm — the panel's body is
-          padding and nothing else, so two bare fields in one met at the label.
-          Not two `PanelBody`s, which would draw the panel's seam hairline
-          between the kind and the note: one question, not two sections. */}
-      <PanelBody className="form-stack">
-        {/* The kind's name is VISIBLE and is also the group's accessible name:
-            the fieldset announces the words the row draws, rather than a
-            sighted reader meeting four buttons with nothing saying what they
-            choose between. Four short labels, all worth seeing at once, which
-            is what a segmented strip is for. */}
-        <div className="field">
-          <span className="t-label">{t("worklist.manager.coachAbout")}</span>
-          <SegmentedControl
-            options={COACH_KINDS}
-            value={kind}
-            onChange={setKind}
-            label={t("worklist.manager.coachAbout")}
-            labels={{
-              coach_reply_aging: t("worklist.manager.kind.reply_aging"),
-              coach_deal_needs_next_step: t("worklist.manager.kind.next_step"),
-              coach_review_backlog: t("worklist.manager.kind.review_backlog"),
-              coach_general: t("worklist.manager.kind.general"),
-            }}
-          />
-        </div>
-        <Field label={t("worklist.manager.note")}>
-          {(control) => (
-            <Textarea
-              {...control}
-              value={note}
-              maxLength={500}
-              rows={3}
-              onChange={(event) => setNote(event.target.value)}
-            />
-          )}
-        </Field>
-      </PanelBody>
-    </Panel>
-  );
-}
-
-/**
- * What a refused note says, and it never wears the completion mark.
- *
- * The server answers 403 `permission_denied` where the caller may not coach
- * this contact at all, which is not a failure to retry — the generic "that could
- * not be left" invited exactly that, and every press earned the same refusal.
- * Read off the RFC-7807 sentinel rather than off the message text: the words
- * are the reader's locale's and the code is the contract's.
- *
- * The named wording needs a name. A roster that cannot name the recipient falls
- * back to the generic sentence, which is still true.
- */
-function coachRefused(
-  failure: unknown,
-  name: string | null | undefined,
-  t: ReturnType<typeof useT>,
-  toast: ReturnType<typeof useToast>,
-): void {
-  const refused = problemCodeOf(failure) === "permission_denied";
-  toast.show(
-    refused && name
-      ? t("worklist.manager.coachRefused", { name })
-      : t("worklist.manager.coachFailed"),
-    { tone: "danger" },
   );
 }
 

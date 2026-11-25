@@ -183,15 +183,14 @@ func updateDerivedVoiceProfile(ctx context.Context, tx pgx.Tx, build derivedProf
 			UPDATE voice_profile SET
 			  voice_profile_md = $2,
 			  profile_version = $3,
-			  model_ref = coalesce($4, model_ref),
-			  active_source_hash = $5,
-			  last_built_at = $6,
+			  active_source_hash = $4,
+			  last_built_at = $5,
 			  status = 'ready',
 			  version = version + 1,
-			  updated_at = $6
+			  updated_at = $5
 			WHERE id = $1
 			RETURNING %s`, voiceProfileColumns),
-		build.profileID, build.voiceProfileMD, build.nextVersion, build.modelRef, build.sourceHash, build.now))
+		build.profileID, build.voiceProfileMD, build.nextVersion, build.sourceHash, build.now))
 }
 
 func insertDerivedProfileDelta(ctx context.Context, tx pgx.Tx, build derivedProfileBuild, totalWords int) error {

@@ -152,8 +152,8 @@ func TestAnInvoiceFromAReplacedConnectionIsNotFound(t *testing.T) {
 	invoice := a.mirroredInvoice(t)
 	successor := ids.NewV7()
 	a.ownerExec(t, `
-		INSERT INTO finance_connection (id, provider, status, credential_ref, source, captured_by, created_at)
-		VALUES ($1, $2, 'active', 'offline://successor', 'system', 'system:test', now() + interval '1 second')`,
+		INSERT INTO finance_connection (id, provider, status, captured_by, created_at)
+		VALUES ($1, $2, 'active', 'system:test', now() + interval '1 second')`,
 		successor, fixtureProviderName)
 	// The package shares one database, and every later test reads the newest connection.
 	t.Cleanup(func() {

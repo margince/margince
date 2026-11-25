@@ -397,15 +397,9 @@ func TestAPartiesHookCannotNameACompanyTheMailboxOwnerCannotSee(t *testing.T) {
 	w := newDealWorld(t, e)
 	w.employee(t, "alice@acme.example", w.customer)
 	acme := w.deal(t, "Acme rollout")
-	hidden := w.at(t, "Hidden")
+	hidden := asSeat(w, e.Rep3).at(t, "Hidden")
 	hiddenDeal := hidden.deal(t, "Hidden rollout")
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
-		_, err := tx.Exec(context.Background(),
-			`UPDATE company SET visibility = 'owner', owner_id = $2 WHERE id = $1`, hidden.customer, e.Rep3)
-		return err
-	}); err != nil {
-		t.Fatalf("hiding the company: %v", err)
-	}
+	makePrivate(t, hidden, hidden.customer, ids.UUID{})
 	registerMailHooks(t, extension.MailHooks{Parties: func(_ context.Context, _ extension.MailView, p extension.MailParties) (extension.MailParties, error) {
 		p.Companies = []string{hidden.customer.String()}
 		p.Reason = "other_account"

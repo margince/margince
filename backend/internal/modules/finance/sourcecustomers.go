@@ -300,12 +300,10 @@ func writeLink(ctx context.Context, tx pgx.Tx, connectionID ids.UUID, externalID
 		return err
 	}
 	linkID := ids.NewV7()
-	// sync_hash is required by the table and unused for a link: a link is a
-	// human's decision, never compared against a source.
 	if _, err := tx.Exec(ctx, `
 		INSERT INTO finance_customer_link
-		       (id, connection_id, company_id, external_customer_id, sync_hash, source, captured_by)
-		VALUES ($1, $2, $3, $4, '', 'manual', $5)`,
+		       (id, connection_id, company_id, external_customer_id, captured_by)
+		VALUES ($1, $2, $3, $4, $5)`,
 		linkID, connectionID, companyID, externalID, by); err != nil {
 		return fmt.Errorf("record the customer link: %w", err)
 	}

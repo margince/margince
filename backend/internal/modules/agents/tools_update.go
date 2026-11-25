@@ -34,6 +34,8 @@ type updateRecordArgs struct {
 	ID         ids.UUID        `json:"id"`
 	Fields     json.RawMessage `json:"fields"`
 	IfVersion  *int64          `json:"if_version"`
+	// Why is read by the surface (statedwhy.go); the patch does not use it.
+	Why string `json:"why"`
 }
 
 func (t updateRecord) Spec() mcp.ToolSpec {
@@ -44,11 +46,12 @@ func (t updateRecord) Spec() mcp.ToolSpec {
 		RequiredScope: principal.ScopeWrite,
 		Tier:          mcp.TierAutoExecute,
 		OpenAPIOp:     "updateContact/updateCompany/updateDeal/updateLead/updateActivity/updateProject/updateRelationship/updateProduct/updateOfferTemplate/updateOffer",
-		InputSchema: schema(`{"type":"object","required":["record_type","id","fields"],"properties":{
+		InputSchema: schema(`{"type":"object","required":["record_type","id","fields","why"],"properties":{
 			"record_type":{"type":"string","enum":["contact","company","deal","lead","activity","project","relationship","product","offer_template","offer"]},
 			"id":{"type":"string","format":"uuid"},
 			"fields":{"type":"object","description":` + jsonString("Only sent fields change. "+recordFieldsDescription) + `},
 			"if_version":{"type":"integer","description":"Optimistic-concurrency guard: the last-seen record version"},
+			` + whyProperty + `,
 			"approval_id":{"type":"string","format":"uuid","description":"Set on retry after a human approved the staged call; send it with exactly the staged arguments"}},
 			"additionalProperties":false}`),
 		UnkeyedArguments: recordFieldsUnkeyed(),
@@ -72,6 +75,9 @@ func (t updateRecord) StageInfo(ctx context.Context, in json.RawMessage) (StageI
 	if err := decodeArgs(in, &args); err != nil {
 		return StageInfo{}, err
 	}
+	if err := checkStatedWhy(args.Why); err != nil {
+		return StageInfo{}, err
+	}
 	// Named field-by-field rather than a bare conversion: PatchCommand
 	// deliberately does not carry if_version (command.go's own doc comment
 	// says why), so its shape no longer matches updateRecordArgs' and a
@@ -86,6 +92,9 @@ func (t updateRecord) StageInfo(ctx context.Context, in json.RawMessage) (StageI
 func (t updateRecord) Handle(ctx context.Context, in json.RawMessage) (json.RawMessage, error) {
 	var args updateRecordArgs
 	if err := decodeArgs(in, &args); err != nil {
+		return nil, err
+	}
+	if err := checkStatedWhy(args.Why); err != nil {
 		return nil, err
 	}
 	if err := rejectUnknownFields(updateWriteShapes, args.RecordType, args.Fields); err != nil {

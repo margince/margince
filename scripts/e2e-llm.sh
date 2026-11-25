@@ -234,6 +234,12 @@ COMMIT="$(cat "$STAMP_DIR/commit")"
 # free to assert the absence of something — which the ordering could not
 # otherwise support, since scenarios are driven in the order the glob below
 # yields, filename order and not case number, with case10 second and case9 last.
+# THE SERVER'S OWN RECORD of each /mcp call (mcp.call_log). run_once cuts each
+# run's lines beside its transcript, and the checker grades the calls from them
+# (e2e/llm/calllog.py). A file outlives the restore before every run.
+CALL_LOG="$WORK/mcp-calls.jsonl"
+export MARGINCE_MCP_CALL_LOG="$CALL_LOG"
+
 echo "==> booting the $SLUG stack (never :8080)"
 # A previous run that was interrupted leaves its api holding :18081, and
 # dev-fresh refuses rather than attaching to the wrong stack. Stopping this
@@ -626,6 +632,9 @@ for line in open(sys.argv[1]):
 # keep_transcript copies a stopped run's transcript where the reader looks. It is
 # the only evidence of which failure this was, so a copy that fails says so.
 keep_transcript() {
+  if [[ -f "$1.calls" ]] && ! cp "$1.calls" "$RECORD_DIR/"; then
+    echo "  and the server's call log could not be kept: $1.calls" >&2
+  fi
   if ! cp "$1" "$RECORD_DIR/"; then
     echo "  and the transcript could not be kept: $1" >&2
   else
@@ -633,13 +642,39 @@ keep_transcript() {
   fi
 }
 
+# keep_world <file> keeps the approvals a run left, with their audit and outbox
+# rows, before the restore takes them away. A staged approval that is gone by the
+# time a model looks can only be followed through its own trail.
+keep_world() {
+  bash "$ROOT/scripts/dev.sh" query "$SLUG" > "$1" 2>&1 <<'SQL' || echo "  the world could not be kept: $1" >&2
+\echo approval
+SELECT id, kind, status, created_at, decided_at, decided_by_system, consumed_at, effect_ran_at,
+       effect_failed_at, expires_at, staged_by_connection
+  FROM approval ORDER BY created_at DESC LIMIT 20;
+\echo audit_log
+SELECT occurred_at, action, actor_type, entity_type, entity_id
+  FROM audit_log WHERE entity_id IN (SELECT id FROM approval) ORDER BY occurred_at DESC LIMIT 50;
+\echo event_outbox
+SELECT created_at, published_at, stream, envelope ->> 'type' AS type
+  FROM event_outbox
+ WHERE envelope::text LIKE ANY (ARRAY(SELECT '%' || id || '%' FROM approval))
+ ORDER BY created_at DESC LIMIT 50;
+SQL
+}
+
 # run_once drives one run on the chosen route: 0 when it ran, 1 when it left no
 # usable transcript (scored as a failed run, as before), 3 when the route could
 # not run it at all — a harness stop, never a score. drive.py reads the
 # passport from the variable it is named, so it reaches no command line.
 run_once() {
-  local status=0
+  local status=0 at=0
+  [[ -f "$CALL_LOG" ]] && at=$(($(wc -c < "$CALL_LOG")))
   drive_once "$@" || status=$?
+  # Only the run's own calls: the REST door's are http, and restmap below reads
+  # the catalog over /mcp itself.
+  if [[ "$DOOR" = mcp ]]; then
+    python3 "$ROOT/e2e/llm/calllog.py" cut "$CALL_LOG" "$at" "$2.calls" 2>>"$2.err" || return 3
+  fi
   # On the REST door the run holds http calls; they are rewritten to the verbs
   # they ran, and the tools it was offered are the MCP surface's own, so the
   # checker reads the run as it reads one made over MCP.
@@ -721,6 +756,7 @@ for scenario in "$SCENARIO_DIR"/*.yaml; do
   results="$WORK/$name.results"
   : > "$results"
 
+  rm -f "$RECORD_DIR/$name".run*.world.txt
   made=0
   for i in $(seq 1 "$runs"); do
     # A run that cannot move the verdict is not paid for: two passes at 2-of-3
@@ -785,6 +821,8 @@ for scenario in "$SCENARIO_DIR"/*.yaml; do
     if [[ -n "$setup" ]] && ! why="$(python3 "$ROOT/e2e/llm/casesetup.py" "$setup" "$APP_BASE" "$COOKIES" 2>&1)"; then
       echo
       echo "HARNESS: $name run $i could not be set up: $why"
+      keep_world "$RECORD_DIR/$name.run$i.world.txt"
+      echo "  what the setup left is at $RECORD_DIR/$name.run$i.world.txt"
       echo "  This is not a use-case failure. Nothing was scored."
       exit 2
     fi
@@ -857,6 +895,7 @@ for scenario in "$SCENARIO_DIR"/*.yaml; do
     MARGINCE_E2E_TOKEN="$READER_PASSPORT" python3 "$ROOT/e2e/llm/endstate.py" \
       --scenario "$scenario" --transcript "$transcript" \
       --mcp-url "$APP_BASE/mcp" --token-env MARGINCE_E2E_TOKEN >> "$results" 2>&1 || ended=$?
+    [[ -z "$setup" ]] || keep_world "$RECORD_DIR/$name.run$i.world.txt"
     if [[ "$ended" -ne 0 && "$ended" -ne 4 ]]; then
       echo
       echo "HARNESS: $name run $i left a world that could not be read:"
@@ -956,9 +995,14 @@ for scenario in "$SCENARIO_DIR"/*.yaml; do
   python3 "$ROOT/e2e/llm/check.py" --efficiency "$scenario" \
     ${transcripts[@]+"${transcripts[@]}"} | tee -a "$REPORT"
 
-  # A settled scenario makes fewer runs than an earlier lane may have kept.
-  rm -f "$RECORD_DIR/$name".run*.jsonl
+  # A settled scenario makes fewer runs than an earlier lane may have kept. Each
+  # run's cut of the server's call log stays beside its transcript.
+  rm -f "$RECORD_DIR/$name".run*.jsonl "$RECORD_DIR/$name".run*.jsonl.calls
   cp "$WORK/$name".run*.jsonl "$RECORD_DIR/" 2>/dev/null || true
+  for calls in "$WORK/$name".run*.jsonl.calls; do
+    [[ -e "$calls" ]] || continue
+    cp "$calls" "$RECORD_DIR/" || echo "  the server's call log could not be kept: $calls" >&2
+  done
 done
 
 # A run that called nothing is scored on its answer, but a sweep in which no run

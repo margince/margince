@@ -170,7 +170,7 @@ The Members, Teams, Roles and permissions, and Seats and license pages sit in th
 
 **Members** lists everyone with a seat, and what each one can open. Here you ask colleagues in, change a role, turn a user off and turn them on again. Only a role allowed to see users sees this page: Admin by default, or a custom role given that permission. Every seat can still look a colleague up in the lists for sharing and for picking an owner on a record. An Admin also picks a member's teams here, and a team name nobody has yet creates that team.
 
-**Teams** holds who is in each team, which decides who can open records shared with a team. Create one, archive or restore it, and open a team to add or remove its members. Being in a team gives no access on its own, with one exception. A **Team lead** reads and works their team's records, so for them a team is what "their team" means. For every other built-in role, a team counts when a record is shared with it. See [Seats, roles and who can see what](seats-roles-and-access.md#row-scope-which-records-not-which-kinds).
+**Teams** holds who is in each team, which decides who can open records shared with a team. Every member can open it and read how many are in each team, but only a role that may see users reads the names. Create one, archive or restore it, and open a team to add or remove its members. Being in a team gives no access on its own, with one exception. A **Team lead** reads and works their team's records, so for them a team is what "their team" means. For every other built-in role, a team counts when a record is shared with it (see [Seats, roles and who can see what](seats-roles-and-access.md#row-scope-which-records-not-which-kinds)).
 
 **Seats and license** shows how many seats the installation may use against how many are in use. See [the licence](seats-roles-and-access.md#the-licence).
 
@@ -385,7 +385,7 @@ A **read-only seat** keeps every page it could read, and loses every control tha
 
 | You are | You can change | You can also look up |
 |---|---|---|
-| A sales seat | Your own pages, Products and offers, Mail capture (adding only) | The rest of the Sales group, and Knowledge |
+| A sales seat | Your own pages, Products and offers, Mail capture (adding only) | The rest of the Sales group, Knowledge and Teams |
 | A team lead | The same | The same |
 | Management | The same | The above, and also AI usage, model calls, seat counts and the sign-in status, all read-only |
 | Ops | Most pages that run the business, the model rates too | The rest, the list of add-ons too, whose access switches Ops cannot change |

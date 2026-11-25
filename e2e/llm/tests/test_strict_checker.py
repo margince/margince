@@ -59,7 +59,7 @@ class FinalAnswerTest(unittest.TestCase):
     def test_the_judge_reads_the_final_answer_only(self):
         seen = []
         real = check.judge.verdict
-        check.judge.verdict = lambda criterion, answer: seen.append(answer) or (True, "")
+        check.judge.verdict = lambda criterion, answer, evidence="": seen.append(answer) or (True, "")
         try:
             path = run([("Thinking aloud here.", [("search_records", {}, False)])], "The final word.")
             check.check({"judge": ["it answers"]}, path)

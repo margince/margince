@@ -105,6 +105,9 @@ func repointDisplacedParticipants(ctx context.Context, tx pgx.Tx, id ids.Activit
 	if err := storekit.LockMeetingAttendeeWrites(ctx, tx, id.UUID); err != nil {
 		return err
 	}
+	if _, err := storekit.LowercaseOlderParticipantAddresses(ctx, tx, `ap.activity_id = $1`, id); err != nil {
+		return err
+	}
 	if err := unbindDisplacedSenders(ctx, tx, id, target, displaced); err != nil {
 		return err
 	}

@@ -423,11 +423,46 @@ func TestAMeetingBookedOnTheOldPersonalTeamKeepsItsColleaguesAfterTheMove(t *tes
 }
 
 // A colleague who leaves one link while an answer by host waits for that host's
-// lock stays off it. The answer by host reads the link again under the lock.
+// lock stays off it. The answer by host reads the links under the lock, so with
+// no other link to answer it is not found.
 func TestAnAnswerByHostDoesNotConfirmALinkTheColleagueLeftMeanwhile(t *testing.T) {
 	f := newTeamFixture(t)
 	member := f.colleague(t, "Member")
 	f.name(t, false, member)
+	if err := answerByHostWhileLeaving(t, f, member); !errors.Is(err, apperrors.ErrNotFound) {
+		t.Fatalf("the answer by host on a link the colleague left meanwhile: %v, want not found", err)
+	}
+	if state := firstMemberState(t, f, f.link); state != "left" {
+		t.Fatalf("the link reads the colleague as %q, want left", state)
+	}
+}
+
+// The same race with a second link still pending confirms that one and leaves
+// the left link alone.
+func TestAnAnswerByHostConfirmsTheOtherLinkWhenTheColleagueLeftOneMeanwhile(t *testing.T) {
+	f := newTeamFixture(t)
+	member := f.colleague(t, "Member")
+	f.name(t, false, member)
+	other, err := f.store.CreateSchedulingTeamLink(f.ctx, teamLinkRequest(member))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := answerByHostWhileLeaving(t, f, member); err != nil {
+		t.Fatalf("the answer by host with another pending link: %v, want success", err)
+	}
+	if state := firstMemberState(t, f, f.link); state != "left" {
+		t.Errorf("the left link reads the colleague as %q, want left", state)
+	}
+	if state := firstMemberState(t, f, ids.UUID(other.Id)); state != "confirmed" {
+		t.Errorf("the other link reads the colleague as %q, want confirmed", state)
+	}
+}
+
+// answerByHostWhileLeaving starts a confirm by host behind the host's lock.
+// While the confirm waits, it marks the colleague left on f.link. It returns
+// what the confirm returned.
+func answerByHostWhileLeaving(t *testing.T, f *teamFixture, member ids.UserID) error {
+	t.Helper()
 	holder, err := f.env.owner.Begin(f.ctx)
 	if err != nil {
 		t.Fatal(err)
@@ -451,11 +486,14 @@ func TestAnAnswerByHostDoesNotConfirmALinkTheColleagueLeftMeanwhile(t *testing.T
 	if err := release(); err != nil {
 		t.Fatal(err)
 	}
-	if err := <-answered; !errors.Is(err, apperrors.ErrNotFound) {
-		t.Fatalf("the answer by host on a link the colleague left meanwhile: %v, want not found", err)
-	}
+	return <-answered
+}
+
+func firstMemberState(t *testing.T, f *teamFixture, link ids.UUID) string {
+	t.Helper()
 	var state string
-	if err := f.env.owner.QueryRow(f.ctx, `SELECT scheduling_policy->'team_members'->0->>'state' FROM booking_page WHERE id=$1`, f.link).Scan(&state); err != nil || state != "left" {
-		t.Fatalf("the link reads the colleague as %q (%v), want left", state, err)
+	if err := f.env.owner.QueryRow(f.ctx, `SELECT scheduling_policy->'team_members'->0->>'state' FROM booking_page WHERE id=$1`, link).Scan(&state); err != nil {
+		t.Fatalf("reading the colleague's state on %s: %v", link, err)
 	}
+	return state
 }

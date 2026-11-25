@@ -388,6 +388,19 @@ export function RecordHistory({
                 key={row.reversal.id}
                 row={row}
                 currency={currency}
+                redo={
+                  panelRestore && (
+                    <UndoButton
+                      entry={row.reversal}
+                      kind={kind}
+                      id={id}
+                      changes={entryFieldChanges(row.reversal)}
+                      currency={currency}
+                      restore={panelRestore}
+                      intent="redo"
+                    />
+                  )
+                }
               >
                 <HistoryEntryRow
                   entry={row.reversal}
@@ -395,8 +408,8 @@ export function RecordHistory({
                   id={id}
                   locale={locale}
                   currency={currency}
-                  restore={panelRestore}
-                  intent="redo"
+                  // Its Redo is the pair's own, on the face above.
+                  restore={undefined}
                 />
                 <HistoryEntryRow
                   entry={row.reversed}

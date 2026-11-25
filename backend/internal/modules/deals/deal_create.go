@@ -373,7 +373,7 @@ func (s *Store) createDealInTx(ctx context.Context, tx pgx.Tx, in CreateDealInpu
 		in.Description, in.CommercialMotion, in.Priority, in.AcquisitionSource,
 		in.ExpectedArrMinor, in.SourceSystem, in.CloseDateProvisional,
 	})
-	cfCols, cfHolders, args, err := storekit.InsertFragments(active, in.CustomFields, base)
+	cfCols, cfHolders, args, err := storekit.InsertFragmentsIn(ctx, tx, active, in.CustomFields, base)
 	if err != nil {
 		return crmcontracts.Deal{}, err
 	}

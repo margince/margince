@@ -151,11 +151,28 @@ func judgelessProofs() map[string]judgelessProof {
 	proofs := map[string]judgelessProof{}
 	for _, set := range []map[string]judgelessProof{
 		verdictProofs(), confidentialityProofs(), counterpartyProofs(), agentLoopProofs(), gradingProofs(),
-		extractionProofs(), emptyAnswerProofs(), blankPageProofs(), stageClaimProofs(), tagSuggestProofs(), settlementProofs(),
+		extractionProofs(), emptyAnswerProofs(), blankPageProofs(), stageClaimProofs(), tagSuggestProofs(), settlementProofs(), classifyReplyProofs(),
 	} {
 		maps.Copy(proofs, set)
 	}
 	return proofs
+}
+
+// classifyReplyProofs holds the one classify case whose check is a ruled-out reply verdict.
+func classifyReplyProofs() map[string]judgelessProof {
+	reply := func(verdict string) func([]string) string {
+		return func(ids []string) string {
+			return mustJSON(map[string]any{"results": []map[string]any{
+				{"id": ids[0], "label": "other", "confidence": 0.9, "reply": verdict},
+			}})
+		}
+	}
+	return map[string]judgelessProof{
+		// A negative verdict on a customer who is waiting closes the deal as lost overnight.
+		"a_short_reply_over_a_quoted_refusal_is_not_a_refusal": {
+			correct: reply("neutral"), wrong: reply("negative"), wantWrong: aitasks.OutcomeWrongAnswer,
+		},
+	}
 }
 
 func literal(reply string) func([]string) string { return func([]string) string { return reply } }

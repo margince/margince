@@ -39,6 +39,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/approvals"
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/deals"
+	"github.com/margince/margince/backend/internal/platform/testdb"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -862,7 +863,10 @@ func TestCompany360NextMeetingNamesColleaguesAndAddresses(t *testing.T) {
 		t.Fatalf("deactivating the seat: %v", err)
 	}
 	e.WsExec(t, `UPDATE activity_participant SET address = 'ines@northwind.test' WHERE activity_id = $1 AND contact_id = $2`, meeting, buyer)
-	e.WsExec(t, `INSERT INTO activity_participant (activity_id, address, role) VALUES ($1, 'INES@northwind.test', 'attendee')`, meeting)
+	testdb.WithParticipantAddressCheckLifted(t, func(tx pgx.Tx) error {
+		_, err := tx.Exec(t.Context(), `INSERT INTO activity_participant (activity_id, address, role) VALUES ($1, 'INES@northwind.test', 'attendee')`, meeting)
+		return err
+	})
 
 	reader := e.As(e.Rep1, []ids.UUID{e.Team1}, integration.AccountRepPerms)
 	view, err := svc.Assemble(reader, ids.From[ids.CompanyKind](company))

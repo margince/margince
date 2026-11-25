@@ -2532,7 +2532,7 @@ export interface paths {
         };
         /**
          * Stream a company's logo image.
-         * @description The bytes behind `Company.logo_url` (A55): the company logo resolved from its
+         * @description The bytes behind `Company.logo_url`: the company logo resolved from its
          *     own website during enrichment or uploaded by a contact, normalized once at store time
          *     to PNG. Resolved site marks are square; uploaded wordmarks keep their aspect ratio.
          *     The response is always `image/png` — whatever the source format was, what is served
@@ -3341,7 +3341,7 @@ export interface paths {
          *     only mention account records that caller could open themselves. The model also
          *     receives the installation's own company profile (what we sell, our positioning and
          *     proof), which every member may read, so a first email to a company knows our offer
-         *     as well as the account. Grounding order is A132's: the caller's intent, then the recipient and
+         *     as well as the account. Grounding order: the caller's intent, then the recipient and
          *     our relationship with them, then the deal and what we last committed to, then the
          *     recent conversation, then the dossier, then the writer's voice. Every input but
          *     the intent is untrusted text and is fenced.
@@ -3508,7 +3508,7 @@ export interface paths {
         put?: never;
         /**
          * Read the company's WHOLE site in the background — a crawl that ends in staged 🟡 proposals.
-         * @description The deep read (founder ratification R2, the A102 crawl seam): discovers up to 12 pages of the
+         * @description The deep read: discovers up to 12 pages of the
          *     company's own site — well-known paths, sitemap, same-registrable-domain nav links, every
          *     one robots-checked and SSRF-guarded, discovery is deterministic code and NEVER model-chosen —
          *     extracts each page through the shared evidence gate, and stages the merged findings as 🟡
@@ -5142,7 +5142,7 @@ export interface paths {
          *     `PUT /projects/{id}/companies`; this one is required because a project starts with a client.
          *     `key` is optional. Without it the server mints one from the name: the initials alone
          *     (`ERA`) when no live project uses those letters, else the letters plus the lowest free
-         *     number from 2 (`ERA-2`). `getProjectKeyPreview` answers the key a create would mint.
+         *     number from 2. `getProjectKeyPreview` answers the key a create would mint.
          *     A sent key is stored in upper case and is refused with 422 naming `key` when it does not
          *     fit the key shape (`invalid_key`), is a word often bracketed in subject lines
          *     (`key_is_common_word`), is a word of a colleague's name (`key_is_colleague_name`), or is
@@ -10562,7 +10562,7 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * Count and sample what a filter would select, before it is saved (LVS-EXT-9).
+         * Count and sample what a filter would select, before it is saved.
          * @description The match count and one bounded page for a candidate filter tree —
          *     the filter a user is still editing, which nothing else in the contract
          *     can evaluate. The object list operations take flat scalar parameters and
@@ -12496,7 +12496,7 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * Run a report (the `run_report` MCP verb) and return aggregate rows.
+         * Run a report (the `run_report` MCP verb) and return aggregate rows. It keeps nothing; to keep figures others can reopen, ask runAnalyticsQuery with `save`.
          * @description Executes a validated, typed query plan (NOT free-form SQL). Every aggregate cell is
          *     reconcilable via the `derivation` for "Explain This Number" (features/03 §1.3).
          *     Bound by RBAC; an agent caller cannot read beyond the human's scope. Audit-logged.
@@ -13588,7 +13588,7 @@ export interface paths {
         };
         /**
          * List the calling user's capture connections + sync state.
-         * @description The per-user mail/calendar connections this user has established (RC-8), each with its
+         * @description The per-user mail/calendar connections this user has established, each with its
          *     status and sync watermark. Never returns the credential — it lives encrypted in the vault
          *     (`credential_ref`); this row carries only status + cursor (capture.md CAP-DDL-2).
          */
@@ -14285,7 +14285,7 @@ export interface paths {
             header?: never;
             path: {
                 /**
-                 * @description The mail/calendar provider (A51 email+calendar parity). Every provider connects through
+                 * @description The mail/calendar provider. Every provider connects through
                  *     the same operation; gmail/gcal/gdocs/graph/graphcal authorize by OAuth redirect, imap by
                  *     credential submission, and test_mailbox connects immediately with neither (a QC-only
                  *     connector, reachable only when the deployment armed operations.allow_test_mailbox — a
@@ -14306,7 +14306,7 @@ export interface paths {
         put?: never;
         /**
          * Connect (or re-authorize) the calling user's mail/calendar for capture.
-         * @description Per-user, consent-driven connect (RC-8). For an OAuth provider (`gmail`/`gcal`/`graph`/`graphcal`)
+         * @description Per-user, consent-driven connect. For an OAuth provider (`gmail`/`gcal`/`graph`/`graphcal`)
          *     returns the provider `authorize_url` to redirect the user to; the flow completes at
          *     `GET /connectors/{provider}/callback`. The refresh token is written to the vault on
          *     callback, NEVER to the row or a response. Human-only: an agent connecting a human's mailbox
@@ -14326,7 +14326,7 @@ export interface paths {
             header?: never;
             path: {
                 /**
-                 * @description The mail/calendar provider (A51 email+calendar parity). Every provider connects through
+                 * @description The mail/calendar provider. Every provider connects through
                  *     the same operation; gmail/gcal/gdocs/graph/graphcal authorize by OAuth redirect, imap by
                  *     credential submission, and test_mailbox connects immediately with neither (a QC-only
                  *     connector, reachable only when the deployment armed operations.allow_test_mailbox — a
@@ -14436,7 +14436,7 @@ export interface paths {
             header?: never;
             path: {
                 /**
-                 * @description The mail/calendar provider (A51 email+calendar parity). Every provider connects through
+                 * @description The mail/calendar provider. Every provider connects through
                  *     the same operation; gmail/gcal/gdocs/graph/graphcal authorize by OAuth redirect, imap by
                  *     credential submission, and test_mailbox connects immediately with neither (a QC-only
                  *     connector, reachable only when the deployment armed operations.allow_test_mailbox — a
@@ -14458,7 +14458,7 @@ export interface paths {
         /**
          * Disconnect the calling user's mail/calendar capture.
          * @description Disconnects the caller's connection: capture stops immediately (the connection flips to
-         *     `disconnected`, RC-8) and the poller no longer selects it. No upstream token revocation is
+         *     `disconnected`) and the poller no longer selects it. No upstream token revocation is
          *     performed — the user removes the grant at the provider themselves. The stored credential
          *     IS deleted from the vault as part of this call, not merely retired for a later sweep.
          *     Idempotent. Already-captured activities are retained — they are real history; capture
@@ -14621,7 +14621,7 @@ export interface paths {
             header?: never;
             path: {
                 /**
-                 * @description The mail/calendar provider (A51 email+calendar parity). Every provider connects through
+                 * @description The mail/calendar provider. Every provider connects through
                  *     the same operation; gmail/gcal/gdocs/graph/graphcal authorize by OAuth redirect, imap by
                  *     credential submission, and test_mailbox connects immediately with neither (a QC-only
                  *     connector, reachable only when the deployment armed operations.allow_test_mailbox — a
@@ -14663,7 +14663,7 @@ export interface paths {
             header?: never;
             path: {
                 /**
-                 * @description The mail/calendar provider (A51 email+calendar parity). Every provider connects through
+                 * @description The mail/calendar provider. Every provider connects through
                  *     the same operation; gmail/gcal/gdocs/graph/graphcal authorize by OAuth redirect, imap by
                  *     credential submission, and test_mailbox connects immediately with neither (a QC-only
                  *     connector, reachable only when the deployment armed operations.allow_test_mailbox — a
@@ -14725,7 +14725,7 @@ export interface paths {
             header?: never;
             path: {
                 /**
-                 * @description The mail/calendar provider (A51 email+calendar parity). Every provider connects through
+                 * @description The mail/calendar provider. Every provider connects through
                  *     the same operation; gmail/gcal/gdocs/graph/graphcal authorize by OAuth redirect, imap by
                  *     credential submission, and test_mailbox connects immediately with neither (a QC-only
                  *     connector, reachable only when the deployment armed operations.allow_test_mailbox — a
@@ -14772,7 +14772,7 @@ export interface paths {
             header?: never;
             path: {
                 /**
-                 * @description The mail/calendar provider (A51 email+calendar parity). Every provider connects through
+                 * @description The mail/calendar provider. Every provider connects through
                  *     the same operation; gmail/gcal/gdocs/graph/graphcal authorize by OAuth redirect, imap by
                  *     credential submission, and test_mailbox connects immediately with neither (a QC-only
                  *     connector, reachable only when the deployment armed operations.allow_test_mailbox — a
@@ -14829,7 +14829,7 @@ export interface paths {
             header?: never;
             path: {
                 /**
-                 * @description The mail/calendar provider (A51 email+calendar parity). Every provider connects through
+                 * @description The mail/calendar provider. Every provider connects through
                  *     the same operation; gmail/gcal/gdocs/graph/graphcal authorize by OAuth redirect, imap by
                  *     credential submission, and test_mailbox connects immediately with neither (a QC-only
                  *     connector, reachable only when the deployment armed operations.allow_test_mailbox — a
@@ -14888,7 +14888,7 @@ export interface paths {
             header?: never;
             path: {
                 /**
-                 * @description The mail/calendar provider (A51 email+calendar parity). Every provider connects through
+                 * @description The mail/calendar provider. Every provider connects through
                  *     the same operation; gmail/gcal/gdocs/graph/graphcal authorize by OAuth redirect, imap by
                  *     credential submission, and test_mailbox connects immediately with neither (a QC-only
                  *     connector, reachable only when the deployment armed operations.allow_test_mailbox — a
@@ -14947,7 +14947,7 @@ export interface paths {
             header?: never;
             path: {
                 /**
-                 * @description The mail/calendar provider (A51 email+calendar parity). Every provider connects through
+                 * @description The mail/calendar provider. Every provider connects through
                  *     the same operation; gmail/gcal/gdocs/graph/graphcal authorize by OAuth redirect, imap by
                  *     credential submission, and test_mailbox connects immediately with neither (a QC-only
                  *     connector, reachable only when the deployment armed operations.allow_test_mailbox — a
@@ -14998,7 +14998,7 @@ export interface paths {
             header?: never;
             path: {
                 /**
-                 * @description The mail/calendar provider (A51 email+calendar parity). Every provider connects through
+                 * @description The mail/calendar provider. Every provider connects through
                  *     the same operation; gmail/gcal/gdocs/graph/graphcal authorize by OAuth redirect, imap by
                  *     credential submission, and test_mailbox connects immediately with neither (a QC-only
                  *     connector, reachable only when the deployment armed operations.allow_test_mailbox — a
@@ -16437,7 +16437,7 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * The workspace's own consumer-mail domain list (CAP-PARAM-5).
+         * The workspace's own consumer-mail domain list.
          * @description The workspace's additions to and carve-outs from the shipped consumer-mail baseline.
          *     Mail from a consumer domain still creates the contact; what it never creates is a
          *     company. Every human role may read the list; any seat holding `capture_settings:create`
@@ -16706,7 +16706,7 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * Search the shipped consumer-mail baseline (CAP-PARAM-5).
+         * Search the shipped consumer-mail baseline.
          * @description The vendored consumer-domain dataset the installation ships with, as a searchable read.
          *     The workspace's own list is only ever a delta against this baseline, so deciding whether
          *     a domain needs an `extra` entry — or a `never` carve-out — starts here. Answers the
@@ -17507,7 +17507,7 @@ export interface paths {
          * @description `merge` requires `winner_id` (one of the pair) and executes `mergeContact`/
          *     `mergeCompany` server-side — one merge in the system, no second verb.
          *     `not_a_duplicate` flips the row and suppresses the pair from every future
-         *     sweep (AC-dedupe-7). `409 already_disposed`; `422` when `winner_id` is not
+         *     sweep. `409 already_disposed`; `422` when `winner_id` is not
          *     one of the pair. Deciding a pair CHANGES both records, so the caller needs
          *     write authority over each of them and not merely the object grant — a seat
          *     that can read the pair but change neither gets `403`.
@@ -18010,7 +18010,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** List GDPR data-subject requests (B-E11.30). */
+        /** List GDPR data-subject requests. */
         get: operations["listDataSubjectRequests"];
         put?: never;
         /**
@@ -18152,7 +18152,7 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * One privacy notice owed, where the source is confirmed. The case id comes from notice_cases, not the contact's id.
+         * One privacy notice owed, where the source is confirmed. The case id comes from notice_cases (GET /privacy/notice-cases), not the contact's id.
          * @description The same case the queue lists, read on its own, for a surface that opens one duty rather
          *     than working a page of them.
          *
@@ -18187,7 +18187,7 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * Give a privacy notice already owed (from notice_cases) an owner.
+         * Give a privacy notice already owed (from notice_cases, GET /privacy/notice-cases) an owner.
          * @description Records who is working this duty, so the queue shows a claimed case rather than a pile
          *     nobody has taken.
          *
@@ -18271,7 +18271,7 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * One contact's privacy-notice case — its source, whether a notice is owed, and by when. The id comes from notice_case_reviews or the contact's contact_360 view, not the contact's id.
+         * One contact's privacy-notice case — its source, whether a notice is owed, and by when. The id comes from notice_case_reviews (GET /privacy/notice-case-reviews) or the contact's contact_360 view (GET /contacts/{id}/360), not the contact's id.
          * @description The administrative record for a source review or notice duty. Human privacy-request read
          *     authority covers the record; contact names remain limited by ordinary contact visibility.
          */
@@ -18296,7 +18296,7 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * Give a contact's privacy-notice case (from notice_case_reviews) an owner.
+         * Give a contact's privacy-notice case (from notice_case_reviews, GET /privacy/notice-case-reviews) an owner.
          * @description Records who is working this duty, so the queue shows a claimed case rather than a pile
          *     nobody has taken.
          *
@@ -18324,7 +18324,7 @@ export interface paths {
         /** Read accessible evidence for a contact source assessment. */
         get: operations["getNoticeSourceEvidence"];
         put?: never;
-        /** Confirm where a contact came from (bought list, import, their own enquiry), which decides whether a privacy notice is owed. Preview it first (POST /privacy/notice-case-reviews/{id}/source/preview). Only a contact with no recorded source is up for review; when its evidence does not name where the data first came from, ask the user rather than guessing a kind. */
+        /** Confirm where a contact came from (bought list, import, their own enquiry), which decides whether a privacy notice is owed. Preview it first (POST /privacy/notice-case-reviews/{id}/source/preview). Only a contact with no recorded source is up for review; when its evidence does not name where the data first came from (an import alone does not), ask the user rather than guessing a kind. */
         post: operations["assessNoticeSource"];
         delete?: never;
         options?: never;
@@ -18670,7 +18670,7 @@ export interface paths {
         /**
          * Read the human+agent-attributable audit log (Settings governance view).
          * @description Cursor-paginated read over `audit_log` (feedback/13, un-defers the fast-follow stub). Powers
-         *     AC-settings-16 (B-EP09.13b) — the live-filterable audit view. Every entry attributes the actor
+         *     The live-filterable audit view. Every entry attributes the actor
          *     (`human:*` / `agent:*` + `passport_id`), the action, and the target. Admin/compliance scope;
          *     read-only.
          *
@@ -23084,7 +23084,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** The acting rep's latest Morning-Brief run (the on-open read-model re-read; never re-ranks). */
+        /** Your morning brief for today, its ranked items. 404 means none has been made yet; generateMorningBrief makes one. */
         get: operations["getMorningBrief"];
         put?: never;
         /**
@@ -23250,7 +23250,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Mark a brief item acted (B-E05.13) — the deal drops from the next run until it materially changes. */
+        /** Mark a brief item acted — the deal drops from the next run until it materially changes. */
         post: operations["markBriefItemActed"];
         delete?: never;
         options?: never;
@@ -24033,7 +24033,7 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * Answer a question nobody wrote a report for.
+         * Answer a question nobody wrote a report for. With `save` the answer is kept as a saved question, which `GET /analytics/runs` lists and others reopen by its `run_id`.
          * @description A typed query over the vocabulary `/analytics/schema` returns. The caller names a
          *     population, what to group by, what to measure and how to narrow — never SQL, and
          *     never a field that is not in their own schema.
@@ -24532,7 +24532,7 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * The acting user's own in-app notifications, newest first. Not a privacy notice owed to a contact; those are notice_case_reviews.
+         * The acting user's own in-app notifications, newest first. Not a privacy notice owed to a contact; those are notice_case_reviews (GET /privacy/notice-case-reviews).
          * @description The acting human's own notifications, newest first, read and unread; another seat's are
          *     not an error, they are absent.
          *
@@ -24632,7 +24632,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Dismiss a brief item (B-E05.13) — it does not reappear unless a new linked activity arrives after the mark. */
+        /** Dismiss a brief item — it does not reappear unless a new linked activity arrives after the mark. */
         post: operations["markBriefItemDismissed"];
         delete?: never;
         options?: never;
@@ -24653,7 +24653,7 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * Snooze a brief item (A77/AC-home-6) — hidden until `snoozed_until` passes, then it re-surfaces as actionable.
+         * Snooze a brief item — hidden until `snoozed_until` passes, then it re-surfaces as actionable.
          * @description Sets the item to `state=snoozed` with the given `snoozed_until`. While the instant has not
          *     passed, the item is hidden from the home read AND the deal is suppressed from freshly
          *     generated runs. Once `snoozed_until` passes, the item re-surfaces as actionable — distinct
@@ -25850,7 +25850,7 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * The agreements this company holds, newest first (CONTRACT-WIRE-1).
+         * The agreements this company holds, newest first.
          * @description Every contract anchored to this company, whatever its status.
          *
          *     `under_contract` on each row is a DERIVED reading computed from the dates
@@ -25878,7 +25878,7 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * Record an agreement (CONTRACT-WIRE-2).
+         * Record an agreement.
          * @description `signed_on` is never defaulted from a deal's close time: that timestamp records
          *     when somebody moved a stage, which is not evidence that anything was signed.
          *     A `company_id`, `deal_id` or `project_id` that names a record the caller cannot read answers
@@ -25898,12 +25898,12 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** One contract (CONTRACT-WIRE-3). */
+        /** One agreement with a company, with its terms, value, dates and status. */
         get: operations["getContract"];
         put?: never;
         post?: never;
         /**
-         * Archive an agreement (CONTRACT-WIRE-5).
+         * Archive an agreement.
          * @description Archive is the delete. The row and its history stay, because deleting a contract
          *     would silently change whether an account ever counted as a customer and destroy
          *     the evidence behind a deal that was marked won.
@@ -25912,7 +25912,7 @@ export interface paths {
         options?: never;
         head?: never;
         /**
-         * Change an agreement's recorded terms (CONTRACT-WIRE-4).
+         * Change an agreement's recorded terms.
          * @description Status is NOT patchable here. A status moves through its own transitions so the
          *     proposal and event that belong to it are written from the same transaction, and
          *     so a correction to a term can never silently activate an agreement.
@@ -25932,7 +25932,7 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * Assert a new contract status (CONTRACT-PARAM-1).
+         * Assert a new contract status.
          * @description A status moves because a human said so. No date moves it, here or anywhere:
          *     the data that would drive an inference is exactly the data most likely to be
          *     stale, and a term that lapsed last month is very often an agreement everybody
@@ -25958,7 +25958,7 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * Record notice of cancellation and when it takes effect (CONTRACT-WIRE-6).
+         * Record notice of cancellation and when it takes effect.
          * @description Cancellation is two facts and NO state change. Notice given and effective date
          *     are recorded; the status stays as it is and the customer stays under contract
          *     until the effective date, because that is what a notice period is.
@@ -25984,7 +25984,7 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * Create the successor agreement and supersede this one (CONTRACT-WIRE-7).
+         * Create the successor agreement and supersede this one.
          * @description A renewal never mutates the agreement it replaces. The successor is created and
          *     the predecessor is marked superseded, pointing at it, in ONE transaction — so an
          *     agreement that has run for six years reads as a chain rather than a row somebody
@@ -26044,7 +26044,7 @@ export interface paths {
         options?: never;
         head?: never;
         /**
-         * Set a document's category, title, state or supersedes pointer (DOC-WIRE-2).
+         * Set a document's category, title, state or supersedes pointer.
          * @description The bytes, the filename and the checksum are NOT patchable here —
          *     they are what arrived, and a surface that let a human edit them would make the
          *     record a description of itself rather than of the file.
@@ -26668,7 +26668,7 @@ export interface paths {
         put?: never;
         /**
          * Reverse a completed CSV import run.
-         * @description IEM-WIRE-9 (A93; S-E15.4c). Valid from `complete` (starting a fresh
+         * @description Valid from `complete` (starting a fresh
          *     reversal) or `undoing` (resuming one already under way, from its
          *     persisted checkpoint) — and only for the `csv` connector. Undoing a
          *     run that is still in flight, was never approved, has already failed,
@@ -26676,8 +26676,8 @@ export interface paths {
          *     `undoing` state carries no recorded progress to resume; the
          *     the `salesforce` connector has no reversal path — it is unbuilt.
          *
-         *     Reverses only the rows this run created that nobody has touched since
-         *     (A93): never an all-or-nothing hard rollback that clobbers a later
+         *     Reverses only the rows this run created that nobody has touched since:
+         *     never an all-or-nothing hard rollback that clobbers a later
          *     edit. A row a human touched after import is left exactly as they left
          *     it and named in the report's `kept` list, not silently skipped — and
          *     a row that cannot be reversed for any other reason (a business rule
@@ -30446,7 +30446,7 @@ export interface components {
             total: number;
         };
         /**
-         * @description One entry on the workspace's own consumer-mail list (CAP-PARAM-5). `extra` marks a
+         * @description One entry on the workspace's own consumer-mail list. `extra` marks a
          *     consumer domain the shipped baseline missed; `never` takes one back out of the baseline
          *     that claimed it. Either way the domain is stored in its registrable form, which is what
          *     the matcher keys on.
@@ -30531,7 +30531,7 @@ export interface components {
             /** Format: uuid */
             id: string;
             /**
-             * @description The mail/calendar/meeting-notes provider (A51 email+calendar parity).
+             * @description The mail/calendar/meeting-notes provider.
              * @enum {string}
              */
             provider: "gmail" | "gcal" | "gdocs" | "graph" | "graphcal" | "imap" | "test_mailbox";
@@ -34343,7 +34343,7 @@ export interface components {
          */
         ImportRunStatus: "pending" | "validating" | "awaiting_approval" | "running" | "complete" | "failed" | "undoing" | "undone" | "cancelled";
         /**
-         * @description The result of undoing a committed import run (IEM-WIRE-9; A93). Every
+         * @description The result of undoing a committed import run. Every
          *     import-created row lands in exactly one of three buckets: reversed,
          *     kept because a human edited it since (the "kept — you edited these"
          *     list S-E15.4c requires, not a diff of what changed), or errored
@@ -34364,7 +34364,7 @@ export interface components {
             reversed_count: number;
             /** @description Rows this run corrected rather than created, which undo leaves corrected. A row count, from the run's own report: two rows naming one record count twice. Absent or zero means the run corrected nothing, and what it did reverse is `reversed_count`, `kept` and `errored`. */
             updates_not_reversed?: number;
-            /** @description Import-created rows left in place: a human edited them since import (A93), or a live record still names the company. */
+            /** @description Import-created rows left in place: a human edited them since import, or a live record still names the company. */
             kept: {
                 object: components["schemas"]["ImportObject"];
                 /** Format: uuid */
@@ -34549,6 +34549,15 @@ export interface components {
              *     notice still says what it is about, which is why the kind is closed and this is not.
              */
             note?: string;
+            /**
+             * Format: uuid
+             * @description The deal the notice is about. Required for `coach_deal_needs_next_step`, and refused on
+             *     every other kind. The deal must be open, owned by the recipient, and one the caller
+             *     can read. The headline then names the deal and what Margince sees on it: whether a
+             *     next step is planned, and the day of its last activity. The recipient's row links to
+             *     the deal.
+             */
+            deal_id?: string;
         };
         /** @description One durable line addressed to one contact, as the raising call returns it. */
         Notice: {
@@ -35434,7 +35443,10 @@ export interface components {
             converted_from_lead_id?: string | null;
             /** @description Deterministic relationship-strength (features/07 §4). Read-only derived view; NULL until capture has interactions. No mystery number — the factors + contributing activities are the explanation. */
             readonly strength?: components["schemas"]["RelationshipStrength"];
+            /** @description The channel this contact arrived by: `api`, `automation`, `capture`, `import`, `manual` or `webform`. An older contact can show another value until the background correction reaches it. */
             source: string;
+            /** @description The system or connector the contact came from, such as `gmail` for one read out of a mailbox. Empty when a member or an API client wrote it and named none. */
+            readonly source_system?: string | null;
             /** @description Server-stamped from the authenticated principal (human:<uuid> | agent:<id> | connector:<name>); never client-supplied. */
             readonly captured_by: string;
             /**
@@ -35520,7 +35532,11 @@ export interface components {
             address?: components["schemas"]["Address"];
             emails?: components["schemas"]["ContactEmailInput"][];
             phones?: components["schemas"]["ContactPhoneInput"][];
-            source: string;
+            /**
+             * @description The channel this contact arrived by. A client that wrote it for a member sends `manual`; an integration sends `api`. The other system and the contact's id there go in `source_system` and `source_id`. Any other value is 422 `invalid_source`.
+             * @enum {string}
+             */
+            source: "api" | "automation" | "capture" | "import" | "manual" | "webform";
             /** @description The id this contact has in source_system. Needs source_system, and the pair is unique: a second contact with the same pair is 409. */
             source_id?: string | null;
             /** @description Which external system this record came from, when a caller imported it. The reserved mirror: namespace is refused on this wire except for a declared importer: a signed-in human holding import_run:create (an agent carrying those grants is still refused). */
@@ -35993,7 +36009,7 @@ export interface components {
             /** @description The types an installed extension adds, as `ext:<unit>:<type>`. Kept apart from `relationship_types`, whose list stays the closed set above. Each value is declared by the extension it names; a value no extension declares is refused (422, `invalid_enum`). */
             extension_relationship_types?: string[];
             /**
-             * @description Where to fetch the company's logo image (A55) — the `getCompanyLogo`
+             * @description Where to fetch the company's logo image — the `getCompanyLogo`
              *     path for this record, cookie-authenticated and same-origin. A revision query changes
              *     with the stored image so a replacement cannot remain hidden behind an older cached
              *     response. The key is ABSENT entirely (not null) when no logo is stored, which is the
@@ -36009,7 +36025,10 @@ export interface components {
             readonly contact_count?: number;
             /** @description How many open, live deals belong to this account (PO-EXT-10; AC-companies-2/3's Open deals column), counted across the WHOLE workspace — the same population the account's `computed_fields` open-pipeline row sums (founder decision 2026-08-18: a pipeline figure on an account is a fact about the account, not about who may open each deal). The key is ABSENT entirely, not 0, for a role without `deal:read` or without `computed_field:read` (STATE-4, the `computed_fields` gate). Present on `listCompanies` and `getCompany`; write responses omit it. */
             readonly open_deal_count?: number;
+            /** @description The channel this company arrived by: `api`, `automation`, `capture`, `import`, `manual` or `webform`. An older company can show another value until the background correction reaches it. */
             source: string;
+            /** @description The system or connector the company came from, such as `gmail` for one read out of a mailbox. Empty when a member or an API client wrote it and named none. */
+            readonly source_system?: string | null;
             /** @description Server-stamped from the authenticated principal (human:<uuid> | agent:<id> | connector:<name>); never client-supplied. */
             readonly captured_by: string;
             /**
@@ -36078,7 +36097,11 @@ export interface components {
             /** Format: uuid */
             parent_company_id?: string | null;
             domains?: components["schemas"]["CompanyDomainInput"][];
-            source: string;
+            /**
+             * @description The channel this company arrived by. A client that wrote it for a member sends `manual`; an integration sends `api`. The other system and the company's id there go in `source_system` and `source_id`. Any other value is 422 `invalid_source`.
+             * @enum {string}
+             */
+            source: "api" | "automation" | "capture" | "import" | "manual" | "webform";
             /** @description Which external system this record came from, when a caller imported it. The reserved mirror: namespace is refused on this wire except for a declared importer: a signed-in human holding import_run:create (an agent carrying those grants is still refused). */
             source_system?: string | null;
             /** @description The id this company has in source_system. Needs source_system, and the pair is unique: a second company with the same pair is 409. Look a company up by it with the `source_system` and `source_id` filters on `listCompanies`. */
@@ -37057,7 +37080,7 @@ export interface components {
             at_precision?: components["schemas"]["OccurredPrecision"];
         };
         /**
-         * @description How the relationship stands, in the parts a reader can act on (AC-company-3).
+         * @description How the relationship stands, in the parts a reader can act on.
          *
          *     It replaces a single 0–100 score. That number was PO-F-3's MAX over the account's
          *     contacts, so one talkative contact spoke for the whole account and a long, low-volume
@@ -37578,7 +37601,7 @@ export interface components {
             evidence: components["schemas"]["CompanyBriefEvidence"][];
             /**
              * @description What performing this advice means, named by the server rather than inferred by the
-             *     client from the evidence order (AC-company-14). A rule that cannot name an action
+             *     client from the evidence order. A rule that cannot name an action
              *     carries null and the card advises without offering a button, which is honest — a
              *     control that does nothing teaches the reader to stop pressing them.
              *
@@ -37843,7 +37866,7 @@ export interface components {
              */
             on_signal_route?: boolean;
             /**
-             * @description The company node's resolved logo (A55), same value `Company.logo_url` carries.
+             * @description The company node's resolved logo, same value `Company.logo_url` carries.
              *     Absent on a company with no resolved logo and on every contact or deal node —
              *     a client draws the node's monogram or its token-coloured circle instead.
              */
@@ -38260,7 +38283,7 @@ export interface components {
             participants_more?: number;
         };
         /**
-         * @description The eight kinds one extraction mechanism produces (ADR-0097 D1). They share a
+         * @description The eight kinds one extraction mechanism produces. They share a
          *     lifecycle — extracted → cited → correctable → dismissible — and differ only here.
          *
          *     `commitment_ours` / `commitment_theirs` — a promise, by us or by them.
@@ -40905,7 +40928,7 @@ export interface components {
              *     `deal_stakeholder` — the contact holds a stakeholder seat on the deal.
              *     `parent_of` — `from` is the parent company of `to` (the account's parent
              *     points at it; the account points at each child).
-             *     `partner_of` / `referred_by` / `co_sell_with` — the A41 partner edges, from
+             *     `partner_of` / `referred_by` / `co_sell_with` — the partner edges, from
              *     the company that records the edge to its counterparty.
              *     `owns` — `from` is the workspace member who owns the account.
              *     `in_contact_with` — `from` is the workspace member who has been IN recorded
@@ -42583,7 +42606,7 @@ export interface components {
             readonly status: "draft" | "active" | "expired" | "cancelled" | "superseded";
             /**
              * Format: date
-             * @description When a human asserts it was signed. Never derived from a deal close time, and never a signing ceremony — in-product e-signature stays removed (A94).
+             * @description When a human asserts it was signed. Never derived from a deal close time, and never a signing ceremony — in-product e-signature stays removed.
              */
             signed_on?: string | null;
             /** Format: date */
@@ -43009,7 +43032,13 @@ export interface components {
             /** @description Null on the birth row. */
             from_phase: string | null;
             to_phase: string;
+            /** @description The reason typed with the move. */
             reason: string | null;
+            /**
+             * @description What caused a move no one chose by hand. Absent on a move made by hand, and on
+             *     every move recorded before causes were stored. A client words the cause itself.
+             */
+            cause?: components["schemas"]["Project360PhaseCause"];
             /** Format: date-time */
             changed_at: string;
             /**
@@ -43020,6 +43049,25 @@ export interface components {
              *     system principal is `actor_type: system`.
              */
             changed_by?: components["schemas"]["PrincipalAttribution"];
+        };
+        /**
+         * @description Why the project moved, as a code and the record behind it. `deal_won`: winning the
+         *     deal moved the project into delivering.
+         */
+        Project360PhaseCause: {
+            /** @enum {string} */
+            kind: "deal_won";
+            /**
+             * Format: uuid
+             * @description The deal whose win moved the project. Null when the caller may not see that deal,
+             *     or it no longer exists.
+             */
+            deal_id: string | null;
+            /**
+             * @description The deal's name now, read under the caller's deal grant and row scope, archived
+             *     deals included. Null exactly when `deal_id` is.
+             */
+            deal_name: string | null;
         };
         Project360PhaseDuration: {
             phase: string;
@@ -45752,8 +45800,8 @@ export interface components {
              *     `AttachmentExtraction` the human was actually shown. Required, and not
              *     inferable: resolving "the newest reading" instead would let a reading started
              *     by someone else between the display and the click decide what gets written,
-             *     which is precisely the divergence storing the fields exists to prevent
-             *     (RD-AC-N-5). A reading belonging to another attachment, or one that never
+             *     which is precisely the divergence storing the fields exists to prevent.
+             *     A reading belonging to another attachment, or one that never
              *     existed, is a 404. A reading not read for deal facts is a 422 `not_deal_facts`.
              */
             extraction_id: string;
@@ -45942,7 +45990,7 @@ export interface components {
          */
         AccountDraftReason: {
             /**
-             * @description Which grounding input this came from, in A132's order.
+             * @description Which grounding input this came from, in the grounding order.
              *
              *     `intent` — the caller's own steering. `recipient` / `relationship` — who they are
              *     and how we stand with them. `deal` — the open opportunity the message is about.
@@ -48408,7 +48456,10 @@ export interface components {
             status: "open" | "acknowledged" | "resolved" | "dismissed";
             /** Format: date-time */
             detected_at: string;
+            /** @description The channel this signal arrived by: `api`, `automation`, `capture`, `import`, `manual` or `webform`. An older signal can show another value until the background correction reaches it. */
             source: string;
+            /** @description The producer that wrote the signal, such as `signal-scan` or the name of an extension. Empty when a member or an API client filed it. */
+            readonly source_system?: string | null;
             /** @description Server-stamped from the authenticated principal; never client-supplied. */
             readonly captured_by: string;
             version?: components["schemas"]["RowVersion"];
@@ -48605,7 +48656,11 @@ export interface components {
              * @description When the underlying observation happened (defaults to now).
              */
             detected_at?: string | null;
-            source: string;
+            /**
+             * @description The channel this signal arrived by. A client that files it for a member sends `manual`; an integration sends `api`. Any other value is 422 `invalid_source`.
+             * @enum {string}
+             */
+            source: "api" | "automation" | "capture" | "import" | "manual" | "webform";
         };
         /**
          * @description Triage and correction. A `status` move to acknowledged/resolved/dismissed appends the human-outcome
@@ -49067,7 +49122,7 @@ export interface components {
              */
             cursor?: string;
         };
-        /** @description What a candidate filter would select for this caller (LVS-EXT-9). */
+        /** @description What a candidate filter would select for this caller. */
         FilterPreview: {
             resource: components["schemas"]["FilterResource"];
             /**
@@ -51101,6 +51156,11 @@ export interface components {
             owned: components["schemas"]["HandoverCounts"];
             signal_count: number;
             blockers: components["schemas"]["MemberRetirementBlocker"][];
+            /**
+             * @description The records behind each blocker that is about records, such as `deal_rooms` or
+             *     `webhooks`. A blocker that is a state, such as `deactivate_first`, has no entry.
+             */
+            blocking_records?: components["schemas"]["MemberRetirementBlockingRecords"][];
             consequences: components["schemas"]["MemberRetirementConsequence"][];
             token: string;
             source_name: string;
@@ -51109,6 +51169,24 @@ export interface components {
             survivor_name?: string;
             /** Format: email */
             survivor_email?: string;
+        };
+        /**
+         * @description The records that hold one blocker. `total` counts every one of them. `records` lists the
+         *     ones you may open, up to 25, and `visible` says how many those are in all. A record kept
+         *     to its owner, or one with no screen you may open, counts in `total` only.
+         */
+        MemberRetirementBlockingRecords: {
+            blocker: components["schemas"]["MemberRetirementBlocker"];
+            total: number;
+            visible: number;
+            records: components["schemas"]["MemberRetirementBlockingRecord"][];
+        };
+        MemberRetirementBlockingRecord: {
+            /** Format: uuid */
+            id: string;
+            name: string;
+            /** @description Where the record opens in the app, such as the deal a Deal Room belongs to. Absent when it has no page of its own. */
+            web_url?: string;
         };
         MergeMembersRequest: {
             /** Format: uuid */
@@ -56214,6 +56292,8 @@ export interface components {
             summary?: string | null;
             /** @description The summary's sentence and the field values it lists, apart, so a client can show the values as a list instead of the joined key=value text. Absent on a proposal whose summary is a sentence alone, and on one staged before the parts were kept. Withheld with the summary. */
             summary_parts?: components["schemas"]["ApprovalSummaryParts"];
+            /** @description Why this proposal exists, as whoever staged it said it: the record and the fact that prompted it. A card leads with it. Absent when its maker gave none, never filled with a stock sentence, and withheld with the summary. */
+            readonly why?: components["schemas"]["WorkGrounds"];
             /** @description The staged diff/payload that will execute on approve. */
             proposed_change?: {
                 [key: string]: unknown;
@@ -57241,6 +57321,10 @@ export interface components {
             change_reasons: components["schemas"]["RecordAccessReason"][];
             /** @description The member's role keys. Present only when `detail` is true. */
             roles?: string[];
+            /** @description The name an admin gave each live role in `roles`, keyed by role key, so a reader who may not read the role directory still sees a custom role by its name. Present only when `detail` is true. Absent from an older server; a key it does not name is shown as the key. */
+            role_names?: {
+                [key: string]: string;
+            };
         };
         /**
          * @description One reason a member can open or change the record. `workspace_visible` means the record is
@@ -60261,7 +60345,7 @@ export interface components {
             /** Format: date-time */
             expires_at: string;
         };
-        /** @description The sign of impersonation the sender check saw when capture made this contact from a mail. */
+        /** @description The sign of impersonation the sender check saw on a captured mail from this contact. */
         ContactImpersonationWarning: {
             /**
              * @description Which sign it saw. `punycode_domain`: the mail domain is written in punycode, which can look like another domain. `display_name_other_domain`: the display name holds an address on a domain other than the one the mail came from. Absent on a warning recorded before the reason was stored.
@@ -62428,6 +62512,8 @@ export interface components {
             /** @description On a task row: true when `due_at` names an agreed time of day, false when the task is due by that day. Absent on other rows. */
             due_has_time?: boolean;
             due_intent?: components["schemas"]["IntentTime"];
+            /** @description On a task row: the kind of work it asks for, so a card names it without reading the task. Absent on other rows. */
+            task_type?: components["schemas"]["TaskType"];
             /** @description Past due at the read instant, resolved server-side so every surface agrees. */
             overdue?: boolean;
             /**
@@ -64173,6 +64259,8 @@ export interface components {
             /** @description On a task row: true when `due_at` names an agreed time of day, false when the task is due by that day. Absent on other rows. */
             due_has_time?: boolean;
             due_intent?: components["schemas"]["IntentTime"];
+            /** @description On a task row: the kind of work it asks for, so a card names it without reading the task. Absent on other rows. */
+            task_type?: components["schemas"]["TaskType"];
             /** @description Past due at the read instant, resolved server-side so every surface agrees. */
             overdue?: boolean;
             /**
@@ -65563,6 +65651,15 @@ export interface components {
                 "application/problem+json": components["schemas"]["Problem"];
             };
         };
+        /** @description `name_taken`: another entry of this list already holds the name, compared trimmed and ignoring case; the detail names it. Any other state conflict answers its own code. */
+        NameTakenConflict: {
+            headers: {
+                [name: string]: unknown;
+            };
+            content: {
+                "application/problem+json": components["schemas"]["Problem"];
+            };
+        };
         /** @description State conflict (duplicate key, concurrent edit, already-decided, default-pipeline collision). */
         Conflict: {
             headers: {
@@ -65695,7 +65792,7 @@ export interface components {
          */
         CaptureConnectionId: string;
         /**
-         * @description The mail/calendar provider (A51 email+calendar parity). Every provider connects through
+         * @description The mail/calendar provider. Every provider connects through
          *     the same operation; gmail/gcal/gdocs/graph/graphcal authorize by OAuth redirect, imap by
          *     credential submission, and test_mailbox connects immediately with neither (a QC-only
          *     connector, reachable only when the deployment armed operations.allow_test_mailbox — a
@@ -71807,7 +71904,7 @@ export interface operations {
                 };
             };
             403: components["responses"]["Forbidden"];
-            409: components["responses"]["Conflict"];
+            409: components["responses"]["NameTakenConflict"];
             422: components["responses"]["ValidationError"];
         };
     };
@@ -71891,7 +71988,7 @@ export interface operations {
             };
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
-            409: components["responses"]["Conflict"];
+            409: components["responses"]["NameTakenConflict"];
             422: components["responses"]["ValidationError"];
         };
     };
@@ -82020,7 +82117,7 @@ export interface operations {
                 };
             };
             403: components["responses"]["Forbidden"];
-            409: components["responses"]["Conflict"];
+            409: components["responses"]["NameTakenConflict"];
             422: components["responses"]["ValidationError"];
         };
     };
@@ -82104,7 +82201,7 @@ export interface operations {
             };
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
-            409: components["responses"]["Conflict"];
+            409: components["responses"]["NameTakenConflict"];
             422: components["responses"]["ValidationError"];
         };
     };
@@ -82180,7 +82277,7 @@ export interface operations {
                 };
             };
             403: components["responses"]["Forbidden"];
-            409: components["responses"]["Conflict"];
+            409: components["responses"]["NameTakenConflict"];
             422: components["responses"]["ValidationError"];
         };
     };
@@ -82247,7 +82344,7 @@ export interface operations {
             };
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
-            409: components["responses"]["Conflict"];
+            409: components["responses"]["NameTakenConflict"];
             422: components["responses"]["ValidationError"];
         };
     };
@@ -82323,7 +82420,7 @@ export interface operations {
                 };
             };
             403: components["responses"]["Forbidden"];
-            409: components["responses"]["Conflict"];
+            409: components["responses"]["NameTakenConflict"];
             422: components["responses"]["ValidationError"];
         };
     };
@@ -82390,7 +82487,7 @@ export interface operations {
             };
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
-            409: components["responses"]["Conflict"];
+            409: components["responses"]["NameTakenConflict"];
             422: components["responses"]["ValidationError"];
         };
     };
@@ -82576,7 +82673,7 @@ export interface operations {
                 };
             };
             403: components["responses"]["Forbidden"];
-            409: components["responses"]["Conflict"];
+            409: components["responses"]["NameTakenConflict"];
             422: components["responses"]["ValidationError"];
         };
     };
@@ -82635,7 +82732,7 @@ export interface operations {
             };
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
-            409: components["responses"]["Conflict"];
+            409: components["responses"]["NameTakenConflict"];
             422: components["responses"]["ValidationError"];
         };
     };
@@ -82880,15 +82977,7 @@ export interface operations {
                 };
             };
             403: components["responses"]["Forbidden"];
-            /** @description Another reason already holds this label, compared trimmed and ignoring case. */
-            409: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/problem+json": components["schemas"]["Problem"];
-                };
-            };
+            409: components["responses"]["NameTakenConflict"];
             422: components["responses"]["ValidationError"];
         };
     };
@@ -82972,15 +83061,7 @@ export interface operations {
             };
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
-            /** @description Another reason already holds this label, compared trimmed and ignoring case. */
-            409: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/problem+json": components["schemas"]["Problem"];
-                };
-            };
+            409: components["responses"]["NameTakenConflict"];
             422: components["responses"]["ValidationError"];
         };
     };
@@ -89556,7 +89637,7 @@ export interface operations {
             header?: never;
             path: {
                 /**
-                 * @description The mail/calendar provider (A51 email+calendar parity). Every provider connects through
+                 * @description The mail/calendar provider. Every provider connects through
                  *     the same operation; gmail/gcal/gdocs/graph/graphcal authorize by OAuth redirect, imap by
                  *     credential submission, and test_mailbox connects immediately with neither (a QC-only
                  *     connector, reachable only when the deployment armed operations.allow_test_mailbox — a
@@ -89606,7 +89687,7 @@ export interface operations {
             header?: never;
             path: {
                 /**
-                 * @description The mail/calendar provider (A51 email+calendar parity). Every provider connects through
+                 * @description The mail/calendar provider. Every provider connects through
                  *     the same operation; gmail/gcal/gdocs/graph/graphcal authorize by OAuth redirect, imap by
                  *     credential submission, and test_mailbox connects immediately with neither (a QC-only
                  *     connector, reachable only when the deployment armed operations.allow_test_mailbox — a
@@ -89748,7 +89829,7 @@ export interface operations {
             header?: never;
             path: {
                 /**
-                 * @description The mail/calendar provider (A51 email+calendar parity). Every provider connects through
+                 * @description The mail/calendar provider. Every provider connects through
                  *     the same operation; gmail/gcal/gdocs/graph/graphcal authorize by OAuth redirect, imap by
                  *     credential submission, and test_mailbox connects immediately with neither (a QC-only
                  *     connector, reachable only when the deployment armed operations.allow_test_mailbox — a
@@ -89940,7 +90021,7 @@ export interface operations {
             header?: never;
             path: {
                 /**
-                 * @description The mail/calendar provider (A51 email+calendar parity). Every provider connects through
+                 * @description The mail/calendar provider. Every provider connects through
                  *     the same operation; gmail/gcal/gdocs/graph/graphcal authorize by OAuth redirect, imap by
                  *     credential submission, and test_mailbox connects immediately with neither (a QC-only
                  *     connector, reachable only when the deployment armed operations.allow_test_mailbox — a
@@ -89987,7 +90068,7 @@ export interface operations {
             header?: never;
             path: {
                 /**
-                 * @description The mail/calendar provider (A51 email+calendar parity). Every provider connects through
+                 * @description The mail/calendar provider. Every provider connects through
                  *     the same operation; gmail/gcal/gdocs/graph/graphcal authorize by OAuth redirect, imap by
                  *     credential submission, and test_mailbox connects immediately with neither (a QC-only
                  *     connector, reachable only when the deployment armed operations.allow_test_mailbox — a
@@ -90053,7 +90134,7 @@ export interface operations {
             header?: never;
             path: {
                 /**
-                 * @description The mail/calendar provider (A51 email+calendar parity). Every provider connects through
+                 * @description The mail/calendar provider. Every provider connects through
                  *     the same operation; gmail/gcal/gdocs/graph/graphcal authorize by OAuth redirect, imap by
                  *     credential submission, and test_mailbox connects immediately with neither (a QC-only
                  *     connector, reachable only when the deployment armed operations.allow_test_mailbox — a
@@ -90106,7 +90187,7 @@ export interface operations {
             header?: never;
             path: {
                 /**
-                 * @description The mail/calendar provider (A51 email+calendar parity). Every provider connects through
+                 * @description The mail/calendar provider. Every provider connects through
                  *     the same operation; gmail/gcal/gdocs/graph/graphcal authorize by OAuth redirect, imap by
                  *     credential submission, and test_mailbox connects immediately with neither (a QC-only
                  *     connector, reachable only when the deployment armed operations.allow_test_mailbox — a
@@ -90158,7 +90239,7 @@ export interface operations {
             header?: never;
             path: {
                 /**
-                 * @description The mail/calendar provider (A51 email+calendar parity). Every provider connects through
+                 * @description The mail/calendar provider. Every provider connects through
                  *     the same operation; gmail/gcal/gdocs/graph/graphcal authorize by OAuth redirect, imap by
                  *     credential submission, and test_mailbox connects immediately with neither (a QC-only
                  *     connector, reachable only when the deployment armed operations.allow_test_mailbox — a
@@ -90210,7 +90291,7 @@ export interface operations {
             header?: never;
             path: {
                 /**
-                 * @description The mail/calendar provider (A51 email+calendar parity). Every provider connects through
+                 * @description The mail/calendar provider. Every provider connects through
                  *     the same operation; gmail/gcal/gdocs/graph/graphcal authorize by OAuth redirect, imap by
                  *     credential submission, and test_mailbox connects immediately with neither (a QC-only
                  *     connector, reachable only when the deployment armed operations.allow_test_mailbox — a
@@ -90262,7 +90343,7 @@ export interface operations {
             header?: never;
             path: {
                 /**
-                 * @description The mail/calendar provider (A51 email+calendar parity). Every provider connects through
+                 * @description The mail/calendar provider. Every provider connects through
                  *     the same operation; gmail/gcal/gdocs/graph/graphcal authorize by OAuth redirect, imap by
                  *     credential submission, and test_mailbox connects immediately with neither (a QC-only
                  *     connector, reachable only when the deployment armed operations.allow_test_mailbox — a
@@ -90324,7 +90405,7 @@ export interface operations {
             header?: never;
             path: {
                 /**
-                 * @description The mail/calendar provider (A51 email+calendar parity). Every provider connects through
+                 * @description The mail/calendar provider. Every provider connects through
                  *     the same operation; gmail/gcal/gdocs/graph/graphcal authorize by OAuth redirect, imap by
                  *     credential submission, and test_mailbox connects immediately with neither (a QC-only
                  *     connector, reachable only when the deployment armed operations.allow_test_mailbox — a
@@ -90371,7 +90452,7 @@ export interface operations {
             header?: never;
             path: {
                 /**
-                 * @description The mail/calendar provider (A51 email+calendar parity). Every provider connects through
+                 * @description The mail/calendar provider. Every provider connects through
                  *     the same operation; gmail/gcal/gdocs/graph/graphcal authorize by OAuth redirect, imap by
                  *     credential submission, and test_mailbox connects immediately with neither (a QC-only
                  *     connector, reachable only when the deployment armed operations.allow_test_mailbox — a
@@ -90424,7 +90505,7 @@ export interface operations {
             header?: never;
             path: {
                 /**
-                 * @description The mail/calendar provider (A51 email+calendar parity). Every provider connects through
+                 * @description The mail/calendar provider. Every provider connects through
                  *     the same operation; gmail/gcal/gdocs/graph/graphcal authorize by OAuth redirect, imap by
                  *     credential submission, and test_mailbox connects immediately with neither (a QC-only
                  *     connector, reachable only when the deployment armed operations.allow_test_mailbox — a
@@ -99025,7 +99106,7 @@ export interface operations {
             };
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
-            409: components["responses"]["Conflict"];
+            409: components["responses"]["NameTakenConflict"];
             422: components["responses"]["ValidationError"];
         };
     };
@@ -99057,7 +99138,7 @@ export interface operations {
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
-            409: components["responses"]["Conflict"];
+            409: components["responses"]["NameTakenConflict"];
             422: components["responses"]["ValidationError"];
         };
     };
@@ -104153,7 +104234,7 @@ export interface operations {
                     "application/problem+json": components["schemas"]["Problem"];
                 };
             };
-            /** @description No such live contact to address (a departed or unknown recipient reads the same). */
+            /** @description No such live contact to address (a departed or unknown recipient reads the same), or no deal of that id the caller can read. */
             404: {
                 headers: {
                     [name: string]: unknown;
@@ -104162,7 +104243,7 @@ export interface operations {
                     "application/problem+json": components["schemas"]["Problem"];
                 };
             };
-            /** @description An unknown kind, or a note past its ceiling. */
+            /** @description An unknown kind, a note past its ceiling, a next-step notice without its deal, a deal on any other kind, or a deal that is closed or owned by someone else. */
             422: {
                 headers: {
                     [name: string]: unknown;
@@ -107550,6 +107631,7 @@ export interface operations {
             };
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["PermissionDenied"];
+            409: components["responses"]["NameTakenConflict"];
             422: components["responses"]["ValidationError"];
         };
     };
@@ -107649,6 +107731,7 @@ export interface operations {
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["PermissionDenied"];
             404: components["responses"]["NotFound"];
+            409: components["responses"]["NameTakenConflict"];
             422: components["responses"]["ValidationError"];
         };
     };

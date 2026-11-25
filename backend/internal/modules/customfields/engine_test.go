@@ -12,6 +12,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/values"
+	"github.com/margince/margince/backend/internal/shared/ports/extregistrytest"
 	"github.com/margince/margince/backend/internal/shared/ports/recordkinds"
 	"github.com/margince/margince/backend/pkg/extension"
 )
@@ -68,8 +69,7 @@ func TestValidate_PicklistRequiresNonEmptyOptions(t *testing.T) {
 }
 
 func TestValidate_RecordFieldNeedsOneRegisteredKind(t *testing.T) {
-	recordkinds.Reset()
-	t.Cleanup(recordkinds.Reset)
+	extregistrytest.Reset(t)
 	recordkinds.Register("alpha", []extension.RecordKindDeclaration{{
 		Kind: "visit", DisplayName: "Visit", Table: "ext_alpha_visit",
 		Fields:     []extension.RecordKindField{{Name: "code", Label: "Code"}},

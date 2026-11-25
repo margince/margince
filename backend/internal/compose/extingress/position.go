@@ -39,7 +39,7 @@ func SavePosition(ctx context.Context, tx pgx.Tx, unit, system string, position 
 		INSERT INTO extension_ingest_position (unit, source_system, member_id, position)
 		VALUES ($1, $2, $3, $4)
 		ON CONFLICT (unit, source_system, member_id) DO UPDATE
-		   SET position = EXCLUDED.position, version = extension_ingest_position.version + 1, saved_at = now()`,
+		   SET position = EXCLUDED.position, version = extension_ingest_position.version + 1`,
 		unit, system, NoMember, string(position))
 	return err
 }
@@ -62,7 +62,7 @@ func SaveMemberPosition(
 	} else {
 		err = tx.QueryRow(ctx, `
 			UPDATE extension_ingest_position
-			   SET position = $4, version = version + 1, saved_at = now()
+			   SET position = $4, version = version + 1
 			 WHERE unit = $1 AND source_system = $2 AND member_id = $3 AND version = $5
 			RETURNING version`, unit, system, member, string(position), expected).Scan(&version)
 	}

@@ -25,7 +25,7 @@ import {
   useCreateAcquisitionSource,
   useUpdateAcquisitionSource,
 } from "../../lib/acquisitionsources.queries";
-import { problemMessageOf } from "../../lib/problem";
+import { TEXT_LIMITS } from "../../lib/textlimits_gen";
 import { useVocabGrants, vocabMenuColumn } from "../leads/leadvocab.rows";
 
 function sourceColumns({
@@ -134,14 +134,10 @@ export function AcquisitionSourcesCard() {
   const [namingOpen, setNamingOpen] = useState(false);
   const sources = rowsOf(query.data);
   const write = naming.mode === "rename" ? rename : create;
-  // A rename cannot collide: only the key is unique, and it never changes.
-  const refused =
-    naming.mode === "rename"
-      ? {
-          problem: rename.isError ? problemMessageOf(rename.error, t) : null,
-          nameProblem: null,
-        }
-      : nameRefusal(create.error, t, "acqSources.duplicate");
+  const refused = nameRefusal(write.error, t, {
+    label: t("acqSources.addLabel"),
+    duplicate: "acqSources.duplicate",
+  });
   const open = (next: Naming) => {
     create.reset();
     rename.reset();
@@ -227,6 +223,7 @@ export function AcquisitionSourcesCard() {
         pending={write.isPending}
         problem={refused.problem}
         nameProblem={refused.nameProblem}
+        maxLength={TEXT_LIMITS.label}
         onSave={(label) => {
           if (naming.mode === "rename") {
             rename.mutate(

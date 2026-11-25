@@ -12,9 +12,9 @@ import {
   LIFECYCLE_OPTIONS,
   SIZE_BAND_OPTIONS,
 } from "../../components/companylookups";
-import { EditAccessRequest } from "../../components/editaccessrequest";
 import { type RailEdit, RailField } from "../../components/railfield";
 import { useSectionEdit } from "../../components/sectionedit";
+import { useViewOnlyAccess } from "../../components/viewonly";
 import { Badge } from "../../design-system/atoms";
 import { InlineChoice } from "../../design-system/inlinechoice";
 import { InlineText } from "../../design-system/inlinetext";
@@ -28,7 +28,6 @@ import { postalLines } from "../../format/address";
 import { useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import { ADDRESS_KEYS } from "../../lib/addresscolumns";
-import { useCanWriteRecord } from "../../lib/capability";
 import { useIndustryOptions } from "../../lib/industryoptions";
 import { labelFor } from "../../lib/labelfor";
 import { useListsAvailable, useRecordLists } from "../../lib/lists.queries";
@@ -37,7 +36,7 @@ import { CompanyContactCard } from "./companycontactcard";
 import {
   companyWebsite,
   displayHost,
-  useCompanyReadOnlyReason,
+  useCompanyVerbRefusal,
 } from "./companyheader";
 import { useCompanyEdit, useCompanyFieldSave } from "./companyrailedit";
 import {
@@ -59,7 +58,7 @@ type RailProps = Readonly<{
   // The composite read is still in flight, so the Way in row can tell "still
   // loading" from "nobody has a way in".
   loading: boolean;
-  // Why this reader cannot change the account, said once as the footnote. The
+  // Why an archived account takes no change, said once as the footnote. The
   // verbs in the head point at it by `id`.
   refusal?: Readonly<{ id: string; text: string }>;
 }>;
@@ -114,6 +113,7 @@ function RailBody({
   const about = useAboutSection(company, view, loading, edit);
   const address = useAddressSection(company, edit);
   const ownership = useOwnershipSection(company, edit);
+  const access = useViewOnlyAccess("company", company);
   const registration = useRegistrationSection(company, edit, gate);
   const sections: DetailSection[] = [
     about.section,
@@ -133,14 +133,8 @@ function RailBody({
     <>
       <RecordDetails
         sections={sections}
-        footnote={
-          refusal && (
-            <>
-              <span id={refusal.id}>{refusal.text}</span>
-              <EditAccessRequest kind="company" record={company} />
-            </>
-          )
-        }
+        footnote={refusal && <span id={refusal.id}>{refusal.text}</span>}
+        access={access}
       />
       {about.element}
       {address.element}
@@ -158,13 +152,8 @@ export type Edit = Readonly<{ canEdit: boolean; reason?: string }>;
  * checklist) refuses with this one answer.
  */
 export function useCompanyEditGate(company: Company): Edit {
-  const t = useT();
-  const writable = useCanWriteRecord("company", company);
-  const reason = useCompanyReadOnlyReason(company);
-  return {
-    canEdit: writable && !reason,
-    reason: reason ?? (writable ? undefined : t("record.notYoursToChange")),
-  };
+  const reason = useCompanyVerbRefusal(company);
+  return { canEdit: !reason, reason };
 }
 
 /** The account's name as the record's head renames it, with the rail's gate. */

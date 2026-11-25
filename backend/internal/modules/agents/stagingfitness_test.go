@@ -85,7 +85,7 @@ func stageableToolArgs() (reads, creates map[string]string) {
 				`"links":[{"entity_type":"company","entity_id":%q}]}`, ids.NewV7()),
 		// The whole-call staging the tier floor produces (#982). It patches an
 		// existing row, so it carries the same obligation as its siblings.
-		"update_record": fmt.Sprintf(`{"record_type":"contact","id":%q,"fields":{"full_name":"X"}}`, contact),
+		"update_record": fmt.Sprintf(`{"why":"A test asks for this change.","record_type":"contact","id":%q,"fields":{"full_name":"X"}}`, contact),
 	}
 	// A create names no existing record, so it has no target to probe. What it
 	// owes instead is to stage the shape it claims: the record TYPE, and no id —
