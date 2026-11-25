@@ -12,7 +12,7 @@
   "search": "semantic",
   "self_judged": false,
   "stamp": {
-    "scenario": "3991ecbb752ebf04",
+    "scenario": "5534c8a5db93ea0d",
     "tools": "9dabbb105e703649",
     "instructions": "4eab26d5fff0793f",
     "judge": "",
@@ -23,8 +23,8 @@
     },
     "commit": "6d3a5be8c69b862c6c7db3c3534ac5fd705dd41e",
     "ran_at": "2026-11-25T07:41:45Z",
-    "graded_commit": "6d3a5be8c69b862c6c7db3c3534ac5fd705dd41e",
-    "graded_at": "2026-11-25T07:41:45Z"
+    "graded_commit": "e78e69d3f41bf45bbc08207d2d75a94ae33d19f4",
+    "graded_at": "2026-11-25T11:02:17Z"
   },
   "usage": {
     "input_tokens": 37625,

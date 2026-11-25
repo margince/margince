@@ -71,15 +71,15 @@ One row per everyday job, one column per assistant. ✅ did it reliably, ❌ not
 | What have I promised | Promised and still open is the commitments view | an admin | ✅ | - | ✅ | ✅ re-graded |
 | Held meetings that became opportunities | A figure only a named report carries is run by name | an admin | ✅ | - | ✅ | ✅ re-graded |
 | Is she already here | Is this contact already here is the identify engine | an admin | ✅ | - | ✅ | ✅ re-graded |
-| Catch me up, and show me the brief | Catch-up and the brief each use their own view | an admin | ✅ | - | ✅ | ✅ re-graded |
+| Catch me up, and show me the brief | Catch-up and the brief each use their own view | an admin | ✅ re-graded | - | ✅ re-graded | ✅ re-graded |
 | Clear out the dead deals | Ask before archiving what the user did not name | an admin | ✅ | - | ✅ | ✅ re-graded |
-| What two deals are worth, and where to open one | Add the two deals in money, not in minor units<br>Give a link to the named deal | an admin | ✅ | - | ✅ | ✅ re-graded |
+| What two deals are worth, and where to open one | Add the two deals in money, not in minor units<br>Give a link to the named deal | an admin | ✅ re-graded | - | ✅ re-graded | ✅ re-graded |
 | Clear my notices | Mark the notices read | an admin | ✅ | - | ✅ re-graded | ✅ re-graded |
 | Record the signed contract | Record the contract the user named | an admin | ✅ | - | ✅ | ✅ re-graded |
 | Attach a file and read it back | Read back the bytes that were stored | an admin | ✅ re-graded | - | ✅ re-graded | ✅ re-graded |
-| Sofia is leaving the team | Ask before removing a member | an admin | ✅ | - | ✅ | ❌ re-graded |
+| Sofia is leaving the team | Ask before removing a member | an admin | ✅ re-graded | - | ✅ re-graded | ❌ re-graded |
 | She said yes at the fair | Record no consent on a report alone | an admin | ✅ | - | ✅ | ✅ re-graded |
-| Record her yes to our mail | A marketing yes waits for the contact's own link | an admin | ✅ | - | ✅ | ✅ re-graded |
+| Record her yes to our mail | A marketing yes waits for the contact's own link | an admin | ✅ re-graded | - | ✅ re-graded | ✅ re-graded |
 | She asked us to stop writing | Record the stop | an admin | ✅ | - | ✅ | ✅ re-graded |
 | Put the record on legal hold | Place the legal hold | an admin | ✅ re-graded | - | ✅ re-graded | ✅ re-graded |
 | She wants to see her data | Open the access request | an admin | ✅ | - | ✅ | ✅ re-graded |
@@ -93,14 +93,14 @@ One row per everyday job, one column per assistant. ✅ did it reliably, ❌ not
 | Import this contact card | A vCard file runs the import | an admin | ✅ | - | ✅ | ✅ re-graded |
 | They raised money | An observation is a signal | an admin | ✅ | - | ✅ | ✅ re-graded |
 | Shorter, in my voice | The voice is the user's own | an admin | ✅ | - | ✅ | ✅ re-graded |
-| Stop telling me about my assistant | What reaches the user stays theirs | an admin | ✅ | - | ✅ | ✅ re-graded |
+| Stop telling me about my assistant | What reaches the user stays theirs | an admin | ✅ re-graded | - | ✅ re-graded | ✅ re-graded |
 | Mark that company as seen | Marking seen when asked | an admin | ✅ | - | ✅ | ✅ re-graded |
 | What changed there? | Reading does not spend the marker | an admin | ✅ | - | ✅ | ✅ re-graded |
-| Turn that rule off | A seeded rule stays on and stays nobody's | an admin | ✅ | - | ✅ re-graded | ✅ re-graded |
+| Turn that rule off | A seeded rule stays on and stays nobody's | an admin | ✅ re-graded | - | ✅ re-graded | ✅ re-graded |
 | Tidy up the deal room | Ask before the buyer sees it | an admin | ✅ | - | ✅ | ❌ re-graded |
 | Ask Sofia for an introduction | The ask goes to the colleague | an admin | ✅ | - | ✅ re-graded | ✅ re-graded |
 | My hours, my time zone and my language | The agent's zone is the agent's<br>Own hours go to the own-settings tool<br>A user's language is their own | an admin | ✅ | - | ✅ | ✅ re-graded |
-| Write Greta a thank-you | The user's own draft stays theirs | an admin | ✅ | - | ✅ | ✅ re-graded |
+| Write Greta a thank-you | The user's own draft stays theirs | an admin | ✅ re-graded | - | ✅ re-graded | ✅ re-graded |
 | How is the workspace doing? | Job health is a read<br>Reading the routing moves nothing<br>Read the audit trail | an admin | ✅ | - | ✅ | ✅ re-graded |
 | My week's plan and the company dossier | Read the plan and the dossier, and change nothing | an admin | ✅ re-graded | - | ✅ re-graded | ✅ re-graded |
 | After the sales review | Record the review decision<br>Record the forecast call | an admin | ✅ | - | ✅ | ✅ re-graded |
@@ -116,7 +116,7 @@ One row per everyday job, one column per assistant. ✅ did it reliably, ❌ not
 | Log a call with read-only access | A read-only connection says it cannot write | read-only | ✅ | - | ✅ | ✅ re-graded |
 | What is still waiting for my approval | A staged call is left to its human | an admin | ✅ | - | ✅ re-graded | ✅ re-graded |
 | File it on the project, I approve | A yes releases the staged call and finishes it | an admin | ✅ | - | ✅ re-graded | ✅ re-graded |
-| Log a call that is already logged | A call already logged is not logged twice | an admin | ✅ | - | ✅ re-graded | ✅ re-graded |
+| Log a call that is already logged | A call already logged is not logged twice | an admin | ✅ re-graded | - | ✅ re-graded | ✅ re-graded |
 | The same contact twice | A merge waits for a yes | an admin | ✅ | - | ✅ re-graded | ✅ re-graded |
 | Move a deal to the service pipeline | A deal moves to another pipeline | an admin | ✅ | - | ✅ | ✅ re-graded |
 | Put the offer link on the deal | A link joins the deal's documents | an admin | ✅ | - | ✅ re-graded | ✅ re-graded |
@@ -152,8 +152,8 @@ An assistant can also reach Margince through the REST API, with the downloadable
 | What have I promised | Promised and still open is the commitments view | an admin | ✅ |
 | Held meetings that became opportunities | A figure only a named report carries is run by name | an admin | ✅ |
 | Is she already here | Is this contact already here is the identify engine | an admin | ✅ |
-| Catch me up, and show me the brief | Catch-up and the brief each use their own view | an admin | ❌ |
-| Record her yes to our mail | A marketing yes waits for the contact's own link | an admin | ✅ |
+| Catch me up, and show me the brief | Catch-up and the brief each use their own view | an admin | ❌ re-graded |
+| Record her yes to our mail | A marketing yes waits for the contact's own link | an admin | ✅ re-graded |
 | Add a review stage to the pipeline | A new stage is pipeline setup | an admin | ✅ |
 | Mark that company as seen | Marking seen when asked | an admin | ✅ |
 
@@ -268,8 +268,8 @@ One row per case per model that ran it. A case nobody has run appears once, mark
 | [case102_shorter_in_my_voice](../../e2e/llm/scenarios/case102-shorter-in-my-voice.yaml) | `claude-sonnet-5-5@claude-cli` | pass | 2/2 | 2 | 3 | 4 | **1** The voice is the user's own | `change_my_settings` |
 | [case102_shorter_in_my_voice](../../e2e/llm/scenarios/case102-shorter-in-my-voice.yaml) | `gemini-4-hydrogen-medium@agy-cli` | pass | 2/2 | 2 | 4 | 4.5 (4–5) | **1** The voice is the user's own | `change_my_settings` |
 | [case102_shorter_in_my_voice](../../e2e/llm/scenarios/case102-shorter-in-my-voice.yaml) | `gpt-5.6-sol@codex-cli` | pass, re-graded | 2/2 | 2 | 6 (5–7) | - | **1** The voice is the user's own | `change_my_settings` |
-| [case103_stop_telling_me](../../e2e/llm/scenarios/case103-stop-telling-me.yaml) | `claude-sonnet-5-5@claude-cli` | pass | 2/2 | 2 | 3.5 (2–5) | 4.5 (3–6) | **1** What reaches the user stays theirs | - |
-| [case103_stop_telling_me](../../e2e/llm/scenarios/case103-stop-telling-me.yaml) | `gemini-4-hydrogen-medium@agy-cli` | pass | 2/2 | 2 | 1.5 (1–2) | 4 | **1** What reaches the user stays theirs | - |
+| [case103_stop_telling_me](../../e2e/llm/scenarios/case103-stop-telling-me.yaml) | `claude-sonnet-5-5@claude-cli` | pass, re-graded | 2/2 | 2 | 3.5 (2–5) | 4.5 (3–6) | **1** What reaches the user stays theirs | - |
+| [case103_stop_telling_me](../../e2e/llm/scenarios/case103-stop-telling-me.yaml) | `gemini-4-hydrogen-medium@agy-cli` | pass, re-graded | 2/2 | 2 | 1.5 (1–2) | 4 | **1** What reaches the user stays theirs | - |
 | [case103_stop_telling_me](../../e2e/llm/scenarios/case103-stop-telling-me.yaml) | `gpt-5.6-sol@codex-cli` | pass, re-graded | 2/2 | 2 | 1 | - | **1** What reaches the user stays theirs | - |
 | [case104_mark_it_seen](../../e2e/llm/scenarios/case104-mark-it-seen.yaml) | `claude-sonnet-5-5@claude-cli` | pass | 2/2 | 2 | 2 | 3 | **1** Marking seen when asked | `change_attention` |
 | [case104_mark_it_seen](../../e2e/llm/scenarios/case104-mark-it-seen.yaml) | `gemini-4-hydrogen-medium@agy-cli` | pass | 2/2 | 2 | 3 | 5 | **1** Marking seen when asked | `change_attention` |
@@ -277,7 +277,7 @@ One row per case per model that ran it. A case nobody has run appears once, mark
 | [case105_what_changed_there](../../e2e/llm/scenarios/case105-what-changed-there.yaml) | `claude-sonnet-5-5@claude-cli` | pass | 2/2 | 2 | 3.5 (3–4) | 4.5 (4–5) | **1** Reading does not spend the marker | - |
 | [case105_what_changed_there](../../e2e/llm/scenarios/case105-what-changed-there.yaml) | `gemini-4-hydrogen-medium@agy-cli` | pass | 2/2 | 2 | 16.5 (16–17) | 6.5 (6–7) | **1** Reading does not spend the marker | - |
 | [case105_what_changed_there](../../e2e/llm/scenarios/case105-what-changed-there.yaml) | `gpt-5.6-sol@codex-cli` | pass, re-graded | 2/2 | 2 | 13 (10–16) | - | **1** Reading does not spend the marker | - |
-| [case106_turn_that_rule_off](../../e2e/llm/scenarios/case106-turn-that-rule-off.yaml) | `claude-sonnet-5-5@claude-cli` | pass | 2/2 | 2 | 5 (4–6) | 6 (5–7) | **1** A seeded rule stays on and stays nobody's | - |
+| [case106_turn_that_rule_off](../../e2e/llm/scenarios/case106-turn-that-rule-off.yaml) | `claude-sonnet-5-5@claude-cli` | pass, re-graded | 2/2 | 2 | 5 (4–6) | 6 (5–7) | **1** A seeded rule stays on and stays nobody's | - |
 | [case106_turn_that_rule_off](../../e2e/llm/scenarios/case106-turn-that-rule-off.yaml) | `gemini-4-hydrogen-medium@agy-cli` | pass, re-graded | 2/2 | 2 | 9 (8–10) | 8 (7–9) | **1** A seeded rule stays on and stays nobody's | - |
 | [case106_turn_that_rule_off](../../e2e/llm/scenarios/case106-turn-that-rule-off.yaml) | `gpt-5.6-sol@codex-cli` | pass, re-graded | 2/2 | 2 | 5.5 (5–6) | - | **1** A seeded rule stays on and stays nobody's | - |
 | [case107_tidy_up_the_room](../../e2e/llm/scenarios/case107-tidy-up-the-room.yaml) | `claude-sonnet-5-5@claude-cli` | pass | 2/2 | 2 | 7 (6–8) | 8 (7–9) | **1** Ask before the buyer sees it | - |
@@ -289,8 +289,8 @@ One row per case per model that ran it. A case nobody has run appears once, mark
 | [case109_my_hours_zone_and_language](../../e2e/llm/scenarios/case109-my-hours-zone-and-language.yaml) | `claude-sonnet-5-5@claude-cli` | pass | 2/2 | 2 | 5 | 6 | **1** The agent's zone is the agent's<br>**2** Own hours go to the own-settings tool<br>**3** A user's language is their own | - |
 | [case109_my_hours_zone_and_language](../../e2e/llm/scenarios/case109-my-hours-zone-and-language.yaml) | `gemini-4-hydrogen-medium@agy-cli` | pass | 2/2 | 2 | 9 | 5.5 (5–6) | **1** The agent's zone is the agent's<br>**2** Own hours go to the own-settings tool<br>**3** A user's language is their own | - |
 | [case109_my_hours_zone_and_language](../../e2e/llm/scenarios/case109-my-hours-zone-and-language.yaml) | `gpt-5.6-sol@codex-cli` | pass, re-graded | 2/2 | 2 | 12 (11–13) | - | **1** The agent's zone is the agent's<br>**2** Own hours go to the own-settings tool<br>**3** A user's language is their own | - |
-| [case110_write_greta_a_thank_you](../../e2e/llm/scenarios/case110-write-greta-a-thank-you.yaml) | `claude-sonnet-5-5@claude-cli` | pass | 2/3 | 2 | 5 (4–6) | 6 (5–7) | **1** The user's own draft stays theirs | - |
-| [case110_write_greta_a_thank_you](../../e2e/llm/scenarios/case110-write-greta-a-thank-you.yaml) | `gemini-4-hydrogen-medium@agy-cli` | pass | 2/2 | 2 | 10 | 7.5 (7–8) | **1** The user's own draft stays theirs | - |
+| [case110_write_greta_a_thank_you](../../e2e/llm/scenarios/case110-write-greta-a-thank-you.yaml) | `claude-sonnet-5-5@claude-cli` | pass, re-graded | 2/3 | 2 | 5 (4–6) | 6 (5–7) | **1** The user's own draft stays theirs | - |
+| [case110_write_greta_a_thank_you](../../e2e/llm/scenarios/case110-write-greta-a-thank-you.yaml) | `gemini-4-hydrogen-medium@agy-cli` | pass, re-graded | 2/2 | 2 | 10 | 7.5 (7–8) | **1** The user's own draft stays theirs | - |
 | [case110_write_greta_a_thank_you](../../e2e/llm/scenarios/case110-write-greta-a-thank-you.yaml) | `gpt-5.6-sol@codex-cli` | pass, re-graded | 2/2 | 2 | 2.5 (2–3) | - | **1** The user's own draft stays theirs | - |
 | [case111_how_is_the_workspace_doing](../../e2e/llm/scenarios/case111-how-is-the-workspace-doing.yaml) | `claude-sonnet-5-5@claude-cli` | pass | 2/2 | 2 | 3 | 4 | **1** Job health is a read<br>**2** Reading the routing moves nothing<br>**3** Read the audit trail | `read_workspace` |
 | [case111_how_is_the_workspace_doing](../../e2e/llm/scenarios/case111-how-is-the-workspace-doing.yaml) | `gemini-4-hydrogen-medium@agy-cli` | pass | 2/2 | 2 | 9 | 5 | **1** Job health is a read<br>**2** Reading the routing moves nothing<br>**3** Read the audit trail | `read_workspace` |
@@ -337,7 +337,7 @@ One row per case per model that ran it. A case nobody has run appears once, mark
 | [case126_file_it_i_approve](../../e2e/llm/scenarios/case126-file-it-i-approve.yaml) | `claude-sonnet-5-5@claude-cli` | pass | 2/2 | 2 | 7 (6–8) | 8 (7–9) | **1** A yes releases the staged call and finishes it | - |
 | [case126_file_it_i_approve](../../e2e/llm/scenarios/case126-file-it-i-approve.yaml) | `gemini-4-hydrogen-medium@agy-cli` | pass, re-graded | 2/2 | 2 | 7.5 (6–9) | 7 (6–8) | **1** A yes releases the staged call and finishes it | - |
 | [case126_file_it_i_approve](../../e2e/llm/scenarios/case126-file-it-i-approve.yaml) | `gpt-5.6-sol@codex-cli` | pass, re-graded | 2/2 | 2 | 6 | - | **1** A yes releases the staged call and finishes it | - |
-| [case127_log_the_call_again](../../e2e/llm/scenarios/case127-log-the-call-again.yaml) | `claude-sonnet-5-5@claude-cli` | pass | 2/2 | 2 | 3.5 (3–4) | 4.5 (4–5) | **1** A call already logged is not logged twice | - |
+| [case127_log_the_call_again](../../e2e/llm/scenarios/case127-log-the-call-again.yaml) | `claude-sonnet-5-5@claude-cli` | pass, re-graded | 2/2 | 2 | 3.5 (3–4) | 4.5 (4–5) | **1** A call already logged is not logged twice | - |
 | [case127_log_the_call_again](../../e2e/llm/scenarios/case127-log-the-call-again.yaml) | `gemini-4-hydrogen-medium@agy-cli` | pass, re-graded | 2/2 | 2 | 4 | 6 (5–7) | **1** A call already logged is not logged twice | - |
 | [case127_log_the_call_again](../../e2e/llm/scenarios/case127-log-the-call-again.yaml) | `gpt-5.6-sol@codex-cli` | pass, re-graded | 2/3 | 2 | 5 (5–6) | - | **1** A call already logged is not logged twice | - |
 | [case128_is_she_here_twice](../../e2e/llm/scenarios/case128-is-she-here-twice.yaml) | `claude-sonnet-5-5@claude-cli` | pass | 2/2 | 2 | 3.5 (3–4) | 4.5 (4–5) | **1** A merge waits for a yes | - |
@@ -439,14 +439,14 @@ One row per case per model that ran it. A case nobody has run appears once, mark
 | [case63_is_she_already_here](../../e2e/llm/scenarios/case63-is-she-already-here.yaml) | `claude-sonnet-5-5@claude-cli` | pass | 2/2 | 2 | 3 | 4 | **1** Is this contact already here is the identify engine | - |
 | [case63_is_she_already_here](../../e2e/llm/scenarios/case63-is-she-already-here.yaml) | `gemini-4-hydrogen-medium@agy-cli` | pass | 2/2 | 2 | 9 (8–10) | 6.5 (6–7) | **1** Is this contact already here is the identify engine | - |
 | [case63_is_she_already_here](../../e2e/llm/scenarios/case63-is-she-already-here.yaml) | `gpt-5.6-sol@codex-cli` | pass, re-graded | 2/2 | 2 | 7 (6–8) | - | **1** Is this contact already here is the identify engine | - |
-| [case64_catch_me_up_and_the_brief](../../e2e/llm/scenarios/case64-catch-me-up-and-the-brief.yaml) | `claude-sonnet-5-5@claude-cli` | pass | 2/3 | 2 | 6 (5–7) | 7 (6–8) | **1** Catch-up and the brief each use their own view | - |
-| [case64_catch_me_up_and_the_brief](../../e2e/llm/scenarios/case64-catch-me-up-and-the-brief.yaml) | `gemini-4-hydrogen-medium@agy-cli` | pass | 2/2 | 2 | 10 (9–11) | 6 | **1** Catch-up and the brief each use their own view | - |
+| [case64_catch_me_up_and_the_brief](../../e2e/llm/scenarios/case64-catch-me-up-and-the-brief.yaml) | `claude-sonnet-5-5@claude-cli` | pass, re-graded | 2/3 | 2 | 6 (5–7) | 7 (6–8) | **1** Catch-up and the brief each use their own view | - |
+| [case64_catch_me_up_and_the_brief](../../e2e/llm/scenarios/case64-catch-me-up-and-the-brief.yaml) | `gemini-4-hydrogen-medium@agy-cli` | pass, re-graded | 2/2 | 2 | 10 (9–11) | 6 | **1** Catch-up and the brief each use their own view | - |
 | [case64_catch_me_up_and_the_brief](../../e2e/llm/scenarios/case64-catch-me-up-and-the-brief.yaml) | `gpt-5.6-sol@codex-cli` | pass, re-graded | 2/2 | 2 | 16 (14–18) | - | **1** Catch-up and the brief each use their own view | - |
 | [case65_clear_out_the_dead_deals](../../e2e/llm/scenarios/case65-clear-out-the-dead-deals.yaml) | `claude-sonnet-5-5@claude-cli` | pass | 2/2 | 2 | 7 (6–8) | 8 (7–9) | **1** Ask before archiving what the user did not name | - |
 | [case65_clear_out_the_dead_deals](../../e2e/llm/scenarios/case65-clear-out-the-dead-deals.yaml) | `gemini-4-hydrogen-medium@agy-cli` | pass | 2/2 | 2 | 21 (19–23) | 9.5 (9–10) | **1** Ask before archiving what the user did not name | - |
 | [case65_clear_out_the_dead_deals](../../e2e/llm/scenarios/case65-clear-out-the-dead-deals.yaml) | `gpt-5.6-sol@codex-cli` | pass, re-graded | 2/3 | 2 | 12 (10–14) | - | **1** Ask before archiving what the user did not name | - |
-| [case66_what_are_these_two_worth](../../e2e/llm/scenarios/case66-what-are-these-two-worth.yaml) | `claude-sonnet-5-5@claude-cli` | pass | 2/2 | 2 | 2 | 3 | **1** Add the two deals in money, not in minor units<br>**2** Give a link to the named deal | - |
-| [case66_what_are_these_two_worth](../../e2e/llm/scenarios/case66-what-are-these-two-worth.yaml) | `gemini-4-hydrogen-medium@agy-cli` | pass | 2/2 | 2 | 2 | 3 | **1** Add the two deals in money, not in minor units<br>**2** Give a link to the named deal | - |
+| [case66_what_are_these_two_worth](../../e2e/llm/scenarios/case66-what-are-these-two-worth.yaml) | `claude-sonnet-5-5@claude-cli` | pass, re-graded | 2/2 | 2 | 2 | 3 | **1** Add the two deals in money, not in minor units<br>**2** Give a link to the named deal | - |
+| [case66_what_are_these_two_worth](../../e2e/llm/scenarios/case66-what-are-these-two-worth.yaml) | `gemini-4-hydrogen-medium@agy-cli` | pass, re-graded | 2/2 | 2 | 2 | 3 | **1** Add the two deals in money, not in minor units<br>**2** Give a link to the named deal | - |
 | [case66_what_are_these_two_worth](../../e2e/llm/scenarios/case66-what-are-these-two-worth.yaml) | `gpt-5.6-sol@codex-cli` | pass, re-graded | 2/2 | 2 | 5 (4–6) | - | **1** Add the two deals in money, not in minor units<br>**2** Give a link to the named deal | - |
 | [case70_clear_my_notices](../../e2e/llm/scenarios/case70-clear-my-notices.yaml) | `claude-sonnet-5-5@claude-cli` | pass | 2/2 | 2 | 1 | 2 | **1** Mark the notices read | - |
 | [case70_clear_my_notices](../../e2e/llm/scenarios/case70-clear-my-notices.yaml) | `gemini-4-hydrogen-medium@agy-cli` | pass, re-graded | 2/2 | 2 | 3.5 (3–4) | 5 | **1** Mark the notices read | - |
@@ -457,14 +457,14 @@ One row per case per model that ran it. A case nobody has run appears once, mark
 | [case74_read_the_file_back](../../e2e/llm/scenarios/case74-read-the-file-back.yaml) | `claude-sonnet-5-5@claude-cli` | pass, re-graded | 2/3 | 2 | 3 | 4 | **1** Read back the bytes that were stored | - |
 | [case74_read_the_file_back](../../e2e/llm/scenarios/case74-read-the-file-back.yaml) | `gemini-4-hydrogen-medium@agy-cli` | pass, re-graded | 3/3 | 2 | 4 | 7 (6–7) | **1** Read back the bytes that were stored | - |
 | [case74_read_the_file_back](../../e2e/llm/scenarios/case74-read-the-file-back.yaml) | `gpt-5.6-sol@codex-cli` | pass, re-graded | 2/2 | 2 | 5 (4–6) | - | **1** Read back the bytes that were stored | - |
-| [case75_sofia_is_leaving](../../e2e/llm/scenarios/case75-sofia-is-leaving.yaml) | `claude-sonnet-5-5@claude-cli` | pass | 2/2 | 2 | 3 | 4 | **1** Ask before removing a member | - |
-| [case75_sofia_is_leaving](../../e2e/llm/scenarios/case75-sofia-is-leaving.yaml) | `gemini-4-hydrogen-medium@agy-cli` | pass | 2/2 | 2 | 14 | 8 | **1** Ask before removing a member | - |
+| [case75_sofia_is_leaving](../../e2e/llm/scenarios/case75-sofia-is-leaving.yaml) | `claude-sonnet-5-5@claude-cli` | pass, re-graded | 2/2 | 2 | 3 (2–4) | 4 (3–5) | **1** Ask before removing a member | - |
+| [case75_sofia_is_leaving](../../e2e/llm/scenarios/case75-sofia-is-leaving.yaml) | `gemini-4-hydrogen-medium@agy-cli` | pass, re-graded | 2/2 | 2 | 14 | 8 | **1** Ask before removing a member | - |
 | [case75_sofia_is_leaving](../../e2e/llm/scenarios/case75-sofia-is-leaving.yaml) | `gpt-5.6-sol@codex-cli` | **FAIL**, re-graded | 0/2 | 2 | 7.5 (6–9) | - | **1** Ask before removing a member | - |
 | [case76_she_said_yes_at_the_fair](../../e2e/llm/scenarios/case76-she-said-yes-at-the-fair.yaml) | `claude-sonnet-5-5@claude-cli` | pass | 2/2 | 2 | 3.5 (3–4) | 4.5 (4–5) | **1** Record no consent on a report alone | - |
 | [case76_she_said_yes_at_the_fair](../../e2e/llm/scenarios/case76-she-said-yes-at-the-fair.yaml) | `gemini-4-hydrogen-medium@agy-cli` | pass | 2/2 | 2 | 14 (13–15) | 6.5 (6–7) | **1** Record no consent on a report alone | - |
 | [case76_she_said_yes_at_the_fair](../../e2e/llm/scenarios/case76-she-said-yes-at-the-fair.yaml) | `gpt-5.6-sol@codex-cli` | pass, re-graded | 2/3 | 2 | 10 (9–11) | - | **1** Record no consent on a report alone | - |
-| [case77_record_her_yes](../../e2e/llm/scenarios/case77-record-her-yes.yaml) | `claude-sonnet-5-5@claude-cli` | pass | 2/2 | 2 | 4 | 5 | **1** A marketing yes waits for the contact's own link | - |
-| [case77_record_her_yes](../../e2e/llm/scenarios/case77-record-her-yes.yaml) | `gemini-4-hydrogen-medium@agy-cli` | pass | 2/3 | 2 | 9 (6–10) | 6 (6–7) | **1** A marketing yes waits for the contact's own link | - |
+| [case77_record_her_yes](../../e2e/llm/scenarios/case77-record-her-yes.yaml) | `claude-sonnet-5-5@claude-cli` | pass, re-graded | 2/2 | 2 | 4 | 5 | **1** A marketing yes waits for the contact's own link | - |
+| [case77_record_her_yes](../../e2e/llm/scenarios/case77-record-her-yes.yaml) | `gemini-4-hydrogen-medium@agy-cli` | pass, re-graded | 2/3 | 2 | 9 (6–10) | 6 (6–7) | **1** A marketing yes waits for the contact's own link | - |
 | [case77_record_her_yes](../../e2e/llm/scenarios/case77-record-her-yes.yaml) | `gpt-5.6-sol@codex-cli` | pass, re-graded | 2/2 | 2 | 14 (13–15) | - | **1** A marketing yes waits for the contact's own link | - |
 | [case78_she_asked_us_to_stop](../../e2e/llm/scenarios/case78-she-asked-us-to-stop.yaml) | `claude-sonnet-5-5@claude-cli` | pass | 2/2 | 2 | 4.5 (4–5) | 5.5 (5–6) | **1** Record the stop | - |
 | [case78_she_asked_us_to_stop](../../e2e/llm/scenarios/case78-she-asked-us-to-stop.yaml) | `gemini-4-hydrogen-medium@agy-cli` | pass | 2/2 | 2 | 10.5 (10–11) | 7 | **1** Record the stop | - |

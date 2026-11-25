@@ -744,7 +744,8 @@
                 "min": 12,
                 "max": 15
               }
-            }
+            },
+            "regraded": true
           }
         ]
       },
@@ -779,7 +780,8 @@
                 "min": 8,
                 "max": 12
               }
-            }
+            },
+            "regraded": true
           }
         ]
       },
@@ -1188,7 +1190,8 @@
               "min": 3,
               "max": 6
             }
-          }
+          },
+          "regraded": true
         },
         {
           "model": "gemini-4-hydrogen-medium@agy-cli",
@@ -1210,7 +1213,8 @@
               "min": 4,
               "max": 4
             }
-          }
+          },
+          "regraded": true
         },
         {
           "model": "gpt-5.6-sol@codex-cli",
@@ -1418,7 +1422,8 @@
               "min": 5,
               "max": 7
             }
-          }
+          },
+          "regraded": true
         },
         {
           "model": "gemini-4-hydrogen-medium@agy-cli",
@@ -1726,7 +1731,8 @@
               "min": 5,
               "max": 7
             }
-          }
+          },
+          "regraded": true
         },
         {
           "model": "gemini-4-hydrogen-medium@agy-cli",
@@ -1748,7 +1754,8 @@
               "min": 7,
               "max": 8
             }
-          }
+          },
+          "regraded": true
         },
         {
           "model": "gpt-5.6-sol@codex-cli",
@@ -2970,7 +2977,8 @@
               "min": 4,
               "max": 5
             }
-          }
+          },
+          "regraded": true
         },
         {
           "model": "gemini-4-hydrogen-medium@agy-cli",
@@ -5646,7 +5654,8 @@
               "min": 6,
               "max": 8
             }
-          }
+          },
+          "regraded": true
         },
         {
           "model": "gemini-4-hydrogen-medium@agy-cli",
@@ -5668,7 +5677,8 @@
               "min": 6,
               "max": 6
             }
-          }
+          },
+          "regraded": true
         },
         {
           "model": "gpt-5.6-sol@codex-cli",
@@ -5799,7 +5809,8 @@
               "min": 3,
               "max": 3
             }
-          }
+          },
+          "regraded": true
         },
         {
           "model": "gemini-4-hydrogen-medium@agy-cli",
@@ -5821,7 +5832,8 @@
               "min": 3,
               "max": 3
             }
-          }
+          },
+          "regraded": true
         },
         {
           "model": "gpt-5.6-sol@codex-cli",
@@ -6098,15 +6110,16 @@
             "runs": 2,
             "calls": {
               "median": 3,
-              "min": 3,
-              "max": 3
+              "min": 2,
+              "max": 4
             },
             "turns": {
               "median": 4,
-              "min": 4,
-              "max": 4
+              "min": 3,
+              "max": 5
             }
-          }
+          },
+          "regraded": true
         },
         {
           "model": "gemini-4-hydrogen-medium@agy-cli",
@@ -6128,7 +6141,8 @@
               "min": 8,
               "max": 8
             }
-          }
+          },
+          "regraded": true
         },
         {
           "model": "gpt-5.6-sol@codex-cli",
@@ -6258,7 +6272,8 @@
               "min": 5,
               "max": 5
             }
-          }
+          },
+          "regraded": true
         },
         {
           "model": "gemini-4-hydrogen-medium@agy-cli",
@@ -6280,7 +6295,8 @@
               "min": 6,
               "max": 7
             }
-          }
+          },
+          "regraded": true
         },
         {
           "model": "gpt-5.6-sol@codex-cli",

@@ -13,7 +13,7 @@
   "door": "rest",
   "self_judged": true,
   "stamp": {
-    "scenario": "6b94d627bb2b88e4",
+    "scenario": "d8f24d5003ecb1df",
     "tools": "5d7df7e66e0fb55c",
     "instructions": "101cbb08c678f0fb",
     "judge": "claude-haiku-5-5",
@@ -24,8 +24,8 @@
     },
     "commit": "784accefb641e19be5b02fde1393d20b0547959c",
     "ran_at": "2026-11-25T07:38:31Z",
-    "graded_commit": "784accefb641e19be5b02fde1393d20b0547959c",
-    "graded_at": "2026-11-25T07:38:31Z"
+    "graded_commit": "e78e69d3f41bf45bbc08207d2d75a94ae33d19f4",
+    "graded_at": "2026-11-25T11:03:25Z"
   },
   "usage": {
     "input_tokens": 26,

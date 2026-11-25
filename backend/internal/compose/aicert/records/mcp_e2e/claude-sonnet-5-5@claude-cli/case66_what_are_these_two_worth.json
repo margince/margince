@@ -11,21 +11,22 @@
   "effort": "thinking off",
   "system_prompt": "cli-default",
   "search": "semantic",
+  "door": "mcp",
   "self_judged": true,
   "stamp": {
-    "scenario": "79f1541a041b8e4d",
+    "scenario": "7b145646516d72e3",
     "tools": "61c549e589737e6e",
     "instructions": "4eab26d5fff0793f",
     "judge": "claude-haiku-5-5",
     "harness": "ae24b6799c8461d2",
     "parsers": {
-      "gemini:cli": "1796d51361de08d5",
+      "gemini:cli": "fa1db64bc14e971b",
       "gpt:cli": "d48ca27c983f8b3f"
     },
     "commit": "85f521b0a8e383753f3d1cf2b46147ada28d8757",
     "ran_at": "2026-11-25T06:03:26Z",
-    "graded_commit": "85f521b0a8e383753f3d1cf2b46147ada28d8757",
-    "graded_at": "2026-11-25T06:03:26Z"
+    "graded_commit": "e78e69d3f41bf45bbc08207d2d75a94ae33d19f4",
+    "graded_at": "2026-11-25T11:02:08Z"
   },
   "usage": {
     "input_tokens": 8,
