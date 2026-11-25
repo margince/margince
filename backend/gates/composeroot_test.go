@@ -41,7 +41,9 @@ const (
 	// Raised by 1 for the removed-unit list cases, which drive the unexported
 	// Live List check and list export over a kind no unit declares. Raised by 1
 	// test file for the data reset cases of an event the sweep orphaned.
-	composeRootTestFiles = 1913
+	// Raised by 1 test file for the unit tool coverage cases, which read the
+	// unexported tool coverage census.
+	composeRootTestFiles = 1914
 	// Raised by 107 for the floor of a figure every reader is shown alike. Raised
 	// by 1 for the import that binds one zone lookup to each attention read.
 	// Raised by 249 production and 62 test lines for the full-path certification
