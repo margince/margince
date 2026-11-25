@@ -45,9 +45,9 @@ const (
 	// the unit tool coverage cases, which read the unexported tool coverage census.
 	// Raised by 1 production file for agentfor.go, the one seam that binds the
 	// product acting for a named colleague, split out of the deal-owner seam.
-	// Raised by 2 test files for that seam's id check and for the finance card
-	// and company page withholding the same billing contacts, which drives the
-	// unexported finance billing adapter.
+	// Raised by 2 test files for that seam's id check and for the billing case.
+	// That case drives the unexported finance billing adapter, so the finance
+	// card and the company page withhold the same billing contacts.
 	composeRootTestFiles = 1921
 	// Raised by 107 for the floor of a figure every reader is shown alike. Raised
 	// by 1 for the import that binds one zone lookup to each attention read.
