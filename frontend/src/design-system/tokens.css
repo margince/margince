@@ -46,9 +46,9 @@
   /* Level 1, a pane on the page ground, and a hairline for its edge. */
   --pane: #fcfffe;
   --paneEdge: #d8e2de;
-  /* The faces a control and a field draw for themselves, at any depth. Copies
-   * of --bgElevated and --pane today, not aliases: a rung moves with the
-   * nesting ladder, and a control face must not follow it. --textInverse is
+  /* The faces a control and a field draw for themselves, at any depth. Values
+   * of their own, not aliases of a rung: a rung moves with the nesting ladder,
+   * and a control face must not follow it. --textInverse is
    * the ink on a --textPrimary fill. tokens.test.ts holds their contrast. */
   --bgField: #fbfcfb;
   --bgControl: #fcfffe;
@@ -61,7 +61,7 @@
   --ladder3: #f1f3f3;
   --ladder4: #e3e7e8;
   --ladder1Edge: var(--paneEdge);
-  --ladder2Edge: #e3e7e8;
+  --ladder2Edge: #f1f3f3;
   --ladder3Edge: #d0d6d8;
   --ladder4Edge: #b6bfc1;
 
@@ -290,7 +290,7 @@
   --discoveryBorder: #d8a0f7;
 
   /* A notice card's ground and the borders on it, per callout tone. Mixed into
-   * the opaque --bgElevated: over a translucent pane the wash would shift. */
+   * the opaque --bgElevated, so the wash reads the same on any pane. */
   --bgNoticeInfo: color-mix(in oklab, var(--info) 12%, var(--bgElevated));
   --borderNoticeInfo: color-mix(in oklab, var(--info) 30%, var(--bgElevated));
   --bgNoticeSuccess: color-mix(in oklab, var(--success) 12%, var(--bgElevated));
@@ -348,9 +348,7 @@
   /* ===== Corners =====
    * One ladder, in fours: 4 / 8, and the pill. Every corner in the tree reads
    * one of these. A raw px radius is a value nobody chose, which is how the
-   * tree came to answer 3, 5, 6, 9, 10, 11 and 28px at once. The squircle block
-   * at the foot of this file doubles the ladder under `corner-shape`, so a
-   * value here also decides what a smooth corner measures. */
+   * tree came to answer 3, 5, 6, 9, 10, 11 and 28px at once. */
   --r-xs: 4px;
   --r-sm: 8px;
   /* A control, a card and a pane round alike, at every width: a box that
@@ -493,6 +491,9 @@
      to read across. */
   --drawerWindowWidth: 1440px;
   --dialogFullWidth: 1240px;
+  /* The content card's inset from the glass's trailing and bottom edges
+     (app/shell.css); a drawer floats at the same gap, so their edges line up. */
+  --cardInset: var(--space-2);
   /* The docked window (DockedWindow): its own size beside the page, and the
      grown one. The glass less a gutter bounds both. */
   --dockWidth: 560px;
@@ -533,7 +534,10 @@
    *                 above the bare card because the band makes it the wider
    *                 surface of the two
    *   --gapActions  between two buttons that sit side by side
-   *   --gapPanes    between two page panes (.page-pane)
+   *   --pageGutter  the page's own inset: the strip, the heading, the
+   *                 screen's block and the phone bar all stand on it
+   *   --gapPanes    between page columns side by side: the page's gutter,
+   *                 so they line up with the scroller's inset
    *   --padPane     inside a page pane that pads itself
    * A screen is held to these in the contexts that HAVE one
    * (check-ds-spacing-roles.sh); everywhere else the raw rung is still the
@@ -542,7 +546,8 @@
   --padCard: var(--space-4);
   --padPanel: var(--space-5);
   --gapActions: var(--space-2);
-  --gapPanes: var(--space-6);
+  --pageGutter: var(--space-5);
+  --gapPanes: var(--pageGutter);
   --padPane: var(--space-5);
 
   /* How far the agent's cell rises above the top edge of the phone bar. The bar
@@ -617,6 +622,13 @@
     var(--fontWeightRegular) 0.75rem / 1rem var(--fontFamilyBody);
   /* The gap between two blocks of S prose. */
   --paragraphSpacingSmall: 0.5rem;
+  /* A key cap's legend (`Kbd`), under Body S: a cap sits beside words and is
+     not read as one of them. */
+  --fontKeycap: var(--fontWeightMedium) 0.625rem / 1rem var(--fontFamilyBody);
+  /* The line under an installation's name in the rail head, set solid so the
+     name and this line fit the top bar's band. */
+  --fontAttribution:
+    var(--fontWeightRegular) 0.625rem / 1 var(--fontFamilyBody);
 
   /* Heading sizes, chosen by the CONTEXT a heading sits in. The level an
      `<h1>`–`<h6>` carries is structure and is chosen separately — README's
@@ -798,6 +810,10 @@
    panes pay it twice. The width is PHONE_MAX_WIDTH in lib/viewport.ts. */
 @media (max-width: 700px) {
   :root {
+    /* The phone's ground is the card's white, so a pane on it takes the edge
+       a pane on the desktop card takes. */
+    --ladder1Edge: var(--ladder2Edge);
+    --pageGutter: var(--space-3);
     --padCard: var(--space-3);
     --padPane: var(--space-3);
     --padPanel: var(--space-3);
@@ -806,36 +822,37 @@
 
 /* Dark palette. --bgInkField is absent: it is one dark plate in both themes. */
 [data-theme="dark"] {
-  --bgPage: #0c1311;
-  --bgElevated: #161d1a;
-  --bgInset: #1a211e;
+  --bgPage: #111816;
+  --bgElevated: #19211f;
+  --bgInset: #252c2a;
   --bgChip: rgba(239, 247, 244, 0.09);
-  --segmentPressed: #3d4441;
-  --bgHover: #172823;
-  --bgStrip: #0a1713;
-  --hoverShade: #1a493b;
+  --segmentPressed: #414a48;
+  --bgHover: #263531;
+  --bgStrip: #131a19;
+  --hoverShade: #41685e;
   --hoverShare: 25%;
-  --stripShade: #02130e;
+  --stripShade: #0c1313;
   --stripShare: 60%;
   /* Under --bgElevated, the way the light well sits under its surface: a
      recess goes away from the lifted ground in both themes. */
-  --bgWell: #111815;
-  --pane: rgba(239, 247, 244, 0.045);
-  --paneEdge: rgba(239, 247, 244, 0.09);
-  --bgField: #161d1a;
+  --bgWell: #161d1b;
+  --pane: #1d2422;
+  --paneEdge: #2f3835;
+  --bgField: #161d1b;
+  /* A light wash, so a control face lifts off whatever ground it lands on. */
   --bgControl: rgba(239, 247, 244, 0.045);
-  --textInverse: #161d1a;
-  /* Each level lifts toward the light on its light rung's hue, and each edge
-     keeps its light contrast. Level 4 stops where a state chip still clears AA. */
-  --ladder1Solid: #161d1b;
-  --ladder2: #1c2020;
-  --ladder3: #1f2323;
-  --ladder4: #212628;
-  --ladder2Edge: #292f30;
-  --ladder3Edge: #31383a;
-  --ladder4Edge: #3b4345;
+  --textInverse: #19211f;
+  /* Every ground is opaque and faintly brand-tinted, level 1 too, so a sticky
+     cell on --ground matches its row. Level 4 stops where a state ink clears AA. */
+  --ladder1Solid: #1d2422;
+  --ladder2: #212927;
+  --ladder3: #282f2d;
+  --ladder4: #2f3735;
+  --ladder2Edge: #29312f;
+  --ladder3Edge: #3c4644;
+  --ladder4Edge: #4a5552;
 
-  --accent: #16a34a;
+  --accent: #48a58f;
   /* --textOnAccent stays light in dark mode: it is the shared ink for every
      fill that ISN'T --accent and doesn't lighten here (a toast on
      --bgInkField, the AI FAB on --ai, the voice orb over the Core's own glass,
@@ -845,19 +862,19 @@
      it flips here for the same reason --textOnAccentControl does — see its
      declaration below. */
   /* Lighter than --accent, so it reads on --accentLight over each dark ground. */
-  --accentText: #4ade80;
-  --accentLight: rgba(22, 163, 74, 0.16);
-  --accentMed: rgba(22, 163, 74, 0.28);
+  --accentText: #6dc8b1;
+  --accentLight: rgba(72, 165, 143, 0.18);
+  --accentMed: rgba(72, 165, 143, 0.3);
   /* Dark ink: white fails AA on the lifted dark-theme accent. Not --textOnAccent,
      which still inks fills that stay dark here (--bgInkField, --ai). */
-  --textOnAccentControl: #06130b;
+  --textOnAccentControl: #062d26;
   /* The same flip, one theme later: a filled state control's ground is the
      tone's *Text token, and a Text red is DEEP in light and BRIGHT here — a
      near-black pane barely has to move a hue before it reads on it. So the ink
      that clears AA on that ground inverts with the theme rather than staying
-     put. Near-black gives 5.69:1 on --infoText, 7.57:1 on --successText,
-     9.37:1 on --warningText, 5.63:1 on --dangerText and 5.78:1 on
-     --discoveryText; white would give 3.08:1 on the red. */
+     put. Near-black gives 6.89:1 on --infoText, 8.88:1 on --successText,
+     9.37:1 on --warningText, 6.86:1 on --dangerText and 7.04:1 on
+     --discoveryText; white would give 2.42:1 on the red. */
   --textOnStatusControl: #04240f;
   /* Dark: a deeper, muted ground and a pale ink of the same hue. */
   --avatarGroundL: 0.32;
@@ -869,14 +886,13 @@
   --avatarInkL: 0.9;
   --avatarInkC: 0.045;
 
-  --textPrimary: #edf6f4;
-  --textSecondary: #9aa8a3;
+  --textPrimary: #e1e8e6;
+  --textSecondary: #adb9b6;
 
-  --borderSubtle: #22352e;
-  --borderStrong: #31463d;
-  /* 3.45:1 on --bgElevated, 3.79:1 on --bgPage — the dark counterpart of the
-     control boundary, held to the same 1.4.11 floor. */
-  --borderControl: #5f7a6e;
+  --borderSubtle: #2f3937;
+  --borderStrong: #3f4b48;
+  /* The 1.4.11 floor of 3:1 on every ground and on --bgControl over it. */
+  --borderControl: #7c8c88;
 
   /* Themed, because a 5% black is invisible on a near-black page: any surface
      whose face depends on this simply loses its top side in dark. Only the INK
@@ -890,19 +906,18 @@
      ink is lighter than this one, so the dark theme dims with black. */
   --overlayScrim: rgba(0, 0, 0, 0.55);
 
-  /* Lifted teal mark: the light --tealText (#0e7490) is dark-on-dark over a
+  /* Lifted teal mark: the light --tealText (#0d6882) is dark-on-dark over a
    * dark card, below AA — brighten it for dark. --teal is unthemed. */
-  --tealText: #5cb6cf;
+  --tealText: #66c0d9;
 
-  --aiText: #9ba0f0;
+  --aiText: #a7adfe;
 
-  /* The five states on a dark ground. Information and success keep their light
-   * base — a hue that reads on both papers needs no second value — while
-   * warning, danger and discovery step to one this ground can carry: the light
+  /* The five states on a dark ground. Information keeps its light base, a hue
+   * that reads on both papers; success steps yellower, apart from the teal.
+   * Warning, danger and discovery step to one this ground can carry. The light
    * amber and red go shrill against near-black, and the light violet
-   * disappears into it. All five bases are STATED here even where the value is
-   * unchanged, so a call site reads the role and never has to know which of
-   * them a theme leaves where it was.
+   * disappears into it. All five bases are STATED here, so a call site reads
+   * the role and never has to know which of them a theme moves.
    *
    * The Text tokens walk the other way from light: UP in lightness until the
    * hue clears 4.5:1 on every dark ground and on its own tint. Success and
@@ -917,17 +932,17 @@
    * hexes in light because the design source gives that ramp and are ordinary
    * derivations of the dark base here. */
   --info: #0485f7;
-  --infoText: #3d99ff;
-  --success: #17c964;
+  --infoText: #62aaff;
+  --success: #51d75e;
   --successText: var(--success);
   --warning: #f7b750;
   --warningText: var(--warning);
   --danger: #db3b3e;
-  --dangerText: #ff615e;
+  --dangerText: #ff817a;
   --dangerBg: color-mix(in srgb, var(--danger) 16%, transparent);
   --dangerSurface: color-mix(in srgb, var(--danger) 16%, var(--bgElevated));
   --discovery: #b76be3;
-  --discoveryText: #c478f1;
+  --discoveryText: #d38bff;
   --discoverySurface: color-mix(
     in srgb,
     var(--discovery) 12%,
@@ -975,41 +990,41 @@
  */
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
-    --bgPage: #0c1311;
-    --bgElevated: #161d1a;
-    --bgInset: #1a211e;
+    --bgPage: #111816;
+    --bgElevated: #19211f;
+    --bgInset: #252c2a;
     --bgChip: rgba(239, 247, 244, 0.09);
-    --segmentPressed: #3d4441;
-    --bgHover: #172823;
-    --bgStrip: #0a1713;
-    --hoverShade: #1a493b;
+    --segmentPressed: #414a48;
+    --bgHover: #263531;
+    --bgStrip: #131a19;
+    --hoverShade: #41685e;
     --hoverShare: 25%;
-    --stripShade: #02130e;
+    --stripShade: #0c1313;
     --stripShare: 60%;
     /* Under --bgElevated, the way the light well sits under its surface: a
        recess goes away from the lifted ground in both themes. */
-    --bgWell: #111815;
-    --pane: rgba(239, 247, 244, 0.045);
-    --paneEdge: rgba(239, 247, 244, 0.09);
-    --bgField: #161d1a;
+    --bgWell: #161d1b;
+    --pane: #1d2422;
+    --paneEdge: #2f3835;
+    --bgField: #161d1b;
     --bgControl: rgba(239, 247, 244, 0.045);
-    --textInverse: #161d1a;
-    --ladder1Solid: #161d1b;
-    --ladder2: #1c2020;
-    --ladder3: #1f2323;
-    --ladder4: #212628;
-    --ladder2Edge: #292f30;
-    --ladder3Edge: #31383a;
-    --ladder4Edge: #3b4345;
+    --textInverse: #19211f;
+    --ladder1Solid: #1d2422;
+    --ladder2: #212927;
+    --ladder3: #282f2d;
+    --ladder4: #2f3735;
+    --ladder2Edge: #29312f;
+    --ladder3Edge: #3c4644;
+    --ladder4Edge: #4a5552;
 
-    --accent: #16a34a;
+    --accent: #48a58f;
 
-    --accentText: #4ade80;
+    --accentText: #6dc8b1;
 
-    --accentLight: rgba(22, 163, 74, 0.16);
-    --accentMed: rgba(22, 163, 74, 0.28);
+    --accentLight: rgba(72, 165, 143, 0.18);
+    --accentMed: rgba(72, 165, 143, 0.3);
 
-    --textOnAccentControl: #06130b;
+    --textOnAccentControl: #062d26;
     --textOnStatusControl: #04240f;
 
     --avatarGroundL: 0.32;
@@ -1021,35 +1036,35 @@
     --avatarInkL: 0.9;
     --avatarInkC: 0.045;
 
-    --textPrimary: #edf6f4;
-    --textSecondary: #9aa8a3;
+    --textPrimary: #e1e8e6;
+    --textSecondary: #adb9b6;
 
-    --borderSubtle: #22352e;
-    --borderStrong: #31463d;
+    --borderSubtle: #2f3937;
+    --borderStrong: #3f4b48;
 
-    --borderControl: #5f7a6e;
+    --borderControl: #7c8c88;
 
     --shadow-rest: 0 1px 2px 0 rgb(0 0 0 / 0.4);
     --shadow-well: inset 0 1px 2px 0 rgb(0 0 0 / 0.4);
     --shadow-pop: 0 8px 30px rgba(0, 0, 0, 0.55);
     --overlayScrim: rgba(0, 0, 0, 0.55);
 
-    --tealText: #5cb6cf;
+    --tealText: #66c0d9;
 
-    --aiText: #9ba0f0;
+    --aiText: #a7adfe;
 
     --info: #0485f7;
-    --infoText: #3d99ff;
-    --success: #17c964;
+    --infoText: #62aaff;
+    --success: #51d75e;
     --successText: var(--success);
     --warning: #f7b750;
     --warningText: var(--warning);
     --danger: #db3b3e;
-    --dangerText: #ff615e;
+    --dangerText: #ff817a;
     --dangerBg: color-mix(in srgb, var(--danger) 16%, transparent);
     --dangerSurface: color-mix(in srgb, var(--danger) 16%, var(--bgElevated));
     --discovery: #b76be3;
-    --discoveryText: #c478f1;
+    --discoveryText: #d38bff;
     --discoverySurface: color-mix(
       in srgb,
       var(--discovery) 12%,
@@ -1065,47 +1080,6 @@
     --tagViolet: #a78bfa;
     --tagLime: #a3e635;
     --tagOrange: #fb923c;
-  }
-}
-
-/* ===== Smooth corners =====
- *
- * `corner-shape: squircle` draws a superellipse instead of a quarter-circle:
- * the same corner without the two points where a circular arc meets the
- * straight edge. Where an engine has it (CSS Borders and Box Decorations L4),
- * every box in the tree takes it — declared once, here, rather than at each of
- * the several hundred call sites that would each have to remember.
- *
- * The ladder DOUBLES inside the query. A superellipse of radius R reads about
- * as round as a circular corner of R/2, so a corner that kept its number would
- * visibly tighten the day a browser shipped the property. Doubling is what
- * keeps the change to the corner's quality rather than its size.
- *
- * `:where(*)` carries zero specificity on purpose: a pill, a circle or any
- * other genuinely round thing cancels it with a plain `corner-shape: round`
- * beside its own `border-radius`, wherever that rule happens to sit. A
- * superellipse at --r-full is a lozenge and at 50% a squircle tile, and neither
- * is what an avatar or a status pill means. --r-full is therefore NOT doubled:
- * it is already larger than any box it lands on.
- *
- * The generated boxes are listed BESIDE the universal selector, because `*`
- * matches elements and not pseudo-elements — while the doubled tokens reach
- * them anyway, since a custom property inherits and `corner-shape` does not.
- * Left off the list, `::before` and `::after` would keep the initial round
- * shape and draw a corner at twice the radius its author asked for: a dot, a
- * notch or a drawn separator visibly rounder than the box it belongs to. The
- * pseudo-elements a stylesheet in this tree gives a corner to are held against
- * this list by `census/rules/corners.census.ts`, so a new one cannot arrive unlisted. */
-@supports (corner-shape: squircle) {
-  :root {
-    --r-xs: 8px;
-    --r-sm: 16px;
-  }
-  :where(*),
-  :where(*)::before,
-  :where(*)::after,
-  :where(*)::backdrop {
-    corner-shape: squircle;
   }
 }
 

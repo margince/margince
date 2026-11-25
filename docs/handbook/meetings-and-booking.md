@@ -1,5 +1,5 @@
 <!-- prose:plain -->
-<!-- describes: frontend/src/features/booking backend/internal/modules/activities/scheduling_occupancy.go backend/internal/modules/activities/scheduling_invitation.go backend/internal/modules/activities/scheduling_reminder.go backend/internal/modules/activities/scheduling_proposal.go backend/internal/modules/activities/scheduling_public.go backend/internal/modules/activities/scheduling_preview.go backend/internal/compose/publicbookingpreview.go backend/internal/modules/activities/scheduling_alias.go backend/internal/modules/activities/scheduling_used.go backend/internal/modules/activities/meetingmove.go backend/internal/modules/activities/meetingcancel.go backend/internal/modules/activities/meetingoutcomestart.go frontend/src/components/meetingoutcome.tsx frontend/src/components/recordmeetings.tsx -->
+<!-- describes: frontend/src/features/booking backend/internal/modules/activities/scheduling_occupancy.go backend/internal/modules/activities/scheduling_invitation.go backend/internal/modules/activities/scheduling_reminder.go backend/internal/modules/activities/scheduling_proposal.go backend/internal/modules/activities/scheduling_public.go backend/internal/modules/activities/scheduling_preview.go backend/internal/compose/publicbookingpreview.go backend/internal/modules/activities/scheduling_alias.go backend/internal/modules/activities/scheduling_used.go backend/internal/modules/activities/scheduling_teamlinks.go backend/internal/modules/activities/meetingmove.go backend/internal/modules/activities/meetingcancel.go backend/internal/modules/activities/meetingoutcomestart.go frontend/src/components/meetingoutcome.tsx frontend/src/components/recordmeetings.tsx -->
 # Meetings and booking
 
 Meetings and booking in Margince covers how a contact books time with you, and what happens to the invitation after that. You set your hours, calendars and booking link in **Settings → Meetings**; see [Your own settings](your-own-settings.md#meetings) for that set-up.
@@ -65,6 +65,8 @@ A meeting with a Margince invitation takes only **It happened** or **No-show**, 
 A held meeting shows **Add notes** on the timeline and the **Meetings** tab, or **Edit notes** when it has some.
 Write the notes the next day if you need to, then press **Log**. Anyone who may change the meeting can do this.
 A meeting with a Margince invitation does not offer them.
+
+A meeting whose subject only arranges how you get somewhere, such as "Airport drop-off" or "Flug nach Hamburg", does not ask for an outcome. It still asks when it is on a deal, lead or project.
 
 A colleague's meeting that you were in but cannot change shows as **No outcome yet for** the meeting. Its host records the outcome. Press **Done** to take it off your list.
 Also called: mark a meeting held, meeting outcome, no-show, meeting happened.
@@ -133,25 +135,31 @@ When you change or remove your short address, the old one stops working at once.
 
 ### How do I offer times when several colleagues are free?
 <!-- opens: settings/meetings -->
-To offer only times when you and your colleagues are all free in Margince, open Settings → **Meetings** and use **Colleagues on this link**.
-1. Under **Add a colleague**, choose a colleague. Only colleagues with a connected calendar are offered. You can name up to five.
-2. Each colleague sees your link under **Colleagues' links that name you** in their own **Meetings** settings, and chooses **Confirm**.
-3. Once all have confirmed, guests see only the times when all of you are free.
+To offer only times when you and your colleagues are all free in Margince, open Settings → **Meetings** and make a team link under **Team links**.
+1. Under **New team link with**, choose a colleague. Only colleagues with a connected calendar are offered. The new link gets its own address.
+   Its name, such as "Meet Ada and Grace", is the meeting title guests see.
+2. To name more colleagues, use **Add a colleague** on that link. You can name up to five on one link.
+3. Each colleague gets a notice in the app and an email. Both say who named them on which team link, and open their own **Meetings** settings. There they see your link under **Colleagues' links that name you**, and choose **Confirm**. The email follows their setting for **Approvals waiting on you**.
+4. Once all have confirmed, the team link shows **Takes bookings**. Choose **Copy link** on it to share it.
 Also called: team booking link, group booking link, shared free time.
+
+Your personal booking link stays as it is: it always offers only your own free times. You can keep several team links beside it, each with its own colleagues and address. A team link uses the calendar and the booking settings of your personal link. That includes how long a meeting takes and the notice it needs.
 
 Each time must fall in the working hours of every colleague, read in that colleague's own time zone.
 
-A booking lands as one meeting in your calendar, and every colleague is invited to it. Margince checks each colleague's calendar again when the guest books. A time a colleague filled since the guest opened the page is refused, and the guest picks another. A time booked through your link also counts as taken on each colleague's own booking page. Guests never see a colleague's calendar names, event titles or other guests.
+A booking lands as one meeting in your calendar, and every colleague is invited to it. Margince checks each colleague's calendar again when the guest books. A time a colleague filled since the guest opened the page is refused, and the guest picks another. A time booked through your team link also counts as taken on each colleague's own booking page. Nothing else about a colleague's own link changes. Guests never see a colleague's calendar names, event titles or other guests.
 
-The link takes bookings only while every colleague on it is ready. A ready colleague has confirmed, is still on the link and in the workspace, and has a calendar Margince can read. Each colleague's row shows where they stand.
+A team link takes bookings only while every colleague on it is ready. A ready colleague has confirmed, is still on the link and in the workspace, and has a calendar Margince can read. Each colleague's row shows where they stand.
 
-A colleague can choose **Leave** at any time. Remove them from the list to take bookings again.
+Only you change your team link. A colleague on it can choose **Leave** at any time. Remove them from the list to take bookings again. **Delete link** stops the team link's address. Meetings already booked through it stay, and your personal link does not change.
 
 ## What your guest sees
 
 The Margince booking page shows your name from **Settings → Account**, and the name and logo of the company you work for. An Admin sets that company under **Legal entities**. Unless an Admin sets one, that is your company profile. A company with no logo shows its name only. When new meetings get a video call, it names the video app: Google Meet or Microsoft Teams. Guests never see which calendar provider you use, your calendar names, or other guests.
 
-Your booking link has the form `https://<your Margince address>/book/<code>`. With a short address it is `/book/<your short address>`, and the long form still works. A short address works in capital or small letters. A link in the old form, with `/#/book/` in it, still opens the same page. The page and the guest's own meeting page do not promote Margince. The browser tab names you: "Book a meeting with" and your name.
+Your booking link has the form `https://<your Margince address>/book/<code>`. With a short address it is `/book/<your short address>`, and the long form still works. A short address works in capital or small letters. A link in the old form, with `/#/book/` in it, still opens the same page.
+
+The page and the guest's own meeting page do not promote Margince. The browser tab names you: "Book a meeting with" and your name. The tab shows the company logo when there is one.
 
 When you paste the link into chat or email, the preview card shows your name and the company name. It also shows the meeting title and how long the meeting takes. It shows the company logo when there is one. Without a logo the card is text only.
 
@@ -159,11 +167,11 @@ A paused page gives a card that names nobody. A replaced or unknown address give
 
 If your account is suspended or removed, your page and your short address stop working. Nobody else can take your short address, so it never leads to someone else's page.
 
-A page is paused when **Accept bookings** is off. It is also paused when your calendar cannot take bookings: none is set, it is read-only, or it is disconnected. A link that names colleagues is also paused until every colleague on it has confirmed and has a calendar Margince can read.
+A page is paused when **Accept bookings** is off. It is also paused when your calendar cannot take bookings: none is set, it is read-only, or it is disconnected. A team link is also paused until every colleague on it has confirmed and has a calendar Margince can read.
 
 A guest who opens a paused page reads that you are not taking bookings through it right now. The page names you and shows nothing else: no free times, no meeting details. **My booking link** in the account menu shows **Paused** while it is. A personal link you sent stays open while your calendar can take its booking, even when **Accept bookings** is off.
 
-Home shows you one card while your page is paused by its calendar or by a colleague on it, so you can fix it. It shows the card only when **Accept bookings** is on and the page was used: somebody booked through it, or you copied its link. The card names the reason and opens your booking settings.
+Home shows you a card while your page is paused by its calendar, so you can fix it. It shows one more for each team link paused by a colleague on it. Home shows a card only for a page that is on and was used. Your personal page is used once somebody booked through it or you copied its link. A team link counts as used from the start. The card names the reason and opens your booking settings.
 
 Turning off **Accept bookings** stops new bookings on your public page. Personal links you already sent keep working until they run out. **Replace address** stops the old public address once you confirm, but guests keep the private links that let them change their own meetings.
 

@@ -31,9 +31,9 @@
   "catalog": {
     "tools": 48,
     "system_frame_tokens": 730,
-    "tokens": 53316,
+    "tokens": 53537,
     "median_tool_tokens": 806,
-    "mean_tool_tokens": 1110
+    "mean_tool_tokens": 1114
   },
   "agents": [
     {
@@ -93,11 +93,11 @@
     },
     {
       "name": "change_settings",
-      "tokens": 3209
+      "tokens": 3239
     },
     {
       "name": "change_activities",
-      "tokens": 2918
+      "tokens": 2977
     },
     {
       "name": "read_workspace",
@@ -105,7 +105,7 @@
     },
     {
       "name": "change_state",
-      "tokens": 2301
+      "tokens": 2365
     },
     {
       "name": "find_records",
@@ -141,7 +141,7 @@
     },
     {
       "name": "change_compliance",
-      "tokens": 1274
+      "tokens": 1289
     },
     {
       "name": "change_access",
@@ -216,16 +216,16 @@
       "tokens": 465
     },
     {
+      "name": "enrich",
+      "tokens": 448
+    },
+    {
       "name": "annotate_brief",
       "tokens": 417
     },
     {
       "name": "read_context",
       "tokens": 413
-    },
-    {
-      "name": "enrich",
-      "tokens": 395
     },
     {
       "name": "check_availability",

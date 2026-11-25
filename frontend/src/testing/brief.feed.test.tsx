@@ -486,7 +486,7 @@ it.each(["stalled", "closing_soon", "opportunity"])(
       card
         .getByRole("link", { name: en["deal.openDeal"] })
         .getAttribute("href"),
-    ).toBe("/#/deals/deal-expansion");
+    ).toBe("/#/deals/deal-expansion?from=worklist");
   },
 );
 

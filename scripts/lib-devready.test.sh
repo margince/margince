@@ -254,8 +254,8 @@ boot "$proxy_up" "$api_up"
 echo "wiring: every seed and verify script waits for the app before its first request"
 # The first top-level request of each: a sign-in or a login.
 for script in seed-dev.sh verify-boot.sh seed-demo-company.sh seed-analytics.sh; do
-  first_check="$(grep -n '^dev_require_app "\$API_BASE"' "$SCRIPT_DIR/$script" | head -1 | cut -d: -f1 || true)"
-  first_request="$(grep -nE '^(sign_in_as_admin$|login_status=|status="\$\(api POST /auth/login|as_admin$)' "$SCRIPT_DIR/$script" | head -1 | cut -d: -f1 || true)"
+  first_check="$(grep -n '^dev_require_app "\$API_BASE"' "$SCRIPT_DIR/$script" | sed -n 1p | cut -d: -f1 || true)"
+  first_request="$(grep -nE '^(sign_in_as_admin$|login_status=|status="\$\(api POST /auth/login|as_admin$)' "$SCRIPT_DIR/$script" | sed -n 1p | cut -d: -f1 || true)"
   [[ -n "$first_check" ]] || { fail "$script never calls dev_require_app"; continue; }
   [[ -n "$first_request" ]] || { fail "$script: found no first request to place the check against"; continue; }
   ((first_check < first_request)) || fail "$script sends its first request (line $first_request) before dev_require_app (line $first_check)"

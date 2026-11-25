@@ -136,6 +136,7 @@ export function CompanyProfileDialog({
   pending,
   error,
   refusedAt,
+  dirty,
   onChange,
   onClose,
   onSubmit,
@@ -147,7 +148,9 @@ export function CompanyProfileDialog({
   /** The refused save, and when it was sent, so each refusal is shown once. */
   error: unknown;
   refusedAt: number | undefined;
+  dirty: boolean;
   onChange: (next: CompanyInput) => void;
+  /** Discards the draft. Cancel calls it at once; the X, Escape and the backdrop ask first. */
   onClose: () => void;
   onSubmit: () => void;
 }>) {
@@ -172,7 +175,13 @@ export function CompanyProfileDialog({
     asked.current?.focus();
   }, []);
   return (
-    <Modal open onClose={onClose} labelledBy={titleId} intent="drawer">
+    <Modal
+      open
+      onClose={onClose}
+      labelledBy={titleId}
+      intent="drawer"
+      unsaved={dirty}
+    >
       <DrawerHead>
         <Heading size="large" id={titleId} className="t-h2">
           {t("settings.companyContextTitle")}

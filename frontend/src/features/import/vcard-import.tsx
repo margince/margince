@@ -21,7 +21,6 @@ import { Callout } from "../../design-system/callout";
 import { FileDropzone } from "../../design-system/filedropzone";
 import { Heading } from "../../design-system/heading";
 import { Panel, PanelBody } from "../../design-system/panel";
-import { RecordBack } from "../../design-system/recordview";
 import { useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import type { ACCEPTED_ATTACHMENT_EXTENSIONS } from "../../lib/attachmentupload";
@@ -30,8 +29,8 @@ import { valueFor } from "../../lib/labelfor";
 import { ACTION_PARAM, QUALIFY_ACTION } from "../../lib/leads.address";
 import { postMultipart } from "../../lib/multipart";
 import { problemMessageOf } from "../../lib/problem";
-import { navigate, routeHash } from "../../lib/router";
-import { hashWithParams, useUrlParams } from "../../lib/urlstate";
+import { navigate } from "../../lib/router";
+import { useUrlParams } from "../../lib/urlstate";
 import { useMeSettled } from "../../lib/writerefusal";
 import "./vcard-import.css";
 
@@ -201,22 +200,7 @@ export function VCardImportPage() {
   useUnsavedGuard(importer.isPending);
 
   return (
-    <div className="wrap narrow">
-      <RecordBack
-        href={
-          companyId === undefined
-            ? routeHash({ screen: "contacts" })
-            : hashWithParams(
-                routeHash({ screen: "companies", id: companyId }),
-                new Map([["tab", "contacts"]]),
-              )
-        }
-        label={t(
-          companyId === undefined
-            ? "vcardImport.back"
-            : "vcardImport.backToCompany",
-        )}
-      />
+    <div className="wrap narrow page-pane">
       <Heading
         size="xlarge"
         className="t-display vcard-import-title arrival-focus"

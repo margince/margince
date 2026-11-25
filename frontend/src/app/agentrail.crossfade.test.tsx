@@ -2,7 +2,7 @@
 
 import { act, cleanup, fireEvent, render } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { RailSaying } from "./agentrail";
+import { RailSaying } from "./agentrail-saying";
 import { plain, type SpokenLine } from "./ai-activity-speak";
 
 // The rail's own line, split out of agentrail.test.tsx because that file is over

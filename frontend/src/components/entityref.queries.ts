@@ -150,8 +150,8 @@ export function usableName(name: string | null | undefined): string | null {
 
 // The resolved display name only, sharing EntityRef's exact cache entry so
 // nothing is fetched twice. Exported for chrome that wants the name as plain
-// text rather than as EntityRef's navigating button: the breadcrumb names the
-// record you are already looking at, so linking it would go nowhere.
+// text, not as EntityRef's navigating button. The browser tab names the record
+// already on screen, so a link there would go nowhere.
 export function useEntityName(
   kind: EntityKind,
   id: string | null | undefined,

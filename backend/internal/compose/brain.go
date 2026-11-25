@@ -16,7 +16,6 @@ import (
 
 	"github.com/jackc/pgx/v5/pgxpool"
 
-	"github.com/margince/margince/backend/internal/compose/extai"
 	"github.com/margince/margince/backend/internal/modules/agents/runner"
 	"github.com/margince/margince/backend/internal/modules/ai"
 	"github.com/margince/margince/backend/internal/modules/contacts"
@@ -163,8 +162,7 @@ type ModelPath struct {
 	// it has to be able to ask what its binding can carry before it sends any.
 	DocumentExtract documentCompleter
 	// Enrich is the §2.9 evidence-or-omit signature field extraction lane.
-	Enrich        completer
-	ExtensionTask extai.Lane // the lane every Runtime.AI call rides; no unit holds a provider client
+	Enrich completer
 	// ProposeRoles reads a deal's buying roles out of what its contacts wrote.
 	// The one lane in this struct with NO floor behind it: every other absent
 	// lane degrades to a deterministic answer, and a buying role has none —
@@ -371,7 +369,6 @@ func modelPathForRouter(router *ai.Router, companyContext *companyContextProvide
 		RequestSettlement:             brain(ai.TaskRequestSettlement),
 		DealVerdict:                   brain(ai.TaskDealVerdict),
 		TagSuggest:                    brain(ai.TaskTagSuggest),
-		ExtensionTask:                 brain(ai.TaskExtensionTask),
 		CaptureCounterpartyVerdict:    brain(ai.TaskCaptureCounterpartyVerdict),
 		CaptureConfidentialityVerdict: brain(ai.TaskCaptureConfidentialityVerdict),
 		SignalExtract:                 brain(ai.TaskSignalExtract),

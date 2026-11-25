@@ -48,7 +48,7 @@ func (t memberTool) Spec() mcp.ToolSpec {
 	spec := mcp.ToolSpec{
 		Name: toolMergeMembers, Title: "Merge duplicate members", Version: toolVersionV1,
 		AskUserFirst:  true,
-		Description:   "Transfer an unused imported or invited duplicate member's work to the selected account and remove the duplicate. Use the token from preview_member_retirement after the user has confirmed which account survives. The survivor keeps its sign-in settings and access; original attribution remains in history. Use resolve_duplicates for customer contacts or companies.",
+		Description:   "Transfer an unused imported or invited duplicate member's work to the selected member and remove the duplicate. Use the token from preview_member_retirement after the user has confirmed which member survives. The survivor keeps its sign-in settings and access; original attribution remains in history. Use resolve_duplicates for customer contacts or companies.",
 		Instead:       "Use resolve_duplicates for customer contacts or companies.",
 		RequiredScope: principal.ScopeWrite, Tier: mcp.TierConfirmationRequired, WaitsEvenForItsUser: true, Unlisted: true,
 		OpenAPIOp: "mergeMembers", ReplayGrant: &mcp.ReplayGrant{Object: memberAdminObject, Action: principal.ActionDelete},
@@ -58,8 +58,8 @@ func (t memberTool) Spec() mcp.ToolSpec {
 	if t.preview {
 		spec.Name = "preview_member_retirement"
 		spec.Title = "Preview removing or merging a member"
-		spec.Description = "Read the work and dependencies affected by retiring a member. Requires an administrator with member read and delete permission. Set mode to merge and include to_user_id to choose the surviving member. Return the preview to the user before merge_members. Use list_colleagues to find the member accounts first."
-		spec.Instead = "Use list_colleagues to find the member accounts first."
+		spec.Description = "Read the work and dependencies affected by retiring a member. Requires an administrator with member read and delete permission. Set mode to merge and include to_user_id to choose the surviving member. Return the preview to the user before merge_members. Use list_colleagues to find the members first."
+		spec.Instead = "Use list_colleagues to find the members first."
 		spec.RequiredScope = principal.ScopeRead
 		spec.Tier = mcp.TierAutoExecute
 		spec.WaitsEvenForItsUser = false

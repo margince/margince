@@ -46,7 +46,9 @@ operation in the OpenAPI document shows which. A list answers `{ "data": [...], 
 
 ## Errors
 
-An error answers `application/problem+json` (RFC 7807) with a machine `code` to branch on:
+An error answers `application/problem+json` (RFC 7807) with a machine `code` to branch on. A file
+route that a browser tab opens answers its 404 or 403 as a short `text/html` page instead, and the
+contract declares it there:
 
 ```json
 {"type": "https://errors.gradion.com/version_skew", "title": "Conflict", "status": 409,

@@ -36,6 +36,9 @@ func (a *sourceAdmin) mirroredInvoice(t *testing.T) crmcontracts.FinanceInvoice 
 	if summary.InvoiceDocuments == nil || !*summary.InvoiceDocuments {
 		t.Fatalf("the card does not offer documents from a source that serves them: %+v", summary.InvoiceDocuments)
 	}
+	if summary.ProviderName == nil || *summary.ProviderName != fixtureSourceName {
+		t.Errorf("provider_name = %v, want the name the source declares, %q", summary.ProviderName, fixtureSourceName)
+	}
 	if summary.RecentInvoices == nil || len(*summary.RecentInvoices) == 0 {
 		t.Fatal("the sync mirrored no invoice; the rest of this test proves nothing")
 	}
@@ -190,6 +193,8 @@ func TestASourceWithoutDocumentsIsNeitherOfferedNorOpened(t *testing.T) {
 
 	if summary := a.summaryAtEpoch(t, a.company); summary.InvoiceDocuments == nil || *summary.InvoiceDocuments {
 		t.Errorf("invoice_documents = %v, want false for a source that serves none", summary.InvoiceDocuments)
+	} else if summary.ProviderName != nil {
+		t.Errorf("provider_name = %q for a source that declares no name, want absent rather than its key", *summary.ProviderName)
 	}
 	expect(t, download(a.documentReader(principal.RowScopeAll), a.handlers, ids.UUID(invoice.Id)),
 		http.StatusUnprocessableEntity, "unsupported_by_sor")

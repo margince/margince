@@ -300,6 +300,12 @@ func checkedRule(rule, check string) string {
 // record graded the old way reads stale; gradingrule_test.go fails an unbumped edit.
 const gradingRule = "grading-rule-14"
 
+// collectionRule versions how runs and judge scores are collected: which runs a
+// record holds and how a judge reply becomes a score. A change there makes the
+// stored rows differ from what the build would record. A re-stamp from an older
+// collectionRule is then refused; collectionrule_test.go fails an unbumped edit.
+const collectionRule = "collection-rule-1"
+
 // gradedBy is the stamp's grader third: the grader's request digest under the
 // rule that turns its opinions into a verdict, which no request carries.
 func gradedBy(rule, graderRequest string) string {

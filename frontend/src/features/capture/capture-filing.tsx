@@ -23,6 +23,7 @@ const EXT_RESULTS = [
 
 const CORE_BASES = [
   "project",
+  "chosen_thread",
   "thread",
   "sole_open_deal",
   "stakeholder",

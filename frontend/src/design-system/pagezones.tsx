@@ -80,8 +80,7 @@ export function PageZones({
   asideLabel?: string;
   // Classes for the aside column, on the same rule as `railClassName`.
   asideClassName?: string;
-  // Each column stands as one page pane, the surface RecordView's cards are,
-  // and the aside stays in view beside the work as RecordView's details card.
+  // Each column stands as one page pane, as RecordView's two columns do.
   panes?: boolean;
   // Classes for the grid container itself — the composing page's own concerns
   // about the block as a whole (an arrival stack, a page-specific bottom
@@ -130,12 +129,7 @@ export function PageZones({
       {aside && asidePresence.mounted && (
         <aside
           ref={asideColumn}
-          className={cls(
-            "page-zones-aside-column",
-            pane,
-            panes ? "page-pane-sticky" : undefined,
-            asideClassName,
-          )}
+          className={cls("page-zones-aside-column", pane, asideClassName)}
           aria-label={asideLabel}
           data-state={asidePresence.state}
           // A column on its way out takes no focus and answers no pointer: it

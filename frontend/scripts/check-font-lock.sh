@@ -93,7 +93,7 @@ strip_allowed() {
 while IFS= read -r hit; do
   # A declaration whose value starts on the next line matches nothing here, and
   # under pipefail that no-match would end the whole gate with a bare exit 1.
-  value=$(echo "$hit" | grep -oE "font-family\s*:[^;]+" | head -1 || true)
+  value=$(echo "$hit" | grep -oE "font-family\s*:[^;]+" | sed -n 1p || true)
   [[ -z "$value" ]] && continue
   stripped=$(echo "$value" | strip_allowed)
   while :; do

@@ -107,7 +107,6 @@
   inline-size: 100%;
   block-size: var(--space-1);
   border-radius: var(--r-full);
-  corner-shape: round;
   background: var(--bgHover);
   overflow: hidden;
 }
@@ -194,24 +193,11 @@
   padding-inline: var(--space-1);
 }
 
-/* The weekly reads like the morning: cards on the page in the work column,
-   and the side column's panels standing on the page beside them. */
-.brief-weekly-page > .page-pane {
-  --padPane: 0px;
-  border-color: transparent;
-  background: none;
-  box-shadow: none;
-  padding: 0;
-}
 .brief-weekly-page > .brief-main,
 .brief-weekly-page > .brief-rail {
   display: flex;
   flex-direction: column;
   gap: var(--space-4);
-}
-/* The side column scrolls as one; its panels keep their height in it. */
-.brief-weekly-page > .brief-rail > * {
-  flex: none;
 }
 
 /* The headline's comparison line, on the report panel's own inset. */

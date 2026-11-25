@@ -21,6 +21,11 @@ Six things are checked per run, and all six must hold:
                    The other direction: some call to `tool` carries what
                    `tool~regex` asks, when the target is named in free text
                    rather than one argument's exact value.
+  must_return      Did the server answer a call the way the case is about? Each
+                   entry is `tool~regex`, searched in the text of every result
+                   a call to `tool` received, with ` || ` between alternatives
+                   as in must_call_matching: a preview asked in the chat, where
+                   a staging for the inbox would measure another case.
   figures_from_results
                    Is every money figure the run states one Margince returned in
                    this run, or worked out from one? `true` checks each amount
@@ -137,13 +142,14 @@ _SCHEMA = {
     "must_not_call_with": "list", "must_call_matching": "list", "must_mention": "list",
     "must_not_mention": "list", "judge": "list", "must_end_with": "list", "counts_when_refused": "list",
     "elicitation": "list", "must_answer": "list", "mcp_only": "list", "expected_calls": "count",
+    "must_return": "list",
 }
 # The checks an mcp_only entry may name: the ones that pin an MCP call's name or
 # argument, which a REST door spells by route. Every other check reads the
 # answer or the records and holds on both doors.
-_DOOR_SCOPED = ("must_call", "must_call_with", "must_call_matching")
+_DOOR_SCOPED = ("must_call", "must_call_with", "must_call_matching", "must_return")
 _REQUIRED = ("name", "prompt", "writes", "runs", "pass_at")
-# The credentials scripts/e2e-llm.sh mints, by the `passport:` value that picks
+# The credentials scripts/e2e-llm.sh connects, by the `passport:` value that picks
 # one; absent is the narrow one.
 PASSPORTS = ("", "wide", "research", "rep", "readonly")
 
@@ -330,11 +336,12 @@ def _entry_problems(data):
         tool, sep, pattern = str(entry).partition("~")
         problems.append(_compiles("must_not_call_with", pattern) if sep and tool and pattern
                         else f"must_not_call_with entry {entry!r} is not tool~regex")
-    for entry in data.get("must_call_matching", []):
-        for alternative in str(entry).split(" || "):
-            tool, sep, pattern = alternative.strip().partition("~")
-            problems.append(_compiles("must_call_matching", pattern) if sep and tool and pattern
-                            else f"must_call_matching entry {entry!r} is not tool~regex")
+    for key in ("must_call_matching", "must_return"):
+        for entry in data.get(key, []):
+            for alternative in str(entry).split(" || "):
+                tool, sep, pattern = alternative.strip().partition("~")
+                problems.append(_compiles(key, pattern) if sep and tool and pattern
+                                else f"{key} entry {entry!r} is not tool~regex")
     for entry in data.get("must_call_with", []):
         for alternative in alternatives(entry):
             target, sep, _ = alternative.partition("=")
@@ -410,15 +417,16 @@ def offered_verbs(offered, routes):
 # One run as the grader reads it. `said` is every word the assistant wrote and
 # `final` is the answer the user was left with; `calls` are every attempt and
 # `worked` the calls whose result was not an error. A call with no result did
-# not finish, so it is not in `worked`; `refused` are the others.
-Run = collections.namedtuple("Run", "called said calls final worked refused")
+# not finish, so it is not in `worked`; `refused` are the others. `answers` are
+# (name, result text) for every call that got a result, worked or not.
+Run = collections.namedtuple("Run", "called said calls final worked refused answers")
 
 
 def read_run(path):
     """Read a stream-json transcript: tool calls as `tool_use` blocks, prose as
     `text` blocks, each call's outcome as a `tool_result`, and the final answer
     as the terminal `result` event's text."""
-    attempts, said, final, failed = [], [], "", {}
+    attempts, said, final, failed, results = [], [], "", {}, {}
     with _open_checked(path) as handle:
         lines = handle.readlines()
     for line in lines:
@@ -444,11 +452,12 @@ def read_run(path):
                 attempts.append((block.get("id"), block.get("name", ""), block.get("input") or {}))
             elif block.get("type") == "tool_result":
                 failed[block.get("tool_use_id")] = bool(block.get("is_error")) and not staged(block.get("content"))
+                results[block.get("tool_use_id")] = result_text(block.get("content"))
             elif block.get("type") == "text":
                 said.append(block.get("text", ""))
 
     routes = load_routes()
-    called, calls, worked, refused = [], [], [], []
+    called, calls, worked, refused, answers = [], [], [], [], []
     for call_id, name, arguments in attempts:
         # Recorded twice on purpose, as the router and as its verb, so a
         # scenario may name either; nothing here counts calls.
@@ -462,21 +471,30 @@ def read_run(path):
             worked += both
         else:
             refused += both
-    return Run(called, "\n".join(said), calls, final, worked, refused)
+        if call_id in results:
+            answers += [(each, results[call_id]) for each, _ in both]
+    return Run(called, "\n".join(said), calls, final, worked, refused, answers)
 
 
-# A confirm-first write comes back as an error that staged it for a human, and
-# staging is the call doing its job. The words are the server's own
-# (stagedExplanation in backend/internal/modules/agents/explain.go); a result
-# carries no other mark of it.
-_STAGED = re.compile(r"confirm-first \(🟡\)|already approved this exact call", re.IGNORECASE)
+# A confirm-first write comes back as an error that staged it for a human, or
+# that asks its user's yes in the conversation, and either is the call doing its
+# job. The words are the server's own (stagedExplanation in
+# backend/internal/modules/agents/explain.go, confirmInConversationLead in
+# confirmcode.go); a result carries no other mark of it.
+_STAGED = re.compile(
+    r"confirm-first \(🟡\)|already approved this exact call|needs the user's yes in this conversation", re.IGNORECASE)
+
+
+def result_text(content):
+    """A tool result's content as one text, whether it came as parts or whole."""
+    if isinstance(content, list):
+        return " ".join(str(part.get("text", "")) for part in content if isinstance(part, dict))
+    return str(content or "")
 
 
 def staged(content):
     """Whether a tool result's content is a write staged for approval."""
-    if isinstance(content, list):
-        content = " ".join(str(part.get("text", "")) for part in content if isinstance(part, dict))
-    return bool(_STAGED.search(str(content or "")))
+    return bool(_STAGED.search(result_text(content)))
 
 
 def read_transcript(path):
@@ -1242,6 +1260,21 @@ def _unmatched_problem(calls, entry):
     return "never called " + " or ".join(f"{tool} carrying anything matching /{pattern}/" for tool, pattern in wanted)
 
 
+def _unreturned_problem(answers, entry):
+    """A problem line when no alternative's tool got a result its regex finds, or None."""
+    wanted = [alternative.strip().partition("~")[::2] for alternative in str(entry).split(" || ")]
+    if not all(tool and pattern for tool, pattern in wanted):
+        return f"must_return entry {entry!r} is not tool~regex"
+    got = []
+    for tool, pattern in wanted:
+        texts = [text for name, text in answers if tool_matches([name], tool)]
+        if any(re.search(pattern, text, re.IGNORECASE) for text in texts):
+            return None
+        got += texts
+    seen = f"; it answered {got[0][:200]!r}" if got else "; no call to it was answered"
+    return "never got " + " or ".join(f"{tool} answering /{pattern}/" for tool, pattern in wanted) + seen
+
+
 def answered(path):
     """(the entry that answered, the action) for each question the host answered."""
     found = []
@@ -1305,6 +1338,11 @@ def check(scenario, transcript_path):
 
     for entry in scenario.get("must_call_matching", []):
         problem = _unmatched_problem(calls, entry)
+        if problem:
+            problems.append(problem)
+
+    for entry in scenario.get("must_return", []):
+        problem = _unreturned_problem(run.answers, entry)
         if problem:
             problems.append(problem)
 

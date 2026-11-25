@@ -21,15 +21,16 @@ import { BEHAVIOUR } from "./margince-core-motion";
  * something it does not do.
  *
  * **State is motion first and colour second.** Each state owns one distinct
- * `level` / `speed` / `pulse` / `ingest` signature (`margince-core-motion.ts`),
- * driven straight into the shader, before it owns a colour triple
- * (`margince-core.css`). Two consequences worth knowing before reading the five:
+ * `level` / `form` / `speed` / `pulse` / `ingest` signature
+ * (`margince-core-motion.ts`), driven straight into the shader, before it owns a
+ * colour triple (`margince-core.css`). Two consequences worth knowing before
+ * reading the five:
  *
- *  - A still frame is not the story. `ingest` and `working` sit in
- *    neighbouring greens and are told apart by how the ribbons move: one turns
- *    material inward, the other runs hot and fast. `margince-core-motion.test.ts`
- *    pins the signature, which is where a movement can be asserted instead of
- *    eyeballed.
+ *  - A still frame is not the story. `ingest` and `working` share the thinking
+ *    figure and are told apart by how the ribbons move: one falls inward, the
+ *    other turns and breathes. Idle drifts slowly at a lower frame rate;
+ *    warning and error hold still, so the loop parks.
+ *    `margince-core-motion.test.ts` pins the signature.
  *  - The condition a user acts on is never the orb. Every surface that shows a
  *    Core also states its condition in words beside it, which is what makes the
  *    orb safe to be `aria-hidden`.
@@ -47,24 +48,22 @@ export default meta;
 type Story = StoryObj<typeof meta>;
 
 /**
- * Rest, and where the Core spends nearly all of its life: nothing staged,
- * nothing running. Low energy, slow phase, a shallow breath — an idle state
- * with more going on than that reads as work nobody asked for. A finished run
- * settles back here rather than into a state of its own.
+ * Rest, where the Core spends nearly all of its life: nothing staged, nothing
+ * running. The calm figure drifts slowly, since more motion would read as work.
+ * A finished run settles back here.
  */
 export const Idle: Story = { args: { state: "idle" } };
 
 /**
- * Captured calls, mail and meetings arriving. `ingest` sits at its ceiling here
- * and nowhere else, the whirlpool that reads as material moving from the glass
- * to the centre rather than the object simply being busy.
+ * Captured calls, mail and meetings arriving. `ingest` is at its ceiling here
+ * alone: grain streams from the ribbons to the centre, so material comes in.
  */
 export const Ingesting: Story = { args: { state: "ingest" } };
 
 /**
  * Traversing the context graph, matching records against evidence, composing
- * staged proposals. The fastest phase of the five and the shallowest breath —
- * thought reads as speed, not as a pulse.
+ * staged proposals. The thinking figure: brighter, twisted, folded, breathing,
+ * and the fastest phase of the five.
  */
 export const Working: Story = { args: { state: "working" } };
 
@@ -111,17 +110,15 @@ export const ProgressSteps: Story = {
 };
 
 /**
- * Stopped and waiting for a contact: a record contradicts reality, an action
- * needs permission it does not have, a source it cannot reach, a licence it
- * does not carry. Amber, slow, and breathing hard enough to be caught out of
- * the corner of an eye — the orb only ever reports that a contact is needed,
- * never which of these it is; the surface around it says that in words.
+ * Stopped and waiting for a contact: a record contradicts reality, or an action
+ * lacks a permission, a source or a licence. The thinking figure at rest, in
+ * amber. The orb says only that a contact is needed; the surface says which.
  */
 export const Warning: Story = { args: { state: "warning" } };
 
 /**
- * The run failed. Red, the one colour outside the product's palette, and the
- * hardest breath of the five.
+ * The run failed. The thinking figure at rest, in red, the one colour outside
+ * the product's palette.
  */
 export const Errored: Story = { args: { state: "error" } };
 
@@ -129,14 +126,9 @@ export const Errored: Story = { args: { state: "error" } };
  * Both size presets at once, because the difference is not only 230px against
  * 150px.
  *
- * The glass thins as the ball shrinks: the rim darkening and the edge are fixed
- * weights, so on a small disc they cover a far bigger share of it and turn the
- * orb grey. Those rungs are container queries on the Core's own box, so a layout
- * that sizes one through `--coreGlass` gets the right treatment without knowing
- * they exist.
- *
- * Review this one at a desktop width: below 900px the stylesheet takes the hero
- * down to the md geometry, and then the two are the same ball twice.
+ * The point count follows the pixel area, so a small ball carries fewer points,
+ * not smaller ones. Review it at a desktop width: below 900px the hero takes
+ * the md geometry.
  */
 export const Sizes: Story = {
   render: () => (
@@ -216,6 +208,30 @@ export const Ladder: Story = {
       ))}
     </div>
   ),
+};
+
+/**
+ * A state change eases. Press to go from idle to working: the figure twists,
+ * folds and brightens over about a second, then slows again back in idle.
+ */
+export const StateChange: Story = {
+  render: () => {
+    const [working, setWorking] = useState(false);
+    return (
+      <div
+        style={{
+          display: "grid",
+          gap: "var(--space-4)",
+          justifyItems: "center",
+        }}
+      >
+        <MarginceCoreScene state={working ? "working" : "idle"} size="md" />
+        <Button onClick={() => setWorking((now) => !now)}>
+          {working ? "Back to idle" : "Start working"}
+        </Button>
+      </div>
+    );
+  },
 };
 
 /**

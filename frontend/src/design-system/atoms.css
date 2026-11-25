@@ -275,7 +275,15 @@
   place-items: center;
   z-index: 50;
 }
+/* Every dialog and drawer is drawn on the page card's ground: its rung is pinned
+   in the ladder. */
+/* The box takes focus only when it holds nothing else to land on. It is not a
+   control, so it draws no ring; the first Tab reaches the close door, which does. */
+.modal:focus {
+  outline: none;
+}
 .modal {
+  background-color: var(--ground);
   border-radius: var(--r-lg);
   box-shadow: var(--shadow-pop);
   padding: 22px;
@@ -409,21 +417,14 @@
   }
 }
 
-/* The right-anchored drawer, anchored to the trailing edge so the record
-   behind stays legible as context.
-
-   The drawer FLOATS rather than being welded to the edge: one --space-4 gap on
-   its three outer sides, so the scrim runs all the way round it and the record
-   behind reads as a page the drawer is sitting ON rather than a page it has
-   been cut out of. The gap is paid by the overlay, which already spans the
-   viewport — a margin on the drawer itself would have to be subtracted from
-   every height and width rule below, four of them, each a chance to disagree. */
+/* The trailing-edge drawer floats one --cardInset clear of the window, so it
+   sits on the record behind; the overlay pays the gap, not each size rule. */
 .overlay-right {
   place-items: stretch end;
-  padding: var(--space-4);
+  padding: var(--cardInset);
 }
 .modal-drawer {
-  width: min(var(--drawerWidth), calc(100vw - var(--space-4) * 2));
+  width: min(var(--drawerWidth), calc(100vw - var(--cardInset) * 2));
   /* The glass less the gap it floats in, as a LENGTH, and it has to be one.
      `height: 100%` is 100% of the overlay's grid row, and that row is
      auto-sized: it stretches to the TALLER of the viewport and the drawer's own
@@ -432,10 +433,9 @@
      glass — where the clip below put it permanently out of reach, because the
      scrolling band inside had been given nothing to scroll. A percentage cannot
      bound a box whose own content is what sizes the thing it is a percentage
-     OF. The `--space-4` here is the same gap `.overlay-right` pays as padding
-     above; the two are one measurement and have to move together. */
-  height: calc(100dvh - var(--space-4) * 2);
-  max-height: calc(100dvh - var(--space-4) * 2);
+     OF. */
+  height: calc(100dvh - var(--cardInset) * 2);
+  max-height: calc(100dvh - var(--cardInset) * 2);
   border-radius: var(--r-lg);
   box-shadow: var(--shadow-pop);
   padding: var(--space-5);
@@ -467,7 +467,7 @@
 /* The READING drawer: its bands are sticky so close and commit stay in reach
    however long the body runs. */
 .modal-drawer-wide {
-  width: min(var(--drawerReadingWidth), calc(100vw - var(--space-4) * 2));
+  width: min(var(--drawerReadingWidth), calc(100vw - var(--cardInset) * 2));
   display: flex;
   flex-direction: column;
   padding: 0;
@@ -476,7 +476,7 @@
    intent's width. After the intents' widths, which it replaces, and before the
    phone sheet, which replaces it. */
 .modal-drawer-window {
-  width: min(var(--drawerWindowWidth), calc(100vw - var(--space-4) * 2));
+  width: min(var(--drawerWindowWidth), calc(100vw - var(--cardInset) * 2));
 }
 /* In a dialog the stack's gap is the only space between its rows; a row's own
    margin would add to it. Declared before `.modal .actions`, so its margin wins. */
@@ -691,16 +691,16 @@
     transform: scale(0.98);
   }
 }
-/* Past its own trailing edge AND past the gap it floats in, or the last
-   --space-4 of the drawer sits on the glass before it has started to move. */
+/* Past its own trailing edge AND past the gap it floats in, or the drawer's
+   last strip sits on the glass before it has started to move. */
 @keyframes drawer-arrive {
   from {
-    transform: translateX(calc(100% + var(--space-4)));
+    transform: translateX(calc(100% + var(--cardInset)));
   }
 }
 @keyframes drawer-leave {
   to {
-    transform: translateX(calc(100% + var(--space-4)));
+    transform: translateX(calc(100% + var(--cardInset)));
   }
 }
 
@@ -904,7 +904,6 @@
   flex-shrink: 0;
   margin-left: 5px;
   border-radius: 50%;
-  corner-shape: round;
   background: var(--accent);
 }
 /* Keyboard focus reads an accent-token ring (matches .input/.textarea) rather
@@ -996,13 +995,21 @@
   text-align: start;
 }
 
+/* Not `display: flex`: a cap stands inside a sentence (kbd.stories.tsx), and a
+   block box would break the line around it. */
 .kbd {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: var(--space-5);
+  height: var(--space-5);
+  padding: 0 var(--space-1);
+  font: var(--fontKeycap);
   background: var(--bgChip);
   color: var(--textPrimary);
   border: 1px solid var(--borderStrong);
   border-bottom-width: 2px;
   border-radius: var(--r-xs);
-  padding: 1px 5px;
 }
 
 /* The section's head: its title, and the verbs that act on it at the far end.
@@ -1778,6 +1785,8 @@ span.error-line {
   width: 14px;
   height: 14px;
   flex: none;
+  /* Centred on the summary's first line, also where a summary aligns to start. */
+  margin-block: calc((1lh - 14px) / 2);
 }
 .disclosure-body {
   margin-top: var(--space-3);
@@ -1860,7 +1869,6 @@ span.error-line {
   padding-inline: var(--space-2) var(--space-3);
   gap: var(--space-1);
   border-radius: var(--r-full);
-  corner-shape: round;
   background: var(--ground);
 }
 .overflow-menu-labelled[aria-busy="true"] > svg:not(.busy-mark) {
@@ -2371,10 +2379,11 @@ span.error-line {
 }
 /* The ring goes round the CARD, because the card is what the press lands on.
    Around the words alone it drew a keyboard reader a target an inch from the
-   one their Enter would hit. */
+   one their Enter would hit. Inside its edge: a sheet or strip that clips at
+   the card's edge would cut a ring drawn outside it. */
 .stat-card:has(.stat-card-open:focus-visible) {
   outline: var(--focus-ring);
-  outline-offset: 2px;
+  outline-offset: -2px;
 }
 /* And the words take the TRANSPARENT ring, which is what pairs with the card's:
    the platform's own outline would otherwise draw a second, off-palette box
@@ -2426,7 +2435,6 @@ span.error-line {
   display: block;
   block-size: 4px;
   border-radius: var(--r-full);
-  corner-shape: round;
   background: var(--bgHover);
   overflow: hidden;
 }

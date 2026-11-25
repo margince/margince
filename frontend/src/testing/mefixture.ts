@@ -31,6 +31,7 @@ const NO_GRANT: RbacObjectGrant = {
 const AVAILABLE: SettingsAvailability = {
   company_context: true,
   embedding_reindex: true,
+  vat_register: true,
 };
 
 export type GrantSpec = Partial<Record<RbacObject, readonly RbacAction[]>>;

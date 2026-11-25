@@ -94,7 +94,6 @@
   block-size: 2px;
   overflow: hidden;
   border-radius: var(--r-full);
-  corner-shape: round;
   background: var(--borderSubtle);
   color: transparent;
 }
@@ -115,7 +114,6 @@
   min-block-size: var(--controlHeight);
   padding-inline: var(--space-3);
   border-radius: var(--r-full);
-  corner-shape: round;
   background: var(--accent);
   color: var(--textOnAccentControl);
 }
@@ -156,7 +154,6 @@
   min-block-size: var(--controlHeight);
   padding-inline: var(--space-3);
   border-radius: var(--r-full);
-  corner-shape: round;
   color: var(--textPrimary);
 }
 .stage-ladder-step.is-done > .stage-ladder-stage {
@@ -314,7 +311,6 @@
   padding-inline: var(--space-3);
   border: 1px dashed var(--borderStrong);
   border-radius: var(--r-full);
-  corner-shape: round;
   box-shadow: none;
 }
 .stage-ladder-exit-label {
@@ -362,7 +358,6 @@
   display: block;
   block-size: 6px;
   border-radius: var(--r-full);
-  corner-shape: round;
   background: var(--borderSubtle);
 }
 .stage-ladder-bar.is-done .stage-ladder-track-bar {

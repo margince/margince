@@ -39,34 +39,34 @@ describe("columnLayout", () => {
     const layout = columnLayout(catalogue, {}, 707);
     expect(layout.floor).toBeCloseTo(707);
     expect(px(layout.widthOf(catalogue[1]))).toBe(110);
-    expect(px(layout.widthOf(catalogue[0]))).toBeGreaterThan(200);
+    expect(px(layout.widthOf(catalogue[0]))).toBeGreaterThan(180);
   });
 
-  it("draws the identity column at 200px by default when the box has no room", () => {
+  it("draws the identity column at 180px by default when the box has no room", () => {
     const layout = columnLayout(catalogue, {}, 0);
-    expect(layout.widthOf(catalogue[0])).toBe("200px");
+    expect(layout.widthOf(catalogue[0])).toBe("180px");
   });
 
   it("holds every column at its minimum when the box has no room for them", () => {
     const layout = columnLayout(catalogue, {}, 400);
     expect(catalogue.map((column) => px(layout.widthOf(column)))).toEqual([
-      200, 110, 130, 130, 56,
+      180, 110, 120, 120, 56,
     ]);
-    expect(layout.floor).toBe(626);
+    expect(layout.floor).toBe(586);
   });
 
   it("gives the room past every minimum to the identity column first", () => {
-    const layout = columnLayout(catalogue, {}, 806);
+    const layout = columnLayout(catalogue, {}, 786);
     expect(catalogue.map((column) => px(layout.widthOf(column)))).toEqual([
-      380, 110, 130, 130, 56,
+      380, 110, 120, 120, 56,
     ]);
-    expect(layout.floor).toBeCloseTo(806);
+    expect(layout.floor).toBeCloseTo(786);
   });
 
   it("lets the other columns grow by their shares once the identity column holds 400px", () => {
     const layout = columnLayout(catalogue, {}, 1000);
     expect(px(layout.widthOf(catalogue[0]))).toBe(400);
-    expect(px(layout.widthOf(catalogue[2]))).toBeGreaterThan(130);
+    expect(px(layout.widthOf(catalogue[2]))).toBeGreaterThan(120);
     expect(layout.floor).toBeCloseTo(1000);
 
     const wide = columnLayout(catalogue, {}, 1400);
@@ -79,9 +79,9 @@ describe("columnLayout", () => {
       { key: "alias", fixed: true },
       { key: "status" },
     ];
-    const layout = columnLayout(pair, {}, 630);
+    const layout = columnLayout(pair, {}, 620);
     expect(pair.map((column) => px(layout.widthOf(column)))).toEqual([
-      250, 250, 130,
+      250, 250, 120,
     ]);
   });
 
@@ -100,7 +100,7 @@ describe("columnLayout", () => {
   it("gives a dragged identity column no room ahead of the others", () => {
     const layout = columnLayout(catalogue, { name: 300 }, 806);
     expect(layout.widthOf(catalogue[0])).toBe("300px");
-    expect(px(layout.widthOf(catalogue[2]))).toBeGreaterThan(130);
+    expect(px(layout.widthOf(catalogue[2]))).toBeGreaterThan(120);
   });
 
   const contacts: SizedColumn[] = [
@@ -131,6 +131,27 @@ describe("columnLayout", () => {
     expect(layout.widthOf(contacts[4])).toBe("150px");
     expect(layout.floor).toBe(1030);
     expect(layout.slack).toBeUndefined();
+  });
+
+  // 1024px less the folded rail, the page's edges and a 10px scrollbar. The
+  // header floors are what German "Lebenszyklus" and "Beziehungstyp" measure.
+  it("fits the seven default Companies columns of a 1024px window in German", () => {
+    const defaults: SizedColumn[] = [
+      { key: "name", fixed: true },
+      { key: "openDeals", numeric: true },
+      { key: "lifecycle" },
+      { key: "relationship" },
+      { key: "owner", holds: "colleague" },
+      { key: "lastActivity", holds: "date" },
+      { key: "created", holds: "date" },
+    ];
+    const headers = {
+      held: { lifecycle: 137, relationship: 129 },
+      onScreen: {},
+    };
+    const layout = columnLayout(defaults, {}, 950, headers);
+    expect(layout.floor).toBeCloseTo(950);
+    expect(px(layout.widthOf(defaults[2]))).toBe(137);
   });
 
   it("holds a date at its minimum on a narrow page and fits the row", () => {
@@ -171,7 +192,7 @@ describe("columnLayout", () => {
   it("never sets a numeric column narrower than the widest figure it holds", () => {
     const layout = columnLayout(catalogue, {}, 400, figures(150));
     expect(px(layout.widthOf(catalogue[1]))).toBe(150);
-    expect(layout.floor).toBe(666);
+    expect(layout.floor).toBe(626);
   });
 
   it("lets a figure wider than the numeric cap widen its column past it", () => {

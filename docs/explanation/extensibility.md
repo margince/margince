@@ -2,15 +2,15 @@
 <!-- describes: backend/pkg/extension backend/internal/compose/extensions.go backend/internal/compose/extingress.go backend/internal/compose/extensiontools.go backend/internal/compose/channelprovider.go backend/internal/compose/extledger.go backend/internal/compose/unitsql backend/tools/gen-composition scripts/check-pkg-freeze.sh -->
 # Extensibility: the extension tier
 
-The *extension tier* is how a small, closed add-on comes into this product without a change to any file
-the core owns. A unit is one named folder with a version under `extensions/<name>/`. It is its own Go
-module, it reaches the core through one small public surface, and the build composes it in. The plain
-tree, with no add-ons of its own, ships three units:
+The *extension tier* is how a small, closed add-on comes into this product without a change to any file the core owns. A unit is
+one named folder with a version under `extensions/<name>/`. It is its own Go module, it reaches the core through one small public
+surface, and the build composes it in. The plain tree, with no add-ons of its own, ships four units:
 
 | Unit | What it is |
 |---|---|
 | `extensions/eu` | The packs of the 27 EU member states: each one's outbound messaging rules on a shared EU layer, and the German legal floors on retention |
 | `extensions/apac` | The packs of `au`, `cn`, `hk`, `id`, `in`, `jp`, `kr`, `my`, `nz`, `ph`, `sg`, `th`, `tw` and `vn`: each one's outbound messaging rules, the request deadlines of `vn`, and no retention floor |
+| `extensions/us` | The pack of `us`: its outbound messaging rules, the first with opt-out advertising, and its retention floor for accounting records |
 | `extensions/openchannel` | The reference unit. It uses every capability the tier has: its own tables, governed agent tools, an inbound edge with no sign-in that checks a signature, a job that empties a queue, a subscription, ingress with a merge key, a transport it carries replies out on, and its own screen |
 
 Read this page for the whole tier. To *build* a unit, go to [how-to/add-an-extension.md](../how-to/add-an-extension.md).
@@ -120,7 +120,6 @@ already exists:
 | `Jobs` | Scheduled work: a job that runs on a fixed schedule and starts one worker run per tenant |
 | `Secrets` | The secret keys the unit will use, by name and scope. It is a request; it grants nothing |
 | `OAuthApps` | Vendors whose sign-in the core runs for an admin. The core keeps the tokens and gives the unit a live access token through `Runtime.OAuthAccessToken` |
-| `AITasks` | The AI tasks the unit may run. Each call goes through `Runtime.AI` and the core's own AI path, with its region limit, secret stripping, budget and call log; the unit never holds a provider client or key |
 | `Migrations` | The SQL schema layer the unit owns, built into the binary instead of read from the tree |
 | `Reach` | The unit's own tables whose columns hold a core company, contact or lead id. The core's merge moves those columns onto the record that stays, and its erasure clears the columns a table lists. Core never names the unit's tables in its own SQL |
 | `Entries` | Buttons on core screens that open the unit's screen. The unit names a slot, a label key, an icon and an RBAC object, and the core draws and places the button |
@@ -213,7 +212,6 @@ the harm could go before turning the unit on:
 | `finance_sources` | `FinanceSources` | Which accounting systems it reads |
 | `entries` | `Entries` | Which core screens offer a way into the unit, and the object a reader needs `read` on to see it |
 | `oauth_apps` | `OAuthApps` | Which vendors an admin is sent to, the scopes asked for, and the token URL that receives the client secret |
-| `ai_tasks` | `AITasks` | Which AI tasks the unit may run, the prompt each one sends, and whether it takes documents or has an answer schema |
 | `instrumentation` | `Instrumentation` | Which of its three parts the unit has: `start` (a backend part), `browser` (the named export the SPA calls) and `edge` (a session-less path under `/v1/public/instrument/<unit>/`) |
 
 The `extension.Extension` value the unit returns, and every field the manifest derives, must be written

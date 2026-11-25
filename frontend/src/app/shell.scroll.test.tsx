@@ -9,7 +9,6 @@ import {
   fireEvent,
   screen,
   waitFor,
-  within,
 } from "@testing-library/react";
 import { useState } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
@@ -266,18 +265,9 @@ function main(): HTMLElement {
   return column;
 }
 
-function trail(): string[] {
-  const nav = screen.getByRole("navigation", {
-    name: en["shell.breadcrumbAria"],
-  });
-  return within(nav)
-    .getAllByRole("listitem")
-    .map((stop) =>
-      (stop.textContent ?? "").replace(
-        stop.querySelector(".crumbs-sep")?.textContent ?? "",
-        "",
-      ),
-    );
+// The browser tab's path, the page first, without the product's name.
+function tabPath(): string[] {
+  return document.title.split(" · ").slice(0, -1);
 }
 
 function wait(): HTMLElement {
@@ -292,7 +282,7 @@ function activeRow(): Element | null {
 
 const ANNA = "0a7e5c1d-6b2f-4c8e-9d3a-1f2e3d4c5b6a";
 
-// The requests that read a record's name, which only the landed trail makes.
+// The requests that read a record's name, which only the landed tab title makes.
 function nameReads(fetch: ReturnType<typeof vi.fn>): number {
   return fetch.mock.calls.filter(([input]) =>
     String(input instanceof Request ? input.url : input).includes(
@@ -321,8 +311,7 @@ describe("the chrome while the next page loads", () => {
     expect(headings.map((heading) => heading.textContent)).toEqual([
       "Analytics",
     ]);
-    expect(trail()).toEqual(["Analytics"]);
-    expect(document.title.startsWith("Analytics ·")).toBe(true);
+    expect(tabPath()).toEqual(["Analytics"]);
     expect(activeRow()?.textContent).toBe("Analytics");
     expect(activeRow()).toHaveAttribute("aria-current", "page");
   });
@@ -358,21 +347,16 @@ describe("the chrome while the next page loads", () => {
   });
 
   it.each([
-    ["a screen", "#/scheduled", "last", en["nav.scheduled"]],
+    ["a screen", "#/scheduled", "page", en["nav.scheduled"]],
     [
       "a settings page",
       "#/settings/account",
-      "last",
+      "page",
       en["settings.tab.account"],
     ],
-    [
-      "a record, by its list",
-      `#/contacts/${ANNA}`,
-      "first",
-      en["nav.contacts"],
-    ],
+    ["a record, by its list", `#/contacts/${ANNA}`, "list", en["nav.contacts"]],
   ] as const)(
-    "names %s as its trail does once it lands",
+    "names %s as its tab does once it lands",
     async (_c, to, stop, name) => {
       vi.useFakeTimers();
       window.history.replaceState(null, "", "#/analytics");
@@ -386,8 +370,8 @@ describe("the chrome while the next page loads", () => {
       const label = wait().textContent;
 
       fireEvent.click(screen.getByRole("button", { name: "Land" }));
-      const stops = trail();
-      const named = stop === "first" ? stops[0] : stops[stops.length - 1];
+      const path = tabPath();
+      const named = stop === "list" ? path[path.length - 1] : path[0];
       expect(label).toBe(
         en["shell.pageLoading"].replace("{page}", named ?? ""),
       );
@@ -441,7 +425,7 @@ describe("the chrome while the next page loads", () => {
     expect(wait().textContent).toBe(started);
 
     fireEvent.click(screen.getByRole("button", { name: "Land" }));
-    expect(trail().at(-1)).toBe("Key accounts");
+    expect(document.querySelector(".pagewait-line")).toBeNull();
   });
 
   it("steps Back out of a move still loading, onto the record on screen", async () => {

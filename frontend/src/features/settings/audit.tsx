@@ -15,7 +15,11 @@ import { Badge } from "../../design-system/atoms";
 import { formatDateTime } from "../../format/format";
 import { type Translator, useLocale, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
-import { type ActorFields, actorAttribution } from "../../lib/auditactor";
+import {
+  type ActorFields,
+  actorAttribution,
+  qualifierPhrase,
+} from "../../lib/auditactor";
 import { SEARCH_HIT_KIND_KEY } from "../../lib/searchkinds";
 import { useViewerZone } from "../../lib/viewerzone";
 import { AUDIT_KIND_LABEL } from "./audit.kinds";
@@ -134,8 +138,9 @@ export function ActorTag({
 }: Readonly<{ entry: ActorFields; meUserId?: string }>) {
   const t = useT();
   const Icon = ACTOR_ICON[entry.actor_type];
-  const { labelKey, name, qualifierKey, qualifierName, identifier } =
-    actorAttribution(entry, meUserId);
+  const who = actorAttribution(entry, meUserId);
+  const { labelKey, name, identifier } = who;
+  const qualifier = qualifierPhrase(who, t);
 
   return (
     <span className="audit-actor">
@@ -147,10 +152,7 @@ export function ActorTag({
         {name ?? (labelKey ? t(labelKey) : null)}
       </span>
       {identifier && <span>{identifier}</span>}
-      {qualifierName && (
-        <span>{t("audit.viaNamed", { client: qualifierName })}</span>
-      )}
-      {!qualifierName && qualifierKey && <span>{t(qualifierKey)}</span>}
+      {qualifier && <span>{qualifier}</span>}
     </span>
   );
 }

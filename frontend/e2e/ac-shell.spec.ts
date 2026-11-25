@@ -121,10 +121,8 @@ test("AC-shell-2: exactly one rail item is active and tracks the route", async (
 });
 
 // One page-level heading per railed page, and it names the page. On a list, a
-// report or a settings surface the shell's page head mints it.
-// On a record the record's own identity block is the heading, and the head
-// prints the trail back instead.
-// Two h1s with the same name would give a screen reader two page titles.
+// report or a settings surface the shell's page head mints it. On a RECORD the
+// record's own identity block is it, so the name is never at heading level twice.
 test("AC-shell-1k: one h1 per railed page, and on a record it is the record's own", async ({
   page,
 }) => {
@@ -136,12 +134,10 @@ test("AC-shell-1k: one h1 per railed page, and on a record it is the record's ow
   await expect(heading).toHaveCount(1);
   await expect(heading).toHaveText("Anna Weber");
   await expect(page.locator(".record-split-head h1")).toHaveText("Anna Weber");
-  // The trail back to the list stands in the top bar, outside the document the
-  // reader is reading.
-  await expect(page.locator(".topbar .crumbs a").last()).toHaveText("Kontakte");
-  await expect(page.locator('.topbar [aria-current="page"]')).toHaveText(
-    "Anna Weber",
-  );
+  // The way back to the list is the top bar's Back control.
+  await expect(
+    page.locator(".topbar").getByRole("button", { name: de["shell.back"] }),
+  ).toBeVisible();
 
   // An id segment that names no record is named in words, never as its slug.
   // The h1 names the privacy surface; "Settings" belongs to the rail heading.
@@ -342,6 +338,28 @@ test("About Margince meets AA", async ({ page }) => {
   await expectNoAaViolations(page, "home — about margince");
   await page.keyboard.press("Escape");
   await expect(accountTrigger(page)).toBeFocused();
+});
+
+// The sidebar's toggle at the rail's foot, swept in both states.
+// Collapsed, its tip is open while axe reads the page.
+test("the sidebar toggle at the rail's foot meets AA in both states", async ({
+  page,
+}) => {
+  await page.goto("/#/home");
+  await page.waitForLoadState("networkidle");
+  const rail = page.locator("nav.rail");
+  const collapse = rail.getByRole("button", { name: de["shell.collapse"] });
+  await expect(collapse).toHaveAttribute("aria-expanded", "true");
+  await settleAnimations(page);
+  await expectNoAaViolations(page, "home: rail expanded, its toggle row");
+
+  await collapse.click();
+  const expand = rail.getByRole("button", { name: de["shell.expand"] });
+  await expect(expand).toHaveAttribute("aria-expanded", "false");
+  await expand.focus();
+  await expect(rail.getByRole("tooltip")).toBeVisible();
+  await settleAnimations(page);
+  await expectNoAaViolations(page, "home: rail collapsed, its toggle's tip");
 });
 
 // Headless Chromium never offers to install, so the test makes the offer itself.

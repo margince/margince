@@ -7,7 +7,6 @@ mkdir "$fixtures/bin"
 export CLOCK_STATE="$fixtures/clock" CLOCK_ACTIONS="$fixtures/actions"
 export CLOCK_NTP_STATE="$fixtures/ntp"
 export CLOCK_DRIFT_BASELINE="$fixtures/baseline"
-export SLICE_GAP=0
 export PATH="$fixtures/bin:$PATH"
 
 cat >"$fixtures/bin/date" <<'STUB'
@@ -54,10 +53,6 @@ if [[ "${MOCK_TERMINATE:-0}" == 1 ]]; then kill -TERM "$PPID"; exit 0; fi
 if [[ "${MOCK_TIMEOUT:-0}" == 1 ]]; then exit 124; fi
 exec "$@"
 STUB
-cat >"$fixtures/bin/sleep" <<'STUB'
-#!/usr/bin/env bash
-echo "sleep $1" >>"$CLOCK_ACTIONS"
-STUB
 chmod +x "$fixtures/bin/"*
 
 run_case() {
@@ -67,7 +62,7 @@ run_case() {
 	echo true >"$CLOCK_NTP_STATE"
 	: >"$CLOCK_ACTIONS"
 	rm -f "$CLOCK_DRIFT_BASELINE"
-	env "$@" bash "$root/scripts/clock-drift-host.sh" run 200 >"$fixtures/output" 2>&1 || status=$?
+	env "$@" bash "$root/scripts/clock-drift-host.sh" run 200 "${SLICE:-unit-cached}" >"$fixtures/output" 2>&1 || status=$?
 	if [[ "$status" != "$expected" ]]; then
 		cat "$fixtures/output" >&2
 		echo "$name: status $status, want $expected" >&2
@@ -83,22 +78,13 @@ run_case() {
 run_case success 0
 run_case 'caller applier cannot double the shift' 0 BACKEND_CLOCK_SKEW=database:200
 grep -q '^suite$' "$CLOCK_ACTIONS"
-# What must run, taken from the Makefile and the shard numbering, not from the script under test.
-want="$(sed -n 's/^test:[[:space:]]*\([^#]*\).*/\1/p' "$root/backend/Makefile" | tr ' ' '\n' | sed '/^$/d; s/^test-/unit-/')"
-run_case 'every slice gets its own moved window' 0
-ran="$(sed -n 's/^slice //p' "$CLOCK_ACTIONS")"
-total="$(printf '%s\n' "$ran" | sed -n 's|^integration:[0-9]*/||p' | sort -n | tail -1)"
-for ((k = 1; k <= total; k++)); do want="$want"$'\n'"integration:$k/$total"; done
-grep -q '^unit-' <<<"$want"
-(( total > 1 ))
-[[ "$(printf '%s\n' "$ran" | sort)" == "$(printf '%s\n' "$want" | sort)" ]] || { echo "slices that ran differ from the Makefile's test legs and every shard:" >&2; diff <(printf '%s\n' "$want" | sort) <(printf '%s\n' "$ran" | sort) >&2 || true; exit 1; }
-slices="$(printf '%s\n' "$ran" | wc -l | tr -d ' ')"
-[[ "$(grep -c '^date +200 days$' "$CLOCK_ACTIONS")" == "$slices" ]]
-[[ "$(grep -c '^date -200 days$' "$CLOCK_ACTIONS")" == "$slices" ]]
-grep -q 'ran 0s at the moved clock' "$fixtures/output"
-run_case 'a real-time gap separates the slices' 0 SLICE_GAP=7
-[[ "$(grep -c '^sleep 7$' "$CLOCK_ACTIONS")" == "$((slices - 1))" ]]
-grep -q '7s at real time before the next slice' "$fixtures/output"
+SLICE=integration:2/6 run_case 'a run moves the clock once for the slice it names' 0
+[[ "$(sed -n 's/^slice //p' "$CLOCK_ACTIONS")" == integration:2/6 ]]
+[[ "$(grep -c '^date +200 days$' "$CLOCK_ACTIONS")" == 1 ]]
+[[ "$(grep -c '^date -200 days$' "$CLOCK_ACTIONS")" == 1 ]]
+grep -q 'slice integration:2/6 ran 0s at the moved clock' "$fixtures/output"
+SLICE=integration:9/6 run_case 'a misspelt slice moves no clock' 2
+[[ ! -s "$CLOCK_ACTIONS" ]]
 run_case 'suite failure stays red' 23 MOCK_SUITE_STATUS=23
 run_case 'timeout restores clock' 124 MOCK_TIMEOUT=1
 run_case 'termination restores clock' 143 MOCK_TERMINATE=1
@@ -107,7 +93,7 @@ run_case 'failed move restores time sync' 92 MOCK_MOVE_FAIL=1
 echo 1720000 >"$CLOCK_STATE"
 : >"$CLOCK_ACTIONS"
 status=0
-MOCK_RESTORE_FAIL=1 bash "$root/scripts/clock-drift-host.sh" run 200 >"$fixtures/output" 2>&1 || status=$?
+MOCK_RESTORE_FAIL=1 bash "$root/scripts/clock-drift-host.sh" run 200 unit-cached >"$fixtures/output" 2>&1 || status=$?
 [[ "$status" != 0 && -e "$CLOCK_DRIFT_BASELINE" ]]
 [[ "$(cat "$CLOCK_STATE")" == 19000000 ]]
 grep -q 'restoration failed' "$fixtures/output"
@@ -116,12 +102,46 @@ bash "$root/scripts/clock-drift-host.sh" restore 200
 echo 'PASS: restoration failure remains recoverable'
 
 status=0
-bash "$root/scripts/clock-drift-host.sh" run 08 >"$fixtures/output" 2>&1 || status=$?
+bash "$root/scripts/clock-drift-host.sh" run 08 unit-cached >"$fixtures/output" 2>&1 || status=$?
 [[ "$status" == 2 && ! -e "$CLOCK_DRIFT_BASELINE" ]]
 echo 'PASS: invalid offset changes no clock'
 
+# What must run, taken from the Makefile and the shard numbering, not from the
+# script under test: the job matrix holds every unit leg and every shard.
+want="$(sed -n 's/^test:[[:space:]]*\([^#]*\).*/\1/p' "$root/backend/Makefile" | tr ' ' '\n' | sed '/^$/d; s/^test-/unit-/')"
+listed="$(bash "$root/scripts/backend-clock-drift.sh" matrix | grep -o '"slice":"[^"]*"' | sed 's/^"slice":"//; s/"$//')"
+total="$(sed -n 's|^integration:[0-9]*/||p' <<<"$listed" | sort -n | tail -1)"
+for ((k = 1; k <= total; k++)); do want="$want"$'\n'"integration:$k/$total"; done
+grep -q '^unit-' <<<"$want"
+(( total > 1 ))
+[[ "$(sort <<<"$listed")" == "$(sort <<<"$want")" ]] || { echo "the job matrix differs from the Makefile's test legs and every shard:" >&2; diff <(sort <<<"$want") <(sort <<<"$listed") >&2 || true; exit 1; }
+echo 'PASS: the job matrix holds every slice'
+
+verdict_case() {
+	local name="$1" expected="$2" status=0 slice
+	shift 2
+	rm -rf "$fixtures/verdicts"
+	mkdir "$fixtures/verdicts"
+	for slice in $listed; do
+		echo pass >"$fixtures/verdicts/$(tr ':/' '--' <<<"$slice")"
+	done
+	"$@"
+	bash "$root/scripts/backend-clock-drift.sh" verdict "$fixtures/verdicts" >"$fixtures/output" 2>&1 || status=$?
+	if [[ "$status" != "$expected" ]]; then
+		cat "$fixtures/output" >&2
+		echo "$name: status $status, want $expected" >&2
+		exit 1
+	fi
+	echo "PASS: $name"
+}
+verdict_case 'every slice passed' 0 true
+verdict_case 'a calendar red is a finding' 1 eval 'echo calendar >"$fixtures/verdicts/integration-3-$total"'
+verdict_case 'a slice with no verdict is no verdict' 3 rm "$fixtures/verdicts/unit-solo"
+verdict_case 'a calendar red outranks a missing slice' 1 eval 'echo calendar >"$fixtures/verdicts/unit-cached"; rm "$fixtures/verdicts/unit-solo"'
+verdict_case 'an unreadable verdict is no verdict' 3 eval 'echo pas >"$fixtures/verdicts/unit-solo"'
+
 awk '
- /^  backend-clock-drift:/ { inside=1; next }
+ /^  backend-clock-drift-slice:/ { inside=1; next }
  inside && /^  [^ #][^:]*:/ { exit }
  inside && /^[[:space:]]*#/ { next }
  inside { print }
@@ -133,4 +153,9 @@ if grep -Fq './scripts/clock-drift-host.sh move ' "$fixtures/job"; then
  exit 1
 fi
 grep -Fq 'run: ./scripts/clock-drift-host.sh restore ' "$fixtures/job"
+# Without pipefail, `run ... | tee` takes tee's status, and a red slice reads as passed.
+grep -Fq 'set -o pipefail' "$fixtures/job"
 echo 'PASS: workflow keeps shift and recovery in one shell'
+grep -Fq './scripts/backend-clock-drift.sh matrix' "$root/.github/workflows/scheduled.yml"
+grep -Fq './scripts/backend-clock-drift.sh verdict ' "$root/.github/workflows/scheduled.yml"
+echo 'PASS: the workflow takes its slices and its verdict from the slice script'

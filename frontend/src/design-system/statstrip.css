@@ -397,7 +397,6 @@
   color: transparent;
   text-decoration: none;
   border-radius: var(--r-full);
-  corner-shape: round;
 }
 @media (pointer: coarse) {
   .stat-strip[data-lead] .stat-card-basis {
@@ -413,7 +412,6 @@
   color: var(--textSecondary);
   border: 1px solid var(--borderStrong);
   border-radius: var(--r-full);
-  corner-shape: round;
 }
 .stat-strip[data-lead] .stat-card-basis:hover::before {
   border-color: var(--accent);

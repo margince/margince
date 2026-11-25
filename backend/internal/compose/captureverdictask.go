@@ -126,10 +126,10 @@ func (e *CounterpartyVerdictEngine) ask(
 	}
 	var payload verdictPayload
 	if err := json.Unmarshal([]byte(ai.Unfence(out.Response.Text)), &payload); err != nil {
-		return nil, fmt.Errorf("verdict: unparseable model output: %w", err)
+		return nil, &unusableVerdictAnswer{fmt.Errorf("verdict: unparseable model output: %w", err)}
 	}
 	if msg := validateVerdictPayload(payload, row); msg != "" {
-		return nil, fmt.Errorf("verdict: %s", msg)
+		return nil, &unusableVerdictAnswer{fmt.Errorf("verdict: %s", msg)}
 	}
 	return resolveBatchRefs(payload.Results, senderRefs(row)), nil
 }

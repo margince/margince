@@ -4,9 +4,13 @@
 /** @vitest-environment happy-dom */
 
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { runCoreLoop, type Wanted } from "./margince-core-engine";
+import {
+  attachCoreLoop,
+  runCoreLoop,
+  type Wanted,
+} from "./margince-core-engine";
 import type { CoreFrame, CoreRenderer } from "./margince-core-gl";
-import { FRAME_MS, rowFor } from "./margince-core-motion";
+import { FRAME_MS, rowFor, still } from "./margince-core-motion";
 
 // The draw loop's contract with the GPU, which is a contract about WHEN rather
 // than about pixels. `margince-core-engine.test.tsx` covers the same engine from
@@ -99,6 +103,7 @@ const drifting = (): Wanted => ({ behaviour: rowFor("ingest"), paper: 0 });
 
 afterEach(() => {
   vi.restoreAllMocks();
+  vi.unstubAllGlobals();
 });
 
 describe("the Core's draw budget", () => {
@@ -182,5 +187,146 @@ describe("the Core's parking", () => {
 
   it("keeps running while the state it was given still drifts", () => {
     expect(runFor(1000, 1000 / 60, drifting()).parked).toBe(false);
+  });
+});
+
+describe("the Core under reduced motion", () => {
+  /** The first frame drawn after a still Core turns from idle to error. */
+  function firstFrameAfterTurning(snap: boolean): CoreFrame {
+    vi.spyOn(document, "hasFocus").mockReturnValue(true);
+    const asked: FrameRequestCallback[] = [];
+    vi.spyOn(globalThis, "requestAnimationFrame").mockImplementation((cb) => {
+      asked.push(cb);
+      return asked.length;
+    });
+    vi.spyOn(globalThis, "cancelAnimationFrame").mockImplementation(() => {
+      asked.length = 0;
+    });
+    const renderer = recorder(() => 0);
+    const wanted = { current: { behaviour: still("idle"), paper: 0, snap } };
+    const loop = runCoreLoop(
+      document.createElement("canvas"),
+      wanted,
+      () => renderer,
+    );
+    asked.shift()?.(FRAME_MS);
+    wanted.current.behaviour = still("error");
+    loop?.poke();
+    asked.shift()?.(FRAME_MS * 2);
+    loop?.stop();
+    const frame = renderer.frames.at(-1);
+    if (!frame) {
+      throw new Error("the Core drew nothing after its state changed");
+    }
+    return frame;
+  }
+
+  it("takes the new state's colour on the next frame", () => {
+    expect(firstFrameAfterTurning(true).tint).toBe(1);
+    expect(firstFrameAfterTurning(true).tintCol).toEqual(
+      still("error").tintCol,
+    );
+  });
+
+  it("eases into it otherwise", () => {
+    expect(firstFrameAfterTurning(false).tint).toBeLessThan(0.5);
+  });
+});
+
+describe("the Core through a GPU reset", () => {
+  it("drops to its still dress on a lost context and goes live again on restore", () => {
+    vi.spyOn(globalThis, "requestAnimationFrame").mockReturnValue(1);
+    vi.spyOn(globalThis, "cancelAnimationFrame").mockImplementation(() => {});
+    const canvas = document.createElement("canvas");
+    const built: ReturnType<typeof recorder>[] = [];
+    const live: boolean[] = [];
+    const release = attachCoreLoop(
+      canvas,
+      { current: { behaviour: rowFor("idle"), paper: 0 } },
+      () => {
+        const renderer = recorder(() => 0);
+        built.push(renderer);
+        return renderer;
+      },
+      { current: null },
+      (now) => live.push(now),
+    );
+
+    const lost = new Event("webglcontextlost", { cancelable: true });
+    canvas.dispatchEvent(lost);
+    canvas.dispatchEvent(new Event("webglcontextrestored"));
+    release();
+
+    // Not prevented, and the browser would never offer the context back.
+    expect(lost.defaultPrevented).toBe(true);
+    expect(live).toEqual([true, false, true]);
+    expect(built).toHaveLength(2);
+    expect(built[1]?.frames.length).toBeGreaterThan(0);
+  });
+
+  it("goes live on restore when the context it was born with was already lost", () => {
+    vi.spyOn(globalThis, "requestAnimationFrame").mockReturnValue(1);
+    vi.spyOn(globalThis, "cancelAnimationFrame").mockImplementation(() => {});
+    const canvas = document.createElement("canvas");
+    const renderer = recorder(() => 0);
+    const offered = [null, renderer];
+    const live: boolean[] = [];
+    const release = attachCoreLoop(
+      canvas,
+      { current: { behaviour: rowFor("idle"), paper: 0 } },
+      () => offered.shift() ?? null,
+      { current: null },
+      (now) => live.push(now),
+    );
+
+    canvas.dispatchEvent(new Event("webglcontextrestored"));
+    release();
+
+    expect(live).toEqual([false, true]);
+    expect(renderer.frames.length).toBeGreaterThan(0);
+  });
+});
+
+describe("the Core out of sight", () => {
+  it("parks once its canvas reports it is not in view", () => {
+    vi.spyOn(document, "hasFocus").mockReturnValue(true);
+    const asked: FrameRequestCallback[] = [];
+    vi.spyOn(globalThis, "requestAnimationFrame").mockImplementation((cb) => {
+      asked.push(cb);
+      return asked.length;
+    });
+    vi.spyOn(globalThis, "cancelAnimationFrame").mockImplementation(() => {
+      asked.length = 0;
+    });
+    // A hidden element has no box, and the browser reports it out of view.
+    let report: (entries: { isIntersecting: boolean }[]) => void = () => {};
+    vi.stubGlobal(
+      "IntersectionObserver",
+      class {
+        constructor(callback: typeof report) {
+          report = callback;
+        }
+        observe() {}
+        disconnect() {}
+      },
+    );
+    const canvas = document.createElement("canvas");
+    const renderer = recorder(() => 0);
+    const release = attachCoreLoop(
+      canvas,
+      { current: drifting() },
+      () => renderer,
+      { current: null },
+      () => {},
+    );
+    expect(asked).toHaveLength(1);
+
+    report([{ isIntersecting: false }]);
+    asked.shift()?.(FRAME_MS);
+    const drawn = renderer.frames.length;
+    release();
+
+    expect(asked).toHaveLength(0);
+    expect(drawn).toBe(renderer.frames.length);
   });
 });

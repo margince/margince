@@ -176,6 +176,15 @@ func (s *Store) insertNotice(ctx context.Context, in NewNotice, evidence map[str
 	return written, nil
 }
 
+// fittedWords is a notice's subject, body and their descriptor as the table
+// stores them: bounded, with the descriptor bound to the words kept.
+func fittedWords(ctx context.Context, in NewNotice) (*systemtext.Message, string, string) {
+	metadata, subject, body := systemtext.FitForWrite(ctx, in.SystemText, in.Subject, in.Body, subjectBound, bodyBound)
+	subject = textcut.Runes(subject, subjectBound)
+	body = textcut.Runes(body, bodyBound)
+	return systemtext.ForWrite(ctx, metadata, subject, body), subject, body
+}
+
 // insertNoticeTx is the write itself, returning the whole row.
 //
 // Create keeps its id-only signature because every system flow that calls it
@@ -190,10 +199,7 @@ func (s *Store) insertNoticeTx(ctx context.Context, tx pgx.Tx, in NewNotice, evi
 	if err != nil {
 		return Notice{}, false, err
 	}
-	metadata, subject, body := systemtext.FitForWrite(ctx, in.SystemText, in.Subject, in.Body, subjectBound, bodyBound)
-	subject = textcut.Runes(subject, subjectBound)
-	body = textcut.Runes(body, bodyBound)
-	metadata = systemtext.ForWrite(ctx, metadata, subject, body)
+	metadata, subject, body := fittedWords(ctx, in)
 
 	id := ids.NewV7()
 	var createdAt time.Time

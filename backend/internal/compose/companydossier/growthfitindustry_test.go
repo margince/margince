@@ -135,16 +135,16 @@ func TestTheModelReadsTheColumnIndustryWordedInThePromptLanguage(t *testing.T) {
 		if err := json.Unmarshal([]byte(encodeInput(in, string(lang))), &sent); err != nil {
 			t.Fatalf("decode: %v", err)
 		}
-		if sent.Industry != want {
-			t.Errorf("%s: industry = %q, want %q", lang, sent.Industry, want)
+		if got := sentColumns(sent).Industry; got != want {
+			t.Errorf("%s: industry = %q, want %q", lang, got, want)
 		}
 	}
 	var unrepaired modelInput
 	if err := json.Unmarshal([]byte(encodeInput(Input{Industry: "Medical devices"}, "en")), &unrepaired); err != nil {
 		t.Fatalf("decode: %v", err)
 	}
-	if unrepaired.Industry != "Medical devices" {
-		t.Errorf("a value that is no code was sent as %q, want it as stored", unrepaired.Industry)
+	if got := sentColumns(unrepaired).Industry; got != "Medical devices" {
+		t.Errorf("a value that is no code was sent as %q, want it as stored", got)
 	}
 	if strings.Contains(encodeInput(Input{}, "en"), `"industry"`) {
 		t.Error("an empty industry reached the model input")
@@ -212,7 +212,15 @@ func TestBuildInputCarriesTheCompanyColumnIndustry(t *testing.T) {
 	if err := json.Unmarshal([]byte(encodeInput(in, "en")), &sent); err != nil {
 		t.Fatalf("decode: %v", err)
 	}
-	if sent.SizeBand != "51-200" {
-		t.Errorf("the model read size band %q, want the column value", sent.SizeBand)
+	if got := sentColumns(sent).SizeBand; got != "51-200" {
+		t.Errorf("the model read size band %q, want the column value", got)
 	}
+}
+
+// sentColumns is the company record the model read, or none.
+func sentColumns(sent modelInput) companyColumns {
+	if sent.Company == nil {
+		return companyColumns{}
+	}
+	return *sent.Company
 }

@@ -56,7 +56,7 @@ func (s *Dispatcher) initialize(rawParams json.RawMessage) (map[string]any, *rpc
 // The approvals sentence names a tool BY NAME, and RegisterApprovalTools
 // registers nothing without an inbox, so the sentence is served only beside it.
 func (s *Dispatcher) instructions() string {
-	guidance := orientation + s.startingTools() + surfaceInstructions
+	guidance := orientation + toolNamesRule + s.startingTools() + surfaceInstructions
 	if _, served := s.registry.Spec(listApprovalsToolName); !served {
 		return guidance
 	}
@@ -69,6 +69,12 @@ const orientation = "Margince is a CRM: contacts, companies, deals, leads, proje
 	"activity on them. When an answer names a record, give the reader its evidence web_url so " +
 	"they can open it. Money comes as <name>_minor in minor units with a readable <name>_display " +
 	"beside it; quote the display. "
+
+// toolNamesRule comes before the first tool this text names. The server cannot
+// know the prefix a client adds to a tool's name, so it names tools bare and says so.
+const toolNamesRule = "This server names its tools by their own names, here, in every tool " +
+	"description and in its answers. Your client may list each tool under a longer name with a " +
+	"prefix of its own; call a tool by the name your client lists. "
 
 // startingTools names the first tools to reach for, only those this composition
 // serves, for the same reason the approvals sentence is conditional.
@@ -86,9 +92,8 @@ func (s *Dispatcher) startingTools() string {
 }
 
 // surfaceInstructions is the guidance for the model on the other side of the
-// client, kept to what is true of EVERY tool: the per-tool text is
-// DescribeForClient's, and a second description of the governance here would be
-// a second answer to the same question.
+// client, kept to what is true of every tool. governanceDefaults is the half of
+// each description DescribeForClient leaves out, so the two read as one text.
 //
 // One string for both eras. `initialize` and `server/discover` are the same
 // claim to two generations of client, and two spellings of one claim is how a
@@ -97,8 +102,8 @@ func (s *Dispatcher) startingTools() string {
 const surfaceInstructions = "A governed CRM tool surface. Every call re-authenticates and is bounded by " +
 	"the granting human's own permissions, so a tool may refuse a record this passport cannot " +
 	"reach. Tools that a human must approve say so in their own description; calling one " +
-	"stages the effect for review rather than performing it. A tool whose description names no " +
-	"governance runs immediately and needs only the read scope. " + mcp.UntrustedContentRule + " " +
+	"stages the effect for review rather than performing it. " + governanceDefaults + " " +
+	mcp.UntrustedContentRule + " " +
 	mcp.ConflictingSourcesRule + " " +
 	mcp.LocalTimeRule + " " + mcp.OwnershipRule
 

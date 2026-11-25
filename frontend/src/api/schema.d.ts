@@ -117,7 +117,12 @@ export interface paths {
         post?: never;
         delete?: never;
         options?: never;
-        head?: never;
+        /**
+         * Reachability probe for a monitor that sends HEAD.
+         * @description `getStatus` without a body, for a monitor that probes with HEAD. It answers what
+         *     `getStatus` answers, and does no more work.
+         */
+        head: operations["headStatus"];
         patch?: never;
         trace?: never;
     };
@@ -2359,6 +2364,9 @@ export interface paths {
          *     past 120 characters (`too_long`), the limit of every company name typed by hand.
          *     A `parent_company_id` that names a company the caller cannot read answers 422 naming
          *     `parent_company_id`, the same for a missing record and for one hidden by row scope.
+         *     A parent that already sits below this company answers 422 `parent_company_below` on
+         *     `parent_company_id`, with `params.name` naming that company. A parent that is the company itself
+         *     answers 422 `parent_company_self` on `parent_company_id`.
          */
         patch: operations["updateCompany"];
         trace?: never;
@@ -7901,7 +7909,10 @@ export interface paths {
     };
     "/public/booking/{host_slug}/preview": {
         parameters: {
-            query?: never;
+            query?: {
+                /** @description Meeting length in minutes the shared link asks for. The card names it, links to it and gives it as the canonical address when the page offers it; otherwise the card names the default length. */
+                l?: number;
+            };
             header?: never;
             path: {
                 host_slug: string;
@@ -7914,7 +7925,8 @@ export interface paths {
          *     preview reads the page without running the app. The HTML carries the host's name,
          *     company, meeting title and duration as escaped title, description, Open Graph and
          *     Twitter card fields. The canonical URL and `og:url` are the absolute `/book/{host_slug}`
-         *     address on the configured public origin, and are omitted when no usable origin is
+         *     address on the configured public origin, with `?l=` when the card names an offered
+         *     length the link asked for, and are omitted when no usable origin is
          *     configured. The company logo is the card image when there is one; otherwise the card
          *     has no image. A paused page answers generic metadata that names no host. A missing
          *     or revoked page answers 404 with no host metadata. Responses are `no-store` and
@@ -8161,6 +8173,64 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/scheduling/team-links": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List the caller's team booking links.
+         * @description Each live team link the caller owns, oldest first. A team link sits beside the caller's
+         *     personal booking page, which always offers the caller's own free time alone.
+         */
+        get: operations["listSchedulingTeamLinks"];
+        put?: never;
+        /**
+         * Create a team booking link that names colleagues.
+         * @description Creates a link with its own address. Guests see only the times when the caller and every
+         *     member are free, inside each one's own working hours, and each booking invites every
+         *     member. The link uses the calendar and booking settings of the caller's personal page.
+         *     Each member starts as `pending`, and the link takes no bookings until every member has
+         *     confirmed. Name one to five colleagues offered by `GET /scheduling/team-candidates`;
+         *     anything else answers 422 on `team_members`.
+         */
+        post: operations["createSchedulingTeamLink"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/scheduling/team-links/{page_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                page_id: string;
+            };
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Rename a team link, switch it on or off, or change its members.
+         * @description Only the link's owner may change it; anyone else gets 404. A member kept on the list keeps
+         *     their own answer, and a member new to it starts as `pending`.
+         */
+        put: operations["updateSchedulingTeamLink"];
+        post?: never;
+        /**
+         * Delete a team link.
+         * @description The link's address stops working. Meetings already booked through it stand. The owner's
+         *     personal page does not change. Only the link's owner may delete it; anyone else gets 404.
+         */
+        delete: operations["deleteSchedulingTeamLink"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/scheduling/team-requests": {
         parameters: {
             query?: never;
@@ -8193,13 +8263,40 @@ export interface paths {
         };
         get?: never;
         /**
-         * Confirm or leave a colleague's booking link that names the caller.
-         * @description `confirmed` lets the link read the caller's free time and put the caller on each meeting
-         *     booked through it. `left` takes the caller off: the link stops taking bookings until its
-         *     owner removes the caller, and the owner sees why. Answers 404 when no live link of that
-         *     colleague names the caller.
+         * Confirm or leave every team link of a colleague that names the caller.
+         * @deprecated
+         * @description Use `PUT /scheduling/team-links/{page_id}/answer` instead, which answers one team link.
+         *     This answers each live team link of that colleague that names the caller. `confirmed`
+         *     confirms each one still pending. `left` takes the caller off each one they have not left.
+         *     Answers 404 when no live team link of that colleague names the caller.
          */
         put: operations["answerSchedulingTeamRequest"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/scheduling/team-links/{page_id}/answer": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The `page_id` of a team request, from `GET /scheduling/team-requests`. */
+                page_id: string;
+            };
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Confirm or leave a colleague's team link that names the caller.
+         * @description `confirmed` lets the link read the caller's free time and put the caller on each meeting
+         *     booked through it. `left` takes the caller off: the link stops taking bookings until its
+         *     owner removes the caller, and the owner sees why. Answers 404 when no live team link with
+         *     this id names the caller.
+         */
+        put: operations["answerSchedulingTeamLink"];
         post?: never;
         delete?: never;
         options?: never;
@@ -8309,7 +8406,7 @@ export interface paths {
     "/public/booking/{host_slug}/availability": {
         parameters: {
             query?: {
-                /** @description Offered meeting length in minutes. Unknown lengths use the default. */
+                /** @description Offered meeting length in minutes. A length the page does not offer is refused with 422 `length_not_offered`; read the profile again for the lengths on offer. */
                 l?: number;
             };
             header?: never;
@@ -8336,7 +8433,7 @@ export interface paths {
     "/public/booking/{host_slug}": {
         parameters: {
             query?: {
-                /** @description Offered meeting length in minutes. Unknown lengths use the default. */
+                /** @description Offered meeting length in minutes. A length the page does not offer is refused with 422 `length_not_offered`; read the profile again for the lengths on offer. */
                 l?: number;
             };
             header?: never;
@@ -11658,11 +11755,16 @@ export interface paths {
         get: operations["listWebForms"];
         put?: never;
         /**
-         * Create a website form (returns a minted signing secret once).
+         * Create a website form; a human sees its minted signing secret once.
          * @description Mints the form's public key, the last segment of its intake address
          *     `POST /v1/public/forms/{form_key}`. A `server` form answers its own signing secret in
          *     `signing_secret`, once; no read returns it again. So does a `typeform` or `tally` form
-         *     sent without `sender_secret`: the secret is then typed into the builder's webhook. A
+         *     sent without `sender_secret`: the secret is then typed into the builder's webhook. Only a
+         *     human gets that secret: an agent's answer leaves `signing_secret` out, so no secret
+         *     enters a model transcript. Its user then shows one with Make a new secret on the form in
+         *     Settings > Website forms (`POST /v1/web-forms/{id}/rotate-secret`). An agent that sends
+         *     `sender_secret`, websites, consent or a privacy notice is refused with `403`, as on an
+         *     update: those stay with its user. A
          *     `webflow` form stores the secret Webflow issued, sent in `sender_secret` now or on a
          *     later update; until then it refuses every post. Every signed
          *     sender needs a secret store on this installation; without one it answers 422 on `sender`.
@@ -17908,7 +18010,7 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * One privacy notice owed, where the source is confirmed. The case id comes from notice_cases, not the contact's id.
+         * One privacy notice owed, where the source is confirmed. The case id comes from notice_cases (GET /privacy/notice-cases), not the contact's id.
          * @description The same case the queue lists, read on its own, for a surface that opens one duty rather
          *     than working a page of them.
          *
@@ -17943,7 +18045,7 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * Give a privacy notice already owed (from notice_cases) an owner.
+         * Give a privacy notice already owed (from notice_cases, GET /privacy/notice-cases) an owner.
          * @description Records who is working this duty, so the queue shows a claimed case rather than a pile
          *     nobody has taken.
          *
@@ -18027,7 +18129,7 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * One contact's privacy-notice case — its source, whether a notice is owed, and by when. The id comes from notice_case_reviews or the contact's contact_360 view, not the contact's id.
+         * One contact's privacy-notice case — its source, whether a notice is owed, and by when. The id comes from notice_case_reviews (GET /privacy/notice-case-reviews) or the contact's contact_360 view (GET /contacts/{id}/360), not the contact's id.
          * @description The administrative record for a source review or notice duty. Human privacy-request read
          *     authority covers the record; contact names remain limited by ordinary contact visibility.
          */
@@ -18052,7 +18154,7 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * Give a contact's privacy-notice case (from notice_case_reviews) an owner.
+         * Give a contact's privacy-notice case (from notice_case_reviews, GET /privacy/notice-case-reviews) an owner.
          * @description Records who is working this duty, so the queue shows a claimed case rather than a pile
          *     nobody has taken.
          *
@@ -18080,7 +18182,7 @@ export interface paths {
         /** Read accessible evidence for a contact source assessment. */
         get: operations["getNoticeSourceEvidence"];
         put?: never;
-        /** Confirm where a contact came from (bought list, import, their own enquiry), which decides whether a privacy notice is owed. Preview it first (POST /privacy/notice-case-reviews/{id}/source/preview). Only a contact with no recorded source is up for review; when its evidence does not name where the data first came from, ask the user rather than guessing a kind. */
+        /** Confirm where a contact came from (bought list, import, their own enquiry), which decides whether a privacy notice is owed. Preview it first (POST /privacy/notice-case-reviews/{id}/source/preview). Only a contact with no recorded source is up for review; when its evidence does not name where the data first came from (an import alone does not), ask the user rather than guessing a kind. */
         post: operations["assessNoticeSource"];
         delete?: never;
         options?: never;
@@ -24285,7 +24387,7 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * The acting user's own in-app notifications, newest first. Not a privacy notice owed to a contact; those are notice_case_reviews.
+         * The acting user's own in-app notifications, newest first. Not a privacy notice owed to a contact; those are notice_case_reviews (GET /privacy/notice-case-reviews).
          * @description The acting human's own notifications, newest first, read and unread; another seat's are
          *     not an error, they are absent.
          *
@@ -28020,7 +28122,7 @@ export interface components {
             };
         };
         WebFormCreated: components["schemas"]["WebForm"] & {
-            /** @description The signing secret this installation minted for a `server`, `typeform` or `tally` form, shown this once. */
+            /** @description The signing secret this installation minted for a `server`, `typeform` or `tally` form, shown this once and only to a human, never to an agent. */
             signing_secret?: string;
         };
         WebFormListResponse: {
@@ -32804,7 +32906,7 @@ export interface components {
             processing: "cloud_provider" | "configured_endpoint";
             certification?: components["schemas"]["AiRouteCertification"];
         };
-        /** @description What the certification records say about this model for this task. Absent on a candidate no record measured, which the screen reads as not certified. */
+        /** @description What the certification records say about this model for this task, read by the same rule as the feature's `certification` grade, so the lead candidate and the feature never disagree. Absent on a candidate that grade calls not_measured. */
         AiRouteCertification: {
             /**
              * @description The worst verdict across the task's sites and across the records of this model.
@@ -32847,9 +32949,9 @@ export interface components {
         };
         /**
          * @description The certification grade of the model that answers this feature first (the lead of
-         *     `normal_candidates`), read from the committed certification records by the readiness
+         *     `effective_candidates`), read from the committed certification records by the readiness
          *     report's rule: the worst grade over every site the feature ships, and not measured when
-         *     any site has no record for that model. Absent when no model is bound, and for embeddings.
+         *     any site has no record for that model. Absent when no model is bound or the budget blocks the feature, and for embeddings.
          */
         AiTaskCertification: {
             /**
@@ -36448,13 +36550,18 @@ export interface components {
         FinanceSourceOption: {
             /** @description The source's key, stored on every mirrored row. */
             provider: string;
+            /** @description The source's name for a reader, as its unit declares it. Absent when the unit declares none; a client then names it another way, never by the key. */
+            provider_name?: string;
             /** @description What the extension unit supplying it says it is for. */
             description: string;
         };
         FinanceConnection: {
             /** Format: uuid */
             id: string;
+            /** @description The source's key. Show `provider_name` to a reader. */
             provider: string;
+            /** @description The source's name for a reader, as its unit declares it. Absent when the unit declares none; a client then names it another way, never by the key. */
+            provider_name?: string;
             /**
              * @description `connecting` until the first sync finishes; `error` when the last one failed.
              * @enum {string}
@@ -36493,7 +36600,10 @@ export interface components {
             state: components["schemas"]["FinanceSummaryState"];
             /** @description Opaque revision of readable companies and the imported snapshot. Pages with different revisions must not be combined. */
             access_scope: string;
+            /** @description The accounting source's key. Show `provider_name` to a reader. */
             provider?: string;
+            /** @description The accounting source's name for a reader, as its unit declares it. Absent when the unit declares none; a client then names no source rather than show the key. */
+            provider_name?: string;
             /** Format: date-time */
             last_synced_at?: string;
             /** @description Readable, live linked companies eligible for the payment overview. */
@@ -36553,8 +36663,10 @@ export interface components {
              *     Absent when the caller lacks the contact or relationship grant, so an empty array means nobody is named rather than nobody may be seen. Contacts outside the caller's row scope are not listed, and no count says how many were withheld.
              */
             billing_contacts?: components["schemas"]["BillingContact"][];
-            /** @description Which accounting source this came from, in the source's own words ("offline_demo"). Rendered as a label beside the figures so a reader knows what they are looking at; absent when nothing is connected. */
+            /** @description Which accounting source this came from, by its key ("offline_demo"). A key, not a name for a reader: show `provider_name`. Absent when nothing is connected. */
             provider?: string | null;
+            /** @description The accounting source's name for a reader ("Demo accounting"), as the unit that supplies it declares it. Absent when nothing is connected, or when that unit declares no name; a client then names no source rather than show the key. */
+            provider_name?: string | null;
             /**
              * Format: date-time
              * @description When the last successful sync finished. Null when none has.
@@ -37834,6 +37946,7 @@ export interface components {
             privacy_source_reviews?: string[];
             /** @description Unresolved disclosure work for this contact, in deadline order. Absent when privacy-request read authority is withheld. */
             privacy_notice_duties?: components["schemas"]["ContactNoticeDuty"][];
+            privacy_confirmed_source?: components["schemas"]["ContactConfirmedSource"];
             /** @description Per-purpose state. The proof log stays at `GET /contacts/{id}/consent` — this is the guard, not the ledger. */
             consent?: {
                 state: components["schemas"]["ContactConsentState"][];
@@ -38423,7 +38536,7 @@ export interface components {
              *     `reason_at` when the date is known.
              * @enum {string}
              */
-            reason_code: "objection" | "suppressed_objection" | "suppressed_restricted" | "suppressed_subject_request" | "suppressed_hard_bounce" | "suppressed" | "contract_notice" | "no_call_path" | "said_we_may_write" | "unconfirmed_double_opt_in" | "no_connection" | "qualifying_event" | "consent_confirmed" | "consent_withdrawn" | "no_consent_exception_not_offered" | "no_consent" | "existing_customer";
+            reason_code: "objection" | "suppressed_objection" | "suppressed_restricted" | "suppressed_subject_request" | "suppressed_hard_bounce" | "suppressed" | "contract_notice" | "no_call_path" | "said_we_may_write" | "unconfirmed_double_opt_in" | "no_connection" | "qualifying_event" | "consent_confirmed" | "consent_withdrawn" | "no_consent_exception_not_offered" | "no_consent" | "existing_customer" | "opt_out_allowed";
             /**
              * Format: date-time
              * @description When the objection behind an `objection` reason was recorded, when the record carries it.
@@ -42605,6 +42718,26 @@ export interface components {
             phase_durations: components["schemas"]["Project360PhaseDuration"][];
         };
         /**
+         * @description The source a reviewer last confirmed for this contact, from the newest confirmed
+         *     privacy-notice case. Absent when no source was ever confirmed, and withheld with the
+         *     privacy_notice_duties section.
+         */
+        ContactConfirmedSource: {
+            /** Format: uuid */
+            case_id: string;
+            /** @description The confirmed kind: one of `AssessNoticeSource.kind`. */
+            source_kind: string;
+            /**
+             * Format: date-time
+             * @description The acquisition date the reviewer confirmed; null when they confirmed none.
+             */
+            source_obtained_at: string | null;
+            /** Format: date-time */
+            confirmed_at: string;
+            /** @description Read from the confirm's audit row. Absent for an agent reader, and when that row no longer exists. */
+            confirmed_by?: components["schemas"]["PrincipalAttribution"];
+        };
+        /**
          * @description Who a recorded change is attributed to, read from the audit row the change
          *     wrote. The fields mean what they mean on AuditHistoryEntry, and a client
          *     renders them with the same helper.
@@ -43655,7 +43788,10 @@ export interface components {
             logo_url?: string;
             title: string;
             location: string;
+            /** @description The length this page books: the one `l` asked for when the page offers it, else the default. */
             duration_minutes: number;
+            /** @description Every meeting length the host's booking page offers, the default first. Pass one as `l` to book at that length. Absent on a paused page and on a meeting proposal. */
+            offered_lengths?: number[];
             enabled: boolean;
             /** @description True when the page takes no bookings now: the host turned bookings off, or the calendar behind it cannot take them. The availability and booking calls then answer as for an unknown page. */
             paused: boolean;
@@ -43702,17 +43838,17 @@ export interface components {
              *     the page names no calendar (a page saved before the profile existed reads this way).
              *     `calendar_read_only`: the connection lacks the calendar write grant. `calendar_unavailable`:
              *     the connection is gone or refused. `team_not_ready`: a team member has not confirmed, has
-             *     left, or has no calendar Margince can read; `team_members` says which. Answered on the
-             *     host's own profile read only.
+             *     left, or has no calendar Margince can read; the team link's `team_members` says which.
+             *     Answered on the host's own reads only.
              * @enum {string}
              */
             readonly blocker?: "none" | "no_calendar" | "calendar_read_only" | "calendar_unavailable" | "team_not_ready";
             /**
-             * @description Colleagues who must attend every meeting booked through this page. Guests see only the
-             *     times when the host and every member are free, inside each one's own working hours, and
-             *     each booking invites every member. A member named here starts as `pending` and the page
-             *     takes no bookings until every member has confirmed. Only `user_id` is read from a
-             *     request; a colleague not offered by `GET /scheduling/team-candidates` is refused.
+             * @deprecated
+             * @description The personal page names no colleagues: it offers the host's own free time alone. A
+             *     request naming a member answers 422 on `team_members`; an empty list is accepted. A
+             *     response does not carry the field. Colleagues are named on a team link
+             *     (`POST /scheduling/team-links`).
              */
             team_members?: components["schemas"]["SchedulingTeamMember"][];
         };
@@ -43734,13 +43870,46 @@ export interface components {
             name: string;
         };
         SchedulingTeamRequest: {
+            /**
+             * Format: uuid
+             * @description The team link that names the caller; answer it with `PUT /scheduling/team-links/{page_id}/answer`.
+             */
+            page_id: string;
             /** Format: uuid */
             host_user_id: string;
             host_name: string;
-            /** @description The meeting title the link offers. */
+            /** @description The team link's name, which is the meeting title it offers. */
             title: string;
             /** @enum {string} */
             state: "pending" | "confirmed";
+        };
+        /**
+         * @description A booking link that names colleagues who attend every meeting booked through it. It uses
+         *     the calendar and booking settings of its owner's personal page, and has its own address.
+         */
+        SchedulingTeamLink: {
+            /** Format: uuid */
+            id: string;
+            /** @description The link's name, which is also the meeting title guests see. */
+            title: string;
+            /** @description Whether the owner switched the link on. */
+            enabled: boolean;
+            team_members: components["schemas"]["SchedulingTeamMember"][];
+            slug: string;
+            /** @description The address to share, `/book/{slug}` on the configured public origin. Absent when no usable public origin is configured. */
+            public_url?: string;
+            /**
+             * @description Why the link takes no bookings now, with the meanings `SchedulingProfile.blocker` gives them.
+             * @enum {string}
+             */
+            blocker: "none" | "no_calendar" | "calendar_read_only" | "calendar_unavailable" | "team_not_ready";
+        };
+        SchedulingTeamLinkRequest: {
+            title: string;
+            /** @description Absent means on. */
+            enabled?: boolean;
+            /** @description Only `user_id` is read. A member's answer is theirs to give. */
+            team_members: components["schemas"]["SchedulingTeamMember"][];
         };
         SchedulingTeamAnswer: {
             /** @enum {string} */
@@ -44004,7 +44173,7 @@ export interface components {
             readonly writable?: boolean;
             /** @description Whether THIS caller may archive THIS activity: the row write gate `writable` asks, plus the `activity:delete` grant, or `activity:update` on a note, task, call or meeting the caller logged by hand (under their own stamp or through an agent acting for them) that no provider import backs. Sent and captured correspondence, a calendar-synced meeting and a colleague's entry need the delete grant. A meeting a live invitation holds is never archivable. Server-computed per row, per caller. A UX signal, never the enforcement, exactly like `writable`; absent means NOT archivable. */
             readonly archivable?: boolean;
-            /** @description Whether this meeting still owes an answer about how it went, by the rule the Worklist's outcome lane asks: a meeting linked to a customer record the caller may see, with no `meeting_status` or `booked`, whose start has passed (a date-only meeting once its date is over in the installation's timezone) by the server's clock, and whose content the caller may read. Unlike the lane it has no look-back window, so an old booked meeting still asks. Every read that carries `writable` carries this. A client offers the outcome control when this and `writable` are both true. Absent means false. */
+            /** @description Whether this meeting still owes an answer about how it went, by the rule the Worklist's outcome lane asks: a meeting linked to a customer record the caller may see, with no `meeting_status` or `booked`, whose start has passed (a date-only meeting once its date is over in the installation's timezone) by the server's clock, and whose content the caller may read. A meeting whose subject names travel logistics (a flight, an airport, a pickup) asks only when it links a deal, lead or project the caller may see. Unlike the lane it has no look-back window, so an old booked meeting still asks. Every read that carries `writable` carries this. A client offers the outcome control when this and `writable` are both true. Absent means false. */
             readonly awaiting_outcome?: boolean;
             /** @description Whether a live calendar invitation holds this meeting. Then a write through this activity that sets `subject`, `body`, `occurred_at`, `occurred_precision` or a `meeting_status` other than `held` or `no_show` is refused with `calendar_managed`; that change goes through the invitation (`PATCH /scheduling/invitations/{id}`). Archiving or restoring the activity is refused with `calendar_managed` too, and the undo of its creation is refused. Every read that carries `writable` carries this. Absent means false. */
             readonly calendar_managed?: boolean;
@@ -46351,6 +46520,14 @@ export interface components {
              *     `POST /lawful-basis-confirmations` before the send. Absent or false otherwise.
              */
             lawful_basis_missing?: boolean;
+            /**
+             * @description The record states no country for this recipient, the refusal is for want of marketing
+             *     consent, and an installed pack allows advertising until the recipient refuses. A composer
+             *     asks the sender for the country, saves it on the contact with `PATCH /contacts/{id}`
+             *     (`address_country`) and asks the preview again. Absent or false when no answer could
+             *     change the decision, and for a recipient the caller cannot read.
+             */
+            ask_country?: boolean;
             /**
              * Format: uuid
              * @description For a recipient marked `lawful_basis_missing`: the purpose a consent request would ask
@@ -51078,9 +51255,11 @@ export interface components {
             routine_mail_scope?: "personal" | "team" | "combined";
             /**
              * Format: uuid
-             * @description The selected live team for team or combined scope. Personal scope ignores a retained selection.
+             * @description The selected live team for team or combined scope. Personal scope ignores a retained selection. A team that does not exist, is archived or is not one the caller may review is refused with 422 `delivery_team_gone` on this field.
              */
             routine_mail_team_id?: string;
+            /** @description True removes the selected team, and a team or combined scope falls back to `personal`. Sent together with `routine_mail_team_id` it is refused with 422. */
+            clear_routine_mail_team?: boolean;
             /** @description Earliest weekday, Monday 1 through Sunday 7. A non-working choice rolls to the next working weekday; later workdays allow catch-up. */
             weekly_delivery_day?: number;
             /** @description Combine eligible notices and current actions with the weekly message when it is ready, using one routine email per reporting day. Defaults to false; class opt-outs remain effective. */
@@ -52535,6 +52714,8 @@ export interface components {
             disabled_features?: components["schemas"]["CoreFeature"][];
             /** @description Whether reporting is enabled in this installation. */
             reporting?: boolean;
+            /** @description True when this installation consults the EU VAT register, so `POST /companies/{id}/vat-check` can queue a check. Absent or false means that request answers 404, and a client offers no check. */
+            vat_register?: boolean;
             /** @description True when Live Lists and Shortlists are on (`lists.enabled`, on by default). False when an operator has switched them off: the `/lists` routes answer 404, no agent tool reaches them, and no screen offers them. */
             lists?: boolean;
             /** @description True when an embeddings model is bound, so the reindex surface (`/embeddings/reindex*`) exists. False is the posture under which those routes answer 501: `--ai-fake`, or a routing document that binds no embeddings model. Bound or unbound only — deliberately not which model, which is the reindex status's own answer to a caller who may read it. */
@@ -53223,19 +53404,34 @@ export interface components {
             next_attempt_at?: string;
             count?: number;
             /** @enum {string} */
-            unit?: "runs" | "mailboxes" | "records" | "updates" | "items" | "threads";
+            unit?: "runs" | "mailboxes" | "records" | "updates" | "items" | "threads" | "messages";
             /** Format: date-time */
             window_start?: string;
             /** Format: date-time */
             window_end?: string;
+            footer_gap?: components["schemas"]["HealthFooterGap"];
             action: components["schemas"]["HealthAction"];
+        };
+        /** @description A legal entity whose mail owes a company detail nobody stated. A send that owes it is held for review with `footer_incomplete`, and a background send is dropped. The finding goes once the details are complete. */
+        HealthFooterGap: {
+            /** Format: uuid */
+            legal_entity_id: string;
+            /** @description Empty for a default entity that states no name. */
+            legal_entity_name: string;
+            is_default: boolean;
+            /** @description The owed disclosure kinds with no text, then `entity_name` for a default entity with neither a display name nor a legal name. */
+            missing: ("controller_identity" | "privacy_contact" | "objection_route" | "advertiser_contact" | "advertisement" | "entity_name")[];
+            /** @description Sends a user pressed that were held for this since the details last changed. */
+            held_by_user: number;
+            /** @description Background sends, such as a meeting reminder, that were held or dropped for this since the details last changed. */
+            held_in_background: number;
         };
         HealthAction: {
             /**
-             * @description Where the finding is acted on. `regional` is the Company settings part that holds the installation timezone.
+             * @description Where the finding is acted on. `regional` is the Company settings part that holds the installation timezone. `legal_entities` is the Company settings part that lists the legal entities, and `company_profile` the one that names the company. `disclosures` is the jurisdiction page that holds the company details every mail discloses.
              * @enum {string}
              */
-            destination: "diagnostics" | "connections" | "models" | "search" | "updates" | "configuration" | "regional";
+            destination: "diagnostics" | "connections" | "models" | "search" | "updates" | "configuration" | "regional" | "legal_entities" | "company_profile" | "disclosures";
             available: boolean;
             reason?: string;
         };
@@ -53373,7 +53569,7 @@ export interface components {
             on_behalf_of_name?: string | null;
             /**
              * Format: uuid
-             * @description The bulk change that wrote this row; null for a change made on its own.
+             * @description The operation group that wrote this row: a bulk change, or one run of a capture purge. Null for a change made on its own.
              */
             batch_id?: string | null;
             action: components["schemas"]["AuditAction"];
@@ -54091,7 +54287,7 @@ export interface components {
          * @description AI task key from the task catalog, used to localize its display name.
          * @enum {string}
          */
-        AiTask: "account_scan" | "agent_loop" | "brief_ranking" | "capture_classify" | "capture_confidentiality_verdict" | "capture_counterparty_verdict" | "chat_summary" | "chat_task_reading" | "cert_judge" | "cold_start" | "corpus_ask" | "deal_health" | "deal_verdict" | "document_extract" | "draft_reply" | "enrich" | "extension_task" | "growth_fit" | "nl_search" | "offer_draft" | "owed_verdict" | "propose_roles" | "rate_extract" | "reader_rendering" | "report_interpret" | "report_setup" | "request_settlement" | "rewrite" | "signal_extract" | "site_extract" | "site_fact_extract" | "site_triage" | "stage_evidence_extract" | "summarize" | "tag_suggest" | "transcript" | "transcript_propose" | "voice_build" | "weekly_learnings" | "weekly_review";
+        AiTask: "account_scan" | "agent_loop" | "brief_ranking" | "capture_classify" | "capture_confidentiality_verdict" | "capture_counterparty_verdict" | "chat_summary" | "chat_task_reading" | "cert_judge" | "cold_start" | "corpus_ask" | "deal_health" | "deal_verdict" | "document_extract" | "draft_reply" | "enrich" | "growth_fit" | "nl_search" | "offer_draft" | "owed_verdict" | "propose_roles" | "rate_extract" | "reader_rendering" | "report_interpret" | "report_setup" | "request_settlement" | "rewrite" | "signal_extract" | "site_extract" | "site_fact_extract" | "site_triage" | "stage_evidence_extract" | "summarize" | "tag_suggest" | "transcript" | "transcript_propose" | "voice_build" | "weekly_learnings" | "weekly_review";
         /**
          * @description What kind of AI work an occurrence is. Every AI task this build can run reports here,
          *     because a task that reports nothing is AI work the product performed and then denied.
@@ -54111,6 +54307,9 @@ export interface components {
          *     also what a caller may FILTER on, and rows written before they were retired are served
          *     until the projection's retention window closes over them — narrowing the filter would
          *     refuse a query that still has answers.
+         *
+         *     `extension_task` is RETIRED for the same reason: the task was removed, and an extension's
+         *     AI task now reports under its own `ext_<unit>_<task>` name. `ai.RetiredTasks` lists it.
          *
          *     Its own schema because the item that reports a kind and the query that asks for kinds
          *     must be ONE list — two copies of a vocabulary are two vocabularies as soon as somebody
@@ -54230,22 +54429,30 @@ export interface components {
         AgentToolListResponse: {
             data: components["schemas"]["AgentTool"][];
         };
-        /** @description The actions of one MCP router whose actions run REST routes. */
+        /** @description The actions of one MCP router, with the arguments each takes. */
         RouterActions: {
             router: string;
             /** @description What ask_user_first asks of the model; present when an action here has it. */
             ask_user_first_means?: string;
+            /** @description Where an action's arguments go in the router call: top-level members beside action, a routed body in request_body. */
+            how_to_call: string;
             actions: {
                 /** @description The value the router's action argument takes. */
                 action: string;
-                /** @description The route's summary. */
+                /** @description What the action does. */
                 does: string;
                 /** @description The method and route, for example POST /v1/record-grants. */
                 route: string;
                 /** @description The path ids the action takes as arguments. */
                 ids?: string[];
-                /** @description The query parameters it takes as arguments. */
-                query?: string[];
+                /** @description The query parameters it takes as arguments, each with its type and any closed values. */
+                query?: {
+                    name: string;
+                    type: string;
+                    required?: boolean;
+                    enum?: string[];
+                    format?: string;
+                }[];
                 /** @description Whether it takes if_version: the version you last read. */
                 if_version?: boolean;
                 /** @description Whether the app asks its user to confirm it first. */
@@ -54253,7 +54460,9 @@ export interface components {
                 /** @description Whether it takes filename, content_type and content_base64. */
                 uploads_a_file?: boolean;
                 /** @description The JSON schema of its body argument. */
-                body?: Record<string, never>;
+                body?: {
+                    [key: string]: unknown;
+                };
             }[];
         };
         /**
@@ -56756,6 +56965,10 @@ export interface components {
             change_reasons: components["schemas"]["RecordAccessReason"][];
             /** @description The member's role keys. Present only when `detail` is true. */
             roles?: string[];
+            /** @description The name an admin gave each live role in `roles`, keyed by role key, so a reader who may not read the role directory still sees a custom role by its name. Present only when `detail` is true. Absent from an older server; a key it does not name is shown as the key. */
+            role_names?: {
+                [key: string]: string;
+            };
         };
         /**
          * @description One reason a member can open or change the record. `workspace_visible` means the record is
@@ -59776,7 +59989,7 @@ export interface components {
             /** Format: date-time */
             expires_at: string;
         };
-        /** @description The sign of impersonation the sender check saw when capture made this contact from a mail. */
+        /** @description The sign of impersonation the sender check saw on a captured mail from this contact. */
         ContactImpersonationWarning: {
             /**
              * @description Which sign it saw. `punycode_domain`: the mail domain is written in punycode, which can look like another domain. `display_name_other_domain`: the display name holds an address on a domain other than the one the mail came from. Absent on a warning recorded before the reason was stored.
@@ -65014,6 +65227,34 @@ export interface components {
                 "application/problem+json": components["schemas"]["Problem"];
             };
         };
+        /**
+         * @description No such file in this workspace, or out of RBAC scope. A browser tab that opened the file's
+         *     link (an `Accept` that prefers `text/html`) reads a short page in the reader's language
+         *     instead of the problem; every other caller gets the problem.
+         */
+        FileNotFound: {
+            headers: {
+                [name: string]: unknown;
+            };
+            content: {
+                "application/problem+json": components["schemas"]["Problem"];
+                "text/html": string;
+            };
+        };
+        /**
+         * @description Authenticated, but the role lacks the grant for this file (`code: permission_denied`). A
+         *     browser tab that opened the file's link (an `Accept` that prefers `text/html`) reads a short
+         *     page in the reader's language instead of the problem; every other caller gets the problem.
+         */
+        FileForbidden: {
+            headers: {
+                [name: string]: unknown;
+            };
+            content: {
+                "application/problem+json": components["schemas"]["Problem"];
+                "text/html": string;
+            };
+        };
         /** @description No such resource in this workspace (or out of RBAC scope). */
         NotFound: {
             headers: {
@@ -65239,9 +65480,10 @@ export interface components {
         /**
          * @description Only the members of this list — a Shortlist's chosen records, or the records a Live List's
          *     filter selects now — narrowed before sorting and paging, so the page is the list's members
-         *     in the record list's own columns. The list must be one the caller may find and of this
-         *     record type; otherwise `404` or `422`. Sharing a list never widens what the read shows:
-         *     the caller's row scope still applies to every row.
+         *     in the record list's own columns. A list the caller cannot find, or any list while lists
+         *     are off, narrows to no rows, as an unknown `tag_id` or `owner_id` does. A list of another
+         *     record type answers `422`. Sharing a list never widens what the read shows: the caller's
+         *     row scope still applies to every row.
          */
         ListMembershipFilter: string;
         /** @description Include soft-deleted (archived) rows. Default false. */
@@ -65465,6 +65707,34 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["ServiceStatus"];
                 };
+            };
+            /** @description The installation is not bootstrapped yet. */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    headStatus: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The api is reachable through the public path. */
+            200: {
+                headers: {
+                    "Cache-Control"?: "no-store";
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
             /** @description The installation is not bootstrapped yet. */
             503: {
@@ -65827,7 +66097,7 @@ export interface operations {
         responses: {
             /**
              * @description Installation reset to first-boot state.
-             *     Five of these fields — `jobs_deleted`, `streams_purged`, `cache_keys_deleted`, `objects_deleted` and `drain_timed_out` — exist here and not in the retired upstream copy of this contract, and that is deliberate rather than drift anyone should reconcile away. A reset clears the job queue, the event bus, the Redis counters and the object bytes, and an operator who is told only how many table rows went has no way to tell "nothing to delete" from "this build cannot tell you". This file is the authority and the build follows it; the note is here so the next reader meets the divergence rather than re-deriving it.
+             *     Four of these fields — `jobs_deleted`, `streams_purged`, `cache_keys_deleted` and `objects_deleted` — exist here and not in the retired upstream copy of this contract, and that is deliberate rather than drift anyone should reconcile away. A reset clears the job queue, the event bus, the Redis counters and the object bytes, and an operator who is told only how many table rows went has no way to tell "nothing to delete" from "this build cannot tell you". This file is the authority and the build follows it; the note is here so the next reader meets the divergence rather than re-deriving it.
              */
             200: {
                 headers: {
@@ -65846,7 +66116,10 @@ export interface operations {
                         cache_keys_deleted: number;
                         /** @description Objects removed from the blob store under this workspace's key prefix. */
                         objects_deleted: number;
-                        /** @description True when a job was still running when the bounded drain window expired. The reset proceeded — a long pass must not make an installation unresettable — and the surviving job's completion write will fail against rows that no longer exist. */
+                        /**
+                         * @deprecated
+                         * @description Always false. A reset whose job drain timed out is refused with 409 before anything is deleted, so a successful reset never has this state. Kept so existing clients keep parsing.
+                         */
                         drain_timed_out: boolean;
                     };
                 };
@@ -65863,6 +66136,15 @@ export interface operations {
             };
             /** @description This installation did not arm `operations.allow_data_reset`, so the operation does not exist here. Checked before authentication, so it is a 404 rather than a 403 for every caller — the answer discloses nothing about who asked. The body is the standard problem document. */
             404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Refused with nothing deleted: another reset is running, or a background job was still running when the bounded drain window expired (the queues run again; run the reset again), or the queues could not be resumed after the reset (code `reset_queues_not_resumed`; the body says whether the reset had finished). */
+            409: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -66429,7 +66711,7 @@ export interface operations {
                 };
             };
             401: components["responses"]["Unauthorized"];
-            403: components["responses"]["Forbidden"];
+            403: components["responses"]["FileForbidden"];
         };
     };
     getAgentOpenAPIDocument: {
@@ -66597,9 +66879,10 @@ export interface operations {
                 /**
                  * @description Only the members of this list — a Shortlist's chosen records, or the records a Live List's
                  *     filter selects now — narrowed before sorting and paging, so the page is the list's members
-                 *     in the record list's own columns. The list must be one the caller may find and of this
-                 *     record type; otherwise `404` or `422`. Sharing a list never widens what the read shows:
-                 *     the caller's row scope still applies to every row.
+                 *     in the record list's own columns. A list the caller cannot find, or any list while lists
+                 *     are off, narrows to no rows, as an unknown `tag_id` or `owner_id` does. A list of another
+                 *     record type answers `422`. Sharing a list never widens what the read shows: the caller's
+                 *     row scope still applies to every row.
                  */
                 list_id?: components["parameters"]["ListMembershipFilter"];
                 /**
@@ -68672,9 +68955,10 @@ export interface operations {
                 /**
                  * @description Only the members of this list — a Shortlist's chosen records, or the records a Live List's
                  *     filter selects now — narrowed before sorting and paging, so the page is the list's members
-                 *     in the record list's own columns. The list must be one the caller may find and of this
-                 *     record type; otherwise `404` or `422`. Sharing a list never widens what the read shows:
-                 *     the caller's row scope still applies to every row.
+                 *     in the record list's own columns. A list the caller cannot find, or any list while lists
+                 *     are off, narrows to no rows, as an unknown `tag_id` or `owner_id` does. A list of another
+                 *     record type answers `422`. Sharing a list never widens what the read shows: the caller's
+                 *     row scope still applies to every row.
                  */
                 list_id?: components["parameters"]["ListMembershipFilter"];
                 /**
@@ -69312,8 +69596,8 @@ export interface operations {
                 };
             };
             401: components["responses"]["Unauthorized"];
-            403: components["responses"]["Forbidden"];
-            404: components["responses"]["NotFound"];
+            403: components["responses"]["FileForbidden"];
+            404: components["responses"]["FileNotFound"];
             422: components["responses"]["ValidationError"];
             /** @description The deployment has no object store configured, so no logo can be stored or served. */
             501: {
@@ -69348,8 +69632,8 @@ export interface operations {
                 };
             };
             401: components["responses"]["Unauthorized"];
-            403: components["responses"]["Forbidden"];
-            404: components["responses"]["NotFound"];
+            403: components["responses"]["FileForbidden"];
+            404: components["responses"]["FileNotFound"];
             422: components["responses"]["ValidationError"];
             /** @description The deployment has no object store configured, so no logo can be stored or served. */
             501: {
@@ -70730,8 +71014,8 @@ export interface operations {
                     "application/pdf": string;
                 };
             };
-            403: components["responses"]["Forbidden"];
-            404: components["responses"]["NotFound"];
+            403: components["responses"]["FileForbidden"];
+            404: components["responses"]["FileNotFound"];
             422: components["responses"]["ValidationError"];
             /** @description The caller fetched 20 invoice documents in the current one-minute window. */
             429: {
@@ -71900,9 +72184,10 @@ export interface operations {
                 /**
                  * @description Only the members of this list — a Shortlist's chosen records, or the records a Live List's
                  *     filter selects now — narrowed before sorting and paging, so the page is the list's members
-                 *     in the record list's own columns. The list must be one the caller may find and of this
-                 *     record type; otherwise `404` or `422`. Sharing a list never widens what the read shows:
-                 *     the caller's row scope still applies to every row.
+                 *     in the record list's own columns. A list the caller cannot find, or any list while lists
+                 *     are off, narrows to no rows, as an unknown `tag_id` or `owner_id` does. A list of another
+                 *     record type answers `422`. Sharing a list never widens what the read shows: the caller's
+                 *     row scope still applies to every row.
                  */
                 list_id?: components["parameters"]["ListMembershipFilter"];
                 /**
@@ -77565,7 +77850,7 @@ export interface operations {
                     "image/png": string;
                 };
             };
-            404: components["responses"]["NotFound"];
+            404: components["responses"]["FileNotFound"];
             422: components["responses"]["ValidationError"];
             /** @description The logo could not be read. */
             default: {
@@ -77615,7 +77900,10 @@ export interface operations {
     };
     getPublicBookingPreview: {
         parameters: {
-            query?: never;
+            query?: {
+                /** @description Meeting length in minutes the shared link asks for. The card names it, links to it and gives it as the canonical address when the page offers it; otherwise the card names the default length. */
+                l?: number;
+            };
             header?: never;
             path: {
                 host_slug: string;
@@ -77633,6 +77921,7 @@ export interface operations {
                     "text/html": string;
                 };
             };
+            422: components["responses"]["ValidationError"];
             /** @description The page is missing, revoked or unavailable; the HTML names no host. */
             default: {
                 headers: {
@@ -78188,6 +78477,137 @@ export interface operations {
             };
         };
     };
+    listSchedulingTeamLinks: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The caller's team links. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SchedulingTeamLink"][];
+                };
+            };
+            /** @description The operation could not be completed. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    createSchedulingTeamLink: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SchedulingTeamLinkRequest"];
+            };
+        };
+        responses: {
+            /** @description The new team link. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SchedulingTeamLink"];
+                };
+            };
+            422: components["responses"]["ValidationError"];
+            /** @description The operation could not be completed. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    updateSchedulingTeamLink: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                page_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SchedulingTeamLinkRequest"];
+            };
+        };
+        responses: {
+            /** @description The changed team link. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SchedulingTeamLink"];
+                };
+            };
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
+            /** @description The operation could not be completed. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    deleteSchedulingTeamLink: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                page_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The team link is deleted. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
+            /** @description The operation could not be completed. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
     listSchedulingTeamRequests: {
         parameters: {
             query?: never;
@@ -78223,6 +78643,42 @@ export interface operations {
             header?: never;
             path: {
                 host_user_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SchedulingTeamAnswer"];
+            };
+        };
+        responses: {
+            /** @description The answer is recorded. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
+            /** @description The operation could not be completed. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    answerSchedulingTeamLink: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The `page_id` of a team request, from `GET /scheduling/team-requests`. */
+                page_id: string;
             };
             cookie?: never;
         };
@@ -78558,7 +79014,7 @@ export interface operations {
     getPublicAvailability: {
         parameters: {
             query: {
-                /** @description Offered meeting length in minutes. Unknown lengths use the default. */
+                /** @description Offered meeting length in minutes. A length the page does not offer is refused with 422 `length_not_offered`; read the profile again for the lengths on offer. */
                 l?: number;
                 from: string;
                 to: string;
@@ -78605,7 +79061,7 @@ export interface operations {
     bookPublicMeeting: {
         parameters: {
             query?: {
-                /** @description Offered meeting length in minutes. Unknown lengths use the default. */
+                /** @description Offered meeting length in minutes. A length the page does not offer is refused with 422 `length_not_offered`; read the profile again for the lengths on offer. */
                 l?: number;
             };
             header?: {
@@ -79107,7 +79563,7 @@ export interface operations {
                 };
             };
             401: components["responses"]["Unauthorized"];
-            404: components["responses"]["NotFound"];
+            404: components["responses"]["FileNotFound"];
             422: components["responses"]["ValidationError"];
             /** @description Rate-limited. */
             429: {
@@ -79789,9 +80245,10 @@ export interface operations {
                 /**
                  * @description Only the members of this list — a Shortlist's chosen records, or the records a Live List's
                  *     filter selects now — narrowed before sorting and paging, so the page is the list's members
-                 *     in the record list's own columns. The list must be one the caller may find and of this
-                 *     record type; otherwise `404` or `422`. Sharing a list never widens what the read shows:
-                 *     the caller's row scope still applies to every row.
+                 *     in the record list's own columns. A list the caller cannot find, or any list while lists
+                 *     are off, narrows to no rows, as an unknown `tag_id` or `owner_id` does. A list of another
+                 *     record type answers `422`. Sharing a list never widens what the read shows: the caller's
+                 *     row scope still applies to every row.
                  */
                 list_id?: components["parameters"]["ListMembershipFilter"];
                 /**
@@ -82945,8 +83402,8 @@ export interface operations {
                 };
             };
             401: components["responses"]["Unauthorized"];
-            403: components["responses"]["Forbidden"];
-            404: components["responses"]["NotFound"];
+            403: components["responses"]["FileForbidden"];
+            404: components["responses"]["FileNotFound"];
             409: components["responses"]["Conflict"];
             422: components["responses"]["ValidationError"];
         };
@@ -82973,8 +83430,8 @@ export interface operations {
                 };
             };
             401: components["responses"]["Unauthorized"];
-            403: components["responses"]["Forbidden"];
-            404: components["responses"]["NotFound"];
+            403: components["responses"]["FileForbidden"];
+            404: components["responses"]["FileNotFound"];
             422: components["responses"]["ValidationError"];
         };
     };
@@ -84633,7 +85090,7 @@ export interface operations {
                 };
             };
             401: components["responses"]["Unauthorized"];
-            403: components["responses"]["PermissionDenied"];
+            403: components["responses"]["FileForbidden"];
         };
     };
     listChannelConnections: {
@@ -87525,8 +87982,8 @@ export interface operations {
                 };
             };
             401: components["responses"]["Unauthorized"];
-            403: components["responses"]["Forbidden"];
-            404: components["responses"]["NotFound"];
+            403: components["responses"]["FileForbidden"];
+            404: components["responses"]["FileNotFound"];
             422: components["responses"]["ValidationError"];
             /** @description The deployment has no object store configured, so no logo can be stored or served. */
             501: {
@@ -87746,8 +88203,8 @@ export interface operations {
                 };
             };
             401: components["responses"]["Unauthorized"];
-            403: components["responses"]["Forbidden"];
-            404: components["responses"]["NotFound"];
+            403: components["responses"]["FileForbidden"];
+            404: components["responses"]["FileNotFound"];
             422: components["responses"]["ValidationError"];
             /** @description The deployment has no object store configured, so no logo can be stored or served. */
             501: {
@@ -90713,8 +91170,8 @@ export interface operations {
                 };
             };
             401: components["responses"]["Unauthorized"];
-            403: components["responses"]["Forbidden"];
-            404: components["responses"]["NotFound"];
+            403: components["responses"]["FileForbidden"];
+            404: components["responses"]["FileNotFound"];
         };
     };
     getLicenseEntitlement: {
@@ -93676,7 +94133,7 @@ export interface operations {
                 actor?: string;
                 entity_type?: string;
                 entity_id?: string;
-                /** @description Only the rows one bulk change wrote (`executeBulkChange` answers the id). */
+                /** @description Only the rows one operation group wrote: a bulk change (`executeBulkChange` answers the id) or one run of a capture purge. */
                 batch_id?: string;
                 /** @description One of the AuditLogEntry.action values. */
                 action?: string;
@@ -97165,8 +97622,8 @@ export interface operations {
                 content?: never;
             };
             401: components["responses"]["Unauthorized"];
-            403: components["responses"]["Forbidden"];
-            404: components["responses"]["NotFound"];
+            403: components["responses"]["FileForbidden"];
+            404: components["responses"]["FileNotFound"];
             422: components["responses"]["ValidationError"];
             /** @description The deployment has no object store configured, so no picture can be stored or served. */
             501: {
@@ -101238,7 +101695,7 @@ export interface operations {
                     "application/pdf": string;
                 };
             };
-            404: components["responses"]["NotFound"];
+            404: components["responses"]["FileNotFound"];
             422: components["responses"]["ValidationError"];
             /** @description The object store (blobstore) is not wired on this deployment — the same unwired-by-omission posture as renderOffer. */
             501: {
@@ -102359,8 +102816,8 @@ export interface operations {
                 };
             };
             401: components["responses"]["Unauthorized"];
-            403: components["responses"]["Forbidden"];
-            404: components["responses"]["NotFound"];
+            403: components["responses"]["FileForbidden"];
+            404: components["responses"]["FileNotFound"];
         };
     };
     getAnalyticsContext: {
@@ -105137,7 +105594,7 @@ export interface operations {
                     "application/octet-stream": string;
                 };
             };
-            404: components["responses"]["NotFound"];
+            404: components["responses"]["FileNotFound"];
             422: components["responses"]["ValidationError"];
         };
     };
@@ -105533,7 +105990,7 @@ export interface operations {
                 };
             };
             401: components["responses"]["Unauthorized"];
-            403: components["responses"]["PermissionDenied"];
+            403: components["responses"]["FileForbidden"];
         };
     };
     getImportRun: {
@@ -105711,8 +106168,8 @@ export interface operations {
                 };
             };
             401: components["responses"]["Unauthorized"];
-            403: components["responses"]["PermissionDenied"];
-            404: components["responses"]["NotFound"];
+            403: components["responses"]["FileForbidden"];
+            404: components["responses"]["FileNotFound"];
             409: components["responses"]["Conflict"];
             422: components["responses"]["ValidationError"];
         };
@@ -106762,8 +107219,8 @@ export interface operations {
                 };
             };
             401: components["responses"]["Unauthorized"];
-            403: components["responses"]["PermissionDenied"];
-            404: components["responses"]["NotFound"];
+            403: components["responses"]["FileForbidden"];
+            404: components["responses"]["FileNotFound"];
             422: components["responses"]["ValidationError"];
         };
     };

@@ -12,7 +12,7 @@ The page lists these kinds under **Delivery by kind**. Each row has a short note
 
 | Kind | What it tells you | Standing choice |
 |---|---|---|
-| **Approvals waiting on you** | Somebody needs your decision before their work can go on. | **Email** |
+| **Approvals waiting on you** | Somebody needs your decision before their work can go on. A colleague who named you on one of their team links counts too. | **Email** |
 | **Project health set by the AI** | The AI marked a project of yours at risk, off track or back on track. | **In the app** |
 | **Automations that ran** | A rule your company set fired, or could not. | **In the app** |
 | **Leads past their deadline** | A lead nobody has answered inside the time your team agreed. | **In the app** |

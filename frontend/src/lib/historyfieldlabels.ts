@@ -204,6 +204,10 @@ const SYNTHETIC_AUDIT_FIELD_LABELS = new Map<string, MessageKey>([
     "history.field.impersonation_warning_carried",
   ],
   [
+    "impersonation_warning_raised",
+    "history.field.impersonation_warning_raised",
+  ],
+  [
     "impersonation_warning_cleared",
     "history.field.impersonation_warning_cleared",
   ],

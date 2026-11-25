@@ -45,9 +45,9 @@ func DataTask() datatask.Task {
 // producer moves to source_system, where the scan's readers select on it.
 func SignalDataTask() datatask.Task {
 	return datatask.Task{
-		ID: "core/1795489500_signal_source_channels", Version: 1,
-		Title:    systemtext.Literal("datatask.title.core.1795489500_signal_source_channels"),
-		Requires: []string{"core/1795489500"},
+		ID: "core/1795589886_signal_source_channels", Version: 1,
+		Title:    systemtext.Literal("datatask.title.core.1795589886_signal_source_channels"),
+		Requires: []string{"core/1795589886"},
 		Steps: []datatask.Step{
 			step("signal_sources", signals.CorrectSignalSourcesTx, signals.CountUnlistedSignalSources),
 		},

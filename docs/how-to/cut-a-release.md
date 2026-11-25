@@ -34,7 +34,10 @@ tag, create a draft release for the tag, by hand, with the part no tool can writ
 
 - **Highlights**: what a user gets from this release, in a few lines.
 - **Upgrade notes**: what someone who runs Margince must do or know before the upgrade. That covers a
-  setting that changed, a feature taken out, and an API change that breaks a client.
+  setting that changed, a feature taken out, and an API change that breaks a client. It also covers a new
+  OAuth redirect address, or a Google or Microsoft API, that the provider app must allow. Name the address and
+  the API, because users see a provider error until an operator adds them. The pull request that adds one carries `!`
+  in its title.
 
 ```sh
 gh release create v1.1.0 --draft --title "Margince v1.1.0" --notes-file notes.md

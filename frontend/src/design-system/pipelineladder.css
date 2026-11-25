@@ -32,7 +32,6 @@
 .pipeline-ladder__mark {
   background: var(--borderSubtle);
   border-radius: 50%;
-  corner-shape: round;
   height: var(--space-3);
   margin-top: var(--space-1);
   position: relative;

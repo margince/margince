@@ -435,6 +435,9 @@ func Write(w http.ResponseWriter, r *http.Request, err error) {
 		slog.WarnContext(r.Context(), "unnamed field-decode failure",
 			"method", r.Method, "path", loggedPath(r), "err", withheld)
 	}
+	if writeRefusalPage(w, r, fault.Status) {
+		return
+	}
 	// Fields renders INTO details rather than over it: both are public on
 	// DetailedError, so a handler may legitimately carry extra structured
 	// context alongside a per-field breakdown, and dropping that context on

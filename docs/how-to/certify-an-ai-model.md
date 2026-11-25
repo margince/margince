@@ -18,7 +18,7 @@ instead. The lane is never part of a request path.
 > certified record. Read it before you pay for a run.
 
 See also [ai-runtime.md](../explanation/ai-runtime.md), [connect-a-cloud-model-provider.md](connect-a-cloud-model-provider.md), [add-an-ai-task.md](add-an-ai-task.md),
-[certify-a-decision-site.md](certify-a-decision-site.md) (the decisions lane) and [reference/ai-certification.md](../reference/ai-certification.md), the page these records fill.
+[certify-a-decision-site.md](certify-a-decision-site.md) (decisions), [run-the-agent-loop-lane.md](run-the-agent-loop-lane.md) (scheduled agents) and [reference/ai-certification.md](../reference/ai-certification.md).
 
 ## Prerequisites
 
@@ -204,8 +204,8 @@ There are four states, and each one means something different:
 
 - **`current`**: the run measured every scenario this site ships, and the stamp of each one is the stamp
   this build makes. So the band describes the request this build sends. A stamp covers the scenario, the
-  request the site builds from it, and how a run is graded. That is the request and rule of the
-  grader, and the Go code of the check of the site (`testdata/site_checks.golden`).
+  request built from it, the request and rule of the grader, and the Go check of the site. That check
+  stops at code that calls the database driver (`testdata/site_checks.golden`), as a run has no database.
 - **`partial`**: all that the record measured is still current, but the corpus has new cases since then.
   It is wrong about nothing, and to fix it costs only the new scenarios.
 - **`stale`**: a scenario the record *measured* has changed since then. Or the prompt code or how a

@@ -136,6 +136,9 @@ func namesRowsMayStillCarry() []string {
 			out = append(out, task)
 		}
 	}
+	for _, task := range ai.RetiredTasks() {
+		out = append(out, string(task))
+	}
 	return out
 }
 

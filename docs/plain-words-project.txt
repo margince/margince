@@ -68,7 +68,6 @@ anti
 any
 anyone
 anything
-anyway
 anywhere
 apart
 app
@@ -1191,7 +1190,6 @@ provenance
 provider
 provisional
 proxy
-pseudo
 public
 pull
 pulse
@@ -1213,7 +1211,6 @@ quick
 quiet
 quotation
 quote
-r
 radio
 radius
 rail
@@ -1349,7 +1346,6 @@ section
 secure
 security
 see
-seems
 seen
 segment
 seldom
@@ -1422,7 +1418,6 @@ slot
 slots
 slow
 small
-smooth
 snapshot
 so
 soft
@@ -1455,7 +1450,6 @@ split
 spread
 spreads
 square
-squircle
 sso
 stack
 stage
@@ -1511,7 +1505,6 @@ suggestions
 suite
 sum
 summary
-superellipse
 support
 suppress
 sure
@@ -1644,7 +1637,6 @@ unix
 unknown
 unless
 unlink
-unlisted
 unpinned
 unrestricted
 unsaved

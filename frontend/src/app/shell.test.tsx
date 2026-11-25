@@ -1,11 +1,17 @@
 /** @vitest-environment happy-dom */
-import { act, cleanup, screen, within } from "@testing-library/react";
+import { act, cleanup, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { House } from "lucide-react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { en } from "../i18n/en";
 import { findExtension, unitTitle } from "../lib/extensions";
-import { parseHash, type Route, samePage, useHash } from "../lib/router";
+import {
+  navigate,
+  parseHash,
+  type Route,
+  samePage,
+  useHash,
+} from "../lib/router";
 import { useReportShownAddress } from "../lib/screenaddress";
 import {
   fixtureSection,
@@ -15,6 +21,7 @@ import {
   renderWith,
   stubPhoneViewport,
 } from "../testing/shellharness";
+import { currentAgentEdge } from "./agent-edge-signal";
 import { PageTitle, Shell } from "./shell";
 
 // A composed installation, because the vanilla registry is empty by
@@ -59,11 +66,24 @@ vi.mock("@composition/extensions", () => ({
 //
 // The SIDEBAR — the destinations, the badges, the collapsed tooltips, the phone
 // bar and a section's entries as a second level — is rail.test.tsx's. The TOP
-// BAR's own trail, search affordance and collapse toggle are topbar.test.tsx's,
+// BAR's own search affordance is topbar.test.tsx's,
 // and the account menu and the agent dock are proved where they live
 // (account.test.tsx, agentrail.test.tsx). What is asserted here is that the
 // shell MOUNTS them in the places it promises, and feeds them the counts it
 // already has.
+
+/** A window this wide, for every `max-width` query the app asks. */
+function stubViewportWidth(width: number) {
+  vi.stubGlobal("matchMedia", (query: string) => {
+    const cap = /max-width:\s*(\d+)px/.exec(query)?.[1];
+    return {
+      matches: cap !== undefined && width <= Number(cap),
+      media: query,
+      addEventListener: () => undefined,
+      removeEventListener: () => undefined,
+    };
+  });
+}
 
 // A screen still on `address` while the bar has moved on.
 function StillOn({ address }: Readonly<{ address: string }>) {
@@ -88,9 +108,8 @@ afterEach(() => {
 });
 
 // The page's own name, standing INSIDE the scroller above the content it names.
-// It is what is left of the old page head once the trail, the system-of-record
-// chip and the agent moved out of it: a heading, the one line under it that some
-// screens need, and whatever the screen itself asked to put beside them.
+// A heading, the one line under it that some screens need, and whatever the
+// screen itself asked to put beside them.
 describe("PageTitle", () => {
   // A screen the SHELL still names. The record lists name themselves in the
   // header of the table that is the page (SELF_HEADED_SCREENS), so a list route
@@ -100,8 +119,7 @@ describe("PageTitle", () => {
     expect(
       screen.getByRole("heading", { level: 1, name: "Analytics" }),
     ).toBeTruthy();
-    // The name, not a way anywhere: the trail is the top bar's and is the only
-    // thing here that links.
+    // The name, not a way anywhere.
     expect(screen.queryByRole("link", { name: "Analytics" })).toBeNull();
   });
 
@@ -220,10 +238,8 @@ describe("PageTitle", () => {
     expect(document.body.textContent).not.toContain("ghost");
   });
 
-  // A page whose name alone does not say what it is for carries one quiet line
-  // under the heading, and this is where it belongs: a screen that printed its
-  // own subtitle had to print its own title above it to hang it on, and the
-  // shell was already printing that title.
+  // A page whose name does not say what it is for carries one line under the
+  // shell's heading. No screen then prints a title to hang its own line on.
   it("prints the page's subtitle under the heading", () => {
     const { container } = render(<PageTitle route={{ screen: "filters" }} />);
     const heading = screen.getByRole("heading", {
@@ -234,10 +250,8 @@ describe("PageTitle", () => {
     expect(sub?.textContent).toBe(
       "Every saved view and list you can use, and where a new filter starts.",
     );
-    // Directly under the name it explains, inside the title's own text column —
-    // not beside the actions, where it would read as product chrome. The
-    // heading's own parent is the row it shares with the scope badge, so the
-    // subtitle follows THAT rather than the heading itself.
+    // Under the row the heading shares with the scope badge, inside the title's
+    // text column rather than beside the actions.
     expect(heading.closest(".pagetitle-head")?.nextElementSibling).toBe(sub);
     expect(container.querySelector(".pagetitle-text")?.contains(sub)).toBe(
       true,
@@ -271,7 +285,6 @@ describe("PageTitle", () => {
   // A record names itself: its surface prints the identity block, and that is
   // the page's one h1. This yields whole — no heading, no subtitle, no element
   // at all — or the document would offer two page titles for the same record.
-  // Where the reader came from is the top bar's trail (topbar.test.tsx).
   //
   // No record screen carries a subtitle key today (the map names `filters` and
   // `scheduled`, and neither has a record segment), so what the subtitle half
@@ -354,10 +367,8 @@ describe("Section switcher (the page title at phone width)", () => {
     expect(screen.queryByRole("button", { name: /change section/ })).toBeNull();
   });
 
-  // At phone width the switcher IS the heading: the control names the page and
-  // opens the others, so nothing above it repeats that name. The page is still
-  // named exactly once at heading level, and the trail in the top bar is the only
-  // other place it appears — the same arithmetic as every other route.
+  // At phone width the switcher is the heading: it names the page and opens the
+  // others. The page is still named once at heading level.
   it("stands as the page's heading at phone width", () => {
     stubPhoneViewport();
     render(<PageTitle route={deepRoute} section={fixtureSection("deep")} />);
@@ -500,12 +511,9 @@ describe("Shell", () => {
     expect(document.body.dataset.screen).toBe("analytics");
   });
 
-  // ONE element claims the page, on every route — and where two elements could
-  // claim it, they must be claiming the SAME page. On a record route they would
-  // not: the sidebar's row marks the list the record was opened from, and a list
-  // is not the page. So the row yields to `aria-current="true"` there (current in
-  // this set) and the trail's last stop keeps `page`.
-  it("claims the page exactly once on a record, with the sidebar's row yielding", () => {
+  // On a record the sidebar's row marks the list the record was opened from.
+  // A list is not the page, so the row claims "true" and nothing claims page.
+  it("claims no page on a record, with the sidebar's row yielding", () => {
     window.location.hash = `#/contacts/${ANNA_ID}`;
     const client = newClient();
     client.setQueryData(["contact", "ref", ANNA_ID], "Anna Weber");
@@ -513,37 +521,22 @@ describe("Shell", () => {
       client,
       <Shell onOpenSearch={ignoreSearch}>{null}</Shell>,
     );
-    const claims = container.querySelectorAll('[aria-current="page"]');
-    expect(claims).toHaveLength(1);
-    expect(claims[0].textContent).toBe("Anna Weber");
+    expect(container.querySelectorAll('[aria-current="page"]')).toHaveLength(0);
     const row = container.querySelector("nav.rail a.navitem.active");
     expect(row?.textContent).toBe("Contacts");
     expect(row?.getAttribute("aria-current")).toBe("true");
   });
 
-  // Where the row IS the page it keeps the stronger claim and agrees with the
-  // trail: two elements naming one page is what a breadcrumb and a navigation
-  // row are for. Below the Filters and views library the trail ends in a page
-  // the row only leads to, so the row yields as it does on a record. Unread,
-  // each leaf is its page's fallback name. More stands in for a row only at
-  // phone width and is hidden above it, so its claim is rail.test.tsx's.
+  // Where the row is the page it keeps the stronger claim. Below the Filters
+  // and views library the row only leads to the page, so it yields. More's
+  // claim is phone-only, so it is rail.test.tsx's.
   it.each([
-    ["#/contacts", "Contacts", "page", ["Contacts", "Contacts"]],
-    [
-      "#/filters",
-      "Filters and views",
-      "page",
-      ["Filters and views", "Filters and views"],
-    ],
-    [
-      "#/filters/companies",
-      "Filters and views",
-      "true",
-      ["New company filter"],
-    ],
-    ["#/filters/contacts/v1", "Filters and views", "true", ["Saved view"]],
-    ["#/filters/list/L1", "Filters and views", "true", ["Edit filter"]],
-    ["#/lists/L1", "Filters and views", "true", ["List"]],
+    ["#/contacts", "Contacts", "page", ["Contacts"]],
+    ["#/filters", "Filters and views", "page", ["Filters and views"]],
+    ["#/filters/companies", "Filters and views", "true", []],
+    ["#/filters/contacts/v1", "Filters and views", "true", []],
+    ["#/filters/list/L1", "Filters and views", "true", []],
+    ["#/lists/L1", "Filters and views", "true", []],
   ])(
     "on %s the %s row claims %s and the page is claimed by %j",
     (hash, row, rowClaim, claims) => {
@@ -566,58 +559,22 @@ describe("Shell", () => {
   // One h1 per railed page, and exactly one — on a list, a report, a settings
   // surface, the shell mints it, so a screen that also prints its own title at
   // heading level is printing a duplicate rather than filling a gap.
-  // Which pages keep the reading column, and the one distinction that is easy to
-  // get wrong: a company RECORD is capped, the company LIST is not, and the only
-  // thing separating them is the id. The marker is what the stylesheet keys the
-  // cap on, so a route landing in the wrong family is a layout regression that
-  // nothing else would catch. The sets themselves are GRIDDED_RECORD_SCREENS
-  // (keyed on an id) and GRIDDED_SCREENS (keyed on the screen alone: the pages
-  // that read down without being drawn as a record).
+  // Settings alone keeps the capped reading column; every other page, a record
+  // included, takes the card's full width. The stylesheet keys the cap on the
+  // marker, so a route in the wrong family is a layout regression.
   it.each([
     ["#/settings/account", true],
-    // Every record page keeps the one measure, so a walk from a company to the
-    // deal on it to the lead behind it never changes column.
-    ["#/companies/o-1", true],
-    ["#/contacts/p-1", true],
-    ["#/leads/l-1", true],
-    // A lead whose id is the word "import" is a record like any other: that
-    // segment is the contacts screen's, not every screen's.
-    ["#/leads/import", true],
-    ["#/deals/d-1", true],
-    ["#/projects/pr-1", true],
-    // The deal room is a page OF the deal, so it keeps the deal's column.
-    ["#/deals/d-1/room", true],
-    // Brief carries no id and is capped anyway: it reads down, and its decision
-    // cards carry drafted prose somebody has to read before deciding.
-    ["#/", true],
-    // The rest of the screen-keyed half, each read top to bottom rather than
-    // scanned across: a queue of work, a list of saved views, a column of
-    // report sections, and a settings-like page of stacked choices.
-    ["#/worklist", true],
-    ["#/filters", true],
-    // An opened list carries an id but is no record, and it reads down.
-    ["#/lists/L1", true],
-    ["#/analytics", true],
-    // Analytics' old address parses to the same screen, so it inherits the
-    // same column: a bookmark cannot land on a differently laid-out page.
-    ["#/reports", true],
+    ["#/companies/o-1", false],
+    ["#/contacts/p-1", false],
+    ["#/deals/d-1/room", false],
+    ["#/", false],
+    ["#/worklist", false],
+    ["#/lists/L1", false],
+    ["#/analytics", false],
     ["#/companies", false],
-    ["#/contacts", false],
-    ["#/deals", false],
-    ["#/leads", false],
-    ["#/projects", false],
-    // Keyed on the screen although they carry ids: a share view is one record
-    // handed to a reader and an offer is a detail page drawing its own
-    // surface, so neither is a RecordView and both read down.
-    ["#/share/contact/c-1", true],
-    ["#/offers/of-1", true],
-    // `#/deals/new` carries the create segment rather than a record id: it is
-    // the LIST with its form open, and a list is scanned across.
+    ["#/share/contact/c-1", false],
+    ["#/offers/of-1", false],
     ["#/deals/new", false],
-    ["#/leads/new", false],
-    // A composed unit's page keeps the settings LEVEL (below) but not the
-    // reading column: the column is a claim about the page's own content, and a
-    // unit lays its own surface out.
     ["#/ext/notes", false],
   ])("reads the column policy off the route: %s", (hash, capped) => {
     window.location.hash = String(hash);
@@ -628,16 +585,14 @@ describe("Shell", () => {
     expect(main?.className.includes("main-gridded")).toBe(capped);
   });
 
-  // A record page carries `main-record` on top of the cap: the class adds no
-  // width and only NAMES the column as a container, which is what lets the
-  // record's tab strip measure the column it spans.
+  // A record page carries `main-record`. The class adds no width; it names the
+  // column as a container, so the record's tab strip can measure the column it
+  // spans.
   //
-  // The name comes off the ROUTE rather than off whether a strip is drawn, so a
-  // page deeper INSIDE a record keeps it: `#/deals/<id>/room` is still that
-  // deal's column, and a container named on arrival cannot go missing on the
-  // one page of a record that reaches for it late. A page that is not a record
-  // at all names none — a list with its create form open, settings, the
-  // worklist.
+  // The name comes off the route, not off whether a strip is drawn. So a page
+  // inside a record keeps it: `#/deals/<id>/room` is still that deal's column.
+  // A page that is not a record names none: a list with its create form open,
+  // settings, the worklist.
   it.each([
     ["#/companies/o-1", true],
     ["#/contacts/p-1", true],
@@ -651,8 +606,8 @@ describe("Shell", () => {
     ["#/leads/new", false],
     ["#/settings/account", false],
     ["#/worklist", false],
-    // Capped, and still not records: the container the tab strip measures is
-    // the record page's, and neither of these draws one.
+    // Not records: the container the tab strip measures is the record
+    // page's, and neither of these draws one.
     ["#/share/contact/c-1", false],
     ["#/offers/of-1", false],
   ])("names the record column as a container: %s", (hash, record) => {
@@ -664,11 +619,8 @@ describe("Shell", () => {
     expect(main?.className.includes("main-record")).toBe(record);
   });
 
-  // A unit's page is REACHED from settings and its trail says so
-  // (`Settings / notes`), so the sidebar keeps the settings level on it. It did
-  // not: the rail fell back to the ten destinations, and following "Open" from a
-  // settings card swapped the whole sidebar out from under a reader whose URL
-  // and breadcrumb still read Settings.
+  // A unit's page is REACHED from settings, so the sidebar keeps the settings
+  // level on it.
   //
   // Asserted on what the rail SHOWS rather than on a class name, because the
   // class is a rendering detail and the level is the claim.
@@ -706,16 +658,11 @@ describe("Shell", () => {
 
     await act(() => vi.advanceTimersByTimeAsync(200));
     const label = document.querySelector(".pagewait")?.textContent;
-    cleanup();
-    vi.useRealTimers();
-
-    // The unit's page once it has landed: its trail ends in the same name.
-    render(<Shell onOpenSearch={ignoreSearch}>{null}</Shell>);
-    const leaf = document.querySelector(".topbar .crumbs-current")?.textContent;
     const unit = findExtension("notes");
     if (!unit) throw new Error("the composed registry lost its unit");
-    expect(leaf).toBe(unitTitle(unit, "en"));
-    expect(label).toBe(en["shell.pageLoading"].replace("{page}", leaf ?? ""));
+    expect(label).toBe(
+      en["shell.pageLoading"].replace("{page}", unitTitle(unit, "en")),
+    );
   });
 
   it("mints the page-level heading on a route that names no record", () => {
@@ -755,21 +702,10 @@ describe("Shell", () => {
     );
     expect(screen.queryAllByRole("heading", { level: 1 })).toHaveLength(0);
     expect(container.querySelector(".pagetitle")).toBeNull();
-    // What says where the reader is instead: the top bar's trail, leading back
-    // to the list this record was opened from. Its own rules are in
-    // topbar.test.tsx; that the shell still shows one here is the shell's.
-    const trail = screen.getByRole("navigation", { name: "Breadcrumb" });
-    expect(
-      within(trail)
-        .getByRole("link", { name: "Contacts" })
-        .getAttribute("href"),
-    ).toBe("/#/contacts");
   });
 
-  // The three pieces in the order the page is read: the bar is the first row of
-  // <main> and stays put, the name is inside the scroller and goes with the
-  // page. A title that drifted into the bar would scroll away with nothing; a
-  // bar inside the scroller would take the trail off screen on a long page.
+  // The bar is the first row of <main> and stays put. The page's name is inside
+  // the scroller and goes with the page.
   it("mounts the top bar above the scroller and the page's name inside it", () => {
     window.location.hash = "#/analytics";
     const { container } = render(
@@ -828,6 +764,54 @@ describe("Shell", () => {
     expect(screen.queryByRole("button", { name: "Expand sidebar" })).toBeNull();
   });
 
+  // With no stored choice, a tablet starts folded and nothing is stored.
+  // A stored choice wins both ways.
+  it.each([
+    ["a tablet", 1024, null, "Expand sidebar"],
+    ["a laptop", 1280, null, "Collapse sidebar"],
+    ["a phone", 390, null, "Collapse sidebar"],
+    ["a tablet that chose it open", 1024, "0", "Collapse sidebar"],
+    ["a laptop that chose it folded", 1280, "1", "Expand sidebar"],
+  ])(
+    "starts the sidebar on %s as its toggle names",
+    (_case, width, stored, toggleName) => {
+      stubViewportWidth(width);
+      if (stored !== null) {
+        window.localStorage.setItem("margince.sidebarCollapsed", stored);
+      }
+      window.location.hash = "#/contacts";
+      const { container } = render(
+        <Shell onOpenSearch={ignoreSearch}>{null}</Shell>,
+      );
+      const app = container.querySelector(".app");
+      expect(app?.classList.contains("railexpanded")).toBe(
+        toggleName === "Collapse sidebar",
+      );
+      if (width > 700) {
+        expect(screen.getByRole("button", { name: toggleName })).toBeTruthy();
+      }
+      expect(window.localStorage.getItem("margince.sidebarCollapsed")).toBe(
+        stored,
+      );
+    },
+  );
+
+  it("leaves the stored fold alone when the sidebar key is pressed on a phone", async () => {
+    stubViewportWidth(390);
+    const user = userEvent.setup();
+    window.location.hash = "#/contacts";
+    const { container } = render(
+      <Shell onOpenSearch={ignoreSearch}>{null}</Shell>,
+    );
+
+    await user.keyboard("{Meta>}b{/Meta}");
+
+    expect(window.localStorage.getItem("margince.sidebarCollapsed")).toBeNull();
+    expect(
+      container.querySelector(".app")?.classList.contains("railexpanded"),
+    ).toBe(true);
+  });
+
   // The agent lives in the CHROME, at the foot of the rail, on a screen the rail
   // reaches from its top level. Once, and inside the nav rather than the content
   // column: a second one anywhere is two things claiming to be the same agent.
@@ -864,14 +848,9 @@ describe("Shell", () => {
     expect(container.querySelector(".rail .navlevel .arblock")).not.toBeNull();
   });
 
-  // A sidebar showing a section's entries is navigation inside ONE destination,
-  // and the agent belongs to the whole SESSION — so it keeps its foot there
-  // rather than going quiet because a reader walked into settings, which is
-  // where they would go to fix whatever the orb is amber about. Still one block,
-  // reduced by the rail's own state (app/agentrail.css) rather than by a second
-  // component: two Cores reporting one session is the thing that rule exists to
-  // stop, at any size.
-  it("keeps the one agent at the foot while the rail shows a section's own entries", async () => {
+  // A sidebar showing a section's entries is navigation inside one destination.
+  // The agent belongs to the whole SESSION, so that column shows no agent foot.
+  it("shows no agent at the foot while the rail shows a section's own entries", async () => {
     window.location.hash = "#/settings/account";
     const { container } = render(
       <Shell onOpenSearch={ignoreSearch}>{null}</Shell>,
@@ -887,10 +866,43 @@ describe("Shell", () => {
       await within(rail).findByRole("link", { name: "Account" }),
     ).toBeTruthy();
     expect(rail.className).toContain("leveled");
-    expect(container.querySelectorAll(".arblock")).toHaveLength(1);
+    expect(container.querySelector<HTMLElement>(".railagent")?.hidden).toBe(
+      true,
+    );
     expect(
-      container.querySelector(".rail .railagent")?.querySelector(".arblock"),
-    ).not.toBeNull();
+      screen.queryByRole("region", { name: en["agent.rail.region"] }),
+    ).toBeNull();
+  });
+
+  // Hidden there, not unmounted: the rail is what publishes the window's edge.
+  it("keeps a run's edge lit after the rail drills into a section", async () => {
+    const client = newClient();
+    client.setQueryData(["me", "ai-activity"], {
+      running: [
+        {
+          id: "run-brief",
+          kind: "morning_brief",
+          state: "running",
+          started_at: new Date().toISOString(),
+        },
+      ],
+      recent: [],
+      faults: [],
+    });
+    window.location.hash = "#/contacts";
+    renderWith(client, <Shell onOpenSearch={ignoreSearch}>{null}</Shell>);
+    await waitFor(() => expect(currentAgentEdge().reading).toBe(true));
+
+    act(() => navigate({ screen: "settings", id: "account" }));
+
+    // The section's rail replaces the destinations' one, so it is found anew.
+    await waitFor(() =>
+      expect(
+        screen.getByRole("navigation", { name: "Primary navigation" })
+          .className,
+      ).toContain("leveled"),
+    );
+    expect(currentAgentEdge().reading).toBe(true);
   });
 
   it("renders rail-less for the documented exceptions (AC-shell layout exception)", () => {

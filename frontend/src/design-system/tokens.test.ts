@@ -287,8 +287,12 @@ describe("Ledger-Green token layer (B-EP09.1)", () => {
           const edge = composite(pal[`--ladder${level}Edge`], ground);
           return contrastOf(edge, ground);
         });
+        // Level 2's ground already parts it from the card, so its edge is the faintest.
         for (const [at, ratio] of ratios.entries()) {
-          expect(ratio, `${theme}: level ${at + 1} edge`).toBeGreaterThan(1.15);
+          const floor = at === 1 ? 1.05 : 1.15;
+          expect(ratio, `${theme}: level ${at + 1} edge`).toBeGreaterThan(
+            floor,
+          );
         }
         const deep = ratios.slice(1);
         expect(
@@ -480,7 +484,7 @@ describe("Ledger-Green token layer (B-EP09.1)", () => {
         // it carries whatever the chip's rule sets, so every role that lands
         // on one is measured over it.
         ...chipInks.map((ink) => [ink, "--bgChip"]),
-        // A control face is translucent in dark, so it composites like a tint.
+        // A control face is a light wash in dark, so it composites like a tint.
         ["--textPrimary", "--bgControl"],
         ["--accentText", "--bgControl"],
       ] as const;
@@ -527,7 +531,7 @@ describe("Ledger-Green token layer (B-EP09.1)", () => {
     const dark = parseBlock(tokenDecls, '[data-theme="dark"]');
 
     it("lifts the accent so it reads on a dark ground", () => {
-      expect(normalize(dark["--accent"])).toBe("#16a34a");
+      expect(normalize(dark["--accent"])).toBe("#48a58f");
     });
 
     it("overrides only tokens the light theme defines — no orphan knobs", () => {
@@ -538,7 +542,7 @@ describe("Ledger-Green token layer (B-EP09.1)", () => {
 
     it("pins the dark grounds the ladder is measured from", () => {
       const dark = parseBlock(tokenDecls, '[data-theme="dark"]');
-      expect(normalize(dark["--bgPage"])).toBe("#0c1311");
+      expect(normalize(dark["--bgPage"])).toBe("#111816");
     });
 
     // A scrim sets a dialog apart by dimming the page it covers, in both
@@ -557,8 +561,8 @@ describe("Ledger-Green token layer (B-EP09.1)", () => {
     // from the light values and where the sweeps read them against near-black.
     it("pins both neutral inks", () => {
       const dark = parseBlock(tokenDecls, '[data-theme="dark"]');
-      expect(normalize(dark["--textPrimary"])).toBe("#edf6f4");
-      expect(normalize(dark["--textSecondary"])).toBe("#9aa8a3");
+      expect(normalize(dark["--textPrimary"])).toBe("#e1e8e6");
+      expect(normalize(dark["--textSecondary"])).toBe("#adb9b6");
     });
 
     it("keeps the ink field one plate in both themes", () => {
