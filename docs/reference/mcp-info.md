@@ -15,9 +15,9 @@ input and output schema in folds below it. What a tool may do and whether a huma
 |---|---:|
 | Tools | 48 |
 | Resources | 14 |
-| Tool catalog | 243.1 KB |
+| Tool catalog | 243.2 KB |
 | Resource catalog | 5.5 KB |
-| Approx. wire tokens | 63640 |
+| Approx. wire tokens | 63652 |
 | Largest tool | `read_details` (15.8 KB) |
 | Scopes rendered | `read`, `draft`, `write`, `send`, `enrich` |
 
@@ -108,7 +108,7 @@ descriptions and input schemas are what each step pays for.
 | [`read_workspace`](#read_workspace) | Read how this workspace is set up | yes |  | 2779 |
 | [`resolve_duplicates`](#resolve_duplicates) | Merge two records or dismiss a flagged pair |  |  | 618 |
 | [`run_research`](#run_research) | Run AI work for your user |  |  | 1365 |
-| [`schedule_meeting`](#schedule_meeting) | Invite to a meeting |  |  | 515 |
+| [`schedule_meeting`](#schedule_meeting) | Invite to a meeting |  |  | 527 |
 | [`send_outbound`](#send_outbound) | Send a message |  |  | 1678 |
 | [`update_record`](#update_record) | Update a record |  | [`ui://margince/update.html`](#update_view) | 626 |
 | [`whoami`](#whoami) | Who this passport acts for | yes |  | 129 |
@@ -10118,12 +10118,12 @@ start_backfill, start_search_reindex; requires passport scope "enrich".)
 Put a meeting on the host's calendar. invite creates the calendar event and the provider sends the
 invitation to every attendee: the contact, and any further addresses. invite reaches attendees
 outside the workspace. The call queues it and returns it pending, so name them and the time and get
-the user's yes first. Read check_availability before choosing a time. A start_intent (the user's
-local time) replaces start, and end moves with it so the meeting keeps its length. Use
-change_activities with log to record a meeting without inviting anyone, or one that already
-happened. Keep the invitation id and inspect its status before claiming it was delivered. A refused
-or failed invite invited nobody. (Governance: a human approves every call before it runs; requires
-passport scope "send".)
+the user's yes first, unless they asked for this invite themselves. Read check_availability before
+choosing a time. A start_intent (the user's local time) replaces start, and end moves with it so the
+meeting keeps its length. Use change_activities with log to record a meeting without inviting
+anyone, or one that already happened. Keep the invitation id and inspect its status before claiming
+it was delivered. A refused or failed invite invited nobody. (Governance: a human approves every
+call before it runs; requires passport scope "send".)
 ```
 
 <details><summary>Input schema</summary>

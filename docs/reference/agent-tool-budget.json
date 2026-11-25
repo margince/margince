@@ -31,9 +31,9 @@
   "catalog": {
     "tools": 48,
     "system_frame_tokens": 730,
-    "tokens": 53537,
+    "tokens": 53548,
     "median_tool_tokens": 806,
-    "mean_tool_tokens": 1114
+    "mean_tool_tokens": 1115
   },
   "agents": [
     {
@@ -200,12 +200,12 @@
       "tokens": 618
     },
     {
-      "name": "draft_outbound",
-      "tokens": 524
+      "name": "schedule_meeting",
+      "tokens": 527
     },
     {
-      "name": "schedule_meeting",
-      "tokens": 515
+      "name": "draft_outbound",
+      "tokens": 524
     },
     {
       "name": "list_approvals",

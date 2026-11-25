@@ -10,16 +10,16 @@
   "totals": {
     "tools": 48,
     "resources": 14,
-    "tool_catalog_bytes": 248941,
+    "tool_catalog_bytes": 248987,
     "resource_catalog_bytes": 5622,
-    "approx_wire_tokens_total": 63640,
+    "approx_wire_tokens_total": 63652,
     "largest_tool_bytes": 16204,
     "largest_tool": "read_details",
     "tool_catalog_composition": {
-      "description_bytes": 52229,
+      "description_bytes": 52275,
       "input_schema_bytes": 150393,
       "output_schema_bytes": 34465,
-      "description_plus_input_schema_bytes": 202622
+      "description_plus_input_schema_bytes": 202668
     }
   },
   "tools": {
@@ -9303,7 +9303,7 @@
           "readOnlyHint": false,
           "title": "Invite to a meeting"
         },
-        "description": "Put a meeting on the host's calendar. invite creates the calendar event and the provider sends the invitation to every attendee: the contact, and any further addresses. invite reaches attendees outside the workspace. The call queues it and returns it pending, so name them and the time and get the user's yes first. Read check_availability before choosing a time. A start_intent (the user's local time) replaces start, and end moves with it so the meeting keeps its length. Use change_activities with log to record a meeting without inviting anyone, or one that already happened. Keep the invitation id and inspect its status before claiming it was delivered. A refused or failed invite invited nobody. (Governance: a human approves every call before it runs; requires passport scope \"send\".)",
+        "description": "Put a meeting on the host's calendar. invite creates the calendar event and the provider sends the invitation to every attendee: the contact, and any further addresses. invite reaches attendees outside the workspace. The call queues it and returns it pending, so name them and the time and get the user's yes first, unless they asked for this invite themselves. Read check_availability before choosing a time. A start_intent (the user's local time) replaces start, and end moves with it so the meeting keeps its length. Use change_activities with log to record a meeting without inviting anyone, or one that already happened. Keep the invitation id and inspect its status before claiming it was delivered. A refused or failed invite invited nobody. (Governance: a human approves every call before it runs; requires passport scope \"send\".)",
         "inputSchema": {
           "properties": {
             "action": {
