@@ -18,9 +18,8 @@ package migrations_test
 // migration (~1.3s each) to arrive at a schema the lane had already handed them:
 // every clone is copied from an already-migrated template.
 //
-// So: build head ONCE per process as the template of every test's database,
-// then verify it is still head before each use and rebuild only when it is
-// not. A rewinding suite leaves its own copy short of head, and the
+// So: build head once per process as the template of every test's database.
+// Before each use, verify it is still head, and rebuild only when it is not. A rewinding suite leaves its own copy short of head, and the
 // verification catches a helper that rewound before it asked.
 
 import (
@@ -71,9 +70,9 @@ func headSchemaRebuilt(t *testing.T, conn *pgx.Conn) bool {
 }
 
 // TestMain builds head once from this binary's migrations and makes it the
-// template of every test database in the package. The lane's template is
-// built by cmd/migrate, which also applies River and the composed units, and
-// the tests here read the schema the core and custom migrations build alone.
+// template of every test database in the package. The lane's template comes
+// from cmd/migrate, which also applies River and the composed units. The tests
+// here read the schema the core and custom migrations build alone.
 func TestMain(m *testing.M) {
 	os.Exit(runOnHead(m))
 }

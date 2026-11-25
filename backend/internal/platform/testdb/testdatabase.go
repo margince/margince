@@ -139,10 +139,10 @@ func processTemplate() string {
 }
 
 // DeriveTemplate copies the lane's template, runs build on the copy, and makes
-// that copy the template of every later copy in this process. It is for a
-// TestMain whose tests all start from one state the lane's template is not,
-// so the state is built once and not once per test. The caller drops the
-// derived template with the function it returns, after the tests ran.
+// that copy the template of every later copy in this process. It serves a
+// TestMain whose tests all start from a state the lane's template is not. The
+// state is then built once per process, not once per test. The caller drops
+// the derived template with the function it returns, after the tests ran.
 func DeriveTemplate(ctx context.Context, build func(context.Context, *pgx.Conn) error) (func() error, error) {
 	db, err := copyTemplate(ctx, os.Getenv(TemplateEnv))
 	if err != nil {
