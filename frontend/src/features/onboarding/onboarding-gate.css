@@ -88,7 +88,7 @@
 .ob-gate-field:has([aria-invalid="true"]):focus-within {
   box-shadow: var(--focus-field-danger);
 }
-.ob-gate-field:has(:disabled) {
+.ob-gate-field:has(.ob-gate-input:disabled) {
   background: var(--bgInset);
   border-color: var(--borderStrong);
 }

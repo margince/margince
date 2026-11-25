@@ -303,7 +303,8 @@
   display: flex;
   flex-direction: column;
   gap: var(--space-1);
-  padding: var(--space-1) var(--space-1) var(--space-1) var(--space-3);
+  padding-block: var(--space-1);
+  padding-inline: var(--space-3) var(--space-1);
   border: 1px solid var(--aiMed);
   border-radius: var(--r-xs);
   background: var(--aiLight);

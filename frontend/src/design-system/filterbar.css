@@ -119,8 +119,10 @@
   .field:has([aria-invalid="true"]):focus-within {
   box-shadow: var(--focus-field-danger);
 }
+/* Read off the chip's own control, not a button beside it. `:where` lets
+   focus win on an aria-disabled control, which keeps its tab stop. */
 .filter-bar[data-labels="inside"]
-  .field:has(:disabled, [aria-disabled="true"]) {
+.field:where(:has(.input:disabled, .input[aria-disabled="true"])) {
   background: var(--bgInset);
   border-color: var(--borderStrong);
 }

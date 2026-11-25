@@ -993,19 +993,16 @@
   background: transparent;
   font: var(--fontBodyLarge);
 }
-/* The bar's foot is its field's edge, so it takes the control token. */
-.palette-input,
-.palette-filter {
+/* The bar's foot is its field's edge, so it takes the control token and
+   stays under the field while the filter strip shows. */
+.palette-input {
   border-bottom: 1px solid var(--borderControl);
-}
-.palette-input:has(+ .palette-filter) {
-  border-bottom: 0;
 }
 /* A strip wider than the panel scrolls sideways, its cut edge faded so the
    last type reads as more to scroll to rather than as clipped. */
 .palette-filter {
   position: relative;
-  padding: 0 var(--space-8) var(--space-3) var(--space-4);
+  padding: var(--space-3) var(--space-8) var(--space-3) var(--space-4);
   overflow-x: auto;
   scrollbar-width: none;
   mask-image: linear-gradient(
@@ -1729,7 +1726,8 @@
   border-color: var(--focusEdge);
   box-shadow: var(--focus-field);
 }
-.settingssearch input:disabled {
+/* `:where` lets focus win on an aria-disabled field, which keeps its tab stop. */
+.settingssearch input:where(:disabled, [aria-disabled="true"]) {
   background: var(--bgInset);
   border-color: var(--borderStrong);
 }

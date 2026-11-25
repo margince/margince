@@ -54,7 +54,7 @@ export function JsonField({
   const lines = Math.max(value.split("\n").length, 1);
   const marked = new Set(problemLines);
   return (
-    <div className={`json-field${invalid ? " json-field-invalid" : ""}`}>
+    <div className="json-field">
       <div className="json-field-gutter" ref={gutter} aria-hidden="true">
         {Array.from({ length: lines }, (_, i) => (
           <span

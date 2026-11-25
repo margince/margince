@@ -40,9 +40,9 @@ export function TextInput({
  * carries the magnifier.
  *
  * `flush` is for a field whose container already draws the chrome: the ⌘K
- * palette's own bar, with its own ground, inset and bottom rule. Nested, the
- * ordinary field's border and radius read as a box inside a box. The field's
- * own padding also pushes the caret off the text column of the results below.
+ * palette's own bar, with its own ground, inset and bottom rule. It drops the
+ * field's fill, radius and padding; the container's sheet removes the border,
+ * since only it knows that its rule is the field's edge.
  * It is a variant rather than a caller overriding `.input` from outside. A call
  * site that reaches in to cancel a primitive's chrome is how the next surface
  * grows a second search field nobody can find. It takes a `ref` for the reason

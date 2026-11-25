@@ -200,11 +200,11 @@ function everyAlternative(list: string): string[] {
 
 const COMBINATORS = " \t\n\r\f>+~";
 
-type Chain = { compounds: string[]; combinators: string[] };
+export type Chain = { compounds: string[]; combinators: string[] };
 
 const chainsRead = new Map<string, Chain>();
 
-function chain(selector: string): Chain {
+export function chain(selector: string): Chain {
   let read = chainsRead.get(selector);
   if (read === undefined) {
     read = chainWritten(selector);
@@ -228,7 +228,7 @@ function chainWritten(selector: string): Chain {
   return links;
 }
 
-function joined({ compounds, combinators }: Chain): string {
+export function joined({ compounds, combinators }: Chain): string {
   return compounds.reduce((out, compound, index) => {
     const combinator = combinators[index - 1] ?? " ";
     return `${out}${combinator === " " ? " " : ` ${combinator} `}${compound}`;
@@ -238,8 +238,6 @@ function joined({ compounds, combinators }: Chain): string {
 export function compounds(selector: string): string[] {
   return chain(selector).compounds;
 }
-
-export const combinators = (selector: string) => chain(selector).combinators;
 
 const MAX_ALTERNATIVES = 256;
 

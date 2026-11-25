@@ -906,8 +906,8 @@
   border-radius: 50%;
   background: var(--accent);
 }
-/* Keyboard focus reads the house ring (--focus-ring-forced) rather than the
- * browser's off-palette native outline. */
+/* Keyboard focus shows as the glow. The outline is transparent until forced
+ * colours repaint it, so the browser's off-palette ring never shows. */
 .segmented button:focus-visible {
   outline: var(--focus-ring-forced);
   outline-offset: 2px;
@@ -1618,7 +1618,6 @@ span.error-line {
 .input-icon-flush .input:focus-visible {
   outline: none;
   box-shadow: none;
-  border: 0;
 }
 
 /* A textarea is the same field as .input, only taller: the two sit next to each

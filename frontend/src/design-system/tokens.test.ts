@@ -514,17 +514,20 @@ describe("Ledger-Green token layer (B-EP09.1)", () => {
     // field is a fact of the markup, not of the sheet. The warning strip holds
     // a Select; the AI band holds the Purpose line and the language Select.
     const washedBoxes = [".compose-strip-warning", ".compose-aiband"];
-    const fieldWashes = rulesOf([join(here, "../features/mail/compose.css")])
-      .filter((rule) => washedBoxes.includes(rule.selector.trim()))
-      .flatMap((rule) => declaredValues(rule.body, "background"))
-      .map((value) => /^var\((--[\w-]+)\)$/.exec(value)?.[1] ?? value);
+    const composeRules = rulesOf([join(here, "../features/mail/compose.css")]);
+    const washOf = (box: string) =>
+      composeRules
+        .filter((rule) => rule.selector.trim() === box)
+        .flatMap((rule) => declaredValues(rule.body, "background"))
+        .map((value) => /^var\((--[\w-]+)\)$/.exec(value)?.[1] ?? value);
+    const fieldWashes = washedBoxes.flatMap(washOf);
 
     // WCAG 1.4.11: a control's edge is often all that parts it from its ground.
     // So it holds 3:1 on every ground, bare, hovered or striped, and under its face.
     it("draws a control's border at 3:1 on every ground, both themes", () => {
-      expect(fieldWashes, "a washed box paints no wash").toHaveLength(
-        washedBoxes.length,
-      );
+      for (const box of washedBoxes) {
+        expect(washOf(box), `${box} paints no wash`).not.toEqual([]);
+      }
       const failures: string[] = [];
       for (const [theme, pal] of Object.entries(themes)) {
         const border = pal["--borderControl"];

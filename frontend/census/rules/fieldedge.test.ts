@@ -206,8 +206,44 @@ describe("a text field's resting edge", () => {
         ".bar[data-x] .field > .box { border: 0; }",
         ".field > .box { border: 0; }",
         `.field { border: ${faint}; }`,
+        `.bar[data-x] .field { border: ${faint}; }`,
+        ".p + .q { border-bottom: 1px solid var(--borderControl); }",
+        ".p + .q .box { border: 0; }",
+        ".p .q .box { border: 0; }",
       ]),
-    ).toEqual([bare(".row .box"), bare(".field > .box")]);
+    ).toEqual([
+      bare(".row .box"),
+      bare(".field > .box"),
+      `${SHEET}: .bar[data-x] .field draws ${faint}`,
+      bare(".p .q .box"),
+    ]);
+  });
+
+  it("reads a box lit in context as a field there, its own edge included", () => {
+    expect(
+      findings(markup('<input className="box" />'), [
+        ".a .b:focus-within { border-color: var(--accent); }",
+        `.a .b { border: ${faint}; }`,
+        ".a .b { border: 0; }",
+        ".a .b .box { border: 0; }",
+        ".c:focus-within .d:focus-within { border-color: var(--accent); }",
+        ".c .d > .box { border: 0; }",
+      ]),
+    ).toEqual([`${SHEET}: .a .b draws ${faint}`, bare(".a .b")]);
+  });
+
+  it("unseats a row that any rule on its box takes the foot from", () => {
+    expect(
+      findings(markup('<input className="box" />'), [
+        ".row { border-bottom: 1px solid var(--borderControl); }",
+        ".row.flat { border-bottom: 0; }",
+        ".row .box { border: 0; }",
+        ".row.flat .box { border: 0; }",
+        ".kept { border-bottom: 1px solid var(--borderControl); }",
+        ".kept:hover { border-bottom-color: var(--accent); }",
+        ".kept .box { border: 0; }",
+      ]),
+    ).toEqual([bare(".row .box"), bare(".row.flat .box")]);
   });
 
   it("passes a field that clears its sides and rules its foot in the control edge", () => {
@@ -215,10 +251,18 @@ describe("a text field's resting edge", () => {
       findings(markup('<input className="box" />'), [
         ".ruled .box { border-color: transparent; border-block-end-color: var(--borderControl); }",
         ".faint .box { border-color: transparent; border-block-end-color: var(--borderSubtle); }",
+        ".zero .box { border: 0; border-block-end-color: var(--borderControl); }",
+        ".top .box { border-color: transparent; border-top-color: var(--borderControl); }",
+        ".side .box { border: 1px solid transparent; border-left: 1px solid var(--borderControl); }",
+        ".dotted .box { border-color: transparent; border-bottom: 1px dotted var(--borderControl); }",
+        ".thin .box { border-color: transparent; border-bottom-color: var(--borderControl); border-bottom-width: 0; }",
       ]),
     ).toEqual([
       bare(".faint .box"),
       `${SHEET}: .faint .box draws var(--borderSubtle)`,
+      ...[".zero", ".top", ".side", ".dotted", ".thin"].map((row) =>
+        bare(`${row} .box`),
+      ),
     ]);
   });
 
