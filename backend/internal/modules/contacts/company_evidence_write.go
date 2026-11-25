@@ -193,9 +193,11 @@ func writeEvidence[T any](
 // correctsNothing is a correction that sends the stored value back under the
 // provenance the row already holds. Its verification time is the only column
 // that would move, and a resend verifies nothing new. A confirmation always
-// writes: restamping who agreed, and when, is what that verb is for.
+// writes: restamping who agreed, and when, is what that verb is for. A claim
+// with a canonical hook always writes too, because the record's own column or
+// the check it queues may have moved on since the claim was stated.
 func (w evidenceWrite[T]) correctsNothing(p *storekit.Patch, created bool) bool {
-	if w.value == nil || created || w.remove {
+	if w.value == nil || created || w.remove || w.canonical != nil {
 		return false
 	}
 	moved := p.Moved()
