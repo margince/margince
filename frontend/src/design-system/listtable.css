@@ -342,9 +342,10 @@
   flex-wrap: wrap;
   gap: var(--space-2);
 }
-/* Save view and Manage views share the footer's width, on a phone as above. */
+/* Each button grows from its label's width, and wraps below when both do not
+   fit. Not a zero basis: an even split lets a long label run past its button. */
 .lt-vfoot > .btn {
-  flex: 1 1 0;
+  flex: 1 1 auto;
 }
 /* A Save view with nothing to save draws nothing, and its rule goes too. */
 .lt-vfoot:empty {

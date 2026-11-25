@@ -154,6 +154,38 @@ describe("columnLayout", () => {
     expect(px(layout.widthOf(defaults[2]))).toBe(137);
   });
 
+  const contactDefaults: SizedColumn[] = [
+    { key: "name", fixed: true },
+    { key: "email", holds: "email" },
+    { key: "company" },
+    { key: "tags" },
+    { key: "owner", holds: "colleague" },
+    { key: "lastActivity", holds: "date" },
+    { key: "created", holds: "date" },
+  ];
+
+  it("grows the email column beside the name before the plain columns", () => {
+    const layout = columnLayout(contactDefaults, {}, 1176);
+    expect(contactDefaults.map((column) => px(layout.widthOf(column)))).toEqual(
+      [306, 240, 120, 120, 150, 120, 120],
+    );
+    const wide = columnLayout(contactDefaults, {}, 1800);
+    expect(px(wide.widthOf(contactDefaults[1]))).toBeGreaterThan(
+      px(wide.widthOf(contactDefaults[3])),
+    );
+  });
+
+  // The name keeps its own minimum, and the email column takes what is left
+  // of the room above its own.
+  it("fits the seven default Contacts columns of a 1024px window in German", () => {
+    const headers = { held: { company: 130 }, onScreen: {} };
+    const layout = columnLayout(contactDefaults, {}, 950, headers);
+    expect(contactDefaults.map((column) => px(layout.widthOf(column)))).toEqual(
+      [180, 130, 130, 120, 150, 120, 120],
+    );
+    expect(layout.floor).toBeCloseTo(950);
+  });
+
   it("holds a date at its minimum on a narrow page and fits the row", () => {
     const layout = columnLayout(contacts, {}, 900);
     expect(px(layout.widthOf(contacts[3]))).toBe(120);

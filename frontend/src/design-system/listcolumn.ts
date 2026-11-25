@@ -42,11 +42,12 @@ export type ListColumn<Row> = PhonePlacement & {
    */
   verbs?: boolean | "menu";
   /**
-   * A value whose length hardly changes: a date, or a colleague's name beside
-   * their avatar. The column stops growing at a preset width. A "score" column
-   * keeps the width of its short score and header.
+   * What the column holds, where that sets its width. A date or a colleague's
+   * name hardly changes length, so its column stops at a preset width. A
+   * "score" column keeps the width of its short score and header. An "email"
+   * column grows beside the name before the others do.
    */
-  holds?: "date" | "colleague" | "score";
+  holds?: "date" | "colleague" | "score" | "email";
   /** Starts unticked in the Display menu: offered rather than drawn. */
   initiallyHidden?: boolean;
   /**
