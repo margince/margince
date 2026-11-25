@@ -38464,6 +38464,9 @@ type AttentionItem struct {
 	SummaryParts  *ApprovalSummaryParts `json:"summary_parts,omitempty"`
 	SystemDisplay *SystemDisplay        `json:"system_display,omitempty"`
 
+	// TaskType On a task row: the kind of work it asks for, so a card names it without reading the task. Absent on other rows.
+	TaskType *TaskType `json:"task_type,omitempty"`
+
 	// Title The server's own sentence for this item, when it has one — an approval
 	// summary is composed at staging time out of the proposal's own facts.
 	// ABSENT where the sentence would have to be invented: the product ships
@@ -75624,6 +75627,9 @@ type WorklistItem struct {
 	// SummaryParts On an approval, its title taken apart, so the row shows the sentence as its title and the proposed values as its supporting line. Absent when the title is a sentence alone.
 	SummaryParts  *ApprovalSummaryParts `json:"summary_parts,omitempty"`
 	SystemDisplay *SystemDisplay        `json:"system_display,omitempty"`
+
+	// TaskType On a task row: the kind of work it asks for, so a card names it without reading the task. Absent on other rows.
+	TaskType *TaskType `json:"task_type,omitempty"`
 
 	// Title The server's own sentence for this item, where it has one.
 	Title *string `json:"title,omitempty"`
