@@ -37,7 +37,7 @@ import {
   TaskDueDatePick,
   useMoveTask,
 } from "./taskduedatepick";
-import { useTaskNextSteps } from "./tasknextsteps";
+import { TaskNextStepsPending, useTaskNextSteps } from "./tasknextsteps";
 import { taskOriginKey } from "./taskorigin";
 import { TaskOutcomeForm } from "./taskoutcome";
 import { TaskRemindMenu } from "./taskreminder";
@@ -385,7 +385,10 @@ function TaskDetailActions({
       {canAct && (
         <div ref={verbs} className="task-detail-verbs">
           <div className="task-detail-buttons">
+            {/* Done's weight waits on the contact read, so its place is held. */}
+            {next.pending && <TaskNextStepsPending />}
             <TaskQuickActions
+              showComplete={!next.pending}
               completeLabel={
                 isWebsiteInquiryTask(task)
                   ? t("inquiry.markHandled")

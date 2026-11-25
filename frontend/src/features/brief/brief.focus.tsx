@@ -74,6 +74,9 @@ export function Triage({
   // The type's own step is the card's one filled verb, so Done steps back.
   // A refused draft still draws its AI button, with the reason under it.
   const step = useTaskNextSteps(task, false);
+  // Until the task and its contact are read, Done's weight is a guess, so its
+  // place is held rather than drawn filled and then quieted.
+  const weighing = taskPending || step.pending;
   // Next steps past a task without answering it; past the last it wraps.
   // It sits at the title's end, apart from the verbs that answer the task.
   const next = rows.length > 1 ? rows[(at + 1) % rows.length] : undefined;
@@ -173,6 +176,7 @@ export function Triage({
                       titleEnd={emailNamesRow(lead) ? undefined : nextLink}
                       underTitle={emailNamesRow(lead) ? undefined : head}
                       quiet={step.fills}
+                      answerPending={weighing}
                       // The card around this row says whose it is, why it is
                       // here and where it stands in the day, each once.
                       framed

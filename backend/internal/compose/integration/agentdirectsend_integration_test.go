@@ -7,14 +7,18 @@ package integration
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"reflect"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/margince/margince/backend/internal/compose"
 	"github.com/margince/margince/backend/internal/compose/integration/apptest"
 	"github.com/margince/margince/backend/internal/modules/consent"
+	"github.com/margince/margince/backend/internal/platform/clocktest"
+	"github.com/margince/margince/backend/internal/platform/mailcopy"
 )
 
 // The decision to send a refused message is the user's own. Their agent may
@@ -65,7 +69,13 @@ func TestOnlyTheUserDecidesARefusedSendNotTheirAgent(t *testing.T) {
 
 // The mail an agent would send is the mail the user would see in the composer.
 func TestAnAgentPreviewsAContactsPrivacyMailAsTheUserDoes(t *testing.T) {
-	d := newTwoDoorsWith(t, "agent-mail-preview", []compose.Option{compose.WithOperatorMail(apptest.DiscardingMailer{})}, "read")
+	// An hour off the wall clock, so a preview the clock never reached shows
+	// another expiry. Its link must still be live.
+	issued := clocktest.Now(t).Truncate(time.Minute).Add(-time.Hour)
+	d := newTwoDoorsWith(t, "agent-mail-preview", []compose.Option{
+		compose.WithConsentClockForTest(func() time.Time { return issued }),
+		compose.WithOperatorMail(apptest.DiscardingMailer{}),
+	}, "read")
 	c := seedConsentSubject(t, d.e)
 	var asUser map[string]any
 	if status := d.e.Call(t, "GET", "/v1/contacts/"+c.contactID+"/consent/mail-preview?kind=privacy_notice", nil, nil, &asUser); status != http.StatusOK {
@@ -78,5 +88,16 @@ func TestAnAgentPreviewsAContactsPrivacyMailAsTheUserDoes(t *testing.T) {
 	}
 	if !reflect.DeepEqual(asUser, asAgent) {
 		t.Errorf("the agent's preview %v differs from the user's %v", asAgent, asUser)
+	}
+	language, ok := asUser["language"].(string)
+	if !ok {
+		t.Fatalf("the preview names no language: %v", asUser)
+	}
+	// The seeded contact names no country and the installation keeps its UTC
+	// default, so the link's fourteen days print in UTC.
+	words := mailcopy.For(language)
+	expiry := fmt.Sprintf(words.ConfirmExpiry, words.Instant(issued.Add(14*24*time.Hour)))
+	if text, ok := asUser["text"].(string); !ok || !strings.Contains(text, expiry) {
+		t.Errorf("the preview does not expire fourteen days after the pinned instant (%q): %q", expiry, text)
 	}
 }
