@@ -18676,6 +18676,51 @@ func (e MemberRetirementConsequence) Valid() bool {
 	}
 }
 
+// Defines values for MemberUnavailableActionAction.
+const (
+	MemberUnavailableActionActionMerge MemberUnavailableActionAction = "merge"
+)
+
+// Valid indicates whether the value is a known member of the MemberUnavailableActionAction enum.
+func (e MemberUnavailableActionAction) Valid() bool {
+	switch e {
+	case MemberUnavailableActionActionMerge:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for MemberUnavailableActionReason.
+const (
+	MemberUnavailableActionReasonAgentSeat      MemberUnavailableActionReason = "agent_seat"
+	MemberUnavailableActionReasonPasswordSet    MemberUnavailableActionReason = "password_set"
+	MemberUnavailableActionReasonProviderLinked MemberUnavailableActionReason = "provider_linked"
+	MemberUnavailableActionReasonSelf           MemberUnavailableActionReason = "self"
+	MemberUnavailableActionReasonSignedIn       MemberUnavailableActionReason = "signed_in"
+	MemberUnavailableActionReasonSoleAdmin      MemberUnavailableActionReason = "sole_admin"
+)
+
+// Valid indicates whether the value is a known member of the MemberUnavailableActionReason enum.
+func (e MemberUnavailableActionReason) Valid() bool {
+	switch e {
+	case MemberUnavailableActionReasonAgentSeat:
+		return true
+	case MemberUnavailableActionReasonPasswordSet:
+		return true
+	case MemberUnavailableActionReasonProviderLinked:
+		return true
+	case MemberUnavailableActionReasonSelf:
+		return true
+	case MemberUnavailableActionReasonSignedIn:
+		return true
+	case MemberUnavailableActionReasonSoleAdmin:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for MorningBriefFactorsOmitted.
 const (
 	MorningBriefFactorsOmittedWarmth MorningBriefFactorsOmitted = "warmth"
@@ -59744,6 +59789,20 @@ type MemberRetirementPreview struct {
 	Token         string               `json:"token"`
 }
 
+// MemberUnavailableAction One member verb the caller holds the grant for and this member refuses, with why.
+type MemberUnavailableAction struct {
+	Action MemberUnavailableActionAction `json:"action"`
+
+	// Reason Why the verb is refused. `password_set`, `signed_in` and `provider_linked` are the three signs that an account has been used; a used account shows each one that applies. `sole_admin` is the last active administrator, `self` is the caller's own account and `agent_seat` is an agent.
+	Reason MemberUnavailableActionReason `json:"reason"`
+}
+
+// MemberUnavailableActionAction defines model for MemberUnavailableAction.Action.
+type MemberUnavailableActionAction string
+
+// MemberUnavailableActionReason Why the verb is refused. `password_set`, `signed_in` and `provider_linked` are the three signs that an account has been used; a used account shows each one that applies. `sole_admin` is the last active administrator, `self` is the caller's own account and `agent_seat` is an agent.
+type MemberUnavailableActionReason string
+
 // MergeMembersRequest defines model for MergeMembersRequest.
 type MergeMembersRequest struct {
 	PreviewToken string             `json:"preview_token"`
@@ -72916,8 +72975,11 @@ type User struct {
 	TimezoneChosen *bool `json:"timezone_chosen,omitempty"`
 
 	// TimezoneSetBy The agent that set `timezone` for this user, as its `captured_by` stamp. Present on the caller's own seat while the zone is the agent's; absent once the user chooses, and on the roster.
-	TimezoneSetBy *string    `json:"timezone_set_by,omitempty"`
-	UpdatedAt     *time.Time `json:"updated_at,omitempty"`
+	TimezoneSetBy *string `json:"timezone_set_by,omitempty"`
+
+	// UnavailableActions The member verbs the caller holds the `user_admin` grant for and this member refuses, each with the reason, so a client explains the missing button instead of hiding it. An action never appears here and in `allowed_actions`. Present wherever `allowed_actions` is; empty when nothing is refused.
+	UnavailableActions *[]MemberUnavailableAction `json:"unavailable_actions,omitempty"`
+	UpdatedAt          *time.Time                 `json:"updated_at,omitempty"`
 }
 
 // UserAllowedActions defines model for User.AllowedActions.

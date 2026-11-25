@@ -31,7 +31,7 @@
   "users.retirement.webhooks": "Webhooks dieses Mitglieds neu zuweisen oder deaktivieren.",
   "users.retirement.weekly_plans": "Offene Wochenpläne dieses Mitglieds abschließen.",
   "users.retirement.analytics_shares": "Aktive geteilte Analytics-Ansichten für dieses Mitglied widerrufen.",
-  "users.retirement.source_used": "Nur ungenutzte importierte oder eingeladene Konten können zusammengeführt werden. Bei eingerichteten Konten Arbeit übergeben und das Mitglied deaktivieren.",
+  "users.retirement.source_used": "Hier lässt sich nur ein Konto zusammenführen, das niemand benutzt hat: kein Passwort, keine Anmeldung und kein verknüpfter Anbieter. Übergeben Sie stattdessen die Arbeit und deaktivieren Sie das Mitglied.",
   "users.retirement.self_survivor": "Ein anderes Mitglied als sich selbst als Ziel wählen.",
   "users.retirement.deactivate_first": "Dieses Mitglied vor dem Entfernen deaktivieren.",
   "users.retirement.choose_survivor": "Das Mitglied wählen, das bestehen bleibt.",

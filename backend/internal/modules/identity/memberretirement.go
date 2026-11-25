@@ -48,16 +48,16 @@ type retirementMember struct {
 	Removed *time.Time
 	Merged  *ids.UUID
 	Agent   bool
-	Unused  bool
+	Usage   memberUsage
 }
 
 func readRetirementMember(ctx context.Context, tx pgx.Tx, id ids.UserID, lock bool) (retirementMember, error) {
 	var m retirementMember
-	query := `SELECT display_name, email, status, updated_at, removed_at, merged_into_user_id, is_agent, ` + unusedMemberSQL("app_user") + ` FROM app_user WHERE id = @member AND archived_at IS NULL`
+	query := `SELECT display_name, email, status, updated_at, removed_at, merged_into_user_id, is_agent, ` + memberUsageColumns("app_user") + ` FROM app_user WHERE id = @member AND archived_at IS NULL`
 	if lock {
 		query += " FOR UPDATE"
 	}
-	err := tx.QueryRow(ctx, query, pgx.StrictNamedArgs{memberParameter: id}).Scan(&m.Name, &m.Email, &m.Status, &m.Updated, &m.Removed, &m.Merged, &m.Agent, &m.Unused)
+	err := tx.QueryRow(ctx, query, pgx.StrictNamedArgs{memberParameter: id}).Scan(&m.Name, &m.Email, &m.Status, &m.Updated, &m.Removed, &m.Merged, &m.Agent, &m.Usage.PasswordSet, &m.Usage.SignedIn, &m.Usage.ProviderLinked)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return m, apperrors.ErrNotFound
 	}
@@ -175,7 +175,7 @@ func applyRetirementWork(out *crmcontracts.MemberRetirementPreview, work MemberW
 }
 
 func applyMergeEligibility(out *crmcontracts.MemberRetirementPreview, member retirementMember, actor Identity, target *ids.UUID) {
-	if !member.Unused {
+	if !member.Usage.unused() {
 		out.Blockers = append(out.Blockers, "source_used")
 	}
 	if target != nil && *target == actor.UserID.UUID {

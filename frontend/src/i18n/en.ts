@@ -80,7 +80,7 @@ export const en = {
   "users.retirement.analytics_shares":
     "Revoke live analytics shares scoped to this member.",
   "users.retirement.source_used":
-    "Only unused imported or invited identities can be merged. Hand over work and deactivate a member who has already completed sign-in setup.",
+    "Only an account that nobody has used can be merged here: no password, no sign-in and no linked provider. Hand over the work and deactivate the member instead.",
   "users.retirement.self_survivor":
     "Choose a surviving member other than yourself.",
   "users.retirement.deactivate_first":
@@ -140,6 +140,20 @@ export const en = {
   "users.editCancel": "Cancel",
   "users.editSave": "Save member",
   "users.merge": "Merge duplicate",
+  "users.mergeRefused.password_set":
+    "This account has a password set, so it cannot be merged.",
+  "users.mergeRefused.signed_in":
+    "This account has signed in, so it cannot be merged.",
+  "users.mergeRefused.provider_linked":
+    "This account is linked to a sign-in provider, so it cannot be merged.",
+  "users.mergeRefused.sole_admin":
+    "This is the only administrator, so it cannot be merged.",
+  "users.mergeRefused.self":
+    "This is your own account, so it cannot be merged.",
+  "users.mergeRefused.agent_seat": "Agent seats cannot be merged.",
+  "users.mergeRefused.other": "This account cannot be merged right now.",
+  "users.mergeRefused.wayOut":
+    "Merge the other account into {name} if that one is unused, or hand over {name}’s work and deactivate the account.",
   "users.remove": "Remove member",
   "users.mergeTitle": "Merge {name} into another account?",
   "users.removeTitle": "Remove {name}?",

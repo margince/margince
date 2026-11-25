@@ -100,7 +100,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "users.retirement.analytics_shares":
     "Thu hồi các liên kết chia sẻ phân tích đang hoạt động theo thành viên này.",
   "users.retirement.source_used":
-    "Chỉ có thể gộp tài khoản nhập hoặc được mời chưa thiết lập đăng nhập. Với tài khoản đã thiết lập, hãy bàn giao công việc rồi tắt thành viên.",
+    "Chỉ gộp được tài khoản chưa ai dùng: chưa có mật khẩu, chưa đăng nhập và chưa liên kết nhà cung cấp. Hãy bàn giao công việc và vô hiệu hóa thành viên.",
   "users.retirement.self_survivor":
     "Chọn một thành viên khác bạn làm tài khoản giữ lại.",
   "users.retirement.deactivate_first": "Tắt thành viên này trước khi xóa.",
@@ -162,6 +162,20 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "users.editCancel": "Hủy",
   "users.editSave": "Lưu thành viên",
   "users.merge": "Gộp tài khoản trùng",
+  "users.mergeRefused.password_set":
+    "Tài khoản này đã đặt mật khẩu nên không thể gộp.",
+  "users.mergeRefused.signed_in":
+    "Tài khoản này đã đăng nhập nên không thể gộp.",
+  "users.mergeRefused.provider_linked":
+    "Tài khoản này đã liên kết với nhà cung cấp đăng nhập nên không thể gộp.",
+  "users.mergeRefused.sole_admin":
+    "Đây là quản trị viên duy nhất nên không thể gộp.",
+  "users.mergeRefused.self":
+    "Đây là tài khoản của chính bạn nên không thể gộp.",
+  "users.mergeRefused.agent_seat": "Không thể gộp chỗ của tác nhân.",
+  "users.mergeRefused.other": "Hiện chưa thể gộp tài khoản này.",
+  "users.mergeRefused.wayOut":
+    "Hãy gộp tài khoản kia vào tài khoản của {name} nếu tài khoản đó chưa dùng, hoặc bàn giao công việc của {name} rồi vô hiệu hóa tài khoản.",
   "users.remove": "Xóa thành viên",
   "users.mergeTitle": "Gộp {name} vào tài khoản khác?",
   "users.removeTitle": "Xóa {name}?",

@@ -61,7 +61,7 @@ You cannot remove your own account or the last active admin. Removal cannot be u
 ### How do I merge duplicate accounts for the same colleague?
 
 Open the duplicate account's actions menu and choose **Merge duplicate**. Select the **Account to keep**, review the work and items, then confirm.
-The source must be an imported or invited account that has never been used to sign in. You cannot select your own account as the account to keep. The duplicate leaves the member list.
+The source must be an account nobody has used: no password set, no sign-in and no linked sign-in provider. You cannot select your own account as the account to keep. The duplicate leaves the member list. When the account cannot be merged, **Merge duplicate** stays in the menu greyed out, and the menu says why. A used account shows each sign of use it has. The last active admin, your own account and agent seats show their own reason. To fold a used account into another, merge the other account into it if that one is unused, or hand over its work and deactivate it.
 
 The surviving account keeps its name, email, roles, teams and sign-in settings, and retains the original account’s private records and mail. Connected accounts must be reconnected under the surviving member. Use this only for two accounts belonging to the same colleague. If the account you keep is deactivated, reactivate it after merging.
 The surviving member's editor lists the accounts merged into it. The original names stay in history.

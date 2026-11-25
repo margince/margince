@@ -31,7 +31,7 @@
   "users.retirement.webhooks": "Giao lại hoặc tắt các webhook của thành viên này.",
   "users.retirement.weekly_plans": "Đóng các kế hoạch tuần đang mở của thành viên này.",
   "users.retirement.analytics_shares": "Thu hồi các liên kết chia sẻ phân tích đang hoạt động theo thành viên này.",
-  "users.retirement.source_used": "Chỉ có thể gộp tài khoản nhập hoặc được mời chưa thiết lập đăng nhập. Với tài khoản đã thiết lập, hãy bàn giao công việc rồi tắt thành viên.",
+  "users.retirement.source_used": "Chỉ gộp được tài khoản chưa ai dùng: chưa có mật khẩu, chưa đăng nhập và chưa liên kết nhà cung cấp. Hãy bàn giao công việc và vô hiệu hóa thành viên.",
   "users.retirement.self_survivor": "Chọn một thành viên khác bạn làm tài khoản giữ lại.",
   "users.retirement.deactivate_first": "Tắt thành viên này trước khi xóa.",
   "users.retirement.choose_survivor": "Chọn thành viên giữ lại.",

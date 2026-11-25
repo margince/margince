@@ -1,5 +1,6 @@
 /** @vitest-environment happy-dom */
 import { cleanup, screen, waitFor, within } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { browserZone } from "../../format/timezone";
 import { en } from "../../i18n/en";
@@ -7,11 +8,13 @@ import { SEEDED_ASSIGNABLE_ROLES } from "../../testing/roles.testkit";
 import { UsersAdminCard } from "./users-admin";
 import {
   backend,
+  jsonResponse,
   ROSTER,
   render,
   roleControl,
   roleShown,
   rowFor,
+  rowMenu,
 } from "./users-admin.testkit";
 import type { User } from "./users-members";
 import { roleRefusal } from "./users-rolecell";
@@ -172,5 +175,66 @@ describe("roleRefusal", () => {
     expect(
       roleRefusal(ada, { ...context([ada]), canChangeRole: false }),
     ).toEqual({});
+  });
+});
+
+describe("a merge the server refuses", () => {
+  const used: Omit<User, "timezone"> = {
+    ...ROSTER.data[0],
+    id: "u-used",
+    email: "uma@acme.test",
+    display_name: "Uma Used",
+    allowed_actions: ["deactivate"],
+    unavailable_actions: [{ action: "merge", reason: "password_set" }],
+  };
+
+  function rosterWith(rows: Omit<User, "timezone">[]) {
+    const rest = backend([]);
+    return vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+      const req =
+        input instanceof Request ? input : new Request(String(input), init);
+      if (
+        new URL(req.url).pathname.endsWith("/v1/users") &&
+        req.method === "GET"
+      ) {
+        return jsonResponse({ ...ROSTER, data: rows });
+      }
+      return rest(input, init);
+    });
+  }
+
+  it("stays in the menu, disabled, with the reason and the way out", async () => {
+    vi.stubGlobal("fetch", rosterWith([used]));
+    render(<UsersAdminCard />);
+    await waitFor(() => expect(screen.getByText("Uma Used")).toBeTruthy());
+
+    const verbs = await rowMenu(userEvent.setup(), "Uma Used");
+    const merge = verbs.getByRole("button", { name: en["users.merge"] });
+    expect(merge.hasAttribute("disabled")).toBe(true);
+    const reason = document.getElementById(
+      merge.getAttribute("aria-describedby") ?? "",
+    );
+    expect(reason?.textContent).toContain(
+      en["users.mergeRefused.password_set"],
+    );
+    expect(reason?.textContent).toContain("hand over Uma Used");
+  });
+
+  it("offers a working Merge, and no reason, where the server offers it", async () => {
+    const unused = {
+      ...used,
+      id: "u-unused",
+      display_name: "Una Unused",
+      allowed_actions: ["merge"] as User["allowed_actions"],
+      unavailable_actions: [],
+    };
+    vi.stubGlobal("fetch", rosterWith([unused]));
+    render(<UsersAdminCard />);
+    await waitFor(() => expect(screen.getByText("Una Unused")).toBeTruthy());
+
+    const verbs = await rowMenu(userEvent.setup(), "Una Unused");
+    const merge = verbs.getByRole("button", { name: en["users.merge"] });
+    expect(merge.hasAttribute("disabled")).toBe(false);
+    expect(merge.hasAttribute("aria-describedby")).toBe(false);
   });
 });
