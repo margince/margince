@@ -31334,7 +31334,7 @@ components:
       required: [id, provider, channelId, channelLabel, status, version]
       properties:
         id: {type: string, format: uuid}
-        provider: {type: string, enum: [telegram, dispact]}
+        provider: {type: string, enum: [telegram, dispact, whatsapp, zalo_oa]}
         channelId:
           type: string
           description: The provider's own id for the bot — the key the binding is unique on. For Dispact it is the chat's team id.
@@ -31346,9 +31346,9 @@ components:
           description: The web address of a self-hosted provider's install (Dispact). Absent for Telegram.
         status:
           type: string
-          enum: [pending, connected, disconnected, error, reauth_required]
+          enum: [pending_approval, connected, disconnected, error, reauth_required]
           description: >-
-            Only `connected` is live, and it is the only state a connect can produce: a pull ingress makes no provider call after the write, so there is no half-connected state. `error` and `reauth_required` are where ingress parks a binding it can no longer poll (another consumer holds the bot's updates; the token was refused), and neither is polled again until an operator acts. `pending` is a value NO server produces: it is retained because the code generator disambiguates enum member names across the whole document, so dropping it renames unrelated generated constants in other schemas.
+            Only `connected` is live, and it is the only state a connect can produce: a pull ingress makes no provider call after the write, so there is no half-connected state. `error` and `reauth_required` are where ingress parks a binding it can no longer poll (another consumer holds the bot's updates; the token was refused), and neither is polled again until an operator acts. `pending_approval` is the state of a Telegram Business link nobody has approved. It is served by the telegram-business operations and never appears on a bot connection.
         eventsSecretSet:
           type: boolean
           readOnly: true

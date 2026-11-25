@@ -5312,6 +5312,8 @@ func (e ChangeContractStatusRequestStatus) Valid() bool {
 const (
 	ChannelConnectionProviderDispact  ChannelConnectionProvider = "dispact"
 	ChannelConnectionProviderTelegram ChannelConnectionProvider = "telegram"
+	ChannelConnectionProviderWhatsapp ChannelConnectionProvider = "whatsapp"
+	ChannelConnectionProviderZaloOa   ChannelConnectionProvider = "zalo_oa"
 )
 
 // Valid indicates whether the value is a known member of the ChannelConnectionProvider enum.
@@ -5321,6 +5323,10 @@ func (e ChannelConnectionProvider) Valid() bool {
 		return true
 	case ChannelConnectionProviderTelegram:
 		return true
+	case ChannelConnectionProviderWhatsapp:
+		return true
+	case ChannelConnectionProviderZaloOa:
+		return true
 	default:
 		return false
 	}
@@ -5328,11 +5334,11 @@ func (e ChannelConnectionProvider) Valid() bool {
 
 // Defines values for ChannelConnectionStatus.
 const (
-	ChannelConnectionStatusConnected      ChannelConnectionStatus = "connected"
-	ChannelConnectionStatusDisconnected   ChannelConnectionStatus = "disconnected"
-	ChannelConnectionStatusError          ChannelConnectionStatus = "error"
-	ChannelConnectionStatusPending        ChannelConnectionStatus = "pending"
-	ChannelConnectionStatusReauthRequired ChannelConnectionStatus = "reauth_required"
+	ChannelConnectionStatusConnected       ChannelConnectionStatus = "connected"
+	ChannelConnectionStatusDisconnected    ChannelConnectionStatus = "disconnected"
+	ChannelConnectionStatusError           ChannelConnectionStatus = "error"
+	ChannelConnectionStatusPendingApproval ChannelConnectionStatus = "pending_approval"
+	ChannelConnectionStatusReauthRequired  ChannelConnectionStatus = "reauth_required"
 )
 
 // Valid indicates whether the value is a known member of the ChannelConnectionStatus enum.
@@ -5344,7 +5350,7 @@ func (e ChannelConnectionStatus) Valid() bool {
 		return true
 	case ChannelConnectionStatusError:
 		return true
-	case ChannelConnectionStatusPending:
+	case ChannelConnectionStatusPendingApproval:
 		return true
 	case ChannelConnectionStatusReauthRequired:
 		return true
@@ -25876,6 +25882,27 @@ func (e TechnicalEnrichStartedStatus) Valid() bool {
 	}
 }
 
+// Defines values for TelegramBusinessConnectionStatus.
+const (
+	TelegramBusinessConnectionStatusConnected       TelegramBusinessConnectionStatus = "connected"
+	TelegramBusinessConnectionStatusDisconnected    TelegramBusinessConnectionStatus = "disconnected"
+	TelegramBusinessConnectionStatusPendingApproval TelegramBusinessConnectionStatus = "pending_approval"
+)
+
+// Valid indicates whether the value is a known member of the TelegramBusinessConnectionStatus enum.
+func (e TelegramBusinessConnectionStatus) Valid() bool {
+	switch e {
+	case TelegramBusinessConnectionStatusConnected:
+		return true
+	case TelegramBusinessConnectionStatusDisconnected:
+		return true
+	case TelegramBusinessConnectionStatusPendingApproval:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for TranscriptReadReportStatus.
 const (
 	TranscriptReadReportStatusDone    TranscriptReadReportStatus = "done"
@@ -41178,7 +41205,7 @@ type ChannelConnection struct {
 	Id              openapi_types.UUID        `json:"id"`
 	Provider        ChannelConnectionProvider `json:"provider"`
 
-	// Status Only `connected` is live, and it is the only state a connect can produce: a pull ingress makes no provider call after the write, so there is no half-connected state. `error` and `reauth_required` are where ingress parks a binding it can no longer poll (another consumer holds the bot's updates; the token was refused), and neither is polled again until an operator acts. `pending` is a value NO server produces: it is retained because the code generator disambiguates enum member names across the whole document, so dropping it renames unrelated generated constants in other schemas.
+	// Status Only `connected` is live, and it is the only state a connect can produce: a pull ingress makes no provider call after the write, so there is no half-connected state. `error` and `reauth_required` are where ingress parks a binding it can no longer poll (another consumer holds the bot's updates; the token was refused), and neither is polled again until an operator acts. `pending_approval` is the state of a Telegram Business link nobody has approved. It is served by the telegram-business operations and never appears on a bot connection.
 	Status    ChannelConnectionStatus `json:"status"`
 	UpdatedAt *time.Time              `json:"updatedAt,omitempty"`
 	Version   int64                   `json:"version"`
@@ -41187,7 +41214,7 @@ type ChannelConnection struct {
 // ChannelConnectionProvider defines model for ChannelConnection.Provider.
 type ChannelConnectionProvider string
 
-// ChannelConnectionStatus Only `connected` is live, and it is the only state a connect can produce: a pull ingress makes no provider call after the write, so there is no half-connected state. `error` and `reauth_required` are where ingress parks a binding it can no longer poll (another consumer holds the bot's updates; the token was refused), and neither is polled again until an operator acts. `pending` is a value NO server produces: it is retained because the code generator disambiguates enum member names across the whole document, so dropping it renames unrelated generated constants in other schemas.
+// ChannelConnectionStatus Only `connected` is live, and it is the only state a connect can produce: a pull ingress makes no provider call after the write, so there is no half-connected state. `error` and `reauth_required` are where ingress parks a binding it can no longer poll (another consumer holds the bot's updates; the token was refused), and neither is polled again until an operator acts. `pending_approval` is the state of a Telegram Business link nobody has approved. It is served by the telegram-business operations and never appears on a bot connection.
 type ChannelConnectionStatus string
 
 // ChannelConnectionListResponse defines model for ChannelConnectionListResponse.
@@ -70729,6 +70756,33 @@ type TechnicalEnrichStartedStatus string
 type TechnicalEnrichStatus struct {
 	CompanyId openapi_types.UUID    `json:"company_id"`
 	Lanes     []TechnicalEnrichLane `json:"lanes"`
+}
+
+// TelegramBusinessConnection One Telegram Business account the owner linked to the workspace's bot. Nothing from the account is stored until an admin approves it.
+type TelegramBusinessConnection struct {
+	// AccountId The owner's Telegram user id, the key a repeated link keeps its row by.
+	AccountId string `json:"accountId"`
+
+	// ApprovedAt When an admin approved the link; absent until then.
+	ApprovedAt *time.Time `json:"approvedAt,omitempty"`
+
+	// ConnectedAt When the owner first linked the bot.
+	ConnectedAt time.Time          `json:"connectedAt"`
+	Id          openapi_types.UUID `json:"id"`
+
+	// OwnerLabel The owner's name as Telegram last reported it. Display only, since a name is mutable and identifies nothing.
+	OwnerLabel string `json:"ownerLabel"`
+
+	// Status `pending_approval` waits for an admin; `disconnected` means the owner switched the link off in Telegram.
+	Status TelegramBusinessConnectionStatus `json:"status"`
+}
+
+// TelegramBusinessConnectionStatus `pending_approval` waits for an admin; `disconnected` means the owner switched the link off in Telegram.
+type TelegramBusinessConnectionStatus string
+
+// TelegramBusinessConnectionListResponse defines model for TelegramBusinessConnectionListResponse.
+type TelegramBusinessConnectionListResponse struct {
+	Data []TelegramBusinessConnection `json:"data"`
 }
 
 // ThreadAudienceOutcome What an owner's decision about a thread reached.
@@ -101891,6 +101945,15 @@ type ServerInterface interface {
 	// Connect a messaging-channel bot for the whole workspace.
 	// (POST /channel-connections)
 	ConnectChannel(w http.ResponseWriter, r *http.Request)
+	// List the Telegram Business accounts linked to the workspace's bot.
+	// (GET /channel-connections/telegram-business)
+	ListTelegramBusinessConnections(w http.ResponseWriter, r *http.Request)
+	// Disconnect a Telegram Business account from the workspace.
+	// (DELETE /channel-connections/telegram-business/{id})
+	DisconnectTelegramBusinessConnection(w http.ResponseWriter, r *http.Request, id Id)
+	// Approve a Telegram Business account for the workspace.
+	// (POST /channel-connections/telegram-business/{id}/approve)
+	ApproveTelegramBusinessConnection(w http.ResponseWriter, r *http.Request, id Id)
 	// Disconnect a messaging channel (archives the binding and destroys the credential).
 	// (DELETE /channel-connections/{id})
 	DisconnectChannel(w http.ResponseWriter, r *http.Request, id Id)
@@ -106136,6 +106199,24 @@ func (_ Unimplemented) ListChannelConnections(w http.ResponseWriter, r *http.Req
 // Connect a messaging-channel bot for the whole workspace.
 // (POST /channel-connections)
 func (_ Unimplemented) ConnectChannel(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// List the Telegram Business accounts linked to the workspace's bot.
+// (GET /channel-connections/telegram-business)
+func (_ Unimplemented) ListTelegramBusinessConnections(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Disconnect a Telegram Business account from the workspace.
+// (DELETE /channel-connections/telegram-business/{id})
+func (_ Unimplemented) DisconnectTelegramBusinessConnection(w http.ResponseWriter, r *http.Request, id Id) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Approve a Telegram Business account for the workspace.
+// (POST /channel-connections/telegram-business/{id}/approve)
+func (_ Unimplemented) ApproveTelegramBusinessConnection(w http.ResponseWriter, r *http.Request, id Id) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -123631,6 +123712,90 @@ func (siw *ServerInterfaceWrapper) ConnectChannel(w http.ResponseWriter, r *http
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.ConnectChannel(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ListTelegramBusinessConnections operation middleware
+func (siw *ServerInterfaceWrapper) ListTelegramBusinessConnections(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListTelegramBusinessConnections(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// DisconnectTelegramBusinessConnection operation middleware
+func (siw *ServerInterfaceWrapper) DisconnectTelegramBusinessConnection(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.DisconnectTelegramBusinessConnection(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ApproveTelegramBusinessConnection operation middleware
+func (siw *ServerInterfaceWrapper) ApproveTelegramBusinessConnection(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ApproveTelegramBusinessConnection(w, r, id)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -162459,6 +162624,15 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/channel-connections", wrapper.ConnectChannel)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/channel-connections/telegram-business", wrapper.ListTelegramBusinessConnections)
+	})
+	r.Group(func(r chi.Router) {
+		r.Delete(options.BaseURL+"/channel-connections/telegram-business/{id}", wrapper.DisconnectTelegramBusinessConnection)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/channel-connections/telegram-business/{id}/approve", wrapper.ApproveTelegramBusinessConnection)
 	})
 	r.Group(func(r chi.Router) {
 		r.Delete(options.BaseURL+"/channel-connections/{id}", wrapper.DisconnectChannel)

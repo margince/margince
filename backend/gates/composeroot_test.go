@@ -63,7 +63,7 @@ const (
 	// its field errors, and the route cases that read the unexported verb shapes.
 	// Raised by 9 production and 17 test lines for the company status rename,
 	// whose webhook and preview keys sit in this package's unexported maps.
-	composeRootProductionLines = 230_713
+	composeRootProductionLines = 230_703
 	composeRootTestLines       = 360_251
 )
 
