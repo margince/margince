@@ -190,6 +190,28 @@ describe("WhoCanSeePanel", () => {
     expect(screen.getByText("Admin")).toBeTruthy();
   });
 
+  it("shows a custom role by the name the server sent, else by its key", async () => {
+    serve(
+      answer({
+        detail: true,
+        data: [
+          member("u-kim", "Kim Rep", {
+            group: "shared",
+            read_reasons: [{ code: "user_share", access: "read" }],
+            roles: ["custom_sales_assistant", "custom_unnamed"],
+            role_names: { custom_sales_assistant: "Sales assistant" },
+          }),
+        ],
+        group_counts: { owner: 0, shared: 1, team_shared: 0, everyone: 0 },
+      }),
+    );
+    render(<WhoCanSeePanel kind="contact" recordId="c-1" />);
+
+    expect(await screen.findByText("Sales assistant")).toBeTruthy();
+    expect(screen.queryByText("custom_sales_assistant")).toBeNull();
+    expect(screen.getByText("custom_unnamed")).toBeTruthy();
+  });
+
   it("loads the next page, and a colleague on it joins their group", async () => {
     const user = userEvent.setup();
     serve(

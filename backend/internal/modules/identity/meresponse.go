@@ -13,7 +13,6 @@ package identity
 
 import (
 	"context"
-	"slices"
 
 	"github.com/jackc/pgx/v5"
 	openapi_types "github.com/oapi-codegen/runtime/types"
@@ -111,23 +110,45 @@ func (s *Service) heldRoleNames(ctx context.Context, held []string) (*map[string
 	if len(held) == 0 {
 		return nil, nil //nolint:nilnil // no role to name, which /me says by omitting it
 	}
-	names := make(map[string]string, len(held))
+	live, err := s.liveRoleNames(ctx)
+	if err != nil {
+		return nil, err
+	}
+	names := namesOfRoles(live, held)
+	return &names, nil
+}
+
+// liveRoleNames is the name an admin gave each live role, keyed by role key.
+// It skips the role directory's own gate: a name is shown only beside a role
+// key the reader was already allowed to see.
+func (s *Service) liveRoleNames(ctx context.Context) (map[string]string, error) {
+	names := map[string]string{}
 	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
 		live, err := liveRolesTx(ctx, tx)
 		if err != nil {
 			return err
 		}
 		for _, r := range live {
-			if slices.Contains(held, r.key) {
-				names[r.key] = r.name
-			}
+			names[r.key] = r.name
 		}
 		return nil
 	})
 	if err != nil {
 		return nil, err
 	}
-	return &names, nil
+	return names, nil
+}
+
+// namesOfRoles picks from live the name of each held role. A held key that
+// names no live role is left out, and a client shows it by its key.
+func namesOfRoles(live map[string]string, held []string) map[string]string {
+	names := make(map[string]string, len(held))
+	for _, key := range held {
+		if name, ok := live[key]; ok {
+			names[key] = name
+		}
+	}
+	return names
 }
 
 // optionalString omits an empty value rather than sending it.

@@ -56840,6 +56840,10 @@ export interface components {
             change_reasons: components["schemas"]["RecordAccessReason"][];
             /** @description The member's role keys. Present only when `detail` is true. */
             roles?: string[];
+            /** @description The name an admin gave each live role in `roles`, keyed by role key, so a reader who may not read the role directory still sees a custom role by its name. Present only when `detail` is true. Absent from an older server; a key it does not name is shown as the key. */
+            role_names?: {
+                [key: string]: string;
+            };
         };
         /**
          * @description One reason a member can open or change the record. `workspace_visible` means the record is
