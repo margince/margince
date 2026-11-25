@@ -243,6 +243,9 @@ func (s *Store) UpdateSignal(ctx context.Context, id ids.SignalID, in UpdateSign
 		if err := auth.EnsureSignalVisible(ctx, tx, id.UUID); err != nil {
 			return err
 		}
+		if err := auth.RefuseArchived(ctx, tx, "signal", id.UUID); err != nil {
+			return err
+		}
 		current, params, err := readSignalRow(ctx, tx, id, storekit.LiveOnly)
 		if err != nil {
 			return err
@@ -320,14 +323,16 @@ func (s *Store) ArchiveSignal(ctx context.Context, id ids.SignalID) (crmcontract
 		if err := auth.EnsureSignalVisible(ctx, tx, id.UUID); err != nil {
 			return err
 		}
-		if _, err := readSignal(ctx, tx, id, storekit.LiveOnly); err != nil {
+		archived, err := auth.ArchivedAlready(ctx, tx, "signal", id.UUID)
+		if err != nil {
 			return err
 		}
-		if err := archiveSignalTx(ctx, tx, id.UUID); err != nil {
-			return err
+		if !archived {
+			if err := archiveSignalTx(ctx, tx, id.UUID); err != nil {
+				return err
+			}
 		}
 
-		var err error
 		if out, err = readSignalFor(ctx, tx, id, storekit.IncludeArchived, s.words); err != nil {
 			return fmt.Errorf("read archived signal: %w", err)
 		}

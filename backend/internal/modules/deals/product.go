@@ -127,6 +127,9 @@ func (s *Store) UpdateProduct(ctx context.Context, id ids.ProductID, in UpdatePr
 	}
 	var out crmcontracts.Product
 	err := s.Tx(ctx, func(tx pgx.Tx) error {
+		if err := auth.RefuseArchived(ctx, tx, "product", id.UUID); err != nil {
+			return err
+		}
 		current, err := readProduct(ctx, tx, id, storekit.LiveOnly)
 		if err != nil {
 			return err
@@ -287,6 +290,12 @@ func (s *Store) ArchiveProductAt(ctx context.Context, id ids.ProductID, ifVersio
 	}
 	var out crmcontracts.Product
 	err := s.Tx(ctx, func(tx pgx.Tx) error {
+		if archived, err := auth.ArchivedAlready(ctx, tx, "product", id.UUID); err != nil || archived {
+			if err == nil {
+				out, err = readProduct(ctx, tx, id, storekit.IncludeArchived)
+			}
+			return err
+		}
 		if _, err := readProduct(ctx, tx, id, storekit.LiveOnly); err != nil {
 			return err
 		}

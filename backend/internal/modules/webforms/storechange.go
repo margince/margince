@@ -198,6 +198,9 @@ func (s *Store) writeFormUpdate(ctx context.Context, id ids.UUID, in UpdateInput
 	var out Form
 	var replacedRef *string
 	err = s.db.Tx(ctx, func(tx pgx.Tx) error {
+		if err := auth.RefuseArchived(ctx, tx, "web_form", id); err != nil {
+			return err
+		}
 		lock, err := storekit.LockRow(ctx, tx, "web_form", id, storekit.LiveOnly)
 		if err != nil {
 			return err
@@ -379,9 +382,16 @@ func (s *Store) retireForm(ctx context.Context, id ids.UUID) (Form, error) {
 		return Form{}, err
 	}
 	var out Form
+	var repeated bool
 	err := database.WithWorkspaceWriteTx(ctx, s.db.Pool(), func(bound context.Context) error {
 		err := s.db.Tx(bound, func(tx pgx.Tx) error {
 			var err error
+			if repeated, err = auth.ArchivedAlready(bound, tx, "web_form", id); err != nil || repeated {
+				if err == nil {
+					out, err = scanForm(tx.QueryRow(bound, "SELECT "+formColumns+" FROM web_form WHERE id = $1", id))
+				}
+				return err
+			}
 			out, err = scanForm(tx.QueryRow(bound,
 				"UPDATE web_form SET archived_at = now() WHERE id = $1 AND archived_at IS NULL RETURNING "+formColumns, id))
 			if errors.Is(err, pgx.ErrNoRows) {
@@ -392,13 +402,13 @@ func (s *Store) retireForm(ctx context.Context, id ids.UUID) (Form, error) {
 			_, err = storekit.Audit(bound, tx, "archive", auditEntity, id, nil, nil)
 			return err
 		})
-		if err != nil || out.HandlingAutomationID == nil || s.settings == nil {
+		if err != nil || repeated || out.HandlingAutomationID == nil || s.settings == nil {
 			return err
 		}
 		return s.settings.SwitchOff(bound, *out.HandlingAutomationID)
 	})
-	if err != nil {
-		return Form{}, err
+	if err != nil || repeated {
+		return out, err
 	}
 	s.dropSecret(ctx, out.SecretRef, "web form archived")
 	return out, nil

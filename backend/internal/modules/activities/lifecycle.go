@@ -314,6 +314,12 @@ func (s *Store) ArchiveActivityTx(ctx context.Context, tx pgx.Tx, id ids.Activit
 func archiveActivityInTx(
 	ctx context.Context, tx pgx.Tx, id ids.ActivityID, ifVersion *int64, o archiveOptions, asOf time.Time,
 ) (crmcontracts.Activity, error) {
+	if done, err := activityArchivedAlready(ctx, tx, id.UUID); err != nil || done {
+		if err != nil {
+			return crmcontracts.Activity{}, err
+		}
+		return readActivityAt(ctx, tx, id, storekit.IncludeArchived, asOf)
+	}
 	held, err := lockActivityForWrite(ctx, tx, id.UUID)
 	if err != nil {
 		return crmcontracts.Activity{}, err

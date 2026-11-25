@@ -112,6 +112,18 @@ when you import. A record is archived, not deleted: an archive operation sets `a
 record stays readable by id. A few operations remove a part of a record, such as
 `removeOfferLineItem`.
 
+## Archived records
+
+| Request on an archived record | Answer |
+|---|---|
+| The archive operation again | The same status as the first archive. Nothing changes, and no event is sent. `If-Match` is not checked, so a retry with the version you sent first still succeeds. |
+| A change, such as `PATCH`, or a write that adds to the record | `409 record_archived`. Restore the record first. |
+| Any request on a record you cannot read | `404`, whether it is archived or not. |
+
+An archived tag is the one exception: it still takes a `PATCH`, so you can rename it to free its name
+before a restore. `backend/internal/compose/integration/archivedrecordanswer_integration_test.go`
+reads every archive operation in the contract and fails one that answers otherwise.
+
 On a deal, an offer, a project and a signal, `source` is one of the values the contract lists for
 that field. A program that calls the API sends `api`. Any other value is refused with
 `422 invalid_source`. A signal that a job or an extension wrote names it in `source_system`, which

@@ -165,8 +165,8 @@ func TestOneColleagueHoldsARoleOncePerCompany(t *testing.T) {
 	if len(listed) != 0 {
 		t.Fatalf("an ended responsibility is still listed: %+v", listed)
 	}
-	if err := e.store.ArchiveAssignment(ctx, ids.UUID(created.Id)); !errors.Is(err, apperrors.ErrConflict) {
-		t.Fatalf("ending it twice: err=%v, want ErrConflict", err)
+	if err := e.store.ArchiveAssignment(ctx, ids.UUID(created.Id)); err != nil {
+		t.Fatalf("ending it twice: err=%v, want a no-op", err)
 	}
 	// Ended is not gone: the row is history, and the same colleague can be
 	// staffed again without the old row standing in the way.

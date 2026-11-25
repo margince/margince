@@ -81,6 +81,9 @@ func (s *Store) updateProjectInTx(
 	if err := auth.EnsureWritable(ctx, tx, projectObject, id.UUID); err != nil {
 		return crmcontracts.Project{}, err
 	}
+	if err := auth.RefuseArchived(ctx, tx, projectObject, id.UUID); err != nil {
+		return crmcontracts.Project{}, err
+	}
 	// current is read with the active columns, so the audit before-image
 	// carries the custom-field values as they were.
 	current, err := readProject(ctx, tx, id, storekit.LiveOnly, active)

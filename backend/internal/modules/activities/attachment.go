@@ -132,9 +132,21 @@ func ensureAttachmentParentWritableLive(ctx context.Context, tx pgx.Tx, entityTy
 // was also one they owned; with a project readable workspace-wide it is the
 // difference between "look at another team's file" and "delete it".
 func resolveAttachmentParent(ctx context.Context, tx pgx.Tx, id ids.UUID, action principal.Action) (entityType string, err error) {
+	return resolveAttachmentParentIn(ctx, tx, id, action, storekit.LiveOnly)
+}
+
+// resolveAttachmentParentIn is resolveAttachmentParent for a chosen archive
+// filter: an archive asks it of an archived file too, to find a repeat.
+func resolveAttachmentParentIn(
+	ctx context.Context, tx pgx.Tx, id ids.UUID, action principal.Action, archived storekit.ArchivedFilter,
+) (entityType string, err error) {
 	var entityID ids.UUID
+	live := " AND archived_at IS NULL"
+	if archived != storekit.LiveOnly {
+		live = ""
+	}
 	row := tx.QueryRow(ctx,
-		`SELECT entity_type, entity_id FROM attachment WHERE id = $1 AND archived_at IS NULL`, id)
+		`SELECT entity_type, entity_id FROM attachment WHERE id = $1`+live, id)
 	switch scanErr := row.Scan(&entityType, &entityID); {
 	case errors.Is(scanErr, pgx.ErrNoRows):
 		return "", apperrors.ErrNotFound

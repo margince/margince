@@ -302,8 +302,8 @@ func TestAMemberRestoreRefusesAMembershipThatMovedOn(t *testing.T) {
 	if _, err := f.store.ArchiveList(f.rep, archived); err != nil {
 		t.Fatalf("archiving the list: %v", err)
 	}
-	if _, err := f.store.RestoreMemberRemoval(f.rep, archived, removal); !errors.Is(err, collections.ErrListArchived) {
-		t.Fatalf("restoring onto an archived list → %v, want ErrListArchived", err)
+	if _, err := f.store.RestoreMemberRemoval(f.rep, archived, removal); !errors.Is(err, apperrors.ErrArchived) {
+		t.Fatalf("restoring onto an archived list → %v, want ErrArchived", err)
 	}
 }
 

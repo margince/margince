@@ -109,6 +109,9 @@ func (s *Store) UpdateLegalEntity(ctx context.Context, id ids.LegalEntityID, in 
 	}
 	var out LegalEntity
 	err := s.tx(ctx, func(tx pgx.Tx) error {
+		if err := auth.RefuseArchived(ctx, tx, legalEntityTable, id.UUID); err != nil {
+			return err
+		}
 		lock, err := storekit.LockRow(ctx, tx, legalEntityTable, id.UUID, storekit.LiveOnly)
 		if err != nil {
 			return err
@@ -198,6 +201,12 @@ func (s *Store) ArchiveLegalEntity(ctx context.Context, id ids.LegalEntityID, if
 	}
 	var out LegalEntity
 	err := s.tx(ctx, func(tx pgx.Tx) error {
+		if archived, err := auth.ArchivedAlready(ctx, tx, legalEntityTable, id.UUID); err != nil || archived {
+			if err == nil {
+				out, err = readLegalEntity(ctx, tx, id)
+			}
+			return err
+		}
 		// The lock is what an assignment waits on too, so no user can join the
 		// entity between the count below and the archive.
 		if _, err := storekit.LockRow(ctx, tx, legalEntityTable, id.UUID, storekit.LiveOnly); err != nil {

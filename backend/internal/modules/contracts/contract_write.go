@@ -175,6 +175,9 @@ func (s *Store) UpdateContract(ctx context.Context, id ids.ContractID, in crmcon
 		if err != nil {
 			return err
 		}
+		if err := auth.RefuseArchived(ctx, tx, contractTable, id.UUID); err != nil {
+			return err
+		}
 		// Naming a deal or a project is a read of it, on a PATCH exactly as on a
 		// create. Without this a caller re-points a contract at a record it
 		// cannot see — and because the company arm of the visibility
@@ -291,6 +294,9 @@ func (s *Store) ArchiveContract(ctx context.Context, id ids.ContractID) error {
 		}
 		existing, err := writableContract(ctx, tx, id, today)
 		if err != nil {
+			return err
+		}
+		if archived, err := auth.ArchivedAlready(ctx, tx, contractTable, id.UUID); err != nil || archived {
 			return err
 		}
 		// Archiving takes no If-Match on the wire, so the write is serialized by

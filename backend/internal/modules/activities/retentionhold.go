@@ -20,6 +20,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -78,9 +79,34 @@ func lockActivityForWrite(ctx context.Context, tx pgx.Tx, id ids.UUID) (held boo
 		return false, err
 	}
 	if !held {
-		return false, apperrors.ErrNotFound
+		return false, refuseArchivedActivity(ctx, tx, id)
 	}
 	return true, nil
+}
+
+// refuseArchivedActivity answers a change to an archived activity that no
+// retention obligation holds: ErrArchived to a caller who may change it, and
+// the write gate's own refusal to anyone else.
+func refuseArchivedActivity(ctx context.Context, tx pgx.Tx, id ids.UUID) error {
+	if err := auth.EnsureActivityWritableIn(ctx, tx, id, false); err != nil {
+		return err
+	}
+	return auth.RefuseArchived(ctx, tx, "activity", id)
+}
+
+// activityArchivedAlready reports that an archive of the activity has nothing
+// to do: it is archived, no retention obligation holds it, and the caller may
+// change it. A held row goes on to the archive, whose write meets the hold.
+func activityArchivedAlready(ctx context.Context, tx pgx.Tx, id ids.UUID) (bool, error) {
+	if err := auth.EnsureActivityWritableIn(ctx, tx, id, false); err != nil {
+		return false, err
+	}
+	archived, err := auth.ArchivedAlready(ctx, tx, "activity", id)
+	if err != nil || !archived {
+		return false, err
+	}
+	held, err := activityRetentionHeld(ctx, tx, id)
+	return !held, err
 }
 
 // activityArchivedFilter is the storekit.ArchivedFilter a caller must resolve

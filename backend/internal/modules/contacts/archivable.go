@@ -17,15 +17,19 @@ import (
 
 // lockThenEnsureArchivable locks the record before it reads who may archive
 // it. So an owner change that commits meanwhile is read rather than raced, and
-// the archive runs on the authority the row holds when written.
-func lockThenEnsureArchivable(ctx context.Context, tx pgx.Tx, table string, rule auth.ArchiveRule, id ids.UUID) error {
+// the archive runs on the authority the row holds when written. It answers
+// true for a record archived already, which a second archive leaves alone.
+func lockThenEnsureArchivable(ctx context.Context, tx pgx.Tx, table string, rule auth.ArchiveRule, id ids.UUID) (bool, error) {
+	if archived, err := auth.ArchivedAlready(ctx, tx, table, id); err != nil || archived {
+		return archived, err
+	}
 	if err := lockArchivedRow(ctx, tx, table, id); err != nil {
-		return err
+		return false, err
 	}
 	if err := auth.EnsureWritable(ctx, tx, table, id); err != nil {
-		return err
+		return false, err
 	}
-	return auth.EnsureArchivable(ctx, tx, rule, id)
+	return false, auth.EnsureArchivable(ctx, tx, rule, id)
 }
 
 // Lists, record reads and mutation echoes show the same write and archive actions.

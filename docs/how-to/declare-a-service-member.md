@@ -76,7 +76,7 @@ curl -X POST http://localhost:8080/v1/users/service-members/<id>/archive \
   --cookie 'crm_session=<your session>'
 ```
 
-The member is deactivated and archived, and `user.deactivated` is published. The answer is `204`. An id that is not a live service member, including one already archived, answers `404`. The row and its secret stay, so the audit trail still names something real.
+The member is deactivated and archived, and `user.deactivated` is published. The answer is `204`. An id that is not a service member answers `404`. Archiving an archived member changes nothing and answers `204` again. The row and its secret stay, so the audit trail still names something real.
 
 ## No MCP tools yet
 

@@ -157,13 +157,15 @@ func (s *Service) ArchiveServiceMember(ctx context.Context, actor Identity, memb
 		}
 		var status string
 		err := tx.QueryRow(ctx,
-			`SELECT status FROM app_user
-			  WHERE id = $1 AND service_extension IS NOT NULL AND archived_at IS NULL FOR UPDATE`,
+			`SELECT status FROM app_user WHERE id = $1 AND service_extension IS NOT NULL FOR UPDATE`,
 			member).Scan(&status)
 		if errors.Is(err, pgx.ErrNoRows) {
 			return apperrors.ErrNotFound
 		}
 		if err != nil {
+			return err
+		}
+		if archived, err := auth.ArchivedAlready(ctx, tx, "app_user", member.UUID); err != nil || archived {
 			return err
 		}
 		if _, err := tx.Exec(ctx,

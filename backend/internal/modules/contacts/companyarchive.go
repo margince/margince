@@ -69,7 +69,12 @@ func (s *Store) ArchiveCompany(
 		if err != nil {
 			return err
 		}
-		if err := lockThenEnsureArchivable(ctx, tx, companyEntity, auth.CompanyArchive, id.UUID); err != nil {
+		archived, err := lockThenEnsureArchivable(ctx, tx, companyEntity, auth.CompanyArchive, id.UUID)
+		if err != nil {
+			return err
+		}
+		if archived {
+			out, err = readCompany(ctx, tx, id, storekit.IncludeArchived, active)
 			return err
 		}
 		// The precondition, under the row lock the write takes: a caller that
@@ -100,7 +105,7 @@ func (s *Store) ArchiveCompanyTx(ctx context.Context, tx pgx.Tx, id ids.CompanyI
 	if err := auth.RequireArchiveGrant(ctx, auth.CompanyArchive); err != nil {
 		return err
 	}
-	if err := lockThenEnsureArchivable(ctx, tx, companyEntity, auth.CompanyArchive, id.UUID); err != nil {
+	if archived, err := lockThenEnsureArchivable(ctx, tx, companyEntity, auth.CompanyArchive, id.UUID); err != nil || archived {
 		return err
 	}
 	_, err := archiveCompanyTx(ctx, tx, id, ifVersion, nil)

@@ -86,6 +86,9 @@ func (s *Store) ArchiveDealTx(ctx context.Context, tx pgx.Tx, id ids.DealID, ifV
 // archiveDealInTx is the archive itself, behind the up-front grant its callers
 // ask: the row's write and archive checks, the guarded patch and the cascade.
 func archiveDealInTx(ctx context.Context, tx pgx.Tx, id ids.DealID, ifVersion *int64, o archiveOptions) error {
+	if archived, err := auth.ArchivedAlready(ctx, tx, dealTable, id.UUID); err != nil || archived {
+		return err
+	}
 	if err := lockThenEnsureWritable(ctx, tx, id); err != nil {
 		return err
 	}

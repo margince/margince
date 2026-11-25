@@ -56,6 +56,9 @@ func (s *Store) ArchivePipeline(ctx context.Context, id ids.PipelineID, ifVersio
 		return err
 	}
 	return s.Tx(ctx, func(tx pgx.Tx) error {
+		if archived, err := auth.ArchivedAlready(ctx, tx, "pipeline", id.UUID); err != nil || archived {
+			return err
+		}
 		// The pipeline row is the serialization point for every write that
 		// reshapes it or its stage list (lockStageConfig's own doc), so a
 		// retirement and a stage reorder queue rather than racing.

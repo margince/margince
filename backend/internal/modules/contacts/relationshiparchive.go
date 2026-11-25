@@ -36,6 +36,9 @@ func (s *Store) archiveRelationshipTx(ctx context.Context, tx pgx.Tx, id ids.UUI
 	if err := requireRelationshipArchive(ctx, tx, current); err != nil {
 		return relationshipRow{}, err
 	}
+	if archived, err := auth.ArchivedAlready(ctx, tx, "relationship", id); err != nil || archived {
+		return current, err
+	}
 	p := storekit.NewPatch()
 	p.Set("archived_at", nil, time.Now().UTC())
 	if err := p.ApplyGuarded(ctx, tx, "relationship", id, ifVersion); err != nil {

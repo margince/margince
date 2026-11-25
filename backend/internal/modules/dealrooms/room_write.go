@@ -227,6 +227,9 @@ func (s *Store) UpdateRoom(ctx context.Context, id ids.DealRoomID, in UpdateRoom
 	}
 	var out crmcontracts.DealRoom
 	err := s.tx(ctx, func(tx pgx.Tx) error {
+		if err := refuseArchivedRoom(ctx, tx, id); err != nil {
+			return err
+		}
 		if _, err := storekit.LockRow(ctx, tx, roomObject, id.UUID, storekit.LiveOnly); err != nil {
 			return err
 		}
@@ -467,6 +470,15 @@ func changedFields(p *storekit.Patch) []string {
 // and a room is the sharpest form of that: it is buyer-facing access, and
 // handing out more of it after the deal was retired is what retiring the deal
 // meant to stop.
+// refuseArchivedRoom answers ErrArchived for an archived room the caller can
+// read, and ErrNotFound for one the caller cannot.
+func refuseArchivedRoom(ctx context.Context, tx pgx.Tx, id ids.DealRoomID) error {
+	if _, err := readRoom(ctx, tx, id); err != nil {
+		return err
+	}
+	return auth.RefuseArchived(ctx, tx, roomObject, id.UUID)
+}
+
 func ensureDealWritable(ctx context.Context, tx pgx.Tx, room crmcontracts.DealRoom) error {
 	return auth.EnsureWritableLive(ctx, tx, dealTable, ids.UUID(room.DealId))
 }

@@ -66,7 +66,8 @@ func EnsureWritable(ctx context.Context, tx pgx.Tx, table string, id ids.UUID) e
 // THIS IS THE SPELLING A WRITE THAT ADDS OWES, and the rule is stated here once
 // rather than re-argued at each gate: archived means frozen, so a write that
 // puts something NEW on a record needs the record to still be live and not
-// merely visible.
+// merely visible. An archived record the caller can see answers
+// apperrors.ErrArchived (409); one the caller cannot see stays ErrNotFound.
 //
 // A path that STAGES a proposal and applies it later needs it most: the archive
 // lands inside that window, and the window is the ordinary case rather than a
@@ -96,7 +97,7 @@ func EnsureWritable(ctx context.Context, tx pgx.Tx, table string, id ids.UUID) e
 // writers owe it is derived in backend/liveprobelock_test.go.
 func EnsureWritableLive(ctx context.Context, tx pgx.Tx, table string, id ids.UUID) error {
 	if err := EnsureVisibleLive(ctx, tx, table, id); err != nil {
-		return err
+		return archivedOrHidden(ctx, tx, table, id, err)
 	}
 	return ensureWriteAuthority(ctx, tx, table, id)
 }

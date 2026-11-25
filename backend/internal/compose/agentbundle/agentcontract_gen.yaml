@@ -10538,7 +10538,7 @@ paths:
       description: |-
         Needs list authority: the list's steward, or a seat with the list update grant that reads
         every row. `version` must be the one the caller read; a list changed since answers `409`.
-        An archived list is read-only (`409`). Every change is recorded as a revision.
+        An archived list is read-only (`409 record_archived`). Every change is recorded as a revision.
 
         Needs the passport permission Change records.
 
@@ -22934,6 +22934,7 @@ paths:
             application/json:
               schema: {$ref: '#/components/schemas/Signal'}
         '404': {$ref: '#/components/responses/NotFound'}
+        '409': {$ref: '#/components/responses/Conflict'}
         '422': {$ref: '#/components/responses/ValidationError'}
       description: |-
         Triage a signal (acknowledge / resolve / dismiss, severity).
@@ -25888,7 +25889,8 @@ paths:
         Soft-deletes the attachment: the row is archived and it disappears from
         listings and downloads. The object bytes are retained and purged by the
         Art. 17 erasure / retention path, matching how every archived record's
-        data persists until erasure. Already-archived or invisible → 404.
+        data persists until erasure. Archiving an archived attachment changes
+        nothing and answers 204 again; an invisible one is 404.
 
         Needs the passport permission Change records.
 
@@ -26943,6 +26945,7 @@ paths:
         '401': {$ref: '#/components/responses/Unauthorized'}
         '403': {$ref: '#/components/responses/PermissionDenied'}
         '404': {$ref: '#/components/responses/NotFound'}
+        '409': {$ref: '#/components/responses/Conflict'}
         '422': {$ref: '#/components/responses/ValidationError'}
       description: |-
         Edit a corpus — its words, its floor, or which one the palette asks.
@@ -27430,7 +27433,7 @@ components:
             held:
               value: {type: 'https://errors.gradion.com/locked', title: Locked, status: 423, code: locked, detail: The record is held under a statutory retention obligation.}
     Conflict:
-      description: State conflict (duplicate key, concurrent edit, already-decided, default-pipeline collision).
+      description: State conflict (duplicate key, concurrent edit, already-decided, default-pipeline collision, or `record_archived`, a change to an archived record).
       content:
         application/problem+json:
           schema: {$ref: '#/components/schemas/Problem'}

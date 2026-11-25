@@ -171,6 +171,9 @@ func (s *Store) FillEmptyLeadFieldsTx(ctx context.Context, tx pgx.Tx, id ids.Lea
 	if err := auth.EnsureWritable(ctx, tx, "lead", id.UUID); err != nil {
 		return err
 	}
+	if err := auth.RefuseArchived(ctx, tx, "lead", id.UUID); err != nil {
+		return err
+	}
 	// And the LOCK comes before the decision read, which is the rule for every
 	// internal multi-step flow (storekit.ApplyGuarded's own comment states it).
 	// Deciding which fields are empty from an unlocked read leaves an interval

@@ -133,9 +133,16 @@ func (s *Store) ArchiveTag(ctx context.Context, id ids.TagID) (tagRow, error) {
 	}
 	var out tagRow
 	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
+		archived, err := auth.ArchivedAlready(ctx, tx, "tag", id.UUID)
+		if err != nil {
+			return err
+		}
+		if archived {
+			out, err = scanTag(tx.QueryRow(ctx, "SELECT "+tagColumns+" FROM tag WHERE id = $1", id))
+			return err
+		}
 		row := tx.QueryRow(ctx,
 			"UPDATE tag SET archived_at = now() WHERE id = $1 AND archived_at IS NULL RETURNING "+tagColumns, id)
-		var err error
 		if out, err = scanTag(row); errors.Is(err, pgx.ErrNoRows) {
 			return apperrors.ErrNotFound
 		} else if err != nil {

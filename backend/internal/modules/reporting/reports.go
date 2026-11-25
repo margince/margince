@@ -407,9 +407,9 @@ func (s *Service) ArchiveReport(ctx context.Context, id ids.UUID) (crmcontracts.
 		if err := s.canEditReport(ctx, tx, before); err != nil {
 			return err
 		}
-		if before.ArchivedAt != nil {
+		if archived, err := auth.ArchivedAlready(ctx, tx, "report_definition", id); err != nil || archived {
 			out = before
-			return nil
+			return err
 		}
 		at := s.now()
 		out = before
