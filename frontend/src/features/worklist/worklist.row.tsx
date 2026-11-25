@@ -3,6 +3,7 @@
 
 import type { ReactNode } from "react";
 import { MayBeDone } from "../../components/maybedone";
+import { TaskNextStepsPending } from "../../components/tasknextsteps";
 import { Badge } from "../../design-system/atoms";
 import { PanelRow } from "../../design-system/panel";
 import { QuietVerbs } from "../../design-system/verbvolume";
@@ -55,7 +56,11 @@ import { RowActs } from "./worklist.rowverbs";
 import "./worklist.row.css";
 import { useViewerZone } from "../../lib/viewerzone";
 import { PreparationNote } from "./worklist.ready";
-import { RowProposal, rowAnswer } from "./worklist.row.answer";
+import {
+  type RowPlacement,
+  RowProposal,
+  rowAnswer,
+} from "./worklist.row.answer";
 import { Rank, RowLead, RowText, titleLinks } from "./worklist.row.cells";
 
 // Preserve server order while naming each group member once.
@@ -119,6 +124,7 @@ export function WorklistRow({
   menu,
   framed = false,
   quiet = false,
+  answerPending = false,
   pick,
   titleEnd,
   underTitle,
@@ -136,6 +142,8 @@ export function WorklistRow({
   menu?: ReactNode;
   /** The card already holds a filled verb, so the row's own is outlined. */
   quiet?: boolean;
+  /** Whether the answer fills is still being read, so its place is held. */
+  answerPending?: boolean;
   /** Drawn at the end of the title line. */
   titleEnd?: ReactNode;
   /** Drawn under the title's own lines, so it follows them in reading order. */
@@ -244,7 +252,10 @@ export function WorklistRow({
   // registers a mutation and reads nothing, so every row may call it. Two
   // writes would carry two settled flags, and one item could be answered twice.
   const brief = useBriefAnswer(item);
-  const answer = withFoldedBrief(rowAnswer(item, brief, quiet), item, brief);
+  const answer = heldAnswer(
+    withFoldedBrief(rowAnswer(item, brief, quiet), item, brief),
+    answerPending,
+  );
   const readings: RowReadings = shapedReadings(framed, {
     item,
     ...name,
@@ -387,6 +398,12 @@ export function WorklistRow({
       </PutDownByThumb>
     </PanelRow>
   );
+}
+
+// A held answer keeps its place in the line, in no weight it may then lose.
+function heldAnswer(answer: RowPlacement, held: boolean): RowPlacement {
+  if (!held || !answer.primary) return answer;
+  return { ...answer, primary: <TaskNextStepsPending /> };
 }
 
 // The surface's menu lines first, then the lane's rarer answers.
