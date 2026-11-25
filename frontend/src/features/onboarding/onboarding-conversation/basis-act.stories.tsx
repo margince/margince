@@ -2,6 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
+import { expect, userEvent, waitFor, within } from "storybook/test";
 import {
   installFetchStub,
   jsonResponse,
@@ -14,7 +15,8 @@ import type { ConversationState } from "./conversation-types";
 
 // The basis, asked right after the company is confirmed: base currency and
 // reporting timezone, prefilled from the installation, with the currency shown
-// locked once a deal has frozen it.
+// locked once a deal has frozen it, and a refused save with each refusal
+// beside its field.
 
 const asking: ConversationState = {
   ...initialConversationState,
@@ -57,6 +59,61 @@ function act(locked: boolean, locale?: "de") {
   };
 }
 
+const rateSheet = { reason: "rate_sheet", count: 2, base_currency: "EUR" };
+
+// The step loaded unlocked; a rate was added before Continue, so the save is
+// refused and the read after it reports the lock.
+function refusedAct() {
+  let refused = false;
+  installFetchStub({
+    "GET /me": meRoute({ installation_settings: ["update"] }),
+    "GET /installation/settings": () =>
+      jsonResponse(
+        refused
+          ? {
+              ...settings,
+              base_currency_locked: true,
+              base_currency_lock: rateSheet,
+            }
+          : settings,
+      ),
+    "PATCH /installation/settings": () => {
+      refused = true;
+      return jsonResponse(
+        {
+          code: "validation_error",
+          detail: "The installation could not be saved.",
+          details: {
+            errors: [
+              {
+                field: "installation.base_currency",
+                code: "setting_frozen",
+                message: "2 rate(s) in the sheet convert into EUR",
+                params: {
+                  reason: "rate_sheet",
+                  count: "2",
+                  base_currency: "EUR",
+                },
+              },
+              {
+                field: "installation.timezone",
+                code: "setting_invalid",
+                message: '"Mars/Olympus" is not an IANA zone name',
+              },
+            ],
+          },
+        },
+        422,
+      );
+    },
+  });
+  return (
+    <StoryProviders locale="de">
+      <BasisAct state={asking} dispatch={() => {}} />
+    </StoryProviders>
+  );
+}
+
 const meta: Meta<typeof BasisAct> = {
   title: "Onboarding/Conversation/Basis act",
   component: BasisAct,
@@ -72,3 +129,21 @@ export const CurrencyLocked: Story = { render: act(true) };
 
 /** The German act. */
 export const OpenGerman: Story = { render: act(false, "de") };
+
+/** A German save refused on both fields: the currency's lock and the time zone. */
+export const RefusedGerman: Story = {
+  render: refusedAct,
+  play: async ({ canvasElement }) => {
+    const user = userEvent.setup();
+    const canvas = within(canvasElement);
+    const currency = await canvas.findByLabelText("Basiswährung");
+    await user.clear(currency);
+    await user.type(currency, "CHF");
+    const zone = canvas.getByLabelText("Zeitzone des Unternehmens");
+    await user.clear(zone);
+    await user.type(zone, "Mars/Olympus");
+    await user.click(canvas.getByRole("button", { name: "Weiter" }));
+    await waitFor(() => expect(currency).toBeDisabled());
+    await expect(zone).toHaveAttribute("aria-invalid", "true");
+  },
+};

@@ -12,6 +12,7 @@ import {
   type Words,
 } from "../../i18n";
 import { currencyNote } from "../../lib/installation-settings.currency";
+import { type FieldProblem, faultSentence } from "../../lib/problem";
 import { defaultAgentAllowances } from "../../testing/agentallowances.fixtures";
 import { defaultOperations } from "../../testing/operationsettings.fixtures";
 
@@ -218,4 +219,68 @@ describe("currencyNote falls back for an older or newer server", () => {
       catalogs.en["installationSettings.baseCurrencyHint"],
     );
   });
+});
+
+describe("a refused base currency words its lock as the field's hint does", () => {
+  const prose = "3 rate(s) in the sheet convert into EUR";
+  const refusal = (params?: Record<string, string>): FieldProblem => ({
+    field: "installation.base_currency",
+    code: "setting_frozen",
+    message: prose,
+    ...(params ? { params } : null),
+  });
+  const cases: [Record<string, string>, BaseCurrencyLock][] = [
+    [
+      { reason: "rates_frozen", count: "3" },
+      { reason: "rates_frozen", count: 3 },
+    ],
+    [
+      { reason: "rate_sheet", count: "1", base_currency: "CHF" },
+      { reason: "rate_sheet", count: 1, base_currency: "CHF" },
+    ],
+    [
+      { reason: "rate_sheet", count: "1204" },
+      { reason: "rate_sheet", count: 1204 },
+    ],
+  ];
+  for (const locale of ["en", "de", "vi"] as const) {
+    for (const [params, lock] of cases) {
+      it(`${params.reason}, ${params.count}, ${params.base_currency ?? "no base"}, in ${locale}`, () => {
+        expect(faultSentence(refusal(params), locale)).toBe(
+          currencyNote(locked({ base_currency_lock: lock }), wordsFor(locale)),
+        );
+      });
+    }
+  }
+
+  const unread: [string, FieldProblem][] = [
+    ["no params", refusal()],
+    [
+      "a reason this build does not know",
+      refusal({ reason: "ledger_sealed", count: "2" }),
+    ],
+    ["no count", refusal({ reason: "rates_frozen" })],
+    [
+      "a count that is not a whole number",
+      refusal({ reason: "rates_frozen", count: "3.5" }),
+    ],
+    [
+      "another setting",
+      {
+        ...refusal({ reason: "rates_frozen", count: "3" }),
+        field: "installation.timezone",
+      },
+    ],
+  ];
+  for (const [what, fault] of unread) {
+    it(`keeps the server's sentence in English for ${what}`, () => {
+      expect(faultSentence(fault, "en")).toBe(`${prose}.`);
+    });
+
+    it(`keeps the generic sentence in German for ${what}`, () => {
+      expect(faultSentence(fault, "de")).toBe(
+        translate("de", "common.fieldInvalid"),
+      );
+    });
+  }
 });

@@ -23,6 +23,10 @@ import { useCanWrite } from "../../lib/capability";
 // Installation facts are readable by every role; only admin/ops may change them.
 // Each row opens the shared sparse-patch form with its own field focused.
 import { useCurrencyNote } from "../../lib/installation-settings.currency";
+import {
+  installationRefusal,
+  refusalWordsLock,
+} from "../../lib/installation-settings.refusal";
 import { type FieldLabels, percentLimit, unwrap } from "../../lib/problem";
 // Shared with every upload form, which reads the ceiling off this same record.
 // One query, one key: two hooks on one key would let whichever mounted first
@@ -45,7 +49,6 @@ import {
   fiscalYearStartSummary,
   InstallationProfileDialog,
 } from "./installation-settings.profile";
-import { installationRefusal } from "./installation-settings.refusal";
 import { RegionalSettingsRows } from "./installation-settings.regional";
 
 export { fiscalYearStartSummary } from "./installation-settings.profile";
@@ -77,11 +80,22 @@ const EDITABLE_FACTS = [
 // tab in one sparse PATCH, so this decides only where focus lands.
 export type EditedFact = (typeof EDITABLE_FACTS)[number];
 
+const FORECAST_FACTS: readonly EditedFact[] = [
+  "forecast_forward_measure",
+  "forecast_likely_threshold",
+];
+
 // The server's bounds on the Likely threshold, in percent.
 const LIKELY_THRESHOLD = { min: 1, max: 100 } as const;
 
-function factLabels(t: ReturnType<typeof useT>, locale: Locale): FieldLabels {
-  return {
+// Labels only for the facts the part's dialog draws, so a refusal naming
+// another fact reaches the foot.
+function factLabels(
+  t: ReturnType<typeof useT>,
+  locale: Locale,
+  part: InstallationPart,
+): FieldLabels {
+  const labels: FieldLabels = {
     timezone: t("installationSettings.timezone"),
     base_currency: t("installationSettings.baseCurrency"),
     base_language: t("installationSettings.baseLanguage"),
@@ -94,6 +108,13 @@ function factLabels(t: ReturnType<typeof useT>, locale: Locale): FieldLabels {
       limit: percentLimit(locale),
     },
   };
+  return Object.fromEntries(
+    Object.entries(labels).filter(
+      ([fact]) =>
+        FORECAST_FACTS.some((forecast) => forecast === fact) ===
+        (part === "forecast"),
+    ),
+  );
 }
 
 // A whole percent from 1 to 100, in the words the server's refusal gets.
@@ -269,7 +290,7 @@ function InstallationSettingsForm({
   // Keyed by the wire field name because that is what the server asserts. The
   // patch is sparse and built from the same names, so the two cannot drift
   // without the request itself being wrong.
-  const labels = factLabels(t, locale);
+  const labels = factLabels(t, locale, part);
   const [faults, faultsRoot] = useFieldFaults();
   const refused = new Map(
     EDITABLE_FACTS.flatMap((fact) => {
@@ -277,7 +298,11 @@ function InstallationSettingsForm({
       return sentence === undefined ? [] : [[fact, sentence] as const];
     }),
   );
-  const blanket = installationRefusal(update.error, t, labels, part).rest;
+  const blanket = installationRefusal(update.error, t, labels).rest;
+  const lockRefused = refusalWordsLock(
+    update.error,
+    refused.get("base_currency"),
+  );
   const edit = (next: InstallationSettings) => {
     for (const fact of EDITABLE_FACTS) {
       if (next[fact] !== draft[fact]) faults.edited(fact);
@@ -319,7 +344,7 @@ function InstallationSettingsForm({
     }
     update.mutate(patch, {
       onError: (error) =>
-        faults.show(installationRefusal(error, t, labels, part).byField),
+        faults.show(installationRefusal(error, t, labels).byField),
     });
   };
 
@@ -465,6 +490,7 @@ function InstallationSettingsForm({
           dirty={dirty}
           pending={update.isPending}
           refused={refused}
+          lockRefused={lockRefused}
           formRef={faultsRoot}
           blanketError={blanket}
           describe={describe}

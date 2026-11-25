@@ -10,11 +10,12 @@ import {
 import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, type MockInstance, vi } from "vitest";
+import type { components } from "../../api/schema";
 import { DateFormatsProvider } from "../../app/dateformats";
 import { UnsavedGuard, useHasUnsavedChanges } from "../../components/unsaved";
 import { pickOption } from "../../design-system/select-testing";
 import { formatDate } from "../../format/format";
-import { LocaleProvider, useLocale } from "../../i18n";
+import { type Locale, LocaleProvider, useLocale } from "../../i18n";
 import { type GrantSpec, meFixture } from "../../testing/mefixture";
 import { LANGUAGE_DEPENDENT_QUERY_PREFIXES } from "./aicaches";
 import { InstallationSettingsCard } from "./installation-settings";
@@ -42,7 +43,15 @@ type BackendOptions = {
   locked?: boolean;
   lockedReason?: string;
   /** What the server refuses the PATCH with, as an RFC-7807 validation body. */
-  refuse?: { field: string; code: string; message: string; max?: number }[];
+  refuse?: {
+    field: string;
+    code: string;
+    message: string;
+    max?: number;
+    params?: Record<string, string>;
+  }[];
+  /** The lock the read reports once the PATCH was refused: a rate froze it meanwhile. */
+  lockAfterRefusal?: components["schemas"]["BaseCurrencyLock"];
   /** The settings a boot source sets, as the read reports them. */
   locks?: unknown[];
 };
@@ -50,7 +59,7 @@ type BackendOptions = {
 // backendFor answers /me with the given grants and /installation/settings with
 // the given state, capturing any PATCH body so the wire shape is assertable.
 function backendFor(allow: GrantSpec, opts: BackendOptions = {}) {
-  let state = {
+  let state: Record<string, unknown> = {
     name: "Brandt Automotive",
     timezone: "Europe/Berlin",
     base_currency: "EUR",
@@ -86,6 +95,13 @@ function backendFor(allow: GrantSpec, opts: BackendOptions = {}) {
         if (req.method === "PATCH") {
           capturedPatch = await req.json();
           if (opts.refuse) {
+            if (opts.lockAfterRefusal) {
+              state = {
+                ...state,
+                base_currency_locked: true,
+                base_currency_lock: opts.lockAfterRefusal,
+              };
+            }
             // The shape httperr.Validation actually emits: one top-level code
             // for every 422, and the rule that fired named per field.
             return jsonResponse(
@@ -110,10 +126,11 @@ function backendFor(allow: GrantSpec, opts: BackendOptions = {}) {
 function render(
   node: ReactNode,
   client = new QueryClient({ defaultOptions: { queries: { retry: false } } }),
+  locale?: Locale,
 ) {
   return rtlRender(
     <QueryClientProvider client={client}>
-      <LocaleProvider>{node}</LocaleProvider>
+      <LocaleProvider initial={locale}>{node}</LocaleProvider>
     </QueryClientProvider>,
   );
 }
@@ -642,6 +659,41 @@ describe("InstallationSettingsCard", () => {
 
     await within(dialog).findByText("Settings not saved");
     expect(dialog.querySelector('[aria-invalid="true"]')).toBeNull();
+  });
+
+  it("words a currency frozen after the page loaded as its lock, once, in the reader's language", async () => {
+    const user = userEvent.setup();
+    const { fetchMock } = backendFor(SETTINGS_EDITOR, {
+      refuse: [
+        {
+          field: "installation.base_currency",
+          code: "setting_frozen",
+          message: "3 deal(s) have already frozen a conversion rate against it",
+          params: { reason: "rates_frozen", count: "3" },
+        },
+      ],
+      lockAfterRefusal: { reason: "rates_frozen", count: 3 },
+    });
+    vi.stubGlobal("fetch", fetchMock);
+    render(<InstallationSettingsCard />, undefined, "de");
+
+    const dialog = await openFrom(user, /basiswährung bearbeiten/i);
+    const currency = within(dialog).getByLabelText(
+      "Basiswährung",
+    ) as HTMLInputElement;
+    await user.clear(currency);
+    await user.type(currency, "CHF");
+    await user.click(within(dialog).getByRole("button", { name: "Speichern" }));
+
+    const sentence =
+      "Für 3 Einträge ist bereits jeweils ein Wechselkurs zu dieser Währung festgeschrieben, daher ist sie nicht mehr änderbar.";
+    const refusal = await within(dialog).findByText(sentence);
+    expect(refusal.className).toContain("field-error");
+    expect(currency.getAttribute("aria-invalid")).toBe("true");
+    expect(within(dialog).queryByText(/frozen a conversion rate/)).toBeNull();
+    // The read after the refusal locks the field, and its hint holds the same sentence.
+    await waitFor(() => expect(currency.disabled).toBe(true));
+    expect(within(dialog).getAllByText(sentence)).toHaveLength(1);
   });
 
   it("says a refusal once — on the field, or in the summary, never both", async () => {
