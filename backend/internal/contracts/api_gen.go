@@ -76909,6 +76909,9 @@ type PermissionDenied = Problem
 // RetentionHeld RFC 7807 problem+json with a stable machine `code` and structured `details`.
 type RetentionHeld = Problem
 
+// Retired RFC 7807 problem+json with a stable machine `code` and structured `details`.
+type Retired = Problem
+
 // RoleCannotCapture RFC 7807 problem+json with a stable machine `code` and structured `details`.
 type RoleCannotCapture = Problem
 

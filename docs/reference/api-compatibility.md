@@ -49,6 +49,22 @@ The shared rules are in
 The check refuses a removal without a recorded announcement and prevents changes
 that backdate a published notice or bring its sunset forward.
 
+## A retired operation
+
+A maintainer may remove the behaviour behind a deprecated operation before
+its notice window ends. The operation then stays in the contract, still
+deprecated, and declares the shared `Retired` response. Every call answers
+`410 Gone` with the problem code `endpoint_retired`, whatever the request
+holds. A client reads this as a refusal it can act on, not as a server fault.
+The operation leaves the contract only under the removal rules above.
+
+A deprecated operation that does not declare `Retired` stays callable. The test
+`TestEveryRetiredOperationAnswersItsDeclaredRefusal` in
+[retiredroutes_test.go](../../backend/internal/compose/retiredroutes_test.go)
+reads the deprecated operations from the contract. It sends each retired one
+through the route table and expects the `410`. It fails when a handler answers
+`endpoint_retired` for an operation the contract does not declare retired.
+
 ## Mark an operation
 
 Set `deprecated: true` on the operation in `crm.yaml`. Until its announcing release
