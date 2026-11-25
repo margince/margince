@@ -20,6 +20,8 @@ import {
 } from "./filtersentence";
 import { referencedIdsOf } from "./filtersentence.names";
 
+const TAG = enCatalog["filters.field.tag"];
+
 // The one place a filter becomes words, so these read like the sentences a
 // reader sees under a Live List and on a saved view, clause by clause.
 
@@ -279,10 +281,10 @@ describe("a filter read as one sentence", () => {
     };
     const tagged = (value: string | string[]) =>
       read(newGroup("and", [newLeaf("tag", "in", value)]), named);
-    expect(tagged(["t-a", "t-b"])).toBe('Tag is any of "Wanted", "Other"');
-    expect(tagged(["t-a", "t-unknown"])).toBe("Tag is any of 2 tags");
+    expect(tagged(["t-a", "t-b"])).toBe(`${TAG} is any of "Wanted", "Other"`);
+    expect(tagged(["t-a", "t-unknown"])).toBe(`${TAG} is any of 2 tags`);
     expect(read(newGroup("and", [newLeaf("tag", "eq", "t-a")]), named)).toBe(
-      'Tag is "Wanted"',
+      `${TAG} is "Wanted"`,
     );
   });
 
@@ -290,15 +292,15 @@ describe("a filter read as one sentence", () => {
     const retiring = { ...en, retiredTags: new Set(["t-old", "t-gone"]) };
     const tagged = (op: "eq" | "neq" | "in", value: string | string[]) =>
       read(newGroup("and", [newLeaf("tag", op, value)]), retiring);
-    expect(tagged("eq", "t-old")).toBe("Tag is 1 archived tag");
-    expect(tagged("neq", "t-old")).toBe("Tag is not 1 archived tag");
+    expect(tagged("eq", "t-old")).toBe(`${TAG} is 1 archived tag`);
+    expect(tagged("neq", "t-old")).toBe(`${TAG} is not 1 archived tag`);
     expect(tagged("in", ["t-old", "t-gone"])).toBe(
-      "Tag is any of 2 archived tags",
+      `${TAG} is any of 2 archived tags`,
     );
     expect(tagged("in", ["t-live", "t-old", "t-new"])).toBe(
-      "Tag is any of 3 tags, 1 archived",
+      `${TAG} is any of 3 tags, 1 archived`,
     );
-    expect(tagged("eq", "t-live")).toBe("Tag is 1 tag");
+    expect(tagged("eq", "t-live")).toBe(`${TAG} is 1 tag`);
     // Beside an "or", the clause is one way in among others, not the group's answer.
     expect(
       read(
@@ -308,7 +310,7 @@ describe("a filter read as one sentence", () => {
         ]),
         retiring,
       ),
-    ).toBe("City is Berlin or Tag is 1 archived tag");
+    ).toBe(`City is Berlin or ${TAG} is 1 archived tag`);
 
     const note = enCatalog["filters.sentence.retiredTagNote"];
     for (const [op, operand] of [
@@ -329,7 +331,7 @@ describe("a filter read as one sentence", () => {
     ).toBeUndefined();
     // Words that know of no retired tag count every id as a tag.
     expect(read(newGroup("and", [newLeaf("tag", "eq", "t-old")]))).toBe(
-      "Tag is 1 tag",
+      `${TAG} is 1 tag`,
     );
     expect(
       read(newGroup("and", [newLeaf("tag", "eq", "t-old")]), {

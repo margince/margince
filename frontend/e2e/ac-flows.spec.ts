@@ -412,7 +412,7 @@ test.describe("filters and views", () => {
     expect(await textsOf(page.getByRole("option"))).toEqual([
       "Branche",
       "Lebenszyklus",
-      "Tag",
+      de["filters.field.tag"],
       "Verantwortlich",
       // The custom field sorts after the core ones. A reader scanning for a
       // column they added finds it in one place rather than interleaved.
@@ -505,7 +505,9 @@ test.describe("filters and views", () => {
     // operators. `enthält` is gone: a picker that offered it would produce a 422
     // the reader could not interpret.
     await page.getByRole("combobox", { name: "Feld" }).first().click();
-    await page.getByRole("option", { name: "Tag", exact: true }).click();
+    await page
+      .getByRole("option", { name: de["filters.field.tag"], exact: true })
+      .click();
     await page.getByRole("combobox", { name: "Operator" }).first().click();
     expect(await textsOf(page.getByRole("option"))).toEqual([
       "ist",
