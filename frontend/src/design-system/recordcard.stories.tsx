@@ -96,7 +96,7 @@ export const NameOnly: Story = {
   ),
 };
 
-/** A deal has no face, so it wears its kind's icon where a person's avatar goes. */
+/** A deal has no face, so it wears its kind's icon where a contact's avatar goes. */
 export const Deal: Story = {
   render: () => (
     <RecordCard
