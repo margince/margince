@@ -40369,8 +40369,8 @@ type CaptureConnection struct {
 	HistoryBaseline *MailHistoryBaseline `json:"history_baseline,omitempty"`
 
 	// HistoryNarrowing Earlier mail of this mailbox that a background job is still narrowing, after a change
-	// asked for `apply_to_history`. Absent when nothing is pending. Mail the job has not reached
-	// yet keeps the audience it had.
+	// asked for `apply_to_history`. Absent when nothing is pending. Readers already see the
+	// mail as narrowed; the job writes the narrowing it implies.
 	HistoryNarrowing *MailHistoryNarrowing `json:"history_narrowing,omitempty"`
 	Id               openapi_types.UUID    `json:"id"`
 
@@ -58846,8 +58846,8 @@ type MailHistoryBaseline struct {
 }
 
 // MailHistoryNarrowing Earlier mail of this mailbox that a background job is still narrowing, after a change
-// asked for `apply_to_history`. Absent when nothing is pending. Mail the job has not reached
-// yet keeps the audience it had.
+// asked for `apply_to_history`. Absent when nothing is pending. Readers already see the
+// mail as narrowed; the job writes the narrowing it implies.
 type MailHistoryNarrowing struct {
 	// Posture What the earlier mail is narrowed to.
 	Posture MailHistoryNarrowingPosture `json:"posture"`
@@ -69130,8 +69130,8 @@ type SharedMailbox struct {
 	ConnectedBy *openapi_types.UUID `json:"connected_by,omitempty"`
 
 	// HistoryNarrowing Earlier mail of this mailbox that a background job is still narrowing, after a change
-	// asked for `apply_to_history`. Absent when nothing is pending. Mail the job has not reached
-	// yet keeps the audience it had.
+	// asked for `apply_to_history`. Absent when nothing is pending. Readers already see the
+	// mail as narrowed; the job writes the narrowing it implies.
 	HistoryNarrowing *MailHistoryNarrowing `json:"history_narrowing,omitempty"`
 
 	// Id The connection id. It stays the same across a disconnect and a reconnect.

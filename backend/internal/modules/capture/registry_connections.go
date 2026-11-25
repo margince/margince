@@ -219,7 +219,7 @@ func (r *Registry) connectionViews(ctx context.Context, includeBackfill bool) ([
 		if err := rows.Err(); err != nil {
 			return err
 		}
-		if err := seatNarrowingsTx(ctx, tx, actor.UserID, out); err != nil {
+		if err := seatNarrowingsTx(ctx, tx, out); err != nil {
 			return err
 		}
 		if !includeBackfill {

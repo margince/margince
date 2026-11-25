@@ -116,8 +116,8 @@ func (r *Registry) SetMailPosture(
 		if !applyToHistory {
 			return nil
 		}
-		// The job narrows the earlier mail after this commits. Until it reaches
-		// a message, that message keeps the audience it has.
+		// Readers honour the request once this commits; the job then writes the
+		// narrowed imports in batches.
 		return requestHistoryNarrowingTx(ctx, tx, match, posture)
 	})
 	if errors.Is(err, pgx.ErrNoRows) {

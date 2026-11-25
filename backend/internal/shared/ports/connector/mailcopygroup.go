@@ -52,11 +52,7 @@ const foldRowsPerPageRow = 8
 
 // FoldBounds are the bounds a read tries in turn for a page of want rows: a
 // multiple of the page, then every candidate. Zero means unbounded.
-func FoldBounds(want int) []int { return []int{CopySampleRows(want), 0} }
-
-// CopySampleRows is how many candidates a reader that cannot widen its bound
-// reads to fill a page of want rows with whole mail.
-func CopySampleRows(want int) int { return want * foldRowsPerPageRow }
+func FoldBounds(want int) []int { return []int{want * foldRowsPerPageRow, 0} }
 
 // FoldIncomplete reports whether a page of got rows, read under a bound, may be
 // short because the bound left candidates out. Then the read goes on to its

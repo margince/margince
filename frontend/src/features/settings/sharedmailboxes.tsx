@@ -203,15 +203,19 @@ function SharedMailboxRow({
           visibility: t(labelFor(VISIBILITY_LABEL, mailbox.mail_visibility)),
         })}
         reason={
-          unread
-            ? t("captureHealth.unreadPeriodFolded", {
+          [
+            unread &&
+              t("captureHealth.unreadPeriodFolded", {
                 from: formatDateTime(unread.from, locale, zone),
                 to: formatDateTime(unread.to, locale, zone),
-              })
-            : narrowing &&
+              }),
+            narrowing &&
               t("connectors.mailPosture.historyNarrowing", {
                 count: formatNumber(narrowing.remaining, locale),
-              })
+              }),
+          ]
+            .filter(Boolean)
+            .join(" ") || undefined
         }
         action={importFirst ? importHistory : change}
         menu={

@@ -212,49 +212,65 @@ func (s *Store) similarEntitiesWithin(ctx context.Context, queryVec []float32, i
 	limit = clampLimit(limit)
 	var hits []VectorHit
 	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
-		var args []any
-		arg := func(v any) int { args = append(args, v); return len(args) }
-		vecPos := arg(vectorLiteral(queryVec))
-		// The e.model = $identity predicate is load-bearing for BOTH correctness (old-space rows must not
-		// rank against new-space queries) AND crash-avoidance: the column is unbounded, so a bare
-		// e.embedding <=> $q against a different-width row raises "different vector dimensions". The filter
-		// excludes those rows before the projection computes <=>. NEVER remove it. (see design §5.6)
-		identityPos := arg(identity)
-
-		branches, err := similarBranchSQL(ctx, similarQuery{types: types, vecPos: vecPos, identityPos: identityPos, limit: limit, within: within}, arg)
-		if err != nil {
-			return err
-		}
-		if len(branches) == 0 {
-			return nil
-		}
-		sql := "SELECT rtype, id, title, sim FROM (" + strings.Join(branches, " UNION ALL ") + ") ranked"
-		if bound := withinClause(within, arg); bound != "" {
-			sql += " WHERE " + bound
-		}
-		sql += fmt.Sprintf(" ORDER BY sim DESC, rtype, id LIMIT $%d", arg(limit))
-		rows, err := tx.Query(ctx, sql, args...)
-		if err != nil {
-			return fmt.Errorf("search: similarity query: %w", err)
-		}
-		defer rows.Close()
-		for rows.Next() {
-			var h VectorHit
-			var title *string
-			if err := rows.Scan(&h.Type, &h.ID, &title, &h.Similarity); err != nil {
+		// Mail is grouped over a sample of the nearest candidates first. A pass
+		// whose sample may have cut a distinct mail runs again over all of them.
+		for _, sample := range connector.FoldBounds(limit) {
+			q := similarQuery{types: types, limit: limit, within: within, sample: sample}
+			var whole bool
+			var err error
+			if hits, whole, err = similarPassTx(ctx, tx, queryVec, identity, q); err != nil || whole {
 				return err
 			}
-			if title != nil {
-				h.Title = *title
-			}
-			hits = append(hits, h)
 		}
-		return rows.Err()
+		return nil
 	})
 	if err != nil {
 		return nil, err
 	}
 	return hits, nil
+}
+
+// similarPassTx runs one similarity query, and reports whether its mail sample
+// held every candidate that could reach the page.
+func similarPassTx(ctx context.Context, tx pgx.Tx, queryVec []float32, identity string, q similarQuery) ([]VectorHit, bool, error) {
+	var args []any
+	arg := func(v any) int { args = append(args, v); return len(args) }
+	q.vecPos = arg(vectorLiteral(queryVec))
+	// Every branch filters on `e.model = $identity`. Rows of another model must not
+	// rank against this query. A row of another width would also fail the `<=>`
+	// with "different vector dimensions", and the filter drops it first.
+	q.identityPos = arg(identity)
+
+	branches, err := similarBranchSQL(ctx, q, arg)
+	if err != nil || len(branches) == 0 {
+		return nil, true, err
+	}
+	sql := "SELECT rtype, id, title, sim, whole FROM (" + strings.Join(branches, " UNION ALL ") + ") ranked"
+	if bound := withinClause(q.within, arg); bound != "" {
+		sql += " WHERE " + bound
+	}
+	sql += fmt.Sprintf(" ORDER BY sim DESC, rtype, id LIMIT $%d", arg(q.limit))
+	rows, err := tx.Query(ctx, sql, args...)
+	if err != nil {
+		return nil, false, fmt.Errorf("search: similarity query: %w", err)
+	}
+	defer rows.Close()
+	var hits []VectorHit
+	allWhole := true
+	for rows.Next() {
+		var h VectorHit
+		var title *string
+		var whole bool
+		if err := rows.Scan(&h.Type, &h.ID, &title, &h.Similarity, &whole); err != nil {
+			return nil, false, err
+		}
+		if title != nil {
+			h.Title = *title
+		}
+		allWhole = allWhole && whole
+		hits = append(hits, h)
+	}
+	return hits, allWhole, rows.Err()
 }
 
 // similarQuery is what every branch of the similarity union ranks against.
@@ -263,6 +279,8 @@ type similarQuery struct {
 	vecPos, identityPos int
 	limit               int
 	within              []ids.UUID
+	// sample bounds the mail candidates grouped; zero groups all of them.
+	sample int
 }
 
 // similarBranchSQL builds one ranked SELECT per requested-and-admitted record
@@ -301,7 +319,7 @@ func similarBranchSQL(ctx context.Context, q similarQuery, arg func(any) int) ([
 			continue
 		}
 		branches = append(branches, fmt.Sprintf(
-			`SELECT '%s'::text AS rtype, e.entity_id AS id, %s AS title, %s AS sim
+			`SELECT '%s'::text AS rtype, e.entity_id AS id, %s AS title, %s AS sim, TRUE AS whole
 			 FROM embedding e JOIN %s t ON t.id = e.entity_id WHERE %s`,
 			branch.entity, branch.title, similaritySQL("e", q.vecPos), branch.table, filter,
 		))
@@ -311,24 +329,30 @@ func similarBranchSQL(ctx context.Context, q similarQuery, arg func(any) int) ([
 
 // similarMailSQL ranks activities so that mail several mailboxes captured is
 // one hit, through the grouping every other mail reader uses. Grouping reads
-// each candidate's body, so it runs over the nearest candidates only. The sample
-// is large enough to hold every copy of the first page's mail. The
-// bound joins that sample, or a retrieval bounded to a few records could find
-// none of them in it.
+// each candidate's body, so a first pass groups the nearest q.sample only. Its
+// rows are whole when the sample held every candidate. They are also whole when
+// it held a page of distinct mail, because a mail it cut is farther than those. The bound joins
+// the sample, or a retrieval bounded to a few records could find none in it.
 func similarMailSQL(ctx context.Context, branch searchBranch, q similarQuery, filter string, arg func(any) int) string {
 	if q.within != nil {
 		filter += fmt.Sprintf(" AND t.id = ANY($%d)", arg(q.within))
 	}
-	nearest := fmt.Sprintf(`(SELECT t.* FROM embedding e JOIN %s t ON t.id = e.entity_id WHERE %s
-	  ORDER BY %s <=> $%d::halfvec, t.id LIMIT $%d)`,
-		branch.table, filter, storedVectorSQL("e"), q.vecPos, arg(connector.CopySampleRows(q.limit)))
+	limit, whole := "", "TRUE"
+	if q.sample > 0 {
+		pos := arg(q.sample)
+		limit = fmt.Sprintf(" LIMIT $%d", pos)
+		whole = fmt.Sprintf("(count(*) OVER () >= $%d OR (SELECT count(*) FROM nearest) < $%d)", arg(q.limit), pos)
+	}
 	// The copy shown may have no vector of its own yet, so the hit scores as
 	// the nearest of the copies it stands for.
-	return fmt.Sprintf(`SELECT '%s'::text AS rtype, t.id AS id, %s AS title, near.sim
+	return fmt.Sprintf(`(WITH nearest AS MATERIALIZED (SELECT t.* FROM embedding e JOIN %s t ON t.id = e.entity_id
+	  WHERE %s ORDER BY %s <=> $%d::halfvec, t.id%s)
+	 SELECT '%s'::text AS rtype, t.id AS id, %s AS title, near.sim, %s AS whole
 	 FROM %s
 	 CROSS JOIN LATERAL (SELECT max(%s) AS sim FROM embedding e
-	   WHERE e.entity_type = '%s' AND e.model = $%d AND e.entity_id = ANY(copies.copy_ids)) near`,
-		branch.entity, branch.title, connector.MailCopyGroupFrom(ctx, nearest, "t", sqlTrue, sqlTrue, arg),
+	   WHERE e.entity_type = '%s' AND e.model = $%d AND e.entity_id = ANY(copies.copy_ids)) near)`,
+		branch.table, filter, storedVectorSQL("e"), q.vecPos, limit,
+		branch.entity, branch.title, whole, connector.MailCopyGroupFrom(ctx, "nearest", "t", sqlTrue, sqlTrue, arg),
 		similaritySQL("e", q.vecPos), branch.entity, q.identityPos)
 }
 

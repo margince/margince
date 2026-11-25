@@ -6,10 +6,9 @@ package capture
 // Narrowing a mailbox's history in the background.
 //
 // A posture change commits at once, and its request to cover earlier mail is
-// stored on the connection. A job then narrows that mail one batch per run, each
-// batch in its own transaction, one mailbox at a time across the installation.
-// Mail the job has not reached keeps the audience it has, so no read needs to
-// know a narrowing is pending.
+// stored on the connection. Readers honour a pending request at once
+// (threadverdict.WorkspaceAudienceSQL). A job then writes the narrowed imports
+// one batch per run, each batch in its own transaction, one mailbox at a time.
 
 import (
 	"context"
@@ -18,7 +17,8 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
-	"github.com/margince/margince/backend/internal/shared/apperrors"
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -34,30 +34,55 @@ type HistoryNarrowing struct {
 // of the installation, so only one mailbox's history narrows at a time.
 const historyNarrowingLock = "capture.history_narrowing"
 
+// historyNarrowingKey names the narrowing in audit images and the settings event.
+const historyNarrowingKey = "history_narrowing"
+
 // requestHistoryNarrowingTx stores that the matched connection's earlier mail
-// is to be narrowed to posture. A pending held narrowing stays held: a later
-// request to narrow to classified must not loosen what was asked first.
+// is to be narrowed to posture, and leaves the request on its trail. A pending
+// held narrowing stays held: a later classified request must not loosen it.
 func requestHistoryNarrowingTx(ctx context.Context, tx pgx.Tx, match connectionMatch, posture string) error {
 	if posture != PostureHeld && posture != PostureClassified {
 		return nil
 	}
 	placeholder, args := match.with(posture == PostureHeld)
-	if _, err := tx.Exec(ctx, `UPDATE capture_connection
+	var before *bool
+	var after bool
+	err := tx.QueryRow(ctx, `UPDATE capture_connection
 		   SET history_narrowing_held = coalesce(history_narrowing_held, false) OR `+placeholder+`::boolean
-		 WHERE `+match.where+` AND archived_at IS NULL`, args...); err != nil {
+		 WHERE `+match.where+` AND archived_at IS NULL
+		RETURNING (SELECT c.history_narrowing_held FROM capture_connection c WHERE c.id = capture_connection.id),
+		          history_narrowing_held`, args...).Scan(&before, &after)
+	if err != nil {
 		return fmt.Errorf("capture: recording the history narrowing: %w", err)
 	}
-	return nil
+	return narrowingTrailTx(ctx, tx, match.id, match.shared(),
+		map[string]any{historyNarrowingKey: pendingPosture(before)},
+		map[string]any{historyNarrowingKey: narrowingPosture(after)})
+}
+
+// narrowingTrailTx writes the audit row and event of one step of a narrowing:
+// its request, a batch, or its end. A shared mailbox announces it on the
+// mailbox's own trail; a seat's mailbox is a capture setting of the workspace.
+func narrowingTrailTx(ctx context.Context, tx pgx.Tx, connection ids.UUID, shared bool, before, after map[string]any) error {
+	if shared {
+		return announceSharedMailboxTx(ctx, tx, auditVerbUpdate, sharedChangeVisibility, connection, before, after)
+	}
+	auditID, err := storekit.Audit(ctx, tx, auditVerbUpdate, captureConnectionObject, connection, before, after)
+	if err != nil {
+		return fmt.Errorf("capture: auditing the history narrowing of %s: %w", connection, err)
+	}
+	return storekit.EmitEvent(ctx, tx, auditID, storekit.MustWorkspace(ctx),
+		crmcontracts.InternalEventCaptureSettingsUpdated{ChangedKeys: []string{historyNarrowingKey}})
 }
 
 // historyNarrowingTx is the progress of a pending narrowing, or nil when
 // none is pending.
-func historyNarrowingTx(ctx context.Context, tx pgx.Tx, by importer, held *bool) (*HistoryNarrowing, error) {
+func historyNarrowingTx(ctx context.Context, tx pgx.Tx, scope narrowScope, held *bool) (*HistoryNarrowing, error) {
 	if held == nil {
 		return nil, nil
 	}
 	posture := narrowingPosture(*held)
-	left, err := narrowRemainingTx(ctx, tx, by, posture)
+	left, err := narrowRemainingTx(ctx, tx, scope, posture)
 	if err != nil {
 		return nil, err
 	}
@@ -65,10 +90,10 @@ func historyNarrowingTx(ctx context.Context, tx pgx.Tx, by importer, held *bool)
 }
 
 // seatNarrowingsTx fills in the progress of each of a seat's connections.
-func seatNarrowingsTx(ctx context.Context, tx pgx.Tx, seat ids.UUID, views []ConnectionView) error {
+func seatNarrowingsTx(ctx context.Context, tx pgx.Tx, views []ConnectionView) error {
 	for i := range views {
 		var err error
-		if views[i].HistoryNarrowing, err = historyNarrowingTx(ctx, tx, seatImporter(seat), views[i].narrowingHeld); err != nil {
+		if views[i].HistoryNarrowing, err = historyNarrowingTx(ctx, tx, deliveredScope(views[i].ID), views[i].narrowingHeld); err != nil {
 			return err
 		}
 	}
@@ -82,6 +107,15 @@ func narrowingPosture(held bool) string {
 	return PostureClassified
 }
 
+// pendingPosture is the posture a stored request narrows to, or nil for none.
+func pendingPosture(held *bool) *string {
+	if held == nil {
+		return nil
+	}
+	posture := narrowingPosture(*held)
+	return &posture
+}
+
 // pendingNarrowing is one connection whose earlier mail still narrows.
 type pendingNarrowing struct {
 	connection ids.UUID
@@ -89,11 +123,11 @@ type pendingNarrowing struct {
 	posture    string
 }
 
-func (p pendingNarrowing) importer() importer {
+func (p pendingNarrowing) scope() narrowScope {
 	if p.seat == nil {
-		return mailboxImporter(p.connection)
+		return mailboxScope(p.connection)
 	}
-	return seatImporter(*p.seat)
+	return deliveredScope(p.connection)
 }
 
 // NarrowPendingHistory narrows one batch of the oldest pending history
@@ -129,41 +163,45 @@ func (r *Registry) NarrowPendingHistory(ctx context.Context) (bool, error) {
 // left. A batch must leave fewer rows to do than it found. A claim that stopped
 // excluding the value it writes would narrow the same rows forever.
 func (r *Registry) narrowPendingBatchTx(ctx context.Context, tx pgx.Tx, p pendingNarrowing) error {
-	by := p.importer()
-	before, err := narrowRemainingTx(ctx, tx, by, p.posture)
+	scope := p.scope()
+	before, err := narrowRemainingTx(ctx, tx, scope, p.posture)
 	if err != nil {
 		return err
 	}
-	moved, err := narrowHistoryTx(ctx, tx, by, p.posture, r.sink.recomputeAudience)
+	moved, err := narrowHistoryTx(ctx, tx, scope, p.posture, r.sink.recomputeAudience)
 	if err != nil {
 		return err
 	}
-	left, err := narrowRemainingTx(ctx, tx, by, p.posture)
+	left, err := narrowRemainingTx(ctx, tx, scope, p.posture)
 	if err != nil {
 		return err
 	}
-	if moved > 0 && left >= before {
+	if len(moved) > 0 && left >= before {
 		return fmt.Errorf("capture: narrowing history to %s made no progress: %d rows still due after a batch that moved %d",
-			p.posture, left, moved)
+			p.posture, left, len(moved))
+	}
+	shared := p.seat == nil
+	// The activity's own audit row appears only when its audience moved, so the
+	// batch names every import it narrowed.
+	if len(moved) > 0 {
+		if err := narrowingTrailTx(ctx, tx, p.connection, shared,
+			map[string]any{historyNarrowingKey: p.posture, "remaining": before},
+			map[string]any{historyNarrowingKey: p.posture, "remaining": left, "narrowed_activities": moved}); err != nil {
+			return err
+		}
 	}
 	if left > 0 {
 		return nil
 	}
+	return endNarrowingTx(ctx, tx, p, shared)
+}
+
+// endNarrowingTx clears a finished request and records that it finished.
+func endNarrowingTx(ctx context.Context, tx pgx.Tx, p pendingNarrowing, shared bool) error {
 	if _, err := tx.Exec(ctx, `UPDATE capture_connection SET history_narrowing_held = NULL WHERE id = $1`, p.connection); err != nil {
 		return fmt.Errorf("capture: ending the history narrowing: %w", err)
 	}
-	if p.seat != nil {
-		return nil
-	}
-	box, err := sharedMailboxTx(ctx, tx, p.connection, "")
-	if errors.Is(err, apperrors.ErrNotFound) {
-		// A disconnected mailbox has no trail to announce on; its mail still narrowed.
-		return nil
-	}
-	if err != nil {
-		return err
-	}
-	narrowed := sharedMailboxImage(box)
-	narrowed["history_narrowed_to"] = p.posture
-	return announceSharedMailboxTx(ctx, tx, auditVerbUpdate, sharedChangeVisibility, box.ID, sharedMailboxImage(box), narrowed)
+	return narrowingTrailTx(ctx, tx, p.connection, shared,
+		map[string]any{historyNarrowingKey: p.posture},
+		map[string]any{historyNarrowingKey: nil, "history_narrowed_to": p.posture})
 }

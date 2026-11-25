@@ -48,7 +48,7 @@ func scanSharedMailbox(row pgx.Row) (SharedMailboxView, error) {
 // withNarrowingTx fills in the progress of a pending history narrowing.
 func (v *SharedMailboxView) withNarrowingTx(ctx context.Context, tx pgx.Tx) error {
 	var err error
-	v.HistoryNarrowing, err = historyNarrowingTx(ctx, tx, mailboxImporter(v.ID), v.narrowingHeld)
+	v.HistoryNarrowing, err = historyNarrowingTx(ctx, tx, mailboxScope(v.ID), v.narrowingHeld)
 	return err
 }
 
