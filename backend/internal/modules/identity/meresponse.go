@@ -125,18 +125,12 @@ func (s *Service) liveRoleNames(ctx context.Context) (map[string]string, error) 
 	names := map[string]string{}
 	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
 		live, err := liveRolesTx(ctx, tx)
-		if err != nil {
-			return err
-		}
 		for _, r := range live {
 			names[r.key] = r.name
 		}
-		return nil
+		return err
 	})
-	if err != nil {
-		return nil, err
-	}
-	return names, nil
+	return names, err
 }
 
 // namesOfRoles picks from live the name of each held role. A held key that
