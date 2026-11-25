@@ -37,6 +37,7 @@ import "./connectors.css";
 // The Connections family has one entry for the Settings screen: the mailbox card
 // and the workspace bot beside it on Integrations.
 export { WorkspaceBotPanel } from "./connectors.telegram";
+export { TelegramBusinessPanel } from "./connectors.telegrambusiness";
 
 // The connected-inboxes surface (RC-8), the Settings cards the onboarding copy
 // promises ("disconnect in one click", "manage in Settings"). It lists the live

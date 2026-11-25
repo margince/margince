@@ -7,6 +7,7 @@ import (
 	"context"
 	"fmt"
 	"maps"
+	"time"
 
 	"github.com/jackc/pgx/v5"
 	openapi_types "github.com/oapi-codegen/runtime/types"
@@ -114,6 +115,9 @@ func (s *Store) mergeLeadTx(ctx context.Context, tx pgx.Tx, sourceID, targetID i
 			return crmcontracts.Lead{}, fmt.Errorf("apply lead survivorship fill: %w", err)
 		}
 	}
+	if err := carryKeptProvenance(ctx, tx, entityLead, sourceID.UUID, targetID.UUID, p.After()); err != nil {
+		return crmcontracts.Lead{}, err
+	}
 	auditID, err := storekit.Audit(ctx, tx, "merge", entityLead, sourceID.UUID,
 		map[string]any{auditKeyMergedInto: nil},
 		map[string]any{auditKeyMergedInto: targetID, auditKeyFilled: filledColumns(p.After())})
@@ -132,6 +136,11 @@ func (s *Store) mergeLeadTx(ctx context.Context, tx pgx.Tx, sourceID, targetID i
 	if _, err := storekit.Audit(ctx, tx, "merge", entityLead, targetID.UUID, before, after); err != nil {
 		return crmcontracts.Lead{}, fmt.Errorf("audit lead merge on the survivor: %w", err)
 	}
+	// The survivor now holds the retired lead's activities and hand-set
+	// factors, so its stored score is scored again from them.
+	if err := recomputeLeadScoreTx(ctx, tx, targetID, time.Now().UTC()); err != nil {
+		return crmcontracts.Lead{}, fmt.Errorf("score the surviving lead: %w", err)
+	}
 	out, err := readLead(ctx, tx, targetID, storekit.LiveOnly, active)
 	if err != nil {
 		return crmcontracts.Lead{}, fmt.Errorf("read surviving lead: %w", err)
@@ -140,9 +149,9 @@ func (s *Store) mergeLeadTx(ctx context.Context, tx pgx.Tx, sourceID, targetID i
 }
 
 // carryLeadToLeadTx moves everything the merged-away lead holds onto the
-// survivor: its activities and consent, which contacts owns, then its stops and
-// consent links, which are consent's tables and not a relink (stopcarry.go,
-// satellitecarry.go), then its memberships.
+// survivor. Its activities, consent, open work and memberships are contacts'
+// tables. Its stops, overrides and consent links are consent's, so a port
+// carries them (stopcarry.go, overridecarry.go, satellitecarry.go).
 func (s *Store) carryLeadToLeadTx(ctx context.Context, tx pgx.Tx, sourceID, targetID ids.LeadID, by string) error {
 	if err := carryLeadActivitiesToLead(ctx, tx, sourceID, targetID); err != nil {
 		return err
@@ -154,8 +163,17 @@ func (s *Store) carryLeadToLeadTx(ctx context.Context, tx pgx.Tx, sourceID, targ
 	if err := s.carryStopsTx(ctx, tx, from, to); err != nil {
 		return fmt.Errorf("carry the merged-away lead's stops: %w", err)
 	}
+	if err := s.carryOverridesTx(ctx, tx, from, to); err != nil {
+		return fmt.Errorf("carry the merged-away lead's send overrides: %w", err)
+	}
 	if err := s.carryConsentSatellitesTx(ctx, tx, from, to); err != nil {
 		return fmt.Errorf("carry the merged-away lead's consent links: %w", err)
+	}
+	if err := carryLeadWorkToLead(ctx, tx, sourceID, targetID); err != nil {
+		return err
+	}
+	if err := s.carryInitiativePlacesTx(ctx, tx, sourceID, targetID); err != nil {
+		return fmt.Errorf("carry the merged-away lead's initiative places: %w", err)
 	}
 	if err := s.carryGrantsTx(ctx, tx, entityLead, sourceID.UUID, targetID.UUID); err != nil {
 		return fmt.Errorf("carry the merged-away lead's grants: %w", err)
@@ -169,7 +187,7 @@ func (s *Store) carryLeadToLeadTx(ctx context.Context, tx pgx.Tx, sourceID, targ
 	if err := recordmerge.MoveKindIDRows(ctx, tx, entityLead, sourceID.UUID, targetID.UUID); err != nil {
 		return fmt.Errorf("carry the merged-away lead's references by kind and id: %w", err)
 	}
-	return carryLeadMembershipsToLead(ctx, tx, sourceID, targetID)
+	return recordmerge.RelinkMemberships(ctx, tx, entityLead, sourceID.UUID, targetID.UUID)
 }
 
 // readLeadMergeState reads one end of a lead merge: the live lead, or — for
@@ -260,26 +278,6 @@ func retireStaleCandidates(ctx context.Context, tx pgx.Tx, loser ids.LeadID) err
 		if _, err := archiveDedupeCandidateTx(ctx, tx, id, archiveReasonEndpointMerged,
 			map[string]any{auditKeyEntityType: entityLead}); err != nil {
 			return err
-		}
-	}
-	return nil
-}
-
-// carryLeadMembershipsToLead moves list memberships and tags the survivor
-// does not already have; the rest go with the archived row (§1.10 cleanup).
-func carryLeadMembershipsToLead(ctx context.Context, tx pgx.Tx, sourceID, targetID ids.LeadID) error {
-	for _, m := range []struct{ table, key string }{{"list_member", "list_id"}, {"taggable", "tag_id"}} {
-		if _, err := tx.Exec(ctx, `
-			DELETE FROM `+m.table+` a
-			WHERE a.entity_type = 'lead' AND a.entity_id = $1 AND EXISTS (
-			  SELECT 1 FROM `+m.table+` b
-			  WHERE b.entity_type = 'lead' AND b.entity_id = $2 AND b.`+m.key+` = a.`+m.key+`)`,
-			sourceID, targetID); err != nil {
-			return fmt.Errorf("drop colliding lead %s rows: %w", m.table, err)
-		}
-		if _, err := tx.Exec(ctx, `UPDATE `+m.table+` SET entity_id = $2 WHERE entity_type = 'lead' AND entity_id = $1`,
-			sourceID, targetID); err != nil {
-			return fmt.Errorf("carry lead %s rows: %w", m.table, err)
 		}
 	}
 	return nil

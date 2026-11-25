@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import type { components } from "../../api/schema";
+import { isTeam } from "../../components/readerteam";
 import {
   RosterPartialNote,
   useRosterPartial,
@@ -12,8 +12,6 @@ import { SetPicker, type SetPickerOption } from "../../design-system/setpicker";
 import { formatNumber } from "../../format/format";
 import { useLocale, usePlural, useT } from "../../i18n";
 import { useCreateTeam } from "./team-dialogs";
-
-type Team = components["schemas"]["Team"];
 
 /**
  * The teams a member is on, in the invite and edit dialogs. One field for both,
@@ -97,8 +95,4 @@ export function MemberTeamsField({
       <RosterPartialNote partial={partial} />
     </>
   );
-}
-
-function isTeam(entry: { id: string }): entry is Team {
-  return "name" in entry;
 }

@@ -112,6 +112,9 @@ func (s *Store) mergeCompanyTx(
 	if err := s.carryGrantsTx(ctx, tx, "company", sourceID.UUID, targetID.UUID); err != nil {
 		return crmcontracts.Company{}, fmt.Errorf("carry the merged-away company's grants: %w", err)
 	}
+	if err := s.carrySignalResolutionsTx(ctx, tx, "company", sourceID.UUID, targetID.UUID); err != nil {
+		return crmcontracts.Company{}, fmt.Errorf("carry the signals resolved to the merged-away company: %w", err)
+	}
 	if err := recordmerge.ArchiveMergedAway(ctx, tx, "company", sourceID.UUID, targetID.UUID); err != nil {
 		return crmcontracts.Company{}, fmt.Errorf("retire merged-away company: %w", err)
 	}

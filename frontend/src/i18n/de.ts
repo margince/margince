@@ -13255,6 +13255,50 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "connectors.telegramConnectedAs": "Verbunden als @{username}.",
   "connectors.telegramConnectFailed": "Bot nicht verbunden",
 
+  "connectors.tgbiz.title": "Telegram Business",
+  "connectors.tgbiz.intro":
+    "Verknüpfe ein Telegram-Business-Konto des Unternehmens mit dem Bot. Kundennachrichten und die Antworten aus diesem Konto erscheinen dann im Verlauf des jeweiligen Kontakts. Das Team antwortet weiter in Telegram.",
+  "connectors.tgbiz.stepsTitle": "So wird ein Konto verknüpft:",
+  "connectors.tgbiz.step1":
+    "Öffnet Telegram, dann Einstellungen, Telegram Business, Chatbots.",
+  "connectors.tgbiz.step2":
+    "Gibt @{username} ein und wählt, welche Chats der Bot sehen darf.",
+  "connectors.tgbiz.step3":
+    "Das Konto erscheint dann hier als Wartet auf Freigabe. Bis ein Admin es freigibt, wird nichts daraus erfasst.",
+  "connectors.tgbiz.emptyTitle": "Kein Business-Konto verknüpft",
+  "connectors.tgbiz.emptyNote":
+    "Sobald ein Konto in Telegram mit dem Bot verknüpft wird, erscheint es hier.",
+  "connectors.tgbiz.statusPending": "Wartet auf Freigabe",
+  "connectors.tgbiz.statusConnected": "Verbunden",
+  "connectors.tgbiz.statusOff": "In Telegram ausgeschaltet",
+  "connectors.tgbiz.linked": "Verknüpft am {date}",
+  "connectors.tgbiz.approvedOn": "Freigegeben am {date}",
+  "connectors.tgbiz.offReason":
+    "Diese Verknüpfung wurde in Telegram ausgeschaltet. Es wird nichts Neues erfasst. Wird der Bot erneut verknüpft, wartet das Konto wieder auf Freigabe.",
+  "connectors.tgbiz.approve": "Als Firmenkonto freigeben",
+  "connectors.tgbiz.approveTitle": "{owner} als Firmenkonto freigeben?",
+  "connectors.tgbiz.approveBody":
+    "Kundennachrichten und die Antworten aus der Telegram-App erscheinen im Verlauf des Kunden. Bis du die Sichtbarkeit änderst, kann nur das gewählte Team sie lesen. Vor deiner Freigabe wird nichts aus dem Konto erfasst.",
+  "connectors.tgbiz.ownAccount":
+    "Eigenes Konto eines Mitglieds · jeder Chat wird zurückgehalten",
+  "connectors.tgbiz.changeReaders": "Leserkreis ändern",
+  "connectors.tgbiz.readerTeamRequired":
+    "Wähle das Team, das die Nachrichten dieses Kontos liest.",
+  "connectors.tgbiz.visibilityTitle":
+    "Leserkreis für die Nachrichten von {owner} ändern",
+  "connectors.tgbiz.visibilityWarning":
+    "Das gilt für Nachrichten, die das Konto nach der Änderung erfasst. Bereits zurückgehaltene Nachrichten bleiben zurückgehalten.",
+  "connectors.tgbiz.visibilityHeldHint":
+    "Nur das Lese-Team kann eine Nachricht lesen.",
+  "connectors.tgbiz.visibilitySharedHint":
+    "Eine Nachricht ist so geteilt wie der Kontakt, bei dem sie abgelegt ist.",
+  "connectors.tgbiz.visibilityConfirm": "Sichtbarkeit ändern",
+  "connectors.tgbiz.approveConflict":
+    "Dieses Konto lässt sich nicht freigeben. Entweder wurde die Verknüpfung in Telegram ausgeschaltet (der Bot muss erneut verknüpft werden), oder das Team weicht von dem ab, das das Konto schon liest. Die Liste ist neu geladen.",
+  "connectors.tgbiz.disconnectTitle": "Konto von {owner} trennen?",
+  "connectors.tgbiz.disconnectBody":
+    "Margince erfasst nichts mehr aus diesem Konto. Was bereits erfasst wurde, bleibt im CRM. Wird der Bot erneut verknüpft, wartet das Konto auf Freigabe.",
+
   "connectors.bot.provDispact": "Dispact",
   "connectors.bot.dispactTitle": "Dispact-Bot",
   "connectors.bot.dispactSub":
@@ -15091,6 +15135,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "audit.kind.deal_suggestion": "Deal-Vorschlag",
   "audit.kind.dedupe_candidate": "Mögliches Duplikat",
   "audit.kind.existing_customer_notice": "Hinweis auf Bestandskunden",
+  "audit.kind.field_provenance": "Herkunft eines Feldes",
   "audit.kind.finance_connection": "Buchhaltungsverbindung",
   "audit.kind.finance_customer_link": "Verknüpfung mit Buchhaltungskunden",
   "audit.kind.finance_external_customer": "Buchhaltungskunde",
@@ -15140,6 +15185,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "audit.kind.scheduled_send": "Geplante E-Mail",
   "audit.kind.sdr_handoff": "SDR-Übergabe",
   "audit.kind.signal": "Signal",
+  "audit.kind.signal_resolution": "Zuordnung eines Signals",
   "audit.kind.site_read": "Website-Analyse",
   "audit.kind.stage": "Phase",
   "audit.kind.stage_exit_criterion": "Ausstiegskriterium der Phase",
