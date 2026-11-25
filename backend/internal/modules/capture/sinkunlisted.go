@@ -10,6 +10,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/occurredday"
@@ -141,7 +142,9 @@ func meetingHoldersTx(ctx context.Context, tx pgx.Tx, meeting ids.ActivityID, se
 		                  AND starts_with(o.key, `+storekit.MailboxMarkSQL("c2")+` || ':')),
 		       EXISTS (SELECT 1 FROM capture_import other
 		                 JOIN activity_participant guest ON guest.activity_id = other.activity_id AND guest.user_id = other.user_id
-		                WHERE other.activity_id = $1 AND other.user_id <> $2 AND `+meetingPartySaidSQL("guest")+`)
+		                 JOIN activity act ON act.id = other.activity_id
+		                WHERE other.activity_id = $1 AND other.user_id <> $2 AND `+meetingPartySaidSQL("guest")+`
+		                  AND `+auth.ParticipantStandsSQL("guest", "act")+`)
 		       OR EXISTS (SELECT 1 FROM activity_participant guest, unnest($4::text[], $5::text[]) box(email, email_domain_folded)
 		                   WHERE guest.activity_id = $1 AND `+meetingPartySaidSQL("guest")+`
 		                     AND `+storekit.SeatLoginIsSQL("box", "lower(guest.address)", "guest.address_domain_folded")+`)`,
