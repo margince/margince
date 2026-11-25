@@ -268,3 +268,9 @@
 1795620142_the_seat_provider_check_is_validated.down.sql | * | the down migration is a single SELECT 1 that changes nothing
 1795620144_a_business_link_without_a_seat_waits_for_approval.up.sql | channel_connection | moves only the Telegram Business link rows that are connected with no seat, a handful per business account, and the table holds one row per connection
 1795620144_a_business_link_without_a_seat_waits_for_approval.down.sql | * | the down migration is a single SELECT 1 that changes nothing
+1795551000_a_chat_connection_can_ride_a_bot_and_name_its_account.down.sql | channel_connection, contact_channel_identity | channel_connection holds a handful of rows, one per bot and business account, and the dev-only rollback drops the account rows; contact_channel_identity loses only the duplicate bindings that account scopes allowed
+1795551001_the_connection_checks_are_validated.down.sql | * | the down migration is a single SELECT 1 that changes nothing
+1795551002_the_new_connection_columns_check_their_text_limits.up.sql | * | the file only replaces trigger definitions and writes no row
+1795551002_the_new_connection_columns_check_their_text_limits.down.sql | * | the file only replaces trigger definitions and writes no row
+1795621300_a_member_keeps_their_own_ingest_position.down.sql | extension_ingest_position | one row per unit and source, and the dev-only rollback drops the per-member rows
+1795621301_the_ingest_position_version_check_is_validated.down.sql | * | the down migration is a single SELECT 1 that changes nothing

@@ -487,7 +487,7 @@ var tableOwners = map[string]string{
 	// extension port, before any module is reached.
 	"extension_ingest_refusal": "internal/compose",
 	// Where a unit's bulk load stopped, written by the extension port.
-	"extension_ingest_position": "internal/compose",
+	"extension_ingest_position": "internal/compose/extingress",
 	"idempotency_key":           "internal/compose",
 	// A bulk change and the user's confirmation of one. compose owns both
 	// because the change spans three record types in two modules, and the
