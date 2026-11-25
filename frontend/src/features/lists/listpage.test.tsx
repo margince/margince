@@ -732,6 +732,16 @@ describe("an opened list", () => {
     expect(screen.queryByRole("button", { name: /^Select all/ })).toBeNull();
   });
 
+  it("says the records are unavailable, and does not call the filter broken", async () => {
+    stubLivePage({ ...liveList, health: "unavailable", visible_count: null });
+    page(LIVE_ID);
+    expect(
+      await screen.findByText(en["lists.unavailable.title"]),
+    ).toBeInTheDocument();
+    expect(screen.getByText(en["lists.unavailable.body"])).toBeInTheDocument();
+    expect(screen.queryByText(en["lists.invalid.title"])).toBeNull();
+  });
+
   it("dates a list's exports by the latest of them, whatever order they arrive in", async () => {
     stubLivePage({ ...liveList, dependencies: exportDependencies });
     page(LIVE_ID);

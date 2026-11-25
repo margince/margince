@@ -348,7 +348,7 @@ func (s *Store) checkNewList(ctx context.Context, in *CreateListInput) error {
 	if !values.HasVisibleText(in.Name) {
 		return &BadInputError{Field: nameField, Reason: "a list needs a name"}
 	}
-	if !acceptsEntityType(in.EntityType) {
+	if !acceptsEntityType(in.EntityType) || kindUnavailable(ctx, in.EntityType) {
 		return &BadInputError{Field: entityTypeField, Reason: "must be " + memberEntityVocabulary}
 	}
 	if in.ListType == "" {

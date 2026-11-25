@@ -6332,7 +6332,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "deal.standing.risk.replyOwed": "Phản hồi của nhóm còn chờ xử lý",
   "deal.standing.risk.closePassed": "Quá hạn chốt",
   "deal.details.closingFootnote":
-    "Các giai đoạn chốt sẽ hỏi trước: Thắng và Thua mở một hộp thoại ngắn.",
+    "Giai đoạn chốt sẽ hỏi trước và mở một hộp thoại ngắn.",
   "deal.timeline.empty": "Chưa có hoạt động nào trên deal này.",
   "legalEntities.title": "Pháp nhân",
   "legalEntities.sub":
@@ -7350,6 +7350,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "brief.rail": "Ngữ cảnh",
   "brief.rail.numbers": "Số liệu",
   "extensionReports.withheld": "Đã ẩn: quá ít bản ghi để hiển thị",
+  "extensionReports.unavailable": "Không tải được báo cáo này.",
   "extensionReports.noValue": "Không có giá trị",
   "extensionReports.excluded_one":
     "{count} bản ghi bị ẩn với bạn do quyền trên trường.",
@@ -7863,6 +7864,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "docs.category.message": "Tệp đính kèm tin nhắn",
   "docs.category.other": "Khác",
   "docs.category.link": "Liên kết đã gửi",
+  "docs.source.upload": "Đã tải lên",
+  "docs.source.link": "Đã thêm liên kết",
   "docs.view.label": "Hiển thị tài liệu dưới dạng",
   "docs.view.grid": "Lưới",
   "docs.view.list": "Danh sách",
@@ -18325,6 +18328,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "webForms.rotateConfirm.body":
     "Khóa hiện tại ngừng hoạt động ngay và khóa mới chỉ hiện một lần. Hãy dán nó vào chỗ của khóa cũ ngay.",
   "webForms.archive": "Lưu trữ",
+  "webForms.archiveTitle": "Lưu trữ {name}?",
   "webForms.archiveConfirm":
     "Sau khi lưu trữ, biểu mẫu này không nhận bài gửi nữa. Không thể hoàn tác.",
   "webForms.archiveDone": "Đã lưu trữ biểu mẫu trang web",
@@ -18707,7 +18711,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Các trường của deal thay đổi, trừ giai đoạn và người chịu trách nhiệm.",
   "webhooks.event.deal.stage_changed.label": "Deal đã chuyển giai đoạn",
   "webhooks.event.deal.stage_changed.when":
-    "Deal chuyển sang giai đoạn mới, kể cả Thắng và Thua.",
+    "Deal chuyển sang giai đoạn mới, kể cả các giai đoạn chốt.",
   "webhooks.event.deal.owner_changed.label": "Đã giao lại deal",
   "webhooks.event.deal.owner_changed.when":
     "Deal được giao cho người chịu trách nhiệm khác.",
@@ -20310,6 +20314,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "lists.audience.ownerAndSteward": "Người chịu trách nhiệm và người phụ trách",
   "lists.audience.unknownTeam":
     "M\u1ed9t nh\u00f3m b\u1ea1n kh\u00f4ng xem \u0111\u01b0\u1ee3c",
+  "lists.health.unavailable": "Bản ghi không khả dụng",
   "lists.health.ownerless": "Chưa ai phụ trách",
   "lists.health.invalid":
     "B\u1ed9 l\u1ecdc kh\u00f4ng c\u00f2n d\u00f9ng \u0111\u01b0\u1ee3c",
@@ -20358,6 +20363,9 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "B\u1ed9 l\u1ecdc n\u00e0y kh\u00f4ng c\u00f2n d\u00f9ng \u0111\u01b0\u1ee3c",
   "lists.invalid.body":
     "Một trường trong bộ lọc đã thay đổi. Người phụ trách danh sách có thể sửa bộ lọc trong trình tạo bộ lọc.",
+  "lists.unavailable.title": "Các bản ghi này không khả dụng",
+  "lists.unavailable.body":
+    "Danh sách này chứa bản ghi do một tiện ích mở rộng thêm vào, và tiện ích đó chưa được cài đặt. Danh sách sẽ hoạt động lại khi tiện ích được cài đặt lại.",
   "lists.ownerless.title":
     "Kh\u00f4ng ai ph\u1ee5 tr\u00e1ch danh s\u00e1ch n\u00e0y",
   "lists.ownerless.body":

@@ -5310,8 +5310,11 @@ func (e ChangeContractStatusRequestStatus) Valid() bool {
 
 // Defines values for ChannelConnectionProvider.
 const (
-	ChannelConnectionProviderDispact  ChannelConnectionProvider = "dispact"
-	ChannelConnectionProviderTelegram ChannelConnectionProvider = "telegram"
+	ChannelConnectionProviderDispact          ChannelConnectionProvider = "dispact"
+	ChannelConnectionProviderTelegram         ChannelConnectionProvider = "telegram"
+	ChannelConnectionProviderTelegramBusiness ChannelConnectionProvider = "telegram_business"
+	ChannelConnectionProviderWhatsapp         ChannelConnectionProvider = "whatsapp"
+	ChannelConnectionProviderZaloOa           ChannelConnectionProvider = "zalo_oa"
 )
 
 // Valid indicates whether the value is a known member of the ChannelConnectionProvider enum.
@@ -5321,6 +5324,12 @@ func (e ChannelConnectionProvider) Valid() bool {
 		return true
 	case ChannelConnectionProviderTelegram:
 		return true
+	case ChannelConnectionProviderTelegramBusiness:
+		return true
+	case ChannelConnectionProviderWhatsapp:
+		return true
+	case ChannelConnectionProviderZaloOa:
+		return true
 	default:
 		return false
 	}
@@ -5328,11 +5337,11 @@ func (e ChannelConnectionProvider) Valid() bool {
 
 // Defines values for ChannelConnectionStatus.
 const (
-	ChannelConnectionStatusConnected      ChannelConnectionStatus = "connected"
-	ChannelConnectionStatusDisconnected   ChannelConnectionStatus = "disconnected"
-	ChannelConnectionStatusError          ChannelConnectionStatus = "error"
-	ChannelConnectionStatusPending        ChannelConnectionStatus = "pending"
-	ChannelConnectionStatusReauthRequired ChannelConnectionStatus = "reauth_required"
+	ChannelConnectionStatusConnected       ChannelConnectionStatus = "connected"
+	ChannelConnectionStatusDisconnected    ChannelConnectionStatus = "disconnected"
+	ChannelConnectionStatusError           ChannelConnectionStatus = "error"
+	ChannelConnectionStatusPendingApproval ChannelConnectionStatus = "pending_approval"
+	ChannelConnectionStatusReauthRequired  ChannelConnectionStatus = "reauth_required"
 )
 
 // Valid indicates whether the value is a known member of the ChannelConnectionStatus enum.
@@ -5344,7 +5353,7 @@ func (e ChannelConnectionStatus) Valid() bool {
 		return true
 	case ChannelConnectionStatusError:
 		return true
-	case ChannelConnectionStatusPending:
+	case ChannelConnectionStatusPendingApproval:
 		return true
 	case ChannelConnectionStatusReauthRequired:
 		return true
@@ -13435,6 +13444,24 @@ func (e ExtensionReportKind) Valid() bool {
 	}
 }
 
+// Defines values for ExtensionReportStatus.
+const (
+	ExtensionReportStatusOk          ExtensionReportStatus = "ok"
+	ExtensionReportStatusUnavailable ExtensionReportStatus = "unavailable"
+)
+
+// Valid indicates whether the value is a known member of the ExtensionReportStatus enum.
+func (e ExtensionReportStatus) Valid() bool {
+	switch e {
+	case ExtensionReportStatusOk:
+		return true
+	case ExtensionReportStatusUnavailable:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for ExtractedFieldConfidence.
 const (
 	ExtractedFieldConfidenceHigh   ExtractedFieldConfidence = "high"
@@ -17459,6 +17486,7 @@ const (
 	ListHealthOwnerless    ListHealth = "ownerless"
 	ListHealthRetiredField ListHealth = "retired_field"
 	ListHealthRetiredTag   ListHealth = "retired_tag"
+	ListHealthUnavailable  ListHealth = "unavailable"
 )
 
 // Valid indicates whether the value is a known member of the ListHealth enum.
@@ -17473,6 +17501,8 @@ func (e ListHealth) Valid() bool {
 	case ListHealthRetiredField:
 		return true
 	case ListHealthRetiredTag:
+		return true
+	case ListHealthUnavailable:
 		return true
 	default:
 		return false
@@ -25870,6 +25900,27 @@ const (
 func (e TechnicalEnrichStartedStatus) Valid() bool {
 	switch e {
 	case TechnicalEnrichStartedStatusTechnicalEnrichStartedStatusQueued:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for TelegramBusinessConnectionStatus.
+const (
+	TelegramBusinessConnectionStatusConnected       TelegramBusinessConnectionStatus = "connected"
+	TelegramBusinessConnectionStatusDisconnected    TelegramBusinessConnectionStatus = "disconnected"
+	TelegramBusinessConnectionStatusPendingApproval TelegramBusinessConnectionStatus = "pending_approval"
+)
+
+// Valid indicates whether the value is a known member of the TelegramBusinessConnectionStatus enum.
+func (e TelegramBusinessConnectionStatus) Valid() bool {
+	switch e {
+	case TelegramBusinessConnectionStatusConnected:
+		return true
+	case TelegramBusinessConnectionStatusDisconnected:
+		return true
+	case TelegramBusinessConnectionStatusPendingApproval:
 		return true
 	default:
 		return false
@@ -38852,7 +38903,7 @@ type AuthCapabilities struct {
 	// Password Email + password login is enabled.
 	Password bool `json:"password"`
 
-	// PasswordReset The A74 reset flow can complete end to end (outbound email configured + healthy).
+	// PasswordReset Password sign-in is on and the reset mail channel is configured. Nothing checks that mail is delivered.
 	PasswordReset bool `json:"password_reset"`
 
 	// ReleaseVersion The release this api was built from (`YYYY.<edition>`). A client compares it against its OWN release and refuses to run against a different one — a mixed-release set must not serve. ABSENT is not a mismatch: it means this api carries no release version (a build that was not published as one), and a client MUST then make no comparison rather than treat the absence as a difference.
@@ -41178,7 +41229,7 @@ type ChannelConnection struct {
 	Id              openapi_types.UUID        `json:"id"`
 	Provider        ChannelConnectionProvider `json:"provider"`
 
-	// Status Only `connected` is live, and it is the only state a connect can produce: a pull ingress makes no provider call after the write, so there is no half-connected state. `error` and `reauth_required` are where ingress parks a binding it can no longer poll (another consumer holds the bot's updates; the token was refused), and neither is polled again until an operator acts. `pending` is a value NO server produces: it is retained because the code generator disambiguates enum member names across the whole document, so dropping it renames unrelated generated constants in other schemas.
+	// Status Only `connected` is live, and it is the only state a connect can produce: a pull ingress makes no provider call after the write, so there is no half-connected state. `error` and `reauth_required` are where ingress parks a binding it can no longer poll (another consumer holds the bot's updates; the token was refused), and neither is polled again until an operator acts. `pending_approval` is the state of a Telegram Business link nobody has approved. It is served by the telegram-business operations and never appears on a bot connection.
 	Status    ChannelConnectionStatus `json:"status"`
 	UpdatedAt *time.Time              `json:"updatedAt,omitempty"`
 	Version   int64                   `json:"version"`
@@ -41187,7 +41238,7 @@ type ChannelConnection struct {
 // ChannelConnectionProvider defines model for ChannelConnection.Provider.
 type ChannelConnectionProvider string
 
-// ChannelConnectionStatus Only `connected` is live, and it is the only state a connect can produce: a pull ingress makes no provider call after the write, so there is no half-connected state. `error` and `reauth_required` are where ingress parks a binding it can no longer poll (another consumer holds the bot's updates; the token was refused), and neither is polled again until an operator acts. `pending` is a value NO server produces: it is retained because the code generator disambiguates enum member names across the whole document, so dropping it renames unrelated generated constants in other schemas.
+// ChannelConnectionStatus Only `connected` is live, and it is the only state a connect can produce: a pull ingress makes no provider call after the write, so there is no half-connected state. `error` and `reauth_required` are where ingress parks a binding it can no longer poll (another consumer holds the bot's updates; the token was refused), and neither is polled again until an operator acts. `pending_approval` is the state of a Telegram Business link nobody has approved. It is served by the telegram-business operations and never appears on a bot connection.
 type ChannelConnectionStatus string
 
 // ChannelConnectionListResponse defines model for ChannelConnectionListResponse.
@@ -52209,6 +52260,9 @@ type ExtensionReport struct {
 	// Population What is counted, a record kind (`ext:<unit>:<kind>`) or a core report population.
 	Population string `json:"population"`
 
+	// Status `unavailable` when the report could not run. It then carries no groups, no total and no exclusion count, and the other reports still answer. The cause is logged on the server, never sent.
+	Status ExtensionReportStatus `json:"status"`
+
 	// Total The whole count. Null once anything is withheld, because total minus the shown groups would be the withheld one.
 	Total *int `json:"total"`
 
@@ -52221,6 +52275,9 @@ type ExtensionReport struct {
 
 // ExtensionReportKind defines model for ExtensionReport.Kind.
 type ExtensionReportKind string
+
+// ExtensionReportStatus `unavailable` when the report could not run. It then carries no groups, no total and no exclusion count, and the other reports still answer. The cause is logged on the server, never sent.
+type ExtensionReportStatus string
 
 // ExtensionReportDirectory The counts and breakdowns installed extensions add that this caller may read, ordered by name.
 type ExtensionReportDirectory struct {
@@ -57916,7 +57973,7 @@ type List struct {
 	// EntityType A record type a filter may be built over: one of core's five, or `ext:<unit>:<kind>` for a kind an extension declared. A kind no installed extension declares answers 404 on the vocabulary and 422 on a preview.
 	EntityType FilterResource `json:"entity_type"`
 
-	// Health `ownerless` when nobody looks after the list — no steward, or one who can no longer sign in — so somebody should take it over. `invalid` when a Live List's filter no longer compiles. `retired_field` when a Live List's filter names a custom field that has been retired: the list still evaluates on the kept values, and its steward should replace the clause. `retired_tag` when a Live List's filter names a tag that has been archived or merged away: that tag no longer matches any record, so a clause on it selects nothing, and its steward should name the tag that took its place. `invalid` outranks `ownerless`, which outranks `retired_field`, which outranks `retired_tag`.
+	// Health `unavailable` when no installed extension declares the list's record kind any more. Such a list has no count, no members, no filter definition and no export, and comes back when the extension is installed again; it outranks every other value. A list over a declared kind the caller may not read is left out of the library instead. `ownerless` when nobody looks after the list — no steward, or one who can no longer sign in — so somebody should take it over. `invalid` when a Live List's filter no longer compiles. `retired_field` when a Live List's filter names a custom field that has been retired: the list still evaluates on the kept values, and its steward should replace the clause. `retired_tag` when a Live List's filter names a tag that has been archived or merged away: that tag no longer matches any record, so a clause on it selects nothing, and its steward should name the tag that took its place. `invalid` outranks `ownerless`, which outranks `retired_field`, which outranks `retired_tag`.
 	Health ListHealth         `json:"health"`
 	Id     openapi_types.UUID `json:"id"`
 
@@ -57951,11 +58008,11 @@ type List struct {
 	UpdatedAt *time.Time          `json:"updated_at,omitempty"`
 	Version   int64               `json:"version"`
 
-	// VisibleCount How many members this caller may see. Null when the list's filter can no longer be evaluated (health `invalid`). Never the list's whole size.
+	// VisibleCount How many members this caller may see. Null when the list's filter can no longer be evaluated (health `invalid`) or its records are unavailable (health `unavailable`). Never the list's whole size.
 	VisibleCount *int `json:"visible_count,omitempty"`
 }
 
-// ListHealth `ownerless` when nobody looks after the list — no steward, or one who can no longer sign in — so somebody should take it over. `invalid` when a Live List's filter no longer compiles. `retired_field` when a Live List's filter names a custom field that has been retired: the list still evaluates on the kept values, and its steward should replace the clause. `retired_tag` when a Live List's filter names a tag that has been archived or merged away: that tag no longer matches any record, so a clause on it selects nothing, and its steward should name the tag that took its place. `invalid` outranks `ownerless`, which outranks `retired_field`, which outranks `retired_tag`.
+// ListHealth `unavailable` when no installed extension declares the list's record kind any more. Such a list has no count, no members, no filter definition and no export, and comes back when the extension is installed again; it outranks every other value. A list over a declared kind the caller may not read is left out of the library instead. `ownerless` when nobody looks after the list — no steward, or one who can no longer sign in — so somebody should take it over. `invalid` when a Live List's filter no longer compiles. `retired_field` when a Live List's filter names a custom field that has been retired: the list still evaluates on the kept values, and its steward should replace the clause. `retired_tag` when a Live List's filter names a tag that has been archived or merged away: that tag no longer matches any record, so a clause on it selects nothing, and its steward should name the tag that took its place. `invalid` outranks `ownerless`, which outranks `retired_field`, which outranks `retired_tag`.
 type ListHealth string
 
 // ListListType defines model for List.ListType.
@@ -70729,6 +70786,33 @@ type TechnicalEnrichStartedStatus string
 type TechnicalEnrichStatus struct {
 	CompanyId openapi_types.UUID    `json:"company_id"`
 	Lanes     []TechnicalEnrichLane `json:"lanes"`
+}
+
+// TelegramBusinessConnection One Telegram Business account the owner linked to the workspace's bot. Nothing from the account is stored until an admin approves it.
+type TelegramBusinessConnection struct {
+	// AccountId The owner's Telegram user id, the key a repeated link keeps its row by.
+	AccountId string `json:"accountId"`
+
+	// ApprovedAt When an admin approved the link; absent until then.
+	ApprovedAt *time.Time `json:"approvedAt,omitempty"`
+
+	// ConnectedAt When the owner first linked the bot.
+	ConnectedAt time.Time          `json:"connectedAt"`
+	Id          openapi_types.UUID `json:"id"`
+
+	// OwnerLabel The owner's name as Telegram last reported it. Display only, since a name is mutable and identifies nothing.
+	OwnerLabel string `json:"ownerLabel"`
+
+	// Status `pending_approval` waits for an admin; `disconnected` means the owner switched the link off in Telegram.
+	Status TelegramBusinessConnectionStatus `json:"status"`
+}
+
+// TelegramBusinessConnectionStatus `pending_approval` waits for an admin; `disconnected` means the owner switched the link off in Telegram.
+type TelegramBusinessConnectionStatus string
+
+// TelegramBusinessConnectionListResponse defines model for TelegramBusinessConnectionListResponse.
+type TelegramBusinessConnectionListResponse struct {
+	Data []TelegramBusinessConnection `json:"data"`
 }
 
 // ThreadAudienceOutcome What an owner's decision about a thread reached.
@@ -101891,6 +101975,15 @@ type ServerInterface interface {
 	// Connect a messaging-channel bot for the whole workspace.
 	// (POST /channel-connections)
 	ConnectChannel(w http.ResponseWriter, r *http.Request)
+	// List the Telegram Business accounts linked to the workspace's bot.
+	// (GET /channel-connections/telegram-business)
+	ListTelegramBusinessConnections(w http.ResponseWriter, r *http.Request)
+	// Disconnect a Telegram Business account from the workspace.
+	// (DELETE /channel-connections/telegram-business/{id})
+	DisconnectTelegramBusinessConnection(w http.ResponseWriter, r *http.Request, id Id)
+	// Approve a Telegram Business account for the workspace.
+	// (POST /channel-connections/telegram-business/{id}/approve)
+	ApproveTelegramBusinessConnection(w http.ResponseWriter, r *http.Request, id Id)
 	// Disconnect a messaging channel (archives the binding and destroys the credential).
 	// (DELETE /channel-connections/{id})
 	DisconnectChannel(w http.ResponseWriter, r *http.Request, id Id)
@@ -106136,6 +106229,24 @@ func (_ Unimplemented) ListChannelConnections(w http.ResponseWriter, r *http.Req
 // Connect a messaging-channel bot for the whole workspace.
 // (POST /channel-connections)
 func (_ Unimplemented) ConnectChannel(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// List the Telegram Business accounts linked to the workspace's bot.
+// (GET /channel-connections/telegram-business)
+func (_ Unimplemented) ListTelegramBusinessConnections(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Disconnect a Telegram Business account from the workspace.
+// (DELETE /channel-connections/telegram-business/{id})
+func (_ Unimplemented) DisconnectTelegramBusinessConnection(w http.ResponseWriter, r *http.Request, id Id) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Approve a Telegram Business account for the workspace.
+// (POST /channel-connections/telegram-business/{id}/approve)
+func (_ Unimplemented) ApproveTelegramBusinessConnection(w http.ResponseWriter, r *http.Request, id Id) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -123631,6 +123742,90 @@ func (siw *ServerInterfaceWrapper) ConnectChannel(w http.ResponseWriter, r *http
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.ConnectChannel(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ListTelegramBusinessConnections operation middleware
+func (siw *ServerInterfaceWrapper) ListTelegramBusinessConnections(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListTelegramBusinessConnections(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// DisconnectTelegramBusinessConnection operation middleware
+func (siw *ServerInterfaceWrapper) DisconnectTelegramBusinessConnection(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.DisconnectTelegramBusinessConnection(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ApproveTelegramBusinessConnection operation middleware
+func (siw *ServerInterfaceWrapper) ApproveTelegramBusinessConnection(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ApproveTelegramBusinessConnection(w, r, id)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -162459,6 +162654,15 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/channel-connections", wrapper.ConnectChannel)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/channel-connections/telegram-business", wrapper.ListTelegramBusinessConnections)
+	})
+	r.Group(func(r chi.Router) {
+		r.Delete(options.BaseURL+"/channel-connections/telegram-business/{id}", wrapper.DisconnectTelegramBusinessConnection)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/channel-connections/telegram-business/{id}/approve", wrapper.ApproveTelegramBusinessConnection)
 	})
 	r.Group(func(r chi.Router) {
 		r.Delete(options.BaseURL+"/channel-connections/{id}", wrapper.DisconnectChannel)

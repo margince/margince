@@ -31,6 +31,7 @@ var storedStageNameReads = gatekit.Waive(map[string]string{
 	"internal/modules/deals/deal_advance.go":      "the deal.stage_changed event keeps the stored name for subscribers",
 	"internal/modules/deals/keynamedrepair.go":    "writes the stored stage into a deal name that every reader shares",
 	"internal/modules/deals/legalreviewpacket.go": "a frozen packet several reviewers read, each in their own language",
+	"internal/modules/deals/seededstagenames.go":  "the translation repair matches the stored English name against the names the product seeds, and shows no reader a name",
 	"internal/modules/deals/proposalstage.go":     "matches proposal words against every name and translation a stage has, and keeps the stored name for the card, which the deal's owner alone reads and which is staged once in the installation's language",
 })
 
