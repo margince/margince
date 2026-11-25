@@ -40,6 +40,18 @@ func registerHistoryVisits(t *testing.T) {
 			t.Fatalf("preparing the visit table (%s): %v", stmt, err)
 		}
 	}
+	registerHistoryVisitKind()
+	t.Cleanup(func() {
+		recordkinds.Reset()
+		if _, err := owner.Exec(context.Background(), `DROP TABLE IF EXISTS ext.`+historyDemoTable); err != nil {
+			t.Errorf("dropping the visit table: %v", err)
+		}
+	})
+}
+
+// registerHistoryVisitKind declares the visit kind over a table that already
+// exists, as composing its unit again would.
+func registerHistoryVisitKind() {
 	recordkinds.Register("historydemo", []extension.RecordKindDeclaration{{
 		Kind: "visit", DisplayName: "Visit", Table: historyDemoTable,
 		Fields:     []extension.RecordKindField{{Name: "code", Label: "Code"}, {Name: "site", Label: "Site"}},
@@ -49,12 +61,6 @@ func registerHistoryVisits(t *testing.T) {
 			Subjects: []extension.TimelineSubject{{Entity: "contact", Column: "contact_id"}},
 		},
 	}})
-	t.Cleanup(func() {
-		recordkinds.Reset()
-		if _, err := owner.Exec(context.Background(), `DROP TABLE IF EXISTS ext.`+historyDemoTable); err != nil {
-			t.Errorf("dropping the visit table: %v", err)
-		}
-	})
 }
 
 func readExtensionHistory(ctx context.Context, t *testing.T, e *integration.Env, contact ids.UUID) (int, []crmcontracts.ExtensionHistoryEntry) {

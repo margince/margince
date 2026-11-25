@@ -82,3 +82,5 @@ fe7b0c82d93b663e3927671e52a6988735d7ced5 ba4530b9f04f69a1170ceeea063d5adf8a22f23
 d084dbc769deea1c62f324b24b09cd16de64dcb7 5ce723da0e509a3b167166ffbade43cdcaad8228 ratified-a-company-says-status-where-it-said-lifecycle-and-publishes-its-column-text-limits
 a8463929c42388452e8a52750c438099ad7779a1 ec124a84e3c6a1f346da51e506bb4fec5d1ffd5b ratified-develop-s-company-status-and-column-text-limits-carried-into-develop-in-the-back-sync
 5ce723da0e509a3b167166ffbade43cdcaad8228 ec124a84e3c6a1f346da51e506bb4fec5d1ffd5b ratified-main-s-signal-source-of-six-channels-carried-into-develop-in-the-back-sync
+5b91459388982e3951aba811d2669c0f54338943 66e94e0036aa15f2214b7dd2bb5e162a0e67e8b3 ratified-develop-s-company-status-and-chat-business-accounts-carried-into-develop-in-the-back-sync
+a0d9e91c17fd307fdee4e1dc3c7d993eb3527a6e 66e94e0036aa15f2214b7dd2bb5e162a0e67e8b3 ratified-main-s-signal-source-and-update-why-carried-into-develop-in-the-back-sync

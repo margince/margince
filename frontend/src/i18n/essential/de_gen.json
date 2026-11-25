@@ -2783,6 +2783,7 @@
   "brief.rail": "Kontext",
   "brief.rail.numbers": "Kennzahlen",
   "extensionReports.withheld": "Zurückgehalten: zu wenige Datensätze für eine Anzeige",
+  "extensionReports.unavailable": "Dieser Bericht konnte nicht geladen werden.",
   "extensionReports.noValue": "Kein Wert",
   "extensionReports.excluded_one": "{count} Datensatz ist für dich durch eine Feldberechtigung ausgeblendet.",
   "extensionReports.excluded_other": "{count} Datensätze sind für dich durch eine Feldberechtigung ausgeblendet.",

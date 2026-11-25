@@ -263,3 +263,7 @@
 1795597706_a_company_bounds_its_text_by_the_contract.down.sql | * | restores the two text guards on company and on site_read as they stood before; no existing row is changed
 1795589887_the_text_limits_follow_the_signal_source_system.up.sql | * | replaces the two text guards on signal; the guards act on later writes only, and it changes no existing row
 1795589887_the_text_limits_follow_the_signal_source_system.down.sql | * | restores the two earlier text guards on signal; it changes no existing row
+1795597143_a_chat_connection_can_ride_a_bot_and_name_its_account.down.sql | channel_connection | channel_connection holds a handful of rows, one per bot and business account, and the dev-only rollback drops the account rows
+1795597144_the_connection_checks_are_validated.down.sql | * | the down migration is a single SELECT 1 that changes nothing
+1795597145_the_new_connection_columns_check_their_text_limits.up.sql | * | the file only replaces trigger definitions and writes no row
+1795597145_the_new_connection_columns_check_their_text_limits.down.sql | * | the file only replaces trigger definitions and writes no row

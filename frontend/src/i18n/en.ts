@@ -7534,6 +7534,7 @@ export const en = {
   "brief.rail": "Context",
   "brief.rail.numbers": "Numbers",
   "extensionReports.withheld": "Withheld: too few records to show",
+  "extensionReports.unavailable": "This report could not be loaded.",
   "extensionReports.noValue": "No value",
   "extensionReports.excluded_one":
     "{count} record is hidden from you by a field permission.",
@@ -20658,6 +20659,7 @@ export const en = {
   "lists.audience.youAndSteward": "You and its steward",
   "lists.audience.ownerAndSteward": "Its owner and steward",
   "lists.audience.unknownTeam": "A team you cannot see",
+  "lists.health.unavailable": "Records unavailable",
   "lists.health.ownerless": "Needs a steward",
   "lists.health.invalid": "Filter no longer works",
   "lists.health.retiredField": "Uses a retired field",
@@ -20700,6 +20702,9 @@ export const en = {
   "lists.invalid.title": "This filter no longer works",
   "lists.invalid.body":
     "A field it names has changed. Its steward can fix the filter in the builder.",
+  "lists.unavailable.title": "These records are unavailable",
+  "lists.unavailable.body":
+    "This list holds records an extension adds, and that extension is not installed. The list works again when the extension is installed again.",
   "lists.ownerless.title": "Nobody looks after this list",
   "lists.ownerless.body":
     "Its steward has left or was never set. Somebody who may change the list should take it over.",
