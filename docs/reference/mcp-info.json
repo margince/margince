@@ -19455,6 +19455,7 @@
                 "type": "string"
               },
               "label": {
+                "maxLength": 120,
                 "type": "string"
               },
               "object": {
@@ -19514,6 +19515,7 @@
           "body": {
             "properties": {
               "label": {
+                "maxLength": 120,
                 "minLength": 1,
                 "type": "string"
               },
@@ -19598,6 +19600,7 @@
                 "type": "string"
               },
               "label": {
+                "maxLength": 120,
                 "minLength": 1,
                 "type": "string",
                 "x-single-line": true
@@ -19810,6 +19813,7 @@
                 "type": "string"
               },
               "label": {
+                "maxLength": 120,
                 "minLength": 1,
                 "type": "string"
               },
@@ -19848,6 +19852,7 @@
                 "type": "boolean"
               },
               "name": {
+                "maxLength": 120,
                 "type": "string"
               },
               "position": {
@@ -19859,6 +19864,7 @@
                 "items": {
                   "properties": {
                     "name": {
+                      "maxLength": 120,
                       "type": "string"
                     },
                     "pipeline_id": {
@@ -20024,6 +20030,7 @@
           "body": {
             "properties": {
               "name": {
+                "maxLength": 120,
                 "type": "string"
               },
               "name_translations": {
@@ -20433,6 +20440,7 @@
                 "type": "array"
               },
               "label": {
+                "maxLength": 120,
                 "type": "string"
               },
               "label_translations": {
@@ -21085,6 +21093,7 @@
                 "type": "boolean"
               },
               "label": {
+                "maxLength": 120,
                 "minLength": 1,
                 "type": "string"
               },
@@ -21299,6 +21308,7 @@
                 "x-extensible-enum": true
               },
               "label": {
+                "maxLength": 120,
                 "minLength": 1,
                 "type": "string",
                 "x-single-line": true
@@ -21594,6 +21604,7 @@
                 "type": "boolean"
               },
               "label": {
+                "maxLength": 120,
                 "minLength": 1,
                 "type": "string"
               },
@@ -21630,6 +21641,7 @@
                 "type": "boolean"
               },
               "name": {
+                "maxLength": 120,
                 "type": "string"
               },
               "position": {
@@ -21744,6 +21756,7 @@
           "body": {
             "properties": {
               "name": {
+                "maxLength": 120,
                 "type": "string"
               },
               "name_translations": {
