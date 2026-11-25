@@ -123,7 +123,7 @@ func TestARowThatMovedUnderTheLockRecordsNothing(t *testing.T) {
 	typed := "Passwort: Hunter2-Example!"
 	tx := &countingTx{affected: 0}
 	wrote, err := maskRowTextTx(systemCtx(), tx,
-		ids.ActivityID{UUID: ids.NewV7()}, nil, &typed)
+		ids.ActivityID{UUID: ids.NewV7()}, "email", nil, &typed)
 	if err != nil {
 		t.Fatalf("a row that moved was reported as a failure: %v", err)
 	}
