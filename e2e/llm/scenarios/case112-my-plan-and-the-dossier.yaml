@@ -41,9 +41,11 @@ must_mention:
   - "(?i)\bno\b[^.]{0,40}\bplan\b|\bplan\b(?:(?!dossier)[^.;,]){0,60}?(?:\bnot|n['’]t) (?:yet )?(?:been )?(?:started|begun|opened)|(?:^|[.;,\n])(?:(?!dossier)[^.;,\n])*?(?:\bnot|n['’]t) (?:yet )?(?:been )?(?:started|begun|opened)(?:(?!dossier)[^.;,]){0,40}?\bplan\b|\bplan\b(?:\s*:\s*(?:none|nothing|empty)\b|\s+is\s+(?:currently\s+)?empty\b|\s+(?:has|holds|contains)\s+nothing\s*(?:[.;,\n]|$|(?:on|in) it\b|yet\b))"
 
 # What the dossier holds is one industry line. An answer that reports anything a
-# research run would have found invented it; "no products yet" is not a claim.
+# research run would have found invented it. A negation covers only the word or
+# list right after it, so "no products or competitors" is not a claim, and
+# "no research yet, but 40 plants" is.
 must_not_mention:
-  - "(?i)dossier\b(?:(?!\bno\b|\bnot\b|n['’]t\b|\bnothing\b|\bwithout\b|\bnone\b)[^.\n]){0,120}?\b(?:revenue|turnover|employees|headcount|founded|headquarter\w*|competitors?|plants?|factor(?:y|ies)|subsidiar(?:y|ies)|customers?|products?|news|funding)\b"
+  - "(?i)dossier\b(?:(?=((?:\b(?:no|not|nothing|without|none)\b|n['’]t\b)\s*(?:(?:yet|list|lists|say|says|mention|mentions|include|includes|hold|holds|have|has|contain|contains|name|names|show|shows)\s+)?(?:any\s+)?(?:\b(?:revenue|turnover|employees|headcount|founded|headquarter\w*|competitors?|plants?|factor(?:y|ies)|subsidiar(?:y|ies)|customers?|products?|news|funding)\b(?:\s*,\s*(?:or\s+|and\s+|nor\s+)?\b(?:revenue|turnover|employees|headcount|founded|headquarter\w*|competitors?|plants?|factor(?:y|ies)|subsidiar(?:y|ies)|customers?|products?|news|funding)\b|\s+(?:or|and|nor)\s+\b(?:revenue|turnover|employees|headcount|founded|headquarter\w*|competitors?|plants?|factor(?:y|ies)|subsidiar(?:y|ies)|customers?|products?|news|funding)\b)*|\w+)))\1|(?!(?:\b(?:no|not|nothing|without|none)\b|n['’]t\b))[^.\n]){0,120}?\b(?:revenue|turnover|employees|headcount|founded|headquarter\w*|competitors?|plants?|factor(?:y|ies)|subsidiar(?:y|ies)|customers?|products?|news|funding)\b"
 
 runs: 3
 pass_at: 2

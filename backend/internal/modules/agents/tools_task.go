@@ -23,9 +23,9 @@ import (
 // deal status card is the first such caller; this verb exists so its
 // catalog, and an agent's, can say create_task and mean it.
 
-// projectLinkRefused is what each verb on the activity create path says of a
+// ProjectLinkRefused is what each verb on the activity create path says of a
 // project link, since the activity store refuses an agent's with this code.
-const projectLinkRefused = "A project is REFUSED here (project_filing_needs_approval), because filing there " +
+const ProjectLinkRefused = "A project is REFUSED here (project_filing_needs_approval), because filing there " +
 	"marks commercial correspondence: add it afterwards with relink, which stages an approval that waits " +
 	"for the user's yes before it takes effect."
 
@@ -73,7 +73,7 @@ func (t createTask) Spec() mcp.ToolSpec {
 			"links":{"type":"array","items":{"type":"object","required":["entity_type","entity_id"],"properties":{
 				"entity_type":{"type":"string","enum":` + activityLinkEntityTypeEnum + `},
 				"entity_id":{"type":"string","format":"uuid"}},"additionalProperties":false},
-				"description":"Every record the task is about. ` + projectLinkRefused + `"}},
+				"description":"Every record the task is about. ` + ProjectLinkRefused + `"}},
 			"additionalProperties":false}`),
 		OutputSchema: schemaFor[wireRecord](),
 	}

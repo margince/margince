@@ -362,10 +362,16 @@ func (a *accountSendEnv) mintAccountSendPassport(t *testing.T) string {
 }
 
 // An agent's preview of a first message answers what its send would. The send
-// refuses a project link, so the preview refuses it with the same code.
+// refuses a project link, so the preview refuses it with the same code. A
+// project the probe cannot reach answers not-found on both doors, so the
+// refusal never says that a record the agent cannot reach exists.
 func TestAnAgentsPreviewAndSendAgreeOnAProjectLink(t *testing.T) {
 	a := setupAccountSend(t)
-	project := createdRecord(t, a.AppEnv, "/v1/projects", AnyMap{"name": "Rollout", "company_id": a.company, "source": "manual"})
+	live := createdRecord(t, a.AppEnv, "/v1/projects", AnyMap{"name": "Rollout", "company_id": a.company, "source": "manual"})
+	archived := createdRecord(t, a.AppEnv, "/v1/projects", AnyMap{"name": "Retired", "company_id": a.company, "source": "manual"})
+	if status := a.Call(t, "DELETE", "/v1/projects/"+archived, nil, nil, nil); status != http.StatusNoContent {
+		t.Fatalf("archive the project → %d", status)
+	}
 	var minted struct {
 		Token string `json:"token"`
 	}
@@ -375,23 +381,39 @@ func TestAnAgentsPreviewAndSendAgreeOnAProjectLink(t *testing.T) {
 		t.Fatalf("issue passport → %d", status)
 	}
 	agent := apptest.NewMCPClient(a.AppEnv, minted.Token)
-	body := accountSendBody(a.company, a.deal, "Hello from an agent")
-	body["links"] = []AnyMap{{"entity_type": "company", "entity_id": a.company}, {"entity_type": "project", "entity_id": project}}
-
-	send := map[string]any{"as": "email_new"}
-	for key, value := range body {
-		send[key] = value
+	notFound := func(text string) bool {
+		return strings.Contains(text, "reference_not_found") || strings.Contains(text, "No such record")
 	}
-	answers := map[string]apptest.MCPResult{
-		"preview": agent.Call(t, "change_activities", map[string]any{"action": "check_new_send", "request_body": body}),
-		"send":    agent.Call(t, "send_outbound", send),
-	}
-	for door, got := range answers {
-		if !got.IsError || !strings.Contains(got.Text, projectFilingCode) {
-			t.Errorf("the %s answered %s, want the %s refusal", door, got.Text, projectFilingCode)
-		}
+	for _, tc := range []struct {
+		name, project string
+		want          func(string) bool
+	}{
+		{"a live project", live, func(text string) bool { return strings.Contains(text, projectFilingCode) }},
+		{"an archived project", archived, notFound},
+		{"no such project", absentRecordID, notFound},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			body := accountSendBody(a.company, a.deal, "Hello from an agent")
+			body["links"] = []AnyMap{{"entity_type": "company", "entity_id": a.company}, {"entity_type": "project", "entity_id": tc.project}}
+			send := map[string]any{"as": "email_new"}
+			for key, value := range body {
+				send[key] = value
+			}
+			answers := map[string]apptest.MCPResult{
+				"preview": agent.Call(t, "change_activities", map[string]any{"action": "check_new_send", "request_body": body}),
+				"send":    agent.Call(t, "send_outbound", send),
+			}
+			for door, got := range answers {
+				if !got.IsError || !tc.want(got.Text) {
+					t.Errorf("the %s answered %s", door, got.Text)
+				}
+				if tc.project != live && strings.Contains(got.Text, projectFilingCode) {
+					t.Errorf("the %s judged a project the agent cannot reach: %s", door, got.Text)
+				}
+			}
+		})
 	}
 	if n := a.deliveryCount(t); n != 0 {
-		t.Errorf("%d deliveries after a refused send, want 0", n)
+		t.Errorf("%d deliveries after refused sends, want 0", n)
 	}
 }

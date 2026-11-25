@@ -85,6 +85,8 @@ class AgentParityCasesTest(unittest.TestCase):
             "record's own fields, not by a research run.",
             "Weekly plan: nothing is saved.\n\n**Nordholz dossier**\nVery thin. It holds one section, Industry: "
             "Manufacturing, generated from the record's own fields rather than a research run.",
+            "No plan is saved. The Nordholz dossier holds only the industry from the record and doesn't list "
+            "plants or customers.",
         ):
             with self.subTest(answer=answer):
                 self.assertEqual(self.problems(name, reads, answer), [])
@@ -96,6 +98,7 @@ class AgentParityCasesTest(unittest.TestCase):
             "You have no plan open this week, and the Nordholz dossier lists 40 plants.",
             "No plan is saved. The Nordholz dossier is thin, but it says they have 250 employees and sell to "
             "automotive customers.",
+            "No plan this week. The Nordholz dossier has no research yet, but says it has 40 plants.",
         ):
             with self.subTest(answer=answer):
                 problems = self.problems(name, reads, answer)

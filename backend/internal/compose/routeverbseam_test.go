@@ -124,3 +124,36 @@ func TestNoTwoActionsOfOneRouterSayTheSameThing(t *testing.T) {
 		seen[key] = v.Action
 	}
 }
+
+// A route-backed verb's links description is written in crm.yaml, which cannot
+// name a Go constant. Each one that names the project refusal says it in the
+// words the registry verbs use, so the two cannot drift apart.
+func TestARouteVerbStatesTheProjectRefusalInTheRegistrysWords(t *testing.T) {
+	stated := 0
+	for route, shape := range routeVerbShapes {
+		var body struct {
+			Properties struct {
+				Links struct {
+					Description string `json:"description"`
+				} `json:"links"`
+			} `json:"properties"`
+		}
+		if shape.BodySchema == "" {
+			continue
+		}
+		if err := json.Unmarshal([]byte(shape.BodySchema), &body); err != nil {
+			t.Fatalf("%s: the body schema does not decode: %v", route, err)
+		}
+		said := strings.Join(strings.Fields(body.Properties.Links.Description), " ")
+		if !strings.Contains(said, "project_filing_needs_approval") {
+			continue
+		}
+		stated++
+		if !strings.Contains(said, agents.ProjectLinkRefused) {
+			t.Errorf("%s names the project refusal in its own words:\n%s\nwant it to contain:\n%s", route, said, agents.ProjectLinkRefused)
+		}
+	}
+	if stated == 0 {
+		t.Fatal("no route-backed verb names the project refusal, so this test reads nothing")
+	}
+}
