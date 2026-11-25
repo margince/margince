@@ -209,7 +209,13 @@ function DealCardFoot({
             {/* How long it has sat is the size of the stall, and only then: on
                 a healthy card the number is a fact nobody acts on. */}
             <span className="deal-age">
-              {formatAge(deal.idleSince, deal.measuredAt, locale, zone)}
+              {formatAge(
+                deal.idleSince,
+                deal.measuredAt,
+                locale,
+                zone,
+                deal.idleSincePrecision,
+              )}
             </span>
           </span>
         )}

@@ -43,9 +43,11 @@ type InteractionEdge struct {
 	UserID    ids.UUID
 	ContactID ids.UUID
 
-	LastAt        time.Time
-	LastInboundAt *time.Time
-	LastOutbound  *time.Time
+	LastAt time.Time
+	// LastAtDateOnly says the activity behind LastAt names only a date.
+	LastAtDateOnly bool
+	LastInboundAt  *time.Time
+	LastOutbound   *time.Time
 	// LastMetAt is the newest meeting or call of the pair neither declined.
 	// Nil when they never met.
 	LastMetAt *time.Time
@@ -232,7 +234,8 @@ func EdgesForContact(ctx context.Context, tx pgx.Tx, contactID ids.UUID, limit i
 	}
 	rows, err := tx.Query(ctx, `
 		SELECT e.user_id, e.contact_id, e.last_at, e.last_inbound_at, e.last_outbound_at, e.last_met_at,
-		       e.late_count_90d, e.late_out_count_90d, e.count_90d, e.in_count_90d, e.out_count_90d, e.sent_count_90d, e.count_total
+		       e.late_count_90d, e.late_out_count_90d, e.count_90d, e.in_count_90d, e.out_count_90d, e.sent_count_90d, e.count_total,
+		       `+edgeLastIsDaySQL+`
 		  FROM graph_interaction_edge e
 		  `+liveMemberJoin+`
 		 WHERE e.contact_id = $1
@@ -283,7 +286,8 @@ func EdgesForContacts(ctx context.Context, tx pgx.Tx, contacts []ids.UUID) ([]In
 	}
 	rows, err := tx.Query(ctx, `
 		SELECT e.user_id, e.contact_id, e.last_at, e.last_inbound_at, e.last_outbound_at, e.last_met_at,
-		       e.late_count_90d, e.late_out_count_90d, e.count_90d, e.in_count_90d, e.out_count_90d, e.sent_count_90d, e.count_total
+		       e.late_count_90d, e.late_out_count_90d, e.count_90d, e.in_count_90d, e.out_count_90d, e.sent_count_90d, e.count_total,
+		       `+edgeLastIsDaySQL+`
 		  FROM graph_interaction_edge e
 		  `+liveMemberJoin+`
 		 WHERE e.contact_id = ANY($1)

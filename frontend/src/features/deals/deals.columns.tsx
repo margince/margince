@@ -238,7 +238,13 @@ export function dealColumns(
         deal.last_activity_at ? (
           <CellStrip>
             <span>
-              {formatAge(deal.last_activity_at, Date.now(), locale, recordZone)}
+              {formatAge(
+                deal.last_activity_at,
+                Date.now(),
+                locale,
+                recordZone,
+                deal.last_activity_precision,
+              )}
             </span>
             {deal.stalled && (
               <Badge tone="warning">{t("deal.stalledBadge")}</Badge>

@@ -46313,8 +46313,11 @@ type ContactGraphEdge struct {
 	Interactions90d int    `json:"interactions_90d"`
 
 	// LastAt The newest `occurred_at` among the activities the edge counts. A client orders edges by it.
-	LastAt      *time.Time `json:"last_at,omitempty"`
-	Outbound90d *int       `json:"outbound_90d,omitempty"`
+	LastAt *time.Time `json:"last_at,omitempty"`
+
+	// LastPrecision How to read `last_at`, from the activity it names. Absent when that is null.
+	LastPrecision *OccurredPrecision `json:"last_precision,omitempty"`
+	Outbound90d   *int               `json:"outbound_90d,omitempty"`
 
 	// Receipts The actual messages behind this edge, each individually visibility-checked before it is named. Present on `direct` edges only: pooled counts are disclosable where the correspondence itself is not, so an `account` edge carries the numbers and no rows.
 	Receipts *[]ContactGraphReceipt `json:"receipts,omitempty"`
@@ -46442,7 +46445,10 @@ type ContactGraphRouteEvidence struct {
 	Inbound90d      *int       `json:"inbound_90d,omitempty"`
 	Interactions90d int        `json:"interactions_90d"`
 	LastAt          *time.Time `json:"last_at,omitempty"`
-	Outbound90d     *int       `json:"outbound_90d,omitempty"`
+
+	// LastPrecision How to read `last_at`, from the activity it names. Absent when that is null.
+	LastPrecision *OccurredPrecision `json:"last_precision,omitempty"`
+	Outbound90d   *int               `json:"outbound_90d,omitempty"`
 
 	// Sent90d Messages in the last 90 days the colleague sent to the contact as the sender (participant role `from`). Being copied does not count. Absent for a reader without activity read, and on an edge folded before the count existed. The two-way reading then falls back to `outbound_90d`, which also counts mail the colleague was copied on.
 	Sent90d *int `json:"sent_90d,omitempty" minimum:"0"`
@@ -46699,6 +46705,9 @@ type ContactNetworkColleague struct {
 
 	// LastOutboundAt When this colleague last wrote to them.
 	LastOutboundAt *time.Time `json:"last_outbound_at,omitempty"`
+
+	// LastPrecision How to read `last_at`, from the activity it names. Absent when that is null.
+	LastPrecision *OccurredPrecision `json:"last_precision,omitempty"`
 
 	// Outbound90d Outbound interactions in the last 90 days this colleague was on, as sender or copied. sent_90d counts only what they sent.
 	Outbound90d *int `json:"outbound_90d,omitempty" minimum:"0"`
@@ -62342,6 +62351,9 @@ type Project struct {
 	// LastActivityAt The newest workspace-audience activity filed under the project, maintained from the timeline on link write. A task never counts, whoever filed it. It is a read accelerator that a rebuild must reproduce. A message limited to its participants does not move it, even for a reader who may read that message: one number every reader sees can only count what every reader may see.
 	LastActivityAt *time.Time `json:"last_activity_at,omitempty"`
 
+	// LastActivityPrecision How to read `last_activity_at`, from the activity it names. A day entry counts its quiet days from its own date. Absent when that is null.
+	LastActivityPrecision *OccurredPrecision `json:"last_activity_precision,omitempty"`
+
 	// LegalHold True while a litigation or investigation hold is preserving this record. A held record is never acted on by a retention sweep and an Art. 17 erasure against it is refused, so a screen that offers either action has to know. Placed and lifted through /retention/legal-holds, never by an ordinary edit.
 	LegalHold *bool `json:"legal_hold,omitempty"`
 
@@ -62555,6 +62567,9 @@ type Project360Rollups struct {
 
 	// LastActivityAt The newest WORKSPACE-AUDIENCE activity filed under the project, a task never counting; null when nothing is filed yet. A message limited to its participants does not move it, even for a reader who may read that message.
 	LastActivityAt *time.Time `json:"last_activity_at"`
+
+	// LastActivityPrecision How to read `last_activity_at`, from the activity it names. A day entry counts its quiet days from its own date. Absent when that is null.
+	LastActivityPrecision *OccurredPrecision `json:"last_activity_precision,omitempty"`
 
 	// OpenCommitments Open tasks filed under the project, whole lifecycle.
 	OpenCommitments int `json:"open_commitments" minimum:"0"`
@@ -68108,6 +68123,9 @@ type SearchHitStanding struct {
 
 	// LastActivityAt When the record was last in touch: its newest logged call, mail, meeting or note. Set on a contact, a company and a deal.
 	LastActivityAt *time.Time `json:"last_activity_at,omitempty"`
+
+	// LastActivityPrecision How to read `last_activity_at`, from the activity it names. Absent when that is null.
+	LastActivityPrecision *OccurredPrecision `json:"last_activity_precision,omitempty"`
 
 	// MaskedFields The fields above a field mask withheld from this caller, by their wire names.
 	MaskedFields *[]string `json:"masked_fields,omitempty"`
@@ -98296,6 +98314,14 @@ func (a *Project) UnmarshalJSON(b []byte) error {
 		delete(object, "last_activity_at")
 	}
 
+	if raw, found := object["last_activity_precision"]; found {
+		err = json.Unmarshal(raw, &a.LastActivityPrecision)
+		if err != nil {
+			return fmt.Errorf("error reading 'last_activity_precision': %w", err)
+		}
+		delete(object, "last_activity_precision")
+	}
+
 	if raw, found := object["legal_hold"]; found {
 		err = json.Unmarshal(raw, &a.LegalHold)
 		if err != nil {
@@ -98486,6 +98512,13 @@ func (a Project) MarshalJSON() ([]byte, error) {
 		object["last_activity_at"], err = json.Marshal(a.LastActivityAt)
 		if err != nil {
 			return nil, fmt.Errorf("error marshaling 'last_activity_at': %w", err)
+		}
+	}
+
+	if a.LastActivityPrecision != nil {
+		object["last_activity_precision"], err = json.Marshal(a.LastActivityPrecision)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'last_activity_precision': %w", err)
 		}
 	}
 

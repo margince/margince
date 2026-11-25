@@ -38887,6 +38887,8 @@ export interface components {
              * @description The newest `occurred_at` among the activities the edge counts. A client orders edges by it.
              */
             last_at?: string | null;
+            /** @description How to read `last_at`, from the activity it names. Absent when that is null. */
+            readonly last_precision?: components["schemas"]["OccurredPrecision"];
             /** @description The actual messages behind this edge, each individually visibility-checked before it is named. Present on `direct` edges only: pooled counts are disclosable where the correspondence itself is not, so an `account` edge carries the numbers and no rows. */
             receipts?: components["schemas"]["ContactGraphReceipt"][];
         };
@@ -38976,6 +38978,8 @@ export interface components {
             two_way: boolean;
             /** Format: date-time */
             last_at?: string | null;
+            /** @description How to read `last_at`, from the activity it names. Absent when that is null. */
+            readonly last_precision?: components["schemas"]["OccurredPrecision"];
             /** @description Whole days from the last interaction to now, so a client renders "2 days ago" without re-deriving today from a timestamp. */
             days_since_last?: number | null;
         };
@@ -39432,6 +39436,8 @@ export interface components {
             two_way?: boolean;
             /** Format: date-time */
             last_at?: string | null;
+            /** @description How to read `last_at`, from the activity it names. Absent when that is null. */
+            readonly last_precision?: components["schemas"]["OccurredPrecision"];
             /** @description Interactions in the last 90 days where they wrote to this colleague. */
             inbound_90d?: number;
             /** @description Outbound interactions in the last 90 days this colleague was on, as sender or copied. sent_90d counts only what they sent. */
@@ -42829,6 +42835,8 @@ export interface components {
              * @description The newest workspace-audience activity filed under the project, maintained from the timeline on link write. A task never counts, whoever filed it. It is a read accelerator that a rebuild must reproduce. A message limited to its participants does not move it, even for a reader who may read that message: one number every reader sees can only count what every reader may see.
              */
             readonly last_activity_at?: string | null;
+            /** @description How to read `last_activity_at`, from the activity it names. A day entry counts its quiet days from its own date. Absent when that is null. */
+            readonly last_activity_precision?: components["schemas"]["OccurredPrecision"];
             /** @description The channel this record arrived by, one of the values `CreateProjectRequest.source` lists. A record written before the list was fixed may still carry an older value until the background correction reaches it. */
             source: string;
             /** @description Server-stamped from the authenticated principal; never client-supplied. */
@@ -43143,6 +43151,8 @@ export interface components {
              * @description The newest WORKSPACE-AUDIENCE activity filed under the project, a task never counting; null when nothing is filed yet. A message limited to its participants does not move it, even for a reader who may read that message.
              */
             last_activity_at: string | null;
+            /** @description How to read `last_activity_at`, from the activity it names. A day entry counts its quiet days from its own date. Absent when that is null. */
+            readonly last_activity_precision?: components["schemas"]["OccurredPrecision"];
             /** @description Every live activity filed under the project. */
             activity_count: number;
         };
@@ -54480,6 +54490,8 @@ export interface components {
              * @description When the record was last in touch: its newest logged call, mail, meeting or note. Set on a contact, a company and a deal.
              */
             last_activity_at?: string | null;
+            /** @description How to read `last_activity_at`, from the activity it names. Absent when that is null. */
+            readonly last_activity_precision?: components["schemas"]["OccurredPrecision"];
             /** @description The fields above a field mask withheld from this caller, by their wire names. */
             masked_fields?: string[];
         };

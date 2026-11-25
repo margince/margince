@@ -13,6 +13,7 @@ import (
 	"fmt"
 
 	"github.com/margince/margince/backend/internal/shared/kernel/idlebase"
+	"github.com/margince/margince/backend/internal/shared/kernel/occurredday"
 )
 
 // DefaultProjectQuietDays is how long a project in flight may go without a
@@ -39,8 +40,20 @@ func ProjectInFlightSQL(alias string) string {
 func ProjectQuietSQL(alias, nowSQL string, daysPos int) string {
 	// nowSQL is cast so a bound parameter is typed by the comparison rather
 	// than guessed as an interval from the subtraction beside it.
-	return fmt.Sprintf("%[1]s < (%[2]s)::timestamptz - make_interval(days => $%[3]d)",
-		ProjectQuietAnchorSQL(alias), nowSQL, daysPos)
+	//
+	// A date-only newest activity is quiet from its own date, counted on the
+	// installation's calendar. Its noon-UTC anchor is the next day far east of UTC.
+	anchor := ProjectQuietAnchorSQL(alias)
+	return fmt.Sprintf(`(CASE WHEN %[4]s
+		THEN %[5]s <= %[6]s - $%[3]d
+		ELSE %[1]s < (%[2]s)::timestamptz - make_interval(days => $%[3]d) END)`,
+		anchor, nowSQL, daysPos, LastActivityDaySQL(alias), occurredday.NamedDateSQL(anchor), occurredday.TodaySQL(nowSQL))
+}
+
+// LastActivityDaySQL says the activity the project's stored clock names is a
+// day entry, so days since it count from its own date.
+func LastActivityDaySQL(project string) string {
+	return occurredday.ClockIsDaySQL(occurredday.LinkedClockRowsSQL("project_id", project+".id"), project+".last_activity_at")
 }
 
 // ProjectQuietAnchorSQL is the instant the quiet rule measured from — the

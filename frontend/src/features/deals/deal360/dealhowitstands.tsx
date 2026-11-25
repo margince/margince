@@ -13,6 +13,7 @@ import {
   type StandingDim,
   StandingDims,
 } from "../../../design-system/standingdims";
+import { activityDay } from "../../../format/activitywhen";
 import {
   formatDayMonth,
   formatDayMonthNearYear,
@@ -321,7 +322,13 @@ function momentumDim(
         value: t("deal.stalledBadge"),
         sub: momentum.since
           ? t("deal.standing.momentum.stalledSub", {
-              date: day(momentum.since),
+              date: activityDay(
+                momentum.since,
+                momentum.precision ?? "instant",
+                locale,
+                zone,
+                formatDayMonth,
+              ),
             })
           : undefined,
       };
@@ -338,7 +345,13 @@ function momentumDim(
         ...base,
         value: t("deal.standing.momentum.active"),
         sub: t("deal.standing.momentum.activeSub", {
-          date: day(momentum.last),
+          date: activityDay(
+            momentum.last,
+            momentum.precision ?? "instant",
+            locale,
+            zone,
+            formatDayMonth,
+          ),
         }),
       };
     default:

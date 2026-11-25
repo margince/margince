@@ -89,9 +89,13 @@ export function verdictSourceCount(card: DealStatusCard): number {
 }
 
 export type Momentum =
-  | Readonly<{ state: "stalled"; since?: string }>
+  | Readonly<{
+      state: "stalled";
+      since?: string;
+      precision?: OccurredPrecision;
+    }>
   | Readonly<{ state: "on_hold"; until: string }>
-  | Readonly<{ state: "active"; last: string }>
+  | Readonly<{ state: "active"; last: string; precision?: OccurredPrecision }>
   | Readonly<{ state: "quiet" }>;
 
 /**
@@ -117,20 +121,25 @@ export function waitHolds(
 export function momentumOf(
   deal: Pick<
     Deal,
-    "stalled" | "wait_until" | "wait_ends_at" | "last_activity_at"
+    | "stalled"
+    | "wait_until"
+    | "wait_ends_at"
+    | "last_activity_at"
+    | "last_activity_precision"
   >,
   now: Date,
 ): Momentum {
+  const precision = deal.last_activity_precision;
   if (deal.stalled) {
     return deal.last_activity_at
-      ? { state: "stalled", since: deal.last_activity_at }
+      ? { state: "stalled", since: deal.last_activity_at, precision }
       : { state: "stalled" };
   }
   if (waitHolds(deal.wait_until, deal.wait_ends_at, now)) {
     return { state: "on_hold", until: deal.wait_until };
   }
   if (deal.last_activity_at) {
-    return { state: "active", last: deal.last_activity_at };
+    return { state: "active", last: deal.last_activity_at, precision };
   }
   return { state: "quiet" };
 }

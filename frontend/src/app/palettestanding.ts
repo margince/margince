@@ -3,6 +3,7 @@
 
 import type { components } from "../api/schema";
 import type { StatusKind } from "../design-system/statusbadge";
+import { activityDay } from "../format/activitywhen";
 import { formatMoneyWhole } from "../format/format";
 import { formatDayMonthNearYear } from "../format/format.dates";
 import { LEAD_STATUS_LABEL } from "../format/leadstatus";
@@ -45,6 +46,26 @@ function leadStatusKind(status: Lead["status"]): StatusKind {
 }
 
 /**
+ * When the record was last in touch. A date-only touch names its date: an age
+ * counted from its stored noon UTC is a day short far east of UTC.
+ */
+function lastContactOf(
+  standing: NonNullable<SearchResult["standing"]>,
+  { t, locale, zone, now }: Reading,
+): string | undefined {
+  const at = standing.last_activity_at;
+  if (!at) return undefined;
+  return t("palette.lastContact", {
+    when:
+      standing.last_activity_precision === "day"
+        ? activityDay(at, "day", locale, zone, (day, locale, zone) =>
+            formatDayMonthNearYear(day, locale, zone, now),
+          )
+        : formatRelativeTime(at, locale, now),
+  });
+}
+
+/**
  * The second line and status of one hit, from the standing the search answer
  * carries. `fallback` is the line a hit shows without one: an employer, a
  * partner mark, the server's snippet.
@@ -58,11 +79,7 @@ export function describeHit(
   if (!standing) return { subtitle: fallback };
   const { t, locale, zone, now } = reading;
   const day = (date: string) => formatDayMonthNearYear(date, locale, zone, now);
-  const lastContact = standing.last_activity_at
-    ? t("palette.lastContact", {
-        when: formatRelativeTime(standing.last_activity_at, locale, now),
-      })
-    : undefined;
+  const lastContact = lastContactOf(standing, reading);
   switch (hit.type) {
     case "contact":
       return {

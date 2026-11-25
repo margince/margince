@@ -124,7 +124,7 @@ export function projectMoments(
     ...paperMoments(view),
     ...taskMoments(view, words),
   ];
-  const last = lastUpdate(view);
+  const last = lastUpdate(view, words.zone);
   if (last) {
     moments.push({
       key: "update",

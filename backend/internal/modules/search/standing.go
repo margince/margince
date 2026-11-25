@@ -14,8 +14,10 @@ import (
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/auth"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/platform/labeltranslation"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/occurredday"
 )
 
 // standingColumns is what one record type says about where it stands, as SQL
@@ -23,15 +25,22 @@ import (
 // the same row shape and the page is read in one statement.
 type standingColumns struct {
 	hitType, state, dueOn, jobTitle, lastActivity string
+	// clockRows are the activity rows the record's stored clock is folded
+	// from, so the standing can say whether that clock names a day entry.
+	clockRows string
 }
 
 // standingReads are the hit types a result list shows a standing for, in the
 // order their parts appear in the statement. A deal adds its stage and its
 // masked money in dealStanding.
 var standingReads = []standingColumns{
-	{hitType: entityContact, jobTitle: "t.title", lastActivity: lastActivityColumn},
-	{hitType: entityCompany, lastActivity: lastActivityColumn},
-	{hitType: entityDeal, state: "t.status", dueOn: "t.expected_close_date", lastActivity: lastActivityColumn},
+	{hitType: entityContact, jobTitle: "t.title", lastActivity: lastActivityColumn,
+		clockRows: occurredday.LinkedClockRowsSQL("contact_id", "t.id")},
+	{hitType: entityCompany, lastActivity: lastActivityColumn,
+		clockRows: "FROM (" + storekit.CompanyFiledActivityReach("t.id") + ") clock_link " +
+			"JOIN activity clock_row ON clock_row.id = clock_link.activity_id WHERE true"},
+	{hitType: entityDeal, state: "t.status", dueOn: "t.expected_close_date", lastActivity: lastActivityColumn,
+		clockRows: occurredday.LinkedClockRowsSQL("deal_id", "t.id")},
 	{hitType: entityLead, state: "t.status"},
 	{hitType: entityProject, state: "t.phase", dueOn: "t.target_end_date"},
 }
@@ -102,10 +111,14 @@ func standingPart(ctx context.Context, read standingColumns, recordIDs []ids.UUI
 		}
 		join = " LEFT JOIN stage st ON st.id = t.stage_id"
 	}
+	lastActivityDay := "false"
+	if read.clockRows != "" {
+		lastActivityDay = occurredday.ClockIsDaySQL(read.clockRows, read.lastActivity)
+	}
 	return fmt.Sprintf(
-		"SELECT '%s'::text, t.id, %s, %s, %s, %s, %s, %s, %s, %s FROM %s t%s WHERE t.id = ANY($%d) AND (%s)",
+		"SELECT '%s'::text, t.id, %s, %s, %s, %s, %s, %s, %s, %s, %s FROM %s t%s WHERE t.id = ANY($%d) AND (%s)",
 		read.hitType, orNull(read.state, "text"), stage, amount, currency, orNull(read.dueOn, "date"),
-		orNull(read.jobTitle, "text"), orNull(read.lastActivity, "timestamptz"), masks,
+		orNull(read.jobTitle, "text"), orNull(read.lastActivity, "timestamptz"), lastActivityDay, masks,
 		read.hitType, join, arg(recordIDs), scope,
 	), nil
 }
@@ -161,11 +174,13 @@ func readStandings(ctx context.Context, tx pgx.Tx, statement string, args []any)
 			standing crmcontracts.SearchHitStanding
 			dueOn    *time.Time
 			masked   []string
+			day      bool
 		)
 		if err := rows.Scan(&hitType, &recordID, &standing.State, &standing.Stage, &standing.AmountMinor,
-			&standing.Currency, &dueOn, &standing.JobTitle, &standing.LastActivityAt, &masked); err != nil {
+			&standing.Currency, &dueOn, &standing.JobTitle, &standing.LastActivityAt, &day, &masked); err != nil {
 			return nil, fmt.Errorf("search: reading where this page's records stand: %w", err)
 		}
+		standing.LastActivityPrecision = occurredday.ClockPrecision[crmcontracts.OccurredPrecision](standing.LastActivityAt, day)
 		if dueOn != nil {
 			standing.DueOn = &openapi_types.Date{Time: *dueOn}
 		}

@@ -25,6 +25,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/occurredday"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/kernel/relstrength"
 )
@@ -222,6 +223,7 @@ func WireColleague(e search.InteractionEdge, name string, now time.Time) crmcont
 	}
 	last := e.LastAt
 	out.LastAt = &last
+	out.LastPrecision = occurredday.ClockPrecision[crmcontracts.OccurredPrecision](&last, e.LastAtDateOnly)
 	// Null means it never happened in that direction, which is not the same
 	// as "long ago" — the projection keeps them distinct and so does the wire.
 	out.LastInboundAt = e.LastInboundAt

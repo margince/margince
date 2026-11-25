@@ -24,6 +24,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/occurredday"
 	"github.com/margince/margince/backend/internal/shared/kernel/provenance"
 	"github.com/margince/margince/backend/internal/shared/ports/fieldcatalog"
 )
@@ -129,21 +130,8 @@ func scanDeal(row pgx.Row, active []fieldcatalog.Column, extra ...any) (crmcontr
 	d.ImportedFrom = provenance.ImportedFrom(sourceSystem)
 	stalled := IsStalled(status, d.CreatedAt, d.LastActivityAt, pauseEnds, meetingAhead, time.Now().UTC())
 	d.Stalled = &stalled
-	d.LastActivityPrecision = lastActivityPrecision(d.LastActivityAt, lastActivityDay)
+	d.LastActivityPrecision = occurredday.ClockPrecision[crmcontracts.OccurredPrecision](d.LastActivityAt, lastActivityDay)
 	return d, nil
-}
-
-// lastActivityPrecision says how to read the deal's stored clock, nil when it
-// holds none.
-func lastActivityPrecision(at *time.Time, day bool) *crmcontracts.OccurredPrecision {
-	switch {
-	case at == nil:
-		return nil
-	case day:
-		return new(crmcontracts.OccurredPrecisionOccurredPrecisionDay)
-	default:
-		return new(crmcontracts.OccurredPrecisionOccurredPrecisionInstant)
-	}
 }
 
 // setDealEnums maps the four nullable enum columns onto their wire types.

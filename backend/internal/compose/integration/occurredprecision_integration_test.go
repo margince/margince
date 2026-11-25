@@ -291,3 +291,34 @@ func TestADealSaysWhetherItsLastActivityIsADay(t *testing.T) {
 		t.Errorf("a deal with no activity reads last_activity_precision %q, want none", *untouched.Precision)
 	}
 }
+
+// A project says how to read its last activity on its own read and in the
+// rollup its page draws.
+func TestAProjectSaysWhetherItsLastActivityIsADay(t *testing.T) {
+	e := apptest.SetupApp(t)
+	e.BootstrapWorkspace(t)
+	company := createdID(t, e, "/v1/companies", AnyMap{"display_name": "Day Projects GmbH", "source": "manual"})
+	for _, want := range []string{"day", "instant"} {
+		project := createdID(t, e, "/v1/projects", AnyMap{"name": "Rollout " + want, "company_id": company, "source": "manual"})
+		note := AnyMap{"kind": "note", "subject": "Met at the fair", "source": "manual",
+			"occurred_at": "2025-03-09T12:00:00Z", "links": []AnyMap{{"entity_type": "project", "entity_id": project}}}
+		if want == "day" {
+			note["occurred_precision"] = "day"
+		}
+		mustCall(t, e, "POST", "/v1/activities", note, http.StatusCreated, nil)
+		var read struct {
+			Precision string `json:"last_activity_precision"`
+		}
+		mustCall(t, e, "GET", "/v1/projects/"+project, nil, http.StatusOK, &read)
+		var page struct {
+			Rollups struct {
+				Precision string `json:"last_activity_precision"`
+			} `json:"rollups"`
+		}
+		mustCall(t, e, "GET", "/v1/projects/"+project+"/360", nil, http.StatusOK, &page)
+		if read.Precision != want || page.Rollups.Precision != want {
+			t.Errorf("a project whose last activity is a %s reads %q on the record and %q in the rollup",
+				want, read.Precision, page.Rollups.Precision)
+		}
+	}
+}

@@ -351,7 +351,7 @@ export function projectGap(
   view: Project360,
   ctx: Ctx,
 ): TimelineGap | undefined {
-  const quiet = quietStretch(view);
+  const quiet = quietStretch(view, ctx.zone);
   if (!quiet) {
     return undefined;
   }
