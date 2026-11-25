@@ -141,8 +141,8 @@ func (g *CommissionGen) accrue(ctx context.Context, env events.Envelope, moved d
 			"attribution", *moved.PartnerAttribution, "tier_set", tier != nil)
 		return nil
 	}
-	// The deal or the partner is gone or archived. Restoring one does not
-	// replay this event, so a retry would never succeed.
+	// The ledger reads archived deals and partners, so ErrNotFound means the
+	// deal or the partner no longer exists. No retry finds it.
 	return unactionableIfGone(err, "deal", env.Entity.ID)
 }
 
@@ -151,7 +151,7 @@ func (g *CommissionGen) reverse(ctx context.Context, deal ids.UUID, toStatus str
 	reversed, err := g.ledger.ReverseForDeal(ctx, ids.From[ids.DealKind](deal),
 		"the deal left won ("+toStatus+"), so the commission it earned is undone")
 	if err != nil {
-		return unactionableIfGone(err, "deal", deal)
+		return err
 	}
 	if reversed > 0 {
 		g.log.InfoContext(ctx, "commission: a reopened deal's entries were reversed",

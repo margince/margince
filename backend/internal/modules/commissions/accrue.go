@@ -60,17 +60,6 @@ func (s *Store) Accrue(ctx context.Context, in AccrueInput) (crmcontracts.Commis
 	if err := auth.Require(ctx, commissionObject, principal.ActionCreate); err != nil {
 		return crmcontracts.CommissionEntry{}, err
 	}
-	if in.Attribution != AttributionSourced {
-		// Only a partner who BROUGHT the deal earns on it. An influenced deal
-		// is reporting, not money.
-		return crmcontracts.CommissionEntry{}, ErrNotAccruable
-	}
-	if in.RateBps <= 0 {
-		// A tier that resolves to nothing is a partner whose arrangement was
-		// never set. Accruing zero would state, durably, that they earned
-		// nothing on a deal they brought.
-		return crmcontracts.CommissionEntry{}, ErrNotAccruable
-	}
 	by, err := storekit.CapturedBy(ctx)
 	if err != nil {
 		return crmcontracts.CommissionEntry{}, err
@@ -86,14 +75,26 @@ func (s *Store) Accrue(ctx context.Context, in AccrueInput) (crmcontracts.Commis
 }
 
 func accrueTx(ctx context.Context, tx pgx.Tx, in AccrueInput, by string) (crmcontracts.CommissionEntry, error) {
-	// The deal and the partner are both row-scoped records, and an entry that
-	// pointed at either one the caller cannot see would be unreadable the
-	// moment it was written.
-	if err := auth.EnsureLinkTarget(ctx, tx, "deal", in.DealID.UUID); err != nil {
+	// An entry on a deal or partner the caller cannot see would be unreadable.
+	// Archived rows are admitted, because archiving before the accrual runs
+	// must not cancel what the win earned. Only a missing row answers
+	// ErrNotFound, and it answers before the checks below.
+	if err := auth.EnsureVisibleExisting(ctx, tx, "deal", in.DealID.UUID); err != nil {
 		return crmcontracts.CommissionEntry{}, err
 	}
-	if err := auth.EnsureLinkTarget(ctx, tx, "company", in.PartnerCompanyID.UUID); err != nil {
+	if err := auth.EnsureVisibleExisting(ctx, tx, "company", in.PartnerCompanyID.UUID); err != nil {
 		return crmcontracts.CommissionEntry{}, err
+	}
+	if in.Attribution != AttributionSourced {
+		// Only a partner who BROUGHT the deal earns on it. An influenced deal
+		// is reporting, not money.
+		return crmcontracts.CommissionEntry{}, ErrNotAccruable
+	}
+	if in.RateBps <= 0 {
+		// A tier that resolves to nothing is a partner whose arrangement was
+		// never set. Accruing zero would state, durably, that they earned
+		// nothing on a deal they brought.
+		return crmcontracts.CommissionEntry{}, ErrNotAccruable
 	}
 
 	id := ids.New[ids.CommissionEntryKind]()

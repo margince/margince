@@ -17,7 +17,6 @@ package integration
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"log/slog"
 	"testing"
 
@@ -232,10 +231,9 @@ func TestReopeningAWonDealReversesWhatItEarned(t *testing.T) {
 	}
 }
 
-// A deal archived between its win and the delivery cannot be accrued, and
-// restoring it does not replay the win. The consumer must skip the entry, not
-// leave it pending in front of every later event on cg:commissions.
-func TestAWinWhoseDealWasArchivedBeforeDeliveryIsSkipped(t *testing.T) {
+// Whether a sourced win earns commission must not depend on when the event is
+// delivered. A deal archived after its win and before the accrual still accrues.
+func TestAWinWhoseDealWasArchivedBeforeDeliveryStillAccrues(t *testing.T) {
 	e := Setup(t)
 	fx := seedAccrualFixture(t, e, "tier2_20")
 	admin := e.As(e.AdminUser, nil, commissionAdminPerms)
@@ -248,12 +246,37 @@ func TestAWinWhoseDealWasArchivedBeforeDeliveryIsSkipped(t *testing.T) {
 		t.Fatalf("archiving the won deal: %v", err)
 	}
 
-	err := fx.gen.HandleEvent(context.Background(), lastStageChanged(t, e, fx.deal))
-	if !errors.Is(err, kevents.ErrUnactionable) {
-		t.Errorf("the consumer answered %v for a win on an archived deal, want ErrUnactionable", err)
+	if err := fx.gen.HandleEvent(context.Background(), lastStageChanged(t, e, fx.deal)); err != nil {
+		t.Fatalf("the consumer refused a win on an archived deal: %v", err)
 	}
-	if got := liveEntries(t, e, fx); len(got) != 0 {
-		t.Errorf("live entries = %v on an archived deal, want none", got)
+	// Counted in the table: the ledger's list hides an archived deal's entries
+	// until the deal is restored, and restoring must find the entry there.
+	if n := e.WsCount(t, `SELECT count(*) FROM commission_entry
+		WHERE deal_id = $1 AND status <> 'void' AND amount_minor = 20000`, fx.deal); n != 1 {
+		t.Errorf("%d accruals of 20000 exist on a deal archived before delivery, want 1", n)
+	}
+}
+
+// An archived partner keeps what it earned on a deal it sourced. Archiving the
+// partner company before the win is priced must not turn it into "no tier".
+func TestAWinWhosePartnerWasArchivedBeforeDeliveryStillAccrues(t *testing.T) {
+	e := Setup(t)
+	fx := seedAccrualFixture(t, e, "tier2_20")
+	admin := e.As(e.AdminUser, nil, commissionAdminPerms)
+	if _, err := e.Deals.AdvanceDeal(admin, fx.deal, deals.AdvanceDealInput{
+		ToStageID: fx.won, WonWithoutContractReason: WonByImport(),
+	}); err != nil {
+		t.Fatalf("winning the deal: %v", err)
+	}
+	if _, err := e.Contacts.ArchiveCompany(admin, fx.partner, nil); err != nil {
+		t.Fatalf("archiving the partner company: %v", err)
+	}
+
+	if err := fx.gen.HandleEvent(context.Background(), lastStageChanged(t, e, fx.deal)); err != nil {
+		t.Fatalf("the consumer refused a win whose partner was archived: %v", err)
+	}
+	if got := liveEntries(t, e, fx); len(got) != 1 || got[0] != 20_000 {
+		t.Errorf("live entries = %v for a partner archived before delivery, want [20000]", got)
 	}
 }
 

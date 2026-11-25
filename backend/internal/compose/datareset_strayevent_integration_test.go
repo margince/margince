@@ -42,7 +42,7 @@ var strayEventPerms = principal.Permissions{
 	Objects: map[string]principal.ObjectGrant{
 		"partner":               {Create: true, Read: true, Update: true},
 		"company":               {Create: true, Read: true, Update: true},
-		"deal":                  {Create: true, Read: true, Update: true},
+		"deal":                  {Create: true, Read: true, Update: true, Delete: true},
 		"installation_settings": {Read: true},
 	},
 	RowScope: principal.RowScopeAll,
@@ -156,10 +156,13 @@ func TestADealEventTheResetOrphanedIsSkippedByCommissionsAndTheRoomTimeline(t *t
 	}
 
 	gen := NewCommissionGen(e.Pool, commissions.NewStore(e.DB()), contacts.NewStore(e.DB()), slog.New(slog.DiscardHandler))
-	for i, what := range []string{"win", "reopen"} {
-		if err := gen.HandleEvent(context.Background(), moved[i]); staysPending(err) {
-			t.Errorf("commissions on the orphaned %s answered %v — that error keeps the entry pending and stalls cg:commissions", what, err)
-		}
+	if err := gen.HandleEvent(context.Background(), moved[0]); !errors.Is(err, events.ErrUnactionable) {
+		t.Errorf("commissions on the orphaned win answered %v, want ErrUnactionable — any other error keeps the entry pending on cg:commissions", err)
+	}
+	// The entries a reopen would reverse went with the deal, so there is
+	// nothing to do and nothing to report.
+	if err := gen.HandleEvent(context.Background(), moved[1]); err != nil {
+		t.Errorf("commissions on the orphaned reopen answered %v, want nil", err)
 	}
 
 	timeline := NewDealRoomTimeline(e.Pool, activities.NewStore(e.DB()), slog.New(slog.DiscardHandler))
@@ -168,14 +171,27 @@ func TestADealEventTheResetOrphanedIsSkippedByCommissionsAndTheRoomTimeline(t *t
 	}
 }
 
-// staysPending is whether the subscriber leaves an entry pending after the
-// handler's answer, to be reclaimed again on every pass.
-func staysPending(err error) bool {
-	return err != nil && !errors.Is(err, events.ErrUnactionable)
+// An archived deal still exists and can be restored, so a room note about it
+// stays owed. The entry is retried rather than acked away.
+func TestARoomCommentOnAnArchivedDealIsRetriedNotSkipped(t *testing.T) {
+	e := integration.Setup(t)
+	fx := seedStrayDeal(t, e)
+	if _, err := e.Deals.ArchiveDeal(e.As(e.AdminUser, nil, strayEventPerms), fx.deal, nil); err != nil {
+		t.Fatalf("archiving the deal: %v", err)
+	}
+
+	timeline := NewDealRoomTimeline(e.Pool, activities.NewStore(e.DB()), slog.New(slog.DiscardHandler))
+	err := timeline.HandleEvent(context.Background(), orphanedRoomComment(t, fx.deal))
+	if err == nil {
+		t.Fatal("a note was written onto an archived deal, which is frozen")
+	}
+	if errors.Is(err, events.ErrUnactionable) {
+		t.Errorf("the room timeline answered %v for an archived deal — the entry is acked and the note is lost for good, though the deal can be restored", err)
+	}
 }
 
-// orphanedRoomComment is a buyer comment about a deal the reset deleted. It
-// carries a correlation id, because the note's write refuses to run without one.
+// orphanedRoomComment is a buyer comment about the deal. It carries a
+// correlation id, because the note's write refuses to run without one.
 func orphanedRoomComment(t *testing.T, deal ids.DealID) events.Envelope {
 	t.Helper()
 	name := "Thorsten Sifferlien"
@@ -200,9 +216,9 @@ func orphanedRoomComment(t *testing.T, deal ids.DealID) events.Envelope {
 	}
 }
 
-// The notice-case consumer already reads a missing contact as nothing owed.
-// This pins that answer for a contact the reset deleted.
-func TestAContactCreatedTheResetOrphanedOpensNoNoticeCase(t *testing.T) {
+// The notice-case consumer reads a missing contact as nothing owed. The cohort
+// repair reports it as unactionable. Neither answer leaves the entry pending.
+func TestAContactCreatedTheResetOrphanedIsSkippedByItsConsumers(t *testing.T) {
 	e := integration.Setup(t)
 	var contact ids.UUID
 	resetWithAWriteInTheWindow(t, e, func() { contact = e.SeedContact(t, "Selma Window", nil) })
@@ -217,5 +233,10 @@ func TestAContactCreatedTheResetOrphanedOpensNoNoticeCase(t *testing.T) {
 	}
 	if n := e.WsCount(t, `SELECT count(*) FROM privacy_notice_case`); n != 0 {
 		t.Errorf("%d notice cases exist for a contact the reset deleted, want 0", n)
+	}
+
+	cohort := NewCohortPromoteGen(e.Pool, contacts.NewStore(e.DB()), slog.New(slog.DiscardHandler))
+	if err := cohort.HandleEvent(context.Background(), created[0]); !errors.Is(err, events.ErrUnactionable) {
+		t.Errorf("the cohort repair on the orphaned contact answered %v, want ErrUnactionable", err)
 	}
 }
