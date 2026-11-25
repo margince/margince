@@ -89,7 +89,7 @@ const (
 	// seat without an introduction grant that the preview refusal case needs.
 	// Raised by 110 production and 297 test lines, and 3 test files, when main's
 	// Anthropic setup met develop's cases in the back-sync.
-	composeRootProductionLines = 230_923
+	composeRootProductionLines = 230_921
 	composeRootTestLines       = 361_329
 )
 

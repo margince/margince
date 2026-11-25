@@ -98,3 +98,4 @@ d72248c5d90040c69ff1059af7f90065ec4361c7 003d9453d409ac0c245d4e55fded45e847906d8
 917b418ecad76cef28d22879bee10f853376fb94 003d9453d409ac0c245d4e55fded45e847906d82 ratified-main-s-contract-changes-carried-into-develop-in-the-back-sync
 e587f3dd6eb8994139ca8b45b9e69bd633c72da7 6b23582352599475e663101c7288659675b94c4b ratified-develop-s-company-status-carried-into-develop-in-the-back-sync
 917b418ecad76cef28d22879bee10f853376fb94 6b23582352599475e663101c7288659675b94c4b ratified-main-s-contract-changes-carried-into-develop-in-the-back-sync
+e587f3dd6eb8994139ca8b45b9e69bd633c72da7 30608ced46758ce36aab603e2a52447eb4bbaeff ratified-a-contact-and-company-source-is-one-of-six-channels

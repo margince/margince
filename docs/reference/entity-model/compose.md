@@ -205,7 +205,7 @@ The 42 tables owned by `compose`, as the migrations build them. [Back to the ent
 
 ## analytics_share
 
-16 columns · primary key `(id)` · referenced by 0 foreign keys
+14 columns · primary key `(id)` · referenced by 0 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -223,8 +223,6 @@ The 42 tables owned by `compose`, as the migrations build them. [Back to the ent
 | `token_hash` | `text` | yes |  |
 | `captured_by` | `text` | yes | Who or what wrote the row. Stamped by the server from the authenticated principal, never taken from the request body. |
 | `created_at` | `timestamp with time zone`, default `now()` | yes | When the row was created. Set once. |
-| `updated_at` | `timestamp with time zone`, default `now()` | yes | When the row last changed. Refreshed on every write. |
-| `version` | `bigint`, default `1` | yes | Optimistic-concurrency counter. Every write bumps it, so an update built on a stale read is refused instead of overwriting. |
 
 **Points at**
 
@@ -244,7 +242,6 @@ The 42 tables owned by `compose`, as the migrations build them. [Back to the ent
 - `analytics_share_scope_shape`: `CHECK (((scope_id IS NULL) OR (num_nonnulls(scope_team_id, scope_user_id) = 1)))`
 - `analytics_share_snapshot_matches_kind`: `CHECK (((kind = 'snapshot') = (snapshot_id IS NOT NULL)))`
 - `analytics_share_token_hash_check`: `CHECK ((token_hash ~ '^[0-9a-f]{64}$'))`
-- `analytics_share_version_js_safe`: `CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))`
 - `uq_analytics_share_token`: `UNIQUE (token_hash)`
 
 **Indexes**
@@ -518,13 +515,12 @@ The 42 tables owned by `compose`, as the migrations build them. [Back to the ent
 
 ## contact_moment_dismissal
 
-5 columns · primary key `(user_id, contact_id, claim_key)` · referenced by 0 foreign keys
+4 columns · primary key `(user_id, contact_id, claim_key)` · referenced by 0 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
 | `claim_key` | `text` | yes |  |
 | `contact_id` | `uuid` | yes | Points at `contact.id`. |
-| `dismissed_at` | `timestamp with time zone`, default `now()` | yes |  |
 | `evidence_fingerprint` | `text` | yes |  |
 | `user_id` | `uuid` | yes | Points at `app_user.id`. |
 
@@ -578,13 +574,12 @@ The 42 tables owned by `compose`, as the migrations build them. [Back to the ent
 
 ## extension_ingest_position
 
-6 columns · primary key `(unit, source_system, member_id)` · referenced by 0 foreign keys
+5 columns · primary key `(unit, source_system, member_id)` · referenced by 0 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
 | `member_id` | `uuid`, default `'00000000-0000-0000-0000-000000000000'::uuid` | yes |  |
 | `position` | `text` | yes |  |
-| `saved_at` | `timestamp with time zone`, default `now()` | yes |  |
 | `unit` | `text` | yes |  |
 | `source_system` | `text` | yes | The outside system the record came from, when it came from one. |
 | `version` | `bigint`, default `1` | yes | Optimistic-concurrency counter. Every write bumps it, so an update built on a stale read is refused instead of overwriting. |
@@ -605,12 +600,11 @@ The 42 tables owned by `compose`, as the migrations build them. [Back to the ent
 
 ## extension_ingest_refusal
 
-6 columns · primary key `(unit, refusal, day)` · referenced by 0 foreign keys
+5 columns · primary key `(unit, refusal, day)` · referenced by 0 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
 | `day` | `date` | yes |  |
-| `first_at` | `timestamp with time zone` | yes |  |
 | `last_at` | `timestamp with time zone` | yes |  |
 | `refusal` | `text` | yes | Which check refused the record, from the core's closed vocabulary (`extension.RecordRefusal`), one per check the ingress grammar runs. |
 | `refused` | `bigint` | yes | Records this check refused in the window. |
@@ -1372,7 +1366,7 @@ The 42 tables owned by `compose`, as the migrations build them. [Back to the ent
 
 ## weekly_review_learning
 
-6 columns · primary key `(id)` · referenced by 1 foreign key
+5 columns · primary key `(id)` · referenced by 1 foreign key
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -1381,7 +1375,6 @@ The 42 tables owned by `compose`, as the migrations build them. [Back to the ent
 | `position` | `integer` | yes |  |
 | `text` | `text` | yes | One sentence, in the reader's own language. |
 | `weekly_review_id` | `uuid` | yes | Points at `weekly_review.id`. |
-| `created_at` | `timestamp with time zone`, default `now()` | yes | When the row was created. Set once. |
 
 **Points at**
 
@@ -1496,7 +1489,7 @@ The 42 tables owned by `compose`, as the migrations build them. [Back to the ent
 
 ## weekly_review_scorecard
 
-26 columns · primary key `(id)` · referenced by 0 foreign keys
+25 columns · primary key `(id)` · referenced by 0 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -1525,7 +1518,6 @@ The 42 tables owned by `compose`, as the migrations build them. [Back to the ent
 | `meetings_no_show` | `integer` |  |  |
 | `meetings_partial_history` | `integer` |  |  |
 | `weekly_review_id` | `uuid` | yes | Points at `weekly_review.id`. |
-| `created_at` | `timestamp with time zone`, default `now()` | yes | When the row was created. Set once. |
 
 **Points at**
 

@@ -174,7 +174,6 @@ var memberReferences = map[string]memberReference{
 	"signal_resolution.resolved_by":            {disposition: referenceRetain},
 	"suggestion_dismissal.user_id":             {disposition: referenceRetain},
 	"system_log.on_behalf_of":                  {disposition: referenceRetain},
-	"tag_suggestion.decided_by":                {disposition: referenceRetain},
 	"team_membership.user_id":                  {disposition: referenceRetain},
 	"user_mfa.user_id":                         {disposition: referenceRetain},
 	"user_record_view.user_id":                 {disposition: referenceRetain},

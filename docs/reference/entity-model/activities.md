@@ -1051,7 +1051,7 @@ The 32 tables owned by `activities`, as the migrations build them. [Back to the 
 
 ## booking_alias
 
-6 columns · primary key `(id)` · referenced by 0 foreign keys
+5 columns · primary key `(id)` · referenced by 0 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -1060,7 +1060,6 @@ The 32 tables owned by `activities`, as the migrations build them. [Back to the 
 | `booking_page_id` | `uuid` |  | Points at `booking_page.id`. |
 | `host_user_id` | `uuid` |  | Points at `app_user.id`. |
 | `retired_at` | `timestamp with time zone` |  |  |
-| `created_at` | `timestamp with time zone`, default `now()` | yes | When the row was created. Set once. |
 
 **Points at**
 
@@ -1339,19 +1338,17 @@ The 32 tables owned by `activities`, as the migrations build them. [Back to the 
 
 ## meeting_readiness
 
-9 columns · primary key `(attendee_id, activity_id)` · referenced by 0 foreign keys
+7 columns · primary key `(attendee_id, activity_id)` · referenced by 0 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
 | `activity_id` | `uuid` | yes | Points at `activity.id`. |
 | `agenda_fingerprint` | `text` | yes |  |
 | `attendee_id` | `uuid` | yes | Points at `app_user.id`. |
-| `confirmed_at` | `timestamp with time zone` | yes |  |
 | `participants_fingerprint` | `text` | yes |  |
 | `revision` | `text` | yes |  |
 | `starts_at` | `timestamp with time zone` | yes |  |
 | `starts_on_day` | `boolean` | yes |  |
-| `captured_by` | `text` | yes | Who or what wrote the row. Stamped by the server from the authenticated principal, never taken from the request body. |
 
 **Points at**
 
@@ -1371,8 +1368,8 @@ The 32 tables owned by `activities`, as the migrations build them. [Back to the 
 
 **Triggers**
 
-- `text_bound_insert`: `AFTER INSERT FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL, '{"revision": 20000, "captured_by": 20000, "agenda_fingerprint": 20000, "participants_fingerprint": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"agenda_fingerprint":20000,"captured_by":20000,"participants_fingerprint":20000,"revision":20000}')`
-- `text_bound_update`: `AFTER UPDATE FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"revision": 20000, "captured_by": 20000, "agenda_fingerprint": 20000, "participants_fingerprint": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"agenda_fingerprint":20000,"captured_by":20000,"participants_fingerprint":20000,"revision":20000}')`
+- `text_bound_insert`: `AFTER INSERT FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL, '{"revision": 20000, "agenda_fingerprint": 20000, "participants_fingerprint": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"agenda_fingerprint":20000,"participants_fingerprint":20000,"revision":20000}')`
+- `text_bound_update`: `AFTER UPDATE FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"revision": 20000, "agenda_fingerprint": 20000, "participants_fingerprint": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"agenda_fingerprint":20000,"participants_fingerprint":20000,"revision":20000}')`
 
 ## scheduled_send
 
@@ -1488,14 +1485,13 @@ The 32 tables owned by `activities`, as the migrations build them. [Back to the 
 
 ## worklist_done
 
-5 columns · primary key `(reader_id, source, row_id)` · referenced by 0 foreign keys
+4 columns · primary key `(reader_id, source, row_id)` · referenced by 0 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
 | `done_at` | `timestamp with time zone` | yes |  |
 | `reader_id` | `uuid` | yes | Points at `app_user.id`. |
 | `row_id` | `text` | yes |  |
-| `set_by` | `text` | yes |  |
 | `source` | `text` | yes | Which internal channel the record arrived by. |
 
 **Points at**
@@ -1514,19 +1510,18 @@ The 32 tables owned by `activities`, as the migrations build them. [Back to the 
 
 **Triggers**
 
-- `text_bound_insert`: `AFTER INSERT FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL, '{"row_id": 20000, "set_by": 20000, "source": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"row_id":20000,"set_by":20000,"source":20000}')`
-- `text_bound_update`: `AFTER UPDATE FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"row_id": 20000, "set_by": 20000, "source": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"row_id":20000,"set_by":20000,"source":20000}')`
+- `text_bound_insert`: `AFTER INSERT FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL, '{"row_id": 20000, "source": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"row_id":20000,"source":20000}')`
+- `text_bound_update`: `AFTER UPDATE FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"row_id": 20000, "source": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"row_id":20000,"source":20000}')`
 
 ## worklist_pin
 
-5 columns · primary key `(reader_id, source, row_id)` · referenced by 0 foreign keys
+4 columns · primary key `(reader_id, source, row_id)` · referenced by 0 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
 | `pinned_at` | `timestamp with time zone`, default `now()` | yes |  |
 | `reader_id` | `uuid` | yes | Points at `app_user.id`. |
 | `row_id` | `text` | yes | The row's own id within that lane. |
-| `set_by` | `text` | yes |  |
 | `source` | `text` | yes | The lane the row came from. |
 
 **Points at**
@@ -1545,5 +1540,5 @@ The 32 tables owned by `activities`, as the migrations build them. [Back to the 
 
 **Triggers**
 
-- `text_bound_insert`: `AFTER INSERT FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL, '{"row_id": 20000, "set_by": 20000, "source": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"row_id":20000,"set_by":20000,"source":20000}')`
-- `text_bound_update`: `AFTER UPDATE FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"row_id": 20000, "set_by": 20000, "source": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"row_id":20000,"set_by":20000,"source":20000}')`
+- `text_bound_insert`: `AFTER INSERT FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL, '{"row_id": 20000, "source": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"row_id":20000,"source":20000}')`
+- `text_bound_update`: `AFTER UPDATE FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"row_id": 20000, "source": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"row_id":20000,"source":20000}')`

@@ -120,8 +120,8 @@ func foldContactPairsSQL(advanceSnapshot bool) string {
 		     GROUP BY t.contact_a, t.contact_b
 		)
 		INSERT INTO graph_contact_edge AS e
-		    (contact_a, contact_b, last_at, count_90d, count_total, computed_at, read_snapshot)
-		SELECT f.contact_a, f.contact_b, f.last_at, f.count_90d, f.count_total, now(), pg_current_snapshot()
+		    (contact_a, contact_b, last_at, count_90d, count_total, read_snapshot)
+		SELECT f.contact_a, f.contact_b, f.last_at, f.count_90d, f.count_total, pg_current_snapshot()
 		  FROM folded f
 		 ORDER BY f.contact_a, f.contact_b
 		ON CONFLICT (contact_a, contact_b) DO UPDATE SET
