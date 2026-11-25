@@ -5,7 +5,6 @@ package recordkinds
 
 import (
 	"fmt"
-	"strings"
 )
 
 // CheckColumns refuses a kind whose table lacks a column the kind reads. It
@@ -34,7 +33,7 @@ func CheckColumns(k Declared, table string, columns map[string]string) error {
 			}
 		}
 	}
-	if typ, ok := columns[title]; ok && !strings.HasPrefix(typ, "text") && !strings.HasPrefix(typ, "character varying") && typ != "citext" {
+	if typ, ok := columns[title]; ok && typ != "text" && typ != "character varying" && typ != "citext" {
 		return fmt.Errorf("record kind %s: title column %q of %s is %s, but search reads it as text", k.Name, title, table, typ)
 	}
 	return nil

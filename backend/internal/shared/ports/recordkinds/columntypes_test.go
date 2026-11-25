@@ -34,7 +34,9 @@ func TestCheckColumns(t *testing.T) {
 		want string
 	}{
 		{"complete", ok, ""},
-		{"varchar title", with("code", "character varying(40)"), ""},
+		{"varchar title", with("code", "character varying"), ""},
+		{"text array title", with("code", "text[]"), "title column"},
+		{"varchar array title", with("code", "character varying[]"), "title column"},
 		{"missing time", with("seen_at", ""), "does not exist"},
 		{"missing subject", with("contact_id", ""), "does not exist"},
 		{"time is text", with("seen_at", "text"), "not timestamp"},
