@@ -123,9 +123,8 @@ func countedEmploymentFrom(ctx context.Context, companyBinding string, arg func(
 // caller may see. Which employment edges this caller may traverse bounds the
 // set as much as which contacts they may see.
 //
-// It takes the gates itself rather than being handed them: a caller that had
-// to remember either could forget one and get a counting oracle over edges it
-// is refused everywhere else.
+// It takes the gates itself rather than being handed them. A caller that had
+// to pass either could forget one, and count edges it is refused elsewhere.
 func employmentSection(ctx context.Context, companyBinding string, arg func(any) int) (storekit.HiddenSection, error) {
 	if err := auth.Require(ctx, "contact", principal.ActionRead); err != nil {
 		return storekit.HiddenSection{}, err
