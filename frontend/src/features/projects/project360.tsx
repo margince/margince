@@ -12,7 +12,6 @@ import {
 import { ArchiveAction } from "../../components/archive";
 import { EditAccessRequest } from "../../components/editaccessrequest";
 import { useRailRename } from "../../components/railfield";
-import { RecordTeam } from "../../components/recordteam";
 import { useFieldsDialog } from "../../components/sectionedit";
 import {
   snoozedDueAt,
@@ -47,14 +46,11 @@ import {
   isMissingProject,
   ProjectNotFound,
 } from "./projectarchived";
-import { ProjectCompanies } from "./projectcompanies";
 import {
   ProjectDetails,
   ProjectSharedPill,
   ProjectSubtitle,
 } from "./projectdetails";
-import { ProjectDocuments } from "./projectdocuments";
-import { ProjectDrawer } from "./projectdrawer";
 import type { ProjectHealthAssessment } from "./projecthealth.queries";
 import { ProjectHealthModal } from "./projecthealthmodal";
 import { type LogDrawer, ProjectLogVerbs } from "./projectlogverbs";
@@ -64,18 +60,15 @@ import { AssignProjectOwnerAction } from "./projectowner";
 import { AdvanceProjectModal } from "./projectphase";
 import { ProjectKeyChip } from "./projects";
 import { PHASE_LABEL, type Project, type ProjectPhase } from "./projects.form";
-import {
-  type Commitment,
-  type Project360,
-  StakeholdersCard,
-} from "./projectsections";
+import type { Commitment, Project360 } from "./projectsections";
 import { nextCommitment } from "./projectstanding";
 import { ProjectStanding } from "./projectstandingcard";
 import { ProjectTabs } from "./projecttabs";
 import "./projects.css";
 import { RecordGone } from "../../components/recordgone";
 import { useViewerZone } from "../../lib/viewerzone";
-import { ProjectHistory, ProjectLatestInbound } from "./project360.chronology";
+import { ProjectLatestInbound } from "./project360.chronology";
+import { type ProjectDrawerKind, ProjectDrawers } from "./project360.drawers";
 import { ProjectCards } from "./projectcards";
 import { useProjectEdit } from "./projectedit";
 
@@ -118,22 +111,6 @@ export function ProjectScreen({
   );
 }
 
-// The drawers the page opens; "tasks" is the history narrowed to tasks.
-type ProjectDrawerKind = "history" | "tasks" | "documents" | "contacts";
-
-// The history drawer's title, kept past closing so it does not change while
-// the drawer animates out.
-function useHistoryDrawerTitle(drawer: ProjectDrawerKind | null): string {
-  const t = useT();
-  const [kind, setKind] = useState<"history" | "tasks">("history");
-  if ((drawer === "history" || drawer === "tasks") && drawer !== kind) {
-    setKind(drawer);
-  }
-  return kind === "tasks"
-    ? t("project.commitments.all")
-    : t("record.fullHistory");
-}
-
 function ProjectPage({ view }: Readonly<{ view: Project360 }>) {
   const t = useT();
   const readerZone = useViewerZone();
@@ -141,7 +118,6 @@ function ProjectPage({ view }: Readonly<{ view: Project360 }>) {
   const readOnlyReasonId = useId();
   const [moveTo, setMoveTo] = useState<ProjectPhase | null>(null);
   const [drawer, setDrawer] = useState<ProjectDrawerKind | null>(null);
-  const historyTitle = useHistoryDrawerTitle(drawer);
   // Every write affordance on this page answers one question, asked once. An
   // archived project takes no changes, and one this caller cannot write takes
   // none from them. One answer and one rendered sentence, so every disabled
@@ -273,46 +249,12 @@ function ProjectPage({ view }: Readonly<{ view: Project360 }>) {
         projectId={project.id}
         correcting={healthEdit && healthEdit !== "new" ? healthEdit : undefined}
       />
-      <ProjectDrawer
-        open={drawer === "history" || drawer === "tasks"}
-        title={historyTitle}
+      <ProjectDrawers
+        view={view}
+        drawer={drawer}
+        readOnly={readOnly}
         onClose={() => setDrawer(null)}
-      >
-        <ProjectHistory
-          view={view}
-          kind={drawer === "tasks" ? "task" : undefined}
-        />
-      </ProjectDrawer>
-      <ProjectDrawer
-        open={drawer === "documents"}
-        title={t("project.documents.title")}
-        onClose={() => setDrawer(null)}
-      >
-        <ProjectDocuments view={view} readOnly={readOnly} />
-      </ProjectDrawer>
-      <ProjectDrawer
-        open={drawer === "contacts"}
-        title={t("project.more.contacts")}
-        onClose={() => setDrawer(null)}
-      >
-        <div className="project-drawer-stack">
-          <ProjectCompanies
-            projectId={project.id}
-            companies={project.companies}
-            readOnly={readOnly}
-          />
-          <RecordTeam
-            recordType="project"
-            recordId={project.id}
-            readOnly={readOnly}
-          />
-          <StakeholdersCard
-            view={view}
-            projectId={project.id}
-            readOnly={readOnly}
-          />
-        </div>
-      </ProjectDrawer>
+      />
       {openTask && (
         <TaskDetailModal
           activityId={openTask}
