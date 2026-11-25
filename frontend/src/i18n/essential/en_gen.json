@@ -1729,6 +1729,8 @@
   "record.archivedReadOnly": "This company is archived and takes no changes.",
   "record.notYoursToChange": "You cannot edit this company. Ask its owner to hand it over or share it, or ask an administrator.",
   "record.actionRefused": "Your role does not include this action. Ask an administrator for the right.",
+  "record.roleReadsOnly": "Your role can only read. Ask an administrator for another role.",
+  "record.archiveRefused": "Only its owner or a manager can archive this.",
   "record.accessUnknown": "Your access could not be read. Reload the page to check it again.",
   "contact.attachRefused": "You can only read this contact. Ask its owner for write access.",
   "record.attachRefused": "You can only read this record. Ask its owner for write access.",

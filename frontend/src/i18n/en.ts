@@ -3102,6 +3102,9 @@ export const en = {
     "You cannot edit this company. Ask its owner to hand it over or share it, or ask an administrator.",
   "record.actionRefused":
     "Your role does not include this action. Ask an administrator for the right.",
+  "record.roleReadsOnly":
+    "Your role can only read. Ask an administrator for another role.",
+  "record.archiveRefused": "Only its owner or a manager can archive this.",
   "record.accessUnknown":
     "Your access could not be read. Reload the page to check it again.",
   "contact.attachRefused":
@@ -6759,14 +6762,8 @@ export const en = {
   "deal.acquisitionRetired": "(retired)",
   "deal.waitUntil": "Wait until",
   "deal.fxBase": "{value} · rate {rate} on {date}",
-  "deal.archiveRefused":
-    "Only the deal’s owner or a manager can archive this deal.",
-  "contact.archiveRefused":
-    "Only the contact’s owner or a manager can archive this contact.",
   "contact.undoArchiveNothing":
     "This archive could not be undone, because the contact’s history holds no archive to put back. Open the contact to see whether it is still archived.",
-  "company.archiveRefused":
-    "Only the company’s owner or a manager can archive this company.",
   "deal.archive": "Archive deal",
   "deal.restore": "Restore deal",
   "deal.archiveConfirm":

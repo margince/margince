@@ -106,6 +106,7 @@ function useLookupRefusal(contactId: string): string | undefined {
   const record = useContact360(contactId);
   const refusal = useRecordWriteRefusal("contact", record.data?.contact, {
     archived: t("contact.rail.archivedReadOnly"),
+    readOnlyRole: t("record.roleReadsOnly"),
     notYours: t("provider.profile.lookupNotYours"),
   });
   return record.data?.contact ? refusal : undefined;

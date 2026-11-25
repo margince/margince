@@ -70,7 +70,28 @@ describe("a reader the server does not let archive this contact", () => {
     expect(
       document.getElementById(verb.getAttribute("aria-describedby") ?? "")
         ?.textContent,
-    ).toBe(en["contact.archiveRefused"]);
+    ).toBe(en["record.archiveRefused"]);
+  });
+});
+
+describe("a reader whose role only reads", () => {
+  it("names the role, not the owner, on the page and on archive", async () => {
+    const readOnly: Contact360 = {
+      ...view,
+      contact: { ...view.contact, archivable: false, writable: false },
+    };
+    mount("overview", readOnly, [], {}, { contact: ["read"] });
+
+    await screen.findByText(en["record.roleReadsOnly"]);
+    expect(screen.queryByText(en["contact.notYoursToChange"])).toBeNull();
+    await openRecordMenu();
+    const verb = await screen.findByTestId("archive-record");
+    await waitFor(() =>
+      expect(
+        document.getElementById(verb.getAttribute("aria-describedby") ?? "")
+          ?.textContent,
+      ).toBe(en["record.roleReadsOnly"]),
+    );
   });
 });
 

@@ -140,7 +140,7 @@ function useOwnerRefusal(lead: Lead, writer: LeadWriter) {
   const mayAssign = useCanWrite("lead", "update");
   const assignRefusal = useWriteRefusal("lead", "update", {
     seat: t("settings.seatRefused"),
-    grant: t("record.actionRefused"),
+    grant: t("record.roleReadsOnly"),
   });
   if (lead.archived_at) {
     return { refused: true, reason: writer.readOnlyReason };

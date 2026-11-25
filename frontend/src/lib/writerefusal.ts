@@ -6,6 +6,7 @@ import type { MessageKey } from "../i18n/en";
 import {
   type RequiredGrant,
   useCanMutate,
+  useGrantRefused,
   useRecordWriteRefusal,
   useWriteRefusal,
   type WritableRecord,
@@ -117,6 +118,25 @@ export function useKindWriteRefusal(
   const words = RECORD_REFUSALS[kind];
   return useRecordWriteRefusal(kind, record, {
     archived: t(words.archived),
+    readOnlyRole: t("record.roleReadsOnly"),
     notYours: t(words.notYours),
   });
+}
+
+/**
+ * What a refused Archive says on a record page. A role that only reads is told
+ * so on every kind. Otherwise a contact, company or deal is its owner's or a
+ * manager's to archive; a project takes the delete grant alone.
+ */
+export function useArchiveRefusal(
+  kind: "contact" | "company" | "deal" | "project",
+): string {
+  const t = useT();
+  const readOnlyRole = useGrantRefused({ object: kind, action: "update" });
+  if (readOnlyRole) {
+    return t("record.roleReadsOnly");
+  }
+  return t(
+    kind === "project" ? "record.actionRefused" : "record.archiveRefused",
+  );
 }

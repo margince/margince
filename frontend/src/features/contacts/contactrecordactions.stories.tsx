@@ -120,3 +120,37 @@ export const RefusedByArchive: Story = {
     await screen.findByTestId("archive-record");
   },
 };
+
+// A role that only reads: Archive names the role, since no owner can lift it.
+export const ArchiveRefusedReadOnlyRole: Story = {
+  render: () => {
+    installFetchStub({ ...ROUTES, "GET /me": meRoute({ contact: ["read"] }) });
+    return (
+      <StoryProviders>
+        <ContactMenu contact={{ ...ANNA, archivable: false }} />
+      </StoryProviders>
+    );
+  },
+  play: async () => {
+    await userEvent.click(screen.getByRole("button", { name: "More actions" }));
+    await screen.findByText(
+      "Your role can only read. Ask an administrator for another role.",
+    );
+  },
+};
+
+// A writing role on somebody else's contact: Archive is its owner's or a manager's.
+export const ArchiveRefusedNotYours: Story = {
+  render: () => {
+    installFetchStub(ROUTES);
+    return (
+      <StoryProviders>
+        <ContactMenu contact={{ ...ANNA, archivable: false }} />
+      </StoryProviders>
+    );
+  },
+  play: async () => {
+    await userEvent.click(screen.getByRole("button", { name: "More actions" }));
+    await screen.findByText("Only its owner or a manager can archive this.");
+  },
+};

@@ -3094,6 +3094,10 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Bạn không có quyền sửa công ty này. Đề nghị người chịu trách nhiệm chuyển giao hoặc chia sẻ, hoặc liên hệ quản trị viên.",
   "record.actionRefused":
     "Vai trò của bạn không bao gồm thao tác này. Liên hệ quản trị viên để được cấp thêm quyền.",
+  "record.roleReadsOnly":
+    "Vai trò của bạn chỉ có quyền xem. Liên hệ quản trị viên để được cấp vai trò khác.",
+  "record.archiveRefused":
+    "Chỉ ai chịu trách nhiệm hồ sơ này hoặc quản lý mới lưu trữ được.",
   "record.accessUnknown":
     "Không đọc được quyền truy cập của bạn. Tải lại trang để kiểm tra lại.",
   "contact.attachRefused":
@@ -6613,14 +6617,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "deal.acquisitionRetired": "(đã ngừng dùng)",
   "deal.waitUntil": "Chờ đến",
   "deal.fxBase": "{value} · tỷ giá {rate} ngày {date}",
-  "deal.archiveRefused":
-    "Chỉ chủ deal hoặc quản lý mới có thể lưu trữ deal này.",
-  "contact.archiveRefused":
-    "Chỉ chủ sở hữu liên hệ hoặc quản lý mới có thể lưu trữ liên hệ này.",
   "contact.undoArchiveNothing":
     "Không thể hoàn tác việc lưu trữ vì lịch sử của liên hệ không có lần lưu trữ nào để khôi phục. Hãy mở liên hệ để xem liên hệ còn được lưu trữ hay không.",
-  "company.archiveRefused":
-    "Chỉ chủ sở hữu công ty hoặc quản lý mới có thể lưu trữ công ty này.",
   "deal.archive": "Chuyển deal vào kho lưu trữ",
   "deal.restore": "Khôi phục deal",
   "deal.archiveConfirm":

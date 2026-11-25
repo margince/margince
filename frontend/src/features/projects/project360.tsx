@@ -36,6 +36,7 @@ import { catalogOfRecord } from "../../lib/customfields.logic";
 import { labelFor } from "../../lib/labelfor";
 import { unwrap } from "../../lib/problem";
 import { useShortcut } from "../../lib/shortcuts";
+import { useArchiveRefusal } from "../../lib/writerefusal";
 import { ShareAction } from "../records/share";
 import { TaskDetailModal } from "../worklist/taskdetailmodal";
 import { useProjectScreenReads } from "./project360.reads";
@@ -413,6 +414,7 @@ function ProjectActions({
   onHealth: (edit: ProjectHealthAssessment | "new") => void;
 }>) {
   const t = useT();
+  const archiveRefusal = useArchiveRefusal("project");
   const taskRefusedId = logRefusedId ?? activity.refusedId;
   const taskKeys = useShortcut(
     "record.addTask",
@@ -462,6 +464,7 @@ function ProjectActions({
           verb a reader cannot walk back does not sit in the routine run. */}
       <ArchiveAction
         requires={{ object: "project", action: "delete" }}
+        refusedReason={archiveRefusal}
         disabledReasonId={refusedReasonId}
         label={t("project.archive")}
         confirmText={t("project.archiveConfirm")}

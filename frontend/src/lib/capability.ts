@@ -178,17 +178,15 @@ export type WritableRecord = {
  * server: a rep opened a colleague's deal, was offered Edit, filled the form
  * in, and learned from the 403 that it was never theirs to save.
  *
- * Archived comes first because it is the reason a reader can act on. The
- * other sentence covers everything `useCanWriteRecord` refuses — no object
- * grant, a read seat, a row that is somebody else's — because the reader's
- * remedy is the same for all three: ask the owner or the administrator. Naming
- * the axis would also name a fact the snapshot cannot always tell apart from
- * its neighbour (an extension object misspelled reads as a grant not made).
+ * Archived comes first because it is the reason a reader can act on. Then the
+ * role: no object grant or a read seat only reads, and only an administrator
+ * can lift that, not a share or a handover. Last, a row that is somebody
+ * else's, which its owner can share. Until `/me` answers, the role is not
+ * blamed.
  *
- * The caller supplies the two sentences because they name the record's KIND —
- * "this deal", "this contact" — and a sentence that said "this record" on
- * every page would be the first line on the page not to know what it was
- * about.
+ * The caller supplies the sentences, because most name the record's kind
+ * ("this deal", "this contact"). A page that said "this record" would not
+ * know what it was about.
  *
  * UX honesty, never enforcement, like every predicate in this file: the
  * server refuses whatever this returns.
@@ -196,18 +194,23 @@ export type WritableRecord = {
 export function useRecordWriteRefusal(
   object: RbacObject,
   record: WritableRecord | undefined,
-  reasons: Readonly<{ archived: string; notYours: string }>,
+  reasons: Readonly<{
+    archived: string;
+    readOnlyRole: string;
+    notYours: string;
+  }>,
 ): string | undefined {
-  // Runs unconditionally: the number of hooks a render performs must not
+  // Both run unconditionally: the number of hooks a render performs must not
   // depend on the record's state.
   const canWrite = useCanWriteRecord(object, record);
+  const roleRefused = useGrantRefused({ object, action: "update" });
   if (record?.archived_at) {
     return reasons.archived;
   }
-  if (!canWrite) {
-    return reasons.notYours;
+  if (canWrite) {
+    return undefined;
   }
-  return undefined;
+  return roleRefused ? reasons.readOnlyRole : reasons.notYours;
 }
 
 /**

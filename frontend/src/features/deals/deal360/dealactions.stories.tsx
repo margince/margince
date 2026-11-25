@@ -174,6 +174,24 @@ export const ReadOnlyDeal: Story = {
   },
 };
 
+/** A deal this reader may change but not archive: Archive names who can. */
+export const ArchiveRefusedNotYours: Story = {
+  render: () => actions({ archivable: false }),
+  play: async ({ canvasElement }) => {
+    await userEvent.click(
+      await within(canvasElement).findByRole("button", {
+        name: "More actions",
+      }),
+    );
+    const archive = await screen.findByTestId("archive-record");
+    await waitFor(() =>
+      expect(archive).toHaveAccessibleDescription(
+        "Only its owner or a manager can archive this.",
+      ),
+    );
+  },
+};
+
 /**
  * Archived. The page's one sentence refuses the logging verbs, Share, Correct
  * close day, Reopen and Archive; Edit details stays enabled, opening a

@@ -3192,6 +3192,10 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Du kannst dieses Unternehmen nicht bearbeiten. Frage die verantwortliche Person, ob sie es dir übergibt oder mit dir teilt, oder frage einen Admin.",
   "record.actionRefused":
     "Deine Rolle enthält diese Aktion nicht. Frage einen Admin nach dem Recht.",
+  "record.roleReadsOnly":
+    "Deine Rolle erlaubt nur das Lesen. Frage einen Admin nach einer anderen Rolle.",
+  "record.archiveRefused":
+    "Nur Verantwortliche oder Führungskräfte können diesen Eintrag archivieren.",
   "record.accessUnknown":
     "Dein Zugriff konnte nicht gelesen werden. Lade die Seite neu, um ihn erneut zu prüfen.",
   "contact.attachRefused":
@@ -6793,14 +6797,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "deal.acquisitionRetired": "(stillgelegt)",
   "deal.waitUntil": "Warten bis",
   "deal.fxBase": "{value} · Kurs {rate} vom {date}",
-  "deal.archiveRefused":
-    "Nur der Verantwortliche des Deals oder eine Führungskraft kann diesen Deal archivieren.",
-  "contact.archiveRefused":
-    "Nur der Verantwortliche des Kontakts oder eine Führungskraft kann diesen Kontakt archivieren.",
   "contact.undoArchiveNothing":
     "Das Archivieren ließ sich nicht rückgängig machen, weil der Verlauf des Kontakts kein Archivieren zum Zurücknehmen enthält. Öffne den Kontakt, um zu sehen, ob er noch archiviert ist.",
-  "company.archiveRefused":
-    "Nur der Verantwortliche des Unternehmens oder eine Führungskraft kann dieses Unternehmen archivieren.",
   "deal.archive": "Deal archivieren",
   "deal.restore": "Deal wiederherstellen",
   "deal.archiveConfirm":
