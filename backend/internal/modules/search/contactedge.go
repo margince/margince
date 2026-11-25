@@ -31,13 +31,6 @@ type ContactEdge struct {
 	CountTotal     int
 }
 
-// contactEdgeLastIsDaySQL says the activity a contact pair's last_at names is
-// a day entry: one both contacts took part in.
-var contactEdgeLastIsDaySQL = occurredday.ClockIsDaySQL(`FROM activity_participant clock_a
-		JOIN activity_participant clock_b ON clock_b.activity_id = clock_a.activity_id
-		JOIN activity clock_row ON clock_row.id = clock_a.activity_id
-		WHERE clock_a.contact_id = e.contact_a AND clock_b.contact_id = e.contact_b`, "e.last_at")
-
 // StrengthOf scores the pair at an instant through the same §4 kernel every
 // other edge uses. No directed counts exist for a pair we only co-observed,
 // and none are invented: the reciprocity term simply has nothing to say.
@@ -102,7 +95,7 @@ func scanContactPairs(rows pgx.Rows) ([]contactPair, error) {
 }
 
 // contactEdgeFacts are the folded columns of graph_contact_edge.
-var contactEdgeFacts = []string{"last_at", "count_90d", "count_total"}
+var contactEdgeFacts = []string{"last_at", "last_precision", "count_90d", "count_total"}
 
 // foldContactPairsSQL is the upsert that refolds named contact pairs.
 func foldContactPairsSQL(advanceSnapshot bool) string {
@@ -113,7 +106,7 @@ func foldContactPairsSQL(advanceSnapshot bool) string {
 		),
 		folded AS (
 		    SELECT t.contact_a, t.contact_b,
-		           max(a.occurred_at) AS last_at,
+		           max(a.occurred_at) AS last_at, ` + occurredday.LatestPrecisionSQL("a", "") + ` AS last_precision,
 		           count(DISTINCT ` + graphInteractionUnit + `) FILTER (WHERE ` + occurredday.FromSQL("a", window) + `) AS count_90d,
 		           count(DISTINCT ` + graphInteractionUnit + `) AS count_total
 		      FROM target t
@@ -129,8 +122,8 @@ func foldContactPairsSQL(advanceSnapshot bool) string {
 		     GROUP BY t.contact_a, t.contact_b
 		)
 		INSERT INTO graph_contact_edge AS e
-		    (contact_a, contact_b, last_at, count_90d, count_total, read_snapshot)
-		SELECT f.contact_a, f.contact_b, f.last_at, f.count_90d, f.count_total, pg_current_snapshot()
+		    (contact_a, contact_b, last_at, last_precision, count_90d, count_total, read_snapshot)
+		SELECT f.contact_a, f.contact_b, f.last_at, f.last_precision, f.count_90d, f.count_total, pg_current_snapshot()
 		  FROM folded f
 		 ORDER BY f.contact_a, f.contact_b
 		ON CONFLICT (contact_a, contact_b) DO UPDATE SET
@@ -240,7 +233,7 @@ func ContactEdgesForContact(ctx context.Context, tx pgx.Tx, contactID ids.UUID, 
 	}
 	limitPos := arg(limit)
 	rows, err := tx.Query(ctx, fmt.Sprintf(`
-		SELECT e.contact_a, e.contact_b, e.last_at, `+contactEdgeLastIsDaySQL+`, e.count_90d, e.count_total, p.id, p.full_name
+		SELECT e.contact_a, e.contact_b, e.last_at, e.last_precision IS NOT DISTINCT FROM 'day', e.count_90d, e.count_total, p.id, p.full_name
 		  FROM graph_contact_edge e
 		  JOIN contact p
 		    ON p.id = CASE WHEN e.contact_a = $%d THEN e.contact_b ELSE e.contact_a END
@@ -279,7 +272,7 @@ func ContactEdgesAmong(ctx context.Context, tx pgx.Tx, contacts []ids.UUID) ([]C
 		return nil, nil
 	}
 	rows, err := tx.Query(ctx, `
-		SELECT e.contact_a, e.contact_b, e.last_at, `+contactEdgeLastIsDaySQL+`, e.count_90d, e.count_total
+		SELECT e.contact_a, e.contact_b, e.last_at, e.last_precision IS NOT DISTINCT FROM 'day', e.count_90d, e.count_total
 		  FROM graph_contact_edge e
 		 WHERE e.contact_a = ANY($1) AND e.contact_b = ANY($1)
 		 ORDER BY e.last_at DESC, e.contact_a, e.contact_b`, contacts)

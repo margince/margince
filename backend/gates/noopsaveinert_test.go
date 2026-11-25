@@ -192,6 +192,12 @@ var unprobedSaveRoutes = gatekit.Waive(map[string]string{
 	"PATCH /provider-connections/{provider}": "held by TestAConfigurationSaveOfTheStoredSettingsChangesNothing at the store, which needs a registered provider the HTTP harness lacks",
 })
 
+// probedWithoutTheHelper: probed routes whose test checks the save its own way,
+// keyed by `METHOD path`, each with why it cannot use the shared helper.
+var probedWithoutTheHelper = gatekit.Waive(map[string]string{
+	"PUT /web-forms/{id}/handling": "the save moves the form and its policy, so the test checks both versions and the whole outbox itself",
+})
+
 // TestEveryVersionedSaveRouteIsProbedForANoOp derives the client save routes
 // from the contract: every PATCH or PUT taking If-Match. Each is probed by an
 // HTTP test that re-sends its record's own values, or is ratified above. The
@@ -200,6 +206,7 @@ var unprobedSaveRoutes = gatekit.Waive(map[string]string{
 func TestEveryVersionedSaveRouteIsProbedForANoOp(t *testing.T) {
 	t.Parallel()
 	defer unprobedSaveRoutes.AssertAllMatched(t)
+	defer probedWithoutTheHelper.AssertAllMatched(t)
 
 	probed := noOpProbedRoutesFromSource(t)
 	contract := map[string]bool{}
@@ -243,7 +250,7 @@ func noOpProbedRoutesFromSource(t *testing.T) map[string]string {
 	if err != nil {
 		t.Fatalf("reading the probe table: %v", err)
 	}
-	declared := integrationTestsBeside(t, filepath.Dir(noOpProbeFile))
+	declared := integrationFuncsBeside(t, filepath.Dir(noOpProbeFile))
 	out := map[string]string{}
 	ast.Inspect(file, func(n ast.Node) bool {
 		spec, ok := n.(*ast.ValueSpec)
@@ -265,9 +272,13 @@ func noOpProbedRoutesFromSource(t *testing.T) map[string]string {
 				t.Errorf("the probe table holds an entry that is not a pair of string literals")
 				continue
 			}
-			if !declared[test] {
+			switch {
+			case declared[test] == nil:
 				t.Errorf("%s names %s, which no integration test file in %s declares",
 					route, test, filepath.Dir(noOpProbeFile))
+			case !probeSendsRoute(declared, test, route) && !probedWithoutTheHelper.Waived(t, route):
+				t.Errorf("%s names %s, which sends that route no save through assertSaveChangesNothing or "+
+					"assertResendChangesNothing: probe the route there, or name the test that does", route, test)
 			}
 			out[route] = test
 		}
@@ -279,23 +290,26 @@ func noOpProbedRoutesFromSource(t *testing.T) map[string]string {
 	return out
 }
 
-// integrationTestsBeside names the test functions the integration test files
-// in dir declare.
-func integrationTestsBeside(t *testing.T, dir string) map[string]bool {
+// integrationFuncsBeside is every function the integration test files of
+// package integration in dir declare, by name.
+func integrationFuncsBeside(t *testing.T, dir string) map[string]*ast.FuncDecl {
 	t.Helper()
 	paths, err := filepath.Glob(filepath.Join(dir, "*_integration_test.go"))
 	if err != nil || len(paths) == 0 {
 		t.Fatalf("finding the integration test files in %s: %v (%d found)", dir, err, len(paths))
 	}
-	declared := map[string]bool{}
+	declared := map[string]*ast.FuncDecl{}
 	for _, path := range paths {
 		file, err := parser.ParseFile(token.NewFileSet(), path, nil, 0)
 		if err != nil {
 			t.Fatalf("reading %s: %v", path, err)
 		}
+		if file.Name.Name != "integration" {
+			continue
+		}
 		for _, decl := range file.Decls {
-			if fn, ok := decl.(*ast.FuncDecl); ok && fn.Recv == nil && strings.HasPrefix(fn.Name.Name, "Test") {
-				declared[fn.Name.Name] = true
+			if fn, ok := decl.(*ast.FuncDecl); ok && fn.Recv == nil {
+				declared[fn.Name.Name] = fn
 			}
 		}
 	}

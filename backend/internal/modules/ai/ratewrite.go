@@ -265,6 +265,11 @@ func (s *RateStore) writeModelRate(ctx context.Context, tx pgx.Tx, p preparedMod
 	if err := auth.Require(ctx, "ai_model_rate", action); err != nil {
 		return ModelRateRow{}, err
 	}
+	// The day's price sent again rewrites nothing and leaves no audit entry.
+	after := modelRateImage(p, effDate)
+	if moved, _ := storekit.ChangedColumns(before, after); replacing && len(moved) == 0 {
+		return readModelRateTx(ctx, tx, p.provider, p.modelID, effDate)
+	}
 	id, out, err := upsertModelRate(ctx, tx, p, effDate)
 	if err != nil {
 		return ModelRateRow{}, err
@@ -274,13 +279,6 @@ func (s *RateStore) writeModelRate(ctx context.Context, tx pgx.Tx, p preparedMod
 	// fx_rate sibling). The verb is the SAME word the gate above demanded, so
 	// authorization_rule attributes the grant that actually admitted the write
 	// rather than a plausible-looking one.
-	//
-	// The day's price sent again leaves no audit entry. The sheet has no
-	// version, so that entry would be the only trace of a change nobody made.
-	after := modelRateImage(p, effDate)
-	if moved, _ := storekit.ChangedColumns(before, after); replacing && len(moved) == 0 {
-		return out, nil
-	}
 	if _, err := storekit.Audit(ctx, tx, string(action), auditentity.ModelRate, id, before, after); err != nil {
 		return ModelRateRow{}, fmt.Errorf("audit ai_model_rate %s: %w", action, err)
 	}

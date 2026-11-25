@@ -56,3 +56,25 @@ func modelRateImage(r preparedModelRate, effDate time.Time) map[string]any {
 		"date": effDate, "lane": string(r.lane), rateSourceField: string(r.source),
 	}, r.band)
 }
+
+// readModelRateTx is one stored price row, in the shape a write answers.
+func readModelRateTx(ctx context.Context, tx pgx.Tx, provider, modelID string, effDate time.Time) (ModelRateRow, error) {
+	rows, err := tx.Query(ctx, `
+		SELECT provider, model_id, input_per_mtok_microusd, output_per_mtok_microusd,
+		       cache_read_per_mtok_microusd, cache_write_per_mtok_microusd, effective_date, lane, source,
+		       `+longContextColumns("ai_model_rate")+`
+		FROM ai_model_rate
+		WHERE provider = $1 AND model_id = $2 AND effective_date = $3`, provider, modelID, effDate)
+	if err != nil {
+		return ModelRateRow{}, fmt.Errorf("read ai_model_rate: %w", err)
+	}
+	defer rows.Close()
+	found, err := scanModelRateRows(rows)
+	if err != nil {
+		return ModelRateRow{}, err
+	}
+	if len(found) != 1 {
+		return ModelRateRow{}, fmt.Errorf("read ai_model_rate: %d rows for one day's price", len(found))
+	}
+	return found[0], nil
+}

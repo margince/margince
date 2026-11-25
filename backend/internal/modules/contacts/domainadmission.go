@@ -146,6 +146,11 @@ func recordHumanDomainAdmissionTx(
 	//
 	// A decision that repeats the stored one changes nothing. Writing it would
 	// restamp admission_at and, for an unblock, ask about the domain again.
+	// The lock is taken first and held through the write below, so the
+	// decision compared is the one the write would replace.
+	if err := lockDomainAdmissionTx(ctx, tx, domain); err != nil {
+		return BlockedDomain{}, err
+	}
 	current, err := readDomainAdmissionTx(ctx, tx, domain)
 	switch {
 	case errors.Is(err, pgx.ErrNoRows):
