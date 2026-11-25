@@ -257,4 +257,36 @@ describe("an archived deal's menu", () => {
       screen.queryByRole("button", { name: en["deal.restore"] }),
     ).toBeNull();
   });
+
+  it("offers Merge deal on a live deal with an account, and not on an archived one", async () => {
+    mount(
+      { deal: ["read", "update", "delete"] },
+      { writable: true, company_id: "c-1" },
+    );
+    await openMore();
+    expect(
+      await screen.findByRole("button", { name: en["merge.deal"] }),
+    ).toBeTruthy();
+    cleanup();
+
+    mount(
+      { deal: ["read", "update", "delete"] },
+      {
+        archived_at: "2026-11-01T09:00:00Z",
+        writable: false,
+        company_id: "c-1",
+      },
+    );
+    await openMore();
+    expect(screen.queryByRole("button", { name: en["merge.deal"] })).toBeNull();
+  });
+
+  it("offers no Merge deal on a deal with no account, which has nobody to merge with", async () => {
+    mount(
+      { deal: ["read", "update", "delete"] },
+      { writable: true, company_id: undefined },
+    );
+    await openMore();
+    expect(screen.queryByRole("button", { name: en["merge.deal"] })).toBeNull();
+  });
 });
