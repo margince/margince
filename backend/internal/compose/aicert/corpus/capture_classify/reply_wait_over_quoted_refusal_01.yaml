@@ -12,23 +12,10 @@ expect:
   outcome: accepted
   answer:
     - not_reply: negative
-  rubric: >
-    The candidate output is the harness's record of the run, not one reply.
-    "replies" holds each raw reply in the order the pass asked, and "messages"
-    holds what the pass stored for each message. That wrapper is the harness's,
-    so never score it as a format fault; each reply inside it is the model's.
-    A message answered under the 0.7 floor is re-asked alone, so a second reply
-    is that re-ask and not a contradiction.
-    The customer's whole message is one line: they will wait for our answer.
-    In the mailbox this line sat on top of a quoted older mail that said "we
-    will not go ahead with this project"; the backlog read cuts that quote
-    away, so the model sees only the sender's current words, which is the
-    body here. Any label is acceptable. Score the reply verdict: "neutral" or
-    "positive" scores high, and null is acceptable. "negative" is the failure
-    this scenario exists to catch, because a negative verdict on the newest
-    customer mail closes the deal as lost overnight, and this customer is
-    waiting on us.
-  bands:
-    certified_min: 70
-    degraded_min: 50
-    floor: 40
+  judge: none
+  judge_none_reason: >
+    The check is the reply verdict alone: it must not be "negative", because a
+    negative verdict on the newest customer mail closes the deal as lost
+    overnight while the customer waits on us. Any other label is acceptable, so
+    a judge only adds noise, and a weak one read the harness's second reply as a
+    contradiction.

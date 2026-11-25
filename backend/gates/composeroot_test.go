@@ -61,11 +61,11 @@ const (
 	// case, which drives the unexported mail worker over two team links.
 	// Raised by 2 production lines for the stage-evidence prompt rule on a
 	// document a criterion asks to be sent, which is the site's own prompt text.
-	// Raised by 4 production lines for the prompt rules the Anthropic certification
-	// found missing (the close date, a refused injection, the card's lengths and
-	// a confidence under a floor). Raised by 2 test files and 118 test lines for the
-	// gate that runs every expected set_amount through the real decider, and for
-	// the prompt-length test, both of which drive unexported compose code.
+	// Raised by 4 production lines for prompt rules the Anthropic certification
+	// found missing: the close date, a refused injection, the card's lengths and a
+	// confidence under a floor. Raised by 2 test files and 118 test lines for the
+	// gate that runs every expected set_amount through the real decider. That gate
+	// and the prompt-length test drive unexported compose code.
 	composeRootProductionLines = 230_703
 	composeRootTestLines       = 360_246
 )

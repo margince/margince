@@ -17981,6 +17981,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "firstRun.ai.chatModel": "Modell",
   "firstRun.ai.modelHint":
     "Jedes Modell, das der Anbieter bereitstellt, funktioniert. Die Tests haben die Zusammenstellung oben bewertet, nicht ein Modell für jede Stufe.",
+  "firstRun.ai.setupTitle.anthropic_cloud": "Anthropic Claude",
   "firstRun.ai.setupTitle.consumer_class_brokered":
     "Gemma 4 zum Selbstbetrieb, über OpenRouter",
   "firstRun.ai.setupTitle.gemini_cloud": "Google Gemini",
