@@ -122,6 +122,11 @@ type corpus struct {
 	PendingApprovals int `json:"pending_approvals,omitempty"`
 	AppliedApprovals int `json:"applied_approvals,omitempty"`
 	ExpiredApprovals int `json:"expired_approvals,omitempty"`
+	// The longest history of each kind the seeded corpus holds.
+	LargestCompany int `json:"largest_company_activities,omitempty"`
+	LargestDeal    int `json:"largest_deal_activities,omitempty"`
+	LargestContact int `json:"largest_contact_activities,omitempty"`
+	LargestThread  int `json:"largest_thread_messages,omitempty"`
 }
 
 // strictVerdict mirrors StrictVerdict in perfrecord.go: one strict Home cohort.

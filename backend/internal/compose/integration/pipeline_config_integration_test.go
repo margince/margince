@@ -49,7 +49,7 @@ func TestPipelineStageConfigLifecycle(t *testing.T) {
 		WinProbability int    `json:"win_probability"`
 	}
 	if status := e.Call(t, "POST", "/v1/stages", AnyMap{
-		"pipeline_id": second.ID, "name": "Won", "position": 2, "semantic": "won",
+		"pipeline_id": second.ID, "name": "Signed", "position": 2, "semantic": "won",
 	}, nil, &stage); status != http.StatusCreated {
 		t.Fatalf("create stage → %d", status)
 	}
