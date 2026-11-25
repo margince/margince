@@ -12,6 +12,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/ports/fieldcatalog"
 )
 
@@ -36,7 +37,11 @@ func EnsureRecordTargets(ctx context.Context, tx pgx.Tx, active []fieldcatalog.C
 		if err != nil {
 			continue
 		}
-		switch err := auth.EnsureLinkTarget(ctx, tx, c.Options[0], id); {
+		err = apperrors.ErrNotFound
+		if auth.Allows(ctx, c.Options[0], principal.ActionRead) {
+			err = auth.EnsureLinkTarget(ctx, tx, c.Options[0], id)
+		}
+		switch {
 		case errors.Is(err, apperrors.ErrNotFound):
 			refused = append(refused, CustomFieldError{Field: c.Name, Code: CustomFieldTargetMissing, Message: "names no live " + c.Options[0] + " record you can read"})
 		case err != nil:
