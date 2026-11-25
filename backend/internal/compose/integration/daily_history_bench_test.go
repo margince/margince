@@ -21,13 +21,10 @@ import (
 // a company, a deal and a contact, and the mails of one thread.
 type historySizes struct{ Company, Deal, Contact, Thread int }
 
-// dailyHistoryTier is the longest history of each kind at the published tier.
-// The tier spreads its activities evenly, about fifty per company, so no record
-// there grows a history a reader's cost could follow. The company's history is
-// four hundred times that, yet four percent of the tier's activities, so the
-// skew adds to the tier without changing its shape. Each nests in the one
-// before: the thread is the contact's, and the contact's mail is filed under
-// the deal and the company.
+// dailyHistoryTier is the longest history of each kind at the published tier,
+// where a company averages about fifty activities. The company's history is
+// four hundred times that, yet four percent of the tier's activities. Each
+// history nests in the one before it: thread, contact, deal, company.
 var dailyHistoryTier = historySizes{Company: 20_000, Deal: 10_000, Contact: 5_000, Thread: 2_000}
 
 func (h historySizes) scaled(f float64) historySizes {
@@ -76,8 +73,8 @@ func (h dailyHistory) input(in dailyInput) dailyInput {
 	return in
 }
 
-// addTo states the history in the record's corpus facts: its activities in the
-// count, and the longest history of each kind as the database holds it.
+// addTo counts the history's activities in the record's corpus facts. It also
+// states the longest history of each kind as the database holds it.
 func (h dailyHistory) addTo(c *CorpusFacts) {
 	c.Activities += h.Sizes.Company
 	c.LargestCompany, c.LargestDeal, c.LargestContact, c.LargestThread = h.Longest.Company, h.Longest.Deal, h.Longest.Contact, h.Longest.Thread

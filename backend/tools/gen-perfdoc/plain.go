@@ -270,8 +270,8 @@ func answerFor(kind momentKind, rows []measurement) answer {
 	return a
 }
 
-// recordedAnswer is the slowest row a seat recorded without a budget, unless a
-// try failed: a failed try still fails, as it does on a judged row.
+// recordedAnswer is the slowest row a seat recorded without a budget. A failed
+// try still fails, as it does on a judged row.
 func recordedAnswer(rows []measurement) answer {
 	var a answer
 	for _, m := range rows {
