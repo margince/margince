@@ -14,9 +14,8 @@ import (
 	"github.com/margince/margince/backend/internal/compose/integration/apptest"
 )
 
-// refusalCase is one request a caller got wrong and the answer that names the
-// fault: the status, the top-level code, and the field and its code when the
-// fault is one field.
+// refusalCase is one request a caller got wrong, and the answer that names
+// the fault. That is the status and the code, plus the field and its code.
 type refusalCase struct {
 	name, method, path string
 	body               any
@@ -30,7 +29,7 @@ type refusalCase struct {
 var sentinelTail = regexp.MustCompile(`: (not found|conflict|invalid argument|permission denied|version skew)$`)
 
 // Each refusal names the input that is wrong, with the code the same mistake
-// answers on every other route, and no detail ends in a sentinel's words.
+// gets on other routes. No detail ends in a sentinel's words.
 func TestEveryRefusalNamesTheFaultTheCallerMade(t *testing.T) {
 	e, _ := listsApp(t, true)
 	stages := apptest.DiscoverSeededPipeline(t, e)

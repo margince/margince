@@ -101,6 +101,9 @@ func (s *Store) CreateTag(ctx context.Context, name string, color, description *
 	if err != nil {
 		return tagRow{}, err
 	}
+	if err := refuseUnknownColor(color); err != nil {
+		return tagRow{}, err
+	}
 	var out tagRow
 	err = s.db.Tx(ctx, func(tx pgx.Tx) error {
 		var err error
@@ -115,27 +118,6 @@ func (s *Store) CreateTag(ctx context.Context, name string, color, description *
 	}
 	return out, err
 }
-
-// TagNameTakenError refuses a name a live tag holds. It answers 409 with the
-// holder's id, so a caller can apply that tag instead.
-type TagNameTakenError struct{ ExistingID ids.UUID }
-
-func (*TagNameTakenError) Error() string {
-	return "a tag with this name already exists; apply that tag instead"
-}
-
-func (*TagNameTakenError) Unwrap() error { return apperrors.ErrConflict }
-
-// FaultReference names the tag that holds the name, once it is known.
-func (e *TagNameTakenError) FaultReference() map[string]any {
-	if e.ExistingID.IsZero() {
-		return map[string]any{}
-	}
-	return map[string]any{"existing_id": e.ExistingID.String()}
-}
-
-// Unreferenced is the conflict the status and the code come from.
-func (*TagNameTakenError) Unreferenced() error { return apperrors.ErrConflict }
 
 // insertTagTx coins a validated name and audits it.
 func insertTagTx(ctx context.Context, tx pgx.Tx, name string, color, description *string) (tagRow, error) {
@@ -416,7 +398,7 @@ func NormalizeTagName(name string) string {
 func ValidateTagName(name string) (string, error) {
 	normalized := NormalizeTagName(name)
 	if !values.HasVisibleText(normalized) {
-		return "", &BadInputError{Field: "name", Code: "required", Reason: "a tag needs a name"}
+		return "", &BadInputError{Field: nameField, Code: codeRequired, Reason: "a tag needs a name"}
 	}
 	if utf8.RuneCountInString(normalized) > maxTagNameRunes {
 		return "", &BadInputError{

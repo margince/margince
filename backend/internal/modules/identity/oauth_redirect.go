@@ -3,13 +3,12 @@
 
 package identity
 
-// Where an authorization may be sent back to, and how. Three rules, and the
-// first two are the difference between a working native client and an open
-// redirect: what a client may REGISTER (redirectURIFault), what a registered
-// URI MATCHES at authorize time (redirectURIMatches), and how a decision is
-// actually delivered to the address that survived both (redirectToClient).
-// Split out of oauth.go so each file stays one concept —
-// oauth_redirect_test.go is this file's suite.
+// Where an authorization may be sent back to, and how. There are three rules.
+// redirectURIFault says what a client may register. redirectURIMatches says
+// what a registered URI matches at authorize time. redirectToClient delivers a
+// decision to the address that passed both. The first two separate a
+// working native client from an open redirect. oauth_redirect_test.go is this
+// file's suite.
 
 import (
 	"fmt"
@@ -122,10 +121,9 @@ func clientResponseURI(req authorizeRequest, answer url.Values) (string, error) 
 		// contradicting itself rather than anything the caller sent.
 		return "", fmt.Errorf("oauth: redirect_uri does not parse: %w", err)
 	}
-	// A query we cannot parse is refused rather than delivered: the alternative
-	// is silently dropping the pair that failed to decode, which hands the
-	// client a callback URL it did not register. redirectURIFault refuses such
-	// a registration, so this is the closed door behind that one.
+	// A query we cannot parse is refused, not delivered. Dropping the pair that
+	// failed to decode would hand the client a callback URL it did not register.
+	// redirectURIFault refuses such a registration; this is the door behind it.
 	params, err := url.ParseQuery(location.RawQuery)
 	if err != nil {
 		return "", fmt.Errorf("oauth: redirect_uri query does not parse: %w", err)
@@ -140,10 +138,9 @@ func clientResponseURI(req authorizeRequest, answer url.Values) (string, error) 
 		params.Set(oauthParamState, req.State)
 	}
 	location.RawQuery = params.Encode()
-	// redirectURIFault refuses a fragment at registration; the same rule holds
-	// at delivery, so a fragment smuggled onto a presented loopback URI cannot
-	// ride into the Location. URL.String() emits a fragment only when Fragment
-	// is set, which is why clearing that one field is enough.
+	// redirectURIFault refuses a fragment at registration. The same rule holds
+	// at delivery, so a fragment added to a presented loopback URI stays out of
+	// the Location. URL.String() emits a fragment only when Fragment is set.
 	location.Fragment = ""
 	return location.String(), nil
 }

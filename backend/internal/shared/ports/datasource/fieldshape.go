@@ -232,7 +232,7 @@ func localizeInsideItems(raw json.RawMessage, t reflect.Type, decode ProbeDecode
 	}
 	var items []json.RawMessage
 	if json.Unmarshal(raw, &items) != nil {
-		return nil
+		return nil //nolint:nilerr // a value that is no array is the decoder's to refuse
 	}
 	for i, itemRaw := range items {
 		probeErr := decode(itemRaw, reflect.New(item).Interface())
@@ -240,9 +240,10 @@ func localizeInsideItems(raw json.RawMessage, t reflect.Type, decode ProbeDecode
 			continue
 		}
 		inner := LocalizeFieldFault(itemRaw, reflect.New(item).Interface(), probeErr, decode)
-		if inner != nil {
-			inner.Field = "[" + strconv.Itoa(i) + "]." + inner.Field
+		if inner == nil {
+			return nil
 		}
+		inner.Field = "[" + strconv.Itoa(i) + "]." + inner.Field
 		return inner
 	}
 	return nil

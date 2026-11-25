@@ -3,8 +3,8 @@
 
 package datasource
 
-// Two request rules the generated types do not hold on decode: an enum value
-// is one the contract lists, and an email address is sent as the bare address.
+// A request rule the generated email type does not hold on decode: an address
+// is sent as user@domain.
 
 import (
 	"encoding/json"
@@ -12,64 +12,7 @@ import (
 	"reflect"
 	"strconv"
 	"strings"
-
-	"github.com/margince/margince/backend/internal/shared/kernel/textcut"
 )
-
-// RejectUnknownEnumValues names the first enum value sent that its field does
-// not list. A generated enum is a string type with a Valid method, and its
-// decode accepts any string, so a value outside the list reaches a CHECK and
-// is refused there without a field. owned names the paths a later layer judges.
-//
-//craft:ignore naked-any mirror of StrictDecode's seam target
-func RejectUnknownEnumValues(decoded any, raw json.RawMessage, owned func(path string) bool) *FieldShapeError {
-	sent := sentKeys{raw: raw}
-	return taggedFieldRefusal(reflect.ValueOf(decoded), "", func(_ reflect.StructField, value reflect.Value, name string) *FieldShapeError {
-		if owned != nil && owned(name) {
-			return nil
-		}
-		return unknownEnumValue(value, name, &sent)
-	})
-}
-
-func unknownEnumValue(value reflect.Value, name string, sent *sentKeys) *FieldShapeError {
-	if value.Kind() == reflect.Pointer {
-		if value.IsNil() {
-			return nil
-		}
-		value = value.Elem()
-	} else if value.IsZero() && !sent.holds(name) {
-		return nil
-	}
-	if value.Kind() == reflect.Slice {
-		for i := range value.Len() {
-			if refused := unknownEnumValue(value.Index(i), name+"["+strconv.Itoa(i)+"]", sent); refused != nil {
-				return refused
-			}
-		}
-		return nil
-	}
-	if value.Kind() != reflect.String || listsValue(value) {
-		return nil
-	}
-	return &FieldShapeError{
-		Field: name, Want: "one of the values this field's schema lists",
-		Got: strconv.Quote(textcut.BytesMarked(value.String(), maxEchoedValue, "…")), code: "invalid_enum",
-	}
-}
-
-// listsValue answers the generated Valid method, and true for a string type
-// that has none, which is no enum.
-func listsValue(value reflect.Value) bool {
-	valid := value.MethodByName("Valid")
-	if !valid.IsValid() || valid.Type().NumIn() != 0 || valid.Type().NumOut() != 1 || valid.Type().Out(0).Kind() != reflect.Bool {
-		return true
-	}
-	return valid.Call(nil)[0].Bool()
-}
-
-// maxEchoedValue bounds a caller's own value quoted back in a refusal.
-const maxEchoedValue = 64
 
 // emailTypeName is the name the contract generator gives its email format.
 const emailTypeName = "Email"
@@ -105,8 +48,8 @@ func displayNameEmail(raw json.RawMessage, t reflect.Type, path string) *FieldSh
 		}
 	case t.Kind() == reflect.Slice:
 		var items []json.RawMessage
-		if json.Unmarshal(raw, &items) != nil {
-			return nil
+		if decodeErr := json.Unmarshal(raw, &items); decodeErr != nil {
+			return nil //nolint:nilerr // a value that is no array is the decoder's to refuse
 		}
 		for i, item := range items {
 			if refused := displayNameEmail(item, t.Elem(), path+"["+strconv.Itoa(i)+"]"); refused != nil {
@@ -119,11 +62,14 @@ func displayNameEmail(raw json.RawMessage, t reflect.Type, path string) *FieldSh
 
 func emailWithDisplayName(raw json.RawMessage, path string) *FieldShapeError {
 	var text string
-	if json.Unmarshal(raw, &text) != nil {
-		return nil
+	if decodeErr := json.Unmarshal(raw, &text); decodeErr != nil {
+		return nil //nolint:nilerr // a value that is no string is the decoder's to refuse
 	}
-	parsed, err := mail.ParseAddress(text)
-	if err != nil || parsed.Address == strings.TrimSpace(text) {
+	parsed, parseErr := mail.ParseAddress(text)
+	if parseErr != nil {
+		return nil //nolint:nilerr // an address that does not parse is the decoder's to refuse
+	}
+	if parsed.Address == strings.TrimSpace(text) {
 		return nil
 	}
 	return &FieldShapeError{

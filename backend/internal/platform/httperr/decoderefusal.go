@@ -211,9 +211,9 @@ func deref(t reflect.Type) reflect.Type {
 	return t
 }
 
-// fieldDecodeValidation answers the provider seam's field-decode refusal with
-// the codes the REST body decode uses for the same mistake: an unknown key is
-// `unknown_field`, and a value its field cannot hold names that field.
+// fieldDecodeValidation answers the provider seam's field-decode refusal. It
+// uses the codes of the REST body decode: an unknown key is `unknown_field`,
+// and a value its field cannot hold names that field.
 func fieldDecodeValidation(cause error) *DetailedError {
 	if unknown, ok := errors.AsType[*datasource.UnknownFieldError](cause); ok {
 		return Validation("fields", "unknown_field", boundFaultText(unknown.Error()))

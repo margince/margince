@@ -20,6 +20,7 @@ import (
 	"slices"
 	"strings"
 
+	"github.com/margince/margince/backend/internal/compose/scopesubjects"
 	"github.com/margince/margince/backend/internal/modules/agents"
 	"github.com/margince/margince/backend/internal/platform/corefeatures"
 	"github.com/margince/margince/backend/internal/platform/httperr"
@@ -128,8 +129,8 @@ func (e *reportEngine) Run(ctx context.Context, report string, req reportRequest
 		return reportOutcome{}, &UnknownReportError{Report: report, Served: slices.Sorted(maps.Keys(prebuiltReports))}
 	}
 	if req.Scope != nil && req.Scope.Kind != "" {
-		if part, sentence := scopeShapeFault(*req.Scope); part != "" {
-			return reportOutcome{}, &values.ParseError{Field: reportingScope + "." + part, Code: "invalid", Message: sentence}
+		if fault := scopesubjects.ShapeFault(req.Scope.Kind, req.Scope.ID != nil); fault != nil {
+			return reportOutcome{}, &values.ParseError{Field: reportingScope + "." + fault.Part, Code: codeInvalid, Message: fault.Sentence}
 		}
 	}
 	return e.runSpec(ctx, report, spec, req)

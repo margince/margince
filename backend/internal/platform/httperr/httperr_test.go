@@ -51,7 +51,7 @@ func TestWrite_craftedDomainDetailFlows(t *testing.T) {
 }
 
 // Every sentinel's own words are dropped from the end of a detail and of a
-// field message, however deep the wrap, because the code already says them.
+// field message. The code already says them, however deep the wrap.
 func TestNoDetailEndsInTheWordsOfASentinel(t *testing.T) {
 	if fault, _ := Classify(fmt.Errorf("the record is not on this list: %w", apperrors.ErrNotFound)); fault.Detail != "the record is not on this list" {
 		t.Errorf("detail = %q, want the sentence alone", fault.Detail)

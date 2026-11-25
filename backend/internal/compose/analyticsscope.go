@@ -42,9 +42,9 @@ import (
 
 // The population kinds, spelled as the wire spells them.
 const (
-	ScopeKindWorkspace = "workspace"
-	ScopeKindTeam      = "team"
-	ScopeKindOwner     = "owner"
+	ScopeKindWorkspace = scopesubjects.KindWorkspace
+	ScopeKindTeam      = scopesubjects.KindTeam
+	ScopeKindOwner     = scopesubjects.KindOwner
 )
 
 // RequestedScope is what the caller asked for. A zero value means they asked
@@ -251,8 +251,8 @@ func resolveAnalyticsScope(
 		return defaultScopeFor(p, lens)
 	}
 
-	if part, sentence := scopeShapeFault(requested); part != "" {
-		return ResolvedScope{}, fmt.Errorf("%s: %w", sentence, apperrors.ErrInvalidArgument)
+	if fault := scopesubjects.ShapeFault(requested.Kind, requested.ID != nil); fault != nil {
+		return ResolvedScope{}, fault
 	}
 	switch requested.Kind {
 	case ScopeKindTeam:
@@ -262,29 +262,6 @@ func resolveAnalyticsScope(
 	default:
 		return ResolvedScope{Kind: ScopeKindWorkspace, Label: workspaceLabel}, nil
 	}
-}
-
-// scopeShapeFault names the part of a requested scope that does not fit its
-// kind ("kind" or "id") and says why, or answers "" for a scope that fits. A
-// door names the part by its own wire spelling.
-func scopeShapeFault(requested RequestedScope) (part, sentence string) {
-	switch requested.Kind {
-	case ScopeKindWorkspace:
-		if requested.ID != nil {
-			return "id", "the workspace scope names no subject"
-		}
-	case ScopeKindTeam:
-		if requested.ID == nil {
-			return "id", "a team scope names which team"
-		}
-	case ScopeKindOwner:
-		if requested.ID == nil {
-			return "id", "an owner scope names which owner"
-		}
-	default:
-		return "kind", fmt.Sprintf("%q is not a population; choose owner, team or workspace", requested.Kind)
-	}
-	return "", ""
 }
 
 // workspaceLabel is what the whole-installation population is called. Held

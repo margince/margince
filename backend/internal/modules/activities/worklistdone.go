@@ -296,11 +296,11 @@ func distinctRows(rows []WorklistRowRef) []WorklistRowRef {
 func validRowRef(row WorklistRowRef, at string) error {
 	switch {
 	case row.Source == "":
-		return &values.ParseError{Field: at + "source", Code: "required", Message: "name the lane the row came from in source"}
+		return &values.ParseError{Field: at + "source", Code: codeRequired, Message: "name the lane the row came from in source"}
 	case !crmcontracts.WorklistItemSource(row.Source).Valid():
 		return &values.ParseError{Field: at + "source", Code: "invalid_enum", Message: fmt.Sprintf("%q is not a lane this queue produces", row.Source)}
 	case row.RowID == "":
-		return &values.ParseError{Field: at + "row_id", Code: "required", Message: "name the row in row_id"}
+		return &values.ParseError{Field: at + "row_id", Code: codeRequired, Message: "name the row in row_id"}
 	case len(row.RowID) > maxPinnedRowIDLen:
 		return &values.ParseError{
 			Field: at + "row_id", Code: "too_long", Max: maxPinnedRowIDLen,

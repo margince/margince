@@ -13,9 +13,7 @@ import (
 	"log/slog"
 	"maps"
 	"net/http"
-	"slices"
 	"strconv"
-	"strings"
 
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
@@ -290,35 +288,8 @@ func (f Fault) CallersToFix() bool {
 // that could never succeed, for a mistake the caller could have fixed had we
 // named it. One tree and two renderers means the surfaces cannot drift apart
 // again.
-func Classify(err error) (Fault, bool) {
-	fault, ok := classify(err)
-	fault.Detail = withoutSentinelText(fault.Detail)
-	// A copy, because Fields may be the slice of the caller's own DetailedError.
-	fields := slices.Clone(fault.Fields)
-	for i := range fields {
-		fields[i].Message = withoutSentinelText(fields[i].Message)
-	}
-	fault.Fields = fields
-	return fault, ok
-}
-
-// withoutSentinelText drops the sentinel words a `fmt.Errorf("…: %w")` wrap
-// leaves at the end of a sentence. The code already says them to a machine,
-// and a person reads "the record is not on this list: not found" as noise.
-func withoutSentinelText(detail string) string {
-	for {
-		trimmed := detail
-		for _, m := range mapping {
-			trimmed = strings.TrimSuffix(trimmed, ": "+m.sentinel.Error())
-		}
-		if trimmed == detail {
-			return detail
-		}
-		detail = trimmed
-	}
-}
-
-func classify(err error) (Fault, bool) {
+func Classify(err error) (fault Fault, ok bool) {
+	defer func() { fault = withoutSentinelWords(fault) }()
 	// A REFUSAL THAT CARRIES A REFERENCE renders it as a field rather than
 	// leaving it in prose.
 	//
