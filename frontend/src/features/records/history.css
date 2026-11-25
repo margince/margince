@@ -92,8 +92,16 @@
   border-left: 1px solid var(--borderSubtle);
 }
 
-.reversal-toggle {
+/* The pair's Redo and its disclosure, side by side on the folded line. */
+.reversal-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--gapActions);
   margin-top: var(--space-2);
+}
+.reversal-actions > .entry-undo {
+  margin-top: 0;
 }
 /* In a timeline row's body these blocks sit --space-3 below the line above,
    and the body's own --space-1 gap already pays part of that. */
@@ -103,7 +111,7 @@
     .entry-fields,
     .entry-undo,
     .entry-edge,
-    .reversal-toggle,
+    .reversal-actions,
     .reversal-pair-body
   ) {
   margin-top: calc(var(--space-3) - var(--space-1));
