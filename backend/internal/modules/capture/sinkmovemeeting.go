@@ -22,6 +22,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/platform/auth"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
@@ -80,11 +81,17 @@ func admitCalendarVerb(ctx context.Context, key connector.NaturalKey, verb strin
 	if key.SourceSystem == "" || key.SourceID == "" {
 		return fmt.Errorf("capture: to %s a meeting needs a natural key", verb)
 	}
+	return admitCalendarProvider(ctx, key.SourceSystem, verb)
+}
+
+// admitCalendarProvider is admitCalendarVerb for a verb that names its
+// provider and no single event.
+func admitCalendarProvider(ctx context.Context, sourceSystem, verb string) error {
 	actor, ok := principal.Actor(ctx)
 	if !ok || actor.Type != principal.PrincipalConnector {
 		return fmt.Errorf("capture: to %s a meeting requires a connector principal — the registry builds it, nothing else may", verb)
 	}
-	if want := connectorPrincipalID(key.SourceSystem); want != actor.ID {
+	if want := connectorPrincipalID(sourceSystem); want != actor.ID {
 		return fmt.Errorf(
 			"capture: %q cannot %s a meeting captured by %q — a connector acts for its own provider and no other",
 			actor.ID, verb, want)
@@ -159,15 +166,12 @@ func (s *Sink) moveOnReplay(
 
 // replayIncumbent is assertedIncumbent for the row a capture replays onto. A
 // meeting's replay settles its guests and start under the row lock, so it takes
-// that lock first. Taken after its own import row shares the row, the lock would
-// wait on a colleague's import of the meeting. That import's recompute waits here.
-// A restricted meeting takes none of those writes, so it is not locked.
+// the attendee lock and that row lock first. Taken after its own import row, the
+// lock would wait on a colleague's import, whose recompute waits here. A relist
+// waits here too, and then sees this import. A restricted row is not locked.
 func replayIncumbent(ctx context.Context, tx pgx.Tx, id ids.ActivityID, fields ActivityFields) (string, bool, error) {
 	if fields.Kind == meetingKind {
-		var locked ids.ActivityID
-		err := tx.QueryRow(ctx,
-			`SELECT id FROM activity WHERE id = $1 AND restricted_at IS NULL FOR UPDATE`, id).Scan(&locked)
-		if err != nil && !errors.Is(err, pgx.ErrNoRows) {
+		if err := storekit.LockMeetingAttendeePage(ctx, tx, []ids.UUID{id.UUID}); err != nil {
 			return "", false, fmt.Errorf("capture: locking the meeting a replay settles: %w", err)
 		}
 	}

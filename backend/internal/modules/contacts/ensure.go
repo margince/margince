@@ -32,6 +32,7 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/platform/owndomain"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/kernel/relationshipmark"
@@ -323,6 +324,9 @@ func (s *Store) ensureContact(ctx context.Context, tx pgx.Tx, in EnsureCounterpa
 	}
 	parsed := ParseContactName(in.DisplayName, in.Email)
 	name := parsed.Full
+	// The sign is judged on the address's own domain, so a caller's Domain
+	// field cannot raise or hide one.
+	sign := impersonationSign(in.DisplayName, owndomain.OfAddress(in.Email))
 	// The workspace's own consumer-mail list travels with the candidate: the
 	// employer-agreement term must judge a shared domain the same way capture
 	// does, or an admin's carve-out would hold on one side and not the other.
@@ -369,11 +373,10 @@ func (s *Store) ensureContact(ctx context.Context, tx pgx.Tx, in EnsureCounterpa
 				return err
 			}
 		}
-		if impersonationSign(in.DisplayName, in.Domain) != "" {
-			// The header carries a sign of impersonation. A new record would be
-			// made with the warning. An existing one is left as it stands, and
-			// nothing is learned from this message. The activity is captured either way.
-			return nil
+		if sign != "" {
+			// Nothing is learned from a message that shows a sign. It labels a
+			// contact with no verdict yet, and the activity is captured either way.
+			return raiseImpersonationWarningTx(ctx, tx, match.ContactID, sign)
 		}
 		return fillMissingContactName(ctx, tx, match.ContactID, parsed, res)
 	}
@@ -391,7 +394,7 @@ func (s *Store) ensureContact(ctx context.Context, tx pgx.Tx, in EnsureCounterpa
 		OwnerID:          ownerFromUUID(&in.OwnerID),
 		Visibility:       visibilityFor(in.OwnerScoped),
 		Narrowing:        narrowingFor(in.OwnerScoped, in.NarrowedBecause),
-		QuarantineReason: impersonationSign(in.DisplayName, in.Domain),
+		QuarantineReason: sign,
 		Emails:           []ContactEmailInput{{Email: in.Email, EmailType: emailTypeWork, IsPrimary: true}},
 		Source:           in.Source,
 		CapturedBy:       in.CapturedBy,

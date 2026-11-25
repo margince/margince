@@ -1841,6 +1841,9 @@ export const en = {
   "scheduling.retryHelp":
     "Retry sends the same invitation again, so the guest does not get a second one.",
   "book.videoApp": "{app} · link in your invite",
+  "book.lengthChoice": "Meeting length",
+  "book.lengthNotOffered":
+    "This meeting length is no longer offered. Choose another length.",
   "scheduling.pickDay": "Choose a day",
   "scheduling.changeTime": "Change time",
   "scheduling.confirmAt": "Confirm {day}, {time}",
@@ -2224,6 +2227,7 @@ export const en = {
   "systemJob.capture_classify": "Mail sorting",
   "systemJob.capture_credential_backfill": "Mail connection update",
   "systemJob.capture_personal_purge": "Personal mail removal",
+  "systemJob.capture_purge_receipt": "Mail removal receipt",
   "systemJob.capture_part_slim_worker": "Mail storage cleanup",
   "systemJob.capture_trace_sweep": "Mail trace cleanup",
   "systemJob.capture_which_deal": "Deal question from mail",
@@ -2649,6 +2653,8 @@ export const en = {
   "history.field.qualifying_event_retracted": "Recorded exchange withdrawn",
   "history.field.acquisition_request_retracted":
     "Acquisition request withdrawn",
+  "history.field.impersonation_warning_raised":
+    "Impersonation warning raised by a later email",
   "history.field.impersonation_warning_cleared":
     "Impersonation warning cleared",
   "history.field.impersonation_warning_carried":
@@ -3367,6 +3373,16 @@ export const en = {
   "rel.add": "Add relationship",
   "rel.seatOnDeal": "Add to a deal",
   "rel.addStakeholder": "Add stakeholder",
+  "rel.stakeholderOffer.title": "Add this mail’s contacts to the deal?",
+  "rel.stakeholderOffer.body":
+    "As stakeholders, their next mail goes onto the deal by itself. Untick anyone who is not part of it.",
+  "rel.stakeholderOffer.legend": "Contacts on this mail",
+  "rel.stakeholderOffer.confirm": "Add to deal",
+  "rel.stakeholderOffer.decline": "Not now",
+  "rel.stakeholderOffer.noneTicked": "Tick at least one contact to add.",
+  "rel.stakeholderOffer.added": "Added to the deal",
+  "rel.stakeholderOffer.unread":
+    "The mail is on the deal. Margince could not read who is on it, so it offers nobody to add.",
   "rel.dealStakeholders": "Stakeholders",
   "rel.dealStakeholdersEmpty": "No stakeholders on this deal",
   "rel.employerUnavailable":
@@ -3830,6 +3846,8 @@ export const en = {
   "consent.reason.no_consent": "No consent recorded",
   "consent.reason.existing_customer":
     "They bought from you and were told then that they may object to advertising",
+  "consent.reason.opt_out_allowed":
+    "Advertising is allowed here until they refuse, and no refusal is on file",
   "consent.reason.qualifying.inbound_message": "They wrote to you on {date}",
   "consent.reason.qualifying.inquiry": "They made an inquiry on {date}",
   "consent.reason.qualifying.in_person":
@@ -8219,6 +8237,12 @@ export const en = {
   "editAccess.withdraw": "Withdraw edit access request",
   "editAccess.sent": "Edit access requested from {owner}",
   "editAccess.withdrawn": "Edit access request withdrawn",
+  // A record this reader may view but not change. The head's pill and the
+  // Ownership row say so, and the panel names the owner.
+  "viewOnly.pill": "View only",
+  "viewOnly.label": "Your access",
+  "viewOnly.owns": "{owner} owns {name}",
+  "record.details.access": "Access",
   // The owner offering a record to a colleague, from the access panel.
   "handover.offer": "Hand over to…",
   "handover.offerTo": "Hand over to",
@@ -8564,6 +8588,8 @@ export const en = {
   "sendPermission.footer.phone": "a phone number",
   "sendPermission.footer.web": "a website or social link",
   "sendPermission.footer.privacy": "privacy contact information",
+  "sendPermission.footer.advertisement":
+    "the line that identifies it as an advertisement",
   "sendPermission.footer.advertiser": "advertiser contact information",
   "sendPermission.footer.identity": "the company name and address",
   "sendPermission.footer.unknown": "some company footer text",
@@ -8590,6 +8616,14 @@ export const en = {
   "sendPermission.appliesToSome_other":
     "This applies to {count} of {total} recipients.",
   "sendPermission.checking": "Checking whether this message can be sent…",
+  "countryQuestion.title": "Which country is {address} in?",
+  "countryQuestion.body":
+    "Some countries allow advertising until the contact unsubscribes. This contact has no country, so Margince asks for the consent it needs everywhere else. Your answer is saved on the contact.",
+  "countryQuestion.label": "Country",
+  "countryQuestion.none": "Choose a country",
+  "countryQuestion.save": "Save country",
+  "countryQuestion.alreadySet":
+    "This contact has a country now. The check was asked again.",
   "lawfulBasis.title": "No valid basis recorded",
   "lawfulBasis.body":
     "No valid basis under Vietnamese law is recorded for this contact: neither their consent nor a case where the law allows processing without it. Sending is at your own risk.",
@@ -10542,6 +10576,16 @@ export const en = {
     "Put this text in ~/.gemini/config/mcp_config.json. If the file already lists servers, add only the margince entry beside them.",
   "aiAccess.local.antigravity.signIn":
     "Open the agent settings, then “Customizations”, and choose “Authenticate” next to margince.",
+  "aiAccess.place.lumoNote":
+    "Lumo on the web cannot connect to other apps yet. Use the Lumo desktop app, which you can download from proton.me/lumo/download.",
+  "aiAccess.local.lumo.open":
+    "In Lumo Desktop, choose “Settings” at the bottom of the sidebar, then “Desktop app” and “Connectors”.",
+  "aiAccess.local.lumo.add":
+    "Choose “Add MCP server…” and set “Transport” to “Remote (HTTP)”.",
+  "aiAccess.local.lumo.fill":
+    "Enter margince as the ID and Margince as the Display name, add a short description, and paste the address.",
+  "aiAccess.local.lumo.signIn":
+    "Choose “Add server”. Margince opens when Lumo asks: sign in and choose Authorize.",
   "aiAccess.other.sub":
     "Margince works with any AI tool that can add a remote MCP server. Look for “MCP”, “connectors” or “tools” in its settings.",
   "aiAccess.other.typeLabel": "Type",
@@ -11228,8 +11272,6 @@ export const en = {
   "settings.resetDataConfirmName": "Type this company name:",
   "settings.resetDataResult":
     "Cleared: tables {tables}, job rows {jobs}, event streams {streams}, cache keys {keys}, stored files {objects}.",
-  "settings.resetDataDrainWarning":
-    "A background job was running when the reset began. It fails against the deleted data and logs one harmless error.",
 
   "settings.jobs": "Background jobs",
   "settings.jobsSub": "Queued background jobs and failed jobs by owner.",
@@ -14298,6 +14340,7 @@ export const en = {
   "buyer.previewReadOnly":
     "A preview is read-only. Close this tab to return to the Deal Room page.",
   "buyer.closedNote": "This room is now read-only.",
+  "buyer.readOnly": "Your access to this room is read-only.",
   "buyer.stewardUnknown": "your contact",
   "buyer.signOut": "Sign out",
   "buyer.signedInAs": "Signed in as {name}.",
@@ -14390,7 +14433,6 @@ export const en = {
   "threads.newLabel": "New thread",
   "threads.requireChangeLabel": "This document needs a change",
   "threads.open": "Post",
-  "threads.readOnly": "Your access is read-only.",
   "deal360.blocker": "Blockers",
   "deal360.buyer": "What the buyer wants",
   "deal360.verdict.live": "On track",
@@ -15622,6 +15664,8 @@ export const en = {
   "captureActivity.filing.core.retracted":
     "The CRM took its deal link back: {reason}",
   "captureActivity.filing.basis.project": "the mail’s project",
+  "captureActivity.filing.basis.chosen_thread":
+    "a deal a colleague chose for an earlier mail in the thread",
   "captureActivity.filing.basis.thread": "an earlier mail in the thread",
   "captureActivity.filing.basis.sole_open_deal": "the company’s only open deal",
   "captureActivity.filing.basis.stakeholder": "a stakeholder on the deal",
@@ -19989,6 +20033,7 @@ export const en = {
   "contact.strip.days": "{count} days",
   "contact.consent.fact.existingCustomer":
     "Existing customer, marketing allowed",
+  "contact.consent.fact.optOutAllowed": "Advertising allowed until they refuse",
   "contact.consent.fact.saidWeMayWrite": "Permission to write recorded",
   "contact.consent.fact.businessContact": "Recent business contact recorded",
   "contact.consent.fact.serviceMessages": "Service messages allowed",
@@ -21659,6 +21704,9 @@ export const en = {
   "worklist.manager.kind.next_step": "Deal next step",
   "worklist.manager.kind.review_backlog": "Review backlog",
   "worklist.manager.kind.general": "Other",
+  "worklist.manager.coachDeal": "Deal",
+  "worklist.manager.coachNoDeal":
+    "No deal is in their day, so there is none to name.",
   "worklist.board.title": "Team work needing attention",
   "worklist.gap.rankedOn": "Ranked on {date}.",
   "worklist.gap.masked_one":
@@ -22811,6 +22859,7 @@ export const en = {
   "magic.why.site_read_unnamed": "Read on the company’s website.",
   "magic.why.site_read_each": "Read on each company’s own website.",
   "magic.why.signature": "Taken from an email signature.",
+  "magic.why.stated": "Reason given: {why}",
   "magic.why.retention": "Retention rule: after {days} days.",
   "magic.by.retention": "Retention",
   "magic.by.mail_filing": "Mail filing",
@@ -22967,6 +23016,7 @@ export const en = {
   "scheduling.videoNotSet": "Not set",
   "scheduling.video.ownShort": "Your own link",
   "scheduling.mainLink": "(main link)",
+  "scheduling.copyLengthLink": "Copy the {length} link",
   "scheduling.linkActions": "More actions for {name}",
   "scheduling.editLink": "Edit link",
   "scheduling.createLink": "Create booking link",
@@ -22996,9 +23046,23 @@ export const en = {
   "scheduling.replaceAliasHelp":
     "Your short address {url} stops working too. You can choose it again afterwards.",
   "scheduling.replaceConfirmTitle": "Replace link address?",
-  "scheduling.team.title": "Colleagues on this link",
-  "scheduling.team.foot":
-    "Guests see only the times when you and every colleague here are free, in each colleague’s own working hours. Each booking invites every colleague.",
+  "scheduling.teamLinks.title": "Team links",
+  "scheduling.teamLinks.foot":
+    "A team link offers only the times when you and every colleague on it are free, in each one’s own working hours, and invites every colleague to each meeting. It uses the calendar and settings of your personal link, which always offers only your own free time.",
+  "scheduling.teamLinks.create": "New team link with",
+  "scheduling.teamLinks.createHelp":
+    "Choose a colleague to make a new link with its own address. Only colleagues with a connected calendar are offered. Each colleague confirms before the link takes bookings.",
+  "scheduling.teamLinks.defaultTitle": "Meet {names}",
+  "scheduling.teamLinks.off": "Off: takes no bookings",
+  "scheduling.teamLinks.ready": "Takes bookings",
+  "scheduling.teamLinks.waiting": "Waiting for colleagues",
+  "scheduling.teamLinks.paused": "Paused: your calendar cannot take meetings",
+  "scheduling.teamLinks.delete": "Delete link",
+  "scheduling.teamLinks.deleteTitle": "Delete “{title}”?",
+  "scheduling.teamLinks.deleteHelp":
+    "The link’s address stops working. Meetings already booked through it stay. Your personal link does not change.",
+  "scheduling.teamLinks.lastMember":
+    "A team link needs at least one colleague. Delete the link instead.",
   "scheduling.team.add": "Add a colleague",
   "scheduling.team.addHelp":
     "Only colleagues with a connected calendar are offered. Each one confirms before the link takes bookings.",
@@ -23021,7 +23085,7 @@ export const en = {
   "scheduling.team.confirm": "Confirm",
   "scheduling.team.leave": "Leave",
   "worklist.untitled.booking_health_team_not_ready":
-    "Your booking page is paused: a colleague on it has not confirmed, has left, or has no readable calendar",
+    "Your team link is paused: a colleague on it has not confirmed, has left, or has no readable calendar",
   "scheduling.personalLinksFoot":
     "Meeting one specific person? Open their contact and choose Book a meeting to send a few times or a personal link that only they can use.",
   "scheduling.liveNoInvitesTitle": "Guests can book, but no invitations go out",
@@ -23600,7 +23664,6 @@ export const en = {
   "aiTask.name.document_extract": "Document extraction",
   "aiTask.name.draft_reply": "Reply drafting",
   "aiTask.name.enrich": "Signature enrichment",
-  "aiTask.name.extension_task": "Extension AI task",
   "aiTask.name.growth_fit": "Company fit assessment",
   "aiTask.name.nl_search": "Natural-language search",
   "aiTask.name.offer_draft": "Offer drafting",
@@ -24189,6 +24252,33 @@ export const en = {
   "health.openModels": "Open Models",
   "health.openConnections": "Open Connections",
   "health.openRegional": "Open Regional and calendar",
+  "health.source.footer": "Company details in mail footers",
+  "health.code.footer_complete":
+    "Every mail footer has the company details it must show",
+  "health.code.footer_incomplete": "Mail footers lack company details",
+  "health.footerIncompleteFor": "{entity}: mail footers lack company details",
+  "health.footerDefaultEntity": "The default legal entity",
+  "health.effect.footer":
+    "Mail that must show these details is held for review. Whoever wrote it can still send it with a reason. A background send, such as a meeting reminder, is dropped.",
+  "health.footerNext":
+    "Fill in the missing details. The warning goes once they are complete.",
+  "health.recovery.footer":
+    "Every company detail the jurisdiction packs require is stated.",
+  "health.footerMissing": "Missing details",
+  "health.footerHeldByUser": "Sends by users held since the last change",
+  "health.footerHeldInBackground":
+    "Background sends held or dropped since the last change",
+  "health.footerDetail.controller_identity": "Legal name and postal address",
+  "health.footerDetail.privacy_contact": "Privacy contact",
+  "health.footerDetail.objection_route": "How to object",
+  "health.footerDetail.advertisement": "Advertisement line",
+  "health.footerDetail.advertiser_contact": "Advertiser contact",
+  "health.footerDetail.entity_name": "Company name",
+  "health.measure.messages_one": "{count} message",
+  "health.measure.messages_other": "{count} messages",
+  "health.openLegalEntities": "Open Legal entities",
+  "health.openCompanyProfile": "Open Company profile",
+  "health.openDisclosures": "Open Jurisdiction",
   "health.unit.runs": "runs",
   "health.history": "Retained failure history",
   "health.historyWindow":

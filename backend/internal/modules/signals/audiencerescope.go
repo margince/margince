@@ -39,10 +39,9 @@ const (
 // different owner is archived too: its summary now mixes correspondence two
 // different contacts limited, and no one reader admits both.
 //
-// The rows are selected by source = 'signal-scan' — the extraction producer's
-// own stamp — never by source_channel, which the contract DEFAULTS to
-// 'derived' for a human's own POST /signals (migration 0208 records the same
-// trap); a contact's own filing is theirs, not this corrector's.
+// The rows are selected by ScanWrittenSQL, the extraction producer's own stamp.
+// source_channel defaults to 'derived' for a signal a member files, and that
+// filing is theirs, not this corrector's.
 func NarrowDerivedForActivity(ctx context.Context, tx pgx.Tx, activityID ids.UUID, owner *ids.UUID) (int, error) {
 	if owner != nil {
 		resolved, found, err := auth.ConsolidatedMemberTx(ctx, tx, *owner)
@@ -55,6 +54,7 @@ func NarrowDerivedForActivity(ctx context.Context, tx pgx.Tx, activityID ids.UUI
 			owner = nil
 		}
 	}
+	scanWritten := ScanWrittenSQL("")
 	cites := `evidence @> jsonb_build_array(jsonb_build_object('source_type', 'activity', 'source_id', $1::text))`
 	moved := 0
 	apply := func(action, sql string, before, after map[string]any, args ...any) error {
@@ -90,7 +90,7 @@ func NarrowDerivedForActivity(ctx context.Context, tx pgx.Tx, activityID ids.UUI
 		if err := apply("narrowing extraction signals", `
 			UPDATE signal
 			   SET visibility = 'owner', owner_id = $2
-			 WHERE source = 'signal-scan' AND visibility = 'workspace' AND archived_at IS NULL
+			 WHERE `+scanWritten+` AND visibility = 'workspace' AND archived_at IS NULL
 			   AND `+cites+`
 			RETURNING id`,
 			map[string]any{"visibility": "workspace", "owner_id": nil},
@@ -103,7 +103,7 @@ func NarrowDerivedForActivity(ctx context.Context, tx pgx.Tx, activityID ids.UUI
 		if err := apply("archiving cross-owner extraction signals", `
 			UPDATE signal
 			   SET archived_at = now()
-			 WHERE source = 'signal-scan' AND visibility = 'owner' AND owner_id <> $2 AND archived_at IS NULL
+			 WHERE `+scanWritten+` AND visibility = 'owner' AND owner_id <> $2 AND archived_at IS NULL
 			   AND `+cites+`
 			RETURNING id`,
 			map[string]any{rescopeImageArchivedAt: nil},
@@ -116,7 +116,7 @@ func NarrowDerivedForActivity(ctx context.Context, tx pgx.Tx, activityID ids.UUI
 	if err := apply("archiving ownerless extraction signals", `
 		UPDATE signal
 		   SET archived_at = now()
-		 WHERE source = 'signal-scan' AND archived_at IS NULL
+		 WHERE `+scanWritten+` AND archived_at IS NULL
 		   AND `+cites+`
 		RETURNING id`,
 		map[string]any{rescopeImageArchivedAt: nil},

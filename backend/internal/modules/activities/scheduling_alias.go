@@ -105,8 +105,7 @@ func (s *Store) setBookingAliasTx(ctx context.Context, tx pgx.Tx, host ids.UserI
 	args := schedulingArgs{}
 	var page ids.UUID
 	var policy *crmcontracts.SchedulingProfile
-	err := tx.QueryRow(ctx, `SELECT id, scheduling_policy FROM booking_page WHERE host_user_id=`+args.add(host)+
-		` AND revoked_at IS NULL ORDER BY created_at DESC LIMIT 1 FOR UPDATE`, args...).Scan(&page, &policy)
+	err := tx.QueryRow(ctx, `SELECT id, scheduling_policy FROM booking_page WHERE `+livePageSQL(&args, host, ids.Nil)+` FOR UPDATE`, args...).Scan(&page, &policy)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return errAliasNoPage
 	}
@@ -131,7 +130,8 @@ func (s *Store) setBookingAliasTx(ctx context.Context, tx pgx.Tx, host ids.UserI
 	return storekit.EmitEvent(ctx, tx, audit, page, crmcontracts.InternalEventBookingPageUpdated{Enabled: policy != nil && policy.Enabled})
 }
 
-// liveBookingPageAlias is the host's live alias on their current page, or "".
+// liveBookingPageAlias is the host's live alias on their personal page, or "".
+// An alias only ever names a personal page.
 func liveBookingPageAlias(ctx context.Context, tx pgx.Tx, host ids.UserID) (string, error) {
 	args := schedulingArgs{}
 	var alias string

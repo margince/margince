@@ -61,6 +61,7 @@ find "$ROOT" "$SCRIPTS_ROOT" "$E2E_ROOT" \( -name "*.ts" -o -name "*.tsx" -o -na
     ! -path "$ROOT/i18n/vi.ts" \
     -exec wc -l {} + \
 | awk -v cap="$CAP" -v testcap="$TEST_CAP" -v waivers="$WAIVERS" -v e2e="$E2E_ROOT/" '
+# early-pipe-ok: this program exits only in END, after it has read all its input
 BEGIN {
   while ((getline line < waivers) > 0) {
     if (line ~ /^[[:space:]]*#/ || line ~ /^[[:space:]]*$/) continue

@@ -1957,7 +1957,6 @@ const (
 	AiTaskDocumentExtract               AiTask = "document_extract"
 	AiTaskDraftReply                    AiTask = "draft_reply"
 	AiTaskEnrich                        AiTask = "enrich"
-	AiTaskExtensionTask                 AiTask = "extension_task"
 	AiTaskGrowthFit                     AiTask = "growth_fit"
 	AiTaskNlSearch                      AiTask = "nl_search"
 	AiTaskOfferDraft                    AiTask = "offer_draft"
@@ -2017,8 +2016,6 @@ func (e AiTask) Valid() bool {
 	case AiTaskDraftReply:
 		return true
 	case AiTaskEnrich:
-		return true
-	case AiTaskExtensionTask:
 		return true
 	case AiTaskGrowthFit:
 		return true
@@ -8658,6 +8655,7 @@ const (
 	ContactConsentGuardEntryReasonCodeNoConsent                    ContactConsentGuardEntryReasonCode = "no_consent"
 	ContactConsentGuardEntryReasonCodeNoConsentExceptionNotOffered ContactConsentGuardEntryReasonCode = "no_consent_exception_not_offered"
 	ContactConsentGuardEntryReasonCodeObjection                    ContactConsentGuardEntryReasonCode = "objection"
+	ContactConsentGuardEntryReasonCodeOptOutAllowed                ContactConsentGuardEntryReasonCode = "opt_out_allowed"
 	ContactConsentGuardEntryReasonCodeQualifyingEvent              ContactConsentGuardEntryReasonCode = "qualifying_event"
 	ContactConsentGuardEntryReasonCodeSaidWeMayWrite               ContactConsentGuardEntryReasonCode = "said_we_may_write"
 	ContactConsentGuardEntryReasonCodeSuppressed                   ContactConsentGuardEntryReasonCode = "suppressed"
@@ -8688,6 +8686,8 @@ func (e ContactConsentGuardEntryReasonCode) Valid() bool {
 	case ContactConsentGuardEntryReasonCodeNoConsentExceptionNotOffered:
 		return true
 	case ContactConsentGuardEntryReasonCodeObjection:
+		return true
+	case ContactConsentGuardEntryReasonCodeOptOutAllowed:
 		return true
 	case ContactConsentGuardEntryReasonCodeQualifyingEvent:
 		return true
@@ -14646,23 +14646,32 @@ func (e HandoffAssigneeStatus) Valid() bool {
 
 // Defines values for HealthActionDestination.
 const (
-	HealthActionDestinationConfiguration HealthActionDestination = "configuration"
-	HealthActionDestinationConnections   HealthActionDestination = "connections"
-	HealthActionDestinationDiagnostics   HealthActionDestination = "diagnostics"
-	HealthActionDestinationModels        HealthActionDestination = "models"
-	HealthActionDestinationRegional      HealthActionDestination = "regional"
-	HealthActionDestinationSearch        HealthActionDestination = "search"
-	HealthActionDestinationUpdates       HealthActionDestination = "updates"
+	HealthActionDestinationCompanyProfile HealthActionDestination = "company_profile"
+	HealthActionDestinationConfiguration  HealthActionDestination = "configuration"
+	HealthActionDestinationConnections    HealthActionDestination = "connections"
+	HealthActionDestinationDiagnostics    HealthActionDestination = "diagnostics"
+	HealthActionDestinationDisclosures    HealthActionDestination = "disclosures"
+	HealthActionDestinationLegalEntities  HealthActionDestination = "legal_entities"
+	HealthActionDestinationModels         HealthActionDestination = "models"
+	HealthActionDestinationRegional       HealthActionDestination = "regional"
+	HealthActionDestinationSearch         HealthActionDestination = "search"
+	HealthActionDestinationUpdates        HealthActionDestination = "updates"
 )
 
 // Valid indicates whether the value is a known member of the HealthActionDestination enum.
 func (e HealthActionDestination) Valid() bool {
 	switch e {
+	case HealthActionDestinationCompanyProfile:
+		return true
 	case HealthActionDestinationConfiguration:
 		return true
 	case HealthActionDestinationConnections:
 		return true
 	case HealthActionDestinationDiagnostics:
+		return true
+	case HealthActionDestinationDisclosures:
+		return true
+	case HealthActionDestinationLegalEntities:
 		return true
 	case HealthActionDestinationModels:
 		return true
@@ -14837,6 +14846,7 @@ func (e HealthFindingScope) Valid() bool {
 const (
 	HealthFindingUnitItems     HealthFindingUnit = "items"
 	HealthFindingUnitMailboxes HealthFindingUnit = "mailboxes"
+	HealthFindingUnitMessages  HealthFindingUnit = "messages"
 	HealthFindingUnitRecords   HealthFindingUnit = "records"
 	HealthFindingUnitRuns      HealthFindingUnit = "runs"
 	HealthFindingUnitThreads   HealthFindingUnit = "threads"
@@ -14850,6 +14860,8 @@ func (e HealthFindingUnit) Valid() bool {
 		return true
 	case HealthFindingUnitMailboxes:
 		return true
+	case HealthFindingUnitMessages:
+		return true
 	case HealthFindingUnitRecords:
 		return true
 	case HealthFindingUnitRuns:
@@ -14857,6 +14869,36 @@ func (e HealthFindingUnit) Valid() bool {
 	case HealthFindingUnitThreads:
 		return true
 	case HealthFindingUnitUpdates:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for HealthFooterGapMissing.
+const (
+	HealthFooterGapMissingAdvertisement      HealthFooterGapMissing = "advertisement"
+	HealthFooterGapMissingAdvertiserContact  HealthFooterGapMissing = "advertiser_contact"
+	HealthFooterGapMissingControllerIdentity HealthFooterGapMissing = "controller_identity"
+	HealthFooterGapMissingEntityName         HealthFooterGapMissing = "entity_name"
+	HealthFooterGapMissingObjectionRoute     HealthFooterGapMissing = "objection_route"
+	HealthFooterGapMissingPrivacyContact     HealthFooterGapMissing = "privacy_contact"
+)
+
+// Valid indicates whether the value is a known member of the HealthFooterGapMissing enum.
+func (e HealthFooterGapMissing) Valid() bool {
+	switch e {
+	case HealthFooterGapMissingAdvertisement:
+		return true
+	case HealthFooterGapMissingAdvertiserContact:
+		return true
+	case HealthFooterGapMissingControllerIdentity:
+		return true
+	case HealthFooterGapMissingEntityName:
+		return true
+	case HealthFooterGapMissingObjectionRoute:
+		return true
+	case HealthFooterGapMissingPrivacyContact:
 		return true
 	default:
 		return false
@@ -23620,6 +23662,33 @@ func (e SchedulingTeamAnswerState) Valid() bool {
 	case SchedulingTeamAnswerStateConfirmed:
 		return true
 	case SchedulingTeamAnswerStateLeft:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for SchedulingTeamLinkBlocker.
+const (
+	SchedulingTeamLinkBlockerCalendarReadOnly    SchedulingTeamLinkBlocker = "calendar_read_only"
+	SchedulingTeamLinkBlockerCalendarUnavailable SchedulingTeamLinkBlocker = "calendar_unavailable"
+	SchedulingTeamLinkBlockerNoCalendar          SchedulingTeamLinkBlocker = "no_calendar"
+	SchedulingTeamLinkBlockerNone                SchedulingTeamLinkBlocker = "none"
+	SchedulingTeamLinkBlockerTeamNotReady        SchedulingTeamLinkBlocker = "team_not_ready"
+)
+
+// Valid indicates whether the value is a known member of the SchedulingTeamLinkBlocker enum.
+func (e SchedulingTeamLinkBlocker) Valid() bool {
+	switch e {
+	case SchedulingTeamLinkBlockerCalendarReadOnly:
+		return true
+	case SchedulingTeamLinkBlockerCalendarUnavailable:
+		return true
+	case SchedulingTeamLinkBlockerNoCalendar:
+		return true
+	case SchedulingTeamLinkBlockerNone:
+		return true
+	case SchedulingTeamLinkBlockerTeamNotReady:
 		return true
 	default:
 		return false
@@ -33624,7 +33693,7 @@ type Activity struct {
 	// AutomaticKind What sent this activity when no human wrote it, or null when a human did. `product` is mail or work the product wrote itself, `calendar` a mail carrying an invitation, a response or a cancellation, `sending_system` mail from a sending system such as a file-share notice, a notification or a delivery report, and `bulk` mail that carried a List-Unsubscribe header, such as a newsletter or a campaign. Such a row is never counted as an exchange, a last contact or a direction of the relationship.
 	AutomaticKind *ActivityAutomaticKind `json:"automatic_kind,omitempty"`
 
-	// AwaitingOutcome Whether this meeting still owes an answer about how it went, by the rule the Worklist's outcome lane asks: a meeting linked to a customer record the caller may see, with no `meeting_status` or `booked`, whose start has passed (a date-only meeting once its date is over in the installation's timezone) by the server's clock, and whose content the caller may read. Unlike the lane it has no look-back window, so an old booked meeting still asks. Every read that carries `writable` carries this. A client offers the outcome control when this and `writable` are both true. Absent means false.
+	// AwaitingOutcome Whether this meeting still owes an answer about how it went, by the rule the Worklist's outcome lane asks: a meeting linked to a customer record the caller may see, with no `meeting_status` or `booked`, whose start has passed (a date-only meeting once its date is over in the installation's timezone) by the server's clock, and whose content the caller may read. A meeting whose subject names travel logistics (a flight, an airport, a pickup) asks only when it links a deal, lead or project the caller may see. Unlike the lane it has no look-back window, so an old booked meeting still asks. Every read that carries `writable` carries this. A client offers the outcome control when this and `writable` are both true. Absent means false.
 	AwaitingOutcome *bool   `json:"awaiting_outcome,omitempty"`
 	Body            *string `json:"body,omitempty"`
 
@@ -34917,6 +34986,9 @@ type AiActivityItem struct {
 	// until the projection's retention window closes over them — narrowing the filter would
 	// refuse a query that still has answers.
 	//
+	// `extension_task` is RETIRED for the same reason: the task was removed, and an extension's
+	// AI task now reports under its own `ext_<unit>_<task>` name. `ai.RetiredTasks` lists it.
+	//
 	// Its own schema because the item that reports a kind and the query that asks for kinds
 	// must be ONE list — two copies of a vocabulary are two vocabularies as soon as somebody
 	// edits one.
@@ -35006,6 +35078,9 @@ type AiActivityItemState string
 // also what a caller may FILTER on, and rows written before they were retired are served
 // until the projection's retention window closes over them — narrowing the filter would
 // refuse a query that still has answers.
+//
+// `extension_task` is RETIRED for the same reason: the task was removed, and an extension's
+// AI task now reports under its own `ext_<unit>_<task>` name. `ai.RetiredTasks` lists it.
 //
 // Its own schema because the item that reports a kind and the query that asks for kinds
 // must be ONE list — two copies of a vocabulary are two vocabularies as soon as somebody
@@ -35419,9 +35494,9 @@ type AiFeatureRoute struct {
 	BudgetExempt bool `json:"budget_exempt"`
 
 	// Certification The certification grade of the model that answers this feature first (the lead of
-	// `normal_candidates`), read from the committed certification records by the readiness
+	// `effective_candidates`), read from the committed certification records by the readiness
 	// report's rule: the worst grade over every site the feature ships, and not measured when
-	// any site has no record for that model. Absent when no model is bound, and for embeddings.
+	// any site has no record for that model. Absent when no model is bound or the budget blocks the feature, and for embeddings.
 	Certification *AiTaskCertification `json:"certification,omitempty"`
 
 	// Decides The task declares a decision form, so a decision model may answer it first and its decision timeout applies.
@@ -35980,7 +36055,7 @@ type AiProviderSettings struct {
 
 // AiRouteCandidate defines model for AiRouteCandidate.
 type AiRouteCandidate struct {
-	// Certification What the certification records say about this model for this task. Absent on a candidate no record measured, which the screen reads as not certified.
+	// Certification What the certification records say about this model for this task, read by the same rule as the feature's `certification` grade, so the lead candidate and the feature never disagree. Absent on a candidate that grade calls not_measured.
 	Certification *AiRouteCertification `json:"certification,omitempty"`
 	Model         string                `json:"model"`
 	Processing    string                `json:"processing"`
@@ -35988,7 +36063,7 @@ type AiRouteCandidate struct {
 	Tier          string                `json:"tier"`
 }
 
-// AiRouteCertification What the certification records say about this model for this task. Absent on a candidate no record measured, which the screen reads as not certified.
+// AiRouteCertification What the certification records say about this model for this task, read by the same rule as the feature's `certification` grade, so the lead candidate and the feature never disagree. Absent on a candidate that grade calls not_measured.
 type AiRouteCertification struct {
 	// Current Every record behind the verdict still describes the prompts this build sends.
 	Current bool `json:"current"`
@@ -36160,9 +36235,9 @@ type AiStatus struct {
 type AiTask string
 
 // AiTaskCertification The certification grade of the model that answers this feature first (the lead of
-// `normal_candidates`), read from the committed certification records by the readiness
+// `effective_candidates`), read from the committed certification records by the readiness
 // report's rule: the worst grade over every site the feature ships, and not measured when
-// any site has no record for that model. Absent when no model is bound, and for embeddings.
+// any site has no record for that model. Absent when no model is bound or the budget blocks the feature, and for embeddings.
 type AiTaskCertification struct {
 	// Grade ready — clears the certification bar, so rely on it; usable_with_care — mostly right, so have someone look over what it produces; not_reliable — wrong too often or below the quality bar; not_measured — no record grades this model on every site of the feature. docs/reference/ai-certification.md states the bars.
 	Grade string `json:"grade"`
@@ -36854,6 +36929,9 @@ type Approval struct {
 
 	// TargetVersion The `version` of the target row when the diff was staged. On approve-execute the server RE-READS the row; if its current version ≠ target_version the execution is rejected with 409 ErrVersionSkew (the world changed since the human last saw the diff — re-stage). This closes the stage→approval race (ADR-0036).
 	TargetVersion *int `json:"target_version,omitempty"`
+
+	// Why Why this proposal exists, as whoever staged it said it: the record and the fact that prompted it. A card leads with it. Absent when its maker gave none, never filled with a stock sentence, and withheld with the summary.
+	Why *WorkGrounds `json:"why,omitempty"`
 }
 
 // ApprovalStatus defines model for Approval.Status.
@@ -38383,6 +38461,9 @@ type AttentionItem struct {
 	SummaryParts  *ApprovalSummaryParts `json:"summary_parts,omitempty"`
 	SystemDisplay *SystemDisplay        `json:"system_display,omitempty"`
 
+	// TaskType On a task row: the kind of work it asks for, so a card names it without reading the task. Absent on other rows.
+	TaskType *TaskType `json:"task_type,omitempty"`
+
 	// Title The server's own sentence for this item, when it has one — an approval
 	// summary is composed at staging time out of the proposal's own facts.
 	// ABSENT where the sentence would have to be invented: the product ships
@@ -38702,7 +38783,7 @@ type AuditLogEntry struct {
 	// AuthorizationRule Which RBAC/scope rule allowed it.
 	AuthorizationRule *string `json:"authorization_rule,omitempty"`
 
-	// BatchId The bulk change that wrote this row; null for a change made on its own.
+	// BatchId The operation group that wrote this row: a bulk change, or one run of a capture purge. Null for a change made on its own.
 	BatchId *openapi_types.UUID `json:"batch_id,omitempty"`
 
 	// Before The record image before the change. For an `activity` row this read
@@ -46165,7 +46246,7 @@ type ContactGraphRouteEvidence struct {
 // ContactGraphRouteType `direct` is a colleague who corresponds with the contact themselves. `through_contact` goes via someone else at the contact's company.
 type ContactGraphRouteType string
 
-// ContactImpersonationWarning The sign of impersonation the sender check saw when capture made this contact from a mail.
+// ContactImpersonationWarning The sign of impersonation the sender check saw on a captured mail from this contact.
 type ContactImpersonationWarning struct {
 	// DetectedAt When the sender check recorded it.
 	DetectedAt time.Time `json:"detected_at"`
@@ -48397,11 +48478,13 @@ type CreateSignalRequest struct {
 	EntityId   *openapi_types.UUID `json:"entity_id,omitempty"`
 
 	// EntityType Subject record, both entity fields together or neither: with a subject the signal enters `resolved`; without one it enters `unresolved` (a raw item needing a raw_ref for POST /signals/{id}/resolve).
-	EntityType    *CreateSignalRequestEntityType    `json:"entity_type,omitempty"`
-	Evidence      *[]SignalEvidence                 `json:"evidence,omitempty"`
-	Kind          CreateSignalRequestKind           `json:"kind"`
-	RawRef        *string                           `json:"raw_ref,omitempty"`
-	Severity      *CreateSignalRequestSeverity      `json:"severity,omitempty"`
+	EntityType *CreateSignalRequestEntityType `json:"entity_type,omitempty"`
+	Evidence   *[]SignalEvidence              `json:"evidence,omitempty"`
+	Kind       CreateSignalRequestKind        `json:"kind"`
+	RawRef     *string                        `json:"raw_ref,omitempty"`
+	Severity   *CreateSignalRequestSeverity   `json:"severity,omitempty"`
+
+	// Source The channel this signal arrived by. A client that files it for a member sends `manual`; an integration sends `api`. Any other value is 422 `invalid_source`.
 	Source        string                            `json:"source"`
 	SourceChannel *CreateSignalRequestSourceChannel `json:"source_channel,omitempty"`
 	Summary       string                            `json:"summary"`
@@ -53559,12 +53642,12 @@ type HandoverCounts struct {
 type HealthAction struct {
 	Available bool `json:"available"`
 
-	// Destination Where the finding is acted on. `regional` is the Company settings part that holds the installation timezone.
+	// Destination Where the finding is acted on. `regional` is the Company settings part that holds the installation timezone. `legal_entities` is the Company settings part that lists the legal entities, and `company_profile` the one that names the company. `disclosures` is the jurisdiction page that holds the company details every mail discloses.
 	Destination HealthActionDestination `json:"destination"`
 	Reason      *string                 `json:"reason,omitempty"`
 }
 
-// HealthActionDestination Where the finding is acted on. `regional` is the Company settings part that holds the installation timezone.
+// HealthActionDestination Where the finding is acted on. `regional` is the Company settings part that holds the installation timezone. `legal_entities` is the Company settings part that lists the legal entities, and `company_profile` the one that names the company. `disclosures` is the jurisdiction page that holds the company details every mail discloses.
 type HealthActionDestination string
 
 // HealthDimension One named part of the relationship's health, with the reason for its rating.
@@ -53637,6 +53720,9 @@ type HealthFinding struct {
 	Count           *int                   `json:"count,omitempty" minimum:"0"`
 	FirstObservedAt *time.Time             `json:"first_observed_at,omitempty"`
 
+	// FooterGap A legal entity whose mail owes a company detail nobody stated. A send that owes it is held for review with `footer_incomplete`, and a background send is dropped. The finding goes once the details are complete.
+	FooterGap *HealthFooterGap `json:"footer_gap,omitempty"`
+
 	// Id Stable identity of the source condition and affected scope.
 	Id                string              `json:"id"`
 	Impact            HealthFindingImpact `json:"impact"`
@@ -53673,6 +53759,26 @@ type HealthFindingScope string
 
 // HealthFindingUnit defines model for HealthFinding.Unit.
 type HealthFindingUnit string
+
+// HealthFooterGap A legal entity whose mail owes a company detail nobody stated. A send that owes it is held for review with `footer_incomplete`, and a background send is dropped. The finding goes once the details are complete.
+type HealthFooterGap struct {
+	// HeldByUser Sends a user pressed that were held for this since the details last changed.
+	HeldByUser int `json:"held_by_user" minimum:"0"`
+
+	// HeldInBackground Background sends, such as a meeting reminder, that were held or dropped for this since the details last changed.
+	HeldInBackground int                `json:"held_in_background" minimum:"0"`
+	IsDefault        bool               `json:"is_default"`
+	LegalEntityId    openapi_types.UUID `json:"legal_entity_id"`
+
+	// LegalEntityName Empty for a default entity that states no name.
+	LegalEntityName string `json:"legal_entity_name"`
+
+	// Missing The owed disclosure kinds with no text, then `entity_name` for a default entity with neither a display name nor a legal name.
+	Missing []HealthFooterGapMissing `json:"missing"`
+}
+
+// HealthFooterGapMissing defines model for HealthFooterGap.Missing.
+type HealthFooterGapMissing string
 
 // HealthSource defines model for HealthSource.
 type HealthSource struct {
@@ -62855,7 +62961,9 @@ type PublicOriginStatus struct {
 // every other field holds a neutral value (empty text, zero duration, `enabled: false`, no
 // `video_app`), so the guest learns nothing about the calendar behind the page.
 type PublicSchedulingProfile struct {
-	CompanyName     string `json:"company_name"`
+	CompanyName string `json:"company_name"`
+
+	// DurationMinutes The length this page books: the one `l` asked for when the page offers it, else the default.
 	DurationMinutes int    `json:"duration_minutes"`
 	Enabled         bool   `json:"enabled"`
 	HostName        string `json:"host_name"`
@@ -62863,6 +62971,9 @@ type PublicSchedulingProfile struct {
 
 	// LogoUrl Absolute public logo URL when the public origin is configured; otherwise relative to the API origin.
 	LogoUrl *string `json:"logo_url,omitempty"`
+
+	// OfferedLengths Every meeting length the host's booking page offers, the default first. Pass one as `l` to book at that length. Absent on a paused page and on a meeting proposal.
+	OfferedLengths *[]int `json:"offered_lengths,omitempty"`
 
 	// Paused True when the page takes no bookings now: the host turned bookings off, or the calendar behind it cannot take them. The availability and booking calls then answer as for an unknown page.
 	Paused bool   `json:"paused"`
@@ -63002,6 +63113,13 @@ type QuickCaptureContactResult struct {
 
 // RaiseNoticeRequest defines model for RaiseNoticeRequest.
 type RaiseNoticeRequest struct {
+	// DealId The deal the notice is about. Required for `coach_deal_needs_next_step`, and refused on
+	// every other kind. The deal must be open, owned by the recipient, and one the caller
+	// can read. The headline then names the deal and what Margince sees on it: whether a
+	// next step is planned, and the day of its last activity. The recipient's row links to
+	// the deal.
+	DealId *openapi_types.UUID `json:"deal_id,omitempty"`
+
 	// Kind What a coaching notice is about. A closed vocabulary, because a notice addressed to a
 	// colleague is words in their queue: the kind is what the recipient reads as the headline,
 	// and the coach supplies only the note beneath it.
@@ -63270,6 +63388,9 @@ type RecordAccessMember struct {
 	// Group The group the panel lists this member under, from their first reason.
 	Group       RecordAccessMemberGroup `json:"group"`
 	ReadReasons []RecordAccessReason    `json:"read_reasons"`
+
+	// RoleNames The name an admin gave each live role in `roles`, keyed by role key, so a reader who may not read the role directory still sees a custom role by its name. Present only when `detail` is true. Absent from an older server; a key it does not name is shown as the key.
+	RoleNames *map[string]string `json:"role_names,omitempty"`
 
 	// Roles The member's role keys. Present only when `detail` is true.
 	Roles  *[]string          `json:"roles,omitempty"`
@@ -66101,7 +66222,7 @@ type RoleDirectory struct {
 // RoleDirectoryVerbs defines model for RoleDirectory.Verbs.
 type RoleDirectoryVerbs string
 
-// RouterActions The actions of one MCP router whose actions run REST routes.
+// RouterActions The actions of one MCP router, with the arguments each takes.
 type RouterActions struct {
 	Actions []struct {
 		// Action The value the router's action argument takes.
@@ -66113,7 +66234,7 @@ type RouterActions struct {
 		// Body The JSON schema of its body argument.
 		Body *map[string]interface{} `json:"body,omitempty"`
 
-		// Does The route's summary.
+		// Does What the action does.
 		Does string `json:"does"`
 
 		// Ids The path ids the action takes as arguments.
@@ -66122,8 +66243,14 @@ type RouterActions struct {
 		// IfVersion Whether it takes if_version: the version you last read.
 		IfVersion *bool `json:"if_version,omitempty"`
 
-		// Query The query parameters it takes as arguments.
-		Query *[]string `json:"query,omitempty"`
+		// Query The query parameters it takes as arguments, each with its type and any closed values.
+		Query *[]struct {
+			Enum     *[]string `json:"enum,omitempty"`
+			Format   *string   `json:"format,omitempty"`
+			Name     string    `json:"name"`
+			Required *bool     `json:"required,omitempty"`
+			Type     string    `json:"type"`
+		} `json:"query,omitempty"`
 
 		// Route The method and route, for example POST /v1/record-grants.
 		Route string `json:"route"`
@@ -66134,7 +66261,10 @@ type RouterActions struct {
 
 	// AskUserFirstMeans What ask_user_first asks of the model; present when an action here has it.
 	AskUserFirstMeans *string `json:"ask_user_first_means,omitempty"`
-	Router            string  `json:"router"`
+
+	// HowToCall Where an action's arguments go in the router call: top-level members beside action, a routed body in request_body.
+	HowToCall string `json:"how_to_call"`
+	Router    string `json:"router"`
 }
 
 // RowTag A tag as a list ROW carries it: the word and its colour, nothing else. The full
@@ -67185,8 +67315,8 @@ type SchedulingProfile struct {
 	// the page names no calendar (a page saved before the profile existed reads this way).
 	// `calendar_read_only`: the connection lacks the calendar write grant. `calendar_unavailable`:
 	// the connection is gone or refused. `team_not_ready`: a team member has not confirmed, has
-	// left, or has no calendar Margince can read; `team_members` says which. Answered on the
-	// host's own profile read only.
+	// left, or has no calendar Margince can read; the team link's `team_members` says which.
+	// Answered on the host's own reads only.
 	Blocker           *SchedulingProfileBlocker `json:"blocker,omitempty"`
 	BlockingCalendars *[]string                 `json:"blocking_calendars,omitempty"`
 	BufferMinutes     int                       `json:"buffer_minutes" maximum:"120" minimum:"0"`
@@ -67218,11 +67348,11 @@ type SchedulingProfile struct {
 	ReplaceLink *bool   `json:"replace_link,omitempty"`
 	Slug        *string `json:"slug,omitempty"`
 
-	// TeamMembers Colleagues who must attend every meeting booked through this page. Guests see only the
-	// times when the host and every member are free, inside each one's own working hours, and
-	// each booking invites every member. A member named here starts as `pending` and the page
-	// takes no bookings until every member has confirmed. Only `user_id` is read from a
-	// request; a colleague not offered by `GET /scheduling/team-candidates` is refused.
+	// TeamMembers The personal page names no colleagues: it offers the host's own free time alone. A
+	// request naming a member answers 422 on `team_members`; an empty list is accepted. A
+	// response does not carry the field. Colleagues are named on a team link
+	// (`POST /scheduling/team-links`).
+	// Deprecated: this property has been marked as deprecated upstream, but no `x-deprecated-reason` was set
 	TeamMembers *[]SchedulingTeamMember `json:"team_members,omitempty"`
 	Title       string                  `json:"title"`
 
@@ -67237,8 +67367,8 @@ type SchedulingProfile struct {
 // the page names no calendar (a page saved before the profile existed reads this way).
 // `calendar_read_only`: the connection lacks the calendar write grant. `calendar_unavailable`:
 // the connection is gone or refused. `team_not_ready`: a team member has not confirmed, has
-// left, or has no calendar Margince can read; `team_members` says which. Answered on the
-// host's own profile read only.
+// left, or has no calendar Margince can read; the team link's `team_members` says which.
+// Answered on the host's own reads only.
 type SchedulingProfileBlocker string
 
 // SchedulingProfileProvider defines model for SchedulingProfile.Provider.
@@ -67256,6 +67386,38 @@ type SchedulingTeamAnswerState string
 type SchedulingTeamCandidate struct {
 	Name   string             `json:"name"`
 	UserId openapi_types.UUID `json:"user_id"`
+}
+
+// SchedulingTeamLink A booking link that names colleagues who attend every meeting booked through it. It uses
+// the calendar and booking settings of its owner's personal page, and has its own address.
+type SchedulingTeamLink struct {
+	// Blocker Why the link takes no bookings now, with the meanings `SchedulingProfile.blocker` gives them.
+	Blocker SchedulingTeamLinkBlocker `json:"blocker"`
+
+	// Enabled Whether the owner switched the link on.
+	Enabled bool               `json:"enabled"`
+	Id      openapi_types.UUID `json:"id"`
+
+	// PublicUrl The address to share, `/book/{slug}` on the configured public origin. Absent when no usable public origin is configured.
+	PublicUrl   *string                `json:"public_url,omitempty"`
+	Slug        string                 `json:"slug"`
+	TeamMembers []SchedulingTeamMember `json:"team_members"`
+
+	// Title The link's name, which is also the meeting title guests see.
+	Title string `json:"title"`
+}
+
+// SchedulingTeamLinkBlocker Why the link takes no bookings now, with the meanings `SchedulingProfile.blocker` gives them.
+type SchedulingTeamLinkBlocker string
+
+// SchedulingTeamLinkRequest defines model for SchedulingTeamLinkRequest.
+type SchedulingTeamLinkRequest struct {
+	// Enabled Absent means on.
+	Enabled *bool `json:"enabled,omitempty"`
+
+	// TeamMembers Only `user_id` is read. A member's answer is theirs to give.
+	TeamMembers []SchedulingTeamMember `json:"team_members"`
+	Title       string                 `json:"title"`
 }
 
 // SchedulingTeamMember defines model for SchedulingTeamMember.
@@ -67276,11 +67438,14 @@ type SchedulingTeamMemberState string
 
 // SchedulingTeamRequest defines model for SchedulingTeamRequest.
 type SchedulingTeamRequest struct {
-	HostName   string                     `json:"host_name"`
-	HostUserId openapi_types.UUID         `json:"host_user_id"`
-	State      SchedulingTeamRequestState `json:"state"`
+	HostName   string             `json:"host_name"`
+	HostUserId openapi_types.UUID `json:"host_user_id"`
 
-	// Title The meeting title the link offers.
+	// PageId The team link that names the caller; answer it with `PUT /scheduling/team-links/{page_id}/answer`.
+	PageId openapi_types.UUID         `json:"page_id"`
+	State  SchedulingTeamRequestState `json:"state"`
+
+	// Title The team link's name, which is the meeting title it offers.
 	Title string `json:"title"`
 }
 
@@ -67815,6 +67980,13 @@ type SendAuthorizationPreview struct {
 // SendAuthorizationPreviewRecipient One recipient's answer. It describes the MESSAGE, never the contact's file.
 type SendAuthorizationPreviewRecipient struct {
 	Address openapi_types.Email `json:"address"`
+
+	// AskCountry The record states no country for this recipient, the refusal is for want of marketing
+	// consent, and an installed pack allows advertising until the recipient refuses. A composer
+	// asks the sender for the country, saves it on the contact with `PATCH /contacts/{id}`
+	// (`address_country`) and asks the preview again. Absent or false when no answer could
+	// change the decision, and for a recipient the caller cannot read.
+	AskCountry *bool `json:"ask_country,omitempty"`
 
 	// Basis The lawful ground an allow would rest on.
 	Basis *string `json:"basis,omitempty"`
@@ -69044,11 +69216,16 @@ type Signal struct {
 	// ResolvedContactId Optional contact resolution, set only under a recorded consent grant and never inferred.
 	ResolvedContactId *openapi_types.UUID `json:"resolved_contact_id,omitempty"`
 	Severity          SignalSeverity      `json:"severity"`
-	Source            string              `json:"source"`
+
+	// Source The channel this signal arrived by: `api`, `automation`, `capture`, `import`, `manual` or `webform`. An older signal can show another value until the background correction reaches it.
+	Source string `json:"source"`
 
 	// SourceChannel Where the raw signal came from.
 	SourceChannel SignalSourceChannel `json:"source_channel"`
-	Status        SignalStatus        `json:"status"`
+
+	// SourceSystem The producer that wrote the signal, such as `signal-scan` or the name of an extension. Empty when a member or an API client filed it.
+	SourceSystem *string      `json:"source_system,omitempty"`
+	Status       SignalStatus `json:"status"`
 
 	// Summary The signal's one sentence. A sentence the server words itself (`technical_change`,
 	// `ghosted_thread`, `project_gone_quiet`) is in the reader's chosen display language, else
@@ -75445,6 +75622,9 @@ type WorklistItem struct {
 	SummaryParts  *ApprovalSummaryParts `json:"summary_parts,omitempty"`
 	SystemDisplay *SystemDisplay        `json:"system_display,omitempty"`
 
+	// TaskType On a task row: the kind of work it asks for, so a card names it without reading the task. Absent on other rows.
+	TaskType *TaskType `json:"task_type,omitempty"`
+
 	// Title The server's own sentence for this item, where it has one.
 	Title *string `json:"title,omitempty"`
 
@@ -77843,7 +78023,7 @@ type ListAuditLogParams struct {
 	EntityType *string             `form:"entity_type,omitempty" json:"entity_type,omitempty"`
 	EntityId   *openapi_types.UUID `form:"entity_id,omitempty" json:"entity_id,omitempty"`
 
-	// BatchId Only the rows one bulk change wrote (`executeBulkChange` answers the id).
+	// BatchId Only the rows one operation group wrote: a bulk change (`executeBulkChange` answers the id) or one run of a capture purge.
 	BatchId *openapi_types.UUID `form:"batch_id,omitempty" json:"batch_id,omitempty"`
 
 	// Action One of the AuditLogEntry.action values.
@@ -83643,7 +83823,7 @@ type BookPublicMeetingJSONBody struct {
 
 // BookPublicMeetingParams defines parameters for BookPublicMeeting.
 type BookPublicMeetingParams struct {
-	// L Offered meeting length in minutes. Unknown lengths use the default.
+	// L Offered meeting length in minutes. A length the page does not offer is refused with 422 `length_not_offered`; read the profile again for the lengths on offer.
 	L *int `form:"l,omitempty" json:"l,omitempty"`
 
 	// IdempotencyKey Client-supplied key making a mutation safe to retry — an update exactly as much as a
@@ -83688,7 +83868,13 @@ type GetPublicAvailabilityParams struct {
 	To              time.Time `form:"to" json:"to"`
 	DurationMinutes *int      `form:"duration_minutes,omitempty" json:"duration_minutes,omitempty"`
 
-	// L Offered meeting length in minutes. Unknown lengths use the default.
+	// L Offered meeting length in minutes. A length the page does not offer is refused with 422 `length_not_offered`; read the profile again for the lengths on offer.
+	L *int `form:"l,omitempty" json:"l,omitempty"`
+}
+
+// GetPublicBookingPreviewParams defines parameters for GetPublicBookingPreview.
+type GetPublicBookingPreviewParams struct {
+	// L Meeting length in minutes the shared link asks for. The card names it, links to it and gives it as the canonical address when the page offers it; otherwise the card names the default length.
 	L *int `form:"l,omitempty" json:"l,omitempty"`
 }
 
@@ -87052,6 +87238,15 @@ type PutSchedulingAliasJSONRequestBody = SchedulingAliasRequest
 
 // CreateMeetingProposalJSONRequestBody defines body for CreateMeetingProposal for application/json ContentType.
 type CreateMeetingProposalJSONRequestBody = MeetingProposalRequest
+
+// CreateSchedulingTeamLinkJSONRequestBody defines body for CreateSchedulingTeamLink for application/json ContentType.
+type CreateSchedulingTeamLinkJSONRequestBody = SchedulingTeamLinkRequest
+
+// UpdateSchedulingTeamLinkJSONRequestBody defines body for UpdateSchedulingTeamLink for application/json ContentType.
+type UpdateSchedulingTeamLinkJSONRequestBody = SchedulingTeamLinkRequest
+
+// AnswerSchedulingTeamLinkJSONRequestBody defines body for AnswerSchedulingTeamLink for application/json ContentType.
+type AnswerSchedulingTeamLinkJSONRequestBody = SchedulingTeamAnswer
 
 // AnswerSchedulingTeamRequestJSONRequestBody defines body for AnswerSchedulingTeamRequest for application/json ContentType.
 type AnswerSchedulingTeamRequestJSONRequestBody = SchedulingTeamAnswer
@@ -103237,7 +103432,7 @@ type ServerInterface interface {
 	// Get ready for a meeting about one record.
 	// (GET /meeting-prep)
 	PrepForMeeting(w http.ResponseWriter, r *http.Request, params PrepForMeetingParams)
-	// The acting user's own in-app notifications, newest first. Not a privacy notice owed to a contact; those are notice_case_reviews.
+	// The acting user's own in-app notifications, newest first. Not a privacy notice owed to a contact; those are notice_case_reviews (GET /privacy/notice-case-reviews).
 	// (GET /notices)
 	ListNotices(w http.ResponseWriter, r *http.Request, params ListNoticesParams)
 	// Raise a coaching notice for a colleague. It lands in their Worklist's notices lane.
@@ -103384,16 +103579,16 @@ type ServerInterface interface {
 	// Every contact's privacy-notice case, including one whose source was never recorded (an older contact), soonest deadline first. Without state it lists unresolved cases only, so an empty page is not an empty notice history, and a contact imported moments ago may have no case yet. For one contact, read their contact_360 view (GET /contacts/{id}/360) instead; its privacy_source_reviews and privacy_notice_duties carry the case ids.
 	// (GET /privacy/notice-case-reviews)
 	ListNoticeCaseReviews(w http.ResponseWriter, r *http.Request, params ListNoticeCaseReviewsParams)
-	// One contact's privacy-notice case — its source, whether a notice is owed, and by when. The id comes from notice_case_reviews or the contact's contact_360 view, not the contact's id.
+	// One contact's privacy-notice case — its source, whether a notice is owed, and by when. The id comes from notice_case_reviews (GET /privacy/notice-case-reviews) or the contact's contact_360 view (GET /contacts/{id}/360), not the contact's id.
 	// (GET /privacy/notice-case-reviews/{id})
 	GetNoticeCaseReview(w http.ResponseWriter, r *http.Request, id openapi_types.UUID)
-	// Give a contact's privacy-notice case (from notice_case_reviews) an owner.
+	// Give a contact's privacy-notice case (from notice_case_reviews, GET /privacy/notice-case-reviews) an owner.
 	// (POST /privacy/notice-case-reviews/{id}/assign)
 	AssignNoticeCaseReview(w http.ResponseWriter, r *http.Request, id openapi_types.UUID)
 	// Read accessible evidence for a contact source assessment.
 	// (GET /privacy/notice-case-reviews/{id}/source)
 	GetNoticeSourceEvidence(w http.ResponseWriter, r *http.Request, id openapi_types.UUID, params GetNoticeSourceEvidenceParams)
-	// Confirm where a contact came from (bought list, import, their own enquiry), which decides whether a privacy notice is owed. Preview it first (POST /privacy/notice-case-reviews/{id}/source/preview). Only a contact with no recorded source is up for review; when its evidence does not name where the data first came from, ask the user rather than guessing a kind.
+	// Confirm where a contact came from (bought list, import, their own enquiry), which decides whether a privacy notice is owed. Preview it first (POST /privacy/notice-case-reviews/{id}/source/preview). Only a contact with no recorded source is up for review; when its evidence does not name where the data first came from (an import alone does not), ask the user rather than guessing a kind.
 	// (POST /privacy/notice-case-reviews/{id}/source)
 	AssessNoticeSource(w http.ResponseWriter, r *http.Request, id openapi_types.UUID)
 	// Preview what confirming a contact's source decides — whether a notice is owed and by when — without changing the case. Confirming is the user's decision, so offer confirm_notice_source (POST /privacy/notice-case-reviews/{id}/source) and ask them, unless they already named the source and asked you to confirm it.
@@ -103402,10 +103597,10 @@ type ServerInterface interface {
 	// Privacy notices already owed, where the source is confirmed, soonest deadline first. A contact whose source nobody has confirmed is in notice_case_reviews (GET /privacy/notice-case-reviews).
 	// (GET /privacy/notice-cases)
 	ListNoticeCases(w http.ResponseWriter, r *http.Request, params ListNoticeCasesParams)
-	// One privacy notice owed, where the source is confirmed. The case id comes from notice_cases, not the contact's id.
+	// One privacy notice owed, where the source is confirmed. The case id comes from notice_cases (GET /privacy/notice-cases), not the contact's id.
 	// (GET /privacy/notice-cases/{id})
 	GetNoticeCase(w http.ResponseWriter, r *http.Request, id openapi_types.UUID)
-	// Give a privacy notice already owed (from notice_cases) an owner.
+	// Give a privacy notice already owed (from notice_cases, GET /privacy/notice-cases) an owner.
 	// (POST /privacy/notice-cases/{id}/assign)
 	AssignNoticeCase(w http.ResponseWriter, r *http.Request, id openapi_types.UUID)
 	// End a disclosure duty on a stated ground, or record that it was met elsewhere.
@@ -103524,7 +103719,7 @@ type ServerInterface interface {
 	GetPublicAvailability(w http.ResponseWriter, r *http.Request, hostSlug string, params GetPublicAvailabilityParams)
 	// Read the link-preview card for a host's public booking page.
 	// (GET /public/booking/{host_slug}/preview)
-	GetPublicBookingPreview(w http.ResponseWriter, r *http.Request, hostSlug string)
+	GetPublicBookingPreview(w http.ResponseWriter, r *http.Request, hostSlug string, params GetPublicBookingPreviewParams)
 	// Read the host-approved booking page identity and meeting details.
 	// (GET /public/booking/{host_slug}/profile)
 	GetPublicSchedulingProfile(w http.ResponseWriter, r *http.Request, hostSlug string, params GetPublicSchedulingProfileParams)
@@ -103843,10 +104038,25 @@ type ServerInterface interface {
 	// List the colleagues the caller may name on their booking link.
 	// (GET /scheduling/team-candidates)
 	ListSchedulingTeamCandidates(w http.ResponseWriter, r *http.Request)
+	// List the caller's team booking links.
+	// (GET /scheduling/team-links)
+	ListSchedulingTeamLinks(w http.ResponseWriter, r *http.Request)
+	// Create a team booking link that names colleagues.
+	// (POST /scheduling/team-links)
+	CreateSchedulingTeamLink(w http.ResponseWriter, r *http.Request)
+	// Delete a team link.
+	// (DELETE /scheduling/team-links/{page_id})
+	DeleteSchedulingTeamLink(w http.ResponseWriter, r *http.Request, pageId openapi_types.UUID)
+	// Rename a team link, switch it on or off, or change its members.
+	// (PUT /scheduling/team-links/{page_id})
+	UpdateSchedulingTeamLink(w http.ResponseWriter, r *http.Request, pageId openapi_types.UUID)
+	// Confirm or leave a colleague's team link that names the caller.
+	// (PUT /scheduling/team-links/{page_id}/answer)
+	AnswerSchedulingTeamLink(w http.ResponseWriter, r *http.Request, pageId openapi_types.UUID)
 	// List the colleagues' booking links that name the caller.
 	// (GET /scheduling/team-requests)
 	ListSchedulingTeamRequests(w http.ResponseWriter, r *http.Request)
-	// Confirm or leave a colleague's booking link that names the caller.
+	// Confirm or leave every team link of a colleague that names the caller.
 	// (PUT /scheduling/team-requests/{host_user_id})
 	AnswerSchedulingTeamRequest(w http.ResponseWriter, r *http.Request, hostUserId openapi_types.UUID)
 	// Read the current receiver and reassignment version of a prospect handoff.
@@ -108991,7 +109201,7 @@ func (_ Unimplemented) PrepForMeeting(w http.ResponseWriter, r *http.Request, pa
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
-// The acting user's own in-app notifications, newest first. Not a privacy notice owed to a contact; those are notice_case_reviews.
+// The acting user's own in-app notifications, newest first. Not a privacy notice owed to a contact; those are notice_case_reviews (GET /privacy/notice-case-reviews).
 // (GET /notices)
 func (_ Unimplemented) ListNotices(w http.ResponseWriter, r *http.Request, params ListNoticesParams) {
 	w.WriteHeader(http.StatusNotImplemented)
@@ -109285,13 +109495,13 @@ func (_ Unimplemented) ListNoticeCaseReviews(w http.ResponseWriter, r *http.Requ
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
-// One contact's privacy-notice case — its source, whether a notice is owed, and by when. The id comes from notice_case_reviews or the contact's contact_360 view, not the contact's id.
+// One contact's privacy-notice case — its source, whether a notice is owed, and by when. The id comes from notice_case_reviews (GET /privacy/notice-case-reviews) or the contact's contact_360 view (GET /contacts/{id}/360), not the contact's id.
 // (GET /privacy/notice-case-reviews/{id})
 func (_ Unimplemented) GetNoticeCaseReview(w http.ResponseWriter, r *http.Request, id openapi_types.UUID) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
-// Give a contact's privacy-notice case (from notice_case_reviews) an owner.
+// Give a contact's privacy-notice case (from notice_case_reviews, GET /privacy/notice-case-reviews) an owner.
 // (POST /privacy/notice-case-reviews/{id}/assign)
 func (_ Unimplemented) AssignNoticeCaseReview(w http.ResponseWriter, r *http.Request, id openapi_types.UUID) {
 	w.WriteHeader(http.StatusNotImplemented)
@@ -109303,7 +109513,7 @@ func (_ Unimplemented) GetNoticeSourceEvidence(w http.ResponseWriter, r *http.Re
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
-// Confirm where a contact came from (bought list, import, their own enquiry), which decides whether a privacy notice is owed. Preview it first (POST /privacy/notice-case-reviews/{id}/source/preview). Only a contact with no recorded source is up for review; when its evidence does not name where the data first came from, ask the user rather than guessing a kind.
+// Confirm where a contact came from (bought list, import, their own enquiry), which decides whether a privacy notice is owed. Preview it first (POST /privacy/notice-case-reviews/{id}/source/preview). Only a contact with no recorded source is up for review; when its evidence does not name where the data first came from (an import alone does not), ask the user rather than guessing a kind.
 // (POST /privacy/notice-case-reviews/{id}/source)
 func (_ Unimplemented) AssessNoticeSource(w http.ResponseWriter, r *http.Request, id openapi_types.UUID) {
 	w.WriteHeader(http.StatusNotImplemented)
@@ -109321,13 +109531,13 @@ func (_ Unimplemented) ListNoticeCases(w http.ResponseWriter, r *http.Request, p
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
-// One privacy notice owed, where the source is confirmed. The case id comes from notice_cases, not the contact's id.
+// One privacy notice owed, where the source is confirmed. The case id comes from notice_cases (GET /privacy/notice-cases), not the contact's id.
 // (GET /privacy/notice-cases/{id})
 func (_ Unimplemented) GetNoticeCase(w http.ResponseWriter, r *http.Request, id openapi_types.UUID) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
-// Give a privacy notice already owed (from notice_cases) an owner.
+// Give a privacy notice already owed (from notice_cases, GET /privacy/notice-cases) an owner.
 // (POST /privacy/notice-cases/{id}/assign)
 func (_ Unimplemented) AssignNoticeCase(w http.ResponseWriter, r *http.Request, id openapi_types.UUID) {
 	w.WriteHeader(http.StatusNotImplemented)
@@ -109563,7 +109773,7 @@ func (_ Unimplemented) GetPublicAvailability(w http.ResponseWriter, r *http.Requ
 
 // Read the link-preview card for a host's public booking page.
 // (GET /public/booking/{host_slug}/preview)
-func (_ Unimplemented) GetPublicBookingPreview(w http.ResponseWriter, r *http.Request, hostSlug string) {
+func (_ Unimplemented) GetPublicBookingPreview(w http.ResponseWriter, r *http.Request, hostSlug string, params GetPublicBookingPreviewParams) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -110203,13 +110413,43 @@ func (_ Unimplemented) ListSchedulingTeamCandidates(w http.ResponseWriter, r *ht
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
+// List the caller's team booking links.
+// (GET /scheduling/team-links)
+func (_ Unimplemented) ListSchedulingTeamLinks(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Create a team booking link that names colleagues.
+// (POST /scheduling/team-links)
+func (_ Unimplemented) CreateSchedulingTeamLink(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Delete a team link.
+// (DELETE /scheduling/team-links/{page_id})
+func (_ Unimplemented) DeleteSchedulingTeamLink(w http.ResponseWriter, r *http.Request, pageId openapi_types.UUID) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Rename a team link, switch it on or off, or change its members.
+// (PUT /scheduling/team-links/{page_id})
+func (_ Unimplemented) UpdateSchedulingTeamLink(w http.ResponseWriter, r *http.Request, pageId openapi_types.UUID) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Confirm or leave a colleague's team link that names the caller.
+// (PUT /scheduling/team-links/{page_id}/answer)
+func (_ Unimplemented) AnswerSchedulingTeamLink(w http.ResponseWriter, r *http.Request, pageId openapi_types.UUID) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
 // List the colleagues' booking links that name the caller.
 // (GET /scheduling/team-requests)
 func (_ Unimplemented) ListSchedulingTeamRequests(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
-// Confirm or leave a colleague's booking link that names the caller.
+// Confirm or leave every team link of a colleague that names the caller.
 // (PUT /scheduling/team-requests/{host_user_id})
 func (_ Unimplemented) AnswerSchedulingTeamRequest(w http.ResponseWriter, r *http.Request, hostUserId openapi_types.UUID) {
 	w.WriteHeader(http.StatusNotImplemented)
@@ -150287,8 +150527,24 @@ func (siw *ServerInterfaceWrapper) GetPublicBookingPreview(w http.ResponseWriter
 		return
 	}
 
+	// Parameter object where we will unmarshal all parameters from the context
+	var params GetPublicBookingPreviewParams
+
+	// ------------- Optional query parameter "l" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "l", r.URL.Query(), &params.L, runtime.BindQueryParameterOptions{Type: "integer", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "l"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "l", Err: err})
+		}
+		return
+	}
+
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.GetPublicBookingPreview(w, r, hostSlug)
+		siw.Handler.GetPublicBookingPreview(w, r, hostSlug, params)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -154690,6 +154946,144 @@ func (siw *ServerInterfaceWrapper) ListSchedulingTeamCandidates(w http.ResponseW
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.ListSchedulingTeamCandidates(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ListSchedulingTeamLinks operation middleware
+func (siw *ServerInterfaceWrapper) ListSchedulingTeamLinks(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListSchedulingTeamLinks(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// CreateSchedulingTeamLink operation middleware
+func (siw *ServerInterfaceWrapper) CreateSchedulingTeamLink(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.CreateSchedulingTeamLink(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// DeleteSchedulingTeamLink operation middleware
+func (siw *ServerInterfaceWrapper) DeleteSchedulingTeamLink(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "page_id" -------------
+	var pageId openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "page_id", chi.URLParam(r, "page_id"), &pageId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "page_id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.DeleteSchedulingTeamLink(w, r, pageId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// UpdateSchedulingTeamLink operation middleware
+func (siw *ServerInterfaceWrapper) UpdateSchedulingTeamLink(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "page_id" -------------
+	var pageId openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "page_id", chi.URLParam(r, "page_id"), &pageId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "page_id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.UpdateSchedulingTeamLink(w, r, pageId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// AnswerSchedulingTeamLink operation middleware
+func (siw *ServerInterfaceWrapper) AnswerSchedulingTeamLink(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "page_id" -------------
+	var pageId openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "page_id", chi.URLParam(r, "page_id"), &pageId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "page_id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.AnswerSchedulingTeamLink(w, r, pageId)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -164212,6 +164606,21 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/scheduling/team-candidates", wrapper.ListSchedulingTeamCandidates)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/scheduling/team-links", wrapper.ListSchedulingTeamLinks)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/scheduling/team-links", wrapper.CreateSchedulingTeamLink)
+	})
+	r.Group(func(r chi.Router) {
+		r.Delete(options.BaseURL+"/scheduling/team-links/{page_id}", wrapper.DeleteSchedulingTeamLink)
+	})
+	r.Group(func(r chi.Router) {
+		r.Put(options.BaseURL+"/scheduling/team-links/{page_id}", wrapper.UpdateSchedulingTeamLink)
+	})
+	r.Group(func(r chi.Router) {
+		r.Put(options.BaseURL+"/scheduling/team-links/{page_id}/answer", wrapper.AnswerSchedulingTeamLink)
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/scheduling/team-requests", wrapper.ListSchedulingTeamRequests)

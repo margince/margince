@@ -108,6 +108,12 @@ export const Cursor: Story = {
   play: picking("Cursor"),
 };
 
+// Lumo is used in one place, so the card does not ask where.
+export const Lumo: Story = {
+  render: story(),
+  play: picking("Lumo"),
+};
+
 export const AnotherTool: Story = {
   render: story(),
   play: picking("Another AI tool"),

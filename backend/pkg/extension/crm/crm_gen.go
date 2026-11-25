@@ -1897,7 +1897,7 @@ type Activity struct {
 	// AutomaticKind What sent this activity when no human wrote it, or null when a human did. `product` is mail or work the product wrote itself, `calendar` a mail carrying an invitation, a response or a cancellation, `sending_system` mail from a sending system such as a file-share notice, a notification or a delivery report, and `bulk` mail that carried a List-Unsubscribe header, such as a newsletter or a campaign. Such a row is never counted as an exchange, a last contact or a direction of the relationship.
 	AutomaticKind *ActivityAutomaticKind `json:"automatic_kind,omitempty"`
 
-	// AwaitingOutcome Whether this meeting still owes an answer about how it went, by the rule the Worklist's outcome lane asks: a meeting linked to a customer record the caller may see, with no `meeting_status` or `booked`, whose start has passed (a date-only meeting once its date is over in the installation's timezone) by the server's clock, and whose content the caller may read. Unlike the lane it has no look-back window, so an old booked meeting still asks. Every read that carries `writable` carries this. A client offers the outcome control when this and `writable` are both true. Absent means false.
+	// AwaitingOutcome Whether this meeting still owes an answer about how it went, by the rule the Worklist's outcome lane asks: a meeting linked to a customer record the caller may see, with no `meeting_status` or `booked`, whose start has passed (a date-only meeting once its date is over in the installation's timezone) by the server's clock, and whose content the caller may read. A meeting whose subject names travel logistics (a flight, an airport, a pickup) asks only when it links a deal, lead or project the caller may see. Unlike the lane it has no look-back window, so an old booked meeting still asks. Every read that carries `writable` carries this. A client offers the outcome control when this and `writable` are both true. Absent means false.
 	AwaitingOutcome *bool   `json:"awaiting_outcome,omitempty"`
 	Body            *string `json:"body,omitempty"`
 
@@ -3554,11 +3554,16 @@ type Signal struct {
 	// ResolvedContactId Optional contact resolution, set only under a recorded consent grant and never inferred.
 	ResolvedContactId *string        `json:"resolved_contact_id,omitempty"`
 	Severity          SignalSeverity `json:"severity"`
-	Source            string         `json:"source"`
+
+	// Source The channel this signal arrived by: `api`, `automation`, `capture`, `import`, `manual` or `webform`. An older signal can show another value until the background correction reaches it.
+	Source string `json:"source"`
 
 	// SourceChannel Where the raw signal came from.
 	SourceChannel SignalSourceChannel `json:"source_channel"`
-	Status        SignalStatus        `json:"status"`
+
+	// SourceSystem The producer that wrote the signal, such as `signal-scan` or the name of an extension. Empty when a member or an API client filed it.
+	SourceSystem *string      `json:"source_system,omitempty"`
+	Status       SignalStatus `json:"status"`
 
 	// Summary The signal's one sentence. A sentence the server words itself (`technical_change`,
 	// `ghosted_thread`, `project_gone_quiet`) is in the reader's chosen display language, else

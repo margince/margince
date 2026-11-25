@@ -116,7 +116,7 @@ func dataTaskCatalog(pool *pgxpool.Pool, now func() time.Time) []datatask.Task {
 		heldMailDataTask(now), subjectMailDataTask(now), noticeSourceDataTask(now), homeRepairDataTask(pool, now), mailRecipientsDataTask(), machineAddressDataTask(), pastActivityClocksDataTask(), taskActivityClocksDataTask(),
 		unaskedcommitments.DataTask(), retiredstagecards.DataTask(), colleagueSenderDataTask(), deliveryReportsDataTask(pool, now), liftedAgentCallsDataTask(), mailDealsDataTask(pool), mailBodyCompletenessDataTask(),
 		machineSenderDataTask(), signatureTitleHistoryDataTask(pool), manualSignalNoEvidenceDataTask(), companyprofiles.IndustryTask(), contactEmployersDataTask(pool), unknownEmploymentDataTask(pool), leadScoresFollowOriginDataTask(now), phaseHistoryLinksDataTask(),
-		activities.MeetingNotesDataTask(activities.NewStore(InstallationDB(pool)).WithLeadQualifyTasks(newLeadWorkTasks(InstallationDB(pool), slog.Default()))), activities.CaptureLabelsDataTask(), membersOnlyMailDataTask(), signatureWindowDataTask(), unsplitAddressDataTask(), dedupeScanDataTask(),
+		activities.MeetingNotesDataTask(activities.NewStore(InstallationDB(pool)).WithLeadQualifyTasks(newLeadWorkTasks(InstallationDB(pool), slog.Default()))), activities.CaptureLabelsDataTask(), activities.SearchTextDataTask(), membersOnlyMailDataTask(), signatureWindowDataTask(), unsplitAddressDataTask(), dedupeScanDataTask(),
 		leadMailDataTask(pool), documentLinksDataTask(), requestProofDataTask(), ownDomainFoldDataTask(), participantEvidenceDataTask(), polymorphicKeysDataTask(), initialsNamesDataTask(), seatEmploymentDataTask(), meetingNoonStartsDataTask(), meetingHistoryPrecisionDataTask(), guessedMailboxSeatsDataTask(), matchedMeetingGuestsDataTask(pool),
 		meetingGuestAnswersDataTask(pool),
 		calendarDescriptionsDataTask(),
@@ -125,6 +125,7 @@ func dataTaskCatalog(pool *pgxpool.Pool, now func() time.Time) []datatask.Task {
 		meetingDuplicatesDataTask(pool),
 		meetingPairsDataTask(pool),
 		meetingSeriesSlotsDataTask(pool),
+		splitSeriesDataTask(pool), activities.ImportedMeetingCopiesDataTask(activities.NewStore(InstallationDB(pool))),
 		meetingOrganizerHostDataTask(pool),
 		linkedInIdentityDataTask(),
 		leadContactPairsDataTask(pool),
@@ -162,7 +163,8 @@ func dataTaskCatalog(pool *pgxpool.Pool, now func() time.Time) []datatask.Task {
 		customerlinks.DataTask(),
 		qualifytasks.DuplicatesDataTask(now), qualifytasks.TextDataTask(),
 		companyprofiles.OfferDuplicatesTask(),
-		qualifytasks.SystemTextDataTask(), employmentrepair.DataTask(contacts.NewStore(InstallationDB(pool))), halfvectors.DataTask(), recordsources.DataTask(),
+		qualifytasks.SystemTextDataTask(), employmentrepair.DataTask(contacts.NewStore(InstallationDB(pool))), halfvectors.DataTask(), recordsources.DataTask(), recordsources.SignalDataTask(),
 		rolemailboxseats.DataTask(),
+		activities.TeamLinksDataTask(activities.NewStore(InstallationDB(pool)).WithTeamRequestNotice(teamRequestNotice{}), now),
 	}
 }

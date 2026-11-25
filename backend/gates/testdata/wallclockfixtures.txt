@@ -36,7 +36,6 @@ internal/compose/canceledmeetingclocks_integration_test.go 1
 internal/compose/canceledmeetingfolds_integration_test.go 6
 internal/compose/captureenrich_integration_test.go 1
 internal/compose/capturehealth_integration_test.go 4
-internal/compose/capturepurgereceipt_test.go 1
 internal/compose/capturesweepreceipt_integration_test.go 3
 internal/compose/closedate_integration_test.go 3
 internal/compose/cohortpromotegen_integration_test.go 2
@@ -65,7 +64,7 @@ internal/compose/dealsuggestiontotals_integration_test.go 1
 internal/compose/deferral_test.go 3
 internal/compose/edgeerasureboundary_integration_test.go 4
 internal/compose/edgelastmet_integration_test.go 1
-internal/compose/erasurebriefcache_integration_test.go 3
+internal/compose/erasurebriefcache_integration_test.go 2
 internal/compose/erasurecollateral_integration_test.go 2
 internal/compose/erasuregraph_integration_test.go 1
 internal/compose/erasurestageevidence_integration_test.go 1
@@ -105,6 +104,7 @@ internal/compose/integration/capture/capture_providerrecovery_integration_test.g
 internal/compose/integration/capture/capture_sqlprofile_integration_test.go 1
 internal/compose/integration/capture/capture_syncstate_integration_test.go 1
 internal/compose/integration/capture/fieldprovenance_integration_test.go 1
+internal/compose/integration/capture/gcal_relist_integration_test.go 1
 internal/compose/integration/capture/gmail_connector_integration_test.go 1
 internal/compose/integration/capture/gmail_watch_integration_test.go 2
 internal/compose/integration/capture/perfcapture_bench_test.go 1
@@ -262,6 +262,7 @@ internal/compose/meetinglane_integration_test.go 1
 internal/compose/meetingparties_integration_test.go 3
 internal/compose/meetingpastcap_integration_test.go 5
 internal/compose/meetingrsvpbackfill_integration_test.go 4
+internal/compose/meetingseriessplit_integration_test.go 1
 internal/compose/mergecarriesgrants_integration_test.go 4
 internal/compose/mergecarriesintros_integration_test.go 1
 internal/compose/mergecarrieslinks_integration_test.go 2
@@ -274,6 +275,7 @@ internal/compose/owedanswer_integration_test.go 10
 internal/compose/privacyqueuenames_integration_test.go 5
 internal/compose/providerselect_test.go 5
 internal/compose/publicoriginprobe_test.go 7
+internal/compose/purgerun/kept_test.go 1
 internal/compose/qualifiedinteraction_integration_test.go 1
 internal/compose/rateproposals_integration_test.go 3
 internal/compose/reconcile_integration_test.go 3

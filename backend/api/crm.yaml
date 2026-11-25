@@ -717,8 +717,8 @@ paths:
           description: >
             Installation reset to first-boot state.
 
-            Five of these fields — `jobs_deleted`, `streams_purged`, `cache_keys_deleted`,
-            `objects_deleted` and `drain_timed_out` — exist here and not in the retired upstream
+            Four of these fields — `jobs_deleted`, `streams_purged`, `cache_keys_deleted`
+            and `objects_deleted` — exist here and not in the retired upstream
             copy of this contract, and that is deliberate rather than drift anyone should
             reconcile away. A reset clears the job queue, the event bus, the Redis counters and
             the object bytes, and an operator who is told only how many table rows went has no way
@@ -761,10 +761,10 @@ paths:
                     description: Objects removed from the blob store under this workspace's key prefix.
                   drain_timed_out:
                     type: boolean
+                    deprecated: true
                     description: >
-                      True when a job was still running when the bounded drain window expired. The reset
-                      proceeded — a long pass must not make an installation unresettable — and the surviving
-                      job's completion write will fail against rows that no longer exist.
+                      Always false. A reset whose job drain timed out is refused with 409 before anything is
+                      deleted, so a successful reset never has this state. Kept so existing clients keep parsing.
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403':
           description: >
@@ -780,6 +780,15 @@ paths:
             does not exist here. Checked before authentication, so it is a 404 rather than
             a 403 for every caller — the answer discloses nothing about who asked. The body
             is the standard problem document.
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+        '409':
+          description: >
+            Refused with nothing deleted: another reset is running, or a background job was still
+            running when the bounded drain window expired (the queues run again; run the reset again), or the
+            queues could not be resumed after the reset (code `reset_queues_not_resumed`; the body says whether
+            the reset had finished).
           content:
             application/problem+json:
               schema: { $ref: '#/components/schemas/Problem' }
@@ -11570,6 +11579,7 @@ paths:
   /public/booking/{host_slug}/preview:
     parameters:
       - { name: host_slug, in: path, required: true, schema: { type: string } }
+      - { name: l, in: query, required: false, description: "Meeting length in minutes the shared link asks for. The card names it, links to it and gives it as the canonical address when the page offers it; otherwise the card names the default length.", schema: { type: integer } }
     get:
       tags: [Public]
       operationId: getPublicBookingPreview
@@ -11580,7 +11590,8 @@ paths:
         preview reads the page without running the app. The HTML carries the host's name,
         company, meeting title and duration as escaped title, description, Open Graph and
         Twitter card fields. The canonical URL and `og:url` are the absolute `/book/{host_slug}`
-        address on the configured public origin, and are omitted when no usable origin is
+        address on the configured public origin, with `?l=` when the card names an offered
+        length the link asked for, and are omitted when no usable origin is
         configured. The company logo is the card image when there is one; otherwise the card
         has no image. A paused page answers generic metadata that names no host. A missing
         or revoked page answers 404 with no host metadata. Responses are `no-store` and
@@ -11592,6 +11603,7 @@ paths:
           content:
             text/html:
               schema: { type: string }
+        '422': { $ref: '#/components/responses/ValidationError' }
         default:
           description: The page is missing, revoked or unavailable; the HTML names no host.
           content:
@@ -11976,6 +11988,109 @@ paths:
               schema:
                 type: array
                 items: { $ref: '#/components/schemas/SchedulingTeamCandidate' }
+  /scheduling/team-links:
+    get:
+      tags: [Activities]
+      operationId: listSchedulingTeamLinks
+      x-mcp-tool: { verb: read_view, tier: auto_execute, scope: read }
+      summary: List the caller's team booking links.
+      description: |
+        Each live team link the caller owns, oldest first. A team link sits beside the caller's
+        personal booking page, which always offers the caller's own free time alone.
+      responses:
+        default:
+          description: The operation could not be completed.
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+        '200':
+          description: The caller's team links.
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/SchedulingTeamLink' }
+    post:
+      tags: [Activities]
+      operationId: createSchedulingTeamLink
+      security: [ { cookieAuth: [] } ]   # human session only: a team link publishes colleagues' joint free time
+      x-agent-access: human-only
+      x-human-only-reason: security
+      summary: Create a team booking link that names colleagues.
+      description: |
+        Creates a link with its own address. Guests see only the times when the caller and every
+        member are free, inside each one's own working hours, and each booking invites every
+        member. The link uses the calendar and booking settings of the caller's personal page.
+        Each member starts as `pending`, and the link takes no bookings until every member has
+        confirmed. Name one to five colleagues offered by `GET /scheduling/team-candidates`;
+        anything else answers 422 on `team_members`.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/SchedulingTeamLinkRequest' }
+      responses:
+        default:
+          description: The operation could not be completed.
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+        '201':
+          description: The new team link.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/SchedulingTeamLink' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+  /scheduling/team-links/{page_id}:
+    parameters:
+      - { name: page_id, in: path, required: true, schema: { type: string, format: uuid } }
+    put:
+      tags: [Activities]
+      operationId: updateSchedulingTeamLink
+      security: [ { cookieAuth: [] } ]   # human session only: a team link publishes colleagues' joint free time
+      x-agent-access: human-only
+      x-human-only-reason: security
+      summary: Rename a team link, switch it on or off, or change its members.
+      description: |
+        Only the link's owner may change it; anyone else gets 404. A member kept on the list keeps
+        their own answer, and a member new to it starts as `pending`.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/SchedulingTeamLinkRequest' }
+      responses:
+        default:
+          description: The operation could not be completed.
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+        '200':
+          description: The changed team link.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/SchedulingTeamLink' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+    delete:
+      tags: [Activities]
+      operationId: deleteSchedulingTeamLink
+      security: [ { cookieAuth: [] } ]   # human session only: a team link publishes colleagues' joint free time
+      x-agent-access: human-only
+      x-human-only-reason: security
+      summary: Delete a team link.
+      description: |
+        The link's address stops working. Meetings already booked through it stand. The owner's
+        personal page does not change. Only the link's owner may delete it; anyone else gets 404.
+      responses:
+        default:
+          description: The operation could not be completed.
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+        '204': { description: The team link is deleted. }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/ValidationError' }
   /scheduling/team-requests:
     get:
       tags: [Activities]
@@ -12004,15 +12119,47 @@ paths:
     put:
       tags: [Activities]
       operationId: answerSchedulingTeamRequest
+      # A host may have several team links. Kept for clients built before
+      # them; it answers every live team link of the host that names the caller.
+      deprecated: true
       security: [ { cookieAuth: [] } ]   # human session only: a member's consent to share free time
       x-agent-access: human-only
       x-human-only-reason: security
-      summary: Confirm or leave a colleague's booking link that names the caller.
+      summary: Confirm or leave every team link of a colleague that names the caller.
+      description: |
+        Use `PUT /scheduling/team-links/{page_id}/answer` instead, which answers one team link.
+        This answers each live team link of that colleague that names the caller. `confirmed`
+        confirms each one still pending. `left` takes the caller off each one they have not left.
+        Answers 404 when no live team link of that colleague names the caller.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/SchedulingTeamAnswer' }
+      responses:
+        default:
+          description: The operation could not be completed.
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+        '204': { description: The answer is recorded. }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+  /scheduling/team-links/{page_id}/answer:
+    parameters:
+      - { name: page_id, in: path, required: true, schema: { type: string, format: uuid }, description: 'The `page_id` of a team request, from `GET /scheduling/team-requests`.' }
+    put:
+      tags: [Activities]
+      operationId: answerSchedulingTeamLink
+      security: [ { cookieAuth: [] } ]   # human session only: a member's consent to share free time
+      x-agent-access: human-only
+      x-human-only-reason: security
+      summary: Confirm or leave a colleague's team link that names the caller.
       description: |
         `confirmed` lets the link read the caller's free time and put the caller on each meeting
         booked through it. `left` takes the caller off: the link stops taking bookings until its
-        owner removes the caller, and the owner sees why. Answers 404 when no live link of that
-        colleague names the caller.
+        owner removes the caller, and the owner sees why. Answers 404 when no live team link with
+        this id names the caller.
       requestBody:
         required: true
         content:
@@ -12260,7 +12407,7 @@ paths:
   /public/booking/{host_slug}/availability:
     parameters:
       - { name: host_slug, in: path, required: true, schema: { type: string }, description: The host's unguessable public booking slug (not the user uuid). }
-      - { name: l, in: query, required: false, description: Offered meeting length in minutes. Unknown lengths use the default., schema: { type: integer } }
+      - { name: l, in: query, required: false, description: "Offered meeting length in minutes. A length the page does not offer is refused with 422 `length_not_offered`; read the profile again for the lengths on offer.", schema: { type: integer } }
     get:
       tags: [Public]
       operationId: getPublicAvailability
@@ -12305,7 +12452,7 @@ paths:
   /public/booking/{host_slug}:
     parameters:
       - { name: host_slug, in: path, required: true, schema: { type: string } }
-      - { name: l, in: query, required: false, description: Offered meeting length in minutes. Unknown lengths use the default., schema: { type: integer } }
+      - { name: l, in: query, required: false, description: "Offered meeting length in minutes. A length the page does not offer is refused with 422 `length_not_offered`; read the profile again for the lengths on offer.", schema: { type: integer } }
     post:
       tags: [Public]
       operationId: bookPublicMeeting
@@ -26383,7 +26530,7 @@ paths:
       operationId: getNoticeCase
       security: [ { bearerAuth: [] }, { cookieAuth: [] } ]
       x-mcp-tool: { verb: get_notice_case, router: read_details, action: notice_case, tier: auto_execute, scope: read, served_by: route }
-      summary: One privacy notice owed, where the source is confirmed. The case id comes from notice_cases, not the contact's id.
+      summary: One privacy notice owed, where the source is confirmed. The case id comes from notice_cases (GET /privacy/notice-cases), not the contact's id.
       description: |
         The same case the queue lists, read on its own, for a surface that opens one duty rather
         than working a page of them.
@@ -26415,7 +26562,7 @@ paths:
       operationId: assignNoticeCase
       security: [ { bearerAuth: [] }, { cookieAuth: [] } ]
       x-mcp-tool: { verb: assign_notice_case, router: change_compliance, action: assign_notice_case, tier: auto_execute, scope: write, served_by: route }
-      summary: Give a privacy notice already owed (from notice_cases) an owner.
+      summary: Give a privacy notice already owed (from notice_cases, GET /privacy/notice-cases) an owner.
       description: |
         Records who is working this duty, so the queue shows a claimed case rather than a pile
         nobody has taken.
@@ -26536,7 +26683,7 @@ paths:
       operationId: getNoticeCaseReview
       security: [ { bearerAuth: [] }, { cookieAuth: [] } ]
       x-mcp-tool: { verb: get_notice_case_review, router: read_details, action: notice_case_review, tier: auto_execute, scope: read, served_by: route }
-      summary: One contact's privacy-notice case — its source, whether a notice is owed, and by when. The id comes from notice_case_reviews or the contact's contact_360 view, not the contact's id.
+      summary: One contact's privacy-notice case — its source, whether a notice is owed, and by when. The id comes from notice_case_reviews (GET /privacy/notice-case-reviews) or the contact's contact_360 view (GET /contacts/{id}/360), not the contact's id.
       description: |
         The administrative record for a source review or notice duty. Human privacy-request read
         authority covers the record; contact names remain limited by ordinary contact visibility.
@@ -26558,7 +26705,7 @@ paths:
       operationId: assignNoticeCaseReview
       security: [ { bearerAuth: [] }, { cookieAuth: [] } ]
       x-mcp-tool: { verb: assign_notice_case_review, router: change_compliance, action: assign_notice_case_review, tier: auto_execute, scope: write, served_by: route }
-      summary: Give a contact's privacy-notice case (from notice_case_reviews) an owner.
+      summary: Give a contact's privacy-notice case (from notice_case_reviews, GET /privacy/notice-case-reviews) an owner.
       description: |
         Records who is working this duty, so the queue shows a claimed case rather than a pile
         nobody has taken.
@@ -26608,7 +26755,7 @@ paths:
       operationId: assessNoticeSource
       security: [ { bearerAuth: [] }, { cookieAuth: [] } ]
       x-mcp-tool: { verb: confirm_notice_source, router: change_compliance, action: confirm_notice_source, tier: auto_execute, scope: write, served_by: route, ask_user_first: true }
-      summary: Confirm where a contact came from (bought list, import, their own enquiry), which decides whether a privacy notice is owed. Preview it first (POST /privacy/notice-case-reviews/{id}/source/preview). Only a contact with no recorded source is up for review; when its evidence does not name where the data first came from, ask the user rather than guessing a kind.
+      summary: Confirm where a contact came from (bought list, import, their own enquiry), which decides whether a privacy notice is owed. Preview it first (POST /privacy/notice-case-reviews/{id}/source/preview). Only a contact with no recorded source is up for review; when its evidence does not name where the data first came from (an import alone does not), ask the user rather than guessing a kind.
       requestBody:
         required: true
         content:
@@ -27055,7 +27202,7 @@ paths:
         - { name: actor, in: query, schema: { type: string }, description: 'Typed principal filter, e.g. human:<uuid> or agent:sdr.' }
         - { name: entity_type, in: query, schema: { type: string } }
         - { name: entity_id, in: query, schema: { type: string, format: uuid } }
-        - { name: batch_id, in: query, schema: { type: string, format: uuid }, description: 'Only the rows one bulk change wrote (`executeBulkChange` answers the id).' }
+        - { name: batch_id, in: query, schema: { type: string, format: uuid }, description: 'Only the rows one operation group wrote: a bulk change (`executeBulkChange` answers the id) or one run of a capture purge.' }
         - { name: action, in: query, schema: { type: string }, description: 'One of the AuditLogEntry.action values.' }
         - { name: from, in: query, schema: { type: string, format: date-time } }
         - { name: to, in: query, schema: { type: string, format: date-time } }
@@ -35620,7 +35767,7 @@ paths:
       operationId: listNotices
       security: [ { bearerAuth: [] }, { cookieAuth: [] } ]
       x-mcp-tool: { verb: list_notices, router: read_details, action: notices, tier: auto_execute, scope: read, served_by: route }
-      summary: The acting user's own in-app notifications, newest first. Not a privacy notice owed to a contact; those are notice_case_reviews.
+      summary: The acting user's own in-app notifications, newest first. Not a privacy notice owed to a contact; those are notice_case_reviews (GET /privacy/notice-case-reviews).
       description: |
         The acting human's own notifications, newest first, read and unread; another seat's are
         not an error, they are absent.
@@ -35698,12 +35845,16 @@ paths:
             application/problem+json:
               schema: { $ref: '#/components/schemas/Problem' }
         '404':
-          description: No such live contact to address (a departed or unknown recipient reads the same).
+          description: >-
+            No such live contact to address (a departed or unknown recipient reads the same), or no
+            deal of that id the caller can read.
           content:
             application/problem+json:
               schema: { $ref: '#/components/schemas/Problem' }
         '422':
-          description: An unknown kind, or a note past its ceiling.
+          description: >-
+            An unknown kind, a note past its ceiling, a next-step notice without its deal, a deal
+            on any other kind, or a deal that is closed or owned by someone else.
           content:
             application/problem+json:
               schema: { $ref: '#/components/schemas/Problem' }
@@ -46973,7 +47124,7 @@ components:
     AiRouteCertification:
       type: object
       required: [verdict, current]
-      description: 'What the certification records say about this model for this task. Absent on a candidate no record measured, which the screen reads as not certified.'
+      description: 'What the certification records say about this model for this task, read by the same rule as the feature''s `certification` grade, so the lead candidate and the feature never disagree. Absent on a candidate that grade calls not_measured.'
       properties:
         verdict: { type: string, enum: [certified, supported_degraded, not_supported], x-extensible-enum: true, x-go-type: string, description: 'The worst verdict across the task''s sites and across the records of this model.' }
         current: { type: boolean, description: 'Every record behind the verdict still describes the prompts this build sends.' }
@@ -47009,9 +47160,9 @@ components:
       required: [grade, model, recheck_pending]
       description: |
         The certification grade of the model that answers this feature first (the lead of
-        `normal_candidates`), read from the committed certification records by the readiness
+        `effective_candidates`), read from the committed certification records by the readiness
         report's rule: the worst grade over every site the feature ships, and not measured when
-        any site has no record for that model. Absent when no model is bound, and for embeddings.
+        any site has no record for that model. Absent when no model is bound or the budget blocks the feature, and for embeddings.
       properties:
         grade:
           type: string
@@ -48513,6 +48664,15 @@ components:
           description: |
             The coach's own words, shown beneath the kind's headline. Optional: without one the
             notice still says what it is about, which is why the kind is closed and this is not.
+        deal_id:
+          type: string
+          format: uuid
+          description: |
+            The deal the notice is about. Required for `coach_deal_needs_next_step`, and refused on
+            every other kind. The deal must be open, owned by the recipient, and one the caller
+            can read. The headline then names the deal and what Margince sees on it: whether a
+            next step is planned, and the day of its last activity. The recipient's row links to
+            the deal.
     Notice:
       type: object
       description: One durable line addressed to one contact, as the raising call returns it.
@@ -54214,6 +54374,7 @@ components:
             - no_consent_exception_not_offered
             - no_consent
             - existing_customer
+            - opt_out_allowed
           x-extensible-enum: true
         reason_at:
           type: [string, 'null']
@@ -60194,7 +60355,11 @@ components:
         logo_url: { type: string, description: Absolute public logo URL when the public origin is configured; otherwise relative to the API origin. }
         title: { type: string }
         location: { type: string }
-        duration_minutes: { type: integer }
+        duration_minutes: { type: integer, description: "The length this page books: the one `l` asked for when the page offers it, else the default." }
+        offered_lengths:
+          type: array
+          items: { type: integer }
+          description: Every meeting length the host's booking page offers, the default first. Pass one as `l` to book at that length. Absent on a paused page and on a meeting proposal.
         enabled: { type: boolean }
         paused: { type: boolean, description: "True when the page takes no bookings now: the host turned bookings off, or the calendar behind it cannot take them. The availability and booking calls then answer as for an unknown page." }
         video_app: { type: string, enum: [google_meet, microsoft_teams], x-extensible-enum: true, description: Present when new meetings get a video call link from the host's calendar. }
@@ -60238,18 +60403,18 @@ components:
             the page names no calendar (a page saved before the profile existed reads this way).
             `calendar_read_only`: the connection lacks the calendar write grant. `calendar_unavailable`:
             the connection is gone or refused. `team_not_ready`: a team member has not confirmed, has
-            left, or has no calendar Margince can read; `team_members` says which. Answered on the
-            host's own profile read only.
+            left, or has no calendar Margince can read; the team link's `team_members` says which.
+            Answered on the host's own reads only.
         team_members:
           type: array
           maxItems: 5
+          deprecated: true
           items: { $ref: '#/components/schemas/SchedulingTeamMember' }
           description: |
-            Colleagues who must attend every meeting booked through this page. Guests see only the
-            times when the host and every member are free, inside each one's own working hours, and
-            each booking invites every member. A member named here starts as `pending` and the page
-            takes no bookings until every member has confirmed. Only `user_id` is read from a
-            request; a colleague not offered by `GET /scheduling/team-candidates` is refused.
+            The personal page names no colleagues: it offers the host's own free time alone. A
+            request naming a member answers 422 on `team_members`; an empty list is accepted. A
+            response does not carry the field. Colleagues are named on a team link
+            (`POST /scheduling/team-links`).
     SchedulingTeamMember:
       type: object
       required: [user_id]
@@ -60273,12 +60438,47 @@ components:
         name: { type: string }
     SchedulingTeamRequest:
       type: object
-      required: [host_user_id, host_name, title, state]
+      required: [page_id, host_user_id, host_name, title, state]
       properties:
+        page_id: { type: string, format: uuid, description: 'The team link that names the caller; answer it with `PUT /scheduling/team-links/{page_id}/answer`.' }
         host_user_id: { type: string, format: uuid }
         host_name: { type: string }
-        title: { type: string, description: The meeting title the link offers. }
+        title: { type: string, description: "The team link's name, which is the meeting title it offers." }
         state: { type: string, enum: [pending, confirmed], x-extensible-enum: true }
+    SchedulingTeamLink:
+      type: object
+      required: [id, title, enabled, team_members, slug, blocker]
+      description: |
+        A booking link that names colleagues who attend every meeting booked through it. It uses
+        the calendar and booking settings of its owner's personal page, and has its own address.
+      properties:
+        id: { type: string, format: uuid }
+        title: { type: string, maxLength: 200, description: "The link's name, which is also the meeting title guests see." }
+        enabled: { type: boolean, description: Whether the owner switched the link on. }
+        team_members:
+          type: array
+          maxItems: 5
+          items: { $ref: '#/components/schemas/SchedulingTeamMember' }
+        slug: { type: string }
+        public_url: { type: string, description: 'The address to share, `/book/{slug}` on the configured public origin. Absent when no usable public origin is configured.' }
+        blocker:
+          type: string
+          enum: [none, no_calendar, calendar_read_only, calendar_unavailable, team_not_ready]
+          x-extensible-enum: true
+          description: Why the link takes no bookings now, with the meanings `SchedulingProfile.blocker` gives them.
+    SchedulingTeamLinkRequest:
+      type: object
+      additionalProperties: false
+      required: [title, team_members]
+      properties:
+        title: { type: string, maxLength: 200 }
+        enabled: { type: boolean, description: Absent means on. }
+        team_members:
+          type: array
+          minItems: 1
+          maxItems: 5
+          items: { $ref: '#/components/schemas/SchedulingTeamMember' }
+          description: Only `user_id` is read. A member's answer is theirs to give.
     SchedulingTeamAnswer:
       type: object
       additionalProperties: false
@@ -60569,7 +60769,9 @@ components:
             Worklist's outcome lane asks: a meeting linked to a customer record the caller may
             see, with no `meeting_status` or `booked`, whose start has passed (a date-only
             meeting once its date is over in the installation's timezone) by the server's clock,
-            and whose content the caller may read. Unlike the lane it has no look-back window, so
+            and whose content the caller may read. A meeting whose subject names travel logistics
+            (a flight, an airport, a pickup) asks only when it links a deal, lead or project the
+            caller may see. Unlike the lane it has no look-back window, so
             an old booked meeting still asks. Every read that carries `writable` carries this.
             A client offers the outcome control when this and `writable` are both true. Absent
             means false.
@@ -63806,6 +64008,14 @@ components:
             their consent nor an agreement with them. A privacy notice they were sent is neither.
             Not a refusal: a surface shows a warning and records the sender's confirmation through
             `POST /lawful-basis-confirmations` before the send. Absent or false otherwise.
+        ask_country:
+          type: boolean
+          description: |
+            The record states no country for this recipient, the refusal is for want of marketing
+            consent, and an installed pack allows advertising until the recipient refuses. A composer
+            asks the sender for the country, saves it on the contact with `PATCH /contacts/{id}`
+            (`address_country`) and asks the preview again. Absent or false when no answer could
+            change the decision, and for a recipient the caller cannot read.
         consent_purpose_id:
           type: string
           format: uuid
@@ -65555,7 +65765,8 @@ components:
           description: Per-claim evidence; a claim without evidence is omitted.
         status: { type: string, enum: [open, acknowledged, resolved, dismissed], x-extensible-enum: true, default: open }
         detected_at: { type: string, format: date-time }
-        source: { type: string }
+        source: { type: string, description: 'The channel this signal arrived by: `api`, `automation`, `capture`, `import`, `manual` or `webform`. An older signal can show another value until the background correction reaches it.' }
+        source_system: { type: [string, 'null'], readOnly: true, description: 'The producer that wrote the signal, such as `signal-scan` or the name of an extension. Empty when a member or an API client filed it.' }
         captured_by: { type: string, readOnly: true, description: 'Server-stamped from the authenticated principal; never client-supplied.' }
         version: { $ref: '#/components/schemas/RowVersion' }
         created_at: { type: string, format: date-time }
@@ -65752,7 +65963,7 @@ components:
           type: array
           items: { $ref: '#/components/schemas/SignalEvidence' }
         detected_at: { type: [string, 'null'], format: date-time, description: When the underlying observation happened (defaults to now). }
-        source: { type: string }
+        source: { type: string, enum: [api, automation, capture, import, manual, webform], x-go-type: string, description: 'The channel this signal arrived by. A client that files it for a member sends `manual`; an integration sends `api`. Any other value is 422 `invalid_source`.' }
 
     UpdateSignalRequest:
       type: object
@@ -73086,7 +73297,7 @@ components:
         assessment: {type: string, enum: [attention, checked, incomplete], x-extensible-enum: true}
         sources:
           type: array
-          maxItems: 10
+          maxItems: 11
           items: {$ref: '#/components/schemas/HealthSource'}
         findings:
           type: array
@@ -73157,17 +73368,40 @@ components:
         first_observed_at: {type: string, format: date-time}
         next_attempt_at: {type: string, format: date-time}
         count: {type: integer, minimum: 0}
-        unit: {type: string, enum: [runs, mailboxes, records, updates, items, threads], x-extensible-enum: true}
+        unit: {type: string, enum: [runs, mailboxes, records, updates, items, threads, messages], x-extensible-enum: true}
         window_start: {type: string, format: date-time}
         window_end: {type: string, format: date-time}
+        footer_gap:
+          $ref: '#/components/schemas/HealthFooterGap'
         action:
           $ref: '#/components/schemas/HealthAction'
+    HealthFooterGap:
+      type: object
+      additionalProperties: false
+      description: >
+        A legal entity whose mail owes a company detail nobody stated. A send that owes it is held
+        for review with `footer_incomplete`, and a background send is dropped. The finding goes once
+        the details are complete.
+      required: [legal_entity_id, legal_entity_name, is_default, missing, held_by_user, held_in_background]
+      properties:
+        legal_entity_id: {type: string, format: uuid}
+        legal_entity_name: {type: string, description: Empty for a default entity that states no name.}
+        is_default: {type: boolean}
+        missing:
+          type: array
+          minItems: 1
+          description: >
+            The owed disclosure kinds with no text, then `entity_name` for a default entity with
+            neither a display name nor a legal name.
+          items: {type: string, enum: [controller_identity, privacy_contact, objection_route, advertiser_contact, advertisement, entity_name], x-extensible-enum: true}
+        held_by_user: {type: integer, minimum: 0, description: 'Sends a user pressed that were held for this since the details last changed.'}
+        held_in_background: {type: integer, minimum: 0, description: 'Background sends, such as a meeting reminder, that were held or dropped for this since the details last changed.'}
     HealthAction:
       type: object
       additionalProperties: false
       required: [destination, available]
       properties:
-        destination: {type: string, enum: [diagnostics, connections, models, search, updates, configuration, regional], x-extensible-enum: true, description: 'Where the finding is acted on. `regional` is the Company settings part that holds the installation timezone.'}
+        destination: {type: string, enum: [diagnostics, connections, models, search, updates, configuration, regional, legal_entities, company_profile, disclosures], x-extensible-enum: true, description: 'Where the finding is acted on. `regional` is the Company settings part that holds the installation timezone. `legal_entities` is the Company settings part that lists the legal entities, and `company_profile` the one that names the company. `disclosures` is the jurisdiction page that holds the company details every mail discloses.'}
         available: {type: boolean}
         reason: {type: string}
 
@@ -73369,7 +73603,7 @@ components:
             when no user row resolves — a deactivated or deleted member still has
             audit rows, and an honest identifier is better than an invented name.
         on_behalf_of_name: { type: [string, 'null'], description: Resolved display name for on_behalf_of. }
-        batch_id: { type: [string, 'null'], format: uuid, description: 'The bulk change that wrote this row; null for a change made on its own.' }
+        batch_id: { type: [string, 'null'], format: uuid, description: 'The operation group that wrote this row: a bulk change, or one run of a capture purge. Null for a change made on its own.' }
         action:
           $ref: '#/components/schemas/AuditAction'
         entity_type: { type: string }
@@ -74438,7 +74672,6 @@ components:
         - document_extract
         - draft_reply
         - enrich
-        - extension_task
         - growth_fit
         - nl_search
         - offer_draft
@@ -74495,6 +74728,9 @@ components:
         also what a caller may FILTER on, and rows written before they were retired are served
         until the projection's retention window closes over them — narrowing the filter would
         refuse a query that still has answers.
+
+        `extension_task` is RETIRED for the same reason: the task was removed, and an extension's
+        AI task now reports under its own `ext_<unit>_<task>` name. `ai.RetiredTasks` lists it.
 
         Its own schema because the item that reports a kind and the query that asks for kinds
         must be ONE list — two copies of a vocabulary are two vocabularies as soon as somebody
@@ -74638,11 +74874,12 @@ components:
 
     RouterActions:
       type: object
-      description: The actions of one MCP router whose actions run REST routes.
-      required: [router, actions]
+      description: The actions of one MCP router, with the arguments each takes.
+      required: [router, actions, how_to_call]
       properties:
         router: { type: string }
         ask_user_first_means: { type: string, description: 'What ask_user_first asks of the model; present when an action here has it.' }
+        how_to_call: { type: string, description: 'Where an action''s arguments go in the router call: top-level members beside action, a routed body in request_body.' }
         actions:
           type: array
           items:
@@ -74650,14 +74887,25 @@ components:
             required: [action, does, route]
             properties:
               action: { type: string, description: 'The value the router''s action argument takes.' }
-              does: { type: string, description: 'The route''s summary.' }
+              does: { type: string, description: 'What the action does.' }
               route: { type: string, description: 'The method and route, for example POST /v1/record-grants.' }
               ids: { type: array, items: { type: string }, description: The path ids the action takes as arguments. }
-              query: { type: array, items: { type: string }, description: The query parameters it takes as arguments. }
+              query:
+                type: array
+                description: The query parameters it takes as arguments, each with its type and any closed values.
+                items:
+                  type: object
+                  required: [name, type]
+                  properties:
+                    name: { type: string }
+                    type: { type: string }
+                    required: { type: boolean }
+                    enum: { type: array, items: { type: string } }
+                    format: { type: string }
               if_version: { type: boolean, description: 'Whether it takes if_version: the version you last read.' }
               ask_user_first: { type: boolean, description: Whether the app asks its user to confirm it first. }
               uploads_a_file: { type: boolean, description: 'Whether it takes filename, content_type and content_base64.' }
-              body: { type: object, description: The JSON schema of its body argument. }
+              body: { type: object, additionalProperties: true, description: The JSON schema of its body argument. }
 
     AgentAdmissionPolicy:
       type: object
@@ -76493,6 +76741,13 @@ components:
             values as a list instead of the joined key=value text. Absent on a proposal whose
             summary is a sentence alone, and on one staged before the parts were kept.
             Withheld with the summary.
+        why:
+          allOf: [{ $ref: '#/components/schemas/WorkGrounds' }]
+          readOnly: true
+          description: >-
+            Why this proposal exists, as whoever staged it said it: the record and the fact
+            that prompted it. A card leads with it. Absent when its maker gave none, never
+            filled with a stock sentence, and withheld with the summary.
         proposed_change:
           type: object
           additionalProperties: true
@@ -77627,6 +77882,13 @@ components:
           type: array
           items: { type: string }
           description: The member's role keys. Present only when `detail` is true.
+        role_names:
+          type: object
+          additionalProperties: { type: string }
+          description: >
+            The name an admin gave each live role in `roles`, keyed by role key, so a reader who may
+            not read the role directory still sees a custom role by its name. Present only when
+            `detail` is true. Absent from an older server; a key it does not name is shown as the key.
     RecordAccessReason:
       type: object
       description: |
@@ -80794,7 +81056,7 @@ components:
     ContactImpersonationWarning:
       type: object
       description: >-
-        The sign of impersonation the sender check saw when capture made this contact from a mail.
+        The sign of impersonation the sender check saw on a captured mail from this contact.
       required: [detected_at]
       properties:
         reason:
@@ -83305,6 +83567,9 @@ components:
         due_at: { type: string, format: date-time, description: "When this is due (tasks), or when it lapses (approvals)." }
         due_has_time: { type: boolean, description: 'On a task row: true when `due_at` names an agreed time of day, false when the task is due by that day. Absent on other rows.' }
         due_intent: { $ref: '#/components/schemas/IntentTime' }
+        task_type:
+          allOf: [{ $ref: '#/components/schemas/TaskType' }]
+          description: 'On a task row: the kind of work it asks for, so a card names it without reading the task. Absent on other rows.'
         overdue: { type: boolean, description: "Past due at the read instant, resolved server-side so every surface agrees." }
         due_group:
           type: string
@@ -85221,6 +85486,9 @@ components:
         due_at: { type: string, format: date-time, description: 'When this is due, or when the meeting starts.' }
         due_has_time: { type: boolean, description: 'On a task row: true when `due_at` names an agreed time of day, false when the task is due by that day. Absent on other rows.' }
         due_intent: { $ref: '#/components/schemas/IntentTime' }
+        task_type:
+          allOf: [{ $ref: '#/components/schemas/TaskType' }]
+          description: 'On a task row: the kind of work it asks for, so a card names it without reading the task. Absent on other rows.'
         overdue: { type: boolean, description: 'Past due at the read instant, resolved server-side so every surface agrees.' }
         due_group:
           type: string

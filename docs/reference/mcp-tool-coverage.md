@@ -186,7 +186,7 @@ Everything below is the detail behind the two tables above: which tools each job
 | … some case requires as one of a set | 0 |
 | … **no case requires** | 5 |
 | … of those, permitted somewhere but never required | 1 |
-| Prompt tokens spent on tools no case requires | 3265 |
+| Prompt tokens spent on tools no case requires | 3318 |
 | Use cases | 83 |
 | Acceptance criteria the cases declare, each with a statement | 133 |
 
@@ -666,8 +666,8 @@ Every run of every case requiring this tool passed, for the model named.
 | `change_access` | 1.00 | 2 | `case114_the_fleet_team` |
 | `create_record` | 1.00 | 2 | `case56_not_the_same` |
 | `change_my_settings` | 1.00 | 2 | `case102_shorter_in_my_voice` |
-| `change_tags` | 1.00 | 2 | `case32_two_words_for_one_thing` |
 | `update_record` | 1.00 | 2 | `case33_two_cards_for_one_company` |
+| `change_tags` | 1.00 | 2 | `case32_two_words_for_one_thing` |
 | `resolve_duplicates` | 1.00 | 4 | `case33_two_cards_for_one_company`, `case56_not_the_same` |
 | `draft_outbound` | 1.00 | 2 | `case60_send_one_draft_one` |
 | `schedule_meeting` | 1.00 | 2 | `case46_get_us_in_a_room` |
@@ -687,8 +687,8 @@ Every run of every case requiring this tool passed, for the model named.
 | `change_access` | 1.00 | 2 | `case114_the_fleet_team` |
 | `create_record` | 1.00 | 2 | `case56_not_the_same` |
 | `change_my_settings` | 1.00 | 2 | `case102_shorter_in_my_voice` |
-| `change_tags` | 1.00 | 2 | `case32_two_words_for_one_thing` |
 | `update_record` | 1.00 | 2 | `case33_two_cards_for_one_company` |
+| `change_tags` | 1.00 | 2 | `case32_two_words_for_one_thing` |
 | `resolve_duplicates` | 1.00 | 4 | `case33_two_cards_for_one_company`, `case56_not_the_same` |
 | `draft_outbound` | 1.00 | 2 | `case60_send_one_draft_one` |
 | `schedule_meeting` | 1.00 | 2 | `case46_get_us_in_a_room` |
@@ -707,8 +707,8 @@ Every run of every case requiring this tool passed, for the model named.
 | `change_access` | 1.00 | 2 | `case114_the_fleet_team` |
 | `create_record` | 1.00 | 2 | `case56_not_the_same` |
 | `change_my_settings` | 1.00 | 2 | `case102_shorter_in_my_voice` |
-| `change_tags` | 1.00 | 2 | `case32_two_words_for_one_thing` |
 | `update_record` | 1.00 | 2 | `case33_two_cards_for_one_company` |
+| `change_tags` | 1.00 | 2 | `case32_two_words_for_one_thing` |
 | `resolve_duplicates` | 1.00 | 4 | `case33_two_cards_for_one_company`, `case56_not_the_same` |
 | `draft_outbound` | 1.00 | 2 | `case60_send_one_draft_one` |
 | `check_availability` | 1.00 | 2 | `case23_find_us_a_slot` |
@@ -788,6 +788,6 @@ A tool in the `Permitted in` column is worse than one with nothing: a case is al
 | `change_record_parts` | 1017 | - | - | - | - |
 | `change_relationships` | 816 | - | - | - | - |
 | `change_lists` | 620 | - | - | `case47_tidy_the_fair_list` | - |
+| `enrich` | 448 | - | - | - | - |
 | `annotate_brief` | 417 | `agent_loop` | `agent_loop` | - | `morning_brief` |
-| `enrich` | 395 | - | - | - | - |
 

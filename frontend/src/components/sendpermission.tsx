@@ -22,6 +22,7 @@ import {
 } from "../lib/sendstatus";
 import { CitedLaws } from "./citedlaw";
 import { lawsOf } from "./citedprovisions";
+import { CountryQuestion } from "./countryquestion";
 import { LawfulBasisCallout } from "./lawfulbasiswarning";
 
 // What the engine decided about this message, said where the rep is writing it.
@@ -210,6 +211,7 @@ export function SendPermission(props: SendPermissionProps) {
   return (
     <>
       <LawfulBasisCallout preview={props.preview} />
+      <CountryQuestion preview={props.preview} />
       <PermissionNotice {...props} />
     </>
   );

@@ -11,9 +11,11 @@
 //
 // It is a go-run-only developer tool, not a shipped process role:
 // `make e2e-ai-report` invokes it directly with `go run`, so it never gets a
-// cmd/<role> entry of its own. It always exits 0 — the certification lane is
-// paid and manual, and a report that failed a build would make every prompt
-// edit wait on a paid run.
+// cmd/<role> entry of its own. Printing the report always exits 0. The
+// certification lane is paid and manual, and a report that failed a build would
+// make every prompt edit wait on a paid run. Three flags answer one question for
+// CI instead: -newly-stale, -totals and -require-current. Only the last fails,
+// and only the release workflow runs it.
 package main
 
 import (
@@ -40,6 +42,11 @@ func main() {
 	repoRoot := flag.String("repo", "..", "the repository root (relative to backend/), read to tell a current agent loop verdict from a stale one")
 	agentLoopDir := flag.String("agentloop", "internal/compose/aicert/records/agent_loop_e2e",
 		"directory of the agent loop live lane's verdicts")
+	newlyStaleAgainst := flag.String("newly-stale", "",
+		"print the records current in this saved report of another tree and not current here, as a pull request comment")
+	requireCurrent := flag.String("require-current", "",
+		"exit 1 and list the rungs of this preset file (such as gemini_cloud.yaml) whose record is not current")
+	totalsOnly := flag.Bool("totals", false, "print only how many records are current, partial, stale and absent")
 	flag.Parse()
 
 	// The census is what says which sites SHOULD have a record: an absent
@@ -81,7 +88,16 @@ func main() {
 		fmt.Fprintf(os.Stderr, "reportcmd: %v\n", err)
 		os.Exit(1)
 	}
-	emit(renderReadiness(aicert.Census{Sites: census.All(), Scopes: census.Scopes()}, stamps, perScenario, records, contextOwed))
+	readiness := aicert.Census{Sites: census.All(), Scopes: census.Scopes()}
+	if *newlyStaleAgainst != "" || *requireCurrent != "" || *totalsOnly {
+		out, problems, code := answer(*newlyStaleAgainst, *requireCurrent, *totalsOnly, *presetDir, readiness, stamps, perScenario, records, corpus, census)
+		emit(out)
+		for _, line := range problems {
+			fmt.Fprintln(os.Stderr, line)
+		}
+		os.Exit(code)
+	}
+	emit(renderReadiness(readiness, stamps, perScenario, records, contextOwed))
 	emit(renderDecisions(decisionRows))
 
 	reports, err := presetReports(context.Background(), *presetDir, corpus, census, records)
@@ -101,6 +117,32 @@ func main() {
 		os.Exit(1)
 	}
 	emit(renderAgentLoop(verdicts))
+}
+
+// answer is what one of the CI flags asked: the text for stdout, the lines for
+// stderr and the exit code. It is 0, except for -require-current naming a rung
+// that is not current.
+func answer(base, preset string, onlyTotals bool, presetDir string, readiness aicert.Census, stamps map[string]string,
+	perScenario map[string]map[string]string, records []aicert.Record, corpus []aicert.Scenario, census *aitasks.Registry,
+) (out string, problems []string, code int) {
+	rows, _ := aicert.Readiness(readiness, stamps, perScenario, records)
+	switch {
+	case onlyTotals:
+		return totals(rows) + "\n", nil, 0
+	case base != "":
+		comment, err := newlyStaleFromFile(base, rows)
+		if err != nil {
+			return "", []string{"reportcmd: " + err.Error()}, 1
+		}
+		return comment, nil, 0
+	default:
+		reports, err := presetReports(context.Background(), presetDir, corpus, census, records)
+		if err != nil {
+			return "", []string{"reportcmd: " + err.Error()}, 1
+		}
+		problems, code = requireCurrent(reports, preset)
+		return "", problems, code
+	}
 }
 
 // presetReports reads the rung states of the presets under dir over the committed records.

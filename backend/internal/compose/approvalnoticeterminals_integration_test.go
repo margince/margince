@@ -125,7 +125,7 @@ func TestRepeatedSubjectErasureRecordsEachNoticeOnce(t *testing.T) {
 	subject := a.e.SeedContact(t, "Dana Buyer", &a.e.AdminUser)
 	_, staged := a.stage(a.proposerCtx(ids.Nil), t, approvals.StageInput{
 		Kind: "update_record", TargetType: "contact", TargetID: subject,
-		ProposedChange: json.RawMessage(`{"record_type":"contact","id":"` + subject.String() + `","fields":{"title":"Buyer"}}`),
+		ProposedChange: json.RawMessage(`{"why":"A test asks for this change.","record_type":"contact","id":"` + subject.String() + `","fields":{"title":"Buyer"}}`),
 		DiffHash:       "contact-title", Summary: "Update contact title",
 	})
 	a.deliver(t, staged)

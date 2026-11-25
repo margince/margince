@@ -6,7 +6,7 @@
     "required_only_as_one_of_a_set": 0,
     "never_driven": 5,
     "permitted_but_never_required": 1,
-    "tokens_served_but_never_driven": 3265,
+    "tokens_served_but_never_driven": 3318,
     "use_case_cases": 83,
     "acceptance_criteria_named": 133,
     "tools_added_by_shipped_units": 0,
@@ -8237,6 +8237,20 @@
       "measured_by_model": {}
     },
     {
+      "name": "enrich",
+      "tokens": 448,
+      "agents": [],
+      "required_by_cases": [],
+      "required_as_one_of_a_set_by_cases": [],
+      "permitted_in_cases": [],
+      "called_in_held_runs": null,
+      "driven": false,
+      "required_only_as_one_of_a_set": false,
+      "graded_by_certification_tasks": [],
+      "near_miss_in_certification_tasks": [],
+      "measured_by_model": {}
+    },
+    {
       "name": "annotate_brief",
       "tokens": 417,
       "agents": [
@@ -8254,20 +8268,6 @@
       "near_miss_in_certification_tasks": [
         "agent_loop"
       ],
-      "measured_by_model": {}
-    },
-    {
-      "name": "enrich",
-      "tokens": 395,
-      "agents": [],
-      "required_by_cases": [],
-      "required_as_one_of_a_set_by_cases": [],
-      "permitted_in_cases": [],
-      "called_in_held_runs": null,
-      "driven": false,
-      "required_only_as_one_of_a_set": false,
-      "graded_by_certification_tasks": [],
-      "near_miss_in_certification_tasks": [],
       "measured_by_model": {}
     },
     {
@@ -8416,7 +8416,7 @@
     },
     {
       "name": "change_activities",
-      "tokens": 2918,
+      "tokens": 2977,
       "agents": [
         "overnight_at_risk_sweep"
       ],
@@ -8625,7 +8625,7 @@
     },
     {
       "name": "change_state",
-      "tokens": 2301,
+      "tokens": 2365,
       "agents": [],
       "required_by_cases": [],
       "required_as_one_of_a_set_by_cases": [],
@@ -9026,7 +9026,7 @@
     },
     {
       "name": "change_compliance",
-      "tokens": 1274,
+      "tokens": 1289,
       "agents": [],
       "required_by_cases": [],
       "required_as_one_of_a_set_by_cases": [],
@@ -9286,22 +9286,22 @@
       "measured_by_model": {}
     },
     {
-      "name": "change_tags",
-      "tokens": 652,
+      "name": "update_record",
+      "tokens": 698,
       "agents": [],
       "required_by_cases": [
-        "case32_two_words_for_one_thing"
+        "case33_two_cards_for_one_company"
       ],
       "required_as_one_of_a_set_by_cases": [],
       "permitted_in_cases": [
-        "case30_a_word_for_it",
-        "case31_wrong_word_on_the_record",
-        "case56_not_the_same"
+        "case123_take_over_sofias_deal",
+        "case43_the_fair_leads_are_prospects"
       ],
       "called_in_held_runs": [
-        "case30_a_word_for_it",
-        "case31_wrong_word_on_the_record",
-        "case32_two_words_for_one_thing"
+        "case1_log_it",
+        "case33_two_cards_for_one_company",
+        "case40_sort_the_queue",
+        "case43_the_fair_leads_are_prospects"
       ],
       "driven": true,
       "required_only_as_one_of_a_set": false,
@@ -9329,22 +9329,22 @@
       }
     },
     {
-      "name": "update_record",
-      "tokens": 626,
+      "name": "change_tags",
+      "tokens": 652,
       "agents": [],
       "required_by_cases": [
-        "case33_two_cards_for_one_company"
+        "case32_two_words_for_one_thing"
       ],
       "required_as_one_of_a_set_by_cases": [],
       "permitted_in_cases": [
-        "case123_take_over_sofias_deal",
-        "case43_the_fair_leads_are_prospects"
+        "case30_a_word_for_it",
+        "case31_wrong_word_on_the_record",
+        "case56_not_the_same"
       ],
       "called_in_held_runs": [
-        "case1_log_it",
-        "case33_two_cards_for_one_company",
-        "case40_sort_the_queue",
-        "case43_the_fair_leads_are_prospects"
+        "case30_a_word_for_it",
+        "case31_wrong_word_on_the_record",
+        "case32_two_words_for_one_thing"
       ],
       "driven": true,
       "required_only_as_one_of_a_set": false,

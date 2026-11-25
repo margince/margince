@@ -141,7 +141,7 @@ function isSignOff(line: string): boolean {
   return SIGN_OFF_PREFIXES.some((prefix) => normalized.startsWith(prefix));
 }
 
-function isQuoteStart(lines: readonly string[], index: number): boolean {
+function startsQuote(lines: readonly string[], index: number): boolean {
   const line = lines[index] ?? "";
   if (line.startsWith(">")) {
     return true;
@@ -163,91 +163,135 @@ function opensReplyHeader(lines: readonly string[], index: number): boolean {
     .some((next) => REPLY_HEADER_SENT.test(next));
 }
 
-/**
- * forwardedBlockEnd is the line after the sender block that opens at start,
- * or -1 when none does. Gmail and Apple Mail write that block under an
- * attribution line, and Outlook writes it bare.
- */
-function forwardedBlockEnd(lines: readonly string[], start: number): number {
-  let from = start;
-  if (!opensReplyHeader(lines, from)) {
-    from += 1;
-    while (from < lines.length && !(lines[from] ?? "").trim()) {
-      from += 1;
+const isBlank = (line: string | undefined): boolean => !line?.trim();
+
+// The index after the ">" lines a quote at `index` opens, or -1 when the quote
+// carries no ">" lines.
+function markedRunEnd(lines: readonly string[], index: number): number {
+  let first = index;
+  if (!lines[first]?.startsWith(">")) {
+    first += 1;
+    while (first < lines.length && isBlank(lines[first])) {
+      first += 1;
     }
-    if (from === lines.length || !opensReplyHeader(lines, from)) {
+    if (!lines[first]?.startsWith(">")) {
       return -1;
     }
   }
-  let end = from + 1;
-  while (end < lines.length && (lines[end] ?? "").trim()) {
+  let after = first;
+  while (
+    after < lines.length &&
+    (lines[after]?.startsWith(">") || isBlank(lines[after]))
+  ) {
+    after += 1;
+  }
+  return after;
+}
+
+function isBlankFrom(lines: readonly string[], from: number): boolean {
+  for (let i = from; i < lines.length; i += 1) {
+    if (!isBlank(lines[i])) {
+      return false;
+    }
+  }
+  return true;
+}
+
+// The attribution line directly above a quoted block introduces it, so it
+// travels with the quote rather than trailing the message.
+function attributedStart(lines: readonly string[], index: number): number {
+  const above = lines[index - 1]?.trim() ?? "";
+  const marked = lines[index]?.startsWith(">") ?? false;
+  return marked && index > 0 && above.endsWith(":") ? index - 1 : index;
+}
+
+/**
+ * forwardedBlockEnd is the line after the header block of the mail a forward
+ * passes on, or 0 when the first quote opens none. Gmail and Apple Mail write
+ * that block under a forward line, and Outlook writes it bare.
+ */
+function forwardedBlockEnd(lines: readonly string[]): number {
+  const first = lines.findIndex(
+    (_, i) => startsQuote(lines, i) || opensReplyHeader(lines, i),
+  );
+  if (first < 0) {
+    return 0;
+  }
+  let header = first;
+  if (!opensReplyHeader(lines, header)) {
+    if (lines[first]?.startsWith(">")) {
+      return 0;
+    }
+    header += 1;
+    while (header < lines.length && isBlank(lines[header])) {
+      header += 1;
+    }
+    if (header === lines.length || !opensReplyHeader(lines, header)) {
+      return 0;
+    }
+  }
+  let end = header + 1;
+  while (end < lines.length && !isBlank(lines[end])) {
     end += 1;
   }
   return end;
 }
 
 /**
- * forwardedBlock is the forward's first header block, as the line it opens on
- * and the line after it; `from` is -1 when there is none. A forward's own block
- * may open the body, where a reply's never does.
+ * ownTextEnd is the index of the first line of quoted or forwarded mail, or
+ * `lines.length` when the sender wrote every line.
+ *
+ * A line a mail program writes above quoted mail ends the text. A quote marked
+ * with ">" ends it only when nothing follows, so an inline reply stays whole.
+ * The server stores the same boundary for search.
+ *
+ * A forward passes its first quoted mail on as its own text. Outlook writes a
+ * forward and a reply alike, so only the subject tells them apart.
  */
-function forwardedBlock(lines: readonly string[]): {
-  from: number;
-  to: number;
-} {
-  const from = lines.findIndex(
-    (_, i) => isQuoteStart(lines, i) || opensReplyHeader(lines, i),
-  );
-  const to = from < 0 ? -1 : forwardedBlockEnd(lines, from);
-  return to < 0 ? { from: -1, to: -1 } : { from, to };
-}
-
-// The attribution line directly above a quoted block introduces it, so it
-// travels with the quote rather than trailing the message.
-function quoteCut(lines: readonly string[], index: number): number {
-  const above = lines[index - 1]?.trim() ?? "";
-  const opensQuote = (lines[index] ?? "").startsWith(">");
-  return opensQuote && index > 0 && above.endsWith(":") ? index - 1 : index;
+function ownTextEnd(lines: readonly string[], subject: string): number {
+  const start = isForwardSubject(subject) ? forwardedBlockEnd(lines) : 0;
+  for (let i = start; i < lines.length; i += 1) {
+    if (!startsQuote(lines, i)) {
+      continue;
+    }
+    const after = markedRunEnd(lines, i);
+    if (after < 0) {
+      return i;
+    }
+    if (isBlankFrom(lines, after)) {
+      return attributedStart(lines, i);
+    }
+    i = after - 1;
+  }
+  return lines.length;
 }
 
 /**
  * boundaryIndex is the first line that belongs to the tail rather than the
- * message, and WHICH KIND of tail it opens.
+ * message, and which kind of tail it opens. A sign-off counts only above the
+ * quoted earlier mail.
  *
- * The kind is not decoration. A sign-off and a quoted reply are both trimmed,
- * and a caller that folds them behind one control saying "show quoted history"
- * hides a sender's own name under a promise of history that is not there.
- *
- * `at` is -1 when the whole body is the message. In a forward the first header
- * block opens the forwarded mail, which is the message too. An Outlook forward
- * and reply look alike, so only the subject can say which one this is.
+ * `at` is -1 when the whole body is the message.
  */
 function boundaryIndex(
   lines: readonly string[],
-  forwards: boolean,
+  subject: string,
 ): {
   at: number;
   kind: "signature" | "quote";
 } {
+  const quote = ownTextEnd(lines, subject);
   const signOffFloor = Math.max(0, lines.length - TRAILING_SCAN_LINES);
-  const forwarded = forwards ? forwardedBlock(lines) : { from: -1, to: -1 };
-  for (let i = 0; i < lines.length; i += 1) {
+  for (let i = 0; i < quote; i += 1) {
     const line = lines[i] ?? "";
-    if (SIGNATURE_DELIMITER.test(line)) {
-      return { at: i, kind: "signature" };
-    }
-    if (i === forwarded.from) {
-      i = forwarded.to - 1;
-      continue;
-    }
-    if (isQuoteStart(lines, i)) {
-      return { at: quoteCut(lines, i), kind: "quote" };
-    }
-    if (i >= signOffFloor && isSignOff(line)) {
+    if (
+      SIGNATURE_DELIMITER.test(line) ||
+      (i >= signOffFloor && isSignOff(line))
+    ) {
       return { at: i, kind: "signature" };
     }
   }
-  return { at: -1, kind: "quote" };
+  return { at: quote < lines.length ? quote : -1, kind: "quote" };
 }
 
 /**
@@ -275,7 +319,7 @@ export function splitEmailBody(body: string, subject = ""): EmailBodyParts {
   }
 
   const lines = rest.split("\n");
-  const cut = boundaryIndex(lines, isForwardSubject(subject));
+  const cut = boundaryIndex(lines, subject);
   if (cut.at < 0) {
     return { header, main: rest.trim(), trimmed: "", tail: "none" };
   }

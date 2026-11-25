@@ -150,7 +150,7 @@ func queueStageEvidenceReread(ctx context.Context, tx pgx.Tx, domain string, rem
 	if !ok {
 		return errors.New("compose: an own domain was removed outside a bound workspace")
 	}
-	queue, err := ownerChangeMail()
+	queue, err := callerTxJobs()
 	if err != nil {
 		return err
 	}
@@ -165,7 +165,7 @@ func newStageEvidenceRereadWorker(
 ) *evidencereread.Worker[StageEvidenceRereadArgs] {
 	return &evidencereread.Worker[StageEvidenceRereadArgs]{
 		Bind: workspaceJobCtx, Pool: pool, Log: log, Reads: lane,
-		Queue: func() (evidencereread.Enqueuer, error) { return ownerChangeMail() },
+		Queue: func() (evidencereread.Enqueuer, error) { return callerTxJobs() },
 		Own:   ownDomainReader{store: capture.NewOwnDomainStore(InstallationDB(pool))},
 		Reading: func(job StageEvidenceRereadArgs, deal ids.DealID, activity ids.UUID) (river.JobArgs, *river.InsertOpts) {
 			opts := stageEvidenceReadInsertOpts()

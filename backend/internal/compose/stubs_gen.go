@@ -3527,7 +3527,7 @@ func (stubs) GetPublicAvailability(w nethttp.ResponseWriter, r *nethttp.Request,
 	httperr.NotImplemented(w, r, "GetPublicAvailability")
 }
 
-func (stubs) GetPublicBookingPreview(w nethttp.ResponseWriter, r *nethttp.Request, hostSlug string) {
+func (stubs) GetPublicBookingPreview(w nethttp.ResponseWriter, r *nethttp.Request, hostSlug string, params crmcontracts.GetPublicBookingPreviewParams) {
 	httperr.NotImplemented(w, r, "GetPublicBookingPreview")
 }
 
@@ -3953,6 +3953,26 @@ func (stubs) CreateMeetingProposal(w nethttp.ResponseWriter, r *nethttp.Request,
 
 func (stubs) ListSchedulingTeamCandidates(w nethttp.ResponseWriter, r *nethttp.Request) {
 	httperr.NotImplemented(w, r, "ListSchedulingTeamCandidates")
+}
+
+func (stubs) ListSchedulingTeamLinks(w nethttp.ResponseWriter, r *nethttp.Request) {
+	httperr.NotImplemented(w, r, "ListSchedulingTeamLinks")
+}
+
+func (stubs) CreateSchedulingTeamLink(w nethttp.ResponseWriter, r *nethttp.Request) {
+	httperr.NotImplemented(w, r, "CreateSchedulingTeamLink")
+}
+
+func (stubs) DeleteSchedulingTeamLink(w nethttp.ResponseWriter, r *nethttp.Request, pageId openapi_types.UUID) {
+	httperr.NotImplemented(w, r, "DeleteSchedulingTeamLink")
+}
+
+func (stubs) UpdateSchedulingTeamLink(w nethttp.ResponseWriter, r *nethttp.Request, pageId openapi_types.UUID) {
+	httperr.NotImplemented(w, r, "UpdateSchedulingTeamLink")
+}
+
+func (stubs) AnswerSchedulingTeamLink(w nethttp.ResponseWriter, r *nethttp.Request, pageId openapi_types.UUID) {
+	httperr.NotImplemented(w, r, "AnswerSchedulingTeamLink")
 }
 
 func (stubs) ListSchedulingTeamRequests(w nethttp.ResponseWriter, r *nethttp.Request) {

@@ -219,7 +219,7 @@ func (s *Service) optionalLanes(
 	return append(lanes, s.operationalLanes(ctx, asOf, out)...)
 }
 
-// bookingLane is the reader's own paused booking page, at most one card.
+// bookingLane is the reader's own paused booking pages, one card for each.
 func (s *Service) bookingLane(ctx context.Context, out *crmcontracts.Attention) optionalLane {
 	return optionalLane{
 		name: "booking_health", bound: s.bookingHealth != nil,

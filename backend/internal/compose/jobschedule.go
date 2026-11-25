@@ -137,6 +137,7 @@ func configDependencies(cfg JobRunnerConfig) map[string]bool {
 		// removes them from the provider original, so a role with no object
 		// store has nothing to prove with and no business reading the table.
 		"Blobstore":        cfg.Blobstore != nil,
+		"JournalBlobstore": cfg.JournalBlobstore != nil,
 		"ChannelVault":     cfg.ChannelVault != nil,
 		"ClassifyBrain":    cfg.ClassifyBrain != nil,
 		"DeepReadBrain":    cfg.DeepReadBrain != nil,

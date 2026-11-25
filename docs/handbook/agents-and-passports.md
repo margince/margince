@@ -64,8 +64,8 @@ The `openapi.yaml` file in the skill lists every call a passport can make.
 Also called: REST API, API key, script, access token, integration.
 
 ### How do I connect a coding agent to Margince?
-For Claude Code, Codex, GitHub Copilot in an editor, Cursor or Antigravity, use the **Connect your AI tool** card in **Settings → AI assistants**. Choose the AI, then where you use it, for example **Claude Code in Visual Studio**.
-Do what the card shows: run the command, or add the text to the file it names. Then sign in in the browser and choose **Authorize** on **Authorize access**; no passport is needed.
+Use the **Connect your AI tool** card in **Settings → AI assistants** for Claude Code, Codex, GitHub Copilot in an editor, Cursor, Antigravity or Lumo. The Lumo website cannot connect yet, so for Lumo follow the steps the card shows in the Lumo app.
+For the others, run the command or add the text the card shows, then sign in and choose **Authorize**; no passport is needed.
 If the page says AI tools "cannot connect to Margince yet", an administrator or operations user must turn it on first.
 Also called: MCP client, MCP server, command line, AI assistant integration.
 
@@ -146,6 +146,11 @@ continue to run automatically. Sending limits and access checks still apply.
 AI names the address Margince reads. Someone who talks the AI round could make
 it reach an address nobody holding the passport ever picked. That is a question
 about where your data goes, so it waits.
+
+When you work with your AI assistant in a chat, it asks you there. It tells you
+what would change and acts only after you say yes. Nothing appears in your
+approvals. A change that cannot be undone still waits in your approvals. So does
+any such change a scheduled agent makes with nobody watching.
 
 The waits below apply only to automatic work with no passport behind it.
 **Folding one tag into another.** A merge renames a word on every record

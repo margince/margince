@@ -5,11 +5,11 @@ package agents
 
 // The arguments the SURFACE owns, which no handler ever sees.
 //
-// Two of them today. `approval_id` asserts that a human released this exact
-// call (approvals.go), and `idempotency_key` asks that the call be safe to
-// repeat (idempotency.go). Neither is part of what a tool DOES, so neither
-// reaches its decode — a handler that had to remember to ignore them would be
-// thirty handlers that can each forget one.
+// Three of them today. `approval_id` says a human released this exact call
+// (approvals.go). `confirm_code` says its user said yes to its preview in the
+// conversation (confirmcode.go). `idempotency_key` asks that the call be safe to
+// repeat (idempotency.go). None is part of what a tool does, so none reaches
+// its decode, and no handler has to remember to ignore them.
 //
 // ONE READING of the caller's bytes decides both, and then the diff_hash. That
 // is not tidiness: `encoding/json` matches members case-insensitively and takes
@@ -19,9 +19,9 @@ package agents
 // popped from the object the digest is then computed over, so there is nothing
 // for a second reading to differ about.
 //
-// BOTH ARE POPPED BEFORE THE HASH, and that ordering is load-bearing for the 🟡
-// loop: a refused call is staged under the hash of its arguments, and its
-// post-approval retry must hash identically. A retry that added — or dropped —
+// All are popped before the hash, and the 🟡 loop depends on that order. A
+// refused call is staged under the hash of its arguments. Its released retry
+// must hash identically. A retry that added or dropped
 // a retry key would otherwise present a call the human never approved.
 
 import (
@@ -49,10 +49,13 @@ import (
 const (
 	approvalIDArg     = mcp.ReservedApprovalIDArg
 	idempotencyKeyArg = mcp.ReservedIdempotencyKeyArg
+	confirmCodeArg    = mcp.ReservedConfirmCodeArg
 )
 
 var (
 	errInvalidApprovalID    = errors.New("`approval_id` must be a UUID string")
+	errInvalidConfirmCode   = errors.New("`confirm_code` must be the string a preview of this call answered")
+	errTwoReleases          = errors.New("send `approval_id` or `confirm_code`, not both: each releases the call on its own")
 	errInvalidRetryKey      = errors.New("`idempotency_key` must be a string")
 	errEmptyRetryKey        = errors.New("`idempotency_key` is empty; omit it, or send the key you will retry with")
 	errRetryKeyTooLong      = fmt.Errorf("`idempotency_key` is longer than %d characters", maxRetryKeyLen)
@@ -72,6 +75,10 @@ var (
 // behind both is `text`, so neither unit is a storage constraint.
 const maxRetryKeyLen = 255
 
+// maxConfirmCodeLen bounds a presented code well above any code a preview mints,
+// so an oversized string is refused before it is decoded.
+const maxConfirmCodeLen = 1024
+
 // reserved is one call's surface-owned arguments, plus what is left of it.
 type reserved struct {
 	// Args is the call WITHOUT the reserved members, canonicalized — the bytes
@@ -79,6 +86,9 @@ type reserved struct {
 	Args json.RawMessage
 	// ApprovalID is the release a retry asserts; zero when none was presented.
 	ApprovalID ids.ApprovalID
+	// ConfirmCode is the one-time code a preview answered; empty when none was
+	// presented.
+	ConfirmCode string
 	// RetryKey is the caller's idempotency key; empty when none was presented.
 	RetryKey string
 	// DiffHash identifies the CALL: the same arguments in any spelling produce
@@ -142,6 +152,17 @@ func splitReserved(in json.RawMessage) (reserved, error) {
 		}
 		out.ApprovalID = id
 		delete(m, approvalIDArg)
+	}
+	if raw, ok := m[confirmCodeArg]; ok {
+		code, isStr := raw.(string)
+		if !isStr || code == "" || len(code) > maxConfirmCodeLen {
+			return reserved{}, &BadArgsError{Cause: errInvalidConfirmCode}
+		}
+		if !out.ApprovalID.IsZero() {
+			return reserved{}, &BadArgsError{Cause: errTwoReleases}
+		}
+		out.ConfirmCode = code
+		delete(m, confirmCodeArg)
 	}
 	if raw, ok := m[idempotencyKeyArg]; ok {
 		key, isStr := raw.(string)

@@ -24,6 +24,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/correspondence"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/mailquote"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/kernel/textlang"
 	"github.com/margince/margince/backend/internal/shared/kernel/values"
@@ -195,6 +196,9 @@ func (s *Sink) captureActivity(ctx context.Context, tx pgx.Tx, rec connector.Nor
 	}
 	decision, err := s.finishNewActivity(ctx, tx, id, rec, fields, birth, memberBound)
 	if err != nil {
+		return datasource.EntityRef{}, false, counterpartyDecision{}, err
+	}
+	if err := s.foldReplacedSeries(ctx, tx, id, rec); err != nil {
 		return datasource.EntityRef{}, false, counterpartyDecision{}, err
 	}
 	return ref, true, decision, nil
@@ -477,8 +481,9 @@ func capturedActivityInsert(ctx context.Context, rec connector.NormalizedRecord,
 		nullableString(fields.CalendarUID),
 		fields.CalendarEvent,
 		fields.forwardedFrom != nil,
+		mailquote.OwnEnd(fields.Kind, fields.Subject, nullableString(fields.Body)),
 	}
-	query := `INSERT INTO activity(kind,channel_provider,subject,body,occurred_at,direction,source_system,source_id,source,captured_by,thread_key,counterparty_email,counterparty_outbound_attested,bulk_mail_attested,audience,audience_reason,has_calendar_part,host_user_id,language,raw_capture_id,duration_seconds,sent_by_colleague,calendar_method,foreign_link,sender_was_stranger,inbound_sender_authenticated,body_completeness,sender_is_machine,occurred_precision,invitation_sender,agenda_fingerprint,assignee_id,due_at,calendar_uid,calendar_event,forwarded_to_self)
+	query := `INSERT INTO activity(kind,channel_provider,subject,body,occurred_at,direction,source_system,source_id,source,captured_by,thread_key,counterparty_email,counterparty_outbound_attested,bulk_mail_attested,audience,audience_reason,has_calendar_part,host_user_id,language,raw_capture_id,duration_seconds,sent_by_colleague,calendar_method,foreign_link,sender_was_stranger,inbound_sender_authenticated,body_completeness,sender_is_machine,occurred_precision,invitation_sender,agenda_fingerprint,assignee_id,due_at,calendar_uid,calendar_event,forwarded_to_self,body_own_end)
  VALUES (` + storekit.Placeholders(args) + `) ON CONFLICT(source_system,source_id) WHERE source_system IS NOT NULL AND source_id IS NOT NULL DO NOTHING RETURNING id`
 	return query, args
 }

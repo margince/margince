@@ -35,6 +35,30 @@ func TestTheZeroRuleSetGrantsNothing(t *testing.T) {
 // An unguarded exception is worse than no exception: it looks lawful, it
 // appears in the manifest as a declared rule, and every advertising message it
 // touches goes out having satisfied a condition set that is empty.
+// A pack that states no mode keeps requiring consent, and the mode has two
+// values the engine knows.
+func TestTheMarketingModeDefaultsToOptInAndRefusesAnUnknownValue(t *testing.T) {
+	var r Rules
+	if r.MarketingMode.OptOut() {
+		t.Error("the zero rule set allows advertising until a refusal")
+	}
+	valid := Rules{Jurisdiction: "aa", Version: 1}
+	for _, mode := range []MarketingMode{"", MarketingOptIn, MarketingOptOut} {
+		valid.MarketingMode = mode
+		if err := valid.Validate(); err != nil {
+			t.Errorf("mode %q refused: %v", mode, err)
+		}
+	}
+	valid.MarketingMode = "opt_sideways"
+	if err := valid.Validate(); err == nil {
+		t.Error("an unknown mode was accepted")
+	}
+	valid.MarketingMode, valid.ConsentOnly = MarketingOptOut, true
+	if err := valid.Validate(); err == nil {
+		t.Error("opt-out together with consent-only was accepted")
+	}
+}
+
 func TestAnExceptionMustNameAtLeastOneCondition(t *testing.T) {
 	err := MarketingException{Kind: ExistingCustomer}.Validate()
 	if err == nil {

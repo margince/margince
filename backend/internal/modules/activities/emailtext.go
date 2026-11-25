@@ -8,17 +8,11 @@ import (
 	"strings"
 
 	"github.com/margince/margince/backend/internal/shared/kernel/mailquote"
-	"github.com/margince/margince/backend/internal/shared/kernel/mailsubject"
 )
 
 // Stored mail retains its signature for enrichment; previews remove it for reading.
 // The parity gate compares this display policy and shared mailquote patterns with the browser.
 // Language detection may discard all text, but a preview must preserve a nonempty body.
-
-// preamblePattern is what the capture mail mapper prepends verbatim. Peeled
-// before any heuristic runs, or the `From:` line reads as an Outlook reply
-// header and folds the entire message.
-var preamblePattern = regexp.MustCompile(`^From:[^\n]*\nTo:[^\n]*\n\n`)
 
 // signatureDelimiter is RFC 3676 §4.3: a line of exactly two hyphens.
 // Trailing whitespace is allowed because mail clients strip it inconsistently.
@@ -121,92 +115,19 @@ func isSignOff(line string) bool {
 	return false
 }
 
-func isQuoteStart(lines []string, index int) bool {
-	line := lines[index]
-	if strings.HasPrefix(line, ">") {
-		return true
-	}
-	if mailquote.IsAttribution(line) {
-		return true
-	}
-	// The Outlook block: the sent-date field within the next few lines is what
-	// separates a reply header from a sentence that opens "Von:".
-	return index > 0 && mailquote.OpensReplyHeader(line, lines[index+1:])
-}
-
-// forwardedBlockEnd is the line after the sender block that opens at start,
-// or -1 when none does. Gmail and Apple Mail write that block under an
-// attribution line, and Outlook writes it bare.
-func forwardedBlockEnd(lines []string, start int) int {
-	from := start
-	if !mailquote.OpensReplyHeader(lines[from], lines[from+1:]) {
-		from++
-		for from < len(lines) && strings.TrimSpace(lines[from]) == "" {
-			from++
-		}
-		if from == len(lines) || !mailquote.OpensReplyHeader(lines[from], lines[from+1:]) {
-			return -1
-		}
-	}
-	end := from + 1
-	for end < len(lines) && strings.TrimSpace(lines[end]) != "" {
-		end++
-	}
-	return end
-}
-
-// forwardedBlock is the forward's first header block, as the line it opens on
-// and the line after it; from is -1 when there is none. A forward's own block
-// may open the body, where a reply's never does.
-func forwardedBlock(lines []string) (from, to int) {
-	for i, line := range lines {
-		if isQuoteStart(lines, i) || mailquote.OpensReplyHeader(line, lines[i+1:]) {
-			if end := forwardedBlockEnd(lines, i); end > 0 {
-				return i, end
-			}
-			break
-		}
-	}
-	return -1, -1
-}
-
-// quoteCut is where a quote opening at index starts. The attribution line
-// directly above a quoted block introduces it, so it travels with the quote.
-func quoteCut(lines []string, index int) int {
-	if strings.HasPrefix(lines[index], ">") && index > 0 && strings.HasSuffix(strings.TrimSpace(lines[index-1]), ":") {
-		return index - 1
-	}
-	return index
-}
-
 // boundaryIndex is the first line belonging to the tail rather than the
-// message, and WHICH KIND of tail it opens. The index is -1 when the whole
-// body is the message.
-//
-// In a forward the first header block opens the forwarded mail, which is the
-// message too. An Outlook forward and reply look alike, so only the subject
-// can say which one this is.
-func boundaryIndex(lines []string, forward bool) (int, EmailBodyTail) {
+// message, and which kind of tail it opens. The index is -1 when the whole
+// body is the message. A sign-off counts only above the quoted earlier mail.
+func boundaryIndex(lines []string, subject string) (int, EmailBodyTail) {
+	quote := mailquote.OwnTextEnd(lines, subject)
 	signOffFloor := max(0, len(lines)-trailingScanLines)
-	from, to := -1, -1
-	if forward {
-		from, to = forwardedBlock(lines)
+	for i, line := range lines[:quote] {
+		if signatureDelimiter.MatchString(line) || (i >= signOffFloor && isSignOff(line)) {
+			return i, TailSignature
+		}
 	}
-	for i := 0; i < len(lines); i++ {
-		line := lines[i]
-		if signatureDelimiter.MatchString(line) {
-			return i, TailSignature
-		}
-		if i == from {
-			i = to - 1
-			continue
-		}
-		if isQuoteStart(lines, i) {
-			return quoteCut(lines, i), TailQuote
-		}
-		if i >= signOffFloor && isSignOff(line) {
-			return i, TailSignature
-		}
+	if quote < len(lines) {
+		return quote, TailQuote
 	}
 	return -1, TailNone
 }
@@ -222,13 +143,8 @@ func SplitEmailBody(body, subject string) EmailBodyParts {
 	if strings.TrimSpace(body) == "" {
 		return EmailBodyParts{Tail: TailNone}
 	}
-	var header, rest string
-	if loc := preamblePattern.FindString(body); loc != "" {
-		header = strings.TrimSpace(loc)
-		rest = body[len(loc):]
-	} else {
-		rest = body
-	}
+	preamble, rest := mailquote.Preamble(body)
+	header := strings.TrimSpace(preamble)
 
 	// A body that is only a preamble has no message under it. The header is the
 	// whole of what was captured, so it IS the message: the invariant is that a
@@ -238,7 +154,7 @@ func SplitEmailBody(body, subject string) EmailBodyParts {
 	}
 
 	lines := strings.Split(rest, "\n")
-	cut, tail := boundaryIndex(lines, mailsubject.IsForward(subject))
+	cut, tail := boundaryIndex(lines, subject)
 	if cut < 0 {
 		return EmailBodyParts{Header: header, Main: strings.TrimSpace(rest), Tail: TailNone}
 	}

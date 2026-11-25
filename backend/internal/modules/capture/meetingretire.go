@@ -152,12 +152,19 @@ func leaveTheRowsOthersList(ctx context.Context, tx pgx.Tx, activityID ids.Activ
 }
 
 // retireTheSeatThatLeft drops every calendar row bound to a seat whose own copy
-// of the meeting is gone, whichever rosters list it. Only that colleague leaves:
-// a guest no other calendar lists stays, and the seat comes off the rest.
+// of the meeting is gone, whichever rosters list it. It also drops each other
+// colleague's row that no live calendar lists any more, save the host's.
+//
+// An outside guest's row stays as the record of who was invited. The seat comes
+// off the rows other calendars list.
 func retireTheSeatThatLeft(ctx context.Context, tx pgx.Tx, activityID ids.ActivityID, seat ids.UUID) (int, error) {
 	tag, err := tx.Exec(ctx, `
- DELETE FROM activity_participant ap
- WHERE ap.activity_id=$1 AND ap.relinked_at IS NULL AND ap.user_id=$2 AND `+storekit.OnACalendarRosterSQL("ap"), activityID, seat)
+ DELETE FROM activity_participant ap USING activity a
+ WHERE a.id=ap.activity_id AND ap.activity_id=@activity AND ap.relinked_at IS NULL AND `+storekit.OnACalendarRosterSQL("ap")+`
+ AND (ap.user_id=@seat OR (ap.user_id IS NOT NULL AND ap.user_id IS DISTINCT FROM a.host_user_id
+  AND `+storekit.RosterListsSQL("ap", "@seat")+` AND NOT `+anotherLiveRosterSQL("ap")+`))`, pgx.StrictNamedArgs{
+		capturedActivityObject: activityID, rosterSeatArg: seat, calendarProvidersArg: calendarProviderNames(),
+	})
 	if err != nil {
 		return 0, fmt.Errorf("capture: retiring the seat that left a meeting: %w", err)
 	}

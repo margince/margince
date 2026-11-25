@@ -13,6 +13,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/mailquote"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
@@ -101,6 +102,10 @@ func TakeOverAssertedActivityTx(
 	if _, err := storekit.LockRow(ctx, tx, "activity", activityID.UUID, storekit.LiveOnly); err != nil {
 		return err
 	}
+	ownEnd, err := takenOverOwnEnd(ctx, tx, activityID, subject, body)
+	if err != nil {
+		return err
+	}
 	// COALESCE on subject and body: a connector that reads a message with no
 	// subject supplies an empty one. Letting that blank the import's subject
 	// would lose the only description the row carries. The read
@@ -110,10 +115,11 @@ func TakeOverAssertedActivityTx(
 		UPDATE activity
 		   SET subject           = COALESCE(NULLIF($2, ''), subject),
 		       body              = COALESCE(NULLIF($3, ''), body),
+		       body_own_end      = CASE WHEN $2 = '' AND $3 = '' THEN body_own_end ELSE $6::int END,
 		       captured_by       = $4,
 		       sender_is_machine = sender_is_machine OR $5
 		 WHERE id = $1`,
-		activityID, subject, body, capturedBy, senderIsMachine)
+		activityID, subject, body, capturedBy, senderIsMachine, ownEnd)
 	if err != nil {
 		return fmt.Errorf("activities: writing the read message over %s: %w", activityID, err)
 	}
@@ -136,4 +142,23 @@ func TakeOverAssertedActivityTx(
 		return fmt.Errorf("activities: emitting the take-over of %s: %w", activityID, err)
 	}
 	return nil
+}
+
+// takenOverOwnEnd is the stored end of the text a take-over leaves. An empty
+// field keeps the stored one, and a forward subject moves the end, so both are
+// read under the row lock the caller holds.
+func takenOverOwnEnd(ctx context.Context, tx pgx.Tx, activityID ids.ActivityID, subject, body string) (*int, error) {
+	var kind string
+	var storedSubject, storedBody *string
+	if err := tx.QueryRow(ctx, `SELECT kind, subject, body FROM activity WHERE id = $1`, activityID).
+		Scan(&kind, &storedSubject, &storedBody); err != nil {
+		return nil, fmt.Errorf("activities: reading the asserted row %s for its own text: %w", activityID, err)
+	}
+	if subject == "" {
+		subject = deref(storedSubject)
+	}
+	if body != "" {
+		storedBody = &body
+	}
+	return mailquote.OwnEnd(kind, subject, storedBody), nil
 }

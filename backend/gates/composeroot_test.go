@@ -34,15 +34,35 @@ const composeRootDir = "internal/compose"
 // The ceilings below hold develop and main together: each side's additions
 // stayed under its own ceilings, and the two sets of additions sum to these.
 const (
-	composeRootProductionFiles = 1383
-	composeRootTestFiles       = 1909
+	composeRootProductionFiles = 1384
+	// Raised by 2 files for the extension mail-file read cases and the purge
+	// receipt cases, which drive this package's unexported seams. Raised by 1
+	// production and 1 test file for the series-split fold and its cases.
+	composeRootTestFiles = 1911
 	// Raised by 107 for the floor of a figure every reader is shown alike. Raised
 	// by 1 for the import that binds one zone lookup to each attention read.
 	// Raised by 249 production and 62 test lines for the full-path certification
 	// cases of two capture sites, which drive private engine code that cannot
-	// leave this package.
-	composeRootProductionLines = 230_518
-	composeRootTestLines       = 359_389
+	// leave this package. Raised by 58 test lines for the system health footer
+	// cases, which read this package's unexported health sources. Raised by 29
+	// test lines for the data reset cases of a timed-out job drain. Raised by 72
+	// test lines for the extension mail-file and purge receipt cases. Raised by 30
+	// production and 21 test lines for the approvals adapter and server option that
+	// confirm a call in the conversation. Raised by 191 test lines for the
+	// team-request mail cases, which drive this package's unexported mail worker
+	// and send basis. Raised by 2 production and 52 test lines for the booking length
+	// card cases, which drive the unexported bookingCard and the booking page fixtures.
+	// Raised by 140 production and 269 test lines for the series-split fold and
+	// repair task. Their cases drive the unexported Home meeting lane and fold.
+	// Raised by 43 test lines for the refold cases of a transaction still open,
+	// which drive the unexported clock refold worker.
+	// Raised by 7 production lines for the team request reword and the paused
+	// team link's title on Home. Raised by 64 test lines for the team-link mail
+	// case, which drives the unexported mail worker over two team links.
+	// Raised by 2 production lines for the stage-evidence prompt rule on a
+	// document a criterion asks to be sent, which is the site's own prompt text.
+	composeRootProductionLines = 230_699
+	composeRootTestLines       = 360_128
 )
 
 // A read under these floors stopped early or read the wrong place, and would
