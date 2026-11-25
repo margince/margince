@@ -181,7 +181,7 @@ func (w *telegramIngestWorker) parseAndFile(actorCtx context.Context, raw connec
 	if errors.Is(err, connector.ErrSkip) {
 		// Not a new message. An edit or a deletion goes through the change
 		// path, and any other update kind is never a fault.
-		return w.changeChat(actorCtx, raw, link)
+		return w.changeChat(actorCtx, raw, link, rawID)
 	}
 	if err != nil {
 		return fmt.Errorf("telegram_ingest: normalizing: %w", err)
@@ -214,7 +214,7 @@ func (w *telegramIngestWorker) settleFilingError(ctx context.Context, err error)
 // network changes a message through. A change to a message that has not landed
 // and could not be restated fails the job, so River retries it after the
 // original.
-func (w *telegramIngestWorker) changeChat(actorCtx context.Context, raw connector.RawRecord, link *telegram.BusinessLink) error {
+func (w *telegramIngestWorker) changeChat(actorCtx context.Context, raw connector.RawRecord, link *telegram.BusinessLink, rawID ids.UUID) error {
 	binding, changes, err := telegram.ParseChatChanges(raw, link)
 	if errors.Is(err, connector.ErrSkip) {
 		return nil
@@ -227,6 +227,9 @@ func (w *telegramIngestWorker) changeChat(actorCtx context.Context, raw connecto
 		return errors.New("telegram_ingest: the sink acts on no chat changes")
 	}
 	for _, change := range changes {
+		// The row the report arrived in is the message's stored original once the
+		// edit lands, and is deleted when it changes nothing.
+		change.StoredOriginal = rawID
 		outcome, err := capture.ChangeChatMessage(actorCtx, sink, binding, change)
 		if err != nil {
 			return w.settleFilingError(actorCtx, err)

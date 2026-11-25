@@ -112,7 +112,8 @@ type ActivityFields struct {
 	// sourceRevision is the provider's edit time when the message is filed
 	// already edited. Zero for an original. It is unexported for the reason
 	// memberOwned is: only the chat filing function states it.
-	sourceRevision time.Time
+	sourceRevision    time.Time
+	sourceRevisionSeq int64
 
 	// judged is what the sink concluded from Envelope. Unexported so no
 	// connector can state the conclusion for it.

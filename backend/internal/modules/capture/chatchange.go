@@ -44,6 +44,9 @@ func ChangeChatMessage(
 	if err := validChatChange(change); err != nil {
 		return "", err
 	}
+	if err := validRestatement(change); err != nil {
+		return "", err
+	}
 	if change.Kind == connector.ChatDeliveryReported {
 		slog.DebugContext(ctx, "capture: a chat delivery status writes nothing to the conversation",
 			"provider", binding.Provider, "status", string(change.Status))
@@ -67,7 +70,8 @@ func fileRestatedEdit(
 	ctx context.Context, sink ChatSink, binding connector.ChatBinding, key connector.NaturalKey, change connector.ChatChange,
 ) (connector.ChatChangeOutcome, error) {
 	restated := *change.Restated
-	restated.Revision = change.Revision
+	restated.Revision, restated.RevisionSeq = change.Revision, change.RevisionSeq
+	restated.StoredOriginal = change.StoredOriginal
 	if _, err := FileChatMessage(ctx, sink, binding, restated); err != nil {
 		if errors.Is(err, connector.ErrSkip) {
 			return connector.ChatChangeStale, nil
@@ -120,6 +124,21 @@ func validChatChange(change connector.ChatChange) error {
 		}
 	default:
 		return fmt.Errorf("%w: a chat change is an edit, a deletion or a delivery report", apperrors.ErrInvalidArgument)
+	}
+	return nil
+}
+
+// validRestatement refuses a restated message that is not the message the
+// change names. Filing it would file some other message, and its contact.
+func validRestatement(change connector.ChatChange) error {
+	restated := change.Restated
+	if restated == nil {
+		return nil
+	}
+	sameKeys := (restated.Keys == nil && change.Keys == nil) ||
+		(restated.Keys != nil && change.Keys != nil && *restated.Keys == *change.Keys)
+	if !sameKeys || restated.ConversationID != change.ConversationID || restated.IdempotencyKey != change.IdempotencyKey {
+		return fmt.Errorf("%w: a restated chat message is not the message the change names", apperrors.ErrInvalidArgument)
 	}
 	return nil
 }

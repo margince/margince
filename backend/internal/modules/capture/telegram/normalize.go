@@ -212,10 +212,10 @@ func ParseChatChanges(raw connector.RawRecord, link *BusinessLink) (connector.Ch
 		return connector.ChatBinding{}, nil, fmt.Errorf("telegram: update %d is an edit that names no edit time: %w", update.UpdateID, connector.ErrSkip)
 	}
 	edited := time.Unix(msg.EditDate, 0).UTC()
-	chat.Revision = edited
+	chat.Revision, chat.RevisionSeq = edited, update.UpdateID
 	return binding, []connector.ChatChange{{
 		Kind: connector.ChatEdited, ConversationID: chat.ConversationID, IdempotencyKey: chat.IdempotencyKey,
-		Body: chat.Body, Revision: edited, Restated: &chat,
+		Body: chat.Body, Revision: edited, RevisionSeq: update.UpdateID, Restated: &chat,
 	}}, nil
 }
 

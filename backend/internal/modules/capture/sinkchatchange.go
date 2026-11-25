@@ -15,7 +15,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"time"
 
 	"github.com/jackc/pgx/v5"
 
@@ -25,12 +24,13 @@ import (
 )
 
 // ChatEditor writes the text a provider says a chat message now has when the
-// edit is newer than the stored text. found says a row holds the key; applied
-// says the text was written. activities owns the write; compose injects it. Nil
-// is a Sink that acts on no edits.
+// edit is later than the stored text. found says a row holds the key; applied
+// says the text was written; superseded is the raw row the edit replaced.
+// activities owns the write; compose injects it. Nil is a Sink that acts on no
+// edits.
 type ChatEditor func(
-	ctx context.Context, tx pgx.Tx, key connector.NaturalKey, connectorID, body string, revision time.Time,
-) (found, applied bool, err error)
+	ctx context.Context, tx pgx.Tx, key connector.NaturalKey, connectorID string, change connector.ChatChange,
+) (found, applied bool, superseded ids.UUID, err error)
 
 // WithChatEditor returns a copy that applies a provider's edit of a chat message.
 func (s *Sink) WithChatEditor(edit ChatEditor) *Sink {
@@ -64,13 +64,40 @@ func (s *Sink) ChangeChat(ctx context.Context, key connector.NaturalKey, change 
 	if key.SourceSystem == "" || key.SourceID == "" {
 		return "", errors.New("capture: a chat change needs a natural key")
 	}
+	var outcome connector.ChatChangeOutcome
+	var err error
 	switch change.Kind {
 	case connector.ChatEdited:
-		return s.editChatMessage(ctx, actor, key, change)
+		outcome, err = s.editChatMessage(ctx, actor, key, change)
 	case connector.ChatDeleted:
-		return s.deleteChatMessage(ctx, actor, key)
+		outcome, err = s.deleteChatMessage(ctx, actor, key)
+	default:
+		return "", fmt.Errorf("capture: a chat change of kind %q is not one the sink acts on", change.Kind)
 	}
-	return "", fmt.Errorf("capture: a chat change of kind %q is not one the sink acts on", change.Kind)
+	// An edit that waits for its original keeps its row, which the retry reads.
+	if err != nil || outcome == connector.ChatChangeNotFiled {
+		return outcome, err
+	}
+	return outcome, s.dropUnlinkedRaw(ctx, change.StoredOriginal)
+}
+
+// dropUnlinkedRaw deletes the raw row a report arrived in unless a message
+// holds it as its stored original. A row that changed nothing keeps no text,
+// and the privacy purge and erasure reach only the rows an activity links.
+func (s *Sink) dropUnlinkedRaw(ctx context.Context, raw ids.UUID) error {
+	if raw.IsZero() {
+		return nil
+	}
+	return s.db.Tx(ctx, func(tx pgx.Tx) error {
+		var linked bool
+		if err := tx.QueryRow(ctx, `SELECT EXISTS (SELECT 1 FROM activity WHERE raw_capture_id = $1)`, raw).Scan(&linked); err != nil {
+			return fmt.Errorf("capture: checking whether a message holds a raw row: %w", err)
+		}
+		if linked {
+			return nil
+		}
+		return DeleteRawCaptureTx(ctx, tx, raw)
+	})
 }
 
 // editChatMessage writes an edit under the lock filing the message takes. An
@@ -90,23 +117,23 @@ func (s *Sink) editChatMessage(
 		if err := lockChatKeyTx(ctx, tx, key); err != nil {
 			return err
 		}
-		found, applied, err := s.editChat(ctx, tx, key, actor.ID, change.Body, change.Revision)
+		// A deletion that was admitted leaves its record first, so an edit that
+		// arrives while the content is being destroyed finds the message removed.
+		removed, err := chatRemovedTx(ctx, tx, key)
+		if err != nil || removed {
+			return err
+		}
+		found, applied, superseded, err := s.editChat(ctx, tx, key, actor.ID, change)
 		switch {
 		case err != nil:
 			return err
 		case applied:
 			outcome = connector.ChatChangeApplied
-		case found:
-		default:
-			// Nothing holds the key: either the original has not landed yet, or
-			// the provider deleted the message before it did.
-			removed, err := chatRemovedTx(ctx, tx, key)
-			if err != nil {
-				return err
+			if !superseded.IsZero() {
+				return DeleteRawCaptureTx(ctx, tx, superseded)
 			}
-			if !removed {
-				outcome = connector.ChatChangeNotFiled
-			}
+		case !found:
+			outcome = connector.ChatChangeNotFiled
 		}
 		return nil
 	})
@@ -146,6 +173,10 @@ func (s *Sink) deleteChatMessage(ctx context.Context, actor principal.Principal,
 			settled = connector.ChatChangeKept
 		case archived:
 			settled = connector.ChatChangeStale
+		default:
+			// Recorded under the lock before the purge runs in transactions of
+			// its own, so an edit in between sees the message as removed.
+			return writeChatTombstoneTx(ctx, tx, key)
 		}
 		return nil
 	})

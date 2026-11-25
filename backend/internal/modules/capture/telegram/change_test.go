@@ -70,6 +70,9 @@ func TestAnEditedMessageIsAnEditOfTheMessageItRestates(t *testing.T) {
 	if want := time.Unix(1690000600, 0).UTC(); !edit.Revision.Equal(want) {
 		t.Errorf("revision = %v, want the edit time %v", edit.Revision, want)
 	}
+	if edit.RevisionSeq != 400 || edit.Restated == nil || edit.Restated.RevisionSeq != 400 {
+		t.Errorf("revision sequence = %d, want the edit update's id 400, so two edits of one second keep their order", edit.RevisionSeq)
+	}
 	if edit.Restated == nil || edit.Restated.Body != "hello, edited" || !edit.Restated.OccurredAt.Equal(time.Unix(1690000000, 0).UTC()) || !edit.Restated.Revision.Equal(edit.Revision) {
 		t.Errorf("restated = %+v, want the whole message at its original time carrying the edit time", edit.Restated)
 	}

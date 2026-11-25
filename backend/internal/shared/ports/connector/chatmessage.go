@@ -136,6 +136,9 @@ type ChatMessage struct {
 	// Revision is the provider's edit time when this report already carries an
 	// edited text, as a restated message does. It is zero for an original.
 	Revision time.Time
+	// RevisionSeq is the provider's sequence number of the edit report, as
+	// ChatChange.RevisionSeq states it. Zero for an original.
+	RevisionSeq int64
 	// StoredOriginal names the raw_capture row the adapter already wrote. Raw
 	// carries the bytes when it has not.
 	StoredOriginal ids.UUID

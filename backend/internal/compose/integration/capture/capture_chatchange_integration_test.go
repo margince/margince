@@ -23,11 +23,16 @@ import (
 	"github.com/margince/margince/backend/internal/compose/integration"
 	capturemod "github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/platform/database"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
 )
 
 const chatChangeConversation = "990100"
+
+// storedOriginalJoin is the join the privacy purge, erasure and subject access use to reach an original.
+var storedOriginalJoin = storekit.StoredOriginalSQL("a", "r")
 
 var chatChangeEpoch = time.Date(2026, 7, 30, 9, 0, 0, 0, time.UTC)
 
@@ -336,4 +341,123 @@ func wsScalar(t *testing.T, e *integration.SearchEnv, query string, args ...any)
 		t.Fatalf("reading (%s): %v", query, err)
 	}
 	return out
+}
+
+// An edit that arrives while a deletion is being carried out must not bring
+// the text back. The purge runs in transactions of its own. The test lets the
+// edit in from inside the purge, after the deletion was admitted and before it
+// is carried out.
+func TestAnEditThatArrivesDuringADeletionDoesNotRestoreTheText(t *testing.T) {
+	c := newChatChangeEnv(t)
+	id := c.file(t, "15", "private words")
+	purger := compose.NewCapturePurger(c.e.Pool, compose.NewRetentionServiceFor(compose.InstallationDB(c.e.Pool), nil, slog.Default()))
+	var during connector.ChatChangeOutcome
+	c.sink = c.sink.WithChatPurger(func(ctx context.Context, admit func(context.Context, pgx.Tx) error, seat ids.UUID, key connector.NaturalKey) error {
+		during = c.change(t, chatEdit("15", "sneaked in", 30))
+		return purger.PurgeRemovedChat(ctx, admit, seat, key)
+	})
+
+	wantOutcome(t, "deletion", c.change(t, chatDeletion("15")), connector.ChatChangeRemoved)
+	wantOutcome(t, "edit during the deletion", during, connector.ChatChangeStale)
+	if got := c.body(t, "15"); got != "" {
+		t.Fatalf("body %q after the deletion, want it gone", got)
+	}
+	audits, events := c.trail(t, id)
+	if events == 0 || audits == 0 {
+		t.Fatal("the deletion left no trail")
+	}
+}
+
+func TestARestatementMustNameTheMessageTheChangeNames(t *testing.T) {
+	c := newChatChangeEnv(t)
+	other := chatOriginal("17", "someone else's message")
+	edit := chatEdit("16", "edited", 5)
+	edit.Restated = &other
+
+	_, err := capturemod.ChangeChatMessage(connectorSeatCtx(c.e), c.sink, c.binding, edit)
+	if !errors.Is(err, apperrors.ErrInvalidArgument) {
+		t.Fatalf("a restatement of another message = %v, want an invalid argument", err)
+	}
+	if n := c.activities(t); n != 0 {
+		t.Fatalf("%d activities filed from a mismatched restatement, want none", n)
+	}
+}
+
+// seedRaw stores one provider original, as the poll does before it enqueues the ingest job.
+func (c chatChangeEnv) seedRaw(t *testing.T, id, text string) ids.UUID {
+	t.Helper()
+	var raw ids.UUID
+	err := database.WithWorkspaceTx(c.e.Admin(), c.e.Pool, func(tx pgx.Tx) error {
+		var err error
+		raw, err = capturemod.InsertRawCaptureTx(c.e.Admin(), tx, capturemod.RawRecord{
+			SourceSystem: "telegram", SourceID: "raw-" + id + "-" + ids.NewV7().String(),
+			Payload: []byte(`{"text":"` + text + `"}`),
+		})
+		return err
+	})
+	if err != nil {
+		t.Fatalf("storing the raw update: %v", err)
+	}
+	return raw
+}
+
+func (c chatChangeEnv) rawHolding(t *testing.T, text string) int {
+	t.Helper()
+	return wsCount(t, c.e, `SELECT count(*) FROM raw_capture WHERE payload::text LIKE '%' || $1 || '%'`, text)
+}
+
+func TestEveryRawRowThatContributesToAMessageIsLinkedToItOrDeleted(t *testing.T) {
+	c := newChatChangeEnv(t)
+	original := chatOriginal("18", "first words")
+	original.StoredOriginal = c.seedRaw(t, "18", "first words")
+	id, err := capturemod.FileChatMessage(connectorSeatCtx(c.e), c.sink, c.binding, original)
+	if err != nil {
+		t.Fatalf("filing: %v", err)
+	}
+
+	edit := chatEdit("18", "second words", 10)
+	edit.RevisionSeq, edit.StoredOriginal = 2, c.seedRaw(t, "18", "second words")
+	wantOutcome(t, "edit", c.change(t, edit), connector.ChatChangeApplied)
+	if n := c.rawHolding(t, "first words"); n != 0 {
+		t.Fatalf("%d raw rows still hold the replaced text", n)
+	}
+	linked := `SELECT count(*) FROM activity a JOIN raw_capture r ON ` + storedOriginalJoin + ` WHERE a.id = $1 AND r.payload::text LIKE '%second words%'`
+	if n := wsCount(t, c.e, linked, id.ID); n != 1 {
+		t.Fatalf("the privacy selection reaches %d raw rows holding the edit, want 1", n)
+	}
+
+	stale := chatEdit("18", "older words", 5)
+	stale.RevisionSeq, stale.StoredOriginal = 1, c.seedRaw(t, "18", "older words")
+	wantOutcome(t, "older edit", c.change(t, stale), connector.ChatChangeStale)
+	if n := c.rawHolding(t, "older words"); n != 0 {
+		t.Fatalf("%d raw rows hold the text of an edit that changed nothing", n)
+	}
+	wantOutcome(t, "redelivered edit", c.change(t, edit), connector.ChatChangeStale)
+	if n := wsCount(t, c.e, linked, id.ID); n != 1 {
+		t.Fatalf("a redelivered edit unlinked or deleted the stored original, %d reach it", n)
+	}
+
+	wantOutcome(t, "deletion", c.change(t, chatDeletion("18")), connector.ChatChangeRemoved)
+	for _, text := range []string{"first words", "second words", "older words"} {
+		if n := c.rawHolding(t, text); n != 0 {
+			t.Fatalf("%d raw rows still hold %q after the deletion", n, text)
+		}
+	}
+}
+
+func TestTwoEditsStampedWithOneSecondEndAtTheLaterReport(t *testing.T) {
+	for name, order := range map[string][]int64{"earlier report first": {5, 6}, "later report first": {6, 5}} {
+		t.Run(name, func(t *testing.T) {
+			c := newChatChangeEnv(t)
+			c.file(t, "19", "original")
+			for _, seq := range order {
+				edit := chatEdit("19", map[int64]string{5: "text of report 5", 6: "text of report 6"}[seq], 10)
+				edit.RevisionSeq = seq
+				c.change(t, edit)
+			}
+			if got := c.body(t, "19"); got != "text of report 6" {
+				t.Fatalf("body %q, want the text of the later report", got)
+			}
+		})
+	}
 }

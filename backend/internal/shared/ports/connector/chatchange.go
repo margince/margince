@@ -6,6 +6,8 @@ package connector
 import (
 	"context"
 	"time"
+
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
 // What a chat network says about a message it already delivered. A network
@@ -49,11 +51,20 @@ type ChatChange struct {
 	IdempotencyKey string
 	Keys           *ChatOwnKeys
 
-	// Body and Revision are an edit's new text and the provider's own edit
-	// time. The revision orders edits: an edit no newer than the stored one
-	// changes nothing, whatever order the reports arrive in.
-	Body     string
-	Revision time.Time
+	// Body, Revision and RevisionSeq are an edit's new text and its place in the
+	// provider's order of edits. The order is the provider's edit time, then its
+	// own sequence number for the report (Telegram's update_id). An edit that is
+	// not later changes nothing, whatever order the reports arrive in. A
+	// provider with no sequence leaves RevisionSeq zero. Two edits it stamps
+	// with one time then keep the first.
+	Body        string
+	Revision    time.Time
+	RevisionSeq int64
+	// StoredOriginal names the raw_capture row the report arrived in. An edit
+	// that is applied takes the link to the stored original from the row it
+	// replaces. An edit that changes nothing, and any other report, has its
+	// row deleted, so no row holds text the message does not.
+	StoredOriginal ids.UUID
 	// Restated is the whole message as the edit report carries it, when the
 	// provider restates it. It files the message when the edit arrives before
 	// the original did. A provider that reports only the new text leaves it nil.
