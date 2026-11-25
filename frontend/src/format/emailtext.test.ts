@@ -431,6 +431,29 @@ describe("splitEmailBody on a forward", () => {
     expect(parts.tail).toBe("quote");
   });
 
+  it("still folds a quote right under the forwarded block", () => {
+    const parts = splitEmailBody(
+      "FYI\n\nFrom: Dana\nSent: Monday\nTo: Sales\nTerms.\n> Earlier message",
+      "FW: Pricing",
+    );
+    expect(parts.main).toBe(
+      "FYI\n\nFrom: Dana\nSent: Monday\nTo: Sales\nTerms.",
+    );
+    expect(parts.trimmed).toBe("> Earlier message");
+    expect(parts.tail).toBe("quote");
+  });
+
+  it("closes only the note at a sign-off above the forwarded block", () => {
+    const parts = splitEmailBody(
+      "FYI\n\nBest regards\nAlice\n\nFrom: Dana\nSent: Monday\nTo: Sales\n\nTerms.",
+      "FW: Pricing",
+    );
+    expect(parts.main).toBe(
+      "FYI\n\nBest regards\nAlice\n\nFrom: Dana\nSent: Monday\nTo: Sales\n\nTerms.",
+    );
+    expect(parts.tail).toBe("none");
+  });
+
   it("still folds a quote marker in a forward", () => {
     const parts = splitEmailBody(
       "Ja, passt.\n\n> Passt Dienstag?",

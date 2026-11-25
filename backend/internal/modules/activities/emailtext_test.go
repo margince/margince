@@ -353,6 +353,20 @@ func TestAForwardKeepsTheMailItForwards(t *testing.T) {
 			tail:    TailQuote,
 		},
 		{
+			name:    "a quote right under the forwarded block still folds",
+			subject: "FW: Pricing",
+			body:    "FYI\n\nFrom: Dana\nSent: Monday\nTo: Sales\nTerms.\n> Earlier message",
+			main:    "FYI\n\nFrom: Dana\nSent: Monday\nTo: Sales\nTerms.",
+			trimmed: "> Earlier message",
+			tail:    TailQuote,
+		},
+		{
+			name:    "a sign-off above the forwarded block closes only the note",
+			subject: "FW: Pricing",
+			body:    "FYI\n\nBest regards\nAlice\n\nFrom: Dana\nSent: Monday\nTo: Sales\n\nTerms.",
+			main:    "FYI\n\nBest regards\nAlice\n\nFrom: Dana\nSent: Monday\nTo: Sales\n\nTerms.",
+		},
+		{
 			name:    "a quote marker in a forward still folds",
 			subject: "Fwd: Angebot",
 			body:    "Ja, passt.\n\n> Passt Dienstag?",

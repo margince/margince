@@ -34,11 +34,7 @@ func Preamble(body string) (preamble, text string) {
 // A forward passes its first quoted mail on as its own text. Outlook writes a
 // forward and a reply alike, so only the subject tells them apart.
 func OwnTextEnd(lines []string, subject string) int {
-	start := 0
-	if mailsubject.IsForward(subject) {
-		start = forwardedBlockEnd(lines)
-	}
-	for i := start; i < len(lines); i++ {
+	for i := ForwardedBlockEnd(lines, subject); i < len(lines); i++ {
 		if !startsQuote(lines, i) {
 			continue
 		}
@@ -54,10 +50,14 @@ func OwnTextEnd(lines []string, subject string) int {
 	return len(lines)
 }
 
-// forwardedBlockEnd is the line after the header block of the mail a forward
-// passes on, or 0 when the first quote opens none. Gmail and Apple Mail write
-// that block under a forward line, and Outlook writes it bare.
-func forwardedBlockEnd(lines []string) int {
+// ForwardedBlockEnd is the line after the header block of the mail a forward
+// passes on. It is 0 for any other mail, and when the first quote opens no
+// block. Gmail and Apple Mail write that block under a forward line, and
+// Outlook writes it bare.
+func ForwardedBlockEnd(lines []string, subject string) int {
+	if !mailsubject.IsForward(subject) {
+		return 0
+	}
 	for i := range lines {
 		if !startsQuote(lines, i) && !OpensReplyHeader(lines[i], lines[i+1:]) {
 			continue
@@ -74,7 +74,7 @@ func forwardedBlockEnd(lines []string) int {
 			}
 		}
 		end := header + 1
-		for end < len(lines) && strings.TrimSpace(lines[end]) != "" {
+		for end < len(lines) && strings.TrimSpace(lines[end]) != "" && !strings.HasPrefix(lines[end], ">") {
 			end++
 		}
 		return end

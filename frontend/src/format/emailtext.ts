@@ -207,10 +207,14 @@ function attributedStart(lines: readonly string[], index: number): number {
 
 /**
  * forwardedBlockEnd is the line after the header block of the mail a forward
- * passes on, or 0 when the first quote opens none. Gmail and Apple Mail write
- * that block under a forward line, and Outlook writes it bare.
+ * passes on. It is 0 for any other mail, and when the first quote opens no
+ * block. Gmail and Apple Mail write that block under a forward line, and
+ * Outlook writes it bare.
  */
-function forwardedBlockEnd(lines: readonly string[]): number {
+function forwardedBlockEnd(lines: readonly string[], subject: string): number {
+  if (!isForwardSubject(subject)) {
+    return 0;
+  }
   const first = lines.findIndex(
     (_, i) => startsQuote(lines, i) || opensReplyHeader(lines, i),
   );
@@ -231,7 +235,11 @@ function forwardedBlockEnd(lines: readonly string[]): number {
     }
   }
   let end = header + 1;
-  while (end < lines.length && !isBlank(lines[end])) {
+  while (
+    end < lines.length &&
+    !isBlank(lines[end]) &&
+    !lines[end]?.startsWith(">")
+  ) {
     end += 1;
   }
   return end;
@@ -246,8 +254,7 @@ function forwardedBlockEnd(lines: readonly string[]): number {
  * A forward passes its first quoted mail on, which only its subject tells.
  */
 function ownTextEnd(lines: readonly string[], subject: string): number {
-  const start = isForwardSubject(subject) ? forwardedBlockEnd(lines) : 0;
-  for (let i = start; i < lines.length; i += 1) {
+  for (let i = forwardedBlockEnd(lines, subject); i < lines.length; i += 1) {
     if (!startsQuote(lines, i)) {
       continue;
     }
@@ -279,7 +286,8 @@ function boundaryIndex(
 } {
   const quote = ownTextEnd(lines, subject);
   const signOffFloor = Math.max(0, lines.length - TRAILING_SCAN_LINES);
-  for (let i = 0; i < quote; i += 1) {
+  // A sign-off above a forwarded mail closes the note, not the message.
+  for (let i = forwardedBlockEnd(lines, subject); i < quote; i += 1) {
     const line = lines[i] ?? "";
     if (
       SIGNATURE_DELIMITER.test(line) ||

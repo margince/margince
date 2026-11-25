@@ -19,6 +19,8 @@ describe("isForwardSubject", () => {
   it("reads the outermost prefix", () => {
     expect(isForwardSubject("WG: Angebot")).toBe(true);
     expect(isForwardSubject("  fwd:Angebot")).toBe(true);
+    expect(isForwardSubject("\u00a0WG: Angebot")).toBe(true);
+    expect(isForwardSubject("\u2003WG: Angebot")).toBe(false);
     expect(isForwardSubject("Fwd: Re: Angebot")).toBe(true);
     expect(isForwardSubject("Re: Fwd: Angebot")).toBe(false);
     expect(isForwardSubject("Forward planning")).toBe(false);

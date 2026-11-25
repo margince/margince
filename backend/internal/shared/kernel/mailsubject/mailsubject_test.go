@@ -77,6 +77,8 @@ func TestIsForwardReadsTheOutermostPrefix(t *testing.T) {
 		"WG: Angebot":       true,
 		"  fwd:Angebot":     true,
 		"FW : Angebot":      true,
+		"\u00a0WG: Angebot": true,
+		"\u2003WG: Angebot": false,
 		"Fwd: Re: Angebot":  true,
 		"Re: Fwd: Angebot":  false,
 		"AW: WG: Angebot":   false,

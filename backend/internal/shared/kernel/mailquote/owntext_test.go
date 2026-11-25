@@ -143,6 +143,12 @@ func TestAForwardKeepsTheMailItPassesOn(t *testing.T) {
 			own:     "Agreed.\n\n",
 		},
 		{
+			name:    "a marked quote right under the forwarded block ends the text",
+			subject: "FW: Pricing",
+			body:    "FYI\n\nFrom: Dana Roe\nSent: Monday\nTo: Sales\nThirty days net.\n> Terms?",
+			own:     "FYI\n\nFrom: Dana Roe\nSent: Monday\nTo: Sales\nThirty days net.\n",
+		},
+		{
 			name:    "a marked quote in a forward still ends the text",
 			subject: "Fwd: Pricing",
 			body:    "Agreed.\n\n> Thirty days net?\n",

@@ -31,8 +31,9 @@ export function withoutSubjectPrefixes(subject: string): string {
  */
 export const MAIL_FORWARD_PREFIXES: readonly string[] = ["fwd", "fw", "wg"];
 
+// The spaces Go's `\s` reads, and U+00A0, so both sides read one subject alike.
 const outerPrefix = new RegExp(
-  `^\\s*(${MAIL_SUBJECT_PREFIXES.join("|")})\\s*:`,
+  `^[\\t\\n\\f\\r \\u00a0]*(${MAIL_SUBJECT_PREFIXES.join("|")})[\\t\\n\\f\\r \\u00a0]*:`,
   "i",
 );
 
