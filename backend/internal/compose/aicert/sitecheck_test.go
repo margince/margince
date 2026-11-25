@@ -425,11 +425,11 @@ func (w *checkWalk) visit(t *testing.T, pkg *sourcePackage, node ast.Node) {
 var driverPath = reflect.TypeFor[pgx.Tx]().PkgPath()
 
 // namesTheDriver answers whether a function or value declaration reaches the
-// database driver: it names a driver package, or calls through a receiver field
-// of a driver type. A certification run builds no database, so such code only
-// stores or loads rows and cannot change what the model is asked or how its
-// answer is graded. A type declaration is not storage by this rule: a case's
-// engine may hold a pool that no run uses.
+// database driver. It does when it names a driver package or calls through a
+// receiver field of a driver type. A certification run builds no database. Such
+// code only stores or loads rows, which changes neither the request nor the grade.
+// A type declaration is not storage by this rule: a case's engine may hold a
+// pool that no run uses.
 func namesTheDriver(pkg *sourcePackage, node ast.Node) bool {
 	file := pkg.fileOf[node]
 	var recv string
