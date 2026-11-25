@@ -30,6 +30,7 @@ import { useLocale, usePlural, useT, type Words } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { changeBadge } from "../lib/calendarchange";
 import { useCompanyZone } from "../lib/companyzone";
+import { valueFor } from "../lib/labelfor";
 import { isTaskType, type TaskType } from "../lib/tasktype";
 import { useViewerZone } from "../lib/viewerzone";
 import {
@@ -130,7 +131,9 @@ function kindKey(item: WorklistItem): MessageKey {
 
 function kindIcon(item: WorklistItem): LucideIcon {
   if (item.email_summary?.calendar_change) return CalendarClock;
-  return emailNamesRow(item) ? Mail : CATEGORY_ICONS[item.category];
+  return emailNamesRow(item)
+    ? Mail
+    : valueFor(CATEGORY_ICONS, item.category, SquareCheck);
 }
 
 type CardStatus = Readonly<{
