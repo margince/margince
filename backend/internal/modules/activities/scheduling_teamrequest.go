@@ -30,19 +30,19 @@ type TeamRequestStanding struct {
 // ReadTeamRequestTx reads the acting colleague's request on the team link page,
 // so a delayed message about it says what is true when it leaves.
 func ReadTeamRequestTx(ctx context.Context, tx pgx.Tx, page ids.UUID, member ids.UserID) (TeamRequestStanding, error) {
-	return readTeamRequestTx(ctx, tx, page, member, "")
+	return teamRequestStandingTx(ctx, tx, page, member, "")
 }
 
 // HoldTeamRequestTx is ReadTeamRequestTx holding the link until commit, so an
 // answer or a removal waits for the send reserved against it.
 func HoldTeamRequestTx(ctx context.Context, tx pgx.Tx, page ids.UUID, member ids.UserID) (TeamRequestStanding, error) {
-	return readTeamRequestTx(ctx, tx, page, member, " FOR SHARE OF p")
+	return teamRequestStandingTx(ctx, tx, page, member, " FOR SHARE OF p")
 }
 
 // teamRequestSeed keys the fingerprint. A read and its hold run in one process.
 var teamRequestSeed = maphash.MakeSeed()
 
-func readTeamRequestTx(ctx context.Context, tx pgx.Tx, page ids.UUID, member ids.UserID, lock string) (TeamRequestStanding, error) {
+func teamRequestStandingTx(ctx context.Context, tx pgx.Tx, page ids.UUID, member ids.UserID, lock string) (TeamRequestStanding, error) {
 	if actor, ok := principal.Actor(ctx); !ok || actor.UserID != member.UUID {
 		return TeamRequestStanding{}, apperrors.ErrPermissionDenied
 	}

@@ -42,11 +42,14 @@ type teamLinkRow struct {
 	Policy storedSchedulingProfile
 }
 
+// forUpdateClause holds a team link row until commit when the caller will write it.
+const forUpdateClause = ` FOR UPDATE`
+
 func readTeamLinkTx(ctx context.Context, tx pgx.Tx, host ids.UserID, page ids.UUID, lock bool) (teamLinkRow, error) {
 	args := schedulingArgs{}
 	query := `SELECT id, slug, scheduling_policy FROM booking_page WHERE ` + livePageSQL(&args, host, page) + ` AND team_link`
 	if lock {
-		query += ` FOR UPDATE`
+		query += forUpdateClause
 	}
 	var link teamLinkRow
 	err := tx.QueryRow(ctx, query, args...).Scan(&link.ID, &link.Slug, &link.Policy)

@@ -71,7 +71,7 @@ func (s *Store) MoveTeamsToTeamLinksTx(ctx context.Context, tx pgx.Tx, in datata
 		return datatask.BatchOut{}, err
 	}
 	rows, err := tx.Query(ctx, `SELECT id FROM booking_page WHERE id > @after AND `+personalPageWithTeamSQL+` ORDER BY id LIMIT @limit`,
-		pgx.NamedArgs{"after": after, argLimit: in.Limit})
+		pgx.NamedArgs{repairAfterArg: after, argLimit: in.Limit})
 	if err != nil {
 		return datatask.BatchOut{}, fmt.Errorf("activities: paging personal pages with a team: %w", err)
 	}
