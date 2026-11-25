@@ -6,10 +6,11 @@ import type { MessageKey } from "../i18n/en";
 import {
   type RequiredGrant,
   useCanMutate,
-  useGrantRefused,
   useRecordWriteRefusal,
+  useWriteBlock,
   useWriteRefusal,
   type WritableRecord,
+  type WriteBlock,
 } from "./capability";
 import type { EntityKind } from "./entity";
 import { useMe } from "./session";
@@ -79,6 +80,12 @@ export function useMeSettled(): boolean {
   return !me.isPending || me.errorUpdateCount > 0;
 }
 
+/** What a refusal by the seat or by the role says, on every surface. */
+export const WRITE_BLOCK_REFUSAL = {
+  seat: "settings.seatRefused",
+  role: "record.roleReadsOnly",
+} as const satisfies Record<WriteBlock, MessageKey>;
+
 // What each record kind's page says when the record takes no change.
 const RECORD_REFUSALS = {
   contact: {
@@ -118,23 +125,24 @@ export function useKindWriteRefusal(
   const words = RECORD_REFUSALS[kind];
   return useRecordWriteRefusal(kind, record, {
     archived: t(words.archived),
-    readOnlyRole: t("record.roleReadsOnly"),
+    seat: t(WRITE_BLOCK_REFUSAL.seat),
+    readOnlyRole: t(WRITE_BLOCK_REFUSAL.role),
     notYours: t(words.notYours),
   });
 }
 
 /**
- * What a refused Archive says on a record page. A role that only reads is told
- * so on every kind. Otherwise a contact, company or deal is its owner's or a
- * manager's to archive; a project takes the delete grant alone.
+ * What a refused Archive says on a record page. A read seat or a role that
+ * only reads is told so on every kind. Otherwise a contact, company or deal is
+ * its owner's or a manager's to archive; a project takes the delete grant alone.
  */
 export function useArchiveRefusal(
   kind: "contact" | "company" | "deal" | "project",
 ): string {
   const t = useT();
-  const readOnlyRole = useGrantRefused({ object: kind, action: "update" });
-  if (readOnlyRole) {
-    return t("record.roleReadsOnly");
+  const block = useWriteBlock(kind);
+  if (block) {
+    return t(WRITE_BLOCK_REFUSAL[block]);
   }
   return t(
     kind === "project" ? "record.actionRefused" : "record.archiveRefused",

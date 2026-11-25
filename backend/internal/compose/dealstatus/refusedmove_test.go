@@ -7,6 +7,7 @@ import (
 	"context"
 	"testing"
 
+	"github.com/margince/margince/backend/internal/compose/momentaction"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -26,7 +27,7 @@ func seatWith(seat principal.SeatType, activity principal.ObjectGrant) context.C
 func TestTheCardsMoveIsBlockedOnTheServedCopyOnly(t *testing.T) {
 	filed := crmcontracts.DealStatusCard{Next: &crmcontracts.DealStatusCardMove{Action: "create_task"}}
 	served := withRefusedMove(seatWith(principal.SeatFull, principal.ObjectGrant{Read: true}), filed)
-	if got := served.Next.BlockedReason; got == nil || *got != "Your role can only read. Ask an administrator for another role." {
+	if got := served.Next.BlockedReason; got == nil || *got != momentaction.RoleReadsOnly().En {
 		t.Fatalf("a reader without activity.create was served create_task with blocked_reason %v", got)
 	}
 	if filed.Next.BlockedReason != nil {

@@ -52,6 +52,14 @@ describe("useKindWriteRefusal", () => {
     }
   });
 
+  it("tells a read seat to ask for a full seat, whatever the role holds", async () => {
+    stubMe(meFixture({ allow: { company: ["read", "update"] }, seat: "read" }));
+
+    expect(
+      await settled(() => useKindWriteRefusal("company", { writable: false })),
+    ).toBe(en["settings.seatRefused"]);
+  });
+
   it("keeps the owner sentence for a writing role on somebody else's row", async () => {
     stubMe(meFixture({ allow: { company: ["read", "update"] } }));
 
@@ -72,11 +80,11 @@ describe("useArchiveRefusal", () => {
     }
   });
 
-  it("names the role on a read seat", async () => {
+  it("names the seat on a read seat", async () => {
     stubMe(meFixture({ allow: { contact: ["read", "update"] }, seat: "read" }));
 
     expect(await settled(() => useArchiveRefusal("contact"))).toBe(
-      en["record.roleReadsOnly"],
+      en["settings.seatRefused"],
     );
   });
 

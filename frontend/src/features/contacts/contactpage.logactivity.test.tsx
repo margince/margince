@@ -10,6 +10,7 @@ import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { afterEach, describe, expect, it } from "vitest";
 import { CallLogHost } from "../../components/calllog.host";
+import { en } from "../../i18n/en";
 import {
   type Contact360,
   mount,
@@ -97,9 +98,7 @@ describe("logging an activity", () => {
     const reason = document.getElementById(
       button.getAttribute("aria-describedby") ?? "",
     );
-    expect(reason?.textContent).toBe(
-      "Your role can only read. Ask an administrator for another role.",
-    );
+    expect(reason?.textContent).toBe(en["record.actionRefused"]);
     expect(reason?.closest(".record-aside")).not.toBeNull();
   });
 
@@ -124,11 +123,7 @@ describe("logging an activity", () => {
     const header = await recordHeader();
     // Stated once on the page; the open menu then repeats it beside its
     // refused rows, which is the menu's own rule.
-    expect(
-      screen.getAllByText(
-        "Your role can only read. Ask an administrator for another role.",
-      ),
-    ).toHaveLength(1);
+    expect(screen.getAllByText(en["record.actionRefused"])).toHaveLength(1);
     const addTask = await addTaskRow(header);
     const logActivity = within(header).getByRole("button", {
       name: /Log activity/,
@@ -155,11 +150,7 @@ describe("logging an activity", () => {
     });
     expect(addTask).toHaveProperty("disabled", true);
     expect(logActivity).toHaveProperty("disabled", true);
-    expect(
-      within(header).queryByText(
-        "Your role can only read. Ask an administrator for another role.",
-      ),
-    ).toBeNull();
+    expect(within(header).queryByText(en["record.actionRefused"])).toBeNull();
   });
 
   // The button names a verb and opens the same form Log activity does,
@@ -393,9 +384,7 @@ describe("logging a call started on the page", () => {
       { contact: ["read", "update"] },
       inShell,
     );
-    await screen.findByText(
-      "Your role can only read. Ask an administrator for another role.",
-    );
+    await screen.findByText(en["record.actionRefused"]);
 
     const [number] = await screen.findAllByRole("link", { name: NUMBER });
     expect(fireEvent.click(number)).toBe(true);

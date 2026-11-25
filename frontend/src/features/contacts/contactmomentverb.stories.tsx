@@ -4,6 +4,7 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, waitFor, within } from "storybook/test";
 import type { components } from "../../api/schema";
+import { en } from "../../i18n/en";
 import {
   installFetchStub,
   meRoute,
@@ -52,8 +53,12 @@ const WRITES: Parameters<typeof meRoute>[0] = {
   activity: ["read", "create"],
 };
 
-function verbs(contact: Contact, grants: Parameters<typeof meRoute>[0]) {
-  installFetchStub({ "GET /me": meRoute(grants) });
+function verbs(
+  contact: Contact,
+  grants: Parameters<typeof meRoute>[0],
+  seat: "full" | "read" = "full",
+) {
+  installFetchStub({ "GET /me": meRoute(grants, { seat }) });
   return (
     <StoryProviders>
       <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap" }}>
@@ -84,9 +89,7 @@ export const NotYours: Story = {
       name: /Log an interaction/,
     });
     await waitFor(() =>
-      expect(log).toHaveAccessibleDescription(
-        "You can only read this contact. Ask its owner for write access.",
-      ),
+      expect(log).toHaveAccessibleDescription(en["contact.attachRefused"]),
     );
   },
 };
@@ -108,4 +111,17 @@ export const ReadOnlyRole: Story = {
 export const ReadOnlyRolePhone: Story = {
   ...ReadOnlyRole,
   tags: ["uat-phone"],
+};
+
+/** A read seat: the writing verb is not drawn, whatever the role holds. */
+export const ReadSeat: Story = {
+  render: () => verbs(ANNA, WRITES, "read"),
+  play: ReadOnlyRole.play,
+};
+
+/** A writing role whose row is its own but whose role is short this action. */
+export const RoleRefusesTheAction: Story = {
+  render: () =>
+    verbs(ANNA, { contact: ["read", "update"], activity: ["read"] }),
+  play: ReadOnlyRole.play,
 };

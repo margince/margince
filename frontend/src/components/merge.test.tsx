@@ -13,8 +13,12 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
-function mount(allow: GrantSpec, requires: RequiredGrant) {
-  vi.stubGlobal("fetch", async () => Response.json(meFixture({ allow })));
+function mount(
+  allow: GrantSpec,
+  requires: RequiredGrant,
+  seat: "full" | "read" = "full",
+) {
+  vi.stubGlobal("fetch", async () => Response.json(meFixture({ allow, seat })));
   render(
     <QueryClientProvider
       client={
@@ -55,6 +59,16 @@ describe("MergeAction refused", () => {
     mount({ contact: ["read"] }, { object: "contact", action: "update" });
 
     expect(await refusal()).toBe(en["record.roleReadsOnly"]);
+  });
+
+  it("names the seat on a read seat, whatever the role holds", async () => {
+    mount(
+      { contact: ["read", "update", "delete"] },
+      { object: "contact", action: "delete" },
+      "read",
+    );
+
+    expect(await refusal()).toBe(en["settings.seatRefused"]);
   });
 
   it("names the missing right to a role that writes the record", async () => {

@@ -33,27 +33,22 @@ type offeredVerbs struct {
 	constPrefix string
 	// The enum's size today. A floor, so an extraction that goes short fails.
 	floor int
-	// How an entry says "this verb writes".
-	writes func(t *testing.T, mapName, kind string, value ast.Expr) bool
 }
 
 var offeredVerbVocabularies = []offeredVerbs{
 	{
 		schema: "ContactMomentAction", source: "internal/compose/momentaction/withhold.go",
 		mapName: "writesAnActivity", constPrefix: "ContactMomentActionKind", floor: 8,
-		writes: boolLiteral,
 	},
 	{
 		schema: "WorklistMove", anchors: []string{"\n        action:"},
 		source:  "internal/compose/momentaction/writeverbs.go",
 		mapName: "worklistVerbWrites", constPrefix: "WorklistMoveAction", floor: 7,
-		writes: boolLiteral,
 	},
 	{
 		schema: "Company360Suggestion", anchors: []string{"\n        action:", "\n            kind:"},
 		source:  "internal/compose/momentaction/writeverbs.go",
 		mapName: "suggestionVerbWrites", constPrefix: "Company360SuggestionActionKind", floor: 3,
-		writes: boolLiteral,
 	},
 }
 
@@ -175,7 +170,7 @@ func (v offeredVerbs) classification(t *testing.T) (kinds map[string]bool, writi
 					continue
 				}
 				kind := v.kindOf(t, pair.Key)
-				writes := v.writes(t, v.mapName, kind, pair.Value)
+				writes := boolLiteral(t, v.mapName, kind, pair.Value)
 				kinds[kind] = writes
 				if writes {
 					writing++

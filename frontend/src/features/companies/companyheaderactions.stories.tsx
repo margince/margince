@@ -4,7 +4,8 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, screen, userEvent, waitFor, within } from "storybook/test";
 import type { components } from "../../api/schema";
-import { useActivityGate } from "../../components/activitygate";
+import { useActivityGate, writableTarget } from "../../components/activitygate";
+import { en } from "../../i18n/en";
 import type { GrantSpec } from "../../testing/mefixture";
 import {
   installFetchStub,
@@ -38,14 +39,17 @@ const company: Company = {
   version: 1,
 };
 
+const WRITES: GrantSpec = {
+  company: ["read", "update"],
+  activity: ["create"],
+};
+
 function Row({
   record = company,
-  activity = true,
-}: Readonly<{ record?: Company; activity?: boolean }>) {
-  const grants: GrantSpec = activity
-    ? { company: ["read", "update"], activity: ["create"] }
-    : { company: ["read", "update"] };
-  installFetchStub({ "GET /me": meRoute(grants) });
+  grants = WRITES,
+  seat = "full",
+}: Readonly<{ record?: Company; grants?: GrantSpec; seat?: "full" | "read" }>) {
+  installFetchStub({ "GET /me": meRoute(grants, { seat }) });
   return (
     <StoryProviders>
       {/* The head's own bar class, so the verbs and any caption sit at the
@@ -61,7 +65,7 @@ function Row({
 
 // The gate is the page's, read inside the providers the way the page reads it.
 function GatedActions({ record }: Readonly<{ record: Company }>) {
-  const activity = useActivityGate();
+  const activity = useActivityGate("company", writableTarget(record));
   return (
     <CompanyHeaderActions
       company={record}
@@ -74,20 +78,24 @@ function GatedActions({ record }: Readonly<{ record: Company }>) {
   );
 }
 
+// Every verb in the strip, Book included, points at the one sentence.
+async function refusedWith(canvasElement: HTMLElement, sentence: string) {
+  const canvas = within(canvasElement);
+  for (const name of ["Email", "Log activity", /Book/]) {
+    const verb = await canvas.findByRole("button", { name });
+    await waitFor(() => expect(verb).toHaveAccessibleDescription(sentence));
+  }
+}
+
 export const Live: Story = { render: () => <Row /> };
 
-// A role without the activity grant: both log verbs point at one sentence.
+// A role that may change neither the account nor an activity: the role only reads.
 export const LogRefused: Story = {
-  render: () => <Row activity={false} />,
+  render: () => <Row grants={{ company: ["read"] }} />,
   play: async ({ canvasElement }) => {
-    const email = await within(canvasElement).findByRole("button", {
-      name: "Email",
-    });
-    await waitFor(() =>
-      expect(email).toHaveAccessibleDescription(
-        "Your role can only read. Ask an administrator for another role.",
-      ),
-    );
+    const why = en["record.roleReadsOnly"];
+    await refusedWith(canvasElement, why);
+    const email = within(canvasElement).getByRole("button", { name: "Email" });
     await expect(email).toBeDisabled();
     const host = email.closest(".icon-action");
     await expect(host).not.toBeNull();
@@ -95,12 +103,33 @@ export const LogRefused: Story = {
       await userEvent.hover(host);
     }
     await waitFor(() =>
-      expect(screen.getByRole("tooltip")).toHaveTextContent(
-        "Email. Your role can only read. Ask an administrator for another role.",
-      ),
+      expect(screen.getByRole("tooltip")).toHaveTextContent(`Email. ${why}`),
     );
   },
 };
+
+// A read seat is told about its seat, whatever its role holds.
+export const SeatRefused: Story = {
+  render: () => <Row seat="read" />,
+  play: ({ canvasElement }) =>
+    refusedWith(canvasElement, en["settings.seatRefused"]),
+};
+
+// A custom role that may change the account but not write an activity.
+export const ActionRefused: Story = {
+  render: () => <Row grants={{ company: ["read", "update"] }} />,
+  play: ({ canvasElement }) =>
+    refusedWith(canvasElement, en["record.actionRefused"]),
+};
+
+// A writing role on a colleague's account: Book says what Log says.
+export const NotYours: Story = {
+  render: () => <Row record={{ ...company, writable: false }} />,
+  play: ({ canvasElement }) =>
+    refusedWith(canvasElement, en["record.attachRefused"]),
+};
+
+export const NotYoursPhone: Story = { ...NotYours, tags: ["uat-phone"] };
 
 // An archived account: every verb here refuses on the record's state, and the
 // sentence is the component's own when the page has not stated it.

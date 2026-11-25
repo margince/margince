@@ -4,10 +4,7 @@
 import { CalendarPlus, FileText } from "lucide-react";
 import { useCallback, useId, useMemo, useRef } from "react";
 import type { components } from "../../api/schema";
-import {
-  ACTIVITY_ROLE_REFUSAL,
-  type ActivityGate,
-} from "../../components/activitygate";
+import type { ActivityGate } from "../../components/activitygate";
 import { ExtensionEntries } from "../../components/extensionentries";
 import { LogActivityAction } from "../../components/logactivity.action";
 import { searchCompanyContacts } from "../../components/meetingattendees";
@@ -54,7 +51,6 @@ function stripRefusals(
 ): Readonly<{
   ownArchived?: string;
   activityRefusal?: string;
-  bookRefusal?: string;
 }> {
   if (state.archived) {
     return state.pageStatesArchive
@@ -62,15 +58,7 @@ function stripRefusals(
       : { ownArchived: t("record.archivedReadOnly") };
   }
   const key = state.activityRefusalKey;
-  if (!key) {
-    return {};
-  }
-  return {
-    activityRefusal: t(key),
-    bookRefusal: t(
-      key === ACTIVITY_ROLE_REFUSAL ? key : "scheduling.bookRefused",
-    ),
-  };
+  return key ? { activityRefusal: t(key) } : {};
 }
 
 export function CompanyHeaderActions({
@@ -108,11 +96,8 @@ export function CompanyHeaderActions({
   const ownReasonId = useId();
   const reasonId = archivedReasonId ?? ownReasonId;
   const archived = company.archived_at ? reasonId : undefined;
-  // Independent of `archived`: a live record a seat may not write to is
-  // refused for this reason, not that one.
-  const bookRefusedId = useId();
   const logRefused = archived ?? activity.refusedId;
-  const { ownArchived, activityRefusal, bookRefusal } = stripRefusals(t, {
+  const { ownArchived, activityRefusal } = stripRefusals(t, {
     archived: archived !== undefined,
     pageStatesArchive: archivedReasonId !== undefined,
     activityRefusalKey: activity.refusalKey,
@@ -156,14 +141,9 @@ export function CompanyHeaderActions({
         view={view}
         allowed={!logPending && !logRefused}
         pending={logPending}
-        reasonId={archived ?? (activity.pending ? undefined : bookRefusedId)}
-        reasonTip={ownArchived ?? bookRefusal}
+        reasonId={logRefused}
+        reasonTip={logRefusal}
       />
-      {bookRefusal && (
-        <p className="t-caption" id={bookRefusedId}>
-          {bookRefusal}
-        </p>
-      )}
       <Button
         disabled={logPending}
         reasonId={logRefused}

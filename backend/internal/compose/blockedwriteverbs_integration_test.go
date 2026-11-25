@@ -15,6 +15,7 @@ import (
 	"github.com/margince/margince/backend/internal/compose/companyscan"
 	"github.com/margince/margince/backend/internal/compose/dealstatus"
 	"github.com/margince/margince/backend/internal/compose/integration"
+	"github.com/margince/margince/backend/internal/compose/momentaction"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/approvals"
@@ -22,15 +23,31 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
-// refusedRole is what every refused activity-writing move says: the role only reads.
-const refusedRole = "Your role can only read. Ask an administrator for another role."
+// The refusals a move says: a read seat, a role that only reads, and a role
+// that changes the record and writes no activity.
+var (
+	refusedSeat   = momentaction.SeatReadsOnly().En
+	refusedRole   = momentaction.RoleReadsOnly().En
+	refusedAction = momentaction.ActionRefused().En
+)
 
 // readsActivities is the admin's grants with activity.create taken away, so
-// the reader still sees every row and may write no activity.
+// the reader still sees and changes every row and may write no activity.
 func readsActivities() principal.Permissions {
 	perms := integration.AdminPerms
 	perms.Objects = maps.Clone(perms.Objects)
 	perms.Objects["activity"] = principal.ObjectGrant{Read: true}
+	return perms
+}
+
+// readsOnly is the admin's grants cut to reading, so the reader sees every row
+// and may change none.
+func readsOnly() principal.Permissions {
+	perms := integration.AdminPerms
+	perms.Objects = make(map[string]principal.ObjectGrant, len(integration.AdminPerms.Objects))
+	for object, grant := range integration.AdminPerms.Objects {
+		perms.Objects[object] = principal.ObjectGrant{Read: grant.Read}
+	}
 	return perms
 }
 
@@ -43,9 +60,10 @@ func TestTheWorklistOffersAMailMoveOnlyToASeatThatMayWrite(t *testing.T) {
 		want *string
 	}{
 		"a full seat that may write":    {integration.OnSeat(e.As(e.Rep1, team, integration.AdminPerms), principal.SeatFull), nil},
-		"a full seat without the grant": {integration.OnSeat(e.As(e.Rep1, team, readsActivities()), principal.SeatFull), new(refusedRole)},
-		"a read seat holding the grant": {integration.OnSeat(e.As(e.Rep1, team, integration.AdminPerms), principal.SeatRead), new(refusedRole)},
-		"an agent whose human lacks it": {e.AgentFor(t, e.Rep1, team, readsActivities()), new(refusedRole)},
+		"a full seat without the grant": {integration.OnSeat(e.As(e.Rep1, team, readsActivities()), principal.SeatFull), new(refusedAction)},
+		"a role that only reads":        {integration.OnSeat(e.As(e.Rep1, team, readsOnly()), principal.SeatFull), new(refusedRole)},
+		"a read seat holding the grant": {integration.OnSeat(e.As(e.Rep1, team, integration.AdminPerms), principal.SeatRead), new(refusedSeat)},
+		"an agent whose human lacks it": {e.AgentFor(t, e.Rep1, team, readsActivities()), new(refusedAction)},
 	} {
 		page := quiet.read(reader.ctx)
 		if page.OptionalRelationships == nil || len(*page.OptionalRelationships) != 1 {
@@ -81,8 +99,9 @@ func TestTheCompanyPageOffersADraftReplyOnlyToASeatThatMayWrite(t *testing.T) {
 		want *string
 	}{
 		"a full seat that may write":    {integration.OnSeat(e.Admin(), principal.SeatFull), nil},
-		"a full seat without the grant": {integration.OnSeat(e.As(e.AdminUser, nil, readsActivities()), principal.SeatFull), new(refusedRole)},
-		"a read seat holding the grant": {integration.OnSeat(e.Admin(), principal.SeatRead), new(refusedRole)},
+		"a full seat without the grant": {integration.OnSeat(e.As(e.AdminUser, nil, readsActivities()), principal.SeatFull), new(refusedAction)},
+		"a role that only reads":        {integration.OnSeat(e.As(e.AdminUser, nil, readsOnly()), principal.SeatFull), new(refusedRole)},
+		"a read seat holding the grant": {integration.OnSeat(e.Admin(), principal.SeatRead), new(refusedSeat)},
 	} {
 		page, err := service.Assemble(reader.ctx, ids.From[ids.CompanyKind](company))
 		if err != nil {
@@ -119,8 +138,9 @@ func TestTheDealCardOffersItsTaskOnlyToASeatThatMayWrite(t *testing.T) {
 		want *string
 	}{
 		{"a full seat that may write", integration.OnSeat(e.As(e.Rep1, team, integration.AdminPerms), principal.SeatFull), nil},
-		{"a full seat without the grant", integration.OnSeat(e.As(e.Rep1, team, readsActivities()), principal.SeatFull), new(refusedRole)},
-		{"a read seat holding the grant", integration.OnSeat(e.As(e.Rep1, team, integration.AdminPerms), principal.SeatRead), new(refusedRole)},
+		{"a full seat without the grant", integration.OnSeat(e.As(e.Rep1, team, readsActivities()), principal.SeatFull), new(refusedAction)},
+		{"a role that only reads", integration.OnSeat(e.As(e.Rep1, team, readsOnly()), principal.SeatFull), new(refusedRole)},
+		{"a read seat holding the grant", integration.OnSeat(e.As(e.Rep1, team, integration.AdminPerms), principal.SeatRead), new(refusedSeat)},
 		{"the writer again, after the cache was filled", integration.OnSeat(e.As(e.Rep1, team, integration.AdminPerms), principal.SeatFull), nil},
 	} {
 		card, err := cards.ReadFacts(reader.ctx, ids.From[ids.DealKind](e.calm))

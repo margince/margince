@@ -26,8 +26,8 @@ func TestAReaderIsRefusedEveryMoveThatWritesAndNoneThatReads(t *testing.T) {
 		crmcontracts.WorklistMoveActionDraftEmail,
 		crmcontracts.WorklistMoveActionCreateTask,
 	} {
-		got := MoveRefusal(ctx, action)
-		if got == nil || *got != roleReadsOnly["en"] {
+		got := MoveRefusal(ctx, "contact", action)
+		if got == nil || *got != RoleReadsOnly().En {
 			t.Errorf("%s: refusal %v, want the role sentence", action, got)
 		}
 	}
@@ -36,41 +36,57 @@ func TestAReaderIsRefusedEveryMoveThatWritesAndNoneThatReads(t *testing.T) {
 		crmcontracts.WorklistMoveActionOpenMeetingBrief,
 		crmcontracts.WorklistMoveActionReconnect,
 	} {
-		if got := MoveRefusal(ctx, action); got != nil {
+		if got := MoveRefusal(ctx, "contact", action); got != nil {
 			t.Errorf("%s only reads, and was refused: %q", action, *got)
 		}
 	}
 }
 
 func TestASeatThatMayNotWriteIsRefusedEvenWithTheGrant(t *testing.T) {
-	got := MoveRefusal(seated(principal.SeatRead, writer), crmcontracts.WorklistMoveActionCreateTask)
-	if got == nil || *got != roleReadsOnly["en"] {
-		t.Fatalf("a read seat holding activity.create got %v for create_task, want the role sentence", got)
+	got := MoveRefusal(seated(principal.SeatRead, writer), "deal", crmcontracts.WorklistMoveActionCreateTask)
+	if got == nil || *got != SeatReadsOnly().En {
+		t.Fatalf("a read seat holding activity.create got %v for create_task, want the seat sentence", got)
+	}
+}
+
+func TestARoleThatUpdatesTheRowButWritesNoActivityHearsTheActionSentence(t *testing.T) {
+	for _, record := range []string{"contact", "deal", ""} {
+		got := MoveRefusal(customRole(), record, crmcontracts.WorklistMoveActionDraftEmail)
+		if got == nil || *got != ActionRefused().En {
+			t.Errorf("a row about %q: refusal %v, want the action sentence", record, got)
+		}
+	}
+}
+
+func TestARowAboutNoRecordNeverBlamesTheRole(t *testing.T) {
+	got := MoveRefusal(reader(readerOnly), "", crmcontracts.WorklistMoveActionCreateTask)
+	if got == nil || *got != ActionRefused().En {
+		t.Fatalf("a row about no record got %v, want the action sentence", got)
 	}
 }
 
 func TestAWriterIsRefusedNothing(t *testing.T) {
 	ctx := reader(writer)
 	for action := range worklistVerbWrites {
-		if got := MoveRefusal(ctx, action); got != nil {
+		if got := MoveRefusal(ctx, "contact", action); got != nil {
 			t.Errorf("%s: a writer was refused: %q", action, *got)
 		}
 	}
 }
 
 func TestAnUnclassifiedMoveIsRefusedLikeAWrite(t *testing.T) {
-	if MoveRefusal(reader(readerOnly), "send_contract") == nil {
+	if MoveRefusal(reader(readerOnly), "contact", "send_contract") == nil {
 		t.Fatal("a verb the map does not know was offered live to a reader")
 	}
-	if got := MoveRefusal(reader(writer), "send_contract"); got != nil {
+	if got := MoveRefusal(reader(writer), "contact", "send_contract"); got != nil {
 		t.Fatalf("a writer was refused an unknown verb: %q", *got)
 	}
 }
 
 func TestTheRefusalSpeaksTheReadersLanguage(t *testing.T) {
 	ctx := systemtext.WithLocale(reader(readerOnly), textlang.German)
-	got := MoveRefusal(ctx, crmcontracts.WorklistMoveActionCreateTask)
-	if want := roleReadsOnly["de"]; got == nil || *got != want {
+	got := MoveRefusal(ctx, "contact", crmcontracts.WorklistMoveActionCreateTask)
+	if want := RoleReadsOnly().De; got == nil || *got != want {
 		t.Fatalf("refusal %v, want %q", got, want)
 	}
 }
@@ -84,12 +100,18 @@ func TestACompanyBriefRowBlocksOnlyItsWritingAction(t *testing.T) {
 	}
 	MarkRefusedSuggestions(reader(readerOnly), rows)
 	for _, row := range rows[:2] {
-		if got := row.Action.BlockedReason; got == nil || *got != roleReadsOnly["en"] {
+		if got := row.Action.BlockedReason; got == nil || *got != RoleReadsOnly().En {
 			t.Errorf("%s: %v, want the role sentence", row.Action.Kind, got)
 		}
 	}
 	if got := rows[2].Action.BlockedReason; got != nil {
 		t.Errorf("open_deal only reads, and was refused: %q", *got)
+	}
+	MarkRefusedSuggestions(customRole(), rows)
+	for _, row := range rows[:2] {
+		if got := row.Action.BlockedReason; got == nil || *got != ActionRefused().En {
+			t.Errorf("%s for a role that updates the company: %v, want the action sentence", row.Action.Kind, got)
+		}
 	}
 	MarkRefusedSuggestions(reader(writer), rows)
 	for i, row := range rows[:3] {
@@ -119,18 +141,18 @@ func TestAskingTheManagerAsksTheDealGrantNotTheActivityGrant(t *testing.T) {
 			},
 		})
 	}
-	got := MoveRefusal(asWho(readerOnly), crmcontracts.WorklistMoveActionBringInManager)
-	if got == nil || *got != "You do not have permission to change deals" {
-		t.Errorf("a reader of deals who may write activities was offered the move live: %v", got)
+	got := MoveRefusal(asWho(readerOnly), "deal", crmcontracts.WorklistMoveActionBringInManager)
+	if got == nil || *got != RoleReadsOnly().En {
+		t.Errorf("a reader of deals who may write activities got %v, want the role sentence", got)
 	}
-	if got := MoveRefusal(asWho(principal.ObjectGrant{Read: true, Update: true}), crmcontracts.WorklistMoveActionBringInManager); got != nil {
+	if got := MoveRefusal(asWho(principal.ObjectGrant{Read: true, Update: true}), "deal", crmcontracts.WorklistMoveActionBringInManager); got != nil {
 		t.Errorf("a seat that may update deals was refused: %q", *got)
 	}
 }
 
-func TestAskingTheManagerForARoleThatOnlyReadsSaysTheRoleSentence(t *testing.T) {
-	got := MoveRefusal(reader(readerOnly), crmcontracts.WorklistMoveActionBringInManager)
-	if got == nil || *got != roleReadsOnly["en"] {
-		t.Errorf("a role that only reads got %v, want the role sentence", got)
+func TestAskingTheManagerOnAReadSeatSaysTheSeatSentence(t *testing.T) {
+	got := MoveRefusal(seated(principal.SeatRead, writer), "deal", crmcontracts.WorklistMoveActionBringInManager)
+	if got == nil || *got != SeatReadsOnly().En {
+		t.Errorf("a read seat got %v, want the seat sentence", got)
 	}
 }

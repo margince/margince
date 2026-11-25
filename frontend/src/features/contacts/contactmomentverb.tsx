@@ -1,14 +1,12 @@
 import { CheckSquare, FileText, Search, Send, Users } from "lucide-react";
 import type { ReactNode } from "react";
 import type { components } from "../../api/schema";
-import {
-  ACTIVITY_ROLE_REFUSAL,
-  useActivityGate,
-} from "../../components/activitygate";
+import { useActivityGate } from "../../components/activitygate";
 import { Button, type ButtonVariant } from "../../design-system/atoms";
 import { CallAction } from "../../design-system/callaction";
 import { primaryPhone } from "../../format/contacturi";
 import { useT } from "../../i18n";
+import { useGrantRefused } from "../../lib/capability";
 import { MOMENT_VERB_WRITES, momentVerbWrites } from "../../lib/writeverbs";
 import { momentDrafts } from "./contactpage.drawers";
 
@@ -53,7 +51,11 @@ export function ActionVerb(props: ActionVerbProps) {
 
 function SurfaceVerb({ action, contact, primary, onAction }: ActionVerbProps) {
   const t = useT();
-  const gate = useActivityGate(contact);
+  const gate = useActivityGate("contact", contact);
+  const writeRefused = useGrantRefused({
+    object: "activity",
+    action: "create",
+  });
   const attaches =
     action.destination?.surface === "booking" ||
     action.destination?.surface === "activity_log";
@@ -65,10 +67,7 @@ function SurfaceVerb({ action, contact, primary, onAction }: ActionVerbProps) {
   const files = attaches || drafts;
   // Not drawn: the press writes an activity, by the server's classification
   // of its kind, and this seat may not.
-  if (
-    momentVerbWrites(action.kind) &&
-    gate.refusalKey === ACTIVITY_ROLE_REFUSAL
-  ) {
+  if (momentVerbWrites(action.kind) && writeRefused) {
     return null;
   }
   const variant = verbVariant(drafts, primary === true);

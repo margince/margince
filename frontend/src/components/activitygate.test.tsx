@@ -34,7 +34,7 @@ function refusalKeyFor(
   allow: Parameters<typeof meFixture>[0],
   record: { writable?: boolean },
 ) {
-  return renderHook(() => useActivityGate(writableTarget(record)), {
+  return renderHook(() => useActivityGate("deal", writableTarget(record)), {
     wrapper: withMe(allow),
   }).result.current.refusalKey;
 }
@@ -50,16 +50,40 @@ describe("useWritingVerbOffered", () => {
 });
 
 describe("useActivityGate", () => {
-  it("names the role when the role may not create an activity", () => {
+  it("names the role when the role may change neither the record nor an activity", () => {
     expect(
-      refusalKeyFor({ allow: { activity: ["read"] } }, { writable: true }),
+      refusalKeyFor(
+        { allow: { activity: ["read"], deal: ["read"] } },
+        { writable: false },
+      ),
     ).toBe("record.roleReadsOnly");
   });
 
-  it("names the role on a read seat", () => {
+  it("names the missing action for a role that may change the record but write no activity", () => {
     expect(
       refusalKeyFor(
-        { allow: { activity: ["read", "create"] }, seat: "read" },
+        { allow: { activity: ["read"], deal: ["read", "update"] } },
+        { writable: true },
+      ),
+    ).toBe("record.actionRefused");
+  });
+
+  it("names the seat on a read seat, whatever the role holds", () => {
+    expect(
+      refusalKeyFor(
+        {
+          allow: { activity: ["read", "create"], deal: ["read", "update"] },
+          seat: "read",
+        },
+        { writable: false },
+      ),
+    ).toBe("settings.seatRefused");
+  });
+
+  it("names the role on a row it may not file onto when the role may not change the record", () => {
+    expect(
+      refusalKeyFor(
+        { allow: { activity: ["read", "create"], deal: ["read"] } },
         { writable: false },
       ),
     ).toBe("record.roleReadsOnly");
@@ -68,7 +92,7 @@ describe("useActivityGate", () => {
   it("keeps the owner sentence for a writing role on a row it may not file onto", () => {
     expect(
       refusalKeyFor(
-        { allow: { activity: ["read", "create"] } },
+        { allow: { activity: ["read", "create"], deal: ["read", "update"] } },
         { writable: false },
       ),
     ).toBe("record.attachRefused");
@@ -77,7 +101,7 @@ describe("useActivityGate", () => {
   it("refuses nothing to a writing role on its own row", () => {
     expect(
       refusalKeyFor(
-        { allow: { activity: ["read", "create"] } },
+        { allow: { activity: ["read", "create"], deal: ["read", "update"] } },
         { writable: true },
       ),
     ).toBeUndefined();

@@ -22,11 +22,10 @@ import {
   subjectIsRequired,
   todayDay,
 } from "../lib/activitybody";
-import { useGrantRefused } from "../lib/capability";
 import type { EntityKind } from "../lib/entity";
 import { unwrap } from "../lib/problem";
 import { ActivityBodyField } from "./activitybodyfield";
-import { ACTIVITY_ROLE_REFUSAL } from "./activitygate";
+import { useActivityGate } from "./activitygate";
 import { TaskAssigneeField } from "./assigneepicker";
 import { LogActivityEntries } from "./extensionentries";
 import { dueBoundsOf, latestDayOf } from "./logactivity.days";
@@ -474,12 +473,12 @@ export function LogActivity({
   askedKind?: OpeningKind;
 }>) {
   const t = useT();
-  const logRefused = useGrantRefused({ object: "activity", action: "create" });
+  const gate = useActivityGate(entityType);
   return (
     <Panel title={t("log.title")}>
       <PanelBody>
-        {logRefused ? (
-          <p>{t(ACTIVITY_ROLE_REFUSAL)}</p>
+        {gate.refusalKey ? (
+          <p>{t(gate.refusalKey)}</p>
         ) : (
           <LogActivityForm
             entityType={entityType}

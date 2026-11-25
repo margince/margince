@@ -48,22 +48,21 @@ var writesAnActivity = map[crmcontracts.ContactMomentActionKind]bool{
 	crmcontracts.ContactMomentActionKindCall: false,
 }
 
-// Withhold turns every activity-writing verb on this card into a blocked one
-// that says so, for a caller who may not create an activity.
+// Withhold blocks every activity-writing verb on this card, saying why, for a
+// caller who may not create an activity. `record` is the card's RBAC object.
 //
-// The ladders that build these cards derive their verbs from the page alone
-// and know nothing about the caller, so a verb offered as available to a
-// reader without the grant opens a form whose save is refused. The destination
-// goes with the state: a blocked verb that still names a surface is a button
-// the client can still route on.
-func Withhold(ctx context.Context, language string, moment *crmcontracts.ContactMoment) {
+// The ladders derive their verbs from the page alone, knowing nothing of the
+// caller. The destination goes with the state: a blocked verb that still names
+// a surface is a button the client can still route on.
+func Withhold(ctx context.Context, language, record string, moment *crmcontracts.ContactMoment) {
 	said := langcopy.For(language)
 	if moment.MayBeDone != nil {
-		withholdDone(ctx, said, moment)
+		withholdDone(ctx, said, record, moment)
 	}
 	if auth.AllowsWrite(ctx, "activity", principal.ActionCreate) {
 		return
 	}
+	reason := writeRefusal(ctx, said, record, blockedWords.ActionRefused)
 	block := func(action *crmcontracts.ContactMomentAction) {
 		if !writesAnActivity[action.Kind] {
 			return
@@ -82,7 +81,7 @@ func Withhold(ctx context.Context, language string, moment *crmcontracts.Contact
 		if action.State == crmcontracts.ContactMomentActionStateBlocked {
 			return
 		}
-		blockAction(action, said.Say(blockedWords.RoleReadsOnly))
+		blockAction(action, reason)
 	}
 	block(&moment.RecommendedAction)
 	if moment.SecondaryActions == nil {
@@ -96,7 +95,7 @@ func Withhold(ctx context.Context, language string, moment *crmcontracts.Contact
 // withholdDone blocks Done on a may-be-done card for a reader who may not
 // write the promise it completes: a task is an activity update, a claim
 // settles under contact update. The endpoint still asks the row's own scope.
-func withholdDone(ctx context.Context, said langcopy.Spoken, moment *crmcontracts.ContactMoment) {
+func withholdDone(ctx context.Context, said langcopy.Spoken, record string, moment *crmcontracts.ContactMoment) {
 	object, specific := "activity", blockedWords.Complete
 	if moment.MayBeDone.PromiseType == crmcontracts.ContactMomentMayBeDonePromiseTypeClaim {
 		object, specific = "contact", blockedWords.Settle
@@ -104,7 +103,7 @@ func withholdDone(ctx context.Context, said langcopy.Spoken, moment *crmcontract
 	if auth.AllowsWrite(ctx, object, principal.ActionUpdate) {
 		return
 	}
-	blockAction(&moment.RecommendedAction, grantRefusal(ctx, said, specific))
+	blockAction(&moment.RecommendedAction, writeRefusal(ctx, said, record, specific))
 }
 
 func blockAction(action *crmcontracts.ContactMomentAction, reason string) {

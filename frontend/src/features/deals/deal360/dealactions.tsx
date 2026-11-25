@@ -145,7 +145,7 @@ export function DealActions({
   // The log/task drawer's own state: one drawer with two doors, the same
   // shape companyheaderactions.tsx and leads.tsx keep for the identical pair.
   const [drawer, setDrawer] = useState<"log" | "task" | "call" | null>(null);
-  const activity = useActivityGate(writableTarget(deal));
+  const activity = useActivityGate("deal", writableTarget(deal));
   const logRefused = refusedByArchive ?? activity.refusedId;
   const logRefusal = activityRefusal(t, refusedByArchive, activity);
   const logPending = !refusedByArchive && activity.pending;

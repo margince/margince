@@ -141,7 +141,7 @@ function ProjectPage({ view }: Readonly<{ view: Project360 }>) {
   const nextVerbs = useNextTaskVerbs(view, taskUpdate, canUpdateTask);
   // Log in the strip and Add task in the menu open one drawer. The page holds
   // that drawer and the gate both verbs read.
-  const activity = useActivityGate(writableTarget(project));
+  const activity = useActivityGate("project", writableTarget(project));
   const [logDrawer, setLogDrawer] = useState<LogDrawer>(null);
   const edit = useProjectEdit(project);
   const rename = useRailRename(edit, "name", t("project.name"));

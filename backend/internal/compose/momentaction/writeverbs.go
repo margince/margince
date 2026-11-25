@@ -35,38 +35,40 @@ var suggestionVerbWrites = map[crmcontracts.Company360SuggestionActionKind]bool{
 }
 
 // MoveRefusal says why this reader may not take a Worklist or deal-card verb,
-// in the reader's language, or nil when they may.
-func MoveRefusal(ctx context.Context, action crmcontracts.WorklistMoveAction) *string {
+// or nil when they may. `record` is the RBAC object the row is about; empty
+// means the row is about no record.
+func MoveRefusal(ctx context.Context, record string, action crmcontracts.WorklistMoveAction) *string {
 	// Asking the manager changes the deal, not an activity, so it asks the deal grant.
 	if action == crmcontracts.WorklistMoveActionBringInManager {
 		if auth.AllowsWrite(ctx, "deal", principal.ActionUpdate) {
 			return nil
 		}
-		reason := grantRefusal(ctx, langcopy.For(string(systemtext.Locale(ctx))), blockedWords.Deal)
+		reason := writeRefusal(ctx, langcopy.For(string(systemtext.Locale(ctx))), "deal", blockedWords.ActionRefused)
 		return &reason
 	}
-	return refusal(ctx, worklistVerbWrites, action)
+	return refusal(ctx, record, worklistVerbWrites, action)
 }
 
 // MarkRefusedSuggestions blocks each company brief action this reader may not
-// take. The company page and the account scan both serve these rows.
+// take. The company page and the account scan both serve these rows, and each
+// action files onto the company.
 func MarkRefusedSuggestions(ctx context.Context, suggestions []crmcontracts.Company360Suggestion) {
 	for i := range suggestions {
 		if action := suggestions[i].Action; action != nil {
-			action.BlockedReason = refusal(ctx, suggestionVerbWrites, action.Kind)
+			action.BlockedReason = refusal(ctx, "company", suggestionVerbWrites, action.Kind)
 		}
 	}
 }
 
 // refusal fails closed. A verb missing from the map is refused like a write,
 // so a new verb is not offered live before someone classifies it.
-func refusal[K comparable](ctx context.Context, verbs map[K]bool, verb K) *string {
+func refusal[K comparable](ctx context.Context, record string, verbs map[K]bool, verb K) *string {
 	if writes, known := verbs[verb]; known && !writes {
 		return nil
 	}
 	if auth.AllowsWrite(ctx, "activity", principal.ActionCreate) {
 		return nil
 	}
-	reason := langcopy.For(string(systemtext.Locale(ctx))).Say(blockedWords.RoleReadsOnly)
+	reason := writeRefusal(ctx, langcopy.For(string(systemtext.Locale(ctx))), record, blockedWords.ActionRefused)
 	return &reason
 }

@@ -695,14 +695,12 @@ it.each([false, undefined])(
     mount(
       () => [proposed],
       {},
-      { activity: ["read", "create"] },
+      { activity: ["read", "create"], contact: ["read", "update"] },
       { ...view, contact: { ...view.contact, attachable } },
     );
     expect(await screen.findByText("Project discovery")).toBeTruthy();
     expect(
-      await screen.findByText(
-        "You can only read this contact. Ask its owner for write access.",
-      ),
+      await screen.findByText(translate("en", "contact.attachRefused")),
     ).toBeTruthy();
     expect(
       screen.getByRole("button", { name: "Book a meeting" }),

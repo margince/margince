@@ -8,19 +8,15 @@ import (
 	"testing"
 
 	contracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/shared/kernel/langcopy"
 	"github.com/margince/margince/backend/internal/shared/kernel/langcopy/langcopytest"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 func TestBlockedCopyCatalog(t *testing.T) { langcopytest.Census(t, blockedWords) }
 
-// roleReadsOnly is the sentence a reader whose role only reads gets, per
-// language, as the record pages word it.
-var roleReadsOnly = map[string]string{
-	"en": "Your role can only read. Ask an administrator for another role.",
-	"de": "Deine Rolle erlaubt nur das Lesen. Frage einen Admin nach einer anderen Rolle.",
-	"vi": "Vai trò của bạn chỉ có quyền xem. Liên hệ quản trị viên để được cấp vai trò khác.",
-}
+// spoken is every language the blocked copy is written in.
+var spoken = []string{"en", "de", "vi"}
 
 // promised turns the card's recommended action into Done on a task or a claim.
 func promised(promise string) contracts.ContactMoment {
@@ -30,40 +26,64 @@ func promised(promise string) contracts.ContactMoment {
 	return moment
 }
 
-func TestARoleThatOnlyReadsHearsTheRoleSentenceOnEveryVerb(t *testing.T) {
+func booked() contracts.ContactMoment {
 	booking := card()
 	booking.RecommendedAction.Kind = contracts.ContactMomentActionKindScheduleMeeting
-	readers := map[string]context.Context{
-		"no activity.create": reader(principal.ObjectGrant{Read: true}),
-		"a read seat":        seated(principal.SeatRead, principal.ObjectGrant{Read: true, Create: true, Update: true}),
-	}
-	for language, want := range roleReadsOnly {
-		for who, ctx := range readers {
+	return booking
+}
+
+func TestTheSeatAndARoleThatOnlyReadsEachHaveTheirSentenceOnEveryVerb(t *testing.T) {
+	for _, reader := range []struct {
+		who  string
+		ctx  context.Context
+		want langcopy.Phrase
+	}{
+		{"a read seat whose role writes", seated(principal.SeatRead, principal.ObjectGrant{Read: true, Create: true, Update: true}), SeatReadsOnly()},
+		{"a read seat whose role only reads", seated(principal.SeatRead, principal.ObjectGrant{Read: true}), SeatReadsOnly()},
+		{"a role that only reads", reader(principal.ObjectGrant{Read: true}), RoleReadsOnly()},
+	} {
+		for _, language := range spoken {
+			want := langcopy.For(language).Say(reader.want)
 			for name, moment := range map[string]contracts.ContactMoment{
-				"log": card(), "book": booking, "task done": promised("task"), "claim done": promised("claim"),
+				"log": card(), "book": booked(), "task done": promised("task"), "claim done": promised("claim"),
 			} {
-				Withhold(ctx, language, &moment)
+				Withhold(reader.ctx, language, "contact", &moment)
 				got := moment.RecommendedAction
 				if got.State != contracts.ContactMomentActionStateBlocked || got.BlockedReason == nil || *got.BlockedReason != want {
-					t.Errorf("%s, %s, %s: %+v, want blocked saying %q", language, who, name, got, want)
+					t.Errorf("%s, %s, %s: %+v, want blocked saying %q", language, reader.who, name, got, want)
 				}
 			}
 		}
 	}
 }
 
-func TestAReaderWhoMayWriteActivitiesHearsWhichGrantIsMissing(t *testing.T) {
-	logsOnly := reader(principal.ObjectGrant{Read: true, Create: true})
-	for _, tc := range []struct{ language, task, claim string }{
-		{"en", "You do not have permission to complete tasks", "You do not have permission to settle commitments"},
-		{"de", "Sie haben keine Berechtigung, Aufgaben abzuschließen", "Sie haben keine Berechtigung, Zusagen abzuschließen"},
-		{"vi", "Bạn không có quyền hoàn thành nhiệm vụ", "Bạn không có quyền hoàn tất cam kết"},
-	} {
-		for promise, want := range map[string]string{"task": tc.task, "claim": tc.claim} {
+func TestARoleThatUpdatesTheRecordButWritesNoActivityHearsTheActionSentence(t *testing.T) {
+	for _, language := range spoken {
+		want := langcopy.For(language).Say(ActionRefused())
+		for name, moment := range map[string]contracts.ContactMoment{"log": card(), "book": booked()} {
+			for _, record := range []string{"contact", "company"} {
+				Withhold(customRole(), language, record, &moment)
+				if got := moment.RecommendedAction.BlockedReason; got == nil || *got != want {
+					t.Errorf("%s, %s on a %s: blocked_reason %v, want %q", language, name, record, got, want)
+				}
+			}
+		}
+	}
+}
+
+// On the account card the claim's contact is not the record the card sits on.
+// A role that may change the company hears which grant is missing.
+func TestAReaderWhoMayWriteTheRecordHearsWhichGrantIsMissing(t *testing.T) {
+	logsOnly := holding(principal.SeatFull, map[string]principal.ObjectGrant{
+		"activity": {Read: true, Create: true}, "contact": {Read: true}, "company": {Read: true, Update: true},
+	})
+	for _, language := range spoken {
+		said := langcopy.For(language)
+		for promise, want := range map[string]string{"task": said.Say(blockedWords.Complete), "claim": said.Say(blockedWords.Settle)} {
 			moment := promised(promise)
-			Withhold(logsOnly, tc.language, &moment)
+			Withhold(logsOnly, language, "company", &moment)
 			if got := moment.RecommendedAction.BlockedReason; got == nil || *got != want {
-				t.Errorf("%s/%s: blocked_reason %v, want %q", tc.language, promise, got, want)
+				t.Errorf("%s/%s: blocked_reason %v, want %q", language, promise, got, want)
 			}
 		}
 	}

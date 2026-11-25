@@ -10,11 +10,14 @@ package integration
 // names none. The win runs through the real deals store.
 
 import (
+	"context"
 	"testing"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/modules/projects"
 	"github.com/margince/margince/backend/internal/platform/clocktest"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -65,26 +68,67 @@ func TestAWonDealNamesItselfAsTheCauseOfTheDeliveryMove(t *testing.T) {
 	}
 }
 
+// wonCause is the cause on the project's last move, as this reader is served it.
+func wonCause(t *testing.T, e *Env, reader context.Context, project ids.ProjectID) *crmcontracts.Project360PhaseCause {
+	t.Helper()
+	page, err := project360Service(e, clocktest.Now(t).UTC()).Assemble(reader, project)
+	if err != nil {
+		t.Fatalf("assemble the project page: %v", err)
+	}
+	if page.PhaseHistory == nil {
+		t.Fatal("phase_history omitted, want it kept")
+	}
+	won := page.PhaseHistory.Data[len(page.PhaseHistory.Data)-1]
+	if won.Cause == nil || won.Cause.Kind != crmcontracts.Project360PhaseCauseKindDealWon {
+		t.Fatalf("cause = %+v, want deal_won", won.Cause)
+	}
+	return won.Cause
+}
+
 // A reader without the deal grant keeps the history and the cause kind, with
 // the deal unnamed.
 func TestTheCauseLeavesTheDealUnnamedForAReaderWithoutTheDealGrant(t *testing.T) {
 	e := Setup(t)
 	f := pursuedThenWon(t, e, "Hidden pursuit")
 
-	page, err := project360Service(e, clocktest.Now(t).UTC()).
-		Assemble(e.As(e.Rep1, []ids.UUID{e.Team1}, withoutGrant(project360RepPerms, "deal")), f.project)
-	if err != nil {
-		t.Fatalf("assemble without the deal grant: %v", err)
+	cause := wonCause(t, e, e.As(e.Rep1, []ids.UUID{e.Team1}, withoutGrant(project360RepPerms, "deal")), f.project)
+	if cause.DealId != nil || cause.DealName != nil {
+		t.Errorf("cause names deal %v %v, want both null for a reader without the deal grant", cause.DealId, cause.DealName)
 	}
-	if page.PhaseHistory == nil {
-		t.Fatal("phase_history omitted, want it kept with the deal unnamed")
+}
+
+// A deal reads workspace-wide (auth.identityTables), so the cause names it for
+// a seat whose team does not own it, as GetDeal answers that seat.
+func TestTheCauseNamesTheDealForASeatOnAnotherTeam(t *testing.T) {
+	e := Setup(t)
+	f := pursuedThenWon(t, e, "Scoped pursuit")
+	if _, err := e.Deals.UpdateDeal(e.Admin(), f.deal, deals.UpdateDealInput{OwnerID: userIDPtr(&e.Rep3)}); err != nil {
+		t.Fatalf("hand the deal to a seat on the other team: %v", err)
 	}
-	won := page.PhaseHistory.Data[len(page.PhaseHistory.Data)-1]
-	if won.Cause == nil || won.Cause.Kind != crmcontracts.Project360PhaseCauseKindDealWon {
-		t.Fatalf("cause = %+v, want deal_won", won.Cause)
+	reader := e.As(e.Rep1, []ids.UUID{e.Team1}, project360RepPerms)
+	if _, err := e.Deals.GetDeal(reader, f.deal, storekit.IncludeArchived); err != nil {
+		t.Fatalf("GetDeal refuses the seat (%v), and the page must agree with it", err)
 	}
-	if won.Cause.DealId != nil || won.Cause.DealName != nil {
-		t.Errorf("cause names deal %v %v, want both null for a reader without the deal grant",
-			won.Cause.DealId, won.Cause.DealName)
+
+	cause := wonCause(t, e, reader, f.project)
+	if cause.DealId == nil || cause.DealName == nil || *cause.DealName != "Scoped pursuit phase one" {
+		t.Errorf("cause names deal %v %v, want the deal GetDeal shows this seat", cause.DealId, cause.DealName)
+	}
+}
+
+// A history keeps naming the deal behind a move after that deal is archived.
+func TestTheCauseStillNamesAnArchivedDeal(t *testing.T) {
+	e := Setup(t)
+	f := pursuedThenWon(t, e, "Archived pursuit")
+	if _, err := e.Deals.ArchiveDeal(e.Admin(), f.deal, nil); err != nil {
+		t.Fatalf("archive the won deal: %v", err)
+	}
+
+	cause := wonCause(t, e, e.Admin(), f.project)
+	if cause.DealId == nil || ids.UUID(*cause.DealId) != f.deal.UUID {
+		t.Errorf("cause deal_id = %v, want the archived deal %s", cause.DealId, f.deal.UUID)
+	}
+	if cause.DealName == nil || *cause.DealName != "Archived pursuit phase one" {
+		t.Errorf("cause deal_name = %v, want the archived deal's name", cause.DealName)
 	}
 }

@@ -174,7 +174,7 @@ function ActionsHost({
   filesOnto?: Company;
 }>) {
   const [drawer, setDrawer] = useState<ActivityDrawer>(null);
-  const activity = useActivityGate(writableTarget(filesOnto));
+  const activity = useActivityGate("company", writableTarget(filesOnto));
   return (
     <>
       <CompanyHeaderActions
@@ -276,7 +276,7 @@ describe("Log activity and Add task, gated on the create grant", () => {
     expect(describedBy).toBeTruthy();
     expect(task.getAttribute("aria-describedby")).toBe(describedBy);
     expect(document.getElementById(describedBy ?? "")?.textContent).toBe(
-      "Your role can only read. Ask an administrator for another role.",
+      en["record.roleReadsOnly"],
     );
 
     // Both refused for the SAME reason, so the reader reads it once: pressing
@@ -296,8 +296,8 @@ describe("Log activity and Add task, gated on the create grant", () => {
     ).toBe(en["record.roleReadsOnly"]);
   });
 
-  it("keeps the booking sentence for a writing role on a row it may not file onto", async () => {
-    stubGrants({ activity: ["create"] });
+  it("gives Book the row's sentence for a writing role on somebody else's company", async () => {
+    stubGrants({ activity: ["create"], company: ["read", "update"] });
     const notTheirs = { ...COMPANY, writable: false };
     renderInApp(<ActionsHost company={notTheirs} filesOnto={notTheirs} />);
 
@@ -306,13 +306,29 @@ describe("Log activity and Add task, gated on the create grant", () => {
       expect(
         document.getElementById(book.getAttribute("aria-describedby") ?? "")
           ?.textContent,
-      ).toBe(en["scheduling.bookRefused"]),
+      ).toBe(en["record.attachRefused"]),
     );
     const log = screen.getByRole("button", { name: "Log activity" });
-    expect(
-      document.getElementById(log.getAttribute("aria-describedby") ?? "")
-        ?.textContent,
-    ).toBe(en["record.attachRefused"]);
+    expect(log.getAttribute("aria-describedby")).toBe(
+      book.getAttribute("aria-describedby"),
+    );
+  });
+
+  it("names the missing action, not the role, for a role that may change the company", async () => {
+    stubGrants({ activity: ["read"], company: ["read", "update"] });
+    renderInApp(<ActionsHost filesOnto={COMPANY} />);
+
+    const log = await screen.findByRole("button", { name: "Log activity" });
+    await waitFor(() =>
+      expect(
+        document.getElementById(log.getAttribute("aria-describedby") ?? "")
+          ?.textContent,
+      ).toBe(en["record.actionRefused"]),
+    );
+    const book = screen.getByRole("button", { name: BOOK_NAME });
+    expect(book.getAttribute("aria-describedby")).toBe(
+      log.getAttribute("aria-describedby"),
+    );
   });
 
   it("presses both, with the grant", async () => {
