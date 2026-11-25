@@ -46,3 +46,28 @@ func (s *Store) HandOverTx(ctx context.Context, tx pgx.Tx, in NewNotice) (ids.UU
 	}
 	return reopened, nil
 }
+
+// RewordLiveTx writes new words into the recipient's live line of one
+// announcement, fitted as a new line's are. A line taken back, or never
+// written, is left alone. Whether it was read is kept.
+func (s *Store) RewordLiveTx(ctx context.Context, tx pgx.Tx, in NewNotice) error {
+	if in.DedupeKey == "" {
+		return errors.New("notices: a reword names the announcement it changes")
+	}
+	metadata, subject, body := fittedWords(ctx, in)
+	var id ids.UUID
+	var was string
+	err := tx.QueryRow(ctx, `
+		UPDATE notice AS n SET subject = $3, body = $4, system_text = $5, subject_parts = $6
+		  FROM (SELECT id, subject FROM notice WHERE recipient_user_id = $1 AND dedupe_key = $2 AND retracted_at IS NULL FOR UPDATE) AS old
+		 WHERE n.id = old.id
+		RETURNING n.id, old.subject`, in.Recipient, in.DedupeKey, subject, body, metadata, in.SubjectParts).Scan(&id, &was)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return nil
+	}
+	if err != nil {
+		return fmt.Errorf("notices: rewording a live announcement: %w", err)
+	}
+	_, err = storekit.Audit(ctx, tx, "update", "notice", id, map[string]any{"subject": was}, map[string]any{"subject": subject})
+	return err
+}

@@ -411,7 +411,7 @@ func trailingIDOf(capturedBy string) (string, bool) {
 // tell "somebody else holds this" from "nothing holds this" would have an
 // existence oracle over colleagues' mail, keyed on a header they can type.
 func ResolveBindableIdentity(ctx context.Context, tx pgx.Tx, kind, key string) (ids.ActivityID, bool, error) {
-	return bindableIdentityUnder(ctx, tx, kind, key, nil, nil)
+	return bindableIdentityUnder(ctx, tx, kind, key, nil, nil, nil)
 }
 
 // ResolveBindableIdentityProving is ResolveBindableIdentity with the cross-seat
@@ -422,12 +422,14 @@ func ResolveBindableIdentity(ctx context.Context, tx pgx.Tx, kind, key string) (
 // addresses for the mailbox that already holds the message.
 func ResolveBindableIdentityProving(proved AddressProver) func(context.Context, pgx.Tx, string, string) (ids.ActivityID, bool, error) {
 	return func(ctx context.Context, tx pgx.Tx, kind, key string) (ids.ActivityID, bool, error) {
-		return bindableIdentityUnder(ctx, tx, kind, key, proved, nil)
+		return bindableIdentityUnder(ctx, tx, kind, key, proved, nil, nil)
 	}
 }
 
+// author is the seat a declared importer names as the meeting's author
+// (source_author_id); only the import door states one.
 func bindableIdentityUnder(
-	ctx context.Context, tx pgx.Tx, kind, key string, proved AddressProver, incoming []string,
+	ctx context.Context, tx pgx.Tx, kind, key string, proved AddressProver, incoming []string, author *ids.UUID,
 ) (ids.ActivityID, bool, error) {
 	incumbent, found, err := ResolveIdentity(ctx, tx, kind, key)
 	if err != nil || !found {
@@ -447,6 +449,9 @@ func bindableIdentityUnder(
 		}
 		if !bindable && kind == IdentityKindMail && len(incoming) > 0 {
 			bindable, err = importNamesIncumbentSeat(ctx, tx, incumbent, proved, incoming)
+		}
+		if err == nil && !bindable && kind == IdentityKindMeeting && author != nil {
+			bindable, err = importAuthorHoldsMeeting(ctx, tx, incumbent, *author)
 		}
 		if err != nil || !bindable {
 			return ids.ActivityID{}, false, err

@@ -23668,6 +23668,33 @@ func (e SchedulingTeamAnswerState) Valid() bool {
 	}
 }
 
+// Defines values for SchedulingTeamLinkBlocker.
+const (
+	SchedulingTeamLinkBlockerCalendarReadOnly    SchedulingTeamLinkBlocker = "calendar_read_only"
+	SchedulingTeamLinkBlockerCalendarUnavailable SchedulingTeamLinkBlocker = "calendar_unavailable"
+	SchedulingTeamLinkBlockerNoCalendar          SchedulingTeamLinkBlocker = "no_calendar"
+	SchedulingTeamLinkBlockerNone                SchedulingTeamLinkBlocker = "none"
+	SchedulingTeamLinkBlockerTeamNotReady        SchedulingTeamLinkBlocker = "team_not_ready"
+)
+
+// Valid indicates whether the value is a known member of the SchedulingTeamLinkBlocker enum.
+func (e SchedulingTeamLinkBlocker) Valid() bool {
+	switch e {
+	case SchedulingTeamLinkBlockerCalendarReadOnly:
+		return true
+	case SchedulingTeamLinkBlockerCalendarUnavailable:
+		return true
+	case SchedulingTeamLinkBlockerNoCalendar:
+		return true
+	case SchedulingTeamLinkBlockerNone:
+		return true
+	case SchedulingTeamLinkBlockerTeamNotReady:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for SchedulingTeamMemberState.
 const (
 	SchedulingTeamMemberStateConfirmed   SchedulingTeamMemberState = "confirmed"
@@ -67270,8 +67297,8 @@ type SchedulingProfile struct {
 	// the page names no calendar (a page saved before the profile existed reads this way).
 	// `calendar_read_only`: the connection lacks the calendar write grant. `calendar_unavailable`:
 	// the connection is gone or refused. `team_not_ready`: a team member has not confirmed, has
-	// left, or has no calendar Margince can read; `team_members` says which. Answered on the
-	// host's own profile read only.
+	// left, or has no calendar Margince can read; the team link's `team_members` says which.
+	// Answered on the host's own reads only.
 	Blocker           *SchedulingProfileBlocker `json:"blocker,omitempty"`
 	BlockingCalendars *[]string                 `json:"blocking_calendars,omitempty"`
 	BufferMinutes     int                       `json:"buffer_minutes" maximum:"120" minimum:"0"`
@@ -67303,11 +67330,11 @@ type SchedulingProfile struct {
 	ReplaceLink *bool   `json:"replace_link,omitempty"`
 	Slug        *string `json:"slug,omitempty"`
 
-	// TeamMembers Colleagues who must attend every meeting booked through this page. Guests see only the
-	// times when the host and every member are free, inside each one's own working hours, and
-	// each booking invites every member. A member named here starts as `pending` and the page
-	// takes no bookings until every member has confirmed. Only `user_id` is read from a
-	// request; a colleague not offered by `GET /scheduling/team-candidates` is refused.
+	// TeamMembers The personal page names no colleagues: it offers the host's own free time alone. A
+	// request naming a member answers 422 on `team_members`; an empty list is accepted. A
+	// response does not carry the field. Colleagues are named on a team link
+	// (`POST /scheduling/team-links`).
+	// Deprecated: this property has been marked as deprecated upstream, but no `x-deprecated-reason` was set
 	TeamMembers *[]SchedulingTeamMember `json:"team_members,omitempty"`
 	Title       string                  `json:"title"`
 
@@ -67322,8 +67349,8 @@ type SchedulingProfile struct {
 // the page names no calendar (a page saved before the profile existed reads this way).
 // `calendar_read_only`: the connection lacks the calendar write grant. `calendar_unavailable`:
 // the connection is gone or refused. `team_not_ready`: a team member has not confirmed, has
-// left, or has no calendar Margince can read; `team_members` says which. Answered on the
-// host's own profile read only.
+// left, or has no calendar Margince can read; the team link's `team_members` says which.
+// Answered on the host's own reads only.
 type SchedulingProfileBlocker string
 
 // SchedulingProfileProvider defines model for SchedulingProfile.Provider.
@@ -67341,6 +67368,38 @@ type SchedulingTeamAnswerState string
 type SchedulingTeamCandidate struct {
 	Name   string             `json:"name"`
 	UserId openapi_types.UUID `json:"user_id"`
+}
+
+// SchedulingTeamLink A booking link that names colleagues who attend every meeting booked through it. It uses
+// the calendar and booking settings of its owner's personal page, and has its own address.
+type SchedulingTeamLink struct {
+	// Blocker Why the link takes no bookings now, with the meanings `SchedulingProfile.blocker` gives them.
+	Blocker SchedulingTeamLinkBlocker `json:"blocker"`
+
+	// Enabled Whether the owner switched the link on.
+	Enabled bool               `json:"enabled"`
+	Id      openapi_types.UUID `json:"id"`
+
+	// PublicUrl The address to share, `/book/{slug}` on the configured public origin. Absent when no usable public origin is configured.
+	PublicUrl   *string                `json:"public_url,omitempty"`
+	Slug        string                 `json:"slug"`
+	TeamMembers []SchedulingTeamMember `json:"team_members"`
+
+	// Title The link's name, which is also the meeting title guests see.
+	Title string `json:"title"`
+}
+
+// SchedulingTeamLinkBlocker Why the link takes no bookings now, with the meanings `SchedulingProfile.blocker` gives them.
+type SchedulingTeamLinkBlocker string
+
+// SchedulingTeamLinkRequest defines model for SchedulingTeamLinkRequest.
+type SchedulingTeamLinkRequest struct {
+	// Enabled Absent means on.
+	Enabled *bool `json:"enabled,omitempty"`
+
+	// TeamMembers Only `user_id` is read. A member's answer is theirs to give.
+	TeamMembers []SchedulingTeamMember `json:"team_members"`
+	Title       string                 `json:"title"`
 }
 
 // SchedulingTeamMember defines model for SchedulingTeamMember.
@@ -67361,11 +67420,14 @@ type SchedulingTeamMemberState string
 
 // SchedulingTeamRequest defines model for SchedulingTeamRequest.
 type SchedulingTeamRequest struct {
-	HostName   string                     `json:"host_name"`
-	HostUserId openapi_types.UUID         `json:"host_user_id"`
-	State      SchedulingTeamRequestState `json:"state"`
+	HostName   string             `json:"host_name"`
+	HostUserId openapi_types.UUID `json:"host_user_id"`
 
-	// Title The meeting title the link offers.
+	// PageId The team link that names the caller; answer it with `PUT /scheduling/team-links/{page_id}/answer`.
+	PageId openapi_types.UUID         `json:"page_id"`
+	State  SchedulingTeamRequestState `json:"state"`
+
+	// Title The team link's name, which is the meeting title it offers.
 	Title string `json:"title"`
 }
 
@@ -87151,6 +87213,15 @@ type PutSchedulingAliasJSONRequestBody = SchedulingAliasRequest
 // CreateMeetingProposalJSONRequestBody defines body for CreateMeetingProposal for application/json ContentType.
 type CreateMeetingProposalJSONRequestBody = MeetingProposalRequest
 
+// CreateSchedulingTeamLinkJSONRequestBody defines body for CreateSchedulingTeamLink for application/json ContentType.
+type CreateSchedulingTeamLinkJSONRequestBody = SchedulingTeamLinkRequest
+
+// UpdateSchedulingTeamLinkJSONRequestBody defines body for UpdateSchedulingTeamLink for application/json ContentType.
+type UpdateSchedulingTeamLinkJSONRequestBody = SchedulingTeamLinkRequest
+
+// AnswerSchedulingTeamLinkJSONRequestBody defines body for AnswerSchedulingTeamLink for application/json ContentType.
+type AnswerSchedulingTeamLinkJSONRequestBody = SchedulingTeamAnswer
+
 // AnswerSchedulingTeamRequestJSONRequestBody defines body for AnswerSchedulingTeamRequest for application/json ContentType.
 type AnswerSchedulingTeamRequestJSONRequestBody = SchedulingTeamAnswer
 
@@ -103941,10 +104012,25 @@ type ServerInterface interface {
 	// List the colleagues the caller may name on their booking link.
 	// (GET /scheduling/team-candidates)
 	ListSchedulingTeamCandidates(w http.ResponseWriter, r *http.Request)
+	// List the caller's team booking links.
+	// (GET /scheduling/team-links)
+	ListSchedulingTeamLinks(w http.ResponseWriter, r *http.Request)
+	// Create a team booking link that names colleagues.
+	// (POST /scheduling/team-links)
+	CreateSchedulingTeamLink(w http.ResponseWriter, r *http.Request)
+	// Delete a team link.
+	// (DELETE /scheduling/team-links/{page_id})
+	DeleteSchedulingTeamLink(w http.ResponseWriter, r *http.Request, pageId openapi_types.UUID)
+	// Rename a team link, switch it on or off, or change its members.
+	// (PUT /scheduling/team-links/{page_id})
+	UpdateSchedulingTeamLink(w http.ResponseWriter, r *http.Request, pageId openapi_types.UUID)
+	// Confirm or leave a colleague's team link that names the caller.
+	// (PUT /scheduling/team-links/{page_id}/answer)
+	AnswerSchedulingTeamLink(w http.ResponseWriter, r *http.Request, pageId openapi_types.UUID)
 	// List the colleagues' booking links that name the caller.
 	// (GET /scheduling/team-requests)
 	ListSchedulingTeamRequests(w http.ResponseWriter, r *http.Request)
-	// Confirm or leave a colleague's booking link that names the caller.
+	// Confirm or leave every team link of a colleague that names the caller.
 	// (PUT /scheduling/team-requests/{host_user_id})
 	AnswerSchedulingTeamRequest(w http.ResponseWriter, r *http.Request, hostUserId openapi_types.UUID)
 	// Read the current receiver and reassignment version of a prospect handoff.
@@ -110301,13 +110387,43 @@ func (_ Unimplemented) ListSchedulingTeamCandidates(w http.ResponseWriter, r *ht
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
+// List the caller's team booking links.
+// (GET /scheduling/team-links)
+func (_ Unimplemented) ListSchedulingTeamLinks(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Create a team booking link that names colleagues.
+// (POST /scheduling/team-links)
+func (_ Unimplemented) CreateSchedulingTeamLink(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Delete a team link.
+// (DELETE /scheduling/team-links/{page_id})
+func (_ Unimplemented) DeleteSchedulingTeamLink(w http.ResponseWriter, r *http.Request, pageId openapi_types.UUID) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Rename a team link, switch it on or off, or change its members.
+// (PUT /scheduling/team-links/{page_id})
+func (_ Unimplemented) UpdateSchedulingTeamLink(w http.ResponseWriter, r *http.Request, pageId openapi_types.UUID) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Confirm or leave a colleague's team link that names the caller.
+// (PUT /scheduling/team-links/{page_id}/answer)
+func (_ Unimplemented) AnswerSchedulingTeamLink(w http.ResponseWriter, r *http.Request, pageId openapi_types.UUID) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
 // List the colleagues' booking links that name the caller.
 // (GET /scheduling/team-requests)
 func (_ Unimplemented) ListSchedulingTeamRequests(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
-// Confirm or leave a colleague's booking link that names the caller.
+// Confirm or leave every team link of a colleague that names the caller.
 // (PUT /scheduling/team-requests/{host_user_id})
 func (_ Unimplemented) AnswerSchedulingTeamRequest(w http.ResponseWriter, r *http.Request, hostUserId openapi_types.UUID) {
 	w.WriteHeader(http.StatusNotImplemented)
@@ -154813,6 +154929,144 @@ func (siw *ServerInterfaceWrapper) ListSchedulingTeamCandidates(w http.ResponseW
 	handler.ServeHTTP(w, r)
 }
 
+// ListSchedulingTeamLinks operation middleware
+func (siw *ServerInterfaceWrapper) ListSchedulingTeamLinks(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListSchedulingTeamLinks(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// CreateSchedulingTeamLink operation middleware
+func (siw *ServerInterfaceWrapper) CreateSchedulingTeamLink(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.CreateSchedulingTeamLink(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// DeleteSchedulingTeamLink operation middleware
+func (siw *ServerInterfaceWrapper) DeleteSchedulingTeamLink(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "page_id" -------------
+	var pageId openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "page_id", chi.URLParam(r, "page_id"), &pageId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "page_id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.DeleteSchedulingTeamLink(w, r, pageId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// UpdateSchedulingTeamLink operation middleware
+func (siw *ServerInterfaceWrapper) UpdateSchedulingTeamLink(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "page_id" -------------
+	var pageId openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "page_id", chi.URLParam(r, "page_id"), &pageId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "page_id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.UpdateSchedulingTeamLink(w, r, pageId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// AnswerSchedulingTeamLink operation middleware
+func (siw *ServerInterfaceWrapper) AnswerSchedulingTeamLink(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "page_id" -------------
+	var pageId openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "page_id", chi.URLParam(r, "page_id"), &pageId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "page_id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.AnswerSchedulingTeamLink(w, r, pageId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // ListSchedulingTeamRequests operation middleware
 func (siw *ServerInterfaceWrapper) ListSchedulingTeamRequests(w http.ResponseWriter, r *http.Request) {
 
@@ -164326,6 +164580,21 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/scheduling/team-candidates", wrapper.ListSchedulingTeamCandidates)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/scheduling/team-links", wrapper.ListSchedulingTeamLinks)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/scheduling/team-links", wrapper.CreateSchedulingTeamLink)
+	})
+	r.Group(func(r chi.Router) {
+		r.Delete(options.BaseURL+"/scheduling/team-links/{page_id}", wrapper.DeleteSchedulingTeamLink)
+	})
+	r.Group(func(r chi.Router) {
+		r.Put(options.BaseURL+"/scheduling/team-links/{page_id}", wrapper.UpdateSchedulingTeamLink)
+	})
+	r.Group(func(r chi.Router) {
+		r.Put(options.BaseURL+"/scheduling/team-links/{page_id}/answer", wrapper.AnswerSchedulingTeamLink)
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/scheduling/team-requests", wrapper.ListSchedulingTeamRequests)
