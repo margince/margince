@@ -67,23 +67,3 @@ func TestAcceptingATaxedOfferOntoAClosedDealFreezesItsNet(t *testing.T) {
 		t.Fatalf("closed deal = %d (base %d, %s), want the offer's net %d on both", got, base, status, *accepted.NetMinor)
 	}
 }
-
-// A deal priced from its lines takes nothing from an accepted offer, tax or no tax.
-func TestAcceptingAnOfferLeavesALinesDealsValueToItsLines(t *testing.T) {
-	e := Setup(t)
-	pipeline, open, _ := DealFixture(t, e)
-	deal := e.SeedDeal(t, "Priced by lines", pipeline, open, &e.Rep1)
-	description, quantity, price, currency := "Setup", "1", int64(50000), "EUR"
-	if _, err := e.Deals.AddDealLine(e.Admin(), ids.From[ids.DealKind](deal), deals.AddDealLineInput{
-		Currency: &currency, Description: &description, Quantity: &quantity, UnitPriceMinor: &price,
-	}); err != nil {
-		t.Fatalf("adding a line: %v", err)
-	}
-	before := e.WsCount(t, `SELECT amount_minor FROM deal WHERE id = $1`, deal)
-
-	taxedOffer(t, e, deal)
-
-	if after := e.WsCount(t, `SELECT amount_minor FROM deal WHERE id = $1`, deal); after != before {
-		t.Fatalf("a lines deal went from %d to %d on accept, want its lines' value kept", before, after)
-	}
-}

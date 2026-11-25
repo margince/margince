@@ -1,7 +1,9 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-package compose
+// Package offernetdeals holds the data task that re-prices deals which took the
+// gross of an accepted offer. A deal's value is the figure without tax.
+package offernetdeals
 
 import (
 	"context"
@@ -9,7 +11,6 @@ import (
 	"fmt"
 
 	"github.com/jackc/pgx/v5"
-	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/modules/notices"
@@ -21,11 +22,9 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/values"
 )
 
-// offerNetDealValuesDataTask re-prices the deals that took the gross of an
-// accepted offer to its net, and tells each deal's owner in the same transaction.
-func offerNetDealValuesDataTask(pool *pgxpool.Pool) datatask.Task {
-	store := deals.NewStore(InstallationDB(pool), DealsInstallation())
-	noticeStore := notices.NewStore(InstallationDB(pool))
+// DataTask re-prices the deals that took the gross of an accepted offer to its
+// net, and tells each deal's owner in the same transaction.
+func DataTask(store *deals.Store, noticeStore *notices.Store) datatask.Task {
 	return datatask.Task{
 		ID: "core/1795589912_offer_net_deal_values", Version: 1,
 		Title: systemtext.Literal("datatask.title.core.1795589912_offer_net_deal_values"),
@@ -89,7 +88,7 @@ func tellOwnerOfNetValue(ctx context.Context, tx pgx.Tx, store *notices.Store, c
 		Recipient: ids.From[ids.UserKind](*c.Owner), Kind: notices.KindDealValueNetBasis,
 		Subject: subject, Body: body, SystemText: message,
 		DedupeKey: "deal-net-value:" + c.Deal.String(),
-		Target:    notices.Target{Type: entityDeal, ID: c.Deal.UUID},
+		Target:    notices.Target{Type: "deal", ID: c.Deal.UUID},
 	}); err != nil {
 		return fmt.Errorf("telling the owner of deal %s its value now leaves out tax: %w", c.Deal, err)
 	}

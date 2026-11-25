@@ -21,9 +21,9 @@ import (
 )
 
 // grossPricedDealsSQL selects the deals whose amount is the gross of their
-// latest accepted offer, and whose accept row says that figure came from the
-// accept itself. A person who later typed the same figure by hand leaves no
-// such row, and a deal in lines mode takes its value from its lines.
+// latest accepted offer. Its accept row must say the accept wrote that figure.
+// A figure someone typed by hand leaves no such row.
+// A deal in lines mode takes its value from its lines.
 const grossPricedDealsSQL = `
 	FROM deal d
 	JOIN LATERAL (
@@ -63,9 +63,10 @@ type NetCorrectionPage struct {
 
 // RepriceFromAcceptedOfferNetTx corrects one page of gross-priced deals, after
 // the given deal id. Each goes through the deal patch seam, so the forecast move,
-// the audit row and deal.updated are written as for the accept itself, and a
-// closed deal is re-frozen on the net. ARR was derived from net and is not
-// touched. Commission entries keep the basis they recorded.
+// the audit row and deal.updated are written as for the accept itself.
+// A closed deal is re-frozen on the net.
+// ARR was derived from net and is not touched.
+// Commission entries keep the basis they recorded.
 func (s *Store) RepriceFromAcceptedOfferNetTx(ctx context.Context, tx pgx.Tx, after ids.UUID, limit int) (NetCorrectionPage, error) {
 	if err := auth.RequireSystem(ctx); err != nil {
 		return NetCorrectionPage{}, err
@@ -99,7 +100,7 @@ func (s *Store) RepriceFromAcceptedOfferNetTx(ctx context.Context, tx pgx.Tx, af
 	return page, nil
 }
 
-// repriceOneToNet re-reads the deal under its lock, because a person may have
+// repriceOneToNet re-reads the deal under its lock, because someone may have
 // retyped the amount since the page was listed. It answers whether it wrote.
 func (s *Store) repriceOneToNet(ctx context.Context, tx pgx.Tx, c *NetCorrection) (bool, error) {
 	var status string
@@ -135,7 +136,7 @@ func EstimateGrossPricedDeals(ctx context.Context, q interface {
 	QueryRow(context.Context, string, ...any) pgx.Row
 }, limit int64,
 ) (int64, error) {
-	if err := auth.Require(ctx, dealTable, principal.ActionRead); err != nil {
+	if err := auth.Require(ctx, "deal", principal.ActionRead); err != nil {
 		return 0, err
 	}
 	var count int64

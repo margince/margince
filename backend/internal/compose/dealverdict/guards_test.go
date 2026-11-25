@@ -211,8 +211,8 @@ func TestAnAcceptedOfferSetsItsOwnAmount(t *testing.T) {
 	}
 }
 
-// A buyer who quotes the offer's price with tax is quoting a figure the deal
-// does not hold, so the offer fixes the amount and the quote is dropped.
+// A buyer who quotes the offer's price with tax quotes a figure the deal does
+// not hold. The offer fixes the amount, and the quote is dropped.
 func TestAQuoteOfTheOffersGrossIsDroppedNotApplied(t *testing.T) {
 	t.Parallel()
 	state := guardState()

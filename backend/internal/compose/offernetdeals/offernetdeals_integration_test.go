@@ -3,7 +3,7 @@
 
 //go:build integration
 
-package compose
+package offernetdeals_test
 
 import (
 	"context"
@@ -14,26 +14,27 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/compose/integration"
+	"github.com/margince/margince/backend/internal/compose/offernetdeals"
 	"github.com/margince/margince/backend/internal/modules/deals"
+	"github.com/margince/margince/backend/internal/modules/notices"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/platform/datatask"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
-// netDealFixture is a deal owned by Rep1 whose accepted offer carries tax, left
-// in the state the accept wrote before a deal's value left tax out: the deal
-// holds the offer's gross and, when acceptWroteIt, the accept's audit row says the
-// accept put it there.
+// netDealFixture is a deal owned by Rep1 whose accepted offer carries tax.
+// It is left as an accept wrote it before a deal's value left tax out.
+// The deal holds the offer's gross. When acceptWroteIt, an accept audit row says
+// the accept put it there.
 type netDealFixture struct {
 	deal       ids.UUID
 	offer      ids.UUID
 	net, gross int64
 }
 
-func seedGrossPricedDeal(t *testing.T, e *integration.Env, name, taxRate string, acceptWroteIt bool) netDealFixture {
+func seedGrossPricedDeal(t *testing.T, e *integration.Env, pipeline ids.PipelineID, open ids.StageID, name, taxRate string, acceptWroteIt bool) netDealFixture {
 	t.Helper()
-	pipeline, open, _ := integration.DealFixture(t, e)
 	deal := e.SeedDeal(t, name, pipeline, open, &e.Rep1)
 	offerDesk := e.As(e.Rep1, []ids.UUID{e.Team1}, integration.OfferDeskPerms)
 	description, price := "Retainer", int64(23820)
@@ -83,16 +84,17 @@ func netValueNotices(t *testing.T, e *integration.Env, deal ids.UUID) int {
 func TestTheOfferNetTaskCorrectsAGrossPricedDealAndTellsItsOwnerOnce(t *testing.T) {
 	e := integration.Setup(t)
 	ctx := principal.SystemActing(e.Admin(), "system:datatask-test")
-	fx := seedGrossPricedDeal(t, e, "Taxed", "19.00", true)
+	pipeline, open, _ := integration.DealFixture(t, e)
+	fx := seedGrossPricedDeal(t, e, pipeline, open, "Taxed", "19.00", true)
 	if fx.net == fx.gross {
 		t.Fatal("the fixture offer carries no tax")
 	}
-	if n, _, err := offerNetDealValuesDataTask(e.Pool).Steps[0].Estimate(ctx, e.Pool, 10); err != nil || n != 1 {
+	if n, _, err := offernetdeals.DataTask(e.Deals, notices.NewStore(e.DB())).Steps[0].Estimate(ctx, e.Pool, 10); err != nil || n != 1 {
 		t.Fatalf("estimate = %d, %v; want the one gross-priced deal", n, err)
 	}
 
-	e.RunDataTask(ctx, t, offerNetDealValuesDataTask(e.Pool))
-	e.RunDataTask(ctx, t, offerNetDealValuesDataTask(e.Pool))
+	e.RunDataTask(ctx, t, offernetdeals.DataTask(e.Deals, notices.NewStore(e.DB())))
+	e.RunDataTask(ctx, t, offernetdeals.DataTask(e.Deals, notices.NewStore(e.DB())))
 
 	if got := storedDealAmount(t, e, fx.deal); got != fx.net {
 		t.Fatalf("deal amount = %d, want the offer's net %d", got, fx.net)
@@ -104,7 +106,7 @@ func TestTheOfferNetTaskCorrectsAGrossPricedDealAndTellsItsOwnerOnce(t *testing.
 		t.Fatalf("the notice did not reach the deal's owner")
 	}
 	if got := e.WsCount(t, `SELECT count(*) FROM audit_log WHERE entity_type = 'deal' AND entity_id = $1
-		 AND action = 'update' AND evidence ? 'offer_id' AND after ->> 'amount_minor' = $2`, fx.deal, strconv.FormatInt(fx.net, 10)); got != 1 {
+		 AND action = 'update' AND evidence ? 'offer_id' AND before ->> 'amount_minor' = $2 AND after ->> 'amount_minor' = $3`, fx.deal, strconv.FormatInt(fx.gross, 10), strconv.FormatInt(fx.net, 10)); got != 1 {
 		t.Fatalf("%d audit rows record the correction, want one", got)
 	}
 }
@@ -113,17 +115,18 @@ func TestTheOfferNetTaskLeavesAloneWhatIsNotAGrossFromAnAccept(t *testing.T) {
 	e := integration.Setup(t)
 	ctx := principal.SystemActing(e.Admin(), "system:datatask-test")
 
-	retyped := seedGrossPricedDeal(t, e, "Retyped", "19.00", true)
+	pipeline, open, _ := integration.DealFixture(t, e)
+	retyped := seedGrossPricedDeal(t, e, pipeline, open, "Retyped", "19.00", true)
 	e.WsExec(t, `UPDATE deal SET amount_minor = 777000 WHERE id = $1`, retyped.deal)
 
-	typedByHand := seedGrossPricedDeal(t, e, "Typed by hand", "19.00", false)
+	typedByHand := seedGrossPricedDeal(t, e, pipeline, open, "Typed by hand", "19.00", false)
 
-	untaxed := seedGrossPricedDeal(t, e, "Untaxed", "0.00", true)
+	untaxed := seedGrossPricedDeal(t, e, pipeline, open, "Untaxed", "0.00", true)
 
-	lines := seedGrossPricedDeal(t, e, "Lines", "19.00", true)
+	lines := seedGrossPricedDeal(t, e, pipeline, open, "Lines", "19.00", true)
 	e.WsExec(t, `UPDATE deal SET commercial_mode = 'lines' WHERE id = $1`, lines.deal)
 
-	e.RunDataTask(ctx, t, offerNetDealValuesDataTask(e.Pool))
+	e.RunDataTask(ctx, t, offernetdeals.DataTask(e.Deals, notices.NewStore(e.DB())))
 
 	for name, c := range map[string]struct {
 		deal ids.UUID
@@ -144,8 +147,9 @@ func TestTheOfferNetTaskLeavesAloneWhatIsNotAGrossFromAnAccept(t *testing.T) {
 func TestTheOfferNetTaskRollsBackItsNoticeWithItsDomainWrite(t *testing.T) {
 	e := integration.Setup(t)
 	ctx := principal.SystemActing(e.Admin(), "system:datatask-test")
-	fx := seedGrossPricedDeal(t, e, "Rolled back", "19.00", true)
-	task := offerNetDealValuesDataTask(e.Pool)
+	pipeline, open, _ := integration.DealFixture(t, e)
+	fx := seedGrossPricedDeal(t, e, pipeline, open, "Rolled back", "19.00", true)
+	task := offernetdeals.DataTask(e.Deals, notices.NewStore(e.DB()))
 	original := task.Steps[0].Batch
 	task.Steps[0].Batch = func(ctx context.Context, tx pgx.Tx, in datatask.BatchIn) (datatask.BatchOut, error) {
 		out, err := original(ctx, tx, in)

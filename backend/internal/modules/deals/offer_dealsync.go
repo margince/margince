@@ -30,11 +30,11 @@ type dealWrite struct {
 }
 
 // syncDealAmountFromOffer writes the accepted offer's net, the figure without
-// tax, onto the deal: a deal's value never carries tax. A
-// still-open deal takes the amount as-is; a deal that already closed carries the
-// re-freeze freezeBaseRate states, which is the invariant applyMoneyInvariants
-// enforces on direct deal edits: re-pricing a deal is one rule whichever door
-// the price arrives through.
+// tax, onto the deal: a deal's value never carries tax.
+// A still-open deal takes the amount as-is.
+// A deal that already closed carries the re-freeze freezeBaseRate states.
+// That is the invariant applyMoneyInvariants enforces on direct deal edits.
+// Re-pricing a deal is one rule whichever door the price arrives through.
 //
 // The write goes through the deal patch seam rather than its own UPDATE, so the
 // deal's forecast move is recorded with it. Pricing a deal from its accepted

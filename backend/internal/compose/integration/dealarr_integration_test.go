@@ -221,14 +221,14 @@ func TestAcceptingAnOfferInTheSameCurrencyKeepsRecurringRevenue(t *testing.T) {
 		t.Fatalf("accepting a EUR offer over EUR recurring revenue: %v", err)
 	}
 
-	// The one-off amount takes the accepted gross; the subscription is
+	// The one-off amount takes the accepted net; the subscription is
 	// untouched, because the offer said nothing about it.
-	const acceptedGross = int64(11900)
+	const acceptedNet = int64(10000)
 	if got := e.WsCount(t,
 		`SELECT count(*) FROM deal
 		  WHERE id = $1 AND amount_minor = $2 AND expected_arr_minor = $3 AND currency = 'EUR'`,
-		deal, acceptedGross, arr); got != 1 {
-		t.Fatalf("the accept did not leave the deal with the accepted gross beside its untouched ARR")
+		deal, acceptedNet, arr); got != 1 {
+		t.Fatalf("the accept did not leave the deal with the accepted net beside its untouched ARR")
 	}
 }
 

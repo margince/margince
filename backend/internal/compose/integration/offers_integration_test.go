@@ -362,9 +362,9 @@ func assertSendFreezesDailyFxRate(t *testing.T, e *apptest.AppEnv, wsID, offerID
 	}
 }
 
-// assertAcceptSyncsDealAmount covers accept: status flips, accepted_at
-// lands, the DEAL takes the accepted net as its headline amount
-// (forecast honesty), and a second accept refuses — accept is terminal.
+// assertAcceptSyncsDealAmount covers accept: status flips and accepted_at lands.
+// The DEAL takes the accepted net as its headline amount, so the forecast counts the figure without tax.
+// A second accept refuses, because accept is terminal.
 func assertAcceptSyncsDealAmount(t *testing.T, e *apptest.AppEnv, dealID, offerID string) {
 	t.Helper()
 	var accepted offerBody

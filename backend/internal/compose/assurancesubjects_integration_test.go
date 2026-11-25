@@ -69,8 +69,8 @@ func dressedDeal(t *testing.T, e *integration.Env) ids.UUID {
 	integration.LinkActivity(t, owner, task, "deal", deal)
 
 	if _, err := owner.Exec(ctx, `
-		INSERT INTO offer (deal_id, offer_number, status, currency, net_minor, gross_minor, source, captured_by)
-		VALUES ($1, 'A-1', 'sent', 'EUR', 4300000, 5117000, 'manual', 'test')`, deal); err != nil {
+		INSERT INTO offer (deal_id, offer_number, status, currency, net_minor, tax_minor, gross_minor, source, captured_by)
+		VALUES ($1, 'A-1', 'sent', 'EUR', 4300000, 817000, 5117000, 'manual', 'test')`, deal); err != nil {
 		t.Fatalf("seeding the sent offer: %v", err)
 	}
 	// A second, newer offer in another currency must NOT become the total: a
