@@ -11042,7 +11042,7 @@ paths:
             type: array
             items:
               $ref: '#/components/schemas/ReportingMetricID'
-            maxItems: 8
+            maxItems: 12
         - name: blocks
           in: query
           required: false
@@ -11221,7 +11221,7 @@ paths:
             type: array
             items:
               $ref: '#/components/schemas/ReportingMetricID'
-            maxItems: 8
+            maxItems: 12
         - name: blocks
           in: query
           required: false
@@ -11382,7 +11382,7 @@ paths:
             type: array
             items:
               $ref: '#/components/schemas/ReportingMetricID'
-            maxItems: 8
+            maxItems: 12
         - name: blocks
           in: query
           required: false
@@ -39045,7 +39045,7 @@ components:
           enum: [this_week, this_month, last_month, last_week, this_quarter, last_quarter, last_year]
         metrics:
           type: array
-          maxItems: 8
+          maxItems: 12
           items: {$ref: '#/components/schemas/ReportingMetricID'}
         blocks:
           type: array
@@ -46355,7 +46355,7 @@ components:
           items:
             $ref: '#/components/schemas/ReportingMetricID'
           minItems: 1
-          maxItems: 8
+          maxItems: 12
         blocks:
           type: array
           items:

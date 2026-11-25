@@ -15988,7 +15988,7 @@ paths:
           type: array
           items:
             $ref: '#/components/schemas/ReportingMetricID'
-          maxItems: 8
+          maxItems: 12
       - &id012
         name: blocks
         in: query
@@ -16158,7 +16158,7 @@ paths:
           type: array
           items:
             $ref: '#/components/schemas/ReportingMetricID'
-          maxItems: 8
+          maxItems: 12
       - &id012
         name: blocks
         in: query
@@ -57735,7 +57735,7 @@ components:
           x-extensible-enum: true
         metrics:
           type: array
-          maxItems: 8
+          maxItems: 12
           items: { $ref: '#/components/schemas/ReportingMetricID' }
         blocks:
           type: array
@@ -67523,7 +67523,7 @@ components:
           items:
             $ref: '#/components/schemas/ReportingMetricID'
           minItems: 1
-          maxItems: 8
+          maxItems: 12
         blocks:
           type: array
           items:
