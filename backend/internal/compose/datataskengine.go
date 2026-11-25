@@ -51,8 +51,8 @@ import (
 
 const introductionValidationMigration = "core/1792842046"
 
-func newDataTaskEngine(pool *pgxpool.Pool, composed *Extensions, release string, now func() time.Time) (*datatask.Engine, error) {
-	return datatask.New(pool, dataTaskCatalog(pool, composed, now), release, now, dataTaskFailureNotice(pool))
+func newDataTaskEngine(pool *pgxpool.Pool, release string, now func() time.Time) (*datatask.Engine, error) {
+	return datatask.New(pool, dataTaskCatalog(pool, now), release, now, dataTaskFailureNotice(pool))
 }
 
 func dataTaskFailureNotice(pool *pgxpool.Pool) func(context.Context, pgx.Tx, datatask.Progress) error {
@@ -105,7 +105,7 @@ func dataTaskTitleCode(taskID string) string {
 	return "datatask.title." + strings.ReplaceAll(taskID, "/", ".")
 }
 
-func dataTaskCatalog(pool *pgxpool.Pool, composed *Extensions, now func() time.Time) []datatask.Task {
+func dataTaskCatalog(pool *pgxpool.Pool, now func() time.Time) []datatask.Task {
 	return []datatask.Task{
 		heldMailDataTask(now), subjectMailDataTask(now), noticeSourceDataTask(now), homeRepairDataTask(pool, now), mailRecipientsDataTask(), machineAddressDataTask(), pastActivityClocksDataTask(), taskActivityClocksDataTask(),
 		unaskedcommitments.DataTask(), retiredstagecards.DataTask(), colleagueSenderDataTask(), deliveryReportsDataTask(pool, now), liftedAgentCallsDataTask(composed), mailDealsDataTask(pool), mailBodyCompletenessDataTask(),

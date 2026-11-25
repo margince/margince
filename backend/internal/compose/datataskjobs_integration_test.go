@@ -45,7 +45,7 @@ func TestTwoCorrectionReconcilersShareOneRiverJob(t *testing.T) {
 	if got := e.WsCount(t, `SELECT count(*) FROM river_job WHERE kind='data_task_run'`); got != 1 {
 		t.Fatalf("executor jobs=%d", got)
 	}
-	steps := registeredDataTaskSteps(dataTaskCatalog(e.Pool, nil, func() time.Time { return clocktest.Now(t) }))
+	steps := registeredDataTaskSteps(dataTaskCatalog(e.Pool, func() time.Time { return clocktest.Now(t) }))
 	if got := e.WsCount(t, `SELECT count(*) FROM data_task_run`); got != steps {
 		t.Fatalf("seeded steps=%d", got)
 	}
@@ -62,7 +62,7 @@ func TestTwoCorrectionReconcilersShareOneRiverJob(t *testing.T) {
 			snoozeOf(t, err)
 		}
 	}
-	ctx, engine, err := dataTaskJobEngine(t.Context(), e.Pool, nil)
+	ctx, engine, err := dataTaskJobEngine(t.Context(), e.Pool)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -94,7 +94,7 @@ func TestMissingInstallationKeepsAnErrorContext(t *testing.T) {
 	t.Parallel()
 	e := integration.Setup(t)
 	e.WsExec(t, `DELETE FROM workspace`)
-	ctx, engine, err := dataTaskJobEngine(t.Context(), e.Pool, nil)
+	ctx, engine, err := dataTaskJobEngine(t.Context(), e.Pool)
 	if err == nil || ctx == nil || engine != nil {
 		t.Fatalf("unconfigured worker=%v %v %v", ctx, engine, err)
 	}
@@ -107,7 +107,7 @@ func TestOwnerCorrectionCommandsEstimateAndEnqueueWithoutExecuting(t *testing.T)
 	t.Parallel()
 	e := integration.Setup(t)
 	integration.ApplyRiverSchema(t)
-	ctx, engine, err := dataTaskJobEngine(t.Context(), e.Pool, nil)
+	ctx, engine, err := dataTaskJobEngine(t.Context(), e.Pool)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -122,7 +122,7 @@ func TestOwnerCorrectionCommandsEstimateAndEnqueueWithoutExecuting(t *testing.T)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(after) != registeredDataTaskSteps(dataTaskCatalog(e.Pool, nil, func() time.Time { return clocktest.Now(t) })) || len(before) != len(after) {
+	if len(after) != registeredDataTaskSteps(dataTaskCatalog(e.Pool, func() time.Time { return clocktest.Now(t) })) || len(before) != len(after) {
 		t.Fatalf("registered steps before=%d after=%d", len(before), len(after))
 	}
 	for i, p := range after {
@@ -150,7 +150,7 @@ func TestOwnerCorrectionCommandsEstimateAndEnqueueWithoutExecuting(t *testing.T)
 func TestCorrectionWorkerCommitsFailureCapAndNoticeFromJobContext(t *testing.T) {
 	t.Parallel()
 	e := integration.Setup(t)
-	ctx, engine, err := dataTaskJobEngine(t.Context(), e.Pool, nil)
+	ctx, engine, err := dataTaskJobEngine(t.Context(), e.Pool)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -176,7 +176,7 @@ func TestReconciliationQueuesCompletedCorrectionsAtANewerCodeVersion(t *testing.
 	t.Parallel()
 	e := integration.Setup(t)
 	integration.ApplyRiverSchema(t)
-	ctx, engine, err := dataTaskJobEngine(t.Context(), e.Pool, nil)
+	ctx, engine, err := dataTaskJobEngine(t.Context(), e.Pool)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -184,7 +184,7 @@ func TestReconciliationQueuesCompletedCorrectionsAtANewerCodeVersion(t *testing.
 		t.Fatal(err)
 	}
 	e.WsExec(t, `UPDATE data_task_run SET status='done'`)
-	tasks := dataTaskCatalog(e.Pool, nil, func() time.Time { return clocktest.Now(t) })
+	tasks := dataTaskCatalog(e.Pool, func() time.Time { return clocktest.Now(t) })
 	tasks[0].Version++
 	upgraded, err := datatask.New(e.Pool, tasks, "test", func() time.Time { return clocktest.Now(t) }, dataTaskFailureNotice(e.Pool))
 	if err != nil {

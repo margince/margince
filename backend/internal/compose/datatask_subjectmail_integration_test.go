@@ -76,7 +76,7 @@ func TestDirectSenderCorrectionPagesReplaysAndPreservesOtherSources(t *testing.T
 		t.Fatalf("bounded estimate = %d/%t", estimated, more)
 	}
 	registered := false
-	for _, candidate := range dataTaskCatalog(e.Pool, nil, func() time.Time { return now }) {
+	for _, candidate := range dataTaskCatalog(e.Pool, func() time.Time { return now }) {
 		if candidate.ID == task.ID {
 			registered = true
 		}

@@ -66,7 +66,7 @@ func restoreLegacyRecipientThroughEngine(classifier context.Context, t *testing.
 	}); err != nil {
 		t.Fatal(err)
 	}
-	engine, err := newDataTaskEngine(e.Pool, nil, "test", func() time.Time { return at })
+	engine, err := newDataTaskEngine(e.Pool, "test", func() time.Time { return at })
 	if err != nil {
 		t.Fatal(err)
 	}

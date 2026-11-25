@@ -63,6 +63,7 @@ func TestABootFailureAfterALaneStartedStillJoinsIt(t *testing.T) {
 	lanes, err := startEventLanes(laneCtx, &background, workerConfig{
 		webhookKey: "not-a-valid-signing-key",
 		settings:   bootSettings(t),
+		extensions: &compose.Extensions{},
 	},
 		pool, rdb, nil, compose.ModelPath{}, laneLog, &announced)
 	if err == nil {

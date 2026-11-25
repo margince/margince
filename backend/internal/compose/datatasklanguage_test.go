@@ -14,7 +14,7 @@ import (
 )
 
 func TestEveryCoreRepairTitleReachesTheReaderInTheirLanguage(t *testing.T) {
-	tasks := dataTaskCatalog(nil, nil, func() time.Time { return time.Unix(0, 0) })
+	tasks := dataTaskCatalog(nil, func() time.Time { return time.Unix(0, 0) })
 	if len(tasks) == 0 {
 		t.Fatal("the repair catalog is empty")
 	}

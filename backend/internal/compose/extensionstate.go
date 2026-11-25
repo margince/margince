@@ -182,7 +182,6 @@ func (s *Server) bindExtensions() {
 	s.connectorHandlers.extensions = s.extensions
 	s.connectorAppHandlers.extensions = s.extensions
 	s.installationSettingsHandlers.extensions = s.extensions
-	s.dataTaskHandlers.extensions = s.extensions
 	s.analyticsQueryHandlers.extensions = s.extensions
 	s.jobTable = s.extensions.declaredJobs()
 }

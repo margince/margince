@@ -256,7 +256,7 @@ func TestHeldMailDomainAndAuditRollBackWithItsProgress(t *testing.T) {
 		t.Fatalf("partial progress: %+v", progress[1])
 	}
 	now = now.Add(time.Hour)
-	resumed, err := newDataTaskEngine(e.Pool, nil, "test", func() time.Time { return now })
+	resumed, err := newDataTaskEngine(e.Pool, "test", func() time.Time { return now })
 	if err != nil {
 		t.Fatal(err)
 	}

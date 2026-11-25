@@ -101,7 +101,7 @@ func addHolderRolesTx(ctx context.Context, tx pgx.Tx, rbac RbacObjects, holders 
 	for i, holder := range holders {
 		users[i] = holder.UserID
 	}
-	_, held, err := loadRoleDocuments(ctx, tx, rbac, users)
+	held, err := loadRoleDocuments(ctx, tx, rbac, users)
 	if err != nil {
 		return err
 	}

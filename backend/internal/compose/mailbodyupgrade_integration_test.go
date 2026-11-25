@@ -121,7 +121,7 @@ func (o *owedEnv) runMailBodyTask(t *testing.T) datatask.Task {
 // batches so paging is exercised.
 func registeredMailBodyTask(t *testing.T, o *owedEnv) datatask.Task {
 	t.Helper()
-	for _, task := range dataTaskCatalog(o.e.Pool, nil, func() time.Time { return o.now }) {
+	for _, task := range dataTaskCatalog(o.e.Pool, func() time.Time { return o.now }) {
 		if task.ID == mailBodyCompletenessDataTask().ID {
 			for i := range task.Steps {
 				task.Steps[i].Limit = 2

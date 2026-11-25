@@ -175,7 +175,7 @@ func TestExecuteRunsTheReleaseCatalogWithoutReachingOutside(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	catalog := dataTaskCatalog(e.Pool, nil, func() time.Time { return clocktest.Now(t) })
+	catalog := dataTaskCatalog(e.Pool, func() time.Time { return clocktest.Now(t) })
 	if len(run.Progress) < len(catalog) || len(run.Required) != len(catalog) {
 		t.Errorf("the run reports %d steps and %d required versions for %d tasks", len(run.Progress), len(run.Required), len(catalog))
 	}

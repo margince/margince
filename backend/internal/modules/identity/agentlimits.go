@@ -43,7 +43,7 @@ func refuseAgentMemberReach(ctx context.Context, tx pgx.Tx, rbac RbacObjects, ta
 	if err := lockAuthorization(ctx, tx); err != nil {
 		return err
 	}
-	_, roles, err := loadRoleDocuments(ctx, tx, rbac, []ids.UUID{target.UUID})
+	roles, err := loadRoleDocuments(ctx, tx, rbac, []ids.UUID{target.UUID})
 	if err != nil {
 		return err
 	}
@@ -75,7 +75,7 @@ func refuseAgentTeamReach(ctx context.Context, tx pgx.Tx, rbac RbacObjects, team
 	if err != nil {
 		return err
 	}
-	_, roles, err := loadRoleDocuments(ctx, tx, rbac, members)
+	roles, err := loadRoleDocuments(ctx, tx, rbac, members)
 	if err != nil {
 		return err
 	}

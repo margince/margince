@@ -14,7 +14,7 @@ import (
 func TestOnlyTheColleagueSenderTaskOpensTheSenderReadArm(t *testing.T) {
 	t.Parallel()
 	var owners []string
-	for _, task := range dataTaskCatalog(nil, nil, nil) {
+	for _, task := range dataTaskCatalog(nil, nil) {
 		for _, step := range task.Steps {
 			if step.Name == auth.SenderStampsCheckedStep {
 				owners = append(owners, task.ID)

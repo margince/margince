@@ -65,16 +65,15 @@ func addDataTaskJobs(reg *jobRegistry, pool *pgxpool.Pool, cfg JobRunnerConfig, 
 	if pace <= 0 {
 		pace = dataTaskDefaultPace
 	}
-	addDeclaredWorker[DataTaskRunArgs](reg, &dataTaskRunWorker{pool: pool, composed: cfg.Extensions, pace: pace, log: log})
-	addDeclaredWorker[DataTaskReconcileArgs](reg, &dataTaskReconcileWorker{pool: pool, composed: cfg.Extensions, log: log, pace: pace})
+	addDeclaredWorker[DataTaskRunArgs](reg, &dataTaskRunWorker{pool: pool, pace: pace, log: log})
+	addDeclaredWorker[DataTaskReconcileArgs](reg, &dataTaskReconcileWorker{pool: pool, log: log, pace: pace})
 	return periodicFor(cfg, DataTaskReconcileArgs{})
 }
 
 type dataTaskRunWorker struct {
-	pool     *pgxpool.Pool
-	composed *Extensions
-	pace     time.Duration
-	log      *slog.Logger
+	pool *pgxpool.Pool
+	pace time.Duration
+	log  *slog.Logger
 }
 
 func (w *dataTaskRunWorker) Work(ctx context.Context, _ *river.Job[DataTaskRunArgs]) error {
@@ -86,7 +85,7 @@ func (w *dataTaskRunWorker) Work(ctx context.Context, _ *river.Job[DataTaskRunAr
 		return river.JobSnooze(dataTaskBusyWait)
 	}
 	defer release()
-	ctx, engine, err := dataTaskJobEngine(ctx, w.pool, w.composed)
+	ctx, engine, err := dataTaskJobEngine(ctx, w.pool)
 	if err != nil {
 		return jobs.FaultContext(ctx, err)
 	}
@@ -107,14 +106,13 @@ func (w *dataTaskRunWorker) Work(ctx context.Context, _ *river.Job[DataTaskRunAr
 }
 
 type dataTaskReconcileWorker struct {
-	pool     *pgxpool.Pool
-	composed *Extensions
-	log      *slog.Logger
-	pace     time.Duration
+	pool *pgxpool.Pool
+	log  *slog.Logger
+	pace time.Duration
 }
 
 func (w *dataTaskReconcileWorker) Work(ctx context.Context, _ *river.Job[DataTaskReconcileArgs]) error {
-	ctx, engine, err := dataTaskJobEngine(ctx, w.pool, w.composed)
+	ctx, engine, err := dataTaskJobEngine(ctx, w.pool)
 	if err != nil {
 		return jobs.FaultContext(ctx, err)
 	}
@@ -211,7 +209,7 @@ func reconcileDataTaskProgress(ctx context.Context, engine *datatask.Engine) ([]
 	return progress, nil
 }
 
-func dataTaskJobEngine(ctx context.Context, pool *pgxpool.Pool, composed *Extensions) (context.Context, *datatask.Engine, error) {
+func dataTaskJobEngine(ctx context.Context, pool *pgxpool.Pool) (context.Context, *datatask.Engine, error) {
 	bound, err := installationJobCtx(ctx, IdentityService(pool))
 	if err != nil {
 		return ctx, nil, err
@@ -220,6 +218,6 @@ func dataTaskJobEngine(ctx context.Context, pool *pgxpool.Pool, composed *Extens
 	if _, ok := principal.CorrelationID(ctx); !ok {
 		ctx = principal.WithCorrelationID(ctx, ids.NewV7())
 	}
-	engine, err := newDataTaskEngine(pool, composed, buildinfo.ReleaseVersion, time.Now)
+	engine, err := newDataTaskEngine(pool, buildinfo.ReleaseVersion, time.Now)
 	return ctx, engine, err
 }
