@@ -13,7 +13,7 @@ import { OverflowMenu } from "../../design-system/overflowmenu";
 import { Panel, PanelBody, PanelIntro } from "../../design-system/panel";
 import { ProviderList, ProviderRow } from "../../design-system/providerrow";
 import { QueryStates } from "../../design-system/querystates";
-import { formatDateTime } from "../../format/format";
+import { formatDateTime, formatNumber } from "../../format/format";
 import { useLocale, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import { statusLabel, statusTone } from "../../lib/connector-status";
@@ -57,6 +57,13 @@ function useSharedMailboxes() {
         throwProblem(error);
       }
       return { allowed: true, items: data.items };
+    },
+    // The server narrows earlier mail one batch every ten seconds.
+    refetchInterval: (query) => {
+      const answer = query.state.data;
+      return answer?.allowed && answer.items.some((m) => m.history_narrowing)
+        ? 10_000
+        : false;
     },
   });
 }
@@ -167,6 +174,7 @@ function SharedMailboxRow({
   const zone = useViewerZone();
   const connected = mailbox.status !== "disconnected";
   const unread = mailbox.unread_period;
+  const narrowing = mailbox.history_narrowing;
   // A span no sync read is what the row needs an admin for, so the import
   // that recovers it takes the visible verb.
   const importFirst = connected && unread != null;
@@ -200,7 +208,10 @@ function SharedMailboxRow({
                 from: formatDateTime(unread.from, locale, zone),
                 to: formatDateTime(unread.to, locale, zone),
               })
-            : undefined
+            : narrowing &&
+              t("connectors.mailPosture.historyNarrowing", {
+                count: formatNumber(narrowing.remaining, locale),
+              })
         }
         action={importFirst ? importHistory : change}
         menu={

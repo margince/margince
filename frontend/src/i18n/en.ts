@@ -11305,6 +11305,7 @@ export const en = {
   "jobs.kind.capture_auto_enrich_sweep": "Company enrichment from mail",
   "jobs.kind.capture_backfill": "Mail history import",
   "jobs.kind.capture_backfill_reconcile": "Mail history import recovery",
+  "jobs.kind.capture_history_narrowing": "Narrowing earlier mail",
   "jobs.kind.capture_confidentiality_verdict": "Mail confidentiality check",
   "jobs.kind.capture_counterparty_verdict": "Mail sender check",
   "jobs.kind.capture_enrich": "Contact details from signatures",
@@ -13038,6 +13039,8 @@ export const en = {
   "connectors.mailPosture.historyBody":
     "This setting applies to mail captured from now on. Mail already in the CRM keeps its visibility unless you narrow it to match.",
   "connectors.mailPosture.historyApply": "Also narrow captured mail",
+  "connectors.mailPosture.historyNarrowing":
+    "Earlier mail is being narrowed in the background: {count} left. A message keeps its visibility until it is reached.",
   "connectors.disconnectBodyGoogleNote":
     "Google may still list Margince under your account’s third-party access. Remove it there to revoke access fully.",
   "connectors.disconnectBodyMicrosoftNote":

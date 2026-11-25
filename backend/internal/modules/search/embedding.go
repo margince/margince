@@ -16,6 +16,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/ports/connector"
 	"github.com/margince/margince/backend/internal/shared/ports/model"
 )
 
@@ -220,7 +221,7 @@ func (s *Store) similarEntitiesWithin(ctx context.Context, queryVec []float32, i
 		// excludes those rows before the projection computes <=>. NEVER remove it. (see design §5.6)
 		identityPos := arg(identity)
 
-		branches, err := similarBranchSQL(ctx, types, vecPos, identityPos, arg)
+		branches, err := similarBranchSQL(ctx, similarQuery{types: types, vecPos: vecPos, identityPos: identityPos, limit: limit, within: within}, arg)
 		if err != nil {
 			return err
 		}
@@ -256,13 +257,21 @@ func (s *Store) similarEntitiesWithin(ctx context.Context, queryVec []float32, i
 	return hits, nil
 }
 
+// similarQuery is what every branch of the similarity union ranks against.
+type similarQuery struct {
+	types               []string
+	vecPos, identityPos int
+	limit               int
+	within              []ids.UUID
+}
+
 // similarBranchSQL builds one ranked SELECT per requested-and-admitted record
 // type — the vector arm's counterpart to admittedBranchSQL, and subject to the
 // same two gates: object RBAC hides a denied type silently, then the branch
 // carries the caller's scope clause. A vector hit is a read too.
 //
 // An empty types narrows nothing, which is what the retrieval seam asks for.
-func similarBranchSQL(ctx context.Context, types []string, vecPos, identityPos int, arg func(any) int) ([]string, error) {
+func similarBranchSQL(ctx context.Context, q similarQuery, arg func(any) int) ([]string, error) {
 	var branches []string
 	for _, branch := range searchBranches {
 		// A word has no prose to embed, so a similarity search over one would
@@ -270,7 +279,7 @@ func similarBranchSQL(ctx context.Context, types []string, vecPos, identityPos i
 		if branch.textOnly {
 			continue
 		}
-		if len(types) > 0 && !slices.Contains(types, branch.entity) {
+		if len(q.types) > 0 && !slices.Contains(q.types, branch.entity) {
 			continue
 		}
 		scope, admitted, err := branchScope(ctx, branch, "t", arg)
@@ -280,22 +289,52 @@ func similarBranchSQL(ctx context.Context, types []string, vecPos, identityPos i
 		if !admitted {
 			continue
 		}
-		sql := fmt.Sprintf(
-			`SELECT '%s'::text AS rtype, e.entity_id AS id, %s AS title,
-			        (1 - (`+storedVectorSQL("e")+` <=> $%d::halfvec))::float8 AS sim
-			 FROM embedding e JOIN %s t ON t.id = e.entity_id
-			 WHERE e.entity_type = '%s' AND t.archived_at IS NULL AND e.model = $%d`,
-			branch.entity, branch.title, vecPos, branch.table, branch.entity, identityPos,
-		)
+		filter := fmt.Sprintf("e.entity_type = '%s' AND t.archived_at IS NULL AND e.model = $%d", branch.entity, q.identityPos)
 		if narrowing := branch.narrowing("t"); narrowing != "" {
-			sql += " AND " + narrowing
+			filter += " AND " + narrowing
 		}
 		if scope != "" {
-			sql += " AND " + scope
+			filter += " AND " + scope
 		}
-		branches = append(branches, sql)
+		if branch.table == entityActivity {
+			branches = append(branches, similarMailSQL(ctx, branch, q, filter, arg))
+			continue
+		}
+		branches = append(branches, fmt.Sprintf(
+			`SELECT '%s'::text AS rtype, e.entity_id AS id, %s AS title, %s AS sim
+			 FROM embedding e JOIN %s t ON t.id = e.entity_id WHERE %s`,
+			branch.entity, branch.title, similaritySQL("e", q.vecPos), branch.table, filter,
+		))
 	}
 	return branches, nil
+}
+
+// similarMailSQL ranks activities so that mail several mailboxes captured is
+// one hit, through the grouping every other mail reader uses. Grouping reads
+// each candidate's body, so it runs over the nearest candidates only. The sample
+// is large enough to hold every copy of the first page's mail. The
+// bound joins that sample, or a retrieval bounded to a few records could find
+// none of them in it.
+func similarMailSQL(ctx context.Context, branch searchBranch, q similarQuery, filter string, arg func(any) int) string {
+	if q.within != nil {
+		filter += fmt.Sprintf(" AND t.id = ANY($%d)", arg(q.within))
+	}
+	nearest := fmt.Sprintf(`(SELECT t.* FROM embedding e JOIN %s t ON t.id = e.entity_id WHERE %s
+	  ORDER BY %s <=> $%d::halfvec, t.id LIMIT $%d)`,
+		branch.table, filter, storedVectorSQL("e"), q.vecPos, arg(connector.CopySampleRows(q.limit)))
+	// The copy shown may have no vector of its own yet, so the hit scores as
+	// the nearest of the copies it stands for.
+	return fmt.Sprintf(`SELECT '%s'::text AS rtype, t.id AS id, %s AS title, near.sim
+	 FROM %s
+	 CROSS JOIN LATERAL (SELECT max(%s) AS sim FROM embedding e
+	   WHERE e.entity_type = '%s' AND e.model = $%d AND e.entity_id = ANY(copies.copy_ids)) near`,
+		branch.entity, branch.title, connector.MailCopyGroupFrom(ctx, nearest, "t", sqlTrue, sqlTrue, arg),
+		similaritySQL("e", q.vecPos), branch.entity, q.identityPos)
+}
+
+// similaritySQL is the cosine similarity of one stored vector to the query.
+func similaritySQL(alias string, vecPos int) string {
+	return fmt.Sprintf("(1 - (%s <=> $%d::halfvec))::float8", storedVectorSQL(alias), vecPos)
 }
 
 // vectorLiteral renders pgvector's input syntax; parameterized as text

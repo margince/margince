@@ -406,6 +406,20 @@ kinds:
       and both the fetch and the failure-recording write fail as a spurious
       "unreachable".
 
+  capture_history_narrowing:
+    role: worker
+    fleet: true
+    go_type: CaptureHistoryNarrowingArgs
+    queue: default
+    timeout: 2m
+    opts_owner: caller
+    cadence: 10s
+    registration: always
+    reason: >-
+      Narrow one batch of one mailbox's earlier mail per run, after a posture
+      change asked for it. The cadence is the pause between batches, and a
+      database lock keeps one mailbox narrowing at a time across every process.
+
   capture_classify:
     role: worker
     fleet: true

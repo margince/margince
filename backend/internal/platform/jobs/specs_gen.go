@@ -11,7 +11,7 @@ import "time"
 // would believe. It says nothing about the file on disk — a pair
 // regenerated TOGETHER from a stale contract matches here, and the drift
 // gate is what catches that.
-const JobContractHash = "fe2e8364a1dcd12622af997321c469a060bce1f7bb8091fe04d794c89f2c9745"
+const JobContractHash = "2087bb98c17fc84c1931f6f1a0a42a13f5bfb1f04ecf5a3cdf994e95b27a6e6d"
 
 // specs is every declared kind. A kind absent from this table is a kind
 // nobody declared, and MustBeTotal is what names them: the runner calls it
@@ -251,6 +251,16 @@ var specs = map[string]Spec{
 		Cadence:      Cadence{Fixed: 24 * time.Hour},
 		Registration: Registration{When: []string{"EnrichBrain"}},
 		Args:         []ArgField{{Name: "Pending", Scalar: true, Reason: "Selects the durable pending cohort; absent means the existing full repair pass."}},
+	},
+	"capture_history_narrowing": {
+		Kind:      "capture_history_narrowing",
+		GoType:    "CaptureHistoryNarrowingArgs",
+		Role:      Worker,
+		Fleet:     true,
+		Queue:     "default",
+		Timeout:   TimeoutPolicy{Fixed: 2 * time.Minute},
+		OptsOwner: OptsCaller,
+		Cadence:   Cadence{Fixed: 10 * time.Second},
 	},
 	"capture_part_slim": {
 		Kind:         "capture_part_slim",

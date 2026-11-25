@@ -2351,6 +2351,7 @@ public.capture_connection.history_baseline_date date gen=- def=-
 public.capture_connection.history_baseline_set_at timestamp with time zone gen=- def=-
 public.capture_connection.history_baseline_set_by text gen=- def=-
 public.capture_connection.history_baseline_tz text gen=- def=-
+public.capture_connection.history_narrowing_held boolean gen=- def=-
 public.capture_connection.home_read_fence_shared_mailbox_readers CREATE TRIGGER home_read_fence_shared_mailbox_readers AFTER UPDATE OF reader_team_id, mail_posture ON public.capture_connection FOR EACH ROW WHEN (((old.reader_team_id IS DISTINCT FROM new.reader_team_id) OR (old.mail_posture IS DISTINCT FROM new.mail_posture))) EXECUTE FUNCTION advance_home_read_fence()
 public.capture_connection.id uuid NOT NULL gen=- def=uuidv7()
 public.capture_connection.keys_by_provider boolean NOT NULL gen=- def=false

@@ -401,11 +401,21 @@ func TestApplyingAPostureToHistoryNarrowsOnlyBackwards(t *testing.T) {
 		t.Fatalf("%d open messages before the change, want 3", n)
 	}
 
-	// Narrowing WITH apply_to_history reaches back over them.
-	if _, err := env.registry.SetMailPosture(
-		seatContext(e, e.Rep1), capturemod.ProviderMailbox("gmail"), capturemod.PostureHeld, true); err != nil {
+	// Narrowing with apply_to_history answers at once, and reaches back over
+	// them once the background narrowing has run.
+	view, err := env.registry.SetMailPosture(
+		seatContext(e, e.Rep1), capturemod.ProviderMailbox("gmail"), capturemod.PostureHeld, true)
+	if err != nil {
 		t.Fatalf("narrowing with apply_to_history: %v", err)
 	}
+	pending := view.HistoryNarrowing
+	if pending == nil || pending.Posture != capturemod.PostureHeld || pending.Remaining != 3 {
+		t.Fatalf("the answer shows %+v, want three messages left to hold", pending)
+	}
+	if n := openActivityCount(t, e); n != 3 {
+		t.Fatalf("%d open messages before the narrowing ran, want 3: mail it has not reached keeps its audience", n)
+	}
+	integration.NarrowHistoryToTheEnd(t, e.WS, env.registry)
 	if n := openActivityCount(t, e); n != 0 {
 		t.Fatalf("%d messages are still open after applying the posture to history", n)
 	}
@@ -415,6 +425,9 @@ func TestApplyingAPostureToHistoryNarrowsOnlyBackwards(t *testing.T) {
 	if _, err := env.registry.SetMailPosture(
 		seatContext(e, e.Rep1), capturemod.ProviderMailbox("gmail"), capturemod.PostureShared, true); err != nil {
 		t.Fatalf("widening with apply_to_history: %v", err)
+	}
+	if batches := integration.NarrowHistoryToTheEnd(t, e.WS, env.registry); batches != 0 {
+		t.Fatalf("widening queued %d batches of narrowing", batches)
 	}
 	if n := openActivityCount(t, e); n != 0 {
 		t.Fatalf("widening re-opened %d messages of history; only narrowing reaches back", n)
@@ -447,6 +460,7 @@ func TestNarrowingToClassifiedNeverLoosensAHeldMessage(t *testing.T) {
 		seatContext(e, e.Rep1), capturemod.ProviderMailbox("gmail"), capturemod.PostureHeld, true); err != nil {
 		t.Fatalf("holding the history: %v", err)
 	}
+	integration.NarrowHistoryToTheEnd(t, e.WS, env.registry)
 	if got := importPostureOf(t, e, activityID, e.Rep1); got != capturemod.PostureHeld {
 		t.Fatalf("the import row is %q after holding the history, want held", got)
 	}
@@ -459,6 +473,7 @@ func TestNarrowingToClassifiedNeverLoosensAHeldMessage(t *testing.T) {
 		seatContext(e, e.Rep1), capturemod.ProviderMailbox("gmail"), capturemod.PostureClassified, true); err != nil {
 		t.Fatalf("applying classified to history: %v", err)
 	}
+	integration.NarrowHistoryToTheEnd(t, e.WS, env.registry)
 	if got := importPostureOf(t, e, activityID, e.Rep1); got != capturemod.PostureHeld {
 		t.Fatalf("applying classified to history loosened a held row to %q", got)
 	}

@@ -11343,6 +11343,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Anreicherung von Unternehmensdaten aus E-Mails",
   "jobs.kind.capture_backfill": "Import des E-Mail-Verlaufs",
   "jobs.kind.capture_backfill_reconcile": "Wiederaufnahme des E-Mail-Imports",
+  "jobs.kind.capture_history_narrowing": "Einschränkung früherer E-Mails",
   "jobs.kind.capture_confidentiality_verdict":
     "Vertraulichkeitsprüfung von E-Mails",
   "jobs.kind.capture_counterparty_verdict": "Prüfung der Absendeadressen",
@@ -13111,6 +13112,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "connectors.mailPosture.historyBody":
     "Diese Einstellung gilt für E-Mails, die ab jetzt erfasst werden. E-Mails, die bereits im CRM sind, behalten ihre Sichtbarkeit, es sei denn, du schränkst sie entsprechend ein.",
   "connectors.mailPosture.historyApply": "Auch erfasste E-Mails einschränken",
+  "connectors.mailPosture.historyNarrowing":
+    "Frühere E-Mails werden im Hintergrund eingeschränkt: noch {count}. Jede Nachricht behält ihre Sichtbarkeit, bis sie an der Reihe ist.",
   "connectors.disconnectBodyGoogleNote":
     "Google führt Margince möglicherweise weiterhin unter den Drittanbieter-Apps mit Zugriff auf dein Konto. Entferne Margince dort, um den Zugriff vollständig zu widerrufen.",
   "connectors.disconnectBodyMicrosoftNote":

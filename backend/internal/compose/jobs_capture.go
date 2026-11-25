@@ -94,6 +94,7 @@ func addCapturePipelineJobs(reg *jobRegistry, pool *pgxpool.Pool, cfg JobRunnerC
 	addDeclaredWorker[CaptureBackfillReconcileArgs](reg, &captureBackfillReconcileWorker{
 		pool: pool, registry: cfg.GmailRegistry, log: log, enrichEnabled: cfg.EnrichBrain != nil,
 	})
+	addDeclaredWorker[CaptureHistoryNarrowingArgs](reg, &captureHistoryNarrowingWorker{pool: pool, registry: cfg.GmailRegistry})
 
 	// The Telegram ingest job is not periodic — a poll enqueues one per accepted
 	// update in the same transaction as the raw capture row; the worker role only
