@@ -6,10 +6,10 @@
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
-# The suites in the order they run, one name per line. clock-drift-host.sh moves
-# the host clock for ONE slice at a time and puts it back between them, because
-# a hosted runner whose clock stays 200 days ahead for the whole run loses its
-# link to GitHub after about an hour. The names live here, beside what runs them.
+# The suites, one name per line. scheduled.yml runs each slice as its own job,
+# because a hosted runner whose clock is moved 200 days stops renewing its job
+# lock and is dropped after about an hour. The names live here, beside what
+# runs them.
 INTEGRATION_SLICES=6
 slices() {
 	# The unit legs are the prerequisites of `test:` in backend/Makefile, read
@@ -24,10 +24,64 @@ slices() {
 	done
 }
 
-if [[ "${1:-}" == slices ]]; then
+# slice_key is a slice's name as a job artifact may spell it: no ':' or '/'.
+slice_key() {
+	printf '%s' "$1" | tr ':/' '--'
+}
+
+# matrix is the slice list as scheduled.yml's job matrix reads it.
+matrix() {
+	local slice sep=''
+	printf '['
+	for slice in $(slices); do
+		printf '%s{"slice":"%s","key":"%s"}' "$sep" "$slice" "$(slice_key "$slice")"
+		sep=','
+	done
+	printf ']\n'
+}
+
+# verdict combines the per-slice verdict files in $1, one per slice key holding
+# `pass` or `calendar`. A slice with no file never reached a verdict.
+# Exit 0: every slice passed. 1: a suite failed at the moved clock. 3: a slice
+# gave no verdict. A calendar red wins over a missing slice, because it is
+# the one finding about the tree.
+verdict() {
+	local dir="$1" slice file got calendar=0 missing=0
+	for slice in $(slices); do
+		file="$dir/$(slice_key "$slice")"
+		got=$(cat "$file" 2>/dev/null || true)
+		case "$got" in
+		pass) echo "backend-clock-drift: $slice passed at the moved clock" ;;
+		calendar)
+			echo "backend-clock-drift: $slice failed at the moved clock"
+			calendar=1
+			;;
+		*)
+			echo "backend-clock-drift: $slice gave no verdict" >&2
+			missing=1
+			;;
+		esac
+	done
+	[[ "$calendar" -eq 0 ]] || return 1
+	[[ "$missing" -eq 0 ]] || return 3
+}
+
+case "${1:-}" in
+slices)
 	slices
 	exit 0
-fi
+	;;
+matrix)
+	matrix
+	exit 0
+	;;
+verdict)
+	[[ $# -eq 2 ]] || { echo "usage: $0 verdict <dir>" >&2; exit 2; }
+	status=0
+	verdict "$2" || status=$?
+	exit "$status"
+	;;
+esac
 
 # BACKEND_CLOCK_SLICE picks one slice; unset runs every suite in one go, which
 # is what the database and fixture appliers want on a laptop.

@@ -55,6 +55,8 @@ func newSharedGuests(t *testing.T) sharedGuests {
 	}
 	for _, seat := range []ids.UUID{e.Rep1, e.Rep2, e.Rep3} {
 		e.GrantRole(t, seat, "admin")
+	}
+	for _, seat := range []ids.UUID{e.Rep1, e.Rep2, e.Rep3, e.AdminUser} {
 		if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 			var address string
 			err := tx.QueryRow(context.Background(), `SELECT email FROM app_user WHERE id = $1`, seat).Scan(&address)
@@ -150,8 +152,14 @@ func (s sharedGuests) reads(t *testing.T, seat, meeting ids.UUID) bool {
 // answers counts the outside guest's rows that hold the accepted answer.
 func (s sharedGuests) answers(t *testing.T, meeting ids.UUID) int {
 	t.Helper()
+	return s.answersOf(t, meeting, sharedGuestBuyer)
+}
+
+// answersOf counts address's rows that hold the accepted answer.
+func (s sharedGuests) answersOf(t *testing.T, meeting ids.UUID, address string) int {
+	t.Helper()
 	return s.e.WsCount(t, `SELECT count(*) FROM activity_participant
-		WHERE activity_id=$1 AND address=$2 AND response='accepted'`, meeting, sharedGuestBuyer)
+		WHERE activity_id=$1 AND address=$2 AND response='accepted'`, meeting, address)
 }
 
 // calendars counts the calendars the outside guest's row names.
@@ -291,6 +299,56 @@ func TestACalendarThatLeftNoLongerHoldsTheGuestsAnotherCalendarLists(t *testing.
 	}
 	if got := s.answers(t, meeting); got != 0 {
 		t.Errorf("a guest no remaining calendar lists keeps %d rows", got)
+	}
+}
+
+// A calendar whose copy is gone grants nothing any more. A colleague only it
+// listed loses the meeting; an outside guest only it listed stays as history.
+func TestACalendarThatLeftTakesTheColleaguesOnlyItListed(t *testing.T) {
+	s := newSharedGuests(t)
+	e := s.e
+	const visitor = "visitor@customer.test"
+	shared := s.address[e.AdminUser]
+	meeting := s.sync(t, e.Rep1, sharedGuestHost, s.address[e.Rep1], s.address[e.Rep2], shared, sharedGuestBuyer)
+	s.sync(t, e.Rep2, sharedGuestHost, s.address[e.Rep1], s.address[e.Rep2], shared, s.address[e.Rep3], sharedGuestBuyer, visitor)
+	if !s.reads(t, e.Rep3, meeting) || !s.reads(t, e.AdminUser, meeting) {
+		t.Fatal("a colleague guest does not read the meeting before a calendar left")
+	}
+
+	s.leave(t, e.Rep2)
+
+	if s.reads(t, e.Rep3, meeting) {
+		t.Error("a colleague only the calendar that left listed still reads the meeting")
+	}
+	if !s.reads(t, e.AdminUser, meeting) {
+		t.Error("a colleague another calendar still lists lost the meeting")
+	}
+	if got := s.answersOf(t, meeting, visitor); got != 1 {
+		t.Errorf("the outside guest only the calendar that left listed holds %d answered rows, want 1", got)
+	}
+	if got := s.calendars(t, meeting); got != 1 {
+		t.Errorf("the guest both calendars listed names %d calendars after one left, want 1", got)
+	}
+}
+
+// A disconnected calendar reports no change, so a colleague it still lists
+// grants nothing once the last live calendar listing them leaves.
+func TestACalendarThatLeftTakesAColleagueOnlyADisconnectedCalendarAlsoLists(t *testing.T) {
+	s := newSharedGuests(t)
+	e := s.e
+	meeting := s.bothList(t, sharedGuestHost)
+	registry := compose.NewCaptureRegistry(e.Pool, keyvault.NewMemory(), compose.CaptureConfig{})
+	if err := registry.Disconnect(e.As(e.Rep1, []ids.UUID{e.Team1}, integration.AdminPerms), capturemod.ProviderMailbox("gcal")); err != nil {
+		t.Fatal(err)
+	}
+
+	s.leave(t, e.Rep2)
+
+	if s.reads(t, e.Rep3, meeting) {
+		t.Error("a colleague only a disconnected calendar still lists reads the meeting")
+	}
+	if got := s.answers(t, meeting); got != 1 {
+		t.Errorf("the outside guest holds %d answered rows after a calendar left, want 1", got)
 	}
 }
 

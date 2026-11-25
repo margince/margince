@@ -11988,6 +11988,109 @@ paths:
               schema:
                 type: array
                 items: { $ref: '#/components/schemas/SchedulingTeamCandidate' }
+  /scheduling/team-links:
+    get:
+      tags: [Activities]
+      operationId: listSchedulingTeamLinks
+      x-mcp-tool: { verb: read_view, tier: auto_execute, scope: read }
+      summary: List the caller's team booking links.
+      description: |
+        Each live team link the caller owns, oldest first. A team link sits beside the caller's
+        personal booking page, which always offers the caller's own free time alone.
+      responses:
+        default:
+          description: The operation could not be completed.
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+        '200':
+          description: The caller's team links.
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/SchedulingTeamLink' }
+    post:
+      tags: [Activities]
+      operationId: createSchedulingTeamLink
+      security: [ { cookieAuth: [] } ]   # human session only: a team link publishes colleagues' joint free time
+      x-agent-access: human-only
+      x-human-only-reason: security
+      summary: Create a team booking link that names colleagues.
+      description: |
+        Creates a link with its own address. Guests see only the times when the caller and every
+        member are free, inside each one's own working hours, and each booking invites every
+        member. The link uses the calendar and booking settings of the caller's personal page.
+        Each member starts as `pending`, and the link takes no bookings until every member has
+        confirmed. Name one to five colleagues offered by `GET /scheduling/team-candidates`;
+        anything else answers 422 on `team_members`.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/SchedulingTeamLinkRequest' }
+      responses:
+        default:
+          description: The operation could not be completed.
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+        '201':
+          description: The new team link.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/SchedulingTeamLink' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+  /scheduling/team-links/{page_id}:
+    parameters:
+      - { name: page_id, in: path, required: true, schema: { type: string, format: uuid } }
+    put:
+      tags: [Activities]
+      operationId: updateSchedulingTeamLink
+      security: [ { cookieAuth: [] } ]   # human session only: a team link publishes colleagues' joint free time
+      x-agent-access: human-only
+      x-human-only-reason: security
+      summary: Rename a team link, switch it on or off, or change its members.
+      description: |
+        Only the link's owner may change it; anyone else gets 404. A member kept on the list keeps
+        their own answer, and a member new to it starts as `pending`.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/SchedulingTeamLinkRequest' }
+      responses:
+        default:
+          description: The operation could not be completed.
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+        '200':
+          description: The changed team link.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/SchedulingTeamLink' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+    delete:
+      tags: [Activities]
+      operationId: deleteSchedulingTeamLink
+      security: [ { cookieAuth: [] } ]   # human session only: a team link publishes colleagues' joint free time
+      x-agent-access: human-only
+      x-human-only-reason: security
+      summary: Delete a team link.
+      description: |
+        The link's address stops working. Meetings already booked through it stand. The owner's
+        personal page does not change. Only the link's owner may delete it; anyone else gets 404.
+      responses:
+        default:
+          description: The operation could not be completed.
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+        '204': { description: The team link is deleted. }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/ValidationError' }
   /scheduling/team-requests:
     get:
       tags: [Activities]
@@ -12016,15 +12119,47 @@ paths:
     put:
       tags: [Activities]
       operationId: answerSchedulingTeamRequest
+      # A host may have several team links. Kept for clients built before
+      # them; it answers every live team link of the host that names the caller.
+      deprecated: true
       security: [ { cookieAuth: [] } ]   # human session only: a member's consent to share free time
       x-agent-access: human-only
       x-human-only-reason: security
-      summary: Confirm or leave a colleague's booking link that names the caller.
+      summary: Confirm or leave every team link of a colleague that names the caller.
+      description: |
+        Use `PUT /scheduling/team-links/{page_id}/answer` instead, which answers one team link.
+        This answers each live team link of that colleague that names the caller. `confirmed`
+        confirms each one still pending. `left` takes the caller off each one they have not left.
+        Answers 404 when no live team link of that colleague names the caller.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/SchedulingTeamAnswer' }
+      responses:
+        default:
+          description: The operation could not be completed.
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+        '204': { description: The answer is recorded. }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+  /scheduling/team-links/{page_id}/answer:
+    parameters:
+      - { name: page_id, in: path, required: true, schema: { type: string, format: uuid }, description: 'The `page_id` of a team request, from `GET /scheduling/team-requests`.' }
+    put:
+      tags: [Activities]
+      operationId: answerSchedulingTeamLink
+      security: [ { cookieAuth: [] } ]   # human session only: a member's consent to share free time
+      x-agent-access: human-only
+      x-human-only-reason: security
+      summary: Confirm or leave a colleague's team link that names the caller.
       description: |
         `confirmed` lets the link read the caller's free time and put the caller on each meeting
         booked through it. `left` takes the caller off: the link stops taking bookings until its
-        owner removes the caller, and the owner sees why. Answers 404 when no live link of that
-        colleague names the caller.
+        owner removes the caller, and the owner sees why. Answers 404 when no live team link with
+        this id names the caller.
       requestBody:
         required: true
         content:
@@ -60255,18 +60390,18 @@ components:
             the page names no calendar (a page saved before the profile existed reads this way).
             `calendar_read_only`: the connection lacks the calendar write grant. `calendar_unavailable`:
             the connection is gone or refused. `team_not_ready`: a team member has not confirmed, has
-            left, or has no calendar Margince can read; `team_members` says which. Answered on the
-            host's own profile read only.
+            left, or has no calendar Margince can read; the team link's `team_members` says which.
+            Answered on the host's own reads only.
         team_members:
           type: array
           maxItems: 5
+          deprecated: true
           items: { $ref: '#/components/schemas/SchedulingTeamMember' }
           description: |
-            Colleagues who must attend every meeting booked through this page. Guests see only the
-            times when the host and every member are free, inside each one's own working hours, and
-            each booking invites every member. A member named here starts as `pending` and the page
-            takes no bookings until every member has confirmed. Only `user_id` is read from a
-            request; a colleague not offered by `GET /scheduling/team-candidates` is refused.
+            The personal page names no colleagues: it offers the host's own free time alone. A
+            request naming a member answers 422 on `team_members`; an empty list is accepted. A
+            response does not carry the field. Colleagues are named on a team link
+            (`POST /scheduling/team-links`).
     SchedulingTeamMember:
       type: object
       required: [user_id]
@@ -60290,12 +60425,47 @@ components:
         name: { type: string }
     SchedulingTeamRequest:
       type: object
-      required: [host_user_id, host_name, title, state]
+      required: [page_id, host_user_id, host_name, title, state]
       properties:
+        page_id: { type: string, format: uuid, description: 'The team link that names the caller; answer it with `PUT /scheduling/team-links/{page_id}/answer`.' }
         host_user_id: { type: string, format: uuid }
         host_name: { type: string }
-        title: { type: string, description: The meeting title the link offers. }
+        title: { type: string, description: "The team link's name, which is the meeting title it offers." }
         state: { type: string, enum: [pending, confirmed], x-extensible-enum: true }
+    SchedulingTeamLink:
+      type: object
+      required: [id, title, enabled, team_members, slug, blocker]
+      description: |
+        A booking link that names colleagues who attend every meeting booked through it. It uses
+        the calendar and booking settings of its owner's personal page, and has its own address.
+      properties:
+        id: { type: string, format: uuid }
+        title: { type: string, maxLength: 200, description: "The link's name, which is also the meeting title guests see." }
+        enabled: { type: boolean, description: Whether the owner switched the link on. }
+        team_members:
+          type: array
+          maxItems: 5
+          items: { $ref: '#/components/schemas/SchedulingTeamMember' }
+        slug: { type: string }
+        public_url: { type: string, description: 'The address to share, `/book/{slug}` on the configured public origin. Absent when no usable public origin is configured.' }
+        blocker:
+          type: string
+          enum: [none, no_calendar, calendar_read_only, calendar_unavailable, team_not_ready]
+          x-extensible-enum: true
+          description: Why the link takes no bookings now, with the meanings `SchedulingProfile.blocker` gives them.
+    SchedulingTeamLinkRequest:
+      type: object
+      additionalProperties: false
+      required: [title, team_members]
+      properties:
+        title: { type: string, maxLength: 200 }
+        enabled: { type: boolean, description: Absent means on. }
+        team_members:
+          type: array
+          minItems: 1
+          maxItems: 5
+          items: { $ref: '#/components/schemas/SchedulingTeamMember' }
+          description: Only `user_id` is read. A member's answer is theirs to give.
     SchedulingTeamAnswer:
       type: object
       additionalProperties: false

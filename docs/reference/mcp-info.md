@@ -17,7 +17,7 @@ input and output schema in folds below it. What a tool may do and whether a huma
 | Resources | 14 |
 | Tool catalog | 243.9 KB |
 | Resource catalog | 5.5 KB |
-| Approx. wire tokens | 63841 |
+| Approx. wire tokens | 63852 |
 | Largest tool | `read_details` (15.8 KB) |
 | Scopes rendered | `read`, `draft`, `write`, `send`, `enrich` |
 
@@ -34,11 +34,11 @@ tool adds to that listing, and what it costs each scheduled agent, agent by agen
 |---|---:|---:|---|
 | Output schemas | 33.7 KB | 13% | **No**: a result's shape, never listed to a model |
 | Descriptions (incl. governance clause) | 51.0 KB | 20% | Yes, every step |
-| Input schemas | 147.6 KB | 60% | Yes, every step |
+| Input schemas | 147.7 KB | 60% | Yes, every step |
 | _Names, annotations, punctuation_ | 11.6 KB | 4% | Partly |
 | **Description + input schema** | **198.7 KB** | **81%** | **the recurring cost** |
 
-Output schemas are the largest part of the total and are never sent to a model;
+Output schemas count in the total but are never sent to a model;
 descriptions and input schemas are what each step pays for.
 
 ## Index
@@ -2272,12 +2272,12 @@ actions decide_commission, disqualify, transfer_projects.)
           "type": "string"
         },
         "pipeline_id": {
-          "description": "Choose from the workspace's pipeline list with list_pipelines.",
+          "description": "Choose from the workspace's pipeline list with read_workspace with topic=pipelines.",
           "format": "uuid",
           "type": "string"
         },
         "stage_id": {
-          "description": "Choose an open stage from the workspace's pipeline list with list_pipelines.",
+          "description": "Choose an open stage from the workspace's pipeline list with read_workspace with topic=pipelines.",
           "format": "uuid",
           "type": "string"
         }
