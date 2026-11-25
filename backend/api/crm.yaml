@@ -48526,6 +48526,7 @@ components:
         object:     { $ref: '#/components/schemas/ImportObject' }   # absent for a ZIP run, whose types are in `parts`
         file_name:   { type: string, description: 'The uploaded file''s name, as the run was created with it. Display only.' }
         source_name: { type: string, description: 'The name the run''s source is filed under.' }
+        row_count:   { type: integer, minimum: 0, readOnly: true, description: 'Rows the upload counted in the file, a ZIP''s files added together. Present while the run keeps what the upload read of the file, in a list too, so a draft no test has read still says how many rows it holds.' }
         parts:
           type: array
           items: { $ref: '#/components/schemas/ImportRunPart' }
@@ -48611,6 +48612,7 @@ components:
         file:      { type: string, description: 'The ZIP entry, or the uploaded file''s name for a single CSV. Empty for a single CSV created without `file_name`.' }
         object:    { $ref: '#/components/schemas/ImportObject' }
         row_count: { type: integer, minimum: 0, description: 'Rows the file holds, once a dry run has read it; 0 before.' }
+        rows_written: { type: integer, minimum: 0, readOnly: true, description: 'Rows of the file the run created or updated. Present once the run has written: `complete`, `failed`, `undoing` or `undone`.' }
         mapping:
           type: object
           additionalProperties: { type: string }
