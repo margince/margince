@@ -10591,6 +10591,16 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Füge diesen Text in ~/.gemini/config/mcp_config.json ein. Stehen in der Datei schon Server, füge nur den Eintrag margince daneben ein.",
   "aiAccess.local.antigravity.signIn":
     "Öffne die Agent-Einstellungen, dann „Customizations“, und wähle „Authenticate“ neben margince.",
+  "aiAccess.place.lumoNote":
+    "Lumo im Web kann noch keine anderen Apps verbinden. Nutze die Lumo-Desktop-App, die du unter proton.me/lumo/download herunterladen kannst.",
+  "aiAccess.local.lumo.open":
+    "Wähle in Lumo Desktop unten in der Seitenleiste „Settings“, dann „Desktop app“ und „Connectors“.",
+  "aiAccess.local.lumo.add":
+    "Wähle „Add MCP server…“ und stelle „Transport“ auf „Remote (HTTP)“.",
+  "aiAccess.local.lumo.fill":
+    "Gib margince als ID und Margince als Display name ein, ergänze eine kurze Beschreibung und füge die Adresse ein.",
+  "aiAccess.local.lumo.signIn":
+    "Wähle „Add server“. Wenn Lumo dazu auffordert, öffnet sich Margince: melde dich an und wähle Authorize.",
   "aiAccess.other.sub":
     "Margince funktioniert mit jedem KI-Tool, das einen entfernten MCP-Server hinzufügen kann. Suche in seinen Einstellungen nach „MCP“, „Connectors“ oder „Tools“.",
   "aiAccess.other.typeLabel": "Typ",

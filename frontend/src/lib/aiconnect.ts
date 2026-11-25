@@ -175,7 +175,8 @@ export type CliId =
   | "vscode"
   | "visual-studio"
   | "cursor"
-  | "antigravity";
+  | "antigravity"
+  | "lumo";
 
 // Product names, typed as the vendor spells them in every language.
 export const CLI_NAMES: Readonly<Record<CliId, string>> = {
@@ -185,6 +186,7 @@ export const CLI_NAMES: Readonly<Record<CliId, string>> = {
   "visual-studio": "Visual Studio",
   cursor: "Cursor",
   antigravity: "Antigravity",
+  lumo: "Lumo Desktop",
 };
 
 /** One step, and what it hands the reader to copy: the address, or a command
@@ -276,6 +278,17 @@ export const CLI_PATHS: readonly CliPath[] = [
       ALLOW,
     ],
   },
+  {
+    id: "lumo",
+    // Lumo's website cannot add a custom MCP server; the desktop app can.
+    help: "https://proton.me/lumo/download",
+    steps: [
+      { text: "aiAccess.local.lumo.open" },
+      { text: "aiAccess.local.lumo.add" },
+      { text: "aiAccess.local.lumo.fill", copy: "address" },
+      { text: "aiAccess.local.lumo.signIn" },
+    ],
+  },
 ];
 
 export function cliPath(id: CliId): CliPath {
@@ -295,6 +308,7 @@ export const AI_CHOICES = [
   "copilot",
   "gemini",
   "cursor",
+  "lumo",
   "other",
 ] as const;
 export type AiChoice = (typeof AI_CHOICES)[number];
@@ -308,6 +322,7 @@ export const AI_CHOICE_NAMES: Readonly<
   copilot: "Copilot",
   gemini: "Gemini",
   cursor: "Cursor",
+  lumo: "Lumo",
 };
 
 // The mark beside each answer: a vendor's logo where one is drawn, otherwise a
@@ -332,6 +347,8 @@ export const AI_CHOICE_MARKS: Readonly<Record<AiChoice, AiMark>> = {
   copilot: "github-copilot",
   gemini: "gemini",
   cursor: "cursor",
+  // A plain icon: the licence of Proton's logo is not yet checked.
+  lumo: "other",
   other: "other",
 };
 
@@ -453,6 +470,14 @@ export const AI_PLACES: Readonly<Record<AiChoice, readonly AiPlace[]>> = {
   ],
   cursor: [
     { id: "cursor", mark: "cursor", route: { kind: "local", cli: "cursor" } },
+  ],
+  lumo: [
+    {
+      id: "lumo",
+      mark: "other",
+      route: { kind: "local", cli: "lumo" },
+      note: "aiAccess.place.lumoNote",
+    },
   ],
   other: [],
 };

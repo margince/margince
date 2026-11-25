@@ -10294,6 +10294,16 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Thêm nội dung này vào ~/.gemini/config/mcp_config.json. Nếu tệp đã có máy chủ khác, chỉ thêm mục margince bên cạnh chúng.",
   "aiAccess.local.antigravity.signIn":
     "Mở cài đặt agent, rồi “Customizations”, và chọn “Authenticate” bên cạnh margince.",
+  "aiAccess.place.lumoNote":
+    "Lumo trên web chưa thể kết nối với ứng dụng khác. Hãy dùng ứng dụng Lumo cho máy tính, tải tại proton.me/lumo/download.",
+  "aiAccess.local.lumo.open":
+    "Trong Lumo Desktop, chọn “Settings” ở cuối thanh bên, rồi “Desktop app” và “Connectors”.",
+  "aiAccess.local.lumo.add":
+    "Chọn “Add MCP server…” và đặt “Transport” thành “Remote (HTTP)”.",
+  "aiAccess.local.lumo.fill":
+    "Nhập margince làm ID và Margince làm Display name, thêm mô tả ngắn rồi dán địa chỉ.",
+  "aiAccess.local.lumo.signIn":
+    "Chọn “Add server”. Khi Lumo yêu cầu, Margince mở ra: hãy đăng nhập và chọn Authorize.",
   "aiAccess.other.sub":
     "Margince hoạt động với mọi công cụ AI có thể thêm máy chủ MCP từ xa. Hãy tìm “MCP”, “connectors” hoặc “tools” trong phần cài đặt của nó.",
   "aiAccess.other.typeLabel": "Loại",
