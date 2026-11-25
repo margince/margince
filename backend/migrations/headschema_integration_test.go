@@ -18,10 +18,9 @@ package migrations_test
 // migration (~1.3s each) to arrive at a schema the lane had already handed them:
 // every clone is copied from an already-migrated template.
 //
-// So: build head ONCE per process, then verify it is still head before each
-// later use and rebuild only when it is not. The verification is what makes this
-// safe to mix with the rewinding suites in the same binary — they run on the
-// same database, and one of them leaves it two migrations short.
+// So: take the test's copy as it comes, verify it is still head, and rebuild
+// only when it is not. A rewinding suite leaves its own copy short of head, and
+// the verification catches a helper that rewound before it asked.
 
 import (
 	"context"
@@ -30,10 +29,14 @@ import (
 	"testing"
 
 	"github.com/jackc/pgx/v5"
+
+	"github.com/margince/margince/backend/internal/platform/testdb"
 )
 
-// headFingerprint is the catalog of the schema this process built at head,
-// captured the first time headSchema ran. Empty until then.
+// headFingerprint is the catalog of the schema the last rebuild in this
+// process produced at head. Empty until a rebuild ran. templateFingerprint is
+// the catalog of an untouched copy of the lane's template, which also carries
+// River's tables and the composed units' tables a rebuild does not build.
 //
 // A digest of the catalog, not the migration ledger's version set. The ledger
 // records a version, not a checksum — scripts/lib-testdb.sh says so where it
@@ -42,10 +45,10 @@ import (
 // build". Both questions have to come out right here: a rewinding suite that
 // leaves the ledger at head having altered a table would pass a version check
 // and hand the next reader a schema nothing in this package built.
-var headFingerprint string
+var headFingerprint, templateFingerprint string
 
-// headMu guards headFingerprint for the tests that run in parallel, each on a
-// database of its own.
+// headMu guards both fingerprints for the tests that run in parallel, each on
+// a database of its own.
 var headMu sync.Mutex
 
 // headSchema hands the caller a database at head with no rows in it.
@@ -58,27 +61,43 @@ func headSchema(t *testing.T, conn *pgx.Conn) {
 // full drop-and-replay. Only its own tests read the answer: both paths leave a
 // database at head with no rows, so nothing else can tell them apart.
 //
-// The FIRST call in the process rebuilds unconditionally — drop, then replay
-// every embedded migration — so the reference catalog is one this binary's own
-// migrations produced rather than whatever the template happened to hold. That
-// closes the case the template cannot: the ledger cannot see an edited or
-// renumbered migration, so a clone built from a template that diverged from this
-// checkout is at "head" by the only measure the database keeps.
-//
-// Later calls compare the live catalog against that reference and rebuild only
-// on a mismatch, which is what the rewinding suites in this package produce.
-// Matching costs one query instead of a full replay.
+// A test's own copy of the template is at head: testdb proves the template's
+// ledger against the content digests this binary embeds before it hands out a
+// copy. So a catalog that matches an untouched copy, or the one the last
+// rebuild produced, is head, and only a suite that rewound its own database
+// pays for a replay. Matching costs one query instead of a full replay.
 func headSchemaRebuilt(t *testing.T, conn *pgx.Conn) bool {
 	t.Helper()
-	headMu.Lock()
-	defer headMu.Unlock()
-	if headFingerprint != "" && catalogDigest(t, conn) == headFingerprint {
+	template, built := fingerprints(t)
+	if digest := catalogDigest(t, conn); digest == template || (built != "" && digest == built) {
 		return false
 	}
 	resetSchema(t, conn)
 	migrateAll(t, conn)
-	headFingerprint = catalogDigest(t, conn)
+	digest := catalogDigest(t, conn)
+	headMu.Lock()
+	headFingerprint = digest
+	headMu.Unlock()
 	return true
+}
+
+// fingerprints answers the untouched template's digest, taking it on first
+// use, and the digest of the last rebuild.
+func fingerprints(t *testing.T) (template, built string) {
+	t.Helper()
+	headMu.Lock()
+	defer headMu.Unlock()
+	if templateFingerprint == "" {
+		templateFingerprint = untouchedDigest(t)
+	}
+	return templateFingerprint, headFingerprint
+}
+
+// untouchedDigest is the catalog of a template copy no test has written to.
+func untouchedDigest(t *testing.T) string {
+	t.Helper()
+	conn := connect(t, testdb.Untouched(t).OwnerDSN)
+	return catalogDigest(t, conn)
 }
 
 // catalogDigest is one md5 over the schema the migrations build, at the grain the
@@ -382,7 +401,7 @@ func TestHeadSchemaRebuildsWhateverTheDigestClaimsToWatch(t *testing.T) {
 				t.Fatalf("headSchema did not rebuild after %q — "+
 					"the ledger still reads head, so the digest is the only thing that can see this", move.name)
 			}
-			if catalogDigest(t, conn) != headFingerprint {
+			if _, built := fingerprints(t); catalogDigest(t, conn) != built {
 				t.Fatal("the rebuilt catalog does not match the head this process built")
 			}
 		})

@@ -120,6 +120,23 @@ func For(t testing.TB) Database {
 	return create(t, inPlaceRequested())
 }
 
+// Untouched answers a copy of the template that no test has written to, for a
+// caller that compares a database it changed against what the lane started
+// it from. For never answers this copy, and it is dropped when t ends.
+func Untouched(t testing.TB) Database {
+	t.Helper()
+	db, err := copyTemplate(t.Context(), os.Getenv(TemplateEnv))
+	if err != nil {
+		t.Fatalf("testdb: %v", err)
+	}
+	t.Cleanup(func() {
+		if err := release(context.Background(), "", db); err != nil {
+			t.Errorf("testdb: %v", err)
+		}
+	})
+	return db
+}
+
 func inPlaceRequested() bool { return os.Getenv(InPlaceEnv) == "1" }
 
 // create copies the template for t and drops the copy when t ends, after
