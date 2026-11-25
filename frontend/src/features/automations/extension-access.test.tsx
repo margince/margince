@@ -369,7 +369,7 @@ describe("ExtensionAccessCard", () => {
       throw new Error("no unit block rendered for quiet");
     }
     expect(
-      within(quiet).getByText(/registers no permission objects/i),
+      within(quiet).getByText(/has no permissions to grant/i),
     ).toBeTruthy();
   });
 

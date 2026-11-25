@@ -23,6 +23,7 @@ import { catalogContext } from "./settingsnav";
 import { COMPANY_CONTEXT_OFF, EVERY_GRANT } from "./settingspages.fixtures";
 import {
   COMPANY_CONTEXT_SECTIONS,
+  SUBPAGE_SECTIONS,
   settingsSectionKeys,
 } from "./settingssections";
 import { settingsTabLabel } from "./settingstabs";
@@ -167,13 +168,17 @@ function drawnSections(page: SettingsPageId, tab: string | undefined) {
   ].map(t);
 }
 
-const TAB_NAMES = new Set<string>(
-  SETTINGS_PAGES.flatMap((page) =>
+// A sub-address leads with its own name too, drawn by the switch that opens it.
+const TAB_NAMES = new Set<string>([
+  ...SETTINGS_PAGES.flatMap((page) =>
     "tabs" in page
       ? page.tabs.flatMap((tab) => settingsTabLabel(page.id, tab.id) ?? [])
       : [],
   ),
-);
+  ...Object.values(SUBPAGE_SECTIONS).flatMap((parts) =>
+    Object.values(parts ?? {}).flatMap((keys) => keys[0] ?? []),
+  ),
+]);
 
 async function expectTabDraws(
   Story: (typeof pageStories)[number],

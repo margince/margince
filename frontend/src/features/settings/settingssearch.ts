@@ -393,7 +393,11 @@ export function settingsSearch(
     if (holdsEveryWord(words, fields)) {
       const rank = Math.min(...words.map((word) => rankOf(word, fields)));
       const best = Math.floor(rank / 2);
-      const section = namedSection(words, sections, best - named.length);
+      // A setting named in full opens where it is drawn, even when one of its
+      // words also names the page.
+      const section =
+        sections.find((each) => fold(each) === words.join(" ")) ??
+        namedSection(words, sections, best - named.length);
       const tabIndex = best - (named.length - tabWords.length);
       const tab = matchedTab(
         page.id,

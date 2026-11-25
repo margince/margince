@@ -9,8 +9,9 @@ import {
   type SettingsPage,
   type SettingsPageId,
 } from "../../lib/settingscatalog";
+import { AGENT_RULES_SUBPAGE, settingsHref } from "../../lib/settingsrouting";
 import type { SettingName } from "./configurationentries";
-import { settingsSearch } from "./settingssearch";
+import { settingsSearch, settingsSearchRoute } from "./settingssearch";
 
 const t = (key: MessageKey) => translate("en", key);
 const de = (key: MessageKey) => translate("de", key);
@@ -97,6 +98,21 @@ describe("settingsSearch", () => {
     const activity = settingsSearch("capture activity", ALL, t);
     expect(activity[0]?.page.id).toBe("connections");
     expect(activity[0]?.tab).toBe("activity");
+  });
+
+  // Agent rules has an address under AI assistants, and a hit on it opens there;
+  // the reader's own switches stand on the page itself.
+  it("opens Agent rules at its own address, and Automatic changes on the page", () => {
+    const rules = settingsSearch("agent rules", ALL, t)[0];
+    expect(rules?.page.id).toBe("agents");
+    expect(rules && settingsSearchRoute(rules)).toEqual(
+      settingsHref("agents", AGENT_RULES_SUBPAGE),
+    );
+    const tiers = settingsSearch("autonomy tiers", ALL, t)[0];
+    expect(tiers?.tab).toBe(AGENT_RULES_SUBPAGE);
+    const own = settingsSearch("automatic changes", ALL, t)[0];
+    expect(own?.page.id).toBe("agents");
+    expect(own && settingsSearchRoute(own)).toEqual(settingsHref("agents"));
   });
 
   // Two pages can each honestly answer one word, and picking one would make the

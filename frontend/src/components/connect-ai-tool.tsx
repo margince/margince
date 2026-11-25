@@ -47,7 +47,7 @@ export function ConnectAiToolCard() {
     <Panel title={t("aiAccess.connect.title")}>
       <PanelBody>
         <PanelIntro>{t("aiAccess.connect.sub")}</PanelIntro>
-        <ConnectAiTool />
+        <ConnectAiTool passportsBelow />
         <p className="t-caption aiconnect-devhint">
           {t("aiAccess.connect.devHint")}
         </p>
@@ -56,15 +56,20 @@ export function ConnectAiToolCard() {
   );
 }
 
-/** The picker and its steps without a card, for a dialog that has its own. */
-export function ConnectAiTool() {
+/**
+ * The picker and its steps without a card, for a dialog that has its own.
+ * `passportsBelow` says the page draws For developers under it.
+ */
+export function ConnectAiTool({
+  passportsBelow = false,
+}: Readonly<{ passportsBelow?: boolean }>) {
   const t = useT();
   const connector = useConnectorState();
   return (
     <QueryGate query={connector} pendingLabel={t("aiAccess.connect.title")}>
       {(state) =>
         state.enabled ? (
-          <Picker mcpUrl={state.url} />
+          <Picker mcpUrl={state.url} passportsBelow={passportsBelow} />
         ) : (
           <Callout title={t("agents.connectorOff")}>
             {t("agents.connectorOffDetail")}
@@ -75,7 +80,10 @@ export function ConnectAiTool() {
   );
 }
 
-function Picker({ mcpUrl }: Readonly<{ mcpUrl: string }>) {
+function Picker({
+  mcpUrl,
+  passportsBelow,
+}: Readonly<{ mcpUrl: string; passportsBelow: boolean }>) {
   const t = useT();
   const [choice, setChoice] = useState<AiChoice>("claude");
   const [placeId, setPlaceId] = useState(AI_PLACES.claude[0]?.id ?? "");
@@ -125,7 +133,7 @@ function Picker({ mcpUrl }: Readonly<{ mcpUrl: string }>) {
         )}
       </div>
       {place === undefined ? (
-        <OtherPath mcpUrl={mcpUrl} />
+        <OtherPath mcpUrl={mcpUrl} passportsBelow={passportsBelow} />
       ) : (
         <PlacePath
           key={`${choice}-${place.id}`}
@@ -230,7 +238,10 @@ function LocalPath({
 
 // Any tool that adds a remote MCP server gets the three facts each one asks for.
 // Two captions cover a tool that cannot use one of them.
-function OtherPath({ mcpUrl }: Readonly<{ mcpUrl: string }>) {
+function OtherPath({
+  mcpUrl,
+  passportsBelow,
+}: Readonly<{ mcpUrl: string; passportsBelow: boolean }>) {
   const t = useT();
   return (
     <div className="aiconnect-path" data-testid="aiconnect-path">
@@ -245,7 +256,13 @@ function OtherPath({ mcpUrl }: Readonly<{ mcpUrl: string }>) {
         <dt>{t("aiAccess.other.signInLabel")}</dt>
         <dd>{t("aiAccess.other.signIn")}</dd>
       </dl>
-      <p className="t-caption">{t("aiAccess.other.apiKey")}</p>
+      <p className="t-caption">
+        {t(
+          passportsBelow
+            ? "aiAccess.other.apiKeyBelow"
+            : "aiAccess.other.apiKey",
+        )}
+      </p>
       <p className="t-caption">{t("aiAccess.other.notAllowed")}</p>
     </div>
   );
