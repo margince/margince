@@ -11,9 +11,11 @@ package compose
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/compose/dayrule"
 	"github.com/margince/margince/backend/internal/compose/weekly"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/assurance"
@@ -21,6 +23,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/shared/kernel/idlebase"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/occurredday"
 )
 
 // WeeklyAttention binds the team read's live lists. Stateless: every read
@@ -61,22 +64,32 @@ func (WeeklyAttention) StalledDealsOf(
 	if scope == "" {
 		scope = sqlUnnarrowed
 	}
+	zone, err := dayrule.Zone(ctx, tx, occurredday.Combined, ids.Nil)
+	if err != nil {
+		return nil, err
+	}
 	quiet := idlebase.SQL("d")
 	query := fmt.Sprintf(`
-		SELECT d.id, d.name, d.owner_id, %[1]s,
-		       (extract(epoch FROM now() - %[1]s) / 86400)::int
+		SELECT d.id, d.name, d.owner_id, %[1]s, %[2]s, now()
 		  FROM deal d
-		 WHERE d.archived_at IS NULL AND d.owner_id = ANY($%[2]d) AND %[3]s AND (%[4]s)
+		 WHERE d.archived_at IS NULL AND d.owner_id = ANY($%[3]d) AND %[4]s AND (%[5]s)
 		 ORDER BY %[1]s, d.id
-		 LIMIT $%[5]d`, quiet, arg(members), deals.StalledSQL("d"), scope, arg(limit))
+		 LIMIT $%[6]d`, quiet, deals.LastActivityDaySQL("d"), arg(members), deals.StalledSQL("d"), scope, arg(limit))
 	rows, err := tx.Query(ctx, query, args...)
 	if err != nil {
 		return nil, fmt.Errorf("compose: reading the team's stalled deals: %w", err)
 	}
+	// A date-only newest activity counts from its own date, so a team far east
+	// of UTC does not read the deal a day less quiet than it is.
 	stale, err := pgx.CollectRows(rows, func(row pgx.CollectableRow) (weekly.StaleDeal, error) {
 		var d weekly.StaleDeal
-		err := row.Scan(&d.DealID, &d.DealName, &d.OwnerID, &d.LastActivityAt, &d.DaysQuiet)
-		return d, err
+		var since occurredday.Moment
+		var asOf time.Time
+		if err := row.Scan(&d.DealID, &d.DealName, &d.OwnerID, &since.At, &since.DateOnly, &asOf); err != nil {
+			return d, err
+		}
+		d.LastActivityAt, d.DaysQuiet = since.At, occurredday.DaysSince(since, asOf, zone)
+		return d, nil
 	})
 	if err != nil {
 		return nil, fmt.Errorf("compose: reading the team's stalled deals: %w", err)

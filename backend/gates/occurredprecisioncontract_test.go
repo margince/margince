@@ -140,7 +140,6 @@ var precisionlessTimes = gatekit.Waive(map[string]string{
 		"the row was marked done; the description names occurred_at to say it is not that",
 	"api/crm.yaml Company.last_activity_at":                          storedClock,
 	"api/crm.yaml Contact.last_activity_at":                          storedClock,
-	"api/crm.yaml Deal.last_activity_at":                             storedClock,
 	"api/crm.yaml Project.last_activity_at":                          storedClock,
 	"api/crm.yaml SearchHitStanding.last_activity_at":                storedClock,
 	"api/crm.yaml Project360Rollups.last_activity_at":                storedClock,

@@ -244,3 +244,50 @@ func TestADayEntryRendersAtNoonUTCOnEveryDoor(t *testing.T) {
 		"kind": "note", "subject": "Fair", "occurred_at": noon, "occurred_precision": "day",
 	}))
 }
+
+// A deal says how to read its last activity, from the activity the clock
+// names, on its own read and in the list.
+func TestADealSaysWhetherItsLastActivityIsADay(t *testing.T) {
+	e := apptest.SetupApp(t)
+	e.BootstrapWorkspace(t)
+	stages := apptest.DiscoverSeededPipeline(t, e)
+	cases := map[string]AnyMap{
+		"day":     {"occurred_at": "2025-03-09T12:00:00Z", "occurred_precision": "day"},
+		"instant": {"occurred_at": "2025-03-09T12:00:00Z"},
+	}
+	for want, when := range cases {
+		dealID := apptest.CreateOpenDeal(t, e, stages)
+		note := AnyMap{"kind": "note", "subject": "Met at the fair", "source": "manual",
+			"links": []AnyMap{{"entity_type": "deal", "entity_id": dealID}}}
+		for key, value := range when {
+			note[key] = value
+		}
+		mustCall(t, e, "POST", "/v1/activities", note, http.StatusCreated, nil)
+		var deal struct {
+			Precision string `json:"last_activity_precision"`
+		}
+		mustCall(t, e, "GET", "/v1/deals/"+dealID, nil, http.StatusOK, &deal)
+		if deal.Precision != want {
+			t.Errorf("a deal whose last activity is a %s reads last_activity_precision %q", want, deal.Precision)
+		}
+		var list struct {
+			Data []struct {
+				ID        string `json:"id"`
+				Precision string `json:"last_activity_precision"`
+			} `json:"data"`
+		}
+		mustCall(t, e, "GET", "/v1/deals?limit=200", nil, http.StatusOK, &list)
+		for _, row := range list.Data {
+			if row.ID == dealID && row.Precision != want {
+				t.Errorf("the deal list reads a %s last activity as %q", want, row.Precision)
+			}
+		}
+	}
+	var untouched struct {
+		Precision *string `json:"last_activity_precision"`
+	}
+	mustCall(t, e, "GET", "/v1/deals/"+apptest.CreateOpenDeal(t, e, stages), nil, http.StatusOK, &untouched)
+	if untouched.Precision != nil {
+		t.Errorf("a deal with no activity reads last_activity_precision %q, want none", *untouched.Precision)
+	}
+}

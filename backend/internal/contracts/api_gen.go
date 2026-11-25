@@ -49281,6 +49281,9 @@ type Deal struct {
 	// LastActivityAt The newest `occurred_at` at or before now of an activity filed under the deal, so a booked meeting counts once it starts. A task never counts, whoever filed it, and neither does a canceled or no-show meeting. Drives the deterministic stalled flag. A message limited to its participants counts by its date alone, so a deal worked through private mail does not read as stalled. The deal timeline already lists such a message to every reader of the deal with its time, so its date reveals nothing new; its text and sender stay with its audience, a message limited to a chosen audience does not count, and no contact or company date moves for it.
 	LastActivityAt *time.Time `json:"last_activity_at,omitempty"`
 
+	// LastActivityPrecision How to read `last_activity_at`, from the activity it names. A day entry counts its quiet days from its own date. Absent when that is null.
+	LastActivityPrecision *OccurredPrecision `json:"last_activity_precision,omitempty"`
+
 	// LastEmail The newest email on this deal that the whole workspace may see — what a board card states as "last mail, N days ago" beside the deal, so a rep reads the silence without opening every card. Null on a deal nobody has mailed about. Counts what `last_activity_at` counts, narrowed to mail: workspace-audience rows only, and never the product's own system writing — a message limited to its participants must not move a date every colleague reads, and a mail the installation sent itself is not the buyer engaging. The rows a reader may discover through `GET /activities` can therefore be newer than this instant.
 	LastEmail *DealLastEmail `json:"last_email,omitempty"`
 
@@ -49459,6 +49462,9 @@ type DealAdvanced struct {
 
 	// LastActivityAt The newest `occurred_at` at or before now of an activity filed under the deal, so a booked meeting counts once it starts. A task never counts, whoever filed it, and neither does a canceled or no-show meeting. Drives the deterministic stalled flag. A message limited to its participants counts by its date alone, so a deal worked through private mail does not read as stalled. The deal timeline already lists such a message to every reader of the deal with its time, so its date reveals nothing new; its text and sender stay with its audience, a message limited to a chosen audience does not count, and no contact or company date moves for it.
 	LastActivityAt *time.Time `json:"last_activity_at,omitempty"`
+
+	// LastActivityPrecision How to read `last_activity_at`, from the activity it names. A day entry counts its quiet days from its own date. Absent when that is null.
+	LastActivityPrecision *OccurredPrecision `json:"last_activity_precision,omitempty"`
 
 	// LastEmail The newest email on this deal that the whole workspace may see — what a board card states as "last mail, N days ago" beside the deal, so a rep reads the silence without opening every card. Null on a deal nobody has mailed about. Counts what `last_activity_at` counts, narrowed to mail: workspace-audience rows only, and never the product's own system writing — a message limited to its participants must not move a date every colleague reads, and a mail the installation sent itself is not the buyer engaging. The rows a reader may discover through `GET /activities` can therefore be newer than this instant.
 	LastEmail *DealLastEmail `json:"last_email,omitempty"`
@@ -93683,6 +93689,14 @@ func (a *Deal) UnmarshalJSON(b []byte) error {
 		delete(object, "last_activity_at")
 	}
 
+	if raw, found := object["last_activity_precision"]; found {
+		err = json.Unmarshal(raw, &a.LastActivityPrecision)
+		if err != nil {
+			return fmt.Errorf("error reading 'last_activity_precision': %w", err)
+		}
+		delete(object, "last_activity_precision")
+	}
+
 	if raw, found := object["last_email"]; found {
 		err = json.Unmarshal(raw, &a.LastEmail)
 		if err != nil {
@@ -94125,6 +94139,13 @@ func (a Deal) MarshalJSON() ([]byte, error) {
 		object["last_activity_at"], err = json.Marshal(a.LastActivityAt)
 		if err != nil {
 			return nil, fmt.Errorf("error marshaling 'last_activity_at': %w", err)
+		}
+	}
+
+	if a.LastActivityPrecision != nil {
+		object["last_activity_precision"], err = json.Marshal(a.LastActivityPrecision)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'last_activity_precision': %w", err)
 		}
 	}
 
@@ -94571,6 +94592,14 @@ func (a *DealAdvanced) UnmarshalJSON(b []byte) error {
 			return fmt.Errorf("error reading 'last_activity_at': %w", err)
 		}
 		delete(object, "last_activity_at")
+	}
+
+	if raw, found := object["last_activity_precision"]; found {
+		err = json.Unmarshal(raw, &a.LastActivityPrecision)
+		if err != nil {
+			return fmt.Errorf("error reading 'last_activity_precision': %w", err)
+		}
+		delete(object, "last_activity_precision")
 	}
 
 	if raw, found := object["last_email"]; found {
@@ -95023,6 +95052,13 @@ func (a DealAdvanced) MarshalJSON() ([]byte, error) {
 		object["last_activity_at"], err = json.Marshal(a.LastActivityAt)
 		if err != nil {
 			return nil, fmt.Errorf("error marshaling 'last_activity_at': %w", err)
+		}
+	}
+
+	if a.LastActivityPrecision != nil {
+		object["last_activity_precision"], err = json.Marshal(a.LastActivityPrecision)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'last_activity_precision': %w", err)
 		}
 	}
 

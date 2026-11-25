@@ -38,7 +38,7 @@ var dealColumns = `id, name, amount_minor, expected_arr_minor, arr_source_offer_
 	description, commercial_motion, priority, acquisition_source,
 	expected_close_date, close_date_provisional, closed_at, win_probability_override, win_probability_set_by,
 	` + StageWinProbabilitySQL("") + `, wait_until, ` + PauseEndsSQL("") + `, last_activity_at,
-	` + MeetingAheadSQL("") + `,
+	` + MeetingAheadSQL("") + `, ` + LastActivityDaySQL(dealTable) + `,
 	source, captured_by,
 	source_system, source_author_id, source_author_name,
 	` + sourceAuthorSeatNameSQL("deal") + `,
@@ -71,7 +71,7 @@ func scanDeal(row pgx.Row, active []fieldcatalog.Column, extra ...any) (crmcontr
 	var overrideBy *string
 	var stageProbability int
 	var expectedClose, waitUntil, fxRateDate, pauseEnds *time.Time
-	var closeDateProvisional, meetingAhead bool
+	var closeDateProvisional, meetingAhead, lastActivityDay bool
 	var version int64
 
 	var wonReason, motion, priority, lossBasis *string
@@ -84,7 +84,7 @@ func scanDeal(row pgx.Row, active []fieldcatalog.Column, extra ...any) (crmcontr
 		&d.LostReasonCode, &lossBasis, &wonReason, &d.WonWithoutContractDetail,
 		&d.Description, &motion, &priority, &d.AcquisitionSource,
 		&expectedClose, &closeDateProvisional, &d.ClosedAt, &override, &overrideBy, &stageProbability, &waitUntil, &pauseEnds, &d.LastActivityAt,
-		&meetingAhead,
+		&meetingAhead, &lastActivityDay,
 		&d.Source, &d.CapturedBy,
 		&sourceSystem, &authorID, &authorName, &authorSeatName,
 		&version, &d.CreatedAt, &d.UpdatedAt, &d.ArchivedAt, &d.LegalHold, &mergedInto,
@@ -129,7 +129,21 @@ func scanDeal(row pgx.Row, active []fieldcatalog.Column, extra ...any) (crmcontr
 	d.ImportedFrom = provenance.ImportedFrom(sourceSystem)
 	stalled := IsStalled(status, d.CreatedAt, d.LastActivityAt, pauseEnds, meetingAhead, time.Now().UTC())
 	d.Stalled = &stalled
+	d.LastActivityPrecision = lastActivityPrecision(d.LastActivityAt, lastActivityDay)
 	return d, nil
+}
+
+// lastActivityPrecision says how to read the deal's stored clock, nil when it
+// holds none.
+func lastActivityPrecision(at *time.Time, day bool) *crmcontracts.OccurredPrecision {
+	switch {
+	case at == nil:
+		return nil
+	case day:
+		return new(crmcontracts.OccurredPrecisionOccurredPrecisionDay)
+	default:
+		return new(crmcontracts.OccurredPrecisionOccurredPrecisionInstant)
+	}
 }
 
 // setDealEnums maps the four nullable enum columns onto their wire types.
