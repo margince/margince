@@ -260,9 +260,9 @@ func (s *Store) ListLinkSuggestions(ctx context.Context) ([]crmcontracts.LinkSug
 
 // mayDecide is the one bar for accepting or rejecting a suggestion, asked by
 // the decision and by the queue read. The caller updates messages, may change
-// this one (the write scope the relink applies, so a reject cannot decide a
-// message an accept would be refused for), and may read the target the answer
-// names. A target they cannot read is not found.
+// this one, and may read the target the answer names. The write scope is the
+// relink's, so a reject cannot decide a message an accept would refuse. A
+// target they cannot read is not found.
 func mayDecide(ctx context.Context, tx pgx.Tx, suggestion crmcontracts.LinkSuggestion) error {
 	if err := auth.Require(ctx, "activity", principal.ActionUpdate); err != nil {
 		return err

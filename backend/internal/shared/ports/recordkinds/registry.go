@@ -42,8 +42,8 @@ type Declared struct {
 	View string
 }
 
-// TitleColumn is the field a record of the kind is titled and searched by:
-// its History label field, else the first field of its natural key. Search
+// TitleColumn is the field a record of the kind is titled and searched by. It
+// is the History label field, else the first field of the natural key. Search
 // matches on it, and the readiness check asks for the index that match needs.
 func (d Declared) TitleColumn() string {
 	if d.Timeline != nil {

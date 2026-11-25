@@ -58,8 +58,7 @@ func requestedTypes(ctx context.Context, in Input) []string {
 // admittedExtensionSQL builds one ranked SELECT per requested kind the caller
 // may read. A title matches when it holds every word of the query, in any case.
 // A title that starts with the first word ranks higher. The match is a LIKE on
-// lower(title), the form the trigram index VerifyRecordKinds requires serves;
-// strpos would read every row.
+// lower(title), which the trigram index VerifyRecordKinds requires serves.
 //
 // The core branches bind the query as headPos and tailPos (0 without a
 // fragment). A statement with an unreferenced parameter fails whole.

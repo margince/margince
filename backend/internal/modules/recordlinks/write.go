@@ -187,7 +187,7 @@ func (s *Store) Delete(ctx context.Context, id ids.UUID) error {
 }
 
 // mayRemove is the one bar for removing a link, and List asks it too, so the
-// screen offers Remove exactly where Delete succeeds. The bar is Create's: the
+// screen offers Remove where Delete succeeds. The bar is Create's: the
 // caller updates the record the link starts on and can see the one it ends on.
 // A denial is ErrPermissionDenied; an end the caller cannot see is ErrNotFound.
 func mayRemove(ctx context.Context, tx pgx.Tx, link crmcontracts.RecordLink) error {

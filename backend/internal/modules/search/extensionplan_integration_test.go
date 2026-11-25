@@ -5,7 +5,7 @@
 
 package search
 
-// The search branch over an extension kind, run against a real table: the
+// The search branch over an extension kind, run against a real table. The
 // trigram index serves its match, and a wildcard in the query matches itself.
 
 import (

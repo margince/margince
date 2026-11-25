@@ -46,7 +46,7 @@ SELECT EXISTS (SELECT 1 FROM pg_index i JOIN pg_opclass o ON o.oid = i.indclass[
                   AND pg_get_indexdef(i.indexrelid, 1, true) = 'lower(' || quote_ident($2) || ')')`
 
 // kindTimelineIndexed reads whether a btree index on one ext table starts with
-// the subject column, then the time column: the History read filters on the
+// the subject column, then the time column. The History read filters on the
 // first and sorts on the second.
 const kindTimelineIndexed = `
 SELECT EXISTS (SELECT 1 FROM pg_index i JOIN pg_class c ON c.oid = i.indexrelid JOIN pg_am am ON am.oid = c.relam
