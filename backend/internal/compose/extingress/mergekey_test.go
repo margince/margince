@@ -1,12 +1,13 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-package compose
+package extingress_test
 
 import (
 	"errors"
 	"testing"
 
+	"github.com/margince/margince/backend/internal/compose/extingress"
 	"github.com/margince/margince/backend/pkg/extension"
 )
 
@@ -52,7 +53,7 @@ func TestRefuseUndeclaredMergeKey(t *testing.T) {
 		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			err := refuseUndeclaredMergeKey(tc.source, tc.cp)
+			err := extingress.RefuseUndeclaredMergeKey(tc.source, tc.cp)
 			if tc.refuse && !errors.Is(err, extension.ErrInvalid) {
 				t.Fatalf("got %v, want an ErrInvalid-class refusal", err)
 			}
@@ -73,12 +74,12 @@ func TestTheDeclarationIsStampedFromTheSourceNotTheRecord(t *testing.T) {
 		ChannelIdentity: extension.ChannelIdentity{Provider: "dispact", ChannelUserID: "U0293"},
 	}
 
-	silent := counterpartyOf(cp, extension.IngressSource{System: "inbox"})
+	silent := extingress.CounterpartyOf(cp, extension.IngressSource{System: "inbox"})
 	if silent.MayCorroborateByEmail() {
 		t.Error("a record from a source declaring nothing arrived able to corroborate by address")
 	}
 
-	vouched := counterpartyOf(cp, extension.IngressSource{
+	vouched := extingress.CounterpartyOf(cp, extension.IngressSource{
 		System: "inbox", Merges: []extension.MergeKey{extension.MergeKeyEmail},
 	})
 	if !vouched.MayCorroborateByEmail() {

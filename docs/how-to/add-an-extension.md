@@ -1614,6 +1614,50 @@ fields its matching ladder may use, from your declaration. What each field must 
 does not, is the connector contract in
 [explanation/ingress-gate-and-auto-capture.md](../explanation/ingress-gate-and-auto-capture.md).
 
+### A member-owned chat source
+
+A chat account belongs to one member. Pin a posture on the source to say so:
+
+```go
+Ingress: []extension.IngressSource{{
+	System:        "relay",
+	Lands:         []extension.RecordKind{extension.KindActivity},
+	PinnedPosture: extension.PostureClassified, // or PostureHeld; never wider
+}},
+```
+
+The member puts in the connection as a user-scoped secret for their own account. Your unit has no `channel_connection` row.
+A member asks you for something on your own HTTP route. The route stores the request in your own table and calls
+`rt.SyncNow`. Your job ingests it later, because a call with a caller never ingests.
+
+A chat message is kind `message`, with a counterparty named by an account on your own channel. It goes through the
+function every chat network shares. The pin is written as the import's `posture_at_import`. So the audience of the
+message and the check for private threads work as they do for mail in a member's mailbox. The pin replaces the posture
+derived from the member's mailboxes.
+
+A source with a pin lands chat messages only. Any other record answers `DispositionUnrepresentable`.
+
+Four things are new on this path:
+
+- **`Record.ChosenSubject`** names a contact or a lead that the member picked (`extension.ChosenSubject`). The core
+  checks it on the member's live rights. The message is linked to it directly, and nothing matches its counterparty by
+  identity. A subject the member cannot see answers `DispositionSubjectNotFound`, the same as one that does not exist.
+  It stores nothing, and the other records of the batch go on. Your cursor moves past it like past any answer.
+- **`Record.OccurredPrecision`** is `PrecisionInstant` (the default), `PrecisionDay` or `PrecisionUnknown`. The core
+  stores a day as a date with no time of day. With an unknown time you may leave `Activity.OccurredAt` zero.
+  The core then dates the record on the day it takes it in, as a day. The timeline has no separate stored "unknown", so it reads like a
+  day. The time the core takes a record in is never one you state.
+- **`Record.Parts` and `Record.PartDrops`** carry files, within `MaxInboundFiles`, `MaxInboundFileBytes` and
+  `MaxInboundMessageBytes`. The core reads each type again from the bytes. A retry keeps one copy of a file, as for
+  mail, and an erasure removes it.
+- **One saved place per member.** `rt.MemberIngestPosition(ctx, member, source)` answers the member's `MemberPosition`.
+  `rt.IngestMemberBatch(ctx, member, source, recs, position, version)` lands the records, then saves the place only
+  if `version` is still the one you read. A stale writer gets `ErrPositionConflict`, which is also an `ErrConflict`,
+  and reads the place again.
+
+Two members of one source never see each other's place. A source with a pin keeps a place per member, so `IngestBatch`
+and `IngestPosition` refuse it with `ErrInvalid`. They stay as they were for a source with no pin.
+
 ## Carry replies: give a transport
 
 A `Channel` declares a message provider your unit can carry messages on. So a rep's reply to a chat you
