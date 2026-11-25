@@ -118,9 +118,8 @@ type unitManifest struct {
 	mailHooksDecl
 }
 
-// inboundEndpoint is one declared anonymous edge (see
-// extension.InboundEndpoint), sorted by slug so the encoding does not depend on
-// declaration order.
+// inboundEndpoint is one declared anonymous edge (see extension.InboundEndpoint),
+// sorted by slug so the encoding does not depend on declaration order.
 //
 // Durations are published in WHOLE SECONDS rather than as Go duration strings:
 // this document is read by an operator comparing a skew against a sender's own

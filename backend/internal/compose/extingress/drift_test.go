@@ -158,8 +158,6 @@ var waivedActivityFields = gatekit.Waive(map[string]string{
 	"pinnedPosture": "unexported, and copied from the declared source's IngressSource.PinnedPosture onto the chat binding. A unit stating it per record could pick the widest posture its declaration allows",
 	"judged": "unexported, and the sink sets it from Envelope. A unit stating it would state the " +
 		"conclusion the sink exists to draw",
-	"memberOwned": "unexported, and FileChatMessage derives it from the authenticated chat binding. A unit " +
-		"stating it would claim a member's own account the binding never proved",
 })
 
 // TestThePublishedActivityMirrorsTheCoreOne is the same rule one level in. The

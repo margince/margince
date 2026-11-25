@@ -59,8 +59,7 @@ whatever it does.
 
 The fitness tests hold the rest of the surface. Units are trusted code that runs in the role process; see
 [what the tier does not guard against](#what-the-tier-does-not-guard-against). Extensibility costs a new
-build. In return, the build proves that a composed product is wired the same way the core is, or it
-fails.
+build. In return, the build proves that a composed product is wired like the core, or it fails.
 
 ## Principles
 
