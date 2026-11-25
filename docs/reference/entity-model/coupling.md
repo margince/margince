@@ -33,7 +33,7 @@ An area with no inbound key is a candidate for a separate module. Its outbound k
 | [deals](deals.md) | 26 | 379 | 26 | 16 | 2 |
 | [finance](finance.md) | 5 | 85 | 0 | 3 | 0 |
 | [forecasting](forecasting.md) | 4 | 94 | 1 | 2 | 0 |
-| [identity](identity.md) | 22 | 206 | 151 | 6 | 5 |
+| [identity](identity.md) | 22 | 206 | 153 | 6 | 5 |
 | [initiatives](initiatives.md) | 5 | 40 | 0 | 2 | 1 |
 | [integrations](integrations.md) | 5 | 59 | 3 | 3 | 1 |
 | [introductions](introductions.md) | 1 | 31 | 0 | 6 | 1 |
@@ -44,7 +44,7 @@ An area with no inbound key is a candidate for a separate module. Its outbound k
 | [privacy](privacy.md) | 2 | 14 | 0 | 0 | 0 |
 | [projects](projects.md) | 3 | 42 | 11 | 3 | 0 |
 | [recordlinks](recordlinks.md) | 1 | 8 | 0 | 0 | 0 |
-| [reporting](reporting.md) | 14 | 121 | 0 | 10 | 0 |
+| [reporting](reporting.md) | 14 | 121 | 0 | 12 | 0 |
 | [search](search.md) | 4 | 42 | 0 | 4 | 2 |
 | [signals](signals.md) | 2 | 43 | 2 | 9 | 4 |
 | [webforms](webforms.md) | 2 | 27 | 0 | 4 | 0 |
@@ -168,6 +168,8 @@ No outbound foreign keys.
 - `report_definition.report_definition_audience_team_id_fkey`: `FOREIGN KEY (audience_team_id) REFERENCES team(id) ON DELETE RESTRICT`
 - `report_definition.report_definition_owner_id_fkey`: `FOREIGN KEY (owner_id) REFERENCES app_user(id) ON DELETE RESTRICT`
 - `report_definition_revision.report_definition_revision_created_by_fkey`: `FOREIGN KEY (created_by) REFERENCES app_user(id) ON DELETE RESTRICT`
+- `report_edition.report_edition_owner_id_fkey`: `FOREIGN KEY (owner_id) REFERENCES app_user(id) ON DELETE RESTRICT`
+- `report_edition.report_edition_publication_team_id_fkey`: `FOREIGN KEY (publication_team_id) REFERENCES team(id) ON DELETE RESTRICT`
 - `report_execution.report_execution_owner_id_fkey`: `FOREIGN KEY (owner_id) REFERENCES app_user(id) ON DELETE RESTRICT`
 - `report_schedule.report_schedule_owner_id_fkey`: `FOREIGN KEY (owner_id) REFERENCES app_user(id) ON DELETE RESTRICT`
 - `reporting_framework_revision.reporting_framework_revision_created_by_fkey`: `FOREIGN KEY (created_by) REFERENCES app_user(id) ON DELETE RESTRICT`

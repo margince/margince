@@ -94,7 +94,8 @@ var scheduleMeetingCopy = toolCopy{
 	Purpose: "Put a meeting on the host's calendar. invite creates the calendar event and the " +
 		"provider sends the invitation to every attendee: the contact, and any further addresses.",
 	Limits: "invite reaches attendees outside the workspace. The call queues it and returns it " +
-		"pending, so name them and the time and get the user's yes first. Read check_availability " +
+		"pending, so name them and the time and get the user's yes first, unless they asked for " +
+		"this invite themselves. Read check_availability " +
 		"before choosing a time. A start_intent (the user's local time) replaces start, and end " +
 		"moves with it so the meeting keeps its length.",
 	Instead: "Use change_activities with log to record a meeting without inviting anyone, or one " +
