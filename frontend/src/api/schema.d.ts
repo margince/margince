@@ -65329,6 +65329,15 @@ export interface components {
                 "application/problem+json": components["schemas"]["Problem"];
             };
         };
+        /** @description `name_taken`: another entry of this list already holds the name, compared trimmed and ignoring case; the detail names it. Any other state conflict answers its own code. */
+        NameTakenConflict: {
+            headers: {
+                [name: string]: unknown;
+            };
+            content: {
+                "application/problem+json": components["schemas"]["Problem"];
+            };
+        };
         /** @description State conflict (duplicate key, concurrent edit, already-decided, default-pipeline collision). */
         Conflict: {
             headers: {
@@ -71573,7 +71582,7 @@ export interface operations {
                 };
             };
             403: components["responses"]["Forbidden"];
-            409: components["responses"]["Conflict"];
+            409: components["responses"]["NameTakenConflict"];
             422: components["responses"]["ValidationError"];
         };
     };
@@ -71657,7 +71666,7 @@ export interface operations {
             };
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
-            409: components["responses"]["Conflict"];
+            409: components["responses"]["NameTakenConflict"];
             422: components["responses"]["ValidationError"];
         };
     };
@@ -81703,7 +81712,7 @@ export interface operations {
                 };
             };
             403: components["responses"]["Forbidden"];
-            409: components["responses"]["Conflict"];
+            409: components["responses"]["NameTakenConflict"];
             422: components["responses"]["ValidationError"];
         };
     };
@@ -81787,7 +81796,7 @@ export interface operations {
             };
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
-            409: components["responses"]["Conflict"];
+            409: components["responses"]["NameTakenConflict"];
             422: components["responses"]["ValidationError"];
         };
     };
@@ -81863,7 +81872,7 @@ export interface operations {
                 };
             };
             403: components["responses"]["Forbidden"];
-            409: components["responses"]["Conflict"];
+            409: components["responses"]["NameTakenConflict"];
             422: components["responses"]["ValidationError"];
         };
     };
@@ -81930,7 +81939,7 @@ export interface operations {
             };
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
-            409: components["responses"]["Conflict"];
+            409: components["responses"]["NameTakenConflict"];
             422: components["responses"]["ValidationError"];
         };
     };
@@ -82006,7 +82015,7 @@ export interface operations {
                 };
             };
             403: components["responses"]["Forbidden"];
-            409: components["responses"]["Conflict"];
+            409: components["responses"]["NameTakenConflict"];
             422: components["responses"]["ValidationError"];
         };
     };
@@ -82073,7 +82082,7 @@ export interface operations {
             };
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
-            409: components["responses"]["Conflict"];
+            409: components["responses"]["NameTakenConflict"];
             422: components["responses"]["ValidationError"];
         };
     };
@@ -82259,7 +82268,7 @@ export interface operations {
                 };
             };
             403: components["responses"]["Forbidden"];
-            409: components["responses"]["Conflict"];
+            409: components["responses"]["NameTakenConflict"];
             422: components["responses"]["ValidationError"];
         };
     };
@@ -82318,7 +82327,7 @@ export interface operations {
             };
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
-            409: components["responses"]["Conflict"];
+            409: components["responses"]["NameTakenConflict"];
             422: components["responses"]["ValidationError"];
         };
     };
@@ -82563,15 +82572,7 @@ export interface operations {
                 };
             };
             403: components["responses"]["Forbidden"];
-            /** @description Another reason already holds this label, compared trimmed and ignoring case. */
-            409: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/problem+json": components["schemas"]["Problem"];
-                };
-            };
+            409: components["responses"]["NameTakenConflict"];
             422: components["responses"]["ValidationError"];
         };
     };
@@ -82655,15 +82656,7 @@ export interface operations {
             };
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
-            /** @description Another reason already holds this label, compared trimmed and ignoring case. */
-            409: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/problem+json": components["schemas"]["Problem"];
-                };
-            };
+            409: components["responses"]["NameTakenConflict"];
             422: components["responses"]["ValidationError"];
         };
     };
@@ -98561,7 +98554,7 @@ export interface operations {
             };
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
-            409: components["responses"]["Conflict"];
+            409: components["responses"]["NameTakenConflict"];
             422: components["responses"]["ValidationError"];
         };
     };
@@ -98593,7 +98586,7 @@ export interface operations {
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
-            409: components["responses"]["Conflict"];
+            409: components["responses"]["NameTakenConflict"];
             422: components["responses"]["ValidationError"];
         };
     };
@@ -107061,6 +107054,7 @@ export interface operations {
             };
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["PermissionDenied"];
+            409: components["responses"]["NameTakenConflict"];
             422: components["responses"]["ValidationError"];
         };
     };
@@ -107160,6 +107154,7 @@ export interface operations {
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["PermissionDenied"];
             404: components["responses"]["NotFound"];
+            409: components["responses"]["NameTakenConflict"];
             422: components["responses"]["ValidationError"];
         };
     };

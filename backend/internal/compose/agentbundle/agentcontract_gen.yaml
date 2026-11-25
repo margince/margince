@@ -3772,7 +3772,7 @@ paths:
             application/json:
               schema: {$ref: '#/components/schemas/PartnerStage'}
         '403': {$ref: '#/components/responses/Forbidden'}
-        '409': {$ref: '#/components/responses/Conflict'}
+        '409': {$ref: '#/components/responses/NameTakenConflict'}
         '422': {$ref: '#/components/responses/ValidationError'}
       description: |-
         Add a partner stage.
@@ -3811,7 +3811,7 @@ paths:
               schema: {$ref: '#/components/schemas/PartnerStage'}
         '403': {$ref: '#/components/responses/Forbidden'}
         '404': {$ref: '#/components/responses/NotFound'}
-        '409': {$ref: '#/components/responses/Conflict'}
+        '409': {$ref: '#/components/responses/NameTakenConflict'}
         '422': {$ref: '#/components/responses/ValidationError'}
   /commissions:
     get:
@@ -9718,7 +9718,7 @@ paths:
             application/json:
               schema: {$ref: '#/components/schemas/LeadOrigin'}
         '403': {$ref: '#/components/responses/Forbidden'}
-        '409': {$ref: '#/components/responses/Conflict'}
+        '409': {$ref: '#/components/responses/NameTakenConflict'}
         '422': {$ref: '#/components/responses/ValidationError'}
       description: |-
         Add a lead origin.
@@ -9757,7 +9757,7 @@ paths:
               schema: {$ref: '#/components/schemas/LeadOrigin'}
         '403': {$ref: '#/components/responses/Forbidden'}
         '404': {$ref: '#/components/responses/NotFound'}
-        '409': {$ref: '#/components/responses/Conflict'}
+        '409': {$ref: '#/components/responses/NameTakenConflict'}
         '422': {$ref: '#/components/responses/ValidationError'}
     delete:
       tags: [Leads]
@@ -9816,7 +9816,7 @@ paths:
             application/json:
               schema: {$ref: '#/components/schemas/AcquisitionSource'}
         '403': {$ref: '#/components/responses/Forbidden'}
-        '409': {$ref: '#/components/responses/Conflict'}
+        '409': {$ref: '#/components/responses/NameTakenConflict'}
         '422': {$ref: '#/components/responses/ValidationError'}
       description: |-
         Add an acquisition source.
@@ -9857,7 +9857,7 @@ paths:
               schema: {$ref: '#/components/schemas/AcquisitionSource'}
         '403': {$ref: '#/components/responses/Forbidden'}
         '404': {$ref: '#/components/responses/NotFound'}
-        '409': {$ref: '#/components/responses/Conflict'}
+        '409': {$ref: '#/components/responses/NameTakenConflict'}
         '422': {$ref: '#/components/responses/ValidationError'}
   /loss-reasons:
     get:
@@ -9894,7 +9894,7 @@ paths:
             application/json:
               schema: {$ref: '#/components/schemas/LossReason'}
         '403': {$ref: '#/components/responses/Forbidden'}
-        '409': {$ref: '#/components/responses/Conflict'}
+        '409': {$ref: '#/components/responses/NameTakenConflict'}
         '422': {$ref: '#/components/responses/ValidationError'}
       description: |-
         Add a loss reason.
@@ -9934,7 +9934,7 @@ paths:
               schema: {$ref: '#/components/schemas/LossReason'}
         '403': {$ref: '#/components/responses/Forbidden'}
         '404': {$ref: '#/components/responses/NotFound'}
-        '409': {$ref: '#/components/responses/Conflict'}
+        '409': {$ref: '#/components/responses/NameTakenConflict'}
         '422': {$ref: '#/components/responses/ValidationError'}
   /loss-reasons/legacy:
     get:
@@ -10064,7 +10064,7 @@ paths:
             application/json:
               schema: {$ref: '#/components/schemas/RecordRole'}
         '403': {$ref: '#/components/responses/Forbidden'}
-        '409': {$ref: '#/components/responses/Conflict'}
+        '409': {$ref: '#/components/responses/NameTakenConflict'}
         '422': {$ref: '#/components/responses/ValidationError'}
       description: |-
         Add a responsibility role.
@@ -10104,7 +10104,7 @@ paths:
               schema: {$ref: '#/components/schemas/RecordRole'}
         '403': {$ref: '#/components/responses/Forbidden'}
         '404': {$ref: '#/components/responses/NotFound'}
-        '409': {$ref: '#/components/responses/Conflict'}
+        '409': {$ref: '#/components/responses/NameTakenConflict'}
         '422': {$ref: '#/components/responses/ValidationError'}
   /records/{record_type}/{record_id}/assignments:
     parameters:
@@ -10245,11 +10245,7 @@ paths:
             application/json:
               schema: {$ref: '#/components/schemas/LeadDisqualifyReason'}
         '403': {$ref: '#/components/responses/Forbidden'}
-        '409':
-          description: Another reason already holds this label, compared trimmed and ignoring case.
-          content:
-            application/problem+json:
-              schema: {$ref: '#/components/schemas/Problem'}
+        '409': {$ref: '#/components/responses/NameTakenConflict'}
         '422': {$ref: '#/components/responses/ValidationError'}
       description: |-
         Add a disqualification reason.
@@ -10280,11 +10276,7 @@ paths:
               schema: {$ref: '#/components/schemas/LeadDisqualifyReason'}
         '403': {$ref: '#/components/responses/Forbidden'}
         '404': {$ref: '#/components/responses/NotFound'}
-        '409':
-          description: Another reason already holds this label, compared trimmed and ignoring case.
-          content:
-            application/problem+json:
-              schema: {$ref: '#/components/schemas/Problem'}
+        '409': {$ref: '#/components/responses/NameTakenConflict'}
         '422': {$ref: '#/components/responses/ValidationError'}
       description: |-
         Rename, reorder or (de)activate a disqualification reason.
@@ -20703,7 +20695,7 @@ paths:
               schema: {$ref: '#/components/schemas/Team'}
         '401': {$ref: '#/components/responses/Unauthorized'}
         '403': {$ref: '#/components/responses/Forbidden'}
-        '409': {$ref: '#/components/responses/Conflict'}
+        '409': {$ref: '#/components/responses/NameTakenConflict'}
         '422': {$ref: '#/components/responses/ValidationError'}
   /teams/{id}:
     parameters:
@@ -20737,7 +20729,7 @@ paths:
         '401': {$ref: '#/components/responses/Unauthorized'}
         '403': {$ref: '#/components/responses/Forbidden'}
         '404': {$ref: '#/components/responses/NotFound'}
-        '409': {$ref: '#/components/responses/Conflict'}
+        '409': {$ref: '#/components/responses/NameTakenConflict'}
         '422': {$ref: '#/components/responses/ValidationError'}
   /teams/{id}/members/{userId}:
     parameters:
@@ -26891,6 +26883,7 @@ paths:
               schema: {$ref: '#/components/schemas/KnowledgeCorpus'}
         '401': {$ref: '#/components/responses/Unauthorized'}
         '403': {$ref: '#/components/responses/PermissionDenied'}
+        '409': {$ref: '#/components/responses/NameTakenConflict'}
         '422': {$ref: '#/components/responses/ValidationError'}
       description: |-
         Define a document corpus.
@@ -26943,6 +26936,7 @@ paths:
         '401': {$ref: '#/components/responses/Unauthorized'}
         '403': {$ref: '#/components/responses/PermissionDenied'}
         '404': {$ref: '#/components/responses/NotFound'}
+        '409': {$ref: '#/components/responses/NameTakenConflict'}
         '422': {$ref: '#/components/responses/ValidationError'}
       description: |-
         Edit a corpus — its words, its floor, or which one the palette asks.
@@ -27429,6 +27423,12 @@ components:
           examples:
             held:
               value: {type: 'https://errors.gradion.com/locked', title: Locked, status: 423, code: locked, detail: The record is held under a statutory retention obligation.}
+    NameTakenConflict:
+      description: >-
+        `name_taken`: another entry of this list already holds the name, compared trimmed and ignoring case; the detail names it. Any other state conflict answers its own code.
+      content:
+        application/problem+json:
+          schema: {$ref: '#/components/schemas/Problem'}
     Conflict:
       description: State conflict (duplicate key, concurrent edit, already-decided, default-pipeline collision).
       content:
@@ -40770,7 +40770,7 @@ components:
       required: [pipeline_id, name, position]
       properties:
         pipeline_id: {type: string, format: uuid}
-        name: {type: string}
+        name: {type: string, maxLength: 120}
         position: {type: integer}
         semantic: {type: string, enum: [open, won, lost], default: open}
         win_probability: {type: integer, minimum: 0, maximum: 100, default: 0}
@@ -40778,7 +40778,7 @@ components:
     UpdateStageRequest:
       type: object
       properties:
-        name: {type: string}
+        name: {type: string, maxLength: 120}
         position: {type: integer}
         semantic: {type: string, enum: [open, won, lost]}
         win_probability: {type: integer, minimum: 0, maximum: 100}
@@ -40989,7 +40989,7 @@ components:
       type: object
       required: [name]
       properties:
-        name: {type: string}
+        name: {type: string, maxLength: 120}
         is_default: {type: boolean, default: false}
         position: {type: integer, default: 0}
         stages:
@@ -41011,7 +41011,7 @@ components:
           description: |-
             Accepted and ignored. The stage joins the pipeline this request creates; the field
             stays so a client written when nested stages reused `CreateStageRequest` is not refused.
-        name: {type: string}
+        name: {type: string, maxLength: 120}
         position:
           type: integer
           description: Omitted or 0, the stage takes its place in the list (1-based).
@@ -41020,7 +41020,7 @@ components:
     UpdatePipelineRequest:
       type: object
       properties:
-        name: {type: string}
+        name: {type: string, maxLength: 120}
         is_default: {type: boolean}
         position: {type: integer}
     PipelineOrderRequest:
@@ -43917,7 +43917,7 @@ components:
     CreateLeadRequest:
       type: object
       properties:
-        full_name: {type: [string, 'null']}
+        full_name: {type: [string, 'null'], maxLength: 120}
         email: {type: [string, 'null'], format: email}
         phone: {type: [string, 'null'], description: "E.164, as a contact's number is. One number: a lead is one enquiry until it is promoted, and the number carries to the contact it becomes."}
         linkedin_url: {type: [string, 'null']}
@@ -43959,7 +43959,7 @@ components:
         "disqualified ⇒ archived" is enforced on that one path); `promoted` is reachable only via
         POST /leads/{id}/promote. Both terminal states are therefore excluded from this enum.
       properties:
-        full_name: {type: [string, 'null']}
+        full_name: {type: [string, 'null'], maxLength: 120}
         email: {type: [string, 'null'], format: email}
         phone: {type: [string, 'null'], description: "E.164, as a contact's number is. One number: a lead is one enquiry until it is promoted, and the number carries to the contact it becomes."}
         title: {type: [string, 'null']}
@@ -44590,14 +44590,14 @@ components:
       type: object
       required: [label]
       properties:
-        label: {type: string, minLength: 1}
+        label: {type: string, minLength: 1, maxLength: 120}
         key: {type: string, description: 'Optional; derived from the label (lowercased, non-alphanumerics collapsed to `_`) when absent. Must be unique.'}
         intent: {$ref: '#/components/schemas/LeadSourceIntent'}
         sort_order: {type: integer}
     UpdateLeadOriginRequest:
       type: object
       properties:
-        label: {type: string, minLength: 1}
+        label: {type: string, minLength: 1, maxLength: 120}
         intent: {$ref: '#/components/schemas/LeadSourceIntent'}
         sort_order: {type: integer}
         active: {type: boolean}
@@ -44669,12 +44669,12 @@ components:
       type: object
       required: [label]
       properties:
-        label: {type: string, minLength: 1}
+        label: {type: string, minLength: 1, maxLength: 120}
         sort_order: {type: integer}
     UpdateLeadDisqualifyReasonRequest:
       type: object
       properties:
-        label: {type: string, minLength: 1}
+        label: {type: string, minLength: 1, maxLength: 120}
         sort_order: {type: integer}
         active: {type: boolean}
     FollowUpSettings:
@@ -51308,7 +51308,7 @@ components:
         object:
           type: string
           enum: [contact, company, deal, lead, project, contract, activity]
-        label: {type: string}
+        label: {type: string, maxLength: 120}
         type:
           type: string
           enum: [text, number, date, currency, picklist, multiselect, boolean, record, url]
@@ -51330,7 +51330,7 @@ components:
       description: >-
         Merge-PATCH of the settings a live field may change: `label`, `label_translations`, `option_translations`, `show_in_create`, `reportable` and `activity_kinds`. At least one is required. `column_name`, `object`, and `type` are absent from this request schema entirely (immutable, not just ignored if sent). `reportable` true on a field that is not a picklist or boolean is refused. `activity_kinds` replaces the kinds an activity field applies to, and an empty array means every kind again; it is refused on another object's field.
       properties:
-        label: {type: string}
+        label: {type: string, maxLength: 120}
         label_translations: {$ref: '#/components/schemas/LabelTranslations'}
         option_translations: {$ref: '#/components/schemas/OptionTranslations'}
         show_in_create: {type: boolean}
@@ -53567,14 +53567,14 @@ components:
       type: object
       required: [label, meaning]
       properties:
-        label: {type: string, minLength: 1}
+        label: {type: string, minLength: 1, maxLength: 120}
         key: {type: string, description: 'Optional; derived from the label when absent. Lowercase letters, digits and underscores, starting with a letter. Must be unique.'}
         meaning: {$ref: '#/components/schemas/PartnerStageMeaning'}
         sort_order: {type: integer}
     UpdatePartnerStageRequest:
       type: object
       properties:
-        label: {type: string, minLength: 1}
+        label: {type: string, minLength: 1, maxLength: 120}
         meaning: {$ref: '#/components/schemas/PartnerStageMeaning'}
         sort_order: {type: integer}
         active: {type: boolean}

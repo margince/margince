@@ -15,9 +15,9 @@ input and output schema in folds below it. What a tool may do and whether a huma
 |---|---:|
 | Tools | 48 |
 | Resources | 14 |
-| Tool catalog | 243.3 KB |
+| Tool catalog | 243.8 KB |
 | Resource catalog | 5.5 KB |
-| Approx. wire tokens | 63677 |
+| Approx. wire tokens | 63824 |
 | Largest tool | `read_details` (15.8 KB) |
 | Scopes rendered | `read`, `draft`, `write`, `send`, `enrich` |
 
@@ -34,9 +34,9 @@ tool adds to that listing, and what it costs each scheduled agent, agent by agen
 |---|---:|---:|---|
 | Output schemas | 33.7 KB | 13% | **No**: a result's shape, never listed to a model |
 | Descriptions (incl. governance clause) | 51.0 KB | 20% | Yes, every step |
-| Input schemas | 147.0 KB | 60% | Yes, every step |
+| Input schemas | 147.5 KB | 60% | Yes, every step |
 | _Names, annotations, punctuation_ | 11.6 KB | 4% | Partly |
-| **Description + input schema** | **198.0 KB** | **81%** | **the recurring cost** |
+| **Description + input schema** | **198.6 KB** | **81%** | **the recurring cost** |
 
 Output schemas count in the total but are never sent to a model;
 descriptions and input schemas are what each step pays for.
@@ -108,7 +108,7 @@ descriptions and input schemas are what each step pays for.
 | [`read_workspace`](#read_workspace) | Read how this workspace is set up | yes |  | 2779 |
 | [`resolve_duplicates`](#resolve_duplicates) | Merge two records or dismiss a flagged pair |  |  | 618 |
 | [`run_research`](#run_research) | Run AI work for your user |  |  | 1365 |
-| [`schedule_meeting`](#schedule_meeting) | Invite to a meeting |  |  | 515 |
+| [`schedule_meeting`](#schedule_meeting) | Invite to a meeting |  |  | 527 |
 | [`send_outbound`](#send_outbound) | Send a message |  |  | 1678 |
 | [`update_record`](#update_record) | Update a record |  | [`ui://margince/update.html`](#update_view) | 698 |
 | [`whoami`](#whoami) | Who this passport acts for | yes |  | 129 |
@@ -885,6 +885,11 @@ archive_document, assign_inquiry.)
       "format": "uuid",
       "type": "string"
     },
+    "assignee_id": {
+      "description": "task only: Defaults to the human you act for.",
+      "format": "uuid",
+      "type": "string"
+    },
     "attendee_user_ids": {
       "description": "log only: Meeting or call only: the workspace members who attended besides you, ids from the colleague roster. An id that is not an active member is refused.",
       "items": {
@@ -932,6 +937,10 @@ archive_document, assign_inquiry.)
       "description": "log, task only: RFC 3339 WITH Z or the user's offset (…T14:35:00Z); never invent an hour or offset.",
       "format": "date-time",
       "type": "string"
+    },
+    "due_has_time": {
+      "description": "task only: True when due_at is an agreed time of day, such as a callback hour; the reminder is then set to it. Leave out for a day.",
+      "type": "boolean"
     },
     "entity_id": {
       "description": "attach, relink, relink_many only",
@@ -1094,6 +1103,18 @@ archive_document, assign_inquiry.)
     },
     "subject": {
       "description": "log, task only: Prose a colleague reads. Write it in whoami's prose_language, whatever language this conversation is in; do not translate names or quoted text.",
+      "type": "string"
+    },
+    "task_type": {
+      "description": "task only: The work it asks for; it decides the one button the task shows. reply answers a message the way it came in, reach_out contacts someone by email or phone, do is work outside Margince.",
+      "enum": [
+        "reply",
+        "reach_out",
+        "meet",
+        "review",
+        "decide",
+        "do"
+      ],
       "type": "string"
     }
   },
@@ -7224,6 +7245,11 @@ read_attention for what needs the user now, and read_record for a record's own f
       },
       "type": "array"
     },
+    "contact_id": {
+      "description": "meeting_proposals only",
+      "format": "uuid",
+      "type": "string"
+    },
     "create_company": {
       "description": "lead_promotion_preview only",
       "type": "boolean"
@@ -7288,11 +7314,6 @@ read_attention for what needs the user now, and read_record for a record's own f
     "request_body": {
       "description": "ai_budget_preview, ai_routing_preview, ai_task_overrides_preview, automation_preview, backfill_preview, filter_preview, mail_deal_repair_preview, notice_source_preview, voice_source_preview, website_inquiry_preview only: The chosen action's request body; read_workspace topic actions lists its shape",
       "type": "object"
-    },
-    "since": {
-      "description": "magic, magic_line_records, team_margince_changes only",
-      "format": "date-time",
-      "type": "string"
     },
     "stage_history_id": {
       "description": "deal_margince_changes only",
@@ -9442,7 +9463,7 @@ find_records to find a customer contact; colleagues are seats here. Use read_for
 view=input_sources to learn whether a number can be trusted: how complete and current the data is.
 user_id is what assignee_id and owner_id take; never assign to an is_agent seat. Keep pipeline_id
 and stage_id for a deal. Take every name verbatim; a custom field is spelled cf_<slug>. (Ask the
-user first for the actions ai_call, ai_calls, member_retirement.)
+user first for the actions ai_call, ai_calls.)
 ```
 
 <details><summary>Input schema</summary>
@@ -10118,12 +10139,12 @@ start_backfill, start_search_reindex; requires passport scope "enrich".)
 Put a meeting on the host's calendar. invite creates the calendar event and the provider sends the
 invitation to every attendee: the contact, and any further addresses. invite reaches attendees
 outside the workspace. The call queues it and returns it pending, so name them and the time and get
-the user's yes first. Read check_availability before choosing a time. A start_intent (the user's
-local time) replaces start, and end moves with it so the meeting keeps its length. Use
-change_activities with log to record a meeting without inviting anyone, or one that already
-happened. Keep the invitation id and inspect its status before claiming it was delivered. A refused
-or failed invite invited nobody. (Governance: a human approves every call before it runs; requires
-passport scope "send".)
+the user's yes first, unless they asked for this invite themselves. Read check_availability before
+choosing a time. A start_intent (the user's local time) replaces start, and end moves with it so the
+meeting keeps its length. Use change_activities with log to record a meeting without inviting
+anyone, or one that already happened. Keep the invitation id and inspect its status before claiming
+it was delivered. A refused or failed invite invited nobody. (Governance: a human approves every
+call before it runs; requires passport scope "send".)
 ```
 
 <details><summary>Input schema</summary>
