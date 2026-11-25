@@ -323,7 +323,9 @@ func (h *httpMCPHandler) servePost(w http.ResponseWriter, r *http.Request) {
 	start := time.Now()
 	body, release, err := h.readBody(w, r)
 	if err != nil {
-		h.writeBodyRefusal(w, r, err)
+		sw := &statusWriter{ResponseWriter: w, status: http.StatusOK}
+		h.writeBodyRefusal(sw, r, err)
+		h.recordRefusal(r, start, sw.status)
 		return
 	}
 	defer release()

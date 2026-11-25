@@ -217,3 +217,14 @@ func TestAToolAnswerTheLogCannotReadIsRecordedAsUnreadable(t *testing.T) {
 		}
 	}
 }
+
+func TestABodyTheDoorWillNotReadIsRecordedAsARefusal(t *testing.T) {
+	door, kept := loggedDoor(t, `{}`, asConnectedAgent(ids.NewV7(), ids.NewV7(), ids.NewV7()))
+	if got := post(t, door, strings.Repeat(" ", MaxMCPRequestBytes+1)); got != http.StatusRequestEntityTooLarge {
+		t.Fatalf("answered %d, want 413", got)
+	}
+	if len(kept.records) != 1 || kept.records[0].Outcome != OutcomeRefused ||
+		kept.records[0].HTTPStatus != http.StatusRequestEntityTooLarge {
+		t.Errorf("recorded %+v, want one refusal with status 413", kept.records)
+	}
+}
