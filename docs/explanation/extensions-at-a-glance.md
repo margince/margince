@@ -180,7 +180,7 @@ Every field of `Extension` that brings something to the core.
 | `Jurisdictions` | Unit's jurisdiction packs (policy suppliers to the core retention engine, never actors). |
 | `Messaging` | Unit's outbound-messaging rule sets, the country rules the core authorization engine consults before a message goes out. |
 | `SubjectRights` | Unit's data-subject-request deadlines. |
-| `Reach` | Reach declares the unit's tables holding a core company, contact or lead id. |
+| `Reach` | Reach declares the unit's tables holding a core company, contact, lead or deal id. |
 | `Privacy` | Privacy declares, for every table the unit owns, which core record its rows belong to, which columns are personal data and the retention class. |
 | `Documents` | Compliance documents the unit ships for its jurisdictions. |
 | `Tools` | Governed agent tools the unit contributes: named operations running at a requested risk tier. |

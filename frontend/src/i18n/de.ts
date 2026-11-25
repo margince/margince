@@ -3288,6 +3288,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
 
   "merge.contact": "Kontakt zusammenführen",
   "merge.company": "Unternehmen zusammenführen",
+  "merge.deal": "Deal zusammenführen",
   "merge.searchPlaceholder": "Suchen…",
   "merge.pickTarget": "Datensatz auswählen, der bleibt",
   "merge.confirm":

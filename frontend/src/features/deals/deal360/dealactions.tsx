@@ -38,6 +38,7 @@ import { useDealRecipientAddress } from "./usedealrecipient";
 import "./deal360.css";
 import { AddToShortlistAction } from "../../../components/addtoshortlist";
 import { RequestLegalReviewAction } from "./deallegaltab";
+import { DealMergeAction } from "./dealmerge.action";
 import { ReopenAction } from "./dealreopen";
 import { MovePipelineAction } from "./movepipeline";
 
@@ -275,7 +276,10 @@ export function DealActions({
           </>
         )}
         {canWrite && !deal.archived_at && (
-          <DealArchiveAction deal={deal} refusedReasonId={refusedReasonId} />
+          <>
+            <DealMergeAction deal={deal} disabledReasonId={refusedReasonId} />
+            <DealArchiveAction deal={deal} refusedReasonId={refusedReasonId} />
+          </>
         )}
       </OverflowMenu>
     </>

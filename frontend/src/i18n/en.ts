@@ -3194,6 +3194,7 @@ export const en = {
 
   "merge.contact": "Merge contact",
   "merge.company": "Merge company",
+  "merge.deal": "Merge deal",
   "merge.searchPlaceholder": "Search…",
   "merge.pickTarget": "Select record to keep",
   "merge.confirm":

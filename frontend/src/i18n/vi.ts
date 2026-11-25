@@ -3191,6 +3191,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
 
   "merge.contact": "Gộp liên hệ",
   "merge.company": "Gộp công ty",
+  "merge.deal": "Gộp deal",
   "merge.searchPlaceholder": "Tìm kiếm…",
   "merge.pickTarget": "Chọn hồ sơ giữ lại",
   "merge.confirm":
