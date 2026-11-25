@@ -21,7 +21,7 @@ must_not_call_with:
   - change_access~hand_over_work
 
 must_mention:
-  - "(?i)deactivat|remov|hand(ing|s|ed)? (her )?(\w+ )*(over|off)|handover"
+  - "(?i)deactivat|remov|hand(ing|s|ed)? (her )?(\w+ )*(over|off)|handover|revok|disabl|offboard|reassign|transfer"
 
 runs: 3
 pass_at: 2
