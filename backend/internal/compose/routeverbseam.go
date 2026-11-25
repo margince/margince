@@ -166,8 +166,15 @@ func routeAnswer(call agents.RouteVerb, rec *cappedRecorder) (json.RawMessage, e
 	if refusal, known := viewRefusals[res.StatusCode]; known {
 		return nil, routedRefusal{fmt.Errorf("the %s verb was refused: %s: %w", verb, problem.Detail, refusal), problem.Details}
 	}
+	if fields := httperr.FieldErrorsOf(problem.Details); len(fields) > 0 && problem.Code == routeValidationCode {
+		return nil, &httperr.DetailedError{Status: res.StatusCode, Code: routeValidationCode, Detail: problem.Detail, Fields: fields}
+	}
 	return nil, httperr.Validation(verb, problem.Code, problem.Detail)
 }
+
+// routeValidationCode is the code of a route refusal whose field errors an
+// agent reads back by field.
+const routeValidationCode = "validation_error"
 
 // routedRefusal keeps the route's structured details on the tool surface, so an
 // agent reads the same missing_grant or limit a REST caller does.

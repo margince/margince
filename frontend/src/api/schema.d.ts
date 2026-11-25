@@ -46347,7 +46347,10 @@ export interface components {
             /**
              * @description The records the message would be filed under. They are read through the caller's
              *     own row scope before the engine sees them, so naming a record the caller cannot
-             *     open is refused here rather than answered about.
+             *     open is refused here rather than answered about. A project is REFUSED here
+             *     (project_filing_needs_approval), because filing there marks commercial
+             *     correspondence: add it afterwards with relink, which stages an approval that waits
+             *     for the user's yes before it takes effect.
              */
             links: components["schemas"]["ActivityLinkInput"][];
             communication_context?: components["schemas"]["CommunicationContext"];
@@ -57643,7 +57646,7 @@ export interface components {
              */
             met_in_person: boolean;
             /** @description Evidence in the officer's words. Required when no existing evidence is selected. */
-            note: string;
+            note?: string;
             selected_evidence?: components["schemas"]["NoticeSourceEvidenceReference"];
             /** @description When provided, refuses a confirmation if the case, selected evidence or proposed assessment changed since preview. */
             preview_token?: string;
