@@ -33,6 +33,14 @@ func noImporterVerdictSQL(alias, status string) string {
  WHERE thread_hold_import.activity_id=%[1]s.id AND %[2]s)`, alias, status)
 }
 
+// LedgerKeySQL names the ledger key one import row is judged under: the burst id
+// for a chat message, the thread key for everything else. The two spaces cannot
+// meet, since a thread key is never the text of a uuid. Only the audience
+// derivation reads it; the reader-side thread-hold checks stay on thread keys.
+func LedgerKeySQL(importAlias, activityAlias string) string {
+	return fmt.Sprintf("coalesce(%s.burst_id::text, %s.thread_key)", importAlias, activityAlias)
+}
+
 // AnySeatHoldsSQL is true while any seat holds the thread of activity alias,
 // or still waits on its verdict. One seat's hold protects the whole thread.
 func AnySeatHoldsSQL(alias string) string {
