@@ -151,7 +151,10 @@ func scalarOperand(value any, field Field, name, op string) (any, error) {
 		}
 	}
 	switch field.Type {
-	case FieldText, FieldPicklist, FieldMultiselect:
+	case FieldText:
+		text, err := scalarStringOperand(value, invalid, field.FoldCase)
+		return strings.TrimSpace(text), err
+	case FieldPicklist, FieldMultiselect:
 		return scalarStringOperand(value, invalid, field.FoldCase)
 	case FieldDomain:
 		return scalarDomainOperand(value, invalid)

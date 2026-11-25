@@ -285,7 +285,7 @@ function hasUsableOperand(op: FilterOp, value: LeafValue): boolean {
     case "in":
       return Array.isArray(value) && value.length > 0;
     case "contains":
-      return typeof value === "string" && value !== "";
+      return typeof value === "string" && value.trim() !== "";
     case "within_radius":
       return isRadiusOperand(value);
     default:
