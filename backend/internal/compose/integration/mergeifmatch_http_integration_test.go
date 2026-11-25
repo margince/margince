@@ -66,7 +66,7 @@ func TestAMergeHonoursTheSourcesIfMatchVersion(t *testing.T) {
 			targetBefore := version(target)
 
 			// 409 alone is not the claim: a merge answers it for an already-merged
-			// source and an unwritable target too.
+			// source and a target the caller cannot see too.
 			if status, problem := merge(source, target, strconv.FormatInt(current+98, 10)); status != http.StatusConflict || problem.Code != "version_skew" {
 				t.Errorf("merge with a version the source is not at answered %d %q, want 409 version_skew", status, problem.Code)
 			}

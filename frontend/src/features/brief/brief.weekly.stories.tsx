@@ -148,8 +148,7 @@ export const NarratedWeek: Story = {
 };
 
 // The same week in the dark theme, where `--aiText` over `--aiLight` is the
-// pair the dark accent lift moves first — and where an indigo edge inside a
-// translucent panel is easiest to lose.
+// pair the dark accent lift moves first.
 export const NarratedWeekDark: Story = {
   globals: { theme: "dark" },
   render: panel(

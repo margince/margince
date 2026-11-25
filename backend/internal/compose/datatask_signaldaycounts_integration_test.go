@@ -30,8 +30,8 @@ import (
 )
 
 type legacySignal struct {
-	kind, summary, source string
-	project               ids.UUID
+	kind, summary, producer string
+	project                 ids.UUID
 }
 
 // seedLegacySignal writes one signal on the company and returns its id.
@@ -41,7 +41,7 @@ func seedLegacySignal(ctx context.Context, t *testing.T, e *integration.Env, com
 	if err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
 		_, err := signals.RecordDerived(ctx, tx, signals.DerivedSignal{
 			Kind: s.kind, CompanyID: company, ProjectID: s.project, Summary: s.summary,
-			Severity: severityWarn, Fingerprint: fingerprint, Source: s.source,
+			Severity: severityWarn, Fingerprint: fingerprint, Producer: s.producer,
 		}, time.Date(2026, 9, 1, 8, 0, 0, 0, time.UTC))
 		return err
 	}); err != nil {
@@ -80,7 +80,7 @@ func TestTheSignalDayCountTaskRewordsOnlyTheScansOldSummaries(t *testing.T) {
 	edited := "We wrote 15 days ago and nobody has answered. Chase the CFO."
 	other := seedLegacySignal(ctx, t, e, company, legacySignal{kind: kindGhostedThread, summary: edited})
 	human := fmt.Sprintf(legacy(textlang.English).ghostedThread, 9)
-	filed := seedLegacySignal(ctx, t, e, company, legacySignal{kind: kindGhostedThread, summary: human, source: "analyst-note"})
+	filed := seedLegacySignal(ctx, t, e, company, legacySignal{kind: kindGhostedThread, summary: human, producer: "analyst-note"})
 
 	fingerprints := map[ids.UUID]string{}
 	for _, id := range []ids.UUID{english, german, quiet} {

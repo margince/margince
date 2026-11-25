@@ -306,6 +306,7 @@ func wire(ctx context.Context, a row, now time.Time) crmcontracts.Approval {
 		DecidedAt:  a.DecidedAt,
 	}
 	out.SummaryParts = readSummaryParts(a.SummaryParts)
+	out.Why = readWhy(ctx, a.SummaryParts)
 	sentence := ""
 	if out.SummaryParts != nil {
 		sentence = out.SummaryParts.Sentence

@@ -18010,7 +18010,7 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * One privacy notice owed, where the source is confirmed. The case id comes from notice_cases, not the contact's id.
+         * One privacy notice owed, where the source is confirmed. The case id comes from notice_cases (GET /privacy/notice-cases), not the contact's id.
          * @description The same case the queue lists, read on its own, for a surface that opens one duty rather
          *     than working a page of them.
          *
@@ -18045,7 +18045,7 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * Give a privacy notice already owed (from notice_cases) an owner.
+         * Give a privacy notice already owed (from notice_cases, GET /privacy/notice-cases) an owner.
          * @description Records who is working this duty, so the queue shows a claimed case rather than a pile
          *     nobody has taken.
          *
@@ -18129,7 +18129,7 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * One contact's privacy-notice case — its source, whether a notice is owed, and by when. The id comes from notice_case_reviews or the contact's contact_360 view, not the contact's id.
+         * One contact's privacy-notice case — its source, whether a notice is owed, and by when. The id comes from notice_case_reviews (GET /privacy/notice-case-reviews) or the contact's contact_360 view (GET /contacts/{id}/360), not the contact's id.
          * @description The administrative record for a source review or notice duty. Human privacy-request read
          *     authority covers the record; contact names remain limited by ordinary contact visibility.
          */
@@ -18154,7 +18154,7 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * Give a contact's privacy-notice case (from notice_case_reviews) an owner.
+         * Give a contact's privacy-notice case (from notice_case_reviews, GET /privacy/notice-case-reviews) an owner.
          * @description Records who is working this duty, so the queue shows a claimed case rather than a pile
          *     nobody has taken.
          *
@@ -18182,7 +18182,7 @@ export interface paths {
         /** Read accessible evidence for a contact source assessment. */
         get: operations["getNoticeSourceEvidence"];
         put?: never;
-        /** Confirm where a contact came from (bought list, import, their own enquiry), which decides whether a privacy notice is owed. Preview it first (POST /privacy/notice-case-reviews/{id}/source/preview). Only a contact with no recorded source is up for review; when its evidence does not name where the data first came from, ask the user rather than guessing a kind. */
+        /** Confirm where a contact came from (bought list, import, their own enquiry), which decides whether a privacy notice is owed. Preview it first (POST /privacy/notice-case-reviews/{id}/source/preview). Only a contact with no recorded source is up for review; when its evidence does not name where the data first came from (an import alone does not), ask the user rather than guessing a kind. */
         post: operations["assessNoticeSource"];
         delete?: never;
         options?: never;
@@ -24387,7 +24387,7 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * The acting user's own in-app notifications, newest first. Not a privacy notice owed to a contact; those are notice_case_reviews.
+         * The acting user's own in-app notifications, newest first. Not a privacy notice owed to a contact; those are notice_case_reviews (GET /privacy/notice-case-reviews).
          * @description The acting human's own notifications, newest first, read and unread; another seat's are
          *     not an error, they are absent.
          *
@@ -34323,6 +34323,15 @@ export interface components {
              *     notice still says what it is about, which is why the kind is closed and this is not.
              */
             note?: string;
+            /**
+             * Format: uuid
+             * @description The deal the notice is about. Required for `coach_deal_needs_next_step`, and refused on
+             *     every other kind. The deal must be open, owned by the recipient, and one the caller
+             *     can read. The headline then names the deal and what Margince sees on it: whether a
+             *     next step is planned, and the day of its last activity. The recipient's row links to
+             *     the deal.
+             */
+            deal_id?: string;
         };
         /** @description One durable line addressed to one contact, as the raising call returns it. */
         Notice: {
@@ -48155,7 +48164,10 @@ export interface components {
             status: "open" | "acknowledged" | "resolved" | "dismissed";
             /** Format: date-time */
             detected_at: string;
+            /** @description The channel this signal arrived by: `api`, `automation`, `capture`, `import`, `manual` or `webform`. An older signal can show another value until the background correction reaches it. */
             source: string;
+            /** @description The producer that wrote the signal, such as `signal-scan` or the name of an extension. Empty when a member or an API client filed it. */
+            readonly source_system?: string | null;
             /** @description Server-stamped from the authenticated principal; never client-supplied. */
             readonly captured_by: string;
             version?: components["schemas"]["RowVersion"];
@@ -48352,7 +48364,11 @@ export interface components {
              * @description When the underlying observation happened (defaults to now).
              */
             detected_at?: string | null;
-            source: string;
+            /**
+             * @description The channel this signal arrived by. A client that files it for a member sends `manual`; an integration sends `api`. Any other value is 422 `invalid_source`.
+             * @enum {string}
+             */
+            source: "api" | "automation" | "capture" | "import" | "manual" | "webform";
         };
         /**
          * @description Triage and correction. A `status` move to acknowledged/resolved/dismissed appends the human-outcome
@@ -55935,6 +55951,8 @@ export interface components {
             summary?: string | null;
             /** @description The summary's sentence and the field values it lists, apart, so a client can show the values as a list instead of the joined key=value text. Absent on a proposal whose summary is a sentence alone, and on one staged before the parts were kept. Withheld with the summary. */
             summary_parts?: components["schemas"]["ApprovalSummaryParts"];
+            /** @description Why this proposal exists, as whoever staged it said it: the record and the fact that prompted it. A card leads with it. Absent when its maker gave none, never filled with a stock sentence, and withheld with the summary. */
+            readonly why?: components["schemas"]["WorkGrounds"];
             /** @description The staged diff/payload that will execute on approve. */
             proposed_change?: {
                 [key: string]: unknown;
@@ -56962,6 +56980,10 @@ export interface components {
             change_reasons: components["schemas"]["RecordAccessReason"][];
             /** @description The member's role keys. Present only when `detail` is true. */
             roles?: string[];
+            /** @description The name an admin gave each live role in `roles`, keyed by role key, so a reader who may not read the role directory still sees a custom role by its name. Present only when `detail` is true. Absent from an older server; a key it does not name is shown as the key. */
+            role_names?: {
+                [key: string]: string;
+            };
         };
         /**
          * @description One reason a member can open or change the record. `workspace_visible` means the record is
@@ -59982,7 +60004,7 @@ export interface components {
             /** Format: date-time */
             expires_at: string;
         };
-        /** @description The sign of impersonation the sender check saw when capture made this contact from a mail. */
+        /** @description The sign of impersonation the sender check saw on a captured mail from this contact. */
         ContactImpersonationWarning: {
             /**
              * @description Which sign it saw. `punycode_domain`: the mail domain is written in punycode, which can look like another domain. `display_name_other_domain`: the display name holds an address on a domain other than the one the mail came from. Absent on a warning recorded before the reason was stored.
@@ -62149,6 +62171,8 @@ export interface components {
             /** @description On a task row: true when `due_at` names an agreed time of day, false when the task is due by that day. Absent on other rows. */
             due_has_time?: boolean;
             due_intent?: components["schemas"]["IntentTime"];
+            /** @description On a task row: the kind of work it asks for, so a card names it without reading the task. Absent on other rows. */
+            task_type?: components["schemas"]["TaskType"];
             /** @description Past due at the read instant, resolved server-side so every surface agrees. */
             overdue?: boolean;
             /**
@@ -63894,6 +63918,8 @@ export interface components {
             /** @description On a task row: true when `due_at` names an agreed time of day, false when the task is due by that day. Absent on other rows. */
             due_has_time?: boolean;
             due_intent?: components["schemas"]["IntentTime"];
+            /** @description On a task row: the kind of work it asks for, so a card names it without reading the task. Absent on other rows. */
+            task_type?: components["schemas"]["TaskType"];
             /** @description Past due at the read instant, resolved server-side so every surface agrees. */
             overdue?: boolean;
             /**
@@ -103644,7 +103670,7 @@ export interface operations {
                     "application/problem+json": components["schemas"]["Problem"];
                 };
             };
-            /** @description No such live contact to address (a departed or unknown recipient reads the same). */
+            /** @description No such live contact to address (a departed or unknown recipient reads the same), or no deal of that id the caller can read. */
             404: {
                 headers: {
                     [name: string]: unknown;
@@ -103653,7 +103679,7 @@ export interface operations {
                     "application/problem+json": components["schemas"]["Problem"];
                 };
             };
-            /** @description An unknown kind, or a note past its ceiling. */
+            /** @description An unknown kind, a note past its ceiling, a next-step notice without its deal, a deal on any other kind, or a deal that is closed or owned by someone else. */
             422: {
                 headers: {
                     [name: string]: unknown;

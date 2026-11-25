@@ -1,0 +1,13 @@
+/* The chip line under a piece of work, on Home's cards and the Worklist's rows. */
+.task-meta {
+  align-self: stretch;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+  margin-block-start: var(--space-2);
+}
+/* The state stands at the far end of the chips' line. */
+.task-meta-status {
+  margin-inline-start: auto;
+}

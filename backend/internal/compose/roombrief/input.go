@@ -75,13 +75,18 @@ type DocumentIn struct {
 type ThreadIn struct {
 	ID string `json:"id"`
 	// DocumentID and About are empty for a thread about the whole room.
-	DocumentID     string      `json:"document_id,omitempty"`
-	About          string      `json:"about,omitempty"`
-	Resolved       bool        `json:"resolved"`
-	WaitingOnYou   bool        `json:"waiting_on_you"`
-	RequiredChange bool        `json:"required_change,omitempty"`
-	Comments       []CommentIn `json:"comments"`
-	latest         time.Time
+	DocumentID     string `json:"document_id,omitempty"`
+	About          string `json:"about,omitempty"`
+	Resolved       bool   `json:"resolved"`
+	WaitingOnYou   bool   `json:"waiting_on_you"`
+	RequiredChange bool   `json:"required_change,omitempty"`
+	// BuyerSetsCondition marks a waiting thread whose last comment says the buyer
+	// will not sign or go ahead until something is met. It is read from the
+	// words, so a condition phrased another way, or in another language, is
+	// unmarked and the model reads it as before.
+	BuyerSetsCondition bool        `json:"buyer_sets_condition,omitempty"`
+	Comments           []CommentIn `json:"comments"`
+	latest             time.Time
 }
 
 // CommentIn is one comment, newest last.
@@ -190,6 +195,7 @@ func threadsFrom(threads []crmcontracts.DealRoomThread, titles, seats map[string
 			last := comments[len(comments)-1]
 			folded.latest = last.CreatedAt
 			folded.WaitingOnYou = !folded.Resolved && last.Author.Side == sideBuyer
+			folded.BuyerSetsCondition = folded.WaitingOnYou && setsCondition(last.Body)
 		}
 		for _, comment := range comments[max(0, len(comments)-maxThreadComments):] {
 			folded.Comments = append(folded.Comments, commentFrom(comment, seats))

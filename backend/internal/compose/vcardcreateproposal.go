@@ -162,6 +162,7 @@ func vcardCreateStager(pool *pgxpool.Pool) func(ctx context.Context, entry conta
 		}
 		digest := sha256.Sum256(body)
 		_, _, err = svc.StageUnlessDeclined(ctx, approvals.StageInput{
+			Why:            approvals.HeadlineSaysWhy,
 			Kind:           vcardCreateKind,
 			ProposedChange: body,
 			DiffHash:       hex.EncodeToString(digest[:]),

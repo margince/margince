@@ -21,6 +21,7 @@ import (
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/deals"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 )
 
 // The job names used more than once below.
@@ -194,6 +195,10 @@ func reasonFromEvidence(evidence, after map[string]any) *crmcontracts.MagicSente
 		return &crmcontracts.MagicSentence{Key: whySiteUnnamed}
 	case "capture_enrich":
 		return &crmcontracts.MagicSentence{Key: "magic.why.signature"}
+	}
+	if why, ok := evidence[storekit.EvidenceKeyStatedReason].(string); ok && strings.TrimSpace(why) != "" {
+		values := map[string]string{"why": strings.TrimSpace(why)}
+		return &crmcontracts.MagicSentence{Key: "magic.why.stated", Values: &values}
 	}
 	return nil
 }

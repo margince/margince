@@ -10,16 +10,16 @@
   "totals": {
     "tools": 48,
     "resources": 14,
-    "tool_catalog_bytes": 248899,
+    "tool_catalog_bytes": 249249,
     "resource_catalog_bytes": 5622,
-    "approx_wire_tokens_total": 63630,
+    "approx_wire_tokens_total": 63717,
     "largest_tool_bytes": 16204,
     "largest_tool": "read_details",
     "tool_catalog_composition": {
       "description_bytes": 52248,
-      "input_schema_bytes": 150332,
+      "input_schema_bytes": 150682,
       "output_schema_bytes": 34465,
-      "description_plus_input_schema_bytes": 202580
+      "description_plus_input_schema_bytes": 202930
     }
   },
   "tools": {
@@ -882,7 +882,7 @@
         "inputSchema": {
           "properties": {
             "action": {
-              "description": "read_workspace topic actions lists each action's body\nassign_notice_case: Give a privacy notice already owed (from notice_cases) an owner\nassign_notice_case_review: Give a contact's privacy-notice case (from notice_case_reviews) an owner\nconfirm_notice_source: Confirm where a contact came from (bought list, import, their own enquiry), which decides whether a privacy notice is owed\nlift_lead_suppression: Take back a stop on a lead, if you outrank the level that set it\nlift_suppression: Take back a stop, if you outrank the level that set it\nopen_data_subject_request: Open a data-subject request (access/rectify/erasure)\npin_activity_to_floor: Pin an activity to the retention floor, restricting it\nplace_legal_hold: Place a legal hold on a record\nrecord_communication_context: Answer a refusal by saying what happened away from the system\nrecord_consent: Grant or withdraw consent for one purpose — writes an append-only proof row\nrecord_lead_qualifying_event: Record an exchange with a lead\nrecord_qualifying_event: Record an exchange for scoped correspondence\nresolve_confirm_submission: Accept or decline what a subject proposed\nretract_acquisition_request: Take back the request the contact's acquisition records\nretract_lead_qualifying_event: Take back a recorded lead exchange\nretract_qualifying_event: Take back an exchange a colleague recorded by hand\nrevoke_override: Take back a standing override, if your level may revoke the one that recorded it\nsuppress_contact: Record that this contact asked us to stop writing to them\nupdate_data_subject_request: Update a data-subject request's status / assignee / resolution",
+              "description": "read_workspace topic actions lists each action's body\nassign_notice_case: Give a privacy notice already owed (from notice_cases, GET /privacy/notice-cases) an owner\nassign_notice_case_review: Give a contact's privacy-notice case (from notice_case_reviews, GET /privacy/notice-case-reviews) an owner\nconfirm_notice_source: Confirm where a contact came from (bought list, import, their own enquiry), which decides whether a privacy notice is owed\nlift_lead_suppression: Take back a stop on a lead, if you outrank the level that set it\nlift_suppression: Take back a stop, if you outrank the level that set it\nopen_data_subject_request: Open a data-subject request (access/rectify/erasure)\npin_activity_to_floor: Pin an activity to the retention floor, restricting it\nplace_legal_hold: Place a legal hold on a record\nrecord_communication_context: Answer a refusal by saying what happened away from the system\nrecord_consent: Grant or withdraw consent for one purpose — writes an append-only proof row\nrecord_lead_qualifying_event: Record an exchange with a lead\nrecord_qualifying_event: Record an exchange for scoped correspondence\nresolve_confirm_submission: Accept or decline what a subject proposed\nretract_acquisition_request: Take back the request the contact's acquisition records\nretract_lead_qualifying_event: Take back a recorded lead exchange\nretract_qualifying_event: Take back an exchange a colleague recorded by hand\nrevoke_override: Take back a standing override, if your level may revoke the one that recorded it\nsuppress_contact: Record that this contact asked us to stop writing to them\nupdate_data_subject_request: Update a data-subject request's status / assignee / resolution",
               "enum": [
                 "assign_notice_case",
                 "assign_notice_case_review",
@@ -9673,12 +9673,19 @@
                 "offer"
               ],
               "type": "string"
+            },
+            "why": {
+              "description": "Why you are making this change, in one sentence the user reads beside it. Name who, which record or message, and the fact that prompted it, for example: Anna Weber wrote on 14 Nov that the rollout moves to March.",
+              "maxLength": 600,
+              "minLength": 1,
+              "type": "string"
             }
           },
           "required": [
             "record_type",
             "id",
-            "fields"
+            "fields",
+            "why"
           ],
           "type": "object"
         },
@@ -12715,6 +12722,15 @@
                 "type": "string"
               },
               "source": {
+                "description": "The channel this signal arrived by. A client that files it for a member sends `manual`; an integration sends `api`. Any other value is 422 `invalid_source`.",
+                "enum": [
+                  "api",
+                  "automation",
+                  "capture",
+                  "import",
+                  "manual",
+                  "webform"
+                ],
                 "type": "string"
               },
               "source_channel": {
@@ -13042,6 +13058,11 @@
           "body": {
             "additionalProperties": false,
             "properties": {
+              "deal_id": {
+                "description": "The deal the notice is about. Required for `coach_deal_needs_next_step`, and refused on every other kind. The deal must be open, owned by the recipient, and one the caller can read. The headline then names the deal and what Margince sees on it: whether a next step is planned, and the day of its last activity. The recipient's row links to the deal.",
+                "format": "uuid",
+                "type": "string"
+              },
               "kind": {
                 "description": "What a coaching notice is about. A closed vocabulary, because a notice addressed to a colleague is words in their queue: the kind is what the recipient reads as the headline, and the coach supplies only the note beneath it. The kinds an automation raises under the system principal (`automation`, `lead_sla`) are deliberately absent — a contact may not raise a notice that looks like the system spoke.",
                 "enum": [
@@ -14260,7 +14281,7 @@
             ],
             "type": "object"
           },
-          "does": "Give a privacy notice already owed (from notice_cases) an owner.",
+          "does": "Give a privacy notice already owed (from notice_cases, GET /privacy/notice-cases) an owner.",
           "ids": [
             "id"
           ],
@@ -14280,7 +14301,7 @@
             ],
             "type": "object"
           },
-          "does": "Give a contact's privacy-notice case (from notice_case_reviews) an owner.",
+          "does": "Give a contact's privacy-notice case (from notice_case_reviews, GET /privacy/notice-case-reviews) an owner.",
           "ids": [
             "id"
           ],
@@ -14358,7 +14379,7 @@
             ],
             "type": "object"
           },
-          "does": "Confirm where a contact came from (bought list, import, their own enquiry), which decides whether a privacy notice is owed. Preview it first (POST /privacy/notice-case-reviews/{id}/source/preview). Only a contact with no recorded source is up for review; when its evidence does not name where the data first came from, ask the user rather than guessing a kind.",
+          "does": "Confirm where a contact came from (bought list, import, their own enquiry), which decides whether a privacy notice is owed. Preview it first (POST /privacy/notice-case-reviews/{id}/source/preview). Only a contact with no recorded source is up for review; when its evidence does not name where the data first came from (an import alone does not), ask the user rather than guessing a kind.",
           "ids": [
             "id"
           ],
@@ -25129,7 +25150,7 @@
         },
         {
           "action": "notice_case",
-          "does": "One privacy notice owed, where the source is confirmed. The case id comes from notice_cases, not the contact's id.",
+          "does": "One privacy notice owed, where the source is confirmed. The case id comes from notice_cases (GET /privacy/notice-cases), not the contact's id.",
           "ids": [
             "id"
           ],
@@ -25137,7 +25158,7 @@
         },
         {
           "action": "notice_case_review",
-          "does": "One contact's privacy-notice case — its source, whether a notice is owed, and by when. The id comes from notice_case_reviews or the contact's contact_360 view, not the contact's id.",
+          "does": "One contact's privacy-notice case — its source, whether a notice is owed, and by when. The id comes from notice_case_reviews (GET /privacy/notice-case-reviews) or the contact's contact_360 view (GET /contacts/{id}/360), not the contact's id.",
           "ids": [
             "id"
           ],
@@ -25236,7 +25257,7 @@
         },
         {
           "action": "notices",
-          "does": "The acting user's own in-app notifications, newest first. Not a privacy notice owed to a contact; those are notice_case_reviews.",
+          "does": "The acting user's own in-app notifications, newest first. Not a privacy notice owed to a contact; those are notice_case_reviews (GET /privacy/notice-case-reviews).",
           "query": [
             {
               "name": "cursor",
