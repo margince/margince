@@ -9,8 +9,7 @@ To open Settings in Margince, open the account menu at the top right of the scre
 Settings opens on **Overview**, which lists every page you can open. The page list down the side is in groups: **You**, **Company**, **People**, **Sales**, **Data**, **AI**, **Compliance** and **System**.
 
 A long page splits into tabs at its top, such as **Booking links**, **Availability** and **Guest page** on **Meetings**. Each tab has its own address, so a link can open one tab.
-
-To go right to one page, press ⌘K (Ctrl+K) and type its name, or the name of a setting on it. Or type into **Search settings** at the top of the settings list. When the page was found by one of its settings, **Search settings** shows that setting under the page name. When it finds one page, Enter opens that page. When it finds more, choose one with the arrow keys first.
+To go right to one page, press ⌘K (Ctrl+K) and type its name, or the name of a setting on it. Or type into **Search settings** at the top of the settings list. When the page was found by one of its settings, **Search settings** shows that setting under the page name. When it finds one page, Enter opens that page.
 
 ### What settings pages are there?
 Margince Settings puts its pages in these groups:
@@ -136,9 +135,7 @@ Seeing the rates needs the permission to read exchange rates. The Admin and Ops 
 ### How do I add a second company we work under?
 <!-- opens: settings/company -->
 
-**Legal entities** lists the companies you work under, each with its **Country** and **Jurisdiction**. Every installation starts with one, marked **Default**. It takes its name, address, VAT ID and logo from the company profile, so you change those on the company form. A colleague nobody has assigned works for the default. A colleague's booking page shows the company they work for.
-
-The **Country** column gives each name in your language. Where the default has no legal name or **Country** of its own to show, its row says **From the company profile**.
+**Legal entities** lists the companies you work under, each with its **Country** and **Jurisdiction**. Every installation starts with one, marked **Default**. It takes its name, address, VAT ID and logo from the company profile, so you change those on the company form. A colleague nobody has assigned works for the default. A colleague's booking page shows the company they work for. Where the default has no legal name or **Country** of its own, its row says **From the company profile**.
 
 An Admin adds another with **New legal entity**: its name, legal name, **Country** (where its address is) and **Jurisdiction** (the law it follows). Of the roles Margince ships, only Admin may change them, and a custom role can be given that permission too. Every other role sees the list and cannot change it. The ones you add can also say what they sell and to whom. On a company you can then choose which of them its fit rating is measured against. A new offer is issued by the company its writer works for; see [Offers and the rate card](offers-and-products.md).
 
