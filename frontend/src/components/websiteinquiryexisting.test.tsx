@@ -214,10 +214,19 @@ it("tells submissions of one form apart by who sent them and how their message o
     subject: "Website form: Website contact",
     web_form: null,
   };
+  const blank = {
+    ...first,
+    id: "00000000-0000-4000-8000-000000000025",
+    web_form: {
+      full_name: "   ",
+      email: "jo@example.test",
+      message: "A second question.",
+    },
+  };
   stubs(
     () => jsonResponse({ items: [] }),
     () => jsonResponse({ items: [] }),
-    [first, second, unkept],
+    [first, second, unkept, blank],
   );
   renderWithQueryClient(
     <WebsiteInquiryExistingDialog
@@ -243,6 +252,10 @@ it("tells submissions of one form apart by who sent them and how their message o
   if (!unnamed) throw new Error("the row of an unnamed sender is missing");
   expect(within(unnamed).getAllByText("ops@example.test")).toHaveLength(1);
   expect(within(unnamed).getByText("Our order has not arrived.")).toBeVisible();
+  // A name of spaces is no name: the row reads by the address, not blank.
+  expect(
+    screen.getByRole("checkbox", { name: "Select jo@example.test" }),
+  ).toBeInTheDocument();
   // A note whose fields were never kept still reads by its subject.
   expect(
     screen.getByRole("checkbox", {
