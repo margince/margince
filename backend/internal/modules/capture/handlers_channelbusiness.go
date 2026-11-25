@@ -39,7 +39,32 @@ func (h ChannelHandlers) ApproveTelegramBusinessConnection(w http.ResponseWriter
 	if !h.composed(w, r) {
 		return
 	}
-	link, err := h.store.ApproveBusinessConnection(r.Context(), ids.UUID(id))
+	var req crmcontracts.ApproveTelegramBusinessConnectionRequest
+	if r.ContentLength != 0 && !httperr.Decode(w, r, &req) {
+		return
+	}
+	var team ids.UUID
+	if req.ReaderTeamId != nil {
+		team = ids.UUID(*req.ReaderTeamId)
+	}
+	link, err := h.store.ApproveBusinessConnection(r.Context(), ids.UUID(id), team)
+	if err != nil {
+		writeChannelErr(w, r, err)
+		return
+	}
+	httperr.WriteJSON(w, http.StatusOK, wireBusinessConnection(link))
+}
+
+// UpdateTelegramBusinessConnectionVisibility sets who may read the account's messages.
+func (h ChannelHandlers) UpdateTelegramBusinessConnectionVisibility(w http.ResponseWriter, r *http.Request, id crmcontracts.Id) {
+	if !h.composed(w, r) {
+		return
+	}
+	var req crmcontracts.UpdateTelegramBusinessConnectionVisibilityRequest
+	if !httperr.Decode(w, r, &req) {
+		return
+	}
+	link, err := h.store.ChangeBusinessVisibility(r.Context(), ids.UUID(id), string(req.MailVisibility), req.Confirm)
 	if err != nil {
 		writeChannelErr(w, r, err)
 		return
@@ -61,11 +86,30 @@ func (h ChannelHandlers) DisconnectTelegramBusinessConnection(w http.ResponseWri
 
 func wireBusinessConnection(c BusinessConnection) crmcontracts.TelegramBusinessConnection {
 	return crmcontracts.TelegramBusinessConnection{
-		Id:          openapi_types.UUID(c.ID),
-		AccountId:   c.AccountID,
-		OwnerLabel:  c.OwnerLabel,
-		Status:      crmcontracts.TelegramBusinessConnectionStatus(c.Status),
-		ConnectedAt: c.ConnectedAt,
-		ApprovedAt:  c.ApprovedAt,
+		Id:             openapi_types.UUID(c.ID),
+		AccountId:      c.AccountID,
+		OwnerLabel:     c.OwnerLabel,
+		Status:         crmcontracts.TelegramBusinessConnectionStatus(c.Status),
+		ConnectedAt:    c.ConnectedAt,
+		ApprovedAt:     c.ApprovedAt,
+		SeatId:         optionalUUID(c.SeatID),
+		ReaderTeamId:   optionalUUID(c.ReaderTeam),
+		MailVisibility: optionalVisibility(c.Visibility),
 	}
+}
+
+func optionalUUID(id *ids.UUID) *openapi_types.UUID {
+	if id == nil {
+		return nil
+	}
+	wire := openapi_types.UUID(*id)
+	return &wire
+}
+
+func optionalVisibility(v *string) *crmcontracts.TelegramBusinessConnectionMailVisibility {
+	if v == nil {
+		return nil
+	}
+	wire := crmcontracts.TelegramBusinessConnectionMailVisibility(*v)
+	return &wire
 }

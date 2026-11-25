@@ -20,6 +20,7 @@ import (
 	"github.com/riverqueue/river"
 
 	"github.com/margince/margince/backend/internal/compose"
+	"github.com/margince/margince/backend/internal/compose/integration"
 	"github.com/margince/margince/backend/internal/compose/integration/apptest"
 	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
@@ -131,7 +132,7 @@ func TestABusinessConnectionWaitsForApprovalAndStoresNothing(t *testing.T) {
 	if again.version != row.version || c.connectionAudits(t, row.id) != 1 {
 		t.Errorf("a repeated update changed the link (version %d -> %d, %d audit rows)", row.version, again.version, c.connectionAudits(t, row.id))
 	}
-	if n := c.count(t, `SELECT count(*) FROM channel_connection WHERE provider = 'telegram_business' AND archived_at IS NULL`); n != 1 {
+	if n := c.count(t, `SELECT count(*) FROM channel_connection WHERE provider = 'telegram_business' AND archived_at IS NULL AND account_id IS NOT NULL`); n != 1 {
 		t.Errorf("%d live account connections after a repeat, want 1", n)
 	}
 	if bot, ok := c.liveBot(t); !ok || bot != c.conn.ID.String() {
@@ -194,7 +195,7 @@ func TestTurningALinkOffAndOnReturnsItToItsApprovalState(t *testing.T) {
 		t.Errorf("the row keeps connection id %q, want the new one bc-2 on the same row", row.channelID)
 	}
 
-	if _, err := c.channelStore().ApproveBusinessConnection(c.adminCtx(t), ids.MustParse(row.id)); err != nil {
+	if _, err := c.channelStore().ApproveBusinessConnection(c.adminCtx(t), ids.MustParse(row.id), c.readerTeam(t)); err != nil {
 		t.Fatalf("approving: %v", err)
 	}
 	c.deliver(t, sub, update(6205, "bc-2", false))
@@ -217,7 +218,7 @@ func TestOnlyAnAdminApprovesOrDisconnectsABusinessConnection(t *testing.T) {
 	if _, err := store.ListBusinessConnections(rep); !errors.Is(err, apperrors.ErrPermissionDenied) {
 		t.Errorf("a rep's list = %v, want permission denied", err)
 	}
-	if _, err := store.ApproveBusinessConnection(rep, id); !errors.Is(err, apperrors.ErrPermissionDenied) {
+	if _, err := store.ApproveBusinessConnection(rep, id, ids.NewV7()); !errors.Is(err, apperrors.ErrPermissionDenied) {
 		t.Errorf("a rep's approval = %v, want permission denied", err)
 	}
 	if err := store.DisconnectBusinessConnection(rep, id); !errors.Is(err, apperrors.ErrPermissionDenied) {
@@ -237,7 +238,7 @@ func TestOnlyAnAdminApprovesOrDisconnectsABusinessConnection(t *testing.T) {
 		t.Fatalf("list = %+v, want the one waiting account", listed.Data)
 	}
 	var approved struct{ Status string }
-	if status := c.Call(t, http.MethodPost, "/v1/channel-connections/telegram-business/"+row.id+"/approve", nil, nil, &approved); status != http.StatusOK || approved.Status != "connected" {
+	if status := c.Call(t, http.MethodPost, "/v1/channel-connections/telegram-business/"+row.id+"/approve", integration.AnyMap{"readerTeamId": c.readerTeam(t).String()}, nil, &approved); status != http.StatusOK || approved.Status != "connected" {
 		t.Fatalf("the admin's approval → %d %q, want 200 connected", status, approved.Status)
 	}
 	if n := c.connectionAudits(t, row.id); n != 2 {
@@ -245,7 +246,7 @@ func TestOnlyAnAdminApprovesOrDisconnectsABusinessConnection(t *testing.T) {
 	}
 
 	agent := apptest.PassportBearer(t, c.AppEnv, "business agent", "read", "write")
-	if status := c.Call(t, http.MethodPost, "/v1/channel-connections/telegram-business/"+row.id+"/approve", nil, agent, nil); status == http.StatusOK {
+	if status := c.Call(t, http.MethodPost, "/v1/channel-connections/telegram-business/"+row.id+"/approve", integration.AnyMap{"readerTeamId": c.readerTeam(t).String()}, agent, nil); status == http.StatusOK {
 		t.Errorf("an agent passport approved a business connection → %d", status)
 	}
 	if status := c.Call(t, http.MethodDelete, "/v1/channel-connections/telegram-business/"+row.id, nil, nil, nil); status != http.StatusNoContent {
@@ -254,7 +255,7 @@ func TestOnlyAnAdminApprovesOrDisconnectsABusinessConnection(t *testing.T) {
 	if _, ok := c.businessRow(t, "880301"); ok {
 		t.Error("a disconnected link is still live")
 	}
-	if _, err := store.ApproveBusinessConnection(c.adminCtx(t), id); !errors.Is(err, apperrors.ErrNotFound) {
+	if _, err := store.ApproveBusinessConnection(c.adminCtx(t), id, ids.NewV7()); !errors.Is(err, apperrors.ErrNotFound) {
 		t.Errorf("approving a disconnected link = %v, want not found", err)
 	}
 
@@ -271,7 +272,7 @@ func TestBusinessConnectionsLeaveTheBotConnectionsUntouched(t *testing.T) {
 	startTelegramWorker(t, runner)
 	c.deliver(t, sub, businessUpdate{updateID: 6401, connectionID: "bc-z", ownerID: 880401, firstName: "Ed", enabled: true})
 	row, _ := c.businessRow(t, "880401")
-	if _, err := c.channelStore().ApproveBusinessConnection(c.adminCtx(t), ids.MustParse(row.id)); err != nil {
+	if _, err := c.channelStore().ApproveBusinessConnection(c.adminCtx(t), ids.MustParse(row.id), c.readerTeam(t)); err != nil {
 		t.Fatalf("approving: %v", err)
 	}
 
@@ -335,7 +336,7 @@ func TestTheBusinessEndpointsServeOnlyTelegramBusinessRows(t *testing.T) {
 	if len(listed) != 1 || listed[0].AccountID != "880501" {
 		t.Errorf("the Telegram list holds %+v, want the Telegram link alone", listed)
 	}
-	if _, err := store.ApproveBusinessConnection(c.adminCtx(t), foreignID); !errors.Is(err, apperrors.ErrNotFound) {
+	if _, err := store.ApproveBusinessConnection(c.adminCtx(t), foreignID, ids.NewV7()); !errors.Is(err, apperrors.ErrNotFound) {
 		t.Errorf("approving another provider's child row = %v, want not found", err)
 	}
 	if err := store.DisconnectBusinessConnection(c.adminCtx(t), foreignID); !errors.Is(err, apperrors.ErrNotFound) {

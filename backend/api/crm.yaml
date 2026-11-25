@@ -17995,8 +17995,19 @@ paths:
       x-human-only-reason: security
       summary: Approve a Telegram Business account for the workspace.
       description: |
-        Moves a `pending_approval` link to `connected`. Approving a link that is already
-        `connected` changes nothing. A `409` means the owner switched the link off in Telegram.
+        Moves a `pending_approval` link to `connected` and gives the account its seat. A company
+        account's seat is read by the team in `readerTeamId` and starts `held`, as a shared
+        mailbox does; an admin then opens it with `PATCH /channel-connections/telegram-business/{id}/visibility`. The team is
+        required the first time an account is approved (`422 reader_team_required`) and is
+        optional when the account comes back to a seat it already had. A member's own account
+        takes no team and starts `classified`. Approving a link that is already `connected` changes
+        nothing except that it makes a missing seat. A `409` means the owner switched the link off
+        in Telegram, or `readerTeamId` names another team than the seat already has.
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/ApproveTelegramBusinessConnectionRequest' }
       responses:
         '200':
           description: The approved connection.
@@ -18008,6 +18019,46 @@ paths:
         '404': { $ref: '#/components/responses/NotFound' }
         '422': { $ref: '#/components/responses/ValidationError' }
         '409': { $ref: '#/components/responses/Conflict' }
+        '503':
+          description: 'This deployment serves no messaging channels (`code: channel_connections_not_configured`).'
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+
+  /channel-connections/telegram-business/{id}/visibility:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+    patch:
+      tags: [Connectors]
+      operationId: updateTelegramBusinessConnectionVisibility
+      security: [ { cookieAuth: [] } ]
+      x-agent-access: human-only
+      x-human-only-reason: security
+      summary: Change who may read a business account's messages.
+      description: |
+        Sets the mail visibility of the account's seat, as `PATCH /shared-mailboxes/{id}` does for a
+        shared mailbox: the next message follows it. `shared` needs `capture.shared_posture_allowed`
+        and `classified` is refused, both with `422`. The request must carry `confirm: true`, because
+        the change decides what every reader of the seat sees. A link nobody has approved has no seat
+        and answers `409`. A member's own account has no team seat and answers `404`.
+
+        Admin only, in a signed-in session.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/UpdateTelegramBusinessConnectionVisibilityRequest' }
+      responses:
+        '200':
+          description: The connection as it now stands.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/TelegramBusinessConnection' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/PermissionDenied' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '422': { $ref: '#/components/responses/ValidationError' }
         '503':
           description: 'This deployment serves no messaging channels (`code: channel_connections_not_configured`).'
           content:
@@ -47775,6 +47826,26 @@ components:
           description: '`pending_approval` waits for an admin; `disconnected` means the owner switched the link off in Telegram.'
         connectedAt: { type: string, format: date-time, description: When the owner first linked the bot. }
         approvedAt: { type: [string, 'null'], format: date-time, description: When an admin approved the link; absent until then. }
+        seatId:
+          type: [string, 'null']
+          format: uuid
+          description: The seat the account's messages file through. Its mail visibility is changed with `PATCH /channel-connections/telegram-business/{id}/visibility`. Null until an admin approves the link.
+        readerTeamId: { type: [string, 'null'], format: uuid, description: The team that reads a company account's messages. Null for a member's own account and before approval. }
+        mailVisibility:
+          type: [string, 'null']
+          enum: [held, shared, classified, null]
+          x-extensible-enum: true
+          description: What the seat asks of the account's messages. `held` keeps them from colleagues outside the reader team and `shared` opens them as the contact's sharing allows. A member's own account starts `classified`, which holds a chat.
+    ApproveTelegramBusinessConnectionRequest:
+      type: object
+      properties:
+        readerTeamId: { type: string, format: uuid, description: The team that reads the account's messages. }
+    UpdateTelegramBusinessConnectionVisibilityRequest:
+      type: object
+      required: [mail_visibility, confirm]
+      properties:
+        mail_visibility: { type: string, enum: [held, shared, classified], description: '`classified` is refused with `422`.' }
+        confirm: { type: boolean, description: 'Must be true: the change decides what every reader of the seat sees.' }
     TelegramBusinessConnectionListResponse:
       type: object
       required: [data]

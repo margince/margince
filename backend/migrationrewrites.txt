@@ -272,3 +272,7 @@
 1795603730_a_settings_list_holds_each_name_once.up.sql | * | the procedural body renames only the second and later spellings of one name in nine settings lists, which an admin keeps by hand, so the set is empty or a handful of rows
 1795603731_a_lead_name_holds_at_most_a_label.up.sql | * | replaces the two text-bound triggers on lead, which act on later writes only; no existing row is changed
 1795603731_a_lead_name_holds_at_most_a_label.down.sql | * | restores the two text-bound triggers on lead as they stood before; no existing row is changed
+1795620141_a_chat_business_account_has_a_seat.down.sql | channel_connection, capture_connection | the dev-only rollback removes business link rows and their seats, a handful per business account; the tables hold one row per connection
+1795620142_the_seat_provider_check_is_validated.down.sql | * | the down migration is a single SELECT 1 that changes nothing
+1795620144_a_business_link_without_a_seat_waits_for_approval.up.sql | channel_connection | moves only the Telegram Business link rows that are connected with no seat, a handful per business account, and the table holds one row per connection
+1795620144_a_business_link_without_a_seat_waits_for_approval.down.sql | * | the down migration is a single SELECT 1 that changes nothing

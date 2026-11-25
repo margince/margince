@@ -31,8 +31,8 @@ module to put a change in, read [modules.md](../modules.md).
 | | |
 |---|--:|
 | Tables | 354 |
-| Columns | 4406 |
-| Foreign keys | 618 |
+| Columns | 4407 |
+| Foreign keys | 619 |
 | Owning areas | 40 |
 
 ## The 12 records everything else hangs off
@@ -205,7 +205,7 @@ erDiagram
 | [`capture_auto_enrich_state`](capture.md#capture_auto_enrich_state) | capture | 6 | 0 |
 | [`capture_backfill`](capture.md#capture_backfill) | capture | 31 | 5 |
 | [`capture_backfill_creation`](capture.md#capture_backfill_creation) | capture | 4 | 0 |
-| [`capture_connection`](capture.md#capture_connection) | capture | 35 | 5 |
+| [`capture_connection`](capture.md#capture_connection) | capture | 35 | 6 |
 | [`capture_counterparty_hold`](capture.md#capture_counterparty_hold) | capture | 6 | 0 |
 | [`capture_exclusion`](capture.md#capture_exclusion) | capture | 8 | 0 |
 | [`capture_freemail_domain`](capture.md#capture_freemail_domain) | capture | 4 | 0 |
@@ -221,7 +221,7 @@ erDiagram
 | [`capture_test_mailbox_sent`](capture.md#capture_test_mailbox_sent) | capture | 8 | 0 |
 | [`capture_thread_verdict`](capture.md#capture_thread_verdict) | capture | 16 | 0 |
 | [`capture_trace`](capture.md#capture_trace) | capture | 13 | 0 |
-| [`channel_connection`](capture.md#channel_connection) | capture | 19 | 2 |
+| [`channel_connection`](capture.md#channel_connection) | capture | 20 | 2 |
 | [`channel_provider`](compose.md#channel_provider) | compose | 5 | 2 |
 | [`chat_link`](chatlinks.md#chat_link) | chatlinks | 18 | 1 |
 | [`chat_post_item`](chatlinks.md#chat_post_item) | chatlinks | 11 | 0 |
