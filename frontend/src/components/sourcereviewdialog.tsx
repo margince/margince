@@ -285,7 +285,8 @@ function canPreviewSource(
     settled &&
     request !== null &&
     (!request.met_in_person || Boolean(request.obtained_at)) &&
-    (request.note.trim() !== "" || request.selected_evidence !== undefined)
+    ((request.note ?? "").trim() !== "" ||
+      request.selected_evidence !== undefined)
   );
 }
 
