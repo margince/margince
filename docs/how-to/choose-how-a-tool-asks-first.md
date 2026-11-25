@@ -30,7 +30,9 @@ The hold does not trust the model. The user agrees in the chat only when the pas
 - what it changes stays with the caller or the workspace setup, and a member can undo it;
 - it only shows fewer things, such as a stop on a contact.
 
-**Use neither** for a plain read, or a write the user asked for in so many words. Do not mark a read, unless it shows something private, such as the AI calls the workspace kept.
+**Use neither** for a plain read, or a write with small risk that needs no ask at all, such as logging a call. Do not mark a read, unless it shows something private, such as the AI calls the workspace kept.
+
+You choose the way for the tool, not for one request. An act with serious risk keeps its hold even when the user asked for it in so many words. The user then agrees once, as in `case126_file_it_i_approve`.
 
 ## How to set each
 
