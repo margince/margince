@@ -16,8 +16,8 @@ import (
 
 // HandOverTx moves one announcement to a new recipient. Every other copy is
 // taken back. The recipient's line is written, or, when an earlier hand-over
-// took it back, opened again unread. Its mail attempt is kept, so handing a
-// request back and forth sends each member one email at most.
+// took it back, opened again unread with the words in. Its mail attempt is
+// kept, so handing a request back and forth sends each member one email at most.
 func (s *Store) HandOverTx(ctx context.Context, tx pgx.Tx, in NewNotice) (ids.UUID, error) {
 	if in.DedupeKey == "" {
 		return ids.Nil, errors.New("notices: a hand-over names the announcement it moves")
@@ -28,11 +28,12 @@ func (s *Store) HandOverTx(ctx context.Context, tx pgx.Tx, in NewNotice) (ids.UU
 		in.DedupeKey, in.Recipient); err != nil {
 		return ids.Nil, fmt.Errorf("notices: taking back an announcement from its former recipients: %w", err)
 	}
+	metadata, subject, body := fittedWords(ctx, in)
 	var reopened ids.UUID
 	err := tx.QueryRow(ctx, `
-		UPDATE notice SET retracted_at = NULL, read_at = NULL
+		UPDATE notice SET retracted_at = NULL, read_at = NULL, subject = $3, body = $4, system_text = $5, subject_parts = $6
 		 WHERE recipient_user_id = $1 AND dedupe_key = $2 AND retracted_at IS NOT NULL
-		RETURNING id`, in.Recipient, in.DedupeKey).Scan(&reopened)
+		RETURNING id`, in.Recipient, in.DedupeKey, subject, body, metadata, in.SubjectParts).Scan(&reopened)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return s.CreateTx(ctx, tx, in)
 	}

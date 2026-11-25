@@ -236,7 +236,8 @@ type noticeWriter func(ctx context.Context, tx pgx.Tx, line notices.NewNotice) (
 
 // recordApprovalNotice writes one decider's line and, when they asked for
 // email, the message about it, in the caller's transaction. The staging
-// announcement and a deal's owner change both tell a decider this way.
+// announcement, a deal's owner change and a booking link's team request all
+// tell their reader this way.
 func recordApprovalNotice(
 	ctx context.Context, tx pgx.Tx, write noticeWriter, mail noticeMailQueue, wsID ids.UUID, line notices.NewNotice,
 ) error {

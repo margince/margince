@@ -43,7 +43,7 @@ var removeTagCopy = toolCopy{
 // rather than warning about an authority the store already enforces.
 var createTagCopy = toolCopy{
 	Purpose: "Coin a new word in the workspace vocabulary, so records can be grouped by it.",
-	Limits: "list_tags FIRST: a workspace with \"Key Account\" does not want \"key accounts\" " +
+	Limits: "list_tags FIRST: a workspace with \"Key Customer\" does not want \"key customers\" " +
 		"beside it, and the two then split the records that belong together. A name already " +
 		"taken is a conflict, matched case-insensitively — including a RETIRED word holding " +
 		"it, which change_tags restores. Needs the tag.create grant, " +

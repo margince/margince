@@ -79,7 +79,7 @@ func (f *rereadFixture) read(args StageEvidenceReadArgs) {
 func (f *rereadFixture) firstReading(mail ids.UUID) {
 	f.t.Helper()
 	args := StageEvidenceReadArgs{Workspace: f.WS, DealID: f.dealID.UUID, ActivityID: mail}
-	queue, err := ownerChangeMail()
+	queue, err := callerTxJobs()
 	if err != nil {
 		f.t.Fatal(err)
 	}

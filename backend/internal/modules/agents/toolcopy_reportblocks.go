@@ -18,6 +18,6 @@ var describeReportBlocksCopy = toolCopy{
 		"same document as the margince://schema/report-blocks resource, for a caller that " +
 		"reads tools rather than resources.",
 	Retain: "A figure is never written into a block, only cited: every number names a saved " +
-		"run and a cell inside it. A block carrying a literal number is refused even beside a " +
-		"valid citation.",
+		"run's cell, a standard metric (metric_ref) or a frozen edition (edition_ref). A block " +
+		"carrying a literal number is refused even beside a valid citation.",
 }

@@ -37,20 +37,28 @@ func (s *Sink) RemoveCalendarMeeting(ctx context.Context, key connector.NaturalK
 		if err != nil {
 			return err
 		}
-		if organizer {
-			if s.cancelMeetingByID != nil {
-				_, err = s.cancelMeetingByID(ctx, tx, id, key, at)
-				return err
-			}
-			if s.cancelMeeting != nil {
-				_, _, err = s.cancelMeeting(ctx, tx, key, at)
-				return err
-			}
-			return nil
-		}
-		_, err = SettleMeetingRosterTx(ctx, ctx, tx, id, MeetingRoster{Seat: actorUserID(ctx), Current: true, Left: true}, nil)
-		return err
+		return s.removeCalendarCopyTx(ctx, tx, id, key, at, organizer)
 	})
+}
+
+// removeCalendarCopyTx settles one meeting the seat's calendar no longer
+// holds: it cancels the meeting, or takes the seat off its roster.
+func (s *Sink) removeCalendarCopyTx(
+	ctx context.Context, tx pgx.Tx, id ids.ActivityID, key connector.NaturalKey, at time.Time, cancel bool,
+) error {
+	if !cancel {
+		_, err := SettleMeetingRosterTx(ctx, ctx, tx, id, MeetingRoster{Seat: actorUserID(ctx), Current: true, Left: true}, nil)
+		return err
+	}
+	if s.cancelMeetingByID != nil {
+		_, err := s.cancelMeetingByID(ctx, tx, id, key, at)
+		return err
+	}
+	if s.cancelMeeting != nil {
+		_, _, err := s.cancelMeeting(ctx, tx, key, at)
+		return err
+	}
+	return nil
 }
 
 // SeatOrganizesMeetingTx reports whether the seat is the meeting's recorded

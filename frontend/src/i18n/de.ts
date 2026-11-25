@@ -1912,6 +1912,9 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "scheduling.retryHelp":
     "Ein neuer Versuch sendet dieselbe Einladung erneut. Der Gast erhält also keine zweite Einladung.",
   "book.videoApp": "{app} · Link in Ihrer Einladung",
+  "book.lengthChoice": "Dauer des Termins",
+  "book.lengthNotOffered":
+    "Diese Termindauer wird nicht mehr angeboten. Wählen Sie eine andere Dauer.",
   "scheduling.pickDay": "Tag auswählen",
   "scheduling.changeTime": "Zeit ändern",
   "scheduling.confirmAt": "{day}, {time} bestätigen",
@@ -23336,6 +23339,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "scheduling.videoNotSet": "Nicht festgelegt",
   "scheduling.video.ownShort": "Eigener Link",
   "scheduling.mainLink": "(Hauptlink)",
+  "scheduling.copyLengthLink": "Link für {length} kopieren",
   "scheduling.linkActions": "Weitere Aktionen für {name}",
   "scheduling.editLink": "Link bearbeiten",
   "scheduling.createLink": "Buchungslink erstellen",
