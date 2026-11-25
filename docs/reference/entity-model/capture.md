@@ -206,7 +206,7 @@ The 25 tables owned by `capture`, as the migrations build them. [Back to the ent
 
 ## capture_connection
 
-35 columns · primary key `(id)` · referenced by 5 foreign keys
+35 columns · primary key `(id)` · referenced by 6 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -262,7 +262,7 @@ The 25 tables owned by `capture`, as the migrations build them. [Back to the ent
 - `capture_connection_backup_owner_is_shared`: `CHECK (((backup_owner_id IS NULL) OR (user_id IS NULL)))`
 - `capture_connection_history_baseline_check`: `CHECK ((((history_baseline_date IS NULL) = (history_baseline_tz IS NULL)) AND ((history_baseline_date IS NULL) = (history_baseline_set_by IS NULL)) AND ((history_baseline_date IS NULL) = (history_baseline_set_at IS NULL))))`
 - `capture_connection_mail_posture_check`: `CHECK ((mail_posture = ANY (ARRAY['shared', 'classified', 'held'])))`
-- `capture_connection_provider_check`: `CHECK ((provider = ANY (ARRAY['gmail', 'gcal', 'gdocs', 'imap', 'graph', 'graphcal', 'whatsapp', 'telegram', 'offline_demo', 'test_mailbox'])))`
+- `capture_connection_provider_check`: `CHECK ((provider = ANY (ARRAY['gmail', 'gcal', 'gdocs', 'imap', 'graph', 'graphcal', 'whatsapp', 'telegram', 'offline_demo', 'test_mailbox', 'telegram_business', 'zalo_oa'])))`
 - `capture_connection_shared_shape`: `CHECK ((((user_id IS NOT NULL) AND (reader_team_id IS NULL)) OR ((user_id IS NULL) AND (reader_team_id IS NOT NULL) AND (account_label IS NOT NULL) AND (mail_posture <> 'classified'))))`
 - `capture_connection_status_check`: `CHECK ((status = ANY (ARRAY['connected', 'disconnected', 'error', 'reauth_required'])))`
 - `capture_connection_unread_period_whole`: `CHECK ((((unread_from IS NULL) AND (unread_to IS NULL)) OR ((unread_from IS NOT NULL) AND (unread_to IS NOT NULL) AND (unread_from < unread_to))))`
@@ -874,7 +874,7 @@ The 25 tables owned by `capture`, as the migrations build them. [Back to the ent
 
 ## channel_connection
 
-19 columns · primary key `(id)` · referenced by 2 foreign keys
+20 columns · primary key `(id)` · referenced by 2 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -892,6 +892,7 @@ The 25 tables owned by `capture`, as the migrations build them. [Back to the ent
 | `parent_connection_id` | `uuid` |  | Points at `channel_connection.id`. |
 | `poll_offset` | `bigint`, default `0` | yes |  |
 | `provider` | `text` | yes | One of `telegram`, `telegram_business`, `dispact`, `whatsapp`, `zalo_oa`. |
+| `seat_id` | `uuid` |  | Points at `capture_connection.id`. |
 | `status` | `text` | yes | Only `connected` is live, and it is the only state a connect can produce: a pull ingress makes no provider call after the write, so there is no half-connected state. |
 | `archived_at` | `timestamp with time zone` |  | Soft-delete marker. `NULL` means live, and nearly every read filters on it. |
 | `created_at` | `timestamp with time zone`, default `now()` | yes | When the row was created. Set once. |
@@ -905,6 +906,7 @@ The 25 tables owned by `capture`, as the migrations build them. [Back to the ent
 | `connected_by` | `app_user` | the parent cannot be deleted while this row points at it |
 | `owner_user_id` | `app_user` | the parent cannot be deleted while this row points at it |
 | `parent_connection_id` | `channel_connection` | the parent cannot be deleted while this row points at it |
+| `seat_id` | `capture_connection` | the parent cannot be deleted while this row points at it |
 
 **Rules**
 
@@ -921,8 +923,10 @@ The 25 tables owned by `capture`, as the migrations build them. [Back to the ent
 - `channel_connection_owner_idx`: `btree (owner_user_id) WHERE (owner_user_id IS NOT NULL)`
 - `channel_connection_parent_idx`: `btree (parent_connection_id) WHERE (parent_connection_id IS NOT NULL)`
 - `channel_connection_pkey`: `unique, btree (id)`
+- `channel_connection_seat_idx`: `btree (seat_id)`
 - `uq_channel_connection_account`: `unique, btree (provider, account_id) WHERE ((archived_at IS NULL) AND (account_id IS NOT NULL))`
 - `uq_channel_connection_provider`: `unique, btree (provider) WHERE ((archived_at IS NULL) AND (account_id IS NULL))`
+- `uq_channel_connection_seat`: `unique, btree (seat_id) WHERE ((seat_id IS NOT NULL) AND (archived_at IS NULL))`
 
 **Triggers**
 

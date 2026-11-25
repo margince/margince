@@ -6697,6 +6697,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "outcomeReview.notes": "Weitere Notizen",
   "deal.commercialContext": "Kaufmännischer Kontext",
 
+  "deal.closedAmountKept":
+    "Ein gewonnener oder verlorener Deal behält seinen Preis. Öffne ihn zuerst wieder, um ihn zu entfernen.",
   "deal.arrFromOffer":
     "Der erwartete ARR stammt aus dem angenommenen Angebot und wird hier nicht bearbeitet.",
   "deal.brief": "Deal-Bericht",
@@ -9656,6 +9658,14 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Nur die Führungskraft, die diese Prognose abgegeben hat, kann eine neue abgeben.",
   "review.submitNewCall": "Neue Prognose abgeben",
   "review.forecastCallMoved": "Abgegebene Prognose prüfen",
+  "review.duplicateMotion": "Möglicherweise ein Kaufvorhaben",
+  "review.duplicateHelp":
+    "Diese beiden offenen Deals eines Kunden teilen eine Mail, einen Termin oder einen Kontakt, liegen in einer Pipeline und schließen höchstens 60 Tage auseinander.",
+  "review.duplicateThisDeal": "Dieser Deal",
+  "review.duplicateOtherDeal": "Sieht aus wie",
+  "review.duplicateOtherWithheld": "Ein Deal, der sich nicht öffnen lässt",
+  "review.duplicateSwap": "Stattdessen den anderen Deal behalten",
+  "review.duplicateSeparate": "Das sind getrennte Deals",
   "review.unknownCheck": "Unbenannte Prüfung",
   "review.sheetTitle": "Prüfung beantworten",
   "review.outcomeLegend": "Antworttyp",
@@ -15968,6 +15978,11 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Nur Lesezugriff. Deine Rolle darf keine Kurse ändern.",
   "settings.rates.fxTableLabel": "Geltende Kurse",
   "settings.rates.fxAdd": "Kurs festlegen",
+  "settings.rates.fxRemoveVerb": "{currency} entfernen",
+  "settings.rates.fxRemoveTitle": "Kurs für {currency} entfernen?",
+  "settings.rates.fxRemoveBody":
+    "Deals in {currency} zeigen keinen Wert in der Basiswährung, bis ein neuer Kurs festgelegt ist. Bereits berechnete Zahlen behalten den Kurs, mit dem sie berechnet wurden.",
+  "settings.rates.fxRemoveConfirm": "Entfernen",
   "settings.rates.fxEmpty": "Noch keine Wechselkurse.",
   "settings.rates.fxModalTitle": "Wechselkurs festlegen",
   "settings.rates.rateToBase": "Kurs (zur Basiswährung)",
@@ -16491,6 +16506,11 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "extAccess.brings.routes": "Routen",
   "extAccess.brings.jobs": "Hintergrund-Jobs",
   "extAccess.brings.needs": "Nutzt vom Kern",
+  "extAccess.brings.mail": "Liest aus erfassten E-Mails",
+  "extAccess.mail.subject": "Den Betreff",
+  "extAccess.mail.addresses": "Die Adressen der Beteiligten",
+  "extAccess.mail.body_one": "Das erste {count} Zeichen des Textes",
+  "extAccess.mail.body_other": "Die ersten {count} Zeichen des Textes",
   "extAccess.need.models": "KI-Modelle",
   "extAccess.need.objects": "Dateispeicher",
   "extAccess.brings.none": "Keine",
@@ -17332,13 +17352,13 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "installationSettings.baseCurrencyLock.ratesFrozen_other":
     "Für {count} Einträge ist bereits jeweils ein Wechselkurs zu dieser Währung festgeschrieben, daher ist sie nicht mehr änderbar.",
   "installationSettings.baseCurrencyLock.rateSheet_one":
-    "{count} Wechselkurs rechnet in {base} um. Entferne zuerst die Wechselkurse, um die Basiswährung zu ändern.",
+    "{count} Wechselkurs rechnet in {base} um. Entferne zuerst alle Währungen aus der Kurstabelle, um die Basiswährung zu ändern.",
   "installationSettings.baseCurrencyLock.rateSheet_other":
-    "{count} Wechselkurse rechnen in {base} um. Entferne zuerst die Wechselkurse, um die Basiswährung zu ändern.",
+    "{count} Wechselkurse rechnen in {base} um. Entferne zuerst alle Währungen aus der Kurstabelle, um die Basiswährung zu ändern.",
   "installationSettings.baseCurrencyLock.rateSheetUnnamed_one":
-    "{count} Wechselkurs rechnet in eine Basiswährung um, die nicht hinterlegt ist. Entferne zuerst die Wechselkurse, um die Basiswährung zu ändern.",
+    "{count} Wechselkurs rechnet in eine Basiswährung um, die nicht hinterlegt ist. Entferne zuerst alle Währungen aus der Kurstabelle, um die Basiswährung zu ändern.",
   "installationSettings.baseCurrencyLock.rateSheetUnnamed_other":
-    "{count} Wechselkurse rechnen in eine Basiswährung um, die nicht hinterlegt ist. Entferne zuerst die Wechselkurse, um die Basiswährung zu ändern.",
+    "{count} Wechselkurse rechnen in eine Basiswährung um, die nicht hinterlegt ist. Entferne zuerst alle Währungen aus der Kurstabelle, um die Basiswährung zu ändern.",
   "installationSettings.baseLanguage": "Basissprache",
   "installationSettings.baseLanguageHint":
     "Sprache, in der die KI schreibt, wenn das ganze Team den Text liest. Die Anzeigesprache ist davon getrennt, und Antworten nach außen folgen der Sprache des Threads.",

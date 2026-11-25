@@ -23446,8 +23446,10 @@ paths:
       security: [{bearerAuth: []}]
       summary: Answer a finding from the nightly input check.
       description: |-
-        Six answers, and they are not interchangeable. `fixed_record` and `added_evidence`
-        say the record moved. `reassign` says it is somebody else's. `remind_later` says
+        Seven answers, and they are not interchangeable. `fixed_record` and `added_evidence`
+        say the record moved. `reassign` says it is somebody else's. `separate` answers only
+        a `duplicate_motion` finding: its two deals are not one buying motion, and the pair
+        is not flagged again. `remind_later` says
         not now — and it leaves the finding OPEN, because "not now" is an answer about
         when rather than about whether, and a deferred finding that read as resolved would
         never come back.
@@ -48989,9 +48991,9 @@ components:
           description: For fixed_record on an unlinked signal, file its source evidence on this deal at the same company and settle the signal in the same transaction.
         outcome:
           type: string
-          enum: [fixed_record, added_evidence, value_correct, not_relevant, remind_later, reassign]
+          enum: [fixed_record, added_evidence, value_correct, not_relevant, remind_later, reassign, separate]
           description: >-
-            What kind of answer this is. `condition_cleared` is absent on purpose: it is the check's own, and a contact naming it would be saying the condition stopped being true without anything having looked.
+            What kind of answer this is. `condition_cleared` is absent on purpose: it is the check's own, and a contact naming it would be saying the condition stopped being true without anything having looked. `separate` answers only a `duplicate_motion` finding, says its two deals are not one buying motion, and has no expiry: the pair is not flagged again.
         reason:
           type: string
           maxLength: 2000
@@ -50211,6 +50213,32 @@ components:
           description: >-
             The core capabilities the unit declares it uses, each with the reason its author gave. The core grants exactly these and refuses the rest, so this list is the whole of what the unit can borrow from the core (its AI models, its object store). Sorted by capability; absent for a unit that declares none.
           items: {$ref: '#/components/schemas/ComposedExtensionNeed'}
+        mail_hooks:
+          $ref: '#/components/schemas/ComposedExtensionMailHooks'
+    ComposedExtensionMailHooks:
+      type: object
+      additionalProperties: false
+      required: [parties, deal, reads, body_characters, reasons]
+      description: >-
+        The unit's mail-capture hooks and what of each captured mail they read. Absent for a unit with no hook. A unit may send what a hook read to its own provider.
+      properties:
+        parties:
+          type: boolean
+          description: True when the unit may change the contacts and companies core found for a mail.
+        deal:
+          type: boolean
+          description: True when the unit may change the deal core files a mail on.
+        reads:
+          type: array
+          description: The parts of every captured mail the hooks read.
+          items: {type: string, enum: [subject, addresses, body]}
+        body_characters:
+          type: integer
+          description: How many characters of the mail's text a hook reads.
+        reasons:
+          type: array
+          description: The reason keys the unit's answers may give, sorted.
+          items: {type: string}
     ComposedExtensionNeed:
       type: object
       additionalProperties: false

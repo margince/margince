@@ -274,7 +274,9 @@ type Extension struct {
 	// operator which secrets a unit expects before it ever runs.
 	Secrets []SecretsRequest
 
-	MailHooks MailHooks // the two mail-capture hooks, see MailHooks
+	// MailHooks are the two mail-capture hooks. The manifest names them,
+	// because each reads the subject, addresses and text of captured mail.
+	MailHooks MailHooks
 	// Jobs are the scheduled background jobs the unit contributes: named
 	// cadenced passes that fan out over the fleet, one workspace per tick.
 	// Like a Tool this carries BEHAVIOR only — the cadence, wall clocks,

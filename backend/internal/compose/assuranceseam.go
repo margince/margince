@@ -387,12 +387,7 @@ func onlyDealSQL(only []ids.UUID, arg func(any) int) string {
 	return fmt.Sprintf(" AND d.id = ANY($%d)", arg(only))
 }
 
-// visibleToAllSQL admits an activity every member may read. The check runs as
-// the system and its answer reaches every reader of the forecast, so a limited
-// or restricted message must not move it.
-func visibleToAllSQL(alias string) string {
-	return "(" + relstrength.WorkspaceAudienceSQL(alias) + " AND " + alias + ".restricted_at IS NULL)"
-}
+func visibleToAllSQL(alias string) string { return relstrength.VisibleToAllSQL(alias) }
 
 // customerWroteSQL is a message one of the deal's contacts wrote.
 func customerWroteSQL(alias string) string {

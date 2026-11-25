@@ -252,8 +252,12 @@ Copy `extensions/openchannel/api/crm.yaml`. These rules fail you if you miss the
 - **Paths start from the `servers` URL**, which already ends in `/v1`. Write `/ext/<name>/inbound`, never
   `/v1/ext/...`. The server puts the base path back when it mounts the route. Written twice, it publishes
   `/v1/v1/ext/...` to every generated client (the `composition` tool refuses it).
-- **Every path must be under `/ext/<your-unit>/`.** Another unit's space, a core path, or a path template
-  (`{id}`) are all refused.
+- Every path must be under `/ext/<your-unit>/`. Another unit's space or a core path is refused.
+- A path may name a record by its id, as in `GET /ext/<unit>/orders/{order_id}`. The part right after the
+  unit is fixed, so `/ext/<unit>/{id}` is refused. Declare each id as a parameter with `in: path`,
+  `required: true` and a plain schema: text, a number or true/false. The tool takes the id as an argument of
+  that name, for any method, so an agent passes it the same way. The same name again in the body or query is
+  refused, by `make gen` and with a 422 on a call.
 - **Arguments live where the method puts them.** A served extension operation *is* a tool call under the
   rules, so the seam reads its arguments from one place. That is the request body for POST, PUT and PATCH, and
   the query for GET. If you declare them on the other side, the generator fails with a named error. The seam
