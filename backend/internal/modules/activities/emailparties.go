@@ -112,7 +112,7 @@ func readEmailPartiesOf(ctx context.Context, tx pgx.Tx, messages []ids.UUID) (ma
 		  `+contactJoin+`
 		  LEFT JOIN app_user u ON u.id = ap.user_id
 		  LEFT JOIN LATERAL (
-		       SELECT nullif(btrim(c.account_label), '') AS account_label FROM capture_connection c
+		       SELECT nullif(btrim(coalesce(substring(c.account_label FROM '<([^>]*)>'), c.account_label)), '') AS account_label FROM capture_connection c
 		        WHERE c.user_id = ap.user_id AND `+storekit.CapturingMailboxSQL("c", "act")+`
 		          AND nullif(btrim(c.account_label), '') IS NOT NULL
 		        ORDER BY c.created_at, c.id LIMIT 1) mailbox ON ap.user_id IS NOT NULL AND ap.address IS NULL
