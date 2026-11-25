@@ -87,17 +87,11 @@ func (h Handlers) WithInstallationName(r InstallationNameReader) Handlers {
 	return h
 }
 
-// WithClock returns a copy whose store reads time from now. Every copy shares
-// that store, so the clock holds for each door and each later With* copy.
+// WithClock sets the clock every store reading of now goes through. All copies
+// share that store, so the clock holds across later With* copies.
 func (h Handlers) WithClock(now func() time.Time) Handlers {
-	h.store = h.store.WithClock(now)
+	h.store.now = now
 	return h
-}
-
-// WithClock injects the instant the store dates what it issues from.
-func (s *Store) WithClock(now func() time.Time) *Store {
-	s.now = now
-	return s
 }
 
 // WithEraser returns a copy wired to the erase path.

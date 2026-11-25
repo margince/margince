@@ -93,6 +93,8 @@ func TestAnAgentPreviewsAContactsPrivacyMailAsTheUserDoes(t *testing.T) {
 	if !ok {
 		t.Fatalf("the preview names no language: %v", asUser)
 	}
+	// The seeded contact names no country and the installation keeps its UTC
+	// default, so the link's fourteen days print in UTC.
 	words := mailcopy.For(language)
 	expiry := fmt.Sprintf(words.ConfirmExpiry, words.Instant(issued.Add(14*24*time.Hour)))
 	if text, ok := asUser["text"].(string); !ok || !strings.Contains(text, expiry) {

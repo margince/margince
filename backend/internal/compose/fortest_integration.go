@@ -50,8 +50,8 @@ func TeamServiceForTest(pool *pgxpool.Pool) *identity.Service {
 	return identity.NewService(pool).WithMailCapture(mailCaptureSeam{})
 }
 
-// WithConsentClockForTest dates what the consent doors issue by now. The store
-// is shared by pointer, so the clock holds whichever option rebinds the handlers.
+// WithConsentClockForTest sets the clock the consent doors' store reads now from.
+// The store is shared by pointer, so it holds in any option order.
 func WithConsentClockForTest(now func() time.Time) Option {
 	return func(s *Server, _ *pgxpool.Pool) { s.consentHandlers = s.consentHandlers.WithClock(now) }
 }
