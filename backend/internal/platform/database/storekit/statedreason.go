@@ -23,10 +23,10 @@ func WithStatedReason(ctx context.Context, why string) context.Context {
 	return context.WithValue(ctx, statedReasonKey{}, why)
 }
 
-// withStatedReason adds the reason to a row written under a marked context.
+// stampStatedReason adds the reason to a row written under a marked context.
 //
 //craft:ignore naked-any the audit evidence seam is jsonb; its members are each writer's own shape
-func withStatedReason(ctx context.Context, evidence map[string]any) map[string]any {
+func stampStatedReason(ctx context.Context, evidence map[string]any) map[string]any {
 	why, ok := ctx.Value(statedReasonKey{}).(string)
 	if !ok || why == "" {
 		return evidence

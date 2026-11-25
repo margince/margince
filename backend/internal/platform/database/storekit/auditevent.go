@@ -88,7 +88,7 @@ func prepareAuditRow(ctx context.Context, entityType string, entityID ids.UUID, 
 	if row.after, err = marshalOrNil(after); err != nil {
 		return auditRow{}, err
 	}
-	evidence, err = withExtensionAttribution(ctx, withStatedReason(ctx, withConfirmedByLink(ctx, withReleasedByLink(ctx, entityID, withReversalLink(ctx, entityType, entityID, evidence)))))
+	evidence, err = withExtensionAttribution(ctx, stampStatedReason(ctx, withConfirmedByLink(ctx, withReleasedByLink(ctx, entityID, withReversalLink(ctx, entityType, entityID, evidence)))))
 	if err != nil {
 		return auditRow{}, err
 	}

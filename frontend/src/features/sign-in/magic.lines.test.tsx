@@ -81,7 +81,11 @@ describe("a receipt line is one row", () => {
     expect(screen.queryByText(/12\.555555555/)).toBeNull();
   });
 
-  it.each([
+  it.each<{
+    key: string;
+    values: Readonly<Record<string, string>> | undefined;
+    text: string;
+  }>([
     {
       key: "magic.why.forecast_date_basis",
       values: {

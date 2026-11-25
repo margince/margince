@@ -91,7 +91,7 @@ func TestEveryStagedApprovalCarriesAReason(t *testing.T) {
 				if !literalKeys(lit)["Why"] && !literalKeys(lit)["Evidence"] && !assignsReason(decl) &&
 					!approvalWhyWaived.Waived(t, filepath.ToSlash(p)) {
 					t.Errorf("%s: this approval is staged with neither Why nor Evidence, so its card cannot say "+
-						"why it exists. Set Why to the trigger in words that name the person and record, or "+
+						"why it exists. Set Why to the trigger in words that name who and which record, or "+
 						"Evidence to the quote it rests on", gatekit.SourceFileSet().Position(lit.Pos()))
 				}
 			}

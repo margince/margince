@@ -65,11 +65,15 @@ func checkCoachDeal(ask CoachAsk) error {
 	wantsDeal := ask.Kind == crmcontracts.NoticeKindCoachDealNeedsNextStep
 	switch {
 	case wantsDeal && ask.Deal.IsZero():
-		return &values.ParseError{Field: fieldDeal, Code: "missing_deal",
-			Message: "a next-step notice names the deal it is about; send deal_id"}
+		return &values.ParseError{
+			Field: fieldDeal, Code: "missing_deal",
+			Message: "a next-step notice names the deal it is about; send deal_id",
+		}
 	case !wantsDeal && !ask.Deal.IsZero():
-		return &values.ParseError{Field: fieldDeal, Code: "deal_not_for_kind",
-			Message: "only a next-step notice names a deal; leave deal_id out for this kind"}
+		return &values.ParseError{
+			Field: fieldDeal, Code: "deal_not_for_kind",
+			Message: "only a next-step notice names a deal; leave deal_id out for this kind",
+		}
 	}
 	return nil
 }
@@ -86,12 +90,16 @@ func coachHeadline(ctx context.Context, deals CoachDeals, ask CoachAsk) (coachLi
 		return coachLine{}, err
 	}
 	if !deal.Open {
-		return coachLine{}, &values.ParseError{Field: fieldDeal, Code: "deal_closed",
-			Message: "the deal is closed, so it has no next step to plan; pick an open deal"}
+		return coachLine{}, &values.ParseError{
+			Field: fieldDeal, Code: "deal_closed",
+			Message: "the deal is closed, so it has no next step to plan; pick an open deal",
+		}
 	}
 	if deal.Owner != ask.Recipient.UUID {
-		return coachLine{}, &values.ParseError{Field: fieldDeal, Code: "deal_not_theirs",
-			Message: "the deal belongs to someone else; coach its owner, or pick one of the recipient's deals"}
+		return coachLine{}, &values.ParseError{
+			Field: fieldDeal, Code: "deal_not_theirs",
+			Message: "the deal belongs to someone else; coach its owner, or pick one of the recipient's deals",
+		}
 	}
 	code := "coach.why.next_step_stalled"
 	if !deal.NextStepPlanned {

@@ -180,8 +180,9 @@ func stageFollowUpDraft(
 		TargetID:       dealID,
 		Summary:        summary,
 		SystemText:     &systemtext.Message{Version: 1, Subject: systemtext.Sentence("approval.draftedReplyWaiting", systemtext.Text(draft.Subject))},
-		Why: approvals.Grounds{Sentence: systemtext.Sentence("approval.why.reply_owed",
-			systemtext.Text(draft.To), systemtext.Date(wrote.UTC().Format(time.DateOnly)))},
+		Why: approvals.Grounds{
+			Sentence: systemtext.Sentence("approval.why.reply_owed", systemtext.Text(draft.To), systemtext.Date(wrote.UTC().Format(time.DateOnly))),
+		},
 		Identity:    identity,
 		JoinPending: true,
 	})
