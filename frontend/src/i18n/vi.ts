@@ -16054,6 +16054,12 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Tắt: tiện ích mở rộng này giữ nguyên trường công ty hoặc deal mà một thành viên đã sửa gần nhất và báo là đã giữ lại. Bật: nó thay thế trường đó.",
   "extGovernance.readOnly": "Quản trị viên thay đổi cài đặt này.",
   "extGovernance.notSaved": "Chưa lưu được cài đặt.",
+  "extAccess.setupReady": "Sẵn sàng",
+  "extAccess.needsSetup": "Cần thiết lập",
+  "extAccess.setupMissing": "Còn thiếu: {items}.",
+  "extAccess.setupSecret": "khóa “{name}” trong Cài đặt, mục Tích hợp",
+  "extAccess.setupApp":
+    "ứng dụng “{name}” trong Cài đặt, mục Đăng nhập và bảo mật",
   "users.empty": "Chưa có thành viên nào.",
   "users.inviteTitle": "Mời thành viên",
   "users.teamsLabel": "Nhóm",

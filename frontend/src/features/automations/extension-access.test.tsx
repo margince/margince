@@ -90,6 +90,10 @@ const EXTENSIONS = {
         { capability: "models", reason: "Writes the one-line summaries." },
         { capability: "objects", reason: "Keeps the summaries it writes." },
       ],
+      setup_missing: [
+        { kind: "workspace_secret", name: "signing" },
+        { kind: "oauth_app", name: "Acme CRM" },
+      ],
     },
     {
       name: "quiet",
@@ -101,6 +105,7 @@ const EXTENSIONS = {
       rbac_objects: [],
       routes: [],
       jobs: [],
+      setup_missing: [],
     },
     {
       // Composed by the running binary and absent from THIS bundle's registry:
@@ -923,6 +928,30 @@ describe("ExtensionAccessCard unit identity", () => {
       screen.queryByRole("link", {
         name: en["extAccess.openUnit"].replace("{name}", "Quiet"),
       }),
+    ).toBeNull();
+  });
+});
+
+describe("ExtensionAccessCard setup state", () => {
+  it("says a unit is ready, or names what it still needs, and nothing for an older server", async () => {
+    vi.stubGlobal("fetch", backend([]));
+    render(<ExtensionAccessCard />);
+
+    const quiet = (await screen.findByText("Quiet")).closest("section.panel");
+    expect(
+      within(quiet as HTMLElement).getByText(en["extAccess.setupReady"]),
+    ).toBeTruthy();
+    const notes = screen.getByText("Notes").closest("section.panel");
+    const setup = within(notes as HTMLElement).getByTestId("ext-unit-setup");
+    expect(setup.textContent).toContain(en["extAccess.needsSetup"]);
+    expect(setup.textContent).toContain("“signing”");
+    expect(setup.textContent).toContain("“Acme CRM”");
+    const stale = screen.getByText("Stale").closest("section.panel");
+    expect(
+      within(stale as HTMLElement).queryByText(en["extAccess.setupReady"]),
+    ).toBeNull();
+    expect(
+      within(stale as HTMLElement).queryByTestId("ext-unit-setup"),
     ).toBeNull();
   });
 });

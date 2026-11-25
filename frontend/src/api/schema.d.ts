@@ -52903,6 +52903,18 @@ export interface components {
             jobs: string[];
             /** @description The core capabilities the unit declares it uses, each with the reason its author gave. The core grants exactly these and refuses the rest, so this list is the whole of what the unit can borrow from the core (its AI models, its object store). Sorted by capability; absent for a unit that declares none. */
             needs?: components["schemas"]["ComposedExtensionNeed"][];
+            /** @description What an admin still has to set before the unit can work: each workspace secret the unit declares that holds no value, then each OAuth app it declares with no stored client. Empty means the unit is ready. Worked out on each read from the declaration and the stored values; nothing about it is stored. An older server leaves it out. */
+            setup_missing?: components["schemas"]["ComposedExtensionSetupItem"][];
+        };
+        /** @description One piece of setup a composed unit still needs. */
+        ComposedExtensionSetupItem: {
+            /**
+             * @description `workspace_secret` is a key the installation shares, set on Settings → Integrations. `oauth_app` is a vendor app whose client an admin stores on Settings → Sign-in and security.
+             * @enum {string}
+             */
+            kind: "workspace_secret" | "oauth_app";
+            /** @description The secret's key as the unit declares it, or the OAuth app's title. */
+            name: string;
         };
         /** @description One core capability a unit declares it uses. */
         ComposedExtensionNeed: {

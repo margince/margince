@@ -639,6 +639,10 @@ asked for:
 | `Scope: extension.SecretScopeWorkspace` | Settings → Integrations | the installation's shared key, kept by an operator |
 | no `Secrets` at all | no page | nothing to set up, so nothing to list; `#/ext/<name>` still routes |
 
+The unit's card under Settings, Extensions says "Ready" or "Needs setup". It needs setup while a workspace-scoped key
+you declare holds no value, or while an `OAuthApps` entry has no stored client. User-scoped keys never count.
+`GET /v1/extensions` names the missing items in `setup_missing`; nothing about it is stored.
+
 This has two results. **A unit declares one scope**: secrets that cover both are refused at `make gen`. A unit
 that is half one user's own account and half the installation's has no single page.
 
@@ -837,11 +841,13 @@ Settings: []extension.Setting{
 | `Label` | The name the admin sees. Required, one line, up to 60 characters. Shown as written, in one language. |
 | `Hint` | What the setting does. Optional, one line, up to 200 characters. |
 | `Kind` | `extension.SettingSwitch` holds `true` or `false` and starts `false`. `extension.SettingText` holds one line of up to 200 characters and starts empty. |
-| `Initial` | The value before an admin changes it. Optional. It must fit the `Kind`; left out, a switch starts `false` and a text starts empty. |
+| `Initial` | The value before an admin changes it. Optional. The `Kind` must hold it; left out, a switch starts `false` and a text starts empty. |
 
 Only an admin sees these settings, and only an admin can change them. Each change is saved with an audit row, like any installation setting. `make gen` and the start both refuse a declaration that breaks the table above, and the generated manifest lists the settings.
 
-An admin changes them with `PUT /v1/extensions/{name}/settings`. Send `overwrites_edited_fields` and a `declared` list of `key` and `value` pairs, for example `{"overwrites_edited_fields": false, "declared": [{"key": "region", "value": "eu-west"}]}`. A setting left out of the list keeps its value. A saved value wins over `Initial` from then on, across restarts and new versions of the unit. A new `Initial` reaches only a setting no admin has saved. A key the unit did not declare, or a value its kind cannot hold, is a 422 and saves nothing. A switch value is the text `true` or `false`.
+An admin changes them with `PUT /v1/extensions/{name}/settings`. Send `overwrites_edited_fields` and a `declared` list of `key` and `value` pairs, for example `{"overwrites_edited_fields": false, "declared": [{"key": "region", "value": "eu-west"}]}`. A setting left out of the list keeps its value. A key the unit did not declare, or a value its kind cannot hold, is a 422 and saves nothing. A switch value is the text `true` or `false`.
+
+A saved value wins over `Initial` from then on, across restarts and new versions of the unit. A new `Initial` reaches only a setting no admin has saved.
 
 The core stores the values and does not yet hand them to the unit's code. Only core code reads them today. A unit that needs to read its own setting has to wait for that.
 
@@ -1255,9 +1261,9 @@ Which half declares what is a rule, and the `composition` tool refuses the other
   tick.
 - **Both parts share one queue**, and the child's kind is the dispatcher's name plus `_ws`. No clock ever
   reaches a worker that no dispatcher fans out to.
-- **A dispatcher has one schedule**: a `cadence` interval such as `6h`, or `at` with a local time as `HH:MM`. Add
-  `days` to narrow `at` to some weekdays, written `mon` to `sun`; without `days` it runs every day. Both a
-  `cadence` and an `at`, or `days` with no `at`, are refused.
+- **A dispatcher has one schedule**: a `cadence` such as `6h`, or `at` with a local time as `HH:MM`. Add `days`
+  to run `at` only on some days, written `mon` to `sun`; without `days` it runs every day. Both a `cadence` and an
+  `at`, or `days` with no `at`, are refused.
 
 ```yaml
 ext_demo_report:
@@ -1270,10 +1276,14 @@ ext_demo_report:
 ```
 
 An `at` time counts in the company time zone an admin sets in Settings. A change of zone moves the next run within
-a minute. A time the clock skips in spring runs at the first minute after the gap. A time the clock shows twice in
-autumn runs once. A start of the worker never runs an `at` job by itself. If the worker was down at a slot, the job
-runs once soon after the restart; otherwise it waits for its next slot. Job health counts it overdue after the
-longest gap between two slots: a day, three days over a weekend, or a week.
+a minute.
+
+When the clock skips an hour, a time in that hour runs at the first minute after it. When the clock shows an hour
+twice, a time in it runs once. A start of the worker never runs an `at` job by itself. If the worker was down at a
+slot, the job runs once soon after the restart; otherwise it waits for its next slot.
+
+Job health lets an `at` job wait the longest gap between two of its slots. That is one day for a daily job, and three
+days for one that skips `sat` and `sun`.
 
 ```go
 Jobs: []extension.Job{{Name: "heartbeat", Handle: heartbeat}},

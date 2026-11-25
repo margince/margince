@@ -16385,6 +16385,12 @@ export const en = {
     "Off: this extension leaves a company or deal field that a member last edited as it is, and reports it as withheld. On: it replaces that field.",
   "extGovernance.readOnly": "An admin changes this setting.",
   "extGovernance.notSaved": "Setting was not saved.",
+  "extAccess.setupReady": "Ready",
+  "extAccess.needsSetup": "Needs setup",
+  "extAccess.setupMissing": "Still missing: {items}.",
+  "extAccess.setupSecret": "the key “{name}” in Settings under Integrations",
+  "extAccess.setupApp":
+    "the app “{name}” in Settings under Sign-in and security",
   "users.empty": "No members yet.",
   "users.inviteTitle": "Invite member",
   "users.teamsLabel": "Teams",
