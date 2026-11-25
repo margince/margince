@@ -293,22 +293,6 @@
 1795634861_a_phase_move_names_the_deal_win_that_caused_it.up.sql | * | the procedural bodies are the two text limit triggers on project_phase_history, re-created to hold the new cause_kind column to its limit; the migration adds two nullable columns with no default and changes no existing row
 1795634861_a_phase_move_names_the_deal_win_that_caused_it.down.sql | * | the down migration re-creates the same two text limit triggers as they were, then drops the two cause columns; it changes no existing row
 1795634862_the_phase_move_cause_checks_are_validated.down.sql | * | the down migration is a single SELECT 1 that changes nothing
-1795568046_a_company_says_status_and_source.up.sql | saved_view | only company list views a reader saved with the status filter or sort are rewritten, one row each, and each was saved by hand, so the set is small
-1795568046_a_company_says_status_and_source.down.sql | saved_view | runs only on a rollback and moves back the same hand-saved company list views
-1795578268_a_company_bounds_its_text_by_the_contract.up.sql | * | replaces the two text guards on company and on site_read; the guards act on later writes only, and it changes no existing row
-1795578268_a_company_bounds_its_text_by_the_contract.down.sql | * | restores the two text guards on company and on site_read as they stood before; no existing row is changed
-1795597143_a_chat_connection_can_ride_a_bot_and_name_its_account.down.sql | channel_connection | channel_connection holds a handful of rows, one per bot and business account, and the dev-only rollback drops the account rows
-1795597144_the_connection_checks_are_validated.down.sql | * | the down migration is a single SELECT 1 that changes nothing
-1795597145_the_new_connection_columns_check_their_text_limits.up.sql | * | the file only replaces trigger definitions and writes no row
-1795597145_the_new_connection_columns_check_their_text_limits.down.sql | * | the file only replaces trigger definitions and writes no row
-1795608722_a_finding_about_two_deals_can_be_answered_separate.down.sql | assurance_exception, assurance_resolution | runs only on a rollback and touches only findings somebody answered separate, at most one per pair of deals, which people answered by hand
-1795608723_the_separate_answer_check_is_validated.down.sql | * | the down migration is a single SELECT 1 that changes nothing
-1795620141_a_chat_business_account_has_a_seat.down.sql | channel_connection, capture_connection | the dev-only rollback removes business link rows and their seats, a handful per business account; the tables hold one row per connection
-1795620142_the_seat_provider_check_is_validated.down.sql | * | the down migration is a single SELECT 1 that changes nothing
-1795620144_a_business_link_without_a_seat_waits_for_approval.up.sql | channel_connection | moves only the Telegram Business link rows that are connected with no seat, a handful per business account, and the table holds one row per connection
-1795620144_a_business_link_without_a_seat_waits_for_approval.down.sql | * | the down migration is a single SELECT 1 that changes nothing
-1795621300_a_member_keeps_their_own_ingest_position.down.sql | extension_ingest_position | one row per unit and source, and the dev-only rollback drops the per-member rows
-1795621301_the_ingest_position_version_check_is_validated.down.sql | * | the down migration is a single SELECT 1 that changes nothing
 1795639501_core_only_kind_columns_are_validated.down.sql | * | the down migration is a single SELECT 1 that changes nothing
 1795639500_core_only_kind_columns_refuse_an_extension_kind.up.sql | * | the procedural body only checks whether any dedupe pair holds an extension id and drops two empty columns when none does; it writes no row
 1795639501_core_only_kind_columns_are_validated.up.sql | * | the procedural body validates seven CHECKs and writes no row; a CHECK a stored row breaks stays NOT VALID
