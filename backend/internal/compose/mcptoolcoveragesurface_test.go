@@ -167,7 +167,7 @@ func extensionTools(dir string) ([]unitTool, error) {
 	return tools, nil
 }
 
-// lanePassportScopes are the scopes scripts/e2e-llm.sh mints its passports with.
+// lanePassportScopes are the scopes scripts/e2e-llm.sh connects its passports with.
 // The key is a scenario's `passport:` line: absent, "wide", "research", "rep" or "readonly".
 //
 // It is the LANE'S OWN CHOICE, restated here because the page's central claim is

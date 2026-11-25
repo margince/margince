@@ -204,6 +204,7 @@ export const UNUSED_INSTALLATION_ROUTES: RouteMap = {
   "GET /installation/configuration": () => jsonResponse(CONFIGURATION),
   "GET /scheduling/profile": () => jsonResponse(bookingProfile),
   "GET /scheduling/team-candidates": () => jsonResponse([]),
+  "GET /scheduling/team-links": () => jsonResponse([]),
   "GET /scheduling/team-requests": () => jsonResponse([]),
   "GET /company": () => jsonResponse(UNREAD_COMPANY),
   "GET /company/context/capabilities": () => jsonResponse(COMPANY_CONTEXT_ON),

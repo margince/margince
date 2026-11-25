@@ -8173,6 +8173,64 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/scheduling/team-links": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List the caller's team booking links.
+         * @description Each live team link the caller owns, oldest first. A team link sits beside the caller's
+         *     personal booking page, which always offers the caller's own free time alone.
+         */
+        get: operations["listSchedulingTeamLinks"];
+        put?: never;
+        /**
+         * Create a team booking link that names colleagues.
+         * @description Creates a link with its own address. Guests see only the times when the caller and every
+         *     member are free, inside each one's own working hours, and each booking invites every
+         *     member. The link uses the calendar and booking settings of the caller's personal page.
+         *     Each member starts as `pending`, and the link takes no bookings until every member has
+         *     confirmed. Name one to five colleagues offered by `GET /scheduling/team-candidates`;
+         *     anything else answers 422 on `team_members`.
+         */
+        post: operations["createSchedulingTeamLink"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/scheduling/team-links/{page_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                page_id: string;
+            };
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Rename a team link, switch it on or off, or change its members.
+         * @description Only the link's owner may change it; anyone else gets 404. A member kept on the list keeps
+         *     their own answer, and a member new to it starts as `pending`.
+         */
+        put: operations["updateSchedulingTeamLink"];
+        post?: never;
+        /**
+         * Delete a team link.
+         * @description The link's address stops working. Meetings already booked through it stand. The owner's
+         *     personal page does not change. Only the link's owner may delete it; anyone else gets 404.
+         */
+        delete: operations["deleteSchedulingTeamLink"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/scheduling/team-requests": {
         parameters: {
             query?: never;
@@ -8205,13 +8263,40 @@ export interface paths {
         };
         get?: never;
         /**
-         * Confirm or leave a colleague's booking link that names the caller.
-         * @description `confirmed` lets the link read the caller's free time and put the caller on each meeting
-         *     booked through it. `left` takes the caller off: the link stops taking bookings until its
-         *     owner removes the caller, and the owner sees why. Answers 404 when no live link of that
-         *     colleague names the caller.
+         * Confirm or leave every team link of a colleague that names the caller.
+         * @deprecated
+         * @description Use `PUT /scheduling/team-links/{page_id}/answer` instead, which answers one team link.
+         *     This answers each live team link of that colleague that names the caller. `confirmed`
+         *     confirms each one still pending. `left` takes the caller off each one they have not left.
+         *     Answers 404 when no live team link of that colleague names the caller.
          */
         put: operations["answerSchedulingTeamRequest"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/scheduling/team-links/{page_id}/answer": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The `page_id` of a team request, from `GET /scheduling/team-requests`. */
+                page_id: string;
+            };
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Confirm or leave a colleague's team link that names the caller.
+         * @description `confirmed` lets the link read the caller's free time and put the caller on each meeting
+         *     booked through it. `left` takes the caller off: the link stops taking bookings until its
+         *     owner removes the caller, and the owner sees why. Answers 404 when no live team link with
+         *     this id names the caller.
+         */
+        put: operations["answerSchedulingTeamLink"];
         post?: never;
         delete?: never;
         options?: never;
@@ -43753,17 +43838,17 @@ export interface components {
              *     the page names no calendar (a page saved before the profile existed reads this way).
              *     `calendar_read_only`: the connection lacks the calendar write grant. `calendar_unavailable`:
              *     the connection is gone or refused. `team_not_ready`: a team member has not confirmed, has
-             *     left, or has no calendar Margince can read; `team_members` says which. Answered on the
-             *     host's own profile read only.
+             *     left, or has no calendar Margince can read; the team link's `team_members` says which.
+             *     Answered on the host's own reads only.
              * @enum {string}
              */
             readonly blocker?: "none" | "no_calendar" | "calendar_read_only" | "calendar_unavailable" | "team_not_ready";
             /**
-             * @description Colleagues who must attend every meeting booked through this page. Guests see only the
-             *     times when the host and every member are free, inside each one's own working hours, and
-             *     each booking invites every member. A member named here starts as `pending` and the page
-             *     takes no bookings until every member has confirmed. Only `user_id` is read from a
-             *     request; a colleague not offered by `GET /scheduling/team-candidates` is refused.
+             * @deprecated
+             * @description The personal page names no colleagues: it offers the host's own free time alone. A
+             *     request naming a member answers 422 on `team_members`; an empty list is accepted. A
+             *     response does not carry the field. Colleagues are named on a team link
+             *     (`POST /scheduling/team-links`).
              */
             team_members?: components["schemas"]["SchedulingTeamMember"][];
         };
@@ -43785,13 +43870,46 @@ export interface components {
             name: string;
         };
         SchedulingTeamRequest: {
+            /**
+             * Format: uuid
+             * @description The team link that names the caller; answer it with `PUT /scheduling/team-links/{page_id}/answer`.
+             */
+            page_id: string;
             /** Format: uuid */
             host_user_id: string;
             host_name: string;
-            /** @description The meeting title the link offers. */
+            /** @description The team link's name, which is the meeting title it offers. */
             title: string;
             /** @enum {string} */
             state: "pending" | "confirmed";
+        };
+        /**
+         * @description A booking link that names colleagues who attend every meeting booked through it. It uses
+         *     the calendar and booking settings of its owner's personal page, and has its own address.
+         */
+        SchedulingTeamLink: {
+            /** Format: uuid */
+            id: string;
+            /** @description The link's name, which is also the meeting title guests see. */
+            title: string;
+            /** @description Whether the owner switched the link on. */
+            enabled: boolean;
+            team_members: components["schemas"]["SchedulingTeamMember"][];
+            slug: string;
+            /** @description The address to share, `/book/{slug}` on the configured public origin. Absent when no usable public origin is configured. */
+            public_url?: string;
+            /**
+             * @description Why the link takes no bookings now, with the meanings `SchedulingProfile.blocker` gives them.
+             * @enum {string}
+             */
+            blocker: "none" | "no_calendar" | "calendar_read_only" | "calendar_unavailable" | "team_not_ready";
+        };
+        SchedulingTeamLinkRequest: {
+            title: string;
+            /** @description Absent means on. */
+            enabled?: boolean;
+            /** @description Only `user_id` is read. A member's answer is theirs to give. */
+            team_members: components["schemas"]["SchedulingTeamMember"][];
         };
         SchedulingTeamAnswer: {
             /** @enum {string} */
@@ -78348,6 +78466,137 @@ export interface operations {
             };
         };
     };
+    listSchedulingTeamLinks: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The caller's team links. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SchedulingTeamLink"][];
+                };
+            };
+            /** @description The operation could not be completed. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    createSchedulingTeamLink: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SchedulingTeamLinkRequest"];
+            };
+        };
+        responses: {
+            /** @description The new team link. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SchedulingTeamLink"];
+                };
+            };
+            422: components["responses"]["ValidationError"];
+            /** @description The operation could not be completed. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    updateSchedulingTeamLink: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                page_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SchedulingTeamLinkRequest"];
+            };
+        };
+        responses: {
+            /** @description The changed team link. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SchedulingTeamLink"];
+                };
+            };
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
+            /** @description The operation could not be completed. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    deleteSchedulingTeamLink: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                page_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The team link is deleted. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
+            /** @description The operation could not be completed. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
     listSchedulingTeamRequests: {
         parameters: {
             query?: never;
@@ -78383,6 +78632,42 @@ export interface operations {
             header?: never;
             path: {
                 host_user_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SchedulingTeamAnswer"];
+            };
+        };
+        responses: {
+            /** @description The answer is recorded. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
+            /** @description The operation could not be completed. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    answerSchedulingTeamLink: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The `page_id` of a team request, from `GET /scheduling/team-requests`. */
+                page_id: string;
             };
             cookie?: never;
         };

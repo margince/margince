@@ -52,8 +52,11 @@ func TestAPausedBookingPageIsOneCardNamingItsBlocker(t *testing.T) {
 	if card.Kind == nil || *card.Kind != "calendar_read_only" {
 		t.Errorf("kind = %v, want the blocker", card.Kind)
 	}
-	if card.CauseRef == nil || *card.CauseRef != "booking_health:calendar_read_only" {
-		t.Errorf("cause_ref = %v, want the blocker as the cause", card.CauseRef)
+	if want := "booking_health:calendar_read_only:" + page.String(); card.CauseRef == nil || *card.CauseRef != want {
+		t.Errorf("cause_ref = %v, want the blocker and the page as the cause", card.CauseRef)
+	}
+	if card.CauseLabel != nil {
+		t.Errorf("the personal page is named %q, want no label", *card.CauseLabel)
 	}
 	if len(card.Actions) != 0 {
 		t.Error("a booking card promises no verbs")
@@ -81,5 +84,22 @@ func TestAnUnboundBookingLaneIsAbsent(t *testing.T) {
 	}
 	if out.BookingHealth != nil {
 		t.Fatalf("booking_health = %v, want the lane absent", out.BookingHealth)
+	}
+}
+
+// Team links that each wait for a colleague are separate things to fix. Each
+// card names its link, and no number of them folds into one incident.
+func TestEachPausedTeamLinkIsItsOwnNamedCard(t *testing.T) {
+	titles := []string{"Meet Ada and Grace", "Meet Ada and Alan", "Meet Ada and Linus"}
+	rows := make([]ranked, 0, len(titles))
+	for _, title := range titles {
+		card := bookingItem(BookingConcern{PageID: ids.NewV7(), Blocker: "team_not_ready", Title: title})
+		if card.CauseLabel == nil || *card.CauseLabel != title {
+			t.Fatalf("the card for %q is labelled %v", title, card.CauseLabel)
+		}
+		rows = append(rows, classifySystem(card, fixedClock()))
+	}
+	if folded := foldRoutineDecisions(rows); len(folded) != len(titles) {
+		t.Fatalf("%d paused team links folded into %d rows, want one each", len(titles), len(folded))
 	}
 }
