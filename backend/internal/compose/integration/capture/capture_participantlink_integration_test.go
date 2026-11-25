@@ -159,6 +159,38 @@ func TestASecondMailboxJoiningASuppressedMessageFilesItUnderNobody(t *testing.T)
 	}
 }
 
+// An introduction whose copied outsider the ladder suppressed stays unfiled
+// after the trace sweep, though the stored counterparty is the colleague.
+func TestAJoinedIntroductionWithASuppressedOutsiderStaysUnfiledAfterTheSweep(t *testing.T) {
+	env := newCaptureEnv(t)
+	e, sync := env.e, env.sync
+	syncSecond := secondMailbox(t, e, e.Rep3)
+	store := contacts.NewStore(e.DB())
+	if _, err := store.EnsureContactByEmail(contactCreator(e), "Cc Contact", "cc@partner.example", "manual", storekit.RefuseErased); err != nil {
+		t.Fatalf("seeding the copied contact: %v", err)
+	}
+	mail := []byte(strings.Join([]string{
+		"From: Colleague <" + secondSeatAddress + ">", "To: " + captureOwner, "Cc: dse@eu.docusign.net, cc@partner.example",
+		"Subject: intro", "Date: Wed, 04 Jun 2026 08:00:00 +0000", "Message-ID: <intro-sup@myco.example>",
+		"Content-Type: text/plain", "", "hello", "",
+	}, "\r\n"))
+	sync(t, mail)
+	if n := countRows(t, e, `SELECT count(*) FROM capture_trace WHERE source_id = 'intro-sup@myco.example' AND stage = 'tier_ladder' AND outcome = 'suppressed'`); n == 0 {
+		t.Fatal("the first mailbox's ladder did not suppress the introduction, so this test proves nothing")
+	}
+	if _, err := capturemod.NewTraceStore(e.DB()).SweepOlderThan(e.Admin(), 0); err != nil {
+		t.Fatalf("sweeping the trace: %v", err)
+	}
+	syncSecond(t, mail)
+	if n := countRows(t, e, `SELECT count(*) FROM capture_import ci JOIN activity a ON a.id = ci.activity_id
+		WHERE a.source_id = 'intro-sup@myco.example' AND ci.user_id = '`+e.Rep3.String()+`'`); n != 1 {
+		t.Fatalf("the second mailbox recorded %d imports of the introduction, want 1, so this test proves nothing", n)
+	}
+	if filed := contactsFiledUnder(t, e, "intro-sup@myco.example"); len(filed) != 0 {
+		t.Fatalf("a suppressed introduction is filed under %v once a second mailbox joined it, want nobody", filed)
+	}
+}
+
 // The filing does not widen who may READ the message.
 //
 // This is the invariant the whole change turns on. A message the sender marked

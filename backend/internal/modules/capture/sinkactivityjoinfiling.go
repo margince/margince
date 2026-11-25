@@ -35,13 +35,15 @@ func (s *Sink) joinActivityTx(
 
 // ladderSuppressedClause holds for activity a when the counterparty ladder
 // suppressed its message. Such a message is filed under nobody, whichever
-// mailbox delivers it. The trace says so for the message itself. The
-// disposition ledger still says so for its counterparty after the trace sweep.
+// mailbox delivers it. The trace says so for the message itself. After the
+// trace sweep, the disposition ledger still names every suppressed address,
+// and the party the ladder judged is always one of the message's participants.
 const ladderSuppressedClause = `(EXISTS (SELECT 1 FROM capture_trace t
 	WHERE t.source_system = a.source_system AND t.source_id = a.source_id
 	  AND t.stage = 'tier_ladder' AND t.outcome = 'suppressed')
- OR EXISTS (SELECT 1 FROM capture_pending_counterparty d
-	WHERE d.email = lower(btrim(a.counterparty_email)) AND d.status = 'suppressed'))`
+ OR EXISTS (SELECT 1 FROM activity_participant sp
+	JOIN capture_pending_counterparty d ON d.email = lower(btrim(sp.address)) AND d.status = 'suppressed'
+	WHERE sp.activity_id = a.id))`
 
 // seatHoldsImportTx answers whether the seat has an import row on the activity.
 func seatHoldsImportTx(ctx context.Context, tx pgx.Tx, id ids.ActivityID, seat ids.UUID) (bool, error) {
