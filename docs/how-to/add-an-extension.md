@@ -1322,9 +1322,9 @@ Declare each group of reads your unit makes:
 
 ```go
 SystemReads: []extension.SystemRead{
-	extension.SystemReadDeals,     // Deals().Get and Deals().Responsible
-	extension.SystemReadAuthority, // Authority().CanRead and CanWrite
-	extension.SystemReadDirectory, // Directory().Emails and ByRole (as actAs)
+	extension.SystemReadDeals,     // Deals().GetAs and ResponsibleAs (as actAs)
+	extension.SystemReadAuthority, // Authority().CanReadAs and CanWriteAs (as actAs)
+	extension.SystemReadDirectory, // Directory().EmailsAs and ByRole (as actAs)
 	extension.SystemReadActivities, // Activities().Mail
 	extension.SystemReadSetAside, // SetAside().Contact and Contacts
 	extension.SystemReadCompanies, // Companies().Get and List (as actAs)
@@ -1339,9 +1339,9 @@ unit reads without opening its source. `fixtures/extensions/crm-hello` is the sm
 subscription that reads the deal its event names.
 
 ```go
-deal, err := rt.Deals().Get(ctx, d.Entity.ID)            // extension.ErrNotFound once the deal is gone
-team, err := rt.Deals().Responsible(ctx, d.Entity.ID)    // owner first, then by email
-emails, err := rt.Directory().Emails(ctx, ids)           // active human members only
+deal, err := rt.Deals().GetAs(ctx, actAs, d.Entity.ID)           // extension.ErrNotFound once the deal is gone or out of the seat's scope
+team, err := rt.Deals().ResponsibleAs(ctx, actAs, d.Entity.ID)   // owner first, then by email
+emails, err := rt.Directory().EmailsAs(ctx, actAs, ids)          // active human members only
 mail, err := rt.Activities().Mail(ctx, member, d.Entity.ID, extension.MailQuery{}) // the deal's shared emails as that member may see the deal, newest first
 ```
 
@@ -1429,8 +1429,11 @@ mail, err := rt.Activities().Mail(ctx, member, d.Entity.ID, extension.MailQuery{
 
   A read is never bound to a colleague, so it does not
   stop when a colleague leaves. Each read writes one `system_log` row that names the unit, the read, the record
-  and `actAs`. `Deals().Get`, `Authority` and `Directory().Emails` keep their old shape until seat-bound
-  variants replace them.
+  and `actAs`.
+- **The forms without `actAs` are deprecated.** `Deals().Get`, `Deals().Responsible`, `Authority().CanRead`,
+  `CanWrite` and `Directory().Emails` answer as the system actor, so no grant, row scope or field mask limits
+  them. Use the `As` form of each. A deal the service member cannot open answers `ErrNotFound`, and an amount
+  its role masks comes back empty.
 - **A private reply is not seen.** A reply that sits only in a private mailbox is not in `Mail`. So "no reply
   yet" is a reminder for a colleague to check, not a fact. Never act on it alone, for example by sending a
   message.
@@ -1448,6 +1451,10 @@ writable, err := rt.Authority().CanWrite(ctx, user, deal)
 
 - **`CanRead(user, record, fields)`**: may `user` open the deal and read every field in `fields`? A field
   mask that hides one of them answers no. A mask counts even when users who may change the deal can see past it.
+- **`CanReadAs(actAs, user, record, fields)` and `CanWriteAs(actAs, user, record)`** ask the same on a job
+  tick or a bus delivery, as the service member. The member must open the deal, or the answer is
+  `ErrNotFound`. A question about anyone but the member itself also needs the roster read an administrator
+  holds (`user_admin` read), or the answer is `ErrForbidden`.
 - **`CanWrite(user, record)`**: could `user` change the deal now? The deal is live, and they hold a full
   seat. Their role holds `read` and `update` on deals, and they may change this deal, not only open it. A
   deal shared with them read-only answers no. It takes no fields.
