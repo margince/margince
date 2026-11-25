@@ -63,7 +63,7 @@ func probabilityAction(pct int) Action {
 func TestEachGuardDropsWhatItGuards(t *testing.T) {
 	t.Parallel()
 	human := "human"
-	acceptedEUR := &Offer{GrossMinor: 4_610_000, Currency: "EUR", Accepted: true}
+	acceptedEUR := &Offer{NetMinor: 4_610_000, Currency: "EUR", Accepted: true}
 	cases := []struct {
 		name   string
 		action Action
@@ -194,11 +194,12 @@ func decideConverted(t *testing.T, quote string, rates fixedRates) Decision {
 	return got[0]
 }
 
-// An accepted offer lets the amount become that offer's gross amount.
+// An accepted offer lets the amount become that offer's net amount, the figure
+// without tax.
 func TestAnAcceptedOfferSetsItsOwnAmount(t *testing.T) {
 	t.Parallel()
 	state := guardState()
-	state.AcceptedOffer = &Offer{GrossMinor: 5_000_000, Currency: "EUR", Accepted: true}
+	state.AcceptedOffer = &Offer{NetMinor: 5_000_000, Currency: "EUR", Accepted: true}
 	in := guardInput()
 	in.Activities[0].Body = "Accepted: 50,000 EUR."
 	got, err := Decide(in, state, Payload{Actions: []Action{amountAction(50_000, "EUR", "50,000 EUR")}}, fixedRates{})
@@ -206,7 +207,24 @@ func TestAnAcceptedOfferSetsItsOwnAmount(t *testing.T) {
 		t.Fatal(err)
 	}
 	if got[0].Change == nil || got[0].Change.AmountMinor != 5_000_000 {
-		t.Fatalf("change = %+v, want the offer's gross amount", got[0].Change)
+		t.Fatalf("change = %+v, want the offer's net amount", got[0].Change)
+	}
+}
+
+// A buyer who quotes the offer's price with tax is quoting a figure the deal
+// does not hold, so the offer fixes the amount and the quote is dropped.
+func TestAQuoteOfTheOffersGrossIsDroppedNotApplied(t *testing.T) {
+	t.Parallel()
+	state := guardState()
+	state.AcceptedOffer = &Offer{NetMinor: 5_000_000, Currency: "EUR", Accepted: true}
+	in := guardInput()
+	in.Activities[0].Body = "Total with VAT: 59,500 EUR."
+	got, err := Decide(in, state, Payload{Actions: []Action{amountAction(59_500, "EUR", "59,500 EUR")}}, fixedRates{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got[0].Outcome != DroppedOfferFixes || got[0].Change != nil && got[0].Change.AmountMinor != 0 {
+		t.Fatalf("outcome = %q change = %+v, want the quote dropped as fixed by the offer", got[0].Outcome, got[0].Change)
 	}
 }
 

@@ -149,6 +149,7 @@ func dataTaskCatalog(pool *pgxpool.Pool, now func() time.Time) []datatask.Task {
 		stockLaddersDataTask(ai.NewRoutingStore(NewSettingsStore(pool), StoredConfig(pool)).AdoptStockTaskLaddersTx),
 		mailCopiesDataTask(pool),
 		answeredTasksDataTask(pool),
+		offerNetDealValuesDataTask(pool),
 		halvedprobabilities.DataTask(halvedProbabilityStore(pool)),
 		falseMeetingCancelsDataTask(now),
 		provensenders.DataTask(),

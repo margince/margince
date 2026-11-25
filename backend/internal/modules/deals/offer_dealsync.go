@@ -29,7 +29,8 @@ type dealWrite struct {
 	before, after map[string]any
 }
 
-// syncDealAmountFromOffer writes the accepted gross onto the deal. A
+// syncDealAmountFromOffer writes the accepted offer's net, the figure without
+// tax, onto the deal: a deal's value never carries tax. A
 // still-open deal takes the amount as-is; a deal that already closed carries the
 // re-freeze freezeBaseRate states, which is the invariant applyMoneyInvariants
 // enforces on direct deal edits: re-pricing a deal is one rule whichever door
@@ -51,13 +52,13 @@ type dealWrite struct {
 func (s *Store) syncDealAmountFromOffer(ctx context.Context, tx pgx.Tx,
 	dealID ids.DealID, offer crmcontracts.Offer,
 ) (dealWrite, error) {
-	if offer.GrossMinor == nil {
-		// The totals engine derives a gross for every line and send refuses an
+	if offer.NetMinor == nil {
+		// The totals engine derives a net for every line and send refuses an
 		// offer with none, so a sent offer always carries one. Refusing rather
 		// than writing NULL keeps that reasoning falsifiable: a null amount
 		// beside the currency below would trip deal_amount_currency_pair, and
 		// the row would fail with nothing naming the offer that did it.
-		return dealWrite{}, fmt.Errorf("accepted offer %s carries no gross to price deal %s with", offer.Id, dealID)
+		return dealWrite{}, fmt.Errorf("accepted offer %s carries no net to price deal %s with", offer.Id, dealID)
 	}
 	// The row lock makes the status read and the amount write below one
 	// race-free unit. IncludeArchived preserves the read below, which
@@ -110,14 +111,14 @@ func (s *Store) syncDealAmountFromOffer(ctx context.Context, tx pgx.Tx,
 	// compared on its own terms. An unpriced deal and a priced one are different
 	// forecasts; so are two different prices; and re-pricing at the figure the
 	// deal already carries is neither.
-	// An offer's lines are non-negative, so its gross is too. Asked anyway, so
+	// An offer's lines are non-negative, so its net is too. Asked anyway, so
 	// this writer shares the sign rule with the others.
-	if err := amountSetError(offer.GrossMinor); err != nil {
+	if err := amountSetError(offer.NetMinor); err != nil {
 		return dealWrite{}, err
 	}
 	p := storekit.NewPatch()
-	if amountBefore == nil || *amountBefore != *offer.GrossMinor {
-		p.Set(amountField, amountBefore, *offer.GrossMinor)
+	if amountBefore == nil || *amountBefore != *offer.NetMinor {
+		p.Set(amountField, amountBefore, *offer.NetMinor)
 	}
 	if currencyBefore == nil || *currencyBefore != offer.Currency {
 		p.Set(currencyField, currencyBefore, offer.Currency)
@@ -140,7 +141,7 @@ func (s *Store) syncDealAmountFromOffer(ctx context.Context, tx pgx.Tx,
 	if DealStatus(status) != DealOpen {
 		// deal_closed_at guarantees closedAt on a non-open row.
 		if err := s.freezeBaseRate(ctx, tx, p, openapi_types.UUID(dealID.UUID), offer.Currency,
-			*offer.GrossMinor, *closedAt); err != nil {
+			*offer.NetMinor, *closedAt); err != nil {
 			return dealWrite{}, fmt.Errorf("re-freeze fx for closed deal on accept: %w", err)
 		}
 	}

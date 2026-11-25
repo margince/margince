@@ -39,7 +39,7 @@ import (
 
 // offerDeskCompanyPerms is the offer desk that may also read companies.
 //
-// offerDeskPerms carries no `company` grant at all, and VisibleSubset
+// OfferDeskPerms carries no `company` grant at all, and VisibleSubset
 // withholds every id when the object grant is missing — so a fixture built on
 // it would pass whatever capture privacy did, which is the wrong subject. This
 // set isolates the row-scope arm: the grant is present for both seats, and the

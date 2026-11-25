@@ -135,7 +135,7 @@ func TestAcceptingAnOfferInAnotherCurrencyRefusesOverRecurringRevenue(t *testing
 	e := Setup(t)
 	pipeline, open, _ := DealFixture(t, e)
 	deal := e.SeedDeal(t, "Subscription plus project", pipeline, open, &e.Rep1)
-	ctx := e.As(e.Rep1, []ids.UUID{e.Team1}, offerDeskPerms)
+	ctx := e.As(e.Rep1, []ids.UUID{e.Team1}, OfferDeskPerms)
 	admin := e.Admin()
 
 	// The deal is priced in euros and carries a euro subscription.
@@ -193,7 +193,7 @@ func TestAcceptingAnOfferInTheSameCurrencyKeepsRecurringRevenue(t *testing.T) {
 	e := Setup(t)
 	pipeline, open, _ := DealFixture(t, e)
 	deal := e.SeedDeal(t, "Subscription, same currency", pipeline, open, &e.Rep1)
-	ctx := e.As(e.Rep1, []ids.UUID{e.Team1}, offerDeskPerms)
+	ctx := e.As(e.Rep1, []ids.UUID{e.Team1}, OfferDeskPerms)
 	admin := e.Admin()
 
 	amount, arr, currency := int64(500000), int64(1200000), "EUR"
