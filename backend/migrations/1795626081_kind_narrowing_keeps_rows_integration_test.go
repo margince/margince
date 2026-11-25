@@ -56,8 +56,10 @@ func TestNarrowingTheKindColumnsKeepsStoredExtensionRows(t *testing.T) {
 		t.Fatalf("the upgrade stopped on stored extension rows: %v", err)
 	}
 	for _, c := range []struct{ table, column string }{
-		{"attachment", "entity_type"}, {"embedding", "entity_type"},
-		{"field_provenance", "object_type"}, {"dedupe_candidate", "entity_type"},
+		{"attachment", "entity_type"},
+		{"embedding", "entity_type"},
+		{"field_provenance", "object_type"},
+		{"dedupe_candidate", "entity_type"},
 	} {
 		var kept int
 		if err := conn.QueryRow(ctx, `SELECT count(*) FROM `+c.table+` WHERE `+c.column+` = $1`, kind).Scan(&kept); err != nil {

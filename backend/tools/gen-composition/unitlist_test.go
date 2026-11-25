@@ -8,6 +8,8 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+
+	"github.com/margince/margince/backend/internal/platform/unitset"
 )
 
 func TestTheUnitListNamesEachComposedUnitAndItsManifest(t *testing.T) {
@@ -52,5 +54,11 @@ func TestACoreOnlyBuildListsNoUnits(t *testing.T) {
 	}
 	if string(body) != "[]\n" {
 		t.Fatalf("%s = %q, want an empty array", unitListFile, body)
+	}
+}
+
+func TestTheManifestNameIsTheUnitSetOne(t *testing.T) {
+	if unitManifestFile != unitset.ManifestFile {
+		t.Fatalf("gen-composition writes %q and unitset reads %q", unitManifestFile, unitset.ManifestFile)
 	}
 }

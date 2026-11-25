@@ -15,14 +15,13 @@ import (
 	"path/filepath"
 	"strconv"
 
-	"github.com/margince/margince/backend/internal/platform/unitset"
 	"github.com/margince/margince/backend/pkg/extension"
 )
 
 // unitManifestFile is the per-unit generated manifest of what an operator must
-// resolve. Preflight, permission review and the boot inventory read it without
-// compiling the unit. The drift gate (-verify) binds it to in-repo sources.
-const unitManifestFile = unitset.ManifestFile
+// resolve. It stays a literal so check-generators-twice ties the committed
+// manifests to this tool. A test holds it equal to unitset.ManifestFile.
+const unitManifestFile = "manifest.generated.json"
 
 // opAgentToolInvoke is the operation a governed agent tool performs; the
 // security descriptor names it so a later capability kind reusing the id

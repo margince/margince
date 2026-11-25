@@ -13,9 +13,20 @@ const exportCensusFloor = 633
 // extension API that shipped there stays, whether or not this tree calls it.
 const publishedInV1 = "released in v1.0.0, so code outside this tree may call it"
 
+// memberChatIngest is the reason for the member-owned chat ingest. A unit that
+// files a member's own chats calls it. No unit in this tree does yet.
+const memberChatIngest = "the member-owned chat ingest; no unit in this tree files a member's own chats yet"
+
 // exportWaivers are the exported pkg/extension names with no caller in this
 // tree, each with why it stays.
 var exportWaivers = gatekit.Waive(map[string]string{
+	"extension.OccurredPrecision":                    memberChatIngest,
+	"extension.PostureClassified":                    memberChatIngest,
+	"extension.PostureHeld":                          memberChatIngest,
+	"extension.PrecisionDay":                         memberChatIngest,
+	"extension.Runtime.IngestMemberBatch":            memberChatIngest,
+	"extension.Runtime.MemberIngestPosition":         memberChatIngest,
+	"extension.SubjectKind":                          memberChatIngest,
 	"extension/crm.CreateActivityRequest.LinkTo":     publishedInV1,
 	"extension.APIBasePath":                          publishedInV1,
 	"extension.Activities.Mail":                      publishedInV1,
@@ -83,7 +94,6 @@ var exportWaivers = gatekit.Waive(map[string]string{
 	"extension.ReadPage":                             publishedInV1,
 	"extension.RecordRef":                            publishedInV1,
 	"extension.RecordRefusedError":                   publishedInV1,
-	"extension.RefusalActivity":                      publishedInV1,
 	"extension.RefusalAddresses":                     publishedInV1,
 	"extension.RefusalCounterparty":                  publishedInV1,
 	"extension.RefusalParticipants":                  publishedInV1,
