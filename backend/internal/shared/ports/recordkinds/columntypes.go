@@ -8,10 +8,20 @@ import (
 	"strings"
 )
 
-// CheckReadColumnTypes refuses a kind whose title or timeline columns have a
-// type the History and search queries cannot read. The title is searched as
-// text, the time orders the History, and a subject column is compared to an id.
-func CheckReadColumnTypes(k Declared, table string, columns map[string]string) error {
+// CheckColumns refuses a kind whose table lacks a column the kind reads. It
+// also refuses a title or timeline column whose type History and search cannot
+// read. The title is searched as text, the time orders the History, and a
+// subject column is compared to an id.
+func CheckColumns(k Declared, table string, columns map[string]string) error {
+	required := []string{"id", "archived_at"}
+	for _, f := range k.Fields {
+		required = append(required, f.Name)
+	}
+	for _, c := range required {
+		if _, ok := columns[c]; !ok {
+			return fmt.Errorf("record kind %s: table %s has no column %q", k.Name, table, c)
+		}
+	}
 	title := k.NaturalKey[0]
 	if tl := k.Timeline; tl != nil {
 		title = tl.LabelField

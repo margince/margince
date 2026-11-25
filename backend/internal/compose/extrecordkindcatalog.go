@@ -56,16 +56,7 @@ func VerifyRecordKinds(ctx context.Context, q recordKindQuerier, kinds []recordk
 		if !granted {
 			return fmt.Errorf("record kind %s: the application role lacks select, insert, update or delete on %s; grant all four to it", k.Name, qualified)
 		}
-		required := []string{"id", "archived_at"}
-		for _, f := range k.Fields {
-			required = append(required, f.Name)
-		}
-		for _, c := range required {
-			if _, ok := columns[c]; !ok {
-				return fmt.Errorf("record kind %s: table %s has no column %q", k.Name, qualified, c)
-			}
-		}
-		if err := recordkinds.CheckReadColumnTypes(k, qualified, columns); err != nil {
+		if err := recordkinds.CheckColumns(k, qualified, columns); err != nil {
 			return err
 		}
 		if !unique {

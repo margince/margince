@@ -11,14 +11,14 @@ import (
 	"github.com/margince/margince/backend/pkg/extension"
 )
 
-func TestCheckReadColumnTypes(t *testing.T) {
+func TestCheckColumns(t *testing.T) {
 	const tz, id = "timestamp with time zone", "uuid"
 	kind := func(label string) Declared {
 		return Declared{Name: "ext:u:k", NaturalKey: []string{"code"}, Timeline: &extension.RecordKindTimeline{
 			LabelField: label, AtColumn: "seen_at", Subjects: []extension.TimelineSubject{{Entity: "contact", Column: "contact_id"}},
 		}}
 	}
-	ok := map[string]string{"code": "text", "seen_at": tz, "contact_id": id}
+	ok := map[string]string{"id": id, "archived_at": tz, "code": "text", "seen_at": tz, "contact_id": id}
 	with := func(col, typ string) map[string]string {
 		m := maps.Clone(ok)
 		if typ == "" {
@@ -42,7 +42,7 @@ func TestCheckReadColumnTypes(t *testing.T) {
 		{"title is integer", with("code", "integer"), "title column"},
 	}
 	for _, c := range cases {
-		err := CheckReadColumnTypes(kind("code"), "ext.t", c.cols)
+		err := CheckColumns(kind("code"), "ext.t", c.cols)
 		switch {
 		case c.want == "" && err != nil:
 			t.Errorf("%s: %v", c.name, err)
