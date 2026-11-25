@@ -321,8 +321,8 @@ var segmentEngines = map[string]storekit.Query{
 			// a fresh dependency on a column that is going away.
 			"company_industry":  customerField("industry", storekit.FieldPicklist, industryValues...),
 			"company_size_band": customerField("size_band", storekit.FieldPicklist, sizeBandValues...),
-			"company_status":    customerField("status", storekit.FieldPicklist, lifecycleValues...),
-			"company_lifecycle": customerField("status", storekit.FieldPicklist),
+			"company_status":    customerField(companyStatusColumn, storekit.FieldPicklist, lifecycleValues...),
+			"company_lifecycle": customerField(companyStatusColumn, storekit.FieldPicklist),
 			"company_country":   customerField("address_country", storekit.FieldText),
 			// The products a deal sells, from its accepted offer or set by hand.
 			"product_id": productLinkField("EXISTS (SELECT 1 FROM deal_product dp WHERE dp.deal_id = t.id AND %s)"),
@@ -376,8 +376,12 @@ var segmentEngines = map[string]storekit.Query{
 //
 // Keyed by resource rather than by bare name: two resources may legitimately
 // carry a field of the same name where only one of them has retired it.
+// companyStatusColumn is the company column a deal or contact filter reads
+// through its customer.
+const companyStatusColumn = "status"
+
 var retiredCoreFields = map[string]map[string]bool{
-	// ADR-0079/A124 replaced classification; lifecycle is status under its old name.
+	// classification was retired from the company record; lifecycle is status under its old name.
 	typeCompany: {"classification": true, "lifecycle": true},
 	typeDeal:    {"company_lifecycle": true},
 }

@@ -59,8 +59,10 @@ const (
 	// Raised by 7 production lines for the team request reword and the paused
 	// team link's title on Home. Raised by 64 test lines for the team-link mail
 	// case, which drives the unexported mail worker over two team links.
-	composeRootProductionLines = 230_697
-	composeRootTestLines       = 360_128
+	// Raised by 9 production and 17 test lines for the company status rename,
+	// whose webhook and preview keys sit in this package's unexported maps.
+	composeRootProductionLines = 230_706
+	composeRootTestLines       = 360_145
 )
 
 // A read under these floors stopped early or read the wrong place, and would

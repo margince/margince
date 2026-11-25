@@ -27,6 +27,7 @@ var companyWriteBodies = []string{"CreateCompanyRequest", "UpdateCompanyRequest"
 
 // serverWrittenCompanyColumns are the bounded company text columns no request
 // body writes, each with the writer that fills it instead.
+// gatekit:fixture the bounded company columns only the server writes, each with its writer
 var serverWrittenCompanyColumns = map[string]string{
 	"captured_by":          "the signed-in caller, never a request body",
 	"geocode_input_hash":   "the geocoder",
