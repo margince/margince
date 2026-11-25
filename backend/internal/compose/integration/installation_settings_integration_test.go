@@ -550,8 +550,8 @@ func TestBaseCurrencyWillNotMoveOutFromUnderAPricedRateSheet(t *testing.T) {
 	}
 }
 
-// The refusal's params and the read's base_currency_lock spell one lock, so on
-// the wire they hold the same keys with the same values, for every reason.
+// The refusal's params and the read's base_currency_lock spell one lock, so
+// they carry the same keys and values for every reason.
 func TestARefusedBaseCurrencyCarriesTheFactsTheReadShows(t *testing.T) {
 	for name, tc := range map[string]struct {
 		lock    func(*testing.T, *apptest.AppEnv, string)
