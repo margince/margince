@@ -108,7 +108,9 @@ Each unit has a key prefix of its own in each workspace: `<workspace>/ext/<unit>
 | Content type | found by the core from the bytes, never taken from the unit |
 | Core attachments | not readable by a unit |
 
-The core counts each unit's objects and bytes in the table `extension_object_usage`. A `Put` that replaces an object counts only the change in its size, so a unit at its quota can still replace or shrink an object. Each `Put` and `Delete` writes an audit row on that table in the same transaction, before the bytes are stored or deleted. The row names the unit, the call, the object's name and its size. A call whose audit row cannot be written stores nothing and answers an error with no detail. The audit log keeps these rows, so an object's name must not hold personal data.
+The core counts each unit's objects and bytes in the table `extension_object_usage`. A `Put` that replaces an object counts only the change in its size. So a unit at its quota can still replace or shrink an object.
+
+Each `Put` and `Delete` writes an audit row on that table in the same transaction, before the bytes are stored or deleted. The row names the unit, the call, the object's name and its size. A call whose audit row cannot be written stores nothing and answers an error with no detail. The audit log keeps these rows, so an object's name must not hold personal data.
 
 An object is deleted when:
 
@@ -118,7 +120,7 @@ An object is deleted when:
 | The unit is removed from the composed set | each boot deletes the prefix of every unit recorded earlier and no longer composed, and then that unit's count. A boot with no file store, or a failed delete, leaves it for the next boot and does not stop the start |
 | The unit deletes it | `Objects().Delete` |
 
-Erasing one contact deletes none of a unit's objects, because no object is tied to a contact. A unit that stores personal data in an object deletes it with `Delete`. No object is deleted by age. The core keeps a count of a unit's objects and no list of them, so a unit that wants an object removed after a time deletes it itself.
+Erasing one contact deletes none of a unit's objects, because no object is tied to a contact. A unit that stores personal data in an object deletes it with `Delete`. No object is deleted by age. The core keeps a count of a unit's objects and no list of them. A unit that wants an object removed after a time deletes it itself.
 
 ## How to read this page
 

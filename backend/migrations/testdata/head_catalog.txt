@@ -5724,7 +5724,7 @@ public.extension_object_usage.bytes bigint NOT NULL gen=- def=0
 public.extension_object_usage.extension_object_usage_counted CHECK (((objects >= 0) AND (bytes >= 0)))
 public.extension_object_usage.extension_object_usage_pkey PRIMARY KEY (id)
 public.extension_object_usage.extension_object_usage_unit_key UNIQUE (unit)
-public.extension_object_usage.id uuid NOT NULL gen=- def=-
+public.extension_object_usage.id uuid NOT NULL gen=- def=uuidv7()
 public.extension_object_usage.objects bigint NOT NULL gen=- def=0
 public.extension_object_usage.text_bound_insert CREATE TRIGGER text_bound_insert AFTER INSERT ON public.extension_object_usage FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"unit": 20000}'::jsonb)) EXECUTE FUNCTION refuse_oversized_text('{"unit":20000}')
 public.extension_object_usage.text_bound_update CREATE TRIGGER text_bound_update AFTER UPDATE ON public.extension_object_usage FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"unit": 20000}'::jsonb)) EXECUTE FUNCTION refuse_oversized_text('{"unit":20000}')

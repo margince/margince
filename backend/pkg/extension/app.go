@@ -25,8 +25,8 @@ const (
 	AppGroupIntelligence AppGroup = "intelligence"
 )
 
-// AppGroups is every heading the drawer offers. gen-composition writes it
-// into the SPA's @composition/extensions as EXTENSION_APP_GROUPS.
+// AppGroups lists the headings the drawer offers. gen-composition writes the
+// list into the SPA's @composition/extensions as EXTENSION_APP_GROUPS.
 func AppGroups() []AppGroup {
 	return []AppGroup{AppGroupRecords, AppGroupWork, AppGroupIntelligence}
 }

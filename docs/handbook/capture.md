@@ -164,7 +164,9 @@ That is the colleague who sent the email, or the one colleague it was addressed 
 
 To answer, use **Relink** on any email of that conversation and pick the deal. The other emails of the conversation with the same contact go on that deal too, with the promises read from them. An email already on a deal keeps it. The task is then done. If it is about none of them, choose **None of these deals** on the task. Margince then never files that conversation on those deals.
 
-To say an email or a meeting is not about a deal, choose **Not about this deal** under **More actions** on its row. It stays on the deal with that mark, and no longer counts as activity on the deal. Margince never files it on that deal again, or moves it to another deal, by itself; **Relink** still files it on any record. A project link that came with that deal comes off too, unless its retention rules keep it. **About this deal** takes the mark back. This holds when an agent marks the deal for you as well. When an extension filed an email on a deal, its row says **Filed here by**, the extension's name and its reason. **Undo** beside it marks the email **Not about this deal**, so the extension cannot file it there again.
+To say an email or a meeting is not about a deal, choose **Not about this deal** under **More actions** on its row. It stays on the deal with that mark, and no longer counts as activity on the deal. Margince never files it on that deal again, or moves it to another deal, by itself; **Relink** still files it on any record. A project link that came with that deal comes off too, unless its retention rules keep it. **About this deal** takes the mark back. This holds when an agent marks the deal for you as well.
+
+When an extension filed an email on a deal, its row says **Filed here by**, the extension's name and its reason. **Undo** beside it marks the email **Not about this deal**, so the extension cannot file it there again.
 
 Meetings use the same contact and company rules. They never follow an email thread or ask you to choose a deal. If several deals fit, the meeting stays off them.
 
@@ -392,8 +394,4 @@ contact, which archives it and keeps its mail. Mail and meetings from before the
 back now. Each shows the reason and its outside addresses. No action is needed. To share one,
 search for it and choose **Preview and change sharing**.
 
-Three settings decide who may read captured mail. **Mail visibility** is in
-each mailbox's settings in Settings → Connections. **Private correspondence** is on a
-contact's or company's page. **Mail sharing and sync** is in Settings → Mail capture,
-for administrators only. They are explained in [Who can see an email](who-can-see-an-email.md),
-together with whose capture activity you can see.
+Three settings decide who may read captured mail. **Mail visibility** is in each mailbox's settings in Settings → Connections. **Private correspondence** is on a contact's or company's page. **Mail sharing and sync** is in Settings → Mail capture, for administrators only. They are explained in [Who can see an email](who-can-see-an-email.md), together with whose capture activity you can see.

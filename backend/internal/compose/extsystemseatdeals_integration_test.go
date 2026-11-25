@@ -12,6 +12,7 @@ package compose
 import (
 	"context"
 	"errors"
+	"slices"
 	"testing"
 
 	"github.com/jackc/pgx/v5"
@@ -27,13 +28,15 @@ const (
 	seatOwnDealGrants = `{"objects":{"deal":{"read":true}},"row_scope":"own"}`
 	// seatDealGrants lets a seat read every deal, and nothing of the roster.
 	seatDealGrants = `{"objects":{"deal":{"read":true}},"row_scope":"all"}`
+	// seatNoDealGrants reads companies and no deal.
+	seatNoDealGrants = `{"objects":{"company":{"read":true}},"row_scope":"all"}`
 	// seatAdminDealGrants adds the administrators' roster read.
 	seatAdminDealGrants = `{"objects":{"deal":{"read":true},"user_admin":{"read":true}},"row_scope":"all"}`
 )
 
 func TestASeatBoundDealReadAnswersOnlyWhatTheSeatMayOpen(t *testing.T) {
 	s := setupSystemRead(t)
-	seat := s.serviceSeat(t, seatOwnDealGrants)
+	seat := s.serviceSeat(t, seatNoDealGrants)
 	as := extension.UserID(seat.String())
 	var (
 		old                  extension.DealSummary
@@ -41,6 +44,7 @@ func TestASeatBoundDealReadAnswersOnlyWhatTheSeatMayOpen(t *testing.T) {
 	)
 	s.onDelivery(t, func(ctx context.Context, rt extension.Runtime) error {
 		var err error
+		//nolint:staticcheck // the deprecated system-actor form, to show what the seat-bound one withholds
 		if old, err = rt.Deals().Get(ctx, s.deal.String()); err != nil {
 			return err
 		}
@@ -53,16 +57,16 @@ func TestASeatBoundDealReadAnswersOnlyWhatTheSeatMayOpen(t *testing.T) {
 	}
 	for read, err := range map[string]error{"GetAs": getAs, "ResponsibleAs": responsibleAs} {
 		if !errors.Is(err, extension.ErrNotFound) {
-			t.Errorf("%s of a deal outside the seat's row scope: err = %v, want ErrNotFound", read, err)
+			t.Errorf("%s by a seat with no deal read: err = %v, want ErrNotFound", read, err)
 		}
 	}
 }
 
-// The seat opens the deal it names, which was merged into one it may not open.
-// The colleagues are the survivor's, so the read is refused.
-func TestResponsibleAsRefusesTheSurvivorOfAMergeTheSeatCannotOpen(t *testing.T) {
+// A deal merged away answers for the deal it was merged into. A seat that may
+// read deals gets the survivor's colleagues; one that may not is refused.
+func TestResponsibleAsAnswersForTheSurvivorOfAMerge(t *testing.T) {
 	s := setupSystemRead(t)
-	seat := s.serviceSeat(t, seatOwnDealGrants)
+	reader, blind := s.serviceSeat(t, seatDealGrants), s.serviceSeat(t, seatNoDealGrants)
 	var pipeline, stage ids.UUID
 	s.read(t, func(ctx context.Context, tx pgx.Tx) error {
 		return tx.QueryRow(ctx, `SELECT pipeline_id, stage_id FROM deal WHERE id = $1`, s.deal).Scan(&pipeline, &stage)
@@ -78,14 +82,26 @@ func TestResponsibleAsRefusesTheSurvivorOfAMergeTheSeatCannotOpen(t *testing.T) 
 	if _, err := s.Deals.MergeDeal(s.Admin(), sourceID, ids.From[ids.DealKind](s.deal), nil); err != nil {
 		t.Fatalf("merging the copy into the deal: %v", err)
 	}
-	s.WsExec(t, `UPDATE deal SET owner_id = $1 WHERE id = $2`, seat, sourceID.UUID)
-	var refused error
+	var (
+		viaSource, ofSurvivor []extension.Responsible
+		refused               error
+	)
 	s.onDelivery(t, func(ctx context.Context, rt extension.Runtime) error {
-		_, refused = rt.Deals().ResponsibleAs(ctx, extension.UserID(seat.String()), sourceID.String())
+		var err error
+		if viaSource, err = rt.Deals().ResponsibleAs(ctx, extension.UserID(reader.String()), sourceID.String()); err != nil {
+			return err
+		}
+		if ofSurvivor, err = rt.Deals().ResponsibleAs(ctx, extension.UserID(reader.String()), s.deal.String()); err != nil {
+			return err
+		}
+		_, refused = rt.Deals().ResponsibleAs(ctx, extension.UserID(blind.String()), sourceID.String())
 		return nil
 	})
+	if len(viaSource) == 0 || !slices.Equal(viaSource, ofSurvivor) {
+		t.Errorf("ResponsibleAs of the merged-away deal = %+v, want the survivor's %+v", viaSource, ofSurvivor)
+	}
 	if !errors.Is(refused, extension.ErrNotFound) {
-		t.Errorf("ResponsibleAs through a merge into a deal outside the seat's scope: err = %v, want ErrNotFound", refused)
+		t.Errorf("ResponsibleAs through a merge by a seat with no deal read: err = %v, want ErrNotFound", refused)
 	}
 }
 

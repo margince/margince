@@ -1474,9 +1474,9 @@ mail, err := rt.Activities().Mail(ctx, member, d.Entity.ID, extension.MailQuery{
   stop when a colleague leaves. Each read writes one `system_log` row that names the unit, the read, the record
   and `actAs`.
 - **The forms without `actAs` are deprecated.** `Deals().Get`, `Deals().Responsible`, `Authority().CanRead`,
-  `CanWrite` and `Directory().Emails` answer as the system actor, so no grant, row scope or field mask limits
-  them. Use the `As` form of each. A deal the service member cannot open answers `ErrNotFound`, and an amount
-  its role masks comes back empty.
+  `CanWrite` and `Directory().Emails` run as the system, so no grant, row scope or field mask limits them. Use
+  the `As` form of each. A deal the service member cannot open answers `ErrNotFound`. A value field its role
+  masks comes back empty.
 - **A private reply is not seen.** A reply that sits only in a private mailbox is not in `Mail`. So "no reply
   yet" is a reminder for a colleague to check, not a fact. Never act on it alone, for example by sending a
   message.
@@ -1496,8 +1496,8 @@ writable, err := rt.Authority().CanWrite(ctx, user, deal)
   mask that hides one of them answers no. A mask counts even when users who may change the deal can see past it.
 - **`CanReadAs(actAs, user, record, fields)` and `CanWriteAs(actAs, user, record)`** ask the same on a job
   tick or a bus delivery, as the service member. The member must open the deal, or the answer is
-  `ErrNotFound`. A question about anyone but the member itself also needs the roster read an administrator
-  holds (`user_admin` read), or the answer is `ErrForbidden`.
+  `ErrNotFound`. A question about a colleague also needs the `user_admin` read grant, or the answer is
+  `ErrForbidden`.
 - **`CanWrite(user, record)`**: could `user` change the deal now? The deal is live, and they hold a full
   seat. Their role holds `read` and `update` on deals, and they may change this deal, not only open it. A
   deal shared with them read-only answers no. It takes no fields.

@@ -45,7 +45,7 @@ func TestEachObjectCallIsCountedAndAudited(t *testing.T) {
 		t.Errorf("usage = %s objects/bytes, want 1/5", got)
 	}
 	audited := e.WsCount(t, `SELECT count(*) FROM audit_log a JOIN extension_object_usage u ON u.id = a.entity_id
-		WHERE a.entity_type = 'extension_object_usage' AND u.unit = 'summaries' AND a.evidence->>'extension' = 'summaries'
+		WHERE a.entity_type = 'extension_object_usage' AND u.unit = 'summaries' AND a.evidence->>'object_unit' = 'summaries'
 		  AND a.evidence->>'object' IN ('a', 'b', 'never-stored')`)
 	if audited != 4 {
 		t.Errorf("four object calls and a no-op delete left %d audit rows naming the unit and the object, want 4", audited)
@@ -70,7 +70,7 @@ func TestAUnitAtItsCountCapMayReplaceButNotAdd(t *testing.T) {
 		t.Errorf("another unit, under its own cap: %v", err)
 	}
 	if n := e.WsCount(t, `SELECT count(*) FROM audit_log WHERE entity_type = 'extension_object_usage' AND evidence->>'object' = 'new'
-		AND evidence->>'extension' = 'summaries'`); n != 0 {
+		AND evidence->>'object_unit' = 'summaries'`); n != 0 {
 		t.Errorf("a refused Put left %d audit rows", n)
 	}
 }

@@ -113,8 +113,7 @@ type heldUsage struct {
 }
 
 func lockUsage(ctx context.Context, tx pgx.Tx, unit string) (heldUsage, error) {
-	if _, err := tx.Exec(ctx, `INSERT INTO extension_object_usage (id, unit) VALUES ($1, $2) ON CONFLICT (unit) DO NOTHING`,
-		ids.NewV7(), unit); err != nil {
+	if _, err := tx.Exec(ctx, `INSERT INTO extension_object_usage (unit) VALUES ($1) ON CONFLICT (unit) DO NOTHING`, unit); err != nil {
 		return heldUsage{}, err
 	}
 	var held heldUsage
@@ -125,7 +124,9 @@ func lockUsage(ctx context.Context, tx pgx.Tx, unit string) (heldUsage, error) {
 
 func recordChange(ctx context.Context, tx pgx.Tx, unit string, held heldUsage, change ObjectChange) error {
 	after := Usage{Objects: max(held.Objects+change.Usage.Objects, 0), Bytes: max(held.Bytes+change.Usage.Bytes, 0)}
-	evidence := map[string]any{"extension": unit, "object_call": change.Action, "object": change.Name, "object_bytes": change.Size}
+	// "extension" is stamped by the core from the invocation, so the unit is
+	// named under its own key.
+	evidence := map[string]any{"object_unit": unit, "object_call": change.Action, "object": change.Name, "object_bytes": change.Size}
 	if cid, ok := principal.CorrelationID(ctx); ok {
 		evidence["correlation_id"] = cid.String()
 	}
@@ -133,8 +134,12 @@ func recordChange(ctx context.Context, tx pgx.Tx, unit string, held heldUsage, c
 		usageImage(held.Usage), usageImage(after), evidence); err != nil {
 		return err
 	}
-	_, err := tx.Exec(ctx, `UPDATE extension_object_usage SET objects = $2, bytes = $3, updated_at = now() WHERE id = $1`,
-		held.id, after.Objects, after.Bytes)
+	// The row is locked for the call, and the counts it held guard the write.
+	tag, err := tx.Exec(ctx, `UPDATE extension_object_usage SET objects = $2, bytes = $3, updated_at = now()
+		 WHERE id = $1 AND objects = $4 AND bytes = $5`, held.id, after.Objects, after.Bytes, held.Objects, held.Bytes)
+	if err == nil && tag.RowsAffected() != 1 {
+		err = fmt.Errorf("extcapability: the object count of %q changed under its lock", unit)
+	}
 	return err
 }
 

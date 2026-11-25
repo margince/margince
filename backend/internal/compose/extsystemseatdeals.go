@@ -21,6 +21,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/platform/labeltranslation"
 	"github.com/margince/margince/backend/internal/platform/mailcopy"
 	"github.com/margince/margince/backend/internal/shared/kernel/fieldmask"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -53,7 +54,10 @@ func (d systemDeals) GetAs(ctx context.Context, actAs extension.UserID, dealID s
 		if err != nil || got.StageId == nil {
 			return err
 		}
-		return tx.QueryRow(seatCtx, `SELECT name FROM stage WHERE id = $1`, ids.UUID(*got.StageId)).Scan(&stage)
+		args := []any{ids.UUID(*got.StageId)}
+		arg := func(v any) int { args = append(args, v); return len(args) }
+		name := labeltranslation.SQL(seatCtx, "name", "name_translations", arg)
+		return tx.QueryRow(seatCtx, `SELECT `+name+` FROM stage WHERE id = $1`, args...).Scan(&stage)
 	})
 	if err != nil {
 		return extension.DealSummary{}, seat.seatFault(err)
@@ -175,9 +179,14 @@ func (a systemAuthority) CanReadAs(ctx context.Context, actAs, user extension.Us
 	if err != nil {
 		return false, err
 	}
-	shown, err := dealShownTo(seat.sys, a.rt.deps.pool, userID, dealID, fields)
+	// The colleague's own seat is bound from the system context, as CanRead binds it.
+	sys, err := a.rt.systemRead(ctx, extension.SystemReadAuthority)
 	if err != nil {
-		return false, a.rt.systemReadFault(seat.sys, err)
+		return false, err
+	}
+	shown, err := dealShownTo(sys, a.rt.deps.pool, userID, dealID, fields)
+	if err != nil {
+		return false, a.rt.systemReadFault(sys, err)
 	}
 	return shown, nil
 }
@@ -191,9 +200,13 @@ func (a systemAuthority) CanWriteAs(ctx context.Context, actAs, user extension.U
 	if err != nil {
 		return false, err
 	}
-	writable, err := dealWritableBy(seat.sys, a.rt.deps.pool, userID, dealID)
+	sys, err := a.rt.systemRead(ctx, extension.SystemReadAuthority)
 	if err != nil {
-		return false, a.rt.systemReadFault(seat.sys, err)
+		return false, err
+	}
+	writable, err := dealWritableBy(sys, a.rt.deps.pool, userID, dealID)
+	if err != nil {
+		return false, a.rt.systemReadFault(sys, err)
 	}
 	return writable, nil
 }

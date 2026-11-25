@@ -631,7 +631,7 @@ The 43 tables owned by `compose`, as the migrations build them. [Back to the ent
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
-| `id` | `uuid` | yes | Primary key. |
+| `id` | `uuid`, default `uuidv7()` | yes | Primary key. |
 | `bytes` | `bigint`, default `0` | yes |  |
 | `objects` | `bigint`, default `0` | yes |  |
 | `unit` | `text` | yes |  |

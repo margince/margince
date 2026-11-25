@@ -7,7 +7,7 @@
 -- transaction that writes its audit row, which names the row by id. One row
 -- per unit; an installation holds one workspace.
 CREATE TABLE IF NOT EXISTS extension_object_usage (
-    id uuid NOT NULL,
+    id uuid NOT NULL DEFAULT uuidv7(),
     unit text NOT NULL,
     objects bigint NOT NULL DEFAULT 0,
     bytes bigint NOT NULL DEFAULT 0,

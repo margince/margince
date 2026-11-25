@@ -17,6 +17,11 @@ const publishedInV1 = "released in v1.0.0, so code outside this tree may call it
 // files a member's own chats calls it. No unit in this tree does yet.
 const memberChatIngest = "the member-owned chat ingest; no unit in this tree files a member's own chats yet"
 
+// seatBoundRead is a read that runs as the unit's service member. It replaces
+// a deprecated form that answers as the system actor, for units outside this
+// tree that still call the old one.
+const seatBoundRead = "the seat-bound form of a deprecated system read; no unit in this tree makes that read"
+
 // exportWaivers are the exported pkg/extension names with no caller in this
 // tree, each with why it stays.
 var exportWaivers = gatekit.Waive(map[string]string{
@@ -136,9 +141,13 @@ var exportWaivers = gatekit.Waive(map[string]string{
 	"extension.Activities.OpenAttachment":            "the door a unit reads a workspace mail's file through; no unit in this tree reads one",
 	"extension.AppGroupIntelligence":                 "an app group a unit may place its app in; the units in this tree use another",
 	"extension.AppGroupRecords":                      "an app group a unit may place its app in; the units in this tree use another",
-	"extension.AppGroups":                            "lists the app groups for a unit that offers a choice of one; no unit in this tree does",
 	"extension.CompanyTypeNamePattern":               "the source gates/extensionnamegrammar_test.go holds every company-type copy to",
 	"extension.QualifiedNamePattern":                 "the source gates/extensionnamegrammar_test.go holds every `ext:` kind copy to",
+	"extension.Authority.CanReadAs":                  seatBoundRead,
+	"extension.Authority.CanWriteAs":                 seatBoundRead,
+	"extension.Deals.GetAs":                          seatBoundRead,
+	"extension.Deals.ResponsibleAs":                  seatBoundRead,
+	"extension.Directory.EmailsAs":                   seatBoundRead,
 	"extension.Directory.ByRole":                     "the door a unit finds members by role through; no unit in this tree asks",
 	"extension.MailContentState":                     "the state a unit reads off MailContent; no unit in this tree reads mail content",
 	"extension.MailDealHook":                         "the hook type a unit declares to adjust a mail's deal; no unit in this tree declares one",
