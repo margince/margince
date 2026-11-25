@@ -106,12 +106,18 @@ func TestTheImportedCopiesTaskFoldsOnlyTheAuthorsCalendarCopy(t *testing.T) {
 		author  func(e *integration.SearchEnv) ids.UUID
 		folded  bool
 	}{
-		{name: "the author's calendar holds it", subject: "Kick-off review",
-			author: func(e *integration.SearchEnv) ids.UUID { return e.Rep1 }, folded: true},
-		{name: "another title", subject: "Another meeting",
-			author: func(e *integration.SearchEnv) ids.UUID { return e.Rep1 }},
-		{name: "another author", subject: "Kick-off review",
-			author: func(e *integration.SearchEnv) ids.UUID { return e.Rep3 }},
+		{
+			name: "the author's calendar holds it", subject: "Kick-off review", folded: true,
+			author: func(e *integration.SearchEnv) ids.UUID { return e.Rep1 },
+		},
+		{
+			name: "another title", subject: "Another meeting",
+			author: func(e *integration.SearchEnv) ids.UUID { return e.Rep1 },
+		},
+		{
+			name: "another author", subject: "Kick-off review",
+			author: func(e *integration.SearchEnv) ids.UUID { return e.Rep3 },
+		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			env := newCaptureEnv(t)
