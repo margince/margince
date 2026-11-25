@@ -7,6 +7,7 @@ package migrations_test
 
 import (
 	"context"
+	"os"
 	"testing"
 
 	"github.com/margince/margince/backend/internal/platform/dbmigrate"
@@ -85,5 +86,56 @@ func TestNarrowingTheKindColumnsKeepsStoredExtensionRows(t *testing.T) {
 	if _, err := conn.Exec(ctx, `INSERT INTO field_provenance (object_type, object_id, field_name, source, captured_by)
 		VALUES ($1, gen_random_uuid(), 'name', 'test', 'system')`, kind); err == nil {
 		t.Error("a new row of an extension kind was accepted after the upgrade")
+	}
+}
+
+// The narrowing runs again over its own result and leaves the same schema. A
+// database migrated under an earlier number is in that state. The dedupe pair
+// columns are gone by then, so the up file must not parse a statement naming them.
+func TestNarrowingTheKindColumnsRunsAgainOverItsOwnResult(t *testing.T) {
+	conn := connect(t, ownerDSNOf(t))
+	headSchema(t, conn)
+	ctx := context.Background()
+	for _, file := range []string{
+		"core/1795626081_core_only_kind_columns_refuse_an_extension_kind.up.sql",
+		"core/1795626082_core_only_kind_columns_are_validated.up.sql",
+	} {
+		body, err := os.ReadFile(file)
+		if err != nil {
+			t.Fatal(err)
+		}
+		tx, err := conn.Begin(ctx)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if _, err := tx.Exec(ctx, string(body)); err != nil {
+			rollbackErr := tx.Rollback(ctx)
+			t.Fatalf("running %s a second time: %v (rollback: %v)", file, err, rollbackErr)
+		}
+		if err := tx.Commit(ctx); err != nil {
+			t.Fatal(err)
+		}
+	}
+	var pairColumns, unvalidated int
+	if err := conn.QueryRow(ctx, `
+		SELECT count(*) FROM information_schema.columns
+		 WHERE table_schema = current_schema() AND table_name = 'dedupe_candidate'
+		   AND column_name IN ('left_ext_id', 'right_ext_id')`).Scan(&pairColumns); err != nil {
+		t.Fatal(err)
+	}
+	if pairColumns != 0 {
+		t.Errorf("dedupe_candidate has %d extension pair column(s) after the rerun", pairColumns)
+	}
+	if err := conn.QueryRow(ctx, `
+		SELECT count(*) FROM pg_constraint
+		 WHERE conname = ANY ($1) AND NOT convalidated`, []string{
+		"attachment_entity_type_check", "embedding_entity_type_check", "field_provenance_object_type_check",
+		"user_record_view_entity_type_check", "signal_entity_type_check",
+		"dedupe_candidate_entity_type_check", "dedupe_candidate_shape",
+	}).Scan(&unvalidated); err != nil {
+		t.Fatal(err)
+	}
+	if unvalidated != 0 {
+		t.Errorf("%d narrowed CHECK(s) are NOT VALID after the rerun over a clean schema", unvalidated)
 	}
 }

@@ -15,6 +15,9 @@
 --
 -- The CHECKs are NOT VALID, so they refuse new rows at once and leave stored
 -- ones in place. The next migration validates each one that no row breaks.
+--
+-- Every step runs again safely over its own result: each CHECK is dropped if it
+-- exists before it is added, and the pair columns are read only if they exist.
 SET LOCAL lock_timeout = '3s';
 
 ALTER TABLE attachment DROP CONSTRAINT IF EXISTS attachment_entity_type_check;
@@ -40,10 +43,21 @@ ALTER TABLE signal
     ) NOT VALID;
 
 DO $$
+DECLARE
+    pair_columns text;
+    held boolean := false;
 BEGIN
-    IF NOT EXISTS (
-        SELECT 1 FROM dedupe_candidate WHERE left_ext_id IS NOT NULL OR right_ext_id IS NOT NULL
-    ) THEN
+    -- The pair columns are named only through EXECUTE, so a schema that already
+    -- dropped them never parses a statement that names them.
+    SELECT string_agg(format('%I IS NOT NULL', column_name), ' OR ')
+      INTO pair_columns
+      FROM information_schema.columns
+     WHERE table_schema = current_schema() AND table_name = 'dedupe_candidate'
+       AND column_name IN ('left_ext_id', 'right_ext_id');
+    IF pair_columns IS NOT NULL THEN
+        EXECUTE 'SELECT EXISTS (SELECT 1 FROM dedupe_candidate WHERE ' || pair_columns || ')' INTO held;
+    END IF;
+    IF NOT held THEN
         DROP INDEX IF EXISTS uq_dedupe_candidate_pair_ext;
         ALTER TABLE dedupe_candidate DROP CONSTRAINT IF EXISTS dedupe_candidate_ext_shape;
         ALTER TABLE dedupe_candidate DROP COLUMN IF EXISTS left_ext_id, DROP COLUMN IF EXISTS right_ext_id;
