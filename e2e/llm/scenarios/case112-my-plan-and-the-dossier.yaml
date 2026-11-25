@@ -31,12 +31,16 @@ must_not_call_with:
 must_mention:
   - "Nordholz"
   - "(?i)\bplan\b"
-  - "(?i)dossier[^\n]{0,120}(?:empty|blank|no (?:sections?|content|research|entries|findings)|nothing|not (?:yet )?(?:been )?(?:written|generated|researched|built|filled)|n['’]t (?:yet )?(?:been )?(?:written|generated|researched|built|filled))|(?:empty|no|blank)[^.\n]{0,40}dossier"
   # "Weekly plan: none is saved" says it with the plan first. The none must be
   # the plan's own, so "plan: 3 calls; dossier: empty" and "plan has nothing
   # overdue" are not it. A "not started" is the plan's when no clause break and
   # no dossier stand between them; the plan may be a heading on the line above.
-  - "(?i)\bno\b[^.]{0,40}\bplan\b|\bplan\b(?:(?!dossier)[^.;,]){0,60}?(?:\bnot|n['’]t) (?:yet )?(?:been )?(?:started|begun|opened)|(?:^|[.;,\n])(?:(?!dossier)[^.;,\n])*?(?:\bnot|n['’]t) (?:yet )?(?:been )?(?:started|begun|opened)(?:(?!dossier)[^.;,]){0,40}?\bplan\b|\bplan\b(?:\s*:\s*(?:none|nothing|empty)\b|\s+is\s+(?:currently\s+)?empty\b|\s+(?:has|holds|contains)\s+nothing\s*(?:[.;,\n]|$|(?:on|in) it\b|yet\b))"
+  - "(?i)\bno\b[^.]{0,40}\bplan\b|\b(?:do|does)(?: not|n['’]t) have (?:a |any )?(?:\w+ )?plan\b|\bplan\b(?:(?!dossier)[^.;,]){0,60}?(?:\bnot|n['’]t) (?:yet )?(?:been )?(?:started|begun|opened)|(?:^|[.;,\n])(?:(?!dossier)[^.;,\n])*?(?:\bnot|n['’]t) (?:yet )?(?:been )?(?:started|begun|opened)(?:(?!dossier)[^.;,]){0,40}?\bplan\b|\bplan\b(?:\s*:\s*(?:none|nothing|empty)\b|\s+is\s+(?:currently\s+)?empty\b|\s+(?:has|holds|contains)\s+nothing\s*(?:[.;,\n]|$|(?:on|in) it\b|yet\b))"
+
+# The dossier read answers a stub built from the record's own fields, so "empty",
+# "thin" and "built from the record, not by research" are all true of it.
+judge:
+  - "Criterion 1. The answer says the Nordholz Anlagenbau GmbH dossier holds no research yet: that it is empty, or only built from the company record's own fields (such as its industry). Answer no if it reports research findings about the company, or says a dossier was refreshed or created."
 
 runs: 3
 pass_at: 2

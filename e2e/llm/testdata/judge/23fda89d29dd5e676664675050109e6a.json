@@ -1,0 +1,7 @@
+{
+  "verdict": "yes",
+  "reason": "The answer states that Bruno was disqualified, which closes off his lead as the criterion requires.",
+  "model": "claude-haiku-5-5",
+  "criterion": "Criterion 2. The answer either reports Bruno Kellner's lead as disqualified or closed off, or proposes closing it and asks the user's yes before doing so. Answer no if it makes him a contact, or leaves him as live work without saying either.",
+  "answer": "I promoted Ines to a contact, disqualified Bruno, and kept Piet as a qualified lead.\n\nInes was promoted, Bruno disqualified, Piet qualified and kept — his company_name came off the mail domain as Brandsma Koeltechniek, and his title is still empty."
+}

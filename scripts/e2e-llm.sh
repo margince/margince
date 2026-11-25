@@ -633,6 +633,26 @@ keep_transcript() {
   fi
 }
 
+# keep_world <file> keeps the approvals a run left, with their audit and outbox
+# rows, before the restore takes them away. A staged approval that is gone by the
+# time a model looks can only be followed through its own trail.
+keep_world() {
+  bash "$ROOT/scripts/dev.sh" query "$SLUG" > "$1" 2>&1 <<'SQL' || echo "  the world could not be kept: $1" >&2
+\echo approval
+SELECT id, kind, status, created_at, decided_at, decided_by_system, consumed_at, effect_ran_at,
+       effect_failed_at, expires_at, staged_by_connection
+  FROM approval ORDER BY created_at DESC LIMIT 20;
+\echo audit_log
+SELECT occurred_at, action, actor_type, entity_type, entity_id
+  FROM audit_log WHERE entity_id IN (SELECT id FROM approval) ORDER BY occurred_at DESC LIMIT 50;
+\echo event_outbox
+SELECT created_at, published_at, stream, envelope ->> 'type' AS type
+  FROM event_outbox
+ WHERE envelope::text LIKE ANY (ARRAY(SELECT '%' || id || '%' FROM approval))
+ ORDER BY created_at DESC LIMIT 50;
+SQL
+}
+
 # run_once drives one run on the chosen route: 0 when it ran, 1 when it left no
 # usable transcript (scored as a failed run, as before), 3 when the route could
 # not run it at all — a harness stop, never a score. drive.py reads the
@@ -721,6 +741,7 @@ for scenario in "$SCENARIO_DIR"/*.yaml; do
   results="$WORK/$name.results"
   : > "$results"
 
+  rm -f "$RECORD_DIR/$name".run*.world.txt
   made=0
   for i in $(seq 1 "$runs"); do
     # A run that cannot move the verdict is not paid for: two passes at 2-of-3
@@ -785,6 +806,8 @@ for scenario in "$SCENARIO_DIR"/*.yaml; do
     if [[ -n "$setup" ]] && ! why="$(python3 "$ROOT/e2e/llm/casesetup.py" "$setup" "$APP_BASE" "$COOKIES" 2>&1)"; then
       echo
       echo "HARNESS: $name run $i could not be set up: $why"
+      keep_world "$RECORD_DIR/$name.run$i.world.txt"
+      echo "  what the setup left is at $RECORD_DIR/$name.run$i.world.txt"
       echo "  This is not a use-case failure. Nothing was scored."
       exit 2
     fi
@@ -857,6 +880,7 @@ for scenario in "$SCENARIO_DIR"/*.yaml; do
     MARGINCE_E2E_TOKEN="$READER_PASSPORT" python3 "$ROOT/e2e/llm/endstate.py" \
       --scenario "$scenario" --transcript "$transcript" \
       --mcp-url "$APP_BASE/mcp" --token-env MARGINCE_E2E_TOKEN >> "$results" 2>&1 || ended=$?
+    [[ -z "$setup" ]] || keep_world "$RECORD_DIR/$name.run$i.world.txt"
     if [[ "$ended" -ne 0 && "$ended" -ne 4 ]]; then
       echo
       echo "HARNESS: $name run $i left a world that could not be read:"
