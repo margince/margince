@@ -971,9 +971,11 @@ for scenario in "$SCENARIO_DIR"/*.yaml; do
   python3 "$ROOT/e2e/llm/check.py" --efficiency "$scenario" \
     ${transcripts[@]+"${transcripts[@]}"} | tee -a "$REPORT"
 
-  # A settled scenario makes fewer runs than an earlier lane may have kept.
-  rm -f "$RECORD_DIR/$name".run*.jsonl
+  # A settled scenario makes fewer runs than an earlier lane may have kept. Each
+  # run's cut of the server's call log stays beside its transcript.
+  rm -f "$RECORD_DIR/$name".run*.jsonl "$RECORD_DIR/$name".run*.jsonl.calls
   cp "$WORK/$name".run*.jsonl "$RECORD_DIR/" 2>/dev/null || true
+  cp "$WORK/$name".run*.jsonl.calls "$RECORD_DIR/" 2>/dev/null || true
 done
 
 # A run that called nothing is scored on its answer, but a sweep in which no run
