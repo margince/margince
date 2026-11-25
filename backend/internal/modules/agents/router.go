@@ -135,6 +135,12 @@ func (r *Registry) actionSentences(routerName, field string, choices []string, t
 	return sentences
 }
 
+// actionField is the member router picks its action by.
+func (r *Registry) actionField(router string) string {
+	spec, _ := r.Spec(router)
+	return spec.ActionField
+}
+
 // routerRunSpec is the spec of the tool a router runs for one of its actions,
 // and false when the router has no such action.
 func (r *Registry) routerRunSpec(routerName, action string) (mcp.ToolSpec, bool) {

@@ -49,7 +49,9 @@ func TestOnlyAFullySettledRelistRetiresWhatItLeftOut(t *testing.T) {
 		api     func(t *testing.T) *fakeAPI
 		failOn  string
 		fails   bool
+		stale   bool
 		retired [][]string
+		landed  []string
 	}{
 		{name: "an expired token re-lists", retired: [][]string{{"evt-1", "evt-2"}}, api: func(t *testing.T) *fakeAPI {
 			return &fakeAPI{owner: gcalOwner, deltaErr: ErrSyncTokenGone, initialToken: "fresh", initial: listing(t)}
@@ -63,6 +65,10 @@ func TestOnlyAFullySettledRelistRetiresWhatItLeftOut(t *testing.T) {
 		{name: "an event of the listing fails to land", failOn: "evt-1", fails: true, api: func(t *testing.T) *fakeAPI {
 			return &fakeAPI{owner: gcalOwner, deltaErr: ErrSyncTokenGone, initialToken: "fresh", initial: listing(t)}
 		}},
+		{name: "a stale list drains the token and retires against the full list alone", stale: true, retired: [][]string{{"evt-1", "evt-2"}}, landed: []string{"evt-9"}, api: func(t *testing.T) *fakeAPI {
+			drained := eventJSON(t, "evt-9", "confirmed", "Moved", "2026-07-18T10:00:00Z", gcalOwner, "client@acme.com")
+			return &fakeAPI{owner: gcalOwner, deltaToken: "next", delta: [][]byte{drained}, initialToken: "fresh", initial: listing(t)}
+		}},
 		{name: "an event names no id", api: func(t *testing.T) *fakeAPI {
 			return &fakeAPI{owner: gcalOwner, deltaErr: ErrSyncTokenGone, initialToken: "fresh", initial: append(listing(t), []byte(`{"status":"confirmed"}`))}
 		}},
@@ -72,12 +78,28 @@ func TestOnlyAFullySettledRelistRetiresWhatItLeftOut(t *testing.T) {
 			c := New(fakeOAuth{access: "access-1"}, tc.api(t))
 			c.now = func() time.Time { return now }
 			sink := &retiringSink{failOn: tc.failOn}
-			prior, err := json.Marshal(cursorState{SyncToken: "sync-abc", ListedAt: now})
+			listedBefore := now.Add(-time.Hour)
+			if tc.stale {
+				listedBefore = now.Add(-relistAfter)
+			}
+			prior, err := json.Marshal(cursorState{SyncToken: "sync-abc", ListedAt: listedBefore})
 			if err != nil {
 				t.Fatal(err)
 			}
-			if _, err := c.Sync(context.Background(), authBytes(t), prior, sink); (err != nil) != tc.fails {
+			next, err := c.Sync(context.Background(), authBytes(t), prior, sink)
+			if (err != nil) != tc.fails {
 				t.Fatalf("Sync: %v", err)
+			}
+			// Only a listing that settled dates the window; any other stays due.
+			if want := map[bool]time.Time{true: now, false: listedBefore}[tc.retired != nil]; !tc.fails {
+				if state, err := parseCursor(next); err != nil || !state.ListedAt.Equal(want) {
+					t.Errorf("the cursor dates the listing %v (%v), want %v", state.ListedAt, err, want)
+				}
+			}
+			for _, id := range tc.landed {
+				if !slices.ContainsFunc(sink.recs, func(rec connector.NormalizedRecord) bool { return rec.NaturalKey.SourceID == id }) {
+					t.Errorf("the drained event %s never reached capture", id)
+				}
 			}
 			if !slices.EqualFunc(sink.listings, tc.retired, slices.Equal) {
 				t.Fatalf("listings handed for retirement = %v, want %v", sink.listings, tc.retired)

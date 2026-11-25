@@ -382,6 +382,7 @@ Every call a passport can make, grouped by area. Find the operationId in openapi
 | `PUT /scheduling/profile/alias` | putSchedulingAlias | Choose, change or clear the caller's friendly booking address. | Change records | at once |
 | `POST /scheduling/profile/shared` | markBookingPageShared | Record that the caller shared their booking link. | Change records | at once |
 | `GET /scheduling/team-candidates` | listSchedulingTeamCandidates | List the colleagues the caller may name on their booking link. | Read records | at once |
+| `GET /scheduling/team-links` | listSchedulingTeamLinks | List the caller's team booking links. | Read records | at once |
 | `GET /scheduling/team-requests` | listSchedulingTeamRequests | List the colleagues' booking links that name the caller. | Read records | at once |
 | `POST /scheduling/invitations` | createMeetingInvitation | Reserve a meeting and request a calendar-native invitation. | Send messages | waits for approval |
 | `GET /scheduling/invitations/{id}` | getMeetingInvitation | Read invitation delivery and calendar state. | Read records | at once |

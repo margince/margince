@@ -94,7 +94,7 @@ func subjectOwnChannelAccounts(ctx context.Context, tx pgx.Tx, contactID ids.Con
 
 // sarJudgementSections gather the conclusions. Each reads the one message set
 // subjectAuthoredMessages resolved, as $1.
-func sarJudgementSections(pkg *SARPackage, authored []ids.UUID) []sarSection {
+func sarJudgementSections(pkg *SARPackage, contactID ids.ContactID, authored []ids.UUID) []sarSection {
 	messages := []any{authored}
 	return []sarSection{
 		// What we concluded the subject's replies MEANT, and who concluded it.
@@ -157,5 +157,16 @@ func sarJudgementSections(pkg *SARPackage, authored []ids.UUID) []sarSection {
 		   JOIN stage_exit_criterion c ON c.id = ev.criterion_id
 		   JOIN activity a ON a.id = ev.source_id
 		   WHERE ev.source_type = 'activity' AND ev.source_id = ANY($1)`, messages},
+		// The claims erasure deletes: those about the subject, and those read from a
+		// message they wrote or are linked to. Reading and quote follow the body.
+		{&pkg.ConversationClaims, `SELECT c.kind, c.status, c.due_at, c.needs_review, c.source,
+		          c.created_at, c.corrected_at, c.archived_at, true AS derived,
+		          CASE WHEN ` + sarContentDisclosed + ` THEN c.body END AS reading,
+		          CASE WHEN ` + sarContentDisclosed + ` THEN c.source_quote END AS quote,
+		          ` + sarContentDisclosed + ` AS content_disclosed,
+		          c.source_activity_id AS activity_id, a.occurred_at
+		   FROM conversation_claim c
+		   JOIN activity a ON a.id = c.source_activity_id
+		   WHERE c.contact_id = $1 OR c.source_activity_id = ANY($2)`, []any{contactID, authored}},
 	}
 }

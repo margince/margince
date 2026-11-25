@@ -6,6 +6,7 @@ package activities
 import (
 	"context"
 	"errors"
+	"maps"
 	"slices"
 	"strings"
 	"time"
@@ -138,33 +139,47 @@ func lockInvitationHolders(ctx context.Context, tx pgx.Tx, host ids.UserID, invi
 	return lockSlotHolders(ctx, tx, host, team)
 }
 
-// confirmTeamTx takes the host's page lock and reads each member's answer again
-// under it. A member who is no longer confirmed refuses the booking, as a
+// confirmTeamTx takes the host's page lock and reads the page the booking came
+// through again under it. The page must still be live, and a team link still
+// switched on. Its team must be the confirmed team the time was offered for. A
+// member added, taken off or no longer confirmed refuses the booking, as a
 // paused page does.
-func confirmTeamTx(ctx context.Context, tx pgx.Tx, host ids.UserID, team []ids.UUID) error {
+func confirmTeamTx(ctx context.Context, tx pgx.Tx, host ids.UserID, page ids.UUID, team []ids.UUID) error {
 	if err := storekit.LockWriteIdentity(ctx, tx, "booking_page", host.String()); err != nil {
 		return err
 	}
-	if len(team) == 0 {
-		return nil
-	}
 	var stored *storedSchedulingProfile
+	var teamLink bool
 	args := schedulingArgs{}
-	err := tx.QueryRow(ctx, `SELECT scheduling_policy FROM booking_page WHERE host_user_id=`+args.add(host)+
-		` AND revoked_at IS NULL ORDER BY created_at DESC LIMIT 1`, args...).Scan(&stored)
-	if errors.Is(err, pgx.ErrNoRows) || (err == nil && stored == nil) {
+	err := tx.QueryRow(ctx, `SELECT scheduling_policy, team_link FROM booking_page WHERE `+livePageSQL(&args, host, page), args...).Scan(&stored, &teamLink)
+	if errors.Is(err, pgx.ErrNoRows) || (err == nil && pageRefusesBooking(stored, teamLink, team)) {
 		return apperrors.ErrNotFound
 	}
 	if err != nil {
 		return err
 	}
+	if stored == nil {
+		return nil
+	}
 	confirmed := confirmedMembers(stored.SchedulingProfile)
+	if len(teamMembers(stored.SchedulingProfile)) != len(team) {
+		return apperrors.ErrNotFound
+	}
 	for _, member := range team {
 		if !confirmed[member] {
 			return apperrors.ErrNotFound
 		}
 	}
 	return nil
+}
+
+// pageRefusesBooking is whether a page read under the booking's lock can no
+// longer take it before its team is compared.
+func pageRefusesBooking(stored *storedSchedulingProfile, teamLink bool, team []ids.UUID) bool {
+	if stored == nil {
+		return teamLink || len(team) > 0
+	}
+	return teamLink && !stored.Enabled
 }
 
 // confirmedMembers are the members of a page whose own answer is confirmed.
@@ -191,19 +206,19 @@ func reserveSlotHolders(ctx context.Context, tx pgx.Tx, host ids.UserID, team []
 }
 
 // teamOf is the members a booked meeting holds time for, as calendars to check
-// a move against. Only a member still confirmed on the host's page counts. A
-// member who left the link or the workspace is dropped, and the meeting stands.
-// A confirmed member whose calendar cannot be read refuses the move, as the
-// host's own calendar would.
-func (s *Store) teamOf(ctx context.Context, host ids.UserID, members []ids.UUID) ([]teamCalendar, error) {
+// a move against. Only a member still confirmed on the link that booked it
+// counts. A meeting booked before invitations named their link counts a member
+// confirmed on any of the host's live links. Any other member is dropped, and
+// the meeting stands. A confirmed member whose calendar cannot be read refuses
+// the move.
+func (s *Store) teamOf(ctx context.Context, host ids.UserID, page *ids.UUID, members []ids.UUID) ([]teamCalendar, error) {
 	if len(members) == 0 {
 		return nil, nil
 	}
-	page, err := s.hostSchedulingProfile(ctx, host)
+	confirmed, err := s.confirmedOnLinks(ctx, host, page)
 	if err != nil {
 		return nil, err
 	}
-	confirmed := confirmedMembers(page)
 	team := make([]teamCalendar, 0, len(members))
 	for _, member := range members {
 		if !confirmed[member] {
@@ -220,6 +235,31 @@ func (s *Store) teamOf(ctx context.Context, host ids.UserID, members []ids.UUID)
 		}
 	}
 	return team, nil
+}
+
+// confirmedOnLinks are the members confirmed on the live page, or on any live
+// page of host when page is nil.
+func (s *Store) confirmedOnLinks(ctx context.Context, host ids.UserID, page *ids.UUID) (map[ids.UUID]bool, error) {
+	confirmed := map[ids.UUID]bool{}
+	err := s.tx(ctx, func(tx pgx.Tx) error {
+		args := schedulingArgs{}
+		query := `SELECT scheduling_policy FROM booking_page WHERE host_user_id=` + args.add(host) + ` AND revoked_at IS NULL`
+		if page != nil {
+			query += ` AND id=` + args.add(*page)
+		}
+		rows, err := tx.Query(ctx, query, args...)
+		if err != nil {
+			return err
+		}
+		policies, err := pgx.CollectRows(rows, pgx.RowTo[*storedSchedulingProfile])
+		for _, policy := range policies {
+			if policy != nil {
+				maps.Copy(confirmed, confirmedMembers(policy.SchedulingProfile))
+			}
+		}
+		return err
+	})
+	return confirmed, err
 }
 
 func teamIDs(team []teamCalendar) []ids.UUID {

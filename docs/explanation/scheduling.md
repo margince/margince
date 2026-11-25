@@ -1,5 +1,5 @@
 <!-- prose:plain -->
-<!-- describes: backend/internal/shared/ports/connector/calendarinterval.go backend/internal/modules/activities/scheduling_policy.go backend/internal/modules/capture/gcal/scheduling_lookup.go backend/internal/modules/activities/workinghours.go backend/internal/modules/activities/scheduling_occupancy.go backend/internal/modules/activities/scheduling_invitation.go backend/internal/modules/activities/scheduling_roster.go backend/internal/modules/activities/scheduling_team.go backend/internal/compose/teamrequestnotice.go backend/internal/modules/activities/scheduling_teamtime.go backend/internal/modules/activities/scheduling_park.go backend/internal/modules/activities/handlers_proposal.go backend/internal/modules/activities/booking_invitee.go backend/internal/compose/schedulingattendees.go backend/internal/modules/activities/scheduling_secrets.go backend/internal/modules/activities/scheduling_erasure.go backend/internal/modules/activities/scheduling_reminder.go backend/internal/modules/activities/meetingoutcomestart.go backend/internal/modules/activities/meetingmove.go backend/internal/modules/capture/gcal/scheduling.go backend/internal/modules/capture/graphcal/scheduling.go backend/internal/modules/activities/activityintent.go -->
+<!-- describes: backend/internal/shared/ports/connector/calendarinterval.go backend/internal/modules/activities/scheduling_policy.go backend/internal/modules/capture/gcal/scheduling_lookup.go backend/internal/modules/activities/workinghours.go backend/internal/modules/activities/scheduling_occupancy.go backend/internal/modules/activities/scheduling_invitation.go backend/internal/modules/activities/scheduling_roster.go backend/internal/modules/activities/scheduling_team.go backend/internal/modules/activities/scheduling_teamlinks.go backend/internal/modules/activities/scheduling_teamlinkmove.go backend/internal/compose/teamrequestnotice.go backend/internal/modules/activities/scheduling_teamtime.go backend/internal/modules/activities/scheduling_park.go backend/internal/modules/activities/handlers_proposal.go backend/internal/modules/activities/booking_invitee.go backend/internal/compose/schedulingattendees.go backend/internal/modules/activities/scheduling_secrets.go backend/internal/modules/activities/scheduling_erasure.go backend/internal/modules/activities/scheduling_reminder.go backend/internal/modules/activities/meetingoutcomestart.go backend/internal/modules/activities/meetingmove.go backend/internal/modules/capture/gcal/scheduling.go backend/internal/modules/capture/graphcal/scheduling.go backend/internal/modules/activities/activityintent.go -->
 # Scheduling
 
 What a meeting host sees is in the handbook page
@@ -36,23 +36,38 @@ refused.
 
 ## A team link waits for every member
 
-A booking page may name up to five colleagues in `team_members`, stored in the page's
-`scheduling_policy`. Each member's answer is their own. The owner's save keeps it, and starts a new
-member as `pending`. Only the member writes `confirmed` or `left`.
+A host has one personal booking page and any number of team links, each a `booking_page` row of its
+own with `team_link` set. The index `booking_page_one_personal_per_host` keeps one live personal page
+per host. The personal page names no team, so it offers its host's free time alone. A
+team link stores its name, its switch and up to five colleagues in `team_members`. Its calendar and
+every other setting come from the host's personal page (`bookingPageProfile`). Each read of one page
+names it by id, or names the personal page (`livePageSQL`).
+
+Each member's answer is their own. The owner's save keeps it, and starts a new member as `pending`.
+Only the member writes `confirmed` or `left`, and they answer one team link by its id.
 
 The save that names a new member also gives them a notice of kind `meeting_team_request`, in the same
-transaction, through `compose/teamrequestnotice.go`. The notice is in the approval class, so it is
-mailed as an approval is, unless the member chose otherwise. A member kept on the list gets no second
-notice.
+transaction, through `compose/teamrequestnotice.go`. The notice is keyed by team link and member, so
+two links that name one colleague each ask. It sits in the approval class of notices, so it is mailed
+as an approval is unless the member chose otherwise. A member kept on the list gets no second notice.
+Answering, being taken off the list or a deleted link takes the notice back, and a notice taken
+back is never mailed.
 
-Answering, or being taken off the list, takes the notice back, and a notice taken back is never mailed.
-The mail reads the link again when it leaves. It names the current title, and it is not sent once the
-member is no longer pending. The send holds the link until the mail is set to go, so an answer waits for
-it. Naming a member again opens the same notice, with the current title.
+The mail reads its team link again, by the link's id, when it leaves. It names the current title,
+and it is not sent if the member is no longer pending at that check. The send holds the link while
+it is booked in, so an answer, or taking the member off, waits for it. An answer that commits after
+the send is booked in cannot stop that mail. Naming a member again opens the same notice, with the
+current title.
+
+A team stored on a personal page moves onto a new team link with a new address, through the data task
+`core/1795540594_teams_move_to_team_links`. Each member keeps their answer.
 
 Confirming is a consent to share free time with a public page, so an agent cannot give it. Until every member has confirmed
 and has a calendar Margince can read, the page's `blocker` is `team_not_ready` and the page is
-paused. Home tells the owner through the same booking card a broken calendar raises.
+paused. Home tells the owner through a booking card for that link, which names the link.
+
+A booking reads its page again under the page lock before it commits. A team link switched off since
+the guest opened it, or a team that changed since, refuses the booking as a paused page does.
 
 A member's calendar is read through the calendars of their own booking settings. The page keeps
 the same free time around their meetings as around the host's. A read-only grant is enough, because a member's
@@ -67,9 +82,12 @@ the page lock and reads each member's answer again under it. So two links cannot
 twice, and each member's own page stops offering the time.
 
 Each member is invited on the one event, and the booking closes each member's own open tasks on the
-booked record. A move checks every member again who is still confirmed on the page. A member who left the link or
-the workspace is left out. A member whose
-calendar cannot be read refuses the move, as the host's own calendar would. The member's copy of
+booked record. A meeting records the link that booked it in `meeting_invitation.booking_page_id`. A move
+checks every member again who is still confirmed on that link, and none once the link is deleted. A
+meeting booked before the column existed checks the members confirmed on any of the host's live links. A member who left the link or
+the workspace is left out.
+
+A member whose calendar cannot be read refuses the move, as the host's own calendar would. The member's copy of
 the meeting has an event id of its own, so the move knows it by its current time. When a member
 leaves the workspace, every link that names them marks them `unavailable` and stays paused.
 
