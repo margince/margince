@@ -7,6 +7,7 @@ package integration
 
 import (
 	"context"
+	"time"
 
 	"github.com/jackc/pgx/v5"
 
@@ -15,11 +16,13 @@ import (
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/ai"
 	"github.com/margince/margince/backend/internal/modules/capture"
+	"github.com/margince/margince/backend/internal/modules/consent"
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/modules/initiatives"
 	"github.com/margince/margince/backend/internal/modules/integrations"
+	"github.com/margince/margince/backend/internal/modules/introductions"
 	"github.com/margince/margince/backend/internal/modules/notices"
 	"github.com/margince/margince/backend/internal/modules/signals"
 	"github.com/margince/margince/backend/internal/modules/weeklyplan"
@@ -44,8 +47,11 @@ func (e *Env) bindStores(db *database.DB) {
 		WithMergeContentReader(e.Activities).
 		WithProfileVerdictReader(profileverdicts.MergeReader(db)).
 		WithFeedbackCarryReader(ai.NewFeedbackStore(db)).
-		// As production wires it: a merge keeps the former owner's access.
+		// As production wires them: a merge keeps the former owner's access, and
+		// carries what consent, introductions, signals and initiatives keep.
 		WithGrantCarrier(identity.NewServiceFor(db)).
+		WithStopCarrier(consent.NewStore(db)).
+		WithSatelliteCarriers(consent.NewStore(db), introductions.NewStore(db, time.Now)).
 		WithInstallationRenamer(func(context.Context, pgx.Tx, string) error { return nil })
 	e.Deals = deals.NewStore(db, installseam.Deals())
 	e.Projects = ProjectsStore(db)

@@ -402,8 +402,9 @@ func TestAMergeRacingAnErasureOfTheSourcesRequestCompletesBoth(t *testing.T) {
 		t.Fatalf("the merge that met the fulfilment returned %v, want the refusal to merge while the request is answered", raced)
 	}
 	c.merge(t, retired, survivor)
-	if n := c.count(t, `SELECT count(*) FROM data_subject_request WHERE id = $1 AND status = 'fulfilled' AND contact_id = $2`,
-		request, retired); n != 1 {
+	// A fulfilled erasure keeps only the erased contact's id, in subject_ref.
+	if n := c.count(t, `SELECT count(*) FROM data_subject_request
+		WHERE id = $1 AND status = 'fulfilled' AND contact_id IS NULL AND subject_ref = $2::text`, request, retired); n != 1 {
 		t.Error("the fulfilled request moved with the later merge, or was never fulfilled")
 	}
 }
