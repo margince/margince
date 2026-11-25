@@ -5,32 +5,10 @@ package threadverdict
 
 import "fmt"
 
-// WorkspaceAudienceSQL applies thread holds and pending history narrowings
-// while preserving explicit internal-mail admission.
+// WorkspaceAudienceSQL applies thread holds while preserving explicit internal-mail admission.
 func WorkspaceAudienceSQL(alias string) string {
 	return fmt.Sprintf(`(%[1]s.audience = 'workspace' AND
- (%[1]s.internal_mail_authorization IS NOT NULL OR (%[2]s AND %[3]s)))`, alias, UnheldSQL(alias), noPendingNarrowingSQL(alias))
-}
-
-// NarrowingDueSQL is true while import row imp still needs a narrowing. The
-// target is held when the SQL boolean held is true, else classified. A held row
-// is never due: narrowing to classified must not loosen it.
-func NarrowingDueSQL(imp, held string) string {
-	return fmt.Sprintf(`(coalesce(%[1]s.posture_at_import, 'shared') <> 'held'
- AND (%[2]s OR coalesce(%[1]s.posture_at_import, 'shared') <> 'classified'))`, imp, held)
-}
-
-// noPendingNarrowingSQL is false while an importer of activity alias waits on
-// a stricter posture over its earlier mail. The job has not written it yet.
-// The request takes effect for readers at once; the job only stores it. Here a
-// seat's request covers every import of that seat. That can hold back mail from
-// its other mailbox until the job ends, never the reverse.
-func noPendingNarrowingSQL(alias string) string {
-	return fmt.Sprintf(`NOT EXISTS (
- SELECT 1 FROM capture_import narrowing_import
- JOIN capture_connection narrowing ON narrowing.history_narrowing_held IS NOT NULL
-  AND (narrowing.id = narrowing_import.connection_id OR narrowing.user_id = narrowing_import.user_id)
- WHERE narrowing_import.activity_id = %[1]s.id AND %[2]s)`, alias, NarrowingDueSQL("narrowing_import", "narrowing.history_narrowing_held"))
+ (%[1]s.internal_mail_authorization IS NOT NULL OR %[2]s))`, alias, UnheldSQL(alias))
 }
 
 // UnheldSQL is true while no importing seat holds the thread of activity

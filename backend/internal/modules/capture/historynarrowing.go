@@ -6,9 +6,10 @@ package capture
 // Narrowing a mailbox's history in the background.
 //
 // A posture change commits at once, and its request to cover earlier mail is
-// stored on the connection. Readers honour a pending request at once
-// (threadverdict.WorkspaceAudienceSQL). A job then writes the narrowed imports
-// one batch per run, each batch in its own transaction, one mailbox at a time.
+// stored on the connection. A job then narrows that mail one batch per run, each
+// batch in its own transaction, one mailbox at a time across the installation.
+// Mail the job has not reached keeps the audience it has, so no read needs to
+// know a narrowing is pending.
 
 import (
 	"context"
@@ -144,9 +145,9 @@ func (r *Registry) NarrowPendingHistory(ctx context.Context) (bool, error) {
 			return nil
 		}
 		var p pendingNarrowing
-		var held bool
-		err := tx.QueryRow(ctx, `SELECT id, user_id, history_narrowing_held FROM capture_connection
-			 WHERE history_narrowing_held IS NOT NULL ORDER BY id LIMIT 1 FOR UPDATE`).Scan(&p.connection, &p.seat, &held)
+		var held, archived bool
+		err := tx.QueryRow(ctx, `SELECT id, user_id, history_narrowing_held, archived_at IS NOT NULL FROM capture_connection
+			 WHERE history_narrowing_held IS NOT NULL ORDER BY id LIMIT 1 FOR UPDATE`).Scan(&p.connection, &p.seat, &held, &archived)
 		if errors.Is(err, pgx.ErrNoRows) {
 			return nil
 		}
@@ -154,6 +155,10 @@ func (r *Registry) NarrowPendingHistory(ctx context.Context) (bool, error) {
 			return fmt.Errorf("capture: finding a pending history narrowing: %w", err)
 		}
 		found, p.posture = true, narrowingPosture(held)
+		if archived {
+			// A removed mailbox's request is dropped, not carried out.
+			return endNarrowingTx(ctx, tx, p, "dropped_archived")
+		}
 		return r.narrowPendingBatchTx(ctx, tx, p)
 	})
 	return found, err
@@ -193,15 +198,16 @@ func (r *Registry) narrowPendingBatchTx(ctx context.Context, tx pgx.Tx, p pendin
 	if left > 0 {
 		return nil
 	}
-	return endNarrowingTx(ctx, tx, p, shared)
+	return endNarrowingTx(ctx, tx, p, "history_narrowed_to")
 }
 
-// endNarrowingTx clears a finished request and records that it finished.
-func endNarrowingTx(ctx context.Context, tx pgx.Tx, p pendingNarrowing, shared bool) error {
+// endNarrowingTx clears a request and records why under outcome: it finished
+// (history_narrowed_to), or its mailbox was removed (dropped_archived).
+func endNarrowingTx(ctx context.Context, tx pgx.Tx, p pendingNarrowing, outcome string) error {
 	if _, err := tx.Exec(ctx, `UPDATE capture_connection SET history_narrowing_held = NULL WHERE id = $1`, p.connection); err != nil {
 		return fmt.Errorf("capture: ending the history narrowing: %w", err)
 	}
-	return narrowingTrailTx(ctx, tx, p.connection, shared,
+	return narrowingTrailTx(ctx, tx, p.connection, p.seat == nil,
 		map[string]any{historyNarrowingKey: p.posture},
-		map[string]any{historyNarrowingKey: nil, "history_narrowed_to": p.posture})
+		map[string]any{historyNarrowingKey: nil, outcome: p.posture})
 }

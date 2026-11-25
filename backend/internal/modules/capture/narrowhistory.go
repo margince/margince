@@ -23,7 +23,6 @@ import (
 
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
-	"github.com/margince/margince/backend/internal/shared/kernel/threadverdict"
 )
 
 // narrowBatch is how many import rows one batch of the background narrowing
@@ -54,9 +53,12 @@ func deliveredScope(connection ids.UUID) narrowScope {
 }
 
 // narrowDue is the batch predicate the claim and the progress check both ask,
-// so the two cannot disagree. Pending readers ask the same posture test.
+// so the two cannot disagree. A row it writes stops matching, which ends the
+// narrowing. A held row never matches, so narrowing to classified never loosens it.
 func narrowDue(scope narrowScope) string {
-	return scope.where + " AND " + threadverdict.NarrowingDueSQL("capture_import", "($2 = 'held')")
+	return scope.where + `
+	   AND coalesce(posture_at_import, 'shared') <> $2
+	   AND coalesce(posture_at_import, 'shared') <> 'held'`
 }
 
 // narrowRemainingTx counts what a further batch would still claim. The job

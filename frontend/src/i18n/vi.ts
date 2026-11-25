@@ -12765,7 +12765,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Cài đặt này áp dụng cho thư thu thập từ giờ trở đi. Thư đã có trong CRM giữ nguyên phạm vi hiển thị, trừ khi thu hẹp lại cho khớp.",
   "connectors.mailPosture.historyApply": "Thu hẹp cả thư đã thu thập",
   "connectors.mailPosture.historyNarrowing":
-    "Thư trước đó đã được thu hẹp với người đọc. Margince đang lưu thay đổi trong nền: còn {count}.",
+    "Thư trước đó đang được thu hẹp trong nền: còn {count}. Mỗi thư giữ mức hiển thị hiện tại cho đến khi được xử lý.",
   "connectors.disconnectBodyGoogleNote":
     "Google có thể vẫn liệt kê Margince trong phần quyền truy cập của bên thứ ba trên tài khoản Google. Gỡ ở đó để thu hồi hoàn toàn quyền truy cập.",
   "connectors.disconnectBodyMicrosoftNote":

@@ -205,7 +205,7 @@ To change who can read mail captured from your mailbox in Margince, open **Setti
 1. Open the account menu, choose **Settings**, then **Connections**.
 2. Press the arrow at the end of the mailbox's row.
 3. Set **Mail visibility** to **Held until checked**, **Always held** or **Shared with the team**.
-4. When you narrow it, the row **Apply to captured mail?** shows. Tick **Also narrow captured mail** to narrow mail already captured too. Colleagues stop seeing that mail at once; Margince saves the change in the background and shows how many messages are left.
+4. When you narrow it, the row **Apply to captured mail?** shows. Tick **Also narrow captured mail** to narrow mail already captured too. Margince narrows it in the background and shows how many messages are left; a message keeps its visibility until it is reached.
 5. Press **Save** on the **Unsaved changes** bar.
 
 **Shared with the team** is refused until an administrator allows it for the company.
@@ -327,7 +327,7 @@ To connect a shared mailbox in Margince, an administrator opens **Settings → I
 2. Enter the **Mailbox address**, choose the **Team that reads it**, and choose **Held** or **Shared**.
 3. Enter the login of the mail service, then press **Connect a shared mailbox**.
 
-**Change** on its row changes the team or the visibility, for all mail it already captured. Narrowing captured mail to **Held** applies at once; the row shows how many messages are still being saved. **Import older mail** and **Disconnect** are in the row's menu.
+**Change** on its row changes the team or the visibility, for all mail it already captured. Narrowing captured mail to **Held** runs in the background, and the row shows how many messages are left. **Import older mail** and **Disconnect** are in the row's menu.
 Also called: sales@ inbox, team mailbox, group mailbox.
 
 ## Shared mailboxes

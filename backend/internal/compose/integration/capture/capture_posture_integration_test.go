@@ -413,7 +413,7 @@ func TestApplyingAPostureToHistoryNarrowsOnlyBackwards(t *testing.T) {
 		t.Fatalf("the answer shows %+v, want three messages left to hold", pending)
 	}
 	if n := openActivityCount(t, e); n != 3 {
-		t.Fatalf("%d open messages before the narrowing ran, want 3: the job writes the narrowing, the request does not", n)
+		t.Fatalf("%d open messages before the narrowing ran, want 3: mail the job has not reached keeps its audience", n)
 	}
 	integration.NarrowHistoryToTheEnd(t, e.WS, env.registry)
 	if n := openActivityCount(t, e); n != 0 {

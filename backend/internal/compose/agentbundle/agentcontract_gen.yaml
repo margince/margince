@@ -29040,8 +29040,8 @@ components:
       required: [posture, remaining]
       description: |-
         Earlier mail of this mailbox that a background job is still narrowing, after a change
-        asked for `apply_to_history`. Absent when nothing is pending. Readers already see the
-        mail as narrowed; the job writes the narrowing it implies.
+        asked for `apply_to_history`. Absent when nothing is pending. Mail the job has not reached
+        yet keeps the audience it had.
       properties:
         posture: {type: string, enum: [classified, held], description: What the earlier mail is narrowed to.}
         remaining: {type: integer, minimum: 0, description: Messages still to narrow.}

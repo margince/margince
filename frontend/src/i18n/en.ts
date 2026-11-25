@@ -13040,7 +13040,7 @@ export const en = {
     "This setting applies to mail captured from now on. Mail already in the CRM keeps its visibility unless you narrow it to match.",
   "connectors.mailPosture.historyApply": "Also narrow captured mail",
   "connectors.mailPosture.historyNarrowing":
-    "Earlier mail is already narrowed for readers. Margince is saving the change in the background: {count} left.",
+    "Earlier mail is being narrowed in the background: {count} left. A message keeps its visibility until it is reached.",
   "connectors.disconnectBodyGoogleNote":
     "Google may still list Margince under your account’s third-party access. Remove it there to revoke access fully.",
   "connectors.disconnectBodyMicrosoftNote":

@@ -10,12 +10,8 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/jackc/pgx/v5"
-
 	"github.com/margince/margince/backend/internal/compose/integration"
 	capturemod "github.com/margince/margince/backend/internal/modules/capture"
-	"github.com/margince/margince/backend/internal/platform/auth"
-	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
 )
@@ -42,28 +38,9 @@ func pendingNarrowing(t *testing.T, env captureEnv) *capturemod.HistoryNarrowing
 	return rep1Connection(t, env, "gmail").HistoryNarrowing
 }
 
-// readableMailCount is how many emails a colleague on none of them may read,
-// through the content gate every mail reader composes.
-func readableMailCount(t *testing.T, e *integration.SearchEnv) int {
-	t.Helper()
-	ctx := e.Admin()
-	var args []any
-	gate, err := auth.ActivityContentClause(ctx, "a", func(v any) int { args = append(args, v); return len(args) })
-	if err != nil {
-		t.Fatal(err)
-	}
-	var n int
-	if err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
-		return tx.QueryRow(context.Background(), `SELECT count(*) FROM activity a WHERE a.kind = 'email' AND `+gate, args...).Scan(&n)
-	}); err != nil {
-		t.Fatalf("counting readable mail: %v", err)
-	}
-	return n
-}
-
 // A history larger than one batch narrows over several runs. Each run commits
-// its batch, so the stored audience of mail it has not reached stays open and
-// the connection counts down. The next run resumes where one stopped, and every message narrows once.
+// its batch, so mail it has not reached stays open and the connection counts
+// down. The next run resumes where one stopped, and every message narrows once.
 func TestHistoryNarrowsOneBatchAtATimeAndResumes(t *testing.T) {
 	env := newCaptureEnv(t)
 	e, sync := env.e, env.sync
@@ -137,27 +114,33 @@ func TestAPendingHeldNarrowingIsNeitherLoosenedNorDropped(t *testing.T) {
 	}
 }
 
-// The stricter posture holds for readers from the moment it commits. A
-// colleague on none of the earlier mail stops reading it before the job runs.
-func TestAPendingNarrowingHidesEarlierMailFromColleaguesAtOnce(t *testing.T) {
+// A removed mailbox's pending request is dropped with a trail, and none of
+// its earlier mail is narrowed.
+func TestARemovedMailboxDropsItsPendingNarrowing(t *testing.T) {
 	env := newCaptureEnv(t)
 	e, sync := env.e, env.sync
 	allowSharedPosture(t, e)
 	setPosture(t, env, e.Rep1, capturemod.PostureShared)
-	sync(t, customerMail("window-1@acme.example"), customerMail("window-2@acme.example"))
-	if n := readableMailCount(t, e); n != 2 {
-		t.Fatalf("a colleague reads %d shared messages before the change, want 2", n)
-	}
+	sync(t, customerMail("removed-1@acme.example"))
+	connection := rep1Connection(t, env, "gmail").ID
 	if _, err := env.registry.SetMailPosture(
-		seatContext(e, e.Rep1), capturemod.ProviderMailbox("gmail"), capturemod.PostureClassified, true); err != nil {
+		seatContext(e, e.Rep1), capturemod.ProviderMailbox("gmail"), capturemod.PostureHeld, true); err != nil {
 		t.Fatalf("narrowing with apply_to_history: %v", err)
 	}
-	if n := readableMailCount(t, e); n != 0 {
-		t.Fatalf("a colleague still reads %d earlier messages while the narrowing is pending", n)
+	if _, err := e.Owner.Exec(context.Background(), `UPDATE capture_connection SET archived_at = now() WHERE id = $1`, connection); err != nil {
+		t.Fatalf("removing the mailbox: %v", err)
 	}
 	integration.NarrowHistoryToTheEnd(t, e.WS, env.registry)
-	if n := readableMailCount(t, e); n != 0 {
-		t.Fatalf("a colleague reads %d earlier messages after the narrowing ended", n)
+	if n := openActivityCount(t, e); n != 1 {
+		t.Fatalf("%d messages open after the removed mailbox's request ran, want 1: it is dropped", n)
+	}
+	if got := countRows(t, e, fmt.Sprintf(`SELECT count(*) FROM capture_connection
+		WHERE id = '%s' AND history_narrowing_held IS NULL`, connection)); got != 1 {
+		t.Fatal("the removed mailbox still holds its request")
+	}
+	if got := countRows(t, e, fmt.Sprintf(`SELECT count(*) FROM audit_log
+		WHERE entity_id = '%s' AND after->>'dropped_archived' = 'held'`, connection)); got != 1 {
+		t.Fatalf("%d audit rows say the request was dropped, want 1", got)
 	}
 }
 
