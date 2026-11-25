@@ -78,7 +78,9 @@ const (
 	// orphaned, which drive the unexported reset handlers.
 	// Raised by 21 test lines when main's root compose cases met develop's in the
 	// back-sync; each side stayed under its own ceiling.
-	composeRootProductionLines = 230_733
+	// Raised by 10 production lines when develop's rate sheet removal and main's
+	// call log met in the back-sync; develop's own ceiling already covers them.
+	composeRootProductionLines = 230_743
 	composeRootTestLines       = 360_940
 )
 
