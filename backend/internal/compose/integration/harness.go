@@ -163,7 +163,7 @@ func Setup(t *testing.T) *Env {
 	// last and sees a package that has genuinely stopped.
 	testdb.AssertPoolsQuiesced(t)
 	e.Pool = pool
-	e.bindStores(harnessDB(pool, e.WS))
+	e.bindStores(t, harnessDB(pool, e.WS))
 	return e
 }
 

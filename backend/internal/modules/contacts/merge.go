@@ -223,6 +223,9 @@ func settleContactMerge(ctx context.Context, tx pgx.Tx, tgtLock storekit.RowLock
 	} else if err := storekit.TouchLocked(ctx, tx, tgtLock); err != nil {
 		return fmt.Errorf("move the survivor's version: %w", err)
 	}
+	if err := carryKeptProvenance(ctx, tx, contactEntity, sourceID.UUID, targetID.UUID, p.After()); err != nil {
+		return err
+	}
 	if err := recordmerge.ArchiveMergedAway(ctx, tx, contactEntity, sourceID.UUID, targetID.UUID); err != nil {
 		return fmt.Errorf("retire merged-away contact: %w", err)
 	}
@@ -282,6 +285,9 @@ func (s *Store) carryContactSatellitesTx(ctx context.Context, tx pgx.Tx, sourceI
 		{"consent links", func() error { return s.carryConsentSatellitesTx(ctx, tx, from, to) }},
 		{"introduction asks", func() error { return s.carryIntrosTx(ctx, tx, sourceID, targetID) }},
 		{"grants", func() error { return s.carryGrantsTx(ctx, tx, contactEntity, sourceID.UUID, targetID.UUID) }},
+		{"resolved signals", func() error {
+			return s.carrySignalResolutionsTx(ctx, tx, contactEntity, sourceID.UUID, targetID.UUID)
+		}},
 	}
 	for _, step := range steps {
 		if err := step.run(); err != nil {

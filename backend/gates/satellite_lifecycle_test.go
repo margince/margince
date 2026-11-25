@@ -5,25 +5,20 @@
 
 package gates
 
-// Every table with a contact_id column is reached by the retention anonymizer,
-// the merge relink and the archive cascade, or says why not.
+// Every contact_ table with a contact_id column is reached by the retention
+// anonymizer and the archive cascade, or says why not.
 // piicoverage_test.go proves Art. 17 erasure and Art. 15 SAR reach every table
-// its registry declares PII-bearing; it says nothing about the three OTHER
-// lifecycle paths a contact's child rows ride — the retention anonymizer, the
-// merge relink, and the archive cascade. Those are where a new satellite rots
-// invisibly: a satellite nobody archived stays live under an archived Contact,
-// and one nobody relinked is orphaned on the merged-away half. Neither errors,
-// and neither is visible until someone reads the row that should be gone.
+// its registry declares PII-bearing. The merge is held per column by
+// mergereferences_test.go. These are the other two paths a contact's child
+// rows ride, and where a new satellite rots unseen. A satellite nobody
+// archived stays live under an archived contact. One the anonymizer missed
+// keeps a copy of the subject.
 //
-// The obligations are DERIVED, never listed:
+// The obligations are derived, never listed:
 //
-//   - The satellite set comes from the migration DDL — every table with a
-//     contact_id column. A new satellite is enrolled by the migration that
-//     creates it, not by an edit here. Two of the three paths below then narrow
-//     it to the contact_ prefix, because their obligations are about the
-//     contact's OWN child rows; the merge does not, because a merge orphans
-//     whatever names the retired id whatever it is called. Sixteen tables were
-//     invisible to this census while the prefix was the whole of it.
+//   - The satellite set comes from the migration DDL: every contact_ table
+//     with a contact_id column. A new satellite is enrolled by the migration
+//     that creates it, not by an edit here.
 //   - The archive cascade binds a satellite IFF it has an archived_at column.
 //     Four satellites (contact_consent, contact_social, contact_profile_field,
 //     contact_signature_enrich_state) have none, so ArchiveContact has nothing
@@ -37,15 +32,12 @@ package gates
 //     soft delete on a table with no archived_at column would be red for a
 //     requirement that does not apply.
 //   - The retention anonymizer binds a satellite that the PII registry
-//     (piiTables) declares subject-bearing. The merge relink does NOT, and the
-//     difference is the point: an anonymizer owes only what carries the
-//     subject, while a merge owes every row pointing at the record it retires —
-//     a dismissal that silently comes back is not PII and is still a defect.
-//     Registration in that registry is the ONE act that declares a table holds
-//     a data subject, and it already carries the ratified reasons a contact_*
-//     table may sit outside it — contact_consent, for instance, is deliberately
-//     kept under Art. 5 accountability rather than erased. Re-deciding that here
-//     would fork the judgment across two gates.
+//     (piiTables) declares subject-bearing. Registration in that registry is
+//     the ONE act that declares a table holds a data subject, and it already
+//     carries the ratified reasons a contact_* table may sit outside it —
+//     contact_consent, for instance, is deliberately kept under Art. 5
+//     accountability rather than erased. Re-deciding that here would fork the
+//     judgment across two gates.
 //
 // Presence is the whole check: each path's corpus is what its entry point can
 // REACH through the package call graph, reusing the write-target extraction the
@@ -56,8 +48,6 @@ package gates
 // REACH, never a filename. A path keyed to the file its statements sit in today
 // reports a dropped obligation the moment somebody splits a long function, which
 // is a constraint nobody chose and a failure that fires when nothing is wrong.
-// The merge already spans three files; the other two paths would have said the
-// same thing the first time they grew a second.
 
 import (
 	"io/fs"
@@ -72,7 +62,7 @@ import (
 
 // satellitePath is one lifecycle obligation: the entry point that discharges
 // it, and the message a missing table gets. Every path here is a WRITE —
-// archiving, deleting or relinking the satellite's rows.
+// archiving or deleting the satellite's rows.
 type satellitePath struct {
 	name string
 	// pkg and from together name the path's corpus: everything the entry point
@@ -85,9 +75,6 @@ type satellitePath struct {
 	// piiOnly restricts the path to satellites the PII registry declares
 	// subject-bearing.
 	piiOnly bool
-	// everyTableNamingAContact widens the corpus past the contact_ prefix to
-	// every table carrying a contact_id column.
-	everyTableNamingAContact bool
 }
 
 // satelliteLifecyclePaths are the contact-satellite obligations this gate owns.
@@ -109,35 +96,7 @@ var satelliteLifecyclePaths = []satellitePath{
 		remedy:  "delete its rows somewhere the contact/anonymize executor reaches — the sweep anonymizes the contact row and would leave this satellite's copy of the subject behind",
 		piiOnly: true,
 	},
-	{
-		name:   "merge_relink",
-		remedy: "relink its rows onto the survivor from relinkContactReferences — rows left on the merged-away contact are orphaned, invisible to every read of the survivor",
-		// EVERY TABLE POINTING AT THE CONTACT, not only the subject-bearing
-		// ones, and not only those NAMED for the contact. A merge orphans
-		// whatever still names the retired id — a dismissal that silently comes
-		// back, a credential that keeps working against a record no read
-		// returns — and neither the PII registry nor the contact_ prefix has
-		// anything to say about that. The two paths above are narrower for
-		// reasons of their own: an anonymizer owes only what carries the
-		// subject, and an archive only what has an archived_at to set.
-		everyTableNamingAContact: true,
-		pkg:                      "internal/modules/contacts",
-		from:                     "relinkContactReferences",
-	},
 }
-
-// carriedElsewhere ratifies a table the merge does not write from
-// relinkContactReferences, and that no port carries either. Every entry says
-// WHO handles it instead, or why nothing should — and an entry the census never
-// asks about is reported as unmatched, so a ratification cannot outlive the
-// reason for it.
-var carriedElsewhere = gatekit.Waive(map[string]string{
-	"activity_link":             "the contact merge moves the timeline links in platform/recordmerge (RelinkLinkRows), the one statement the contact, company and deal merges share, so a link the survivor already holds stands and the retired copy is dropped. The call sits in relinkContactReferences; the SQL does not",
-	"contact_address_country":   "a check of the merged-away contact's own postal code and city, which says nothing about the survivor's address. The survivor keeps its own check, and the trigger deletes it when the merge moves the survivor's address; the next sweep checks the address the survivor ends with",
-	"tag_suggestion":            "a tag suggestion is the tag scout's reading of ONE record's evidence. The merge archives the merged-away contact, which the next scout pass reads as a suggestion that no longer stands (superseded); the activities the merge relinks raise the survivor's own suggestion. Moving the row could collide with the survivor's own open suggestion of the same tag",
-	"lawful_basis_confirmation": "a user's confirmation that lasts 15 minutes and is spent once by the next send to that record. The merge leaves it on the merged-away contact, where it expires unspent; a send to the survivor shows the warning and asks again. Moving it would let one confirmation answer a send to a different record than the one the user confirmed",
-	"graph_interaction_edge":    "search owns it and REBUILDS it rather than moving it: graphedgegen.go consumes contact.merged and refolds the survivor's edges after dropping the source's, which is the right shape for a table derived entirely from activities the merge has already relinked. Moving the rows instead would carry a fold computed against the pre-merge graph",
-})
 
 // portCarry names who carries one satellite through a port: the owning
 // module's implementation, and the contacts function that decides whether an
@@ -155,21 +114,29 @@ type portCarry struct {
 
 const (
 	consentPkg       = "internal/modules/consent"
+	identityPkg      = "internal/modules/identity"
+	initiativesPkg   = "internal/modules/initiatives"
 	introductionsPkg = "internal/modules/introductions"
+	signalsPkg       = "internal/modules/signals"
 )
 
 // carriedThroughAPort names the satellites another module moves inside the
 // merge's own transaction.
 var carriedThroughAPort = map[string]portCarry{
-	"communication_suppression": {consentPkg, "Store.CarryStopsTx", "holdsALiveStop"},
-	"communication_override":    {consentPkg, "Store.CarryOverridesTx", "holdsALiveOverride"},
-	"withdrawal_credential":     {consentPkg, "Store.CarrySatellitesTx", "holdsAConsentSatellite"},
-	"preference_token":          {consentPkg, "Store.CarrySatellitesTx", "holdsAConsentSatellite"},
-	"confirm_token":             {consentPkg, "Store.CarrySatellitesTx", "holdsAConsentSatellite"},
-	"communication_basis":       {consentPkg, "Store.CarrySatellitesTx", "holdsAConsentSatellite"},
-	"consent_qualifying_event":  {consentPkg, "Store.CarrySatellitesTx", "holdsAConsentSatellite"},
-	"consent_doi_token":         {consentPkg, "Store.CarrySatellitesTx", "holdsAConsentSatellite"},
-	"intro_request":             {introductionsPkg, "Store.CarryIntrosTx", "refuseUnwiredIntroCarry"},
+	"communication_suppression":  {consentPkg, "Store.CarryStopsTx", "holdsALiveStop"},
+	"communication_override":     {consentPkg, "Store.CarryOverridesTx", "holdsALiveOverride"},
+	"withdrawal_credential":      {consentPkg, "Store.CarrySatellitesTx", "holdsAConsentSatellite"},
+	"preference_token":           {consentPkg, "Store.CarrySatellitesTx", "holdsAConsentSatellite"},
+	"confirm_token":              {consentPkg, "Store.CarrySatellitesTx", "holdsAConsentSatellite"},
+	"communication_basis":        {consentPkg, "Store.CarrySatellitesTx", "holdsAConsentSatellite"},
+	"consent_qualifying_event":   {consentPkg, "Store.CarrySatellitesTx", "holdsAConsentSatellite"},
+	"consent_doi_token":          {consentPkg, "Store.CarrySatellitesTx", "holdsAConsentSatellite"},
+	"data_subject_request":       {consentPkg, "Store.BindRequestsToAddressesTx", "holdsAConsentSatellite"},
+	"signal":                     {signalsPkg, "CarryResolutionsTx", "refuseUnwiredSignalCarry"},
+	"intro_request":              {introductionsPkg, "Store.CarryIntrosTx", "refuseUnwiredIntroCarry"},
+	"record_grant":               {identityPkg, "Service.CarryGrantsTx", "refuseUnwiredGrantCarry"},
+	"sales_initiative_member":    {initiativesPkg, "CarryLeadMergeTx", "refuseUnwiredInitiativeCarry"},
+	"sales_initiative_enrolment": {initiativesPkg, "CarryLeadMergeTx", "refuseUnwiredInitiativeCarry"},
 }
 
 var (
@@ -270,14 +237,13 @@ func contactSatellites(t *testing.T) map[string]map[string]bool {
 
 func TestEveryContactSatelliteJoinsEveryLifecyclePathThatApplies(t *testing.T) {
 	t.Parallel()
-	defer carriedElsewhere.AssertAllMatched(t)
 
 	satellites := contactSatellites(t)
 	var missing []string
 	for _, path := range satelliteLifecyclePaths {
 		writes := path.writes(t)
 		for table, cols := range satellites {
-			if !path.everyTableNamingAContact && !contactSatelliteName.MatchString(table) {
+			if !contactSatelliteName.MatchString(table) {
 				continue // outside the prefix this path's corpus is drawn from
 			}
 			if path.archivedOnly && !cols["archived_at"] {
@@ -289,16 +255,6 @@ func TestEveryContactSatelliteJoinsEveryLifecyclePathThatApplies(t *testing.T) {
 			if writes[table] {
 				continue
 			}
-			// ASKED ABOUT AN OFFENDER, never about a candidate: a table the
-			// path already writes never reaches the register, so a stale
-			// ratification shows up as unmatched rather than sitting there
-			// agreeing with a path that no longer needs it.
-			if path.name == mergeRelinkPath && carriedElsewhere.Waived(t, table) {
-				continue
-			}
-			if _, ported := carriedThroughAPort[table]; ported && path.name == mergeRelinkPath {
-				continue
-			}
 			missing = append(missing, "contact satellite "+table+" is not handled by the "+path.name+
 				" path ("+path.where()+") — "+path.remedy)
 		}
@@ -308,10 +264,6 @@ func TestEveryContactSatelliteJoinsEveryLifecyclePathThatApplies(t *testing.T) {
 		t.Error(m)
 	}
 }
-
-// mergeRelinkPath is the one path whose corpus is every table naming a contact,
-// and so the one whose ratifications the register above answers for.
-const mergeRelinkPath = "merge_relink"
 
 // writes returns the tables this path writes: the SQL literals of one file, or
 // everything its entry point can reach.
@@ -336,34 +288,49 @@ func (p satellitePath) where() string {
 // with itself rather than with the tree.
 func reachedWrites(t *testing.T, dir, from string) map[string]bool {
 	t.Helper()
+	writes := map[string]bool{}
+	for _, statement := range reachedStatements(t, dir, from) {
+		for _, table := range sqlWriteTargets(statement) {
+			writes[table] = true
+		}
+	}
+	return writes
+}
+
+// reachedStatements returns the SQL literals of `from` and of everything it
+// calls inside its own package.
+func reachedStatements(t *testing.T, dir, from string) []string {
+	t.Helper()
 	graph := packageCallGraph(t, dir)
+	var statements []string
+	for name := range reachedFunctions(t, graph, dir, from) {
+		statements = append(statements, graph[name].statements...)
+	}
+	return statements
+}
+
+// reachedFunctions returns `from` and every function of the graph it calls,
+// directly or not.
+func reachedFunctions(t *testing.T, graph map[string]*graphFunc, dir, from string) map[string]bool {
+	t.Helper()
 	if _, known := graph[from]; !known {
 		t.Fatalf("no function %s in %s — the entry point was renamed and this census now "+
 			"reads an empty corpus, which is PASS for every table", from, dir)
 	}
-	writes := map[string]bool{}
-	seen := map[string]bool{}
+	reached := map[string]bool{}
 	var walk func(string)
 	walk = func(name string) {
-		if seen[name] {
-			return
-		}
-		seen[name] = true
 		fn, known := graph[name]
-		if !known {
+		if reached[name] || !known {
 			return
 		}
-		for _, statement := range fn.statements {
-			for _, table := range sqlWriteTargets(statement) {
-				writes[table] = true
-			}
-		}
+		reached[name] = true
 		for called := range fn.calls {
 			walk(called)
 		}
 	}
 	walk(from)
-	return writes
+	return reached
 }
 
 // TestEveryPortCarriesTheTablesItsRegisterEntryClaims holds carriedThroughAPort
@@ -373,11 +340,18 @@ func reachedWrites(t *testing.T, dir, from string) map[string]bool {
 // merge strand it silently.
 func TestEveryPortCarriesTheTablesItsRegisterEntryClaims(t *testing.T) {
 	t.Parallel()
-	satellites := contactSatellites(t)
+	referencing := map[string]bool{}
+	catalog := headCatalogLines(t)
+	for _, merged := range mergedRecords {
+		for _, column := range referencesTo(catalog, merged.record) {
+			table, _, _ := strings.Cut(column, ".")
+			referencing[table] = true
+		}
+	}
 	refusals := packageCallGraph(t, "internal/modules/contacts")
 	for table, port := range carriedThroughAPort {
-		if satellites[table] == nil {
-			t.Errorf("carriedThroughAPort names %s, which no migration gives a contact_id column — "+
+		if !referencing[table] {
+			t.Errorf("carriedThroughAPort names %s, which has no column referencing a contact or a lead — "+
 				"an entry the census never asks about looks like coverage and answers nothing", table)
 			continue
 		}
