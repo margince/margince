@@ -10,16 +10,16 @@
   "totals": {
     "tools": 48,
     "resources": 14,
-    "tool_catalog_bytes": 248960,
+    "tool_catalog_bytes": 248941,
     "resource_catalog_bytes": 5622,
-    "approx_wire_tokens_total": 63645,
+    "approx_wire_tokens_total": 63640,
     "largest_tool_bytes": 16204,
     "largest_tool": "read_details",
     "tool_catalog_composition": {
-      "description_bytes": 52248,
+      "description_bytes": 52229,
       "input_schema_bytes": 150393,
       "output_schema_bytes": 34465,
-      "description_plus_input_schema_bytes": 202641
+      "description_plus_input_schema_bytes": 202622
     }
   },
   "tools": {
@@ -8653,7 +8653,7 @@
           "readOnlyHint": true,
           "title": "Read how this workspace is set up"
         },
-        "description": "Read how this workspace is set up. colleagues: the seats that can receive work, not the contacts stored as records; q narrows by name. pipelines: every pipeline with its stages, each open, won or lost. channel_providers: the messaging transports. The other topics name what a tool accepts: query (find_records engine query), analytics (read_analytics), record_fields (create_record and update_record), list_filters (find_records engine list), report_vocabulary (read_reports kind run), report_blocks (read_analytics step compose). data_subject_requests, notice_cases, audit_log, legal_holds, restricted_records and record_history are the privacy queues and trail; a project's phase moves and their reasons are in read_project overview. capture_senders, held_threads, counterparty_holds, owner_identities and contacts_awaiting_decision are the user's own mail decisions. my_working_hours and my_brief_delivery are the user's own settings. system_health, job_health, capture_health, recovery_health, automatic_work_health and data_tasks are health and operations pages, each under its own grant. ai_routing, ai_calls, retention_settings, tax_rates, fx_rates and ai_model_rates are separate settings, traces and rates; ask first before ai_calls and ai_call. member_retirement previews a member removal, or a merge when mode is merge and to_user_id names the survivor. A q matching nobody answers with every colleague and a warning. A stage's semantic, not its name, says whether it closes a deal, and only a user changes it, in the app. None of the name topics is a prerequisite: each tool refuses an unknown name with the accepted list. Use find_records to find a customer contact; colleagues are seats here. Use read_forecast with view=input_sources to learn whether a number can be trusted: how complete and current the data is. user_id is what assignee_id and owner_id take; never assign to an is_agent seat. Keep pipeline_id and stage_id for a deal. Take every name verbatim; a custom field is spelled cf_\u003cslug\u003e. (Ask the user first for the actions ai_call, ai_calls, member_retirement.)",
+        "description": "Read how this workspace is set up. colleagues: the seats that can receive work, not the contacts stored as records; q narrows by name. pipelines: every pipeline with its stages, each open, won or lost. channel_providers: the messaging transports. The other topics name what a tool accepts: query (find_records engine query), analytics (read_analytics), record_fields (create_record and update_record), list_filters (find_records engine list), report_vocabulary (read_reports kind run), report_blocks (read_analytics step compose). data_subject_requests, notice_cases, audit_log, legal_holds, restricted_records and record_history are the privacy queues and trail; a project's phase moves and their reasons are in read_project overview. capture_senders, held_threads, counterparty_holds, owner_identities and contacts_awaiting_decision are the user's own mail decisions. my_working_hours and my_brief_delivery are the user's own settings. system_health, job_health, capture_health, recovery_health, automatic_work_health and data_tasks are health and operations pages, each under its own grant. ai_routing, ai_calls, retention_settings, tax_rates, fx_rates and ai_model_rates are separate settings, traces and rates; ask first before ai_calls and ai_call. member_retirement previews a member removal, or a merge when mode is merge and to_user_id names the survivor. A q matching nobody answers with every colleague and a warning. A stage's semantic, not its name, says whether it closes a deal, and only a user changes it, in the app. None of the name topics is a prerequisite: each tool refuses an unknown name with the accepted list. Use find_records to find a customer contact; colleagues are seats here. Use read_forecast with view=input_sources to learn whether a number can be trusted: how complete and current the data is. user_id is what assignee_id and owner_id take; never assign to an is_agent seat. Keep pipeline_id and stage_id for a deal. Take every name verbatim; a custom field is spelled cf_\u003cslug\u003e. (Ask the user first for the actions ai_call, ai_calls.)",
         "inputSchema": {
           "properties": {
             "action": {
@@ -27607,7 +27607,6 @@
         },
         {
           "action": "member_retirement",
-          "ask_user_first": true,
           "body": {
             "additionalProperties": false,
             "properties": {

@@ -17,7 +17,7 @@ input and output schema in folds below it. What a tool may do and whether a huma
 | Resources | 14 |
 | Tool catalog | 243.1 KB |
 | Resource catalog | 5.5 KB |
-| Approx. wire tokens | 63645 |
+| Approx. wire tokens | 63640 |
 | Largest tool | `read_details` (15.8 KB) |
 | Scopes rendered | `read`, `draft`, `write`, `send`, `enrich` |
 
@@ -9442,7 +9442,7 @@ find_records to find a customer contact; colleagues are seats here. Use read_for
 view=input_sources to learn whether a number can be trusted: how complete and current the data is.
 user_id is what assignee_id and owner_id take; never assign to an is_agent seat. Keep pipeline_id
 and stage_id for a deal. Take every name verbatim; a custom field is spelled cf_<slug>. (Ask the
-user first for the actions ai_call, ai_calls, member_retirement.)
+user first for the actions ai_call, ai_calls.)
 ```
 
 <details><summary>Input schema</summary>
