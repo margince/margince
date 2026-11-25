@@ -27,7 +27,7 @@ import { formatDate } from "../../format/format";
 import { useLocale, useT } from "../../i18n";
 import type { CfObject, CfType } from "../../lib/customfields.logic";
 import { useViewerZone } from "../../lib/viewerzone";
-import { AuditEntryLine } from "../settings/audit";
+import { AuditEntryLine, entryName } from "../settings/audit";
 import { fieldChangeKeys, fieldTarget } from "./customfields.changes";
 import { CustomFieldChoices } from "./customfields.choices";
 import { ActivityKindsSelect } from "./customfields.kinds";
@@ -357,6 +357,7 @@ export function AuditRail({
               target={fieldTarget(
                 entry,
                 fields?.get(entry.entity_id),
+                entryName(entry),
                 t,
                 locale,
               )}

@@ -123,19 +123,19 @@ describe("fieldChangeKeys", () => {
 describe("fieldTarget", () => {
   it("names the record type and the field's current label from the catalog", () => {
     const hidden = update({ show_in_create: true }, { show_in_create: false });
-    expect(fieldTarget(hidden, field(), t, "en")).toBe("Contact · Budget");
+    expect(fieldTarget(hidden, field(), "Budget", t, "en")).toBe("Contact · Budget");
   });
 
   it("prefers the current label to the one a rename wrote", () => {
     const renamed = update({ label: "Budget" }, { label: "Spend" });
-    expect(fieldTarget(renamed, field({ label: "Cost" }), t, "en")).toBe(
+    expect(fieldTarget(renamed, field({ label: "Cost" }), "Spend", t, "en")).toBe(
       "Contact · Cost",
     );
   });
 
   it("marks a field that is retired now", () => {
     const retired = field({ object: "deal", status: "retired" });
-    expect(fieldTarget(entry(), retired, t, "en")).toBe(
+    expect(fieldTarget(entry(), retired, "Budget", t, "en")).toBe(
       "Deal · Budget (retired)",
     );
   });
@@ -145,11 +145,11 @@ describe("fieldTarget", () => {
       action: "create",
       after: { object: "company", label: "Budget" },
     });
-    expect(fieldTarget(created, undefined, t, "en")).toBe("Company · Budget");
+    expect(fieldTarget(created, undefined, "Budget", t, "en")).toBe("Company · Budget");
   });
 
   it("names nothing when neither the catalog nor the entry names the field", () => {
     const hidden = update({ show_in_create: true }, { show_in_create: false });
-    expect(fieldTarget(hidden, undefined, t, "en")).toBeUndefined();
+    expect(fieldTarget(hidden, undefined, undefined, t, "en")).toBeUndefined();
   });
 });
