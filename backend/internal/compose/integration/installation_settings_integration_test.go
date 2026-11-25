@@ -24,9 +24,11 @@ package integration
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"maps"
+	"net/http"
 	"reflect"
 	"strings"
 	"testing"
@@ -35,8 +37,10 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/compose"
+	"github.com/margince/margince/backend/internal/compose/integration/apptest"
 	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/platform/database"
+	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/currencylock"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -420,6 +424,18 @@ func TestBaseCurrencyFreezesOnceADealHasConvertedAgainstIt(t *testing.T) {
 	if field != "installation.base_currency" || code != "setting_frozen" {
 		t.Errorf("refusal = %s/%s, want installation.base_currency/setting_frozen", field, code)
 	}
+	wantFacts := map[string]string{"reason": "rates_frozen", "count": "1"}
+	wantFrozenFacts(t, "the write", err, wantFacts, got.BaseCurrencyLock)
+
+	settingsStore := compose.NewSettingsStore(e.Pool)
+	err = database.WithWorkspaceTx(admin, e.Pool, func(tx pgx.Tx) error {
+		_, err := settingsStore.DeleteRawTx(admin, tx, identity.BaseCurrency.Key())
+		return err
+	})
+	if err == nil {
+		t.Fatal("the base currency was reset to its default after deals had converted against it")
+	}
+	wantFrozenFacts(t, "the removal", err, wantFacts, got.BaseCurrencyLock)
 
 	// Everything else on the surface still changes — the freeze is scoped to
 	// the one value whose history is at stake.
@@ -515,6 +531,7 @@ func TestBaseCurrencyWillNotMoveOutFromUnderAPricedRateSheet(t *testing.T) {
 	if !strings.Contains(message, "clear the rate sheet") {
 		t.Errorf("reason = %q, want it to name the repair", message)
 	}
+	refusal := err
 
 	read, err := store.GetInstallation(admin)
 	if err != nil {
@@ -523,11 +540,69 @@ func TestBaseCurrencyWillNotMoveOutFromUnderAPricedRateSheet(t *testing.T) {
 	if want := (currencylock.Lock{Reason: currencylock.RateSheet, Count: 1, BaseCurrency: base.BaseCurrency}); !reflect.DeepEqual(withoutBreakdown(read.BaseCurrencyLock), want) {
 		t.Errorf("lock = %+v, want %+v", read.BaseCurrencyLock, want)
 	}
+	wantFrozenFacts(t, "the write", refusal,
+		map[string]string{"reason": "rate_sheet", "count": "1", "base_currency": base.BaseCurrency}, read.BaseCurrencyLock)
 
 	// Re-asserting the base already in force is not a change, so a priced sheet
 	// does not break an idempotent patch.
 	if _, err := store.UpdateInstallation(admin, identity.InstallationPatch{BaseCurrency: &base.BaseCurrency}); err != nil {
 		t.Fatalf("re-setting the base already in force: %v", err)
+	}
+}
+
+// The refusal's params and the read's base_currency_lock spell one lock, so on
+// the wire they hold the same keys with the same values.
+func TestARefusedBaseCurrencyCarriesTheFactsTheReadShows(t *testing.T) {
+	e := apptest.SetupApp(t)
+	e.BootstrapWorkspace(t)
+	base, from, to := baseCurrency(t, e), "USD", "CHF"
+	if base == from {
+		from = "GBP"
+	}
+	if base == to {
+		to = "JPY"
+	}
+	if status := e.Call(t, http.MethodPost, "/v1/fx-rates",
+		map[string]any{"from_currency": from, "rate": "0.92"}, nil, nil); status != http.StatusCreated {
+		t.Fatalf("POST /fx-rates → %d, want 201", status)
+	}
+
+	var read struct {
+		Lock map[string]json.RawMessage `json:"base_currency_lock"`
+	}
+	if status := e.Call(t, http.MethodGet, "/v1/installation/settings", nil, nil, &read); status != http.StatusOK {
+		t.Fatalf("GET /installation/settings → %d, want 200", status)
+	}
+	lock := make(map[string]string, len(read.Lock))
+	for key, raw := range read.Lock {
+		var text string
+		if err := json.Unmarshal(raw, &text); err != nil {
+			text = string(raw)
+		}
+		lock[key] = text
+	}
+	if want := map[string]string{"reason": "rate_sheet", "count": "1", "base_currency": base}; !maps.Equal(lock, want) {
+		t.Fatalf("base_currency_lock = %v, want %v", lock, want)
+	}
+
+	var refused struct {
+		Details struct {
+			Errors []httperr.FieldError `json:"errors"`
+		} `json:"details"`
+	}
+	if status := e.Call(t, http.MethodPatch, "/v1/installation/settings",
+		map[string]any{"base_currency": to}, nil, &refused); status != http.StatusUnprocessableEntity {
+		t.Fatalf("PATCH base_currency under a priced sheet → %d, want 422", status)
+	}
+	faults := refused.Details.Errors
+	if len(faults) != 1 || faults[0].Field != "installation.base_currency" || faults[0].Code != "setting_frozen" {
+		t.Fatalf("field errors = %+v, want one setting_frozen on installation.base_currency", faults)
+	}
+	if !strings.Contains(faults[0].Message, "clear the rate sheet") {
+		t.Errorf("message = %q, want the English reason kept beside the facts", faults[0].Message)
+	}
+	if !maps.Equal(faults[0].Params, lock) {
+		t.Errorf("params = %v, want the read's base_currency_lock %v", faults[0].Params, lock)
 	}
 }
 
@@ -584,6 +659,19 @@ func TestTheFrozenRateCountSumsEveryKindOfRecord(t *testing.T) {
 		if !strings.Contains(got.BaseCurrencyLock.Prose(), kind) {
 			t.Errorf("lock reason = %q, want it to name %q", got.BaseCurrencyLock.Prose(), kind)
 		}
+	}
+}
+
+// wantFrozenFacts holds a setting_frozen refusal to the facts it should name,
+// and to the facts the read's lock reports.
+func wantFrozenFacts(t *testing.T, path string, err error, want map[string]string, read currencylock.Lock) {
+	t.Helper()
+	var named interface{ FieldParams() map[string]string }
+	if !errors.As(err, &named) {
+		t.Fatalf("%s's refusal names no facts: %v", path, err)
+	}
+	if got := named.FieldParams(); !maps.Equal(got, want) || !maps.Equal(got, read.Params()) {
+		t.Errorf("%s's refusal params = %v, want %v, the facts of the read's lock %+v", path, got, want, read)
 	}
 }
 

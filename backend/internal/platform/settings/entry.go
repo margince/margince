@@ -65,7 +65,7 @@ type Definition interface {
 	// why. The reason is the owning module's own sentence — a refusal that
 	// says "3 deals have already frozen a rate against it" tells the operator
 	// something "immutable" does not.
-	Frozen(context.Context, pgx.Tx) (bool, string, error)
+	Frozen(context.Context, pgx.Tx) (bool, Freeze, error)
 	// HasFreezeProbe reports whether an immutability probe is attached.
 	HasFreezeProbe() bool
 	// AuditImage renders a value for the ledger. Identity for almost every
@@ -100,7 +100,7 @@ type Entry[T any] struct {
 	verb        string
 	def         T
 	validate    func(T) error
-	freeze      func(context.Context, pgx.Tx) (bool, string, error)
+	freeze      func(context.Context, pgx.Tx) (bool, Freeze, error)
 	identity    bool
 	// secretReference redacts this entry's audited image. Off by default: a
 	// setting's value belongs in the ledger unless someone declares it is a
@@ -163,6 +163,15 @@ func (e *Entry[T]) SurvivesDataReset() bool { return e.identity }
 // this package never learns the domain predicate. Returns the entry for
 // declaration-site chaining.
 func (e *Entry[T]) WithFreeze(probe func(context.Context, pgx.Tx) (bool, string, error)) *Entry[T] {
+	return e.WithFreezeFacts(func(ctx context.Context, tx pgx.Tx) (bool, Freeze, error) {
+		frozen, why, err := probe(ctx, tx)
+		return frozen, Freeze{Reason: why}, err
+	})
+}
+
+// WithFreezeFacts is WithFreeze for a module that also names the facts its
+// reason was worded from.
+func (e *Entry[T]) WithFreezeFacts(probe func(context.Context, pgx.Tx) (bool, Freeze, error)) *Entry[T] {
 	e.freeze = probe
 	return e
 }
@@ -175,9 +184,9 @@ func (e *Entry[T]) HasFreezeProbe() bool { return e.freeze != nil }
 
 // Frozen runs the owning module's probe, if it declared one. An entry with no
 // probe is always changeable.
-func (e *Entry[T]) Frozen(ctx context.Context, tx pgx.Tx) (bool, string, error) {
+func (e *Entry[T]) Frozen(ctx context.Context, tx pgx.Tx) (bool, Freeze, error) {
 	if e.freeze == nil {
-		return false, "", nil
+		return false, Freeze{}, nil
 	}
 	return e.freeze(ctx, tx)
 }
@@ -278,7 +287,14 @@ func (e InvalidValue) FieldFault() (field, code, message string) {
 // operator learns WHY it is locked, which a flat 409 would not tell them.
 type FrozenValue struct {
 	Setting string
-	Reason  string
+	Freeze
+}
+
+// Freeze is why a setting cannot change: the owning module's sentence, and the
+// facts it was worded from, for a client that words the refusal itself.
+type Freeze struct {
+	Reason string
+	Params map[string]string
 }
 
 func (e FrozenValue) Error() string {
@@ -289,6 +305,9 @@ func (e FrozenValue) Error() string {
 func (e FrozenValue) FieldFault() (field, code, message string) {
 	return e.Setting, "setting_frozen", e.Reason
 }
+
+// FieldParams carries the owning module's facts, or none when it names none.
+func (e FrozenValue) FieldParams() map[string]string { return e.Params }
 
 // UnsetValue refuses a read of a setting that has no stored value, for the
 // readers that may not fall back to the registered default (RequireTx).
