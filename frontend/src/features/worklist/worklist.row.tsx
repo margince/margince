@@ -3,6 +3,7 @@
 
 import type { ReactNode } from "react";
 import { MayBeDone } from "../../components/maybedone";
+import { subjectChipped } from "../../components/taskmeta";
 import { Badge } from "../../design-system/atoms";
 import { PanelRow } from "../../design-system/panel";
 import { QuietVerbs } from "../../design-system/verbvolume";
@@ -185,11 +186,14 @@ export function WorklistRow({
   // Open the activity itself without leaving the queue for its linked record.
   const source = useRowSource(item);
   const viewer = useMe(false).data?.user;
+  // A queue row says who and when as Home's cards do: in the chip line.
+  const chipped = density !== "compact" && !framed;
   const name = framedName(
     readerTask(sentenceTitled(item), viewer, t),
     t,
     locale,
     framed,
+    chipped,
   );
   const title = name.title;
   const facts = dealFactsText(item, t, locale, zone);
@@ -229,9 +233,9 @@ export function WorklistRow({
   // under the row itself (brief.focus.tsx) and withholds this — the frame, not
   // the verb order, because the drawer takes that order with no card around
   // its rows and this line is the only place those facts are said there.
-  const about = framed
+  const about = chipped
     ? undefined
-    : aboutRecord(item, emailOpener !== undefined, listed);
+    : framedAbout(item, framed, emailOpener !== undefined, listed);
   const touch = lastTouch(touchOf(item, framed), t, locale, zone);
   const host = hostText(item, viewer?.id, t);
   const responsibility = sharedResponsibility(item, locale, t);
@@ -251,7 +255,7 @@ export function WorklistRow({
     href,
     open: source.open,
     sourceUnavailable: source.unavailable,
-    when,
+    when: chipped ? null : when,
     facts,
     said,
     detail,
@@ -262,7 +266,6 @@ export function WorklistRow({
     touch,
     pinned,
   });
-  const kind = conditionOf(item, t) ?? t(eyebrowKeyFor(item));
   return (
     <PanelRow
       // A CLASS and not a data attribute: `PanelRow` takes a className and
@@ -297,24 +300,9 @@ export function WorklistRow({
             />
           )}
         </RowLead>
-        {/* WHAT KIND of work, in its own column at a width that has one, so a
-            reader running down the queue reads the kinds as a list without
-            reading a title first — and in the warning tone on the rows the day
-            put in its first band, where the kind is also why it is there. The
-            title line keeps the states that are about this row alone: overdue,
-            unprepared.
-
-            A soft `Badge`, the variant a column carrying one per row wears:
-            the solid fill is kept for the one status a surface must not let a
-            reader miss, and a queue of those would teach the eye to skip them.
-            The span is PLACEMENT — the grid cell and the
-            width the kinds share; `conditionOf` says what a system row
-            draws there instead. */}
-        <span className="worklist-row-kind" title={kind}>
-          <Badge tone={item.band === "now" ? "warning" : undefined}>
-            {kind}
-          </Badge>
-        </span>
+        {/* The one-line density keeps the kind as its lead; every other
+            row names it in the chip line. */}
+        {density === "compact" && <CompactKind item={item} />}
         <div className="worklist-row-text">
           {/* A waiting EMAIL names itself with the canonical row — the same one
             the timeline draws — so the queue shows the message rather than a
@@ -338,6 +326,7 @@ export function WorklistRow({
               badged={badged}
               titleEnd={titleEnd}
               underTitle={underTitle}
+              chipped={chipped}
             />
           )}
           <PromiseEmailLine item={item} onOpen={onOpenEmail} />
@@ -389,6 +378,27 @@ export function WorklistRow({
   );
 }
 
+// The frame names the row's records itself, so a framed row withholds them.
+function framedAbout(
+  item: WorklistItem,
+  framed: boolean,
+  named: boolean,
+  listed: (href: string) => string,
+) {
+  return framed ? undefined : aboutRecord(item, named, listed);
+}
+
+/** The kind as the one-line row's lead, warm on the day's first band. */
+function CompactKind({ item }: Readonly<{ item: WorklistItem }>) {
+  const t = useT();
+  const kind = conditionOf(item, t) ?? t(eyebrowKeyFor(item));
+  return (
+    <span className="worklist-row-kind" title={kind}>
+      <Badge tone={item.band === "now" ? "warning" : undefined}>{kind}</Badge>
+    </span>
+  );
+}
+
 // The surface's menu lines first, then the lane's rarer answers.
 function joinedMenu(surface: ReactNode, lane: ReactNode): ReactNode {
   if (!lane) return surface;
@@ -405,12 +415,14 @@ function framedName(
   t: Parameters<typeof itemTitle>[1],
   locale: Parameters<typeof itemTitle>[2],
   framed: boolean,
+  chipped: boolean,
 ) {
   const subject = framed ? briefSubjectLabel(item) : undefined;
-  const subjectNamed =
-    framed &&
-    !!subjectHref(item) &&
-    (!item.contact?.label || item.contact.id === item.subject?.id);
+  // A chip names the subject on a chipped row, so the title need not.
+  const subjectNamed = framed
+    ? !!subjectHref(item) &&
+      (!item.contact?.label || item.contact.id === item.subject?.id)
+    : chipped && subjectChipped(item);
   return {
     title: subject ?? itemTitle(item, t, locale, subjectNamed),
     heading: subject !== undefined,

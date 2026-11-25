@@ -368,7 +368,7 @@ it("a promise carrying its email is named once and drawn as a task", async () =>
   // The email is drawn under the promise; the card's own meta names a task.
   const meta = article.querySelector(".brief-triage-lead-head");
   expect(meta?.textContent).not.toContain(en["timeline.kind.email"]);
-  expect(article.querySelector(".brief-task-status")).toBeNull();
+  expect(article.querySelector(".task-meta-status")).toBeNull();
 });
 
 it("a card done from its own tick hands focus to the card that takes its place", () => {

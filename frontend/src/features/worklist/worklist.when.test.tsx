@@ -114,14 +114,14 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
-// The moment line itself, found by its own class rather than by matching text.
+// The moment on the row's chip line, found by its place rather than its text.
 //
 // The page's summary says "1 due · ..." in its lead, so a text match for /due /
 // finds that line and reports a row saying something it never said. Asking for
 // the element the row actually renders is the difference between testing this
 // change and testing the header.
 function momentLine(): HTMLElement | null {
-  return document.querySelector(".worklist-row-when");
+  return document.querySelector(".task-meta > .badge");
 }
 
 function meetingAt(dueAt: string): WorklistItem {
@@ -203,13 +203,15 @@ describe("a task says when it is due", () => {
     expect(await screen.findByText(/due 17:00/)).toBeTruthy();
   });
 
-  // The overdue badge said "Overdue" and stopped. By how long is the fact a rep
-  // triages on, and it was on the wire the whole time.
-  it("says how far past due an overdue task is, beside the badge", async () => {
+  // By how long is the fact a rep triages on. The due day says it in the
+  // danger tone, and no second "Overdue" badge repeats it.
+  it("says how far past due an overdue task is, on its due day", async () => {
     draw([taskDue("2026-08-28T08:00:00Z", true)]);
 
-    expect(await screen.findByText("Overdue")).toBeTruthy();
-    expect(momentLine()?.textContent).toMatch(/28/);
+    await screen.findByText("Send the retrofit quote");
+    expect(momentLine()?.textContent).toMatch(/28.*3 days late/);
+    expect(momentLine()?.className).toContain("badge-danger");
+    expect(screen.queryByText("Overdue")).toBeNull();
   });
 });
 

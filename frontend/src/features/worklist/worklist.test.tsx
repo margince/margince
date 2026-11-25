@@ -92,9 +92,11 @@ describe("what the ranked queue tells a reader", () => {
     renderWorklist();
 
     // Eight rows reading the same sentence cannot be ordered or chosen between.
-    // The name is already on the row; only the title discarded it.
-    expect(await screen.findByText(/Katrin Seibert/)).toBeTruthy();
-    expect(screen.getByText(/Philipp Hartwig/)).toBeTruthy();
+    // Each row's chip line names its lead, so the two read apart.
+    expect(await screen.findByText("Katrin Seibert")).toBeTruthy();
+    expect(
+      screen.getByText("Philipp Hartwig").closest(".task-meta"),
+    ).not.toBeNull();
   });
 
   // The server sends the deal's name in `detail` — the title has nowhere to

@@ -105,25 +105,14 @@
   margin-block: var(--space-3) var(--space-2);
 }
 
-/* The kind chip heads the work it labels, so a long kind reads whole. The verbs
-   sit under the work, so the title and its caption keep the card's width; from
-   70rem, the width worklist.row.css uses for the same move, they stand beside it. */
+/* The verbs sit under the work, so the title and its chips keep the card's
+   width; from 70rem, as in worklist.row.css, they stand beside it. */
 .worklist-embedded .worklist-list > li > .worklist-row {
   grid-template-columns: auto minmax(0, 1fr);
   column-gap: var(--space-3);
 }
-.worklist-embedded .worklist-list > li > .worklist-row > .worklist-row-kind {
-  grid-column: 2;
-}
-.worklist-embedded .worklist-list > li > .worklist-row > .worklist-row-lead {
-  grid-row: 1 / span 2;
-}
-.worklist-embedded .worklist-list > li > .worklist-row > .worklist-row-text {
-  grid-column: 2;
-  margin-top: calc(var(--space-1) - var(--space-2));
-}
 .worklist-embedded .worklist-list > li > .worklist-row > .worklist-row-acts,
-.worklist-embedded .worklist-list > li > .worklist-row > :nth-child(n + 5) {
+.worklist-embedded .worklist-list > li > .worklist-row > :nth-child(n + 4) {
   grid-column: 2 / -1;
 }
 @container (min-width: 70rem) {
@@ -134,6 +123,5 @@
   }
   .worklist-embedded .worklist-list > li > .worklist-row > .worklist-row-acts {
     grid-column: 3;
-    grid-row: 1 / span 2;
   }
 }
