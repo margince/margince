@@ -166,6 +166,12 @@ func (s reportSpec) overExtensionTable() bool {
 
 // extensionKindSpec is the population of a record kind a unit declared. The
 // kind's rights object gates the read and names the field masks that reach it.
+//
+// Decision: a breakdown here skips the administrator's reportable opt-in on
+// purpose. That opt-in guards fields an administrator adds to a core record
+// and may not have meant to publish. A unit's fields are its own declared
+// schema, fixed by what was installed, and the kind's read right and field
+// masks already gate every value a report can group by.
 func extensionKindSpec(d recordkinds.Declared, by string) reportSpec {
 	spec := reportSpec{
 		entity:      datasource.EntityType(d.Object),

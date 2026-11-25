@@ -31,7 +31,9 @@ const (
 	// DeleteArchiveOnly keeps the row and marks it archived. It is the default.
 	DeleteArchiveOnly DeletePolicy = "archive_only"
 	// DeleteErasable lets the row be erased for good, through the same
-	// erasure path core records use.
+	// erasure path core records use. Today it is declared intent only: core
+	// has no erasure route for an extension row, so the directory shows the
+	// policy and nothing enforces it yet.
 	DeleteErasable DeletePolicy = "erasable"
 )
 

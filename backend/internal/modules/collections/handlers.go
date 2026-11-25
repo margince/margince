@@ -12,7 +12,9 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/platform/httperr"
+	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/ports/recordkinds"
 )
 
 // pathID asserts a contract path id as entity K's id — the widening
@@ -160,15 +162,20 @@ func (h Handlers) RestoreTagApplication(w http.ResponseWriter, r *http.Request, 
 // GetFilterVocabulary answers what a filter may say about one record type.
 //
 // `resource` is a core record type or `ext:<unit>:<kind>`. The contract cannot
-// list the second, so it does not close the set. The wrapper hands any string
-// here. A value no engine serves, a typo or a kind no unit declared,
-// earns a 422 naming the parameter. A bare 404 for `?resource=peron` would say
-// neither what went wrong nor what to do.
+// list the second, so it does not close the set. A kind no installed extension
+// declares, or one the caller may not read, answers 404 as the contract says.
+// Any other name no engine serves, such as a typo, earns a 422 naming the
+// parameter. A bare 404 for `?resource=peron` would say neither what went wrong
+// nor what to do.
 func (h Handlers) GetFilterVocabulary(w http.ResponseWriter, r *http.Request, params crmcontracts.GetFilterVocabularyParams) {
 	resource := string(params.Resource)
 	fields, ok, err := h.store.FilterVocabulary(r.Context(), resource)
 	if err != nil {
 		writeErr(w, r, err)
+		return
+	}
+	if !ok && recordkinds.IsExtensionName(resource) {
+		httperr.Write(w, r, apperrors.ErrNotFound)
 		return
 	}
 	if !ok {
