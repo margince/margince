@@ -31,22 +31,28 @@ import (
 
 // DealLabels answers each named deal's own name, under the caller's grants.
 func (s *Store) DealLabels(ctx context.Context, want []ids.UUID) (map[ids.UUID]string, error) {
+	query, args, err := dealIdentityQuery(ctx, want, storekit.LiveOnly, false)
+	if err != nil {
+		return nil, err
+	}
 	labels := map[ids.UUID]string{}
-	err := s.Tx(ctx, func(tx pgx.Tx) error {
+	if len(want) == 0 {
+		return labels, nil
+	}
+	err = s.Tx(ctx, func(tx pgx.Tx) error {
 		var err error
-		labels, err = dealNamesTx(ctx, tx, want, storekit.LiveOnly)
+		labels, err = storekit.LabelsByID(ctx, tx, query, args...)
 		return err
 	})
-	return labels, err
+	if err != nil {
+		return nil, fmt.Errorf("deals: reading deal names: %w", err)
+	}
+	return labels, nil
 }
 
-// DealNamesTx names deals, archived included, inside the caller's transaction.
+// DealNamesTx includes archived deals: a history keeps naming a deal after it is archived.
 func (s *Store) DealNamesTx(ctx context.Context, tx pgx.Tx, want []ids.UUID) (map[ids.UUID]string, error) {
-	return dealNamesTx(ctx, tx, want, storekit.IncludeArchived)
-}
-
-func dealNamesTx(ctx context.Context, tx pgx.Tx, want []ids.UUID, archived storekit.ArchivedFilter) (map[ids.UUID]string, error) {
-	query, args, err := dealIdentityQuery(ctx, want, archived, false)
+	query, args, err := dealIdentityQuery(ctx, want, storekit.IncludeArchived, false)
 	if err != nil {
 		return nil, err
 	}

@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -50,5 +51,14 @@ func TestEveryListOnThePageBlocksTheMovesThisReaderMayNotTake(t *testing.T) {
 	}
 	if got := page.Queue[1].Move.BlockedReason; got != nil {
 		t.Errorf("open_task only reads, and was refused: %q", *got)
+	}
+}
+
+func TestEverySubjectTypeNamesAnObjectARoleCanGrant(t *testing.T) {
+	for _, subject := range contractEnum(t, "AttentionSubjectType") {
+		row := crmcontracts.WorklistItem{Subject: &crmcontracts.AttentionSubject{Type: crmcontracts.AttentionSubjectType(subject)}}
+		if object := moveRecord(row); !identity.RBACObjectGrantable(object) {
+			t.Errorf("subject type %q names %q, which no role can grant, so its moves are refused to everyone", subject, object)
+		}
 	}
 }
