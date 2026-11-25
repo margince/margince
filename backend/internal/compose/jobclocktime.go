@@ -26,11 +26,26 @@ import (
 type clockTimeSchedule struct {
 	at   extension.TimeOfDay
 	zone func() *time.Location
+	now  func() time.Time
 }
 
-// Next is the first slot after current. A run at a slot asks again with that
-// slot, so a time the clock shows twice when it falls back runs once.
+// Next is the first slot after both current and now. After downtime River
+// restores a stored slot and asks Next with that old slot. Counting from now
+// keeps it from replaying every slot it missed.
 func (s clockTimeSchedule) Next(current time.Time) time.Time {
+	return s.slotAfter(later(current, s.now()))
+}
+
+func later(a, b time.Time) time.Time {
+	if b.After(a) {
+		return b
+	}
+	return a
+}
+
+// slotAfter is the first slot after t. A run at a slot asks again with that
+// slot, so a time the clock shows twice when it falls back runs once.
+func (s clockTimeSchedule) slotAfter(current time.Time) time.Time {
 	zone := s.zone()
 	y, m, d := current.In(zone).Date()
 	// Today and the next seven days hold a slot of every valid TimeOfDay.
@@ -80,11 +95,19 @@ func (b *ScheduleBook) location() *time.Location {
 	return time.UTC
 }
 
+// now is the book's clock, utcNow unless a test set one.
+func (b *ScheduleBook) now() time.Time {
+	if b.clock != nil {
+		return b.clock()
+	}
+	return utcNow()
+}
+
 // scheduleClockTime builds a clock-time pass and records it under the zone.
 func (b *ScheduleBook) scheduleClockTime(kind string, at extension.TimeOfDay, ctor river.PeriodicJobConstructor) *river.PeriodicJob {
 	b.mu.Lock()
 	defer b.mu.Unlock()
-	job, catchUp := b.periodicJob(kind, kind, clockTimeSchedule{at: at, zone: b.location}, ctor)
+	job, catchUp := b.periodicJob(kind, kind, clockTimeSchedule{at: at, zone: b.location, now: b.now}, ctor)
 	b.kinds[kind] = tracked{setting: zoneScheduleKey, job: job, catchUp: catchUp}
 	return job
 }

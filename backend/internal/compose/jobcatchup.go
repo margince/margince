@@ -45,23 +45,36 @@ func (s *catchUpSchedule) Next(current time.Time) time.Time {
 	if !s.armed.CompareAndSwap(true, false) {
 		return s.every.Next(current)
 	}
+	if clock, ok := s.every.(clockTimeSchedule); ok {
+		return s.firstClockRun(clock, current)
+	}
 	first := current
 	if !s.lastRun.IsZero() {
 		if next := s.every.Next(s.lastRun); next.After(first) {
 			first = next
 		}
 	}
-	if runsAtClockTimes(s.every) {
-		// A pass that never ran waits for its first slot; a slot still ahead
-		// keeps its exact time. Only a missed slot runs now, spread below.
-		if s.lastRun.IsZero() {
-			return s.every.Next(current)
-		}
-		if first.After(current) {
-			return first
-		}
-	}
 	return first.Add(startupDelay(s.kind, s.every.Next(current).Sub(current), s.spread))
+}
+
+// replayedSlotMargin tells River's placement, which asks Next with the moment
+// it starts, from a stored past slot River has already enqueued.
+const replayedSlotMargin = 5 * time.Second
+
+// firstClockRun is a clock-time pass's first run after a start: at most one
+// catch-up, for a slot missed while the worker was down. A pass that never ran,
+// or whose last run is after its latest slot, waits for its next slot.
+func (s *catchUpSchedule) firstClockRun(clock clockTimeSchedule, current time.Time) time.Time {
+	now := clock.now()
+	if current.Before(now.Add(-replayedSlotMargin)) {
+		// River restored a stored slot and enqueued it; that run is the catch-up.
+		return clock.Next(current)
+	}
+	missed := !s.lastRun.IsZero() && !clock.slotAfter(s.lastRun).After(now)
+	if !missed {
+		return clock.Next(current)
+	}
+	return current.Add(startupDelay(s.kind, clock.Next(current).Sub(current), s.spread))
 }
 
 // rearm makes the next Next catch up again. A schedule handed back to River

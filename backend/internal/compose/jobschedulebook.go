@@ -68,6 +68,8 @@ type ScheduleBook struct {
 	// zone is the installation's time zone, which clock-time passes count in
 	// (jobclocktime.go). Nil reads as UTC.
 	zone atomic.Pointer[time.Location]
+	// clock is what clock-time passes read as now; nil reads the real clock.
+	clock func() time.Time
 }
 
 // newScheduleBook seeds the book from the values read, one per setting key.

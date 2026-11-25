@@ -44638,7 +44638,7 @@ type ComposedExtension struct {
 	// Routes The unit's published operations, one entry per method+path pair. Sorted by path then method. A bare path would under-report the surface — one path serving GET and DELETE is two capabilities to an operator auditing what a unit can do, and collapsing them hides the destructive one behind the harmless one.
 	Routes []ComposedExtensionRoute `json:"routes"`
 
-	// SetupMissing What an admin still has to set before the unit can work: each workspace secret the unit declares that holds no value, then each OAuth app it declares with no stored client. Empty means the unit is ready. Worked out on each read from the declaration and the stored values; nothing about it is stored. An older server leaves it out.
+	// SetupMissing What an admin still has to set before the unit can work: each workspace secret the unit declares that holds no value, then each OAuth app it declares with no stored client. Empty means the unit is ready. Worked out on each read from the declaration and the stored values; nothing about it is stored. Each part needs the caller's right to read that setting: admin for a workspace secret, capture_settings.read for an OAuth app. A part the caller may not read is left out. The field is absent when that hides a part and nothing visible is missing, and from an older server.
 	SetupMissing *[]ComposedExtensionSetupItem `json:"setup_missing,omitempty"`
 
 	// Version The unit's own declared version. It carries NO authority (ADR-0120 §7): operator decisions bind to manifest digests, never to this string. Display only.

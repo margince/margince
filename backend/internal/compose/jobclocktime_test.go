@@ -27,6 +27,36 @@ var weekdaysAt0730 = extension.TimeOfDay{
 	Days:   []time.Weekday{time.Monday, time.Tuesday, time.Wednesday, time.Thursday, time.Friday},
 }
 
+func clockAt(at time.Time) func() time.Time { return func() time.Time { return at } }
+
+// riverRuns replays River's loop for a stored slot restored after downtime.
+// River enqueues the slot and asks Next with it. It enqueues again while the
+// answer is already due.
+func riverRuns(s river.PeriodicSchedule, restored, now time.Time) (runs int, next time.Time) {
+	for next = restored; !next.After(now); next = s.Next(next) {
+		runs++
+	}
+	return runs, next
+}
+
+// Three days down: River restores Monday's 07:30 and must not then replay
+// Tuesday and Wednesday as well.
+func TestARestoredPastSlotRunsOnceAndThenWaitsForTheNextSlot(t *testing.T) {
+	now := time.Date(2026, 11, 26, 10, 0, 0, 0, time.UTC) // Thursday
+	restored := time.Date(2026, 11, 23, 7, 30, 0, 0, time.UTC)
+	tomorrow := time.Date(2026, 11, 27, 7, 30, 0, 0, time.UTC)
+	every := clockTimeSchedule{at: extension.TimeOfDay{Minute: 7*60 + 30}, zone: func() *time.Location { return time.UTC }, now: clockAt(now)}
+	for name, schedule := range map[string]river.PeriodicSchedule{
+		"the bare schedule": every,
+		"behind a catch-up": newCatchUpSchedule("ext_demo_report", every, restored.Add(-24*time.Hour), startupSpread),
+	} {
+		runs, next := riverRuns(schedule, restored, now)
+		if runs != 1 || !next.Equal(tomorrow) {
+			t.Errorf("%s: %d runs, then next at %s; want 1 run, then %s", name, runs, next, tomorrow)
+		}
+	}
+}
+
 func TestAClockTimeScheduleRunsAtTheNextLocalSlot(t *testing.T) {
 	zone := berlin(t)
 	at := func(y int, m time.Month, d, h, min int) time.Time { return time.Date(y, m, d, h, min, 0, 0, zone) }
@@ -44,7 +74,7 @@ func TestAClockTimeScheduleRunsAtTheNextLocalSlot(t *testing.T) {
 		// Clocks spring from 02:00 to 03:00 on 2026-03-29.
 		"a time the clock skips": {extension.TimeOfDay{Minute: 2*60 + 30}, at(2026, 3, 29, 1, 0), at(2026, 3, 29, 3, 0)},
 	} {
-		s := clockTimeSchedule{at: tc.at, zone: func() *time.Location { return zone }}
+		s := clockTimeSchedule{at: tc.at, zone: func() *time.Location { return zone }, now: clockAt(time.Time{})}
 		if got := s.Next(tc.current); !got.Equal(tc.want) {
 			t.Errorf("%s: Next(%s) = %s, want %s", name, tc.current, got, tc.want)
 		}
@@ -54,7 +84,7 @@ func TestAClockTimeScheduleRunsAtTheNextLocalSlot(t *testing.T) {
 // Clocks fall back from 03:00 to 02:00 on 2026-10-25, so 02:30 happens twice.
 func TestATimeTheClockShowsTwiceRunsOnce(t *testing.T) {
 	zone := berlin(t)
-	s := clockTimeSchedule{at: extension.TimeOfDay{Minute: 2*60 + 30}, zone: func() *time.Location { return zone }}
+	s := clockTimeSchedule{at: extension.TimeOfDay{Minute: 2*60 + 30}, zone: func() *time.Location { return zone }, now: clockAt(time.Time{})}
 	first := s.Next(time.Date(2026, 10, 25, 0, 0, 0, 0, zone))
 	if h, m, _ := first.In(zone).Clock(); h != 2 || m != 30 || first.In(zone).Day() != 25 {
 		t.Fatalf("first run %s, want 02:30 on the 25th", first.In(zone))
@@ -66,7 +96,7 @@ func TestATimeTheClockShowsTwiceRunsOnce(t *testing.T) {
 
 func TestAClockTimeScheduleCountsInTheZoneItIsGivenEachTime(t *testing.T) {
 	zone := time.UTC
-	s := clockTimeSchedule{at: extension.TimeOfDay{Minute: 7*60 + 30}, zone: func() *time.Location { return zone }}
+	s := clockTimeSchedule{at: extension.TimeOfDay{Minute: 7*60 + 30}, zone: func() *time.Location { return zone }, now: clockAt(time.Time{})}
 	current := time.Date(2026, 11, 25, 0, 0, 0, 0, time.UTC)
 	if got := s.Next(current); !got.Equal(time.Date(2026, 11, 25, 7, 30, 0, 0, time.UTC)) {
 		t.Fatalf("in UTC: %s", got)
@@ -78,8 +108,8 @@ func TestAClockTimeScheduleCountsInTheZoneItIsGivenEachTime(t *testing.T) {
 }
 
 func TestAClockTimePassCatchesUpOnlyAMissedSlot(t *testing.T) {
-	every := clockTimeSchedule{at: extension.TimeOfDay{Minute: 7*60 + 30}, zone: func() *time.Location { return time.UTC }}
 	now := time.Date(2026, 11, 25, 10, 0, 0, 0, time.UTC)
+	every := clockTimeSchedule{at: extension.TimeOfDay{Minute: 7*60 + 30}, zone: func() *time.Location { return time.UTC }, now: clockAt(now)}
 	todaySlot, tomorrowSlot := time.Date(2026, 11, 25, 7, 30, 0, 0, time.UTC), time.Date(2026, 11, 26, 7, 30, 0, 0, time.UTC)
 
 	missed := newCatchUpSchedule("ext_demo_report", every, todaySlot.Add(-24*time.Hour), startupSpread)
@@ -98,6 +128,7 @@ func TestAClockTimePassCatchesUpOnlyAMissedSlot(t *testing.T) {
 
 func TestAClockTimePassNeverRunsAtStartEvenWithoutHistory(t *testing.T) {
 	book := newScheduleBook(nil)
+	book.clock = clockAt(time.Date(2026, 11, 25, 10, 0, 0, 0, time.UTC))
 	periodicForComposed(book, extension.JobDeclaration{Unit: "demo", Job: "report", At: &weekdaysAt0730})
 	catchUp := book.kinds["ext_demo_report"].catchUp
 	if catchUp == nil {

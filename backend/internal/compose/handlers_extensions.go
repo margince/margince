@@ -69,34 +69,37 @@ func (h extensionsHandlers) ListExtensions(w http.ResponseWriter, r *http.Reques
 		return
 	}
 	exts := ComposedExtensions()
-	missing := make(map[string][]crmcontracts.ComposedExtensionSetupItem, len(exts))
+	missing := make(map[string]*[]crmcontracts.ComposedExtensionSetupItem, len(exts))
 	for _, e := range exts {
-		items, err := h.setupMissing(r.Context(), e)
+		items, known, err := h.setupMissing(r.Context(), e)
 		if err != nil {
 			httperr.Write(w, r, err)
 			return
 		}
-		missing[string(e.Name)] = items
+		if known {
+			missing[string(e.Name)] = &items
+		}
 	}
 	units := composedExtensionInventory(exts, ComposedVerbs(), servedExtensionJobs())
 	for i := range units {
-		items := missing[units[i].Name]
-		units[i].SetupMissing = &items
+		units[i].SetupMissing = missing[units[i].Name]
 	}
 	httperr.WriteJSON(w, http.StatusOK, crmcontracts.ExtensionDirectory{Extensions: units})
 }
 
-// extensionSetupReadActor attributes the read of whether a unit's OAuth app is
-// stored. The reader holds extension_access, not capture settings, and learns
-// only yes or no.
-const extensionSetupReadActor = "system:extension_setup_read"
-
-// setupMissing reads what an admin has set up for the unit and names what is
-// still missing. Derived on each read and never stored, so it cannot go stale.
-func (h extensionsHandlers) setupMissing(ctx context.Context, e extension.Extension) ([]crmcontracts.ComposedExtensionSetupItem, error) {
+// setupMissing names what an admin still has to set for the unit. Each part
+// needs the caller's own right: admin for a workspace secret, as for the
+// unit's declared settings, and capture_settings.read for an OAuth app. A part
+// the caller may not read is left out. If one is left out and nothing visible
+// is missing, known is false, so the caller is never told the unit is ready.
+func (h extensionsHandlers) setupMissing(ctx context.Context, e extension.Extension) (missing []crmcontracts.ComposedExtensionSetupItem, known bool, err error) {
+	see := setupVisibility{
+		secrets: auth.AdminGranted(ctx),
+		apps:    auth.Require(ctx, "capture_settings", principal.ActionRead) == nil,
+	}
 	var keys []string
 	for _, s := range e.Secrets {
-		if s.Scope == extension.SecretScopeWorkspace {
+		if see.secrets && s.Scope == extension.SecretScopeWorkspace {
 			keys = append(keys, s.Key)
 		}
 	}
@@ -106,35 +109,46 @@ func (h extensionsHandlers) setupMissing(ctx context.Context, e extension.Extens
 			stored, err = extsecrets.WorkspaceKeysStored(ctx, tx, string(e.Name), keys)
 			return err
 		}); err != nil {
-			return nil, err
+			return nil, false, err
 		}
 	}
 	configured := map[string]bool{}
 	for _, app := range e.OAuthApps {
-		if h.apps == nil {
+		if h.apps == nil || !see.apps {
 			break
 		}
-		status, err := h.apps.Read(principal.SystemActing(ctx, extensionSetupReadActor), capture.AppProvider(app.Provider))
+		status, err := h.apps.Read(ctx, capture.AppProvider(app.Provider))
 		if err != nil {
-			return nil, err
+			return nil, false, err
 		}
 		configured[app.Provider] = status.Configured
 	}
-	return unitSetupMissing(e, stored, configured), nil
+	missing = unitSetupMissing(e, see, stored, configured)
+	return missing, len(missing) > 0 || !see.hides(e), nil
 }
 
-// unitSetupMissing lists, in declaration order, each workspace secret the unit
-// declares that holds no value and each OAuth app with no stored client. A
-// user-scoped secret is each member's own to connect and never blocks the unit.
-func unitSetupMissing(e extension.Extension, stored, configured map[string]bool) []crmcontracts.ComposedExtensionSetupItem {
+// setupVisibility says which parts of a unit's setup the caller may read.
+type setupVisibility struct{ secrets, apps bool }
+
+// hides reports whether the unit declares a part of its setup the caller may
+// not read.
+func (see setupVisibility) hides(e extension.Extension) bool {
+	workspaceSecret := slices.ContainsFunc(e.Secrets, func(s extension.SecretsRequest) bool { return s.Scope == extension.SecretScopeWorkspace })
+	return (workspaceSecret && !see.secrets) || (len(e.OAuthApps) > 0 && !see.apps)
+}
+
+// unitSetupMissing lists, in declaration order, the visible parts still unset.
+// That is each workspace secret with no value, then each OAuth app with no
+// stored client. A user-scoped secret is each member's own and never counts.
+func unitSetupMissing(e extension.Extension, see setupVisibility, stored, configured map[string]bool) []crmcontracts.ComposedExtensionSetupItem {
 	out := []crmcontracts.ComposedExtensionSetupItem{}
 	for _, s := range e.Secrets {
-		if s.Scope == extension.SecretScopeWorkspace && !stored[s.Key] {
+		if see.secrets && s.Scope == extension.SecretScopeWorkspace && !stored[s.Key] {
 			out = append(out, crmcontracts.ComposedExtensionSetupItem{Kind: crmcontracts.ComposedExtensionSetupItemKindWorkspaceSecret, Name: s.Key})
 		}
 	}
 	for _, app := range e.OAuthApps {
-		if !configured[app.Provider] {
+		if see.apps && !configured[app.Provider] {
 			out = append(out, crmcontracts.ComposedExtensionSetupItem{Kind: crmcontracts.ComposedExtensionSetupItemKindOauthApp, Name: app.Title})
 		}
 	}
