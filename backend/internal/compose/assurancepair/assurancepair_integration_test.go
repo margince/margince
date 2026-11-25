@@ -15,6 +15,7 @@ import (
 	"encoding/json"
 	"errors"
 	"testing"
+	"time"
 
 	"github.com/jackc/pgx/v5"
 
@@ -342,6 +343,66 @@ func TestAPassOverOneDealReconcilesItsPairs(t *testing.T) {
 	e.rescan(t, e.earlier)
 	if _, status, _ := e.pairFinding(t); status != assurance.ExceptionConditionCleared {
 		t.Fatalf("status = %q after the deal changed pipeline, want condition_cleared", status)
+	}
+}
+
+// A pass over one deal closes only the pair findings that include it, not
+// another pair filed on the same deal.
+func TestAPassOverOneDealLeavesAnotherPairFiledOnTheSameDealOpen(t *testing.T) {
+	e := setupPair(t)
+	owner := integration.OwnerConn(t)
+	third := e.seedDeal(t, owner, "Pair third", 55)
+	meeting := integration.SeedIDRow(t, owner, `
+		INSERT INTO activity (id, kind, subject, occurred_at, source, captured_by)
+		VALUES ($1, 'meeting', 'Second', now() - interval '2 days', 'manual', 'test')`)
+	integration.LinkActivity(t, owner, meeting, "deal", third)
+	integration.LinkActivity(t, owner, meeting, "deal", e.later)
+	e.run(t)
+	if n := e.WsCount(t, `SELECT count(*) FROM assurance_exception WHERE type = $1 AND status = 'open' AND subject_id = $2`,
+		assurance.TypeDuplicateMotion, e.later); n != 2 {
+		t.Fatalf("%d open pair findings on the later deal, want 2", n)
+	}
+	execSeed(t, owner, `DELETE FROM activity_link WHERE deal_id = $1`, e.earlier)
+	e.rescan(t, e.earlier)
+	open := e.WsCount(t, `SELECT count(*) FROM assurance_exception WHERE type = $1 AND status = 'open'
+		AND observed ->> 'other_deal_id' = $2`, assurance.TypeDuplicateMotion, third.String())
+	cleared := e.WsCount(t, `SELECT count(*) FROM assurance_exception WHERE type = $1 AND status = $3
+		AND observed ->> 'other_deal_id' = $2`, assurance.TypeDuplicateMotion, e.earlier.String(), assurance.ExceptionConditionCleared)
+	if open != 1 || cleared != 1 {
+		t.Fatalf("open pair with the third deal = %d, cleared pair with the earlier deal = %d, want 1 and 1", open, cleared)
+	}
+}
+
+// Every answer on a pair finding needs write authority over both deals, as the
+// list offers it. A reader who may not write the second deal is refused all.
+func TestEveryAnswerOnAPairNeedsBothDeals(t *testing.T) {
+	e := setupPair(t)
+	e.run(t)
+	execSeed(t, integration.OwnerConn(t), `UPDATE deal SET owner_id = $2 WHERE id = $1`, e.earlier, e.AdminUser)
+	reader := e.As(e.Rep1, nil, principal.Permissions{
+		RoleKeys: []string{"rep"}, RowScope: principal.RowScopeOwn,
+		Objects: map[string]principal.ObjectGrant{
+			"forecast": {Read: true, Update: true}, "deal": {Read: true, Update: true},
+		},
+	})
+	id, _, _ := e.pairFinding(t)
+	now := clocktest.Now(t)
+	later := now.Add(24 * time.Hour)
+	for _, answer := range []assurance.Resolution{
+		{Outcome: assurance.OutcomeFixedRecord}, {Outcome: assurance.OutcomeAddedEvidence},
+		{Outcome: assurance.OutcomeValueCorrect, Reason: "checked"}, {Outcome: assurance.OutcomeNotRelevant, Reason: "checked"},
+		{Outcome: assurance.OutcomeRemindLater, RemindAt: &later}, {Outcome: assurance.OutcomeReassign},
+		{Outcome: assurance.OutcomeSeparate},
+	} {
+		if err := assurance.NewStore(compose.InstallationDB(e.Pool)).Resolve(reader, id, answer, now); err == nil {
+			t.Errorf("%s: a reader who may write only the later deal was allowed it", answer.Outcome)
+		}
+	}
+	if n := e.WsCount(t, `SELECT count(*) FROM assurance_resolution`); n != 0 {
+		t.Fatalf("%d answers stored from refused calls", n)
+	}
+	if _, status, _ := e.pairFinding(t); status != "open" {
+		t.Fatalf("status = %q, want open", status)
 	}
 }
 

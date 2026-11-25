@@ -154,7 +154,7 @@ func (s *Store) resolveIn(
 	if err := ensureAnswerable(ctx, tx, exceptionID); err != nil {
 		return err
 	}
-	if err := requireSeparable(ctx, tx, exceptionID, in.Outcome); err != nil {
+	if err := requirePairAuthority(ctx, tx, exceptionID, in.Outcome); err != nil {
 		return err
 	}
 	if err := s.applySignalDecision(ctx, tx, exceptionID, in); err != nil {
@@ -266,13 +266,12 @@ func ensureAnswerable(ctx context.Context, tx pgx.Tx, exceptionID ids.UUID) erro
 	return auth.EnsureWritable(ctx, tx, subjectKindDeal, subjectID)
 }
 
-// requireSeparable refuses "separate" on any finding but a pair of deals. Only
-// there does the answer say anything, and elsewhere it would close a finding
-// without naming a reason or an expiry.
-func requireSeparable(ctx context.Context, tx pgx.Tx, exceptionID ids.UUID, outcome string) error {
-	if outcome != OutcomeSeparate {
-		return nil
-	}
+// requirePairAuthority holds an answer on a pair finding to authority over both
+// deals, whatever the answer, as AnswerableFindings offers it. It also refuses
+// "separate" on any other finding, where the answer says nothing and would
+// close a finding without a reason or an expiry. A partner out of the caller's
+// scope answers not found, so nothing leaks.
+func requirePairAuthority(ctx context.Context, tx pgx.Tx, exceptionID ids.UUID, outcome string) error {
 	var findingType string
 	var partner *ids.UUID
 	if err := tx.QueryRow(ctx, `SELECT type, (observed ->> $2)::uuid FROM assurance_exception WHERE id = $1`,
@@ -280,14 +279,14 @@ func requireSeparable(ctx context.Context, tx pgx.Tx, exceptionID ids.UUID, outc
 		return fmt.Errorf("assurance: reading the finding's type: %w", err)
 	}
 	if findingType != TypeDuplicateMotion {
-		return &values.ParseError{
-			Field: slotOutcome, Code: "not_allowed",
-			Message: "separate answers only a finding about two deals that may be one buying motion",
+		if outcome == OutcomeSeparate {
+			return &values.ParseError{
+				Field: slotOutcome, Code: "not_allowed",
+				Message: "separate answers only a finding about two deals that may be one buying motion",
+			}
 		}
+		return nil
 	}
-	// The answer silences the pair for good, so it needs the same authority
-	// over the second deal as the subject. A deal out of the caller's scope
-	// answers not found, so nothing leaks.
 	if partner == nil {
 		return apperrors.ErrNotFound
 	}

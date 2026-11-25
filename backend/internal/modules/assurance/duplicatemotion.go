@@ -18,7 +18,9 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 // PairSubject is two open deals of one account as the rule sees them, already
@@ -72,21 +74,29 @@ func (s *Scanner) askPairs(ctx context.Context, tx pgx.Tx, now time.Time, only [
 	return nil
 }
 
-// closeClearedPairsOf closes the open pair findings of deal that a pass over it
-// no longer raises. A pair is filed on one of its deals, so the filing deals
-// are looked up first. CloseCleared then keeps the remind-later carve-out.
+// closeClearedPairsOf closes the open pair findings that include deal and that
+// a pass over it no longer raises. It closes only those findings, never
+// another pair filed on the same deal, and keeps the remind-later carve-out.
 func (s *Store) closeClearedPairsOf(ctx context.Context, tx pgx.Tx, deal ids.UUID, seen []string) (int64, error) {
-	rows, err := tx.Query(ctx, `SELECT subject_id FROM assurance_exception
-		WHERE status = 'open' AND type = $1 AND subject_kind = 'deal'
-		  AND (subject_id = $2 OR observed ->> $3 = $2::text)`, TypeDuplicateMotion, deal, SlotOtherDealID)
-	if err != nil {
-		return 0, fmt.Errorf("assurance: reading the pair findings of a deal: %w", err)
+	if err := auth.Require(ctx, "forecast", principal.ActionUpdate); err != nil {
+		return 0, err
 	}
-	filed, err := pgx.CollectRows(rows, pgx.RowTo[string])
-	if err != nil {
-		return 0, fmt.Errorf("assurance: reading the pair findings of a deal: %w", err)
+	if seen == nil {
+		seen = []string{}
 	}
-	return s.CloseCleared(ctx, tx, []string{TypeDuplicateMotion}, filed, seen)
+	tag, err := tx.Exec(ctx, `
+		UPDATE assurance_exception
+		SET status = $1, updated_at = now()
+		WHERE status = 'open' AND type = $2 AND subject_kind = 'deal'
+		  AND (subject_id = $3 OR observed ->> $4 = $3::text)
+		  AND NOT (logical_key = ANY($5))
+		  AND `+notDeferredSQL("$6", "$7"),
+		ExceptionConditionCleared, TypeDuplicateMotion, deal, SlotOtherDealID, seen,
+		OutcomeRemindLater, MaxSuppressionDays())
+	if err != nil {
+		return 0, fmt.Errorf("assurance: closing the pair findings of a deal: %w", err)
+	}
+	return tag.RowsAffected(), nil
 }
 
 // duplicateMotion is the rule. A deal with no close date is never flagged. The
