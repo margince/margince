@@ -6,9 +6,9 @@
 package migrations_test
 
 // The activity_link clock triggers fire once per statement. Each step below is
-// one statement a writer can send, one row or several, and after each every
-// stored clock must hold the value the rows give and the value a full refold
-// (last_activity_of_<table>) reads from scratch.
+// one statement a writer can send, with one row or several. After each step,
+// every stored clock must hold the value the rows give. It must also equal what
+// a full refold (last_activity_of_<table>) reads from scratch.
 
 import (
 	"context"

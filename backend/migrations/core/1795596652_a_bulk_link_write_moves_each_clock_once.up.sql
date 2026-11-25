@@ -5,7 +5,7 @@ SET LOCAL lock_timeout = '2s';
 
 -- The link clock triggers fire once per statement and move each record they
 -- reach once. AFTER ROW triggers also run when the statement ends, so each row
--- read the same tables a statement trigger reads, and advancing a clock to the
+-- read the same tables a statement trigger reads. Advancing a clock to the
 -- latest of several values gives the value the row-by-row advances reached.
 -- The records are locked in (kind, id) order over the whole statement, the
 -- order one row's firing already took.

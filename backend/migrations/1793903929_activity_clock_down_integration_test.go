@@ -24,6 +24,10 @@ func TestActivityClockRollbackRespectsAnEarlierInstalledAdvance(t *testing.T) {
 	}
 	through := namespaceThroughVersion(t, core, "1793983521")
 	migration := through.Migrations[len(through.Migrations)-1]
+	// The statement-level link triggers replaced the function this rollback
+	// keeps, so each case first rewinds the schema to before them.
+	statementTriggers := namespaceThroughVersion(t, core, "1795596652")
+	rewind := statementTriggers.Migrations[len(statementTriggers.Migrations)-1]
 	for _, previous := range []bool{false, true} {
 		t.Run(fmt.Sprintf("earlier_advance=%t", previous), func(t *testing.T) {
 			ctx := context.Background()
@@ -36,6 +40,9 @@ func TestActivityClockRollbackRespectsAnEarlierInstalledAdvance(t *testing.T) {
 					t.Error(err)
 				}
 			}()
+			if _, err := tx.Exec(ctx, rewind.DownSQL); err != nil {
+				t.Fatal(err)
+			}
 			if _, err := tx.Exec(ctx, `DELETE FROM schema_migrations_core WHERE version='1793878884'`); err != nil {
 				t.Fatal(err)
 			}
