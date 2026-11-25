@@ -40,18 +40,25 @@ export function firstBriefWait(
   return granted ? "prepared" : "switchedOff";
 }
 
+// A lapsed or outgrown grant prepares nothing tonight, so it reads as off and
+// the link leads to the card that renews it.
+function grantWorks(
+  grants: Parameters<typeof grantStanding>[0] | undefined,
+): boolean | undefined {
+  if (grants === undefined) return undefined;
+  const { granted, lapsed, outgrown } = grantStanding(grants);
+  return granted && !lapsed && !outgrown;
+}
+
 export function FirstDayPanel() {
   const t = useT();
   const canMutate = useCanMutate();
   const grants = useAgentGrants(canMutate);
   const setup = useSetupChecklist(useSettingsReach());
-  const wait = firstBriefWait(
-    canMutate,
-    grants.data === undefined ? undefined : grantStanding(grants.data).granted,
-  );
+  const wait = firstBriefWait(canMutate, grantWorks(grants.data));
   const openSteps = setup.settled && setup.total > 0 && !setup.complete;
   return (
-    <Panel title={t("brief.firstDay.title")} className="brief-firstday">
+    <Panel title={t("brief.firstDay.title")}>
       <PanelBody>
         <PanelIntro>{t("brief.firstDay.what")}</PanelIntro>
         <p className="t-body">

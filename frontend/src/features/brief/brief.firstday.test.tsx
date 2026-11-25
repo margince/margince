@@ -43,6 +43,24 @@ describe("Home before the first Morning brief", () => {
     expect(screen.queryByText(en["magic.heading.brief"])).toBeNull();
   });
 
+  // A granted answer whose credential lapsed prepares nothing tonight.
+  it("sends a reader whose overnight authority lapsed to renew it", async () => {
+    const lapsed = {
+      data: declined.data.map((grant) => ({ ...grant, state: "granted" })),
+    };
+    stubApi({ "GET /me/agent-grants": () => jsonResponse(lapsed) });
+    render(<BriefScreen />);
+    const panel = await firstDayPanel();
+    expect(
+      await within(panel).findByRole("link", {
+        name: en["brief.firstDay.turnOn"],
+      }),
+    ).toBeTruthy();
+    expect(
+      within(panel).queryByText(en["brief.firstDay.briefTonight"]),
+    ).toBeNull();
+  });
+
   // A read seat writes nothing, so the overnight switch is not theirs to turn.
   it("offers a read-only member no link to a switch the seat cannot turn", async () => {
     stubApi({
