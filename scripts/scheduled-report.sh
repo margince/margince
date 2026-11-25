@@ -422,9 +422,11 @@ if [[ "${BACKEND_CLOCK_RESULT:-}" = "failure" ]] && [[ "${BACKEND_CLOCK_OUTCOME:
 verdict about the tree: $RUN_URL
 
 No backend test is known to depend on the calendar, and none is known not to. The
-job annotations and the end of the step log say why the lane stopped: the runner
-lost its connection while its clock was moved, the 45-minute budget ran out, or
-\`scripts/clock-drift-host.sh\` found the shift no longer in force.
+\`backend clock drift (main, +200 days)\` job names each slice that gave no verdict.
+That slice's own job says why it stopped: its annotations show a runner that lost
+its connection while its clock was moved, and the end of its step log shows a slice
+over its 30-minute budget or \`scripts/clock-drift-host.sh\` finding the shift no
+longer in force.
 
 Reproduce the suites locally with \`BACKEND_CLOCK_SKEW=database:200 make backend-clock-drift\`."\
     || unreported=1
