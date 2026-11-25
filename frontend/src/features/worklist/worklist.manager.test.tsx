@@ -407,8 +407,8 @@ describe("leaving a note on somebody's queue", () => {
     });
   });
 
-  // The server words a next-step headline from its deal. So the note cannot
-  // leave without one, and it sends the deal the coach picked.
+  // The server words a next-step headline from its deal. So a press without
+  // one says the deal is required and sends nothing; with one, it sends it.
   it("sends a next-step note only with the deal it names", async () => {
     const fetched = stubRosterAnd(() => jsonResponse({}));
     const user = userEvent.setup();
@@ -430,7 +430,13 @@ describe("leaving a note on somebody's queue", () => {
     const confirm = screen.getByRole("button", {
       name: en["worklist.manager.coachConfirm"],
     });
-    expect((confirm as HTMLButtonElement).disabled).toBe(true);
+    await user.click(confirm);
+    expect(
+      await screen.findByText(
+        `${en["worklist.manager.coachDeal"]} is required.`,
+      ),
+    ).toBeTruthy();
+    expect(await wrote(fetched)).toBeUndefined();
     await pickOption(
       user,
       screen.getByRole("combobox", { name: en["worklist.manager.coachDeal"] }),

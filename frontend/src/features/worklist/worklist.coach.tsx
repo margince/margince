@@ -11,9 +11,11 @@ import {
   Textarea,
 } from "../../design-system/atoms";
 import { Panel, PanelBody } from "../../design-system/panel";
+import { useFieldFaults } from "../../design-system/savepage";
 import { Select, type SelectOption } from "../../design-system/select";
 import { useToast } from "../../design-system/toast";
-import { useT } from "../../i18n";
+import { useLocale, useT } from "../../i18n";
+import { blankRequired } from "../../lib/blankrequired";
 import { problemCodeOf } from "../../lib/problem";
 import { useCoachTeammate, type WorklistItem } from "./worklist.queries";
 
@@ -64,7 +66,9 @@ export function CoachControl({
   name?: string | null;
 }>) {
   const t = useT();
+  const { locale } = useLocale();
   const toast = useToast();
+  const [faults, faultsRoot] = useFieldFaults<HTMLDivElement>();
   const [open, setOpen] = useState(false);
   const [kind, setKind] = useState<CoachKind>("coach_general");
   const [note, setNote] = useState("");
@@ -106,8 +110,16 @@ export function CoachControl({
           </Button>
           <Button
             variant="primary"
-            disabled={coach.isPending || (namesDeal && dealId === "")}
+            disabled={coach.isPending}
             onClick={() => {
+              const blank = namesDeal
+                ? blankRequired(locale, {
+                    deal: [t("worklist.manager.coachDeal"), dealId],
+                  })
+                : new Map<string, string>();
+              if (faults.show(blank)) {
+                return;
+              }
               coach.mutate(
                 { recipientUserId: owner, kind, note, dealId },
                 {
@@ -129,53 +141,64 @@ export function CoachControl({
     >
       {/* `.form-stack` spaces the fields. One `PanelBody`, because the kind,
           the deal and the note are one question, not sections. */}
-      <PanelBody className="form-stack">
-        {/* The visible label is also the strip's accessible name, so both
+      <PanelBody>
+        <div className="form-stack" ref={faultsRoot}>
+          {/* The visible label is also the strip's accessible name, so both
             readers learn what the four buttons choose between. */}
-        <div className="field">
-          <span className="t-label">{t("worklist.manager.coachAbout")}</span>
-          <SegmentedControl
-            options={COACH_KINDS}
-            value={kind}
-            onChange={setKind}
-            label={t("worklist.manager.coachAbout")}
-            labels={{
-              coach_reply_aging: t("worklist.manager.kind.reply_aging"),
-              coach_deal_needs_next_step: t("worklist.manager.kind.next_step"),
-              coach_review_backlog: t("worklist.manager.kind.review_backlog"),
-              coach_general: t("worklist.manager.kind.general"),
-            }}
-          />
-        </div>
-        {namesDeal && (
-          <Field
-            label={t("worklist.manager.coachDeal")}
-            hint={
-              deals.length === 0 ? t("worklist.manager.coachNoDeal") : undefined
-            }
-          >
+          <div className="field">
+            <span className="t-label">{t("worklist.manager.coachAbout")}</span>
+            <SegmentedControl
+              options={COACH_KINDS}
+              value={kind}
+              onChange={setKind}
+              label={t("worklist.manager.coachAbout")}
+              labels={{
+                coach_reply_aging: t("worklist.manager.kind.reply_aging"),
+                coach_deal_needs_next_step: t(
+                  "worklist.manager.kind.next_step",
+                ),
+                coach_review_backlog: t("worklist.manager.kind.review_backlog"),
+                coach_general: t("worklist.manager.kind.general"),
+              }}
+            />
+          </div>
+          {namesDeal && (
+            <Field
+              label={t("worklist.manager.coachDeal")}
+              required
+              error={faults.of("deal")}
+              hint={
+                deals.length === 0
+                  ? t("worklist.manager.coachNoDeal")
+                  : undefined
+              }
+            >
+              {(control) => (
+                <Select
+                  {...control}
+                  options={deals}
+                  value={deal}
+                  onChange={(next) => {
+                    setDeal(next);
+                    faults.edited("deal");
+                  }}
+                  disabled={deals.length === 0}
+                />
+              )}
+            </Field>
+          )}
+          <Field label={t("worklist.manager.note")}>
             {(control) => (
-              <Select
+              <Textarea
                 {...control}
-                options={deals}
-                value={deal}
-                onChange={setDeal}
-                disabled={deals.length === 0}
+                value={note}
+                maxLength={500}
+                rows={3}
+                onChange={(event) => setNote(event.target.value)}
               />
             )}
           </Field>
-        )}
-        <Field label={t("worklist.manager.note")}>
-          {(control) => (
-            <Textarea
-              {...control}
-              value={note}
-              maxLength={500}
-              rows={3}
-              onChange={(event) => setNote(event.target.value)}
-            />
-          )}
-        </Field>
+        </div>
       </PanelBody>
     </Panel>
   );
