@@ -46,13 +46,9 @@ func (h Handlers) PublicBookingPreview(ctx context.Context, slug string) (Bookin
 	if err != nil {
 		return BookingPreview{}, err
 	}
-	profile, err := h.store.hostSchedulingProfile(ctx, page.HostUserID)
-	if err != nil {
-		return BookingPreview{}, err
-	}
-	paused, _, err := h.store.pagePaused(ctx, page.HostUserID, profile)
-	if err != nil || paused {
-		return BookingPreview{}, err
+	profile, open := h.store.openForBooking(ctx, page)
+	if open.err != nil || open.paused {
+		return BookingPreview{}, open.err
 	}
 	profile = h.store.brandSchedulingProfile(ctx, page.HostUserID, profile)
 	out := BookingPreview{Available: true, Title: profile.Title, DurationMinutes: profile.DurationMinutes, Lengths: bookingLengths(profile)}
