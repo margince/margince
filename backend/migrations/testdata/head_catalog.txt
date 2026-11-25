@@ -3344,24 +3344,6 @@ public.company_address_country_goes_stale() secdef=false cfg=- acl=- BEGIN
 END;
 
 public.company_address_country_pkey CREATE UNIQUE INDEX company_address_country_pkey ON public.company_address_country USING btree (company_id)
-public.company_brief acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
-public.company_brief.company_brief_company_fkey FOREIGN KEY (company_id) REFERENCES company(id) ON DELETE CASCADE
-public.company_brief.company_brief_generated_by_check CHECK ((generated_by = ANY (ARRAY['model'::text, 'deterministic'::text])))
-public.company_brief.company_brief_pkey PRIMARY KEY (id)
-public.company_brief.company_brief_user_id_company_id_key UNIQUE (user_id, company_id)
-public.company_brief.company_brief_user_id_fkey FOREIGN KEY (user_id) REFERENCES app_user(id) ON DELETE CASCADE
-public.company_brief.company_id uuid NOT NULL gen=- def=-
-public.company_brief.fingerprint text NOT NULL gen=- def=-
-public.company_brief.generated_at timestamp with time zone NOT NULL gen=- def=-
-public.company_brief.generated_by text NOT NULL gen=- def=-
-public.company_brief.id uuid NOT NULL gen=- def=uuidv7()
-public.company_brief.payload jsonb NOT NULL gen=- def=-
-public.company_brief.text_bound_insert CREATE TRIGGER text_bound_insert AFTER INSERT ON public.company_brief FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"fingerprint": 20000, "generated_by": 20000}'::jsonb)) EXECUTE FUNCTION refuse_oversized_text('{"fingerprint":20000,"generated_by":20000}')
-public.company_brief.text_bound_update CREATE TRIGGER text_bound_update AFTER UPDATE ON public.company_brief FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"fingerprint": 20000, "generated_by": 20000}'::jsonb)) EXECUTE FUNCTION refuse_oversized_text('{"fingerprint":20000,"generated_by":20000}')
-public.company_brief.user_id uuid NOT NULL gen=- def=-
-public.company_brief_company_ix CREATE INDEX company_brief_company_ix ON public.company_brief USING btree (company_id)
-public.company_brief_pkey CREATE UNIQUE INDEX company_brief_pkey ON public.company_brief USING btree (id)
-public.company_brief_user_id_company_id_key CREATE UNIQUE INDEX company_brief_user_id_company_id_key ON public.company_brief USING btree (user_id, company_id)
 public.company_domain acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.company_domain.archived_at timestamp with time zone gen=- def=-
 public.company_domain.captured_by text NOT NULL gen=- def=-
@@ -3426,21 +3408,6 @@ public.company_domain_disposition.text_bound_update CREATE TRIGGER text_bound_up
 public.company_domain_disposition.updated_at timestamp with time zone NOT NULL gen=- def=now()
 public.company_domain_disposition_pkey CREATE UNIQUE INDEX company_domain_disposition_pkey ON public.company_domain_disposition USING btree (id)
 public.company_domain_pkey CREATE UNIQUE INDEX company_domain_pkey ON public.company_domain USING btree (id)
-public.company_dossier acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
-public.company_dossier.company_dossier_company_fkey FOREIGN KEY (company_id) REFERENCES company(id) ON DELETE CASCADE
-public.company_dossier.company_dossier_generated_by_check CHECK ((generated_by = ANY (ARRAY['model'::text, 'deterministic'::text])))
-public.company_dossier.company_dossier_pkey PRIMARY KEY (user_id, company_id)
-public.company_dossier.company_dossier_user_fkey FOREIGN KEY (user_id) REFERENCES app_user(id) ON DELETE CASCADE
-public.company_dossier.company_id uuid NOT NULL gen=- def=-
-public.company_dossier.fingerprint text NOT NULL gen=- def=-
-public.company_dossier.generated_at timestamp with time zone NOT NULL gen=- def=now()
-public.company_dossier.generated_by text NOT NULL gen=- def=-
-public.company_dossier.payload jsonb NOT NULL gen=- def=-
-public.company_dossier.text_bound_insert CREATE TRIGGER text_bound_insert AFTER INSERT ON public.company_dossier FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"fingerprint": 20000, "generated_by": 20000}'::jsonb)) EXECUTE FUNCTION refuse_oversized_text('{"fingerprint":20000,"generated_by":20000}')
-public.company_dossier.text_bound_update CREATE TRIGGER text_bound_update AFTER UPDATE ON public.company_dossier FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"fingerprint": 20000, "generated_by": 20000}'::jsonb)) EXECUTE FUNCTION refuse_oversized_text('{"fingerprint":20000,"generated_by":20000}')
-public.company_dossier.user_id uuid NOT NULL gen=- def=-
-public.company_dossier_company_ix CREATE INDEX company_dossier_company_ix ON public.company_dossier USING btree (company_id)
-public.company_dossier_pkey CREATE UNIQUE INDEX company_dossier_pkey ON public.company_dossier USING btree (user_id, company_id)
 public.company_fact acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.company_fact.captured_at timestamp with time zone NOT NULL gen=- def=now()
 public.company_fact.captured_by text NOT NULL gen=- def=-
@@ -3529,21 +3496,6 @@ BEGIN
 END;
 
 public.company_geocode_state_pkey CREATE UNIQUE INDEX company_geocode_state_pkey ON public.company_geocode_state USING btree (company_id)
-public.company_growth_fit acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
-public.company_growth_fit.company_growth_fit_company_fkey FOREIGN KEY (company_id) REFERENCES company(id) ON DELETE CASCADE
-public.company_growth_fit.company_growth_fit_generated_by_check CHECK ((generated_by = ANY (ARRAY['model'::text, 'deterministic'::text])))
-public.company_growth_fit.company_growth_fit_pkey PRIMARY KEY (user_id, company_id)
-public.company_growth_fit.company_growth_fit_user_fkey FOREIGN KEY (user_id) REFERENCES app_user(id) ON DELETE CASCADE
-public.company_growth_fit.company_id uuid NOT NULL gen=- def=-
-public.company_growth_fit.fingerprint text NOT NULL gen=- def=-
-public.company_growth_fit.generated_at timestamp with time zone NOT NULL gen=- def=now()
-public.company_growth_fit.generated_by text NOT NULL gen=- def=-
-public.company_growth_fit.payload jsonb NOT NULL gen=- def=-
-public.company_growth_fit.text_bound_insert CREATE TRIGGER text_bound_insert AFTER INSERT ON public.company_growth_fit FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"fingerprint": 20000, "generated_by": 20000}'::jsonb)) EXECUTE FUNCTION refuse_oversized_text('{"fingerprint":20000,"generated_by":20000}')
-public.company_growth_fit.text_bound_update CREATE TRIGGER text_bound_update AFTER UPDATE ON public.company_growth_fit FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"fingerprint": 20000, "generated_by": 20000}'::jsonb)) EXECUTE FUNCTION refuse_oversized_text('{"fingerprint":20000,"generated_by":20000}')
-public.company_growth_fit.user_id uuid NOT NULL gen=- def=-
-public.company_growth_fit_company_ix CREATE INDEX company_growth_fit_company_ix ON public.company_growth_fit USING btree (company_id)
-public.company_growth_fit_pkey CREATE UNIQUE INDEX company_growth_fit_pkey ON public.company_growth_fit USING btree (user_id, company_id)
 public.company_linkedin_url_key CREATE UNIQUE INDEX company_linkedin_url_key ON public.company USING btree (lower(linkedin_url)) WHERE ((linkedin_url IS NOT NULL) AND (archived_at IS NULL))
 public.company_no_ancestor_cycle() secdef=false cfg=- acl=- 
 DECLARE
@@ -4143,21 +4095,6 @@ public.contact_address_country_goes_stale() secdef=false cfg=- acl=- BEGIN
 END;
 
 public.contact_address_country_pkey CREATE UNIQUE INDEX contact_address_country_pkey ON public.contact_address_country USING btree (contact_id)
-public.contact_brief acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
-public.contact_brief.contact_brief_contact_fkey FOREIGN KEY (contact_id) REFERENCES contact(id) ON DELETE CASCADE
-public.contact_brief.contact_brief_generated_by_check CHECK ((generated_by = ANY (ARRAY['model'::text, 'deterministic'::text])))
-public.contact_brief.contact_brief_pkey PRIMARY KEY (user_id, contact_id)
-public.contact_brief.contact_brief_user_fkey FOREIGN KEY (user_id) REFERENCES app_user(id) ON DELETE CASCADE
-public.contact_brief.contact_id uuid NOT NULL gen=- def=-
-public.contact_brief.fingerprint text NOT NULL gen=- def=-
-public.contact_brief.generated_at timestamp with time zone NOT NULL gen=- def=now()
-public.contact_brief.generated_by text NOT NULL gen=- def=-
-public.contact_brief.payload jsonb NOT NULL gen=- def=-
-public.contact_brief.text_bound_insert CREATE TRIGGER text_bound_insert AFTER INSERT ON public.contact_brief FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"fingerprint": 20000, "generated_by": 20000}'::jsonb)) EXECUTE FUNCTION refuse_oversized_text('{"fingerprint":20000,"generated_by":20000}')
-public.contact_brief.text_bound_update CREATE TRIGGER text_bound_update AFTER UPDATE ON public.contact_brief FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"fingerprint": 20000, "generated_by": 20000}'::jsonb)) EXECUTE FUNCTION refuse_oversized_text('{"fingerprint":20000,"generated_by":20000}')
-public.contact_brief.user_id uuid NOT NULL gen=- def=-
-public.contact_brief_contact_ix CREATE INDEX contact_brief_contact_ix ON public.contact_brief USING btree (contact_id)
-public.contact_brief_pkey CREATE UNIQUE INDEX contact_brief_pkey ON public.contact_brief USING btree (user_id, contact_id)
 public.contact_channel_identity acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.contact_channel_identity.archived_at timestamp with time zone gen=- def=-
 public.contact_channel_identity.blocked_at timestamp with time zone gen=- def=-
@@ -5515,21 +5452,6 @@ public.deal_stage_history.write_seq bigint gen=- def=nextval('deal_stage_history
 public.deal_stage_history_deal_id_id_key CREATE UNIQUE INDEX deal_stage_history_deal_id_id_key ON public.deal_stage_history USING btree (deal_id, id)
 public.deal_stage_history_pkey CREATE UNIQUE INDEX deal_stage_history_pkey ON public.deal_stage_history USING btree (id)
 public.deal_stage_history_write_seq acl=margince_owner=rwU/margince_owner,margince_app=rU/margince_owner rls=false force=false
-public.deal_status_card acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
-public.deal_status_card.deal_id uuid NOT NULL gen=- def=-
-public.deal_status_card.deal_status_card_deal_fkey FOREIGN KEY (deal_id) REFERENCES deal(id) ON DELETE CASCADE
-public.deal_status_card.deal_status_card_generated_by_check CHECK ((generated_by = ANY (ARRAY['model'::text, 'deterministic'::text])))
-public.deal_status_card.deal_status_card_pkey PRIMARY KEY (user_id, deal_id)
-public.deal_status_card.deal_status_card_user_fkey FOREIGN KEY (user_id) REFERENCES app_user(id) ON DELETE CASCADE
-public.deal_status_card.fingerprint text NOT NULL gen=- def=-
-public.deal_status_card.generated_at timestamp with time zone NOT NULL gen=- def=now()
-public.deal_status_card.generated_by text NOT NULL gen=- def=-
-public.deal_status_card.payload jsonb NOT NULL gen=- def=-
-public.deal_status_card.text_bound_insert CREATE TRIGGER text_bound_insert AFTER INSERT ON public.deal_status_card FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"fingerprint": 20000, "generated_by": 20000}'::jsonb)) EXECUTE FUNCTION refuse_oversized_text('{"fingerprint":20000,"generated_by":20000}')
-public.deal_status_card.text_bound_update CREATE TRIGGER text_bound_update AFTER UPDATE ON public.deal_status_card FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"fingerprint": 20000, "generated_by": 20000}'::jsonb)) EXECUTE FUNCTION refuse_oversized_text('{"fingerprint":20000,"generated_by":20000}')
-public.deal_status_card.user_id uuid NOT NULL gen=- def=-
-public.deal_status_card_deal_ix CREATE INDEX deal_status_card_deal_ix ON public.deal_status_card USING btree (deal_id)
-public.deal_status_card_pkey CREATE UNIQUE INDEX deal_status_card_pkey ON public.deal_status_card USING btree (user_id, deal_id)
 public.deal_suggestion acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.deal_suggestion.accepted_deal_id uuid gen=- def=-
 public.deal_suggestion.captured_by text NOT NULL gen=- def=-
@@ -6238,6 +6160,30 @@ public.fx_rate.superseded_at timestamp with time zone gen=- def=-
 public.fx_rate.to_currency currency_code NOT NULL gen=- def=-
 public.fx_rate_current_pair_day CREATE UNIQUE INDEX fx_rate_current_pair_day ON public.fx_rate USING btree (from_currency, to_currency, rate_date) WHERE (superseded_at IS NULL)
 public.fx_rate_pkey CREATE UNIQUE INDEX fx_rate_pkey ON public.fx_rate USING btree (id)
+public.generated_summary acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
+public.generated_summary.company_id uuid gen=- def=-
+public.generated_summary.contact_id uuid gen=- def=-
+public.generated_summary.deal_id uuid gen=- def=-
+public.generated_summary.fingerprint text NOT NULL gen=- def=-
+public.generated_summary.generated_at timestamp with time zone NOT NULL gen=- def=now()
+public.generated_summary.generated_by text NOT NULL gen=- def=-
+public.generated_summary.generated_summary_company_fkey FOREIGN KEY (company_id) REFERENCES company(id) ON DELETE CASCADE
+public.generated_summary.generated_summary_contact_fkey FOREIGN KEY (contact_id) REFERENCES contact(id) ON DELETE CASCADE
+public.generated_summary.generated_summary_deal_fkey FOREIGN KEY (deal_id) REFERENCES deal(id) ON DELETE CASCADE
+public.generated_summary.generated_summary_generated_by_check CHECK ((generated_by = ANY (ARRAY['model'::text, 'deterministic'::text])))
+public.generated_summary.generated_summary_kind_check CHECK ((kind = ANY (ARRAY['company_brief'::text, 'company_dossier'::text, 'company_growth_fit'::text, 'contact_brief'::text, 'deal_status_card'::text])))
+public.generated_summary.generated_summary_kind_names_its_record CHECK (((num_nonnulls(company_id, contact_id, deal_id) = 1) AND ((contact_id IS NOT NULL) = (kind = 'contact_brief'::text)) AND ((deal_id IS NOT NULL) = (kind = 'deal_status_card'::text))))
+public.generated_summary.generated_summary_reader_kind_record_key UNIQUE NULLS NOT DISTINCT (user_id, kind, company_id, contact_id, deal_id)
+public.generated_summary.generated_summary_user_fkey FOREIGN KEY (user_id) REFERENCES app_user(id) ON DELETE CASCADE
+public.generated_summary.kind text NOT NULL gen=- def=-
+public.generated_summary.payload jsonb NOT NULL gen=- def=-
+public.generated_summary.text_bound_insert CREATE TRIGGER text_bound_insert AFTER INSERT ON public.generated_summary FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"kind": 20000, "fingerprint": 20000, "generated_by": 20000}'::jsonb)) EXECUTE FUNCTION refuse_oversized_text('{"fingerprint":20000,"generated_by":20000,"kind":20000}')
+public.generated_summary.text_bound_update CREATE TRIGGER text_bound_update AFTER UPDATE ON public.generated_summary FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"kind": 20000, "fingerprint": 20000, "generated_by": 20000}'::jsonb)) EXECUTE FUNCTION refuse_oversized_text('{"fingerprint":20000,"generated_by":20000,"kind":20000}')
+public.generated_summary.user_id uuid NOT NULL gen=- def=-
+public.generated_summary_company_ix CREATE INDEX generated_summary_company_ix ON public.generated_summary USING btree (company_id) WHERE (company_id IS NOT NULL)
+public.generated_summary_contact_ix CREATE INDEX generated_summary_contact_ix ON public.generated_summary USING btree (contact_id) WHERE (contact_id IS NOT NULL)
+public.generated_summary_deal_ix CREATE INDEX generated_summary_deal_ix ON public.generated_summary USING btree (deal_id) WHERE (deal_id IS NOT NULL)
+public.generated_summary_reader_kind_record_key CREATE UNIQUE INDEX generated_summary_reader_kind_record_key ON public.generated_summary USING btree (user_id, kind, company_id, contact_id, deal_id) NULLS NOT DISTINCT
 public.geocode_cache acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.geocode_cache.created_at timestamp with time zone NOT NULL gen=- def=now()
 public.geocode_cache.geocode_cache_pkey PRIMARY KEY (query)

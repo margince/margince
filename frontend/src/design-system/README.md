@@ -139,8 +139,8 @@ one, or one in an inline style.
 
 **Two neutral inks.** `--textPrimary` carries a heading, a record's name and body prose.
 `--textSecondary` supports: a placeholder first, and each other role is decided at the element. Dark
-lifts both. `--textPrimary` goes from `#182c28` to `#edf6f4`, and `--textSecondary` from `#55645f`
-to `#9aa8a3`. Anything quieter than the second uses the same ink at a smaller
+lifts both. `--textPrimary` goes from `#182c28` to `#e1e8e6`, and `--textSecondary` from `#55645f`
+to `#adb9b6`. Anything quieter than the second uses the same ink at a smaller
 size or a lighter weight; there is no third neutral.
 
 `Foundations/Typography` in Storybook draws the body levels, the heading ladder and the pairs.
@@ -159,9 +159,10 @@ level 4 for anything deeper. `surfaces.css` paints every level, and a component 
 own. The one exception is a fixed state colour, such as a pressed reading or the selected row:
 `surfaces.ledger.txt` names each one with its reason.
 
-Each level also has its hairline (`--ladder1Edge` to `--ladder4Edge`). Level 2's is the weakest: 1.07:1 on
-its ground in both themes, since its ground already parts it from the card. Level 1 stands at
-1.32:1 in light, and from level 2 down each is stronger than the last, up to 1.51:1.
+Each level also has its hairline (`--ladder1Edge` to `--ladder4Edge`). Level 2's is the weakest, 1.07:1 on
+its ground in light and 1.12:1 in dark, since its ground already parts it from the card. Level 1
+stands at 1.32:1 in light and 1.31:1 in dark, and from level 2 down each is stronger than the last,
+up to 1.50:1 in light and 1.58:1 in dark.
 A pane's border and the rule under its head read it as `var(--groundEdge)`. A dialog, popover,
 menu or side sheet keeps its own surface, and a card in it starts again at level 2.
 `Foundations/Elevation` draws the ladder in both themes.
@@ -197,7 +198,7 @@ Five states, and a screen may not make up a new one.
 | State | What it says | Base (light / dark) |
 |---|---|---|
 | information | The neutral report, and work still running: an `info` mark, the ring of a spinner, a row a job is still writing. | `#0485f7` / `#0485f7` |
-| success | A good end: the thing finished the way the reader hoped. | `#17c964` / `#17c964` |
+| success | A good end: the thing finished the way the reader hoped. | `#17c964` / `#51d75e` |
 | warning | A note before the fact: the sentence that stops an error while it can still be stopped. | `#f5a524` / `#f7b750` |
 | danger | The serious one, or the one nobody can take back: the write that failed, the record that cannot come back. | `#ff383c` / `#db3b3e` |
 | discovery | What is new to this reader: onboarding, a feature they do not know yet. The one state that is not a verdict about the record. | `#964ac0` / `#b76be3` |
@@ -217,8 +218,8 @@ The ground of a filled control is the tone's `--<state>Text`, never its base. A 
 seen at the size of a bar or a dot, and no one ink sits on all five. White gives 2.04:1 on
 `--warning`, an almost black ink gives 3.19:1 on `--discovery`, and the dark danger base takes
 neither. The Text token carries ink, so it fills a button that deletes, a done disc and a `primary`
-badge. Their letters are in `--textOnStatusControl`. It is the one token in the palette that changes
-with the theme, because the ground under it does.
+badge. Their letters are in `--textOnStatusControl`. It changes with the theme, because the ground under
+it does.
 
 The light ink, surface and border of discovery are stated as hex values (`#48245d`, `#eed7fc`,
 `#d8a0f7`). The design source gives those values directly. No share of `#964ac0` over
@@ -271,7 +272,7 @@ Paint it where that is true and nowhere else. A card tinted indigo for looks tel
 that screen something false about who decided.
 
 It is a family of its own for the same reason the five states are: one meaning per colour.
-`--accent` (deep teal in light, green in dark) is the brand and the primary action. The state hues report how something
+`--accent` (deep teal in light, a lighter teal in dark) is the brand and the primary action. The state hues report how something
 went. None of them means "written by a model". The top of `tokens.css` states the split, and
 `tokens.test.ts` pins it.
 
@@ -283,7 +284,7 @@ the rule and the gate.
 | `--ai` | `#5b61d6` | The line and the mark: a solid border on a staged card the reader has focused or accepted, a focus ring, a hairline. The strongest of the four, so the rarest. |
 | `--aiLight` | `rgba(91, 97, 214, 0.08)` | The ground under text an agent wrote: staged cards, the wash of the onboarding stage, a `badge-ai` fill. |
 | `--aiMed` | `rgba(91, 97, 214, 0.3)` | The border of something staged. Most often `1.5px dashed`, which is half the signal (see below). |
-| `--aiText` | `#3f45b0` light, `#9ba0f0` dark | Text and glyphs on `--aiLight`. Never `--ai` for text over the tint: the two are so close that it fails AA on the ground its own family paints. |
+| `--aiText` | `#3f45b0` light, `#a7adfe` dark | Text and glyphs on `--aiLight`. Never `--ai` for text over the tint: the two are so close that it fails AA on the ground its own family paints. |
 
 **Dashed means proposed; solid means real.** `1.5px dashed var(--aiMed)` marks a thing an agent has
 staged and a human has not accepted yet. It marks `.staging-card`, `.deal-card.staged`,

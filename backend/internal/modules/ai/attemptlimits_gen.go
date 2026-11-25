@@ -42,7 +42,6 @@ var certifiedAttemptTimeouts = map[Task]certifiedLimit{
 	}},
 	// records/draft_reply/gemini_gemini-3.1-pro-preview_cloud_frontier.json: p95 12.492s
 	"draft_reply": {limit: 30 * time.Second, measured: []boundModel{
-		{provider: "gemini", model: "gemini-3.1-flash-lite"},
 		{provider: "gemini", model: "gemini-3.1-pro-preview"},
 		{provider: "gemini", model: "gemini-3.5-flash"},
 		{provider: "gemini", model: "gemini-3.5-flash-lite"},
@@ -126,7 +125,7 @@ var certifiedAttemptTimeouts = map[Task]certifiedLimit{
 		{provider: "openai_compatible", model: "openai/gpt-oss-120b"},
 		{provider: "openai_compatible", model: "qwen/qwen3.8-27b"},
 	}},
-	// records/rewrite/gemini_gemini-3.8-flash_cloud_frontier.json: p95 4.401s
+	// records/rewrite/gemini_gemini-3.8-flash_cloud_frontier.json: p95 4.954s
 	"rewrite": {limit: 30 * time.Second, measured: []boundModel{
 		{provider: "gemini", model: "gemini-3.5-flash-lite"},
 		{provider: "gemini", model: "gemini-3.6-flash"},

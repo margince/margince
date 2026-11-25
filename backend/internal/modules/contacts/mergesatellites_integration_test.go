@@ -149,9 +149,9 @@ func TestAMergeCarriesOpenWorkAndDropsTheStaleBrief(t *testing.T) {
 		INSERT INTO contact_signature_enrich_state (contact_id, activity_id, last_activity_at)
 		VALUES ($1, $2, now())`, retired.ContactID, activity)
 	e.execAs(ctx, t, `
-		INSERT INTO contact_brief (user_id, contact_id, fingerprint, payload, generated_by)
-		VALUES ($1, $2, 'fp-retired', '{}'::jsonb, 'deterministic'),
-		       ($1, $3, 'fp-survivor', '{}'::jsonb, 'deterministic')`,
+		INSERT INTO generated_summary (user_id, kind, contact_id, fingerprint, payload, generated_by)
+		VALUES ($1, 'contact_brief', $2, 'fp-retired', '{}'::jsonb, 'deterministic'),
+		       ($1, 'contact_brief', $3, 'fp-survivor', '{}'::jsonb, 'deterministic')`,
 		reader, retired.ContactID, survivor.ContactID)
 
 	if _, err := e.store.MergeContact(ctx, retired.ContactID, survivor.ContactID, nil); err != nil {
@@ -168,7 +168,7 @@ func TestAMergeCarriesOpenWorkAndDropsTheStaleBrief(t *testing.T) {
 		t.Errorf("%d enrichment attempt(s) still name the merged-away contact, want 0", n)
 	}
 	if n := e.countAs(ctx, t,
-		`SELECT count(*) FROM contact_brief WHERE contact_id IN ($1, $2)`,
+		`SELECT count(*) FROM generated_summary WHERE contact_id IN ($1, $2)`,
 		retired.ContactID, survivor.ContactID); n != 0 {
 		t.Errorf("%d brief(s) survived the merge, want 0 — both were written about a record that "+
 			"no longer stands in the shape they describe", n)

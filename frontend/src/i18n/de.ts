@@ -2762,6 +2762,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Erfasster Austausch zurückgenommen",
   "history.field.acquisition_request_retracted":
     "Anfrage aus der Herkunft zurückgenommen",
+  "history.field.impersonation_warning_raised":
+    "Warnung vor möglicher Täuschung durch spätere E-Mail ausgelöst",
   "history.field.impersonation_warning_cleared":
     "Warnung vor möglicher Täuschung aufgehoben",
   "history.field.impersonation_warning_carried":
