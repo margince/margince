@@ -15,9 +15,9 @@ input and output schema in folds below it. What a tool may do and whether a huma
 |---|---:|
 | Tools | 48 |
 | Resources | 14 |
-| Tool catalog | 243.0 KB |
+| Tool catalog | 243.9 KB |
 | Resource catalog | 5.5 KB |
-| Approx. wire tokens | 63622 |
+| Approx. wire tokens | 63844 |
 | Largest tool | `read_details` (15.8 KB) |
 | Scopes rendered | `read`, `draft`, `write`, `send`, `enrich` |
 
@@ -34,9 +34,9 @@ tool adds to that listing, and what it costs each scheduled agent, agent by agen
 |---|---:|---:|---|
 | Output schemas | 33.7 KB | 13% | **No**: a result's shape, never listed to a model |
 | Descriptions (incl. governance clause) | 51.0 KB | 20% | Yes, every step |
-| Input schemas | 146.8 KB | 60% | Yes, every step |
+| Input schemas | 147.6 KB | 60% | Yes, every step |
 | _Names, annotations, punctuation_ | 11.6 KB | 4% | Partly |
-| **Description + input schema** | **197.8 KB** | **81%** | **the recurring cost** |
+| **Description + input schema** | **198.7 KB** | **81%** | **the recurring cost** |
 
 Output schemas count in the total but are never sent to a model;
 descriptions and input schemas are what each step pays for.
@@ -68,7 +68,7 @@ descriptions and input schemas are what each step pays for.
 | [`archive_record`](#archive_record) | Archive a record |  |  | 300 |
 | [`bulk_update_records`](#bulk_update_records) | Change many records at once |  |  | 892 |
 | [`change_access`](#change_access) | Share records and set up members and teams |  |  | 1152 |
-| [`change_activities`](#change_activities) | Log, plan and file activities |  |  | 2977 |
+| [`change_activities`](#change_activities) | Log, plan and file activities |  |  | 2980 |
 | [`change_attention`](#change_attention) | Act on proposals, notices and the weekly plan |  |  | 1842 |
 | [`change_capture`](#change_capture) | Decide what comes into the CRM |  |  | 1891 |
 | [`change_compliance`](#change_compliance) | Record consent, stops, holds and privacy work |  |  | 1274 |
@@ -95,7 +95,7 @@ descriptions and input schemas are what each step pays for.
 | [`read_approval`](#read_approval) | Read one staged action in full | yes | [`ui://margince/approval.html`](#approval_view) | 154 |
 | [`read_attention`](#read_attention) | See what needs attention | yes | [`ui://margince/attention.html`](#attention_view) | 365 |
 | [`read_context`](#read_context) | Get the story so far | yes | [`ui://margince/context.html`](#context_view) | 413 |
-| [`read_details`](#read_details) | Read a record's panels and the day's lists | yes |  | 4600 |
+| [`read_details`](#read_details) | Read a record's panels and the day's lists | yes |  | 4604 |
 | [`read_forecast`](#read_forecast) | Read the forecast and how it moved | yes | [`ui://margince/forecast.html`](#forecast_view) | 978 |
 | [`read_import`](#read_import) | Read an import run or the import format | yes |  | 235 |
 | [`read_lists`](#read_lists) | Find and read lists | yes |  | 797 |
@@ -105,7 +105,7 @@ descriptions and input schemas are what each step pays for.
 | [`read_reports`](#read_reports) | Read sales reports | yes |  | 3353 |
 | [`read_tags`](#read_tags) | Read tags | yes |  | 358 |
 | [`read_view`](#read_view) | Read a view | yes |  | 1921 |
-| [`read_workspace`](#read_workspace) | Read how this workspace is set up | yes |  | 2779 |
+| [`read_workspace`](#read_workspace) | Read how this workspace is set up | yes |  | 2994 |
 | [`resolve_duplicates`](#resolve_duplicates) | Merge two records or dismiss a flagged pair |  |  | 618 |
 | [`run_research`](#run_research) | Run AI work for your user |  |  | 1365 |
 | [`schedule_meeting`](#schedule_meeting) | Invite to a meeting |  |  | 515 |
@@ -1021,7 +1021,7 @@ archive_document, assign_inquiry.)
       "type": "string"
     },
     "links": {
-      "description": "log, task only: Every record this was about, ALL OF THEM in this call — EXCEPT a project, which this verb REFUSES because filing there marks commercial correspondence. A meeting or a call is with a CONTACT and reaches their company through them — linking one to a company is REFUSED, so name the contact who was there and the company follows from where they work. A meeting linked to the deal alone sits on no attendee's timeline and the company sees nothing. Adding a link AFTERWARDS is a second write — and a later link onto a project stages an approval that waits for the user's yes before it takes effect.",
+      "description": "log, task only: Every record this was about, ALL OF THEM in this call: adding one AFTERWARDS is a second write. A project is REFUSED here (project_filing_needs_approval), because filing there marks commercial correspondence: add it afterwards with relink, which stages an approval that waits for the user's yes before it takes effect. A meeting or a call is with a CONTACT and reaches their company through them — linking one to a company is REFUSED, so name the contact who was there and the company follows from where they work. A meeting linked to the deal alone sits on no attendee's timeline and the company sees nothing.",
       "items": {
         "additionalProperties": false,
         "properties": {
@@ -7273,6 +7273,7 @@ read_attention for what needs the user now, and read_record for a record's own f
     "note_activity_id": {
       "description": "deal_margince_changes only",
       "items": {
+        "format": "uuid",
         "type": "string"
       },
       "type": "array"
@@ -9570,6 +9571,50 @@ user first for the actions ai_call, ai_calls, member_retirement.)
     "kinds": {
       "description": "my_ai_activity only",
       "items": {
+        "enum": [
+          "morning_brief",
+          "overnight_at_risk_sweep",
+          "document_extract",
+          "site_read",
+          "brief_ranking",
+          "capture_classify",
+          "capture_confidentiality_verdict",
+          "capture_counterparty_verdict",
+          "cert_judge",
+          "cold_start",
+          "deal_health",
+          "draft_reply",
+          "enrich",
+          "extension_task",
+          "growth_fit",
+          "nl_search",
+          "offer_draft",
+          "rate_extract",
+          "signal_extract",
+          "site_extract",
+          "site_fact_extract",
+          "site_triage",
+          "stage_evidence_extract",
+          "summarize",
+          "transcript",
+          "transcript_propose",
+          "voice_build",
+          "corpus_ask",
+          "weekly_review",
+          "weekly_learnings",
+          "propose_roles",
+          "owed_verdict",
+          "request_settlement",
+          "account_scan",
+          "tag_suggest",
+          "report_setup",
+          "report_interpret",
+          "reader_rendering",
+          "deal_verdict",
+          "rewrite",
+          "chat_summary",
+          "chat_task_reading"
+        ],
         "type": "string"
       },
       "type": "array"
@@ -9736,6 +9781,18 @@ user first for the actions ai_call, ai_calls, member_retirement.)
     "state": {
       "description": "notice_case_reviews, notice_cases only",
       "items": {
+        "enum": [
+          "assigned",
+          "blocked",
+          "completed",
+          "delivery_failed",
+          "exempt_with_reason",
+          "not_required",
+          "open",
+          "provided_elsewhere",
+          "queued",
+          "source_review"
+        ],
         "type": "string"
       },
       "type": "array"
