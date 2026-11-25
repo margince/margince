@@ -17,17 +17,25 @@ type storedSummary struct {
 	crmcontracts.ApprovalSummaryParts
 	SystemText *systemtext.Message `json:"_system_text,omitempty"` //nolint:tagliatelle // The private envelope key cannot collide with a public contract field.
 	EffectText *systemtext.Message `json:"_effect_text,omitempty"` //nolint:tagliatelle // The private envelope key cannot collide with a public contract field.
+	Why        *storedWhy          `json:"_why,omitempty"`         //nolint:tagliatelle // The private envelope key cannot collide with a public contract field.
 }
 
-func marshalSystemSummary(ctx context.Context, summary string, parts *crmcontracts.ApprovalSummaryParts, message, effect *systemtext.Message) (json.RawMessage, error) {
-	if message == nil && effect == nil {
-		return marshalSummaryParts(parts)
+func marshalSystemSummary(ctx context.Context, in StageInput) (json.RawMessage, error) {
+	why := storedGrounds(ctx, in.Why)
+	if in.SystemText == nil && in.EffectSystemText == nil && why == nil {
+		return marshalSummaryParts(in.SummaryParts)
 	}
+	parts := in.SummaryParts
 	if parts == nil {
-		parts = &crmcontracts.ApprovalSummaryParts{Sentence: summary, Fields: []crmcontracts.ApprovalSummaryField{}}
+		parts = &crmcontracts.ApprovalSummaryParts{Sentence: in.Summary, Fields: []crmcontracts.ApprovalSummaryField{}}
 	}
-	metadata := systemtext.ForWrite(ctx, message, parts.Sentence, "")
-	return json.Marshal(storedSummary{ApprovalSummaryParts: *parts, SystemText: metadata, EffectText: systemtext.BoundEffect(effect)})
+	var metadata *systemtext.Message
+	if in.SystemText != nil {
+		metadata = systemtext.ForWrite(ctx, in.SystemText, parts.Sentence, "")
+	}
+	return json.Marshal(storedSummary{
+		ApprovalSummaryParts: *parts, SystemText: metadata, EffectText: systemtext.BoundEffect(in.EffectSystemText), Why: why,
+	})
 }
 
 // SummarySystemText reads provenance from the private stored envelope.

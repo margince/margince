@@ -20,11 +20,11 @@ func TestUpdateRecordToolClearsOnANullAndRefusesWhatItCannotClear(t *testing.T) 
 
 	// A field this agent wrote is not a human's, so the clear applies at once.
 	if _, err := invoke("update_record", fmt.Sprintf(
-		`{"record_type":"contact","id":%q,"fields":{"title":"CTO"}}`, e.contactID)); err != nil {
+		`{"why":"A test asks for this change.","record_type":"contact","id":%q,"fields":{"title":"CTO"}}`, e.contactID)); err != nil {
 		t.Fatalf("setting the title: %v", err)
 	}
 	if _, err := invoke("update_record", fmt.Sprintf(
-		`{"record_type":"contact","id":%q,"fields":{"title":null}}`, e.contactID)); err != nil {
+		`{"why":"A test asks for this change.","record_type":"contact","id":%q,"fields":{"title":null}}`, e.contactID)); err != nil {
 		t.Fatalf("clearing the title with a null: %v", err)
 	}
 	if _, title := contactNameAndTitle(t, invoke, e.contactID); title != "" {
@@ -33,7 +33,7 @@ func TestUpdateRecordToolClearsOnANullAndRefusesWhatItCannotClear(t *testing.T) 
 
 	// A field the contact cannot clear is refused, never answered "updated".
 	_, err := invoke("update_record", fmt.Sprintf(
-		`{"record_type":"contact","id":%q,"fields":{"full_name":null}}`, e.contactID))
+		`{"why":"A test asks for this change.","record_type":"contact","id":%q,"fields":{"full_name":null}}`, e.contactID))
 	if err == nil || !strings.Contains(err.Error(), "full_name") {
 		t.Errorf("a null full_name → %v, want a refusal naming full_name", err)
 	}
@@ -46,7 +46,7 @@ func TestUpdateRecordToolClearsOnANullAndRefusesWhatItCannotClear(t *testing.T) 
 	}
 	edgeID, _ := wireEdge(t, created)
 	cleared, err := invoke("update_record", fmt.Sprintf(
-		`{"record_type":"relationship","id":%q,"fields":{"role":null}}`, edgeID))
+		`{"why":"A test asks for this change.","record_type":"relationship","id":%q,"fields":{"role":null}}`, edgeID))
 	if err != nil {
 		t.Fatalf("clearing the role with a null: %v", err)
 	}
