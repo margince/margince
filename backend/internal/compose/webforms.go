@@ -21,6 +21,7 @@ import (
 
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	"github.com/margince/margince/backend/internal/compose/importcells"
 	"github.com/margince/margince/backend/internal/compose/inquiries"
 	"github.com/margince/margince/backend/internal/compose/webformlead"
 	"github.com/margince/margince/backend/internal/modules/activities"
@@ -59,9 +60,9 @@ func newWebFormLander(db *database.DB, pool *pgxpool.Pool, log *slog.Logger) web
 // sees no refusal, so the refusal's wording is dropped.
 //
 //craft:ignore naked-any the value is a lead CustomFields entry, shaped by the column type
-func webFormFieldValue(name string, column fieldcatalog.Column, text string) (any, bool) {
-	value, problem := checkCell(name, column, text, false)
-	return value, problem == nil
+func webFormFieldValue(_ string, column fieldcatalog.Column, text string) (any, bool) {
+	value, why := importcells.FieldValue(column, text, false)
+	return value, why.Code == ""
 }
 
 // WithWebFormThrottle sets the intake throttle's limits from the deployment's

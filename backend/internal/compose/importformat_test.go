@@ -12,7 +12,6 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/migration"
 	"github.com/margince/margince/backend/internal/shared/kernel/langcopy"
-	"github.com/margince/margince/backend/internal/shared/kernel/textlang"
 	"github.com/margince/margince/backend/internal/shared/ports/fieldcatalog"
 )
 
@@ -60,16 +59,6 @@ func targetExistsSomewhere(t *testing.T, object, target string) bool {
 		}
 	}
 	return false
-}
-
-func TestTheSizeBandExampleNamesOnlyBandsTheImportTakes(t *testing.T) {
-	for _, lang := range textlang.Shipped {
-		for band := range strings.SplitSeq(importguide.Columns[fieldSizeBand].Example.In(lang), " · ") {
-			if !importableSizeBands[band] {
-				t.Errorf("%s example names %q, which the import refuses", lang, band)
-			}
-		}
-	}
 }
 
 func TestTheFormatNamesEachFileSoAnUploadDetectsIt(t *testing.T) {

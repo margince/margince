@@ -59,8 +59,8 @@ const (
 	// Raised by 7 production lines for the team request reword and the paused
 	// team link's title on Home. Raised by 64 test lines for the team-link mail
 	// case, which drives the unexported mail worker over two team links.
-	composeRootProductionLines = 230_697
-	composeRootTestLines       = 360_128
+	composeRootProductionLines = 230_547
+	composeRootTestLines       = 360_116
 )
 
 // A read under these floors stopped early or read the wrong place, and would
