@@ -14,23 +14,26 @@ import transcript  # noqa: E402
 
 # A real `agy -p --output-format stream-json` run against a stand-in server
 # attached as the lane's server: it reads two tool schemas, calls both tools
-# and answers. Only the operator's home and the workspace path were rewritten.
+# and answers. Only the run's agy home and the workspace path were rewritten.
 SAMPLE = os.path.join(HERE, "testdata", "agy", "echo-and-sum.jsonl")
 OFFERED = ["echo", "get-sum"]
-SPILL = "/home/operator/.gemini/antigravity-cli/brain/97ade4ad-ef66-4233-91c4-2852503da362/.system_generated/steps/{}/{}"
-OTHER_SPILL = "/home/operator/.gemini/antigravity-cli/brain/0000-other/.system_generated/steps/{}/{}"
+# The run's agy home (clean.agy_home); only what the run wrote is under it.
+HOME = "/tmp/e2e-llm-agy-home.run"
+SPILL = HOME + "/.gemini/antigravity-cli/brain/97ade4ad-ef66-4233-91c4-2852503da362/.system_generated/steps/{}/{}"
+OPERATOR_SPILL = "/home/operator/.gemini/antigravity-cli/brain/97ade4ad-ef66-4233-91c4-2852503da362/.system_generated/steps/{}/{}"
 
 
-def convert(lines):
+def convert(lines, home=HOME):
     out = tempfile.NamedTemporaryFile(suffix=".jsonl", delete=False).name
-    code = transcript.from_agy(lines, out, "gemini-4-hydrogen-medium", "gemini:cli", OFFERED)
+    code = transcript.from_agy(lines, out, "gemini-4-hydrogen-medium", "gemini:cli", OFFERED, home=home)
     with open(out, encoding="utf-8") as handle:
         return code, out, handle.read()
 
 
-def sample():
+def sample(home=HOME):
+    """The sample's lines, its tool-schema reads placed under `home`."""
     with open(SAMPLE, encoding="utf-8") as handle:
-        return handle.read().splitlines()
+        return handle.read().replace(HOME, home).splitlines()
 
 
 def tool_step(index, name, state="DONE", **params):
@@ -115,7 +118,7 @@ class FromAgyTest(unittest.TestCase):
                               tool_step(10, "read_file", Path="/tmp/e2e-llm-agy.ws/README.md"))
         out = tempfile.NamedTemporaryFile(suffix=".jsonl", delete=False).name
         code = transcript.from_agy(lines, out, "gemini-4-hydrogen-medium", "gemini:cli", OFFERED,
-                                   workspace="/tmp/e2e-llm-agy.ws")
+                                   workspace="/tmp/e2e-llm-agy.ws", home=HOME)
         self.assertEqual(code, 0)
 
     def test_a_look_past_the_runs_own_folder_still_stops_the_run(self):
@@ -142,16 +145,40 @@ class FromAgyTest(unittest.TestCase):
                               tool_step(10, "read_file", Path=SPILL.format(9, "resource_0.txt")))
         self.assertEqual(convert(lines)[0], 0)
 
-    def test_a_spill_shaped_path_outside_agys_home_stops_the_run(self):
-        conversation = SPILL.split("/brain/")[1].split("/")[0]
-        for path in (f"/tmp/elsewhere/brain/{conversation}/.system_generated/steps/5/output.txt",
-                     SPILL.replace(conversation, f"0000-other/../{conversation}/../0000-other").format(5, "output.txt")):
+    def test_reading_a_tool_schema_or_a_missing_config_file_in_the_runs_home_is_allowed(self):
+        # Gemini sometimes looks for agy's own config after reading a router's
+        # action list; in the run's home that file is absent or the run's own.
+        for path in (f"{HOME}/.gemini/antigravity-cli/mcp/{transcript.SERVER}/echo.json",
+                     f"{HOME}/.gemini/antigravity-cli/mcp/{transcript.SERVER}.json",
+                     f"{HOME}/.gemini/antigravity-cli/settings.json"):
+            lines = before_answer(sample(), tool_step(9, "read_file", Path=path))
+            self.assertEqual(convert(lines)[0], 0, path)
+
+    def test_a_read_in_the_operators_own_agy_home_stops_the_run(self):
+        for path in (OPERATOR_SPILL.format(5, "output.txt"),
+                     f"/home/operator/.gemini/antigravity-cli/mcp/{transcript.SERVER}/echo.json",
+                     "/home/operator/.gemini/antigravity-cli/settings.json"):
             lines = before_answer(sample(), tool_step(9, "read_file", Path=path))
             self.assertEqual(convert(lines)[0], 3, path)
 
-    def test_reading_a_spill_of_another_conversation_stops_the_run(self):
-        lines = before_answer(sample(), tool_step(9, "read_file", Path=OTHER_SPILL.format(5, "output.txt")))
+    def test_a_path_that_climbs_out_of_the_runs_home_stops_the_run(self):
+        lines = before_answer(sample(), tool_step(9, "read_file", Path=f"{HOME}/../operator/.gemini/x.json"))
         self.assertEqual(convert(lines)[0], 3)
+
+    def test_a_read_through_the_homes_keychain_link_stops_the_run(self):
+        home, operator = tempfile.mkdtemp(), tempfile.mkdtemp()
+        self.addCleanup(shutil.rmtree, home)
+        self.addCleanup(shutil.rmtree, operator)
+        os.makedirs(os.path.join(home, "Library"))
+        os.symlink(operator, os.path.join(home, "Library", "Keychains"))
+        keychain = os.path.join(home, "Library", "Keychains", "login.keychain-db")
+        self.assertEqual(convert(sample(home), home=home)[0], 0)
+        lines = before_answer(sample(home), tool_step(9, "read_file", Path=keychain))
+        self.assertEqual(convert(lines, home=home)[0], 3)
+
+    def test_without_a_home_a_read_of_agys_files_stops_the_run(self):
+        lines = before_answer(sample(), tool_step(9, "read_file", Path=SPILL.format(5, "output.txt")))
+        self.assertEqual(convert(lines, home="")[0], 3)
 
     def test_a_long_lane_result_reaches_the_transcript_from_the_file_agy_spilled_it_to(self):
         conversation = SPILL.split("/brain/")[1].split("/")[0]
@@ -166,8 +193,7 @@ class FromAgyTest(unittest.TestCase):
             "step_index": 9, "state": "DONE", "step_type": "tool", "tool_name": "call_mcp_tool",
             "tool_info": {"name": "call_mcp_tool", "output": "",
                           "parameters": {"ServerName": transcript.SERVER, "ToolName": "echo", "Arguments": {}}}}})
-        with unittest.mock.patch.dict(os.environ, {"HOME": home}):
-            code, _out, raw = convert(before_answer(sample(), long_call))
+        code, _out, raw = convert(before_answer(sample(home), long_call), home=home)
         self.assertEqual(code, 0)
         self.assertIn("the whole long answer", raw)
 
@@ -224,8 +250,11 @@ agents = os.path.join(os.getcwd(), ".agents", "agents")
 with open(os.environ["FAKE_AGY_SEEN"], "w") as f:
     json.dump({"argv": sys.argv[1:], "cwd": sorted(os.listdir(os.getcwd())),
                "agents": {name: open(os.path.join(agents, name)).read() for name in os.listdir(agents)},
-               "mode": oct(os.stat(os.getcwd()).st_mode & 0o777)}, f)
-sys.stdout.write(open(os.environ["FAKE_AGY_OUT"]).read())
+               "mode": oct(os.stat(os.getcwd()).st_mode & 0o777), "home": os.environ["HOME"],
+               "home_holds": sorted(os.path.relpath(os.path.join(d, n), os.environ["HOME"])
+                                    for d, dirs, files in os.walk(os.environ["HOME"]) for n in dirs + files),
+               "keychains": os.path.realpath(os.path.join(os.environ["HOME"], "Library", "Keychains"))}, f)
+sys.stdout.write(open(os.environ["FAKE_AGY_OUT"]).read().replace(os.environ["FAKE_AGY_HOME"], os.environ["HOME"]))
 sys.stdout.flush()
 time.sleep(float(os.environ.get("FAKE_AGY_HANG", "0")))
 sys.exit(int(os.environ.get("FAKE_AGY_EXIT", "0")))
@@ -242,10 +271,14 @@ class RunAgyTest(unittest.TestCase):
             handle.write(FAKE_AGY)
         os.chmod(os.path.join(self.bin, "agy"), 0o755)
         self.seen_file = os.path.join(self.bin, "seen.json")
-        # agy's own home, where it writes the schemas of a server it attached.
+        # The operator's home: their agy settings and the keychain that holds the sign-in.
         self.home = tempfile.mkdtemp()
+        os.makedirs(os.path.join(self.home, "Library", "Keychains"))
+        os.makedirs(os.path.join(self.home, ".gemini", "antigravity-cli"))
         self.env = {"PATH": self.bin + os.pathsep + os.environ["PATH"], "FAKE_AGY_SEEN": self.seen_file,
-                    "FAKE_AGY_OUT": SAMPLE, "MARGINCE_E2E_TOKEN": "s3cr3t-passport", "HOME": self.home}
+                    "FAKE_AGY_OUT": SAMPLE, "FAKE_AGY_HOME": HOME, "MARGINCE_E2E_TOKEN": "s3cr3t-passport", "HOME": self.home,
+                    # The fake is Python, which would leave its own caches in the home it lists.
+                    "PYTHONDONTWRITEBYTECODE": "1", "PYTHONPYCACHEPREFIX": self.bin}
         self.mcp = FakeMcp([{"name": t, "inputSchema": {"type": "object"}} for t in OFFERED])
         self.mcp.__enter__()
 
@@ -293,6 +326,18 @@ class RunAgyTest(unittest.TestCase):
         _code, _out, seen = self.run_agy()
         self.assertEqual(seen["cwd"], [".agents"])
         self.assertEqual(list(seen["agents"]), ["margince-e2e-llm.md"])
+
+    def test_agy_runs_in_a_home_of_its_own_that_links_only_the_keychain(self):
+        _code, _out, seen = self.run_agy()
+        self.assertNotEqual(os.path.realpath(seen["home"]), os.path.realpath(self.home))
+        self.assertEqual(seen["home_holds"], ["Library", os.path.join("Library", "Keychains")])
+        self.assertEqual(seen["keychains"], os.path.realpath(os.path.join(self.home, "Library", "Keychains")))
+        self.assertFalse(os.path.exists(seen["home"]), "the run's home outlives the run")
+
+    def test_an_operator_with_no_keychain_folder_gets_an_empty_home(self):
+        shutil.rmtree(os.path.join(self.home, "Library"))
+        _code, _out, seen = self.run_agy()
+        self.assertEqual(seen["home_holds"], [])
 
     def test_an_agy_killed_at_the_wall_clock_is_a_harness_fault_even_with_a_complete_stream(self):
         import candidates
