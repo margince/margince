@@ -11,6 +11,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/shared/kernel/correspondence"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
 )
@@ -41,7 +42,7 @@ func stampGuestsPastCap(
 	names := make([]string, 0, cap(addresses))
 	responses := make([]string, 0, cap(addresses))
 	for _, p := range withheld {
-		address := strings.ToLower(strings.TrimSpace(p.Email))
+		address := correspondence.Fold(p.Email)
 		if address == "" || held[address] {
 			continue
 		}
@@ -122,7 +123,7 @@ func settleAnswers(
 	addresses := make([]string, 0, len(listed))
 	responses := make([]string, 0, len(listed))
 	for _, p := range listed {
-		address := strings.ToLower(strings.TrimSpace(p.Email))
+		address := correspondence.Fold(p.Email)
 		if address == "" || p.Response == "" {
 			continue
 		}
@@ -133,7 +134,7 @@ func settleAnswers(
 	ownerAddress, ownerResponse := "", ""
 	if roster.Current && actorUserID(ctx) == roster.Seat && roster.OwnerAnswer != nil {
 		ownerResponse = roster.OwnerAnswer.Response
-		ownerAddress = strings.ToLower(strings.TrimSpace(roster.OwnerAnswer.Address))
+		ownerAddress = correspondence.Fold(roster.OwnerAnswer.Address)
 	}
 	if ownerResponse != "" && ownerAddress != "" {
 		alone, err := ownAddressHeldAloneTx(ctx, tx, roster.Seat, ownerAddress)
