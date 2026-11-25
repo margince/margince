@@ -300,11 +300,15 @@ func TestAReviewedMappingAppliesOnceAndNeverOverwritesAChoice(t *testing.T) {
 		}
 		return deal
 	}
-	first := lose("North", "Far too expensive", nil)
-	second := lose("South", "  far too EXPENSIVE ", nil)
-	chosen := lose("East", "far too expensive", new("competitor"))
+	// The note is this run's own: notes are counted across every deal the
+	// database holds, and a repeated run must not count the last one's.
+	run := ids.NewV7().String()[24:]
+	text := "far too expensive " + run
+	first := lose("North", "Far too expensive "+run, nil)
+	second := lose("South", "  far too EXPENSIVE "+strings.ToUpper(run)+" ", nil)
+	chosen := lose("East", text, new("competitor"))
 
-	note := legacyNote(t, e, "far too expensive")
+	note := legacyNote(t, e, text)
 	if note.DealCount != 2 {
 		t.Fatalf("the note counts %d deals, want the two with no code", note.DealCount)
 	}
@@ -327,21 +331,21 @@ func TestAReviewedMappingAppliesOnceAndNeverOverwritesAChoice(t *testing.T) {
 	if err := e.owner.QueryRow(context.Background(), `SELECT lost_reason FROM deal WHERE id = $1`, second).Scan(&kept); err != nil {
 		t.Fatal(err)
 	}
-	if kept != "far too EXPENSIVE" {
+	if kept != "far too EXPENSIVE "+strings.ToUpper(run) {
 		t.Errorf("the note became %q, want it as the closer wrote it", kept)
 	}
 	if changed := applyMappings(t, e, decided); changed != 0 {
 		t.Errorf("a second run changed %d deals, want none", changed)
 	}
 
-	if applied := legacyNote(t, e, "far too expensive"); applied.Mapping == nil || applied.PendingCount != 0 || applied.DealCount != 2 {
+	if applied := legacyNote(t, e, text); applied.Mapping == nil || applied.PendingCount != 0 || applied.DealCount != 2 {
 		t.Errorf("an applied decision lists as %+v, want it kept with nothing pending", applied)
 	}
 	corrected, err := e.store.DecideLegacyLossReason(ctx, note.TextHash, "no_budget")
 	if err != nil {
 		t.Fatalf("correcting the decision: %v", err)
 	}
-	if listed := legacyNote(t, e, "far too expensive"); listed.PendingCount != 2 {
+	if listed := legacyNote(t, e, text); listed.PendingCount != 2 {
 		t.Errorf("a corrected decision lists %d deals pending, want the 2 it mapped", listed.PendingCount)
 	}
 	if changed := applyMappings(t, e, corrected); changed != 2 {
@@ -398,10 +402,12 @@ func TestTheApplyCountsWhatTheOperatorMayReadAndMapsOnlyWhatItMayWrite(t *testin
 	p := seedLossPipeline(t, e)
 	ctx := e.asLossAdmin()
 	deal := p.deal(t, e, "Someone else's loss")
-	if _, err := e.store.AdvanceDeal(ctx, deal, AdvanceDealInput{ToStageID: p.lost, LostReason: new("Out of scope entirely")}); err != nil {
+	// This run's own note, so a repeated run counts only the deal it lost.
+	text := "out of scope entirely " + ids.NewV7().String()[24:]
+	if _, err := e.store.AdvanceDeal(ctx, deal, AdvanceDealInput{ToStageID: p.lost, LostReason: new(text)}); err != nil {
 		t.Fatal(err)
 	}
-	decided, err := e.store.DecideLegacyLossReason(ctx, legacyNote(t, e, "out of scope entirely").TextHash, "price")
+	decided, err := e.store.DecideLegacyLossReason(ctx, legacyNote(t, e, text).TextHash, "price")
 	if err != nil {
 		t.Fatal(err)
 	}
