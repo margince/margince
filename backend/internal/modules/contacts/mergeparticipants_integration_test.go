@@ -18,6 +18,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/platform/testdb"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -101,5 +102,45 @@ func TestAMergeMovesTheParticipantRowsOntoTheSurvivor(t *testing.T) {
 	got := e.participantContactsOn(ctx, t, shared)
 	if len(got) != 1 || got[0] != survivor.ContactID.UUID {
 		t.Errorf("the shared activity names %v, want the survivor once — the two halves were one party, not two", got)
+	}
+}
+
+// A row stored before addresses were held lowercase moves with its lowercase
+// twin. The two spellings become one row on the survivor, and the merge succeeds.
+func TestAMergeFoldsTwoSpellingsOfTheSourcesAddress(t *testing.T) {
+	e := setupDedupe(t)
+	ctx := e.as()
+	survivor, err := e.store.EnsureCounterparty(ctx, e.ensureInput(ctx, t, "keeper@fold.test", "Keeper", "fold.test"))
+	if err != nil {
+		t.Fatalf("ensure survivor: %v", err)
+	}
+	retired, err := e.store.EnsureCounterparty(ctx, e.ensureInput(ctx, t, "dupe@fold.test", "Dupe", "fold.test"))
+	if err != nil {
+		t.Fatalf("ensure retired: %v", err)
+	}
+	shared := e.seedCapturedMail(ctx, t, "other@fold.test", "from")
+	testdb.WithParticipantAddressCheckLifted(t, func(tx pgx.Tx) error {
+		_, err := tx.Exec(ctx, `INSERT INTO activity_participant (activity_id, contact_id, role, address)
+			VALUES ($1, $2, 'cc', 'Dupe@Fold.test')`, shared, retired.ContactID)
+		return err
+	})
+	e.seedParticipantOn(ctx, t, shared, retired.ContactID, "cc", "dupe@fold.test")
+
+	if _, err := e.store.MergeContact(ctx, retired.ContactID, survivor.ContactID, nil); err != nil {
+		t.Fatalf("merging a contact held under two spellings of one address: %v", err)
+	}
+	var rows int
+	if err := e.store.tx(ctx, func(tx pgx.Tx) error {
+		return tx.QueryRow(ctx, `SELECT count(*) FROM activity_participant
+			 WHERE activity_id = $1 AND role = 'cc' AND contact_id = $2 AND address = 'dupe@fold.test'`,
+			shared, survivor.ContactID).Scan(&rows)
+	}); err != nil {
+		t.Fatal(err)
+	}
+	if rows != 1 {
+		t.Errorf("the survivor holds %d row(s) for the address, want the two spellings as one", rows)
+	}
+	if n := len(e.participantContactsOn(ctx, t, shared)); n != 1 {
+		t.Errorf("the activity names %d contact row(s), want 1", n)
 	}
 }

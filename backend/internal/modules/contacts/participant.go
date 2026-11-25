@@ -24,6 +24,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/relstrength"
 )
@@ -82,6 +83,9 @@ func promotableParticipantSQL(alias string) string {
 func promoteParticipantsToContact(
 	ctx context.Context, tx pgx.Tx, activities []ids.UUID, contactID ids.ContactID, batch *int,
 ) ([]ids.UUID, error) {
+	if _, err := storekit.LowercaseOlderParticipantAddresses(ctx, tx, `ap.activity_id = ANY($1)`, activities); err != nil {
+		return nil, err
+	}
 	// The WHERE clause carries the idempotence: a row that already names a
 	// contact is left alone, so a second pass cannot repoint a participant that
 	// a merge or a human has since settled differently.

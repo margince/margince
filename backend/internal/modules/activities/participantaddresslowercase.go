@@ -73,12 +73,9 @@ func LowercaseParticipantAddressesTx(ctx context.Context, tx pgx.Tx, after ids.U
 	if err != nil {
 		return nil, 0, err
 	}
-	// No column is changed here. The update trigger lowercases the address and
-	// folds the rows that become one party, as it does for a member's edit.
-	tag, err := tx.Exec(ctx, `UPDATE activity_participant SET display_name = display_name
-		 WHERE id = ANY($1) AND address <> lower(btrim(address))`, inspected)
+	changed, err := storekit.LowercaseOlderParticipantAddresses(ctx, tx, `ap.id = ANY($1)`, inspected)
 	if err != nil {
-		return nil, 0, fmt.Errorf("activities: lowercasing participant addresses: %w", err)
+		return nil, 0, err
 	}
 	lowered, err := countParticipantSpellings(ctx, tx, held)
 	if err != nil {
@@ -93,7 +90,7 @@ func LowercaseParticipantAddressesTx(ctx context.Context, tx pgx.Tx, after ids.U
 			return nil, 0, err
 		}
 	}
-	return inspected, int(tag.RowsAffected()), nil
+	return inspected, changed, nil
 }
 
 // countParticipantSpellings counts, per activity and in activity order, those

@@ -228,6 +228,7 @@ func insertLoggedParticipant(ctx context.Context, tx pgx.Tx, activityID ids.Acti
 // name is the party's display name; nil leaves the column NULL, as the logged
 // path has always written it.
 func insertParticipantRow(ctx context.Context, tx pgx.Tx, activityID ids.ActivityID, role string, userID, contactID *ids.UUID, address string, name *string) error {
+	address = correspondence.Fold(address)
 	// The user arm is written through a SELECT over app_user rather than a
 	// bare VALUES: a principal's UserID is not guaranteed to name a workspace
 	// member. An agent or a service principal can carry an id that belongs to
@@ -235,7 +236,6 @@ func insertParticipantRow(ctx context.Context, tx pgx.Tx, activityID ids.Activit
 	// whole write for a participant row that is a nicety, not the point of the
 	// operation. Guarding here rather than pre-checking also avoids a race
 	// with a member being archived between the check and the insert.
-	address = correspondence.Fold(address)
 	if err := storekit.LockMeetingAttendeeWrites(ctx, tx, activityID.UUID); err != nil {
 		return err
 	}

@@ -366,12 +366,12 @@ func insertParticipant(
 	address string,
 	channelUserID string,
 ) error {
+	address = correspondence.Fold(address)
 	// The user arm rides a SELECT over app_user for the same reason the logged
 	// path does: a principal's UserID need not name a workspace member, and
 	// the composite FK would reject it — failing an ingest we have already
 	// read off the wire, over a participant row that is a nicety rather than
 	// the point of the write.
-	address = correspondence.Fold(address)
 	if err := storekit.LockMeetingAttendeeWrites(ctx, tx, activityID.UUID); err != nil {
 		return err
 	}
