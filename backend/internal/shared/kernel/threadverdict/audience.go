@@ -3,7 +3,10 @@
 
 package threadverdict
 
-import "fmt"
+import (
+	"fmt"
+	"strings"
+)
 
 // WorkspaceAudienceSQL applies thread holds while preserving explicit internal-mail admission.
 func WorkspaceAudienceSQL(alias string) string {
@@ -33,12 +36,27 @@ func noImporterVerdictSQL(alias, status string) string {
  WHERE thread_hold_import.activity_id=%[1]s.id AND %[2]s)`, alias, status)
 }
 
-// LedgerKeySQL names the ledger key one import row is judged under: the burst id
-// for a chat message, the thread key for everything else. The two spaces cannot
-// meet, since a thread key is never the text of a uuid. Only the audience
+// BurstKeyPrefix starts the ledger key of a chat burst. The capture sink refuses
+// every record whose thread key starts with it. A mail thread root is picked by
+// its sender, and so none can equal a burst key.
+const BurstKeyPrefix = "chat-burst:"
+
+// BurstKey is the ledger key of the chat burst with this id.
+func BurstKey(burst string) string { return BurstKeyPrefix + burst }
+
+// BurstOfKey returns the burst id a ledger key names, and false for a mail key.
+func BurstOfKey(key string) (string, bool) { return strings.CutPrefix(key, BurstKeyPrefix) }
+
+// BurstKeySQL is BurstKey over a SQL uuid expression.
+func BurstKeySQL(burst string) string {
+	return fmt.Sprintf("('%s' || %s::text)", BurstKeyPrefix, burst)
+}
+
+// LedgerKeySQL names the ledger key one import row is judged under: its burst
+// for a chat message, its thread key for everything else. Only the audience
 // derivation reads it; the reader-side thread-hold checks stay on thread keys.
 func LedgerKeySQL(importAlias, activityAlias string) string {
-	return fmt.Sprintf("coalesce(%s.burst_id::text, %s.thread_key)", importAlias, activityAlias)
+	return fmt.Sprintf("coalesce(%s, %s.thread_key)", BurstKeySQL(importAlias+".burst_id"), activityAlias)
 }
 
 // AnySeatHoldsSQL is true while any seat holds the thread of activity alias,

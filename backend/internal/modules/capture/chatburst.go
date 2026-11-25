@@ -27,6 +27,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/kernel/threadverdict"
 	"github.com/margince/margince/backend/internal/shared/ports/datasource"
 )
 
@@ -50,6 +51,16 @@ const (
 
 	instantPrecision = "instant"
 )
+
+// burstOfKey returns the burst a ledger key names.
+func burstOfKey(key string) (ids.UUID, bool) {
+	text, ok := threadverdict.BurstOfKey(key)
+	if !ok {
+		return ids.Nil, false
+	}
+	burst, err := ids.Parse(text)
+	return burst, err == nil
+}
 
 // IsBurst says the question is about a chat burst and names its messages.
 func (t PendingThread) IsBurst() bool { return len(t.BurstMembers) > 0 }
@@ -80,14 +91,15 @@ func openChatBurstQuestionTx(ctx context.Context, tx pgx.Tx, id ids.ActivityID, 
 // openBurstQuestionTx opens the question of one burst and leaves an existing
 // one as it is.
 func openBurstQuestionTx(ctx context.Context, tx pgx.Tx, user, burst, first ids.UUID) error {
-	if err := LockThreadHoldTx(ctx, tx, burst.String()); err != nil {
+	key := threadverdict.BurstKey(burst.String())
+	if err := LockThreadHoldTx(ctx, tx, key); err != nil {
 		return err
 	}
 	if _, err := tx.Exec(ctx, `
 		INSERT INTO capture_thread_verdict (thread_key, user_id, first_activity_id, status, next_attempt_at)
 		VALUES ($1, $2, $3, 'pending', now())
 		ON CONFLICT (thread_key, user_id) DO NOTHING`,
-		burst.String(), user, first); err != nil {
+		key, user, first); err != nil {
 		return fmt.Errorf("capture: opening the confidentiality question for a chat burst: %w", err)
 	}
 	return nil
@@ -161,7 +173,7 @@ func instantBurstTx(
 		       (SELECT count(*) FROM capture_import c WHERE c.user_id = p.user_id AND c.burst_id = p.burst_id)
 		  FROM capture_import p
 		  JOIN activity pa ON pa.id = p.activity_id
-		  LEFT JOIN capture_thread_verdict v ON v.user_id = p.user_id AND v.thread_key = p.burst_id::text
+		  LEFT JOIN capture_thread_verdict v ON v.user_id = p.user_id AND v.thread_key = `+threadverdict.BurstKeySQL("p.burst_id")+`
 		 WHERE p.user_id = $1 AND p.burst_id IS NOT NULL AND pa.thread_key = $2
 		   AND p.activity_id <> $3 AND pa.restricted_at IS NULL
 		   AND pa.occurred_at <= $4 -- occurred_at raw: the keyset bound of the message before this one
@@ -188,8 +200,8 @@ func instantBurstTx(
 // what came before. A question that is not about a burst is returned
 // as it was.
 func claimBurstTx(ctx context.Context, tx pgx.Tx, row PendingThread) (PendingThread, time.Duration, error) {
-	burst, err := ids.Parse(row.ThreadKey)
-	if err != nil {
+	burst, ok := burstOfKey(row.ThreadKey)
+	if !ok {
 		return row, 0, nil
 	}
 	rows, err := tx.Query(ctx, `
@@ -253,9 +265,9 @@ func chatSpeaker(direction string) string {
 func (s *ThreadVerdictStore) recordOutcomeOnBurstTx(
 	ctx context.Context, tx pgx.Tx, row PendingThread, status, kind string,
 ) (ThreadOutcome, error) {
-	burst, err := ids.Parse(row.ThreadKey)
-	if err != nil {
-		return ThreadOutcome{}, fmt.Errorf("capture: a chat burst question is keyed by %q: %w", row.ThreadKey, err)
+	burst, ok := burstOfKey(row.ThreadKey)
+	if !ok {
+		return ThreadOutcome{}, fmt.Errorf("capture: a chat burst question is keyed by %q", row.ThreadKey)
 	}
 	if err := stampSiblingsTx(ctx, tx, row.UserID, row.BurstMembers, status, kind, siblingStatusesTaken(status)); err != nil {
 		return ThreadOutcome{}, err

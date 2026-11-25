@@ -17,6 +17,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"log/slog"
+	"os"
 	"strings"
 	"sync/atomic"
 	"testing"
@@ -83,11 +84,17 @@ func newBurstFiling(t *testing.T, posture string, team bool) burstFiling {
 // file stores one inbound message under its provider id and returns its activity.
 func (f burstFiling) file(key string, offset time.Duration, body string) ids.UUID {
 	f.t.Helper()
+	return f.fileIn("990100", key, offset, body)
+}
+
+// fileIn is file in the chat of one conversation.
+func (f burstFiling) fileIn(conversation, key string, offset time.Duration, body string) ids.UUID {
+	f.t.Helper()
 	chat, err := capturemod.FileChatMessage(f.fx.ctx,
 		compose.NewCaptureSink(f.fx.e.Pool, compose.CaptureConfig{}), f.fx.binding,
 		connector.ChatMessage{
-			ConversationID: "990100", IdempotencyKey: key, Direction: connector.DirectionInbound,
-			Counterparty: connector.ChatParty{UserID: "990100", DisplayName: "Buyer"},
+			ConversationID: conversation, IdempotencyKey: key, Direction: connector.DirectionInbound,
+			Counterparty: connector.ChatParty{UserID: conversation, DisplayName: "Buyer"},
 			Body:         body, OccurredAt: f.base.Add(offset),
 		})
 	if err != nil {
@@ -143,7 +150,7 @@ func (f burstFiling) judge(brain *burstBrain) {
 	if brain != nil {
 		lane = brain
 	}
-	engine := compose.NewConfidentialityVerdictEngine(f.fx.e.Pool, lane, slog.Default())
+	engine := compose.NewConfidentialityVerdictEngine(f.fx.e.Pool, lane, slog.New(slog.NewTextHandler(os.Stderr, nil)))
 	if err := engine.RunWorkspace(principal.WithWorkspaceID(context.Background(), f.fx.e.WS), 0); err != nil {
 		f.t.Fatalf("confidentiality pass: %v", err)
 	}
@@ -315,5 +322,71 @@ func TestAMessageTheVerdictDidNotReadMovesToItsOwnBurst(t *testing.T) {
 	}
 	if got := f.ledgerRows(two); got != 1 {
 		t.Fatalf("the unread message has %d questions of its own, want 1", got)
+	}
+}
+
+// liveIdentities counts the live channel identities of one chat user, which is
+// what stands for a contact only a chat created.
+func (f burstFiling) liveIdentities(channelUser string) int {
+	f.t.Helper()
+	var n int
+	if err := database.WithWorkspaceTx(f.fx.e.Admin(), f.fx.e.Pool, func(tx pgx.Tx) error {
+		return tx.QueryRow(context.Background(), `
+			SELECT count(*) FROM contact_channel_identity i JOIN contact c ON c.id = i.contact_id
+			 WHERE i.channel_user_id = $1 AND i.archived_at IS NULL AND c.archived_at IS NULL`, channelUser).Scan(&n)
+	}); err != nil {
+		f.t.Fatalf("counting the identities of a chat user: %v", err)
+	}
+	return n
+}
+
+func TestAPersonalBurstRetractsAChatOnlyContactAndALaterBurstDoesNotMakeItAgain(t *testing.T) {
+	f := newBurstFiling(t, "classified", false)
+	const stranger = "770200"
+	first := f.fileIn(stranger, "1", 0, "Ich habe die diagnosis vom Arzt bekommen.")
+	if got := f.liveIdentities(stranger); got != 1 {
+		t.Fatalf("the chat made %d contacts for its first message, want 1", got)
+	}
+
+	f.judge(&burstBrain{})
+	if got := f.liveIdentities(stranger); got != 0 {
+		var status, kind string
+		var links, owners int
+		if err := database.WithWorkspaceTx(f.fx.e.Admin(), f.fx.e.Pool, func(tx pgx.Tx) error {
+			if err := tx.QueryRow(context.Background(), `SELECT status, coalesce(kind, '') FROM capture_thread_verdict WHERE first_activity_id = $1`, first).Scan(&status, &kind); err != nil {
+				return err
+			}
+			return tx.QueryRow(context.Background(), `SELECT count(*), count(c.owner_id) FROM activity_link l JOIN contact c ON c.id = l.contact_id WHERE l.activity_id = $1 AND l.entity_type = 'contact'`, first).Scan(&links, &owners)
+		}); err != nil {
+			t.Fatalf("reading the state: %v", err)
+		}
+		t.Logf("ledger %s/%s, %d contact links, %d owned", status, kind, links, owners)
+		t.Fatalf("a personal burst left %d live contacts, want its chat-only contact retracted", got)
+	}
+
+	later := f.fileIn(stranger, "2", 3*time.Hour, "Passt der Termin am Montag?")
+	if got := f.liveIdentities(stranger); got != 0 {
+		t.Fatalf("a later burst of the same chat made %d contacts again", got)
+	}
+	f.wantReaders("a later burst in a chat judged personal", later, 1)
+}
+
+// A mail thread's root is the sender's own text, so it may equal any string,
+// a burst's id among them. It must neither read nor move the burst's verdict.
+func TestAMailThreadRootedAtABurstIdLeavesTheBurstVerdictAlone(t *testing.T) {
+	f := newBurstFiling(t, "classified", false)
+	one := f.file("1", 0, "Danke fuer das Angebot.")
+	f.share()
+	f.judge(&burstBrain{})
+	f.wantReaders("a judged ordinary burst", one, 2)
+
+	f.fx.env.sync(t, email("stranger@elsewhere.example", "Stranger", captureOwner, "root-collision@elsewhere.example", f.burstOf(one).String()))
+	f.wantReaders("the burst after a mail rooted at its id arrived", one, 2)
+	var status string
+	if err := database.WithWorkspaceTx(f.fx.e.Admin(), f.fx.e.Pool, func(tx pgx.Tx) error {
+		return tx.QueryRow(context.Background(),
+			`SELECT status FROM capture_thread_verdict WHERE first_activity_id = $1`, one).Scan(&status)
+	}); err != nil || status != capturemod.VerdictCleared {
+		t.Fatalf("the burst's verdict is %q (err %v) after a mail rooted at its id, want cleared", status, err)
 	}
 }
