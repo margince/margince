@@ -26842,6 +26842,33 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/fx-rates/{from}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /**
+         * Remove a currency from the FX rate sheet.
+         * @description Admin/ops-only. The currency no longer appears on the sheet and converts
+         *     nothing, so deals priced in it show no base value until a new rate is set.
+         *     The rows are kept, marked as replaced, so a figure computed at an earlier
+         *     rate version still finds the rate it used. A removed currency no longer
+         *     counts toward the base-currency lock. A currency with no rate on the sheet
+         *     is a 404. Gated on the `fx_rate` update grant that corrects a rate, and
+         *     audited with the rate it removed. Human session only
+         *     (x-agent-access: human-only). Audit-only write (no event stream, EVT-NOEVT-3).
+         */
+        delete: operations["removeFxRate"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/fx-rates/propose-refresh": {
         parameters: {
             query?: never;
@@ -106871,6 +106898,31 @@ export interface operations {
             };
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
+        };
+    };
+    removeFxRate: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description 3-letter ISO currency to remove. */
+                from: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The currency is off the sheet. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
         };
     };
     proposeFxRateRefresh: {

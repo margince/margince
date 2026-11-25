@@ -103183,6 +103183,9 @@ type ServerInterface interface {
 	// Enqueue an async FX-rate refresh (stages 🟡 proposals).
 	// (POST /fx-rates/propose-refresh)
 	ProposeFxRateRefresh(w http.ResponseWriter, r *http.Request)
+	// Remove a currency from the FX rate sheet.
+	// (DELETE /fx-rates/{from})
+	RemoveFxRate(w http.ResponseWriter, r *http.Request, from string)
 	// List this workspace's recent CSV import runs, newest first.
 	// (GET /imports)
 	ListImportRuns(w http.ResponseWriter, r *http.Request, params ListImportRunsParams)
@@ -108481,6 +108484,12 @@ func (_ Unimplemented) ListFxRateCurrencies(w http.ResponseWriter, r *http.Reque
 // Enqueue an async FX-rate refresh (stages 🟡 proposals).
 // (POST /fx-rates/propose-refresh)
 func (_ Unimplemented) ProposeFxRateRefresh(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Remove a currency from the FX rate sheet.
+// (DELETE /fx-rates/{from})
+func (_ Unimplemented) RemoveFxRate(w http.ResponseWriter, r *http.Request, from string) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -140098,6 +140107,38 @@ func (siw *ServerInterfaceWrapper) ProposeFxRateRefresh(w http.ResponseWriter, r
 	handler.ServeHTTP(w, r)
 }
 
+// RemoveFxRate operation middleware
+func (siw *ServerInterfaceWrapper) RemoveFxRate(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "from" -------------
+	var from string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "from", chi.URLParam(r, "from"), &from, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "from", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.RemoveFxRate(w, r, from)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // ListImportRuns operation middleware
 func (siw *ServerInterfaceWrapper) ListImportRuns(w http.ResponseWriter, r *http.Request) {
 
@@ -164006,6 +164047,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/fx-rates/propose-refresh", wrapper.ProposeFxRateRefresh)
+	})
+	r.Group(func(r chi.Router) {
+		r.Delete(options.BaseURL+"/fx-rates/{from}", wrapper.RemoveFxRate)
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/imports", wrapper.ListImportRuns)

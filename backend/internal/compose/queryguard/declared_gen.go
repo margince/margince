@@ -46,6 +46,7 @@ var Declared = map[string][]string{
 	"DELETE /v1/finance/source":                                                {},
 	"DELETE /v1/finance/source/customers/{external_id}/link":                   {},
 	"DELETE /v1/forecast/shares/{id}":                                          {},
+	"DELETE /v1/fx-rates/{from}":                                               {},
 	"DELETE /v1/installation/agent-clients/{id}":                               {},
 	"DELETE /v1/installation/oauth-apps/{provider}":                            {},
 	"DELETE /v1/knowledge/corpora/{id}":                                        {},
