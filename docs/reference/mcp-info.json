@@ -17226,7 +17226,7 @@
                       "type": "string",
                       "x-extensible-enum": true
                     },
-                    "maxItems": 8,
+                    "maxItems": 12,
                     "minItems": 1,
                     "type": "array"
                   },
@@ -18639,7 +18639,7 @@
                       "type": "string",
                       "x-extensible-enum": true
                     },
-                    "maxItems": 8,
+                    "maxItems": 12,
                     "minItems": 1,
                     "type": "array"
                   },
@@ -28608,7 +28608,7 @@
                       "type": "string",
                       "x-extensible-enum": true
                     },
-                    "maxItems": 8,
+                    "maxItems": 12,
                     "minItems": 1,
                     "type": "array"
                   },
