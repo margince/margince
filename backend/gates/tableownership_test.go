@@ -68,6 +68,10 @@ const extSecretsStoreDir = "internal/platform/extsecrets"
 // those was short by two, which is what the derivation replaced.
 const keyVaultStoreDir = "internal/platform/keyvault"
 
+// generatedSummaryStoreDir holds the store the summary writers, the erasure
+// and the record merges share, so one package writes generated_summary.
+const generatedSummaryStoreDir = "internal/platform/generatedsummary"
+
 // jobsStoreDir runs the River fleet, and is where river_job is written from —
 // discovered by platformStoreDirs rather than named here; the constant exists
 // so tableOwners can point at it in one spelling.

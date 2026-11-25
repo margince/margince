@@ -176,8 +176,9 @@ step one level down for each pane inside a pane.
   state that is not a verdict about the record.
 
 Each state has one base, and it is the only value someone picks: `--info` `#0485f7`, `--success`
-`#17c964`, `--warning` `#f5a524`, `--danger` `#ff383c`, `--discovery` `#964ac0` in light. Warning,
-danger and discovery step to a lighter tone that the dark ground can carry. Everything else in a
+`#17c964`, `--warning` `#f5a524`, `--danger` `#ff383c`, `--discovery` `#964ac0` in light. In dark,
+success steps to `#51d75e`, so it parts from the teal accent. Warning, danger and discovery step to
+a lighter tone that the dark ground can carry. Everything else in a
 family comes from that base in `tokens.css` and nowhere else:
 
 - the ink (`--<state>Text`): the base moved in OKLCh lightness until it clears 4.5:1 on every ground
@@ -191,8 +192,8 @@ ink reads on all five bases. `tokens.test.ts` reads the five states off the shee
 in both themes, and fails when a state is missing from one of them.
 
 **The neutral ink is two tokens**. `--textPrimary` is the ink that carries (names, headings, body),
-at `#182c28` in light and `#edf6f4` in dark. `--textSecondary` is the one that supports, at
-`#55645f` in light and `#9aa8a3` in dark, and a placeholder is the first thing
+at `#182c28` in light and `#e1e8e6` in dark. `--textSecondary` is the one that supports, at
+`#55645f` in light and `#adb9b6` in dark, and a placeholder is the first thing
 that uses it. They take the place of the four steps `--ink` / `--ink2` / `--ink3` / `--ink4`,
 which answer "how quiet is this?" four ways. `tokens.test.ts` measures every pair the product draws
 against every ground it lands on.
@@ -221,15 +222,15 @@ as a value still to come. Today the shipped name of the agent tint is `--aiLight
 
 ### Dark
 
-The ground is `--bgPage #0c1311`, the darkest rung. Every other ground lifts above it, and only
+The ground is `--bgPage #111816`, the darkest rung. Every other ground lifts above it, and only
 `--ladder4` lifts past the hover step. A pane on the page (level 1) is
-`rgba(239,247,244,.045)` with a `.09` edge. The ink is `#edf6f4`, and `#9aa8a3` for text that supports.
+a solid `#1d2422` with a `#2f3835` edge. The ink is `#e1e8e6`, and `#adb9b6` for text that supports.
 
 A pane in a pane lifts one step toward the light per level, up to `--ladder4` at level 4. That is
 as light as a state chip's ground can go and still clear AA.
 
-The accent goes up to `#16a34a` with dark ink (`#06130b`) on it, its text to `#4ade80`, and the
-indigo text to `#9ba0f0`. The chip turns around instead of copying the light theme: `--bgChip` becomes
+The accent goes up to `#48a58f` with dark ink (`#062d26`) on it, its text to `#6dc8b1`, and the
+indigo text to `#a7adfe`. The chip turns around instead of copying the light theme: `--bgChip` becomes
 `rgba(239,247,244,.09)`, because a chip on a dark ground can step only one way. The theme switch in three states moves between
 them: `:root`, then `prefers-color-scheme` inside `:not([data-theme="light"])`,
 then `[data-theme="dark"]`.
@@ -900,7 +901,7 @@ The primitives in the catalog keep their names and `props`; this is how each one
 
 | Component | Look |
 |---|---|
-| `Button` primary | `--accent` fill, `--textOnAccentControl` text (off-white `#f4faf7` in light, dark ink `#06130b` in dark), `--r-control` (8px) radius, `--controlHeight` (32px), `--fontWeightMedium`. One per view. |
+| `Button` primary | `--accent` fill, `--textOnAccentControl` text (off-white `#f4faf7` in light, dark ink `#062d26` in dark), `--r-control` (8px) radius, `--controlHeight` (32px), `--fontWeightMedium`. One per view. |
 | `Button` secondary | `--pane` fill, `--line2` outline, `--ink` text, flat. With only an icon, it is the same `--controlHeight` square for the more menu: there is one control size. |
 | `Button` ghost | No outline, `--ink2` text; hover `--bg3`. |
 | `Button` danger | An outline in `--bad`; fills only inside a `ConfirmModal`. |

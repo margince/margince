@@ -71,10 +71,9 @@ export const CannotChange: Story = { render: story(true, READER) };
 // The denial in dark, next to `CannotChange` for comparison. A refused switch
 // says so twice: the sentence beneath it, and the track — which is desaturated
 // rather than dimmed, because the on-state has to stay legible. Desaturation is
-// the fragile half of that: the dark palette's live green sits about where the
-// light palette's muted one does, so this is the story that shows whether a
-// reader in dark can still tell a refused switch from an operable one before
-// clicking it.
+// the fragile half: the dark live accent sits about where the light muted one
+// does. This story shows whether a reader in dark can still tell a refused
+// switch from an operable one before clicking it.
 export const CannotChangeDark: Story = {
   globals: { theme: "dark" },
   render: story(true, READER),

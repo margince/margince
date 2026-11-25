@@ -55974,7 +55974,7 @@ components:
     ContactImpersonationWarning:
       type: object
       description: >-
-        The sign of impersonation the sender check saw when capture made this contact from a mail.
+        The sign of impersonation the sender check saw on a captured mail from this contact.
       required: [detected_at]
       properties:
         reason:

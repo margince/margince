@@ -56958,6 +56958,10 @@ export interface components {
             change_reasons: components["schemas"]["RecordAccessReason"][];
             /** @description The member's role keys. Present only when `detail` is true. */
             roles?: string[];
+            /** @description The name an admin gave each live role in `roles`, keyed by role key, so a reader who may not read the role directory still sees a custom role by its name. Present only when `detail` is true. Absent from an older server; a key it does not name is shown as the key. */
+            role_names?: {
+                [key: string]: string;
+            };
         };
         /**
          * @description One reason a member can open or change the record. `workspace_visible` means the record is
@@ -59978,7 +59982,7 @@ export interface components {
             /** Format: date-time */
             expires_at: string;
         };
-        /** @description The sign of impersonation the sender check saw when capture made this contact from a mail. */
+        /** @description The sign of impersonation the sender check saw on a captured mail from this contact. */
         ContactImpersonationWarning: {
             /**
              * @description Which sign it saw. `punycode_domain`: the mail domain is written in punycode, which can look like another domain. `display_name_other_domain`: the display name holds an address on a domain other than the one the mail came from. Absent on a warning recorded before the reason was stored.

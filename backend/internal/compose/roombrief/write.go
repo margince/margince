@@ -60,7 +60,8 @@ A comment's speaker is "buyer" or "your_side". "your_side" is the READER or a co
 Inside a comment, "you" and "your" mean whoever that comment addressed: in a "your_side" comment, the buyer. Never carry them into the brief, where "you" is the reader.
 "downloaded" lists the documents a buyer downloaded. A document no buyer downloaded has not been read by anyone the room can see; say so only when it matters.
 asked_for_new_link_on is when a buyer asked for a new link and has not been in since; they cannot get in until the reader issues one.
-Name a date only when the summary supplies it. Never compute one, and never estimate how long ago something was.
+Name a date only when the summary supplies it. Never compute one, and never estimate how long ago something was. Never write "today", "yesterday", "now" or "this week": the summary gives calendar days only.
+Name as setting a condition only the buyer whose own comment sets it. A buyer who only shares the thread is not named as refusing. A condition that waits on a buyer's counsel or board waits on them, not on the reader.
 Label every sentence. A FACT restates the summary and cites the record it came from. An ASSESSMENT is a judgment drawn from several records; cite them. A RECOMMENDATION is one concrete move; cite the record that motivates it.
 Cite only the refs the summary gave you: a buyer as participant, a document as document, a thread as thread. Put refs ONLY in evidence, never in the text.
 If nothing is waiting and nothing is missing, say so in one sentence and stop.`
