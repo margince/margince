@@ -78,4 +78,4 @@ cb3567e3c038a99c488ff70d67a879ad87481ec9 1d21459ba06ec59c984fa3db1b9bb211113ee0e
 9ee4446817ea2be8f70495da16e21f908ead5109 b75442a6cc435d8866968a259f7d86d8cca0c20e ratified-a-deal-offer-and-project-source-is-one-of-six-channels
 ba71b7b06f2dc67ddd1e5ed68f03869244ebdf1c 75c9a29241ebac09a1f91df494624785539aac45 ratified-main-s-deal-offer-and-project-source-of-six-channels-carried-into-develop-in-the-back-sync
 fe7b0c82d93b663e3927671e52a6988735d7ced5 ba4530b9f04f69a1170ceeea063d5adf8a22f23f ratified-develop-s-router-actions-query-items-are-objects-carried-into-main-in-the-sync
-02216fa5a49e24cff48ae094dc775ecc584ac657 43af58b5e813ebf60de3da2710a57e254c7d3f5e ratified-a-company-says-status-where-it-said-lifecycle-and-publishes-its-column-text-limits
+104a7918d313a248dd6c557b36f8626fa0262076 906b7c2240766cb309dcc65131f0ad901601cbd2 ratified-a-company-says-status-where-it-said-lifecycle-and-publishes-its-column-text-limits
