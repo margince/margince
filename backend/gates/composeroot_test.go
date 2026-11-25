@@ -85,10 +85,13 @@ const (
 	// Raised by 60 production and 65 test lines for the record kind index checks
 	// and the History type check. They extend VerifyRecordKinds and the
 	// unexported History query, and their cases drive the History query plan.
+	// Raised by 240 production and 260 test lines for the extension card's setup
+	// state and the schedule book's time zone. Both drive the unexported
+	// inventory handler, schedule book and catch-up schedule.
 	// Raised by 61 production and 2 test lines for the history-narrowing fleet
 	// worker.
-	composeRootProductionLines = 230_940
-	composeRootTestLines       = 361_100
+	composeRootProductionLines = 231_180
+	composeRootTestLines       = 361_360
 )
 
 // A read under these floors stopped early or read the wrong place, and would
