@@ -24,44 +24,71 @@ type Runtime struct{}
 
 var _ extension.Runtime = Runtime{}
 
+// Secrets answers as the core answers a unit that holds nothing.
 func (Runtime) Secrets() extension.Secrets { return Secrets{} }
-func (Runtime) Caller() extension.Caller   { return extension.Caller{} }
 
+// Caller answers as the core answers a unit that holds nothing.
+func (Runtime) Caller() extension.Caller { return extension.Caller{} }
+
+// Tx answers as the core answers a unit that holds nothing.
 func (Runtime) Tx(context.Context, func(context.Context, extension.Tx) error) error {
 	return extension.ErrRuntimeExpired
 }
 
+// Ingest answers as the core answers a unit that holds nothing.
 func (Runtime) Ingest(context.Context, extension.UserID, extension.Record) (extension.Result, error) {
 	return extension.Result{}, extension.ErrAttendedIngest
 }
 
+// IngestBatch answers as the core answers a unit that holds nothing.
 func (Runtime) IngestBatch(context.Context, extension.UserID, extension.SourceName, []extension.Record, extension.BatchPosition) ([]extension.Result, error) {
 	return nil, extension.ErrAttendedIngest
 }
 
+// IngestPosition answers as the core answers a unit that holds nothing.
 func (Runtime) IngestPosition(context.Context, extension.SourceName) (extension.BatchPosition, error) {
 	return "", extension.ErrNotDeclared
 }
 
+// SyncNow answers as the core answers a unit that holds nothing.
 func (Runtime) SyncNow(context.Context, extension.JobName) error { return extension.ErrNoSuchJob }
 
+// OAuthAccessToken answers as the core answers a unit that holds nothing.
 func (Runtime) OAuthAccessToken(context.Context, extension.OAuthProvider) (string, error) {
 	return "", extension.ErrNoSuchOAuthApp
 }
 
+// OAuthDisconnect answers as the core answers a unit that holds nothing.
 func (Runtime) OAuthDisconnect(context.Context, extension.OAuthProvider) error {
 	return extension.ErrNoSuchOAuthApp
 }
 
-func (Runtime) Deals() extension.Deals              { return deals{} }
-func (Runtime) Authority() extension.Authority      { return authority{} }
-func (Runtime) Directory() extension.Directory      { return directory{} }
-func (Runtime) Activities() extension.Activities    { return activities{} }
-func (Runtime) SetAside() extension.SetAside        { return setAside{} }
-func (Runtime) Companies() extension.Companies      { return companies{} }
+// Deals answers as the core answers a unit that holds nothing.
+func (Runtime) Deals() extension.Deals { return deals{} }
+
+// Authority answers as the core answers a unit that holds nothing.
+func (Runtime) Authority() extension.Authority { return authority{} }
+
+// Directory answers as the core answers a unit that holds nothing.
+func (Runtime) Directory() extension.Directory { return directory{} }
+
+// Activities answers as the core answers a unit that holds nothing.
+func (Runtime) Activities() extension.Activities { return activities{} }
+
+// SetAside answers as the core answers a unit that holds nothing.
+func (Runtime) SetAside() extension.SetAside { return setAside{} }
+
+// Companies answers as the core answers a unit that holds nothing.
+func (Runtime) Companies() extension.Companies { return companies{} }
+
+// MailContent answers as the core answers a unit that holds nothing.
 func (Runtime) MailContent() extension.MailContents { return mailContents{} }
-func (Runtime) Models() extension.Models            { return models{} }
-func (Runtime) Objects() extension.Objects          { return objects{} }
+
+// Models answers as the core answers a unit that holds nothing.
+func (Runtime) Models() extension.Models { return models{} }
+
+// Objects answers as the core answers a unit that holds nothing.
+func (Runtime) Objects() extension.Objects { return objects{} }
 
 // Core is an extension.Core that hands back no door. Every getter answers nil,
 // so a handler that files or reads through the core panics at the first call.
@@ -72,12 +99,25 @@ type Core struct{}
 
 var _ extension.Core = Core{}
 
-func (Core) Activities() extension.ActivityRepo            { return nil }
-func (Core) Deals() extension.DealRepo                     { return nil }
-func (Core) Companies() extension.CompanyRepo              { return nil }
-func (Core) Signals() extension.SignalRepo                 { return nil }
-func (Core) CustomFields() extension.CustomFieldRepo       { return nil }
-func (Core) Notices() extension.NoticeRepo                 { return nil }
+// Activities answers nil: this kit hands back no door.
+func (Core) Activities() extension.ActivityRepo { return nil }
+
+// Deals answers nil: this kit hands back no door.
+func (Core) Deals() extension.DealRepo { return nil }
+
+// Companies answers nil: this kit hands back no door.
+func (Core) Companies() extension.CompanyRepo { return nil }
+
+// Signals answers nil: this kit hands back no door.
+func (Core) Signals() extension.SignalRepo { return nil }
+
+// CustomFields answers nil: this kit hands back no door.
+func (Core) CustomFields() extension.CustomFieldRepo { return nil }
+
+// Notices answers nil: this kit hands back no door.
+func (Core) Notices() extension.NoticeRepo { return nil }
+
+// LinkSuggestions answers nil: this kit hands back no door.
 func (Core) LinkSuggestions() extension.LinkSuggestionRepo { return nil }
 
 // Secrets refuses every read and write: nothing is stored.
@@ -85,18 +125,26 @@ type Secrets struct{}
 
 var _ extension.Secrets = Secrets{}
 
+// Get answers as an empty store answers.
 func (Secrets) Get(context.Context, string) ([]byte, error) { return nil, extension.ErrSecretNotFound }
-func (Secrets) Put(context.Context, string, []byte) error   { return extension.ErrRuntimeExpired }
-func (Secrets) Delete(context.Context, string) error        { return extension.ErrRuntimeExpired }
 
+// Put answers as an empty store answers.
+func (Secrets) Put(context.Context, string, []byte) error { return extension.ErrRuntimeExpired }
+
+// Delete answers as an empty store answers.
+func (Secrets) Delete(context.Context, string) error { return extension.ErrRuntimeExpired }
+
+// GetUser answers as an empty store answers.
 func (Secrets) GetUser(context.Context, extension.UserID, string) ([]byte, error) {
 	return nil, extension.ErrSecretNotFound
 }
 
+// PutUser answers as an empty store answers.
 func (Secrets) PutUser(context.Context, extension.UserID, string, []byte) error {
 	return extension.ErrRuntimeExpired
 }
 
+// DeleteUser answers as an empty store answers.
 func (Secrets) DeleteUser(context.Context, extension.UserID, string) error {
 	return extension.ErrRuntimeExpired
 }
