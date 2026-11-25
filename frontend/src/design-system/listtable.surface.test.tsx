@@ -295,7 +295,59 @@ describe("pagination", () => {
       [9, 40],
     ]) {
       expect(pagerSlots(current, lastPage)).toHaveLength(6);
+      expect(pagerSlots(current, lastPage, true)).toHaveLength(7);
     }
+  });
+
+  it("numbers the last page once the end of the list is known", () => {
+    expect(pagerSlots(1, 175, true)).toEqual([
+      "room",
+      "room",
+      1,
+      2,
+      3,
+      "gap",
+      175,
+    ]);
+    expect(pagerSlots(90, 175, true)).toEqual([
+      1,
+      "gap",
+      89,
+      90,
+      91,
+      "gap",
+      175,
+    ]);
+    expect(pagerSlots(175, 175, true)).toEqual([
+      1,
+      "gap",
+      173,
+      174,
+      175,
+      "room",
+      "room",
+    ]);
+  });
+
+  it("puts no gap before a last page that follows the window", () => {
+    expect(pagerSlots(1, 4, true)).toEqual([
+      "room",
+      "room",
+      1,
+      2,
+      3,
+      "room",
+      4,
+    ]);
+    expect(pagerSlots(2, 3, true)).toEqual([
+      "room",
+      "room",
+      1,
+      2,
+      3,
+      "room",
+      "room",
+    ]);
   });
 
   it("reaches page one from the strip rather than by walking Prev", async () => {
