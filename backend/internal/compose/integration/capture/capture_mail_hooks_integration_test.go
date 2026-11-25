@@ -270,7 +270,7 @@ func TestARepairAcrossTwoMailboxesLogsAHookAnswerOnce(t *testing.T) {
 	w.employee(t, "alice@acme.example", w.customer)
 	only := w.deal(t, "Acme rollout")
 	colleague := secondSentMailbox(t, e, e.Rep3)
-	raw := mailFrom("alice@acme.example", "hook11@acme.example", "", "invoice")
+	raw := mailFrom("alice@acme.example", "hook11@acme.example", "", "invoice", secondSeatAddress)
 	env.sync(t, raw)
 	colleague(t, nil, nil, raw)
 	wantDeals(t, e, "hook11@acme.example", only)

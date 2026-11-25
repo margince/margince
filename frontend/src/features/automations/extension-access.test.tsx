@@ -323,6 +323,12 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
+// The list items of the fact row under term.
+function rowItems(term: string) {
+  const row = screen.getByText(term).closest(".factlist-row");
+  return [...(row?.querySelectorAll("li") ?? [])].map((li) => li.textContent);
+}
+
 describe("ExtensionAccessCard", () => {
   it("renders each composed unit, what it brings, and the matrix from the fetched grants", async () => {
     vi.stubGlobal("fetch", backend([]));
@@ -346,31 +352,17 @@ describe("ExtensionAccessCard", () => {
     ]);
     expect(screen.getByText("ext_notes_digest")).toBeTruthy();
 
-    // What it borrows from the core, with the author's reason beside each.
-    const needs = screen
-      .getByText("Uses from the core")
-      .closest(".factlist-row");
-    expect(
-      [...(needs?.querySelectorAll("li") ?? [])].map(
-        (item) => item.textContent,
-      ),
-    ).toEqual([
+    // What it borrows from the core, with the author's reason beside each, and
+    // what of captured mail its hooks read, with the server's count.
+    expect(rowItems("Uses from the core")).toEqual([
       "AI models — Writes the one-line summaries.",
       "File storage — Keeps the summaries it writes.",
     ]);
-
-    // A unit with a mail hook lists what it reads, with the server's count.
-    const mail = screen
-      .getByText("Reads from captured mail")
-      .closest(".factlist-row");
-    expect(
-      [...(mail?.querySelectorAll("li") ?? [])].map((item) => item.textContent),
-    ).toEqual([
+    expect(rowItems("Reads from captured mail")).toEqual([
       "The subject",
       "The participants' addresses",
       "The first 1,234 characters of the text",
     ]);
-    expect(screen.getAllByText("Reads from captured mail")).toHaveLength(1);
 
     // The grants, read straight off the fixture: admin reads and creates the
     // note object and does neither of the other two verbs.

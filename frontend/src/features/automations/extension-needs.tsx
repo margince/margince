@@ -59,7 +59,7 @@ export function UnitNeeds({ needs }: Readonly<{ needs: readonly Need[] }>) {
 }
 
 /** The needs row of a unit's "brings" list. */
-export function needsFact(needs: readonly Need[] | undefined, term: string) {
+function needsFact(needs: readonly Need[] | undefined, term: string) {
   return { key: "needs", term, value: <UnitNeeds needs={needs ?? []} /> };
 }
 
@@ -99,8 +99,19 @@ function UnitMailReads({ hooks }: Readonly<{ hooks: MailHooks }>) {
  * hook. The unit may send what its hooks read to its own provider, so the admin
  * learns of it before granting the unit anything.
  */
-export function mailHooksFacts(hooks: MailHooks | undefined, term: string) {
+function mailHooksFacts(hooks: MailHooks | undefined, term: string) {
   return hooks
     ? [{ key: "mail", term, value: <UnitMailReads hooks={hooks} /> }]
     : [];
+}
+
+/** The rows of a unit's "brings" list for what it uses beyond its own records. */
+export function borrowedFacts(
+  unit: Readonly<{ needs?: readonly Need[]; mail_hooks?: MailHooks }>,
+  t: ReturnType<typeof useT>,
+) {
+  return [
+    needsFact(unit.needs, t("extAccess.brings.needs")),
+    ...mailHooksFacts(unit.mail_hooks, t("extAccess.brings.mail")),
+  ];
 }

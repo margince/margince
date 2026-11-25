@@ -132,7 +132,7 @@ func logUnauditedHookAnswers(ctx context.Context, tx pgx.Tx, mail ids.ActivityID
 		}
 		detail := map[string]any{
 			"activity_id": mail, "unit": c.Unit, "hook": c.Hook, fieldReason: reason,
-			"result": string(c.Result), "outcome": string(verdict.Outcome),
+			"result": string(c.Result), fieldOutcome: string(verdict.Outcome),
 		}
 		if err := logHookAnswerOnce(ctx, tx, detail); err != nil {
 			return err

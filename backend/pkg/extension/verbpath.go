@@ -48,9 +48,7 @@ func (v Verb) validatePathArguments() error {
 		if !declared || !slices.Contains(doc.Required, name) {
 			return fmt.Errorf("operation %s routes {%s}, which its input schema does not declare as a required argument", v.OperationID, name)
 		}
-		switch prop.Type {
-		case "string", "number", "integer", "boolean":
-		default:
+		if !flatArgumentType(prop.Type) {
 			return fmt.Errorf("operation %s routes {%s} of type %q — a path segment carries a string, number, integer or boolean", v.OperationID, name, prop.Type)
 		}
 	}

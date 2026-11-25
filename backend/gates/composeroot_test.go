@@ -74,8 +74,11 @@ const (
 	// extractor and transcript proposer.
 	// Raised by 244 test lines for the data reset cases of an event the sweep
 	// orphaned, which drive the unexported reset handlers.
-	composeRootProductionLines = 230_745
-	composeRootTestLines       = 360_931
+	// Raised by 63 production and 96 test lines for path ids in extension routes
+	// and the mail hooks in the extension inventory. They extend the unexported
+	// route argument reader and inventory builder, and their cases drive them.
+	composeRootProductionLines = 230_808
+	composeRootTestLines       = 361_027
 )
 
 // A read under these floors stopped early or read the wrong place, and would

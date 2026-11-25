@@ -16036,7 +16036,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "extAccess.brings.needs": "Dùng từ lõi",
   "extAccess.brings.mail": "Đọc từ thư đã thu thập",
   "extAccess.mail.subject": "Tiêu đề",
-  "extAccess.mail.addresses": "Địa chỉ của những người tham gia",
+  "extAccess.mail.addresses": "Các địa chỉ email trong thư",
   "extAccess.mail.body_one": "{count} ký tự đầu của nội dung",
   "extAccess.mail.body_other": "{count} ký tự đầu của nội dung",
   "extAccess.need.models": "Mô hình AI",

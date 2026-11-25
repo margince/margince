@@ -72763,7 +72763,7 @@ components:
         reads:
           type: array
           description: The parts of every captured mail the hooks read.
-          items: { type: string, enum: [subject, addresses, body] }
+          items: { type: string, enum: [subject, addresses, body], x-extensible-enum: true }
         body_characters:
           type: integer
           description: How many characters of the mail's text a hook reads.
