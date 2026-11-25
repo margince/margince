@@ -16,6 +16,8 @@ import (
 	"strconv"
 
 	"github.com/margince/margince/backend/pkg/extension"
+
+	"github.com/margince/margince/backend/internal/platform/unitset"
 )
 
 // unitManifestFile is the per-unit generated manifest: what
@@ -24,7 +26,7 @@ import (
 // review, and the boot inventory read it WITHOUT compiling or executing
 // the code. The drift gate (-verify), not a signature, binds it to the
 // source for in-repo units.
-const unitManifestFile = "manifest.generated.json"
+const unitManifestFile = unitset.ManifestFile
 
 // opAgentToolInvoke is the operation a governed agent tool performs; the
 // security descriptor names it so a later capability kind reusing the id

@@ -5,6 +5,7 @@ package main
 
 import (
 	"bytes"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"go/format"
@@ -17,12 +18,14 @@ import (
 	"golang.org/x/mod/modfile"
 
 	"github.com/margince/margince/backend/pkg/extension"
+
+	"github.com/margince/margince/backend/internal/platform/unitset"
 )
 
 // compositionModule is the constant import path the role binaries wire
 // (backend/go.mod resolves it to the committed vanilla stub; the
 // generated go.work overrides it with build/composition/backend).
-const compositionModule = "github.com/margince/margince/composition"
+const compositionModule = unitset.CompositionModule
 
 // extensionsGenHeader is shared by the vanilla stub and every composed
 // output — the vanilla body below it must stay byte-identical to
@@ -299,7 +302,12 @@ func composedFiles(root string) (composition, error) {
 	if err != nil {
 		return composition{}, err
 	}
+	unitList, err := composedUnitList(root, units)
+	if err != nil {
+		return composition{}, err
+	}
 	files := map[string][]byte{
+		unitListFile:                     unitList,
 		goWorkFile:                       work,
 		"backend/go.mod":                 composedGoMod(goVersion),
 		"backend/extensions_gen.go":      wiring,
@@ -314,6 +322,37 @@ func composedFiles(root string) (composition, error) {
 		files["api/"+base] = content
 	}
 	return composition{Files: files, Verbs: verbs, Jobs: jobDecls, AITasks: taskDecls, Manifests: manifests}, nil
+}
+
+// unitListFile names the composed units and where each one's manifest is,
+// relative to the root. scripts/verify-boot.sh reads it instead of guessing
+// the set from the folders under extensions/.
+const unitListFile = "units.json"
+
+// composedUnit is one row of unitListFile.
+type composedUnit struct {
+	Name     string `json:"name"`
+	Manifest string `json:"manifest"`
+}
+
+// composedUnitList encodes the selected units sorted by name, and an empty
+// array for a core-only build, so a reader can tell "no units" from a file
+// nobody wrote.
+func composedUnitList(root string, units []extensionUnit) ([]byte, error) {
+	rows := make([]composedUnit, 0, len(units))
+	for _, u := range units {
+		rel, err := filepath.Rel(root, filepath.Join(u.Dir, unitManifestFile))
+		if err != nil {
+			return nil, err
+		}
+		rows = append(rows, composedUnit{Name: u.Name, Manifest: filepath.ToSlash(rel)})
+	}
+	sort.Slice(rows, func(i, j int) bool { return rows[i].Name < rows[j].Name })
+	encoded, err := json.MarshalIndent(rows, "", "  ")
+	if err != nil {
+		return nil, err
+	}
+	return append(encoded, '\n'), nil
 }
 
 // canonicalGoSource parses emitted Go source and requires it to already
