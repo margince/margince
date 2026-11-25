@@ -20686,7 +20686,7 @@ export const en = {
     "A field it names has changed. Its steward can fix the filter in the builder.",
   "lists.unavailable.title": "These records are unavailable",
   "lists.unavailable.body":
-    "This list holds records an extension adds. The extension is not installed, or you may not read its records. The list works again when the extension is installed and you may read its records.",
+    "This list holds records an extension adds, and that extension is not installed. The list works again when the extension is installed again.",
   "lists.ownerless.title": "Nobody looks after this list",
   "lists.ownerless.body":
     "Its steward has left or was never set. Somebody who may change the list should take it over.",

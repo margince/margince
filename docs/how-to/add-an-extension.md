@@ -1902,11 +1902,13 @@ rows and any grants of its RBAC objects inside `role.permissions` all stay. Ther
 
 Lists, saved views and reports over the unit's record kinds stay, and nothing else breaks:
 
-- A list over one of its kinds reads as health `unavailable`, with no count and no members. Its export
-  answers 422. The Live List check stores it as `invalid`, which pauses the rules that watch it. It keeps the
-  list's last members, so no one is recorded as having left.
+- A list over one of its kinds reads as health `unavailable`, with no count, no members and no filter. Its
+  export answers 422. The Live List check stores it as `invalid` and pauses the rules that watch it as
+  `list_unavailable`. It keeps the list's last members, so no one is recorded as having left.
 - A saved view over one of its kinds keeps its row. A change to its filter answers 422.
 - Its reports leave the report directory, because they are no longer registered.
 
-All of these come back when the unit is composed again. A member who may not read a kind sees its
-lists the same way, so they cannot tell a removed unit from a right they lack.
+All of these come back when the unit is composed again, except the paused rules, which a person resumes.
+A member who may not read a kind is told nothing about its lists: the library leaves them out, and a
+direct read answers 403. A new list, saved view or search over a kind answers 422 alike whether the unit
+was removed or the caller may not read it.

@@ -7,13 +7,16 @@ package compose
 
 // Removing a unit leaves every list, saved view and export that does not name
 // its kinds working. What names them reads as unavailable or empty, never as a
-// fault, and a member without a kind's read right sees the same.
+// fault, and composing the unit again picks up where it left off. A member
+// without a kind's read right is told nothing about its lists.
 
 import (
 	"context"
 	"errors"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
+	"slices"
 	"strings"
 	"testing"
 	"time"
@@ -64,23 +67,26 @@ func seedKindLists(t *testing.T, e *integration.Env, store *collections.Store, c
 	return kindLists{live: live.ID, short: short.ID, contacts: contacts.ID, view: view.ID, visit: visit}
 }
 
-// assertKindListsUnavailable checks every list and view surface a reader who
-// cannot read the kind reaches.
-func assertKindListsUnavailable(t *testing.T, e *integration.Env, store *collections.Store, ctx context.Context, seeded kindLists) {
+// assertRemovedKindListsUnavailable checks every list and view surface once the
+// unit is gone.
+func assertRemovedKindListsUnavailable(t *testing.T, e *integration.Env, store *collections.Store, ctx context.Context, seeded kindLists) {
 	t.Helper()
 	page, err := store.ListsPage(ctx, collections.ListFilter{})
 	if err != nil {
 		t.Fatalf("list library = %v, want it to load", err)
 	}
-	health := map[string]crmcontracts.ListHealth{}
+	byName := map[string]crmcontracts.List{}
 	for _, l := range page.Data {
-		health[l.Name] = l.Health
+		byName[l.Name] = l
 	}
 	want := map[string]crmcontracts.ListHealth{"Berlin visits": "unavailable", "Chosen visits": "unavailable", "Contacts": crmcontracts.ListHealthOk}
 	for name, h := range want {
-		if health[name] != h {
-			t.Errorf("health of %s = %q, want %q", name, health[name], h)
+		if byName[name].Health != h {
+			t.Errorf("health of %s = %q, want %q", name, byName[name].Health, h)
 		}
+	}
+	if byName["Berlin visits"].Definition != nil {
+		t.Error("the library returned the filter of a removed kind's list")
 	}
 	for _, id := range []ids.ListID{seeded.live, seeded.short} {
 		if _, err := store.ListView(ctx, id); err != nil {
@@ -92,6 +98,15 @@ func assertKindListsUnavailable(t *testing.T, e *integration.Env, store *collect
 		}
 		if _, err := store.ExplainView(ctx, id, seeded.visit); !errors.Is(err, apperrors.ErrNotFound) {
 			t.Errorf("why the visit is on %s = %v, want not found", id, err)
+		}
+		history, _, err := store.History(ctx, id, 50, "")
+		if err != nil || len(history) == 0 {
+			t.Errorf("history of %s = %d entries, %v; want it to load", id, len(history), err)
+		}
+		for _, entry := range history {
+			if entry.Definition != nil || entry.PreviousDefinition != nil {
+				t.Errorf("history of %s returned the filter of a removed kind", id)
+			}
 		}
 		if code := exportListStatus(e, store, ctx, id); code != http.StatusUnprocessableEntity {
 			t.Errorf("export of %s = %d, want 422", id, code)
@@ -117,38 +132,123 @@ func exportListStatus(e *integration.Env, store *collections.Store, ctx context.
 	return rec.Code
 }
 
-func TestRemovingAUnitLeavesItsListsUnavailableAndTheRestWorking(t *testing.T) {
+// checkOf runs one Live List check pass and answers the given list's check,
+// failing on any error the pass or that list reports.
+func checkOf(t *testing.T, e *integration.Env, list ids.ListID) collections.LiveCheck {
+	t.Helper()
+	checks, err := CheckLiveLists(context.Background(), e.Pool, e.WS, time.Now)
+	if err != nil {
+		t.Fatalf("check pass: %v", err)
+	}
+	for _, check := range checks {
+		if check.ListID == list {
+			if check.Err != nil {
+				t.Fatalf("check of %s: %v", list, check.Err)
+			}
+			return check
+		}
+	}
+	t.Fatalf("the pass did not check %s", list)
+	return collections.LiveCheck{}
+}
+
+func TestRemovingAUnitLeavesItsListsUnavailableAndComposingItAgainResumes(t *testing.T) {
 	e := integration.Setup(t)
 	registerHistoryVisits(t)
 	store := collections.NewStore(e.DB())
 	ctx := e.As(e.Rep1, []ids.UUID{e.Team1}, listingPerms(true))
 	seeded := seedKindLists(t, e, store, ctx)
-	if _, err := CheckLiveLists(context.Background(), e.Pool, e.WS, time.Now); err != nil {
-		t.Fatalf("the first check: %v", err)
+	if first := checkOf(t, e, seeded.live); first.Outcome != collections.CheckComplete || first.Members != 1 {
+		t.Fatalf("first check = %+v, want complete with the one Berlin visit", first)
 	}
+	rule := ids.NewV7()
+	e.WsExec(t, `INSERT INTO automation (id, key, name, trigger, action, params, owner_id, enabled, tier)
+		VALUES ($1, 'list_membership_notify', 'Tell me', '{"event_type":"list.evaluated"}', '{"kind":"notify"}',
+		jsonb_build_object('list_id', $2::text), $3, true, 'auto_execute')`, rule, seeded.live.String(), e.Rep1)
 
 	recordkinds.Reset()
 
-	assertKindListsUnavailable(t, e, store, ctx, seeded)
-	checks, err := CheckLiveLists(context.Background(), e.Pool, e.WS, time.Now)
-	if err != nil {
-		t.Fatalf("the check after the removal: %v", err)
+	assertRemovedKindListsUnavailable(t, e, store, ctx, seeded)
+	if removed := checkOf(t, e, seeded.live); removed.Outcome != collections.CheckInvalid || !removed.KindRemoved {
+		t.Errorf("check after the removal = %+v, want invalid with the kind removed", removed)
 	}
-	for _, check := range checks {
-		if check.ListID == seeded.live && (check.Outcome != collections.CheckInvalid || check.Err != nil) {
-			t.Errorf("check of the Live List = %s, %v; want invalid and no failure", check.Outcome, check.Err)
-		}
+	if reason := e.WsScalar(t, `SELECT coalesce(paused_reason, '') FROM automation WHERE id = $1`, rule); reason != "list_unavailable" {
+		t.Errorf("the rule on the list paused as %q, want list_unavailable", reason)
 	}
-	if left := e.WsScalar(t, `SELECT count(*)::text FROM list_member_event WHERE list_id = '`+seeded.live.String()+`' AND action = 'left'`); left != "0" {
-		t.Errorf("%s members recorded as left, want none: the unit's removal is not the records leaving", left)
+
+	registerHistoryVisitKind()
+	e.WsExec(t, `UPDATE ext.`+historyDemoTable+` SET site = 'Munich site' WHERE code = 'v1'`)
+	e.WsExec(t, `INSERT INTO ext.`+historyDemoTable+` (code, site) VALUES ('v2', 'Berlin new')`)
+	back := checkOf(t, e, seeded.live)
+	if back.Outcome != collections.CheckComplete || back.Members != 1 || back.Entered != 1 || back.Left != 1 {
+		t.Errorf("check after composing the unit again = %+v, want complete with v2 entered and v1 left", back)
+	}
+	left := e.WsScalar(t, `SELECT string_agg(entity_id::text, ',') FROM list_member_event WHERE list_id = $1::uuid AND action = 'left'`, seeded.live.String())
+	if left != seeded.visit.String() {
+		t.Errorf("left events = %q, want only v1 (%s): the removal itself is not the records leaving", left, seeded.visit)
+	}
+	members, err := store.MembersPage(ctx, seeded.live, collections.MemberRead{})
+	if err != nil || len(members.Data) != 1 {
+		t.Errorf("members after the unit is back = %d, %v; want v2", len(members.Data), err)
 	}
 }
 
-func TestAMemberWithoutTheKindsReadRightSeesItsListsUnavailable(t *testing.T) {
+func TestAMemberWithoutTheKindsReadRightIsToldNothingAboutItsLists(t *testing.T) {
 	e := integration.Setup(t)
 	registerHistoryVisits(t)
 	store := collections.NewStore(e.DB())
 	seeded := seedKindLists(t, e, store, e.As(e.Rep1, []ids.UUID{e.Team1}, listingPerms(true)))
+	colleague := e.As(e.Rep2, []ids.UUID{e.Team1}, listingPerms(false))
 
-	assertKindListsUnavailable(t, e, store, e.As(e.Rep1, []ids.UUID{e.Team1}, listingPerms(false)), seeded)
+	page, err := store.ListsPage(colleague, collections.ListFilter{})
+	if err != nil {
+		t.Fatalf("list library = %v, want it to load", err)
+	}
+	var names []string
+	for _, l := range page.Data {
+		names = append(names, l.Name)
+		if l.EntityType == historyDemoKind {
+			t.Errorf("the library showed %q, a team list over a kind the member may not read, with filter %v", l.Name, l.Definition)
+		}
+	}
+	if !slices.Contains(names, "Contacts") {
+		t.Errorf("library = %v, want the team's contact list still there", names)
+	}
+	for _, id := range []ids.ListID{seeded.live, seeded.short} {
+		if _, err := store.ListView(colleague, id); !errors.Is(err, apperrors.ErrPermissionDenied) {
+			t.Errorf("list %s = %v, want permission denied", id, err)
+		}
+		if _, _, err := store.History(colleague, id, 50, ""); !errors.Is(err, apperrors.ErrPermissionDenied) {
+			t.Errorf("history of %s = %v, want permission denied, as it carries the filter", id, err)
+		}
+		if _, err := store.MembersPage(colleague, id, collections.MemberRead{}); !errors.Is(err, apperrors.ErrPermissionDenied) {
+			t.Errorf("members of %s = %v, want permission denied", id, err)
+		}
+		if code := exportListStatus(e, store, colleague, id); code != http.StatusForbidden {
+			t.Errorf("export of %s = %d, want 403", id, code)
+		}
+	}
+}
+
+func TestCreatingOverAnUnreadableKindAnswersAsOverARemovedOne(t *testing.T) {
+	e := integration.Setup(t)
+	registerHistoryVisits(t)
+	store := collections.NewStore(e.DB())
+	colleague := e.As(e.Rep2, []ids.UUID{e.Team1}, listingPerms(false))
+	refusal := func(kind string) (string, string) {
+		_, listErr := store.CreateList(colleague, collections.CreateListInput{Name: "Probe", EntityType: kind, ListType: "static"})
+		_, viewErr := store.CreateSavedView(colleague, collections.CreateSavedViewInput{Resource: kind, Name: "Probe", Query: map[string]any{}})
+		for _, err := range []error{listErr, viewErr} {
+			if _, ok := errors.AsType[*collections.BadInputError](err); !ok {
+				t.Errorf("creating over %s = %v, want a 422", kind, err)
+			}
+		}
+		return fmt.Sprint(listErr), fmt.Sprint(viewErr)
+	}
+	unreadableList, unreadableView := refusal(historyDemoKind)
+	removedList, removedView := refusal("ext:nobody:ghost")
+	if strings.ReplaceAll(unreadableList, historyDemoKind, "") != strings.ReplaceAll(removedList, "ext:nobody:ghost", "") ||
+		strings.ReplaceAll(unreadableView, historyDemoKind, "") != strings.ReplaceAll(removedView, "ext:nobody:ghost", "") {
+		t.Errorf("the refusals differ, so they tell the kinds apart: %q vs %q, %q vs %q", unreadableList, removedList, unreadableView, removedView)
+	}
 }

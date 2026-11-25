@@ -20924,7 +20924,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Ein Feld im Filter hat sich geändert. Wer für die Liste zuständig ist, kann den Filter im Editor korrigieren.",
   "lists.unavailable.title": "Diese Datensätze sind nicht verfügbar",
   "lists.unavailable.body":
-    "Diese Liste enthält Datensätze einer Erweiterung. Die Erweiterung ist nicht installiert, oder du darfst ihre Datensätze nicht lesen. Die Liste funktioniert wieder, sobald die Erweiterung installiert ist und du ihre Datensätze lesen darfst.",
+    "Diese Liste enthält Datensätze einer Erweiterung, und diese Erweiterung ist nicht installiert. Die Liste funktioniert wieder, sobald die Erweiterung wieder installiert ist.",
   "lists.ownerless.title": "Niemand ist für diese Liste zuständig",
   "lists.ownerless.body":
     "Für diese Liste ist niemand mehr zuständig, oder es wurde nie jemand festgelegt. Wer die Liste ändern darf, sollte sie übernehmen.",

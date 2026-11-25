@@ -151,8 +151,8 @@ func (s *Store) ExplainMember(ctx context.Context, listID ids.ListID, entityID i
 	if err != nil {
 		return MemberExplanation{}, err
 	}
-	// The reader cannot see a record of a kind they cannot read.
-	if kindUnavailable(ctx, list.EntityType) {
+	// No record of a removed kind can be seen.
+	if kindRemoved(list.EntityType) {
 		return MemberExplanation{}, apperrors.ErrNotFound
 	}
 	if list.ListType == listTypeDynamic {
@@ -236,6 +236,11 @@ func (s *Store) History(ctx context.Context, listID ids.ListID, limit int, curso
 	if err != nil {
 		return nil, storekit.Page{}, err
 	}
+	removed := kindRemoved(list.EntityType)
+	// A revision carries the filter, which a reader of the kind alone may see.
+	if !removed && kindUnavailable(ctx, list.EntityType) {
+		return nil, storekit.Page{}, apperrors.ErrPermissionDenied
+	}
 	var after *storekit.Cursor
 	if cursor != "" {
 		decoded, err := storekit.DecodeCursor("list_history", cursor)
@@ -261,6 +266,12 @@ func (s *Store) History(ctx context.Context, listID ids.ListID, limit int, curso
 	})
 	if err != nil {
 		return nil, storekit.Page{}, err
+	}
+	// A removed kind's filter names fields no reader can read any more.
+	if removed {
+		for i := range out {
+			out[i].Definition, out[i].PreviousDefinition = nil, nil
+		}
 	}
 	if len(out) > limit {
 		out = out[:limit]

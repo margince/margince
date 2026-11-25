@@ -14,6 +14,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/ports/recordkinds"
@@ -94,7 +95,7 @@ func (s *Store) readMembers(ctx context.Context, listID ids.ListID, read MemberR
 	if err != nil {
 		return nil, storekit.Page{}, err
 	}
-	if kindUnavailable(ctx, list.EntityType) {
+	if kindRemoved(list.EntityType) {
 		return nil, storekit.Page{}, nil
 	}
 	if list.ListType == listTypeDynamic {
@@ -135,7 +136,7 @@ func visibleMemberClause(ctx context.Context, entityType string, arg func(any) i
 // Its rows have no owner to scope by, so the kind's read right is the whole
 // scope. A reader without it sees no member. One with it sees the live rows.
 func extensionMemberClause(ctx context.Context, kind, idColumn string) string {
-	declared, ok := readableKind(ctx, kind)
+	declared, ok := auth.ReadableKind(ctx, kind)
 	if !ok {
 		return "FALSE"
 	}
@@ -236,12 +237,16 @@ const dynamicAddedBy = "dynamic"
 // already held cannot wait on a second connection from the same pool without
 // risking a deadlock under load.
 func (s *Store) liveFilter(ctx context.Context, list listRow) (storekit.Query, storekit.Predicate, error) {
-	if kindUnavailable(ctx, list.EntityType) {
-		return storekit.Query{}, storekit.Predicate{}, errKindUnavailable
+	if kindRemoved(list.EntityType) {
+		return storekit.Query{}, storekit.Predicate{}, errKindRemoved
 	}
 	engine, ok, err := s.SegmentEngine(ctx, list.EntityType)
 	if err != nil {
 		return storekit.Query{}, storekit.Predicate{}, err
+	}
+	if !ok && recordkinds.IsExtensionName(list.EntityType) {
+		// A declared kind answers no engine only to a caller who may not read it.
+		return storekit.Query{}, storekit.Predicate{}, apperrors.ErrPermissionDenied
 	}
 	if !ok {
 		// A stored list.entity_type outside the segment set is a schema
@@ -325,7 +330,7 @@ func (s *Store) MemberFilter(ctx context.Context, listID ids.UUID, entityType st
 	if list.EntityType != entityType {
 		return nil, &BadInputError{Field: listIDField, Reason: "names a list of " + list.EntityType + ", not of " + entityType}
 	}
-	if kindUnavailable(ctx, list.EntityType) {
+	if kindRemoved(list.EntityType) {
 		return func(string, func(any) int) (string, error) { return "FALSE", nil }, nil
 	}
 	if list.ListType == listTypeDynamic {

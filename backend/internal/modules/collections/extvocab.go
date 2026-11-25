@@ -12,7 +12,6 @@ import (
 
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
-	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/ports/recordkinds"
 )
 
@@ -46,7 +45,7 @@ func extensionVocabulary(engine storekit.Query) []VocabularyField {
 // Its rows carry no owner, so the kind's read right (Object) is the whole row
 // scope. A kind the caller may not read answers as no kind at all.
 func extensionEngine(ctx context.Context, kind string) (storekit.Query, bool) {
-	declared, ok := readableKind(ctx, kind)
+	declared, ok := auth.ReadableKind(ctx, kind)
 	if !ok {
 		return storekit.Query{}, false
 	}
@@ -72,28 +71,27 @@ func extensionEngine(ctx context.Context, kind string) (storekit.Query, bool) {
 	}, true
 }
 
-// errKindUnavailable is a list or view over an extension kind this caller
-// cannot read. Its readers answer it as empty or unavailable, never as a fault,
-// so the lists and views over every other kind keep working.
-var errKindUnavailable = errors.New("the record kind of this list is unavailable")
+// errKindRemoved is a list over an extension kind no unit declares any more.
+// Its readers answer it as empty or unavailable, never as a fault, so the
+// lists over every other kind keep working.
+var errKindRemoved = errors.New("no installed extension declares the record kind of this list")
 
-// readableKind is an extension kind this caller can read: a unit still declares
-// it and the caller holds its read right. The two cases answer alike, so a
-// reader cannot tell a removed unit from a right it lacks.
-func readableKind(ctx context.Context, kind string) (recordkinds.Declared, bool) {
-	declared, ok := recordkinds.Lookup(kind)
-	if !ok || !auth.Allows(ctx, kind, principal.ActionRead) {
-		return recordkinds.Declared{}, false
+// kindRemoved is true for an extension kind no unit declares any more. A kind
+// the caller may not read is not removed: its readers keep refusing it.
+func kindRemoved(kind string) bool {
+	if !recordkinds.IsExtensionName(kind) {
+		return false
 	}
-	return declared, true
+	_, declared := recordkinds.Lookup(kind)
+	return !declared
 }
 
-// kindUnavailable is true for an extension kind readableKind refuses. A core
-// record type is never unavailable: its own gates answer for it.
+// kindUnavailable is true for an extension kind the caller cannot read, removed
+// or not. What a caller creates over a kind answers both alike.
 func kindUnavailable(ctx context.Context, kind string) bool {
 	if !recordkinds.IsExtensionName(kind) {
 		return false
 	}
-	_, ok := readableKind(ctx, kind)
+	_, ok := auth.ReadableKind(ctx, kind)
 	return !ok
 }

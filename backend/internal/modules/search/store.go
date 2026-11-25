@@ -13,6 +13,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -211,7 +212,7 @@ func (s *Store) Search(ctx context.Context, in Input) (Page, error) {
 		types = slices.DeleteFunc(slices.Clone(types), func(t string) bool { return t == entityActivity })
 	}
 	for _, t := range types {
-		if !knownEntity(t) {
+		if !knownEntity(ctx, t) {
 			return Page{}, &BadQueryError{Field: "types", Reason: fmt.Sprintf("unknown type %q", t)}
 		}
 	}
@@ -409,9 +410,12 @@ func (e *QueryTooBroadError) FieldFault() (field, code, message string) {
 		"add another word, or narrow it by record type"
 }
 
-func knownEntity(t string) bool {
-	if _, declared := recordkinds.Lookup(t); declared {
-		return true
+// knownEntity is a core searchable type or an extension kind the caller can
+// read. A removed kind and an unreadable one are both unknown.
+func knownEntity(ctx context.Context, t string) bool {
+	if recordkinds.IsExtensionName(t) {
+		_, readable := auth.ReadableKind(ctx, t)
+		return readable
 	}
 	for _, b := range searchBranches {
 		if b.entity == t {

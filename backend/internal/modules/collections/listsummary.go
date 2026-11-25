@@ -75,15 +75,15 @@ func (s *Store) summarize(ctx context.Context, lists []listRow) ([]*listSummary,
 
 // gatedSummaries checks read access once per record type, before any filter is
 // judged. So a list whose filter no longer compiles is refused to a reader who
-// may not read its records. A list over an extension kind this reader cannot
-// read is marked unavailable and never judged, so it cannot fail the page.
+// may not read its records. A list over an extension kind no unit declares any
+// more is marked unavailable and never judged, so it cannot fail the page.
 func gatedSummaries(ctx context.Context, lists []listRow) ([]*listSummary, error) {
 	out := make([]*listSummary, 0, len(lists))
 	gated := map[string]bool{}
 	for _, l := range lists {
 		summary := &listSummary{listRow: l, Health: healthOK, CanEdit: mayEditList(ctx, l)}
 		switch {
-		case kindUnavailable(ctx, l.EntityType):
+		case kindRemoved(l.EntityType):
 			summary.Health = healthUnavailable
 		case !gated[l.EntityType]:
 			if err := auth.Require(ctx, l.EntityType, principal.ActionRead); err != nil {

@@ -20362,7 +20362,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Một trường trong bộ lọc đã thay đổi. Người phụ trách danh sách có thể sửa bộ lọc trong trình tạo bộ lọc.",
   "lists.unavailable.title": "Các bản ghi này không khả dụng",
   "lists.unavailable.body":
-    "Danh sách này chứa bản ghi do một tiện ích mở rộng thêm vào. Tiện ích đó chưa được cài đặt, hoặc bạn không có quyền đọc các bản ghi của nó. Danh sách sẽ hoạt động lại khi tiện ích được cài đặt và bạn có quyền đọc các bản ghi đó.",
+    "Danh sách này chứa bản ghi do một tiện ích mở rộng thêm vào, và tiện ích đó chưa được cài đặt. Danh sách sẽ hoạt động lại khi tiện ích được cài đặt lại.",
   "lists.ownerless.title":
     "Kh\u00f4ng ai ph\u1ee5 tr\u00e1ch danh s\u00e1ch n\u00e0y",
   "lists.ownerless.body":

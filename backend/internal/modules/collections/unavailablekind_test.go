@@ -8,6 +8,7 @@ import (
 	"errors"
 	"testing"
 
+	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/ports/recordkinds"
 	"github.com/margince/margince/backend/pkg/extension"
@@ -58,47 +59,56 @@ func TestAnExtensionKindIsUnavailableWhenRemovedOrNotReadable(t *testing.T) {
 	}
 }
 
-func TestAListOverAnUnavailableKindIsMarkedAndTheOthersStillPassTheGate(t *testing.T) {
+func TestOnlyAKindNoUnitDeclaresIsRemoved(t *testing.T) {
+	registerVisit(t)
+	if kindRemoved(visitKind) || kindRemoved(typeContact) || !kindRemoved("ext:gone:visit") {
+		t.Error("kindRemoved must hold only for an extension kind no unit declares")
+	}
+}
+
+func TestAListOverARemovedKindIsMarkedAndAnUnreadableOneStillRefused(t *testing.T) {
 	registerVisit(t)
 	lists := []listRow{
 		{EntityType: "ext:gone:visit", ListType: listTypeDynamic},
 		{EntityType: typeContact, ListType: listTypeStatic},
-		{EntityType: visitKind, ListType: listTypeStatic},
 	}
-	for name, ctx := range map[string]context.Context{
-		"the unit was removed":            readerOf(typeContact, "ext_alpha_visit"),
-		"the reader lacks the read right": readerOf(typeContact),
-	} {
-		got, err := gatedSummaries(ctx, lists)
-		if err != nil {
-			t.Fatalf("%s: gatedSummaries = %v, want the page to keep loading", name, err)
-		}
-		if got[0].Health != healthUnavailable || got[1].Health != healthOK {
-			t.Errorf("%s: health = %s, %s, want unavailable, ok", name, got[0].Health, got[1].Health)
-		}
+	got, err := gatedSummaries(readerOf(typeContact), lists)
+	if err != nil {
+		t.Fatalf("gatedSummaries = %v, want the page to keep loading", err)
 	}
-	readable, err := gatedSummaries(readerOf(typeContact, "ext_alpha_visit"), lists)
-	if err != nil || readable[2].Health != healthOK {
-		t.Errorf("a readable extension list: err = %v, want it ok", err)
+	if got[0].Health != healthUnavailable || got[1].Health != healthOK {
+		t.Errorf("health = %s, %s, want unavailable, ok", got[0].Health, got[1].Health)
 	}
-	unreadable, err := gatedSummaries(readerOf(typeContact), lists)
-	if err != nil || unreadable[2].Health != healthUnavailable {
-		t.Errorf("an extension list the reader may not read: err = %v, want it unavailable", err)
+	_, err = gatedSummaries(readerOf(typeContact), []listRow{{EntityType: visitKind, ListType: listTypeStatic}})
+	if !errors.Is(err, apperrors.ErrPermissionDenied) {
+		t.Errorf("a declared kind the reader may not read = %v, want permission denied", err)
 	}
 }
 
-func TestTheLiveListCheckStoresAnUnavailableKindAsInvalid(t *testing.T) {
-	if !invalidFilter(errKindUnavailable) {
-		t.Error("an unavailable kind must checkpoint the list invalid, not fail every pass")
+func TestTheWireNeverCarriesARemovedKindsFilter(t *testing.T) {
+	definition := map[string]any{"field": "site", "op": "eq", "value": "x"}
+	removed := wireList(listSummary{listRow: listRow{Definition: definition}, Health: healthUnavailable})
+	kept := wireList(listSummary{listRow: listRow{Definition: definition}, Health: healthOK})
+	if removed.Definition != nil || kept.Definition == nil {
+		t.Errorf("definitions = %v, %v; want none for the removed kind and the filter otherwise", removed.Definition, kept.Definition)
 	}
 }
 
-func TestAnUnavailableKindAnswersEmptyMembersAndNoFilter(t *testing.T) {
+func TestTheLiveListCheckStoresARemovedKindAsInvalid(t *testing.T) {
+	if !invalidFilter(errKindRemoved) {
+		t.Error("a removed kind must checkpoint the list invalid, not fail every pass")
+	}
+}
+
+func TestALiveListOverAnUnreadableKindIsRefusedAndOverARemovedOneEmpty(t *testing.T) {
 	registerVisit(t)
 	var store Store
 	ctx := readerOf(typeContact)
-	if _, _, err := store.liveFilter(ctx, listRow{EntityType: visitKind, ListType: listTypeDynamic}); !errors.Is(err, errKindUnavailable) {
-		t.Errorf("liveFilter = %v, want errKindUnavailable", err)
+	if _, _, err := store.liveFilter(ctx, listRow{EntityType: visitKind, ListType: listTypeDynamic}); !errors.Is(err, apperrors.ErrPermissionDenied) {
+		t.Errorf("liveFilter over an unreadable kind = %v, want permission denied", err)
+	}
+	if _, _, err := store.liveFilter(ctx, listRow{EntityType: "ext:gone:visit", ListType: listTypeDynamic}); !errors.Is(err, errKindRemoved) {
+		t.Errorf("liveFilter over a removed kind = %v, want errKindRemoved", err)
 	}
 	if clause := extensionMemberClause(ctx, visitKind, "ev.entity_id"); clause != "FALSE" {
 		t.Errorf("member clause = %q, want FALSE", clause)

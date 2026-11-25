@@ -354,7 +354,7 @@ A Live List's row in the library shows **Uses a retired field** when its filter 
 
 In the library, **Filter no longer works** means a field the filter names has changed, so the filter cannot run. The list's page says "This filter no longer works". Its steward fixes it the same way, with **Edit filter**.
 
-**Records unavailable** means the list holds records an extension adds, and you cannot read them now. Either the extension was removed, or your role may not read its records. The list shows no members and cannot be exported. Its page says "These records are unavailable". The list works again when the extension is back and you may read its records.
+**Records unavailable** means the list holds records an extension adds, and that extension was removed. The list shows no members and cannot be exported. Its page says "These records are unavailable". The list works again when the extension is installed again.
 
 Also called: broken list, list warning, archived custom field, removed extension.
 
