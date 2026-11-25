@@ -256,3 +256,5 @@
 1795449105_an_archived_record_leaves_its_chat_channel.down.sql | * | the down migration is a single SELECT 1 that changes nothing
 1795540594_a_host_keeps_team_links_beside_the_personal_link.up.sql | booking_page | revokes a host's older live booking pages; every writer kept one live page per host, so the set is empty or a handful
 1795540594_a_host_keeps_team_links_beside_the_personal_link.down.sql | booking_page | revokes the live team links, at most a few per member
+1795589887_the_text_limits_follow_the_signal_source_system.up.sql | * | replaces the two text guards on signal; the guards act on later writes only, and it changes no existing row
+1795589887_the_text_limits_follow_the_signal_source_system.down.sql | * | restores the two earlier text guards on signal; it changes no existing row

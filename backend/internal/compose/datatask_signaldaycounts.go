@@ -78,8 +78,8 @@ func rewordedDaySummary(kind, summary string) (string, bool) {
 	return "", false
 }
 
-const signalDayCountScope = `FROM signal s
- WHERE s.source = 'signal-scan' AND s.kind IN ('` + kindGhostedThread + `', '` + kindProjectGoneQuiet + `')`
+var signalDayCountScope = `FROM signal s
+ WHERE ` + signals.ScanWrittenSQL("s.") + ` AND s.kind IN ('` + kindGhostedThread + `', '` + kindProjectGoneQuiet + `')`
 
 type storedSignalSummary struct {
 	ID      ids.UUID
