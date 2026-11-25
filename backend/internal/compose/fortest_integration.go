@@ -11,6 +11,7 @@ package compose
 import (
 	"context"
 	"net/http"
+	"time"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -47,4 +48,9 @@ func SharedMailboxRouterForTest(pool *pgxpool.Pool, registry *capture.Registry, 
 // TeamServiceForTest is identity with capture's team seam, as the API wires it.
 func TeamServiceForTest(pool *pgxpool.Pool) *identity.Service {
 	return identity.NewService(pool).WithMailCapture(mailCaptureSeam{})
+}
+
+// WithConsentClockForTest pins the consent store's clock; the store is shared, so option order does not matter.
+func WithConsentClockForTest(now func() time.Time) Option {
+	return func(s *Server, _ *pgxpool.Pool) { s.consentHandlers = s.WithClock(now) }
 }

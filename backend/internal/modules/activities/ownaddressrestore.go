@@ -102,7 +102,9 @@ func restoreOwnAddressUnlinkTx(ctx context.Context, tx pgx.Tx, u ownAddressUnlin
 	}
 	for _, p := range u.participants {
 		if _, err := tx.Exec(ctx, `
-			INSERT INTO activity_participant SELECT * FROM jsonb_populate_record(NULL::activity_participant, $1::jsonb)
+			INSERT INTO activity_participant SELECT * FROM jsonb_populate_record(NULL::activity_participant,
+			       CASE WHEN jsonb_typeof($1::jsonb->'address') = 'string'
+			            THEN jsonb_set($1::jsonb, '{address}', to_jsonb(lower(btrim($1::jsonb->>'address')))) ELSE $1::jsonb END)
 			ON CONFLICT DO NOTHING`, p); err != nil {
 			return false, fmt.Errorf("activities: putting a claimed address's participant back: %w", err)
 		}

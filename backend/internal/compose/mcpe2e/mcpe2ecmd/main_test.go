@@ -64,19 +64,86 @@ func TestStampsAreWrittenPerDoor(t *testing.T) {
 	}
 }
 
-func TestATreeAgainstItselfMakesNothingStale(t *testing.T) {
+func TestATreeAgainstItsOwnAnswerMakesNothingStale(t *testing.T) {
 	declareTree(t)
+	current := filepath.Join(t.TempDir(), "current.json")
+	if err := run([]string{"current", "-root", repoRoot, "-out", current}, &strings.Builder{}); err != nil {
+		t.Fatal(err)
+	}
 	var out strings.Builder
-	if err := run([]string{"newly-stale", "-root", repoRoot, "-base", repoRoot}, &out); err != nil {
+	if err := run([]string{"newly-stale", "-root", repoRoot, "-base-current", current}, &out); err != nil {
 		t.Fatal(err)
 	}
 	if out.Len() != 0 {
-		t.Errorf("a tree against itself listed stale verdicts:\n%s", out.String())
+		t.Errorf("a tree against its own answer listed stale verdicts:\n%s", out.String())
+	}
+}
+
+// Every verdict the base found current is newly stale under a head that finds
+// it stale, so the table names each one.
+func TestABaseThatFoundEveryVerdictCurrentListsEachStaleOne(t *testing.T) {
+	declareTree(t)
+	dir := t.TempDir()
+	current := filepath.Join(dir, "current.json")
+	if err := run([]string{"current", "-root", repoRoot, "-out", current}, &strings.Builder{}); err != nil {
+		t.Fatal(err)
+	}
+	body, err := os.ReadFile(current) // #nosec G304 -- t.TempDir() + a literal filename, test-only
+	if err != nil {
+		t.Fatal(err)
+	}
+	currency := map[string]bool{}
+	if err := json.Unmarshal(body, &currency); err != nil {
+		t.Fatal(err)
+	}
+	stale := 0
+	for key, isCurrent := range currency {
+		if !isCurrent {
+			stale++
+		}
+		currency[key] = true
+	}
+	allCurrent := filepath.Join(dir, "all-current.json")
+	writeFile(t, allCurrent, currency)
+	var out strings.Builder
+	if err := run([]string{"newly-stale", "-root", repoRoot, "-base-current", allCurrent}, &out); err != nil {
+		t.Fatal(err)
+	}
+	if got := strings.Count(out.String(), "\n| `"); got != stale {
+		t.Errorf("listed %d verdicts, want the %d this tree finds stale:\n%s", got, stale, out.String())
+	}
+}
+
+func writeFile(t *testing.T, path string, value map[string]bool) {
+	t.Helper()
+	body, err := json.Marshal(value)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(path, body, 0o600); err != nil {
+		t.Fatal(err)
 	}
 }
 
 func TestAMisusedCommandSaysWhy(t *testing.T) {
-	for _, args := range [][]string{nil, {"stamps"}, {"newly-stale"}, {"made-up"}, {"report", "-no-such-flag"}} {
+	dir := t.TempDir()
+	notJSON, null := filepath.Join(dir, "not.json"), filepath.Join(dir, "null.json")
+	writeFile(t, null, nil)
+	if err := os.WriteFile(notJSON, []byte("stale: yes"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	for _, args := range [][]string{
+		nil,
+		{"stamps"},
+		{"current"},
+		{"newly-stale"},
+		{"made-up"},
+		{"report", "-no-such-flag"},
+		{"current", "-root", dir, "-out", filepath.Join(dir, "current.json")},
+		{"newly-stale", "-base-current", filepath.Join(dir, "missing.json")},
+		{"newly-stale", "-base-current", notJSON},
+		{"newly-stale", "-base-current", null},
+	} {
 		if err := run(args, &strings.Builder{}); err == nil {
 			t.Errorf("%v ran without an error", args)
 		}

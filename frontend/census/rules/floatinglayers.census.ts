@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-// A layer that hangs over the page hides what is under it. Level 1's pane is
-// see-through in dark, so a layer that falls back to it shows the page through.
+// A layer that hangs over the page hides what is under it. A ground that is
+// see-through in either theme shows the page through it.
 
 import {
   alternativesOf,
