@@ -181,12 +181,16 @@ func refuseUnmergeablePair(ctx context.Context, tx pgx.Tx, src, tgt crmcontracts
 	// A contract's company must match its deal's, and a project must share the
 	// company of every deal it holds.
 	if !sameUUID(src.CompanyId, tgt.CompanyId) {
-		return &MergeRefusedError{Code: mergeRefusedCompany,
-			Message: "the two deals name different companies; merge the companies first"}
+		return &MergeRefusedError{
+			Code:    mergeRefusedCompany,
+			Message: "the two deals name different companies; merge the companies first",
+		}
 	}
 	if src.LegalHold != nil && *src.LegalHold {
-		return &MergeRefusedError{Code: mergeRefusedHold,
-			Message: "this deal is under a legal hold; lift the hold before merging it away"}
+		return &MergeRefusedError{
+			Code:    mergeRefusedHold,
+			Message: "this deal is under a legal hold; lift the hold before merging it away",
+		}
 	}
 	return refuseDoubleHolders(ctx, tx, ids.DealID{UUID: ids.UUID(src.Id)}, ids.DealID{UUID: ids.UUID(tgt.Id)})
 }

@@ -37,9 +37,12 @@ func MoveDealRefsTx(ctx context.Context, tx pgx.Tx, from, to ids.UUID) ([]record
 		return nil, err
 	}
 	if err := storekit.AuditEach(ctx, tx, "update", "record_assignment", movedIDs,
-		map[string]any{"deal_id": from}, map[string]any{"deal_id": to}); err != nil {
+		map[string]any{assignmentDealColumn: from}, map[string]any{assignmentDealColumn: to}); err != nil {
 		return nil, fmt.Errorf("audit the record_assignment rows of the merge: %w", err)
 	}
 	moved = append(moved, recordmerge.Moved{Table: "record_assignment", IDs: movedIDs})
 	return moved, nil
 }
+
+// assignmentDealColumn is the column an assignment names its deal in.
+const assignmentDealColumn = "deal_id"

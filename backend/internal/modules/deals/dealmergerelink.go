@@ -88,24 +88,23 @@ func refuseDoubleHolders(ctx context.Context, tx pgx.Tx, sourceID, targetID ids.
 		both bool
 		what string
 	}{
-		{commission, "a live commission"}, {review, "an open legal review"},
-		{chat, "a live chat link"}, {room, "an open Deal Room"},
+		{commission, "a live commission"},
+		{review, "an open legal review"},
+		{chat, "a live chat link"},
+		{room, "an open Deal Room"},
 	} {
 		if held.both {
-			return &MergeRefusedError{Code: mergeRefusedBoth,
-				Message: "both deals hold " + held.what + ", and a deal holds only one; close one of them first"}
+			return &MergeRefusedError{
+				Code:    mergeRefusedBoth,
+				Message: "both deals hold " + held.what + ", and a deal holds only one; close one of them first",
+			}
 		}
 	}
 	return nil
 }
 
-// execMerge runs one relink statement with the source as $1 and the target as $2.
-func execMerge(ctx context.Context, tx pgx.Tx, stmt string, sourceID, targetID ids.DealID) error {
-	_, err := moveMerge(ctx, tx, stmt, sourceID, targetID)
-	return err
-}
-
-// moveMerge is execMerge answering how many rows the statement changed.
+// moveMerge runs one relink statement with the source as $1 and the target as
+// $2, and answers how many rows it changed.
 func moveMerge(ctx context.Context, tx pgx.Tx, stmt string, sourceID, targetID ids.DealID) (int64, error) {
 	tag, err := tx.Exec(ctx, stmt, sourceID, targetID)
 	if err != nil {
