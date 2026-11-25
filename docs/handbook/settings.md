@@ -9,7 +9,8 @@ To open Settings in Margince, open the account menu at the top right of the scre
 Settings opens on **Overview**, which lists every page you can open. The page list down the side is in groups: **You**, **Company**, **People**, **Sales**, **Data**, **AI**, **Compliance** and **System**.
 
 A long page splits into tabs at its top, such as **Booking links**, **Availability** and **Guest page** on **Meetings**. Each tab has its own address, so a link can open one tab.
-To go right to one page, press ⌘K (Ctrl+K) and type its name, or the name of a setting on it. Or type into **Search settings** at the top of the settings list. When the page was found by one of its settings, **Search settings** shows that setting under the page name.
+
+To go right to one page, press ⌘K (Ctrl+K) and type its name, or the name of a setting on it. Or type into **Search settings** at the top of the settings list. When the page was found by one of its settings, **Search settings** shows that setting under the page name. When it finds one page, Enter opens that page. When it finds more, choose one with the arrow keys first.
 
 ### What settings pages are there?
 Margince Settings puts its pages in these groups:

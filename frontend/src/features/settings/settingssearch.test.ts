@@ -99,6 +99,25 @@ describe("settingsSearch", () => {
     expect(activity[0]?.tab).toBe("activity");
   });
 
+  // A setting answers to the words printed on it, and opens on its own tab.
+  it.each([
+    ["exchange rate", "company", "money"],
+    ["fx", "company", "money"],
+    ["probability", "deals", "pipelines"],
+    ["exit criteria", "deals", "pipelines"],
+  ] as const)("opens %p on the tab that holds it", (query, page, tab) => {
+    const hit = settingsSearch(query, ALL, t).find(
+      (each) => each.page.id === page,
+    );
+    expect(hit?.tab).toBe(tab);
+  });
+
+  it("finds a stage setting by its translated column head", () => {
+    const hits = settingsSearch(de("stage.winProb"), ALL, de);
+    expect(hits[0]?.page.id).toBe("deals");
+    expect(hits[0]?.section).toBe(de("stage.winProb"));
+  });
+
   // Two pages can each honestly answer one word, and picking one would make the
   // search wrong for everybody who meant the other.
   it("offers both pages a shared word reaches", () => {
