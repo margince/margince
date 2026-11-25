@@ -7792,6 +7792,24 @@ func (e ComposedExtensionMailHooksReads) Valid() bool {
 	}
 }
 
+// Defines values for ComposedExtensionSetupItemKind.
+const (
+	ComposedExtensionSetupItemKindOauthApp        ComposedExtensionSetupItemKind = "oauth_app"
+	ComposedExtensionSetupItemKindWorkspaceSecret ComposedExtensionSetupItemKind = "workspace_secret"
+)
+
+// Valid indicates whether the value is a known member of the ComposedExtensionSetupItemKind enum.
+func (e ComposedExtensionSetupItemKind) Valid() bool {
+	switch e {
+	case ComposedExtensionSetupItemKindOauthApp:
+		return true
+	case ComposedExtensionSetupItemKindWorkspaceSecret:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for ComputedFieldKind.
 const (
 	ComputedFieldKindCount          ComputedFieldKind = "count"
@@ -44716,6 +44734,9 @@ type ComposedExtension struct {
 	// Routes The unit's published operations, one entry per method+path pair. Sorted by path then method. A bare path would under-report the surface — one path serving GET and DELETE is two capabilities to an operator auditing what a unit can do, and collapsing them hides the destructive one behind the harmless one.
 	Routes []ComposedExtensionRoute `json:"routes"`
 
+	// SetupMissing What an admin still has to set before the unit can work: each workspace secret the unit declares that holds no value, then each OAuth app it declares with no stored client. Empty means the unit is ready. Worked out on each read from the declaration and the stored values; nothing about it is stored. Each part needs the caller's right to read that setting: admin for a workspace secret, capture_settings.read for an OAuth app. A part the caller may not read is left out. The field is absent when that hides a part and nothing visible is missing, and from an older server.
+	SetupMissing *[]ComposedExtensionSetupItem `json:"setup_missing,omitempty"`
+
 	// Version The unit's own declared version. It carries NO authority (ADR-0120 §7): operator decisions bind to manifest digests, never to this string. Display only.
 	Version string `json:"version"`
 }
@@ -44758,6 +44779,18 @@ type ComposedExtensionRoute struct {
 	// Path The path AS THE CONTRACT SPELLS IT — `/ext/<unit>/…`, relative to the server url that already ends in `/v1`, so it is the spelling a reader can find by opening the published document rather than the path the router mounts.
 	Path string `json:"path"`
 }
+
+// ComposedExtensionSetupItem One piece of setup a composed unit still needs.
+type ComposedExtensionSetupItem struct {
+	// Kind `workspace_secret` is a key the installation shares, set on Settings → Integrations. `oauth_app` is a vendor app whose client an admin stores on Settings → Sign-in and security.
+	Kind ComposedExtensionSetupItemKind `json:"kind"`
+
+	// Name The secret's key as the unit declares it, or the OAuth app's title.
+	Name string `json:"name"`
+}
+
+// ComposedExtensionSetupItemKind `workspace_secret` is a key the installation shares, set on Settings → Integrations. `oauth_app` is a vendor app whose client an admin stores on Settings → Sign-in and security.
+type ComposedExtensionSetupItemKind string
 
 // ComputedField S-E15.8c formula-field display row (RD-AC-6/RD-AC-7/RD-AC-N-1) — a read-only,
 // database-computed value, never a runtime-authored expression. `computable: false` +
@@ -63914,7 +63947,10 @@ type RecordLink struct {
 	FromType LinkedRecordType   `json:"from_type"`
 	Id       openapi_types.UUID `json:"id"`
 	LinkType string             `json:"link_type"`
-	ToId     openapi_types.UUID `json:"to_id"`
+
+	// Removable True when this reader may remove the link: they may change the record it starts on and see the one it ends on. Set on a list read, absent on a write's answer.
+	Removable *bool              `json:"removable,omitempty"`
+	ToId      openapi_types.UUID `json:"to_id"`
 
 	// ToName The name of the record the link ends on, for the screen. Absent on a write's answer.
 	ToName *string          `json:"to_name,omitempty"`

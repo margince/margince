@@ -6362,6 +6362,7 @@ export const en = {
   "deal.links.outgoing": "From this deal: {type}",
   "deal.links.incoming": "To this deal: {type}",
   "deal.links.remove": "Remove",
+  "deal.links.unknownType": "Link",
   "deal.links.type": "Link type",
   "deal.links.typePlaceholder": "Choose a type",
   "deal.links.search": "Search for the record to link",
@@ -16456,6 +16457,12 @@ export const en = {
     "Off: this extension leaves a company or deal field that a member last edited as it is, and reports it as withheld. On: it replaces that field.",
   "extGovernance.readOnly": "An admin changes this setting.",
   "extGovernance.notSaved": "Setting was not saved.",
+  "extAccess.setupReady": "Ready",
+  "extAccess.needsSetup": "Needs setup",
+  "extAccess.setupMissing": "Still missing: {items}.",
+  "extAccess.setupSecret": "the key “{name}” in Settings under Integrations",
+  "extAccess.setupApp":
+    "the app “{name}” in Settings under Sign-in and security",
   "users.empty": "No members yet.",
   "users.inviteTitle": "Invite member",
   "users.teamsLabel": "Teams",
@@ -19246,6 +19253,7 @@ export const en = {
   "linkSuggestions.kind.project": "project",
   "linkSuggestions.accept": "File it there",
   "linkSuggestions.reject": "Not there",
+  "linkSuggestions.noAccess": "You do not have access to suggested links.",
   "linkSuggestions.unavailable":
     "The suggested links could not be read. Try again later.",
   "webhooks.event.activity.readiness_recorded.label":

@@ -45206,6 +45206,8 @@ export interface components {
             link_type: string;
             /** Format: date-time */
             created_at: string;
+            /** @description True when this reader may remove the link: they may change the record it starts on and see the one it ends on. Set on a list read, absent on a write's answer. */
+            removable?: boolean;
         };
         RecordLinkList: {
             data: components["schemas"]["RecordLink"][];
@@ -53053,7 +53055,19 @@ export interface components {
             jobs: string[];
             /** @description The core capabilities the unit declares it uses, each with the reason its author gave. The core grants exactly these and refuses the rest, so this list is the whole of what the unit can borrow from the core (its AI models, its object store). Sorted by capability; absent for a unit that declares none. */
             needs?: components["schemas"]["ComposedExtensionNeed"][];
+            /** @description What an admin still has to set before the unit can work: each workspace secret the unit declares that holds no value, then each OAuth app it declares with no stored client. Empty means the unit is ready. Worked out on each read from the declaration and the stored values; nothing about it is stored. Each part needs the caller's right to read that setting: admin for a workspace secret, capture_settings.read for an OAuth app. A part the caller may not read is left out. The field is absent when that hides a part and nothing visible is missing, and from an older server. */
+            setup_missing?: components["schemas"]["ComposedExtensionSetupItem"][];
             mail_hooks?: components["schemas"]["ComposedExtensionMailHooks"];
+        };
+        /** @description One piece of setup a composed unit still needs. */
+        ComposedExtensionSetupItem: {
+            /**
+             * @description `workspace_secret` is a key the installation shares, set on Settings → Integrations. `oauth_app` is a vendor app whose client an admin stores on Settings → Sign-in and security.
+             * @enum {string}
+             */
+            kind: "workspace_secret" | "oauth_app";
+            /** @description The secret's key as the unit declares it, or the OAuth app's title. */
+            name: string;
         };
         /** @description The unit's mail-capture hooks and what of each captured mail they read. Absent for a unit with no hook. A unit may send what a hook read to its own provider. */
         ComposedExtensionMailHooks: {

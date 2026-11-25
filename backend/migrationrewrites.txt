@@ -268,4 +268,6 @@
 1795620142_the_seat_provider_check_is_validated.down.sql | * | the down migration is a single SELECT 1 that changes nothing
 1795620144_a_business_link_without_a_seat_waits_for_approval.up.sql | channel_connection | moves only the Telegram Business link rows that are connected with no seat, a handful per business account, and the table holds one row per connection
 1795620144_a_business_link_without_a_seat_waits_for_approval.down.sql | * | the down migration is a single SELECT 1 that changes nothing
+1795621300_a_member_keeps_their_own_ingest_position.down.sql | extension_ingest_position | one row per unit and source, and the dev-only rollback drops the per-member rows
+1795621301_the_ingest_position_version_check_is_validated.down.sql | * | the down migration is a single SELECT 1 that changes nothing
 1795627202_an_extension_counts_its_stored_objects.up.sql | * | creates a new empty table and its two text guards; the guards act on later writes only, and no row exists to change

@@ -16584,6 +16584,13 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Aus: Diese Erweiterung lässt ein Feld eines Unternehmens oder Deals, das zuletzt ein Mitglied bearbeitet hat, unverändert und meldet es als zurückgehalten. An: Die Erweiterung ersetzt das Feld.",
   "extGovernance.readOnly": "Diese Einstellung ändert ein Admin.",
   "extGovernance.notSaved": "Einstellung wurde nicht gespeichert.",
+  "extAccess.setupReady": "Bereit",
+  "extAccess.needsSetup": "Einrichtung nötig",
+  "extAccess.setupMissing": "Es fehlt noch: {items}.",
+  "extAccess.setupSecret":
+    "der Schlüssel „{name}“ in den Einstellungen unter Anbindungen",
+  "extAccess.setupApp":
+    "die App „{name}“ in den Einstellungen unter Anmeldung und Sicherheit",
   "users.empty": "Noch keine Mitglieder.",
   "users.inviteTitle": "Mitglied einladen",
   "users.teamsLabel": "Teams",
@@ -19466,6 +19473,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "linkSuggestions.kind.project": "Projekt",
   "linkSuggestions.accept": "Dort ablegen",
   "linkSuggestions.reject": "Nicht dort",
+  "linkSuggestions.noAccess":
+    "Du hast keinen Zugriff auf Verknüpfungsvorschläge.",
   "linkSuggestions.unavailable":
     "Die Verknüpfungsvorschläge konnten nicht gelesen werden. Versuche es später erneut.",
   "webhooks.event.activity.readiness_recorded.label":
@@ -21609,6 +21618,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "deal.links.outgoing": "Von diesem Deal: {type}",
   "deal.links.incoming": "Zu diesem Deal: {type}",
   "deal.links.remove": "Entfernen",
+  "deal.links.unknownType": "Verknüpfung",
   "deal.links.type": "Verknüpfungsart",
   "deal.links.typePlaceholder": "Art wählen",
   "deal.links.search": "Datensatz zum Verknüpfen suchen",

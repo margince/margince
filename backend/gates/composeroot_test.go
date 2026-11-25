@@ -34,14 +34,17 @@ const composeRootDir = "internal/compose"
 // The ceilings below hold develop and main together: each side's additions
 // stayed under its own ceilings, and the two sets of additions sum to these.
 const (
-	composeRootProductionFiles = 1384
+	// Raised by 1 for the seat-bound deal reads a unit asks as its own user.
+	composeRootProductionFiles = 1385
 	// Raised by 2 files for the extension mail-file read cases and the purge
 	// receipt cases, which drive this package's unexported seams. Raised by 1
 	// production and 1 test file for the series-split fold and its cases.
 	// Raised by 1 for the removed-unit list cases, which drive the unexported
 	// Live List check and list export over a kind no unit declares. Raised by 1
 	// test file for the data reset cases of an event the sweep orphaned.
-	composeRootTestFiles = 1913
+	// Raised by 2 test files for the seat-bound deal reads and the stored-object
+	// count, whose cases drive the unexported seat and ledger wiring.
+	composeRootTestFiles = 1915
 	// Raised by 107 for the floor of a figure every reader is shown alike. Raised
 	// by 1 for the import that binds one zone lookup to each attention read.
 	// Raised by 249 production and 62 test lines for the full-path certification
@@ -80,8 +83,16 @@ const (
 	// Raised by 6 production lines for the signals and initiatives carriers
 	// every contact merge door is wired with. Raised by 6 test lines for the
 	// seat without an introduction grant that the preview refusal case needs.
-	composeRootProductionLines = 230_819
-	composeRootTestLines       = 361_033
+	// Raised by 60 production and 65 test lines for the record kind index checks
+	// and the History type check. They extend VerifyRecordKinds and the
+	// unexported History query, and their cases drive the History query plan.
+	// Raised by 240 production and 260 test lines for the extension card's setup
+	// state and the schedule book's time zone. Both drive the unexported
+	// inventory handler, schedule book and catch-up schedule.
+	// Raised by 243 production and 264 test lines for the seat-bound deal reads
+	// and the stored-object ledger wiring, and the cases that drive them.
+	composeRootProductionLines = 231_362
+	composeRootTestLines       = 361_622
 )
 
 // A read under these floors stopped early or read the wrong place, and would

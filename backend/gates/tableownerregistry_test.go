@@ -487,7 +487,7 @@ var tableOwners = map[string]string{
 	// extension port, before any module is reached.
 	"extension_ingest_refusal": "internal/compose",
 	// Where a unit's bulk load stopped, written by the extension port.
-	"extension_ingest_position": "internal/compose",
+	"extension_ingest_position": "internal/compose/extingress",
 	// The running count and size of each unit's stored objects, kept by the
 	// object capability beside the store call it counts.
 	"extension_object_usage": "internal/compose/extcapability",

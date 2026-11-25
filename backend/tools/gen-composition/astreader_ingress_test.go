@@ -144,3 +144,21 @@ func TestIngressEntryMustBeAnIngressSourceLiteral(t *testing.T) {
 		t.Fatalf("err = %v, want the wrong-literal-type refusal", err)
 	}
 }
+
+// A pinned posture is part of what an operator reads before a member-owned
+// source runs. A posture wider than the two narrow ones is refused at
+// generation time, as it is at boot.
+func TestAPinnedPostureDerivesIntoTheManifestAndAWideOneIsRefused(t *testing.T) {
+	src := ingressUnitSource("\t\t\t{System: \"relay\", Lands: []extension.RecordKind{extension.KindActivity}, PinnedPosture: extension.PostureClassified},\n")
+	derived, err := deriveSynthetic(t, "x", src)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(string(derived), `"pinned_posture": "classified"`) {
+		t.Errorf("the pinned posture is missing from the manifest:\n%s", derived)
+	}
+	wide := ingressUnitSource("\t\t\t{System: \"relay\", Lands: []extension.RecordKind{extension.KindActivity}, PinnedPosture: \"shared\"},\n")
+	if _, err := deriveSynthetic(t, "x", wide); err == nil || !strings.Contains(err.Error(), "never a wider one") {
+		t.Errorf("a pinned shared posture was derived: %v", err)
+	}
+}

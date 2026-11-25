@@ -3,6 +3,8 @@
 
 package connector
 
+import "github.com/margince/margince/backend/internal/shared/ports/datasource"
+
 // The party a captured record was WITH — one end of the exchange, and the one
 // direction is defined against. Split from connector.go so the record shape and
 // the party identity stay separately legible; MessageParticipant, the FURTHER
@@ -54,6 +56,10 @@ type Counterparty struct {
 	// for a reader that can check authorship against more than the grant
 	// address — the capture sink, which holds the seat's other addresses.
 	filedAsSent bool
+	// chosenSubject is the contact or lead a member filed the message on. It is
+	// unexported because it stops the identity match. WithChosenSubject is the
+	// way in, and the caller has checked the member may see the subject.
+	chosenSubject *datasource.EntityRef
 	// mayCorroborateByEmail records that the SOURCE of this record declared the
 	// email merge key, so an address riding alongside a channel identity may
 	// reach the resolution ladder. Like sentByOwner it is unexported, and for
@@ -144,6 +150,17 @@ func (c Counterparty) WithDeclaredEmailMerge(declared bool) Counterparty {
 	c.mayCorroborateByEmail = declared
 	return c
 }
+
+// WithChosenSubject returns a copy filed on the contact or lead a member chose.
+// The sink links the activity to it and does not resolve the counterparty by
+// identity. A nil ref clears it.
+func (c Counterparty) WithChosenSubject(ref *datasource.EntityRef) Counterparty {
+	c.chosenSubject = ref
+	return c
+}
+
+// ChosenSubject is the contact or lead the member filed the message on, or nil.
+func (c Counterparty) ChosenSubject() *datasource.EntityRef { return c.chosenSubject }
 
 // MayCorroborateByEmail reports whether the source declared the email merge key.
 func (c Counterparty) MayCorroborateByEmail() bool { return c.mayCorroborateByEmail }

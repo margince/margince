@@ -67,54 +67,119 @@ func chatRecord(binding connector.ChatBinding, msg connector.ChatMessage) (conne
 	if err := validChatKeyParts(binding, msg); err != nil {
 		return connector.NormalizedRecord{}, err
 	}
-	sourceID := binding.KeyScope + ":" + msg.ConversationID + ":" + msg.IdempotencyKey
+	keys := chatKeys(binding, msg)
+	system := binding.SourceSystem
+	if system == "" {
+		system = binding.Provider
+	}
+	// A source with keys of its own is stamped with its source system alone; a
+	// derived key is stamped "<provider>:<key>".
+	source := binding.Provider + ":" + keys.SourceID
+	if msg.Keys != nil {
+		source = system
+	}
+	counterparty := connector.Counterparty{
+		Email:       msg.Counterparty.Email,
+		Domain:      msg.Counterparty.Domain,
+		Direction:   msg.Direction,
+		DisplayName: msg.Counterparty.DisplayName,
+		ChannelIdentity: connector.ChannelIdentity{
+			Provider:      binding.Provider,
+			AccountScope:  binding.AccountScope,
+			ChannelUserID: msg.Counterparty.UserID,
+			Username:      msg.Counterparty.Username,
+		},
+	}.WithDeclaredEmailMerge(msg.Counterparty.EmailMayMatch).WithChosenSubject(msg.ChosenSubject)
 	return connector.NormalizedRecord{
 		EntityType: datasource.EntityActivity,
 		NaturalKey: connector.NaturalKey{
-			SourceSystem: binding.Provider,
-			SourceID:     sourceID,
+			SourceSystem: system,
+			SourceID:     keys.SourceID,
 			// The conversation id of a private chat is the contact's own account
 			// id, so the pipeline trace stores a hash of the key.
-			SourceIDNamesAContact: true,
+			SourceIDNamesAContact: keys.SourceIDNamesAContact,
 		},
 		Fields: ActivityFields{
 			Kind:            ChatMessageKind,
 			ChannelProvider: binding.Provider,
+			ProviderPrivate: msg.ProviderPrivate,
+			Subject:         msg.Subject,
 			Body:            msg.Body,
 			OccurredAt:      msg.OccurredAt,
+			DateOnly:        msg.OccurredDay,
 			Direction:       msg.Direction,
 			memberOwned:     binding.Ownership == connector.ChatOwnedByMember,
+			pinnedPosture:   binding.PinnedPosture,
 		},
-		Source:         binding.Provider + ":" + sourceID,
+		Source:         source,
 		CapturedBy:     binding.CapturedBy,
 		StoredOriginal: msg.StoredOriginal,
 		Raw:            msg.Raw,
-		Counterparty: connector.Counterparty{
-			Direction:   msg.Direction,
-			DisplayName: msg.Counterparty.DisplayName,
-			ChannelIdentity: connector.ChannelIdentity{
-				Provider:      binding.Provider,
-				AccountScope:  binding.AccountScope,
-				ChannelUserID: msg.Counterparty.UserID,
-				Username:      msg.Counterparty.Username,
-			},
-		},
-		ThreadKey: binding.Provider + ":" + binding.ThreadScope + ":" + msg.ConversationID,
+		Counterparty:   counterparty,
+		Addresses:      msg.Addresses,
+		Participants:   msg.Participants,
+		Parts:          msg.Parts,
+		PartDrops:      msg.PartDrops,
+		ThreadKey:      keys.ThreadKey,
 	}, nil
+}
+
+// chatKeys is the natural key's source id and the thread key: the source's own
+// when it supplied them, otherwise derived from the connection's scopes.
+func chatKeys(binding connector.ChatBinding, msg connector.ChatMessage) connector.ChatOwnKeys {
+	if msg.Keys != nil {
+		return *msg.Keys
+	}
+	return connector.ChatOwnKeys{
+		SourceID:              binding.KeyScope + ":" + msg.ConversationID + ":" + msg.IdempotencyKey,
+		ThreadKey:             binding.Provider + ":" + binding.ThreadScope + ":" + msg.ConversationID,
+		SourceIDNamesAContact: true,
+	}
 }
 
 // validChatKeyParts refuses what would make two messages share a key or one
 // message's key read as another's. The conversation and message ids are the
-// provider's own and are joined with colons, so neither may hold one.
+// provider's own and are joined with colons, so neither may hold one. A source
+// that supplies its own keys is held to the same bounds the unit door applies.
 func validChatKeyParts(binding connector.ChatBinding, msg connector.ChatMessage) error {
 	if err := validChatOwnership(binding); err != nil {
 		return err
 	}
+	if binding.Provider == "" || binding.CapturedBy == "" {
+		return fmt.Errorf("%w: a chat binding names no provider or capturer", apperrors.ErrInvalidArgument)
+	}
+	if err := validPinnedPosture(binding.PinnedPosture); err != nil {
+		return err
+	}
+	if msg.Counterparty.UserID == "" {
+		return fmt.Errorf("%w: a chat message names no counterparty", apperrors.ErrInvalidArgument)
+	}
+	if msg.Keys != nil {
+		return validOwnKeys(msg)
+	}
+	return validScopedKeys(binding, msg)
+}
+
+// validOwnKeys holds a message whose source supplied its own keys. Direction may
+// be empty for a record that has no direction.
+func validOwnKeys(msg connector.ChatMessage) error {
 	switch {
-	case binding.Provider == "" || binding.CapturedBy == "" || binding.KeyScope == "" || binding.ThreadScope == "":
-		return fmt.Errorf("%w: a chat binding names no provider, capturer or key scope", apperrors.ErrInvalidArgument)
-	case msg.ConversationID == "" || msg.IdempotencyKey == "" || msg.Counterparty.UserID == "":
-		return fmt.Errorf("%w: a chat message names no conversation, message or counterparty", apperrors.ErrInvalidArgument)
+	case msg.Keys.SourceID == "":
+		return fmt.Errorf("%w: a chat message's own keys name no source id", apperrors.ErrInvalidArgument)
+	case msg.Direction != "" && msg.Direction != connector.DirectionInbound && msg.Direction != connector.DirectionOutbound:
+		return fmt.Errorf("%w: a chat message is neither inbound nor outbound", apperrors.ErrInvalidArgument)
+	}
+	return nil
+}
+
+// validScopedKeys holds a message whose keys are derived from the connection's
+// scopes and the provider's own ids.
+func validScopedKeys(binding connector.ChatBinding, msg connector.ChatMessage) error {
+	switch {
+	case binding.KeyScope == "" || binding.ThreadScope == "":
+		return fmt.Errorf("%w: a chat binding names no key scope", apperrors.ErrInvalidArgument)
+	case msg.ConversationID == "" || msg.IdempotencyKey == "":
+		return fmt.Errorf("%w: a chat message names no conversation or message", apperrors.ErrInvalidArgument)
 	case strings.Contains(msg.ConversationID, ":") || strings.Contains(msg.IdempotencyKey, ":"):
 		return fmt.Errorf("%w: a chat conversation or message id holds a colon, which would make its key ambiguous", apperrors.ErrInvalidArgument)
 	case msg.Direction != connector.DirectionInbound && msg.Direction != connector.DirectionOutbound:
@@ -133,4 +198,13 @@ func validChatOwnership(binding connector.ChatBinding) error {
 		return fmt.Errorf("%w: a member-owned chat connection names no member to file for", apperrors.ErrInvalidArgument)
 	}
 	return nil
+}
+
+// validPinnedPosture admits only the postures that narrow a reading.
+func validPinnedPosture(posture string) error {
+	switch posture {
+	case "", connector.ChatPostureClassified, connector.ChatPostureHeld:
+		return nil
+	}
+	return fmt.Errorf("%w: a pinned chat posture is classified or held", apperrors.ErrInvalidArgument)
 }
