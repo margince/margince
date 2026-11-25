@@ -56,19 +56,6 @@ func SubjectsRestricted(ctx context.Context, tx pgx.Tx, s model.Subjects) (bool,
 	return restricted, nil
 }
 
-// AnyContactRestricted reports whether the workspace holds any contact under a
-// restriction of processing in force.
-func AnyContactRestricted(ctx context.Context, tx pgx.Tx) (bool, error) {
-	var restricted bool
-	err := tx.QueryRow(ctx, `
-		SELECT EXISTS (SELECT 1 FROM communication_suppression rs
-		                WHERE `+auth.LiveRestrictionSQL("rs")+` AND rs.contact_id IS NOT NULL)`).Scan(&restricted)
-	if err != nil {
-		return false, fmt.Errorf("storekit: reading restrictions of processing: %w", err)
-	}
-	return restricted, nil
-}
-
 func restrictedSet(ctx context.Context, tx pgx.Tx, subjects []ids.UUID, query string) (map[ids.UUID]bool, error) {
 	out := map[ids.UUID]bool{}
 	if len(subjects) == 0 {

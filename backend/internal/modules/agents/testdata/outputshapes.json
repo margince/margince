@@ -5249,13 +5249,17 @@
         "type": "object",
         "required": [
           "router",
-          "actions"
+          "actions",
+          "how_to_call"
         ],
         "properties": {
           "router": {
             "type": "string"
           },
           "ask_user_first_means": {
+            "type": "string"
+          },
+          "how_to_call": {
             "type": "string"
           },
           "actions": {
@@ -5286,7 +5290,31 @@
                 "query": {
                   "type": "array",
                   "items": {
-                    "type": "string"
+                    "type": "object",
+                    "required": [
+                      "name",
+                      "type"
+                    ],
+                    "properties": {
+                      "name": {
+                        "type": "string"
+                      },
+                      "type": {
+                        "type": "string"
+                      },
+                      "required": {
+                        "type": "boolean"
+                      },
+                      "enum": {
+                        "type": "array",
+                        "items": {
+                          "type": "string"
+                        }
+                      },
+                      "format": {
+                        "type": "string"
+                      }
+                    }
                   }
                 },
                 "if_version": {

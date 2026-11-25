@@ -269,7 +269,6 @@ describe("ResetDataCard (danger zone)", () => {
     streams_purged: 12,
     cache_keys_deleted: 341,
     objects_deleted: 7,
-    drain_timed_out: false,
   };
 
   // Fixed precondition for every summary test below: admin + the armed reset,
@@ -313,18 +312,6 @@ describe("ResetDataCard (danger zone)", () => {
         "Cleared: tables 84, job rows 12, event streams 12, cache keys 341, stored files 7.",
       ),
     ).toBeInTheDocument();
-  });
-
-  it("warns when a job was still running at drain time", async () => {
-    const user = userEvent.setup();
-    renderSettingsAsAdmin({
-      resetResponse: { ...fullResetBody, drain_timed_out: true },
-    });
-    await confirmReset(user, "Acme Inc");
-
-    expect(await screen.findByRole("alert")).toHaveTextContent(
-      /background job was running when the reset began/,
-    );
   });
 
   it("shows no summary before a reset has run", async () => {

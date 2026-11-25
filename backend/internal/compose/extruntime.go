@@ -21,7 +21,6 @@ import (
 
 	"github.com/jackc/pgx/v5/pgxpool"
 
-	"github.com/margince/margince/backend/internal/compose/extai"
 	"github.com/margince/margince/backend/internal/compose/extcapability"
 	"github.com/margince/margince/backend/internal/modules/ai"
 	"github.com/margince/margince/backend/internal/modules/capture"
@@ -116,11 +115,6 @@ func BindExtensionRuntime(pool *pgxpool.Pool, vault keyvault.Vault) {
 	}
 	// Only its own two fields: the other dependencies are bound by their own calls.
 	extensionRuntimeDeps.pool, extensionRuntimeDeps.vault = pool, vault
-}
-
-// AI is the unit's AI port for this call, guarded by this Runtime's lifetime.
-func (r *callRuntime) AI() extension.AI { //nolint:ireturn // the published port, as Secrets.
-	return extai.Port{Scope: r.scoped, Unit: r.unit, Declared: ComposedExtensions, Pool: r.deps.pool, PDF: processPDFReader, MaxDocumentBytes: maxDocumentBytes, MaxInputChars: maxDocumentTextChars}
 }
 
 // boundExtensionRuntime reads the binding. Read per CALL rather than

@@ -178,3 +178,30 @@ func bothAdvertisingLines(t *testing.T, lines []DisclosureLine) []DisclosureLine
 	}
 	return lines
 }
+
+func TestAnAdvertisementLineNamesTheSenderInTheMailsLanguage(t *testing.T) {
+	owed := []messagingrules.Disclosure{{Kind: messagingrules.Advertisement, MarketingOnly: true}}
+	for language, want := range map[string]string{
+		"en": "This is an advertisement from Example Trading GmbH.",
+		"de": "Dies ist Werbung von Example Trading GmbH.",
+		"vi": "Đây là quảng cáo của Example Trading GmbH.",
+	} {
+		lines := layoutDisclosures(owed, particularsWith("", ""), disclosureLayout{marketing: true, language: language, baseLanguage: "en"})
+		if got, _ := lineOf(lines, messagingrules.Advertisement); got.Text != want {
+			t.Errorf("%s mail printed %q, want %q", language, got.Text, want)
+		}
+	}
+}
+
+func TestAnAdvertisementLineIsMissingWithoutALegalNameAndAbsentFromTransactionalMail(t *testing.T) {
+	owed := []messagingrules.Disclosure{{Kind: messagingrules.Advertisement, MarketingOnly: true}}
+	unnamed := ControllerParticulars{PostalAddress: "Hauptstraße 1"}
+	lines := layoutDisclosures(owed, unnamed, disclosureLayout{marketing: true, language: "en", baseLanguage: "en"})
+	if got, found := lineOf(lines, messagingrules.Advertisement); !found || !got.Missing() {
+		t.Errorf("advertising from an unnamed sender gave %+v, want a missing advertisement line", lines)
+	}
+	lines = layoutDisclosures(owed, particularsWith("", ""), disclosureLayout{language: "en", baseLanguage: "en"})
+	if len(lines) != 0 {
+		t.Errorf("transactional mail owes %+v, want no advertisement line", lines)
+	}
+}

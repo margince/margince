@@ -569,9 +569,15 @@ names, and the core keeps them apart from other units. No method takes another u
 
 ## Own a screen: `frontend/`
 
-Ship `extensions/<name>/frontend/package.json` and the module it names. The package may use its own
-packages. They live in the generated workspace under `build/composition-frontend/workspace/`, which
-`make composition` writes. The tracked `pnpm-lock.yaml` names only the core frontend.
+Ship `extensions/<name>/frontend/package.json` and the module it names. The package may use only packages
+the main app already ships. Each runtime or peer package must be a dependency of `frontend/` in the
+tracked `pnpm-lock.yaml`. Declare it at the range the main app declares, or at its locked version.
+
+No
+license check exists yet for an extension's own packages, so the generator refuses any other package. It
+also refuses `optionalDependencies`, and allows `devDependencies`. The unit installs in the generated
+workspace under `build/composition-frontend/workspace/`, which `make composition` writes. Each package is
+pinned there to the main app's locked version.
 
 ```json
 {
@@ -1323,6 +1329,7 @@ SystemReads: []extension.SystemRead{
 	extension.SystemReadSetAside, // SetAside().Contact and Contacts
 	extension.SystemReadCompanies, // Companies().Get and List (as actAs)
 	extension.SystemReadMailContent, // MailContent().Get (as actAs)
+	extension.SystemReadMailAttachments, // Activities().Attachments and OpenAttachment (as actAs)
 },
 ```
 
@@ -1357,9 +1364,11 @@ mail, err := rt.Activities().Mail(ctx, member, d.Entity.ID, extension.MailQuery{
   list was cut. A key that names no role adds nobody and is no error. The core logs which keys you asked for.
 - **`Mail` answers the emails of one deal.** It tells a unit if a mail is sent and if a reply is in. Each
   `MailSummary` holds the id, the direction, the time, what kind of sender wrote it (empty for a human) and the
-  deal id. It holds no subject, body, address or file. It leaves out mail kept private to its senders and
-  receivers, archived mail unless you set `IncludeArchived`, and mail held back from reading. It gives pages,
-  newest first, of at most `extension.MaxReadPage`.
+  deal id. It holds no subject, body, address or file.
+
+  It leaves out mail kept private to its senders and
+  receivers, archived mail unless you set `IncludeArchived`, and mail held back from reading. It also leaves out
+  mail under a restriction of processing (Art. 18). It gives pages, newest first, of at most `extension.MaxReadPage`.
 
   You name the member it answers for. A deal that member cannot open answers `ErrNotFound`.
 - **`SetAside` reads who put a contact aside.** A colleague can put a contact aside for up to 90 days, or for
@@ -1393,7 +1402,23 @@ mail, err := rt.Activities().Mail(ctx, member, d.Entity.ID, extension.MailQuery{
   or body was taken out answers the content state `withheld` and gives neither. The body stops at
   `extension.MaxMailBody` characters, and `BodyTruncated` says so. Ask `Authority().CanRead` before you show a
   colleague what you kept from it.
-- **Name the seat: `actAs`.** `Companies`, `MailContent().Get` and `ByRole` take `actAs` right after `ctx`.
+- **`Attachments` and `OpenAttachment` read mail files.** `Activities().Attachments(ctx, actAs, mailID)`
+  lists the files sent with one email, oldest first. Each `MailAttachment` holds the id, the mail id, the file
+  name, the stored type, the size and the time. `Activities().OpenAttachment(ctx, actAs, attachmentID)` also gives
+  the bytes, with the type the bytes show.
+
+  Both run as `actAs` under the rule `MailContent().Get` applies to the mail. A mail that read refuses answers
+  `ErrNotFound` here too. So does a file that was archived or whose bytes were withheld. A list leaves such a file
+  out. Only files sent with an email are read, never a file a user uploaded.
+
+  A file of more than `extension.MaxInboundFileBytes` bytes answers `ErrInvalid`. An open checks the file again
+  after it reads the bytes. A file withheld or archived in that time answers `ErrNotFound`.
+
+  Each list and each open writes an `export` row to the system log, which names your unit and `actAs`. An open that
+  fails writes no row and does not count. A unit may open `extension.MaxAttachmentOpensPerDay` (200) files in a workspace per UTC day. The next open answers
+  `extension.ErrAttachmentCapReached` until the next UTC day starts. A list does not count.
+- **Name the seat: `actAs`.** `Companies`, `MailContent().Get`, the reads of mail files and `ByRole` take
+  `actAs` right after `ctx`.
   It must be the unit's own service member, the one the core made for it (see
   [declare-a-service-member.md](declare-a-service-member.md)). That member must have filed one of the unit's
   user secrets.
@@ -1716,53 +1741,6 @@ The rules:
   `google` or `microsoft`. `AuthURL` and `TokenURL` must use `https`.
 - `rt.OAuthDisconnect(ctx, "books")` drops the tokens. It does not end the grant at the vendor.
 
-## Ask a model: declare an AI task
-
-A unit that wants a model's help declares each task and runs it through the core. It never holds a provider
-client or a key:
-
-```go
-AITasks: []extension.AITask{{
-	Name:      "invoice_total",
-	Prompt:    "Read the invoice and return its total amount and currency.",
-	Schema:    `{"type":"object","required":["total","currency"],"properties":{"total":{"type":"number"},"currency":{"type":"string"}}}`,
-	Documents: true,
-}},
-```
-
-```go
-res, err := rt.AI().Run(ctx, "invoice_total", extension.AIInput{
-	Documents: []extension.AIDocument{{Filename: "inv.pdf", ContentType: "application/pdf", Body: pdf}},
-	NoContact: "a supplier invoice",
-})
-```
-
-Every call is one `extension_task` call on the core's router. The installation's routing setting picks the
-model. The region limit applies as it does to a core task. Secrets are stripped from the input. The input is
-never kept in the call log's payload store. The `ai_call` row names the unit and the task as
-`<unit>/<task>`.
-
-The rules:
-
-- **A task you did not declare is refused** with `ErrAITaskUndeclared`. `Name` is `snake_case`, at most 48
-  characters, and the call log keeps it, so a rename splits one task's history.
-- **Name the contacts the call carries** in `Contacts`, or say in `NoContact` why it carries none. A named contact
-  with a stop on its processing refuses the call. A call that does neither is refused with `ErrInvalid`.
-  The core cannot check the source of your input. So it also refuses every AI call while any contact in the
-  workspace has a stop on its processing. The error is `ErrAIUnavailable`, and the call may be tried
-  again once the stop is removed.
-- A document is read by its bytes, not its label. A PDF is read as text by the reader the core uses for its own documents. A scan with no text layer is refused
-  with `ErrAIScannedDocument`. No document goes to a model as bytes, and an image is refused with
-  `ErrAIDocumentType`.
-- **`Documents: true` is required** to pass documents. Text types go through as text.
-- **With a `Schema`**, the model is held to it, and the answer comes back as `AIResult.JSON`, one JSON object. Without one,
-  it comes back as `AIResult.Text`.
-- **The answer is advice.** `AIResult.MachineMade` is always true. A unit that shows or stores it says a model
-  wrote it.
-- **`ErrAIUnavailable`** means routing, the region limit, a stop on processing or the budget refused the call. It reached
-  no model, so a job may try again later.
-- The core's certification covers the one `extension_task` site. It does not run a unit's own examples yet.
-
 ## Call your provider
 
 Build each request with `extension.NewRequest`. It names the installation to your provider in the
@@ -1792,11 +1770,12 @@ Needs: []extension.Need{
 },
 ```
 
-Ask a model with `rt.Models().Complete`. Name the core records the text was built from in `About`, or say in
-`NoContactData` why it holds none of a contact's data:
+Ask a model with `rt.Models().Complete`, for a task the unit declares in its `api/ai-tasks.yaml` as
+`ext_<unit>_<task>`. Each such task has its own routing, budget and certification case. Name the core
+records the text was built from in `About`, or say in `NoContactData` why it holds none of a contact's data:
 
 ```go
-text, err := rt.Models().Complete(ctx, extension.CompleteRequest{
+text, err := rt.Models().Complete(ctx, "ext_books_summarise", extension.CompleteRequest{
     System:   "Summarise the change in one sentence.",
     Messages: []extension.Message{{Role: "user", Text: change}},
     About:    []extension.EntityRef{{Type: "deal", ID: dealID}},

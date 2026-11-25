@@ -17,6 +17,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/margince/margince/backend/internal/modules/activities"
+	"github.com/margince/margince/backend/internal/modules/agents"
 	"github.com/margince/margince/backend/internal/modules/ai"
 	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/modules/identity"
@@ -84,7 +85,21 @@ func WithMCPResource(resource string) Option {
 // WithMCPInputStateKey lets a tool ask the user in the chat, signing each
 // question with the deployment's HMAC key. Without one no tool asks.
 func WithMCPInputStateKey(key string) Option {
-	return func(s *Server, _ *pgxpool.Pool) { s.mcpInputStateKey = key }
+	return func(s *Server, _ *pgxpool.Pool) { s.mcpChat.inputStateKey = key }
+}
+
+// mcpChatSettings signs the questions a tool asks in the chat, and spends each
+// answer and confirm code once.
+type mcpChatSettings struct {
+	inputStateKey string
+	replayGuard   agents.ReplayGuard
+}
+
+// WithMCPReplayGuard spends each confirm code and each answered chat question
+// once. Without it no tool asks in the chat, and a call that waits for its own
+// user stages into the approval inbox.
+func WithMCPReplayGuard(guard agents.ReplayGuard) Option {
+	return func(s *Server, _ *pgxpool.Pool) { s.mcpChat.replayGuard = guard }
 }
 
 // WithMCPConnector turns the remote MCP connector on: the /mcp transport,

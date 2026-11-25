@@ -1494,7 +1494,7 @@ kinds:
     timeout: 5m
     opts_owner: caller
     cadence: 1h
-    registration: {when: [Blobstore], absent: registers_nothing}
+    registration: {when: [JournalBlobstore], absent: registers_nothing}
     reason: >-
       Hourly, and the cadence answers how much of the journal a restore may
       lose rather than how long the export takes: an erasure recorded after the

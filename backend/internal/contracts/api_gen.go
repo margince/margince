@@ -1957,7 +1957,6 @@ const (
 	AiTaskDocumentExtract               AiTask = "document_extract"
 	AiTaskDraftReply                    AiTask = "draft_reply"
 	AiTaskEnrich                        AiTask = "enrich"
-	AiTaskExtensionTask                 AiTask = "extension_task"
 	AiTaskGrowthFit                     AiTask = "growth_fit"
 	AiTaskNlSearch                      AiTask = "nl_search"
 	AiTaskOfferDraft                    AiTask = "offer_draft"
@@ -2017,8 +2016,6 @@ func (e AiTask) Valid() bool {
 	case AiTaskDraftReply:
 		return true
 	case AiTaskEnrich:
-		return true
-	case AiTaskExtensionTask:
 		return true
 	case AiTaskGrowthFit:
 		return true
@@ -8658,6 +8655,7 @@ const (
 	ContactConsentGuardEntryReasonCodeNoConsent                    ContactConsentGuardEntryReasonCode = "no_consent"
 	ContactConsentGuardEntryReasonCodeNoConsentExceptionNotOffered ContactConsentGuardEntryReasonCode = "no_consent_exception_not_offered"
 	ContactConsentGuardEntryReasonCodeObjection                    ContactConsentGuardEntryReasonCode = "objection"
+	ContactConsentGuardEntryReasonCodeOptOutAllowed                ContactConsentGuardEntryReasonCode = "opt_out_allowed"
 	ContactConsentGuardEntryReasonCodeQualifyingEvent              ContactConsentGuardEntryReasonCode = "qualifying_event"
 	ContactConsentGuardEntryReasonCodeSaidWeMayWrite               ContactConsentGuardEntryReasonCode = "said_we_may_write"
 	ContactConsentGuardEntryReasonCodeSuppressed                   ContactConsentGuardEntryReasonCode = "suppressed"
@@ -8688,6 +8686,8 @@ func (e ContactConsentGuardEntryReasonCode) Valid() bool {
 	case ContactConsentGuardEntryReasonCodeNoConsentExceptionNotOffered:
 		return true
 	case ContactConsentGuardEntryReasonCodeObjection:
+		return true
+	case ContactConsentGuardEntryReasonCodeOptOutAllowed:
 		return true
 	case ContactConsentGuardEntryReasonCodeQualifyingEvent:
 		return true
@@ -14646,23 +14646,32 @@ func (e HandoffAssigneeStatus) Valid() bool {
 
 // Defines values for HealthActionDestination.
 const (
-	HealthActionDestinationConfiguration HealthActionDestination = "configuration"
-	HealthActionDestinationConnections   HealthActionDestination = "connections"
-	HealthActionDestinationDiagnostics   HealthActionDestination = "diagnostics"
-	HealthActionDestinationModels        HealthActionDestination = "models"
-	HealthActionDestinationRegional      HealthActionDestination = "regional"
-	HealthActionDestinationSearch        HealthActionDestination = "search"
-	HealthActionDestinationUpdates       HealthActionDestination = "updates"
+	HealthActionDestinationCompanyProfile HealthActionDestination = "company_profile"
+	HealthActionDestinationConfiguration  HealthActionDestination = "configuration"
+	HealthActionDestinationConnections    HealthActionDestination = "connections"
+	HealthActionDestinationDiagnostics    HealthActionDestination = "diagnostics"
+	HealthActionDestinationDisclosures    HealthActionDestination = "disclosures"
+	HealthActionDestinationLegalEntities  HealthActionDestination = "legal_entities"
+	HealthActionDestinationModels         HealthActionDestination = "models"
+	HealthActionDestinationRegional       HealthActionDestination = "regional"
+	HealthActionDestinationSearch         HealthActionDestination = "search"
+	HealthActionDestinationUpdates        HealthActionDestination = "updates"
 )
 
 // Valid indicates whether the value is a known member of the HealthActionDestination enum.
 func (e HealthActionDestination) Valid() bool {
 	switch e {
+	case HealthActionDestinationCompanyProfile:
+		return true
 	case HealthActionDestinationConfiguration:
 		return true
 	case HealthActionDestinationConnections:
 		return true
 	case HealthActionDestinationDiagnostics:
+		return true
+	case HealthActionDestinationDisclosures:
+		return true
+	case HealthActionDestinationLegalEntities:
 		return true
 	case HealthActionDestinationModels:
 		return true
@@ -14837,6 +14846,7 @@ func (e HealthFindingScope) Valid() bool {
 const (
 	HealthFindingUnitItems     HealthFindingUnit = "items"
 	HealthFindingUnitMailboxes HealthFindingUnit = "mailboxes"
+	HealthFindingUnitMessages  HealthFindingUnit = "messages"
 	HealthFindingUnitRecords   HealthFindingUnit = "records"
 	HealthFindingUnitRuns      HealthFindingUnit = "runs"
 	HealthFindingUnitThreads   HealthFindingUnit = "threads"
@@ -14850,6 +14860,8 @@ func (e HealthFindingUnit) Valid() bool {
 		return true
 	case HealthFindingUnitMailboxes:
 		return true
+	case HealthFindingUnitMessages:
+		return true
 	case HealthFindingUnitRecords:
 		return true
 	case HealthFindingUnitRuns:
@@ -14857,6 +14869,36 @@ func (e HealthFindingUnit) Valid() bool {
 	case HealthFindingUnitThreads:
 		return true
 	case HealthFindingUnitUpdates:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for HealthFooterGapMissing.
+const (
+	HealthFooterGapMissingAdvertisement      HealthFooterGapMissing = "advertisement"
+	HealthFooterGapMissingAdvertiserContact  HealthFooterGapMissing = "advertiser_contact"
+	HealthFooterGapMissingControllerIdentity HealthFooterGapMissing = "controller_identity"
+	HealthFooterGapMissingEntityName         HealthFooterGapMissing = "entity_name"
+	HealthFooterGapMissingObjectionRoute     HealthFooterGapMissing = "objection_route"
+	HealthFooterGapMissingPrivacyContact     HealthFooterGapMissing = "privacy_contact"
+)
+
+// Valid indicates whether the value is a known member of the HealthFooterGapMissing enum.
+func (e HealthFooterGapMissing) Valid() bool {
+	switch e {
+	case HealthFooterGapMissingAdvertisement:
+		return true
+	case HealthFooterGapMissingAdvertiserContact:
+		return true
+	case HealthFooterGapMissingControllerIdentity:
+		return true
+	case HealthFooterGapMissingEntityName:
+		return true
+	case HealthFooterGapMissingObjectionRoute:
+		return true
+	case HealthFooterGapMissingPrivacyContact:
 		return true
 	default:
 		return false
@@ -33624,7 +33666,7 @@ type Activity struct {
 	// AutomaticKind What sent this activity when no human wrote it, or null when a human did. `product` is mail or work the product wrote itself, `calendar` a mail carrying an invitation, a response or a cancellation, `sending_system` mail from a sending system such as a file-share notice, a notification or a delivery report, and `bulk` mail that carried a List-Unsubscribe header, such as a newsletter or a campaign. Such a row is never counted as an exchange, a last contact or a direction of the relationship.
 	AutomaticKind *ActivityAutomaticKind `json:"automatic_kind,omitempty"`
 
-	// AwaitingOutcome Whether this meeting still owes an answer about how it went, by the rule the Worklist's outcome lane asks: a meeting linked to a customer record the caller may see, with no `meeting_status` or `booked`, whose start has passed (a date-only meeting once its date is over in the installation's timezone) by the server's clock, and whose content the caller may read. Unlike the lane it has no look-back window, so an old booked meeting still asks. Every read that carries `writable` carries this. A client offers the outcome control when this and `writable` are both true. Absent means false.
+	// AwaitingOutcome Whether this meeting still owes an answer about how it went, by the rule the Worklist's outcome lane asks: a meeting linked to a customer record the caller may see, with no `meeting_status` or `booked`, whose start has passed (a date-only meeting once its date is over in the installation's timezone) by the server's clock, and whose content the caller may read. A meeting whose subject names travel logistics (a flight, an airport, a pickup) asks only when it links a deal, lead or project the caller may see. Unlike the lane it has no look-back window, so an old booked meeting still asks. Every read that carries `writable` carries this. A client offers the outcome control when this and `writable` are both true. Absent means false.
 	AwaitingOutcome *bool   `json:"awaiting_outcome,omitempty"`
 	Body            *string `json:"body,omitempty"`
 
@@ -34917,6 +34959,9 @@ type AiActivityItem struct {
 	// until the projection's retention window closes over them — narrowing the filter would
 	// refuse a query that still has answers.
 	//
+	// `extension_task` is RETIRED for the same reason: the task was removed, and an extension's
+	// AI task now reports under its own `ext_<unit>_<task>` name. `ai.RetiredTasks` lists it.
+	//
 	// Its own schema because the item that reports a kind and the query that asks for kinds
 	// must be ONE list — two copies of a vocabulary are two vocabularies as soon as somebody
 	// edits one.
@@ -35006,6 +35051,9 @@ type AiActivityItemState string
 // also what a caller may FILTER on, and rows written before they were retired are served
 // until the projection's retention window closes over them — narrowing the filter would
 // refuse a query that still has answers.
+//
+// `extension_task` is RETIRED for the same reason: the task was removed, and an extension's
+// AI task now reports under its own `ext_<unit>_<task>` name. `ai.RetiredTasks` lists it.
 //
 // Its own schema because the item that reports a kind and the query that asks for kinds
 // must be ONE list — two copies of a vocabulary are two vocabularies as soon as somebody
@@ -35419,9 +35467,9 @@ type AiFeatureRoute struct {
 	BudgetExempt bool `json:"budget_exempt"`
 
 	// Certification The certification grade of the model that answers this feature first (the lead of
-	// `normal_candidates`), read from the committed certification records by the readiness
+	// `effective_candidates`), read from the committed certification records by the readiness
 	// report's rule: the worst grade over every site the feature ships, and not measured when
-	// any site has no record for that model. Absent when no model is bound, and for embeddings.
+	// any site has no record for that model. Absent when no model is bound or the budget blocks the feature, and for embeddings.
 	Certification *AiTaskCertification `json:"certification,omitempty"`
 
 	// Decides The task declares a decision form, so a decision model may answer it first and its decision timeout applies.
@@ -35980,7 +36028,7 @@ type AiProviderSettings struct {
 
 // AiRouteCandidate defines model for AiRouteCandidate.
 type AiRouteCandidate struct {
-	// Certification What the certification records say about this model for this task. Absent on a candidate no record measured, which the screen reads as not certified.
+	// Certification What the certification records say about this model for this task, read by the same rule as the feature's `certification` grade, so the lead candidate and the feature never disagree. Absent on a candidate that grade calls not_measured.
 	Certification *AiRouteCertification `json:"certification,omitempty"`
 	Model         string                `json:"model"`
 	Processing    string                `json:"processing"`
@@ -35988,7 +36036,7 @@ type AiRouteCandidate struct {
 	Tier          string                `json:"tier"`
 }
 
-// AiRouteCertification What the certification records say about this model for this task. Absent on a candidate no record measured, which the screen reads as not certified.
+// AiRouteCertification What the certification records say about this model for this task, read by the same rule as the feature's `certification` grade, so the lead candidate and the feature never disagree. Absent on a candidate that grade calls not_measured.
 type AiRouteCertification struct {
 	// Current Every record behind the verdict still describes the prompts this build sends.
 	Current bool `json:"current"`
@@ -36160,9 +36208,9 @@ type AiStatus struct {
 type AiTask string
 
 // AiTaskCertification The certification grade of the model that answers this feature first (the lead of
-// `normal_candidates`), read from the committed certification records by the readiness
+// `effective_candidates`), read from the committed certification records by the readiness
 // report's rule: the worst grade over every site the feature ships, and not measured when
-// any site has no record for that model. Absent when no model is bound, and for embeddings.
+// any site has no record for that model. Absent when no model is bound or the budget blocks the feature, and for embeddings.
 type AiTaskCertification struct {
 	// Grade ready — clears the certification bar, so rely on it; usable_with_care — mostly right, so have someone look over what it produces; not_reliable — wrong too often or below the quality bar; not_measured — no record grades this model on every site of the feature. docs/reference/ai-certification.md states the bars.
 	Grade string `json:"grade"`
@@ -38702,7 +38750,7 @@ type AuditLogEntry struct {
 	// AuthorizationRule Which RBAC/scope rule allowed it.
 	AuthorizationRule *string `json:"authorization_rule,omitempty"`
 
-	// BatchId The bulk change that wrote this row; null for a change made on its own.
+	// BatchId The operation group that wrote this row: a bulk change, or one run of a capture purge. Null for a change made on its own.
 	BatchId *openapi_types.UUID `json:"batch_id,omitempty"`
 
 	// Before The record image before the change. For an `activity` row this read
@@ -53559,12 +53607,12 @@ type HandoverCounts struct {
 type HealthAction struct {
 	Available bool `json:"available"`
 
-	// Destination Where the finding is acted on. `regional` is the Company settings part that holds the installation timezone.
+	// Destination Where the finding is acted on. `regional` is the Company settings part that holds the installation timezone. `legal_entities` is the Company settings part that lists the legal entities, and `company_profile` the one that names the company. `disclosures` is the jurisdiction page that holds the company details every mail discloses.
 	Destination HealthActionDestination `json:"destination"`
 	Reason      *string                 `json:"reason,omitempty"`
 }
 
-// HealthActionDestination Where the finding is acted on. `regional` is the Company settings part that holds the installation timezone.
+// HealthActionDestination Where the finding is acted on. `regional` is the Company settings part that holds the installation timezone. `legal_entities` is the Company settings part that lists the legal entities, and `company_profile` the one that names the company. `disclosures` is the jurisdiction page that holds the company details every mail discloses.
 type HealthActionDestination string
 
 // HealthDimension One named part of the relationship's health, with the reason for its rating.
@@ -53637,6 +53685,9 @@ type HealthFinding struct {
 	Count           *int                   `json:"count,omitempty" minimum:"0"`
 	FirstObservedAt *time.Time             `json:"first_observed_at,omitempty"`
 
+	// FooterGap A legal entity whose mail owes a company detail nobody stated. A send that owes it is held for review with `footer_incomplete`, and a background send is dropped. The finding goes once the details are complete.
+	FooterGap *HealthFooterGap `json:"footer_gap,omitempty"`
+
 	// Id Stable identity of the source condition and affected scope.
 	Id                string              `json:"id"`
 	Impact            HealthFindingImpact `json:"impact"`
@@ -53673,6 +53724,26 @@ type HealthFindingScope string
 
 // HealthFindingUnit defines model for HealthFinding.Unit.
 type HealthFindingUnit string
+
+// HealthFooterGap A legal entity whose mail owes a company detail nobody stated. A send that owes it is held for review with `footer_incomplete`, and a background send is dropped. The finding goes once the details are complete.
+type HealthFooterGap struct {
+	// HeldByUser Sends a user pressed that were held for this since the details last changed.
+	HeldByUser int `json:"held_by_user" minimum:"0"`
+
+	// HeldInBackground Background sends, such as a meeting reminder, that were held or dropped for this since the details last changed.
+	HeldInBackground int                `json:"held_in_background" minimum:"0"`
+	IsDefault        bool               `json:"is_default"`
+	LegalEntityId    openapi_types.UUID `json:"legal_entity_id"`
+
+	// LegalEntityName Empty for a default entity that states no name.
+	LegalEntityName string `json:"legal_entity_name"`
+
+	// Missing The owed disclosure kinds with no text, then `entity_name` for a default entity with neither a display name nor a legal name.
+	Missing []HealthFooterGapMissing `json:"missing"`
+}
+
+// HealthFooterGapMissing defines model for HealthFooterGap.Missing.
+type HealthFooterGapMissing string
 
 // HealthSource defines model for HealthSource.
 type HealthSource struct {
@@ -62855,7 +62926,9 @@ type PublicOriginStatus struct {
 // every other field holds a neutral value (empty text, zero duration, `enabled: false`, no
 // `video_app`), so the guest learns nothing about the calendar behind the page.
 type PublicSchedulingProfile struct {
-	CompanyName     string `json:"company_name"`
+	CompanyName string `json:"company_name"`
+
+	// DurationMinutes The length this page books: the one `l` asked for when the page offers it, else the default.
 	DurationMinutes int    `json:"duration_minutes"`
 	Enabled         bool   `json:"enabled"`
 	HostName        string `json:"host_name"`
@@ -62863,6 +62936,9 @@ type PublicSchedulingProfile struct {
 
 	// LogoUrl Absolute public logo URL when the public origin is configured; otherwise relative to the API origin.
 	LogoUrl *string `json:"logo_url,omitempty"`
+
+	// OfferedLengths Every meeting length the host's booking page offers, the default first. Pass one as `l` to book at that length. Absent on a paused page and on a meeting proposal.
+	OfferedLengths *[]int `json:"offered_lengths,omitempty"`
 
 	// Paused True when the page takes no bookings now: the host turned bookings off, or the calendar behind it cannot take them. The availability and booking calls then answer as for an unknown page.
 	Paused bool   `json:"paused"`
@@ -66101,7 +66177,7 @@ type RoleDirectory struct {
 // RoleDirectoryVerbs defines model for RoleDirectory.Verbs.
 type RoleDirectoryVerbs string
 
-// RouterActions The actions of one MCP router whose actions run REST routes.
+// RouterActions The actions of one MCP router, with the arguments each takes.
 type RouterActions struct {
 	Actions []struct {
 		// Action The value the router's action argument takes.
@@ -66113,7 +66189,7 @@ type RouterActions struct {
 		// Body The JSON schema of its body argument.
 		Body *map[string]interface{} `json:"body,omitempty"`
 
-		// Does The route's summary.
+		// Does What the action does.
 		Does string `json:"does"`
 
 		// Ids The path ids the action takes as arguments.
@@ -66122,8 +66198,14 @@ type RouterActions struct {
 		// IfVersion Whether it takes if_version: the version you last read.
 		IfVersion *bool `json:"if_version,omitempty"`
 
-		// Query The query parameters it takes as arguments.
-		Query *[]string `json:"query,omitempty"`
+		// Query The query parameters it takes as arguments, each with its type and any closed values.
+		Query *[]struct {
+			Enum     *[]string `json:"enum,omitempty"`
+			Format   *string   `json:"format,omitempty"`
+			Name     string    `json:"name"`
+			Required *bool     `json:"required,omitempty"`
+			Type     string    `json:"type"`
+		} `json:"query,omitempty"`
 
 		// Route The method and route, for example POST /v1/record-grants.
 		Route string `json:"route"`
@@ -66134,7 +66216,10 @@ type RouterActions struct {
 
 	// AskUserFirstMeans What ask_user_first asks of the model; present when an action here has it.
 	AskUserFirstMeans *string `json:"ask_user_first_means,omitempty"`
-	Router            string  `json:"router"`
+
+	// HowToCall Where an action's arguments go in the router call: top-level members beside action, a routed body in request_body.
+	HowToCall string `json:"how_to_call"`
+	Router    string `json:"router"`
 }
 
 // RowTag A tag as a list ROW carries it: the word and its colour, nothing else. The full
@@ -67815,6 +67900,13 @@ type SendAuthorizationPreview struct {
 // SendAuthorizationPreviewRecipient One recipient's answer. It describes the MESSAGE, never the contact's file.
 type SendAuthorizationPreviewRecipient struct {
 	Address openapi_types.Email `json:"address"`
+
+	// AskCountry The record states no country for this recipient, the refusal is for want of marketing
+	// consent, and an installed pack allows advertising until the recipient refuses. A composer
+	// asks the sender for the country, saves it on the contact with `PATCH /contacts/{id}`
+	// (`address_country`) and asks the preview again. Absent or false when no answer could
+	// change the decision, and for a recipient the caller cannot read.
+	AskCountry *bool `json:"ask_country,omitempty"`
 
 	// Basis The lawful ground an allow would rest on.
 	Basis *string `json:"basis,omitempty"`
@@ -77843,7 +77935,7 @@ type ListAuditLogParams struct {
 	EntityType *string             `form:"entity_type,omitempty" json:"entity_type,omitempty"`
 	EntityId   *openapi_types.UUID `form:"entity_id,omitempty" json:"entity_id,omitempty"`
 
-	// BatchId Only the rows one bulk change wrote (`executeBulkChange` answers the id).
+	// BatchId Only the rows one operation group wrote: a bulk change (`executeBulkChange` answers the id) or one run of a capture purge.
 	BatchId *openapi_types.UUID `form:"batch_id,omitempty" json:"batch_id,omitempty"`
 
 	// Action One of the AuditLogEntry.action values.
@@ -83643,7 +83735,7 @@ type BookPublicMeetingJSONBody struct {
 
 // BookPublicMeetingParams defines parameters for BookPublicMeeting.
 type BookPublicMeetingParams struct {
-	// L Offered meeting length in minutes. Unknown lengths use the default.
+	// L Offered meeting length in minutes. A length the page does not offer is refused with 422 `length_not_offered`; read the profile again for the lengths on offer.
 	L *int `form:"l,omitempty" json:"l,omitempty"`
 
 	// IdempotencyKey Client-supplied key making a mutation safe to retry — an update exactly as much as a
@@ -83688,7 +83780,13 @@ type GetPublicAvailabilityParams struct {
 	To              time.Time `form:"to" json:"to"`
 	DurationMinutes *int      `form:"duration_minutes,omitempty" json:"duration_minutes,omitempty"`
 
-	// L Offered meeting length in minutes. Unknown lengths use the default.
+	// L Offered meeting length in minutes. A length the page does not offer is refused with 422 `length_not_offered`; read the profile again for the lengths on offer.
+	L *int `form:"l,omitempty" json:"l,omitempty"`
+}
+
+// GetPublicBookingPreviewParams defines parameters for GetPublicBookingPreview.
+type GetPublicBookingPreviewParams struct {
+	// L Meeting length in minutes the shared link asks for. The card names it, links to it and gives it as the canonical address when the page offers it; otherwise the card names the default length.
 	L *int `form:"l,omitempty" json:"l,omitempty"`
 }
 
@@ -103524,7 +103622,7 @@ type ServerInterface interface {
 	GetPublicAvailability(w http.ResponseWriter, r *http.Request, hostSlug string, params GetPublicAvailabilityParams)
 	// Read the link-preview card for a host's public booking page.
 	// (GET /public/booking/{host_slug}/preview)
-	GetPublicBookingPreview(w http.ResponseWriter, r *http.Request, hostSlug string)
+	GetPublicBookingPreview(w http.ResponseWriter, r *http.Request, hostSlug string, params GetPublicBookingPreviewParams)
 	// Read the host-approved booking page identity and meeting details.
 	// (GET /public/booking/{host_slug}/profile)
 	GetPublicSchedulingProfile(w http.ResponseWriter, r *http.Request, hostSlug string, params GetPublicSchedulingProfileParams)
@@ -109563,7 +109661,7 @@ func (_ Unimplemented) GetPublicAvailability(w http.ResponseWriter, r *http.Requ
 
 // Read the link-preview card for a host's public booking page.
 // (GET /public/booking/{host_slug}/preview)
-func (_ Unimplemented) GetPublicBookingPreview(w http.ResponseWriter, r *http.Request, hostSlug string) {
+func (_ Unimplemented) GetPublicBookingPreview(w http.ResponseWriter, r *http.Request, hostSlug string, params GetPublicBookingPreviewParams) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -150287,8 +150385,24 @@ func (siw *ServerInterfaceWrapper) GetPublicBookingPreview(w http.ResponseWriter
 		return
 	}
 
+	// Parameter object where we will unmarshal all parameters from the context
+	var params GetPublicBookingPreviewParams
+
+	// ------------- Optional query parameter "l" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "l", r.URL.Query(), &params.L, runtime.BindQueryParameterOptions{Type: "integer", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "l"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "l", Err: err})
+		}
+		return
+	}
+
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.GetPublicBookingPreview(w, r, hostSlug)
+		siw.Handler.GetPublicBookingPreview(w, r, hostSlug, params)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {

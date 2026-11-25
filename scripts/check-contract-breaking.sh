@@ -36,8 +36,8 @@ if [[ -n "${OASDIFF:-}" ]]; then
 else
   BIN_DIR="$(go env GOBIN)"
   [[ -n "$BIN_DIR" ]] || BIN_DIR="$(go env GOPATH)/bin"
-  if go version -m "$BIN_DIR/oasdiff" 2>/dev/null \
-      | grep -qE "[[:space:]]mod[[:space:]]+github\.com/oasdiff/oasdiff[[:space:]]+${OASDIFF_VERSION}([[:space:]]|\$)"; then
+  oasdiff_mod="$(go version -m "$BIN_DIR/oasdiff" 2>/dev/null || true)"
+  if grep -qE "[[:space:]]mod[[:space:]]+github\.com/oasdiff/oasdiff[[:space:]]+${OASDIFF_VERSION}([[:space:]]|\$)" <<<"$oasdiff_mod"; then
     OASDIFF_CMD=("$BIN_DIR/oasdiff")
   else
     OASDIFF_CMD=(go run "github.com/oasdiff/oasdiff@${OASDIFF_VERSION}")

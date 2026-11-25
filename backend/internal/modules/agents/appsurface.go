@@ -63,6 +63,25 @@ func (s *Dispatcher) offeredTo(ctx context.Context) []mcp.ToolSpec {
 	return s.registry.Offered(ctx)
 }
 
+// offeredOne is the one tool name as offeredTo would list it to this caller,
+// and false when that list leaves it out.
+func (r *Registry) offeredOne(ctx context.Context, name string) (mcp.ToolSpec, bool) {
+	spec, ok := r.Spec(name)
+	if !ok {
+		return spec, false
+	}
+	if surface, isApp := appSurfaceOf(ctx); isApp {
+		if !slices.Contains(surface.Tools, name) {
+			return spec, false
+		}
+		return r.availableSpec(spec)
+	}
+	if spec, ok = r.availableSpec(spec); !ok {
+		return spec, false
+	}
+	return r.offeredSpec(ctx, spec)
+}
+
 // outsideAppSurface reports a name the calling app may not call. ok is false
 // when no app is calling.
 func outsideAppSurface(ctx context.Context, name string) (outside, ok bool) {

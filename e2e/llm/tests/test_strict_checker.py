@@ -99,6 +99,17 @@ class MustCallSucceededTest(unittest.TestCase):
             out.finish(False, "It is waiting for your approval.", 2)
         self.assertEqual(check.check({"must_call": ["log_activity"], "must_call_with": ["log_activity.kind=call"]}, path), [])
 
+    def test_a_call_asking_its_users_yes_in_the_conversation_is_a_call_that_worked(self):
+        path = tempfile.NamedTemporaryFile(suffix=".jsonl", delete=False).name
+        with transcript.Transcript(path) as out:
+            out.init("m", "claude:cli", "cli-default", "connected", ["relink_activity"])
+            out.assistant("", [("c1", "relink_activity", {"entity_type": "project"})])
+            out.tool_results([("c1", "Needs the user's yes in this conversation. Nothing was changed yet; it would "
+                                     "file the mail. Tell the user in your own words what it would do and ask them.",
+                               True)])
+            out.finish(False, "Shall I file it under the project?", 2)
+        self.assertEqual(check.check({"must_call": ["relink_activity"]}, path), [])
+
     def test_a_send_the_scenario_expects_refused_still_counts(self):
         path = run([("", [("log_activity", {"kind": "note"}, True)])], "Not sent: no mailbox is connected.")
         scenario = {"must_call": ["log_activity"], "must_call_with": ["log_activity.kind=note"],

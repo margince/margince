@@ -63,6 +63,15 @@ describe("the app-level error boundary", () => {
     expect(screen.queryByText(SHELL)).toBeNull();
   });
 
+  // Outside the shell no scroller pads the top, so the box carries the gap.
+  it("keeps the page's top gap above the box", () => {
+    renderBoundary(<Fragile />);
+
+    expect(
+      screen.getByRole("alert").classList.contains("errorboundary-page"),
+    ).toBe(true);
+  });
+
   it("shows the reader nothing of the error itself", () => {
     renderBoundary(<Fragile />);
 

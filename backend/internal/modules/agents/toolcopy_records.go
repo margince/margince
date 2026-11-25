@@ -141,7 +141,7 @@ var logActivityCopy = toolCopy{
 
 var createTaskCopy = toolCopy{
 	Purpose: "Put a to-do on someone's list: what is owed, by whom, on which records.",
-	Limits: "Creates the task only — no reminder, no deal move. A source activity supplies its " +
+	Limits: "Creates the task only, with no deal move; it reminds only at a due_at with due_has_time. A source activity supplies its " +
 		"visible links when none are sent; without either, the task sits on no timeline.",
 	Instead: "log_activity is for what already happened.",
 }

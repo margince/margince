@@ -40,7 +40,7 @@ func layoutDisclosures(owed []messagingrules.Disclosure, p ControllerParticulars
 		if d.MarketingOnly && !l.marketing {
 			continue
 		}
-		text := particularFor(d.Kind, l.particularsFor(d.Kind, p))
+		text := l.textFor(d.Kind, p)
 		line := DisclosureLine{Kind: string(d.Kind), Text: text}
 		missing := meansMissing(text, d.Means)
 		if text != "" && len(missing) > 0 {
@@ -58,6 +58,20 @@ func layoutDisclosures(owed []messagingrules.Disclosure, p ControllerParticulars
 		return out
 	}
 	return l.refusalSectionLast(out, l.advertisingParticulars(p))
+}
+
+// textFor answers the words that meet one obligation, empty where the
+// installation has not stated what they need.
+func (l disclosureLayout) textFor(kind messagingrules.DisclosureKind, p ControllerParticulars) string {
+	text := particularFor(kind, l.particularsFor(kind, p))
+	if kind != messagingrules.Advertisement || text == "" {
+		return text
+	}
+	language := l.packLanguage
+	if language == "" {
+		language = l.language
+	}
+	return fmt.Sprintf(mailcopy.For(language).AdvertisementLabel, mailcopy.OneLine(text))
 }
 
 // particularsFor answers the version of p a disclosure of kind prints.

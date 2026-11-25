@@ -90,7 +90,7 @@ check yes "$(grep -q '"\$OWNER_DSN" != "\$COMPOSE_OWNER_DSN"' "$dev" && echo yes
 # on the machine and the port is what the api and the migrator actually connect
 # to. Addressing one database two ways is how a seed ran against another
 # checkout's postgres.
-check yes "$(sed -n '/^psql_owner() {/,/^}$/p' "$dev" | grep -q 'dev-psql.sh "$(dsn_port "$OWNER_DSN")"' && echo yes || echo no)" \
+check yes "$(sed -n '/^psql_owner() {/,/^}$/p' "$dev" | grep 'dev-psql.sh "$(dsn_port "$OWNER_DSN")"' >/dev/null && echo yes || echo no)" \
       "psql_owner resolves its container from the owner DSN's port, not the compose project"
 
 # That resolution can only ever reach a LOCAL container — `docker exec` has no

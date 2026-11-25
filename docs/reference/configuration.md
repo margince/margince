@@ -218,7 +218,7 @@ admin can also change under Settings. One that also says kept by a reset keeps i
 | `ai_routing` | `MARGINCE_AI_ROUTING` | `--ai-routing` | `string` | — | api, worker | Ignored; kept so existing command lines parse. |
 | `api_base_url` | `MARGINCE_API_BASE_URL` | `--api-base-url` | `string` | — | api | External base of the api for the OAuth `redirect_uri` when the api and the SPA are on different origins; defaults to `--public-base-url`. |
 | `blobstore_access_key` | `MARGINCE_BLOBSTORE_ACCESS_KEY` | — | `string`, secret | — | api, migrate, worker | Access key for the object store. |
-| `blobstore_bucket` | `MARGINCE_BLOBSTORE_BUCKET` | — | `string` | — | api, migrate, worker | Bucket attachments are written to. |
+| `blobstore_bucket` | `MARGINCE_BLOBSTORE_BUCKET` | — | `string` | — | api, migrate, worker | Bucket attachments are written to. Its credentials need `s3:PutObject`, `s3:GetObject`, `s3:DeleteObject` and `s3:ListBucket`. Erasure also needs `s3:ListBucketVersions` and `s3:DeleteObjectVersion`, so no version of a deleted object stays behind. |
 | `blobstore_endpoint` | `MARGINCE_BLOBSTORE_ENDPOINT` | — | `string` | — | api, migrate, worker | Endpoint of an object store such as MinIO for attachment bytes; it wins over `MARGINCE_BLOBSTORE_PATH`, and with both unset the attachment endpoints answer 501. |
 | `blobstore_path` | `MARGINCE_BLOBSTORE_PATH` | — | `string` | — | api, migrate, worker | Directory attachment bytes are written to when there is no object storage service; ignored when `MARGINCE_BLOBSTORE_ENDPOINT` is set. |
 | `blobstore_region` | `MARGINCE_BLOBSTORE_REGION` | — | `string` | — | api, migrate, worker | Region the bucket lives in. |
@@ -227,6 +227,13 @@ admin can also change under Settings. One that also says kept by a reset keeps i
 | `certlog_base_url` | `MARGINCE_CERTLOG_BASE_URL` | `--certlog-base-url` | `string` | — | worker | Base URL of a certificate log, or public for a free public one; unset makes no outbound lookups of what a company runs. |
 | `connector_state_key` | `MARGINCE_CONNECTOR_STATE_KEY` | `--connector-state-key` | `string`, secret | — | api | HMAC key of at least 32 bytes signing the OAuth connect state and the questions an MCP tool asks in the chat; required for the Gmail and Graph connect flows and for two-step sign-in. Unset, it is derived from the vault root key. |
 | `dsn` | `MARGINCE_DSN` | `--dsn` | `string`, secret | — | api, migrate, worker | Postgres DSN of the runtime app role; migrate falls back to it when `MARGINCE_OWNER_DSN` is unset. |
+| `erasure_journal_access_key` | `MARGINCE_ERASURE_JOURNAL_ACCESS_KEY` | — | `string`, secret | — | worker | Access key for the erasure journal's object store. |
+| `erasure_journal_bucket` | `MARGINCE_ERASURE_JOURNAL_BUCKET` | — | `string` | — | worker | Bucket the erasure journal is written to. |
+| `erasure_journal_endpoint` | `MARGINCE_ERASURE_JOURNAL_ENDPOINT` | — | `string` | — | worker | Endpoint of a separate object store for the erasure journal, so a restore of the main store never rolls it back; it wins over `MARGINCE_ERASURE_JOURNAL_PATH`, and with both unset the journal stays in the main store. |
+| `erasure_journal_path` | `MARGINCE_ERASURE_JOURNAL_PATH` | — | `string` | — | worker | Directory the erasure journal is written to when there is no object storage service for it; ignored when `MARGINCE_ERASURE_JOURNAL_ENDPOINT` is set. |
+| `erasure_journal_region` | `MARGINCE_ERASURE_JOURNAL_REGION` | — | `string` | — | worker | Region the erasure journal's bucket lives in. |
+| `erasure_journal_secret_key` | `MARGINCE_ERASURE_JOURNAL_SECRET_KEY` | — | `string`, secret | — | worker | Secret key for the erasure journal's object store. |
+| `erasure_journal_use_ssl` | `MARGINCE_ERASURE_JOURNAL_USE_SSL` | — | `bool` | `false` | worker | Reach the erasure journal's object store over TLS. |
 | `geocode_base_url` | `MARGINCE_GEOCODE_BASE_URL` | `--geocode-base-url` | `string` | — | api, worker | Nominatim base URL; unset or public uses the public service, off stops the lookup of map points; give the api and the worker the same value, or a lookup is never queued. |
 | `gmail_client_id` | `MARGINCE_GMAIL_CLIENT_ID` | `--gmail-client-id` | `string` | — | api, worker | Google OAuth client id of the Gmail capture connector. |
 | `gmail_client_secret` | `MARGINCE_GMAIL_CLIENT_SECRET` | `--gmail-client-secret` | `string`, secret | — | api, worker | Google OAuth client secret of the Gmail capture connector. |

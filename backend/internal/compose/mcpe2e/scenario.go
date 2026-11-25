@@ -13,6 +13,7 @@ import (
 	"bytes"
 	"fmt"
 	"os"
+	"path/filepath"
 	"regexp"
 	"strings"
 )
@@ -29,6 +30,7 @@ type scenario struct {
 	judged bool
 	tools  []string
 	body   []byte
+	lists  map[string][]string
 }
 
 // toolKeys are the checks whose entries name a tool. Each says how check.py
@@ -62,8 +64,54 @@ func readScenario(path string) (scenario, error) {
 	}
 	return scenario{
 		name: reader.name, body: body, judged: len(reader.lists["judge"]) > 0,
-		tools: scenarioTools(reader.lists),
+		tools: scenarioTools(reader.lists), lists: reader.lists,
 	}, nil
+}
+
+// RequiredCalls names, per scenario, every call a check requires a run to make.
+// Each alternative counts, since a run may make any of them. A must_call_with
+// alternative keeps its tool.argument=value. A must_call_matching one keeps its
+// tool, plus tool.argument=value for each "argument": "value" in its pattern.
+// So an action pinned only by a pattern is still seen.
+func RequiredCalls(dir string) (map[string][]string, error) {
+	paths, err := filepath.Glob(filepath.Join(dir, "*.yaml"))
+	if err != nil {
+		return nil, err
+	}
+	out := map[string][]string{}
+	for _, path := range paths {
+		sc, err := readScenario(path)
+		if err != nil {
+			return nil, err
+		}
+		for _, key := range []string{"must_call", "must_call_with", "must_call_matching"} {
+			shape := toolKeys[key]
+			for _, entry := range sc.lists[key] {
+				for alternative := range strings.SplitSeq(entry, shape.anyOf) {
+					out[sc.name] = append(out[sc.name], requiredCall(strings.TrimSpace(alternative), shape.nameEnd)...)
+				}
+			}
+		}
+	}
+	return out, nil
+}
+
+// patternMember is one "argument": "value" a must_call_matching pattern spells.
+var patternMember = regexp.MustCompile(`"([a-z_]+)":\s*"([a-z_]+)"`)
+
+func requiredCall(alternative, nameEnd string) []string {
+	if alternative == "" {
+		return nil
+	}
+	if nameEnd != "~" {
+		return []string{alternative}
+	}
+	tool, pattern, _ := strings.Cut(alternative, nameEnd)
+	calls := []string{tool}
+	for _, member := range patternMember.FindAllStringSubmatch(pattern, -1) {
+		calls = append(calls, tool+"."+member[1]+"="+member[2])
+	}
+	return calls
 }
 
 // scenarioReader is the state of one pass over a scenario file: the key a

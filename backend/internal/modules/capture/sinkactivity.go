@@ -197,6 +197,9 @@ func (s *Sink) captureActivity(ctx context.Context, tx pgx.Tx, rec connector.Nor
 	if err != nil {
 		return datasource.EntityRef{}, false, counterpartyDecision{}, err
 	}
+	if err := s.foldReplacedSeries(ctx, tx, id, rec); err != nil {
+		return datasource.EntityRef{}, false, counterpartyDecision{}, err
+	}
 	return ref, true, decision, nil
 }
 

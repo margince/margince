@@ -36,7 +36,10 @@ expect "$checkout" "$head" 'a checkout names its own HEAD, never the placeholder
 # The same commit as a source download: git archive fills REVISION in.
 download="$WORK/download"
 mkdir -p "$download"
-git -C "$checkout" archive HEAD | tar -x -C "$download"
+# Through a file, not a pipe: bsdtar stops at the end marker, and git's write
+# of the padding after it dies of SIGPIPE under pipefail.
+git -C "$checkout" archive --output="$WORK/download.tar" HEAD
+tar -x -f "$WORK/download.tar" -C "$download"
 expect "$download" "$head" 'a source download has no .git, and REVISION carries the commit it was cut from'
 
 # A tree with no .git whose REVISION was never filled in.

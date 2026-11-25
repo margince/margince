@@ -108,6 +108,12 @@ type Rules struct {
 	// default.
 	ConsentOnly bool
 
+	// MarketingMode says whether advertising here needs the recipient's prior
+	// consent or is allowed until they object. The empty value is MarketingOptIn,
+	// so a pack that states nothing keeps requiring consent. It applies to recipients in this country, whatever country the sender is in. An objection, an
+	// unsubscribe or a withdrawal stops advertising in either mode.
+	MarketingMode MarketingMode
+
 	// Disclosures are what a first message to somebody must carry.
 	//
 	// The send path renders them into the message footer. Held by
@@ -296,12 +302,15 @@ const (
 	// address, website — which some jurisdictions require on advertising
 	// beyond the controller's identity.
 	AdvertiserContact DisclosureKind = "advertiser_contact"
+	// Advertisement is the sentence that identifies a message as advertising,
+	// naming the sender. It needs only the controller's legal name.
+	Advertisement DisclosureKind = "advertisement"
 )
 
 // Validate enforces membership in the closed set.
 func (k DisclosureKind) Validate() error {
 	switch k {
-	case ControllerIdentity, PrivacyContact, ObjectionRoute, AdvertiserContact:
+	case ControllerIdentity, PrivacyContact, ObjectionRoute, AdvertiserContact, Advertisement:
 		return nil
 	}
 	return fmt.Errorf("disclosure %q is not one this contract defines", string(k))
@@ -443,6 +452,12 @@ func (r Rules) Validate() error {
 		if err := r.FrequencyCap.Validate(); err != nil {
 			return fmt.Errorf("messaging rules for %q: %w", string(r.Jurisdiction), err)
 		}
+	}
+	if err := r.MarketingMode.Validate(); err != nil {
+		return fmt.Errorf("messaging rules for %q: %w", string(r.Jurisdiction), err)
+	}
+	if r.MarketingMode.OptOut() && r.ConsentOnly {
+		return fmt.Errorf("messaging rules for %q allow advertising until the recipient refuses and also ask for prior consent only", string(r.Jurisdiction))
 	}
 	if err := r.validateClaims(); err != nil {
 		return fmt.Errorf("messaging rules for %q: %w", string(r.Jurisdiction), err)

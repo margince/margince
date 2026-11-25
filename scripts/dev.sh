@@ -1240,7 +1240,8 @@ up)
   # Scanned only to choose between a real model and the offline fake below. The
   # binding itself is never read from a file by the api or the worker.
   routing_src="config/margince.yaml"
-  if seeded_ai_routing config/margince.dev.yaml | grep -q .; then
+  dev_routing="$(seeded_ai_routing config/margince.dev.yaml)"
+  if [[ -n "$dev_routing" ]]; then
     routing_src="config/margince.dev.yaml"
   fi
 
@@ -1559,7 +1560,7 @@ up)
     # The only seat on a cold start is the bootstrap admin, and the deployment
     # config is where it is defined — read the address back from that file
     # rather than restating it, so an edited config prints the truth.
-    admin_email="$(sed -n 's/^[[:space:]]*email:[[:space:]]*\(.*\)$/\1/p' "$deploy_cfg" | head -1)"
+    admin_email="$(sed -n 's/^[[:space:]]*email:[[:space:]]*\(.*\)$/\1/p' "$deploy_cfg" | sed -n 1p)"
     echo "  login    ${admin_email} / $(cat "$admin_pw_file")  (bootstrap admin — cold start, no other data)"
     echo "  demo     make seed-dev  — adds the demo records + rep seats on top"
     # Name the reading tool, not just the file: the raw log interleaves three

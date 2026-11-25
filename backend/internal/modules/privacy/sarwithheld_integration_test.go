@@ -47,8 +47,9 @@ import (
 // source and fails when they diverge — without it, registering a column there
 // and forgetting it here would leave the airtight half not looking.
 var withheldFromTheExport = map[string][]string{
-	"activity":      {"system_text"},
-	"confirm_token": {"token_hash", "delivered_to"},
+	"activity":           {"system_text"},
+	"confirm_token":      {"token_hash", "delivered_to"},
+	"conversation_claim": {"captured_by", "corrected_by_user_id", "taken_by_user_id"},
 }
 
 // The gate's registration and this one describe the same rule, so they must name

@@ -1841,6 +1841,9 @@ export const en = {
   "scheduling.retryHelp":
     "Retry sends the same invitation again, so the guest does not get a second one.",
   "book.videoApp": "{app} · link in your invite",
+  "book.lengthChoice": "Meeting length",
+  "book.lengthNotOffered":
+    "This meeting length is no longer offered. Choose another length.",
   "scheduling.pickDay": "Choose a day",
   "scheduling.changeTime": "Change time",
   "scheduling.confirmAt": "Confirm {day}, {time}",
@@ -2224,6 +2227,7 @@ export const en = {
   "systemJob.capture_classify": "Mail sorting",
   "systemJob.capture_credential_backfill": "Mail connection update",
   "systemJob.capture_personal_purge": "Personal mail removal",
+  "systemJob.capture_purge_receipt": "Mail removal receipt",
   "systemJob.capture_part_slim_worker": "Mail storage cleanup",
   "systemJob.capture_trace_sweep": "Mail trace cleanup",
   "systemJob.capture_which_deal": "Deal question from mail",
@@ -3369,6 +3373,16 @@ export const en = {
   "rel.add": "Add relationship",
   "rel.seatOnDeal": "Add to a deal",
   "rel.addStakeholder": "Add stakeholder",
+  "rel.stakeholderOffer.title": "Add this mail’s contacts to the deal?",
+  "rel.stakeholderOffer.body":
+    "As stakeholders, their next mail goes onto the deal by itself. Untick anyone who is not part of it.",
+  "rel.stakeholderOffer.legend": "Contacts on this mail",
+  "rel.stakeholderOffer.confirm": "Add to deal",
+  "rel.stakeholderOffer.decline": "Not now",
+  "rel.stakeholderOffer.noneTicked": "Tick at least one contact to add.",
+  "rel.stakeholderOffer.added": "Added to the deal",
+  "rel.stakeholderOffer.unread":
+    "The mail is on the deal. Margince could not read who is on it, so it offers nobody to add.",
   "rel.dealStakeholders": "Stakeholders",
   "rel.dealStakeholdersEmpty": "No stakeholders on this deal",
   "rel.employerUnavailable":
@@ -3832,6 +3846,8 @@ export const en = {
   "consent.reason.no_consent": "No consent recorded",
   "consent.reason.existing_customer":
     "They bought from you and were told then that they may object to advertising",
+  "consent.reason.opt_out_allowed":
+    "Advertising is allowed here until they refuse, and no refusal is on file",
   "consent.reason.qualifying.inbound_message": "They wrote to you on {date}",
   "consent.reason.qualifying.inquiry": "They made an inquiry on {date}",
   "consent.reason.qualifying.in_person":
@@ -8566,6 +8582,8 @@ export const en = {
   "sendPermission.footer.phone": "a phone number",
   "sendPermission.footer.web": "a website or social link",
   "sendPermission.footer.privacy": "privacy contact information",
+  "sendPermission.footer.advertisement":
+    "the line that identifies it as an advertisement",
   "sendPermission.footer.advertiser": "advertiser contact information",
   "sendPermission.footer.identity": "the company name and address",
   "sendPermission.footer.unknown": "some company footer text",
@@ -8592,6 +8610,14 @@ export const en = {
   "sendPermission.appliesToSome_other":
     "This applies to {count} of {total} recipients.",
   "sendPermission.checking": "Checking whether this message can be sent…",
+  "countryQuestion.title": "Which country is {address} in?",
+  "countryQuestion.body":
+    "Some countries allow advertising until the contact unsubscribes. This contact has no country, so Margince asks for the consent it needs everywhere else. Your answer is saved on the contact.",
+  "countryQuestion.label": "Country",
+  "countryQuestion.none": "Choose a country",
+  "countryQuestion.save": "Save country",
+  "countryQuestion.alreadySet":
+    "This contact has a country now. The check was asked again.",
   "lawfulBasis.title": "No valid basis recorded",
   "lawfulBasis.body":
     "No valid basis under Vietnamese law is recorded for this contact: neither their consent nor a case where the law allows processing without it. Sending is at your own risk.",
@@ -11230,8 +11256,6 @@ export const en = {
   "settings.resetDataConfirmName": "Type this company name:",
   "settings.resetDataResult":
     "Cleared: tables {tables}, job rows {jobs}, event streams {streams}, cache keys {keys}, stored files {objects}.",
-  "settings.resetDataDrainWarning":
-    "A background job was running when the reset began. It fails against the deleted data and logs one harmless error.",
 
   "settings.jobs": "Background jobs",
   "settings.jobsSub": "Queued background jobs and failed jobs by owner.",
@@ -14300,6 +14324,7 @@ export const en = {
   "buyer.previewReadOnly":
     "A preview is read-only. Close this tab to return to the Deal Room page.",
   "buyer.closedNote": "This room is now read-only.",
+  "buyer.readOnly": "Your access to this room is read-only.",
   "buyer.stewardUnknown": "your contact",
   "buyer.signOut": "Sign out",
   "buyer.signedInAs": "Signed in as {name}.",
@@ -14392,7 +14417,6 @@ export const en = {
   "threads.newLabel": "New thread",
   "threads.requireChangeLabel": "This document needs a change",
   "threads.open": "Post",
-  "threads.readOnly": "Your access is read-only.",
   "deal360.blocker": "Blockers",
   "deal360.buyer": "What the buyer wants",
   "deal360.verdict.live": "On track",
@@ -15624,6 +15648,8 @@ export const en = {
   "captureActivity.filing.core.retracted":
     "The CRM took its deal link back: {reason}",
   "captureActivity.filing.basis.project": "the mail’s project",
+  "captureActivity.filing.basis.chosen_thread":
+    "a deal a colleague chose for an earlier mail in the thread",
   "captureActivity.filing.basis.thread": "an earlier mail in the thread",
   "captureActivity.filing.basis.sole_open_deal": "the company’s only open deal",
   "captureActivity.filing.basis.stakeholder": "a stakeholder on the deal",
@@ -19991,6 +20017,7 @@ export const en = {
   "contact.strip.days": "{count} days",
   "contact.consent.fact.existingCustomer":
     "Existing customer, marketing allowed",
+  "contact.consent.fact.optOutAllowed": "Advertising allowed until they refuse",
   "contact.consent.fact.saidWeMayWrite": "Permission to write recorded",
   "contact.consent.fact.businessContact": "Recent business contact recorded",
   "contact.consent.fact.serviceMessages": "Service messages allowed",
@@ -22969,6 +22996,7 @@ export const en = {
   "scheduling.videoNotSet": "Not set",
   "scheduling.video.ownShort": "Your own link",
   "scheduling.mainLink": "(main link)",
+  "scheduling.copyLengthLink": "Copy the {length} link",
   "scheduling.linkActions": "More actions for {name}",
   "scheduling.editLink": "Edit link",
   "scheduling.createLink": "Create booking link",
@@ -23602,7 +23630,6 @@ export const en = {
   "aiTask.name.document_extract": "Document extraction",
   "aiTask.name.draft_reply": "Reply drafting",
   "aiTask.name.enrich": "Signature enrichment",
-  "aiTask.name.extension_task": "Extension AI task",
   "aiTask.name.growth_fit": "Company fit assessment",
   "aiTask.name.nl_search": "Natural-language search",
   "aiTask.name.offer_draft": "Offer drafting",
@@ -24191,6 +24218,33 @@ export const en = {
   "health.openModels": "Open Models",
   "health.openConnections": "Open Connections",
   "health.openRegional": "Open Regional and calendar",
+  "health.source.footer": "Company details in mail footers",
+  "health.code.footer_complete":
+    "Every mail footer has the company details it must show",
+  "health.code.footer_incomplete": "Mail footers lack company details",
+  "health.footerIncompleteFor": "{entity}: mail footers lack company details",
+  "health.footerDefaultEntity": "The default legal entity",
+  "health.effect.footer":
+    "Mail that must show these details is held for review. Whoever wrote it can still send it with a reason. A background send, such as a meeting reminder, is dropped.",
+  "health.footerNext":
+    "Fill in the missing details. The warning goes once they are complete.",
+  "health.recovery.footer":
+    "Every company detail the jurisdiction packs require is stated.",
+  "health.footerMissing": "Missing details",
+  "health.footerHeldByUser": "Sends by users held since the last change",
+  "health.footerHeldInBackground":
+    "Background sends held or dropped since the last change",
+  "health.footerDetail.controller_identity": "Legal name and postal address",
+  "health.footerDetail.privacy_contact": "Privacy contact",
+  "health.footerDetail.objection_route": "How to object",
+  "health.footerDetail.advertisement": "Advertisement line",
+  "health.footerDetail.advertiser_contact": "Advertiser contact",
+  "health.footerDetail.entity_name": "Company name",
+  "health.measure.messages_one": "{count} message",
+  "health.measure.messages_other": "{count} messages",
+  "health.openLegalEntities": "Open Legal entities",
+  "health.openCompanyProfile": "Open Company profile",
+  "health.openDisclosures": "Open Jurisdiction",
   "health.unit.runs": "runs",
   "health.history": "Retained failure history",
   "health.historyWindow":

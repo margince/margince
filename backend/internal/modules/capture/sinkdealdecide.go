@@ -36,6 +36,9 @@ type dealFacts struct {
 	provenContacts []ids.UUID
 	companies      []ids.UUID
 	thread         []ids.UUID
+	// chosen is the open deals a colleague filed earlier mail of the
+	// conversation on, at any company.
+	chosen []ids.UUID
 	// hooks are the extension changes already made to contacts and companies.
 	hooks []HookChange
 	// topicMemo is the digest of the topic question last answered for it.
@@ -51,12 +54,17 @@ func readDealFacts(ctx context.Context, tx pgx.Tx, activityID ids.ActivityID, re
 	var filed bool
 	var project *ids.UUID
 	var sender string
+	// filedSibling only spares the scoped conversation read for mail whose
+	// conversation has no deal at all; it decides nothing itself.
+	var filedSibling bool
 	err := tx.QueryRow(ctx, `
 		SELECT a.kind, a.channel_provider,
 		       EXISTS (SELECT 1 FROM activity_link l WHERE l.activity_id = a.id AND l.entity_type = 'deal'),
 		       (SELECT l.project_id FROM activity_link l WHERE l.activity_id = a.id AND l.entity_type = 'project'),
-		       coalesce(a.deal_topic_digest, ''), coalesce(a.counterparty_email, '')
-		  FROM activity a WHERE a.id = $1`, activityID).Scan(&kind, &channel, &filed, &project, &facts.topicMemo, &sender)
+		       coalesce(a.deal_topic_digest, ''), coalesce(a.counterparty_email, ''),
+		       EXISTS (SELECT 1 FROM activity s JOIN activity_link sl ON sl.activity_id = s.id AND sl.entity_type = 'deal'
+		                WHERE s.id <> a.id AND `+correspondence.ConversationSQL("s", "a")+`)
+		  FROM activity a WHERE a.id = $1`, activityID).Scan(&kind, &channel, &filed, &project, &facts.topicMemo, &sender, &filedSibling)
 	if err != nil {
 		return facts, fmt.Errorf("capture: reading the mail the deal rule files: %w", err)
 	}
@@ -85,9 +93,14 @@ func readDealFacts(ctx context.Context, tx pgx.Tx, activityID ids.ActivityID, re
 	if err = hooks.adjustParties(ctx, tx, &facts); err != nil {
 		return facts, err
 	}
-	if kind == kindEmail && len(facts.companies) == 1 {
-		facts.thread, err = threadDeals(ctx, tx, activityID, facts.companies[0])
+	if kind != kindEmail || !filedSibling {
+		return facts, nil
 	}
+	var company ids.UUID
+	if len(facts.companies) == 1 {
+		company = facts.companies[0]
+	}
+	facts.chosen, facts.thread, err = conversationDeals(ctx, tx, activityID, company)
 	return facts, err
 }
 
@@ -182,6 +195,15 @@ func decideByRule(ctx context.Context, tx pgx.Tx, facts dealFacts, candidates De
 		deals, err := candidates.OpenDealsOfProject(ctx, tx, facts.project)
 		return withBasis(oneDeal(deals, WhichDeal{ProjectID: facts.project}), DealBasisProject, DealBasisProject), err
 	}
+	// A colleague's choice for the conversation outranks every company rung,
+	// because a partner's mail is often about a deal at the customer. Two
+	// choices disagree, and the machine picks neither.
+	switch len(facts.chosen) {
+	case 1:
+		return DealVerdict{Outcome: DealLinked, Deal: facts.chosen[0], Basis: DealBasisChosenThread}, nil
+	case 2:
+		return DealVerdict{Outcome: DealNone, Basis: DealBasisChosenThread}, nil
+	}
 	verdict, err := decideByCompany(ctx, tx, facts, candidates)
 	if err != nil || verdict.Outcome != DealNone || len(facts.contacts) == 0 {
 		return verdict, err
@@ -221,9 +243,9 @@ func decideByCompany(ctx context.Context, tx pgx.Tx, facts dealFacts, candidates
 	if company.IsZero() {
 		return DealVerdict{Outcome: DealNone}, nil
 	}
-	// The thread a mail claims is typed by its sender, so a sibling's deal
-	// counts only when the mail's own company corroborates it. A deal at
-	// another company is no clue about this one.
+	// The thread a mail claims is typed by its sender. A sibling's deal the
+	// machine chose counts only when the mail's own company corroborates it.
+	// Only a colleague's choice crosses companies (decideByRule).
 	switch len(facts.thread) {
 	case 1:
 		return DealVerdict{Outcome: DealLinked, Deal: facts.thread[0], Basis: DealBasisThread}, nil
@@ -356,52 +378,72 @@ func mailCompanies(ctx context.Context, tx pgx.Tx, activityID ids.ActivityID, co
 	return companies, nil
 }
 
-// threadDeals is the open deals of company that proven mail of this mail's
-// conversation is filed under. It answers at most two, after the whole
-// population is filtered. The conversation and the proof are correspondence's, as the deal
-// answer and the request settlement read them. The mail itself must be proven
-// too: a reply anyone could have typed follows no deal. Only siblings and
-// deals the capturing seat may read count.
-func threadDeals(ctx context.Context, tx pgx.Tx, activityID ids.ActivityID, company ids.UUID) ([]ids.UUID, error) {
+// conversationDeals reads, in one round trip, the open deals that proven mail
+// of this mail's conversation is filed under. chosen is those a human or an
+// agent filed earlier mail on, at any company: a later choice never reroutes
+// older mail. thread is those of company, for our own mail filed by any hand;
+// a zero company has none. Each answers at most two, after the whole
+// population is filtered. The mail itself must be proven: a reply anyone
+// could have typed follows no deal. Only unrestricted siblings and deals the
+// capturing seat may read count. The conversation and the proof are
+// correspondence's, as the deal answer and the request settlement read them.
+func conversationDeals(ctx context.Context, tx pgx.Tx, activityID ids.ActivityID, company ids.UUID) (chosen, thread []ids.UUID, err error) {
 	if !auth.ReadGranted(ctx, "deal") {
-		return nil, nil
+		return nil, nil, nil
 	}
 	args := []any{activityID, company}
 	arg := func(v any) int { args = append(args, v); return len(args) }
 	siblingScope, err := auth.ActivityContentClause(ctx, "a", arg)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	dealScope, err := auth.ScopeClauseFor(ctx, "deal", "d", arg)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	for _, clause := range []*string{&siblingScope, &dealScope} {
 		if *clause == "" {
 			*clause = sqlUnscoped
 		}
 	}
-	rows, err := tx.Query(ctx, `
-		SELECT DISTINCT d.id
+	query := `
+		SELECT d.id, coalesce(bool_or(` + chosenSiblingSQL + `), false), coalesce(bool_or(d.company_id = $2::uuid), false)
 		  FROM activity self
-		  JOIN activity a ON a.id <> self.id AND `+correspondence.ConversationSQL("a", "self")+`
-		  JOIN activity_link l ON l.activity_id = a.id AND l.entity_type = 'deal' AND `+relstrength.DealLinkStandsSQL("l")+`
+		  JOIN activity a ON a.id <> self.id AND ` + correspondence.ConversationSQL("a", "self") + `
+		  JOIN activity_link l ON l.activity_id = a.id AND l.entity_type = 'deal' AND ` + relstrength.DealLinkStandsSQL("l") + `
 		  JOIN deal d ON d.id = l.deal_id
-		 WHERE self.id = $1 AND `+correspondence.ProvenSQL("self")+`
-		   AND `+correspondence.ProvenSQL("a")+`
-		   AND a.restricted_at IS NULL AND (`+siblingScope+`)
-		   AND d.company_id = $2 AND d.status = 'open' AND d.archived_at IS NULL AND (`+dealScope+`)
-		 ORDER BY d.id
-		 LIMIT 2`, args...)
+		 WHERE self.id = $1 AND ` + correspondence.ProvenSQL("self") + ` AND ` + correspondence.ProvenSQL("a") + `
+		   AND a.restricted_at IS NULL AND (` + siblingScope + `)
+		   AND d.status = 'open' AND d.archived_at IS NULL AND (` + dealScope + `)
+		 GROUP BY d.id
+		 ORDER BY d.id`
+	rows, err := tx.Query(ctx, query, args...)
 	if err != nil {
-		return nil, fmt.Errorf("capture: reading the conversation's deals: %w", err)
+		return nil, nil, fmt.Errorf("capture: reading the conversation's deals: %w", err)
 	}
-	deals, err := pgx.CollectRows(rows, pgx.RowTo[ids.UUID])
-	if err != nil {
-		return nil, fmt.Errorf("capture: reading the conversation's deals: %w", err)
+	defer rows.Close()
+	for rows.Next() {
+		var deal ids.UUID
+		var byHand, ours bool
+		if err := rows.Scan(&deal, &byHand, &ours); err != nil {
+			return nil, nil, fmt.Errorf("capture: reading the conversation's deals: %w", err)
+		}
+		if byHand && len(chosen) < 2 {
+			chosen = append(chosen, deal)
+		}
+		if ours && len(thread) < 2 {
+			thread = append(thread, deal)
+		}
 	}
-	return deals, nil
+	if err := rows.Err(); err != nil {
+		return nil, nil, fmt.Errorf("capture: reading the conversation's deals: %w", err)
+	}
+	return chosen, thread, nil
 }
+
+// chosenSiblingSQL holds when a human or an agent chose deal d for sibling a,
+// and a came before the mail being decided.
+var chosenSiblingSQL = `(a.occurred_at, a.id) < (self.occurred_at, self.id) AND ` + provenance.HumanChoseDealSQL("a.id", "d.id")
 
 func dealActivityKind(kind string) bool {
 	return kind == kindEmail || kind == meetingKind
