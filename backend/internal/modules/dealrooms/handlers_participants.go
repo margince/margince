@@ -117,11 +117,15 @@ func credentialFor(r *http.Request, credential string) string {
 	return credential
 }
 
-// recordSendOutcome stamps what the relay did onto the invitation it carried.
-// It runs after the issuing transaction committed, so a slow relay never rolls
+// recordSendOutcome stamps what the relay did onto the invitation it carried,
+// and logs the relay's refusal, which the row keeps only as `failed_at`. It runs after the issuing transaction committed, so a slow relay never rolls
 // back a participant. A failure to record is logged and swallowed: the
 // credential is valid either way, and only the roster chip is lost.
 func (h Handlers) recordSendOutcome(ctx context.Context, issued IssuedInvitation, sendErr error) {
+	if sendErr != nil {
+		slog.WarnContext(ctx, "the mail relay refused a deal room invitation",
+			"participant_id", issued.Participant.Id, "err", sendErr)
+	}
 	if err := h.inviteRecords.RecordInvitationSend(ctx,
 		participantPathID(issued.Participant.Id), issued.Credential, sendErr); err != nil {
 		slog.ErrorContext(ctx, "recording deal room invitation delivery failed",
