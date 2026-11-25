@@ -149,3 +149,39 @@ func (e *dedupeEnv) countInWorkspace(ctx context.Context, t *testing.T, query st
 	}
 	return n
 }
+
+// The same Telegram user reached through two business accounts is two
+// bindings, and through one account is one.
+func TestAnIdentityIsBoundOncePerAccountScope(t *testing.T) {
+	e := setupDedupe(t)
+	ctx := e.as()
+	first := e.seedContact(ctx, t, "First Scope", []string{"first@scope.test"}, nil)
+	second := e.seedContact(ctx, t, "Second Scope", []string{"second@scope.test"}, nil)
+	other := e.seedContact(ctx, t, "Same Scope", []string{"same@scope.test"}, nil)
+	const user = "770601"
+	inFirst := connector.ChannelIdentity{Provider: telegramProvider, AccountScope: "880001", ChannelUserID: user}
+	inSecond := connector.ChannelIdentity{Provider: telegramProvider, AccountScope: "880002", ChannelUserID: user}
+
+	if bound := e.bindIdentity(ctx, t, first, inFirst); bound != first {
+		t.Fatalf("the first scope bound %s, want %s", bound, first)
+	}
+	if bound := e.bindIdentity(ctx, t, second, inSecond); bound != second {
+		t.Fatalf("the same user under a second account bound %s, want its own binding %s", bound, second)
+	}
+	if bound := e.bindIdentity(ctx, t, other, inFirst); bound != first {
+		t.Fatalf("a second bind in the first scope returned %s, want the incumbent %s", bound, first)
+	}
+	if n := e.countInWorkspace(ctx, t,
+		`SELECT count(*) FROM contact_channel_identity WHERE channel_user_id = $1 AND archived_at IS NULL`, user); n != 2 {
+		t.Fatalf("%d live bindings for one user in two scopes, want 2", n)
+	}
+	if n := e.countInWorkspace(ctx, t,
+		`SELECT count(*) FROM contact_channel_identity WHERE channel_user_id = $1 AND account_scope = ''`, user); n != 0 {
+		t.Fatalf("%d bindings landed in the workspace bot's scope, want none", n)
+	}
+
+	resolved, err := e.resolveOrCreateContactForIdentity(ctx, "Resolver", inSecond)
+	if err != nil || resolved != second {
+		t.Fatalf("resolving the user in the second scope = %s, %v, want %s", resolved, err, second)
+	}
+}

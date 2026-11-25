@@ -61,11 +61,11 @@ func ResolveOrCreateChannelIdentity(ctx context.Context, tx pgx.Tx, contactID id
 	// channel, and unlike a mail message there is no per-record id worth
 	// stamping — the binding outlives every message that refreshed it.
 	tag, err := tx.Exec(ctx, `
-		INSERT INTO contact_channel_identity (contact_id, provider, channel_user_id, username, source, captured_by)
-		VALUES ($1, $2, $3, NULLIF($4, ''), $2, $5)
-		ON CONFLICT (provider, channel_user_id) WHERE archived_at IS NULL
+		INSERT INTO contact_channel_identity (contact_id, provider, account_scope, channel_user_id, username, source, captured_by)
+		VALUES ($1, $2, $6, $3, NULLIF($4, ''), $2, $5)
+		ON CONFLICT (provider, account_scope, channel_user_id) WHERE archived_at IS NULL
 		DO NOTHING`,
-		contactID, ci.Provider, ci.ChannelUserID, ci.Username, by)
+		contactID, ci.Provider, ci.ChannelUserID, ci.Username, by, ci.AccountScope)
 	if err != nil {
 		return ids.ContactID{}, fmt.Errorf("contacts: binding channel identity: %w", err)
 	}
@@ -79,8 +79,8 @@ func ResolveOrCreateChannelIdentity(ctx context.Context, tx pgx.Tx, contactID id
 	var winner ids.ContactID
 	err = tx.QueryRow(ctx, `
 		SELECT contact_id FROM contact_channel_identity
-		WHERE provider = $1 AND channel_user_id = $2 AND archived_at IS NULL`,
-		ci.Provider, ci.ChannelUserID).Scan(&winner)
+		WHERE provider = $1 AND channel_user_id = $2 AND account_scope = $3 AND archived_at IS NULL`,
+		ci.Provider, ci.ChannelUserID, ci.AccountScope).Scan(&winner)
 	if err != nil {
 		return ids.ContactID{}, fmt.Errorf("contacts: reading the channel identity that won the bind: %w", err)
 	}
@@ -140,13 +140,13 @@ func (s *Store) SetChannelIdentityBlocked(ctx context.Context, tx pgx.Tx, ci con
 			botID, updateID)
 	}
 	// At most one row can come back: the partial unique index admits one live
-	// binding per (workspace, provider, channel_user_id).
+	// binding per (provider, account_scope, channel_user_id).
 	var contactID ids.ContactID
 	var wasBlockedAt *time.Time
 	err := tx.QueryRow(ctx, `
 		WITH bound AS (
 			SELECT id, contact_id, blocked_at FROM contact_channel_identity
-			 WHERE provider = $1 AND channel_user_id = $2 AND archived_at IS NULL
+			 WHERE provider = $1 AND channel_user_id = $2 AND account_scope = $6 AND archived_at IS NULL
 		)
 		UPDATE contact_channel_identity pci
 		   SET membership_bot_id    = $4,
@@ -157,7 +157,7 @@ func (s *Store) SetChannelIdentityBlocked(ctx context.Context, tx pgx.Tx, ci con
 		   AND (pci.membership_bot_id IS DISTINCT FROM $4
 		        OR $5 > coalesce(pci.membership_update_id, 0))
 		RETURNING bound.contact_id, bound.blocked_at`,
-		ci.Provider, ci.ChannelUserID, blocked, botID, updateID).Scan(&contactID, &wasBlockedAt)
+		ci.Provider, ci.ChannelUserID, blocked, botID, updateID, ci.AccountScope).Scan(&contactID, &wasBlockedAt)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return nil
 	}
@@ -251,7 +251,7 @@ func auditChannelIdentityChange(ctx context.Context, tx pgx.Tx, contactID ids.Co
 // a handle can be released and re-claimed while the account id cannot.
 func ReachableChannelIdentities(ctx context.Context, tx pgx.Tx, contactID ids.ContactID, provider string) ([]connector.ChannelIdentity, error) {
 	rows, err := tx.Query(ctx, `
-		SELECT channel_user_id, coalesce(username, '')
+		SELECT account_scope, channel_user_id, coalesce(username, '')
 		  FROM contact_channel_identity
 		 WHERE contact_id = $1 AND provider = $2
 		   AND archived_at IS NULL AND blocked_at IS NULL
@@ -263,7 +263,7 @@ func ReachableChannelIdentities(ctx context.Context, tx pgx.Tx, contactID ids.Co
 	var out []connector.ChannelIdentity
 	for rows.Next() {
 		identity := connector.ChannelIdentity{Provider: provider}
-		if err := rows.Scan(&identity.ChannelUserID, &identity.Username); err != nil {
+		if err := rows.Scan(&identity.AccountScope, &identity.ChannelUserID, &identity.Username); err != nil {
 			return nil, fmt.Errorf("contacts: reading reachable channel identities: %w", err)
 		}
 		out = append(out, identity)

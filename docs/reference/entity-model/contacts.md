@@ -781,11 +781,12 @@ The 49 tables owned by `contacts`, as the migrations build them. [Back to the en
 
 ## contact_channel_identity
 
-14 columns · primary key `(id)` · referenced by 0 foreign keys
+15 columns · primary key `(id)` · referenced by 0 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
 | `id` | `uuid`, default `uuidv7()` | yes | Primary key. |
+| `account_scope` | `text`, default `''::text` | yes |  |
 | `blocked_at` | `timestamp with time zone` |  |  |
 | `channel_user_id` | `text` | yes |  |
 | `contact_id` | `uuid` | yes | Points at `contact.id`. |
@@ -815,12 +816,12 @@ The 49 tables owned by `contacts`, as the migrations build them. [Back to the en
 
 - `contact_channel_identity_pkey`: `unique, btree (id)`
 - `idx_contact_channel_identity_contact`: `btree (contact_id)`
-- `uq_contact_channel_identity`: `unique, btree (provider, channel_user_id) WHERE (archived_at IS NULL)`
+- `uq_contact_channel_identity`: `unique, btree (provider, account_scope, channel_user_id) WHERE (archived_at IS NULL)`
 
 **Triggers**
 
-- `text_bound_insert`: `AFTER INSERT FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL, '{"source": 20000, "provider": 20000, "username": 20000, "captured_by": 20000, "channel_user_id": 20000, "membership_bot_id": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"captured_by":20000,"channel_user_id":20000,"membership_bot_id":20000,"provider":20000,"source":20000,"username":20000}')`
-- `text_bound_update`: `AFTER UPDATE FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"source": 20000, "provider": 20000, "username": 20000, "captured_by": 20000, "channel_user_id": 20000, "membership_bot_id": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"captured_by":20000,"channel_user_id":20000,"membership_bot_id":20000,"provider":20000,"source":20000,"username":20000}')`
+- `text_bound_insert`: `AFTER INSERT FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL, '{"source": 20000, "provider": 20000, "username": 20000, "captured_by": 20000, "account_scope": 20000, "channel_user_id": 20000, "membership_bot_id": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"account_scope":20000,"captured_by":20000,"channel_user_id":20000,"membership_bot_id":20000,"provider":20000,"source":20000,"username":20000}')`
+- `text_bound_update`: `AFTER UPDATE FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"source": 20000, "provider": 20000, "username": 20000, "captured_by": 20000, "account_scope": 20000, "channel_user_id": 20000, "membership_bot_id": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"account_scope":20000,"captured_by":20000,"channel_user_id":20000,"membership_bot_id":20000,"provider":20000,"source":20000,"username":20000}')`
 - `trg_contact_channel_identity_updated`: `BEFORE UPDATE FOR EACH ROW EXECUTE FUNCTION set_updated_at_bump_version()`
 
 ## contact_email
