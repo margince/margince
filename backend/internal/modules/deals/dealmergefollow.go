@@ -8,6 +8,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -17,17 +18,26 @@ const maxMergeHops = 8
 
 // FollowMergeTx answers the deal that carries on for a merged-away deal, and the
 // deal itself when it was not merged. Who is responsible for a retired duplicate
-// is whoever is responsible for the deal that replaced it.
+// is whoever is responsible for the deal that replaced it. The first deal is read under the
+// caller's row scope. One it cannot see answers pgx.ErrNoRows, like one that
+// does not exist.
 func FollowMergeTx(ctx context.Context, tx pgx.Tx, id ids.UUID) (ids.UUID, error) {
-	for range maxMergeHops {
-		var next *ids.UUID
-		if err := tx.QueryRow(ctx, `SELECT merged_into_id FROM deal WHERE id = $1`, id).Scan(&next); err != nil {
-			return id, err
-		}
-		if next == nil {
-			return id, nil
-		}
-		id = *next
+	args := []any{id, maxMergeHops}
+	arg := func(v any) int { args = append(args, v); return len(args) }
+	scope, err := auth.ScopeClauseFor(ctx, "deal", "d", arg)
+	if err != nil {
+		return ids.UUID{}, err
 	}
-	return id, nil
+	if scope == "" {
+		scope = "TRUE"
+	}
+	var end ids.UUID
+	err = tx.QueryRow(ctx, `
+		WITH RECURSIVE chain(deal_id, hop) AS (
+			SELECT d.id, 0 FROM deal d WHERE d.id = $1 AND (`+scope+`)
+			UNION ALL
+			SELECT d.merged_into_id, c.hop + 1 FROM chain c JOIN deal d ON d.id = c.deal_id
+			 WHERE d.merged_into_id IS NOT NULL AND c.hop < $2)
+		SELECT deal_id FROM chain ORDER BY hop DESC LIMIT 1`, args...).Scan(&end)
+	return end, err
 }
