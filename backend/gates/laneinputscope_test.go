@@ -454,18 +454,16 @@ func unscoped(lane filteredLane, scopes map[string][]string) []string {
 	return missing
 }
 
-// scopeClaims answers the three pattern shapes the classifier uses: a literal
-// path, a directory tree, and a basename anywhere in the tree. A shape it does
-// not recognise leaves the path unclaimed rather than claimed, because the way
-// this gate must not fail is by reporting a pass over patterns it never read.
+// scopeClaims answers the four pattern shapes the classifier uses: a literal
+// path, a directory tree, a basename anywhere in the tree, and a glob inside one
+// directory. A shape it does not recognise leaves the path unclaimed rather than
+// claimed, because the way this gate must not fail is by reporting a pass over
+// patterns it never read.
 func scopeClaims(path string, patterns []string) bool {
 	for _, pattern := range patterns {
 		pattern = strings.Trim(pattern, "'")
 		switch {
-		case pattern == path:
-			return true
-		case strings.HasSuffix(pattern, "/**") &&
-			strings.HasPrefix(path, strings.TrimSuffix(pattern, "**")):
+		case coveredBy(pattern, path):
 			return true
 		case strings.HasPrefix(pattern, "**/") &&
 			(path == strings.TrimPrefix(pattern, "**/") ||

@@ -78,6 +78,10 @@ jobs:
           persist-credentials: false
           # The tag is checked against main, which a shallow checkout lacks.
           fetch-depth: 0
+      # `make check` leaves the release scripts' tests out, so the release
+      # proves the scripts it calls before it uses them.
+      - name: The release scripts pass their own tests
+        run: make check-release
       - name: Read the tag
         id: version
         env:

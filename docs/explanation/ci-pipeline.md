@@ -145,6 +145,7 @@ to run the Go unit gates. The other is to boot the sharded Postgres databases.
 | `frontend` | `third-party-files.txt`, `frontend/**`, `backend/api/**` (the contract drives FE types), `backend/internal/modules/agents/previewcatalog_gen.json` (only `fe-drift` builds it again from `frontend/`), the composition inputs the lane type checks against (`instance/**`, `extensions/**`, `fixtures/**`, `composition/**`, `backend/tools/gen-composition/**`, `Makefile`, `scripts/**`), and the install inputs `pnpm-lock.yaml`, `pnpm-workspace.yaml` and the root `package.json`, plus `.github/actions/install-playwright-chromium/**` (it decides whether the UAT part can run at all, so a change to it cannot be reviewed without the lane it governs), and for the same reason the CI image `.github/ci-image/**` and `.github/actions/ci-image/**` | frontend lane, UAT |
 | `e2e` | `backend/**`, `frontend/**`, `docker-compose.dev.yml`, `instance/**`, `extensions/**`, `fixtures/**`, `composition/**`, `scripts/**`, `Makefile` | full stack live-boot |
 | `images` | `Dockerfile`, `.dockerignore`, `docker-bake.hcl` | `images (build only)` |
+| `release` | `Makefile`, `scripts/release*`, `scripts/lib-git-fixture.sh`, `.github/workflows/release.yml`, `.github/workflows/release-tag.yml`, `.github/workflows/_release-*.yml` | `release-scripts` (`make check-release`) |
 | `deps` | `go.work`, `go.work.sum`, `**/go.mod`, `**/go.sum`, `**/package.json`, `**/pnpm-lock.yaml`, `pnpm-workspace.yaml`, `.syft.yaml`, `.grant.yaml`, `sbom-schemas/**`, `Makefile`, `scripts/sbom-census.sh`, `scripts/test-sbom-census.sh`, `scripts/install-sbom-python.sh`, `scripts/test-install-sbom-python.sh`, `scripts/sbom-license-parity.sh`, `scripts/test-sbom-license-parity.sh`, `third-party-files.txt`, `scripts/third_party_files.py`, `scripts/third-party-files.sh`, `scripts/test-third-party-files.sh`, `embedded-binaries.txt`, `scripts/embedded-binary-licenses.sh`, `scripts/test-embedded-binary-licenses.sh`, `.github/workflows/**`, `.github/actions/**` | the license gate |
 
 What the `backend` scope adds on top of `backend_db`:
@@ -205,6 +206,14 @@ What follows from this:
     `.github/workflows/**`). So the Go gates and the license gate run on them.
   - None of them proves itself on a schedule. The next user to start one finds a change that made it fail.
     So start `sbom.yml` from the branch of a PR that touches it. A release workflow publishes, so read its diff.
+- A **PR that changes a release script or a release workflow** matches `release`, and runs
+  **`release-scripts`**: `make check-release`, the release scripts' own tests. `make check` leaves them
+  out, because only the release workflows run those scripts.
+  - The release workflows run `make check-release` themselves, before any job calls a release script. So
+    a release does not depend on a pull request having run the lane.
+  - `backend/gates/releaselane_test.go` derives the scope from the tree: each file a release test opens,
+    and each workflow that calls a release script. It also fails a release job that calls a script before
+    the lane ran.
 - A **PR into `develop`** skips `integration`, `uat`, `live-boot`, `images` and `sonarcloud`, plus the
   test-input census. The `full_lane` output of `changes` is false only there. The `develop` into `main`
   pull request runs them under the usual path filters: [land-through-develop.md](../how-to/land-through-develop.md).
@@ -236,6 +245,7 @@ changes ──┬─> deterministic-gates *
           │                  fe-bundle *  ┘                     │   │
           ├─> uat *  (`frontend` scope, beside the lane)        │   │
           ├─> live-boot, home-budget                            │   │
+          ├─> release-scripts  (`release` scope)                │   │
           v                                                     v   v
  deterministic-gates + integration + frontend ──> sonarcloud
   craft-residue  (every non-draft change, independent)
@@ -244,8 +254,9 @@ changes ──┬─> deterministic-gates *
 
   ci  ── the ONE required context. needs: ci-image, deterministic-gates,
          test-budget, backend-lint, craftsmanship, craft-residue,
-         secret-scan, integration, frontend, uat, license-gate, images
-         (twelve — vuln, live-boot, home-budget and repeat-changed-tests
+         secret-scan, integration, frontend, uat, license-gate, images,
+         release-scripts
+         (thirteen — vuln, live-boot, home-budget and repeat-changed-tests
          stay advisory and are NOT in the fan-in)
 ```
 
@@ -338,7 +349,7 @@ The job runs with `if: always()`. An aggregate that is skipped, together with a 
 report a **green** required check.
 
 A lane joins `needs` as its own change, so a red aggregate has one candidate cause. `license-gate`,
-`images` and `uat` each joined that way. `ci-image` is there because a failed image build skips every
+`images`, `uat` and `release-scripts` each joined that way. `ci-image` is there because a failed image build skips every
 job that needs it, and a skip passes on a pull request.
 
 These jobs are not in `needs`:

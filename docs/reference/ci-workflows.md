@@ -316,6 +316,11 @@ nobody can get. So a newer run takes over only before signing starts, while `sbo
 
 ## `release.yml` and `_release-dist.yml`
 
+`make check` does not test the release scripts. So each release workflow runs `make check-release` first: in the
+`version` job of `release-tag.yml` and of `_release-dist.yml`, and in the job of `_release-sbom.yml`. Every job that
+calls a release script runs it, or needs a job that ran it. A failing release script test stops the run before it
+builds or publishes.
+
 `_release-dist.yml` cuts a server release in a dist service: `dist.test.margince.com` or `dist.margince.com`.
 `release-tag.yml` calls it on a plain `vX.Y.Z` tag push, with target `test`. `release.yml` is a manual dispatch
 with a required `tag` input, such as `v1.0.0`, and a `target` input, `test` or `production`. Each run calls
