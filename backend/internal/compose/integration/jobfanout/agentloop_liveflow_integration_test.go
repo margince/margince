@@ -58,8 +58,8 @@ func (l liveLane) certify(t *testing.T, sc agentloope2e.Scenario) (agentloope2e.
 func (l liveLane) attempt(t *testing.T, sc agentloope2e.Scenario, run int) live.Observed {
 	t.Helper()
 	re, recorder := l.setup(t)
-	world := re.seedLoopWorld(t, sc)
 	re.requireDayHeadroom(t, sc)
+	world := re.seedLoopWorld(t, sc)
 	probe := re.probeSeed(t, sc, world)
 	svc := l.serve(t, re, loopRun{sc: sc, world: world, probe: probe})
 
