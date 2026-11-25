@@ -4,7 +4,12 @@
 package company360
 
 import (
+	"context"
 	"encoding/json"
+	"errors"
+	"github.com/margince/margince/backend/internal/compose/draftvoice"
+	"github.com/margince/margince/backend/internal/modules/ai"
+	"github.com/margince/margince/backend/internal/shared/ports/model"
 	"strings"
 	"testing"
 
@@ -308,5 +313,23 @@ func TestTheIntroTemplateSurvivesItsOwnParse(t *testing.T) {
 		if _, _, err := CheckIntroDraft(string(raw), fixture); err != nil {
 			t.Errorf("%s: the template is refused by its own parse: %v", name, err)
 		}
+	}
+}
+
+// neverAsked is a model lane that fails the test if it is called.
+type neverAsked struct{ t *testing.T }
+
+func (n neverAsked) Complete(context.Context, model.Request) (model.Response, error) {
+	n.t.Error("the model was asked although the team rules could not be read")
+	return model.Response{}, nil
+}
+
+// The team rules are workspace policy: with a model lane bound and the setting
+// unreadable, the ask is refused rather than written from the template.
+func TestAnIntroRequestIsRefusedWhenTheTeamRulesCannotBeRead(t *testing.T) {
+	t.Parallel()
+	_, err := writeIntroRequest(context.Background(), neverAsked{t}, ai.NewVoiceStore(nil), introFactsFromFixture(warmIntro()))
+	if !errors.Is(err, draftvoice.ErrRulesUnavailable) {
+		t.Fatalf("an unreadable team rules setting must refuse the ask, got %v", err)
 	}
 }

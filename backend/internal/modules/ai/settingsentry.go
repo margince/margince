@@ -74,7 +74,7 @@ func RoutingSurface() []config.Any { return []config.Any{Routing, TaskOverridesS
 // Definitions are the ai rows that are not configuration: the record of the
 // last price sync.
 func Definitions() []settings.Definition {
-	return []settings.Definition{PriceSyncLastRun}
+	return []settings.Definition{PriceSyncLastRun, TeamRules}
 }
 
 // validateStoredRouting holds a stored binding to the same bar the file always

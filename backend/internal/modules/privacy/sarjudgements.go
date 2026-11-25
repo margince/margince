@@ -69,7 +69,7 @@ func subjectAuthoredMessages(ctx context.Context, tx pgx.Tx, contactID ids.Conta
 // subject is, minus any a different live contact also holds.
 func subjectOwnChannelAccounts(ctx context.Context, tx pgx.Tx, contactID ids.ContactID, identities []ids.UUID) ([]string, []string, error) {
 	rows, err := tx.Query(ctx,
-		`SELECT provider, channel_user_id FROM contact_channel_identity WHERE contact_id = ANY($1)`, identities)
+		`SELECT provider, channel_user_id, account_scope FROM contact_channel_identity WHERE contact_id = ANY($1)`, identities)
 	if err != nil {
 		return nil, nil, fmt.Errorf("reading the subject's chat accounts for the export: %w", err)
 	}
@@ -79,8 +79,9 @@ func subjectOwnChannelAccounts(ctx context.Context, tx pgx.Tx, contactID ids.Con
 	}
 	providers, accounts := channelIdentityPairs(held)
 	rows, err = tx.Query(ctx, `
-		SELECT provider, account FROM unnest($2::text[], $3::text[]) AS t(provider, account)
-		EXCEPT `+rivalHeldChannelAccounts, contactID, providers, accounts)
+		SELECT provider, account, ''::text FROM (
+			SELECT provider, account FROM unnest($2::text[], $3::text[]) AS t(provider, account)
+			EXCEPT `+rivalHeldChannelAccounts+`) kept`, contactID, providers, accounts)
 	if err != nil {
 		return nil, nil, fmt.Errorf("dropping chat accounts another contact holds: %w", err)
 	}

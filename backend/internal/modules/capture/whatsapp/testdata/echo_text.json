@@ -1,0 +1,4 @@
+{"object":"whatsapp_business_account","entry":[{"id":"WABA1","changes":[{"field":"smb_message_echoes","value":{"messaging_product":"whatsapp","metadata":{"display_phone_number":"15550001111","phone_number_id":"PNID1"},"contacts":[{"wa_id":"491701234567","user_id":"BR.ADA","profile":{"name":"Ada Customer"}}],"message_echoes":[
+{"from":"15550001111","to":"+491701234567","to_user_id":"BR.ADA","id":"wamid.ECHO1","timestamp":1764000100,"type":"text","text":{"body":"Yes, valid until Friday."}},
+{"from":"15550001111","to":"491701234567","id":"wamid.ECHO2","timestamp":"1764000101","type":"image","image":{"id":"MEDIA9","mime_type":"image/png","sha256":"x=","caption":"price list","url":"https://lookaside.fbsbx.com/whatsapp_business/attachments/?mid=9"}}
+]}}]}]}

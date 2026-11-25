@@ -13,6 +13,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/compose/meetingbrief"
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -50,6 +51,7 @@ func TestDealMovementReadUsesBaseLanguageAndPreservesItsSource(t *testing.T) {
 	service := meetingBriefServiceAt(e, changed.Add(time.Hour))
 	for _, tc := range []struct{ language, prefix string }{{"en", "Since then the deal"}, {"de", "Seitdem ist der Deal"}, {"vi", "Kể từ đó, giao dịch"}} {
 		SetBaseLanguage(e.Admin(), t, e.Pool, tc.language)
+		stageName := stageNameIn(t, stage, tc.language)
 		brief, err := service.Get(e.Admin(), meeting)
 		if err != nil {
 			t.Fatal(err)
@@ -60,7 +62,7 @@ func TestDealMovementReadUsesBaseLanguageAndPreservesItsSource(t *testing.T) {
 				continue
 			}
 			for _, sentence := range section.Sentences {
-				if strings.HasPrefix(sentence.Text, tc.prefix) && strings.Contains(sentence.Text, stage.Name) {
+				if strings.HasPrefix(sentence.Text, tc.prefix) && strings.Contains(sentence.Text, stageName) {
 					found = true
 				}
 			}
@@ -73,7 +75,7 @@ func TestDealMovementReadUsesBaseLanguageAndPreservesItsSource(t *testing.T) {
 			if err != nil {
 				return err
 			}
-			if len(moves) != 1 || moves[0].DealID != ids.UUID(deal.Id).String() || !moves[0].At.Equal(changed) || !strings.HasPrefix(moves[0].Text, tc.prefix) || !strings.Contains(moves[0].Text, stage.Name) {
+			if len(moves) != 1 || moves[0].DealID != ids.UUID(deal.Id).String() || !moves[0].At.Equal(changed) || !strings.HasPrefix(moves[0].Text, tc.prefix) || !strings.Contains(moves[0].Text, stageName) {
 				t.Fatalf("%s moved source or missed language: %+v", tc.language, moves)
 			}
 			return nil
@@ -81,4 +83,22 @@ func TestDealMovementReadUsesBaseLanguageAndPreservesItsSource(t *testing.T) {
 			t.Fatal(err)
 		}
 	}
+}
+
+// stageNameIn is the stage's name as a reader of language sees it: a seeded
+// stage carries its own translation, and English is the stored name.
+func stageNameIn(t *testing.T, stage crmcontracts.Stage, language string) string {
+	t.Helper()
+	if language == "en" {
+		return stage.Name
+	}
+	if stage.NameTranslations == nil {
+		t.Fatalf("seeded stage %q carries no translations", stage.Name)
+	}
+	byLanguage := map[string]*string{"de": stage.NameTranslations.De, "vi": stage.NameTranslations.Vi}
+	name := byLanguage[language]
+	if name == nil {
+		t.Fatalf("seeded stage %q carries no %s name", stage.Name, language)
+	}
+	return *name
 }

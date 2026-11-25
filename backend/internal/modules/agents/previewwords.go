@@ -279,7 +279,7 @@ var effectSentences = map[string]cardWords{
 	},
 	"member_sign_in_dropped": {
 		en: "The merged account’s password, linked sign-in providers and second factor are not moved. Its holder signs in with the account you keep.",
-		de: "Passwort, verknüpfte Anmeldeanbieter und zweiter Faktor des zusammengeführten Kontos werden nicht übernommen. Der Inhaber meldet sich mit dem Konto an, das bleibt.",
+		de: "Passwort, verknüpfte Anmeldeanbieter und zweiter Faktor des zusammengeführten Kontos werden nicht übernommen. Wer das Konto nutzt, meldet sich mit dem Konto an, das bleibt.",
 		vi: "Mật khẩu, nhà cung cấp đăng nhập đã liên kết và yếu tố thứ hai của tài khoản bị gộp không được chuyển. Chủ tài khoản đăng nhập bằng tài khoản được giữ lại.",
 	},
 	"member_source_signed_out": {

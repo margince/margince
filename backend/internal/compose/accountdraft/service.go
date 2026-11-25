@@ -244,7 +244,10 @@ func (s *Service) Draft(
 	}
 	// Loaded after the 360 read, so a caller who may not read this account is
 	// refused before their voice profile is touched at all.
-	voice := draftvoice.Load(ctx, s.voice, s.log)
+	voice, err := draftvoice.Load(ctx, s.voice, s.log)
+	if err != nil {
+		return crmcontracts.CompanyEmailDraft{}, nil, err
+	}
 	draft, by, err := Write(ctx, s.lane, in, voice)
 	if err != nil {
 		return crmcontracts.CompanyEmailDraft{}, nil, err

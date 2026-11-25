@@ -211,6 +211,16 @@ describe("connectorsPollInterval", () => {
       }),
     ).toBe(2_500);
   });
+
+  it("polls slowly while earlier mail is still being narrowed", () => {
+    expect(
+      connectorsPollInterval({
+        data: [
+          mailbox({ history_narrowing: { posture: "held", remaining: 40 } }),
+        ],
+      }),
+    ).toBe(10_000);
+  });
 });
 
 describe("liveCapture course", () => {

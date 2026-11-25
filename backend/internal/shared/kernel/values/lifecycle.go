@@ -3,7 +3,10 @@
 
 package values
 
-import "slices"
+import (
+	"slices"
+	"strings"
+)
 
 // LifecycleLive is the company lifecycle only a signed-in user may set. It
 // states that the agreed first scope is in use, which nothing in the product
@@ -51,6 +54,12 @@ func EngagedLifecycles() []string {
 		}
 	}
 	return out
+}
+
+// EngagedLifecycleSQLList renders EngagedLifecycles as a quoted SQL list, for a
+// read whose generic plan must see the values. They are constants of this package.
+func EngagedLifecycleSQLList() string {
+	return "'" + strings.Join(EngagedLifecycles(), "','") + "'"
 }
 
 // EngagedLifecycle reports whether an account at stage is engaged.

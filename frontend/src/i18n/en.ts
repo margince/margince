@@ -6,6 +6,7 @@ export const en = {
   "systemJob.proposal_stage": "Asking whether a sent proposal moves the deal",
   "systemJob.legal_review_desk": "Legal review desk",
   "systemJob.import_identity_links": "Attaching imported mail links",
+  "systemJob.history_narrowing": "Narrowing earlier mail",
   "systemJob.promise_kept": "Closing a commitment a meeting shows kept",
   "systemJob.transcript_audience": "Giving meeting notes the meeting’s readers",
   "systemJob.meeting_profile":
@@ -3464,6 +3465,8 @@ export const en = {
   "common.errorReference": "Reference",
   "common.assistantUnavailable":
     "The AI did not answer. Try again, or ask your admin to check Settings → AI.",
+  "common.teamRulesUnavailable":
+    "The team rules could not be read, so no draft was written. Try again in a moment.",
   "common.providerOutOfCredit":
     "The AI provider has no credit left. Contact your system administrator.",
   "common.providerUnauthorized":
@@ -11368,6 +11371,7 @@ export const en = {
   "jobs.kind.capture_auto_enrich_sweep": "Company enrichment from mail",
   "jobs.kind.capture_backfill": "Mail history import",
   "jobs.kind.capture_backfill_reconcile": "Mail history import recovery",
+  "jobs.kind.capture_history_narrowing": "Narrowing earlier mail",
   "jobs.kind.capture_confidentiality_verdict": "Mail confidentiality check",
   "jobs.kind.capture_counterparty_verdict": "Mail sender check",
   "jobs.kind.capture_enrich": "Contact details from signatures",
@@ -11431,6 +11435,7 @@ export const en = {
   "jobs.kind.technical_enrich_backfill": "Technical lookup backlog",
   "jobs.kind.technical_enrich_company": "Company technical lookup",
   "jobs.kind.telegram_ingest": "Telegram message intake",
+  "jobs.kind.whatsapp_ingest": "WhatsApp message intake",
   "jobs.kind.telegram_poll": "Telegram message fetch",
   "jobs.kind.chat_link_flush": "Chat channel posts",
   "jobs.kind.chat_pull": "Chat channel summaries",
@@ -13103,6 +13108,10 @@ export const en = {
   "connectors.mailPosture.historyBody":
     "This setting applies to mail captured from now on. Mail already in the CRM keeps its visibility unless you narrow it to match.",
   "connectors.mailPosture.historyApply": "Also narrow captured mail",
+  "connectors.mailPosture.historyNarrowing_one":
+    "Earlier mail is being narrowed in the background: {count} message left. A message keeps its visibility until it is reached.",
+  "connectors.mailPosture.historyNarrowing_other":
+    "Earlier mail is being narrowed in the background: {count} messages left. A message keeps its visibility until it is reached.",
   "connectors.disconnectBodyGoogleNote":
     "Google may still list Margince under your account’s third-party access. Remove it there to revoke access fully.",
   "connectors.disconnectBodyMicrosoftNote":
@@ -15179,6 +15188,7 @@ export const en = {
   "audit.kind.workspace": "Company profile",
   "audit.kind.agent_client": "Connected AI tool",
   "audit.kind.ai_budget": "AI allowance",
+  "audit.kind.ai_team_rules": "Team rules",
   "audit.kind.ai_call_payload": "AI call content",
   "audit.kind.ai_routing": "AI model routing",
   "audit.kind.authentication_policy": "Sign-in policy",
@@ -15461,6 +15471,7 @@ export const en = {
   "settings.part.models.tiers": "Model tiers",
   "settings.part.models.tasks": "AI tasks",
   "settings.part.models.prices": "Prices",
+  "settings.part.models.rules": "Rules",
   "settings.part.usage.allowance": "Allowance",
   "settings.part.usage.agents": "Agent limits",
   "settings.part.usage.spend": "Spend",
@@ -16118,7 +16129,7 @@ export const en = {
     "The more of your own writing it reads, the closer it gets.",
   "settings.voice.rulesTitle": "Your rules",
   "settings.voice.rulesIntro":
-    "Margince never overwrites these. They steer every draft.",
+    "Margince never overwrites these. They steer every draft. Where they disagree with the team rules, the team rules win.",
   "voice.insights.themesLabel": "You keep coming back to",
   "voice.insights.figKept": "Drafts you kept",
   "voice.insights.figKeptValue": "{kept} of {drafted}",
@@ -16409,6 +16420,22 @@ export const en = {
   "roles.object.voice_profile": "Writing voice",
   "roles.object.ai_routing": "AI routing",
   "roles.object.ai_budget": "AI allowance",
+  "roles.object.ai_team_rules": "Team rules",
+  "teamRules.title": "Team rules",
+  "teamRules.intro":
+    "One text that every AI draft in your company follows: what may be said and which wording to use. It wins over a colleague’s own rules in Voice DNA. It never lets a draft state a fact the record does not hold.",
+  "teamRules.label": "Rules for every draft",
+  "teamRules.length":
+    "{used} of {max} characters. Every draft carries this text.",
+  "teamRules.savedBy": "Last saved by {who} on {when}.",
+  "teamRules.unknownEditor": "someone",
+  "teamRules.none": "No team rules saved yet.",
+  "teamRules.conflictTitle":
+    "A colleague saved the team rules while you were editing",
+  "teamRules.conflictBody":
+    "Reload to see their version and drop your edit, or keep your text and save it over theirs.",
+  "teamRules.reload": "Reload their version",
+  "teamRules.keepMine": "Keep my text",
   "roles.object.ai_diagnostics": "AI usage",
   "roles.object.ai_model_rate": "Model prices",
   "roles.object.embedding_reindex": "Search index",

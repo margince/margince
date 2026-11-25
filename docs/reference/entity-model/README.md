@@ -31,7 +31,7 @@ module to put a change in, read [modules.md](../modules.md).
 | | |
 |---|--:|
 | Tables | 354 |
-| Columns | 4350 |
+| Columns | 4352 |
 | Foreign keys | 618 |
 | Owning areas | 40 |
 
@@ -205,7 +205,7 @@ erDiagram
 | [`capture_auto_enrich_state`](capture.md#capture_auto_enrich_state) | capture | 6 | 0 |
 | [`capture_backfill`](capture.md#capture_backfill) | capture | 31 | 5 |
 | [`capture_backfill_creation`](capture.md#capture_backfill_creation) | capture | 4 | 0 |
-| [`capture_connection`](capture.md#capture_connection) | capture | 35 | 6 |
+| [`capture_connection`](capture.md#capture_connection) | capture | 36 | 6 |
 | [`capture_counterparty_hold`](capture.md#capture_counterparty_hold) | capture | 6 | 0 |
 | [`capture_exclusion`](capture.md#capture_exclusion) | capture | 8 | 0 |
 | [`capture_freemail_domain`](capture.md#capture_freemail_domain) | capture | 4 | 0 |
@@ -397,7 +397,7 @@ erDiagram
 | [`provider_run`](integrations.md#provider_run) | integrations | 25 | 5 |
 | [`provider_run_category`](integrations.md#provider_run_category) | integrations | 4 | 0 |
 | [`provider_run_reservation`](integrations.md#provider_run_reservation) | integrations | 4 | 0 |
-| [`raw_capture`](capture.md#raw_capture) | capture | 9 | 2 |
+| [`raw_capture`](capture.md#raw_capture) | capture | 10 | 2 |
 | [`record_assignment`](assignments.md#record_assignment) | assignments | 13 | 0 |
 | [`record_grant`](identity.md#record_grant) | identity | 16 | 0 |
 | [`record_link`](recordlinks.md#record_link) | recordlinks | 8 | 0 |

@@ -141,6 +141,16 @@ func TestApplyingAHeldVisibilityToHistoryNarrowsEvenWhenTheMailboxIsAlreadyHeld(
 	if rec.Code != http.StatusOK {
 		t.Fatalf("the narrowing answered %d: %s", rec.Code, rec.Body)
 	}
+	if !strings.Contains(rec.Body.String(), `"history_narrowing":{"posture":"held","remaining":1}`) {
+		t.Fatalf("the answer does not say one message is left to narrow: %s", rec.Body)
+	}
+	if got := e.WsCount(t, `SELECT count(*) FROM capture_import WHERE connection_id = $1 AND posture_at_import = 'held'`, id); got != 0 {
+		t.Fatal("the answer came after the history narrowed; a job narrows it after the change commits")
+	}
+	integration.NarrowHistoryToTheEnd(t, e.WS, s.registry)
+	if got := e.WsCount(t, `SELECT count(*) FROM audit_log WHERE entity_id = $1 AND after->>'history_narrowed_to' = 'held'`, id); got != 1 {
+		t.Fatalf("%d audit rows say the history narrowed to held, want 1", got)
+	}
 	if got := e.WsCount(t, `SELECT count(*) FROM capture_import WHERE connection_id = $1 AND posture_at_import = 'held'`, id); got != 1 {
 		t.Fatal("apply_to_history on an already-held mailbox must still narrow its history")
 	}

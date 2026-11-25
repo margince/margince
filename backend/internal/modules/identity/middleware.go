@@ -43,6 +43,10 @@ var publicRequests = map[string]map[string]bool{
 	// Dispact's push receiver: the signature with the sealed events secret is
 	// the credential, and the handler checks it before reading anything.
 	"/v1/channel-events/dispact": {http.MethodPost: true},
+	// Meta's WhatsApp webhook. The verify token (GET) and the HMAC signature with
+	// the app secret (POST) are the credentials. The handler checks them against
+	// the sealed secrets before it stores anything.
+	"/v1/channel-events/whatsapp": {http.MethodGet: true, http.MethodPost: true},
 	// The OAuth AS endpoints authenticate by their own means: DCR is
 	// open (public clients + PKCE), token exchange proves possession via
 	// the code + verifier, and RFC 7009 revocation proves it by presenting

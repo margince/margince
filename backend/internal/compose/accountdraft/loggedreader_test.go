@@ -6,6 +6,8 @@ package accountdraft
 import (
 	"context"
 	"errors"
+	"github.com/margince/margince/backend/internal/compose/draftvoice"
+	"github.com/margince/margince/backend/internal/modules/ai"
 	"testing"
 	"time"
 
@@ -50,5 +52,23 @@ func TestAnAccountDraftReadsTheNewestLoggedTouchOfItsRecipient(t *testing.T) {
 	reader.err = errors.New("down")
 	if _, _, err := svc.Draft(human, company, Request{ContactID: contact.String()}); err == nil {
 		t.Error("a failed logged-touch read still produced a draft")
+	}
+}
+
+// The team rules are workspace policy: when the setting cannot be read the draft
+// is refused, not written without them.
+func TestAnAccountDraftIsRefusedWhenTheTeamRulesCannotBeRead(t *testing.T) {
+	company := ids.From[ids.CompanyKind](ids.NewV7())
+	human := principal.WithActor(context.Background(), principal.Principal{Type: principal.PrincipalHuman, ID: "human:u-1"})
+	contact := ids.NewV7()
+	view := viewWithActivities(t, activityWith(t, "Angebot", "Wir melden uns wegen der offenen Punkte."))
+	view.Contacts = &struct {
+		Data []crmcontracts.Company360Contact `json:"data"`
+		Page crmcontracts.PageInfo            `json:"page"`
+	}{Data: []crmcontracts.Company360Contact{{ContactId: openapi_types.UUID(contact), FullName: "Priya Raman"}}}
+	svc := NewService(fixedAccount{view: view}, nil).WithVoice(ai.NewVoiceStore(nil), nil)
+
+	if _, _, err := svc.Draft(human, company, Request{ContactID: contact.String()}); !errors.Is(err, draftvoice.ErrRulesUnavailable) {
+		t.Fatalf("an unreadable team rules setting must refuse the draft, got %v", err)
 	}
 }
