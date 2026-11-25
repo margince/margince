@@ -88,7 +88,11 @@ you SAW: given_first when the given names are printed before the family name, fa
 when the family name is printed first, unclear when the page does not show which word is the
 family name. Never decide the order from where a word stands, and never reorder the words.
 "Lê Thị Mai" is family_name "Lê", middle "Thị", given_names "Mai", order family_first.
-"Anna Weber" is given_names "Anna", family_name "Weber", order given_first. When the order
+"Anna Weber" is given_names "Anna", family_name "Weber", order given_first. A label printed with
+the name can show the order. "Họ và tên" (family name, then the rest) and "Nachname Vorname" read
+as family_first, so "Họ và tên: Đặng Khoa" is family_name "Đặng", given_names "Khoa". "Vorname Nachname"
+and "Name: Anna Weber" read as given_first, so "Vorname Nachname: Katrin Albrecht" is given_names
+"Katrin", family_name "Albrecht". When the order
 is unclear, leave family_name and given_names empty. evidence_snippet is the printed line
 that holds the name. A company, a brand, a team or a department is never a name, so a block
 headed "Greven Ebusiness" or "Seven Mills Consulting" states no name. Omit "name" when the

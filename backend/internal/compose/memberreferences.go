@@ -107,7 +107,6 @@ var memberReferences = map[string]memberReference{
 	"deal_room_thread.author_user_id":          {disposition: referenceRetain},
 	"deal_room_thread.resolved_by_user_id":     {disposition: referenceRetain},
 	"deal_stage_evidence.refuted_by":           {disposition: referenceRetain},
-	"deal_suggestion.decided_by":               {disposition: referenceRetain},
 	"dedupe_candidate.disposed_by":             {disposition: referenceRetain},
 	"email_signature.owner_id":                 {disposition: referenceRetain},
 	"extension_secret.user_id":                 {disposition: referenceRetain},

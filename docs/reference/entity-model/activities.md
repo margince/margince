@@ -914,14 +914,12 @@ The 32 tables owned by `activities`, as the migrations build them. [Back to the 
 
 ## activity_sales_state
 
-5 columns · primary key `(thread_key, kind, channel_provider)` · referenced by 0 foreign keys
+3 columns · primary key `(thread_key, kind, channel_provider)` · referenced by 0 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
 | `channel_provider` | `text`, default `''::text` | yes |  |
 | `kind` | `text` | yes |  |
-| `set_at` | `timestamp with time zone`, default `now()` | yes |  |
-| `set_by` | `text` | yes |  |
 | `thread_key` | `text` | yes |  |
 
 **Indexes**
@@ -930,8 +928,8 @@ The 32 tables owned by `activities`, as the migrations build them. [Back to the 
 
 **Triggers**
 
-- `text_bound_insert`: `AFTER INSERT FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL, '{"kind": 20000, "set_by": 20000, "thread_key": 20000, "channel_provider": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"channel_provider":20000,"kind":20000,"set_by":20000,"thread_key":20000}')`
-- `text_bound_update`: `AFTER UPDATE FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"kind": 20000, "set_by": 20000, "thread_key": 20000, "channel_provider": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"channel_provider":20000,"kind":20000,"set_by":20000,"thread_key":20000}')`
+- `text_bound_insert`: `AFTER INSERT FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL, '{"kind": 20000, "thread_key": 20000, "channel_provider": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"channel_provider":20000,"kind":20000,"thread_key":20000}')`
+- `text_bound_update`: `AFTER UPDATE FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"kind": 20000, "thread_key": 20000, "channel_provider": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"channel_provider":20000,"kind":20000,"thread_key":20000}')`
 
 ## attachment
 
@@ -1127,14 +1125,12 @@ The 32 tables owned by `activities`, as the migrations build them. [Back to the 
 
 ## deal_document_hide
 
-4 columns · primary key `(deal_id, attachment_id)` · referenced by 0 foreign keys
+2 columns · primary key `(deal_id, attachment_id)` · referenced by 0 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
 | `attachment_id` | `uuid` | yes | Points at `attachment.id`. |
 | `deal_id` | `uuid` | yes | Points at `deal.id`. |
-| `hidden_at` | `timestamp with time zone`, default `now()` | yes |  |
-| `hidden_by` | `text` | yes |  |
 
 **Points at**
 
@@ -1147,11 +1143,6 @@ The 32 tables owned by `activities`, as the migrations build them. [Back to the 
 
 - `deal_document_hide_pkey`: `unique, btree (deal_id, attachment_id)`
 - `idx_deal_document_hide_attachment`: `btree (attachment_id)`
-
-**Triggers**
-
-- `text_bound_insert`: `AFTER INSERT FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL, '{"hidden_by": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"hidden_by":20000}')`
-- `text_bound_update`: `AFTER UPDATE FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"hidden_by": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"hidden_by":20000}')`
 
 ## mail_draft
 

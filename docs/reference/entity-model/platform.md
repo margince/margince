@@ -6,7 +6,7 @@ The 14 tables owned by `platform`, as the migrations build them. [Back to the en
 
 ## audit_log
 
-15 columns · primary key `(id)` · referenced by 2 foreign keys
+15 columns · primary key `(id)` · referenced by 1 foreign key
 
 | Column | Type | Required | What it is |
 |---|---|---|---|

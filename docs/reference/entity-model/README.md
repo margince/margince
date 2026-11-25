@@ -31,8 +31,8 @@ module to put a change in, read [modules.md](../modules.md).
 | | |
 |---|--:|
 | Tables | 354 |
-| Columns | 4359 |
-| Foreign keys | 616 |
+| Columns | 4338 |
+| Foreign keys | 613 |
 | Owning areas | 40 |
 
 ## The 12 records everything else hangs off
@@ -41,7 +41,7 @@ Ranked by how many foreign keys point at them.
 
 | Record | Lives in | Columns | Foreign keys pointing at it |
 |---|---|--:|--:|
-| [`app_user`](identity.md#app_user) | [identity](identity.md) | 39 | 150 |
+| [`app_user`](identity.md#app_user) | [identity](identity.md) | 39 | 149 |
 | [`contact`](contacts.md#contact) | [contacts](contacts.md) | 49 | 50 |
 | [`activity`](activities.md#activity) | [activities](activities.md) | 91 | 49 |
 | [`company`](contacts.md#company) | [contacts](contacts.md) | 46 | 49 |
@@ -162,7 +162,7 @@ erDiagram
 | [`activity_retention_evidence`](activities.md#activity_retention_evidence) | activities | 12 | 0 |
 | [`activity_review_response`](activities.md#activity_review_response) | activities | 16 | 0 |
 | [`activity_review_template`](activities.md#activity_review_template) | activities | 16 | 0 |
-| [`activity_sales_state`](activities.md#activity_sales_state) | activities | 5 | 0 |
+| [`activity_sales_state`](activities.md#activity_sales_state) | activities | 3 | 0 |
 | [`agent_run`](agents.md#agent_run) | agents | 15 | 0 |
 | [`agent_standing_grant`](agents.md#agent_standing_grant) | agents | 6 | 0 |
 | [`agent_task`](compose.md#agent_task) | compose | 14 | 0 |
@@ -174,7 +174,7 @@ erDiagram
 | [`ai_task_run`](aiactivity.md#ai_task_run) | aiactivity | 24 | 0 |
 | [`ai_usage`](ai.md#ai_usage) | ai | 7 | 0 |
 | [`analytics_share`](compose.md#analytics_share) | compose | 14 | 0 |
-| [`app_user`](identity.md#app_user) | identity | 39 | 150 |
+| [`app_user`](identity.md#app_user) | identity | 39 | 149 |
 | [`approval`](approvals.md#approval) | approvals | 38 | 4 |
 | [`approval_autonomy_policy`](approvals.md#approval_autonomy_policy) | approvals | 12 | 0 |
 | [`approval_preference`](approvals.md#approval_preference) | approvals | 3 | 0 |
@@ -189,7 +189,7 @@ erDiagram
 | [`assurance_task_item`](assurance.md#assurance_task_item) | assurance | 12 | 0 |
 | [`attachment`](activities.md#attachment) | activities | 28 | 6 |
 | [`attachment_extraction`](activities.md#attachment_extraction) | activities | 13 | 0 |
-| [`audit_log`](platform.md#audit_log) | platform | 15 | 2 |
+| [`audit_log`](platform.md#audit_log) | platform | 15 | 1 |
 | [`auth_token`](identity.md#auth_token) | identity | 10 | 0 |
 | [`automation`](automation.md#automation) | automation | 16 | 1 |
 | [`automation_effect_claim`](automation.md#automation_effect_claim) | automation | 7 | 0 |
@@ -276,26 +276,26 @@ erDiagram
 | [`data_task_run`](platform.md#data_task_run) | platform | 23 | 0 |
 | [`deal`](deals.md#deal) | deals | 52 | 30 |
 | [`deal_acquisition_source`](deals.md#deal_acquisition_source) | deals | 12 | 1 |
-| [`deal_correction`](deals.md#deal_correction) | deals | 21 | 0 |
-| [`deal_document_hide`](activities.md#deal_document_hide) | activities | 4 | 0 |
+| [`deal_correction`](deals.md#deal_correction) | deals | 20 | 0 |
+| [`deal_document_hide`](activities.md#deal_document_hide) | activities | 2 | 0 |
 | [`deal_line_item`](deals.md#deal_line_item) | deals | 22 | 0 |
 | [`deal_loss_reason`](deals.md#deal_loss_reason) | deals | 12 | 3 |
-| [`deal_loss_reason_mapping`](deals.md#deal_loss_reason_mapping) | deals | 7 | 0 |
-| [`deal_move_dismissal`](compose.md#deal_move_dismissal) | compose | 4 | 0 |
-| [`deal_product`](deals.md#deal_product) | deals | 11 | 0 |
+| [`deal_loss_reason_mapping`](deals.md#deal_loss_reason_mapping) | deals | 6 | 0 |
+| [`deal_move_dismissal`](compose.md#deal_move_dismissal) | compose | 3 | 0 |
+| [`deal_product`](deals.md#deal_product) | deals | 9 | 0 |
 | [`deal_risk_day`](deals.md#deal_risk_day) | deals | 7 | 1 |
 | [`deal_risk_verdict`](deals.md#deal_risk_verdict) | deals | 2 | 0 |
 | [`deal_room`](dealrooms.md#deal_room) | dealrooms | 14 | 6 |
 | [`deal_room_comment`](dealrooms.md#deal_room_comment) | dealrooms | 10 | 0 |
 | [`deal_room_document`](dealrooms.md#deal_room_document) | dealrooms | 12 | 2 |
 | [`deal_room_engagement`](dealrooms.md#deal_room_engagement) | dealrooms | 6 | 0 |
-| [`deal_room_invitation`](dealrooms.md#deal_room_invitation) | dealrooms | 14 | 0 |
+| [`deal_room_invitation`](dealrooms.md#deal_room_invitation) | dealrooms | 12 | 0 |
 | [`deal_room_participant`](dealrooms.md#deal_room_participant) | dealrooms | 13 | 5 |
-| [`deal_room_session`](dealrooms.md#deal_room_session) | dealrooms | 10 | 0 |
+| [`deal_room_session`](dealrooms.md#deal_room_session) | dealrooms | 9 | 0 |
 | [`deal_room_thread`](dealrooms.md#deal_room_thread) | dealrooms | 16 | 1 |
 | [`deal_stage_evidence`](deals.md#deal_stage_evidence) | deals | 19 | 1 |
-| [`deal_stage_history`](deals.md#deal_stage_history) | deals | 25 | 3 |
-| [`deal_suggestion`](deals.md#deal_suggestion) | deals | 21 | 1 |
+| [`deal_stage_history`](deals.md#deal_stage_history) | deals | 24 | 3 |
+| [`deal_suggestion`](deals.md#deal_suggestion) | deals | 19 | 1 |
 | [`deal_suggestion_evidence`](deals.md#deal_suggestion_evidence) | deals | 8 | 0 |
 | [`dedupe_candidate`](contacts.md#dedupe_candidate) | contacts | 21 | 0 |
 | [`dedupe_scan_state`](contacts.md#dedupe_scan_state) | contacts | 3 | 0 |
@@ -375,7 +375,7 @@ erDiagram
 | [`oauth_grant`](identity.md#oauth_grant) | identity | 10 | 4 |
 | [`oauth_refresh_token`](identity.md#oauth_refresh_token) | identity | 7 | 0 |
 | [`offer`](deals.md#offer) | deals | 29 | 3 |
-| [`offer_line_item`](deals.md#offer_line_item) | deals | 21 | 1 |
+| [`offer_line_item`](deals.md#offer_line_item) | deals | 21 | 0 |
 | [`offer_template`](deals.md#offer_template) | deals | 10 | 1 |
 | [`onboarding_wizard_state`](identity.md#onboarding_wizard_state) | identity | 15 | 0 |
 | [`partner`](contacts.md#partner) | contacts | 27 | 0 |
@@ -423,13 +423,13 @@ erDiagram
 | [`runner_job`](agents.md#runner_job) | agents | 7 | 0 |
 | [`sales_goal_plan`](reporting.md#sales_goal_plan) | reporting | 10 | 1 |
 | [`sales_goal_plan_revision`](reporting.md#sales_goal_plan_revision) | reporting | 10 | 0 |
-| [`sales_initiative`](initiatives.md#sales_initiative) | initiatives | 18 | 4 |
-| [`sales_initiative_baseline`](initiatives.md#sales_initiative_baseline) | initiatives | 6 | 0 |
+| [`sales_initiative`](initiatives.md#sales_initiative) | initiatives | 17 | 4 |
+| [`sales_initiative_baseline`](initiatives.md#sales_initiative_baseline) | initiatives | 2 | 0 |
 | [`sales_initiative_enrolment`](initiatives.md#sales_initiative_enrolment) | initiatives | 9 | 0 |
 | [`sales_initiative_member`](initiatives.md#sales_initiative_member) | initiatives | 6 | 0 |
 | [`sales_initiative_revision`](initiatives.md#sales_initiative_revision) | initiatives | 6 | 0 |
 | [`sales_target`](reporting.md#sales_target) | reporting | 12 | 1 |
-| [`sales_target_revision`](reporting.md#sales_target_revision) | reporting | 5 | 0 |
+| [`sales_target_revision`](reporting.md#sales_target_revision) | reporting | 4 | 0 |
 | [`saved_view`](collections.md#saved_view) | collections | 10 | 0 |
 | [`scheduled_send`](activities.md#scheduled_send) | activities | 23 | 1 |
 | [`sdr_handoff`](contacts.md#sdr_handoff) | contacts | 17 | 1 |

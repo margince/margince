@@ -107,7 +107,6 @@ public.activity_review_template.shipped_label_key document
 public.activity_review_template.source document
 public.activity_sales_state.channel_provider document
 public.activity_sales_state.kind document
-public.activity_sales_state.set_by document
 public.activity_sales_state.thread_key document
 public.agent_run.agent_spec document
 public.agent_run.degrade_reason note
@@ -703,7 +702,6 @@ public.deal_correction.fields document
 public.deal_correction.remaining_open_stages document
 public.deal_correction.reversed_by document
 public.deal_correction.standing_close_date document
-public.deal_document_hide.hidden_by document
 public.deal_line_item.billing_model document
 public.deal_line_item.captured_by document
 public.deal_line_item.catalog_name line
@@ -738,15 +736,12 @@ public.deal_room_document.source document
 public.deal_room_document.title label
 public.deal_room_engagement.kind document
 public.deal_room_invitation.captured_by document
-public.deal_room_invitation.failure_reason note
-public.deal_room_invitation.source document
 public.deal_room_participant.capability document
 public.deal_room_participant.captured_by document
 public.deal_room_participant.email document
 public.deal_room_participant.full_name exempt participant identities can be copied from an existing customer record
 public.deal_room_participant.source document
 public.deal_room_session.captured_by document
-public.deal_room_session.source document
 public.deal_room_thread.captured_by document
 public.deal_room_thread.source document
 public.deal_room_thread.state document
@@ -1266,9 +1261,7 @@ public.sales_initiative.captured_by document
 public.sales_initiative.description document checked: typed by a user
 public.sales_initiative.name label
 public.sales_initiative.objective_metric document
-public.sales_initiative.source document
 public.sales_initiative.status document
-public.sales_initiative_baseline.status document
 public.sales_initiative_enrolment.captured_by document
 public.sales_initiative_enrolment.reason document
 public.sales_initiative_enrolment.record_type document
