@@ -31,6 +31,7 @@ import { QueryGate } from "../../design-system/querystates";
 import { useOwnToast } from "../../design-system/toast";
 import { industryOptions } from "../../format/industry";
 import { useLocale, useT } from "../../i18n";
+import { leadIdentityName } from "../../lib/leadname";
 import {
   originFilterOptions,
   originPickOptions,
@@ -47,7 +48,6 @@ import {
 } from "../lists/savedviews";
 import { LeadBulkBar, useBulkDoneMessage } from "./leadbulk";
 import { useLeadSettings } from "./leadhandling";
-import { leadIdentityName } from "./leadname";
 import { LEAD_STATUS_FILTER_OPTIONS, LeadBoard } from "./leadpresentation";
 import { leadColumns } from "./leads.columns";
 import {
