@@ -39,6 +39,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/ai"
 	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/modules/contacts"
+	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/modules/notices"
 	"github.com/margince/margince/backend/internal/platform/datatask"
@@ -130,7 +131,7 @@ func dataTaskCatalog(pool *pgxpool.Pool, now func() time.Time) []datatask.Task {
 		linkedInIdentityDataTask(),
 		leadContactPairsDataTask(pool),
 		addressDomainFoldDataTask(),
-		seededStageNamesDataTask(),
+		deals.SeededStageNamesDataTask(),
 		geocodePointsDataTask(),
 		signaturePhonesDataTask(),
 		lossMappingDataTask(pool),

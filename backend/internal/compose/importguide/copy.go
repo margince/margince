@@ -21,6 +21,10 @@ type Column struct {
 	Aliases                     []string
 }
 
+// legacyCompanyNameHeader is the German header older export files carry for a
+// company name, kept as an alias so those files still map their column.
+const legacyCompanyNameHeader = "Firmenname"
+
 // Columns is the guide of every core import target, keyed by target or by
 // "object.target" where one object's column means something else.
 var Columns = withLabels(withActivityColumns(map[string]Column{
@@ -38,7 +42,7 @@ var Columns = withLabels(withActivityColumns(map[string]Column{
 		En: "The company's display name. Used to find an existing company when the row has no ref.",
 		De: "Der Anzeigename des Unternehmens. Hat die Zeile keine Ref, wird damit ein vorhandenes Unternehmen gesucht.",
 		Vi: "Tên hiển thị của công ty. Dùng để tìm công ty đã có khi dòng không có ref.",
-	}, Example: same("Acme GmbH"), RequiredOnNew: true, Aliases: []string{"Name", "Firmenname"}},
+	}, Example: same("Acme GmbH"), RequiredOnNew: true, Aliases: []string{"Name", legacyCompanyNameHeader}},
 	"legal_name": {Description: langcopy.Phrase{
 		En: "The registered legal name, if it differs from the display name.",
 		De: "Der eingetragene rechtliche Name, falls er vom Anzeigenamen abweicht.",
@@ -158,7 +162,7 @@ var Columns = withLabels(withActivityColumns(map[string]Column{
 		En: "The company the lead works for, as text. A lead links to no company record.",
 		De: "Das Unternehmen, für das der Lead arbeitet, als Text. Ein Lead ist mit keinem Unternehmen verknüpft.",
 		Vi: "Công ty nơi lead làm việc, dạng văn bản. Lead không liên kết với hồ sơ công ty nào.",
-	}, Example: same("Acme"), Aliases: []string{"Company", "Firmenname"}},
+	}, Example: same("Acme"), Aliases: []string{"Company", legacyCompanyNameHeader}},
 	"lead.status": {Description: langcopy.Phrase{
 		En: "Where the lead stands: new, contacted or engaged. Leave it empty for new. A lead is qualified or disqualified in Margince, so a file cannot set those.",
 		De: "Wo der Lead steht: new, contacted oder engaged. Leer bedeutet new. Ein Lead wird in Margince qualifiziert oder disqualifiziert, daher kann eine Datei das nicht setzen.",
@@ -178,7 +182,7 @@ var Columns = withLabels(withActivityColumns(map[string]Column{
 		En: "The company this contact works for, by its name. The import links the company with that name, or creates one if none matches, and the import preview says when it will create one.",
 		De: "Das Unternehmen, für das dieser Kontakt arbeitet, mit seinem Namen. Der Import verknüpft das Unternehmen mit diesem Namen oder erstellt eines, wenn keines passt, und die Importvorschau sagt, wann sie eines erstellt.",
 		Vi: "Công ty nơi liên hệ này làm việc, theo tên. Lần nhập liên kết công ty có tên này, hoặc tạo công ty mới nếu không có công ty nào khớp, và bản xem trước lần nhập cho biết khi nào sẽ tạo.",
-	}, Example: same("Acme GmbH"), Aliases: []string{"Company", "Firmenname"}},
+	}, Example: same("Acme GmbH"), Aliases: []string{"Company", legacyCompanyNameHeader}},
 	"company_ref": {Description: langcopy.Phrase{
 		En: "The company this contact works for: the company's ref in this upload or an earlier one, its domain, its exact name, or its Margince ID. If none matches, the import preview reports a broken link.",
 		De: "Das Unternehmen, für das dieser Kontakt arbeitet: die Ref des Unternehmens aus diesem oder einem früheren Import, seine Domain, sein genauer Name oder seine Margince-ID. Passt nichts, meldet die Importvorschau eine fehlerhafte Verknüpfung.",

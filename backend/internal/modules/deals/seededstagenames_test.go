@@ -40,8 +40,10 @@ func TestARenameDropsOnlyTheSeededTranslations(t *testing.T) {
 		changes bool
 	}{
 		{"seeded stage renamed alone", seeded, UpdateStageInput{Name: &newName}, map[string]string{}, true},
-		{"a sent map equal to the seeded set is kept", seeded,
-			UpdateStageInput{Name: &newName, NameTranslations: seededTranslations("Negotiation")}, seededTranslations("Negotiation"), true},
+		{
+			"a sent map equal to the seeded set is kept", seeded,
+			UpdateStageInput{Name: &newName, NameTranslations: seededTranslations("Negotiation")}, seededTranslations("Negotiation"), true,
+		},
 		{"seeded stage renamed with new translations", seeded, UpdateStageInput{Name: &newName, NameTranslations: admin}, admin, true},
 		{"the seeded words an admin typed survive a rename", typed, UpdateStageInput{Name: &newName}, nil, false},
 		{"no rename keeps the seeded set", seeded, UpdateStageInput{}, nil, false},

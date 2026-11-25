@@ -61,8 +61,11 @@ const (
 	// case, which drives the unexported mail worker over two team links.
 	// Raised by 7 production and 106 test lines for the route answer that keeps
 	// its field errors, and the route cases that read the unexported verb shapes.
-	composeRootProductionLines = 230_704
-	composeRootTestLines       = 360_234
+	// Raised by 12 production and 71 test lines for the reading refusal that
+	// names its cause per question. Its cases drive the unexported document
+	// extractor and transcript proposer.
+	composeRootProductionLines = 230_716
+	composeRootTestLines       = 360_305
 )
 
 // A read under these floors stopped early or read the wrong place, and would

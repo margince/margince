@@ -1,9 +1,9 @@
 {
   "totals": {
     "sites": 62,
-    "sites_best_current": 52,
+    "sites_best_current": 50,
     "sites_best_partial": 1,
-    "sites_best_stale": 9,
+    "sites_best_stale": 11,
     "sites_absent": 0,
     "scenarios": 344,
     "records": 401,
@@ -413,7 +413,7 @@
             "thinking_level": "low"
           },
           "band": "certified",
-          "state": "current",
+          "state": "stale",
           "abandoned": 0,
           "runs": 24,
           "passed": 24,
@@ -1661,7 +1661,7 @@
             "thinking_level": "low"
           },
           "band": "certified",
-          "state": "current",
+          "state": "stale",
           "abandoned": 0,
           "runs": 24,
           "passed": 24,
@@ -9620,7 +9620,7 @@
       "usable_with_care": 4,
       "not_reliable_yet": 0,
       "too_few_runs": 17,
-      "recheck_pending": 9,
+      "recheck_pending": 11,
       "judges": [
         "claude-sonnet-5-5"
       ],
@@ -9658,9 +9658,9 @@
             "thinking_level": "low"
           },
           "sites": 52,
-          "sites_current": 44,
+          "sites_current": 42,
           "sites_partial": 1,
-          "sites_stale": 7,
+          "sites_stale": 9,
           "runs": 981,
           "passed": 979,
           "reliability": 0.9979612640163099,
@@ -9977,7 +9977,7 @@
             "thinking_level": "low"
           },
           "band": "too_few_runs",
-          "state": "current",
+          "state": "stale",
           "runs": 6,
           "passed": 6,
           "records": 1,
@@ -9993,7 +9993,7 @@
             "thinking_level": "low"
           },
           "band": "certified",
-          "state": "current",
+          "state": "stale",
           "runs": 12,
           "passed": 12,
           "records": 1,
@@ -12616,9 +12616,9 @@
         "thinking_level": "low"
       },
       "sites": 52,
-      "sites_current": 44,
+      "sites_current": 42,
       "sites_partial": 1,
-      "sites_stale": 7,
+      "sites_stale": 9,
       "runs": 981,
       "passed": 979,
       "reliability": 0.9979612640163099,
@@ -21499,24 +21499,8 @@
       "key": "document_extract/chat",
       "scope": "full_invocation",
       "missing_context_scopes": [],
-      "best_state": "current",
-      "recommended": {
-        "binding": {
-          "provider": "gemini",
-          "model": "gemini-3.8-flash",
-          "env": "cloud_frontier",
-          "thinking_level": "low"
-        },
-        "band": "too_few_runs",
-        "runs": 6,
-        "passed": 6,
-        "reliability": 1,
-        "reliability_interval": {
-          "lower": 0.785084,
-          "upper": 1
-        },
-        "state": "current"
-      },
+      "best_state": "stale",
+      "recommended": null,
       "scenarios": [
         {
           "name": "chat_screenshot_with_header",
@@ -21574,10 +21558,10 @@
             "env": "cloud_frontier",
             "thinking_level": "low"
           },
-          "state": "current",
+          "state": "stale",
           "band": "too_few_runs",
           "judge": "claude-sonnet-5-5",
-          "scenarios_measured": 2,
+          "scenarios_measured": 0,
           "scenarios_total": 2,
           "runs": 6,
           "passed": 6,
@@ -21594,7 +21578,13 @@
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": ""
+          "stale_reason": "2 scenarios it scored have changed since (how a run is graded): chat_screenshot_with_header, picture_with_no_chat",
+          "stale_cause": {
+            "grader_changed": [
+              "chat_screenshot_with_header",
+              "picture_with_no_chat"
+            ]
+          }
         }
       ]
     },
@@ -21604,24 +21594,8 @@
       "key": "document_extract/fields",
       "scope": "full_invocation",
       "missing_context_scopes": [],
-      "best_state": "current",
-      "recommended": {
-        "binding": {
-          "provider": "gemini",
-          "model": "gemini-3.8-flash",
-          "env": "cloud_frontier",
-          "thinking_level": "low"
-        },
-        "band": "certified",
-        "runs": 12,
-        "passed": 12,
-        "reliability": 1,
-        "reliability_interval": {
-          "lower": 0.879604,
-          "upper": 1
-        },
-        "state": "current"
-      },
+      "best_state": "stale",
+      "recommended": null,
       "scenarios": [
         {
           "name": "attached_document_states_none_of_them",
@@ -21740,10 +21714,10 @@
             "env": "cloud_frontier",
             "thinking_level": "low"
           },
-          "state": "current",
+          "state": "stale",
           "band": "certified",
           "judge": "claude-sonnet-5-5",
-          "scenarios_measured": 4,
+          "scenarios_measured": 0,
           "scenarios_total": 4,
           "runs": 12,
           "passed": 12,
@@ -21760,7 +21734,15 @@
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": ""
+          "stale_reason": "4 scenarios it scored have changed since (how a run is graded): attached_document_states_none_of_them, order_form_states_all_four, pdf_agreement_read_as_a_document_part, quote_states_money_but_no_close_date",
+          "stale_cause": {
+            "grader_changed": [
+              "attached_document_states_none_of_them",
+              "order_form_states_all_four",
+              "pdf_agreement_read_as_a_document_part",
+              "quote_states_money_but_no_close_date"
+            ]
+          }
         }
       ]
     },
