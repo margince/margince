@@ -32,7 +32,7 @@ module to put a change in, read [modules.md](../modules.md).
 |---|--:|
 | Tables | 354 |
 | Columns | 4399 |
-| Foreign keys | 615 |
+| Foreign keys | 617 |
 | Owning areas | 40 |
 
 ## The 12 records everything else hangs off
@@ -41,14 +41,14 @@ Ranked by how many foreign keys point at them.
 
 | Record | Lives in | Columns | Foreign keys pointing at it |
 |---|---|--:|--:|
-| [`app_user`](identity.md#app_user) | [identity](identity.md) | 39 | 150 |
+| [`app_user`](identity.md#app_user) | [identity](identity.md) | 39 | 151 |
 | [`contact`](contacts.md#contact) | [contacts](contacts.md) | 49 | 50 |
 | [`activity`](activities.md#activity) | [activities](activities.md) | 91 | 49 |
 | [`company`](contacts.md#company) | [contacts](contacts.md) | 46 | 49 |
 | [`deal`](deals.md#deal) | [deals](deals.md) | 52 | 30 |
 | [`lead`](contacts.md#lead) | [contacts](contacts.md) | 49 | 20 |
 | [`project`](projects.md#project) | [projects](projects.md) | 24 | 13 |
-| [`team`](identity.md#team) | [identity](identity.md) | 6 | 10 |
+| [`team`](identity.md#team) | [identity](identity.md) | 6 | 11 |
 | [`legal_entity`](contacts.md#legal_entity) | [contacts](contacts.md) | 30 | 9 |
 | [`passport`](identity.md#passport) | [identity](identity.md) | 14 | 9 |
 | [`consent_purpose`](consent.md#consent_purpose) | [consent](consent.md) | 8 | 8 |
@@ -174,7 +174,7 @@ erDiagram
 | [`ai_task_run`](aiactivity.md#ai_task_run) | aiactivity | 24 | 0 |
 | [`ai_usage`](ai.md#ai_usage) | ai | 7 | 0 |
 | [`analytics_share`](compose.md#analytics_share) | compose | 16 | 0 |
-| [`app_user`](identity.md#app_user) | identity | 39 | 150 |
+| [`app_user`](identity.md#app_user) | identity | 39 | 151 |
 | [`approval`](approvals.md#approval) | approvals | 38 | 4 |
 | [`approval_autonomy_policy`](approvals.md#approval_autonomy_policy) | approvals | 12 | 0 |
 | [`approval_preference`](approvals.md#approval_preference) | approvals | 3 | 0 |
@@ -453,7 +453,7 @@ erDiagram
 | [`tag_suggestion_evidence`](collections.md#tag_suggestion_evidence) | collections | 4 | 0 |
 | [`taggable`](collections.md#taggable) | collections | 8 | 0 |
 | [`tax_rate`](deals.md#tax_rate) | deals | 7 | 0 |
-| [`team`](identity.md#team) | identity | 6 | 10 |
+| [`team`](identity.md#team) | identity | 6 | 11 |
 | [`team_membership`](identity.md#team_membership) | identity | 5 | 0 |
 | [`team_weekly_review`](compose.md#team_weekly_review) | compose | 30 | 4 |
 | [`team_weekly_review_coverage`](compose.md#team_weekly_review_coverage) | compose | 13 | 0 |

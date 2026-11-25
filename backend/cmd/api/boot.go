@@ -19,6 +19,7 @@ import (
 	"github.com/redis/go-redis/v9"
 
 	"github.com/margince/margince/backend/internal/compose"
+	"github.com/margince/margince/backend/internal/compose/extensionegress"
 	"github.com/margince/margince/backend/internal/compose/installtrial"
 	ps "github.com/margince/margince/backend/internal/compose/programsettings"
 	"github.com/margince/margince/backend/internal/modules/ai"
@@ -170,7 +171,7 @@ func bindInstallation(ctx context.Context, cfg apiConfig, pool *pgxpool.Pool, va
 			return deployconfig.Bootstrap{}, nil, fmt.Errorf("api: %w", err)
 		}
 	}
-	compose.BindExtensionEgress(cfg.posture)
+	extensionegress.Bind(cfg.posture)
 	if err := compose.EnsureInstallation(ctx, pool, logger, bootstrap); err != nil {
 		return deployconfig.Bootstrap{}, nil, err
 	}

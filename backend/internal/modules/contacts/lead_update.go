@@ -267,7 +267,7 @@ func (s *Store) writeLeadInTx(
 	if err := stampStatusSetBy(ctx, p, current, in); err != nil {
 		return none, err
 	}
-	if err := storekit.SetCustomFieldPatch(p, active, in.CustomFields, current.AdditionalProperties); err != nil {
+	if err := storekit.SetCustomFieldPatchIn(ctx, tx, p, active, in.CustomFields, current.AdditionalProperties); err != nil {
 		return none, err
 	}
 	if err := unlinkUnnamedCompany(ctx, tx, id, current.CompanyName, current.CandidateCompanyKey, p); err != nil {
