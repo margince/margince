@@ -87,6 +87,9 @@ func (d *twoDoors) toolRefused(t *testing.T, name string, args map[string]any) s
 type effect struct {
 	Audit  []string
 	Events []string
+	// Reasons are the reasons the agent stated, one per audit row. Only the
+	// tool door asks for one, so they are kept apart from the rows compared.
+	Reasons []string
 }
 
 var uuidText = regexp.MustCompile(`[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}`)
@@ -148,17 +151,19 @@ func (d *twoDoors) effectOf(t *testing.T, entity string, differ map[string]bool)
 	var out effect
 	rows, err := d.e.Owner.Query(t.Context(),
 		`SELECT action, actor_type, actor_id, coalesce(passport_id::text, ''), coalesce(on_behalf_of::text, ''),
-		        coalesce(authorization_rule, ''), coalesce(evidence::text, ''), coalesce(before::text, ''), coalesce(after::text, '')
+		        coalesce(authorization_rule, ''), coalesce(nullif(evidence - 'stated_reason', '{}'::jsonb)::text, ''),
+		        coalesce(before::text, ''), coalesce(after::text, ''), coalesce(evidence->>'stated_reason', '')
 		 FROM audit_log WHERE entity_id = $1 AND actor_type = 'agent' ORDER BY occurred_at, id`, entity)
 	if err != nil {
 		t.Fatalf("reading the audit rows of %s: %v", entity, err)
 	}
 	defer rows.Close()
 	for rows.Next() {
-		var action, actorType, actorID, passport, onBehalf, rule, evidence, before, after string
-		if err := rows.Scan(&action, &actorType, &actorID, &passport, &onBehalf, &rule, &evidence, &before, &after); err != nil {
+		var action, actorType, actorID, passport, onBehalf, rule, evidence, before, after, reason string
+		if err := rows.Scan(&action, &actorType, &actorID, &passport, &onBehalf, &rule, &evidence, &before, &after, &reason); err != nil {
 			t.Fatal(err)
 		}
+		out.Reasons = append(out.Reasons, reason)
 		out.Audit = append(out.Audit, strings.Join([]string{
 			action, actorType, actorID, passport, onBehalf, rule,
 			canonical(t, []byte(evidence), entity, differ),

@@ -134,6 +134,9 @@ func TestAnExtensionSignalCarriesItsLayoutAndCoreStampedProvenance(t *testing.T)
 	if claim.Provenance == nil || claim.Provenance.Unit != "sigtest" || claim.Provenance.CapturedBy != f.actorID {
 		t.Errorf("the provenance reads %+v, want unit sigtest and captured_by %s", claim.Provenance, f.actorID)
 	}
+	if got.Source != "automation" || got.SourceSystem == nil || *got.SourceSystem != "sigtest" {
+		t.Errorf("the signal reads source %q and source_system %v, want automation and sigtest", got.Source, got.SourceSystem)
+	}
 }
 
 func TestTheSameFingerprintFromTwoReportersIsOneSignal(t *testing.T) {
@@ -222,7 +225,7 @@ func TestTheSignalKindCheckAdmitsOnlyCoreKindsAndTheExtensionSpelling(t *testing
 	insert := func(kind string) error {
 		_, err := f.owner.Exec(f.ctx, `
 			INSERT INTO signal (kind, source_channel, resolution_state, severity, summary, evidence, status, detected_at, source, captured_by)
-			VALUES ($1, 'derived', 'unresolved', 'info', 'x', '[]'::jsonb, 'open', now(), 'test', 'test')`, kind)
+			VALUES ($1, 'derived', 'unresolved', 'info', 'x', '[]'::jsonb, 'open', now(), 'manual', 'test')`, kind)
 		return err
 	}
 	for _, kind := range []string{"risk", "technical_change", "ext:unit-a:loss", "ext:a:x_9"} {
@@ -259,7 +262,7 @@ func TestAnExtensionSignalCannotBeMovedToACoreKindOrHaveItsEvidenceReplaced(t *t
 func TestACallerCannotForgeExtensionEvidenceThroughTheHumanPaths(t *testing.T) {
 	f := newExtensionSignalFixture(t)
 	forged := []crmcontracts.SignalEvidence{{Snippet: "x", Provenance: &crmcontracts.SignalProvenance{Unit: "sigtest", CapturedBy: "someone"}}}
-	_, err := f.store.CreateSignal(f.ctx, CreateSignalInput{Kind: "risk", Summary: "s", Evidence: forged})
+	_, err := f.store.CreateSignal(f.ctx, CreateSignalInput{Kind: "risk", Summary: "s", Source: "manual", Evidence: forged})
 	var refusal *InvalidExtensionSignalError
 	if !errors.As(err, &refusal) {
 		t.Errorf("a request carrying provenance returned %v, want InvalidExtensionSignalError", err)

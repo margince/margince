@@ -180,7 +180,7 @@ export function cardName(
 //
 // The summary then explains whichever of those two the headline was. It shows
 // only underneath one: with neither, the summary is the headline, and printing
-// it twice reads as two facts.
+// it twice reads as two facts. The proposal's reason comes first under it.
 export function DecisionHead({
   approval,
   draft,
@@ -250,8 +250,18 @@ export function DecisionHead({
           {headline}
         </p>
       )}
+      {/* Why the proposal exists leads what the card says about it. */}
+      <ApprovalGrounds approval={approval} />
       {named && sentence && <p className="approval-why">{sentence}</p>}
       <SummaryFields parts={listed} words={labels.summaryWords} />
     </>
   );
+}
+
+/** Why the proposal exists, when its maker said; nothing when it did not. */
+export function ApprovalGrounds({
+  approval,
+}: Readonly<{ approval: DecisionApproval }>) {
+  const grounds = approval.why?.text.trim();
+  return grounds ? <p className="approval-why">{grounds}</p> : null;
 }
