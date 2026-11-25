@@ -11,7 +11,12 @@ import (
 	"github.com/margince/margince/backend/internal/platform/auth"
 )
 
-const dealPage = "deal"
+const (
+	dealPage = "deal"
+	nameCol  = "b.name"
+	// sqlTrue is the rule of a reader that hides no row.
+	sqlTrue = "TRUE"
+)
 
 // reader is how the store that owns a blocking table serves its rows. It asks
 // the read grants first, then its row rule over the row aliased b. Its SQL is
@@ -28,12 +33,12 @@ type reader struct {
 // asks what its store's list asks, so the preview names no row that list hides.
 var readers = map[string]reader{
 	"deal_room.steward_user_id": {objects: []string{"deal_room"}, name: "b.title", rows: dealRoomRows, pageType: dealPage, pageID: "b.deal_id"},
-	"automation.owner_id":       {objects: []string{"automation"}, name: "b.name"},
-	"web_form.owner_id":         {objects: []string{"integrations"}, name: "b.name"},
+	"automation.owner_id":       {objects: []string{"automation"}, name: nameCol},
+	"web_form.owner_id":         {objects: []string{"integrations"}, name: nameCol},
 	// A target address can carry a token in its query, so only the rest names it.
 	"webhook_subscription.owner_id": {objects: []string{"webhook_subscription"}, name: `regexp_replace(b.target_url, '[?#].*$', '')`},
-	"sales_initiative.owner_id":     {objects: []string{"sales_initiative"}, name: "b.name", rows: initiativeRows},
-	"report_definition.owner_id":    {objects: []string{"report_definition"}, name: "b.name", rows: reportRows("b.id")},
+	"sales_initiative.owner_id":     {objects: []string{"sales_initiative"}, name: nameCol, rows: initiativeRows},
+	"report_definition.owner_id":    {objects: []string{"report_definition"}, name: nameCol, rows: reportRows("b.id")},
 	"report_schedule.owner_id": {
 		objects: []string{"report_definition", "report_schedule"},
 		name:    "(SELECT d.name FROM report_definition d WHERE d.id = b.report_id)", rows: reportRows("b.report_id"),
@@ -47,7 +52,7 @@ func dealRoomRows(ctx context.Context, arg func(any) int) (string, error) {
 		return "", err
 	}
 	if scope == "" {
-		scope = "TRUE"
+		scope = sqlTrue
 	}
 	return "EXISTS (SELECT 1 FROM deal d WHERE d.id = b.deal_id AND " + scope + ")", nil
 }
@@ -58,7 +63,7 @@ func initiativeRows(ctx context.Context, arg func(any) int) (string, error) {
 		return "", err
 	}
 	if scope == "" {
-		return "TRUE", nil
+		return sqlTrue, nil
 	}
 	return scope, nil
 }

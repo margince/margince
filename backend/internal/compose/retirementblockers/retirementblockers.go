@@ -163,7 +163,7 @@ func (r reader) visibleSQL(ctx context.Context, arg func(any) int) (string, erro
 		readCtx = next
 	}
 	if r.rows == nil {
-		return "TRUE", nil
+		return sqlTrue, nil
 	}
 	return r.rows(readCtx, arg)
 }
