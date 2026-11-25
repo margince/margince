@@ -6,7 +6,6 @@ package reporting
 import (
 	"errors"
 	"fmt"
-	"strings"
 	"unicode/utf8"
 
 	"github.com/margince/margince/backend/internal/shared/apperrors"
@@ -56,5 +55,5 @@ func refusedField(field string, err error) error {
 	if _, named := errors.AsType[*fieldRefusal](err); named || !errors.Is(err, apperrors.ErrInvalidArgument) {
 		return err
 	}
-	return refuse(field, "invalid", strings.TrimSuffix(err.Error(), ": "+apperrors.ErrInvalidArgument.Error()))
+	return refuse(field, "invalid", err.Error())
 }

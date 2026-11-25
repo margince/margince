@@ -251,32 +251,40 @@ func resolveAnalyticsScope(
 		return defaultScopeFor(p, lens)
 	}
 
+	if part, sentence := scopeShapeFault(requested); part != "" {
+		return ResolvedScope{}, fmt.Errorf("%s: %w", sentence, apperrors.ErrInvalidArgument)
+	}
+	switch requested.Kind {
+	case ScopeKindTeam:
+		return resolveTeamScope(*requested.ID), nil
+	case ScopeKindOwner:
+		return resolveOwnerScope(ctx, tx, p, lens, *requested.ID)
+	default:
+		return ResolvedScope{Kind: ScopeKindWorkspace, Label: workspaceLabel}, nil
+	}
+}
+
+// scopeShapeFault names the part of a requested scope that does not fit its
+// kind ("kind" or "id") and says why, or answers "" for a scope that fits. A
+// door names the part by its own wire spelling.
+func scopeShapeFault(requested RequestedScope) (part, sentence string) {
 	switch requested.Kind {
 	case ScopeKindWorkspace:
 		if requested.ID != nil {
-			return ResolvedScope{}, fmt.Errorf(
-				"the workspace scope names no subject: %w", apperrors.ErrInvalidArgument)
+			return "id", "the workspace scope names no subject"
 		}
-		return ResolvedScope{Kind: ScopeKindWorkspace, Label: workspaceLabel}, nil
-
 	case ScopeKindTeam:
 		if requested.ID == nil {
-			return ResolvedScope{}, fmt.Errorf(
-				"a team scope names which team: %w", apperrors.ErrInvalidArgument)
+			return "id", "a team scope names which team"
 		}
-		return resolveTeamScope(*requested.ID), nil
-
 	case ScopeKindOwner:
 		if requested.ID == nil {
-			return ResolvedScope{}, fmt.Errorf(
-				"an owner scope names which owner: %w", apperrors.ErrInvalidArgument)
+			return "id", "an owner scope names which owner"
 		}
-		return resolveOwnerScope(ctx, tx, p, lens, *requested.ID)
-
 	default:
-		return ResolvedScope{}, fmt.Errorf(
-			"%q is not a population: %w", requested.Kind, apperrors.ErrInvalidArgument)
+		return "kind", fmt.Sprintf("%q is not a population; choose owner, team or workspace", requested.Kind)
 	}
+	return "", ""
 }
 
 // workspaceLabel is what the whole-installation population is called. Held

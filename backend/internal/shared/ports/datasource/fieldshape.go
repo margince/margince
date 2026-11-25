@@ -180,6 +180,10 @@ func LocalizeFieldFault(raw json.RawMessage, into any, err error, decode ProbeDe
 			inner.Field = key + "." + inner.Field
 			return inner
 		}
+		if inner := localizeInsideItems(keys[key], field.Type, decode); inner != nil {
+			inner.Field = key + inner.Field
+			return inner
+		}
 		if deeper {
 			return nil
 		}
@@ -193,6 +197,10 @@ func LocalizeFieldFault(raw json.RawMessage, into any, err error, decode ProbeDe
 		// the caller their value is wrong for being right.
 		if sent := sentShape(keys[key]); errors.As(probeErr, &typeErr) && sent != want {
 			refusal.Got = sent
+		} else if errors.As(probeErr, &typeErr) && (want == numberShape || want == integerShape) {
+			// A number of the right shape that the decoder still refused is one
+			// past what the field can hold, such as 1e400.
+			refusal.Got, refusal.code = "a number outside the range it can hold", codeOutOfRange
 		}
 		return refusal
 	}
@@ -207,6 +215,37 @@ func localizeInsideObject(raw json.RawMessage, t reflect.Type, err error, decode
 		return nil
 	}
 	return LocalizeFieldFault(raw, reflect.New(inner).Interface(), err, decode)
+}
+
+// localizeInsideItems names the key inside the first array item whose value
+// failed, as `[0].email`, or nil for a field that is no array of objects. A
+// caller told that `emails` must be an array of objects when it is one would
+// change the one thing that was right.
+func localizeInsideItems(raw json.RawMessage, t reflect.Type, decode ProbeDecoder) *FieldShapeError {
+	list := derefType(t)
+	if list == nil || list.Kind() != reflect.Slice {
+		return nil
+	}
+	item := derefType(list.Elem())
+	if item == nil || item.Kind() != reflect.Struct || isNamedShape(item.Name()) {
+		return nil
+	}
+	var items []json.RawMessage
+	if json.Unmarshal(raw, &items) != nil {
+		return nil
+	}
+	for i, itemRaw := range items {
+		probeErr := decode(itemRaw, reflect.New(item).Interface())
+		if probeErr == nil {
+			continue
+		}
+		inner := LocalizeFieldFault(itemRaw, reflect.New(item).Interface(), probeErr, decode)
+		if inner != nil {
+			inner.Field = "[" + strconv.Itoa(i) + "]." + inner.Field
+		}
+		return inner
+	}
+	return nil
 }
 
 // namesAKeyBelowATopLevelField reports whether a decoder path reaches a key

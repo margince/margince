@@ -26,6 +26,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/kernel/values"
 )
 
 // doneOnActivity names the rows whose id is an activity, with the kind of
@@ -238,15 +239,17 @@ func (s *Store) judgeRows(
 	if err != nil {
 		return err
 	}
+	for i, row := range rows {
+		if err := validRowRef(row, fmt.Sprintf("rows[%d].", i)); err != nil {
+			return err
+		}
+	}
 	rows = distinctRows(rows)
 	if len(rows) == 0 || len(rows) > maxDoneRows {
 		return httperr.Validation("rows", "out_of_range", fmt.Sprintf("a Done names 1 to %d rows", maxDoneRows))
 	}
 	onActivity := false
 	for _, row := range rows {
-		if err := validRowRef(row); err != nil {
-			return err
-		}
 		_, backed := doneOnActivity[crmcontracts.WorklistItemSource(row.Source)]
 		onActivity = onActivity || backed
 	}
@@ -284,15 +287,25 @@ func distinctRows(rows []WorklistRowRef) []WorklistRowRef {
 }
 
 // validRowRef refuses a source the queue does not produce and an id no row
-// could carry, the same two checks a pin makes.
-func validRowRef(row WorklistRowRef) error {
-	if !crmcontracts.WorklistItemSource(row.Source).Valid() {
-		return fmt.Errorf("%q is not a lane this queue produces: %w",
-			row.Source, apperrors.ErrInvalidArgument)
-	}
-	if row.RowID == "" || len(row.RowID) > maxPinnedRowIDLen {
-		return fmt.Errorf("a row's id is 1 to %d characters: %w",
-			maxPinnedRowIDLen, apperrors.ErrInvalidArgument)
+// could carry, naming the field under at ("rows[2]." for a Done batch).
+//
+// The source is checked against the contract's own vocabulary. Without it the
+// table takes any string: junk that matches no row and sits forever, because
+// only its author can remove it. The id bound stops a caller storing a page of
+// text under a key nothing will ever match.
+func validRowRef(row WorklistRowRef, at string) error {
+	switch {
+	case row.Source == "":
+		return &values.ParseError{Field: at + "source", Code: "required", Message: "name the lane the row came from in source"}
+	case !crmcontracts.WorklistItemSource(row.Source).Valid():
+		return &values.ParseError{Field: at + "source", Code: "invalid_enum", Message: fmt.Sprintf("%q is not a lane this queue produces", row.Source)}
+	case row.RowID == "":
+		return &values.ParseError{Field: at + "row_id", Code: "required", Message: "name the row in row_id"}
+	case len(row.RowID) > maxPinnedRowIDLen:
+		return &values.ParseError{
+			Field: at + "row_id", Code: "too_long", Max: maxPinnedRowIDLen,
+			Message: fmt.Sprintf("a row's id is at most %d characters", maxPinnedRowIDLen),
+		}
 	}
 	return nil
 }

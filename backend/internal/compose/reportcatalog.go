@@ -24,6 +24,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/corefeatures"
 	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
+	"github.com/margince/margince/backend/internal/shared/kernel/values"
 )
 
 // reportToolCatalog publishes the prebuilt catalog to the run_report tool: the
@@ -125,6 +126,11 @@ func (e *reportEngine) Run(ctx context.Context, report string, req reportRequest
 		// A 404 here: the key is a path parameter and the contract scopes 422 to
 		// the plan's fields. The tool door refuses the key at its schema enum.
 		return reportOutcome{}, &UnknownReportError{Report: report, Served: slices.Sorted(maps.Keys(prebuiltReports))}
+	}
+	if req.Scope != nil && req.Scope.Kind != "" {
+		if part, sentence := scopeShapeFault(*req.Scope); part != "" {
+			return reportOutcome{}, &values.ParseError{Field: reportingScope + "." + part, Code: "invalid", Message: sentence}
+		}
 	}
 	return e.runSpec(ctx, report, spec, req)
 }

@@ -107,8 +107,35 @@ func (s *Store) CreateTag(ctx context.Context, name string, color, description *
 		out, err = insertTagTx(ctx, tx, name, color, description)
 		return err
 	})
+	if taken, ok := errors.AsType[*TagNameTakenError](err); ok {
+		// Without the holder's id the refusal still stands; the id only helps.
+		if holder, live, findErr := s.FindTag(ctx, name); findErr == nil && live {
+			taken.ExistingID = holder
+		}
+	}
 	return out, err
 }
+
+// TagNameTakenError refuses a name a live tag holds. It answers 409 with the
+// holder's id, so a caller can apply that tag instead.
+type TagNameTakenError struct{ ExistingID ids.UUID }
+
+func (*TagNameTakenError) Error() string {
+	return "a tag with this name already exists; apply that tag instead"
+}
+
+func (*TagNameTakenError) Unwrap() error { return apperrors.ErrConflict }
+
+// FaultReference names the tag that holds the name, once it is known.
+func (e *TagNameTakenError) FaultReference() map[string]any {
+	if e.ExistingID.IsZero() {
+		return map[string]any{}
+	}
+	return map[string]any{"existing_id": e.ExistingID.String()}
+}
+
+// Unreferenced is the conflict the status and the code come from.
+func (*TagNameTakenError) Unreferenced() error { return apperrors.ErrConflict }
 
 // insertTagTx coins a validated name and audits it.
 func insertTagTx(ctx context.Context, tx pgx.Tx, name string, color, description *string) (tagRow, error) {
@@ -119,7 +146,7 @@ func insertTagTx(ctx context.Context, tx pgx.Tx, name string, color, description
 	out, err := scanTag(row)
 	if err != nil {
 		if constraint, ok := storekit.UniqueViolation(err); ok && constraint == uqTagName {
-			return tagRow{}, fmt.Errorf("tag %q: %w", name, apperrors.ErrConflict)
+			return tagRow{}, &TagNameTakenError{}
 		}
 		return tagRow{}, err
 	}
@@ -389,7 +416,7 @@ func NormalizeTagName(name string) string {
 func ValidateTagName(name string) (string, error) {
 	normalized := NormalizeTagName(name)
 	if !values.HasVisibleText(normalized) {
-		return "", &BadInputError{Field: "name", Reason: "must not be empty"}
+		return "", &BadInputError{Field: "name", Code: "required", Reason: "a tag needs a name"}
 	}
 	if utf8.RuneCountInString(normalized) > maxTagNameRunes {
 		return "", &BadInputError{

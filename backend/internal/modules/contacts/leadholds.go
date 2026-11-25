@@ -152,7 +152,10 @@ func admitLeadHolders(ctx context.Context, tx pgx.Tx, keys storekit.IdentityKeys
 	}
 	if len(holders.Leads) == 0 {
 		if len(convert) > 0 {
-			return nil, &LeadHoldsIdentityError{LeadIDs: []ids.LeadID{}}
+			return nil, &values.ParseError{
+				Field: fieldConvertLeadIDs, Code: "reference_not_found",
+				Message: "convert_lead_ids names no live lead that holds an address or profile this write gives the contact; leave it out",
+			}
 		}
 		return nil, nil
 	}

@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"net/mail"
 	"testing"
 )
 
@@ -189,11 +190,9 @@ func TestStrictDecode_leavesAWholePayloadShapeFailureAlone(t *testing.T) {
 	}
 }
 
-// The decoder sometimes keeps a path this walk cannot reach, because it reaches
-// INSIDE a nested value. Its answer is the more precise one and must survive.
-func TestLocalizeFieldFault_defersToAPathTheDecoderKept(t *testing.T) {
-	// A plain struct (no catch-all, so no generated unmarshaler) is where
-	// encoding/json still fills Field, and it fills it with a dotted path.
+// A bad key inside an array item is named with the item's index, the path the
+// decoder itself keeps for a plain struct. The array's own shape was right.
+func TestLocalizeFieldFault_namesTheKeyInsideAnArrayItem(t *testing.T) {
 	type link struct {
 		EntityID   int    `json:"entity_id"`
 		EntityType string `json:"entity_type"`
@@ -201,19 +200,66 @@ func TestLocalizeFieldFault_defersToAPathTheDecoderKept(t *testing.T) {
 	type body struct {
 		Links []link `json:"links"`
 	}
-	raw := json.RawMessage(`{"links":[{"entity_id":"nope","entity_type":"deal"}]}`)
+	raw := json.RawMessage(`{"links":[{"entity_id":1,"entity_type":"deal"},{"entity_id":"nope","entity_type":"deal"}]}`)
 	var into body
 	err := StrictDecode(raw, &into)
-	if err == nil {
-		t.Fatal("a string where an integer belongs was accepted")
+	refusal, ok := errors.AsType[*FieldShapeError](err)
+	if !ok || refusal.Field != "links[1].entity_id" {
+		t.Fatalf("err = %v, want the refusal to name links[1].entity_id", err)
 	}
-	var typeErr *json.UnmarshalTypeError
-	if !errors.As(err, &typeErr) || typeErr.Field == "" {
-		t.Fatalf("this case is only meaningful while the decoder keeps a path; err = %v", err)
+	if want := "`links[1].entity_id` must be an integer, not a string"; refusal.Error() != want {
+		t.Errorf("refusal = %q, want %q", refusal.Error(), want)
 	}
-	if got := LocalizeFieldFault(raw, &into, err, strictProbe); got != nil {
-		t.Errorf("localized to %q, want nil — the decoder already knew %q, which is deeper",
-			got.Field, typeErr.Field)
+}
+
+// Email mirrors the contract's generated email type, which decodes through
+// net/mail and keeps only the address.
+type Email string
+
+func (e *Email) UnmarshalJSON(data []byte) error {
+	var text string
+	if err := json.Unmarshal(data, &text); err != nil {
+		return err
+	}
+	parsed, err := mail.ParseAddress(text)
+	if err != nil {
+		return errors.New("email: failed to pass regex validation")
+	}
+	*e = Email(parsed.Address)
+	return nil
+}
+
+// An email item the format refuses names the address, not the array.
+func TestLocalizeFieldFault_namesTheAddressInsideAnEmailItem(t *testing.T) {
+	type emailItem struct {
+		Email     Email `json:"email"`
+		IsPrimary *bool `json:"is_primary,omitempty"`
+	}
+	type body struct {
+		Emails []emailItem `json:"emails"`
+	}
+	var into body
+	err := StrictDecode(json.RawMessage(`{"emails":[{"email":"x@example.com.","is_primary":true}]}`), &into)
+	refusal, ok := errors.AsType[*FieldShapeError](err)
+	if !ok || refusal.Field != "emails[0].email" || refusal.ShapeCode() != "email_malformed" {
+		t.Fatalf("err = %v, want email_malformed on emails[0].email", err)
+	}
+}
+
+// A number of the right shape past what its field holds is out of range, not a
+// number that must be a number.
+func TestLocalizeFieldFault_namesANumberPastItsRange(t *testing.T) {
+	type body struct {
+		Rate *float64 `json:"default_tax_rate,omitempty"`
+	}
+	var into body
+	err := StrictDecode(json.RawMessage(`{"default_tax_rate":1e400}`), &into)
+	refusal, ok := errors.AsType[*FieldShapeError](err)
+	if !ok || refusal.Field != "default_tax_rate" || refusal.ShapeCode() != "out_of_range" {
+		t.Fatalf("err = %v, want out_of_range on default_tax_rate", err)
+	}
+	if want := "`default_tax_rate` must be a number, not a number outside the range it can hold"; refusal.Error() != want {
+		t.Errorf("refusal = %q, want %q", refusal.Error(), want)
 	}
 }
 

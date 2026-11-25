@@ -157,22 +157,29 @@ type DecodedValueError struct {
 }
 
 // RefuseDecodedValue names the first decoded value outside its date-time range,
-// its number bounds, its no-repeats rule or its single-line rule. owned names the paths whose number
-// bounds a later layer judges.
+// its number bounds, its no-repeats rule, its single-line rule, its enum or the
+// plain email form. owned names the paths whose number bounds and enums a later
+// layer judges.
 //
 //craft:ignore naked-any mirror of StrictDecode's seam target
 func RefuseDecodedValue(decoded any, raw json.RawMessage, owned func(path string) bool) *DecodedValueError {
 	if outOfRange := RejectOutOfRangeTimes(decoded); outOfRange != nil {
-		return &DecodedValueError{FieldShapeError: outOfRange, Code: "out_of_range"}
+		return &DecodedValueError{FieldShapeError: outOfRange, Code: codeOutOfRange}
 	}
 	if outOfBounds := RejectOutOfBoundsNumbers(decoded, raw, owned); outOfBounds != nil {
-		return &DecodedValueError{FieldShapeError: outOfBounds, Code: "out_of_range"}
+		return &DecodedValueError{FieldShapeError: outOfBounds, Code: codeOutOfRange}
 	}
 	if repeated := RejectRepeatedItems(decoded); repeated != nil {
 		return &DecodedValueError{FieldShapeError: repeated, Code: "duplicate"}
 	}
 	if unsafe := RejectUnsafeSingleLine(decoded); unsafe != nil {
 		return &DecodedValueError{FieldShapeError: unsafe, Code: "invalid_characters"}
+	}
+	if unlisted := RejectUnknownEnumValues(decoded, raw, owned); unlisted != nil {
+		return &DecodedValueError{FieldShapeError: unlisted, Code: unlisted.ShapeCode()}
+	}
+	if named := RejectDisplayNameEmails(decoded, raw); named != nil {
+		return &DecodedValueError{FieldShapeError: named, Code: named.ShapeCode()}
 	}
 	return nil
 }

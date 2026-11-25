@@ -5,7 +5,7 @@ package identity
 
 // Where an authorization may be sent back to, and how. Three rules, and the
 // first two are the difference between a working native client and an open
-// redirect: what a client may REGISTER (validRedirectURI), what a registered
+// redirect: what a client may REGISTER (redirectURIFault), what a registered
 // URI MATCHES at authorize time (redirectURIMatches), and how a decision is
 // actually delivered to the address that survived both (redirectToClient).
 // Split out of oauth.go so each file stays one concept —
@@ -20,28 +20,33 @@ import (
 	"github.com/margince/margince/backend/internal/platform/httperr"
 )
 
-// validRedirectURI admits https anywhere and plain http only on
-// loopback (native-app dev flows).
+// redirectURIFault says which rule a redirect URI breaks, or "" for none, so a
+// refusal names the rule the client broke and not one it kept. It admits https
+// anywhere and plain http only on loopback (native-app dev flows).
 //
 // A query is allowed — a client may legitimately register one — but only one
 // this server can reproduce verbatim when it delivers a response there. An
 // undecodable query is refused HERE, where a client developer sees it at
 // registration, rather than at the redirect that follows a human's consent.
-func validRedirectURI(raw string) bool {
+func redirectURIFault(raw string) string {
+	const schemeRule = "a redirect URI must be https, or http on localhost"
 	u, err := url.Parse(raw)
-	if err != nil || u.Fragment != "" {
-		return false
+	switch {
+	case err != nil:
+		return "a redirect URI must be an absolute URL"
+	case u.Fragment != "":
+		return "a redirect URI must not carry a fragment"
 	}
 	if _, err := url.ParseQuery(u.RawQuery); err != nil {
-		return false
+		return "a redirect URI's query must be well formed"
 	}
-	switch u.Scheme {
-	case "https":
-		return u.Host != ""
-	case "http":
-		return isLoopbackHost(u.Hostname())
+	switch {
+	case u.Scheme == "https" && u.Host != "":
+		return ""
+	case u.Scheme == "http" && isLoopbackHost(u.Hostname()):
+		return ""
 	default:
-		return false
+		return schemeRule
 	}
 }
 
@@ -119,7 +124,7 @@ func clientResponseURI(req authorizeRequest, answer url.Values) (string, error) 
 	}
 	// A query we cannot parse is refused rather than delivered: the alternative
 	// is silently dropping the pair that failed to decode, which hands the
-	// client a callback URL it did not register. validRedirectURI refuses such
+	// client a callback URL it did not register. redirectURIFault refuses such
 	// a registration, so this is the closed door behind that one.
 	params, err := url.ParseQuery(location.RawQuery)
 	if err != nil {
@@ -135,7 +140,7 @@ func clientResponseURI(req authorizeRequest, answer url.Values) (string, error) 
 		params.Set(oauthParamState, req.State)
 	}
 	location.RawQuery = params.Encode()
-	// validRedirectURI refuses a fragment at registration; the same rule holds
+	// redirectURIFault refuses a fragment at registration; the same rule holds
 	// at delivery, so a fragment smuggled onto a presented loopback URI cannot
 	// ride into the Location. URL.String() emits a fragment only when Fragment
 	// is set, which is why clearing that one field is enough.

@@ -57,7 +57,7 @@ func OwnerLabel(ctx context.Context, tx pgx.Tx, id ids.UUID) (string, error) {
 		if errors.Is(err, pgx.ErrNoRows) {
 			// Deactivated counts as absent, not merely archived: a departed
 			// colleague is no longer a population somebody measures.
-			return "", fmt.Errorf("no such contact to measure: %w", apperrors.ErrNotFound)
+			return "", fmt.Errorf("no such user to measure: %w", apperrors.ErrNotFound)
 		}
 		if err != nil {
 			return "", fmt.Errorf("scopesubjects: naming the measured contact: %w", err)

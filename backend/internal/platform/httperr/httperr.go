@@ -13,7 +13,9 @@ import (
 	"log/slog"
 	"maps"
 	"net/http"
+	"slices"
 	"strconv"
+	"strings"
 
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
@@ -114,8 +116,7 @@ func clientInputValidation(err error) (error, bool) {
 		return Validation(refused.Field, refused.Code, refused.Error()).WithParams(refused.Params), true
 	}
 	if badFields, ok := errors.AsType[*datasource.FieldDecodeError](err); ok {
-		detail, _ := fieldDecodeRefusal(badFields.Cause)
-		return Validation("fields", "invalid_field", detail), true
+		return fieldDecodeValidation(badFields.Cause), true
 	}
 
 	// An entity_type no provider on this installation serves. Same obligation
@@ -290,6 +291,34 @@ func (f Fault) CallersToFix() bool {
 // named it. One tree and two renderers means the surfaces cannot drift apart
 // again.
 func Classify(err error) (Fault, bool) {
+	fault, ok := classify(err)
+	fault.Detail = withoutSentinelText(fault.Detail)
+	// A copy, because Fields may be the slice of the caller's own DetailedError.
+	fields := slices.Clone(fault.Fields)
+	for i := range fields {
+		fields[i].Message = withoutSentinelText(fields[i].Message)
+	}
+	fault.Fields = fields
+	return fault, ok
+}
+
+// withoutSentinelText drops the sentinel words a `fmt.Errorf("…: %w")` wrap
+// leaves at the end of a sentence. The code already says them to a machine,
+// and a person reads "the record is not on this list: not found" as noise.
+func withoutSentinelText(detail string) string {
+	for {
+		trimmed := detail
+		for _, m := range mapping {
+			trimmed = strings.TrimSuffix(trimmed, ": "+m.sentinel.Error())
+		}
+		if trimmed == detail {
+			return detail
+		}
+		detail = trimmed
+	}
+}
+
+func classify(err error) (Fault, bool) {
 	// A REFUSAL THAT CARRIES A REFERENCE renders it as a field rather than
 	// leaving it in prose.
 	//
