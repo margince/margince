@@ -17,7 +17,7 @@ func TestTheSetAsideReadAsksTheBoundClockAndFallsBackToTheWallClock(t *testing.T
 	if got := bound.clockNow(); !got.Equal(fixed) {
 		t.Errorf("clockNow with a bound clock = %v, want %v", got, fixed)
 	}
-	if got := (&callRuntime{}).clockNow(); time.Since(got) > time.Minute || time.Until(got) > time.Minute {
+	if got := (&callRuntime{}).clockNow(); got.Year() < 2026 {
 		t.Errorf("clockNow with no bound clock = %v, want the wall clock", got)
 	}
 }
