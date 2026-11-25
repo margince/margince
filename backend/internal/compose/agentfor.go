@@ -15,6 +15,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strings"
 
 	"github.com/jackc/pgx/v5"
 
@@ -23,6 +24,9 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/ports/authz"
 )
+
+// agentActorPrefix is the kind every actor id bound through this seam has.
+const agentActorPrefix = "agent:"
 
 // agentFor binds the product acting FOR person: an agent principal named
 // actorID, carrying OnBehalfOf and the person's grants as they are now. A
@@ -36,7 +40,10 @@ func agentFor(ctx context.Context, users *identity.Service, person ids.UUID, act
 	if err != nil {
 		return nil, fmt.Errorf("compose: authority of the person to act for: %w", err)
 	}
-	agent := agentPrincipalFor(member, actorID)
+	agent, err := agentPrincipalFor(member, actorID)
+	if err != nil {
+		return nil, err
+	}
 	lang, err := users.ReadingLanguage(ctx, agent)
 	return withOwnersLanguage(ctx, agent, lang, err)
 }
@@ -49,14 +56,22 @@ func agentForTx(users *identity.Service, person ids.UUID, actorID string) func(c
 		if err != nil {
 			return nil, fmt.Errorf("compose: authority of the person to act for: %w", err)
 		}
-		agent := agentPrincipalFor(authz.HumanPrincipal(person, rbac, seat), actorID)
+		agent, err := agentPrincipalFor(authz.HumanPrincipal(person, rbac, seat), actorID)
+		if err != nil {
+			return nil, err
+		}
 		lang, err := identity.ReadingLanguageTx(ctx, tx, agent)
 		return withOwnersLanguage(ctx, agent, lang, err)
 	}
 }
 
-// agentPrincipalFor is the agent acting for person under actorID.
-func agentPrincipalFor(person principal.Principal, actorID string) principal.Principal {
+// agentPrincipalFor is the agent acting for person under actorID. storekit
+// stamps actor_type from the type and actor_id from the id, so an id of any
+// other kind would write an audit row naming two actors; it is refused.
+func agentPrincipalFor(person principal.Principal, actorID string) (principal.Principal, error) {
+	if !strings.HasPrefix(actorID, agentActorPrefix) || len(actorID) == len(agentActorPrefix) {
+		return principal.Principal{}, fmt.Errorf("compose: %q is not an agent id, so no agent may act under it", actorID)
+	}
 	return principal.Principal{
 		Type:        principal.PrincipalAgent,
 		ID:          actorID,
@@ -68,5 +83,5 @@ func agentPrincipalFor(person principal.Principal, actorID string) principal.Pri
 		// Write, and only write: a pass acting unattended changes records and
 		// never puts a message on the wire.
 		Scopes: principal.ScopeSet{principal.ScopeWrite: struct{}{}},
-	}
+	}, nil
 }

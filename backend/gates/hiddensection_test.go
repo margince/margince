@@ -30,6 +30,18 @@ import (
 // sectionListMethods are the HiddenSection methods that render the list side.
 var sectionListMethods = []string{"ListSQL", "VisibleFrom"}
 
+// hiddenRecordsSections pairs each contract field of type HiddenRecords with
+// the builder whose section answers it. The pairing is the one fact neither
+// side states: both the contract's fields and the tree's builders are read
+// from their owners, and each must match this table exactly.
+//
+// gatekit:fixture the contract fields a hidden-section builder answers
+var hiddenRecordsSections = map[string]string{
+	"Company360.contacts_hidden":                    "internal/modules/contacts.employmentSection",
+	"Company360.billing_contacts_hidden":            "internal/modules/contacts.billingContactsSection",
+	"CompanyFinanceSummary.billing_contacts_hidden": "internal/modules/contacts.billingContactsSection",
+}
+
 // sectionUse is what the tree does with one builder's sections.
 type sectionUse struct {
 	file            string
@@ -74,6 +86,7 @@ func TestEveryHiddenCountSharesItsListsSection(t *testing.T) {
 	for fn, dir := range bodies {
 		readSectionUses(t, fn, dir, builders)
 	}
+	assertSectionsMatchTheContract(t, builders)
 	for _, name := range slices.Sorted(maps.Keys(builders)) {
 		use := builders[name]
 		if !use.counted || !use.listed {
@@ -161,4 +174,67 @@ func builderCalled(expr ast.Expr, dir string, builders map[string]*sectionUse) s
 		return key
 	}
 	return ""
+}
+
+// assertSectionsMatchTheContract fails when a HiddenRecords field has no
+// builder behind it, or a builder answers no field: a count the contract does
+// not carry, or a field nothing fills.
+func assertSectionsMatchTheContract(t *testing.T, builders map[string]*sectionUse) {
+	t.Helper()
+	fields := hiddenRecordsFields(t)
+	if !slices.Equal(fields, slices.Sorted(maps.Keys(hiddenRecordsSections))) {
+		t.Errorf("api/crm.yaml carries HiddenRecords on %v, and hiddenRecordsSections pairs %v. "+
+			"Pair each field with the section builder that fills it", fields, slices.Sorted(maps.Keys(hiddenRecordsSections)))
+	}
+	paired := map[string]bool{}
+	for _, builder := range hiddenRecordsSections {
+		paired[builder] = true
+		if builders[builder] == nil {
+			t.Errorf("hiddenRecordsSections names %s, and no such function returns a storekit.HiddenSection", builder)
+		}
+	}
+	for builder := range builders {
+		if !paired[builder] {
+			t.Errorf("%s builds a hidden section that no HiddenRecords field in api/crm.yaml carries", builder)
+		}
+	}
+}
+
+// hiddenRecordsFields is every "Schema.property" in the contract whose type is
+// HiddenRecords, sorted.
+func hiddenRecordsFields(t *testing.T) []string {
+	t.Helper()
+	components, _ := loadContractDocument(t)["components"].(map[string]any)
+	schemas, _ := components["schemas"].(map[string]any)
+	if len(schemas) == 0 {
+		t.Fatal("read no schemas from api/crm.yaml: the reader has stopped matching")
+	}
+	var out []string
+	for name, raw := range schemas {
+		schema, _ := raw.(map[string]any)
+		properties, _ := schema["properties"].(map[string]any)
+		for property, node := range properties {
+			if refersToHiddenRecords(node) {
+				out = append(out, name+"."+property)
+			}
+		}
+	}
+	slices.Sort(out)
+	return out
+}
+
+// refersToHiddenRecords is whether a property node is a HiddenRecords, named
+// directly or through allOf.
+func refersToHiddenRecords(node any) bool {
+	property, _ := node.(map[string]any)
+	if ref, _ := property["$ref"].(string); strings.HasSuffix(ref, "/HiddenRecords") {
+		return true
+	}
+	parts, _ := property["allOf"].([]any)
+	for _, part := range parts {
+		if refersToHiddenRecords(part) {
+			return true
+		}
+	}
+	return false
 }

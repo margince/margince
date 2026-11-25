@@ -138,12 +138,8 @@ func TestTheCompanyPageAndTheFinanceCardNameTheSameBillingContacts(t *testing.T)
 		Role           string `json:"role"`
 	}
 
-	type withheld struct {
-		Count int `json:"count"`
-	}
 	var page struct {
 		BillingContacts []billing `json:"billing_contacts"`
-		Hidden          *withheld `json:"billing_contacts_hidden"`
 	}
 	if status := e.Call(t, "GET", "/v1/companies/"+e.companyID+"/360", nil, nil, &page); status != http.StatusOK {
 		t.Fatalf("company 360 → %d", status)
@@ -159,7 +155,6 @@ func TestTheCompanyPageAndTheFinanceCardNameTheSameBillingContacts(t *testing.T)
 
 	var card struct {
 		BillingContacts []billing `json:"billing_contacts"`
-		Hidden          *withheld `json:"billing_contacts_hidden"`
 	}
 	if status := e.Call(t, "GET", "/v1/companies/"+e.companyID+"/finance-summary", nil, nil, &card); status != http.StatusOK {
 		t.Fatalf("finance summary → %d", status)
@@ -176,10 +171,6 @@ func TestTheCompanyPageAndTheFinanceCardNameTheSameBillingContacts(t *testing.T)
 			t.Errorf("row %d differs between the finance card and the company page:\n  card = %+v\n  page = %+v",
 				i, card.BillingContacts[i], page.BillingContacts[i])
 		}
-	}
-	if card.Hidden == nil || page.Hidden == nil || *card.Hidden != *page.Hidden {
-		t.Errorf("billing_contacts_hidden: finance card %+v, company page %+v; both say what scope withheld, alike",
-			card.Hidden, page.Hidden)
 	}
 
 	// And the contact's own page, the same edges asked from the other end.

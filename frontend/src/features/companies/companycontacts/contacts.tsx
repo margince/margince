@@ -263,7 +263,9 @@ export function CompanyContactsList({
           id: contact.contact_id,
         })}
       />
-      <HiddenRecordsFoot hidden={hidden} />
+      {/* The count is of the whole roster, so it is true only under the
+          whole roster: a search or a status narrows the rows above it. */}
+      {isWholeRoster(state.query) && <HiddenRecordsFoot hidden={hidden} />}
     </>
   );
 }
@@ -314,4 +316,10 @@ function lastWritten(
     return { theyWrote: true, ...inbound };
   }
   return outbound && { theyWrote: false, ...outbound };
+}
+
+// isWholeRoster is whether the list shows every current employee the reader
+// may see, with no search and no status narrowing it.
+function isWholeRoster(query: ListQuery): boolean {
+  return query.q === "" && !Object.values(query.filters).some(Boolean);
 }

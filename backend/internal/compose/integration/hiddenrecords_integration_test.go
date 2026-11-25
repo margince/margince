@@ -71,6 +71,10 @@ func TestCompanyContactsStateHowManyAreHiddenAndWhoHoldsThem(t *testing.T) {
 	seedEmployee(t, e, company, "Hidden Sponsor", e.Rep3, true)
 	seedEmployee(t, e, company, "Hidden Engineer", e.Rep3, true)
 	seedEmployee(t, e, company, "Orphaned Champion", seedDepartedSeat(t), true)
+	// Archived, and owned by a colleague nothing else hides: counting it would
+	// show as a fourth entry and a second holder.
+	archived := seedEmployee(t, e, company, "Archived Lead", e.Rep2, true)
+	e.WsExec(t, `UPDATE contact SET archived_at = now() WHERE id = $1`, archived)
 
 	rep := e.As(e.Rep1, []ids.UUID{e.Team1}, hiddenReaderPerms)
 	page, err := companySurfaceService(e).Assemble(rep, companyIDOf(company))
@@ -85,16 +89,16 @@ func TestCompanyContactsStateHowManyAreHiddenAndWhoHoldsThem(t *testing.T) {
 		t.Fatal("contacts_hidden is absent beside a listed contacts section")
 	}
 	if hidden.Count != 3 {
-		t.Errorf("contacts_hidden.count = %d, want 3: two of Rep3's and the departed seat's", hidden.Count)
+		t.Errorf("contacts_hidden.count = %d, want 3: two of Rep3's and the departed seat's, never the archived one", hidden.Count)
 	}
 	if len(hidden.Holders) != 1 || ids.UUID(hidden.Holders[0].UserId) != e.Rep3 {
-		t.Errorf("holders = %+v, want Rep3 once and never the departed seat", hidden.Holders)
+		t.Errorf("holders = %+v, want Rep3 once: never the departed seat, never the archived contact's owner", hidden.Holders)
 	}
 	wire, err := json.Marshal(page)
 	if err != nil {
 		t.Fatal(err)
 	}
-	for _, withheld := range []string{"Hidden Sponsor", "Hidden Engineer", "Orphaned Champion"} {
+	for _, withheld := range []string{"Hidden Sponsor", "Hidden Engineer", "Orphaned Champion", "Archived Lead"} {
 		if strings.Contains(string(wire), withheld) {
 			t.Errorf("the page carries the withheld contact name %q", withheld)
 		}
