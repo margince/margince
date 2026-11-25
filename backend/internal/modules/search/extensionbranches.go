@@ -19,18 +19,10 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/ports/recordkinds"
 )
-
-// extensionTitleColumn is the field a hit is titled and matched by. It is the
-// kind's History label field, else the first field of its natural key.
-func extensionTitleColumn(kind recordkinds.Declared) string {
-	if kind.Timeline != nil {
-		return kind.Timeline.LabelField
-	}
-	return kind.NaturalKey[0]
-}
 
 // extensionTypes lists every declared kind's name.
 func extensionTypes() []string {
@@ -65,7 +57,8 @@ func requestedTypes(ctx context.Context, in Input) []string {
 
 // admittedExtensionSQL builds one ranked SELECT per requested kind the caller
 // may read. A title matches when it holds every word of the query, in any case.
-// A title that starts with the first word ranks higher.
+// A title that starts with the first word ranks higher. The match is a LIKE on
+// lower(title), which the trigram index VerifyRecordKinds requires serves.
 //
 // The core branches bind the query as headPos and tailPos (0 without a
 // fragment). A statement with an unreferenced parameter fails whole.
@@ -80,12 +73,12 @@ func admittedExtensionSQL(ctx context.Context, types []string, query string, hea
 		if !slices.Contains(types, kind.Name) || !mayRead(ctx, kind.Name) {
 			continue
 		}
-		column := "t." + pgx.Identifier{extensionTitleColumn(kind)}.Sanitize()
+		column := "t." + pgx.Identifier{kind.TitleColumn()}.Sanitize()
 		title := "lower(" + column + ")"
 		words := strings.Fields(strings.ToLower(query))
 		holds := make([]string, len(words))
 		for i, word := range words {
-			holds[i] = fmt.Sprintf("strpos(%s, $%d::text) > 0", title, arg(word))
+			holds[i] = fmt.Sprintf(`%s LIKE '%%' || $%d::text || '%%' ESCAPE '\'`, title, arg(storekit.EscapeLike(word)))
 		}
 		branches = append(branches, fmt.Sprintf(
 			`SELECT $%d::text AS rtype, t.id, %s AS title, NULL::text AS snippet,
