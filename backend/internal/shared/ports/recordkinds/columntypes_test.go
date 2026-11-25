@@ -1,21 +1,20 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-package compose
+package recordkinds
 
 import (
 	"maps"
 	"strings"
 	"testing"
 
-	"github.com/margince/margince/backend/internal/shared/ports/recordkinds"
 	"github.com/margince/margince/backend/pkg/extension"
 )
 
 func TestCheckReadColumnTypes(t *testing.T) {
 	const tz, id = "timestamp with time zone", "uuid"
-	kind := func(label string) recordkinds.Declared {
-		return recordkinds.Declared{Name: "ext:u:k", NaturalKey: []string{"code"}, Timeline: &extension.RecordKindTimeline{
+	kind := func(label string) Declared {
+		return Declared{Name: "ext:u:k", NaturalKey: []string{"code"}, Timeline: &extension.RecordKindTimeline{
 			LabelField: label, AtColumn: "seen_at", Subjects: []extension.TimelineSubject{{Entity: "contact", Column: "contact_id"}},
 		}}
 	}
@@ -43,7 +42,7 @@ func TestCheckReadColumnTypes(t *testing.T) {
 		{"title is integer", with("code", "integer"), "title column"},
 	}
 	for _, c := range cases {
-		err := checkReadColumnTypes(kind("code"), "ext.t", c.cols)
+		err := CheckReadColumnTypes(kind("code"), "ext.t", c.cols)
 		switch {
 		case c.want == "" && err != nil:
 			t.Errorf("%s: %v", c.name, err)
