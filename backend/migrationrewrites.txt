@@ -252,3 +252,4 @@
 1795388888_the_basis_vocabulary_names_no_country_validated.down.sql | * | the down migration is a single SELECT 1 that changes nothing
 1795449105_an_archived_record_leaves_its_chat_channel.up.sql | *, audit_log, chat_link | touches only live chat links whose deal or project is archived, with one audit row each; a link is a channel a member chose by hand for one deal or project, so the set is the links people made
 1795449105_an_archived_record_leaves_its_chat_channel.down.sql | * | the down migration is a single SELECT 1 that changes nothing
+1795545538_an_append_only_row_claims_no_lifecycle.down.sql | * | runs only on a rollback and adds columns back with a constant or now() default and a fresh trigger; PostgreSQL stores such a default once and rewrites no row
