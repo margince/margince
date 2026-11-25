@@ -18,6 +18,12 @@ import (
 // new runs, because their rows are not what this rule would record.
 var restampableRules = map[string]string{"grading-rule-13": "grading-rule-14"}
 
+// collectionOfRule is the collectionRule each grading rule ran under. A record
+// re-stamps only from a rule whose collection is today's. A moved collection
+// changes the rows a build would record, and no re-grade of stored rows can
+// reproduce that. Every bump of gradingRule adds its entry.
+var collectionOfRule = map[string]string{"grading-rule-13": "collection-rule-1", "grading-rule-14": "collection-rule-1"}
+
 // RestampBasis holds what a re-stamp compares a row against, keyed
 // "task/scenario". One stamp is under this build's grading rule. The other is
 // under the rule the record was graded by.
@@ -31,6 +37,10 @@ func NewRestampBasis(ctx context.Context, oldRule string, corpus []Scenario, cen
 	if restampableRules[oldRule] != gradingRule {
 		return RestampBasis{}, fmt.Errorf("aicert: restamp: no review says %q moved only how rows pool and grade into %q, "+
 			"so its records need new runs; add the pair to restampableRules once a reviewer has checked that", oldRule, gradingRule)
+	}
+	if was := collectionOfRule[oldRule]; was != collectionRule {
+		return RestampBasis{}, fmt.Errorf("aicert: restamp: %q collected its runs under %q and this build under %q, "+
+			"so its stored rows are not what this build would record and its records need new runs", oldRule, was, collectionRule)
 	}
 	return restampBasisBetween(ctx, corpus, census, func(scenarios []Scenario) (map[string]string, error) {
 		return scenarioStampsUnder(ctx, oldRule, scenarios, census)
