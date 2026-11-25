@@ -82,7 +82,7 @@ func Withhold(ctx context.Context, language string, moment *crmcontracts.Contact
 		if action.State == crmcontracts.ContactMomentActionStateBlocked {
 			return
 		}
-		blockAction(action, said.Say(blockedReason(action.Kind)))
+		blockAction(action, said.Say(blockedWords.RoleReadsOnly))
 	}
 	block(&moment.RecommendedAction)
 	if moment.SecondaryActions == nil {
@@ -97,27 +97,14 @@ func Withhold(ctx context.Context, language string, moment *crmcontracts.Contact
 // write the promise it completes: a task is an activity update, a claim
 // settles under contact update. The endpoint still asks the row's own scope.
 func withholdDone(ctx context.Context, said langcopy.Spoken, moment *crmcontracts.ContactMoment) {
-	object, reason := "activity", said.Say(blockedWords.Complete)
+	object, specific := "activity", blockedWords.Complete
 	if moment.MayBeDone.PromiseType == crmcontracts.ContactMomentMayBeDonePromiseTypeClaim {
-		object, reason = "contact", said.Say(blockedWords.Settle)
+		object, specific = "contact", blockedWords.Settle
 	}
 	if auth.AllowsWrite(ctx, object, principal.ActionUpdate) {
 		return
 	}
-	done := &moment.RecommendedAction
-	blockAction(done, reason)
-}
-
-// blockedReason names what the reader may not do, in the verb's own words.
-func blockedReason(kind crmcontracts.ContactMomentActionKind) langcopy.Phrase {
-	switch kind {
-	case crmcontracts.ContactMomentActionKindScheduleMeeting:
-		return blockedWords.Book
-	case crmcontracts.ContactMomentActionKindDraftReply:
-		return blockedWords.Send
-	default:
-		return blockedWords.Log
-	}
+	blockAction(&moment.RecommendedAction, grantRefusal(ctx, said, specific))
 }
 
 func blockAction(action *crmcontracts.ContactMomentAction, reason string) {

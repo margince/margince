@@ -47,13 +47,13 @@ var offeredVerbVocabularies = []offeredVerbs{
 		schema: "WorklistMove", anchors: []string{"\n        action:"},
 		source:  "internal/compose/momentaction/writeverbs.go",
 		mapName: "worklistVerbWrites", constPrefix: "WorklistMoveAction", floor: 7,
-		writes: refusalPhrase,
+		writes: boolLiteral,
 	},
 	{
 		schema: "Company360Suggestion", anchors: []string{"\n        action:", "\n            kind:"},
 		source:  "internal/compose/momentaction/writeverbs.go",
 		mapName: "suggestionVerbWrites", constPrefix: "Company360SuggestionActionKind", floor: 3,
-		writes: refusalPhrase,
+		writes: boolLiteral,
 	},
 }
 
@@ -221,21 +221,6 @@ func boolLiteral(t *testing.T, mapName, kind string, value ast.Expr) bool {
 			"without running it", mapName, kind, value)
 	}
 	return answer.Name == "true"
-}
-
-// refusalPhrase reads an entry whose answer is `nil` for a read, or the
-// address of the refusal a writing verb gets.
-func refusalPhrase(t *testing.T, mapName, kind string, value ast.Expr) bool {
-	t.Helper()
-	if ident, ok := value.(*ast.Ident); ok && ident.Name == "nil" {
-		return false
-	}
-	if unary, ok := value.(*ast.UnaryExpr); ok && unary.Op == token.AND {
-		return true
-	}
-	t.Fatalf("%s[%s] is %T rather than nil or &phrase; the classification has to be readable "+
-		"without running it", mapName, kind, value)
-	return false
 }
 
 // snakeOf turns `OpenMeetingBrief` into `open_meeting_brief`.

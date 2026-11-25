@@ -22,10 +22,8 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
-const (
-	refusedSend = "You do not have permission to send email"
-	refusedTask = "You do not have permission to add tasks"
-)
+// refusedRole is what every refused activity-writing move says: the role only reads.
+const refusedRole = "Your role can only read. Ask an administrator for another role."
 
 // readsActivities is the admin's grants with activity.create taken away, so
 // the reader still sees every row and may write no activity.
@@ -45,9 +43,9 @@ func TestTheWorklistOffersAMailMoveOnlyToASeatThatMayWrite(t *testing.T) {
 		want *string
 	}{
 		"a full seat that may write":    {integration.OnSeat(e.As(e.Rep1, team, integration.AdminPerms), principal.SeatFull), nil},
-		"a full seat without the grant": {integration.OnSeat(e.As(e.Rep1, team, readsActivities()), principal.SeatFull), new(refusedSend)},
-		"a read seat holding the grant": {integration.OnSeat(e.As(e.Rep1, team, integration.AdminPerms), principal.SeatRead), new(refusedSend)},
-		"an agent whose human lacks it": {e.AgentFor(t, e.Rep1, team, readsActivities()), new(refusedSend)},
+		"a full seat without the grant": {integration.OnSeat(e.As(e.Rep1, team, readsActivities()), principal.SeatFull), new(refusedRole)},
+		"a read seat holding the grant": {integration.OnSeat(e.As(e.Rep1, team, integration.AdminPerms), principal.SeatRead), new(refusedRole)},
+		"an agent whose human lacks it": {e.AgentFor(t, e.Rep1, team, readsActivities()), new(refusedRole)},
 	} {
 		page := quiet.read(reader.ctx)
 		if page.OptionalRelationships == nil || len(*page.OptionalRelationships) != 1 {
@@ -83,8 +81,8 @@ func TestTheCompanyPageOffersADraftReplyOnlyToASeatThatMayWrite(t *testing.T) {
 		want *string
 	}{
 		"a full seat that may write":    {integration.OnSeat(e.Admin(), principal.SeatFull), nil},
-		"a full seat without the grant": {integration.OnSeat(e.As(e.AdminUser, nil, readsActivities()), principal.SeatFull), new(refusedSend)},
-		"a read seat holding the grant": {integration.OnSeat(e.Admin(), principal.SeatRead), new(refusedSend)},
+		"a full seat without the grant": {integration.OnSeat(e.As(e.AdminUser, nil, readsActivities()), principal.SeatFull), new(refusedRole)},
+		"a read seat holding the grant": {integration.OnSeat(e.Admin(), principal.SeatRead), new(refusedRole)},
 	} {
 		page, err := service.Assemble(reader.ctx, ids.From[ids.CompanyKind](company))
 		if err != nil {
@@ -121,8 +119,8 @@ func TestTheDealCardOffersItsTaskOnlyToASeatThatMayWrite(t *testing.T) {
 		want *string
 	}{
 		{"a full seat that may write", integration.OnSeat(e.As(e.Rep1, team, integration.AdminPerms), principal.SeatFull), nil},
-		{"a full seat without the grant", integration.OnSeat(e.As(e.Rep1, team, readsActivities()), principal.SeatFull), new(refusedTask)},
-		{"a read seat holding the grant", integration.OnSeat(e.As(e.Rep1, team, integration.AdminPerms), principal.SeatRead), new(refusedTask)},
+		{"a full seat without the grant", integration.OnSeat(e.As(e.Rep1, team, readsActivities()), principal.SeatFull), new(refusedRole)},
+		{"a read seat holding the grant", integration.OnSeat(e.As(e.Rep1, team, integration.AdminPerms), principal.SeatRead), new(refusedRole)},
 		{"the writer again, after the cache was filled", integration.OnSeat(e.As(e.Rep1, team, integration.AdminPerms), principal.SeatFull), nil},
 	} {
 		card, err := cards.ReadFacts(reader.ctx, ids.From[ids.DealKind](e.calm))

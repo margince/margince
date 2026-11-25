@@ -26,7 +26,7 @@ func seatWith(seat principal.SeatType, activity principal.ObjectGrant) context.C
 func TestTheCardsMoveIsBlockedOnTheServedCopyOnly(t *testing.T) {
 	filed := crmcontracts.DealStatusCard{Next: &crmcontracts.DealStatusCardMove{Action: "create_task"}}
 	served := withRefusedMove(seatWith(principal.SeatFull, principal.ObjectGrant{Read: true}), filed)
-	if got := served.Next.BlockedReason; got == nil || *got != "You do not have permission to add tasks" {
+	if got := served.Next.BlockedReason; got == nil || *got != "Your role can only read. Ask an administrator for another role." {
 		t.Fatalf("a reader without activity.create was served create_task with blocked_reason %v", got)
 	}
 	if filed.Next.BlockedReason != nil {

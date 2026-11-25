@@ -171,8 +171,8 @@ func TestWithholdBlocksDraftReplyForAReaderWhoCannotSend(t *testing.T) {
 	if got.State != crmcontracts.ContactMomentActionStateBlocked || got.Destination != nil {
 		t.Fatalf("draft_reply for a read-only reader = %q with destination %+v, want blocked with none", got.State, got.Destination)
 	}
-	if got.BlockedReason == nil || *got.BlockedReason != "You do not have permission to send email" {
-		t.Errorf("draft_reply blocked reason = %v, want the send refusal, not the log one", got.BlockedReason)
+	if got.BlockedReason == nil || *got.BlockedReason != roleReadsOnly["en"] {
+		t.Errorf("draft_reply blocked reason = %v, want the role sentence", got.BlockedReason)
 	}
 
 	writer := draft()

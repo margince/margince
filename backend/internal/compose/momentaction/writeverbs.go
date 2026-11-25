@@ -13,26 +13,25 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/systemtext"
 )
 
-// worklistVerbWrites answers, for every Worklist move, which refusal a reader
-// without the write grant gets. Nil means the verb only reads. The deal card's
-// moves are a subset of this vocabulary. gates/momentactionvocabulary_test.go
-// holds the keys equal to the enum.
-var worklistVerbWrites = map[crmcontracts.WorklistMoveAction]*langcopy.Phrase{
-	crmcontracts.WorklistMoveActionDraftReply:       &blockedWords.Send,
-	crmcontracts.WorklistMoveActionDraftEmail:       &blockedWords.Send,
-	crmcontracts.WorklistMoveActionCreateTask:       &blockedWords.Task,
-	crmcontracts.WorklistMoveActionOpenTask:         nil,
-	crmcontracts.WorklistMoveActionOpenMeetingBrief: nil,
-	crmcontracts.WorklistMoveActionReconnect:        nil,
-	crmcontracts.WorklistMoveActionBringInManager:   nil,
-	crmcontracts.WorklistMoveActionNone:             nil,
+// worklistVerbWrites answers, for every Worklist move, whether it writes an
+// activity. The deal card's moves are a subset of this vocabulary.
+// gates/momentactionvocabulary_test.go holds the keys equal to the enum.
+var worklistVerbWrites = map[crmcontracts.WorklistMoveAction]bool{
+	crmcontracts.WorklistMoveActionDraftReply:       true,
+	crmcontracts.WorklistMoveActionDraftEmail:       true,
+	crmcontracts.WorklistMoveActionCreateTask:       true,
+	crmcontracts.WorklistMoveActionOpenTask:         false,
+	crmcontracts.WorklistMoveActionOpenMeetingBrief: false,
+	crmcontracts.WorklistMoveActionReconnect:        false,
+	crmcontracts.WorklistMoveActionBringInManager:   false,
+	crmcontracts.WorklistMoveActionNone:             false,
 }
 
 // suggestionVerbWrites is the same answer for the company brief's actions.
-var suggestionVerbWrites = map[crmcontracts.Company360SuggestionActionKind]*langcopy.Phrase{
-	crmcontracts.Company360SuggestionActionKindDraftReply: &blockedWords.Send,
-	crmcontracts.Company360SuggestionActionKindAddTask:    &blockedWords.Task,
-	crmcontracts.Company360SuggestionActionKindOpenDeal:   nil,
+var suggestionVerbWrites = map[crmcontracts.Company360SuggestionActionKind]bool{
+	crmcontracts.Company360SuggestionActionKindDraftReply: true,
+	crmcontracts.Company360SuggestionActionKindAddTask:    true,
+	crmcontracts.Company360SuggestionActionKindOpenDeal:   false,
 }
 
 // MoveRefusal says why this reader may not take a Worklist or deal-card verb,
@@ -43,7 +42,7 @@ func MoveRefusal(ctx context.Context, action crmcontracts.WorklistMoveAction) *s
 		if auth.AllowsWrite(ctx, "deal", principal.ActionUpdate) {
 			return nil
 		}
-		reason := langcopy.For(string(systemtext.Locale(ctx))).Say(blockedWords.Deal)
+		reason := grantRefusal(ctx, langcopy.For(string(systemtext.Locale(ctx))), blockedWords.Deal)
 		return &reason
 	}
 	return refusal(ctx, worklistVerbWrites, action)
@@ -61,17 +60,13 @@ func MarkRefusedSuggestions(ctx context.Context, suggestions []crmcontracts.Comp
 
 // refusal fails closed. A verb missing from the map is refused like a write,
 // so a new verb is not offered live before someone classifies it.
-func refusal[K comparable](ctx context.Context, verbs map[K]*langcopy.Phrase, verb K) *string {
-	phrase, known := verbs[verb]
-	if known && phrase == nil {
+func refusal[K comparable](ctx context.Context, verbs map[K]bool, verb K) *string {
+	if writes, known := verbs[verb]; known && !writes {
 		return nil
 	}
 	if auth.AllowsWrite(ctx, "activity", principal.ActionCreate) {
 		return nil
 	}
-	if phrase == nil {
-		phrase = &blockedWords.Log
-	}
-	reason := langcopy.For(string(systemtext.Locale(ctx))).Say(*phrase)
+	reason := langcopy.For(string(systemtext.Locale(ctx))).Say(blockedWords.RoleReadsOnly)
 	return &reason
 }

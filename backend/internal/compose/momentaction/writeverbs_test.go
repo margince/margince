@@ -21,14 +21,14 @@ var (
 
 func TestAReaderIsRefusedEveryMoveThatWritesAndNoneThatReads(t *testing.T) {
 	ctx := reader(readerOnly)
-	for action, want := range map[crmcontracts.WorklistMoveAction]string{
-		crmcontracts.WorklistMoveActionDraftReply: "You do not have permission to send email",
-		crmcontracts.WorklistMoveActionDraftEmail: "You do not have permission to send email",
-		crmcontracts.WorklistMoveActionCreateTask: "You do not have permission to add tasks",
+	for _, action := range []crmcontracts.WorklistMoveAction{
+		crmcontracts.WorklistMoveActionDraftReply,
+		crmcontracts.WorklistMoveActionDraftEmail,
+		crmcontracts.WorklistMoveActionCreateTask,
 	} {
 		got := MoveRefusal(ctx, action)
-		if got == nil || *got != want {
-			t.Errorf("%s: refusal %v, want %q", action, got, want)
+		if got == nil || *got != roleReadsOnly["en"] {
+			t.Errorf("%s: refusal %v, want the role sentence", action, got)
 		}
 	}
 	for _, action := range []crmcontracts.WorklistMoveAction{
@@ -44,8 +44,8 @@ func TestAReaderIsRefusedEveryMoveThatWritesAndNoneThatReads(t *testing.T) {
 
 func TestASeatThatMayNotWriteIsRefusedEvenWithTheGrant(t *testing.T) {
 	got := MoveRefusal(seated(principal.SeatRead, writer), crmcontracts.WorklistMoveActionCreateTask)
-	if got == nil {
-		t.Fatal("a read seat holding activity.create was offered create_task live")
+	if got == nil || *got != roleReadsOnly["en"] {
+		t.Fatalf("a read seat holding activity.create got %v for create_task, want the role sentence", got)
 	}
 }
 
@@ -70,7 +70,7 @@ func TestAnUnclassifiedMoveIsRefusedLikeAWrite(t *testing.T) {
 func TestTheRefusalSpeaksTheReadersLanguage(t *testing.T) {
 	ctx := systemtext.WithLocale(reader(readerOnly), textlang.German)
 	got := MoveRefusal(ctx, crmcontracts.WorklistMoveActionCreateTask)
-	if want := "Sie haben keine Berechtigung, Aufgaben zu erstellen"; got == nil || *got != want {
+	if want := roleReadsOnly["de"]; got == nil || *got != want {
 		t.Fatalf("refusal %v, want %q", got, want)
 	}
 }
@@ -83,11 +83,10 @@ func TestACompanyBriefRowBlocksOnlyItsWritingAction(t *testing.T) {
 		{},
 	}
 	MarkRefusedSuggestions(reader(readerOnly), rows)
-	if got := rows[0].Action.BlockedReason; got == nil || *got != "You do not have permission to add tasks" {
-		t.Errorf("add_task: %v", got)
-	}
-	if got := rows[1].Action.BlockedReason; got == nil || *got != "You do not have permission to send email" {
-		t.Errorf("draft_reply: %v", got)
+	for _, row := range rows[:2] {
+		if got := row.Action.BlockedReason; got == nil || *got != roleReadsOnly["en"] {
+			t.Errorf("%s: %v, want the role sentence", row.Action.Kind, got)
+		}
 	}
 	if got := rows[2].Action.BlockedReason; got != nil {
 		t.Errorf("open_deal only reads, and was refused: %q", *got)
@@ -126,5 +125,12 @@ func TestAskingTheManagerAsksTheDealGrantNotTheActivityGrant(t *testing.T) {
 	}
 	if got := MoveRefusal(asWho(principal.ObjectGrant{Read: true, Update: true}), crmcontracts.WorklistMoveActionBringInManager); got != nil {
 		t.Errorf("a seat that may update deals was refused: %q", *got)
+	}
+}
+
+func TestAskingTheManagerForARoleThatOnlyReadsSaysTheRoleSentence(t *testing.T) {
+	got := MoveRefusal(reader(readerOnly), crmcontracts.WorklistMoveActionBringInManager)
+	if got == nil || *got != roleReadsOnly["en"] {
+		t.Errorf("a role that only reads got %v, want the role sentence", got)
 	}
 }
