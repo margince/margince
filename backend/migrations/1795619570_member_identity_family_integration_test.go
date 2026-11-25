@@ -30,7 +30,7 @@ func TestAMemberIdentityFamilyReadsTheSameAcrossItsPlanChange(t *testing.T) {
 	if err != nil {
 		t.Fatalf("loading core: %v", err)
 	}
-	through := namespaceThroughVersion(t, core, "1795596248")
+	through := namespaceThroughVersion(t, core, "1795619570")
 	if _, err := dbmigrate.Up(ctx, conn, through); err != nil {
 		t.Fatalf("up: %v", err)
 	}

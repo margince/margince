@@ -60,7 +60,7 @@ func leadTaskWorkSQL(ctx context.Context, arg func(any) int) (string, error) {
 }
 
 // leadOpenTasksSQL is the lead's open current tasks, one row each. work is the
-// largest clause of the lead read, and Postgres plans each copy of it, so the
+// largest clause of the lead read, and Postgres plans each copy of it. So the
 // count, the next task and its deadline all read this one table.
 //
 // readable is the audience. A limited task is not the "next task" of a card
@@ -76,8 +76,8 @@ func leadOpenTasksSQL(work string) string {
 }
 
 // nextLeadTaskSQL is one column of the next readable row of leadOpenTasksSQL.
-// The title and the deadline describe one task, so both take it by this order:
-// two orders could put one task's title beside another task's deadline.
+// The title and the deadline describe one task, so both take it by this order.
+// Two orders could put one task's title beside another task's deadline.
 func nextLeadTaskSQL(column string) string {
 	return `(array_agg(task.` + column + ` ORDER BY task.due_order NULLS LAST, task.created_at, task.id) FILTER (WHERE task.readable))[1]`
 }
@@ -88,9 +88,9 @@ func leadNextTaskDueSQL(work string) string {
 	return `(SELECT ` + nextLeadTaskSQL("due") + ` FROM ` + leadOpenTasksSQL(work) + `)`
 }
 
-// leadTaskSummarySQL is one record of the open task count, the next task's
-// descriptor (its title in the reader's language, as History names it) and
-// its deadline.
+// leadTaskSummarySQL is one record: the open task count, the next task's
+// descriptor and its deadline. The descriptor names the task in the reader's
+// language, as History names it.
 func leadTaskSummarySQL(work string) string {
 	return `(SELECT ROW(count(*), ` + nextLeadTaskSQL("descriptor") + `, ` + nextLeadTaskSQL("due") + `) FROM ` + leadOpenTasksSQL(work) + `)`
 }
