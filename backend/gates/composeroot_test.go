@@ -38,7 +38,7 @@ const (
 	// Raised by 2 files for the extension mail-file read cases and the purge
 	// receipt cases, which drive this package's unexported seams. Raised by 1
 	// production and 1 test file for the series-split fold and its cases.
-	composeRootTestFiles = 1911
+	composeRootTestFiles = 1912
 	// Raised by 107 for the floor of a figure every reader is shown alike. Raised
 	// by 1 for the import that binds one zone lookup to each attention read.
 	// Raised by 249 production and 62 test lines for the full-path certification
@@ -61,8 +61,8 @@ const (
 	// case, which drives the unexported mail worker over two team links.
 	// Raised by 2 production lines for the stage-evidence prompt rule on a
 	// document a criterion asks to be sent, which is the site's own prompt text.
-	composeRootProductionLines = 230_699
-	composeRootTestLines       = 360_140
+	composeRootProductionLines = 230_705
+	composeRootTestLines       = 360_167
 )
 
 // A read under these floors stopped early or read the wrong place, and would
