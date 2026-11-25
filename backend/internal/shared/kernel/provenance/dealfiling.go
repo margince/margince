@@ -23,12 +23,15 @@ const (
 const ExtensionHooksKey = "extension_hooks"
 
 // LatestDealFilingSQL selects the actor type and the first extension hook of
-// the latest relink row about activity and deal, or no row. Both arguments are
-// compile-time SQL expressions.
+// the latest relink row about activity and deal, or no row. A machine's mark
+// on a link that already existed is skipped: it marks the filing and does not
+// make one. Only a mark's before-image carries the relevance. Both arguments
+// are compile-time SQL expressions.
 func LatestDealFilingSQL(activity, deal string) string {
 	return `SELECT f.actor_type, f.evidence->'` + ExtensionHooksKey + `'->0 FROM audit_log f
 	  WHERE f.entity_type = 'activity' AND f.entity_id = ` + activity + ` AND f.action = 'activity_relink'
 	    AND coalesce(f.after->>'entity_type', f.before->>'entity_type') = 'deal' AND ` + relinkRecordSQL("f") + ` = (` + deal + `)::text
+	    AND NOT (f.actor_type NOT IN ('human', 'agent') AND coalesce(f.before ? 'deal_relevance', false))
 	  ORDER BY f.occurred_at DESC, f.id DESC LIMIT 1`
 }
 

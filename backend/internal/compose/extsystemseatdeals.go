@@ -98,10 +98,24 @@ func (d systemDeals) ResponsibleAs(ctx context.Context, actAs extension.UserID, 
 	if err := seat.trace(fieldmask.Deal, dealID, nil); err != nil {
 		return nil, err
 	}
-	if err := seat.opensDeal(seatCtx, id); err != nil {
+	// The answer is about the deal a merge carried on in, so the seat must open
+	// that deal and not only the one it named.
+	var survivor ids.UUID
+	err = database.WithWorkspaceTx(seatCtx, d.rt.deps.pool, func(tx pgx.Tx) error {
+		var err error
+		survivor, err = deals.FollowMergeTx(seatCtx, tx, id)
+		return err
+	})
+	if errors.Is(err, pgx.ErrNoRows) {
+		return nil, extension.ErrNotFound
+	}
+	if err != nil {
+		return nil, seat.seatFault(err)
+	}
+	if err := seat.opensDeal(seatCtx, survivor); err != nil {
 		return nil, err
 	}
-	responsible, err := readDealResponsible(seatCtx, d.rt.deps.pool, id)
+	responsible, err := readDealResponsible(seatCtx, d.rt.deps.pool, survivor)
 	if err != nil && !errors.Is(err, extension.ErrNotFound) {
 		return nil, seat.seatFault(err)
 	}

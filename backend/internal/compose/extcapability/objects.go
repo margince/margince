@@ -105,12 +105,19 @@ func (o Objects) Put(ctx context.Context, name string, content []byte) error {
 		}
 		return ObjectChange{Action: ObjectPut, Name: name, Size: size, Usage: moved}, nil
 	}
-	return o.Ledger(ctx, o.Unit, plan, func() error {
+	err = o.Ledger(ctx, o.Unit, plan, func() error {
 		if err := o.Store.Put(ctx, key, bytes.NewReader(content), size, extension.SniffContentType(content)); err != nil {
 			return o.fault(ctx, err)
 		}
 		return nil
 	})
+	if !errors.Is(err, ErrWrittenNotRecorded) {
+		return err
+	}
+	if undo := o.Store.Delete(ctx, key); undo != nil {
+		slog.ErrorContext(ctx, "extcapability: an uncounted extension object could not be deleted", "err", undo, "unit", o.Unit)
+	}
+	return ErrObjectsFailed
 }
 
 // measure answers the size of the object at key, and whether there is one.
@@ -151,7 +158,8 @@ func (o Objects) Get(ctx context.Context, name string) (extension.Object, error)
 	return extension.Object{Content: content, ContentType: meta.ContentType}, nil
 }
 
-// Delete removes the object. A missing one is not an error.
+// Delete removes the object. A missing one is not an error, and is neither
+// counted nor audited.
 func (o Objects) Delete(ctx context.Context, name string) error {
 	ctx, key, err := o.key(ctx, name)
 	if err != nil {
@@ -160,16 +168,21 @@ func (o Objects) Delete(ctx context.Context, name string) error {
 	plan := func(Usage) (ObjectChange, error) {
 		old, existed, err := o.measure(ctx, key)
 		if err != nil || !existed {
-			return ObjectChange{Action: ObjectDelete, Name: name}, err
+			return ObjectChange{}, err
 		}
 		return ObjectChange{Action: ObjectDelete, Name: name, Size: old, Usage: Usage{Objects: -1, Bytes: -old}}, nil
 	}
-	return o.Ledger(ctx, o.Unit, plan, func() error {
+	err = o.Ledger(ctx, o.Unit, plan, func() error {
 		if err := o.Store.Delete(ctx, key); err != nil {
 			return o.fault(ctx, err)
 		}
 		return nil
 	})
+	// The object is gone and stays counted, which only overstates the usage.
+	if errors.Is(err, ErrWrittenNotRecorded) {
+		return ErrObjectsFailed
+	}
+	return err
 }
 
 func (o Objects) fault(ctx context.Context, err error) error {

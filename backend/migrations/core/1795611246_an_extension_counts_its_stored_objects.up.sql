@@ -6,7 +6,7 @@
 -- count and total size itself. Each Put and Delete updates this row in the
 -- transaction that writes its audit row, which names the row by id. One row
 -- per unit; an installation holds one workspace.
-CREATE TABLE extension_object_usage (
+CREATE TABLE IF NOT EXISTS extension_object_usage (
     id uuid NOT NULL,
     unit text NOT NULL,
     objects bigint NOT NULL DEFAULT 0,

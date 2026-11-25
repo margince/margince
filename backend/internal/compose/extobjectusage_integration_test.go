@@ -35,6 +35,7 @@ func TestEachObjectCallIsCountedAndAudited(t *testing.T) {
 		func() error { return objects.Put(ctx, "a", []byte("abcde")) },
 		func() error { return objects.Put(ctx, "b", []byte("xy")) },
 		func() error { return objects.Delete(ctx, "b") },
+		func() error { return objects.Delete(ctx, "never-stored") },
 	} {
 		if err := call(); err != nil {
 			t.Fatalf("call %d: %v", i, err)
@@ -45,9 +46,9 @@ func TestEachObjectCallIsCountedAndAudited(t *testing.T) {
 	}
 	audited := e.WsCount(t, `SELECT count(*) FROM audit_log a JOIN extension_object_usage u ON u.id = a.entity_id
 		WHERE a.entity_type = 'extension_object_usage' AND u.unit = 'summaries' AND a.evidence->>'extension' = 'summaries'
-		  AND a.evidence->>'object' IN ('a', 'b')`)
+		  AND a.evidence->>'object' IN ('a', 'b', 'never-stored')`)
 	if audited != 4 {
-		t.Errorf("four object calls left %d audit rows naming the unit and the object, want 4", audited)
+		t.Errorf("four object calls and a no-op delete left %d audit rows naming the unit and the object, want 4", audited)
 	}
 }
 

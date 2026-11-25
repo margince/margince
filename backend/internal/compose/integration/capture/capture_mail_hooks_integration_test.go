@@ -123,6 +123,18 @@ func TestTheActivityReadNamesWhoFiledAMailOnItsDeal(t *testing.T) {
 	if got := filedBy(t, e, w, mail, chosen); got != "deal-rules/deal/names_reporting" {
 		t.Errorf("the unit's filing reads as %q, want deal-rules/deal/names_reporting", got)
 	}
+	// The classifier's later mark on the link does not take the filing over.
+	system := newRepairer(e, w).system
+	if err := database.WithWorkspaceTx(system, e.Pool, func(tx pgx.Tx) error {
+		_, err := activities.MarkDealLinkTx(system, tx, ids.From[ids.ActivityKind](mail), chosen, "uncertain", nil)
+		return err
+	}); err != nil {
+		t.Fatalf("the classifier's mark: %v", err)
+	}
+	wantMark(t, e, "filer2@acme.example", chosen, "uncertain/classifier")
+	if got := filedBy(t, e, w, mail, chosen); got != "deal-rules/deal/names_reporting" {
+		t.Errorf("after the classifier's mark the filing reads as %q, want the unit still", got)
+	}
 	if status, _ := decline(w.ctx, t, e, mail, dealBody(chosen)); status != http.StatusOK {
 		t.Fatalf("the decline answered %d", status)
 	}

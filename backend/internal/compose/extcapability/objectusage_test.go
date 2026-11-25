@@ -6,6 +6,7 @@ package extcapability_test
 import (
 	"context"
 	"errors"
+	"strings"
 	"testing"
 
 	"github.com/margince/margince/backend/internal/compose/extcapability"
@@ -14,7 +15,8 @@ import (
 )
 
 // ledger is the database boundary of an object call. It holds one unit's
-// usage and the changes logged, and refuses to record when down is set.
+// usage and the changes logged. When down is set its commit fails after the
+// store call, as PoolLedger's does.
 type ledger struct {
 	held   extcapability.Usage
 	logged []extcapability.ObjectChange
@@ -23,14 +25,14 @@ type ledger struct {
 
 func (l *ledger) run(_ context.Context, _ string, plan func(extcapability.Usage) (extcapability.ObjectChange, error), write func() error) error {
 	change, err := plan(l.held)
-	if err != nil {
+	if err != nil || change == (extcapability.ObjectChange{}) {
 		return err
-	}
-	if l.down {
-		return extcapability.ErrObjectsFailed
 	}
 	if err := write(); err != nil {
 		return err
+	}
+	if l.down {
+		return extcapability.ErrWrittenNotRecorded
 	}
 	l.logged = append(l.logged, change)
 	l.held.Objects += change.Usage.Objects
@@ -61,7 +63,6 @@ func TestEachPutAndDeleteIsLoggedAndCounted(t *testing.T) {
 		{Action: extcapability.ObjectPut, Name: "report", Size: 5, Usage: extcapability.Usage{Objects: 1, Bytes: 5}},
 		{Action: extcapability.ObjectPut, Name: "report", Size: 2, Usage: extcapability.Usage{Bytes: -3}},
 		{Action: extcapability.ObjectDelete, Name: "report", Size: 2, Usage: extcapability.Usage{Objects: -1, Bytes: -2}},
-		{Action: extcapability.ObjectDelete, Name: "report"},
 	}
 	if len(l.logged) != len(want) {
 		t.Fatalf("logged %+v, want %+v", l.logged, want)
@@ -76,15 +77,30 @@ func TestEachPutAndDeleteIsLoggedAndCounted(t *testing.T) {
 	}
 }
 
-func TestAPutThatCannotBeLoggedStoresNothing(t *testing.T) {
+// A count that does not commit after the store call leaves the usage high,
+// never low: the Put's bytes are taken back, and the deleted object stays
+// counted.
+func TestAnObjectCallWhoseCountDoesNotCommitNeverLeavesAnObjectUncounted(t *testing.T) {
 	t.Parallel()
 	ctx, ws := inWorkspace()
 	store := blobstore.NewMemory()
-	if err := objectsOver(store, &ledger{down: true}).Put(ctx, "report", []byte("x")); !errors.Is(err, extcapability.ErrObjectsFailed) {
-		t.Errorf("Put with the log down: err = %v, want ErrObjectsFailed", err)
+	key := extcapability.Prefix(ws, "u") + "report"
+	l := &ledger{down: true}
+	if err := objectsOver(store, l).Put(ctx, "report", []byte("x")); !errors.Is(err, extcapability.ErrObjectsFailed) {
+		t.Errorf("Put whose count did not commit: err = %v, want ErrObjectsFailed", err)
 	}
-	if _, _, err := store.Get(ctx, extcapability.Prefix(ws, "u")+"report"); !errors.Is(err, blobstore.ErrNotFound) {
-		t.Errorf("the object was stored though its log row was not: err = %v", err)
+	if _, _, err := store.Get(ctx, key); !errors.Is(err, blobstore.ErrNotFound) {
+		t.Errorf("the uncounted object stayed in the store: err = %v", err)
+	}
+	if err := store.Put(ctx, key, strings.NewReader("abc"), 3, "text/plain"); err != nil {
+		t.Fatal(err)
+	}
+	l.held = extcapability.Usage{Objects: 1, Bytes: 3}
+	if err := objectsOver(store, l).Delete(ctx, "report"); !errors.Is(err, extcapability.ErrObjectsFailed) {
+		t.Errorf("Delete whose count did not commit: err = %v, want ErrObjectsFailed", err)
+	}
+	if l.held != (extcapability.Usage{Objects: 1, Bytes: 3}) {
+		t.Errorf("usage after an uncounted delete = %+v, want it still counted", l.held)
 	}
 }
 

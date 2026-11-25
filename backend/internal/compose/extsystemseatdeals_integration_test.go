@@ -14,7 +14,11 @@ import (
 	"errors"
 	"testing"
 
+	"github.com/jackc/pgx/v5"
+
+	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/shared/kernel/fieldmask"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/pkg/extension"
 )
 
@@ -51,6 +55,37 @@ func TestASeatBoundDealReadAnswersOnlyWhatTheSeatMayOpen(t *testing.T) {
 		if !errors.Is(err, extension.ErrNotFound) {
 			t.Errorf("%s of a deal outside the seat's row scope: err = %v, want ErrNotFound", read, err)
 		}
+	}
+}
+
+// The seat opens the deal it names, which was merged into one it may not open.
+// The colleagues are the survivor's, so the read is refused.
+func TestResponsibleAsRefusesTheSurvivorOfAMergeTheSeatCannotOpen(t *testing.T) {
+	s := setupSystemRead(t)
+	seat := s.serviceSeat(t, seatOwnDealGrants)
+	var pipeline, stage ids.UUID
+	s.read(t, func(ctx context.Context, tx pgx.Tx) error {
+		return tx.QueryRow(ctx, `SELECT pipeline_id, stage_id FROM deal WHERE id = $1`, s.deal).Scan(&pipeline, &stage)
+	})
+	source, err := s.Deals.CreateDeal(s.Admin(), deals.CreateDealInput{
+		Name: "Fleet renewal, second copy", PipelineID: ids.From[ids.PipelineKind](pipeline),
+		StageID: ids.From[ids.StageKind](stage), Source: "manual",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	sourceID := ids.From[ids.DealKind](ids.UUID(source.Id))
+	if _, err := s.Deals.MergeDeal(s.Admin(), sourceID, ids.From[ids.DealKind](s.deal), nil); err != nil {
+		t.Fatalf("merging the copy into the deal: %v", err)
+	}
+	s.WsExec(t, `UPDATE deal SET owner_id = $1 WHERE id = $2`, seat, sourceID.UUID)
+	var refused error
+	s.onDelivery(t, func(ctx context.Context, rt extension.Runtime) error {
+		_, refused = rt.Deals().ResponsibleAs(ctx, extension.UserID(seat.String()), sourceID.String())
+		return nil
+	})
+	if !errors.Is(refused, extension.ErrNotFound) {
+		t.Errorf("ResponsibleAs through a merge into a deal outside the seat's scope: err = %v, want ErrNotFound", refused)
 	}
 }
 
