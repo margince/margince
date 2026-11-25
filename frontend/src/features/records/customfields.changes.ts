@@ -9,7 +9,6 @@ import {
   type CfObject,
   customFieldLabel,
 } from "../../lib/customfields.logic";
-import { entryName } from "../settings/audit";
 
 type AuditLogEntry = components["schemas"]["AuditLogEntry"];
 type CustomField = components["schemas"]["CustomField"];
@@ -67,18 +66,19 @@ export function fieldChangeKeys(entry: AuditLogEntry): readonly MessageKey[] {
 
 /**
  * The field an entry changed, as "Contact · Budget". It comes from the catalog
- * row the reader holds, else from the object and label the entry carries.
+ * row the reader holds, else from the object and the name the entry recorded.
  */
 export function fieldTarget(
   entry: AuditLogEntry,
   field: CustomField | undefined,
+  recorded: string | undefined,
   t: Translator,
   locale: string,
 ): string | undefined {
   const written: unknown = entry.after?.object;
   const object: CfObject | undefined =
     field?.object ?? CF_OBJECTS.find((one) => one === written);
-  const name = field ? customFieldLabel(field, locale) : entryName(entry);
+  const name = field ? customFieldLabel(field, locale) : recorded;
   if (object === undefined) return name;
   const objectName = t(`cf.obj.${object}`);
   return name ? `${objectName} · ${name}` : objectName;
