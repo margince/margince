@@ -77861,6 +77861,13 @@ components:
           type: array
           items: { type: string }
           description: The member's role keys. Present only when `detail` is true.
+        role_names:
+          type: object
+          additionalProperties: { type: string }
+          description: >
+            The name an admin gave each live role in `roles`, keyed by role key, so a reader who may
+            not read the role directory still sees a custom role by its name. Present only when
+            `detail` is true. Absent from an older server; a key it does not name is shown as the key.
     RecordAccessReason:
       type: object
       description: |
