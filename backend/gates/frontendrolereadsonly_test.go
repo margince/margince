@@ -58,9 +58,9 @@ func TestTheServersRefusalsAreTheRecordPagesSentences(t *testing.T) {
 // so a language added there is a language this gate reads.
 func refusalPhraseLanguages() []string {
 	shape := reflect.TypeFor[langcopy.Phrase]()
-	languages := make([]string, 0, shape.NumField())
-	for i := range shape.NumField() {
-		languages = append(languages, strings.ToLower(shape.Field(i).Name))
+	var languages []string
+	for field := range shape.Fields() {
+		languages = append(languages, strings.ToLower(field.Name))
 	}
 	slices.Sort(languages)
 	return languages
