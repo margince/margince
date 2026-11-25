@@ -25,8 +25,8 @@ import { InstallationSettingsCard } from "./installation-settings";
 // installation_settings:update opens the dialog that changes them, so the verb
 // is refused with a reason (never hidden) for everyone else.
 //
-// Beyond that, the base currency's lock: the row and the field both carry the
-// reason the server reports, so nobody types a value they cannot save.
+// The base currency's lock: the row and the field both carry the server's
+// reason. So nobody types a value they cannot save.
 
 function jsonResponse(body: unknown, status = 200) {
   return new Response(JSON.stringify(body), {
