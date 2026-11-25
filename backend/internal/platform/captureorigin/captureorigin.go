@@ -17,10 +17,18 @@ const (
 )
 
 // ContactSQL is the test that capture created the contact aliased p. The
-// arguments hold VerdictActor, AcceptActor and the capture channel. The vCard
+// arguments hold VerdictActor, AcceptActor and the import channel. The vCard
 // ingest and an import also run as connectors, and their channel is import.
 // The database maps a source the correction task has not reached yet.
-func ContactSQL(verdict, accept, capture string) string {
+func ContactSQL(verdict, accept, imported string) string {
 	return `(p.captured_by LIKE 'connector:%' OR p.captured_by IN (` + verdict + `, ` + accept + `))
-		   AND party_source_channel(p.source, p.source_system) = ` + capture
+		   AND party_source_channel(p.source, p.source_system) <> ` + imported + `
+		   AND ` + NoOtherSystemSQL("p.source_system")
+}
+
+// NoOtherSystemSQL tests that column names no system but the connector or
+// writer the source mapping fills. Each such name maps to itself, and an
+// import's or an integration's name does not. column is a compile-time expression.
+func NoOtherSystemSQL(column string) string {
+	return "(" + column + " IS NULL OR party_source_producer(" + column + ") = " + column + ")"
 }

@@ -75,7 +75,7 @@ func CaptureMintedForSeatTx(ctx context.Context, tx pgx.Tx, seat ids.UUID, candi
 		          AND m.after ->> $7 = p.id::text)
 		   AND NOT `+writtenAboutByAnybodySQL("$3", "$4", "$6")+`
 		 ORDER BY p.id`,
-		candidates, seat, CaptureVerdictActor, CaptureAcceptActor, provenance.RecordSourceCapture, DisplayNameRepairActor,
+		candidates, seat, CaptureVerdictActor, CaptureAcceptActor, provenance.RecordSourceImport, DisplayNameRepairActor,
 		auditKeyMergedInto)
 	if err != nil {
 		return nil, fmt.Errorf("contacts: reading which contacts capture made for a seat: %w", err)

@@ -64,6 +64,8 @@ func TestTheTaskMovesOlderContactsAndCompaniesOntoAChannel(t *testing.T) {
 	plant("contact", "public_booking", nil, [2]string{"webform", "public_booking"})
 	plant("contact", "mirror:csv:bundle:contact:7", &csv, [2]string{"import", csv})
 	plant("contact", "website footer", nil, [2]string{"api", ""})
+	crmImport := "crm_import"
+	plant("contact", "gmail:msg-9", &crmImport, [2]string{"import", crmImport})
 	plant("company", "domain_triage:acme.test", nil, [2]string{"capture", "domain_triage"})
 	plant("company", "coldstart", nil, [2]string{"automation", "coldstart"})
 	plant("company", "mirror:csv:bundle:contact:8", nil, [2]string{"import", csv})

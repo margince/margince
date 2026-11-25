@@ -24,12 +24,13 @@ LANGUAGE sql IMMUTABLE AS $$
  END
 $$;
 
--- Maps an older contact or company source onto its channel. An extension's
--- word is an import when the writer also named the system, else a capture.
+-- Maps an older contact or company source onto its channel. A row whose writer
+-- named a system other than the stamp's own was imported, as an extension's was.
 CREATE FUNCTION party_source_channel(source text, source_system text) RETURNS text
 LANGUAGE sql IMMUTABLE AS $$
  SELECT CASE
   WHEN source LIKE 'mirror:%' OR (source LIKE 'ext:%' AND source_system IS NOT NULL) THEN 'import'
+  WHEN party_source_producer(source) <> source_system THEN 'import'
   WHEN party_source_producer(source) IN ('erasure_return', 'public_booking', 'web_form') THEN 'webform'
   WHEN party_source_producer(source) = 'vcard_import' THEN 'import'
   WHEN party_source_producer(source) = 'coldstart' THEN 'automation'

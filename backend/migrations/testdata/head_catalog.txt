@@ -8419,6 +8419,7 @@ public.partner_stage_pkey CREATE UNIQUE INDEX partner_stage_pkey ON public.partn
 public.party_source_channel(source text, source_system text) secdef=false cfg=- acl=- 
  SELECT CASE
   WHEN source LIKE 'mirror:%' OR (source LIKE 'ext:%' AND source_system IS NOT NULL) THEN 'import'
+  WHEN party_source_producer(source) <> source_system THEN 'import'
   WHEN party_source_producer(source) IN ('erasure_return', 'public_booking', 'web_form') THEN 'webform'
   WHEN party_source_producer(source) = 'vcard_import' THEN 'import'
   WHEN party_source_producer(source) = 'coldstart' THEN 'automation'

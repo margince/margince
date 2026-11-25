@@ -10,6 +10,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/platform/auth"
+	"github.com/margince/margince/backend/internal/platform/captureorigin"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -30,7 +31,8 @@ type OutsideID struct {
 // stageAdoptedSource stages an outside id onto a hand-made company. A company
 // that holds one, or names another system, is refused. Stamping over it would
 // take the record from the system that owns it. A connector or writer the
-// source mapping put in source_system owns nothing, so a captured company can be adopted.
+// source mapping put in source_system owns nothing, so a captured company can
+// be adopted.
 func stageAdoptedSource(ctx context.Context, tx pgx.Tx, id ids.CompanyID, p *storekit.Patch, adopt *OutsideID) error {
 	if adopt == nil {
 		return nil
@@ -43,8 +45,7 @@ func stageAdoptedSource(ctx context.Context, tx pgx.Tx, id ids.CompanyID, p *sto
 	}
 	var held bool
 	if err := tx.QueryRow(ctx,
-		`SELECT source_id IS NOT NULL
-		        OR (source_system IS NOT NULL AND source_system IS DISTINCT FROM party_source_producer(source_system))
+		`SELECT source_id IS NOT NULL OR NOT `+captureorigin.NoOtherSystemSQL("source_system")+`
 		   FROM company WHERE id = $1 FOR UPDATE`, id.UUID).Scan(&held); err != nil {
 		return fmt.Errorf("read the company's outside id: %w", err)
 	}

@@ -134,7 +134,7 @@ func captureGuessedDisplayNamesTx(
 		          AND NOT (`+captureWriterSQL("a.actor_id", "$2", "$3", "$9")+` OR a.actor_id IN ($11, $14)))
 		 ORDER BY p.id
 		 LIMIT $6`,
-		only, CaptureVerdictActor, CaptureAcceptActor, provenance.RecordSourceCapture, rule.needPair, limit,
+		only, CaptureVerdictActor, CaptureAcceptActor, provenance.RecordSourceImport, rule.needPair, limit,
 		first, last, DisplayNameRepairActor, rule.keepWhenPairShown, enrichCapturedBy,
 		rule.unsplitMaxLen, rule.among, InitialsRepairActor)
 	if err != nil {
