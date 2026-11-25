@@ -285,6 +285,7 @@ class RunAgyTest(unittest.TestCase):
         # The operator's home: their agy settings and the keychain that holds the sign-in.
         self.home = tempfile.mkdtemp()
         os.makedirs(os.path.join(self.home, "Library", "Keychains"))
+        os.makedirs(os.path.join(self.home, "Library", "Application Support", "antigravity"))
         os.makedirs(os.path.join(self.home, ".gemini", "antigravity-cli"))
         self.env = {"PATH": self.bin + os.pathsep + os.environ["PATH"], "FAKE_AGY_SEEN": self.seen_file,
                     "FAKE_AGY_OUT": SAMPLE, "FAKE_AGY_HOME": HOME, "MARGINCE_E2E_TOKEN": "s3cr3t-passport", "HOME": self.home,
@@ -338,10 +339,12 @@ class RunAgyTest(unittest.TestCase):
         self.assertEqual(seen["cwd"], [".agents"])
         self.assertEqual(list(seen["agents"]), ["margince-e2e-llm.md"])
 
-    def test_agy_runs_in_a_home_of_its_own_that_links_only_the_keychain(self):
+    def test_agy_runs_in_a_home_of_its_own_that_links_only_the_sign_in(self):
         _code, _out, seen = self.run_agy()
         self.assertNotEqual(os.path.realpath(seen["home"]), os.path.realpath(self.home))
-        self.assertEqual(seen["home_holds"], ["Library", os.path.join("Library", "Keychains")])
+        self.assertEqual(seen["home_holds"], ["Library", os.path.join("Library", "Application Support"),
+                                              os.path.join("Library", "Application Support", "antigravity"),
+                                              os.path.join("Library", "Keychains")])
         self.assertEqual(seen["keychains"], os.path.realpath(os.path.join(self.home, "Library", "Keychains")))
         self.assertFalse(os.path.exists(seen["home"]), "the run's home outlives the run")
 

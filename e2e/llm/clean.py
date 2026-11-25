@@ -88,23 +88,25 @@ def codex_env(home):
     return {**os.environ, "CODEX_HOME": home, "HOME": home}
 
 
-# On macOS agy keeps its sign-in in the login keychain, which it finds under $HOME;
-# with HOME empty it asks for a browser sign-in and print mode fails.
-AGY_KEYCHAINS = os.path.join("Library", "Keychains")
+# On macOS agy keeps its sign-in in the login keychain, which it finds under $HOME,
+# and (since 1.5.17) names the account scope in a file beside it; with either
+# missing it asks for a browser sign-in and print mode fails.
+AGY_SIGN_IN = (os.path.join("Library", "Keychains"), os.path.join("Library", "Application Support", "antigravity"))
 
 
 @contextlib.contextmanager
 def agy_home():
     """A HOME for agy that holds none of the operator's agy settings, skills or past chats.
 
-    Only the keychain folder is linked in, so the sign-in still works. Everything
-    else under it is written by the one run that uses it.
+    Only the places that hold the sign-in are linked in. Everything else under it
+    is written by the one run that uses it.
     """
     with tempfile.TemporaryDirectory(prefix="e2e-llm-agy-home.") as home:
-        keychains = os.path.join(os.path.expanduser("~"), AGY_KEYCHAINS)
-        if os.path.isdir(keychains):
-            os.makedirs(os.path.join(home, os.path.dirname(AGY_KEYCHAINS)))
-            os.symlink(keychains, os.path.join(home, AGY_KEYCHAINS))
+        for place in AGY_SIGN_IN:
+            operator = os.path.join(os.path.expanduser("~"), place)
+            if os.path.isdir(operator):
+                os.makedirs(os.path.join(home, os.path.dirname(place)), exist_ok=True)
+                os.symlink(operator, os.path.join(home, place))
         yield home
 
 
