@@ -416,10 +416,10 @@ func seedOpenContractEndedOnContact(t *testing.T, e *integration.Env, company, c
 		_, err := tx.Exec(context.Background(), `
 			INSERT INTO signal (id, kind, source_channel, entity_type, entity_id,
 			                    resolved_company_id, resolution_state, severity, summary, status,
-			                    detected_at, source, captured_by)
+			                    detected_at, source, source_system, captured_by)
 			VALUES ($1, 'contract_ended', 'derived', 'contact', $2, $3, 'resolved',
 			        'warn', 'Their contact wrote that the renewal will not proceed.', 'open',
-			        now(), 'signal-scan', 'agent:contract_ended')`,
+			        now(), 'automation', 'signal-scan', 'agent:contract_ended')`,
 			signal, contact, company)
 		return err
 	}); err != nil {

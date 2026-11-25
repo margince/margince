@@ -192,6 +192,7 @@ func loadAICertPresets(t *testing.T) []aiCertPreset {
 var aiCertPresetOrder = []string{
 	"gemini_cloud.yaml",
 	"gemini_vertex_eu.yaml",
+	"anthropic_cloud.yaml",
 	"openrouter_openai.yaml",
 	"openrouter_cloud.yaml",
 	"consumer_class_brokered.yaml",

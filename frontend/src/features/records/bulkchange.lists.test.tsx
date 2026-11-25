@@ -178,7 +178,7 @@ describe.each(cases)("the $screen list's bulk bar", (entry) => {
     ]) {
       const button = screen.getByRole("button", { name: verb });
       expect(button).toBeDisabled();
-      expect(button).toHaveAccessibleDescription(en["record.actionRefused"]);
+      expect(button).toHaveAccessibleDescription(en["record.roleReadsOnly"]);
       sentences.add(button.getAttribute("aria-describedby"));
     }
     expect(sentences.size).toBe(1);

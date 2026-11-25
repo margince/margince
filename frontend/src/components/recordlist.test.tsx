@@ -3,10 +3,11 @@ import "@testing-library/jest-dom/vitest";
 import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { cleanup, screen } from "@testing-library/react";
+import { cleanup, render as renderNode, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it } from "vitest";
-import { useT } from "../i18n";
+import { ABSENT } from "../format/absent";
+import { type Translator, translate, useT } from "../i18n";
 import { emptyPage, type Row, render } from "../testing/listquery.testkit";
 import {
   type ListQuery,
@@ -16,6 +17,7 @@ import {
 } from "./listquery";
 import {
   createdColumn,
+  lastActivityCell,
   mineEmptyLine,
   ownerColumn,
   sharedEmptyLine,
@@ -24,6 +26,7 @@ import {
 } from "./recordlist";
 
 const here = dirname(fileURLToPath(import.meta.url));
+const t: Translator = (key, params) => translate("en", key, params);
 
 // The record lists that share the Owner/Created columns and the standard
 // views. A fourth owner-scoped list joins this array, not the copy-paste.
@@ -56,7 +59,6 @@ describe("one record list, three record types", () => {
   });
 
   it("the standard views are All, and Mine only for a signed-in reader", () => {
-    const t = ((key: string) => key) as Parameters<typeof ownerColumn>[0];
     expect(ownerColumn(t).sort).toBe("owner_id");
     // The zone is what the column RENDERS its dates in; this line asserts what
     // it SORTS on, which the zone cannot change. Any zone the column would
@@ -82,6 +84,27 @@ describe("one record list, three record types", () => {
   });
 });
 
+describe("an empty date cell", () => {
+  afterEach(cleanup);
+
+  // The same mark the other empty cells show, so a blank cell never reads as
+  // a value that failed to load.
+  it("shows the absent mark for a row with no last activity and no created date", () => {
+    const row = { last_activity_at: null };
+    const created = createdColumn<typeof row>(t, "en", "UTC");
+    renderNode(
+      <>
+        <p data-testid="last">
+          {lastActivityCell<typeof row>("en", "UTC")(row)}
+        </p>
+        <p data-testid="created">{created.cell(row)}</p>
+      </>,
+    );
+    expect(screen.getByTestId("last").textContent).toBe(ABSENT);
+    expect(screen.getByTestId("created").textContent).toBe(ABSENT);
+  });
+});
+
 describe("the Shared with me view", () => {
   it("narrows by the reader's grants and names no owner", () => {
     expect(sharedWithMeView().filters).toEqual({ shared_with_me: "true" });
@@ -89,7 +112,6 @@ describe("the Shared with me view", () => {
 });
 
 describe("the Mine empty note", () => {
-  const t = ((key: string) => key) as Parameters<typeof mineEmptyLine>[0]["t"];
   const listOn = (query: Partial<ListQuery>): ListState<{ id: string }> => ({
     rows: [],
     query: {

@@ -5,7 +5,12 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { plantedFindings, srcDir } from "../tree";
-import { glyphsInMenus, MENU, rule } from "./overflowmenu-icons.census";
+import {
+  glyphsInMenus,
+  MENU,
+  menuTags,
+  rule,
+} from "./overflowmenu-icons.census";
 
 describe("an item in an overflow menu carries words, not glyphs", () => {
   it("names a menu the design system still exports", () => {
@@ -57,12 +62,67 @@ describe("an item in an overflow menu carries words, not glyphs", () => {
   });
 });
 
+describe("a component that renders its children into an overflow menu", () => {
+  const wrappersOf = (text: string) =>
+    [...menuTags([{ path: "fixture.tsx", text }])].filter(
+      (tag) => tag !== MENU,
+    );
+
+  it("is read off the design system's own source", () => {
+    const path = join(srcDir, "design-system", "projectlinks.tsx");
+    expect(menuTags([{ path, text: readFileSync(path, "utf8") }])).toContain(
+      "RemoveLinkMenu",
+    );
+  });
+
+  it("is found by every way a component hands its children on", () => {
+    expect(
+      wrappersOf(
+        `export function A({ children }) { return <${MENU} label="a">{children}<Button>Go</Button></${MENU}>; }
+         export const B = (props) => <${MENU}><div>{props.children}</div></${MENU}>;
+         export const C = ({ children: items }) => <${MENU}>{items}</${MENU}>;
+         export const D = ({ children }) => <A>{children}</A>;`,
+      ),
+    ).toEqual(["A", "B", "C", "D"]);
+  });
+
+  it("is not a component that keeps its children out of the menu", () => {
+    expect(
+      wrappersOf(
+        `export const A = ({ children }) => <div>{children}<${MENU}><Button>Go</Button></${MENU}></div>;
+         export const B = ({ children }) => <${MENU} label={children}><Button>Go</Button></${MENU}>;`,
+      ),
+    ).toEqual([]);
+  });
+});
+
 describe("the overflowmenu-icons rule", () => {
-  it("reports a planted glyph through its own corpus and visit", () => {
+  it("reports a planted glyph through its own corpus and walk", () => {
     const path = join(srcDir, "features", "planted.tsx");
     const text = `import { Mail } from "lucide-react";\nexport const F = () => <${MENU}><Mail /></${MENU}>;\n`;
     expect(plantedFindings(rule, [{ path, area: "src", text }])).toEqual([
       "src/features/planted.tsx:2: `Mail` is a glyph from lucide-react",
+    ]);
+  });
+
+  it("reports a glyph handed to a wrapper written in another file", () => {
+    const wrapper = join(srcDir, "design-system", "plantedmenu.tsx");
+    const screen = join(srcDir, "features", "planted.tsx");
+    expect(
+      plantedFindings(rule, [
+        {
+          path: wrapper,
+          area: "src",
+          text: `export function PlantedMenu({ children }) {\n  return <${MENU}>{children}<Button>Remove</Button></${MENU}>;\n}\n`,
+        },
+        {
+          path: screen,
+          area: "src",
+          text: `import { Mail } from "lucide-react";\nexport const F = () => (\n  <PlantedMenu><Button><Mail />Write</Button></PlantedMenu>\n);\n`,
+        },
+      ]),
+    ).toEqual([
+      "src/features/planted.tsx:3: `Mail` is a glyph from lucide-react",
     ]);
   });
 });

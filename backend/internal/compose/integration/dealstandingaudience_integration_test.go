@@ -236,8 +236,8 @@ func seedCachedStandingCiting(
 		t.Fatalf("seeding the reader: %v", err)
 	}
 	if _, err := e.Owner.Exec(context.Background(), `
-		INSERT INTO deal_status_card (user_id, deal_id, fingerprint, generated_at, generated_by, payload)
-		VALUES ($1, $2, 'fixture', now(), 'deterministic', $3)`,
+		INSERT INTO generated_summary (user_id, kind, deal_id, fingerprint, generated_at, generated_by, payload)
+		VALUES ($1, 'deal_status_card', $2, 'fixture', now(), 'deterministic', $3)`,
 		userID, deal, payload); err != nil {
 		t.Fatalf("seeding the cached card: %v", err)
 	}

@@ -1,0 +1,133 @@
+{
+  "task": "report_interpret",
+  "provider": "anthropic",
+  "served_model": "claude-haiku-5-5",
+  "env_class": "cloud_frontier",
+  "prompt_version": "p0a65e73d6f98235a310c64b1b5d25493",
+  "corpus_version": "v1",
+  "verdict": "certified",
+  "runs": 12,
+  "passed": 12,
+  "reliability": 1,
+  "reported_accepted": 12,
+  "reported_wrong_answer": 0,
+  "reported_invalid": 0,
+  "reported_abstained": 0,
+  "certified_scope": "full_invocation",
+  "context_applied": false,
+  "context_scopes": null,
+  "context_owed": 0,
+  "judge_score_p50": 100,
+  "judge_score_min": 100,
+  "latency_p50": 6174,
+  "latency_p95": 12858,
+  "mean_tokens": 5253,
+  "mean_tokens_in": 3732,
+  "mean_tokens_out": 1520,
+  "mean_cached_tokens": 1520,
+  "mean_cache_write_tokens": 1541,
+  "est_cost_microusd": 0,
+  "judge_served_model": "gemini-3.1-flash-lite",
+  "judge_provider": "gemini",
+  "self_judged": false,
+  "served_identity_source": "response",
+  "ran_at": "2026-11-25T07:15:29Z",
+  "scenarios": [
+    {
+      "scenario": "progress_summary_judges_nothing_against_a_goal_nobody_set",
+      "site": "progress_summary",
+      "stamp": "5c8999533281b4c65b2f503d0e467de23ae1e8b80f9fb951f6c5ca49021a4511919c308c591d79ede8f43638e57debffde6f1a14da4c9453dcb810884138222fb6abc141cc6eda8e10b646c92c59a164ebd5e0e1007ec23ef0f4e14909f6f25f",
+      "verdict": "certified",
+      "judge_band": "certified",
+      "runs": 3,
+      "passed": 3,
+      "judge_scores": [
+        100,
+        100,
+        100
+      ],
+      "bands": {
+        "certified_min": 70,
+        "degraded_min": 50,
+        "floor": 40
+      },
+      "context_owed": 0,
+      "reported_accepted": 3,
+      "reported_wrong_answer": 0,
+      "reported_invalid": 0,
+      "reported_abstained": 0
+    },
+    {
+      "scenario": "progress_summary_names_what_is_missing_to_the_goal",
+      "site": "progress_summary",
+      "stamp": "579b1fb7da37495ed3e71582fe92fb5478a017cd545f7cc6fc76dfe962a1943d673daf7b1f7be64bed88ea4b475a8805175816dfa3e76e2958f5d9f37eb438fb62136f0a0a5835cec5033d3da4534b9a8bbe5af5e348fb92a71abcc9cfcc3024",
+      "verdict": "certified",
+      "judge_band": "certified",
+      "runs": 3,
+      "passed": 3,
+      "judge_scores": [
+        100,
+        100,
+        100
+      ],
+      "bands": {
+        "certified_min": 70,
+        "degraded_min": 50,
+        "floor": 40
+      },
+      "context_owed": 0,
+      "reported_accepted": 3,
+      "reported_wrong_answer": 0,
+      "reported_invalid": 0,
+      "reported_abstained": 0
+    },
+    {
+      "scenario": "sales_assessment_acknowledges_an_open_decision",
+      "site": "sales_assessment",
+      "stamp": "2d9c7a9743ffb10f5c808f4d91aa94cc22ef4248eb52ba0da2e41040d6111df160799b9dfc96a934b8665953e6e4d37c0d829da7e02c74919bc599f288feee79453d6132d2e732b08a4764eb19431ed6497e76f7d0546733d2f4d1cbbbd32a1b",
+      "verdict": "certified",
+      "judge_band": "certified",
+      "runs": 3,
+      "passed": 3,
+      "judge_scores": [
+        100,
+        100,
+        100
+      ],
+      "bands": {
+        "certified_min": 70,
+        "degraded_min": 50,
+        "floor": 40
+      },
+      "context_owed": 0,
+      "reported_accepted": 3,
+      "reported_wrong_answer": 0,
+      "reported_invalid": 0,
+      "reported_abstained": 0
+    },
+    {
+      "scenario": "sales_assessment_names_the_deal_no_decision_covers",
+      "site": "sales_assessment",
+      "stamp": "d665af1f0806ddecf480613517aa4a29a596634aa4d6bf4e71f7592fd193a3e8d20725e5ad044f41cad1f8986a6477df3d8029f68f5f63fbe70aa92976baf064e4d58b0cd5b9b1f59d9dae593bef186601479fa4ecc928514262a8853424ab72",
+      "verdict": "certified",
+      "judge_band": "certified",
+      "runs": 3,
+      "passed": 3,
+      "judge_scores": [
+        100,
+        100,
+        100
+      ],
+      "bands": {
+        "certified_min": 70,
+        "degraded_min": 50,
+        "floor": 40
+      },
+      "context_owed": 0,
+      "reported_accepted": 3,
+      "reported_wrong_answer": 0,
+      "reported_invalid": 0,
+      "reported_abstained": 0
+    }
+  ]
+}

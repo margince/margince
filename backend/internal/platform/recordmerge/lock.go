@@ -22,14 +22,7 @@ func Screen(ctx context.Context, tx pgx.Tx, kind string, sourceID, targetID ids.
 	if err := auth.EnsureWritable(ctx, tx, kind, sourceID); err != nil {
 		return err
 	}
-	writable, err := auth.WritableBy(ctx, tx, kind, targetID)
-	if err != nil {
-		return err
-	}
-	if !writable {
-		return apperrors.ErrConflict
-	}
-	return nil
+	return ensureTarget(ctx, tx, kind, targetID)
 }
 
 // MissingIsConflict maps the not-found storekit.LockPair answers for a row that

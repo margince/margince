@@ -34,11 +34,11 @@ func (s *Store) RemoveFxRate(ctx context.Context, fromCurrency string) error {
 		return fxInvalid("from_currency", "fx_rate_currency", "from_currency must be a 3-letter ISO code")
 	}
 	return s.Tx(ctx, func(tx pgx.Tx) error {
-		return s.removeFxRate(ctx, tx, from)
+		return s.removeFxRateTx(ctx, tx, from)
 	})
 }
 
-func (s *Store) removeFxRate(ctx context.Context, tx pgx.Tx, from string) error {
+func (s *Store) removeFxRateTx(ctx context.Context, tx pgx.Tx, from string) error {
 	if err := storekit.LockWriteIdentity(ctx, tx, "fx_rate", from); err != nil {
 		return err
 	}

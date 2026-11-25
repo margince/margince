@@ -62,7 +62,7 @@ func (s *Service) DismissMove(ctx context.Context, dealID ids.DealID, fingerprin
 		INSERT INTO deal_move_dismissal (user_id, deal_id, fingerprint)
 		VALUES ($1, $2, $3)
 		ON CONFLICT (user_id, deal_id)
-		DO UPDATE SET fingerprint = EXCLUDED.fingerprint, dismissed_at = now()`)
+		DO UPDATE SET fingerprint = EXCLUDED.fingerprint`)
 }
 
 // RestoreMove clears this reader's set-aside of the move with this digest:

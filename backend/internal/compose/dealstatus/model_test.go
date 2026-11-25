@@ -5,6 +5,7 @@ package dealstatus
 
 import (
 	"encoding/json"
+	"strconv"
 	"strings"
 	"testing"
 
@@ -168,6 +169,15 @@ func TestAnOversizedSentenceIsRefused(t *testing.T) {
 		story: []map[string]any{line(strings.Repeat("x", maxSentenceLen+1), "act-1")},
 	}), in); err == nil {
 		t.Fatal("a sentence past the card's bounds was kept")
+	}
+}
+
+func TestThePromptStatesEveryLengthTheFilterRefusesOver(t *testing.T) {
+	system := StatusRequest(inputWithTimeline(), string(textlang.English)).System
+	for name, bound := range map[string]int{"maxSentenceLen": maxSentenceLen, "maxMoveReason": maxMoveReason} {
+		if !strings.Contains(system, "at most "+strconv.Itoa(bound)) {
+			t.Errorf("the filter refuses a reply over %s (%d characters), and the prompt never states it", name, bound)
+		}
 	}
 }
 

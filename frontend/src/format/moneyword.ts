@@ -3,7 +3,7 @@
 
 import type { Locale } from "../i18n";
 
-export const MONEY_ABSENT = "—";
+export { ABSENT as MONEY_ABSENT } from "./absent";
 
 /**
  * A money reading, or the WORD the caller gives for its absence.

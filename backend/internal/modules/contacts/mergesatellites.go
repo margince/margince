@@ -21,6 +21,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/platform/generatedsummary"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -60,8 +61,8 @@ func relinkReaderJudgements(ctx context.Context, tx pgx.Tx, sourceID, targetID i
 	// sees the source rows the delete is about to remove.
 	if _, err := tx.Exec(ctx, `
 		WITH carried AS (
-		  INSERT INTO contact_moment_dismissal (user_id, contact_id, claim_key, evidence_fingerprint, dismissed_at)
-		  SELECT user_id, @target, claim_key, evidence_fingerprint, dismissed_at
+		  INSERT INTO contact_moment_dismissal (user_id, contact_id, claim_key, evidence_fingerprint)
+		  SELECT user_id, @target, claim_key, evidence_fingerprint
 		    FROM contact_moment_dismissal WHERE contact_id = @source
 		  ON CONFLICT (user_id, contact_id, claim_key) DO NOTHING
 		)
@@ -80,9 +81,7 @@ func relinkReaderJudgements(ctx context.Context, tx pgx.Tx, sourceID, targetID i
 		pgx.NamedArgs{auditKeySource: sourceID, mergeTargetKey: targetID}); err != nil {
 		return fmt.Errorf("carry the nudges a reader had already put down: %w", err)
 	}
-	if _, err := tx.Exec(ctx,
-		`DELETE FROM contact_brief WHERE contact_id IN (@source, @target)`,
-		pgx.NamedArgs{auditKeySource: sourceID, mergeTargetKey: targetID}); err != nil {
+	if err := generatedsummary.ForgetContacts(ctx, tx, sourceID, targetID); err != nil {
 		return fmt.Errorf("drop the briefs the merge made stale: %w", err)
 	}
 	return nil

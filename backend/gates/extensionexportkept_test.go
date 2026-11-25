@@ -80,7 +80,6 @@ var exportWaivers = gatekit.Waive(map[string]string{
 	"extension.MaxInboundNonce":                      publishedInV1,
 	"extension.MaxInboundRef":                        publishedInV1,
 	"extension.MaxInboundSkew":                       publishedInV1,
-	"extension.MaxKeyLength":                         publishedInV1,
 	"extension.MaxLandedCustomFields":                publishedInV1,
 	"extension.MaxParticipants":                      publishedInV1,
 	"extension.MaxPositionBytes":                     publishedInV1,

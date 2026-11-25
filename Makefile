@@ -21,6 +21,12 @@ ifeq (,$(findstring -trimpath,$(GOFLAGS)))
 override GOFLAGS += -trimpath
 export GOFLAGS
 endif
+# -trimpath leaves runtime.GOROOT empty in a `go run` tool such as gen-composition,
+# so the root of the same go is passed in the environment.
+ifeq ($(GOROOT),)
+GOROOT := $(shell $(GO) env GOROOT)
+export GOROOT
+endif
 endif
 
 # The deterministic script gates `check-root-gates` fans out. One list, one

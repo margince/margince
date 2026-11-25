@@ -105,8 +105,8 @@ func TestAContactsHistoryCarriesExtensionRowsAndSignalsNewestFirst(t *testing.T)
 			VALUES ($1, $2, $3::timestamptz, $4, CASE WHEN $5 THEN now() END)`, row.code, row.site, row.at, who, row.archived)
 	}
 	e.WsExec(t, `INSERT INTO signal (kind, entity_type, entity_id, summary, detected_at, source, captured_by)
-		VALUES ('ext:historydemo:late', 'contact', $1, 'Paid late', '2026-04-15T10:00:00Z', 'test', 'human:seed'),
-		       ('risk', 'contact', $1, 'A core signal', '2026-04-16T10:00:00Z', 'test', 'human:seed')`, contact)
+		VALUES ('ext:historydemo:late', 'contact', $1, 'Paid late', '2026-04-15T10:00:00Z', 'automation', 'human:seed'),
+		       ('risk', 'contact', $1, 'A core signal', '2026-04-16T10:00:00Z', 'manual', 'human:seed')`, contact)
 
 	reader := e.As(e.Rep1, nil, principal.Permissions{
 		RowScope: principal.RowScopeAll,

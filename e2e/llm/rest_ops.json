@@ -3735,7 +3735,8 @@
       "id",
       "idempotency_key",
       "if_version",
-      "record_type"
+      "record_type",
+      "why"
     ],
     "update_record_assignment": [
       "id",

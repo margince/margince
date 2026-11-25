@@ -28,7 +28,7 @@ export function itemWords(activity: Activity): {
   const excerpt =
     summary?.preview ??
     (activity.kind === "email"
-      ? emailSummaryText(raw)
+      ? emailSummaryText(raw, activity.subject ?? "")
       : oneLine(activity, raw));
   return { subject, excerpt: excerpt || undefined };
 }

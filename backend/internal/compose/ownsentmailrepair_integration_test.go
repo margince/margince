@@ -145,6 +145,27 @@ func TestMailTheSeatWroteFromAFormerAddressIsReadAgainAsTheirs(t *testing.T) {
 	}
 }
 
+// A verdict exists only on inbound mail, so turning a row round to outbound
+// clears it. Leaving it would break the check that ties a verdict to inbound
+// and fail the whole capture.
+func TestTheOwnSentMailClaimClearsTheReplyVerdict(t *testing.T) {
+	e := integration.Setup(t)
+	seedRepairSeat(t, e)
+	id := seedReceivedMail(t, e, "verdict@previous-employer.example")
+	e.WsExec(t, `UPDATE activity SET reply_verdict = 'positive', reply_verdict_at = now(), reply_verdict_by = 'model'
+		WHERE id = $1`, id)
+
+	runOwnSentMailRepair(t, e)
+
+	if got := storedEndsOf(t, e, id); got.direction != "outbound" || got.verdict != capture.OwnSentMailClaimed {
+		t.Fatalf("after the pass the mail reads %+v, want claimed and outbound", got)
+	}
+	if n := e.WsCount(t, `SELECT count(*) FROM activity WHERE id = $1
+		AND reply_verdict IS NULL AND reply_verdict_at IS NULL AND reply_verdict_by IS NULL`, id); n != 1 {
+		t.Errorf("the claimed row still carries a reply verdict")
+	}
+}
+
 // A replay changes nothing. The marker keeps the row from being offered again,
 // and judging the claimed row once more finds nothing left to turn round.
 func TestTheOwnSentMailRepairReplaysWithoutASecondClaim(t *testing.T) {

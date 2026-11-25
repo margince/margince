@@ -15,6 +15,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/compose/integration"
 	"github.com/margince/margince/backend/internal/modules/activities"
+	"github.com/margince/margince/backend/internal/shared/kernel/correspondence"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/ports/workflow"
 )
@@ -31,7 +32,7 @@ func seedMeetingWith(t *testing.T, e *integration.Env, address string) ids.UUID 
 		VALUES ($1, $2, 'from', $3, 'rep@ourcompany.test')`, ids.NewV7(), activity, e.Rep1)
 	e.WsExec(t, `
 		INSERT INTO activity_participant (id, activity_id, role, address)
-		VALUES ($1, $2, 'attendee', $3)`, ids.NewV7(), activity, address)
+		VALUES ($1, $2, 'attendee', $3)`, ids.NewV7(), activity, correspondence.Fold(address))
 	return activity
 }
 

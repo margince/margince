@@ -20266,6 +20266,21 @@ func (e ProjectPhase) Valid() bool {
 	}
 }
 
+// Defines values for Project360PhaseCauseKind.
+const (
+	Project360PhaseCauseKindDealWon Project360PhaseCauseKind = "deal_won"
+)
+
+// Valid indicates whether the value is a known member of the Project360PhaseCauseKind enum.
+func (e Project360PhaseCauseKind) Valid() bool {
+	switch e {
+	case Project360PhaseCauseKindDealWon:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for Project360Section.
 const (
 	Project360SectionActivities   Project360Section = "activities"
@@ -33569,8 +33584,8 @@ type AcceptExtractionRequest struct {
 	// `AttachmentExtraction` the human was actually shown. Required, and not
 	// inferable: resolving "the newest reading" instead would let a reading started
 	// by someone else between the display and the click decide what gets written,
-	// which is precisely the divergence storing the fields exists to prevent
-	// (RD-AC-N-5). A reading belonging to another attachment, or one that never
+	// which is precisely the divergence storing the fields exists to prevent.
+	// A reading belonging to another attachment, or one that never
 	// existed, is a 404. A reading not read for deal facts is a 422 `not_deal_facts`.
 	ExtractionId openapi_types.UUID `json:"extraction_id"`
 
@@ -33728,7 +33743,7 @@ type AccountDraftReason struct {
 	// EvidenceRef One record a brief sentence was written from.
 	EvidenceRef *CompanyBriefEvidence `json:"evidence_ref,omitempty"`
 
-	// Kind Which grounding input this came from, in A132's order.
+	// Kind Which grounding input this came from, in the grounding order.
 	//
 	// `intent` — the caller's own steering. `recipient` / `relationship` — who they are
 	// and how we stand with them. `deal` — the open opportunity the message is about.
@@ -33740,7 +33755,7 @@ type AccountDraftReason struct {
 	Label string `json:"label"`
 }
 
-// AccountDraftReasonKind Which grounding input this came from, in A132's order.
+// AccountDraftReasonKind Which grounding input this came from, in the grounding order.
 //
 // `intent` — the caller's own steering. `recipient` / `relationship` — who they are
 // and how we stand with them. `deal` — the open opportunity the message is about.
@@ -37067,6 +37082,9 @@ type Approval struct {
 
 	// TargetVersion The `version` of the target row when the diff was staged. On approve-execute the server RE-READS the row; if its current version ≠ target_version the execution is rejected with 409 ErrVersionSkew (the world changed since the human last saw the diff — re-stage). This closes the stage→approval race (ADR-0036).
 	TargetVersion *int `json:"target_version,omitempty"`
+
+	// Why Why this proposal exists, as whoever staged it said it: the record and the fact that prompted it. A card leads with it. Absent when its maker gave none, never filled with a stock sentence, and withheld with the summary.
+	Why *WorkGrounds `json:"why,omitempty"`
 }
 
 // ApprovalStatus defines model for Approval.Status.
@@ -38601,6 +38619,9 @@ type AttentionItem struct {
 	// SummaryParts On an approval, its title taken apart, so the row can show the proposed values as a list. Absent when the title is a sentence alone.
 	SummaryParts  *ApprovalSummaryParts `json:"summary_parts,omitempty"`
 	SystemDisplay *SystemDisplay        `json:"system_display,omitempty"`
+
+	// TaskType On a task row: the kind of work it asks for, so a card names it without reading the task. Absent on other rows.
+	TaskType *TaskType `json:"task_type,omitempty"`
 
 	// Title The server's own sentence for this item, when it has one — an approval
 	// summary is composed at staging time out of the proposal's own facts.
@@ -40520,7 +40541,7 @@ type CaptureConnection struct {
 	// NextSyncDueAt When the sweep will next pick this connection up (backoff-aware).
 	NextSyncDueAt *time.Time `json:"next_sync_due_at,omitempty"`
 
-	// Provider The mail/calendar/meeting-notes provider (A51 email+calendar parity).
+	// Provider The mail/calendar/meeting-notes provider.
 	Provider CaptureConnectionProvider `json:"provider"`
 
 	// Scopes The granted provider scopes.
@@ -40566,7 +40587,7 @@ type CaptureConnection struct {
 // for `apply_to_history`.
 type CaptureConnectionMailPosture string
 
-// CaptureConnectionProvider The mail/calendar/meeting-notes provider (A51 email+calendar parity).
+// CaptureConnectionProvider The mail/calendar/meeting-notes provider.
 type CaptureConnectionProvider string
 
 // CaptureConnectionStatus Connection state; `reauth_required` when the stored token expired/was revoked upstream.
@@ -41992,7 +42013,7 @@ type Company struct {
 	// LinkedinUrl Canonical LinkedIn company URL. A validated column rather than a governed custom field, because it bears identity semantics — matching, dedupe, enrichment — a custom field cannot express. Unique among live rows.
 	LinkedinUrl *string `json:"linkedin_url,omitempty"`
 
-	// LogoUrl Where to fetch the company's logo image (A55) — the `getCompanyLogo`
+	// LogoUrl Where to fetch the company's logo image — the `getCompanyLogo`
 	// path for this record, cookie-authenticated and same-origin. A revision query changes
 	// with the stored image so a replacement cannot remain hidden behind an older cached
 	// response. The key is ABSENT entirely (not null) when no logo is stored, which is the
@@ -42025,7 +42046,12 @@ type Company struct {
 	// RelationshipTypes WHAT THE COMPANY IS to us (PO-DDL-4b, ADR-0079). Multi-valued, because a company is legitimately several things at once — the partner program is built on companies that are simultaneously partners and customers. A company IS a partner iff it carries `partner` here AND has a `partner` row; removing the type while that row lives is refused (422).
 	RelationshipTypes *[]CompanyRelationshipTypes `json:"relationship_types,omitempty"`
 	SizeBand          *CompanySizeBand            `json:"size_band,omitempty"`
-	Source            string                      `json:"source"`
+
+	// Source The channel this company arrived by: `api`, `automation`, `capture`, `import`, `manual` or `webform`. An older company can show another value until the background correction reaches it.
+	Source string `json:"source"`
+
+	// SourceSystem The system or connector the company came from, such as `gmail` for one read out of a mailbox. Empty when a member or an API client wrote it and named none.
+	SourceSystem *string `json:"source_system,omitempty"`
 
 	// Status Where the account stands with us. Single-valued: an account is at one point in a sales motion at a time. `unknown` is the default and means it — the retired `classification` defaulted to `prospect` and, having no writer, rendered that default on every unassessed account as though someone had judged it. `onboarding` means the contract is signed and set-up runs. `live` means the agreed first scope is in use, and only a signed-in user may set it: an agent, automation, approval or import gets 422 `lifecycle_live_needs_a_human`.
 	Status *CompanyStatus `json:"status,omitempty"`
@@ -42091,7 +42117,7 @@ type Company360 struct {
 	// Deals The account's open deals plus the two lifetime figures the header needs.
 	Deals *Company360Deals `json:"deals,omitempty"`
 
-	// Health How the relationship stands, in the parts a reader can act on (AC-company-3).
+	// Health How the relationship stands, in the parts a reader can act on.
 	//
 	// It replaces a single 0–100 score. That number was PO-F-3's MAX over the account's
 	// contacts, so one talkative contact spoke for the whole account and a long, low-volume
@@ -42378,7 +42404,7 @@ type Company360Deals struct {
 	WonLifetime Money `json:"won_lifetime"`
 }
 
-// Company360Health How the relationship stands, in the parts a reader can act on (AC-company-3).
+// Company360Health How the relationship stands, in the parts a reader can act on.
 //
 // It replaces a single 0–100 score. That number was PO-F-3's MAX over the account's
 // contacts, so one talkative contact spoke for the whole account and a long, low-volume
@@ -42678,7 +42704,7 @@ type Company360StateStripSignalSeverity string
 // it offers are the same governed endpoints the rep would have used anyway.
 type Company360Suggestion struct {
 	// Action What performing this advice means, named by the server rather than inferred by the
-	// client from the evidence order (AC-company-14). A rule that cannot name an action
+	// client from the evidence order. A rule that cannot name an action
 	// carries null and the card advises without offering a button, which is honest — a
 	// control that does nothing teaches the reader to stop pressing them.
 	//
@@ -43685,7 +43711,7 @@ type CompanyGraphEdge struct {
 	// `deal_stakeholder` — the contact holds a stakeholder seat on the deal.
 	// `parent_of` — `from` is the parent company of `to` (the account's parent
 	// points at it; the account points at each child).
-	// `partner_of` / `referred_by` / `co_sell_with` — the A41 partner edges, from
+	// `partner_of` / `referred_by` / `co_sell_with` — the partner edges, from
 	// the company that records the edge to its counterparty.
 	// `owns` — `from` is the workspace member who owns the account.
 	// `in_contact_with` — `from` is the workspace member who has been IN recorded
@@ -43746,7 +43772,7 @@ type CompanyGraphEdge struct {
 // `deal_stakeholder` — the contact holds a stakeholder seat on the deal.
 // `parent_of` — `from` is the parent company of `to` (the account's parent
 // points at it; the account points at each child).
-// `partner_of` / `referred_by` / `co_sell_with` — the A41 partner edges, from
+// `partner_of` / `referred_by` / `co_sell_with` — the partner edges, from
 // the company that records the edge to its counterparty.
 // `owns` — `from` is the workspace member who owns the account.
 // `in_contact_with` — `from` is the workspace member who has been IN recorded
@@ -43791,7 +43817,7 @@ type CompanyGraphNode struct {
 	// Label The record's display name — the company's, the contact's full name, the deal's name, the workspace member's display name.
 	Label string `json:"label"`
 
-	// LogoUrl The company node's resolved logo (A55), same value `Company.logo_url` carries.
+	// LogoUrl The company node's resolved logo, same value `Company.logo_url` carries.
 	// Absent on a company with no resolved logo and on every contact or deal node —
 	// a client draws the node's monogram or its token-coloured circle instead.
 	LogoUrl *string `json:"logo_url,omitempty"`
@@ -45357,7 +45383,7 @@ type ConsumerMailBaselineResponse struct {
 	Total int `json:"total"`
 }
 
-// ConsumerMailDomain One entry on the workspace's own consumer-mail list (CAP-PARAM-5). `extra` marks a
+// ConsumerMailDomain One entry on the workspace's own consumer-mail list. `extra` marks a
 // consumer domain the shipped baseline missed; `never` takes one back out of the baseline
 // that claimed it. Either way the domain is stored in its registrable form, which is what
 // the matcher keys on.
@@ -45480,7 +45506,12 @@ type Contact struct {
 
 	// Social The contact's links by platform: github, linkedin, twitter. linkedin is a LinkedIn profile link.
 	Social *map[string]interface{} `json:"social,omitempty"`
-	Source string                  `json:"source"`
+
+	// Source The channel this contact arrived by: `api`, `automation`, `capture`, `import`, `manual` or `webform`. An older contact can show another value until the background correction reaches it.
+	Source string `json:"source"`
+
+	// SourceSystem The system or connector the contact came from, such as `gmail` for one read out of a mailbox. Empty when a member or an API client wrote it and named none.
+	SourceSystem *string `json:"source_system,omitempty"`
 
 	// Strength Deterministic relationship-strength (features/07 §4). Read-only derived view; NULL until capture has interactions. No mystery number — the factors + contributing activities are the explanation.
 	Strength *RelationshipStrength `json:"strength,omitempty"`
@@ -46423,7 +46454,7 @@ type ContactGraphRouteEvidence struct {
 // ContactGraphRouteType `direct` is a colleague who corresponds with the contact themselves. `through_contact` goes via someone else at the contact's company.
 type ContactGraphRouteType string
 
-// ContactImpersonationWarning The sign of impersonation the sender check saw when capture made this contact from a mail.
+// ContactImpersonationWarning The sign of impersonation the sender check saw on a captured mail from this contact.
 type ContactImpersonationWarning struct {
 	// DetectedAt When the sender check recorded it.
 	DetectedAt time.Time `json:"detected_at"`
@@ -47167,7 +47198,7 @@ type Contract struct {
 	ProjectId *openapi_types.UUID `json:"project_id,omitempty"`
 	RenewalOn *openapi_types.Date `json:"renewal_on,omitempty"`
 
-	// SignedOn When a human asserts it was signed. Never derived from a deal close time, and never a signing ceremony — in-product e-signature stays removed (A94).
+	// SignedOn When a human asserts it was signed. Never derived from a deal close time, and never a signing ceremony — in-product e-signature stays removed.
 	SignedOn *openapi_types.Date `json:"signed_on,omitempty"`
 	Source   string              `json:"source"`
 	StartsOn *openapi_types.Date `json:"starts_on,omitempty"`
@@ -47353,7 +47384,7 @@ type ConversationClaim struct {
 	DueAt       *time.Time         `json:"due_at,omitempty"`
 	Id          openapi_types.UUID `json:"id"`
 
-	// Kind The eight kinds one extraction mechanism produces (ADR-0097 D1). They share a
+	// Kind The eight kinds one extraction mechanism produces. They share a
 	// lifecycle — extracted → cited → correctable → dismissible — and differ only here.
 	//
 	// `commitment_ours` / `commitment_theirs` — a promise, by us or by them.
@@ -47411,7 +47442,7 @@ type ConversationClaimAutoKept struct {
 	Evidence *ConversationClaimLooksKept `json:"evidence,omitempty"`
 }
 
-// ConversationClaimKind The eight kinds one extraction mechanism produces (ADR-0097 D1). They share a
+// ConversationClaimKind The eight kinds one extraction mechanism produces. They share a
 // lifecycle — extracted → cited → correctable → dismissible — and differ only here.
 //
 // `commitment_ours` / `commitment_theirs` — a promise, by us or by them.
@@ -47760,7 +47791,9 @@ type CreateCompanyRequest struct {
 	// Phone The company's main number. A formatted number is accepted and stored in E.164 form (for example +49301234567). It is never a contact's own number.
 	Phone    *string                       `json:"phone,omitempty"`
 	SizeBand *CreateCompanyRequestSizeBand `json:"size_band,omitempty"`
-	Source   string                        `json:"source"`
+
+	// Source The channel this company arrived by. A client that wrote it for a member sends `manual`; an integration sends `api`. The other system and the company's id there go in `source_system` and `source_id`. Any other value is 422 `invalid_source`.
+	Source string `json:"source"`
 
 	// SourceAuthorId Who wrote this record in the system it came from, when the author holds a seat here. Written only by a declared importer (a signed-in human holding import_run:create), only beside a source_system; either author field or both may be sent, and the seat's current name wins on read. captured_by still names the caller.
 	SourceAuthorId *openapi_types.UUID `json:"source_author_id,omitempty"`
@@ -47842,7 +47875,9 @@ type CreateContactRequest struct {
 
 	// Social Links by platform. Only github, linkedin and twitter are taken; any other key is refused with 422 `social_platform_unknown`. linkedin takes only a LinkedIn profile link (https://www.linkedin.com/in/<name>).
 	Social *map[string]interface{} `json:"social,omitempty"`
-	Source string                  `json:"source"`
+
+	// Source The channel this contact arrived by. A client that wrote it for a member sends `manual`; an integration sends `api`. The other system and the contact's id there go in `source_system` and `source_id`. Any other value is 422 `invalid_source`.
+	Source string `json:"source"`
 
 	// SourceAuthorId Who wrote this record in the system it came from, when the author holds a seat here. Written only by a declared importer (a signed-in human holding import_run:create), only beside a source_system; either author field or both may be sent, and the seat's current name wins on read. captured_by still names the caller.
 	SourceAuthorId *openapi_types.UUID `json:"source_author_id,omitempty"`
@@ -48655,11 +48690,13 @@ type CreateSignalRequest struct {
 	EntityId   *openapi_types.UUID `json:"entity_id,omitempty"`
 
 	// EntityType Subject record, both entity fields together or neither: with a subject the signal enters `resolved`; without one it enters `unresolved` (a raw item needing a raw_ref for POST /signals/{id}/resolve).
-	EntityType    *CreateSignalRequestEntityType    `json:"entity_type,omitempty"`
-	Evidence      *[]SignalEvidence                 `json:"evidence,omitempty"`
-	Kind          CreateSignalRequestKind           `json:"kind"`
-	RawRef        *string                           `json:"raw_ref,omitempty"`
-	Severity      *CreateSignalRequestSeverity      `json:"severity,omitempty"`
+	EntityType *CreateSignalRequestEntityType `json:"entity_type,omitempty"`
+	Evidence   *[]SignalEvidence              `json:"evidence,omitempty"`
+	Kind       CreateSignalRequestKind        `json:"kind"`
+	RawRef     *string                        `json:"raw_ref,omitempty"`
+	Severity   *CreateSignalRequestSeverity   `json:"severity,omitempty"`
+
+	// Source The channel this signal arrived by. A client that files it for a member sends `manual`; an integration sends `api`. Any other value is 422 `invalid_source`.
 	Source        string                            `json:"source"`
 	SourceChannel *CreateSignalRequestSourceChannel `json:"source_channel,omitempty"`
 	Summary       string                            `json:"summary"`
@@ -52572,7 +52609,7 @@ type FiledChatCapture struct {
 	ActivityId openapi_types.UUID `json:"activity_id"`
 }
 
-// FilterPreview What a candidate filter would select for this caller (LVS-EXT-9).
+// FilterPreview What a candidate filter would select for this caller.
 type FilterPreview struct {
 	// Columns The column order the rows below are keyed by, schema-derived and
 	// identical to the JSON filtered export's for the same resource.
@@ -55248,7 +55285,7 @@ type ImportSourceProfile struct {
 // draft save names `object`, which is the reader's own choice.
 type ImportSourceProfileObjectChosenBy string
 
-// ImportUndoReport The result of undoing a committed import run (IEM-WIRE-9; A93). Every
+// ImportUndoReport The result of undoing a committed import run. Every
 // import-created row lands in exactly one of three buckets: reversed,
 // kept because a human edited it since (the "kept — you edited these"
 // list S-E15.4c requires, not a diff of what changed), or errored
@@ -55310,7 +55347,7 @@ type ImportUndoReport struct {
 		ReasonCode *ImportReasonCode `json:"reason_code,omitempty"`
 	} `json:"errored"`
 
-	// Kept Import-created rows left in place: a human edited them since import (A93), or a live record still names the company.
+	// Kept Import-created rows left in place: a human edited them since import, or a live record still names the company.
 	Kept []struct {
 		Id openapi_types.UUID `json:"id"`
 
@@ -59726,13 +59763,36 @@ type MeetingResponse string
 // MemberRetirementBlocker defines model for MemberRetirementBlocker.
 type MemberRetirementBlocker string
 
+// MemberRetirementBlockingRecord defines model for MemberRetirementBlockingRecord.
+type MemberRetirementBlockingRecord struct {
+	Id   openapi_types.UUID `json:"id"`
+	Name string             `json:"name"`
+
+	// WebUrl Where the record opens in the app, such as the deal a Deal Room belongs to. Absent when it has no page of its own.
+	WebUrl *string `json:"web_url,omitempty"`
+}
+
+// MemberRetirementBlockingRecords The records that hold one blocker. `total` counts every one of them. `records` lists the
+// ones you may open, up to 25, and `visible` says how many those are in all. A record kept
+// to its owner, or one with no screen you may open, counts in `total` only.
+type MemberRetirementBlockingRecords struct {
+	Blocker MemberRetirementBlocker          `json:"blocker"`
+	Records []MemberRetirementBlockingRecord `json:"records"`
+	Total   int                              `json:"total" minimum:"0"`
+	Visible int                              `json:"visible" minimum:"0"`
+}
+
 // MemberRetirementConsequence defines model for MemberRetirementConsequence.
 type MemberRetirementConsequence string
 
 // MemberRetirementPreview defines model for MemberRetirementPreview.
 type MemberRetirementPreview struct {
-	Blockers     []MemberRetirementBlocker     `json:"blockers"`
-	Consequences []MemberRetirementConsequence `json:"consequences"`
+	Blockers []MemberRetirementBlocker `json:"blockers"`
+
+	// BlockingRecords The records behind each blocker that is about records, such as `deal_rooms` or
+	// `webhooks`. A blocker that is a state, such as `deactivate_first`, has no entry.
+	BlockingRecords *[]MemberRetirementBlockingRecords `json:"blocking_records,omitempty"`
+	Consequences    []MemberRetirementConsequence      `json:"consequences"`
 
 	// Owned Live records per kind.
 	Owned         HandoverCounts       `json:"owned"`
@@ -62419,6 +62479,22 @@ type Project360Health struct {
 	Current *ProjectHealthAssessment `json:"current,omitempty"`
 }
 
+// Project360PhaseCause Why the project moved, as a code and the record behind it. `deal_won`: winning the
+// deal moved the project into delivering.
+type Project360PhaseCause struct {
+	// DealId The deal whose win moved the project. Null when the caller may not see that deal,
+	// or it no longer exists.
+	DealId *openapi_types.UUID `json:"deal_id"`
+
+	// DealName The deal's name now, read under the caller's deal grant and row scope, archived
+	// deals included. Null exactly when `deal_id` is.
+	DealName *string                  `json:"deal_name"`
+	Kind     Project360PhaseCauseKind `json:"kind"`
+}
+
+// Project360PhaseCauseKind defines model for Project360PhaseCause.Kind.
+type Project360PhaseCauseKind string
+
 // Project360PhaseDuration defines model for Project360PhaseDuration.
 type Project360PhaseDuration struct {
 	// Current True for the phase the project is in at `as_of`.
@@ -62440,7 +62516,10 @@ type Project360PhaseHistory struct {
 
 // Project360PhaseTransition defines model for Project360PhaseTransition.
 type Project360PhaseTransition struct {
-	ChangedAt time.Time `json:"changed_at"`
+	// Cause What caused a move no one chose by hand. Absent on a move made by hand, and on
+	// every move recorded before causes were stored. A client words the cause itself.
+	Cause     *Project360PhaseCause `json:"cause,omitempty"`
+	ChangedAt time.Time             `json:"changed_at"`
 
 	// ChangedBy Who made the move, from the audit row written in the same transaction.
 	// Absent when that row is not known: a move recorded before the link existed
@@ -62452,8 +62531,10 @@ type Project360PhaseTransition struct {
 	// FromPhase Null on the birth row.
 	FromPhase *string            `json:"from_phase"`
 	Id        openapi_types.UUID `json:"id"`
-	Reason    *string            `json:"reason"`
-	ToPhase   string             `json:"to_phase"`
+
+	// Reason The reason typed with the move.
+	Reason  *string `json:"reason"`
+	ToPhase string  `json:"to_phase"`
 }
 
 // Project360Rollups The header figures. Open deals use the latest base-currency rate on or before today;
@@ -63303,6 +63384,13 @@ type QuickCaptureContactResult struct {
 
 // RaiseNoticeRequest defines model for RaiseNoticeRequest.
 type RaiseNoticeRequest struct {
+	// DealId The deal the notice is about. Required for `coach_deal_needs_next_step`, and refused on
+	// every other kind. The deal must be open, owned by the recipient, and one the caller
+	// can read. The headline then names the deal and what Margince sees on it: whether a
+	// next step is planned, and the day of its last activity. The recipient's row links to
+	// the deal.
+	DealId *openapi_types.UUID `json:"deal_id,omitempty"`
+
 	// Kind What a coaching notice is about. A closed vocabulary, because a notice addressed to a
 	// colleague is words in their queue: the kind is what the recipient reads as the headline,
 	// and the coach supplies only the note beneath it.
@@ -63572,6 +63660,9 @@ type RecordAccessMember struct {
 	Group       RecordAccessMemberGroup `json:"group"`
 	ReadReasons []RecordAccessReason    `json:"read_reasons"`
 
+	// RoleNames The name an admin gave each live role in `roles`, keyed by role key, so a reader who may not read the role directory still sees a custom role by its name. Present only when `detail` is true. Absent from an older server; a key it does not name is shown as the key.
+	RoleNames *map[string]string `json:"role_names,omitempty"`
+
 	// Roles The member's role keys. Present only when `detail` is true.
 	Roles  *[]string          `json:"roles,omitempty"`
 	UserId openapi_types.UUID `json:"user_id"`
@@ -63776,7 +63867,7 @@ type RecordConversationClaimRequest struct {
 	// DueAt When the commitment is owed, where one is known. Absent on kinds that carry no date.
 	DueAt *time.Time `json:"due_at,omitempty"`
 
-	// Kind The eight kinds one extraction mechanism produces (ADR-0097 D1). They share a
+	// Kind The eight kinds one extraction mechanism produces. They share a
 	// lifecycle — extracted → cited → correctable → dismissible — and differ only here.
 	//
 	// `commitment_ours` / `commitment_theirs` — a promise, by us or by them.
@@ -69399,11 +69490,16 @@ type Signal struct {
 	// ResolvedContactId Optional contact resolution, set only under a recorded consent grant and never inferred.
 	ResolvedContactId *openapi_types.UUID `json:"resolved_contact_id,omitempty"`
 	Severity          SignalSeverity      `json:"severity"`
-	Source            string              `json:"source"`
+
+	// Source The channel this signal arrived by: `api`, `automation`, `capture`, `import`, `manual` or `webform`. An older signal can show another value until the background correction reaches it.
+	Source string `json:"source"`
 
 	// SourceChannel Where the raw signal came from.
 	SourceChannel SignalSourceChannel `json:"source_channel"`
-	Status        SignalStatus        `json:"status"`
+
+	// SourceSystem The producer that wrote the signal, such as `signal-scan` or the name of an extension. Empty when a member or an API client filed it.
+	SourceSystem *string      `json:"source_system,omitempty"`
+	Status       SignalStatus `json:"status"`
 
 	// Summary The signal's one sentence. A sentence the server words itself (`technical_change`,
 	// `ghosted_thread`, `project_gone_quiet`) is in the reader's chosen display language, else
@@ -75851,6 +75947,9 @@ type WorklistItem struct {
 	SummaryParts  *ApprovalSummaryParts `json:"summary_parts,omitempty"`
 	SystemDisplay *SystemDisplay        `json:"system_display,omitempty"`
 
+	// TaskType On a task row: the kind of work it asks for, so a card names it without reading the task. Absent on other rows.
+	TaskType *TaskType `json:"task_type,omitempty"`
+
 	// Title The server's own sentence for this item, where it has one.
 	Title *string `json:"title,omitempty"`
 
@@ -76738,6 +76837,9 @@ type FileNotFound = Problem
 
 // Forbidden RFC 7807 problem+json with a stable machine `code` and structured `details`.
 type Forbidden = Problem
+
+// NameTakenConflict RFC 7807 problem+json with a stable machine `code` and structured `details`.
+type NameTakenConflict = Problem
 
 // NotFound RFC 7807 problem+json with a stable machine `code` and structured `details`.
 type NotFound = Problem
@@ -89282,6 +89384,14 @@ func (a *Company) UnmarshalJSON(b []byte) error {
 		delete(object, "source")
 	}
 
+	if raw, found := object["source_system"]; found {
+		err = json.Unmarshal(raw, &a.SourceSystem)
+		if err != nil {
+			return fmt.Errorf("error reading 'source_system': %w", err)
+		}
+		delete(object, "source_system")
+	}
+
 	if raw, found := object["status"]; found {
 		err = json.Unmarshal(raw, &a.Status)
 		if err != nil {
@@ -89598,6 +89708,13 @@ func (a Company) MarshalJSON() ([]byte, error) {
 	object["source"], err = json.Marshal(a.Source)
 	if err != nil {
 		return nil, fmt.Errorf("error marshaling 'source': %w", err)
+	}
+
+	if a.SourceSystem != nil {
+		object["source_system"], err = json.Marshal(a.SourceSystem)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'source_system': %w", err)
+		}
 	}
 
 	if a.Status != nil {
@@ -89968,6 +90085,14 @@ func (a *Contact) UnmarshalJSON(b []byte) error {
 		delete(object, "source")
 	}
 
+	if raw, found := object["source_system"]; found {
+		err = json.Unmarshal(raw, &a.SourceSystem)
+		if err != nil {
+			return fmt.Errorf("error reading 'source_system': %w", err)
+		}
+		delete(object, "source_system")
+	}
+
 	if raw, found := object["strength"]; found {
 		err = json.Unmarshal(raw, &a.Strength)
 		if err != nil {
@@ -90276,6 +90401,13 @@ func (a Contact) MarshalJSON() ([]byte, error) {
 	object["source"], err = json.Marshal(a.Source)
 	if err != nil {
 		return nil, fmt.Errorf("error marshaling 'source': %w", err)
+	}
+
+	if a.SourceSystem != nil {
+		object["source_system"], err = json.Marshal(a.SourceSystem)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'source_system': %w", err)
+		}
 	}
 
 	if a.Strength != nil {
@@ -101779,7 +101911,7 @@ type ServerInterface interface {
 	// A few written sentences on where one Progress reading stands against its sales goal and what is still open.
 	// (POST /analytics/progress/summary)
 	SummarizeSalesProgress(w http.ResponseWriter, r *http.Request)
-	// Answer a question nobody wrote a report for.
+	// Answer a question nobody wrote a report for. With `save` the answer is kept as a saved question, which `GET /analytics/runs` lists and others reopen by its `run_id`.
 	// (POST /analytics/query)
 	RunAnalyticsQuery(w http.ResponseWriter, r *http.Request)
 	// List reporting reports
@@ -101983,7 +102115,7 @@ type ServerInterface interface {
 	// One named reading of this attachment, for a screen polling the reading it started.
 	// (GET /attachments/{id}/extractions/{extraction_id})
 	GetAttachmentExtractionReading(w http.ResponseWriter, r *http.Request, id Id, extractionId openapi_types.UUID)
-	// Set a document's category, title, state or supersedes pointer (DOC-WIRE-2).
+	// Set a document's category, title, state or supersedes pointer.
 	// (PATCH /attachments/{id}/metadata)
 	UpdateAttachmentMetadata(w http.ResponseWriter, r *http.Request, id Id)
 	// Request access to a restricted attachment (audit row only — no notification system).
@@ -102064,7 +102196,7 @@ type ServerInterface interface {
 	// Book a meeting at a chosen slot and queue its calendar invitation.
 	// (POST /bookings)
 	BookMeeting(w http.ResponseWriter, r *http.Request, params BookMeetingParams)
-	// The acting rep's latest Morning-Brief run (the on-open read-model re-read; never re-ranks).
+	// Your morning brief for today, its ranked items. 404 means none has been made yet; generateMorningBrief makes one.
 	// (GET /brief)
 	GetMorningBrief(w http.ResponseWriter, r *http.Request)
 	// Assemble the acting rep's brief for today if the overnight pass has not already.
@@ -102073,13 +102205,13 @@ type ServerInterface interface {
 	// Write the overnight pass's findings onto the acting rep's own brief for today.
 	// (PUT /brief/annotations)
 	AnnotateMorningBrief(w http.ResponseWriter, r *http.Request)
-	// Mark a brief item acted (B-E05.13) — the deal drops from the next run until it materially changes.
+	// Mark a brief item acted — the deal drops from the next run until it materially changes.
 	// (POST /brief/items/{itemId}/act)
 	MarkBriefItemActed(w http.ResponseWriter, r *http.Request, itemId openapi_types.UUID)
-	// Dismiss a brief item (B-E05.13) — it does not reappear unless a new linked activity arrives after the mark.
+	// Dismiss a brief item — it does not reappear unless a new linked activity arrives after the mark.
 	// (POST /brief/items/{itemId}/dismiss)
 	MarkBriefItemDismissed(w http.ResponseWriter, r *http.Request, itemId openapi_types.UUID)
-	// Snooze a brief item (A77/AC-home-6) — hidden until `snoozed_until` passes, then it re-surfaces as actionable.
+	// Snooze a brief item — hidden until `snoozed_until` passes, then it re-surfaces as actionable.
 	// (POST /brief/items/{itemId}/snooze)
 	SnoozeBriefItem(w http.ResponseWriter, r *http.Request, itemId openapi_types.UUID)
 	// Take back a snooze — the item returns to the queue immediately.
@@ -102115,10 +102247,10 @@ type ServerInterface interface {
 	// Ask about an undecided domain again (admin/ops).
 	// (POST /capture/blocked-domains/{domain}/reopen)
 	ReopenWithheldDomain(w http.ResponseWriter, r *http.Request, domain string)
-	// Search the shipped consumer-mail baseline (CAP-PARAM-5).
+	// Search the shipped consumer-mail baseline.
 	// (GET /capture/consumer-mail-baseline)
 	ListConsumerMailBaseline(w http.ResponseWriter, r *http.Request, params ListConsumerMailBaselineParams)
-	// The workspace's own consumer-mail domain list (CAP-PARAM-5).
+	// The workspace's own consumer-mail domain list.
 	// (GET /capture/consumer-mail-domains)
 	ListConsumerMailDomains(w http.ResponseWriter, r *http.Request)
 	// Add a consumer-mail domain, or carve one out.
@@ -102349,7 +102481,7 @@ type ServerInterface interface {
 	// The account's contacts, ranked by who is worth writing to next, filtered and paged over the WHOLE account.
 	// (GET /companies/{id}/contacts)
 	ListCompanyContacts(w http.ResponseWriter, r *http.Request, id Id, params ListCompanyContactsParams)
-	// The agreements this company holds, newest first (CONTRACT-WIRE-1).
+	// The agreements this company holds, newest first.
 	// (GET /companies/{id}/contracts)
 	ListCompanyContracts(w http.ResponseWriter, r *http.Request, id Id, params ListCompanyContractsParams)
 	// How well this account is covered — who answers, who is missing from the buying team, and the warmest way in.
@@ -102769,25 +102901,25 @@ type ServerInterface interface {
 	// The records most relevant to a description, ranked by meaning as well as words.
 	// (GET /context-search)
 	SearchContext(w http.ResponseWriter, r *http.Request, params SearchContextParams)
-	// Record an agreement (CONTRACT-WIRE-2).
+	// Record an agreement.
 	// (POST /contracts)
 	CreateContract(w http.ResponseWriter, r *http.Request, params CreateContractParams)
-	// Archive an agreement (CONTRACT-WIRE-5).
+	// Archive an agreement.
 	// (DELETE /contracts/{id})
 	ArchiveContract(w http.ResponseWriter, r *http.Request, id Id)
-	// One contract (CONTRACT-WIRE-3).
+	// One agreement with a company, with its terms, value, dates and status.
 	// (GET /contracts/{id})
 	GetContract(w http.ResponseWriter, r *http.Request, id Id)
-	// Change an agreement's recorded terms (CONTRACT-WIRE-4).
+	// Change an agreement's recorded terms.
 	// (PATCH /contracts/{id})
 	UpdateContract(w http.ResponseWriter, r *http.Request, id Id, params UpdateContractParams)
-	// Record notice of cancellation and when it takes effect (CONTRACT-WIRE-6).
+	// Record notice of cancellation and when it takes effect.
 	// (POST /contracts/{id}/cancellation)
 	CancelContract(w http.ResponseWriter, r *http.Request, id Id, params CancelContractParams)
-	// Create the successor agreement and supersede this one (CONTRACT-WIRE-7).
+	// Create the successor agreement and supersede this one.
 	// (POST /contracts/{id}/renewal)
 	RenewContract(w http.ResponseWriter, r *http.Request, id Id, params RenewContractParams)
-	// Assert a new contract status (CONTRACT-PARAM-1).
+	// Assert a new contract status.
 	// (POST /contracts/{id}/status)
 	ChangeContractStatus(w http.ResponseWriter, r *http.Request, id Id, params ChangeContractStatusParams)
 	// List custom fields for an object (admin read; includes retired by default).
@@ -102811,7 +102943,7 @@ type ServerInterface interface {
 	// Retire (soft-retire) a custom field. It cannot be undone.
 	// (POST /custom-fields/{id}/retire)
 	RetireCustomField(w http.ResponseWriter, r *http.Request, id Id, params RetireCustomFieldParams)
-	// List GDPR data-subject requests (B-E11.30).
+	// List GDPR data-subject requests.
 	// (GET /data-subject-requests)
 	ListDataSubjectRequests(w http.ResponseWriter, r *http.Request, params ListDataSubjectRequestsParams)
 	// Open a data-subject request (access/rectify/erasure). subject_ref is the subject's contact id when they are a contact, else the email they wrote from; only a contact id can be fulfilled. Admin-mediated; ties to retention and erasure.
@@ -103156,7 +103288,7 @@ type ServerInterface interface {
 	// Per-field change history for one record, projected from audit_log before/after diffs.
 	// (GET /field-history)
 	GetFieldHistory(w http.ResponseWriter, r *http.Request, params GetFieldHistoryParams)
-	// Count and sample what a filter would select, before it is saved (LVS-EXT-9).
+	// Count and sample what a filter would select, before it is saved.
 	// (POST /filters/preview)
 	PreviewFilter(w http.ResponseWriter, r *http.Request)
 	// Propose filter clauses for a list described in plain words.
@@ -103765,7 +103897,7 @@ type ServerInterface interface {
 	// Get ready for a meeting about one record.
 	// (GET /meeting-prep)
 	PrepForMeeting(w http.ResponseWriter, r *http.Request, params PrepForMeetingParams)
-	// The acting user's own in-app notifications, newest first. Not a privacy notice owed to a contact; those are notice_case_reviews.
+	// The acting user's own in-app notifications, newest first. Not a privacy notice owed to a contact; those are notice_case_reviews (GET /privacy/notice-case-reviews).
 	// (GET /notices)
 	ListNotices(w http.ResponseWriter, r *http.Request, params ListNoticesParams)
 	// Raise a coaching notice for a colleague. It lands in their Worklist's notices lane.
@@ -103912,16 +104044,16 @@ type ServerInterface interface {
 	// Every contact's privacy-notice case, including one whose source was never recorded (an older contact), soonest deadline first. Without state it lists unresolved cases only, so an empty page is not an empty notice history, and a contact imported moments ago may have no case yet. For one contact, read their contact_360 view (GET /contacts/{id}/360) instead; its privacy_source_reviews and privacy_notice_duties carry the case ids.
 	// (GET /privacy/notice-case-reviews)
 	ListNoticeCaseReviews(w http.ResponseWriter, r *http.Request, params ListNoticeCaseReviewsParams)
-	// One contact's privacy-notice case — its source, whether a notice is owed, and by when. The id comes from notice_case_reviews or the contact's contact_360 view, not the contact's id.
+	// One contact's privacy-notice case — its source, whether a notice is owed, and by when. The id comes from notice_case_reviews (GET /privacy/notice-case-reviews) or the contact's contact_360 view (GET /contacts/{id}/360), not the contact's id.
 	// (GET /privacy/notice-case-reviews/{id})
 	GetNoticeCaseReview(w http.ResponseWriter, r *http.Request, id openapi_types.UUID)
-	// Give a contact's privacy-notice case (from notice_case_reviews) an owner.
+	// Give a contact's privacy-notice case (from notice_case_reviews, GET /privacy/notice-case-reviews) an owner.
 	// (POST /privacy/notice-case-reviews/{id}/assign)
 	AssignNoticeCaseReview(w http.ResponseWriter, r *http.Request, id openapi_types.UUID)
 	// Read accessible evidence for a contact source assessment.
 	// (GET /privacy/notice-case-reviews/{id}/source)
 	GetNoticeSourceEvidence(w http.ResponseWriter, r *http.Request, id openapi_types.UUID, params GetNoticeSourceEvidenceParams)
-	// Confirm where a contact came from (bought list, import, their own enquiry), which decides whether a privacy notice is owed. Preview it first (POST /privacy/notice-case-reviews/{id}/source/preview). Only a contact with no recorded source is up for review; when its evidence does not name where the data first came from, ask the user rather than guessing a kind.
+	// Confirm where a contact came from (bought list, import, their own enquiry), which decides whether a privacy notice is owed. Preview it first (POST /privacy/notice-case-reviews/{id}/source/preview). Only a contact with no recorded source is up for review; when its evidence does not name where the data first came from (an import alone does not), ask the user rather than guessing a kind.
 	// (POST /privacy/notice-case-reviews/{id}/source)
 	AssessNoticeSource(w http.ResponseWriter, r *http.Request, id openapi_types.UUID)
 	// Preview what confirming a contact's source decides — whether a notice is owed and by when — without changing the case. Confirming is the user's decision, so offer confirm_notice_source (POST /privacy/notice-case-reviews/{id}/source) and ask them, unless they already named the source and asked you to confirm it.
@@ -103930,10 +104062,10 @@ type ServerInterface interface {
 	// Privacy notices already owed, where the source is confirmed, soonest deadline first. A contact whose source nobody has confirmed is in notice_case_reviews (GET /privacy/notice-case-reviews).
 	// (GET /privacy/notice-cases)
 	ListNoticeCases(w http.ResponseWriter, r *http.Request, params ListNoticeCasesParams)
-	// One privacy notice owed, where the source is confirmed. The case id comes from notice_cases, not the contact's id.
+	// One privacy notice owed, where the source is confirmed. The case id comes from notice_cases (GET /privacy/notice-cases), not the contact's id.
 	// (GET /privacy/notice-cases/{id})
 	GetNoticeCase(w http.ResponseWriter, r *http.Request, id openapi_types.UUID)
-	// Give a privacy notice already owed (from notice_cases) an owner.
+	// Give a privacy notice already owed (from notice_cases, GET /privacy/notice-cases) an owner.
 	// (POST /privacy/notice-cases/{id}/assign)
 	AssignNoticeCase(w http.ResponseWriter, r *http.Request, id openapi_types.UUID)
 	// End a disclosure duty on a stated ground, or record that it was met elsewhere.
@@ -104248,7 +104380,7 @@ type ServerInterface interface {
 	// Update a relationship (role, primary flag, dates).
 	// (PATCH /relationships/{id})
 	UpdateRelationship(w http.ResponseWriter, r *http.Request, id Id, params UpdateRelationshipParams)
-	// Run a report (the `run_report` MCP verb) and return aggregate rows.
+	// Run a report (the `run_report` MCP verb) and return aggregate rows. It keeps nothing; to keep figures others can reopen, ask runAnalyticsQuery with `save`.
 	// (POST /reports/{report})
 	RunReport(w http.ResponseWriter, r *http.Request, report string)
 	// "Explain This Number" — resolve a derivation handle to its definition + source rows.
@@ -105598,7 +105730,7 @@ func (_ Unimplemented) SummarizeSalesProgress(w http.ResponseWriter, r *http.Req
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
-// Answer a question nobody wrote a report for.
+// Answer a question nobody wrote a report for. With `save` the answer is kept as a saved question, which `GET /analytics/runs` lists and others reopen by its `run_id`.
 // (POST /analytics/query)
 func (_ Unimplemented) RunAnalyticsQuery(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotImplemented)
@@ -106006,7 +106138,7 @@ func (_ Unimplemented) GetAttachmentExtractionReading(w http.ResponseWriter, r *
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
-// Set a document's category, title, state or supersedes pointer (DOC-WIRE-2).
+// Set a document's category, title, state or supersedes pointer.
 // (PATCH /attachments/{id}/metadata)
 func (_ Unimplemented) UpdateAttachmentMetadata(w http.ResponseWriter, r *http.Request, id Id) {
 	w.WriteHeader(http.StatusNotImplemented)
@@ -106168,7 +106300,7 @@ func (_ Unimplemented) BookMeeting(w http.ResponseWriter, r *http.Request, param
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
-// The acting rep's latest Morning-Brief run (the on-open read-model re-read; never re-ranks).
+// Your morning brief for today, its ranked items. 404 means none has been made yet; generateMorningBrief makes one.
 // (GET /brief)
 func (_ Unimplemented) GetMorningBrief(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotImplemented)
@@ -106186,19 +106318,19 @@ func (_ Unimplemented) AnnotateMorningBrief(w http.ResponseWriter, r *http.Reque
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
-// Mark a brief item acted (B-E05.13) — the deal drops from the next run until it materially changes.
+// Mark a brief item acted — the deal drops from the next run until it materially changes.
 // (POST /brief/items/{itemId}/act)
 func (_ Unimplemented) MarkBriefItemActed(w http.ResponseWriter, r *http.Request, itemId openapi_types.UUID) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
-// Dismiss a brief item (B-E05.13) — it does not reappear unless a new linked activity arrives after the mark.
+// Dismiss a brief item — it does not reappear unless a new linked activity arrives after the mark.
 // (POST /brief/items/{itemId}/dismiss)
 func (_ Unimplemented) MarkBriefItemDismissed(w http.ResponseWriter, r *http.Request, itemId openapi_types.UUID) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
-// Snooze a brief item (A77/AC-home-6) — hidden until `snoozed_until` passes, then it re-surfaces as actionable.
+// Snooze a brief item — hidden until `snoozed_until` passes, then it re-surfaces as actionable.
 // (POST /brief/items/{itemId}/snooze)
 func (_ Unimplemented) SnoozeBriefItem(w http.ResponseWriter, r *http.Request, itemId openapi_types.UUID) {
 	w.WriteHeader(http.StatusNotImplemented)
@@ -106270,13 +106402,13 @@ func (_ Unimplemented) ReopenWithheldDomain(w http.ResponseWriter, r *http.Reque
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
-// Search the shipped consumer-mail baseline (CAP-PARAM-5).
+// Search the shipped consumer-mail baseline.
 // (GET /capture/consumer-mail-baseline)
 func (_ Unimplemented) ListConsumerMailBaseline(w http.ResponseWriter, r *http.Request, params ListConsumerMailBaselineParams) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
-// The workspace's own consumer-mail domain list (CAP-PARAM-5).
+// The workspace's own consumer-mail domain list.
 // (GET /capture/consumer-mail-domains)
 func (_ Unimplemented) ListConsumerMailDomains(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotImplemented)
@@ -106738,7 +106870,7 @@ func (_ Unimplemented) ListCompanyContacts(w http.ResponseWriter, r *http.Reques
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
-// The agreements this company holds, newest first (CONTRACT-WIRE-1).
+// The agreements this company holds, newest first.
 // (GET /companies/{id}/contracts)
 func (_ Unimplemented) ListCompanyContracts(w http.ResponseWriter, r *http.Request, id Id, params ListCompanyContractsParams) {
 	w.WriteHeader(http.StatusNotImplemented)
@@ -107578,43 +107710,43 @@ func (_ Unimplemented) SearchContext(w http.ResponseWriter, r *http.Request, par
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
-// Record an agreement (CONTRACT-WIRE-2).
+// Record an agreement.
 // (POST /contracts)
 func (_ Unimplemented) CreateContract(w http.ResponseWriter, r *http.Request, params CreateContractParams) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
-// Archive an agreement (CONTRACT-WIRE-5).
+// Archive an agreement.
 // (DELETE /contracts/{id})
 func (_ Unimplemented) ArchiveContract(w http.ResponseWriter, r *http.Request, id Id) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
-// One contract (CONTRACT-WIRE-3).
+// One agreement with a company, with its terms, value, dates and status.
 // (GET /contracts/{id})
 func (_ Unimplemented) GetContract(w http.ResponseWriter, r *http.Request, id Id) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
-// Change an agreement's recorded terms (CONTRACT-WIRE-4).
+// Change an agreement's recorded terms.
 // (PATCH /contracts/{id})
 func (_ Unimplemented) UpdateContract(w http.ResponseWriter, r *http.Request, id Id, params UpdateContractParams) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
-// Record notice of cancellation and when it takes effect (CONTRACT-WIRE-6).
+// Record notice of cancellation and when it takes effect.
 // (POST /contracts/{id}/cancellation)
 func (_ Unimplemented) CancelContract(w http.ResponseWriter, r *http.Request, id Id, params CancelContractParams) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
-// Create the successor agreement and supersede this one (CONTRACT-WIRE-7).
+// Create the successor agreement and supersede this one.
 // (POST /contracts/{id}/renewal)
 func (_ Unimplemented) RenewContract(w http.ResponseWriter, r *http.Request, id Id, params RenewContractParams) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
-// Assert a new contract status (CONTRACT-PARAM-1).
+// Assert a new contract status.
 // (POST /contracts/{id}/status)
 func (_ Unimplemented) ChangeContractStatus(w http.ResponseWriter, r *http.Request, id Id, params ChangeContractStatusParams) {
 	w.WriteHeader(http.StatusNotImplemented)
@@ -107662,7 +107794,7 @@ func (_ Unimplemented) RetireCustomField(w http.ResponseWriter, r *http.Request,
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
-// List GDPR data-subject requests (B-E11.30).
+// List GDPR data-subject requests.
 // (GET /data-subject-requests)
 func (_ Unimplemented) ListDataSubjectRequests(w http.ResponseWriter, r *http.Request, params ListDataSubjectRequestsParams) {
 	w.WriteHeader(http.StatusNotImplemented)
@@ -108352,7 +108484,7 @@ func (_ Unimplemented) GetFieldHistory(w http.ResponseWriter, r *http.Request, p
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
-// Count and sample what a filter would select, before it is saved (LVS-EXT-9).
+// Count and sample what a filter would select, before it is saved.
 // (POST /filters/preview)
 func (_ Unimplemented) PreviewFilter(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotImplemented)
@@ -109570,7 +109702,7 @@ func (_ Unimplemented) PrepForMeeting(w http.ResponseWriter, r *http.Request, pa
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
-// The acting user's own in-app notifications, newest first. Not a privacy notice owed to a contact; those are notice_case_reviews.
+// The acting user's own in-app notifications, newest first. Not a privacy notice owed to a contact; those are notice_case_reviews (GET /privacy/notice-case-reviews).
 // (GET /notices)
 func (_ Unimplemented) ListNotices(w http.ResponseWriter, r *http.Request, params ListNoticesParams) {
 	w.WriteHeader(http.StatusNotImplemented)
@@ -109864,13 +109996,13 @@ func (_ Unimplemented) ListNoticeCaseReviews(w http.ResponseWriter, r *http.Requ
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
-// One contact's privacy-notice case — its source, whether a notice is owed, and by when. The id comes from notice_case_reviews or the contact's contact_360 view, not the contact's id.
+// One contact's privacy-notice case — its source, whether a notice is owed, and by when. The id comes from notice_case_reviews (GET /privacy/notice-case-reviews) or the contact's contact_360 view (GET /contacts/{id}/360), not the contact's id.
 // (GET /privacy/notice-case-reviews/{id})
 func (_ Unimplemented) GetNoticeCaseReview(w http.ResponseWriter, r *http.Request, id openapi_types.UUID) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
-// Give a contact's privacy-notice case (from notice_case_reviews) an owner.
+// Give a contact's privacy-notice case (from notice_case_reviews, GET /privacy/notice-case-reviews) an owner.
 // (POST /privacy/notice-case-reviews/{id}/assign)
 func (_ Unimplemented) AssignNoticeCaseReview(w http.ResponseWriter, r *http.Request, id openapi_types.UUID) {
 	w.WriteHeader(http.StatusNotImplemented)
@@ -109882,7 +110014,7 @@ func (_ Unimplemented) GetNoticeSourceEvidence(w http.ResponseWriter, r *http.Re
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
-// Confirm where a contact came from (bought list, import, their own enquiry), which decides whether a privacy notice is owed. Preview it first (POST /privacy/notice-case-reviews/{id}/source/preview). Only a contact with no recorded source is up for review; when its evidence does not name where the data first came from, ask the user rather than guessing a kind.
+// Confirm where a contact came from (bought list, import, their own enquiry), which decides whether a privacy notice is owed. Preview it first (POST /privacy/notice-case-reviews/{id}/source/preview). Only a contact with no recorded source is up for review; when its evidence does not name where the data first came from (an import alone does not), ask the user rather than guessing a kind.
 // (POST /privacy/notice-case-reviews/{id}/source)
 func (_ Unimplemented) AssessNoticeSource(w http.ResponseWriter, r *http.Request, id openapi_types.UUID) {
 	w.WriteHeader(http.StatusNotImplemented)
@@ -109900,13 +110032,13 @@ func (_ Unimplemented) ListNoticeCases(w http.ResponseWriter, r *http.Request, p
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
-// One privacy notice owed, where the source is confirmed. The case id comes from notice_cases, not the contact's id.
+// One privacy notice owed, where the source is confirmed. The case id comes from notice_cases (GET /privacy/notice-cases), not the contact's id.
 // (GET /privacy/notice-cases/{id})
 func (_ Unimplemented) GetNoticeCase(w http.ResponseWriter, r *http.Request, id openapi_types.UUID) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
-// Give a privacy notice already owed (from notice_cases) an owner.
+// Give a privacy notice already owed (from notice_cases, GET /privacy/notice-cases) an owner.
 // (POST /privacy/notice-cases/{id}/assign)
 func (_ Unimplemented) AssignNoticeCase(w http.ResponseWriter, r *http.Request, id openapi_types.UUID) {
 	w.WriteHeader(http.StatusNotImplemented)
@@ -110536,7 +110668,7 @@ func (_ Unimplemented) UpdateRelationship(w http.ResponseWriter, r *http.Request
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
-// Run a report (the `run_report` MCP verb) and return aggregate rows.
+// Run a report (the `run_report` MCP verb) and return aggregate rows. It keeps nothing; to keep figures others can reopen, ask runAnalyticsQuery with `save`.
 // (POST /reports/{report})
 func (_ Unimplemented) RunReport(w http.ResponseWriter, r *http.Request, report string) {
 	w.WriteHeader(http.StatusNotImplemented)

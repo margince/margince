@@ -159,6 +159,11 @@ const extSchemaPrefix = `"ext".`
 
 // extensionKindSpec is the population of a record kind a unit declared. The
 // kind's rights object gates the read and names the field masks that reach it.
+//
+// A breakdown here skips the administrator's reportable opt-in. That opt-in
+// guards fields an administrator adds to a core record. A unit's fields are
+// its own declared schema, and the kind's read right and field masks gate
+// every value a report can group by.
 func extensionKindSpec(d recordkinds.Declared, by string) reportSpec {
 	spec := reportSpec{
 		entity:        datasource.EntityType(d.Object),

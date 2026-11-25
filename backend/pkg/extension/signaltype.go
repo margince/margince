@@ -5,6 +5,7 @@ package extension
 
 import (
 	"fmt"
+	"math"
 	"slices"
 	"strings"
 )
@@ -102,7 +103,7 @@ func (d SignalTypeDeclaration) Validate() error {
 
 // CheckFields refuses evidence that does not fit the layout. It refuses a member
 // the layout does not name, a required member left out and a member of the wrong
-// type. A number is a float64 after JSON decoding and an int from Go code.
+// type. A number is a float64 after JSON decoding and an int from Go code. NaN and Inf are not numbers JSON can carry, so they are refused.
 func (d SignalTypeDeclaration) CheckFields(fields map[string]any) error {
 	declared := make(map[string]SignalEvidenceField, len(d.Evidence))
 	for _, f := range d.Evidence {
@@ -135,8 +136,12 @@ func fieldTypeFits(t SignalFieldType, v any) bool {
 		_, ok := v.(bool)
 		return ok
 	case SignalFieldNumber:
-		switch v.(type) {
-		case float64, float32, int, int32, int64:
+		switch n := v.(type) {
+		case float64:
+			return !math.IsNaN(n) && !math.IsInf(n, 0)
+		case float32:
+			return !math.IsNaN(float64(n)) && !math.IsInf(float64(n), 0)
+		case int, int32, int64:
 			return true
 		}
 	}

@@ -219,11 +219,6 @@ func (s *Store) compareSnapshot(ctx context.Context, tx pgx.Tx, l listRow, table
 	if err := tx.QueryRow(ctx, enterStatement, args).Scan(&check.Entered); err != nil {
 		return fmt.Errorf("record who entered: %w", err)
 	}
-	if _, err := tx.Exec(ctx, `UPDATE list_live_member SET definition_version = @version
-		WHERE list_id = @list_id AND definition_version <> @version`,
-		pgx.StrictNamedArgs{listIDField: l.ID, versionField: l.Version}); err != nil {
-		return err
-	}
 	if !held {
 		check.Entered, check.Left = 0, 0
 	}
@@ -305,8 +300,8 @@ const leaveStatement = `WITH gone AS (
 // enterStatement holds the members the filter newly selects and, past the
 // first check, records each as having entered.
 const enterStatement = `WITH came AS (
-		INSERT INTO list_live_member (list_id, entity_type, entity_id, member_since, definition_version)
-		SELECT @list_id, @entity_type, m.id, @at, @version FROM unnest(@changed::uuid[]) AS m(id)
+		INSERT INTO list_live_member (list_id, entity_type, entity_id, member_since)
+		SELECT @list_id, @entity_type, m.id, @at FROM unnest(@changed::uuid[]) AS m(id)
 		ON CONFLICT (list_id, entity_id) DO NOTHING
 		RETURNING entity_type, entity_id),
 	logged AS (

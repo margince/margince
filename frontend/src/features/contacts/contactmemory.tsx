@@ -143,7 +143,12 @@ function MemoryEntry({
       key={row.key}
       title={
         open && email ? (
-          <Button variant="link" className="pe-card-open" onClick={open}>
+          <Button
+            variant="link"
+            align="start"
+            className="pe-card-open"
+            onClick={open}
+          >
             {row.title}
           </Button>
         ) : (

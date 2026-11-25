@@ -70,17 +70,20 @@ describe("the companies on a project", () => {
     }
   });
 
-  // Every card carries the same "Detach" item, so the name has to say which
-  // company it takes off.
-  it("names the company on each card's detach item", async () => {
+  // Every card's menu looks the same, so its name says which company it is
+  // for. It takes the link off with Remove, as the other link rows do.
+  it("names the company on each card's menu, which holds Remove", async () => {
     const user = userEvent.setup();
     renderSection([netcare, relay], false);
 
-    const [first] = screen.getAllByRole("button", { name: "More actions" });
-    await user.click(first);
+    await user.click(
+      screen.getByRole("button", { name: "More actions for netcare" }),
+    );
 
+    expect(screen.getByRole("button", { name: "Remove" })).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Remove" }));
     expect(
-      screen.getByRole("button", { name: "Detach netcare" }),
+      screen.getByRole("button", { name: "Remove company" }),
     ).toBeInTheDocument();
   });
 
@@ -90,7 +93,7 @@ describe("the companies on a project", () => {
     renderSection([netcare], false);
 
     expect(
-      screen.queryByRole("button", { name: "More actions" }),
+      screen.queryByRole("button", { name: /^More actions/ }),
     ).not.toBeInTheDocument();
   });
 

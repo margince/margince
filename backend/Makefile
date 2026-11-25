@@ -113,6 +113,12 @@ ifeq (,$(findstring -trimpath,$(GOFLAGS)))
 override GOFLAGS += -trimpath
 export GOFLAGS
 endif
+# -trimpath leaves runtime.GOROOT empty in a `go run` tool such as gen-composition,
+# so the root of the same go is passed in the environment, as in ../Makefile.
+ifeq ($(GOROOT),)
+GOROOT := $(shell go env GOROOT)
+export GOROOT
+endif
 endif
 # The root workspace, which is what every backend/tools generator runs under:
 # the tools are a separate module, and their resolution must not depend on

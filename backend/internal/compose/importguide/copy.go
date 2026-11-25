@@ -57,7 +57,7 @@ var Columns = withLabels(withActivityColumns(map[string]Column{
 		En: "Number of employees, as one of the bands Margince uses.",
 		De: "Anzahl der Beschäftigten als eine der Größenklassen, die Margince verwendet.",
 		Vi: "Số nhân viên, theo một trong các nhóm quy mô Margince dùng.",
-	}, Example: same("1-10 · 11-50 · 51-200"), Aliases: []string{"Number of employees", "Anzahl Mitarbeiter", "Mitarbeitende"}},
+	}, Example: same("1-10 · 11-50 · 51-200"), Aliases: []string{"Employees", "Mitarbeitende", "Số nhân viên", "Number of employees", "Anzahl Mitarbeiter", "Beschäftigtenzahl"}},
 	"description": {Description: langcopy.Phrase{
 		En: "A short description of the company.",
 		De: "Eine kurze Beschreibung des Unternehmens.",

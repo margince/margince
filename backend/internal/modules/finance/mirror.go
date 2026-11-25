@@ -332,16 +332,16 @@ func insertInvoice(
 		       (id, connection_id, company_id, external_id, number,
 		        issued_at, due_at, status, currency, net_minor, tax_minor, gross_minor,
 		        open_minor, credited_minor, fully_paid_at, disputed_at, void_at,
-		        credits_invoice_id, source_updated_at, sync_hash, fx_rate_to_base,
+		        credits_invoice_id, sync_hash, fx_rate_to_base,
 		        fx_rate_date, source, captured_by, customer_link_id, dunning_level)
 		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15,
-		        $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26)
+		        $16, $17, $18, $19, $20, $21, $22, $23, $24, $25)
 		RETURNING fx_rate_to_base`,
 		id, args.connectionID, args.companyID,
 		inv.ExternalID, nullable(inv.Number), inv.IssuedOn, inv.DueOn, values.status,
 		inv.Currency, inv.NetMinor, inv.TaxMinor, inv.GrossMinor, values.openMinor,
 		values.credited, inv.FullyPaidAt, values.disputedAt, values.voidAt,
-		values.creditsID, inv.UpdatedAt, hash, values.fxRate, values.fxDate,
+		values.creditsID, hash, values.fxRate, values.fxDate,
 		args.source, args.capturedBy, args.linkID, inv.DunningLevel).Scan(&values.fxRate)
 	if err != nil {
 		return fmt.Errorf("mirror the invoice: %w", err)
@@ -381,15 +381,15 @@ func updateInvoice(
 		       status = $6, currency = $7, net_minor = $8, tax_minor = $9,
 		       gross_minor = $10, open_minor = $11, credited_minor = $12,
 		       fully_paid_at = $13, disputed_at = $14, void_at = $15,
-		       credits_invoice_id = $16, source_updated_at = $17, sync_hash = $18,
-		       fx_rate_to_base = $19, fx_rate_date = $20, customer_link_id = $21,
-		       dunning_level = $22
+		       credits_invoice_id = $16, sync_hash = $17,
+		       fx_rate_to_base = $18, fx_rate_date = $19, customer_link_id = $20,
+		       dunning_level = $21
 		 WHERE id = $1
 		RETURNING fx_rate_to_base`,
 		id, args.companyID, nullable(inv.Number), inv.IssuedOn, inv.DueOn,
 		values.status, inv.Currency, inv.NetMinor, inv.TaxMinor, inv.GrossMinor,
 		values.openMinor, values.credited, inv.FullyPaidAt, values.disputedAt,
-		values.voidAt, values.creditsID, inv.UpdatedAt, hash,
+		values.voidAt, values.creditsID, hash,
 		values.fxRate, values.fxDate, args.linkID, inv.DunningLevel).Scan(&values.fxRate)
 	if err != nil {
 		return fmt.Errorf("update the mirrored invoice: %w", err)

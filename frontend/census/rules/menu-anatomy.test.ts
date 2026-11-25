@@ -199,6 +199,16 @@ describe("the option-role census", () => {
     expect(classesUnderAnOptionRole(source)).toEqual(["pick-list", "pick-row"]);
   });
 
+  it("reads a role written as an expression", () => {
+    const source = parseSource(
+      "fixture.tsx",
+      `const a = <ul role={"listbox"} className="pick-list" />;
+       const b = <li role={chosen ? "option" : undefined} className="pick-row" />;
+       const c = <div role={live ? "status" : undefined} className="not-a-menu" />;`,
+    );
+    expect(classesUnderAnOptionRole(source)).toEqual(["pick-list", "pick-row"]);
+  });
+
   it("reports a planted option surface the roster does not know", () => {
     const area: Area = "src";
     expect(

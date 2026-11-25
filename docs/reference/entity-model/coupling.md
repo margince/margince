@@ -10,46 +10,46 @@ An area with no inbound key is a candidate for a separate module. Its outbound k
 
 | Area | Tables | Columns | Inbound keys | Outbound keys | Outbound cascades |
 |---|--:|--:|--:|--:|--:|
-| [activities](activities.md) | 32 | 432 | 29 | 38 | 18 |
+| [activities](activities.md) | 32 | 424 | 29 | 38 | 18 |
 | [agents](agents.md) | 3 | 28 | 0 | 5 | 1 |
-| [ai](ai.md) | 12 | 196 | 0 | 3 | 0 |
+| [ai](ai.md) | 12 | 194 | 0 | 3 | 0 |
 | [aiactivity](aiactivity.md) | 1 | 24 | 0 | 2 | 0 |
 | [approvals](approvals.md) | 3 | 53 | 4 | 8 | 2 |
 | [assignments](assignments.md) | 2 | 27 | 0 | 5 | 3 |
 | [assurance](assurance.md) | 9 | 86 | 0 | 7 | 5 |
-| [automation](automation.md) | 3 | 33 | 1 | 2 | 0 |
+| [automation](automation.md) | 3 | 32 | 1 | 2 | 0 |
 | [capture](capture.md) | 25 | 261 | 6 | 27 | 14 |
 | [chatlinks](chatlinks.md) | 2 | 29 | 0 | 4 | 2 |
-| [collections](collections.md) | 13 | 106 | 1 | 10 | 6 |
+| [collections](collections.md) | 13 | 101 | 1 | 9 | 6 |
 | [commissions](commissions.md) | 1 | 18 | 0 | 2 | 2 |
 | [comms](comms.md) | 1 | 47 | 5 | 6 | 1 |
-| [compose](compose.md) | 47 | 429 | 3 | 40 | 36 |
+| [compose](compose.md) | 42 | 390 | 3 | 30 | 26 |
 | [consent](consent.md) | 23 | 319 | 2 | 42 | 23 |
-| [contacts](contacts.md) | 49 | 716 | 77 | 35 | 12 |
-| [continuity](continuity.md) | 1 | 8 | 0 | 0 | 0 |
+| [contacts](contacts.md) | 49 | 711 | 75 | 35 | 12 |
+| [continuity](continuity.md) | 1 | 7 | 0 | 0 | 0 |
 | [contracts](contracts.md) | 1 | 29 | 2 | 3 | 0 |
 | [customfields](customfields.md) | 1 | 19 | 0 | 1 | 0 |
-| [dealrooms](dealrooms.md) | 8 | 95 | 0 | 8 | 1 |
-| [deals](deals.md) | 26 | 387 | 26 | 18 | 2 |
-| [finance](finance.md) | 5 | 85 | 0 | 3 | 0 |
+| [dealrooms](dealrooms.md) | 8 | 92 | 0 | 8 | 1 |
+| [deals](deals.md) | 26 | 379 | 26 | 16 | 2 |
+| [finance](finance.md) | 5 | 79 | 0 | 3 | 0 |
 | [forecasting](forecasting.md) | 4 | 94 | 1 | 2 | 0 |
-| [identity](identity.md) | 22 | 206 | 157 | 6 | 5 |
-| [initiatives](initiatives.md) | 5 | 45 | 0 | 2 | 1 |
+| [identity](identity.md) | 22 | 206 | 153 | 6 | 5 |
+| [initiatives](initiatives.md) | 5 | 40 | 0 | 2 | 1 |
 | [integrations](integrations.md) | 5 | 59 | 3 | 3 | 1 |
 | [introductions](introductions.md) | 1 | 31 | 0 | 6 | 1 |
-| [knowledge](knowledge.md) | 3 | 39 | 0 | 0 | 0 |
+| [knowledge](knowledge.md) | 3 | 36 | 0 | 0 | 0 |
 | [migration](migration.md) | 2 | 42 | 0 | 0 | 0 |
 | [notices](notices.md) | 3 | 26 | 0 | 3 | 3 |
-| [platform](platform.md) | 13 | 94 | 2 | 3 | 1 |
+| [platform](platform.md) | 14 | 103 | 1 | 7 | 5 |
 | [privacy](privacy.md) | 2 | 14 | 0 | 0 | 0 |
-| [projects](projects.md) | 3 | 42 | 11 | 3 | 0 |
+| [projects](projects.md) | 3 | 44 | 11 | 3 | 0 |
 | [recordlinks](recordlinks.md) | 1 | 8 | 0 | 0 | 0 |
-| [reporting](reporting.md) | 14 | 122 | 0 | 10 | 0 |
-| [search](search.md) | 4 | 42 | 0 | 4 | 2 |
-| [signals](signals.md) | 2 | 42 | 2 | 9 | 4 |
+| [reporting](reporting.md) | 14 | 121 | 0 | 12 | 0 |
+| [search](search.md) | 4 | 40 | 0 | 4 | 2 |
+| [signals](signals.md) | 2 | 43 | 2 | 9 | 4 |
 | [webforms](webforms.md) | 2 | 27 | 0 | 4 | 0 |
 | [webhooks](webhooks.md) | 2 | 32 | 0 | 1 | 1 |
-| [weeklyplan](weeklyplan.md) | 2 | 35 | 0 | 7 | 1 |
+| [weeklyplan](weeklyplan.md) | 2 | 33 | 0 | 7 | 1 |
 
 ## Keys from areas with no inbound dependency
 
@@ -168,6 +168,8 @@ No outbound foreign keys.
 - `report_definition.report_definition_audience_team_id_fkey`: `FOREIGN KEY (audience_team_id) REFERENCES team(id) ON DELETE RESTRICT`
 - `report_definition.report_definition_owner_id_fkey`: `FOREIGN KEY (owner_id) REFERENCES app_user(id) ON DELETE RESTRICT`
 - `report_definition_revision.report_definition_revision_created_by_fkey`: `FOREIGN KEY (created_by) REFERENCES app_user(id) ON DELETE RESTRICT`
+- `report_edition.report_edition_owner_id_fkey`: `FOREIGN KEY (owner_id) REFERENCES app_user(id) ON DELETE RESTRICT`
+- `report_edition.report_edition_publication_team_id_fkey`: `FOREIGN KEY (publication_team_id) REFERENCES team(id) ON DELETE RESTRICT`
 - `report_execution.report_execution_owner_id_fkey`: `FOREIGN KEY (owner_id) REFERENCES app_user(id) ON DELETE RESTRICT`
 - `report_schedule.report_schedule_owner_id_fkey`: `FOREIGN KEY (owner_id) REFERENCES app_user(id) ON DELETE RESTRICT`
 - `reporting_framework_revision.reporting_framework_revision_created_by_fkey`: `FOREIGN KEY (created_by) REFERENCES app_user(id) ON DELETE RESTRICT`

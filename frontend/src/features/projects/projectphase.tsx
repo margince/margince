@@ -8,7 +8,7 @@ import { ifMatch, requireVersion } from "../../api/version";
 import { Field, Textarea } from "../../design-system/atoms";
 import { ConfirmModal } from "../../design-system/confirmmodal";
 import { useFieldFaults } from "../../design-system/savepage";
-import { StageLadder } from "../../design-system/stageladder";
+import { StageLadder, type StageStep } from "../../design-system/stageladder";
 import { useLocale, useT } from "../../i18n";
 import { labelFor } from "../../lib/labelfor";
 import { blankRequired, problemMessageOf, unwrap } from "../../lib/problem";
@@ -58,11 +58,7 @@ export function PhaseStepper({
       variant={variant}
       steps={PROJECT_PHASES.map((step, rung) => ({
         key: step,
-        label: t(labelFor(PHASE_LABEL, step)),
-        // The name holds the phase it shows, so voice control can say it.
-        actionLabel: t("project.advance.title", {
-          phase: t(labelFor(PHASE_LABEL, step)),
-        }),
+        ...stepWords(step, phase, t),
         done: rung < here,
         current: step === phase,
         terminal: step === "closed",
@@ -74,6 +70,21 @@ export function PhaseStepper({
       }))}
     />
   );
+}
+
+// Closed is a way out, so its step reads as the verb until the project is
+// closed. A phase name there reads as the project's status.
+function stepWords(
+  step: ProjectPhase,
+  phase: ProjectPhase,
+  t: ReturnType<typeof useT>,
+): Pick<StageStep, "label" | "actionLabel"> {
+  if (step === "closed" && phase !== "closed") {
+    return { label: t("project.advance.close") };
+  }
+  const label = t(labelFor(PHASE_LABEL, step));
+  // The name holds the phase it shows, so voice control can say it.
+  return { label, actionLabel: t("project.advance.title", { phase: label }) };
 }
 
 export type PhaseMove = Readonly<{
@@ -154,9 +165,13 @@ export function AdvanceProjectModal({
       open={to !== null}
       onClose={onClose}
       title={
-        to
-          ? t("project.advance.title", { phase: t(labelFor(PHASE_LABEL, to)) })
-          : ""
+        closing
+          ? t("project.advance.close")
+          : to
+            ? t("project.advance.title", {
+                phase: t(labelFor(PHASE_LABEL, to)),
+              })
+            : ""
       }
       confirmLabel={
         closing ? t("project.advance.close") : t("project.advance.confirm")

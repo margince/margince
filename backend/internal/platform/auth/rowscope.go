@@ -370,7 +370,11 @@ func VisibleToExisting(ctx context.Context, tx pgx.Tx, table string, id ids.UUID
 // probeRead notes table's read check and records no refusal, for a caller that
 // answers a missing grant as "withheld" rather than refusing the call.
 func probeRead(ctx context.Context, table string) error {
-	read := Check{Object: table, Actions: []principal.Action{principal.ActionRead}}
+	object, err := gateObject(table)
+	if err != nil {
+		return err
+	}
+	read := Check{Object: object, Actions: []principal.Action{principal.ActionRead}}
 	noteCheck(ctx, read)
 	return probeCheck(ctx, read)
 }

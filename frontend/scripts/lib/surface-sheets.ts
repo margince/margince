@@ -38,6 +38,21 @@ export const TYPE = /^(?:[a-zA-Z][\w-]*|\*)/;
 export const PSEUDO_ELEMENT = /::[\w-]+|:(?:before|after)\b/;
 export const STATE = /:(?:hover|focus-visible|focus-within|focus|active)\b/g;
 
+/** A token opaque in light and see-through in dark, for a probe that must fail in dark only. */
+export function darkOnlyWash(
+  light: Readonly<Record<string, string>>,
+  dark: Readonly<Record<string, string>>,
+): string {
+  const name = Object.keys(dark).find(
+    (token) =>
+      OPAQUE.test(light[token] ?? "") && /^rgba\(/.test(dark[token] ?? ""),
+  );
+  if (name === undefined) {
+    throw new Error("tokens.css has no token that is see-through in dark only");
+  }
+  return name;
+}
+
 export type Declaration = { property: string; value: string };
 
 export function declarations(body: string): Declaration[] {

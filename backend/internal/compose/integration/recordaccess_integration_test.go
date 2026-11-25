@@ -432,6 +432,32 @@ func TestOnlyAMemberAdministratorSeesRolesAndTeams(t *testing.T) {
 	}
 }
 
+// A member administrator may not read the role directory, so each row names
+// the roles it shows by the name an admin gave them.
+func TestTheAdminSeesACustomRoleByItsName(t *testing.T) {
+	w := setupAccessWorld(t)
+	e := w.e
+	role, err := w.directory.CreateRole(e.Admin(), w.adminIdentity(), "rep", "Sales assistant")
+	if err != nil {
+		t.Fatalf("creating the custom role: %v", err)
+	}
+	if err := w.directory.ChangeUserRole(e.Admin(), w.adminIdentity(), ids.From[ids.UserKind](w.rep4), role.Key); err != nil {
+		t.Fatalf("moving rep4 onto the custom role: %v", err)
+	}
+	members := w.everyone(t, e.AdminUser, "contact", w.workspaceContact)
+	if got := members[w.rep4]; got.RoleNames == nil || (*got.RoleNames)[role.Key] != "Sales assistant" {
+		t.Errorf("rep4 is shown role names %v, want %s named %q", got.RoleNames, role.Key, "Sales assistant")
+	}
+	if names := members[w.roleless].RoleNames; names != nil && len(*names) != 0 {
+		t.Errorf("a member holding no role is shown role names %v, want none", names)
+	}
+	for member, got := range w.everyone(t, e.Rep3, "contact", w.workspaceContact) {
+		if got.RoleNames != nil {
+			t.Errorf("a rep is shown %s's role names", member)
+		}
+	}
+}
+
 func TestACallerWhoCannotOpenTheRecordLearnsNothing(t *testing.T) {
 	w := setupAccessWorld(t)
 	e := w.e

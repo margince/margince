@@ -174,7 +174,7 @@ func TestAutomaticWorkOverwritesAHumanTypedFieldWithoutApproval(t *testing.T) {
 	invoke := automaticInvoker(t, e)
 
 	out, err := invoke("update_record", fmt.Sprintf(
-		`{"record_type":"contact","id":%q,"fields":{"full_name":"Mona Machine","title":"VP Engineering"}}`, contactID,
+		`{"why":"A test asks for this change.","record_type":"contact","id":%q,"fields":{"full_name":"Mona Machine","title":"VP Engineering"}}`, contactID,
 	))
 	if err != nil {
 		t.Fatalf("a patch touching a human-typed name → %v, want it applied", err)

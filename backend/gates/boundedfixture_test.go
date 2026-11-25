@@ -73,6 +73,9 @@ var permsValuesThisCannotRead = gatekit.Waive(map[string]string{
 // measurement in a test binary of its own is the one exception. Its actors are
 // the database's seeded roles, so it has no fixture principal to bound.
 var suitesWithNoBoundedActor = gatekit.Waive(map[string]string{
+	"searchtext": "the search value a database trigger and a system data task keep for an activity row: " +
+		"every case reads that stored column, which no principal's row scope changes, and the search " +
+		"suite in the parent package holds the row scope of the hits",
 	"agentaccess": "the MCP transport and its authorization server: every case is about a " +
 		"passport's own authority, and the row scope behind it is exercised by the tool suites " +
 		"in the parent package rather than here",
@@ -85,6 +88,8 @@ var suitesWithNoBoundedActor = gatekit.Waive(map[string]string{
 		"the refusal is the subject and a bounded seat would not change it",
 	"jobfanout": "fan-out from the scheduler, whose actor is a system principal by construction; " +
 		"Unbounded short-circuits on the TYPE here, so a row scope on the fixture would decide nothing",
+	"retirementpreview": "a member's retirement preview, which only the admin role may read; the narrow case " +
+		"cuts that role to row scope own through the role API, which this scan cannot read as a fixture",
 	"schemaready": "the readiness probe over migration state, which runs before any principal is " +
 		"resolved and reads the migration ledger rather than a tenant row — /readyz is unauthenticated " +
 		"and a row scope would decide nothing about whether the schema is there",

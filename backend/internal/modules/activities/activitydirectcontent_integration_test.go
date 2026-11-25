@@ -303,7 +303,7 @@ func TestDirectContentEmailSummaryKeepsMultipleReadableRows(t *testing.T) {
 		}
 		preview := ""
 		if row.Body != nil {
-			preview = EmailSummaryText(*row.Body)
+			preview = EmailSummaryText(*row.Body, deref(row.Subject))
 		}
 		if preview == "" {
 			if summary.Preview != nil {

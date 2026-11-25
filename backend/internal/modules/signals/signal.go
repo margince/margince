@@ -29,6 +29,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/kernel/provenance"
 	"github.com/margince/margince/backend/internal/shared/ports/signaltypes"
 )
 
@@ -60,6 +61,9 @@ func (s *Store) CreateSignal(ctx context.Context, in CreateSignalInput) (crmcont
 		// The kind check admits the spelling, so this path must refuse it: only
 		// the declaring unit's seam checks the layout, owner and fingerprint.
 		return crmcontracts.Signal{}, &InvalidExtensionSignalError{Field: signalKindArg, Reason: "an extension kind is filed only by the extension that declares it"}
+	}
+	if err := provenance.AdmitRecordChannel(in.Source); err != nil {
+		return crmcontracts.Signal{}, err
 	}
 	if strings.TrimSpace(in.Summary) == "" {
 		return crmcontracts.Signal{}, &RequiredFieldError{Field: "summary"}
@@ -296,8 +300,12 @@ func (s *Store) UpdateSignal(ctx context.Context, id ids.SignalID, in UpdateSign
 				return fmt.Errorf("append signal outcome: %w", err)
 			}
 		}
-		if _, err := storekit.Audit(ctx, tx, "update", "signal", id.UUID, p.Before(), p.After()); err != nil {
+		auditID, err := storekit.Audit(ctx, tx, "update", "signal", id.UUID, p.Before(), p.After())
+		if err != nil {
 			return fmt.Errorf("audit signal update: %w", err)
+		}
+		if err := emitSignalUpdated(ctx, tx, auditID, id.UUID, actor.UserID); err != nil {
+			return err
 		}
 		if out, err = readSignalFor(ctx, tx, id, storekit.LiveOnly, s.words); err != nil {
 			return fmt.Errorf("read updated signal: %w", err)
@@ -338,7 +346,7 @@ func signalColumns(alias string) string {
 	cols := []string{
 		"id", "kind", "source_channel", "raw_ref", "entity_type", "entity_id",
 		"resolution_state", "resolution_confidence::float8", "resolved_company_id", "resolved_contact_id",
-		"severity", "summary", "evidence", "status", "detected_at", "source", "captured_by",
+		"severity", "summary", "evidence", "status", "detected_at", "source", "source_system", "captured_by",
 		"version", "created_at", "updated_at", "archived_at", "summary_params",
 	}
 	for i, c := range cols {
@@ -400,7 +408,7 @@ func scanSignal(row pgx.Row) (crmcontracts.Signal, json.RawMessage, error) {
 
 	err := row.Scan(&id, &kind, &sourceChannel, &sig.RawRef, &entityType, &entityID,
 		&resolutionState, &confidence, &resolvedCompanyID, &resolvedContactID,
-		&severity, &sig.Summary, &evidenceJSON, &status, &sig.DetectedAt, &sig.Source, &capturedBy,
+		&severity, &sig.Summary, &evidenceJSON, &status, &sig.DetectedAt, &sig.Source, &sig.SourceSystem, &capturedBy,
 		&version, &sig.CreatedAt, &sig.UpdatedAt, &sig.ArchivedAt, &params,
 		&resolutionOutcome, &resolutionNote, &resolvedBy, &resolvedAt)
 	if err != nil {
@@ -459,4 +467,32 @@ func resolvedByOf(actor principal.Principal) *ids.UUID {
 		return nil
 	}
 	return storekit.UUIDOrNil(actor.UserID)
+}
+
+// emitSignalUpdated stages signal.updated beside the audit row. A subscriber
+// sees a correction. A signal with no owner names the member who changed it.
+// With no owner and no member id, no event is staged. The audit row still
+// records the correction, and a zero id would name nobody.
+func emitSignalUpdated(ctx context.Context, tx pgx.Tx, auditID, id, actor ids.UUID) error {
+	var owner *ids.UUID
+	if err := tx.QueryRow(ctx, `SELECT owner_id FROM signal WHERE id = $1`, id).Scan(&owner); err != nil {
+		return fmt.Errorf("read signal owner: %w", err)
+	}
+	named, ok := correctionOwner(owner, actor)
+	if !ok {
+		return nil
+	}
+	if err := storekit.EmitEvent(ctx, tx, auditID, id, crmcontracts.PublicEventSignalUpdated{SignalId: openapi_types.UUID(id), OwnerId: openapi_types.UUID(named)}); err != nil {
+		return fmt.Errorf("emit signal.updated: %w", err)
+	}
+	return nil
+}
+
+// correctionOwner names who a signal.updated event reports: the owner, else the
+// acting member. It reports false when neither is a real id.
+func correctionOwner(owner *ids.UUID, actor ids.UUID) (ids.UUID, bool) {
+	if owner != nil && *owner != (ids.UUID{}) {
+		return *owner, true
+	}
+	return actor, actor != (ids.UUID{})
 }

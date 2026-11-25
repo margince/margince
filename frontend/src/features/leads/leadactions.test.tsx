@@ -231,7 +231,7 @@ describe("the lead header's Email verb", () => {
     expect(
       document.getElementById(email.getAttribute("aria-describedby") ?? "")
         ?.textContent,
-    ).toBe("You do not have permission to log activities on this record.");
+    ).toBe("Your role can only read. Ask an administrator for another role.");
   });
 
   it("allows outreach without inventing a reply obligation", async () => {

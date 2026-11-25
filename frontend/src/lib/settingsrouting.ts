@@ -83,11 +83,13 @@ const LEGACY_ADMIN_IDS: readonly string[] = [
 
 export const IMPORT_RUN_SUBPAGE = "run";
 export const IMPORT_TEMPLATE_SUBPAGE = "template";
+export const AGENT_RULES_SUBPAGE = "rules";
 
 // A page listed here answers only these segments under it, one level deep; any
 // other is unknown. A page with tabs answers its tab ids the same way.
 const SUBPAGES: Readonly<Partial<Record<SettingsPageId, readonly string[]>>> = {
   import: [IMPORT_RUN_SUBPAGE, IMPORT_TEMPLATE_SUBPAGE],
+  agents: [AGENT_RULES_SUBPAGE],
 };
 
 // The OAuth return lands on `#/settings/<page>/{outcome}/{provider}`, so these

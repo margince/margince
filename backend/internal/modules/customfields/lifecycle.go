@@ -114,6 +114,9 @@ func (p FieldPatch) validate() error {
 	if p.Label != nil && strings.TrimSpace(*p.Label) == "" {
 		return &ValidationError{Errors: []FieldError{{Field: fieldLabel, Code: codeRequired}}}
 	}
+	if p.Label != nil {
+		return requireLabelWithin(*p.Label)
+	}
 	return nil
 }
 

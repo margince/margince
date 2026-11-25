@@ -1,5 +1,6 @@
 import { expect, test } from "@playwright/test";
 import { loadLocale } from "../src/i18n/catalogs";
+import { de } from "../src/i18n/de";
 import { expectNoAaViolations, settleAnimations } from "./a11y";
 import { brandt } from "./mockapi/fixtures";
 import { page as listPage } from "./mockapi/server";
@@ -905,4 +906,76 @@ test("PERF-1: a record opens on its route's identity, not on its read", async ({
   ).toBeVisible();
   expect(readStarted).toBe(true);
   expect(readAnswered).toBe(false);
+});
+
+// A new condition and the pickers it opens: the field, an owner, a company search.
+test("AC-filters-and-views-6: a new condition names no field, and each picker it opens meets AA and closes on Escape", async ({
+  page,
+}) => {
+  await page.route(/\/v1\/filters\/vocabulary\?.*resource=contact/, (route) =>
+    route.fulfill({
+      json: {
+        resource: "contact",
+        fields: [
+          {
+            name: "owner_id",
+            type: "id",
+            operators: ["eq", "neq", "in", "exists"],
+            custom: false,
+            references: "app_user",
+          },
+          {
+            name: "company_id",
+            type: "id",
+            operators: ["eq", "neq", "in", "exists"],
+            custom: false,
+            references: "company",
+          },
+        ],
+      },
+    }),
+  );
+  await page.goto("/#/filters/contacts");
+  await expectShellRendered(page);
+  await page.getByRole("button", { name: de["filters.addClause"] }).click();
+
+  const field = page.getByRole("combobox", { name: de["filters.field"] });
+  await expect(field).toBeFocused();
+  await expect(field).toHaveText(de["filters.choosePlaceholder"]);
+  await expect(page.getByRole("combobox", { name: "Operator" })).toHaveCount(0);
+  await page.keyboard.press("Enter");
+  await expect(page.getByRole("listbox")).toBeVisible();
+  await expectNoAaViolations(page, "filters — the field picker open");
+  await page.keyboard.press("Escape");
+  await expect(page.getByRole("listbox")).toHaveCount(0);
+  await expect(field).toBeFocused();
+
+  await field.click();
+  await page.getByRole("option", { name: "Verantwortlich" }).click();
+  const owner = page.getByRole("combobox", { name: de["filters.value"] });
+  await expect(owner).toHaveText(de["filters.pickOwner"]);
+  await owner.click();
+  await expect(page.getByRole("option").first()).toHaveText(de["filters.you"]);
+  await expectNoAaViolations(page, "filters — the owner picker open");
+  await page.keyboard.press("Escape");
+  await expect(page.getByRole("listbox")).toHaveCount(0);
+
+  await field.click();
+  await page.getByRole("option", { name: "Unternehmen" }).click();
+  const search = page.getByRole("combobox", {
+    name: de["filters.searchRecords"],
+  });
+  await search.fill("Brandt");
+  await expect(
+    page.getByRole("option", { name: "Brandt Automotive GmbH" }),
+  ).toBeVisible();
+  await expectNoAaViolations(page, "filters — the company suggestions open");
+  await page.keyboard.press("Escape");
+  await expect(page.getByRole("listbox")).toHaveCount(0);
+  await expect(search).toHaveValue("Brandt");
+  await page.keyboard.press("ArrowDown");
+  await page.keyboard.press("Enter");
+  await expect(
+    page.getByRole("button", { name: de["filters.changeRecord"] }),
+  ).toBeFocused();
 });

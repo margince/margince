@@ -173,7 +173,7 @@ export const LongLinkTitle: Story = {
       <OverviewList>
         <OverviewRow
           title={
-            <Button variant="link">
+            <Button variant="link" align="start">
               Kritische Sicherheitslücke auf Webseiten - "node2shell2" und
               Brokkoli-Exploit betreffen viele Installationen
             </Button>
