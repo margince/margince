@@ -12,6 +12,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/platform/database"
+	"github.com/margince/margince/backend/internal/platform/testdb"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -108,5 +109,56 @@ func TestAFoldedCopyCarriesItsCalendarToTheSurvivorsGuests(t *testing.T) {
 		if rows != 1 || calendars != want {
 			t.Errorf("%s: the survivor holds %d rows naming %d calendars, want 1 row naming %d", address, rows, calendars, want)
 		}
+	}
+}
+
+// A copy's guest stored before addresses were held lowercase reaches the
+// survivor in lowercase, so the fold does not fail on the older row.
+func TestAFoldedCopyCarriesAnOlderGuestInLowercase(t *testing.T) {
+	e := setupSend(t)
+	ctx := context.Background()
+	var survivor, duplicate ids.UUID
+	if err := e.owner.QueryRow(ctx, `WITH copies AS (
+ INSERT INTO activity (kind, occurred_at, direction, source, captured_by)
+ SELECT 'meeting', now() - interval '1 day', 'inbound', 'gcal', 'connector:gcal' FROM generate_series(1, 2) RETURNING id)
+ SELECT min(id::text)::uuid, max(id::text)::uuid FROM copies`).Scan(&survivor, &duplicate); err != nil {
+		t.Fatal(err)
+	}
+	testdb.WithParticipantAddressCheckLifted(t, func(tx pgx.Tx) error {
+		_, err := tx.Exec(ctx, `INSERT INTO activity_participant (activity_id, address, role, response)
+ VALUES ($1, ' Guest@Partner.example', 'attendee', 'accepted')`, duplicate)
+		return err
+	})
+
+	system := principal.SystemActing(principal.WithWorkspaceID(ctx, e.ws), "system:meeting-fold")
+	store := NewStore(database.BindTo(e.pool, ids.From[ids.WorkspaceKind](e.ws)))
+	if err := database.WithWorkspaceTx(system, e.pool, func(tx pgx.Tx) error {
+		return store.RetireMeetingCopyTx(system, tx, ids.From[ids.ActivityKind](duplicate), ids.From[ids.ActivityKind](survivor))
+	}); err != nil {
+		t.Fatalf("folding the copy: %v", err)
+	}
+	var carried int
+	if err := e.owner.QueryRow(ctx, `SELECT count(*) FROM activity_participant
+ WHERE activity_id = $1 AND address = 'guest@partner.example' AND response = 'accepted'`, survivor).Scan(&carried); err != nil {
+		t.Fatal(err)
+	}
+	if carried != 1 {
+		t.Fatalf("the survivor holds %d lowercase rows for the older guest, want the one carried", carried)
+	}
+}
+
+// A carry whose context ended stops at the fold and reports it, before any
+// guest is copied.
+func TestACopyCarryReportsAFoldItCouldNotRun(t *testing.T) {
+	e := setupSend(t)
+	ctx := principal.SystemActing(principal.WithWorkspaceID(context.Background(), e.ws), "system:meeting-fold")
+	stopped, stop := context.WithCancel(ctx)
+	stop()
+	err := database.WithWorkspaceTx(ctx, e.pool, func(tx pgx.Tx) error {
+		_, err := carryMissingParticipantsTx(stopped, tx, ids.New[ids.ActivityKind](), ids.New[ids.ActivityKind]())
+		return err
+	})
+	if err == nil {
+		t.Fatal("carrying guests under an ended context reported success")
 	}
 }
