@@ -14,36 +14,34 @@
   "self_judged": true,
   "stamp": {
     "scenario": "2f7580ef18595532",
-    "tools": "b3a7237c5a84f99f",
+    "tools": "9e92f6a8d4dd49ec",
     "instructions": "4eab26d5fff0793f",
     "judge": "claude-haiku-5-5",
     "harness": "ae24b6799c8461d2",
     "parsers": {
-      "gemini:cli": "1796d51361de08d5",
+      "gemini:cli": "fa1db64bc14e971b",
       "gpt:cli": "d48ca27c983f8b3f"
     },
-    "commit": "85f521b0a8e383753f3d1cf2b46147ada28d8757",
-    "ran_at": "2026-11-25T05:57:03Z",
-    "graded_commit": "85f521b0a8e383753f3d1cf2b46147ada28d8757",
-    "graded_at": "2026-11-25T05:57:03Z"
+    "commit": "6d3a5be8c69b862c6c7db3c3534ac5fd705dd41e",
+    "ran_at": "2026-11-25T07:45:40Z",
+    "graded_commit": "6d3a5be8c69b862c6c7db3c3534ac5fd705dd41e",
+    "graded_at": "2026-11-25T07:45:40Z"
   },
   "usage": {
     "input_tokens": 16,
-    "output_tokens": 2448,
-    "cache_creation_input_tokens": 10802,
-    "cache_read_input_tokens": 586615,
+    "output_tokens": 2618,
+    "cache_creation_input_tokens": 80317,
+    "cache_read_input_tokens": 514157,
     "runs_measured": 2,
     "runs_costed": 2,
-    "cost_usd": 0.1264
+    "cost_usd": 0.3989
   },
   "tools_by_run": [
     {
       "passed": true,
       "tools": [
-        "catch_me_up_on",
         "check_availability",
         "find_records",
-        "read_context",
         "search_records",
         "whoami"
       ]
@@ -61,14 +59,14 @@
   "efficiency": {
     "runs": 2,
     "calls": {
-      "median": 4.5,
+      "median": 4,
       "min": 4,
-      "max": 5
+      "max": 4
     },
     "turns": {
-      "median": 5.5,
+      "median": 5,
       "min": 5,
-      "max": 6
+      "max": 5
     },
     "refused": {
       "median": 1,
@@ -76,19 +74,19 @@
       "max": 1
     },
     "prompt_tokens": {
-      "median": 298716.5,
-      "min": 297175,
-      "max": 300258
+      "median": 297245,
+      "min": 297223,
+      "max": 297267
     },
     "output_tokens": {
-      "median": 1224,
-      "min": 947,
-      "max": 1501
+      "median": 1309,
+      "min": 1245,
+      "max": 1373
     },
     "duration_ms": {
-      "median": 13188.5,
-      "min": 11350,
-      "max": 15027
+      "median": 13284.5,
+      "min": 12406,
+      "max": 14163
     }
   }
 }
