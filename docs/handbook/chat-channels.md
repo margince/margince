@@ -23,8 +23,9 @@ An admin connects the Dispact bot once for everyone.
 Open the deal. Once an admin connects the chat bot, the **Team chat** card appears on its overview.
 - Click **Create a channel** to make a new private channel named after the deal. Every member who can
   see the deal is invited, at most 50, starting with the deal's owner and you. Someone without a chat
-  account is not added. If another channel has that name, the new one ends in a short code. If the chat
-  refuses the name, rename the deal or link an existing channel.
+  account is not added. A member who later can no longer open the deal stays in the channel until
+  someone removes them in the chat. If another channel has that name, the new one ends in a short code.
+  If the chat refuses the name, rename the deal or link an existing channel.
 - Click **Link an existing channel** to use a private channel you already have. **Channel name or link**
   lists the private channels the bot is in that no record has yet. Pick one, or type its name or link.
 - A private channel the bot is not in is not listed, because the chat does not show it to the bot. A
