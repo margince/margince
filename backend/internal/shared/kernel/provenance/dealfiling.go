@@ -17,6 +17,21 @@ const (
 	ProjectRungSubject = "subject"
 )
 
+// ExtensionHooksKey names, in the evidence of an automatic activity_relink
+// row, the extension hooks that shaped it: a list of objects with "unit",
+// "hook" and "reason".
+const ExtensionHooksKey = "extension_hooks"
+
+// LatestDealFilingSQL selects the actor type and the first extension hook of
+// the latest relink row about activity and deal, or no row. Both arguments are
+// compile-time SQL expressions.
+func LatestDealFilingSQL(activity, deal string) string {
+	return `SELECT f.actor_type, f.evidence->'` + ExtensionHooksKey + `'->0 FROM audit_log f
+	  WHERE f.entity_type = 'activity' AND f.entity_id = ` + activity + ` AND f.action = 'activity_relink'
+	    AND coalesce(f.after->>'entity_type', f.before->>'entity_type') = 'deal' AND ` + relinkRecordSQL("f") + ` = (` + deal + `)::text
+	  ORDER BY f.occurred_at DESC, f.id DESC LIMIT 1`
+}
+
 // DealDeclinedKey marks the `after` of the activity_relink audit row that
 // records a colleague's "not about this deal". Its entity names the deal.
 const DealDeclinedKey = "declined"

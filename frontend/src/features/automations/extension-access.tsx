@@ -20,11 +20,11 @@ import { objectLabel } from "../../format/rbacobjects";
 import { useLocale, useT } from "../../i18n";
 import { useCan, useCanMutate } from "../../lib/capability";
 import {
-  composedScreens,
   EXTENSION_SCREEN,
   extensionTitle,
   findExtension,
 } from "../../lib/extensions";
+import { composedScreens } from "../../lib/extensionscreens";
 import {
   isVersionSkew,
   ProblemError,

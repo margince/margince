@@ -23473,6 +23473,8 @@ export const en = {
   "aiServing.previewFailed":
     "The server could not check this value: {reason} Save stays off until it can.",
   "dealDecline.action": "Not about this deal",
+  "dealFiling.byUnit": "Filed here by {unit}: {reason}",
+  "dealFiling.byUnitNoReason": "Filed here by {unit}",
   "dealDecline.done":
     "Marked as not about this deal. It no longer keeps the deal active.",
   "dealDecline.doneProjectKept":

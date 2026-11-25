@@ -5,8 +5,8 @@ import { describe, expect, it } from "vitest";
 import { stable } from "../format/collate";
 
 // `settingscatalog.ts` spells `UnitSecretScope` a second time rather than
-// importing it, because the extensions registry reaches `@composition/screens`
-// and would drag React and a build alias into a module whose whole purpose is
+// importing it, because the extensions registry sits behind the
+// `@composition/extensions` build alias and would drag it into a module whose whole purpose is
 // being importable from anywhere — including a plain node script and a test with
 // no alias configured.
 //

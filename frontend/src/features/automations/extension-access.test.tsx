@@ -41,7 +41,8 @@ import { ExtensionAccessCard } from "./extension-access";
 // operations — the jurisdiction-pack shape, whose generic page would draw a
 // heading over an empty list. `stale` is absent from the registry entirely,
 // which is the version skew the card has to name rather than swallow.
-vi.mock("@composition/extensions", () => ({
+vi.mock("@composition/extensions", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@composition/extensions")>()),
   extensions: [
     {
       name: "notes",

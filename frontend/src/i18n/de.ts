@@ -23835,6 +23835,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "aiServing.previewFailed":
     "Der Server konnte diesen Wert nicht prüfen: {reason} Speichern bleibt deaktiviert, bis der Server den Wert prüfen kann.",
   "dealDecline.action": "Gehört nicht zu diesem Deal",
+  "dealFiling.byUnit": "Von {unit} hier zugeordnet: {reason}",
+  "dealFiling.byUnitNoReason": "Von {unit} hier zugeordnet",
   "dealDecline.done":
     "Als nicht zu diesem Deal gehörig markiert. Der Eintrag hält den Deal nicht mehr aktiv.",
   "dealDecline.doneProjectKept":

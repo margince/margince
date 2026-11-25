@@ -23185,6 +23185,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "aiServing.previewFailed":
     "Máy chủ không thể kiểm tra giá trị này: {reason} Nút Lưu sẽ tắt cho đến khi kiểm tra được.",
   "dealDecline.action": "Không thuộc deal này",
+  "dealFiling.byUnit": "{unit} đã gắn thư vào đây: {reason}",
+  "dealFiling.byUnitNoReason": "{unit} đã gắn thư vào đây",
   "dealDecline.done":
     "Đã đánh dấu là không thuộc deal này. Mục này không còn giữ deal hoạt động.",
   "dealDecline.doneProjectKept":

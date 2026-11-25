@@ -1305,6 +1305,24 @@ func (e EmailSummaryMove) Valid() bool {
 	}
 }
 
+// Defines values for LinkFilerHook.
+const (
+	LinkFilerHookDeal    LinkFilerHook = "deal"
+	LinkFilerHookParties LinkFilerHook = "parties"
+)
+
+// Valid indicates whether the value is a known member of the LinkFilerHook enum.
+func (e LinkFilerHook) Valid() bool {
+	switch e {
+	case LinkFilerHookDeal:
+		return true
+	case LinkFilerHookParties:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for MeetingResponse.
 const (
 	Accepted    MeetingResponse = "accepted"
@@ -2197,7 +2215,10 @@ type ActivityLink struct {
 	DealRelevance *ActivityLinkDealRelevance `json:"deal_relevance,omitempty"`
 	EntityId      string                     `json:"entity_id"`
 	EntityType    ActivityLinkEntityType     `json:"entity_type"`
-	Id            *string                    `json:"id,omitempty"`
+
+	// FiledBy On a deal link only, and only when no human or agent chose it: who filed the activity on the deal, read from the latest filing of it there. The actor is `core` for the installation's own rule, or the name of the extension whose hook filed it. Marking the link `unrelated` takes the filing back, and no automatic pass files the activity there again.
+	FiledBy *LinkFiler `json:"filed_by,omitempty"`
+	Id      *string    `json:"id,omitempty"`
 
 	// RelevanceSource Who set `deal_relevance`. The classifier never changes a mark a human set.
 	RelevanceSource *ActivityLinkRelevanceSource `json:"relevance_source,omitempty"`
@@ -3178,6 +3199,20 @@ type IntentTime struct {
 	// WallClock Local date and time, no offset.
 	WallClock string `json:"wall_clock"`
 }
+
+// LinkFiler On a deal link only, and only when no human or agent chose it: who filed the activity on the deal, read from the latest filing of it there. The actor is `core` for the installation's own rule, or the name of the extension whose hook filed it. Marking the link `unrelated` takes the filing back, and no automatic pass files the activity there again.
+type LinkFiler struct {
+	Actor string `json:"actor"`
+
+	// Hook Which hook point filed it, for an extension actor. Absent for `core`.
+	Hook *LinkFilerHook `json:"hook,omitempty"`
+
+	// Reason For an extension, a key the extension declared for its hook. Read it together with the actor: the label comes from that extension's own translations. Absent for `core`.
+	Reason *string `json:"reason,omitempty"`
+}
+
+// LinkFilerHook Which hook point filed it, for an extension actor. Absent for `core`.
+type LinkFilerHook string
 
 // MeetingAttendeeResponse The answer one colleague or linked contact on a meeting gave its invitation. Exactly one of `user_id` and `contact_id` is set.
 type MeetingAttendeeResponse struct {

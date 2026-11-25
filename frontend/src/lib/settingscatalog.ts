@@ -167,9 +167,9 @@ export type SettingsScope =
 
 /**
  * Where a composed unit keeps its secrets. Mirrored rather than imported: the
- * extensions registry reaches `@composition/screens` and so pulls React and a
- * build alias into whatever imports it, which is the one thing this module may
- * not do — being importable from anywhere is its whole purpose.
+ * extensions registry sits behind the `@composition/extensions` build alias
+ * and pulls it into whatever imports it, which is the one thing this module
+ * may not do — being importable from anywhere is its whole purpose.
  *
  * `settingscatalog.units.test.ts` holds the two spellings equal.
  */

@@ -60367,6 +60367,29 @@ components:
           x-enum-varnames: [LinkRelevanceSourceHuman, LinkRelevanceSourceClassifier]
           x-extensible-enum: true
           description: Who set `deal_relevance`. The classifier never changes a mark a human set.
+        filed_by: { $ref: '#/components/schemas/LinkFiler' }
+
+    LinkFiler:
+      type: object
+      readOnly: true
+      description: >-
+        On a deal link only, and only when no human or agent chose it: who filed the activity on
+        the deal, read from the latest filing of it there. The actor is `core` for the
+        installation's own rule, or the name of the extension whose hook filed it. Marking the link
+        `unrelated` takes the filing back, and no automatic pass files the activity there again.
+      required: [actor]
+      properties:
+        actor: { type: string }
+        hook:
+          type: string
+          enum: [parties, deal]
+          x-extensible-enum: true
+          description: 'Which hook point filed it, for an extension actor. Absent for `core`.'
+        reason:
+          type: string
+          description: >-
+            For an extension, a key the extension declared for its hook. Read it together with the
+            actor: the label comes from that extension's own translations. Absent for `core`.
 
     RelinkThreadRequest:
       type: object

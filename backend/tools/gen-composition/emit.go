@@ -202,7 +202,7 @@ export type ExtensionDescriptor = {
   readonly secretScope: "user" | "workspace" | "";
 };
 
-export const extensions: readonly ExtensionDescriptor[] = `
+`
 
 // composition is everything one read of the enabled set produces: the
 // deterministic output files, the governance the merged contracts publish, and
