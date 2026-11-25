@@ -4,8 +4,8 @@
 package extcapability
 
 // What each unit keeps in the object store. The store has no list or size
-// call, so the core counts a unit's objects and bytes itself, in the same
-// transaction as the audit row of the call that changed them.
+// call, so the core counts a unit's objects and bytes itself. The count
+// changes in the transaction that writes the call's audit row.
 
 import (
 	"context"

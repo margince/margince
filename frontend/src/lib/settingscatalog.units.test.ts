@@ -5,10 +5,9 @@ import { describe, expect, it } from "vitest";
 import { stable } from "../format/collate";
 
 // `settingscatalog.ts` spells `UnitSecretScope` a second time rather than
-// importing it, because the extensions registry sits behind the
-// `@composition/extensions` build alias and would drag it into a module whose whole purpose is
-// being importable from anywhere — including a plain node script and a test with
-// no alias configured.
+// importing it. The extensions registry sits behind a build alias. Imported
+// there, it would drag the alias into a module that a plain node script and a
+// test with no alias configured both import.
 //
 // A mirrored type needs a gate that fails in BOTH directions, or the copy drifts
 // silently: a scope added to the registry and not here makes a page's units arm

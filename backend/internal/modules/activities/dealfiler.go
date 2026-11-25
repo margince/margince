@@ -24,9 +24,9 @@ func dealFilerJoin(alias string) string {
 // of its first extension hook.
 const dealFilerColumns = `filer.actor_type, filer.hook->>'unit', filer.hook->>'hook', filer.hook->>'reason'`
 
-// dealFiler answers who filed the link from its latest filing row: nil when
-// there is none or a human or an agent wrote it, the extension whose hook
-// shaped it, or else core.
+// dealFiler answers who filed the link from its latest filing row. It is nil
+// when there is none, or a human or an agent wrote it. Otherwise it is the
+// extension whose hook shaped the row, or core.
 func dealFiler(actorType, unit, hook, reason *string) *crmcontracts.LinkFiler {
 	if actorType == nil || *actorType == "human" || *actorType == "agent" {
 		return nil

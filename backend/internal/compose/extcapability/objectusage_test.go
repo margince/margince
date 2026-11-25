@@ -13,7 +13,7 @@ import (
 	"github.com/margince/margince/backend/pkg/extension"
 )
 
-// ledger is the database boundary of an object call: it holds one unit's
+// ledger is the database boundary of an object call. It holds one unit's
 // usage and the changes logged, and refuses to record when down is set.
 type ledger struct {
 	held   extcapability.Usage

@@ -4,7 +4,7 @@
 package compose
 
 // The seat-bound forms of the deal, authority and directory system reads. Each
-// runs as the unit's service member through seatRead, so the seat's own grants,
+// runs as the unit's service member through seatRead. The seat's own grants,
 // row scope and field masks narrow it the way the app narrows that seat.
 
 import (
@@ -108,8 +108,8 @@ func (d systemDeals) ResponsibleAs(ctx context.Context, actAs extension.UserID, 
 	return responsible, err
 }
 
-// opensDeal answers ErrNotFound unless the seat may open the deal in the app,
-// so a deal outside its scope cannot be told from one that does not exist.
+// opensDeal answers ErrNotFound unless the seat may open the deal in the app.
+// So a deal outside its scope cannot be told from one that does not exist.
 func (s systemSeat) opensDeal(seatCtx context.Context, deal ids.UUID) error {
 	if err := auth.Require(seatCtx, fieldmask.Deal, principal.ActionRead); err != nil {
 		return extension.ErrNotFound

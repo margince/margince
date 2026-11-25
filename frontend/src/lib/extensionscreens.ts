@@ -12,14 +12,11 @@ import type {
   ExtensionScreenRegistry,
 } from "./extensions";
 
-// The component registries an installation composes, annotated once.
+// The component registries an installation composes, typed at their one
+// import site, so a unit export that is not a component fails here.
 //
-// The generated file is emitted untyped: it is written to two paths at
-// different depths and must be byte-identical, so it carries no type import.
-// The annotation lands here, at the registry's one import site, so a unit
-// export that is not a component fails it. It is a module of its own because
-// loading the registry loads every unit, and a unit imports the app surface
-// (surface/index.ts). Only the screens that mount a unit import this module.
+// Loading the registry loads every unit, and a unit imports the app surface
+// (surface/index.ts). So only the screens that mount a unit import this file.
 
 export const composedScreens: ExtensionScreenRegistry = extensionScreens;
 

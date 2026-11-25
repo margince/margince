@@ -164,8 +164,8 @@ type Authority interface {
 
 	// CanReadAs is CanRead asked by actAs, the unit's service member. A deal
 	// the seat cannot open answers ErrNotFound. A question about a user other
-	// than actAs answers ErrForbidden unless the seat may read the roster the
-	// way an administrator does, the rule Directory.ByRole applies.
+	// than actAs answers ErrForbidden, unless the seat may read the roster as
+	// an administrator does. Directory.ByRole applies the same rule.
 	CanReadAs(ctx context.Context, actAs, user UserID, record EntityRef, fields []string) (bool, error)
 
 	// CanWriteAs is CanWrite asked by actAs, under the rules of CanReadAs.
