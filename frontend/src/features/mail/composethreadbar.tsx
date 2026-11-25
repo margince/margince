@@ -466,7 +466,7 @@ function ThreadMessage({
           {/* Read without moving the draft onto it. */}
           <div className="compose-message-actions">
             <Popover label={t("compose.previewEmail")} onHover>
-              <EmailText body={message.body ?? ""} />
+              <EmailText body={message.body ?? ""} subject={message.subject} />
             </Popover>
           </div>
         </>

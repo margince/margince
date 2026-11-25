@@ -165,6 +165,7 @@ function SourceEmailBody({
         activityId={presentation.id}
         language={presentation.language}
         body={presentation.body}
+        subject={presentation.summary.subject}
       />
       {onOpenThread && (
         <Button variant="ghost" aria-haspopup="dialog" onClick={onOpenThread}>

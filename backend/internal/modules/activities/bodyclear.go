@@ -17,11 +17,19 @@ func (in *UpdateActivityInput) spellClearedBody() {
 	}
 }
 
-// patchedOwnEnd is the stored end of the body a patch writes. An empty body is
+// patchedOwnEnd is the stored end of the text a patch leaves. A forward subject
+// moves the end, so a patch of either field derives it again. An empty body is
 // stored as none, and so is its end.
-func patchedOwnEnd(current crmcontracts.Activity, body *string) *int {
+func patchedOwnEnd(current crmcontracts.Activity, in UpdateActivityInput) *int {
+	subject, body := current.Subject, current.Body
+	if in.Subject != nil {
+		subject = in.Subject
+	}
+	if in.Body != nil {
+		body = in.Body
+	}
 	if body == nil || *body == "" {
 		return nil
 	}
-	return mailquote.OwnEnd(string(current.Kind), body)
+	return mailquote.OwnEnd(string(current.Kind), deref(subject), body)
 }

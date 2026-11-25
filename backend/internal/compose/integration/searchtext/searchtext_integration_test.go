@@ -71,6 +71,24 @@ func TestMailSearchReadsTheSendersWordsAndNotTheMailTheyQuote(t *testing.T) {
 	assertFound(t, e, mail, "walnut", false)
 }
 
+// An Outlook forward and reply carry the same header block. Only the subject
+// tells search whether the mail under it is passed on or quoted.
+func TestAForwardIsFoundByTheMailItPassesOn(t *testing.T) {
+	e := integration.Setup(t)
+	body := "Zur Info.\n\nVon: Max Muster <max@kunde.de>\nGesendet: Dienstag, 12. August 2026 09:14\nAn: Vertrieb\nBetreff: Schrank\n\nDer Nussbaum passt.\n"
+	forward := logMail(t, e, "WG: Schrank", body)
+	reply := logMail(t, e, "AW: Schrank", body)
+	assertFound(t, e, forward, "nussbaum", true)
+	assertFound(t, e, reply, "nussbaum", false)
+
+	// A new subject moves the end over the body the row keeps.
+	subject := "WG: Schrank"
+	if _, err := e.Activities.UpdateActivity(e.Admin(), ids.From[ids.ActivityKind](reply), activities.UpdateActivityInput{Subject: &subject}); err != nil {
+		t.Fatalf("renaming the reply a forward: %v", err)
+	}
+	assertFound(t, e, reply, "nussbaum", true)
+}
+
 // The database cuts by characters, as Go counted them. The words above this
 // quote hold letters of two and three bytes, and the stored words lose accents.
 func TestTheEndCutsAMailWithLettersOfSeveralBytesAtTheQuote(t *testing.T) {

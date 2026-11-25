@@ -45,7 +45,7 @@ func insertLoggedActivityRow(ctx context.Context, tx pgx.Tx, in LogActivityInput
 	})
 	args = append(args, entity)
 	entityHolder := storekit.SQLf("$%d", len(args))
-	args = append(args, mailquote.OwnEnd(in.Kind, in.Body))
+	args = append(args, mailquote.OwnEnd(in.Kind, deref(in.Subject), in.Body))
 	ownEndHolder := storekit.SQLf(", $%d", len(args))
 	args = append(args, orWallClock(in.recordedAt))
 	undated := occurredday.UndatedSQL(storekit.SQLf("$%d", len(args)))
@@ -55,7 +55,7 @@ func insertLoggedActivityRow(ctx context.Context, tx pgx.Tx, in LogActivityInput
 	precisionCol, precisionHolder, args := precisionInsertFragment(in.OccurredPrecision, args)
 	languageCol, languageHolder, args := languageInsertFragment(in, args)
 	assistedCol, assistedHolder, args := aiAssistedInsertFragment(in.AIAssisted, args)
-	cfCols, cfHolders, args, err := storekit.InsertFragments(in.customColumns, in.CustomFields, args)
+	cfCols, cfHolders, args, err := storekit.InsertFragmentsIn(ctx, tx, in.customColumns, in.CustomFields, args)
 	if err != nil {
 		return ids.ActivityID{}, time.Time{}, err
 	}

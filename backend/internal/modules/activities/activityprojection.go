@@ -470,7 +470,7 @@ func RowEmailSummary(a crmcontracts.Activity) *crmcontracts.EmailSummary {
 	}
 	summary.Subject = a.Subject
 	if a.Body != nil {
-		if preview := EmailSummaryText(*a.Body); preview != "" {
+		if preview := EmailSummaryText(*a.Body, deref(a.Subject)); preview != "" {
 			summary.Preview = &preview
 		}
 	}
