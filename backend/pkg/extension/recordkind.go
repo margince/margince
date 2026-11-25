@@ -5,24 +5,13 @@ package extension
 
 import (
 	"fmt"
-	"regexp"
 	"slices"
 	"strings"
 )
 
 // RecordKindPrefix opens every record kind a unit declares, so a stored kind
-// says at a glance that it is not one of core's. The spelling is permanent once
-// data carries it: every closed kind list in the schema accepts it as a pattern.
-const RecordKindPrefix = "ext:"
-
-// maxRecordKindLength caps the kind half. With the unit name capped at 32 and
-// the two separators, a full name stays inside 68 characters.
-const maxRecordKindLength = 32
-
-// recordKindGrammar is the kind half of `ext:<unit>:<kind>`: a lower-case
-// letter, then lower-case letters, digits and underscores. The schema CHECKs
-// spell the same shape, so a name this accepts is one every table accepts.
-var recordKindGrammar = regexp.MustCompile(`^[a-z][a-z0-9_]*$`)
+// shows at a glance that a unit declared it. It is QualifiedPrefix.
+const RecordKindPrefix = QualifiedPrefix
 
 // DeletePolicy says what removing a record of a kind means.
 type DeletePolicy string
@@ -109,7 +98,7 @@ func (k RecordKindDeclaration) validateTimeline() error {
 	if !slices.ContainsFunc(k.Fields, func(f RecordKindField) bool { return f.Name == tl.LabelField }) {
 		return fmt.Errorf("record kind %q timeline label names %q, which is not a declared field", k.Kind, tl.LabelField)
 	}
-	if !recordKindGrammar.MatchString(tl.AtColumn) {
+	if !shortNameGrammar.MatchString(tl.AtColumn) {
 		return fmt.Errorf("record kind %q timeline time %q is not a column name", k.Kind, tl.AtColumn)
 	}
 	if len(tl.Subjects) == 0 {
@@ -120,7 +109,7 @@ func (k RecordKindDeclaration) validateTimeline() error {
 		if !timelineEntities[s.Entity] {
 			return fmt.Errorf("record kind %q timeline names %q, which is not contact, company or deal", k.Kind, s.Entity)
 		}
-		if !recordKindGrammar.MatchString(s.Column) {
+		if !shortNameGrammar.MatchString(s.Column) {
 			return fmt.Errorf("record kind %q timeline column %q is not a column name", k.Kind, s.Column)
 		}
 		if seen[s.Entity] {
@@ -134,7 +123,7 @@ func (k RecordKindDeclaration) validateTimeline() error {
 // RecordKindName is the stored and wire form of a unit's kind. It is the one
 // place the form is built, so a unit can only name a kind under its own name.
 func RecordKindName(unit Name, kind string) string {
-	return RecordKindPrefix + string(unit) + ":" + kind
+	return QualifiedName(unit, kind)
 }
 
 // RecordKindObject is the RBAC object that gates the kind. The unit name's
@@ -159,8 +148,8 @@ func ParseRecordKindName(name string) (Name, string, bool) {
 }
 
 func validRecordKindName(kind string) error {
-	if !recordKindGrammar.MatchString(kind) || len(kind) > maxRecordKindLength {
-		return fmt.Errorf("record kind %q is not a valid kind name (a lower-case letter, then lower-case letters, digits and underscores, at most %d characters)", kind, maxRecordKindLength)
+	if !shortNameGrammar.MatchString(kind) || len(kind) > maxShortNameLength {
+		return fmt.Errorf("record kind %q is not a valid kind name (a lower-case letter, then lower-case letters, digits and underscores, at most %d characters)", kind, maxShortNameLength)
 	}
 	return nil
 }
@@ -230,7 +219,7 @@ func (k RecordKindDeclaration) validateFields() error {
 	}
 	declared := map[string]bool{}
 	for _, f := range k.Fields {
-		if !recordKindGrammar.MatchString(f.Name) {
+		if !shortNameGrammar.MatchString(f.Name) {
 			return fmt.Errorf("record kind %q has field %q, which is not a column name", k.Kind, f.Name)
 		}
 		if strings.TrimSpace(f.Label) == "" {

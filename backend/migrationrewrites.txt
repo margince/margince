@@ -270,3 +270,6 @@
 1795620144_a_business_link_without_a_seat_waits_for_approval.down.sql | * | the down migration is a single SELECT 1 that changes nothing
 1795621300_a_member_keeps_their_own_ingest_position.down.sql | extension_ingest_position | one row per unit and source, and the dev-only rollback drops the per-member rows
 1795621301_the_ingest_position_version_check_is_validated.down.sql | * | the down migration is a single SELECT 1 that changes nothing
+1795626082_core_only_kind_columns_are_validated.down.sql | * | the down migration is a single SELECT 1 that changes nothing
+1795626081_core_only_kind_columns_refuse_an_extension_kind.up.sql | * | the procedural body only checks whether any dedupe pair holds an extension id and drops two empty columns when none does; it writes no row
+1795626082_core_only_kind_columns_are_validated.up.sql | * | the procedural body validates seven CHECKs and writes no row; a CHECK a stored row breaks stays NOT VALID
