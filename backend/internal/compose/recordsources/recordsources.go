@@ -10,6 +10,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/modules/projects"
 	"github.com/margince/margince/backend/internal/modules/signals"
@@ -50,6 +51,20 @@ func SignalDataTask() datatask.Task {
 		Requires: []string{"core/1795589886"},
 		Steps: []datatask.Step{
 			step("signal_sources", signals.CorrectSignalSourcesTx, signals.CountUnlistedSignalSources),
+		},
+	}
+}
+
+// PartyDataTask corrects contacts and companies. A connector or writer an older
+// source named moves to source_system, so a captured row keeps its mailbox.
+func PartyDataTask() datatask.Task {
+	return datatask.Task{
+		ID: "core/1795606808_party_source_channels", Version: 1,
+		Title:    systemtext.Literal("datatask.title.core.1795606808_party_source_channels"),
+		Requires: []string{"core/1795606808"},
+		Steps: []datatask.Step{
+			step("contact_sources", contacts.CorrectContactSourcesTx, contacts.CountUnlistedContactSources),
+			step("company_sources", contacts.CorrectCompanySourcesTx, contacts.CountUnlistedCompanySources),
 		},
 	}
 }

@@ -21,6 +21,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/platform/mailidentity"
 	"github.com/margince/margince/backend/internal/shared/kernel/correspondence"
+	"github.com/margince/margince/backend/internal/shared/kernel/provenance"
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
 	"github.com/margince/margince/backend/internal/shared/ports/datasource"
 )
@@ -120,7 +121,7 @@ func senderWasStrangerTx(ctx context.Context, tx pgx.Tx, sender string, before t
 		   WHERE pe.email = ANY($1::text[]) AND pe.archived_at IS NULL
 		     AND p.archived_at IS NULL AND p.merged_into_id IS NULL AND p.created_at < $2
 		     AND NOT (`+captureorigin.ContactSQL("$3", "$4", "$5")+`))`,
-		spellings, before, captureorigin.VerdictActor, captureorigin.AcceptActor, captureorigin.VCardSource).Scan(&contact)
+		spellings, before, captureorigin.VerdictActor, captureorigin.AcceptActor, provenance.RecordSourceCapture).Scan(&contact)
 	if err != nil {
 		return false, fmt.Errorf("capture: asking whether a sender is a contact: %w", err)
 	}

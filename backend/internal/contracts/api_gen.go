@@ -41890,7 +41890,12 @@ type Company struct {
 	// RelationshipTypes WHAT THE COMPANY IS to us (PO-DDL-4b, ADR-0079). Multi-valued, because a company is legitimately several things at once — the partner program is built on companies that are simultaneously partners and customers. A company IS a partner iff it carries `partner` here AND has a `partner` row; removing the type while that row lives is refused (422).
 	RelationshipTypes *[]CompanyRelationshipTypes `json:"relationship_types,omitempty"`
 	SizeBand          *CompanySizeBand            `json:"size_band,omitempty"`
-	Source            string                      `json:"source"`
+
+	// Source The channel this company arrived by: `api`, `automation`, `capture`, `import`, `manual` or `webform`. An older company can show another value until the background correction reaches it.
+	Source string `json:"source"`
+
+	// SourceSystem The system or connector the company came from, such as `gmail` for one read out of a mailbox. Empty when a member or an API client wrote it and named none.
+	SourceSystem *string `json:"source_system,omitempty"`
 
 	// Strength Deterministic company-level relationship-strength roll-up (features/07 §4). Read-only derived view; NULL until capture has interactions.
 	Strength  *RelationshipStrength `json:"strength,omitempty"`
@@ -45303,7 +45308,12 @@ type Contact struct {
 
 	// Social The contact's links by platform: github, linkedin, twitter. linkedin is a LinkedIn profile link.
 	Social *map[string]interface{} `json:"social,omitempty"`
-	Source string                  `json:"source"`
+
+	// Source The channel this contact arrived by: `api`, `automation`, `capture`, `import`, `manual` or `webform`. An older contact can show another value until the background correction reaches it.
+	Source string `json:"source"`
+
+	// SourceSystem The system or connector the contact came from, such as `gmail` for one read out of a mailbox. Empty when a member or an API client wrote it and named none.
+	SourceSystem *string `json:"source_system,omitempty"`
 
 	// Strength Deterministic relationship-strength (features/07 §4). Read-only derived view; NULL until capture has interactions. No mystery number — the factors + contributing activities are the explanation.
 	Strength *RelationshipStrength `json:"strength,omitempty"`
@@ -47583,7 +47593,9 @@ type CreateCompanyRequest struct {
 	// Phone The company's main number. A formatted number is accepted and stored in E.164 form (for example +49301234567). It is never a contact's own number.
 	Phone    *string                       `json:"phone,omitempty"`
 	SizeBand *CreateCompanyRequestSizeBand `json:"size_band,omitempty"`
-	Source   string                        `json:"source"`
+
+	// Source The channel this company arrived by. A client that wrote it for a member sends `manual`; an integration sends `api`. The other system and the company's id there go in `source_system` and `source_id`. Any other value is 422 `invalid_source`.
+	Source string `json:"source"`
 
 	// SourceAuthorId Who wrote this record in the system it came from, when the author holds a seat here. Written only by a declared importer (a signed-in human holding import_run:create), only beside a source_system; either author field or both may be sent, and the seat's current name wins on read. captured_by still names the caller.
 	SourceAuthorId *openapi_types.UUID `json:"source_author_id,omitempty"`
@@ -47665,7 +47677,9 @@ type CreateContactRequest struct {
 
 	// Social Links by platform. Only github, linkedin and twitter are taken; any other key is refused with 422 `social_platform_unknown`. linkedin takes only a LinkedIn profile link (https://www.linkedin.com/in/<name>).
 	Social *map[string]interface{} `json:"social,omitempty"`
-	Source string                  `json:"source"`
+
+	// Source The channel this contact arrived by. A client that wrote it for a member sends `manual`; an integration sends `api`. The other system and the contact's id there go in `source_system` and `source_id`. Any other value is 422 `invalid_source`.
+	Source string `json:"source"`
 
 	// SourceAuthorId Who wrote this record in the system it came from, when the author holds a seat here. Written only by a declared importer (a signed-in human holding import_run:create), only beside a source_system; either author field or both may be sent, and the seat's current name wins on read. captured_by still names the caller.
 	SourceAuthorId *openapi_types.UUID `json:"source_author_id,omitempty"`
@@ -89005,6 +89019,14 @@ func (a *Company) UnmarshalJSON(b []byte) error {
 		delete(object, "source")
 	}
 
+	if raw, found := object["source_system"]; found {
+		err = json.Unmarshal(raw, &a.SourceSystem)
+		if err != nil {
+			return fmt.Errorf("error reading 'source_system': %w", err)
+		}
+		delete(object, "source_system")
+	}
+
 	if raw, found := object["strength"]; found {
 		err = json.Unmarshal(raw, &a.Strength)
 		if err != nil {
@@ -89320,6 +89342,13 @@ func (a Company) MarshalJSON() ([]byte, error) {
 	object["source"], err = json.Marshal(a.Source)
 	if err != nil {
 		return nil, fmt.Errorf("error marshaling 'source': %w", err)
+	}
+
+	if a.SourceSystem != nil {
+		object["source_system"], err = json.Marshal(a.SourceSystem)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'source_system': %w", err)
+		}
 	}
 
 	if a.Strength != nil {
@@ -89683,6 +89712,14 @@ func (a *Contact) UnmarshalJSON(b []byte) error {
 		delete(object, "source")
 	}
 
+	if raw, found := object["source_system"]; found {
+		err = json.Unmarshal(raw, &a.SourceSystem)
+		if err != nil {
+			return fmt.Errorf("error reading 'source_system': %w", err)
+		}
+		delete(object, "source_system")
+	}
+
 	if raw, found := object["strength"]; found {
 		err = json.Unmarshal(raw, &a.Strength)
 		if err != nil {
@@ -89991,6 +90028,13 @@ func (a Contact) MarshalJSON() ([]byte, error) {
 	object["source"], err = json.Marshal(a.Source)
 	if err != nil {
 		return nil, fmt.Errorf("error marshaling 'source': %w", err)
+	}
+
+	if a.SourceSystem != nil {
+		object["source_system"], err = json.Marshal(a.SourceSystem)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'source_system': %w", err)
+		}
 	}
 
 	if a.Strength != nil {

@@ -16,15 +16,11 @@ const (
 	VCardSource  = "vcard_import"
 )
 
-// ContactSQL is the test that capture created the contact aliased p, read from
-// captured_by, which is stamped once at create. The arguments are the
-// placeholders holding VerdictActor, AcceptActor and VCardSource.
-//
-// Capture sinks run as `connector:` principals, the verdict and accept paths as
-// their two actors. Two connector doors are not capture: the vCard ingest and an
-// import, which names its system in source_system.
-func ContactSQL(verdict, accept, vcard string) string {
+// ContactSQL is the test that capture created the contact aliased p. The
+// arguments hold VerdictActor, AcceptActor and the capture channel. The vCard
+// ingest and an import also run as connectors, and their channel is import.
+// The database maps a source the correction task has not reached yet.
+func ContactSQL(verdict, accept, capture string) string {
 	return `(p.captured_by LIKE 'connector:%' OR p.captured_by IN (` + verdict + `, ` + accept + `))
-		   AND p.source IS DISTINCT FROM ` + vcard + `
-		   AND p.source_system IS NULL`
+		   AND party_source_channel(p.source, p.source_system) = ` + capture
 }

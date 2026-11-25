@@ -17,6 +17,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/platform/captureorigin"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/provenance"
 )
 
 // The machine principals that mint a contact through the capture door after a
@@ -133,7 +134,7 @@ func captureGuessedDisplayNamesTx(
 		          AND NOT (`+captureWriterSQL("a.actor_id", "$2", "$3", "$9")+` OR a.actor_id IN ($11, $14)))
 		 ORDER BY p.id
 		 LIMIT $6`,
-		only, CaptureVerdictActor, CaptureAcceptActor, vcardSource, rule.needPair, limit,
+		only, CaptureVerdictActor, CaptureAcceptActor, provenance.RecordSourceCapture, rule.needPair, limit,
 		first, last, DisplayNameRepairActor, rule.keepWhenPairShown, enrichCapturedBy,
 		rule.unsplitMaxLen, rule.among, InitialsRepairActor)
 	if err != nil {

@@ -3297,6 +3297,8 @@ public.company.company_refuse_anchor_retirement CREATE TRIGGER company_refuse_an
 public.company.company_size_band_check CHECK (((size_band IS NULL) OR (size_band = ANY (ARRAY['1-10'::text, '11-50'::text, '51-200'::text, '201-500'::text, '501-1000'::text, '1001-5000'::text, '5000+'::text]))))
 public.company.company_source_author_id_fkey FOREIGN KEY (source_author_id) REFERENCES app_user(id) ON DELETE SET NULL
 public.company.company_source_author_needs_a_source CHECK ((((source_author_id IS NULL) AND (source_author_name IS NULL)) OR (source_system IS NOT NULL)))
+public.company.company_source_channel CREATE TRIGGER company_source_channel BEFORE INSERT OR UPDATE ON public.company FOR EACH ROW WHEN ((new.source <> ALL (ARRAY['api'::text, 'automation'::text, 'capture'::text, 'import'::text, 'manual'::text, 'webform'::text]))) EXECUTE FUNCTION move_party_source_onto_its_channel()
+public.company.company_source_check CHECK ((source = ANY (ARRAY['api'::text, 'automation'::text, 'capture'::text, 'import'::text, 'manual'::text, 'webform'::text]))) NOT VALID
 public.company.company_source_id_length CHECK (((source_id IS NULL) OR ((char_length(source_id) >= 1) AND (char_length(source_id) <= 128))))
 public.company.company_source_id_needs_a_source CHECK (((source_id IS NULL) OR (source_system IS NOT NULL)))
 public.company.company_version_js_safe CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))
@@ -4020,6 +4022,8 @@ public.contact.contact_relationship_mark_check CHECK ((relationship_mark = ANY (
 public.contact.contact_relationship_mark_set_by_pairs CHECK (((relationship_mark IS NULL) = (relationship_mark_set_by IS NULL)))
 public.contact.contact_source_author_id_fkey FOREIGN KEY (source_author_id) REFERENCES app_user(id) ON DELETE SET NULL
 public.contact.contact_source_author_needs_a_source CHECK ((((source_author_id IS NULL) AND (source_author_name IS NULL)) OR (source_system IS NOT NULL)))
+public.contact.contact_source_channel CREATE TRIGGER contact_source_channel BEFORE INSERT OR UPDATE ON public.contact FOR EACH ROW WHEN ((new.source <> ALL (ARRAY['api'::text, 'automation'::text, 'capture'::text, 'import'::text, 'manual'::text, 'webform'::text]))) EXECUTE FUNCTION move_party_source_onto_its_channel()
+public.contact.contact_source_check CHECK ((source = ANY (ARRAY['api'::text, 'automation'::text, 'capture'::text, 'import'::text, 'manual'::text, 'webform'::text]))) NOT VALID
 public.contact.contact_source_id_length CHECK (((source_id IS NULL) OR ((char_length(source_id) >= 1) AND (char_length(source_id) <= 128))))
 public.contact.contact_source_id_needs_a_source CHECK (((source_id IS NULL) OR (source_system IS NOT NULL)))
 public.contact.contact_strength_dates_archive CREATE TRIGGER contact_strength_dates_archive BEFORE UPDATE OF archived_at ON public.contact FOR EACH ROW WHEN ((old.archived_at IS DISTINCT FROM new.archived_at)) EXECUTE FUNCTION trg_contact_strength_dates_archive()
@@ -7978,6 +7982,15 @@ BEGIN
   PERFORM set_config('margince.last_activity_move', 'off', true);
 END;
 
+public.move_party_source_onto_its_channel() secdef=false cfg=- acl=- 
+DECLARE
+ channel text := party_source_channel(NEW.source, NEW.source_system);
+BEGIN
+ NEW.source_system := COALESCE(NEW.source_system, party_source_producer(NEW.source));
+ NEW.source := channel;
+ RETURN NEW;
+END;
+
 public.move_project_last_activity(pid uuid) secdef=false cfg=- acl=- 
 DECLARE
   v timestamptz;
@@ -8403,6 +8416,28 @@ public.partner_stage.updated_at timestamp with time zone NOT NULL gen=- def=now(
 public.partner_stage.version bigint NOT NULL gen=- def=1
 public.partner_stage_key_key CREATE UNIQUE INDEX partner_stage_key_key ON public.partner_stage USING btree (key)
 public.partner_stage_pkey CREATE UNIQUE INDEX partner_stage_pkey ON public.partner_stage USING btree (id)
+public.party_source_channel(source text, source_system text) secdef=false cfg=- acl=- 
+ SELECT CASE
+  WHEN source LIKE 'mirror:%' OR (source LIKE 'ext:%' AND source_system IS NOT NULL) THEN 'import'
+  WHEN party_source_producer(source) IN ('erasure_return', 'public_booking', 'web_form') THEN 'webform'
+  WHEN party_source_producer(source) = 'vcard_import' THEN 'import'
+  WHEN party_source_producer(source) = 'coldstart' THEN 'automation'
+  WHEN party_source_producer(source) IS NOT NULL THEN 'capture'
+  ELSE record_source_channel(source)
+ END
+
+public.party_source_producer(source text) secdef=false cfg=- acl=- 
+ SELECT CASE
+  WHEN source LIKE 'domain_triage:%' THEN 'domain_triage'
+  WHEN source LIKE 'mirror:%' THEN substring(source FROM '^(mirror:.*?):(?:company|contact|lead):')
+  WHEN source LIKE 'ext:%' THEN source
+  WHEN split_part(source, ':', 1) IN ('dispact', 'gcal', 'gdocs', 'gmail', 'graph', 'graphcal', 'imap',
+                                      'offline_demo', 'telegram', 'test_mailbox') THEN split_part(source, ':', 1)
+  WHEN source IN ('capture_counterparty', 'capture_counterparty_verdict', 'coldstart', 'erasure_return',
+                  'public_booking', 'siteread', 'vcard_import', 'web_form')
+   THEN source
+ END
+
 public.passport acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.passport.app_issuer text gen=- def=-
 public.passport.app_subject text gen=- def=-
