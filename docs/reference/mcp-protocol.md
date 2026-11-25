@@ -89,9 +89,10 @@ signed with the deployment's `connector_state_key`. Two questions go this way. O
 more than one.
 
 The client then sends the same call again, with `inputResponses` and the same `requestState`. A state for some other
-caller, tool or set of arguments, or one older than ten minutes, gets the question again. The answer comes back
-through the client, so it only decides what the client could decide by itself. A change a human must approve still
-goes to the approval inbox. A client with no form support, or a server with no key, gets the answer it had before.
+caller, tool, set of arguments or question, or one older than ten minutes, gets the question again. So does a state
+sent a second time: Redis spends each one once, so one yes covers one retry. The answer comes back through the
+client, so it only decides what the client could decide by itself. A change a human must approve still goes to the
+approval inbox. A client with no form support, or a server with no key or Redis, gets the answer it had before.
 
 **Confirming in the conversation.** A tool marked `WaitsEvenForItsUser` waits for a human even when the agent acts
 as its user. Over MCP, when that user is in the conversation, the call does not stage. Its first answer is a refusal

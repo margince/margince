@@ -389,7 +389,7 @@ func TestTheMCPDoorAsksInTheConversationAndRunsOnTheCode(t *testing.T) {
 	f := newConfirmFixture(t)
 	d := NewDispatcher(f.reg, func(context.Context) (context.Context, error) { return f.user, nil }, "t", "0")
 	d.inputState = newInputStateSigner([]byte(strings.Repeat("k", 32)))
-	d.confirmGuard = f.guard
+	d.replayGuard = f.guard
 	call := func(args string) map[string]any {
 		t.Helper()
 		params, _ := json.Marshal(map[string]any{"name": f.tool.name, "arguments": json.RawMessage(args)})
