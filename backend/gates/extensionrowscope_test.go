@@ -5,17 +5,17 @@
 
 package gates
 
-// Every core read of an extension kind's rows carries the kind's row scope. A
-// reader without it still answers plausible rows, a colleague's ones too. The
-// corpus is each function naming the ext schema in a file that imports the
-// record-kind registry. Only those files can tell a kind's table from a unit's
-// other tables; the rest is privacy and reach plumbing that runs as system.
+// Every core read of a unit table carries the kind's row scope, or says why it
+// may not. A reader without it still answers plausible rows, a colleague's ones
+// too. The corpus is every function under internal/ that spells the ext schema,
+// directly or through a constant of any package, whatever the file imports.
 
 import (
 	"go/ast"
 	"go/token"
 	"io/fs"
 	"path/filepath"
+	"sort"
 	"strconv"
 	"strings"
 	"testing"
@@ -23,54 +23,105 @@ import (
 	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
-// extensionScopeCarriers are the names that put the kind's row scope on a read.
-// ExtensionScopeClause renders it. A storekit.Query with Object set and a
-// reportSpec with extensionKind set have it rendered by their one executor.
-const recordKindRegistry = "github.com/margince/margince/backend/internal/shared/ports/recordkinds"
+// extensionScopeCalls render the kind's row scope into a read.
+var extensionScopeCalls = []string{"ExtensionScopeClause", "ExtensionTableScopeClause"}
 
-var extensionScopeCarriers = map[string]bool{"ExtensionScopeClause": true, "Object": true, "extensionKind": true}
-
-// unscopedExtensionReaders name the ext schema and return no row to a reader.
+// unscopedExtensionReaders name the ext schema without rendering the scope.
+// Each reason says where the scope is applied instead, or why no reader is
+// served a row.
 var unscopedExtensionReaders = gatekit.Waive(map[string]string{
-	"compose.VerifyRecordKinds":     "reads the table's catalog at boot, never a row",
-	"compose.extensionHistoryQuery": "its one caller, extensionRecordEntries, renders the kind's row scope and passes it in",
+	"collections.extensionEngine":               "builds a storekit.Query with Object set; Query.rowScope renders the kind's scope on every execution",
+	"compose.extensionKindSpec":                 "builds a reportSpec with extensionKind set; specScopeClauses renders the kind's scope for every report",
+	"compose.extensionHistoryQuery":             "its one caller, extensionRecordEntries, renders the kind's scope and passes it in",
+	"compose.VerifyRecordKinds":                 "reads the table's catalog at boot, never a row",
+	"compose/corereach.Install":                 "names the tables a unit owns for the reach check, never a row",
+	"platform/sweepreach.Install":               "names the tables a unit owns for the reach check, never a row",
+	"platform/extprivacy.qualified":             "spells a table name for the erasure engine, which runs as the system and must clear every row of a data subject",
+	"platform/extprivacy.CountDependents":       "counts the unit rows a merge would leave behind; the merge refuses on any of them, whoever may read it",
+	"platform/extprivacy.clearAssignments":      "reads the column types of a table it clears for an erasure, never a row",
+	"platform/extprivacy.VerifySchema":          "reads the catalog of a unit's tables at boot, never a row",
+	"platform/extprivacy.readPinningReferences": "reads the catalog of a unit's tables at boot, never a row",
+	"platform/extprivacy.readTables":            "reads the catalog of a unit's tables at boot, never a row",
 })
+
+// extensionSchemaReaders is how many functions name the ext schema. The census
+// fails on fewer as well as more, so a reader that stops being found is seen.
+const extensionSchemaReaders = 16
 
 func TestEveryReadOfAnExtensionKindCarriesItsRowScope(t *testing.T) {
 	t.Parallel()
 	defer unscopedExtensionReaders.AssertAllMatched(t)
 	root := filepath.Join(gatekit.ModuleRoot(t), "internal")
-	seen := 0
-	err := gatekit.WalkDir(root, func(path string, entry fs.DirEntry, err error) error {
-		if err != nil || !entry.IsDir() {
-			return err
+	dirs := packageDirs(t, root)
+	consts := map[string]map[string]string{}
+	byName := map[string]string{}
+	for _, dir := range dirs {
+		consts[dir] = gatekit.PackageStringConstants(t, dir)
+		byName[filepath.Base(dir)] = dir
+	}
+	var found []string
+	for _, dir := range dirs {
+		pkg, err := filepath.Rel(root, dir)
+		if err != nil {
+			t.Fatal(err)
 		}
-		seen += extensionReadersIn(t, root, path)
-		return nil
+		pkg = strings.TrimPrefix(pkg, "modules/")
+		for _, fn := range extSchemaFunctions(t, dir, consts, byName) {
+			subject := pkg + "." + fn.Name.Name
+			found = append(found, subject)
+			if gatekit.CallsAny(fn.Body, extensionScopeCalls) || unscopedExtensionReaders.Waived(t, subject) {
+				continue
+			}
+			t.Errorf("%s reads a table in the ext schema without the kind's row scope; "+
+				"add auth.ExtensionScopeClause to its WHERE, or waive it here naming where the scope is applied", subject)
+		}
+	}
+	if len(found) != extensionSchemaReaders {
+		sort.Strings(found)
+		t.Errorf("the census found %d functions naming the ext schema, want %d: %v. "+
+			"Check each new or missing one, then set extensionSchemaReaders", len(found), extensionSchemaReaders, found)
+	}
+}
+
+func packageDirs(t *testing.T, root string) []string {
+	t.Helper()
+	var dirs []string
+	err := gatekit.WalkDir(root, func(path string, entry fs.DirEntry, err error) error {
+		if err == nil && entry.IsDir() {
+			dirs = append(dirs, path)
+		}
+		return err
 	})
 	if err != nil {
 		t.Fatalf("walking %s: %v", root, err)
 	}
-	if seen < 7 {
-		t.Fatalf("the census found %d functions naming the ext schema, want at least the 7 this gate was written against: the spelling of the schema changed", seen)
-	}
+	return dirs
 }
 
-// extensionReadersIn checks each function of one package directory that names
-// the ext schema, and returns how many it found.
-func extensionReadersIn(t *testing.T, root, dir string) int {
+// extSchemaFunctions are the functions of one package directory whose body
+// spells the ext schema.
+func extSchemaFunctions(t *testing.T, dir string, consts map[string]map[string]string, byName map[string]string) []*ast.FuncDecl {
 	t.Helper()
 	sources, err := filepath.Glob(filepath.Join(dir, "*.go"))
-	if err != nil || len(sources) == 0 {
-		return 0
-	}
-	consts := gatekit.PackageStringConstants(t, dir)
-	pkg, err := filepath.Rel(root, dir)
 	if err != nil {
 		t.Fatal(err)
 	}
-	pkg = strings.TrimPrefix(strings.TrimPrefix(pkg, "modules/"), "platform/")
-	found := 0
+	value := func(node ast.Node) string {
+		switch n := node.(type) {
+		case *ast.BasicLit:
+			if unquoted, err := strconv.Unquote(n.Value); err == nil && n.Kind == token.STRING {
+				return unquoted
+			}
+		case *ast.Ident:
+			return consts[dir][n.Name]
+		case *ast.SelectorExpr:
+			if pkg, ok := n.X.(*ast.Ident); ok {
+				return consts[byName[pkg.Name]][n.Sel.Name]
+			}
+		}
+		return ""
+	}
+	var out []*ast.FuncDecl
 	for _, source := range sources {
 		if strings.HasSuffix(source, "_test.go") {
 			continue
@@ -79,69 +130,20 @@ func extensionReadersIn(t *testing.T, root, dir string) int {
 		if err != nil {
 			t.Fatalf("parsing %s: %v", source, err)
 		}
-		if qualifier, dotted := gatekit.ImportedAs(file, recordKindRegistry); qualifier == "" && !dotted {
-			continue
-		}
 		for _, decl := range file.Decls {
-			fn, ok := decl.(*ast.FuncDecl)
-			if !ok || fn.Body == nil || !namesExtSchema(fn.Body, consts) {
-				continue
+			if fn, ok := decl.(*ast.FuncDecl); ok && fn.Body != nil && spellsExtSchema(fn.Body, value) {
+				out = append(out, fn)
 			}
-			found++
-			if carriesExtensionScope(fn.Body) || unscopedExtensionReaders.Waived(t, pkg+"."+fn.Name.Name) {
-				continue
-			}
-			t.Errorf("%s: %s reads a table in the ext schema without the kind's row scope; "+
-				"add auth.ExtensionScopeClause to its WHERE, or read through a storekit.Query with Object set",
-				source, fn.Name.Name)
 		}
 	}
-	return found
+	return out
 }
 
-// namesExtSchema reports a body that spells the ext schema: the literal "ext"
-// or `"ext".`, directly or through a package constant.
-func namesExtSchema(body ast.Node, consts map[string]string) bool {
+func spellsExtSchema(body ast.Node, value func(ast.Node) string) bool {
 	found := false
 	ast.Inspect(body, func(node ast.Node) bool {
-		var value string
-		switch n := node.(type) {
-		case *ast.BasicLit:
-			if n.Kind != token.STRING {
-				return true
-			}
-			unquoted, err := strconv.Unquote(n.Value)
-			if err != nil {
-				return true
-			}
-			value = unquoted
-		case *ast.Ident:
-			value = consts[n.Name]
-		}
-		if value == "ext" || value == `"ext".` {
+		if v := value(node); v == "ext" || v == `"ext".` {
 			found = true
-		}
-		return !found
-	})
-	return found
-}
-
-// carriesExtensionScope reports a body that names one of the scope carriers, as
-// a call or as a struct field it sets.
-func carriesExtensionScope(body ast.Node) bool {
-	found := false
-	ast.Inspect(body, func(node ast.Node) bool {
-		switch n := node.(type) {
-		case *ast.SelectorExpr:
-			found = found || n.Sel.Name == "ExtensionScopeClause"
-		case *ast.CallExpr:
-			if id, ok := n.Fun.(*ast.Ident); ok && id.Name == "ExtensionScopeClause" {
-				found = true
-			}
-		case *ast.KeyValueExpr:
-			if key, ok := n.Key.(*ast.Ident); ok && extensionScopeCarriers[key.Name] {
-				found = true
-			}
 		}
 		return !found
 	})

@@ -102,6 +102,7 @@ func scopedReader(e *integration.Env, scope principal.RowScope) context.Context 
 		RowScope: scope,
 		Objects: map[string]principal.ObjectGrant{
 			scopeDemoObject: {Read: true}, "contact": {Read: true}, "signal": {Read: true},
+			"list": {Create: true, Read: true, Update: true, Delete: true},
 		},
 	})
 }

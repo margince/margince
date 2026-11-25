@@ -376,7 +376,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `extensioninboundverifiesgate_test.go` | H2 | Every inbound endpoint a unit declares must check the signature. |
 | `extensionprivacycensus_test.go` | H2 | Every table an extension's migrations create must carry a privacy declaration, and every declaration must name a table the migrations create. |
 | `extensionregistrywiring_test.go` | H2 | Every place that erases, exports or merges is handed the extension registry. |
-| `extensionrowscope_test.go` | H2 | Every core read of an extension kind's rows carries the kind's row scope. |
+| `extensionrowscope_test.go` | H2 | Every core read of a unit table carries the kind's row scope, or says why it may not. |
 | `extensionsignored_test.go` | H3 | The enabled set must be a set git actually has. |
 | `extinboundnonce_test.go` | H1 | A unit that takes an anonymous inbound webhook refuses a replay of one. |
 | `fiscalperiodsingle_test.go` | H2 | Which fiscal period holds a day is computed in one place. |

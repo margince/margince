@@ -59,3 +59,14 @@ func ExtensionScopeClause(ctx context.Context, kind, alias string, arg func(any)
 	column := pgx.Identifier{declared.OwnerColumn}.Sanitize()
 	return ownerColumnPredicate(p, arg, unownedIsShared, column)(alias), nil
 }
+
+// ExtensionTableScopeClause is ExtensionScopeClause for a unit table named
+// directly. A table that holds no declared kind has no owner core knows of.
+// Its clause is empty, as for a kind without an owner column.
+func ExtensionTableScopeClause(ctx context.Context, table, alias string, arg func(any) int) (string, error) {
+	declared, ok := recordkinds.LookupTable(table)
+	if !ok {
+		return "", nil
+	}
+	return ExtensionScopeClause(ctx, declared.Name, alias, arg)
+}

@@ -95,6 +95,19 @@ func Lookup(name string) (Declared, bool) {
 	return d, ok
 }
 
+// LookupTable answers the kind whose rows a unit table holds, and false for a
+// table no unit declared a kind over.
+func LookupTable(table string) (Declared, bool) {
+	mu.RLock()
+	defer mu.RUnlock()
+	for _, d := range byName {
+		if d.Table == table {
+			return d, true
+		}
+	}
+	return Declared{}, false
+}
+
 // DeclaredBy reports whether the unit declared the kind. A kind another unit
 // declared, or none did, answers false.
 func DeclaredBy(unit string, name string) bool {
