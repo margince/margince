@@ -11579,6 +11579,7 @@ paths:
   /public/booking/{host_slug}/preview:
     parameters:
       - { name: host_slug, in: path, required: true, schema: { type: string } }
+      - { name: l, in: query, required: false, description: "Meeting length in minutes the shared link asks for. The card names it, links to it and gives it as the canonical address when the page offers it; otherwise the card names the default length.", schema: { type: integer } }
     get:
       tags: [Public]
       operationId: getPublicBookingPreview
@@ -11589,7 +11590,8 @@ paths:
         preview reads the page without running the app. The HTML carries the host's name,
         company, meeting title and duration as escaped title, description, Open Graph and
         Twitter card fields. The canonical URL and `og:url` are the absolute `/book/{host_slug}`
-        address on the configured public origin, and are omitted when no usable origin is
+        address on the configured public origin, with `?l=` when the card names an offered
+        length the link asked for, and are omitted when no usable origin is
         configured. The company logo is the card image when there is one; otherwise the card
         has no image. A paused page answers generic metadata that names no host. A missing
         or revoked page answers 404 with no host metadata. Responses are `no-store` and
@@ -11601,6 +11603,7 @@ paths:
           content:
             text/html:
               schema: { type: string }
+        '422': { $ref: '#/components/responses/ValidationError' }
         default:
           description: The page is missing, revoked or unavailable; the HTML names no host.
           content:
@@ -12269,7 +12272,7 @@ paths:
   /public/booking/{host_slug}/availability:
     parameters:
       - { name: host_slug, in: path, required: true, schema: { type: string }, description: The host's unguessable public booking slug (not the user uuid). }
-      - { name: l, in: query, required: false, description: Offered meeting length in minutes. Unknown lengths use the default., schema: { type: integer } }
+      - { name: l, in: query, required: false, description: "Offered meeting length in minutes. A length the page does not offer is refused with 422 `length_not_offered`; read the profile again for the lengths on offer.", schema: { type: integer } }
     get:
       tags: [Public]
       operationId: getPublicAvailability
@@ -12314,7 +12317,7 @@ paths:
   /public/booking/{host_slug}:
     parameters:
       - { name: host_slug, in: path, required: true, schema: { type: string } }
-      - { name: l, in: query, required: false, description: Offered meeting length in minutes. Unknown lengths use the default., schema: { type: integer } }
+      - { name: l, in: query, required: false, description: "Offered meeting length in minutes. A length the page does not offer is refused with 422 `length_not_offered`; read the profile again for the lengths on offer.", schema: { type: integer } }
     post:
       tags: [Public]
       operationId: bookPublicMeeting
@@ -60204,7 +60207,11 @@ components:
         logo_url: { type: string, description: Absolute public logo URL when the public origin is configured; otherwise relative to the API origin. }
         title: { type: string }
         location: { type: string }
-        duration_minutes: { type: integer }
+        duration_minutes: { type: integer, description: "The length this page books: the one `l` asked for when the page offers it, else the default." }
+        offered_lengths:
+          type: array
+          items: { type: integer }
+          description: Every meeting length the host's booking page offers, the default first. Pass one as `l` to book at that length. Absent on a paused page and on a meeting proposal.
         enabled: { type: boolean }
         paused: { type: boolean, description: "True when the page takes no bookings now: the host turned bookings off, or the calendar behind it cannot take them. The availability and booking calls then answer as for an unknown page." }
         video_app: { type: string, enum: [google_meet, microsoft_teams], x-extensible-enum: true, description: Present when new meetings get a video call link from the host's calendar. }
@@ -74683,11 +74690,12 @@ components:
 
     RouterActions:
       type: object
-      description: The actions of one MCP router whose actions run REST routes.
-      required: [router, actions]
+      description: The actions of one MCP router, with the arguments each takes.
+      required: [router, actions, how_to_call]
       properties:
         router: { type: string }
         ask_user_first_means: { type: string, description: 'What ask_user_first asks of the model; present when an action here has it.' }
+        how_to_call: { type: string, description: 'Where an action''s arguments go in the router call: top-level members beside action, a routed body in request_body.' }
         actions:
           type: array
           items:
@@ -74695,14 +74703,25 @@ components:
             required: [action, does, route]
             properties:
               action: { type: string, description: 'The value the router''s action argument takes.' }
-              does: { type: string, description: 'The route''s summary.' }
+              does: { type: string, description: 'What the action does.' }
               route: { type: string, description: 'The method and route, for example POST /v1/record-grants.' }
               ids: { type: array, items: { type: string }, description: The path ids the action takes as arguments. }
-              query: { type: array, items: { type: string }, description: The query parameters it takes as arguments. }
+              query:
+                type: array
+                description: The query parameters it takes as arguments, each with its type and any closed values.
+                items:
+                  type: object
+                  required: [name, type]
+                  properties:
+                    name: { type: string }
+                    type: { type: string }
+                    required: { type: boolean }
+                    enum: { type: array, items: { type: string } }
+                    format: { type: string }
               if_version: { type: boolean, description: 'Whether it takes if_version: the version you last read.' }
               ask_user_first: { type: boolean, description: Whether the app asks its user to confirm it first. }
               uploads_a_file: { type: boolean, description: 'Whether it takes filename, content_type and content_base64.' }
-              body: { type: object, description: The JSON schema of its body argument. }
+              body: { type: object, additionalProperties: true, description: The JSON schema of its body argument. }
 
     AgentAdmissionPolicy:
       type: object

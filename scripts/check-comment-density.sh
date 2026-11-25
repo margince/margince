@@ -47,7 +47,7 @@ code="${totals%% *}"
 comments="${totals##* }"
 
 now_pm=$(( comments * 1000 / code ))
-base_pm="$(grep -vE '^\s*#|^\s*$' "$BASELINE_FILE" | head -1 | tr -d ' ')"
+base_pm="$(grep -vE '^\s*#|^\s*$' "$BASELINE_FILE" | sed -n 1p | tr -d ' ')"
 
 printf 'comment-density: %d comment / %d code = %d.%d%% of code\n' \
 	"$comments" "$code" $(( now_pm / 10 )) $(( now_pm % 10 ))

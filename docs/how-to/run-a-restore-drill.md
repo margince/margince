@@ -34,8 +34,12 @@ when the restore starts. `--restored-to` must be RFC 3339 and must not lie in th
 Use your backup tool to restore the database into the spare database. Restore the object store to the same point
 in time. A database without its attachment files is half a restore.
 
-Leave out the `erasure-suppression/` prefix of the object store. It holds the erasure journal, and the replay below
-needs the newest copy. Copy that prefix from the live object store instead.
+If the installation sets a separate erasure journal store (`MARGINCE_ERASURE_JOURNAL_ENDPOINT` or
+`MARGINCE_ERASURE_JOURNAL_PATH`), restore nothing of it. The restore never touches that store, and the replay below
+reads it as it is. Skip the rest of this section's note about the journal.
+
+Without a separate journal store, leave out the `erasure-suppression/` prefix of the restored object store. It holds
+the erasure journal, and the replay below needs the newest copy. Copy that prefix from the live object store instead.
 
 Then bring the restored schema up to the running release:
 
@@ -67,6 +71,10 @@ export MARGINCE_KEYVAULT_ROOT_KEY="$MARGINCE_KEYVAULT_ROOT_KEY"
 worker replay-erasures
 ```
 
+With a separate journal store, keep its `MARGINCE_ERASURE_JOURNAL_*` settings pointing at the live journal store.
+Without one, the command prints a warning first: the journal lives in the restored object store and may have been
+rolled back with it.
+
 An installation that keeps its objects on local disk sets `MARGINCE_BLOBSTORE_PATH` to the spare folder instead of the
 `MARGINCE_BLOBSTORE_*` service settings. `MARGINCE_DSN` is the runtime app role, not the owner. The root key is the
 one the installation sealed its secrets with.
@@ -86,7 +94,7 @@ keeps the newer time it already held.
 On a drill the count is often zero, and zero is a valid result. A contact under legal hold is not erased. The command
 names it and exits with an error after it has erased the others.
 
-The command refuses to run without an object store, because the journal lives there. It also refuses a journal with no
+The command refuses to run without an object store or a separate journal store, because the journal lives there. It also refuses a journal with no
 entry, which most often means the settings point at the wrong store. Pass `--empty-journal-ok` only if the installation
 has never erased anyone.
 

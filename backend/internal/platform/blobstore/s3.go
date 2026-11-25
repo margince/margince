@@ -5,6 +5,7 @@ package blobstore
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"strings"
@@ -31,7 +32,10 @@ type Config struct {
 // isolation lives in the workspace-prefixed key the caller supplies.
 type s3Store struct {
 	client *minio.Client
-	bucket string
+	// listPageSize is the S3 page size of a version listing; zero is the
+	// server's default. Tests lower it to cross a page boundary.
+	listPageSize int
+	bucket       string
 }
 
 // New builds an S3-compatible store and ensures its bucket exists. It
@@ -154,30 +158,52 @@ func (s *s3Store) Delete(ctx context.Context, key string) error {
 	return nil
 }
 
-// DeletePrefix lists the prefix recursively and removes objects one at a
-// time so a single failure is attributable to the key that caused it, rather
-// than a batch call obscuring which object failed mid-sweep. A removal error
-// stops the sweep and returns the count so far, leaving the prefix partially
-// deleted; DeletePrefix is idempotent, so a retry with the same prefix safely
-// finishes it.
+// DeletePrefix removes every version and delete marker under the prefix, so a
+// versioned bucket keeps nothing retrievable. On an unversioned bucket the
+// result is the same as before.
+//
+// Removal is one call per version so a failure names its key. A failure stops
+// the sweep and returns the count so far. A retry finishes the job. The count
+// is distinct keys that held a real version.
 func (s *s3Store) DeletePrefix(ctx context.Context, prefix string) (int, error) {
 	if prefix == "" || !strings.HasSuffix(prefix, "/") {
 		return 0, ErrInvalidPrefix
 	}
 	deleted := 0
+	lastCounted := ""
 	for obj := range s.client.ListObjects(ctx, s.bucket, minio.ListObjectsOptions{
-		Prefix:    prefix,
-		Recursive: true,
+		Prefix:       prefix,
+		Recursive:    true,
+		WithVersions: true,
+		MaxKeys:      s.listPageSize,
 	}) {
 		if obj.Err != nil {
-			return deleted, fmt.Errorf("blobstore: listing %s: %w", prefix, obj.Err)
+			return deleted, versionAccessErr(fmt.Errorf("blobstore: listing %s: %w", prefix, obj.Err), obj.Err)
 		}
-		if err := s.client.RemoveObject(ctx, s.bucket, obj.Key, minio.RemoveObjectOptions{}); err != nil {
-			return deleted, fmt.Errorf("blobstore: removing %s: %w", obj.Key, err)
+		if err := s.client.RemoveObject(ctx, s.bucket, obj.Key, minio.RemoveObjectOptions{VersionID: obj.VersionID}); err != nil {
+			return deleted, versionAccessErr(fmt.Errorf("blobstore: removing %s: %w", obj.Key, err), err)
 		}
-		deleted++
+		if !obj.IsDeleteMarker && obj.Key != lastCounted {
+			deleted++
+			lastCounted = obj.Key
+		}
 	}
 	return deleted, nil
+}
+
+// ErrVersionPermissionsMissing reports that the store's credentials may not
+// list or delete object versions, which DeletePrefix needs so that no version
+// outlives an erasure. It is never answered by deleting only the current
+// objects: that would leave versions behind and report success.
+var ErrVersionPermissionsMissing = errors.New("blobstore: the object store credentials lack s3:ListBucketVersions or s3:DeleteObjectVersion on the bucket; grant both so erasure can remove every version")
+
+// versionAccessErr wraps wrapped with ErrVersionPermissionsMissing when cause
+// is an access-denied answer from the store, and returns it unchanged otherwise.
+func versionAccessErr(wrapped, cause error) error {
+	if minio.ToErrorResponse(cause).Code == "AccessDenied" {
+		return fmt.Errorf("%w: %w", ErrVersionPermissionsMissing, wrapped)
+	}
+	return wrapped
 }
 
 func (s *s3Store) Health(ctx context.Context) error {

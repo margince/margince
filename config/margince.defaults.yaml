@@ -20,6 +20,13 @@ blobstore_use_ssl: false
 certlog_base_url: null
 connector_state_key: ${file:/run/secrets/connector_state_key}
 dsn: ${file:/run/secrets/dsn}
+erasure_journal_access_key: ${file:/run/secrets/erasure_journal_access_key}
+erasure_journal_bucket: null
+erasure_journal_endpoint: null
+erasure_journal_path: null
+erasure_journal_region: null
+erasure_journal_secret_key: ${file:/run/secrets/erasure_journal_secret_key}
+erasure_journal_use_ssl: false
 geocode_base_url: null
 gmail_client_id: null
 gmail_client_secret: ${file:/run/secrets/gmail_client_secret}

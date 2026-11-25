@@ -97,6 +97,7 @@ func newActivitiesHandlers(pool *pgxpool.Pool) activitiesHandlers {
 		WithTaskRecommendation(taskRecommendationReader(pool)).
 		WithInquiryAssignment(newInquiryAssignment(InstallationDB(pool))).
 		WithLeadQualifyTasks(newLeadWorkTasks(InstallationDB(pool), slog.Default())).
+		WithTeamRequestNotice(teamRequestNotice{}).
 		WithFieldCatalog(customfields.NewService(pool, nil)).
 		WithRecordZone(installationZoneTx).
 		WithSettings(StoredConfig(pool)).

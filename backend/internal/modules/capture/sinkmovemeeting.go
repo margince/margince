@@ -80,11 +80,17 @@ func admitCalendarVerb(ctx context.Context, key connector.NaturalKey, verb strin
 	if key.SourceSystem == "" || key.SourceID == "" {
 		return fmt.Errorf("capture: to %s a meeting needs a natural key", verb)
 	}
+	return admitCalendarProvider(ctx, key.SourceSystem, verb)
+}
+
+// admitCalendarProvider is admitCalendarVerb for a verb that names its
+// provider and no single event.
+func admitCalendarProvider(ctx context.Context, sourceSystem, verb string) error {
 	actor, ok := principal.Actor(ctx)
 	if !ok || actor.Type != principal.PrincipalConnector {
 		return fmt.Errorf("capture: to %s a meeting requires a connector principal — the registry builds it, nothing else may", verb)
 	}
-	if want := connectorPrincipalID(key.SourceSystem); want != actor.ID {
+	if want := connectorPrincipalID(sourceSystem); want != actor.ID {
 		return fmt.Errorf(
 			"capture: %q cannot %s a meeting captured by %q — a connector acts for its own provider and no other",
 			actor.ID, verb, want)

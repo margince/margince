@@ -100,7 +100,6 @@ type unitManifest struct {
 	CompanyTypes []declaredCompanyType `json:"company_types,omitempty"`
 	RecordKinds  []declaredRecordKind  `json:"record_kinds,omitempty"`
 	LinkTypes    []declaredLinkType    `json:"link_types,omitempty"`
-	AITasks      []declaredAITask      `json:"ai_tasks,omitempty"`
 	reportDecls
 	// Panels are the places on core pages that draw the unit's own component.
 	Panels []declaredPanel `json:"panels,omitempty"`

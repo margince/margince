@@ -102,7 +102,6 @@ internal/compose/companybrief/ask_test.go#func declaredQuestions
 internal/compose/companybrief/evidencenames.go#func recordNames
 internal/compose/companybrief/write.go#var knownNature
 internal/compose/companydossier/doc.go#package companydossier
-internal/compose/companydossier/input.go#func KnownRecords
 internal/compose/companydossier/service.go#var knownNature
 internal/compose/companynamepromotion_integration_test.go#func seedDossierName
 internal/compose/companyrollupread.go#type fxConverter

@@ -351,8 +351,16 @@ func notificationMessage(notice notices.Notice, facts approvalMailFacts, base st
 	var body emailview.Content
 	body.Paragraph(words.NotificationIntro)
 	writeNoticeSection(&body, notice, facts)
-	body.Action(words.NotificationOpen, mailcopy.Destination(base, mailcopy.WorklistFragment))
+	body.Action(words.NotificationOpen, mailcopy.Destination(base, noticeMailFragment(notice)))
 	return body.Message(notificationMailSubject(notice, words), string(words.Language), words.NotificationPreview)
+}
+
+// noticeMailFragment is where the message's button answers the notice.
+func noticeMailFragment(notice notices.Notice) string {
+	if notice.Kind == notices.KindMeetingTeamRequest {
+		return mailcopy.MeetingSettingsFragment
+	}
+	return mailcopy.WorklistFragment
 }
 
 // writeNoticeSection is one notice's part of a message: its subject and facts

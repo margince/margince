@@ -88,6 +88,8 @@ type Sink struct {
 	// foldMeeting retires one of two live rows holding one meeting. Nil keeps
 	// both.
 	foldMeeting MeetingFolder
+	// replacedSeries folds the meetings a split series replaced. Nil keeps them.
+	replacedSeries SeriesSplitFolder
 	// keepMeetingHost hands a replayed meeting to its organizer. Nil leaves the
 	// first calendar that synced it as its host.
 	keepMeetingHost   MeetingHostKeeper

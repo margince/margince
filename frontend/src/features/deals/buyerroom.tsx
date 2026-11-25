@@ -313,7 +313,7 @@ function conversationRefusal(
     return t("buyer.closedNote");
   }
   if (view.participant.capability === "view") {
-    return t("threads.readOnly");
+    return t("buyer.readOnly");
   }
   return undefined;
 }

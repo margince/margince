@@ -592,18 +592,6 @@ tasks:
     no_payload: true
     doc: "read one chat screenshot a user just filed on a contact, lead or deal (the chat_tasks site) against at most ten open tasks on that record that the user holds and may change. Margince's own tasks, a task the user reopened after an automatic answer, and a task this chat already changed are not asked about. Per task the model answers done, new_date with a day after today and within a year, or none, quoting the one chat line the answer rests on. A change needs confidence 0.8 or more and a quote the chat holds; anything else is unsure and changes nothing. A change is written by the chat task reader on the user's behalf, with the chat and the quote as evidence, so Done for you shows it with Undo, and the same chat never changes that task again. With no lane the chat is filed and no task changes. no_payload because the prompt carries the customer's own chat messages."
 
-  extension_task:
-    display_name: "Extension AI task"
-    summary: "Runs an AI task that an installed extension declared, on the same models, region limit and call log as the product's own tasks."
-    ladder: [cheap_cloud, premium]
-    execution_mode: background
-    status: shipped
-    subject_restriction: honour
-    sites: [run]
-    company_context: none
-    no_payload: true
-    doc: "the one task every extension AI call rides, so an extension never holds a provider client or key. The extension's declared task (its prompt, answer schema and whether it takes documents) is data on its declaration; the unit and the declared task name are stamped on every ai_call row the call writes. no_payload BY CONTRACT: an extension's input is whatever the unit chooses to send, and none of it may be kept in ai_call_payload. The request must name the contacts it carries, or say it carries none, so a restriction of processing holds for an extension as it does for core."
-
 # embed is a workload, not a task (ADR-0074). It has a real ladder and a real
 # cost rule, but its tier is deliberately NOT one of the chat tiers above, and
 # it has no prompt, no text answer and no completion path — so it carries no

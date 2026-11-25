@@ -64,8 +64,8 @@ check "$(lane_timed_out "$tmp/quoted.log" && echo no || echo yes)" \
 # Order is the whole point: the first thing printed is what the reader debugs.
 check "$(grep -qF 'exceeded its ${IT_TIMEOUT} budget' "$lane" && echo yes || echo no)" \
     "the timeout names the budget it crossed"
-timeout_line="$(grep -n 'exceeded its ${IT_TIMEOUT} budget' "$lane" | head -1 | cut -d: -f1)"
-diverge_line="$(grep -n 'ran a different test set' "$lane" | head -1 | cut -d: -f1)"
+timeout_line="$(grep -n 'exceeded its ${IT_TIMEOUT} budget' "$lane" | sed -n 1p | cut -d: -f1)"
+diverge_line="$(grep -n 'ran a different test set' "$lane" | sed -n 1p | cut -d: -f1)"
 check "$([[ -n "$timeout_line" ]] && [[ -n "$diverge_line" ]] && [[ "$timeout_line" -lt "$diverge_line" ]] && echo yes || echo no)" \
     "the timeout is reported before the reconciliation diff"
 

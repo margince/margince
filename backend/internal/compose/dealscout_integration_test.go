@@ -114,43 +114,7 @@ func (e *scoutEnv) email(t *testing.T, subject, direction string, company ids.UU
 // document files one captured part on the mail, through capture's own writer.
 func (e *scoutEnv) document(t *testing.T, mail ids.UUID, filename, contentType string) ids.UUID {
 	t.Helper()
-	return captureMailDocument(t, e.Env, blobstore.NewMemory(), mail, filename, contentType, []byte(filename))
-}
-
-// captureMailDocument stages and records one file on a mail through capture's
-// own writer, into blob, and returns its attachment id.
-func captureMailDocument(
-	t *testing.T, e *integration.Env, blob blobstore.Store, mail ids.UUID, filename, contentType string, body []byte,
-) ids.UUID {
-	t.Helper()
-	ctx := principal.WithCorrelationID(principal.WithActor(principal.WithWorkspaceID(context.Background(), e.WS),
-		principal.Principal{
-			Type: principal.PrincipalConnector, ID: "connector:imap",
-			Permissions: principal.Permissions{
-				Objects:  map[string]principal.ObjectGrant{"activity": {Create: true}},
-				RowScope: principal.RowScopeAll,
-			},
-		}), ids.NewV7())
-	store := activities.NewStore(InstallationDB(e.Pool)).WithBlobstore(blob)
-	staged, err := store.StageCapturedFiles(ctx, []activities.CapturedFile{{
-		PartID: filename, Filename: filename, ContentType: contentType, Body: body,
-	}})
-	if err != nil {
-		t.Fatalf("staging %s: %v", filename, err)
-	}
-	if err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
-		return store.RecordCapturedFiles(ctx, tx, ids.From[ids.ActivityKind](mail), activities.CapturedFileSource{
-			System: "imap", MessageID: "m-" + mail.String(), CapturedBy: "connector:imap", Category: "email_attachment",
-		}, staged)
-	}); err != nil {
-		t.Fatalf("recording %s: %v", filename, err)
-	}
-	var id ids.UUID
-	if err := e.Pool.QueryRow(context.Background(),
-		`SELECT id FROM attachment WHERE activity_id = $1 AND filename = $2`, mail, filename).Scan(&id); err != nil {
-		t.Fatalf("reading back %s: %v", filename, err)
-	}
-	return id
+	return e.CaptureMailFile(t, blobstore.NewMemory(), mail, filename, contentType, []byte(filename))
 }
 
 // reading finishes a document reading through the extraction writer.

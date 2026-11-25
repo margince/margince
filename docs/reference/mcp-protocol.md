@@ -127,14 +127,23 @@ the same in either era. A missing or empty `uri` is `-32602`, and a read that fa
 later. That is also why the server reports `tools.listChanged: false`: the notice would go on a stream this transport
 does not open. The surface does change per caller, but this server cannot say so.
 
-**A tool result carries the answer twice.** A tool that declares an `outputSchema` returns the JSON of a `tools/call`
-that works both in a `TextContent` block and as `structuredContent`. Both are the same bytes, not a second copy built
-again. A router lists no `outputSchema`, because its actions answer different shapes, and a routed call is checked
-against the schema of the action it ran. Only a router bound to an app view lists one, built from its actions' shapes.
+**A tool result carries the answer twice.** A tool with an output schema returns the JSON of a `tools/call` that
+works both in a `TextContent` block and as `structuredContent`. Both are the same bytes, not a second copy built
+again. A router has no output schema, because its actions answer different shapes. A routed call is checked against
+the schema of the action it ran. Only a router bound to an app view has one, built from its actions' shapes.
 
-So a client that compares the two never finds a number changed or a key moved. Each tool lists the shape its handler
-writes. A result that misses its **declared schema** is kept out of `structuredContent`, and logged as a bug in this
-server.
+So a client that compares the two never finds a number changed or a key moved. A result that misses its schema is kept
+out of `structuredContent`, and logged as a bug in this server.
+
+`tools/list` names an `outputSchema` only where an app view reads the answer: the tool bound to a view, and a tool a
+view runs. Every other tool keeps its schema in the server, which checks each answer against it, and its answer
+still carries `structuredContent`. The protocol allows structured content without a listed schema. The rule is
+`listsOutputSchema` in `backend/internal/modules/agents/toollist.go`.
+
+Text every tool would repeat is in the server instructions. A tool's text names a tier only when the tool does not
+run at once. It names a scope only past the defaults: read for a tool that only reads, write for one that changes
+anything. An ask-first tool says "Ask the user first", and the instructions say what that asks for. No schema
+explains `idempotency_key`; the instructions say what it does.
 
 **No sessions, in either era.** `initialize` still answers a handshake-era client, and it makes no `Mcp-Session-Id`.
 If a client sends one, Margince does not use it or send it back, and `DELETE /mcp` answers `405`, since there is no

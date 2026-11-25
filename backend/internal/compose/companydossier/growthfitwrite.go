@@ -30,9 +30,7 @@ import (
 	"github.com/margince/margince/backend/internal/compose/promptlang"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/ai"
-	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/shared/kernel/promptfence"
-	"github.com/margince/margince/backend/internal/shared/kernel/textlang"
 	"github.com/margince/margince/backend/internal/shared/ports/model"
 )
 
@@ -46,7 +44,7 @@ const growthFitSystem = `You assess how well one company fits what WE sell, from
 The summary describes THEM: its offer_summary, icp and industry say what THEY sell and to whom. What WE sell is the confirmed company context, and nothing in the summary describes us.
 Return ONLY a JSON object: {"band":"strong|moderate|weak","sub_scores":[SUBSCORE],"positive_factors":[CLAIM],"negative_factors":[CLAIM],"whitespace":[CLAIM],"objections":[CLAIM],"recommended_angle":CLAIM}.
 A CLAIM is {"text":"...","nature":"fact|assessment|recommendation","evidence":[{"entity_type":"company|fact|profile_field","entity_id":"fa1"}]}.
-A record's entity_type is the key the summary lists it under: profile_field or fact. Its entity_id is the record's "id" there, such as pf1 or fa2.
+A record's entity_type is the key the summary lists it under: company, profile_field or fact. Its entity_id is the record's "id" there, such as co1, pf1 or fa2.
 A SUBSCORE is {"dimension":"industry_fit|company_size|transformation_need|access","score":0-100,"reason":"...","evidence":[...]}.
 Give exactly those four dimensions, once each, and no others. Each cites the records its reason reads. industry_fit reads their offer_summary, icp and industry against our icp: how well what they are matches who we sell to. What they sell and who they sell to both decide it, so it cites their offer_summary and their icp. company_size is whether they are the size we serve. transformation_need is how much they appear to need what we do, read from what they sell and the technology they run. access is how reachable the decision-makers are.
 A sub-score is the band taken apart, not a second opinion: score each dimension from the same evidence, and give the reason in one sentence. Never total them — a separate step decides the band.
@@ -93,11 +91,7 @@ func GrowthFitRequest(in Input, lang string) model.Request {
 // the entity_type a citation of it names, so the key a model reads is the type
 // it writes. A profile field cited as a fact grounds nothing and is dropped.
 type modelInput struct {
-	// Industry is the company column worded in the prompt language. The company
-	// row stays uncitable, so a claim can cite the value only through the
-	// profile field when one exists.
-	Industry      string                             `json:"industry,omitempty"`
-	SizeBand      string                             `json:"size_band,omitempty"`
+	Company       *companyColumns                    `json:"company,omitempty"`
 	ProfileFields []crmcontracts.CompanyProfileField `json:"profile_field"`
 	Facts         []crmcontracts.CompanyFact         `json:"fact"`
 }
@@ -110,7 +104,7 @@ type modelInput struct {
 // raise. An empty prompt would still reach the model fenced, and the grounding
 // filter refuses the reply that came back from it.
 func encodeInput(in Input, lang string) string {
-	encoded, _ := json.Marshal(modelInput{Industry: contacts.IndustryWords(in.Industry, textlang.Lang(lang)), SizeBand: in.SizeBand, ProfileFields: in.ProfileFields, Facts: in.Facts}) //nolint:errchkjson // plain structs of scalars; marshal cannot fail
+	encoded, _ := json.Marshal(modelInput{Company: companyColumnsOf(in, lang), ProfileFields: in.ProfileFields, Facts: in.Facts}) //nolint:errchkjson // plain structs of scalars; marshal cannot fail
 	return string(encoded)
 }
 

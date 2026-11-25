@@ -2,9 +2,24 @@
 import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { cleanup, renderHook } from "@testing-library/react";
-import { afterEach, beforeEach, expect, it } from "vitest";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import {
+  cleanup,
+  render,
+  renderHook,
+  screen,
+  waitFor,
+} from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
+import type { ReactNode } from "react";
+import { afterEach, beforeEach, expect, it, vi } from "vitest";
+import { formatTimeOfDay } from "../../format/format";
+import { browserZone } from "../../format/timezone";
+import { LocaleProvider, translate } from "../../i18n";
+import { bookingProfile, bookingSlots } from "../../testing/book.testkit";
+import { installFetchStub, jsonResponse } from "../../testing/story-utils";
 import { useBookingTitle } from "./booking-common";
+import { BookingGuestScreen } from "./booking-guest";
 
 // The app shell's own head, as index.html ships it, with its scripts left out.
 const shellHead = new DOMParser()
@@ -31,7 +46,12 @@ const icons = () =>
 beforeEach(() => {
   document.head.innerHTML = shellHead;
 });
-afterEach(cleanup);
+afterEach(() => {
+  cleanup();
+  vi.unstubAllGlobals();
+  vi.useRealTimers();
+  globalThis.history.replaceState(null, "", "/");
+});
 
 it("starts from a shell head that names Margince", () => {
   expect(document.title).toBe("Margince");
@@ -89,4 +109,149 @@ it("leaves the head alone for the host's own signed-in view", () => {
   const before = document.head.innerHTML;
   renderHook(() => useBookingTitle(null, acme));
   expect(document.head.innerHTML).toBe(before);
+});
+
+// The guest's meeting length on the public page.
+
+const notOffered = {
+  status: 422,
+  code: "validation_error",
+  detail: "This meeting length is no longer offered. Choose another length.",
+  details: {
+    errors: [{ field: "l", code: "length_not_offered", message: "gone" }],
+  },
+};
+
+function guestProviders(client: QueryClient, children: ReactNode) {
+  return (
+    <QueryClientProvider client={client}>
+      <LocaleProvider initial="en">{children}</LocaleProvider>
+    </QueryClientProvider>
+  );
+}
+
+// The server's rule: the asked length when the page offers it, else the
+// default. A time read at a length it no longer offers is refused.
+function mountGuest(address: string, offered = [30, 45, 60]) {
+  globalThis.history.replaceState(null, "", address);
+  const server = { offered, asked: [] as (string | null)[] };
+  installFetchStub({
+    "GET /public/booking/host/profile": (_body, url) => {
+      const length = Number(url.searchParams.get("l"));
+      return jsonResponse({
+        ...bookingProfile,
+        paused: false,
+        offered_lengths: server.offered,
+        duration_minutes: server.offered.includes(length) ? length : 30,
+      });
+    },
+    "GET /public/booking/host/availability": (_body, url) => {
+      const length = url.searchParams.get("l");
+      server.asked.push(length);
+      return server.offered.includes(Number(length))
+        ? jsonResponse({ slots: bookingSlots, truncated: false })
+        : jsonResponse(notOffered, 422);
+    },
+    "POST /public/booking/host": () =>
+      jsonResponse({ ...notOffered, detail: "English server text" }, 422),
+  });
+  const client = new QueryClient({
+    defaultOptions: { queries: { retry: false } },
+  });
+  const view = render(
+    guestProviders(client, <BookingGuestScreen hostSlug="host" />),
+  );
+  return { server, view, client };
+}
+
+const pressed = (name: string) =>
+  screen.getByRole("button", { name }).getAttribute("aria-pressed");
+
+it("asks for the times of the length the guest picks and keeps it in the address", async () => {
+  const { server } = mountGuest("/book/host");
+  await userEvent.click(await screen.findByRole("button", { name: "45 min" }));
+  await waitFor(() => expect(server.asked).toContain("45"));
+  expect(new URLSearchParams(globalThis.location.search).get("l")).toBe("45");
+  await waitFor(() => expect(pressed("45 min")).toBe("true"));
+  expect(pressed("30 min")).toBe("false");
+});
+
+it.each([
+  ["opens at the length a link asks for", "/book/host?l=60", "60 min"],
+  [
+    "falls back to the default for a length not offered",
+    "/book/host?l=47",
+    "30 min",
+  ],
+])("%s", async (_name, address, chosen) => {
+  const { server } = mountGuest(address);
+  await waitFor(() => expect(pressed(chosen)).toBe("true"));
+  for (const length of ["30 min", "45 min", "60 min"])
+    if (length !== chosen) expect(pressed(length)).toBe("false");
+  await waitFor(() => expect(server.asked).toContain(chosen.split(" ")[0]));
+  expect(server.asked).not.toContain("47");
+});
+
+it("moves to a length still offered when the host removed the one the guest picked", async () => {
+  const { server } = mountGuest("/book/host");
+  await screen.findByRole("button", { name: "45 min" });
+  server.offered = [30, 60];
+  await userEvent.click(screen.getByRole("button", { name: "45 min" }));
+  await waitFor(() =>
+    expect(screen.queryByRole("button", { name: "45 min" })).toBeNull(),
+  );
+  await waitFor(() => expect(pressed("30 min")).toBe("true"));
+  await waitFor(() => expect(server.asked.at(-1)).toBe("30"));
+});
+
+it("never shows the last host's page while the next host's page loads", async () => {
+  const { view, client } = mountGuest("/book/host");
+  expect(await screen.findByText(bookingProfile.title)).toBeTruthy();
+  installFetchStub({
+    "GET /public/booking/other/profile": () => new Promise(() => undefined),
+  });
+  view.rerender(
+    guestProviders(client, <BookingGuestScreen hostSlug="other" />),
+  );
+  await waitFor(() =>
+    expect(screen.queryByText(bookingProfile.title)).toBeNull(),
+  );
+  expect(screen.queryByRole("button", { name: "45 min" })).toBeNull();
+});
+
+// The fixture's free times fall in October 2026, so the page opens that month.
+async function pickFirstTime() {
+  vi.useFakeTimers({ toFake: ["Date"] });
+  vi.setSystemTime(new Date("2026-10-01T12:00:00Z"));
+  const view = mountGuest("/book/host?l=45");
+  const time = formatTimeOfDay(bookingSlots[0].start, "en", browserZone());
+  await userEvent.click(await screen.findByRole("button", { name: time }));
+  expect(screen.getByRole("button", { name: CONFIRM })).toBeTruthy();
+  return view;
+}
+const CONFIRM = /^Confirm \d/;
+
+it("drops the picked time when a profile read moves the page to another length", async () => {
+  const { server, client } = await pickFirstTime();
+  server.offered = [30, 60];
+  await client.invalidateQueries({ queryKey: ["public-booking-profile"] });
+  await waitFor(() => expect(pressed("30 min")).toBe("true"));
+  expect(screen.queryByRole("button", { name: CONFIRM })).toBeNull();
+});
+
+it("explains a booking refused for its length in the guest's language", async () => {
+  const { server } = await pickFirstTime();
+  server.offered = [30, 60];
+  await userEvent.type(screen.getByLabelText("Your name"), "Nina Weber");
+  await userEvent.type(screen.getByLabelText("Your email"), "nina@x.example");
+  await userEvent.click(screen.getByRole("checkbox"));
+  await userEvent.click(screen.getByRole("button", { name: CONFIRM }));
+  // The profile read after the refusal moves the page to 30 minutes, which
+  // drops the picked time and its form; the refusal still says why.
+  await waitFor(() => expect(pressed("30 min")).toBe("true"));
+  expect(screen.queryByRole("button", { name: CONFIRM })).toBeNull();
+  expect(
+    screen.getByText(translate("en", "book.lengthNotOffered")),
+  ).toBeTruthy();
+  expect(screen.queryByText("English server text")).toBeNull();
 });

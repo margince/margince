@@ -57,8 +57,8 @@ func TestTheScriptedModelsReachEveryCheck(t *testing.T) {
 func runLoopCase(t *testing.T, sc agentloope2e.Scenario, want loopExpectation, drive loopDriver) {
 	t.Helper()
 	re := setupRunner(t)
-	world := re.seedLoopWorld(t, sc)
 	re.requireDayHeadroom(t, sc)
+	world := re.seedLoopWorld(t, sc)
 	probe := re.probeSeed(t, sc, world)
 
 	trigger := string(sc.Agent) + ":e2e-" + want.name
