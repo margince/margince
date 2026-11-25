@@ -247,6 +247,7 @@ The 26 tables owned by `deals`, as the migrations build them. [Back to the entit
 **Indexes**
 
 - `deal_acquisition_source_key_key`: `unique, btree (key)`
+- `deal_acquisition_source_label_once`: `unique, btree (lower(btrim(label)))`
 - `deal_acquisition_source_pkey`: `unique, btree (id)`
 
 **Triggers**
@@ -414,6 +415,7 @@ The 26 tables owned by `deals`, as the migrations build them. [Back to the entit
 **Indexes**
 
 - `deal_loss_reason_key_key`: `unique, btree (key)`
+- `deal_loss_reason_label_once`: `unique, btree (lower(btrim(label)))`
 - `deal_loss_reason_pkey`: `unique, btree (id)`
 
 **Triggers**
@@ -1070,7 +1072,7 @@ The 26 tables owned by `deals`, as the migrations build them. [Back to the entit
 
 **Indexes**
 
-- `pipeline_name_unique`: `unique, btree (name) WHERE (archived_at IS NULL)`
+- `pipeline_name_unique`: `unique, btree (lower(btrim(name))) WHERE (archived_at IS NULL)`
 - `pipeline_pkey`: `unique, btree (id)`
 - `uq_pipeline_default`: `unique, btree ((true)) WHERE (is_default AND (archived_at IS NULL))`
 
@@ -1206,6 +1208,7 @@ The 26 tables owned by `deals`, as the migrations build them. [Back to the entit
 
 - `idx_stage_pipeline`: `btree (pipeline_id)`
 - `stage_id_pipeline_unique`: `unique, btree (id, pipeline_id)`
+- `stage_name_once`: `unique, btree (pipeline_id, lower(btrim(name))) WHERE (archived_at IS NULL)`
 - `stage_pkey`: `unique, btree (id)`
 - `uq_stage_position`: `unique, btree (pipeline_id, "position") WHERE (archived_at IS NULL)`
 

@@ -3780,6 +3780,7 @@
   "notice.excuseConfirm": "Grund erfassen",
   "pipeline.defaultTaken": "Eine andere Pipeline ist schon der Standard. Erstelle diese mit „Kein Standard“ und nutze danach „Zum Standard machen“.",
   "pipeline.nameTaken": "Eine Pipeline mit diesem Namen gibt es schon.",
+  "stage.nameTaken": "Eine Phase mit diesem Namen gibt es in dieser Pipeline schon. Wähle einen anderen Namen.",
   "stage.lastClosing": "Eine Pipeline braucht eine Phase Gewonnen und eine Phase Verloren. Erstelle zuerst eine weitere dieses Typs.",
   "ob.field.display_name": "Unternehmensname",
   "ob.field.offer_summary": "Produkte und Leistungen",

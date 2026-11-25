@@ -269,3 +269,6 @@
 1795614889_the_new_connection_columns_check_their_text_limits.down.sql | * | the file only replaces trigger definitions and writes no row
 1795608722_a_finding_about_two_deals_can_be_answered_separate.down.sql | assurance_exception, assurance_resolution | runs only on a rollback and touches only findings somebody answered separate, at most one per pair of deals, which people answered by hand
 1795608723_the_separate_answer_check_is_validated.down.sql | * | the down migration is a single SELECT 1 that changes nothing
+1795603730_a_settings_list_holds_each_name_once.up.sql | * | the procedural body renames only the second and later spellings of one name in nine settings lists, which an admin keeps by hand, so the set is empty or a handful of rows
+1795603731_a_lead_name_holds_at_most_a_label.up.sql | * | replaces the two text-bound triggers on lead, which act on later writes only; no existing row is changed
+1795603731_a_lead_name_holds_at_most_a_label.down.sql | * | restores the two text-bound triggers on lead as they stood before; no existing row is changed

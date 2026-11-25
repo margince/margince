@@ -3427,6 +3427,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "partnerStages.addOpen": "Neue Phase",
   "partnerStages.addTitle": "Neue Partnerphase",
   "partnerStages.addConfirm": "Phase hinzufügen",
+  "partnerStages.labelField": "Bezeichnung",
   "partnerStages.renameTitle": "Phase umbenennen",
   "partnerStages.colStage": "Phase",
   "partnerStages.colMeaning": "Bedeutung",
@@ -6615,6 +6616,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "lossReasons.addOpen": "Neuer Grund",
   "lossReasons.addTitle": "Neuer Verlustgrund",
   "lossReasons.addConfirm": "Grund hinzufügen",
+  "lossReasons.labelField": "Bezeichnung",
   "lossReasons.renameTitle": "Grund umbenennen",
   "lossReasons.activeFor":
     "{label} kann gewählt werden, wenn ein Deal verloren geht",
@@ -12461,6 +12463,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "translation.nameIn.vi": "Name auf Vietnamesisch",
   "translation.given": "{language}: {name}",
   "stage.name": "Name",
+  "stage.nameTaken":
+    "Eine Phase mit diesem Namen gibt es in dieser Pipeline schon. Wähle einen anderen Namen.",
   "stage.semantic": "Phasentyp",
   "stage.lastClosing":
     "Eine Pipeline braucht eine Phase Gewonnen und eine Phase Verloren. Erstelle zuerst eine weitere dieses Typs.",
@@ -15693,6 +15697,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "knowledge.upload.submit_one": "Dokument hinzufügen",
   "knowledge.new.title": "Neue Dokumentensammlung",
   "knowledge.new.name": "Name",
+  "knowledge.new.nameTaken":
+    "Eine Dokumentensammlung mit diesem Namen gibt es schon. Wähle einen anderen Namen.",
   "knowledge.new.topic": "Was diese Sammlung abdeckt",
   "knowledge.new.topicHint":
     "Ein Satz. Der Satz wird allen gezeigt, deren Frage diese Sammlung nicht abdeckt.",

@@ -15,9 +15,9 @@ input and output schema in folds below it. What a tool may do and whether a huma
 |---|---:|
 | Tools | 48 |
 | Resources | 14 |
-| Tool catalog | 244.2 KB |
+| Tool catalog | 244.0 KB |
 | Resource catalog | 5.5 KB |
-| Approx. wire tokens | 63931 |
+| Approx. wire tokens | 63864 |
 | Largest tool | `read_details` (15.8 KB) |
 | Scopes rendered | `read`, `draft`, `write`, `send`, `enrich` |
 
@@ -34,9 +34,9 @@ tool adds to that listing, and what it costs each scheduled agent, agent by agen
 |---|---:|---:|---|
 | Output schemas | 33.7 KB | 13% | **No**: a result's shape, never listed to a model |
 | Descriptions (incl. governance clause) | 51.0 KB | 20% | Yes, every step |
-| Input schemas | 148.0 KB | 60% | Yes, every step |
+| Input schemas | 147.7 KB | 60% | Yes, every step |
 | _Names, annotations, punctuation_ | 11.6 KB | 4% | Partly |
-| **Description + input schema** | **199.0 KB** | **81%** | **the recurring cost** |
+| **Description + input schema** | **198.7 KB** | **81%** | **the recurring cost** |
 
 Output schemas count in the total but are never sent to a model;
 descriptions and input schemas are what each step pays for.
@@ -68,7 +68,7 @@ descriptions and input schemas are what each step pays for.
 | [`archive_record`](#archive_record) | Archive a record |  |  | 300 |
 | [`bulk_update_records`](#bulk_update_records) | Change many records at once |  |  | 892 |
 | [`change_access`](#change_access) | Share records and set up members and teams |  |  | 1152 |
-| [`change_activities`](#change_activities) | Log, plan and file activities |  |  | 2980 |
+| [`change_activities`](#change_activities) | Log, plan and file activities |  |  | 2977 |
 | [`change_attention`](#change_attention) | Act on proposals, notices and the weekly plan |  |  | 1842 |
 | [`change_capture`](#change_capture) | Decide what comes into the CRM |  |  | 1891 |
 | [`change_compliance`](#change_compliance) | Record consent, stops, holds and privacy work |  |  | 1289 |
@@ -87,7 +87,7 @@ descriptions and input schemas are what each step pays for.
 | [`decide_approvals`](#decide_approvals) | Approve or reject staged actions |  |  | 465 |
 | [`draft_outbound`](#draft_outbound) | Draft an email or follow-ups |  |  | 524 |
 | [`enrich`](#enrich) | Enrich a company from its website |  |  | 448 |
-| [`find_records`](#find_records) | Find records | yes |  | 2050 |
+| [`find_records`](#find_records) | Find records | yes |  | 2057 |
 | [`list_approvals`](#list_approvals) | List what is waiting for a decision | yes | [`ui://margince/approval-queue.html`](#approval_queue_view) | 474 |
 | [`list_documents`](#list_documents) | List a record's documents or read one | yes |  | 331 |
 | [`preview_import`](#preview_import) | Preview an import |  |  | 1012 |
@@ -95,7 +95,7 @@ descriptions and input schemas are what each step pays for.
 | [`read_approval`](#read_approval) | Read one staged action in full | yes | [`ui://margince/approval.html`](#approval_view) | 154 |
 | [`read_attention`](#read_attention) | See what needs attention | yes | [`ui://margince/attention.html`](#attention_view) | 365 |
 | [`read_context`](#read_context) | Get the story so far | yes | [`ui://margince/context.html`](#context_view) | 413 |
-| [`read_details`](#read_details) | Read a record's panels and the day's lists | yes |  | 4604 |
+| [`read_details`](#read_details) | Read a record's panels and the day's lists | yes |  | 4600 |
 | [`read_forecast`](#read_forecast) | Read the forecast and how it moved | yes | [`ui://margince/forecast.html`](#forecast_view) | 978 |
 | [`read_import`](#read_import) | Read an import run or the import format | yes |  | 235 |
 | [`read_lists`](#read_lists) | Find and read lists | yes |  | 797 |
@@ -105,10 +105,10 @@ descriptions and input schemas are what each step pays for.
 | [`read_reports`](#read_reports) | Read sales reports | yes |  | 3353 |
 | [`read_tags`](#read_tags) | Read tags | yes |  | 358 |
 | [`read_view`](#read_view) | Read a view | yes |  | 1921 |
-| [`read_workspace`](#read_workspace) | Read how this workspace is set up | yes |  | 2994 |
+| [`read_workspace`](#read_workspace) | Read how this workspace is set up | yes |  | 2779 |
 | [`resolve_duplicates`](#resolve_duplicates) | Merge two records or dismiss a flagged pair |  |  | 618 |
 | [`run_research`](#run_research) | Run AI work for your user |  |  | 1365 |
-| [`schedule_meeting`](#schedule_meeting) | Invite to a meeting |  |  | 515 |
+| [`schedule_meeting`](#schedule_meeting) | Invite to a meeting |  |  | 527 |
 | [`send_outbound`](#send_outbound) | Send a message |  |  | 1678 |
 | [`update_record`](#update_record) | Update a record |  | [`ui://margince/update.html`](#update_view) | 698 |
 | [`whoami`](#whoami) | Who this passport acts for | yes |  | 129 |
@@ -885,6 +885,11 @@ archive_document, assign_inquiry.)
       "format": "uuid",
       "type": "string"
     },
+    "assignee_id": {
+      "description": "task only: Defaults to the human you act for.",
+      "format": "uuid",
+      "type": "string"
+    },
     "attendee_user_ids": {
       "description": "log only: Meeting or call only: the workspace members who attended besides you, ids from the colleague roster. An id that is not an active member is refused.",
       "items": {
@@ -932,6 +937,10 @@ archive_document, assign_inquiry.)
       "description": "log, task only: RFC 3339 WITH Z or the user's offset (…T14:35:00Z); never invent an hour or offset.",
       "format": "date-time",
       "type": "string"
+    },
+    "due_has_time": {
+      "description": "task only: True when due_at is an agreed time of day, such as a callback hour; the reminder is then set to it. Leave out for a day.",
+      "type": "boolean"
     },
     "entity_id": {
       "description": "attach, relink, relink_many only",
@@ -1021,7 +1030,7 @@ archive_document, assign_inquiry.)
       "type": "string"
     },
     "links": {
-      "description": "log, task only: Every record this was about, ALL OF THEM in this call: adding one AFTERWARDS is a second write. A project is REFUSED here (project_filing_needs_approval), because filing there marks commercial correspondence: add it afterwards with relink, which stages an approval that waits for the user's yes before it takes effect. A meeting or a call is with a CONTACT and reaches their company through them — linking one to a company is REFUSED, so name the contact who was there and the company follows from where they work. A meeting linked to the deal alone sits on no attendee's timeline and the company sees nothing.",
+      "description": "log, task only: Every record this was about, ALL OF THEM in this call — EXCEPT a project, which this verb REFUSES because filing there marks commercial correspondence. A meeting or a call is with a CONTACT and reaches their company through them — linking one to a company is REFUSED, so name the contact who was there and the company follows from where they work. A meeting linked to the deal alone sits on no attendee's timeline and the company sees nothing. Adding a link AFTERWARDS is a second write — and a later link onto a project stages an approval that waits for the user's yes before it takes effect.",
       "items": {
         "additionalProperties": false,
         "properties": {
@@ -1094,6 +1103,18 @@ archive_document, assign_inquiry.)
     },
     "subject": {
       "description": "log, task only: Prose a colleague reads. Write it in whoami's prose_language, whatever language this conversation is in; do not translate names or quoted text.",
+      "type": "string"
+    },
+    "task_type": {
+      "description": "task only: The work it asks for; it decides the one button the task shows. reply answers a message the way it came in, reach_out contacts someone by email or phone, do is work outside Margince.",
+      "enum": [
+        "reply",
+        "reach_out",
+        "meet",
+        "review",
+        "decide",
+        "do"
+      ],
       "type": "string"
     }
   },
@@ -1651,7 +1672,7 @@ archive_contract, archive_room, cancel_contract, reject_offer, send_offer.)
 {
   "properties": {
     "action": {
-      "description": "read_workspace topic actions lists each action's body\naccept_offer: Record the buyer's acceptance — syncs the deal's amount from the offer's net\nadd_deal_line: Add a product or a custom item to a deal; the deal's value follows its lines\narchive_contract: Archive an agreement (CONTRACT-WIRE-5)\narchive_room: Archive a Deal Room, ending buyer access\ncancel_contract: Record notice of cancellation and when it takes effect (CONTRACT-WIRE-6)\nclose_room: Freeze the room's content, keeping buyer access\npause_room: Pause buyer access without ending it\nrecord_contract: Record an agreement (CONTRACT-WIRE-2)\nrefresh_offer_from_deal: Replace a draft offer's lines with the deal's current lines; the header stays\nreject_offer: Record the buyer's decline (sent → rejected; emits offer.rejected)\nremove_deal_line: Remove one line of a deal\nrender_offer: Render the offer's branded PDF (sets pdf_asset_ref)\nrenew_contract: Create the successor agreement and supersede this one (CONTRACT-WIRE-7)\nresolve_room_thread: Close a thread — the seller's side saying the point is settled\nrevoke_room_participant: Take a contact's access away\nsend_offer: Move a draft offer to sent — the transition that freezes its commercial terms (FX + buyer/issuer snapshot)\nset_contract_status: Assert a new contract status (CONTRACT-PARAM-1)\nset_deal_products: Set a deal's products by hand, replacing every allocation it had\nupdate_contract: Change an agreement's recorded terms (CONTRACT-WIRE-4)\nupdate_deal_line: Change one line of a deal; omit a field to leave it as it is, send null to clear it\nupdate_room_participant: Correct a participant's name, address or capability\nuse_deal_estimate: Return a deal with no lines to a typed estimate",
+      "description": "read_workspace topic actions lists each action's body\naccept_offer: Record the buyer's acceptance — syncs the deal's amount from the offer's gross\nadd_deal_line: Add a product or a custom item to a deal; the deal's value follows its lines\narchive_contract: Archive an agreement (CONTRACT-WIRE-5)\narchive_room: Archive a Deal Room, ending buyer access\ncancel_contract: Record notice of cancellation and when it takes effect (CONTRACT-WIRE-6)\nclose_room: Freeze the room's content, keeping buyer access\npause_room: Pause buyer access without ending it\nrecord_contract: Record an agreement (CONTRACT-WIRE-2)\nrefresh_offer_from_deal: Replace a draft offer's lines with the deal's current lines; the header stays\nreject_offer: Record the buyer's decline (sent → rejected; emits offer.rejected)\nremove_deal_line: Remove one line of a deal\nrender_offer: Render the offer's branded PDF (sets pdf_asset_ref)\nrenew_contract: Create the successor agreement and supersede this one (CONTRACT-WIRE-7)\nresolve_room_thread: Close a thread — the seller's side saying the point is settled\nrevoke_room_participant: Take a contact's access away\nsend_offer: Move a draft offer to sent — the transition that freezes its commercial terms (FX + buyer/issuer snapshot)\nset_contract_status: Assert a new contract status (CONTRACT-PARAM-1)\nset_deal_products: Set a deal's products by hand, replacing every allocation it had\nupdate_contract: Change an agreement's recorded terms (CONTRACT-WIRE-4)\nupdate_deal_line: Change one line of a deal; omit a field to leave it as it is, send null to clear it\nupdate_room_participant: Correct a participant's name, address or capability\nuse_deal_estimate: Return a deal with no lines to a typed estimate",
       "enum": [
         "accept_offer",
         "add_deal_line",
@@ -3402,6 +3423,9 @@ next_cursor to read on.
           "type": "string"
         },
         "kind": {
+          "type": "string"
+        },
+        "lifecycle": {
           "type": "string"
         },
         "link_type": {
@@ -7221,6 +7245,11 @@ read_attention for what needs the user now, and read_record for a record's own f
       },
       "type": "array"
     },
+    "contact_id": {
+      "description": "meeting_proposals only",
+      "format": "uuid",
+      "type": "string"
+    },
     "create_company": {
       "description": "lead_promotion_preview only",
       "type": "boolean"
@@ -7273,7 +7302,6 @@ read_attention for what needs the user now, and read_record for a record's own f
     "note_activity_id": {
       "description": "deal_margince_changes only",
       "items": {
-        "format": "uuid",
         "type": "string"
       },
       "type": "array"
@@ -7286,11 +7314,6 @@ read_attention for what needs the user now, and read_record for a record's own f
     "request_body": {
       "description": "ai_budget_preview, ai_routing_preview, ai_task_overrides_preview, automation_preview, backfill_preview, filter_preview, mail_deal_repair_preview, notice_source_preview, voice_source_preview, website_inquiry_preview only: The chosen action's request body; read_workspace topic actions lists its shape",
       "type": "object"
-    },
-    "since": {
-      "description": "magic, magic_line_records, team_margince_changes only",
-      "format": "date-time",
-      "type": "string"
     },
     "stage_history_id": {
       "description": "deal_margince_changes only",
@@ -9440,7 +9463,7 @@ find_records to find a customer contact; colleagues are seats here. Use read_for
 view=input_sources to learn whether a number can be trusted: how complete and current the data is.
 user_id is what assignee_id and owner_id take; never assign to an is_agent seat. Keep pipeline_id
 and stage_id for a deal. Take every name verbatim; a custom field is spelled cf_<slug>. (Ask the
-user first for the actions ai_call, ai_calls, member_retirement.)
+user first for the actions ai_call, ai_calls.)
 ```
 
 <details><summary>Input schema</summary>
@@ -9571,50 +9594,6 @@ user first for the actions ai_call, ai_calls, member_retirement.)
     "kinds": {
       "description": "my_ai_activity only",
       "items": {
-        "enum": [
-          "morning_brief",
-          "overnight_at_risk_sweep",
-          "document_extract",
-          "site_read",
-          "brief_ranking",
-          "capture_classify",
-          "capture_confidentiality_verdict",
-          "capture_counterparty_verdict",
-          "cert_judge",
-          "cold_start",
-          "deal_health",
-          "draft_reply",
-          "enrich",
-          "extension_task",
-          "growth_fit",
-          "nl_search",
-          "offer_draft",
-          "rate_extract",
-          "signal_extract",
-          "site_extract",
-          "site_fact_extract",
-          "site_triage",
-          "stage_evidence_extract",
-          "summarize",
-          "transcript",
-          "transcript_propose",
-          "voice_build",
-          "corpus_ask",
-          "weekly_review",
-          "weekly_learnings",
-          "propose_roles",
-          "owed_verdict",
-          "request_settlement",
-          "account_scan",
-          "tag_suggest",
-          "report_setup",
-          "report_interpret",
-          "reader_rendering",
-          "deal_verdict",
-          "rewrite",
-          "chat_summary",
-          "chat_task_reading"
-        ],
         "type": "string"
       },
       "type": "array"
@@ -9781,18 +9760,6 @@ user first for the actions ai_call, ai_calls, member_retirement.)
     "state": {
       "description": "notice_case_reviews, notice_cases only",
       "items": {
-        "enum": [
-          "assigned",
-          "blocked",
-          "completed",
-          "delivery_failed",
-          "exempt_with_reason",
-          "not_required",
-          "open",
-          "provided_elsewhere",
-          "queued",
-          "source_review"
-        ],
         "type": "string"
       },
       "type": "array"
@@ -10172,12 +10139,12 @@ start_backfill, start_search_reindex; requires passport scope "enrich".)
 Put a meeting on the host's calendar. invite creates the calendar event and the provider sends the
 invitation to every attendee: the contact, and any further addresses. invite reaches attendees
 outside the workspace. The call queues it and returns it pending, so name them and the time and get
-the user's yes first. Read check_availability before choosing a time. A start_intent (the user's
-local time) replaces start, and end moves with it so the meeting keeps its length. Use
-change_activities with log to record a meeting without inviting anyone, or one that already
-happened. Keep the invitation id and inspect its status before claiming it was delivered. A refused
-or failed invite invited nobody. (Governance: a human approves every call before it runs; requires
-passport scope "send".)
+the user's yes first, unless they asked for this invite themselves. Read check_availability before
+choosing a time. A start_intent (the user's local time) replaces start, and end moves with it so the
+meeting keeps its length. Use change_activities with log to record a meeting without inviting
+anyone, or one that already happened. Keep the invitation id and inspect its status before claiming
+it was delivered. A refused or failed invite invited nobody. (Governance: a human approves every
+call before it runs; requires passport scope "send".)
 ```
 
 <details><summary>Input schema</summary>

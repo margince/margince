@@ -51,9 +51,9 @@ A CLI starts with nothing of yours: `e2e/llm/clean.py` starts it, and the judge,
 
 Before each run of the lane on this route, it installs again when what is installed is not what `e2e/llm/sdk-runner/package.json` pins. It checks the registry signatures, and runs `npm run selfcheck` there. That folder keeps no lockfile, so the source SBOM never lists the Agent SDK.
 
-Gemini runs through the Antigravity CLI (`E2E_LLM_CANDIDATE=gemini`, after you run `agy` once and sign in). Each run gets an empty folder that holds one agent file. That agent names the lane's server as its only MCP server, and turns off your own servers, rules and skill files. In print mode `agy` refuses any action it would ask you about, and `--settings` allows only the lane's server.
+Gemini runs through the Antigravity CLI (`E2E_LLM_CANDIDATE=gemini`, after you run `agy` once and sign in). Each run gets an empty folder that holds one agent file. That agent names the lane's server as its only MCP server, and turns off your own servers, rules and skill files. In print mode `agy` refuses any action it would ask you about, and `--settings` allows only the lane's server. Each run also gets a home folder of its own (`agy_home` in `e2e/llm/clean.py`), so `agy` reads none of your own `agy` settings or past chats. On macOS `agy` keeps its sign-in under `~/Library/Keychains` and `~/Library/Application Support/antigravity`, so that home holds two links, to those folders.
 
-`agy` does not list MCP tools to the model. The model reads the schema of a tool from a file under `~/.gemini/antigravity-cli/`. It reads a long result back from a file there too. The lane allows those reads and stops a run on any other tool. `e2e/llm/tests/test_agy.py` checks how it starts.
+`agy` does not list MCP tools to the model. The model reads the schema of a tool from a file in the run's home. It reads a long result back from a file there too. The lane allows any read inside that home or the run's folder. It stops a run on a read in any other place, through those links too, and on any other tool. `e2e/llm/tests/test_agy.py` checks how it starts.
 
 Records made before this check did not measure a model that knows nothing about Margince. A Claude CLI run read the `CLAUDE.md` and `AGENTS.md` of this repository, and your own settings. Measure those records again before you compare them with a new one. A codex record is in question too if your codex home held plugins, hooks, `memories`, `skills` or an `AGENTS.md`. `ls backend/internal/compose/aicert/records/mcp_e2e*/*@{claude,codex}-cli/` lists them.
 
@@ -94,10 +94,7 @@ candidate of the judge's own family says `self_judged: true`, and the coverage p
 
 ## 2. Give the stack a search that works
 
-The scenarios need `search_context`, and it ranks by meaning only when an
-embedding model serves the stack. In most cases, the `.env.local` of a worktree has no
-embedding key. The lane **refuses to sweep** a stack whose search now matches only shared words.
-Then every candidate would be measured on a degraded tool.
+The scenarios need `search_context`, and it ranks by meaning only when an embedding model serves the stack. In most cases, the `.env.local` of a worktree has no embedding key. The lane **refuses to sweep** a stack whose search now matches only shared words. Then every candidate would be measured on a degraded tool.
 
 Put `GEMINI_API_KEY` in the `.env.local` of the checkout you run from
 (the binding of the dev stack itself). Or set the binding of the stack of the lane to a committed preset:
@@ -273,6 +270,8 @@ PY
 `python3 e2e/llm/why.py <scenario>` puts the tools that a scenario requires next to
 what each run could call, and what it called.
 
+For a case with a `setup:`, each run also keeps `<scenario>.run<n>.world.txt` beside its transcript. It holds the approvals the run left, with their `audit_log` and `event_outbox` rows, read before the restore removes them. A setup that fails keeps one too.
+
 Before you call a red scenario a product regression, rule out the harness:
 
 | Sign | Cause | Fix |
@@ -283,6 +282,7 @@ Before you call a red scenario a product regression, rule out the harness:
 | `the stack refused the reindex (HTTP …)` | The `.env.local` of the checkout has no key for the provider of the preset, so no case is scored | section 2 |
 | `CERTIFICATE_VERIFY_FAILED` | A Python with no CA bundle | The bridge uses the system bundle instead; check that it exists |
 | OpenRouter 404 `No endpoints found that can handle the requested parameters` | `require_parameters` routing, and a parameter that no endpoint declares | Remove the parameter from the request of the bridge |
+| `HARNESS: agy: authentication failed or timed out` | `agy` has no sign-in it can reach from the run's own home | On macOS, run `agy` once and sign in. On another system, find where `agy` keeps its sign-in, and link that place into the home in `agy_home` |
 | `agy used a tool outside the lane's MCP server: read_file …` | The model reached for its own file tool, most often when the prompt is not clear | A harness stop, never a score. Run the case again; if it happens again, the prompt is not clear enough for Gemini |
 | `codex refused to call …: MCP tool call requires approval` | Codex in `exec` mode refuses MCP writes it would ask about | The lane approves its own server (`default_tools_approval_mode`). This stop means the installed codex no longer accepts that key. Find the key it does accept with `codex exec --strict-config -c 'mcp_servers.x.<key>="approve"' "hi"` (it refuses an unknown key before any model call), and set it in `run_codex` in `e2e/llm/drive.py` |
 | `the stack did not answer an authenticated call after the restore` | The snapshot restore between runs cuts every database connection, and the api still answered 503 after 30 seconds | A harness stop, never a score. Read `make dev-logs DEV_SLUG=<slug> FOLLOW=0 N=500` before the next boot replaces the log |
@@ -290,8 +290,7 @@ Before you call a red scenario a product regression, rule out the harness:
 | Turn cap reached | The model makes one tool call per turn | A finding, not a bug: the cap is the same for every candidate |
 | `the run never finished: no result event` | The driver (claude CLI, codex, or the bridge) ended part of the way through a run. A CLI that exits with an error code, under a result that reports no error, stops the lane in the same way | A harness stop, never a score. Every driver writes a last result when the model ends the run, at the turn cap too. The stop prints the last lines the driver wrote to stderr |
 
-Always run a control (the same scenario, on a model that passes it) before
-you decide that your own change caused it.
+Always run a control (the same scenario, on a model that passes it) before you decide that your own change caused it.
 
 ## 7. Try another effort or another model
 

@@ -179,10 +179,7 @@ func (s *Sink) captureActivity(ctx context.Context, tx pgx.Tx, rec connector.Nor
 			// advances the watermark and no later pass retries it.
 			return s.fileUnderOwnReplayKey(ctx, tx, rec, fields, birth, memberBound)
 		}
-		if err := s.finishJoinedActivity(
-			ctx, tx, id, rec, fields, birth,
-			joinedCapture{memberBound: memberBound, alreadyFiled: alreadyFiled},
-		); err != nil {
+		if err := s.joinActivityTx(ctx, tx, id, rec, fields, birth, joinedCapture{memberBound: memberBound, alreadyFiled: alreadyFiled}); err != nil {
 			return datasource.EntityRef{}, false, counterpartyDecision{}, err
 		}
 		return ref, false, counterpartyDecision{}, nil
