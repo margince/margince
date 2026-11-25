@@ -22538,6 +22538,7 @@ const (
 	ResolveInputCheckOutcomeNotRelevant   ResolveInputCheckOutcome = "not_relevant"
 	ResolveInputCheckOutcomeReassign      ResolveInputCheckOutcome = "reassign"
 	ResolveInputCheckOutcomeRemindLater   ResolveInputCheckOutcome = "remind_later"
+	ResolveInputCheckOutcomeSeparate      ResolveInputCheckOutcome = "separate"
 	ResolveInputCheckOutcomeValueCorrect  ResolveInputCheckOutcome = "value_correct"
 )
 
@@ -22553,6 +22554,8 @@ func (e ResolveInputCheckOutcome) Valid() bool {
 	case ResolveInputCheckOutcomeReassign:
 		return true
 	case ResolveInputCheckOutcomeRemindLater:
+		return true
+	case ResolveInputCheckOutcomeSeparate:
 		return true
 	case ResolveInputCheckOutcomeValueCorrect:
 		return true
@@ -65824,7 +65827,7 @@ type ResolveInputCheck struct {
 	// ExpiresAt When a suppressing answer stops holding. Omitted, it is the 90-day ceiling; beyond the ceiling it is refused rather than shortened.
 	ExpiresAt *time.Time `json:"expires_at,omitempty"`
 
-	// Outcome What kind of answer this is. `condition_cleared` is absent on purpose: it is the check's own, and a contact naming it would be saying the condition stopped being true without anything having looked.
+	// Outcome What kind of answer this is. `condition_cleared` is absent on purpose: it is the check's own, and a contact naming it would be saying the condition stopped being true without anything having looked. `separate` answers only a `duplicate_motion` finding, says its two deals are not one buying motion, and has no expiry: the pair is not flagged again.
 	Outcome ResolveInputCheckOutcome `json:"outcome"`
 
 	// Reason Required for `value_correct` and `not_relevant`. Those hide the finding, and the next contact to see the number is owed the reason it is not flagged.
@@ -65834,7 +65837,7 @@ type ResolveInputCheck struct {
 	RemindAt *time.Time `json:"remind_at,omitempty"`
 }
 
-// ResolveInputCheckOutcome What kind of answer this is. `condition_cleared` is absent on purpose: it is the check's own, and a contact naming it would be saying the condition stopped being true without anything having looked.
+// ResolveInputCheckOutcome What kind of answer this is. `condition_cleared` is absent on purpose: it is the check's own, and a contact naming it would be saying the condition stopped being true without anything having looked. `separate` answers only a `duplicate_motion` finding, says its two deals are not one buying motion, and has no expiry: the pair is not flagged again.
 type ResolveInputCheckOutcome string
 
 // ResponseMetrics What the workspace did with its work over one window. Three questions: how fast it

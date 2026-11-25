@@ -39,6 +39,10 @@ export type ReviewActions = Readonly<{
     suggestionId: string;
     open: boolean;
   }>;
+  DealMergeAction: ComponentType<{
+    deal: components["schemas"]["Deal"];
+    initialTarget: { id: string; name: string; writable: boolean };
+  }>;
   OpenActivityDrawer: ComponentType<{
     activityId: string | null;
     zone: string;

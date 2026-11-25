@@ -137,22 +137,20 @@ func recordTelegramBusinessConnection(ctx context.Context, tx pgx.Tx, botConnect
 		businessAuditImage(current, botConnection), businessAuditImage(after, botConnection))
 }
 
-// RecordTelegramBusinessUpdatesTx applies every business_connection update of one
-// polled batch in Telegram's order, and leaves other kinds alone. One that cannot
-// be decoded is skipped, because failing would hold the cursor behind it for good.
-func RecordTelegramBusinessUpdatesTx(ctx context.Context, tx pgx.Tx, botConnection ids.UUID, batch []json.RawMessage) error {
-	for _, update := range batch {
-		bc, isBusiness, err := telegram.ParseBusinessConnection(update)
-		if err != nil || !isBusiness {
-			// Another kind of update, or one the poller's classification already
-			// refused and logged. Neither may hold the cursor.
-			continue
-		}
-		if err := recordTelegramBusinessConnection(ctx, tx, botConnection, bc); err != nil {
-			return err
-		}
+// RecordTelegramBusinessUpdateTx applies one polled update when it is a
+// business_connection and leaves other kinds alone. One that cannot be decoded is
+// skipped, because failing would hold the cursor behind it for good.
+func RecordTelegramBusinessUpdateTx(ctx context.Context, tx pgx.Tx, botConnection ids.UUID, update json.RawMessage) error {
+	bc, isBusiness, err := telegram.ParseBusinessConnection(update)
+	if !isBusiness {
+		return nil
 	}
-	return nil
+	if err != nil {
+		// One the poller's classification already refused and logged. It may
+		// not hold the cursor.
+		return nil //nolint:nilerr // a malformed update is skipped, never retried
+	}
+	return recordTelegramBusinessConnection(ctx, tx, botConnection, bc)
 }
 
 func insertBusinessConnection(ctx context.Context, tx pgx.Tx, botConnection, connectedBy ids.UUID, bc telegram.BusinessConnection) error {

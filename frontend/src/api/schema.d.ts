@@ -23475,8 +23475,10 @@ export interface paths {
         put?: never;
         /**
          * Answer a finding from the nightly input check.
-         * @description Six answers, and they are not interchangeable. `fixed_record` and `added_evidence`
-         *     say the record moved. `reassign` says it is somebody else's. `remind_later` says
+         * @description Seven answers, and they are not interchangeable. `fixed_record` and `added_evidence`
+         *     say the record moved. `reassign` says it is somebody else's. `separate` answers only
+         *     a `duplicate_motion` finding: its two deals are not one buying motion, and the pair
+         *     is not flagged again. `remind_later` says
          *     not now — and it leaves the finding OPEN, because "not now" is an answer about
          *     when rather than about whether, and a deferred finding that read as resolved would
          *     never come back.
@@ -51898,10 +51900,10 @@ export interface components {
              */
             deal_id?: string;
             /**
-             * @description What kind of answer this is. `condition_cleared` is absent on purpose: it is the check's own, and a contact naming it would be saying the condition stopped being true without anything having looked.
+             * @description What kind of answer this is. `condition_cleared` is absent on purpose: it is the check's own, and a contact naming it would be saying the condition stopped being true without anything having looked. `separate` answers only a `duplicate_motion` finding, says its two deals are not one buying motion, and has no expiry: the pair is not flagged again.
              * @enum {string}
              */
-            outcome: "fixed_record" | "added_evidence" | "value_correct" | "not_relevant" | "remind_later" | "reassign";
+            outcome: "fixed_record" | "added_evidence" | "value_correct" | "not_relevant" | "remind_later" | "reassign" | "separate";
             /** @description Required for `value_correct` and `not_relevant`. Those hide the finding, and the next contact to see the number is owed the reason it is not flagged. */
             reason?: string;
             /** @description What was looked at, for an answer that rests on something. */
