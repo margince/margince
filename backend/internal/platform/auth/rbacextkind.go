@@ -7,6 +7,8 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/jackc/pgx/v5"
+
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/ports/recordkinds"
@@ -33,4 +35,27 @@ func ReadableKind(ctx context.Context, kind string) (recordkinds.Declared, bool)
 		return recordkinds.Declared{}, false
 	}
 	return declared, true
+}
+
+// ExtensionScopeClause renders the caller's row scope over a declared kind's
+// table aliased alias, as ScopeClauseFor does over a deal. Empty means every
+// row: the kind declares no owner column, or the caller reads every row. It
+// answers which rows only; each reader takes the kind's read right first.
+func ExtensionScopeClause(ctx context.Context, kind, alias string, arg func(any) int) (string, error) {
+	declared, ok := recordkinds.Lookup(kind)
+	if !ok {
+		return "", fmt.Errorf("auth: no extension declares the record kind %q: %w", kind, apperrors.ErrNotFound)
+	}
+	if declared.OwnerColumn == "" {
+		return "", nil
+	}
+	p, err := rbacActor(ctx)
+	if err != nil {
+		return "", err
+	}
+	if Unbounded(p) {
+		return "", nil
+	}
+	column := pgx.Identifier{declared.OwnerColumn}.Sanitize()
+	return ownerColumnPredicate(p, arg, unownedIsShared, column)(alias), nil
 }

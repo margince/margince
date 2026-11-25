@@ -895,17 +895,19 @@ RecordKinds: []extension.RecordKindDeclaration{{
 | `Defaults` | Starting rights per system role. Leave it out and every role is refused until an admin ticks the kind's object. |
 | `DeletePolicy` | `extension.DeleteArchiveOnly` (the default) or `extension.DeleteErasable`. |
 | `View` | Optional. The name of the page under your screen that shows one record of the kind, such as `room-page`. A notice about a record of the kind opens `#/ext/<unit>/<view>`, with `record_type` and `record_id` in the query. Leave it out and the notice opens your screen itself. Read both in the screen with `useEntryContext`. |
+| `OwnerColumn` | Optional. The `uuid` column that holds the member who owns a row. Core then shows a reader the rows their role's own, team or all row scope allows, as for deals, and a row with no owner to every reader. Leave it out and the `read` right on the kind shows every row. Core's readers apply the scope; your unit's own routes read the table with your own SQL and must apply it themselves. |
 
 The kind is gated on the RBAC object `ext_<unit>_<kind>`. The unit's hyphens become `_` in that name. Before core links,
-tags or lists a record, it checks the `read` right and a live row. A caller without the right gets `404`. The start
+tags or lists a record, it checks the `read` right and a live row inside the kind's row scope. A caller without the right gets `404`. The start
 refuses a declaration that breaks the table above.
 
-Ship two more indexes in the unit's migrations, because core's reads over your table use them:
+Ship these indexes in the unit's migrations, because core's reads over your table use them:
 
 | Read | Index the table must hold |
 |---|---|
 | Search | A text search index over the lower-cased title column: `CREATE INDEX ON ext.<table> USING gin (lower(<title>) public.gin_trgm_ops)`. The title column is the `LabelField` of the `Timeline`, or else the first `NaturalKey` field. |
 | History, for each entry of `Timeline.Subjects` | An index whose first column is the subject's `Column` and whose second is the `AtColumn`: `CREATE INDEX ON ext.<table> (<column>, <at column>)`. |
+| Row scope, when `OwnerColumn` is set | An index whose first column is the owner column: `CREATE INDEX ON ext.<table> (<owner column>)`. |
 
 Each index covers every row, so give it no `WHERE`. The service reports itself unready while your table, a column,
 the unique index or one of these indexes is missing. It does the same while such an index is not valid, as after a

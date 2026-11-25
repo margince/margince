@@ -174,8 +174,9 @@ func EnsureLinkTarget(ctx context.Context, tx pgx.Tx, table string, id ids.UUID)
 }
 
 // ensureExtensionRecord is the row probe for a kind an extension declared, live
-// or not as the caller asks. A caller without the kind's read right gets the
-// answer a missing row gets, so the probe does not disclose that the id exists.
+// or not as the caller asks. A caller without the kind's read right, or outside
+// its row scope, gets the answer a missing row gets, so the probe does not
+// disclose that the id exists.
 // The share lock is the one a core target takes: an archive between the probe
 // and the write must wait.
 func ensureExtensionRecord(ctx context.Context, tx pgx.Tx, kind string, id ids.UUID, live bool) error {
@@ -183,12 +184,21 @@ func ensureExtensionRecord(ctx context.Context, tx pgx.Tx, kind string, id ids.U
 	if !ok || Require(ctx, kind, principal.ActionRead) != nil {
 		return apperrors.ErrNotFound
 	}
-	query := `SELECT 1 FROM ` + pgx.Identifier{"ext", declared.Table}.Sanitize() + ` WHERE id = $1`
+	var args []any
+	arg := func(v any) int { args = append(args, v); return len(args) }
+	query := fmt.Sprintf(`SELECT 1 FROM %s t WHERE t.id = $%d`, pgx.Identifier{"ext", declared.Table}.Sanitize(), arg(id))
 	if live {
-		query += ` AND archived_at IS NULL`
+		query += ` AND t.archived_at IS NULL`
+	}
+	scope, err := ExtensionScopeClause(ctx, kind, "t", arg)
+	if err != nil {
+		return err
+	}
+	if scope != "" {
+		query += ` AND ` + scope
 	}
 	var held int
-	err := tx.QueryRow(ctx, query+` FOR SHARE`, id).Scan(&held)
+	err = tx.QueryRow(ctx, query+` FOR SHARE`, args...).Scan(&held)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return apperrors.ErrNotFound
 	}

@@ -157,26 +157,20 @@ func registeredReports() []registeredReport {
 // extSchemaPrefix opens the table of every spec over a unit's own rows.
 const extSchemaPrefix = `"ext".`
 
-// overExtensionTable says the spec reads a unit's own table. Those rows have no
-// owner, so no row-scope clause exists to render. The kind's read right, taken
-// at admission, is their whole scope.
-func (s reportSpec) overExtensionTable() bool {
-	return strings.HasPrefix(s.table, extSchemaPrefix)
-}
-
 // extensionKindSpec is the population of a record kind a unit declared. The
 // kind's rights object gates the read and names the field masks that reach it.
 func extensionKindSpec(d recordkinds.Declared, by string) reportSpec {
 	spec := reportSpec{
-		entity:      datasource.EntityType(d.Object),
-		table:       extSchemaPrefix + pgx.Identifier{d.Table}.Sanitize(),
-		baseWhere:   whereArchivedNull,
-		basePlain:   "live " + d.DisplayName + " records",
-		population:  measureEveryReadableRow,
-		dimensions:  map[string]string{},
-		measures:    map[string]string{},
-		filters:     map[string]string{},
-		defaultAggs: []reportAggregate{{Fn: aggFnCount, As: extReportRecords}},
+		entity:        datasource.EntityType(d.Object),
+		table:         extSchemaPrefix + pgx.Identifier{d.Table}.Sanitize(),
+		extensionKind: d.Name,
+		baseWhere:     whereArchivedNull,
+		basePlain:     "live " + d.DisplayName + " records",
+		population:    measureEveryReadableRow,
+		dimensions:    map[string]string{},
+		measures:      map[string]string{},
+		filters:       map[string]string{},
+		defaultAggs:   []reportAggregate{{Fn: aggFnCount, As: extReportRecords}},
 	}
 	if by != "" {
 		// Cast to text: a unit's column can hold any type, and the wire key is text.

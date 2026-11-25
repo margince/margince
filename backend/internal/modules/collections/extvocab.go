@@ -42,8 +42,8 @@ func extensionVocabulary(engine storekit.Query) []VocabularyField {
 // built from the declaration on each call, because the registry is filled at
 // boot. Every declared field is a text column the unit owns, and a pick from its options when it declares any.
 //
-// Its rows carry no owner, so the kind's read right (Object) is the whole row
-// scope. A kind the caller may not read answers as no kind at all.
+// Setting Object gives the engine the kind's read right and row scope. A kind
+// the caller may not read answers as no kind at all.
 func extensionEngine(ctx context.Context, kind string) (storekit.Query, bool) {
 	declared, ok := auth.ReadableKind(ctx, kind)
 	if !ok {

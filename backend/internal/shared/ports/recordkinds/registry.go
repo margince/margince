@@ -40,6 +40,9 @@ type Declared struct {
 	// View is the path segment under the unit's screen that shows one record,
 	// or empty for the screen itself.
 	View string
+	// OwnerColumn holds the member who owns a row, or is empty for a kind whose
+	// read right shows every row.
+	OwnerColumn string
 }
 
 // TitleColumn is the field a record of the kind is titled and searched by. It
@@ -73,6 +76,7 @@ func Register(unit extension.Name, kinds []extension.RecordKindDeclaration) {
 			Name: name, Unit: unit, Kind: k.Kind, DisplayName: k.DisplayName, Table: k.Table,
 			Object: extension.RecordKindObject(unit, k.Kind), Fields: k.Fields,
 			NaturalKey: k.NaturalKey, DeletePolicy: policy, Timeline: k.Timeline, View: k.View,
+			OwnerColumn: k.OwnerColumn,
 		}
 	}
 }

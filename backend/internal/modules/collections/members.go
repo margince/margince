@@ -126,7 +126,7 @@ func (s *Store) readMembers(ctx context.Context, listID ids.ListID, read MemberR
 // reader's scope for the list's record type.
 func visibleMemberClause(ctx context.Context, entityType string, arg func(any) int) (string, error) {
 	if recordkinds.IsExtensionName(entityType) {
-		return extensionMemberClause(ctx, entityType, "lm.entity_id"), nil
+		return extensionMemberClause(ctx, entityType, "lm.entity_id", arg)
 	}
 	scope, err := recordScope(ctx, entityType, "e", arg)
 	if err != nil {
@@ -137,15 +137,22 @@ func visibleMemberClause(ctx context.Context, entityType string, arg func(any) i
 }
 
 // extensionMemberClause is visibleMemberClause for a kind an extension declared.
-// Its rows have no owner to scope by, so the kind's read right is the whole
-// scope. A reader without it sees no member. One with it sees the live rows.
-func extensionMemberClause(ctx context.Context, kind, idColumn string) string {
+// A reader without the kind's read right sees no member. One with it sees the
+// live rows inside the kind's row scope.
+func extensionMemberClause(ctx context.Context, kind, idColumn string, arg func(any) int) (string, error) {
 	declared, ok := auth.ReadableKind(ctx, kind)
 	if !ok {
-		return sqlFalse
+		return sqlFalse, nil
 	}
-	return fmt.Sprintf("EXISTS (SELECT 1 FROM %s e WHERE e.id = %s AND e.archived_at IS NULL)",
-		pgx.Identifier{"ext", declared.Table}.Sanitize(), idColumn)
+	scope, err := auth.ExtensionScopeClause(ctx, kind, "e", arg)
+	if err != nil {
+		return "", err
+	}
+	if scope != "" {
+		scope = " AND " + scope
+	}
+	return fmt.Sprintf("EXISTS (SELECT 1 FROM %s e WHERE e.id = %s AND e.archived_at IS NULL%s)",
+		pgx.Identifier{"ext", declared.Table}.Sanitize(), idColumn, scope), nil
 }
 
 // recordScope is the reader's row scope over a record of table aliased alias,
