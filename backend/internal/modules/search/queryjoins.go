@@ -126,6 +126,9 @@ var notAnEdge = map[string]string{
 	"confirm_token": "contact_id and lead_id are alternative SUBJECTS of one emailed link, and the " +
 		"confirm_token_one_subject CHECK admits exactly one. A link is a credential sent to one " +
 		"subject, not a relationship between records, so no hop traverses it",
+	"generated_summary": "company_id, contact_id and deal_id are alternative SUBJECTS of one cached summary, and the " +
+		"generated_summary_kind_names_its_record CHECK admits exactly one. A summary is one reader's " +
+		"cache about ONE record, so it relates no two records and no hop traverses it",
 	"record_grant": "contact_id, company_id, deal_id, lead_id and project_id are generated from one " +
 		"record_type and record_id pair, and the record_grant_record_shape CHECK admits exactly one. A " +
 		"grant shares ONE record with a colleague or team, so it relates no two records and no hop traverses it",

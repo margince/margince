@@ -83,11 +83,7 @@ export function FilterEditor({
             onAdd={() =>
               dispatch({
                 type: "edit",
-                tree: addToGroup(
-                  draft.tree,
-                  draft.tree.id,
-                  firstClause(fields),
-                ),
+                tree: addToGroup(draft.tree, draft.tree.id, firstClause()),
               })
             }
           />

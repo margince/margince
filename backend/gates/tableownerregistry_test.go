@@ -577,22 +577,9 @@ var tableOwners = map[string]string{
 	// The rep's own "not this, not now" on a suggestion: per user, keyed on
 	// the evidence it fired on. Same ruling — view state, no audit row.
 	"suggestion_dismissal": "internal/compose/company360",
-	// The account brief's per-user cache: derived content, regenerable at
-	// any time, readable by nobody but its own user. Same ruling.
-	"company_brief":      "internal/compose/companybrief",
-	"company_dossier":    "internal/compose/companydossier",
-	"company_growth_fit": "internal/compose/companydossier",
 	// The account scan's per-user row: the last findings the model read for
 	// this reader, and the job carrier of the read in flight. Same ruling.
-	"company_scan": "internal/compose/companyscan",
-	// The relationship brief's per-user cache — the contact-side sibling of
-	// company_brief, and the same ruling for the same reasons.
-	"contact_brief": "internal/compose/contactbrief",
-	// The deal status card's per-user cache — the deal-side sibling of the
-	// two above, and the same ruling: derived content, regenerable from the
-	// records at any time, readable by nobody but the user it was written
-	// for.
-	"deal_status_card":    "internal/compose/dealstatus",
+	"company_scan":        "internal/compose/companyscan",
 	"deal_move_dismissal": "internal/compose/dealstatus",
 	// The reader's own "not this, not now" on the page's one moment, held
 	// against the evidence it fired on so it re-arms when that evidence moves
@@ -620,6 +607,9 @@ var tableOwners = map[string]string{
 	// The bookkeeping rows of the background passes. A module reaches its row
 	// through the storekit readers and writers, with a shape of its own.
 	"installation_state": storekitOwned,
+	// One reader's generated summaries of a company, a contact or a deal:
+	// derived content, rebuilt from the record, read by no other reader.
+	"generated_summary": generatedSummaryStoreDir,
 }
 
 // sqlTarget is one write a literal performs: which table, by which verb, and

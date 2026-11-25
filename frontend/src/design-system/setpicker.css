@@ -91,10 +91,6 @@
   min-inline-size: 0;
 }
 
-.set-picker-create {
-  justify-content: flex-start;
-}
-
 .set-picker-foot {
   display: flex;
   justify-content: flex-end;

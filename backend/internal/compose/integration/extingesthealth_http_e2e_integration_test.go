@@ -45,8 +45,8 @@ func seedRefusal(t *testing.T, e *apptest.AppEnv, unit, refusal string, daysAgo,
 	t.Helper()
 	at := time.Now().UTC().AddDate(0, 0, -daysAgo)
 	if _, err := e.Owner.Exec(context.Background(),
-		`INSERT INTO extension_ingest_refusal (unit, refusal, day, refused, first_at, last_at)
-		 VALUES ($1, $2, $3::date, $4, $3, $3)`,
+		`INSERT INTO extension_ingest_refusal (unit, refusal, day, refused, last_at)
+		 VALUES ($1, $2, $3::date, $4, $3)`,
 		unit, refusal, at, refused); err != nil {
 		t.Fatalf("seeding a %s/%s refusal %d day(s) back: %v", unit, refusal, daysAgo, err)
 	}

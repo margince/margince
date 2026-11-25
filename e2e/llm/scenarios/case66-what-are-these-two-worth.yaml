@@ -36,7 +36,7 @@ may_call:
 # The two figures are seed-specific, so an answer that carries both was read
 # from the deals and not recalled.
 must_mention:
-  - "68[.,' ’]?500"
+  - "68[.,' ’  ]?500"
   - "56[.,' ’]?000"
   - "12[.,' ’]?500"
   # Criterion 2: a link to a deal's page, a mechanical fact a regex holds.

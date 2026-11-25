@@ -15,7 +15,7 @@ import { ENTITY } from "../lib/entity";
 import { valueFor } from "../lib/labelfor";
 import { type Route, routeHash } from "../lib/router";
 import { useTaskContact } from "../lib/taskcontact";
-import { taskTypeOf } from "../lib/tasktype";
+import { type TaskType, taskTypeOf } from "../lib/tasktype";
 import { useWriteTo } from "../lib/writeto";
 import { mostSpecificFirst } from "./recordlinks";
 import "./tasknextsteps.css";
@@ -33,8 +33,8 @@ import { asksWhichDeal, WhichDealChoice } from "./whichdealchoice";
 type Activity = components["schemas"]["Activity"];
 type Contact = components["schemas"]["Contact"];
 
-/** The room the next steps take while the reads behind them are out, so the
- *  verbs arrive without pushing the row they sit in. One Email verb wide. */
+/** The room a verb takes while the reads behind it are out, so it arrives
+ *  without pushing the row it sits in. One Email verb wide. */
 export function TaskNextStepsPending() {
   return (
     <div className="task-next-pending">
@@ -77,7 +77,7 @@ export function TaskNextSteps({
 }
 
 /** The type's step, and whether it is a filled button, so Done can step back
- *  and the card keeps one filled verb. */
+ *  and the card keeps one filled verb. While `pending`, that is not known yet. */
 export function useTaskNextSteps(
   task: Activity | undefined,
   offerOpen: boolean,
@@ -92,6 +92,7 @@ export function useTaskNextSteps(
   const call = !shown.includes("call") && ways.phone !== undefined;
   return {
     ...typedSteps(ways),
+    pending: pending && CONTACT_STEPS.has(taskTypeOf(task)),
     others:
       mail || call ? (
         <OtherWays
@@ -155,7 +156,7 @@ function reachOutWays(ways: Ways): readonly Way[] {
   return BOTH_WAYS;
 }
 
-function typedSteps(ways: Ways): Omit<Steps, "others"> {
+function typedSteps(ways: Ways): TypedStep {
   const { task, reachable } = ways;
   switch (taskTypeOf(task)) {
     case "reply":
@@ -181,14 +182,24 @@ function typedSteps(ways: Ways): Omit<Steps, "others"> {
   }
 }
 
+// The types whose step reads the task's contact, so whether it fills waits on it.
+const CONTACT_STEPS: ReadonlySet<TaskType> = new Set([
+  "reply",
+  "reach_out",
+  "meet",
+]);
+
 type Steps = Readonly<{
   steps: ReactNode;
   fills: boolean;
+  /** A read that decides `fills` is still out, so Done holds its place. */
+  pending: boolean;
   /** The other ways to reach the contact, for the task's menu: always open,
    *  whatever way the type picked. */
   others?: ReactNode;
 }>;
-const NO_STEP: Steps = { steps: null, fills: false };
+const NO_STEP: Steps = { steps: null, fills: false, pending: false };
+type TypedStep = Pick<Steps, "steps" | "fills">;
 
 /** What reaching the task's contact can use: a mail target, a number. */
 type Ways = Readonly<{
@@ -204,7 +215,7 @@ type Ways = Readonly<{
 
 /** A reply or a reach out goes back the way its conversation went. A message
  *  Margince cannot answer in kind, or none, offers both ways. */
-function conversationSteps(ways: Ways): Omit<Steps, "others"> {
+function conversationSteps(ways: Ways): TypedStep {
   const { task, offerOpen, pending, mailFills, phone } = ways;
   const shown = shownWays(ways);
   if (shown.length > 1) return bothWaysSteps(ways);
@@ -221,7 +232,7 @@ function conversationSteps(ways: Ways): Omit<Steps, "others"> {
 }
 
 /** Email first, filled when it can be drafted; else Call is the filled one. */
-function bothWaysSteps(ways: Ways): Omit<Steps, "others"> {
+function bothWaysSteps(ways: Ways): TypedStep {
   const { task, offerOpen, mailFills, mailWorks, phone } = ways;
   return {
     steps: (

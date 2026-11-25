@@ -4,6 +4,7 @@
 package contacts
 
 import (
+	"strings"
 	"testing"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
@@ -18,5 +19,17 @@ func TestACapturedNameOfSpacesIsAbsentAndTheRestOfTheFoldStands(t *testing.T) {
 	}
 	if patch.Title == nil || *patch.Title != "CTO" {
 		t.Errorf("the title the same capture carried was lost: %v", patch.Title)
+	}
+}
+
+// A captured name, company and title past their columns' limit fold in cut.
+// An approved fold never fails on text nobody can shorten.
+func TestACapturedTextPastItsLimitFoldsInCut(t *testing.T) {
+	long := strings.Repeat("n", ContactNameLimit+1)
+	patch := emptyFieldPatch(crmcontracts.Lead{}, CapturedLeadFields{FullName: long, CompanyName: long, Title: long})
+	for field, got := range map[string]*string{"full_name": patch.FullName, "company_name": patch.CompanyName, "title": patch.Title} {
+		if got == nil || *got != long[:ContactNameLimit] {
+			t.Errorf("%s folded in as %v, want the first %d characters", field, got, ContactNameLimit)
+		}
 	}
 }

@@ -193,7 +193,7 @@ func RecordSuggestionTx(ctx context.Context, tx pgx.Tx, d SuggestionDraft) (bool
 	if err := validDraft(d); err != nil {
 		return false, err
 	}
-	through, stands, err := evidenceStandsTx(ctx, tx, d)
+	stands, err := evidenceStandsTx(ctx, tx, d)
 	if err != nil || !stands {
 		return false, err
 	}
@@ -219,13 +219,13 @@ func RecordSuggestionTx(ctx context.Context, tx pgx.Tx, d SuggestionDraft) (bool
 		company, arg(pipelineID, "uuid"), arg(stageID, "uuid"), arg(d.NameHint, "text"),
 		arg(d.AmountMinor, "bigint"), arg(d.Currency, "text"), arg(d.CloseDate, "date"), arg(d.Confidence, "numeric"),
 		arg(suggestionFingerprint(d.CompanyID, d.Evidence), "text"), arg(len(d.Evidence), "integer"),
-		arg(through, "timestamptz"), arg(by, "text"),
+		arg(by, "text"),
 	}, ", ")
 	var id ids.UUID
 	err = tx.QueryRow(ctx, `
 		INSERT INTO deal_suggestion (company_id, pipeline_id, proposed_stage_id, name_hint,
 		       proposed_amount_minor, currency, proposed_close_date, confidence, fingerprint, evidence_count,
-		       evidence_through, captured_by)
+		       captured_by)
 		SELECT `+row+`
 		 WHERE `+SuggestableCompanyClause(company)+`
 		ON CONFLICT DO NOTHING

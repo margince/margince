@@ -11,10 +11,10 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/events"
 )
 
-// edgeBookkeeping are the columns every refold rewrites besides the facts.
+// edgeBookkeeping is what every refold rewrites besides the facts.
 // The facts lists say which columns an edge holds. The SET list and the
 // unchanged guard are both built from them.
-var edgeBookkeeping = []string{"computed_at", "read_snapshot"}
+var edgeBookkeeping = []string{"read_snapshot"}
 
 // edgeUpsertSet is the DO UPDATE SET list: every fact, then the bookkeeping.
 func edgeUpsertSet(facts []string) string {
@@ -27,12 +27,12 @@ func edgeUpsertSet(facts []string) string {
 }
 
 // unchangedEdgeGuard makes the upsert a no-op for a row whose folded facts
-// already match, so computed_at and the tuple stay as they were.
+// already match, so its read_snapshot stays as it was.
 //
-// Only read_snapshot has a reader: uncoveredGraphSourceSQL treats an older
-// snapshot as not covering a history import's source. A kept snapshot costs
-// one more fold and never a stale edge. The prepare step and the drain pass
-// advanceSnapshot and always write, because they establish that coverage.
+// uncoveredGraphSourceSQL treats an older snapshot as not covering a history
+// import's source. A kept snapshot costs one more fold and never a stale edge.
+// The prepare step and the drain pass advanceSnapshot and always write,
+// because they establish that coverage.
 func unchangedEdgeGuard(advanceSnapshot bool, facts []string) string {
 	if advanceSnapshot {
 		return ""

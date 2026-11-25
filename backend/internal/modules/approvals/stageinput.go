@@ -50,6 +50,9 @@ type StageInput struct {
 	Summary      string
 	// SummaryParts is Summary taken apart, nil when Summary is a sentence alone.
 	SummaryParts *crmcontracts.ApprovalSummaryParts
+	// Why is what prompted the proposal, naming the record and the fact. The
+	// card leads with it.
+	Why Grounds
 	// TargetLabel names the target when its table has no name to read, such as
 	// a captured message offered as a new contact. Nil reads the name from the
 	// target row, which is what every named record does.

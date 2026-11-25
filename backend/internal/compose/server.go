@@ -16,6 +16,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/margince/margince/backend/internal/compose/briefs"
+	"github.com/margince/margince/backend/internal/compose/coachdeal"
 	"github.com/margince/margince/backend/internal/compose/legalreviewdesk"
 	"github.com/margince/margince/backend/internal/compose/legalreviewrecords"
 	"github.com/margince/margince/backend/internal/compose/vacuumhealth"
@@ -329,12 +330,10 @@ func newServer(pool *pgxpool.Pool, log *slog.Logger, authH authHandlers, dealsH 
 		// api role's WithSchemaPool rebuilds this over the real pool.
 		customfieldsHandlers: customfields.NewHandlers(pool, nil),
 		module:               knowledge.NewHandlers(InstallationDB(pool)).WithUploadLimit(limits.KnowledgeDocument),
-		// The personal agent-activity read. Plain time.Now, NOT time.Now().UTC():
-		// the store bounds "today" at midnight in the clock's own location, and a
-		// UTC clock would name the wrong day on a non-UTC installation for the
-		// hours either side of local midnight.
+		// Plain time.Now, not UTC: the store bounds "today" at midnight in the
+		// clock's location, so a UTC clock names the wrong day near midnight.
 		aiActivityHandlers: aiactivity.NewHandlers(aiactivity.NewStore(InstallationDB(pool)), time.Now),
-		noticesHandlers:    notices.NewHandlers(notices.NewStore(InstallationDB(pool)), newTeammatesSeam(pool)),
+		noticesHandlers:    notices.NewHandlers(notices.NewStore(InstallationDB(pool)), coachdeal.Reach(newTeammatesSeam(pool), pool, deals.NewStore(InstallationDB(pool), DealsInstallation()))),
 		assignmentHandlers: assignments.NewHandlers(assignments.NewStore(InstallationDB(pool))),
 		// One clock, passed to both halves: the store stamps when each move
 		// happened and the transport works out when an unanswered ask goes

@@ -13,7 +13,7 @@ import { useLocale, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import {
   blankRequired,
-  problemCodeOf,
+  problemFieldErrorsOf,
   problemMessageOf,
   problemStatus,
   unwrap,
@@ -38,7 +38,11 @@ function approveError(
   if (!error) {
     return null;
   }
-  if (problemCodeOf(error) === "reader_team_required") {
+  if (
+    problemFieldErrorsOf(error).some(
+      (fault) => fault.code === "reader_team_required",
+    )
+  ) {
     return t("connectors.tgbiz.readerTeamRequired");
   }
   if (problemStatus(error) === 409) {

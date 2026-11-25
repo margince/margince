@@ -82,7 +82,7 @@ const mergeHistory = "history of the retired record, which is never rewritten"
 // why. Keys are table.column.
 var stayOnTheRetiredRecord = gatekit.Waive(map[string]string{
 	"contact_address_country.contact_id":       "a check of the merged-away contact's own postal code and city, which says nothing about the survivor's address. The survivor keeps its own check, and the trigger deletes it when the merge moves the survivor's address; the next sweep checks the address the survivor ends with",
-	"contact_brief.contact_id":                 "a cached sentence about one record. relinkReaderJudgements deletes the briefs of both halves, so the next read writes one about the record that stands",
+	"generated_summary.contact_id":             "a cached sentence about one record. relinkReaderJudgements forgets the summaries of both halves (generatedsummary.ForgetContacts), so the next read writes one about the record that stands",
 	"contact.converted_from_lead_id":           "names the lead a contact was promoted from. Only an open lead merges, and a promoted lead is archived, so no contact names a lead that a merge retires",
 	"dedupe_candidate.left_contact_id":         "the duplicate pair the reviewer judged. The merge settles that pair and archives every other open pair naming the retired record, so each row stays the record of a decision about the two it named",
 	"dedupe_candidate.right_contact_id":        "the duplicate pair the reviewer judged. The merge settles that pair and archives every other open pair naming the retired record, so each row stays the record of a decision about the two it named",

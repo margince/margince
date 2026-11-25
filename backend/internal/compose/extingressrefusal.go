@@ -63,11 +63,11 @@ func (r *callRuntime) noteRefusal(ctx context.Context, class extension.RecordRef
 }
 
 // recordIngestRefusal is the upsert: one row per unit per class per day,
-// carrying the count and the window it spans.
+// carrying the count and the newest refusal.
 func recordIngestRefusal(ctx context.Context, tx pgx.Tx, unit string, class extension.RecordRefusal, at time.Time) error {
 	_, err := tx.Exec(ctx, `
-		INSERT INTO extension_ingest_refusal (unit, refusal, day, refused, first_at, last_at)
-		VALUES ($1, $2, $3::date, 1, $4, $4)
+		INSERT INTO extension_ingest_refusal (unit, refusal, day, refused, last_at)
+		VALUES ($1, $2, $3::date, 1, $4)
 		ON CONFLICT (unit, refusal, day) DO UPDATE
 		   SET refused = extension_ingest_refusal.refused + 1,
 		       last_at = EXCLUDED.last_at`,

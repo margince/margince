@@ -22,14 +22,10 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/systemtext"
 )
 
-// redactSubjectTimeline erases the subject's free text from the activity
-// timeline: subject/body of every subject-only activity are wiped (the
-// GENERATED search_tsv refreshes from the now-empty text, so the erased
-// name is no longer full-text searchable). The subject's attachments are
-// purged separately by eraseAttachments; this handles only
-// the timeline text and its field-level provenance. It returns the
-// redacted activity ids so the caller can tombstone each record's own
-// audit spine.
+// redactSubjectTimeline wipes the subject and body of every activity that is
+// about the subject alone. A trigger rebuilds search_tsv from the emptied text,
+// so search no longer finds the erased name. eraseAttachments purges the files.
+// The caller tombstones the audit spine of each activity id returned.
 // subjectTimelineLockSQL selects every row this erasure will judge, FOR UPDATE.
 //
 // The three id sets come from the same fragments the destroy and the hold
@@ -115,7 +111,7 @@ func (e *Eraser) redactSubjectTimeline(ctx context.Context, tx pgx.Tx, contactID
 	args := []any{contactID, emails, floorCurrent, floorCarried, erasedName, channelKeys}
 	args = append(args, systemtext.BoundLiteral("core.erased_subject", erasedName))
 	rows, err := tx.Query(ctx, `
-		UPDATE activity a SET subject = $5, body = NULL, owed_ask = NULL, system_text = `+fmt.Sprintf("$%d", len(args))+`, raw = NULL, agenda_fingerprint = NULL, calendar_event = NULL,
+		UPDATE activity a SET subject = $5, body = NULL, body_own_end = NULL, owed_ask = NULL, system_text = `+fmt.Sprintf("$%d", len(args))+`, raw = NULL, agenda_fingerprint = NULL, calendar_event = NULL,
  internal_mail_authorization = `+erasedInternalMailAuthorizationSQL+`,
 		  counterparty_email = NULL,
 		  -- What a classifier concluded the message MEANT goes with the words it

@@ -55,7 +55,6 @@ func syncDealProductsFromOffer(ctx context.Context, tx pgx.Tx, dealID ids.DealID
 		return nil, nil, fmt.Errorf("clear offer deal products: %w", err)
 	}
 	netByProduct := map[openapi_types.UUID]int64{}
-	lineByProduct := map[openapi_types.UUID]openapi_types.UUID{}
 	var order []openapi_types.UUID
 	for _, line := range lines {
 		if line.ProductId == nil || line.LineNetMinor == nil {
@@ -63,15 +62,13 @@ func syncDealProductsFromOffer(ctx context.Context, tx pgx.Tx, dealID ids.DealID
 		}
 		if _, seen := netByProduct[*line.ProductId]; !seen {
 			order = append(order, *line.ProductId)
-			lineByProduct[*line.ProductId] = line.Id
 		}
 		netByProduct[*line.ProductId] += *line.LineNetMinor
 	}
 	for _, productID := range order {
-		lineID := lineByProduct[productID]
-		if _, err := tx.Exec(ctx, `INSERT INTO deal_product (deal_id, product_id, source, offer_line_item_id, amount_minor, currency, component_kind)
-			 SELECT $1, $2, 'offer', $3, $4, $5, p.component_kind FROM product p WHERE p.id = $2`,
-			dealID, productID, lineID, netByProduct[productID], offer.Currency); err != nil {
+		if _, err := tx.Exec(ctx, `INSERT INTO deal_product (deal_id, product_id, source, amount_minor, currency, component_kind)
+			 SELECT $1, $2, 'offer', $3, $4, p.component_kind FROM product p WHERE p.id = $2`,
+			dealID, productID, netByProduct[productID], offer.Currency); err != nil {
 			return nil, nil, fmt.Errorf("write offer deal product: %w", err)
 		}
 	}

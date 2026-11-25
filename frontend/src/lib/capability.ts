@@ -168,46 +168,55 @@ export type WritableRecord = {
   readonly archived_at?: string | null;
 };
 
+/** Which axis refuses every change to `object`: the seat, then the role. */
+export type WriteBlock = "seat" | "role";
+
+/**
+ * Whether the seat or the role refuses every change to `object`, or undefined
+ * when neither does. Undefined until /me answers, so neither is blamed early.
+ */
+export function useWriteBlock(object: RbacObject): WriteBlock | undefined {
+  const answered = useMe().data?.authorization !== undefined;
+  const mutable = useCanMutate();
+  const granted = useCan(object, "update");
+  if (!answered) {
+    return undefined;
+  }
+  if (!mutable) {
+    return "seat";
+  }
+  return granted ? undefined : "role";
+}
+
 /**
  * Why this caller may not change THIS record, or undefined when they may.
- *
- * The one answer a record page's verbs share — edit, archive, share, the
- * upload, the inline fields — so the page cannot disagree with itself about
- * whether the record takes changes. Before this each page asked only whether
- * the record was archived and left the grant, the seat and the row to the
- * server: a rep opened a colleague's deal, was offered Edit, filled the form
- * in, and learned from the 403 that it was never theirs to save.
- *
- * Archived comes first because it is the reason a reader can act on. The
- * other sentence covers everything `useCanWriteRecord` refuses — no object
- * grant, a read seat, a row that is somebody else's — because the reader's
- * remedy is the same for all three: ask the owner or the administrator. Naming
- * the axis would also name a fact the snapshot cannot always tell apart from
- * its neighbour (an extension object misspelled reads as a grant not made).
- *
- * The caller supplies the two sentences because they name the record's KIND —
- * "this deal", "this contact" — and a sentence that said "this record" on
- * every page would be the first line on the page not to know what it was
- * about.
- *
- * UX honesty, never enforcement, like every predicate in this file: the
- * server refuses whatever this returns.
+ * Archived comes first: a reader can act on it. The seat and the role follow,
+ * which only an administrator lifts. Last is a row its owner can share.
  */
 export function useRecordWriteRefusal(
   object: RbacObject,
   record: WritableRecord | undefined,
-  reasons: Readonly<{ archived: string; notYours: string }>,
+  reasons: Readonly<{
+    archived: string;
+    seat: string;
+    readOnlyRole: string;
+    notYours: string;
+  }>,
 ): string | undefined {
-  // Runs unconditionally: the number of hooks a render performs must not
+  // Both run unconditionally: the number of hooks a render performs must not
   // depend on the record's state.
   const canWrite = useCanWriteRecord(object, record);
+  const block = useWriteBlock(object);
   if (record?.archived_at) {
     return reasons.archived;
   }
-  if (!canWrite) {
-    return reasons.notYours;
+  if (canWrite) {
+    return undefined;
   }
-  return undefined;
+  if (block) {
+    return block === "seat" ? reasons.seat : reasons.readOnlyRole;
+  }
+  return reasons.notYours;
 }
 
 /**

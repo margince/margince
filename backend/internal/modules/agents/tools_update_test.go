@@ -12,6 +12,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"strings"
 	"testing"
 
 	"github.com/margince/margince/backend/internal/shared/apperrors"
@@ -35,6 +36,7 @@ func updateArgs(t *testing.T, id ids.UUID) json.RawMessage {
 		"record_type": "contact",
 		"id":          id,
 		"fields":      map[string]any{"title": "Analyst"},
+		"why":         "Her signature names her an analyst.",
 	})
 	if err != nil {
 		t.Fatalf("marshaling args: %v", err)
@@ -109,5 +111,23 @@ func TestUpdateRecordRefusesStagingForATargetHeldElsewhere(t *testing.T) {
 	}
 	if len(p.updates) != 0 {
 		t.Errorf("provider.Update called %d time(s), want 0", len(p.updates))
+	}
+}
+
+// A blank or overlong reason is refused before anything is staged or written,
+// as a missing one is.
+func TestUpdateRecordRefusesAReasonItCannotShow(t *testing.T) {
+	for name, why := range map[string]string{"blank": "   ", "overlong": strings.Repeat("x", statedWhyLimit+1)} {
+		in, err := json.Marshal(map[string]any{"record_type": "contact", "id": ids.NewV7(), "fields": map[string]any{"title": "CTO"}, "why": why})
+		if err != nil {
+			t.Fatal(err)
+		}
+		tool := updateRecord{p: &fakeSoR{}}
+		if _, err := tool.StageInfo(context.Background(), in); !errors.As(err, new(*BadArgsError)) {
+			t.Errorf("%s: StageInfo err = %v, want a refusal of why", name, err)
+		}
+		if _, err := tool.Handle(context.Background(), in); !errors.As(err, new(*BadArgsError)) {
+			t.Errorf("%s: Handle err = %v, want a refusal of why", name, err)
+		}
 	}
 }

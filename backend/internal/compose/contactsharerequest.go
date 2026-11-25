@@ -102,6 +102,7 @@ func (q contactShareQueue) FileTx(ctx context.Context, tx pgx.Tx, req contacts.S
 	}
 	digest := sha256.Sum256(body)
 	_, open, err := svc.StageUnlessDeclinedTx(principal.SystemActing(ctx, contactShareActor), tx, approvals.StageInput{
+		Why:            approvals.HeadlineSaysWhy,
 		Kind:           contactShareKind,
 		ProposedChange: body,
 		DiffHash:       hex.EncodeToString(digest[:]),

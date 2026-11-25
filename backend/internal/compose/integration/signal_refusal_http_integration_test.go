@@ -35,6 +35,10 @@ func TestASignalTheStoreRefusesAnswers422NamingTheField(t *testing.T) {
 			name: "summary left out", field: "summary", code: "required",
 			body: AnyMap{"kind": "risk", "summary": "", "source": "manual"},
 		},
+		{
+			name: "source naming the scan", field: "source", code: "invalid_source",
+			body: AnyMap{"kind": "risk", "summary": "x", "source": "signal-scan"},
+		},
 	}
 	for _, refusal := range refusals {
 		t.Run(refusal.name, func(t *testing.T) {

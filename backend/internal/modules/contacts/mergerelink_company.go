@@ -29,6 +29,7 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/platform/generatedsummary"
 	"github.com/margince/margince/backend/internal/platform/recordmerge"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
@@ -158,49 +159,14 @@ func carryCompanyEnrichment(ctx context.Context, tx pgx.Tx, sourceID, targetID i
 	return nil
 }
 
-// carryCompanyReaderRows moves the per-reader rows: the brief, the dossier,
-// the growth reading, and what a reader chose not to be asked again.
-//
-// These are keyed per (reader, company) rather than per company, so the
-// collision is per reader too: a reader holding a row on BOTH companies keeps
-// their own reading of the survivor, and the merged-away one is dropped
-// instead of blending two readers' answers into one row neither wrote.
+// carryCompanyReaderRows moves the generated summaries each reader holds, and
+// retires what a reader chose not to be asked again.
 //
 // company_scan is deliberately NOT here — it is a durable job, not a reading,
 // and moveCompanyScans retires it.
 func carryCompanyReaderRows(ctx context.Context, tx pgx.Tx, sourceID, targetID ids.CompanyID) error {
-	// Spelled out per table rather than looped over their names. The coverage
-	// census reads THIS source to decide which tables the merge touches, and a
-	// table name assembled at runtime is invisible to it — a statement built by
-	// concatenation would move the rows and still read as forgotten.
-	for _, stmt := range []string{
-		`UPDATE company_brief a SET company_id = $2
-		 WHERE a.company_id = $1
-		   AND NOT EXISTS (SELECT 1 FROM company_brief b
-		                    WHERE b.company_id = $2 AND b.user_id = a.user_id)`,
-		`UPDATE company_dossier a SET company_id = $2
-		 WHERE a.company_id = $1
-		   AND NOT EXISTS (SELECT 1 FROM company_dossier b
-		                    WHERE b.company_id = $2 AND b.user_id = a.user_id)`,
-		`UPDATE company_growth_fit a SET company_id = $2
-		 WHERE a.company_id = $1
-		   AND NOT EXISTS (SELECT 1 FROM company_growth_fit b
-		                    WHERE b.company_id = $2 AND b.user_id = a.user_id)`,
-	} {
-		if _, err := tx.Exec(ctx, stmt, sourceID, targetID); err != nil {
-			return fmt.Errorf("carry the per-reader rows: %w", err)
-		}
-	}
-	// The retirements name the source alone, so they carry one parameter
-	// rather than two.
-	for _, stmt := range []string{
-		`DELETE FROM company_brief WHERE company_id = $1`,
-		`DELETE FROM company_dossier WHERE company_id = $1`,
-		`DELETE FROM company_growth_fit WHERE company_id = $1`,
-	} {
-		if _, err := tx.Exec(ctx, stmt, sourceID); err != nil {
-			return fmt.Errorf("retire the merged-away per-reader rows: %w", err)
-		}
+	if err := generatedsummary.CarryCompany(ctx, tx, sourceID, targetID); err != nil {
+		return fmt.Errorf("carry the per-reader rows: %w", err)
 	}
 	// A dismissal is a reader saying "stop offering me this about this
 	// company", and it is NOT carried — the fingerprint it is keyed by is

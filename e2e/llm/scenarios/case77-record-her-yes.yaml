@@ -37,7 +37,7 @@ must_not_call_with:
   - log_activity~.
 
 must_mention:
-  - "(?i)confirm"
+  - "(?i)confirm|opt-?in|verif|click"
 
 # The claim, with its verb straight after the pronoun.
 must_not_mention:

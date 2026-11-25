@@ -389,9 +389,12 @@ func TestEveryAnswerOnAPairNeedsBothDeals(t *testing.T) {
 	now := clocktest.Now(t)
 	later := now.Add(24 * time.Hour)
 	for _, answer := range []assurance.Resolution{
-		{Outcome: assurance.OutcomeFixedRecord}, {Outcome: assurance.OutcomeAddedEvidence},
-		{Outcome: assurance.OutcomeValueCorrect, Reason: "checked"}, {Outcome: assurance.OutcomeNotRelevant, Reason: "checked"},
-		{Outcome: assurance.OutcomeRemindLater, RemindAt: &later}, {Outcome: assurance.OutcomeReassign},
+		{Outcome: assurance.OutcomeFixedRecord},
+		{Outcome: assurance.OutcomeAddedEvidence},
+		{Outcome: assurance.OutcomeValueCorrect, Reason: "checked"},
+		{Outcome: assurance.OutcomeNotRelevant, Reason: "checked"},
+		{Outcome: assurance.OutcomeRemindLater, RemindAt: &later},
+		{Outcome: assurance.OutcomeReassign},
 		{Outcome: assurance.OutcomeSeparate},
 	} {
 		if err := assurance.NewStore(compose.InstallationDB(e.Pool)).Resolve(reader, id, answer, now); err == nil {

@@ -152,8 +152,8 @@ func TestAStampItCannotMakeSaysWhy(t *testing.T) {
 	if _, err := CurrentStamps(tree(t), Door("smoke-signal")); err == nil {
 		t.Error("a door nobody serves stamped without an error")
 	}
-	if _, err := NewlyStale(t.TempDir(), tree(t)); err == nil {
-		t.Error("a base tree with nothing to stamp gave a list")
+	if _, err := Currency(t.TempDir()); err == nil {
+		t.Error("a base tree with nothing to stamp gave an answer")
 	}
 }
 
@@ -209,7 +209,7 @@ func TestAParserFixStalesOnlyTheVerdictsOfItsDriver(t *testing.T) {
 	if !slices.Equal(stale["gpt"], []string{"transcript parser"}) || len(stale["claude"]) != 0 {
 		t.Errorf("report = %v, want gpt stale for its parser and claude current", stale)
 	}
-	newly, err := NewlyStale(base, head)
+	newly, err := NewlyStale(currencyOf(t, base), head)
 	if err != nil {
 		t.Fatal(err)
 	}

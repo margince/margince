@@ -6,7 +6,7 @@ The 3 tables owned by `knowledge`, as the migrations build them. [Back to the en
 
 ## knowledge_chunk
 
-11 columns · primary key `(id)` · referenced by 0 foreign keys
+10 columns · primary key `(id)` · referenced by 0 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -16,7 +16,6 @@ The 3 tables owned by `knowledge`, as the migrations build them. [Back to the en
 | `corpus_id` | `uuid` | yes |  |
 | `document_id` | `uuid` | yes | Points at `knowledge_document.id`. |
 | `embed_identity` | `text` |  |  |
-| `embedded_at` | `timestamp with time zone` |  |  |
 | `embedding` | `vector` |  |  |
 | `start_line` | `integer` |  |  |
 | `text` | `text` | yes |  |
@@ -41,7 +40,7 @@ The 3 tables owned by `knowledge`, as the migrations build them. [Back to the en
 
 ## knowledge_corpus
 
-12 columns · primary key `(id)` · referenced by 1 foreign key
+11 columns · primary key `(id)` · referenced by 1 foreign key
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -56,7 +55,6 @@ The 3 tables owned by `knowledge`, as the migrations build them. [Back to the en
 | `archived_at` | `timestamp with time zone` |  | Soft-delete marker. `NULL` means live, and nearly every read filters on it. |
 | `captured_by` | `text` | yes | Who or what wrote the row. Stamped by the server from the authenticated principal, never taken from the request body. |
 | `created_at` | `timestamp with time zone`, default `now()` | yes | When the row was created. Set once. |
-| `updated_at` | `timestamp with time zone`, default `now()` | yes | When the row last changed. Refreshed on every write. |
 
 **Rules**
 
@@ -65,19 +63,19 @@ The 3 tables owned by `knowledge`, as the migrations build them. [Back to the en
 
 **Indexes**
 
+- `knowledge_corpus_name_once`: `unique, btree (lower(btrim(name))) WHERE ((archived_at IS NULL) AND (managed_source IS NULL))`
 - `knowledge_corpus_one_default`: `unique, btree (default_ask) WHERE (default_ask AND (archived_at IS NULL))`
 - `knowledge_corpus_one_per_managed_source`: `unique, btree (managed_source) WHERE ((managed_source IS NOT NULL) AND (archived_at IS NULL))`
 - `knowledge_corpus_pkey`: `unique, btree (id)`
 
 **Triggers**
 
-- `knowledge_corpus_touch`: `BEFORE UPDATE FOR EACH ROW EXECUTE FUNCTION set_updated_at()`
 - `text_bound_insert`: `AFTER INSERT FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL, '{"name": 120, "captured_by": 20000, "description": 20000, "managed_source": 20000, "topic_statement": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"captured_by":20000,"description":20000,"managed_source":20000,"name":120,"topic_statement":20000}')`
 - `text_bound_update`: `AFTER UPDATE FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"name": 120, "captured_by": 20000, "description": 20000, "managed_source": 20000, "topic_statement": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"captured_by":20000,"description":20000,"managed_source":20000,"name":120,"topic_statement":20000}')`
 
 ## knowledge_document
 
-16 columns · primary key `(id)` · referenced by 1 foreign key
+15 columns · primary key `(id)` · referenced by 1 foreign key
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -96,7 +94,6 @@ The 3 tables owned by `knowledge`, as the migrations build them. [Back to the en
 | `archived_at` | `timestamp with time zone` |  | Soft-delete marker. `NULL` means live, and nearly every read filters on it. |
 | `captured_by` | `text` | yes | Who or what wrote the row. Stamped by the server from the authenticated principal, never taken from the request body. |
 | `created_at` | `timestamp with time zone`, default `now()` | yes | When the row was created. Set once. |
-| `updated_at` | `timestamp with time zone`, default `now()` | yes | When the row last changed. Refreshed on every write. |
 
 **Points at**
 
@@ -120,6 +117,5 @@ The 3 tables owned by `knowledge`, as the migrations build them. [Back to the en
 
 **Triggers**
 
-- `knowledge_document_touch`: `BEFORE UPDATE FOR EACH ROW EXECUTE FUNCTION set_updated_at()`
 - `text_bound_insert`: `AFTER INSERT FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL, '{"checksum": 20000, "filename": 20000, "captured_by": 20000, "storage_key": 20000, "content_type": 20000, "ingest_detail": 20000, "ingest_status": 20000, "managed_source": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"captured_by":20000,"checksum":20000,"content_type":20000,"filename":20000,"ingest_detail":20000,"ingest_status":20000,"managed_source":20000,"storage_key":20000}')`
 - `text_bound_update`: `AFTER UPDATE FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"checksum": 20000, "filename": 20000, "captured_by": 20000, "storage_key": 20000, "content_type": 20000, "ingest_detail": 20000, "ingest_status": 20000, "managed_source": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"captured_by":20000,"checksum":20000,"content_type":20000,"filename":20000,"ingest_detail":20000,"ingest_status":20000,"managed_source":20000,"storage_key":20000}')`

@@ -140,7 +140,7 @@ func TestAnEmploymentEdgeLivesItsWholeLifeThroughTheToolSurface(t *testing.T) {
 	// value to undo — which is what makes this the case that proves the patch
 	// path serves an edge at all.
 	updated, err := registry.Invoke(ctx, "update_record", json.RawMessage(fmt.Sprintf(
-		`{"record_type":"relationship","id":%q,"fields":{"started_at":"2026-02-01"}}`, edgeID)))
+		`{"why":"A test asks for this change.","record_type":"relationship","id":%q,"fields":{"started_at":"2026-02-01"}}`, edgeID)))
 	if err != nil {
 		t.Fatalf("update_record relationship: %v", err)
 	}
@@ -160,7 +160,7 @@ func TestAnEmploymentEdgeLivesItsWholeLifeThroughTheToolSurface(t *testing.T) {
 	// A field a human wrote applies at once, for an edge as for any record.
 	// The audit row and Undo put a wrong edit back, so nothing waits.
 	overwritten, err := registry.Invoke(ctx, "update_record", json.RawMessage(fmt.Sprintf(
-		`{"record_type":"relationship","id":%q,"fields":{"role":"vp_sales"}}`, edgeID)))
+		`{"why":"A test asks for this change.","record_type":"relationship","id":%q,"fields":{"role":"vp_sales"}}`, edgeID)))
 	if err != nil {
 		t.Fatalf("overwriting a human-written role: %v", err)
 	}
@@ -181,7 +181,7 @@ func TestAnEmploymentEdgeLivesItsWholeLifeThroughTheToolSurface(t *testing.T) {
 		t.Errorf("reading the archived edge = %v, want ErrNotFound", err)
 	}
 	if _, err := registry.Invoke(ctx, "update_record", json.RawMessage(fmt.Sprintf(
-		`{"record_type":"relationship","id":%q,"fields":{"started_at":"2026-04-01"}}`, edgeID))); !errors.Is(err, apperrors.ErrNotFound) {
+		`{"why":"A test asks for this change.","record_type":"relationship","id":%q,"fields":{"started_at":"2026-04-01"}}`, edgeID))); !errors.Is(err, apperrors.ErrNotFound) {
 		t.Errorf("patching the archived edge = %v, want ErrNotFound", err)
 	}
 }
@@ -262,7 +262,7 @@ func TestAnEdgeIsInvisibleWhenEitherEndpointIsOutOfTheCallersRowScope(t *testing
 	// which would confirm the edge exists.
 	stranger := e.As(e.Rep3, []ids.UUID{e.Team2}, relationshipReaderPerms())
 	for _, call := range []struct{ tool, args string }{
-		{"update_record", fmt.Sprintf(`{"record_type":"relationship","id":%q,"fields":{"role":"cto"}}`, edgeID)},
+		{"update_record", fmt.Sprintf(`{"why":"A test asks for this change.","record_type":"relationship","id":%q,"fields":{"role":"cto"}}`, edgeID)},
 		{"archive_record", fmt.Sprintf(`{"record_type":"relationship","id":%q}`, edgeID)},
 	} {
 		_, err := registry.Invoke(stranger, call.tool, json.RawMessage(call.args))
@@ -284,7 +284,7 @@ func TestAnEdgeIsInvisibleWhenEitherEndpointIsOutOfTheCallersRowScope(t *testing
 	// started_at, not role: role carries a human's audited write from the create,
 	// so patching it would stage for precedence and say nothing about row scope.
 	if _, err := registry.Invoke(stranger, "update_record", json.RawMessage(fmt.Sprintf(
-		`{"record_type":"relationship","id":%q,"fields":{"started_at":"2026-03-01"}}`, ownEdge))); err != nil {
+		`{"why":"A test asks for this change.","record_type":"relationship","id":%q,"fields":{"started_at":"2026-03-01"}}`, ownEdge))); err != nil {
 		t.Errorf("Rep3 patching their own edge: %v — the refusals above are a blanket denial, not row scope", err)
 	}
 }
@@ -497,7 +497,7 @@ func TestOneHiddenEndpointIsEnoughToHideTheEdge(t *testing.T) {
 		t.Fatalf("the stranger cannot read their OWN contact, so this case proves nothing: %v", err)
 	}
 	for _, call := range []struct{ tool, args string }{
-		{"update_record", fmt.Sprintf(`{"record_type":"relationship","id":%q,"fields":{"started_at":"2026-05-01"}}`, edgeID)},
+		{"update_record", fmt.Sprintf(`{"why":"A test asks for this change.","record_type":"relationship","id":%q,"fields":{"started_at":"2026-05-01"}}`, edgeID)},
 		{"archive_record", fmt.Sprintf(`{"record_type":"relationship","id":%q}`, edgeID)},
 	} {
 		_, err := registry.Invoke(stranger, call.tool, json.RawMessage(call.args))

@@ -35,6 +35,7 @@ export const EveryState: Story = {
       <VisibilityBadge state="selected" />
       <VisibilityBadge state="private" />
       <VisibilityBadge state="withheld" />
+      <VisibilityBadge state="viewOnly" />
     </div>
   ),
 };

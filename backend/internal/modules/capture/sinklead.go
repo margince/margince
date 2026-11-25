@@ -20,6 +20,7 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/platform/database/textbounds"
 	"github.com/margince/margince/backend/internal/platform/owndomain"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -47,6 +48,7 @@ func (s *Sink) captureLead(ctx context.Context, tx pgx.Tx, rec connector.Normali
 	// carrying the raw spelling would read them as two questions and forget a
 	// refusal the first time a provider changed its capitalisation.
 	fields.Email = strings.ToLower(strings.TrimSpace(fields.Email))
+	fields = fittedLeadFields(fields)
 	// The A13 resurrection guard: an erased subject's address
 	// refuses re-capture — deletion sticks. The natural key, not
 	// the address, names the skip (the log must not re-store PII).
@@ -107,6 +109,15 @@ func (s *Sink) captureLead(ctx context.Context, tx pgx.Tx, rec connector.Normali
 		return datasource.EntityRef{}, nil, nil, err
 	}
 	return ref, nil, nil, nil
+}
+
+// fittedLeadFields cuts the captured name, company and title to their columns'
+// limits: a provider's text nobody can shorten must not fail the capture.
+func fittedLeadFields(fields LeadFields) LeadFields {
+	fields.FullName = textbounds.Fit("public.lead.full_name", fields.FullName)
+	fields.CompanyName = textbounds.Fit("public.lead.company_name", fields.CompanyName)
+	fields.Title = textbounds.Fit("public.lead.title", fields.Title)
+	return fields
 }
 
 // leadCreatedCapturePayload builds the lead.created event for the

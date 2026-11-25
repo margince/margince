@@ -16,9 +16,15 @@ import {
 import {
   clauseWords,
   filterSentence,
+  operatorKey,
   type SentenceWords,
 } from "./filtersentence";
 import { referencedIdsOf } from "./filtersentence.names";
+
+const TAG = enCatalog["filters.field.tag"];
+const INCLUDE = enCatalog["filters.op.include"];
+const NOT_INCLUDE = enCatalog["filters.op.notInclude"];
+const INCLUDE_ANY = enCatalog["filters.op.includeAny"];
 
 // The one place a filter becomes words, so these read like the sentences a
 // reader sees under a Live List and on a saved view, clause by clause.
@@ -85,7 +91,7 @@ const FIELDS: VocabularyField[] = [
   {
     name: "tag",
     type: "id",
-    operators: ["eq", "neq", "in"],
+    operators: ["eq", "neq", "in", "exists"],
     custom: false,
     references: "tag",
   },
@@ -279,10 +285,12 @@ describe("a filter read as one sentence", () => {
     };
     const tagged = (value: string | string[]) =>
       read(newGroup("and", [newLeaf("tag", "in", value)]), named);
-    expect(tagged(["t-a", "t-b"])).toBe('Tag is any of "Wanted", "Other"');
-    expect(tagged(["t-a", "t-unknown"])).toBe("Tag is any of 2 tags");
+    expect(tagged(["t-a", "t-b"])).toBe(
+      `${TAG} ${INCLUDE_ANY} "Wanted", "Other"`,
+    );
+    expect(tagged(["t-a", "t-unknown"])).toBe(`${TAG} ${INCLUDE_ANY} 2 tags`);
     expect(read(newGroup("and", [newLeaf("tag", "eq", "t-a")]), named)).toBe(
-      'Tag is "Wanted"',
+      `${TAG} ${INCLUDE} "Wanted"`,
     );
   });
 
@@ -290,15 +298,15 @@ describe("a filter read as one sentence", () => {
     const retiring = { ...en, retiredTags: new Set(["t-old", "t-gone"]) };
     const tagged = (op: "eq" | "neq" | "in", value: string | string[]) =>
       read(newGroup("and", [newLeaf("tag", op, value)]), retiring);
-    expect(tagged("eq", "t-old")).toBe("Tag is 1 archived tag");
-    expect(tagged("neq", "t-old")).toBe("Tag is not 1 archived tag");
+    expect(tagged("eq", "t-old")).toBe(`${TAG} ${INCLUDE} 1 archived tag`);
+    expect(tagged("neq", "t-old")).toBe(`${TAG} ${NOT_INCLUDE} 1 archived tag`);
     expect(tagged("in", ["t-old", "t-gone"])).toBe(
-      "Tag is any of 2 archived tags",
+      `${TAG} ${INCLUDE_ANY} 2 archived tags`,
     );
     expect(tagged("in", ["t-live", "t-old", "t-new"])).toBe(
-      "Tag is any of 3 tags, 1 archived",
+      `${TAG} ${INCLUDE_ANY} 3 tags, 1 archived`,
     );
-    expect(tagged("eq", "t-live")).toBe("Tag is 1 tag");
+    expect(tagged("eq", "t-live")).toBe(`${TAG} ${INCLUDE} 1 tag`);
     // Beside an "or", the clause is one way in among others, not the group's answer.
     expect(
       read(
@@ -308,7 +316,7 @@ describe("a filter read as one sentence", () => {
         ]),
         retiring,
       ),
-    ).toBe("City is Berlin or Tag is 1 archived tag");
+    ).toBe(`City is Berlin or ${TAG} ${INCLUDE} 1 archived tag`);
 
     const note = enCatalog["filters.sentence.retiredTagNote"];
     for (const [op, operand] of [
@@ -329,7 +337,7 @@ describe("a filter read as one sentence", () => {
     ).toBeUndefined();
     // Words that know of no retired tag count every id as a tag.
     expect(read(newGroup("and", [newLeaf("tag", "eq", "t-old")]))).toBe(
-      "Tag is 1 tag",
+      `${TAG} ${INCLUDE} 1 tag`,
     );
     expect(
       read(newGroup("and", [newLeaf("tag", "eq", "t-old")]), {
@@ -337,6 +345,51 @@ describe("a filter read as one sentence", () => {
         retiredTags: retiring.retiredTags,
       }),
     ).toMatch(/ 1 archiviertes Tag$/);
+  });
+
+  it("reads a tag clause as what the set includes, in the picker and the sentence", () => {
+    const tagField = FIELDS.find((field) => field.name === "tag");
+    expect(enCatalog[operatorKey("eq", tagField)]).toBe(INCLUDE);
+    expect(enCatalog[operatorKey("eq", undefined)]).toBe(
+      enCatalog["filters.op.eq"],
+    );
+    const german = {
+      ...wordsIn("de"),
+      tagNames: new Map([
+        ["t-a", "Wanted"],
+        ["t-b", "Other"],
+      ]),
+    };
+    const deTag = de["filters.field.tag"];
+    expect(read(newGroup("and", [newLeaf("tag", "eq", "t-a")]), german)).toBe(
+      `${deTag} ${de["filters.op.include"]} "Wanted"`,
+    );
+    expect(
+      read(newGroup("and", [newLeaf("tag", "in", ["t-a", "t-c"])]), german),
+    ).toBe(`${deTag} ${de["filters.op.includeAny"]} 2 Tags`);
+    expect(read(newGroup("and", [newLeaf("tag", "in", ["t-a"])]), german)).toBe(
+      `${deTag} ${de["filters.op.include"]} "Wanted"`,
+    );
+  });
+
+  it("reads whether a record has tags as what its set includes", () => {
+    const tagField = FIELDS.find((field) => field.name === "tag");
+    expect(enCatalog[operatorKey("exists", tagField)]).toBe(
+      enCatalog["filters.op.includeSomeOrNone"],
+    );
+    for (const [locale, catalog] of [
+      ["en", enCatalog],
+      ["de", de],
+    ] as const) {
+      const tag = catalog["filters.field.tag"];
+      const has = (operand: boolean) =>
+        read(
+          newGroup("and", [newLeaf("tag", "exists", operand)]),
+          wordsIn(locale),
+        );
+      expect(has(true)).toBe(`${tag} ${catalog["filters.op.includeSome"]}`);
+      expect(has(false)).toBe(`${tag} ${catalog["filters.op.includeNone"]}`);
+    }
   });
 
   it("counts ids in German with no article that must agree with the noun", () => {

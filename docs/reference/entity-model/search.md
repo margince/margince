@@ -63,11 +63,10 @@ The 4 tables owned by `search`, as the migrations build them. [Back to the entit
 
 ## graph_contact_edge
 
-10 columns · primary key `(contact_a, contact_b)` · referenced by 0 foreign keys
+9 columns · primary key `(contact_a, contact_b)` · referenced by 0 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
-| `computed_at` | `timestamp with time zone`, default `now()` | yes |  |
 | `contact_a` | `uuid` | yes |  |
 | `contact_b` | `uuid` | yes |  |
 | `count_90d` | `integer`, default `0` | yes |  |
@@ -98,11 +97,10 @@ The 4 tables owned by `search`, as the migrations build them. [Back to the entit
 
 ## graph_interaction_edge
 
-18 columns · primary key `(user_id, contact_id)` · referenced by 0 foreign keys
+17 columns · primary key `(user_id, contact_id)` · referenced by 0 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
-| `computed_at` | `timestamp with time zone`, default `now()` | yes |  |
 | `contact_id` | `uuid` | yes | Points at `contact.id`. |
 | `count_90d` | `integer`, default `0` | yes |  |
 | `count_total` | `integer`, default `0` | yes |  |

@@ -381,6 +381,7 @@ func (s *RunnerService) executeJob(ctx context.Context, job runner.QueuedJob) {
 		Budget:     spec.Budget,
 		Tools:      spec.Tools,
 		Grounding:  grounding,
+		Outcome:    outcomeCheckFor(spec),
 		// The rendered rule, not a code: the runner is a module and may not
 		// import compose, where the one spelling of this block lives.
 		LanguageRule: promptlang.Rule(identity.BaseLanguageForPrompt(bounded, s.pool)),
