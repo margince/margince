@@ -15,6 +15,7 @@ workflow is outside the gate:
 | `closing-declaration.yml` | pull request events | No |
 | `docs-describing.yml` | pull request events | No |
 | `mcp-e2e-stale.yml` | pull request events that touch the MCP catalog or the e2e lane | No |
+| `ai-records-stale.yml` | pull request events that touch `backend/` or `config/presets/`; it comments which AI records the change makes stale, and never fails | No |
 | `issue-closed.yml` | issue `closed`, a daily check, manual dispatch | No |
 | `main-health.yml` | `pace.yml`, `main` every six hours, manual dispatch | No |
 | `pace.yml` | every push to `main` or `develop` | No (runs after the merge) |
@@ -165,10 +166,9 @@ its evidence from the environment, so a fixture can drive every case (`make test
 
 ## `mcp-e2e-stale.yml`
 
-What starts it: a pull request that changes `docs/reference/mcp-info.json`, `e2e/llm/`, the MCP verdict folders or `backend/internal/compose/mcpe2e/`. Each committed MCP use-case verdict carries a stamp of what it measured. The workflow holds every verdict against the stamps of the base tree and of the change. It lists the ones that were current before and are not now, with what moved. The list comes from the stamps, never from a list kept by hand.
+What starts it: a pull request that changes `docs/reference/mcp-info.json`, `e2e/llm/`, the MCP verdict folders or `backend/internal/compose/mcpe2e/`. Each committed MCP use-case verdict carries a stamp of what it measured. The base tree judges its own verdicts with its own code. The change's code judges the change's tree, so a change to how a stamp is made shows too. The workflow lists the verdicts that were current before and are not now, with what moved, and any verdict the change files already stale. The list comes from the stamps, never from a list kept by hand.
 
-It warns and never fails, and keeps one comment, deleted once nothing is stale. A base it cannot check out or stamp gives no comment.
-`make e2e-llm-report` prints the state of every verdict for a local branch.
+It warns and never fails, and keeps one comment, deleted once nothing is stale. A base it cannot check out or stamp gives no comment. `make e2e-llm-report` prints the state of every verdict for a local branch.
 
 ## `issue-closed.yml`
 

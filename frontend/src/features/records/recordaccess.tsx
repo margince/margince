@@ -18,7 +18,6 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useRef, useState } from "react";
 import { api } from "../../api/client";
 import { ifMatch, requireVersion } from "../../api/version";
-import { EditAccessRequest } from "../../components/editaccessrequest";
 import { Button } from "../../design-system/atoms";
 import { ChoiceList } from "../../design-system/choicelist";
 import { ErrorLine } from "../../design-system/errorline";
@@ -36,7 +35,6 @@ import { navigate } from "../../lib/router";
 import { useViewerId } from "../../lib/session";
 import { useKindWriteRefusal } from "../../lib/writerefusal";
 import { HandoverOffer } from "./handoveroffer";
-import { HandoverRequest } from "./handoverrequest";
 import "./recordaccess.css";
 
 // The shape both records share, which is all this component reads. Spelled
@@ -183,13 +181,9 @@ export function RecordAccess({
     >
       <div className="record-access-panel">
         <p>{sentence}</p>
-        {refusal ? (
-          <>
-            <p className="t-caption">{refusal}</p>
-            <EditAccessRequest kind={kind} record={record} />
-            <HandoverRequest kind={kind} record={record} />
-          </>
-        ) : (
+        {/* A reader who may not change the record finds why, and the asks,
+            behind the head's View only pill. */}
+        {!refusal && (
           <>
             <AudienceSwitch
               legend={t(copy.title)}

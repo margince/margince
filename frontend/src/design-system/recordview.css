@@ -197,16 +197,7 @@
 }
 .record-split-verbs
   > :not(.btn-primary, .btn-with-reason:has(> .btn-primary), p)
-  ~ :not(.btn-primary, .btn-with-reason:has(> .btn-primary), p)::before,
-.record-split-verbs
-  > :not(.btn-primary, .btn-with-reason:has(> .btn-primary), p)
-  ~ *
-  > .btn-with-reason:has(> .t-caption)
-  > .btn::before,
-.record-split-verbs
-  > :not(.btn-primary, .btn-with-reason:has(> .btn-primary), p)
-  ~ .btn-with-reason:has(> .t-caption):not(:has(> .btn-primary))
-  > .btn::before {
+  ~ :not(.btn-primary, .btn-with-reason:has(> .btn-primary), p)::before {
   content: "";
   position: absolute;
   inset-inline-start: 0;
@@ -233,6 +224,19 @@
   overflow: hidden;
   text-overflow: ellipsis;
 }
+/* A tile names its verb in words, so a refused one swaps its glyph for the
+   lock, as a labelled button does, instead of a corner lock. */
+.record-split-verbs .btn > .btn-lock {
+  position: static;
+  inline-size: var(--controlIcon);
+  block-size: var(--controlIcon);
+  padding: 0;
+  background: none;
+  color: inherit;
+}
+.record-split-verbs .btn > .btn-lock + svg {
+  display: none;
+}
 /* The filled verb sits inset in the bar, with the same room to the bar's edge
    as to the tiles under it, so it never presses against the border. */
 .record-split-verbs:has(> .btn-primary, > .btn-with-reason > .btn-primary) {
@@ -255,41 +259,6 @@
   flex: none;
   align-self: stretch;
   justify-content: center;
-}
-/* A tile's refusal is a sentence too wide for the tile: it runs along the
-   bar's foot, in room the bar keeps for it. */
-.record-split-verbs:has(> * > .btn-with-reason > .t-caption),
-.record-split-verbs:has(> .btn-with-reason > .btn:not(.btn-primary)) {
-  position: relative;
-  padding-block-end: calc(var(--space-2) + 2lh);
-}
-.record-split-verbs > * > .btn-with-reason > .t-caption,
-.record-split-verbs > .btn-with-reason:not(:has(> .btn-primary)) > .t-caption {
-  position: absolute;
-  inset-inline: var(--space-2);
-  inset-block-end: var(--space-1);
-}
-/* A positioned tile would hold the sentence to its own width. So the tile that
-   states one stays static, and its button fills it and draws the hairline. */
-.record-split-verbs > :has(> .btn-with-reason > .t-caption),
-.record-split-verbs
-  > .btn-with-reason:has(> .t-caption):not(:has(> .btn-primary)) {
-  position: static;
-}
-.record-split-verbs
-  > :not(.btn-primary, .btn-with-reason:has(> .btn-primary), p)
-  ~ :is(
-    :has(> .btn-with-reason > .t-caption),
-    .btn-with-reason:has(> .t-caption):not(:has(> .btn-primary))
-  )::before {
-  content: none;
-}
-.record-split-verbs > * > .btn-with-reason:has(> .t-caption) > .btn,
-.record-split-verbs
-  > .btn-with-reason:has(> .t-caption):not(:has(> .btn-primary))
-  > .btn {
-  position: relative;
-  align-self: stretch;
 }
 .record-split-verbs > p {
   flex-basis: 100%;
