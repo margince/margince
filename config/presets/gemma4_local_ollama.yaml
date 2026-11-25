@@ -6,9 +6,10 @@
 # NOT YET MEASURED: no certification record exists for this setup, so no task is
 # graded on it and none of its answers is known to be good enough. Certify it
 # with `make e2e-ai ROUTING=config/presets/gemma4_local_ollama.yaml`
-# on a machine that serves it; its grades then appear in
-# docs/reference/ai-certification.md under this file's name. Until then, do not
-# bind this preset to a workspace whose confidentiality decisions matter.
+# on a machine that serves it, then regenerate the page with `go test
+# ./internal/compose/aicert/ -run TestAICertificationPage -update-ai-cert`; its grades
+# then appear in docs/reference/ai-certification.md under this file's name. Until
+# then, do not bind this preset to a workspace whose confidentiality decisions matter.
 #
 # No task list here on purpose. The bands move when a prompt is fixed or the
 # corpus grows, and a list in this comment would read as true long after it

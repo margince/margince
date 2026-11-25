@@ -56,21 +56,26 @@ func statusesOf(report string) map[string]string {
 }
 
 // newlyStale lists the records current in the base report that are not current
-// in rows: what the tree behind rows made stale, partial or gone.
+// in rows. A record the tree behind rows no longer carries at all is listed as
+// gone, named by the binding the base report gave it.
 func newlyStale(base map[string]string, rows []aicert.ReadinessRow) []string {
-	var out []string
+	now := map[string]string{}
 	for _, row := range rows {
-		cell := cells(row)
-		if base[rowKey(cell)] == aicert.StatusCurrent && row.Status() != aicert.StatusCurrent {
-			out = append(out, fmt.Sprintf("%s on %s: now %s", row.SiteKey(), bindingOf(cell), row.Status()))
+		now[rowKey(cells(row))] = row.Status()
+	}
+	var out []string
+	for key, status := range base {
+		if status != aicert.StatusCurrent || now[key] == aicert.StatusCurrent {
+			continue
 		}
+		state := now[key]
+		if state == "" {
+			state = "gone"
+		}
+		out = append(out, fmt.Sprintf("%s: now %s", key, state))
 	}
 	slices.Sort(out)
 	return out
-}
-
-func bindingOf(cell []string) string {
-	return cell[columnProvider] + " " + cell[columnModel] + " (" + cell[columnEnv] + ")"
 }
 
 // renderNewlyStale is the pull request comment, empty when nothing went stale.

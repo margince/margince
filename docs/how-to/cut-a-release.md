@@ -29,8 +29,10 @@ an added part, such as `v1.1.0-rc.1`, passes with blockers still open.
 
 `release-tag.yml` also refuses a plain tag while `config/presets/gemini_cloud.yaml` has a stale or absent
 AI record. That is the setup a new installation is offered, and the check reads each task's first rung and
-its fallback. The run lists them. Refresh them with [the sweep](re-certify-the-whole-corpus.md), merge the
-records, then run all jobs of the run again. A tag with an added part passes and only prints the list.
+its fallback. Run [the sweep](re-certify-the-whole-corpus.md) and merge its records into `main` before you
+tag. A run reads the commit of its tag, so merging records later does not help it, and running all jobs again
+reads the same commit. For a tag that failed this check, delete it and tag the new `main`, as
+[When a run fails](#when-a-run-fails) says. A tag with an added part passes and only prints the list.
 
 ## Write the notes
 

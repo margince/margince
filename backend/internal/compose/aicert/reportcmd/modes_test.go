@@ -38,7 +38,7 @@ func TestARecordCurrentInTheBaseReportAndStaleNowIsNamed(t *testing.T) {
 	oneMoved := map[string]string{"rate_extract": currentStamp, "brief_ranking": staleStamp}
 	rows, _ := aicert.Readiness(aicert.Census{Sites: sites}, oneMoved, nil, records)
 	got := newlyStale(statusesOf(base), rows)
-	if len(got) != 1 || !strings.HasPrefix(got[0], "brief_ranking/rank on anthropic claude-sonnet-4-6 (byok)") || !strings.HasSuffix(got[0], "now stale") {
+	if len(got) != 1 || !strings.HasPrefix(got[0], "brief_ranking/rank | anthropic | claude-sonnet-4-6 | byok") || !strings.HasSuffix(got[0], "now stale") {
 		t.Fatalf("newlyStale = %q, want the one record that moved", got)
 	}
 	comment := renderNewlyStale(got)
@@ -86,5 +86,20 @@ func TestAPresetRungThatIsNotCurrentIsListedAndAFallbackThatIsTheSameModelIsNot(
 	want := []string{"brief_ranking: premium on m is stale", "agent_loop: fallback cheap_cloud on n is absent"}
 	if strings.Join(got, "\n") != strings.Join(want, "\n") {
 		t.Errorf("notCurrentRungs = %q, want %q", got, want)
+	}
+}
+
+// A record the changed tree no longer carries has no row to compare, so the
+// base's own binding names it.
+func TestARecordTheChangedTreeNoLongerCarriesIsNamedAsGone(t *testing.T) {
+	sites := twoSites()
+	records := []aicert.Record{recordFor("rate_extract", "fx", currentStamp), recordFor("brief_ranking", "rank", currentStamp)}
+	stamps := map[string]string{"rate_extract": currentStamp, "brief_ranking": currentStamp}
+	base := renderReadiness(aicert.Census{Sites: sites}, stamps, nil, records, nil)
+
+	rows, _ := aicert.Readiness(aicert.Census{Sites: sites}, stamps, nil, records[:1])
+	got := newlyStale(statusesOf(base), rows)
+	if len(got) != 1 || got[0] != "brief_ranking/rank | anthropic | claude-sonnet-4-6 | byok: now gone" {
+		t.Errorf("newlyStale = %q, want the deleted record named by its base binding", got)
 	}
 }
