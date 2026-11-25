@@ -13,9 +13,12 @@ package assurance
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	"github.com/jackc/pgx/v5"
+
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
 // PairSubject is two open deals of one account as the rule sees them, already
@@ -39,7 +42,8 @@ type PairSubject struct {
 }
 
 // PairSubjectsFunc reads the candidate pairs of open deals that share evidence.
-type PairSubjectsFunc func(ctx context.Context, tx pgx.Tx, now time.Time) ([]PairSubject, error)
+// With only set, it reads just the pairs that include one of those deals.
+type PairSubjectsFunc func(ctx context.Context, tx pgx.Tx, now time.Time, only []ids.UUID) ([]PairSubject, error)
 
 // WithPairSubjects asks the pass to check pairs of deals too.
 func (s *Scanner) WithPairSubjects(subjects PairSubjectsFunc) *Scanner {
@@ -49,11 +53,11 @@ func (s *Scanner) WithPairSubjects(subjects PairSubjectsFunc) *Scanner {
 }
 
 // askPairs raises one finding per pair that reads as one buying motion.
-func (s *Scanner) askPairs(ctx context.Context, tx pgx.Tx, now time.Time, pass *walked) error {
+func (s *Scanner) askPairs(ctx context.Context, tx pgx.Tx, now time.Time, only []ids.UUID, pass *walked) error {
 	if s.pairs == nil {
 		return nil
 	}
-	subjects, err := s.pairs(ctx, tx, now)
+	subjects, err := s.pairs(ctx, tx, now, only)
 	if err != nil {
 		return err
 	}
@@ -66,6 +70,23 @@ func (s *Scanner) askPairs(ctx context.Context, tx pgx.Tx, now time.Time, pass *
 		pass.seen = append(pass.seen, LogicalKey(*finding))
 	}
 	return nil
+}
+
+// closeClearedPairsOf closes the open pair findings of deal that a pass over it
+// no longer raises. A pair is filed on one of its deals, so the filing deals
+// are looked up first. CloseCleared then keeps the remind-later carve-out.
+func (s *Store) closeClearedPairsOf(ctx context.Context, tx pgx.Tx, deal ids.UUID, seen []string) (int64, error) {
+	rows, err := tx.Query(ctx, `SELECT subject_id FROM assurance_exception
+		WHERE status = 'open' AND type = $1 AND subject_kind = 'deal'
+		  AND (subject_id = $2 OR observed ->> $3 = $2::text)`, TypeDuplicateMotion, deal, SlotOtherDealID)
+	if err != nil {
+		return 0, fmt.Errorf("assurance: reading the pair findings of a deal: %w", err)
+	}
+	filed, err := pgx.CollectRows(rows, pgx.RowTo[string])
+	if err != nil {
+		return 0, fmt.Errorf("assurance: reading the pair findings of a deal: %w", err)
+	}
+	return s.CloseCleared(ctx, tx, []string{TypeDuplicateMotion}, filed, seen)
 }
 
 // duplicateMotion is the rule. A deal with no close date is never flagged. The

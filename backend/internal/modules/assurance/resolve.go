@@ -274,7 +274,9 @@ func requireSeparable(ctx context.Context, tx pgx.Tx, exceptionID ids.UUID, outc
 		return nil
 	}
 	var findingType string
-	if err := tx.QueryRow(ctx, `SELECT type FROM assurance_exception WHERE id = $1`, exceptionID).Scan(&findingType); err != nil {
+	var partner *ids.UUID
+	if err := tx.QueryRow(ctx, `SELECT type, (observed ->> $2)::uuid FROM assurance_exception WHERE id = $1`,
+		exceptionID, SlotOtherDealID).Scan(&findingType, &partner); err != nil {
 		return fmt.Errorf("assurance: reading the finding's type: %w", err)
 	}
 	if findingType != TypeDuplicateMotion {
@@ -283,7 +285,13 @@ func requireSeparable(ctx context.Context, tx pgx.Tx, exceptionID ids.UUID, outc
 			Message: "separate answers only a finding about two deals that may be one buying motion",
 		}
 	}
-	return nil
+	// The answer silences the pair for good, so it needs the same authority
+	// over the second deal as the subject. A deal out of the caller's scope
+	// answers not found, so nothing leaks.
+	if partner == nil {
+		return apperrors.ErrNotFound
+	}
+	return auth.EnsureWritable(ctx, tx, subjectKindDeal, *partner)
 }
 
 // ensureCallAnswerable admits the call's own author: an answer about a call

@@ -311,7 +311,11 @@ export function DuplicateCheckSheet({
       : undefined;
   const subject = useDeal(check.subject_id, open);
   const other = useDeal(otherId, open);
-  const mayAnswer = check.destination?.mode !== "read";
+  // "Separate" silences the pair, so it needs both deals writable.
+  const mayAnswer =
+    check.destination?.mode !== "read" &&
+    subject.data?.writable === true &&
+    other.data?.writable === true;
   const ends: [Deal, Deal] | undefined =
     subject.data && other.data
       ? keepOther

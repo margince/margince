@@ -201,7 +201,7 @@ func (s *Scanner) Scan(ctx context.Context, now time.Time) (Result, error) {
 			err = s.askCalls(ctx, tx, now, &pass)
 		}
 		if err == nil {
-			err = s.askPairs(ctx, tx, now, &pass)
+			err = s.askPairs(ctx, tx, now, nil, &pass)
 		}
 		if err != nil {
 			out.Status = StatusIncomplete

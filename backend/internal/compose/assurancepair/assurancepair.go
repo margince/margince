@@ -26,7 +26,11 @@ import (
 
 // assurancePairSubjectsSQL finds the pairs. Evidence counts only when it is
 // live and judged to belong to both deals.
-func assurancePairSubjectsSQL() string {
+func assurancePairSubjectsSQL(narrowed bool) string {
+	only := ""
+	if narrowed {
+		only = " AND (a.id = ANY($1) OR b.id = ANY($1))"
+	}
 	return `
 	SELECT a.id, b.id, a.owner_id, a.amount_minor, a.currency,
 	       a.pipeline_id, b.pipeline_id, a.expected_close_date, b.expected_close_date,
@@ -50,7 +54,7 @@ func assurancePairSubjectsSQL() string {
 	 WHERE a.company_id IS NOT NULL
 	   AND a.archived_at IS NULL AND a.status = 'open' AND ` + deals.StandingSQL("a") + `
 	   AND b.archived_at IS NULL AND b.status = 'open' AND ` + deals.StandingSQL("b") + `
-	   AND shared.activities + stakeholders.contacts > 0
+	   AND shared.activities + stakeholders.contacts > 0` + only + `
 	 ORDER BY a.id, b.id`
 }
 
@@ -61,8 +65,12 @@ func assurancePairSubjectsSQL() string {
 //
 // Only mail and meetings every member may read count, as in the deal read: the
 // finding reaches readers who could not open a restricted message.
-func Subjects(ctx context.Context, tx pgx.Tx, _ time.Time) ([]assurance.PairSubject, error) {
-	rows, err := tx.Query(ctx, assurancePairSubjectsSQL())
+func Subjects(ctx context.Context, tx pgx.Tx, _ time.Time, only []ids.UUID) ([]assurance.PairSubject, error) {
+	var args []any
+	if only != nil {
+		args = append(args, only)
+	}
+	rows, err := tx.Query(ctx, assurancePairSubjectsSQL(only != nil), args...)
 	if err != nil {
 		return nil, fmt.Errorf("compose: reading the deal pairs to check: %w", err)
 	}

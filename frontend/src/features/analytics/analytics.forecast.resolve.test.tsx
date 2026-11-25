@@ -550,6 +550,9 @@ describe("a finding about two deals that may be one buying motion", () => {
     expect(
       within(sheet).queryByRole("button", { name: "Merge deal" }),
     ).not.toBeInTheDocument();
+    expect(
+      within(sheet).queryByRole("button", { name: "These are separate" }),
+    ).not.toBeInTheDocument();
   });
 
   it("names no second deal and offers no merge when the reader may not see it", async () => {
@@ -561,8 +564,8 @@ describe("a finding about two deals that may be one buying motion", () => {
       within(sheet).queryByRole("button", { name: "Merge deal" }),
     ).not.toBeInTheDocument();
     expect(
-      within(sheet).getByRole("button", { name: "These are separate" }),
-    ).toBeInTheDocument();
+      within(sheet).queryByRole("button", { name: "These are separate" }),
+    ).not.toBeInTheDocument();
   });
 
   it("is the only finding that offers either", async () => {

@@ -305,3 +305,81 @@ func TestAReaderWithoutTheOtherDealIsNotNamedIt(t *testing.T) {
 		t.Fatal("a reader with no access to deals was handed the second deal's id")
 	}
 }
+
+// rescan is the pass over one changed deal, which the freshness marker queues.
+func (e *pairEnv) rescan(t *testing.T, deal ids.UUID) {
+	t.Helper()
+	execSeed(t, integration.OwnerConn(t), `INSERT INTO assurance_input_change (subject_kind, subject_id, generation)
+		VALUES ('deal', $1, 1) ON CONFLICT (subject_kind, subject_id) DO UPDATE SET generation = assurance_input_change.generation + 1`, deal)
+	store := assurance.NewStore(compose.InstallationDB(e.Pool))
+	ctx := principal.SystemActing(principal.WithWorkspaceID(context.Background(), e.WS), "system:assurance")
+	if _, err := compose.AssuranceScanner(e.Pool, store).ScanDeal(ctx, clocktest.Now(t), deal); err != nil {
+		t.Fatalf("the pass over one deal: %v", err)
+	}
+}
+
+// A pass over one changed deal reconciles every pair that includes it.
+func TestAPassOverOneDealReconcilesItsPairs(t *testing.T) {
+	e := setupPair(t)
+	owner := integration.OwnerConn(t)
+	e.rescan(t, e.earlier)
+	if _, status, found := e.pairFinding(t); !found || status != "open" {
+		t.Fatalf("a new matching pair: found=%v status=%q, want it raised on its own pass", found, status)
+	}
+	e.setClose(t, e.earlier, 200)
+	e.rescan(t, e.earlier)
+	if _, status, _ := e.pairFinding(t); status != assurance.ExceptionConditionCleared {
+		t.Fatalf("status = %q after the earlier deal's date left the window, want condition_cleared", status)
+	}
+	e.setClose(t, e.earlier, 40)
+	e.rescan(t, e.later)
+	if _, status, _ := e.pairFinding(t); status != "open" {
+		t.Fatalf("status = %q after the date came back, want open", status)
+	}
+	other := integration.SeedIDRow(t, owner, `INSERT INTO pipeline (id, name) VALUES ($1, 'Other')`)
+	stage := integration.SeedIDRow(t, owner, `INSERT INTO stage (id, pipeline_id, name, "position") VALUES ($1, $2, 'Open', 0)`, other)
+	execSeed(t, owner, `UPDATE deal SET pipeline_id = $2, stage_id = $3 WHERE id = $1`, e.earlier, other, stage)
+	e.rescan(t, e.earlier)
+	if _, status, _ := e.pairFinding(t); status != assurance.ExceptionConditionCleared {
+		t.Fatalf("status = %q after the deal changed pipeline, want condition_cleared", status)
+	}
+}
+
+// Answering separate needs write authority over both deals. A reader who may
+// not write the second deal is neither offered the answer nor allowed it.
+func TestSeparateNeedsAuthorityOverBothDeals(t *testing.T) {
+	e := setupPair(t)
+	e.run(t)
+	execSeed(t, integration.OwnerConn(t), `UPDATE deal SET owner_id = $2 WHERE id = $1`, e.earlier, e.AdminUser)
+	reader := e.As(e.Rep1, nil, principal.Permissions{
+		RoleKeys: []string{"rep"}, RowScope: principal.RowScopeOwn,
+		Objects: map[string]principal.ObjectGrant{
+			"forecast": {Read: true, Update: true}, "deal": {Read: true, Update: true},
+		},
+	})
+	id, _, _ := e.pairFinding(t)
+	err := assurance.NewStore(compose.InstallationDB(e.Pool)).Resolve(reader, id,
+		assurance.Resolution{Outcome: assurance.OutcomeSeparate}, clocktest.Now(t))
+	if err == nil {
+		t.Fatal("a reader who may write only the later deal answered the pair separate")
+	}
+	if _, status, _ := e.pairFinding(t); status != "open" {
+		t.Fatalf("status = %q after the refused answer, want open", status)
+	}
+	var answerable map[ids.UUID]bool
+	if err := database.WithWorkspaceTx(reader, e.Pool, func(tx pgx.Tx) error {
+		var found assurance.Exception
+		if err := tx.QueryRow(reader, `SELECT id, type, subject_kind, subject_id, observed FROM assurance_exception WHERE type = $1`,
+			assurance.TypeDuplicateMotion).Scan(&found.ID, &found.Type, &found.SubjectKind, &found.SubjectID, &found.Observed); err != nil {
+			return err
+		}
+		var aerr error
+		answerable, aerr = assurance.AnswerableFindings(reader, tx, []assurance.Exception{found})
+		return aerr
+	}); err != nil {
+		t.Fatal(err)
+	}
+	if answerable[id] {
+		t.Fatal("the pair finding is offered as answerable to a reader who may not write its second deal")
+	}
+}
