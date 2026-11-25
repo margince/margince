@@ -1,10 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { type ReactNode, useCallback, useId, useState } from "react";
 import type { components } from "../../api/schema";
-import {
-  type ActivityGate,
-  useActivityGate,
-} from "../../components/activitygate";
+import { useActivityGate } from "../../components/activitygate";
 import { MergedIntoSentence } from "../../components/historymergedref";
 import {
   LatestInboundLine,
@@ -47,7 +44,6 @@ import { ContactSubtitle } from "./contactsubtitle";
 import { ContactLatestInbound } from "./contacttabs";
 import "./contact360.css";
 import { RecordGone } from "../../components/recordgone";
-import { ViewOnly } from "../../components/viewonly";
 import { useHiddenCoreFeatures } from "../../lib/corefeatures";
 import { isGone } from "../../lib/problem";
 import { useViewerZone } from "../../lib/viewerzone";
@@ -62,7 +58,7 @@ import {
   runContactMomentAction,
   useComposer,
 } from "./contactpage.drawers";
-import { ContactMarks } from "./contactpage.marks";
+import { ContactPulse, placeLogRefusal } from "./contactpage.marks";
 import {
   ContactRecordTabs,
   ContactTabPanel,
@@ -75,60 +71,6 @@ export type Contact360 = components["schemas"]["Contact360"];
 type Contact = components["schemas"]["Contact"];
 
 export type ContactMomentAction = components["schemas"]["ContactMomentAction"];
-
-// Why logging is refused, under the id the Log verb points at. On a view-only
-// contact the head's pill already says it, so the sentence is only described.
-function activityRefusal(
-  activity: ActivityGate,
-  t: ReturnType<typeof useT>,
-  hidden: boolean,
-): ReactNode {
-  if (activity.refusedId === undefined) {
-    return undefined;
-  }
-  return (
-    <span id={activity.sentenceId} className={hidden ? "sr-only" : undefined}>
-      {t(activity.refusalKey ?? "record.logActivityRefused")}
-    </span>
-  );
-}
-
-// Where the Log refusal sits. Beside the View only pill it is hidden, since the
-// pill says it. On the reader's own contact it sits under the left card.
-function placeLogRefusal(
-  activity: ActivityGate,
-  t: ReturnType<typeof useT>,
-  readOnlyReason: string | undefined,
-): Readonly<{ head?: ReactNode; footnote?: ReactNode }> {
-  return readOnlyReason === undefined
-    ? { footnote: activityRefusal(activity, t, false) }
-    : { head: activityRefusal(activity, t, true) };
-}
-
-// The head's pills, then View only with the sentences its refused verbs
-// point at.
-function ContactPulse({
-  view,
-  reasonId,
-  activityRefused,
-}: Readonly<{
-  view: Contact360;
-  reasonId: string;
-  activityRefused: ReactNode;
-}>) {
-  return (
-    <>
-      <ContactMarks view={view} />
-      <ViewOnly
-        kind="contact"
-        record={view.contact}
-        name={view.contact.full_name}
-        reasonId={reasonId}
-      />
-      {activityRefused}
-    </>
-  );
-}
 
 // An archived contact that was merged says where it went, after its reason.
 function mergedInto(row: Contact | undefined): ReactNode {
