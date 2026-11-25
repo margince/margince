@@ -61,9 +61,7 @@ const (
 	// case, which drives the unexported mail worker over two team links.
 	// Raised by 7 production and 106 test lines for the route answer that keeps
 	// its field errors, and the route cases that read the unexported verb shapes.
-	// Raised by 2 production lines for the imports that register the offer net
-	// data task, which lives in its own subpackage.
-	composeRootProductionLines = 230_706
+	composeRootProductionLines = 230_704
 	composeRootTestLines       = 360_234
 )
 

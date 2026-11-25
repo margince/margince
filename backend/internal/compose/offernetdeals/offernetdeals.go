@@ -15,16 +15,17 @@ import (
 	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/modules/notices"
 	"github.com/margince/margince/backend/internal/platform/auth"
+	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/datatask"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/systemtext"
-	"github.com/margince/margince/backend/internal/shared/kernel/textlang"
 	"github.com/margince/margince/backend/internal/shared/kernel/values"
 )
 
 // DataTask re-prices the deals that took the gross of an accepted offer to its
 // net, and tells each deal's owner in the same transaction.
-func DataTask(store *deals.Store, noticeStore *notices.Store) datatask.Task {
+func DataTask(db *database.DB, installation deals.Installation, noticeStore *notices.Store) datatask.Task {
+	store := deals.NewStore(db, installation)
 	return datatask.Task{
 		ID: "core/1795589912_offer_net_deal_values", Version: 1,
 		Title: systemtext.Literal("datatask.title.core.1795589912_offer_net_deal_values"),
@@ -76,11 +77,7 @@ func tellOwnerOfNetValue(ctx context.Context, tx pgx.Tx, store *notices.Store, c
 		Subject: systemtext.Sentence("notice.deal_net_value.subject"),
 		Body:    systemtext.Sentence("notice.deal_net_value.body", systemtext.Text(c.Name), systemtext.Text(was), systemtext.Text(now)),
 	}
-	subject, err := message.Subject.Render(textlang.English)
-	if err != nil {
-		return err
-	}
-	body, err := message.Body.Render(textlang.English)
+	subject, body, err := message.EnglishWords()
 	if err != nil {
 		return err
 	}

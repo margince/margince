@@ -13,6 +13,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/compose"
 	"github.com/margince/margince/backend/internal/compose/integration"
 	"github.com/margince/margince/backend/internal/compose/offernetdeals"
 	"github.com/margince/margince/backend/internal/modules/deals"
@@ -89,12 +90,12 @@ func TestTheOfferNetTaskCorrectsAGrossPricedDealAndTellsItsOwnerOnce(t *testing.
 	if fx.net == fx.gross {
 		t.Fatal("the fixture offer carries no tax")
 	}
-	if n, _, err := offernetdeals.DataTask(e.Deals, notices.NewStore(e.DB())).Steps[0].Estimate(ctx, e.Pool, 10); err != nil || n != 1 {
+	if n, _, err := offernetdeals.DataTask(e.DB(), compose.DealsInstallation(), notices.NewStore(e.DB())).Steps[0].Estimate(ctx, e.Pool, 10); err != nil || n != 1 {
 		t.Fatalf("estimate = %d, %v; want the one gross-priced deal", n, err)
 	}
 
-	e.RunDataTask(ctx, t, offernetdeals.DataTask(e.Deals, notices.NewStore(e.DB())))
-	e.RunDataTask(ctx, t, offernetdeals.DataTask(e.Deals, notices.NewStore(e.DB())))
+	e.RunDataTask(ctx, t, offernetdeals.DataTask(e.DB(), compose.DealsInstallation(), notices.NewStore(e.DB())))
+	e.RunDataTask(ctx, t, offernetdeals.DataTask(e.DB(), compose.DealsInstallation(), notices.NewStore(e.DB())))
 
 	if got := storedDealAmount(t, e, fx.deal); got != fx.net {
 		t.Fatalf("deal amount = %d, want the offer's net %d", got, fx.net)
@@ -126,7 +127,7 @@ func TestTheOfferNetTaskLeavesAloneWhatIsNotAGrossFromAnAccept(t *testing.T) {
 	lines := seedGrossPricedDeal(t, e, pipeline, open, "Lines", "19.00", true)
 	e.WsExec(t, `UPDATE deal SET commercial_mode = 'lines' WHERE id = $1`, lines.deal)
 
-	e.RunDataTask(ctx, t, offernetdeals.DataTask(e.Deals, notices.NewStore(e.DB())))
+	e.RunDataTask(ctx, t, offernetdeals.DataTask(e.DB(), compose.DealsInstallation(), notices.NewStore(e.DB())))
 
 	for name, c := range map[string]struct {
 		deal ids.UUID
@@ -149,7 +150,7 @@ func TestTheOfferNetTaskRollsBackItsNoticeWithItsDomainWrite(t *testing.T) {
 	ctx := principal.SystemActing(e.Admin(), "system:datatask-test")
 	pipeline, open, _ := integration.DealFixture(t, e)
 	fx := seedGrossPricedDeal(t, e, pipeline, open, "Rolled back", "19.00", true)
-	task := offernetdeals.DataTask(e.Deals, notices.NewStore(e.DB()))
+	task := offernetdeals.DataTask(e.DB(), compose.DealsInstallation(), notices.NewStore(e.DB()))
 	original := task.Steps[0].Batch
 	task.Steps[0].Batch = func(ctx context.Context, tx pgx.Tx, in datatask.BatchIn) (datatask.BatchOut, error) {
 		out, err := original(ctx, tx, in)

@@ -40,12 +40,10 @@ import (
 	"github.com/margince/margince/backend/internal/modules/ai"
 	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/modules/contacts"
-	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/modules/notices"
 	"github.com/margince/margince/backend/internal/platform/datatask"
 	"github.com/margince/margince/backend/internal/shared/kernel/systemtext"
-	"github.com/margince/margince/backend/internal/shared/kernel/textlang"
 )
 
 const introductionValidationMigration = "core/1792842046"
@@ -83,16 +81,7 @@ func dataTaskFailureNotice(pool *pgxpool.Pool) func(context.Context, pgx.Tx, dat
 // dataTaskFailureWords names the correction that stopped and why, so an
 // operator knows which of several dozen tasks to look at before opening any.
 func dataTaskFailureWords(p datatask.Progress) (subject, body string, err error) {
-	message := dataTaskFailureMessage(p)
-	subject, err = message.Subject.Render(textlang.English)
-	if err != nil {
-		return "", "", err
-	}
-	body, err = message.Body.Render(textlang.English)
-	if err != nil {
-		return "", "", err
-	}
-	return subject, body, nil
+	return dataTaskFailureMessage(p).EnglishWords()
 }
 
 func dataTaskFailureMessage(p datatask.Progress) *systemtext.Message {
@@ -150,7 +139,7 @@ func dataTaskCatalog(pool *pgxpool.Pool, now func() time.Time) []datatask.Task {
 		keyedIdentifiersDataTask(),
 		stockLaddersDataTask(ai.NewRoutingStore(NewSettingsStore(pool), StoredConfig(pool)).AdoptStockTaskLaddersTx),
 		mailCopiesDataTask(pool),
-		answeredTasksDataTask(pool), offernetdeals.DataTask(deals.NewStore(InstallationDB(pool), DealsInstallation()), notices.NewStore(InstallationDB(pool))),
+		answeredTasksDataTask(pool), offernetdeals.DataTask(InstallationDB(pool), DealsInstallation(), notices.NewStore(InstallationDB(pool))),
 		halvedprobabilities.DataTask(halvedProbabilityStore(pool)),
 		falseMeetingCancelsDataTask(now),
 		provensenders.DataTask(),
