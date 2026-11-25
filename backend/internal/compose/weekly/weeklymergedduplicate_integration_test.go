@@ -16,8 +16,8 @@ import (
 )
 
 // Two won deals of one opportunity count as two wins until they are merged. The
-// review counts archived wins on purpose, so the merge must take the duplicate
-// out of the count and leave the survivor's.
+// review counts archived wins, so the merge must take the duplicate out of the
+// count and leave the survivor's.
 func TestTwoWonDuplicatesMergedCountAsOneWin(t *testing.T) {
 	e := setupWeekly(t)
 	company := e.SeedCompany(t, "Twin Wins GmbH", nil)

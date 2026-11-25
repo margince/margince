@@ -16,10 +16,10 @@ import (
 
 // MoveDealRefsTx moves the chat links of a merged-away deal onto its survivor.
 // A live link leaves the retired deal's project and takes the survivor's under
-// a new link's rule: the project joins when it has no channel of its own and
+// a new link's rule. The project joins when it has no channel of its own and
 // the caller may edit it. The old project leaves in the same statement as the
-// move, so a project both deals share is not mistaken for one that already has
-// a channel.
+// move. A project both deals share is then not mistaken for one that already
+// has a channel.
 func MoveDealRefsTx(ctx context.Context, tx pgx.Tx, from, to ids.UUID) ([]recordmerge.Moved, error) {
 	movedIDs, err := recordmerge.MovedIDs(ctx, tx,
 		`UPDATE chat_link SET deal_id = $2,

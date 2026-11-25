@@ -39,8 +39,8 @@ export function ArchivedDealBand({
   const entry = archives.data?.pages[0]?.data?.[0];
   // Offered only when the history says the archive can be put back. When it
   // says why not, the band says so instead of drawing a dead button.
-  // A merged-away deal is never restored: its offers and contracts now belong
-  // to the deal it merged into, so the band says where it went instead.
+  // A merged-away deal is never restored. Its offers and contracts now belong
+  // to the deal it merged into, so the band says where it went.
   const mergedInto = deal.merged_into_id ?? undefined;
   const undoable =
     !mergedInto && canRestore && entry?.undoable?.undoable === true;

@@ -14,9 +14,10 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
-// MoveDealRefsTx moves the stakeholder edges, the leads qualified into it and the SDR handoffs accepted into it of a merged-away deal onto its
-// survivor, in the merge's transaction. It audits each row it changes and
-// answers the ids it moved.
+// MoveDealRefsTx moves what contacts keeps about a merged-away deal onto its
+// survivor. That is the stakeholder edges, the leads qualified into the deal and
+// the SDR handoffs accepted into it. It runs in the merge's transaction and
+// audits each row it changes. It answers the ids it moved.
 func MoveDealRefsTx(ctx context.Context, tx pgx.Tx, from, to ids.UUID) ([]recordmerge.Moved, error) {
 	var moved []recordmerge.Moved
 	duplicates, err := recordmerge.MovedIDs(ctx, tx, `UPDATE relationship a SET archived_at = now()

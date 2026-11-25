@@ -14,11 +14,10 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
-// Screen answers, before any row lock is taken, the refusal Pair would give for
-// a source the caller cannot write or a target the caller cannot change. A
-// target that does not exist answers the same conflict as one out of the
-// caller's scope, so the merge is no way to probe which ids exist. Pair asks
-// again under the lock.
+// Screen answers the refusal Pair would give, before any row lock is taken. That
+// is a source the caller cannot write or a target the caller cannot change.
+// A target that does not exist answers the same conflict as one out of scope.
+// The merge then cannot probe which ids exist. Pair asks again under the lock.
 func Screen(ctx context.Context, tx pgx.Tx, kind string, sourceID, targetID ids.UUID) error {
 	if err := auth.EnsureWritable(ctx, tx, kind, sourceID); err != nil {
 		return err

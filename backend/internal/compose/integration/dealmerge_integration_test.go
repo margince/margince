@@ -286,8 +286,8 @@ func TestAMergedAwayDealLeavesTheStageEntriesTheReportsCount(t *testing.T) {
 	}
 }
 
-// A target that does not exist and a target out of the caller's scope answer
-// the same conflict, so a merge cannot be used to ask which ids exist.
+// A target that does not exist answers the same conflict as one out of the
+// caller's scope. A merge then cannot be used to ask which ids exist.
 func TestAMergeIntoAMissingTargetAnswersLikeOneOutOfScope(t *testing.T) {
 	e := Setup(t)
 	_, source, target := twoDealsOnOneCompany(t, e)
@@ -309,8 +309,8 @@ func TestAMergeIntoAMissingTargetAnswersLikeOneOutOfScope(t *testing.T) {
 }
 
 // Each owning module moves its own rows through its seam. For every table the
-// case seeds a row on the duplicate, merges, and asserts nothing names the
-// duplicate, the survivor holds the row, and the owner audited the move.
+// case seeds a row on the duplicate and merges. It then asserts that nothing
+// names the duplicate, the survivor holds the row and the owner audited it.
 func TestEachOwnersSeamMovesItsRowsAndAuditsThem(t *testing.T) {
 	e := Setup(t)
 	company, source, target := twoDealsOnOneCompany(t, e)

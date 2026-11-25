@@ -5,9 +5,8 @@
 
 package gates
 
-// Anything in the compose tier that returns a record is a read, so a query that
-// hands back a reference to a row-scoped record applies that record's row
-// scope.
+// Anything in the compose tier that returns a record is a read. A query handing
+// back a reference to a row-scoped record applies that record's row scope.
 //
 // The class this closes is the reference held across time. A read model, a link
 // row and a graph edge all store somebody else's record id, and the scope was

@@ -470,9 +470,9 @@ func changedFields(p *storekit.Patch) []string {
 // handing out more of it after the deal was retired is what retiring the deal
 // meant to stop.
 //
-// It holds the deal row, before the room's own write takes the room's. The deal
-// merge locks the deal first and then moves the room, so every room write that
-// adds access takes the two in the same order.
+// It holds the deal row before the room's own write takes the room's. The deal
+// merge locks the deal first and then moves the room. Every room write that
+// adds access takes the two in that order.
 func ensureDealWritable(ctx context.Context, tx pgx.Tx, room crmcontracts.DealRoom) error {
 	return auth.HoldWritableLive(ctx, tx, dealTable, ids.UUID(room.DealId))
 }
