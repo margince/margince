@@ -11,7 +11,6 @@ package migrations
 
 import (
 	"io/fs"
-	"regexp"
 	"strings"
 	"testing"
 )
@@ -27,13 +26,6 @@ var concurrentIndexBaseline = map[string]string{
 	"core":   "1795632000",
 	"custom": "20261125190000",
 }
-
-// indexBuild captures one CREATE INDEX: group 1 is CONCURRENTLY when present, group 2
-// the table. Postgres allows the index name to be left out, and `ON ONLY` names the
-// same table.
-var indexBuild = regexp.MustCompile(
-	`(?is)\bCREATE\s+(?:UNIQUE\s+)?INDEX\s+(CONCURRENTLY\s+)?(?:IF\s+NOT\s+EXISTS\s+)?(?:[\w".]+\s+)??ON\s+(?:ONLY\s+)?([\w".]+)`,
-)
 
 func TestAnIndexOnAPreExistingTableIsBuiltConcurrently(t *testing.T) {
 	entries, err := fs.ReadDir(files, ".")
@@ -64,7 +56,7 @@ func checkConcurrentIndexBuilds(t *testing.T, namespace, baseline string, dir fs
 	t.Helper()
 	var examined, skipped int
 	err := fs.WalkDir(dir, ".", func(path string, entry fs.DirEntry, err error) error {
-		if err != nil || entry.IsDir() || !strings.HasSuffix(path, ".up.sql") {
+		if err != nil || entry.IsDir() || !strings.HasSuffix(path, ".sql") {
 			return err
 		}
 		if version(path) < baseline {
@@ -90,7 +82,7 @@ func checkConcurrentIndexBuilds(t *testing.T, namespace, baseline string, dir fs
 		t.Fatalf("reading the migration files: %v", err)
 	}
 	if examined == 0 && skipped == 0 {
-		t.Errorf("%s: no up migration at all, so this gate read nothing and passed", namespace)
+		t.Errorf("%s: no migration at all, so this gate read nothing and passed", namespace)
 	}
 	t.Logf("%s: examined %d file(s), %d below the %s pin", namespace, examined, skipped, baseline)
 }
@@ -102,10 +94,10 @@ func plainIndexBuilds(sql string) []string {
 	own := tablesCreatedIn(statements)
 	var found []string
 	for _, m := range indexBuild.FindAllStringSubmatchIndex(statements, -1) {
-		if m[2] >= 0 {
+		if buildsConcurrently.MatchString(statements[m[0]:m[1]]) {
 			continue
 		}
-		table := strings.ToLower(strings.Trim(statements[m[4]:m[5]], `"`))
+		table := strings.ToLower(strings.Trim(statements[m[2]:m[3]], `"`))
 		if at, isOwn := own[table]; isOwn && at < m[0] {
 			continue
 		}
@@ -136,6 +128,9 @@ func TestTheConcurrentIndexGateReportsWhatItClaimsTo(t *testing.T) {
 		{"a build that is only in a comment", "-- CREATE INDEX i ON activity (owner_id);\nSELECT 1;", 0},
 		{"a build that is only a string", `SELECT 'CREATE INDEX i ON activity (owner_id)';`, 0},
 		{"two plain builds", `CREATE INDEX a ON activity (x); CREATE INDEX b ON deal (y);`, 2},
+		{"a block comment between the words", `CREATE /* why */ UNIQUE INDEX i ON activity (slug);`, 1},
+		{"a nested block comment hides a build", "/* outer /* inner */ CREATE INDEX i ON activity (x); */ SELECT 1;", 0},
+		{"a block comment before CONCURRENTLY", `CREATE INDEX /* see docs */ CONCURRENTLY i ON activity (x);`, 0},
 	} {
 		t.Run(c.name, func(t *testing.T) {
 			if found := plainIndexBuilds(c.sql); len(found) != c.finds {
