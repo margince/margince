@@ -60,7 +60,7 @@ The operation leaves the contract only under the removal rules above.
 
 A deprecated operation that does not declare `Retired` stays callable. The test
 `TestEveryRetiredOperationAnswersItsDeclaredRefusal` in
-[retiredroutes_test.go](../../backend/internal/compose/retiredroutes_test.go)
+[retiredroutes_test.go](../../backend/internal/compose/retiredroutes/retiredroutes_test.go)
 reads the deprecated operations from the contract. It sends each retired one
 through the route table and expects the `410`. It fails when a handler answers
 `endpoint_retired` for an operation the contract does not declare retired.
