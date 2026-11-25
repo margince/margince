@@ -106,7 +106,6 @@ const ALIASES: Partial<Record<SettingsPageId, readonly string[]>> = {
     "installation",
     "workspace",
     "currency",
-    "fx",
     "timezone",
     "fiscal year",
   ],

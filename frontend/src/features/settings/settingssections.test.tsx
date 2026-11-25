@@ -3,7 +3,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { composeStories } from "@storybook/react-vite";
-import { render, screen, waitFor } from "@testing-library/react";
+import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it } from "vitest";
 import { stable } from "../../format/collate";
@@ -23,6 +23,7 @@ import { catalogContext } from "./settingsnav";
 import { COMPANY_CONTEXT_OFF, EVERY_GRANT } from "./settingspages.fixtures";
 import {
   COMPANY_CONTEXT_SECTIONS,
+  SETTINGS_COLUMNS,
   settingsSectionKeys,
 } from "./settingssections";
 import { settingsTabLabel } from "./settingstabs";
@@ -66,6 +67,15 @@ const DRAWN_NOT_OFFERED: Readonly<Record<string, readonly NotOffered[]>> = {
     { key: "settings.auditTo", why: "record-filter" },
   ],
 };
+
+// The story that draws each tab's settings table with rows in it.
+const COLUMN_STORIES = [
+  {
+    page: "deals",
+    tab: "pipelines",
+    Story: composeStories(stories).PipelinesAdmin,
+  },
+] as const;
 
 const pageStories = Object.values(composeStories(stories)).filter(
   (story) => story.parameters.settingsPage !== undefined,
@@ -153,14 +163,16 @@ function tabsOf(page: SettingsPageId): readonly (string | undefined)[] {
 }
 
 // The names search offers for one tab, less the tab's own name: the strip
-// draws that, not a panel.
+// draws that, not a panel. Less its column settings too: a page story answers
+// every list empty, so the table that heads them is not drawn there.
 function drawnSections(page: SettingsPageId, tab: string | undefined) {
   const keys = settingsSectionKeys(
     page,
     (each) => tab === undefined || each === tab,
   );
+  const columns = SETTINGS_COLUMNS[page]?.[tab ?? ""] ?? [];
   return [
-    ...keys.filter((key) => !TAB_NAMES.has(key)),
+    ...keys.filter((key) => !TAB_NAMES.has(key) && !columns.includes(key)),
     ...(page === "company" && (tab === undefined || tab === "profile")
       ? COMPANY_CONTEXT_SECTIONS
       : []),
@@ -239,6 +251,26 @@ describe("each settings page's sections are the names it draws", () => {
       }
     },
   );
+
+  it("draws every column setting search offers as a column head", async () => {
+    const offered = Object.entries(SETTINGS_COLUMNS).flatMap(([page, tabs]) =>
+      Object.keys(tabs).map((tab) => `${page}/${tab}`),
+    );
+    expect(COLUMN_STORIES.map(({ page, tab }) => `${page}/${tab}`)).toEqual(
+      offered,
+    );
+    for (const { page, tab, Story } of COLUMN_STORIES) {
+      const view = render(<Story />);
+      for (const key of SETTINGS_COLUMNS[page]?.[tab] ?? []) {
+        expect(
+          await within(view.container).findByRole("columnheader", {
+            name: t(key),
+          }),
+        ).toBeTruthy();
+      }
+      view.unmount();
+    }
+  });
 
   it("opens Company profile on its next tab while the rollout hides the card", async () => {
     const seesCompanyContext = companyContextShown(true, COMPANY_CONTEXT_OFF);
