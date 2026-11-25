@@ -20,9 +20,9 @@ func mergeLines(line writeLine) {
 		"Bestätige, dass zwei Margince-Konten zusammengeführt werden dürfen",
 		"Xác nhận gộp hai tài khoản Margince")
 	line(func(c *Copy) *string { return &c.MergeIntro },
-		"An administrator asked to merge two Margince accounts that belong to the same person. The private mail and activity of the account that goes away move to the account that stays. Confirm only if both accounts are yours. The link is valid for three days and works once.",
-		"Ein Administrator möchte zwei Margince-Konten zusammenführen, die zur selben Person gehören. Private E-Mails und Aktivitäten des Kontos, das entfällt, wandern in das Konto, das bleibt. Bestätige nur, wenn beide Konten dir gehören. Der Link ist drei Tage gültig und funktioniert einmal.",
-		"Quản trị viên đề nghị gộp hai tài khoản Margince của cùng một người. Thư và hoạt động riêng của tài khoản bị bỏ sẽ chuyển sang tài khoản được giữ lại. Chỉ xác nhận nếu cả hai tài khoản đều của bạn. Liên kết có hiệu lực trong ba ngày và chỉ dùng được một lần.")
+		"An administrator asked to merge two Margince accounts that both belong to you. The private mail and activity of the account that goes away move to the account that stays. Confirm only if both accounts are yours. The link is valid for three days and works once.",
+		"Ein Administrator möchte zwei Margince-Konten zusammenführen, die beide dir gehören. Private E-Mails und Aktivitäten des Kontos, das entfällt, wandern in das Konto, das bleibt. Bestätige nur, wenn beide Konten dir gehören. Der Link ist drei Tage gültig und funktioniert einmal.",
+		"Quản trị viên đề nghị gộp hai tài khoản Margince đều của bạn. Thư và hoạt động riêng của tài khoản bị bỏ sẽ chuyển sang tài khoản được giữ lại. Chỉ xác nhận nếu cả hai tài khoản đều của bạn. Liên kết có hiệu lực trong ba ngày và chỉ dùng được một lần.")
 	line(func(c *Copy) *string { return &c.MergeAction },
 		"Confirm the merge",
 		"Zusammenführung bestätigen",

@@ -57,7 +57,7 @@ func (h Handlers) RequestMemberMerge(w http.ResponseWriter, r *http.Request, id 
 		return
 	}
 	for _, link := range links {
-		h.sendMergeConfirmation(r, link.RawToken)
+		h.sendMergeConfirmation(r, actor, link.RawToken)
 	}
 	preview, err := h.svc.PreviewMemberRetirement(r.Context(), actor, source, &target, true)
 	if err != nil {
@@ -82,16 +82,15 @@ func (h Handlers) mergeRequestBudget(actor Identity, source ids.UserID, target i
 }
 
 // sendMergeConfirmation mails one confirmation link from a goroutine, as an
-// invitation is mailed and for the same reason: a job table would store the raw
-// token. The address is read again just before sending, so a link withdrawn
+// invitation is mailed. A job table would store the raw token. The address is read again just before sending, so a link withdrawn
 // since is never mailed.
-func (h Handlers) sendMergeConfirmation(r *http.Request, rawToken string) {
+func (h Handlers) sendMergeConfirmation(r *http.Request, actor Identity, rawToken string) {
 	httpserver.DetachedSend{
 		What:   "merge confirmation send",
 		Budget: h.inviteSendBudget(),
 		Done:   h.resetSendStarted,
 		Send: func(ctx context.Context) (bool, error) {
-			current, live, err := h.svc.MergeConfirmationRecipient(ctx, rawToken)
+			current, live, err := h.svc.MergeConfirmationRecipient(ctx, actor, rawToken)
 			if err != nil {
 				slog.Error("reading a merge confirmation before mailing it failed", "err", err)
 				return true, err
@@ -109,7 +108,7 @@ func (h Handlers) sendMergeConfirmation(r *http.Request, rawToken string) {
 			return true, sendErr
 		},
 		Record: func(ctx context.Context, sendErr error) {
-			if err := h.svc.RecordMergeMailOutcome(ctx, rawToken, sendErr); err != nil {
+			if err := h.svc.RecordMergeMailOutcome(ctx, actor, rawToken, sendErr); err != nil {
 				slog.Error("recording a merge confirmation email outcome failed", "err", err)
 			}
 		},

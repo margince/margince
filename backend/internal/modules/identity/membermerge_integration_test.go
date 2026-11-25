@@ -8,8 +8,8 @@ package identity
 // A used account merges only after the holder of each side that can still sign
 // in has confirmed through a mailed link. These tests drive the preview,
 // request, confirmation and merge the endpoints call. The work that moves with
-// a merge belongs to other modules and is proven where they are; here it is an
-// empty answer, so each test is about who must confirm.
+// a merge belongs to other modules and is proven there. Here it is an empty
+// answer, so each test is about who must confirm.
 
 import (
 	"context"

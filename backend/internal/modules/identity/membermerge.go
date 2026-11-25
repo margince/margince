@@ -5,8 +5,8 @@ package identity
 
 // A used account merges only after the holder of each side that can still sign
 // in has confirmed. The confirmation is a single-use mailed token in auth_token
-// (purpose member_merge_confirm) that names the other account of the pair, so
-// it cannot be spent on any other merge. A deactivated side needs none: its
+// (purpose member_merge_confirm). It names the other account of the pair, so it
+// cannot be spent on any other merge. A deactivated side needs none: its
 // holder has left and cannot confirm.
 
 import (
@@ -23,6 +23,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 const (
@@ -52,11 +53,11 @@ type mergeToken struct {
 
 // mergeSideState decides what one side of a merge owes. Only a used source asks
 // for confirmation, and only of a side whose holder can still sign in.
-func mergeSideState(sourceUsed, deactivated bool, token mergeToken, found bool) string {
+func mergeSideState(sourceUsed bool, status string, token *mergeToken) string {
 	switch {
-	case !sourceUsed || deactivated:
+	case !sourceUsed || alreadyDeactivated(status):
 		return confirmationNotNeeded
-	case !found:
+	case token == nil:
 		return confirmationNotRequested
 	case token.Confirmed:
 		return confirmationConfirmed
@@ -72,19 +73,23 @@ func stillOpen(state string) bool {
 
 // readMergeToken reads the live token side holds for a merge with other,
 // preferring a confirmed one. Locked when the caller is about to rely on it.
-func readMergeToken(ctx context.Context, tx pgx.Tx, side, other ids.UUID, lock bool) (token mergeToken, found bool, err error) {
+func readMergeToken(ctx context.Context, tx pgx.Tx, side, other ids.UUID, lock bool) (*mergeToken, error) {
 	query := `SELECT id, used_at IS NOT NULL FROM auth_token
  WHERE user_id = @side AND counterpart_user_id = @other AND purpose = @purpose AND expires_at > now()
  ORDER BY (used_at IS NOT NULL) DESC, created_at DESC, id DESC LIMIT 1`
 	if lock {
 		query += " FOR UPDATE"
 	}
-	err = tx.QueryRow(ctx, query, pgx.StrictNamedArgs{"side": side, "other": other, "purpose": purposeMemberMergeConfirm}).
+	var token mergeToken
+	err := tx.QueryRow(ctx, query, pgx.StrictNamedArgs{"side": side, "other": other, "purpose": purposeMemberMergeConfirm}).
 		Scan(&token.ID, &token.Confirmed)
 	if errors.Is(err, pgx.ErrNoRows) {
-		return token, false, nil
+		return nil, nil
 	}
-	return token, err == nil, err
+	if err != nil {
+		return nil, err
+	}
+	return &token, nil
 }
 
 // applyMergeConfirmations adds each side's confirmation state to a merge
@@ -109,11 +114,11 @@ func applyMergeConfirmations(
 	confirmations := make([]crmcontracts.MemberMergeConfirmation, 0, len(sides))
 	open := false
 	for _, s := range sides {
-		token, found, err := readMergeToken(ctx, tx, s.id, s.of, lock)
+		token, err := readMergeToken(ctx, tx, s.id, s.of, lock)
 		if err != nil {
 			return err
 		}
-		state := mergeSideState(true, alreadyDeactivated(s.member.Status), token, found)
+		state := mergeSideState(true, s.member.Status, token)
 		open = open || stillOpen(state)
 		confirmations = append(confirmations, crmcontracts.MemberMergeConfirmation{
 			UserId: openapi_types.UUID(s.id), Side: s.side, DisplayName: s.member.Name,
@@ -157,7 +162,7 @@ type MergeConfirmationLink struct {
 
 // RequestMemberMerge mints a confirmation for each side of a merge whose holder
 // has yet to confirm, and answers the links for the caller to mail. It takes
-// the preview token the administrator reviewed and refuses a merge with any
+// the preview token the administrator reviewed. It refuses a merge with any
 // blocker besides the missing confirmations, so no link goes out for a merge
 // that could not run.
 func (s *Service) RequestMemberMerge(ctx context.Context, actor Identity, source ids.UserID, target ids.UUID, token string) ([]MergeConfirmationLink, error) {
@@ -265,9 +270,13 @@ func mintMergeConfirmation(ctx context.Context, tx pgx.Tx, side, other ids.UUID)
 // MergeConfirmationRecipient answers where the confirmation carrying rawToken
 // may still be mailed: the account's current address, while the link is open.
 // The detached send asks it just before mailing.
-func (s *Service) MergeConfirmationRecipient(ctx context.Context, rawToken string) (string, bool, error) {
+func (s *Service) MergeConfirmationRecipient(ctx context.Context, actor Identity, rawToken string) (string, bool, error) {
+	ctx, err := admit(ctx, actor, objectUserAdmin, principal.ActionDelete)
+	if err != nil {
+		return "", false, err
+	}
 	var email string
-	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
+	err = s.db.Tx(ctx, func(tx pgx.Tx) error {
 		return tx.QueryRow(ctx, `SELECT u.email FROM auth_token t JOIN app_user u ON u.id = t.user_id
  WHERE t.token_hash = @hash AND t.purpose = @purpose AND t.used_at IS NULL AND t.expires_at > now()
    AND `+ActivatableMemberSQL("u")+` AND NOT u.is_agent AND u.removed_at IS NULL`,
@@ -281,7 +290,11 @@ func (s *Service) MergeConfirmationRecipient(ctx context.Context, rawToken strin
 
 // RecordMergeMailOutcome stamps the relay's answer onto the link the mail
 // carried, as RecordInviteMailOutcome does for an invitation.
-func (s *Service) RecordMergeMailOutcome(ctx context.Context, rawToken string, sendErr error) error {
+func (s *Service) RecordMergeMailOutcome(ctx context.Context, actor Identity, rawToken string, sendErr error) error {
+	ctx, err := admit(ctx, actor, objectUserAdmin, principal.ActionDelete)
+	if err != nil {
+		return err
+	}
 	// A compile-time literal chosen by the branch, never a value off a request.
 	column := "mail_sent_at"
 	if sendErr != nil {

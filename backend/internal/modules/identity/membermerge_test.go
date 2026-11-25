@@ -25,11 +25,7 @@ func TestAMergeSideOwesAConfirmationOnlyWhileItsHolderCanSignIn(t *testing.T) {
 		{"an active side that confirmed", true, false, &confirmed, confirmationConfirmed},
 	}
 	for _, c := range cases {
-		var token mergeToken
-		if c.token != nil {
-			token = *c.token
-		}
-		if got := mergeSideState(c.sourceUsed, c.deactivated, token, c.token != nil); got != c.want {
+		if got := mergeSideState(c.sourceUsed, mergeStatusOf(c.deactivated), c.token); got != c.want {
 			t.Errorf("%s: state = %q, want %q", c.name, got, c.want)
 		}
 	}
@@ -50,8 +46,11 @@ func TestAMergeWaitsWhileAnySideIsOpen(t *testing.T) {
 		for _, survivor := range all {
 			open := false
 			for _, s := range []side{source, survivor} {
-				token := mergeToken{Confirmed: s.confirmed}
-				open = open || stillOpen(mergeSideState(true, s.deactivated, token, s.confirmed))
+				var token *mergeToken
+				if s.confirmed {
+					token = &mergeToken{Confirmed: true}
+				}
+				open = open || stillOpen(mergeSideState(true, mergeStatusOf(s.deactivated), token))
 			}
 			wantOpen := (!source.deactivated && !source.confirmed) || (!survivor.deactivated && !survivor.confirmed)
 			if open != wantOpen {
@@ -59,4 +58,11 @@ func TestAMergeWaitsWhileAnySideIsOpen(t *testing.T) {
 			}
 		}
 	}
+}
+
+func mergeStatusOf(deactivated bool) string {
+	if deactivated {
+		return userStatusDeactivated
+	}
+	return userStatusActive
 }
