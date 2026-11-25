@@ -17,6 +17,7 @@ package migrations_test
 import (
 	"context"
 	"errors"
+	"fmt"
 	"strings"
 	"testing"
 
@@ -52,17 +53,24 @@ func connect(t *testing.T, dsn string) *pgx.Conn {
 
 func migrateAll(t *testing.T, conn *pgx.Conn) {
 	t.Helper()
+	if err := migrateUp(context.Background(), conn); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func migrateUp(ctx context.Context, conn *pgx.Conn) error {
 	core, err := migrations.Core()
 	if err != nil {
-		t.Fatalf("loading core migrations: %v", err)
+		return fmt.Errorf("loading core migrations: %w", err)
 	}
 	custom, err := migrations.Custom()
 	if err != nil {
-		t.Fatalf("loading custom migrations: %v", err)
+		return fmt.Errorf("loading custom migrations: %w", err)
 	}
-	if _, err := dbmigrate.Up(context.Background(), conn, core, custom); err != nil {
-		t.Fatalf("migrate up: %v", err)
+	if _, err := dbmigrate.Up(ctx, conn, core, custom); err != nil {
+		return fmt.Errorf("migrate up: %w", err)
 	}
+	return nil
 }
 
 // resetSchema drops everything so each test run starts clean.
@@ -80,16 +88,22 @@ func migrateAll(t *testing.T, conn *pgx.Conn) {
 // in 0213_ext_schema.down.sql, where the data is real.
 func resetSchema(t *testing.T, conn *pgx.Conn) {
 	t.Helper()
-	ctx := context.Background()
+	if err := clearSchemas(context.Background(), conn); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func clearSchemas(ctx context.Context, conn *pgx.Conn) error {
 	if _, err := conn.Exec(ctx, `DROP SCHEMA IF EXISTS ext CASCADE`); err != nil {
-		t.Fatalf("resetting the ext schema: %v", err)
+		return fmt.Errorf("resetting the ext schema: %w", err)
 	}
 	if _, err := conn.Exec(ctx, `DROP SCHEMA public CASCADE; CREATE SCHEMA public;`); err != nil {
-		t.Fatalf("resetting schema: %v", err)
+		return fmt.Errorf("resetting schema: %w", err)
 	}
 	if _, err := conn.Exec(ctx, `GRANT USAGE ON SCHEMA public TO margince_app`); err != nil {
-		t.Fatalf("re-granting schema usage: %v", err)
+		return fmt.Errorf("re-granting schema usage: %w", err)
 	}
+	return nil
 }
 
 func TestMigrations_applyReverseReapply(t *testing.T) {

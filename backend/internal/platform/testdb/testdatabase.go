@@ -47,6 +47,11 @@ const (
 // truncates a longer name and would then act on a different database.
 const maxIdentifierBytes = 63
 
+// adminStatementCeiling bounds one CREATE or DROP DATABASE. Both wait for a
+// checkpoint, and under a full lane a checkpoint can outlast the product's
+// ceiling for one statement without anything being wrong.
+const adminStatementCeiling = 5 * time.Minute
+
 // copyAttempts bounds the retries while a lane migrates the template, which is
 // the only time a session is open on it.
 const copyAttempts = 5
@@ -120,24 +125,41 @@ func For(t testing.TB) Database {
 	return create(t, inPlaceRequested())
 }
 
-// Untouched answers a copy of the template that no test has written to, for a
-// caller that compares a database it changed against what the lane started
-// it from. For never answers this copy, and it is dropped when t ends.
-func Untouched(t testing.TB) Database {
-	t.Helper()
-	db, err := copyTemplate(t.Context(), os.Getenv(TemplateEnv))
-	if err != nil {
-		t.Fatalf("testdb: %v", err)
+func inPlaceRequested() bool { return os.Getenv(InPlaceEnv) == "1" }
+
+// derived names the template DeriveTemplate built for this process, if any.
+var derived atomic.Pointer[string]
+
+// processTemplate is the database every copy in this process starts from.
+func processTemplate() string {
+	if name := derived.Load(); name != nil {
+		return *name
 	}
-	t.Cleanup(func() {
-		if err := release(context.Background(), "", db); err != nil {
-			t.Errorf("testdb: %v", err)
-		}
-	})
-	return db
+	return os.Getenv(TemplateEnv)
 }
 
-func inPlaceRequested() bool { return os.Getenv(InPlaceEnv) == "1" }
+// DeriveTemplate copies the lane's template, runs build on the copy, and makes
+// that copy the template of every later copy in this process. It is for a
+// TestMain whose tests all start from one state the lane's template is not,
+// so the state is built once and not once per test. The caller drops the
+// derived template with the function it returns, after the tests ran.
+func DeriveTemplate(ctx context.Context, build func(context.Context, *pgx.Conn) error) (func() error, error) {
+	db, err := copyTemplate(ctx, os.Getenv(TemplateEnv))
+	if err != nil {
+		return nil, err
+	}
+	if err := withOwner(ctx, db, build); err != nil {
+		return nil, errors.Join(fmt.Errorf("building the derived template %s: %w", db.Name, err), release(ctx, "", db))
+	}
+	if err := awaitDisconnect(ctx, db.Name); err != nil {
+		return nil, errors.Join(err, release(ctx, "", db))
+	}
+	derived.Store(&db.Name)
+	return func() error {
+		derived.Store(nil)
+		return release(context.Background(), "", db)
+	}, nil
+}
 
 // create copies the template for t and drops the copy when t ends, after
 // every pool opened on it is closed.
@@ -146,7 +168,7 @@ func create(t testing.TB, inPlace bool) Database {
 	if inPlace {
 		return laneDatabase(t)
 	}
-	db, err := copyTemplate(t.Context(), os.Getenv(TemplateEnv))
+	db, err := copyTemplate(t.Context(), processTemplate())
 	if err != nil {
 		t.Fatalf("testdb: %v", err)
 	}
@@ -270,7 +292,10 @@ func adminPool(ctx context.Context, ownerDSN string) (*pgxpool.Pool, error) {
 			adminErr = err
 			return
 		}
-		admin, adminErr = OwnPoolWith(ctx, maintenance, func(cfg *pgxpool.Config) { cfg.MaxConns = 1 })
+		admin, adminErr = OwnPoolWith(ctx, maintenance, func(cfg *pgxpool.Config) {
+			cfg.MaxConns = 1
+			cfg.ConnConfig.RuntimeParams["statement_timeout"] = strconv.FormatInt(adminStatementCeiling.Milliseconds(), 10)
+		})
 	})
 	return admin, adminErr
 }
