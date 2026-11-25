@@ -44,8 +44,8 @@ func contactCreateFrom(fields map[string]string, typed map[string]any, sourceSys
 	in.SourceSystem = &sourceSystem
 	in.Author = authorFrom(fields)
 	in.OwnerID = ownerFrom(fields, typed)
-	in.FirstName = importString(fields, "first_name")
-	in.LastName = importString(fields, "last_name")
+	in.FirstName = importString(fields, fieldFirstName)
+	in.LastName = importString(fields, fieldLastName)
 	in.Title = importString(fields, fieldTitle)
 	in.Employer = contacts.EmployerChoice{CompanyName: importString(fields, csvEmployerName), Role: in.Title, Source: source}
 	in.Address = addressFrom(fields)
@@ -62,8 +62,8 @@ func contactCreateFrom(fields map[string]string, typed map[string]any, sourceSys
 func contactUpdateFrom(changed map[string]string, typed map[string]any) contacts.UpdateContactInput {
 	in := contacts.UpdateContactInput{
 		FullName:     importString(changed, fieldFullName),
-		FirstName:    importString(changed, "first_name"),
-		LastName:     importString(changed, "last_name"),
+		FirstName:    importString(changed, fieldFirstName),
+		LastName:     importString(changed, fieldLastName),
 		Title:        importString(changed, fieldTitle),
 		OwnerID:      ownerFrom(changed, typed),
 		Address:      addressFrom(changed),
@@ -85,7 +85,7 @@ func contactFullName(fields map[string]string) string {
 	if name := strings.TrimSpace(fields[fieldFullName]); name != "" {
 		return name
 	}
-	if joined := contacts.JoinNameParts(fields["first_name"], fields["last_name"]); joined != "" {
+	if joined := contacts.JoinNameParts(fields[fieldFirstName], fields[fieldLastName]); joined != "" {
 		return joined
 	}
 	return strings.TrimSpace(fields[fieldEmail])
@@ -111,7 +111,7 @@ func withoutDisagreeingFullName(fields map[string]string) map[string]string {
 // parts, so the row has to send this one. A part the row leaves out keeps its
 // stored value, so a row naming only the first name keeps the last.
 func withNamePartsOverStoredEmail(current map[string]json.RawMessage, fields map[string]string) map[string]string {
-	joined := contacts.JoinNameParts(namePart(current, fields, "first_name"), namePart(current, fields, "last_name"))
+	joined := contacts.JoinNameParts(namePart(current, fields, fieldFirstName), namePart(current, fields, fieldLastName))
 	stored := textOf(current[fieldFullName])
 	if joined == "" || stored == "" || !strings.EqualFold(stored, textOf(storedPrimaryEmail(current))) {
 		return fields
@@ -132,7 +132,7 @@ func namePart(current map[string]json.RawMessage, fields map[string]string, part
 
 // joinedNameParts is "first last" when the row states both parts, else "".
 func joinedNameParts(fields map[string]string) string {
-	first, last := fields["first_name"], fields["last_name"]
+	first, last := fields[fieldFirstName], fields[fieldLastName]
 	if strings.TrimSpace(first) == "" || strings.TrimSpace(last) == "" {
 		return ""
 	}

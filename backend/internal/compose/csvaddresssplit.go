@@ -36,7 +36,7 @@ func shapeCells(source *migration.CSVSource, object string, mapping map[string]s
 
 // importNameTargets are the cells that name a record, for every type a file
 // may hold. A line break or a run of spaces in one is a slip in the file.
-var importNameTargets = []string{fieldFullName, "first_name", "last_name", fieldDisplayName, fieldLegalName, dealTargetName}
+var importNameTargets = []string{fieldFullName, fieldFirstName, fieldLastName, fieldDisplayName, fieldLegalName, dealTargetName}
 
 // foldNameCells folds each run of white space in a name cell to one space.
 func foldNameCells(fields map[string]any) {
