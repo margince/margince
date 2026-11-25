@@ -827,7 +827,7 @@ A unit that needs a value an admin sets does not build a settings screen. Declar
 ```go
 Settings: []extension.Setting{
 	{Key: "live", Label: "Send for real", Hint: "Off keeps every message a draft.", Kind: extension.SettingSwitch},
-	{Key: "region", Label: "Region", Kind: extension.SettingText},
+	{Key: "region", Label: "Region", Kind: extension.SettingText, Initial: "eu-west"},
 },
 ```
 
@@ -837,10 +837,11 @@ Settings: []extension.Setting{
 | `Label` | The name the admin sees. Required, one line, up to 60 characters. Shown as written, in one language. |
 | `Hint` | What the setting does. Optional, one line, up to 200 characters. |
 | `Kind` | `extension.SettingSwitch` holds `true` or `false` and starts `false`. `extension.SettingText` holds one line of up to 200 characters and starts empty. |
+| `Initial` | The value before an admin changes it. Optional. It must fit the `Kind`; left out, a switch starts `false` and a text starts empty. |
 
 Only an admin sees these settings, and only an admin can change them. Each change is saved with an audit row, like any installation setting. `make gen` and the start both refuse a declaration that breaks the table above, and the generated manifest lists the settings.
 
-An admin changes them with `PUT /v1/extensions/{name}/settings`. Send `overwrites_edited_fields` and a `declared` list of `key` and `value` pairs, for example `{"overwrites_edited_fields": false, "declared": [{"key": "region", "value": "eu-west"}]}`. A setting left out of the list keeps its value. A key the unit did not declare, or a value its kind cannot hold, is a 422 and saves nothing. A switch value is the text `true` or `false`.
+An admin changes them with `PUT /v1/extensions/{name}/settings`. Send `overwrites_edited_fields` and a `declared` list of `key` and `value` pairs, for example `{"overwrites_edited_fields": false, "declared": [{"key": "region", "value": "eu-west"}]}`. A setting left out of the list keeps its value. A saved value wins over `Initial` from then on, across restarts and new versions of the unit. A new `Initial` reaches only a setting no admin has saved. A key the unit did not declare, or a value its kind cannot hold, is a 422 and saves nothing. A switch value is the text `true` or `false`.
 
 The core stores the values and does not yet hand them to the unit's code. Only core code reads them today. A unit that needs to read its own setting has to wait for that.
 
