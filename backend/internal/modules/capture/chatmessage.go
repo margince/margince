@@ -88,6 +88,7 @@ func chatRecord(binding connector.ChatBinding, msg connector.ChatMessage) (conne
 			AccountScope:  binding.AccountScope,
 			ChannelUserID: msg.Counterparty.UserID,
 			Username:      msg.Counterparty.Username,
+			Alias:         chatAlias(binding.Provider, msg.Counterparty.Alias),
 		},
 	}.WithDeclaredEmailMerge(msg.Counterparty.EmailMayMatch).WithChosenSubject(msg.ChosenSubject)
 	return connector.NormalizedRecord{
@@ -207,4 +208,11 @@ func validPinnedPosture(posture string) error {
 		return nil
 	}
 	return fmt.Errorf("%w: a pinned chat posture is classified or held", apperrors.ErrInvalidArgument)
+}
+
+func chatAlias(provider string, alias *connector.ChatAlias) *connector.ChannelIdentity {
+	if alias == nil {
+		return nil
+	}
+	return &connector.ChannelIdentity{Provider: provider, AccountScope: alias.AccountScope, ChannelUserID: alias.UserID}
 }

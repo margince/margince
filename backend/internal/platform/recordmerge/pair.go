@@ -63,16 +63,16 @@ func Pair[T any, K ids.EntityKind](ctx context.Context, tx pgx.Tx, kind string, 
 	return source, target, nil
 }
 
-// ensureTarget refuses a target the caller cannot change. One they cannot see
-// answers the bare conflict, since merging returns the survivor and the refusal
-// must not confirm that it exists. One they may read answers 403 with the
-// reason, which a retry with a fresh version can never cure.
+// ensureTarget refuses a target the caller cannot change. One they cannot see,
+// or one no row holds, answers the bare conflict. Merging returns the survivor,
+// so the refusal must not confirm that it exists. One they may read answers 403
+// with the reason, which a retry with a fresh version can never cure.
 func ensureTarget(ctx context.Context, tx pgx.Tx, kind string, targetID ids.UUID) error {
 	writable, err := auth.WritableBy(ctx, tx, kind, targetID)
 	if err != nil || writable {
 		return err
 	}
-	visible, err := auth.VisibleTo(ctx, tx, kind, targetID)
+	visible, err := auth.VisibleToExisting(ctx, tx, kind, targetID)
 	switch {
 	case err != nil:
 		return err

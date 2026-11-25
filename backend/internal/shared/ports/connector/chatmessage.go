@@ -71,6 +71,17 @@ const (
 	ChatPostureHeld       = "held"
 )
 
+// ChatLink is what the capture side reads from the approved row of a business
+// chat account when it files a stored message. It names the account, whose it is
+// and the seat it files through.
+type ChatLink struct {
+	// AccountID is the provider's stable id of the account.
+	AccountID   string
+	Ownership   ChatOwnership
+	OwnerUserID ids.UUID
+	SeatID      ids.UUID
+}
+
 // ChatParty is the contact on the other side of a conversation.
 type ChatParty struct {
 	// UserID is the provider's id for them. It is the identity, so it is never empty.
@@ -84,6 +95,14 @@ type ChatParty struct {
 	// Domain is Email's lower-cased domain, which the internal-domain gates key on.
 	Domain        string
 	EmailMayMatch bool
+	// Alias is a second identity the provider named for the same human in this message.
+	Alias *ChatAlias
+}
+
+// ChatAlias is one more identity of a ChatParty.
+type ChatAlias struct {
+	AccountScope string
+	UserID       string
 }
 
 // ChatOwnKeys are keys a source persisted itself. They are used as given where
