@@ -17,9 +17,8 @@ import (
 
 	"golang.org/x/mod/modfile"
 
-	"github.com/margince/margince/backend/pkg/extension"
-
 	"github.com/margince/margince/backend/internal/platform/unitset"
+	"github.com/margince/margince/backend/pkg/extension"
 )
 
 // compositionModule is the constant import path the role binaries wire

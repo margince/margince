@@ -6,17 +6,13 @@
 package gates
 
 // Every exported name in pkg/extension has a caller outside it, or a written
-// reason to exist. The surface is frozen once released, so a name added for a
-// need nobody has yet becomes a promise kept for ever. The names are read from
-// the package's own declarations, so a new one is covered without being listed.
+// reason to exist. A released name is kept for ever, so one added for a need
+// nobody has yet is a lasting promise. The names come from the package's own
+// declarations, so a new one is covered without being listed.
 //
-// A package-level name counts as used where a file selects it through its
-// import (`extension.Name`). A method counts as used where any file that imports
-// the surface selects a member of that name, since a gate without type
-// information cannot tell `core.Notices()` from another `.Notices()`. That reads
-// a method as used too often, never too rarely. Struct fields are not counted:
-// a unit sets them in a literal, where they are keys, not selectors. A
-// generated file is not read: crm.yaml decides what it exports.
+// Without type information a method counts as used wherever a file that imports
+// the surface selects a member of that name. That errs toward "used". Struct
+// fields and generated files are not read.
 
 import (
 	"go/ast"

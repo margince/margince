@@ -10,8 +10,7 @@ import (
 )
 
 // CompanyTypePrefix opens every company type an extension declares, so a stored
-// value says at a glance that it is not one of core's seven. It is
-// QualifiedPrefix.
+// value shows at a glance that a unit declared it. It is QualifiedPrefix.
 const CompanyTypePrefix = QualifiedPrefix
 
 // companyTypeGrammar is the type half of CompanyTypeNamePattern.

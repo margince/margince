@@ -15,13 +15,13 @@ const unitNamePart = `[a-z0-9]+(-[a-z0-9]+)*`
 
 // QualifiedNamePattern is the full form of a record kind, signal kind, link
 // type or report name. The schema CHECKs, backend/api/crm.yaml and the
-// frontend each restate it, and gates/extensionnamegrammar_test.go holds every
-// copy to this source.
+// frontend each restate it. gates/extensionnamegrammar_test.go holds every copy
+// to this source.
 const QualifiedNamePattern = `^ext:` + unitNamePart + `:[a-z][a-z0-9_]{0,31}$`
 
 // CompanyTypeNamePattern is the full form of a company type. Its short part
-// allows a leading digit and has no length cap, and rows stored under that rule
-// keep it, so it stays a second named pattern rather than the kind rule.
+// allows a leading digit and has no length cap. Rows stored under that rule
+// keep it, so it stays a second named pattern.
 const CompanyTypeNamePattern = `^ext:` + unitNamePart + `:[a-z0-9]+(_[a-z0-9]+)*$`
 
 // shortNameGrammar is the short half of a qualified name, and of the other

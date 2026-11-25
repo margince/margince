@@ -7,9 +7,9 @@ package gates
 
 // Every hand-typed copy of the `ext:<unit>:<short>` pattern carries the source
 // pkg/extension publishes. The schema CHECKs, the contract and the frontend
-// each restate it, and a copy that drifts refuses, or admits, a name the Go
-// validators decide the other way. Copies are found by their `ext:` text, so a
-// new one is read without being listed here.
+// each restate it. A copy that drifts refuses a name the Go validators accept,
+// or admits one they refuse. Copies are found by their `ext:` text, so a new
+// one is read without being listed here.
 
 import (
 	"path/filepath"
@@ -111,7 +111,7 @@ func patternBody(pattern string) string {
 }
 
 // nearCompanyType reports whether the copy at lines[i] belongs to a company
-// type: the catalog names the column on the line, the contract names the
+// type. The catalog names the column on the line. The contract names the
 // property a few lines above its pattern.
 func nearCompanyType(lines []string, i int) bool {
 	for j := max(0, i-6); j <= i; j++ {

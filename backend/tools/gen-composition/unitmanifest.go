@@ -15,9 +15,8 @@ import (
 	"path/filepath"
 	"strconv"
 
-	"github.com/margince/margince/backend/pkg/extension"
-
 	"github.com/margince/margince/backend/internal/platform/unitset"
+	"github.com/margince/margince/backend/pkg/extension"
 )
 
 // unitManifestFile is the per-unit generated manifest: what

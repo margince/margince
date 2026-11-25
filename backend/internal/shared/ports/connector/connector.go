@@ -486,8 +486,7 @@ type NaturalKey struct {
 const EmailSourceSystem = "email"
 
 // ExtensionSourceSystemPrefix namespaces every record an extension unit lands,
-// so a unit can never spell a core connector's identity. Spelled here because
-// compose WRITES it onto a unit's records and capture's admit check READS it.
+// so a unit can never spell a core connector's identity.
 const ExtensionSourceSystemPrefix = extension.QualifiedPrefix
 
 type (

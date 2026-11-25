@@ -10,7 +10,7 @@ import (
 )
 
 // RecordKindPrefix opens every record kind a unit declares, so a stored kind
-// says at a glance that it is not one of core's. It is QualifiedPrefix.
+// shows at a glance that a unit declared it. It is QualifiedPrefix.
 const RecordKindPrefix = QualifiedPrefix
 
 // DeletePolicy says what removing a record of a kind means.
