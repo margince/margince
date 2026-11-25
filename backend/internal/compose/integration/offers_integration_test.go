@@ -362,9 +362,9 @@ func assertSendFreezesDailyFxRate(t *testing.T, e *apptest.AppEnv, wsID, offerID
 	}
 }
 
-// assertAcceptSyncsDealAmount covers accept: status flips, accepted_at
-// lands, the DEAL takes the accepted gross as its headline amount
-// (forecast honesty), and a second accept refuses — accept is terminal.
+// assertAcceptSyncsDealAmount covers accept: status flips and accepted_at lands.
+// The DEAL takes the accepted net as its headline amount, so the forecast counts the figure without tax.
+// A second accept refuses, because accept is terminal.
 func assertAcceptSyncsDealAmount(t *testing.T, e *apptest.AppEnv, dealID, offerID string) {
 	t.Helper()
 	var accepted offerBody
@@ -381,9 +381,12 @@ func assertAcceptSyncsDealAmount(t *testing.T, e *apptest.AppEnv, dealID, offerI
 	if status := e.Call(t, "GET", "/v1/deals/"+dealID, nil, nil, &deal); status != http.StatusOK {
 		t.Fatalf("get deal → %d", status)
 	}
-	if deal.AmountMinor != accepted.GrossMinor || deal.Currency != "USD" {
-		t.Fatalf("deal after accept = %d %s, want the accepted gross %d USD",
-			deal.AmountMinor, deal.Currency, accepted.GrossMinor)
+	if accepted.NetMinor == accepted.GrossMinor {
+		t.Fatalf("the offer carries no tax (net = gross = %d), so this test cannot tell the two apart", accepted.NetMinor)
+	}
+	if deal.AmountMinor != accepted.NetMinor || deal.Currency != "USD" {
+		t.Fatalf("deal after accept = %d %s, want the accepted net %d USD, without tax",
+			deal.AmountMinor, deal.Currency, accepted.NetMinor)
 	}
 	// Accept is terminal: a second accept refuses.
 	if status := e.Call(t, "POST", "/v1/offers/"+offerID+"/accept", nil, nil, nil); status != http.StatusUnprocessableEntity {

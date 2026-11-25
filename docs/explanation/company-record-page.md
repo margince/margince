@@ -373,7 +373,7 @@ instead.
 
 **The state strip** is the three values the overview leads with.
 
-- The *account* half (lifecycle, relationship types) needs no grant beyond the company the caller already
+- The *account* half (status, relationship types) needs no grant beyond the company the caller already
   read. Each other value needs its own grant.
 - *Engagement* (last inbound, last outbound, a state worked out from them) needs the timeline grant.
   *Commercial* (open count, stalled count) needs the deal grant. The *signal* slot holds the worst thing
@@ -475,7 +475,7 @@ The record above shows one picture. The installation's own company stores two. T
 only a **square icon**, open or closed. A wordmark scaled into its `32px` square is a row of lines nobody
 can read. The wide lockup is kept for the places that draw a company as a full lockup.
 
-The icon is a second pair of columns on the same row (`logo_icon_object_key`, `logo_icon_origin`). It is
+The icon is a second pair of columns on the same row (`logo_icon_object_key`, `logo_icon_source`). It is
 read back as `CompanyProfile.logo_icon_url`, and served from `GET /companies/{id}/logo/icon` under the
 rules above. It is encoded again the same way, with the same headers. It gives the same 404 for missing,
 hidden and not existing.

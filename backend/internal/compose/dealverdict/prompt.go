@@ -70,7 +70,7 @@ func Prompt(fence promptfence.Fence, in Input) string {
 			criterion.Stage, criterion.Label, r.criteria.For(criterion.ID), criterion.Kind, hintText(criterion.Hint))
 	}
 	for _, offer := range in.Offers {
-		fmt.Fprintf(&b, "Offer: %s, %s\n", values.MajorUnits(offer.GrossMinor, offer.Currency)+" "+offer.Currency, offer.Status)
+		fmt.Fprintf(&b, "Offer: %s without tax, %s\n", values.MajorUnits(offer.NetMinor, offer.Currency)+" "+offer.Currency, offer.Status)
 	}
 	for _, move := range in.StageMoves {
 		fmt.Fprintf(&b, "Stage move on %s: %s to %s\n", move.At.Format(time.DateOnly), move.From, move.To)
@@ -131,7 +131,7 @@ func sampleInput() Input {
 	return Input{
 		DealName: "Sample", Stage: sampleStage, AmountMinor: &amount, Currency: &currency,
 		Probability: 50, ProbabilitySource: "stage", StageProbability: 50,
-		Offers:     []Offer{{GrossMinor: amount, Currency: currency, Status: "sent"}},
+		Offers:     []Offer{{NetMinor: amount, Currency: currency, Status: "sent"}},
 		StageMoves: []StageMove{{From: "Qualified", To: sampleStage}},
 		Later:      []StageOption{{ID: "sample-stage", Name: "Negotiation", Position: 2, Probability: 75}},
 		ExitCriteria: []ExitCriterion{{

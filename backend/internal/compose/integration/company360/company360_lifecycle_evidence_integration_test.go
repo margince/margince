@@ -23,7 +23,7 @@ import (
 func TestLifecycleConflictCitesTheSourceInsteadOfTheExtractionDate(t *testing.T) {
 	e := integration.Setup(t)
 	company := ids.From[ids.CompanyKind](e.SeedCompany(t, "Cedar Labs", &e.Rep1))
-	e.WsExec(t, `UPDATE company SET lifecycle = 'customer' WHERE id = $1`, company.UUID)
+	e.WsExec(t, `UPDATE company SET status = 'customer' WHERE id = $1`, company.UUID)
 	occurred := company360Clock.AddDate(0, 0, -20)
 	quote := "We are ending all business with your company."
 	source, _, err := e.Activities.LogActivity(e.Admin(), activities.LogActivityInput{

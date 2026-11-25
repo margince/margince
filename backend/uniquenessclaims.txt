@@ -212,7 +212,6 @@ internal/compose/sitetriage.go#const block at const triageFieldKind
 internal/compose/tagseam.go#method tagAdapter.TaggableTypes
 internal/compose/telegrampollfixture_integration_test.go#type telegramPollFakeAPI.held
 internal/compose/telegrampollscope.go#func polledBatchAccounts
-internal/compose/telegrampollscope.go#func telegramRawSourceID
 internal/compose/transcriptproposetransport.go#func TranscriptReadOnLanding
 internal/modules/activities/activity.go#const block at const fieldKind
 internal/modules/activities/activitylinks.go#func insertActivityLinks

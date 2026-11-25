@@ -63,11 +63,13 @@ const (
 	// case, which drives the unexported mail worker over two team links.
 	// Raised by 7 production and 106 test lines for the route answer that keeps
 	// its field errors, and the route cases that read the unexported verb shapes.
+	// Raised by 9 production and 17 test lines for the company status rename,
+	// whose webhook and preview keys sit in this package's unexported maps.
 	// Raised by 30 production and 363 test lines for lists over a removed
 	// extension kind and the failing-report directory. The cases drive the
 	// unexported Live List check, the list export and the report directory.
-	composeRootProductionLines = 230_734
-	composeRootTestLines       = 360_597
+	composeRootProductionLines = 230_733
+	composeRootTestLines       = 360_614
 )
 
 // A read under these floors stopped early or read the wrong place, and would

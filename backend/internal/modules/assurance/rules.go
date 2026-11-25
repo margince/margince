@@ -40,8 +40,9 @@ type Subject struct {
 	// or its creation when it never moved.
 	StageID        string
 	StageEnteredAt time.Time
-	// The total of the most recent sent or accepted offer, when there is one.
-	OfferTotalMinor *int64
+	// The net total of the most recent sent or accepted offer, when there is one.
+	// A deal's value has no tax, so the offer is compared without it.
+	OfferNetMinor *int64
 	// The total of the signed contract, when there is one.
 	ContractTotalMinor *int64
 	// How many times the close date has been pushed within this period.
@@ -282,11 +283,12 @@ func closePushed() Rule {
 	}}
 }
 
-// The deal says one number and the offer that was sent says another. The buyer
-// is looking at the offer.
+// The deal says one number and the offer that was sent says another. Both are
+// without tax: the deal's value never carries it, and the offer's net is the
+// figure that compares. The buyer is looking at the offer.
 func amountVsOffer() Rule {
 	return Rule{Type: TypeAmountVsOffer, Needs: []string{"offers"}, Ask: func(_ time.Time, s Subject, cfg Config) *Finding {
-		return amountDisagreement(TypeAmountVsOffer, s, s.OfferTotalMinor, "offer_total", cfg)
+		return amountDisagreement(TypeAmountVsOffer, s, s.OfferNetMinor, "offer_net", cfg)
 	}}
 }
 

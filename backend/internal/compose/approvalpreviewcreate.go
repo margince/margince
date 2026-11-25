@@ -195,6 +195,7 @@ func (r approvalPreviewReader) creationFieldDetails(ctx context.Context, recordT
 		if value.Kind == previewValueText && value.Text == "" {
 			value.Kind = previewValueEmpty
 		}
+		markCompanyStatus(recordType, field, &value)
 		displayField := field
 		if recordType == string(recordTypeLead) && field == previewFieldStatus {
 			displayField = "lead_status"
@@ -258,7 +259,7 @@ func creationAddressFields(address *crmcontracts.Address) map[string]any {
 func creationValueField(field string) string {
 	valueField := ""
 	switch field {
-	case dealIDField, previewFieldBuyerCompanyID, previewFieldTemplateID, "product_id", previewFieldValidUntil, bulkParamOwner, refColProject, companionContactField, refColCompany, refColParentCompany, refColPartnerCompany, fieldPipelineID, fieldStageID, acceptFieldExpectedClose, previewFieldStartedAt, previewFieldTargetEndDate, previewLifecycle, activityTargetOccurredAt:
+	case dealIDField, previewFieldBuyerCompanyID, previewFieldTemplateID, previewFieldProductID, previewFieldValidUntil, bulkParamOwner, refColProject, companionContactField, refColCompany, refColParentCompany, refColPartnerCompany, fieldPipelineID, fieldStageID, acceptFieldExpectedClose, previewFieldStartedAt, previewFieldTargetEndDate, activityTargetOccurredAt:
 		valueField = field
 	case previewFieldSourceAuthorID:
 		valueField = "user_id"

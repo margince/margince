@@ -20,7 +20,7 @@ import (
 )
 
 // exactContactByChannelIdentity is the ladder's first lane: a
-// (provider, channel_user_id) pair already bound to a live contact.
+// (provider, account_scope, channel_user_id) key already bound to a live contact.
 //
 // blocked_at is deliberately not read. Blocking is reachability — the fact
 // "telegram user 123 is contact A" stays true while the user has the bot
@@ -33,6 +33,7 @@ func exactContactByChannelIdentity(ctx context.Context, tx pgx.Tx, identities []
 	}
 	providers := make([]string, 0, len(identities))
 	channelUserIDs := make([]string, 0, len(identities))
+	scopes := make([]string, 0, len(identities))
 	for _, ci := range identities {
 		if ci.Provider == "" || ci.ChannelUserID == "" {
 			// Half a key is no key: it can only match by accident, and the
@@ -41,6 +42,7 @@ func exactContactByChannelIdentity(ctx context.Context, tx pgx.Tx, identities []
 		}
 		providers = append(providers, ci.Provider)
 		channelUserIDs = append(channelUserIDs, ci.ChannelUserID)
+		scopes = append(scopes, ci.AccountScope)
 	}
 	if len(providers) == 0 {
 		return nil, nil
@@ -48,11 +50,12 @@ func exactContactByChannelIdentity(ctx context.Context, tx pgx.Tx, identities []
 	return exactContactIDs(ctx, tx, `
 		SELECT DISTINCT pci.contact_id
 		  FROM contact_channel_identity pci
-		  JOIN unnest($1::text[], $2::text[]) AS k(provider, channel_user_id)
+		  JOIN unnest($1::text[], $2::text[], $3::text[]) AS k(provider, channel_user_id, account_scope)
 		    ON k.provider = pci.provider AND k.channel_user_id = pci.channel_user_id
+		   AND k.account_scope = pci.account_scope
 		 WHERE pci.archived_at IS NULL
 		 ORDER BY pci.contact_id
-		 LIMIT 2`, providers, channelUserIDs)
+		 LIMIT 2`, providers, channelUserIDs, scopes)
 }
 
 // exactContactByPhone matches on the E.164 form contact_phone stores. The
