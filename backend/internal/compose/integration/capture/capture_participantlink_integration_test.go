@@ -287,6 +287,33 @@ func TestAMailboxThatWasNotARecipientFilesNothingOnAJoin(t *testing.T) {
 	}
 }
 
+// A join files nothing on a thread the joining seat judged its private life.
+// The same seat's next business mail still reaches its private contact.
+func TestAJoinFilesNothingOnAThreadTheSeatHoldsPrivate(t *testing.T) {
+	env := newCaptureEnv(t)
+	e, sync := env.e, env.sync
+	syncSecond := secondMailbox(t, e, e.Rep3)
+	store := contacts.NewStore(e.DB())
+	private, err := store.EnsureContactByEmail(contactCreator(e), "Private Contact", "friend@partner.example", "manual", storekit.RefuseErased)
+	if err != nil {
+		t.Fatalf("seeding the second seat's contact: %v", err)
+	}
+	ownerExec(t, e, `UPDATE contact SET owner_id = $2, visibility = 'owner' WHERE id = $1`, private, e.Rep3)
+	seedPersonalThread(t, e, e.Rep3, "held-join@partner.example", []string{"sender@partner.example", "friend@partner.example"})
+	cc := secondSeatAddress + ", friend@partner.example"
+	for _, msgID := range []string{"held-join@partner.example", "open-join@partner.example"} {
+		mail := emailCC("sender@partner.example", "Sender", captureOwner, cc, msgID)
+		sync(t, mail)
+		syncSecond(t, mail)
+	}
+	if filed := contactsFiledUnder(t, e, "open-join@partner.example"); !slices.Contains(filed, private) {
+		t.Fatalf("a business join never reached the seat's private contact, so the held case proves nothing: %v", filed)
+	}
+	if filed := contactsFiledUnder(t, e, "held-join@partner.example"); slices.Contains(filed, private) {
+		t.Fatalf("a join filed a thread the seat holds private under its contact: %v", filed)
+	}
+}
+
 // A join leaves the links the project and deal attribution after it may still
 // need, as a new capture does. A mail copying more contacts than the ceiling
 // holds is filed up to that reservation, and the join adds nothing past it.
