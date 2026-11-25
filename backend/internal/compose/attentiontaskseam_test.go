@@ -68,6 +68,7 @@ func TestATaskCrossesTheSeamWithTheFactsTheRowNeeds(t *testing.T) {
 	row := storedTask(nil, &[]crmcontracts.ActivityLink{
 		{EntityType: entityDeal, EntityId: openapi_types.UUID(deal)},
 	})
+	row.TaskType = new(crmcontracts.TaskTypeReply)
 
 	task := taskFromActivity(row, ids.UUID{}, time.Time{})
 
@@ -79,6 +80,10 @@ func TestATaskCrossesTheSeamWithTheFactsTheRowNeeds(t *testing.T) {
 	}
 	if task.DueAt == nil || !task.DueAt.Equal(*row.DueAt) {
 		t.Errorf("the task is due %v, want the activity's %v", task.DueAt, row.DueAt)
+	}
+	// The type names the work on the queue's card without a read per row.
+	if task.TaskType == nil || *task.TaskType != crmcontracts.TaskTypeReply {
+		t.Errorf("the task's type is %v, want the activity's reply", task.TaskType)
 	}
 	// The record the task is FOR. Without it the row is a sentence the reader
 	// cannot act on, and the lane knew which deal it meant all along.

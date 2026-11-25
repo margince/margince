@@ -38476,6 +38476,9 @@ type AttentionItem struct {
 	SummaryParts  *ApprovalSummaryParts `json:"summary_parts,omitempty"`
 	SystemDisplay *SystemDisplay        `json:"system_display,omitempty"`
 
+	// TaskType On a task row: the kind of work it asks for, so a card names it without reading the task. Absent on other rows.
+	TaskType *TaskType `json:"task_type,omitempty"`
+
 	// Title The server's own sentence for this item, when it has one — an approval
 	// summary is composed at staging time out of the proposal's own facts.
 	// ABSENT where the sentence would have to be invented: the product ships
@@ -48490,11 +48493,13 @@ type CreateSignalRequest struct {
 	EntityId   *openapi_types.UUID `json:"entity_id,omitempty"`
 
 	// EntityType Subject record, both entity fields together or neither: with a subject the signal enters `resolved`; without one it enters `unresolved` (a raw item needing a raw_ref for POST /signals/{id}/resolve).
-	EntityType    *CreateSignalRequestEntityType    `json:"entity_type,omitempty"`
-	Evidence      *[]SignalEvidence                 `json:"evidence,omitempty"`
-	Kind          CreateSignalRequestKind           `json:"kind"`
-	RawRef        *string                           `json:"raw_ref,omitempty"`
-	Severity      *CreateSignalRequestSeverity      `json:"severity,omitempty"`
+	EntityType *CreateSignalRequestEntityType `json:"entity_type,omitempty"`
+	Evidence   *[]SignalEvidence              `json:"evidence,omitempty"`
+	Kind       CreateSignalRequestKind        `json:"kind"`
+	RawRef     *string                        `json:"raw_ref,omitempty"`
+	Severity   *CreateSignalRequestSeverity   `json:"severity,omitempty"`
+
+	// Source The channel this signal arrived by. A client that files it for a member sends `manual`; an integration sends `api`. Any other value is 422 `invalid_source`.
 	Source        string                            `json:"source"`
 	SourceChannel *CreateSignalRequestSourceChannel `json:"source_channel,omitempty"`
 	Summary       string                            `json:"summary"`
@@ -69247,11 +69252,16 @@ type Signal struct {
 	// ResolvedContactId Optional contact resolution, set only under a recorded consent grant and never inferred.
 	ResolvedContactId *openapi_types.UUID `json:"resolved_contact_id,omitempty"`
 	Severity          SignalSeverity      `json:"severity"`
-	Source            string              `json:"source"`
+
+	// Source The channel this signal arrived by: `api`, `automation`, `capture`, `import`, `manual` or `webform`. An older signal can show another value until the background correction reaches it.
+	Source string `json:"source"`
 
 	// SourceChannel Where the raw signal came from.
 	SourceChannel SignalSourceChannel `json:"source_channel"`
-	Status        SignalStatus        `json:"status"`
+
+	// SourceSystem The producer that wrote the signal, such as `signal-scan` or the name of an extension. Empty when a member or an API client filed it.
+	SourceSystem *string      `json:"source_system,omitempty"`
+	Status       SignalStatus `json:"status"`
 
 	// Summary The signal's one sentence. A sentence the server words itself (`technical_change`,
 	// `ghosted_thread`, `project_gone_quiet`) is in the reader's chosen display language, else
@@ -75647,6 +75657,9 @@ type WorklistItem struct {
 	// SummaryParts On an approval, its title taken apart, so the row shows the sentence as its title and the proposed values as its supporting line. Absent when the title is a sentence alone.
 	SummaryParts  *ApprovalSummaryParts `json:"summary_parts,omitempty"`
 	SystemDisplay *SystemDisplay        `json:"system_display,omitempty"`
+
+	// TaskType On a task row: the kind of work it asks for, so a card names it without reading the task. Absent on other rows.
+	TaskType *TaskType `json:"task_type,omitempty"`
 
 	// Title The server's own sentence for this item, where it has one.
 	Title *string `json:"title,omitempty"`

@@ -11042,7 +11042,7 @@ paths:
             type: array
             items:
               $ref: '#/components/schemas/ReportingMetricID'
-            maxItems: 8
+            maxItems: 12
         - name: blocks
           in: query
           required: false
@@ -11221,7 +11221,7 @@ paths:
             type: array
             items:
               $ref: '#/components/schemas/ReportingMetricID'
-            maxItems: 8
+            maxItems: 12
         - name: blocks
           in: query
           required: false
@@ -11382,7 +11382,7 @@ paths:
             type: array
             items:
               $ref: '#/components/schemas/ReportingMetricID'
-            maxItems: 8
+            maxItems: 12
         - name: blocks
           in: query
           required: false
@@ -44947,7 +44947,8 @@ components:
           description: Per-claim evidence; a claim without evidence is omitted.
         status: {type: string, enum: [open, acknowledged, resolved, dismissed], default: open}
         detected_at: {type: string, format: date-time}
-        source: {type: string}
+        source: {type: string, description: 'The channel this signal arrived by: `api`, `automation`, `capture`, `import`, `manual` or `webform`. An older signal can show another value until the background correction reaches it.'}
+        source_system: {type: [string, 'null'], readOnly: true, description: 'The producer that wrote the signal, such as `signal-scan` or the name of an extension. Empty when a member or an API client filed it.'}
         captured_by: {type: string, readOnly: true, description: 'Server-stamped from the authenticated principal; never client-supplied.'}
         version: {$ref: '#/components/schemas/RowVersion'}
         created_at: {type: string, format: date-time}
@@ -45120,7 +45121,7 @@ components:
           type: array
           items: {$ref: '#/components/schemas/SignalEvidence'}
         detected_at: {type: [string, 'null'], format: date-time, description: When the underlying observation happened (defaults to now).}
-        source: {type: string}
+        source: {type: string, enum: [api, automation, capture, import, manual, webform], description: 'The channel this signal arrived by. A client that files it for a member sends `manual`; an integration sends `api`. Any other value is 422 `invalid_source`.'}
     SignalListResponse:
       type: object
       required: [data, page]
@@ -46379,7 +46380,7 @@ components:
           items:
             $ref: '#/components/schemas/ReportingMetricID'
           minItems: 1
-          maxItems: 8
+          maxItems: 12
         blocks:
           type: array
           items:
@@ -58489,6 +58490,9 @@ components:
         due_at: {type: string, format: date-time, description: 'When this is due, or when the meeting starts.'}
         due_has_time: {type: boolean, description: 'On a task row: true when `due_at` names an agreed time of day, false when the task is due by that day. Absent on other rows.'}
         due_intent: {$ref: '#/components/schemas/IntentTime'}
+        task_type:
+          allOf: [{$ref: '#/components/schemas/TaskType'}]
+          description: 'On a task row: the kind of work it asks for, so a card names it without reading the task. Absent on other rows.'
         overdue: {type: boolean, description: 'Past due at the read instant, resolved server-side so every surface agrees.'}
         due_group:
           type: string

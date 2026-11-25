@@ -43,7 +43,7 @@ Ranked by how many foreign keys point at them.
 |---|---|--:|--:|
 | [`app_user`](identity.md#app_user) | [identity](identity.md) | 39 | 150 |
 | [`contact`](contacts.md#contact) | [contacts](contacts.md) | 49 | 50 |
-| [`activity`](activities.md#activity) | [activities](activities.md) | 90 | 49 |
+| [`activity`](activities.md#activity) | [activities](activities.md) | 91 | 49 |
 | [`company`](contacts.md#company) | [contacts](contacts.md) | 46 | 49 |
 | [`deal`](deals.md#deal) | [deals](deals.md) | 52 | 30 |
 | [`lead`](contacts.md#lead) | [contacts](contacts.md) | 49 | 20 |
@@ -139,7 +139,7 @@ erDiagram
 
 | Table | Area | Columns | Referenced by |
 |---|---|--:|--:|
-| [`activity`](activities.md#activity) | activities | 90 | 49 |
+| [`activity`](activities.md#activity) | activities | 91 | 49 |
 | [`activity_audience_member`](activities.md#activity_audience_member) | activities | 5 | 0 |
 | [`activity_calendar_method_backfill`](activities.md#activity_calendar_method_backfill) | activities | 5 | 0 |
 | [`activity_commitment_admission`](activities.md#activity_commitment_admission) | activities | 13 | 0 |
@@ -438,7 +438,7 @@ erDiagram
 | [`session`](identity.md#session) | identity | 11 | 0 |
 | [`setting`](platform.md#setting) | platform | 3 | 0 |
 | [`setup_token`](identity.md#setup_token) | identity | 4 | 0 |
-| [`signal`](signals.md#signal) | signals | 30 | 3 |
+| [`signal`](signals.md#signal) | signals | 31 | 3 |
 | [`signal_resolution`](signals.md#signal_resolution) | signals | 12 | 0 |
 | [`signal_thread_scan`](compose.md#signal_thread_scan) | compose | 10 | 0 |
 | [`site_read`](contacts.md#site_read) | contacts | 36 | 3 |

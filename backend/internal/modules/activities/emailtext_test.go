@@ -3,7 +3,12 @@
 
 package activities
 
-import "testing"
+import (
+	"testing"
+
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/shared/kernel/mailquote"
+)
 
 // The cases here are the shared fixtures the frontend splitter is held to as
 // well. A case added on one side and not the other is the drift this file and
@@ -284,6 +289,26 @@ func TestQuotedHistoryIsTrimmedAndNamedAsOne(t *testing.T) {
 	})
 }
 
+// The boundary the search value is cut at. An inline answer stays in the
+// message; quoted mail folds only when nothing follows it.
+func TestOnlyQuotedEarlierMailLeavesTheMessage(t *testing.T) {
+	t.Parallel()
+	runSplitCases(t, []splitCase{
+		{
+			name: "an inline reply keeps the answers under each quote",
+			body: "On Mon, 3 Mar 2025, Sales wrote:\n> Can you do Friday?\nFriday works.\n> And the price?\nAs quoted.",
+			main: "On Mon, 3 Mar 2025, Sales wrote:\n> Can you do Friday?\nFriday works.\n> And the price?\nAs quoted.",
+		},
+		{
+			name:    "a signature above the quoted mail still opens the tail",
+			body:    "Works for us.\n\n-- \nDana Roe\n\n> Friday?",
+			main:    "Works for us.",
+			trimmed: "-- \nDana Roe\n\n> Friday?",
+			tail:    TailSignature,
+		},
+	})
+}
+
 func TestEmailSummaryTextIsOneLineOfTheSendersOwnWords(t *testing.T) {
 	t.Parallel()
 	for _, tc := range []struct {
@@ -313,5 +338,13 @@ func TestEmailSummaryTextIsOneLineOfTheSendersOwnWords(t *testing.T) {
 				t.Errorf("got %q, want %q", got, tc.want)
 			}
 		})
+	}
+}
+
+// mailquote cannot import the contract, so it spells the mail kind itself.
+func TestTheSplitterAndTheContractNameMailTheSame(t *testing.T) {
+	t.Parallel()
+	if mailquote.MailKind != string(crmcontracts.ActivityKindEmail) {
+		t.Errorf("mailquote calls mail %q and the contract calls it %q", mailquote.MailKind, crmcontracts.ActivityKindEmail)
 	}
 }
