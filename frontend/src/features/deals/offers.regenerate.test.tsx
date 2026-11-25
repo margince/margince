@@ -82,8 +82,7 @@ async function regenerate() {
 }
 
 // The revision asked for was made either way. When no AI line came with it,
-// the reader is told the copy is plain, so a fault elsewhere cannot read as
-// the revision having failed.
+// the reader is told the copy is plain.
 describe("regenerating a sent offer", () => {
   it("says the copy came without AI changes when no AI line was added", async () => {
     serveRegenerate({

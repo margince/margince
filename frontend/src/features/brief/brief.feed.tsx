@@ -148,8 +148,8 @@ export function BriefFeed({
 }
 
 /**
- * How many of the work's cards are drawn, beside the head, and only when the
- * day holds more than its cards: the Worklist switch carries the whole count.
+ * How many of the day's cards are drawn, said only when the day holds more.
+ * The Worklist switch carries the whole count.
  */
 function ShownOf({
   shown,

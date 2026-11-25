@@ -351,8 +351,8 @@ describe("the schedule panel", () => {
     },
   );
 
-  // A seat or role that may not capture, Read-only among them, hears why the
-  // panel is empty and is not sent to a setting it cannot change.
+  // A seat or role that may not capture (Read-only, say) hears why the panel
+  // is empty. It is not sent to a setting it cannot change.
   it.each([
     ["not_connected", "brief.schedule.notConnected"],
     ["unreadable", "brief.schedule.unreadable"],

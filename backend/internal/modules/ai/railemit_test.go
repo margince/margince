@@ -175,9 +175,8 @@ func TestACallOutsideACorrelationScopeIsNotAnnounced(t *testing.T) {
 	}
 }
 
-// The floor is the site's declaration, made on the context where the floor is
-// served, and every call under it carries the declaration to the rail. A call
-// outside one carries none, so its failure stays a failure.
+// The floor is declared on the context where it is served. Every call under it
+// carries it to the rail; a call outside carries none and stays a failure.
 func TestACallCarriesTheFloorItsSiteDeclared(t *testing.T) {
 	var under, outside Call
 	withAmbientIdentity(WithFloor(context.Background()), &under)

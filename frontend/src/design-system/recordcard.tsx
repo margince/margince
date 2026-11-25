@@ -39,6 +39,46 @@ type RecordCardWay =
   | Readonly<{ href: string; onOpen?: never }>
   | Readonly<{ href?: never; onOpen: () => void }>;
 
+/** What the card is and what it is called. */
+type RecordCardMark = Readonly<{
+  // What the card stands for, and so what a message to its address is filed
+  // under. A deal and an activity have no address, so only these two take one.
+  kind: "contact" | "company" | "deal" | "activity";
+  name: string;
+  // A record with no face (a deal, an activity) wears its kind's icon where
+  // the avatar goes.
+  icon?: LucideIcon;
+}>;
+
+type RecordCardFacts = Readonly<{
+  /**
+   * The record's own id. It keys the mark's mesh through `Avatar`, which
+   * explains why a name is the poor key: renaming a record moves it to another
+   * colour on every screen at once. It is also what a message to the card's
+   * address is filed under, which is why it is not optional.
+   */
+  identity: string;
+  // A company's resolved logo, drawn on the mark. `Avatar` keeps the monogram
+  // under it while it loads, if it fails, and when there is none.
+  logo?: string | null;
+  /**
+   * What this record is to the one listing it — a job title, what somebody
+   * was at a former employer. A node rather than a string because the value
+   * can carry its own provenance: a bought title says so where it stands.
+   *
+   * Not `role`: on a component that name reads as the ARIA attribute, to a
+   * linter and to the next author alike.
+   */
+  position?: ReactNode;
+  email?: string;
+  /**
+   * What the surrounding surface knows that the record itself does not — which
+   * colleagues are already in touch, whether an employment is the current one.
+   * It sits at the trailing edge, away from the record's own facts.
+   */
+  aside?: ReactNode;
+}>;
+
 export function RecordCard({
   kind,
   name,
@@ -50,46 +90,7 @@ export function RecordCard({
   position,
   email,
   aside,
-}: Readonly<{
-  // What the card stands for, and so what a message to its address is filed
-  // under. A deal and an activity have no address, so only these two take one.
-  kind: "contact" | "company" | "deal" | "activity";
-  name: string;
-  /**
-   * A record with no face (a deal, an activity) wears its kind's icon in place
-   * of the avatar, so a list of found records reads as one stack.
-   */
-  icon?: LucideIcon;
-}> &
-  RecordCardWay &
-  Readonly<{
-    /**
-     * The record's own id. It keys the mark's mesh through `Avatar`, which
-     * explains why a name is the poor key: renaming a record moves it to another
-     * colour on every screen at once. It is also what a message to the card's
-     * address is filed under, which is why it is not optional.
-     */
-    identity: string;
-    // A company's resolved logo, drawn on the mark. `Avatar` keeps the monogram
-    // under it while it loads, if it fails, and when there is none.
-    logo?: string | null;
-    /**
-     * What this record is to the one listing it — a job title, what somebody
-     * was at a former employer. A node rather than a string because the value
-     * can carry its own provenance: a bought title says so where it stands.
-     *
-     * Not `role`: on a component that name reads as the ARIA attribute, to a
-     * linter and to the next author alike.
-     */
-    position?: ReactNode;
-    email?: string;
-    /**
-     * What the surrounding surface knows that the record itself does not — which
-     * colleagues are already in touch, whether an employment is the current one.
-     * It sits at the trailing edge, away from the record's own facts.
-     */
-    aside?: ReactNode;
-  }>) {
+}: RecordCardMark & RecordCardWay & RecordCardFacts) {
   // One target for the mark and the name together: a monogram beside a link
   // that goes to the same place is a second, smaller version of the same
   // target, and a reader who aims at the face gets nothing.

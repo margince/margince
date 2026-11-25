@@ -28,8 +28,8 @@ const late = row({
   overdue: true,
 });
 
-// A late task's due day is one fact, and Home's card and the Worklist row read
-// it from the one writer, so the reader never compares two spellings of a day.
+// A late task's due day is one fact. Home's card and the Worklist row read it
+// from one writer, so a reader never compares two spellings of a day.
 describe("a late task's due day", () => {
   it("says the day and how late it is", () => {
     expect(whenText(late, t, "en", ZONE, ZONE, NOW)).toBe(

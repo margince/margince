@@ -3,11 +3,9 @@
 
 package compose
 
-// RegenerateOffer shadows the method deals.Handlers promotes into Server: a
-// method declared on Server wins over a promoted one, and only compose can see
-// offerDrafter, which needs the model lane and the retrieval seam a module may
-// not import. Without WithOfferDraft wired it writes exactly the mechanical
-// response deals would have written.
+// RegenerateOffer shadows the method deals.Handlers promotes into Server. Only
+// compose can see offerDrafter, which needs the model lane and the retrieval
+// seam. Without WithOfferDraft it writes the response deals would have written.
 
 import (
 	"net/http"
@@ -19,10 +17,9 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
-// RegenerateOffer runs the mechanical mint FIRST, and only then asks
-// offerDrafter to stage evidence-grounded lines on the fresh draft. Drafting
-// is advisory over the committed mint: when it fails, the plain copy is the
-// answer (ai_generated=false), which the rail records as degraded, not failed.
+// RegenerateOffer mints the plain revision first, then asks offerDrafter for
+// grounded lines on it. When drafting fails the plain copy is the answer
+// (ai_generated=false), and the rail records it as degraded, not failed.
 func (s Server) RegenerateOffer(w http.ResponseWriter, r *http.Request, id crmcontracts.Id, _ crmcontracts.RegenerateOfferParams) {
 	ctx := r.Context()
 	priorID := ids.From[ids.OfferKind](ids.UUID(id))

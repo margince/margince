@@ -300,8 +300,8 @@ export function RegenerateOfferAction({ offer }: Readonly<{ offer: Offer }>) {
         queryKey: ["deal-offers", newDraft.deal_id],
       });
       from.navigate({ screen: "offers", id: newDraft.id });
-      // A revision with no AI lines is still the revision asked for: the
-      // copy is said plainly, never left for the agent rail to call a failure.
+      // A revision with no AI lines is still the revision asked for, so the
+      // plain copy is said here rather than read as a failure.
       if (newDraft.ai_generated !== true) {
         toast.show(t("offer.regeneratedPlain"), { tone: "info" });
       }

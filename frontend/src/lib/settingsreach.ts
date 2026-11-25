@@ -24,9 +24,8 @@ export function catalogContext(): CatalogContext {
  * The settings pages, split into the ones this reader can act on and the ones
  * they can only consult.
  *
- * The hook half of `settingsReach`, so the rail, the settings home, the setup
- * reminder and Home resolve one partition rather than each deciding "can this
- * contact act?" for itself.
+ * The hook half of `settingsReach`. The rail, the settings home, the setup
+ * reminder and Home all resolve this one partition.
  */
 export function useSettingsReach(): SettingsReach {
   return settingsReach(useMe().data, catalogContext());

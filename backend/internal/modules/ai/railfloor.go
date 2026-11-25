@@ -7,13 +7,9 @@ import "context"
 
 type floorKey struct{}
 
-// WithFloor declares that the site making the calls under ctx answers with its
-// own deterministic result when a call fails: a plain draft, a copied offer, a
-// brief built from the record. The reader still gets what they asked for, so
-// the rail settles such a failure as degraded rather than failed.
-//
-// Declared where the floor is served, and only there: a site that returns the
-// error to its caller has nothing to show, and its failure stays a failure.
+// WithFloor declares that the site answers with its own result when a call
+// under ctx fails (a plain draft, a copied offer). The rail then settles the
+// failure as degraded: the reader still got what they asked for.
 func WithFloor(ctx context.Context) context.Context {
 	return context.WithValue(ctx, floorKey{}, true)
 }

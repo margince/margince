@@ -142,8 +142,8 @@ export const ACTIVITY_LINE: Readonly<
     degraded: "agent.activity.accountScan.degraded",
     failed: "agent.activity.accountScan.failed",
   },
-  // An email, not a reply: the task drafts new mail from the composer as well
-  // as answers, and a reply is the named case in SUBJECT_NAMED_LINE.
+  // An email, not a reply: the task drafts new mail as well as answers. A
+  // reply is the named case in SUBJECT_NAMED_LINE.
   draft_reply: {
     queued: "agent.activity.draftEmail.queued",
     running: "agent.activity.draftEmail.running",
@@ -361,9 +361,9 @@ export const NAMED_LINE: Readonly<Partial<Record<ActivityKind, LineSet>>> = {
 };
 
 /**
- * The named lines that depend on what KIND of record the subject is, read
- * ahead of `NAMED_LINE`: one task drafts a reply to a message and a new email
- * about a contact, and only the subject's type tells the two apart.
+ * The named lines that depend on the subject's type, read ahead of
+ * `NAMED_LINE`. One task drafts both a reply to a message and a new email
+ * about a contact; only the subject's type tells the two apart.
  */
 export const SUBJECT_NAMED_LINE: Readonly<
   Partial<Record<ActivityKind, Readonly<Record<string, LineSet>>>>

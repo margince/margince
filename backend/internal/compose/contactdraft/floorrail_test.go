@@ -23,9 +23,8 @@ func (l *floorWitness) Complete(ctx context.Context, _ model.Request) (model.Res
 	return model.Response{}, errors.New("the model is unavailable")
 }
 
-// A lane that fails still leaves the rep a draft, so the composer declares its
-// floor on every call it makes: the rail then says the email was drafted with
-// limited help, not that it failed while the draft sits in the composer.
+// A lane that fails still leaves the rep a draft. So every call is made under
+// the composer's floor, and the rail does not call the draft failed.
 func TestAFailedLaneIsAskedUnderTheComposersFloor(t *testing.T) {
 	lane := &floorWitness{}
 	_, by, err := Write(context.Background(), lane, floorInput(), draftvoice.Context{})
