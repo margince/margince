@@ -91,7 +91,7 @@ func (g *ContactDataEnrich) HandleEvent(ctx context.Context, env events.Envelope
 	// QueueRun answers ErrNotFound for a contact that is gone or archived. An
 	// archived contact is frozen (an erasure archives one), so neither is owed
 	// a lookup later.
-	return unactionableIfGone(g.swallowConfiguration(err), "contact", env.Entity.ID)
+	return events.UnactionableIfGone(g.swallowConfiguration(err), "contact", env.Entity.ID)
 }
 
 // triggerFor decides which toggle this arrival is governed by, from WHO

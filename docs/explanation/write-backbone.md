@@ -1,5 +1,5 @@
 <!-- prose:plain -->
-<!-- describes: backend/internal/platform/database/storekit backend/internal/platform/database/database.go backend/internal/shared/kernel/events backend/internal/platform/events/relay.go backend/internal/platform/events/subscriber.go backend/internal/platform/events/dedupe.go backend/internal/modules/assurance/inputposition.go backend/internal/compose/assurancefreshness.go backend/internal/platform/httpserver/chassis.go backend/internal/compose/runnerservice.go backend/internal/compose/subjectgone.go -->
+<!-- describes: backend/internal/platform/database/storekit backend/internal/platform/database/database.go backend/internal/shared/kernel/events backend/internal/platform/events/relay.go backend/internal/platform/events/subscriber.go backend/internal/platform/events/dedupe.go backend/internal/modules/assurance/inputposition.go backend/internal/compose/assurancefreshness.go backend/internal/platform/httpserver/chassis.go backend/internal/compose/runnerservice.go -->
 # The write backbone: storekit, `audit_log` & the outbox
 
 Every audited write in this backend commits **three rows in one transaction**. They are the domain row, an
@@ -344,8 +344,8 @@ with one ERROR log. A plain error leaves the entry pending, so it comes back on 
 
 An archived record is not a missing one. Some work is still owed once the record is restored, such
 as commission on a won deal. For that work the handler reads the archived row. A handler never keeps
-an entry pending until a restore, because a record can stay archived for good. In `compose`,
-`unactionableIfGone` turns a store's `ErrNotFound` into `ErrUnactionable`.
+an entry pending until a restore, because a record can stay archived for good.
+`events.UnactionableIfGone` turns a store's `ErrNotFound` into `ErrUnactionable`.
 
 ---
 

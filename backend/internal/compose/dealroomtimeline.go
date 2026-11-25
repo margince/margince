@@ -206,7 +206,7 @@ func (w *DealRoomTimeline) write(ctx context.Context, env events.Envelope, note 
 		// would stay pending for as long as it stays archived. The note is
 		// dropped, and the subscriber's ERROR log names the deal.
 		return fmt.Errorf("deal room timeline: writing the note for %s: %w", env.Type,
-			unactionableIfGone(err, "deal", note.deal))
+			events.UnactionableIfGone(err, "deal", note.deal))
 	}
 	return nil
 }

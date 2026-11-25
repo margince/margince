@@ -110,7 +110,7 @@ func (g *CohortPromoteGen) HandleEvent(ctx context.Context, env events.Envelope)
 		// message arriving before its contact). The trigger is the contact's
 		// own write, so the row existed when the event was emitted.
 		if err != nil {
-			return unactionableIfGone(err, "contact", contact.UUID)
+			return events.UnactionableIfGone(err, "contact", contact.UUID)
 		}
 		if done.Linked > 0 || done.Promoted > 0 {
 			g.log.InfoContext(ctx, "repaired a contact's captured cohort",

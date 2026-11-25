@@ -143,7 +143,7 @@ func (g *CommissionGen) accrue(ctx context.Context, env events.Envelope, moved d
 	}
 	// The ledger reads archived deals and partners, so ErrNotFound means the
 	// deal or the partner no longer exists. No retry finds it.
-	return unactionableIfGone(err, "deal", env.Entity.ID)
+	return events.UnactionableIfGone(err, "deal", env.Entity.ID)
 }
 
 // reverse voids whatever live entry the undone win produced.
