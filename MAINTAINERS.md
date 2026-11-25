@@ -14,6 +14,6 @@ path is a separate question, and [CODEOWNERS](CODEOWNERS) answers it.
 
 ## Where Margince is going
 
-The public [Margince roadmap](https://github.com/orgs/margince/projects/2) sorts open issues with a
-dated milestone into **Now**, **Next** and **Later**. The issue is the source of truth, and the project
-only sorts it.
+The public [Margince roadmap](https://github.com/orgs/margince/projects/2) groups issues by their
+milestone into **Now**, **Next** and **Later**. A maintainer brings it up to date by hand, so it can lag
+behind. An issue's own milestone and state are the source of truth, and the board only sorts them.
