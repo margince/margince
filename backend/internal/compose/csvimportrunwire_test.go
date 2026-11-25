@@ -54,7 +54,7 @@ func TestARunSaysTheRowsItWroteOnlyOnceItHasWritten(t *testing.T) {
 func TestADraftSaysTheRowsItsUploadCounted(t *testing.T) {
 	draft := toContractImportRun(migration.Run{
 		Status: migration.StatusPending, Mapping: &migration.RunMapping{Object: migration.ObjectContact},
-		Session: migration.Session{UploadRows: new(7)},
+		UploadRows: new(7),
 	})
 	if draft.RowCount == nil || *draft.RowCount != 7 {
 		t.Errorf("row_count = %v, want the 7 rows the upload counted", draft.RowCount)
