@@ -38,7 +38,9 @@ const (
 	// Raised by 2 files for the extension mail-file read cases and the purge
 	// receipt cases, which drive this package's unexported seams. Raised by 1
 	// production and 1 test file for the series-split fold and its cases.
-	composeRootTestFiles = 1911
+	// Raised by 1 for the removed-unit list cases, which drive the unexported
+	// Live List check and list export over a kind no unit declares.
+	composeRootTestFiles = 1912
 	// Raised by 107 for the floor of a figure every reader is shown alike. Raised
 	// by 1 for the import that binds one zone lookup to each attention read.
 	// Raised by 249 production and 62 test lines for the full-path certification
@@ -63,8 +65,11 @@ const (
 	// its field errors, and the route cases that read the unexported verb shapes.
 	// Raised by 9 production and 17 test lines for the company status rename,
 	// whose webhook and preview keys sit in this package's unexported maps.
-	composeRootProductionLines = 230_703
-	composeRootTestLines       = 360_251
+	// Raised by 30 production and 363 test lines for lists over a removed
+	// extension kind and the failing-report directory. The cases drive the
+	// unexported Live List check, the list export and the report directory.
+	composeRootProductionLines = 230_733
+	composeRootTestLines       = 360_614
 )
 
 // A read under these floors stopped early or read the wrong place, and would

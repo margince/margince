@@ -43,8 +43,9 @@ func extensionTypes() []string {
 }
 
 // requestedTypes is the types a search covers. It is the ones the search names,
-// else every core type, plus the declared kinds when the search asks for them.
-func requestedTypes(in Input) []string {
+// else every core type, plus the kinds the caller may read when the search asks
+// for them. A kind they may not read is left out, never refused.
+func requestedTypes(ctx context.Context, in Input) []string {
 	if len(in.Types) > 0 {
 		return in.Types
 	}
@@ -53,7 +54,11 @@ func requestedTypes(in Input) []string {
 		types = append(types, b.entity)
 	}
 	if in.WithExtensions {
-		types = append(types, extensionTypes()...)
+		for _, kind := range extensionTypes() {
+			if knownEntity(ctx, kind) {
+				types = append(types, kind)
+			}
+		}
 	}
 	return types
 }
