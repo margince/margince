@@ -51,15 +51,17 @@ func seedDepartedSeat(t *testing.T) ids.UUID {
 func seedEmployee(t *testing.T, e *Env, company ids.UUID, name string, owner ids.UUID, private bool) ids.UUID {
 	t.Helper()
 	contact := e.SeedContact(t, name, &owner)
-	if private {
-		e.MakeCapturePrivate(t, "contact", contact, owner)
-	}
 	contactID, companyID := ContactIDOf(contact), companyIDOf(company)
 	primary := true
 	if _, err := e.Contacts.CreateRelationship(e.Admin(), contacts.CreateRelationshipInput{
 		Kind: "employment", ContactID: &contactID, CompanyID: &companyID, IsCurrentPrimary: &primary,
 	}); err != nil {
 		t.Fatalf("employing %s: %v", name, err)
+	}
+	// Private only once employed: a capture-private contact answers to its
+	// owner alone, so the admin who writes the edge could no longer reach it.
+	if private {
+		e.MakeCapturePrivate(t, "contact", contact, owner)
 	}
 	return contact
 }

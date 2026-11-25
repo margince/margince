@@ -231,10 +231,5 @@ func refersToHiddenRecords(node any) bool {
 		return true
 	}
 	parts, _ := property["allOf"].([]any)
-	for _, part := range parts {
-		if refersToHiddenRecords(part) {
-			return true
-		}
-	}
-	return false
+	return slices.ContainsFunc(parts, refersToHiddenRecords)
 }

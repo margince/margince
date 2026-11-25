@@ -3569,8 +3569,10 @@ export const en = {
   "state.staleAsOf": "Last known values, as of {when}",
   "state.partial": "Showing part of the list",
   "state.partialCount": "{count} more not shown",
-  "state.hidden": "{count} more you cannot see.",
-  "state.hiddenAsk": "{count} more you cannot see. Ask {names}.",
+  "state.hidden_one": "{count} more you cannot see.",
+  "state.hidden_other": "{count} more you cannot see.",
+  "state.hiddenAsk_one": "{count} more you cannot see. Ask {names}.",
+  "state.hiddenAsk_other": "{count} more you cannot see. Ask {names}.",
   // The opened file. `FilePreview` is a design-system control every surface
   // that draws a file card can open, so its words belong to the control rather
   // than to any one screen â the same three verbs stand over a contract on an

@@ -3643,9 +3643,12 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "state.staleAsOf": "Zuletzt bekannte Werte, Stand {when}",
   "state.partial": "Ein Teil der Liste wird angezeigt",
   "state.partialCount": "Weitere nicht angezeigt: {count}",
-  "state.hidden": "{count} weitere, die du nicht sehen kannst.",
-  "state.hiddenAsk":
-    "{count} weitere, die du nicht sehen kannst. Frag {names}.",
+  "state.hidden_one": "{count} weiterer, den du nicht sehen kannst.",
+  "state.hidden_other": "{count} weitere, die du nicht sehen kannst.",
+  "state.hiddenAsk_one":
+    "{count} weiterer, den du nicht sehen kannst. Frage {names}.",
+  "state.hiddenAsk_other":
+    "{count} weitere, die du nicht sehen kannst. Frage {names}.",
   "filePreview.download": "Herunterladen",
   "filePreview.print": "Drucken",
   "filePreview.loading": "Datei wird geladen…",

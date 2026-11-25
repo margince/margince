@@ -16,6 +16,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/approvals"
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/finance"
+	"github.com/margince/margince/backend/internal/platform/clocktest"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -45,7 +46,9 @@ func TestTheFinanceCardAndTheCompanyPageWithholdTheSameBillingContacts(t *testin
 		RowScope: principal.RowScopeTeam,
 	})
 	companyID := ids.From[ids.CompanyKind](company)
-	page, err := company360.NewService(e.Pool, e.Contacts, e.Deals, e.Projects, approvals.NewService(e.DB()), time.Now).
+	now := clocktest.Now(t)
+	page, err := company360.NewService(e.Pool, e.Contacts, e.Deals, e.Projects, approvals.NewService(e.DB()),
+		func() time.Time { return now }).
 		Assemble(rep, companyID)
 	if err != nil {
 		t.Fatalf("assemble: %v", err)

@@ -343,29 +343,29 @@ var actorKinds = map[string]string{
 // converts on its own with a test through the real gate. A converted file that
 // keeps its entry fails AssertAllMatched.
 var agentJobsStillSystemTyped = gatekit.Waive(map[string]string{
-	"internal/compose/approvalpreviewcommitment.go":   forAPerson,
-	"internal/compose/chatcapturefile.go":             forAPerson,
-	"internal/compose/coldstartaccept.go":             forAPerson,
-	"internal/compose/companynamepromotion.go":        forAPerson,
-	"internal/compose/deepreadaccept.go":              forAPerson,
-	"internal/compose/deepreadprincipal.go":           forAPerson,
-	"internal/compose/extractionaccept.go":            forAPerson,
-	"internal/compose/fxrefresh.go":                   forAPerson,
-	"internal/compose/jobs_documentextract.go":        forAPerson,
-	"internal/compose/jobs_transcript.go":             forAPerson,
-	"internal/compose/offerdraft.go":                  forAPerson,
-	"internal/compose/onboardingsitereadtransport.go": forAPerson,
-	"internal/compose/rateproposals.go":               forAPerson,
-	"internal/compose/reconcile.go":                   forAPerson,
-	"internal/compose/scrapeaccept.go":                forAPerson,
-	"internal/compose/signalproposals.go":             forAPerson,
-	"internal/compose/voicebuild.go":                  forAPerson,
+	"internal/compose/approvalpreviewcommitment.go":   forAColleague,
+	"internal/compose/chatcapturefile.go":             forAColleague,
+	"internal/compose/coldstartaccept.go":             forAColleague,
+	"internal/compose/companynamepromotion.go":        forAColleague,
+	"internal/compose/deepreadaccept.go":              forAColleague,
+	"internal/compose/deepreadprincipal.go":           forAColleague,
+	"internal/compose/extractionaccept.go":            forAColleague,
+	"internal/compose/fxrefresh.go":                   forAColleague,
+	"internal/compose/jobs_documentextract.go":        forAColleague,
+	"internal/compose/jobs_transcript.go":             forAColleague,
+	"internal/compose/offerdraft.go":                  forAColleague,
+	"internal/compose/onboardingsitereadtransport.go": forAColleague,
+	"internal/compose/rateproposals.go":               forAColleague,
+	"internal/compose/reconcile.go":                   forAColleague,
+	"internal/compose/scrapeaccept.go":                forAColleague,
+	"internal/compose/signalproposals.go":             forAColleague,
+	"internal/compose/voicebuild.go":                  forAColleague,
 	"internal/compose/commitmenttask.go":              forNoOne,
 	"internal/compose/jobs_knowledgeingest.go":        forNoOne,
 })
 
 const (
-	forAPerson = "acts for a named person; until it runs as an agent under that person's live grants, " +
+	forAColleague = "acts for a named colleague; until it runs as an agent under that colleague's live grants, " +
 		"audit_log records it as a system act and no grant bounds what it writes"
 	forNoOne = "acts for no one; it needs a fixed grant set of its own before it can run as an agent, " +
 		"and until then audit_log records it as a system act"

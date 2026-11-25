@@ -4,7 +4,7 @@
 import type { ReactNode } from "react";
 import { formatNumber } from "../format/format";
 import { listFormat } from "../format/formatters";
-import { useLocale, useT } from "../i18n";
+import { useLocale, usePlural, useT } from "../i18n";
 import { Button, PendingBody } from "./atoms";
 import { Eyebrow, type EyebrowElement } from "./eyebrow";
 import "./surfacestate.css";
@@ -363,7 +363,7 @@ export type HiddenRecords = Readonly<{
 export function HiddenRecordsFoot({
   hidden,
 }: Readonly<{ hidden: HiddenRecords | undefined }>) {
-  const t = useT();
+  const plural = usePlural();
   const { locale } = useLocale();
   if (!hidden || hidden.count === 0) {
     return null;
@@ -376,8 +376,8 @@ export function HiddenRecordsFoot({
     <div className="surfacestate-partial-foot">
       <p className="surfacestate-empty surfacestate-info">
         {hidden.holders.length > 0
-          ? t("state.hiddenAsk", { count, names })
-          : t("state.hidden", { count })}
+          ? plural("state.hiddenAsk", hidden.count, { count, names })
+          : plural("state.hidden", hidden.count, { count })}
       </p>
     </div>
   );

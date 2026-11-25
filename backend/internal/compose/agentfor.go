@@ -3,12 +3,12 @@
 
 package compose
 
-// The product acting for one named person: an agent principal named for the
-// job, carrying that person's grants as they are now.
+// The product acting for one named colleague: an agent principal named for the
+// job, carrying that colleague's grants as they are now.
 //
 // A job bound as the system principal passes auth.Require without reading any
-// grant, so a job someone started could do what that person may not. Bound
-// through here, the person's live grants decide, and a person who left or was
+// grant, so a job someone started could do what that colleague may not. Bound
+// through here, the colleague's live grants decide, and a colleague who left or was
 // demoted cannot act through the job.
 
 import (
@@ -28,17 +28,17 @@ import (
 // agentActorPrefix is the kind every actor id bound through this seam has.
 const agentActorPrefix = "agent:"
 
-// agentFor binds the product acting FOR person: an agent principal named
-// actorID, carrying OnBehalfOf and the person's grants as they are now. A
-// person who left answers apperrors.ErrNotFound, and the caller does not act.
-func agentFor(ctx context.Context, users *identity.Service, person ids.UUID, actorID string) (context.Context, error) {
+// agentFor binds the product acting FOR colleague: an agent principal named
+// actorID, carrying OnBehalfOf and the colleague's grants as they are now. A
+// colleague who left answers apperrors.ErrNotFound, and the caller does not act.
+func agentFor(ctx context.Context, users *identity.Service, colleague ids.UUID, actorID string) (context.Context, error) {
 	wsID, ok := principal.WorkspaceID(ctx)
 	if !ok {
-		return nil, errors.New("compose: acting for a person outside a bound workspace")
+		return nil, errors.New("compose: acting for a colleague outside a bound workspace")
 	}
-	member, err := authz.MemberPrincipal(ctx, users, wsID, person)
+	member, err := authz.MemberPrincipal(ctx, users, wsID, colleague)
 	if err != nil {
-		return nil, fmt.Errorf("compose: authority of the person to act for: %w", err)
+		return nil, fmt.Errorf("compose: authority of the colleague to act for: %w", err)
 	}
 	agent, err := agentPrincipalFor(member, actorID)
 	if err != nil {
@@ -50,13 +50,13 @@ func agentFor(ctx context.Context, users *identity.Service, person ids.UUID, act
 
 // agentForTx is agentFor read in the write's own transaction. The write acts
 // on the grants a role change or suspension committed before it left.
-func agentForTx(users *identity.Service, person ids.UUID, actorID string) func(context.Context, pgx.Tx) (context.Context, error) {
+func agentForTx(users *identity.Service, colleague ids.UUID, actorID string) func(context.Context, pgx.Tx) (context.Context, error) {
 	return func(ctx context.Context, tx pgx.Tx) (context.Context, error) {
-		rbac, seat, err := users.EffectiveAuthorityTx(ctx, tx, person)
+		rbac, seat, err := users.EffectiveAuthorityTx(ctx, tx, colleague)
 		if err != nil {
-			return nil, fmt.Errorf("compose: authority of the person to act for: %w", err)
+			return nil, fmt.Errorf("compose: authority of the colleague to act for: %w", err)
 		}
-		agent, err := agentPrincipalFor(authz.HumanPrincipal(person, rbac, seat), actorID)
+		agent, err := agentPrincipalFor(authz.HumanPrincipal(colleague, rbac, seat), actorID)
 		if err != nil {
 			return nil, err
 		}
@@ -65,21 +65,21 @@ func agentForTx(users *identity.Service, person ids.UUID, actorID string) func(c
 	}
 }
 
-// agentPrincipalFor is the agent acting for person under actorID. storekit
+// agentPrincipalFor is the agent acting for colleague under actorID. storekit
 // stamps actor_type from the type and actor_id from the id. An id of another
 // kind would write an audit row naming two actors, so it is refused.
-func agentPrincipalFor(person principal.Principal, actorID string) (principal.Principal, error) {
+func agentPrincipalFor(colleague principal.Principal, actorID string) (principal.Principal, error) {
 	if !strings.HasPrefix(actorID, agentActorPrefix) || len(actorID) == len(agentActorPrefix) {
 		return principal.Principal{}, fmt.Errorf("compose: %q is not an agent id, so no agent may act under it", actorID)
 	}
 	return principal.Principal{
 		Type:        principal.PrincipalAgent,
 		ID:          actorID,
-		UserID:      person.UserID,
-		OnBehalfOf:  person.UserID,
-		SeatType:    person.SeatType,
-		TeamIDs:     person.TeamIDs,
-		Permissions: person.Permissions,
+		UserID:      colleague.UserID,
+		OnBehalfOf:  colleague.UserID,
+		SeatType:    colleague.SeatType,
+		TeamIDs:     colleague.TeamIDs,
+		Permissions: colleague.Permissions,
 		// Write, and only write: a pass acting unattended changes records and
 		// never puts a message on the wire.
 		Scopes: principal.ScopeSet{principal.ScopeWrite: struct{}{}},
