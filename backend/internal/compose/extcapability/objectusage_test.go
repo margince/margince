@@ -77,9 +77,8 @@ func TestEachPutAndDeleteIsLoggedAndCounted(t *testing.T) {
 	}
 }
 
-// A count that does not commit after the store call leaves the usage high,
-// never low: the Put's bytes are taken back, and the deleted object stays
-// counted.
+// A count that does not commit after the store call leaves the usage too high.
+// The Put's bytes are taken back, and the deleted object stays counted.
 func TestAnObjectCallWhoseCountDoesNotCommitNeverLeavesAnObjectUncounted(t *testing.T) {
 	t.Parallel()
 	ctx, ws := inWorkspace()
