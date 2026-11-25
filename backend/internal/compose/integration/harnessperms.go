@@ -333,3 +333,11 @@ func ReadingOnly(perms principal.Permissions) principal.Permissions {
 	perms.Objects = objects
 	return perms
 }
+
+// ActivityReadOnly takes the activity write grants out of perms, so the actor
+// still sees and changes every row perms reaches and may write no activity.
+func ActivityReadOnly(perms principal.Permissions) principal.Permissions {
+	perms.Objects = maps.Clone(perms.Objects)
+	perms.Objects["activity"] = principal.ObjectGrant{Read: true}
+	return perms
+}
