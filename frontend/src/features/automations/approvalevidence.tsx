@@ -50,7 +50,7 @@ function ApprovalMessage({
       {signatureHtml ? (
         <ApprovalSignature approvalId={approval.id} listed={signatureHtml} />
       ) : signature ? (
-        <EmailText body={signature} />
+        <EmailText body={signature} subject={null} />
       ) : null}
       <EmailAttachments files={preview.files ?? []} />
     </>

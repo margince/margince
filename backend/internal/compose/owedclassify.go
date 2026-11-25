@@ -265,7 +265,7 @@ func (c *OwedClassifier) judgeBatch(ctx context.Context, batch []owedCandidate, 
 	}
 	judged, err := c.predictBatch(ctx, worded, calls, owedPredictionSink{
 		accept: func(ctx context.Context, msg owedCandidate, result owedResult) (bool, error) {
-			ask := owedverdict.VerbatimAsk(result.Verdict, result.Ask, msg.Body, msg.Subject)
+			ask := owedverdict.VerbatimAsk(result.Verdict, result.Ask, msg.Body)
 			return c.store.SetOwedVerdictAsked(ctx, msg.ID, result.Verdict, owedverdict.Ruleset, readAt, ask)
 		},
 		decline: func(ctx context.Context, msg owedCandidate, cause error) (bool, error) {
