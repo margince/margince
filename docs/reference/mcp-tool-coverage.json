@@ -17,18 +17,14 @@
     {
       "model": "claude-sonnet-5-5@claude-cli",
       "name": "claude-sonnet-5-5",
-      "trust": "🟡 Mostly",
+      "trust": "🟢 Yes",
       "cases_with_a_committed_run": 81,
-      "cases_that_reached_their_bar": 78,
-      "cases_below_their_bar": 3,
-      "runs": 166,
-      "passed": 159,
-      "reliability": 0.9578313253012049,
-      "cases_below_their_bar_named": [
-        "case75_sofia_is_leaving",
-        "case88_send_it_anyway",
-        "case91_add_a_review_stage"
-      ],
+      "cases_that_reached_their_bar": 81,
+      "cases_below_their_bar": 0,
+      "runs": 167,
+      "passed": 163,
+      "reliability": 0.9760479041916168,
+      "cases_below_their_bar_named": [],
       "route": "Claude Code CLI",
       "self_judged": true,
       "calls_per_case": "4.5 over 81",
@@ -954,17 +950,16 @@
           "efficiency": {
             "runs": 2,
             "calls": {
-              "median": 7.5,
-              "min": 7,
-              "max": 8
+              "median": 10,
+              "min": 9,
+              "max": 11
             },
             "turns": {
-              "median": 8.5,
-              "min": 8,
-              "max": 9
+              "median": 11,
+              "min": 10,
+              "max": 12
             }
-          },
-          "regraded": true
+          }
         },
         {
           "model": "gemini-4-hydrogen-medium@agy-cli",
@@ -1042,8 +1037,7 @@
               "min": 5,
               "max": 5
             }
-          },
-          "regraded": true
+          }
         },
         {
           "model": "gemini-4-hydrogen-medium@agy-cli",
@@ -1122,8 +1116,7 @@
               "min": 4,
               "max": 4
             }
-          },
-          "regraded": true
+          }
         },
         {
           "model": "gemini-4-hydrogen-medium@agy-cli",
@@ -1191,17 +1184,16 @@
           "efficiency": {
             "runs": 2,
             "calls": {
-              "median": 2,
+              "median": 3.5,
               "min": 2,
-              "max": 2
+              "max": 5
             },
             "turns": {
-              "median": 3,
+              "median": 4.5,
               "min": 3,
-              "max": 3
+              "max": 6
             }
-          },
-          "regraded": true
+          }
         },
         {
           "model": "gemini-4-hydrogen-medium@agy-cli",
@@ -1280,8 +1272,7 @@
               "min": 3,
               "max": 3
             }
-          },
-          "regraded": true
+          }
         },
         {
           "model": "gemini-4-hydrogen-medium@agy-cli",
@@ -1349,17 +1340,16 @@
           "efficiency": {
             "runs": 2,
             "calls": {
-              "median": 3,
+              "median": 3.5,
               "min": 3,
-              "max": 3
+              "max": 4
             },
             "turns": {
-              "median": 4,
+              "median": 4.5,
               "min": 4,
-              "max": 4
+              "max": 5
             }
-          },
-          "regraded": true
+          }
         },
         {
           "model": "gemini-4-hydrogen-medium@agy-cli",
@@ -1427,17 +1417,16 @@
           "efficiency": {
             "runs": 2,
             "calls": {
-              "median": 5.5,
-              "min": 5,
+              "median": 5,
+              "min": 4,
               "max": 6
             },
             "turns": {
-              "median": 6.5,
-              "min": 6,
+              "median": 6,
+              "min": 5,
               "max": 7
             }
-          },
-          "regraded": true
+          }
         },
         {
           "model": "gemini-4-hydrogen-medium@agy-cli",
@@ -1505,17 +1494,16 @@
           "efficiency": {
             "runs": 2,
             "calls": {
-              "median": 6.5,
+              "median": 7,
               "min": 6,
-              "max": 7
+              "max": 8
             },
             "turns": {
-              "median": 7.5,
+              "median": 8,
               "min": 7,
-              "max": 8
+              "max": 9
             }
-          },
-          "regraded": true
+          }
         },
         {
           "model": "gemini-4-hydrogen-medium@agy-cli",
@@ -1583,17 +1571,16 @@
           "efficiency": {
             "runs": 2,
             "calls": {
+              "median": 7,
+              "min": 5,
+              "max": 9
+            },
+            "turns": {
               "median": 8,
               "min": 6,
               "max": 10
-            },
-            "turns": {
-              "median": 9,
-              "min": 7,
-              "max": 11
             }
-          },
-          "regraded": true
+          }
         },
         {
           "model": "gemini-4-hydrogen-medium@agy-cli",
@@ -1663,17 +1650,16 @@
           "efficiency": {
             "runs": 2,
             "calls": {
+              "median": 5,
+              "min": 5,
+              "max": 5
+            },
+            "turns": {
               "median": 6,
               "min": 6,
               "max": 6
-            },
-            "turns": {
-              "median": 7,
-              "min": 7,
-              "max": 7
             }
-          },
-          "regraded": true
+          }
         },
         {
           "model": "gemini-4-hydrogen-medium@agy-cli",
@@ -1731,7 +1717,7 @@
       "by_model": [
         {
           "model": "claude-sonnet-5-5@claude-cli",
-          "runs": 2,
+          "runs": 3,
           "passed": 2,
           "pass_at": 2,
           "held": true,
@@ -1739,19 +1725,18 @@
           "search": "semantic",
           "self_judged": true,
           "efficiency": {
-            "runs": 2,
+            "runs": 3,
             "calls": {
-              "median": 5.5,
-              "min": 5,
+              "median": 5,
+              "min": 4,
               "max": 6
             },
             "turns": {
-              "median": 6.5,
-              "min": 6,
+              "median": 6,
+              "min": 5,
               "max": 7
             }
-          },
-          "regraded": true
+          }
         },
         {
           "model": "gemini-4-hydrogen-medium@agy-cli",
@@ -1832,8 +1817,7 @@
               "min": 4,
               "max": 4
             }
-          },
-          "regraded": true
+          }
         },
         {
           "model": "gemini-4-hydrogen-medium@agy-cli",
@@ -1980,17 +1964,16 @@
           "efficiency": {
             "runs": 2,
             "calls": {
-              "median": 7,
-              "min": 6,
-              "max": 8
+              "median": 8.5,
+              "min": 8,
+              "max": 9
             },
             "turns": {
-              "median": 8,
-              "min": 7,
-              "max": 9
+              "median": 9.5,
+              "min": 9,
+              "max": 10
             }
-          },
-          "regraded": true
+          }
         },
         {
           "model": "gemini-4-hydrogen-medium@agy-cli",
@@ -2070,8 +2053,7 @@
               "min": 8,
               "max": 9
             }
-          },
-          "regraded": true
+          }
         },
         {
           "model": "gemini-4-hydrogen-medium@agy-cli",
@@ -2151,8 +2133,7 @@
               "min": 5,
               "max": 5
             }
-          },
-          "regraded": true
+          }
         },
         {
           "model": "gemini-4-hydrogen-medium@agy-cli",
@@ -2229,8 +2210,7 @@
               "min": 6,
               "max": 6
             }
-          },
-          "regraded": true
+          }
         },
         {
           "model": "gemini-4-hydrogen-medium@agy-cli",
@@ -2299,16 +2279,15 @@
             "runs": 2,
             "calls": {
               "median": 3,
-              "min": 3,
-              "max": 3
+              "min": 2,
+              "max": 4
             },
             "turns": {
               "median": 4,
-              "min": 4,
-              "max": 4
+              "min": 3,
+              "max": 5
             }
-          },
-          "regraded": true
+          }
         },
         {
           "model": "gemini-4-hydrogen-medium@agy-cli",
@@ -2376,17 +2355,16 @@
           "efficiency": {
             "runs": 2,
             "calls": {
-              "median": 3.5,
+              "median": 4,
               "min": 3,
-              "max": 4
+              "max": 5
             },
             "turns": {
-              "median": 4.5,
+              "median": 5,
               "min": 4,
-              "max": 5
+              "max": 6
             }
-          },
-          "regraded": true
+          }
         },
         {
           "model": "gemini-4-hydrogen-medium@agy-cli",
@@ -2454,17 +2432,16 @@
           "efficiency": {
             "runs": 2,
             "calls": {
-              "median": 4,
+              "median": 4.5,
               "min": 4,
-              "max": 4
+              "max": 5
             },
             "turns": {
-              "median": 5,
+              "median": 5.5,
               "min": 5,
-              "max": 5
+              "max": 6
             }
-          },
-          "regraded": true
+          }
         },
         {
           "model": "gemini-4-hydrogen-medium@agy-cli",
@@ -2541,8 +2518,7 @@
               "min": 4,
               "max": 4
             }
-          },
-          "regraded": true
+          }
         },
         {
           "model": "gemini-4-hydrogen-medium@agy-cli",
@@ -2614,14 +2590,14 @@
           "efficiency": {
             "runs": 2,
             "calls": {
-              "median": 4,
-              "min": 4,
-              "max": 4
-            },
-            "turns": {
               "median": 5,
               "min": 5,
               "max": 5
+            },
+            "turns": {
+              "median": 6,
+              "min": 6,
+              "max": 6
             }
           },
           "regraded": true
@@ -2692,17 +2668,16 @@
           "efficiency": {
             "runs": 2,
             "calls": {
-              "median": 7.5,
-              "min": 6,
-              "max": 9
+              "median": 7,
+              "min": 7,
+              "max": 7
             },
             "turns": {
-              "median": 8.5,
-              "min": 7,
-              "max": 10
+              "median": 8,
+              "min": 8,
+              "max": 8
             }
-          },
-          "regraded": true
+          }
         },
         {
           "model": "gemini-4-hydrogen-medium@agy-cli",
@@ -2770,17 +2745,16 @@
           "efficiency": {
             "runs": 2,
             "calls": {
-              "median": 3,
-              "min": 3,
-              "max": 3
-            },
-            "turns": {
               "median": 4,
               "min": 4,
               "max": 4
+            },
+            "turns": {
+              "median": 5,
+              "min": 5,
+              "max": 5
             }
-          },
-          "regraded": true
+          }
         },
         {
           "model": "gemini-4-hydrogen-medium@agy-cli",
@@ -2853,17 +2827,16 @@
           "efficiency": {
             "runs": 2,
             "calls": {
-              "median": 2.5,
+              "median": 2,
               "min": 2,
-              "max": 3
+              "max": 2
             },
             "turns": {
-              "median": 3.5,
+              "median": 3,
               "min": 3,
-              "max": 4
+              "max": 3
             }
-          },
-          "regraded": true
+          }
         },
         {
           "model": "gemini-4-hydrogen-medium@agy-cli",
@@ -2931,17 +2904,16 @@
           "efficiency": {
             "runs": 2,
             "calls": {
-              "median": 6.5,
+              "median": 7,
               "min": 6,
-              "max": 7
+              "max": 8
             },
             "turns": {
-              "median": 7.5,
+              "median": 8,
               "min": 7,
-              "max": 8
+              "max": 9
             }
-          },
-          "regraded": true
+          }
         },
         {
           "model": "gemini-4-hydrogen-medium@agy-cli",
@@ -3009,17 +2981,16 @@
           "efficiency": {
             "runs": 2,
             "calls": {
-              "median": 4.5,
+              "median": 3.5,
               "min": 3,
-              "max": 6
+              "max": 4
             },
             "turns": {
-              "median": 5.5,
+              "median": 4.5,
               "min": 4,
-              "max": 7
+              "max": 5
             }
-          },
-          "regraded": true
+          }
         },
         {
           "model": "gemini-4-hydrogen-medium@agy-cli",
@@ -3087,17 +3058,16 @@
           "efficiency": {
             "runs": 2,
             "calls": {
-              "median": 4,
-              "min": 4,
+              "median": 3.5,
+              "min": 3,
               "max": 4
             },
             "turns": {
-              "median": 5,
-              "min": 5,
+              "median": 4.5,
+              "min": 4,
               "max": 5
             }
-          },
-          "regraded": true
+          }
         },
         {
           "model": "gemini-4-hydrogen-medium@agy-cli",
@@ -3174,8 +3144,7 @@
               "min": 4,
               "max": 4
             }
-          },
-          "regraded": true
+          }
         },
         {
           "model": "gemini-4-hydrogen-medium@agy-cli",
@@ -3243,17 +3212,16 @@
           "efficiency": {
             "runs": 2,
             "calls": {
-              "median": 4,
-              "min": 4,
+              "median": 3.5,
+              "min": 3,
               "max": 4
             },
             "turns": {
-              "median": 5,
-              "min": 5,
+              "median": 4.5,
+              "min": 4,
               "max": 5
             }
-          },
-          "regraded": true
+          }
         },
         {
           "model": "gemini-4-hydrogen-medium@agy-cli",
@@ -3345,8 +3313,7 @@
               "min": 5,
               "max": 6
             }
-          },
-          "regraded": true
+          }
         },
         {
           "model": "gemini-4-hydrogen-medium@agy-cli",
@@ -3415,17 +3382,16 @@
           "efficiency": {
             "runs": 2,
             "calls": {
-              "median": 4.5,
-              "min": 4,
-              "max": 5
+              "median": 6,
+              "min": 5,
+              "max": 7
             },
             "turns": {
-              "median": 5.5,
-              "min": 5,
-              "max": 6
+              "median": 7,
+              "min": 6,
+              "max": 8
             }
-          },
-          "regraded": true
+          }
         },
         {
           "model": "gemini-4-hydrogen-medium@agy-cli",
@@ -3496,17 +3462,16 @@
           "efficiency": {
             "runs": 2,
             "calls": {
-              "median": 5,
-              "min": 5,
+              "median": 4.5,
+              "min": 4,
               "max": 5
             },
             "turns": {
-              "median": 6,
-              "min": 6,
+              "median": 5.5,
+              "min": 5,
               "max": 6
             }
-          },
-          "regraded": true
+          }
         },
         {
           "model": "gemini-4-hydrogen-medium@agy-cli",
@@ -3566,7 +3531,7 @@
         {
           "model": "claude-sonnet-5-5@claude-cli",
           "runs": 3,
-          "passed": 3,
+          "passed": 2,
           "pass_at": 2,
           "held": true,
           "driver": "claude:cli",
@@ -3584,8 +3549,7 @@
               "min": 3,
               "max": 3
             }
-          },
-          "regraded": true
+          }
         },
         {
           "model": "gemini-4-hydrogen-medium@agy-cli",
@@ -3654,17 +3618,16 @@
           "efficiency": {
             "runs": 2,
             "calls": {
-              "median": 10,
-              "min": 10,
-              "max": 10
+              "median": 14,
+              "min": 14,
+              "max": 14
             },
             "turns": {
-              "median": 11,
-              "min": 11,
-              "max": 11
+              "median": 15,
+              "min": 15,
+              "max": 15
             }
-          },
-          "regraded": true
+          }
         },
         {
           "model": "gemini-4-hydrogen-medium@agy-cli",
@@ -3733,17 +3696,16 @@
           "efficiency": {
             "runs": 2,
             "calls": {
-              "median": 6,
+              "median": 6.5,
               "min": 6,
-              "max": 6
+              "max": 7
             },
             "turns": {
-              "median": 7,
+              "median": 7.5,
               "min": 7,
-              "max": 7
+              "max": 8
             }
-          },
-          "regraded": true
+          }
         },
         {
           "model": "gemini-4-hydrogen-medium@agy-cli",
@@ -3824,8 +3786,7 @@
               "min": 4,
               "max": 4
             }
-          },
-          "regraded": true
+          }
         },
         {
           "model": "gemini-4-hydrogen-medium@agy-cli",
@@ -3907,8 +3868,7 @@
               "min": 8,
               "max": 13
             }
-          },
-          "regraded": true
+          }
         },
         {
           "model": "gemini-4-hydrogen-medium@agy-cli",
@@ -3977,17 +3937,16 @@
           "efficiency": {
             "runs": 2,
             "calls": {
-              "median": 10.5,
-              "min": 10,
-              "max": 11
+              "median": 8.5,
+              "min": 8,
+              "max": 9
             },
             "turns": {
-              "median": 11.5,
-              "min": 11,
-              "max": 12
+              "median": 9.5,
+              "min": 9,
+              "max": 10
             }
-          },
-          "regraded": true
+          }
         },
         {
           "model": "gemini-4-hydrogen-medium@agy-cli",
@@ -4047,23 +4006,23 @@
       "by_model": [
         {
           "model": "claude-sonnet-5-5@claude-cli",
-          "runs": 2,
-          "passed": 2,
+          "runs": 3,
+          "passed": 3,
           "pass_at": 2,
           "held": true,
           "driver": "claude:cli",
           "search": "semantic",
           "self_judged": true,
           "efficiency": {
-            "runs": 2,
+            "runs": 3,
             "calls": {
-              "median": 14,
-              "min": 13,
+              "median": 15,
+              "min": 11,
               "max": 15
             },
             "turns": {
-              "median": 15,
-              "min": 14,
+              "median": 16,
+              "min": 12,
               "max": 16
             }
           },
@@ -4136,17 +4095,16 @@
           "efficiency": {
             "runs": 2,
             "calls": {
-              "median": 3.5,
-              "min": 3,
-              "max": 4
+              "median": 5,
+              "min": 4,
+              "max": 6
             },
             "turns": {
-              "median": 4.5,
-              "min": 4,
-              "max": 5
+              "median": 6,
+              "min": 5,
+              "max": 7
             }
-          },
-          "regraded": true
+          }
         },
         {
           "model": "gemini-4-hydrogen-medium@agy-cli",
@@ -4219,17 +4177,16 @@
           "efficiency": {
             "runs": 2,
             "calls": {
-              "median": 7,
+              "median": 5.5,
               "min": 5,
-              "max": 9
+              "max": 6
             },
             "turns": {
-              "median": 8,
+              "median": 6.5,
               "min": 6,
-              "max": 10
+              "max": 7
             }
-          },
-          "regraded": true
+          }
         },
         {
           "model": "gemini-4-hydrogen-medium@agy-cli",
@@ -4297,17 +4254,16 @@
           "efficiency": {
             "runs": 2,
             "calls": {
-              "median": 9,
-              "min": 9,
+              "median": 8.5,
+              "min": 8,
               "max": 9
             },
             "turns": {
-              "median": 10,
-              "min": 10,
+              "median": 9.5,
+              "min": 9,
               "max": 10
             }
-          },
-          "regraded": true
+          }
         },
         {
           "model": "gemini-4-hydrogen-medium@agy-cli",
@@ -4378,17 +4334,16 @@
           "efficiency": {
             "runs": 2,
             "calls": {
-              "median": 17,
-              "min": 16,
-              "max": 18
+              "median": 15,
+              "min": 15,
+              "max": 15
             },
             "turns": {
-              "median": 18,
-              "min": 17,
-              "max": 19
+              "median": 16,
+              "min": 16,
+              "max": 16
             }
-          },
-          "regraded": true
+          }
         },
         {
           "model": "gemini-4-hydrogen-medium@agy-cli",
@@ -4458,17 +4413,16 @@
           "efficiency": {
             "runs": 2,
             "calls": {
-              "median": 5.5,
+              "median": 4,
               "min": 4,
-              "max": 7
+              "max": 4
             },
             "turns": {
-              "median": 6.5,
+              "median": 5,
               "min": 5,
-              "max": 8
+              "max": 5
             }
-          },
-          "regraded": true
+          }
         },
         {
           "model": "gemini-4-hydrogen-medium@agy-cli",
@@ -4539,17 +4493,16 @@
           "efficiency": {
             "runs": 2,
             "calls": {
-              "median": 7.5,
+              "median": 7,
               "min": 7,
-              "max": 8
+              "max": 7
             },
             "turns": {
-              "median": 8.5,
+              "median": 8,
               "min": 8,
-              "max": 9
+              "max": 8
             }
-          },
-          "regraded": true
+          }
         },
         {
           "model": "gemini-4-hydrogen-medium@agy-cli",
@@ -4648,17 +4601,16 @@
           "efficiency": {
             "runs": 2,
             "calls": {
-              "median": 5,
-              "min": 4,
-              "max": 6
+              "median": 7,
+              "min": 5,
+              "max": 9
             },
             "turns": {
-              "median": 6,
-              "min": 5,
-              "max": 7
+              "median": 8,
+              "min": 6,
+              "max": 10
             }
-          },
-          "regraded": true
+          }
         },
         {
           "model": "gemini-4-hydrogen-medium@agy-cli",
@@ -4730,17 +4682,16 @@
           "efficiency": {
             "runs": 2,
             "calls": {
-              "median": 12.5,
-              "min": 12,
-              "max": 13
+              "median": 9,
+              "min": 9,
+              "max": 9
             },
             "turns": {
-              "median": 13.5,
-              "min": 13,
-              "max": 14
+              "median": 10,
+              "min": 10,
+              "max": 10
             }
-          },
-          "regraded": true
+          }
         },
         {
           "model": "gemini-4-hydrogen-medium@agy-cli",
@@ -4811,17 +4762,16 @@
           "efficiency": {
             "runs": 2,
             "calls": {
-              "median": 7.5,
-              "min": 7,
-              "max": 8
+              "median": 10.5,
+              "min": 10,
+              "max": 11
             },
             "turns": {
-              "median": 8.5,
-              "min": 8,
-              "max": 9
+              "median": 11.5,
+              "min": 11,
+              "max": 12
             }
-          },
-          "regraded": true
+          }
         },
         {
           "model": "gemini-4-hydrogen-medium@agy-cli",
@@ -4890,17 +4840,16 @@
           "efficiency": {
             "runs": 2,
             "calls": {
-              "median": 4.5,
-              "min": 4,
-              "max": 5
-            },
-            "turns": {
               "median": 5.5,
               "min": 5,
               "max": 6
+            },
+            "turns": {
+              "median": 6.5,
+              "min": 6,
+              "max": 7
             }
-          },
-          "regraded": true
+          }
         },
         {
           "model": "gemini-4-hydrogen-medium@agy-cli",
@@ -4968,17 +4917,16 @@
           "efficiency": {
             "runs": 2,
             "calls": {
-              "median": 6.5,
-              "min": 6,
-              "max": 7
+              "median": 5,
+              "min": 5,
+              "max": 5
             },
             "turns": {
-              "median": 7.5,
-              "min": 7,
-              "max": 8
+              "median": 6,
+              "min": 6,
+              "max": 6
             }
-          },
-          "regraded": true
+          }
         },
         {
           "model": "gemini-4-hydrogen-medium@agy-cli",
@@ -5050,17 +4998,16 @@
           "efficiency": {
             "runs": 2,
             "calls": {
-              "median": 7,
+              "median": 6,
               "min": 6,
-              "max": 8
+              "max": 6
             },
             "turns": {
-              "median": 8,
+              "median": 7,
               "min": 7,
-              "max": 9
+              "max": 7
             }
-          },
-          "regraded": true
+          }
         },
         {
           "model": "gemini-4-hydrogen-medium@agy-cli",
@@ -5137,8 +5084,7 @@
               "min": 4,
               "max": 4
             }
-          },
-          "regraded": true
+          }
         },
         {
           "model": "gemini-4-hydrogen-medium@agy-cli",
@@ -5206,17 +5152,16 @@
           "efficiency": {
             "runs": 2,
             "calls": {
-              "median": 7,
-              "min": 7,
-              "max": 7
+              "median": 6.5,
+              "min": 5,
+              "max": 8
             },
             "turns": {
-              "median": 8,
-              "min": 8,
-              "max": 8
+              "median": 7.5,
+              "min": 6,
+              "max": 9
             }
-          },
-          "regraded": true
+          }
         },
         {
           "model": "gemini-4-hydrogen-medium@agy-cli",
@@ -5286,17 +5231,16 @@
           "efficiency": {
             "runs": 2,
             "calls": {
-              "median": 9.5,
-              "min": 7,
-              "max": 12
+              "median": 12,
+              "min": 10,
+              "max": 14
             },
             "turns": {
-              "median": 10.5,
-              "min": 8,
-              "max": 13
+              "median": 13,
+              "min": 11,
+              "max": 15
             }
-          },
-          "regraded": true
+          }
         },
         {
           "model": "gemini-4-hydrogen-medium@agy-cli",
@@ -5372,17 +5316,16 @@
           "efficiency": {
             "runs": 2,
             "calls": {
-              "median": 8.5,
-              "min": 7,
-              "max": 10
+              "median": 10.5,
+              "min": 10,
+              "max": 11
             },
             "turns": {
-              "median": 9.5,
-              "min": 8,
-              "max": 11
+              "median": 11.5,
+              "min": 11,
+              "max": 12
             }
-          },
-          "regraded": true
+          }
         },
         {
           "model": "gemini-4-hydrogen-medium@agy-cli",
@@ -5459,8 +5402,7 @@
               "min": 3,
               "max": 3
             }
-          },
-          "regraded": true
+          }
         },
         {
           "model": "gemini-4-hydrogen-medium@agy-cli",
@@ -5534,16 +5476,15 @@
             "runs": 2,
             "calls": {
               "median": 4,
-              "min": 3,
-              "max": 5
+              "min": 4,
+              "max": 4
             },
             "turns": {
               "median": 5,
-              "min": 4,
-              "max": 6
+              "min": 5,
+              "max": 5
             }
-          },
-          "regraded": true
+          }
         },
         {
           "model": "gemini-4-hydrogen-medium@agy-cli",
@@ -5611,17 +5552,16 @@
           "efficiency": {
             "runs": 2,
             "calls": {
-              "median": 3.5,
+              "median": 3,
               "min": 3,
-              "max": 4
+              "max": 3
             },
             "turns": {
-              "median": 4.5,
+              "median": 4,
               "min": 4,
-              "max": 5
+              "max": 4
             }
-          },
-          "regraded": true
+          }
         },
         {
           "model": "gemini-4-hydrogen-medium@agy-cli",
@@ -5679,7 +5619,7 @@
       "by_model": [
         {
           "model": "claude-sonnet-5-5@claude-cli",
-          "runs": 2,
+          "runs": 3,
           "passed": 2,
           "pass_at": 2,
           "held": true,
@@ -5687,19 +5627,18 @@
           "search": "semantic",
           "self_judged": true,
           "efficiency": {
-            "runs": 2,
+            "runs": 3,
             "calls": {
               "median": 6,
-              "min": 6,
-              "max": 6
+              "min": 5,
+              "max": 7
             },
             "turns": {
               "median": 7,
-              "min": 7,
-              "max": 7
+              "min": 6,
+              "max": 8
             }
-          },
-          "regraded": true
+          }
         },
         {
           "model": "gemini-4-hydrogen-medium@agy-cli",
@@ -5767,17 +5706,16 @@
           "efficiency": {
             "runs": 2,
             "calls": {
-              "median": 6.5,
+              "median": 7,
               "min": 6,
-              "max": 7
+              "max": 8
             },
             "turns": {
-              "median": 7.5,
+              "median": 8,
               "min": 7,
-              "max": 8
+              "max": 9
             }
-          },
-          "regraded": true
+          }
         },
         {
           "model": "gemini-4-hydrogen-medium@agy-cli",
@@ -5855,8 +5793,7 @@
               "min": 3,
               "max": 3
             }
-          },
-          "regraded": true
+          }
         },
         {
           "model": "gemini-4-hydrogen-medium@agy-cli",
@@ -5933,8 +5870,7 @@
               "min": 2,
               "max": 2
             }
-          },
-          "regraded": true
+          }
         },
         {
           "model": "gemini-4-hydrogen-medium@agy-cli",
@@ -6002,17 +5938,16 @@
           "efficiency": {
             "runs": 2,
             "calls": {
-              "median": 4.5,
-              "min": 3,
-              "max": 6
+              "median": 5,
+              "min": 5,
+              "max": 5
             },
             "turns": {
-              "median": 5.5,
-              "min": 4,
-              "max": 7
+              "median": 6,
+              "min": 6,
+              "max": 6
             }
-          },
-          "regraded": true
+          }
         },
         {
           "model": "gemini-4-hydrogen-medium@agy-cli",
@@ -6070,7 +6005,7 @@
       "by_model": [
         {
           "model": "claude-sonnet-5-5@claude-cli",
-          "runs": 2,
+          "runs": 3,
           "passed": 2,
           "pass_at": 2,
           "held": true,
@@ -6078,19 +6013,18 @@
           "search": "semantic",
           "self_judged": true,
           "efficiency": {
-            "runs": 2,
+            "runs": 3,
             "calls": {
-              "median": 4,
+              "median": 3,
               "min": 3,
-              "max": 5
+              "max": 3
             },
             "turns": {
-              "median": 5,
+              "median": 4,
               "min": 4,
-              "max": 6
+              "max": 4
             }
-          },
-          "regraded": true
+          }
         },
         {
           "model": "gemini-4-hydrogen-medium@agy-cli",
@@ -6148,27 +6082,26 @@
       "by_model": [
         {
           "model": "claude-sonnet-5-5@claude-cli",
-          "runs": 3,
-          "passed": 1,
+          "runs": 2,
+          "passed": 2,
           "pass_at": 2,
-          "held": false,
+          "held": true,
           "driver": "claude:cli",
           "search": "semantic",
           "self_judged": true,
           "efficiency": {
-            "runs": 3,
+            "runs": 2,
             "calls": {
-              "median": 4,
+              "median": 3,
               "min": 3,
-              "max": 4
+              "max": 3
             },
             "turns": {
-              "median": 5,
+              "median": 4,
               "min": 4,
-              "max": 5
+              "max": 4
             }
-          },
-          "regraded": true
+          }
         },
         {
           "model": "gemini-4-hydrogen-medium@agy-cli",
@@ -6236,17 +6169,16 @@
           "efficiency": {
             "runs": 2,
             "calls": {
-              "median": 5,
-              "min": 5,
-              "max": 5
+              "median": 3.5,
+              "min": 3,
+              "max": 4
             },
             "turns": {
-              "median": 6,
-              "min": 6,
-              "max": 6
+              "median": 4.5,
+              "min": 4,
+              "max": 5
             }
-          },
-          "regraded": true
+          }
         },
         {
           "model": "gemini-4-hydrogen-medium@agy-cli",
@@ -6323,8 +6255,7 @@
               "min": 5,
               "max": 5
             }
-          },
-          "regraded": true
+          }
         },
         {
           "model": "gemini-4-hydrogen-medium@agy-cli",
@@ -6392,17 +6323,16 @@
           "efficiency": {
             "runs": 2,
             "calls": {
-              "median": 3.5,
-              "min": 3,
-              "max": 4
-            },
-            "turns": {
               "median": 4.5,
               "min": 4,
               "max": 5
+            },
+            "turns": {
+              "median": 5.5,
+              "min": 5,
+              "max": 6
             }
-          },
-          "regraded": true
+          }
         },
         {
           "model": "gemini-4-hydrogen-medium@agy-cli",
@@ -6470,17 +6400,16 @@
           "efficiency": {
             "runs": 2,
             "calls": {
-              "median": 4.5,
+              "median": 5,
               "min": 4,
-              "max": 5
+              "max": 6
             },
             "turns": {
-              "median": 5.5,
+              "median": 6,
               "min": 5,
-              "max": 6
+              "max": 7
             }
-          },
-          "regraded": true
+          }
         },
         {
           "model": "gemini-4-hydrogen-medium@agy-cli",
@@ -6548,17 +6477,16 @@
           "efficiency": {
             "runs": 2,
             "calls": {
+              "median": 3.5,
+              "min": 3,
+              "max": 4
+            },
+            "turns": {
               "median": 4.5,
               "min": 4,
               "max": 5
-            },
-            "turns": {
-              "median": 5.5,
-              "min": 5,
-              "max": 6
             }
-          },
-          "regraded": true
+          }
         },
         {
           "model": "gemini-4-hydrogen-medium@agy-cli",
@@ -6626,17 +6554,16 @@
           "efficiency": {
             "runs": 2,
             "calls": {
-              "median": 2.5,
+              "median": 2,
               "min": 1,
-              "max": 4
+              "max": 3
             },
             "turns": {
-              "median": 3.5,
+              "median": 3,
               "min": 2,
-              "max": 5
+              "max": 4
             }
-          },
-          "regraded": true
+          }
         },
         {
           "model": "gemini-4-hydrogen-medium@agy-cli",
@@ -6704,17 +6631,16 @@
           "efficiency": {
             "runs": 2,
             "calls": {
-              "median": 3.5,
+              "median": 3,
               "min": 3,
-              "max": 4
+              "max": 3
             },
             "turns": {
-              "median": 4.5,
+              "median": 4,
               "min": 4,
-              "max": 5
+              "max": 4
             }
-          },
-          "regraded": true
+          }
         },
         {
           "model": "gemini-4-hydrogen-medium@agy-cli",
@@ -6772,7 +6698,7 @@
       "by_model": [
         {
           "model": "claude-sonnet-5-5@claude-cli",
-          "runs": 3,
+          "runs": 2,
           "passed": 2,
           "pass_at": 2,
           "held": true,
@@ -6780,19 +6706,18 @@
           "search": "semantic",
           "self_judged": true,
           "efficiency": {
-            "runs": 3,
+            "runs": 2,
             "calls": {
-              "median": 9,
-              "min": 7,
+              "median": 9.5,
+              "min": 8,
               "max": 11
             },
             "turns": {
-              "median": 10,
-              "min": 8,
+              "median": 10.5,
+              "min": 9,
               "max": 12
             }
-          },
-          "regraded": true
+          }
         },
         {
           "model": "gemini-4-hydrogen-medium@agy-cli",
@@ -6851,9 +6776,9 @@
         {
           "model": "claude-sonnet-5-5@claude-cli",
           "runs": 2,
-          "passed": 0,
+          "passed": 2,
           "pass_at": 2,
-          "held": false,
+          "held": true,
           "driver": "claude:cli",
           "search": "semantic",
           "self_judged": true,
@@ -6869,8 +6794,7 @@
               "min": 5,
               "max": 5
             }
-          },
-          "regraded": true
+          }
         },
         {
           "model": "gemini-4-hydrogen-medium@agy-cli",
@@ -6942,17 +6866,16 @@
           "efficiency": {
             "runs": 2,
             "calls": {
-              "median": 10.5,
-              "min": 8,
+              "median": 11,
+              "min": 9,
               "max": 13
             },
             "turns": {
-              "median": 11.5,
-              "min": 9,
+              "median": 12,
+              "min": 10,
               "max": 14
             }
-          },
-          "regraded": true
+          }
         },
         {
           "model": "gemini-4-hydrogen-medium@agy-cli",
@@ -7012,27 +6935,26 @@
       "by_model": [
         {
           "model": "claude-sonnet-5-5@claude-cli",
-          "runs": 3,
-          "passed": 1,
+          "runs": 2,
+          "passed": 2,
           "pass_at": 2,
-          "held": false,
+          "held": true,
           "driver": "claude:cli",
           "search": "semantic",
           "self_judged": true,
           "efficiency": {
-            "runs": 3,
+            "runs": 2,
             "calls": {
-              "median": 3,
-              "min": 3,
-              "max": 9
+              "median": 7,
+              "min": 7,
+              "max": 7
             },
             "turns": {
-              "median": 4,
-              "min": 4,
-              "max": 10
+              "median": 8,
+              "min": 8,
+              "max": 8
             }
-          },
-          "regraded": true
+          }
         },
         {
           "model": "gemini-4-hydrogen-medium@agy-cli",
@@ -7109,8 +7031,7 @@
               "min": 1,
               "max": 2
             }
-          },
-          "regraded": true
+          }
         },
         {
           "model": "gemini-4-hydrogen-medium@agy-cli",
@@ -7178,17 +7099,16 @@
           "efficiency": {
             "runs": 2,
             "calls": {
-              "median": 3,
+              "median": 3.5,
               "min": 2,
-              "max": 4
+              "max": 5
             },
             "turns": {
-              "median": 4,
+              "median": 4.5,
               "min": 3,
-              "max": 5
+              "max": 6
             }
-          },
-          "regraded": true
+          }
         },
         {
           "model": "gemini-4-hydrogen-medium@agy-cli",
@@ -7265,8 +7185,7 @@
               "min": 2,
               "max": 2
             }
-          },
-          "regraded": true
+          }
         },
         {
           "model": "gemini-4-hydrogen-medium@agy-cli",
@@ -7343,8 +7262,7 @@
               "min": 4,
               "max": 4
             }
-          },
-          "regraded": true
+          }
         },
         {
           "model": "gemini-4-hydrogen-medium@agy-cli",
@@ -8296,7 +8214,6 @@
         "case106_turn_that_rule_off",
         "case107_tidy_up_the_room",
         "case108_ask_sofia_for_an_intro",
-        "case110_write_greta_a_thank_you",
         "case111_how_is_the_workspace_doing",
         "case112_my_plan_and_the_dossier",
         "case116_the_rate_and_the_logo",
@@ -8312,7 +8229,8 @@
         "case76_she_said_yes_at_the_fair",
         "case77_record_her_yes",
         "case78_she_asked_us_to_stop",
-        "case86_tell_her_what_we_hold"
+        "case86_tell_her_what_we_hold",
+        "case88_send_it_anyway"
       ],
       "driven": true,
       "required_only_as_one_of_a_set": false,
@@ -8393,12 +8311,10 @@
       "near_miss_in_certification_tasks": [],
       "measured_by_model": {
         "claude-sonnet-5-5@claude-cli": {
-          "runs": 5,
-          "passed": 3,
-          "reliability": 0.6,
-          "cases_below_their_bar": [
-            "case91_add_a_review_stage"
-          ]
+          "runs": 4,
+          "passed": 4,
+          "reliability": 1,
+          "cases_below_their_bar": []
         },
         "gemini-4-hydrogen-medium@agy-cli": {
           "runs": 4,
@@ -8447,7 +8363,6 @@
         "case126_file_it_i_approve",
         "case130_put_the_offer_link_on_the_deal",
         "case42_can_i_answer_on_whatsapp",
-        "case44_chase_what_is_slipping",
         "case45_move_the_deal_on",
         "case46_get_us_in_a_room",
         "case48_that_whole_thread_is_filed_wrong",
@@ -8545,7 +8460,6 @@
         "case107_tidy_up_the_room",
         "case108_ask_sofia_for_an_intro",
         "case109_my_hours_zone_and_language",
-        "case110_write_greta_a_thank_you",
         "case111_how_is_the_workspace_doing",
         "case113_after_the_sales_review",
         "case114_the_fleet_team",
@@ -8796,6 +8710,7 @@
         "case81_she_wants_her_data",
         "case85_the_pilot_slipped",
         "case86_tell_her_what_we_hold",
+        "case88_send_it_anyway",
         "case9_filed_in_the_wrong_place",
         "case94_a_field_for_the_region",
         "case99_they_raised_money"
@@ -8863,6 +8778,7 @@
       ],
       "called_in_held_runs": [
         "case106_turn_that_rule_off",
+        "case108_ask_sofia_for_an_intro",
         "case123_take_over_sofias_deal",
         "case128_is_she_here_twice",
         "case130_put_the_offer_link_on_the_deal",
@@ -8871,7 +8787,7 @@
         "case5_before_the_meeting",
         "case58_quiet_for_three_weeks",
         "case59_file_it_on_the_meeting_and_the_contract",
-        "case63_is_she_already_here",
+        "case91_add_a_review_stage",
         "case94_a_field_for_the_region",
         "case97_import_this_card"
       ],
@@ -9948,6 +9864,7 @@
         "case43_the_fair_leads_are_prospects",
         "case44_chase_what_is_slipping",
         "case45_move_the_deal_on",
+        "case48_that_whole_thread_is_filed_wrong",
         "case49_who_can_introduce_us",
         "case5_before_the_meeting",
         "case50_what_moved_my_quarter",
