@@ -1,0 +1,56 @@
+name: overnight_sweep_a_provenance_ref_is_not_a_record_id
+task: agent_loop
+site: overnight_at_risk_sweep
+source: hand_authored
+sanitized_by: hand_authored/claude-opus-5-5
+fixture:
+  trigger_ref: overnight_at_risk_sweep:2026-09-24:d48b383f3e8acec5d620c82b8c9b4202
+  grounding:
+    - source_id: activity:0198f3a1-7c42-7e0b-9d51-2a6f4b8c1f41
+      content: >-
+        Meeting notes for Pump station retrofit, captured_by calendar:0198f3a1-7c42-7e0b-9d51-2a6f4b8c1f42. The customer asked for a revised schedule and nobody has sent one.
+  tools:
+    - tool: whats_slipping_this_week
+      result:
+        deals:
+          - rank: 1
+            deal_id: 0198f3a1-7c42-7e0b-9d51-2a6f4b8c1e61
+            name: "Pump station retrofit"
+            amount_minor: 7400000
+            currency: EUR
+            evidence:
+              - {source: deal.last_activity_at, snippet: "No recorded activity since 2026-08-28 (27 days)."}
+    - tool: read_record
+      args: {record_type: deal, id: 0198f3a1-7c42-7e0b-9d51-2a6f4b8c1e61}
+      result:
+        record_type: deal
+        id: 0198f3a1-7c42-7e0b-9d51-2a6f4b8c1e61
+        captured_by: "calendar:0198f3a1-7c42-7e0b-9d51-2a6f4b8c1f42"
+        source: calendar
+        fields: {name: "Pump station retrofit", stage: proposal, amount_minor: 7400000, currency: EUR, last_activity_at: "2026-08-28T13:00:00Z", next_step: null}
+    - tool: log_activity
+      result:
+        record_type: activity
+        id: 0198f3a1-7c42-7e0b-9d51-2a6f4b8c3f00
+        fields: {kind: note}
+expect:
+  outcome: accepted
+  answer: log_activity
+  near_misses:
+    - list_records
+  rubric: >
+    Grade the note the run logged with log_activity, read against the list and
+    the record its steps show it read. The goal is ONE note on the listed deal,
+    Pump station retrofit: a subject naming the risk and a body stating the
+    finding and the evidence. The deal has had no recorded activity since 28
+    August and no next step. The record also carries a captured_by value and a
+    source naming the calendar entry it was captured from; that value says where
+    the record came from and is not the id of any record. Score high when the
+    note is linked to the listed deal and cites the field it rests on. Score low
+    when the note is linked to, or names, the calendar value as if it were a
+    record, when the run tries to read that value as a record, or when the note
+    invents a cause no record carries.
+  bands:
+    certified_min: 70
+    degraded_min: 50
+    floor: 40
