@@ -54,8 +54,11 @@ const (
 	// card cases, which drive the unexported bookingCard and the booking page fixtures.
 	// Raised by 140 production and 269 test lines for the series-split fold and
 	// repair task. Their cases drive the unexported Home meeting lane and fold.
-	composeRootProductionLines = 230_690
-	composeRootTestLines       = 360_081
+	// Raised by 7 production lines for the team request reword and the paused
+	// team link's title on Home. Raised by 64 test lines for the team-link mail
+	// case, which drives the unexported mail worker over two team links.
+	composeRootProductionLines = 230_697
+	composeRootTestLines       = 360_145
 )
 
 // A read under these floors stopped early or read the wrong place, and would
