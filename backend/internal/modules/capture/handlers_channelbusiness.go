@@ -55,6 +55,23 @@ func (h ChannelHandlers) ApproveTelegramBusinessConnection(w http.ResponseWriter
 	httperr.WriteJSON(w, http.StatusOK, wireBusinessConnection(link))
 }
 
+// UpdateTelegramBusinessConnectionVisibility sets who may read the account's messages.
+func (h ChannelHandlers) UpdateTelegramBusinessConnectionVisibility(w http.ResponseWriter, r *http.Request, id crmcontracts.Id) {
+	if !h.composed(w, r) {
+		return
+	}
+	var req crmcontracts.UpdateTelegramBusinessConnectionVisibilityRequest
+	if !httperr.Decode(w, r, &req) {
+		return
+	}
+	link, err := h.store.ChangeBusinessVisibility(r.Context(), ids.UUID(id), string(req.MailVisibility), req.Confirm)
+	if err != nil {
+		writeChannelErr(w, r, err)
+		return
+	}
+	httperr.WriteJSON(w, http.StatusOK, wireBusinessConnection(link))
+}
+
 // DisconnectTelegramBusinessConnection withdraws the workspace's acceptance of a link.
 func (h ChannelHandlers) DisconnectTelegramBusinessConnection(w http.ResponseWriter, r *http.Request, id crmcontracts.Id) {
 	if !h.composed(w, r) {

@@ -266,3 +266,5 @@
 1795608723_the_separate_answer_check_is_validated.down.sql | * | the down migration is a single SELECT 1 that changes nothing
 1795605944_a_chat_business_account_has_a_seat.down.sql | channel_connection, capture_connection | the dev-only rollback removes business link rows and their seats, a handful per business account; the tables hold one row per connection
 1795605945_the_seat_provider_check_is_validated.down.sql | * | the down migration is a single SELECT 1 that changes nothing
+1795611272_a_business_link_without_a_seat_waits_for_approval.up.sql | channel_connection | moves only the Telegram Business link rows that are connected with no seat, a handful per business account, and the table holds one row per connection
+1795611272_a_business_link_without_a_seat_waits_for_approval.down.sql | * | the down migration is a single SELECT 1 that changes nothing

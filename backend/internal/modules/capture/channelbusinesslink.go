@@ -48,12 +48,13 @@ func AdmitTelegramUpdateTx(ctx context.Context, tx pgx.Tx, bot ids.UUID, update 
 
 // connectedBusinessLinkTx resolves the connection id a business_message names to
 // the approved link of this bot. It answers false for an unknown id, a link
-// waiting for an admin, and a link switched off.
+// waiting for an admin and a link switched off. It also answers false for a
+// connected link with no seat, because nothing could file its messages.
 func connectedBusinessLinkTx(ctx context.Context, tx pgx.Tx, bot ids.UUID, businessConnectionID string) (ids.UUID, bool, error) {
 	id, _, err := scanBusinessLink(tx.QueryRow(ctx, `
 		SELECT `+businessLinkColumns+` FROM channel_connection
 		 WHERE provider = $1 AND channel_id = $2 AND parent_connection_id = $3
-		   AND status = $4 AND archived_at IS NULL`,
+		   AND status = $4 AND seat_id IS NOT NULL AND archived_at IS NULL`,
 		telegram.BusinessProvider, businessConnectionID, bot, channelStatusConnected))
 	if errors.Is(err, pgx.ErrNoRows) {
 		return ids.Nil, false, nil

@@ -45,7 +45,7 @@ and a chat is one long thread. Rung 4 does not apply to a chat. A chat message w
 A company's business account (Telegram Business, WhatsApp Business, Zalo OA) is a team seat, as a
 shared mailbox is. It has no user, it has a reader team, and its posture is `held` or `shared`.
 Approving the account creates the seat, held. An admin opens it with
-`PATCH /v1/shared-mailboxes/{seatId}`.
+`PATCH /v1/channel-connections/telegram-business/{id}/visibility`. The shared-mailbox routes answer 404 for a chat seat.
 
 The seat's import row names the seat. So its reader team reads
 the account's messages even while the seat is held, and the contact's sharing decides who else may.

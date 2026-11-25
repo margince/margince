@@ -105,6 +105,25 @@ func (s *sharedMailboxSuite) audienceOf(t *testing.T, activity ids.UUID) string 
 	return s.e.WsScalar(t, `SELECT audience FROM activity WHERE id = $1`, activity)
 }
 
+func TestEverySharedMailboxRouteAnswersNotFoundForAChatSeat(t *testing.T) {
+	s := newSharedMailboxSuite(t)
+	seat := s.seatFor(t, "880002", s.e.Team1, ids.Nil)
+	for _, route := range []struct {
+		method, path string
+		body         map[string]any
+	}{
+		{http.MethodPatch, "/shared-mailboxes/" + seat.String(), map[string]any{"mail_visibility": "held", "confirm": true}},
+		{http.MethodPost, "/shared-mailboxes/" + seat.String() + "/disconnect", nil},
+	} {
+		if rec := s.call(s.admin(), t, route.method, route.path, route.body); rec.Code != http.StatusNotFound {
+			t.Errorf("%s %s on a chat seat answered %d, want 404: %s", route.method, route.path, rec.Code, rec.Body)
+		}
+	}
+	if got := s.e.WsScalar(t, `SELECT status FROM capture_connection WHERE id = $1`, seat); got != "connected" {
+		t.Errorf("the refused routes left the seat %q, want connected", got)
+	}
+}
+
 func TestAHeldCompanyAccountKeepsItsMessagesFromColleaguesUntilTheAdminSharesIt(t *testing.T) {
 	s := newSharedMailboxSuite(t)
 	e := s.e
@@ -131,14 +150,9 @@ func TestAHeldCompanyAccountKeepsItsMessagesFromColleaguesUntilTheAdminSharesIt(
 		t.Error("a colleague outside the reader team reads a held message on a contact everyone can open")
 	}
 
-	on := true
-	settings := capture.NewSettings(compose.NewSettingsStore(e.Pool), compose.StoredConfig(e.Pool))
-	if _, err := settings.Update(s.admin(), capture.SettingsPatch{SharedPostureAllowed: &on}); err != nil {
-		t.Fatal(err)
-	}
-	if rec := s.call(s.admin(), t, http.MethodPatch, "/shared-mailboxes/"+seat.String(), map[string]any{"mail_visibility": "shared", "confirm": true}); rec.Code != http.StatusOK {
-		t.Fatalf("the admin opening the seat answered %d: %s", rec.Code, rec.Body)
-	}
+	// The posture change itself is the business connection's door, tested in the
+	// channels lane; this case needs only a seat that is open.
+	e.WsExec(t, `UPDATE capture_connection SET mail_posture = 'shared' WHERE id = $1`, seat)
 
 	second := s.fileChat(t, company, "2", "the shared chat message")
 	if got := s.audienceOf(t, second); got != "workspace" {

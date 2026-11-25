@@ -129,7 +129,7 @@ func recordTelegramBusinessConnection(ctx context.Context, tx pgx.Tx, botConnect
 	if err != nil {
 		return fmt.Errorf("capture: reading the business connection of an account: %w", err)
 	}
-	want := businessStatusFor(bc, current.ApprovedAt != nil)
+	want := businessStatusFor(bc, current.ApprovedAt != nil && current.SeatID != nil)
 	if want == current.Status && storedID == bc.ID && current.OwnerLabel == bc.OwnerLabel {
 		return nil
 	}

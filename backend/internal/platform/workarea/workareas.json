@@ -2056,6 +2056,7 @@
     "updateStageExitCriterion": "pipelines",
     "updateTag": "tags",
     "updateTeam": "members",
+    "updateTelegramBusinessConnectionVisibility": "connectors",
     "updateVoiceCorpusSource": "voice",
     "updateVoiceProfile": "voice",
     "updateWebForm": "web_forms",

@@ -18005,7 +18005,7 @@ paths:
       description: |
         Moves a `pending_approval` link to `connected` and gives the account its seat. A company
         account's seat is read by the team in `readerTeamId` and starts `held`, as a shared
-        mailbox does; an admin then opens it with `PATCH /shared-mailboxes/{seatId}`. The team is
+        mailbox does; an admin then opens it with `PATCH /channel-connections/telegram-business/{id}/visibility`. The team is
         required the first time an account is approved (`422 reader_team_required`) and is
         optional when the account comes back to a seat it already had. A member's own account
         takes no team and starts `classified`. Approving a link that is already `connected` changes
@@ -18027,6 +18027,46 @@ paths:
         '404': { $ref: '#/components/responses/NotFound' }
         '422': { $ref: '#/components/responses/ValidationError' }
         '409': { $ref: '#/components/responses/Conflict' }
+        '503':
+          description: 'This deployment serves no messaging channels (`code: channel_connections_not_configured`).'
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+
+  /channel-connections/telegram-business/{id}/visibility:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+    patch:
+      tags: [Connectors]
+      operationId: updateTelegramBusinessConnectionVisibility
+      security: [ { cookieAuth: [] } ]
+      x-agent-access: human-only
+      x-human-only-reason: security
+      summary: Change who may read a business account's messages.
+      description: |
+        Sets the mail visibility of the account's seat, as `PATCH /shared-mailboxes/{id}` does for a
+        shared mailbox: the next message follows it. `shared` needs `capture.shared_posture_allowed`
+        and `classified` is refused, both with `422`. The request must carry `confirm: true`, because
+        the change decides what every reader of the seat sees. A link nobody has approved has no seat
+        and answers `409`. A member's own account has no team seat and answers `404`.
+
+        Admin only, in a signed-in session.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/UpdateTelegramBusinessConnectionVisibilityRequest' }
+      responses:
+        '200':
+          description: The connection as it now stands.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/TelegramBusinessConnection' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/PermissionDenied' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '422': { $ref: '#/components/responses/ValidationError' }
         '503':
           description: 'This deployment serves no messaging channels (`code: channel_connections_not_configured`).'
           content:
@@ -47784,7 +47824,7 @@ components:
         seatId:
           type: [string, 'null']
           format: uuid
-          description: The seat the account's messages file through. Its mail visibility is changed with `PATCH /shared-mailboxes/{seatId}`. Null until an admin approves the link.
+          description: The seat the account's messages file through. Its mail visibility is changed with `PATCH /channel-connections/telegram-business/{id}/visibility`. Null until an admin approves the link.
         readerTeamId: { type: [string, 'null'], format: uuid, description: The team that reads a company account's messages. Null for a member's own account and before approval. }
         mailVisibility:
           type: [string, 'null']
@@ -47795,6 +47835,12 @@ components:
       type: object
       properties:
         readerTeamId: { type: string, format: uuid, description: The team that reads the account's messages. }
+    UpdateTelegramBusinessConnectionVisibilityRequest:
+      type: object
+      required: [mail_visibility, confirm]
+      properties:
+        mail_visibility: { type: string, enum: [held, shared, classified], description: '`classified` is refused with `422`.' }
+        confirm: { type: boolean, description: 'Must be true: the change decides what every reader of the seat sees.' }
     TelegramBusinessConnectionListResponse:
       type: object
       required: [data]

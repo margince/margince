@@ -25,6 +25,11 @@ import (
 // seat has no mail connector, so the mailbox lists and sweeps leave it out.
 const chatSeatProviders = `('telegram_business', 'zalo_oa')`
 
+// mailSeatSQL is a shared mailbox row: a team seat that is not a chat seat.
+// Every /shared-mailboxes read and write selects through it, so a chat seat reads
+// as not found there and keeps its one door, the business connection's.
+const mailSeatSQL = `user_id IS NULL AND provider NOT IN ` + chatSeatProviders
+
 type chatSeatKey struct{}
 
 // withChatSeat marks a capture as filed through one chat seat.
