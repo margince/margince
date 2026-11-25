@@ -85,7 +85,7 @@ func assertObjectSchema(tool, field string, raw json.RawMessage) error {
 			return fmt.Errorf("%s's %s declares a `type` that is not a string: %w", tool, field, err)
 		}
 	}
-	if declaredType != "object" {
+	if declaredType != schemaObject {
 		return fmt.Errorf("%s declares %s type %q; this surface serves object schemas only",
 			tool, field, declaredType)
 	}
