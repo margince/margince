@@ -196,16 +196,10 @@ func TestALostDealLeavesAGatedStageWithoutLegal(t *testing.T) {
 	if err := e.owner.QueryRow(t.Context(), `SELECT pipeline_id FROM stage WHERE id = $1`, fromID).Scan(&pipelineID); err != nil {
 		t.Fatal(err)
 	}
-	zero := 0
-	lost, err := e.store.CreateStage(e.as(), CreateStageInput{
-		PipelineID: pipelineID, Name: "Lost", Position: 2, Semantic: string(SemanticLost), WinProbability: &zero,
-	})
-	if err != nil {
-		t.Fatalf("seeding a lost stage: %v", err)
-	}
+	_, lost := closingStageIDs(t, e.configEnv, pipelineID)
 	reason := "budget cut"
 	if _, err := e.store.AdvanceDeal(e.asRequester(), dealID, AdvanceDealInput{
-		ToStageID: ids.From[ids.StageKind](ids.UUID(lost.Id)), LostReason: &reason, LostReasonCode: new("other"),
+		ToStageID: lost, LostReason: &reason, LostReasonCode: new("other"),
 	}); err != nil {
 		t.Fatalf("losing a deal on a gated stage was refused: %v", err)
 	}

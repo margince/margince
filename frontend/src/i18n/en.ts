@@ -3331,6 +3331,7 @@ export const en = {
   "partnerStages.addOpen": "New stage",
   "partnerStages.addTitle": "New partner stage",
   "partnerStages.addConfirm": "Add stage",
+  "partnerStages.labelField": "Label",
   "partnerStages.renameTitle": "Rename stage",
   "partnerStages.colStage": "Stage",
   "partnerStages.colMeaning": "Meaning",
@@ -6583,6 +6584,7 @@ export const en = {
   "lossReasons.addOpen": "New reason",
   "lossReasons.addTitle": "New loss reason",
   "lossReasons.addConfirm": "Add reason",
+  "lossReasons.labelField": "Label",
   "lossReasons.renameTitle": "Rename reason",
   "lossReasons.activeFor": "{label} can be picked when a deal is lost",
   "lossReasons.colReason": "Reason",
@@ -12380,6 +12382,8 @@ export const en = {
   "translation.nameIn.vi": "Name in Vietnamese",
   "translation.given": "{language}: {name}",
   "stage.name": "Name",
+  "stage.nameTaken":
+    "A stage with this name already exists in this pipeline. Choose another name.",
   "stage.semantic": "Stage type",
   "stage.lastClosing":
     "A pipeline needs a Won and a Lost stage. Add another of this type first.",
@@ -15589,6 +15593,8 @@ export const en = {
   "knowledge.upload.submit_one": "Add document",
   "knowledge.new.title": "New document set",
   "knowledge.new.name": "Name",
+  "knowledge.new.nameTaken":
+    "A document set with this name already exists. Choose another name.",
   "knowledge.new.topic": "What this set covers",
   "knowledge.new.topicHint":
     "One sentence. It is shown to anyone whose question this set does not cover.",
