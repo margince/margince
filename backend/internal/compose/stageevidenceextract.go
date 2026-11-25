@@ -89,6 +89,8 @@ reading, and for anything about what should happen to the DEAL — you report wh
 about each criterion, never what the deal should do next or which stage it belongs in.
 A speaker reporting what somebody else said or agreed ("she confirmed the budget")
 is not their own statement, and settles nothing.
+A criterion about sending a document (a proposal, quote or offer) is met only by text that sends that
+document. A different attachment, such as an invoice, a receipt or a contract, settles nothing about it.
 Say met=false where the text states the thing has NOT happened: it is still awaited,
 only forecast, floated and deferred, or denied. A plan or expectation to do it ("we expect
 to close by month end") states it has not happened yet: report it as met=false, citing that
