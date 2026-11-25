@@ -39,6 +39,8 @@ case " ${GOFLAGS:-} " in
 	*" -trimpath "*) ;;
 	*) [ -n "${CI:-}" ] || export GOFLAGS="${GOFLAGS:+$GOFLAGS }-trimpath" ;;
 esac
+# -trimpath leaves runtime.GOROOT empty in gen-composition, as the Makefiles say.
+[ -n "${CI:-}" ] || [ -n "${GOROOT:-}" ] || export GOROOT="$(go env GOROOT)"
 # Runtime state (logs, pids, claims) lives under dev_state_root below, one
 # directory per machine rather than per worktree — keep everything this script
 # writes owner-only.
