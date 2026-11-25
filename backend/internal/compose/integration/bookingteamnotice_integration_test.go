@@ -106,7 +106,7 @@ func TestAColleagueNamedOnATeamLinkIsToldInTheAppAndByMail(t *testing.T) {
 	if len(requests) != 1 || requests[0].PageID != link {
 		t.Fatalf("the colleague sees %+v, want one request naming the team link", requests)
 	}
-	mustCall(t, colleague, http.MethodPut, "/v1/scheduling/team-requests/"+link, AnyMap{"state": "confirmed"}, http.StatusNoContent, nil)
+	mustCall(t, colleague, http.MethodPut, "/v1/scheduling/team-links/"+link+"/answer", AnyMap{"state": "confirmed"}, http.StatusNoContent, nil)
 	if _, live := teamRequestLines(t, e, member); live != 0 {
 		t.Fatalf("a confirmed request still interrupts the colleague: %d live notices", live)
 	}
@@ -148,7 +148,7 @@ func TestTwoTeamLinksEachAskTheColleague(t *testing.T) {
 	if all, live := teamRequestLines(t, e, member); all != 2 || live != 2 || teamRequestMails(t, e) != 2 {
 		t.Fatalf("two links naming the colleague left %d notices, %d live, %d mails; want 2 of each", all, live, teamRequestMails(t, e))
 	}
-	mustCall(t, colleague, http.MethodPut, "/v1/scheduling/team-requests/"+first, AnyMap{"state": "confirmed"}, http.StatusNoContent, nil)
+	mustCall(t, colleague, http.MethodPut, "/v1/scheduling/team-links/"+first+"/answer", AnyMap{"state": "confirmed"}, http.StatusNoContent, nil)
 	if all, live := teamRequestLines(t, e, member); all != 2 || live != 1 {
 		t.Fatalf("answering one link left %d notices, %d live; want 2 and 1", all, live)
 	}
@@ -184,4 +184,36 @@ func TestOnlyTheOwnerChangesATeamLink(t *testing.T) {
 	if _, live := teamRequestLines(t, e, member); live != 0 {
 		t.Fatalf("a deleted link's request still interrupts the colleague: %d live", live)
 	}
+}
+
+// A client that answers by host, as it did when a host had one link, still
+// works. Its answer confirms every team link of that host that waits for it.
+func TestTheAnswerByHostConfirmsEveryTeamLinkOfThatHost(t *testing.T) {
+	e := apptest.SetupBookingApp(t)
+	e.DescribeCompany(t)
+	member, colleague := bookingColleague(t, e, "byhost@team-notice.test", "Hal")
+	nameOnLink(t, e, "", member)
+	nameOnLink(t, e, "", member)
+	var host struct {
+		User struct {
+			ID string `json:"id"`
+		} `json:"user"`
+	}
+	mustCall(t, e, http.MethodGet, "/v1/me", nil, http.StatusOK, &host)
+
+	mustCall(t, colleague, http.MethodPut, "/v1/scheduling/team-requests/"+host.User.ID, AnyMap{"state": "confirmed"}, http.StatusNoContent, nil)
+	var links []teamLink
+	mustCall(t, e, http.MethodGet, "/v1/scheduling/team-links", nil, http.StatusOK, &links)
+	if len(links) != 2 {
+		t.Fatalf("the host has %d team links, want 2", len(links))
+	}
+	for _, link := range links {
+		if len(link.TeamMembers) != 1 || link.TeamMembers[0].State != "confirmed" {
+			t.Errorf("team link %s reads %+v after the answer by host, want the colleague confirmed", link.ID, link.TeamMembers)
+		}
+	}
+	if _, live := teamRequestLines(t, e, member); live != 0 {
+		t.Fatalf("%d team request notices still interrupt the colleague, want none", live)
+	}
+	mustCall(t, colleague, http.MethodPut, "/v1/scheduling/team-requests/"+host.User.ID, AnyMap{"state": "confirmed"}, http.StatusNotFound, nil)
 }

@@ -12113,16 +12113,48 @@ paths:
               schema:
                 type: array
                 items: { $ref: '#/components/schemas/SchedulingTeamRequest' }
-  /scheduling/team-requests/{page_id}:
+  /scheduling/team-requests/{host_user_id}:
+    parameters:
+      - { name: host_user_id, in: path, required: true, schema: { type: string, format: uuid } }
+    put:
+      tags: [Activities]
+      operationId: answerSchedulingTeamRequest
+      # A host may have several team links. Kept for clients built before
+      # them; it answers every live team link of the host that names the caller.
+      deprecated: true
+      security: [ { cookieAuth: [] } ]   # human session only: a member's consent to share free time
+      x-agent-access: human-only
+      x-human-only-reason: security
+      summary: Confirm or leave every team link of a colleague that names the caller.
+      description: |
+        Use `PUT /scheduling/team-links/{page_id}/answer` instead, which answers one team link.
+        This answers each live team link of that colleague that names the caller. `confirmed`
+        confirms each one still pending. `left` takes the caller off each one they have not left.
+        Answers 404 when no live team link of that colleague names the caller.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/SchedulingTeamAnswer' }
+      responses:
+        default:
+          description: The operation could not be completed.
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+        '204': { description: The answer is recorded. }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+  /scheduling/team-links/{page_id}/answer:
     parameters:
       - { name: page_id, in: path, required: true, schema: { type: string, format: uuid }, description: 'The `page_id` of a team request, from `GET /scheduling/team-requests`.' }
     put:
       tags: [Activities]
-      operationId: answerSchedulingTeamRequest
+      operationId: answerSchedulingTeamLink
       security: [ { cookieAuth: [] } ]   # human session only: a member's consent to share free time
       x-agent-access: human-only
       x-human-only-reason: security
-      summary: Confirm or leave a colleague's booking link that names the caller.
+      summary: Confirm or leave a colleague's team link that names the caller.
       description: |
         `confirmed` lets the link read the caller's free time and put the caller on each meeting
         booked through it. `left` takes the caller off: the link stops taking bookings until its
@@ -60395,7 +60427,7 @@ components:
       type: object
       required: [page_id, host_user_id, host_name, title, state]
       properties:
-        page_id: { type: string, format: uuid, description: 'The team link that names the caller; answer it with `PUT /scheduling/team-requests/{page_id}`.' }
+        page_id: { type: string, format: uuid, description: 'The team link that names the caller; answer it with `PUT /scheduling/team-links/{page_id}/answer`.' }
         host_user_id: { type: string, format: uuid }
         host_name: { type: string }
         title: { type: string, description: "The team link's name, which is the meeting title it offers." }

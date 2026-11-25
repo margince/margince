@@ -24,33 +24,103 @@ type teamAudit struct {
 // AnswerSchedulingTeamRequest records the acting colleague's answer on the
 // team link that names them. Confirming needs a calendar Margince can read.
 func (s *Store) AnswerSchedulingTeamRequest(ctx context.Context, page ids.UUID, answer crmcontracts.SchedulingTeamAnswerState) error {
-	me, err := schedulingHost(ctx)
+	me, err := s.admitTeamAnswer(ctx, answer)
 	if err != nil {
 		return err
 	}
-	if !answer.Valid() {
-		return &SchedulingArgumentError{Field: fieldTeamAnswer, Code: faultInvalid, Message: "Answer confirmed or left"}
-	}
-	if answer == crmcontracts.SchedulingTeamAnswerStateConfirmed {
-		if _, standing, err := s.memberCalendar(ctx, me); err != nil {
-			return err
-		} else if standing != memberReadable {
-			return errCalendarNotConnected()
-		}
+	return s.tx(ctx, func(tx pgx.Tx) error { return s.answerTeamLinkTx(ctx, tx, page, me, answer) })
+}
+
+// AnswerHostTeamRequests records the acting colleague's answer on every live
+// team link of host that names them and that the answer changes. Confirming
+// answers each pending one, and leaving each one not yet left. It serves
+// clients that answer a host rather than a link.
+func (s *Store) AnswerHostTeamRequests(ctx context.Context, host ids.UserID, answer crmcontracts.SchedulingTeamAnswerState) error {
+	me, err := s.admitTeamAnswer(ctx, answer)
+	if err != nil {
+		return err
 	}
 	return s.tx(ctx, func(tx pgx.Tx) error {
-		stored, err := lockLivePageTx(ctx, tx, page)
+		args := schedulingArgs{}
+		rows, err := tx.Query(ctx, `SELECT id, scheduling_policy FROM booking_page WHERE host_user_id=`+args.add(host)+` AND revoked_at IS NULL
+ AND scheduling_policy->'team_members' @> jsonb_build_array(jsonb_build_object('user_id', `+args.add(me.String())+`::text))
+ ORDER BY created_at, id`, args...)
 		if err != nil {
 			return err
 		}
-		if stored == nil {
-			return apperrors.ErrNotFound
+		type namingPage struct {
+			ID     ids.UUID
+			Policy storedSchedulingProfile
 		}
-		if err := writeMemberStateTx(ctx, tx, page, stored, me, crmcontracts.SchedulingTeamMemberState(answer)); err != nil || s.teamRequests == nil {
+		pages, err := pgx.CollectRows(rows, pgx.RowToStructByPos[namingPage])
+		if err != nil {
 			return err
 		}
-		return s.teamRequests.TeamRequestSettledTx(ctx, tx, page, me)
+		answered := 0
+		for _, page := range pages {
+			if !answerChanges(page.Policy.SchedulingProfile, me, answer) {
+				continue
+			}
+			if err := s.answerTeamLinkTx(ctx, tx, page.ID, me, answer); err != nil {
+				return err
+			}
+			answered++
+		}
+		if answered == 0 {
+			return apperrors.ErrNotFound
+		}
+		return nil
 	})
+}
+
+// answerChanges is whether answer moves member on a page: confirming a pending
+// request, or leaving one not yet left.
+func answerChanges(profile crmcontracts.SchedulingProfile, member ids.UserID, answer crmcontracts.SchedulingTeamAnswerState) bool {
+	for _, m := range teamMembers(profile) {
+		if memberUser(m) != member {
+			continue
+		}
+		state := memberState(m)
+		if answer == crmcontracts.SchedulingTeamAnswerStateConfirmed {
+			return state == crmcontracts.SchedulingTeamMemberStatePending
+		}
+		return state != crmcontracts.SchedulingTeamMemberStateLeft
+	}
+	return false
+}
+
+// admitTeamAnswer is the acting colleague, when they may give answer.
+func (s *Store) admitTeamAnswer(ctx context.Context, answer crmcontracts.SchedulingTeamAnswerState) (ids.UserID, error) {
+	me, err := schedulingHost(ctx)
+	if err != nil {
+		return me, err
+	}
+	if !answer.Valid() {
+		return me, &SchedulingArgumentError{Field: fieldTeamAnswer, Code: faultInvalid, Message: "Answer confirmed or left"}
+	}
+	if answer == crmcontracts.SchedulingTeamAnswerStateConfirmed {
+		if _, standing, err := s.memberCalendar(ctx, me); err != nil {
+			return me, err
+		} else if standing != memberReadable {
+			return me, errCalendarNotConnected()
+		}
+	}
+	return me, nil
+}
+
+// answerTeamLinkTx writes one answer on one live page under its host's lock.
+func (s *Store) answerTeamLinkTx(ctx context.Context, tx pgx.Tx, page ids.UUID, me ids.UserID, answer crmcontracts.SchedulingTeamAnswerState) error {
+	stored, err := lockLivePageTx(ctx, tx, page)
+	if err != nil {
+		return err
+	}
+	if stored == nil {
+		return apperrors.ErrNotFound
+	}
+	if err := writeMemberStateTx(ctx, tx, page, stored, me, crmcontracts.SchedulingTeamMemberState(answer)); err != nil || s.teamRequests == nil {
+		return err
+	}
+	return s.teamRequests.TeamRequestSettledTx(ctx, tx, page, me)
 }
 
 // lockLivePageTx takes a live page's host lock, then the page row, and answers

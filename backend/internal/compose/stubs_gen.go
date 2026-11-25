@@ -3971,11 +3971,15 @@ func (stubs) UpdateSchedulingTeamLink(w nethttp.ResponseWriter, r *nethttp.Reque
 	httperr.NotImplemented(w, r, "UpdateSchedulingTeamLink")
 }
 
+func (stubs) AnswerSchedulingTeamLink(w nethttp.ResponseWriter, r *nethttp.Request, pageId openapi_types.UUID) {
+	httperr.NotImplemented(w, r, "AnswerSchedulingTeamLink")
+}
+
 func (stubs) ListSchedulingTeamRequests(w nethttp.ResponseWriter, r *nethttp.Request) {
 	httperr.NotImplemented(w, r, "ListSchedulingTeamRequests")
 }
 
-func (stubs) AnswerSchedulingTeamRequest(w nethttp.ResponseWriter, r *nethttp.Request, pageId openapi_types.UUID) {
+func (stubs) AnswerSchedulingTeamRequest(w nethttp.ResponseWriter, r *nethttp.Request, hostUserId openapi_types.UUID) {
 	httperr.NotImplemented(w, r, "AnswerSchedulingTeamRequest")
 }
 

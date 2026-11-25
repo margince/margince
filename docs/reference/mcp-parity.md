@@ -9,8 +9,8 @@ Counting what another tool covers, it is 83.8%. Once every pending operation ope
 
 | Counted over | Operations | Open to an agent | Parity |
 |---|---:|---:|---:|
-| Every operation in the contract | 1139 | 882 | 77.4% |
-| Operations a signed-in user reaches | 1094 | 882 | 80.6% |
+| Every operation in the contract | 1140 | 882 | 77.3% |
+| Operations a signed-in user reaches | 1095 | 882 | 80.5% |
 | Operations the web app calls for a signed-in user | 961 | 779 | 81.0% |
 
 The last count answers the question of parity with the web app, so it leads this page. The first adds pages for visitors with no account, where no agent acts because no signed-in user does. The second adds routes where the scan found no web app call: 103 of those are open, so an agent can do them.
@@ -46,7 +46,7 @@ Each operation is in one group. Ask first is a part of Open, so leave it out of 
 
 | Group | Passport area | Operations | Open | Ask first | Pending | Security | Covered | Web app calls | Parity (web app) | Parity (signed-in) |
 |---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
-| [Business operations](#business-operations) | Sales work | 618 | 554 | 43 | 0 | 36 | 28 | 528 | 90.1% | 89.6% |
+| [Business operations](#business-operations) | Sales work | 619 | 554 | 43 | 0 | 37 | 28 | 528 | 90.1% | 89.4% |
 | [Compliance and privacy](#compliance-and-privacy) | Compliance and privacy | 73 | 49 | 20 | 0 | 24 | 0 | 63 | 65.0% | 67.1% |
 | [Capture and connectors](#capture-and-connectors) | Email and calendar capture | 66 | 47 | 12 | 0 | 18 | 1 | 62 | 72.5% | 71.2% |
 | [Workspace settings a non-admin can reach](#workspace-settings-a-non-admin-can-reach) | Company settings | 89 | 69 | 5 | 0 | 12 | 8 | 75 | 82.6% | 77.5% |
@@ -73,7 +73,7 @@ Passport area: Sales work.
 | Legal reviews | 6 | 6 | 0 | 0 | 0 | 0 | 6 | 100.0% | 100.0% |
 | Leads | 20 | 18 | 0 | 0 | 0 | 2 | 19 | 89.4% | 90.0% |
 | Activities, mail and tasks | 50 | 43 | 2 | 0 | 5 | 2 | 47 | 85.1% | 86.0% |
-| Scheduling and bookings | 20 | 15 | 2 | 0 | 4 | 1 | 19 | 78.9% | 75.0% |
+| Scheduling and bookings | 21 | 15 | 2 | 0 | 5 | 1 | 19 | 78.9% | 71.4% |
 | Offers | 15 | 15 | 2 | 0 | 0 | 0 | 15 | 100.0% | 100.0% |
 | Contracts | 8 | 8 | 2 | 0 | 0 | 0 | 7 | 100.0% | 100.0% |
 | Projects | 19 | 17 | 1 | 0 | 1 | 1 | 16 | 87.5% | 89.4% |

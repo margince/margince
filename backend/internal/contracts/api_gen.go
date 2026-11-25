@@ -67423,7 +67423,7 @@ type SchedulingTeamRequest struct {
 	HostName   string             `json:"host_name"`
 	HostUserId openapi_types.UUID `json:"host_user_id"`
 
-	// PageId The team link that names the caller; answer it with `PUT /scheduling/team-requests/{page_id}`.
+	// PageId The team link that names the caller; answer it with `PUT /scheduling/team-links/{page_id}/answer`.
 	PageId openapi_types.UUID         `json:"page_id"`
 	State  SchedulingTeamRequestState `json:"state"`
 
@@ -87219,6 +87219,9 @@ type CreateSchedulingTeamLinkJSONRequestBody = SchedulingTeamLinkRequest
 // UpdateSchedulingTeamLinkJSONRequestBody defines body for UpdateSchedulingTeamLink for application/json ContentType.
 type UpdateSchedulingTeamLinkJSONRequestBody = SchedulingTeamLinkRequest
 
+// AnswerSchedulingTeamLinkJSONRequestBody defines body for AnswerSchedulingTeamLink for application/json ContentType.
+type AnswerSchedulingTeamLinkJSONRequestBody = SchedulingTeamAnswer
+
 // AnswerSchedulingTeamRequestJSONRequestBody defines body for AnswerSchedulingTeamRequest for application/json ContentType.
 type AnswerSchedulingTeamRequestJSONRequestBody = SchedulingTeamAnswer
 
@@ -104021,12 +104024,15 @@ type ServerInterface interface {
 	// Rename a team link, switch it on or off, or change its members.
 	// (PUT /scheduling/team-links/{page_id})
 	UpdateSchedulingTeamLink(w http.ResponseWriter, r *http.Request, pageId openapi_types.UUID)
+	// Confirm or leave a colleague's team link that names the caller.
+	// (PUT /scheduling/team-links/{page_id}/answer)
+	AnswerSchedulingTeamLink(w http.ResponseWriter, r *http.Request, pageId openapi_types.UUID)
 	// List the colleagues' booking links that name the caller.
 	// (GET /scheduling/team-requests)
 	ListSchedulingTeamRequests(w http.ResponseWriter, r *http.Request)
-	// Confirm or leave a colleague's booking link that names the caller.
-	// (PUT /scheduling/team-requests/{page_id})
-	AnswerSchedulingTeamRequest(w http.ResponseWriter, r *http.Request, pageId openapi_types.UUID)
+	// Confirm or leave every team link of a colleague that names the caller.
+	// (PUT /scheduling/team-requests/{host_user_id})
+	AnswerSchedulingTeamRequest(w http.ResponseWriter, r *http.Request, hostUserId openapi_types.UUID)
 	// Read the current receiver and reassignment version of a prospect handoff.
 	// (GET /sdr-handoffs/{id}/assignee)
 	GetHandoffAssignee(w http.ResponseWriter, r *http.Request, id Id)
@@ -110405,15 +110411,21 @@ func (_ Unimplemented) UpdateSchedulingTeamLink(w http.ResponseWriter, r *http.R
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
+// Confirm or leave a colleague's team link that names the caller.
+// (PUT /scheduling/team-links/{page_id}/answer)
+func (_ Unimplemented) AnswerSchedulingTeamLink(w http.ResponseWriter, r *http.Request, pageId openapi_types.UUID) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
 // List the colleagues' booking links that name the caller.
 // (GET /scheduling/team-requests)
 func (_ Unimplemented) ListSchedulingTeamRequests(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
-// Confirm or leave a colleague's booking link that names the caller.
-// (PUT /scheduling/team-requests/{page_id})
-func (_ Unimplemented) AnswerSchedulingTeamRequest(w http.ResponseWriter, r *http.Request, pageId openapi_types.UUID) {
+// Confirm or leave every team link of a colleague that names the caller.
+// (PUT /scheduling/team-requests/{host_user_id})
+func (_ Unimplemented) AnswerSchedulingTeamRequest(w http.ResponseWriter, r *http.Request, hostUserId openapi_types.UUID) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -155023,6 +155035,38 @@ func (siw *ServerInterfaceWrapper) UpdateSchedulingTeamLink(w http.ResponseWrite
 	handler.ServeHTTP(w, r)
 }
 
+// AnswerSchedulingTeamLink operation middleware
+func (siw *ServerInterfaceWrapper) AnswerSchedulingTeamLink(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "page_id" -------------
+	var pageId openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "page_id", chi.URLParam(r, "page_id"), &pageId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "page_id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.AnswerSchedulingTeamLink(w, r, pageId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // ListSchedulingTeamRequests operation middleware
 func (siw *ServerInterfaceWrapper) ListSchedulingTeamRequests(w http.ResponseWriter, r *http.Request) {
 
@@ -155051,12 +155095,12 @@ func (siw *ServerInterfaceWrapper) AnswerSchedulingTeamRequest(w http.ResponseWr
 	var err error
 	_ = err
 
-	// ------------- Path parameter "page_id" -------------
-	var pageId openapi_types.UUID
+	// ------------- Path parameter "host_user_id" -------------
+	var hostUserId openapi_types.UUID
 
-	err = runtime.BindStyledParameterWithOptions("simple", "page_id", chi.URLParam(r, "page_id"), &pageId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	err = runtime.BindStyledParameterWithOptions("simple", "host_user_id", chi.URLParam(r, "host_user_id"), &hostUserId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
 	if err != nil {
-		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "page_id", Err: err})
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "host_user_id", Err: err})
 		return
 	}
 
@@ -155067,7 +155111,7 @@ func (siw *ServerInterfaceWrapper) AnswerSchedulingTeamRequest(w http.ResponseWr
 	r = r.WithContext(ctx)
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.AnswerSchedulingTeamRequest(w, r, pageId)
+		siw.Handler.AnswerSchedulingTeamRequest(w, r, hostUserId)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -164550,10 +164594,13 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 		r.Put(options.BaseURL+"/scheduling/team-links/{page_id}", wrapper.UpdateSchedulingTeamLink)
 	})
 	r.Group(func(r chi.Router) {
+		r.Put(options.BaseURL+"/scheduling/team-links/{page_id}/answer", wrapper.AnswerSchedulingTeamLink)
+	})
+	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/scheduling/team-requests", wrapper.ListSchedulingTeamRequests)
 	})
 	r.Group(func(r chi.Router) {
-		r.Put(options.BaseURL+"/scheduling/team-requests/{page_id}", wrapper.AnswerSchedulingTeamRequest)
+		r.Put(options.BaseURL+"/scheduling/team-requests/{host_user_id}", wrapper.AnswerSchedulingTeamRequest)
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/sdr-handoffs/{id}/assignee", wrapper.GetHandoffAssignee)

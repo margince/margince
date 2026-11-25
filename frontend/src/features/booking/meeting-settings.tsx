@@ -20,8 +20,7 @@ import { MeetingCalendarCard } from "./meeting-calendar";
 import { GuestViewCard } from "./meeting-guest-view";
 import { BookingLinksCard } from "./meeting-links";
 import { MeetingSetupCard } from "./meeting-setup";
-import { TeamRequestsCard } from "./meeting-team";
-import { TeamLinksCard } from "./meeting-teamlinks";
+import { TeamLinksCard, TeamRequestsCard } from "./meeting-team";
 import { useWorkingHours } from "./working-hours";
 
 type Profile = components["schemas"]["SchedulingProfile"];

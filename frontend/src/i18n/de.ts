@@ -23375,7 +23375,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Ein Team-Link bietet nur Zeiten, in denen du und alle Teammitglieder darauf frei sind, jeweils in deren eigenen Arbeitszeiten, und lädt alle zu jedem Termin ein. Er nutzt Kalender und Einstellungen deines persönlichen Links, der immer nur deine eigenen freien Zeiten anbietet.",
   "scheduling.teamLinks.create": "Neuer Team-Link mit",
   "scheduling.teamLinks.createHelp":
-    "Wähle ein Teammitglied, um einen neuen Link mit eigener Adresse anzulegen. Angeboten werden nur Mitglieder mit verbundenem Kalender. Jedes Teammitglied bestätigt, bevor der Link Buchungen annimmt.",
+    "Wähle ein Teammitglied, um einen neuen Link mit eigener Adresse zu erstellen. Angeboten werden nur Mitglieder mit verbundenem Kalender. Jedes Teammitglied bestätigt, bevor der Link Buchungen annimmt.",
   "scheduling.teamLinks.defaultTitle": "Treffen mit {names}",
   "scheduling.teamLinks.off": "Aus: nimmt keine Buchungen an",
   "scheduling.teamLinks.ready": "Nimmt Buchungen an",

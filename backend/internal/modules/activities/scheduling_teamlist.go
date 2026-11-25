@@ -121,13 +121,27 @@ func (h Handlers) ListSchedulingTeamRequests(w http.ResponseWriter, r *http.Requ
 	httperr.WriteJSON(w, http.StatusOK, out)
 }
 
-// AnswerSchedulingTeamRequest implements PUT /scheduling/team-requests/{page_id}.
-func (h Handlers) AnswerSchedulingTeamRequest(w http.ResponseWriter, r *http.Request, pageID openapi_types.UUID) {
+// AnswerSchedulingTeamLink implements PUT /scheduling/team-links/{page_id}/answer.
+func (h Handlers) AnswerSchedulingTeamLink(w http.ResponseWriter, r *http.Request, pageID openapi_types.UUID) {
 	var req crmcontracts.SchedulingTeamAnswer
 	if !httperr.Decode(w, r, &req) {
 		return
 	}
 	if err := h.store.AnswerSchedulingTeamRequest(r.Context(), ids.UUID(pageID), req.State); err != nil {
+		writeStoreErr(w, r, err)
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
+}
+
+// AnswerSchedulingTeamRequest implements the deprecated PUT
+// /scheduling/team-requests/{host_user_id}, which answers each team link of a host.
+func (h Handlers) AnswerSchedulingTeamRequest(w http.ResponseWriter, r *http.Request, hostUserID openapi_types.UUID) {
+	var req crmcontracts.SchedulingTeamAnswer
+	if !httperr.Decode(w, r, &req) {
+		return
+	}
+	if err := h.store.AnswerHostTeamRequests(r.Context(), ids.From[ids.UserKind](ids.UUID(hostUserID)), req.State); err != nil {
 		writeStoreErr(w, r, err)
 		return
 	}

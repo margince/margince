@@ -8252,7 +8252,33 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/scheduling/team-requests/{page_id}": {
+    "/scheduling/team-requests/{host_user_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                host_user_id: string;
+            };
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Confirm or leave every team link of a colleague that names the caller.
+         * @deprecated
+         * @description Use `PUT /scheduling/team-links/{page_id}/answer` instead, which answers one team link.
+         *     This answers each live team link of that colleague that names the caller. `confirmed`
+         *     confirms each one still pending. `left` takes the caller off each one they have not left.
+         *     Answers 404 when no live team link of that colleague names the caller.
+         */
+        put: operations["answerSchedulingTeamRequest"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/scheduling/team-links/{page_id}/answer": {
         parameters: {
             query?: never;
             header?: never;
@@ -8264,13 +8290,13 @@ export interface paths {
         };
         get?: never;
         /**
-         * Confirm or leave a colleague's booking link that names the caller.
+         * Confirm or leave a colleague's team link that names the caller.
          * @description `confirmed` lets the link read the caller's free time and put the caller on each meeting
          *     booked through it. `left` takes the caller off: the link stops taking bookings until its
          *     owner removes the caller, and the owner sees why. Answers 404 when no live team link with
          *     this id names the caller.
          */
-        put: operations["answerSchedulingTeamRequest"];
+        put: operations["answerSchedulingTeamLink"];
         post?: never;
         delete?: never;
         options?: never;
@@ -43846,7 +43872,7 @@ export interface components {
         SchedulingTeamRequest: {
             /**
              * Format: uuid
-             * @description The team link that names the caller; answer it with `PUT /scheduling/team-requests/{page_id}`.
+             * @description The team link that names the caller; answer it with `PUT /scheduling/team-links/{page_id}/answer`.
              */
             page_id: string;
             /** Format: uuid */
@@ -78601,6 +78627,41 @@ export interface operations {
         };
     };
     answerSchedulingTeamRequest: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                host_user_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SchedulingTeamAnswer"];
+            };
+        };
+        responses: {
+            /** @description The answer is recorded. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
+            /** @description The operation could not be completed. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    answerSchedulingTeamLink: {
         parameters: {
             query?: never;
             header?: never;
