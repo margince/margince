@@ -15,9 +15,9 @@ input and output schema in folds below it. What a tool may do and whether a huma
 |---|---:|
 | Tools | 48 |
 | Resources | 14 |
-| Tool catalog | 243.4 KB |
+| Tool catalog | 244.0 KB |
 | Resource catalog | 5.5 KB |
-| Approx. wire tokens | 63724 |
+| Approx. wire tokens | 63864 |
 | Largest tool | `read_details` (15.8 KB) |
 | Scopes rendered | `read`, `draft`, `write`, `send`, `enrich` |
 
@@ -34,9 +34,9 @@ tool adds to that listing, and what it costs each scheduled agent, agent by agen
 |---|---:|---:|---|
 | Output schemas | 33.7 KB | 13% | **No**: a result's shape, never listed to a model |
 | Descriptions (incl. governance clause) | 51.0 KB | 20% | Yes, every step |
-| Input schemas | 147.2 KB | 60% | Yes, every step |
+| Input schemas | 147.7 KB | 60% | Yes, every step |
 | _Names, annotations, punctuation_ | 11.6 KB | 4% | Partly |
-| **Description + input schema** | **198.2 KB** | **81%** | **the recurring cost** |
+| **Description + input schema** | **198.7 KB** | **81%** | **the recurring cost** |
 
 Output schemas count in the total but are never sent to a model;
 descriptions and input schemas are what each step pays for.
@@ -885,6 +885,11 @@ archive_document, assign_inquiry.)
       "format": "uuid",
       "type": "string"
     },
+    "assignee_id": {
+      "description": "task only: Defaults to the human you act for.",
+      "format": "uuid",
+      "type": "string"
+    },
     "attendee_user_ids": {
       "description": "log only: Meeting or call only: the workspace members who attended besides you, ids from the colleague roster. An id that is not an active member is refused.",
       "items": {
@@ -932,6 +937,10 @@ archive_document, assign_inquiry.)
       "description": "log, task only: RFC 3339 WITH Z or the user's offset (…T14:35:00Z); never invent an hour or offset.",
       "format": "date-time",
       "type": "string"
+    },
+    "due_has_time": {
+      "description": "task only: True when due_at is an agreed time of day, such as a callback hour; the reminder is then set to it. Leave out for a day.",
+      "type": "boolean"
     },
     "entity_id": {
       "description": "attach, relink, relink_many only",
@@ -1094,6 +1103,18 @@ archive_document, assign_inquiry.)
     },
     "subject": {
       "description": "log, task only: Prose a colleague reads. Write it in whoami's prose_language, whatever language this conversation is in; do not translate names or quoted text.",
+      "type": "string"
+    },
+    "task_type": {
+      "description": "task only: The work it asks for; it decides the one button the task shows. reply answers a message the way it came in, reach_out contacts someone by email or phone, do is work outside Margince.",
+      "enum": [
+        "reply",
+        "reach_out",
+        "meet",
+        "review",
+        "decide",
+        "do"
+      ],
       "type": "string"
     }
   },
@@ -7224,6 +7245,11 @@ read_attention for what needs the user now, and read_record for a record's own f
       },
       "type": "array"
     },
+    "contact_id": {
+      "description": "meeting_proposals only",
+      "format": "uuid",
+      "type": "string"
+    },
     "create_company": {
       "description": "lead_promotion_preview only",
       "type": "boolean"
@@ -7288,11 +7314,6 @@ read_attention for what needs the user now, and read_record for a record's own f
     "request_body": {
       "description": "ai_budget_preview, ai_routing_preview, ai_task_overrides_preview, automation_preview, backfill_preview, filter_preview, mail_deal_repair_preview, notice_source_preview, voice_source_preview, website_inquiry_preview only: The chosen action's request body; read_workspace topic actions lists its shape",
       "type": "object"
-    },
-    "since": {
-      "description": "magic, magic_line_records, team_margince_changes only",
-      "format": "date-time",
-      "type": "string"
     },
     "stage_history_id": {
       "description": "deal_margince_changes only",

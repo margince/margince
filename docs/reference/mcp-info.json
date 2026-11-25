@@ -10,16 +10,16 @@
   "totals": {
     "tools": 48,
     "resources": 14,
-    "tool_catalog_bytes": 249276,
+    "tool_catalog_bytes": 249836,
     "resource_catalog_bytes": 5622,
-    "approx_wire_tokens_total": 63724,
-    "largest_tool_bytes": 16204,
+    "approx_wire_tokens_total": 63864,
+    "largest_tool_bytes": 16173,
     "largest_tool": "read_details",
     "tool_catalog_composition": {
       "description_bytes": 52275,
-      "input_schema_bytes": 150682,
+      "input_schema_bytes": 151242,
       "output_schema_bytes": 34465,
-      "description_plus_input_schema_bytes": 202957
+      "description_plus_input_schema_bytes": 203517
     }
   },
   "tools": {
@@ -467,6 +467,11 @@
               "format": "uuid",
               "type": "string"
             },
+            "assignee_id": {
+              "description": "task only: Defaults to the human you act for.",
+              "format": "uuid",
+              "type": "string"
+            },
             "attendee_user_ids": {
               "description": "log only: Meeting or call only: the workspace members who attended besides you, ids from the colleague roster. An id that is not an active member is refused.",
               "items": {
@@ -514,6 +519,10 @@
               "description": "log, task only: RFC 3339 WITH Z or the user's offset (…T14:35:00Z); never invent an hour or offset.",
               "format": "date-time",
               "type": "string"
+            },
+            "due_has_time": {
+              "description": "task only: True when due_at is an agreed time of day, such as a callback hour; the reminder is then set to it. Leave out for a day.",
+              "type": "boolean"
             },
             "entity_id": {
               "description": "attach, relink, relink_many only",
@@ -676,6 +685,18 @@
             },
             "subject": {
               "description": "log, task only: Prose a colleague reads. Write it in whoami's prose_language, whatever language this conversation is in; do not translate names or quoted text.",
+              "type": "string"
+            },
+            "task_type": {
+              "description": "task only: The work it asks for; it decides the one button the task shows. reply answers a message the way it came in, reach_out contacts someone by email or phone, do is work outside Margince.",
+              "enum": [
+                "reply",
+                "reach_out",
+                "meet",
+                "review",
+                "decide",
+                "do"
+              ],
               "type": "string"
             }
           },
@@ -6527,6 +6548,11 @@
               },
               "type": "array"
             },
+            "contact_id": {
+              "description": "meeting_proposals only",
+              "format": "uuid",
+              "type": "string"
+            },
             "create_company": {
               "description": "lead_promotion_preview only",
               "type": "boolean"
@@ -6591,11 +6617,6 @@
             "request_body": {
               "description": "ai_budget_preview, ai_routing_preview, ai_task_overrides_preview, automation_preview, backfill_preview, filter_preview, mail_deal_repair_preview, notice_source_preview, voice_source_preview, website_inquiry_preview only: The chosen action's request body; read_workspace topic actions lists its shape",
               "type": "object"
-            },
-            "since": {
-              "description": "magic, magic_line_records, team_margince_changes only",
-              "format": "date-time",
-              "type": "string"
             },
             "stage_history_id": {
               "description": "deal_margince_changes only",
