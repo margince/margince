@@ -98,6 +98,7 @@ type Result struct {
 	Steps        []Step
 	StepsUsed    int
 	OutputTokens int
+	calls        []Call
 }
 
 // NothingToJudge is the result of a run closed before its first model call,
@@ -150,6 +151,9 @@ type Pending struct {
 	TranscriptVersion int
 	StepsUsed         int
 	OutputTokens      int
+	// Calls carries what the job's outcome check has read so far, so a resumed
+	// run is judged on its whole history. Empty for a job with no check.
+	Calls []Call `json:",omitempty"`
 }
 
 // neutralisedObservations is the current transcript version: every observation
@@ -217,7 +221,7 @@ func (r *Runner) Resume(ctx context.Context, job Job, dec Decision) (Result, err
 	if err != nil {
 		return Result{}, err
 	}
-	carried := Result{StepsUsed: dec.Pending.StepsUsed, OutputTokens: dec.Pending.OutputTokens}
+	carried := Result{StepsUsed: dec.Pending.StepsUsed, OutputTokens: dec.Pending.OutputTokens, calls: dec.Pending.Calls}
 
 	if !dec.Approved {
 		win.observeThen(dec.Pending.Tool, "", "the human REJECTED this proposed action; re-plan without it")
@@ -254,6 +258,8 @@ func (r *Runner) Resume(ctx context.Context, job Job, dec Decision) (Result, err
 		observation = "approved action could not be applied: " + r.refusalText(ctx, dec.Pending.Tool, err)
 		recorded = "approved action could not be applied: " + err.Error()
 		admission = AdmissionRefused
+	} else {
+		carried.recordCall(job, dec.Pending.Tool, dec.Pending.Args, out)
 	}
 	win.observe(dec.Pending.Tool, observation)
 	// The approved staged call redeems here with no fresh model completion —
@@ -318,6 +324,13 @@ func (r *Runner) loop(ctx context.Context, job Job, win *window, acc Result) (Re
 		retry.accepted()
 
 		if step.Final != nil {
+			refused, err := refuseFinal(job, win, acc.calls, meta)
+			if err != nil {
+				return Result{}, err
+			}
+			if refused {
+				continue
+			}
 			acc.Outcome = OutcomeCompleted
 			acc.Final = step.Final
 			return acc, nil
@@ -335,6 +348,7 @@ func (r *Runner) loop(ctx context.Context, job Job, win *window, acc Result) (Re
 			// decision it was woken for.
 			out, err = r.retryWithApproval(ctx, job, step, staged.ApprovalID)
 			if err == nil {
+				acc.recordCall(job, step.Tool, step.Args, out)
 				win.observe(step.Tool, string(out))
 				acc.Steps = append(acc.Steps, Step{
 					Tool: step.Tool, Args: step.Args, Observation: truncate(string(out)),
@@ -358,6 +372,7 @@ func (r *Runner) loop(ctx context.Context, job Job, win *window, acc Result) (Re
 			// the policy.
 			acc.Steps = append(acc.Steps, observeRefusal(win, step, r.refusalText(ctx, step.Tool, err), err, meta, resp))
 		default:
+			acc.recordCall(job, step.Tool, step.Args, out)
 			win.observe(step.Tool, string(out))
 			acc.Steps = append(acc.Steps, Step{
 				Tool: step.Tool, Args: step.Args, Observation: truncate(string(out)),
@@ -387,6 +402,7 @@ func suspend(acc Result, approvalID ids.ApprovalID, step modelStep, win *window,
 		TranscriptVersion: neutralisedObservations,
 		StepsUsed:         acc.StepsUsed,
 		OutputTokens:      acc.OutputTokens,
+		Calls:             acc.calls,
 	}
 	return acc
 }
