@@ -521,7 +521,9 @@ describe("ProjectScreen", () => {
     await screen.findByRole("heading", { name: "CRM rollout" });
 
     // The page says why once, rather than each control failing on its own.
-    expect(await screen.findByText(/You cannot edit this project/)).toBeTruthy();
+    expect(
+      await screen.findByText(/You cannot edit this project/),
+    ).toBeTruthy();
 
     // Every verb, not a sample of them: asserting one control would leave the
     // others free to regress one at a time. New Deal is here because binding a
@@ -595,7 +597,9 @@ describe("ProjectScreen", () => {
     render(<ProjectScreen id="pr-1" />);
     await screen.findByRole("heading", { name: "CRM rollout" });
 
-    expect(await screen.findByText(/You cannot edit this project/)).toBeTruthy();
+    expect(
+      await screen.findByText(/You cannot edit this project/),
+    ).toBeTruthy();
     expect(
       screen.queryByRole("button", { name: /^Edit (About|Ownership)$/ }),
     ).toBeNull();
@@ -613,7 +617,9 @@ describe("ProjectScreen", () => {
     render(<ProjectScreen id="pr-1" />);
     await screen.findByRole("heading", { name: "CRM rollout" });
 
-    expect(await screen.findByText(/You cannot edit this project/)).toBeTruthy();
+    expect(
+      await screen.findByText(/You cannot edit this project/),
+    ).toBeTruthy();
   });
 
   // The owner list is portalled beside the menu that holds its trigger, so a
