@@ -319,6 +319,7 @@ func taskFromActivity(row crmcontracts.Activity, reader ids.UUID, asOf time.Time
 		DueAt:         row.DueAt,
 		DueHasTime:    row.DueHasTime != nil && *row.DueHasTime,
 		DueIntent:     row.DueIntent,
+		TaskType:      row.TaskType,
 		LinkType:      linkType,
 		LinkID:        linkID,
 		ReminderDue:   contentReadable(row) && activities.ReminderDueFor(row, reader, asOf),

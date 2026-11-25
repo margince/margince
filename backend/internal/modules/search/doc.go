@@ -2,7 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 // Package search owns cross-object retrieval. That is ranked full-text search
-// over the generated search_tsv columns, the pgvector and full-text hybrid
+// over the stored search_tsv columns, the pgvector and full-text hybrid
 // fused by RRF, and the context graph. Every branch of every query carries
 // the caller's row-scope predicate. A search hit is a read, so existence-hiding
 // holds here as on the per-entity lists.

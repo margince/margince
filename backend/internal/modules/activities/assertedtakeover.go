@@ -13,6 +13,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/mailquote"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
@@ -110,10 +111,12 @@ func TakeOverAssertedActivityTx(
 		UPDATE activity
 		   SET subject           = COALESCE(NULLIF($2, ''), subject),
 		       body              = COALESCE(NULLIF($3, ''), body),
+		       body_own_end      = CASE WHEN $3 = '' THEN body_own_end WHEN kind = $7 THEN $6::int END,
 		       captured_by       = $4,
 		       sender_is_machine = sender_is_machine OR $5
 		 WHERE id = $1`,
-		activityID, subject, body, capturedBy, senderIsMachine)
+		activityID, subject, body, capturedBy, senderIsMachine,
+		mailquote.OwnEnd(mailquote.MailKind, &body), mailquote.MailKind)
 	if err != nil {
 		return fmt.Errorf("activities: writing the read message over %s: %w", activityID, err)
 	}
