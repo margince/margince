@@ -294,6 +294,12 @@ func TestHistoryKeepsCurrentRetriesBeyondTheFinishedRunWindow(t *testing.T) {
 func TestMissingRestoreEvidenceLeavesHealthIncomplete(t *testing.T) {
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
+	// A company with no name is a footer gap an admin must close, which would
+	// read as attention rather than as missing evidence.
+	if _, err := e.Owner.Exec(t.Context(), `INSERT INTO company (display_name, is_anchor, source, captured_by)
+		VALUES ('Restore Test GmbH', true, 'manual', 'human:x')`); err != nil {
+		t.Fatal(err)
+	}
 	var report crmcontracts.SystemHealth
 	if status := e.Call(t, "GET", "/v1/admin/system-health", nil, nil, &report); status != http.StatusOK {
 		t.Fatalf("summary: %d", status)

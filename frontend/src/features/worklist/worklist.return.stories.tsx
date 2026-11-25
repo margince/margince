@@ -3,54 +3,64 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, within } from "storybook/test";
-import { en } from "../../i18n/en";
+import { AppLink } from "../../design-system/applink";
+import { RecordHrefScope } from "../../lib/recordhref";
 import { StoryProviders } from "../../testing/story-utils";
-import { WorklistReturnLink } from "./worklist.return";
+import { WorklistReturnScope } from "./worklist.return";
 
-// "Back to Worklist" on a record the reader opened from the Worklist panel. The
-// link carries the panel's view and scope, so going back lands where they were.
-
-const meta: Meta<typeof WorklistReturnLink> = {
-  title: "Records/Worklist/Return link",
-  component: WorklistReturnLink,
+const meta: Meta<typeof WorklistReturnScope> = {
+  title: "Records/Worklist/Return scope",
+  component: WorklistReturnScope,
   parameters: { layout: "padded" },
 };
 export default meta;
-type Story = StoryObj<typeof WorklistReturnLink>;
+type Story = StoryObj<typeof WorklistReturnScope>;
 
-function at(hash: string) {
-  return () => {
-    const prior = globalThis.location.hash;
-    globalThis.location.hash = hash;
-    return () => {
-      globalThis.location.hash = prior;
-    };
-  };
+function Links() {
+  return (
+    <ul>
+      <li>
+        <AppLink href="#/contacts/c1">Mareike Vollmer</AppLink>
+      </li>
+      <li>
+        <AppLink href="#/settings/privacy">Privacy case</AppLink>
+      </li>
+    </ul>
+  );
 }
 
-export const OpenedFromTheWorklist: Story = {
-  beforeEach: at("#/contacts/c1?from=worklist&queue_scope=team"),
+/** A record link drawn in the drawer carries its dials; any other link does not. */
+export const InTheWorklist: Story = {
   render: () => (
     <StoryProviders>
-      <WorklistReturnLink />
+      <WorklistReturnScope dials={new Map([["queue_scope", "team"]])}>
+        <Links />
+      </WorklistReturnScope>
     </StoryProviders>
   ),
   play: async ({ canvasElement }) => {
-    const link = await within(canvasElement).findByRole("link", {
-      name: en["brief.queue.back"],
-    });
-    await expect(link.getAttribute("href")).toContain("queue_scope=team");
+    const canvas = within(canvasElement);
+    const record = canvas.getByRole("link", { name: "Mareike Vollmer" });
+    await expect(record.getAttribute("href")).toContain("from=worklist");
+    await expect(record.getAttribute("href")).toContain("queue_scope=team");
+    const other = canvas.getByRole("link", { name: "Privacy case" });
+    await expect(other.getAttribute("href")).not.toContain("from=worklist");
   },
 };
 
-export const OpenedFromElsewhere: Story = {
-  beforeEach: at("#/contacts/c1"),
+/** Outside any scope a record link keeps its plain address. */
+export const OutsideAnyScope: Story = {
   render: () => (
     <StoryProviders>
-      <WorklistReturnLink />
+      <RecordHrefScope href={(href) => href}>
+        <Links />
+      </RecordHrefScope>
     </StoryProviders>
   ),
   play: async ({ canvasElement }) => {
-    await expect(within(canvasElement).queryByRole("link")).toBeNull();
+    const record = within(canvasElement).getByRole("link", {
+      name: "Mareike Vollmer",
+    });
+    await expect(record.getAttribute("href")).not.toContain("from=worklist");
   },
 };

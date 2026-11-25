@@ -28,6 +28,7 @@ import { fileListKeys } from "../lib/attachmentkeys";
 import { problemStatus, unwrap } from "../lib/problem";
 import { useViewerZone } from "../lib/viewerzone";
 import { worklistKey } from "../lib/workkeys";
+import { useDealStakeholderOffer } from "./dealstakeholderoffer";
 import {
   WHICH_DEAL_SOURCE,
   WhichDealDecline,
@@ -78,13 +79,16 @@ export function WhichDealChoice({ task }: Readonly<{ task: Activity }>) {
         ),
     })),
   });
-  const file = useFileOnDeal(task.id);
+  const stakeholders = useDealStakeholderOffer();
+  const file = useFileOnDeal(task.id, stakeholders.offer);
   const choices = useDealChoices(
     deals.flatMap((read) => (read.data ? [read.data] : [])),
   );
   const answering = useIsMutating({ mutationKey: whichDealKey(task.id) }) > 0;
   // A deal that closed since it was picked is no longer a card to file on.
   const choice = choices.find((option) => option.value === picked)?.value;
+  // The offer outlives the question it follows, until it is answered.
+  if (stakeholders.asking) return stakeholders.element;
   if (!mail || !asksWhichDeal(task)) return null;
   // A deal gone or out of reach (404) is no choice; any other failure leaves
   // the question unanswerable until a retry reads every deal offered.
@@ -185,7 +189,10 @@ function dealFacts(
   return facts.join(" · ");
 }
 
-function useFileOnDeal(taskId: string) {
+function useFileOnDeal(
+  taskId: string,
+  offerStakeholders: ReturnType<typeof useDealStakeholderOffer>["offer"],
+) {
   const t = useT();
   const toast = useToast();
   const queryClient = useQueryClient();
@@ -209,17 +216,24 @@ function useFileOnDeal(taskId: string) {
         t,
       );
     },
-    onSuccess: async (_filed, { mail }) => {
+    onSuccess: async (_filed, { mail, deal }) => {
       toast.show(t("tasks.whichDeal.filed"));
-      // The thread's files now show on the deal it was filed under.
-      await Promise.all(
-        [
-          ["activity", taskId],
-          TASK_QUEUE_KEY,
-          worklistKey,
-          ...fileListKeys({ entityType: "activity", entityId: mail }, "moved"),
-        ].map((queryKey) => queryClient.invalidateQueries({ queryKey })),
-      );
+      // The thread's files now show on the deal it was filed under. The
+      // question leaves the list only once the offer is answered, so the
+      // offer is not taken down with it.
+      const refresh = () =>
+        Promise.all(
+          [
+            ["activity", taskId],
+            TASK_QUEUE_KEY,
+            worklistKey,
+            ...fileListKeys(
+              { entityType: "activity", entityId: mail },
+              "moved",
+            ),
+          ].map((queryKey) => queryClient.invalidateQueries({ queryKey })),
+        );
+      await offerStakeholders(mail, deal, refresh);
     },
   });
 }

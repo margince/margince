@@ -86,13 +86,15 @@ export function BookingMeetingScreen({
       setReschedule(false);
     },
   });
+  const host = !token;
   const changeError =
     problemCodeOf(change.error) === "conflict" ? (
-      <ErrorLine>{t("scheduling.meetingChanged")}</ErrorLine>
+      <ErrorLine>
+        {t(host ? "scheduling.meetingChanged" : "book.meetingChanged")}
+      </ErrorLine>
     ) : (
       <ErrorLine error={change.error} />
     );
-  const host = !token;
   useBookingTitle(host ? null : t("book.meetingTitle"));
   return (
     <div className={host ? "book-page" : "book-guest-page"}>
@@ -187,7 +189,13 @@ export function BookingMeetingScreen({
                       send({ action: "cancel", version: meeting.version })
                     }
                   >
-                    <p>{t("scheduling.cancelConfirm")}</p>
+                    <p>
+                      {t(
+                        host
+                          ? "scheduling.cancelConfirm"
+                          : "book.cancelConfirm",
+                      )}
+                    </p>
                     {changeError}
                   </ConfirmModal>
                 )}
@@ -244,8 +252,7 @@ function AttentionNotice({
 }>) {
   const t = useT();
   if (meeting.status !== "needs_attention") return null;
-  if (!host)
-    return <Callout tone="warning" title={t("scheduling.guestRecovery")} />;
+  if (!host) return <Callout tone="warning" title={t("book.recovery")} />;
   // A refused calendar parked every queued invitation of the host. Retrying
   // one would fail the same way; reconnecting sends them all on.
   if (meeting.attention_reason === "calendar_disconnected")

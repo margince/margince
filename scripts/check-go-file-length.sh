@@ -23,6 +23,7 @@ WAIVERS="scripts/go-file-length-waivers.txt"
 find backend -name "*.go" \
     ! -name "*_test.go" ! -name "*_gen.go" ! -name "*.gen.go" -exec wc -l {} + \
 | awk -v cap="$CAP" -v waivers="$WAIVERS" '
+# early-pipe-ok: this program exits only in END, after it has read all its input
 BEGIN {
   while ((getline line < waivers) > 0) {
     if (line ~ /^[[:space:]]*#/ || line ~ /^[[:space:]]*$/) continue

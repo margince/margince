@@ -126,6 +126,7 @@ func dataTaskCatalog(pool *pgxpool.Pool, now func() time.Time) []datatask.Task {
 		meetingDuplicatesDataTask(pool),
 		meetingPairsDataTask(pool),
 		meetingSeriesSlotsDataTask(pool),
+		splitSeriesDataTask(pool), activities.ImportedMeetingCopiesDataTask(activities.NewStore(InstallationDB(pool))),
 		meetingOrganizerHostDataTask(pool),
 		linkedInIdentityDataTask(),
 		leadContactPairsDataTask(pool),
@@ -164,5 +165,6 @@ func dataTaskCatalog(pool *pgxpool.Pool, now func() time.Time) []datatask.Task {
 		qualifytasks.DuplicatesDataTask(now), qualifytasks.TextDataTask(),
 		companyprofiles.OfferDuplicatesTask(),
 		qualifytasks.SystemTextDataTask(), employmentrepair.DataTask(contacts.NewStore(InstallationDB(pool))), halfvectors.DataTask(), recordsources.DataTask(), rolemailboxseats.DataTask(), participantaddresses.DataTask(),
+		activities.TeamLinksDataTask(activities.NewStore(InstallationDB(pool)).WithTeamRequestNotice(teamRequestNotice{}), now),
 	}
 }

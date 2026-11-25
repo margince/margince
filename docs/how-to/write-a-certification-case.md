@@ -280,7 +280,7 @@ Declare `single_call` when the site asks again for an item below the floor. Also
 again after an answer it cannot read, or breaks the work into pages and merges the replies:
 
 ```go
-func (captureClassifyCases) CertifiedScope() string { return aitasks.ScopeSingleCall }
+func (certJudgeCases) CertifiedScope() string { return aitasks.ScopeSingleCall }
 ```
 
 A narrower scope also needs its entry, with the reason, in the `narrowedSites` map of that test. So the list

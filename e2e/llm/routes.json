@@ -310,6 +310,7 @@
         "create_review_template": "create_activity_review_template",
         "create_saved_view": "create_saved_view",
         "create_stage": "create_stage",
+        "create_web_form": "create_web_form",
         "decide_legacy_loss_reason": "decide_legacy_loss_reason",
         "delete_disqualify_reason": "delete_lead_disqualify_reason",
         "delete_lead_origin": "delete_lead_origin",

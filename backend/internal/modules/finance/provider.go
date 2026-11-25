@@ -44,7 +44,9 @@ type Sources interface {
 // SourceOption is one source on offer: its key, and what the unit supplying it
 // says it is for.
 type SourceOption struct {
-	Provider    string
+	Provider string
+	// DisplayName is the source's name for a reader; empty when the unit gives none.
+	DisplayName string
 	Description string
 	// Documents says the source serves each invoice's own document.
 	Documents bool

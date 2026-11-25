@@ -1,10 +1,4 @@
-import {
-  Fragment,
-  type ReactNode,
-  Suspense,
-  useDeferredValue,
-  useState,
-} from "react";
+import { type ReactNode, Suspense, useDeferredValue, useState } from "react";
 import {
   AnalyticsScreen,
   ArchivedRecordHistory,
@@ -48,6 +42,7 @@ import {
   WorklistRedirect,
 } from "./App.screens";
 import { CUSTOM_SCREEN } from "./app/custom";
+import { ScreenErrorBoundary } from "./app/errorboundary";
 import { CREATE_ID, IMPORT_ID, opensReservedPage } from "./app/nav";
 import { UnsavedGuard } from "./components/unsaved";
 import { RESET_ROUTE } from "./features/sign-in/auth.route";
@@ -279,7 +274,7 @@ export function ScreenView({
         <UnsavedGuard address={shown} samePlace={samePage} onKeep={returnTo}>
           {(held, asking) => (
             <DrawnFor address={held} pending={loading && !asking}>
-              <Fragment key={identityOfAddress(held)}>
+              <ScreenErrorBoundary key={identityOfAddress(held)}>
                 {screenEnabled(parseHash(held).screen, hidden) ? (
                   screenWithLocale(held)
                 ) : screenEnabled(parseHash(held).screen, disabled) ? (
@@ -287,7 +282,7 @@ export function ScreenView({
                 ) : (
                   <UnknownAddress />
                 )}
-              </Fragment>
+              </ScreenErrorBoundary>
             </DrawnFor>
           )}
         </UnsavedGuard>

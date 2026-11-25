@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { routeHash } from "../lib/router";
 import { settingsHref } from "../lib/settingsrouting";
-import { noticeAction } from "./noticeaction";
+import { noticeAction, noticeKindAction } from "./noticeaction";
 
 describe("manual privacy review destinations", () => {
   it("opens the retained uploaded file through the authorized download endpoint", () => {
@@ -64,5 +64,17 @@ describe("a notice about a unit's own record", () => {
 
   it("opens the unit's screen when the directory has not named a view", () => {
     expect(noticeAction(target)?.href).toMatch(/^#\/ext\/rooms\?/);
+  });
+});
+
+describe("notices about no record", () => {
+  it("sends a colleague named on a booking link to Settings, Meetings", () => {
+    expect(noticeKindAction("meeting_team_request")).toEqual({
+      href: routeHash(settingsHref("meetings")),
+      label: "scheduling.settings",
+    });
+  });
+  it("offers nothing for a kind with no screen to answer it", () => {
+    expect(noticeKindAction("capture_backlog_stalled")).toBeUndefined();
   });
 });

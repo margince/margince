@@ -29,3 +29,32 @@ func TestGetStatusAnswersAFixedUncachedBody(t *testing.T) {
 		t.Fatalf("body = %q, want exactly %q", got, "{\"status\":\"ok\"}\n")
 	}
 }
+
+func TestHeadStatusAnswersGetsStatusAndHeaders(t *testing.T) {
+	srv := httptest.NewServer(contractRouter(Server{}))
+	defer srv.Close()
+	answers := map[string]*http.Response{}
+	for _, method := range []string{http.MethodGet, http.MethodHead} {
+		req, err := http.NewRequestWithContext(t.Context(), method, srv.URL+"/v1/status", nil)
+		if err != nil {
+			t.Fatal(err)
+		}
+		resp, err := srv.Client().Do(req)
+		if err != nil {
+			t.Fatalf("%s: %v", method, err)
+		}
+		if err := resp.Body.Close(); err != nil {
+			t.Errorf("%s: closing the body: %v", method, err)
+		}
+		answers[method] = resp
+	}
+	get, head := answers[http.MethodGet], answers[http.MethodHead]
+	if head.StatusCode != http.StatusOK {
+		t.Fatalf("HEAD = %d, want 200", head.StatusCode)
+	}
+	for _, header := range []string{"Cache-Control", "Content-Type"} {
+		if head.Header.Get(header) != get.Header.Get(header) {
+			t.Errorf("HEAD sent %s %q, GET %q", header, head.Header.Get(header), get.Header.Get(header))
+		}
+	}
+}

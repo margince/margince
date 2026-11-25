@@ -120,9 +120,10 @@ func (h captureExclusionHandlers) PurgeCaptureExclusion(
 // rather than sending an empty class beside a zero.
 func keptContract(kept KeptBreakdown) crmcontracts.CaptureKeptBreakdown {
 	out := crmcontracts.CaptureKeptBreakdown{
-		Held:         kept.Held,
-		UnderStatute: kept.UnderStatute,
-		UnderRequest: kept.UnderRequest,
+		Held:                   kept.Held,
+		UnderStatute:           kept.UnderStatute,
+		UnderRequest:           kept.UnderRequest,
+		UnderUndeterminedFloor: kept.UnderUndeterminedFloor,
 	}
 	if kept.StatutoryClass != "" {
 		out.StatutoryClass = &kept.StatutoryClass

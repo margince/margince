@@ -21,7 +21,7 @@ import { DateInput, isoOrBlank } from "../../design-system/dateinput";
 import { ErrorLine } from "../../design-system/errorline";
 import { Heading } from "../../design-system/heading";
 import { Modal } from "../../design-system/modal";
-import { Panel, PanelBody } from "../../design-system/panel";
+import { Panel, PanelBody, PanelIntro } from "../../design-system/panel";
 import { QueryGate } from "../../design-system/querystates";
 import { useFieldFaults } from "../../design-system/savepage";
 import { Select } from "../../design-system/select";
@@ -125,7 +125,9 @@ export function DecisionsPanel({
       }
     >
       <PanelBody>
-        <p className="t-caption">{t("analytics.decisions.purpose")}</p>
+        <PanelIntro className="t-caption">
+          {t("analytics.decisions.purpose")}
+        </PanelIntro>
         <QueryGate
           query={decisions}
           pendingLabel={t("analytics.decisions.title")}

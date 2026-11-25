@@ -352,8 +352,27 @@ func TestNoSessionIsMintedAndThereIsNoneToClose(t *testing.T) {
 		if resp.StatusCode != http.StatusMethodNotAllowed {
 			t.Errorf("DELETE naming %q: status = %d, want 405", version, resp.StatusCode)
 		}
+		if got := resp.Header.Get("Allow"); got != http.MethodPost {
+			t.Errorf("DELETE naming %q: Allow = %q, want POST", version, got)
+		}
 		if !strings.Contains(string(body), "establishes no session") {
 			t.Errorf("DELETE naming %q answered %q, which does not say why there is nothing to close", version, body)
+		}
+	}
+}
+
+func TestAVerbTheTransportDoesNotServeNamesTheOneItDoes(t *testing.T) {
+	h := NewHTTPHandler(NewRegistry(nil, nil),
+		authenticateAsPassport(map[string]ids.UUID{"a": ids.NewV7()}),
+		func(*http.Request) string { return "" }, "margince-crm", "test", discardLog())
+	for _, method := range []string{http.MethodGet, http.MethodPut} {
+		rec := httptest.NewRecorder()
+		h.ServeHTTP(rec, httptest.NewRequest(method, "/mcp", nil))
+		if rec.Code != http.StatusMethodNotAllowed {
+			t.Errorf("%s: status = %d, want 405", method, rec.Code)
+		}
+		if got := rec.Header().Get("Allow"); got != http.MethodPost {
+			t.Errorf("%s: Allow = %q, want POST", method, got)
 		}
 	}
 }

@@ -13,6 +13,7 @@ import { formatDateAbbrev } from "../../format/format";
 import { type Locale, useLocale, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import { throwProblem } from "../../lib/problem";
+import { useMe } from "../../lib/session";
 import { useViewerZone } from "../../lib/viewerzone";
 import "./companyvatmark.css";
 
@@ -450,7 +451,8 @@ function AskTheRegister({
   canAsk: boolean;
 }>): ReactNode {
   const t = useT();
-  if (!canAsk) {
+  const consults = useMe().data?.settings_availability?.vat_register === true;
+  if (!canAsk || !consults) {
     return null;
   }
   return (

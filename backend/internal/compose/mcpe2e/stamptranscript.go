@@ -122,7 +122,7 @@ func digestHarness(root string) (harness string, parsers map[string]string, err 
 	parsers = map[string]string{}
 	for driver, source := range byDriver {
 		if len(routeParsers[driver]) > 0 {
-			parsers[driver] = digest([]byte(source))
+			parsers[driver] = Digest([]byte(source))
 		}
 	}
 	return harness, parsers, nil

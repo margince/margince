@@ -17,11 +17,11 @@ export function proposalEmailBody(
     .map((slot) => formatDateTime(slot.start, locale, zone))
     .join("\n");
   return [
-    t("scheduling.proposalGreeting"),
+    t("book.proposalGreeting"),
     proposal.description,
     times,
-    `${t("scheduling.proposalChoose")}\n${proposal.url}`,
-    t("scheduling.proposalReply"),
+    `${t("book.proposalChoose")}\n${proposal.url}`,
+    t("book.proposalReply"),
   ]
     .filter((part) => part.trim() !== "")
     .join("\n\n");

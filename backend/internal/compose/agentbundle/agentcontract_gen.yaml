@@ -77,6 +77,9 @@ info:
     PUT /v1/forecast/assurance/enforcement:
       release: ""
       announced_at: ""
+    PUT /v1/scheduling/team-requests/{host_user_id}:
+      release: ""
+      announced_at: ""
     PUT /v1/stage-automation/policies/{id}:
       release: ""
       announced_at: ""
@@ -2130,6 +2133,9 @@ paths:
         past 120 characters (`too_long`), the limit of every company name typed by hand.
         A `parent_company_id` that names a company the caller cannot read answers 422 naming
         `parent_company_id`, the same for a missing record and for one hidden by row scope.
+        A parent that already sits below this company answers 422 `parent_company_below` on
+        `parent_company_id`, with `params.name` naming that company. A parent that is the company itself
+        answers 422 `parent_company_self` on `parent_company_id`.
 
         Needs the passport permission Change records.
 
@@ -2313,8 +2319,8 @@ paths:
             image/png:
               schema: {type: string, format: binary}
         '401': {$ref: '#/components/responses/Unauthorized'}
-        '403': {$ref: '#/components/responses/Forbidden'}
-        '404': {$ref: '#/components/responses/NotFound'}
+        '403': {$ref: '#/components/responses/FileForbidden'}
+        '404': {$ref: '#/components/responses/FileNotFound'}
         '422': {$ref: '#/components/responses/ValidationError'}
         '501':
           description: The deployment has no object store configured, so no logo can be stored or served.
@@ -2340,8 +2346,8 @@ paths:
             image/png:
               schema: {type: string, format: binary}
         '401': {$ref: '#/components/responses/Unauthorized'}
-        '403': {$ref: '#/components/responses/Forbidden'}
-        '404': {$ref: '#/components/responses/NotFound'}
+        '403': {$ref: '#/components/responses/FileForbidden'}
+        '404': {$ref: '#/components/responses/FileNotFound'}
         '422': {$ref: '#/components/responses/ValidationError'}
         '501':
           description: The deployment has no object store configured, so no logo can be stored or served.
@@ -3445,8 +3451,8 @@ paths:
           content:
             application/pdf:
               schema: {type: string, format: binary}
-        '403': {$ref: '#/components/responses/Forbidden'}
-        '404': {$ref: '#/components/responses/NotFound'}
+        '403': {$ref: '#/components/responses/FileForbidden'}
+        '404': {$ref: '#/components/responses/FileNotFound'}
         '422': {$ref: '#/components/responses/ValidationError'}
         '429':
           description: The caller fetched 20 invoice documents in the current one-minute window.
@@ -8380,6 +8386,27 @@ paths:
               schema:
                 type: array
                 items: {$ref: '#/components/schemas/SchedulingTeamCandidate'}
+  /scheduling/team-links:
+    get:
+      tags: [Activities]
+      operationId: listSchedulingTeamLinks
+      summary: List the caller's team booking links.
+      description: |-
+        Each live team link the caller owns, oldest first. A team link sits beside the caller's
+        personal booking page, which always offers the caller's own free time alone.
+      responses:
+        default:
+          description: The operation could not be completed.
+          content:
+            application/problem+json:
+              schema: {$ref: '#/components/schemas/Problem'}
+        '200':
+          description: The caller's team links.
+          content:
+            application/json:
+              schema:
+                type: array
+                items: {$ref: '#/components/schemas/SchedulingTeamLink'}
   /scheduling/team-requests:
     get:
       tags: [Activities]
@@ -10912,9 +10939,9 @@ paths:
         '401':
           $ref: '#/components/responses/Unauthorized'
         '403':
-          $ref: '#/components/responses/Forbidden'
+          $ref: '#/components/responses/FileForbidden'
         '404':
-          $ref: '#/components/responses/NotFound'
+          $ref: '#/components/responses/FileNotFound'
         '422':
           $ref: '#/components/responses/ValidationError'
       parameters:
@@ -11054,8 +11081,8 @@ paths:
             text/csv:
               schema: {type: string}
         '401': {$ref: '#/components/responses/Unauthorized'}
-        '403': {$ref: '#/components/responses/Forbidden'}
-        '404': {$ref: '#/components/responses/NotFound'}
+        '403': {$ref: '#/components/responses/FileForbidden'}
+        '404': {$ref: '#/components/responses/FileNotFound'}
         '422': {$ref: '#/components/responses/ValidationError'}
       description: Export this edition's permitted frozen metrics, chart readings and kept question answers.
   /search/data-answer:
@@ -12957,6 +12984,42 @@ paths:
         '403': {$ref: '#/components/responses/Forbidden'}
         '422': {$ref: '#/components/responses/ValidationError'}
       description: List the website forms that land leads in this installation.
+    post:
+      tags: [WebForms]
+      operationId: createWebForm
+      security: [{bearerAuth: []}]
+      summary: Create a website form; a human sees its minted signing secret once.
+      description: |-
+        Mints the form's public key, the last segment of its intake address
+        `POST /v1/public/forms/{form_key}`. A `server` form answers its own signing secret in
+        `signing_secret`, once; no read returns it again. So does a `typeform` or `tally` form
+        sent without `sender_secret`: the secret is then typed into the builder's webhook. Only a
+        human gets that secret: an agent's answer leaves `signing_secret` out, so no secret
+        enters a model transcript. Its user then shows one with Make a new secret on the form in
+        Settings > Website forms (`POST /v1/web-forms/{id}/rotate-secret`). An agent that sends
+        `sender_secret`, websites, consent or a privacy notice is refused with `403`, as on an
+        update: those stay with its user. A
+        `webflow` form stores the secret Webflow issued, sent in `sender_secret` now or on a
+        later update; until then it refuses every post. Every signed
+        sender needs a secret store on this installation; without one it answers 422 on `sender`.
+
+        Needs the passport permission Change records.
+
+        Runs at once.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/CreateWebFormRequest'}
+      responses:
+        '201':
+          description: The created form, plus the signing secret once whenever this installation minted it.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/WebFormCreated'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '422': {$ref: '#/components/responses/ValidationError'}
   /web-forms/{id}:
     parameters:
       - $ref: '#/components/parameters/Id'
@@ -14591,8 +14654,8 @@ paths:
             image/png:
               schema: {type: string, format: binary}
         '401': {$ref: '#/components/responses/Unauthorized'}
-        '403': {$ref: '#/components/responses/Forbidden'}
-        '404': {$ref: '#/components/responses/NotFound'}
+        '403': {$ref: '#/components/responses/FileForbidden'}
+        '404': {$ref: '#/components/responses/FileNotFound'}
         '422': {$ref: '#/components/responses/ValidationError'}
         '501':
           description: The deployment has no object store configured, so no logo can be stored or served.
@@ -14737,8 +14800,8 @@ paths:
             image/png:
               schema: {type: string, format: binary}
         '401': {$ref: '#/components/responses/Unauthorized'}
-        '403': {$ref: '#/components/responses/Forbidden'}
-        '404': {$ref: '#/components/responses/NotFound'}
+        '403': {$ref: '#/components/responses/FileForbidden'}
+        '404': {$ref: '#/components/responses/FileNotFound'}
         '422': {$ref: '#/components/responses/ValidationError'}
         '501':
           description: The deployment has no object store configured, so no logo can be stored or served.
@@ -16262,8 +16325,8 @@ paths:
             application/octet-stream:
               schema: {type: string, format: binary}
         '401': {$ref: '#/components/responses/Unauthorized'}
-        '403': {$ref: '#/components/responses/Forbidden'}
-        '404': {$ref: '#/components/responses/NotFound'}
+        '403': {$ref: '#/components/responses/FileForbidden'}
+        '404': {$ref: '#/components/responses/FileNotFound'}
   /capture/activity:
     get:
       tags: [Capture]
@@ -17763,7 +17826,7 @@ paths:
       tags: [Compliance]
       operationId: getNoticeCase
       security: [{bearerAuth: []}]
-      summary: One privacy notice owed, where the source is confirmed. The case id comes from notice_cases, not the contact's id.
+      summary: One privacy notice owed, where the source is confirmed. The case id comes from notice_cases (GET /privacy/notice-cases), not the contact's id.
       description: |-
         The same case the queue lists, read on its own, for a surface that opens one duty rather
         than working a page of them.
@@ -17784,7 +17847,7 @@ paths:
       tags: [Compliance]
       operationId: assignNoticeCase
       security: [{bearerAuth: []}]
-      summary: Give a privacy notice already owed (from notice_cases) an owner.
+      summary: Give a privacy notice already owed (from notice_cases, GET /privacy/notice-cases) an owner.
       description: |-
         Records who is working this duty, so the queue shows a claimed case rather than a pile
         nobody has taken.
@@ -17854,7 +17917,7 @@ paths:
       tags: [Compliance]
       operationId: getNoticeCaseReview
       security: [{bearerAuth: []}]
-      summary: One contact's privacy-notice case — its source, whether a notice is owed, and by when. The id comes from notice_case_reviews or the contact's contact_360 view, not the contact's id.
+      summary: One contact's privacy-notice case — its source, whether a notice is owed, and by when. The id comes from notice_case_reviews (GET /privacy/notice-case-reviews) or the contact's contact_360 view (GET /contacts/{id}/360), not the contact's id.
       description: |-
         The administrative record for a source review or notice duty. Human privacy-request read
         authority covers the record; contact names remain limited by ordinary contact visibility.
@@ -17875,7 +17938,7 @@ paths:
       tags: [Compliance]
       operationId: assignNoticeCaseReview
       security: [{bearerAuth: []}]
-      summary: Give a contact's privacy-notice case (from notice_case_reviews) an owner.
+      summary: Give a contact's privacy-notice case (from notice_case_reviews, GET /privacy/notice-case-reviews) an owner.
       description: |-
         Records who is working this duty, so the queue shows a claimed case rather than a pile
         nobody has taken.
@@ -17923,7 +17986,7 @@ paths:
       tags: [Compliance]
       operationId: assessNoticeSource
       security: [{bearerAuth: []}]
-      summary: Confirm where a contact came from (bought list, import, their own enquiry), which decides whether a privacy notice is owed. Preview it first (POST /privacy/notice-case-reviews/{id}/source/preview). Only a contact with no recorded source is up for review; when its evidence does not name where the data first came from, ask the user rather than guessing a kind.
+      summary: Confirm where a contact came from (bought list, import, their own enquiry), which decides whether a privacy notice is owed. Preview it first (POST /privacy/notice-case-reviews/{id}/source/preview). Only a contact with no recorded source is up for review; when its evidence does not name where the data first came from (an import alone does not), ask the user rather than guessing a kind.
       requestBody:
         required: true
         content:
@@ -17940,7 +18003,7 @@ paths:
         '404': {$ref: '#/components/responses/NotFound'}
         '422': {$ref: '#/components/responses/ValidationError'}
       description: |-
-        Confirm where a contact came from (bought list, import, their own enquiry), which decides whether a privacy notice is owed. Preview it first (POST /privacy/notice-case-reviews/{id}/source/preview). Only a contact with no recorded source is up for review; when its evidence does not name where the data first came from, ask the user rather than guessing a kind.
+        Confirm where a contact came from (bought list, import, their own enquiry), which decides whether a privacy notice is owed. Preview it first (POST /privacy/notice-case-reviews/{id}/source/preview). Only a contact with no recorded source is up for review; when its evidence does not name where the data first came from (an import alone does not), ask the user rather than guessing a kind.
 
         Needs the passport permission Change records.
 
@@ -18149,7 +18212,7 @@ paths:
         - {name: actor, in: query, schema: {type: string}, description: 'Typed principal filter, e.g. human:<uuid> or agent:sdr.'}
         - {name: entity_type, in: query, schema: {type: string}}
         - {name: entity_id, in: query, schema: {type: string, format: uuid}}
-        - {name: batch_id, in: query, schema: {type: string, format: uuid}, description: 'Only the rows one bulk change wrote (`executeBulkChange` answers the id).'}
+        - {name: batch_id, in: query, schema: {type: string, format: uuid}, description: 'Only the rows one operation group wrote: a bulk change (`executeBulkChange` answers the id) or one run of a capture purge.'}
         - {name: action, in: query, schema: {type: string}, description: 'One of the AuditLogEntry.action values.'}
         - {name: from, in: query, schema: {type: string, format: date-time}}
         - {name: to, in: query, schema: {type: string, format: date-time}}
@@ -22708,7 +22771,7 @@ paths:
           content:
             application/pdf:
               schema: {type: string, format: binary}
-        '404': {$ref: '#/components/responses/NotFound'}
+        '404': {$ref: '#/components/responses/FileNotFound'}
         '422': {$ref: '#/components/responses/ValidationError'}
         '501':
           description: >-
@@ -23661,8 +23724,8 @@ paths:
             text/csv:
               schema: {type: string, format: binary}
         '401': {$ref: '#/components/responses/Unauthorized'}
-        '403': {$ref: '#/components/responses/Forbidden'}
-        '404': {$ref: '#/components/responses/NotFound'}
+        '403': {$ref: '#/components/responses/FileForbidden'}
+        '404': {$ref: '#/components/responses/FileNotFound'}
   /analytics/context:
     get:
       tags: [Reports]
@@ -24425,7 +24488,7 @@ paths:
       tags: [Notices]
       operationId: listNotices
       security: [{bearerAuth: []}]
-      summary: The acting user's own in-app notifications, newest first. Not a privacy notice owed to a contact; those are notice_case_reviews.
+      summary: The acting user's own in-app notifications, newest first. Not a privacy notice owed to a contact; those are notice_case_reviews (GET /privacy/notice-case-reviews).
       description: |-
         The acting human's own notifications, newest first, read and unread; another seat's are
         not an error, they are absent.
@@ -25812,7 +25875,7 @@ paths:
           content:
             application/octet-stream:
               schema: {type: string, format: binary}
-        '404': {$ref: '#/components/responses/NotFound'}
+        '404': {$ref: '#/components/responses/FileNotFound'}
         '422': {$ref: '#/components/responses/ValidationError'}
     delete:
       tags: [Attachments]
@@ -26086,7 +26149,7 @@ paths:
             application/zip:
               schema: {type: string, format: binary}
         '401': {$ref: '#/components/responses/Unauthorized'}
-        '403': {$ref: '#/components/responses/PermissionDenied'}
+        '403': {$ref: '#/components/responses/FileForbidden'}
   /imports/{id}:
     parameters:
       - {name: id, in: path, required: true, schema: {type: string, format: uuid}}
@@ -26258,8 +26321,8 @@ paths:
             text/csv:
               schema: {type: string}
         '401': {$ref: '#/components/responses/Unauthorized'}
-        '403': {$ref: '#/components/responses/PermissionDenied'}
-        '404': {$ref: '#/components/responses/NotFound'}
+        '403': {$ref: '#/components/responses/FileForbidden'}
+        '404': {$ref: '#/components/responses/FileNotFound'}
         '409': {$ref: '#/components/responses/Conflict'}
         '422': {$ref: '#/components/responses/ValidationError'}
   /imports/{id}/approve:
@@ -26981,8 +27044,8 @@ paths:
             application/octet-stream:
               schema: {type: string, format: binary}
         '401': {$ref: '#/components/responses/Unauthorized'}
-        '403': {$ref: '#/components/responses/PermissionDenied'}
-        '404': {$ref: '#/components/responses/NotFound'}
+        '403': {$ref: '#/components/responses/FileForbidden'}
+        '404': {$ref: '#/components/responses/FileNotFound'}
         '422': {$ref: '#/components/responses/ValidationError'}
   /knowledge/corpora/{id}/ask:
     parameters:
@@ -27186,9 +27249,10 @@ components:
       description: |-
         Only the members of this list — a Shortlist's chosen records, or the records a Live List's
         filter selects now — narrowed before sorting and paging, so the page is the list's members
-        in the record list's own columns. The list must be one the caller may find and of this
-        record type; otherwise `404` or `422`. Sharing a list never widens what the read shows:
-        the caller's row scope still applies to every row.
+        in the record list's own columns. A list the caller cannot find, or any list while lists
+        are off, narrows to no rows, as an unknown `tag_id` or `owner_id` does. A list of another
+        record type answers `422`. Sharing a list never widens what the read shows: the caller's
+        row scope still applies to every row.
     IncludeArchived:
       name: include_archived
       in: query
@@ -27305,6 +27369,32 @@ components:
       content:
         application/problem+json:
           schema: {$ref: '#/components/schemas/Problem'}
+    FileNotFound:
+      description: |-
+        No such file in this workspace, or out of RBAC scope. A browser tab that opened the file's
+        link (an `Accept` that prefers `text/html`) reads a short page in the reader's language
+        instead of the problem; every other caller gets the problem.
+      content:
+        application/problem+json:
+          schema: {$ref: '#/components/schemas/Problem'}
+          examples:
+            notFound:
+              value: {type: 'https://errors.gradion.com/not_found', title: Not found, status: 404, code: not_found, detail: Resource not found.}
+        text/html:
+          schema: {type: string}
+    FileForbidden:
+      description: |-
+        Authenticated, but the role lacks the grant for this file (`code: permission_denied`). A
+        browser tab that opened the file's link (an `Accept` that prefers `text/html`) reads a short
+        page in the reader's language instead of the problem; every other caller gets the problem.
+      content:
+        application/problem+json:
+          schema: {$ref: '#/components/schemas/Problem'}
+          examples:
+            denied:
+              value: {type: 'https://errors.gradion.com/permission_denied', title: Forbidden, status: 403, code: permission_denied, detail: Your role does not permit this action.}
+        text/html:
+          schema: {type: string}
     NotFound:
       description: No such resource in this workspace (or out of RBAC scope).
       content:
@@ -27872,6 +27962,14 @@ components:
             state: {type: string, enum: [throttled, blocked, paused_all]}
             since: {type: [string, 'null'], format: date-time}
             until: {type: [string, 'null'], format: date-time}
+    WebFormCreated:
+      allOf:
+        - $ref: '#/components/schemas/WebForm'
+        - type: object
+          properties:
+            signing_secret:
+              type: string
+              description: The signing secret this installation minted for a `server`, `typeform` or `tally` form, shown this once and only to a human, never to an agent.
     WebFormListResponse:
       type: object
       required: [data, secrets_available]
@@ -27880,6 +27978,32 @@ components:
           type: array
           items: {$ref: '#/components/schemas/WebForm'}
         secrets_available: {type: boolean, description: 'Whether this installation can store a secret, which every sender but `browser` needs.'}
+    CreateWebFormRequest:
+      type: object
+      required: [name, sender]
+      properties:
+        name: {type: string, minLength: 1, maxLength: 120}
+        sender: {$ref: '#/components/schemas/WebFormSender'}
+        sender_secret: {type: string, minLength: 16, maxLength: 512, description: 'The secret a builder signs with. `typeform` and `tally` get a minted one without it; a `webflow` form refuses every post until Webflow''s secret is pasted. Refused for any other sender.'}
+        allowed_origins:
+          type: array
+          maxItems: 20
+          items: {type: string, maxLength: 300}
+          description: Required, and only allowed, for a `browser` form.
+        lead_origin: {type: [string, 'null']}
+        owner_id: {type: [string, 'null'], format: uuid}
+        product_id: {type: [string, 'null'], format: uuid, description: 'The product every lead this form creates is interested in. Omit it or send null to capture leads with no product.'}
+        field_map:
+          type: object
+          maxProperties: 40
+          additionalProperties: {type: string}
+        consent_required: {type: boolean, default: false}
+        consent_policy_version: {type: [string, 'null'], maxLength: 200}
+        consent_wording: {type: [string, 'null'], maxLength: 2000}
+        privacy_notice: {type: [string, 'null'], maxLength: 500}
+        privacy_notice_url: {type: [string, 'null'], format: uri, pattern: '^[Hh][Tt][Tt][Pp][Ss]://[^/?#:@][^/?#@]*([/?#]|$)', maxLength: 2000}
+        redirect_url: {type: [string, 'null'], maxLength: 2000}
+        success_message: {type: [string, 'null'], maxLength: 500}
     UpdateWebFormRequest:
       type: object
       properties:
@@ -30812,7 +30936,7 @@ components:
     AiRouteCertification:
       type: object
       required: [verdict, current]
-      description: 'What the certification records say about this model for this task. Absent on a candidate no record measured, which the screen reads as not certified.'
+      description: 'What the certification records say about this model for this task, read by the same rule as the feature''s `certification` grade, so the lead candidate and the feature never disagree. Absent on a candidate that grade calls not_measured.'
       properties:
         verdict: {type: string, enum: [certified, supported_degraded, not_supported], description: 'The worst verdict across the task''s sites and across the records of this model.'}
         current: {type: boolean, description: 'Every record behind the verdict still describes the prompts this build sends.'}
@@ -30846,9 +30970,9 @@ components:
       required: [grade, model, recheck_pending]
       description: |-
         The certification grade of the model that answers this feature first (the lead of
-        `normal_candidates`), read from the committed certification records by the readiness
+        `effective_candidates`), read from the committed certification records by the readiness
         report's rule: the worst grade over every site the feature ships, and not measured when
-        any site has no record for that model. Absent when no model is bound, and for embeddings.
+        any site has no record for that model. Absent when no model is bound or the budget blocks the feature, and for embeddings.
       properties:
         grade:
           type: string
@@ -34038,13 +34162,21 @@ components:
       required: [provider, description]
       properties:
         provider: {type: string, description: "The source's key, stored on every mirrored row."}
+        provider_name:
+          type: string
+          description: >-
+            The source's name for a reader, as its unit declares it. Absent when the unit declares none; a client then names it another way, never by the key.
         description: {type: string, description: "What the extension unit supplying it says it is for."}
     FinanceConnection:
       type: object
       required: [id, provider, status, connected_at]
       properties:
         id: {type: string, format: uuid}
-        provider: {type: string}
+        provider: {type: string, description: "The source's key. Show `provider_name` to a reader."}
+        provider_name:
+          type: string
+          description: >-
+            The source's name for a reader, as its unit declares it. Absent when the unit declares none; a client then names it another way, never by the key.
         status:
           type: string
           enum: [connecting, active, error]
@@ -34086,7 +34218,11 @@ components:
         access_scope:
           type: string
           description: Opaque revision of readable companies and the imported snapshot. Pages with different revisions must not be combined.
-        provider: {type: string}
+        provider: {type: string, description: 'The accounting source''s key. Show `provider_name` to a reader.'}
+        provider_name:
+          type: string
+          description: >-
+            The accounting source's name for a reader, as its unit declares it. Absent when the unit declares none; a client then names no source rather than show the key.
         last_synced_at: {type: string, format: date-time}
         linked_companies:
           type: integer
@@ -34151,7 +34287,11 @@ components:
         provider:
           type: [string, 'null']
           description: >-
-            Which accounting source this came from, in the source's own words ("offline_demo"). Rendered as a label beside the figures so a reader knows what they are looking at; absent when nothing is connected.
+            Which accounting source this came from, by its key ("offline_demo"). A key, not a name for a reader: show `provider_name`. Absent when nothing is connected.
+        provider_name:
+          type: [string, 'null']
+          description: >-
+            The accounting source's name for a reader ("Demo accounting"), as the unit that supplies it declares it. Absent when nothing is connected, or when that unit declares no name; a client then names no source rather than show the key.
         last_synced_at:
           type: [string, 'null']
           format: date-time
@@ -35433,6 +35573,8 @@ components:
           type: array
           description: Unresolved disclosure work for this contact, in deadline order. Absent when privacy-request read authority is withheld.
           items: {$ref: '#/components/schemas/ContactNoticeDuty'}
+        privacy_confirmed_source:
+          $ref: '#/components/schemas/ContactConfirmedSource'
         consent:
           type: object
           description: Per-purpose state. The proof log stays at `GET /contacts/{id}/consent` — this is the guard, not the ledger.
@@ -36126,6 +36268,7 @@ components:
             - no_consent_exception_not_offered
             - no_consent
             - existing_customer
+            - opt_out_allowed
         reason_at:
           type: [string, 'null']
           format: date-time
@@ -40122,6 +40265,21 @@ components:
       properties:
         data: {type: array, items: {$ref: '#/components/schemas/Project360PhaseTransition'}}
         phase_durations: {type: array, items: {$ref: '#/components/schemas/Project360PhaseDuration'}}
+    ContactConfirmedSource:
+      type: object
+      description: |-
+        The source a reviewer last confirmed for this contact, from the newest confirmed
+        privacy-notice case. Absent when no source was ever confirmed, and withheld with the
+        privacy_notice_duties section.
+      required: [case_id, source_kind, source_obtained_at, confirmed_at]
+      properties:
+        case_id: {type: string, format: uuid}
+        source_kind: {type: string, description: 'The confirmed kind: one of `AssessNoticeSource.kind`.'}
+        source_obtained_at: {type: [string, 'null'], format: date-time, description: 'The acquisition date the reviewer confirmed; null when they confirmed none.'}
+        confirmed_at: {type: string, format: date-time}
+        confirmed_by:
+          allOf: [{$ref: '#/components/schemas/PrincipalAttribution'}]
+          description: Read from the confirm's audit row. Absent for an agent reader, and when that row no longer exists.
     PrincipalAttribution:
       type: object
       description: |-
@@ -41006,18 +41164,18 @@ components:
             the page names no calendar (a page saved before the profile existed reads this way).
             `calendar_read_only`: the connection lacks the calendar write grant. `calendar_unavailable`:
             the connection is gone or refused. `team_not_ready`: a team member has not confirmed, has
-            left, or has no calendar Margince can read; `team_members` says which. Answered on the
-            host's own profile read only.
+            left, or has no calendar Margince can read; the team link's `team_members` says which.
+            Answered on the host's own reads only.
         team_members:
           type: array
           maxItems: 5
+          deprecated: true
           items: {$ref: '#/components/schemas/SchedulingTeamMember'}
           description: |-
-            Colleagues who must attend every meeting booked through this page. Guests see only the
-            times when the host and every member are free, inside each one's own working hours, and
-            each booking invites every member. A member named here starts as `pending` and the page
-            takes no bookings until every member has confirmed. Only `user_id` is read from a
-            request; a colleague not offered by `GET /scheduling/team-candidates` is refused.
+            The personal page names no colleagues: it offers the host's own free time alone. A
+            request naming a member answers 422 on `team_members`; an empty list is accepted. A
+            response does not carry the field. Colleagues are named on a team link
+            (`POST /scheduling/team-links`).
     SchedulingTeamMember:
       type: object
       required: [user_id]
@@ -41040,12 +41198,33 @@ components:
         name: {type: string}
     SchedulingTeamRequest:
       type: object
-      required: [host_user_id, host_name, title, state]
+      required: [page_id, host_user_id, host_name, title, state]
       properties:
+        page_id: {type: string, format: uuid, description: 'The team link that names the caller; answer it with `PUT /scheduling/team-links/{page_id}/answer`.'}
         host_user_id: {type: string, format: uuid}
         host_name: {type: string}
-        title: {type: string, description: The meeting title the link offers.}
+        title: {type: string, description: "The team link's name, which is the meeting title it offers."}
         state: {type: string, enum: [pending, confirmed]}
+    SchedulingTeamLink:
+      type: object
+      required: [id, title, enabled, team_members, slug, blocker]
+      description: |-
+        A booking link that names colleagues who attend every meeting booked through it. It uses
+        the calendar and booking settings of its owner's personal page, and has its own address.
+      properties:
+        id: {type: string, format: uuid}
+        title: {type: string, maxLength: 200, description: "The link's name, which is also the meeting title guests see."}
+        enabled: {type: boolean, description: Whether the owner switched the link on.}
+        team_members:
+          type: array
+          maxItems: 5
+          items: {$ref: '#/components/schemas/SchedulingTeamMember'}
+        slug: {type: string}
+        public_url: {type: string, description: 'The address to share, `/book/{slug}` on the configured public origin. Absent when no usable public origin is configured.'}
+        blocker:
+          type: string
+          enum: [none, no_calendar, calendar_read_only, calendar_unavailable, team_not_ready]
+          description: Why the link takes no bookings now, with the meanings `SchedulingProfile.blocker` gives them.
     SchedulingAliasRequest:
       type: object
       required: [alias]
@@ -41281,7 +41460,7 @@ components:
           type: boolean
           readOnly: true
           description: >-
-            Whether this meeting still owes an answer about how it went, by the rule the Worklist's outcome lane asks: a meeting linked to a customer record the caller may see, with no `meeting_status` or `booked`, whose start has passed (a date-only meeting once its date is over in the installation's timezone) by the server's clock, and whose content the caller may read. Unlike the lane it has no look-back window, so an old booked meeting still asks. Every read that carries `writable` carries this. A client offers the outcome control when this and `writable` are both true. Absent means false.
+            Whether this meeting still owes an answer about how it went, by the rule the Worklist's outcome lane asks: a meeting linked to a customer record the caller may see, with no `meeting_status` or `booked`, whose start has passed (a date-only meeting once its date is over in the installation's timezone) by the server's clock, and whose content the caller may read. A meeting whose subject names travel logistics (a flight, an airport, a pickup) asks only when it links a deal, lead or project the caller may see. Unlike the lane it has no look-back window, so an old booked meeting still asks. Every read that carries `writable` carries this. A client offers the outcome control when this and `writable` are both true. Absent means false.
         calendar_managed:
           type: boolean
           readOnly: true
@@ -43314,6 +43493,14 @@ components:
             their consent nor an agreement with them. A privacy notice they were sent is neither.
             Not a refusal: a surface shows a warning and records the sender's confirmation through
             `POST /lawful-basis-confirmations` before the send. Absent or false otherwise.
+        ask_country:
+          type: boolean
+          description: |-
+            The record states no country for this recipient, the refusal is for want of marketing
+            consent, and an installed pack allows advertising until the recipient refuses. A composer
+            asks the sender for the country, saves it on the contact with `PATCH /contacts/{id}`
+            (`address_country`) and asks the preview again. Absent or false when no answer could
+            change the decision, and for a recipient the caller cannot read.
         consent_purpose_id:
           type: string
           format: uuid
@@ -48181,7 +48368,13 @@ components:
         routine_mail_team_id:
           type: string
           format: uuid
-          description: The selected live team for team or combined scope. Personal scope ignores a retained selection.
+          description: >-
+            The selected live team for team or combined scope. Personal scope ignores a retained selection. A team that does not exist, is archived or is not one the caller may review is refused with 422 `delivery_team_gone` on this field.
+        clear_routine_mail_team:
+          type: boolean
+          writeOnly: true
+          description: >-
+            True removes the selected team, and a team or combined scope falls back to `personal`. Sent together with `routine_mail_team_id` it is refused with 422.
         weekly_delivery_day:
           type: integer
           minimum: 1
@@ -50617,7 +50810,7 @@ components:
         assessment: {type: string, enum: [attention, checked, incomplete]}
         sources:
           type: array
-          maxItems: 10
+          maxItems: 11
           items: {$ref: '#/components/schemas/HealthSource'}
         findings:
           type: array
@@ -50684,17 +50877,37 @@ components:
         first_observed_at: {type: string, format: date-time}
         next_attempt_at: {type: string, format: date-time}
         count: {type: integer, minimum: 0}
-        unit: {type: string, enum: [runs, mailboxes, records, updates, items, threads]}
+        unit: {type: string, enum: [runs, mailboxes, records, updates, items, threads, messages]}
         window_start: {type: string, format: date-time}
         window_end: {type: string, format: date-time}
+        footer_gap:
+          $ref: '#/components/schemas/HealthFooterGap'
         action:
           $ref: '#/components/schemas/HealthAction'
+    HealthFooterGap:
+      type: object
+      additionalProperties: false
+      description: >-
+        A legal entity whose mail owes a company detail nobody stated. A send that owes it is held for review with `footer_incomplete`, and a background send is dropped. The finding goes once the details are complete.
+      required: [legal_entity_id, legal_entity_name, is_default, missing, held_by_user, held_in_background]
+      properties:
+        legal_entity_id: {type: string, format: uuid}
+        legal_entity_name: {type: string, description: Empty for a default entity that states no name.}
+        is_default: {type: boolean}
+        missing:
+          type: array
+          minItems: 1
+          description: >-
+            The owed disclosure kinds with no text, then `entity_name` for a default entity with neither a display name nor a legal name.
+          items: {type: string, enum: [controller_identity, privacy_contact, objection_route, advertiser_contact, advertisement, entity_name]}
+        held_by_user: {type: integer, minimum: 0, description: 'Sends a user pressed that were held for this since the details last changed.'}
+        held_in_background: {type: integer, minimum: 0, description: 'Background sends, such as a meeting reminder, that were held or dropped for this since the details last changed.'}
     HealthAction:
       type: object
       additionalProperties: false
       required: [destination, available]
       properties:
-        destination: {type: string, enum: [diagnostics, connections, models, search, updates, configuration, regional], description: 'Where the finding is acted on. `regional` is the Company settings part that holds the installation timezone.'}
+        destination: {type: string, enum: [diagnostics, connections, models, search, updates, configuration, regional, legal_entities, company_profile, disclosures], description: 'Where the finding is acted on. `regional` is the Company settings part that holds the installation timezone. `legal_entities` is the Company settings part that lists the legal entities, and `company_profile` the one that names the company. `disclosures` is the jurisdiction page that holds the company details every mail discloses.'}
         available: {type: boolean}
         reason: {type: string}
     JobHealthHistory:
@@ -50840,7 +51053,7 @@ components:
             when no user row resolves — a deactivated or deleted member still has
             audit rows, and an honest identifier is better than an invented name.
         on_behalf_of_name: {type: [string, 'null'], description: Resolved display name for on_behalf_of.}
-        batch_id: {type: [string, 'null'], format: uuid, description: 'The bulk change that wrote this row; null for a change made on its own.'}
+        batch_id: {type: [string, 'null'], format: uuid, description: 'The operation group that wrote this row: a bulk change, or one run of a capture purge. Null for a change made on its own.'}
         action:
           $ref: '#/components/schemas/AuditAction'
         entity_type: {type: string}
@@ -51536,7 +51749,6 @@ components:
         - document_extract
         - draft_reply
         - enrich
-        - extension_task
         - growth_fit
         - nl_search
         - offer_draft
@@ -51674,11 +51886,12 @@ components:
         data: {type: array, items: {$ref: '#/components/schemas/AgentTool'}}
     RouterActions:
       type: object
-      description: The actions of one MCP router whose actions run REST routes.
-      required: [router, actions]
+      description: The actions of one MCP router, with the arguments each takes.
+      required: [router, actions, how_to_call]
       properties:
         router: {type: string}
         ask_user_first_means: {type: string, description: 'What ask_user_first asks of the model; present when an action here has it.'}
+        how_to_call: {type: string, description: 'Where an action''s arguments go in the router call: top-level members beside action, a routed body in request_body.'}
         actions:
           type: array
           items:
@@ -51686,14 +51899,25 @@ components:
             required: [action, does, route]
             properties:
               action: {type: string, description: 'The value the router''s action argument takes.'}
-              does: {type: string, description: 'The route''s summary.'}
+              does: {type: string, description: 'What the action does.'}
               route: {type: string, description: 'The method and route, for example POST /v1/record-grants.'}
               ids: {type: array, items: {type: string}, description: The path ids the action takes as arguments.}
-              query: {type: array, items: {type: string}, description: The query parameters it takes as arguments.}
+              query:
+                type: array
+                description: The query parameters it takes as arguments, each with its type and any closed values.
+                items:
+                  type: object
+                  required: [name, type]
+                  properties:
+                    name: {type: string}
+                    type: {type: string}
+                    required: {type: boolean}
+                    enum: {type: array, items: {type: string}}
+                    format: {type: string}
               if_version: {type: boolean, description: 'Whether it takes if_version: the version you last read.'}
               ask_user_first: {type: boolean, description: Whether the app asks its user to confirm it first.}
               uploads_a_file: {type: boolean, description: 'Whether it takes filename, content_type and content_base64.'}
-              body: {type: object, description: The JSON schema of its body argument.}
+              body: {type: object, additionalProperties: true, description: The JSON schema of its body argument.}
     ColdStartField:
       type: object
       description: |-
@@ -55750,7 +55974,7 @@ components:
     ContactImpersonationWarning:
       type: object
       description: >-
-        The sign of impersonation the sender check saw when capture made this contact from a mail.
+        The sign of impersonation the sender check saw on a captured mail from this contact.
       required: [detected_at]
       properties:
         reason:

@@ -99,7 +99,6 @@ func (r *fakeRuntime) Caller() extension.Caller { return r.caller }
 func (r *fakeRuntime) Activities() extension.Activities { return nil }
 
 func (r *fakeRuntime) SetAside() extension.SetAside        { return nil }
-func (r *fakeRuntime) AI() extension.AI                    { return nil }
 func (r *fakeRuntime) Companies() extension.Companies      { return nil }
 func (r *fakeRuntime) MailContent() extension.MailContents { return nil }
 func (r *fakeRuntime) Models() extension.Models            { return nil }

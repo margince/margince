@@ -10,6 +10,9 @@ var publicDefinitions = map[string]Definition{
 	"booking.meeting":   {Words: langcopy.Phrase{En: "Meeting", De: "Besprechung", Vi: "Cuộc họp"}},
 	"booking.proposed":  {Words: langcopy.Phrase{En: "Meeting proposed: %s", De: "Vorgeschlagener Termin: %s", Vi: "Đề xuất cuộc họp: %s"}, Arguments: []string{argumentText}},
 
+	"file.unavailable_title":    {Words: langcopy.Phrase{En: "File not available", De: "Datei nicht verfügbar", Vi: "Tệp không khả dụng"}, Arguments: []string{}},
+	"file.unavailable_sentence": {Words: langcopy.Phrase{En: "This file was deleted or you no longer have access.", De: "Diese Datei wurde gelöscht oder du hast keinen Zugriff mehr darauf.", Vi: "Tệp này đã bị xóa hoặc bạn không còn quyền truy cập."}, Arguments: []string{}},
+
 	"preview.open_booking":         {Words: langcopy.Phrase{En: "Open booking page", De: "Buchungsseite öffnen", Vi: "Mở trang đặt lịch"}, Arguments: []string{}},
 	"preview.page_unavailable":     {Words: langcopy.Phrase{En: "Booking page unavailable", De: "Buchungsseite nicht verfügbar", Vi: "Trang đặt lịch không khả dụng"}, Arguments: []string{}},
 	"preview.booking_unavailable":  {Words: langcopy.Phrase{En: "Booking unavailable", De: "Buchung nicht verfügbar", Vi: "Không thể đặt lịch"}, Arguments: []string{}},

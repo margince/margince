@@ -118,6 +118,35 @@ describe("the phone More menu", () => {
     expect(more().getAttribute("aria-current")).toBe("page");
   });
 
+  // Settings has no row in the sheet. The account menu holds the way there,
+  // so it carries the claim More would make for a page it held.
+  it("marks the account menu, not More, as current on a Settings page", async () => {
+    renderPhoneShell("#/settings/account");
+    const account = await waitFor(() => {
+      const trigger = document.querySelector(".account-trigger");
+      if (!trigger) throw new Error("the top bar has no account menu");
+      return trigger;
+    });
+
+    expect(account.getAttribute("aria-current")).toBe("page");
+    expect(more().hasAttribute("aria-current")).toBe(false);
+    expect(document.querySelectorAll("[aria-current]")).toHaveLength(1);
+  });
+
+  // Above the phone width the Settings level carries the claim itself.
+  it("leaves the account menu unclaimed on a wide Settings page", async () => {
+    const viewport = renderPhoneShell("#/settings/account");
+    act(() => viewport.widen());
+
+    await waitFor(() =>
+      expect(
+        document
+          .querySelector(".account-trigger")
+          ?.hasAttribute("aria-current"),
+      ).toBe(false),
+    );
+  });
+
   // Back and Forward close the menu during render, so no row press hands focus on.
   it("hands focus to More when a new address closes the menu", async () => {
     const user = userEvent.setup();

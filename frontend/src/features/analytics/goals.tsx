@@ -76,7 +76,7 @@ export function SalesGoalsScreen() {
   const year = Number(params.get("year")) || now.getFullYear();
   const roster = useSalesGoalRoster(year);
   return (
-    <div className="wrap progress-page">
+    <div className="wrap progress-page page-pane">
       <QueryGate query={roster} pendingLabel={t("goals.reading")}>
         {(answer) => {
           const seller =

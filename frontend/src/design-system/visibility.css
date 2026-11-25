@@ -19,7 +19,6 @@
   padding: 0 8px 0 6px;
   border: 1px solid var(--borderSubtle);
   border-radius: var(--r-full);
-  corner-shape: round;
   background: var(--bgField);
   color: var(--textPrimary);
   white-space: nowrap;

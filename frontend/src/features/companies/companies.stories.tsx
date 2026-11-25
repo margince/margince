@@ -3,6 +3,7 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { screen, userEvent, within } from "storybook/test";
+import { company as typedCompany } from "../../testing/company.fixtures";
 import {
   installFetchStub,
   jsonResponse,
@@ -11,6 +12,7 @@ import {
   storyQueryClient,
 } from "../../testing/story-utils";
 import { CompanyScreen } from "./companies";
+import { CompanyPage } from "./companies.page";
 import { offerDomainContacts } from "./companycontacts/domaincontacts";
 import { domainCandidates } from "./companycontacts/domaincontacts.fixtures";
 
@@ -574,6 +576,29 @@ export const CompanyArchived: Story = {
     return (
       <StoryProviders>
         <CompanyScreen id="o-1" />
+      </StoryProviders>
+    );
+  },
+};
+
+// The page while its 360 read is in flight: the head draws at once.
+export const CompanyPageLoading: Story = {
+  render: () => {
+    globalThis.location.hash = "#/companies/o-1";
+    installFetchStub({
+      "GET /me": meRoute({ company: ["read", "update"] }),
+      ...overviewRoutes,
+    });
+    return (
+      <StoryProviders>
+        <CompanyPage
+          company={typedCompany}
+          loading
+          failed={false}
+          tab="overview"
+          tabs={null}
+          onTab={() => {}}
+        />
       </StoryProviders>
     );
   },

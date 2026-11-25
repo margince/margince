@@ -104,7 +104,8 @@ var humanOnlyWithoutASession = gatekit.Waive(map[string]string{
 	"getAssistantProfile":  "the public identity and posture of the AI presence, shown before sign-in",
 
 	// Read by machines that hold no seat and never will.
-	"getStatus": "the reachability probe an external uptime monitor calls: a fixed body, no work, nothing disclosed",
+	"getStatus":  "the reachability probe an external uptime monitor calls: a fixed body, no work, nothing disclosed",
+	"headStatus": "the same probe for a monitor that sends HEAD: no body, no work, nothing disclosed",
 })
 
 // aDealRoomSession is the scheme the buyer's own room authenticates with.

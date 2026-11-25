@@ -17,7 +17,7 @@ import type { TimelineEntry, TimelineGroup } from "./timelineentry";
 import "./pagepane.css";
 import "./recordview.css";
 
-/** The way back to where the reader opened a record from, drawn over its head. */
+/** The way back to the page the reader came from, drawn over the page's head. */
 export function RecordBack({
   href,
   label,
@@ -46,9 +46,6 @@ export type RecordRename = Readonly<{
 }>;
 
 export type RecordViewProps = Readonly<{
-  // A `RecordBack` over the head, or a component that may draw one. Absent
-  // or null when the reader arrived any way that has no place to return to.
-  back?: ReactNode;
   name: string;
   // Absent keeps the name as plain text.
   rename?: RecordRename;
@@ -110,11 +107,10 @@ export type RecordViewProps = Readonly<{
  * open tab's feed. The DOM runs in the order the cards are drawn, so the
  * page's one `h1` is read before the feed.
  *
- * The details stay beside the feed while the page scrolls, and fold above it
+ * The details sit beside the feed and scroll with the page, and fold above it
  * once the row has no room for both cards.
  */
 export function RecordView({
-  back,
   aside,
   tabs,
   band,
@@ -132,9 +128,8 @@ export function RecordView({
   const t = useT();
   return (
     <div className="record-split">
-      {back}
       <div className="record-split-row">
-        <div className="page-pane page-pane-sticky record-split-details">
+        <div className="page-pane record-split-details">
           <RecordHead {...head} />
           {aside && (
             <aside className="record-aside" aria-label={t("record.context")}>

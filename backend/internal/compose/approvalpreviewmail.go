@@ -146,6 +146,8 @@ func mailFooterFinding(finding commsauthz.FooterFinding) string {
 		label = "the company name and address"
 	case "advertiser_contact":
 		label = "advertiser contact information"
+	case "advertisement":
+		label = "the line that identifies it as an advertisement"
 	case "recipient_private_link":
 		label = "a private opt-out link, to protect each recipient's private information"
 	case "public_opt_out_link":

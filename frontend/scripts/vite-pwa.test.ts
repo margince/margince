@@ -2,6 +2,8 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { IncomingMessage } from "node:http";
+import { Socket } from "node:net";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
@@ -9,6 +11,10 @@ import { createContext, runInContext } from "node:vm";
 import { build, type InlineConfig } from "vite";
 import { beforeAll, describe, expect, it, vi } from "vitest";
 import { LOCALES } from "../src/i18n";
+import {
+  BOOKING_HOST_IDS,
+  BOOKING_ID_PREFIXES,
+} from "../src/lib/bookingaddress";
 import { SERVICE_WORKER_URL } from "../src/lib/pwa";
 import spaConfig from "../vite.config";
 import { apiNavigationPaths, pwa, workerCacheName } from "./vite-pwa";
@@ -220,6 +226,35 @@ describe("the build", () => {
     ).toEqual(["/v1", "/files"]);
   });
 
+  // nginx.conf refuses these with 404 before its preview redirect.
+  it("answers a booking path naming a host control or a guest token with 404, as nginx does, and proxies a host's page with its query", async () => {
+    const book = spaConfig.server?.proxy?.["/book"];
+    if (typeof book !== "object" || !book.bypass || !book.rewrite)
+      throw new Error(
+        "vite.config.ts proxies /book without a bypass and a rewrite",
+      );
+    const bypass = async (url: string) => {
+      const request = new IncomingMessage(new Socket());
+      request.url = url;
+      request.headers = { "sec-fetch-dest": "document" };
+      return book.bypass?.(request, undefined, book);
+    };
+    for (const id of [
+      ...BOOKING_HOST_IDS,
+      ...BOOKING_ID_PREFIXES.map((prefix) => `${prefix}private-token`),
+    ]) {
+      expect(await bypass(`/book/${id}`), id).toBe(false);
+      expect(await bypass(`/book/${id}/?l=30`), id).toBe(false);
+    }
+    expect(await bypass("/book/anna-meyer?l=30")).toBeUndefined();
+    expect(book.rewrite("/book/anna-meyer?l=30")).toBe(
+      "/v1/public/booking/anna-meyer/preview?l=30",
+    );
+    expect(await apiNavigationPaths(spaConfig.server?.proxy ?? {})).toContain(
+      "/book",
+    );
+  });
+
   it("builds the same worker twice from the same tree", async () => {
     const again = await buildSite("index.html");
     expect(again.get("sw.js")).toBe(emitted("sw.js"));
@@ -407,6 +442,8 @@ describe("the service worker", () => {
       "/healthz",
       "/readyz",
       "/metrics",
+      // The web tier sends every booking page fetch to the api's card.
+      "/book/anna-meyer",
     ]) {
       expect(worker.request(url, "navigate"), url).toBeUndefined();
     }
@@ -453,16 +490,12 @@ describe("the service worker", () => {
     }
   });
 
-  it("gives the offline page to a failed navigation to a record card or a booking page, which the web tier serves as the app", async () => {
+  it("gives the offline page to a failed navigation to a record card, which the web tier serves as the app", async () => {
     const worker = await installed();
     worker.scope.fetch.mockRejectedValue(new TypeError("Failed to fetch"));
-    for (const url of [
-      "/r/deals/0b6f3c1e-5d2a-4c8e-9f10-2a3b4c5d6e7f",
-      "/book/anna-meyer",
-    ]) {
-      const answer = await worker.request(url, "navigate");
-      expect(await answer?.text(), url).toBe(page());
-    }
+    const url = "/r/deals/0b6f3c1e-5d2a-4c8e-9f10-2a3b4c5d6e7f";
+    const answer = await worker.request(url, "navigate");
+    expect(await answer?.text(), url).toBe(page());
   });
 
   it("leaves the failure to the browser when its own cache is gone", async () => {

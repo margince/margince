@@ -98,7 +98,7 @@ elif (( branch_lines >= total_lines / 2 )); then
 fi
 
 early_exits="$(printf '%s\n' "$stripped" \
-  | awk '/^if ! command -v pnpm/,/^fi$/ {next} /(^|[^_[:alnum:]])exit([[:space:]]+(0|\$\?))?[[:space:]]*($|;|&|\|)/ {n++} END {print n+0}')"
+  | awk '/^if ! command -v pnpm/,/^fi$/ {next} /(^|[^_[:alnum:]])exit([[:space:]]+(0|\$\?))?[[:space:]]*($|;|&|\|)/ {n++} END {print n+0}')"  # early-pipe-ok: the awk program matches the word exit in the text it reads, and never calls it
 if [[ "$early_exits" != "0" ]]; then
   fail "$GATE has $early_exits success-exit(s) outside the pnpm-absent branch — every one of them is a path that reports green without running the diff"
 fi
@@ -106,8 +106,8 @@ fi
 # ---- 3. the census precedes every exit --------------------------------------
 # An empty artifact list must fail, and it must fail on the skip path too — that
 # is the path a bare checkout takes, where nobody is watching.
-census_line="$(printf '%s\n' "$stripped" | grep -n 'ARTIFACTS\[@\]} -eq 0' | head -1 | cut -d: -f1)"
-skip_line="$(printf '%s\n' "$stripped" | grep -n '^if ! command -v pnpm' | head -1 | cut -d: -f1)"
+census_line="$(printf '%s\n' "$stripped" | grep -n 'ARTIFACTS\[@\]} -eq 0' | sed -n 1p | cut -d: -f1)"
+skip_line="$(printf '%s\n' "$stripped" | grep -n '^if ! command -v pnpm' | sed -n 1p | cut -d: -f1)"
 if [[ -z "$census_line" ]]; then
   fail "$GATE no longer refuses an empty artifact list; an emptied list would report success having compared nothing"
 elif [[ -z "$skip_line" ]]; then

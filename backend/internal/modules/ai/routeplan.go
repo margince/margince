@@ -140,13 +140,12 @@ func wireCandidates(plan []plannedBinding) []crmcontracts.AiRouteCandidate {
 	return out
 }
 
-// withCertification stamps each candidate with the verdict the certification
-// records give the model it names for task. A model no record measured keeps no
-// stamp, which the screen reads as not certified.
+// withCertification stamps each candidate with the verdict CertificationFor
+// gives the model it names for task. A model that is not measured keeps no stamp.
 func withCertification(candidates []crmcontracts.AiRouteCandidate, plan []plannedBinding, task Task, profile Profile) {
 	for i, binding := range plan {
-		if cert, ok := TierCertificationFor(task, binding.config, profile); ok {
-			candidates[i].Certification = &crmcontracts.AiRouteCertification{Verdict: cert.Verdict, Current: cert.Current}
+		if cert := CertificationFor(task, binding.config, profile); cert.Verdict != "" {
+			candidates[i].Certification = &crmcontracts.AiRouteCertification{Verdict: cert.Verdict, Current: !cert.RecheckPending}
 		}
 	}
 }
@@ -194,7 +193,7 @@ func compareFeatureRoutes(normalConfig, effectiveConfig RoutingConfig, normalBan
 			row.Defaults = &crmcontracts.AiTaskSettings{
 				DecisionTimeoutMs: int(defaults.DecisionTimeout.Milliseconds()), AttemptTimeoutMs: int(defaults.AttemptTimeout.Milliseconds()),
 			}
-			row.Certification = leadCertification(task, normal, normalConfig.Profile)
+			row.Certification = leadCertification(task, effective, effectiveConfig.Profile)
 		}
 		withCertification(row.NormalCandidates, normal, task, normalConfig.Profile)
 		withCertification(row.EffectiveCandidates, effective, task, effectiveConfig.Profile)
@@ -239,8 +238,8 @@ func plannedModels(plan []plannedBinding) []boundModel {
 	return out
 }
 
-// leadCertification grades the model that answers task first under the normal
-// band, the binding the router reaches for before any failure moves it on.
+// leadCertification grades the model that answers task first in plan: the
+// effective lead, which the screen prints beside the grade.
 func leadCertification(task Task, plan []plannedBinding, profile Profile) *crmcontracts.AiTaskCertification {
 	if len(plan) == 0 {
 		return nil

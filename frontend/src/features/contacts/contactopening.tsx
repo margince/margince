@@ -1,4 +1,5 @@
 import type { components } from "../../api/schema";
+import { PendingBody } from "../../design-system/atoms";
 import { Heading } from "../../design-system/heading";
 import { useT } from "../../i18n";
 import { BoughtText, boughtFields } from "./boughtmarks";
@@ -47,7 +48,7 @@ export function ContactOpening({
         ) : (
           <CachedContactHeading id={id} />
         ))}
-      {t("contact.page.loading")}
+      <PendingBody label={t("contact.page.loading")} />
     </div>
   );
 }

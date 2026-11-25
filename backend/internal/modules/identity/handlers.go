@@ -139,7 +139,9 @@ type Handlers struct {
 	installationLock InstallationLock
 	// listsAvailable is the installation's lists.enabled.
 	listsAvailable bool
-	coreFeatures   corefeatures.Availability
+	// vatRegisterAvailable is whether a VAT check request can be queued here.
+	vatRegisterAvailable bool
+	coreFeatures         corefeatures.Availability
 
 	// installationBrand reads the anchor company's name and marks for /me.
 	// Nil omits them (meparts.go).
