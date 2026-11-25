@@ -245,16 +245,22 @@ function forwardedHeader(lines: readonly string[]): number {
       i = after - 1;
       continue;
     }
-    let header = i;
-    while (header < lines.length && !opensReplyHeader(lines, header)) {
-      if (header > i && !isBlank(lines[header])) {
-        return -1;
-      }
-      header += 1;
-    }
-    return header === lines.length ? -1 : header;
+    return headerAt(lines, i);
   }
   return -1;
+}
+
+// The header a quote at `index` opens: that line, or the first after a forward
+// line and blank lines. -1 when another line comes first.
+function headerAt(lines: readonly string[], index: number): number {
+  let header = index;
+  while (header < lines.length && !opensReplyHeader(lines, header)) {
+    if (header > index && !isBlank(lines[header])) {
+      return -1;
+    }
+    header += 1;
+  }
+  return header === lines.length ? -1 : header;
 }
 
 /**

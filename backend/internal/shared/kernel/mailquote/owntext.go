@@ -83,17 +83,21 @@ func forwardedHeader(lines []string) int {
 			i = after - 1
 			continue
 		}
-		header := i
-		for header < len(lines) && !OpensReplyHeader(lines[header], lines[header+1:]) {
-			if header > i && strings.TrimSpace(lines[header]) != "" {
-				return -1
-			}
-			header++
+		return headerAt(lines, i)
+	}
+	return -1
+}
+
+// headerAt is the header a quote at index opens: that line, or the first after
+// a forward line and blank lines. It is -1 when another line comes first.
+func headerAt(lines []string, index int) int {
+	for header := index; header < len(lines); header++ {
+		if OpensReplyHeader(lines[header], lines[header+1:]) {
+			return header
 		}
-		if header == len(lines) {
+		if header > index && strings.TrimSpace(lines[header]) != "" {
 			return -1
 		}
-		return header
 	}
 	return -1
 }
