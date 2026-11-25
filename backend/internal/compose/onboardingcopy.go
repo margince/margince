@@ -82,7 +82,7 @@ var onboardingCopyByLang = map[textlang.Lang]onboardingCopy{
 		selectionReason:   "You chose this.",
 	},
 	textlang.German: {
-		entityQuestion:    "Das Impressum der Website nennt mehrere Rechtsträger. Welcher davon ist dein Unternehmen?",
+		entityQuestion:    "Die rechtlichen Angaben der Website nennen mehrere Rechtsträger. Welcher davon ist dein Unternehmen?",
 		addressQuestion:   "Die Website nennt mehrere Geschäftsanschriften. Welche gehört zu deinem Unternehmen?",
 		conflictQuestion:  "Dein gespeicherter Wert für %s unterscheidet sich von der Website. Welchen Wert soll ich verwenden?",
 		keepLabel:         "Meinen Wert behalten",
