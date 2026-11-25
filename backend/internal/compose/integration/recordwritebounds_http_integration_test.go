@@ -33,7 +33,7 @@ func TestRecordWritesHoldTheContractsSizeBounds(t *testing.T) {
 		}
 		return rows
 	}
-	emails := listOf(26, func(i int) AnyMap { return AnyMap{"email": fmt.Sprintf("person%d@bounds.test", i)} })
+	emails := listOf(26, func(i int) AnyMap { return AnyMap{"email": fmt.Sprintf("contact%d@bounds.test", i)} })
 	phones := listOf(26, func(i int) AnyMap { return AnyMap{"phone": fmt.Sprintf("+4930123%04d", i)} })
 	domains := listOf(101, func(i int) AnyMap { return AnyMap{"domain": fmt.Sprintf("bounds%d.test", i)} })
 
