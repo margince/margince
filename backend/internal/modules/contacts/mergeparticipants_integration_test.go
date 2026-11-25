@@ -144,3 +144,18 @@ func TestAMergeFoldsTwoSpellingsOfTheSourcesAddress(t *testing.T) {
 		t.Errorf("the activity names %d contact row(s), want 1", n)
 	}
 }
+
+// A merge whose context ended stops at the fold and reports it, before any
+// participant row moves.
+func TestAMergeReportsAFoldItCouldNotRun(t *testing.T) {
+	e := setupDedupe(t)
+	ctx := e.as()
+	stopped, stop := context.WithCancel(ctx)
+	stop()
+	err := e.store.tx(ctx, func(tx pgx.Tx) error {
+		return relinkParticipantRows(stopped, tx, ids.New[ids.ContactKind](), ids.New[ids.ContactKind]())
+	})
+	if err == nil {
+		t.Fatal("moving participant rows under an ended context reported success")
+	}
+}

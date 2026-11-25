@@ -20,19 +20,9 @@ import (
 // with the address as typed. idx_aparticipant_address_to_lowercase holds them.
 const addressRowsToLowercase = `FROM activity_participant WHERE address <> lower(btrim(address))`
 
-// The audit images of a lowercased activity count its participant rows, and
-// those still to lowercase. They hold no address.
-const (
-	auditFieldParticipantRows    = "participant_rows"
-	auditFieldAddressesAsWritten = "participant_addresses_not_lowercase"
-)
-
-// participantSpellings counts an activity's participant rows, and those whose
-// address is not lowercase.
-type participantSpellings struct {
-	Activity         ids.UUID
-	Rows, NotLowered int
-}
+// auditFieldAddressesAsWritten counts, in the audit images of a correction, the
+// addresses of one batch on an activity that are not lowercase. No address is held.
+const auditFieldAddressesAsWritten = "participant_addresses_not_lowercase"
 
 // LowercaseParticipantAddressesTx lowercases the address of up to limit older
 // participant rows after the cursor. It returns the rows it inspected and how
@@ -41,86 +31,46 @@ func LowercaseParticipantAddressesTx(ctx context.Context, tx pgx.Tx, after ids.U
 	if err := auth.RequireSystem(ctx); err != nil {
 		return nil, 0, err
 	}
-	rows, err := tx.Query(ctx, `SELECT id, activity_id `+addressRowsToLowercase+` AND id > $1 ORDER BY id LIMIT $2`, after, limit)
-	if err != nil {
+	var inspected, activities []ids.UUID
+	if err := tx.QueryRow(ctx, `
+		SELECT coalesce(array_agg(page.id ORDER BY page.id), '{}'), coalesce(array_agg(page.activity_id ORDER BY page.id), '{}')
+		  FROM (SELECT id, activity_id `+addressRowsToLowercase+` AND id > $1 ORDER BY id LIMIT $2) page`,
+		after, limit).Scan(&inspected, &activities); err != nil {
 		return nil, 0, fmt.Errorf("activities: reading participant addresses to lowercase: %w", err)
 	}
-	page, err := pgx.CollectRows(rows, pgx.RowToStructByPos[struct{ ID, Activity ids.UUID }])
-	if err != nil {
-		return nil, 0, fmt.Errorf("activities: reading participant addresses to lowercase: %w", err)
-	}
-	if len(page) == 0 {
+	if len(inspected) == 0 {
 		return nil, 0, nil
 	}
-	inspected, activities := make([]ids.UUID, len(page)), make([]ids.UUID, len(page))
-	for i, row := range page {
-		inspected[i], activities[i] = row.ID, row.Activity
-	}
 	if err := storekit.LockMeetingAttendeeWrites(ctx, tx, activities...); err != nil {
-		return nil, 0, err
-	}
-	// Every row of the batch's activities is locked. The two counts below are
-	// then of one set of rows, and differ only by what this batch folded.
-	rows, err = tx.Query(ctx, `SELECT id FROM activity_participant WHERE activity_id = ANY($1) ORDER BY id FOR UPDATE`, activities)
-	if err != nil {
-		return nil, 0, fmt.Errorf("activities: locking the participant rows of activities to lowercase: %w", err)
-	}
-	held, err := pgx.CollectRows(rows, pgx.RowTo[ids.UUID])
-	if err != nil {
-		return nil, 0, fmt.Errorf("activities: locking the participant rows of activities to lowercase: %w", err)
-	}
-	before, err := countParticipantSpellings(ctx, tx, held)
-	if err != nil {
 		return nil, 0, err
 	}
 	changed, err := storekit.LowercaseOlderParticipantAddresses(ctx, tx, `ap.id = ANY($1)`, inspected)
 	if err != nil {
 		return nil, 0, err
 	}
-	lowered, err := countParticipantSpellings(ctx, tx, held)
-	if err != nil {
-		return nil, 0, err
+	lowered := map[ids.UUID]int{}
+	for _, activity := range activities {
+		lowered[activity]++
 	}
-	left := make(map[ids.UUID]participantSpellings, len(lowered))
-	for _, activity := range lowered {
-		left[activity.Activity] = activity
-	}
-	for _, activity := range before {
-		if err := auditLowercasedParticipants(ctx, tx, activity, left[activity.Activity], runID); err != nil {
+	for activity, addresses := range lowered {
+		if err := auditLowercasedParticipants(ctx, tx, activity, addresses, runID); err != nil {
 			return nil, 0, err
 		}
 	}
 	return inspected, changed, nil
 }
 
-// countParticipantSpellings counts, per activity and in activity order, those
-// of the given participant rows that are stored.
-func countParticipantSpellings(ctx context.Context, tx pgx.Tx, participants []ids.UUID) ([]participantSpellings, error) {
-	rows, err := tx.Query(ctx, `
-		SELECT activity_id, count(*), count(*) FILTER (WHERE address <> lower(btrim(address)))
-		  FROM activity_participant WHERE id = ANY($1) GROUP BY activity_id ORDER BY activity_id`, participants)
-	if err != nil {
-		return nil, fmt.Errorf("activities: counting the participant rows of activities to lowercase: %w", err)
-	}
-	counts, err := pgx.CollectRows(rows, pgx.RowToStructByPos[participantSpellings])
-	if err != nil {
-		return nil, fmt.Errorf("activities: counting the participant rows of activities to lowercase: %w", err)
-	}
-	return counts, nil
-}
-
-// auditLowercasedParticipants records what the correction did to one activity
-// and announces it, as a roster change announces the activity.
-func auditLowercasedParticipants(ctx context.Context, tx pgx.Tx, before, after participantSpellings, runID ids.UUID) error {
-	auditID, err := storekit.AuditWithEvidence(ctx, tx, "update", "activity", before.Activity,
-		map[string]any{auditFieldParticipantRows: before.Rows, auditFieldAddressesAsWritten: before.NotLowered},
-		map[string]any{auditFieldParticipantRows: after.Rows, auditFieldAddressesAsWritten: after.NotLowered},
+// auditLowercasedParticipants records the correction on one activity and
+// announces it, as a roster change announces the activity.
+func auditLowercasedParticipants(ctx context.Context, tx pgx.Tx, activity ids.UUID, addresses int, runID ids.UUID) error {
+	auditID, err := storekit.AuditWithEvidence(ctx, tx, "update", "activity", activity,
+		map[string]any{auditFieldAddressesAsWritten: addresses}, map[string]any{auditFieldAddressesAsWritten: 0},
 		map[string]any{evidenceDataTaskRun: runID.String()})
 	if err != nil {
 		return err
 	}
 	// The interaction graph refolds an activity's participants on this event.
-	return storekit.EmitEvent(ctx, tx, auditID, before.Activity, crmcontracts.PublicEventActivityUpdated{})
+	return storekit.EmitEvent(ctx, tx, auditID, activity, crmcontracts.PublicEventActivityUpdated{})
 }
 
 // CountParticipantAddressesToLowercase counts the rows

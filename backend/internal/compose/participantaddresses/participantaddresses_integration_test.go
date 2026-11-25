@@ -147,10 +147,9 @@ func TestTwoSpellingsOfOneGuestFoldIntoOneRowThatKeepsWhatBothKnew(t *testing.T)
 		t.Errorf("the meeting holds %d participant row(s), want 3", n)
 	}
 	if n := o.e.WsCount(t, `SELECT count(*) FROM audit_log WHERE entity_type = 'activity' AND entity_id = $1 AND action = 'update'
-		AND before->>'participant_rows' = '4' AND after->>'participant_rows' = '3'
 		AND before->>'participant_addresses_not_lowercase' = '1' AND after->>'participant_addresses_not_lowercase' = '0'
 		AND evidence ? 'data_task_run'`, meeting); n != 1 {
-		t.Errorf("%d audit row(s) record the fold on the meeting, want 1", n)
+		t.Errorf("%d audit row(s) record the correction on the meeting, want 1", n)
 	}
 	if n := o.e.WsCount(t, `SELECT count(*) FROM event_outbox o
 		JOIN audit_log a ON a.id = (o.envelope->'trace'->>'audit_log_id')::uuid
@@ -299,6 +298,18 @@ func TestTheTaskRollsBackWithItsBatchAndRefusesAMalformedCursor(t *testing.T) {
 		return err
 	}); err == nil {
 		t.Fatal("accepted a malformed cursor")
+	}
+	// A batch or an estimate whose context ended reports the failed read.
+	stopped, stop := context.WithCancel(ctx)
+	stop()
+	if err := database.WithWorkspaceTx(ctx, o.e.Pool, func(tx pgx.Tx) error {
+		_, err := lowercase(stopped, tx, datatask.BatchIn{Limit: 2})
+		return err
+	}); err == nil {
+		t.Fatal("a batch whose context ended reported success")
+	}
+	if _, _, err := DataTask().Steps[0].Estimate(stopped, o.e.Pool, 10); err == nil {
+		t.Fatal("an estimate whose context ended reported a count")
 	}
 	member := o.e.Admin()
 	if err := database.WithWorkspaceTx(member, o.e.Pool, func(tx pgx.Tx) error {

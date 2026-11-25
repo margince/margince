@@ -146,3 +146,19 @@ func TestAFoldedCopyCarriesAnOlderGuestInLowercase(t *testing.T) {
 		t.Fatalf("the survivor holds %d lowercase rows for the older guest, want the one carried", carried)
 	}
 }
+
+// A carry whose context ended stops at the fold and reports it, before any
+// guest is copied.
+func TestACopyCarryReportsAFoldItCouldNotRun(t *testing.T) {
+	e := setupSend(t)
+	ctx := principal.SystemActing(principal.WithWorkspaceID(context.Background(), e.ws), "system:meeting-fold")
+	stopped, stop := context.WithCancel(ctx)
+	stop()
+	err := database.WithWorkspaceTx(ctx, e.pool, func(tx pgx.Tx) error {
+		_, err := carryMissingParticipantsTx(stopped, tx, ids.New[ids.ActivityKind](), ids.New[ids.ActivityKind]())
+		return err
+	})
+	if err == nil {
+		t.Fatal("carrying guests under an ended context reported success")
+	}
+}
