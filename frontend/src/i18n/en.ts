@@ -6480,7 +6480,7 @@ export const en = {
   "deal.timeline.empty": "No activity on this deal yet.",
   "legalEntities.title": "Legal entities",
   "legalEntities.sub":
-    "The companies you trade as. A colleague you have not assigned works for the default, which takes its name, address and logo from the company above.",
+    "The companies you trade as. A colleague you have not assigned works for the default, which takes its name, address and logo from the company profile.",
   "legalEntities.loading": "Loading legal entities…",
   "legalEntities.addOpen": "New legal entity",
   "legalEntities.addTitle": "New legal entity",
@@ -6493,6 +6493,7 @@ export const en = {
     "Not set: the installation’s jurisdiction applies",
   "legalEntities.defaultBadge": "Default",
   "legalEntities.defaultUnnamed": "Your company",
+  "legalEntities.fromCompanyProfile": "From the company profile",
   "legalEntities.displayName": "Name",
   "legalEntities.legalName": "Legal name",
   "legalEntities.country": "Country",

@@ -6510,7 +6510,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "deal.timeline.empty": "Noch keine Aktivität zu diesem Deal.",
   "legalEntities.title": "Rechtsträger",
   "legalEntities.sub":
-    "Die Rechtsträger, unter denen du auftrittst. Wer keinem zugeordnet ist, arbeitet für den Standard-Rechtsträger. Dieser übernimmt Namen, Adresse und Logo vom Unternehmen oben.",
+    "Die Rechtsträger, unter denen du auftrittst. Wer keinem zugeordnet ist, arbeitet für den Standard-Rechtsträger. Dieser übernimmt Namen, Adresse und Logo aus dem Unternehmensprofil.",
   "legalEntities.loading": "Rechtsträger werden geladen…",
   "legalEntities.addOpen": "Neuer Rechtsträger",
   "legalEntities.addTitle": "Neuer Rechtsträger",
@@ -6523,6 +6523,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Nicht gesetzt: Der Rechtsraum der Installation gilt",
   "legalEntities.defaultBadge": "Standard",
   "legalEntities.defaultUnnamed": "Dein Unternehmen",
+  "legalEntities.fromCompanyProfile": "Aus dem Unternehmensprofil",
   "legalEntities.displayName": "Name",
   "legalEntities.legalName": "Firmierung",
   "legalEntities.country": "Land",
