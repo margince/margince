@@ -618,6 +618,30 @@ jobs:
   # them: the paper behind the scores found they do not predict a failing test,
   # so the job writes this week beside last week in the run summary and keeps
   # the JSON for next week. It fails only when it cannot measure.
+  ai-records:
+    name: AI certification grades owed (weekly)
+    if: github.event.schedule == '0 2 * * 1'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    defaults:
+      run:
+        working-directory: .
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version-file: backend/go.mod
+          cache-dependency-path: backend/go.sum
+      # What a paid sweep owes, as a number in the run's summary. It reports
+      # and never fails: the sweep is a maintainer's choice and costs money.
+      - name: Count the AI grades that are stale or absent
+        run: |
+          set -euo pipefail
+          cd backend
+          go run ./internal/compose/aicert/reportcmd -totals 2>/dev/null | tee -a "$GITHUB_STEP_SUMMARY"
+
   slop-trend:
     name: slop trend (weekly)
     if: github.event.schedule == '0 2 * * 1' || (github.event_name == 'workflow_dispatch' && inputs.trend)

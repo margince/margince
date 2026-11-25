@@ -3,12 +3,12 @@
 # config/presets/gemma4_local_ollama.yaml — Gemma 4 on the operator's own box,
 # through Ollama on loopback. Zero egress.
 #
-# WHAT THIS PRESET IS NOT CERTIFIED FOR: it binds a model to every task, and the
-# certification records do not grade every one of those bindings as certified.
-# Which tasks, and how badly, is in docs/reference/ai-certification.md under
-# this file's name. Read it before binding this preset to a workspace whose
-# confidentiality decisions matter: a task graded `supported_degraded` or
-# `not_supported` answers wrongly often enough to have been measured doing so.
+# NOT YET MEASURED: no certification record exists for this setup, so no task is
+# graded on it and none of its answers is known to be good enough. Certify it
+# with `make e2e-ai ROUTING=config/presets/gemma4_local_ollama.yaml`
+# on a machine that serves it; its grades then appear in
+# docs/reference/ai-certification.md under this file's name. Until then, do not
+# bind this preset to a workspace whose confidentiality decisions matter.
 #
 # No task list here on purpose. The bands move when a prompt is fixed or the
 # corpus grows, and a list in this comment would read as true long after it

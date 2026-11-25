@@ -27,6 +27,11 @@ gh issue list --label "release: blocker"
 off one the release can ship without. Then run all jobs of the run again; the tag can stay. A tag with
 an added part, such as `v1.1.0-rc.1`, passes with blockers still open.
 
+`release-tag.yml` also refuses a plain tag while `config/presets/gemini_cloud.yaml` has a stale or absent
+AI record. That is the setup a new installation is offered, and the check reads each task's first rung and
+its fallback. The run lists them. Refresh them with [the sweep](re-certify-the-whole-corpus.md), merge the
+records, then run all jobs of the run again. A tag with an added part passes and only prints the list.
+
 ## Write the notes
 
 The notes of a release are its GitHub release page; the repository keeps no changelog file. Before you

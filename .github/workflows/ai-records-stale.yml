@@ -1,0 +1,91 @@
+# Which AI certification records does this pull request make stale?
+#
+# A record carries stamps of the scenario, the prompt this build sends and how
+# the run was graded, so a prompt edit or a changed case reads as stale in
+# `make e2e-ai-report` the moment it lands. That report is the one place the
+# cost shows, and nobody reads it before a merge. This runs it on the base and on
+# this change and names the records that were current before and are not now.
+#
+# IT REPORTS AND NEVER BLOCKS, for the reason docs-describing.yml gives: `ci` is
+# the one required check, and a paid run is never what a pull request waits on.
+name: ai-records-stale
+
+on:
+  pull_request:
+    types: [opened, reopened, synchronize, ready_for_review]
+    paths:
+      - backend/**
+      - config/presets/**
+
+permissions:
+  contents: read
+
+# A module the proxy cannot serve falls through to the source, as in every
+# workflow that installs Go (backend/gates/buildinputfetch_test.go).
+env:
+  GOPROXY: https://proxy.golang.org|direct
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  stale:
+    name: AI records this change makes stale (reports, never blocks)
+    timeout-minutes: 30
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      # write, for the sticky comment the list lives in.
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version-file: backend/go.mod
+          cache-dependency-path: backend/go.sum
+      - name: List the records this change makes stale
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR: ${{ github.event.pull_request.number }}
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        run: |
+          set -euo pipefail
+          base="$RUNNER_TEMP/base"
+          # A base that cannot be read or reported says nothing, rather than a
+          # list made against the wrong tree. The job still succeeds.
+          if ! git fetch -q --depth=1 origin "$BASE_SHA" || ! git worktree add -q "$base" "$BASE_SHA"; then
+            echo "could not check out the base; saying nothing rather than guessing" >&2
+            exit 0
+          fi
+          if ! (cd "$base/backend" && go run ./internal/compose/aicert/reportcmd > "$RUNNER_TEMP/base-report.txt" 2>/dev/null); then
+            echo "could not report on the base; saying nothing rather than guessing" >&2
+            exit 0
+          fi
+          status=0
+          list="$(cd backend && go run ./internal/compose/aicert/reportcmd -newly-stale "$RUNNER_TEMP/base-report.txt" 2>/dev/null)" || status=$?
+          if [ "$status" -ne 0 ]; then
+            echo "could not report on this change; saying nothing rather than guessing" >&2
+            exit 0
+          fi
+          printf '%s\n' "${list:-This change makes no AI certification record stale.}" | tee -a "$GITHUB_STEP_SUMMARY"
+
+          # One sticky comment, found by its marker, and deleted once nothing
+          # is stale, so a fixed finding leaves nothing behind.
+          marker='<!-- ai-records-stale -->'
+          existing="$(gh api --paginate "repos/${{ github.repository }}/issues/${PR}/comments" \
+            --jq "[.[] | select(.body != null and (.body | contains(\"$marker\"))) | .id] | first // empty" || true)"
+          if [ -z "$list" ]; then
+            if [ -n "$existing" ]; then
+              gh api -X DELETE "repos/${{ github.repository }}/issues/comments/${existing}" >/dev/null || true
+            fi
+            exit 0
+          fi
+          body="$(printf '%s\n%s' "$marker" "$list")"
+          if [ -n "$existing" ]; then
+            gh api -X PATCH "repos/${{ github.repository }}/issues/comments/${existing}" -f body="$body" >/dev/null || true
+          else
+            gh api -X POST "repos/${{ github.repository }}/issues/${PR}/comments" -f body="$body" >/dev/null || true
+          fi
