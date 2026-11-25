@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
+import type { components } from "../../api/schema";
 import { floorFigure } from "../../format/figure";
 import { formatNumber } from "../../format/format";
 import { useLocale, usePlural } from "../../i18n";
@@ -10,8 +11,9 @@ import { useMagic } from "../../lib/magic.queries";
 import { usePendingMarginceChanges } from "../../lib/marginchanges";
 import { pillFigure } from "../../lib/worklistcounts";
 import { DEFAULT_VIEW } from "../../lib/worklistviews";
-import type { Worklist } from "../worklist/worklist.queries";
 import { useMorningBrief } from "./brief.queries";
+
+type Worklist = components["schemas"]["Worklist"];
 
 // The reads Home's morning is drawn from, beside the day itself.
 

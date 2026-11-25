@@ -4,15 +4,12 @@
 import { MessageSquare } from "lucide-react";
 import type { ReactNode } from "react";
 import type { components } from "../../api/schema";
-import { RECORD_CHIP_ICONS } from "../../components/recordlinks";
 import { AppLink } from "../../design-system/applink";
 import { Badge } from "../../design-system/atoms";
 import { EmailEntry } from "../../design-system/emailentry";
 import { RecordCard } from "../../design-system/recordcard";
-import { StatusBadge } from "../../design-system/statusbadge";
 import { formatActivityWhen } from "../../format/activitywhen";
 import { formatNumber } from "../../format/format";
-import { useNow } from "../../format/now";
 import { type Translator, useLocale, usePlural, useT } from "../../i18n";
 import { companyTabRoute } from "../../lib/companytab";
 import { ENTITY } from "../../lib/entity";
@@ -22,8 +19,8 @@ import {
   searchHitHasCard,
   searchHitRoute,
 } from "../../lib/searchkinds";
-import { describeHit } from "../../lib/searchstanding";
 import { useViewerZone } from "../../lib/viewerzone";
+import { DealHit } from "./searchdealhit";
 import type { OpenHit } from "./searchpanels";
 
 type SearchResult = components["schemas"]["SearchResult"];
@@ -72,7 +69,9 @@ export function SearchHit({
   // A deal and an activity are records too, and stand in the same box, with
   // what the hit carries to tell one from its look-alikes.
   if (type === "deal" && route) {
-    return <DealHit hit={hit} href={routeHash(route)} />;
+    return (
+      <DealHit hit={hit} href={routeHash(route)} marks={hitMarks(hit, t)} />
+    );
   }
   if (opensPanel) {
     return <ActivityHit hit={hit} onOpen={() => onOpen(hit.id, "activity")} />;
@@ -147,41 +146,6 @@ function RecordHit({
         identity={hit.id}
         href={routeHash(ENTITY[type].route(hit.id))}
         logo={hit.logo_url}
-        position={facts}
-      />
-    </li>
-  );
-}
-
-// A deal, with the stage, amount and close date the hit's standing carries, in
-// the same words the palette gives them.
-function DealHit({ hit, href }: Readonly<{ hit: SearchResult; href: string }>) {
-  const t = useT();
-  const { locale } = useLocale();
-  const zone = useViewerZone();
-  const now = new Date(useNow(60_000));
-  const { subtitle, status } = describeHit(hit, hit.snippet ?? undefined, {
-    t,
-    locale,
-    zone,
-    now,
-  });
-  const marks = hitMarks(hit, t);
-  const facts = (status || subtitle || marks.length > 0) && (
-    <span className="search-hit-marks">
-      {status && <StatusBadge kind={status.kind} label={status.label} />}
-      {subtitle && <span>{subtitle}</span>}
-      {marks}
-    </span>
-  );
-  return (
-    <li className="search-hit">
-      <RecordCard
-        kind="deal"
-        icon={RECORD_CHIP_ICONS.deal}
-        name={hit.title ?? hit.id}
-        identity={hit.id}
-        href={href}
         position={facts}
       />
     </li>
