@@ -223,24 +223,22 @@ func (s *Store) FinishSiteRead(ctx context.Context, readID ids.UUID, in FinishSi
 	if err != nil {
 		return fmt.Errorf("contacts: site-read warnings: %w", err)
 	}
-	grounded := len(in.ProfileFields) > 0 || len(in.Facts) > 0
 	return s.tx(ctx, func(tx pgx.Tx) error {
 		finished, err := scanSiteRead(tx.QueryRow(ctx, `
 			UPDATE site_read
 			SET status = $2, pages = $3, skipped = $4, stopped_reason = $5,
 			    fact_count = $6, proposal_ids = $7, profile_fields = $8, facts = $9,
 			    contacts = $10, warnings = $11, proposal_hash = $12,
-			    legal_entities = $15,
-			    status_code = NULLIF($16, ''), status_detail = NULLIF($17, ''),
-			    next_attempt_at = $18,
+			    legal_entities = $14,
+			    status_code = NULLIF($15, ''), status_detail = NULLIF($16, ''),
+			    next_attempt_at = $17,
 			    draft_version = draft_version + 1, pages_read = $13, phase = NULL,
-			    first_grounded_at = CASE WHEN $14 THEN COALESCE(first_grounded_at, now()) ELSE first_grounded_at END,
 			    finished_at = now(), updated_at = now()
 			WHERE id = $1 AND status = 'running'
-			  AND ($19::timestamptz IS NULL OR started_at = $19)
+			  AND ($18::timestamptz IS NULL OR started_at = $18)
 			RETURNING `+siteReadColumns,
 			readID, in.Status, pages, skipped, in.StoppedReason, in.FactCount, proposals,
-			profileFields, facts, contacts, warnings, in.ProposalHash, len(in.Pages), grounded, entities,
+			profileFields, facts, contacts, warnings, in.ProposalHash, len(in.Pages), entities,
 			in.StatusCode, in.StatusDetail, in.NextAttemptAt, in.ClaimedAt))
 		if errors.Is(err, pgx.ErrNoRows) {
 			return apperrors.ErrNotFound

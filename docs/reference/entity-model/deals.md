@@ -1122,7 +1122,7 @@ The 26 tables owned by `deals`, as the migrations build them. [Back to the entit
 
 ## product_translation
 
-8 columns · primary key `(product_id, language)` · referenced by 0 foreign keys
+7 columns · primary key `(product_id, language)` · referenced by 0 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -1131,7 +1131,6 @@ The 26 tables owned by `deals`, as the migrations build them. [Back to the entit
 | `name` | `text` | yes |  |
 | `product_id` | `uuid` | yes | Points at `product.id`. |
 | `captured_by` | `text` | yes | Who or what wrote the row. Stamped by the server from the authenticated principal, never taken from the request body. |
-| `created_at` | `timestamp with time zone`, default `now()` | yes | When the row was created. Set once. |
 | `updated_at` | `timestamp with time zone`, default `now()` | yes | When the row last changed. Refreshed on every write. |
 | `version` | `bigint`, default `1` | yes | Optimistic-concurrency counter. Every write bumps it, so an update built on a stale read is refused instead of overwriting. |
 

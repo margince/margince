@@ -94,7 +94,6 @@ func TestHistoricalGraphArrivalsCoalesceUntilTheImportEnds(t *testing.T) {
 	if reads := observer.folds.Load(); reads != 4 {
 		t.Fatalf("new pairs needed %d folds, want four across two tables", reads)
 	}
-	b.env.WsExec(t, `UPDATE graph_interaction_edge SET computed_at='2000-01-01T00:00:00Z' WHERE contact_id=@contact`, pgx.NamedArgs{"contact": counterpart})
 	for day := 1; day < 32; day++ {
 		logMail(day)
 	}
@@ -105,7 +104,7 @@ func TestHistoricalGraphArrivalsCoalesceUntilTheImportEnds(t *testing.T) {
 	if err := gen.HandleBatch(context.Background(), all[1:]); err != nil {
 		t.Fatal(err)
 	}
-	if got := b.env.WsCount(t, `SELECT count(*) FROM graph_interaction_edge WHERE contact_id=@contact AND count_total=1 AND computed_at='2000-01-01T00:00:00Z' AND requested_generation>processed_generation AND deferred_run_id=@run`, pgx.NamedArgs{"contact": counterpart, "run": run}); got != 1 {
+	if got := b.env.WsCount(t, `SELECT count(*) FROM graph_interaction_edge WHERE contact_id=@contact AND count_total=1 AND requested_generation>processed_generation AND deferred_run_id=@run`, pgx.NamedArgs{"contact": counterpart, "run": run}); got != 1 {
 		t.Fatalf("historical arrivals refolded instead of coalescing: matching rows=%d", got)
 	}
 	if got := b.env.WsCount(t, `SELECT count(*) FROM graph_contact_edge WHERE count_total=1 AND deferred_run_id=@run AND requested_generation>processed_generation`, pgx.NamedArgs{"run": run}); got != 1 {
@@ -121,7 +120,7 @@ func TestHistoricalGraphArrivalsCoalesceUntilTheImportEnds(t *testing.T) {
 	if err := gen.HandleEvent(context.Background(), envelopeFor(b.env.WS, "activity.archived", "activity", first[0].Entity.ID)); err != nil {
 		t.Fatal(err)
 	}
-	if got := b.env.WsCount(t, `SELECT count(*) FROM graph_interaction_edge WHERE contact_id=@contact AND count_total=31 AND computed_at<>'2000-01-01T00:00:00Z'`, pgx.NamedArgs{"contact": counterpart}); got != 1 {
+	if got := b.env.WsCount(t, `SELECT count(*) FROM graph_interaction_edge WHERE contact_id=@contact AND count_total=31`, pgx.NamedArgs{"contact": counterpart}); got != 1 {
 		t.Fatalf("archival waited for the history drain: %d", got)
 	}
 	if reads := observer.folds.Load(); reads != 6 {

@@ -116,23 +116,19 @@ func RecordTagSuggestionTx(ctx context.Context, tx pgx.Tx, d TagSuggestionDraft)
 		d.TagID, d.EntityID).Scan(&floor); err != nil {
 		return false, fmt.Errorf("collections: reading the tag suggestion floor: %w", err)
 	}
-	through := d.Evidence[0].OccurredAt
 	for _, e := range d.Evidence {
 		if floor != nil && !e.OccurredAt.After(*floor) {
 			return false, nil
 		}
-		if e.OccurredAt.After(through) {
-			through = e.OccurredAt
-		}
 	}
 	var id ids.UUID
 	err = tx.QueryRow(ctx, `
-		INSERT INTO tag_suggestion (tag_id, `+column+`, evidence_count, evidence_through, captured_by)
-		SELECT $1::uuid, $2::uuid, $3::integer, $4::timestamptz, $5::text
+		INSERT INTO tag_suggestion (tag_id, `+column+`, evidence_count, captured_by)
+		SELECT $1::uuid, $2::uuid, $3::integer, $4::text
 		 WHERE `+SuggestableTagClause(d.EntityType, "$1::uuid", "$2::uuid")+`
 		ON CONFLICT DO NOTHING
 		RETURNING id`,
-		d.TagID, d.EntityID, len(d.Evidence), through, by).Scan(&id)
+		d.TagID, d.EntityID, len(d.Evidence), by).Scan(&id)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return false, nil
 	}
