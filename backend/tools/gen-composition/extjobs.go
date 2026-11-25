@@ -56,14 +56,16 @@ const jobsContractBase = "jobs.yaml"
 // unit that meant `send` would read as an omission and be refused, but a typo'd
 // key that fell through would publish a request nobody reviewed.
 type extJobKind struct {
-	Job         string `yaml:"job"`
-	Role        string `yaml:"role"`
-	Queue       string `yaml:"queue"`
-	Timeout     string `yaml:"timeout"`
-	Cadence     string `yaml:"cadence"`
-	MaxAttempts int    `yaml:"max_attempts"`
-	Tier        string `yaml:"tier"`
-	Scope       string `yaml:"scope"`
+	Job         string   `yaml:"job"`
+	Role        string   `yaml:"role"`
+	Queue       string   `yaml:"queue"`
+	Timeout     string   `yaml:"timeout"`
+	Cadence     string   `yaml:"cadence"`
+	At          string   `yaml:"at"`
+	Days        []string `yaml:"days"`
+	MaxAttempts int      `yaml:"max_attempts"`
+	Tier        string   `yaml:"tier"`
+	Scope       string   `yaml:"scope"`
 }
 
 const (
@@ -245,7 +247,7 @@ func declarationFrom(dispatcher, child namedExtKind, queues []string) (extension
 	if want := ns + "_" + dispatcher.def.Job; want != dispatcher.kind {
 		return fail("declares job %q, whose kind is %s — a job's kind is its unit's namespace and its name", dispatcher.def.Job, want)
 	}
-	cadence, err := parseJobDuration("cadence", dispatcher.def.Cadence)
+	cadence, at, err := parseJobSchedule(dispatcher.def)
 	if err != nil {
 		return fail("%w", err)
 	}
@@ -257,8 +259,8 @@ func declarationFrom(dispatcher, child namedExtKind, queues []string) (extension
 	if err != nil {
 		return extension.JobDeclaration{}, fmt.Errorf("kind %s: %w", child.kind, err)
 	}
-	if child.def.Cadence != "" {
-		return extension.JobDeclaration{}, fmt.Errorf("kind %s declares a cadence — an enqueued worker is never ticked", child.kind)
+	if child.def.Cadence != "" || child.def.At != "" || len(child.def.Days) > 0 {
+		return extension.JobDeclaration{}, fmt.Errorf("kind %s declares a cadence or a time of day — an enqueued worker is never ticked", child.kind)
 	}
 	if dispatcher.def.MaxAttempts != 0 {
 		return fail("declares max_attempts — the attempt cap is the CHILD's, and a dispatcher's retry is its own next tick")
@@ -293,6 +295,7 @@ func declarationFrom(dispatcher, child namedExtKind, queues []string) (extension
 		Job:               dispatcher.def.Job,
 		Queue:             dispatcher.def.Queue,
 		Cadence:           cadence,
+		At:                at,
 		DispatcherTimeout: dispatcherTimeout,
 		Timeout:           childTimeout,
 		MaxAttempts:       child.def.MaxAttempts,
@@ -305,6 +308,39 @@ func declarationFrom(dispatcher, child namedExtKind, queues []string) (extension
 		return extension.JobDeclaration{}, err
 	}
 	return d, nil
+}
+
+// parseJobSchedule reads the dispatcher's one schedule: a `cadence:` interval,
+// or an `at:` local clock time with optional `days:`.
+func parseJobSchedule(def extJobKind) (time.Duration, *extension.TimeOfDay, error) {
+	if def.At == "" {
+		if len(def.Days) > 0 {
+			return 0, nil, fmt.Errorf("declares days without at — days narrow a time of day")
+		}
+		cadence, err := parseJobDuration("cadence", def.Cadence)
+		return cadence, nil, err
+	}
+	if def.Cadence != "" {
+		return 0, nil, fmt.Errorf("declares both cadence and at — a job runs on one schedule")
+	}
+	clock, err := time.Parse("15:04", def.At)
+	if err != nil || clock.Format("15:04") != def.At {
+		return 0, nil, fmt.Errorf("at %q: want a local time as HH:MM, from 00:00 to 23:59", def.At)
+	}
+	at := &extension.TimeOfDay{Minute: clock.Hour()*60 + clock.Minute()}
+	for _, name := range def.Days {
+		day, ok := weekdayNames[name]
+		if !ok {
+			return 0, nil, fmt.Errorf("days: %q is not one of mon, tue, wed, thu, fri, sat, sun", name)
+		}
+		at.Days = append(at.Days, day)
+	}
+	return 0, at, nil
+}
+
+var weekdayNames = map[string]time.Weekday{
+	"mon": time.Monday, "tue": time.Tuesday, "wed": time.Wednesday, "thu": time.Thursday,
+	"fri": time.Friday, "sat": time.Saturday, "sun": time.Sunday,
 }
 
 // parseJobDuration reads one duration field, refusing the absence that would

@@ -65,6 +65,9 @@ type ScheduleBook struct {
 	// A nil lastRuns means no history, and the passes keep RunOnStart.
 	lastRuns map[string]time.Time
 	spread   time.Duration
+	// zone is the installation's time zone, which clock-time passes count in
+	// (jobclocktime.go). Nil reads as UTC.
+	zone atomic.Pointer[time.Location]
 }
 
 // newScheduleBook seeds the book from the values read, one per setting key.
@@ -131,7 +134,13 @@ func ReadSchedules(ctx context.Context, pool *pgxpool.Pool) (*ScheduleBook, erro
 	if err != nil {
 		return nil, err
 	}
-	return newScheduleBook(values), nil
+	zone, err := readInstallationZone(ctx, pool)
+	if err != nil {
+		return nil, err
+	}
+	book := newScheduleBook(values)
+	book.zone.Store(zone)
+	return book, nil
 }
 
 func readScheduleValues(ctx context.Context, pool *pgxpool.Pool) (map[string]time.Duration, error) {
@@ -302,6 +311,14 @@ func (b *ScheduleBook) Watch(ctx context.Context, pool *pgxpool.Pool, runner per
 		}
 		if err := b.apply(values, runner); err != nil {
 			log.WarnContext(ctx, "schedules: a changed schedule could not be put back on the runner; that job is off until the next check retries it", "err", err)
+		}
+		zone, err := readInstallationZone(ctx, pool)
+		if err != nil {
+			log.WarnContext(ctx, "schedules: could not read the installation's time zone; clock-time jobs keep the zone they run in", "err", err)
+			continue
+		}
+		if err := b.applyZone(zone, runner); err != nil {
+			log.WarnContext(ctx, "schedules: a clock-time job could not be moved to the new time zone; it is off until the next check retries it", "err", err)
 		}
 	}
 }

@@ -51,6 +51,16 @@ func (s *catchUpSchedule) Next(current time.Time) time.Time {
 			first = next
 		}
 	}
+	if runsAtClockTimes(s.every) {
+		// A pass that never ran waits for its first slot; a slot still ahead
+		// keeps its exact time. Only a missed slot runs now, spread below.
+		if s.lastRun.IsZero() {
+			return s.every.Next(current)
+		}
+		if first.After(current) {
+			return first
+		}
+	}
 	return first.Add(startupDelay(s.kind, s.every.Next(current).Sub(current), s.spread))
 }
 
@@ -75,11 +85,12 @@ func startupDelay(kind string, interval, spread time.Duration) time.Duration {
 }
 
 // periodicJob builds one pass's River entry. A book with no run history keeps
-// RunOnStart: the defaults and the books tests build have none.
+// RunOnStart: the defaults and the books tests build have none. A clock-time
+// pass never runs at start, so it always waits through a catch-up schedule.
 func (b *ScheduleBook) periodicJob(
 	kind, id string, every river.PeriodicSchedule, ctor river.PeriodicJobConstructor,
 ) (*river.PeriodicJob, *catchUpSchedule) {
-	if b.lastRuns == nil {
+	if b.lastRuns == nil && !runsAtClockTimes(every) {
 		return river.NewPeriodicJob(every, ctor, &river.PeriodicJobOpts{ID: id, RunOnStart: true}), nil
 	}
 	s := newCatchUpSchedule(kind, every, b.lastRuns[kind], b.spread)

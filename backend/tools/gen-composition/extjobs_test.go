@@ -7,6 +7,8 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/margince/margince/backend/pkg/extension"
 )
 
 // jobsContract is a merged jobs.yaml holding the core queues block a fragment
@@ -66,6 +68,27 @@ func TestExtensionJobsReadsAPairOutOfTheMergedContract(t *testing.T) {
 	}
 	if d.DispatcherKind() != "ext_demo_refresh" || d.ChildKind() != "ext_demo_refresh_ws" {
 		t.Fatalf("kinds came back as %s / %s", d.DispatcherKind(), d.ChildKind())
+	}
+}
+
+// weekdayPair is wellFormedPair ticking on weekdays at 07:30 local time.
+var weekdayPair = strings.Replace(wellFormedPair, "    cadence: 6h\n", "    at: \"07:30\"\n    days: [mon, tue, wed, thu, fri]\n", 1)
+
+func TestExtensionJobsReadsALocalClockTimeAndItsDays(t *testing.T) {
+	decls, err := extensionJobs(demoUnits(), jobsContract(weekdayPair))
+	if err != nil {
+		t.Fatalf("extensionJobs: %v", err)
+	}
+	d := decls[0]
+	if d.Cadence != 0 || d.At == nil || d.At.Minute != 7*60+30 || len(d.At.Days) != 5 || d.At.Days[0] != time.Monday || d.At.Days[4] != time.Friday {
+		t.Fatalf("schedule came back as cadence %s, at %+v", d.Cadence, d.At)
+	}
+	src := string(extensionsGen([]extensionUnit{{Name: "demo", ModulePath: "example.test/ext/demo"}}, nil, decls, nil))
+	if _, err := canonicalGoSource("extensions_gen.go", []byte(src)); err != nil {
+		t.Fatalf("the emitted composition is not canonical gofmt: %v\n%s", err, src)
+	}
+	if want := "&extension.TimeOfDay{Minute: 7*60 + 30, Days: []time.Weekday{time.Monday, time.Tuesday, time.Wednesday, time.Thursday, time.Friday}}"; !strings.Contains(src, want) {
+		t.Errorf("the emitted composition misses %s:\n%s", want, src)
 	}
 }
 
@@ -176,6 +199,41 @@ func TestExtensionJobsRefusesTheShapesAFragmentMustNotPublish(t *testing.T) {
 			want:  "no dispatcher fans out to",
 		},
 		{
+			name:  "a cadence and a time of day",
+			kinds: strings.Replace(wellFormedPair, "    cadence: 6h\n", "    cadence: 6h\n    at: \"07:30\"\n", 1),
+			want:  "both cadence and at",
+		},
+		{
+			name:  "a time past the day",
+			kinds: strings.Replace(wellFormedPair, "    cadence: 6h\n", "    at: \"24:00\"\n", 1),
+			want:  "want a local time as HH:MM",
+		},
+		{
+			name:  "a time without its leading zero",
+			kinds: strings.Replace(wellFormedPair, "    cadence: 6h\n", "    at: \"7:30\"\n", 1),
+			want:  "want a local time as HH:MM",
+		},
+		{
+			name:  "an unknown day",
+			kinds: strings.Replace(wellFormedPair, "    cadence: 6h\n", "    at: \"07:30\"\n    days: [monday]\n", 1),
+			want:  `"monday" is not one of`,
+		},
+		{
+			name:  "a day named twice",
+			kinds: strings.Replace(wellFormedPair, "    cadence: 6h\n", "    at: \"07:30\"\n    days: [mon, mon]\n", 1),
+			want:  "named twice",
+		},
+		{
+			name:  "days without a time",
+			kinds: strings.Replace(wellFormedPair, "    cadence: 6h\n", "    cadence: 6h\n    days: [mon]\n", 1),
+			want:  "days without at",
+		},
+		{
+			name:  "a time of day on the worker kind",
+			kinds: wellFormedPair + "    at: \"07:30\"\n",
+			want:  "declares a cadence or a time of day",
+		},
+		{
 			// Governance is the dispatcher's, and the pair folds into one
 			// declaration — a second copy on the child is read by nobody.
 			name:  "governance declared twice",
@@ -250,6 +308,7 @@ func TestTheEmittedJobLiteralsAreCanonicalAndReadable(t *testing.T) {
 		`DispatcherTimeout: mustDuration("1m0s"),`,
 		`Timeout:           mustDuration("5m0s"),`,
 		`MaxAttempts:       3,`,
+		`At:                nil,`,
 		"func mustDuration(s string) time.Duration {",
 	} {
 		if !strings.Contains(string(src), want) {
@@ -270,5 +329,28 @@ func TestTheVanillaCompositionImportsNoTime(t *testing.T) {
 		if strings.Contains(src, unwanted) {
 			t.Errorf("the vanilla composition carries %s:\n%s", unwanted, src)
 		}
+	}
+}
+
+// An operator resolved a job at its schedule, so moving the clock time asks
+// again, while an interval job keeps the digest it was resolved under.
+func TestTheJobDigestCoversTheClockTimeAndKeepsTheIntervalDigest(t *testing.T) {
+	interval, err := extensionJobs(demoUnits(), jobsContract(wellFormedPair))
+	if err != nil {
+		t.Fatal(err)
+	}
+	// The digest this pair had before a job could run at a clock time.
+	const before = "sha256:01ef22a3824ff8b299b7afb7404b35b093531570cb32e35769c4ad2d1b456a26"
+	if got := jobDeclarationHash(interval[0]); got != before {
+		t.Errorf("an interval job's digest moved: %s, want %s", got, before)
+	}
+	clock, err := extensionJobs(demoUnits(), jobsContract(weekdayPair))
+	if err != nil {
+		t.Fatal(err)
+	}
+	later := clock[0]
+	later.At = &extension.TimeOfDay{Minute: clock[0].At.Minute + 60, Days: clock[0].At.Days}
+	if jobDeclarationHash(clock[0]) == jobDeclarationHash(later) {
+		t.Error("moving the clock time left the digest unchanged")
 	}
 }

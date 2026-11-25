@@ -1255,6 +1255,25 @@ Which half declares what is a rule, and the `composition` tool refuses the other
   tick.
 - **Both parts share one queue**, and the child's kind is the dispatcher's name plus `_ws`. No clock ever
   reaches a worker that no dispatcher fans out to.
+- **A dispatcher has one schedule**: a `cadence` interval such as `6h`, or `at` with a local time as `HH:MM`. Add
+  `days` to narrow `at` to some weekdays, written `mon` to `sun`; without `days` it runs every day. Both a
+  `cadence` and an `at`, or `days` with no `at`, are refused.
+
+```yaml
+ext_demo_report:
+  job: report
+  role: dispatcher
+  queue: default
+  timeout: 1m
+  at: "07:30"
+  days: [mon, tue, wed, thu, fri]
+```
+
+An `at` time counts in the company time zone an admin sets in Settings. A change of zone moves the next run within
+a minute. A time the clock skips in spring runs at the first minute after the gap. A time the clock shows twice in
+autumn runs once. A start of the worker never runs an `at` job by itself. If the worker was down at a slot, the job
+runs once soon after the restart; otherwise it waits for its next slot. Job health counts it overdue after the
+longest gap between two slots: a day, three days over a weekend, or a week.
 
 ```go
 Jobs: []extension.Job{{Name: "heartbeat", Handle: heartbeat}},
