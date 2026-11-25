@@ -22,6 +22,7 @@ func checkClientDispatcher(offered bool) *Dispatcher {
 	registry.Register(checkClient{log: slog.New(slog.NewTextHandler(&bytes.Buffer{}, nil))})
 	d := NewDispatcher(registry, bindAuthenticated, "margince-crm", "test").WithLogger(discardLog())
 	WithInputStateKey(testStateKey)(d)
+	WithReplayGuard(&memGuard{})(d)
 	return d
 }
 

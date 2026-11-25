@@ -32,7 +32,7 @@ func setupConfirm(t *testing.T) *confirmEnv {
 	t.Helper()
 	o := setupOAuthWith(t,
 		compose.WithMCPInputStateKey(strings.Repeat("k", 32)),
-		compose.WithMCPConfirmGuard(replayguard.New(redistest.Client(t))))
+		compose.WithMCPReplayGuard(replayguard.New(redistest.Client(t))))
 	var company, project struct {
 		ID string `json:"id"`
 	}

@@ -143,8 +143,9 @@ type Dispatcher struct {
 	// inputState signs the questions a tool asks in the chat. Unarmed, no tool
 	// asks, and each does what it did before the question existed.
 	inputState inputStateSigner
-	// confirmGuard spends confirm codes (confirmcode.go); nil keeps the inbox.
-	confirmGuard ConfirmGuard
+	// replayGuard spends confirm codes and answered questions once. Nil asks
+	// nothing in the chat and keeps the inbox.
+	replayGuard ReplayGuard
 	// log receives the true cause of failures the tool client only sees
 	// generically — the client is an untrusted agent, so infrastructure
 	// detail (DSNs, hosts, wrap chains) stays server-side.
@@ -394,7 +395,7 @@ func (s *Dispatcher) call(ctx context.Context, params json.RawMessage, fr framin
 			"mint a new passport or contact the workspace admin.")
 	}
 	callCtx = s.withChatInput(callCtx, fr, p.Name, p.Arguments, params)
-	callCtx = withConversationConfirm(callCtx, conversationConfirm{signer: s.inputState, guard: s.confirmGuard, now: time.Now})
+	callCtx = withConversationConfirm(callCtx, conversationConfirm{signer: s.inputState, guard: s.replayGuard, now: time.Now})
 	spec, registered := s.registry.Spec(p.Name)
 	if registered && s.unoffered(callCtx, p.Name) {
 		return toolError(s.explain(p.Name, &UnknownToolError{Name: p.Name}))
