@@ -12362,6 +12362,8 @@ export const en = {
   "translation.nameIn.vi": "Name in Vietnamese",
   "translation.given": "{language}: {name}",
   "stage.name": "Name",
+  "stage.nameTaken":
+    "A stage with this name already exists in this pipeline. Choose another name.",
   "stage.semantic": "Stage type",
   "stage.lastClosing":
     "A pipeline needs a Won and a Lost stage. Add another of this type first.",
@@ -15571,6 +15573,8 @@ export const en = {
   "knowledge.upload.submit_one": "Add document",
   "knowledge.new.title": "New document set",
   "knowledge.new.name": "Name",
+  "knowledge.new.nameTaken":
+    "A document set with this name already exists. Choose another name.",
   "knowledge.new.topic": "What this set covers",
   "knowledge.new.topicHint":
     "One sentence. It is shown to anyone whose question this set does not cover.",

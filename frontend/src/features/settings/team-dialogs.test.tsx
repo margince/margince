@@ -63,6 +63,48 @@ it.each<[string, ReactNode, string]>([
   },
 );
 
+it("a team name the server finds too long says so on the field, and the box is bounded", async () => {
+  const user = userEvent.setup();
+  vi.stubGlobal(
+    "fetch",
+    vi.fn(async () =>
+      jsonResponse(
+        {
+          status: 422,
+          code: "validation_error",
+          detail: "the request failed validation",
+          details: {
+            errors: [
+              {
+                field: "name",
+                code: "too_long",
+                message: "at most 120 characters",
+                max: 120,
+              },
+            ],
+          },
+        },
+        422,
+      ),
+    ),
+  );
+  render(<NewTeamAction />);
+  await user.click(
+    screen.getByRole("button", { name: en["users.newTeamOpen"] }),
+  );
+  const field = within(await screen.findByRole("dialog")).getByLabelText(
+    en["users.teamNameLabel"],
+  );
+  expect(field).toHaveAttribute("data-character-limit", "120");
+  await user.type(field, "Nord{Enter}");
+
+  await vi.waitFor(() =>
+    expect(field).toHaveAccessibleDescription(
+      "Team name: at most 120 characters.",
+    ),
+  );
+});
+
 // A team of 120 is searched by name, and the search narrows the rows. A
 // removal takes off the member on the pressed row. Focus lands on the next row
 // the reader can still see.

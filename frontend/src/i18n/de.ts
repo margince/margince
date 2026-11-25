@@ -12431,6 +12431,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "translation.nameIn.vi": "Name auf Vietnamesisch",
   "translation.given": "{language}: {name}",
   "stage.name": "Name",
+  "stage.nameTaken":
+    "Eine Phase mit diesem Namen gibt es in dieser Pipeline schon. Wähle einen anderen Namen.",
   "stage.semantic": "Phasentyp",
   "stage.lastClosing":
     "Eine Pipeline braucht eine Phase Gewonnen und eine Phase Verloren. Erstelle zuerst eine weitere dieses Typs.",
@@ -15660,6 +15662,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "knowledge.upload.submit_one": "Dokument hinzufügen",
   "knowledge.new.title": "Neue Dokumentensammlung",
   "knowledge.new.name": "Name",
+  "knowledge.new.nameTaken":
+    "Eine Dokumentensammlung mit diesem Namen gibt es schon. Wähle einen anderen Namen.",
   "knowledge.new.topic": "Was diese Sammlung abdeckt",
   "knowledge.new.topicHint":
     "Ein Satz. Der Satz wird allen gezeigt, deren Frage diese Sammlung nicht abdeckt.",

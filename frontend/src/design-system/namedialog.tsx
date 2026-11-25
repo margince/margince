@@ -14,23 +14,38 @@ import { useFieldFaults } from "./savepage";
 export function nameRefusal(
   error: unknown,
   t: (key: MessageKey) => string,
-  duplicate: MessageKey,
-  // The code of the 409 that means the name is taken; "conflict" by default.
-  code?: string,
+  words: Readonly<{
+    /** The field's label, which a too-long refusal names. */
+    label: string;
+    duplicate: MessageKey;
+    /** The code of the 409 that means the name is taken; "conflict" by default. */
+    code?: string;
+  }>,
 ): { problem: string | null; nameProblem: string | null } {
   const refused = refusalSentences(
     error,
     t,
-    {},
-    { conflict: { field: NAME_FIELD, sentence: t(duplicate), code } },
+    { [NAME_FIELD]: words.label, [LABEL_FIELD]: words.label },
+    {
+      conflict: {
+        field: NAME_FIELD,
+        sentence: t(words.duplicate),
+        code: words.code,
+      },
+    },
   );
   return {
     problem: refused.rest,
-    nameProblem: refused.byField.get(NAME_FIELD) ?? null,
+    nameProblem:
+      refused.byField.get(NAME_FIELD) ??
+      refused.byField.get(LABEL_FIELD) ??
+      null,
   };
 }
 
 const NAME_FIELD = "name";
+// Some lists send their name on the wire as `label`.
+const LABEL_FIELD = "label";
 
 // A refused name stays on its field only while the field still holds it, so
 // an edit clears the refusal without a second round trip.
@@ -60,6 +75,7 @@ export function NameDialog({
   pending = false,
   problem,
   nameProblem,
+  maxLength,
   onSave,
   onDirtyChange,
 }: Readonly<{
@@ -78,6 +94,8 @@ export function NameDialog({
   problem?: string | null;
   /** The refused name itself (a duplicate), drawn on the field until it changes. */
   nameProblem?: string | null;
+  /** The most characters the name may hold, the bound the server refuses past. */
+  maxLength?: number;
   /** The trimmed name. The caller closes the dialog once the write lands. */
   onSave: (name: string) => void;
   onDirtyChange?: (dirty: boolean) => void;
@@ -149,6 +167,7 @@ export function NameDialog({
               {...control}
               value={draft}
               placeholder={placeholder}
+              maxLength={maxLength}
               onChange={(event) => {
                 setDraft(event.target.value);
                 faults.edited(NAME_FIELD);

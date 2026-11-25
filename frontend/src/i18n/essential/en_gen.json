@@ -3776,6 +3776,7 @@
   "notice.excuseConfirm": "Record reason",
   "pipeline.defaultTaken": "Another pipeline is the default. Create this one as Not default, then use Make default on it.",
   "pipeline.nameTaken": "A pipeline with this name already exists.",
+  "stage.nameTaken": "A stage with this name already exists in this pipeline. Choose another name.",
   "stage.lastClosing": "A pipeline needs a Won and a Lost stage. Add another of this type first.",
   "ob.field.display_name": "Company name",
   "ob.field.offer_summary": "Products and services",

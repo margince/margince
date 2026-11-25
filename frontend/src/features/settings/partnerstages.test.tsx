@@ -61,6 +61,12 @@ function backend(allow: GrantSpec, calls: Call[] = []) {
     if (request.method === "DELETE") {
       return new Response(null, { status: 204 });
     }
+    if (request.method === "PATCH" && raw.includes('"label":"Research"')) {
+      return jsonResponse(
+        { status: 409, code: "conflict", detail: "conflict" },
+        409,
+      );
+    }
     if (request.method !== "GET") {
       return jsonResponse(STAGES[1], request.method === "POST" ? 201 : 200);
     }
@@ -120,6 +126,23 @@ it("adds a new stage at the end of the ladder as a candidate", async () => {
         sort_order: 105,
       }),
     ).toBe(true),
+  );
+});
+
+it("says a rename to a taken name on the field", async () => {
+  const user = userEvent.setup();
+  vi.stubGlobal("fetch", backend(ADMIN));
+  render(<PartnerStagesCard />);
+  const row = await screen.findByTestId("partner-stage-ready");
+  await user.click(within(row).getByRole("button", { name: /Ready/ }));
+  await user.click(await screen.findByRole("button", { name: "Rename" }));
+  const field = await screen.findByRole("textbox", { name: "Label" });
+  await user.clear(field);
+  await user.type(field, "Research{Enter}");
+  await waitFor(() =>
+    expect(field).toHaveAccessibleDescription(
+      "A stage with this name or key already exists. Choose another name.",
+    ),
   );
 });
 

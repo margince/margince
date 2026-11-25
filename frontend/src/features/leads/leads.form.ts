@@ -6,6 +6,7 @@
 
 import type { components } from "../../api/schema";
 import type { CreateField, CreateFieldOption } from "../../components/create";
+import { TEXT_LIMITS } from "../../lib/textlimits_gen";
 
 type UpdateLeadRequest = components["schemas"]["UpdateLeadRequest"];
 
@@ -47,9 +48,22 @@ export type LeadFieldChoices = Readonly<{
 
 export function leadEditFields(choices: LeadFieldChoices): CreateField[] {
   return [
-    { key: "full_name", label: "create.fullName", required: true },
-    { key: "company_name", label: "create.companyName" },
-    { key: "title", label: "create.contactTitle" },
+    {
+      key: "full_name",
+      label: "create.fullName",
+      required: true,
+      maxLength: TEXT_LIMITS.label,
+    },
+    {
+      key: "company_name",
+      label: "create.companyName",
+      maxLength: TEXT_LIMITS.label,
+    },
+    {
+      key: "title",
+      label: "create.contactTitle",
+      maxLength: TEXT_LIMITS.label,
+    },
     {
       key: "industry",
       label: "create.industry",

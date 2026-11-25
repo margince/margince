@@ -12094,6 +12094,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "translation.nameIn.vi": "Tên tiếng Việt",
   "translation.given": "{name} ({language})",
   "stage.name": "Tên",
+  "stage.nameTaken":
+    "Pipeline này đã có giai đoạn mang tên này. Hãy chọn tên khác.",
   "stage.semantic": "Loại giai đoạn",
   "stage.lastClosing":
     "Pipeline cần một giai đoạn Thắng và một giai đoạn Thua. Hãy thêm một giai đoạn cùng loại trước.",
@@ -15226,6 +15228,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "knowledge.upload.submit_one": "Thêm 1 tài liệu",
   "knowledge.new.title": "Bộ tài liệu mới",
   "knowledge.new.name": "Tên",
+  "knowledge.new.nameTaken":
+    "Đã có bộ tài liệu mang tên này. Hãy chọn tên khác.",
   "knowledge.new.topic": "Phạm vi của bộ tài liệu",
   "knowledge.new.topicHint":
     "Một câu. Câu này hiển thị cho bất kỳ ai có câu hỏi nằm ngoài phạm vi của bộ này.",

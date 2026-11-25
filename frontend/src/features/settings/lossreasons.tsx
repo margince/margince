@@ -33,7 +33,7 @@ import {
   useLossReasons,
   useUpdateLossReason,
 } from "../../lib/lossreasons.queries";
-import { problemMessageOf } from "../../lib/problem";
+import { TEXT_LIMITS } from "../../lib/textlimits_gen";
 import { DealsWithheld } from "./acquisitionsources";
 import { usePageReadOnly } from "./settingsnav";
 
@@ -143,13 +143,10 @@ export function LossReasonsCard() {
   const [namingOpen, setNamingOpen] = useState(false);
   const reasons = rowsOf(query.data);
   const write = naming.mode === "rename" ? rename : create;
-  const refused =
-    naming.mode === "rename"
-      ? {
-          problem: rename.isError ? problemMessageOf(rename.error, t) : null,
-          nameProblem: null,
-        }
-      : nameRefusal(create.error, t, "lossReasons.duplicate");
+  const refused = nameRefusal(write.error, t, {
+    label: t("acqSources.addLabel"),
+    duplicate: "lossReasons.duplicate",
+  });
   const open = (next: Naming) => {
     create.reset();
     rename.reset();
@@ -235,6 +232,7 @@ export function LossReasonsCard() {
         pending={write.isPending}
         problem={refused.problem}
         nameProblem={refused.nameProblem}
+        maxLength={TEXT_LIMITS.label}
         onSave={(label) => {
           if (naming.mode === "rename") {
             rename.mutate(

@@ -39,6 +39,7 @@ import {
 import { unwrap } from "../../lib/problem";
 import { useMe } from "../../lib/session";
 import { readStored, STORAGE_KEYS, writeStored } from "../../lib/storage";
+import { TEXT_LIMITS } from "../../lib/textlimits_gen";
 import { replaceDial, useUrlParams } from "../../lib/urlstate";
 import {
   SavedViewsFailure,
@@ -293,11 +294,24 @@ function LeadsWorkbench({
             fields={[
               // Typed, never offered from the contacts: someone is either a
               // lead or a contact, and the server refuses a contact's address.
-              { key: "full_name", label: "create.fullName", required: true },
+              {
+                key: "full_name",
+                label: "create.fullName",
+                required: true,
+                maxLength: TEXT_LIMITS.label,
+              },
               { key: "email", label: "create.email", type: "email" },
               { key: "linkedin_url", label: "create.linkedinUrl" },
-              { key: "title", label: "create.contactTitle" },
-              { key: "company_name", label: "create.companyName" },
+              {
+                key: "title",
+                label: "create.contactTitle",
+                maxLength: TEXT_LIMITS.label,
+              },
+              {
+                key: "company_name",
+                label: "create.companyName",
+                maxLength: TEXT_LIMITS.label,
+              },
               {
                 key: "industry",
                 label: "create.industry",

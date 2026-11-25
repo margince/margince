@@ -98,7 +98,9 @@ function backendFor(
   opts: {
     sets?: ReturnType<typeof corpus>[];
     documents?: ReturnType<typeof document>[];
-    refuse?: Partial<Record<"archive" | "upload" | "delete", () => Response>>;
+    refuse?: Partial<
+      Record<"create" | "archive" | "upload" | "delete", () => Response>
+    >;
     maxDocumentBytes?: number;
   } = {},
 ) {
@@ -135,6 +137,7 @@ function backendFor(
       if (req.url.includes("/knowledge/corpora")) {
         if (req.method === "POST") {
           posts.push(req.url);
+          if (opts.refuse?.create) return opts.refuse.create();
           return jsonResponse(corpus(), 201);
         }
         if (req.method === "DELETE") {
@@ -350,6 +353,40 @@ describe("KnowledgeCard", () => {
     await user.type(topic, "How the product is operated.");
     await user.click(create);
     await waitFor(() => expect(backend.posts).toHaveLength(1));
+  });
+
+  it("says on the name field that another set has the name", async () => {
+    const backend = backendFor(ADMIN, {
+      refuse: {
+        create: () =>
+          jsonResponse(
+            { status: 409, code: "conflict", detail: "conflict" },
+            409,
+          ),
+      },
+    });
+    vi.stubGlobal("fetch", backend.fetchMock);
+    const user = userEvent.setup();
+    render(<KnowledgeCard />);
+
+    await user.click(
+      await screen.findByRole("button", { name: "New document set" }),
+    );
+    const dialog = within(await screen.findByRole("dialog"));
+    const name = dialog.getByLabelText(/^name/i);
+    expect(name).toHaveAttribute("data-character-limit", "120");
+    await user.type(name, "Handbook");
+    await user.type(
+      dialog.getByLabelText(/what this set covers/i),
+      "How the product is operated.",
+    );
+    await user.click(dialog.getByRole("button", { name: "Create" }));
+
+    await waitFor(() =>
+      expect(name).toHaveAccessibleDescription(
+        "A document set with this name already exists. Choose another name.",
+      ),
+    );
   });
 
   it("asks before archiving a set, and sends nothing until the reader agrees", async () => {

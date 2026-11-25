@@ -427,6 +427,26 @@ describe("LeadOriginsCard", () => {
     expect(dialog.queryByText(CONFLICT.detail)).toBeNull();
   });
 
+  it("says a rename to a taken origin name on the field", async () => {
+    const user = userEvent.setup();
+    vi.stubGlobal("fetch", backend(ADMIN, [], { refuseWrite: true }));
+    render(
+      <Providers>
+        <LeadOriginsCard />
+      </Providers>,
+    );
+    await openMenu(user, "Trade show");
+    await user.click(screen.getByRole("button", { name: "Rename" }));
+    const dialog = within(await screen.findByRole("dialog"));
+    const field = dialog.getByLabelText(en["leadSources.labelField"]);
+    expect(field).toHaveAttribute("data-character-limit", "120");
+    await user.clear(field);
+    await user.type(field, "Created manually{Enter}");
+    await waitFor(() =>
+      expect(field).toHaveAccessibleDescription(en["leadOrigins.duplicate"]),
+    );
+  });
+
   it("leaves every control inert for a reader, and leaves the why to the page", async () => {
     vi.stubGlobal("fetch", backend(READER));
     render(
