@@ -14,14 +14,13 @@ export const MOVED_BY_A_WIN: readonly ProjectPhase[] = [
 ];
 export const MOVED_INTO_BY_A_WIN = "delivering" satisfies ProjectPhase;
 
-// The project exists and the reader may not read it: no grant, or out of scope.
+// 403: no project grant. 404: out of the reader's row scope. Never a gone project:
+// the product only archives one, and a deleted row clears the deal's link.
 const UNREADABLE = new Set([403, 404]);
 
 type AskedAdvance = Readonly<{
   dealId: string;
   toStage: Readonly<{ semantic: string }>;
-  // Undefined when the opening surface did not hold the deal: it is read first.
-  projectId?: string | null;
 }>;
 
 /**
@@ -32,34 +31,29 @@ export type WinMove = Readonly<{ project: string | null }>;
 
 /**
  * The project that winning this deal moves to delivering, or null when the win
- * moves none. Read at each opening and never kept, because the phase may
- * change between two wins.
+ * moves none. Read fresh at each opening, since either record may change.
  */
 export function useProjectMovedByWin(
   pending: AskedAdvance | null,
 ): WinMove | null {
   const dealId = pending?.dealId ?? null;
-  const heldProjectId = pending?.projectId;
   const move = useQuery({
-    queryKey: ["deals", dealId, "win-project", heldProjectId],
+    queryKey: ["deals", dealId, "win-project"],
     enabled: pending?.toStage.semantic === "won" && dealId !== null,
     gcTime: 0,
     staleTime: 0,
     retry: false,
     queryFn: async ({ signal }) => {
-      const projectId =
-        heldProjectId === undefined
-          ? unwrap(
-              await api.GET("/deals/{id}", {
-                signal,
-                params: { path: { id: dealId ?? "" } },
-              }),
-            ).project_id
-          : heldProjectId;
+      const { project_id: projectId } = unwrap(
+        await api.GET("/deals/{id}", {
+          signal,
+          params: { path: { id: dealId ?? "" } },
+        }),
+      );
       return projectId ? projectAWinMoves(projectId, signal) : null;
     },
   });
-  return move.data ?? null;
+  return move.isFetching ? null : (move.data ?? null);
 }
 
 async function projectAWinMoves(

@@ -43,7 +43,7 @@ const FIELDS: VocabularyField[] = [
   {
     name: "tag_id",
     type: "id",
-    operators: ["eq", "in"],
+    operators: ["eq", "in", "exists"],
     custom: false,
     references: "tag",
   },
@@ -115,6 +115,25 @@ describe("a new condition", () => {
     expect(wire()).toEqual({
       and: [{ field: "full_name", op: "contains", value: "" }],
     });
+  });
+});
+
+describe("whether a record has tags", () => {
+  it("offers the two readings as what the set includes", async () => {
+    serve();
+    render(
+      <Harness start={newGroup("and", [newLeaf("tag_id", "exists", true)])} />,
+    );
+
+    expect(
+      await screen.findByRole("button", { name: en["filters.op.includeSome"] }),
+    ).toHaveAttribute("aria-pressed", "true");
+    expect(
+      screen.getByRole("button", { name: en["filters.op.includeNone"] }),
+    ).toHaveAttribute("aria-pressed", "false");
+    expect(
+      screen.getByRole("combobox", { name: "Operator" }),
+    ).toHaveTextContent(en["filters.op.includeSomeOrNone"]);
   });
 });
 

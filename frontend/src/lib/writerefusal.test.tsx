@@ -6,7 +6,11 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { en } from "../i18n/en";
 import { meFixture } from "../testing/mefixture";
 import { useMe } from "./session";
-import { useArchiveRefusal, useKindWriteRefusal } from "./writerefusal";
+import {
+  useActionRefusal,
+  useArchiveRefusal,
+  useKindWriteRefusal,
+} from "./writerefusal";
 
 function stubMe(body: unknown) {
   vi.stubGlobal(
@@ -66,6 +70,53 @@ describe("useKindWriteRefusal", () => {
     expect(
       await settled(() => useKindWriteRefusal("company", { writable: false })),
     ).toBe(en["record.notYoursToChange"]);
+  });
+});
+
+describe("useActionRefusal", () => {
+  it("tells a role that only reads to ask for another role", async () => {
+    stubMe(meFixture({ allow: { contact: ["read"] } }));
+
+    expect(
+      await settled(() =>
+        useActionRefusal({ object: "contact", action: "create" }),
+      ),
+    ).toBe(en["record.roleReadsOnly"]);
+  });
+
+  it("names the seat on a read seat, whatever the role holds", async () => {
+    stubMe(
+      meFixture({
+        allow: { contact: ["read", "create", "update"] },
+        seat: "read",
+      }),
+    );
+
+    expect(
+      await settled(() =>
+        useActionRefusal({ object: "contact", action: "create" }),
+      ),
+    ).toBe(en["settings.seatRefused"]);
+  });
+
+  it("names the missing right on a role that writes but lacks this grant", async () => {
+    stubMe(meFixture({ allow: { contact: ["read", "update"] } }));
+
+    expect(
+      await settled(() =>
+        useActionRefusal({ object: "contact", action: "create" }),
+      ),
+    ).toBe(en["record.actionRefused"]);
+  });
+
+  it("refuses nothing a role holds", async () => {
+    stubMe(meFixture({ allow: { contact: ["read", "create"] } }));
+
+    expect(
+      await settled(() =>
+        useActionRefusal({ object: "contact", action: "create" }),
+      ),
+    ).toBeUndefined();
   });
 });
 

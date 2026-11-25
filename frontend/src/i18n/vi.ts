@@ -20209,7 +20209,10 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "filters.op.withinRadius": "n\u1eb1m trong b\u00e1n k\u00ednh",
   "filters.op.include": "bao gồm",
   "filters.op.notInclude": "không bao gồm",
-  "filters.op.includeAny": "bao gồm một trong",
+  "filters.op.includeAny": "bao gồm ít nhất một trong",
+  "filters.op.includeSome": "bao gồm ít nhất một",
+  "filters.op.includeNone": "không bao gồm thẻ nào",
+  "filters.op.includeSomeOrNone": "có thẻ hay không",
   "filters.sentence.radiusOf": "{km} km quanh {place}",
   "filters.radius.km": "Kho\u1ea3ng c\u00e1ch (km)",
   "filters.radius.place":

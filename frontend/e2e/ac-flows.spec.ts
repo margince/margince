@@ -514,7 +514,7 @@ test.describe("filters and views", () => {
       de["filters.op.include"],
       de["filters.op.notInclude"],
       de["filters.op.includeAny"],
-      "hat einen Wert",
+      de["filters.op.includeSomeOrNone"],
     ]);
     await page.keyboard.press("Escape");
 

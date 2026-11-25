@@ -66,9 +66,6 @@ export type PendingAdvance = {
   // change made while the dialog was open fails loud instead of being erased.
   version: number | undefined;
   toStage: Stage;
-  // The deal's project as the surface drew it, so a won dialog need not read
-  // the deal again. Undefined where the surface does not hold it.
-  projectId?: string | null;
 };
 
 export type AdvanceInput = {

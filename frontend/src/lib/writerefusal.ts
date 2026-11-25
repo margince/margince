@@ -16,22 +16,32 @@ import type { EntityKind } from "./entity";
 import { useMe } from "./session";
 
 // The sentences a refused write verb says, in one place. A read seat is told
-// to ask for a full seat; a missing grant, to ask for the right. A record's
-// own verbs say why that record takes no change, in its kind's words.
+// to ask for a full seat; a role that only reads, for another role; a missing
+// grant, for the right. A record's own verbs say why it takes no change.
+
+// What a refusal by the seat or by the role says; every hook here reads it.
+export const WRITE_BLOCK_REFUSAL = {
+  seat: "settings.seatRefused",
+  role: "record.roleReadsOnly",
+} as const satisfies Record<WriteBlock, MessageKey>;
 
 /**
- * Why this seat may not take a write verb, or undefined when it may. Nothing
- * is claimed while `/me` is on its way. Once it settles without a snapshot,
- * the access is unknown, and the verb is refused with a way to recover.
+ * Why this seat may not take a write verb, or undefined when it may. A role
+ * without `object`'s update grant is told it only reads. Nothing is claimed
+ * while `/me` is on its way. Once it settles without a snapshot, the access is
+ * unknown, and the verb is refused with a way to recover.
  */
 export function useActionRefusal({
   object,
   action,
 }: RequiredGrant): string | undefined {
   const t = useT();
+  const block = useWriteBlock(object);
   const refusal = useWriteRefusal(object, action, {
-    seat: t("settings.seatRefused"),
-    grant: t("record.actionRefused"),
+    seat: t(WRITE_BLOCK_REFUSAL.seat),
+    grant: t(
+      block === "role" ? WRITE_BLOCK_REFUSAL.role : "record.actionRefused",
+    ),
   });
   return refusalWhen(useAccessState(), refusal, t);
 }
@@ -42,7 +52,7 @@ export function useActionRefusal({
  */
 export function useSeatRefusal(): string | undefined {
   const t = useT();
-  const refusal = useCanMutate() ? undefined : t("settings.seatRefused");
+  const refusal = useCanMutate() ? undefined : t(WRITE_BLOCK_REFUSAL.seat);
   return refusalWhen(useAccessState(), refusal, t);
 }
 
@@ -79,12 +89,6 @@ export function useMeSettled(): boolean {
   const me = useMe();
   return !me.isPending || me.errorUpdateCount > 0;
 }
-
-/** What a refusal by the seat or by the role says, on every surface. */
-export const WRITE_BLOCK_REFUSAL = {
-  seat: "settings.seatRefused",
-  role: "record.roleReadsOnly",
-} as const satisfies Record<WriteBlock, MessageKey>;
 
 // What each record kind's page says when the record takes no change.
 const RECORD_REFUSALS = {

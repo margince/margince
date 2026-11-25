@@ -77,7 +77,18 @@ const SET_OPERATOR_KEY: Partial<Record<FilterOp, MessageKey>> = {
   eq: "filters.op.include",
   neq: "filters.op.notInclude",
   in: "filters.op.includeAny",
+  // Not includeSome: beside "include any of" the picker would offer two near twins.
+  exists: "filters.op.includeSomeOrNone",
 };
+
+/** The two readings of `exists`, said of a set where the field holds one. */
+export function existsKeys(
+  field: Pick<VocabularyField, "references"> | undefined,
+): Readonly<Record<"true" | "false", MessageKey>> {
+  return field?.references === "tag"
+    ? { true: "filters.op.includeSome", false: "filters.op.includeNone" }
+    : { true: "filters.hasValue", false: "filters.isEmpty" };
+}
 
 /** What of a field decides how its operators read. */
 export type OperatorReading = Pick<VocabularyField, "type" | "references">;
@@ -197,10 +208,8 @@ export function clauseWords(
   const field = known ? fieldLabel(known, t) : clause.field;
   const { op, operand } = clause;
   if (op === "exists") {
-    return {
-      field,
-      op: t(operand === false ? "filters.isEmpty" : "filters.hasValue"),
-    };
+    const readings = existsKeys(known);
+    return { field, op: t(operand === false ? readings.false : readings.true) };
   }
   const relative = relativeDateWords(op, operand, words);
   if (relative) {

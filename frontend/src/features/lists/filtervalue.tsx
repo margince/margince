@@ -29,6 +29,7 @@ import {
   MAX_DAYS_AGO,
 } from "../../lib/segmentpredicate";
 import { useMe } from "../../lib/session";
+import { existsKeys } from "./filtersentence";
 import { MoneyControl } from "./filtervalue.money";
 import { ListValue, NumberValue } from "./filtervalue.number";
 import { RadiusValue } from "./filtervalue.radius";
@@ -78,11 +79,12 @@ export function ValueControl({
   if (op === "exists") {
     // `exists` carries its own boolean, and the two readings ARE the question
     // rather than an operand: "has a value" or "is empty".
+    const readings = existsKeys({ references });
     return (
       <BooleanValue
         value={value}
         onChange={onChange}
-        labels={{ true: t("filters.hasValue"), false: t("filters.isEmpty") }}
+        labels={{ true: t(readings.true), false: t(readings.false) }}
         label={t("filters.existsLabel")}
       />
     );

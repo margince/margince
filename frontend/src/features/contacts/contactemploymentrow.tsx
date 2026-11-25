@@ -87,7 +87,7 @@ export function EmploymentRow({
       actions={
         canEdit && (
           <RemoveLinkMenu
-            name={employment.company_name ?? t("field.unset")}
+            name={employment.company_name ?? null}
             onRemove={onRemove}
           >
             <Button onClick={onEdit}>{t("employment.edit")}</Button>

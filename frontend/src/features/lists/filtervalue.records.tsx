@@ -96,6 +96,8 @@ export function chosenIDs(value: LeafValue): readonly string[] {
   return typeof value === "string" && value !== "" ? [value] : [];
 }
 
+const idsKey = (ids: readonly string[]) => ids.join("\n");
+
 /** The typed words are never the value, only an id picked from an answer, so
  *  no clause written here is one the engine would refuse. */
 export function SearchedRecordValue({
@@ -116,9 +118,9 @@ export function SearchedRecordValue({
   const [query, setQuery] = useState("");
   // Names the reader just picked, shown before the name lookup has answered.
   const [names, setNames] = useState<ReadonlyMap<string, string>>(new Map());
-  // The value the reader's own pick sent, until it arrives and takes focus. A
-  // value restored or changed from outside takes none.
-  const sentByPick = useRef<string | null>(null);
+  // The ids before and after the reader's own pick, until the value next
+  // changes. Only the pick arriving takes focus; any other change ends the wait.
+  const sentByPick = useRef<{ from: string; to: string } | null>(null);
   const box = useRef<HTMLInputElement>(null);
   const change = useRef<HTMLButtonElement>(null);
   const popup = useRef<HTMLDivElement>(null);
@@ -132,7 +134,7 @@ export function SearchedRecordValue({
     setNames((was) => new Map(was).set(option.value, option.label));
     setQuery("");
     const next = many ? [...ids, option.value] : option.value;
-    sentByPick.current = JSON.stringify(next);
+    sentByPick.current = { from: idsKey(ids), to: idsKey(chosenIDs(next)) };
     onChange(next);
   }
   function drop(id: string) {
@@ -159,12 +161,14 @@ export function SearchedRecordValue({
   // has nothing left to do and the name stands in its place. A list keeps the
   // box open beneath what it already holds, because the next pick is the point.
   const closed = !many && ids.length > 0;
+  const heldKey = idsKey(ids);
   useLayoutEffect(() => {
-    if (
-      sentByPick.current !== null &&
-      sentByPick.current === JSON.stringify(value)
-    ) {
-      sentByPick.current = null;
+    const sent = sentByPick.current;
+    if (sent === null || sent.from === heldKey) {
+      return;
+    }
+    sentByPick.current = null;
+    if (sent.to === heldKey) {
       (closed ? change : box).current?.focus();
     }
   });

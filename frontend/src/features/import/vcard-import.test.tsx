@@ -429,7 +429,7 @@ describe("VCardImport", () => {
     act(() => {
       client.setQueryData(["me"], meFixture({ allow: { contact: ["read"] } }));
     });
-    expect(await screen.findByText(en["record.actionRefused"])).toBeVisible();
+    expect(await screen.findByText(en["record.roleReadsOnly"])).toBeVisible();
     expect(screen.getByText("The file contains no cards.")).toBeVisible();
   });
 
@@ -444,7 +444,7 @@ describe("VCardImport", () => {
     );
     render(<VCardImportPage />, false);
 
-    expect(await screen.findByText(en["record.actionRefused"])).toBeVisible();
+    expect(await screen.findByText(en["record.roleReadsOnly"])).toBeVisible();
     expect(document.querySelector("input[type=file]")).toBeNull();
   });
 

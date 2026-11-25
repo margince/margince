@@ -91,7 +91,7 @@ const FIELDS: VocabularyField[] = [
   {
     name: "tag",
     type: "id",
-    operators: ["eq", "neq", "in"],
+    operators: ["eq", "neq", "in", "exists"],
     custom: false,
     references: "tag",
   },
@@ -370,6 +370,26 @@ describe("a filter read as one sentence", () => {
     expect(read(newGroup("and", [newLeaf("tag", "in", ["t-a"])]), german)).toBe(
       `${deTag} ${de["filters.op.include"]} "Wanted"`,
     );
+  });
+
+  it("reads whether a record has tags as what its set includes", () => {
+    const tagField = FIELDS.find((field) => field.name === "tag");
+    expect(enCatalog[operatorKey("exists", tagField)]).toBe(
+      enCatalog["filters.op.includeSomeOrNone"],
+    );
+    for (const [locale, catalog] of [
+      ["en", enCatalog],
+      ["de", de],
+    ] as const) {
+      const tag = catalog["filters.field.tag"];
+      const has = (operand: boolean) =>
+        read(
+          newGroup("and", [newLeaf("tag", "exists", operand)]),
+          wordsIn(locale),
+        );
+      expect(has(true)).toBe(`${tag} ${catalog["filters.op.includeSome"]}`);
+      expect(has(false)).toBe(`${tag} ${catalog["filters.op.includeNone"]}`);
+    }
   });
 
   it("counts ids in German with no article that must agree with the noun", () => {

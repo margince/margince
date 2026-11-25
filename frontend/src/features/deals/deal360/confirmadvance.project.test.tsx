@@ -8,7 +8,7 @@ import { afterEach, expect, it, vi } from "vitest";
 import type { components } from "../../../api/schema";
 import { LocaleProvider } from "../../../i18n";
 import { en } from "../../../i18n/en";
-import { ConfirmAdvanceModal } from "./confirmadvance";
+import { ConfirmAdvanceModal, type PendingAdvance } from "./confirmadvance";
 import { askedToClose } from "./confirmadvance.testkit";
 
 // Winning a deal moves its project into delivering when the project is live
@@ -45,9 +45,10 @@ type ProjectRead =
   | null;
 
 // The deal names project pr-1 unless `project` is null; every other read
-// answers an empty page.
-function stubReads(project: ProjectRead) {
+// answers an empty page. `answer` swaps what later reads see.
+function stubReads(initial: ProjectRead) {
   const reads: string[] = [];
+  let project = initial;
   vi.stubGlobal(
     "fetch",
     vi.fn(async (input: Request | string | URL) => {
@@ -83,24 +84,32 @@ function stubReads(project: ProjectRead) {
       return Response.json({ data: [], page: { has_more: false } });
     }),
   );
-  return reads;
+  return {
+    reads,
+    answer: (next: ProjectRead) => {
+      project = next;
+    },
+  };
 }
 
-function openOn(
-  toStage: components["schemas"]["Stage"],
-  projectId?: string | null,
-) {
-  render(
-    <QueryClientProvider client={new QueryClient()}>
+function openOn(toStage: components["schemas"]["Stage"]) {
+  const client = new QueryClient();
+  const shown = (pending: PendingAdvance | null) => (
+    <QueryClientProvider client={client}>
       <LocaleProvider initial="en">
         <ConfirmAdvanceModal
-          pending={{ dealId: "deal-a", version: 3, toStage, projectId }}
+          pending={pending}
           onClose={() => {}}
           onConfirm={async () => undefined}
         />
       </LocaleProvider>
-    </QueryClientProvider>,
+    </QueryClientProvider>
   );
+  const { rerender } = render(shown({ dealId: "deal-a", version: 3, toStage }));
+  return {
+    close: () => rerender(shown(null)),
+    reopen: () => rerender(shown({ dealId: "deal-a", version: 3, toStage })),
+  };
 }
 
 it("says the win also moves a pursuing project to Delivering", async () => {
@@ -124,7 +133,7 @@ it.each([
   ["closed", { phase: "closed" }],
   ["archived", { phase: "pursuing", archived_at: "2026-10-01T08:00:00Z" }],
 ])("says nothing of a project the win leaves alone: %s", async (_, project) => {
-  const reads = stubReads(project);
+  const { reads } = stubReads(project);
   openOn(WON);
   await askedToClose("Closed won");
   await waitFor(() =>
@@ -141,7 +150,7 @@ it("says nothing when the deal has no project", async () => {
 });
 
 it("reads no project for a loss, which moves none", async () => {
-  const reads = stubReads({ phase: "pursuing" });
+  const { reads } = stubReads({ phase: "pursuing" });
   openOn(LOST);
   await askedToClose("Closed lost");
   expect(reads.some((url) => url.includes("/projects/"))).toBe(false);
@@ -161,23 +170,36 @@ it("says the win moves its project when the reader may not read that project", a
   ).toBeTruthy();
 });
 
-it("reads the project the opening surface drew, without reading the deal again", async () => {
-  const reads = stubReads({ phase: "pursuing" });
-  openOn(WON, "pr-1");
+it("reads the deal again at each opening, and names a project attached since", async () => {
+  const deal = stubReads(null);
+  const dialog = openOn(WON);
+  await askedToClose("Closed won");
+  expect(screen.queryByTestId("win-moves-project")).toBeNull();
+
+  dialog.close();
+  deal.answer({ phase: "pursuing" });
+  dialog.reopen();
   expect(
     await screen.findByText("This also moves Depot fit-out to Delivering."),
   ).toBeTruthy();
-  expect(
-    reads.some((url) =>
-      new URL(url, "http://test").pathname.endsWith("/deals/deal-a"),
-    ),
-  ).toBe(false);
 });
 
-it("reads nothing more for a drawn deal with no project", async () => {
-  const reads = stubReads({ phase: "pursuing" });
-  openOn(WON, null);
-  await askedToClose("Closed won");
-  expect(reads.some((url) => url.includes("/projects/"))).toBe(false);
+it("drops the sentence at the next opening once the project has moved on", async () => {
+  const deal = stubReads({ phase: "pursuing" });
+  const dialog = openOn(WON);
+  await screen.findByText("This also moves Depot fit-out to Delivering.");
+
+  dialog.close();
+  deal.answer({ phase: "delivering" });
+  const readsBefore = deal.reads.length;
+  dialog.reopen();
+  expect(screen.queryByTestId("win-moves-project")).toBeNull();
+  await waitFor(() =>
+    expect(
+      deal.reads
+        .slice(readsBefore)
+        .some((url) => url.includes("/projects/pr-1")),
+    ).toBe(true),
+  );
   expect(screen.queryByTestId("win-moves-project")).toBeNull();
 });

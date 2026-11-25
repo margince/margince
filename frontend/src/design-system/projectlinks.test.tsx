@@ -11,7 +11,11 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { LocaleProvider } from "../i18n";
 import { ProblemError } from "../lib/problem";
-import { ProjectLinks, type ProjectLinksAdapter } from "./projectlinks";
+import {
+  ProjectLinks,
+  type ProjectLinksAdapter,
+  RemoveLinkMenu,
+} from "./projectlinks";
 
 afterEach(cleanup);
 
@@ -427,5 +431,22 @@ describe("ProjectLinks", () => {
     expect(screen.queryByRole("button", { name: "Remove" })).toBeNull();
     expect(document.activeElement).toBe(trigger);
     expect(detach).not.toHaveBeenCalled();
+  });
+});
+
+describe("RemoveLinkMenu", () => {
+  it("names its menu for the record, or generically when it has no name", () => {
+    render(
+      <LocaleProvider initial="en">
+        <RemoveLinkMenu name="Brandt Automotive GmbH" onRemove={() => {}} />
+        <RemoveLinkMenu name={null} onRemove={() => {}} />
+      </LocaleProvider>,
+    );
+    expect(
+      screen.getByRole("button", {
+        name: "More actions for Brandt Automotive GmbH",
+      }),
+    ).toBeTruthy();
+    expect(screen.getByRole("button", { name: "More actions" })).toBeTruthy();
   });
 });

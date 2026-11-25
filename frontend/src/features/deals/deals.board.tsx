@@ -346,12 +346,7 @@ export function useBoardInteractions({
       );
     }
     // Terminal-stage advance is a 🟡 confirm (AC-deal-6).
-    setPending({
-      dealId,
-      version,
-      toStage,
-      projectId: drawn.project_id ?? null,
-    });
+    setPending({ dealId, version, toStage });
     return new Promise<boolean>((resolve) => {
       landing.current = resolve;
     });

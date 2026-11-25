@@ -47,22 +47,49 @@ describe("a company clause restored from a saved view", () => {
   });
 });
 
-function OneCompany() {
+// `arrive` is what the owner stores for a sent value: the same, or reshaped.
+function OneCompany({
+  arrive = (sent) => sent,
+}: Readonly<{ arrive?: (sent: LeafValue) => LeafValue }>) {
   const [value, setValue] = useState<LeafValue>("");
   return (
     <>
       <SearchedRecordValue
         many={false}
         value={value}
-        onChange={setValue}
+        onChange={(sent) => setValue(arrive(sent))}
         placeholder={en["filters.pickCompany"]}
       />
       <output>{JSON.stringify(value)}</output>
       <button type="button" onClick={() => setValue("")}>
         Clear from outside
       </button>
+      <button type="button" onClick={() => setValue(ID)}>
+        Choose from outside
+      </button>
     </>
   );
+}
+
+function stubOneAnswer() {
+  installFetchStub({
+    "GET /me": meRoute({ company: ["read"] }),
+    "GET /companies": () =>
+      jsonResponse({
+        data: [{ id: ID, display_name: "Demo GmbH" }],
+        page: { next_cursor: null, has_more: false },
+      }),
+    ...recordNamesRoutes({ company: { [ID]: "Demo GmbH", other: "Other" } }),
+  });
+}
+
+async function pickDemo(user: ReturnType<typeof userEvent.setup>) {
+  await user.type(
+    screen.getByRole("combobox", { name: en["filters.searchRecords"] }),
+    "Demo",
+  );
+  await screen.findByRole("listbox");
+  await user.keyboard("{ArrowDown}{Enter}");
 }
 
 describe("searching for a company", () => {
@@ -147,6 +174,43 @@ describe("searching for a company", () => {
     expect(
       screen.getByRole("combobox", { name: en["filters.searchRecords"] }),
     ).not.toHaveFocus();
+    expect(outside).toHaveFocus();
+  });
+
+  it("moves focus when the pick arrives in another shape", async () => {
+    stubOneAnswer();
+    const user = userEvent.setup();
+    render(
+      <StoryProviders>
+        <OneCompany arrive={(sent) => (Array.isArray(sent) ? sent : [sent])} />
+      </StoryProviders>,
+    );
+    await pickDemo(user);
+    expect(screen.getByRole("status", { hidden: true })).toHaveTextContent(
+      JSON.stringify([ID]),
+    );
+    expect(
+      screen.getByRole("button", { name: en["filters.changeRecord"] }),
+    ).toHaveFocus();
+  });
+
+  it("stops waiting for the pick once the value changes to something else", async () => {
+    stubOneAnswer();
+    const user = userEvent.setup();
+    render(
+      <StoryProviders>
+        <OneCompany arrive={() => "other"} />
+      </StoryProviders>,
+    );
+    await pickDemo(user);
+    const change = screen.getByRole("button", {
+      name: en["filters.changeRecord"],
+    });
+    expect(change).not.toHaveFocus();
+
+    const outside = screen.getByRole("button", { name: "Choose from outside" });
+    await user.click(outside);
+    expect(change).not.toHaveFocus();
     expect(outside).toHaveFocus();
   });
 });

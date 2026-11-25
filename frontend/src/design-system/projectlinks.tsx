@@ -323,17 +323,28 @@ function LinkedRows({
 /**
  * The verb that takes one linked record off this one: a "Remove" item in the
  * row's overflow menu, which stays in view. The caller asks before removing.
- * The row's other verbs, as `children`, come before it.
+ * The row's other verbs, as `children`, come before it. A null `name` is a
+ * record with no name to read, and the menu takes the generic label.
  */
 export function RemoveLinkMenu({
   name,
   onRemove,
   children,
-}: Readonly<{ name: string; onRemove: () => void; children?: ReactNode }>) {
+}: Readonly<{
+  name: string | null;
+  onRemove: () => void;
+  children?: ReactNode;
+}>) {
   const t = useT();
   return (
     // Named for the record, because every row's menu looks the same.
-    <OverflowMenu label={t("record.moreActionsFor", { subject: name })}>
+    <OverflowMenu
+      label={
+        name
+          ? t("record.moreActionsFor", { subject: name })
+          : t("record.moreActions")
+      }
+    >
       {children}
       <Button variant="danger" onClick={onRemove}>
         {t("rel.remove")}
