@@ -53224,6 +53224,11 @@ components:
           allOf: [{$ref: '#/components/schemas/ApprovalSummaryParts'}]
           description: >-
             The summary's sentence and the field values it lists, apart, so a client can show the values as a list instead of the joined key=value text. Absent on a proposal whose summary is a sentence alone, and on one staged before the parts were kept. Withheld with the summary.
+        why:
+          allOf: [{$ref: '#/components/schemas/WorkGrounds'}]
+          readOnly: true
+          description: >-
+            Why this proposal exists, as whoever staged it said it: the record and the fact that prompted it. A card leads with it. Absent when its maker gave none, never filled with a stock sentence, and withheld with the summary.
         proposed_change:
           type: object
           additionalProperties: true

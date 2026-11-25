@@ -36902,6 +36902,9 @@ type Approval struct {
 
 	// TargetVersion The `version` of the target row when the diff was staged. On approve-execute the server RE-READS the row; if its current version ≠ target_version the execution is rejected with 409 ErrVersionSkew (the world changed since the human last saw the diff — re-stage). This closes the stage→approval race (ADR-0036).
 	TargetVersion *int `json:"target_version,omitempty"`
+
+	// Why Why this proposal exists, as whoever staged it said it: the record and the fact that prompted it. A card leads with it. Absent when its maker gave none, never filled with a stock sentence, and withheld with the summary.
+	Why *WorkGrounds `json:"why,omitempty"`
 }
 
 // ApprovalStatus defines model for Approval.Status.

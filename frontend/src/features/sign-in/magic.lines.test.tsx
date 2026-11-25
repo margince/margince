@@ -96,7 +96,12 @@ describe("a receipt line is one row", () => {
       values: undefined,
       text: "Unconfirmed estimate; no usable recorded basis to show.",
     },
-  ])("shows an honest forecast basis: $key", async ({ key, values, text }) => {
+    {
+      key: "magic.why.stated",
+      values: { why: "Her signature on 14 Nov names her CTO." },
+      text: "Reason given: Her signature on 14 Nov names her CTO.",
+    },
+  ])("shows the reason a line gives: $key", async ({ key, values, text }) => {
     stub(receipt({ done: [line({ entity: fleet, reason: { key, values } })] }));
     renderMagic();
     expect(rowOf(await onlyLine("Done for you")).detail).toContain(text);

@@ -90,7 +90,7 @@ func TestContactWritesLeaveTheSameOnEitherDoor(t *testing.T) {
 	version := versionOf(t, d.storedContact(t, viaREST))
 	d.restPinned(t, "PATCH", "/v1/contacts/"+viaREST, AnyMap{"title": "Head of Buying"}, version)
 	d.tool(t, "update_record", map[string]any{
-		"record_type": "contact", "id": viaTool, "fields": map[string]any{"title": "Head of Buying"},
+		"record_type": "contact", "id": viaTool, "fields": map[string]any{"title": "Head of Buying"}, "why": "A test asks for this change.",
 		"if_version": versionOf(t, d.storedContact(t, viaTool)),
 	})
 	sameStored(t, "update", d.storedContact(t, viaREST), d.storedContact(t, viaTool), viaREST, viaTool, "full_name", "social")

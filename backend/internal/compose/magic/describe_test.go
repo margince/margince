@@ -86,6 +86,20 @@ func TestAFieldChangeNamesTheFieldsAndTheSource(t *testing.T) {
 	}
 }
 
+// An agent's change says why in the agent's own words, the reason it had to
+// give for the write.
+func TestAnAgentsFieldChangeGivesTheReasonItStated(t *testing.T) {
+	line, _, ok := lineOf(unmasked(t), auditRow("agent:deepread",
+		`{"title": "Analyst"}`, `{"title": "CTO"}`,
+		`{"stated_reason": "Her signature on 14 Nov names her CTO."}`, time.Now()))
+	if !ok {
+		t.Fatal("a field change was not shown")
+	}
+	if line.Reason == nil || line.Reason.Key != "magic.why.stated" || (*line.Reason.Values)["why"] != "Her signature on 14 Nov names her CTO." {
+		t.Fatalf("reason %v, want the reason the agent gave", line.Reason)
+	}
+}
+
 // The website reader records the page it read as source_url, which is the
 // shape every live row carries.
 func TestASiteReadNamesTheSiteItRecordedAsSourceURL(t *testing.T) {

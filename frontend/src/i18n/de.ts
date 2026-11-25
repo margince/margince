@@ -23177,6 +23177,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "magic.why.site_read_each":
     "Aus der Analyse der jeweiligen Unternehmenswebsite.",
   "magic.why.signature": "Aus einer E-Mail-Signatur übernommen.",
+  "magic.why.stated": "Angegebener Grund: {why}",
   "magic.why.retention": "Aufbewahrungsregel: nach {days} Tagen.",
   "magic.by.retention": "Aufbewahrung",
   "magic.by.mail_filing": "E-Mail-Zuordnung",

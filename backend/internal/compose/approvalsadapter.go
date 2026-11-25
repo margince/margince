@@ -52,6 +52,7 @@ func (a approvalsAdapter) StageCall(ctx context.Context, in agents.StageRequest)
 		Summary:        in.Summary,
 		SystemText:     in.SystemText,
 		SummaryParts:   in.SummaryParts,
+		Why:            approvals.Grounds{Text: in.Why},
 	})
 }
 

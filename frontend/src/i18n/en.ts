@@ -22841,6 +22841,7 @@ export const en = {
   "magic.why.site_read_unnamed": "Read on the company’s website.",
   "magic.why.site_read_each": "Read on each company’s own website.",
   "magic.why.signature": "Taken from an email signature.",
+  "magic.why.stated": "Reason given: {why}",
   "magic.why.retention": "Retention rule: after {days} days.",
   "magic.by.retention": "Retention",
   "magic.by.mail_filing": "Mail filing",

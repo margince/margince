@@ -51,6 +51,23 @@ const staged: DecisionApproval = {
   },
 };
 
+describe("DecisionCard — a proposal with its reason", () => {
+  it("says why the proposal exists right under its headline", () => {
+    const reason = "Anna Weber wrote on 14 Nov that the rollout moves to March.";
+    render(
+      <DecisionCard
+        approval={{ ...staged, why: { text: reason } }}
+        now={NOW}
+        labels={LABELS}
+        onAccept={() => undefined}
+        onReject={() => undefined}
+      />,
+    );
+    const headline = screen.getByText("Update record deal");
+    expect(headline.nextElementSibling?.textContent).toBe(reason);
+  });
+});
+
 describe("DecisionCard — a summary staged with its parts", () => {
   it("heads with the sentence and lists each proposed value whole", () => {
     render(

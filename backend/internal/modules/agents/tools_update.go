@@ -34,6 +34,8 @@ type updateRecordArgs struct {
 	ID         ids.UUID        `json:"id"`
 	Fields     json.RawMessage `json:"fields"`
 	IfVersion  *int64          `json:"if_version"`
+	// Why is read by the surface (statedwhy.go); the patch does not use it.
+	Why string `json:"why"`
 }
 
 func (t updateRecord) Spec() mcp.ToolSpec {
@@ -44,11 +46,12 @@ func (t updateRecord) Spec() mcp.ToolSpec {
 		RequiredScope: principal.ScopeWrite,
 		Tier:          mcp.TierAutoExecute,
 		OpenAPIOp:     "updateContact/updateCompany/updateDeal/updateLead/updateActivity/updateProject/updateRelationship/updateProduct/updateOfferTemplate/updateOffer",
-		InputSchema: schema(`{"type":"object","required":["record_type","id","fields"],"properties":{
+		InputSchema: schema(`{"type":"object","required":["record_type","id","fields","why"],"properties":{
 			"record_type":{"type":"string","enum":["contact","company","deal","lead","activity","project","relationship","product","offer_template","offer"]},
 			"id":{"type":"string","format":"uuid"},
 			"fields":{"type":"object","description":` + jsonString("Only sent fields change. "+recordFieldsDescription) + `},
 			"if_version":{"type":"integer","description":"Optimistic-concurrency guard: the last-seen record version"},
+			` + whyProperty + `,
 			"approval_id":{"type":"string","format":"uuid","description":"Set on retry after a human approved the staged call; send it with exactly the staged arguments"}},
 			"additionalProperties":false}`),
 		UnkeyedArguments: recordFieldsUnkeyed(),

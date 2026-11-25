@@ -55822,6 +55822,8 @@ export interface components {
             summary?: string | null;
             /** @description The summary's sentence and the field values it lists, apart, so a client can show the values as a list instead of the joined key=value text. Absent on a proposal whose summary is a sentence alone, and on one staged before the parts were kept. Withheld with the summary. */
             summary_parts?: components["schemas"]["ApprovalSummaryParts"];
+            /** @description Why this proposal exists, as whoever staged it said it: the record and the fact that prompted it. A card leads with it. Absent when its maker gave none, never filled with a stock sentence, and withheld with the summary. */
+            readonly why?: components["schemas"]["WorkGrounds"];
             /** @description The staged diff/payload that will execute on approve. */
             proposed_change?: {
                 [key: string]: unknown;

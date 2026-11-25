@@ -180,7 +180,7 @@ export function cardName(
 //
 // The summary then explains whichever of those two the headline was. It shows
 // only underneath one: with neither, the summary is the headline, and printing
-// it twice reads as two facts.
+// it twice reads as two facts. The proposal's reason comes first under it.
 export function DecisionHead({
   approval,
   draft,
@@ -209,6 +209,7 @@ export function DecisionHead({
   const named = cardName(approval, draft);
   const sentence = summarySentence(approval);
   const headline = named ?? sentence;
+  const grounds = approval.why?.text.trim() || null;
   const chips = (
     <div className="dcard-meta">
       {meta}
@@ -250,6 +251,8 @@ export function DecisionHead({
           {headline}
         </p>
       )}
+      {/* Why the proposal exists leads what the card says about it. */}
+      {grounds && <p className="approval-why">{grounds}</p>}
       {named && sentence && <p className="approval-why">{sentence}</p>}
       <SummaryFields parts={listed} words={labels.summaryWords} />
     </>

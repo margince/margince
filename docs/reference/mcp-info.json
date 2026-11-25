@@ -10,16 +10,16 @@
   "totals": {
     "tools": 48,
     "resources": 14,
-    "tool_catalog_bytes": 248899,
+    "tool_catalog_bytes": 249188,
     "resource_catalog_bytes": 5622,
-    "approx_wire_tokens_total": 63630,
+    "approx_wire_tokens_total": 63702,
     "largest_tool_bytes": 16204,
     "largest_tool": "read_details",
     "tool_catalog_composition": {
       "description_bytes": 52248,
-      "input_schema_bytes": 150332,
+      "input_schema_bytes": 150621,
       "output_schema_bytes": 34465,
-      "description_plus_input_schema_bytes": 202580
+      "description_plus_input_schema_bytes": 202869
     }
   },
   "tools": {
@@ -9673,12 +9673,19 @@
                 "offer"
               ],
               "type": "string"
+            },
+            "why": {
+              "description": "Why you are making this change, in one sentence the user reads beside it. Name the person, record or message and the fact that prompted it, for example: Anna Weber wrote on 14 Nov that the rollout moves to March.",
+              "maxLength": 600,
+              "minLength": 1,
+              "type": "string"
             }
           },
           "required": [
             "record_type",
             "id",
-            "fields"
+            "fields",
+            "why"
           ],
           "type": "object"
         },
