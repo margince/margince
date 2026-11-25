@@ -51410,11 +51410,13 @@ components:
         address: { $ref: '#/components/schemas/Address' }
         emails:
           type: array
+          maxItems: 25
           items: { $ref: '#/components/schemas/ContactEmailInput' }
         phones:
           type: array
+          maxItems: 25
           items: { $ref: '#/components/schemas/ContactPhoneInput' }
-        source: { type: string, enum: [api, automation, capture, import, manual, webform], x-go-type: string, description: 'The channel this contact arrived by. A client that wrote it for a member sends `manual`; an integration sends `api`. The other system and the contact''s id there go in `source_system` and `source_id`. Any other value is 422 `invalid_source`.' }
+        source: { type: string, maxLength: 128, enum: [api, automation, capture, import, manual, webform], x-go-type: string, description: 'The channel this contact arrived by. A client that wrote it for a member sends `manual`; an integration sends `api`. The other system and the contact''s id there go in `source_system` and `source_id`. Any other value is 422 `invalid_source`.' }
         source_id: { type: [string, 'null'], maxLength: 128, description: 'The id this contact has in source_system. Needs source_system, and the pair is unique: a second contact with the same pair is 409.' }
         source_system: { type: [string, 'null'], maxLength: 128, description: 'Which external system this record came from, when a caller imported it. The reserved mirror: namespace is refused on this wire except for a declared importer: a signed-in human holding import_run:create (an agent carrying those grants is still refused).' }
         source_author_id: { type: [string, 'null'], format: uuid, description: 'Who wrote this record in the system it came from, when the author holds a seat here. Written only by a declared importer (a signed-in human holding import_run:create), only beside a source_system; either author field or both may be sent, and the seat''s current name wins on read. captured_by still names the caller.' }
@@ -51475,7 +51477,7 @@ components:
         profile_url:
           type: [string, 'null']
           description: 'The LinkedIn profile this was read from. Stored, never fetched. It must be a LinkedIn profile (`/in/<name>`): a page off LinkedIn is refused with 422 `linkedin_url_not_linkedin` on this field, and a company page with `linkedin_url_not_profile`.'
-        email: { type: [string, 'null'], format: email, description: 'Refused with 422 `email_names_no_one` when the local part names a sending system, as ContactEmailInput.email is.' }
+        email: { type: [string, 'null'], maxLength: 254, format: email, description: 'Refused with 422 `email_names_no_one` when the local part names a sending system, as ContactEmailInput.email is.' }
         phone: { type: [string, 'null'] }
         convert_lead_ids:
           type: array
@@ -51726,6 +51728,7 @@ components:
       properties:
         email:
           type: string
+          maxLength: 254
           format: email
           description: 'An address whose local part names a sending system (noreply@, notifications@, receipts@ and the like) is refused with 422 `email_names_no_one`: nobody answers there, so it names no contact.'
         email_type: { type: string, enum: [work, personal, other], default: work }
@@ -51801,6 +51804,7 @@ components:
         address: { $ref: '#/components/schemas/Address' }
         emails:
           type: array
+          maxItems: 25
           items: { $ref: '#/components/schemas/ContactEmailInput' }
           description: |
             REPLACES the contact's addresses with exactly this list, which is what a
@@ -51810,8 +51814,12 @@ components:
             Omitting the field leaves the addresses untouched, like every other field
             here. Sending an empty array removes them all, which is a real answer — a
             contact who no longer has a working address is a fact worth recording.
+
+            A list past 25 addresses is 422 `too_many`, unless the contact already
+            holds at least as many: a longer stored list may be sent back, and not grown.
         phones:
           type: array
+          maxItems: 25
           items: { $ref: '#/components/schemas/ContactPhoneInput' }
           description: |
             REPLACES the contact's numbers with exactly this list, the same way `emails`
@@ -51820,7 +51828,8 @@ components:
             that now reaches somebody else.
 
             Omitting the field leaves the numbers untouched. Sending an empty array
-            removes them all.
+            removes them all. A list past 25 numbers is 422 `too_many`, unless the
+            contact already holds at least as many.
 
             `Contact360.dead_addresses` already names which address bounced; until now the
             contract's own remedy for that was to visit the contact page, because the write
@@ -52205,7 +52214,7 @@ components:
           pattern: '^https://([a-z]{2,3}\.)?linkedin\.com/company/[^/?#]+/?$'
         legal_name: { x-single-line: true, type: [string, 'null'], maxLength: 500 }
         phone: { type: [string, 'null'], maxLength: 20000, description: "The company's main number. A formatted number is accepted and stored in E.164 form (for example +49301234567). It is never a contact's own number." }
-        email: { type: [string, 'null'], format: email, maxLength: 20000, description: "The company's general address, for example info@example.com. It never creates or matches a contact." }
+        email: { type: [string, 'null'], format: email, maxLength: 254, description: "The company's general address, for example info@example.com. It never creates or matches a contact." }
         description: { type: [string, 'null'], maxLength: 20000, description: A description of what the company does. }
         industry: { type: [string, 'null'], maxLength: 2000, description: 'An industry code, or text the server can map to one. Text that names no code stores no code and is kept in the description.' }
         size_band: { type: [string, 'null'], enum: [null, '1-10', '11-50', '51-200', '201-500', '501-1000', '1001-5000', '5000+'] }
@@ -52214,8 +52223,9 @@ components:
         parent_company_id: { type: [string, 'null'], format: uuid }
         domains:
           type: array
+          maxItems: 100
           items: { $ref: '#/components/schemas/CompanyDomainInput' }
-        source: { type: string, enum: [api, automation, capture, import, manual, webform], x-go-type: string, description: 'The channel this company arrived by. A client that wrote it for a member sends `manual`; an integration sends `api`. The other system and the company''s id there go in `source_system` and `source_id`. Any other value is 422 `invalid_source`.' }
+        source: { type: string, maxLength: 128, enum: [api, automation, capture, import, manual, webform], x-go-type: string, description: 'The channel this company arrived by. A client that wrote it for a member sends `manual`; an integration sends `api`. The other system and the company''s id there go in `source_system` and `source_id`. Any other value is 422 `invalid_source`.' }
         source_system: { type: [string, 'null'], maxLength: 128, description: 'Which external system this record came from, when a caller imported it. The reserved mirror: namespace is refused on this wire except for a declared importer: a signed-in human holding import_run:create (an agent carrying those grants is still refused).' }
         source_id: { type: [string, 'null'], maxLength: 128, description: 'The id this company has in source_system. Needs source_system, and the pair is unique: a second company with the same pair is 409. Look a company up by it with the `source_system` and `source_id` filters on `listCompanies`.' }
         source_author_id: { type: [string, 'null'], format: uuid, description: 'Who wrote this record in the system it came from, when the author holds a seat here. Written only by a declared importer (a signed-in human holding import_run:create), only beside a source_system; either author field or both may be sent, and the seat''s current name wins on read. captured_by still names the caller.' }
@@ -52234,7 +52244,7 @@ components:
         display_name: { x-single-line: true, type: string, maxLength: 120 }
         legal_name: { x-single-line: true, type: [string, 'null'], maxLength: 500 }
         phone: { type: [string, 'null'], maxLength: 20000, description: "The company's main number. A formatted number is accepted and stored in E.164 form (for example +49301234567). It is never a contact's own number." }
-        email: { type: [string, 'null'], format: email, maxLength: 20000, description: "The company's general address, for example info@example.com. It never creates or matches a contact." }
+        email: { type: [string, 'null'], format: email, maxLength: 254, description: "The company's general address, for example info@example.com. It never creates or matches a contact." }
         description: { type: [string, 'null'], maxLength: 20000, description: 'A description of what the company does. Absent leaves it untouched; an empty string clears it, the same spelling every other nullable text field on this record uses.' }
         industry: { type: [string, 'null'], maxLength: 2000, description: 'An industry code, or text the server can map to one. Text that names no code stores no code and is kept in the description.' }
         size_band: { type: [string, 'null'], enum: [null, '1-10', '11-50', '51-200', '201-500', '501-1000', '1001-5000', '5000+'] }
@@ -52250,7 +52260,8 @@ components:
             archived answers 422 naming this field. Absent leaves it untouched.
         domains:
           type: array
-          description: Replace-set of the company's live domains (add new, archive removed, flip is_primary). Absent = untouched; an empty array clears all domains.
+          maxItems: 100
+          description: Replace-set of the company's live domains (add new, archive removed, flip is_primary). Absent = untouched; an empty array clears all domains. A list past 100 domains is 422 `too_many`, unless the company already holds at least as many.
           items: { $ref: '#/components/schemas/CompanyDomainInput' }
         visibility:
           type: string
@@ -63151,7 +63162,7 @@ components:
             properties:
               entity_type: { type: string, enum: [contact, company, deal, lead, project], x-extensible-enum: true }
               entity_id: { type: string, format: uuid }
-        source: { type: string, enum: [api, automation, capture, import, manual, webform], x-extensible-enum: true, x-go-type: string, description: 'The channel this task arrived by. A client that wrote it for a member sends `manual`; an integration sends `api`. Any other value is 422 `invalid_source`.' }
+        source: { type: string, maxLength: 128, enum: [api, automation, capture, import, manual, webform], x-extensible-enum: true, x-go-type: string, description: 'The channel this task arrived by. A client that wrote it for a member sends `manual`; an integration sends `api`. Any other value is 422 `invalid_source`.' }
       additionalProperties: false
     ActivityDealFilingRecordType:
       type: string
@@ -63347,7 +63358,7 @@ components:
             properties:
               entity_type: { type: string, enum: [contact, company, deal, lead, project] }
               entity_id: { type: string, format: uuid }
-        source: { type: string, enum: [api, automation, capture, import, manual, webform], x-go-type: string, description: 'The channel this activity arrived by. A client that wrote it for a member sends `manual`; an integration sends `api`. The other system and the activity''s id there go in `source_system` and `source_id`. Any other value is 422 `invalid_source`.' }
+        source: { type: string, maxLength: 128, enum: [api, automation, capture, import, manual, webform], x-go-type: string, description: 'The channel this activity arrived by. A client that wrote it for a member sends `manual`; an integration sends `api`. The other system and the activity''s id there go in `source_system` and `source_id`. Any other value is 422 `invalid_source`.' }
         raw:
           type: [object, 'null']
           additionalProperties: true
@@ -66251,7 +66262,7 @@ components:
       type: object
       properties:
         full_name: { x-single-line: true, type: [string, 'null'], maxLength: 120 }
-        email: { type: [string, 'null'], format: email }
+        email: { type: [string, 'null'], maxLength: 254, format: email }
         phone: { type: [string, 'null'], description: "E.164, as a contact's number is. One number: a lead is one enquiry until it is promoted, and the number carries to the contact it becomes." }
         linkedin_url: { type: [string, 'null'], description: 'Normalized LinkedIn profile URL — the E12.11 exact-match dedupe key for LinkedIn-captured leads.' }
         title: { x-single-line: true, type: [string, 'null'] }
@@ -66281,7 +66292,7 @@ components:
         source_author_id: { type: [string, 'null'], format: uuid, description: 'Who wrote this record in the system it came from, when the author holds a seat here. Written only by a declared importer (a signed-in human holding import_run:create), only beside a source_system; either author field or both may be sent, and the seat''s current name wins on read. captured_by still names the caller.' }
         source_author_name: { type: [string, 'null'], maxLength: 200, description: 'The source system''s own spelling of who wrote this record. Same door as source_author_id: a declared importer only, beside a source_system. Kept when a seat is also named, so the name survives the seat.' }
         source_id: { type: [string, 'null'] }
-        source: { type: string, enum: [api, automation, capture, import, manual, webform], x-go-type: string, description: 'The channel this lead arrived by. Optional: the server writes `manual` when none is sent, and an integration sends `api`. The other system and the lead''s id there go in `source_system` and `source_id`. Any other value is 422 `invalid_source`. Never scored; send `origin` for where the lead came from.' }
+        source: { type: string, maxLength: 128, enum: [api, automation, capture, import, manual, webform], x-go-type: string, description: 'The channel this lead arrived by. Optional: the server writes `manual` when none is sent, and an integration sends `api`. The other system and the lead''s id there go in `source_system` and `source_id`. Any other value is 422 `invalid_source`. Never scored; send `origin` for where the lead came from.' }
         origin: { type: [string, 'null'], description: 'Where the lead came from: an ACTIVE key from `/lead-origins` (422 `unknown_lead_origin` or `inactive_lead_origin` otherwise). Omit for an unclassified lead, which scores neutral.' }
         origin_detail: { type: [string, 'null'], maxLength: 500, description: 'A short note beside `origin`.' }
       additionalProperties: true
@@ -66296,7 +66307,7 @@ components:
         POST /leads/{id}/promote. Both terminal states are therefore excluded from this enum.
       properties:
         full_name: { x-single-line: true, type: [string, 'null'], maxLength: 120 }
-        email: { type: [string, 'null'], format: email }
+        email: { type: [string, 'null'], maxLength: 254, format: email }
         phone: { type: [string, 'null'], description: "E.164, as a contact's number is. One number: a lead is one enquiry until it is promoted, and the number carries to the contact it becomes." }
         title: { x-single-line: true, type: [string, 'null'] }
         company_name: { x-single-line: true, type: [string, 'null'] }
@@ -70804,14 +70815,14 @@ components:
       properties:
         resource: { $ref: '#/components/schemas/SavedViewTarget' }
         name: { x-single-line: true, type: string }
-        query: { type: object, additionalProperties: true }
+        query: { type: object, additionalProperties: true, description: 'At most 65536 bytes as JSON; a larger one is 422 `too_large` on `query`.' }
 
     UpdateSavedViewRequest:
       type: object
       description: A partial update; omitted fields keep their stored value.
       properties:
         name: { x-single-line: true, type: string }
-        query: { type: object, additionalProperties: true }
+        query: { type: object, additionalProperties: true, description: 'Replaces the stored query whole. At most 65536 bytes as JSON; a larger one is 422 `too_large` on `query`.' }
 
     SavedViewListResponse:
       type: object
@@ -70856,7 +70867,7 @@ components:
       required: [display_name, email, expected_updated_at]
       properties:
         display_name: { type: string, minLength: 1, maxLength: 120 }
-        email: { type: string, format: email, description: May change only before the account has been used to sign in. }
+        email: { type: string, maxLength: 254, format: email, description: May change only before the account has been used to sign in. }
         role: { type: string, description: Omit to keep the current roles. }
         team_ids:
           type: array
@@ -71255,6 +71266,7 @@ components:
       properties:
         email:
           type: string
+          maxLength: 254
           format: email
           description: >-
             Their work address as the source system spelled it. It is the identity the
@@ -71283,7 +71295,7 @@ components:
       description: Admin-supplied details for a new member. No password — the invite issues a set-password token.
       required: [email, display_name, role]
       properties:
-        email: { type: string, format: email }
+        email: { type: string, maxLength: 254, format: email }
         display_name: { type: string, minLength: 1, maxLength: 120 }
         greeting_name:
           type: [string, 'null']
@@ -82007,7 +82019,7 @@ components:
           description: |
             When buyer access lapses. A past instant is accepted and stored as the
             time of the call, so the room opens with buyer access already ended.
-        source: { type: string }
+        source: { type: string, maxLength: 128 }
       additionalProperties: false
 
     UpdateDealRoomRequest:
@@ -82150,12 +82162,12 @@ components:
       required: [full_name, email, source]
       properties:
         full_name: { type: string, minLength: 1 }
-        email: { type: string, format: email }
+        email: { type: string, maxLength: 254, format: email }
         capability:
           allOf:
             - $ref: '#/components/schemas/DealRoomParticipantCapability'
           description: Defaults to `view` — the least that lets someone read the room.
-        source: { type: string }
+        source: { type: string, maxLength: 128 }
       additionalProperties: false
 
     UpdateDealRoomParticipantRequest:
@@ -82165,6 +82177,7 @@ components:
         full_name: { type: string, minLength: 1 }
         email:
           type: string
+          maxLength: 254
           format: email
           description: |
             Only while their credential is unconsumed. Changing it invalidates the link
@@ -82318,7 +82331,7 @@ components:
           minLength: 1
           description: The buyer-facing name. Defaults to the attachment's filename.
         position: { type: integer, description: Order within the group. Defaults to 0. }
-        source: { type: string }
+        source: { type: string, maxLength: 128 }
       additionalProperties: false
 
     UpdateDealRoomDocumentRequest:
@@ -82422,7 +82435,7 @@ components:
         required_change:
           type: boolean
           description: Only with a document. Marks the thread as one the seller still owes an answer on.
-        source: { type: string, description: 'Provenance. A user''s client names it on the seller edge. An agent that omits it records `agent`, and a buyer''s comment always records the credential.' }
+        source: { type: string, maxLength: 128, description: 'Provenance. A user''s client names it on the seller edge. An agent that omits it records `agent`, and a buyer''s comment always records the credential.' }
         request_id:
           type: string
           format: uuid
@@ -82445,7 +82458,7 @@ components:
       required: [body]
       properties:
         body: { type: string, minLength: 1 }
-        source: { type: string, description: 'Provenance. A user''s client names it on the seller edge. An agent that omits it records `agent`, and a buyer''s comment always records the credential.' }
+        source: { type: string, maxLength: 128, description: 'Provenance. A user''s client names it on the seller edge. An agent that omits it records `agent`, and a buyer''s comment always records the credential.' }
         request_id:
           type: string
           format: uuid
@@ -82499,7 +82512,7 @@ components:
       type: object
       required: [email]
       properties:
-        email: { type: string, format: email }
+        email: { type: string, maxLength: 254, format: email }
       additionalProperties: false
 
     BuyerRoomAccess:

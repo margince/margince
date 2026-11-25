@@ -48,6 +48,9 @@ func replaceContactEmails(ctx context.Context, tx pgx.Tx, wsID ids.WorkspaceID, 
 	if err != nil {
 		return err
 	}
+	if err := refuseLongerList(contactEmailsField, "addresses", maxContactEmails, len(emails), len(held)); err != nil {
+		return err
+	}
 	if err := parseContactHandles(emails, nil, held); err != nil {
 		return err
 	}

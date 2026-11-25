@@ -36568,6 +36568,9 @@ export interface components {
              *     Omitting the field leaves the addresses untouched, like every other field
              *     here. Sending an empty array removes them all, which is a real answer — a
              *     contact who no longer has a working address is a fact worth recording.
+             *
+             *     A list past 25 addresses is 422 `too_many`, unless the contact already
+             *     holds at least as many: a longer stored list may be sent back, and not grown.
              */
             emails?: components["schemas"]["ContactEmailInput"][];
             /**
@@ -36577,7 +36580,8 @@ export interface components {
              *     that now reaches somebody else.
              *
              *     Omitting the field leaves the numbers untouched. Sending an empty array
-             *     removes them all.
+             *     removes them all. A list past 25 numbers is 422 `too_many`, unless the
+             *     contact already holds at least as many.
              *
              *     `Contact360.dead_addresses` already names which address bounced; until now the
              *     contract's own remedy for that was to visit the contact page, because the write
@@ -36870,7 +36874,7 @@ export interface components {
              *     archived answers 422 naming this field. Absent leaves it untouched.
              */
             assess_against_entity_id?: string | null;
-            /** @description Replace-set of the company's live domains (add new, archive removed, flip is_primary). Absent = untouched; an empty array clears all domains. */
+            /** @description Replace-set of the company's live domains (add new, archive removed, flip is_primary). Absent = untouched; an empty array clears all domains. A list past 100 domains is 422 `too_many`, unless the company already holds at least as many. */
             domains?: components["schemas"]["CompanyDomainInput"][];
             /**
              * @description Who may see this company: `workspace` for everyone holding the read grant, `owner` for
@@ -51860,6 +51864,7 @@ export interface components {
         CreateSavedViewRequest: {
             resource: components["schemas"]["SavedViewTarget"];
             name: string;
+            /** @description At most 65536 bytes as JSON; a larger one is 422 `too_large` on `query`. */
             query: {
                 [key: string]: unknown;
             };
@@ -51867,6 +51872,7 @@ export interface components {
         /** @description A partial update; omitted fields keep their stored value. */
         UpdateSavedViewRequest: {
             name?: string;
+            /** @description Replaces the stored query whole. At most 65536 bytes as JSON; a larger one is 422 `too_large` on `query`. */
             query?: {
                 [key: string]: unknown;
             };

@@ -222,7 +222,7 @@ func leadCreateInputAdmitting(req crmcontracts.CreateLeadRequest, importer bool)
 		}
 	}
 	// `source` is nobody's to forge, the importer included.
-	if err := provenance.Refuse(auditKeySource, source); err != nil {
+	if err := provenance.RefuseSource(source); err != nil {
 		return CreateLeadInput{}, err
 	}
 	// After the namespace refusal, which names the reserved field more precisely.
@@ -233,10 +233,14 @@ func leadCreateInputAdmitting(req crmcontracts.CreateLeadRequest, importer bool)
 	if err != nil {
 		return CreateLeadInput{}, err
 	}
-	// A lead's name is optional, but one that is sent is a name and not spaces.
+	// A lead's name is optional, but one that is sent is a name and not spaces,
+	// held to the limit of the contact it may become.
 	if req.FullName != nil {
 		name, err := httperr.RequireNonBlank(contactNameColumn, *req.FullName)
 		if err != nil {
+			return CreateLeadInput{}, err
+		}
+		if err := requireNameWithin(contactNameColumn, name); err != nil {
 			return CreateLeadInput{}, err
 		}
 		req.FullName = &name

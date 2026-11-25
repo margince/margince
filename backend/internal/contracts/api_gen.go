@@ -49154,7 +49154,9 @@ type CreateRoleRequest struct {
 
 // CreateSavedViewRequest defines model for CreateSavedViewRequest.
 type CreateSavedViewRequest struct {
-	Name  string                 `json:"name" singleline:"true"`
+	Name string `json:"name" singleline:"true"`
+
+	// Query At most 65536 bytes as JSON; a larger one is 422 `too_large` on `query`.
 	Query map[string]interface{} `json:"query"`
 
 	// Resource The list a saved view is over: one of core's lists, or `ext:<unit>:<kind>` for a kind an extension declared. One schema for the record, the create body and the list filter, so the three cannot drift.
@@ -72309,7 +72311,7 @@ type UpdateCompanyRequest struct {
 	Description *string `json:"description,omitempty"`
 	DisplayName *string `json:"display_name,omitempty" singleline:"true"`
 
-	// Domains Replace-set of the company's live domains (add new, archive removed, flip is_primary). Absent = untouched; an empty array clears all domains.
+	// Domains Replace-set of the company's live domains (add new, archive removed, flip is_primary). Absent = untouched; an empty array clears all domains. A list past 100 domains is 422 `too_many`, unless the company already holds at least as many.
 	Domains *[]CompanyDomainInput `json:"domains,omitempty"`
 
 	// Email The company's general address, for example info@example.com. It never creates or matches a contact.
@@ -72410,6 +72412,9 @@ type UpdateContactRequest struct {
 	// Omitting the field leaves the addresses untouched, like every other field
 	// here. Sending an empty array removes them all, which is a real answer — a
 	// contact who no longer has a working address is a fact worth recording.
+	//
+	// A list past 25 addresses is 422 `too_many`, unless the contact already
+	// holds at least as many: a longer stored list may be sent back, and not grown.
 	Emails    *[]ContactEmailInput `json:"emails,omitempty"`
 	FirstName *string              `json:"first_name,omitempty" singleline:"true"`
 	FullName  *string              `json:"full_name,omitempty" singleline:"true"`
@@ -72428,7 +72433,8 @@ type UpdateContactRequest struct {
 	// that now reaches somebody else.
 	//
 	// Omitting the field leaves the numbers untouched. Sending an empty array
-	// removes them all.
+	// removes them all. A list past 25 numbers is 422 `too_many`, unless the
+	// contact already holds at least as many.
 	//
 	// `Contact360.dead_addresses` already names which address bounced; until now the
 	// contract's own remedy for that was to visit the contact page, because the write
@@ -73434,7 +73440,9 @@ type UpdateRoleRequestRowScope string
 
 // UpdateSavedViewRequest A partial update; omitted fields keep their stored value.
 type UpdateSavedViewRequest struct {
-	Name  *string                 `json:"name,omitempty" singleline:"true"`
+	Name *string `json:"name,omitempty" singleline:"true"`
+
+	// Query Replaces the stored query whole. At most 65536 bytes as JSON; a larger one is 422 `too_large` on `query`.
 	Query *map[string]interface{} `json:"query,omitempty"`
 }
 

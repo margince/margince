@@ -94,7 +94,7 @@ func addDocumentInput(req crmcontracts.AddDealRoomDocumentRequest) (AddDocumentI
 		return AddDocumentInput{}, err
 	}
 	req.Source = source
-	if err := provenance.Refuse("source", req.Source); err != nil {
+	if err := provenance.RefuseSource(req.Source); err != nil {
 		return AddDocumentInput{}, err
 	}
 	// An omitted attachment_id decodes to the zero UUID with no error and would

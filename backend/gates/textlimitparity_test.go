@@ -18,6 +18,7 @@ import (
 	"go/ast"
 	"go/token"
 	"go/types"
+	"slices"
 	"strconv"
 	"testing"
 
@@ -93,6 +94,54 @@ var textLimits = []textLimit{
 	{sharedTextLimits, "TextDocumentCharacters", schemaPath("components", "schemas", "UpdateCompanyRequest", "properties", "description")},
 	{sharedTextLimits, "TextDocumentCharacters", schemaPath("components", "schemas", "CreateDealRequest", "properties", "description")},
 	{sharedTextLimits, "TextDocumentCharacters", schemaPath("components", "schemas", "UpdateDealRequest", "properties", "description")},
+	{"internal/modules/contacts/contacttextbounds.go", "ContactNameLimit", schemaProperty("CreateLeadRequest", "full_name")},
+	{"internal/modules/contacts/contacttextbounds.go", "ContactNameLimit", schemaProperty("UpdateLeadRequest", "full_name")},
+}
+
+// sourceBodies are the create bodies whose `source` goes through
+// provenance.RefuseSource, which refuses it past SourceIDMax.
+var sourceBodies = []string{
+	"AddDealRoomDocumentRequest", "CreateActivityRequest", "CreateCompanyRequest", "CreateContactRequest",
+	"CreateDealRoomRequest", "CreateLeadRequest", "CreateTaskRequest", "InviteDealRoomParticipantRequest",
+	"OpenDealRoomThreadRequest", "PostDealRoomCommentRequest",
+}
+
+// emailPaths are the addresses whose writer parses them with values.ParseEmail,
+// which refuses one past EmailMaxCharacters.
+var emailPaths = [][]string{
+	schemaProperty("ContactEmailInput", "email"), schemaProperty("QuickCaptureContactRequest", "email"),
+	schemaProperty("CreateLeadRequest", "email"), schemaProperty("UpdateLeadRequest", "email"),
+	schemaProperty("CreateCompanyRequest", "email"), schemaProperty("UpdateCompanyRequest", "email"),
+	schemaProperty("InviteDealRoomParticipantRequest", "email"), schemaProperty("UpdateDealRoomParticipantRequest", "email"),
+	schemaProperty("DealRoomLinkRequest", "email"), schemaProperty("InviteUserRequest", "email"),
+	schemaProperty("FormerMemberRequest", "email"), schemaProperty("UpdateMemberRequest", "email"),
+}
+
+// sharedCapLimits are the caps one shared function applies to many bodies.
+func sharedCapLimits() []textLimit {
+	var limits []textLimit
+	for _, body := range sourceBodies {
+		limits = append(limits, textLimit{"internal/shared/kernel/provenance/sourceid.go", "SourceIDMax", schemaProperty(body, "source")})
+	}
+	for _, path := range emailPaths {
+		limits = append(limits, textLimit{"internal/shared/kernel/values/email.go", "EmailMaxCharacters", path})
+	}
+	return limits
+}
+
+// listLimits are the replace-set caps the contacts module applies, each a
+// mirror of the contract's maxItems on the list.
+var listLimits = []textLimit{
+	{"internal/modules/contacts/listcaps.go", "maxContactEmails", schemaProperty("CreateContactRequest", "emails")},
+	{"internal/modules/contacts/listcaps.go", "maxContactEmails", schemaProperty("UpdateContactRequest", "emails")},
+	{"internal/modules/contacts/listcaps.go", "maxContactPhones", schemaProperty("CreateContactRequest", "phones")},
+	{"internal/modules/contacts/listcaps.go", "maxContactPhones", schemaProperty("UpdateContactRequest", "phones")},
+	{"internal/modules/contacts/listcaps.go", "maxCompanyDomains", schemaProperty("CreateCompanyRequest", "domains")},
+	{"internal/modules/contacts/listcaps.go", "maxCompanyDomains", schemaProperty("UpdateCompanyRequest", "domains")},
+}
+
+func schemaProperty(schema, property string) []string {
+	return schemaPath("components", "schemas", schema, "properties", property)
 }
 
 func corpusBody(method, route, property string) []string {
@@ -110,8 +159,8 @@ func TestEachMirroredTextCapIsTheContractsMaxLength(t *testing.T) {
 	if err := unmarshalYAML(raw, &doc); err != nil {
 		t.Fatalf("parsing the contract: %v", err)
 	}
-	for _, limit := range textLimits {
-		published := publishedMaxLength(t, doc, limit.path)
+	for _, limit := range slices.Concat(textLimits, sharedCapLimits()) {
+		published := publishedBound(t, doc, limit.path, "maxLength")
 		if applied := appliedIntConst(t, limit.file, limit.constant); applied != published {
 			t.Errorf("%s in %s applies %d and api/crm.yaml publishes maxLength %d at %v — one refuses what the other calls valid",
 				limit.constant, limit.file, applied, published, limit.path)
@@ -119,10 +168,34 @@ func TestEachMirroredTextCapIsTheContractsMaxLength(t *testing.T) {
 	}
 }
 
-// publishedMaxLength walks the contract to a schema node and answers its
-// maxLength. It fails when the node moved or carries none, because a gate
-// whose subject vanished must say so rather than pass over nothing.
+func TestEachMirroredListCapIsTheContractsMaxItems(t *testing.T) {
+	t.Parallel()
+	raw, err := gatekit.ReadFile("api/crm.yaml")
+	if err != nil {
+		t.Fatalf("reading the contract: %v", err)
+	}
+	var doc map[string]any
+	if err := yaml.Unmarshal(raw, &doc); err != nil {
+		t.Fatalf("parsing the contract: %v", err)
+	}
+	for _, limit := range listLimits {
+		published := publishedBound(t, doc, limit.path, "maxItems")
+		if applied := appliedIntConst(t, limit.file, limit.constant); applied != published {
+			t.Errorf("%s applies %d and api/crm.yaml publishes maxItems %d at %v — one refuses what the other calls valid",
+				limit.constant, applied, published, limit.path)
+		}
+	}
+}
+
 func publishedMaxLength(t *testing.T, doc map[string]any, path []string) int {
+	t.Helper()
+	return publishedBound(t, doc, path, "maxLength")
+}
+
+// publishedBound walks the contract to a schema node and answers its bound
+// keyword. It fails when the node moved or carries none, because a gate
+// whose subject vanished must say so rather than pass over nothing.
+func publishedBound(t *testing.T, doc map[string]any, path []string, keyword string) int {
 	t.Helper()
 	var node any = doc
 	for _, key := range path {
@@ -138,11 +211,11 @@ func publishedMaxLength(t *testing.T, doc map[string]any, path []string) int {
 	if !ok {
 		t.Fatalf("api/crm.yaml %v is not a schema node", path)
 	}
-	length, ok := schema["maxLength"].(int)
-	if !ok || length <= 0 {
-		t.Fatalf("api/crm.yaml %v publishes no positive maxLength — retire the cap from this gate or restore the bound", path)
+	bound, ok := schema[keyword].(int)
+	if !ok || bound <= 0 {
+		t.Fatalf("api/crm.yaml %v publishes no positive %s — retire the cap from this gate or restore the bound", path, keyword)
 	}
-	return length
+	return bound
 }
 
 // appliedIntConst reads a package's integer constant from source. The constants
