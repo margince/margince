@@ -10,6 +10,7 @@ package compose
 // A hit can be dropped by id like any other.
 
 import (
+	"strings"
 	"testing"
 
 	"github.com/margince/margince/backend/internal/compose/integration"
@@ -54,8 +55,15 @@ func TestAnExtensionKindIsSearchableByItsTitleForACallerWhoMayReadIt(t *testing.
 	}
 
 	denied := principal.Permissions{RowScope: principal.RowScopeAll, Objects: map[string]principal.ObjectGrant{"contact": {Read: true}}}
-	if got := searchTitles(t, e, denied, search.Input{Query: "berlin", Types: []string{historyDemoKind}}); len(got) != 0 {
-		t.Errorf("a caller without the kind's read right was served %v", got)
+	store := search.NewStore(e.DB())
+	_, unreadable := store.Search(e.As(e.Rep1, nil, denied), search.Input{Query: "berlin", Types: []string{historyDemoKind}})
+	_, removed := store.Search(e.As(e.Rep1, nil, denied), search.Input{Query: "berlin", Types: []string{"ext:nobody:ghost"}})
+	if unreadable == nil || removed == nil ||
+		strings.ReplaceAll(unreadable.Error(), historyDemoKind, "") != strings.ReplaceAll(removed.Error(), "ext:nobody:ghost", "") {
+		t.Errorf("unreadable kind = %v, removed kind = %v; want the same refusal, so the two cannot be told apart", unreadable, removed)
+	}
+	if got := searchTitles(t, e, denied, search.Input{Query: "berlin", WithExtensions: true}); len(got) != 0 {
+		t.Errorf("a search over every type served %v from a kind the caller may not read", got)
 	}
 }
 

@@ -7,10 +7,9 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
-	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 // A saved view and a dynamic list are the two stored filter sources
@@ -104,8 +103,8 @@ func (s *Store) ListFilterSource(ctx context.Context, id ids.ListID) (FilterSour
 	if kindRemoved(list.EntityType) {
 		return FilterSource{}, &BadInputError{Field: listIDField, Reason: "the records of this list are unavailable"}
 	}
-	if err := auth.Require(ctx, list.EntityType, principal.ActionRead); err != nil {
-		return FilterSource{}, err
+	if kindUnavailable(ctx, list.EntityType) {
+		return FilterSource{}, apperrors.ErrPermissionDenied
 	}
 	if list.ListType != listTypeDynamic {
 		members, err := s.MemberFilter(ctx, list.ID.UUID, list.EntityType)

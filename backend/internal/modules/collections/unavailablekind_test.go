@@ -87,8 +87,8 @@ func TestAListOverARemovedKindIsMarkedAndAnUnreadableOneStillRefused(t *testing.
 
 func TestTheWireNeverCarriesARemovedKindsFilter(t *testing.T) {
 	definition := map[string]any{"field": "site", "op": "eq", "value": "x"}
-	removed := wireList(listSummary{listRow: listRow{Definition: definition}, Health: healthUnavailable})
-	kept := wireList(listSummary{listRow: listRow{Definition: definition}, Health: healthOK})
+	removed := wireList(listSummary{Definition: definition, Health: healthUnavailable})
+	kept := wireList(listSummary{Definition: definition, Health: healthOK})
 	if removed.Definition != nil || kept.Definition == nil {
 		t.Errorf("definitions = %v, %v; want none for the removed kind and the filter otherwise", removed.Definition, kept.Definition)
 	}

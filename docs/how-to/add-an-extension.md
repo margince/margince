@@ -1908,7 +1908,7 @@ Lists, saved views and reports over the unit's record kinds stay, and nothing el
 - A saved view over one of its kinds keeps its row. A change to its filter answers 422.
 - Its reports leave the report directory, because they are no longer registered.
 
-All of these come back when the unit is composed again, except the paused rules, which a person resumes.
-A member who may not read a kind is told nothing about its lists: the library leaves them out, and a
-direct read answers 403. A new list, saved view or search over a kind answers 422 alike whether the unit
-was removed or the caller may not read it.
+All of these come back when the unit is composed again. The paused rules stay paused until someone
+resumes them. A member who may not read a kind is told nothing about its lists: the library leaves them
+out, and a direct read answers 403. A new list, saved view or search over a kind answers the same 422
+whether the unit was removed or the caller may not read it.

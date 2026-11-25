@@ -207,7 +207,7 @@ func (s *Store) Search(ctx context.Context, in Input) (Page, error) {
 			"q holds %d words and a search takes at most %d; keep the words that name what you are looking for",
 			words, maxQueryWords)}
 	}
-	types := requestedTypes(in)
+	types := requestedTypes(ctx, in)
 	if in.Typeahead && !namesOnlyMail(in.Types) && fragmentTooShortForMail(query) {
 		types = slices.DeleteFunc(slices.Clone(types), func(t string) bool { return t == entityActivity })
 	}
