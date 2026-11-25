@@ -6904,6 +6904,10 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "bulk.selectPage": "Alle Zeilen dieser Seite auswählen",
   "bulk.selectAll": "Alle auswählen",
   "bulk.clearSelection": "Auswahl aufheben",
+  "bulk.selecting_one": "{count} wird ausgewählt…",
+  "bulk.selecting_other": "{count} werden ausgewählt…",
+  "bulk.selectingOf_one": "{count} von {total} wird ausgewählt…",
+  "bulk.selectingOf_other": "{count} von {total} werden ausgewählt…",
   "bulk.selectionLimit_one":
     "Eine Änderung umfasst höchstens {count} Datensatz, daher endet die Auswahl dort.",
   "bulk.selectionLimit_other":

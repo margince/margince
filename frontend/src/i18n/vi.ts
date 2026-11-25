@@ -6722,6 +6722,10 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "bulk.selectPage": "Chọn mọi dòng trên trang này",
   "bulk.selectAll": "Chọn tất cả",
   "bulk.clearSelection": "Bỏ chọn",
+  "bulk.selecting_one": "Đang chọn {count}…",
+  "bulk.selecting_other": "Đang chọn {count}…",
+  "bulk.selectingOf_one": "Đang chọn {count} trên {total}…",
+  "bulk.selectingOf_other": "Đang chọn {count} trên {total}…",
   "bulk.selectionLimit_one":
     "Mỗi lần thay đổi tối đa {count} hồ sơ, nên lựa chọn dừng ở đó.",
   "bulk.selectionLimit_other":

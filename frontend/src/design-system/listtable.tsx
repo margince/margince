@@ -191,6 +191,7 @@ export function ListTable<Row>({
     hasMore,
     onLoadMore,
     failed: problem != null,
+    total: serverTotal,
   });
   const frozen = useFrozenEdge(scrollerNode, shown.length, display.dense);
   const displayDials = useDisplayRows({

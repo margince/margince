@@ -255,7 +255,7 @@ Also called: save a segment, keep an advanced search.
 ### How do I select several records at once?
 To select many records in Margince, open **Contacts**, **Companies**, **Leads** or **Deals** as a **Table**. Tick the box at the start of each row. A bar shows above the rows saying "{count} selected", with the actions for that list. Archived rows have no box, and neither do closed deals or qualified and disqualified leads. **Projects** have no way to tick many rows: change those one at a time.
 
-The box in the name column's heading ticks every row on the page that has a box. Once one row is ticked, the bar ends with **Select all**, which ticks every record that matches the list. One change takes at most 500 records, so **Select all** stops at 500 and says so. **Clear selection** unticks them all.
+The box in the name column's heading ticks every row on the page that has a box. Once one row is ticked, the bar ends with **Select all**, which ticks every record that matches the list. One change takes at most 500 records, so **Select all** stops at 500 and says so. On a long list it takes a moment, and the bar says how far it is, for example "Selecting 150 of 500…". **Clear selection** unticks them all.
 
 Also called: multi-select, bulk edit, mass update, select all.
 

@@ -6871,6 +6871,10 @@ export const en = {
   "bulk.selectPage": "Select every row on this page",
   "bulk.selectAll": "Select all",
   "bulk.clearSelection": "Clear selection",
+  "bulk.selecting_one": "Selecting {count}…",
+  "bulk.selecting_other": "Selecting {count}…",
+  "bulk.selectingOf_one": "Selecting {count} of {total}…",
+  "bulk.selectingOf_other": "Selecting {count} of {total}…",
   "bulk.selectionLimit_one":
     "One change takes at most {count} record, so the selection stops there.",
   "bulk.selectionLimit_other":
