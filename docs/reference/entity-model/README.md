@@ -30,8 +30,8 @@ module to put a change in, read [modules.md](../modules.md).
 
 | | |
 |---|--:|
-| Tables | 358 |
-| Columns | 4426 |
+| Tables | 359 |
+| Columns | 4431 |
 | Foreign keys | 624 |
 | Owning areas | 40 |
 
@@ -107,7 +107,7 @@ erDiagram
 | [collections](collections.md) | 13 |
 | [commissions](commissions.md) | 1 |
 | [comms](comms.md) | 1 |
-| [compose](compose.md) | 47 |
+| [compose](compose.md) | 48 |
 | [consent](consent.md) | 23 |
 | [contacts](contacts.md) | 49 |
 | [continuity](continuity.md) | 1 |
@@ -313,6 +313,7 @@ erDiagram
 | [`existing_customer_notice_purpose`](consent.md#existing_customer_notice_purpose) | consent | 2 | 0 |
 | [`extension_ingest_position`](compose.md#extension_ingest_position) | compose | 4 | 0 |
 | [`extension_ingest_refusal`](compose.md#extension_ingest_refusal) | compose | 6 | 0 |
+| [`extension_object_usage`](compose.md#extension_object_usage) | compose | 5 | 0 |
 | [`extension_secret`](platform.md#extension_secret) | platform | 7 | 0 |
 | [`federated_identity`](identity.md#federated_identity) | identity | 6 | 0 |
 | [`field_mask`](identity.md#field_mask) | identity | 6 | 0 |

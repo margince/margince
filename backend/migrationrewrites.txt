@@ -262,3 +262,4 @@
 1795597144_the_connection_checks_are_validated.down.sql | * | the down migration is a single SELECT 1 that changes nothing
 1795597145_the_new_connection_columns_check_their_text_limits.up.sql | * | the file only replaces trigger definitions and writes no row
 1795597145_the_new_connection_columns_check_their_text_limits.down.sql | * | the file only replaces trigger definitions and writes no row
+1795611246_an_extension_counts_its_stored_objects.up.sql | * | creates a new empty table and its two text guards; the guards act on later writes only, and no row exists to change

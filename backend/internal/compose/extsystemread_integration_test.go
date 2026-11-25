@@ -651,6 +651,7 @@ func TestARemovedUnitsObjectsAreSweptByALaterBootIfTheFirstHadNoStore(t *testing
 	both := []extension.Extension{{Name: "keeper", Version: "1"}, {Name: "leaver", Version: "1"}}
 	observe(both)
 	keeper, leaver := put("keeper"), put("leaver")
+	e.WsExec(t, `INSERT INTO extension_object_usage (id, unit, objects, bytes) VALUES ($1, 'keeper', 1, 1), ($2, 'leaver', 1, 1)`, ids.NewV7(), ids.NewV7())
 	BindExtensionObjects(nil)
 	observe(both[:1])
 	if !present(leaver) {
@@ -663,5 +664,8 @@ func TestARemovedUnitsObjectsAreSweptByALaterBootIfTheFirstHadNoStore(t *testing
 	}
 	if !present(keeper) {
 		t.Error("a unit still composed lost its object")
+	}
+	if counted := e.WsScalar(t, `SELECT string_agg(unit, ',' ORDER BY unit) FROM extension_object_usage`); counted != "keeper" {
+		t.Errorf("units still counted after the sweep = %q, want keeper alone", counted)
 	}
 }

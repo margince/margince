@@ -14661,6 +14661,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "audit.kind.deal_suggestion": "Đề xuất deal",
   "audit.kind.dedupe_candidate": "Hồ sơ có thể trùng",
   "audit.kind.existing_customer_notice": "Thông báo khách hàng hiện có",
+  "audit.kind.extension_object_usage": "Bộ nhớ của tiện ích mở rộng",
   "audit.kind.finance_connection": "Kết nối kế toán",
   "audit.kind.finance_customer_link": "Liên kết khách hàng kế toán",
   "audit.kind.finance_external_customer": "Khách hàng kế toán",

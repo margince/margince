@@ -15081,6 +15081,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "audit.kind.deal_suggestion": "Deal-Vorschlag",
   "audit.kind.dedupe_candidate": "Mögliches Duplikat",
   "audit.kind.existing_customer_notice": "Hinweis auf Bestandskunden",
+  "audit.kind.extension_object_usage": "Erweiterungsspeicher",
   "audit.kind.finance_connection": "Buchhaltungsverbindung",
   "audit.kind.finance_customer_link": "Verknüpfung mit Buchhaltungskunden",
   "audit.kind.finance_external_customer": "Buchhaltungskunde",

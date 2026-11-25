@@ -15001,6 +15001,7 @@ export const en = {
   "audit.kind.deal_suggestion": "Deal suggestion",
   "audit.kind.dedupe_candidate": "Possible duplicate",
   "audit.kind.existing_customer_notice": "Existing customer notice",
+  "audit.kind.extension_object_usage": "Extension storage",
   "audit.kind.finance_connection": "Accounting connection",
   "audit.kind.finance_customer_link": "Accounting customer link",
   "audit.kind.finance_external_customer": "Accounting customer",
