@@ -46,7 +46,6 @@ var unkeyedReferences = gatekit.Waive(map[string]string{
 	"partner.activation_deal_id":                "evidence of the activation; a check requires it once a partner is active",
 	"partner.activation_lead_id":                "evidence of the activation; erasure deletes leads, and a cleared value would break the pairing check",
 	"project_phase_history.audit_log_id":        "the audit log is append only, and a history row must not block an erasure",
-	"sales_initiative_baseline.stage_id":        "the baseline is written once at launch and never rewritten",
 	"scheduled_send.agent_passport_id":          "provenance of the agent that scheduled the send; a passport is revoked, never deleted",
 	"system_log.passport_id":                    "an operational log row outlives what it describes and is never joined",
 	"team_weekly_review.team_id":                "a disbanded team must leave its past weeks readable",

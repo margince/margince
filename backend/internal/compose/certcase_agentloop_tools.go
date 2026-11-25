@@ -18,6 +18,7 @@ import (
 	"github.com/margince/margince/backend/internal/compose/briefs"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/agents"
+	"github.com/margince/margince/backend/internal/modules/agents/runner"
 	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -191,6 +192,9 @@ type agentLoopWork struct {
 	// per deal, where a later brief pass replaces an earlier finding.
 	onceEach bool
 	read     func(json.RawMessage) (agentLoopWorklist, error)
+	// served is the subjects a live answer of the list tool names. It reads the
+	// envelope's data leniently, because the surface adds a readable amount.
+	served func(json.RawMessage) ([]string, error)
 	// wrote is the subjects one write names, refusing what the store refuses.
 	wrote func(args json.RawMessage, list agentLoopWorklist) ([]string, error)
 	// acknowledge is what the tool answers an accepted write with.
@@ -204,8 +208,8 @@ var agentLoopWorks = map[string]agentLoopWork{
 		list: "read_brief", read: readBriefWorklist, wrote: annotatedItems, acknowledge: acknowledgeAnnotation,
 	},
 	"overnight_at_risk_sweep": {
-		list: "whats_slipping_this_week", onceEach: true, read: readSlippingWorklist, wrote: loggedDeals,
-		acknowledge: acknowledgeLoggedNote,
+		list: "whats_slipping_this_week", onceEach: true, read: readSlippingWorklist, served: servedSlippingDeals,
+		wrote: loggedDeals, acknowledge: acknowledgeLoggedNote,
 	},
 }
 
@@ -242,6 +246,23 @@ func readSlippingWorklist(raw json.RawMessage) (agentLoopWorklist, error) {
 	normalized, err := json.Marshal(slipping)
 	list.normalized = normalized
 	return list, err
+}
+
+// servedSlippingDeals is the deals one sealed whats_slipping_this_week answer lists.
+func servedSlippingDeals(answer json.RawMessage) ([]string, error) {
+	var sealed agents.Envelope
+	if err := json.Unmarshal(answer, &sealed); err != nil {
+		return nil, fmt.Errorf("the whats_slipping_this_week answer is not a sealed result: %w", err)
+	}
+	var slipping agents.WhatsSlippingResult
+	if err := json.Unmarshal(sealed.Data, &slipping); err != nil {
+		return nil, fmt.Errorf("the whats_slipping_this_week answer is not the list the tool serves: %w", err)
+	}
+	deals := make([]string, 0, len(slipping.Deals))
+	for _, deal := range slipping.Deals {
+		deals = append(deals, deal.DealID.String())
+	}
+	return deals, nil
 }
 
 // annotatedItems refuses what the brief's store refuses: an item that is not
@@ -321,8 +342,7 @@ func (w agentLoopWork) gradeWrites(writes []json.RawMessage, list agentLoopWorkl
 	for _, subject := range list.subjects {
 		listed[subject] = true
 	}
-	counts := map[string]int{}
-	var problems []string
+	var written, problems []string
 	for _, args := range writes {
 		subjects, err := w.wrote(args, list)
 		if err != nil {
@@ -336,15 +356,15 @@ func (w agentLoopWork) gradeWrites(writes []json.RawMessage, list agentLoopWorkl
 			if !listed[subject] {
 				problems = append(problems, fmt.Sprintf("%s wrote about %s, which is not on the %s list", w.write, subject, w.list))
 			}
-			counts[subject]++
+			written = append(written, subject)
 		}
 	}
-	for _, subject := range list.subjects {
-		switch n := counts[subject]; {
-		case n == 0:
-			problems = append(problems, fmt.Sprintf("nothing was written about %s from the %s list", subject, w.list))
-		case n > 1 && w.onceEach:
-			problems = append(problems, fmt.Sprintf("%s was written about %d times; the goal asks for one", subject, n))
+	for _, tally := range runner.NotWrittenOnce(list.subjects, written) {
+		switch {
+		case tally.Writes == 0:
+			problems = append(problems, fmt.Sprintf("nothing was written about %s from the %s list", tally.Subject, w.list))
+		case w.onceEach:
+			problems = append(problems, fmt.Sprintf("%s was written about %d times; the goal asks for one", tally.Subject, tally.Writes))
 		}
 	}
 	return problems

@@ -489,13 +489,12 @@ The 14 tables owned by `reporting`, as the migrations build them. [Back to the e
 
 ## sales_target_revision
 
-5 columns · primary key `(target_id, revision)` · referenced by 0 foreign keys
+4 columns · primary key `(target_id, revision)` · referenced by 0 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
 | `created_by` | `uuid` | yes | Points at `app_user.id`. |
 | `definition` | `jsonb` | yes |  |
-| `effective_at` | `timestamp with time zone` | yes |  |
 | `revision` | `bigint` | yes |  |
 | `target_id` | `uuid` | yes | Points at `sales_target.id`. |
 

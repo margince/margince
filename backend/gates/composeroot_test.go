@@ -34,14 +34,14 @@ const composeRootDir = "internal/compose"
 // The ceilings below hold develop and main together: each side's additions
 // stayed under its own ceilings, and the two sets of additions sum to these.
 const (
-	composeRootProductionFiles = 1382
+	composeRootProductionFiles = 1383
 	// Raised by 2 files for the extension mail-file read cases and the purge
 	// receipt cases, which drive this package's unexported seams. Raised by 1
 	// production and 1 test file for the series-split fold and its cases.
 	// Raised by 1 for the removed-unit list cases, which drive the unexported
 	// Live List check and list export over a kind no unit declares. Raised by 1
 	// test file for the data reset cases of an event the sweep orphaned.
-	composeRootTestFiles = 1913
+	composeRootTestFiles = 1916
 	// Raised by 107 for the floor of a figure every reader is shown alike. Raised
 	// by 1 for the import that binds one zone lookup to each attention read.
 	// Raised by 249 production and 62 test lines for the full-path certification
@@ -87,8 +87,10 @@ const (
 	// Raised by 6 production lines for the signals and initiatives carriers
 	// every contact merge door is wired with. Raised by 6 test lines for the
 	// seat without an introduction grant that the preview refusal case needs.
-	composeRootProductionLines = 230_813
-	composeRootTestLines       = 361_032
+	// Raised by 110 production and 297 test lines, and 3 test files, when main's
+	// Anthropic setup met develop's cases in the back-sync.
+	composeRootProductionLines = 230_923
+	composeRootTestLines       = 361_329
 )
 
 // A read under these floors stopped early or read the wrong place, and would

@@ -201,8 +201,8 @@ func TestADismissedThreadIsNotSwept(t *testing.T) {
 		t.Fatal(err)
 	}
 	thread := threadKeyOf(t, e, activity)
-	e.exec(t, `INSERT INTO activity_sales_state (thread_key, kind, channel_provider, set_by)
-		VALUES ($1, 'email', '', $2)`, thread, e.rep)
+	e.exec(t, `INSERT INTO activity_sales_state (thread_key, kind, channel_provider)
+		VALUES ($1, 'email', '')`, thread)
 
 	stale, _, err := store.OwedRestale(asClassifier(e), rulesetNew, 100, 400, 400)
 	if err != nil {
