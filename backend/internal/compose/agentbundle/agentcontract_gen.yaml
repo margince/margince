@@ -54355,7 +54355,7 @@ components:
           description: 'The display name of a human `captured_by`. Null for a machine principal and for a member whose user row no longer resolves.'
     AssessNoticeSource:
       type: object
-      required: [kind, note]
+      required: [kind]
       properties:
         kind:
           type: string

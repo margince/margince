@@ -78447,7 +78447,7 @@ components:
 
     AssessNoticeSource:
       type: object
-      required: [kind, note]
+      required: [kind]
       properties:
         kind:
           type: string

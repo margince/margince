@@ -31,9 +31,9 @@
   "catalog": {
     "tools": 48,
     "system_frame_tokens": 730,
-    "tokens": 53521,
+    "tokens": 53743,
     "median_tool_tokens": 806,
-    "mean_tool_tokens": 1114
+    "mean_tool_tokens": 1119
   },
   "agents": [
     {
@@ -68,11 +68,11 @@
         "whats_slipping_this_week"
       ],
       "of_served_tools": 48,
-      "tokens": 6705,
-      "listing_tokens": 3354,
-      "step_schema_tokens": 2620,
+      "tokens": 6711,
+      "listing_tokens": 3357,
+      "step_schema_tokens": 2623,
       "percent_of_ceiling": 20,
-      "headroom_tokens": 16505,
+      "headroom_tokens": 16499,
       "dangling_cross_references": [
         "at_risk_relationships → read_relationships",
         "log_activity → draft_outbound",
@@ -85,7 +85,7 @@
   "tool_cost": [
     {
       "name": "read_details",
-      "tokens": 4600
+      "tokens": 4604
     },
     {
       "name": "read_reports",
@@ -96,12 +96,12 @@
       "tokens": 3239
     },
     {
-      "name": "change_activities",
-      "tokens": 2977
+      "name": "read_workspace",
+      "tokens": 2994
     },
     {
-      "name": "read_workspace",
-      "tokens": 2779
+      "name": "change_activities",
+      "tokens": 2980
     },
     {
       "name": "change_state",

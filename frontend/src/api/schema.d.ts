@@ -57525,7 +57525,7 @@ export interface components {
              */
             met_in_person: boolean;
             /** @description Evidence in the officer's words. Required when no existing evidence is selected. */
-            note: string;
+            note?: string;
             selected_evidence?: components["schemas"]["NoticeSourceEvidenceReference"];
             /** @description When provided, refuses a confirmation if the case, selected evidence or proposed assessment changed since preview. */
             preview_token?: string;

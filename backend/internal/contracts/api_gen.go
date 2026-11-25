@@ -37215,7 +37215,7 @@ type AssessNoticeSource struct {
 	MetInPerson *bool `json:"met_in_person,omitempty"`
 
 	// Note Evidence in the officer's words. Required when no existing evidence is selected.
-	Note       string     `json:"note"`
+	Note       *string    `json:"note,omitempty"`
 	ObtainedAt *time.Time `json:"obtained_at,omitempty"`
 
 	// PreviewToken When provided, refuses a confirmation if the case, selected evidence or proposed assessment changed since preview.
