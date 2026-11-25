@@ -310,10 +310,17 @@ to how text is indexed. Then it says "Reindexing this set", and that no data was
 lost. A question asked while that runs gets the answer that the set is not ready,
 and is not answered from part of the set.
 
-### Removing things from a document set
+### Changing or removing a document set
 
-**Archive set**, in the set's **…** (**Actions**) menu: "Archive {name}? The set and its
-documents are no longer searchable. Nothing is deleted."
+**Edit set**, in the set's **…** (**Actions**) menu, changes its **Name**, **Description** and
+**What this set covers**. Click **Save**. A set that ships with Margince can be edited too.
+
+**Archive set**, in the same menu: "Archive {name}? The set and its documents are no longer
+searchable. Nothing is deleted, and Show archived sets brings it back."
+
+To bring an archived set back, turn on **Show archived sets** in the **Document sets** head. The
+archived set shows the **Archived** badge. Choose **Restore set** in its **…** menu. Its documents
+are searchable again. A set that was the one **Ask your documents** opens on stays an ordinary set.
 
 **Delete**, in a document's **…** (**Actions**) menu: "Delete {name}? The file, its extracted
 text and its search index are permanently deleted."

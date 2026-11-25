@@ -15719,7 +15719,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "knowledge.archive": "Sammlung archivieren",
   "knowledge.archiveConfirm.title": "{name} archivieren?",
   "knowledge.archiveConfirm.body":
-    "Die Sammlung und ihre Dokumente sind nicht mehr durchsuchbar. Es wird nichts gelöscht.",
+    "Die Sammlung und ihre Dokumente sind nicht mehr durchsuchbar. Es wird nichts gelöscht, und „Archivierte Sammlungen zeigen“ holt sie zurück.",
   "knowledge.archiveShipped":
     "Diese Sammlung kann nicht archiviert werden, da sie mit Margince ausgeliefert wird.",
   "knowledge.uploadShipped":
@@ -15752,6 +15752,13 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Ein Satz. Der Satz wird allen gezeigt, deren Frage diese Sammlung nicht abdeckt.",
   "knowledge.searchable": "Durchsuchbar",
   "knowledge.reindexingBadge": "Wird neu indexiert",
+  "knowledge.edit": "Sammlung bearbeiten",
+  "knowledge.edit.title": "{name} bearbeiten",
+  "knowledge.edit.save": "Speichern",
+  "knowledge.edit.description": "Beschreibung",
+  "knowledge.showArchived": "Archivierte Sammlungen zeigen",
+  "knowledge.archivedBadge": "Archiviert",
+  "knowledge.restore": "Sammlung wiederherstellen",
   "settings.tab.privacy": "Datenschutz und Aufbewahrung",
   "verdictPass.subject.senders": "Absendeadressen",
   "verdictPass.subject.threads": "Threads",

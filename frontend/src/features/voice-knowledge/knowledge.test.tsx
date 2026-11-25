@@ -106,7 +106,9 @@ function backendFor(
 ) {
   const posts: string[] = [];
   const deletes: string[] = [];
+  const patches: unknown[] = [];
   let sets = opts.sets ?? [corpus()];
+  let archived: ReturnType<typeof corpus>[] = [];
   let documents = opts.documents ?? [document()];
   const fetchMock = vi.fn(
     async (input: RequestInfo | URL, init?: RequestInit) => {
@@ -134,7 +136,22 @@ function backendFor(
         }
         return jsonResponse({ items: documents });
       }
+      if (req.url.endsWith("/restore")) {
+        posts.push(req.url);
+        const back = archived.filter((set) => req.url.includes(set.id));
+        archived = archived.filter((set) => !req.url.includes(set.id));
+        sets = [...sets, ...back.map((set) => ({ ...set, archived_at: null }))];
+        return jsonResponse(sets[sets.length - 1]);
+      }
       if (req.url.includes("/knowledge/corpora")) {
+        if (req.method === "PATCH") {
+          const body = await req.json();
+          patches.push(body);
+          sets = sets.map((set) =>
+            req.url.endsWith(set.id) ? { ...set, ...body } : set,
+          );
+          return jsonResponse(sets[0]);
+        }
         if (req.method === "POST") {
           posts.push(req.url);
           if (opts.refuse?.create) return opts.refuse.create();
@@ -143,15 +160,26 @@ function backendFor(
         if (req.method === "DELETE") {
           deletes.push(req.url);
           if (opts.refuse?.archive) return opts.refuse.archive();
+          archived = [
+            ...archived,
+            ...sets
+              .filter((set) => req.url.endsWith(set.id))
+              .map((set) => ({ ...set, archived_at: "2026-08-02T00:00:00Z" })),
+          ];
           sets = sets.filter((set) => !req.url.endsWith(set.id));
           return new Response(null, { status: 204 });
         }
-        return jsonResponse({ items: sets });
+        const withArchived = new URL(req.url).searchParams.get(
+          "include_archived",
+        );
+        return jsonResponse({
+          items: withArchived === "true" ? [...sets, ...archived] : sets,
+        });
       }
       throw new Error(`unexpected request: ${req.method} ${req.url}`);
     },
   );
-  return { fetchMock, posts, deletes };
+  return { fetchMock, posts, deletes, patches };
 }
 
 const render = (ui: ReactNode, locale: Locale = "en") => {
@@ -430,6 +458,56 @@ describe("KnowledgeCard", () => {
     expect(globalThis.document.activeElement?.textContent).toBe(
       "Document sets",
     );
+  });
+
+  it("renames a set through Edit, sending only the field that changed", async () => {
+    const backend = backendFor(ADMIN);
+    vi.stubGlobal("fetch", backend.fetchMock);
+    render(<KnowledgeCard />);
+    const user = userEvent.setup();
+    await user.click(
+      await screen.findByRole("button", { name: "Actions for How-to" }),
+    );
+    await user.click(screen.getByRole("button", { name: "Edit set" }));
+    const dialog = screen.getByRole("dialog");
+    const name = within(dialog).getByRole("textbox", { name: /^name/i });
+    await user.clear(name);
+    await user.type(name, "Runbook");
+    await user.click(within(dialog).getByRole("button", { name: "Save" }));
+    await waitFor(() => expect(backend.patches).toEqual([{ name: "Runbook" }]));
+    expect(await screen.findByText("Runbook")).toBeTruthy();
+  });
+
+  it("shows an archived set under Show archived sets and restores it", async () => {
+    const backend = backendFor(ADMIN);
+    vi.stubGlobal("fetch", backend.fetchMock);
+    render(<KnowledgeCard />);
+    const user = userEvent.setup();
+    await user.click(
+      await screen.findByRole("button", { name: "Actions for How-to" }),
+    );
+    await user.click(screen.getByRole("button", { name: /archive set/i }));
+    await user.click(
+      within(screen.getByRole("dialog")).getByRole("button", {
+        name: /^archive set$/i,
+      }),
+    );
+    await waitFor(() => expect(screen.queryByText("How-to")).toBeNull());
+
+    await user.click(
+      screen.getByRole("switch", { name: /show archived sets/i }),
+    );
+    expect(await screen.findByText("Archived")).toBeTruthy();
+    await user.click(
+      screen.getByRole("button", { name: "Actions for How-to" }),
+    );
+    expect(screen.queryByRole("button", { name: "Edit set" })).toBeNull();
+    await user.click(screen.getByRole("button", { name: "Restore set" }));
+    await waitFor(() =>
+      expect(backend.posts.some((url) => url.endsWith("/restore"))).toBe(true),
+    );
+    await waitFor(() => expect(screen.queryByText("Archived")).toBeNull());
+    expect(screen.getByText("How-to")).toBeTruthy();
   });
 
   it("returns focus to the menu when the archive is called off", async () => {
@@ -887,7 +965,8 @@ describe("KnowledgeCard documents", () => {
 });
 
 describe("KnowledgeCard, a set Margince ships", () => {
-  it("offers no archive and no upload on it", async () => {
+  // Its words can still be edited, and an update keeps those edits.
+  it("offers an edit but no archive and no upload on it", async () => {
     vi.stubGlobal(
       "fetch",
       backendFor(ADMIN, { sets: [corpus({ shipped: true })] }).fetchMock,
@@ -899,9 +978,11 @@ describe("KnowledgeCard, a set Margince ships", () => {
       await screen.findByRole("button", { name: "Documents in How-to" }),
     );
     await screen.findByRole("table", { name: "Documents in How-to" });
-    expect(
-      screen.queryByRole("button", { name: "Actions for How-to" }),
-    ).toBeNull();
+    await user.click(
+      screen.getByRole("button", { name: "Actions for How-to" }),
+    );
+    expect(screen.getByRole("button", { name: "Edit set" })).toBeTruthy();
+    expect(screen.queryByRole("button", { name: /archive set/i })).toBeNull();
     expect(screen.queryByLabelText(/add document/i)).toBeNull();
   });
 

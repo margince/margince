@@ -15,6 +15,7 @@ import (
 	"testing"
 
 	"github.com/margince/margince/backend/internal/modules/knowledge"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -239,12 +240,104 @@ func TestAnArchivedCorpusLeavesTheList(t *testing.T) {
 	if err := store.ArchiveCorpus(ctx, ids.UUID(gone.Id)); err != nil {
 		t.Fatalf("archive: %v", err)
 	}
-	list, err := store.ListCorpora(ctx)
+	list, err := store.ListCorpora(ctx, storekit.LiveOnly)
 	if err != nil {
 		t.Fatalf("list: %v", err)
 	}
 	if len(list) != 1 || list[0].Id != kept.Id {
 		t.Fatalf("list = %d corpora, want only the live one", len(list))
+	}
+	all, err := store.ListCorpora(ctx, storekit.IncludeArchived)
+	if err != nil {
+		t.Fatalf("list with archived: %v", err)
+	}
+	if len(all) != 2 || all[0].Id != gone.Id || all[0].ArchivedAt == nil || all[1].ArchivedAt != nil {
+		t.Fatalf("list with archived = %+v, want the archived set stamped beside the live one", all)
+	}
+}
+
+// A restore brings back the set, its documents and their chunks. A second
+// restore changes nothing and writes no second audit row.
+func TestRestoringACorpusBringsBackItsDocumentsAndChunks(t *testing.T) {
+	e := Setup(t)
+	store := knowledge.NewStore(e.DB())
+	ctx := e.As(e.Rep1, nil, corpusAdminPerms)
+
+	made, err := store.CreateCorpus(ctx, howTo("How-to"))
+	if err != nil {
+		t.Fatalf("create: %v", err)
+	}
+	corpusID := ids.UUID(made.Id)
+	seedDocumentWithChunk(t, e, corpusID)
+	if err := store.ArchiveCorpus(ctx, corpusID); err != nil {
+		t.Fatalf("archive: %v", err)
+	}
+	restored, err := store.RestoreCorpus(ctx, corpusID)
+	if err != nil {
+		t.Fatalf("restore: %v", err)
+	}
+	if restored.ArchivedAt != nil || restored.Coverage.DocumentsTotal != 1 {
+		t.Fatalf("restored = archived %v with %d documents, want a live set with its document", restored.ArchivedAt, restored.Coverage.DocumentsTotal)
+	}
+	if live := liveChunkCount(t, e, corpusID); live != 1 {
+		t.Fatalf("%d chunk(s) live after the restore, want 1", live)
+	}
+	after := corpusAuditRows(t, e, corpusID)
+	if _, err := store.RestoreCorpus(ctx, corpusID); err != nil {
+		t.Fatalf("second restore: %v", err)
+	}
+	if again := corpusAuditRows(t, e, corpusID); again != after {
+		t.Fatalf("the second restore wrote %d more audit row(s)", again-after)
+	}
+}
+
+// A set that was the default comes back as an ordinary set, so the default that
+// moved while it was archived stays where it is.
+func TestARestoredDefaultCorpusLeavesTheDefaultWhereItMoved(t *testing.T) {
+	e := Setup(t)
+	store := knowledge.NewStore(e.DB())
+	ctx := e.As(e.Rep1, nil, corpusAdminPerms)
+
+	first := howTo("First")
+	first.DefaultAsk = true
+	made, err := store.CreateCorpus(ctx, first)
+	if err != nil {
+		t.Fatalf("create first: %v", err)
+	}
+	if err := store.ArchiveCorpus(ctx, ids.UUID(made.Id)); err != nil {
+		t.Fatalf("archive: %v", err)
+	}
+	second := howTo("Second")
+	second.DefaultAsk = true
+	now, err := store.CreateCorpus(ctx, second)
+	if err != nil {
+		t.Fatalf("create second: %v", err)
+	}
+	restored, err := store.RestoreCorpus(ctx, ids.UUID(made.Id))
+	if err != nil {
+		t.Fatalf("restore: %v", err)
+	}
+	if restored.DefaultAsk {
+		t.Fatal("the restored set took the default back")
+	}
+	if kept, err := store.ReadCorpus(ctx, ids.UUID(now.Id)); err != nil || !kept.DefaultAsk {
+		t.Fatalf("the current default = %+v (%v), want it to keep the flag", kept, err)
+	}
+}
+
+// Restoring is archiving undone, so it takes the archive permission.
+func TestARepMayNotRestoreACorpus(t *testing.T) {
+	e := Setup(t)
+	store := knowledge.NewStore(e.DB())
+	made, err := store.CreateCorpus(e.As(e.Rep1, nil, corpusAdminPerms), howTo("How-to"))
+	if err != nil {
+		t.Fatalf("create: %v", err)
+	}
+	if err := store.ArchiveCorpus(e.As(e.Rep1, nil, corpusAdminPerms), ids.UUID(made.Id)); err != nil {
+		t.Fatalf("archive: %v", err)
+	}
+	if _, err := store.RestoreCorpus(e.As(e.Rep1, nil, corpusRepPerms), ids.UUID(made.Id)); !errors.Is(err, apperrors.ErrPermissionDenied) {
+		t.Fatalf("a rep's restore = %v, want ErrPermissionDenied", err)
 	}
 }
 

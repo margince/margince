@@ -15,9 +15,9 @@ input and output schema in folds below it. What a tool may do and whether a huma
 |---|---:|
 | Tools | 48 |
 | Resources | 14 |
-| Tool catalog | 244.7 KB |
+| Tool catalog | 244.8 KB |
 | Resource catalog | 5.5 KB |
-| Approx. wire tokens | 64038 |
+| Approx. wire tokens | 64063 |
 | Largest tool | `read_details` (15.8 KB) |
 | Scopes rendered | `read`, `draft`, `write`, `send`, `enrich` |
 
@@ -34,9 +34,9 @@ tool adds to that listing, and what it costs each scheduled agent, agent by agen
 |---|---:|---:|---|
 | Output schemas | 33.7 KB | 13% | **No**: a result's shape, never listed to a model |
 | Descriptions (incl. governance clause) | 51.0 KB | 20% | Yes, every step |
-| Input schemas | 148.4 KB | 60% | Yes, every step |
+| Input schemas | 148.5 KB | 60% | Yes, every step |
 | _Names, annotations, punctuation_ | 11.6 KB | 4% | Partly |
-| **Description + input schema** | **199.4 KB** | **81%** | **the recurring cost** |
+| **Description + input schema** | **199.5 KB** | **81%** | **the recurring cost** |
 
 Output schemas count in the total but are never sent to a model;
 descriptions and input schemas are what each step pays for.
@@ -70,7 +70,7 @@ descriptions and input schemas are what each step pays for.
 | [`change_access`](#change_access) | Share records and set up members and teams |  |  | 1152 |
 | [`change_activities`](#change_activities) | Log, plan and file activities |  |  | 2977 |
 | [`change_attention`](#change_attention) | Act on proposals, notices and the weekly plan |  |  | 1833 |
-| [`change_capture`](#change_capture) | Decide what comes into the CRM |  |  | 1891 |
+| [`change_capture`](#change_capture) | Decide what comes into the CRM |  |  | 1918 |
 | [`change_compliance`](#change_compliance) | Record consent, stops, holds and privacy work |  |  | 1289 |
 | [`change_lists`](#change_lists) | Make and change lists |  |  | 620 |
 | [`change_my_settings`](#change_my_settings) | Change the user's own preferences and voice |  |  | 867 |
@@ -105,7 +105,7 @@ descriptions and input schemas are what each step pays for.
 | [`read_reports`](#read_reports) | Read sales reports | yes |  | 3353 |
 | [`read_tags`](#read_tags) | Read tags | yes |  | 358 |
 | [`read_view`](#read_view) | Read a view | yes |  | 1921 |
-| [`read_workspace`](#read_workspace) | Read how this workspace is set up | yes |  | 2994 |
+| [`read_workspace`](#read_workspace) | Read how this workspace is set up | yes |  | 2996 |
 | [`resolve_duplicates`](#resolve_duplicates) | Merge two records or dismiss a flagged pair |  |  | 618 |
 | [`run_research`](#run_research) | Run AI work for your user |  |  | 1365 |
 | [`schedule_meeting`](#schedule_meeting) | Invite to a meeting |  |  | 527 |
@@ -1250,7 +1250,7 @@ withdraw_owner_identity.)
 {
   "properties": {
     "action": {
-      "description": "read_workspace topic actions lists each action's body\nadd_consumer_mail_domain: Add a consumer-mail domain, or carve one out\nadd_counterparty_hold: Keep one party's mail to the contacts on it\nadd_exclusion: Keep an address or a domain out of capture\nadd_owner_identity: Declare another address as your own\nadd_workspace_email_domain: Register one of the workspace's own email domains\narchive_corpus: Archive a corpus and everything filed in it\ncancel_backfill: Cancel a running backfill — captured rows are retained\ncancel_import_run: Cancel a draft, a test run, or a report nobody will approve\ncreate_corpus: Define a document corpus\ndiscard_domain: Answer an open domain question by excluding the domain from your own capture\ndisconnect_channel: Disconnect a messaging channel (archives the binding and destroys the credential)\ndisconnect_mailbox: Disconnect the calling user's mail/calendar capture\ndismiss_mailbox_silence: Dismiss the owner's current mailbox silence warning\nimport_linkedin_connections: Import your own LinkedIn connections export\nimport_vcards: Import a .vcf address-card file\nkeep_domain_as_company: Answer an open domain question by keeping the company\nkeep_domain_as_vendor: Answer an open vendor question by keeping the vendor verdict\nlift_counterparty_hold: Lift a counterparty hold\nlift_exclusion: Lift an exclusion\nremove_consumer_mail_domain: Withdraw a consumer-mail list entry (admin/ops)\nremove_workspace_email_domain: Stop treating a domain as the workspace's own\nreopen_domain: Ask about an undecided domain again (admin/ops)\nrestore_owner_identity: Put back one of your own addresses you just withdrew\nset_blocked_domain: Block a domain, or unblock one\nset_channel_verbosity: Choose how much Margince posts into a record's channel\nset_context_tag: Set the word this connector files what it captures under\nset_history_baseline: Set the date this mailbox's automatic commitment suggestions start from\nset_mail_posture: Set what this mailbox asks of the mail it brings in\nset_sender_decision: Overrule what the classifier decided about a sender\nset_signature_enrichment: Set this mailbox's own answer to the nightly signature pass\nshare_counterparty_hold_history: Re-open the mail the caller's counterparty holds already caught\nundo_import_run: Reverse a completed CSV import run\nunlink_channel: Stop syncing a record with its chat channel\nupdate_corpus: Edit a corpus — its words, its floor, or which one the palette asks\nupdate_import_run: Save choices on a draft import run\nupload_corpus_document: Add a document to this corpus\nvalidate_import_run: Test a draft import run against the estate\nwithdraw_owner_identity: Withdraw one of your own addresses\nwithdraw_sender_decision: Withdraw your decision and hand the sender back to the classifier",
+      "description": "read_workspace topic actions lists each action's body\nadd_consumer_mail_domain: Add a consumer-mail domain, or carve one out\nadd_counterparty_hold: Keep one party's mail to the contacts on it\nadd_exclusion: Keep an address or a domain out of capture\nadd_owner_identity: Declare another address as your own\nadd_workspace_email_domain: Register one of the workspace's own email domains\narchive_corpus: Archive a corpus and everything filed in it\ncancel_backfill: Cancel a running backfill — captured rows are retained\ncancel_import_run: Cancel a draft, a test run, or a report nobody will approve\ncreate_corpus: Define a document corpus\ndiscard_domain: Answer an open domain question by excluding the domain from your own capture\ndisconnect_channel: Disconnect a messaging channel (archives the binding and destroys the credential)\ndisconnect_mailbox: Disconnect the calling user's mail/calendar capture\ndismiss_mailbox_silence: Dismiss the owner's current mailbox silence warning\nimport_linkedin_connections: Import your own LinkedIn connections export\nimport_vcards: Import a .vcf address-card file\nkeep_domain_as_company: Answer an open domain question by keeping the company\nkeep_domain_as_vendor: Answer an open vendor question by keeping the vendor verdict\nlift_counterparty_hold: Lift a counterparty hold\nlift_exclusion: Lift an exclusion\nremove_consumer_mail_domain: Withdraw a consumer-mail list entry (admin/ops)\nremove_workspace_email_domain: Stop treating a domain as the workspace's own\nreopen_domain: Ask about an undecided domain again (admin/ops)\nrestore_corpus: Bring an archived corpus back with everything filed in it\nrestore_owner_identity: Put back one of your own addresses you just withdrew\nset_blocked_domain: Block a domain, or unblock one\nset_channel_verbosity: Choose how much Margince posts into a record's channel\nset_context_tag: Set the word this connector files what it captures under\nset_history_baseline: Set the date this mailbox's automatic commitment suggestions start from\nset_mail_posture: Set what this mailbox asks of the mail it brings in\nset_sender_decision: Overrule what the classifier decided about a sender\nset_signature_enrichment: Set this mailbox's own answer to the nightly signature pass\nshare_counterparty_hold_history: Re-open the mail the caller's counterparty holds already caught\nundo_import_run: Reverse a completed CSV import run\nunlink_channel: Stop syncing a record with its chat channel\nupdate_corpus: Edit a corpus — its words, its floor, or which one the palette asks\nupdate_import_run: Save choices on a draft import run\nupload_corpus_document: Add a document to this corpus\nvalidate_import_run: Test a draft import run against the estate\nwithdraw_owner_identity: Withdraw one of your own addresses\nwithdraw_sender_decision: Withdraw your decision and hand the sender back to the classifier",
       "enum": [
         "add_consumer_mail_domain",
         "add_counterparty_hold",
@@ -1274,6 +1274,7 @@ withdraw_owner_identity.)
         "remove_consumer_mail_domain",
         "remove_workspace_email_domain",
         "reopen_domain",
+        "restore_corpus",
         "restore_owner_identity",
         "set_blocked_domain",
         "set_channel_verbosity",
@@ -9567,7 +9568,7 @@ user first for the actions ai_call, ai_calls.)
       "type": "string"
     },
     "include_archived": {
-      "description": "legal_entities, pipelines, roles, saved_views, web_forms only",
+      "description": "corpora, legal_entities, pipelines, roles, saved_views, web_forms only",
       "type": "boolean"
     },
     "include_inactive": {

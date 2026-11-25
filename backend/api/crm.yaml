@@ -39517,6 +39517,8 @@ paths:
       x-mcp-tool: { verb: list_corpora, router: read_workspace, action: corpora, tier: auto_execute, scope: read, served_by: route }
       security: [ { bearerAuth: [] }, { cookieAuth: [] } ]
       summary: The document corpora this workspace has defined.
+      parameters:
+        - $ref: '#/components/parameters/IncludeArchived'
       responses:
         '200':
           description: The corpora.
@@ -39633,6 +39635,36 @@ paths:
           content:
             application/problem+json:
               schema: { $ref: '#/components/schemas/Problem' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
+  /knowledge/corpora/{id}/restore:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+    post:
+      tags: [Knowledge]
+      operationId: restoreCorpus
+      x-mcp-tool: { verb: restore_corpus, router: change_capture, action: restore_corpus, tier: auto_execute, scope: write, served_by: route }
+      security: [ { bearerAuth: [] }, { cookieAuth: [] } ]
+      summary: Bring an archived corpus back with everything filed in it.
+      description: >-
+        The undo half of `archiveCorpus`. The set, its documents and their passages
+        return in one transaction, and the ask finds the passages again.
+
+        Restoring a set that is not archived succeeds and changes nothing, so a retried
+        call after a lost response answers the same way as the first.
+
+        It does NOT make the set the default again. The default moved elsewhere when the
+        set was archived, and `updateCorpus` says which set the palette asks.
+      responses:
+        '200':
+          description: The restored corpus.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/KnowledgeCorpus' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/PermissionDenied' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/NameTakenConflict' }
         '422': { $ref: '#/components/responses/ValidationError' }
 
   /knowledge/corpora/{id}/documents:
@@ -87283,6 +87315,10 @@ components:
           description: A re-embed is in flight; every ask answers not_ready until it finishes.
         coverage: { $ref: '#/components/schemas/KnowledgeCoverage' }
         created_at: { type: string, format: date-time }
+        archived_at:
+          type: [string, 'null']
+          format: date-time
+          description: When the set was archived; absent or null while it is live. Only `include_archived` lists an archived set.
 
     KnowledgeCorpusList:
       type: object

@@ -26854,6 +26854,8 @@ paths:
       operationId: listCorpora
       security: [{bearerAuth: []}]
       summary: The document corpora this workspace has defined.
+      parameters:
+        - $ref: '#/components/parameters/IncludeArchived'
       responses:
         '200':
           description: The corpora.
@@ -26972,6 +26974,31 @@ paths:
           content:
             application/problem+json:
               schema: {$ref: '#/components/schemas/Problem'}
+        '422': {$ref: '#/components/responses/ValidationError'}
+  /knowledge/corpora/{id}/restore:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+    post:
+      tags: [Knowledge]
+      operationId: restoreCorpus
+      security: [{bearerAuth: []}]
+      summary: Bring an archived corpus back with everything filed in it.
+      description: |-
+        The undo half of `archiveCorpus`. The set, its documents and their passages return in one transaction, and the ask finds the passages again.
+
+        Needs the passport permission Change records.
+
+        Runs at once.
+      responses:
+        '200':
+          description: The restored corpus.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/KnowledgeCorpus'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/PermissionDenied'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '409': {$ref: '#/components/responses/NameTakenConflict'}
         '422': {$ref: '#/components/responses/ValidationError'}
   /knowledge/corpora/{id}/documents:
     parameters:
@@ -59464,6 +59491,10 @@ components:
           description: A re-embed is in flight; every ask answers not_ready until it finishes.
         coverage: {$ref: '#/components/schemas/KnowledgeCoverage'}
         created_at: {type: string, format: date-time}
+        archived_at:
+          type: [string, 'null']
+          format: date-time
+          description: When the set was archived; absent or null while it is live. Only `include_archived` lists an archived set.
     KnowledgeCorpusList:
       type: object
       description: >-

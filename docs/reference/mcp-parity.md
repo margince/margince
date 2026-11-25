@@ -9,11 +9,11 @@ Counting what another tool covers, it is 83.3%. Once every pending operation ope
 
 | Counted over | Operations | Open to an agent | Parity |
 |---|---:|---:|---:|
-| Every operation in the contract | 1146 | 882 | 76.9% |
-| Operations a signed-in user reaches | 1101 | 882 | 80.1% |
+| Every operation in the contract | 1147 | 883 | 76.9% |
+| Operations a signed-in user reaches | 1102 | 883 | 80.1% |
 | Operations the web app calls for a signed-in user | 967 | 779 | 80.5% |
 
-The last count answers the question of parity with the web app, so it leads this page. The first adds pages for visitors with no account, where no agent acts because no signed-in user does. The second adds routes where the scan found no web app call: 103 of those are open, so an agent can do them.
+The last count answers the question of parity with the web app, so it leads this page. The first adds pages for visitors with no account, where no agent acts because no signed-in user does. The second adds routes where the scan found no web app call: 104 of those are open, so an agent can do them.
 
 | Of the operations the web app calls | Count |
 |---|---:|
@@ -46,7 +46,7 @@ Each operation is in one group. Ask first is a part of Open, so leave it out of 
 
 | Group | Passport area | Operations | Open | Ask first | Pending | Security | Covered | Web app calls | Parity (web app) | Parity (signed-in) |
 |---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
-| [Business operations](#business-operations) | Sales work | 620 | 554 | 43 | 0 | 38 | 28 | 529 | 89.9% | 89.3% |
+| [Business operations](#business-operations) | Sales work | 621 | 555 | 43 | 0 | 38 | 28 | 529 | 89.9% | 89.3% |
 | [Compliance and privacy](#compliance-and-privacy) | Compliance and privacy | 73 | 49 | 20 | 0 | 24 | 0 | 63 | 65.0% | 67.1% |
 | [Capture and connectors](#capture-and-connectors) | Email and calendar capture | 70 | 47 | 12 | 0 | 22 | 1 | 66 | 68.1% | 67.1% |
 | [Workspace settings a non-admin can reach](#workspace-settings-a-non-admin-can-reach) | Company settings | 89 | 69 | 5 | 0 | 12 | 8 | 75 | 82.6% | 77.5% |
@@ -88,7 +88,7 @@ Passport area: Sales work.
 | Signals | 8 | 8 | 1 | 0 | 0 | 0 | 2 | 100.0% | 100.0% |
 | Documents | 17 | 14 | 1 | 0 | 1 | 2 | 16 | 81.2% | 82.3% |
 | Imports | 13 | 12 | 1 | 0 | 0 | 1 | 12 | 91.6% | 92.3% |
-| Knowledge library | 10 | 9 | 1 | 0 | 1 | 0 | 8 | 87.5% | 90.0% |
+| Knowledge library | 11 | 10 | 1 | 0 | 1 | 0 | 8 | 87.5% | 90.9% |
 | Voice profiles | 21 | 17 | 4 | 0 | 4 | 0 | 17 | 82.3% | 80.9% |
 | Sharing, assignment and ownership | 18 | 17 | 1 | 0 | 1 | 0 | 18 | 94.4% | 94.4% |
 | AI help on records | 4 | 0 | 0 | 0 | 3 | 1 | 2 | 0.0% | 0.0% |
@@ -616,6 +616,7 @@ An operation an agent can call, by the passport area that admits it. A passport 
 | `askCorpus` | `POST /knowledge/corpora/{id}/ask` | `ask_knowledge_corpus` |
 | `listCorpusDocuments` | `GET /knowledge/corpora/{id}/documents` | `list_corpus_documents` |
 | `uploadCorpusDocument` | `POST /knowledge/corpora/{id}/documents` | `upload_corpus_document` |
+| `restoreCorpus` | `POST /knowledge/corpora/{id}/restore` | `restore_corpus` |
 | `downloadCorpusDocument` | `GET /knowledge/documents/{id}` | `download_corpus_document` |
 | `listLeads` | `GET /leads` | `list_records` |
 | `createLead` | `POST /leads` | `create_record` |
