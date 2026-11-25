@@ -11,9 +11,9 @@ import (
 	"net/http/httptest"
 	"strings"
 	"testing"
-	"time"
 
 	"github.com/margince/margince/backend/internal/platform/auth"
+	"github.com/margince/margince/backend/internal/platform/clocktest"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -211,7 +211,7 @@ func TestAToolAnswerTheLogCannotReadIsRecordedAsUnreadable(t *testing.T) {
 		"cannot be encoded":   make(chan int),
 		"content is no array": map[string]any{"content": "a string"},
 	} {
-		door.recordExchange(context.Background(), time.Now(), call, rpcResponse{Result: result}, http.StatusOK)
+		door.recordExchange(context.Background(), clocktest.Now(t), call, rpcResponse{Result: result}, http.StatusOK)
 		if got := kept.records[len(kept.records)-1]; got.Outcome != OutcomeUnreadable || got.Answer != "" {
 			t.Errorf("%s: recorded %+v, want an unreadable call with no answer", name, got)
 		}
