@@ -1691,6 +1691,7 @@
     "mergeCompany": "companies",
     "mergeContact": "contacts",
     "mergeContactCase": "duplicates",
+    "mergeDeal": "deals",
     "mergeMembers": "members",
     "mergeTags": "tags",
     "messageAnchorCompanySiteRead": "company_profile",

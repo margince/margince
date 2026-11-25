@@ -27,12 +27,6 @@ import (
 func (s *Store) relinkDealReferences(ctx context.Context, tx pgx.Tx, sourceID, targetID ids.DealID) (mergeTally, error) {
 	var tally mergeTally
 	var err error
-	// The loser's pin on its own accepted offer goes first. deal_arr_source_same_deal
-	// ties the pin to an offer of the same deal, so the offer cannot move while the
-	// source still names it.
-	if err = execMerge(ctx, tx, `UPDATE deal SET arr_source_offer_id = NULL WHERE id = $1 AND arr_source_offer_id IS NOT NULL`, sourceID, targetID); err != nil {
-		return tally, err
-	}
 	if tally.Offers, err = moveMerge(ctx, tx, `UPDATE offer SET deal_id = $2 WHERE deal_id = $1`, sourceID, targetID); err != nil {
 		return tally, err
 	}

@@ -81,7 +81,7 @@ func (s *Store) MergeDeal(ctx context.Context, sourceID, targetID ids.DealID, if
 	}
 	// The merge verb is an update of both rows: rewriting where records point is
 	// curation, and recordmerge.Pair asks write authority on each end.
-	if err := auth.Require(ctx, dealTable, principal.ActionUpdate); err != nil {
+	if err := auth.Require(ctx, "deal", principal.ActionUpdate); err != nil {
 		return crmcontracts.Deal{}, err
 	}
 	if sourceID == targetID {
@@ -107,7 +107,7 @@ func (s *Store) MergeDeal(ctx context.Context, sourceID, targetID ids.DealID, if
 func (s *Store) mergeDealTx(ctx context.Context, tx pgx.Tx, sourceID, targetID ids.DealID, ifVersion *int64,
 	active []fieldcatalog.Column,
 ) (crmcontracts.Deal, error) {
-	_, tgtLock, err := storekit.LockPair(ctx, tx, dealTable, sourceID.UUID, targetID.UUID)
+	srcLock, tgtLock, err := storekit.LockPair(ctx, tx, dealTable, sourceID.UUID, targetID.UUID)
 	if err != nil {
 		return crmcontracts.Deal{}, err
 	}
@@ -116,6 +116,9 @@ func (s *Store) mergeDealTx(ctx context.Context, tx pgx.Tx, sourceID, targetID i
 		return crmcontracts.Deal{}, err
 	}
 	if err := refuseUnmergeablePair(ctx, tx, src, tgt); err != nil {
+		return crmcontracts.Deal{}, err
+	}
+	if err := s.releaseMergedDealPin(ctx, tx, srcLock, src); err != nil {
 		return crmcontracts.Deal{}, err
 	}
 	tally, err := s.relinkDealReferences(ctx, tx, sourceID, targetID)
@@ -131,6 +134,21 @@ func (s *Store) mergeDealTx(ctx context.Context, tx pgx.Tx, sourceID, targetID i
 		return crmcontracts.Deal{}, fmt.Errorf("read surviving deal: %w", err)
 	}
 	return out, nil
+}
+
+// releaseMergedDealPin clears the retired deal's pin on its own accepted offer
+// before the offer moves: deal_arr_source_same_deal ties the pin to an offer of
+// the same deal, so the offer cannot change deals while the source names it.
+func (s *Store) releaseMergedDealPin(ctx context.Context, tx pgx.Tx, srcLock storekit.RowLock, src crmcontracts.Deal) error {
+	if src.ArrSourceOfferId == nil {
+		return nil
+	}
+	p := storekit.NewPatch()
+	p.Set(arrSourceField, ids.UUID(*src.ArrSourceOfferId), nil)
+	if err := applyDealLineValueLocked(ctx, tx, p, srcLock); err != nil {
+		return fmt.Errorf("release the merged-away deal's offer pin: %w", err)
+	}
+	return nil
 }
 
 // readDealMergeState loads one end of a deal merge: a live row returns itself;
@@ -215,7 +233,7 @@ func settleDealMerge(ctx context.Context, tx pgx.Tx, tgtLock storekit.RowLock, p
 	before := map[string]any{recordmerge.MergedIntoKey: nil}
 	after := map[string]any{recordmerge.MergedIntoKey: targetID, auditKeyDealFilled: filled}
 	maps.Copy(after, tally.audit())
-	auditID, err := storekit.Audit(ctx, tx, "merge", dealTable, sourceID.UUID, before, after)
+	auditID, err := storekit.Audit(ctx, tx, "merge", "deal", sourceID.UUID, before, after)
 	if err != nil {
 		return fmt.Errorf("audit deal merge: %w", err)
 	}
@@ -229,7 +247,7 @@ func settleDealMerge(ctx context.Context, tx pgx.Tx, tgtLock storekit.RowLock, p
 	maps.Copy(survivorAfter, tally.audit())
 	maps.Copy(survivorBefore, p.Before())
 	maps.Copy(survivorAfter, p.After())
-	if _, err := storekit.Audit(ctx, tx, "merge", dealTable, targetID.UUID, survivorBefore, survivorAfter); err != nil {
+	if _, err := storekit.Audit(ctx, tx, "merge", "deal", targetID.UUID, survivorBefore, survivorAfter); err != nil {
 		return fmt.Errorf("audit deal merge on the survivor: %w", err)
 	}
 	return nil

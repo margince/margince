@@ -3,19 +3,20 @@
 
 //go:build integration
 
-package compose
+package integration
 
 // The deal merge over a real Postgres, with offers and stakeholders written
 // through the stores that own them.
 
 import (
+	"context"
 	"errors"
 	"sync"
 	"testing"
 
 	"github.com/jackc/pgx/v5"
 
-	"github.com/margince/margince/backend/internal/compose/integration"
+	"github.com/margince/margince/backend/internal/modules/collections"
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
@@ -25,7 +26,7 @@ import (
 
 // twoDealsOnOneCompany seeds the merge's usual pair: a source and a target
 // that name the same company.
-func twoDealsOnOneCompany(t *testing.T, e *integration.Env) (company ids.UUID, source, target ids.DealID) {
+func twoDealsOnOneCompany(t *testing.T, e *Env) (company ids.UUID, source, target ids.DealID) {
 	t.Helper()
 	company = e.SeedCompany(t, "Merge Works GmbH", nil)
 	source = ids.From[ids.DealKind](e.SeedOpenDealOn(t, "Duplicate", company))
@@ -33,7 +34,7 @@ func twoDealsOnOneCompany(t *testing.T, e *integration.Env) (company ids.UUID, s
 	return company, source, target
 }
 
-func addStakeholder(t *testing.T, e *integration.Env, deal ids.DealID, contact ids.UUID) {
+func addStakeholder(t *testing.T, e *Env, deal ids.DealID, contact ids.UUID) {
 	t.Helper()
 	contactID := ids.From[ids.ContactKind](contact)
 	if _, err := e.Contacts.CreateRelationship(e.Admin(), contacts.CreateRelationshipInput{
@@ -44,7 +45,7 @@ func addStakeholder(t *testing.T, e *integration.Env, deal ids.DealID, contact i
 }
 
 func TestDealMergeMovesTheFactsAndLeavesThePathOnTheLoser(t *testing.T) {
-	e := integration.Setup(t)
+	e := Setup(t)
 	admin := e.Admin()
 	_, source, target := twoDealsOnOneCompany(t, e)
 	shared, only := e.SeedContact(t, "Shared Buyer", nil), e.SeedContact(t, "Only On Duplicate", nil)
@@ -89,7 +90,7 @@ func TestDealMergeMovesTheFactsAndLeavesThePathOnTheLoser(t *testing.T) {
 }
 
 func TestDealMergeRefusesWhatCannotJoin(t *testing.T) {
-	e := integration.Setup(t)
+	e := Setup(t)
 	admin := e.Admin()
 	_, source, target := twoDealsOnOneCompany(t, e)
 
@@ -125,7 +126,7 @@ func TestDealMergeRefusesWhatCannotJoin(t *testing.T) {
 }
 
 func TestDealMergeMovesTheLosersPinnedOffer(t *testing.T) {
-	e := integration.Setup(t)
+	e := Setup(t)
 	_, source, target := twoDealsOnOneCompany(t, e)
 	offer, err := e.Deals.CreateOffer(e.Admin(), source, deals.CreateOfferInput{Currency: "EUR", Source: "manual"})
 	if err != nil {
@@ -142,13 +143,18 @@ func TestDealMergeMovesTheLosersPinnedOffer(t *testing.T) {
 }
 
 func TestAMergedAwayDealCannotBeRestored(t *testing.T) {
-	e := integration.Setup(t)
+	e := Setup(t)
 	_, source, target := twoDealsOnOneCompany(t, e)
 	if _, err := e.Deals.MergeDeal(e.Admin(), source, target, nil); err != nil {
 		t.Fatalf("merge: %v", err)
 	}
-	err := restoreIn(t, e, func(tx pgx.Tx) (storekit.RestoreReport, error) {
-		return e.Deals.RestoreDealTx(e.Admin(), tx, source, nil, unarchiveWith(nil))
+	err := e.DB().Tx(e.Admin(), func(tx pgx.Tx) error {
+		with := storekit.RestoreWith{
+			Erased: func(context.Context, pgx.Tx, ids.UUID) (bool, error) { return false, nil },
+			Links:  collections.ArchivedLinkRestore(),
+		}
+		_, err := e.Deals.RestoreDealTx(e.Admin(), tx, source, nil, with)
+		return err
 	})
 	var refusal *storekit.RestoreRefusal
 	if !errors.As(err, &refusal) || refusal.Reason != storekit.RestoreMerged {
@@ -159,7 +165,7 @@ func TestAMergedAwayDealCannotBeRestored(t *testing.T) {
 // Two merges of one pair in opposite directions run under one pair lock, so one
 // wins and the other finds its source or target already gone.
 func TestTwoOppositeDealMergesLeaveOneWinner(t *testing.T) {
-	e := integration.Setup(t)
+	e := Setup(t)
 	_, a, b := twoDealsOnOneCompany(t, e)
 	var wg sync.WaitGroup
 	results := make([]error, 2)

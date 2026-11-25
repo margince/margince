@@ -9,8 +9,8 @@ Counting what another tool covers, it is 83.8%. Once every pending operation ope
 
 | Counted over | Operations | Open to an agent | Parity |
 |---|---:|---:|---:|
-| Every operation in the contract | 1140 | 882 | 77.3% |
-| Operations a signed-in user reaches | 1095 | 882 | 80.5% |
+| Every operation in the contract | 1141 | 882 | 77.3% |
+| Operations a signed-in user reaches | 1096 | 882 | 80.4% |
 | Operations the web app calls for a signed-in user | 961 | 779 | 81.0% |
 
 The last count answers the question of parity with the web app, so it leads this page. The first adds pages for visitors with no account, where no agent acts because no signed-in user does. The second adds routes where the scan found no web app call: 103 of those are open, so an agent can do them.
@@ -46,7 +46,7 @@ Each operation is in one group. Ask first is a part of Open, so leave it out of 
 
 | Group | Passport area | Operations | Open | Ask first | Pending | Security | Covered | Web app calls | Parity (web app) | Parity (signed-in) |
 |---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
-| [Business operations](#business-operations) | Sales work | 619 | 554 | 43 | 0 | 37 | 28 | 528 | 90.1% | 89.4% |
+| [Business operations](#business-operations) | Sales work | 620 | 554 | 43 | 0 | 38 | 28 | 528 | 90.1% | 89.3% |
 | [Compliance and privacy](#compliance-and-privacy) | Compliance and privacy | 73 | 49 | 20 | 0 | 24 | 0 | 63 | 65.0% | 67.1% |
 | [Capture and connectors](#capture-and-connectors) | Email and calendar capture | 66 | 47 | 12 | 0 | 18 | 1 | 62 | 72.5% | 71.2% |
 | [Workspace settings a non-admin can reach](#workspace-settings-a-non-admin-can-reach) | Company settings | 89 | 69 | 5 | 0 | 12 | 8 | 75 | 82.6% | 77.5% |
@@ -68,7 +68,7 @@ Passport area: Sales work.
 | Duplicates | 8 | 8 | 0 | 0 | 0 | 0 | 6 | 100.0% | 100.0% |
 | Companies | 59 | 55 | 2 | 0 | 2 | 2 | 49 | 91.8% | 93.2% |
 | Partners | 1 | 1 | 0 | 0 | 0 | 0 | 1 | 100.0% | 100.0% |
-| Deals | 43 | 39 | 0 | 0 | 2 | 2 | 33 | 93.9% | 90.6% |
+| Deals | 44 | 39 | 0 | 0 | 3 | 2 | 33 | 93.9% | 88.6% |
 | Deal rooms | 24 | 23 | 11 | 0 | 1 | 0 | 21 | 95.2% | 95.8% |
 | Legal reviews | 6 | 6 | 0 | 0 | 0 | 0 | 6 | 100.0% | 100.0% |
 | Leads | 20 | 18 | 0 | 0 | 0 | 2 | 19 | 89.4% | 90.0% |
