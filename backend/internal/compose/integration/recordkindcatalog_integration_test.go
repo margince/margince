@@ -95,3 +95,40 @@ func TestADeclaredKindMustHaveItsTableColumnsAndAUniqueNaturalKey(t *testing.T) 
 		}
 	}
 }
+
+func TestADeclaredKindTimelineColumnsMustExistWithTheRightTypes(t *testing.T) {
+	env := Setup(t)
+	ctx := context.Background()
+	const base = `id uuid PRIMARY KEY, archived_at timestamptz, code text NOT NULL UNIQUE, site text, `
+	cases := []struct {
+		name, table, ddl, at, subject, want string
+	}{
+		{"complete", "ext_kindcat_tlok", base + `seen_at timestamptz, contact_id uuid`, "seen_at", "contact_id", ""},
+		{"missing time column", "ext_kindcat_tlnotime", base + `contact_id uuid`, "seen_at", "contact_id", "seen_at"},
+		{"missing subject column", "ext_kindcat_tlnosubj", base + `seen_at timestamptz`, "seen_at", "contact_id", "contact_id"},
+		{"time column is text", "ext_kindcat_tltext", base + `seen_at text, contact_id uuid`, "seen_at", "contact_id", "not timestamp with time zone"},
+		{"subject column is text", "ext_kindcat_tlsubj", base + `seen_at timestamptz, contact_id text`, "seen_at", "contact_id", "not uuid"},
+	}
+	for _, c := range cases {
+		kindTable(t, c.table, c.ddl)
+		k := declaredKind(c.table, "code")
+		k.Timeline = &extension.RecordKindTimeline{LabelField: "code", AtColumn: c.at,
+			Subjects: []extension.TimelineSubject{{Entity: "contact", Column: c.subject}}}
+		err := compose.VerifyRecordKinds(ctx, env.Pool, []recordkinds.Declared{k})
+		switch {
+		case c.want == "" && err != nil:
+			t.Errorf("%s: %v", c.name, err)
+		case c.want != "" && (err == nil || !strings.Contains(err.Error(), c.want)):
+			t.Errorf("%s: err = %v, want one naming %q", c.name, err, c.want)
+		}
+	}
+}
+
+func TestADeclaredKindTitleColumnMustBeText(t *testing.T) {
+	env := Setup(t)
+	kindTable(t, "ext_kindcat_titleint", `id uuid PRIMARY KEY, archived_at timestamptz, code integer NOT NULL UNIQUE, site text`)
+	err := compose.VerifyRecordKinds(context.Background(), env.Pool, []recordkinds.Declared{declaredKind("ext_kindcat_titleint", "code")})
+	if err == nil || !strings.Contains(err.Error(), "title column") {
+		t.Errorf("err = %v, want one naming the title column", err)
+	}
+}

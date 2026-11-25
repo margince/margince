@@ -6,7 +6,7 @@ package compose
 import (
 	"context"
 	"fmt"
-	"slices"
+	"strings"
 
 	"github.com/jackc/pgx/v5"
 
@@ -25,7 +25,7 @@ type recordKindQuerier interface {
 // expression index does not count, because it lets two live rows share a key.
 const kindTableShape = `
 SELECT to_regclass($1) IS NOT NULL,
-       COALESCE((SELECT array_agg(a.attname::text) FROM pg_attribute a
+       COALESCE((SELECT jsonb_object_agg(a.attname, format_type(a.atttypid, NULL)) FROM pg_attribute a
                   WHERE a.attrelid = to_regclass($1) AND a.attnum > 0 AND NOT a.attisdropped), '{}'),
        EXISTS (SELECT 1 FROM pg_index i
                 WHERE i.indrelid = to_regclass($1) AND i.indisunique AND i.indpred IS NULL AND i.indexprs IS NULL
@@ -46,7 +46,7 @@ SELECT to_regclass($1) IS NOT NULL,
 func VerifyRecordKinds(ctx context.Context, q recordKindQuerier, kinds []recordkinds.Declared) error {
 	for _, k := range kinds {
 		var exists, unique, granted bool
-		var columns []string
+		var columns map[string]string
 		qualified := pgx.Identifier{"ext", k.Table}.Sanitize()
 		if err := q.QueryRow(ctx, kindTableShape, qualified, k.NaturalKey).Scan(&exists, &columns, &unique, &granted); err != nil {
 			return fmt.Errorf("record kind %s: reading %s: %w", k.Name, qualified, err)
@@ -62,13 +62,49 @@ func VerifyRecordKinds(ctx context.Context, q recordKindQuerier, kinds []recordk
 			required = append(required, f.Name)
 		}
 		for _, c := range required {
-			if !slices.Contains(columns, c) {
+			if _, ok := columns[c]; !ok {
 				return fmt.Errorf("record kind %s: table %s has no column %q", k.Name, qualified, c)
 			}
+		}
+		if err := checkReadColumnTypes(k, qualified, columns); err != nil {
+			return err
 		}
 		if !unique {
 			return fmt.Errorf("record kind %s: table %s has no unique index over exactly its natural key %v", k.Name, qualified, k.NaturalKey)
 		}
+	}
+	return nil
+}
+
+// checkReadColumnTypes refuses a kind whose title or timeline columns have a
+// type the History and search queries cannot read. The title is searched as
+// text, the time orders the History, and a subject column is compared to an id.
+func checkReadColumnTypes(k recordkinds.Declared, table string, columns map[string]string) error {
+	title := k.NaturalKey[0]
+	if tl := k.Timeline; tl != nil {
+		title = tl.LabelField
+		if err := wantColumnType(k, table, columns, tl.AtColumn, "timeline time", "timestamp with time zone"); err != nil {
+			return err
+		}
+		for _, s := range tl.Subjects {
+			if err := wantColumnType(k, table, columns, s.Column, "timeline "+s.Entity, "uuid"); err != nil {
+				return err
+			}
+		}
+	}
+	if typ, ok := columns[title]; ok && !strings.HasPrefix(typ, "text") && !strings.HasPrefix(typ, "character varying") && typ != "citext" {
+		return fmt.Errorf("record kind %s: title column %q of %s is %s, but search reads it as text", k.Name, title, table, typ)
+	}
+	return nil
+}
+
+func wantColumnType(k recordkinds.Declared, table string, columns map[string]string, col, role, want string) error {
+	typ, ok := columns[col]
+	if !ok {
+		return fmt.Errorf("record kind %s: %s column %q does not exist in %s", k.Name, role, col, table)
+	}
+	if typ != want {
+		return fmt.Errorf("record kind %s: %s column %q of %s is %s, not %s", k.Name, role, col, table, typ, want)
 	}
 	return nil
 }
