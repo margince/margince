@@ -2039,6 +2039,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "brief.queue.back": "Quay lại Danh sách công việc",
   "brief.queue.title": "Danh sách công việc",
   "brief.queue.show": "Xem Danh sách công việc",
+  "brief.queue.count_one": "{count} mục trong Danh sách công việc",
+  "brief.queue.count_other": "{count} mục trong Danh sách công việc",
   "brief.queue.hide": "Ẩn Danh sách công việc",
   "brief.team.planUnavailable":
     "Không có kế hoạch hiện tại nào của {name} mà bạn có quyền xem.",
@@ -7051,6 +7053,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "brief.week.quiet":
     "Chưa ghi nhận công việc hoàn tất hay biến động deal nào.",
 
+  "brief.first.shownOf": "Hiển thị {shown} trên {total}",
   "brief.feed.changedBadge_one": "1 đã thay đổi",
   "brief.feed.changedBadge_other": "{count} đã thay đổi",
   "brief.feed.loading": "Đang tải Bản tin sáng…",

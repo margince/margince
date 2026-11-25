@@ -2091,6 +2091,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "brief.queue.back": "Zurück zur Worklist",
   "brief.queue.title": "Worklist",
   "brief.queue.show": "Worklist einblenden",
+  "brief.queue.count_one": "{count} Eintrag in der Worklist",
+  "brief.queue.count_other": "{count} Einträge in der Worklist",
   "brief.queue.hide": "Worklist ausblenden",
   "brief.team.planUnavailable":
     "Für {name} ist kein aktueller Plan für dich sichtbar.",
@@ -7237,6 +7239,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "brief.week.andCarry": "{result} {carry}",
   "brief.week.quiet": "Keine erledigte Arbeit und keine Deal-Bewegung erfasst.",
 
+  "brief.first.shownOf": "{shown} von {total} angezeigt",
   "brief.feed.changedBadge_one": "1 geändert",
   "brief.feed.changedBadge_other": "{count} geändert",
   "brief.feed.loading": "Morgenbericht wird geladen…",

@@ -2010,6 +2010,8 @@ export const en = {
   "brief.queue.back": "Back to Worklist",
   "brief.queue.title": "Worklist",
   "brief.queue.show": "Show Worklist",
+  "brief.queue.count_one": "{count} item in the Worklist",
+  "brief.queue.count_other": "{count} items in the Worklist",
   "brief.queue.hide": "Hide Worklist",
   "brief.team.planUnavailable": "No current plan visible to you for {name}.",
   "brief.team.noCommitments": "{name} has no commitments in this plan.",
@@ -7218,6 +7220,7 @@ export const en = {
   "brief.week.quiet": "No completed work or deal movement recorded.",
 
   // What is on screen out of what the day holds, on the panel's own line.
+  "brief.first.shownOf": "{shown} of {total} shown",
   "brief.feed.changedBadge_one": "1 changed",
   "brief.feed.changedBadge_other": "{count} changed",
   "brief.feed.loading": "Loading Morning brief…",

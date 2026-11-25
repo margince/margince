@@ -15,9 +15,11 @@ import { DrawerBody, DrawerHead } from "../../design-system/drawerbands";
 import { Heading } from "../../design-system/heading";
 import { PageZones } from "../../design-system/pagezones";
 import { FlatPanelHeads, Panel, PanelBody } from "../../design-system/panel";
+import { floorFigure } from "../../format/figure";
+import { formatNumber } from "../../format/format";
 import { greetingNameOf } from "../../format/greetingname";
 import { useNow } from "../../format/now";
-import { useLocale, useT } from "../../i18n";
+import { useLocale, usePlural, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import { lazy } from "../../i18n/lazy";
 import { APPROVAL_PARAM } from "../../lib/approvalhref";
@@ -36,6 +38,7 @@ import {
   useHandledForYou,
   useHomeDay,
   type useWorklist,
+  type Worklist,
   type WorklistItem,
   worklistKey,
 } from "../worklist/worklist.queries";
@@ -101,11 +104,12 @@ export function BriefScreen() {
   );
   // The way into the reader's own Today: it always opens Mine, Today, every
   // category, so the number is the one the opened list shows.
+  const queueFigure = useQueueFigure(day);
   const queueToggle = (
     <PageAsideToggle
       controlled={{
         open: queueOpen,
-        ...(day && pillFigure(day, "all", DEFAULT_VIEW)),
+        ...queueFigure,
         labels: {
           show: t("brief.queue.show"),
           hide: t("brief.queue.hide"),
@@ -505,4 +509,21 @@ function LinkedApprovalDrawer() {
 /** What the waiting lanes are counted since: no last brief exists before the first. */
 function waitingHeading(firstDay: boolean): MessageKey {
   return firstDay ? "magic.heading.firstBrief" : "magic.heading.brief";
+}
+
+/** The Worklist's own total, and what it counts, for the switch that opens it. */
+function useQueueFigure(day: Worklist | undefined) {
+  const plural = usePlural();
+  const { locale } = useLocale();
+  const figure = day && pillFigure(day, "all", DEFAULT_VIEW);
+  if (!figure) return undefined;
+  const count = floorFigure(
+    formatNumber(figure.count, locale),
+    figure.floor,
+    figure.count,
+  );
+  return {
+    ...figure,
+    countLabel: plural("brief.queue.count", figure.count, { count }),
+  };
 }

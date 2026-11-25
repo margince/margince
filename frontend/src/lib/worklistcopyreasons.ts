@@ -9,9 +9,11 @@ import {
   taskDueOnDay,
 } from "../format/calendarday";
 import {
+  calendarDaysBetween,
   formatAgreedClock,
   formatDate,
   formatDateTime,
+  formatDayMonthNearYear,
   formatMoney,
   formatNumber,
 } from "../format/format";
@@ -328,6 +330,8 @@ function taskWhen(
   record: string,
   now: Date,
 ): string | null {
+  const late = lateTaskText(item, dueAt, locale, record, now);
+  if (late !== null) return late;
   if (item.due_has_time === true) {
     const intent = item.due_intent;
     const when = momentText(dueAt, "instant", locale, viewer, now);
@@ -342,6 +346,33 @@ function taskWhen(
   return sameCalendarDay(new Date(day), now, record)
     ? null
     : t(key, { when: formatDate(day, locale, record) });
+}
+
+// A late task says its due day and how many days late it is, the two facts a
+// reader acts on, on the record's clock. Home's card and the Worklist row both
+// read it here, so one task never reads two ways.
+function lateTaskText(
+  item: WorklistItem,
+  dueAt: string,
+  locale: Locale,
+  record: string,
+  now: Date,
+): string | null {
+  if (item.overdue !== true) return null;
+  const dueDay = taskDueOnDay(
+    dueAt,
+    item.due_has_time,
+    item.due_intent,
+    record,
+  );
+  const late = calendarDaysBetween(new Date(dueDay), now, record);
+  if (late <= 0) return null;
+  return [
+    formatDayMonthNearYear(dueDay, locale, record, now),
+    translatePlural(locale, "co.next.daysLate", late, {
+      days: formatNumber(late, locale),
+    }),
+  ].join(" · ");
 }
 
 // Which sentence the moment goes in, or null for a row whose `due_at` is not a

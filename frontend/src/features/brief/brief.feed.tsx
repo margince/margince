@@ -92,11 +92,8 @@ export function BriefFeed({
           </AppLink>
         )}
         <SystemBadge day={day} />
-        {rows.length > 0 && (
-          <span className="t-caption t-num brief-first-count">
-            {formatNumber(rows.length, locale)}
-          </span>
-        )}
+        <ShownOf shown={rows.length} total={day?.focus?.total} />
+
         {queueToggle && <div className="brief-first-queue">{queueToggle}</div>}
       </div>
       {refreshFailed && (
@@ -147,6 +144,27 @@ export function BriefFeed({
         }
       />
     </section>
+  );
+}
+
+/**
+ * How many of the work's cards are drawn, beside the head, and only when the
+ * day holds more than its cards: the Worklist switch carries the whole count.
+ */
+function ShownOf({
+  shown,
+  total,
+}: Readonly<{ shown: number; total: number | undefined }>) {
+  const t = useT();
+  const { locale } = useLocale();
+  if (shown === 0 || total === undefined || total <= shown) return null;
+  return (
+    <span className="t-caption t-num brief-first-count">
+      {t("brief.first.shownOf", {
+        shown: formatNumber(shown, locale),
+        total: formatNumber(total, locale),
+      })}
+    </span>
   );
 }
 
