@@ -5,7 +5,11 @@ import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, userEvent, waitFor, within } from "storybook/test";
 import { en } from "../../i18n/en";
 import { StoryProviders } from "../../testing/story-utils";
-import { useWorklistPicks, WorklistBulkBar } from "./worklist.bulkdone";
+import {
+  useWorklistPicks,
+  WorklistBulkBar,
+  WorklistSelect,
+} from "./worklist.bulkdone";
 import { row } from "./worklist.fixtures";
 
 // Selection mode over the loaded queue. Select opens it, and Select all ticks
@@ -22,7 +26,12 @@ const queue = [
 
 function Bar() {
   const selection = useWorklistPicks(queue, "today");
-  return <WorklistBulkBar selection={selection} />;
+  return (
+    <>
+      <WorklistSelect selection={selection} />
+      <WorklistBulkBar selection={selection} />
+    </>
+  );
 }
 
 const meta: Meta<typeof WorklistBulkBar> = {
