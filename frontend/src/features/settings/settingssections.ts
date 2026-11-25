@@ -80,6 +80,7 @@ export const SETTINGS_SECTIONS = {
     "settings.voice.sentMailLabel",
   ],
   agents: [
+    "aiAccess.yourAgent.title",
     "aiAccess.connect.title",
     "agents.connected",
     "autonomy.title",

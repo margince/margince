@@ -30,6 +30,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"slices"
 
 	"github.com/jackc/pgx/v5"
 
@@ -46,6 +47,12 @@ const PhasePursuing = "pursuing"
 // PhaseDelivering is where a won deal puts its project: the work is now owed,
 // not sought.
 const PhaseDelivering = "delivering"
+
+// PhasesAWinAdvances are the phases a won deal moves its project out of, into
+// PhaseDelivering. The won dialog mirrors them to say so before the win.
+func PhasesAWinAdvances() []string {
+	return []string{PhaseInitiative, PhasePursuing}
+}
 
 // deliveryEvidence is what the audit row records in place of a project.update
 // check that never ran. audit_log.authorization_rule is derived from the
@@ -132,7 +139,7 @@ func StartDeliveryForWonDeal(ctx context.Context, tx pgx.Tx, dealID ids.DealID, 
 		return fmt.Errorf("project %s has no phase", id.UUID)
 	}
 	fromPhase := string(*current.Phase)
-	if fromPhase != PhaseInitiative && fromPhase != PhasePursuing {
+	if !slices.Contains(PhasesAWinAdvances(), fromPhase) {
 		return nil
 	}
 	return recordPhaseTransition(ctx, tx, id, current, fromPhase,

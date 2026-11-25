@@ -63,8 +63,8 @@ const COLUMN_SIZES: Readonly<
   // A score of up to three digits under a one-word header and its sort arrow.
   score: { share: null, min: 80 },
   // The address tells two contacts apart, so it grows beside the name. The
-  // minimum stays low enough for the Contacts row to fit 1024px in German.
-  email: { share: 1.8, min: 130, first: 240 },
+  // standard minimum leaves the German Contacts row room at 1024px.
+  email: { share: 1.8, min: 120, first: 240 },
   standard: { share: 1.3, min: 120 },
   // Two labelled ghost buttons side by side in the longest locale this tree
   // ships: German turns "Edit product" into "Produkt bearbeiten".
@@ -236,7 +236,7 @@ export function columnLayout(
   const firstWidths = splitFirstRoom(
     shown.filter(growsFirst).map((column) => {
       const { min, first } = boundsAt(column);
-      return { key: column.key, min, first: first ?? min };
+      return { key: column.key, min, first: Math.max(first ?? min, min) };
     }),
     shown
       .filter((column) => !growsFirst(column))

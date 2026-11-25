@@ -341,6 +341,7 @@ const HUMAN_SENSE_KEYS: Record<string, readonly string[]> = {
     "sendPermission.reason.unconfirmed",
     // A human being on the committee, or who owns or sets something, not the record type.
     "co.aside.visibleOnlyOwner",
+    "filters.pickOwner",
     "co.aside.visibleTheOwnerAndShared_one",
     "co.aside.visibleTheOwnerAndShared_other",
     "contact.card.committee_one",

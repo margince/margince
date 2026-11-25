@@ -6,11 +6,12 @@ import { Hash } from "lucide-react";
 import { useState } from "react";
 import { screen, userEvent, within } from "storybook/test";
 import { LocaleProvider } from "../i18n";
-import { Badge } from "./atoms";
+import { Badge, Button } from "./atoms";
 import {
   type LinkedProject,
   ProjectLinks,
   type ProjectLinksAdapter,
+  RemoveLinkMenu,
 } from "./projectlinks";
 import { Chip } from "./readings";
 import type { RecordPickerCandidate } from "./recordpicker";
@@ -182,4 +183,22 @@ export const RemoveMenuOpen: Story = {
 export const RemoveMenuPhone: Story = {
   tags: ["uat-phone"],
   render: () => <Live />,
+};
+
+/** A row with verbs of its own: they come before Remove, which stays last. */
+export const RemoveMenuWithOtherVerbs: Story = {
+  render: () => (
+    <RemoveLinkMenu name="Brandt Automotive GmbH" onRemove={() => {}}>
+      <Button onClick={() => {}}>Edit employment</Button>
+      <Button onClick={() => {}}>Mark as ended</Button>
+    </RemoveLinkMenu>
+  ),
+  play: async ({ canvasElement }) => {
+    await userEvent.click(
+      await within(canvasElement).findByRole("button", {
+        name: "More actions for Brandt Automotive GmbH",
+      }),
+    );
+    await screen.findByRole("button", { name: "Remove" });
+  },
 };

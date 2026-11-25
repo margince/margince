@@ -184,6 +184,24 @@ describe("columnLayout", () => {
       [180, 130, 130, 120, 150, 120, 120],
     );
     expect(layout.floor).toBeCloseTo(950);
+    // Ten pixels to spare: a scrollbar or a wider header still fits the row.
+    const tighter = columnLayout(contactDefaults, {}, 940, headers);
+    expect(px(tighter.widthOf(contactDefaults[1]))).toBe(120);
+    expect(tighter.floor).toBeCloseTo(940);
+  });
+
+  it("never settles a column that grows first below a minimum its header raised", () => {
+    const columns: SizedColumn[] = [
+      { key: "name", fixed: true },
+      { key: "email", holds: "email" },
+      { key: "status" },
+    ];
+    const headers = { held: { email: 300 }, onScreen: {} };
+    const layout = columnLayout(columns, {}, 760, headers);
+    expect(columns.map((column) => px(layout.widthOf(column)))).toEqual([
+      340, 300, 120,
+    ]);
+    expect(layout.floor).toBeCloseTo(760);
   });
 
   it("holds a date at its minimum on a narrow page and fits the row", () => {

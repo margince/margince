@@ -5,10 +5,11 @@ import {
   hasEmployerFacts,
   useEmployerSummary,
 } from "../../components/contactemployersummary";
-import { Button, OverflowMenu } from "../../design-system/atoms";
+import { Button } from "../../design-system/atoms";
 import { CompanyCard } from "../../design-system/companycard";
 import { ErrorLine } from "../../design-system/errorline";
 import { InlineText } from "../../design-system/inlinetext";
+import { RemoveLinkMenu } from "../../design-system/projectlinks";
 import { formatDateAbbrev } from "../../format/format";
 import { formatMonthAbbrev } from "../../format/format.dates";
 import { type Locale, useLocale, useT } from "../../i18n";
@@ -85,7 +86,10 @@ export function EmploymentRow({
       facts={hasFacts && company ? employerFacts(company, t, locale) : null}
       actions={
         canEdit && (
-          <OverflowMenu label={t("record.moreActions")}>
+          <RemoveLinkMenu
+            name={employment.company_name ?? t("field.unset")}
+            onRemove={onRemove}
+          >
             <Button onClick={onEdit}>{t("employment.edit")}</Button>
             {stillHeld(employment, employmentZone) && (
               <Button
@@ -95,10 +99,7 @@ export function EmploymentRow({
                 {t("contact.rail.markEnded")}
               </Button>
             )}
-            <Button variant="danger" onClick={onRemove}>
-              {t("rel.remove")}
-            </Button>
-          </OverflowMenu>
+          </RemoveLinkMenu>
         )
       }
     >

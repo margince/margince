@@ -58,6 +58,9 @@ function OneCompany() {
         placeholder={en["filters.pickCompany"]}
       />
       <output>{JSON.stringify(value)}</output>
+      <button type="button" onClick={() => setValue("")}>
+        Clear from outside
+      </button>
     </>
   );
 }
@@ -111,5 +114,39 @@ describe("searching for a company", () => {
     expect(
       screen.getByRole("button", { name: en["filters.changeRecord"] }),
     ).toHaveFocus();
+  });
+
+  it("moves focus only after the reader's own pick, not on a later outside change", async () => {
+    installFetchStub({
+      "GET /me": meRoute({ company: ["read"] }),
+      "GET /companies": () =>
+        jsonResponse({
+          data: [{ id: ID, display_name: "Demo GmbH" }],
+          page: { next_cursor: null, has_more: false },
+        }),
+      ...recordNamesRoutes({ company: { [ID]: "Demo GmbH" } }),
+    });
+    const user = userEvent.setup();
+    render(
+      <StoryProviders>
+        <OneCompany />
+      </StoryProviders>,
+    );
+    await user.type(
+      screen.getByRole("combobox", { name: en["filters.searchRecords"] }),
+      "Demo",
+    );
+    await screen.findByRole("listbox");
+    await user.keyboard("{ArrowDown}{Enter}");
+    expect(
+      screen.getByRole("button", { name: en["filters.changeRecord"] }),
+    ).toHaveFocus();
+
+    const outside = screen.getByRole("button", { name: "Clear from outside" });
+    await user.click(outside);
+    expect(
+      screen.getByRole("combobox", { name: en["filters.searchRecords"] }),
+    ).not.toHaveFocus();
+    expect(outside).toHaveFocus();
   });
 });

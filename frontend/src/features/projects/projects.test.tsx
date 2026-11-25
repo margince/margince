@@ -14,7 +14,7 @@ import {
 import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { ABSENT_CELL } from "../../components/recordlist";
+import { ABSENT } from "../../format/absent";
 import { LocaleProvider } from "../../i18n";
 import { jsonResponse } from "../../testing/company.fixtures";
 import { openFilterValues } from "../../testing/listquery.testkit";
@@ -65,7 +65,7 @@ describe("ProjectsScreen", () => {
     expect(await screen.findByText("CRM rollout")).toBeTruthy();
     // An empty cell carries the same mark as an empty Company cell.
     const fleet = screen.getByRole("link", { name: /Fleet retrofit/ });
-    expect(fleet.closest("tr")?.textContent).toContain(ABSENT_CELL);
+    expect(fleet.closest("tr")?.textContent).toContain(ABSENT);
     // The tab and the phase say one word for one fact.
     expect(screen.getAllByText("Delivering").length).toBeGreaterThan(1);
     expect(screen.queryByText("In delivery")).toBeNull();

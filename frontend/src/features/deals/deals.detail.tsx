@@ -277,7 +277,7 @@ export function DealScreen({ id }: Readonly<{ id: string }>) {
                 fromStage: stages.find((stage) => stage.id === deal.stage_id),
               });
             } else {
-              setPending(input);
+              setPending({ ...input, projectId: deal.project_id ?? null });
             }
           };
           const shownTab = tabsOf(deal, legalReview).includes(tab)

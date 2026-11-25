@@ -6326,6 +6326,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "deals.confirmTerminal":
     "Damit wird der Deal als {status} abgeschlossen. Bis du bestätigst, ändert sich nichts.",
   "deals.confirmMovesProject": "Damit wechselt auch {project} zu {phase}.",
+  "deals.confirmMovesUnreadProject":
+    "Damit wechselt auch das zugehörige Projekt zu {phase}.",
   "deals.lostReason": "Verlustgrund",
   "deals.lostReasonNeeded": "Wähle, warum der Deal verloren ging.",
   "deals.lostReasonCode": "Warum verloren?",
@@ -20770,6 +20772,9 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "filters.op.lessThan": "ist kleiner als",
   "filters.op.atMost": "ist h\u00f6chstens",
   "filters.op.withinRadius": "liegt im Umkreis von",
+  "filters.op.include": "enthalten",
+  "filters.op.notInclude": "enthalten nicht",
+  "filters.op.includeAny": "enthalten eines von",
   "filters.sentence.radiusOf": "{km} km um {place}",
   "filters.radius.km": "Entfernung (km)",
   "filters.radius.place": "Ortsname (optional)",
@@ -21157,7 +21162,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "filters.noMatchesLoosen":
     "Keine {records} passen zu diesem Filter. Lockere oder entferne eine Bedingung.",
   "filters.pickTag": "Tag auswählen",
-  "filters.pickOwner": "Verantwortung auswählen",
+  "filters.pickOwner": "Verantwortliche Person auswählen",
   "filters.pickTeam": "Team auswählen",
   "filters.pickCompany": "Unternehmen auswählen",
   "filters.pickPipeline": "Pipeline auswählen",

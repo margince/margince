@@ -4,52 +4,82 @@
 import { useQuery } from "@tanstack/react-query";
 import { api } from "../../../api/client";
 import type { ProjectPhase } from "../../../format/projectphase";
-import { unwrap } from "../../../lib/problem";
+import { problemStatus, unwrap } from "../../../lib/problem";
 
-// The phases the server moves a won deal's project out of, into delivering
-// (StartDeliveryForWonDeal in the projects module).
-const MOVED_BY_A_WIN: readonly ProjectPhase[] = ["initiative", "pursuing"];
+// A mirror of StartDeliveryForWonDeal (backend projects/delivery.go);
+// backend/gates/frontendwinmovesproject_test.go fails either side's drift.
+export const MOVED_BY_A_WIN: readonly ProjectPhase[] = [
+  "initiative",
+  "pursuing",
+];
+export const MOVED_INTO_BY_A_WIN = "delivering" satisfies ProjectPhase;
+
+// The project exists and the reader may not read it: no grant, or out of scope.
+const UNREADABLE = new Set([403, 404]);
 
 type AskedAdvance = Readonly<{
   dealId: string;
   toStage: Readonly<{ semantic: string }>;
+  // Undefined when the opening surface did not hold the deal: it is read first.
+  projectId?: string | null;
 }>;
 
 /**
- * The name of the project that winning this deal moves to delivering. Null
- * means the win moves none, or the reader cannot read the project. Read at
- * each opening and never kept, because the phase may change between two wins.
+ * What winning moves. `project` is the project's name, or null for a project
+ * the reader cannot read, which the server moves all the same.
+ */
+export type WinMove = Readonly<{ project: string | null }>;
+
+/**
+ * The project that winning this deal moves to delivering, or null when the win
+ * moves none. Read at each opening and never kept, because the phase may
+ * change between two wins.
  */
 export function useProjectMovedByWin(
   pending: AskedAdvance | null,
-): string | null {
+): WinMove | null {
   const dealId = pending?.dealId ?? null;
-  const project = useQuery({
-    queryKey: ["deals", dealId, "win-project"],
+  const heldProjectId = pending?.projectId;
+  const move = useQuery({
+    queryKey: ["deals", dealId, "win-project", heldProjectId],
     enabled: pending?.toStage.semantic === "won" && dealId !== null,
     gcTime: 0,
     staleTime: 0,
     retry: false,
     queryFn: async ({ signal }) => {
-      const deal = unwrap(
-        await api.GET("/deals/{id}", {
-          signal,
-          params: { path: { id: dealId ?? "" } },
-        }),
-      );
-      if (!deal.project_id) {
-        return null;
-      }
-      return unwrap(
-        await api.GET("/projects/{id}", {
-          signal,
-          params: { path: { id: deal.project_id } },
-        }),
-      );
+      const projectId =
+        heldProjectId === undefined
+          ? unwrap(
+              await api.GET("/deals/{id}", {
+                signal,
+                params: { path: { id: dealId ?? "" } },
+              }),
+            ).project_id
+          : heldProjectId;
+      return projectId ? projectAWinMoves(projectId, signal) : null;
     },
   });
-  const read = project.data;
-  return read && !read.archived_at && MOVED_BY_A_WIN.includes(read.phase)
-    ? read.name
-    : null;
+  return move.data ?? null;
+}
+
+async function projectAWinMoves(
+  projectId: string,
+  signal: AbortSignal,
+): Promise<WinMove | null> {
+  try {
+    const read = unwrap(
+      await api.GET("/projects/{id}", {
+        signal,
+        params: { path: { id: projectId } },
+      }),
+    );
+    return !read.archived_at && MOVED_BY_A_WIN.includes(read.phase)
+      ? { project: read.name }
+      : null;
+  } catch (error) {
+    if (UNREADABLE.has(problemStatus(error))) {
+      return { project: null };
+    }
+    throw error;
+  }
 }

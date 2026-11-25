@@ -71,7 +71,7 @@ describe("the companies on a project", () => {
   });
 
   // Every card's menu looks the same, so its name says which company it is
-  // for, and Remove is the one word every link row uses.
+  // for. It takes the link off with Remove, as the other link rows do.
   it("names the company on each card's menu, which holds Remove", async () => {
     const user = userEvent.setup();
     renderSection([netcare, relay], false);

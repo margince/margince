@@ -244,6 +244,28 @@ describe("settingsSearch over the settings a page draws", () => {
     );
   });
 
+  // Configuration and Website forms each draw a panel under their own name.
+  it.each([
+    ["Configuration", "configuration"],
+    ["Website forms", "web-forms"],
+  ] as const)(
+    "keeps the group under %p, the page's own full name",
+    (query, page) => {
+      const hit = settingsSearch(query, ALL, t).find(
+        (candidate) => candidate.page.id === page,
+      );
+      expect(hit?.group).toBeDefined();
+      expect(hit?.section).toBeUndefined();
+    },
+  );
+
+  it("finds Your agent on the agents page", () => {
+    const hit = settingsSearch("your agent", ALL, t).find(
+      (candidate) => candidate.page.id === "agents",
+    );
+    expect(hit?.section).toBe(t("aiAccess.yourAgent.title"));
+  });
+
   it("names no setting when an alias already matched", () => {
     const hit = settingsSearch("working hours", ALL, t).find(
       (candidate) => candidate.page.id === "meetings",

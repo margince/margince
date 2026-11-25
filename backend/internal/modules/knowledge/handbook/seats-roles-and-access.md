@@ -164,7 +164,7 @@ Margince comes with six roles: Admin, Ops, Management, Team lead, User and Read-
 | **Management** | every record in the company | every record; no admin rights |
 | **Team lead** | records | records owned by anyone on a live team with them; settings read-only; no access to exchange rates, AI prices, imports or retention |
 | **User** | records, and these settings read-only: the rest of the sales settings, **Knowledge** and **Teams** | records they own; their own settings, **Products and offers** and **Mail capture** (adding only); all of their own saved views |
-| **Read-only** | every record, and these settings read-only: their own except **Meetings**, plus **Teams**, the sales settings, **Mail capture** and **Knowledge** | nothing, except their own saved views; cannot connect a mailbox |
+| **Read-only** | every record, and these settings read-only: **Writing voice**, **Teams**, the sales settings, **Mail capture** and **Knowledge** | no records; their own **Account**, **Notifications**, **AI assistants** and **Connections** settings, and their own saved views; cannot connect a mailbox |
 
 This is the biggest difference between Admin and Ops: **Ops cannot manage members or teams.** It also cannot read the audit log or the privacy list, or reset the installation. It reads the list of roles but does not edit it. Everything else in daily running belongs to Ops.
 

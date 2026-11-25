@@ -118,7 +118,7 @@ export function ClauseRow({
   const operatorOptions: SelectOption[] = (chosen?.operators ?? []).map(
     (candidate) => ({
       value: candidate,
-      label: t(operatorKey(candidate as FilterOp, chosen?.type ?? "text")),
+      label: t(operatorKey(candidate, chosen)),
     }),
   );
 
@@ -142,7 +142,7 @@ export function ClauseRow({
     const keptOp =
       field !== "" && next?.operators.includes(op)
         ? op
-        : ((next?.operators[0] ?? "eq") as FilterOp);
+        : (next?.operators[0] ?? "eq");
     edit((found) => ({
       ...found,
       field: nextField,

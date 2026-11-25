@@ -88,7 +88,8 @@ function advance(
     // Whether the deal has a signed contract. Left out, the read answers
     // nothing usable and the dialog asks only if the server refuses.
     signed?: boolean;
-    // The phase of the project the deal belongs to. Left out, it has none.
+    // The phase of the project the deal belongs to. Left out, it has none;
+    // "unreadable" answers the project read with a 404.
     projectPhase?: string;
   }>,
 ) {
@@ -107,11 +108,13 @@ function advance(
             "GET /deals/deal-1": () =>
               jsonResponse({ id: "deal-1", project_id: "pr-1" }),
             "GET /projects/pr-1": () =>
-              jsonResponse({
-                id: "pr-1",
-                name: "Depot fit-out",
-                phase: args.projectPhase,
-              }),
+              args.projectPhase === "unreadable"
+                ? jsonResponse({ status: 404, title: "Not found" }, 404)
+                : jsonResponse({
+                    id: "pr-1",
+                    name: "Depot fit-out",
+                    phase: args.projectPhase,
+                  }),
           }),
       ...(args.signed === undefined
         ? {}
@@ -197,6 +200,30 @@ export const ClosingWonMovesProject: Story = {
     const dialog = within(await screen.findByRole("dialog"));
     await dialog.findByText("This also moves Depot fit-out to Delivering.");
   },
+};
+
+/** The same win for a reader who may not read the project: it is not named. */
+export const ClosingWonMovesUnreadProject: Story = {
+  render: advance({
+    stage: terminal("Won", "won"),
+    onConfirm: () => Promise.resolve(SAVED),
+    signed: true,
+    projectPhase: "unreadable",
+  }),
+  play: async () => {
+    const dialog = within(await screen.findByRole("dialog"));
+    await dialog.findByText("This also moves its project to Delivering.");
+  },
+};
+
+export const ClosingWonMovesProjectPhone: Story = {
+  tags: ["uat-phone"],
+  render: advance({
+    stage: terminal("Won", "won"),
+    onConfirm: () => Promise.resolve(SAVED),
+    signed: true,
+    projectPhase: "pursuing",
+  }),
 };
 
 const winWithoutContract = advance({

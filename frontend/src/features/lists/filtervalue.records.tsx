@@ -116,9 +116,9 @@ export function SearchedRecordValue({
   const [query, setQuery] = useState("");
   // Names the reader just picked, shown before the name lookup has answered.
   const [names, setNames] = useState<ReadonlyMap<string, string>>(new Map());
-  // Only the reader's own pick moves focus; a clause restored from a saved
-  // view takes none.
-  const [picked, setPicked] = useState(false);
+  // The value the reader's own pick sent, until it arrives and takes focus. A
+  // value restored or changed from outside takes none.
+  const sentByPick = useRef<string | null>(null);
   const box = useRef<HTMLInputElement>(null);
   const change = useRef<HTMLButtonElement>(null);
   const popup = useRef<HTMLDivElement>(null);
@@ -130,9 +130,10 @@ export function SearchedRecordValue({
 
   function pick(option: SearchResult) {
     setNames((was) => new Map(was).set(option.value, option.label));
-    setPicked(true);
     setQuery("");
-    onChange(many ? [...ids, option.value] : option.value);
+    const next = many ? [...ids, option.value] : option.value;
+    sentByPick.current = JSON.stringify(next);
+    onChange(next);
   }
   function drop(id: string) {
     onChange(many ? ids.filter((held) => held !== id) : "");
@@ -159,10 +160,14 @@ export function SearchedRecordValue({
   // box open beneath what it already holds, because the next pick is the point.
   const closed = !many && ids.length > 0;
   useLayoutEffect(() => {
-    if (picked) {
+    if (
+      sentByPick.current !== null &&
+      sentByPick.current === JSON.stringify(value)
+    ) {
+      sentByPick.current = null;
       (closed ? change : box).current?.focus();
     }
-  }, [closed, picked]);
+  });
 
   return (
     <div className="filter-value">

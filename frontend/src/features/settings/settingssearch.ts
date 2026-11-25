@@ -393,11 +393,12 @@ export function settingsSearch(
     if (holdsEveryWord(words, fields)) {
       const rank = Math.min(...words.map((word) => rankOf(word, fields)));
       const best = Math.floor(rank / 2);
-      // A setting named in full opens where it is drawn, even when one of its
-      // words also names the page.
-      const section =
-        sections.find((each) => fold(each) === words.join(" ")) ??
-        namedSection(words, sections, best - named.length);
+      const section = matchedSection(
+        words,
+        label,
+        sections,
+        best - named.length,
+      );
       const tabIndex = best - (named.length - tabWords.length);
       const tab = matchedTab(
         page.id,
@@ -427,6 +428,24 @@ export function settingsSearch(
         pages.indexOf(a.hit.page) - pages.indexOf(b.hit.page),
     )
     .map((entry) => entry.hit);
+}
+
+// A setting named in full opens where it is drawn, even when one of its words
+// also names the page. The page's own full name still wins.
+function matchedSection(
+  words: readonly string[],
+  label: string,
+  sections: readonly string[],
+  best: number,
+): string | undefined {
+  const phrase = words.join(" ");
+  if (fold(label) === phrase) {
+    return undefined;
+  }
+  return (
+    sections.find((each) => fold(each) === phrase) ??
+    namedSection(words, sections, best)
+  );
 }
 
 // The setting a hit through the sections alone names: the one holding every

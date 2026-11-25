@@ -13,17 +13,16 @@ import { type Project360, StakeholdersCard } from "./projectsections";
 // The drawers the page opens; "tasks" is the history narrowed to tasks.
 export type ProjectDrawerKind = "history" | "tasks" | "documents" | "contacts";
 
-// The history drawer's title, kept past closing so it does not change while
-// the drawer animates out.
-function useHistoryDrawerTitle(drawer: ProjectDrawerKind | null): string {
-  const t = useT();
+// Which history the drawer shows, kept past closing so its title and body do
+// not change while the drawer animates out.
+function useHistoryDrawerKind(
+  drawer: ProjectDrawerKind | null,
+): "history" | "tasks" {
   const [kind, setKind] = useState<"history" | "tasks">("history");
   if ((drawer === "history" || drawer === "tasks") && drawer !== kind) {
     setKind(drawer);
   }
-  return kind === "tasks"
-    ? t("project.commitments.all")
-    : t("record.fullHistory");
+  return kind;
 }
 
 /** The project page's reading drawers, one open at a time. */
@@ -39,18 +38,22 @@ export function ProjectDrawers({
   onClose: () => void;
 }>) {
   const t = useT();
-  const historyTitle = useHistoryDrawerTitle(drawer);
+  const historyKind = useHistoryDrawerKind(drawer);
   const project = view.project;
   return (
     <>
       <ProjectDrawer
         open={drawer === "history" || drawer === "tasks"}
-        title={historyTitle}
+        title={
+          historyKind === "tasks"
+            ? t("project.commitments.all")
+            : t("record.fullHistory")
+        }
         onClose={onClose}
       >
         <ProjectHistory
           view={view}
-          kind={drawer === "tasks" ? "task" : undefined}
+          kind={historyKind === "tasks" ? "task" : undefined}
         />
       </ProjectDrawer>
       <ProjectDrawer

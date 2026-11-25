@@ -6244,6 +6244,7 @@ export const en = {
   "deals.confirmTerminal":
     "This closes the deal as {status}. Nothing changes until you confirm.",
   "deals.confirmMovesProject": "This also moves {project} to {phase}.",
+  "deals.confirmMovesUnreadProject": "This also moves its project to {phase}.",
   "deals.lostReason": "Lost reason",
   "deals.lostReasonNeeded": "Pick why the deal was lost.",
   "deals.lostReasonCode": "Why was it lost?",
@@ -20536,6 +20537,9 @@ export const en = {
   "filters.op.lessThan": "is less than",
   "filters.op.atMost": "is at most",
   "filters.op.withinRadius": "is within",
+  "filters.op.include": "include",
+  "filters.op.notInclude": "do not include",
+  "filters.op.includeAny": "include any of",
   "filters.sentence.radiusOf": "{km} km of {place}",
   "filters.radius.km": "Distance (km)",
   "filters.radius.place": "Place name (optional)",

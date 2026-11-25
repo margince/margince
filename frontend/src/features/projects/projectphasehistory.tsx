@@ -17,9 +17,6 @@ import { phaseName } from "./projectstanding.words";
 type PhaseTransition = components["schemas"]["Project360PhaseTransition"];
 type PhaseCause = components["schemas"]["Project360PhaseCause"];
 
-// Splits a sentence around the deal's name, which is drawn as a link.
-const NAME_SLOT = "\u0000";
-
 /**
  * Every visit to a phase, oldest first: when it began and ended, why or by
  * whom, and how long that visit lasted. A reopened project lists a phase
@@ -72,8 +69,12 @@ function VisitRow({
         to: formatDayMonth(leftAt, locale, zone),
       })
     : t("project.history.since", { date: from });
-  const who = phaseMoverSentence(visit.changed_by, !visit.from_phase, t);
-  const why = visit.reason ? `${who} · ${visit.reason}` : who;
+  // A caused move names its cause in place of the person whose act set it off.
+  const credit = isKnownCause(visit.cause) ? (
+    <PhaseCauseWords cause={visit.cause} />
+  ) : (
+    phaseMoverSentence(visit.changed_by, !visit.from_phase, t)
+  );
   const days = daysPast(
     Date.parse(visit.changed_at),
     Date.parse(leftAt ?? asOf),
@@ -86,8 +87,9 @@ function VisitRow({
       title={phaseName(visit.to_phase, t)}
       sub={
         <>
-          {`${span} · ${why}`}
-          <PhaseCauseWords cause={visit.cause} />
+          {`${span} · `}
+          {credit}
+          {visit.reason && ` · ${visit.reason}`}
         </>
       }
       right={leftAt ? length : <Badge>{length}</Badge>}
@@ -95,22 +97,20 @@ function VisitRow({
   );
 }
 
-// What moved the project when no one chose the phase. A cause kind this build
-// has no words for says nothing rather than something wrong.
-function PhaseCauseWords({ cause }: Readonly<{ cause?: PhaseCause }>) {
+// A cause kind this build has no words for credits the mover instead, never
+// something wrong.
+function isKnownCause(cause: PhaseCause | undefined): cause is PhaseCause {
+  return cause?.kind === "deal_won";
+}
+
+function PhaseCauseWords({ cause }: Readonly<{ cause: PhaseCause }>) {
   const t = useT();
-  if (cause?.kind !== "deal_won") {
-    return null;
-  }
   if (!cause.deal_id || !cause.deal_name) {
-    return <> · {t("project.history.dealWonUnnamed")}</>;
+    return t("project.history.dealWonUnnamed");
   }
-  const [before, after] = t("project.history.dealWon", {
-    name: NAME_SLOT,
-  }).split(NAME_SLOT);
+  const [before, after = ""] = t("project.history.dealWon").split("{name}");
   return (
     <>
-      {" · "}
       {before}
       <EntityRef kind="deal" id={cause.deal_id} name={cause.deal_name} />
       {after}

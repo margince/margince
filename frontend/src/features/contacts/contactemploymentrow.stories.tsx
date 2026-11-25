@@ -102,11 +102,11 @@ export const VerbsOpen: Story = {
   render: () => <Rows data={view} />,
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
-    const [first] = await canvas.findAllByRole("button", {
-      name: "More actions",
-    });
-    if (!first) throw new Error("no row offers more actions");
-    await userEvent.click(first);
+    await userEvent.click(
+      await canvas.findByRole("button", {
+        name: "More actions for Brandt Automotive GmbH",
+      }),
+    );
   },
 };
 

@@ -21,7 +21,7 @@ import { LostReasonFields } from "../lostreasonfields";
 import { closeReason, isSavedDeal } from "./closereviewoffer";
 import { CloseTasksQuestion, useCloseTasks } from "./closetasks";
 import { useWinQuestion } from "./winevidence";
-import { useProjectMovedByWin } from "./winmovesproject";
+import { MOVED_INTO_BY_A_WIN, useProjectMovedByWin } from "./winmovesproject";
 import "./deal360.css";
 
 type Deal = components["schemas"]["Deal"];
@@ -66,6 +66,9 @@ export type PendingAdvance = {
   // change made while the dialog was open fails loud instead of being erased.
   version: number | undefined;
   toStage: Stage;
+  // The deal's project as the surface drew it, so a won dialog need not read
+  // the deal again. Undefined where the surface does not hold it.
+  projectId?: string | null;
 };
 
 export type AdvanceInput = {
@@ -256,10 +259,14 @@ export function ConfirmAdvanceModal({
           </p>
           {movedProject && (
             <p className="t-caption" data-testid="win-moves-project">
-              {t("deals.confirmMovesProject", {
-                project: movedProject,
-                phase: t(PHASE_LABEL.delivering),
-              })}
+              {movedProject.project === null
+                ? t("deals.confirmMovesUnreadProject", {
+                    phase: t(labelFor(PHASE_LABEL, MOVED_INTO_BY_A_WIN)),
+                  })
+                : t("deals.confirmMovesProject", {
+                    project: movedProject.project,
+                    phase: t(labelFor(PHASE_LABEL, MOVED_INTO_BY_A_WIN)),
+                  })}
             </p>
           )}
           {(needsLostReason || needsWonReason) && (
