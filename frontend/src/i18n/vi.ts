@@ -6336,7 +6336,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "deal.timeline.empty": "Chưa có hoạt động nào trên deal này.",
   "legalEntities.title": "Pháp nhân",
   "legalEntities.sub":
-    "Các pháp nhân mà công ty bạn dùng để giao dịch. Đồng nghiệp chưa được gán sẽ làm việc cho pháp nhân mặc định, vốn lấy tên, địa chỉ và logo từ công ty ở trên.",
+    "Các pháp nhân mà công ty bạn dùng để giao dịch. Đồng nghiệp chưa được gán sẽ làm việc cho pháp nhân mặc định, vốn lấy tên, địa chỉ và logo từ hồ sơ công ty.",
   "legalEntities.loading": "Đang tải pháp nhân…",
   "legalEntities.addOpen": "Pháp nhân mới",
   "legalEntities.addTitle": "Pháp nhân mới",
@@ -6349,6 +6349,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Chưa đặt: áp dụng khu vực pháp lý của hệ thống",
   "legalEntities.defaultBadge": "Mặc định",
   "legalEntities.defaultUnnamed": "Công ty của bạn",
+  "legalEntities.fromCompanyProfile": "Lấy từ hồ sơ công ty",
   "legalEntities.displayName": "Tên",
   "legalEntities.legalName": "Tên pháp lý",
   "legalEntities.country": "Quốc gia",
