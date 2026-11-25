@@ -85,10 +85,14 @@ func TestAnExtensionKindWithAnOwnerFollowsTheRoleRowScope(t *testing.T) {
 	recordkinds.Reset()
 	t.Cleanup(recordkinds.Reset)
 	recordkinds.Register("alpha", []extension.RecordKindDeclaration{
-		{Kind: "visit", DisplayName: "Visit", Table: "ext_alpha_visit", NaturalKey: []string{"code"},
-			Fields: []extension.RecordKindField{{Name: "code", Label: "Code"}}, OwnerColumn: "visitor_id"},
-		{Kind: "room", DisplayName: "Room", Table: "ext_alpha_room", NaturalKey: []string{"code"},
-			Fields: []extension.RecordKindField{{Name: "code", Label: "Code"}}},
+		{
+			Kind: "visit", DisplayName: "Visit", Table: "ext_alpha_visit", NaturalKey: []string{"code"},
+			Fields: []extension.RecordKindField{{Name: "code", Label: "Code"}}, OwnerColumn: "visitor_id",
+		},
+		{
+			Kind: "room", DisplayName: "Room", Table: "ext_alpha_room", NaturalKey: []string{"code"},
+			Fields: []extension.RecordKindField{{Name: "code", Label: "Code"}},
+		},
 	})
 	arg := func(any) int { return 1 }
 	cases := []struct {

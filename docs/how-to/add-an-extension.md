@@ -902,7 +902,7 @@ RecordKinds: []extension.RecordKindDeclaration{{
 | `Defaults` | Starting rights per system role. Leave it out and every role is refused until an admin ticks the kind's object. |
 | `DeletePolicy` | `extension.DeleteArchiveOnly` (the default) or `extension.DeleteErasable`. |
 | `View` | Optional. The name of the page under your screen that shows one record of the kind, such as `room-page`. A notice about a record of the kind opens `#/ext/<unit>/<view>`, with `record_type` and `record_id` in the query. Leave it out and the notice opens your screen itself. Read both in the screen with `useEntryContext`. |
-| `OwnerColumn` | Optional. The `uuid` column that holds the member who owns a row. Core then shows a reader the rows their role's own, team or all row scope allows, as for deals, and a row with no owner to every reader. Leave it out and the `read` right on the kind shows every row. Core's readers apply the scope; your unit's own routes read the table with your own SQL and must apply it themselves. |
+| `OwnerColumn` | Optional. The `uuid` column that holds the member who owns a row. Core then shows a reader the rows their role's own, team or all row scope allows, as for deals, and a row with no owner to every reader. Leave it out and the `read` right on the kind shows every row. Core's readers apply the scope. Your unit's own routes read the table with your own SQL, so apply the scope in that SQL too. |
 
 The kind is gated on the RBAC object `ext_<unit>_<kind>`. The unit's hyphens become `_` in that name. Before core links,
 tags or lists a record, it checks the `read` right and a live row inside the kind's row scope. A caller without the right gets `404`. The start
@@ -1906,9 +1906,9 @@ Each check runs the rule core's start runs, and fails the test with the start's 
 |---|---|
 | `extensiontest.Check(t, ext)` | A record kind, link type or signal type the start refuses, and a name the unit declares twice. |
 | `extensiontest.CheckLink(t, ext, linkType, from, to)` | A link type the unit does not declare, or one that does not join a `from` record to a `to` record. |
-| `extensiontest.CheckSignal(t, ext, kind, fields)` | A signal type the unit does not declare, or evidence that does not fit its layout. |
+| `extensiontest.CheckSignal(t, ext, kind, fields)` | A signal type the unit does not declare, or evidence its layout refuses. |
 
-The kit does not see other units, so a clash between two units still shows only when the set is composed.
+The kit does not see other units, so a conflict between two units still shows only when the set is composed.
 
 ## Compose and check
 

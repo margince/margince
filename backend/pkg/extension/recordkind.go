@@ -181,7 +181,7 @@ func (k RecordKindDeclaration) Validate(unit Name) error {
 	if err := k.validateTimeline(); err != nil {
 		return err
 	}
-	if k.OwnerColumn != "" && !recordKindGrammar.MatchString(k.OwnerColumn) {
+	if k.OwnerColumn != "" && !shortNameGrammar.MatchString(k.OwnerColumn) {
 		return fmt.Errorf("record kind %q owner column %q is not a column name", k.Kind, k.OwnerColumn)
 	}
 	if k.View != "" && !nameGrammar.MatchString(k.View) {

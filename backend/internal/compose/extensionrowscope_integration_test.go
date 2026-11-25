@@ -85,7 +85,7 @@ func registerScopedVisits(t *testing.T, e *integration.Env, ownerColumn string) 
 			t.Errorf("dropping the visit table: %v", err)
 		}
 	})
-	visits := scopedVisits{contact: e.SeedContact(t, "Visited Person", nil), byTitle: map[string]ids.UUID{}}
+	visits := scopedVisits{contact: e.SeedContact(t, "Visited Contact", nil), byTitle: map[string]ids.UUID{}}
 	for title, who := range map[string]*ids.UUID{"rep1 visit": &e.Rep1, "rep2 visit": &e.Rep2, "rep3 visit": &e.Rep3, "unowned visit": nil} {
 		var id ids.UUID
 		if err := owner.QueryRow(ctx, `INSERT INTO ext.`+scopeDemoTable+` (title, owner_id, contact_id) VALUES ($1, $2, $3) RETURNING id`,
@@ -102,7 +102,7 @@ func scopedReader(e *integration.Env, scope principal.RowScope) context.Context 
 		RowScope: scope,
 		Objects: map[string]principal.ObjectGrant{
 			scopeDemoObject: {Read: true}, "contact": {Read: true}, "signal": {Read: true},
-			"list": {Create: true, Read: true, Update: true, Delete: true},
+			"list": {Create: true, Read: true, Update: true, Delete: true}, "installation_settings": {Read: true},
 		},
 	})
 }
@@ -122,11 +122,11 @@ func TestAnOwnedExtensionKindIsReadUnderTheRoleRowScopeEverywhere(t *testing.T) 
 	visits := registerScopedVisits(t, e, "owner_id")
 	for _, level := range scopeLevels {
 		ctx := scopedReader(e, level.scope)
-		assertTitles(t, level.scope, "search", searchedVisits(t, e, ctx), level.want)
-		assertTitles(t, level.scope, "Live List engine", engineVisits(t, e, ctx, visits), level.want)
-		assertTitles(t, level.scope, "History", historyVisits(t, e, ctx, visits.contact), level.want)
-		assertTitles(t, level.scope, "row check", probedVisits(t, e, ctx, visits), level.want)
-		if count := reportedVisits(t, e, ctx); count != len(level.want) {
+		assertTitles(t, level.scope, "search", searchedVisits(ctx, t, e), level.want)
+		assertTitles(t, level.scope, "Live List engine", engineVisits(ctx, t, e, visits), level.want)
+		assertTitles(t, level.scope, "History", historyVisits(ctx, t, e, visits.contact), level.want)
+		assertTitles(t, level.scope, "row check", probedVisits(ctx, t, e, visits), level.want)
+		if count := reportedVisits(ctx, t, e); count != len(level.want) {
 			t.Errorf("%s: report count = %d, want %d", level.scope, count, len(level.want))
 		}
 	}
@@ -137,8 +137,8 @@ func TestAnExtensionKindWithoutAnOwnerColumnShowsEveryRowToItsReaders(t *testing
 	visits := registerScopedVisits(t, e, "")
 	every := scopeLevels[len(scopeLevels)-1].want
 	ctx := scopedReader(e, principal.RowScopeOwn)
-	assertTitles(t, principal.RowScopeOwn, "search", searchedVisits(t, e, ctx), every)
-	assertTitles(t, principal.RowScopeOwn, "row check", probedVisits(t, e, ctx, visits), every)
+	assertTitles(t, principal.RowScopeOwn, "search", searchedVisits(ctx, t, e), every)
+	assertTitles(t, principal.RowScopeOwn, "row check", probedVisits(ctx, t, e, visits), every)
 }
 
 func assertTitles(t *testing.T, scope principal.RowScope, reader string, got, want []string) {
@@ -149,7 +149,7 @@ func assertTitles(t *testing.T, scope principal.RowScope, reader string, got, wa
 	}
 }
 
-func searchedVisits(t *testing.T, e *integration.Env, ctx context.Context) []string {
+func searchedVisits(ctx context.Context, t *testing.T, e *integration.Env) []string {
 	t.Helper()
 	page, err := search.NewStore(e.DB()).Search(ctx, search.Input{Query: "visit", Types: []string{scopeDemoKind}})
 	if err != nil {
@@ -162,7 +162,7 @@ func searchedVisits(t *testing.T, e *integration.Env, ctx context.Context) []str
 	return out
 }
 
-func engineVisits(t *testing.T, e *integration.Env, ctx context.Context, visits scopedVisits) []string {
+func engineVisits(ctx context.Context, t *testing.T, e *integration.Env, visits scopedVisits) []string {
 	t.Helper()
 	engine, ok, err := collections.NewStore(e.DB()).SegmentEngine(ctx, scopeDemoKind)
 	if err != nil || !ok {
@@ -182,7 +182,7 @@ func engineVisits(t *testing.T, e *integration.Env, ctx context.Context, visits 
 
 // reportedVisits runs the kind's count with no group floor, which would
 // otherwise withhold counts this small.
-func reportedVisits(t *testing.T, e *integration.Env, ctx context.Context) int {
+func reportedVisits(ctx context.Context, t *testing.T, e *integration.Env) int {
 	t.Helper()
 	for _, r := range registeredReports() {
 		if r.name != "ext:scopedemo:visits" {
@@ -198,7 +198,7 @@ func reportedVisits(t *testing.T, e *integration.Env, ctx context.Context) int {
 	return 0
 }
 
-func historyVisits(t *testing.T, e *integration.Env, ctx context.Context, contact ids.UUID) []string {
+func historyVisits(ctx context.Context, t *testing.T, e *integration.Env, contact ids.UUID) []string {
 	t.Helper()
 	code, entries := readExtensionHistory(ctx, t, e, contact)
 	if code != http.StatusOK {
@@ -213,7 +213,7 @@ func historyVisits(t *testing.T, e *integration.Env, ctx context.Context, contac
 
 // probedVisits are the visits the row check behind links, attachments and
 // writes admits; it refuses the others as missing.
-func probedVisits(t *testing.T, e *integration.Env, ctx context.Context, visits scopedVisits) []string {
+func probedVisits(ctx context.Context, t *testing.T, e *integration.Env, visits scopedVisits) []string {
 	t.Helper()
 	var out []string
 	for title, id := range visits.byTitle {

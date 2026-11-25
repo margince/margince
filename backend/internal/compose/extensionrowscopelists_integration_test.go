@@ -47,6 +47,9 @@ func makeScopedLists(t *testing.T, e *integration.Env, visits scopedVisits) scop
 			t.Fatalf("adding %s: %v", title, err)
 		}
 	}
+	// The first check of a Live List only takes its snapshot. So the visits are
+	// archived by their unit while it runs, and enter on the second check.
+	e.WsExec(t, `UPDATE ext.`+scopeDemoTable+` SET archived_at = now()`)
 	live, err := store.CreateList(ctx, collections.CreateListInput{
 		Name: "Every visit", EntityType: scopeDemoKind, ListType: "dynamic",
 		Definition: map[string]any{"field": "title", "op": "contains", "value": "visit"},
@@ -54,22 +57,36 @@ func makeScopedLists(t *testing.T, e *integration.Env, visits scopedVisits) scop
 	if err != nil {
 		t.Fatalf("creating the Live List: %v", err)
 	}
-	// The reader's last visit lies far behind the check, so every row the check
-	// sees entering counts as joined since it.
 	if _, err := store.VisitList(ctx, live.ID); err != nil {
 		t.Fatalf("visiting the Live List: %v", err)
 	}
+	// A pulse counts from a visit over half an hour old, which a test cannot
+	// wait for. Moving the one visit back is the only step no writer offers.
 	e.WsExec(t, `UPDATE list_visit SET visited_at = '2000-01-01T00:00:00Z' WHERE list_id = $1`, live.ID)
-	checks, err := CheckLiveLists(context.Background(), e.Pool, e.WS, func() time.Time { return clocktest.Now(t) })
+	checkLive(t, e, live.ID, clocktest.Now(t), 0)
+	e.WsExec(t, `UPDATE ext.`+scopeDemoTable+` SET archived_at = NULL`)
+	checkLive(t, e, live.ID, clocktest.Now(t).Add(time.Minute), len(visits.byTitle))
+	return scopedLists{shortlist: short.ID, live: live.ID}
+}
+
+// checkLive runs one Live List check pass at the given time and fails unless
+// the list then holds want members.
+func checkLive(t *testing.T, e *integration.Env, list ids.ListID, at time.Time, want int) {
+	t.Helper()
+	checks, err := CheckLiveLists(context.Background(), e.Pool, e.WS, func() time.Time { return at })
 	if err != nil {
 		t.Fatalf("checking the Live List: %v", err)
 	}
 	for _, check := range checks {
-		if check.ListID == live.ID && (check.Err != nil || check.Members != len(visits.byTitle)) {
-			t.Fatalf("the check = %+v, want every visit a member", check)
+		if check.ListID != list {
+			continue
 		}
+		if check.Err != nil || check.Members != want {
+			t.Fatalf("the check = %+v, want %d members", check, want)
+		}
+		return
 	}
-	return scopedLists{shortlist: short.ID, live: live.ID}
+	t.Fatalf("the pass did not check list %s", list)
 }
 
 func TestTheListReadersOfAnOwnedKindFollowTheRowScope(t *testing.T) {
@@ -112,13 +129,13 @@ func TestTheListReadersOfAnOwnedKindFollowTheRowScope(t *testing.T) {
 			}
 		}
 		assertTitles(t, level.scope, "joined since the visit", visits.titlesOf(joined), level.want)
-		assertTitles(t, level.scope, "picker preview", previewedVisits(t, e, ctx, visits), level.want)
+		assertTitles(t, level.scope, "picker preview", previewedVisits(ctx, t, e, visits), level.want)
 	}
 }
 
 // previewedVisits pages through the filter preview a record picker reads,
 // two rows a page.
-func previewedVisits(t *testing.T, e *integration.Env, ctx context.Context, visits scopedVisits) []string {
+func previewedVisits(ctx context.Context, t *testing.T, e *integration.Env, visits scopedVisits) []string {
 	t.Helper()
 	var out []string
 	cursor := ""
