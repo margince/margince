@@ -45217,6 +45217,8 @@ export interface components {
             link_type: string;
             /** Format: date-time */
             created_at: string;
+            /** @description True when this reader may remove the link: they may change the record it starts on and see the one it ends on. Set on a list read, absent on a write's answer. */
+            removable?: boolean;
         };
         RecordLinkList: {
             data: components["schemas"]["RecordLink"][];

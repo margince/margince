@@ -89,8 +89,11 @@ const (
 	// seat without an introduction grant that the preview refusal case needs.
 	// Raised by 110 production and 297 test lines, and 3 test files, when main's
 	// Anthropic setup met develop's cases in the back-sync.
-	composeRootProductionLines = 230_921
-	composeRootTestLines       = 361_329
+	// Raised by 60 production and 65 test lines for the record kind index checks
+	// and the History type check. They extend VerifyRecordKinds and the
+	// unexported History query, and their cases drive the History query plan.
+	composeRootProductionLines = 230_980
+	composeRootTestLines       = 361_394
 )
 
 // A read under these floors stopped early or read the wrong place, and would
