@@ -24,6 +24,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/activities"
 	capturemod "github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/modules/contacts"
+	"github.com/margince/margince/backend/internal/modules/privacy"
 	"github.com/margince/margince/backend/internal/platform/blobstore"
 	"github.com/margince/margince/backend/internal/platform/clocktest"
 	"github.com/margince/margince/backend/internal/platform/database"
@@ -230,4 +231,74 @@ func erasureCtx(e *integration.SearchEnv) context.Context {
 		Type: principal.PrincipalHuman, ID: "human:" + e.Rep1.String(), UserID: e.Rep1, SeatType: principal.SeatFull,
 		Permissions: integration.AdminPerms,
 	})
+}
+
+// seedContactNamed inserts a contact that no mail address or channel account
+// ties to anything the unit's payload says.
+func seedContactNamed(t *testing.T, e *integration.SearchEnv, name string) ids.UUID {
+	t.Helper()
+	id := ids.NewV7()
+	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+		_, err := tx.Exec(context.Background(),
+			`INSERT INTO contact (id, full_name, source, captured_by, owner_id) VALUES ($1, $2, 'manual', 'human:x', $3)`, id, name, e.Rep1)
+		return err
+	}); err != nil {
+		t.Fatalf("seeding %s: %v", name, err)
+	}
+	return id
+}
+
+// A message filed by choice on two contacts is exported for both, though its
+// payload names neither. Erasing one keeps the original for the other, and
+// erasing the second removes it.
+func TestAMessageFiledOnTwoSubjectsIsExportedForBothAndErasedWithTheLast(t *testing.T) {
+	env := newCaptureEnvWithBlob(t, captureNow, blobstore.NewMemory())
+	e := env.e
+	first, second := seedContactNamed(t, e, "First Subject"), seedContactNamed(t, e, "Second Subject")
+	chat := unitChat(t, e, nil, "two-1", first)
+	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+		_, err := tx.Exec(context.Background(),
+			`INSERT INTO activity_link (activity_id, entity_type, contact_id) VALUES ($1, 'contact', $2)`, chat, second)
+		return err
+	}); err != nil {
+		t.Fatalf("filing the message on the second subject: %v", err)
+	}
+	exported := func(subject ids.UUID) bool {
+		t.Helper()
+		pkg, err := privacy.AssembleSAR(erasureCtx(e), e.DB(), ids.From[ids.ContactKind](subject))
+		if err != nil {
+			t.Fatalf("exporting %s: %v", subject, err)
+		}
+		for _, row := range pkg.RawCapture {
+			if row["source_id"] == "two-1" {
+				return true
+			}
+		}
+		return false
+	}
+	held := func() int {
+		var n int
+		if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+			return tx.QueryRow(context.Background(), `SELECT count(*) FROM raw_capture WHERE source_id = 'two-1'`).Scan(&n)
+		}); err != nil {
+			t.Fatal(err)
+		}
+		return n
+	}
+	if !exported(first) || !exported(second) {
+		t.Fatal("the original is missing from the export of a subject the message was filed on")
+	}
+	eraser := compose.ComposedEraser(e.Pool, blobstore.NewMemory())
+	if err := eraser.EraseContact(erasureCtx(e), first, "subject request"); err != nil {
+		t.Fatalf("erasing the first subject: %v", err)
+	}
+	if held() != 1 || !exported(second) {
+		t.Fatal("erasing one subject destroyed the original the other is still owed")
+	}
+	if err := eraser.EraseContact(erasureCtx(e), second, "subject request"); err != nil {
+		t.Fatalf("erasing the second subject: %v", err)
+	}
+	if held() != 0 {
+		t.Fatal("the original survives the erasure of the last subject")
+	}
 }

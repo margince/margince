@@ -83,24 +83,32 @@ func externalOriginalCandidateSQL(scope rawSubjectScope, args pgx.NamedArgs) str
 
 // linkedOriginalsSQL selects the raw_capture ids of originals whose activity is
 // filed on one record through activity_link. The column is contact_id or
-// lead_id, and @linked_subject is the record id.
+// lead_id, and subject is the SQL for the record id, such as "$1".
 //
 // A member who chose the record for a message bound no identity to it. The
 // original may name no address or account the hint arms could find. The link
 // is then the only evidence of whom the message is about.
 //
-// The activity guards hold. A legal hold on the activity keeps its original.
-// So does another activity outside the record that names the same original.
-func linkedOriginalsSQL(column string) string {
-	return `SELECT a.raw_capture_id FROM activity a JOIN activity_link l ON l.activity_id = a.id
-	  WHERE l.` + column + ` = @linked_subject::uuid AND a.raw_capture_id IS NOT NULL` + notTransitivelyHeld("a.id") + `
+// Export and disclosure read every such original. Erasure reads the ones it may
+// destroy. A legal hold on the activity keeps its original. So does another
+// activity that names the original without being filed on this record alone.
+// A message filed on a second live subject is one.
+func linkedOriginalsSQL(column, subject string, erasing bool) string {
+	query := `SELECT a.raw_capture_id FROM activity a JOIN activity_link l ON l.activity_id = a.id
+	  WHERE l.` + column + ` = ` + subject + ` AND a.raw_capture_id IS NOT NULL`
+	if !erasing {
+		return query
+	}
+	return query + notTransitivelyHeld("a.id") + `
 	    AND NOT EXISTS (SELECT 1 FROM activity o WHERE o.raw_capture_id = a.raw_capture_id
-	      AND NOT EXISTS (SELECT 1 FROM activity_link ol WHERE ol.activity_id = o.id AND ol.` + column + ` = @linked_subject::uuid))`
+	      AND (NOT EXISTS (SELECT 1 FROM activity_link ol WHERE ol.activity_id = o.id AND ol.` + column + ` = ` + subject + `)
+	        OR EXISTS (SELECT 1 FROM activity_link xl JOIN ` + strings.TrimSuffix(column, "_id") + ` s ON s.id = xl.` + column + `
+	          WHERE xl.activity_id = o.id AND xl.` + column + ` <> ` + subject + ` AND s.archived_at IS NULL)))`
 }
 
 // deleteLinkedOriginalsTx destroys the originals of messages filed on one record.
 func deleteLinkedOriginalsTx(ctx context.Context, tx pgx.Tx, column string, record ids.UUID) (int64, error) {
-	return deleteRawOriginalsTx(ctx, tx, `r.id IN (`+linkedOriginalsSQL(column)+`)`,
+	return deleteRawOriginalsTx(ctx, tx, `r.id IN (`+linkedOriginalsSQL(column, "@linked_subject::uuid", true)+`)`,
 		pgx.NamedArgs{"linked_subject": record.String()})
 }
 
@@ -116,4 +124,17 @@ func deleteSubjectOriginalsTx(ctx context.Context, tx pgx.Tx, contact ids.Contac
 	}
 	linked, err := deleteLinkedOriginalsTx(ctx, tx, "contact_id", contact.UUID)
 	return tagged + linked, err
+}
+
+// wipeTwinsAndOriginals anonymizes the subject's lead twins and
+// destroys the originals of messages filed on them by choice.
+func wipeTwinsAndOriginals(ctx context.Context, tx pgx.Tx, contact ids.ContactID, emails []string) ([]ids.UUID, error) {
+	wiped, err := anonymizeLeadTwins(ctx, tx, contact, emails)
+	for _, lead := range wiped {
+		if err != nil {
+			break
+		}
+		_, err = deleteLinkedOriginalsTx(ctx, tx, "lead_id", lead)
+	}
+	return wiped, err
 }
