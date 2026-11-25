@@ -34,7 +34,7 @@ const composeRootDir = "internal/compose"
 // The ceilings below hold develop and main together: each side's additions
 // stayed under its own ceilings, and the two sets of additions sum to these.
 const (
-	composeRootProductionFiles = 1384
+	composeRootProductionFiles = 1382
 	// Raised by 2 files for the extension mail-file read cases and the purge
 	// receipt cases, which drive this package's unexported seams. Raised by 1
 	// production and 1 test file for the series-split fold and its cases.
@@ -61,16 +61,16 @@ const (
 	// case, which drives the unexported mail worker over two team links.
 	// Raised by 2 production lines for the stage-evidence prompt rule on a
 	// document a criterion asks to be sent, which is the site's own prompt text.
-	composeRootProductionLines = 230_699
-	composeRootTestLines       = 360_128
+	composeRootProductionLines = 230_684
+	composeRootTestLines       = 360_091
 )
 
 // A read under these floors stopped early or read the wrong place, and would
 // pass every ceiling. They sit near 90% of the package; lower them with the
 // ceilings when code moves out.
 const (
-	composeRootFloorFiles = 2900
-	composeRootFloorLines = 520_000
+	composeRootFloorFiles = 2960
+	composeRootFloorLines = 530_000
 )
 
 // composeRootGenerated grows with the contract, not with hand-written code, so
