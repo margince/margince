@@ -42,12 +42,11 @@ func importedMeetingCopiesDataTask(pool *pgxpool.Pool) datatask.Task {
 	}
 }
 
-// importedMeetingCopiesSQL pairs each live imported meeting that holds no
-// meeting identity with the one live calendar meeting its named author's
-// calendar holds at the same instant under the same title. The import keeps no
-// calendar identity to match on, so the author's own seat, the instant and the
-// title together stand in for it; a slot with two such calendar meetings is
-// left alone. A booked copy is never folded.
+// importedMeetingCopiesSQL pairs a live import that holds no meeting identity
+// with a live calendar meeting of its named author. Both share the instant and
+// the title. The import keeps no calendar identity, so the author's own seat,
+// the instant and the title stand in for it. A slot with two such calendar
+// meetings is left alone, and a booked copy is never folded.
 var importedMeetingCopiesSQL = `
 	FROM activity imp
 	JOIN LATERAL (

@@ -20,9 +20,9 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
-// A colleague's import of a meeting that names the calendar's owner as its
-// author lands on the meeting that owner's calendar already holds, and brings
-// its contact link. The guest is a known contact, so the colleague may read it.
+// A colleague's import that names the calendar's owner as the author lands on
+// the owner's calendar meeting and brings its contact link. The guest is a
+// known contact, so the colleague may read the meeting.
 func TestAnImportNamingTheCalendarOwnerLandsOnTheirMeeting(t *testing.T) {
 	env := newCaptureEnv(t)
 	e := env.e
@@ -47,8 +47,8 @@ func TestAnImportNamingTheCalendarOwnerLandsOnTheirMeeting(t *testing.T) {
 	}
 }
 
-// An import naming any other seat as the author files its own meeting: the
-// calendar's meeting is its owner's, and no claim about someone else joins it.
+// An import naming any other seat as the author files its own meeting. The
+// calendar's meeting is its owner's, and a claim about someone else never joins it.
 func TestAnImportNamingAnotherAuthorFilesItsOwnMeeting(t *testing.T) {
 	env := newCaptureEnv(t)
 	e := env.e

@@ -18,9 +18,9 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
-// An import the author's calendar already holds at the same instant under the
-// same title is folded onto the calendar meeting, which gains the import's
-// records. Any other import stays as it is.
+// An import is folded onto the author's calendar meeting at the same instant
+// under the same title. The calendar meeting gains the import's records. Any
+// other import stays as it is.
 func TestTheImportedCopiesTaskFoldsOnlyTheAuthorsCalendarCopy(t *testing.T) {
 	for _, tc := range []struct {
 		name    string
@@ -66,8 +66,8 @@ func TestTheImportedCopiesTaskFoldsOnlyTheAuthorsCalendarCopy(t *testing.T) {
 }
 
 // importStoredCopy files a meeting through the declared importer's door as
-// Rep1, naming author, in the shape such copies are stored in: no calendar
-// identity, because the author's calendar held it first.
+// Rep1, naming author. It has no calendar identity, the shape such copies are
+// stored in: the author's calendar held the identity first.
 func importStoredCopy(t *testing.T, s seriesSplit, contact, author ids.UUID, subject string) ids.UUID {
 	t.Helper()
 	system, sourceID := "mirror:hubspot", "engagement-1"
