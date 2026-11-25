@@ -24,7 +24,7 @@ const maxMergeHops = 8
 func FollowMergeTx(ctx context.Context, tx pgx.Tx, id ids.UUID) (ids.UUID, error) {
 	args := []any{id, maxMergeHops}
 	arg := func(v any) int { args = append(args, v); return len(args) }
-	scope, err := auth.ScopeClauseFor(ctx, "deal", "d", arg)
+	scope, err := auth.ScopeClauseFor(ctx, dealTable, "d", arg)
 	if err != nil {
 		return ids.UUID{}, err
 	}
