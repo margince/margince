@@ -29,7 +29,7 @@ import {
   RECORDS_COUNT_LABEL,
 } from "../../lib/filtersaddress";
 import { fromHere } from "../../lib/navigatefrom";
-import { blankRequired, problemMessageOf } from "../../lib/problem";
+import { blankRequired, refusalSentences } from "../../lib/problem";
 import { recordKindLabel, useRecordKindDirectory } from "../../lib/recordkinds";
 import { routeHash } from "../../lib/router";
 import { EditFilterAction, mayEditFilter } from "./filterlistedit";
@@ -382,6 +382,8 @@ export function NewShortlistAction() {
   const [open, setOpen] = useState(false);
   const [faults, faultsRoot] = useFieldFaults<HTMLDivElement>();
   const nameLabel = t("lists.name");
+  const purposeLabel = t("lists.purpose");
+  const labels = { name: nameLabel, purpose: purposeLabel };
   const [name, setName] = useState("");
   const [purpose, setPurpose] = useState("");
   const [entityType, setEntityType] = useState<ListRecordType>("contact");
@@ -411,7 +413,7 @@ export function NewShortlistAction() {
         confirmLabel={t("lists.create")}
         bodyRef={faultsRoot}
         pending={create.isPending}
-        error={create.isError ? problemMessageOf(create.error, t) : null}
+        error={refusalSentences(create.error, t, labels).rest}
         onConfirm={() => {
           if (faults.show(blankRequired(locale, { name: [nameLabel, name] }))) {
             return;
@@ -431,6 +433,8 @@ export function NewShortlistAction() {
                 setOpen(false);
                 from.navigate({ screen: "lists", id: list.id });
               },
+              onError: (error) =>
+                faults.show(refusalSentences(error, t, labels).byField),
             },
           );
         }}
@@ -460,12 +464,15 @@ export function NewShortlistAction() {
             />
           )}
         </Field>
-        <Field label={t("lists.purpose")}>
+        <Field label={purposeLabel} error={faults.of("purpose")}>
           {(control) => (
             <Textarea
               {...control}
               value={purpose}
-              onChange={(event) => setPurpose(event.target.value)}
+              onChange={(event) => {
+                setPurpose(event.target.value);
+                faults.edited("purpose");
+              }}
             />
           )}
         </Field>

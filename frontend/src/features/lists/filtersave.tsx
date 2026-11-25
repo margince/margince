@@ -20,7 +20,7 @@ import {
   viewOf,
 } from "../../lib/filtersaddress";
 import { useCreateList, useListsAvailable } from "../../lib/lists.queries";
-import { blankRequired, problemMessageOf } from "../../lib/problem";
+import { blankRequired, refusalSentences } from "../../lib/problem";
 import type { Route } from "../../lib/router";
 import { filterStateFrom, useSaveView } from "../../lib/savedviews.queries";
 import { encode, type Node } from "../../lib/segmentpredicate";
@@ -86,6 +86,11 @@ export function SaveFilterModal({
   const { locale } = useLocale();
   const [faults, faultsRoot] = useFieldFaults<HTMLDivElement>();
   const nameLabel = t("views.name");
+  const purposeLabel = t("filters.purpose");
+  // A refused name or purpose is said on its field, which the sentence names.
+  const labels = { name: nameLabel, purpose: purposeLabel };
+  const refused = (error: unknown) =>
+    faults.show(refusalSentences(error, t, labels).byField);
   // Every opening starts from what the caller offers and nothing typed
   // before: a create that offers the last name again is how a duplicate gets
   // made. Reset as it opens rather than as it closes, so the closing dialog
@@ -134,13 +139,19 @@ export function SaveFilterModal({
           teamId: audience.sharing === "team" ? audience.teamId : null,
           purpose: purpose.trim(),
         },
-        { onSuccess: (list) => onSaved("list", list.id, trimmed) },
+        {
+          onSuccess: (list) => onSaved("list", list.id, trimmed),
+          onError: refused,
+        },
       );
       return;
     }
     create.mutate(
       { resource: viewOf(tab), name: trimmed, query: filterStateFrom(tree) },
-      { onSuccess: (view) => onSaved("view", view.id, trimmed) },
+      {
+        onSuccess: (view) => onSaved("view", view.id, trimmed),
+        onError: refused,
+      },
     );
   };
 
@@ -153,7 +164,7 @@ export function SaveFilterModal({
       confirmLabel={t(asList ? "filters.saveListConfirm" : "views.save")}
       bodyRef={faultsRoot}
       pending={busy}
-      error={run.isError ? problemMessageOf(run.error, t) : null}
+      error={refusalSentences(run.error, t, labels).rest}
       onConfirm={save}
     >
       <Field label={nameLabel} required error={faults.of("name")}>
@@ -198,13 +209,16 @@ export function SaveFilterModal({
             onChange={setAudience}
             ownerIsReader
           />
-          <Field label={t("filters.purpose")}>
+          <Field label={purposeLabel} error={faults.of("purpose")}>
             {(control) => (
               <Textarea
                 {...control}
                 rows={2}
                 value={purpose}
-                onChange={(event) => setPurpose(event.target.value)}
+                onChange={(event) => {
+                  setPurpose(event.target.value);
+                  faults.edited("purpose");
+                }}
               />
             )}
           </Field>
