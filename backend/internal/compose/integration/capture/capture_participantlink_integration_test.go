@@ -23,6 +23,7 @@ package capture
 
 import (
 	"context"
+	"fmt"
 	"slices"
 	"strings"
 	"testing"
@@ -188,6 +189,31 @@ func TestAJoinedIntroductionWithASuppressedOutsiderStaysUnfiledAfterTheSweep(t *
 	}
 	if filed := contactsFiledUnder(t, e, "intro-sup@myco.example"); len(filed) != 0 {
 		t.Fatalf("a suppressed introduction is filed under %v once a second mailbox joined it, want nobody", filed)
+	}
+}
+
+// A join leaves the links the project and deal attribution after it may still
+// need, as a new capture does. A mail copying more contacts than the ceiling
+// holds is filed up to that reservation, and the join adds nothing past it.
+func TestAJoinLeavesTheLinksTheLaterWritersNeed(t *testing.T) {
+	env := newCaptureEnv(t)
+	e, sync := env.e, env.sync
+	syncSecond := secondMailbox(t, e, e.Rep3)
+	store := contacts.NewStore(e.DB())
+	copied := []string{secondSeatAddress}
+	for i := range 25 {
+		address := fmt.Sprintf("c%02d@partner.example", i)
+		if _, err := store.EnsureContactByEmail(contactCreator(e), fmt.Sprintf("Copied %02d", i), address, "manual", storekit.RefuseErased); err != nil {
+			t.Fatalf("seeding %s: %v", address, err)
+		}
+		copied = append(copied, address)
+	}
+	mail := emailCC("sender@partner.example", "Sender", captureOwner, strings.Join(copied, ", "), "crowd@partner.example")
+	sync(t, mail)
+	before := len(contactsFiledUnder(t, e, "crowd@partner.example"))
+	syncSecond(t, mail)
+	if after := len(contactsFiledUnder(t, e, "crowd@partner.example")); after != before || after > 22 {
+		t.Fatalf("the join took the activity from %d to %d contact links; it must leave the three later writers their room", before, after)
 	}
 }
 

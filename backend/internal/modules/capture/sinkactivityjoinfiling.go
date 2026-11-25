@@ -93,7 +93,7 @@ func (s *Sink) fileJoinedMailForSeatTx(
 		return fmt.Errorf("capture: counting a joined mail's links: %w", err)
 	}
 	_, err = fileUnderRecords(tx, records, participantFiling{
-		decider: ctx, budget: max(maxDerivedMeetingLinks-filed, 0), private: private, write: insertParticipantLink(ctx, tx, id),
+		decider: ctx, budget: max(maxDerivedMeetingLinks-filed-laterLinkReservation, 0), private: private, write: insertParticipantLink(ctx, tx, id),
 	})
 	return err
 }
