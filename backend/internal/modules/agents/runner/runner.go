@@ -153,7 +153,7 @@ type Pending struct {
 	OutputTokens      int
 	// Calls carries what the job's outcome check has read so far, so a resumed
 	// run is judged on its whole history. Empty for a job with no check.
-	Calls []Call `json:",omitempty"`
+	Calls []Call `json:"calls,omitempty"`
 }
 
 // neutralisedObservations is the current transcript version: every observation
