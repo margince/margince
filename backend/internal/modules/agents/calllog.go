@@ -160,6 +160,7 @@ func toolAnswer(resp rpcResponse) (text string, isError bool) {
 		return "", false
 	}
 	var wire struct {
+		//nolint:tagliatelle // isError is the MCP result's wire member, camelCase by the specification
 		IsError bool `json:"isError"`
 		Content []struct {
 			Text string `json:"text"`
