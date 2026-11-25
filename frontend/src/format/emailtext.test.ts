@@ -81,6 +81,8 @@ describe("splitEmailBody", () => {
   it.each([
     ["English attribution", "On Tue, 12 Aug 2026 at 09:14, Max Muster wrote:"],
     ["German attribution", "Am 12.08.2026 um 09:14 schrieb Max Muster:"],
+    ["forwarded block", "---------- Forwarded message ----------"],
+    ["German forward", "-------- Weitergeleitete Nachricht --------"],
     ["original message", "----- Original Message -----"],
   ])("cuts at a %s", (_name, marker) => {
     const parts = splitEmailBody(
@@ -89,16 +91,6 @@ describe("splitEmailBody", () => {
     expect(parts.main).toBe("Passt, machen wir so.");
     expect(parts.trimmed).toContain(marker);
     expect(parts.trimmed).toContain("> Wollen wir Dienstag sprechen?");
-  });
-
-  it.each([
-    ["forwarded block", "---------- Forwarded message ----------"],
-    ["German forward", "-------- Weitergeleitete Nachricht --------"],
-  ])("keeps the mail under a %s", (_name, marker) => {
-    const body = `Passt, machen wir so.\n\n${marker}\n> Wollen wir Dienstag sprechen?`;
-    const parts = splitEmailBody(body);
-    expect(parts.main).toBe(body);
-    expect(parts.tail).toBe("none");
   });
 
   it("keeps an attribution line with the quote it introduces", () => {
@@ -357,52 +349,6 @@ describe("only quoted earlier mail leaves the message", () => {
     );
     expect(parts.trimmed).toBe("");
     expect(parts.tail).toBe("none");
-  });
-
-  it("keeps the mail a forward passes on", () => {
-    const body =
-      "FYI.\n\n---------- Forwarded message ---------\nFrom: Dana Roe <dana@buyer.example>\nDate: Mon, 3 Mar 2025 at 10:15\nSubject: Terms\nTo: Sales\n\nNet thirty days.";
-    const parts = splitEmailBody(body);
-    expect(parts.main).toBe(
-      "FYI.\n\n---------- Forwarded message ---------\nFrom: Dana Roe <dana@buyer.example>\nDate: Mon, 3 Mar 2025 at 10:15\nSubject: Terms\nTo: Sales\n\nNet thirty days.",
-    );
-    expect(parts.trimmed).toBe("");
-    expect(parts.tail).toBe("none");
-  });
-
-  it("folds the history under a forwarded mail", () => {
-    const body =
-      "Zur Info.\n\n-------- Weitergeleitete Nachricht --------\nVon: Dana Roe <dana@buyer.example>\nDatum: Mo., 3. März 2025 10:15\nBetreff: Konditionen\n\nDreißig Tage netto.\n\nAm 28.02.2025 um 09:00 schrieb Vertrieb:\n> Welche Konditionen?";
-    const parts = splitEmailBody(body);
-    expect(parts.main).toBe(
-      "Zur Info.\n\n-------- Weitergeleitete Nachricht --------\nVon: Dana Roe <dana@buyer.example>\nDatum: Mo., 3. März 2025 10:15\nBetreff: Konditionen\n\nDreißig Tage netto.",
-    );
-    expect(parts.trimmed).toBe(
-      "Am 28.02.2025 um 09:00 schrieb Vertrieb:\n> Welche Konditionen?",
-    );
-    expect(parts.tail).toBe("quote");
-  });
-
-  it("folds the quote under a Vietnamese attribution", () => {
-    const body =
-      "Bên em đồng ý.\n\nNgày 3 thg 3, 2025, lúc 10:15, Nguyễn Văn An <an@buyer.example> đã viết:\n> Thứ Sáu được không?";
-    const parts = splitEmailBody(body);
-    expect(parts.main).toBe("Bên em đồng ý.");
-    expect(parts.trimmed).toBe(
-      "Ngày 3 thg 3, 2025, lúc 10:15, Nguyễn Văn An <an@buyer.example> đã viết:\n> Thứ Sáu được không?",
-    );
-    expect(parts.tail).toBe("quote");
-  });
-
-  it("folds a Vietnamese Outlook block", () => {
-    const body =
-      "Đồng ý.\n\nTừ: Nguyễn Văn An <an@buyer.example>\nĐã gửi: Thứ Hai, 3 Tháng 3, 2025 10:15\nChủ đề: Thứ Sáu\n\nThứ Sáu được không?";
-    const parts = splitEmailBody(body);
-    expect(parts.main).toBe("Đồng ý.");
-    expect(parts.trimmed).toBe(
-      "Từ: Nguyễn Văn An <an@buyer.example>\nĐã gửi: Thứ Hai, 3 Tháng 3, 2025 10:15\nChủ đề: Thứ Sáu\n\nThứ Sáu được không?",
-    );
-    expect(parts.tail).toBe("quote");
   });
 
   it("opens the tail at a signature above the quoted mail", () => {

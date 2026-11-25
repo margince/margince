@@ -1,4 +1,3 @@
-import { useQueryClient } from "@tanstack/react-query";
 import { type ReactNode, useId, useRef, useState } from "react";
 import type { components } from "../api/schema";
 import {
@@ -20,7 +19,6 @@ import { startOfDayInZone } from "../format/timezone";
 import { useLocale, useT } from "../i18n";
 import { taskDueChoice, taskDueFields } from "../lib/activitybody";
 import { useCanWriteRecord } from "../lib/capability";
-import { isVersionSkewOf } from "../lib/problem";
 import { isWebsiteInquiryTask } from "../lib/websiteinquiries";
 import { mostSpecificFirst, RecordLinkChips } from "./recordlinks";
 import { TaskAssignee } from "./taskassignee";
@@ -34,12 +32,17 @@ import { useTaskContact } from "../lib/taskcontact";
 import { useViewerZone } from "../lib/viewerzone";
 import { CallLogInline, useCallLogFor } from "./calllog.host";
 import { useCompleteTask } from "./taskcomplete";
-import { TaskDueDatePick } from "./taskduedatepick";
-import { TaskNextSteps } from "./tasknextsteps";
+import {
+  currentDueFields,
+  TaskDueDatePick,
+  useMoveTask,
+} from "./taskduedatepick";
+import { TaskNextStepsPending, useTaskNextSteps } from "./tasknextsteps";
 import { taskOriginKey } from "./taskorigin";
 import { TaskOutcomeForm } from "./taskoutcome";
 import { TaskRemindMenu } from "./taskreminder";
 import type { useTaskUpdate } from "./taskwrite";
+import { TaskWriteFailure } from "./taskwritefailure";
 
 // Acting on a task from the record it belongs to. The tasks screen owns the
 // standing work queue; this is the same two verbs (complete, snooze) offered
@@ -131,6 +134,7 @@ export function TaskQuickActions({
   update,
   showComplete = true,
   completeLabel,
+  quiet = false,
 }: Readonly<{
   activityId: string;
   version: number | undefined;
@@ -141,6 +145,8 @@ export function TaskQuickActions({
   update: ReturnType<typeof useTaskUpdate>;
   showComplete?: boolean;
   completeLabel?: string;
+  /** Done steps back to a plain button beside another filled verb. */
+  quiet?: boolean;
 }>) {
   const t = useT();
   const readerZone = useViewerZone();
@@ -148,11 +154,12 @@ export function TaskQuickActions({
   // old next task until the reads land; a press then acts on a stale row.
   const pending = update.isPending;
   const complete = useCompleteTask(update);
+  const move = useMoveTask(update);
   return (
     <>
       {showComplete && (
         <Button
-          variant="primary"
+          variant={quiet ? undefined : "primary"}
           disabled={pending}
           onClick={() => complete(activityId, version)}
         >
@@ -171,7 +178,17 @@ export function TaskQuickActions({
               dueIntent,
             );
             if (nextDue)
-              update.mutate({ id: activityId, version, body: nextDue });
+              void move({
+                id: activityId,
+                version,
+                to: nextDue,
+                back: currentDueFields(
+                  dueAt,
+                  dueHasTime,
+                  readerZone,
+                  dueIntent,
+                ),
+              });
           }}
         >
           {t("tasks.snooze")}
@@ -292,7 +309,15 @@ export function TaskDetailDialog({
                 {task.is_done && (
                   <Badge tone="success">{t("tasks.isDone")}</Badge>
                 )}
-                <TaskAssignee id={task.assignee_id} />
+                {/* A held task names its holder after a label, as Logged
+                  names its time; an unheld one reads Unassigned alone. */}
+                {task.assignee_id ? (
+                  <span>
+                    {t("tasks.heldBy")} <TaskAssignee id={task.assignee_id} />
+                  </span>
+                ) : (
+                  <TaskAssignee id={task.assignee_id} />
+                )}
                 {/* A task an agent wrote says so, so a reader knows it was
                   read out of a conversation rather than typed by a colleague. */}
                 {provenanceOf(task.captured_by).kind === "agent" && (
@@ -347,15 +372,23 @@ function TaskDetailActions({
   const t = useT();
   const [logging, setLogging] = useState(false);
   const canAct = !task.is_done && !readOnly && writable && !logging;
+  // The type's own step is the panel's one filled verb, so Done steps back.
+  const next = useTaskNextSteps(task, true);
   return (
     <>
-      {!logging && (
-        <TaskNextSteps task={task} className="task-detail-actions" />
+      {!logging && (next.steps !== null || next.others) && (
+        <div className="task-detail-actions">
+          {next.steps}
+          {next.others}
+        </div>
       )}
       {canAct && (
         <div ref={verbs} className="task-detail-verbs">
           <div className="task-detail-buttons">
+            {/* Done's weight waits on the contact read, so its place is held. */}
+            {next.pending && <TaskNextStepsPending />}
             <TaskQuickActions
+              showComplete={!next.pending}
               completeLabel={
                 isWebsiteInquiryTask(task)
                   ? t("inquiry.markHandled")
@@ -367,6 +400,7 @@ function TaskDetailActions({
               dueHasTime={task.due_has_time}
               dueIntent={task.due_intent}
               update={update}
+              quiet={next.fills}
             />
             <Button onClick={() => setLogging(true)}>
               {t("tasks.log.action")}
@@ -374,16 +408,14 @@ function TaskDetailActions({
             <TaskRemindMenu task={task} update={update} />
           </div>
           {/* After the buttons in reading order, as on screen. */}
-          <div className="task-detail-due">
-            <TaskDueDatePick
-              activityId={task.id}
-              version={task.version}
-              dueAt={task.due_at}
-              dueHasTime={task.due_has_time}
-              dueIntent={task.due_intent}
-              update={update}
-            />
-          </div>
+          <TaskDueDatePick
+            activityId={task.id}
+            version={task.version}
+            dueAt={task.due_at}
+            dueHasTime={task.due_has_time}
+            dueIntent={task.due_intent}
+            update={update}
+          />
         </div>
       )}
       {!logging && <TaskWriteFailure taskId={task.id} update={update} />}
@@ -395,38 +427,5 @@ function TaskDetailActions({
         />
       )}
     </>
-  );
-}
-
-// Drawn outside the verbs. A task changed elsewhere is refetched as done or
-// gone, and its verbs vanish; the refusal must outlive them.
-export function TaskWriteFailure({
-  taskId,
-  update,
-}: Readonly<{
-  taskId: string;
-  update: ReturnType<typeof useTaskUpdate>;
-}>) {
-  const t = useT();
-  const queryClient = useQueryClient();
-  if (!update.isError || update.variables?.id !== taskId) return null;
-  return (
-    <ErrorLine
-      error={update.error}
-      actions={
-        isVersionSkewOf(update.error) && (
-          <Button
-            onClick={() => {
-              update.reset();
-              void queryClient.invalidateQueries({
-                queryKey: ["activity", taskId],
-              });
-            }}
-          >
-            {t("decision.reRead")}
-          </Button>
-        )
-      }
-    />
   );
 }

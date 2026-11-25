@@ -278,14 +278,14 @@ func leadActor(e *SearchEnv, user ids.UUID, scope principal.RowScope, teams []id
 
 // A merge changes BOTH ends — the source is archived onto the survivor, the
 // survivor absorbs its fields — so both ends carry the write-authority probe.
-// The survivor's refusal is a bare conflict rather than a 403: naming it would
-// disclose more than the caller could already read.
+// A survivor the caller cannot see answers a bare conflict, since naming it
+// would disclose it. One they may only read answers 403 with the reason.
 func TestAMergeNeedsWriteAuthorityOnBothEnds(t *testing.T) {
 	f := seedSharedContact(t, "Merge Source")
 	e := f.env
 	survivor := e.SeedID(t,
-		`INSERT INTO contact (id, full_name, owner_id, source, captured_by)
-		 VALUES ($1, 'Merge Survivor', $2, 'manual', 'human:x')`, e.Rep3)
+		`INSERT INTO contact (id, full_name, owner_id, visibility, source, captured_by)
+		 VALUES ($1, 'Merge Survivor', $2, 'owner', 'manual', 'human:x')`, e.Rep3)
 	store := contacts.NewStore(e.DB()).WithGrantCarrier(identity.NewServiceFor(e.DB()))
 
 	// Read on the source, write on the survivor: the caller may change what the
@@ -299,20 +299,25 @@ func TestAMergeNeedsWriteAuthorityOnBothEnds(t *testing.T) {
 		t.Fatalf("merging away a source held on a read share → %v, want permission-denied", err)
 	}
 
-	// Write on the source, nothing on the survivor: the caller may change what
-	// they are folding away and not what it folds into.
+	// Write on the source, nothing on the capture-private survivor: the caller
+	// may change what they fold away and cannot even see what it folds into.
 	f.share(t, "write")
 	revokeShare(t, e, survivor, e.Rep1)
 	_, err := store.MergeContact(f.holder, ContactIDOf(f.contact), ContactIDOf(survivor), nil)
 	if !errors.Is(err, apperrors.ErrConflict) {
-		t.Fatalf("merging into a survivor the caller cannot change → %v, want conflict", err)
+		t.Fatalf("merging into a survivor the caller cannot see → %v, want conflict", err)
 	}
 
-	// Read on the survivor is not enough either — it is the arm the visibility
-	// probe used to accept, and the one this change closes.
+	// Read on the survivor is not enough either. The caller can already see it,
+	// so the refusal says why instead of reading as a stale version.
 	shareWith(f.owner, t, e, survivor, e.Rep1, "read")
-	if _, err := store.MergeContact(f.holder, ContactIDOf(f.contact), ContactIDOf(survivor), nil); !errors.Is(err, apperrors.ErrConflict) {
-		t.Fatalf("merging into a survivor held on a read share → %v, want conflict", err)
+	_, err = store.MergeContact(f.holder, ContactIDOf(f.contact), ContactIDOf(survivor), nil)
+	fault, ok := errors.AsType[apperrors.MessageFault](err)
+	if !ok || !errors.Is(err, apperrors.ErrPermissionDenied) {
+		t.Fatalf("merging into a survivor held on a read share → %v, want permission-denied with a reason", err)
+	}
+	if code, _ := fault.MessageFault(); code != "merge_target_read_only" {
+		t.Fatalf("merging into a survivor held on a read share answered code %q, want merge_target_read_only", code)
 	}
 
 	// Write on both: the merge goes through, so the two refusals above are the

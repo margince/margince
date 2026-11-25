@@ -650,6 +650,10 @@ const pinnedZones: { file: string; why: string }[] = [
     why: "The Admin settings card DISPLAYS the configured company timezone; the story needs a configured value.",
   },
   {
+    file: "features/sign-in/installation-settings.profile.stories.tsx",
+    why: "The dialog EDITS the company time zone; the story types a zone name into it as an admin would.",
+  },
+  {
     file: "features/sign-in/installation-settings.test.tsx",
     why: "Asserts that same card shows the configured zone verbatim — the one screen where the zone name is the content.",
   },

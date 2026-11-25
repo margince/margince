@@ -2,14 +2,18 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { userEvent, within } from "storybook/test";
+import { expect, userEvent, within } from "storybook/test";
 import {
   TaskCompleteCheck,
+  TaskDueDatePick,
   TaskQuickActions,
   useTaskUpdate,
 } from "../../components/taskactions";
+import { ToastProvider, ToastRegion } from "../../design-system/toast";
 import { en } from "../../i18n/en";
 import { taskWriteKeys } from "../../lib/activitykeys";
+import { ViewerZoneProvider } from "../../lib/viewerzone";
+import { FIXTURE_TIMEZONE } from "../../testing/mefixture";
 import { SourceHost } from "../../testing/sourcehost";
 import {
   installFetchStub,
@@ -284,5 +288,83 @@ export const SourceTranscriptOpen: Story = {
       await body.findByRole("button", { name: en["tasks.openSource"] }),
     );
     await body.findByRole("dialog", { name: "Renewal call with Dana" });
+  },
+};
+
+// A deadline far enough ahead that Move and Snooze start from a future day.
+const MOVE_DUE = "2027-09-01T13:00:00.000Z";
+
+function MoveBody() {
+  const update = useTaskUpdate(taskWriteKeys("company", "o-1"));
+  const task = {
+    activityId: "a-1",
+    version: 3,
+    dueAt: MOVE_DUE,
+    dueHasTime: true,
+    update,
+  };
+  return (
+    <div className="task-detail-verbs">
+      <div className="task-detail-buttons">
+        <TaskQuickActions {...task} showComplete={false} />
+      </div>
+      <TaskDueDatePick {...task} />
+    </div>
+  );
+}
+
+function MoveVerbs() {
+  installFetchStub({
+    "PATCH /activities/a-1": () => jsonResponse({ id: "a-1", version: 4 }),
+  });
+  return (
+    <StoryProviders>
+      <ViewerZoneProvider zone={FIXTURE_TIMEZONE}>
+        <ToastProvider>
+          <MoveBody />
+          <ToastRegion />
+        </ToastProvider>
+      </ViewerZoneProvider>
+    </StoryProviders>
+  );
+}
+
+// A new day and time wait for Move, which sends both in one write.
+export const MoveDayAndTime: Story = {
+  render: () => <MoveVerbs />,
+  play: async () => {
+    const body = within(document.body);
+    const time = body.getByRole("textbox", { name: en["log.dueTime"] });
+    await userEvent.clear(time);
+    await userEvent.type(time, "07:15");
+    await userEvent.tab();
+    await expect(
+      body.getByRole("button", { name: en["tasks.move"] }),
+    ).toBeEnabled();
+  },
+};
+
+// A day already past: the warning under the fields, and Move anyway.
+export const MovePastDate: Story = {
+  render: () => <MoveVerbs />,
+  play: async () => {
+    const body = within(document.body);
+    const day = body.getByRole("textbox", { name: en["tasks.moveTo"] });
+    await userEvent.tripleClick(day);
+    await userEvent.keyboard("01/01/2026{Enter}");
+    await body.findByText(en["tasks.movePastTitle"]);
+    await body.findByRole("button", { name: en["tasks.moveAnyway"] });
+  },
+};
+
+// Snooze 1 day confirms with the new deadline and an Undo, as Done does.
+export const SnoozedWithUndo: Story = {
+  render: () => <MoveVerbs />,
+  play: async () => {
+    const body = within(document.body);
+    await userEvent.click(
+      body.getByRole("button", { name: en["tasks.snooze"] }),
+    );
+    await body.findByRole("button", { name: en["common.undo"] });
   },
 };

@@ -160,6 +160,8 @@ func TestEveryReleasableKindSaysWhetherItsReleaseSends(t *testing.T) {
 		"lifecycle_change": true, "assign_owner": true, "close_date_correction": true,
 		"deal_follow_up": true, "commitment_task": true, "employer_change": true,
 		"fx_rate_proposal": true,
+		// Accepting moves one deal to a later stage and puts nothing on the wire.
+		"deal_proposal_stage": true,
 		// A captured record that collided with a lead already here: accepting
 		// folds the message's fields onto that lead. It writes one record and
 		// puts nothing on the wire.

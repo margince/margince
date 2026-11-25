@@ -89,6 +89,9 @@ const (
 	ReasonLawfulBasisUnconfirmed = "lawful_basis_unconfirmed"
 	// ReasonAllowed is the allow path's own code, so every row has one.
 	ReasonAllowed = "allowed"
+	// ReasonOptOutAllowed is the allow of advertising in a country that allows
+	// it until the recipient refuses.
+	ReasonOptOutAllowed = "opt_out_allowed"
 	// ReasonAllowedByOverride marks a send allowed because a seat outranked the
 	// machine's no-evidence refusal. It is an allow, so it is never absolute and
 	// never itself overrulable (CanBeOverruled short-circuits on VerdictAllow).

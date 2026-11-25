@@ -184,8 +184,9 @@ func open(ctx context.Context, rt extension.Runtime, in json.RawMessage) (json.R
 
 `rt` is the **only** way a unit reaches the core. The core makes a new one for each call, and it stops
 working the moment the handler returns (`extension.ErrRuntimeExpired`). Today it gives `rt.Secrets()`,
-`rt.Tx()`, `rt.Caller()`, `rt.Ingest()` and `rt.SyncNow()`. A handler with nobody behind it also gets six system
-reads. They are `rt.Deals()`, `rt.Authority()`, `rt.Directory()`, `rt.Activities()` and `rt.SetAside()`
+`rt.Tx()`, `rt.Caller()`, `rt.Ingest()` and `rt.SyncNow()`. A handler with nobody behind it also gets these system
+reads. They are `rt.Deals()`, `rt.Authority()`, `rt.Directory()`, `rt.Activities()`, `rt.SetAside()`,
+`rt.Companies()` and `rt.MailContent()`
 (see [Read deals and colleagues from a handler](#read-deals-and-colleagues-from-a-handler)).
 
 What the surface will serve, and what it will not:
@@ -243,7 +244,7 @@ answers it as `422 validation_error`, with your sentence as the message. `extens
 
 You declare an operation in a **contract fragment** under `extensions/<name>/api/`. The **file name names the
 core contract it adds to**. `api/crm.yaml` adds to `backend/api/crm.yaml`, and `api/jobs.yaml` adds to the job
-contract. `gen-composition` merges them into `build/composition/api/`. The operator manifest, the generated
+contract. `api/ai-tasks.yaml` adds the unit's AI tasks (see [what an extension can use from the core](../reference/extension-capabilities.md)). `gen-composition` merges them into `build/composition/api/`. The operator manifest, the generated
 client types, the mounted routes and the docs all read the merged document.
 
 Copy `extensions/openchannel/api/crm.yaml`. These rules fail you if you miss them:
@@ -568,9 +569,15 @@ names, and the core keeps them apart from other units. No method takes another u
 
 ## Own a screen: `frontend/`
 
-Ship `extensions/<name>/frontend/package.json` and the module it names. The package may use its own
-packages. They live in the generated workspace under `build/composition-frontend/workspace/`, which
-`make composition` writes. The tracked `pnpm-lock.yaml` names only the core frontend.
+Ship `extensions/<name>/frontend/package.json` and the module it names. The package may use only packages
+the main app already ships. Each runtime or peer package must be a dependency of `frontend/` in the
+tracked `pnpm-lock.yaml`. Declare it at the range the main app declares, or at its locked version.
+
+No
+license check exists yet for an extension's own packages, so the generator refuses any other package. It
+also refuses `optionalDependencies`, and allows `devDependencies`. The unit installs in the generated
+workspace under `build/composition-frontend/workspace/`, which `make composition` writes. Each package is
+pinned there to the main app's locked version.
 
 ```json
 {
@@ -614,15 +621,17 @@ refuses any bare package name your own `package.json` does not declare.
 `devDependencies` count for test files only, so a screen cannot pull a test runner into the bundle.
 
 **Name your page in one level-1 header.** The app shell makes the page's `h1` for a core screen. It *steps
-back* for a unit, because the shell has no title key for a route the menu rail does not carry. So the top
+back* for a unit, because the shell has no title key for a route the core does not own. So the top
 `<SectionHeader …  level={1} />` of your screen is the page's heading.
 
 Every header under it stays at the
 default `2`. If you leave the top one at the default, your page ships with no heading a reader can go to.
 
-**Your `Secrets` scope places your screen.** Your screen lives at `#/ext/<name>`, and the rail does not carry
-it. Turning on a unit gives an installation something to set up, not a new rail entry beside Pipeline and
-Reports. It is listed in Settings instead, on the page that already holds the kind of key you asked for:
+**Your `Secrets` scope places your screen under Settings.** Your default export lives at `#/ext/<name>`. It is
+the unit's setting page. No drawer row leads to it unless you also declare an app (see
+[Show an app in the home side drawer](#show-an-app-in-the-home-side-drawer)). Turning on a unit gives an
+installation something to set up. It is listed in Settings, on the page that already holds the kind of key you
+asked for:
 
 | Your declaration | Where the unit is listed | What the page means |
 |---|---|---|
@@ -635,7 +644,7 @@ that is half one user's own account and half the installation's has no single pa
 
 Either way of choosing
 hides one half from the one who holds the other. Make two units if you need both. And **the settings row grants no
-rights**: it carries no grant of its own, like the rail row it replaced.
+rights**: it carries no grant of its own.
 
 Your screen still gates itself
 on the object it declares. Settings → Integrations is also gated on the grants its own cards ask for.
@@ -663,11 +672,95 @@ keyed `ext<CamelUnit>.`, for example `extOpenchannel.endpoint.enabled`. `<CamelU
 one hyphen and the next with a capital letter. A part that starts with a number gets an `_` before it
 (`crm-2-x` → `extCrm_2X.`).
 
+
 So two different unit names can never give one start: `foo-1` and `foo1` would
 otherwise both claim `extFoo1.`. The `composition` tool merges them into the one catalog, so `useT()` finds your
-keys and the core's in the same way. Give **every** language the installation ships (`en`, `de`, `vi`),
+keys and the core's in the same way.
+
+Give **every** language the installation ships (`en`, `de`, `vi`),
 or the generator refuses. A reader of the missing one would get an empty screen. Keys outside your space are
-refused too: a unit does not write over core text.
+refused too: your own copy never writes over core text. To change core wording, use an override, below. The steps alone are in [override-core-wording-from-an-extension.md](override-core-wording-from-an-extension.md).
+
+## Override core wording
+
+An installation can change the text of the screens without forking core, for example "Deal" becomes "Opportunity". Put one flat
+JSON object per language in `frontend/i18n-overrides/<locale>.json`, in a folder of its own, apart from
+`frontend/i18n/`. The keys are core keys, named as in the core catalog.
+
+```json
+{ "nav.deals": "Opportunities" }
+```
+
+| Rule | What happens |
+|---|---|
+| An override may cover only some languages | A language with no file keeps core's wording. |
+| The files are the declaration | `make gen` reads them from every enabled unit. There is no runtime or admin editing. |
+| A key that core does not have | `make gen` refuses it and names the key. |
+| Two units override one key in one language | `make gen` refuses it and names both units. |
+| Any core key | All can be changed: consent, erasure, approval and sign-in wording included. |
+
+`translate()` looks in the overrides first, then the core catalog, then your own copy.
+
+Two gates in `frontend/src/i18n/overrides.test.ts` fail the frontend test lane. One fails when an override drops a
+part that core's text has, such as `{count}`. The other fails when an override gives one count form of a key
+(`_one`) and not every form core has for it (`_other`).
+
+The installation owns the wording of every key it overrides. Core does not carry its later changes into that
+key. Check your overrides when you upgrade core.
+
+Limits:
+
+- **Grammar is yours.** A new word can need another article, case or count form. The gates check the parts and count
+  forms, not whether the sentence reads right.
+- **Longer text can break a layout.** Buttons and table headers do not grow without limit.
+- **An override can go stale.** If core changes what a key means, your text still says the old thing.
+
+Not covered: renaming a record type itself, AI prompts, agent tools, text the backend writes, the offline page and the
+docs. An override changes frontend wording only.
+
+## Show an app in the home side drawer
+
+A unit with a screen can also ask for a row in the home side drawer, with its own icon and name. Declare one
+`extension.App` on the `Extension`. A unit has at most one:
+
+```go
+App: &extension.App{
+	Icon:   extension.IconPlug,
+	Label:  "extOpenchannel.title",
+	Group:  extension.AppGroupWork,
+	Object: "ext_openchannel_endpoint",
+	Export: "OpenchannelApp",
+},
+```
+
+| Field | What it means |
+|---|---|
+| `Icon` | An icon from the same short list an entry uses (`extension.EntryIcons()`) |
+| `Label` | A copy key from your own `frontend/i18n/` files. The generator refuses one that is missing from a language |
+| `Group` | The drawer heading the row sits under: `AppGroupRecords`, `AppGroupWork` or `AppGroupIntelligence` |
+| `Object` | The RBAC object a reader needs `read` on. It must be one of your own objects that one of your operations gates on |
+| `Export` | The named export of your frontend package that draws the app |
+
+Your frontend package exports the app by name, beside the default export that stays your setting page:
+
+```tsx
+export function OpenchannelApp() {
+  return <OpenchannelScreen />;
+}
+```
+
+The app opens at `#/app/<name>`, inside the home layout, with no Settings path above it. The setting page stays at
+`#/ext/<name>`. A unit with no default export still gets the published-operations card there.
+
+| Address | What it draws | Where it is offered |
+|---|---|---|
+| `#/app/<name>` | the named export `Export` | a row in the home side drawer, under `Group` |
+| `#/ext/<name>` | the default export, or the card of published operations | Settings, on the page that matches your `Secrets` scope |
+
+A reader without `read` on `Object` sees no row, and the address answers the unknown-page card. The drawer and
+the route ask the same question, so they cannot disagree. The app links to its setting page, and the unit's row in
+Settings links to the app. A unit that declares no app works as before. The reason the drawer may carry a
+unit is in [explanation/extension-apps-in-the-drawer.md](../explanation/extension-apps-in-the-drawer.md).
 
 ## Offer an entry on a core screen
 
@@ -798,6 +891,7 @@ RecordKinds: []extension.RecordKindDeclaration{{
 | `NaturalKey` | The fields that name one record. The table must hold a unique index over these columns and no others, and the index must cover every row. |
 | `Defaults` | Starting rights per system role. Leave it out and every role is refused until an admin ticks the kind's object. |
 | `DeletePolicy` | `extension.DeleteArchiveOnly` (the default) or `extension.DeleteErasable`. |
+| `View` | Optional. The name of the page under your screen that shows one record of the kind, such as `room-page`. A notice about a record of the kind opens `#/ext/<unit>/<view>`, with `record_type` and `record_id` in the query. Leave it out and the notice opens your screen itself. Read both in the screen with `useEntryContext`. |
 
 The kind is gated on the RBAC object `ext_<unit>_<kind>`. The unit's hyphens become `_` in that name. Before core links,
 tags or lists a record, it checks the `read` right and a live row. A caller without the right gets `404`. The start
@@ -1207,7 +1301,7 @@ plan for:
 ### Read deals and colleagues from a handler
 
 Your SQL may touch only your own tables. So a handler reads a core deal, and the colleagues on it, through
-six system reads. No user's rights limit what they read. That is why they answer on a job tick or a bus
+system reads. No user's rights limit what they read. That is why they answer on a job tick or a bus
 delivery, where no user gets the answer.
 
 In all other places `Deals().Get`, `Deals().Responsible`,
@@ -1230,9 +1324,12 @@ Declare each group of reads your unit makes:
 SystemReads: []extension.SystemRead{
 	extension.SystemReadDeals,     // Deals().Get and Deals().Responsible
 	extension.SystemReadAuthority, // Authority().CanRead and CanWrite
-	extension.SystemReadDirectory, // Directory().Emails
+	extension.SystemReadDirectory, // Directory().Emails and ByRole (as actAs)
 	extension.SystemReadActivities, // Activities().Mail
 	extension.SystemReadSetAside, // SetAside().Contact and Contacts
+	extension.SystemReadCompanies, // Companies().Get and List (as actAs)
+	extension.SystemReadMailContent, // MailContent().Get (as actAs)
+	extension.SystemReadMailAttachments, // Activities().Attachments and OpenAttachment (as actAs)
 },
 ```
 
@@ -1256,11 +1353,22 @@ mail, err := rt.Activities().Mail(ctx, member, d.Entity.ID, extension.MailQuery{
   teams on it. It leaves out agents, members who cannot sign in, users taken off the deal, and archived teams. It stops at
   `extension.MaxResponsible` colleagues.
 - **`Emails` takes at most `extension.MaxResponsible` users**, so the list `Responsible` gave always fits.
+- **`ByRole` names who holds a role.** `Directory().ByRole(ctx, actAs, []string{"reviewer"})` answers the ids of the
+  human members who hold at least one of the roles, named by role key. A unit uses it to file a task for each
+  reviewer.
+
+  It runs as `actAs`, the unit's service member (see the `actAs` item below). It answers only if
+  that seat may read the roster the way an admin does. Another seat answers `ErrForbidden`.
+
+  It leaves out agents and members who cannot sign in. The ids stop at `extension.MaxResponsible`, and nothing says the
+  list was cut. A key that names no role adds nobody and is no error. The core logs which keys you asked for.
 - **`Mail` answers the emails of one deal.** It tells a unit if a mail is sent and if a reply is in. Each
   `MailSummary` holds the id, the direction, the time, what kind of sender wrote it (empty for a human) and the
-  deal id. It holds no subject, body, address or file. It leaves out mail kept private to its senders and
-  receivers, archived mail unless you set `IncludeArchived`, and mail held back from reading. It gives pages,
-  newest first, of at most `extension.MaxReadPage`.
+  deal id. It holds no subject, body, address or file.
+
+  It leaves out mail kept private to its senders and
+  receivers, archived mail unless you set `IncludeArchived`, and mail held back from reading. It also leaves out
+  mail under a restriction of processing (Art. 18). It gives pages, newest first, of at most `extension.MaxReadPage`.
 
   You name the member it answers for. A deal that member cannot open answers `ErrNotFound`.
 - **`SetAside` reads who put a contact aside.** A colleague can put a contact aside for up to 90 days, or for
@@ -1271,6 +1379,58 @@ mail, err := rt.Activities().Mail(ctx, member, d.Entity.ID, extension.MailQuery{
   It answers only for a colleague who connected your unit and has not left. Any other colleague answers `ErrForbidden`.
   It gives that colleague's own answer, never another's, and nothing else about the contact. A contact that is not
   there answers `none`. It only reads: the colleague changes it through the product's own routes.
+- **`Companies` reads the installation's companies.** `Get` answers a `CompanySummary`. It holds the name, legal
+  name, lifecycle and owner. It also holds the source system and source id, the time of the last change, and
+  whether the company is archived.
+
+  Both run as `actAs`, the unit's service member, and show what that seat's grants, row scope and field masks
+  show in the app. A field the seat's mask hides is empty. `List` gives pages in the order the app lists
+  companies, at most `extension.MaxReadPage` each. It leaves out archived companies unless you set
+  `IncludeArchived`. A company outside the seat's scope is left out of both. `Get` answers `ErrNotFound` for
+  it, so an id cannot be used to probe.
+- **`MailContent` reads what one mail says.** `MailContent().Get(ctx, actAs, mailID)` answers the subject, body,
+  audience, content state, capture label, source id and time. Its `BulkMail` flag is true for a mail the sender sent to a list.
+  
+
+  It runs as `actAs`, the unit's service member, under the rule the app applies to mail content. That rule is
+  the seat's grants and row scope, the audience and the hold. It answers only mail the whole workspace may
+  read.
+
+  These answer `ErrNotFound`: a mail private to its senders and receivers, and an archived one.
+  So do a held one, one outside the seat's scope, and one that is not an email. So does one under a
+  restriction of processing (Art. 18). A mail whose subject
+  or body was taken out answers the content state `withheld` and gives neither. The body stops at
+  `extension.MaxMailBody` characters, and `BodyTruncated` says so. Ask `Authority().CanRead` before you show a
+  colleague what you kept from it.
+- **`Attachments` and `OpenAttachment` read mail files.** `Activities().Attachments(ctx, actAs, mailID)`
+  lists the files sent with one email, oldest first. Each `MailAttachment` holds the id, the mail id, the file
+  name, the stored type, the size and the time. `Activities().OpenAttachment(ctx, actAs, attachmentID)` also gives
+  the bytes, with the type the bytes show.
+
+  Both run as `actAs` under the rule `MailContent().Get` applies to the mail. A mail that read refuses answers
+  `ErrNotFound` here too. So does a file that was archived or whose bytes were withheld. A list leaves such a file
+  out. Only files sent with an email are read, never a file a user uploaded.
+
+  A file of more than `extension.MaxInboundFileBytes` bytes answers `ErrInvalid`. An open checks the file again
+  after it reads the bytes. A file withheld or archived in that time answers `ErrNotFound`.
+
+  Each list and each open writes an `export` row to the system log, which names your unit and `actAs`. An open that
+  fails writes no row and does not count. A unit may open `extension.MaxAttachmentOpensPerDay` (200) files in a workspace per UTC day. The next open answers
+  `extension.ErrAttachmentCapReached` until the next UTC day starts. A list does not count.
+- **Name the seat: `actAs`.** `Companies`, `MailContent().Get`, the reads of mail files and `ByRole` take
+  `actAs` right after `ctx`.
+  It must be the unit's own service member, the one the core made for it (see
+  [declare-a-service-member.md](declare-a-service-member.md)). That member must have filed one of the unit's
+  user secrets.
+
+  The core makes that member at boot for a unit that lands companies or deals. For any other unit
+  an admin declares it. A call with no `actAs`, a colleague, or the service member of another unit answers
+  `ErrForbidden`, or `ErrInvalid` for an empty or wrong id.
+
+  A read is never bound to a colleague, so it does not
+  stop when a colleague leaves. Each read writes one `system_log` row that names the unit, the read, the record
+  and `actAs`. `Deals().Get`, `Authority` and `Directory().Emails` keep their old shape until seat-bound
+  variants replace them.
 - **A private reply is not seen.** A reply that sits only in a private mailbox is not in `Mail`. So "no reply
   yet" is a reminder for a colleague to check, not a fact. Never act on it alone, for example by sending a
   message.
@@ -1492,7 +1652,7 @@ smallest one to copy:
 
 ```go
 FinanceSources: []extension.FinanceSource{{
-	Provider: "books", Check: check, Customers: customers, InvoicesFor: invoicesFor,
+	Provider: "books", DisplayName: "Books", Check: check, Customers: customers, InvoicesFor: invoicesFor,
 }},
 Secrets: []extension.SecretsRequest{{Key: "books_token", Scope: extension.SecretScopeWorkspace}},
 ```
@@ -1502,6 +1662,9 @@ func check(ctx context.Context, rt extension.Runtime, conn accounting.Connection
 func customers(ctx context.Context, rt extension.Runtime, conn accounting.Connection) ([]accounting.Customer, error)
 func invoicesFor(ctx context.Context, rt extension.Runtime, conn accounting.Connection, customerID string) (accounting.Ledger, error)
 ```
+
+`DisplayName` is the name a reader sees on the finance card ("From Books"). Without it, the page says
+"your accounting system", and never shows the `Provider` key.
 
 The core does the rest. An admin connects your source on **Settings → Integrations**, and the core
 calls `Check` first. An error there refuses the connect and stores nothing. The sync then reads
@@ -1594,6 +1757,37 @@ Under `MARGINCE_ENV=dev`, a client from `OutboundClient()` or `OutboundTransport
 (`127.0.0.0/8` and `::1`). So a stand-in for your provider on your own machine answers. Private ranges stay
 refused under every value, and so does loopback under any value but `dev`. The core sets this once at
 start. Never call `extension.BindEgress` from a unit; the same gate fails that too.
+
+## Use the core's models and object store
+
+Declare the capability first. `rt.Models()` and `rt.Objects()` return `extension.ErrNotDeclared` until
+`Extension.Needs` lists them, and the admin who installs the unit reads each reason on its card:
+
+```go
+Needs: []extension.Need{
+    {Capability: extension.CapabilityModels, Reason: "Writes a one-line summary of a deal's changes."},
+    {Capability: extension.CapabilityObjects, Reason: "Keeps the summaries it wrote."},
+},
+```
+
+Ask a model with `rt.Models().Complete`, for a task the unit declares in its `api/ai-tasks.yaml` as
+`ext_<unit>_<task>`. Each such task has its own routing, budget and certification case. Name the core
+records the text was built from in `About`, or say in `NoContactData` why it holds none of a contact's data:
+
+```go
+text, err := rt.Models().Complete(ctx, "ext_books_summarise", extension.CompleteRequest{
+    System:   "Summarise the change in one sentence.",
+    Messages: []extension.Message{{Role: "user", Text: change}},
+    About:    []extension.EntityRef{{Type: "deal", ID: dealID}},
+})
+```
+
+Keep a file with `rt.Objects().Put(ctx, "summary-2026-11.txt", body)`. Read it back with `Get` and remove it with
+`Delete`. The name is flat: lower-case letters, digits, `.`, `-` and `_`. The core finds the content type from the
+bytes. Removing the unit from the build deletes its objects at the next boot.
+
+The limits, the refusals and the audit rows are in
+[extension-capabilities.md](../reference/extension-capabilities.md).
 
 ## Write the unit's own test
 
@@ -1699,6 +1893,8 @@ under `extensions/`. Run the `rm -rf` after it. `git rm` takes the tracked files
 
 A unit for one installation only is not in git. Remove it from that installation's `go.mod`, and its name from
 `extensions/operator-units`. Then delete its folder under `extensions/`; there is nothing to stage.
+
+At the next boot the core deletes the objects the removed unit kept with `rt.Objects()`.
 
 No other core file or core test needs an edit. Removing it *turns the unit off* (routes answer 404, the list leaves
 the unit out, migrations skip it), but it does **not erase**. The unit's tables and rows, its `extension_secret`

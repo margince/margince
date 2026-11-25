@@ -1095,6 +1095,18 @@ func (stubs) ReadCaptureTracePipeline(w nethttp.ResponseWriter, r *nethttp.Reque
 	httperr.NotImplemented(w, r, "ReadCaptureTracePipeline")
 }
 
+func (stubs) ListUnroutedMail(w nethttp.ResponseWriter, r *nethttp.Request) {
+	httperr.NotImplemented(w, r, "ListUnroutedMail")
+}
+
+func (stubs) RestoreUnroutedAddress(w nethttp.ResponseWriter, r *nethttp.Request, address string) {
+	httperr.NotImplemented(w, r, "RestoreUnroutedAddress")
+}
+
+func (stubs) RefuseUnroutedAddress(w nethttp.ResponseWriter, r *nethttp.Request, address string) {
+	httperr.NotImplemented(w, r, "RefuseUnroutedAddress")
+}
+
 func (stubs) CatchUpOnRecord(w nethttp.ResponseWriter, r *nethttp.Request, params crmcontracts.CatchUpOnRecordParams) {
 	httperr.NotImplemented(w, r, "CatchUpOnRecord")
 }
@@ -1599,7 +1611,7 @@ func (stubs) QuickCaptureContact(w nethttp.ResponseWriter, r *nethttp.Request, p
 	httperr.NotImplemented(w, r, "QuickCaptureContact")
 }
 
-func (stubs) ImportVCards(w nethttp.ResponseWriter, r *nethttp.Request) {
+func (stubs) ImportVCards(w nethttp.ResponseWriter, r *nethttp.Request, params crmcontracts.ImportVCardsParams) {
 	httperr.NotImplemented(w, r, "ImportVCards")
 }
 
@@ -2101,6 +2113,14 @@ func (stubs) RemoveDealLine(w nethttp.ResponseWriter, r *nethttp.Request, id crm
 
 func (stubs) UpdateDealLine(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id, lineId openapi_types.UUID) {
 	httperr.NotImplemented(w, r, "UpdateDealLine")
+}
+
+func (stubs) ClearDealManagerRequest(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
+	httperr.NotImplemented(w, r, "ClearDealManagerRequest")
+}
+
+func (stubs) RequestDealManager(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
+	httperr.NotImplemented(w, r, "RequestDealManager")
 }
 
 func (stubs) ListDealMarginceChanges(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id, params crmcontracts.ListDealMarginceChangesParams) {
@@ -3507,7 +3527,7 @@ func (stubs) GetPublicAvailability(w nethttp.ResponseWriter, r *nethttp.Request,
 	httperr.NotImplemented(w, r, "GetPublicAvailability")
 }
 
-func (stubs) GetPublicBookingPreview(w nethttp.ResponseWriter, r *nethttp.Request, hostSlug string) {
+func (stubs) GetPublicBookingPreview(w nethttp.ResponseWriter, r *nethttp.Request, hostSlug string, params crmcontracts.GetPublicBookingPreviewParams) {
 	httperr.NotImplemented(w, r, "GetPublicBookingPreview")
 }
 
@@ -3935,6 +3955,26 @@ func (stubs) ListSchedulingTeamCandidates(w nethttp.ResponseWriter, r *nethttp.R
 	httperr.NotImplemented(w, r, "ListSchedulingTeamCandidates")
 }
 
+func (stubs) ListSchedulingTeamLinks(w nethttp.ResponseWriter, r *nethttp.Request) {
+	httperr.NotImplemented(w, r, "ListSchedulingTeamLinks")
+}
+
+func (stubs) CreateSchedulingTeamLink(w nethttp.ResponseWriter, r *nethttp.Request) {
+	httperr.NotImplemented(w, r, "CreateSchedulingTeamLink")
+}
+
+func (stubs) DeleteSchedulingTeamLink(w nethttp.ResponseWriter, r *nethttp.Request, pageId openapi_types.UUID) {
+	httperr.NotImplemented(w, r, "DeleteSchedulingTeamLink")
+}
+
+func (stubs) UpdateSchedulingTeamLink(w nethttp.ResponseWriter, r *nethttp.Request, pageId openapi_types.UUID) {
+	httperr.NotImplemented(w, r, "UpdateSchedulingTeamLink")
+}
+
+func (stubs) AnswerSchedulingTeamLink(w nethttp.ResponseWriter, r *nethttp.Request, pageId openapi_types.UUID) {
+	httperr.NotImplemented(w, r, "AnswerSchedulingTeamLink")
+}
+
 func (stubs) ListSchedulingTeamRequests(w nethttp.ResponseWriter, r *nethttp.Request) {
 	httperr.NotImplemented(w, r, "ListSchedulingTeamRequests")
 }
@@ -4065,6 +4105,10 @@ func (stubs) UpdateStageExitCriterion(w nethttp.ResponseWriter, r *nethttp.Reque
 
 func (stubs) GetStatus(w nethttp.ResponseWriter, r *nethttp.Request) {
 	httperr.NotImplemented(w, r, "GetStatus")
+}
+
+func (stubs) HeadStatus(w nethttp.ResponseWriter, r *nethttp.Request) {
+	httperr.NotImplemented(w, r, "HeadStatus")
 }
 
 func (stubs) GetTagSuggestion(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {

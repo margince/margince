@@ -25,10 +25,6 @@ import (
 // gatekit:fixture the scope each narrowed site's reading is compared against —
 // expected data, not an exception granted to the site.
 var narrowedSites = map[string]string{
-	// One call labels a batch; every below-floor message is re-asked solo.
-	"capture_classify/classify": aitasks.ScopeSingleCall,
-	// A below-floor verdict is re-asked once, unbound, and that answer applies.
-	"capture_counterparty_verdict/verdict": aitasks.ScopeSingleCall,
 	// A below-floor message is re-asked SOLO on the next rung, and whether the
 	// row ends up judged at all is decided there rather than here.
 	"owed_verdict/owed": aitasks.ScopeSingleCall,

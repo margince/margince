@@ -18,6 +18,9 @@ import (
 	"context"
 	"errors"
 	"testing"
+	"time"
+
+	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -132,5 +135,96 @@ func TestAReleaseWithOneChangedClaimReleasesNone(t *testing.T) {
 	}
 	if held != 0 {
 		t.Fatalf("%d claims are still held after a release of unchanged claims", held)
+	}
+}
+
+// A notice its producer took back is not mailed, even when its job runs later.
+func TestARetractedNoticeIsNotMailed(t *testing.T) {
+	e := setupNotices(t)
+	id, err := e.store.Create(e.engineCtx(), NewNotice{Recipient: e.recipient, Kind: KindMeetingTeamRequest, Subject: "Ada added you to the booking link", DedupeKey: "team:retracted"})
+	if err != nil {
+		t.Fatalf("recording the notice: %v", err)
+	}
+	if err := e.store.db.Tx(e.engineCtx(), func(tx pgx.Tx) error {
+		_, err := e.store.Retract(e.engineCtx(), tx, "team:retracted")
+		return err
+	}); err != nil {
+		t.Fatalf("taking the notice back: %v", err)
+	}
+	if _, claimed, err := e.store.ClaimEmailAttempt(e.engineCtx(), id); err != nil || claimed {
+		t.Fatalf("claiming a retracted notice's mail → claimed=%v, err=%v; want nothing claimed", claimed, err)
+	}
+}
+
+// A burst claims the recipient's other live approval mails and leaves a
+// retracted one unclaimed.
+func TestABurstLeavesARetractedApprovalUnclaimed(t *testing.T) {
+	e := setupNotices(t)
+	keys := []string{ApprovalNoticeKey(ids.NewV7()), ApprovalNoticeKey(ids.NewV7()), ApprovalNoticeKey(ids.NewV7())}
+	notices := make([]ids.UUID, len(keys))
+	for i, key := range keys {
+		id, err := e.store.Create(e.engineCtx(), NewNotice{Recipient: e.recipient, Kind: KindApprovalPending, Subject: "Approve " + key, DedupeKey: key})
+		if err != nil {
+			t.Fatalf("recording the notice: %v", err)
+		}
+		notices[i] = id
+	}
+	if err := e.store.db.Tx(e.engineCtx(), func(tx pgx.Tx) error {
+		_, err := e.store.Retract(e.engineCtx(), tx, keys[2])
+		return err
+	}); err != nil {
+		t.Fatalf("taking one approval back: %v", err)
+	}
+	first, claimed, err := e.store.ClaimEmailAttempt(e.engineCtx(), notices[0])
+	if err != nil || !claimed {
+		t.Fatalf("claiming the first mail → claimed=%v, err=%v", claimed, err)
+	}
+	burst, err := e.store.ClaimApprovalBurst(e.engineCtx(), first, time.Hour)
+	if err != nil {
+		t.Fatalf("claiming the burst: %v", err)
+	}
+	if len(burst) != 1 || burst[0].Notice.ID != notices[1] {
+		t.Fatalf("the burst claimed %+v, want only the live approval", burst)
+	}
+	var attempted *time.Time
+	if err := e.owner.QueryRow(context.Background(), `SELECT email_attempted_at FROM notice WHERE id = $1`, notices[2]).Scan(&attempted); err != nil || attempted != nil {
+		t.Fatalf("the retracted approval's mail was claimed: %v %v", attempted, err)
+	}
+}
+
+// A reword gives a live line new words and leaves whether it was read alone. A
+// line taken back is left as it is.
+func TestARewordChangesOnlyALiveLine(t *testing.T) {
+	e := setupNotices(t)
+	for _, key := range []string{"team:live", "team:retracted"} {
+		if _, err := e.store.Create(e.engineCtx(), NewNotice{Recipient: e.recipient, Kind: KindMeetingTeamRequest, Subject: "Added to “Intro call”", DedupeKey: key}); err != nil {
+			t.Fatalf("recording the notice: %v", err)
+		}
+	}
+	if _, err := e.owner.Exec(context.Background(), `UPDATE notice SET read_at = now() WHERE dedupe_key = 'team:live'`); err != nil {
+		t.Fatal(err)
+	}
+	if err := e.store.db.Tx(e.engineCtx(), func(tx pgx.Tx) error {
+		if _, err := e.store.Retract(e.engineCtx(), tx, "team:retracted"); err != nil {
+			return err
+		}
+		for _, key := range []string{"team:live", "team:retracted"} {
+			if err := e.store.RewordLiveTx(e.engineCtx(), tx, NewNotice{Recipient: e.recipient, Kind: KindMeetingTeamRequest, Subject: "Added to “Renewal call”", DedupeKey: key}); err != nil {
+				return err
+			}
+		}
+		return nil
+	}); err != nil {
+		t.Fatalf("rewording: %v", err)
+	}
+	for key, want := range map[string]string{"team:live": "Added to “Renewal call”", "team:retracted": "Added to “Intro call”"} {
+		var subject string
+		var read bool
+		if err := e.owner.QueryRow(context.Background(), `SELECT subject, read_at IS NOT NULL FROM notice WHERE dedupe_key = $1`, key).Scan(&subject, &read); err != nil {
+			t.Fatal(err)
+		}
+		if subject != want || read != (key == "team:live") {
+			t.Errorf("%s reads %q (read %v), want %q with its read state kept", key, subject, read, want)
+		}
 	}
 }

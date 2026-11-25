@@ -86,6 +86,10 @@ const EXTENSIONS = {
         { method: "GET", path: "/ext/notes/{id}" },
       ],
       jobs: ["ext_notes_digest"],
+      needs: [
+        { capability: "models", reason: "Writes the one-line summaries." },
+        { capability: "objects", reason: "Keeps the summaries it writes." },
+      ],
     },
     {
       name: "quiet",
@@ -334,6 +338,19 @@ describe("ExtensionAccessCard", () => {
       ["Signing key", "ext_notes_signing_key"],
     ]);
     expect(screen.getByText("ext_notes_digest")).toBeTruthy();
+
+    // What it borrows from the core, with the author's reason beside each.
+    const needs = screen
+      .getByText("Uses from the core")
+      .closest(".factlist-row");
+    expect(
+      [...(needs?.querySelectorAll("li") ?? [])].map(
+        (item) => item.textContent,
+      ),
+    ).toEqual([
+      "AI models — Writes the one-line summaries.",
+      "File storage — Keeps the summaries it writes.",
+    ]);
 
     // The grants, read straight off the fixture: admin reads and creates the
     // note object and does neither of the other two verbs.

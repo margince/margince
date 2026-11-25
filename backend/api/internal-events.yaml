@@ -326,6 +326,21 @@ components:
           type: integer
           minimum: 0
           description: How much the occurrence handled, in quantity_unit.
+        processed:
+          type: integer
+          minimum: 0
+          description: >-
+            How much of its work a LIVE occurrence has finished so far, in the
+            unit its source counts (a website read counts pages). Absent while
+            unknown, which is not zero. Never the settled quantity: a settled
+            event carries none.
+        total:
+          type: integer
+          minimum: 1
+          description: >-
+            How much the occurrence expects to finish in all, in the unit of
+            processed. Absent while the source does not know its length, and a
+            ceiling it might stop short of is not a length.
         quantity_unit:
           type: string
           enum: [messages, records, contacts, documents]

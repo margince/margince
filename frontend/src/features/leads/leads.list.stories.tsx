@@ -60,7 +60,7 @@ function leads(
 ) {
   return () => {
     installFetchStub({
-      "GET /me": meRoute({ lead: ["read", "update"] }, identity),
+      "GET /me": meRoute({ lead: ["read", "update", "create"] }, identity),
       "GET /leads": () =>
         jsonResponse({ data: rows, page: { next_cursor: null } }),
       "GET /leads/settings": () =>

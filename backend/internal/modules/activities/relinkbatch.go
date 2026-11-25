@@ -163,15 +163,19 @@ func admitRelink(ctx context.Context, in RelinkActivityInput) (string, error) {
 
 // relinkActivityRow is the guarded write for ONE activity, inside the caller's
 // transaction, after the caller has probed the destination record. It answers
-// whether a link was actually written — replaying the same association is a
-// no-op, and a no-op writes no audit noise — and whether the row is held, so
-// a caller reading it back afterward (RelinkActivity's own final read) knows
-// which archived filter still finds a no-op's row.
+// whether a link was actually written. Replaying the same association writes
+// no link and no audit noise. The one exception is a colleague confirming a
+// deal link (confirmDealByHand). It also answers whether the row is held.
+// A caller reading it back afterward (RelinkActivity's own final read) then
+// knows which archived filter still finds a no-op's row.
 //
 // The write check is per row on purpose. Customer identity is workspace-
 // readable, so the write arm (auth.EnsureActivityWritable) is what keeps a
 // colleague's correspondence theirs — and in a batch every row is somebody's.
 func relinkActivityRow(ctx context.Context, tx pgx.Tx, id ids.ActivityID, in RelinkActivityInput, column string) (wrote, held bool, err error) {
+	if err := lockRelinkedAttendees(ctx, tx, in, id.UUID); err != nil {
+		return false, false, err
+	}
 	// THE LOCK COMES FIRST, before the authority check and before the version
 	// compare, because both are answers about the row and both are only true
 	// while it holds still. Checked first and locked after, an ownership change
@@ -216,7 +220,7 @@ func relinkActivityRow(ctx context.Context, tx pgx.Tx, id ids.ActivityID, in Rel
 		return false, held, err
 	}
 	if tag.RowsAffected() == 0 {
-		return false, held, nil
+		return false, held, confirmDealByHand(ctx, tx, id, in, held)
 	}
 	return true, held, finalizeRelinkedActivity(ctx, tx, id, in, displaced)
 }
@@ -331,39 +335,6 @@ func relinkMeetsItsPin(ctx context.Context, tx pgx.Tx, id ids.ActivityID, ifVers
 	return nil
 }
 
-// refuseBatchPin keeps a version pin off the doors it cannot mean.
-//
-// One version cannot speak for a thread or a named set: applied per row it
-// would refuse every activity except the one that happened to match, which
-// reads as a partial move nobody asked for. The doors that take a pin are the
-// single relink's, and a caller that supplies one here is told so rather than
-// having it quietly dropped — a pin silently ignored is the failure this whole
-// change is about.
-func refuseBatchPin(in RelinkActivityInput) error {
-	if in.IfVersion == nil {
-		return nil
-	}
-	return &BatchPinError{}
-}
-
-// BatchPinError refuses a version pin on a door that moves many activities.
-//
-// A MessageFault rather than a field fault: the pin arrives as an If-Match
-// HEADER, so there is no request field to name, and inventing one would point
-// the caller at an input that is not theirs to change.
-type BatchPinError struct{}
-
-func (e *BatchPinError) Error() string {
-	return "a thread or a named set moves many activities, and one version cannot condition them"
-}
-
-// MessageFault maps this to a 422 carrying the code, so a client can branch on
-// the reason rather than parsing prose.
-func (e *BatchPinError) MessageFault() (code, message string) {
-	return "pin_not_supported", e.Error() +
-		" — drop the If-Match and relink them one at a time to pin a version"
-}
-
 // RelinkThread applies one relink to every non-archived activity of anchor's
 // correspondence (SameCorrespondenceSQL) that the caller may write. A row the
 // caller cannot see or cannot write is LEFT, not refused. The caller never named
@@ -400,6 +371,13 @@ func (s *Store) RelinkThread(ctx context.Context, anchor ids.ActivityID, in Reli
 		}
 		members, err := liveConversationMembers(ctx, tx, anchor, domain)
 		if err != nil {
+			return err
+		}
+		conversation := make([]ids.UUID, 0, len(members))
+		for _, id := range members {
+			conversation = append(conversation, id.UUID)
+		}
+		if err := lockRelinkedAttendees(ctx, tx, in, conversation...); err != nil {
 			return err
 		}
 		for _, id := range members {
@@ -466,6 +444,9 @@ func (s *Store) RelinkActivities(ctx context.Context, activityIDs []ids.UUID, in
 		if err := auth.EnsureAttachTarget(ctx, tx, in.EntityType, in.EntityID); err != nil {
 			return err
 		}
+		if err := lockRelinkedAttendees(ctx, tx, in, activityIDs...); err != nil {
+			return err
+		}
 		seen := make(map[ids.UUID]struct{}, len(activityIDs))
 		for _, raw := range activityIDs {
 			// A repeated id is one row, not two audit rows for one move.
@@ -495,4 +476,14 @@ func validateRelinkCount(count int) error {
 			fmt.Sprintf("activity_ids names between 1 and %d activities; this request names %d", maxBulkRelink, count))
 	}
 	return nil
+}
+
+// lockRelinkedAttendees takes the attendee locks a contact relink needs, since
+// it moves participant rows and may stamp the sender. A batch takes them all,
+// sorted, before its first row lock.
+func lockRelinkedAttendees(ctx context.Context, tx pgx.Tx, in RelinkActivityInput, activityIDs ...ids.UUID) error {
+	if in.EntityType != linkEntityContact {
+		return nil
+	}
+	return storekit.LockMeetingAttendeeWrites(ctx, tx, activityIDs...)
 }

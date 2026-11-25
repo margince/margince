@@ -30,6 +30,7 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	"github.com/margince/margince/backend/internal/compose/proposalstage"
 	"github.com/margince/margince/backend/internal/modules/ai"
 	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/modules/identity"
@@ -59,9 +60,11 @@ type StageEvidenceReader struct {
 	pool  *pgxpool.Pool
 	deals *deals.Store
 	own   deals.OwnDomainReader
-	brain completer
-	now   func() time.Time
-	log   *slog.Logger
+	// proposals raises the question to move a deal to the proposal stage.
+	proposals *proposalstage.Suggester
+	brain     completer
+	now       func() time.Time
+	log       *slog.Logger
 }
 
 // NewStageEvidenceReader builds the engine over the pool and one model lane.
@@ -71,6 +74,7 @@ func NewStageEvidenceReader(
 ) *StageEvidenceReader {
 	return &StageEvidenceReader{
 		pool: pool, deals: store, own: own, brain: brain, now: now, log: log,
+		proposals: proposalstage.New(InstallationDB(pool), NewApprovalsService(InstallationDB(pool))),
 	}
 }
 
@@ -125,6 +129,10 @@ type stageEvidenceReadFacts struct {
 	// at write time would let a criterion archived in between turn a valid
 	// claim into a refusal, or worse, match a key somebody had reused.
 	byKey map[string]ids.ExitCriterionID
+	// proposalAsked says the reading also asked whether a proposal is
+	// attached. That answer is not a criterion of the stage: it raises the
+	// move question and writes nothing to the ledger.
+	proposalAsked bool
 }
 
 // gather reads the deal's criteria and the activity's text in ONE transaction,
@@ -157,10 +165,17 @@ func (r *StageEvidenceReader) gather(
 		facts.activityID = activityID
 		facts.spans = []stageEvidenceSpan{{SourceID: activityID.String(), Lines: text}}
 		criteria, facts.byKey, err = r.criteriaOf(ctx, tx, dealID)
+		if err != nil && !errors.Is(err, errNothingToRead) {
+			return err
+		}
+		facts.proposalAsked, err = proposalstage.QuestionFor(ctx, tx, authorship, activityID)
 		return err
 	})
 	if err != nil {
 		return facts, nil, err
+	}
+	if facts.proposalAsked {
+		criteria = append(criteria, stageEvidenceCriterion{Key: deals.ProposalSentCriterionKey, Label: proposalstage.SentLabel})
 	}
 	if len(criteria) == 0 {
 		return facts, nil, errNothingToRead
@@ -191,6 +206,11 @@ func (r *StageEvidenceReader) criteriaOf(
 	for _, c := range rows {
 		// Legal's approval settles this kind; a reading of the mail never does.
 		if deals.CriterionKind(c.Kind) == deals.CriterionLegalReviewed {
+			continue
+		}
+		// The reserved key is never a stage criterion's: a stored one is not
+		// offered, so its claims cannot be taken for the proposal question.
+		if c.Key == deals.ProposalSentCriterionKey {
 			continue
 		}
 		criterion := stageEvidenceCriterion{Key: c.Key, Label: c.Label}
@@ -257,6 +277,13 @@ func (r *StageEvidenceReader) record(
 	written := 0
 	for _, claim := range claims {
 		if claim.Confidence < stageEvidenceFloor {
+			continue
+		}
+		if claim.CriterionKey == deals.ProposalSentCriterionKey {
+			asked := facts.proposalAsked && claim.Met == stageEvidenceMet
+			if err := r.proposals.FromReading(ctx, dealID, facts.activityID, asked, claim.Quote); err != nil {
+				return written, err
+			}
 			continue
 		}
 		landed, err := r.write(ctx, dealID, facts, claim)

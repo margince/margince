@@ -13,9 +13,6 @@ import (
 // Left in place, its From line reads as an Outlook reply header.
 var preamblePattern = regexp.MustCompile(`^From:[^\n]*\nTo:[^\n]*\n\n`)
 
-// forwardHeaderLine is one field of the header block under a forward line.
-var forwardHeaderLine = regexp.MustCompile(`^\*{0,2}[^\s:>*][^:]{0,30}:`)
-
 // MailKind is the activity kind whose body a mail program wrote.
 const MailKind = "email"
 
@@ -26,17 +23,13 @@ func Preamble(body string) (preamble, text string) {
 	return preamble, body[len(preamble):]
 }
 
-// OwnTextEnd is the index of the first line of quoted earlier mail, or
-// len(lines) when the sender wrote or forwarded every line.
+// OwnTextEnd is the index of the first line of quoted or forwarded mail, or
+// len(lines) when the sender wrote every line.
 //
-// A line a mail program writes above quoted mail ends the text. A quote marked
+// A line a mail program writes above such mail ends the text. A quote marked
 // with ">" ends it only when nothing follows, so an inline reply stays whole.
 func OwnTextEnd(lines []string) int {
 	for i := 0; i < len(lines); i++ {
-		if isForward(lines[i]) {
-			i = forwardedTextStart(lines, i+1) - 1
-			continue
-		}
 		if !startsQuote(lines, i) {
 			continue
 		}
@@ -80,7 +73,7 @@ func ownChars(body string) int {
 
 func startsQuote(lines []string, index int) bool {
 	line := lines[index]
-	if strings.HasPrefix(line, ">") || isReply(line) {
+	if strings.HasPrefix(line, ">") || IsAttribution(line) {
 		return true
 	}
 	// The sent-date field below separates an Outlook block from prose opening "Von:".
@@ -112,23 +105,6 @@ func attributedStart(lines []string, index int) int {
 		return index - 1
 	}
 	return index
-}
-
-// forwardedTextStart is the index where a forwarded mail's own lines are read
-// from. It passes the header block, whose From and Date fields would read as an
-// Outlook reply header, and a mail forwarded with ">" on every line.
-func forwardedTextStart(lines []string, from int) int {
-	for from < len(lines) && strings.TrimSpace(lines[from]) == "" {
-		from++
-	}
-	end := from
-	for end < len(lines) && end-from < quotedHeaderReach && forwardHeaderLine.MatchString(lines[end]) {
-		end++
-	}
-	for end < len(lines) && (strings.HasPrefix(lines[end], ">") || strings.TrimSpace(lines[end]) == "") {
-		end++
-	}
-	return end
 }
 
 func hasText(lines []string) bool {

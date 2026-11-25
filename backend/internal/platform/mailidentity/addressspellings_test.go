@@ -33,3 +33,26 @@ func TestAnAddressWithNoDomainIsItself(t *testing.T) {
 		t.Errorf("a blank address has no spelling, got %v", got)
 	}
 }
+
+// Only case, surrounding space and the spelling of the domain are folded. The
+// dot and plus rules differ per provider, and a wrong guess joins two seats.
+func TestFoldAddressKeepsPlusTagsDotsAndSubdomainsApart(t *testing.T) {
+	const base = "jane.doe@gmail.com"
+	for _, other := range []string{
+		"jane.doe+news@gmail.com",
+		"janedoe@gmail.com",
+		"j.a.n.e.doe@gmail.com",
+		"jane.doe@mail.gmail.com",
+		"jane.doe@googlemail.com",
+	} {
+		if FoldAddress(other) == FoldAddress(base) {
+			t.Errorf("FoldAddress folded %q into %q, want a different address", other, base)
+		}
+		if SeatAddressKey(other, "") == SeatAddressKey(base, "") {
+			t.Errorf("SeatAddressKey folded %q into %q, want a different address", other, base)
+		}
+	}
+	if got := FoldAddress(" Jane.Doe+News@GMAIL.com "); got != "jane.doe+news@gmail.com" {
+		t.Errorf("FoldAddress kept %q, want only case and space folded", got)
+	}
+}

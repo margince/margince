@@ -323,8 +323,6 @@ func startsQuote(line []rune) bool {
 //
 // It reuses startsQuote and signatureStart rather than scanning for '>' so a
 // marker this file learns about reaches every reading at once.
-// It does not share mailquote.OwnTextEnd, which keeps a forward and an inline
-// reply: a draft may stand only on words the correspondent wrote above them.
 func authoredText(text string) string {
 	runes := []rune(text)
 	offset := earliest(quoteStart(runes), signatureStart(runes))

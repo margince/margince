@@ -386,7 +386,6 @@ ol {
   flex-basis: 0;
   min-inline-size: var(--space-2);
   border-radius: var(--r-full);
-  corner-shape: round;
 }
 
 [data-tone="danger"].view-segment,
@@ -449,7 +448,6 @@ ol {
   inline-size: var(--space-2);
   block-size: var(--space-2);
   border-radius: var(--r-full);
-  corner-shape: round;
 }
 
 .view-legend-value {
@@ -494,7 +492,6 @@ ol {
   inline-size: 104px;
   block-size: 104px;
   border-radius: var(--r-full);
-  corner-shape: round;
   background: var(--ring-fill, var(--borderStrong));
 }
 
@@ -505,7 +502,6 @@ ol {
   inline-size: 88px;
   block-size: 88px;
   border-radius: var(--r-full);
-  corner-shape: round;
   background: var(--ground);
 }
 
@@ -612,7 +608,6 @@ ol {
   padding: 0;
   border: 1px solid var(--groundEdge);
   border-radius: var(--r-full);
-  corner-shape: round;
   background: none;
   color: var(--textSecondary);
   cursor: pointer;
@@ -662,7 +657,6 @@ ol {
   inline-size: var(--space-2);
   block-size: var(--space-2);
   border-radius: var(--r-full);
-  corner-shape: round;
   background: var(--danger);
 }
 

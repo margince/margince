@@ -23,10 +23,6 @@
   overflow-wrap: anywhere;
 }
 
-.approval-decided {
-  margin-top: var(--space-3);
-}
-
 /* The boxes a LinkedIn match card offers, under its fields. */
 .linkedin-match-choice {
   display: flex;

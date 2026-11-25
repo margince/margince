@@ -22,16 +22,21 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/platform/generatedsummary"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
 // relinkStrandedSatellites is the one call the merge makes for both halves
-// below, so relinkContactReferences names this concern once rather than twice.
+// below and the LinkedIn connections, so relinkContactReferences names this
+// concern once.
 func relinkStrandedSatellites(ctx context.Context, tx pgx.Tx, sourceID, targetID ids.ContactID) error {
 	if err := relinkReaderJudgements(ctx, tx, sourceID, targetID); err != nil {
 		return err
 	}
-	return relinkWorkInFlight(ctx, tx, sourceID, targetID)
+	if err := relinkWorkInFlight(ctx, tx, sourceID, targetID); err != nil {
+		return err
+	}
+	return relinkLinkedInConnections(ctx, tx, sourceID, targetID)
 }
 
 // relinkReaderJudgements moves what a READER decided about this contact, and
@@ -77,9 +82,7 @@ func relinkReaderJudgements(ctx context.Context, tx pgx.Tx, sourceID, targetID i
 		pgx.NamedArgs{auditKeySource: sourceID, mergeTargetKey: targetID}); err != nil {
 		return fmt.Errorf("carry the nudges a reader had already put down: %w", err)
 	}
-	if _, err := tx.Exec(ctx,
-		`DELETE FROM contact_brief WHERE contact_id IN (@source, @target)`,
-		pgx.NamedArgs{auditKeySource: sourceID, mergeTargetKey: targetID}); err != nil {
+	if err := generatedsummary.ForgetContacts(ctx, tx, sourceID, targetID); err != nil {
 		return fmt.Errorf("drop the briefs the merge made stale: %w", err)
 	}
 	return nil

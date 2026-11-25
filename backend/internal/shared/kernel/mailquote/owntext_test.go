@@ -4,7 +4,6 @@
 package mailquote
 
 import (
-	"strings"
 	"testing"
 	"unicode/utf8"
 )
@@ -51,11 +50,6 @@ func TestAReplyKeepsTheTextAboveTheQuotedMail(t *testing.T) {
 			own:  "Bên em đồng ý.\n\n",
 		},
 		{
-			name: "a Vietnamese reply that opens with Ngày",
-			body: "Bên em đồng ý.\n\nNgày 3 thg 3, 2025, lúc 10:15, Nguyễn Văn An <an@buyer.example> đã viết:\n\nThứ Sáu được không?\n",
-			own:  "Bên em đồng ý.\n\n",
-		},
-		{
 			name: "an English Outlook block",
 			body: "Works for us.\n\nFrom: Dana Roe <dana@buyer.example>\nSent: Monday, March 3, 2025 10:15\nTo: Sales\nSubject: Friday\n\nCan you do Friday?",
 			own:  "Works for us.\n\n",
@@ -64,16 +58,6 @@ func TestAReplyKeepsTheTextAboveTheQuotedMail(t *testing.T) {
 			name: "a German Outlook block under its divider",
 			body: "Passt.\n\n-----Ursprüngliche Nachricht-----\nVon: Dana Roe <dana@buyer.example>\nGesendet: Montag, 3. März 2025 10:15\nAn: Vertrieb\nBetreff: Freitag\n\nGeht Freitag?",
 			own:  "Passt.\n\n",
-		},
-		{
-			name: "a Vietnamese Outlook block",
-			body: "Đồng ý.\n\nTừ: Nguyễn Văn An <an@buyer.example>\nĐã gửi: Thứ Hai, 3 Tháng 3, 2025 10:15\nTới: Kinh doanh\nChủ đề: Thứ Sáu\n\nThứ Sáu được không?",
-			own:  "Đồng ý.\n\n",
-		},
-		{
-			name: "a Vietnamese original-message divider",
-			body: "Đồng ý.\n\n-----Thư gốc-----\nThứ Sáu được không?",
-			own:  "Đồng ý.\n\n",
 		},
 		{
 			name: "a reply with carriage returns at its line ends",
@@ -112,25 +96,20 @@ func TestTheRuleNeverCutsTheSendersWords(t *testing.T) {
 	})
 }
 
-func TestAForwardKeepsTheMailItPassesOn(t *testing.T) {
+// A forward line is read as the shared patterns read it: it ends the sender's
+// own text, as it does where the History tab folds.
+func TestAForwardLineEndsTheSendersOwnText(t *testing.T) {
 	t.Parallel()
-	gmail := "FYI, the buyer's terms.\n\n---------- Forwarded message ---------\nFrom: Dana Roe <dana@buyer.example>\nDate: Mon, 3 Mar 2025 at 10:15\nSubject: Terms\nTo: Sales <sales@seller.example>\n\n\nNet thirty days.\n"
-	apple := "Begin forwarded message:\n\nFrom: Dana Roe <dana@buyer.example>\nSubject: Terms\nDate: 3 March 2025 at 10:15:00 CET\nTo: Sales <sales@seller.example>\n\nNet thirty days.\n"
-	german := "Zur Info.\n\n-------- Weitergeleitete Nachricht --------\nVon: Dana Roe <dana@buyer.example>\nDatum: Mo., 3. März 2025 10:15\nBetreff: Konditionen\nAn: Vertrieb\n\nDreißig Tage netto.\n"
-	germanApple := "Anfang der weitergeleiteten Nachricht:\n\nVon: Dana Roe <dana@buyer.example>\nBetreff: Konditionen\nDatum: 3. März 2025 um 10:15:00 MEZ\nAn: Vertrieb\n\nDreißig Tage netto.\n"
-	vietnamese := "Gửi anh tham khảo.\n\n---------- Thư đã chuyển tiếp ---------\nTừ: Nguyễn Văn An <an@buyer.example>\nNgày: Th 2, 3 thg 3, 2025 vào lúc 10:15\nTiêu đề: Điều khoản\nĐến: Kinh doanh\n\nThanh toán trong ba mươi ngày.\n"
-	marked := "Passt, machen wir so.\n\n---------- Forwarded message ----------\n> Wollen wir Dienstag sprechen?"
 	runOwnTextCases(t, []ownTextCase{
-		{name: "a forward marked on every line", body: marked, own: marked},
-		{name: "an English forward", body: gmail, own: gmail},
-		{name: "an English forward with no words above it", body: apple, own: apple},
-		{name: "a German forward", body: german, own: german},
-		{name: "a German forward with no words above it", body: germanApple, own: germanApple},
-		{name: "a Vietnamese forward", body: vietnamese, own: vietnamese},
 		{
-			name: "the history under a forwarded mail is still a quote",
-			body: gmail + "\nOn Fri, 28 Feb 2025, Sales wrote:\n> What are your terms?\n",
-			own:  gmail + "\n",
+			name: "an English forward",
+			body: "FYI, the buyer's terms.\n\n---------- Forwarded message ---------\nFrom: Dana Roe <dana@buyer.example>\nDate: Mon, 3 Mar 2025 at 10:15\n\nNet thirty days.\n",
+			own:  "FYI, the buyer's terms.\n\n",
+		},
+		{
+			name: "a German forward",
+			body: "Zur Info.\n\n-------- Weitergeleitete Nachricht --------\nVon: Dana Roe <dana@buyer.example>\n\nDreißig Tage netto.\n",
+			own:  "Zur Info.\n\n",
 		},
 	})
 }
@@ -162,27 +141,5 @@ func TestTheStoredEndCountsCharacters(t *testing.T) {
 	}
 	if *end >= len(own) {
 		t.Fatalf("the fixture has no multi-byte character before the cut: %d characters, %d bytes", *end, len(own))
-	}
-}
-
-func TestAForwardLineIsNotAReplyLine(t *testing.T) {
-	t.Parallel()
-	for _, line := range []string{
-		"---------- Forwarded message ---------", "-------- Weitergeleitete Nachricht --------",
-		"---------- Thư đã chuyển tiếp ---------", "Begin forwarded message:",
-		"Anfang der weitergeleiteten E-Mail:", "Thư được chuyển tiếp:",
-	} {
-		if !isForward(line) || isReply(line) || !IsAttribution(line) {
-			t.Errorf("%q: forward %t, reply %t, attribution %t; want a forward only",
-				line, isForward(line), isReply(line), IsAttribution(line))
-		}
-	}
-	for _, line := range []string{
-		"-----Original Message-----", "-----Ursprüngliche Nachricht-----", "-----Thư gốc-----",
-		"On Mon, 3 Mar 2025, Sales wrote:", "Ngày 3 thg 3, 2025, An đã viết:", strings.Repeat("_", 32),
-	} {
-		if isForward(line) || !isReply(line) {
-			t.Errorf("%q: forward %t, reply %t; want a reply only", line, isForward(line), isReply(line))
-		}
 	}
 }

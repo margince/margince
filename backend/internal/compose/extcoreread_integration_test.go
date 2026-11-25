@@ -70,9 +70,9 @@ func setupReads(t *testing.T) readWorld {
 		  VALUES ($1, $2, $3, 'Theirs Deal', $4, 'open', 'apac', 'manual', 'human:x')`,
 		w.theirsDeal, pipeline, stage, w.colleague)
 	seed(`INSERT INTO signal (id, kind, source_channel, entity_type, entity_id, resolved_company_id,
-		                      resolution_state, severity, summary, status, detected_at, source, captured_by)
+		                      resolution_state, severity, summary, status, detected_at, source, source_system, captured_by)
 		  VALUES ($1, 'contract_ended', 'derived', 'company', $2, $2, 'resolved', 'warn', 'ended', 'open',
-		          now(), 'signal-scan', 'agent:x')`, w.signal, w.mineCompany)
+		          now(), 'automation', 'signal-scan', 'agent:x')`, w.signal, w.mineCompany)
 	seed(`INSERT INTO activity (id, kind, subject, occurred_at, source, captured_by)
 		  VALUES ($1, 'note', 'a note', now(), 'manual', 'human:x')`, w.activity)
 	seed(`INSERT INTO activity_link (activity_id, entity_type, company_id) VALUES ($1, 'company', $2)`,

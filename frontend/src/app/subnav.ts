@@ -130,27 +130,19 @@ export type NavTrailLevel = {
   // See NavSection.lead. Carried down by navTrail, which is the only path from
   // a section to a rendered level.
   lead?: ReactNode;
-  // What the level is CALLED, for everything that names it from outside: the
-  // top bar's trail, the phone-width switcher, and the way back UP to it from
-  // the level below. The rail does not print it — a level names itself through
-  // the heading over its first group. Absent on the primary level, which the
-  // navigation landmark already names, and which is therefore what the way out
-  // of a section is walking back to.
+  // What the level is called, for the phone-width switcher and the way back up
+  // from the level below. The rail names a level by its first group's heading.
+  // Absent on the primary level, which the navigation landmark names.
   titleKey?: MessageKey;
   groups: readonly NavLevelGroup[];
   activeId?: string;
   // Whether the active row IS the page, or only the section the page sits in.
-  // A record route makes its list's row active while the page is the record —
-  // and the trail in the top bar is what names that page, and claims it. Two
-  // elements claiming `aria-current="page"` for different things is worse than
-  // one claiming a little less, so a row that is only an ancestor says
-  // `aria-current="true"` instead: current in this set, not the page.
+  // A record route makes its list's row active while the page is the record.
+  // A row that is only an ancestor says `aria-current="true"`, not "page".
   //
-  // On the PRIMARY level the answer arrives with the level, because whether a
-  // route's segments reach a page below the screen is a question about the
-  // screens, and this module deliberately knows none of them (app/nav.ts, which
-  // owns the destinations, answers it there). A level built below the primary
-  // one is a section the page sits in and says nothing here.
+  // On the primary level the answer arrives with the level: app/nav.ts knows the
+  // screens, and this module knows none. A level below the primary one says
+  // nothing here.
   ancestor?: boolean;
   path: readonly string[];
   badgeIds?: ReadonlySet<string>;
@@ -246,11 +238,9 @@ function activeEntry(level: NavTrailLevel): NavLevelEntry | undefined {
 export function navTrail(
   top: NavTrailLevel,
   route: Route,
-  // Which of the top level's rows the route makes current. For every destination
-  // the PRODUCT owns this is the route's screen; the caller that knows better
-  // passes something else (app/nav.ts: a composed unit's route has screen `ext`
-  // and no row of its own). An id no rendered row carries simply marks nothing —
-  // on those routes the trail in the top bar is what says where the reader is.
+  // Which of the top level's rows the route makes current: the route's screen,
+  // or what app/nav.ts passes for a composed unit (screen `ext`, no row). An id
+  // no rendered row carries marks nothing.
   activeId: string,
   section?: NavSection,
 ): readonly NavTrailLevel[] {
@@ -258,13 +248,9 @@ export function navTrail(
   // below the screen depends on what the screen does with them, which is
   // knowledge this module does not have and app/nav.ts does.
   const trail: NavTrailLevel[] = [{ ...top, activeId }];
-  // Compared against the ROW the route makes current, not the route's raw
-  // screen. They are the same string for every destination the product owns, and
-  // they differ for exactly one case: a composed unit routes as
-  // `{screen: "ext"}` and is reached from Settings, which is what `activeRowFor`
-  // has always answered for it. On the raw screen the level was dropped, so
-  // following "Open" from a settings card replaced the whole sidebar while the
-  // URL and the trail still said Settings.
+  // Compared against the row the route makes current, not its raw screen. The
+  // two differ only for a composed unit, which routes as `{screen: "ext"}` and
+  // is reached from Settings, as `activeRowFor` answers.
   if (!section || section.screen !== activeId) {
     return trail;
   }
@@ -300,7 +286,7 @@ export function navTrail(
       // A child level is named by the entry that opened it — the reader drilled
       // in through that word, so it is the word that says where they are. The
       // rail prints that name as the heading over the level's one group, and the
-      // top bar's trail and the way back up read it from here.
+      // way back up reads it from here.
       titleKey: active.labelKey,
       groups: [{ headingKey: active.labelKey, items: children }],
       activeId: segments[depth],

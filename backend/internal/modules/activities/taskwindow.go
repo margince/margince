@@ -31,12 +31,13 @@ func openTaskWindowClauses(in ListActivitiesInput, reminders string, arg func(an
 		backlog = " OR (" + storekit.TaskDueSQL("a") + " IS NULL AND " + storekit.HumanOrImportedTaskSQL("a") + ")"
 	}
 	var clauses []string
+	dayZone := func() string { return storekit.DayZoneSQL(in.DayZone, arg) }
 	if in.OpenAndDueBy != nil {
 		// Strictly before the instant, which is what deadline.Passed means and
 		// what this clause replaced. The bound the caller passes is the END of
 		// the day, so `<=` would put a task due at exactly tomorrow 00:00 on
 		// today's list — a promise reported late a day early.
-		deadline := storekit.TaskDueBeforeSQL("a", sprintf("$%d", arg(*in.OpenAndDueBy)))
+		deadline := storekit.TaskDueBeforeInSQL("a", sprintf("$%d", arg(*in.OpenAndDueBy)), dayZone())
 		if in.IncludeEmailRequests && in.OpenAndDueAfter == nil {
 			// An undated reminder of a request and an undated promise are both
 			// owed now: nobody named a later day for either.
@@ -62,7 +63,7 @@ func openTaskWindowClauses(in ListActivitiesInput, reminders string, arg func(an
 		if in.IncludeWebsiteInquiries {
 			clauses = append(clauses, "NOT "+provenance.WebsiteInquiryTaskSQL("a"))
 		}
-		from := storekit.TaskDueFromSQL("a", sprintf("$%d", arg(*in.OpenAndDueAfter)))
+		from := storekit.TaskDueFromInSQL("a", sprintf("$%d", arg(*in.OpenAndDueAfter)), dayZone())
 		clauses = append(clauses, openTask+"("+from+backlog+")")
 	}
 	if in.ExceptRemindersDue && reminders != "" {

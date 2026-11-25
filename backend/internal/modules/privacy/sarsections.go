@@ -38,7 +38,7 @@ func sarSections(ctx context.Context, pkg *SARPackage, contactID ids.ContactID, 
 	sections = append(sections, sarRequestSections(pkg, contactID)...)
 	sections = append(sections, sarConsentLinkSections(pkg)...)
 	sections = append(sections, sarCommunicationSections(pkg, emails, leads, identities)...)
-	sections = append(sections, sarJudgementSections(pkg, authored)...)
+	sections = append(sections, sarJudgementSections(pkg, contactID, authored)...)
 	return append(sections, sarProvenanceSections(pkg, contactID, external)...), nil
 }
 
@@ -423,10 +423,11 @@ func sarProvenanceSections(pkg *SARPackage, contactID ids.ContactID, external []
 		// value alone would tell the subject their title is X while the row
 		// also holds that it used to say Y until a message dated Z replaced it,
 		// which is precisely the sort of held-but-unstated fact Art. 15 owes.
+		// signature_support travels too: it holds the lines each mail quoted.
 		{&pkg.EnrichedFields, `SELECT ppf.field, ppf.value, ppf.value_key, ppf.evidence_snippet, ppf.source_ref,
 		          ppf.confidence, ppf.source, ppf.captured_by, ppf.updated_at,
 		          ppf.observed_at, ppf.superseded_value, ppf.superseded_captured_by,
-		          ppf.superseded_observed_at
+		          ppf.superseded_observed_at, ppf.signature_support
 		   FROM contact_profile_field ppf
 		   WHERE ppf.contact_id = $1`, nil},
 		// claim_key is exported as it stands: it is a hash of the claim's

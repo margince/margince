@@ -4,7 +4,6 @@
   block-size: 6px;
   margin-top: var(--space-2);
   border-radius: var(--r-full);
-  corner-shape: round;
   background: var(--bgChip);
   overflow: hidden;
 }
@@ -13,7 +12,6 @@
   display: block;
   block-size: 100%;
   border-radius: var(--r-full);
-  corner-shape: round;
   background: var(--ai);
   overflow: hidden;
   transition: inline-size var(--dur-move) var(--ease-out);
@@ -29,7 +27,7 @@
   background: linear-gradient(
     90deg,
     transparent 0%,
-    color-mix(in srgb, var(--ai) 40%, var(--bgElevated)) 50%,
+    color-mix(in srgb, var(--ai) 40%, var(--bgField)) 50%,
     transparent 100%
   );
   transform: translateX(-100%);

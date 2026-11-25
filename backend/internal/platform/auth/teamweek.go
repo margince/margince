@@ -101,13 +101,28 @@ func teamWeekChecks() []Check {
 // for. A refusal the individual-performance switch made is the caller's to ask.
 func RequireTeamWeekReach(ctx context.Context) (TeamWeekReach, error) {
 	reach := TeamWeekReachOf(ctx)
+	recordTeamReach(ctx, reach)
+	if reach == ReachesNoTeam {
+		return reach, fmt.Errorf("a team's week: %w", apperrors.ErrPermissionDenied)
+	}
+	return reach, nil
+}
+
+// RequireTeamLeadReach is RequireTeamWeekReach without the
+// individual-performance switch, for a write a team's lead answers for.
+func RequireTeamLeadReach(ctx context.Context) (TeamWeekReach, error) {
+	reach := TeamLeadReachOf(ctx)
+	recordTeamReach(ctx, reach)
+	if reach == ReachesNoTeam {
+		return reach, fmt.Errorf("a team lead's act: %w", apperrors.ErrPermissionDenied)
+	}
+	return reach, nil
+}
+
+func recordTeamReach(ctx context.Context, reach TeamWeekReach) {
 	if p, ok := principal.Actor(ctx); ok {
 		for _, c := range teamWeekChecks() {
 			RecordDecision(ctx, c, reach != ReachesNoTeam || c.HeldBy(p))
 		}
 	}
-	if reach == ReachesNoTeam {
-		return reach, fmt.Errorf("a team's week: %w", apperrors.ErrPermissionDenied)
-	}
-	return reach, nil
 }

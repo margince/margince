@@ -194,7 +194,7 @@ The Mail capture page in Settings (group **Data**) decides what comes into the C
 
 **Mail sharing and sync**, on the first tab: whether captured mail is shared with colleagues, and how often each mailbox syncs. It holds for everybody, so it lives here. Your own **Connections** page shows the current sharing setting on a row marked **Whole company**.
 
-The same card holds **Held threads reviewed per run**. A mailbox set to *Held until checked* holds its mail until Margince has checked the thread ([Who can see an email](who-can-see-an-email.md)). This setting says how many held threads one review run looks at, from 1 to 200. The default is 40, and the rest wait for the next run. Raise it when new mail stays hidden from colleagues for longer than the run schedule, which System health sets.
+The same card sets how much each Margince check handles in one run. **Held threads reviewed per run** takes 1 to 200 and defaults to 40, and **Senders judged per run** takes 1 to 1000 and defaults to 200. **Messages labeled per run** and **Messages checked for a reply per run** take 1 to 2500 and default to 500. What a run leaves over waits for the next run. Raise a number when new mail stays hidden or without a label for longer than the run schedule, which System health sets. Mail in a mailbox set to *Held until checked* waits for the thread review ([Who can see an email](who-can-see-an-email.md)).
 
 **Own email domains** are the domains that belong to this company. Mail between colleagues is skipped by default. An Admin can add a mailbox and its folders under **Internal operational mail**. That mail stays with its participants. See [Capture](capture.md) for the source and history choices. Take note: no mailbox offers again the mail skipped while a domain is on this list.
 
@@ -315,9 +315,9 @@ Admin and Ops can see Retention and the **Held** list. The audit log and privacy
 
 ## System health, Data import, and Reset
 
-System health and Reset data sit in the **System** group, and Data import in **Data**.
+System health and Reset data sit in the **System** group, and Data import in **Data**. **System health** opens on **Overview**: what needs work, who can act and the next step. A row of counts at the top says how many checks need you, are not set up yet, and pass. Work that needs a person comes first, with its effect and an action button. The status label says what to fix or review.
 
-**System health** opens on **Overview**: what needs work, who can act and the next step. A row of counts at the top says how many checks need you, are not set up yet, and pass. Work that needs a person comes first, with its effect and an action button. The status label says what to fix or review. **The reporting timezone cannot be read** means the server cannot load the saved time zone, so background work counts its days in UTC. Its button opens **Regional and calendar**, where an admin chooses the time zone again.
+**The reporting timezone cannot be read** means the server cannot load the saved time zone, so background work counts its days in UTC. Its button opens **Regional and calendar**, where an admin chooses the time zone again. **Mail footers lack company details** names a legal entity whose mail must show a detail nobody filled in, such as a privacy contact. A send by a person that needs it is held for review, and a background send such as a meeting reminder is dropped. The warning counts both since the details last changed, and goes once they are complete. Only a seat that may change the installation settings sees the warning, and its button opens the page with the first missing detail.
 
 **Not set up yet** lists each part nobody has set up, such as AI providers, search or restore tests. Each says what happened, why it matters and what to do, with a button that goes there. **Passing** lists the checks with nothing to do. **All checks** holds service status; **Diagnostics** shows the technical details.
 

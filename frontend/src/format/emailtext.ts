@@ -52,31 +52,18 @@ const ATTRIBUTION = [
   /^On\s.{1,200}\swrote:\s*$/,
   /^Am\s.{1,200}\sschrieb\s?.{0,120}:\s*$/,
   /^Vào\s.{1,200}\sđã viết:\s*$/,
-  /^Ngày\s.{1,200}\sđã viết:\s*$/,
-  /^-{2,}\s*(Original Message|Ursprüngliche Nachricht|Thư gốc|Tin nhắn gốc)/i,
+  /^-{2,}\s*(Original Message|Ursprüngliche Nachricht|Forwarded message|Weitergeleitete Nachricht|Thư được chuyển tiếp|Tin nhắn được chuyển tiếp)/i,
+  /^Begin forwarded message:\s*$/i,
+  /^(Thư được chuyển tiếp|Tin nhắn được chuyển tiếp):\s*$/i,
+  /^Anfang der weitergeleiteten (E-Mail|Nachricht)/i,
   /^_{5,}\s*$/,
 ];
-
-// Lines that open mail the sender passes on. It is new to the reader, so it is
-// never folded away as history.
-const FORWARD = [
-  /^-{2,}\s*(Forwarded message|Weitergeleitete Nachricht|Thư được chuyển tiếp|Thư đã chuyển tiếp|Tin nhắn được chuyển tiếp)/i,
-  /^Begin forwarded message:\s*$/i,
-  /^(Thư được chuyển tiếp|Thư đã chuyển tiếp|Tin nhắn được chuyển tiếp):\s*$/i,
-  /^Anfang der weitergeleiteten (E-Mail|Nachricht)/i,
-];
-
-// One field of the header block under a forward line, and how many lines the
-// block may run.
-const FORWARD_HEADER_LINE = /^\*{0,2}[^\s:>*][^:]{0,30}:/;
-const QUOTED_HEADER_REACH = 8;
 
 // The Outlook top-reply block: a From:/Von: line whose neighbours carry the
 // sent-date field. Recognised as a pair because "Von:" alone is ordinary prose
 // in German mail.
-const REPLY_HEADER_FROM = /^\*{0,2}(Von|From|Từ):\*{0,2}\s/;
-const REPLY_HEADER_SENT =
-  /^\*{0,2}(Gesendet|Sent|Datum|Date|Đã gửi|Ngày):\*{0,2}\s/;
+const REPLY_HEADER_FROM = /^\*{0,2}(Von|From):\*{0,2}\s/;
+const REPLY_HEADER_SENT = /^\*{0,2}(Gesendet|Sent|Datum|Date):\*{0,2}\s/;
 
 // Sign-offs, matched only in the trailing region. The multi-word forms may open
 // a line, since a name usually follows on the same one.
@@ -195,31 +182,6 @@ function markedRunEnd(lines: readonly string[], index: number): number {
   return after;
 }
 
-// The index where a forwarded mail's own lines are read from. It passes the
-// header block, whose From and Date fields would read as an Outlook reply
-// header, and a mail forwarded with ">" on every line.
-function forwardedTextStart(lines: readonly string[], from: number): number {
-  let start = from;
-  while (start < lines.length && isBlank(lines[start])) {
-    start += 1;
-  }
-  let end = start;
-  while (
-    end < lines.length &&
-    end - start < QUOTED_HEADER_REACH &&
-    FORWARD_HEADER_LINE.test(lines[end] ?? "")
-  ) {
-    end += 1;
-  }
-  while (
-    end < lines.length &&
-    (lines[end]?.startsWith(">") || isBlank(lines[end]))
-  ) {
-    end += 1;
-  }
-  return end;
-}
-
 function isBlankFrom(lines: readonly string[], from: number): boolean {
   for (let i = from; i < lines.length; i += 1) {
     if (!isBlank(lines[i])) {
@@ -238,8 +200,8 @@ function attributedStart(lines: readonly string[], index: number): number {
 }
 
 /**
- * ownTextEnd is the index of the first line of quoted earlier mail, or
- * `lines.length` when the sender wrote or forwarded every line.
+ * ownTextEnd is the index of the first line of quoted or forwarded mail, or
+ * `lines.length` when the sender wrote every line.
  *
  * A line a mail program writes above quoted mail ends the text. A quote marked
  * with ">" ends it only when nothing follows, so an inline reply stays whole.
@@ -247,11 +209,6 @@ function attributedStart(lines: readonly string[], index: number): number {
  */
 function ownTextEnd(lines: readonly string[]): number {
   for (let i = 0; i < lines.length; i += 1) {
-    const line = lines[i] ?? "";
-    if (FORWARD.some((pattern) => pattern.test(line))) {
-      i = forwardedTextStart(lines, i + 1) - 1;
-      continue;
-    }
     if (!startsQuote(lines, i)) {
       continue;
     }

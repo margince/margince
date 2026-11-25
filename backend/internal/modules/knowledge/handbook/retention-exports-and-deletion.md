@@ -291,7 +291,7 @@ If someone disputes the answer, open the closed request and choose **Record a co
 
 An access request **names a contact**, picked the same way as for an erasure. The form says: "Pick the contact this request is about. You can then download everything held about them from the request."
 
-Open the request and choose **Download data package**. The file is the Art. 15 package. It holds the contact's record, their mail, their consent history, and the facts that show why the contact is in Margince at all.
+Open the request and choose **Download data package**. The file is the Art. 15 package. It holds the contact's record, their mail, their consent history, and the facts that show why the contact is in Margince at all. It also holds what a colleague or the AI read out of the contact's messages, such as a promise to send an order. Each reading is marked as derived and sits next to the words it was read from. The package does not name the colleague who wrote it.
 
 - **Only a human user can have it made**, never an agent. By default that
   is an admin. A custom role can also be given the permission for privacy requests. The user who holds it also needs to delete contacts and to see every record in the company. Anyone else who chooses the button sees why it was refused, and no file is saved.
@@ -379,7 +379,7 @@ The audit trail, **Settings → Audit log**, records "Every action, attributed t
 
 You can filter it by **Actor**, **Entity type**, **Entity ID**, **Action**, and a date range (**From**, **To**). Pick a member in **Actor** to see what they did, and what an AI assistant did for them. **Entity ID** takes a record's full ID: use **Copy record ID** on an entry. The address keeps your filters, so you can share the link. Choose **Show change detail** on any entry to see the change and the **Authorization rule** that allowed it. Where something was done for someone else, the entry says so.
 
-Only an admin can read the full trail: "Your role cannot read the full audit log. It records every actor and every record they accessed."
+Only an admin can read the full trail: "Your role cannot read the full audit log. It records every actor and every record they accessed." Margince keeps the trail for good: no retention rule removes an entry because it is old.
 
 It is also where a record's full ID is shown, which you need to pin a record under the retention floor by hand.
 

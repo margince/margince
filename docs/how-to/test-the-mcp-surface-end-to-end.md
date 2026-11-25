@@ -57,20 +57,21 @@ Gemini runs through the Antigravity CLI (`E2E_LLM_CANDIDATE=gemini`, after you r
 
 Records made before this check did not measure a model that knows nothing about Margince. A Claude CLI run read the `CLAUDE.md` and `AGENTS.md` of this repository, and your own settings. Measure those records again before you compare them with a new one. A codex record is in question too if your codex home held plugins, hooks, `memories`, `skills` or an `AGENTS.md`. `ls backend/internal/compose/aicert/records/mcp_e2e*/*@{claude,codex}-cli/` lists them.
 
-**Five passports.** Every scenario runs on a passport that holds `read` and
-`write`, which is what most jobs need. A scenario that sends mail, writes drafts or sets up meetings
+**Five passports.** Every scenario runs on a passport that holds `read` and `write`, which is what most jobs need. A scenario that sends mail, writes drafts or sets up meetings
 says `passport: wide`. Then the lane gives a second passport that adds the
 `draft` and `send` scopes; `passport: research` adds `enrich`, for AI work. Without
 them, these tools are never in the list the model sees.
 
-The admin mints those three. Two more measure a user with fewer rights.
-`passport: rep` is minted by a seeded seat with the `rep` role, with `read` and `write`. That
+The admin connects those three. Two more measure a user with fewer rights.
+`passport: rep` is connected by a seeded seat with the `rep` role, with `read` and `write`. That
 role writes only the records the seat owns, and another seat owns every seeded deal, so a write
 on a deal is refused. `passport: readonly` is the admin's, with `read` alone, so no tool that
 writes is offered.
 
 On these two, the lane reads the end state through the admin's passport. The narrow seat does
 not see every record a case names.
+
+**Every passport is connected through OAuth**, as a chat client connects one. `e2e/llm/oauthconnect.py` gives consent with the seat's session, with no browser. Some calls wait for their own user, such as filing a mail under a project. On a passport minted over REST, such a call waits in the approval inbox. On a connected passport it answers a preview and a `confirm_code`, and the model asks the user in the chat.
 
 The stack of the lane has no connected mailbox and no Telegram bot. So
 a send is refused after the model calls it, and before any data leaves. The
@@ -320,8 +321,8 @@ cd backend && go test ./internal/compose/ -run TestTheMCPToolCoverageIsPublished
 Each verdict carries a `stamp` of what it measured. It holds a short hash of the scenario file and
 of the published entries of the tools its checks name (`docs/reference/mcp-info.json`). For a
 router, that entry includes the bodies `read_workspace topic=actions` serves. It also holds
-a hash of the server instructions and of the grading harness, the judge model, the commit and the
-time. Before it runs, the lane checks that `mcp-info.json` is what the tree serves.
+a hash of the server instructions, each resource text and the harness, with each parser, the judge, the
+commit and the time. The lane first checks that `mcp-info.json` is what the tree serves.
 
 To grade saved transcripts again, run `check.py --record` with `E2E_LLM_COMMIT` and `E2E_LLM_RAN_AT` set to the run's commit and time, and `E2E_LLM_GRADED_COMMIT` to the commit that grades.
 The stamp then holds `graded_commit` and `graded_at` too. Where the two commits differ, `make e2e-llm-report` and the coverage page say `re-graded`.

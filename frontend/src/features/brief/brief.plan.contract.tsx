@@ -2,8 +2,9 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { useState } from "react";
-import { Button, Field, Textarea } from "../../design-system/atoms";
+import { Button, Textarea } from "../../design-system/atoms";
 import { Callout } from "../../design-system/callout";
+import { FieldEditDialog } from "../../design-system/fieldeditdialog";
 import { Panel, PanelBody, PanelRow } from "../../design-system/panel";
 import { formatNumber } from "../../format/format";
 import { useLocale, useT } from "../../i18n";
@@ -146,49 +147,7 @@ function ContractRow({
   const t = useT();
   const save = useSetPlanContract();
   const [editing, setEditing] = useState(false);
-  const [draft, setDraft] = useState(value ?? "");
 
-  if (editing) {
-    // The editor takes the whole row: a textarea squeezed into the answer's
-    // column would be a writing surface a third of a sentence wide.
-    return (
-      <PanelRow>
-        <div className="plan-contract-edit">
-          <Field label={label} hint={hint}>
-            {(control) => (
-              <Textarea
-                {...control}
-                value={draft}
-                maxLength={2000}
-                rows={3}
-                onChange={(event) => setDraft(event.target.value)}
-              />
-            )}
-          </Field>
-          <div className="form-actions">
-            <Button variant="ghost" onClick={() => setEditing(false)}>
-              {t("plan.contract.cancel")}
-            </Button>
-            <Button
-              pending={save.isPending}
-              onClick={() => {
-                // Only THIS half travels. The other is omitted, which the
-                // server reads as "leave it alone" — sending both would let a
-                // stale draft overwrite a note the rep changed in the other
-                // field.
-                save.mutate(
-                  { [field]: draft },
-                  { onSuccess: () => setEditing(false) },
-                );
-              }}
-            >
-              {t("plan.contract.save")}
-            </Button>
-          </div>
-        </div>
-      </PanelRow>
-    );
-  }
   return (
     <PanelRow>
       <div className="plan-contract-row">
@@ -205,18 +164,34 @@ function ContractRow({
                 : value}
           </span>
           {editable && (
-            <Button
-              variant="ghost"
-              onClick={() => {
-                setDraft(value ?? "");
-                setEditing(true);
-              }}
-            >
+            <Button variant="ghost" onClick={() => setEditing(true)}>
               {t("plan.contract.edit")}
             </Button>
           )}
         </span>
       </div>
+      <FieldEditDialog
+        open={editing}
+        label={label}
+        hint={hint}
+        value={value ?? ""}
+        absent={value == null}
+        onClose={() => setEditing(false)}
+        // Only this half is sent. The server reads an omitted half as "leave
+        // it alone", so a stale draft cannot overwrite the other note.
+        onSave={(next) => save.mutateAsync({ [field]: next })}
+      >
+        {({ control, draft, setDraft, saving }) => (
+          <Textarea
+            {...control}
+            value={draft}
+            maxLength={2000}
+            rows={3}
+            readOnly={saving}
+            onChange={(event) => setDraft(event.target.value)}
+          />
+        )}
+      </FieldEditDialog>
     </PanelRow>
   );
 }

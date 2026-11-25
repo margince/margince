@@ -83,11 +83,12 @@ type ModelPath struct {
 	// its floor abstains, because grading is not a restatement of recorded
 	// values (DOSS-PARAM-7).
 	GrowthFit       completer
-	DraftReply      completer // activity-anchored email reply drafting
-	Rewrite         completer // the rewrite verbs over a rep's own words, premium first
-	ChatSummary     completer // judges and summarises a linked chat channel's talk
-	ChatTaskReading completer // reads a filed chat screenshot against its record's open tasks
-	OfferDraft      completer // the offer regenerate-from-signal drafting call
+	DraftReply      completer               // activity-anchored email reply drafting
+	Rewrite         completer               // the rewrite verbs over a rep's own words, premium first
+	ExtensionTasks  func(ai.Task) completer // one task a unit declared in api/ai-tasks.yaml, for Runtime.Models
+	ChatSummary     completer               // judges and summarises a linked chat channel's talk
+	ChatTaskReading completer               // reads a filed chat screenshot against its record's open tasks
+	OfferDraft      completer               // the offer regenerate-from-signal drafting call
 	// CaptureClassify is the §2.8 batched mail-label lane (ADR-0063) —
 	// the highest-volume, cheapest task, routed L-S with the C-C solo
 	// re-ask riding the same ladder.
@@ -359,6 +360,7 @@ func modelPathForRouter(router *ai.Router, companyContext *companyContextProvide
 		GrowthFit:                     brain(ai.TaskGrowthFit),
 		DraftReply:                    brain(ai.TaskDraftReply),
 		Rewrite:                       brain(ai.TaskRewrite),
+		ExtensionTasks:                func(task ai.Task) completer { return brain(task) },
 		ChatSummary:                   brain(ai.TaskChatSummary),
 		ChatTaskReading:               brain(ai.TaskChatTaskReading),
 		OfferDraft:                    brain(ai.TaskOfferDraft),

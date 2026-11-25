@@ -16,6 +16,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/margince/margince/backend/internal/compose/briefs"
+	"github.com/margince/margince/backend/internal/compose/coachdeal"
 	"github.com/margince/margince/backend/internal/compose/legalreviewdesk"
 	"github.com/margince/margince/backend/internal/compose/legalreviewrecords"
 	"github.com/margince/margince/backend/internal/compose/vacuumhealth"
@@ -166,13 +167,15 @@ func New(pool *pgxpool.Pool, log *slog.Logger, opts ...Option) http.Handler {
 	// decided rather than on whichever proxy the request happened to arrive by.
 	//
 	// instrument.HTTP wraps everything inside the panic guard. A unit's HTTP
-	// hook therefore sees no correlation id or principal on the context.
+	// hook therefore sees no principal on the context.
 	// r.RemoteAddr is still the proxy (before ResolveClientIP). The body is
 	// not yet capped (before LimitBodies).
-	return originalStorageHTTP(pool, srv.blob, httpserver.RecoverPanics(log, instrument.HTTP(
+	// TraceContract sits outside the panic guard, so every /v1 answer (its 500
+	// and a mux redirect included) carries X-Request-Id and an access line.
+	return originalStorageHTTP(pool, srv.blob, httpserver.TraceContract(log, httpserver.RecoverPanics(log, instrument.HTTP(
 		httpserver.ResolveClientIP(srv.trustedProxies,
 			httpserver.LimitBodies(ceiling,
-				httpserver.SecureHeaders(noStoreOnCredentialPaths(mux)))))))
+				httpserver.SecureHeaders(noStoreOnCredentialPaths(mux))))))))
 }
 
 // newServer assembles the module handler sets. Every cross-module edge is
@@ -289,7 +292,7 @@ func newServer(pool *pgxpool.Pool, log *slog.Logger, authH authHandlers, dealsH 
 		},
 		// The Morning Brief always serves on the deterministic §10.1 floor;
 		// the L2 re-order is opt-in via WithBrief (the api role's model path).
-		Handlers: briefs.NewHandlers(briefs.NewBriefEngine(pool, newContactsStore(InstallationDB(pool)))),
+		Handlers: briefs.NewHandlers(briefs.NewBriefEngine(pool, newContactsStore(InstallationDB(pool))).WithWinChances(chances.WinChances)),
 		// The membership seam decides which team's week a lead may open: the
 		// team id arrives from the request, and nothing on the row narrows it
 		// to the reader.
@@ -298,7 +301,7 @@ func newServer(pool *pgxpool.Pool, log *slog.Logger, authH authHandlers, dealsH 
 		// be about the same seven days, and weekly owns that answer. A module
 		// may not import compose, so it takes the function.
 		weeklyPlanHandlers: weeklyplan.NewHandlers(
-			weeklyPlanStore(pool), func() time.Time { return time.Now().UTC() },
+			WeeklyPlanStore(pool), func() time.Time { return time.Now().UTC() },
 		),
 		recordLinksHandlers: recordlinks.NewHandlers(recordlinks.NewStore(InstallationDB(pool))),
 		// The forecast owns its arithmetic and nothing about deals, so the deal
@@ -326,12 +329,10 @@ func newServer(pool *pgxpool.Pool, log *slog.Logger, authH authHandlers, dealsH 
 		// api role's WithSchemaPool rebuilds this over the real pool.
 		customfieldsHandlers: customfields.NewHandlers(pool, nil),
 		module:               knowledge.NewHandlers(InstallationDB(pool)).WithUploadLimit(limits.KnowledgeDocument),
-		// The personal agent-activity read. Plain time.Now, NOT time.Now().UTC():
-		// the store bounds "today" at midnight in the clock's own location, and a
-		// UTC clock would name the wrong day on a non-UTC installation for the
-		// hours either side of local midnight.
+		// Plain time.Now, not UTC: the store bounds "today" at midnight in the
+		// clock's location, so a UTC clock names the wrong day near midnight.
 		aiActivityHandlers: aiactivity.NewHandlers(aiactivity.NewStore(InstallationDB(pool)), time.Now),
-		noticesHandlers:    notices.NewHandlers(notices.NewStore(InstallationDB(pool)), newTeammatesSeam(pool)),
+		noticesHandlers:    notices.NewHandlers(notices.NewStore(InstallationDB(pool)), coachdeal.Reach(newTeammatesSeam(pool), pool, deals.NewStore(InstallationDB(pool), DealsInstallation()))),
 		assignmentHandlers: assignments.NewHandlers(assignments.NewStore(InstallationDB(pool))),
 		// One clock, passed to both halves: the store stamps when each move
 		// happened and the transport works out when an unanswered ask goes

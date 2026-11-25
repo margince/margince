@@ -80,6 +80,15 @@ var enumBindings = map[string]struct{ pkgDir, typeName string }{
 	// CHECK refuses would be a 500 on a valid create.
 	"activity.occurred_precision": {"internal/contracts", "OccurredPrecision"},
 
+	// What an approval names as its target, and what acquisition evidence cites.
+	// An approval's CHECK also admits a unit's own table, which extensionArm sets
+	// aside; the closed list is what Go declares.
+	"report_edition_contribution.source_type":         {"internal/modules/reporting", "SourceType"},
+	"approval.target_entity_type":                     {"internal/shared/kernel/targettype", "Type"},
+	"approval.co_target_entity_type":                  {"internal/shared/kernel/targettype", "Type"},
+	"contact_acquisition_evidence.source_entity_type": {"internal/modules/contacts", "AcquisitionSource"},
+	"consent_qualifying_event.source_entity_type":     {"internal/modules/contacts", "AcquisitionSource"},
+
 	"activity_link.entity_type": {"internal/shared/ports/datasource", "RecordType"},
 	"list.entity_type":          {"internal/shared/ports/datasource", "RecordType"},
 	"list_member.entity_type":   {"internal/shared/ports/datasource", "RecordType"},
@@ -157,12 +166,9 @@ var enumBindings = map[string]struct{ pkgDir, typeName string }{
 	// is worth paying here for the reason the block above gives — which pairs
 	// are real is a judgement, and a wildcard would bind the next column called
 	// generated_by whether or not it holds this vocabulary.
-	"company_brief.generated_by":      {"internal/contracts", "WrittenBy"},
-	"company_dossier.generated_by":    {"internal/contracts", "WrittenBy"},
-	"company_growth_fit.generated_by": {"internal/contracts", "WrittenBy"},
-	"company_scan.generated_by":       {"internal/contracts", "WrittenBy"},
-	"contact_brief.generated_by":      {"internal/contracts", "WrittenBy"},
-	"deal_status_card.generated_by":   {"internal/contracts", "WrittenBy"},
+	"company_scan.generated_by":      {"internal/contracts", "WrittenBy"},
+	"generated_summary.generated_by": {"internal/contracts", "WrittenBy"},
+	"generated_summary.kind":         {"internal/platform/generatedsummary", "Kind"},
 
 	// Found by the vocabulary census in vocabularycensus_test.go. Each type is the one
 	// whose name says what the column means, so a match by value alone did not decide it.
@@ -232,6 +238,7 @@ var enumBindings = map[string]struct{ pkgDir, typeName string }{
 	"offer.source":                                 {"internal/shared/kernel/provenance", "RecordSource"},
 	"partner.source":                               {"internal/shared/kernel/provenance", "RecordSource"},
 	"project.source":                               {"internal/shared/kernel/provenance", "RecordSource"},
+	"signal.source":                                {"internal/shared/kernel/provenance", "RecordSource"},
 	"contact.quarantine_reason":                    {"internal/contracts", "ContactImpersonationWarningReason"},
 	"contact.visibility":                           {"internal/contracts", "RecordAccessVisibility"},
 	"contact_confirm_submission.resolution":        {"internal/contracts", "ConfirmSubmissionResolution"},

@@ -88,7 +88,11 @@ func resolveModelPath(ctx context.Context, spec modelPathSpec, pool *pgxpool.Poo
 	if err != nil {
 		return nil, nil, nil, err
 	}
-	return modelPathFor(ctx, cfg, spec, pool, log)
+	path, state, profile, err := modelPathFor(ctx, cfg, spec, pool, log)
+	if err == nil && path != nil {
+		compose.BindExtensionModels(path.ExtensionTasks)
+	}
+	return path, state, profile, err
 }
 
 // modelPathFor wires the surfaces a resolved binding lights up. A bound

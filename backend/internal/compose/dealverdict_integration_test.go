@@ -206,6 +206,10 @@ func TestMarginceSetsWhatTheCustomerSaidAndAnUndoHoldsItBack(t *testing.T) {
 		WHERE l.deal_id = $1 AND a.subject = 'Margince updated this deal'`, v.deal); n != 1 {
 		t.Errorf("timeline notes = %d, want one for the night", n)
 	}
+	if n := v.WsCount(t, `SELECT count(*) FROM deal_correction c JOIN activity a ON a.id = c.note_activity_id
+		WHERE c.deal_id = $1 AND a.subject = 'Margince updated this deal'`, v.deal); n != 3 {
+		t.Errorf("corrections naming the night's note = %d, want all 3", n)
+	}
 	receipts := attentionReceipts{svc: approvals.NewService(InstallationDB(v.Pool)), deals: v.Deals}
 	recent, err := receipts.Recent(v.owner(t), v.now.Add(72*time.Hour), 10)
 	if err != nil {

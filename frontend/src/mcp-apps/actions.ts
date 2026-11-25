@@ -8,6 +8,7 @@
 // call arrives at the server as the connected assistant, through the same
 // passport, scope and approval checks as a call the model made.
 
+import { keyedIntents } from "../api/intentkeys";
 import {
   allowOutbound,
   MAX_MESSAGE_CHARS,
@@ -27,12 +28,27 @@ export type ActionOutcome =
   | { ok: true; data: unknown; warnings: Warning[] }
   | { ok: false; reason: string; unknown?: true };
 
+/** The `_meta` member the server puts a refusal's stable code in, and the code
+ *  of a call whose key an earlier call still holds. That earlier call may yet
+ *  write, so the press's key is kept: the outcome is unknown, not refused. */
+const REFUSAL_CODE_META = "margince/code";
+const IN_FLIGHT_CODE = "idempotency_key_in_progress";
+
 type Pending = {
   resolve: (outcome: ActionOutcome) => void;
   timer: ReturnType<typeof setTimeout>;
 };
 
 const pending = new Map<number, Pending>();
+
+/** One key per call, kept while a press's outcome is unknown (silent host,
+ *  timeout) and dropped once the write landed or the server refused it. A
+ *  refused call is recorded against its key, so a retry under it would only
+ *  hear the same refusal. */
+const pressKeys = keyedIntents<ActionOutcome>(
+  (outcome) => outcome.ok || outcome.unknown !== true,
+);
+
 let declared: ReadonlySet<string> = new Set();
 let hostProxiesTools = false;
 
@@ -60,8 +76,9 @@ export function canCallTools(): boolean {
 }
 
 /** callServerTool asks the host to run a declared tool and resolves with what
- *  it came to. It never rejects: a refusal, a host error and a silence are all
- *  outcomes the card draws. */
+ *  it came to. Every call carries the press's `idempotency_key`. It never
+ *  rejects: a refusal, a host error and a silence are all outcomes the card
+ *  draws. */
 export function callServerTool(
   name: string,
   args: Record<string, unknown>,
@@ -78,6 +95,14 @@ export function callServerTool(
       reason: "This host does not run tools from a view.",
     });
   }
+  return pressKeys([name, args], (key) => sendCall(name, args, key));
+}
+
+function sendCall(
+  name: string,
+  args: Record<string, unknown>,
+  key: string,
+): Promise<ActionOutcome> {
   const id = nextRequestID();
   return new Promise((resolve) => {
     const timer = setTimeout(() => {
@@ -93,7 +118,7 @@ export function callServerTool(
     sendToHost({
       id,
       method: "tools/call",
-      params: { name, arguments: args },
+      params: { name, arguments: { ...args, idempotency_key: key } },
     });
   });
 }
@@ -137,9 +162,12 @@ function outcomeOf(message: Record<string, unknown>): ActionOutcome {
       Array.isArray(result.content) ? result.content[0] : null,
     );
     const reason = asText(first.text);
+    const heldByEarlierCall =
+      asRecord(result._meta)[REFUSAL_CODE_META] === IN_FLIGHT_CODE;
     return {
       ok: false,
       reason: reason === "" ? "The tool refused the call." : reason,
+      ...(heldByEarlierCall ? { unknown: true as const } : {}),
     };
   }
   const envelope = asRecord(result.structuredContent);

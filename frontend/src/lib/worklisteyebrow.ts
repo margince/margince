@@ -87,19 +87,3 @@ export function conditionOf(item: WorklistItem, t: Translator): string | null {
     return aiTaskLabel(item.ai_task, t, item.cause_label);
   return item.cause_label ?? null;
 }
-
-/**
- * The kind cell's class, which depends on what the cell holds.
- *
- * A category word fits the track it was sized for. A named condition does not
- * — "Notify sales on a new lead" is several times "Meeting" — and the badge
- * inside is `nowrap`, so it ran out of the cell and under the title. The named
- * variant clips with an ellipsis rather than wrapping: the column's argument is
- * that a reader runs DOWN it, and one row growing to two lines breaks the scan.
- * The caller puts the full name in `title` for a pointer.
- */
-export function kindClass(named: string | null): string {
-  return named === null
-    ? "worklist-row-kind"
-    : "worklist-row-kind worklist-row-kind-named";
-}

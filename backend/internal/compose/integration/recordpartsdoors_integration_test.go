@@ -387,10 +387,36 @@ func TestChangeRecordPartsRefusesWhatItsRoutesRefuse(t *testing.T) {
 	}
 }
 
-// Both doors refuse a list narrowed by a list that does not exist, or sorted by
-// a column the timeline lacks. Both refuse a commission nobody accrued.
+// Both doors answer no rows for a list, tag or owner id that names nothing.
+func TestRecordListsNarrowedByAnIDThatNamesNothingAnswerNoRows(t *testing.T) {
+	d := newTwoDoorsWith(t, "list-nowhere-doors", []compose.Option{compose.WithListsEnabled(true)}, "read")
+	nowhere := ids.NewV7().String()
+	contact := func() AnyMap {
+		return AnyMap{"source": "manual", "full_name": "Unlisted contact", "linkedin_url": apptest.ContactProfile()}
+	}
+	for _, c := range []struct {
+		kind, route, filter string
+		body                AnyMap
+	}{
+		{"company", "companies", "list_id", AnyMap{"source": "manual", "display_name": "Unlisted company"}},
+		{"lead", "leads", "list_id", AnyMap{"source": "manual", "full_name": "Unlisted lead"}},
+		{"contact", "contacts", "list_id", contact()},
+		{"contact", "contacts", "tag_id", contact()},
+		{"contact", "contacts", "owner_id", contact()},
+	} {
+		record := createdRecord(t, d.e, "/v1/"+c.route, c.body)
+		rest := d.rest(t, "GET", "/v1/"+c.route+"?"+c.filter+"="+nowhere+"&limit=10", nil)
+		tool := d.tool(t, "list_records", map[string]any{"record_type": c.kind, "limit": 10, "filters": map[string]any{c.filter: nowhere}})
+		if slices.Contains(documentRecords(rest), record) || slices.Contains(documentRecords(tool), record) {
+			t.Errorf("%s by an unknown %s named a record outside it:\nroute: %s\ntool: %s", c.route, c.filter, rest, tool)
+		}
+	}
+}
+
+// Both doors refuse a list sorted by a column the timeline lacks. Both refuse a
+// commission nobody accrued.
 func TestRecordListsRefuseWhatTheirRoutesRefuse(t *testing.T) {
-	d := newTwoDoorsWith(t, "list-refusal-doors", []compose.Option{compose.WithListsEnabled(true)}, "read")
+	d := newTwoDoors(t, "list-refusal-doors", "read")
 	nowhere := ids.NewV7().String()
 	for _, c := range []struct {
 		what, path string
@@ -398,21 +424,6 @@ func TestRecordListsRefuseWhatTheirRoutesRefuse(t *testing.T) {
 		args       map[string]any
 		status     int
 	}{
-		{
-			"companies of a list that does not exist", "/v1/companies?list_id=" + nowhere, "list_records",
-			map[string]any{"record_type": "company", "filters": map[string]any{"list_id": nowhere}},
-			404,
-		},
-		{
-			"leads of a list that does not exist", "/v1/leads?list_id=" + nowhere, "list_records",
-			map[string]any{"record_type": "lead", "filters": map[string]any{"list_id": nowhere}},
-			404,
-		},
-		{
-			"contacts of a list that does not exist", "/v1/contacts?list_id=" + nowhere, "list_records",
-			map[string]any{"record_type": "contact", "filters": map[string]any{"list_id": nowhere}},
-			404,
-		},
 		{
 			"the timeline in an order it has no column for", "/v1/activities?sort=shoe_size", "list_records",
 			map[string]any{"record_type": "activity", "filters": map[string]any{"sort": "shoe_size"}},

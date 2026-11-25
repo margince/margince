@@ -109,15 +109,74 @@ describe("VCardImport", () => {
     );
   });
 
-  it("leads back to the contact list", () => {
+  // The top bar's Back leads to the contact list, so the page draws no second one.
+  it("opens on its title with no way back of its own", () => {
     render(<VCardImportPage />);
     const title = screen.getByRole("heading", { level: 1 });
     expect(title).toHaveTextContent("Import business cards");
     // The link that opened the page is gone, so the title holds focus.
     expect(title).toHaveFocus();
-    expect(
-      screen.getByRole("link", { name: "Back to contacts" }),
-    ).toHaveAttribute("href", "/#/contacts");
+    expect(screen.queryByRole("link", { name: /back/i })).toBeNull();
+  });
+
+  describe("for one company", () => {
+    beforeEach(() => {
+      window.location.hash = "#/contacts/import?company=co-acme";
+    });
+
+    it("names the company and draws no way back of its own", () => {
+      render(<VCardImportPage />);
+      expect(screen.getByTestId("vcard-import-company")).toHaveTextContent(
+        en["vcardImport.forCompany"],
+      );
+      expect(screen.queryByRole("link", { name: /back/i })).toBeNull();
+    });
+
+    it("names the company in the import request", async () => {
+      const user = userEvent.setup();
+      const fetchSpy = vi.fn(
+        async (_url: string, _init: RequestInit): Promise<Response> =>
+          jsonResponse({ results: [] }),
+      );
+      vi.stubGlobal("fetch", fetchSpy);
+
+      render(<VCardImportPage />);
+      await upload(user);
+
+      await screen.findByText("The file contains no cards.");
+      const [url] = importCall(fetchSpy);
+      expect(url).toBe("/v1/contacts/vcard-import?company_id=co-acme");
+    });
+
+    it("sends a card photo nowhere, because it files under no company", async () => {
+      const user = userEvent.setup();
+      const fetchSpy = vi.fn(
+        async (_url: string, _init: RequestInit): Promise<Response> =>
+          jsonResponse({ results: [] }),
+      );
+      vi.stubGlobal("fetch", fetchSpy);
+
+      render(<VCardImportPage />);
+      const input = screen
+        .getByTestId("vcard-import-file")
+        .querySelector("input[type=file]");
+      if (!(input instanceof HTMLInputElement)) {
+        throw new Error("the page rendered no file input");
+      }
+      await user.upload(
+        input,
+        new File(["x"], "card.jpg", { type: "image/jpeg" }),
+      );
+
+      expect(
+        await screen.findByText(en["vcardImport.companyPhoto"]),
+      ).toBeVisible();
+      expect(
+        fetchSpy.mock.calls.some(
+          ([url]) => typeof url === "string" && url.startsWith("/v1/contacts/"),
+        ),
+      ).toBe(false);
+    });
   });
 
   // Leaving does not stop the write, so the guard holds exactly the window in

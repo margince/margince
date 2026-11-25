@@ -78,7 +78,6 @@
   align-items: center;
   padding-inline: var(--space-2) 0;
   border-radius: var(--r-full);
-  corner-shape: round;
   background: var(--bgChip);
   color: var(--textPrimary);
   /* One step down from the field's own type: a token is a value inside a

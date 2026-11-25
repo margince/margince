@@ -74,7 +74,7 @@ func (s *Service) duplicateCandidates(ctx context.Context, depth int) ([]Duplica
 	if err != nil {
 		return nil, 0, err
 	}
-	pairs, err := s.duplicates.OpenCandidates(ctx, depth, owners)
+	pairs, count, err := s.duplicates.OpenCandidates(ctx, depth, owners)
 	if errors.Is(err, apperrors.ErrPermissionDenied) && !s.unassignedDecisions() {
 		// A personal page holds pairs only for a reader who may read them. A
 		// reader without that grant keeps the rest of the decisions lane; the
@@ -84,6 +84,5 @@ func (s *Service) duplicateCandidates(ctx context.Context, depth int) ([]Duplica
 	if err != nil {
 		return nil, 0, err
 	}
-	count, err := s.duplicates.CountOpen(ctx, owners)
-	return pairs, count, err
+	return pairs, count, nil
 }

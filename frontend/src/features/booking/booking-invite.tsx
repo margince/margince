@@ -196,7 +196,7 @@ function bookingDraft(
     contactId,
     contactName: edits.contact?.name ?? contact?.full_name,
     attendee: edits.attendee ?? bookingRecipient(contact),
-    subject: edits.subject ?? saved?.title ?? t("book.subject"),
+    subject: edits.subject ?? saved?.title ?? t("scheduling.defaultSubject"),
     location: edits.location ?? saved?.location ?? "",
     description: edits.description ?? "",
     duration: edits.duration ?? saved?.duration_minutes ?? 30,

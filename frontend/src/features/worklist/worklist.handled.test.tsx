@@ -90,6 +90,15 @@ describe("what was handled for the reader", () => {
             version: 4,
             reversed: false,
           },
+          review: {
+            kind: "close_date",
+            accepted: false,
+            reversed: false,
+            version: 4,
+            can_undo: true,
+            can_accept: true,
+            writable: true,
+          },
         },
       ],
     });
@@ -100,6 +109,43 @@ describe("what was handled for the reader", () => {
     expect(
       await screen.findByRole("button", { name: en["common.undo"] }),
     ).toBeTruthy();
+  });
+
+  it("offers no way back on a deal the row scope makes read-only, whatever the grant says", async () => {
+    stubHandled({
+      as_of: "2026-09-05T09:00:00Z",
+      truncated: false,
+      receipts: [
+        {
+          id: "01a05500-0000-7000-8000-00000000e004",
+          kind: "close_date_correction",
+          summary: 'Corrected the close date on "Ablösung Checkout"',
+          occurred_at: "2026-09-05T08:00:00Z",
+          subject: { type: "deal", id: "d1", label: "Ablösung Checkout" },
+          undo: {
+            audit_log_id: "01a05500-0000-7000-8000-0000000000a1",
+            version: 4,
+            reversed: false,
+          },
+          review: {
+            kind: "close_date",
+            accepted: false,
+            reversed: false,
+            version: 4,
+            can_undo: true,
+            can_accept: true,
+            writable: false,
+          },
+        },
+      ],
+    });
+
+    render(panel());
+    await screen.findByText('Corrected the close date on "Ablösung Checkout"');
+
+    expect(
+      screen.queryByRole("button", { name: en["common.undo"] }),
+    ).toBeNull();
   });
 
   // A correction already put back keeps its row and says so. Dropping the row

@@ -99,7 +99,7 @@ export const Single: Story = {
   },
 };
 
-// Each column on its own pane, the surface a record page's two cards stand on.
+// Each column on a page pane, so the panels in it stand on the second rung.
 export const Panes: Story = {
   args: {
     shape: "aside",
@@ -147,7 +147,7 @@ export const Folded: Story = {
   },
 };
 
-// Folded, the panes stack and keep their chrome.
+// Folded, the columns stack and their panels keep the second rung.
 export const PanesFolded: Story = {
   parameters: FOLDED_VIEWPORT,
   globals: { viewport: { value: "folded" } },

@@ -94,7 +94,7 @@ func TestScheduledMeasurementIncludesTheRealPlanOutcome(t *testing.T) {
 	seedManagerRoles(t, e, e.Rep1, e.Rep2, e.Rep3)
 	e.WsExec(t, `UPDATE role SET permissions=jsonb_set(permissions,'{objects,forecast}','{"read":true,"create":true}'::jsonb) WHERE key='manager'`)
 	ctx := e.As(e.Rep1, nil, integration.AdminPerms)
-	plan := weeklyPlanStore(e.Pool)
+	plan := WeeklyPlanStore(e.Pool)
 	during := teamJobClock.AddDate(0, 0, -7)
 	if _, err := plan.StartWeek(ctx, during); err != nil {
 		t.Fatal(err)
@@ -166,7 +166,7 @@ func seedMeasuredNarrativeSources(t *testing.T, e *integration.Env) {
 	e.WsExec(t, `UPDATE lead SET created_at=`+stamp+` WHERE owner_id=`+who, binds.values...)
 	e.WsExec(t, `UPDATE activity SET created_at=`+stamp+` WHERE kind='task' AND assignee_id=`+who, binds.values...)
 	logHeldMeeting(t, e, e.Rep1, at)
-	plan := weeklyPlanStore(e.Pool)
+	plan := WeeklyPlanStore(e.Pool)
 	for _, week := range []time.Time{at, teamJobClock.AddDate(0, 0, -7)} {
 		if _, err := plan.StartWeek(ctx, week); err != nil {
 			t.Fatal(err)

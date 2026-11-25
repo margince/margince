@@ -20,6 +20,7 @@ const ReceiptTargetDeal = "deal"
 func CorrectionReceipt(c deals.CorrectionReceipt) Receipt {
 	receipt := correctionReceiptOfKind(c)
 	receipt.Source, receipt.AuditLogID = ReceiptFromCorrection, c.AuditLogID
+	receipt.ListedAt = c.ListedAt
 	receipt.Reason, receipt.ReasonKind = c.Basis, c.ReasonKind
 	receipt.CitedActivities, receipt.CitedMoments = c.CitedActivities, c.CitedMoments
 	receipt.CustomerQuote = quotedFacts(c.Evidence).Quote

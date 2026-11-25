@@ -12,14 +12,20 @@ import {
   Textarea,
   TextInput,
 } from "../../design-system/atoms";
+import type { ISODay } from "../../design-system/calendar";
 import { ErrorLine } from "../../design-system/errorline";
 import { Heading } from "../../design-system/heading";
+import { MeetingSlots } from "../../design-system/meetingslots";
 import { Panel, PanelBody } from "../../design-system/panel";
+import { QueryGate, type QueryLike } from "../../design-system/querystates";
+import { SegmentedControl } from "../../design-system/segmentedcontrol";
 import {
   formatDateTime,
+  formatDayLong,
   formatDayMonth,
   formatNumber,
   formatTimeOfDay,
+  identifierNumber,
 } from "../../format/format";
 import { formatDayFull, formatTimeRange } from "../../format/meetingtime";
 import { useLocale, useT } from "../../i18n";
@@ -30,7 +36,7 @@ import {
 } from "../../lib/booking-video";
 import { navigate } from "../../lib/router";
 import { BookingZone } from "./booking-common";
-import type { GuestSlot } from "./booking-guest-month";
+import type { GuestSlot, monthDays } from "./booking-guest-month";
 
 /**
  * The app a booking's video link will come from, as the guest page names it.
@@ -71,6 +77,9 @@ function HostLine({
 export function GuestHost({
   host,
   videoApp,
+  lengths,
+  length = host.duration_minutes,
+  onLength,
   selected,
   zone,
   onZone,
@@ -83,6 +92,11 @@ export function GuestHost({
     location: string;
   }>;
   videoApp?: VideoApp;
+  // The lengths a guest may pick between, the default first; with one or none
+  // the page states its length instead.
+  lengths?: readonly number[];
+  length?: number;
+  onLength?: (length: number) => void;
   selected: GuestSlot | null;
   zone: string;
   onZone: (zone: string) => void;
@@ -90,20 +104,38 @@ export function GuestHost({
 }>) {
   const t = useT();
   const { locale } = useLocale();
+  const minutes = (length: number) =>
+    t("co.recent.minutes", { count: formatNumber(length, locale) });
   return (
     <section className="bookguest-host">
       <p className="t-caption">{host.host_name}</p>
       <Heading as="h1" size="large">
         {host.title}
       </Heading>
-      <HostLine icon={<Clock aria-hidden="true" />}>
-        {t("co.recent.minutes", {
-          count: formatNumber(host.duration_minutes, locale),
-        })}
-      </HostLine>
+      {lengths && lengths.length > 1 && onLength ? (
+        <div className="bookguest-line">
+          <Clock aria-hidden="true" />
+          <SegmentedControl
+            label={t("book.lengthChoice")}
+            options={lengths.map(identifierNumber)}
+            labels={Object.fromEntries(
+              lengths.map((option) => [
+                identifierNumber(option),
+                minutes(option),
+              ]),
+            )}
+            value={identifierNumber(length)}
+            onChange={(next) => onLength(Number(next))}
+          />
+        </div>
+      ) : (
+        <HostLine icon={<Clock aria-hidden="true" />}>
+          {minutes(length)}
+        </HostLine>
+      )}
       {videoApp ? (
         <HostLine icon={<Video aria-hidden="true" />}>
-          {t("scheduling.videoApp", { app: VIDEO_APP_NAME[videoApp] })}
+          {t("book.videoApp", { app: VIDEO_APP_NAME[videoApp] })}
         </HostLine>
       ) : (
         host.location && (
@@ -200,7 +232,7 @@ export function GuestDetailsForm({
               />
             )}
           </Field>
-          <Field label={t("scheduling.guestAgenda")}>
+          <Field label={t("book.agenda")}>
             {(control) => (
               <Textarea
                 {...control}
@@ -279,7 +311,7 @@ export function GuestUnavailable({
               {meeting.subject}
             </Heading>
             <p>{formatDateTime(meeting.start, locale, zone)}</p>
-            <p className="t-caption">{t("scheduling.savedRequest")}</p>
+            <p className="t-caption">{t("book.savedRequest")}</p>
             <Button
               variant="primary"
               onClick={() =>
@@ -293,7 +325,7 @@ export function GuestUnavailable({
           <p>
             {host.host_name
               ? t("scheduling.pausedUnavailable", { host: host.host_name })
-              : t("scheduling.unavailable")}
+              : t("book.unavailable")}
           </p>
         )}
       </PanelBody>
@@ -310,4 +342,72 @@ export function guestTitle(
   return host && !host.paused && host.host_name
     ? t("book.pageTitle", { host: host.host_name })
     : t("book.pageTitleGeneric");
+}
+
+/**
+ * The right-hand column before a time is picked: the times a personal
+ * proposal offers first, then the chosen day's free times.
+ */
+export function GuestTimes({
+  offered,
+  day,
+  days,
+  times,
+  monthKey,
+  zone,
+  needsCalendar,
+  slots,
+  onSelect,
+}: Readonly<{
+  offered: readonly GuestSlot[];
+  day: ISODay | "";
+  days: ReturnType<typeof monthDays> | undefined;
+  times: readonly GuestSlot[];
+  monthKey: string;
+  zone: string;
+  needsCalendar: boolean;
+  slots: QueryLike<unknown>;
+  onSelect: (slot: GuestSlot) => void;
+}>) {
+  const t = useT();
+  const { locale } = useLocale();
+  const monthHasTimes = days?.free.some((free) => free.startsWith(monthKey));
+  return (
+    <>
+      {offered.length > 0 && (
+        <div className="bookguest-suggested">
+          <Heading as="h2" size="medium">
+            {t("scheduling.suggestedTimes")}
+          </Heading>
+          <MeetingSlots
+            slots={offered.map((slot) => ({
+              ...slot,
+              label: formatDateTime(slot.start, locale, zone),
+            }))}
+            onSelect={onSelect}
+            empty={t("book.noTimes")}
+          />
+        </div>
+      )}
+      <Heading as="h2" size="medium">
+        {day ? formatDayLong(day, locale, zone) : t("scheduling.chooseTime")}
+      </Heading>
+      {needsCalendar ? (
+        <p className="t-caption">{t("scheduling.previewCalendarSetup")}</p>
+      ) : (
+        <QueryGate pendingLabel={t("common.loading")} query={slots}>
+          {() => (
+            <MeetingSlots
+              slots={times.map((slot) => ({
+                ...slot,
+                label: formatTimeOfDay(slot.start, locale, zone),
+              }))}
+              onSelect={onSelect}
+              empty={t(monthHasTimes ? "book.noTimesDay" : "book.noTimesMonth")}
+            />
+          )}
+        </QueryGate>
+      )}
+    </>
+  );
 }

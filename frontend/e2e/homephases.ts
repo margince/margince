@@ -99,7 +99,7 @@ export class HomePhaseLog implements HomeRequestObserver {
         sent.cached === true || event.response.fromDiskCache === true;
       sent.serviceWorker = event.response.fromServiceWorker ?? false;
       const correlation = Object.entries(event.response.headers).find(
-        ([name]) => name.toLowerCase() === "x-correlation-id",
+        ([name]) => name.toLowerCase() === "x-request-id",
       )?.[1];
       sent.correlation =
         typeof correlation === "string" &&

@@ -20,6 +20,13 @@ blobstore_use_ssl: false
 certlog_base_url: null
 connector_state_key: ${file:/run/secrets/connector_state_key}
 dsn: ${file:/run/secrets/dsn}
+erasure_journal_access_key: ${file:/run/secrets/erasure_journal_access_key}
+erasure_journal_bucket: null
+erasure_journal_endpoint: null
+erasure_journal_path: null
+erasure_journal_region: null
+erasure_journal_secret_key: ${file:/run/secrets/erasure_journal_secret_key}
+erasure_journal_use_ssl: false
 geocode_base_url: null
 gmail_client_id: null
 gmail_client_secret: ${file:/run/secrets/gmail_client_secret}
@@ -65,6 +72,7 @@ ai:
   capture_payloads: false
   price_sync: {"auto_sync":true}
   provider_keys_anthropic: ${file:/run/secrets/ai.provider_keys_anthropic}
+  provider_keys_azure_openai: ${file:/run/secrets/ai.provider_keys_azure_openai}
   provider_keys_gemini: ${file:/run/secrets/ai.provider_keys_gemini}
   provider_keys_gemini_vertex: ${file:/run/secrets/ai.provider_keys_gemini_vertex}
   provider_keys_jev: ${file:/run/secrets/ai.provider_keys_jev}
@@ -87,16 +95,22 @@ auth:
 capture:
   auto_enrich: true
   auto_enrich_daily_cap: 500
+  classify_pass_cap: 500
   confidentiality_pass_cap: 40
   freemail_extra: null
   freemail_never: null
   gmail_mailbox_quota: 6000
   gmail_project_quota: 1200000
   history_concurrency: 1
+  history_fetch_workers: 0
   history_hold: false
+  history_lookahead: 0
+  history_page_delay: 0s
+  history_page_size: 0
   mail_sharing: true
   mail_sync_interval_seconds: 120
   max_backfill_months: 0
+  owed_classify_pass_cap: 500
   shared_posture_allowed: false
   signature_enrich: true
   site_read_max_mib: 32
@@ -106,6 +120,7 @@ capture:
   trace_payloads: true
   transactional_extra: null
   transactional_never: null
+  verdict_pass_cap: 200
 
 company_context:
   rollout: onboarding

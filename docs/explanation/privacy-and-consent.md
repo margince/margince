@@ -430,7 +430,7 @@ record, or is listed as owing one.
 ## The installation's jurisdiction
 
 An installation runs under one jurisdiction, stored as `installation.country`. It comes from
-`workspace.country` in `margince.yaml`, from the setup claim, or from the Jurisdiction settings page. Packs are extensions (`extensions/eu`, `extensions/apac`), built in through the
+`workspace.country` in `margince.yaml`, from the setup claim, or from the Jurisdiction settings page. Packs are extensions (`extensions/eu`, `extensions/apac`, `extensions/us`), built in through the
 `ports/jurisdiction` seam; see [extensibility.md](extensibility.md), and [messaging-policy-packs.md](messaging-policy-packs.md) for where their rules are read. Core code never names a
 jurisdiction.
 

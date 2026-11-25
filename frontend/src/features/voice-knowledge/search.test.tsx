@@ -358,6 +358,44 @@ describe("SearchScreen", () => {
     render(<SearchScreen q="zzz" />);
     await waitFor(() => expect(screen.getByText(/No matches/)).toBeTruthy());
   });
+  it("shows the hits and one line for a type that ran out of time", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () =>
+        jsonResponse({
+          data: [{ type: "company", id: "o1", title: "Acme GmbH" }],
+          page: { next_cursor: null, has_more: false },
+          types_with_more: [],
+          types_timed_out: ["activity"],
+        }),
+      ),
+    );
+    render(<SearchScreen q="acme" />);
+    expect(await screen.findByText("Acme GmbH")).toBeTruthy();
+    expect(
+      screen.getByText(/Emails and activities could not be searched/),
+    ).toBeTruthy();
+    expect(screen.queryByText(/No matches/)).toBeNull();
+  });
+
+  it("leaves out No matches when nothing else was found and a type ran out of time", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () =>
+        jsonResponse({
+          data: [],
+          page: { next_cursor: null, has_more: false },
+          types_timed_out: ["activity"],
+        }),
+      ),
+    );
+    render(<SearchScreen q="acme" />);
+    expect(
+      await screen.findByText(/Emails and activities could not be searched/),
+    ).toBeTruthy();
+    expect(screen.queryByText(/No matches/)).toBeNull();
+  });
+
   // Finding the WORD is the step before finding the records carrying it, so a
   // tag hit has to be openable. It shipped as plain text — the group rendered,
   // and the result was a dead end.

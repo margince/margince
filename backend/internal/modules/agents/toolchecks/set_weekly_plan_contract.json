@@ -1,7 +1,6 @@
 {
   "verb": "set_weekly_plan_contract",
   "checks": [
-    "installation_settings.read",
     "weekly_plan.update"
   ]
 }

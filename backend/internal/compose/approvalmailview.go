@@ -39,6 +39,10 @@ func refreshApprovalNotice(
 	ctx context.Context, pool *pgxpool.Pool, attempt notices.EmailAttempt, now time.Time, use approvalNoticeUse,
 ) (notices.EmailAttempt, approvalMailFacts, bool, error) {
 	var facts approvalMailFacts
+	if attempt.TeamRequestPage != nil {
+		refreshed, current, err := refreshTeamRequest(ctx, pool, attempt)
+		return refreshed, facts, current, err
+	}
 	if attempt.ApprovalID == nil {
 		if attempt.Notice.Kind == notices.KindApprovalPending {
 			return attempt, facts, false, errors.New("approval notice has no decision reference")

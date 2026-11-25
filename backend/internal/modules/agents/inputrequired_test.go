@@ -6,8 +6,10 @@ package agents
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -35,6 +37,7 @@ func bulkDispatcher(t *testing.T, changer BulkChanger) *Dispatcher {
 	RegisterBulkTool(registry, changer)
 	d := NewDispatcher(registry, bindAuthenticated, "margince-crm", "test").WithLogger(discardLog())
 	WithInputStateKey(testStateKey)(d)
+	WithReplayGuard(&memGuard{})(d)
 	return d
 }
 
@@ -153,5 +156,103 @@ func TestOnlyAFormCapableElicitationDeclarationCounts(t *testing.T) {
 		if got := declaresFormElicitation(json.RawMessage(capabilities)); got != want {
 			t.Errorf("%s → %v, want %v", capabilities, got, want)
 		}
+	}
+}
+
+const yesInChat = `{"action":"accept","content":{"confirm":true}}`
+
+// One yes is one change: the same state sent again is asked again and runs
+// nothing more.
+func TestAnAcceptedAnswerIsGoodForOneRetry(t *testing.T) {
+	changer := &countingChanger{}
+	d := bulkDispatcher(t, changer)
+	_, state := askedFor(t, d.call(writer(), bulkCall(""), askingFraming))
+	d.call(writer(), bulkCall(answering(state, yesInChat)), askingFraming)
+	askedFor(t, d.call(writer(), bulkCall(answering(state, yesInChat)), askingFraming))
+	if changer.executed != 1 {
+		t.Errorf("one yes ran the change %d times, want once", changer.executed)
+	}
+}
+
+// resigned is state with its claims changed and sealed again by the same key,
+// as only the server could.
+func resigned(t *testing.T, d *Dispatcher, state string, change func(*wireInputState)) string {
+	t.Helper()
+	payload, ok := d.inputState.open(state)
+	if !ok {
+		t.Fatal("the server cannot open its own state")
+	}
+	var claims wireInputState
+	if err := json.Unmarshal(payload, &claims); err != nil {
+		t.Fatal(err)
+	}
+	change(&claims)
+	again, err := json.Marshal(claims)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return d.inputState.seal(again)
+}
+
+// A state names the question it was asked for. Under a state for another
+// question of the same call, the answer does not count.
+func TestAStateForAnotherQuestionDoesNotAnswerThisOne(t *testing.T) {
+	changer := &countingChanger{}
+	d := bulkDispatcher(t, changer)
+	_, state := askedFor(t, d.call(writer(), bulkCall(""), askingFraming))
+	other := resigned(t, d, state, func(claims *wireInputState) { claims.Question = "pick_the_record" })
+	askedFor(t, d.call(writer(), bulkCall(answering(other, yesInChat)), askingFraming))
+	if changer.executed != 0 {
+		t.Errorf("an answer under another question's state ran %d changes", changer.executed)
+	}
+}
+
+// A state past its window, or one with no id to spend, is asked again.
+func TestAnExpiredOrUnspendableStateIsAskedAgain(t *testing.T) {
+	signedAt := bulkDispatcher(t, &countingChanger{}).inputState.now()
+	for name, change := range map[string]func(*wireInputState){
+		"expired":     func(claims *wireInputState) { claims.Exp = signedAt.Add(-time.Minute).Unix() },
+		"with no id":  func(claims *wireInputState) { claims.Once = "" },
+		"no question": func(claims *wireInputState) { claims.Question = "" },
+	} {
+		changer := &countingChanger{}
+		d := bulkDispatcher(t, changer)
+		_, state := askedFor(t, d.call(writer(), bulkCall(""), askingFraming))
+		askedFor(t, d.call(writer(), bulkCall(answering(resigned(t, d, state, change), yesInChat)), askingFraming))
+		if changer.executed != 0 {
+			t.Errorf("%s: the state ran %d changes, want it asked again", name, changer.executed)
+		}
+	}
+}
+
+// A replay, once refused, leaves the user free to answer a fresh question.
+func TestAFreshQuestionAfterARefusedReplayStillWorks(t *testing.T) {
+	changer := &countingChanger{}
+	d := bulkDispatcher(t, changer)
+	_, first := askedFor(t, d.call(writer(), bulkCall(""), askingFraming))
+	d.call(writer(), bulkCall(answering(first, yesInChat)), askingFraming)
+	_, fresh := askedFor(t, d.call(writer(), bulkCall(answering(first, yesInChat)), askingFraming))
+	d.call(writer(), bulkCall(answering(fresh, yesInChat)), askingFraming)
+	if changer.executed != 2 {
+		t.Errorf("two yeses to two questions ran %d changes, want two", changer.executed)
+	}
+}
+
+// With nothing to spend an answer once, nothing is asked: the call does what it
+// did before the question existed. A guard that cannot answer asks again.
+func TestWithoutAWorkingGuardNoAnswerCounts(t *testing.T) {
+	d := bulkDispatcher(t, &countingChanger{})
+	d.replayGuard = nil
+	if canAskInChat(d.withChatInput(writer(), askingFraming, "bulk_update_records", json.RawMessage(`{}`), nil)) {
+		t.Error("a dispatcher with no guard offered to ask in the chat")
+	}
+
+	changer := &countingChanger{}
+	broken := bulkDispatcher(t, changer)
+	_, state := askedFor(t, broken.call(writer(), bulkCall(""), askingFraming))
+	broken.replayGuard = &memGuard{err: errors.New("the replay store is down")}
+	askedFor(t, broken.call(writer(), bulkCall(answering(state, yesInChat)), askingFraming))
+	if changer.executed != 0 {
+		t.Errorf("an answer the guard could not spend ran %d changes", changer.executed)
 	}
 }

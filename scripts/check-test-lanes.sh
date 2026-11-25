@@ -41,7 +41,8 @@ lane_report() {
   local f="$1" code lines ln
   # Skip files already in a non-unit lane. Build constraints sit anywhere
   # above the package clause, so scan up to it instead of a fixed head.
-  if sed -n '/^package /q;p' "$f" | grep -qE '^//go:build .*(integration|livesmoke)'; then
+  header="$(sed -n '/^package /q;p' "$f")"
+  if grep -qE '^//go:build .*(integration|livesmoke)' <<<"$header"; then
     return 0
   fi
   # A stripper that fails prints nothing, and nothing matches nothing, so its

@@ -15,10 +15,10 @@ input and output schema in folds below it. What a tool may do and whether a huma
 |---|---:|
 | Tools | 48 |
 | Resources | 14 |
-| Tool catalog | 276.4 KB |
+| Tool catalog | 243.4 KB |
 | Resource catalog | 5.5 KB |
-| Approx. wire tokens | 72154 |
-| Largest tool | `read_details` (17.6 KB) |
+| Approx. wire tokens | 63717 |
+| Largest tool | `read_details` (15.8 KB) |
 | Scopes rendered | `read`, `draft`, `write`, `send`, `enrich` |
 
 Those are the bytes on the wire: they carry each tool's output schema and the
@@ -32,13 +32,13 @@ tool adds to that listing, and what it costs each scheduled agent, agent by agen
 
 | Part | Bytes | Share | In a run's prompt? |
 |---|---:|---:|---|
-| Output schemas | 51.7 KB | 18% | **No**: a result's shape, never listed to a model |
-| Descriptions (incl. governance clause) | 54.0 KB | 19% | Yes, every step |
-| Input schemas | 158.9 KB | 57% | Yes, every step |
-| _Names, annotations, punctuation_ | 11.8 KB | 4% | Partly |
-| **Description + input schema** | **212.9 KB** | **77%** | **the recurring cost** |
+| Output schemas | 33.7 KB | 13% | **No**: a result's shape, never listed to a model |
+| Descriptions (incl. governance clause) | 51.0 KB | 20% | Yes, every step |
+| Input schemas | 147.2 KB | 60% | Yes, every step |
+| _Names, annotations, punctuation_ | 11.6 KB | 4% | Partly |
+| **Description + input schema** | **198.2 KB** | **81%** | **the recurring cost** |
 
-Output schemas are the largest part of the total and are never sent to a model;
+Output schemas count in the total but are never sent to a model;
 descriptions and input schemas are what each step pays for.
 
 ## Index
@@ -66,51 +66,51 @@ descriptions and input schemas are what each step pays for.
 |---|---|:-:|---|---:|
 | [`annotate_brief`](#annotate_brief) | Write findings onto the morning brief |  |  | 417 |
 | [`archive_record`](#archive_record) | Archive a record |  |  | 300 |
-| [`bulk_update_records`](#bulk_update_records) | Change many records at once |  |  | 798 |
+| [`bulk_update_records`](#bulk_update_records) | Change many records at once |  |  | 892 |
 | [`change_access`](#change_access) | Share records and set up members and teams |  |  | 1152 |
-| [`change_activities`](#change_activities) | Log, plan and file activities |  |  | 2918 |
-| [`change_attention`](#change_attention) | Act on proposals, notices and the weekly plan |  |  | 1775 |
-| [`change_capture`](#change_capture) | Decide what comes into the CRM |  |  | 1870 |
-| [`change_compliance`](#change_compliance) | Record consent, stops, holds and privacy work |  |  | 1274 |
+| [`change_activities`](#change_activities) | Log, plan and file activities |  |  | 2977 |
+| [`change_attention`](#change_attention) | Act on proposals, notices and the weekly plan |  |  | 1842 |
+| [`change_capture`](#change_capture) | Decide what comes into the CRM |  |  | 1891 |
+| [`change_compliance`](#change_compliance) | Record consent, stops, holds and privacy work |  |  | 1289 |
 | [`change_lists`](#change_lists) | Make and change lists |  |  | 620 |
 | [`change_my_settings`](#change_my_settings) | Change the user's own preferences and voice |  |  | 867 |
 | [`change_offers`](#change_offers) | Work offers, contracts and deal rooms |  |  | 1096 |
 | [`change_record_parts`](#change_record_parts) | Change the parts of a record |  |  | 1017 |
 | [`change_relationships`](#change_relationships) | Work a company's relationships and briefs |  |  | 816 |
-| [`change_reports`](#change_reports) | Work saved reports and the forecast |  |  | 1599 |
-| [`change_settings`](#change_settings) | Change how the workspace is set up |  |  | 3209 |
-| [`change_state`](#change_state) | Move a lead, deal, project or partner |  |  | 2301 |
+| [`change_reports`](#change_reports) | Work saved reports and the forecast |  |  | 2014 |
+| [`change_settings`](#change_settings) | Change how the workspace is set up |  |  | 3239 |
+| [`change_state`](#change_state) | Move a lead, deal, project or partner |  |  | 2365 |
 | [`change_tags`](#change_tags) | Change tags |  |  | 652 |
 | [`check_availability`](#check_availability) | Check calendar availability | yes |  | 375 |
 | [`commit_import`](#commit_import) | Commit an import |  |  | 275 |
 | [`create_record`](#create_record) | Create a record |  | [`ui://margince/create-followups.html`](#create_followups_view) | 891 |
 | [`decide_approvals`](#decide_approvals) | Approve or reject staged actions |  |  | 465 |
 | [`draft_outbound`](#draft_outbound) | Draft an email or follow-ups |  |  | 524 |
-| [`enrich`](#enrich) | Enrich a company from its website |  |  | 395 |
-| [`find_records`](#find_records) | Find records | yes |  | 2041 |
+| [`enrich`](#enrich) | Enrich a company from its website |  |  | 448 |
+| [`find_records`](#find_records) | Find records | yes |  | 2057 |
 | [`list_approvals`](#list_approvals) | List what is waiting for a decision | yes | [`ui://margince/approval-queue.html`](#approval_queue_view) | 474 |
 | [`list_documents`](#list_documents) | List a record's documents or read one | yes |  | 331 |
 | [`preview_import`](#preview_import) | Preview an import |  |  | 1012 |
-| [`read_analytics`](#read_analytics) | Write a report or query data | yes |  | 1067 |
+| [`read_analytics`](#read_analytics) | Write a report or query data | yes |  | 1373 |
 | [`read_approval`](#read_approval) | Read one staged action in full | yes | [`ui://margince/approval.html`](#approval_view) | 154 |
 | [`read_attention`](#read_attention) | See what needs attention | yes | [`ui://margince/attention.html`](#attention_view) | 365 |
 | [`read_context`](#read_context) | Get the story so far | yes | [`ui://margince/context.html`](#context_view) | 413 |
-| [`read_details`](#read_details) | Read a record's panels and the day's lists | yes |  | 4494 |
+| [`read_details`](#read_details) | Read a record's panels and the day's lists | yes |  | 4600 |
 | [`read_forecast`](#read_forecast) | Read the forecast and how it moved | yes | [`ui://margince/forecast.html`](#forecast_view) | 978 |
 | [`read_import`](#read_import) | Read an import run or the import format | yes |  | 235 |
 | [`read_lists`](#read_lists) | Find and read lists | yes |  | 797 |
 | [`read_project`](#read_project) | Read a project or its handover | yes |  | 318 |
 | [`read_record`](#read_record) | Read a record | yes |  | 284 |
 | [`read_relationships`](#read_relationships) | Read who we know, and how well | yes |  | 359 |
-| [`read_reports`](#read_reports) | Read sales reports | yes |  | 2831 |
+| [`read_reports`](#read_reports) | Read sales reports | yes |  | 3353 |
 | [`read_tags`](#read_tags) | Read tags | yes |  | 358 |
 | [`read_view`](#read_view) | Read a view | yes |  | 1921 |
 | [`read_workspace`](#read_workspace) | Read how this workspace is set up | yes |  | 2779 |
 | [`resolve_duplicates`](#resolve_duplicates) | Merge two records or dismiss a flagged pair |  |  | 618 |
 | [`run_research`](#run_research) | Run AI work for your user |  |  | 1365 |
-| [`schedule_meeting`](#schedule_meeting) | Invite to a meeting |  |  | 487 |
+| [`schedule_meeting`](#schedule_meeting) | Invite to a meeting |  |  | 515 |
 | [`send_outbound`](#send_outbound) | Send a message |  |  | 1678 |
-| [`update_record`](#update_record) | Update a record |  | [`ui://margince/update.html`](#update_view) | 626 |
+| [`update_record`](#update_record) | Update a record |  | [`ui://margince/update.html`](#update_view) | 698 |
 | [`whoami`](#whoami) | Who this passport acts for | yes |  | 129 |
 
 ## Resources
@@ -419,8 +419,7 @@ ranking. Every evidence id you cite must be one the brief already recorded for t
 anything else refuses the whole write, so cite from what read_context with about=brief gave you
 rather than from memory. Use change_activities with action=log to record something that happened on
 a deal, which belongs on the record itself and outlives today's brief. Calling it again replaces
-what you wrote before, so a second pass is a correction rather than an addition. (Runs immediately;
-requires passport scope "write".)
+what you wrote before, so a second pass is a correction rather than an addition.
 ```
 
 <details><summary>Input schema</summary>
@@ -430,7 +429,6 @@ requires passport scope "write".)
   "additionalProperties": false,
   "properties": {
     "idempotency_key": {
-      "description": "A retry without it may repeat the write. Same key, same result; a key reused with other arguments is refused.",
       "maxLength": 255,
       "type": "string"
     },
@@ -477,112 +475,6 @@ requires passport scope "write".)
 
 </details>
 
-<details><summary>Output schema</summary>
-
-```json
-{
-  "properties": {
-    "data": {
-      "properties": {
-        "items_annotated": {
-          "type": "integer"
-        },
-        "narrative_written": {
-          "type": "boolean"
-        }
-      },
-      "required": [
-        "items_annotated",
-        "narrative_written"
-      ],
-      "type": "object"
-    },
-    "evidence": {
-      "items": {
-        "properties": {
-          "captured_by": {
-            "type": "string"
-          },
-          "record_id": {
-            "format": "uuid",
-            "type": "string"
-          },
-          "record_type": {
-            "type": "string"
-          },
-          "source": {
-            "type": "string"
-          },
-          "web_url": {
-            "type": "string"
-          }
-        },
-        "required": [
-          "record_id",
-          "record_type"
-        ],
-        "type": "object"
-      },
-      "type": "array"
-    },
-    "freshness": {
-      "properties": {
-        "authoritative": {
-          "type": "boolean"
-        },
-        "last_synced_at": {
-          "format": "date-time",
-          "type": "string"
-        }
-      },
-      "required": [
-        "authoritative"
-      ],
-      "type": "object"
-    },
-    "schema_version": {
-      "type": "string"
-    },
-    "trace_id": {
-      "type": "string"
-    },
-    "trust": {
-      "type": "string"
-    },
-    "warnings": {
-      "items": {
-        "properties": {
-          "code": {
-            "type": "string"
-          },
-          "message": {
-            "type": "string"
-          }
-        },
-        "required": [
-          "code",
-          "message"
-        ],
-        "type": "object"
-      },
-      "type": "array"
-    }
-  },
-  "required": [
-    "data",
-    "evidence",
-    "freshness",
-    "schema_version",
-    "trace_id",
-    "trust",
-    "warnings"
-  ],
-  "type": "object"
-}
-```
-
-</details>
-
 ### archive_record
 
 **Archive a record**
@@ -596,9 +488,7 @@ that survives, and change_state with action=disqualify to close out a lead going
 lead's own transition records the reason where archiving would not. By default the record is
 archived when this call answers; where an installation has raised this verb to confirm first, the
 answer is a staged approval and you must not report the record as archived until the retry that
-carries their approval has answered. (Runs immediately; the user's yes is needed for it, so tell
-them what the call will change and get it before calling, unless they asked for this call
-themselves; requires passport scope "write".)
+carries their approval has answered. (Ask the user first.)
 ```
 
 <details><summary>Input schema</summary>
@@ -617,7 +507,6 @@ themselves; requires passport scope "write".)
       "type": "string"
     },
     "idempotency_key": {
-      "description": "A retry without it may repeat the write. Same key, same result; a key reused with other arguments is refused.",
       "maxLength": 255,
       "type": "string"
     },
@@ -646,135 +535,23 @@ themselves; requires passport scope "write".)
 
 </details>
 
-<details><summary>Output schema</summary>
-
-```json
-{
-  "properties": {
-    "data": {
-      "properties": {
-        "archived": {
-          "type": "boolean"
-        },
-        "id": {
-          "format": "uuid",
-          "type": "string"
-        },
-        "record_type": {
-          "type": "string"
-        }
-      },
-      "required": [
-        "archived",
-        "id",
-        "record_type"
-      ],
-      "type": "object"
-    },
-    "evidence": {
-      "items": {
-        "properties": {
-          "captured_by": {
-            "type": "string"
-          },
-          "record_id": {
-            "format": "uuid",
-            "type": "string"
-          },
-          "record_type": {
-            "type": "string"
-          },
-          "source": {
-            "type": "string"
-          },
-          "web_url": {
-            "type": "string"
-          }
-        },
-        "required": [
-          "record_id",
-          "record_type"
-        ],
-        "type": "object"
-      },
-      "type": "array"
-    },
-    "freshness": {
-      "properties": {
-        "authoritative": {
-          "type": "boolean"
-        },
-        "last_synced_at": {
-          "format": "date-time",
-          "type": "string"
-        }
-      },
-      "required": [
-        "authoritative"
-      ],
-      "type": "object"
-    },
-    "schema_version": {
-      "type": "string"
-    },
-    "trace_id": {
-      "type": "string"
-    },
-    "trust": {
-      "type": "string"
-    },
-    "warnings": {
-      "items": {
-        "properties": {
-          "code": {
-            "type": "string"
-          },
-          "message": {
-            "type": "string"
-          }
-        },
-        "required": [
-          "code",
-          "message"
-        ],
-        "type": "object"
-      },
-      "type": "array"
-    }
-  },
-  "required": [
-    "data",
-    "evidence",
-    "freshness",
-    "schema_version",
-    "trace_id",
-    "trust",
-    "warnings"
-  ],
-  "type": "object"
-}
-```
-
-</details>
-
 ### bulk_update_records
 
 **Change many records at once**
 
 ```text
 Hand up to 500 contacts, companies, deals or leads to one owner, archive them, add them to or take
-them off a Shortlist, put a tag on or take it off, or file one task under each, in one change; or
-mark up to 500 of the user's Worklist tasks done (record_type worklist_item, verb complete) — or
-undo such a change. Call mode preview first and show the user what it says: how many records change,
-which are left alone and why, and the sample rows. Execute only after they agree. Each record is
-changed only if it still has the version you sent and you may change it. To undo, pass the batch_id
-to undo_preview, show the user the answer, and call undo after they agree; a change is undone once,
-and records changed since are left alone. Ask in words even when the host also shows a form.
-update_record and archive_record change one record. Above 10 records, execute and undo need the
-confirm_token their preview answered; it is good once. Keep batch_id from the answer: undo names the
-change by it. (Runs immediately; the user's yes is needed for it, so tell them what the call will
-change and get it before calling, unless they asked for this call themselves; requires passport
-scope "write".)
+them off a Shortlist, put a tag on or take it off, or file one task under each, in one change; move
+up to 500 deals to one open stage (verb move_stage); or mark up to 500 of the user's Worklist tasks
+done (record_type worklist_item, verb complete) — or undo such a change. Call mode preview first
+and show the user what it says: how many records change, which are left alone and why, and the
+sample rows. Execute only after they agree. Each record is changed only if it still has the version
+you sent and you may change it. To undo, pass the batch_id to undo_preview, show the user the
+answer, and call undo after they agree; a change is undone once, and records changed since are left
+alone. A stage move skips a deal that is won or lost, and its undo moves each deal back as a new
+move. Ask in words even when the host also shows a form. update_record and archive_record change one
+record. Above 10 records, execute and undo need the confirm_token their preview answered; it is good
+once. Keep batch_id from the answer: undo names the change by it. (Ask the user first.)
 ```
 
 <details><summary>Input schema</summary>
@@ -808,7 +585,6 @@ scope "write".)
       "type": "string"
     },
     "idempotency_key": {
-      "description": "A retry without it may repeat the write. Same key, same result; a key reused with other arguments is refused.",
       "maxLength": 255,
       "type": "string"
     },
@@ -870,6 +646,11 @@ scope "write".)
       ],
       "type": "string"
     },
+    "stage_id": {
+      "description": "The open stage to move deals to, for move_stage. Choose one from the workspace's pipeline list with read_workspace with topic=pipelines. A won or lost deal is left alone",
+      "format": "uuid",
+      "type": "string"
+    },
     "tag_id": {
       "description": "The tag, for add_tag and remove_tag",
       "format": "uuid",
@@ -909,6 +690,7 @@ scope "write".)
         "add_tag",
         "remove_tag",
         "create_task",
+        "move_stage",
         "complete"
       ],
       "type": "string"
@@ -930,284 +712,6 @@ scope "write".)
 
 </details>
 
-<details><summary>Output schema</summary>
-
-```json
-{
-  "properties": {
-    "data": {
-      "properties": {
-        "affected": {
-          "items": {
-            "format": "uuid",
-            "type": "string"
-          },
-          "type": "array"
-        },
-        "batch_id": {
-          "format": "uuid",
-          "type": "string"
-        },
-        "changed": {
-          "type": "integer"
-        },
-        "confirm_token": {
-          "type": "string"
-        },
-        "count": {
-          "type": "integer"
-        },
-        "excluded": {
-          "items": {
-            "properties": {
-              "id": {
-                "format": "uuid",
-                "type": "string"
-              },
-              "message": {
-                "type": "string"
-              },
-              "reason": {
-                "type": "string"
-              }
-            },
-            "required": [
-              "id",
-              "reason"
-            ],
-            "type": "object"
-          },
-          "type": "array"
-        },
-        "expires_at": {
-          "format": "date-time",
-          "type": "string"
-        },
-        "left_behind": {
-          "items": {
-            "properties": {
-              "id": {
-                "format": "uuid",
-                "type": "string"
-              },
-              "kind": {
-                "type": "string"
-              },
-              "ref_id": {
-                "format": "uuid",
-                "type": "string"
-              }
-            },
-            "required": [
-              "id",
-              "kind",
-              "ref_id"
-            ],
-            "type": "object"
-          },
-          "type": "array"
-        },
-        "record_type": {
-          "type": "string"
-        },
-        "requires_confirmation": {
-          "type": "boolean"
-        },
-        "sample": {
-          "items": {
-            "properties": {
-              "after": {
-                "properties": {
-                  "archived": {
-                    "type": "boolean"
-                  },
-                  "done": {
-                    "type": "boolean"
-                  },
-                  "listed": {
-                    "type": "boolean"
-                  },
-                  "owner_id": {
-                    "format": "uuid",
-                    "type": "string"
-                  },
-                  "tagged": {
-                    "type": "boolean"
-                  },
-                  "task_id": {
-                    "format": "uuid",
-                    "type": "string"
-                  }
-                },
-                "required": [
-                  "archived"
-                ],
-                "type": "object"
-              },
-              "before": {
-                "properties": {
-                  "archived": {
-                    "type": "boolean"
-                  },
-                  "done": {
-                    "type": "boolean"
-                  },
-                  "listed": {
-                    "type": "boolean"
-                  },
-                  "owner_id": {
-                    "format": "uuid",
-                    "type": "string"
-                  },
-                  "tagged": {
-                    "type": "boolean"
-                  },
-                  "task_id": {
-                    "format": "uuid",
-                    "type": "string"
-                  }
-                },
-                "required": [
-                  "archived"
-                ],
-                "type": "object"
-              },
-              "id": {
-                "format": "uuid",
-                "type": "string"
-              },
-              "label": {
-                "type": "string"
-              }
-            },
-            "required": [
-              "after",
-              "before",
-              "id",
-              "label"
-            ],
-            "type": "object"
-          },
-          "type": "array"
-        },
-        "skipped": {
-          "items": {
-            "properties": {
-              "id": {
-                "format": "uuid",
-                "type": "string"
-              },
-              "message": {
-                "type": "string"
-              },
-              "reason": {
-                "type": "string"
-              }
-            },
-            "required": [
-              "id",
-              "reason"
-            ],
-            "type": "object"
-          },
-          "type": "array"
-        },
-        "undo_of": {
-          "format": "uuid",
-          "type": "string"
-        },
-        "verb": {
-          "type": "string"
-        }
-      },
-      "type": "object"
-    },
-    "evidence": {
-      "items": {
-        "properties": {
-          "captured_by": {
-            "type": "string"
-          },
-          "record_id": {
-            "format": "uuid",
-            "type": "string"
-          },
-          "record_type": {
-            "type": "string"
-          },
-          "source": {
-            "type": "string"
-          },
-          "web_url": {
-            "type": "string"
-          }
-        },
-        "required": [
-          "record_id",
-          "record_type"
-        ],
-        "type": "object"
-      },
-      "type": "array"
-    },
-    "freshness": {
-      "properties": {
-        "authoritative": {
-          "type": "boolean"
-        },
-        "last_synced_at": {
-          "format": "date-time",
-          "type": "string"
-        }
-      },
-      "required": [
-        "authoritative"
-      ],
-      "type": "object"
-    },
-    "schema_version": {
-      "type": "string"
-    },
-    "trace_id": {
-      "type": "string"
-    },
-    "trust": {
-      "type": "string"
-    },
-    "warnings": {
-      "items": {
-        "properties": {
-          "code": {
-            "type": "string"
-          },
-          "message": {
-            "type": "string"
-          }
-        },
-        "required": [
-          "code",
-          "message"
-        ],
-        "type": "object"
-      },
-      "type": "array"
-    }
-  },
-  "required": [
-    "data",
-    "evidence",
-    "freshness",
-    "schema_version",
-    "trace_id",
-    "trust",
-    "warnings"
-  ],
-  "type": "object"
-}
-```
-
-</details>
-
 ### change_access
 
 **Share records and set up members and teams**
@@ -1221,10 +725,9 @@ changes its own user's role or teams, never acts on a member who is an admin, ne
 colleague's work to its own user and never changes a member's email; those are refused. Role
 definitions and declaring or retiring a service member are done in the app. Use send_outbound to
 invite a member or send their sign-in link again, update_record to change a record's owner field
-directly, and read_workspace topic colleagues to find a member's id. (Runs immediately; the user's
-yes is needed for the actions change_role, create_former_member, deactivate_member, end_assignment,
-hand_over_work, remove_member, remove_team_member, so tell them what the call will change and get it
-before calling, unless they asked for this call themselves; requires passport scope "write".)
+directly, and read_workspace topic colleagues to find a member's id. (Ask the user first for the
+actions change_role, create_former_member, deactivate_member, end_assignment, hand_over_work,
+remove_member, remove_team_member.)
 ```
 
 <details><summary>Input schema</summary>
@@ -1270,20 +773,7 @@ before calling, unless they asked for this call themselves; requires passport sc
       "type": "string"
     },
     "idempotency_key": {
-      "description": "A retry without it may repeat the write. Same key, same result; a key reused with other arguments is refused.",
       "maxLength": 255,
-      "type": "string"
-    },
-    "if_version": {
-      "description": "claim_record, unshare only: The version the caller read; the write is refused as skew if the record moved since",
-      "type": "integer"
-    },
-    "record_id": {
-      "description": "assign only",
-      "type": "string"
-    },
-    "record_type": {
-      "description": "assign, claim_record, offer_ownership, request_edit_access, request_ownership, withdraw_edit_access_request, withdraw_ownership_offer, withdraw_ownership_request only",
       "type": "string"
     },
     "request_body": {
@@ -1328,9 +818,8 @@ bring_back, cancel_send, check_new_send, check_send, deal_relevance, decline_dea
 file_channel_message, hide_document, log, preview_inquiry_assignment, preview_sign_off,
 read_document_fields, read_transcript, ready, request_document_access, reschedule_send, save_draft,
 set_aside, set_audience, set_document_details, set_thread_audience, show_document, task, unready;
-decided per call from its arguments for relink, relink_many; the user's yes is needed for the
-actions archive_document, assign_inquiry, so tell them what the call will change and get it before
-calling, unless they asked for this call themselves; requires passport scope "write".)
+decided per call from its arguments for relink, relink_many; ask the user first for the actions
+archive_document, assign_inquiry.)
 ```
 
 <details><summary>Input schema</summary>
@@ -1396,15 +885,6 @@ calling, unless they asked for this call themselves; requires passport scope "wr
       "format": "uuid",
       "type": "string"
     },
-    "assignee_id": {
-      "description": "task only: Defaults to the human you act for.",
-      "format": "uuid",
-      "type": "string"
-    },
-    "attachmentId": {
-      "description": "hide_document, show_document only",
-      "type": "string"
-    },
     "attendee_user_ids": {
       "description": "log only: Meeting or call only: the workspace members who attended besides you, ids from the colleague roster. An id that is not an active member is refused.",
       "items": {
@@ -1420,6 +900,11 @@ calling, unless they asked for this call themselves; requires passport scope "wr
     },
     "channel_provider": {
       "description": "log only: Required for kind \"message\", else refused; one the workspace's channel providers name.",
+      "type": "string"
+    },
+    "confirm_code": {
+      "description": "relink, relink_many only: Only after the user said yes to this call's preview: the confirm_code that preview answered. Never invent one; call without it to get a preview.",
+      "maxLength": 1024,
       "type": "string"
     },
     "content_base64": {
@@ -1447,10 +932,6 @@ calling, unless they asked for this call themselves; requires passport scope "wr
       "description": "log, task only: RFC 3339 WITH Z or the user's offset (…T14:35:00Z); never invent an hour or offset.",
       "format": "date-time",
       "type": "string"
-    },
-    "due_has_time": {
-      "description": "task only: True when due_at is an agreed time of day, such as a callback hour; the reminder is then set to it. Leave out for a day.",
-      "type": "boolean"
     },
     "entity_id": {
       "description": "attach, relink, relink_many only",
@@ -1520,7 +1001,6 @@ calling, unless they asked for this call themselves; requires passport scope "wr
       "type": "string"
     },
     "idempotency_key": {
-      "description": "A retry without it may repeat the write. Same key, same result; a key reused with other arguments is refused.",
       "maxLength": 255,
       "type": "string"
     },
@@ -1590,16 +1070,6 @@ calling, unless they asked for this call themselves; requires passport scope "wr
         "day"
       ]
     },
-    "preparation_revision": {
-      "description": "ready, unready only: The preparation revision read_context with about=meeting answered",
-      "maxLength": 64,
-      "minLength": 1,
-      "type": "string"
-    },
-    "record_type": {
-      "description": "file_channel_message only",
-      "type": "string"
-    },
     "replace_existing_of_type": {
       "default": false,
       "description": "relink, relink_many only: Replace the existing link of the same entity_type (move) rather than adding one (associate)",
@@ -1608,14 +1078,6 @@ calling, unless they asked for this call themselves; requires passport scope "wr
     "request_body": {
       "description": "accept_document_fields, assign_inquiry, attach_link, check_new_send, check_send, deal_relevance, decline_deal, file_channel_message, preview_inquiry_assignment, preview_sign_off, read_document_fields, reschedule_send, save_draft, set_aside, set_audience, set_document_details, set_thread_audience only: The chosen action's request body; read_workspace topic actions lists its shape",
       "type": "object"
-    },
-    "scope": {
-      "description": "bring_back only",
-      "enum": [
-        "mine",
-        "thread"
-      ],
-      "type": "string"
     },
     "source_activity_id": {
       "description": "log, task only: A non-task source, including email or message. Caller and assignee need access to the source content. Empty links inherit its visible links; its audience is preserved. This does not accept a request.",
@@ -1632,22 +1094,6 @@ calling, unless they asked for this call themselves; requires passport scope "wr
     },
     "subject": {
       "description": "log, task only: Prose a colleague reads. Write it in whoami's prose_language, whatever language this conversation is in; do not translate names or quoted text.",
-      "type": "string"
-    },
-    "task_type": {
-      "description": "task only: The work it asks for; it decides the one button the task shows. reply answers a message the way it came in, reach_out contacts someone by email or phone, do is work outside Margince.",
-      "enum": [
-        "reply",
-        "reach_out",
-        "meet",
-        "review",
-        "decide",
-        "do"
-      ],
-      "type": "string"
-    },
-    "thread_key": {
-      "description": "set_thread_audience only",
       "type": "string"
     }
   },
@@ -1672,9 +1118,8 @@ signal, and mark a list, company or contact as seen, which spends the user's own
 so ask first. Each action changes what the user sees next; only accepting a suggestion changes the
 record it is about, because it runs what the suggestion proposes, as the app's Accept does. Use
 update_record or change_record_parts to change a record yourself, and change_activities to log or
-plan work. (Runs immediately; the user's yes is needed for the actions acknowledge_company_view,
-acknowledge_contact_view, archive_signal, visit_list, so tell them what the call will change and get
-it before calling, unless they asked for this call themselves; requires passport scope "write".)
+plan work. (Ask the user first for the actions acknowledge_company_view, acknowledge_contact_view,
+archive_signal, visit_list.)
 ```
 
 <details><summary>Input schema</summary>
@@ -1683,7 +1128,7 @@ it before calling, unless they asked for this call themselves; requires passport
 {
   "properties": {
     "action": {
-      "description": "read_workspace topic actions lists each action's body\naccept_applied_change: Deprecated: Accept a recorded automatic deal change\naccept_deal_suggestion: Open the suggested deal or link the evidence to an existing deal\naccept_tag_suggestion: Apply the suggested tag, as the caller\nacknowledge_company_view: Record that the user has now seen this company — the baseline `since_last_visit` counts from\nacknowledge_contact_view: Record that the user has now seen this contact — the baseline `since_last_visit` counts from\nacknowledge_failed_approval: Say you have seen that an approved change did not run, so it leaves your Worklist\nadd_commitment: Write one thing onto this week's plan\nanswer_teammate: Answer a teammate's request for help\narchive_signal: Archive (soft-delete) a signal\nask_for_help: Say what you need from your lead on one commitment\nbrief_item_done: Mark a brief item acted (B-E05.13) — the deal drops from the next run until it materially changes\ncreate_signal: Record a signal (a derived observation, or a raw inbound/web item awaiting resolution)\ndismiss_brief_item: Dismiss a brief item (B-E05.13) — it does not reappear unless a new linked activity arrives after the mark\ndismiss_company_suggestion: Dismiss one next-step suggestion for the calling human\ndismiss_contact_moment: Hide this moment for me until its evidence changes\ndismiss_deal_move: Set the deal card's move aside for me until it changes\ndismiss_deal_suggestion: Record that the suggestion is not a deal, for the whole workspace\ndismiss_nudge: Set a lapsed contact aside, so the Worklist stops raising them for a while\ndismiss_nudges: Set several lapsed contacts aside at once — the Worklist's \"Dismiss all\"\ndismiss_tag_suggestion: Record that the evidence does not earn the tag, for the whole workspace\nedit_commitment: Correct what a commitment says, when it is due, or what it is about\nmark_all_notices_read: Settle the acting contact's whole notification centre in one act\nmark_notice_read: Settle a notice — its recipient has seen it, and it leaves the Worklist's notices lane\nmark_rows_done: Take rows off your own Worklist, because there is nothing more to do there\npin_row: Put a row at the top of your own day, above what the ranking chose\nreopen_rows: Put rows back on your own Worklist — the undo behind Done\nresolve_signal: Run the signal→company resolver over the signal's raw_ref (inspectable match, never silently confident)\nrestore_company_suggestion: Show a dismissed suggestion or moment again, the undo behind \"Not now\"\nrestore_contact_moment: Show a dismissed moment again, the undo behind \"Not now\"\nrestore_deal_move: Put a set-aside move back on the deal card, the undo behind \"Not now\"\nrestore_nudge: Put a set-aside contact back on the lane — the undo behind the dismiss verb\nset_commitment_state: Mark one commitment done, reopen it, or drop it\nset_weekly_plan: Say what could go wrong this week, and what room there is for it\nsnooze_brief_item: Snooze a brief item (A77/AC-home-6) — hidden until `snoozed_until` passes, then it re-surfaces as actionable\nstart_weekly_plan: Open a plan for this week\nunpin_row: Let the ranking have the row back — the undo behind the pin\nunsnooze_brief_item: Take back a snooze — the item returns to the queue immediately\nupdate_signal: Triage a signal (acknowledge / resolve / dismiss, severity)\nvisit_list: Record that the signed-in user has opened this list — the mark `since_last_visit` counts from",
+      "description": "read_workspace topic actions lists each action's body\naccept_applied_change: Deprecated: Accept a recorded automatic deal change\naccept_deal_suggestion: Open the suggested deal or link the evidence to an existing deal\naccept_tag_suggestion: Apply the suggested tag, as the caller\nacknowledge_company_view: Record that the user has now seen this company — the baseline `since_last_visit` counts from\nacknowledge_contact_view: Record that the user has now seen this contact — the baseline `since_last_visit` counts from\nacknowledge_failed_approval: Say you have seen that an approved change did not run, so it leaves your Worklist\nadd_commitment: Write one thing onto this week's plan\nanswer_teammate: Answer a teammate's request for help\narchive_signal: Archive (soft-delete) a signal\nask_for_help: Say what you need from your lead on one commitment\nbrief_item_done: Mark a brief item acted (B-E05.13) — the deal drops from the next run until it materially changes\ncreate_signal: Record a signal (a derived observation, or a raw inbound/web item awaiting resolution)\ndismiss_brief_item: Dismiss a brief item (B-E05.13) — it does not reappear unless a new linked activity arrives after the mark\ndismiss_company_suggestion: Dismiss one next-step suggestion for the calling human\ndismiss_contact_moment: Hide this moment for me until its evidence changes\ndismiss_deal_move: Set the deal card's move aside for me until it changes\ndismiss_deal_suggestion: Record that the suggestion is not a deal, for the whole workspace\ndismiss_nudge: Set a lapsed contact aside, so the Worklist stops raising them for a while\ndismiss_nudges: Set several lapsed contacts aside at once — the Worklist's \"Dismiss all\"\ndismiss_tag_suggestion: Record that the evidence does not earn the tag, for the whole workspace\nedit_commitment: Correct what a commitment says, when it is due, or what it is about\nmark_all_notices_read: Settle the acting contact's whole notification centre in one act\nmark_notice_read: Settle a notice — its recipient has seen it, and it leaves the Worklist's notices lane\nmark_rows_done: Take rows off your own Worklist, because there is nothing more to do there\npin_row: Put a row at the top of your own day, above what the ranking chose\nreopen_rows: Put rows back on your own Worklist — the undo behind Done\nrequest_deal_manager: Ask the team's manager to look at this deal\nresolve_signal: Run the signal→company resolver over the signal's raw_ref (inspectable match, never silently confident)\nrestore_company_suggestion: Show a dismissed suggestion or moment again, the undo behind \"Not now\"\nrestore_contact_moment: Show a dismissed moment again, the undo behind \"Not now\"\nrestore_deal_move: Put a set-aside move back on the deal card, the undo behind \"Not now\"\nrestore_nudge: Put a set-aside contact back on the lane — the undo behind the dismiss verb\nset_commitment_state: Mark one commitment done, reopen it, or drop it\nset_weekly_plan: Say what could go wrong this week, and what room there is for it\nsnooze_brief_item: Snooze a brief item (A77/AC-home-6) — hidden until `snoozed_until` passes, then it re-surfaces as actionable\nstart_weekly_plan: Open a plan for this week\nunpin_row: Let the ranking have the row back — the undo behind the pin\nunsnooze_brief_item: Take back a snooze — the item returns to the queue immediately\nupdate_signal: Triage a signal (acknowledge / resolve / dismiss, severity)\nvisit_list: Record that the signed-in user has opened this list — the mark `since_last_visit` counts from",
       "enum": [
         "accept_applied_change",
         "accept_deal_suggestion",
@@ -1711,6 +1156,7 @@ it before calling, unless they asked for this call themselves; requires passport
         "mark_rows_done",
         "pin_row",
         "reopen_rows",
+        "request_deal_manager",
         "resolve_signal",
         "restore_company_suggestion",
         "restore_contact_moment",
@@ -1727,50 +1173,17 @@ it before calling, unless they asked for this call themselves; requires passport
       ],
       "type": "string"
     },
-    "changeId": {
-      "description": "accept_applied_change only",
-      "type": "string"
-    },
-    "claim_key": {
-      "description": "restore_contact_moment only",
-      "type": "string"
-    },
-    "evidence_fingerprint": {
-      "description": "restore_contact_moment only",
-      "type": "string"
-    },
-    "fingerprint": {
-      "description": "restore_company_suggestion, restore_deal_move only",
-      "type": "string"
-    },
     "id": {
-      "description": "accept_applied_change, accept_deal_suggestion, accept_tag_suggestion, acknowledge_company_view, acknowledge_contact_view, acknowledge_failed_approval, answer_teammate, archive_signal, ask_for_help, dismiss_company_suggestion, dismiss_contact_moment, dismiss_deal_move, dismiss_deal_suggestion, dismiss_nudge, dismiss_tag_suggestion, edit_commitment, mark_notice_read, resolve_signal, restore_company_suggestion, restore_contact_moment, restore_deal_move, restore_nudge, set_commitment_state, update_signal, visit_list only",
+      "description": "accept_applied_change, accept_deal_suggestion, accept_tag_suggestion, acknowledge_company_view, acknowledge_contact_view, acknowledge_failed_approval, answer_teammate, archive_signal, ask_for_help, dismiss_company_suggestion, dismiss_contact_moment, dismiss_deal_move, dismiss_deal_suggestion, dismiss_nudge, dismiss_tag_suggestion, edit_commitment, mark_notice_read, request_deal_manager, resolve_signal, restore_company_suggestion, restore_contact_moment, restore_deal_move, restore_nudge, set_commitment_state, update_signal, visit_list only",
       "type": "string"
     },
     "idempotency_key": {
-      "description": "A retry without it may repeat the write. Same key, same result; a key reused with other arguments is refused.",
       "maxLength": 255,
       "type": "string"
     },
-    "if_version": {
-      "description": "accept_applied_change, update_signal only: The version the caller read; the write is refused as skew if the record moved since",
-      "type": "integer"
-    },
-    "itemId": {
-      "description": "brief_item_done, dismiss_brief_item, snooze_brief_item, unsnooze_brief_item only",
-      "type": "string"
-    },
     "request_body": {
-      "description": "accept_deal_suggestion, acknowledge_failed_approval, add_commitment, answer_teammate, ask_for_help, create_signal, dismiss_company_suggestion, dismiss_contact_moment, dismiss_deal_move, dismiss_deal_suggestion, dismiss_nudge, dismiss_nudges, edit_commitment, mark_rows_done, pin_row, reopen_rows, set_commitment_state, set_weekly_plan, snooze_brief_item, update_signal only: The chosen action's request body; read_workspace topic actions lists its shape",
+      "description": "accept_deal_suggestion, acknowledge_failed_approval, add_commitment, answer_teammate, ask_for_help, create_signal, dismiss_company_suggestion, dismiss_contact_moment, dismiss_deal_move, dismiss_deal_suggestion, dismiss_nudge, dismiss_nudges, edit_commitment, mark_rows_done, pin_row, reopen_rows, request_deal_manager, set_commitment_state, set_weekly_plan, snooze_brief_item, update_signal only: The chosen action's request body; read_workspace topic actions lists its shape",
       "type": "object"
-    },
-    "row_id": {
-      "description": "unpin_row only",
-      "type": "string"
-    },
-    "source": {
-      "description": "unpin_row only",
-      "type": "string"
     }
   },
   "required": [
@@ -1802,13 +1215,12 @@ stays in the app. Ask the user first where the action is marked so: a vCard writ
 and says the contact handed the card over. Use read_workspace topics capture_senders, held_threads,
 counterparty_holds and corpora to read first, run_research start_backfill to bring in old mail,
 run_research ask_corpus to ask a corpus, preview_import and commit_import to start an import, and
-change_tags to tag a record. (Runs immediately; the user's yes is needed for the actions
-add_consumer_mail_domain, add_owner_identity, add_workspace_email_domain, archive_corpus,
-disconnect_channel, disconnect_mailbox, import_vcards, lift_counterparty_hold, lift_exclusion,
+change_tags to tag a record. (Ask the user first for the actions add_consumer_mail_domain,
+add_owner_identity, add_workspace_email_domain, archive_corpus, disconnect_channel,
+disconnect_mailbox, import_vcards, lift_counterparty_hold, lift_exclusion,
 remove_consumer_mail_domain, remove_workspace_email_domain, set_blocked_domain, set_mail_posture,
 set_sender_decision, share_counterparty_hold_history, undo_import_run, unlink_channel,
-withdraw_owner_identity, so tell them what the call will change and get it before calling, unless
-they asked for this call themselves; requires passport scope "write".)
+withdraw_owner_identity.)
 ```
 
 <details><summary>Input schema</summary>
@@ -1861,12 +1273,8 @@ they asked for this call themselves; requires passport scope "write".)
       ],
       "type": "string"
     },
-    "address": {
-      "description": "set_sender_decision, withdraw_sender_decision only",
-      "type": "string"
-    },
-    "connection_id": {
-      "description": "cancel_backfill, disconnect_mailbox, dismiss_mailbox_silence, set_context_tag, set_history_baseline, set_mail_posture, set_signature_enrichment only",
+    "company_id": {
+      "description": "import_vcards only",
       "format": "uuid",
       "type": "string"
     },
@@ -1878,29 +1286,12 @@ they asked for this call themselves; requires passport scope "write".)
       "description": "import_linkedin_connections, import_vcards, upload_corpus_document only: The file's media type, e.g. image/png",
       "type": "string"
     },
-    "domain": {
-      "description": "discard_domain, keep_domain_as_company, keep_domain_as_vendor, remove_workspace_email_domain, reopen_domain only",
-      "type": "string"
-    },
     "filename": {
       "description": "import_linkedin_connections, import_vcards, upload_corpus_document only: The file's name, with its extension",
       "type": "string"
     },
-    "id": {
-      "description": "archive_corpus, cancel_import_run, disconnect_channel, lift_counterparty_hold, lift_exclusion, remove_consumer_mail_domain, restore_owner_identity, set_channel_verbosity, undo_import_run, unlink_channel, update_corpus, update_import_run, upload_corpus_document, validate_import_run, withdraw_owner_identity only",
-      "type": "string"
-    },
     "idempotency_key": {
-      "description": "A retry without it may repeat the write. Same key, same result; a key reused with other arguments is refused.",
       "maxLength": 255,
-      "type": "string"
-    },
-    "provider": {
-      "description": "cancel_backfill, disconnect_mailbox, dismiss_mailbox_silence, set_context_tag, set_history_baseline, set_mail_posture, set_signature_enrichment only",
-      "type": "string"
-    },
-    "record_type": {
-      "description": "set_channel_verbosity, unlink_channel only",
       "type": "string"
     },
     "request_body": {
@@ -1936,13 +1327,11 @@ done in the app. Use send_outbound double_opt_in, privacy_notice or details_conf
 contact, read_details contact_consent, contact_consent_guard or contact_stops to check a contact
 before you record, read_workspace topics data_subject_requests, notice_cases, audit_log, legal_holds
 and restricted_records to read the queues, and read_workspace topic record_history for one record's
-trail. (Runs immediately; the user's yes is needed for the actions confirm_notice_source,
-lift_lead_suppression, lift_suppression, open_data_subject_request, pin_activity_to_floor,
-place_legal_hold, record_communication_context, record_consent, record_lead_qualifying_event,
-record_qualifying_event, resolve_confirm_submission, retract_acquisition_request,
-retract_lead_qualifying_event, retract_qualifying_event, revoke_override, suppress_contact,
-update_data_subject_request, so tell them what the call will change and get it before calling,
-unless they asked for this call themselves; requires passport scope "write".)
+trail. (Ask the user first for the actions confirm_notice_source, lift_lead_suppression,
+lift_suppression, open_data_subject_request, pin_activity_to_floor, place_legal_hold,
+record_communication_context, record_consent, record_lead_qualifying_event, record_qualifying_event,
+resolve_confirm_submission, retract_acquisition_request, retract_lead_qualifying_event,
+retract_qualifying_event, revoke_override, suppress_contact, update_data_subject_request.)
 ```
 
 <details><summary>Input schema</summary>
@@ -1951,7 +1340,7 @@ unless they asked for this call themselves; requires passport scope "write".)
 {
   "properties": {
     "action": {
-      "description": "read_workspace topic actions lists each action's body\nassign_notice_case: Give a privacy notice already owed (from notice_cases) an owner\nassign_notice_case_review: Give a contact's privacy-notice case (from notice_case_reviews) an owner\nconfirm_notice_source: Confirm where a contact came from (bought list, import, their own enquiry), which decides whether a privacy notice is owed\nlift_lead_suppression: Take back a stop on a lead, if you outrank the level that set it\nlift_suppression: Take back a stop, if you outrank the level that set it\nopen_data_subject_request: Open a data-subject request (access/rectify/erasure)\npin_activity_to_floor: Pin an activity to the retention floor, restricting it\nplace_legal_hold: Place a legal hold on a record\nrecord_communication_context: Answer a refusal by saying what happened away from the system\nrecord_consent: Grant or withdraw consent for one purpose — writes an append-only proof row\nrecord_lead_qualifying_event: Record an exchange with a lead\nrecord_qualifying_event: Record an exchange for scoped correspondence\nresolve_confirm_submission: Accept or decline what a subject proposed\nretract_acquisition_request: Take back the request the contact's acquisition records\nretract_lead_qualifying_event: Take back a recorded lead exchange\nretract_qualifying_event: Take back an exchange a colleague recorded by hand\nrevoke_override: Take back a standing override, if your level may revoke the one that recorded it\nsuppress_contact: Record that this contact asked us to stop writing to them\nupdate_data_subject_request: Update a data-subject request's status / assignee / resolution",
+      "description": "read_workspace topic actions lists each action's body\nassign_notice_case: Give a privacy notice already owed (from notice_cases, GET /privacy/notice-cases) an owner\nassign_notice_case_review: Give a contact's privacy-notice case (from notice_case_reviews, GET /privacy/notice-case-reviews) an owner\nconfirm_notice_source: Confirm where a contact came from (bought list, import, their own enquiry), which decides whether a privacy notice is owed\nlift_lead_suppression: Take back a stop on a lead, if you outrank the level that set it\nlift_suppression: Take back a stop, if you outrank the level that set it\nopen_data_subject_request: Open a data-subject request (access/rectify/erasure)\npin_activity_to_floor: Pin an activity to the retention floor, restricting it\nplace_legal_hold: Place a legal hold on a record\nrecord_communication_context: Answer a refusal by saying what happened away from the system\nrecord_consent: Grant or withdraw consent for one purpose — writes an append-only proof row\nrecord_lead_qualifying_event: Record an exchange with a lead\nrecord_qualifying_event: Record an exchange for scoped correspondence\nresolve_confirm_submission: Accept or decline what a subject proposed\nretract_acquisition_request: Take back the request the contact's acquisition records\nretract_lead_qualifying_event: Take back a recorded lead exchange\nretract_qualifying_event: Take back an exchange a colleague recorded by hand\nrevoke_override: Take back a standing override, if your level may revoke the one that recorded it\nsuppress_contact: Record that this contact asked us to stop writing to them\nupdate_data_subject_request: Update a data-subject request's status / assignee / resolution",
       "enum": [
         "assign_notice_case",
         "assign_notice_case_review",
@@ -1975,16 +1364,8 @@ unless they asked for this call themselves; requires passport scope "write".)
       ],
       "type": "string"
     },
-    "activityId": {
-      "description": "pin_activity_to_floor only",
-      "type": "string"
-    },
     "entityType": {
       "description": "place_legal_hold only",
-      "type": "string"
-    },
-    "event_id": {
-      "description": "retract_lead_qualifying_event, retract_qualifying_event only",
       "type": "string"
     },
     "id": {
@@ -1992,12 +1373,7 @@ unless they asked for this call themselves; requires passport scope "write".)
       "type": "string"
     },
     "idempotency_key": {
-      "description": "A retry without it may repeat the write. Same key, same result; a key reused with other arguments is refused.",
       "maxLength": 255,
-      "type": "string"
-    },
-    "overrideId": {
-      "description": "revoke_override only",
       "type": "string"
     },
     "recordId": {
@@ -2007,10 +1383,6 @@ unless they asked for this call themselves; requires passport scope "write".)
     "request_body": {
       "description": "assign_notice_case, assign_notice_case_review, confirm_notice_source, lift_lead_suppression, lift_suppression, open_data_subject_request, pin_activity_to_floor, place_legal_hold, record_communication_context, record_consent, record_lead_qualifying_event, record_qualifying_event, resolve_confirm_submission, revoke_override, suppress_contact, update_data_subject_request only: The chosen action's request body; read_workspace topic actions lists its shape",
       "type": "object"
-    },
-    "suppressionId": {
-      "description": "lift_lead_suppression, lift_suppression only",
-      "type": "string"
     }
   },
   "required": [
@@ -2033,7 +1405,7 @@ why. Only the steward of a list or a list admin may change it. A change must car
 read; a list changed since is refused. An archived list is read-only. A Live List's members follow
 its filter and cannot be added or removed by hand. Preview a filter with read_lists before saving
 it. bulk_update_records adds or removes many records at once, with a confirmation. Keep the list id
-and its new version from the answer. (Runs immediately; requires passport scope "write".)
+and its new version from the answer.
 ```
 
 <details><summary>Input schema</summary>
@@ -2123,7 +1495,6 @@ and its new version from the answer. (Runs immediately; requires passport scope 
       "type": "string"
     },
     "idempotency_key": {
-      "description": "A retry without it may repeat the write. Same key, same result; a key reused with other arguments is refused.",
       "maxLength": 255,
       "type": "string"
     },
@@ -2197,112 +1568,6 @@ and its new version from the answer. (Runs immediately; requires passport scope 
 
 </details>
 
-<details><summary>Output schema</summary>
-
-```json
-{
-  "properties": {
-    "data": {
-      "properties": {
-        "mode": {
-          "type": "string"
-        },
-        "result": {
-          "type": "object"
-        }
-      },
-      "required": [
-        "mode",
-        "result"
-      ],
-      "type": "object"
-    },
-    "evidence": {
-      "items": {
-        "properties": {
-          "captured_by": {
-            "type": "string"
-          },
-          "record_id": {
-            "format": "uuid",
-            "type": "string"
-          },
-          "record_type": {
-            "type": "string"
-          },
-          "source": {
-            "type": "string"
-          },
-          "web_url": {
-            "type": "string"
-          }
-        },
-        "required": [
-          "record_id",
-          "record_type"
-        ],
-        "type": "object"
-      },
-      "type": "array"
-    },
-    "freshness": {
-      "properties": {
-        "authoritative": {
-          "type": "boolean"
-        },
-        "last_synced_at": {
-          "format": "date-time",
-          "type": "string"
-        }
-      },
-      "required": [
-        "authoritative"
-      ],
-      "type": "object"
-    },
-    "schema_version": {
-      "type": "string"
-    },
-    "trace_id": {
-      "type": "string"
-    },
-    "trust": {
-      "type": "string"
-    },
-    "warnings": {
-      "items": {
-        "properties": {
-          "code": {
-            "type": "string"
-          },
-          "message": {
-            "type": "string"
-          }
-        },
-        "required": [
-          "code",
-          "message"
-        ],
-        "type": "object"
-      },
-      "type": "array"
-    }
-  },
-  "required": [
-    "data",
-    "evidence",
-    "freshness",
-    "schema_version",
-    "trace_id",
-    "trust",
-    "warnings"
-  ],
-  "type": "object"
-}
-```
-
-</details>
-
 ### change_my_settings
 
 **Change the user's own preferences and voice**
@@ -2317,10 +1582,9 @@ with source agent, never chosen. What the product sends them and where, what the
 voice, replacing or putting back a sample they filed or left out, and removing samples for good are
 done in the app. Use change_settings for what every colleague shares, read_workspace topics
 my_working_hours and my_brief_delivery to read their settings, and run_research to build the voice.
-(Runs immediately; the user's yes is needed for the actions apply_voice_version,
-archive_voice_profile, reject_voice_version, rollback_voice_version, save_display_name,
-save_greeting_name, save_timezone, save_working_hours, so tell them what the call will change and
-get it before calling, unless they asked for this call themselves; requires passport scope "write".)
+(Ask the user first for the actions apply_voice_version, archive_voice_profile,
+reject_voice_version, rollback_voice_version, save_display_name, save_greeting_name, save_timezone,
+save_working_hours.)
 ```
 
 <details><summary>Input schema</summary>
@@ -2348,30 +1612,13 @@ get it before calling, unless they asked for this call themselves; requires pass
       ],
       "type": "string"
     },
-    "id": {
-      "description": "add_voice_source, apply_voice_version, archive_voice_profile, reject_voice_version, rollback_voice_version, update_voice_profile, update_voice_source only",
-      "type": "string"
-    },
     "idempotency_key": {
-      "description": "A retry without it may repeat the write. Same key, same result; a key reused with other arguments is refused.",
       "maxLength": 255,
-      "type": "string"
-    },
-    "if_version": {
-      "description": "apply_voice_version, archive_voice_profile, reject_voice_version, update_voice_profile, update_voice_source only: The version the caller read; the write is refused as skew if the record moved since",
-      "type": "integer"
-    },
-    "profileVersion": {
-      "description": "apply_voice_version, reject_voice_version, rollback_voice_version only",
       "type": "string"
     },
     "request_body": {
       "description": "add_voice_source, create_voice_profile, save_display_name, save_greeting_name, save_locale, save_onboarding_state, save_timezone, save_working_hours, update_voice_profile, update_voice_source only: The chosen action's request body; read_workspace topic actions lists its shape",
       "type": "object"
-    },
-    "sourceId": {
-      "description": "update_voice_source only",
-      "type": "string"
     }
   },
   "required": [
@@ -2394,10 +1641,8 @@ offer fixes its version and its exchange rate from then on. What a buyer reads i
 reaches them at once, so inviting them or resending their invitation, writing to them, adding,
 changing or removing a document, editing the room's words, setting its expiry and resuming it are
 send_outbound's. Use change_record_parts to change an offer's line items, change_state to move the
-deal itself, and run_research to regenerate an offer. (Runs immediately; the user's yes is needed
-for the actions archive_contract, archive_room, cancel_contract, reject_offer, send_offer, so tell
-them what the call will change and get it before calling, unless they asked for this call
-themselves; requires passport scope "write".)
+deal itself, and run_research to regenerate an offer. (Ask the user first for the actions
+archive_contract, archive_room, cancel_contract, reject_offer, send_offer.)
 ```
 
 <details><summary>Input schema</summary>
@@ -2433,17 +1678,11 @@ themselves; requires passport scope "write".)
       ],
       "type": "string"
     },
-    "expected_revision": {
-      "description": "remove_deal_line only",
-      "format": "int64",
-      "type": "integer"
-    },
     "id": {
       "description": "accept_offer, add_deal_line, archive_contract, archive_room, cancel_contract, close_room, pause_room, refresh_offer_from_deal, reject_offer, remove_deal_line, render_offer, renew_contract, resolve_room_thread, revoke_room_participant, send_offer, set_contract_status, set_deal_products, update_contract, update_deal_line, update_room_participant, use_deal_estimate only",
       "type": "string"
     },
     "idempotency_key": {
-      "description": "A retry without it may repeat the write. Same key, same result; a key reused with other arguments is refused.",
       "maxLength": 255,
       "type": "string"
     },
@@ -2451,21 +1690,9 @@ themselves; requires passport scope "write".)
       "description": "accept_offer, archive_room, cancel_contract, refresh_offer_from_deal, reject_offer, renew_contract, send_offer, set_contract_status, update_contract only: The version the caller read; the write is refused as skew if the record moved since",
       "type": "integer"
     },
-    "lineId": {
-      "description": "remove_deal_line, update_deal_line only",
-      "type": "string"
-    },
-    "participantId": {
-      "description": "revoke_room_participant, update_room_participant only",
-      "type": "string"
-    },
     "request_body": {
       "description": "add_deal_line, cancel_contract, record_contract, refresh_offer_from_deal, reject_offer, renew_contract, set_contract_status, set_deal_products, update_contract, update_deal_line, update_room_participant, use_deal_estimate only: The chosen action's request body; read_workspace topic actions lists its shape",
       "type": "object"
-    },
-    "threadId": {
-      "description": "resolve_room_thread only",
-      "type": "string"
     }
   },
   "required": [
@@ -2486,8 +1713,7 @@ Change what is kept under a record: an offer's line items, a company's facts and
 project's companies and stakeholders. Prices are in minor units; read a product for its
 unit_price_minor rather than inventing one. An offer's totals are computed from its lines and cannot
 be supplied, and a sent or accepted offer keeps its lines. Use update_record for a record's own
-fields, and create_record with record_type offer to make an offer with its first lines. (Runs
-immediately; requires passport scope "write".)
+fields, and create_record with record_type offer to make an offer with its first lines.
 ```
 
 <details><summary>Input schema</summary>
@@ -2583,7 +1809,6 @@ immediately; requires passport scope "write".)
       "type": "string"
     },
     "idempotency_key": {
-      "description": "A retry without it may repeat the write. Same key, same result; a key reused with other arguments is refused.",
       "maxLength": 255,
       "type": "string"
     },
@@ -2682,100 +1907,6 @@ immediately; requires passport scope "write".)
 
 </details>
 
-<details><summary>Output schema</summary>
-
-```json
-{
-  "properties": {
-    "data": {
-      "type": "object"
-    },
-    "evidence": {
-      "items": {
-        "properties": {
-          "captured_by": {
-            "type": "string"
-          },
-          "record_id": {
-            "format": "uuid",
-            "type": "string"
-          },
-          "record_type": {
-            "type": "string"
-          },
-          "source": {
-            "type": "string"
-          },
-          "web_url": {
-            "type": "string"
-          }
-        },
-        "required": [
-          "record_id",
-          "record_type"
-        ],
-        "type": "object"
-      },
-      "type": "array"
-    },
-    "freshness": {
-      "properties": {
-        "authoritative": {
-          "type": "boolean"
-        },
-        "last_synced_at": {
-          "format": "date-time",
-          "type": "string"
-        }
-      },
-      "required": [
-        "authoritative"
-      ],
-      "type": "object"
-    },
-    "schema_version": {
-      "type": "string"
-    },
-    "trace_id": {
-      "type": "string"
-    },
-    "trust": {
-      "type": "string"
-    },
-    "warnings": {
-      "items": {
-        "properties": {
-          "code": {
-            "type": "string"
-          },
-          "message": {
-            "type": "string"
-          }
-        },
-        "required": [
-          "code",
-          "message"
-        ],
-        "type": "object"
-      },
-      "type": "array"
-    }
-  },
-  "required": [
-    "data",
-    "evidence",
-    "freshness",
-    "schema_version",
-    "trace_id",
-    "trust",
-    "warnings"
-  ],
-  "type": "object"
-}
-```
-
-</details>
-
 ### change_relationships
 
 **Work a company's relationships and briefs**
@@ -2786,8 +1917,7 @@ decide, complete or cancel an introduction and record one that happened; record,
 a promise made in a conversation; save what research found. Each act runs as the app does it, on the
 records the user may open. Use run_research to ask about a company, refresh a brief, dossier, growth
 fit or scan, or research a contact, read_details to read one that is already there, and
-update_record to change a company's or contact's fields. (Runs immediately; requires passport scope
-"write".)
+update_record to change a company's or contact's fields.
 ```
 
 <details><summary>Input schema</summary>
@@ -2817,25 +1947,8 @@ update_record to change a company's or contact's fields. (Runs immediately; requ
       ],
       "type": "string"
     },
-    "field": {
-      "description": "restore_profile_field only",
-      "type": "string"
-    },
-    "id": {
-      "description": "apply_employment_import, cancel_intro_request, check_vat, complete_intro_request, decide_intro_request, link_contacts, reassign_handoff, record_introduction, record_promise, replace_intro_request, request_intro, restore_profile_field, save_research, settle_promise, take_over_promise only",
-      "type": "string"
-    },
     "idempotency_key": {
-      "description": "A retry without it may repeat the write. Same key, same result; a key reused with other arguments is refused.",
       "maxLength": 255,
-      "type": "string"
-    },
-    "request_body": {
-      "description": "apply_employment_import, backfill_employment_import, cancel_intro_request, complete_intro_request, decide_intro_request, link_contacts, reassign_handoff, record_introduction, record_promise, replace_intro_request, request_intro, save_research, settle_promise only: The chosen action's request body; read_workspace topic actions lists its shape",
-      "type": "object"
-    },
-    "value_key": {
-      "description": "restore_profile_field only",
       "type": "string"
     }
   },
@@ -2860,10 +1973,8 @@ one. publish_draft, discard_draft, restore_revision, archive_report, publish_fra
 launch_initiative change what colleagues see: ask the user first. Use read_reports to read reports
 and their metric catalog, run_research for the sales review's assessment or a report set up from a
 description, and change_state move_deal to move a deal. Keep the report id and draft_revision to
-preview the draft with read_reports. (Runs immediately; the user's yes is needed for the actions
-archive_report, discard_draft, launch_initiative, publish_draft, publish_framework,
-restore_revision, so tell them what the call will change and get it before calling, unless they
-asked for this call themselves; requires passport scope "write".)
+preview the draft with read_reports. (Ask the user first for the actions archive_report,
+discard_draft, launch_initiative, publish_draft, publish_framework, restore_revision.)
 ```
 
 <details><summary>Input schema</summary>
@@ -2902,239 +2013,12 @@ asked for this call themselves; requires passport scope "write".)
       ],
       "type": "string"
     },
-    "description": {
-      "description": "draft only",
-      "type": "string"
-    },
-    "id": {
-      "description": "archive_report, create_schedule, discard_draft, freeze_edition, launch_initiative, publish_draft, record_decision_outcome, replace_initiative_members, resolve_input_check, restore_revision, retry_execution, revoke_forecast_share, update_initiative, update_report, update_schedule, update_target only",
-      "type": "string"
-    },
     "idempotency_key": {
-      "description": "A retry without it may repeat the write. Same key, same result; a key reused with other arguments is refused.",
       "maxLength": 255,
-      "type": "string"
-    },
-    "if_version": {
-      "description": "discard_draft, launch_initiative, publish_draft, publish_framework, restore_revision, update_initiative, update_report, update_schedule, update_target only: The version the caller read; the write is refused as skew if the record moved since",
-      "type": "integer"
-    },
-    "name": {
-      "description": "draft only",
-      "type": "string"
-    },
-    "report_id": {
-      "description": "draft only",
-      "format": "uuid",
       "type": "string"
     },
     "request_body": {
       "description": "create_forecast_share, create_initiative, create_report, create_schedule, create_target, publish_framework, record_decision, record_decision_outcome, record_forecast_call, replace_initiative_members, resolve_input_check, update_initiative, update_report, update_schedule, update_target only: The chosen action's request body; read_workspace topic actions lists its shape",
-      "type": "object"
-    },
-    "revision": {
-      "description": "restore_revision only",
-      "type": "string"
-    },
-    "selection": {
-      "description": "The report's metrics, charts and sections; a pipeline_id comes from the workspace's pipeline list",
-      "properties": {
-        "blocks": {
-          "items": {
-            "type": "string"
-          },
-          "type": "array"
-        },
-        "close_interval": {
-          "properties": {
-            "end_at": {
-              "description": "RFC 3339 WITH Z or the user's offset (…T14:35:00Z); never invent an offset.",
-              "format": "date-time",
-              "type": "string"
-            },
-            "start_at": {
-              "description": "RFC 3339 WITH Z or the user's offset (…T14:35:00Z); never invent an offset.",
-              "format": "date-time",
-              "type": "string"
-            }
-          },
-          "required": [
-            "end_at",
-            "start_at"
-          ],
-          "type": "object"
-        },
-        "close_window": {
-          "type": "string"
-        },
-        "country": {
-          "type": "string"
-        },
-        "industry": {
-          "type": "string"
-        },
-        "initiative_id": {
-          "format": "uuid",
-          "type": "string"
-        },
-        "interval": {
-          "properties": {
-            "end_at": {
-              "description": "RFC 3339 WITH Z or the user's offset (…T14:35:00Z); never invent an offset.",
-              "format": "date-time",
-              "type": "string"
-            },
-            "start_at": {
-              "description": "RFC 3339 WITH Z or the user's offset (…T14:35:00Z); never invent an offset.",
-              "format": "date-time",
-              "type": "string"
-            }
-          },
-          "required": [
-            "end_at",
-            "start_at"
-          ],
-          "type": "object"
-        },
-        "layout": {
-          "items": {
-            "properties": {
-              "cards": {
-                "items": {
-                  "properties": {
-                    "id": {
-                      "type": "string"
-                    },
-                    "kind": {
-                      "type": "string"
-                    },
-                    "metric": {
-                      "type": "string"
-                    },
-                    "question": {
-                      "properties": {
-                        "binding": {
-                          "type": "string"
-                        },
-                        "entity": {
-                          "type": "string"
-                        },
-                        "group_by": {
-                          "items": {
-                            "type": "string"
-                          },
-                          "type": "array"
-                        },
-                        "limit": {
-                          "maximum": 1000,
-                          "minimum": 1,
-                          "type": "integer"
-                        },
-                        "measures": {
-                          "items": {
-                            "properties": {
-                              "as": {
-                                "type": "string"
-                              },
-                              "field": {
-                                "type": "string"
-                              },
-                              "fn": {
-                                "type": "string"
-                              }
-                            },
-                            "required": [
-                              "fn"
-                            ],
-                            "type": "object"
-                          },
-                          "type": "array"
-                        },
-                        "saved_question_id": {
-                          "format": "uuid",
-                          "type": "string"
-                        }
-                      },
-                      "required": [
-                        "entity",
-                        "measures"
-                      ],
-                      "type": "object"
-                    },
-                    "width": {
-                      "type": "string"
-                    }
-                  },
-                  "required": [
-                    "id",
-                    "kind",
-                    "width"
-                  ],
-                  "type": "object"
-                },
-                "type": "array"
-              },
-              "title": {
-                "type": "string"
-              }
-            },
-            "required": [
-              "cards"
-            ],
-            "type": "object"
-          },
-          "type": "array"
-        },
-        "metrics": {
-          "items": {
-            "type": "string"
-          },
-          "type": "array"
-        },
-        "period": {
-          "type": "string"
-        },
-        "pipeline_id": {
-          "format": "uuid",
-          "type": "string"
-        },
-        "product_id": {
-          "format": "uuid",
-          "type": "string"
-        },
-        "scope": {
-          "properties": {
-            "id": {
-              "format": "uuid",
-              "type": "string"
-            },
-            "kind": {
-              "type": "string"
-            },
-            "label": {
-              "type": "string"
-            }
-          },
-          "required": [
-            "kind"
-          ],
-          "type": "object"
-        },
-        "target_basis": {
-          "type": "string"
-        },
-        "value_basis": {
-          "type": "string"
-        }
-      },
-      "required": [
-        "blocks",
-        "close_window",
-        "metrics",
-        "period",
-        "scope",
-        "target_basis"
-      ],
       "type": "object"
     }
   },
@@ -3166,14 +2050,13 @@ Which model runs, the plan's budget, stage-move trust, what closes a deal, a sta
 order while a transition is trusted, a seeded automation, a rule's owner, a form's secret, origins
 and consent, retention and permanent deletes are done in the app. Use change_my_settings for the
 user's own name, language, time zone, hours or voice, change_state to move one lead or deal, and
-update_record to change one record. (Runs immediately; the user's yes is needed for the actions
-activate_home_repair, apply_legacy_loss_reasons, archive_automation, archive_exit_criterion,
-archive_legal_entity, archive_pipeline, archive_saved_view, archive_stage, archive_web_form,
-control_data_task, create_custom_field, disconnect_finance_source, disconnect_provider,
+update_record to change one record. (Ask the user first for the actions activate_home_repair,
+apply_legacy_loss_reasons, archive_automation, archive_exit_criterion, archive_legal_entity,
+archive_pipeline, archive_saved_view, archive_stage, archive_web_form, control_data_task,
+create_custom_field, create_web_form, disconnect_finance_source, disconnect_provider,
 handle_website_inquiries, link_finance_customer, record_tax_rate, reorder_stages,
 retire_custom_field, set_ai_model_rate, set_fx_rate, update_automation, update_custom_field_options,
-update_exit_criterion, update_web_form, upsert_partner, so tell them what the call will change and
-get it before calling, unless they asked for this call themselves; requires passport scope "write".)
+update_exit_criterion, update_web_form, upsert_partner.)
 ```
 
 <details><summary>Input schema</summary>
@@ -3182,7 +2065,7 @@ get it before calling, unless they asked for this call themselves; requires pass
 {
   "properties": {
     "action": {
-      "description": "read_workspace topic actions lists each action's body\nactivate_home_repair: Activate exactly the reviewed automatic Home work\napply_legacy_loss_reasons: Apply the reviewed legacy mappings to the lost deals they match\narchive_automation: Delete an automation instance\narchive_exit_criterion: Remove a criterion from its stage (soft delete; archive is the delete)\narchive_legal_entity: Archive a legal entity nobody works for any more\narchive_pipeline: Retire a pipeline (soft delete; archive is the delete)\narchive_saved_view: Archive a saved view\narchive_stage: Remove a stage from its pipeline (soft delete; archive is the delete)\narchive_web_form: Archive a website form; its address stops taking submissions\nconfirm_site_read: Confirm a selected onboarding draft into the anchor company atomically\ncontrol_data_task: Pause, resume, retry or estimate a background correction\ncreate_acquisition_source: Add an acquisition source\ncreate_automation: Configure an automation instance from a catalog type (created paused)\ncreate_custom_field: Define a new custom field on an existing core object (a schema change)\ncreate_disqualify_reason: Add a disqualification reason\ncreate_exit_criterion: Add an exit criterion to a stage\ncreate_lead_origin: Add a lead origin\ncreate_lead_source: Deprecated: Add a lead source\ncreate_legal_entity: Describe a further legal entity\ncreate_loss_reason: Add a loss reason\ncreate_partner_stage: Add a partner stage\ncreate_pipeline: Create a pipeline\ncreate_review_template: Add the question set an outcome's reviews ask from now on\ncreate_saved_view: Save a per-user view (columns, sort, filter state) for a resource\ncreate_stage: Create a stage in a pipeline\ndecide_legacy_loss_reason: Decide which loss reason one legacy note counts under\ndelete_disqualify_reason: Remove a disqualification reason no lead carries\ndelete_lead_origin: Remove a lead origin nothing uses\ndelete_lead_source: Deprecated: Remove a lead source nothing uses\ndisconnect_finance_source: Disconnect the accounting source (admin/ops)\ndisconnect_provider: Disconnect a provider and destroy its sealed credential\nhandle_website_inquiries: Handle explicitly selected accepted inquiries using the reviewed saved policy\nlink_finance_customer: Link a source customer to a company (admin/ops)\nmark_booking_page_shared: Record that the caller shared their booking link\npropose_fx_rate_refresh: Enqueue an async FX-rate refresh (stages 🟡 proposals)\nput_product_translation: Set the product's name and description in one language\nrecord_tax_rate: Record a standard or reduced tax rate for a country from a day on\nrefresh_ai_model_rates: Re-price the models this installation calls from the providers' own catalogues\nremove_legal_entity_logo: Take a legal entity's logo off\nremove_own_logo: Take the installation's own company logo off the record\nremove_own_logo_icon: Take the installation's own square logo icon off the record\nrename_custom_field: Rename a custom field or change whether create dialogs offer it (not a schema change)\nreorder_pipelines: Put the live pipelines in a new order\nreorder_stages: Put a pipeline's stages in a new order\nrestore_pipeline: Put a retired pipeline back in use\nretire_custom_field: Retire (soft-retire) a custom field\nretry_automation_run: Run one failed firing again, from the event that triggered it\nsave_booking_alias: Choose, change or clear the caller's friendly booking address\nsave_booking_page: Configure and activate the caller's booking page\nsave_my_linkedin: Record or correct your own LinkedIn profile\nsave_own_company: Save the installation's own company\nset_ai_model_rate: Set an AI model price effective today or later (append-forward)\nset_ai_price_sync: Turn the daily model price sync on or off (ai_model_rate update)\nset_fx_rate: Set an FX rate effective today or later, or in the past before any stored rate\nsync_finance_source: Queue a sync of the connected source now (admin/ops)\nunlink_finance_customer: Remove a customer's link (admin/ops)\nupdate_acquisition_source: Relabel, reorder or retire an acquisition source\nupdate_automation: Update params or flip status (enable / pause)\nupdate_custom_field_options: Edit a picklist custom field's allowed options (regenerates the column's CHECK)\nupdate_disqualify_reason: Rename, reorder or (de)activate a disqualification reason\nupdate_duplicate_settings: Let any owner of a duplicate merge the whole case, or not\nupdate_exit_criterion: Edit a criterion's label, kind, requiredness, hint or position\nupdate_follow_up_settings: Change the follow-up window or the private-mail request check (admin/ops)\nupdate_lead_origin: Rename, reorder, re-weight or retire a lead origin\nupdate_lead_settings: Change how this installation handles leads (admin/ops)\nupdate_lead_source: Deprecated: Rename, reorder, re-weight or (de)activate a lead source\nupdate_legal_entity: Change a legal entity's description\nupdate_legal_review_settings: Switch legal review on or off for this installation\nupdate_loss_reason: Relabel, reorder or retire a loss reason\nupdate_partner_stage: Rename, reorder, retire or re-mean a partner stage\nupdate_pipeline: Update a pipeline (rename / reorder / set default — bounded config)\nupdate_review_template: Edit the questions for future outcome reviews, or retire or restore a template\nupdate_saved_view: Update a saved view's name or query state\nupdate_stage: Update a stage (rename / reorder / probability)\nupdate_web_form: Change a website form, pause it or resume it\nupload_company_logo: Replace the installation's own company logo with an uploaded image\nupload_company_logo_icon: Replace the installation's own square logo icon with an uploaded image\nupload_legal_entity_logo: Replace a legal entity's logo with an uploaded image\nupsert_partner: Create/update the partner extension on a company (adds `partner` to its relationship types)",
+      "description": "read_workspace topic actions lists each action's body\nactivate_home_repair: Activate exactly the reviewed automatic Home work\napply_legacy_loss_reasons: Apply the reviewed legacy mappings to the lost deals they match\narchive_automation: Delete an automation instance\narchive_exit_criterion: Remove a criterion from its stage (soft delete; archive is the delete)\narchive_legal_entity: Archive a legal entity nobody works for any more\narchive_pipeline: Retire a pipeline (soft delete; archive is the delete)\narchive_saved_view: Archive a saved view\narchive_stage: Remove a stage from its pipeline (soft delete; archive is the delete)\narchive_web_form: Archive a website form; its address stops taking submissions\nconfirm_site_read: Confirm a selected onboarding draft into the anchor company atomically\ncontrol_data_task: Pause, resume, retry or estimate a background correction\ncreate_acquisition_source: Add an acquisition source\ncreate_automation: Configure an automation instance from a catalog type (created paused)\ncreate_custom_field: Define a new custom field on an existing core object (a schema change)\ncreate_disqualify_reason: Add a disqualification reason\ncreate_exit_criterion: Add an exit criterion to a stage\ncreate_lead_origin: Add a lead origin\ncreate_lead_source: Deprecated: Add a lead source\ncreate_legal_entity: Describe a further legal entity\ncreate_loss_reason: Add a loss reason\ncreate_partner_stage: Add a partner stage\ncreate_pipeline: Create a pipeline\ncreate_review_template: Add the question set an outcome's reviews ask from now on\ncreate_saved_view: Save a per-user view (columns, sort, filter state) for a resource\ncreate_stage: Create a stage in a pipeline\ncreate_web_form: Create a website form; a human sees its minted signing secret once\ndecide_legacy_loss_reason: Decide which loss reason one legacy note counts under\ndelete_disqualify_reason: Remove a disqualification reason no lead carries\ndelete_lead_origin: Remove a lead origin nothing uses\ndelete_lead_source: Deprecated: Remove a lead source nothing uses\ndisconnect_finance_source: Disconnect the accounting source (admin/ops)\ndisconnect_provider: Disconnect a provider and destroy its sealed credential\nhandle_website_inquiries: Handle explicitly selected accepted inquiries using the reviewed saved policy\nlink_finance_customer: Link a source customer to a company (admin/ops)\nmark_booking_page_shared: Record that the caller shared their booking link\npropose_fx_rate_refresh: Enqueue an async FX-rate refresh (stages 🟡 proposals)\nput_product_translation: Set the product's name and description in one language\nrecord_tax_rate: Record a standard or reduced tax rate for a country from a day on\nrefresh_ai_model_rates: Re-price the models this installation calls from the providers' own catalogues\nremove_legal_entity_logo: Take a legal entity's logo off\nremove_own_logo: Take the installation's own company logo off the record\nremove_own_logo_icon: Take the installation's own square logo icon off the record\nrename_custom_field: Rename a custom field or change whether create dialogs offer it (not a schema change)\nreorder_pipelines: Put the live pipelines in a new order\nreorder_stages: Put a pipeline's stages in a new order\nrestore_pipeline: Put a retired pipeline back in use\nretire_custom_field: Retire (soft-retire) a custom field\nretry_automation_run: Run one failed firing again, from the event that triggered it\nsave_booking_alias: Choose, change or clear the caller's friendly booking address\nsave_booking_page: Configure and activate the caller's booking page\nsave_my_linkedin: Record or correct your own LinkedIn profile\nsave_own_company: Save the installation's own company\nset_ai_model_rate: Set an AI model price effective today or later (append-forward)\nset_ai_price_sync: Turn the daily model price sync on or off (ai_model_rate update)\nset_fx_rate: Set an FX rate effective today or later, or in the past before any stored rate\nsync_finance_source: Queue a sync of the connected source now (admin/ops)\nunlink_finance_customer: Remove a customer's link (admin/ops)\nupdate_acquisition_source: Relabel, reorder or retire an acquisition source\nupdate_automation: Update params or flip status (enable / pause)\nupdate_custom_field_options: Edit a picklist custom field's allowed options (regenerates the column's CHECK)\nupdate_disqualify_reason: Rename, reorder or (de)activate a disqualification reason\nupdate_duplicate_settings: Let any owner of a duplicate merge the whole case, or not\nupdate_exit_criterion: Edit a criterion's label, kind, requiredness, hint or position\nupdate_follow_up_settings: Change the follow-up window or the private-mail request check (admin/ops)\nupdate_lead_origin: Rename, reorder, re-weight or retire a lead origin\nupdate_lead_settings: Change how this installation handles leads (admin/ops)\nupdate_lead_source: Deprecated: Rename, reorder, re-weight or (de)activate a lead source\nupdate_legal_entity: Change a legal entity's description\nupdate_legal_review_settings: Switch legal review on or off for this installation\nupdate_loss_reason: Relabel, reorder or retire a loss reason\nupdate_partner_stage: Rename, reorder, retire or re-mean a partner stage\nupdate_pipeline: Update a pipeline (rename / reorder / set default — bounded config)\nupdate_review_template: Edit the questions for future outcome reviews, or retire or restore a template\nupdate_saved_view: Update a saved view's name or query state\nupdate_stage: Update a stage (rename / reorder / probability)\nupdate_web_form: Change a website form, pause it or resume it\nupload_company_logo: Replace the installation's own company logo with an uploaded image\nupload_company_logo_icon: Replace the installation's own square logo icon with an uploaded image\nupload_legal_entity_logo: Replace a legal entity's logo with an uploaded image\nupsert_partner: Create/update the partner extension on a company (adds `partner` to its relationship types)",
       "enum": [
         "activate_home_repair",
         "apply_legacy_loss_reasons",
@@ -3209,6 +2092,7 @@ get it before calling, unless they asked for this call themselves; requires pass
         "create_review_template",
         "create_saved_view",
         "create_stage",
+        "create_web_form",
         "decide_legacy_loss_reason",
         "delete_disqualify_reason",
         "delete_lead_origin",
@@ -3274,14 +2158,6 @@ get it before calling, unless they asked for this call themselves; requires pass
       "description": "upload_company_logo, upload_company_logo_icon, upload_legal_entity_logo only: The file's media type, e.g. image/png",
       "type": "string"
     },
-    "criterion_id": {
-      "description": "archive_exit_criterion, update_exit_criterion only",
-      "type": "string"
-    },
-    "external_id": {
-      "description": "link_finance_customer, unlink_finance_customer only",
-      "type": "string"
-    },
     "filename": {
       "description": "upload_company_logo, upload_company_logo_icon, upload_legal_entity_logo only: The file's name, with its extension",
       "type": "string"
@@ -3291,7 +2167,6 @@ get it before calling, unless they asked for this call themselves; requires pass
       "type": "string"
     },
     "idempotency_key": {
-      "description": "A retry without it may repeat the write. Same key, same result; a key reused with other arguments is refused.",
       "maxLength": 255,
       "type": "string"
     },
@@ -3299,25 +2174,9 @@ get it before calling, unless they asked for this call themselves; requires pass
       "description": "archive_exit_criterion, archive_legal_entity, archive_pipeline, archive_stage, remove_legal_entity_logo, rename_custom_field, reorder_stages, update_acquisition_source, update_automation, update_exit_criterion, update_legal_entity, update_loss_reason, update_saved_view, update_stage, update_web_form, upload_legal_entity_logo, upsert_partner only: The version the caller read; the write is refused as skew if the record moved since",
       "type": "integer"
     },
-    "language": {
-      "description": "put_product_translation only",
-      "type": "string"
-    },
-    "provider": {
-      "description": "disconnect_provider only",
-      "type": "string"
-    },
-    "readId": {
-      "description": "confirm_site_read only",
-      "type": "string"
-    },
     "request_body": {
-      "description": "activate_home_repair, apply_legacy_loss_reasons, confirm_site_read, control_data_task, create_acquisition_source, create_automation, create_custom_field, create_disqualify_reason, create_exit_criterion, create_lead_origin, create_lead_source, create_legal_entity, create_loss_reason, create_partner_stage, create_pipeline, create_review_template, create_saved_view, create_stage, decide_legacy_loss_reason, handle_website_inquiries, link_finance_customer, put_product_translation, record_tax_rate, rename_custom_field, reorder_pipelines, reorder_stages, save_booking_alias, save_booking_page, save_my_linkedin, save_own_company, set_ai_model_rate, set_ai_price_sync, set_fx_rate, update_acquisition_source, update_automation, update_custom_field_options, update_disqualify_reason, update_duplicate_settings, update_exit_criterion, update_follow_up_settings, update_lead_origin, update_lead_settings, update_lead_source, update_legal_entity, update_legal_review_settings, update_loss_reason, update_partner_stage, update_pipeline, update_review_template, update_saved_view, update_stage, update_web_form, upsert_partner only: The chosen action's request body; read_workspace topic actions lists its shape",
+      "description": "activate_home_repair, apply_legacy_loss_reasons, confirm_site_read, control_data_task, create_acquisition_source, create_automation, create_custom_field, create_disqualify_reason, create_exit_criterion, create_lead_origin, create_lead_source, create_legal_entity, create_loss_reason, create_partner_stage, create_pipeline, create_review_template, create_saved_view, create_stage, create_web_form, decide_legacy_loss_reason, handle_website_inquiries, link_finance_customer, put_product_translation, record_tax_rate, rename_custom_field, reorder_pipelines, reorder_stages, save_booking_alias, save_booking_page, save_my_linkedin, save_own_company, set_ai_model_rate, set_ai_price_sync, set_fx_rate, update_acquisition_source, update_automation, update_custom_field_options, update_disqualify_reason, update_duplicate_settings, update_exit_criterion, update_follow_up_settings, update_lead_origin, update_lead_settings, update_lead_source, update_legal_entity, update_legal_review_settings, update_loss_reason, update_partner_stage, update_pipeline, update_review_template, update_saved_view, update_stage, update_web_form, upsert_partner only: The chosen action's request body; read_workspace topic actions lists its shape",
       "type": "object"
-    },
-    "text_hash": {
-      "description": "decide_legacy_loss_reason only",
-      "type": "string"
     }
   },
   "required": [
@@ -3351,9 +2210,8 @@ correct_close_day, correct_project_health, decide_commission, decide_legal_revie
 disqualify, link_lead_company, move_deal_pipeline, move_project, promote, publish_contact, qualify,
 record_project_health, reopen_lead, request_legal_review, review_outcome, set_lead_signal,
 transfer_projects, withdraw_legal_review; a human approves first for merge_member_accounts,
-set_up_partner; decided per call from its arguments for move_deal; the user's yes is needed for the
-actions decide_commission, disqualify, transfer_projects, so tell them what the call will change and
-get it before calling, unless they asked for this call themselves; requires passport scope "write".)
+set_up_partner; decided per call from its arguments for move_deal; ask the user first for the
+actions decide_commission, disqualify, transfer_projects.)
 ```
 
 <details><summary>Input schema</summary>
@@ -3362,7 +2220,7 @@ get it before calling, unless they asked for this call themselves; requires pass
 {
   "properties": {
     "action": {
-      "description": "accept_partner_lead: Accept a lead for the partner that referred it\nclear_lead_signal: Withdraw a manual scoring factor\ncorrect_close_day: Correct the day a won or lost deal closed\ncorrect_project_health: Correct one reading, keeping when it was said\ndecide_commission: Approve, pay, or void one entry\ndecide_legal_review: Record legal's answer on a request\ndemote: Reverse a promotion that should not have happened, putting the lead back on the open ladder\ndisqualify: Close out a lead that is not going anywhere, so it stops appearing as live work\nlink_lead_company: Link a lead to a company\nmerge_member_accounts: Transfer an unused imported or invited duplicate member's work to the selected account and remove the duplicate\nmove_deal: Move a deal to a different stage of its pipeline, optionally leaving a note on its timeline saying why, in one call\nmove_deal_pipeline: Move an open deal to another pipeline, onto its first open stage\nmove_project: Move a project to another phase — initiative, pursuing, delivering, closed\npromote: Turn a lead who has genuinely engaged into a contact record, carrying their history across\npublish_contact: Share a contact your mailbox created with the rest of the company\nqualify: Fill in what a lead's own data already implies — today the company name, from the domain of its email address — and report which qualification fields are still empty\nrecord_project_health: Record how this project is going\nreopen_lead: Put a disqualified lead back on the open ladder\nrequest_legal_review: Ask legal to review this deal\nreview_outcome: Write a review of how this deal's current closing went\nset_lead_signal: Enter or replace a manual scoring factor\nset_up_partner: Set up a partner program on a company that has none, with its kinds, a relationship stage and a next step\ntransfer_projects: Move every live project one user owns to another user, in one transaction\nwithdraw_legal_review: Take back an open request",
+      "description": "accept_partner_lead: Accept a lead for the partner that referred it\nclear_lead_signal: Withdraw a manual scoring factor\ncorrect_close_day: Correct the day a won or lost deal closed\ncorrect_project_health: Correct one reading, keeping when it was said\ndecide_commission: Approve, pay, or void one entry\ndecide_legal_review: Record legal's answer on a request\ndemote: Reverse a promotion that should not have happened, putting the lead back on the open ladder\ndisqualify: Close out a lead that is not going anywhere, so it stops appearing as live work\nlink_lead_company: Link a lead to a company\nmerge_member_accounts: Transfer an unused imported or invited duplicate member's work to the selected member and remove the duplicate\nmove_deal: Move a deal to a different stage of its pipeline, optionally leaving a note on its timeline saying why, in one call\nmove_deal_pipeline: Move an open deal to another pipeline, onto its first open stage\nmove_project: Move a project to another phase — initiative, pursuing, delivering, closed\npromote: Turn a lead who has genuinely engaged into a contact record, carrying their history across\npublish_contact: Share a contact your mailbox created with the rest of the company\nqualify: Fill in what a lead's own data already implies — today the company name, from the domain of its email address — and report which qualification fields are still empty\nrecord_project_health: Record how this project is going\nreopen_lead: Put a disqualified lead back on the open ladder\nrequest_legal_review: Ask legal to review this deal\nreview_outcome: Write a review of how this deal's current closing went\nset_lead_signal: Enter or replace a manual scoring factor\nset_up_partner: Set up a partner program on a company that has none, with its kinds, a relationship stage and a next step\ntransfer_projects: Move every live project one user owns to another user, in one transaction\nwithdraw_legal_review: Take back an open request",
       "enum": [
         "accept_partner_lead",
         "clear_lead_signal",
@@ -3393,15 +2251,6 @@ get it before calling, unless they asked for this call themselves; requires pass
     },
     "approval_id": {
       "description": "demote, disqualify, merge_member_accounts, move_deal, move_project, promote, set_up_partner only: Set on approved retry",
-      "format": "uuid",
-      "type": "string"
-    },
-    "assessment_id": {
-      "description": "correct_project_health only",
-      "type": "string"
-    },
-    "company_id": {
-      "description": "set_up_partner: the company",
       "format": "uuid",
       "type": "string"
     },
@@ -3449,16 +2298,11 @@ get it before calling, unless they asked for this call themselves; requires pass
       "format": "uuid",
       "type": "string"
     },
-    "factor": {
-      "description": "clear_lead_signal only",
-      "type": "string"
-    },
     "id": {
       "description": "accept_partner_lead, clear_lead_signal, correct_close_day, correct_project_health, decide_commission, decide_legal_review, link_lead_company, move_deal_pipeline, publish_contact, record_project_health, reopen_lead, request_legal_review, review_outcome, set_lead_signal, withdraw_legal_review only",
       "type": "string"
     },
     "idempotency_key": {
-      "description": "A retry without it may repeat the write. Same key, same result; a key reused with other arguments is refused.",
       "maxLength": 255,
       "type": "string"
     },
@@ -3479,45 +2323,8 @@ get it before calling, unless they asked for this call themselves; requires pass
       "description": "move_deal only: An active loss reason key, expected when the target stage closes the deal as lost. A loss with only a note is recorded as unmapped",
       "type": "string"
     },
-    "next_step": {
-      "description": "set_up_partner only: The one next thing to do with the partner. Written as a task on the company, held by the human you act for",
-      "type": "string"
-    },
-    "next_step_due_at": {
-      "description": "set_up_partner only: The day the next step is due. Needs next_step",
-      "format": "date",
-      "type": "string"
-    },
     "note": {
       "description": "disqualify, move_deal only: Optional: why, in words",
-      "type": "string"
-    },
-    "partner_kinds": {
-      "description": "set_up_partner, required: one or more of hosting, consulting, strategic or referral",
-      "items": {
-        "enum": [
-          "hosting",
-          "consulting",
-          "strategic",
-          "referral"
-        ],
-        "type": "string"
-      },
-      "minItems": 1,
-      "type": "array"
-    },
-    "partner_role": {
-      "description": "set_up_partner, deprecated: send partner_kinds",
-      "enum": [
-        "hosting",
-        "consulting",
-        "strategic"
-      ],
-      "type": "string"
-    },
-    "preview_token": {
-      "description": "merge_member_accounts only",
-      "minLength": 1,
       "type": "string"
     },
     "project_id": {
@@ -3535,10 +2342,6 @@ get it before calling, unless they asked for this call themselves; requires pass
       "format": "uuid",
       "type": "string"
     },
-    "relationship_stage": {
-      "description": "set_up_partner only: An active key from the partner stage list (read_view listPartnerStages). Without one the program starts on the first candidate stage",
-      "type": "string"
-    },
     "request_body": {
       "description": "correct_close_day, correct_project_health, decide_commission, decide_legal_review, link_lead_company, move_deal_pipeline, record_project_health, request_legal_review, review_outcome, set_lead_signal, transfer_projects only: The chosen action's request body; read_workspace topic actions lists its shape",
       "type": "object"
@@ -3549,11 +2352,6 @@ get it before calling, unless they asked for this call themselves; requires pass
         "complete",
         "keep"
       ],
-      "type": "string"
-    },
-    "source_id": {
-      "description": "merge_member_accounts only",
-      "format": "uuid",
       "type": "string"
     },
     "to_phase": {
@@ -3568,11 +2366,6 @@ get it before calling, unless they asked for this call themselves; requires pass
     },
     "to_stage_id": {
       "description": "move_deal only: The target stage, by id — obtain it from the workspace's pipeline list, since a deal you have read carries only the stage it is already IN. That stage's semantic decides what happens next: open executes immediately, won or lost is staged for a human's approval.",
-      "format": "uuid",
-      "type": "string"
-    },
-    "to_user_id": {
-      "description": "merge_member_accounts only",
       "format": "uuid",
       "type": "string"
     },
@@ -3625,9 +2418,8 @@ restore brings back. create and update need tag grants an ordinary seat lacks. u
 the fields it is sent, and sends no version, so read the tag right before editing; it changes what a
 word is called, never what carries it. Removing a tag that is not there succeeds. archive retires a
 word for every record; the records keep it. (Governance: runs immediately for apply, archive,
-create, remove, restore, update; a human approves first for merge; the user's yes is needed for the
-action archive, so tell them what the call will change and get it before calling, unless they asked
-for this call themselves; requires passport scope "write".)
+create, remove, restore, update; a human approves first for merge; ask the user first for the action
+archive.)
 ```
 
 <details><summary>Input schema</summary>
@@ -3672,12 +2464,7 @@ for this call themselves; requires passport scope "write".)
       "description": "create, update only",
       "type": "string"
     },
-    "id": {
-      "description": "restore only",
-      "type": "string"
-    },
     "idempotency_key": {
-      "description": "A retry without it may repeat the write. Same key, same result; a key reused with other arguments is refused.",
       "maxLength": 255,
       "type": "string"
     },
@@ -3787,133 +2574,6 @@ time.
 
 </details>
 
-<details><summary>Output schema</summary>
-
-```json
-{
-  "properties": {
-    "data": {
-      "properties": {
-        "calendar_backing": {
-          "type": "string"
-        },
-        "slots": {
-          "items": {
-            "properties": {
-              "end": {
-                "format": "date-time",
-                "type": "string"
-              },
-              "start": {
-                "format": "date-time",
-                "type": "string"
-              }
-            },
-            "required": [
-              "end",
-              "start"
-            ],
-            "type": "object"
-          },
-          "type": "array"
-        },
-        "truncated": {
-          "type": "boolean"
-        }
-      },
-      "required": [
-        "calendar_backing",
-        "slots",
-        "truncated"
-      ],
-      "type": "object"
-    },
-    "evidence": {
-      "items": {
-        "properties": {
-          "captured_by": {
-            "type": "string"
-          },
-          "record_id": {
-            "format": "uuid",
-            "type": "string"
-          },
-          "record_type": {
-            "type": "string"
-          },
-          "source": {
-            "type": "string"
-          },
-          "web_url": {
-            "type": "string"
-          }
-        },
-        "required": [
-          "record_id",
-          "record_type"
-        ],
-        "type": "object"
-      },
-      "type": "array"
-    },
-    "freshness": {
-      "properties": {
-        "authoritative": {
-          "type": "boolean"
-        },
-        "last_synced_at": {
-          "format": "date-time",
-          "type": "string"
-        }
-      },
-      "required": [
-        "authoritative"
-      ],
-      "type": "object"
-    },
-    "schema_version": {
-      "type": "string"
-    },
-    "trace_id": {
-      "type": "string"
-    },
-    "trust": {
-      "type": "string"
-    },
-    "warnings": {
-      "items": {
-        "properties": {
-          "code": {
-            "type": "string"
-          },
-          "message": {
-            "type": "string"
-          }
-        },
-        "required": [
-          "code",
-          "message"
-        ],
-        "type": "object"
-      },
-      "type": "array"
-    }
-  },
-  "required": [
-    "data",
-    "evidence",
-    "freshness",
-    "schema_version",
-    "trace_id",
-    "trust",
-    "warnings"
-  ],
-  "type": "object"
-}
-```
-
-</details>
-
 ### commit_import
 
 **Commit an import**
@@ -3927,9 +2587,7 @@ to get a file in is not a review of it: unless the asker says they have already 
 rows, show the counts and the mapping and wait for their go-ahead. Use read_import for the report
 first: numbers nobody read are not a check. The write goes on after this answers. Read read_import's
 report until its state is complete or failed, then report what landed: the counts and the mapping
-the run used, each column by the field it went to. (Runs immediately; the user's yes is needed for
-it, so tell them what the call will change and get it before calling, unless they asked for this
-call themselves; requires passport scope "write".)
+the run used, each column by the field it went to. (Ask the user first.)
 ```
 
 <details><summary>Input schema</summary>
@@ -3944,7 +2602,6 @@ call themselves; requires passport scope "write".)
       "type": "string"
     },
     "idempotency_key": {
-      "description": "A retry without it may repeat the write. Same key, same result; a key reused with other arguments is refused.",
       "maxLength": 255,
       "type": "string"
     },
@@ -3955,123 +2612,6 @@ call themselves; requires passport scope "write".)
   },
   "required": [
     "run_id"
-  ],
-  "type": "object"
-}
-```
-
-</details>
-
-<details><summary>Output schema</summary>
-
-```json
-{
-  "properties": {
-    "data": {
-      "properties": {
-        "checkpoint": {
-          "type": "integer"
-        },
-        "error": {
-          "type": "string"
-        },
-        "object": {
-          "type": "string"
-        },
-        "run_id": {
-          "type": "string"
-        },
-        "state": {
-          "type": "string"
-        }
-      },
-      "required": [
-        "checkpoint",
-        "object",
-        "run_id",
-        "state"
-      ],
-      "type": "object"
-    },
-    "evidence": {
-      "items": {
-        "properties": {
-          "captured_by": {
-            "type": "string"
-          },
-          "record_id": {
-            "format": "uuid",
-            "type": "string"
-          },
-          "record_type": {
-            "type": "string"
-          },
-          "source": {
-            "type": "string"
-          },
-          "web_url": {
-            "type": "string"
-          }
-        },
-        "required": [
-          "record_id",
-          "record_type"
-        ],
-        "type": "object"
-      },
-      "type": "array"
-    },
-    "freshness": {
-      "properties": {
-        "authoritative": {
-          "type": "boolean"
-        },
-        "last_synced_at": {
-          "format": "date-time",
-          "type": "string"
-        }
-      },
-      "required": [
-        "authoritative"
-      ],
-      "type": "object"
-    },
-    "schema_version": {
-      "type": "string"
-    },
-    "trace_id": {
-      "type": "string"
-    },
-    "trust": {
-      "type": "string"
-    },
-    "warnings": {
-      "items": {
-        "properties": {
-          "code": {
-            "type": "string"
-          },
-          "message": {
-            "type": "string"
-          }
-        },
-        "required": [
-          "code",
-          "message"
-        ],
-        "type": "object"
-      },
-      "type": "array"
-    }
-  },
-  "required": [
-    "data",
-    "evidence",
-    "freshness",
-    "schema_version",
-    "trace_id",
-    "trust",
-    "warnings"
   ],
   "type": "object"
 }
@@ -4106,7 +2646,7 @@ filed, unresolved until the reviewer decides. When the user says where they met 
 that word as offer_tag, also when they want to decide on the tag themselves: it puts no tag on the
 record and stores nothing, the answer says whether that tag already exists, and change_tags still
 needs their yes. The new record's id comes back in the result; keep it for anything that links to
-it. (Runs immediately; requires passport scope "write".)
+it.
 ```
 
 Renders its result in [`ui://margince/create-followups.html`](#create_followups_view), visible to `model`.
@@ -4127,7 +2667,6 @@ Renders its result in [`ui://margince/create-followups.html`](#create_followups_
       "type": "object"
     },
     "idempotency_key": {
-      "description": "A retry without it may repeat the write. Same key, same result; a key reused with other arguments is refused.",
       "maxLength": 255,
       "type": "string"
     },
@@ -4449,10 +2988,8 @@ merge, no schema change, no send; the rest is theirs to release in the CRM. An i
 answered, or lapsed, is reported as such and nothing is written; each bundle member is answered and
 reported on its own, and a bundle holding none of theirs reads as not found. read_approval when they
 have not seen what it holds; list_approvals is where both ids come from. If the proposal is your OWN
-refused call, approving does not perform it — re-issue that same call with approval_id set. (Runs
-immediately; the user's yes is needed for the actions bundle, one, so tell them what the call will
-change and get it before calling, unless they asked for this call themselves; requires passport
-scope "write".)
+refused call, approving does not perform it — re-issue that same call with approval_id set. (Ask
+the user first for the actions bundle, one.)
 ```
 
 <details><summary>Input schema</summary>
@@ -4473,7 +3010,6 @@ scope "write".)
       "type": "string"
     },
     "idempotency_key": {
-      "description": "A retry without it may repeat the write. Same key, same result; a key reused with other arguments is refused.",
       "maxLength": 255,
       "type": "string"
     },
@@ -4510,7 +3046,7 @@ because they keep an unsent draft of their own, is not saved, so show it in full
 covers the deals read_attention with view=slipping reports, at most 25. send_outbound sends an email
 once it is written. Keep the subject, body, to, the activity_id or links, and the
 communication_context a message echoes; the send takes them unchanged. Each follow-up comes back
-with its deal_id and draft_activity_id. (Runs immediately; requires passport scope "draft".)
+with its deal_id and draft_activity_id. (Requires passport scope "draft".)
 ```
 
 <details><summary>Input schema</summary>
@@ -4532,7 +3068,6 @@ with its deal_id and draft_activity_id. (Runs immediately; requires passport sco
       "type": "string"
     },
     "idempotency_key": {
-      "description": "A retry without it may repeat the write. Same key, same result; a key reused with other arguments is refused.",
       "maxLength": 255,
       "type": "string"
     },
@@ -4626,6 +3161,11 @@ it runs; requires passport scope "enrich".)
       "format": "uuid",
       "type": "string"
     },
+    "confirm_code": {
+      "description": "Only after the user said yes to this call's preview: the confirm_code that preview answered. Never invent one; call without it to get a preview.",
+      "maxLength": 1024,
+      "type": "string"
+    },
     "depth": {
       "default": "page",
       "description": "page reads one page and returns a staged proposal; site queues a multi-page crawl and returns its read id; technical queues a lookup of what the company publicly runs (DNS, certificate logs, one homepage fingerprint) and returns its queue state",
@@ -4637,7 +3177,6 @@ it runs; requires passport scope "enrich".)
       "type": "string"
     },
     "idempotency_key": {
-      "description": "A retry without it may repeat the write. Same key, same result; a key reused with other arguments is refused.",
       "maxLength": 255,
       "type": "string"
     },
@@ -4649,100 +3188,6 @@ it runs; requires passport scope "enrich".)
   },
   "required": [
     "company_id"
-  ],
-  "type": "object"
-}
-```
-
-</details>
-
-<details><summary>Output schema</summary>
-
-```json
-{
-  "properties": {
-    "data": {
-      "type": "object"
-    },
-    "evidence": {
-      "items": {
-        "properties": {
-          "captured_by": {
-            "type": "string"
-          },
-          "record_id": {
-            "format": "uuid",
-            "type": "string"
-          },
-          "record_type": {
-            "type": "string"
-          },
-          "source": {
-            "type": "string"
-          },
-          "web_url": {
-            "type": "string"
-          }
-        },
-        "required": [
-          "record_id",
-          "record_type"
-        ],
-        "type": "object"
-      },
-      "type": "array"
-    },
-    "freshness": {
-      "properties": {
-        "authoritative": {
-          "type": "boolean"
-        },
-        "last_synced_at": {
-          "format": "date-time",
-          "type": "string"
-        }
-      },
-      "required": [
-        "authoritative"
-      ],
-      "type": "object"
-    },
-    "schema_version": {
-      "type": "string"
-    },
-    "trace_id": {
-      "type": "string"
-    },
-    "trust": {
-      "type": "string"
-    },
-    "warnings": {
-      "items": {
-        "properties": {
-          "code": {
-            "type": "string"
-          },
-          "message": {
-            "type": "string"
-          }
-        },
-        "required": [
-          "code",
-          "message"
-        ],
-        "type": "object"
-      },
-      "type": "array"
-    }
-  },
-  "required": [
-    "data",
-    "evidence",
-    "freshness",
-    "schema_version",
-    "trace_id",
-    "trust",
-    "warnings"
   ],
   "type": "object"
 }
@@ -5125,7 +3570,7 @@ next_cursor to read on.
       "type": "integer"
     },
     "per_type": {
-      "description": "search only: Answer up to this many of each type instead of one ranked list, at most 25 records in all. Takes no cursor or limit; types_with_more names the types holding more.",
+      "description": "search only: Answer up to this many of each type instead of one ranked list, at most 25 records in all. Takes no cursor or limit; types_with_more names the types holding more, and types_timed_out the types that could not be searched in time.",
       "maximum": 20,
       "minimum": 1,
       "type": "integer"
@@ -5998,7 +4443,7 @@ such as a contact's `company_ref` names a company's ref. read_import with view f
 file's columns. create_record for one record you already know, and change_capture to import a vCard
 file. Keep the run_id. The counts its report answers — created, duplicates, skipped — and the
 mapping it settled on are what the user weighs, so report both: a column this placed by a name they
-did not write is a decision they did not make. (Runs immediately; requires passport scope "write".)
+did not write is a decision they did not make.
 ```
 
 <details><summary>Input schema</summary>
@@ -6053,7 +4498,6 @@ did not write is a decision they did not make. (Runs immediately; requires passp
       "type": "array"
     },
     "idempotency_key": {
-      "description": "A retry without it may repeat the write. Same key, same result; a key reused with other arguments is refused.",
       "maxLength": 255,
       "type": "string"
     },
@@ -6095,495 +4539,6 @@ did not write is a decision they did not make. (Runs immediately; requires passp
       "type": "string"
     }
   },
-  "type": "object"
-}
-```
-
-</details>
-
-<details><summary>Output schema</summary>
-
-```json
-{
-  "properties": {
-    "data": {
-      "properties": {
-        "columns": {
-          "items": {
-            "type": "string"
-          },
-          "type": "array"
-        },
-        "files": {
-          "items": {
-            "properties": {
-              "columns": {
-                "items": {
-                  "type": "string"
-                },
-                "type": "array"
-              },
-              "mapping": {
-                "additionalProperties": {
-                  "type": "string"
-                },
-                "type": "object"
-              },
-              "name": {
-                "type": "string"
-              },
-              "object": {
-                "type": "string"
-              },
-              "part": {
-                "type": "string"
-              },
-              "unmapped": {
-                "items": {
-                  "type": "string"
-                },
-                "type": "array"
-              }
-            },
-            "required": [
-              "columns",
-              "mapping",
-              "name",
-              "object",
-              "part"
-            ],
-            "type": "object"
-          },
-          "type": "array"
-        },
-        "mapping": {
-          "additionalProperties": {
-            "type": "string"
-          },
-          "type": "object"
-        },
-        "next": {
-          "type": "string"
-        },
-        "report": {
-          "properties": {
-            "disposition": {
-              "properties": {
-                "created": {
-                  "minimum": 0,
-                  "type": "integer"
-                },
-                "duplicates": {
-                  "minimum": 0,
-                  "type": "integer"
-                },
-                "skipped": {
-                  "minimum": 0,
-                  "type": "integer"
-                },
-                "unchanged": {
-                  "minimum": 0,
-                  "type": "integer"
-                },
-                "updated": {
-                  "minimum": 0,
-                  "type": "integer"
-                }
-              },
-              "required": [
-                "created",
-                "skipped",
-                "unchanged",
-                "updated"
-              ],
-              "type": "object"
-            },
-            "estimated_duration_seconds": {
-              "type": "integer"
-            },
-            "issues": {
-              "items": {
-                "properties": {
-                  "column": {
-                    "type": "string"
-                  },
-                  "file": {
-                    "type": "string"
-                  },
-                  "kind": {
-                    "type": "string"
-                  },
-                  "line": {
-                    "minimum": 1,
-                    "type": "integer"
-                  },
-                  "params": {
-                    "additionalProperties": {
-                      "type": "string"
-                    },
-                    "type": "object"
-                  },
-                  "reason": {
-                    "type": "string"
-                  },
-                  "reason_code": {
-                    "type": "string"
-                  },
-                  "value": {
-                    "type": "string"
-                  }
-                },
-                "required": [
-                  "reason"
-                ],
-                "type": "object"
-              },
-              "type": "array"
-            },
-            "links": {
-              "properties": {
-                "applied": {
-                  "minimum": 0,
-                  "type": "integer"
-                },
-                "offered": {
-                  "minimum": 0,
-                  "type": "integer"
-                },
-                "unresolved": {
-                  "items": {
-                    "properties": {
-                      "from": {
-                        "type": "string"
-                      },
-                      "params": {
-                        "additionalProperties": {
-                          "type": "string"
-                        },
-                        "type": "object"
-                      },
-                      "reason": {
-                        "type": "string"
-                      },
-                      "reason_code": {
-                        "type": "string"
-                      },
-                      "to": {
-                        "type": "string"
-                      }
-                    },
-                    "required": [
-                      "from",
-                      "reason",
-                      "to"
-                    ],
-                    "type": "object"
-                  },
-                  "type": "array"
-                }
-              },
-              "required": [
-                "applied",
-                "offered"
-              ],
-              "type": "object"
-            },
-            "mapping": {
-              "additionalProperties": {
-                "type": "string"
-              },
-              "type": "object"
-            },
-            "parts": {
-              "items": {
-                "properties": {
-                  "closed_lost": {
-                    "minimum": 1,
-                    "type": "integer"
-                  },
-                  "closed_won": {
-                    "minimum": 1,
-                    "type": "integer"
-                  },
-                  "disposition": {
-                    "properties": {
-                      "created": {
-                        "minimum": 0,
-                        "type": "integer"
-                      },
-                      "duplicates": {
-                        "minimum": 0,
-                        "type": "integer"
-                      },
-                      "skipped": {
-                        "minimum": 0,
-                        "type": "integer"
-                      },
-                      "unchanged": {
-                        "minimum": 0,
-                        "type": "integer"
-                      },
-                      "updated": {
-                        "minimum": 0,
-                        "type": "integer"
-                      }
-                    },
-                    "required": [
-                      "created",
-                      "skipped",
-                      "unchanged",
-                      "updated"
-                    ],
-                    "type": "object"
-                  },
-                  "file": {
-                    "type": "string"
-                  },
-                  "object": {
-                    "type": "string"
-                  },
-                  "rows_read": {
-                    "minimum": 0,
-                    "type": "integer"
-                  }
-                },
-                "required": [
-                  "disposition",
-                  "file",
-                  "object",
-                  "rows_read"
-                ],
-                "type": "object"
-              },
-              "type": "array"
-            },
-            "rows_read": {
-              "minimum": 0,
-              "type": "integer"
-            },
-            "run_id": {
-              "format": "uuid",
-              "type": "string"
-            },
-            "source_key_used": {
-              "type": "string"
-            },
-            "status": {
-              "type": "string"
-            },
-            "undo": {
-              "properties": {
-                "errored": {
-                  "items": {
-                    "properties": {
-                      "id": {
-                        "format": "uuid",
-                        "type": "string"
-                      },
-                      "object": {
-                        "type": "string"
-                      },
-                      "reason": {
-                        "type": "string"
-                      },
-                      "reason_code": {
-                        "type": "string"
-                      }
-                    },
-                    "required": [
-                      "id",
-                      "object",
-                      "reason"
-                    ],
-                    "type": "object"
-                  },
-                  "type": "array"
-                },
-                "kept": {
-                  "items": {
-                    "properties": {
-                      "id": {
-                        "format": "uuid",
-                        "type": "string"
-                      },
-                      "object": {
-                        "type": "string"
-                      },
-                      "params": {
-                        "additionalProperties": {
-                          "type": "string"
-                        },
-                        "type": "object"
-                      },
-                      "reason": {
-                        "type": "string"
-                      },
-                      "reason_code": {
-                        "type": "string"
-                      }
-                    },
-                    "required": [
-                      "id",
-                      "object"
-                    ],
-                    "type": "object"
-                  },
-                  "type": "array"
-                },
-                "reversed_count": {
-                  "minimum": 0,
-                  "type": "integer"
-                },
-                "run_id": {
-                  "format": "uuid",
-                  "type": "string"
-                },
-                "status": {
-                  "type": "string"
-                },
-                "updates_not_reversed": {
-                  "minimum": 0,
-                  "type": "integer"
-                }
-              },
-              "required": [
-                "errored",
-                "kept",
-                "reversed_count",
-                "run_id",
-                "status"
-              ],
-              "type": "object"
-            }
-          },
-          "required": [
-            "disposition",
-            "issues",
-            "rows_read",
-            "run_id",
-            "source_key_used",
-            "status"
-          ],
-          "type": "object"
-        },
-        "run": {
-          "properties": {
-            "checkpoint": {
-              "type": "integer"
-            },
-            "error": {
-              "type": "string"
-            },
-            "object": {
-              "type": "string"
-            },
-            "run_id": {
-              "type": "string"
-            },
-            "state": {
-              "type": "string"
-            }
-          },
-          "required": [
-            "checkpoint",
-            "object",
-            "run_id",
-            "state"
-          ],
-          "type": "object"
-        },
-        "unmapped": {
-          "items": {
-            "type": "string"
-          },
-          "type": "array"
-        }
-      },
-      "required": [
-        "run"
-      ],
-      "type": "object"
-    },
-    "evidence": {
-      "items": {
-        "properties": {
-          "captured_by": {
-            "type": "string"
-          },
-          "record_id": {
-            "format": "uuid",
-            "type": "string"
-          },
-          "record_type": {
-            "type": "string"
-          },
-          "source": {
-            "type": "string"
-          },
-          "web_url": {
-            "type": "string"
-          }
-        },
-        "required": [
-          "record_id",
-          "record_type"
-        ],
-        "type": "object"
-      },
-      "type": "array"
-    },
-    "freshness": {
-      "properties": {
-        "authoritative": {
-          "type": "boolean"
-        },
-        "last_synced_at": {
-          "format": "date-time",
-          "type": "string"
-        }
-      },
-      "required": [
-        "authoritative"
-      ],
-      "type": "object"
-    },
-    "schema_version": {
-      "type": "string"
-    },
-    "trace_id": {
-      "type": "string"
-    },
-    "trust": {
-      "type": "string"
-    },
-    "warnings": {
-      "items": {
-        "properties": {
-          "code": {
-            "type": "string"
-          },
-          "message": {
-            "type": "string"
-          }
-        },
-        "required": [
-          "code",
-          "message"
-        ],
-        "type": "object"
-      },
-      "type": "array"
-    }
-  },
-  "required": [
-    "data",
-    "evidence",
-    "freshness",
-    "schema_version",
-    "trace_id",
-    "trust",
-    "warnings"
-  ],
   "type": "object"
 }
 ```
@@ -6674,6 +4629,12 @@ read_reports for the standard metrics and named reports. Keep a saved query's id
                           "type": "object"
                         },
                         "close_window": {
+                          "description": "Which open deals the open-pipeline figures count, by expected close. `fiscal_quarter` is the current fiscal quarter, `all_open` is every open deal, and `custom` is `close_interval`, which it requires.",
+                          "enum": [
+                            "fiscal_quarter",
+                            "all_open",
+                            "custom"
+                          ],
                           "type": "string"
                         },
                         "country": {
@@ -6712,6 +4673,17 @@ read_reports for the standard metrics and named reports. Keep a saved query's id
                           "type": "array"
                         },
                         "period": {
+                          "description": "`this_week` runs from Monday 00:00 in the installation zone to the evaluation time. Read at that exact moment, the week holds no time yet and the context's interval starts where it ends.",
+                          "enum": [
+                            "this_week",
+                            "this_month",
+                            "last_month",
+                            "last_week",
+                            "this_quarter",
+                            "last_quarter",
+                            "last_year",
+                            "custom"
+                          ],
                           "type": "string"
                         },
                         "pipeline_id": {
@@ -6729,6 +4701,12 @@ read_reports for the standard metrics and named reports. Keep a saved query's id
                               "type": "string"
                             },
                             "kind": {
+                              "description": "Whose figures the report counts: one `owner`, one `team`, or the whole `workspace`, with `id` naming the owner or team. `managed_teams` is only ever answered, when a request names no scope.",
+                              "enum": [
+                                "owner",
+                                "team",
+                                "workspace"
+                              ],
                               "type": "string"
                             },
                             "label": {
@@ -6741,9 +4719,20 @@ read_reports for the standard metrics and named reports. Keep a saved query's id
                           "type": "object"
                         },
                         "target_basis": {
+                          "description": "Which target period the figures are measured against, a calendar `month` or a `fiscal_quarter`.",
+                          "enum": [
+                            "month",
+                            "fiscal_quarter"
+                          ],
                           "type": "string"
                         },
                         "value_basis": {
+                          "description": "Which part of a won deal's value the won-value figures count. `all` is the whole deal and the default, `software` and `implementation` count only that component of it. Open figures take only `all`.",
+                          "enum": [
+                            "all",
+                            "software",
+                            "implementation"
+                          ],
                           "type": "string"
                         }
                       },
@@ -9081,8 +7070,9 @@ sample, an AI setting or a repair would do, and what a mail backfill would bring
 translations, the jurisdiction's documents and a site read's logo. Each action reads one panel as
 the app draws it, for the records the user may open. Without the enrich scope, a brief, dossier or
 growth fit not written yet answers its plain form from the records, marked deterministic;
-run_research writes one. Use read_context for the story so far on a record, read_attention for what
-needs the user now, and read_record for a record's own fields.
+run_research writes one. A message the engine refused and held is sent anyway only by the user, in
+the app: show them the review and its warning. Use read_context for the story so far on a record,
+read_attention for what needs the user now, and read_record for a record's own fields.
 ```
 
 <details><summary>Input schema</summary>
@@ -9227,20 +7217,12 @@ needs the user now, and read_record for a record's own fields.
       ],
       "type": "string"
     },
-    "company_id": {
-      "description": "deal_suggestions only",
-      "format": "uuid",
-      "type": "string"
-    },
-    "connection_id": {
-      "description": "backfill_preview only",
-      "format": "uuid",
-      "type": "string"
-    },
-    "contact_id": {
-      "description": "meeting_proposals only",
-      "format": "uuid",
-      "type": "string"
+    "change_kind": {
+      "description": "deal_margince_changes only",
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
     },
     "create_company": {
       "description": "lead_promotion_preview only",
@@ -9256,22 +7238,6 @@ needs the user now, and read_record for a record's own fields.
     },
     "deals_cursor": {
       "description": "lead_promotion_preview only",
-      "type": "string"
-    },
-    "documentId": {
-      "description": "jurisdiction_document only",
-      "type": "string"
-    },
-    "email": {
-      "description": "company_for_address only",
-      "type": "string"
-    },
-    "entityId": {
-      "description": "evidence only",
-      "type": "string"
-    },
-    "entityType": {
-      "description": "evidence only",
       "type": "string"
     },
     "entity_id": {
@@ -9295,15 +7261,6 @@ needs the user now, and read_record for a record's own fields.
       "description": "field_history only",
       "type": "string"
     },
-    "from": {
-      "description": "meeting_availability only",
-      "format": "date-time",
-      "type": "string"
-    },
-    "history": {
-      "description": "lead_score only",
-      "type": "boolean"
-    },
     "id": {
       "description": "activity_pipeline, automation_preview, capture_triage, channel_link, communication_review, company_brief, company_contracts, company_linkedin_reach, company_logo, company_logo_icon, company_scan, contact_brief, contact_consent, contact_consent_guard, contact_optout_records, contact_overrides, contact_profile_fields, contact_stops, contract, controller_mail_preview, deal_legal_reviews, deal_lines, deal_margince_changes, deal_products, deal_room_brief, deal_suggestion, document_extraction, dossier, edit_access_request, enrichment_run, evidence, finance_invoice_pdf, growth_fit, handoff_assignee, import_problems, intro_requests, knowledge_document, lead_promotion_preview, lead_score, lead_signals, lead_stops, legal_entity_logo, legal_review, link_candidates, magic_line_records, meeting_availability, notice_case, notice_case_review, notice_source_evidence, notice_source_preview, offer_pdf, offered_values, ownership_offer, ownership_offer_candidates, ownership_request, product_translations, project_filing, relationship_nudge, scheduled_send, tag_suggestion, voice_source_preview, website_inquiry_preview, win_evidence only",
       "type": "string"
@@ -9312,91 +7269,33 @@ needs the user now, and read_record for a record's own fields.
       "description": "controller_mail_preview, job_health_history only",
       "type": "string"
     },
-    "lang": {
-      "description": "import_problems only",
-      "enum": [
-        "en",
-        "de",
-        "vi"
-      ],
-      "type": "string"
-    },
-    "language": {
-      "description": "controller_mail_preview only",
-      "enum": [
-        "de",
-        "en",
-        "vi"
-      ],
-      "type": "string"
-    },
     "limit": {
       "description": "company_contracts, contact_overrides, deal_suggestions, field_history, lead_score, legal_reviews, magic, magic_line_records, my_linkedin_reach, notices only",
       "type": "integer"
     },
-    "owner_id": {
-      "description": "deal_suggestions, teammate_weekly_plan only",
-      "type": "string"
-    },
-    "owner_team_id": {
-      "description": "deal_suggestions only",
-      "format": "uuid",
-      "type": "string"
-    },
-    "pipeline_id": {
-      "description": "deal_suggestions only",
-      "format": "uuid",
-      "type": "string"
+    "note_activity_id": {
+      "description": "deal_margince_changes only",
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
     },
     "project_id": {
       "description": "company_brief only",
       "format": "uuid",
       "type": "string"
     },
-    "provider": {
-      "description": "backfill_preview, scheduling_calendars only",
-      "type": "string"
-    },
-    "question": {
-      "description": "document_extraction only",
-      "enum": [
-        "deal_facts",
-        "chat_capture"
-      ],
-      "type": "string"
-    },
-    "readId": {
-      "description": "site_read_logo only",
-      "type": "string"
-    },
-    "record_id": {
-      "description": "activity_deal_filing only",
-      "format": "uuid",
-      "type": "string"
-    },
-    "record_type": {
-      "description": "activity_deal_filing, channel_link, edit_access_request, ownership_offer, ownership_offer_candidates, ownership_request only",
-      "type": "string"
-    },
     "request_body": {
       "description": "ai_budget_preview, ai_routing_preview, ai_task_overrides_preview, automation_preview, backfill_preview, filter_preview, mail_deal_repair_preview, notice_source_preview, voice_source_preview, website_inquiry_preview only: The chosen action's request body; read_workspace topic actions lists its shape",
       "type": "object"
-    },
-    "rule": {
-      "description": "hidden_backlog_rows only",
-      "type": "string"
-    },
-    "run_id": {
-      "description": "enrichment_run only",
-      "type": "string"
     },
     "since": {
       "description": "magic, magic_line_records, team_margince_changes only",
       "format": "date-time",
       "type": "string"
     },
-    "stage_id": {
-      "description": "deal_suggestions only",
+    "stage_history_id": {
+      "description": "deal_margince_changes only",
       "format": "uuid",
       "type": "string"
     },
@@ -9426,32 +7325,9 @@ needs the user now, and read_record for a record's own fields.
       ],
       "type": "string"
     },
-    "team": {
-      "description": "team_board only",
-      "format": "uuid",
-      "type": "string"
-    },
-    "to": {
-      "description": "meeting_availability only",
-      "format": "date-time",
-      "type": "string"
-    },
-    "token": {
-      "description": "forecast_share_csv, forecast_shared_reading only",
-      "type": "string"
-    },
-    "unassigned": {
-      "description": "deal_suggestions only",
-      "type": "boolean"
-    },
     "under_contract_only": {
       "description": "company_contracts only",
       "type": "boolean"
-    },
-    "week": {
-      "description": "latest_weekly_review only",
-      "format": "date",
-      "type": "string"
     }
   },
   "required": [
@@ -10392,112 +8268,6 @@ change, and next_cursor to read the next page.
 
 </details>
 
-<details><summary>Output schema</summary>
-
-```json
-{
-  "properties": {
-    "data": {
-      "properties": {
-        "mode": {
-          "type": "string"
-        },
-        "result": {
-          "type": "object"
-        }
-      },
-      "required": [
-        "mode",
-        "result"
-      ],
-      "type": "object"
-    },
-    "evidence": {
-      "items": {
-        "properties": {
-          "captured_by": {
-            "type": "string"
-          },
-          "record_id": {
-            "format": "uuid",
-            "type": "string"
-          },
-          "record_type": {
-            "type": "string"
-          },
-          "source": {
-            "type": "string"
-          },
-          "web_url": {
-            "type": "string"
-          }
-        },
-        "required": [
-          "record_id",
-          "record_type"
-        ],
-        "type": "object"
-      },
-      "type": "array"
-    },
-    "freshness": {
-      "properties": {
-        "authoritative": {
-          "type": "boolean"
-        },
-        "last_synced_at": {
-          "format": "date-time",
-          "type": "string"
-        }
-      },
-      "required": [
-        "authoritative"
-      ],
-      "type": "object"
-    },
-    "schema_version": {
-      "type": "string"
-    },
-    "trace_id": {
-      "type": "string"
-    },
-    "trust": {
-      "type": "string"
-    },
-    "warnings": {
-      "items": {
-        "properties": {
-          "code": {
-            "type": "string"
-          },
-          "message": {
-            "type": "string"
-          }
-        },
-        "required": [
-          "code",
-          "message"
-        ],
-        "type": "object"
-      },
-      "type": "array"
-    }
-  },
-  "required": [
-    "data",
-    "evidence",
-    "freshness",
-    "schema_version",
-    "trace_id",
-    "trust",
-    "warnings"
-  ],
-  "type": "object"
-}
-```
-
-</details>
-
 ### read_project
 
 **Read a project or its handover**
@@ -10598,202 +8368,6 @@ is refused rather than silently overwriting a change made in between. Its `owner
 
 </details>
 
-<details><summary>Output schema</summary>
-
-```json
-{
-  "properties": {
-    "data": {
-      "properties": {
-        "facts": {
-          "items": {
-            "properties": {
-              "category": {
-                "type": "string"
-              },
-              "confirmed": {
-                "type": "boolean"
-              },
-              "fact_key": {
-                "type": "string"
-              },
-              "field": {
-                "type": "string"
-              },
-              "source": {
-                "type": "string"
-              },
-              "value": {
-                "type": "string"
-              }
-            },
-            "required": [
-              "category",
-              "confirmed",
-              "fact_key",
-              "field",
-              "source",
-              "value"
-            ],
-            "type": "object"
-          },
-          "type": "array"
-        },
-        "fields": {
-          "type": "object"
-        },
-        "id": {
-          "format": "uuid",
-          "type": "string"
-        },
-        "owner": {
-          "properties": {
-            "id": {
-              "format": "uuid",
-              "type": "string"
-            },
-            "is_you": {
-              "type": "boolean"
-            },
-            "name": {
-              "type": "string"
-            }
-          },
-          "required": [
-            "id",
-            "is_you"
-          ],
-          "type": "object"
-        },
-        "profile_fields": {
-          "items": {
-            "properties": {
-              "confirmed": {
-                "type": "boolean"
-              },
-              "field": {
-                "type": "string"
-              },
-              "source": {
-                "type": "string"
-              },
-              "value": {
-                "type": "string"
-              }
-            },
-            "required": [
-              "confirmed",
-              "field",
-              "source",
-              "value"
-            ],
-            "type": "object"
-          },
-          "type": "array"
-        },
-        "record_type": {
-          "type": "string"
-        },
-        "trust_tier": {
-          "type": "string"
-        },
-        "version": {
-          "type": "integer"
-        }
-      },
-      "required": [
-        "fields",
-        "id",
-        "record_type"
-      ],
-      "type": "object"
-    },
-    "evidence": {
-      "items": {
-        "properties": {
-          "captured_by": {
-            "type": "string"
-          },
-          "record_id": {
-            "format": "uuid",
-            "type": "string"
-          },
-          "record_type": {
-            "type": "string"
-          },
-          "source": {
-            "type": "string"
-          },
-          "web_url": {
-            "type": "string"
-          }
-        },
-        "required": [
-          "record_id",
-          "record_type"
-        ],
-        "type": "object"
-      },
-      "type": "array"
-    },
-    "freshness": {
-      "properties": {
-        "authoritative": {
-          "type": "boolean"
-        },
-        "last_synced_at": {
-          "format": "date-time",
-          "type": "string"
-        }
-      },
-      "required": [
-        "authoritative"
-      ],
-      "type": "object"
-    },
-    "schema_version": {
-      "type": "string"
-    },
-    "trace_id": {
-      "type": "string"
-    },
-    "trust": {
-      "type": "string"
-    },
-    "warnings": {
-      "items": {
-        "properties": {
-          "code": {
-            "type": "string"
-          },
-          "message": {
-            "type": "string"
-          }
-        },
-        "required": [
-          "code",
-          "message"
-        ],
-        "type": "object"
-      },
-      "type": "array"
-    }
-  },
-  "required": [
-    "data",
-    "evidence",
-    "freshness",
-    "schema_version",
-    "trace_id",
-    "trust",
-    "warnings"
-  ],
-  "type": "object"
-}
-```
-
-</details>
-
 ### read_relationships
 
 **Read who we know, and how well**
@@ -10849,11 +8423,12 @@ and the open partner commission liability. run runs one of the named reports, gr
 evidence searches the passages behind a saved run. company_coverage names deals with one contact,
 companies in pipeline nobody has talked to, and won companies gone silent. report_run_cell_records,
 analytics_cell_records and question_card_records name the records behind one figure. Read only.
-Every figure names its coverage and when it was captured; quote both. read_workspace topic
-report_vocabulary names what each run report takes. For a written section a reader keeps, such as a
-board pack, use read_analytics: query with save, then compose. Use read_forecast for what a period
-is expected to close, and read_forecast with view=input_sources for how complete the data behind a
-number is. Keep a run's id to search its evidence, and quote coverage with each number.
+Every figure names its coverage and when it was captured; quote both. A partial coverage with
+nothing priced is not a figure to report. read_workspace topic report_vocabulary names what each run
+report takes. For a written section a reader keeps, such as a board pack, use read_analytics: query
+with save, then compose. Use read_forecast for what a period is expected to close, and read_forecast
+with view=input_sources for how complete the data behind a number is. Keep a run's id to search its
+evidence, and quote coverage with each number.
 ```
 
 <details><summary>Input schema</summary>
@@ -11071,7 +8646,7 @@ number is. Keep a run's id to search its evidence, and quote coverage with each 
       "type": "object"
     },
     "report": {
-      "description": "run only: The prebuilt report to run. Send `report` ALONE for the default answer listed below — that call takes no other argument and needs nothing read first. activities-by-kind: count as activities grouped by kind. deals-by-stage: count as deals, sum(amount_minor) as amount_minor_sum grouped by stage_id, currency. forecast: count as deals, sum(amount_minor) as unweighted_minor, sum(weighted_amount_minor) as weighted_minor grouped by win_probability_band, currency. leads-by-status: count as leads grouped by status. loss-events: count as losses grouped by loss_reason. meeting-conversion: count as meetings grouped by became_opportunity. open-deals-per-company: count as open_deals grouped by company_id. pipeline-current: count as deals, sum(amount_base_minor) as amount_base_minor_sum, sum(weighted_base_minor) as weighted_base_minor_sum, count(amount_base_minor) as priced_deals grouped by stage_id. project-commitments: sum(overdue_commitments), sum(open_commitments) grouped by project_id, name, key, phase, owner_id. projects-by-phase: count as projects, sum(open_deal_value_minor), sum(won_deal_value_minor), sum(open_deal_unpriced), sum(won_deal_unpriced) grouped by phase. projects-gone-quiet: count as projects grouped by project_id, name, key, phase, owner_id, last_activity_at, quiet_since. stage-age: count as deals, median(days_in_stage) as median_days, p75(days_in_stage) as p75_days grouped by stage_id. win-loss: count as deals, sum(amount_minor) as amount_minor_sum, median(days_to_close) as median_days_to_close, p75(days_to_close) as p75_days_to_close grouped by status, currency. A default is not a report's reach: each slices by dimensions the line above does not name, so a breakdown no default shows is usually still one of these reports. Those dimension names, and its `filters` and `aggregates`, are that report's ALONE, published at margince://schema/reports and answered by read_workspace with topic=report_vocabulary; a name outside them is refused with the accepted list. A `pipeline_id` or `stage_id` used in a plan comes from the workspace's pipeline list.",
+      "description": "run only: The prebuilt report to run. Send `report` ALONE for the default answer listed below — that call takes no other argument and needs nothing read first. Per report: default measures; by: every dimension, * = grouped by default. activities-by-kind: count; by: direction, kind*, meeting_status, period_month, period_quarter, period_year, project, project_id. deals-by-stage: count, sum(amount_minor); by: currency*, link_type, partner_company_id, pipeline_id, stage_id*, status, win_probability. forecast: count, sum(amount_minor), sum(weighted_amount_minor); by: currency*, link_type, owner_id, partner_company_id, pipeline_id, stage_id, win_probability, win_probability_band*. leads-by-status: count; by: origin, owner_id, source, status*. loss-events: count; by: company_id, deal_id, link_type, loss_reason*, owner_id, period_month, period_quarter, period_year, pipeline_id. meeting-conversion: count; by: became_opportunity*, host_user_id. open-deals-per-company: count; by: company_id*, currency, link_type, owner_id. pipeline-current: count, sum(amount_base_minor), sum(weighted_base_minor), count(amount_base_minor); by: close_month, currency, link_type, owner_id, partner_company_id, pipeline_id, stage_id*. project-commitments: sum(overdue_commitments), sum(open_commitments); by: company_id, key*, name*, owner_id*, phase*, project_id*. projects-by-phase: count, sum(open_deal_value_minor), sum(won_deal_value_minor), sum(open_deal_unpriced), sum(won_deal_unpriced); by: company_id, owner_id, phase*. projects-gone-quiet: count; by: company_id, key*, last_activity_at*, name*, owner_id*, phase*, project_id*, quiet_since*. stage-age: count, median(days_in_stage), p75(days_in_stage); by: link_type, owner_id, pipeline_id, stage_id*. win-loss: count, sum(amount_minor), median(days_to_close), p75(days_to_close); by: company_id, currency*, link_type, loss_reason, loss_reason_state, lost_reason, owner_id, period_month, period_quarter, period_year, pipeline_id, size_band, source, status*. A report's `filters` and `aggregates` are its own, published at margince://schema/reports and answered by read_workspace with topic=report_vocabulary; a name outside them is refused with the accepted list. A `pipeline_id` or `stage_id` used in a plan comes from the workspace's pipeline list.",
       "enum": [
         "activities-by-kind",
         "deals-by-stage",
@@ -11118,6 +8693,12 @@ number is. Keep a run's id to search its evidence, and quote coverage with each 
           "type": "string"
         },
         "kind": {
+          "description": "Whose figures the report covers: one owner, one team, or the whole workspace. id names the owner or team.",
+          "enum": [
+            "owner",
+            "team",
+            "workspace"
+          ],
           "type": "string"
         }
       },
@@ -11170,6 +8751,12 @@ number is. Keep a run's id to search its evidence, and quote coverage with each 
           "type": "object"
         },
         "close_window": {
+          "description": "Which open deals the open-pipeline figures count, by expected close. `fiscal_quarter` is the current fiscal quarter, `all_open` is every open deal, and `custom` is `close_interval`, which it requires.",
+          "enum": [
+            "fiscal_quarter",
+            "all_open",
+            "custom"
+          ],
           "type": "string"
         },
         "country": {
@@ -11245,6 +8832,17 @@ number is. Keep a run's id to search its evidence, and quote coverage with each 
                                 "type": "string"
                               },
                               "fn": {
+                                "description": "The aggregate. `count` counts ROWS and takes no field; `count_distinct` counts values and skips nulls. The two differ on an unpriced deal, so naming the wrong one reports a column's coverage as its population.",
+                                "enum": [
+                                  "count",
+                                  "count_distinct",
+                                  "sum",
+                                  "avg",
+                                  "min",
+                                  "max",
+                                  "median",
+                                  "p75"
+                                ],
                                 "type": "string"
                               }
                             },
@@ -11267,6 +8865,11 @@ number is. Keep a run's id to search its evidence, and quote coverage with each 
                       "type": "object"
                     },
                     "width": {
+                      "description": "`half` shares a row with the next half card. A chart that needs the whole width draws full regardless.",
+                      "enum": [
+                        "full",
+                        "half"
+                      ],
                       "type": "string"
                     }
                   },
@@ -11297,6 +8900,17 @@ number is. Keep a run's id to search its evidence, and quote coverage with each 
           "type": "array"
         },
         "period": {
+          "description": "`this_week` runs from Monday 00:00 in the installation zone to the evaluation time. Read at that exact moment, the week holds no time yet and the context's interval starts where it ends.",
+          "enum": [
+            "this_week",
+            "this_month",
+            "last_month",
+            "last_week",
+            "this_quarter",
+            "last_quarter",
+            "last_year",
+            "custom"
+          ],
           "type": "string"
         },
         "pipeline_id": {
@@ -11314,6 +8928,12 @@ number is. Keep a run's id to search its evidence, and quote coverage with each 
               "type": "string"
             },
             "kind": {
+              "description": "Whose figures the report counts: one `owner`, one `team`, or the whole `workspace`, with `id` naming the owner or team. `managed_teams` is only ever answered, when a request names no scope.",
+              "enum": [
+                "owner",
+                "team",
+                "workspace"
+              ],
               "type": "string"
             },
             "label": {
@@ -11326,9 +8946,20 @@ number is. Keep a run's id to search its evidence, and quote coverage with each 
           "type": "object"
         },
         "target_basis": {
+          "description": "Which target period the figures are measured against, a calendar `month` or a `fiscal_quarter`.",
+          "enum": [
+            "month",
+            "fiscal_quarter"
+          ],
           "type": "string"
         },
         "value_basis": {
+          "description": "Which part of a won deal's value the won-value figures count. `all` is the whole deal and the default, `software` and `implementation` count only that component of it. Open figures take only `all`.",
+          "enum": [
+            "all",
+            "software",
+            "implementation"
+          ],
           "type": "string"
         }
       },
@@ -11785,100 +9416,6 @@ find_records to find or list records, and read_reports for the standard metrics 
 
 </details>
 
-<details><summary>Output schema</summary>
-
-```json
-{
-  "properties": {
-    "data": {
-      "type": "object"
-    },
-    "evidence": {
-      "items": {
-        "properties": {
-          "captured_by": {
-            "type": "string"
-          },
-          "record_id": {
-            "format": "uuid",
-            "type": "string"
-          },
-          "record_type": {
-            "type": "string"
-          },
-          "source": {
-            "type": "string"
-          },
-          "web_url": {
-            "type": "string"
-          }
-        },
-        "required": [
-          "record_id",
-          "record_type"
-        ],
-        "type": "object"
-      },
-      "type": "array"
-    },
-    "freshness": {
-      "properties": {
-        "authoritative": {
-          "type": "boolean"
-        },
-        "last_synced_at": {
-          "format": "date-time",
-          "type": "string"
-        }
-      },
-      "required": [
-        "authoritative"
-      ],
-      "type": "object"
-    },
-    "schema_version": {
-      "type": "string"
-    },
-    "trace_id": {
-      "type": "string"
-    },
-    "trust": {
-      "type": "string"
-    },
-    "warnings": {
-      "items": {
-        "properties": {
-          "code": {
-            "type": "string"
-          },
-          "message": {
-            "type": "string"
-          }
-        },
-        "required": [
-          "code",
-          "message"
-        ],
-        "type": "object"
-      },
-      "type": "array"
-    }
-  },
-  "required": [
-    "data",
-    "evidence",
-    "freshness",
-    "schema_version",
-    "trace_id",
-    "trust",
-    "warnings"
-  ],
-  "type": "object"
-}
-```
-
-</details>
-
 ### read_workspace
 
 **Read how this workspace is set up**
@@ -11904,10 +9441,8 @@ of the name topics is a prerequisite: each tool refuses an unknown name with the
 find_records to find a customer contact; colleagues are seats here. Use read_forecast with
 view=input_sources to learn whether a number can be trusted: how complete and current the data is.
 user_id is what assignee_id and owner_id take; never assign to an is_agent seat. Keep pipeline_id
-and stage_id for a deal. Take every name verbatim; a custom field is spelled cf_<slug>. (Runs
-immediately; the user's yes is needed for the actions ai_call, ai_calls, member_retirement, so tell
-them what the call will surface and get it before calling, unless they asked for this call
-themselves.)
+and stage_id for a deal. Take every name verbatim; a custom field is spelled cf_<slug>. (Ask the
+user first for the actions ai_call, ai_calls, member_retirement.)
 ```
 
 <details><summary>Input schema</summary>
@@ -12412,9 +9947,8 @@ merge a contact case read through read_view in one step; preview true answers wh
 writes nothing. A merge archives the source and redirects it to the target; it cannot be reversed by
 merging the other way round, and by default nothing holds it. A merged pair cannot be reopened. Use
 archive_record when the extra record has nothing worth keeping. target_id is the record that
-survives and source_id the one merged away — read both records before choosing. (Runs immediately;
-the user's yes is needed for the action merge, so tell them what the call will change and get it
-before calling, unless they asked for this call themselves; requires passport scope "write".)
+survives and source_id the one merged away — read both records before choosing. (Ask the user
+first for the action merge.)
 ```
 
 <details><summary>Input schema</summary>
@@ -12446,7 +9980,6 @@ before calling, unless they asked for this call themselves; requires passport sc
       "type": "string"
     },
     "idempotency_key": {
-      "description": "A retry without it may repeat the write. Same key, same result; a key reused with other arguments is refused.",
       "maxLength": 255,
       "type": "string"
     },
@@ -12517,10 +10050,8 @@ panel first through read_details; run this only when it is out of date. Ask the 
 buying a contact's details, and before rebuilding the search index for the whole workspace. Buying
 needs a daily limit and a healthy connection, skips a contact already looked up, and buys a priced
 detail only when you name its category. Use read_details to read a panel, and enrich to fill a
-company's fields from its website. (Runs immediately; the user's yes is needed for the actions
-enrich_contact_from_provider, start_backfill, start_search_reindex, so tell them what the call will
-change and get it before calling, unless they asked for this call themselves; requires passport
-scope "enrich".)
+company's fields from its website. (Ask the user first for the actions enrich_contact_from_provider,
+start_backfill, start_search_reindex; requires passport scope "enrich".)
 ```
 
 <details><summary>Input schema</summary>
@@ -12557,43 +10088,12 @@ scope "enrich".)
       ],
       "type": "string"
     },
-    "connection_id": {
-      "description": "start_backfill only",
-      "format": "uuid",
-      "type": "string"
-    },
-    "content_base64": {
-      "description": "read_card_photo only: The whole file, standard base64 with = padding",
-      "type": "string"
-    },
-    "content_type": {
-      "description": "read_card_photo only: The file's media type, e.g. image/png",
-      "type": "string"
-    },
-    "filename": {
-      "description": "read_card_photo only: The file's name, with its extension",
-      "type": "string"
-    },
     "id": {
       "description": "ask_about_company, ask_corpus, build_voice_profile, draft_intro_note, draft_intro_request, enrich_contact_from_provider, propose_deal_roles, refresh_company_brief, refresh_contact_brief, refresh_dossier, refresh_growth_fit, refresh_scan, regenerate_offer, research_contact only",
       "type": "string"
     },
     "idempotency_key": {
-      "description": "A retry without it may repeat the write. Same key, same result; a key reused with other arguments is refused.",
       "maxLength": 255,
-      "type": "string"
-    },
-    "project_id": {
-      "description": "refresh_company_brief only",
-      "format": "uuid",
-      "type": "string"
-    },
-    "provider": {
-      "description": "start_backfill only",
-      "type": "string"
-    },
-    "readId": {
-      "description": "ask_site_read only",
       "type": "string"
     },
     "request_body": {
@@ -12660,7 +10160,6 @@ passport scope "send".)
       "type": "string"
     },
     "idempotency_key": {
-      "description": "A retry without it may repeat the write. Same key, same result; a key reused with other arguments is refused.",
       "maxLength": 255,
       "type": "string"
     },
@@ -12672,6 +10171,14 @@ passport scope "send".)
             "type": "string"
           },
           "entity_type": {
+            "description": "The kind of record the meeting is filed on.",
+            "enum": [
+              "contact",
+              "company",
+              "deal",
+              "lead",
+              "project"
+            ],
             "type": "string"
           }
         },
@@ -12751,14 +10258,12 @@ approval instead. chat_reply cannot start a conversation or choose a channel. Us
 first when the message does not exist yet, and change_activities with action=log to record that
 something was said rather than say it. Send the subject, body and activity_id or links the draft
 produced, and keep the staged approval id: the approval binds that exact message, so changed text
-needs a new one. email_new answers with the new conversation's activity_id. (Runs immediately; the
-user's yes is needed for the actions add_room_document, answer_invitation, change_invitation,
-chat_reply, deal_room_invite, deal_room_resend, details_confirmation, double_opt_in, email_new,
-email_reply, invite_member, link_channel, meeting_proposal, my_signature, open_room_thread,
-privacy_notice, remove_room_document, reply_room_thread, resend_member_invite, resume_room,
-set_room_expiry, signature_template, update_room, update_room_document, so tell them what the call
-will change and get it before calling, unless they asked for this call themselves; requires passport
-scope "send".)
+needs a new one. email_new answers with the new conversation's activity_id. (Ask the user first for
+the actions add_room_document, answer_invitation, change_invitation, chat_reply, deal_room_invite,
+deal_room_resend, details_confirmation, double_opt_in, email_new, email_reply, invite_member,
+link_channel, meeting_proposal, my_signature, open_room_thread, privacy_notice,
+remove_room_document, reply_room_thread, resend_member_invite, resume_room, set_room_expiry,
+signature_template, update_room, update_room_document; requires passport scope "send".)
 ```
 
 <details><summary>Input schema</summary>
@@ -12866,7 +10371,6 @@ scope "send".)
       "type": "string"
     },
     "idempotency_key": {
-      "description": "A retry without it may repeat the write. Same key, same result; a key reused with other arguments is refused.",
       "maxLength": 255,
       "type": "string"
     },
@@ -12978,7 +10482,7 @@ says the meeting took place. Use change_state with action=move_deal to move a de
 change_activities with action=relink to change what an activity is about, and change_compliance when
 a contact gave consent or asked to stop; none is a field edit. Send if_version with the version you
 read. If the call comes back staged, keep its approval id to retry the same change once a human has
-released it. (Runs immediately; requires passport scope "write".)
+released it.
 ```
 
 Renders its result in [`ui://margince/update.html`](#update_view), visible to `model`, `app`.
@@ -13003,7 +10507,6 @@ Renders its result in [`ui://margince/update.html`](#update_view), visible to `m
       "type": "string"
     },
     "idempotency_key": {
-      "description": "A retry without it may repeat the write. Same key, same result; a key reused with other arguments is refused.",
       "maxLength": 255,
       "type": "string"
     },
@@ -13025,12 +10528,19 @@ Renders its result in [`ui://margince/update.html`](#update_view), visible to `m
         "offer"
       ],
       "type": "string"
+    },
+    "why": {
+      "description": "Why you are making this change, in one sentence the user reads beside it. Name who, which record or message, and the fact that prompted it, for example: Anna Weber wrote on 14 Nov that the rollout moves to March.",
+      "maxLength": 600,
+      "minLength": 1,
+      "type": "string"
     }
   },
   "required": [
     "record_type",
     "id",
-    "fields"
+    "fields",
+    "why"
   ],
   "type": "object"
 }
@@ -13243,127 +10753,6 @@ answered, where locale is absent until this contact chooses one.
 {
   "additionalProperties": false,
   "properties": {},
-  "type": "object"
-}
-```
-
-</details>
-
-<details><summary>Output schema</summary>
-
-```json
-{
-  "properties": {
-    "data": {
-      "properties": {
-        "acting_user_id": {
-          "format": "uuid",
-          "type": "string"
-        },
-        "display_name": {
-          "type": "string"
-        },
-        "email": {
-          "type": "string"
-        },
-        "locale": {
-          "type": "string"
-        },
-        "prose_language": {
-          "type": "string"
-        },
-        "timezone": {
-          "type": "string"
-        }
-      },
-      "required": [
-        "acting_user_id",
-        "display_name",
-        "email",
-        "prose_language"
-      ],
-      "type": "object"
-    },
-    "evidence": {
-      "items": {
-        "properties": {
-          "captured_by": {
-            "type": "string"
-          },
-          "record_id": {
-            "format": "uuid",
-            "type": "string"
-          },
-          "record_type": {
-            "type": "string"
-          },
-          "source": {
-            "type": "string"
-          },
-          "web_url": {
-            "type": "string"
-          }
-        },
-        "required": [
-          "record_id",
-          "record_type"
-        ],
-        "type": "object"
-      },
-      "type": "array"
-    },
-    "freshness": {
-      "properties": {
-        "authoritative": {
-          "type": "boolean"
-        },
-        "last_synced_at": {
-          "format": "date-time",
-          "type": "string"
-        }
-      },
-      "required": [
-        "authoritative"
-      ],
-      "type": "object"
-    },
-    "schema_version": {
-      "type": "string"
-    },
-    "trace_id": {
-      "type": "string"
-    },
-    "trust": {
-      "type": "string"
-    },
-    "warnings": {
-      "items": {
-        "properties": {
-          "code": {
-            "type": "string"
-          },
-          "message": {
-            "type": "string"
-          }
-        },
-        "required": [
-          "code",
-          "message"
-        ],
-        "type": "object"
-      },
-      "type": "array"
-    }
-  },
-  "required": [
-    "data",
-    "evidence",
-    "freshness",
-    "schema_version",
-    "trace_id",
-    "trust",
-    "warnings"
-  ],
   "type": "object"
 }
 ```

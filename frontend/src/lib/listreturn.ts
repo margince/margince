@@ -62,23 +62,30 @@ const onRecord = (record: Route) => (hash: string) => isOnRecord(record, hash);
 
 /**
  * Leave a record for the screen before it, which history restores with its
- * filter and scroll; with none of ours behind, the record's list.
+ * filter and scroll. With none of ours behind, go to `parent`: the record's
+ * list, unless the page names another.
  */
-export function leaveRecord(record: Route): void {
+export function leaveRecord(
+  record: Route,
+  parent = listAddress(record.screen),
+): void {
   stepBackOutOf(onRecord(record), () => {
-    globalThis.location.hash = listAddress(record.screen);
+    globalThis.location.hash = parent;
   });
 }
 
 /**
  * Whether the bar has already left `record` the way `leaveRecord` would: just
- * behind it, or on its list. A bar still on the record has left nothing.
+ * behind it, or on its parent. A bar still on the record has left nothing.
  */
-export function leftRecord(record: Route, bar: string): boolean {
+export function leftRecord(
+  record: Route,
+  bar: string,
+  parent = listAddress(record.screen),
+): boolean {
   return (
     !isOnRecord(record, bar) &&
-    (steppedBackOutOf(onRecord(record)) ||
-      samePage(bar, listAddress(record.screen)))
+    (steppedBackOutOf(onRecord(record)) || samePage(bar, parent))
   );
 }
 

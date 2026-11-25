@@ -23,6 +23,7 @@ import (
 	"github.com/margince/margince/backend/internal/compose/duequestion"
 	"github.com/margince/margince/backend/internal/compose/editaccess"
 	"github.com/margince/margince/backend/internal/compose/employerchange"
+	"github.com/margince/margince/backend/internal/compose/proposalstage"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/approvals"
 	"github.com/margince/margince/backend/internal/modules/capture"
@@ -99,6 +100,7 @@ func approvalsServiceTelling(pool *pgxpool.Pool, notices *siteLeadNoticeLane) *a
 	svc.WithEffect(string(workflow.ActionAssignOwner), assignOwnerReleaseEffect(svc,
 		NewProvider(pool), InstallationDB(pool)))
 	svc.WithEffect(deals.CloseDateCorrectionKind, closeDateConfirmEffect(svc, deals.NewStore(InstallationDB(pool), DealsInstallation())))
+	proposalstage.Register(svc, InstallationDB(pool), deals.NewStore(InstallationDB(pool), DealsInstallation()))
 	svc.WithEffect(deals.FollowUpReconcileKind, followUpConfirmEffect(svc, activities.NewStore(InstallationDB(pool)), time.Now))
 	svc.WithPrecheck(deals.FollowUpReconcileKind, followUpPrecheck(InstallationDB(pool), time.Now))
 	commitmentTasks := activities.NewStore(InstallationDB(pool))

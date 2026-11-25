@@ -93,14 +93,14 @@ const Unstamped = "no stamp"
 
 // Recheck names why a verdict no longer describes the product. It answers the
 // parts that moved, "no stamp" or "no scenario"; empty means it is current.
-func Recheck(recorded *RecordedStamp, current Stamp, scenarioExists bool) []string {
+func Recheck(recorded *RecordedStamp, current Stamp, scenarioExists bool, driver string) []string {
 	switch {
 	case !scenarioExists:
 		return []string{"no scenario"}
 	case recorded == nil:
 		return []string{Unstamped}
 	default:
-		return recorded.Moved(current)
+		return recorded.Moved(current, driver)
 	}
 }
 
@@ -184,7 +184,7 @@ func Report(root string) ([]Line, error) {
 	out := make([]Line, 0, len(verdicts))
 	for _, v := range verdicts {
 		stamp, exists := current[v.Door][v.Scenario]
-		out = append(out, Line{Verdict: v, Why: Recheck(v.Stamp, stamp, exists)})
+		out = append(out, Line{Verdict: v, Why: Recheck(v.Stamp, stamp, exists, v.Driver)})
 	}
 	return out, nil
 }
@@ -215,7 +215,7 @@ func NewlyStale(baseRoot, headRoot string) ([]Line, error) {
 	var out []Line
 	for _, line := range lines {
 		was, existed := base[line.Door][line.Scenario]
-		if len(line.Why) > 0 && len(Recheck(line.Stamp, was, existed)) == 0 {
+		if len(line.Why) > 0 && len(Recheck(line.Stamp, was, existed, line.Driver)) == 0 {
 			out = append(out, line)
 		}
 	}

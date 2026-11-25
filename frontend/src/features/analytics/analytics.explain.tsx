@@ -7,6 +7,7 @@ import { Button, SectionHeader, Skeleton } from "../../design-system/atoms";
 import { DataTable } from "../../design-system/datatable";
 import { ErrorLine } from "../../design-system/errorline";
 import { Panel, PanelBody } from "../../design-system/panel";
+import { QueryGate } from "../../design-system/querystates";
 import { Stack } from "../../design-system/stack";
 import { rowsState, SurfaceState } from "../../design-system/surfacestate";
 import {
@@ -26,7 +27,13 @@ import type { MessageKey } from "../../i18n/en";
 import { translatedPipeline } from "../../lib/labeltranslation";
 import { unwrap } from "../../lib/problem";
 import { ExplainDrawer } from "./analytics.explain.drawer";
-import { isMoneyField, isNativeMoneyField } from "./analytics.questions.vocab";
+import {
+  isMoneyField,
+  isNativeMoneyField,
+  type MoneyFields,
+  moneyFieldsOf,
+} from "./analytics.questions.money";
+import { useAnalyticsSchema } from "./analytics.schema";
 
 // "Explain this number": where a figure on the Analytics screen came from. ONE
 // body, two hosts: the panel under a report card explains the whole result, and
@@ -132,15 +139,19 @@ const RECORD_NOUN: Readonly<Record<string, MessageKey>> = {
 function derivationHeader(
   col: string,
   report: string,
-  baseCurrency: string | null,
-  t: Translator,
+  frame: Readonly<{
+    baseCurrency: string | null;
+    money: MoneyFields;
+    t: Translator;
+  }>,
 ): string {
+  const { baseCurrency, money, t } = frame;
   const key =
     col === "label"
       ? (RECORD_NOUN[report] ?? "explain.col.record")
       : DERIVATION_HEADERS[col];
   const label = key ? t(key) : col;
-  return baseCurrency && countsInBase(col)
+  return baseCurrency && countsInBase(col, money)
     ? t("explain.col.inCurrency", { label, currency: baseCurrency })
     : label;
 }
@@ -166,22 +177,20 @@ export function derivationColumns(
 
 const LEAD_COLUMNS = ["label", "id", "company_id"];
 
-// Whether a money column is counted in the base currency, read from the
-// declared native set: two project measures named `_minor` are already base.
-// A `_base_minor` name answers base too, and nothing native is spelled so.
-function countsInBase(col: string): boolean {
-  return (
-    col.endsWith("_base_minor") ||
-    (isMoneyField(col) && !isNativeMoneyField(col))
-  );
+// Whether a money column is counted in the base currency, as the report's
+// served schema marks it. Never read from the column's name, which a converted
+// project value shares with a native amount.
+function countsInBase(col: string, money: MoneyFields): boolean {
+  return isMoneyField(col, money) && !isNativeMoneyField(col, money);
 }
 
 export function derivationCellCurrency(
   col: string,
   row: Record<string, unknown>,
   baseCurrency: string | null,
+  money: MoneyFields,
 ): string | null {
-  if (countsInBase(col)) {
+  if (countsInBase(col, money)) {
     return baseCurrency;
   }
   const own = row.currency;
@@ -193,8 +202,11 @@ export function derivationCellCurrency(
 function renderDerivationCell(
   col: string,
   row: Record<string, unknown>,
-  baseCurrency: string | null,
-  locale: Locale,
+  frame: Readonly<{
+    baseCurrency: string | null;
+    money: MoneyFields;
+    locale: Locale;
+  }>,
 ): ReactNode {
   const value = row[col];
   if (value == null) {
@@ -213,11 +225,11 @@ function renderDerivationCell(
       return <EntityRef kind="company" id={value} />;
     }
   }
-  if (col.endsWith("_minor") && typeof value === "number") {
+  if (isMoneyField(col, frame.money) && typeof value === "number") {
     return formatAnalyticsMoneyOrAbsent(
       value,
-      derivationCellCurrency(col, row, baseCurrency),
-      locale,
+      derivationCellCurrency(col, row, frame.baseCurrency, frame.money),
+      frame.locale,
     );
   }
   return String(value);
@@ -260,6 +272,7 @@ function DerivationRows({
 }: Readonly<{ derivation: Derivation; baseCurrency: string | null }>) {
   const t = useT();
   const { locale } = useLocale();
+  const schema = useAnalyticsSchema();
   const columns = derivationColumns(derivation);
   const { rows } = derivation;
   const { state, remaining } = rowsState(rows.length, derivation.total_rows);
@@ -274,21 +287,40 @@ function DerivationRows({
         detail={{ remaining }}
       >
         {rows.length > 0 && (
-          <DataTable
-            label={t("explain.sources")}
-            columns={columns.map((col) => ({
-              key: col,
-              header: derivationHeader(col, derivation.report, baseCurrency, t),
-              render: (row: Record<string, unknown>) =>
-                renderDerivationCell(col, row, baseCurrency, locale),
-            }))}
-            rows={rows}
-            rowKey={(row) =>
-              typeof row.id === "string"
-                ? `id:${row.id}`
-                : `at:${position.get(row)}`
-            }
-          />
+          // No amount is drawn before the schema says which columns are money.
+          <QueryGate query={schema} pendingLabel={t("common.loading")}>
+            {(vocabulary) => (
+              <DataTable
+                label={t("explain.sources")}
+                columns={columns.map((col) => {
+                  const money = moneyFieldsOf(
+                    vocabulary.entities,
+                    derivation.report,
+                  );
+                  return {
+                    key: col,
+                    header: derivationHeader(col, derivation.report, {
+                      baseCurrency,
+                      money,
+                      t,
+                    }),
+                    render: (row: Record<string, unknown>) =>
+                      renderDerivationCell(col, row, {
+                        baseCurrency,
+                        money,
+                        locale,
+                      }),
+                  };
+                })}
+                rows={rows}
+                rowKey={(row) =>
+                  typeof row.id === "string"
+                    ? `id:${row.id}`
+                    : `at:${position.get(row)}`
+                }
+              />
+            )}
+          </QueryGate>
         )}
       </SurfaceState>
     </>

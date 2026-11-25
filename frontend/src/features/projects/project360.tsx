@@ -10,7 +10,6 @@ import {
   writableTarget,
 } from "../../components/activitygate";
 import { ArchiveAction } from "../../components/archive";
-import { EditAccessRequest } from "../../components/editaccessrequest";
 import { useRailRename } from "../../components/railfield";
 import { RecordTeam } from "../../components/recordteam";
 import { useFieldsDialog } from "../../components/sectionedit";
@@ -18,9 +17,13 @@ import {
   snoozedDueAt,
   TaskCompleteCheck,
   TaskQuickActions,
-  TaskWriteFailure,
   useTaskUpdate,
 } from "../../components/taskactions";
+import {
+  currentDueFields,
+  useMoveTask,
+} from "../../components/taskduedatepick";
+import { TaskWriteFailure } from "../../components/taskwritefailure";
 import { Badge, Button, OverflowMenu } from "../../design-system/atoms";
 import { QueryGate } from "../../design-system/querystates";
 import { RecordView } from "../../design-system/recordview";
@@ -69,6 +72,7 @@ import { ProjectStanding } from "./projectstandingcard";
 import { ProjectTabs } from "./projecttabs";
 import "./projects.css";
 import { RecordGone } from "../../components/recordgone";
+import { ViewOnly } from "../../components/viewonly";
 import { useViewerZone } from "../../lib/viewerzone";
 import { ProjectHistory, ProjectLatestInbound } from "./project360.chronology";
 import { ProjectCards } from "./projectcards";
@@ -172,6 +176,12 @@ function ProjectPage({ view }: Readonly<{ view: Project360 }>) {
           <Badge>{t(labelFor(PHASE_LABEL, project.phase))}</Badge>
           {project.key && <ProjectKeyChip projectKey={project.key} dense />}
           <ProjectSharedPill projectId={project.id} />
+          <ViewOnly
+            kind="project"
+            record={project}
+            name={project.name}
+            reasonId={readOnlyReasonId}
+          />
         </>
       }
       actions={
@@ -199,13 +209,10 @@ function ProjectPage({ view }: Readonly<{ view: Project360 }>) {
       }
       tabs={<ProjectTabs />}
       band={
-        // One sentence and nothing else: why this record takes no changes, so
-        // every control it refuses points at it.
-        readOnlyReason ? (
-          <>
-            <p id={readOnlyReasonId}>{readOnlyReason}</p>
-            <EditAccessRequest kind="project" record={project} />
-          </>
+        // Why an archived project takes no changes, so every control it
+        // refuses points at it. A live one says so in the View only pill.
+        readOnlyReason && project.archived_at ? (
+          <p id={readOnlyReasonId}>{readOnlyReason}</p>
         ) : undefined
       }
     >
@@ -313,6 +320,7 @@ function useNextTaskVerbs(
   enabled: boolean,
 ) {
   const zone = useViewerZone();
+  const move = useMoveTask(update);
   const next = nextCommitment(view);
   if (!next || !enabled) {
     return {};
@@ -341,10 +349,16 @@ function useNextTaskVerbs(
               next.dueIntent,
             );
             if (nextDue)
-              update.mutate({
+              void move({
                 id: next.activityId,
                 version: next.version,
-                body: nextDue,
+                to: nextDue,
+                back: currentDueFields(
+                  next.dueAt,
+                  next.dueHasTime,
+                  zone,
+                  next.dueIntent,
+                ),
               });
           },
           pending: update.isPending,

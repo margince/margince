@@ -12,6 +12,7 @@ package contacts
 
 import (
 	"context"
+	"maps"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -93,7 +94,7 @@ func archiveContactInTx(ctx context.Context, tx pgx.Tx, id ids.ContactID, ifVers
 	if _, err := readContactRow(ctx, tx, id, storekit.LiveOnly, nil); err != nil {
 		return err
 	}
-	return archiveContactRows(ctx, tx, id, time.Now().UTC(), ifVersion)
+	return archiveContactRows(ctx, tx, id, time.Now().UTC(), ifVersion, nil)
 }
 
 // archiveContactRows retires a contact and its satellites and lands the write
@@ -112,7 +113,7 @@ func archiveContactInTx(ctx context.Context, tx pgx.Tx, id ids.ContactID, ifVers
 // than queueing behind itself.
 //
 //gate:parent-version-door
-func archiveContactRows(ctx context.Context, tx pgx.Tx, id ids.ContactID, now time.Time, ifVersion *int64) error {
+func archiveContactRows(ctx context.Context, tx pgx.Tx, id ids.ContactID, now time.Time, ifVersion *int64, extra map[string]any) error {
 	p := storekit.NewPatch()
 	p.Set("archived_at", nil, now)
 	if err := p.ApplyGuarded(ctx, tx, contactEntity, id.UUID, ifVersion); err != nil {
@@ -138,14 +139,7 @@ func archiveContactRows(ctx context.Context, tx pgx.Tx, id ids.ContactID, now ti
 	}
 	// Polymorphic membership/tag rows have no archived_at; the §1.10
 	// cleanup rule removes them with the entity.
-	if err := cascade.DropMemberships(ctx, tx,
-		`WITH gone AS (
-			DELETE FROM list_member WHERE `+contactArchiveMemberships+`
-			RETURNING list_id, entity_type, entity_id, added_by, created_at, note),
-		logged AS (
-			INSERT INTO list_member_event (list_id, entity_type, entity_id, action, reason, actor)
-			SELECT list_id, entity_type, entity_id, 'removed', 'record_archived', @actor FROM gone)
-		SELECT list_id, added_by, created_at, note FROM gone`, id.UUID); err != nil {
+	if err := dropShortlistMemberships(ctx, tx, &cascade, contactArchiveMemberships, id.UUID); err != nil {
 		return err
 	}
 	if err := cascade.DropTags(ctx, tx,
@@ -153,7 +147,9 @@ func archiveContactRows(ctx context.Context, tx pgx.Tx, id ids.ContactID, now ti
 		return err
 	}
 
-	auditID, err := storekit.AuditWithEvidence(ctx, tx, "archive", contactEntity, id.UUID, nil, nil, cascade.Evidence())
+	evidence := cascade.Evidence()
+	maps.Copy(evidence, extra)
+	auditID, err := storekit.AuditWithEvidence(ctx, tx, "archive", contactEntity, id.UUID, nil, nil, evidence)
 	if err != nil {
 		return err
 	}

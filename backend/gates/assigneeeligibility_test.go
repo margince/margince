@@ -108,8 +108,9 @@ func keysOf(m map[string]string) []string {
 
 // Each predicate keeps every clause of its rule. The seat rule refuses a seat
 // that cannot do the work, and the run-as rule adds the caller's own write
-// scope. Dropping a clause widens who may be handed a record or acted for,
-// with no test naming what was widened.
+// scope. The task door asks the record rules and gives the one seat refusal.
+// So a task and a record refuse the same seats the same way. Dropping a clause widens who may be handed a record or acted for, with no
+// test naming what was widened.
 func TestTheAssigneePredicatesKeepEveryClauseOfTheirRule(t *testing.T) {
 	t.Parallel()
 	path := filepath.Join(gatekit.ModuleRoot(t), "internal", "platform", "auth", "assignscope.go")
@@ -132,6 +133,8 @@ func TestTheAssigneePredicatesKeepEveryClauseOfTheirRule(t *testing.T) {
 	rules := map[string][]string{
 		"AssigneeEligibleSQL": {"workforce.LiveMemberSQL(alias)", "NOT %[2]s.is_agent", "seat_type <> 'read'"},
 		"runAsOwnerSQL":       {"AssigneeEligibleSQL(alias)", "ownerPredicate"},
+		"EnsureTaskAssignee":  {`AssigneeEligibleSQL("u")`, `newRecordOwnerSQL(`, "refuseIneligibleAssignee(taskAssigneeField)"},
+		"ensureAssigneeWith":  {`refuseIneligibleAssignee("")`},
 	}
 	for name, clauses := range rules {
 		body, ok := bodies[name]

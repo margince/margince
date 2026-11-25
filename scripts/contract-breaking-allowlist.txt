@@ -76,3 +76,6 @@ d2df8a6a65f2992ea52e1df62fc6272d3446ebc6 b8fecbe4e9110d366eb27e8101993187fc91aa4
 8c3e0436c71992ad4cf350815417f337be79e00c b283e415eae1b00161064c04a8eb45df8b21b60d ratified-company-profile-names-and-member-display-names-narrowed-to-the-120-characters-the-server-enforces
 cb3567e3c038a99c488ff70d67a879ad87481ec9 1d21459ba06ec59c984fa3db1b9bb211113ee0e6 ratified-develop-s-company-profile-and-member-display-name-limits-of-120-carried-into-main-in-the-sync
 9ee4446817ea2be8f70495da16e21f908ead5109 b75442a6cc435d8866968a259f7d86d8cca0c20e ratified-a-deal-offer-and-project-source-is-one-of-six-channels
+ba71b7b06f2dc67ddd1e5ed68f03869244ebdf1c 75c9a29241ebac09a1f91df494624785539aac45 ratified-main-s-deal-offer-and-project-source-of-six-channels-carried-into-develop-in-the-back-sync
+fe7b0c82d93b663e3927671e52a6988735d7ced5 ba4530b9f04f69a1170ceeea063d5adf8a22f23f ratified-develop-s-router-actions-query-items-are-objects-carried-into-main-in-the-sync
+0e59fe58e5494c8c10b1e7ad699a6a0d02547526 a8463929c42388452e8a52750c438099ad7779a1 ratified-a-signal-source-is-one-of-six-channels

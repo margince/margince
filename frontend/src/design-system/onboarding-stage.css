@@ -49,7 +49,7 @@
   isolation: isolate;
   /* What a machine without WebGL2 stands on, and what the ground fades up out
      of on every other one. */
-  background: var(--bgElevated);
+  background: var(--bgField);
 }
 @supports (min-height: 100dvh) {
   /* 100vh on mobile Safari measures the viewport with the URL bar collapsed,
@@ -283,7 +283,6 @@
   width: 22px;
   height: 3px;
   border-radius: var(--r-full);
-  corner-shape: round;
   background: var(--borderSubtle);
   transition:
     background var(--dur-move) var(--ease-out),
@@ -566,7 +565,6 @@
   width: 10px;
   height: 10px;
   border-radius: var(--r-full);
-  corner-shape: round;
   pointer-events: none;
   background: radial-gradient(
     circle,

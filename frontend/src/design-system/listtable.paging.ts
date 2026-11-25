@@ -4,7 +4,7 @@
 // Which rendered page of a list table is on screen, and how many rows a page
 // holds. A new narrowing sends the reader back to page one.
 
-import { type RefObject, useEffect, useRef, useState } from "react";
+import { type RefObject, useEffect, useMemo, useRef, useState } from "react";
 import { stable } from "../format/collate";
 
 /**
@@ -197,6 +197,11 @@ export function usePaging<Row>(
   const lastPage = Math.max(1, Math.ceil(control.rows.length / perPage));
   const current = Math.min(page, lastPage);
   const from = (current - 1) * perPage;
+  const { rows } = control;
+  const pageRows = useMemo(
+    () => rows.slice(from, from + perPage),
+    [rows, from, perPage],
+  );
   const [asks, setAsks] = useState(0);
   useReachAskedPage({
     enabled: control.reachAsked !== false,
@@ -229,7 +234,7 @@ export function usePaging<Row>(
     current,
     lastPage,
     from,
-    pageRows: control.rows.slice(from, from + perPage),
+    pageRows,
     perPage,
     setPerPage,
     goto,

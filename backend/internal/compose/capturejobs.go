@@ -18,6 +18,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/riverqueue/river"
 
+	"github.com/margince/margince/backend/internal/compose/purgerun"
 	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/platform/jobs"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -253,6 +254,11 @@ func (w *counterpartyVerdictWorker) judgeWorkspace(ctx context.Context, workspac
 	if w.purger == nil {
 		return nil
 	}
+	// Receipts first, so a failure below does not hold back one an owner's
+	// stopped purge is owed.
+	if err := w.sweepPurges(wsCtx); err != nil {
+		return err
+	}
 	destroyed, err := w.purger.SweepPersonalMail(wsCtx, capture.DefaultPersonalPurgeWindows())
 	if err != nil {
 		return err
@@ -262,6 +268,10 @@ func (w *counterpartyVerdictWorker) judgeWorkspace(ctx context.Context, workspac
 			"workspace", workspace.String(), "messages", destroyed)
 	}
 	return w.stripPrivateThreads(ctx, wsCtx, workspace)
+}
+
+func (w *counterpartyVerdictWorker) sweepPurges(ctx context.Context) error {
+	return purgerun.SweepAndLog(ctx, w.pool, w.log)
 }
 
 // stripPrivateThreads withholds the files of personal-thread mail past the

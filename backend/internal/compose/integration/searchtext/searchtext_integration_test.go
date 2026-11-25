@@ -100,11 +100,8 @@ func TestTheBodyIsReadOnceWhenTheLanguageHasNoDictionary(t *testing.T) {
 	assertFound(t, e, mail, "arriving", true)
 }
 
-func TestAForwardedMailAndANoteAreSearchedWhole(t *testing.T) {
+func TestANoteIsSearchedWhole(t *testing.T) {
 	e := integration.Setup(t)
-	forward := logMail(t, e, "Fwd: Terms", "FYI.\n\n---------- Forwarded message ---------\nFrom: Dana Roe <dana@buyer.example>\nDate: Mon, 3 Mar 2025 at 10:15\nSubject: Terms\n\nNet thirty days on the walnut order.\n")
-	assertFound(t, e, forward, "walnut", true)
-
 	subject, body := "Call notes", "They said:\n> walnut is too dark\n"
 	note, _, err := e.Activities.LogActivity(e.Admin(), activities.LogActivityInput{Kind: "note", Source: "manual", Subject: &subject, Body: &body})
 	if err != nil {

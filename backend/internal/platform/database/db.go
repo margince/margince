@@ -68,6 +68,15 @@ func (d *DB) Bounded(budget time.Duration) *DB {
 	return &DB{pool: d.pool, workspace: d.workspace, budget: budget, admitted: d.admitted}
 }
 
+// Budget is the per-statement ceiling Bounded armed, or zero on a handle
+// nobody bounded. Nil-safe like Bounded.
+func (d *DB) Budget() time.Duration {
+	if d == nil {
+		return 0
+	}
+	return d.budget
+}
+
 // Bind returns a handle that resolves its workspace through resolve.
 func Bind(pool *pgxpool.Pool, resolve func(context.Context) (ids.WorkspaceID, error)) *DB {
 	return &DB{pool: pool, workspace: resolve}

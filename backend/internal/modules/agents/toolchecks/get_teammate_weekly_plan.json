@@ -1,7 +1,6 @@
 {
   "verb": "get_teammate_weekly_plan",
   "checks": [
-    "installation_settings.read",
     "scope:team",
     "weekly_plan.read"
   ],

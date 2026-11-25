@@ -32,6 +32,12 @@ import (
 // reader sees those numbers beside the report's own label.
 const baseCurrencyKey = "base"
 
+// aggKey names each aggregate a handle carries.
+const aggKey = "agg"
+
+// scopeIDKey names the record a scoped handle is about.
+const scopeIDKey = "scope_id"
+
 // derivationURL mints the handle for one aggregate row (or, with a nil
 // row, for the whole filtered result). parseDerivationQuery is its exact
 // inverse; the round trip is unit-tested so a handle we mint always
@@ -48,7 +54,7 @@ func derivationURL(
 		values.Set(baseCurrencyKey, baseCurrency)
 	}
 	for _, agg := range aggregates {
-		values.Add("agg", agg.Fn+":"+agg.Field+":"+agg.As)
+		values.Add(aggKey, agg.Fn+":"+agg.Field+":"+agg.As)
 	}
 	filterKeys := make([]string, 0, len(filters))
 	for key := range filters {
@@ -116,7 +122,7 @@ func parseDerivationQuery(values url.Values) (derivationQuery, error) {
 				q.Scope = &RequestedScope{}
 			}
 			q.Scope.Kind = vals[0]
-		case "scope_id":
+		case scopeIDKey:
 			if len(vals) != 1 {
 				return derivationQuery{}, apperrors.ErrInvalidArgument
 			}
@@ -140,13 +146,19 @@ func parseDerivationQuery(values url.Values) (derivationQuery, error) {
 				return derivationQuery{}, err
 			}
 			q.AsOf = at
+		case ratesKey:
+			at, err := parseHandleRatesAt(vals)
+			if err != nil {
+				return derivationQuery{}, err
+			}
+			q.RatesAt = at
 		case baseCurrencyKey:
 			code, err := parseHandleBaseCurrency(vals)
 			if err != nil {
 				return derivationQuery{}, err
 			}
 			q.BaseCurrency = code
-		case "agg":
+		case aggKey:
 			aggregates, err := parseHandleAggregates(vals)
 			if err != nil {
 				return derivationQuery{}, err
@@ -185,6 +197,23 @@ func parseHandleAsOf(vals []string) (time.Time, error) {
 	return at, nil
 }
 
+// parseHandleRatesAt reads the rate-sheet revision, in the format pinRates writes.
+func parseHandleRatesAt(vals []string) (time.Time, error) {
+	if len(vals) != 1 {
+		return time.Time{}, &FieldNotAllowedError{Field: ratesKey}
+	}
+	at, err := time.Parse(time.RFC3339Nano, vals[0])
+	if err != nil {
+		return time.Time{}, &FieldNotAllowedError{Field: ratesKey + "=" + vals[0]}
+	}
+	return at, nil
+}
+
+// pinRates adds the rate-sheet revision a headline read to its handle.
+func pinRates(handle string, revision time.Time) string {
+	return handle + "&" + url.Values{ratesKey: {revision.UTC().Format(time.RFC3339Nano)}}.Encode()
+}
+
 // parseHandleBaseCurrency reads the currency the headline converted to.
 //
 // Validated rather than trusted, because the value reaches the frame the
@@ -218,7 +247,7 @@ func scopedDerivationURL(report string, filters map[string]any, groupBy []string
 	}
 	values := url.Values{reportingHandleVersion: {"2"}, reportingScopeKind: {scope.Kind}}
 	if scope.ID != nil {
-		values.Set("scope_id", scope.ID.String())
+		values.Set(scopeIDKey, scope.ID.String())
 	}
 	return base + "&" + values.Encode()
 }

@@ -101,6 +101,12 @@ const actions = (
 /** An open deal a rep may write to: every verb live. */
 export const Open: Story = { render: () => actions() };
 
+/** A deal whose company is not shared with this reader: Meet says so, rather
+ * than claiming the deal has no company. */
+export const CompanyWithheld: Story = {
+  render: () => actions({ company_id: null, masked_fields: ["company_id"] }),
+};
+
 /**
  * A seat that may read the deal but not log against it. The two recording verbs
  * keep their place and point at one sentence — withholding twelve buttons
@@ -133,7 +139,8 @@ export const LoggingRefused: Story = {
 
 /**
  * A closed deal this reader may not write: permission, not state, withholds
- * Reopen and the write verbs, so they are absent rather than refused.
+ * Reopen and the write verbs, so they are absent. Add task stays, shut, with
+ * the reason.
  */
 export const ReadOnlyDeal: Story = {
   render: () => actions({ status: "lost", writable: false }),
@@ -145,8 +152,14 @@ export const ReadOnlyDeal: Story = {
     );
     const addTask = await screen.findByRole("button", { name: "Add task" });
     // Until /me answers every deal reads as unwritable, so absence proves
-    // nothing before the seat that holds deal:update has loaded.
-    await waitFor(() => expect(addTask).toBeEnabled());
+    // nothing before the seat that holds deal:update has loaded. Once it has,
+    // the row that stays says why it is shut.
+    await waitFor(() =>
+      expect(addTask).toHaveAccessibleDescription(
+        "You can only read this record. Ask its owner for write access.",
+      ),
+    );
+    await expect(addTask).toBeDisabled();
     for (const name of [
       "Reopen",
       "Archive deal",

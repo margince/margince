@@ -30,6 +30,7 @@ import { Heading } from "../../../design-system/heading";
 import { useToast } from "../../../design-system/toast";
 import { formatNumber } from "../../../format/format";
 import { useLocale, usePlural, useT } from "../../../i18n";
+import { companyContactsListKey } from "../../../lib/companycontacts.keys";
 import {
   problemFieldErrorsOf,
   problemStatus,
@@ -40,7 +41,6 @@ import {
   invalidateCompany,
   invalidateRecord,
 } from "../../../lib/recordwritekeys";
-import { companyContactsListKey } from "./contacts.keys";
 import "./companycontacts.css";
 
 type CandidateList = components["schemas"]["CompanyLinkCandidateList"];

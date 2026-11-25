@@ -18,13 +18,14 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
-// AccessMember is one live member as the directory lists them. Roles is nil
-// unless the directory is the management view.
+// AccessMember is one live member as the directory lists them. Roles and
+// RoleNames are nil unless the directory is the management view.
 type AccessMember struct {
 	ID          ids.UUID
 	DisplayName string
 	CreatedAt   time.Time
 	Roles       []string
+	RoleNames   map[string]string
 }
 
 // AccessShare is one live share on the record.
@@ -64,6 +65,9 @@ func (s *Service) RecordAccessDirectory(
 		return AccessDirectory{}, err
 	}
 	if out.Management {
+		if err := s.nameMemberRoles(ctx, out.Members); err != nil {
+			return AccessDirectory{}, err
+		}
 		names, err := s.teamNames(ctx)
 		if err != nil {
 			return AccessDirectory{}, err
@@ -115,6 +119,19 @@ func (s *Service) walkRoster(ctx context.Context, out *AccessDirectory) error {
 		}
 		cursor = &page.Page.NextCursor
 	}
+}
+
+// nameMemberRoles gives each member the names of the roles they hold, read
+// once for the whole roster.
+func (s *Service) nameMemberRoles(ctx context.Context, members []AccessMember) error {
+	live, err := s.liveRoleNames(ctx)
+	if err != nil {
+		return err
+	}
+	for i := range members {
+		members[i].RoleNames = namesOfRoles(live, members[i].Roles)
+	}
+	return nil
 }
 
 func (s *Service) teamNames(ctx context.Context) (map[ids.UUID]string, error) {

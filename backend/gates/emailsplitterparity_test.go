@@ -53,8 +53,6 @@ var splitterTables = []struct {
 	{goName: "signOffExact", tsName: "SIGN_OFF_EXACT"},
 	{goName: "signOffLines", tsName: "SIGN_OFF_LINES", patterns: true},
 	{goName: "attributionPatterns", tsName: "ATTRIBUTION", patterns: true},
-	{goName: "forwardPatterns", tsName: "FORWARD", patterns: true},
-	{goName: "forwardHeaderLine", tsName: "FORWARD_HEADER_LINE", patterns: true},
 	// The four single patterns. Each is one entry rather than a list, and they
 	// are compared the same way — a preamble the server peels and the browser
 	// does not is the same class of drift as a missing sign-off.
@@ -94,15 +92,11 @@ func TestTheTwoEmailSplittersReadTheSameVocabulary(t *testing.T) {
 	// The window is a number rather than a list, so it is compared on its own.
 	// A server scanning fifteen lines up against a browser scanning ten folds a
 	// message on one surface and prints the sign-off on the other.
-	for _, window := range []struct{ goFile, goName, tsName string }{
-		{goSplitter, "trailingScanLines", "TRAILING_SCAN_LINES"},
-		{"internal/shared/kernel/mailquote/quotedheader.go", "quotedHeaderReach", "QUOTED_HEADER_REACH"},
-	} {
-		inGo, inTS := goSplitterConst(t, window.goFile, window.goName), tsSplitterConst(t, window.tsName)
-		if inGo != inTS {
-			t.Errorf("%s is %d lines in Go and %s is %d in TypeScript: one side folds what the other prints",
-				window.goName, inGo, window.tsName, inTS)
-		}
+	goWindow := goSplitterConst(t, "trailingScanLines")
+	tsWindow := tsSplitterConst(t, "TRAILING_SCAN_LINES")
+	if goWindow != tsWindow {
+		t.Errorf("the trailing scan window is %d lines in Go and %d in TypeScript — one side folds "+
+			"a sign-off the other prints", goWindow, tsWindow)
 	}
 }
 

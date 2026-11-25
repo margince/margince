@@ -55,7 +55,6 @@
 .voiceprint-bars span {
   width: 2.6%;
   border-radius: var(--r-full);
-  corner-shape: round;
   background: linear-gradient(var(--aiMed), var(--ai));
   animation: voiceprint-pulse 2.4s var(--ease-in-out) infinite;
   transition: height var(--dur-move) var(--ease-out);

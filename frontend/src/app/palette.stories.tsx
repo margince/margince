@@ -4,7 +4,7 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, userEvent, within } from "storybook/test";
 import { removeStored, STORAGE_KEYS } from "../lib/storage";
-import { meFixture } from "../testing/mefixture";
+import { meFixture, READS_RECORDS } from "../testing/mefixture";
 import { recordNamesRoutes } from "../testing/recordnames.testkit";
 import {
   installFetchStub,
@@ -124,7 +124,10 @@ function CreatePalette() {
 export const CreateOnly: Story = {
   render: () => {
     removeStored(STORAGE_KEYS.paletteRecents);
-    installFetchStub({ "GET /search": noHits, "GET /me": meRoute({}) });
+    installFetchStub({
+      "GET /search": noHits,
+      "GET /me": meRoute(READS_RECORDS),
+    });
     return (
       <StoryProviders>
         <CreatePalette />
@@ -141,7 +144,7 @@ export const CreateOnly: Story = {
       "New project",
     ]) {
       await expect(
-        await canvas.findByRole("button", { name: new RegExp(label) }),
+        await canvas.findByRole("option", { name: new RegExp(label) }),
       ).toBeInTheDocument();
     }
     await expect(canvas.queryByText("Ask your documents")).toBeNull();

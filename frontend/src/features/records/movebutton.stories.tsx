@@ -2,7 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { expect, screen, userEvent, waitFor, within } from "storybook/test";
+import { expect, screen, userEvent, within } from "storybook/test";
 import {
   installFetchStub,
   jsonResponse,
@@ -42,25 +42,29 @@ export const CreateTask: Story = {
   args: CREATE_TASK,
 };
 
-/** A seat that may not write activities is offered no follow-up. */
-export const CreateTaskNoGrant: Story = {
+const TASK_REFUSAL = "You do not have permission to add tasks";
+const EMAIL_REFUSAL = "You do not have permission to send email";
+
+/** A move the server marked blocked stays on the card, disabled, with its reason. */
+export const CreateTaskBlocked: Story = {
   beforeEach: () => {
     installFetchStub({ "GET /me": meRoute({ activity: ["read"] }) });
   },
-  args: CREATE_TASK,
+  args: {
+    ...CREATE_TASK,
+    move: { ...CREATE_TASK.move, blocked_reason: TASK_REFUSAL },
+  },
   play: async () => {
-    // Drawn while the grants are unknown, gone once /me refuses the write.
-    await screen.findByRole("button", { name: "Create follow-up" });
-    await waitFor(() =>
-      expect(
-        screen.queryByRole("button", { name: "Create follow-up" }),
-      ).toBeNull(),
-    );
+    const button = await screen.findByRole("button", {
+      name: "Create follow-up",
+    });
+    await expect(button).toBeDisabled();
+    await expect(button).toHaveAccessibleDescription(TASK_REFUSAL);
   },
 };
 
-/** A seat that may not write activities is offered no follow-up draft. */
-export const DraftFollowUpNoGrant: Story = {
+/** The same for the follow-up draft. */
+export const DraftFollowUpBlocked: Story = {
   beforeEach: () => {
     installFetchStub({ "GET /me": meRoute({ activity: ["read"] }) });
   },
@@ -72,15 +76,15 @@ export const DraftFollowUpNoGrant: Story = {
         activity_id: "m-1",
         links: [{ entity_type: "contact", entity_id: "p-1" }],
       },
+      blocked_reason: EMAIL_REFUSAL,
     },
   },
   play: async () => {
-    await screen.findByRole("button", { name: "Draft follow-up" });
-    await waitFor(() =>
-      expect(
-        screen.queryByRole("button", { name: "Draft follow-up" }),
-      ).toBeNull(),
-    );
+    const button = await screen.findByRole("button", {
+      name: "Draft follow-up",
+    });
+    await expect(button).toBeDisabled();
+    await expect(button).toHaveAccessibleDescription(EMAIL_REFUSAL);
   },
 };
 

@@ -45,6 +45,7 @@ import (
 	"time"
 
 	"github.com/margince/margince/backend/internal/platform/auth"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/ports/datasource"
 	"github.com/margince/margince/backend/internal/shared/ports/mcp"
@@ -172,9 +173,7 @@ func (r *Registry) claimFor(ctx context.Context, spec mcp.ToolSpec, res reserved
 		out, err := r.replay(ctx, spec, claim)
 		return false, "", out, claim.Records, err
 	case ClaimInFlight:
-		return false, "", nil, 0, fmt.Errorf(
-			"an earlier %s call with this idempotency_key has not finished yet; wait for it rather than "+
-				"repeating it: %w", spec.Name, apperrors.ErrConflict)
+		return false, "", nil, 0, &claimInFlightError{tool: spec.Name}
 	case ClaimMismatch:
 		return false, "", nil, 0, fmt.Errorf(
 			"this idempotency_key was already used for a DIFFERENT %s call%s; send a new key to make this "+
@@ -269,28 +268,20 @@ func (r *Registry) unitOwnedTool(name string) bool {
 	return r.unitOwned[name]
 }
 
-// settleRun records what a claimed run produced, for the retry that comes after
-// a lost response.
+// settleRun records what a claimed run produced, for the retry after a lost
+// response. It runs on a context detached from the caller's cancellation, since
+// a dropped transport is why the caller retries.
 //
-// Both bookkeeping calls run on a context DETACHED from the caller's
-// cancellation, because the motivating case cancels it: the transport dropped,
-// which is precisely why the caller will retry. Settling on the dead context
-// would fail, leave the claim in flight for the whole window, and make the one
-// result the retry exists to fetch permanently unreachable.
-//
-// A FAILED run does not release its key. A handler can fail after its write
-// committed — create_record commits the row and then reads it back — so "the
-// call returned an error" is not "nothing happened", and freeing the key there
-// is how one key creates two records.
-func (r *Registry) settleRun(ctx context.Context, spec mcp.ToolSpec, res reserved, attempt string, out json.RawMessage, records int, runErr error) {
+// A failed run keeps its key, because a handler can fail after its write
+// committed. releasesKey names the one case that gives it back.
+func (r *Registry) settleRun(ctx context.Context, spec mcp.ToolSpec, res reserved, attempt string, out json.RawMessage, records int, runErr error, committed func() bool) {
 	if res.RetryKey == "" {
 		return
 	}
 	book, release := context.WithTimeout(context.WithoutCancel(ctx), bookkeepingTimeout)
 	defer release()
-	if _, asked := errors.AsType[*askInChatError](runErr); asked {
-		// Nothing ran: the call waits for the user, and its retry is the same
-		// call under the same key.
+	// A call that waits for the user ran nothing, and its retry is the same call.
+	if _, asked := errors.AsType[*askInChatError](runErr); asked || releasesKey(runErr, res, committed) {
 		r.releaseUnrunKey(ctx, spec, res, attempt)
 		return
 	}
@@ -335,10 +326,19 @@ func safeFailureReason(err error) string {
 	return "the call did not complete"
 }
 
-// releaseUnrunKey gives a key back after a failure that provably happened
-// BEFORE the tool ran — today, a refused approval redemption. Nothing else may
-// use it: for any failure at or after the handler, whether an effect landed is
-// exactly what this surface cannot know.
+// releasesKey says a failed run gives its key back. The database aborted a
+// transaction in a lock cycle, no transaction of the call committed a write, and
+// no approval was spent. The REST door releases on any refusal without a commit.
+// A tool may reach a provider before it fails, so only a lock cycle proves that
+// the call did not take effect.
+func releasesKey(runErr error, res reserved, committed func() bool) bool {
+	return storekit.IsLockCycle(runErr) && res.ApprovalID.IsZero() && !committed()
+}
+
+// releaseUnrunKey gives a key back after a failure that provably wrote nothing.
+// Two qualify: a refused approval redemption, and a lock cycle that aborted the
+// transaction. Nothing else may use it, because after the handler runs this
+// surface cannot know if an effect landed.
 func (r *Registry) releaseUnrunKey(ctx context.Context, spec mcp.ToolSpec, res reserved, attempt string) {
 	if res.RetryKey == "" {
 		return

@@ -2,7 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { expect, fn, userEvent, within } from "storybook/test";
+import { expect, fn, userEvent, waitFor, within } from "storybook/test";
 import { LocaleProvider } from "../i18n";
 import { NameDialog } from "./namedialog";
 
@@ -36,7 +36,9 @@ export const Create: Story = {
   play: async ({ args }) => {
     const dialog = within(await within(document.body).findByRole("dialog"));
     await userEvent.click(dialog.getByRole("button", { name: "Add reason" }));
-    await expect(dialog.getByText("Reason is required.")).toBeVisible();
+    await waitFor(() =>
+      expect(dialog.getByText("Reason is required.")).toBeVisible(),
+    );
     await expect(dialog.getByRole("textbox", { name: /Reason/ })).toHaveFocus();
     await expect(args.onSave).not.toHaveBeenCalled();
   },

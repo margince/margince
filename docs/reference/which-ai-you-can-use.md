@@ -15,13 +15,13 @@ AI works with Margince in two ways. **Margince AI** is the AI inside the product
 | How we test it | Each feature, on the product's real prompts, many tries | Everyday jobs, done from start to end, several tries |
 
 ### Which AI model should I choose for Margince?
-For Margince AI, choose the model setup with the most features ready. Today that is **Google Gemini**, with 26 of its 38 features ready. A model setup says which model does which kind of work, and the table below shows each one we tested. Your administrator sets it up under **Settings**, then **AI models**.
+For Margince AI, choose the model setup with the most features ready. Today that is **Google Gemini**, with 28 of its 38 features ready. A model setup says which model does which kind of work, and the table below shows each one we tested. Your administrator sets it up under **Settings**, then **AI models**.
 Also called: which model should I use, best model, recommended model, which LLM, which provider, model tiers.
 
 | Model setup | Where your data goes | Ready | Usable with care | Not reliable yet | Not measured |
 |---|---|---:|---:|---:|---:|
-| Google Gemini | global cloud | 26 | 12 | 0 | 0 |
-| Google Gemini in the EU, through Vertex AI | EU-hosted cloud | 26 | 12 | 0 | 0 |
+| Google Gemini | global cloud | 28 | 9 | 1 | 0 |
+| Google Gemini in the EU, through Vertex AI | EU-hosted cloud | 28 | 9 | 1 | 0 |
 | OpenAI GPT-6, through OpenRouter | global cloud | 19 | 3 | 3 | 13 |
 | Open models from OpenAI and Mistral, through OpenRouter | global cloud | 12 | 12 | 8 | 6 |
 | Gemma 4 you could run yourself, through OpenRouter | global cloud | 1 | 0 | 4 | 33 |
@@ -40,8 +40,8 @@ Also called: grade, rating, certified, how reliable is the AI.
 
 | Model setup | Not reliable yet |
 |---|---|
-| Google Gemini | none |
-| Google Gemini in the EU, through Vertex AI | none |
+| Google Gemini | Reply drafting |
+| Google Gemini in the EU, through Vertex AI | Reply drafting |
 | OpenAI GPT-6, through OpenRouter | Thread confidentiality check<br>First-time sender check<br>Meeting follow-up extraction |
 | Open models from OpenAI and Mistral, through OpenRouter | Message classification<br>First-time sender check<br>Buying-role reading<br>Website research<br>Stage evidence extraction<br>Record summary<br>Tag suggestions<br>Meeting follow-up extraction |
 | Gemma 4 you could run yourself, through OpenRouter | First-time sender check<br>Signature enrichment<br>Unanswered-message triage<br>Checking whether the reply answered the request |
@@ -68,7 +68,7 @@ Also called: untested assistant, another AI tool, my own agent.
 The job by job results are in [Your AI assistant: test results](mcp-tool-coverage.md).
 
 ### What did you test, and what not?
-For Margince AI we ran 343 test cases. Each one is an example with a known right answer, in one of the 62 places in the product where a feature calls a model. For your AI assistant, we wrote 83 everyday jobs on a test company. The table counts the jobs each assistant has run, and a job not run yet is not counted as failed. A model setup or an assistant missing from the tables above is not tested yet.
+For Margince AI we ran 344 test cases. Each one is an example with a known right answer, in one of the 62 places in the product where a feature calls a model. For your AI assistant, we wrote 83 everyday jobs on a test company. The table counts the jobs each assistant has run, and a job not run yet is not counted as failed. A model setup or an assistant missing from the tables above is not tested yet.
 Also called: how is the AI tested, test coverage, certification.
 
 ## Where to go next

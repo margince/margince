@@ -136,7 +136,7 @@ func TestAnAmountVerdictLeavesALinesDealAlone(t *testing.T) {
 		AsOwner:       func(context.Context, pgx.Tx) (context.Context, error) { return e.productCtx(), nil },
 		Allowed:       func(context.Context, pgx.Tx, string) (bool, error) { return true, nil },
 		EvidenceHolds: func(context.Context, pgx.Tx) (bool, error) { return true, nil },
-		Record:        func(context.Context, pgx.Tx, []VerdictChange) error { return nil },
+		Record:        func(context.Context, pgx.Tx, []VerdictChange) (ids.UUID, error) { return ids.Nil, nil },
 	})
 	if err != nil {
 		t.Fatalf("applying the verdict: %v", err)

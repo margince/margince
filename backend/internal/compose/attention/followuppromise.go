@@ -215,6 +215,6 @@ func (s *Service) promisesPastTheCap(ctx context.Context, day crmcontracts.Atten
 	if len(cut) == 0 {
 		return nil, nil
 	}
-	window := TaskWindow{AsOf: day.AsOf, Until: s.backlog.until.AddDate(0, 0, upcomingHorizonDays), Scope: TasksMine}
+	window := TaskWindow{AsOf: day.AsOf, Until: s.backlog.until.AddDate(0, 0, upcomingHorizonDays), Scope: TasksMine, Zone: dayZoneOf(TasksMine, s.backlog.zone)}
 	return s.backlog.tasks.TasksIn(ctx, window, cut)
 }

@@ -83,7 +83,7 @@ BEGIN
     ('USD', 'EUR', 0.92, CURRENT_DATE),
     ('GBP', 'EUR', 1.17, CURRENT_DATE),
     ('CHF', 'EUR', 1.04, CURRENT_DATE)
-  ON CONFLICT (from_currency, to_currency, rate_date)
+  ON CONFLICT (from_currency, to_currency, rate_date) WHERE superseded_at IS NULL
     DO UPDATE SET rate = EXCLUDED.rate;
 
   RAISE NOTICE 'seed-dev.sql: FX rates USD/GBP/CHF → EUR seeded for demo-workspace (rate_date=%)', CURRENT_DATE;

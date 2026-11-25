@@ -197,8 +197,8 @@ func TestAMergeOutsideAFiledPairStillNeedsBothRecords(t *testing.T) {
 	if n := c.e.WsCount(t, `SELECT count(*) FROM dedupe_candidate WHERE $1 IN (left_contact_id, right_contact_id)`, mine); n != 0 {
 		t.Fatalf("the unalike contacts were filed as a pair %d time(s)", n)
 	}
-	if _, err := c.store.MergeContact(rep, contactID(mine), contactID(theirs), nil); !errors.Is(err, apperrors.ErrConflict) {
-		t.Errorf("a merge of one's own record into a colleague's unfiled one = %v, want the bare conflict", err)
+	if _, err := c.store.MergeContact(rep, contactID(mine), contactID(theirs), nil); caseCode(err) != "merge_target_read_only" {
+		t.Errorf("a merge of one's own record into a colleague's unfiled one = %v, want the merge_target_read_only refusal", err)
 	}
 	if _, err := c.store.MergeContact(rep, contactID(theirs), contactID(mine), nil); !errors.Is(err, apperrors.ErrPermissionDenied) {
 		t.Errorf("a merge of a colleague's unfiled record into one's own = %v, want 403", err)
@@ -208,8 +208,8 @@ func TestAMergeOutsideAFiledPairStillNeedsBothRecords(t *testing.T) {
 	if _, err := c.store.DisposeDedupeCandidate(c.e.Admin(), c.pairID(t, dismissed[0], dismissed[1]), "not_a_duplicate", nil); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := c.store.MergeContact(rep, contactID(dismissed[0]), contactID(dismissed[1]), nil); !errors.Is(err, apperrors.ErrConflict) {
-		t.Errorf("a merge of one's own record into a pair someone marked as two contacts = %v, want the bare conflict", err)
+	if _, err := c.store.MergeContact(rep, contactID(dismissed[0]), contactID(dismissed[1]), nil); caseCode(err) != "merge_target_read_only" {
+		t.Errorf("a merge of one's own record into a pair someone marked as two contacts = %v, want the merge_target_read_only refusal", err)
 	}
 }
 
@@ -265,8 +265,8 @@ func TestTheOwnerOfEitherHalfMergesAFiledCompanyPair(t *testing.T) {
 		t.Fatalf("the two companies were filed %d time(s), want once", n)
 	}
 	stranger := c.unlikeCompany(t, c.e.Rep2)
-	if _, err := c.store.MergeCompany(rep, ids.From[ids.CompanyKind](mine), ids.From[ids.CompanyKind](stranger), nil); !errors.Is(err, apperrors.ErrConflict) {
-		t.Errorf("a merge into a colleague's unfiled company = %v, want the bare conflict", err)
+	if _, err := c.store.MergeCompany(rep, ids.From[ids.CompanyKind](mine), ids.From[ids.CompanyKind](stranger), nil); caseCode(err) != "merge_target_read_only" {
+		t.Errorf("a merge into a colleague's unfiled company = %v, want the merge_target_read_only refusal", err)
 	}
 	if _, err := c.store.MergeCompany(rep, ids.From[ids.CompanyKind](theirs), ids.From[ids.CompanyKind](mine), nil); !isMergeDirection(err) {
 		t.Errorf("archiving the colleague's company = %v, want the merge_direction refusal", err)

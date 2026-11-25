@@ -104,6 +104,7 @@ function Panel() {
       panel={panel}
       focusMovedOn={focusMovedOn}
       frame={{ left: 12, bottom: 12, width: 420, maxHeight: 700 }}
+      id="agent-panel"
     />
   );
 }

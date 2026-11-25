@@ -1,5 +1,5 @@
 <!-- prose:plain -->
-<!-- describes: backend/internal/compose/suggestionlanes backend/internal/compose/magic/completed.go backend/internal/compose/completedchanges/reader.go backend/internal/platform/database/readadmission.go backend/internal/platform/database/db.go backend/internal/compose/dealstatus backend/internal/platform/database/storekit/leadengagement.go backend/internal/compose/leadworktasks.go backend/internal/compose/attention backend/internal/compose/attentionseam.go backend/internal/compose/attentionsnapshotseam.go backend/internal/compose/worklistmetrics.go backend/internal/platform/database/statementmeter.go backend/internal/platform/database/planreuse.go backend/internal/modules/activities/waitingsql.go backend/internal/modules/activities/replysettled.go backend/internal/modules/activities/followupsetting.go backend/internal/platform/settings/memo.go backend/internal/platform/database/txmemo.go backend/internal/platform/database/savepoint.go backend/internal/platform/database/degradableread.go backend/internal/compose/integration/worklistcost_integration_test.go backend/internal/platform/testdb/roundtrips.go backend/internal/modules/consent/noticecase.go backend/internal/compose/commitmentdispatch.go backend/internal/compose/commitmentsettle.go backend/internal/compose/weekly backend/internal/compose/weeklyjobs.go backend/internal/modules/deals/closedate.go backend/internal/modules/deals/changeacceptance.go frontend/src/features/brief/brief.queue.tsx backend/internal/compose/slipping.go backend/internal/compose/attentionriskseam.go backend/internal/modules/deals/deal_read.go backend/internal/modules/deals/atrisklist.go -->
+<!-- describes: backend/internal/compose/suggestionlanes backend/internal/compose/magic/completed.go backend/internal/compose/completedchanges/reader.go backend/internal/platform/database/readadmission.go backend/internal/platform/database/db.go backend/internal/compose/dealstatus backend/internal/platform/database/storekit/leadengagement.go backend/internal/compose/leadworktasks.go backend/internal/compose/attention backend/internal/compose/dayrule backend/internal/compose/attentionseam.go backend/internal/compose/attentionsnapshotseam.go backend/internal/compose/worklistmetrics.go backend/internal/platform/database/statementmeter.go backend/internal/platform/database/planreuse.go backend/internal/modules/activities/waitingsql.go backend/internal/modules/activities/replysettled.go backend/internal/modules/activities/followupsetting.go backend/internal/platform/settings/memo.go backend/internal/platform/database/txmemo.go backend/internal/platform/database/savepoint.go backend/internal/platform/database/degradableread.go backend/internal/compose/integration/worklistcost_integration_test.go backend/internal/platform/testdb/roundtrips.go backend/internal/modules/consent/noticecase.go backend/internal/compose/commitmentdispatch.go backend/internal/compose/commitmentsettle.go backend/internal/compose/weekly backend/internal/compose/weeklyjobs.go backend/internal/modules/deals/closedate.go backend/internal/modules/deals/changeacceptance.go frontend/src/features/brief/brief.queue.tsx backend/internal/compose/slipping.go backend/internal/compose/attentionriskseam.go backend/internal/modules/deals/deal_read.go backend/internal/modules/deals/atrisklist.go -->
 # Home and the Worklist: how the day is ranked
 
 Home has one ranking engine behind three views: the Worklist, the **Needs you** section on Home, and the
@@ -200,6 +200,11 @@ from the earliest time to the latest, and an undated task or deal goes last. A t
 longest-standing work comes first, whichever source holds it. Approvals and suggestions have no time in this order,
 so they come after the dated rows.
 
+Which day it is depends on the screen. Your own lists read the day in your own time zone: your Worklist, your Home and
+your brief. A screen that puts the work of several colleagues side by side reads the installation's time zone, so every viewer sees
+one day end. A reader with no zone of their own falls back to the installation's. One function answers this for every
+reader (`compose/dayrule`), and the same rule in SQL is `occurredday.ZoneSQL`.
+
 Each source reads a batch after where it stopped. A row is shown only once no source with more rows could still
 hold an earlier one. Each source then moves to the row after the last one it gave, and reads the rest again on the
 next page.
@@ -249,6 +254,11 @@ The approval engine counts approvals under the lane's own query, so a cut lane s
 tail reaches every row it counts. A team page states no approval total, because the count does not judge by the
 team's roster (`exactSources` in `attention/totals.go`). Deal and tag suggestions state their stores' counts the
 same way, in scopes that include them.
+
+The decisions total and the Worklist's `review` count the same set of rows, by `readerSettles` in
+`attention/readings.go`. An approval counts also while its preview is stale or blocked, because the reader can
+refresh it. A duplicate pair without verbs waits on someone else and does not count. Where the total is stated,
+`review` is that total, so Home and the Worklist show one number.
 
 The changed-since-brief link ends at the ranked snapshot its badge counts. It counts the rows
 left after grouping and Done, and each page keeps their changed flags. Without that filter, the

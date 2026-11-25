@@ -40,6 +40,12 @@ export type DetailSection = Readonly<{
 }>;
 
 /**
+ * What this reader may do with the record, as a row and the ask under it. It
+ * joins the Ownership group, beside the owner it is about.
+ */
+export type DetailAccess = Readonly<{ row: DetailRow; foot?: ReactNode }>;
+
+/**
  * The details under a record's head, each group a pane of its own: a small
  * label, then label/value rows. The empty rows of every group fold behind one
  * link, and a group with nothing left to show draws no pane. The `footnote` is
@@ -49,21 +55,24 @@ export type DetailSection = Readonly<{
 export function RecordDetails({
   sections,
   footnote,
+  access,
 }: Readonly<{
   sections: readonly DetailSection[];
   footnote?: ReactNode;
+  access?: DetailAccess;
 }>) {
   const t = useT();
   const plural = usePlural();
   const { locale } = useLocale();
   const [showEmpty, setShowEmpty] = useState(false);
-  const empties = sections.reduce(
+  const groups = withAccess(sections, access, t("record.details.ownership"));
+  const empties = groups.reduce(
     (sum, section) => sum + (section.rows ?? []).filter((r) => r.empty).length,
     0,
   );
   return (
     <div className="recorddetails">
-      {sections.map((section) => (
+      {groups.map((section) => (
         <DetailGroup
           key={section.key}
           section={section}
@@ -87,8 +96,48 @@ export function RecordDetails({
           </Button>
         </div>
       )}
-      {footnote && <p className="recorddetails-note">{footnote}</p>}
+      {footnote && <div className="recorddetails-note">{footnote}</div>}
     </div>
+  );
+}
+
+// The access row goes last in Ownership, or opens a group of that name when
+// the record draws none.
+function withAccess(
+  sections: readonly DetailSection[],
+  access: DetailAccess | undefined,
+  ownershipLabel: string,
+): readonly DetailSection[] {
+  if (!access) {
+    return sections;
+  }
+  const foot = access.foot && (
+    <div className="recorddetails-access">{access.foot}</div>
+  );
+  if (!sections.some((section) => section.key === "ownership")) {
+    return [
+      ...sections,
+      {
+        key: "ownership",
+        label: ownershipLabel,
+        rows: [access.row],
+        children: foot,
+      },
+    ];
+  }
+  return sections.map((section) =>
+    section.key === "ownership"
+      ? {
+          ...section,
+          rows: [...(section.rows ?? []), access.row],
+          children: (
+            <>
+              {section.children}
+              {foot}
+            </>
+          ),
+        }
+      : section,
   );
 }
 

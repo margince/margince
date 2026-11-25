@@ -8,8 +8,9 @@ import {
   useQueryClient,
 } from "@tanstack/react-query";
 import { Handshake } from "lucide-react";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { api } from "../api/client";
+import { intentKeys } from "../api/idempotencykey";
 import type { components } from "../api/schema";
 import { Button, Skeleton } from "../design-system/atoms";
 import { type Choice, ChoiceList } from "../design-system/choicelist";
@@ -27,6 +28,7 @@ import { fileListKeys } from "../lib/attachmentkeys";
 import { problemStatus, unwrap } from "../lib/problem";
 import { useViewerZone } from "../lib/viewerzone";
 import { worklistKey } from "../lib/workkeys";
+import { useDealStakeholderOffer } from "./dealstakeholderoffer";
 import {
   WHICH_DEAL_SOURCE,
   WhichDealDecline,
@@ -77,13 +79,16 @@ export function WhichDealChoice({ task }: Readonly<{ task: Activity }>) {
         ),
     })),
   });
-  const file = useFileOnDeal(task.id);
+  const stakeholders = useDealStakeholderOffer();
+  const file = useFileOnDeal(task.id, stakeholders.offer);
   const choices = useDealChoices(
     deals.flatMap((read) => (read.data ? [read.data] : [])),
   );
   const answering = useIsMutating({ mutationKey: whichDealKey(task.id) }) > 0;
   // A deal that closed since it was picked is no longer a card to file on.
   const choice = choices.find((option) => option.value === picked)?.value;
+  // The offer outlives the question it follows, until it is answered.
+  if (stakeholders.asking) return stakeholders.element;
   if (!mail || !asksWhichDeal(task)) return null;
   // A deal gone or out of reach (404) is no choice; any other failure leaves
   // the question unanswerable until a retry reads every deal offered.
@@ -184,36 +189,51 @@ function dealFacts(
   return facts.join(" · ");
 }
 
-function useFileOnDeal(taskId: string) {
+function useFileOnDeal(
+  taskId: string,
+  offerStakeholders: ReturnType<typeof useDealStakeholderOffer>["offer"],
+) {
   const t = useT();
   const toast = useToast();
   const queryClient = useQueryClient();
+  const keyed = useRef(intentKeys());
   return useMutation({
     mutationKey: whichDealKey(taskId),
-    mutationFn: async ({ mail, deal }: { mail: string; deal: string }) =>
-      unwrap(
-        await api.POST("/activities/relink-thread", {
-          params: { header: { "Idempotency-Key": crypto.randomUUID() } },
-          body: {
-            activity_id: mail,
-            entity_type: "deal",
-            entity_id: deal,
-            replace_existing_of_type: false,
-          },
-        }),
+    mutationFn: async ({ mail, deal }: { mail: string; deal: string }) => {
+      const body = {
+        activity_id: mail,
+        entity_type: "deal" as const,
+        entity_id: deal,
+        replace_existing_of_type: false,
+      };
+      return unwrap(
+        await keyed.current(body, (key) =>
+          api.POST("/activities/relink-thread", {
+            params: { header: { "Idempotency-Key": key } },
+            body,
+          }),
+        ),
         t,
-      ),
-    onSuccess: async (_filed, { mail }) => {
-      toast.show(t("tasks.whichDeal.filed"));
-      // The thread's files now show on the deal it was filed under.
-      await Promise.all(
-        [
-          ["activity", taskId],
-          TASK_QUEUE_KEY,
-          worklistKey,
-          ...fileListKeys({ entityType: "activity", entityId: mail }, "moved"),
-        ].map((queryKey) => queryClient.invalidateQueries({ queryKey })),
       );
+    },
+    onSuccess: async (_filed, { mail, deal }) => {
+      toast.show(t("tasks.whichDeal.filed"));
+      // The thread's files now show on the deal it was filed under. The
+      // question leaves the list only once the offer is answered, so the
+      // offer is not taken down with it.
+      const refresh = () =>
+        Promise.all(
+          [
+            ["activity", taskId],
+            TASK_QUEUE_KEY,
+            worklistKey,
+            ...fileListKeys(
+              { entityType: "activity", entityId: mail },
+              "moved",
+            ),
+          ].map((queryKey) => queryClient.invalidateQueries({ queryKey })),
+        );
+      await offerStakeholders(mail, deal, refresh);
     },
   });
 }

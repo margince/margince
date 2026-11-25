@@ -16,6 +16,13 @@ func (c *Connector) WithBounceSink(sink connector.BounceSink) *Connector {
 	return &copied
 }
 
+// WithBackfillTuning returns a copy that walks history pages by t.
+func (c *Connector) WithBackfillTuning(t connector.BackfillTuning) *Connector {
+	copied := *c
+	copied.tuning = t
+	return &copied
+}
+
 // New returns a Gmail connector over the given OAuth + API surfaces.
 func New(oauth googleconn.Authorizer, api API) *Connector {
 	return &Connector{oauth: timedAuthorizer{oauth}, api: api, rawMemory: processRawMemory}

@@ -102,6 +102,9 @@ func deleteVisibleLinksOfType(ctx context.Context, tx pgx.Tx, id ids.ActivityID,
 // so the organiser's next sync cannot destroy a link a member chose. It keeps
 // its roster seats, so a calendar that lists it still records the guest's answer.
 func repointDisplacedParticipants(ctx context.Context, tx pgx.Tx, id ids.ActivityID, target ids.UUID, displaced []ids.UUID) error {
+	if err := storekit.LockMeetingAttendeeWrites(ctx, tx, id.UUID); err != nil {
+		return err
+	}
 	if err := unbindDisplacedSenders(ctx, tx, id, target, displaced); err != nil {
 		return err
 	}

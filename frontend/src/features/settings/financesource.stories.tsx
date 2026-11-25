@@ -12,6 +12,7 @@ const page = { next_cursor: null, has_more: false };
 const available = [
   {
     provider: "offline_demo",
+    provider_name: "Demo accounting",
     description:
       "Demonstration accounting data for the finance card, generated rather than read from a real system.",
   },
@@ -20,6 +21,7 @@ const available = [
 const connection = {
   id: "0190a5f0-0000-7000-8000-000000000001",
   provider: "offline_demo",
+  provider_name: "Demo accounting",
   status: "active",
   connected_at: "2026-08-01T09:00:00Z",
   last_success_at: "2026-08-02T09:00:00Z",
@@ -88,6 +90,14 @@ export const SyncFailed: Story = {
       status: "error",
       last_error_code: "sync_failed",
     },
+  }),
+};
+
+// A source whose unit declares no name: never shown by its key.
+export const ConnectedUnnamedSource: Story = {
+  render: cardStory({
+    available: [{ ...available[0], provider_name: undefined }],
+    connection: { ...connection, provider_name: undefined },
   }),
 };
 

@@ -69,6 +69,27 @@ func FileOnLeadTx(ctx context.Context, tx pgx.Tx, id ids.ActivityID, lead ids.UU
 	return wrote, err
 }
 
+// FileOnProjectTx is the automatic project filing. It is the guarded relink
+// write of one project link, taken only while the activity has none. It writes
+// the audit row, the evidence given and the relink event, and answers whether
+// the link landed.
+// A link already there, a row gone or a refused writer all answer false.
+// A link inherited from a deal is stamped here, because the relink write
+// leaves that stamp to the member doors.
+func FileOnProjectTx(ctx context.Context, tx pgx.Tx, id ids.ActivityID, project ids.UUID, evidence map[string]any) (bool, error) {
+	in := RelinkActivityInput{EntityType: linkEntityProject, EntityID: project, unfiledOnly: true, evidence: evidence}
+	wrote, _, err := relinkActivityRow(ctx, tx, id, in, linkColumn(linkEntityProject))
+	switch {
+	case errors.Is(err, apperrors.ErrNotFound), errors.Is(err, apperrors.ErrPermissionDenied):
+		return false, nil
+	case err != nil || !wrote:
+		return false, err
+	case inheritedRelink(in):
+		return true, StampCorrespondenceForProject(ctx, tx, id, project)
+	}
+	return true, nil
+}
+
 // RetractMachineLeadTx takes one lead link off an activity, only while no human
 // or agent ever filed the activity under that lead or took it off.
 func RetractMachineLeadTx(ctx context.Context, tx pgx.Tx, id ids.ActivityID, lead ids.UUID, evidence map[string]any) (bool, error) {

@@ -31,6 +31,7 @@
     "DELETE /v1/deals/{id}": "archive_record",
     "DELETE /v1/deals/{id}/documents/{attachmentId}/hide": "unhide_deal_document",
     "DELETE /v1/deals/{id}/lines/{lineId}": "remove_deal_line",
+    "DELETE /v1/deals/{id}/manager-request": "clear_deal_manager_request",
     "DELETE /v1/deals/{id}/move/dismiss": "restore_deal_move",
     "DELETE /v1/finance/source": "disconnect_finance_source",
     "DELETE /v1/finance/source/customers/{external_id}/link": "unlink_finance_customer",
@@ -416,6 +417,7 @@
     "GET /v1/scheduling/profile": "read_view",
     "GET /v1/scheduling/proposals": "list_meeting_proposals",
     "GET /v1/scheduling/team-candidates": "read_view",
+    "GET /v1/scheduling/team-links": "read_view",
     "GET /v1/scheduling/team-requests": "read_view",
     "GET /v1/sdr-handoffs/{id}/assignee": "get_handoff_assignee",
     "GET /v1/search": "search_records",
@@ -687,6 +689,7 @@
     "POST /v1/deals/{id}/legal-reviews": "request_legal_review",
     "POST /v1/deals/{id}/lines": "add_deal_line",
     "POST /v1/deals/{id}/lines/estimate": "use_deal_estimate",
+    "POST /v1/deals/{id}/manager-request": "request_deal_manager",
     "POST /v1/deals/{id}/move-pipeline": "move_deal_pipeline",
     "POST /v1/deals/{id}/move/dismiss": "dismiss_deal_move",
     "POST /v1/deals/{id}/offers": "create_record",
@@ -819,6 +822,7 @@
     "POST /v1/voice-profiles/{id}/versions/{profileVersion}/apply": "apply_voice_version",
     "POST /v1/voice-profiles/{id}/versions/{profileVersion}/reject": "reject_voice_version",
     "POST /v1/voice-profiles/{id}/versions/{profileVersion}/rollback": "rollback_voice_version",
+    "POST /v1/web-forms": "create_web_form",
     "POST /v1/web-forms/{id}/handling/existing": "handle_website_inquiries",
     "POST /v1/web-forms/{id}/handling/preview": "preview_website_inquiries",
     "POST /v1/weekly-plans/commitments": "add_weekly_plan_commitment",
@@ -1253,6 +1257,7 @@
       "note",
       "owner_id",
       "record_type",
+      "stage_id",
       "tag_id",
       "task",
       "verb"
@@ -1347,6 +1352,9 @@
     "clear_activity_disposition": [
       "id",
       "scope"
+    ],
+    "clear_deal_manager_request": [
+      "id"
     ],
     "clear_lead_manual_signal": [
       "factor",
@@ -1539,6 +1547,9 @@
     ],
     "create_voice_profile": [
       "idempotency_key",
+      "request_body"
+    ],
+    "create_web_form": [
       "request_body"
     ],
     "data_coverage": [],
@@ -1739,6 +1750,7 @@
     "enrich": [
       "approval_id",
       "company_id",
+      "confirm_code",
       "depth",
       "idempotency_key",
       "url"
@@ -2127,6 +2139,7 @@
       "filename"
     ],
     "import_vcards": [
+      "company_id",
       "content_base64",
       "content_type",
       "filename"
@@ -2329,8 +2342,11 @@
       "id"
     ],
     "list_deal_margince_changes": [
+      "change_kind",
       "cursor",
-      "id"
+      "id",
+      "note_activity_id",
+      "stage_history_id"
     ],
     "list_deal_products": [
       "id"
@@ -2580,6 +2596,7 @@
     ],
     "merge_members": [
       "approval_id",
+      "confirm_code",
       "idempotency_key",
       "preview_token",
       "source_id",
@@ -3051,6 +3068,7 @@
     "relink_activities": [
       "activity_ids",
       "approval_id",
+      "confirm_code",
       "entity_id",
       "entity_type",
       "idempotency_key",
@@ -3059,6 +3077,7 @@
     "relink_activity": [
       "activity_id",
       "approval_id",
+      "confirm_code",
       "entity_id",
       "entity_type",
       "idempotency_key",
@@ -3066,6 +3085,7 @@
     ],
     "relink_thread": [
       "approval_id",
+      "confirm_code",
       "entity_id",
       "entity_type",
       "idempotency_key",
@@ -3160,6 +3180,10 @@
     ],
     "request_company_vat_check": [
       "id"
+    ],
+    "request_deal_manager": [
+      "id",
+      "request_body"
     ],
     "request_details_confirmation": [
       "id",
@@ -3498,6 +3522,7 @@
     "set_up_partner": [
       "approval_id",
       "company_id",
+      "confirm_code",
       "idempotency_key",
       "next_step",
       "next_step_due_at",
@@ -3704,7 +3729,8 @@
       "id",
       "idempotency_key",
       "if_version",
-      "record_type"
+      "record_type",
+      "why"
     ],
     "update_record_assignment": [
       "id",

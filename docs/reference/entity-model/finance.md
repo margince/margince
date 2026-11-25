@@ -15,7 +15,7 @@ The 5 tables owned by `finance`, as the migrations build them. [Back to the enti
 | `last_attempt_at` | `timestamp with time zone` |  |  |
 | `last_error_code` | `text` |  |  |
 | `last_success_at` | `timestamp with time zone` |  |  |
-| `provider` | `text` | yes |  |
+| `provider` | `text` | yes | The source's key. |
 | `status` | `text`, default `'connecting'::text` | yes | `connecting` until the first sync finishes; `error` when the last one failed. |
 | `archived_at` | `timestamp with time zone` |  | Soft-delete marker. `NULL` means live, and nearly every read filters on it. |
 | `captured_by` | `text` | yes | Who or what wrote the row. Stamped by the server from the authenticated principal, never taken from the request body. |

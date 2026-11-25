@@ -140,8 +140,9 @@ func mustCompileArgument(t *testing.T, call *ast.CallExpr) (string, bool) {
 	return normalizedPattern(body, false), true
 }
 
-// goSplitterConst reads one integer constant out of a Go file.
-func goSplitterConst(t *testing.T, path, name string) int {
+// goSplitterConst reads one integer constant out of the Go file.
+func goSplitterConst(t *testing.T, name string) int {
+	path := goSplitter
 	t.Helper()
 	file, err := gatekit.ParseFile(path, parser.SkipObjectResolution)
 	if err != nil {

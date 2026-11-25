@@ -2,10 +2,8 @@
   "verb": "get_legal_review",
   "checks": [
     "company.read",
-    "contract.read",
     "deal.read",
-    "legal_review.read",
-    "project.read"
+    "legal_review.read"
   ],
   "takes": [
     "legal_review"

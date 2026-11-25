@@ -86,6 +86,7 @@ const ADDRESSED: Readonly<Record<Screen, (route: Route) => Code | undefined>> =
     "oauth-consent": () => SCREEN_CODE.oauthConsent,
     "reset-password": () => undefined,
     ext: () => undefined,
+    app: () => undefined,
     x: () => undefined,
     "not-found": () => undefined,
   };

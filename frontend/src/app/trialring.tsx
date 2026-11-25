@@ -6,8 +6,8 @@ import { useLocale } from "../i18n";
 import type { TrialStanding } from "../lib/license-posture";
 import "./trialring.css";
 
-// The ring's radius in the orb box's 0..100 units. It clears the import ring the
-// orb draws for itself, at every size the rail gives the ball.
+// The ring's radius in its box's 0..100 units; trialring.css sizes the box from
+// the ball, so the ring clears the import ring at every size.
 const RADIUS = 38;
 // The space between two day marks, in degrees, at most a third of a mark.
 const GAP = 6;

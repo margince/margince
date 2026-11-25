@@ -141,7 +141,11 @@ func (h Handlers) GetForecastFocus(w http.ResponseWriter, r *http.Request, param
 		if focus, err = h.readableGoals(ctx, tx, focus); err != nil {
 			return err
 		}
-		out, err = focusToWire(period, focus, h.now().In(period.Zone))
+		if out, err = focusToWire(period, focus, h.now().In(period.Zone)); err != nil {
+			return err
+		}
+		requests, err := h.requestedDeals(ctx, tx, only)
+		out.Requests = &requests
 		return err
 	})
 	if err != nil {

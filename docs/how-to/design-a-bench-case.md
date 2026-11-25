@@ -184,7 +184,7 @@ DNS, connection and TLS intervals help explain it and can overlap. It is not a m
 Chromium's send boundary separates sending from response waiting. Server timings, when supplied,
 remain a separate list. Missing send or server evidence does not become zero.
 An intercepted refresh names its test hold and leaves network phases unknown.
-The response's `X-Correlation-ID` joins the server's request scope and access log; a client cannot choose it.
+The response's `X-Request-Id` joins the server's request scope and access log; a client cannot choose it.
 
 Each record names the loaded bundle files, navigation kind and cache policy, with per-request cache evidence.
 Set `BENCH_HOME_CORPUS` to the fictional dataset revision and `GITHUB_SHA` to the built commit when qualifying a run.

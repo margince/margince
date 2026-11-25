@@ -2,6 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { components } from "../api/schema";
+import type { Translator } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 
 type AuditLogEntry = components["schemas"]["AuditLogEntry"];
@@ -161,4 +162,19 @@ function machineIdentifier(entry: ActorFields): string {
     return entry.agent_client;
   }
   return entry.actor_id === "" ? entry.actor_type : entry.actor_id;
+}
+
+// "via Claude" or "via an agent": how a machine's part reads beside the
+// contact it acted for. Undefined when the row has no machine qualifier.
+export function qualifierPhrase(
+  who: Pick<
+    ReturnType<typeof actorAttribution>,
+    "qualifierKey" | "qualifierName"
+  >,
+  t: Translator,
+): string | undefined {
+  if (who.qualifierName !== undefined) {
+    return t("audit.viaNamed", { client: who.qualifierName });
+  }
+  return who.qualifierKey ? t(who.qualifierKey) : undefined;
 }

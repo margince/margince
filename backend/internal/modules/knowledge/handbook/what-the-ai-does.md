@@ -110,6 +110,9 @@ moves it to the day the chat names, only when the chat clearly settles it. The
 change shows in **Done for you** with **Undo**. See
 [Documents and files](documents-and-files.md).
 
+**Saying why.** When an agent changes a field on a record, it must say why. Its
+line in **Done for you** shows that reason as the agent wrote it.
+
 **Filling in a record from the web.** Reading a company's site, matching a
 LinkedIn connection, filling in a new company. Every one of these shows a card
 for you to check, instead of writing right into the record.
@@ -177,7 +180,7 @@ Where Margince can say who put a value there, it does. The trust marks are:
 - "Source not recorded": when nobody knows where it came from
 
 ## What your agent can set up, and what stays yours
-An agent acting for you can set up pipelines and open stages, custom fields and automations, and change an existing web form. Creating a web form stays yours. It can change price and tax sheets, and your own name, language, hours and voice.
+An agent acting for you can set up pipelines and open stages, custom fields and automations, and create or change a web form. It never sees a web form's secret: choose **Make a new secret** on the form to see one. It can change price and tax sheets, and your own name, language, hours and voice.
 
 It can upload a logo, a vCard or your LinkedIn export. A vCard from your agent fills blanks and replaces nothing a contact already holds. It asks you first where its tool says so. That covers a custom field, a removal, a change to your name and a rule it turns on.
 

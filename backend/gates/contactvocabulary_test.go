@@ -284,6 +284,9 @@ var retired = gatekit.Waive(map[string]string{
 	// the page above, held to it by TestTheEmbeddedHandbookMatchesTheDocs. Waiving the
 	// source without its mirror would fail the moment the two are brought into line.
 	"backend/internal/modules/knowledge/handbook/settings.md": "the embedded copy of the page above",
+	"docs/handbook/roles-and-permissions.md": "the Settings group label People, which is the heading a " +
+		"reader navigating Settings actually sees",
+	"backend/internal/modules/knowledge/handbook/roles-and-permissions.md": "the embedded copy of the page above",
 	"docs/handbook/plain-words.txt": "the handbook's plain word list must admit every word its " +
 		"pages use: the seats settings group, the trust mark for a value a human typed, and a deal won in person",
 

@@ -84,9 +84,9 @@ comes from is in [ai-runtime.md](ai-runtime.md); who may see a row is in
   (`mailquote.OwnEnd`). A trigger builds `search_tsv` from the subject and that part of the body. It
   runs on an insert, and on an update that changes `subject`, `body`, `language`, `body_own_end` or
   `search_tsv` itself.
-- **The History tab folds at the same line.** A forward keeps the mail it passes on,
-  and a reply written between the quoted lines keeps every line. A mail stored before this rule is
-  found through its quoted text until the data task `core/1795363656_mail_search_text` has passed it.
+- **The History tab folds at the same line.** A forward line ends the text as a reply line does, and
+  a reply written between the quoted lines keeps every line. A mail stored before this rule is
+  found through its quoted text until the data task `core/1795596207_mail_search_text` has passed it.
 - **A mail is one hit.** A mail that several mailboxes captured is one activity hit, the reader's
   own copy where they have one. The timelines group copies the same way
   (`connector.MailCopyGroupFrom`).
@@ -131,12 +131,20 @@ subject and again in its body. It ranks above the account, whose name is one wor
 So a short list ranked across types can hold nothing but mail. `per_type=N` asks `GET /v1/search`
 for a **grouped** page instead (`groupedShape`).
 
-Each branch that passes the gate is capped at `N + 1` rows before the `UNION`. The last row is
-dropped and reported in `types_with_more`, and the page takes no cursor or limit. To page through
-the rest, narrow to one type with `types`. The `⌘K` menu asks for it with `per_type=3`, and with
+Each type that passes the gate runs as its own statement, under its own savepoint in one read
+transaction (`groupedHits`). The statement caps the type at `N + 1` rows. The last row is
+dropped and reported in `types_with_more`, and the page takes no cursor or limit.
+
+To page through the rest, narrow to one type with `types`. The `⌘K` menu asks for it with `per_type=3`, and with
 `per_type=8` once one type is picked in its bar. The full results screen with no type set asks with
 `per_type=5`. They show an activity that carries an
 `email_summary` under `Emails`, separate from the calls and notes beside it.
+
+The page has one deadline, the handle's statement budget counted from its start, and each type
+gets what is left of it. The types that rank a bounded sample of their rows (mail today) run last,
+so they keep most of the budget. A type whose statement the budget stops is left out of `data` and
+named in `types_timed_out`, and the other types answer. A ranked page keeps its single statement
+and answers `422 query_too_broad`.
 
 A grouped page of one plain word reads a type's own matches first (`withOwnMatches`). For
 contacts, companies and leads, these are the rows the name index finds. A whole address or domain
@@ -432,7 +440,7 @@ projection, which has its own rules for how it stays current; see
 | Part | Where |
 |---|---|
 | Lexical index | generated `search_tsv` columns on `contact`, `company`, `deal`, `lead`, `project`, `tag`, and `product` + `offer_template`, with the functions that remove accents and apostrophes (`backend/migrations/core/0001_baseline.up.sql`) |
-| Lexical index of activities | `activity.search_tsv`, kept by the trigger function `activity_keeps_search_tsv` from `activity_search_tsv` (`backend/migrations/core/1795363656_mail_search_holds_the_senders_own_text.up.sql`); the boundary rule is `backend/internal/shared/kernel/mailquote/owntext.go` |
+| Lexical index of activities | `activity.search_tsv`, kept by the trigger function `activity_keeps_search_tsv` from `activity_search_tsv` (`backend/migrations/core/1795596207_mail_search_holds_the_senders_own_text.up.sql`); the boundary rule is `backend/internal/shared/kernel/mailquote/owntext.go` |
 | Vector store | `embedding` (`backend/migrations/core/0001_baseline.up.sql`: identity mark + a `vector` with no fixed length). **Not a tenant table**: no `workspace_id`, no RLS |
 | Binding marker | `embed_store_binding` (`backend/migrations/core/0001_baseline.up.sql`: run, identity and the pending set of workspaces). **Not a tenant table**: no `workspace_id`, no RLS |
 | Interaction projection | `graph_interaction_edge`; see [relationship-graph.md](relationship-graph.md) |
@@ -486,7 +494,7 @@ no hop each way, or when two hops on one record share a name.
 |---|---|
 | Lexical query | `internal/modules/search/store.go` (`Search`) |
 | Ranked page + keyset cursor | `internal/modules/search/ranked.go` (`rankedShape`) |
-| Grouped page (`per_type`) | `internal/modules/search/grouped.go` (`groupedShape`) |
+| Grouped page (`per_type`) | `internal/modules/search/grouped.go` (`groupedShape`), `internal/modules/search/groupedlanes.go` |
 | Contacts through the company that employs them (`with_employees`) | `internal/modules/search/employerarm.go` (`employerArmSQL`) |
 | Company hit logo | `internal/modules/search/companylogo.go` ← `internal/modules/contacts/companylogobatch.go` |
 | Where a hit stands (`standing`) | `internal/modules/search/standing.go` (`attachStandings`) |

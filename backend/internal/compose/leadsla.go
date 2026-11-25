@@ -87,6 +87,9 @@ func (leadSLAEscalation) Spec() workflow.Spec {
 		Name:    "lead_sla_escalation",
 		Trigger: workflow.Trigger{EventType: "lead.sla_breached"},
 		Tier:    mcp.TierAutoExecute,
+		// The task and the notice commit in one transaction under the breach's
+		// natural key. A failed Apply leaves neither, and a replay adds both once.
+		ReplaysAfterFailedApply: true,
 	}
 }
 

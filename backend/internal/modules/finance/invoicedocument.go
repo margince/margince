@@ -144,18 +144,27 @@ func admitDocumentFetch(ctx context.Context) error {
 	return nil
 }
 
-// servesDocuments answers whether the named source serves invoice documents,
-// which decides whether the card offers to open one.
-func (s *Store) servesDocuments(provider string) bool {
+// sourceOption answers what the composed units declare about the named source:
+// whether the card offers invoice documents, and the name a reader sees.
+func (s *Store) sourceOption(provider string) SourceOption {
 	if s.sources == nil {
-		return false
+		return SourceOption{Provider: provider}
 	}
 	for _, option := range s.sources.Providers() {
 		if option.Provider == provider {
-			return option.Documents
+			return option
 		}
 	}
-	return false
+	return SourceOption{Provider: provider}
+}
+
+// readerName is the source's name for a reader, absent when its unit gives
+// none, so no surface falls back to the key.
+func (o SourceOption) readerName() *string {
+	if o.DisplayName == "" {
+		return nil
+	}
+	return &o.DisplayName
 }
 
 // readDocumentTarget reads the invoice on the workspace's live connection, and
@@ -186,7 +195,7 @@ func readDocumentTarget(ctx context.Context, tx pgx.Tx, invoiceID ids.UUID) (doc
 	if err != nil {
 		return documentTarget{}, fmt.Errorf("read the invoice: %w", err)
 	}
-	if err := auth.EnsureVisibleLive(ctx, tx, "company", target.companyID); err != nil {
+	if err := ensureLedgerVisible(ctx, tx, target.companyID, true); err != nil {
 		return documentTarget{}, err
 	}
 	linked, err := companyIsLinked(ctx, tx, ids.CompanyID{UUID: target.companyID}, conn.id)

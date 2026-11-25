@@ -3,7 +3,7 @@
   "provider": "gemini",
   "served_model": "gemini-3.1-flash-lite",
   "env_class": "cloud_frontier",
-  "prompt_version": "p85d0084b8d159cf50d182123a18e3b75",
+  "prompt_version": "p9ed75e85cc0caa39cd69fef68a35abfc",
   "corpus_version": "v1",
   "verdict": "supported_degraded",
   "runs": 30,
@@ -36,7 +36,7 @@
     {
       "scenario": "custom_report_setup_names_back_a_measure_it_cannot_express",
       "site": "custom_report_setup",
-      "stamp": "b204d757a75abab868ada3364f90cb219dfbb31b032c98448369538bdd4eabe892773f7f2fcb098965becac713d658f4dd94642d75a5b3789b5e2c8c9e4d49004d54d079091af35f6475adbe9713fae065e54e6241219fcb06f068dbfa711f49",
+      "stamp": "b204d757a75abab868ada3364f90cb219dfbb31b032c98448369538bdd4eabe892773f7f2fcb098965becac713d658f4dd94642d75a5b3789b5e2c8c9e4d490037d83d45b4b54469e2817e0531c4e455ae557a4397e769a4824883862c00aa3b",
       "verdict": "supported_degraded",
       "judge_band": "supported_degraded",
       "runs": 12,
@@ -68,7 +68,7 @@
     {
       "scenario": "custom_report_setup_picks_metrics_and_the_charts_they_draw",
       "site": "custom_report_setup",
-      "stamp": "3fec730ae4e5e137ce0fbcbc9b36e42a2cbdb780937f5c19714baaf8928ef58684b9a3e099f96203b7c1b1d5bc1aab46174a83b80d6294f04f447ec56bdfb47ccd98fc04e707050b0f3b2de26db9af2934141b08f565775cc6ab85ca1115147b",
+      "stamp": "3fec730ae4e5e137ce0fbcbc9b36e42a2cbdb780937f5c19714baaf8928ef58684b9a3e099f96203b7c1b1d5bc1aab46174a83b80d6294f04f447ec56bdfb47c31463df2ee6912225ab1fd8fb10cea6443df8d879ae03cc26a41db55cb044d74",
       "verdict": "certified",
       "judge_band": "certified",
       "runs": 3,
@@ -91,7 +91,7 @@
     {
       "scenario": "initiative_setup_asks_about_a_target_the_words_leave_open",
       "site": "initiative_setup",
-      "stamp": "3c512c8d7bfa57b4e2161bcf52e96399ec854db673c2585f38fe244d1b0807a5be9544a55560d547ea2bd375170f98deb20604b430451ee23bb75336849d962c914307d5c66409f8827886437fbbe6fe7cdce3b8e15f1bdc5828e161dd0e93f1",
+      "stamp": "3c512c8d7bfa57b4e2161bcf52e96399ec854db673c2585f38fe244d1b0807a5be9544a55560d547ea2bd375170f98deb20604b430451ee23bb75336849d962c0cf18d4ecbfc199303e23549213db355e64ac5189450d14765c058aa6dc83812",
       "verdict": "certified",
       "judge_band": "certified",
       "runs": 3,
@@ -114,7 +114,7 @@
     {
       "scenario": "initiative_setup_reads_a_goal_with_a_target_and_deadline",
       "site": "initiative_setup",
-      "stamp": "3d85d85aa3e5b4ab853daf59ea2fd92d9bcade4b369e6af2da65d73fcf3cbf9f93a37ca8555e86ce98f8461d4aaffb1fdfea3514f0e569c04cba7983fe4b0d3976b714b0aa137c51920803ab58b047e6b0be0c72e5daebe50f900f651083fd0b",
+      "stamp": "3d85d85aa3e5b4ab853daf59ea2fd92d9bcade4b369e6af2da65d73fcf3cbf9f93a37ca8555e86ce98f8461d4aaffb1fdfea3514f0e569c04cba7983fe4b0d394ee7e82a982fc159afd7370c9dec3c85b1c18dc4397c92226e2d3e00d6874eff",
       "verdict": "certified",
       "judge_band": "certified",
       "runs": 3,
@@ -137,7 +137,7 @@
     {
       "scenario": "sales_goal_months_follows_last_years_seasons",
       "site": "sales_goal_months",
-      "stamp": "1a277977513b19b10a917f8b13120f8bd4ed4b5293e7f3cfabf00b7a6ffd4d76c87ab7b98d7e156942f12852b0517da0206e5c6d217e2a35751ab5bdf2a5e5028fb68850f0b92e1dd549b247b9044e6094fb8c593e034a11957e87410eb7e3b6",
+      "stamp": "1a277977513b19b10a917f8b13120f8bd4ed4b5293e7f3cfabf00b7a6ffd4d76c87ab7b98d7e156942f12852b0517da0206e5c6d217e2a35751ab5bdf2a5e50250047254f13a5846f7f7caaa36ac2f9c7d987bb34953fb206c0656b771cf027e",
       "verdict": "certified",
       "judge_band": "certified",
       "runs": 3,
@@ -160,7 +160,7 @@
     {
       "scenario": "sales_goal_months_spreads_a_given_yearly_goal",
       "site": "sales_goal_months",
-      "stamp": "5734dd3c0d15d749edfe313a89c432e8357df70935db953ba2d86d46706150f808c340d508fcffb0d2b209fdae5c00dca876b08c0553758c5f01fd435abd9814c6aaed77b9f27000ac515ae49a50d31bc0b16a5a1ed08ab6b0d6e57b0ed1fa26",
+      "stamp": "5734dd3c0d15d749edfe313a89c432e8357df70935db953ba2d86d46706150f808c340d508fcffb0d2b209fdae5c00dca876b08c0553758c5f01fd435abd9814aa93d9f8f47f087961cff7287ca9d4833265f9ac7044af6e3a19cbc8c9edcfde",
       "verdict": "certified",
       "judge_band": "certified",
       "runs": 6,

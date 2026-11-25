@@ -32,6 +32,7 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/platform/owndomain"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/kernel/relationshipmark"
@@ -114,11 +115,13 @@ type EnsureCounterpartyInput struct {
 	// decision that made it, or whoever edited it, stands.
 	RelationshipMark relationshipmark.Mark
 
-	// LinkOnly files the activity under a record the address already names
-	// and creates nothing, for a mailbox no seat owns.
+	// LinkOnly files the activity under a record the address already names,
+	// for a mailbox no seat owns. It creates nothing unless OwnerID is set.
 	LinkOnly bool
-	// ReaderTeam reads the mailbox a link-only ensure files for.
-	ReaderTeam ids.UUID
+	// ReaderTeam reads the mailbox a link-only ensure files for, and
+	// ReaderAuthority reads each member's authority to ask what they may read.
+	ReaderTeam      ids.UUID
+	ReaderAuthority MemberAuthority
 }
 
 // EnsureCounterpartyResult reports what the ensure did — every flag maps to
@@ -235,7 +238,12 @@ func (s *Store) ensureCapturedCounterparty(ctx context.Context, tx pgx.Tx, in En
 		return EnsureCounterpartyResult{}, ErrCounterpartyIsSeat
 	}
 	if in.LinkOnly {
-		return s.linkExistingCounterparty(ctx, tx, in)
+		// A link-only ensure carries an owner only when the ladder said create
+		// for a shared mailbox's backup owner, and then only an unnamed address mints.
+		linked, named, err := s.linkExistingCounterparty(ctx, tx, in)
+		if err != nil || named || in.OwnerID.IsZero() {
+			return linked, err
+		}
 	}
 	if err := s.ensureContact(ctx, tx, in, &res); err != nil {
 		return EnsureCounterpartyResult{}, err
@@ -316,6 +324,9 @@ func (s *Store) ensureContact(ctx context.Context, tx pgx.Tx, in EnsureCounterpa
 	}
 	parsed := ParseContactName(in.DisplayName, in.Email)
 	name := parsed.Full
+	// The sign is judged on the address's own domain, so a caller's Domain
+	// field cannot raise or hide one.
+	sign := impersonationSign(in.DisplayName, owndomain.OfAddress(in.Email))
 	// The workspace's own consumer-mail list travels with the candidate: the
 	// employer-agreement term must judge a shared domain the same way capture
 	// does, or an admin's carve-out would hold on one side and not the other.
@@ -362,11 +373,10 @@ func (s *Store) ensureContact(ctx context.Context, tx pgx.Tx, in EnsureCounterpa
 				return err
 			}
 		}
-		if impersonationSign(in.DisplayName, in.Domain) != "" {
-			// The header carries a sign of impersonation. A new record would be
-			// made with the warning. An existing one is left as it stands, and
-			// nothing is learned from this message. The activity is captured either way.
-			return nil
+		if sign != "" {
+			// Nothing is learned from a message that shows a sign. It labels a
+			// contact with no verdict yet, and the activity is captured either way.
+			return raiseImpersonationWarningTx(ctx, tx, match.ContactID, sign)
 		}
 		return fillMissingContactName(ctx, tx, match.ContactID, parsed, res)
 	}
@@ -384,7 +394,7 @@ func (s *Store) ensureContact(ctx context.Context, tx pgx.Tx, in EnsureCounterpa
 		OwnerID:          ownerFromUUID(&in.OwnerID),
 		Visibility:       visibilityFor(in.OwnerScoped),
 		Narrowing:        narrowingFor(in.OwnerScoped, in.NarrowedBecause),
-		QuarantineReason: impersonationSign(in.DisplayName, in.Domain),
+		QuarantineReason: sign,
 		Emails:           []ContactEmailInput{{Email: in.Email, EmailType: emailTypeWork, IsPrimary: true}},
 		Source:           in.Source,
 		CapturedBy:       in.CapturedBy,

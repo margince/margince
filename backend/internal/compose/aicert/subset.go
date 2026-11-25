@@ -246,6 +246,6 @@ func regradeFromRows(rec *Record) {
 		rec.ReportedAbstained += row.ReportedAbstained
 	}
 	rec.Verdict, rec.Reliability = verdictOver(cases)
-	rec.JudgeScoreP50, rec.JudgeScoreMin, _ = judgeMedianAndMin(scored)
+	rec.JudgeScoreP50, rec.JudgeScoreMin = pooledJudgeScores(scored)
 	rec.PromptVersion = FoldScenarioStamps(stamps)
 }

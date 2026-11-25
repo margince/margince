@@ -8,16 +8,12 @@ import { plantedFindings, srcDir } from "../tree";
 import {
   aliasOf,
   blocks,
-  corneredPseudoElements,
-  isRound,
   ladder,
   PHONE,
   phoneRungBlocks,
   radii,
   readsTheLadder,
   rule,
-  squircleLadder,
-  squircleSelectors,
 } from "./corners.census";
 
 describe("the ladder itself", () => {
@@ -52,41 +48,6 @@ describe("the ladder itself", () => {
         base.get(target),
         `${name} reads ${target}, which the ladder does not size.`,
       ).toMatch(/^\d+px$/);
-    }
-  });
-
-  it("doubles every finite rung under corner-shape, and the pill not at all", () => {
-    const base = ladder(tokens);
-    const smooth = squircleLadder(tokens);
-    expect(smooth.size).toBeGreaterThan(0);
-    for (const [name, value] of base) {
-      if (aliasOf(value)) {
-        expect(
-          smooth.has(name),
-          `${name} reads ${value} and is redeclared in the squircle block. ` +
-            `An alias follows its rung there by itself; a second number is a ` +
-            `second answer that drifts from the first.`,
-        ).toBe(false);
-        continue;
-      }
-      if (name === "--r-full") {
-        expect(
-          smooth.has(name),
-          `--r-full is redeclared in the squircle block. It is already larger ` +
-            `than any box it lands on, and doubling it says nothing; the pill ` +
-            `stays round by cancelling the shape, not by growing.`,
-        ).toBe(false);
-        continue;
-      }
-      const doubled = smooth.get(name);
-      expect(
-        doubled,
-        `${name} has no twin in the @supports (corner-shape: squircle) block. ` +
-          `A rung that is not doubled there tightens the day a browser ships the ` +
-          `property, and only there — the two states never appear side by side, ` +
-          `so nothing would look wrong here.`,
-      ).toBeDefined();
-      expect(doubled).toBe(`${Number(value.replace("px", "")) * 2}px`);
     }
   });
 
@@ -192,85 +153,6 @@ describe("the corner detector sees what it claims to", () => {
       expect(strays).toHaveLength(probe.strays);
     });
   }
-
-  it("sees a cornered pseudo-element, and ignores one with no corner", () => {
-    expect(
-      corneredPseudoElements(".a::after { border-radius: var(--r-sm); }"),
-    ).toEqual(["::after"]);
-    expect(
-      corneredPseudoElements(".a::before { /* border-radius: 4px; */ }"),
-      "a commented-out radius draws nothing, so it corners nothing",
-    ).toEqual([]);
-    expect(
-      corneredPseudoElements('.a::before { content: ""; opacity: 0.5; }'),
-    ).toEqual([]);
-    expect(
-      corneredPseudoElements(".a::marker { border-radius: 50%; }"),
-    ).toEqual(["::marker"]);
-  });
-
-  it("reads the squircle rule's own selector list, not the file's text", () => {
-    const real =
-      "@supports (corner-shape: squircle) {\n" +
-      "  :root { --r-sm: 16px; }\n" +
-      "  :where(*),\n  :where(*)::before {\n    corner-shape: squircle;\n  }\n}";
-    expect(squircleSelectors(real)).toEqual([":where(*)", ":where(*)::before"]);
-    const decoy =
-      "@supports (corner-shape: squircle) {\n" +
-      "  .card::before { border-radius: var(--r-sm); }\n" +
-      "  :where(*) { corner-shape: squircle; }\n}";
-    expect(
-      squircleSelectors(decoy).includes(":where(*)::before"),
-      "a pseudo-element named on an unrelated rule under the query covers nothing",
-    ).toBe(false);
-    const descendant =
-      "@supports (corner-shape: squircle) {\n" +
-      "  :where(*) ::before { corner-shape: squircle; }\n}";
-    expect(
-      squircleSelectors(descendant),
-      "the space is the descendant combinator: that rule paints every " +
-        "descendant's generated box and not the subject's own, so it must not " +
-        "read as the exact form",
-    ).toEqual([":where(*) ::before"]);
-    const commented =
-      "@supports (corner-shape: squircle) {\n" +
-      "  :where(*)::before { /* corner-shape: squircle; */ }\n}";
-    expect(
-      squircleSelectors(commented),
-      "a commented-out declaration declares nothing",
-    ).toEqual([]);
-    const customProperty =
-      "@supports (corner-shape: squircle) {\n" +
-      "  :where(*)::before { --corner-shape: squircle; }\n}";
-    expect(
-      squircleSelectors(customProperty),
-      "a custom property of a similar name paints no corner",
-    ).toEqual([]);
-    const otherValue =
-      "@supports (corner-shape: squircle) {\n" +
-      "  :where(*)::before { corner-shape: squircle-variant; }\n}";
-    expect(
-      squircleSelectors(otherValue),
-      "a different value is a different shape",
-    ).toEqual([]);
-    const important =
-      "@supports (corner-shape: squircle) {\n" +
-      "  :where(*) { corner-shape: squircle !important; }\n}";
-    expect(squircleSelectors(important)).toEqual([":where(*)"]);
-  });
-
-  it("reads a round corner in every spelling it is written in", () => {
-    expect(isRound("var(--r-full)")).toBe(true);
-    expect(isRound("50%")).toBe(true);
-    expect(isRound("var(--r-md)")).toBe(false);
-  });
-
-  it("sees a block that opts out, and one that forgot to", () => {
-    const kept = blocks(".a { border-radius: 50%; corner-shape: round; }")[0];
-    const missed = blocks(".a { border-radius: 50%; }")[0];
-    expect(/corner-shape\s*:\s*round/.test(kept.body)).toBe(true);
-    expect(/corner-shape\s*:\s*round/.test(missed.body)).toBe(false);
-  });
 });
 
 describe("the corners rule", () => {
@@ -289,7 +171,6 @@ describe("the corners rule", () => {
     ]);
     expect(findings).toEqual([
       "src/features/p.css: `border-radius: 11px` names a length, not a rung (--r-sm)",
-      "src/features/p.css: `border-radius: 50%` is round and does not cancel the squircle; add `corner-shape: round;`",
     ]);
   });
 });

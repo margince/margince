@@ -19,6 +19,7 @@ here: put it in the area's word list instead. A name that no plain page uses mus
 | Beschäftigteninformation | The German notice each employee gets before their mailbox is read (Art. 13 GDPR). |
 | breakdown | A count of one population split by one field, which an extension can add. |
 | BUSL | The Business Source License 1.1, the license Margince uses. |
+| capability | A core feature an extension can ask to use, such as its AI models or file store. |
 | challenge | A check a WAF puts to the browser in the app's place, which only a page load can pass. |
 | changelog | A file listing the changes of each release, which this repository does not keep. |
 | Chinese | The Chinese script and the languages written in it. |
@@ -77,6 +78,7 @@ here: put it in the area's word list instead. A name that no plain page uses mus
 | LICENSE | The file at the repository root that holds the license text. |
 | LinkedIn | The professional network whose contact export Margince can import. |
 | locale | The date or time format of the reader's language, as a setting value. |
+| Lumo | Proton's AI assistant, which connects to Margince through its desktop app. |
 | macOS | Apple's desktop operating system. |
 | Margince | The CRM this repository builds. |
 | mask | A field permission that hides one field of a record from a role. |
@@ -102,6 +104,7 @@ here: put it in the area's word list instead. A name that no plain page uses mus
 | React | The JavaScript library the web app is built with. |
 | Redis | The in-memory store Margince uses as its event bus. |
 | REST | The style of HTTP API Margince offers next to MCP. |
+| restriction | A hold a contact may ask for that stops processing of their data (GDPR Art. 18). |
 | RTF | Rich Text Format, a document format most word processors read. |
 | SDK | A software development kit: a library a program uses to drive a tool, as the Claude Agent SDK drives Claude Code. |
 | Shift | The key held while pressing another, as in Page Up/Down by year in `Calendar`. |

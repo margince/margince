@@ -21,9 +21,9 @@ import (
 // still found through the mail it quotes.
 func SearchTextDataTask() datatask.Task {
 	return datatask.Task{
-		ID: "core/1795363656_mail_search_text", Version: 1,
-		Title:    systemtext.Literal("datatask.title.core.1795363656_mail_search_text"),
-		Requires: []string{"core/1795363656"},
+		ID: "core/1795596207_mail_search_text", Version: 1,
+		Title:    systemtext.Literal("datatask.title.core.1795596207_mail_search_text"),
+		Requires: []string{"core/1795596207"},
 		Steps: []datatask.Step{{
 			Name: "rebuild_search_text", Limit: 200, MinLimit: 10,
 			Audit:    datatask.AuditPolicy{Reason: "The stored end and the search value are derived from the body, unaudited as in activities.insertLoggedActivityRow."},

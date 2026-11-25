@@ -295,3 +295,66 @@ func TestAnUploadVerbRefusesAFileItCannotSend(t *testing.T) {
 		}
 	}
 }
+
+// A model reads ask_user_first bare unless the answer says what it asks, and
+// then it drops the exception. The consequence follows what the actions do: a
+// write changes, a read surfaces. An action a human approves anyway carries
+// no ask, and an answer with no ask-first action carries no sentence.
+func TestTheCatalogSaysWhatAskUserFirstAsksOfTheModel(t *testing.T) {
+	readsFirst := RouteVerb{
+		Verb: "read_audit_call", Router: "read_workspace", Action: "ai_call", Op: "getAiCall",
+		Summary: "Read one call", Method: "GET", Pattern: "/v1/ai/calls/{id}", Scope: principal.ScopeRead,
+		PathParams: []string{"id"}, AskUserFirst: true,
+	}
+	runs := func(router, action string) (mcp.ToolSpec, bool) {
+		if router == "change_access" && action == "approved_anyway" {
+			return mcp.ToolSpec{Description: "A human approves it.", AskUserFirst: true, Tier: mcp.TierConfirmationRequired}, true
+		}
+		return mcp.ToolSpec{}, false
+	}
+	d := describeRouterActions{verbs: []RouteVerb{shareRecordVerb, revertStageVerb, readsFirst}, runs: runs}
+	answer := func(request string) map[string]any {
+		t.Helper()
+		out, err := d.Handle(context.Background(), json.RawMessage(request))
+		if err != nil {
+			t.Fatal(err)
+		}
+		var decoded map[string]any
+		if err := json.Unmarshal(out, &decoded); err != nil {
+			t.Fatal(err)
+		}
+		return decoded
+	}
+	for name, tc := range map[string]struct{ request, want string }{
+		"a write router":  {`{"router":"change_state"}`, "tell them what the call will change and " + askFirstGetYes},
+		"a read router":   {`{"router":"read_workspace"}`, "tell them what the call will surface and " + askFirstGetYes},
+		"no ask-first":    {`{"router":"change_access"}`, ""},
+		"approved anyway": {`{"router":"change_access","action":"approved_anyway"}`, ""},
+	} {
+		t.Run(name, func(t *testing.T) {
+			got, present := answer(tc.request)[askFirstMeansField].(string)
+			if tc.want == "" {
+				if present {
+					t.Errorf("%s = %q, want none", askFirstMeansField, got)
+				}
+				return
+			}
+			if !present || !strings.Contains(got, tc.want) {
+				t.Errorf("%s = %q, want it to contain %q", askFirstMeansField, got, tc.want)
+			}
+		})
+	}
+	if got := (askedWrites | askedReads).consequence(); got != "what the call will change or surface" {
+		t.Errorf("a router with writes and reads says %q", got)
+	}
+}
+
+// One sentence tells a model that a refused send goes out only by the user.
+// The tool that checks a contact and the tool that sends both carry it.
+func TestACheckAndASendSayTheSameAboutSendingAnyway(t *testing.T) {
+	for name, copy := range map[string]toolCopy{"read_details": readDetailsCopy, "send_outbound": sendOutboundCopy} {
+		if !strings.Contains(copy.render(), sendAnywayRule) {
+			t.Errorf("%s does not say: %s", name, sendAnywayRule)
+		}
+	}
+}

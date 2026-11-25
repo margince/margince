@@ -1,5 +1,5 @@
 <!-- prose:plain -->
-<!-- describes: frontend/src/app/nav.ts frontend/src/app/palette.tsx frontend/src/app/palettesearch.ts frontend/src/app/paletterecents.ts frontend/src/app/paletterecents.reader.ts frontend/src/app/paletterecents.storage.ts frontend/src/features/voice-knowledge/search.tsx backend/internal/modules/search frontend/src/lib/keymap.ts frontend/src/lib/keyguard.ts frontend/src/app/palettehotkey.ts -->
+<!-- describes: frontend/src/app/nav.ts frontend/src/app/shell.tsx frontend/src/app/palette.tsx frontend/src/app/palettesearch.ts frontend/src/app/paletterecents.ts frontend/src/app/paletterecents.reader.ts frontend/src/app/paletterecents.storage.ts frontend/src/features/voice-knowledge/search.tsx backend/internal/modules/search frontend/src/lib/keymap.ts frontend/src/lib/keyguard.ts frontend/src/app/palettehotkey.ts -->
 # What Margince is
 
 Margince is a CRM. It is one place for the contacts you sell to, the companies
@@ -104,7 +104,7 @@ The sidebar has no counts or badges. The Worklist on Home shows those numbers.
 To get around Margince, use the sidebar on the left. Or press ⌘K (Ctrl+K on Windows and Linux) to open the command palette, and type where you want to go.
 1. Choose a screen in the sidebar, from **Home** at the top to **Sales goals** at the foot.
 2. Open **Settings** from the account menu at the top right.
-3. To hide the sidebar, choose **Collapse sidebar**, or press ⌘B (Ctrl+B).
+3. To hide the sidebar, choose **Collapse sidebar** at the foot of the sidebar, or press ⌘B (Ctrl+B). On a window from `701px` to `1024px`, the sidebar starts narrow until you choose **Expand sidebar**.
 
 On a phone the sidebar turns into a bar at the foot of the screen. It holds **Home**, **Contacts**, **Deals**, the agent between them, and **More** for everything else.
 Also called: navigation, menu, nav bar.
@@ -143,7 +143,7 @@ For a typed search, Enter opens the row you moved to with the arrow keys. If you
 
 At the end of the list, **Ask your documents** puts your words to your documents instead.
 
-If no screen, action or record matches, the palette says **No matches for “…”.** and offers no results page. If record search fails, it says **Search failed**, and the screen commands still work.
+If no screen, action or record matches, the palette says **No matches for “…”.** and offers no results page. If record search fails, it says **Search failed**, and the screen commands still work. If one kind of record could not be searched in time, the palette and the **Search results** page still show the other kinds. They add one line naming that kind, such as “Emails and activities could not be searched for this word in time.” Adding another word helps.
 Also called: find, look up, global search.
 
 **Search results** are in groups by kind: Contacts, Companies, Deals, Leads,
@@ -156,10 +156,10 @@ own name matched. A result that came from a connected system is marked **From a
 connected system**.
 
 An email is found by its subject and by the words its sender wrote. An email quoted under a reply
-does not find it. Three cases still find an email through quoted text:
+does not find it, and neither does an email it forwards. Two cases still find an email through
+quoted text:
 
 - A reply written between the quoted lines is searched whole.
-- A forwarded email is searched with the email it passes on, when the mail program marked it as forwarded.
 - An email stored before this rule keeps its earlier search words until Margince has gone through it.
 
 When nothing matches, the **Search results** page offers **Did you mean:** with up to five

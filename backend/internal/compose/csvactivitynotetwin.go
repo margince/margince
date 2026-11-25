@@ -33,9 +33,9 @@ const noteTwinObject = "activity_note_twin"
 
 // noteTwinKey names the note a row files within one run: its records, subject,
 // body, time, author and owner. It is empty for every kind but a note.
-// The dry run adds the links cell as spelled, because a row of the same upload
-// has no record yet.
-func noteTwinKey(runID migration.RunID, in activities.LogActivityInput, spelled string) string {
+// A dry run also names the records of its own upload that a note links. It
+// uses the ref each answers with, because they have no id yet. The commit passes none.
+func noteTwinKey(runID migration.RunID, in activities.LogActivityInput, pending []string) string {
 	if in.Kind != string(crmcontracts.ActivityKindNote) || in.OccurredAt == nil {
 		return ""
 	}
@@ -44,17 +44,24 @@ func noteTwinKey(runID migration.RunID, in activities.LogActivityInput, spelled 
 		links = append(links, link.EntityType+":"+link.EntityID.String())
 	}
 	slices.Sort(links)
+	pending = slices.Compact(slices.Sorted(slices.Values(pending)))
 	owner := ""
 	if in.Author.AuthorID != nil {
 		owner = in.Author.AuthorID.String()
 	}
 	content := strings.Join([]string{
-		runID.String(), strings.Join(links, ";"), spelled,
+		runID.String(), strings.Join(links, ";"), strings.Join(pending, ";"),
 		derefString(in.Subject), derefString(in.Body), in.OccurredAt.UTC().Format(time.RFC3339Nano),
 		derefString(in.Author.AuthorName), owner,
 	}, "\x00")
 	sum := sha256.Sum256([]byte(content))
 	return hex.EncodeToString(sum[:])
+}
+
+// pendingRefsOf reads the refs a dry run's link step left on a row's cells.
+func pendingRefsOf(typed map[string]any) []string {
+	refs, _ := typed[activityPendingLinks].([]string)
+	return refs
 }
 
 // filedNoteTwin answers the note this run already filed for the same content.

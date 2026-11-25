@@ -21,6 +21,7 @@ import (
 	"github.com/margince/margince/backend/internal/compose/employmentrepair"
 	"github.com/margince/margince/backend/internal/compose/erasedseattraces"
 	"github.com/margince/margince/backend/internal/compose/halfvectors"
+	"github.com/margince/margince/backend/internal/compose/halvedprobabilities"
 	"github.com/margince/margince/backend/internal/compose/importscopes"
 	"github.com/margince/margince/backend/internal/compose/initiativeenrolment"
 	"github.com/margince/margince/backend/internal/compose/invitationsenders"
@@ -30,6 +31,7 @@ import (
 	"github.com/margince/margince/backend/internal/compose/recordsources"
 	"github.com/margince/margince/backend/internal/compose/retiredstagecards"
 	"github.com/margince/margince/backend/internal/compose/retiredthreadsplit"
+	"github.com/margince/margince/backend/internal/compose/rolemailboxseats"
 	"github.com/margince/margince/backend/internal/compose/strengthdates"
 	"github.com/margince/margince/backend/internal/compose/unaskedcommitments"
 	"github.com/margince/margince/backend/internal/compose/viabilitytasks"
@@ -123,6 +125,7 @@ func dataTaskCatalog(pool *pgxpool.Pool, now func() time.Time) []datatask.Task {
 		meetingDuplicatesDataTask(pool),
 		meetingPairsDataTask(pool),
 		meetingSeriesSlotsDataTask(pool),
+		splitSeriesDataTask(pool), activities.ImportedMeetingCopiesDataTask(activities.NewStore(InstallationDB(pool))),
 		meetingOrganizerHostDataTask(pool),
 		linkedInIdentityDataTask(),
 		leadContactPairsDataTask(pool),
@@ -146,6 +149,7 @@ func dataTaskCatalog(pool *pgxpool.Pool, now func() time.Time) []datatask.Task {
 		stockLaddersDataTask(ai.NewRoutingStore(NewSettingsStore(pool), StoredConfig(pool)).AdoptStockTaskLaddersTx),
 		mailCopiesDataTask(pool),
 		answeredTasksDataTask(pool),
+		halvedprobabilities.DataTask(halvedProbabilityStore(pool)),
 		falseMeetingCancelsDataTask(now),
 		provensenders.DataTask(),
 		importscopes.DataTask(),
@@ -159,6 +163,8 @@ func dataTaskCatalog(pool *pgxpool.Pool, now func() time.Time) []datatask.Task {
 		customerlinks.DataTask(),
 		qualifytasks.DuplicatesDataTask(now), qualifytasks.TextDataTask(),
 		companyprofiles.OfferDuplicatesTask(),
-		qualifytasks.SystemTextDataTask(), employmentrepair.DataTask(contacts.NewStore(InstallationDB(pool))), halfvectors.DataTask(), recordsources.DataTask(),
+		qualifytasks.SystemTextDataTask(), employmentrepair.DataTask(contacts.NewStore(InstallationDB(pool))), halfvectors.DataTask(), recordsources.DataTask(), recordsources.SignalDataTask(),
+		rolemailboxseats.DataTask(),
+		activities.TeamLinksDataTask(activities.NewStore(InstallationDB(pool)).WithTeamRequestNotice(teamRequestNotice{}), now),
 	}
 }

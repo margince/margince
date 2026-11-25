@@ -75,7 +75,7 @@ func (a attentionBriefing) Queue(ctx context.Context, now time.Time) ([]attentio
 		unanswered = append(unanswered, attention.BriefEntry{DealID: deal, Snoozed: true})
 		named = append(named, deal)
 	}
-	resolvable, err := a.figures.Figures(ctx, named)
+	resolvable, err := a.figures.Figures(ctx, named, nil)
 	if err != nil {
 		return nil, false, time.Time{}, err
 	}

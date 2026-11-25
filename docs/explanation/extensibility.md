@@ -2,15 +2,15 @@
 <!-- describes: backend/pkg/extension backend/internal/compose/extensions.go backend/internal/compose/extingress.go backend/internal/compose/extensiontools.go backend/internal/compose/channelprovider.go backend/internal/compose/extledger.go backend/internal/compose/unitsql backend/tools/gen-composition scripts/check-pkg-freeze.sh -->
 # Extensibility: the extension tier
 
-The *extension tier* is how a small, closed add-on comes into this product without a change to any file
-the core owns. A unit is one named folder with a version under `extensions/<name>/`. It is its own Go
-module, it reaches the core through one small public surface, and the build composes it in. The plain
-tree, with no add-ons of its own, ships three units:
+The *extension tier* is how a small, closed add-on comes into this product without a change to any file the core owns. A unit is
+one named folder with a version under `extensions/<name>/`. It is its own Go module, it reaches the core through one small public
+surface, and the build composes it in. The plain tree, with no add-ons of its own, ships four units:
 
 | Unit | What it is |
 |---|---|
 | `extensions/eu` | The packs of the 27 EU member states: each one's outbound messaging rules on a shared EU layer, and the German legal floors on retention |
 | `extensions/apac` | The packs of `au`, `cn`, `hk`, `id`, `in`, `jp`, `kr`, `my`, `nz`, `ph`, `sg`, `th`, `tw` and `vn`: each one's outbound messaging rules, the request deadlines of `vn`, and no retention floor |
+| `extensions/us` | The pack of `us`: its outbound messaging rules, the first with opt-out advertising, and its retention floor for accounting records |
 | `extensions/openchannel` | The reference unit. It uses every capability the tier has: its own tables, governed agent tools, an inbound edge with no sign-in that checks a signature, a job that empties a queue, a subscription, ingress with a merge key, a transport it carries replies out on, and its own screen |
 
 Read this page for the whole tier. To *build* a unit, go to [how-to/add-an-extension.md](../how-to/add-an-extension.md).
@@ -608,12 +608,10 @@ fixture units under `fixtures/extensions/` (`crm-hello`, the smallest unit that 
 - [how-to/add-an-extension.md](../how-to/add-an-extension.md): build and ship a unit, step by step.
 - [privacy-and-consent.md](privacy-and-consent.md): the retention engine that reads a pack.
 - [composition-layer.md](composition-layer.md): how `compose` boots and wires the composed set.
-- [agent-surface.md](agent-surface.md): the registry and admission gate a served extension tool goes
-  through.
+- [agent-surface.md](agent-surface.md): the registry and admission gate a served tool goes through.
 - [ingress-gate-and-auto-capture.md](ingress-gate-and-auto-capture.md): what the core does with a record
   a unit lands, with the merge-key declaration and the channel path.
-- [outbound-messaging.md](outbound-messaging.md): the reply path that ends at the `Channel.Send` of a
-  unit.
+- [outbound-messaging.md](outbound-messaging.md): the reply path that ends at a unit's `Channel.Send`.
 - [frontend-architecture.md](frontend-architecture.md): the SPA that the frontend part of an extension
   adds to.
 - [reference/make-targets.md](../reference/make-targets.md): `composition`, `check-composition`,

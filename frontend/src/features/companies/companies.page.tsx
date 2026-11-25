@@ -7,6 +7,7 @@ import {
   useLatestInbound,
 } from "../../components/latestinbound";
 import { useTaskUpdate } from "../../components/taskactions";
+import { ViewOnly } from "../../components/viewonly";
 import { Modal } from "../../design-system/atoms";
 import { DrawerBody, DrawerHead } from "../../design-system/drawerbands";
 import { Heading } from "../../design-system/heading";
@@ -19,7 +20,6 @@ import { navigate } from "../../lib/router";
 import { useViewerZone } from "../../lib/viewerzone";
 import { OpenEmailDrawer } from "../mail/openemaildrawer";
 import { RecordHistoryTab } from "../records/history";
-import { WorklistReturnLink } from "../worklist/worklist.return";
 import type { Company, Company360View } from "./companies";
 import {
   CompanyRecordBody,
@@ -106,7 +106,7 @@ export function CompanyPage({
   // upload and the relationship edges all point at this sentence. A rep on a
   // colleague's account is told once, not offered controls the server refuses.
   const verbRefusal = useCompanyVerbRefusal(company);
-  // Set only when the details' footnote renders. The raw `useId()` value is
+  // Set only when the footnote or the View only pill renders. The raw `useId()` value is
   // always truthy, so passing it always would point `aria-describedby` at an
   // id nothing on the page carries.
   const archivedReasonId = verbRefusal ? archivedParagraphId : undefined;
@@ -155,8 +155,10 @@ export function CompanyPage({
       // undefined `view` alone cannot tell the rail's sections which of the
       // two holds, and each needs its own drawing.
       loading={loading}
+      // An archived account says why in the details' footnote; a live one
+      // this reader may only view says it in the head's View only pill.
       refusal={
-        verbRefusal && archivedReasonId
+        verbRefusal && archivedReasonId && company.archived_at
           ? { id: archivedReasonId, text: verbRefusal }
           : undefined
       }
@@ -179,7 +181,6 @@ export function CompanyPage({
   };
   return (
     <RecordView
-      back={<WorklistReturnLink />}
       name={company.display_name}
       rename={rename}
       identity={company.id}
@@ -189,7 +190,17 @@ export function CompanyPage({
         <CompanyHeadLines company={company} view={view} loading={loading} />
       }
       // Where it stands, what it is to us and who may read it.
-      pulse={<CompanyMarks company={company} />}
+      pulse={
+        <>
+          <CompanyMarks company={company} />
+          <ViewOnly
+            kind="company"
+            record={company}
+            name={company.display_name}
+            reasonId={archivedParagraphId}
+          />
+        </>
+      }
       latest={
         tab !== "overview" && (
           <LatestInboundLine latest={latest} onOpen={() => onTab("overview")} />

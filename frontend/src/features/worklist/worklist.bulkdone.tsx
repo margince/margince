@@ -192,8 +192,32 @@ function usePutDownRows() {
 }
 
 /**
- * Select, while the queue holds a row that takes a box. In selection mode it
- * shows the count, Select all, the two verbs for what is ticked, and Cancel.
+ * Select, while the queue holds a row that takes a box. It is an action of
+ * the panel head the rows sit under, so the head lays it out beside its other
+ * actions. Focus comes back to it when selection mode ends.
+ */
+export function WorklistSelect({
+  selection,
+}: Readonly<{ selection: ReturnType<typeof useWorklistPicks> }>) {
+  const t = useT();
+  const trigger = useFocusBackToSelect(selection.selecting);
+  if (selection.eligible.length === 0 || selection.selecting) {
+    return null;
+  }
+  return (
+    <Button
+      ref={trigger}
+      className="worklist-select"
+      onClick={selection.select}
+    >
+      {t("worklist.bulk.select")}
+    </Button>
+  );
+}
+
+/**
+ * In selection mode: the count, Select all, the two verbs for what is ticked,
+ * and Cancel.
  */
 export function WorklistBulkBar({
   selection,
@@ -202,25 +226,14 @@ export function WorklistBulkBar({
   const plural = usePlural();
   const { locale } = useLocale();
   const [request, setRequest] = useState<BulkChangeRequest | null>(null);
-  const { eligible, rows, selecting, select, selectAll, untick, stop } =
-    selection;
+  const { eligible, rows, selecting, selectAll, untick, stop } = selection;
   const putDown = usePutDownRows();
-  const trigger = useFocusBackToSelect(selecting);
-  if (eligible.length === 0 && request === null) {
+  if (!selecting && request === null) {
     return null;
   }
   const completing = rows.filter(completesInBulk);
   const leaving = rows.filter((item) => !completesInBulk(item));
   const count = (n: number) => ({ count: formatNumber(n, locale) });
-  if (!selecting && request === null) {
-    return (
-      <SelectionBar>
-        <Button ref={trigger} onClick={select}>
-          {t("worklist.bulk.select")}
-        </Button>
-      </SelectionBar>
-    );
-  }
   return (
     <SelectionBar>
       {rows.length > 0 && (

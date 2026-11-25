@@ -4,11 +4,16 @@
 package ai
 
 import (
+	"cmp"
 	"context"
 	"errors"
 	"fmt"
+	"net/http"
 	"slices"
 	"strings"
+	"time"
+
+	"github.com/margince/margince/backend/internal/shared/kernel/retryafter"
 )
 
 // openaiReplyText walks output[], never output[0].content[0]: a reasoning
@@ -94,3 +99,9 @@ var openaiPolicyCodes = map[string]bool{"invalid_prompt": true, "bio_policy": tr
 // openaiMaxOutputTokens is the incomplete reason for a reply the output
 // ceiling cut off.
 const openaiMaxOutputTokens = "max_output_tokens"
+
+// openaiRetryWait is the wait OpenAI's answer states: Retry-After, else its own
+// x-ratelimit-reset headers.
+func openaiRetryWait(resp *http.Response) time.Duration {
+	return cmp.Or(retryafter.Of(resp), retryafter.OpenAIReset(resp))
+}

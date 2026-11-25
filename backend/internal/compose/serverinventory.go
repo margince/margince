@@ -25,6 +25,7 @@ import (
 	"github.com/margince/margince/backend/internal/compose/meetingbrief"
 	"github.com/margince/margince/backend/internal/compose/network"
 	"github.com/margince/margince/backend/internal/compose/roombrief"
+	"github.com/margince/margince/backend/internal/compose/unroutedmail"
 	"github.com/margince/margince/backend/internal/compose/vacuumhealth"
 	"github.com/margince/margince/backend/internal/compose/weekly"
 	"github.com/margince/margince/backend/internal/modules/activities"
@@ -115,6 +116,7 @@ type Server struct {
 	captureSenderHandlers
 	captureExclusionHandlers
 	captureOwnerIdentityHandlers
+	unroutedmail.Endpoints
 	captureCounterpartyHoldHandlers
 	conversationSuggestionHandlers
 	claimHandlers
@@ -178,10 +180,8 @@ type Server struct {
 	financeHandlers
 	integrationsHandlers
 	knowledgeHandlers
-	// The personal agent-activity read: what the scheduled agent is doing for
-	// the caller now, and what it settled for them today. It lives in compose
-	// because it reads the agents module's run tables without importing a
-	// sibling of its own.
+	// The caller's agent-activity read, in compose because it reads the agents
+	// module's run tables without importing a sibling of its own.
 	aiActivityHandlers
 	// The notices transport: the reader's own centre and the settling of it,
 	// their per-class delivery settings, and one coach raising a notice. The
@@ -249,8 +249,8 @@ type Server struct {
 	// challenge points at. WithMCPResource sets both from --public-base-url,
 	// never from a request header a caller controls.
 	mcpResource, mcpAllowedOrigin string
-	// mcpInputStateKey signs the questions a tool asks in the chat.
-	mcpInputStateKey string
+	// mcpChat lets a tool ask in the chat, and a waiting call be confirmed there.
+	mcpChat mcpChatSettings
 	// dispactCalls checks the Dispact app's call tokens on /mcp; nil serves none.
 	dispactCalls *dispactapp.Edge
 	// chatPulls queues a chat_pull for a Dispact notice; WithChatLinks sets it.

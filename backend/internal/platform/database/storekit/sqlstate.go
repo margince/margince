@@ -225,6 +225,14 @@ func IsQueryCanceled(err error) bool {
 	return errors.As(err, &pgErr) && pgErr.Code == pgQueryCanceled
 }
 
+// IsStatementTimeout detects a 57014 that Postgres raised because the statement
+// ran past its statement_timeout, which is the one cancel a budget causes. An
+// operator cancelling the backend carries the same SQLSTATE and is not one.
+func IsStatementTimeout(err error) bool {
+	pgErr, ok := errors.AsType[*pgconn.PgError](err)
+	return ok && pgErr.Code == pgQueryCanceled && strings.Contains(pgErr.Message, "statement timeout")
+}
+
 // IsProgramLimitExceeded detects a 54000: a value the database accepted as
 // input but cannot store or index at that size.
 //
