@@ -13,9 +13,12 @@ package compose
 
 import (
 	"fmt"
+	"path/filepath"
 	"slices"
 	"strings"
 	"testing"
+
+	"github.com/margince/margince/backend/internal/compose/mcpe2e"
 )
 
 func renderMCPToolCoveragePage(r mcpToolCoverage) []byte {
@@ -144,6 +147,9 @@ func writeCoverageCases(p *strings.Builder, r mcpToolCoverage) {
 			}
 			if run.Regraded {
 				result += ", re-graded"
+			}
+			if len(run.EarlierListing) > 0 {
+				result += ", on an earlier listing (" + strings.Join(run.EarlierListing, ", ") + ")"
 			}
 			fmt.Fprintf(p, "| %s | `%s` | %s | %d/%d | %d | %s | %s | %s | %s |\n",
 				link, run.Model, result, run.Passed, run.Runs, run.PassAt,
@@ -521,4 +527,19 @@ func calledInHeldRuns(cases []caseRow, tool string) []string {
 		}
 	}
 	return named
+}
+
+// earlierListings is what changed since each verdict of one tree ran, per `make e2e-llm-report`.
+func earlierListings(recordDir string) (map[verdictKey][]string, error) {
+	lines, err := mcpe2e.Report(repoRoot)
+	if err != nil {
+		return nil, err
+	}
+	out := map[verdictKey][]string{}
+	for _, line := range lines {
+		if line.Tree == filepath.Base(recordDir) && len(line.Why) > 0 {
+			out[verdictKey{model: line.Folder, scenario: line.Scenario}] = line.Why
+		}
+	}
+	return out, nil
 }
