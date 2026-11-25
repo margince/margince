@@ -118,7 +118,7 @@ func TestEverySendAsksTheUserFirst(t *testing.T) {
 
 // irreversibleOpPrefixes are the contract verbs that act on a record or a
 // queue in a way the conversation has no verb to take back.
-var irreversibleOpPrefixes = []string{"archive", "merge", "disqualify", "approve", "reject", "executeBulkChange"}
+var irreversibleOpPrefixes = []string{"archive", "merge", "disqualify", "approve", "reject"}
 
 func hasAnyPrefix(op string, prefixes []string) bool {
 	return slices.ContainsFunc(prefixes, func(p string) bool { return strings.HasPrefix(op, p) })

@@ -8272,7 +8272,7 @@
     },
     {
       "name": "read_details",
-      "tokens": 4600,
+      "tokens": 4602,
       "agents": [],
       "required_by_cases": [],
       "required_as_one_of_a_set_by_cases": [],
@@ -8416,7 +8416,7 @@
     },
     {
       "name": "change_activities",
-      "tokens": 2977,
+      "tokens": 2974,
       "agents": [
         "overnight_at_risk_sweep"
       ],
@@ -8903,7 +8903,7 @@
     },
     {
       "name": "change_attention",
-      "tokens": 1842,
+      "tokens": 1833,
       "agents": [],
       "required_by_cases": [
         "case104_mark_it_seen"
@@ -9089,7 +9089,7 @@
     },
     {
       "name": "change_offers",
-      "tokens": 1096,
+      "tokens": 1069,
       "agents": [],
       "required_by_cases": [],
       "required_as_one_of_a_set_by_cases": [],
