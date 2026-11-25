@@ -56,6 +56,28 @@ func TestReplayErasuresTakesAgainWhatARestoreBroughtBack(t *testing.T) {
 	}
 }
 
+// With a separate journal store the export writes there, not to the main store.
+// A rollback of the main store then leaves the replay's input intact.
+func TestAJournalOnItsOwnStoreSurvivesTheMainStoreRollingBack(t *testing.T) {
+	e := integration.Setup(t)
+	main, journal := blobstore.NewMemory(), blobstore.NewMemory()
+	writer := compose.ComposedEraser(e.Pool, main).WithJournalStore(journal)
+	eraseAndExport(t, e, writer, seedContactWithAddress(t, e, restoredAddress))
+	if n, err := main.DeletePrefix(e.Admin(), "erasure-suppression/"); err != nil || n != 0 {
+		t.Fatalf("the main store held %d journal object(s), err %v; want none", n, err)
+	}
+
+	rollBackSuppressionList(t)
+	restored := seedContactWithAddress(t, e, restoredAddress)
+	reader := compose.ComposedEraser(e.Pool, blobstore.NewMemory()).WithJournalStore(journal)
+	if took, err := reader.ReapplySuppressions(e.Admin()); err != nil || took != 1 {
+		t.Fatalf("re-erased %d, err %v; want the separate journal to have answered", took, err)
+	}
+	if live := countRows(t, e, `SELECT count(*) FROM contact_email WHERE contact_id = $1`, restored); live != 0 {
+		t.Fatalf("%d address(es) survived", live)
+	}
+}
+
 // A contact known only by a chat account carries no address. The replay
 // matches the account itself, as the erasure hashed it.
 func TestReplayErasuresTakesAgainAContactKnownOnlyByAChatAccount(t *testing.T) {

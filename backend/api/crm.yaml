@@ -717,8 +717,8 @@ paths:
           description: >
             Installation reset to first-boot state.
 
-            Five of these fields — `jobs_deleted`, `streams_purged`, `cache_keys_deleted`,
-            `objects_deleted` and `drain_timed_out` — exist here and not in the retired upstream
+            Four of these fields — `jobs_deleted`, `streams_purged`, `cache_keys_deleted`
+            and `objects_deleted` — exist here and not in the retired upstream
             copy of this contract, and that is deliberate rather than drift anyone should
             reconcile away. A reset clears the job queue, the event bus, the Redis counters and
             the object bytes, and an operator who is told only how many table rows went has no way
@@ -761,10 +761,10 @@ paths:
                     description: Objects removed from the blob store under this workspace's key prefix.
                   drain_timed_out:
                     type: boolean
+                    deprecated: true
                     description: >
-                      True when a job was still running when the bounded drain window expired. The reset
-                      proceeded — a long pass must not make an installation unresettable — and the surviving
-                      job's completion write will fail against rows that no longer exist.
+                      Always false. A reset whose job drain timed out is refused with 409 before anything is
+                      deleted, so a successful reset never has this state. Kept so existing clients keep parsing.
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403':
           description: >
@@ -780,6 +780,15 @@ paths:
             does not exist here. Checked before authentication, so it is a 404 rather than
             a 403 for every caller — the answer discloses nothing about who asked. The body
             is the standard problem document.
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+        '409':
+          description: >
+            Refused with nothing deleted: another reset is running, or a background job was still
+            running when the bounded drain window expired (the queues run again; run the reset again), or the
+            queues could not be resumed after the reset (code `reset_queues_not_resumed`; the body says whether
+            the reset had finished).
           content:
             application/problem+json:
               schema: { $ref: '#/components/schemas/Problem' }
@@ -11570,6 +11579,7 @@ paths:
   /public/booking/{host_slug}/preview:
     parameters:
       - { name: host_slug, in: path, required: true, schema: { type: string } }
+      - { name: l, in: query, required: false, description: "Meeting length in minutes the shared link asks for. The card names it, links to it and gives it as the canonical address when the page offers it; otherwise the card names the default length.", schema: { type: integer } }
     get:
       tags: [Public]
       operationId: getPublicBookingPreview
@@ -11580,7 +11590,8 @@ paths:
         preview reads the page without running the app. The HTML carries the host's name,
         company, meeting title and duration as escaped title, description, Open Graph and
         Twitter card fields. The canonical URL and `og:url` are the absolute `/book/{host_slug}`
-        address on the configured public origin, and are omitted when no usable origin is
+        address on the configured public origin, with `?l=` when the card names an offered
+        length the link asked for, and are omitted when no usable origin is
         configured. The company logo is the card image when there is one; otherwise the card
         has no image. A paused page answers generic metadata that names no host. A missing
         or revoked page answers 404 with no host metadata. Responses are `no-store` and
@@ -11592,6 +11603,7 @@ paths:
           content:
             text/html:
               schema: { type: string }
+        '422': { $ref: '#/components/responses/ValidationError' }
         default:
           description: The page is missing, revoked or unavailable; the HTML names no host.
           content:
@@ -12260,7 +12272,7 @@ paths:
   /public/booking/{host_slug}/availability:
     parameters:
       - { name: host_slug, in: path, required: true, schema: { type: string }, description: The host's unguessable public booking slug (not the user uuid). }
-      - { name: l, in: query, required: false, description: Offered meeting length in minutes. Unknown lengths use the default., schema: { type: integer } }
+      - { name: l, in: query, required: false, description: "Offered meeting length in minutes. A length the page does not offer is refused with 422 `length_not_offered`; read the profile again for the lengths on offer.", schema: { type: integer } }
     get:
       tags: [Public]
       operationId: getPublicAvailability
@@ -12305,7 +12317,7 @@ paths:
   /public/booking/{host_slug}:
     parameters:
       - { name: host_slug, in: path, required: true, schema: { type: string } }
-      - { name: l, in: query, required: false, description: Offered meeting length in minutes. Unknown lengths use the default., schema: { type: integer } }
+      - { name: l, in: query, required: false, description: "Offered meeting length in minutes. A length the page does not offer is refused with 422 `length_not_offered`; read the profile again for the lengths on offer.", schema: { type: integer } }
     post:
       tags: [Public]
       operationId: bookPublicMeeting
@@ -27055,7 +27067,7 @@ paths:
         - { name: actor, in: query, schema: { type: string }, description: 'Typed principal filter, e.g. human:<uuid> or agent:sdr.' }
         - { name: entity_type, in: query, schema: { type: string } }
         - { name: entity_id, in: query, schema: { type: string, format: uuid } }
-        - { name: batch_id, in: query, schema: { type: string, format: uuid }, description: 'Only the rows one bulk change wrote (`executeBulkChange` answers the id).' }
+        - { name: batch_id, in: query, schema: { type: string, format: uuid }, description: 'Only the rows one operation group wrote: a bulk change (`executeBulkChange` answers the id) or one run of a capture purge.' }
         - { name: action, in: query, schema: { type: string }, description: 'One of the AuditLogEntry.action values.' }
         - { name: from, in: query, schema: { type: string, format: date-time } }
         - { name: to, in: query, schema: { type: string, format: date-time } }
@@ -46973,7 +46985,7 @@ components:
     AiRouteCertification:
       type: object
       required: [verdict, current]
-      description: 'What the certification records say about this model for this task. Absent on a candidate no record measured, which the screen reads as not certified.'
+      description: 'What the certification records say about this model for this task, read by the same rule as the feature''s `certification` grade, so the lead candidate and the feature never disagree. Absent on a candidate that grade calls not_measured.'
       properties:
         verdict: { type: string, enum: [certified, supported_degraded, not_supported], x-extensible-enum: true, x-go-type: string, description: 'The worst verdict across the task''s sites and across the records of this model.' }
         current: { type: boolean, description: 'Every record behind the verdict still describes the prompts this build sends.' }
@@ -47009,9 +47021,9 @@ components:
       required: [grade, model, recheck_pending]
       description: |
         The certification grade of the model that answers this feature first (the lead of
-        `normal_candidates`), read from the committed certification records by the readiness
+        `effective_candidates`), read from the committed certification records by the readiness
         report's rule: the worst grade over every site the feature ships, and not measured when
-        any site has no record for that model. Absent when no model is bound, and for embeddings.
+        any site has no record for that model. Absent when no model is bound or the budget blocks the feature, and for embeddings.
       properties:
         grade:
           type: string
@@ -54214,6 +54226,7 @@ components:
             - no_consent_exception_not_offered
             - no_consent
             - existing_customer
+            - opt_out_allowed
           x-extensible-enum: true
         reason_at:
           type: [string, 'null']
@@ -60194,7 +60207,11 @@ components:
         logo_url: { type: string, description: Absolute public logo URL when the public origin is configured; otherwise relative to the API origin. }
         title: { type: string }
         location: { type: string }
-        duration_minutes: { type: integer }
+        duration_minutes: { type: integer, description: "The length this page books: the one `l` asked for when the page offers it, else the default." }
+        offered_lengths:
+          type: array
+          items: { type: integer }
+          description: Every meeting length the host's booking page offers, the default first. Pass one as `l` to book at that length. Absent on a paused page and on a meeting proposal.
         enabled: { type: boolean }
         paused: { type: boolean, description: "True when the page takes no bookings now: the host turned bookings off, or the calendar behind it cannot take them. The availability and booking calls then answer as for an unknown page." }
         video_app: { type: string, enum: [google_meet, microsoft_teams], x-extensible-enum: true, description: Present when new meetings get a video call link from the host's calendar. }
@@ -60569,7 +60586,9 @@ components:
             Worklist's outcome lane asks: a meeting linked to a customer record the caller may
             see, with no `meeting_status` or `booked`, whose start has passed (a date-only
             meeting once its date is over in the installation's timezone) by the server's clock,
-            and whose content the caller may read. Unlike the lane it has no look-back window, so
+            and whose content the caller may read. A meeting whose subject names travel logistics
+            (a flight, an airport, a pickup) asks only when it links a deal, lead or project the
+            caller may see. Unlike the lane it has no look-back window, so
             an old booked meeting still asks. Every read that carries `writable` carries this.
             A client offers the outcome control when this and `writable` are both true. Absent
             means false.
@@ -63806,6 +63825,14 @@ components:
             their consent nor an agreement with them. A privacy notice they were sent is neither.
             Not a refusal: a surface shows a warning and records the sender's confirmation through
             `POST /lawful-basis-confirmations` before the send. Absent or false otherwise.
+        ask_country:
+          type: boolean
+          description: |
+            The record states no country for this recipient, the refusal is for want of marketing
+            consent, and an installed pack allows advertising until the recipient refuses. A composer
+            asks the sender for the country, saves it on the contact with `PATCH /contacts/{id}`
+            (`address_country`) and asks the preview again. Absent or false when no answer could
+            change the decision, and for a recipient the caller cannot read.
         consent_purpose_id:
           type: string
           format: uuid
@@ -73086,7 +73113,7 @@ components:
         assessment: {type: string, enum: [attention, checked, incomplete], x-extensible-enum: true}
         sources:
           type: array
-          maxItems: 10
+          maxItems: 11
           items: {$ref: '#/components/schemas/HealthSource'}
         findings:
           type: array
@@ -73157,17 +73184,40 @@ components:
         first_observed_at: {type: string, format: date-time}
         next_attempt_at: {type: string, format: date-time}
         count: {type: integer, minimum: 0}
-        unit: {type: string, enum: [runs, mailboxes, records, updates, items, threads], x-extensible-enum: true}
+        unit: {type: string, enum: [runs, mailboxes, records, updates, items, threads, messages], x-extensible-enum: true}
         window_start: {type: string, format: date-time}
         window_end: {type: string, format: date-time}
+        footer_gap:
+          $ref: '#/components/schemas/HealthFooterGap'
         action:
           $ref: '#/components/schemas/HealthAction'
+    HealthFooterGap:
+      type: object
+      additionalProperties: false
+      description: >
+        A legal entity whose mail owes a company detail nobody stated. A send that owes it is held
+        for review with `footer_incomplete`, and a background send is dropped. The finding goes once
+        the details are complete.
+      required: [legal_entity_id, legal_entity_name, is_default, missing, held_by_user, held_in_background]
+      properties:
+        legal_entity_id: {type: string, format: uuid}
+        legal_entity_name: {type: string, description: Empty for a default entity that states no name.}
+        is_default: {type: boolean}
+        missing:
+          type: array
+          minItems: 1
+          description: >
+            The owed disclosure kinds with no text, then `entity_name` for a default entity with
+            neither a display name nor a legal name.
+          items: {type: string, enum: [controller_identity, privacy_contact, objection_route, advertiser_contact, advertisement, entity_name], x-extensible-enum: true}
+        held_by_user: {type: integer, minimum: 0, description: 'Sends a user pressed that were held for this since the details last changed.'}
+        held_in_background: {type: integer, minimum: 0, description: 'Background sends, such as a meeting reminder, that were held or dropped for this since the details last changed.'}
     HealthAction:
       type: object
       additionalProperties: false
       required: [destination, available]
       properties:
-        destination: {type: string, enum: [diagnostics, connections, models, search, updates, configuration, regional], x-extensible-enum: true, description: 'Where the finding is acted on. `regional` is the Company settings part that holds the installation timezone.'}
+        destination: {type: string, enum: [diagnostics, connections, models, search, updates, configuration, regional, legal_entities, company_profile, disclosures], x-extensible-enum: true, description: 'Where the finding is acted on. `regional` is the Company settings part that holds the installation timezone. `legal_entities` is the Company settings part that lists the legal entities, and `company_profile` the one that names the company. `disclosures` is the jurisdiction page that holds the company details every mail discloses.'}
         available: {type: boolean}
         reason: {type: string}
 
@@ -73369,7 +73419,7 @@ components:
             when no user row resolves — a deactivated or deleted member still has
             audit rows, and an honest identifier is better than an invented name.
         on_behalf_of_name: { type: [string, 'null'], description: Resolved display name for on_behalf_of. }
-        batch_id: { type: [string, 'null'], format: uuid, description: 'The bulk change that wrote this row; null for a change made on its own.' }
+        batch_id: { type: [string, 'null'], format: uuid, description: 'The operation group that wrote this row: a bulk change, or one run of a capture purge. Null for a change made on its own.' }
         action:
           $ref: '#/components/schemas/AuditAction'
         entity_type: { type: string }
@@ -74438,7 +74488,6 @@ components:
         - document_extract
         - draft_reply
         - enrich
-        - extension_task
         - growth_fit
         - nl_search
         - offer_draft
@@ -74495,6 +74544,9 @@ components:
         also what a caller may FILTER on, and rows written before they were retired are served
         until the projection's retention window closes over them — narrowing the filter would
         refuse a query that still has answers.
+
+        `extension_task` is RETIRED for the same reason: the task was removed, and an extension's
+        AI task now reports under its own `ext_<unit>_<task>` name. `ai.RetiredTasks` lists it.
 
         Its own schema because the item that reports a kind and the query that asks for kinds
         must be ONE list — two copies of a vocabulary are two vocabularies as soon as somebody
@@ -74638,11 +74690,12 @@ components:
 
     RouterActions:
       type: object
-      description: The actions of one MCP router whose actions run REST routes.
-      required: [router, actions]
+      description: The actions of one MCP router, with the arguments each takes.
+      required: [router, actions, how_to_call]
       properties:
         router: { type: string }
         ask_user_first_means: { type: string, description: 'What ask_user_first asks of the model; present when an action here has it.' }
+        how_to_call: { type: string, description: 'Where an action''s arguments go in the router call: top-level members beside action, a routed body in request_body.' }
         actions:
           type: array
           items:
@@ -74650,14 +74703,25 @@ components:
             required: [action, does, route]
             properties:
               action: { type: string, description: 'The value the router''s action argument takes.' }
-              does: { type: string, description: 'The route''s summary.' }
+              does: { type: string, description: 'What the action does.' }
               route: { type: string, description: 'The method and route, for example POST /v1/record-grants.' }
               ids: { type: array, items: { type: string }, description: The path ids the action takes as arguments. }
-              query: { type: array, items: { type: string }, description: The query parameters it takes as arguments. }
+              query:
+                type: array
+                description: The query parameters it takes as arguments, each with its type and any closed values.
+                items:
+                  type: object
+                  required: [name, type]
+                  properties:
+                    name: { type: string }
+                    type: { type: string }
+                    required: { type: boolean }
+                    enum: { type: array, items: { type: string } }
+                    format: { type: string }
               if_version: { type: boolean, description: 'Whether it takes if_version: the version you last read.' }
               ask_user_first: { type: boolean, description: Whether the app asks its user to confirm it first. }
               uploads_a_file: { type: boolean, description: 'Whether it takes filename, content_type and content_base64.' }
-              body: { type: object, description: The JSON schema of its body argument. }
+              body: { type: object, additionalProperties: true, description: The JSON schema of its body argument. }
 
     AgentAdmissionPolicy:
       type: object

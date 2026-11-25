@@ -107,13 +107,6 @@ export function ResetDataCard() {
               objects: formatNumber(summary.objects_deleted, locale),
             })}
           />
-          {summary.drain_timed_out && (
-            <Callout
-              tone="warning"
-              live="alert"
-              title={t("settings.resetDataDrainWarning")}
-            />
-          )}
         </PanelBody>
       )}
       <ConfirmModal

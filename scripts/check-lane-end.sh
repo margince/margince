@@ -31,7 +31,7 @@ fi
 	# A lane that fans out (the root gates run side by side) mixes its output,
 	# so the line that names the failure can sit far above the tail.
 	echo "Lines of $log that name a failure:"
-	grep -nE '(^|[^[:alnum:]_])(FAIL|FAILED|panic:)([^[:alnum:]_]|$)|\*\*\* ' "$log" | head -n 40 || true
+	grep -nE '(^|[^[:alnum:]_])(FAIL|FAILED|panic:)([^[:alnum:]_]|$)|\*\*\* ' "$log" | sed -n 1,40p || true
 	echo "Last $tail_lines lines of $log:"
 	echo "----- $lane -----"
 	tail -n "$tail_lines" "$log"

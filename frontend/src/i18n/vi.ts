@@ -1867,6 +1867,9 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "scheduling.retryHelp":
     "Thử lại sẽ gửi lại đúng lời mời đó, nên khách sẽ không nhận được lời mời thứ hai.",
   "book.videoApp": "{app} · liên kết có trong lời mời",
+  "book.lengthChoice": "Thời lượng cuộc hẹn",
+  "book.lengthNotOffered":
+    "Thời lượng cuộc hẹn này không còn được cung cấp. Hãy chọn thời lượng khác.",
   "scheduling.pickDay": "Chọn ngày",
   "scheduling.changeTime": "Đổi giờ",
   "scheduling.confirmAt": "Xác nhận {day}, {time}",
@@ -2242,6 +2245,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "systemJob.capture_classify": "Phân loại thư",
   "systemJob.capture_credential_backfill": "Cập nhật kết nối hộp thư",
   "systemJob.capture_personal_purge": "Xóa thư cá nhân",
+  "systemJob.capture_purge_receipt": "Biên nhận xóa thư",
   "systemJob.capture_part_slim_worker": "Dọn dẹp dữ liệu thư đã lưu",
   "systemJob.capture_trace_sweep": "Dọn dẹp dấu vết thư",
   "systemJob.capture_which_deal": "Câu hỏi về cơ hội từ thư",
@@ -3363,6 +3367,16 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "rel.add": "Thêm quan hệ",
   "rel.seatOnDeal": "Thêm vào deal",
   "rel.addStakeholder": "Thêm bên liên quan",
+  "rel.stakeholderOffer.title": "Thêm các liên hệ trong thư này vào giao dịch?",
+  "rel.stakeholderOffer.body":
+    "Khi là bên liên quan, thư tiếp theo của họ sẽ tự vào giao dịch. Bỏ chọn liên hệ không thuộc giao dịch.",
+  "rel.stakeholderOffer.legend": "Liên hệ trong thư này",
+  "rel.stakeholderOffer.confirm": "Thêm vào giao dịch",
+  "rel.stakeholderOffer.decline": "Để sau",
+  "rel.stakeholderOffer.noneTicked": "Chọn ít nhất một liên hệ để thêm.",
+  "rel.stakeholderOffer.added": "Đã thêm vào giao dịch",
+  "rel.stakeholderOffer.unread":
+    "Thư đã ở trong giao dịch. Margince không đọc được những ai có trong thư, nên không đề xuất ai để thêm.",
   "rel.dealStakeholders": "Bên liên quan",
   "rel.dealStakeholdersEmpty": "Deal này chưa có bên liên quan nào",
   "rel.employerUnavailable":
@@ -3771,6 +3785,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "consent.reason.no_consent": "Chưa ghi nhận đồng ý",
   "consent.reason.existing_customer":
     "Họ đã mua hàng của bạn và khi đó đã được báo rằng họ có thể từ chối quảng cáo",
+  "consent.reason.opt_out_allowed":
+    "Quảng cáo được phép ở đây cho đến khi họ từ chối, và chưa có lời từ chối nào được ghi nhận",
   "consent.reason.qualifying.inbound_message": "Họ đã viết cho bạn ngày {date}",
   "consent.reason.qualifying.inquiry": "Họ đã gửi yêu cầu ngày {date}",
   "consent.reason.qualifying.in_person":
@@ -8359,6 +8375,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "sendPermission.footer.phone": "số điện thoại",
   "sendPermission.footer.web": "trang web hoặc liên kết mạng xã hội",
   "sendPermission.footer.privacy": "thông tin liên hệ về quyền riêng tư",
+  "sendPermission.footer.advertisement": "dòng xác định đây là quảng cáo",
   "sendPermission.footer.advertiser": "thông tin liên hệ nhà quảng cáo",
   "sendPermission.footer.identity": "tên và địa chỉ công ty",
   "sendPermission.footer.unknown": "một phần thông tin chân trang công ty",
@@ -8385,6 +8402,14 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "sendPermission.appliesToSome_other":
     "Điều này áp dụng cho {count} trên {total} người nhận.",
   "sendPermission.checking": "Đang kiểm tra xem có thể gửi tin nhắn này không…",
+  "countryQuestion.title": "{address} ở quốc gia nào?",
+  "countryQuestion.body":
+    "Một số quốc gia cho phép quảng cáo cho đến khi liên hệ hủy đăng ký. Liên hệ này chưa có quốc gia, nên Margince đòi sự đồng ý như ở mọi nơi khác. Câu trả lời của bạn được lưu vào liên hệ.",
+  "countryQuestion.label": "Quốc gia",
+  "countryQuestion.none": "Chọn quốc gia",
+  "countryQuestion.save": "Lưu quốc gia",
+  "countryQuestion.alreadySet":
+    "Liên hệ này đã có quốc gia. Việc kiểm tra đã được hỏi lại.",
   "lawfulBasis.title": "Chưa ghi nhận căn cứ hợp lệ",
   "lawfulBasis.body":
     "Chưa ghi nhận căn cứ hợp lệ theo pháp luật Việt Nam cho liên hệ này: không có sự đồng ý của họ, cũng không có trường hợp pháp luật cho phép xử lý mà không cần sự đồng ý. Nếu gửi, bạn tự chịu rủi ro.",
@@ -10950,8 +10975,6 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "settings.resetDataConfirmName": "Nhập tên công ty này:",
   "settings.resetDataResult":
     "Đã xóa: bảng {tables}, dòng tác vụ {jobs}, luồng sự kiện {streams}, khóa bộ nhớ đệm {keys}, tệp đã lưu {objects}.",
-  "settings.resetDataDrainWarning":
-    "Một tác vụ nền đang chạy khi bắt đầu đặt lại. Tác vụ này sẽ bị lỗi do dữ liệu đã bị xóa và ghi một lỗi vô hại vào nhật ký.",
 
   "settings.jobs": "Tác vụ nền",
   "settings.jobsSub":
@@ -13964,6 +13987,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "buyer.previewReadOnly":
     "Bản xem trước chỉ đọc. Đóng tab này để quay lại trang Deal Room.",
   "buyer.closedNote": "Deal Room này hiện chỉ đọc.",
+  "buyer.readOnly": "Quý khách chỉ có quyền đọc Deal Room này.",
   "buyer.stewardUnknown": "người liên hệ",
   "buyer.signOut": "Đăng xuất",
   "buyer.signedInAs": "Đã đăng nhập với tên {name}.",
@@ -14054,7 +14078,6 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "threads.newLabel": "Chủ đề mới",
   "threads.requireChangeLabel": "Tài liệu này cần sửa",
   "threads.open": "Đăng",
-  "threads.readOnly": "Bạn chỉ có quyền đọc.",
   "deal360.blocker": "Trở ngại",
   "deal360.buyer": "Điều người mua muốn",
   "deal360.verdict.live": "Đúng tiến độ",
@@ -15280,6 +15303,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "captureActivity.filing.core.retracted":
     "CRM đã rút lại liên kết giao dịch: {reason}",
   "captureActivity.filing.basis.project": "dự án của thư",
+  "captureActivity.filing.basis.chosen_thread":
+    "giao dịch mà đồng nghiệp đã chọn cho một thư trước đó trong chuỗi",
   "captureActivity.filing.basis.thread": "một thư trước đó trong chuỗi",
   "captureActivity.filing.basis.sole_open_deal":
     "giao dịch mở duy nhất của công ty",
@@ -19674,6 +19699,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "contact.strip.yesterday": "Hôm qua",
   "contact.strip.days": "{count} ngày",
   "contact.consent.fact.existingCustomer": "Khách hàng hiện có, được tiếp thị",
+  "contact.consent.fact.optOutAllowed": "Được quảng cáo cho đến khi họ từ chối",
   "contact.consent.fact.saidWeMayWrite": "Đã ghi nhận cho phép viết thư",
   "contact.consent.fact.businessContact":
     "Đã ghi nhận liên lạc kinh doanh gần đây",
@@ -22679,6 +22705,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "scheduling.videoNotSet": "Chưa thiết lập",
   "scheduling.video.ownShort": "Liên kết riêng",
   "scheduling.mainLink": "(liên kết chính)",
+  "scheduling.copyLengthLink": "Sao chép liên kết {length}",
   "scheduling.linkActions": "Thao tác khác cho {name}",
   "scheduling.editLink": "Sửa liên kết",
   "scheduling.createLink": "Tạo liên kết đặt lịch",
@@ -23312,7 +23339,6 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "aiTask.name.document_extract": "Trích xuất tài liệu",
   "aiTask.name.draft_reply": "Soạn bản nháp trả lời",
   "aiTask.name.enrich": "Bổ sung thông tin từ chữ ký",
-  "aiTask.name.extension_task": "Tác vụ AI của tiện ích mở rộng",
   "aiTask.name.growth_fit": "Đánh giá mức độ phù hợp của công ty",
   "aiTask.name.nl_search": "Tìm kiếm bằng ngôn ngữ tự nhiên",
   "aiTask.name.offer_draft": "Soạn bản nháp báo giá",
@@ -23906,6 +23932,34 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "health.openModels": "Mở Mô hình",
   "health.openConnections": "Mở Kết nối",
   "health.openRegional": "Mở Khu vực và lịch",
+  "health.source.footer": "Thông tin công ty ở chân thư",
+  "health.code.footer_complete":
+    "Mọi chân thư đều có đủ thông tin công ty cần hiển thị",
+  "health.code.footer_incomplete": "Chân thư thiếu thông tin công ty",
+  "health.footerIncompleteFor": "{entity}: chân thư thiếu thông tin công ty",
+  "health.footerDefaultEntity": "Pháp nhân mặc định",
+  "health.effect.footer":
+    "Thư phải hiển thị các thông tin này sẽ bị giữ lại để xem xét. Tác giả thư vẫn có thể gửi kèm lý do. Thư gửi chạy nền, ví dụ lời nhắc cuộc họp, sẽ bị bỏ.",
+  "health.footerNext":
+    "Điền các thông tin còn thiếu. Cảnh báo sẽ biến mất khi đã đủ.",
+  "health.recovery.footer":
+    "Mọi thông tin công ty mà các gói quy định yêu cầu đều đã được điền.",
+  "health.footerMissing": "Thông tin còn thiếu",
+  "health.footerHeldByUser":
+    "Thư do thành viên gửi bị giữ lại từ lần thay đổi gần nhất",
+  "health.footerHeldInBackground":
+    "Thư chạy nền bị giữ lại hoặc bị bỏ từ lần thay đổi gần nhất",
+  "health.footerDetail.controller_identity": "Tên pháp lý và địa chỉ bưu chính",
+  "health.footerDetail.privacy_contact": "Liên hệ về quyền riêng tư",
+  "health.footerDetail.objection_route": "Cách từ chối",
+  "health.footerDetail.advertisement": "Dòng xác định quảng cáo",
+  "health.footerDetail.advertiser_contact": "Liên hệ của bên quảng cáo",
+  "health.footerDetail.entity_name": "Tên công ty",
+  "health.measure.messages_one": "{count} thư",
+  "health.measure.messages_other": "{count} thư",
+  "health.openLegalEntities": "Mở Pháp nhân",
+  "health.openCompanyProfile": "Mở Hồ sơ công ty",
+  "health.openDisclosures": "Mở Khu vực pháp lý",
   "health.unit.runs": "lần chạy",
   "health.history": "Lịch sử lỗi còn lưu",
   "health.historyWindow":

@@ -63,9 +63,8 @@ type Call struct {
 	// decision-lane attempt — callKindCompletion, callKindEmbedding or
 	// callKindDecision.
 	Kind string
-	// Extension names the extension a call ran for, as "<unit>/<task>", and is
-	// empty for the product's own calls. It lets an operator list every call an
-	// installed extension caused.
+	// Extension names the extension unit a call ran for, empty for the
+	// product's own calls. An older row may read "<unit>/<task>".
 	Extension     string
 	CorrelationID *ids.UUID
 	// Subject is the record the call was about, when the site that made it

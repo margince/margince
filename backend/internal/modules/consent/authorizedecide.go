@@ -364,7 +364,7 @@ func (g *Gate) legacyVerdictFor(ctx context.Context, tx pgx.Tx, contactID string
 	}
 
 	w := packRulesFor(country)
-	marketing := MarketingContext{Exception: w.marketingException, SendingEntity: entity}
+	marketing := w.marketingContext(entity)
 	now := time.Now()
 	verdict, err := VerdictForRecipient(ctx, tx, contactID, d.Recipient.Email, purpose, now.Add(-w.reply), now, marketing)
 	if err != nil {
@@ -419,6 +419,11 @@ func (g *Gate) legacyVerdictFor(ctx context.Context, tx pgx.Tx, contactID string
 		if verdict.ExistingCustomer != nil {
 			d.Basis = commsauthz.BasisExistingCustomerException
 			d.ExistingCustomer = verdict.ExistingCustomer
+		}
+		// No lawful-basis value names "allowed until refused", so the row
+		// records none and its reason code says why the send was allowed.
+		if verdict.ReasonCode == ReasonOptOutAllowed {
+			d.Basis, d.ReasonCode = "", commsauthz.ReasonOptOutAllowed
 		}
 	case VerdictBlocked:
 		d.Verdict = commsauthz.VerdictDeny

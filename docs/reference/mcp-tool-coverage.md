@@ -186,7 +186,7 @@ Everything below is the detail behind the two tables above: which tools each job
 | … some case requires as one of a set | 0 |
 | … **no case requires** | 5 |
 | … of those, permitted somewhere but never required | 1 |
-| Prompt tokens spent on tools no case requires | 3265 |
+| Prompt tokens spent on tools no case requires | 3318 |
 | Use cases | 83 |
 | Acceptance criteria the cases declare, each with a statement | 133 |
 
@@ -788,6 +788,6 @@ A tool in the `Permitted in` column is worse than one with nothing: a case is al
 | `change_record_parts` | 1017 | - | - | - | - |
 | `change_relationships` | 816 | - | - | - | - |
 | `change_lists` | 620 | - | - | `case47_tidy_the_fair_list` | - |
+| `enrich` | 448 | - | - | - | - |
 | `annotate_brief` | 417 | `agent_loop` | `agent_loop` | - | `morning_brief` |
-| `enrich` | 395 | - | - | - | - |
 

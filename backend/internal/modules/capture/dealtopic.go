@@ -25,7 +25,10 @@ type DealBasis string
 
 // The rungs, explicit evidence first.
 const (
-	DealBasisProject      DealBasis = "project"
+	DealBasisProject DealBasis = "project"
+	// DealBasisChosenThread is a deal a colleague chose for earlier mail of
+	// the conversation, at any company.
+	DealBasisChosenThread DealBasis = "chosen_thread"
 	DealBasisThread       DealBasis = "thread"
 	DealBasisSoleOpenDeal DealBasis = "sole_open_deal"
 	DealBasisStakeholder  DealBasis = "stakeholder"

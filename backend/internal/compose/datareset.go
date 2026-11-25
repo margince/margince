@@ -14,6 +14,7 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	"github.com/margince/margince/backend/internal/compose/resetfault"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/modules/identity"
@@ -52,7 +53,9 @@ type resetDataResponse struct {
 	StreamsPurged  int    `json:"streams_purged"`
 	CacheKeys      int    `json:"cache_keys_deleted"`
 	ObjectsDeleted int    `json:"objects_deleted"`
-	DrainTimedOut  bool   `json:"drain_timed_out"`
+	// DrainTimedOut is always false: a timed-out drain refuses the reset, and the
+	// field stays so existing clients keep parsing the body.
+	DrainTimedOut bool `json:"drain_timed_out"`
 }
 
 // dataResetHandlers is the callable the non-production "reset data" HTTP
@@ -127,7 +130,7 @@ func (h dataResetHandlers) run(ctx context.Context, confirmation string) (resetC
 // polls the drain — is still lifted; and the fleet stays down until the last
 // post-commit purge is done, so no job resumes into a window where it reads
 // caches for data being deleted or writes objects the prefix sweep then removes.
-func (h dataResetHandlers) runQuiesced(ctx context.Context, wsID ids.UUID, clearOutbox func() error, sweep func(*resetCounts) error) (resetCounts, error) {
+func (h dataResetHandlers) runQuiesced(ctx context.Context, wsID ids.UUID, clearOutbox func() error, sweep func(*resetCounts) error) (counts resetCounts, err error) {
 	logger := h.log
 	if logger == nil {
 		logger = slog.Default()
@@ -152,7 +155,11 @@ func (h dataResetHandlers) runQuiesced(ctx context.Context, wsID ids.UUID, clear
 	// because a pause with nobody to lift it wedges every queue. What changes
 	// is who reaches this line: a caller that lost the lock returned above,
 	// having paused nothing, so it can no longer lift a pause it never took.
-	defer resumeResetQueues(ctx, logger, rt)
+	defer func() {
+		if resumeErr := resumeResetQueues(ctx, logger, rt); resumeErr != nil {
+			err = resetfault.ResumeFailed{Cause: resumeErr, Completed: err == nil}
+		}
+	}()
 
 	counts, runErr := h.runRuntimePhase(ctx, rt, wsID, clearOutbox, sweep)
 	if runErr != nil {
@@ -193,7 +200,7 @@ func (h dataResetHandlers) runQuiesced(ctx context.Context, wsID ids.UUID, clear
 	logger.Info("data reset complete", "workspace_id", wsID,
 		"tables_cleared", counts.TablesCleared, "jobs_deleted", counts.JobsDeleted,
 		"streams_purged", counts.StreamsPurged, "cache_keys_deleted", counts.CacheKeys,
-		"objects_deleted", counts.ObjectsDeleted, "drain_timed_out", counts.DrainTimedOut,
+		"objects_deleted", counts.ObjectsDeleted,
 		"secrets_purged", counts.SecretsPurged)
 	return counts, nil
 }
@@ -318,7 +325,6 @@ func resetEvidence(counts resetCounts) map[string]any {
 		"jobs_deleted":       counts.JobsDeleted,
 		"streams_purged":     counts.StreamsPurged,
 		"cache_keys_deleted": counts.CacheKeys,
-		"drain_timed_out":    counts.DrainTimedOut,
 		// Sealed credentials redeemed from the vault. Like objects_deleted this
 		// is tallied after the commit, so the number this row carries is the
 		// count the sweep COLLECTED — the work the reset committed itself to —
@@ -407,7 +413,6 @@ func (h dataResetHandlers) ResetData(w http.ResponseWriter, r *http.Request) {
 		StreamsPurged:  counts.StreamsPurged,
 		CacheKeys:      counts.CacheKeys,
 		ObjectsDeleted: counts.ObjectsDeleted,
-		DrainTimedOut:  counts.DrainTimedOut,
 	})
 }
 

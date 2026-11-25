@@ -113,7 +113,7 @@ func existingCustomerGround(
 // ctx: the pack's exception, and the entity a sale must be with. The entity is
 // read only when the pack grants an exception.
 func marketingContextTx(ctx context.Context, tx pgx.Tx, w packRules) (MarketingContext, error) {
-	out := MarketingContext{Exception: w.marketingException}
+	out := w.marketingContext(ids.UUID{})
 	if out.Exception == nil {
 		return out, nil
 	}

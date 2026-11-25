@@ -13,9 +13,9 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	"github.com/margince/margince/backend/internal/compose/purgerun"
 	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/platform/database"
-	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -38,6 +38,17 @@ type Sweeper struct {
 // The kept numbers are counted over every due message of the seat, apart from
 // the batch the destroy reached.
 func (s Sweeper) Seat(ctx context.Context, seat ids.UUID, windows capture.PersonalPurgeWindows) (int, error) {
+	destroyed := 0
+	err := purgerun.Hold(ctx, s.Pool, purgerun.Seat(seat), func(ctx context.Context, run ids.UUID) error {
+		var err error
+		destroyed, err = s.runSeat(ctx, run, seat, windows)
+		return err
+	})
+	return destroyed, err
+}
+
+// runSeat is one run of the seat's pass, under the seat's lock.
+func (s Sweeper) runSeat(ctx context.Context, run, seat ids.UUID, windows capture.PersonalPurgeWindows) (int, error) {
 	var subject capture.PurgeSubject
 	var kept capture.KeptCounts
 	if err := database.WithWorkspaceTx(ctx, s.Pool, func(tx pgx.Tx) error {
@@ -56,34 +67,27 @@ func (s Sweeper) Seat(ctx context.Context, seat ids.UUID, windows capture.Person
 	// No contacts are anonymised here. A `personal` verdict creates no
 	// counterparty record, so there is nothing this sweep could match. A
 	// selector that looked for one could find a contact made for another reason.
-	destroyed, err := s.Destroy(ctx, subject, seat, windows)
-	if err != nil {
-		return destroyed, fmt.Errorf("verdict: destroying personal mail: %w", err)
+	if _, err := s.Destroy(ctx, subject, seat, windows); err != nil {
+		return 0, fmt.Errorf("verdict: destroying personal mail: %w", err)
 	}
-	if destroyed == 0 {
-		return 0, nil
-	}
-	// Each destruction commits in its own transaction, so this row cannot join
-	// them. A failed write loses no evidence. Every destroyed message has its own
-	// erase audit row, and the kept counts are recomputed from current state.
-	if err := s.audit(ctx, seat, destroyed, kept); err != nil {
-		return destroyed, fmt.Errorf("verdict: recording the personal sweep receipt: %w", err)
-	}
-	return destroyed, nil
-}
-
-// audit records what the pass did and what the shields kept.
-func (s Sweeper) audit(ctx context.Context, seat ids.UUID, destroyed int, kept capture.KeptCounts) error {
-	return database.WithWorkspaceTx(ctx, s.Pool, func(tx pgx.Tx) error {
-		_, err := storekit.AuditWithEvidence(ctx, tx, "archive", "capture_personal_sweep", seat, nil, nil,
-			map[string]any{
-				"destroyed":                     destroyed,
-				"skipped":                       kept.UnderStatute + kept.UnderRequest + kept.UnderUndeterminedFloor,
-				"kept_held":                     kept.Held,
-				"kept_under_statute":            kept.UnderStatute,
-				"kept_under_request":            kept.UnderRequest,
-				"kept_under_undetermined_floor": kept.UnderUndeterminedFloor,
-			})
-		return err
+	// Each destruction commits on its own, so the receipt cannot join them. A
+	// failed write loses no evidence: the receipt sweep writes it from the rows
+	// of this run. A run that touched nothing writes none.
+	tally, err := purgerun.WriteReceipt(ctx, s.Pool, purgerun.Seat(seat), run, func(t purgerun.Tally) map[string]any {
+		if t.Destroyed == 0 && t.Released == 0 {
+			return nil
+		}
+		return map[string]any{
+			"destroyed":                     t.Destroyed,
+			"skipped":                       kept.UnderStatute + kept.UnderRequest + kept.UnderUndeterminedFloor,
+			"kept_held":                     kept.Held,
+			"kept_under_statute":            kept.UnderStatute,
+			"kept_under_request":            kept.UnderRequest,
+			"kept_under_undetermined_floor": kept.UnderUndeterminedFloor,
+		}
 	})
+	if err != nil {
+		return tally.Destroyed, fmt.Errorf("verdict: recording the personal sweep receipt: %w", err)
+	}
+	return tally.Destroyed, nil
 }

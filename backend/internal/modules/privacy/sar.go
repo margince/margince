@@ -163,6 +163,11 @@ type SARPackage struct {
 	// proposed, and how sure the writer was. Owed on ReplyJudgements' ground, because it
 	// is a conclusion drawn from what they wrote.
 	StageEvidence []map[string]any `json:"stage_evidence"`
+	// ConversationClaims is what a colleague or a model read out of a message
+	// about the subject: a promise, a question, an objection. Each row carries
+	// the reading next to the quoted words and is marked derived. So the subject
+	// can tell what they wrote from what we concluded. Who wrote it stays out.
+	ConversationClaims []map[string]any `json:"conversation_claims"`
 	// Handoffs is each time this contact was passed from one seat to another as a
 	// prospect, what was decided, and why. Art. 15 owes it twice over: the note
 	// is what one colleague wrote ABOUT them, and the decision is one colleagues

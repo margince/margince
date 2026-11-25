@@ -37,6 +37,7 @@ type fakeAPI struct {
 	initialToken     string
 	deltaToken       string
 	deltaErr         error
+	initialErr       error
 	initialCalls     int
 	incrementalCalls int
 }
@@ -45,6 +46,9 @@ func (f *fakeAPI) PrimaryOwner(context.Context, string) (string, error) { return
 
 func (f *fakeAPI) ListInitial(context.Context, string) ([][]byte, string, error) {
 	f.initialCalls++
+	if f.initialErr != nil {
+		return nil, "", f.initialErr
+	}
 	return f.initial, f.initialToken, nil
 }
 

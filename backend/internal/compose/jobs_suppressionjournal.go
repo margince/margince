@@ -51,12 +51,8 @@ func (SuppressionJournalArgs) Kind() string { return "suppression_journal_export
 // workspace and walks them itself (jobs.FleetWide, ADR-0103).
 func (SuppressionJournalArgs) FleetWide() {}
 
-// suppressionJournalExporterFor answers nil for a role that composed no object
-// store.
-//
-// The journal sits where a database restore cannot reach it, so without a store
-// there is nowhere to write it. The schedule is withheld separately by the
-// kind's own declaration, which names the same dependency.
+// suppressionJournalExporterFor answers nil for a role with no journal store.
+// The schedule is withheld separately by the kind's own declaration.
 func suppressionJournalExporterFor(
 	pool *pgxpool.Pool, blob blobstore.Store, log *slog.Logger,
 ) *suppressionJournalWorker {
@@ -69,11 +65,9 @@ func suppressionJournalExporterFor(
 // addSuppressionJournalJobs registers the export worker when there is somewhere
 // to write to.
 func addSuppressionJournalJobs(reg *jobRegistry, pool *pgxpool.Pool, cfg JobRunnerConfig, log *slog.Logger) {
-	exporter := suppressionJournalExporterFor(pool, cfg.Blobstore, log)
-	if exporter == nil {
-		return
+	if exporter := suppressionJournalExporterFor(pool, cfg.JournalBlobstore, log); exporter != nil {
+		addDeclaredWorker[SuppressionJournalArgs](reg, exporter)
 	}
-	addDeclaredWorker[SuppressionJournalArgs](reg, exporter)
 }
 
 // suppressionJournalWorker writes one installation's journal.
@@ -91,7 +85,7 @@ func (w *suppressionJournalWorker) exportWorkspace(ctx context.Context, workspac
 	// The system principal, bound here rather than inherited: a queue carries
 	// no actor, and ExportSuppressions is gated on the contact delete grant.
 	ctx = principal.SystemActing(principal.WithWorkspaceID(ctx, workspace), suppressionJournalActor)
-	eraser := privacy.NewEraser(InstallationDB(w.pool)).WithCountry(identity.CountryForDecision).WithBlobstore(w.blob).WithExtensions(ExtensionData())
+	eraser := privacy.NewEraser(InstallationDB(w.pool)).WithCountry(identity.CountryForDecision).WithJournalStore(w.blob).WithExtensions(ExtensionData())
 	written, err := eraser.ExportSuppressions(ctx)
 	if err != nil {
 		return err

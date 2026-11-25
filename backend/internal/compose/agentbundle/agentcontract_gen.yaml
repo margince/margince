@@ -18188,7 +18188,7 @@ paths:
         - {name: actor, in: query, schema: {type: string}, description: 'Typed principal filter, e.g. human:<uuid> or agent:sdr.'}
         - {name: entity_type, in: query, schema: {type: string}}
         - {name: entity_id, in: query, schema: {type: string, format: uuid}}
-        - {name: batch_id, in: query, schema: {type: string, format: uuid}, description: 'Only the rows one bulk change wrote (`executeBulkChange` answers the id).'}
+        - {name: batch_id, in: query, schema: {type: string, format: uuid}, description: 'Only the rows one operation group wrote: a bulk change (`executeBulkChange` answers the id) or one run of a capture purge.'}
         - {name: action, in: query, schema: {type: string}, description: 'One of the AuditLogEntry.action values.'}
         - {name: from, in: query, schema: {type: string, format: date-time}}
         - {name: to, in: query, schema: {type: string, format: date-time}}
@@ -30912,7 +30912,7 @@ components:
     AiRouteCertification:
       type: object
       required: [verdict, current]
-      description: 'What the certification records say about this model for this task. Absent on a candidate no record measured, which the screen reads as not certified.'
+      description: 'What the certification records say about this model for this task, read by the same rule as the feature''s `certification` grade, so the lead candidate and the feature never disagree. Absent on a candidate that grade calls not_measured.'
       properties:
         verdict: {type: string, enum: [certified, supported_degraded, not_supported], description: 'The worst verdict across the task''s sites and across the records of this model.'}
         current: {type: boolean, description: 'Every record behind the verdict still describes the prompts this build sends.'}
@@ -30946,9 +30946,9 @@ components:
       required: [grade, model, recheck_pending]
       description: |-
         The certification grade of the model that answers this feature first (the lead of
-        `normal_candidates`), read from the committed certification records by the readiness
+        `effective_candidates`), read from the committed certification records by the readiness
         report's rule: the worst grade over every site the feature ships, and not measured when
-        any site has no record for that model. Absent when no model is bound, and for embeddings.
+        any site has no record for that model. Absent when no model is bound or the budget blocks the feature, and for embeddings.
       properties:
         grade:
           type: string
@@ -36244,6 +36244,7 @@ components:
             - no_consent_exception_not_offered
             - no_consent
             - existing_customer
+            - opt_out_allowed
         reason_at:
           type: [string, 'null']
           format: date-time
@@ -41414,7 +41415,7 @@ components:
           type: boolean
           readOnly: true
           description: >-
-            Whether this meeting still owes an answer about how it went, by the rule the Worklist's outcome lane asks: a meeting linked to a customer record the caller may see, with no `meeting_status` or `booked`, whose start has passed (a date-only meeting once its date is over in the installation's timezone) by the server's clock, and whose content the caller may read. Unlike the lane it has no look-back window, so an old booked meeting still asks. Every read that carries `writable` carries this. A client offers the outcome control when this and `writable` are both true. Absent means false.
+            Whether this meeting still owes an answer about how it went, by the rule the Worklist's outcome lane asks: a meeting linked to a customer record the caller may see, with no `meeting_status` or `booked`, whose start has passed (a date-only meeting once its date is over in the installation's timezone) by the server's clock, and whose content the caller may read. A meeting whose subject names travel logistics (a flight, an airport, a pickup) asks only when it links a deal, lead or project the caller may see. Unlike the lane it has no look-back window, so an old booked meeting still asks. Every read that carries `writable` carries this. A client offers the outcome control when this and `writable` are both true. Absent means false.
         calendar_managed:
           type: boolean
           readOnly: true
@@ -43447,6 +43448,14 @@ components:
             their consent nor an agreement with them. A privacy notice they were sent is neither.
             Not a refusal: a surface shows a warning and records the sender's confirmation through
             `POST /lawful-basis-confirmations` before the send. Absent or false otherwise.
+        ask_country:
+          type: boolean
+          description: |-
+            The record states no country for this recipient, the refusal is for want of marketing
+            consent, and an installed pack allows advertising until the recipient refuses. A composer
+            asks the sender for the country, saves it on the contact with `PATCH /contacts/{id}`
+            (`address_country`) and asks the preview again. Absent or false when no answer could
+            change the decision, and for a recipient the caller cannot read.
         consent_purpose_id:
           type: string
           format: uuid
@@ -50756,7 +50765,7 @@ components:
         assessment: {type: string, enum: [attention, checked, incomplete]}
         sources:
           type: array
-          maxItems: 10
+          maxItems: 11
           items: {$ref: '#/components/schemas/HealthSource'}
         findings:
           type: array
@@ -50823,17 +50832,37 @@ components:
         first_observed_at: {type: string, format: date-time}
         next_attempt_at: {type: string, format: date-time}
         count: {type: integer, minimum: 0}
-        unit: {type: string, enum: [runs, mailboxes, records, updates, items, threads]}
+        unit: {type: string, enum: [runs, mailboxes, records, updates, items, threads, messages]}
         window_start: {type: string, format: date-time}
         window_end: {type: string, format: date-time}
+        footer_gap:
+          $ref: '#/components/schemas/HealthFooterGap'
         action:
           $ref: '#/components/schemas/HealthAction'
+    HealthFooterGap:
+      type: object
+      additionalProperties: false
+      description: >-
+        A legal entity whose mail owes a company detail nobody stated. A send that owes it is held for review with `footer_incomplete`, and a background send is dropped. The finding goes once the details are complete.
+      required: [legal_entity_id, legal_entity_name, is_default, missing, held_by_user, held_in_background]
+      properties:
+        legal_entity_id: {type: string, format: uuid}
+        legal_entity_name: {type: string, description: Empty for a default entity that states no name.}
+        is_default: {type: boolean}
+        missing:
+          type: array
+          minItems: 1
+          description: >-
+            The owed disclosure kinds with no text, then `entity_name` for a default entity with neither a display name nor a legal name.
+          items: {type: string, enum: [controller_identity, privacy_contact, objection_route, advertiser_contact, advertisement, entity_name]}
+        held_by_user: {type: integer, minimum: 0, description: 'Sends a user pressed that were held for this since the details last changed.'}
+        held_in_background: {type: integer, minimum: 0, description: 'Background sends, such as a meeting reminder, that were held or dropped for this since the details last changed.'}
     HealthAction:
       type: object
       additionalProperties: false
       required: [destination, available]
       properties:
-        destination: {type: string, enum: [diagnostics, connections, models, search, updates, configuration, regional], description: 'Where the finding is acted on. `regional` is the Company settings part that holds the installation timezone.'}
+        destination: {type: string, enum: [diagnostics, connections, models, search, updates, configuration, regional, legal_entities, company_profile, disclosures], description: 'Where the finding is acted on. `regional` is the Company settings part that holds the installation timezone. `legal_entities` is the Company settings part that lists the legal entities, and `company_profile` the one that names the company. `disclosures` is the jurisdiction page that holds the company details every mail discloses.'}
         available: {type: boolean}
         reason: {type: string}
     JobHealthHistory:
@@ -50979,7 +51008,7 @@ components:
             when no user row resolves — a deactivated or deleted member still has
             audit rows, and an honest identifier is better than an invented name.
         on_behalf_of_name: {type: [string, 'null'], description: Resolved display name for on_behalf_of.}
-        batch_id: {type: [string, 'null'], format: uuid, description: 'The bulk change that wrote this row; null for a change made on its own.'}
+        batch_id: {type: [string, 'null'], format: uuid, description: 'The operation group that wrote this row: a bulk change, or one run of a capture purge. Null for a change made on its own.'}
         action:
           $ref: '#/components/schemas/AuditAction'
         entity_type: {type: string}
@@ -51675,7 +51704,6 @@ components:
         - document_extract
         - draft_reply
         - enrich
-        - extension_task
         - growth_fit
         - nl_search
         - offer_draft
@@ -51813,11 +51841,12 @@ components:
         data: {type: array, items: {$ref: '#/components/schemas/AgentTool'}}
     RouterActions:
       type: object
-      description: The actions of one MCP router whose actions run REST routes.
-      required: [router, actions]
+      description: The actions of one MCP router, with the arguments each takes.
+      required: [router, actions, how_to_call]
       properties:
         router: {type: string}
         ask_user_first_means: {type: string, description: 'What ask_user_first asks of the model; present when an action here has it.'}
+        how_to_call: {type: string, description: 'Where an action''s arguments go in the router call: top-level members beside action, a routed body in request_body.'}
         actions:
           type: array
           items:
@@ -51825,14 +51854,25 @@ components:
             required: [action, does, route]
             properties:
               action: {type: string, description: 'The value the router''s action argument takes.'}
-              does: {type: string, description: 'The route''s summary.'}
+              does: {type: string, description: 'What the action does.'}
               route: {type: string, description: 'The method and route, for example POST /v1/record-grants.'}
               ids: {type: array, items: {type: string}, description: The path ids the action takes as arguments.}
-              query: {type: array, items: {type: string}, description: The query parameters it takes as arguments.}
+              query:
+                type: array
+                description: The query parameters it takes as arguments, each with its type and any closed values.
+                items:
+                  type: object
+                  required: [name, type]
+                  properties:
+                    name: {type: string}
+                    type: {type: string}
+                    required: {type: boolean}
+                    enum: {type: array, items: {type: string}}
+                    format: {type: string}
               if_version: {type: boolean, description: 'Whether it takes if_version: the version you last read.'}
               ask_user_first: {type: boolean, description: Whether the app asks its user to confirm it first.}
               uploads_a_file: {type: boolean, description: 'Whether it takes filename, content_type and content_base64.'}
-              body: {type: object, description: The JSON schema of its body argument.}
+              body: {type: object, additionalProperties: true, description: The JSON schema of its body argument.}
     ColdStartField:
       type: object
       description: |-

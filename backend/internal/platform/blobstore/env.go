@@ -24,24 +24,31 @@ const (
 	EnvPath      = "MARGINCE_BLOBSTORE_PATH"
 )
 
-// FromConfig builds a Store from the blobstore settings. The secrets have no
-// flag, since a flag leaks into the process table. With neither an endpoint
-// nor a path set it reports configured=false and a nil Store. A deployment
-// without object storage then boots, and the attachment endpoints answer 501.
-//
-// Two providers can be configured, and ENDPOINT wins when both are. An operator
-// who set both has named two different stores for the same bytes, and the
-// endpoint is the one that may already hold the objects this installation has
-// written; preferring an empty local directory would present a working
-// installation whose attachments had all vanished.
+// FromConfig builds a Store from the blobstore settings. With neither an
+// endpoint nor a path set it reports configured=false and a nil Store, and the
+// attachment endpoints answer 501. ENDPOINT wins over PATH because it may
+// already hold the objects this installation wrote.
 //
 //nolint:ireturn // the seam has three providers behind one Store; returning the interface is the design.
 func FromConfig(ctx context.Context, c *config.Config) (store Store, configured bool, err error) {
-	endpoint := config.Val(c, endpointSetting)
+	return fromSettings(ctx, c, attachmentStore)
+}
+
+// storeSettings is one set of the seven settings that name an object store. The
+// attachment store and the erasure journal store each have one, and
+// fromSettings builds either, so a second client is never written.
+type storeSettings struct {
+	endpoint, accessKey, secretKey, bucket, region, path *config.Setting[string]
+	useSSL                                               *config.Setting[bool]
+}
+
+//nolint:ireturn // same seam as FromConfig.
+func fromSettings(ctx context.Context, c *config.Config, set storeSettings) (store Store, configured bool, err error) {
+	endpoint := config.Val(c, set.endpoint)
 	if endpoint == "" {
 		// The filesystem provider: local disk, for an installation with no
 		// object storage service to point at. See NewFilesystem.
-		if path := config.Val(c, pathSetting); path != "" {
+		if path := config.Val(c, set.path); path != "" {
 			s, ferr := NewFilesystem(path)
 			if ferr != nil {
 				return nil, false, ferr
@@ -52,11 +59,11 @@ func FromConfig(ctx context.Context, c *config.Config) (store Store, configured 
 	}
 	s, err := New(ctx, Config{
 		Endpoint:  endpoint,
-		AccessKey: config.Val(c, accessKeySetting),
-		SecretKey: config.Val(c, secretKeySetting),
-		Bucket:    config.Val(c, bucketSetting),
-		Region:    config.Val(c, regionSetting),
-		UseSSL:    config.Val(c, useSSLSetting),
+		AccessKey: config.Val(c, set.accessKey),
+		SecretKey: config.Val(c, set.secretKey),
+		Bucket:    config.Val(c, set.bucket),
+		Region:    config.Val(c, set.region),
+		UseSSL:    config.Val(c, set.useSSL),
 	})
 	if err != nil {
 		return nil, false, err
@@ -83,7 +90,7 @@ var (
 	})
 	bucketSetting = config.Define(config.Spec[string]{
 		Key: "blobstore_bucket", Env: EnvBucket, Type: config.String, Roles: storeRoles,
-		Doc: "Bucket attachments are written to.",
+		Doc: "Bucket attachments are written to. Its credentials need `s3:PutObject`, `s3:GetObject`, `s3:DeleteObject` and `s3:ListBucket`. Erasure also needs `s3:ListBucketVersions` and `s3:DeleteObjectVersion`, so no version of a deleted object stays behind.",
 	})
 	regionSetting = config.Define(config.Spec[string]{
 		Key: "blobstore_region", Env: EnvRegion, Type: config.String, Roles: storeRoles,
@@ -99,7 +106,14 @@ var (
 	})
 )
 
+var attachmentStore = storeSettings{
+	endpoint: endpointSetting, accessKey: accessKeySetting, secretKey: secretKeySetting,
+	bucket: bucketSetting, region: regionSetting, useSSL: useSSLSetting, path: pathSetting,
+}
+
 // Settings are this package's boot settings.
 func Settings() []config.Any {
-	return []config.Any{endpointSetting, accessKeySetting, secretKeySetting, bucketSetting, regionSetting, useSSLSetting, pathSetting}
+	return append(
+		[]config.Any{endpointSetting, accessKeySetting, secretKeySetting, bucketSetting, regionSetting, useSSLSetting, pathSetting},
+		journalSettings()...)
 }

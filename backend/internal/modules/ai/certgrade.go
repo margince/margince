@@ -73,17 +73,21 @@ type CertGrade struct {
 	State   string
 }
 
-// Certification is what Settings shows beside a task: its grade on the model
-// that answers it, and whether that grade waits on a re-check.
+// Certification is what the AI routes screen shows for one model on a task. The
+// task shows the grade and each candidate shows the record's verdict. Both say
+// whether they wait on a re-check. Verdict is "" when the model is not measured.
 type Certification struct {
 	Grade          string
+	Verdict        string
 	RecheckPending bool
 }
 
 // CertificationFor grades binding on task from the table the committed records
 // generate (taskgrades_gen.go): its own record, else the provider's it is
 // measured by. A binding no record measures, or one a shipped site of the task
-// has no record for, is not measured.
+// has no record for, is not measured. A task's grade and each candidate's
+// verdict both read it here, so the two agree on the lead model.
+// Held by: TestTheTaskGradeAndTheLeadVerdictReadOneRecord (internal/modules/ai/certgrade_test.go)
 func CertificationFor(task Task, binding ProviderConfig, profile Profile) Certification {
 	grade, found := taskGrades[CertKeyFor(task, binding, profile)]
 	if !found {
@@ -95,21 +99,22 @@ func CertificationFor(task Task, binding ProviderConfig, profile Profile) Certif
 	if !found || grade.State == certStateAbsent {
 		return Certification{Grade: CertGradeNotMeasured}
 	}
-	return Certification{Grade: certGradeOf(grade.Verdict), RecheckPending: grade.State != certStateCurrent}
+	gradeOf, verdict := certGradeOf(grade.Verdict)
+	return Certification{Grade: gradeOf, Verdict: verdict, RecheckPending: grade.State != certStateCurrent}
 }
 
-func certGradeOf(verdict string) string {
+func certGradeOf(verdict string) (grade, known string) {
 	switch verdict {
 	case certVerdictCertified:
-		return CertGradeReady
+		return CertGradeReady, verdict
 	case certVerdictDegraded:
-		return CertGradeWithCare
+		return CertGradeWithCare, verdict
 	case certVerdictNotSupport:
-		return CertGradeNotReliable
+		return CertGradeNotReliable, verdict
 	default:
 		// A verdict this build does not know grades nothing, so it cannot read
-		// better than the worst grade a measurement gives.
-		return CertGradeNotReliable
+		// better than the worst verdict a measurement gives.
+		return CertGradeNotReliable, certVerdictNotSupport
 	}
 }
 

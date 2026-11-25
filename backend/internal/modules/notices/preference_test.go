@@ -39,6 +39,7 @@ func TestClassForPlacesEveryKindAProducerRaises(t *testing.T) {
 		{"capture_backlog_stalled", classCapture},
 		{"vcard_staging_failed", classSystem},
 		{KindApprovalPending, ClassApprovalPending},
+		{"meeting_team_request", ClassApprovalPending},
 		{"project_health_ai", classProjectHealth},
 		{string(crmcontracts.NoticeKindCoachReplyAging), classCoach},
 		{string(crmcontracts.NoticeKindCoachDealNeedsNextStep), classCoach},

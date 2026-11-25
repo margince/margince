@@ -12,6 +12,7 @@ export const PROBLEM_CODE_COPY = new Map<string, MessageKey>([
   ["booking_horizon", "scheduling.windowHorizon"],
   ["booking_notice", "scheduling.windowNotice"],
   ["booking_limits", "scheduling.windowLimits"],
+  ["length_not_offered", "book.lengthNotOffered"],
   ["approval_preview_incomplete", "approval.preview.incomplete"],
   ["approval_preview_unavailable", "approval.preview.unavailable"],
   ["approval_preview_conflict", "approval.preview.resolveConflict"],

@@ -425,7 +425,7 @@ func (s *Service) insertProposalInTx(ctx context.Context, tx pgx.Tx, in StageInp
 		stagedTargetLabel(ctx, tx, in),
 		nullStr(in.Summary), in.ProposedChange, in.DiffHash, ttlFor(in.Kind, in.TTL).String(),
 		nullUUID(in.BundleID), evidence, decider.member, string(decider.source),
-		nullUUID(conversationOf(ctx, p)), nullStr(pins.context), summaryParts).Scan(&expiresAt); err != nil {
+		nullUUID(principal.ConversationUser(ctx, p)), nullStr(pins.context), summaryParts).Scan(&expiresAt); err != nil {
 		return ids.ApprovalID{}, err
 	}
 	expiresAt = expiresAt.UTC()

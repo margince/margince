@@ -53,7 +53,10 @@ func (s *Store) AnswerSchedulingTeamRequest(ctx context.Context, host ids.UserID
 		if err != nil {
 			return err
 		}
-		return writeMemberStateTx(ctx, tx, page, stored, me, crmcontracts.SchedulingTeamMemberState(answer))
+		if err := writeMemberStateTx(ctx, tx, page, stored, me, crmcontracts.SchedulingTeamMemberState(answer)); err != nil || s.teamRequests == nil {
+			return err
+		}
+		return s.teamRequests.TeamRequestSettledTx(ctx, tx, host, me)
 	})
 }
 

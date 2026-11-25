@@ -31,14 +31,20 @@ export function BookingScreen({
   if (hostSlug.startsWith("meeting-"))
     return <BookingMeetingScreen id={hostSlug.slice(8)} />;
   if (hostSlug.startsWith("proposal-"))
-    return <BookingGuestScreen hostSlug="" proposalToken={hostSlug.slice(9)} />;
+    return (
+      <BookingGuestScreen
+        key={hostSlug}
+        hostSlug=""
+        proposalToken={hostSlug.slice(9)}
+      />
+    );
   if (hostSlug.startsWith("manage-"))
     return <BookingMeetingScreen token={hostSlug.slice(7)} />;
   if (page === "return")
     return <BookingReturnRequestScreen hostSlug={hostSlug} />;
   if (returnToken)
     return <BookingReturnScreen hostSlug={hostSlug} token={returnToken} />;
-  return <BookingGuestScreen hostSlug={hostSlug} />;
+  return <BookingGuestScreen key={hostSlug} hostSlug={hostSlug} />;
 }
 
 // The host's own preview reads their booking profile, which only a seat that

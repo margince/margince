@@ -3,11 +3,10 @@
 
 package compose
 
-// The runner's listing omits two SURFACE-owned things from every schema it
-// renders — `idempotency_key`'s description and `"additionalProperties":false` —
-// and states each once in the system frame instead of once per tool, on a
-// listing every step of every run re-sends. What it saves is published as
-// catalog.tokens in docs/reference/agent-tool-budget.json.
+// The runner's listing omits `"additionalProperties":false` from every schema it
+// renders. The system frame says it once instead, because every step of every
+// run re-sends the listing. What it saves is published as catalog.tokens in
+// docs/reference/agent-tool-budget.json.
 //
 // The invariant is held HERE and not only in the runner, because the runner
 // cannot see the whole served catalog and this package can. The weaker version
@@ -32,8 +31,8 @@ import (
 // listingSchemaPrefix is how ToolListing introduces a rendered schema.
 const listingSchemaPrefix = "  input schema: "
 
-// For every served spec, the listing's schema is exactly the two declared
-// omissions applied to the served one — nothing else moved.
+// For every served spec, the listing's schema is the served one with the
+// declared omission applied, and nothing else moved.
 //
 // THE SECOND SIDE IS COMPUTED HERE, not by calling runner.CompactSchema. That is
 // the whole strength of this gate. Comparing the listing against the same
@@ -42,10 +41,9 @@ const listingSchemaPrefix = "  input schema: "
 // moves both sides together and stays green, with only the budget page's byte
 // count going red as a "regenerate the page" message a reader obeys.
 //
-// So this walks the served JSON itself and removes exactly two things: every
-// `"additionalProperties": false` at any depth, and the ROOT
-// `properties.idempotency_key.description`. Then it compares PARSED TREES, so
-// key order and whitespace are the renderer's business and not this gate's.
+// So this walks the served JSON itself and removes one thing: every
+// `"additionalProperties": false` at any depth. Then it compares PARSED TREES,
+// so key order and whitespace are the renderer's business and not this gate's.
 //
 // Derived from the served surface, so a tool added tomorrow is measured without
 // anybody remembering this test.
@@ -71,7 +69,7 @@ func TestTheListingIsTheDeclaredCompactionOfEveryServedSchema(t *testing.T) {
 			t.Errorf("%s: the served schema is not valid JSON: %v", spec.Name, err)
 			continue
 		}
-		wantTree = withoutTheDeclaredOmissions(wantTree, atRoot)
+		wantTree = withoutTheDeclaredOmissions(wantTree)
 		if !reflect.DeepEqual(listedTree, wantTree) {
 			listedJSON, _ := json.Marshal(listedTree)
 			wantJSON, _ := json.Marshal(wantTree)
@@ -83,13 +81,6 @@ func TestTheListingIsTheDeclaredCompactionOfEveryServedSchema(t *testing.T) {
 		}
 	}
 }
-
-// atRoot / belowRoot mark the level for withoutTheDeclaredOmissions, because the
-// retry key's description is a surface fact only at the root of a schema.
-const (
-	atRoot    = true
-	belowRoot = false
-)
 
 // withoutTheDeclaredOmissions removes, from a parsed schema tree, exactly what
 // the listing is allowed to omit — and nothing else.
@@ -108,7 +99,7 @@ const (
 // the wrong dimension turns a gate into a false alarm.
 //
 //craft:ignore naked-any a decoded JSON document HAS no concrete Go type, and this walk's independence from the implementation's own structure is exactly what makes this side of the gate worth having
-func withoutTheDeclaredOmissions(node any, root bool) any {
+func withoutTheDeclaredOmissions(node any) any {
 	shape, isObject := node.(map[string]any)
 	if !isObject {
 		return node
@@ -122,53 +113,26 @@ func withoutTheDeclaredOmissions(node any, root bool) any {
 			if closed, isBool := value.(bool); isBool && !closed {
 				continue
 			}
-			out[key] = withoutTheDeclaredOmissions(value, belowRoot)
+			out[key] = withoutTheDeclaredOmissions(value)
 		case "properties":
 			properties, ok := value.(map[string]any)
 			if !ok {
 				out[key] = value
 				continue
 			}
-			if root {
-				out[key] = withoutRootRetryKeyDescription(properties)
-				continue
-			}
 			rewritten := make(map[string]any, len(properties))
 			for name, member := range properties {
-				rewritten[name] = withoutTheDeclaredOmissions(member, belowRoot)
+				rewritten[name] = withoutTheDeclaredOmissions(member)
 			}
 			out[key] = rewritten
 		case "items":
-			out[key] = withoutTheDeclaredOmissions(value, belowRoot)
+			out[key] = withoutTheDeclaredOmissions(value)
 		default:
 			// Everything else is carried through UNTOUCHED, including `default`,
 			// `const` and `examples`, whose contents are instance data and not
 			// schemas.
 			out[key] = value
 		}
-	}
-	return out
-}
-
-// withoutRootRetryKeyDescription drops the description of the ONE member the
-// surface owns at a schema's root, leaving every sibling and the member's own
-// type and bound in place.
-func withoutRootRetryKeyDescription(properties map[string]any) map[string]any {
-	out := make(map[string]any, len(properties))
-	for name, value := range properties {
-		member, isObject := value.(map[string]any)
-		if name != mcp.ReservedIdempotencyKeyArg || !isObject {
-			out[name] = withoutTheDeclaredOmissions(value, belowRoot)
-			continue
-		}
-		stripped := make(map[string]any, len(member))
-		for key, inner := range member {
-			if key == "description" {
-				continue
-			}
-			stripped[key] = inner
-		}
-		out[name] = stripped
 	}
 	return out
 }
@@ -182,65 +146,51 @@ func withoutRootRetryKeyDescription(properties map[string]any) map[string]any {
 // took out and refuses to pass on nothing.
 func TestTheCompactionStillRemovesWhatTheFrameStatesOnce(t *testing.T) {
 	specs := servedSurface(t).Specs()
-	served := runner.ToolListing(specs)
-	var retryDescriptions, closedForms int
-	// The retry key's SERVED description, read out of the real catalog rather
-	// than typed here. A literal would search for a string the surface no longer
-	// writes the moment somebody rewords it — passing on nothing, which is the
-	// one direction a census must not fail in.
-	var retryDescription string
+	closedForms := 0
 	for _, spec := range specs {
-		schema := string(spec.InputSchema)
-		if described := servedRetryKeyDescription(t, spec); described != "" {
-			retryDescriptions++
-			if retryDescription == "" {
-				retryDescription = described
-			} else if described != retryDescription {
-				t.Errorf("%s describes the retry key differently from its siblings; the surface has "+
-					"ONE definition of that member and the frame states ONE rule:\n  %s\n  %s",
-					spec.Name, retryDescription, described)
-			}
-		}
-		closedForms += strings.Count(schema, `"additionalProperties":false`)
-	}
-	if retryDescriptions == 0 {
-		t.Error("no served schema carries the retry key with a description, so the first half of the " +
-			"compaction has nothing to remove — either the surface stopped splicing the member, or the " +
-			"name this reads has been renamed out from under it")
+		closedForms += strings.Count(string(spec.InputSchema), `"additionalProperties":false`)
 	}
 	if closedForms == 0 {
-		t.Error("no served schema carries `\"additionalProperties\":false`, so the second half of the " +
-			"compaction has nothing to remove and the frame sentence about it is now a claim about " +
-			"nothing")
+		t.Error("no served schema carries `\"additionalProperties\":false`, so the compaction has nothing " +
+			"to remove and the frame sentence about it is now a claim about nothing")
 	}
-	// And what it removes is GONE from the listing, at every depth: the
-	// whole-catalog count of the closed form exceeds the tool count because
-	// several tools close a nested object too.
-	if strings.Contains(served, `"additionalProperties":false`) {
+	// What it removes is gone from the listing at every depth. Several tools
+	// close a nested object too.
+	if strings.Contains(runner.ToolListing(specs), `"additionalProperties":false`) {
 		t.Errorf("the rendered listing still carries the closed form somewhere, so a nested object is "+
 			"escaping the compaction (%d occurrences across the served schemas)", closedForms)
 	}
-	if strings.Contains(served, retryDescription) {
-		t.Errorf("the rendered listing still carries the retry key's served description, which the "+
-			"surface defines once and the frame states once (%d tools splice it): %s",
-			retryDescriptions, retryDescription)
+}
+
+// The MCP server instructions carry the retry key's rule, and no served schema
+// repeats it. The runner's own tests hold its frame to the rule.
+func TestTheRetryKeyRuleIsStatedOnceAndNoSchemaRepeatsIt(t *testing.T) {
+	keyed := 0
+	for _, spec := range servedSurface(t).Specs() {
+		if described, spliced := servedRetryKey(t, spec); spliced {
+			keyed++
+			if described != "" {
+				t.Errorf("%s describes the retry key in its own schema, which every write would then "+
+					"repeat: %q", spec.Name, described)
+			}
+		}
 	}
-	// The other end of the same invariant: the catalogue's description and the
-	// frame's sentence come from ONE constant. If they ever diverge, the checks
-	// above go looking for text nothing writes and pass on nothing.
-	if !strings.Contains(retryDescription, mcp.ReservedIdempotencyKeyRule) {
-		t.Errorf("the served description %q does not carry mcp.ReservedIdempotencyKeyRule, so the "+
-			"catalogue and the frame are stating one rule from two sources again", retryDescription)
+	if keyed == 0 {
+		t.Fatal("no served schema carries the retry key, so this test asserts nothing about it")
+	}
+	instructions := servedInstructions(t, primedViews(t, everyDeclaredView()))
+	if !strings.Contains(instructions, mcp.ReservedIdempotencyKeyRule) {
+		t.Errorf("the MCP server instructions do not state the retry key's rule, and %d schemas carry "+
+			"the key with no description:\n%s", keyed, instructions)
 	}
 }
 
-// servedRetryKeyDescription returns the description the SERVED schema gives the
-// retry key, or "" when this tool does not carry the member.
+// servedRetryKey returns the description the SERVED schema gives the retry
+// key, and whether the schema carries the member at all.
 //
-// Parsed rather than pattern-matched: the member's presence and its description
-// are two different facts, and a schema that merely mentions the name somewhere
-// in its own prose is not a schema that declares the argument.
-func servedRetryKeyDescription(t *testing.T, spec mcp.ToolSpec) string {
+// Parsed rather than pattern-matched: a schema that merely mentions the name in
+// its own prose is not a schema that declares the argument.
+func servedRetryKey(t *testing.T, spec mcp.ToolSpec) (string, bool) {
 	t.Helper()
 	var parsed struct {
 		Properties map[string]struct {
@@ -249,44 +199,10 @@ func servedRetryKeyDescription(t *testing.T, spec mcp.ToolSpec) string {
 	}
 	if err := json.Unmarshal(spec.InputSchema, &parsed); err != nil {
 		t.Errorf("%s: the served input schema is not a JSON object: %v", spec.Name, err)
-		return ""
+		return "", false
 	}
-	return parsed.Properties[mcp.ReservedIdempotencyKeyArg].Description
-}
-
-// tools/list must NOT move. The compaction is the runner's rendering, and a
-// client's catalogue is the thing mcp-info.md is the check on — so a served
-// schema keeps every byte the compaction takes out of the listing.
-//
-// Asserted here as well as by the mcp-info drift gate, because that gate fails
-// with "the page is stale" and a reader regenerates the page. This one says
-// which invariant broke.
-func TestTheServedSurfaceKeepsWhatTheListingOmits(t *testing.T) {
-	var retryKeyed, closed int
-	for _, spec := range servedSurface(t).Specs() {
-		var parsed struct {
-			Properties map[string]struct {
-				Description string `json:"description"`
-			} `json:"properties"`
-		}
-		if err := json.Unmarshal(spec.InputSchema, &parsed); err != nil {
-			t.Errorf("%s: the served input schema is not a JSON object: %v", spec.Name, err)
-			continue
-		}
-		if member, spliced := parsed.Properties[mcp.ReservedIdempotencyKeyArg]; spliced {
-			retryKeyed++
-			if member.Description == "" {
-				t.Errorf("%s: the SERVED schema's retry key carries no description — the compaction "+
-					"has leaked into tools/list, where a client holds this catalogue for a whole "+
-					"session and has no frame to read the rule from", spec.Name)
-			}
-		}
-		closed += strings.Count(string(spec.InputSchema), `"additionalProperties":false`)
-	}
-	if retryKeyed == 0 || closed == 0 {
-		t.Fatalf("the served surface splices the retry key into %d tools and closes %d schemas; "+
-			"with either at zero this test asserts nothing about tools/list", retryKeyed, closed)
-	}
+	member, spliced := parsed.Properties[mcp.ReservedIdempotencyKeyArg]
+	return member.Description, spliced
 }
 
 // systemFrameBudgetNumerator / Denominator bound the frame at 1/16 of the
