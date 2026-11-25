@@ -79,8 +79,8 @@ func (WeeklyAttention) StalledDealsOf(
 	if err != nil {
 		return nil, fmt.Errorf("compose: reading the team's stalled deals: %w", err)
 	}
-	// A date-only newest activity counts from its own date, so a team far east
-	// of UTC does not read the deal a day less quiet than it is.
+	// A date-only newest activity counts from its own date. Counted from the
+	// stored noon UTC, a team far east of UTC read the deal a day less quiet.
 	stale, err := pgx.CollectRows(rows, func(row pgx.CollectableRow) (weekly.StaleDeal, error) {
 		var d weekly.StaleDeal
 		var since occurredday.Moment

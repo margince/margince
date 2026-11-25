@@ -20,8 +20,8 @@ import (
 )
 
 // A deal whose newest activity names only a date is counted quiet from that
-// date. At UTC+14 its noon-UTC anchor is already the next day, so counting
-// from the stored instant read the deal a day less quiet than it is.
+// date. At UTC+14 its noon-UTC anchor is already the next day. Counted from the
+// stored instant, the deal read a day less quiet than it is.
 func TestATeamsStalledDealCountsADateOnlyActivityFromItsDate(t *testing.T) {
 	e := setupTeamWeekly(t)
 	writeRepWeek(t, e, e.Rep1)

@@ -146,19 +146,7 @@ func (s *Store) SetAudience(ctx context.Context, id ids.ActivityID, in SetAudien
 		if !reachable {
 			return &OrphanedAudienceError{Audience: in.Audience}
 		}
-		stored, err := readAudienceImage(ctx, tx, id)
-		if err != nil {
-			return err
-		}
-		before, after := storekit.ChangedColumns(current, stored)
-		auditID, err := storekit.Audit(ctx, tx, "update", "activity", id.UUID, before, after)
-		if err != nil {
-			return err
-		}
-		audience := crmcontracts.PublicEventActivityChangedFieldsAudience(in.Audience)
-		if err := storekit.EmitEvent(ctx, tx, auditID, id.UUID, crmcontracts.PublicEventActivityUpdated{
-			ChangedFields: crmcontracts.PublicEventActivityChangedFields{Audience: &audience},
-		}); err != nil {
+		if err := recordAudienceChange(ctx, tx, id, current, in.Audience); err != nil {
 			return err
 		}
 		if err := followRecordedMeetingTx(ctx, tx, id); err != nil {
@@ -171,6 +159,24 @@ func (s *Store) SetAudience(ctx context.Context, id ids.ActivityID, in SetAudien
 		return out, err
 	}
 	return out, s.attachCustomValues(ctx, &out)
+}
+
+// recordAudienceChange audits the audience the write left against current and
+// emits the activity.updated that pairs with that audit row.
+func recordAudienceChange(ctx context.Context, tx pgx.Tx, id ids.ActivityID, current map[string]any, audience string) error {
+	stored, err := readAudienceImage(ctx, tx, id)
+	if err != nil {
+		return err
+	}
+	before, after := storekit.ChangedColumns(current, stored)
+	auditID, err := storekit.Audit(ctx, tx, "update", "activity", id.UUID, before, after)
+	if err != nil {
+		return err
+	}
+	changed := crmcontracts.PublicEventActivityChangedFieldsAudience(audience)
+	return storekit.EmitEvent(ctx, tx, auditID, id.UUID, crmcontracts.PublicEventActivityUpdated{
+		ChangedFields: crmcontracts.PublicEventActivityChangedFields{Audience: &changed},
+	})
 }
 
 // readAudienceImage renders one side of the audience audit diff: the column on

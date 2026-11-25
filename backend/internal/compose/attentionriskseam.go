@@ -103,8 +103,8 @@ func (a attentionAtRisk) risky(ctx context.Context, candidates []agents.Slipping
 	return risky, nil
 }
 
-// idleDaysOf counts a date-only newest activity from its own date, so a reader
-// far east of UTC does not see the deal a day less quiet than it is.
+// idleDaysOf counts a date-only newest activity from its own date. Counted from
+// the stored noon UTC, a reader far east of UTC saw the deal a day less quiet.
 func idleDaysOf(deal agents.SlippingDeal, now time.Time, zone *time.Location) int {
 	since := occurredday.Moment{
 		At:       idlebase.Since(deal.CreatedAt, deal.LastActivityAt),
