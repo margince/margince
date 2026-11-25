@@ -34185,6 +34185,8 @@ export interface components {
             file_name?: string;
             /** @description The name the run's source is filed under. */
             source_name?: string;
+            /** @description Rows the upload counted in the file, a ZIP's files added together. Present while the run keeps what the upload read of the file, in a list too, so a draft no test has read still says how many rows it holds. */
+            readonly row_count?: number;
             /** @description The files the run imports, in import order. A single CSV is one part. */
             parts?: components["schemas"]["ImportRunPart"][];
             /**
@@ -34286,6 +34288,8 @@ export interface components {
             object: components["schemas"]["ImportObject"];
             /** @description Rows the file holds, once a dry run has read it; 0 before. */
             row_count: number;
+            /** @description Rows of the file the run created or updated. Present once the run has written: `complete`, `failed`, `undoing` or `undone`. */
+            readonly rows_written?: number;
             /** @description `{source column -> target field}` as the run saved it, the shape `updateImportRun` accepts, so a reader restores its edits from the run. Absent while the run holds none. */
             mapping?: {
                 [key: string]: string;

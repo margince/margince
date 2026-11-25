@@ -54710,7 +54710,10 @@ type ImportRun struct {
 
 	// RateRowsPerSecond Rows walked per second over the last minute. Absent until enough rows and time have passed to say, and while the run is idle.
 	RateRowsPerSecond *float32 `json:"rate_rows_per_second,omitempty" minimum:"0"`
-	Source            string   `json:"source"`
+
+	// RowCount Rows the upload counted in the file, a ZIP's files added together. Present while the run keeps what the upload read of the file, in a list too, so a draft no test has read still says how many rows it holds.
+	RowCount *int   `json:"row_count,omitempty" minimum:"0"`
+	Source   string `json:"source"`
 
 	// SourceName The name the run's source is filed under.
 	SourceName *string `json:"source_name,omitempty"`
@@ -54847,6 +54850,9 @@ type ImportRunPart struct {
 
 	// RowCount Rows the file holds, once a dry run has read it; 0 before.
 	RowCount int `json:"row_count" minimum:"0"`
+
+	// RowsWritten Rows of the file the run created or updated. Present once the run has written: `complete`, `failed`, `undoing` or `undone`.
+	RowsWritten *int `json:"rows_written,omitempty" minimum:"0"`
 }
 
 // ImportRunPhase What a run is doing. A test run reads, then checks; a commit or an undo reports the rest.

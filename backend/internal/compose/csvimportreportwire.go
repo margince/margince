@@ -41,8 +41,7 @@ func toContractImportReport(run migration.Run) crmcontracts.ImportRunReport {
 	// twice the rows the file holds — and the stored report DOES carry both,
 	// because a run's own report is merged into the dry run's so a resumed
 	// attempt keeps what the earlier one already achieved.
-	committed := run.Status == migration.StatusComplete || run.Status == migration.StatusFailed ||
-		run.Status == migration.StatusUndoing || run.Status == migration.StatusUndone
+	committed := hasCommitted(run.Status)
 	// Warnings fold apart from skips, so a row's warning is never taken for
 	// that row's skip.
 	seen, seenWarnings := map[string]bool{}, map[string]bool{}
@@ -95,6 +94,31 @@ func toContractImportReport(run migration.Run) crmcontracts.ImportRunReport {
 		out.Undo = toContractUndoReport(run.ID, run.Status, *run.UndoReport)
 	}
 	return out
+}
+
+// hasCommitted is whether a run in this status has written, so its stored
+// counts say what it did and not what its test predicted.
+func hasCommitted(status string) bool {
+	switch status {
+	case migration.StatusComplete, migration.StatusFailed, migration.StatusUndoing, migration.StatusUndone:
+		return true
+	}
+	return false
+}
+
+// rowsWrittenOf is how many rows of one object the run created or updated,
+// nil before it has written any.
+func rowsWrittenOf(run migration.Run, object string) *int {
+	if run.Report == nil || !hasCommitted(run.Status) {
+		return nil
+	}
+	for _, o := range run.Report.Objects {
+		if o.Object == object {
+			d := importDispositionOf(o, true)
+			return new(d.Created + d.Updated)
+		}
+	}
+	return nil
 }
 
 // rowsReachedOf is how many rows of each reported object the run read. A

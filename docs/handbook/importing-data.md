@@ -82,6 +82,8 @@ Also called: keep rows with broken links, import without the company link.
 ### How long does an import take, and can I leave the page?
 You can leave the page. An import runs on its own once it starts. **Recent imports** shows when it is done, and its file name opens it again. A canceled draft is not listed, so a CSV whose **Import as** you changed shows as one draft. An address that names no import, or one that was removed, says **Import not found**.
 
+Each import in **Recent imports** has its date and time, its rows and its status. A **Draft** counts the rows of its file. **Test run ready** means the test is done and nothing is written yet. Both have **Continue**. A finished import says how many rows it wrote, as in **18 of 49 imported**.
+
 While it runs, **Importing** shows the rows done and the rows in all. It also shows the rows per second, the time passed and the minutes left. The time left shows only after the import has run for about 10 seconds, and it is a guess, not a promise.
 
 If an import stops before the end, it says **Import stopped partway** and why. Choose **Resume import** to go on from that row, not from the start.
