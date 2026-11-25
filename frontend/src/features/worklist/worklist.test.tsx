@@ -99,6 +99,30 @@ describe("what the ranked queue tells a reader", () => {
     ).not.toBeNull();
   });
 
+  // A brief item's chip line withholds its record, so the title keeps it.
+  it("keeps a brief item's record in its title", async () => {
+    stub(
+      day({
+        queue: [
+          row({
+            id: "b1",
+            source: "brief_item",
+            title: "Follow up with the new lead",
+            subject: {
+              type: "lead",
+              id: "01a05500-0000-7000-8000-000000000003",
+              label: "Katrin Seibert",
+            },
+          }),
+        ],
+        summary: { urgent: 0, due: 1, lower_priority: 0, total: 1 },
+      }),
+    );
+    renderWorklist();
+
+    expect(await screen.findByText(/Katrin Seibert/)).toBeTruthy();
+  });
+
   // The server sends the deal's name in `detail` — the title has nowhere to
   // put it, since a notice's subject is never set.
   it("renders the server's one supporting line, even when the title has no subject to name", async () => {

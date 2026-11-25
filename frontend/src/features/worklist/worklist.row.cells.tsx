@@ -69,8 +69,6 @@ export function RowText({
   } = readings;
   const t = useT();
   const listed = useListed();
-  // The chip line's due day already says how late a dated task is.
-  const lateDated = chipped && item.source === "task" && !!item.due_at;
   const name = (
     <>
       {emailOpener ? null : (
@@ -86,9 +84,7 @@ export function RowText({
   );
   const badges = (
     <>
-      {item.overdue && !lateDated && (
-        <Badge tone="danger">{t("worklist.overdue")}</Badge>
-      )}
+      {item.overdue && <Badge tone="danger">{t("worklist.overdue")}</Badge>}
       {/* A state of the meeting, not a reason among reasons: a rep
               scanning for the one to open before it starts has to see it
               without reading the line under the title. Warn, not danger: an

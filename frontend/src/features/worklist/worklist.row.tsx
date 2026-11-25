@@ -418,11 +418,12 @@ function framedName(
   chipped: boolean,
 ) {
   const subject = framed ? briefSubjectLabel(item) : undefined;
-  // A chip names the subject on a chipped row, so the title need not.
+  // A chip names the subject on a chipped row, so the title need not. A brief
+  // item's chip line withholds its subject, so its title keeps it.
   const subjectNamed = framed
     ? !!subjectHref(item) &&
       (!item.contact?.label || item.contact.id === item.subject?.id)
-    : chipped && subjectChipped(item);
+    : chipped && subjectChipped(item) && !briefSubjectLabel(item);
   return {
     title: subject ?? itemTitle(item, t, locale, subjectNamed),
     heading: subject !== undefined,

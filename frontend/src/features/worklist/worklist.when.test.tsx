@@ -204,14 +204,21 @@ describe("a task says when it is due", () => {
   });
 
   // By how long is the fact a rep triages on. The due day says it in the
-  // danger tone, and no second "Overdue" badge repeats it.
-  it("says how far past due an overdue task is, on its due day", async () => {
+  // danger tone, beside the "Overdue" badge that names the state in words.
+  it("says how far past due an overdue task is, beside the badge", async () => {
     draw([taskDue("2026-08-28T08:00:00Z", true)]);
 
-    await screen.findByText("Send the retrofit quote");
+    expect(await screen.findByText("Overdue")).toBeTruthy();
     expect(momentLine()?.textContent).toMatch(/28.*3 days late/);
     expect(momentLine()?.className).toContain("badge-danger");
-    expect(screen.queryByText("Overdue")).toBeNull();
+  });
+
+  // Late the same day, the due chip carries only the hour, so the word is
+  // what says it.
+  it("names a task late on its own due day as overdue", async () => {
+    draw([taskDue("2026-08-31T07:00:00Z", true)]);
+
+    expect(await screen.findByText("Overdue")).toBeTruthy();
   });
 });
 
