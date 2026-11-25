@@ -344,6 +344,7 @@ func taskItem(task Task, asOf, until time.Time, loc *time.Location) crmcontracts
 		WebsiteInquiry: task.Inquiry,
 		Subject:        subjectOf(task.LinkType, task.LinkID), MayBeDone: task.MayBeDone,
 		RequestCheck: task.RequestCheck,
+		TaskType:     task.TaskType,
 		Actions:      taskActions(task),
 	}
 	if task.WebsiteInquiry {
