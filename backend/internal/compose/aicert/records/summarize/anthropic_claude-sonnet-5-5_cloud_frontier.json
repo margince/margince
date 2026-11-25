@@ -1,0 +1,489 @@
+{
+  "task": "summarize",
+  "provider": "anthropic",
+  "served_model": "claude-sonnet-5-5",
+  "env_class": "cloud_frontier",
+  "prompt_version": "pc02a52ad2bbdda9d0151380552b11eb6",
+  "corpus_version": "v1",
+  "verdict": "supported_degraded",
+  "runs": 87,
+  "passed": 87,
+  "reliability": 1,
+  "reported_accepted": 87,
+  "reported_wrong_answer": 0,
+  "reported_invalid": 0,
+  "reported_abstained": 0,
+  "certified_scope": "full_invocation",
+  "context_applied": false,
+  "context_scopes": [
+    "identity"
+  ],
+  "context_owed": 0,
+  "judge_score_p50": 100,
+  "judge_score_min": 52,
+  "latency_p50": 3946,
+  "latency_p95": 13246,
+  "mean_tokens": 3554,
+  "mean_tokens_in": 2956,
+  "mean_tokens_out": 597,
+  "mean_cached_tokens": 2116,
+  "mean_cache_write_tokens": 293,
+  "est_cost_microusd": 0,
+  "judge_served_model": "gemini-3.1-flash-lite",
+  "judge_provider": "gemini",
+  "self_judged": false,
+  "served_identity_source": "response",
+  "ran_at": "2026-11-25T06:37:53Z",
+  "scenarios": [
+    {
+      "scenario": "ask_meeting_prep_stays_silent_about_a_withheld_section",
+      "site": "company_ask",
+      "stamp": "216409853b0b18ec506506b33b139fe8ef646cc637a70a5f9f5e41048a8c2cb1c1448c54d8cb2af7b21f73c7521dc630f92e90abcf6dea77f77aa0f8e3e9d8101f1da80828ed6b67d3f56c0c98e23dc1d0038c4ccc8c10d077dc7d4c46830732",
+      "verdict": "certified",
+      "judge_band": "certified",
+      "runs": 15,
+      "passed": 15,
+      "judge_scores": [
+        100,
+        100,
+        100,
+        100,
+        100,
+        100,
+        100,
+        100,
+        100,
+        100,
+        100,
+        100,
+        100,
+        100,
+        100
+      ],
+      "bands": {
+        "certified_min": 70,
+        "degraded_min": 50,
+        "floor": 40
+      },
+      "privacy": true,
+      "leaks": 0,
+      "context_owed": 0,
+      "reported_accepted": 15,
+      "reported_wrong_answer": 0,
+      "reported_invalid": 0,
+      "reported_abstained": 0
+    },
+    {
+      "scenario": "ask_whats_open_answers_the_pipeline_not_the_history",
+      "site": "company_ask",
+      "stamp": "f26b36025165dcaf20b93cea153906434f1dc1e1a84a396bb71311c30b4eb7f962ffa7f04997c5038939244ec80236017360efdb1b7b3fd108aee4429c9dbcf17d5747422ff41d376bb2fd7f1f212c578c5341d4c09637bfecaff21d748fae69",
+      "verdict": "certified",
+      "judge_band": "certified",
+      "runs": 3,
+      "passed": 3,
+      "judge_scores": [
+        100,
+        90,
+        100
+      ],
+      "bands": {
+        "certified_min": 70,
+        "degraded_min": 50,
+        "floor": 40
+      },
+      "context_owed": 0,
+      "reported_accepted": 3,
+      "reported_wrong_answer": 0,
+      "reported_invalid": 0,
+      "reported_abstained": 0
+    },
+    {
+      "scenario": "ask_whats_open_names_the_promise_each_side_owes",
+      "site": "company_ask",
+      "stamp": "6a32dd5ec5a2fd043e6f35358a3d7f6daee424f82525d1a33d43193c2ed66fe2f9b1e8cc1c46edd36d6b7bc728aba2dc3e2f6b2bed761430b5f0680e7569fa1f733bcca90d655e86fd02c04ebeada02ffa8f60d1166b00218d30cc69c3b4038e",
+      "verdict": "certified",
+      "judge_band": "certified",
+      "runs": 3,
+      "passed": 3,
+      "judge_scores": [
+        100,
+        100,
+        100
+      ],
+      "bands": {
+        "certified_min": 70,
+        "degraded_min": 50,
+        "floor": 40
+      },
+      "context_owed": 0,
+      "reported_accepted": 3,
+      "reported_wrong_answer": 0,
+      "reported_invalid": 0,
+      "reported_abstained": 0
+    },
+    {
+      "scenario": "contact_brief_reads_what_was_said",
+      "site": "contact_brief",
+      "stamp": "254a0bb3d24a0cb291062b5c8e5a8064b4c679969840d501ba23df3ff10cb61889e20d69cb3e415dcb87503c9175f6005e33bfbe7be74cc9de2c3fba0ad60a0248f31292477659f1deb128ed41794639f93345a1f3d5a4fbb4b9e6e970f1dfe8",
+      "verdict": "certified",
+      "judge_band": "certified",
+      "runs": 3,
+      "passed": 3,
+      "judge_scores": [
+        95,
+        95,
+        90
+      ],
+      "bands": {
+        "certified_min": 70,
+        "degraded_min": 50,
+        "floor": 40
+      },
+      "context_owed": 0,
+      "reported_accepted": 3,
+      "reported_wrong_answer": 0,
+      "reported_invalid": 0,
+      "reported_abstained": 0
+    },
+    {
+      "scenario": "contact_brief_states_the_promised_date",
+      "site": "contact_brief",
+      "stamp": "e89a8abfeb4efb093a570497e998c8b0c4a9a909c8491b2aa1b5843c994d64fdf92cce888ab7e636992da2cb3c99e34d81a5574b91a93184dfec3b5ecf88528bd3e8888f887be769f342fa203a21610831e3eeb45c205907fa6a43ef3046ef50",
+      "verdict": "certified",
+      "judge_band": "certified",
+      "runs": 3,
+      "passed": 3,
+      "judge_scores": [
+        100,
+        100,
+        100
+      ],
+      "bands": {
+        "certified_min": 70,
+        "degraded_min": 50,
+        "floor": 40
+      },
+      "context_owed": 0,
+      "reported_accepted": 3,
+      "reported_wrong_answer": 0,
+      "reported_invalid": 0,
+      "reported_abstained": 0
+    },
+    {
+      "scenario": "contact_brief_stays_silent_about_what_the_reader_may_not_see",
+      "site": "contact_brief",
+      "stamp": "c57dea3a660e55db3e1409b29028e8c96d99949860f1997c56ba1c5f2d1dc179511e6a3fabf28e9e5322ce8d8df768294efefc4a8a715f5982db57d07827579fc8863ec93856aeba590a2504381907320f8fed5997acb7e1b136bb3ed7ce6e98",
+      "verdict": "supported_degraded",
+      "judge_band": "supported_degraded",
+      "runs": 15,
+      "passed": 15,
+      "judge_scores": [
+        55,
+        52,
+        55,
+        60,
+        55,
+        52,
+        62,
+        52,
+        60,
+        60,
+        55,
+        60,
+        62,
+        52,
+        90
+      ],
+      "bands": {
+        "certified_min": 70,
+        "degraded_min": 50,
+        "floor": 40
+      },
+      "privacy": true,
+      "leaks": 0,
+      "context_owed": 0,
+      "reported_accepted": 15,
+      "reported_wrong_answer": 0,
+      "reported_invalid": 0,
+      "reported_abstained": 0
+    },
+    {
+      "scenario": "deal_room_brief_names_the_buyer_who_set_it",
+      "site": "deal_room_brief",
+      "stamp": "e3bcc04ff5fd63e8dbbd4196246d4fb995fcc051a1eddfeb5266b8798b447136765bcefccfb9c6d20162178dff83caf3738b0dcb45a65fdcdc59ccf58955f2d0b0af015d47f87720617bb605b683098e53768630e2fd90b7f4289904b5609366",
+      "verdict": "certified",
+      "judge_band": "certified",
+      "runs": 3,
+      "passed": 3,
+      "judge_scores": [
+        90,
+        90,
+        90
+      ],
+      "bands": {
+        "certified_min": 70,
+        "degraded_min": 50,
+        "floor": 40
+      },
+      "context_owed": 0,
+      "reported_accepted": 3,
+      "reported_wrong_answer": 0,
+      "reported_invalid": 0,
+      "reported_abstained": 0
+    },
+    {
+      "scenario": "deal_room_brief_only_routine_asks",
+      "site": "deal_room_brief",
+      "stamp": "125a9758f408f786021de041deb881e2089db88193ebe7d3e8d7e6cf6afdd0cafeb017296ed975caf3c1fac113440c3415e7c2ee6628abd04668bc145e49fd43f2770be9cc7224529a9215853d1530c4850fadbe02c7363bb5070d054a1ce716",
+      "verdict": "certified",
+      "judge_band": "certified",
+      "runs": 3,
+      "passed": 3,
+      "judge_scores": [
+        90,
+        75,
+        90
+      ],
+      "bands": {
+        "certified_min": 70,
+        "degraded_min": 50,
+        "floor": 40
+      },
+      "context_owed": 0,
+      "reported_accepted": 3,
+      "reported_wrong_answer": 0,
+      "reported_invalid": 0,
+      "reported_abstained": 0
+    },
+    {
+      "scenario": "deal_room_brief_reads_the_blocker",
+      "site": "deal_room_brief",
+      "stamp": "e600136afe994feb5055fcdb3d8617756770eb34740602f71041ec6251c6585a4a0c1bf91f89272be231ebf807bbe45ba1e26e11ad1ccbb603f7346592ef726a4fd003c3e8fe579735373385f140eccd22c308a990c27f4e45b7d99f8e1665cc",
+      "verdict": "certified",
+      "judge_band": "certified",
+      "runs": 3,
+      "passed": 3,
+      "judge_scores": [
+        90,
+        90,
+        90
+      ],
+      "bands": {
+        "certified_min": 70,
+        "degraded_min": 50,
+        "floor": 40
+      },
+      "context_owed": 0,
+      "reported_accepted": 3,
+      "reported_wrong_answer": 0,
+      "reported_invalid": 0,
+      "reported_abstained": 0
+    },
+    {
+      "scenario": "deal_room_brief_resolved_condition",
+      "site": "deal_room_brief",
+      "stamp": "c93006605d5e9d3dbe78ab285bf53cba17469f96a2b2e8c585db852005997cfb7aeb469178c64ef726cfb73c607827bf35240036a1213ad3715dd077008fc6b60355b4301654753340cc35e101409a420e30265f7cbc565c04c13567d4f4c566",
+      "verdict": "certified",
+      "judge_band": "certified",
+      "runs": 3,
+      "passed": 3,
+      "judge_scores": [
+        100,
+        100,
+        100
+      ],
+      "bands": {
+        "certified_min": 70,
+        "degraded_min": 50,
+        "floor": 40
+      },
+      "context_owed": 0,
+      "reported_accepted": 3,
+      "reported_wrong_answer": 0,
+      "reported_invalid": 0,
+      "reported_abstained": 0
+    },
+    {
+      "scenario": "deal_room_brief_seller_wrote_the_condition",
+      "site": "deal_room_brief",
+      "stamp": "99722777c70acc8e484bf0d94426da688290598966e089f505667bc39686a4b2594f1201b625916bd8118f9ab5a76873050dcd64e2a5fdd016deac0eb246e20db334a01eb5b78f8ae8fcf7c837c8cb0e21499b8e95a03e662724349921fc08ab",
+      "verdict": "certified",
+      "judge_band": "certified",
+      "runs": 3,
+      "passed": 3,
+      "judge_scores": [
+        100,
+        100,
+        90
+      ],
+      "bands": {
+        "certified_min": 70,
+        "degraded_min": 50,
+        "floor": 40
+      },
+      "context_owed": 0,
+      "reported_accepted": 3,
+      "reported_wrong_answer": 0,
+      "reported_invalid": 0,
+      "reported_abstained": 0
+    },
+    {
+      "scenario": "dossier_describes_the_company_not_the_relationship",
+      "site": "company_dossier",
+      "stamp": "1e8127bc8b1742898698b80a8235ad643c8a813e3bced174f317de60236fa7b6a32cec979dd9b449cda82ee166bcd185872ae22c3b4d0776763d5c5ee1e30fca1eaeb0fabc0e4796ca9bfae84e6d28de43e6d2c1a9f15c7898e179857cca8975",
+      "verdict": "certified",
+      "judge_band": "certified",
+      "runs": 3,
+      "passed": 3,
+      "judge_scores": [
+        90,
+        100,
+        90
+      ],
+      "bands": {
+        "certified_min": 70,
+        "degraded_min": 50,
+        "floor": 40
+      },
+      "context_owed": 0,
+      "reported_accepted": 3,
+      "reported_wrong_answer": 0,
+      "reported_invalid": 0,
+      "reported_abstained": 0
+    },
+    {
+      "scenario": "meeting_brief_reads_the_thread_that_matters",
+      "site": "meeting_brief",
+      "stamp": "a1807122f025496aa7fe96ec9a7da528754a554e02d1f300e39aa6c8838d90a09439ac0184dea4bb02536683adc6e75139a257604c485cdc9c47f9539bd0747a500d310a455b18f7f6e6605cfcb63756a13e1d6e267056f17e1810352ebb9af1",
+      "verdict": "certified",
+      "judge_band": "certified",
+      "runs": 3,
+      "passed": 3,
+      "judge_scores": [
+        90,
+        95,
+        95
+      ],
+      "bands": {
+        "certified_min": 70,
+        "degraded_min": 50,
+        "floor": 40
+      },
+      "context_owed": 0,
+      "reported_accepted": 3,
+      "reported_wrong_answer": 0,
+      "reported_invalid": 0,
+      "reported_abstained": 0
+    },
+    {
+      "scenario": "meeting_plan_reads_the_thread_that_matters",
+      "site": "meeting_plan",
+      "stamp": "60e703f24b4644941ba6c2aefbdbbe2394765deb8229db0bf96c0ffcbafb18322e43167ad63fe3c49ab4d4b6cfee13dcbd23566bac8b8af84f215006718f8a10c9637c57261f98cb8b241008ff977ebe4cab22f3bb4aaeb8b61a7e2de6bc4a3c",
+      "verdict": "certified",
+      "judge_band": "certified",
+      "runs": 3,
+      "passed": 3,
+      "judge_scores": [
+        100,
+        100,
+        90
+      ],
+      "bands": {
+        "certified_min": 70,
+        "degraded_min": 50,
+        "floor": 40
+      },
+      "context_owed": 0,
+      "reported_accepted": 3,
+      "reported_wrong_answer": 0,
+      "reported_invalid": 0,
+      "reported_abstained": 0
+    },
+    {
+      "scenario": "meeting_plan_serves_the_meetings_deal",
+      "site": "meeting_plan",
+      "stamp": "024722e0fd5b4e4bb6bc4696082ea6d4709662a56b7a6c8c179592a9869f80838d39711369abfed43af6e8f46ebdd8967e9ba8b5dee09b89d5276302289d3b99c8a6389fe653dd51d9f08a721820029c8d2214a9c5ae0389e3ae79f70bdc5d12",
+      "verdict": "certified",
+      "judge_band": "certified",
+      "runs": 3,
+      "passed": 3,
+      "judge_scores": [
+        100,
+        100,
+        100
+      ],
+      "bands": {
+        "certified_min": 70,
+        "degraded_min": 50,
+        "floor": 40
+      },
+      "context_owed": 0,
+      "reported_accepted": 3,
+      "reported_wrong_answer": 0,
+      "reported_invalid": 0,
+      "reported_abstained": 0
+    },
+    {
+      "scenario": "brief_stays_silent_about_a_withheld_section",
+      "site": "company_brief",
+      "stamp": "5c2888a5387af338f45baede573ccf21f943654ada3629db1553495697137597e871fcb28f109fb7851a4f4a59f2775b5d843cfc851484480f3cdee0b7da4637eb0da64ef2490b0fabce88cf93b1760219f403d1aff8490723c7093c7603c53b",
+      "verdict": "certified",
+      "judge_band": "certified",
+      "runs": 15,
+      "passed": 15,
+      "judge_scores": [
+        100,
+        100,
+        100,
+        100,
+        100,
+        100,
+        100,
+        100,
+        100,
+        90,
+        100,
+        100,
+        100,
+        90,
+        100
+      ],
+      "bands": {
+        "certified_min": 70,
+        "degraded_min": 50,
+        "floor": 40
+      },
+      "privacy": true,
+      "leaks": 0,
+      "context_owed": 0,
+      "reported_accepted": 15,
+      "reported_wrong_answer": 0,
+      "reported_invalid": 0,
+      "reported_abstained": 0
+    },
+    {
+      "scenario": "brief_names_the_stalled_deal_and_the_last_touch",
+      "site": "company_brief",
+      "stamp": "1e07b2fa67ce36a71d72b04812e210fc4946968c1cbde6cadf6ee996a285aa01f8d0fb5377842a6c08674714e9b67d111c27b82e87501cf9031a483b53d05596c19b4c6c458bfd853539756f592d6cd8cbf8f4f410c178011a7ba20753f36c80",
+      "verdict": "certified",
+      "judge_band": "certified",
+      "runs": 3,
+      "passed": 3,
+      "judge_scores": [
+        100,
+        95,
+        100
+      ],
+      "bands": {
+        "certified_min": 70,
+        "degraded_min": 50,
+        "floor": 40
+      },
+      "context_owed": 0,
+      "reported_accepted": 3,
+      "reported_wrong_answer": 0,
+      "reported_invalid": 0,
+      "reported_abstained": 0
+    }
+  ]
+}

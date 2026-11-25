@@ -9,6 +9,39 @@ import type { components } from "../api/schema";
  * binds a setup the tests have graded.
  */
 export const MODEL_SETUPS = {
+  anthropic_cloud: {
+    routing: {
+      embeddings: {
+        dimensions: 1536,
+        model: "gemini-embedding-001",
+        provider: "gemini",
+      },
+      profile: "cloud_frontier",
+      task_ladders: {
+        agent_loop: ["premium", "cheap_cloud"],
+        nl_search: ["premium", "cheap_cloud"],
+        voice_build: ["premium", "cheap_cloud"],
+      },
+      tiers: {
+        cheap_cloud: {
+          model: "claude-haiku-5-5",
+          provider: "anthropic",
+        },
+        frontier: {
+          model: "claude-sonnet-5-5",
+          provider: "anthropic",
+        },
+        local_small: {
+          model: "claude-haiku-5-5",
+          provider: "anthropic",
+        },
+        premium: {
+          model: "claude-sonnet-5-5",
+          provider: "anthropic",
+        },
+      },
+    },
+  },
   consumer_class_brokered: {
     routing: {
       embeddings: {
