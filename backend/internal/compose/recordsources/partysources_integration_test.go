@@ -6,6 +6,7 @@
 package recordsources
 
 import (
+	"errors"
 	"slices"
 	"testing"
 
@@ -14,6 +15,7 @@ import (
 	"github.com/margince/margince/backend/internal/compose/integration"
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/platform/database"
+	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -199,10 +201,10 @@ func TestAFeedAdoptsACapturedCompanyAndNotAnImportedOne(t *testing.T) {
 		AND before->>'source_system' = 'gmail' AND after->>'source_system' = 'erp'`, captured.Id); n != 1 {
 		t.Errorf("%d audit row(s) keep the connector the adoption replaced, want 1", n)
 	}
-	if err := adopt(ids.UUID(imported.Id), "c-2"); err == nil {
-		t.Error("an imported company was adopted by a feed, want a conflict")
+	if err := adopt(ids.UUID(imported.Id), "c-2"); !errors.Is(err, apperrors.ErrConflict) {
+		t.Errorf("adopting an imported company: %v, want a conflict", err)
 	}
-	if err := adopt(ids.UUID(named.Id), "c-3"); err == nil {
-		t.Error("a company an integration named was adopted by a feed, want a conflict")
+	if err := adopt(ids.UUID(named.Id), "c-3"); !errors.Is(err, apperrors.ErrConflict) {
+		t.Errorf("adopting a company an integration named: %v, want a conflict", err)
 	}
 }

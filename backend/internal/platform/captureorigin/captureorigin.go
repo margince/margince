@@ -28,7 +28,8 @@ func ContactSQL(verdict, accept, imported string) string {
 
 // NoOtherSystemSQL tests that column names no system but the connector or
 // writer the source mapping fills. Each such name maps to itself, and an
-// import's or an integration's name does not. column is a compile-time expression.
+// import's or an integration's name maps to NULL. Never NULL itself, so a
+// caller may scan it. column is a compile-time expression.
 func NoOtherSystemSQL(column string) string {
-	return "(" + column + " IS NULL OR party_source_producer(" + column + ") = " + column + ")"
+	return "(party_source_producer(" + column + ") IS NOT DISTINCT FROM " + column + ")"
 }
