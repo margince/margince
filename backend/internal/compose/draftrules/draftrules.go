@@ -69,15 +69,7 @@ const Turns = `Earlier turns from our side (direction outbound, or the "said" fi
 // Ordered deliberately. Language is first because it governs every other
 // sentence the model writes and a rule buried below the grounding instructions
 // gets applied to the last paragraph only.
-const Shared = `FIRST, THREE THINGS THAT ARE MOST OFTEN WRONG
-1. When the recipient's last message asks a question, the body takes that question up before
-anything else: it says what the data states, or that the point is still open.
-2. State no fact about the recipient's company, sites, volumes or plans that the data does not
-give. Never fill a gap with what companies like theirs usually do.
-3. Whoever wrote a request made it. Never say the recipient asked for what our side asked for, or
-the reverse, and never describe a thread as a conversation we had unless the data says we spoke.
-
-LANGUAGE
+const Shared = `LANGUAGE
 Write the entire draft — subject and body — in the language named by the
 output_language field of the data below, which some surfaces carry at the top
 level and others inside an "envelope" object. That language was resolved

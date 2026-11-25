@@ -98,7 +98,7 @@ var taskGrades = map[CertKey]CertGrade{
 	// records/brief_ranking/openai_compatible_qwen_qwen3.8-27b_cloud_frontier.json
 	{Task: "brief_ranking", Provider: "openai_compatible", Model: "qwen/qwen3.8-27b", Profile: "cloud_frontier", ThinkingLevel: "", SiteThinking: "", Upstream: "{\"only\":[\"deepinfra\"],\"ignore\":null,\"quantizations\":[\"bf16\"],\"sort\":\"\",\"require_parameters\":null,\"allow_fallbacks\":null,\"preferred_max_latency_p90\":0,\"reasoning_effort\":\"\"}"}: {Verdict: "certified", State: "stale"},
 	// records/capture_classify/anthropic_claude-haiku-5-5_cloud_frontier.json
-	{Task: "capture_classify", Provider: "anthropic", Model: "claude-haiku-5-5", Profile: "cloud_frontier", ThinkingLevel: "", SiteThinking: "", Upstream: ""}: {Verdict: "supported_degraded", State: "current"},
+	{Task: "capture_classify", Provider: "anthropic", Model: "claude-haiku-5-5", Profile: "cloud_frontier", ThinkingLevel: "", SiteThinking: "", Upstream: ""}: {Verdict: "certified", State: "current"},
 	// records/capture_classify/gemini_gemini-3.1-flash-lite_cloud_frontier.json
 	{Task: "capture_classify", Provider: "gemini", Model: "gemini-3.1-flash-lite", Profile: "cloud_frontier", ThinkingLevel: "", SiteThinking: "", Upstream: ""}: {Verdict: "certified", State: "current"},
 	// records/capture_classify/gemini_gemini-3.5-flash-lite_cloud_frontier.json
@@ -136,7 +136,7 @@ var taskGrades = map[CertKey]CertGrade{
 	// records/capture_confidentiality_verdict/openai_compatible_qwen_qwen3.8-27b_cloud_frontier.json
 	{Task: "capture_confidentiality_verdict", Provider: "openai_compatible", Model: "qwen/qwen3.8-27b", Profile: "cloud_frontier", ThinkingLevel: "", SiteThinking: "", Upstream: "{\"only\":[\"deepinfra\"],\"ignore\":null,\"quantizations\":[\"bf16\"],\"sort\":\"\",\"require_parameters\":null,\"allow_fallbacks\":null,\"preferred_max_latency_p90\":0,\"reasoning_effort\":\"\"}"}: {Verdict: "certified", State: "stale"},
 	// records/capture_counterparty_verdict/anthropic_claude-haiku-5-5_cloud_frontier.json
-	{Task: "capture_counterparty_verdict", Provider: "anthropic", Model: "claude-haiku-5-5", Profile: "cloud_frontier", ThinkingLevel: "", SiteThinking: "", Upstream: ""}: {Verdict: "not_supported", State: "current"},
+	{Task: "capture_counterparty_verdict", Provider: "anthropic", Model: "claude-haiku-5-5", Profile: "cloud_frontier", ThinkingLevel: "", SiteThinking: "", Upstream: ""}: {Verdict: "certified", State: "current"},
 	// records/capture_counterparty_verdict/gemini_gemini-3.1-flash-lite_cloud_frontier.json
 	{Task: "capture_counterparty_verdict", Provider: "gemini", Model: "gemini-3.1-flash-lite", Profile: "cloud_frontier", ThinkingLevel: "", SiteThinking: "", Upstream: ""}: {Verdict: "certified", State: "current"},
 	// records/capture_counterparty_verdict/gemini_gemini-3.5-flash-lite_cloud_frontier.json
@@ -186,7 +186,7 @@ var taskGrades = map[CertKey]CertGrade{
 	// records/cert_judge/openai_compatible_qwen_qwen3.8-27b_cloud_frontier.json
 	{Task: "cert_judge", Provider: "openai_compatible", Model: "qwen/qwen3.8-27b", Profile: "cloud_frontier", ThinkingLevel: "", SiteThinking: "", Upstream: "{\"only\":[\"deepinfra\"],\"ignore\":null,\"quantizations\":[\"bf16\"],\"sort\":\"\",\"require_parameters\":null,\"allow_fallbacks\":null,\"preferred_max_latency_p90\":0,\"reasoning_effort\":\"\"}"}: {Verdict: "certified", State: "stale"},
 	// records/chat_summary/anthropic_claude-haiku-5-5_cloud_frontier.json
-	{Task: "chat_summary", Provider: "anthropic", Model: "claude-haiku-5-5", Profile: "cloud_frontier", ThinkingLevel: "", SiteThinking: "", Upstream: ""}: {Verdict: "supported_degraded", State: "current"},
+	{Task: "chat_summary", Provider: "anthropic", Model: "claude-haiku-5-5", Profile: "cloud_frontier", ThinkingLevel: "", SiteThinking: "", Upstream: ""}: {Verdict: "certified", State: "current"},
 	// records/chat_summary/anthropic_claude-sonnet-5-5_cloud_frontier.json
 	{Task: "chat_summary", Provider: "anthropic", Model: "claude-sonnet-5-5", Profile: "cloud_frontier", ThinkingLevel: "", SiteThinking: "", Upstream: ""}: {Verdict: "certified", State: "current"},
 	// records/chat_summary/gemini_gemini-3.1-flash-lite_cloud_frontier.json
@@ -308,9 +308,9 @@ var taskGrades = map[CertKey]CertGrade{
 	// records/draft_reply/anthropic_claude-haiku-5-5_cloud_frontier.json
 	{Task: "draft_reply", Provider: "anthropic", Model: "claude-haiku-5-5", Profile: "cloud_frontier", ThinkingLevel: "", SiteThinking: "", Upstream: ""}: {Verdict: "supported_degraded", State: "current"},
 	// records/draft_reply/anthropic_claude-sonnet-5-5_cloud_frontier.json
-	{Task: "draft_reply", Provider: "anthropic", Model: "claude-sonnet-5-5", Profile: "cloud_frontier", ThinkingLevel: "", SiteThinking: "", Upstream: ""}: {Verdict: "certified", State: "current"},
+	{Task: "draft_reply", Provider: "anthropic", Model: "claude-sonnet-5-5", Profile: "cloud_frontier", ThinkingLevel: "", SiteThinking: "", Upstream: ""}: {Verdict: "supported_degraded", State: "current"},
 	// records/draft_reply/gemini_gemini-3.1-flash-lite_cloud_frontier.json
-	{Task: "draft_reply", Provider: "gemini", Model: "gemini-3.1-flash-lite", Profile: "cloud_frontier", ThinkingLevel: "", SiteThinking: "", Upstream: ""}: {Verdict: "not_supported", State: "current"},
+	{Task: "draft_reply", Provider: "gemini", Model: "gemini-3.1-flash-lite", Profile: "cloud_frontier", ThinkingLevel: "", SiteThinking: "", Upstream: ""}: {Verdict: "supported_degraded", State: "current"},
 	// records/draft_reply/gemini_gemini-3.1-pro-preview_cloud_frontier.json
 	{Task: "draft_reply", Provider: "gemini", Model: "gemini-3.1-pro-preview", Profile: "cloud_frontier", ThinkingLevel: "", SiteThinking: "", Upstream: ""}: {Verdict: "supported_degraded", State: "stale"},
 	// records/draft_reply/gemini_gemini-3.5-flash_cloud_frontier.json

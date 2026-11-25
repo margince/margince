@@ -24,10 +24,10 @@ type Tally struct {
 	Writes  int
 }
 
-// NotWrittenOnce is every listed subject that one write does not name, in
-// list order: unwritten, or written more than once. It is the one spelling of
-// "one write per listed subject": the runner's outcome check, the certification
-// grade and the live lane all read it.
+// NotWrittenOnce returns each listed subject that one write does not name, in
+// list order: unwritten, or written more than once. The runner's outcome check,
+// the certification grade and the live lane all read this rule of "one write
+// per listed subject".
 func NotWrittenOnce(listed, written []string) []Tally {
 	counts := make(map[string]int, len(written))
 	for _, subject := range written {
@@ -54,7 +54,7 @@ const outcomeCheckSource = "outcome_check"
 const outcomeRefusedDirective = "Your final answer was not accepted. Do the work named above, then return your final answer again."
 
 // recordCall keeps an executed call for the job's outcome check. A job with no
-// check keeps nothing, so a run holds no second copy of answers nobody reads.
+// check keeps nothing, so a run holds none of the answers nobody reads.
 func (acc *Result) recordCall(job Job, tool string, args, answer json.RawMessage) {
 	if job.Outcome != nil {
 		acc.calls = append(acc.calls, Call{Tool: tool, Args: args, Answer: answer})

@@ -45,10 +45,11 @@ var certifiedAttemptTimeouts = map[Task]certifiedLimit{
 		{provider: "openai_compatible", model: "openai/gpt-oss-120b"},
 		{provider: "openai_compatible", model: "qwen/qwen3.8-27b"},
 	}},
-	// records/draft_reply/anthropic_claude-sonnet-5-5_cloud_frontier.json: p95 18.148s
+	// records/draft_reply/anthropic_claude-sonnet-5-5_cloud_frontier.json: p95 17.426s
 	"draft_reply": {limit: 30 * time.Second, measured: []boundModel{
 		{provider: "anthropic", model: "claude-haiku-5-5"},
 		{provider: "anthropic", model: "claude-sonnet-5-5"},
+		{provider: "gemini", model: "gemini-3.1-flash-lite"},
 		{provider: "gemini", model: "gemini-3.1-pro-preview"},
 		{provider: "gemini", model: "gemini-3.5-flash"},
 		{provider: "gemini", model: "gemini-3.5-flash-lite"},
