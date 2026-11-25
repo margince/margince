@@ -90,6 +90,9 @@ type Finding struct {
 	// — different from zero, which would claim nothing is at stake.
 	AffectedMinor *int64
 	Currency      string
+	// OtherID is the second deal of a finding about a pair of deals, empty for
+	// every other. SubjectID stays the one deal the finding is filed on.
+	OtherID string
 }
 
 // The exception types, and the one place they are named.
@@ -103,7 +106,15 @@ const (
 	TypeNoEconomicBuyer  = "no_economic_buyer"
 	TypeCommitUnpriced   = "commit_unpriced"
 	TypeStageExitUnmet   = "stage_exit_unmet"
+	// TypeDuplicateMotion is a pair finding: two open deals of one account that
+	// read as one buying motion. It is asked of a PairSubject, not of a Subject,
+	// so it is not in Rules().
+	TypeDuplicateMotion = "duplicate_motion"
 )
+
+// DuplicateMotionWindowDays is how far apart two deals' close dates may lie and
+// still be one buying motion.
+const DuplicateMotionWindowDays = 60
 
 // TypeBuyerSilent is a RETIRED type. Stored findings keep it for their
 // history. A pass that read the mailbox clears the open ones, because no rule
@@ -386,6 +397,10 @@ func commitUnpriced() Rule {
 // Keyed on the value, a close date that moved twice would be three exceptions
 // and somebody would resolve the same finding three times.
 func LogicalKey(f Finding) string {
+	// A pair names both deals in id order, one identity whichever it is filed on.
+	if f.OtherID != "" {
+		return fmt.Sprintf("%s:%s:%s", f.Type, min(f.SubjectID, f.OtherID), max(f.SubjectID, f.OtherID))
+	}
 	return fmt.Sprintf("%s:%s", f.Type, f.SubjectID)
 }
 

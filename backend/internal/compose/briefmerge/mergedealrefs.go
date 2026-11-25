@@ -1,7 +1,11 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-package briefs
+// Package briefmerge moves the brief items of a merged deal onto its survivor.
+// It is not part of briefs because installseam imports it. The briefs tests
+// import the integration harness, and the harness imports installseam, so that
+// edge from inside briefs would be an import cycle.
+package briefmerge
 
 import (
 	"context"

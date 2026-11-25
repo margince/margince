@@ -161,7 +161,7 @@ func (w *assuranceRunWorker) Work(ctx context.Context, job *river.Job[AssuranceR
 // that stopped changing.
 func (w *assuranceSweepWorker) check(ctx context.Context, ws ids.UUID, requested bool) error {
 	store := assurance.NewStore(InstallationDB(w.pool))
-	result, err := assuranceScanner(w.pool, store).Scan(ctx, w.now())
+	result, err := AssuranceScanner(w.pool, store).Scan(ctx, w.now())
 	if err != nil {
 		return err
 	}

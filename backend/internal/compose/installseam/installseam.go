@@ -19,7 +19,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
-	"github.com/margince/margince/backend/internal/compose/briefs"
+	"github.com/margince/margince/backend/internal/compose/briefmerge"
 	"github.com/margince/margince/backend/internal/compose/editaccess"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/activities"
@@ -62,7 +62,7 @@ func Deals() deals.Installation {
 		MoveDealRefs: []deals.MoveDealRefs{
 			contacts.MoveDealRefsTx, contracts.MoveDealRefsTx, assignments.MoveDealRefsTx,
 			activities.MoveDealRefsTx, dealrooms.MoveDealRefsTx, chatlinks.MoveDealRefsTx,
-			commissions.MoveDealRefsTx, briefs.MoveDealRefsTx,
+			commissions.MoveDealRefsTx, briefmerge.MoveDealRefsTx,
 		},
 		// The Value sort reads both ungated: a seat that may read deals may
 		// order them, whatever its installation_settings grant.
