@@ -115,8 +115,8 @@ func (w *notificationMailWorker) approvalReading(seatCtx context.Context, items 
 			if refreshed.ApprovalID != nil {
 				refs.approvals = append(refs.approvals, refreshed.ApprovalID.UUID)
 			}
-			if refreshed.TeamRequestHost != nil {
-				refs.teamRequests = append(refs.teamRequests, teamRequestRef{notice: refreshed.Notice.ID, host: *refreshed.TeamRequestHost, member: refreshed.Recipient})
+			if refreshed.TeamRequestPage != nil {
+				refs.teamRequests = append(refs.teamRequests, teamRequestRef{notice: refreshed.Notice.ID, page: *refreshed.TeamRequestPage, member: refreshed.Recipient})
 			}
 			kept = append(kept, approvalMailItem{attempt: refreshed, facts: facts})
 		}
