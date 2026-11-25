@@ -3,7 +3,10 @@
 
 package weekly
 
-import "github.com/margince/margince/backend/internal/shared/kernel/stagemove"
+import (
+	"github.com/margince/margince/backend/internal/modules/deals"
+	"github.com/margince/margince/backend/internal/shared/kernel/stagemove"
+)
 
 // StageEntriesSQL is the stage entry rule the weekly funnel and the Analytics
 // stage cohort share. An entry is a deal's earliest move into an open stage in
@@ -23,7 +26,7 @@ func StageEntriesSQL(start, end, narrowing string) string {
 	 WHERE h.changed_at >= ` + start + ` AND h.changed_at < ` + end + `
 	   AND h.pipeline_id_at_change IS NOT NULL
 	   AND h.semantic_at_change = 'open'
-	   AND d.merged_into_id IS NULL
+	   AND ` + deals.StandingSQL("d") + `
 	   AND ` + stagemove.NotMadeElsewhereSQL("h.provenance") + `
 	   AND (` + narrowing + `)
 	 ORDER BY h.deal_id, h.to_stage_id, h.changed_at, COALESCE(h.write_seq, 0), h.id`

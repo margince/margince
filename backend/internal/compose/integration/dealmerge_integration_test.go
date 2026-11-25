@@ -21,6 +21,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/collections"
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/deals"
+	"github.com/margince/margince/backend/internal/modules/projects"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/platform/recordmerge"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
@@ -304,5 +305,54 @@ func TestAMergeIntoAMissingTargetAnswersLikeOneOutOfScope(t *testing.T) {
 	_, err := e.Contacts.MergeContact(e.Admin(), ContactIDOf(one), ids.New[ids.ContactKind](), nil)
 	if !errors.Is(err, apperrors.ErrConflict) {
 		t.Fatalf("contact merge into a missing target → %v, want the same conflict", err)
+	}
+}
+
+// Each owning module moves its own rows through its seam. For every table the
+// case seeds a row on the duplicate, merges, and asserts nothing names the
+// duplicate, the survivor holds the row, and the owner audited the move.
+func TestEachOwnersSeamMovesItsRowsAndAuditsThem(t *testing.T) {
+	e := Setup(t)
+	company, source, target := twoDealsOnOneCompany(t, e)
+	project, err := e.Projects.CreateProject(mergeAdmin(e), projects.CreateProjectInput{
+		Name: "Merge delivery", Source: "manual", CompanyID: ids.From[ids.CompanyKind](company), DealID: &source,
+	})
+	if err != nil {
+		t.Fatalf("create project on the duplicate: %v", err)
+	}
+	connection, room, link := ids.NewV7(), ids.NewV7(), ids.NewV7()
+	e.WsExec(t, `INSERT INTO deal_room (id, deal_id, title, source, captured_by) VALUES ($1, $2, 'Room', 'manual', 'human:x')`, room, source)
+	e.WsExec(t, `INSERT INTO channel_connection (id, provider, channel_id, channel_label, address, credential_ref, status, connected_by)
+		VALUES ($1, 'dispact', 'team', 'Margince', 'https://chat.test', 'ref', 'connected', $2)`, connection, e.Rep1)
+	e.WsExec(t, `INSERT INTO chat_link (id, connection_id, provider, channel_slug, channel_name, deal_id, project_id, linked_by)
+		VALUES ($1, $2, 'dispact', 'merge', 'Merge', $3, $4, $5)`, link, connection, source, ids.UUID(project.Id), e.Rep1)
+	contact := e.SeedContact(t, "Seam Buyer", nil)
+	addStakeholder(t, e, source, contact)
+
+	if _, err := e.Deals.MergeDeal(mergeAdmin(e), source, target, nil); err != nil {
+		t.Fatalf("merge: %v", err)
+	}
+	for _, c := range []struct{ table, column, entity string }{
+		{"deal_room", "deal_id", "deal_room"},
+		{"chat_link", "deal_id", "chat_link"},
+		{"relationship", "deal_id", "relationship"},
+	} {
+		if n := e.WsCount(t, `SELECT count(*) FROM `+c.table+` WHERE `+c.column+` = $1`, source); n != 0 {
+			t.Errorf("%s: %d rows still name the merged-away deal", c.table, n)
+		}
+		if n := e.WsCount(t, `SELECT count(*) FROM `+c.table+` WHERE `+c.column+` = $1`, target); n != 1 {
+			t.Errorf("%s: the survivor holds %d moved rows, want 1", c.table, n)
+		}
+		if n := e.WsCount(t, `SELECT count(*) FROM audit_log WHERE entity_type = $1 AND action = 'update'
+			AND after->>$2 = $3`, c.entity, c.column, target.String()); n != 1 {
+			t.Errorf("%s: %d audit rows record the move, want 1", c.table, n)
+		}
+	}
+	if n := e.WsCount(t, `SELECT count(*) FROM chat_link WHERE id = $1 AND project_id IS NULL`, link); n != 1 {
+		t.Errorf("the chat link kept the merged-away deal's project instead of the survivor's (none)")
+	}
+	if n := e.WsCount(t, `SELECT count(*) FROM audit_log WHERE entity_id = $1 AND action = 'merge'
+		AND after->'moved_by_owner'->>'deal_room' = '1'`, source); n != 1 {
+		t.Errorf("the deal's merge audit row does not list what the owners moved")
 	}
 }
