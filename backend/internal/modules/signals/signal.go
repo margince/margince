@@ -296,8 +296,12 @@ func (s *Store) UpdateSignal(ctx context.Context, id ids.SignalID, in UpdateSign
 				return fmt.Errorf("append signal outcome: %w", err)
 			}
 		}
-		if _, err := storekit.Audit(ctx, tx, "update", "signal", id.UUID, p.Before(), p.After()); err != nil {
+		auditID, err := storekit.Audit(ctx, tx, "update", "signal", id.UUID, p.Before(), p.After())
+		if err != nil {
 			return fmt.Errorf("audit signal update: %w", err)
+		}
+		if err := emitSignalUpdated(ctx, tx, auditID, id.UUID, actor.UserID); err != nil {
+			return err
 		}
 		if out, err = readSignalFor(ctx, tx, id, storekit.LiveOnly, s.words); err != nil {
 			return fmt.Errorf("read updated signal: %w", err)
@@ -459,4 +463,21 @@ func resolvedByOf(actor principal.Principal) *ids.UUID {
 		return nil
 	}
 	return storekit.UUIDOrNil(actor.UserID)
+}
+
+// emitSignalUpdated stages signal.updated beside the audit row, so a subscriber
+// sees a correction. A signal with no owner names the member who changed it.
+func emitSignalUpdated(ctx context.Context, tx pgx.Tx, auditID, id, actor ids.UUID) error {
+	var owner *ids.UUID
+	if err := tx.QueryRow(ctx, `SELECT owner_id FROM signal WHERE id = $1`, id).Scan(&owner); err != nil {
+		return fmt.Errorf("read signal owner: %w", err)
+	}
+	named := actor
+	if owner != nil {
+		named = *owner
+	}
+	if err := storekit.EmitEvent(ctx, tx, auditID, id, crmcontracts.PublicEventSignalUpdated{SignalId: openapi_types.UUID(id), OwnerId: openapi_types.UUID(named)}); err != nil {
+		return fmt.Errorf("emit signal.updated: %w", err)
+	}
+	return nil
 }

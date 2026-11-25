@@ -12,7 +12,9 @@ package signals
 import (
 	"context"
 	"errors"
+	"math"
 	"os"
+	"strings"
 	"testing"
 
 	"github.com/jackc/pgx/v5"
@@ -202,12 +204,15 @@ func TestAnExtensionSignalThatBreaksTheRulesIsRefused(t *testing.T) {
 		return in
 	}
 	cases := map[string]ExtensionSignal{
-		"another unit's kind":    mutate(func(in *ExtensionSignal) { in.Unit = "other" }),
-		"a core kind":            mutate(func(in *ExtensionSignal) { in.Kind = "risk" }),
-		"an undeclared kind":     mutate(func(in *ExtensionSignal) { in.Kind = "ext:sigtest:unknown" }),
-		"a required member gone": mutate(func(in *ExtensionSignal) { in.Fields = map[string]any{} }),
-		"an unknown member":      mutate(func(in *ExtensionSignal) { in.Fields["provenance"] = "forged" }),
-		"no fingerprint":         mutate(func(in *ExtensionSignal) { in.Fingerprint = " " }),
+		"another unit's kind":      mutate(func(in *ExtensionSignal) { in.Unit = "other" }),
+		"a core kind":              mutate(func(in *ExtensionSignal) { in.Kind = "risk" }),
+		"an undeclared kind":       mutate(func(in *ExtensionSignal) { in.Kind = "ext:sigtest:unknown" }),
+		"a required member gone":   mutate(func(in *ExtensionSignal) { in.Fields = map[string]any{} }),
+		"an unknown member":        mutate(func(in *ExtensionSignal) { in.Fields["provenance"] = "forged" }),
+		"no fingerprint":           mutate(func(in *ExtensionSignal) { in.Fingerprint = " " }),
+		"an oversized fingerprint": mutate(func(in *ExtensionSignal) { in.Fingerprint = strings.Repeat("f", extension.MaxKeyLength+1) }),
+		"a NaN number":             mutate(func(in *ExtensionSignal) { in.Fields["amount"] = math.NaN() }),
+		"an infinite number":       mutate(func(in *ExtensionSignal) { in.Fields["amount"] = math.Inf(1) }),
 	}
 	for name, in := range cases {
 		_, _, err := f.file(in)

@@ -99,6 +99,15 @@ func TestACorrectedSignalKeepsItsOldKindAndEvidenceInTheAudit(t *testing.T) {
 		t.Fatalf("the signal reads kind %q evidence %v after the correction", updated.Kind, updated.Evidence)
 	}
 
+	var updatedEvents int
+	if err := owner.QueryRow(ctx, `SELECT count(*) FROM event_outbox WHERE envelope->>'type' = 'signal.updated' AND envelope->'entity'->>'id' = $1`,
+		made.Id.String()).Scan(&updatedEvents); err != nil {
+		t.Fatalf("counting signal.updated events: %v", err)
+	}
+	if updatedEvents != 1 {
+		t.Errorf("signal.updated events = %d after the correction, want one", updatedEvents)
+	}
+
 	produced := ids.New[ids.SignalKind]()
 	if _, err := owner.Exec(ctx, `
 		INSERT INTO signal (id, kind, source_channel, resolution_state, severity, summary,

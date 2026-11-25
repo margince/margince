@@ -145,6 +145,9 @@ func declaredType(in ExtensionSignal) (signaltypes.Declared, error) {
 	if strings.TrimSpace(in.Fingerprint) == "" {
 		return signaltypes.Declared{}, &InvalidExtensionSignalError{Field: "fingerprint", Reason: "a fingerprint is required, so the same event is recorded once"}
 	}
+	if len(in.Fingerprint) > extension.MaxKeyLength {
+		return signaltypes.Declared{}, &InvalidExtensionSignalError{Field: "fingerprint", Reason: fmt.Sprintf("a fingerprint may be at most %d bytes", extension.MaxKeyLength)}
+	}
 	if err := declared.CheckFields(in.Fields); err != nil {
 		return signaltypes.Declared{}, &InvalidExtensionSignalError{Field: signalEvidenceArg, Reason: err.Error()}
 	}
