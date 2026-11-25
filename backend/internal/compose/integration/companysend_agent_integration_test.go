@@ -78,7 +78,12 @@ type accountSendEnv struct {
 
 func setupAccountSend(t *testing.T) *accountSendEnv {
 	t.Helper()
-	p := setupPreflight(t)
+	return accountSendOn(t, setupPreflight(t))
+}
+
+// accountSendOn lays the account-send records down on a booted pre-flight.
+func accountSendOn(t *testing.T, p *preflightEnv) *accountSendEnv {
+	t.Helper()
 	// Without the send grant every send below refuses at the pre-flight, and
 	// this suite would pass while proving nothing about authority.
 	p.connect(t, apptest.GmailReadonlyScope, apptest.GmailSendScope)
@@ -366,21 +371,13 @@ func (a *accountSendEnv) mintAccountSendPassport(t *testing.T) string {
 // project the probe cannot reach answers not-found on both doors, so the
 // refusal never says that a record the agent cannot reach exists.
 func TestAnAgentsPreviewAndSendAgreeOnAProjectLink(t *testing.T) {
-	a := setupAccountSend(t)
+	a := accountSendOn(t, setupPreflightServingMCP(t))
 	live := createdRecord(t, a.AppEnv, "/v1/projects", AnyMap{"name": "Rollout", "company_id": a.company, "source": "manual"})
 	archived := createdRecord(t, a.AppEnv, "/v1/projects", AnyMap{"name": "Retired", "company_id": a.company, "source": "manual"})
 	if status := a.Call(t, "DELETE", "/v1/projects/"+archived, nil, nil, nil); status != http.StatusNoContent {
 		t.Fatalf("archive the project → %d", status)
 	}
-	var minted struct {
-		Token string `json:"token"`
-	}
-	if status := a.Call(t, "POST", "/v1/passports", AnyMap{
-		"label": "outreach agent", "scopes": []string{"read", "write", "send"},
-	}, nil, &minted); status != http.StatusCreated {
-		t.Fatalf("issue passport → %d", status)
-	}
-	agent := apptest.NewMCPClient(a.AppEnv, minted.Token)
+	agent := apptest.NewMCPClient(a.AppEnv, apptest.MCPBearerToken(t, a.AppEnv, "outreach agent", "read", "write", "send"))
 	notFound := func(text string) bool {
 		return strings.Contains(text, "reference_not_found") || strings.Contains(text, "No such record")
 	}

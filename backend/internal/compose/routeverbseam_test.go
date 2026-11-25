@@ -14,6 +14,7 @@ import (
 	"testing"
 
 	"github.com/margince/margince/backend/internal/modules/agents"
+	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 )
 
@@ -72,6 +73,12 @@ func TestARouteAnswerSaysWhatTheWriteDid(t *testing.T) {
 	}
 	if _, err := answer(http.StatusConflict, `{"code":"taken","detail":"already shared"}`); !errors.Is(err, apperrors.ErrConflict) {
 		t.Errorf("another conflict answered %v, want ErrConflict", err)
+	}
+	_, err := answer(http.StatusUnprocessableEntity, `{"code":"validation_error","detail":"filing refused",`+
+		`"details":{"errors":[{"field":"links","code":"project_filing_needs_approval","message":"filing refused"}]}}`)
+	if fault, ok := errors.AsType[*httperr.DetailedError](err); !ok || len(fault.Fields) != 1 ||
+		fault.Fields[0].Field != "links" || fault.Fields[0].Code != "project_filing_needs_approval" {
+		t.Errorf("a field refusal answered %v, want the route's own field and code", err)
 	}
 }
 

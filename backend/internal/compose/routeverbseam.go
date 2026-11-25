@@ -166,6 +166,9 @@ func routeAnswer(call agents.RouteVerb, rec *cappedRecorder) (json.RawMessage, e
 	if refusal, known := viewRefusals[res.StatusCode]; known {
 		return nil, routedRefusal{fmt.Errorf("the %s verb was refused: %s: %w", verb, problem.Detail, refusal), problem.Details}
 	}
+	if fields := httperr.FieldErrorsOf(problem.Details); len(fields) > 0 {
+		return nil, &httperr.DetailedError{Status: res.StatusCode, Code: problem.Code, Detail: problem.Detail, Fields: fields}
+	}
 	return nil, httperr.Validation(verb, problem.Code, problem.Detail)
 }
 
