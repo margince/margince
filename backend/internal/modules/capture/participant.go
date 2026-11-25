@@ -23,6 +23,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/platform/owndomain"
+	"github.com/margince/margince/backend/internal/shared/kernel/correspondence"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/kernel/relstrength"
@@ -88,9 +89,7 @@ func stampCaptureParticipants(
 			return fmt.Errorf("capture: stamping the mailbox owner as a participant: %w", err)
 		}
 	}
-	// Normalized the same way contact_email is, so the promotion below and the
-	// erasure lookup both match without a runtime case fold.
-	address := strings.ToLower(strings.TrimSpace(counterparty.Email))
+	address := correspondence.Fold(counterparty.Email)
 	// Never the owner's OWN address as the other end. Mail the owner sent from
 	// an alias arrives with that alias as its counterparty. Stamping it would
 	// put the owner at both ends of their own message. A seat's address
@@ -212,7 +211,7 @@ func stampParties(
 	// two rows on purpose.
 	rowOfAddress := make(map[string]int, len(participants))
 	for _, p := range participants {
-		address := strings.ToLower(strings.TrimSpace(p.Email))
+		address := correspondence.Fold(p.Email)
 		account := strings.TrimSpace(p.ChannelUserID)
 		name := strings.TrimSpace(p.DisplayName)
 		// AN ACCOUNT WITHOUT A TRANSPORT IS NOT AN IDENTITY, and storing one
@@ -367,6 +366,7 @@ func insertParticipant(
 	address string,
 	channelUserID string,
 ) error {
+	address = correspondence.Fold(address)
 	// The user arm rides a SELECT over app_user for the same reason the logged
 	// path does: a principal's UserID need not name a workspace member, and
 	// the composite FK would reject it — failing an ingest we have already

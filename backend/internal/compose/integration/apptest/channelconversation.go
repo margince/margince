@@ -54,8 +54,8 @@ func (c *ChannelConversation) SeedInboundMessage(t *testing.T) {
 	if err := InWorkspace(c.AppEnv, t, func(tx pgx.Tx) error {
 		ctx := context.Background()
 		if err := tx.QueryRow(ctx, `
-			INSERT INTO activity (kind, channel_provider, body, occurred_at, direction, source_system, source_id, source, captured_by, thread_key)
-			VALUES ('message', 'telegram', 'Is this still available?', now(), 'inbound',
+			INSERT INTO activity (kind, channel_provider, body, body_own_end, occurred_at, direction, source_system, source_id, source, captured_by, thread_key)
+			VALUES ('message', 'telegram', 'Is this still available?', NULL, now(), 'inbound',
 			        'telegram', '8100:770011:5', 'telegram:8100:770011:5', 'connector:telegram', $1)
 			RETURNING id`, ChannelThreadKey).Scan(&c.ActivityID); err != nil {
 			return err

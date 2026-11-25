@@ -93,7 +93,7 @@ func TestErasingAContactRedactsTheExtensionEvidenceAboutThem(t *testing.T) {
 			                     summary, evidence, status, detected_at, source, captured_by)
 			 VALUES ($1, $2, 'derived', 'contact', $3, 'resolved', 'info', 'Hedda reported a loss',
 			         '[{"snippet":"Hedda reported a loss","fields":{"amount":12,"reporter":"Hedda"},"provenance":{"unit":"erasetest","captured_by":"human:x"}}]'::jsonb,
-			         'open', now(), 'erasetest', 'test')`, id, kind, about)
+			         'open', now(), 'automation', 'test')`, id, kind, about)
 		return id
 	}
 	declared, undeclared, theirs := seed("ext:erasetest:loss", subject), seed("ext:erasetest:gone", subject), seed("ext:erasetest:loss", other)

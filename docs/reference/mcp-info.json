@@ -12722,6 +12722,15 @@
                 "type": "string"
               },
               "source": {
+                "description": "The channel this signal arrived by. A client that files it for a member sends `manual`; an integration sends `api`. Any other value is 422 `invalid_source`.",
+                "enum": [
+                  "api",
+                  "automation",
+                  "capture",
+                  "import",
+                  "manual",
+                  "webform"
+                ],
                 "type": "string"
               },
               "source_channel": {
@@ -17217,7 +17226,7 @@
                       "type": "string",
                       "x-extensible-enum": true
                     },
-                    "maxItems": 8,
+                    "maxItems": 12,
                     "minItems": 1,
                     "type": "array"
                   },
@@ -18630,7 +18639,7 @@
                       "type": "string",
                       "x-extensible-enum": true
                     },
-                    "maxItems": 8,
+                    "maxItems": 12,
                     "minItems": 1,
                     "type": "array"
                   },
@@ -28599,7 +28608,7 @@
                       "type": "string",
                       "x-extensible-enum": true
                     },
-                    "maxItems": 8,
+                    "maxItems": 12,
                     "minItems": 1,
                     "type": "array"
                   },

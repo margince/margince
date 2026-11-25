@@ -67,7 +67,7 @@ func technicalChangeRecorder() contacts.TechnicalChangeRecorder {
 			// news about the account, not a problem with it.
 			Severity: severityInfo,
 			Channel:  technicalChannel,
-			Source:   technicalSource,
+			Producer: technicalSource,
 			// The state it arrived at AND the state it left, so a company that
 			// moves Google → Microsoft → Google → Microsoft raises an event
 			// each time rather than the second Microsoft move colliding with

@@ -155,6 +155,13 @@ the line **Works at** and the company's name. They come after the contacts whose
 own name matched. A result that came from a connected system is marked **From a
 connected system**.
 
+An email is found by its subject and by the words its sender wrote. An email quoted under a reply
+does not find it, and neither does an email it forwards. Two cases still find an email through
+quoted text:
+
+- A reply written between the quoted lines is searched whole.
+- An email stored before this rule keeps its earlier search words until Margince has gone through it.
+
 When nothing matches, the **Search results** page offers **Did you mean:** with up to five
 names that are written close to what you typed. It lists only names you may open.
 

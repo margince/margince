@@ -64,7 +64,8 @@ name: scheduled
 #   slop trend         — the slop scores and the comment numbers, once a week,
 #                        beside last week's. Not a verdict: the comment checks
 #                        judge only added lines, and this is what shows whether
-#                        the rest of the tree gets better.
+#                        the rest of the tree gets better. It also prints how
+#                        many AI certification grades are stale or absent.
 #
 # The weekly perf measurements also RECORD what they measured. The records job
 # (_records.yml) proposes them as a pull request and never writes to main: a
@@ -715,6 +716,18 @@ jobs:
       # craft scores TypeScript with the frontend's own compiler.
       - name: Install the frontend packages
         run: cd frontend && pnpm install --frozen-lockfile
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version-file: backend/go.mod
+          cache-dependency-path: backend/go.sum
+      # What a paid sweep owes, as a number in the run's summary, beside the other
+      # weekly trend. It reports and never fails: the sweep is a maintainer's
+      # choice and costs money.
+      - name: Count the AI grades that are stale or absent
+        run: |
+          set -euo pipefail
+          cd backend
+          go run ./internal/compose/aicert/reportcmd -totals 2>/dev/null | tee -a "$GITHUB_STEP_SUMMARY"
       - name: Fetch last week's numbers
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
