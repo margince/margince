@@ -31,7 +31,7 @@ func (h Handlers) AssessNoticeSource(w http.ResponseWriter, r *http.Request, id 
 }
 
 func sourceAssessmentOf(req crmcontracts.AssessNoticeSource, now time.Time) SourceAssessment {
-	in := SourceAssessment{Kind: string(req.Kind), ObtainedAt: req.ObtainedAt, Note: req.Note, Timezone: valueOr(req.Timezone), Now: now, PreviewToken: valueOr(req.PreviewToken), MetInPerson: req.MetInPerson != nil && *req.MetInPerson}
+	in := SourceAssessment{Kind: string(req.Kind), ObtainedAt: req.ObtainedAt, Note: valueOr(req.Note), Timezone: valueOr(req.Timezone), Now: now, PreviewToken: valueOr(req.PreviewToken), MetInPerson: req.MetInPerson != nil && *req.MetInPerson}
 	if req.SelectedEvidence != nil {
 		in.SelectedEvidence = &SourceEvidenceReference{Kind: string(req.SelectedEvidence.Kind), ID: ids.UUID(req.SelectedEvidence.Id)}
 	}

@@ -37242,7 +37242,7 @@ type AssessNoticeSource struct {
 	MetInPerson *bool `json:"met_in_person,omitempty"`
 
 	// Note Evidence in the officer's words. Required when no existing evidence is selected.
-	Note       string     `json:"note"`
+	Note       *string    `json:"note,omitempty"`
 	ObtainedAt *time.Time `json:"obtained_at,omitempty"`
 
 	// PreviewToken When provided, refuses a confirmation if the case, selected evidence or proposed assessment changed since preview.
@@ -61632,7 +61632,10 @@ type PreviewAccountSendRequest struct {
 
 	// Links The records the message would be filed under. They are read through the caller's
 	// own row scope before the engine sees them, so naming a record the caller cannot
-	// open is refused here rather than answered about.
+	// open is refused here rather than answered about. A project is REFUSED here
+	// (project_filing_needs_approval), because filing there marks commercial
+	// correspondence: add it afterwards with relink, which stages an approval that waits
+	// for the user's yes before it takes effect.
 	Links            []ActivityLinkInput `json:"links"`
 	MarketingPurpose *string             `json:"marketing_purpose,omitempty"`
 
