@@ -3,6 +3,11 @@
 -- VALID, no scan.
 SET LOCAL lock_timeout = '3s';
 
+ALTER TABLE auth_token DROP CONSTRAINT auth_token_merge_survivor_check;
+
+ALTER TABLE auth_token ADD CONSTRAINT auth_token_merge_survivor_check
+    CHECK ((purpose = 'member_merge_confirm') = (merge_survivor IS NOT NULL)) NOT VALID;
+
 ALTER TABLE auth_token DROP CONSTRAINT auth_token_counterpart_check;
 
 ALTER TABLE auth_token ADD CONSTRAINT auth_token_counterpart_check

@@ -31,7 +31,7 @@ module to put a change in, read [modules.md](../modules.md).
 | | |
 |---|--:|
 | Tables | 358 |
-| Columns | 4430 |
+| Columns | 4431 |
 | Foreign keys | 626 |
 | Owning areas | 40 |
 
@@ -190,7 +190,7 @@ erDiagram
 | [`attachment`](activities.md#attachment) | activities | 28 | 6 |
 | [`attachment_extraction`](activities.md#attachment_extraction) | activities | 13 | 0 |
 | [`audit_log`](platform.md#audit_log) | platform | 15 | 2 |
-| [`auth_token`](identity.md#auth_token) | identity | 11 | 0 |
+| [`auth_token`](identity.md#auth_token) | identity | 12 | 0 |
 | [`automation`](automation.md#automation) | automation | 17 | 1 |
 | [`automation_effect_claim`](automation.md#automation_effect_claim) | automation | 7 | 0 |
 | [`booking_alias`](activities.md#booking_alias) | activities | 6 | 0 |

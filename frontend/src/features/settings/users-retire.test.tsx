@@ -285,12 +285,13 @@ it("lists each holder's confirmation and asks for them from the reviewed preview
   );
   render(
     <RetireMember
-      member={SOURCE}
+      member={{ ...SOURCE, merge_needs_confirmation: true }}
       members={[SOURCE, SURVIVOR]}
       merge
       onClose={vi.fn()}
     />,
   );
+  expect(screen.getByText(en["users.mergeNeedsConfirmation"])).toBeTruthy();
   await user.type(
     screen.getByRole("searchbox", { name: en["users.survivingMember"] }),
     SURVIVOR.email,

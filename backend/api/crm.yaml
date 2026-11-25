@@ -69641,16 +69641,15 @@ components:
           x-extensible-enum: true
         reason:
           type: string
-          enum: [password_set, signed_in, provider_linked, sole_admin, self, agent_seat]
+          enum: [sole_admin, self, agent_seat]
           x-extensible-enum: true
           description: >
-            Why the verb is refused. `password_set`, `signed_in` and `provider_linked` are the three
-            signs that an account has been used; a used account shows each one that applies.
-            `sole_admin` is the last active administrator, `self` is the caller's own account and
-            `agent_seat` is an agent.
+            Why the verb is refused. `sole_admin` is the last active administrator, `self` is the
+            caller's own account and `agent_seat` is an agent. A used account is not refused: see
+            `merge_needs_confirmation`.
     MemberRetirementBlocker:
       type: string
-      enum: [approval_decisions, automations, booking_pages, data_requests, deal_rooms, introductions, lists, stewarded_lists, mail_drafts, meeting_invitations, meeting_proposals, privacy_notices, record_responsibilities, reports, report_schedules, saved_views, scheduled_mail, handoffs, voice_profiles, web_forms, webhooks, weekly_plans, analytics_shares, confirmation_missing, self_survivor, deactivate_first, choose_survivor, choose_receiver, private_tasks, work_not_transferable, state_changed]
+      enum: [approval_decisions, automations, booking_pages, data_requests, deal_rooms, introductions, lists, stewarded_lists, mail_drafts, meeting_invitations, meeting_proposals, privacy_notices, record_responsibilities, reports, report_schedules, saved_views, scheduled_mail, handoffs, voice_profiles, web_forms, webhooks, weekly_plans, analytics_shares, confirmation_missing, suspended_side, self_survivor, deactivate_first, choose_survivor, choose_receiver, private_tasks, work_not_transferable, state_changed]
       x-extensible-enum: true
     MemberRetirementConsequence:
       type: string
@@ -69885,6 +69884,13 @@ components:
             offers nothing then. It is an offer, not a promise: every write re-checks under its
             lock, and `change_role` says a role change is possible at all — which roles, is
             `listAssignableRoles`'s answer.
+        merge_needs_confirmation:
+          type: boolean
+          description: >
+            True when `merge` is in `allowed_actions` and this account has been used (a password,
+            a sign-in or a linked provider), so merging it waits for the holder of each side that
+            can still sign in to confirm. Absent otherwise, and on the same views as
+            `allowed_actions`.
         unavailable_actions:
           type: array
           items: { $ref: '#/components/schemas/MemberUnavailableAction' }

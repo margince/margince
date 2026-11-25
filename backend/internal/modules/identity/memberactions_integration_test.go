@@ -305,10 +305,9 @@ func mergeReasons(refused []crmcontracts.MemberUnavailableAction) []string {
 	return out
 }
 
-// An account with only a password shows password_set and nothing about a
-// sign-in. An unused one is offered merge and gives no reason, and a used one
-// is never both offered and refused.
-func TestTheRosterExplainsWhyAUsedMemberCannotBeMerged(t *testing.T) {
+// A used account is offered merge and flagged as needing confirmation. An
+// unused one is offered merge with no flag. Only a real refusal is a reason.
+func TestTheRosterOffersMergeOnAUsedMemberAndSaysItNeedsConfirmation(t *testing.T) {
 	e := setupRevocationEnv(t, "refused-merge")
 	h := NewHandlers(e.svc)
 	unused := e.seat(t, "refused-unused", "rep")
@@ -321,15 +320,21 @@ func TestTheRosterExplainsWhyAUsedMemberCannotBeMerged(t *testing.T) {
 
 	offers := rosterActions(t, e, h, e.admin)
 	refusals := rosterRefusals(t, e, h, e.admin)
+	needs := rosterNeedsConfirmation(t, e, h, e.admin)
 	merge := crmcontracts.UserAllowedActions(actionMerge)
-	if !slices.Contains(offers[unused.UserID.UUID], merge) || len(mergeReasons(refusals[unused.UserID.UUID])) != 0 {
-		t.Errorf("unused member: offers %v, refusals %v; want merge offered and no reason", offers[unused.UserID.UUID], refusals[unused.UserID.UUID])
-	}
-	if got := mergeReasons(refusals[passworded.UserID.UUID]); !slices.Equal(got, []string{reasonPasswordSet}) {
-		t.Errorf("a member with only a password: reasons = %v, want [password_set]", got)
-	}
-	if got := mergeReasons(refusals[linked.UserID.UUID]); !slices.Equal(got, []string{reasonProviderLinked}) {
-		t.Errorf("a member with a linked provider: reasons = %v, want [provider_linked]", got)
+	for name, want := range map[string]struct {
+		id    ids.UserID
+		needs bool
+	}{"unused": {unused.UserID, false}, "password only": {passworded.UserID, true}, "linked provider": {linked.UserID, true}} {
+		if !slices.Contains(offers[want.id.UUID], merge) {
+			t.Errorf("%s: merge is not offered: %v", name, offers[want.id.UUID])
+		}
+		if len(mergeReasons(refusals[want.id.UUID])) != 0 {
+			t.Errorf("%s: refused with %v", name, refusals[want.id.UUID])
+		}
+		if needs[want.id.UUID] != want.needs {
+			t.Errorf("%s: merge_needs_confirmation = %v, want %v", name, needs[want.id.UUID], want.needs)
+		}
 	}
 	if got := mergeReasons(refusals[e.admin.UserID.UUID]); !slices.Contains(got, reasonSelf) {
 		t.Errorf("the caller's own row: reasons = %v, want self", got)
@@ -341,17 +346,33 @@ func TestTheRosterExplainsWhyAUsedMemberCannotBeMerged(t *testing.T) {
 	}
 }
 
-// A caller without the user_admin delete grant is told nothing about merge.
+// rosterNeedsConfirmation reads merge_needs_confirmation off the roster.
+func rosterNeedsConfirmation(t *testing.T, e *revocationEnv, h Handlers, caller Identity) map[ids.UUID]bool {
+	t.Helper()
+	rec := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodGet, "/v1/users?include_inactive=true", nil).
+		WithContext(withIdentity(e.wsCtx(caller), caller))
+	inactive, limit := true, 200
+	h.ListUsers(rec, req, crmcontracts.ListUsersParams{IncludeInactive: &inactive, Limit: &limit})
+	var page crmcontracts.UserListResponse
+	if err := json.Unmarshal(rec.Body.Bytes(), &page); err != nil {
+		t.Fatal(err)
+	}
+	out := map[ids.UUID]bool{}
+	for _, user := range page.Data {
+		out[ids.UUID(user.Id)] = user.MergeNeedsConfirmation != nil && *user.MergeNeedsConfirmation
+	}
+	return out
+}
+
+// A caller without the user_admin delete grant is told nothing about merge,
+// not even that the sole administrator cannot be merged.
 func TestTheRosterGivesNoMergeReasonToACallerWithoutTheVerb(t *testing.T) {
 	e := setupRevocationEnv(t, "refused-merge-no-verb")
 	h := NewHandlers(e.svc)
-	passworded := e.seat(t, "noverb-password", "rep")
-	if _, err := e.owner.Exec(context.Background(), `UPDATE app_user SET password_hash = 'x' WHERE id = $1`, passworded.UserID); err != nil {
-		t.Fatal(err)
-	}
 	updater := e.seat(t, "noverb-holder", e.customRole(t, "Updates only", "rep",
 		map[string]storedGrant{objectUserAdmin: {Read: true, Update: true}}))
-	if got := mergeReasons(rosterRefusals(t, e, h, updater)[passworded.UserID.UUID]); len(got) != 0 {
+	if got := mergeReasons(rosterRefusals(t, e, h, updater)[e.admin.UserID.UUID]); len(got) != 0 {
 		t.Errorf("a caller without the delete verb is told %v", got)
 	}
 }

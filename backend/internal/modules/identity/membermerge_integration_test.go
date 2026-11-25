@@ -353,3 +353,55 @@ func TestAnUnusedSourceStillMergesWithoutAnyConfirmation(t *testing.T) {
 		t.Fatal(err)
 	}
 }
+
+func TestAConfirmationOfAIntoBIsNoneOfBIntoA(t *testing.T) {
+	m := setupMergeEnv(t, "merge-direction")
+	a, b := m.used("dir-a"), m.used("dir-b")
+	links := m.request(a, b)
+	m.confirm(links[a.UUID])
+	m.confirm(links[b.UUID])
+	wantStates(t, m.preview(a, b), "source:confirmed", "survivor:confirmed")
+
+	reversed := m.preview(b, a)
+	wantStates(t, reversed, "source:not_requested", "survivor:not_requested")
+	if !holds(reversed, "confirmation_missing") {
+		t.Fatalf("B into A blockers = %v, want confirmation_missing", reversed.Blockers)
+	}
+	if err := m.merge(b, a, reversed.Token); !errors.Is(err, apperrors.ErrConflict) {
+		t.Fatalf("merging B into A on A-into-B confirmations = %v, want a conflict", err)
+	}
+}
+
+func TestASuspendedSideBlocksTheMergeAndGetsNoLink(t *testing.T) {
+	m := setupMergeEnv(t, "merge-suspended")
+	source, survivor := m.used("susp-source"), m.used("susp-survivor")
+	if _, err := m.owner.Exec(context.Background(), `UPDATE app_user SET status = 'suspended' WHERE id = $1`, survivor); err != nil {
+		t.Fatal(err)
+	}
+	preview := m.preview(source, survivor)
+	if !holds(preview, "suspended_side") {
+		t.Fatalf("blockers = %v, want suspended_side", preview.Blockers)
+	}
+	target := survivor.UUID
+	if _, err := m.svc.RequestMemberMerge(m.ctx, m.admin, source, target, preview.Token); !errors.Is(err, apperrors.ErrConflict) {
+		t.Fatalf("requesting a merge with a suspended side = %v, want a conflict", err)
+	}
+	if n := m.count(`SELECT count(*) FROM auth_token WHERE purpose = 'member_merge_confirm'`); n != 0 {
+		t.Fatalf("%d links minted for a suspended side", n)
+	}
+	m.deactivate(survivor)
+	if holds(m.preview(source, survivor), "suspended_side") {
+		t.Fatal("a deactivated side still counts as suspended")
+	}
+}
+
+func TestInvitingSomeoneKeepsAConfirmedMergeToken(t *testing.T) {
+	m := setupMergeEnv(t, "merge-reaper")
+	source, survivor := m.used("reap-source"), m.used("reap-survivor")
+	links := m.request(source, survivor)
+	m.confirm(links[source.UUID])
+	m.confirm(links[survivor.UUID])
+
+	m.account("reap-newcomer")
+	wantStates(t, m.preview(source, survivor), "source:confirmed", "survivor:confirmed")
+}

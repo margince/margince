@@ -67,6 +67,9 @@ type memberTarget struct {
 type memberOffer struct {
 	Allowed []memberAction
 	Refused []memberRefusal
+	// MergeNeedsConfirmation is set when merge is offered on a used account,
+	// whose merge waits for the holders to confirm.
+	MergeNeedsConfirmation bool
 }
 
 // allowedMemberActions answers, per member, the verbs this caller would be
@@ -100,7 +103,11 @@ func (s *Service) allowedMemberActions(
 				return nil, err
 			}
 		}
-		out[row.ID] = memberOffer{Allowed: memberActionsOn(ctx, actor, target, seatLeft), Refused: refusedMemberActions(ctx, actor, target)}
+		allowed := memberActionsOn(ctx, actor, target, seatLeft)
+		out[row.ID] = memberOffer{
+			Allowed: allowed, Refused: refusedMemberActions(ctx, actor, target),
+			MergeNeedsConfirmation: slices.Contains(allowed, actionMerge) && !row.Usage.unused(),
+		}
 	}
 	return out, nil
 }
@@ -156,16 +163,15 @@ type memberRefusal struct {
 
 // The reasons a merge is refused, as the contract spells them.
 const (
-	reasonPasswordSet    = "password_set"
-	reasonSignedIn       = "signed_in"
-	reasonProviderLinked = "provider_linked"
-	reasonSoleAdmin      = "sole_admin"
-	reasonSelf           = "self"
-	reasonAgentSeat      = "agent_seat"
+	reasonSoleAdmin = "sole_admin"
+	reasonSelf      = "self"
+	reasonAgentSeat = "agent_seat"
 )
 
 // mergeRefusals lists every reason this target cannot be merged away by this
 // caller, in the order the roster shows them. Empty means merge is admitted.
+// A used account is admitted: its merge waits for the holders' confirmation,
+// which the preview asks for, so use is no refusal.
 // The merge offer is decided here alone, so a reason shown is always a reason
 // the offer lacks.
 func mergeRefusals(actor Identity, target memberTarget) []string {
@@ -178,15 +184,6 @@ func mergeRefusals(actor Identity, target memberTarget) []string {
 	}
 	if target.soleAdmin {
 		out = append(out, reasonSoleAdmin)
-	}
-	usage := target.row.Usage
-	for _, sign := range []struct {
-		shown  bool
-		reason string
-	}{{usage.PasswordSet, reasonPasswordSet}, {usage.SignedIn, reasonSignedIn}, {usage.ProviderLinked, reasonProviderLinked}} {
-		if sign.shown {
-			out = append(out, sign.reason)
-		}
 	}
 	return out
 }

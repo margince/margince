@@ -33,6 +33,7 @@
   "users.retirement.analytics_shares": "Aktive geteilte Analytics-Ansichten für dieses Mitglied widerrufen.",
   "users.retirement.confirmation_missing": "Der Inhaber jedes Kontos, das sich noch anmelden kann, muss diese Zusammenführung bestätigen. Fordere unten die Bestätigung an; ein deaktiviertes Konto braucht keine.",
   "users.retirement.sign_in_dropped": "Passwort, verknüpfte Anmeldeanbieter und zweiter Faktor des zusammengeführten Kontos werden nicht übernommen. Der Inhaber meldet sich mit dem Konto an, das bleibt.",
+  "users.retirement.suspended_side": "Ein gesperrtes Konto kann nicht bestätigen. Aktiviere oder deaktiviere es zuerst.",
   "users.retirement.self_survivor": "Ein anderes Mitglied als sich selbst als Ziel wählen.",
   "users.retirement.deactivate_first": "Dieses Mitglied vor dem Entfernen deaktivieren.",
   "users.retirement.choose_survivor": "Das Mitglied wählen, das bestehen bleibt.",

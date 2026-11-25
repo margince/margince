@@ -101,6 +101,10 @@ export const en = {
     "This link is not valid any more. It may have expired, been used, or been replaced. Ask the administrator to send a new one.",
   "users.mergeConfirm.failed":
     "The confirmation did not go through. Try again in a moment.",
+  "users.retirement.suspended_side":
+    "A suspended account cannot confirm. Reactivate or deactivate it first.",
+  "users.mergeNeedsConfirmation":
+    "Merging a used account waits for the holders: each account that can still sign in gets a link to confirm.",
   "users.retirement.self_survivor":
     "Choose a surviving member other than yourself.",
   "users.retirement.deactivate_first":
@@ -160,20 +164,12 @@ export const en = {
   "users.editCancel": "Cancel",
   "users.editSave": "Save member",
   "users.merge": "Merge duplicate",
-  "users.mergeRefused.password_set":
-    "This account has a password set, so it cannot be merged.",
-  "users.mergeRefused.signed_in":
-    "This account has signed in, so it cannot be merged.",
-  "users.mergeRefused.provider_linked":
-    "This account is linked to a sign-in provider, so it cannot be merged.",
   "users.mergeRefused.sole_admin":
     "This is the only administrator, so it cannot be merged.",
   "users.mergeRefused.self":
     "This is your own account, so it cannot be merged.",
   "users.mergeRefused.agent_seat": "Agent seats cannot be merged.",
   "users.mergeRefused.other": "This account cannot be merged right now.",
-  "users.mergeRefused.wayOut":
-    "Merge the other account into {name} if that one is unused, or hand over {name}’s work and deactivate the account.",
   "users.remove": "Remove member",
   "users.mergeTitle": "Merge {name} into another account?",
   "users.removeTitle": "Remove {name}?",

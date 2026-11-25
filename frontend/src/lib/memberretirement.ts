@@ -33,6 +33,7 @@ const BLOCKERS: Readonly<Record<Blocker, MessageKey>> = {
   weekly_plans: "users.retirement.weekly_plans",
   analytics_shares: "users.retirement.analytics_shares",
   confirmation_missing: "users.retirement.confirmation_missing",
+  suspended_side: "users.retirement.suspended_side",
   self_survivor: "users.retirement.self_survivor",
   deactivate_first: "users.retirement.deactivate_first",
   choose_survivor: "users.retirement.choose_survivor",

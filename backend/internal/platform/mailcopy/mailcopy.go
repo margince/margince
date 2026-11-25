@@ -469,7 +469,7 @@ type Copy struct {
 	NoticeBacklogSubject string
 	NoticeBacklogBody    string
 
-	MergeSubject, MergeIntro, MergeAction, MergeIgnore, MergePreview string
+	MergeSubject, MergeIntro, MergeWhich, MergeAction, MergeIgnore, MergePreview string
 }
 
 // OneLine collapses any run of line breaks and other control separators into

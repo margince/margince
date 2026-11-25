@@ -49,6 +49,10 @@ func (h Handlers) ListUsers(w http.ResponseWriter, r *http.Request, params crmco
 			user.AllowedActions = &allowed
 			refused := wireRefusedActions(actions.Refused)
 			user.UnavailableActions = &refused
+			if actions.MergeNeedsConfirmation {
+				needs := true
+				user.MergeNeedsConfirmation = &needs
+			}
 		}
 		data = append(data, user)
 	}

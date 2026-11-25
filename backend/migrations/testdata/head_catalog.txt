@@ -2003,6 +2003,7 @@ public.auth_token acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/ma
 public.auth_token.auth_token_counterpart_check CHECK (((purpose = 'member_merge_confirm'::text) = (counterpart_user_id IS NOT NULL)))
 public.auth_token.auth_token_counterpart_fkey FOREIGN KEY (counterpart_user_id) REFERENCES app_user(id) ON DELETE CASCADE
 public.auth_token.auth_token_expires_after_creation CHECK ((expires_at > created_at))
+public.auth_token.auth_token_merge_survivor_check CHECK (((purpose = 'member_merge_confirm'::text) = (merge_survivor IS NOT NULL)))
 public.auth_token.auth_token_pkey PRIMARY KEY (id)
 public.auth_token.auth_token_purpose_check CHECK ((purpose = ANY (ARRAY['password_reset'::text, 'email_verify'::text, 'invite'::text, 'member_merge_confirm'::text])))
 public.auth_token.auth_token_token_hash_check CHECK ((token_hash ~ '^[0-9a-f]{64}$'::text))
@@ -2014,6 +2015,7 @@ public.auth_token.id uuid NOT NULL gen=- def=uuidv7()
 public.auth_token.mail_failed_at timestamp with time zone gen=- def=-
 public.auth_token.mail_queued_at timestamp with time zone gen=- def=-
 public.auth_token.mail_sent_at timestamp with time zone gen=- def=-
+public.auth_token.merge_survivor boolean gen=- def=-
 public.auth_token.purpose text NOT NULL gen=- def=-
 public.auth_token.text_bound_insert CREATE TRIGGER text_bound_insert AFTER INSERT ON public.auth_token FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"purpose": 20000, "token_hash": 20000}'::jsonb)) EXECUTE FUNCTION refuse_oversized_text('{"purpose":20000,"token_hash":20000}')
 public.auth_token.text_bound_update CREATE TRIGGER text_bound_update AFTER UPDATE ON public.auth_token FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"purpose": 20000, "token_hash": 20000}'::jsonb)) EXECUTE FUNCTION refuse_oversized_text('{"purpose":20000,"token_hash":20000}')

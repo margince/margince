@@ -18602,6 +18602,7 @@ const (
 	MemberRetirementBlockerSelfSurvivor           MemberRetirementBlocker = "self_survivor"
 	MemberRetirementBlockerStateChanged           MemberRetirementBlocker = "state_changed"
 	MemberRetirementBlockerStewardedLists         MemberRetirementBlocker = "stewarded_lists"
+	MemberRetirementBlockerSuspendedSide          MemberRetirementBlocker = "suspended_side"
 	MemberRetirementBlockerVoiceProfiles          MemberRetirementBlocker = "voice_profiles"
 	MemberRetirementBlockerWebForms               MemberRetirementBlocker = "web_forms"
 	MemberRetirementBlockerWebhooks               MemberRetirementBlocker = "webhooks"
@@ -18663,6 +18664,8 @@ func (e MemberRetirementBlocker) Valid() bool {
 	case MemberRetirementBlockerStateChanged:
 		return true
 	case MemberRetirementBlockerStewardedLists:
+		return true
+	case MemberRetirementBlockerSuspendedSide:
 		return true
 	case MemberRetirementBlockerVoiceProfiles:
 		return true
@@ -18738,12 +18741,9 @@ func (e MemberUnavailableActionAction) Valid() bool {
 
 // Defines values for MemberUnavailableActionReason.
 const (
-	MemberUnavailableActionReasonAgentSeat      MemberUnavailableActionReason = "agent_seat"
-	MemberUnavailableActionReasonPasswordSet    MemberUnavailableActionReason = "password_set"
-	MemberUnavailableActionReasonProviderLinked MemberUnavailableActionReason = "provider_linked"
-	MemberUnavailableActionReasonSelf           MemberUnavailableActionReason = "self"
-	MemberUnavailableActionReasonSignedIn       MemberUnavailableActionReason = "signed_in"
-	MemberUnavailableActionReasonSoleAdmin      MemberUnavailableActionReason = "sole_admin"
+	MemberUnavailableActionReasonAgentSeat MemberUnavailableActionReason = "agent_seat"
+	MemberUnavailableActionReasonSelf      MemberUnavailableActionReason = "self"
+	MemberUnavailableActionReasonSoleAdmin MemberUnavailableActionReason = "sole_admin"
 )
 
 // Valid indicates whether the value is a known member of the MemberUnavailableActionReason enum.
@@ -18751,13 +18751,7 @@ func (e MemberUnavailableActionReason) Valid() bool {
 	switch e {
 	case MemberUnavailableActionReasonAgentSeat:
 		return true
-	case MemberUnavailableActionReasonPasswordSet:
-		return true
-	case MemberUnavailableActionReasonProviderLinked:
-		return true
 	case MemberUnavailableActionReasonSelf:
-		return true
-	case MemberUnavailableActionReasonSignedIn:
 		return true
 	case MemberUnavailableActionReasonSoleAdmin:
 		return true
@@ -59857,14 +59851,14 @@ type MemberRetirementPreview struct {
 type MemberUnavailableAction struct {
 	Action MemberUnavailableActionAction `json:"action"`
 
-	// Reason Why the verb is refused. `password_set`, `signed_in` and `provider_linked` are the three signs that an account has been used; a used account shows each one that applies. `sole_admin` is the last active administrator, `self` is the caller's own account and `agent_seat` is an agent.
+	// Reason Why the verb is refused. `sole_admin` is the last active administrator, `self` is the caller's own account and `agent_seat` is an agent. A used account is not refused: see `merge_needs_confirmation`.
 	Reason MemberUnavailableActionReason `json:"reason"`
 }
 
 // MemberUnavailableActionAction defines model for MemberUnavailableAction.Action.
 type MemberUnavailableActionAction string
 
-// MemberUnavailableActionReason Why the verb is refused. `password_set`, `signed_in` and `provider_linked` are the three signs that an account has been used; a used account shows each one that applies. `sole_admin` is the last active administrator, `self` is the caller's own account and `agent_seat` is an agent.
+// MemberUnavailableActionReason Why the verb is refused. `sole_admin` is the last active administrator, `self` is the caller's own account and `agent_seat` is an agent. A used account is not refused: see `merge_needs_confirmation`.
 type MemberUnavailableActionReason string
 
 // MergeMembersRequest defines model for MergeMembersRequest.
@@ -73015,6 +73009,9 @@ type User struct {
 	// Locale The language this contact chose for their own interface, absent when they never chose one. Distinct from the installation's `base_language`, which is what AI writes in for the whole team: this one changes only what THIS contact sees.
 	// Absent is not the same as `en`. A contact who never chose follows their browser, and storing a choice they did not make would freeze whatever their browser said on the day they signed up.
 	Locale *UserLocale `json:"locale,omitempty"`
+
+	// MergeNeedsConfirmation True when `merge` is in `allowed_actions` and this account has been used (a password, a sign-in or a linked provider), so merging it waits for the holder of each side that can still sign in to confirm. Absent otherwise, and on the same views as `allowed_actions`.
+	MergeNeedsConfirmation *bool `json:"merge_needs_confirmation,omitempty"`
 
 	// MergedFrom Original account identities consolidated into this member, present only on the administration view.
 	MergedFrom *[]SeatName `json:"merged_from,omitempty"`

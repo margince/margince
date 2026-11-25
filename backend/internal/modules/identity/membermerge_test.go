@@ -3,7 +3,10 @@
 
 package identity
 
-import "testing"
+import (
+	"strings"
+	"testing"
+)
 
 // A side owes a confirmation only when the source was used and the side's
 // holder can still sign in. Every row of the table holds one answer.
@@ -57,6 +60,25 @@ func TestAMergeWaitsWhileAnySideIsOpen(t *testing.T) {
 				t.Errorf("source %+v, survivor %+v: open = %v, want %v", source, survivor, open, wantOpen)
 			}
 		}
+	}
+}
+
+func TestOnlyASuspendedOrUnknownStatusIsASuspendedSide(t *testing.T) {
+	for status, want := range map[string]bool{
+		userStatusActive: false, userStatusInvited: false, userStatusDeactivated: false, "suspended": true,
+	} {
+		if got := mergeSideSuspended(status); got != want {
+			t.Errorf("status %q: suspended = %v, want %v", status, got, want)
+		}
+	}
+}
+
+// A used merge confirmation is the confirmation itself, so the reaper keeps it
+// until it expires, while every other used token is dead.
+func TestTheReaperKeepsAConfirmedMergeTokenUntilItExpires(t *testing.T) {
+	rule := deadCredentialPredicate["auth_token"]
+	if !strings.Contains(rule, "purpose <> '"+purposeMemberMergeConfirm+"'") || !strings.Contains(rule, "expires_at < now()") {
+		t.Fatalf("auth_token dead rule = %q", rule)
 	}
 }
 

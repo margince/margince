@@ -33,6 +33,7 @@
   "users.retirement.analytics_shares": "Thu hồi các liên kết chia sẻ phân tích đang hoạt động theo thành viên này.",
   "users.retirement.confirmation_missing": "Chủ của mỗi tài khoản còn đăng nhập được phải xác nhận việc gộp này. Hãy yêu cầu xác nhận bên dưới; tài khoản đã vô hiệu hóa không cần xác nhận.",
   "users.retirement.sign_in_dropped": "Mật khẩu, nhà cung cấp đăng nhập đã liên kết và yếu tố thứ hai của tài khoản bị gộp không được chuyển. Chủ tài khoản đăng nhập bằng tài khoản được giữ lại.",
+  "users.retirement.suspended_side": "Tài khoản bị tạm khóa không thể xác nhận. Hãy bật lại hoặc vô hiệu hóa nó trước.",
   "users.retirement.self_survivor": "Chọn một thành viên khác bạn làm tài khoản giữ lại.",
   "users.retirement.deactivate_first": "Tắt thành viên này trước khi xóa.",
   "users.retirement.choose_survivor": "Chọn thành viên giữ lại.",

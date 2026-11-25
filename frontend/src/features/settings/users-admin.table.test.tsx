@@ -185,7 +185,7 @@ describe("a merge the server refuses", () => {
     email: "uma@acme.test",
     display_name: "Uma Used",
     allowed_actions: ["deactivate"],
-    unavailable_actions: [{ action: "merge", reason: "password_set" }],
+    unavailable_actions: [{ action: "merge", reason: "sole_admin" }],
   };
 
   function rosterWith(rows: Omit<User, "timezone">[]) {
@@ -203,7 +203,7 @@ describe("a merge the server refuses", () => {
     });
   }
 
-  it("stays in the menu, disabled, with the reason and the way out", async () => {
+  it("stays in the menu, disabled, with the reason", async () => {
     vi.stubGlobal("fetch", rosterWith([used]));
     render(<UsersAdminCard />);
     await waitFor(() => expect(screen.getByText("Uma Used")).toBeTruthy());
@@ -214,18 +214,16 @@ describe("a merge the server refuses", () => {
     const reason = document.getElementById(
       merge.getAttribute("aria-describedby") ?? "",
     );
-    expect(reason?.textContent).toContain(
-      en["users.mergeRefused.password_set"],
-    );
-    expect(reason?.textContent).toContain("hand over Uma Used");
+    expect(reason?.textContent).toContain(en["users.mergeRefused.sole_admin"]);
   });
 
-  it("offers a working Merge, and no reason, where the server offers it", async () => {
+  it("offers a working Merge, even on a used account, and no reason", async () => {
     const unused = {
       ...used,
       id: "u-unused",
       display_name: "Una Unused",
       allowed_actions: ["merge"] as User["allowed_actions"],
+      merge_needs_confirmation: true,
       unavailable_actions: [],
     };
     vi.stubGlobal("fetch", rosterWith([unused]));

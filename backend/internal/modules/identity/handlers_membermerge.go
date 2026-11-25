@@ -90,7 +90,7 @@ func (h Handlers) sendMergeConfirmation(r *http.Request, actor Identity, rawToke
 		Budget: h.inviteSendBudget(),
 		Done:   h.resetSendStarted,
 		Send: func(ctx context.Context) (bool, error) {
-			current, live, err := h.svc.MergeConfirmationRecipient(ctx, actor, rawToken)
+			mail, live, err := h.svc.MergeConfirmationRecipient(ctx, actor, rawToken)
 			if err != nil {
 				slog.Error("reading a merge confirmation before mailing it failed", "err", err)
 				return true, err
@@ -99,9 +99,9 @@ func (h Handlers) sendMergeConfirmation(r *http.Request, actor Identity, rawToke
 				slog.Info("merge confirmation not mailed: its link or its account changed before the send")
 				return false, nil
 			}
-			words := h.mailCopy(ctx, current)
-			body := words.MergeConfirmMessage(passwordLink(h.passwordLinkBaseURL, confirmMergeRoute, rawToken))
-			sendErr := mailer.SendProduct(ctx, h.resetMailer, current, words.MergeSubject, body)
+			words := h.mailCopy(ctx, mail.To)
+			body := words.MergeConfirmMessage(mail.Goes, mail.Stays, passwordLink(h.passwordLinkBaseURL, confirmMergeRoute, rawToken))
+			sendErr := mailer.SendProduct(ctx, h.resetMailer, mail.To, words.MergeSubject, body)
 			if sendErr != nil {
 				slog.Error("merge confirmation email failed", "err", sendErr)
 			}

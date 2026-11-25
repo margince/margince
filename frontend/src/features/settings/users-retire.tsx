@@ -164,7 +164,7 @@ export function RetireMember({
           refetch={() => preview.refetch()}
         />
       )}
-      {merge && <p>{t("users.visibleWorkNote")}</p>}
+      {merge && <MergeNotes member={member} />}
       <p className="users-retirement-address">
         {t(addressLabel)}: {preview.data?.source_email ?? member.email}
       </p>
@@ -177,6 +177,18 @@ export function RetireMember({
         <p key={code}>{memberRetirementConsequence(code, t)}</p>
       ))}
     </ConfirmModal>
+  );
+}
+
+function MergeNotes({ member }: Readonly<{ member: User }>) {
+  const t = useT();
+  return (
+    <>
+      {member.merge_needs_confirmation && (
+        <p>{t("users.mergeNeedsConfirmation")}</p>
+      )}
+      <p>{t("users.visibleWorkNote")}</p>
+    </>
   );
 }
 

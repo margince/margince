@@ -120,6 +120,10 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "users.mergeConfirm.dead":
     "Liên kết này không còn hiệu lực. Có thể nó đã hết hạn, đã dùng hoặc đã được thay. Hãy nhờ quản trị viên gửi liên kết mới.",
   "users.mergeConfirm.failed": "Chưa xác nhận được. Hãy thử lại sau ít phút.",
+  "users.retirement.suspended_side":
+    "Tài khoản bị tạm khóa không thể xác nhận. Hãy bật lại hoặc vô hiệu hóa nó trước.",
+  "users.mergeNeedsConfirmation":
+    "Gộp tài khoản đã dùng phải chờ chủ tài khoản: mỗi tài khoản còn đăng nhập được sẽ nhận một liên kết để xác nhận.",
   "users.retirement.self_survivor":
     "Chọn một thành viên khác bạn làm tài khoản giữ lại.",
   "users.retirement.deactivate_first": "Tắt thành viên này trước khi xóa.",
@@ -181,20 +185,12 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "users.editCancel": "Hủy",
   "users.editSave": "Lưu thành viên",
   "users.merge": "Gộp tài khoản trùng",
-  "users.mergeRefused.password_set":
-    "Tài khoản này đã đặt mật khẩu nên không thể gộp.",
-  "users.mergeRefused.signed_in":
-    "Tài khoản này đã đăng nhập nên không thể gộp.",
-  "users.mergeRefused.provider_linked":
-    "Tài khoản này đã liên kết với nhà cung cấp đăng nhập nên không thể gộp.",
   "users.mergeRefused.sole_admin":
     "Đây là quản trị viên duy nhất nên không thể gộp.",
   "users.mergeRefused.self":
     "Đây là tài khoản của chính bạn nên không thể gộp.",
   "users.mergeRefused.agent_seat": "Không thể gộp chỗ của tác nhân.",
   "users.mergeRefused.other": "Hiện chưa thể gộp tài khoản này.",
-  "users.mergeRefused.wayOut":
-    "Hãy gộp tài khoản kia vào tài khoản của {name} nếu tài khoản đó chưa dùng, hoặc bàn giao công việc của {name} rồi vô hiệu hóa tài khoản.",
   "users.remove": "Xóa thành viên",
   "users.mergeTitle": "Gộp {name} vào tài khoản khác?",
   "users.removeTitle": "Xóa {name}?",

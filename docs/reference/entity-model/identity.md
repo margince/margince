@@ -106,7 +106,7 @@ The 22 tables owned by `identity`, as the migrations build them. [Back to the en
 
 ## auth_token
 
-11 columns · primary key `(id)` · referenced by 0 foreign keys
+12 columns · primary key `(id)` · referenced by 0 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -116,6 +116,7 @@ The 22 tables owned by `identity`, as the migrations build them. [Back to the en
 | `mail_failed_at` | `timestamp with time zone` |  |  |
 | `mail_queued_at` | `timestamp with time zone` |  |  |
 | `mail_sent_at` | `timestamp with time zone` |  |  |
+| `merge_survivor` | `boolean` |  |  |
 | `purpose` | `text` | yes | One of `password_reset`, `email_verify`, `invite`, `member_merge_confirm`. |
 | `token_hash` | `text` | yes |  |
 | `used_at` | `timestamp with time zone` |  |  |
@@ -133,6 +134,7 @@ The 22 tables owned by `identity`, as the migrations build them. [Back to the en
 
 - `auth_token_counterpart_check`: `CHECK (((purpose = 'member_merge_confirm') = (counterpart_user_id IS NOT NULL)))`
 - `auth_token_expires_after_creation`: `CHECK ((expires_at > created_at))`
+- `auth_token_merge_survivor_check`: `CHECK (((purpose = 'member_merge_confirm') = (merge_survivor IS NOT NULL)))`
 - `auth_token_purpose_check`: `CHECK ((purpose = ANY (ARRAY['password_reset', 'email_verify', 'invite', 'member_merge_confirm'])))`
 - `auth_token_token_hash_check`: `CHECK ((token_hash ~ '^[0-9a-f]{64}$'))`
 

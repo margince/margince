@@ -32,8 +32,7 @@ function deactivateBodyKey(member: User) {
 }
 
 // The Merge item the server refuses, kept in the menu with the sentence that
-// says why and what to do instead. A used account is the case a colleague who
-// left leaves behind, so the way out is named, not left to be guessed.
+// says why.
 function MergeRefused({ member }: Readonly<{ member: User }>) {
   const t = useT();
   const why = useId();
@@ -41,7 +40,6 @@ function MergeRefused({ member }: Readonly<{ member: User }>) {
   if (offers(member, "merge") || reasons.length === 0) {
     return null;
   }
-  const used = reasons.some((reason) => USED_SIGNS.has(reason));
   return (
     <>
       <Button disabled aria-describedby={why}>
@@ -49,27 +47,13 @@ function MergeRefused({ member }: Readonly<{ member: User }>) {
       </Button>
       <p id={why}>
         {reasons.map((reason) => t(mergeRefusedKey(reason))).join(" ")}
-        {used &&
-          ` ${t("users.mergeRefused.wayOut", { name: member.display_name })}`}
       </p>
     </>
   );
 }
 
-const USED_SIGNS: ReadonlySet<string> = new Set([
-  "password_set",
-  "signed_in",
-  "provider_linked",
-]);
-
 function mergeRefusedKey(reason: string): MessageKey {
   switch (reason) {
-    case "password_set":
-      return "users.mergeRefused.password_set";
-    case "signed_in":
-      return "users.mergeRefused.signed_in";
-    case "provider_linked":
-      return "users.mergeRefused.provider_linked";
     case "sole_admin":
       return "users.mergeRefused.sole_admin";
     case "self":

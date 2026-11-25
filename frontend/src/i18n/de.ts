@@ -119,6 +119,10 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Dieser Link gilt nicht mehr. Er ist vielleicht abgelaufen, schon benutzt oder ersetzt worden. Bitte den Administrator, einen neuen zu senden.",
   "users.mergeConfirm.failed":
     "Die Bestätigung ist nicht durchgegangen. Versuche es gleich noch einmal.",
+  "users.retirement.suspended_side":
+    "Ein gesperrtes Konto kann nicht bestätigen. Aktiviere oder deaktiviere es zuerst.",
+  "users.mergeNeedsConfirmation":
+    "Das Zusammenführen eines benutzten Kontos wartet auf die Inhaber: Jedes Konto, das sich noch anmelden kann, erhält einen Link zur Bestätigung.",
   "users.retirement.self_survivor":
     "Ein anderes Mitglied als sich selbst als Ziel wählen.",
   "users.retirement.deactivate_first":
@@ -183,12 +187,6 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "users.editCancel": "Abbrechen",
   "users.editSave": "Mitglied speichern",
   "users.merge": "Duplikat zusammenführen",
-  "users.mergeRefused.password_set":
-    "Für dieses Konto ist ein Passwort gesetzt, deshalb lässt es sich nicht zusammenführen.",
-  "users.mergeRefused.signed_in":
-    "Dieses Konto hat sich bereits angemeldet, deshalb lässt es sich nicht zusammenführen.",
-  "users.mergeRefused.provider_linked":
-    "Dieses Konto ist mit einem Anmeldeanbieter verknüpft, deshalb lässt es sich nicht zusammenführen.",
   "users.mergeRefused.sole_admin":
     "Das ist die einzige Administration, deshalb lässt sich das Konto nicht zusammenführen.",
   "users.mergeRefused.self":
@@ -197,8 +195,6 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Agentenplätze lassen sich nicht zusammenführen.",
   "users.mergeRefused.other":
     "Dieses Konto lässt sich im Moment nicht zusammenführen.",
-  "users.mergeRefused.wayOut":
-    "Führen Sie das andere Konto in das Konto von {name} zusammen, wenn es unbenutzt ist, oder übergeben Sie die Arbeit von {name} und deaktivieren Sie das Konto.",
   "users.remove": "Mitglied entfernen",
   "users.mergeTitle": "{name} mit einem anderen Konto zusammenführen?",
   "users.removeTitle": "{name} entfernen?",

@@ -33,6 +33,7 @@
   "users.retirement.analytics_shares": "Revoke live analytics shares scoped to this member.",
   "users.retirement.confirmation_missing": "The holder of each account that can still sign in must confirm this merge. Ask for confirmation below; a deactivated account needs none.",
   "users.retirement.sign_in_dropped": "The merged account’s password, linked sign-in providers and second factor are not moved. Its holder signs in with the account you keep.",
+  "users.retirement.suspended_side": "A suspended account cannot confirm. Reactivate or deactivate it first.",
   "users.retirement.self_survivor": "Choose a surviving member other than yourself.",
   "users.retirement.deactivate_first": "Deactivate this member before removing it.",
   "users.retirement.choose_survivor": "Choose the member to keep.",
