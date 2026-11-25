@@ -1,4 +1,4 @@
--- 1795551000: a_chat_connection_can_ride_a_bot_and_name_its_account.
+-- 1795597143: a_chat_connection_can_ride_a_bot_and_name_its_account.
 SET LOCAL lock_timeout = '3s';
 
 -- A connection can belong to one upstream account, ride on the bot connection
