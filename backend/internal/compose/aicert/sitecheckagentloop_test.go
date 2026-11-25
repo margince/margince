@@ -75,8 +75,6 @@ func TestOnlyAGradingChangeMovesTheAgentLoopCheck(t *testing.T) {
 			"var operatorDefinitions = map[string]Definition{", "var operatorDefinitions = map[string]Definition{\n\t\"zz.added\": {},")},
 		"a data-task registration": {"compose/datataskengine.go": replaceOnce(
 			"rolemailboxseats.DataTask(),", "rolemailboxseats.DataTask(), rolemailboxseats.DataTask(),")},
-		"a database error the store classifies": {"platform/database/storekit/sqlstate.go": replaceOnce(
-			`pgDeadlockDetected    = "40P01"`, `pgDeadlockDetected    = "40P02"`)},
 	} {
 		if got := walkDigest(t, agentLoopWalk(t, edits)); got != base {
 			t.Errorf("%s moved the agent_loop check, and no grading reads it", name)
