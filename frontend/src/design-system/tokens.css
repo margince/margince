@@ -822,36 +822,36 @@
 
 /* Dark palette. --bgInkField is absent: it is one dark plate in both themes. */
 [data-theme="dark"] {
-  --bgPage: #0c1311;
-  --bgElevated: #161d1a;
-  --bgInset: #1a211e;
+  --bgPage: #111816;
+  --bgElevated: #19211f;
+  --bgInset: #252c2a;
   --bgChip: rgba(239, 247, 244, 0.09);
-  --segmentPressed: #3d4441;
-  --bgHover: #172823;
-  --bgStrip: #0a1713;
-  --hoverShade: #1a493b;
+  --segmentPressed: #414a48;
+  --bgHover: #263531;
+  --bgStrip: #131a19;
+  --hoverShade: #41685e;
   --hoverShare: 25%;
-  --stripShade: #02130e;
+  --stripShade: #0c1313;
   --stripShare: 60%;
   /* Under --bgElevated, the way the light well sits under its surface: a
      recess goes away from the lifted ground in both themes. */
-  --bgWell: #111815;
-  --pane: rgba(239, 247, 244, 0.045);
-  --paneEdge: rgba(239, 247, 244, 0.09);
-  --bgField: #161d1a;
-  --bgControl: rgba(239, 247, 244, 0.045);
-  --textInverse: #161d1a;
-  /* Each level lifts toward the light on its light rung's hue, and each edge
-     keeps its light contrast. Level 4 stops where a state chip still clears AA. */
-  --ladder1Solid: #161d1b;
-  --ladder2: #1c2020;
-  --ladder3: #1f2323;
-  --ladder4: #212628;
-  --ladder2Edge: #222626;
-  --ladder3Edge: #31383a;
-  --ladder4Edge: #3b4345;
+  --bgWell: #161d1b;
+  --pane: #1d2422;
+  --paneEdge: #2f3835;
+  --bgField: #161d1b;
+  --bgControl: #202826;
+  --textInverse: #19211f;
+  /* Every ground is opaque and faintly brand-tinted, level 1 too, so a sticky
+     cell on --ground matches its row. Level 4 stops where a state ink clears AA. */
+  --ladder1Solid: #1d2422;
+  --ladder2: #212927;
+  --ladder3: #282f2d;
+  --ladder4: #2f3735;
+  --ladder2Edge: #29312f;
+  --ladder3Edge: #3c4644;
+  --ladder4Edge: #4a5552;
 
-  --accent: #16a34a;
+  --accent: #62cdb7;
   /* --textOnAccent stays light in dark mode: it is the shared ink for every
      fill that ISN'T --accent and doesn't lighten here (a toast on
      --bgInkField, the AI FAB on --ai, the voice orb over the Core's own glass,
@@ -861,19 +861,19 @@
      it flips here for the same reason --textOnAccentControl does — see its
      declaration below. */
   /* Lighter than --accent, so it reads on --accentLight over each dark ground. */
-  --accentText: #4ade80;
-  --accentLight: rgba(22, 163, 74, 0.16);
-  --accentMed: rgba(22, 163, 74, 0.28);
+  --accentText: #75dac4;
+  --accentLight: rgba(98, 205, 183, 0.16);
+  --accentMed: rgba(98, 205, 183, 0.28);
   /* Dark ink: white fails AA on the lifted dark-theme accent. Not --textOnAccent,
      which still inks fills that stay dark here (--bgInkField, --ai). */
-  --textOnAccentControl: #06130b;
+  --textOnAccentControl: #062d26;
   /* The same flip, one theme later: a filled state control's ground is the
      tone's *Text token, and a Text red is DEEP in light and BRIGHT here — a
      near-black pane barely has to move a hue before it reads on it. So the ink
      that clears AA on that ground inverts with the theme rather than staying
-     put. Near-black gives 5.69:1 on --infoText, 7.57:1 on --successText,
-     9.37:1 on --warningText, 5.63:1 on --dangerText and 5.78:1 on
-     --discoveryText; white would give 3.08:1 on the red. */
+     put. Near-black gives 6.89:1 on --infoText, 7.57:1 on --successText,
+     9.37:1 on --warningText, 6.86:1 on --dangerText and 7.04:1 on
+     --discoveryText; white would give 2.42:1 on the red. */
   --textOnStatusControl: #04240f;
   /* Dark: a deeper, muted ground and a pale ink of the same hue. */
   --avatarGroundL: 0.32;
@@ -885,14 +885,13 @@
   --avatarInkL: 0.9;
   --avatarInkC: 0.045;
 
-  --textPrimary: #edf6f4;
-  --textSecondary: #9aa8a3;
+  --textPrimary: #e1e8e6;
+  --textSecondary: #adb9b6;
 
-  --borderSubtle: #22352e;
-  --borderStrong: #31463d;
-  /* 3.45:1 on --bgElevated, 3.79:1 on --bgPage — the dark counterpart of the
-     control boundary, held to the same 1.4.11 floor. */
-  --borderControl: #5f7a6e;
+  --borderSubtle: #2f3937;
+  --borderStrong: #3f4b48;
+  /* The 1.4.11 floor of 3:1 on every ground: 3.12:1 on --ladder4, the lightest. */
+  --borderControl: #748480;
 
   /* Themed, because a 5% black is invisible on a near-black page: any surface
      whose face depends on this simply loses its top side in dark. Only the INK
@@ -908,9 +907,9 @@
 
   /* Lifted teal mark: the light --tealText (#0e7490) is dark-on-dark over a
    * dark card, below AA — brighten it for dark. --teal is unthemed. */
-  --tealText: #5cb6cf;
+  --tealText: #66c0d9;
 
-  --aiText: #9ba0f0;
+  --aiText: #a7adfe;
 
   /* The five states on a dark ground. Information and success keep their light
    * base — a hue that reads on both papers needs no second value — while
@@ -933,17 +932,17 @@
    * hexes in light because the design source gives that ramp and are ordinary
    * derivations of the dark base here. */
   --info: #0485f7;
-  --infoText: #3d99ff;
+  --infoText: #62aaff;
   --success: #17c964;
   --successText: var(--success);
   --warning: #f7b750;
   --warningText: var(--warning);
   --danger: #db3b3e;
-  --dangerText: #ff615e;
+  --dangerText: #ff817a;
   --dangerBg: color-mix(in srgb, var(--danger) 16%, transparent);
   --dangerSurface: color-mix(in srgb, var(--danger) 16%, var(--bgElevated));
   --discovery: #b76be3;
-  --discoveryText: #c478f1;
+  --discoveryText: #d38bff;
   --discoverySurface: color-mix(
     in srgb,
     var(--discovery) 12%,
@@ -991,41 +990,41 @@
  */
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
-    --bgPage: #0c1311;
-    --bgElevated: #161d1a;
-    --bgInset: #1a211e;
+    --bgPage: #111816;
+    --bgElevated: #19211f;
+    --bgInset: #252c2a;
     --bgChip: rgba(239, 247, 244, 0.09);
-    --segmentPressed: #3d4441;
-    --bgHover: #172823;
-    --bgStrip: #0a1713;
-    --hoverShade: #1a493b;
+    --segmentPressed: #414a48;
+    --bgHover: #263531;
+    --bgStrip: #131a19;
+    --hoverShade: #41685e;
     --hoverShare: 25%;
-    --stripShade: #02130e;
+    --stripShade: #0c1313;
     --stripShare: 60%;
     /* Under --bgElevated, the way the light well sits under its surface: a
        recess goes away from the lifted ground in both themes. */
-    --bgWell: #111815;
-    --pane: rgba(239, 247, 244, 0.045);
-    --paneEdge: rgba(239, 247, 244, 0.09);
-    --bgField: #161d1a;
-    --bgControl: rgba(239, 247, 244, 0.045);
-    --textInverse: #161d1a;
-    --ladder1Solid: #161d1b;
-    --ladder2: #1c2020;
-    --ladder3: #1f2323;
-    --ladder4: #212628;
-    --ladder2Edge: #222626;
-    --ladder3Edge: #31383a;
-    --ladder4Edge: #3b4345;
+    --bgWell: #161d1b;
+    --pane: #1d2422;
+    --paneEdge: #2f3835;
+    --bgField: #161d1b;
+    --bgControl: #202826;
+    --textInverse: #19211f;
+    --ladder1Solid: #1d2422;
+    --ladder2: #212927;
+    --ladder3: #282f2d;
+    --ladder4: #2f3735;
+    --ladder2Edge: #29312f;
+    --ladder3Edge: #3c4644;
+    --ladder4Edge: #4a5552;
 
-    --accent: #16a34a;
+    --accent: #62cdb7;
 
-    --accentText: #4ade80;
+    --accentText: #75dac4;
 
-    --accentLight: rgba(22, 163, 74, 0.16);
-    --accentMed: rgba(22, 163, 74, 0.28);
+    --accentLight: rgba(98, 205, 183, 0.16);
+    --accentMed: rgba(98, 205, 183, 0.28);
 
-    --textOnAccentControl: #06130b;
+    --textOnAccentControl: #062d26;
     --textOnStatusControl: #04240f;
 
     --avatarGroundL: 0.32;
@@ -1037,35 +1036,35 @@
     --avatarInkL: 0.9;
     --avatarInkC: 0.045;
 
-    --textPrimary: #edf6f4;
-    --textSecondary: #9aa8a3;
+    --textPrimary: #e1e8e6;
+    --textSecondary: #adb9b6;
 
-    --borderSubtle: #22352e;
-    --borderStrong: #31463d;
+    --borderSubtle: #2f3937;
+    --borderStrong: #3f4b48;
 
-    --borderControl: #5f7a6e;
+    --borderControl: #748480;
 
     --shadow-rest: 0 1px 2px 0 rgb(0 0 0 / 0.4);
     --shadow-well: inset 0 1px 2px 0 rgb(0 0 0 / 0.4);
     --shadow-pop: 0 8px 30px rgba(0, 0, 0, 0.55);
     --overlayScrim: rgba(0, 0, 0, 0.55);
 
-    --tealText: #5cb6cf;
+    --tealText: #66c0d9;
 
-    --aiText: #9ba0f0;
+    --aiText: #a7adfe;
 
     --info: #0485f7;
-    --infoText: #3d99ff;
+    --infoText: #62aaff;
     --success: #17c964;
     --successText: var(--success);
     --warning: #f7b750;
     --warningText: var(--warning);
     --danger: #db3b3e;
-    --dangerText: #ff615e;
+    --dangerText: #ff817a;
     --dangerBg: color-mix(in srgb, var(--danger) 16%, transparent);
     --dangerSurface: color-mix(in srgb, var(--danger) 16%, var(--bgElevated));
     --discovery: #b76be3;
-    --discoveryText: #c478f1;
+    --discoveryText: #d38bff;
     --discoverySurface: color-mix(
       in srgb,
       var(--discovery) 12%,
