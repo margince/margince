@@ -9,6 +9,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Fragen, ob ein gesendetes Angebot den Deal verschiebt",
   "systemJob.legal_review_desk": "Rechtsprüfung",
   "systemJob.import_identity_links": "Importierte E-Mail verknüpfen",
+  "systemJob.history_narrowing": "Einschränkung früherer E-Mails",
   "systemJob.promise_kept":
     "Eine Zusage schließen, die ein Termin als erfüllt zeigt",
   "systemJob.transcript_audience":
@@ -13116,8 +13117,10 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "connectors.mailPosture.historyBody":
     "Diese Einstellung gilt für E-Mails, die ab jetzt erfasst werden. E-Mails, die bereits im CRM sind, behalten ihre Sichtbarkeit, es sei denn, du schränkst sie entsprechend ein.",
   "connectors.mailPosture.historyApply": "Auch erfasste E-Mails einschränken",
-  "connectors.mailPosture.historyNarrowing":
-    "Frühere E-Mails werden im Hintergrund eingeschränkt: noch {count}. Jede Nachricht behält ihre Sichtbarkeit, bis sie an der Reihe ist.",
+  "connectors.mailPosture.historyNarrowing_one":
+    "Frühere E-Mails werden im Hintergrund eingeschränkt: noch {count} Nachricht. Jede Nachricht behält ihre Sichtbarkeit, bis sie an der Reihe ist.",
+  "connectors.mailPosture.historyNarrowing_other":
+    "Frühere E-Mails werden im Hintergrund eingeschränkt: noch {count} Nachrichten. Jede Nachricht behält ihre Sichtbarkeit, bis sie an der Reihe ist.",
   "connectors.disconnectBodyGoogleNote":
     "Google führt Margince möglicherweise weiterhin unter den Drittanbieter-Apps mit Zugriff auf dein Konto. Entferne Margince dort, um den Zugriff vollständig zu widerrufen.",
   "connectors.disconnectBodyMicrosoftNote":

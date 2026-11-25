@@ -42,10 +42,16 @@ func (w *captureHistoryNarrowingWorker) Work(ctx context.Context, _ *river.Job[C
 		if worked {
 			return nil
 		}
-		wsCtx := principal.WithWorkspaceID(ctx, workspace)
-		wsCtx = principal.WithActor(wsCtx, principal.Principal{Type: principal.PrincipalSystem, ID: "system:history_narrowing"})
-		found, err := w.registry.NarrowPendingHistory(principal.WithCorrelationID(wsCtx, ids.NewV7()))
+		found, err := w.narrowWorkspace(ctx, workspace)
 		worked = found && err == nil
 		return err
 	}))
+}
+
+// narrowWorkspace runs one batch in workspace as the system, the way
+// captureBackfillReconcileWorker binds each workspace of its fleet walk.
+func (w *captureHistoryNarrowingWorker) narrowWorkspace(ctx context.Context, workspace ids.UUID) (bool, error) {
+	wsCtx := principal.WithWorkspaceID(ctx, workspace)
+	wsCtx = principal.WithActor(wsCtx, principal.Principal{Type: principal.PrincipalSystem, ID: "system:history_narrowing"})
+	return w.registry.NarrowPendingHistory(principal.WithCorrelationID(wsCtx, ids.NewV7()))
 }

@@ -319,9 +319,9 @@ func similarBranchSQL(ctx context.Context, q similarQuery, arg func(any) int) ([
 			continue
 		}
 		branches = append(branches, fmt.Sprintf(
-			`SELECT '%s'::text AS rtype, e.entity_id AS id, %s AS title, %s AS sim, TRUE AS whole
+			`SELECT '%s'::text AS rtype, e.entity_id AS id, %s AS title, %s AS sim, %s AS whole
 			 FROM embedding e JOIN %s t ON t.id = e.entity_id WHERE %s`,
-			branch.entity, branch.title, similaritySQL("e", q.vecPos), branch.table, filter,
+			branch.entity, branch.title, similaritySQL("e", q.vecPos), admitsEveryRow, branch.table, filter,
 		))
 	}
 	return branches, nil
@@ -337,7 +337,7 @@ func similarMailSQL(ctx context.Context, branch searchBranch, q similarQuery, fi
 	if q.within != nil {
 		filter += fmt.Sprintf(" AND t.id = ANY($%d)", arg(q.within))
 	}
-	limit, whole := "", "TRUE"
+	limit, whole := "", admitsEveryRow
 	if q.sample > 0 {
 		pos := arg(q.sample)
 		limit = fmt.Sprintf(" LIMIT $%d", pos)

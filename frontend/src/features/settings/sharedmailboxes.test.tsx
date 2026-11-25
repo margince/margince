@@ -175,7 +175,9 @@ describe("the Shared mailboxes card", () => {
 
     const row = await screen.findByTestId("shared-mailbox");
     expect(within(row).getByText(/was never read\./)).toBeTruthy();
-    expect(within(row).getByText(/in the background: 40 left/)).toBeTruthy();
+    expect(
+      within(row).getByText(/in the background: 40 messages left/),
+    ).toBeTruthy();
   });
 
   it("tells a colleague without the admin role why there is nothing to manage", async () => {

@@ -167,6 +167,7 @@ function isMailPosture(value: string): value is MailPosture {
 
 function MailPostureRow({ conn }: Readonly<{ conn: CaptureConnection }>) {
   const t = useT();
+  const plural = usePlural();
   const { locale } = useLocale();
   const settings = useCaptureSettings();
   const save = useSetMailPosture(conn);
@@ -200,7 +201,7 @@ function MailPostureRow({ conn }: Readonly<{ conn: CaptureConnection }>) {
     help,
     !sharedAllowed && t("connectors.mailPosture.sharedNeedsAdmin"),
     pending &&
-      t("connectors.mailPosture.historyNarrowing", {
+      plural("connectors.mailPosture.historyNarrowing", pending.remaining, {
         count: formatNumber(pending.remaining, locale),
       }),
   ]

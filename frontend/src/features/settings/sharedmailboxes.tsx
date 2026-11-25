@@ -14,7 +14,7 @@ import { Panel, PanelBody, PanelIntro } from "../../design-system/panel";
 import { ProviderList, ProviderRow } from "../../design-system/providerrow";
 import { QueryStates } from "../../design-system/querystates";
 import { formatDateTime, formatNumber } from "../../format/format";
-import { useLocale, useT } from "../../i18n";
+import { useLocale, usePlural, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import { statusLabel, statusTone } from "../../lib/connector-status";
 import { labelFor } from "../../lib/labelfor";
@@ -170,6 +170,7 @@ function SharedMailboxRow({
   onOpen: (kind: "change" | "history" | "disconnect") => void;
 }>) {
   const t = useT();
+  const plural = usePlural();
   const { locale } = useLocale();
   const zone = useViewerZone();
   const connected = mailbox.status !== "disconnected";
@@ -210,9 +211,13 @@ function SharedMailboxRow({
                 to: formatDateTime(unread.to, locale, zone),
               }),
             narrowing &&
-              t("connectors.mailPosture.historyNarrowing", {
-                count: formatNumber(narrowing.remaining, locale),
-              }),
+              plural(
+                "connectors.mailPosture.historyNarrowing",
+                narrowing.remaining,
+                {
+                  count: formatNumber(narrowing.remaining, locale),
+                },
+              ),
           ]
             .filter(Boolean)
             .join(" ") || undefined

@@ -6,6 +6,7 @@ export const en = {
   "systemJob.proposal_stage": "Asking whether a sent proposal moves the deal",
   "systemJob.legal_review_desk": "Legal review desk",
   "systemJob.import_identity_links": "Attaching imported mail links",
+  "systemJob.history_narrowing": "Narrowing earlier mail",
   "systemJob.promise_kept": "Closing a commitment a meeting shows kept",
   "systemJob.transcript_audience": "Giving meeting notes the meeting’s readers",
   "systemJob.meeting_profile":
@@ -13043,8 +13044,10 @@ export const en = {
   "connectors.mailPosture.historyBody":
     "This setting applies to mail captured from now on. Mail already in the CRM keeps its visibility unless you narrow it to match.",
   "connectors.mailPosture.historyApply": "Also narrow captured mail",
-  "connectors.mailPosture.historyNarrowing":
-    "Earlier mail is being narrowed in the background: {count} left. A message keeps its visibility until it is reached.",
+  "connectors.mailPosture.historyNarrowing_one":
+    "Earlier mail is being narrowed in the background: {count} message left. A message keeps its visibility until it is reached.",
+  "connectors.mailPosture.historyNarrowing_other":
+    "Earlier mail is being narrowed in the background: {count} messages left. A message keeps its visibility until it is reached.",
   "connectors.disconnectBodyGoogleNote":
     "Google may still list Margince under your account’s third-party access. Remove it there to revoke access fully.",
   "connectors.disconnectBodyMicrosoftNote":

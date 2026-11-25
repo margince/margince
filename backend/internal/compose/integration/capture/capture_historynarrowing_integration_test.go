@@ -59,8 +59,6 @@ func TestHistoryNarrowsOneBatchAtATimeAndResumes(t *testing.T) {
 		seatContext(e, e.Rep1), capturemod.ProviderMailbox("gmail"), capturemod.PostureHeld, true); err != nil {
 		t.Fatalf("narrowing with apply_to_history: %v", err)
 	}
-	seq := countRows(t, e, `SELECT coalesce(max(seq), 0) FROM event_outbox`)
-
 	if !integration.NarrowHistoryBatch(t, e.WS, env.registry) {
 		t.Fatal("the first run found no narrowing pending")
 	}
@@ -79,12 +77,13 @@ func TestHistoryNarrowsOneBatchAtATimeAndResumes(t *testing.T) {
 	if pending := pendingNarrowing(t, env); pending != nil {
 		t.Fatalf("the connection still shows %+v after the narrowing ended", pending)
 	}
-	twice := countRows(t, e, fmt.Sprintf(`SELECT count(*) FROM (SELECT envelope->>'entity_id' FROM event_outbox
-		WHERE seq > %d AND envelope->>'type' = 'activity.updated' GROUP BY 1 HAVING count(*) > 1) repeated`, seq))
-	moved := countRows(t, e, fmt.Sprintf(`SELECT count(DISTINCT envelope->>'entity_id') FROM event_outbox
-		WHERE seq > %d AND envelope->>'type' = 'activity.updated'`, seq))
-	if twice != 0 || moved != messages {
-		t.Fatalf("%d messages announced as moved, %d of them more than once; want each of the %d once", moved, twice, messages)
+	connection := rep1Connection(t, env, "gmail").ID
+	named := countRows(t, e, fmt.Sprintf(`SELECT count(*) FROM audit_log a,
+		jsonb_array_elements_text(a.after->'narrowed_activities') narrowed(id) WHERE a.entity_id = '%s'`, connection))
+	distinct := countRows(t, e, fmt.Sprintf(`SELECT count(DISTINCT narrowed.id) FROM audit_log a,
+		jsonb_array_elements_text(a.after->'narrowed_activities') narrowed(id) WHERE a.entity_id = '%s'`, connection))
+	if named != messages || distinct != messages {
+		t.Fatalf("the batch trail names %d imports, %d of them distinct; want each of the %d once", named, distinct, messages)
 	}
 }
 

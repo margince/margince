@@ -44722,7 +44722,7 @@ components:
         asked for `apply_to_history`. Absent when nothing is pending. Mail the job has not reached
         yet keeps the audience it had.
       properties:
-        posture: { type: string, enum: [classified, held], description: What the earlier mail is narrowed to. }
+        posture: { type: string, enum: [classified, held], x-extensible-enum: true, description: What the earlier mail is narrowed to. }
         remaining: { type: integer, minimum: 0, description: Messages still to narrow. }
 
     WorkspaceEmailDomain:

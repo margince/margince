@@ -52,8 +52,8 @@ func deliveredScope(connection ids.UUID) narrowScope {
 	      WHERE split_part(delivered.mark, ':', 1) = ` + storekit.MailboxSQL("due_mailbox") + `)))`}
 }
 
-// narrowDue is the batch predicate the claim and the progress check both ask,
-// so the two cannot disagree. A row it writes stops matching, which ends the
+// narrowDue is the batch predicate the claim and the progress check both
+// interpolate. A row it writes stops matching, which ends the
 // narrowing. A held row never matches, so narrowing to classified never loosens it.
 func narrowDue(scope narrowScope) string {
 	return scope.where + `

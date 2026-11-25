@@ -20,6 +20,7 @@ import (
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -76,26 +77,26 @@ func narrowingTrailTx(ctx context.Context, tx pgx.Tx, connection ids.UUID, share
 		crmcontracts.InternalEventCaptureSettingsUpdated{ChangedKeys: []string{historyNarrowingKey}})
 }
 
-// historyNarrowingTx is the progress of a pending narrowing, or nil when
-// none is pending.
-func historyNarrowingTx(ctx context.Context, tx pgx.Tx, scope narrowScope, held *bool) (*HistoryNarrowing, error) {
+// historyNarrowingTx is the progress of the request held stores, and false
+// when held says none is pending.
+func historyNarrowingTx(ctx context.Context, tx pgx.Tx, scope narrowScope, held *bool) (HistoryNarrowing, bool, error) {
 	if held == nil {
-		return nil, nil
+		return HistoryNarrowing{}, false, nil
 	}
 	posture := narrowingPosture(*held)
 	left, err := narrowRemainingTx(ctx, tx, scope, posture)
-	if err != nil {
-		return nil, err
-	}
-	return &HistoryNarrowing{Posture: posture, Remaining: left}, nil
+	return HistoryNarrowing{Posture: posture, Remaining: left}, true, err
 }
 
 // seatNarrowingsTx fills in the progress of each of a seat's connections.
 func seatNarrowingsTx(ctx context.Context, tx pgx.Tx, views []ConnectionView) error {
 	for i := range views {
-		var err error
-		if views[i].HistoryNarrowing, err = historyNarrowingTx(ctx, tx, deliveredScope(views[i].ID), views[i].narrowingHeld); err != nil {
+		progress, pending, err := historyNarrowingTx(ctx, tx, deliveredScope(views[i].ID), views[i].narrowingHeld)
+		if err != nil {
 			return err
+		}
+		if pending {
+			views[i].HistoryNarrowing = &progress
 		}
 	}
 	return nil
@@ -157,7 +158,7 @@ func (r *Registry) NarrowPendingHistory(ctx context.Context) (bool, error) {
 		found, p.posture = true, narrowingPosture(held)
 		if archived {
 			// A removed mailbox's request is dropped, not carried out.
-			return endNarrowingTx(ctx, tx, p, "dropped_archived")
+			return dropArchivedNarrowingTx(ctx, tx, p)
 		}
 		return r.narrowPendingBatchTx(ctx, tx, p)
 	})
@@ -198,15 +199,40 @@ func (r *Registry) narrowPendingBatchTx(ctx context.Context, tx pgx.Tx, p pendin
 	if left > 0 {
 		return nil
 	}
-	return endNarrowingTx(ctx, tx, p, "history_narrowed_to")
+	return endNarrowingTx(ctx, tx, p)
 }
 
-// endNarrowingTx clears a request and records why under outcome: it finished
-// (history_narrowed_to), or its mailbox was removed (dropped_archived).
-func endNarrowingTx(ctx context.Context, tx pgx.Tx, p pendingNarrowing, outcome string) error {
-	if _, err := tx.Exec(ctx, `UPDATE capture_connection SET history_narrowing_held = NULL WHERE id = $1`, p.connection); err != nil {
+// endNarrowingTx clears the finished request of a live mailbox and records it.
+// The batch holds the row lock; the expected request makes the write fail on
+// a request that changed underneath it.
+func endNarrowingTx(ctx context.Context, tx pgx.Tx, p pendingNarrowing) error {
+	tag, err := tx.Exec(ctx, `UPDATE capture_connection SET history_narrowing_held = NULL
+		WHERE id = $1 AND archived_at IS NULL AND history_narrowing_held = $2`, p.connection, p.posture == PostureHeld)
+	if err != nil {
 		return fmt.Errorf("capture: ending the history narrowing: %w", err)
 	}
+	if tag.RowsAffected() != 1 {
+		return fmt.Errorf("the history narrowing of %s changed before it ended: %w", p.connection, apperrors.ErrConflict)
+	}
+	return closingTrailTx(ctx, tx, p, "history_narrowed_to")
+}
+
+// dropArchivedNarrowingTx clears the request of a removed mailbox without
+// narrowing its mail, and records that it was dropped.
+func dropArchivedNarrowingTx(ctx context.Context, tx pgx.Tx, p pendingNarrowing) error {
+	tag, err := tx.Exec(ctx, `UPDATE capture_connection SET history_narrowing_held = NULL
+		WHERE id = $1 AND archived_at IS NOT NULL AND history_narrowing_held = $2`, p.connection, p.posture == PostureHeld)
+	if err != nil {
+		return fmt.Errorf("capture: dropping the history narrowing: %w", err)
+	}
+	if tag.RowsAffected() != 1 {
+		return fmt.Errorf("the history narrowing of %s changed before it was dropped: %w", p.connection, apperrors.ErrConflict)
+	}
+	return closingTrailTx(ctx, tx, p, "dropped_archived")
+}
+
+// closingTrailTx records why a request ended under outcome.
+func closingTrailTx(ctx context.Context, tx pgx.Tx, p pendingNarrowing, outcome string) error {
 	return narrowingTrailTx(ctx, tx, p.connection, p.seat == nil,
 		map[string]any{historyNarrowingKey: p.posture},
 		map[string]any{historyNarrowingKey: nil, outcome: p.posture})
