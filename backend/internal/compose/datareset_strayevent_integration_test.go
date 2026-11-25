@@ -211,7 +211,7 @@ func orphanedRoomComment(t *testing.T, deal ids.DealID) events.Envelope {
 	return events.Envelope{
 		EventID:    ids.NewV7(),
 		Type:       dealrooms.EventCommentPosted,
-		OccurredAt: time.Now().UTC(),
+		OccurredAt: clocktest.Now(t).UTC(),
 		Entity:     events.EntityRef{Type: roomTimelineEntity, ID: ids.NewV7()},
 		Trace:      events.Trace{CorrelationID: ids.NewV7()},
 		Payload:    raw,
