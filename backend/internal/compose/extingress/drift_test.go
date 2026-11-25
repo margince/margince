@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-package compose
+package extingress_test
 
 // The published ingress record and the core's own capture envelope are two
 // hand-written type sets describing one thing, and nothing compiles them
@@ -19,18 +19,15 @@ package compose
 // on the published surface, or waived HERE with the reason it is absent. A new
 // field arrives as a failing test naming itself.
 //
-// It lives in COMPOSE rather than beside the published types, and rather than
-// in the root fitness package. pkg/extension may import nothing under internal,
-// in test files and external test files alike, so it cannot see the envelope;
-// and the root package is not permitted to depend on a module (go-arch-lint),
-// so it cannot see capture's activity shape. Compose depends on both already —
-// it is where the conversion under test lives.
+// It lives in compose/extingress, beside the conversion. It does not sit beside
+// the published types or in the root fitness package. pkg/extension may import
+// nothing under internal, in test files and external test files alike, so it
+// cannot see the envelope. The root package may not depend on a module
+// (go-arch-lint), so it cannot see capture's activity shape either. Compose
+// depends on both, and it is where the conversion under test lives.
 
 import (
-	"errors"
-	"os"
 	"reflect"
-	"strings"
 	"testing"
 	"time"
 
@@ -70,13 +67,6 @@ var waivedEnvelopeFields = gatekit.Waive(map[string]string{
 	"participantsAreProviderAttested": "the attestation that a PROVIDER enumerated the party list, which is what lets capture bind an invited colleague's user_id from it. " +
 		"Deliberately unpublishable rather than merely unpublished: it is the core's answer about the SOURCE, stamped from the registry that ran the connector, and a unit able to assert it could manufacture an interaction edge naming any colleague — the exact forgery the inbound-mail rule refuses. " +
 		"Unexported so it cannot be set by assignment either, which means a unit's record arrives un-attested and keeps the strict mail rule",
-	"Parts": "attachments. The published path EXISTS now (extension.InboundFile plus the " +
-		"published sniff/sanitize pair and the four published inbound bounds), so this is no " +
-		"longer a capability gap — it is a deliberate hold: the field lands in the PR of the " +
-		"first unit that fills it, because a published frozen field with no caller freezes a " +
-		"shape no unit has exercised",
-	"PartDrops": "the breadcrumb for refused attachments, held with Parts for the same reason " +
-		"and landing in the same PR — a drop cannot exist while what it accounts for does not",
 	"Containers": "where the PROVIDER filed a message — a Gmail label, a Graph folder, an IMAP mailbox — which a capture exclusion can name. " +
 		"Held rather than closed: the value is provider-qualified, and the qualifier is an allowlist of the providers whose namespaces the exclusion validator knows (containerProviders in the capture module). " +
 		"A unit's own provider is not on it, so a published field would let a unit state a container no rule can name — a value that travels the whole pre-store path and matches nothing, which reads to its author like a rule that does not work. " +
@@ -164,6 +154,8 @@ var waivedActivityFields = gatekit.Waive(map[string]string{
 	"CredentialsMasked": "false is the right answer for a unit. The sink masks every record it is handed " +
 		"and sets the flag itself when that changed the text; a unit stating it would claim a mask the " +
 		"core never performed, and the flag decides which replay proof applies",
+	"memberOwned":   "unexported, and derived from the binding FileChatMessage is handed: a source is member-owned when it pins a posture, which is a declaration an operator reads and no record can state",
+	"pinnedPosture": "unexported, and copied from the declared source's IngressSource.PinnedPosture onto the chat binding. A unit stating it per record could pick the widest posture its declaration allows",
 	"judged": "unexported, and the sink sets it from Envelope. A unit stating it would state the " +
 		"conclusion the sink exists to draw",
 	"memberOwned": "unexported, and FileChatMessage derives it from the authenticated chat binding. A unit " +
@@ -243,7 +235,7 @@ func TestThePublishedParticipantMirrorsTheCoreOne(t *testing.T) {
 		}
 	}
 	// And the other way: a published field nothing maps onto is a promise to a
-	// unit that participantsOf drops on the floor.
+	// unit that extingress.ParticipantsOf drops on the floor.
 	pairedPublished := map[string]bool{}
 	for _, want := range publishedName {
 		pairedPublished[want] = true
@@ -332,7 +324,7 @@ func TestThePublishedActivityTypesMatchTheCores(t *testing.T) {
 			continue // reported by the mirror test above
 		}
 		// A user id is the one pair whose published type is a named string and
-		// whose core type is a UUID. The extingress.go's namedAssignee carries it over.
+		// whose core type is a UUID. extingress.UserUUID carries it over.
 		// The sink refuses an id that is not a UUID or not a colleague.
 		if mirrored.Type == reflect.TypeFor[extension.UserID]() && field.Type == reflect.TypeFor[ids.UUID]() {
 			continue
@@ -357,100 +349,28 @@ func fieldsOf(t reflect.Type) map[string]bool {
 	return out
 }
 
-// A unit has TWO doors it can write an activity through, and the rule bounding
-// which transport it may name is about the unit rather than about a door. This
-// walks both against the same gate, because the failure mode is asymmetric and
-// only one half is loud: capture ingress dies on the CHECK as an unattributable
-// 500 — while the core-write door carries channel_provider on the published
-// request, so a unit could name a core connector's transport and mint a row that
-// is a valid SEND ANCHOR for a conversation it does not own.
-//
-// Two halves, because the rule and its reach can fail separately: the block
-// below pins what the gate DOES, and the source assertion after it pins that
-// both doors actually call it — which is the half that regresses, since a door
-// can be added or rewritten without anyone noticing the gate went missing.
-func TestAUnitMayNameOnlyItsOwnTransportThroughEitherDoor(t *testing.T) {
-	declaresTransport(t, "mine", extension.Channel{Provider: "mine_chat", CredentialModel: extension.CredentialPerMember})
-
-	if err := refuseUndeclaredTransport("mine", activities.KindMessage, "mine_chat"); err != nil {
-		t.Errorf("a unit filing a message on the transport it declared was refused (%v); the declaration is what the permission is bounded by, so this is the case that must pass", err)
-	}
-
-	// The transport it did NOT declare — a core connector's — is the row that
-	// would become a send anchor for a conversation the unit does not own.
-	for _, provider := range []string{"telegram", "someone_elses"} {
-		if err := refuseUndeclaredTransport("mine", activities.KindMessage, provider); err == nil {
-			t.Errorf("a unit filing a message on %q was permitted; it declares only mine_chat", provider)
-		} else if !errors.Is(err, extension.ErrInvalid) {
-			t.Errorf("the refusal is %v, want extension.ErrInvalid so the unit reads it as a bad record rather than a core fault", err)
-		}
-	}
-
-	// A message that names nothing is refused too: it would be a conversation
-	// with no transport, which nothing can reply on.
-	if err := refuseUndeclaredTransport("mine", activities.KindMessage, ""); err == nil {
-		t.Error("a message naming no transport was permitted; it lands as a conversation no reply can leave on")
-	}
-
-	// And the other direction, which is the quieter defect: a record that is not
-	// a message may name no transport at all, or it would be repliable — a note
-	// that answers back.
-	for _, kind := range []string{"note", "email", "call", "meeting", "task"} {
-		if err := refuseUndeclaredTransport("mine", kind, ""); err != nil {
-			t.Errorf("a unit filing %q was refused (%v); only a message is bounded here", kind, err)
-		}
-		if err := refuseUndeclaredTransport("mine", kind, "mine_chat"); err == nil {
-			t.Errorf("a %q naming a transport was permitted; the send path reads the provider column and would answer on it", kind)
-		}
-	}
-
-	// Both doors reach it. A behavioural walk of the core-write door needs a
-	// live pool and transaction, so this is a source assertion instead — the
-	// same shape as the repo's other whole-tree greps, and it fails loudly when
-	// a door stops calling the gate rather than when someone happens to test
-	// that door.
-	for _, door := range []string{"extingress.go", "extcore.go"} {
-		src, err := os.ReadFile(door)
-		if err != nil {
-			t.Fatalf("reading %s: %v", door, err)
-		}
-		if !strings.Contains(string(src), "refuseUndeclaredTransport(") {
-			t.Errorf("%s writes an activity for a unit and does not call refuseUndeclaredTransport; that door can mint a message on a transport the unit does not supply", door)
-		}
+// The published cap and the core's are one number. A unit that checks itself
+// against the published cap and a core that applies its own must not answer
+// differently about the same sixty-contact group. The unit would report a
+// record it believes landable and read a refusal it cannot explain.
+func TestThePublishedRosterCapIsTheCoresOwn(t *testing.T) {
+	if extension.MaxParticipants != connector.MaxParticipants {
+		t.Fatalf("the published cap is %d and the core applies %d", extension.MaxParticipants, connector.MaxParticipants)
 	}
 }
 
-// The counterparty BINDING is bounded by the same declaration, and it is a
-// separate gate because it writes a different row. The activity's provider
-// decides where a reply would be sent; this one writes contact_channel_identity,
-// which is where the core resolves WHO it is sent to — so a unit able to bind an
-// account under a core connector's provider could attach an account it controls
-// to somebody else's contact record and inherit the replies meant for them.
-func TestAUnitMayBindAnAccountOnlyOnItsOwnTransport(t *testing.T) {
-	declaresTransport(t, "mine", extension.Channel{Provider: "mine_chat", CredentialModel: extension.CredentialPerMember})
-
-	if err := refuseUnitIdentity("mine", "mine_chat"); err != nil {
-		t.Errorf("binding an account on the unit's own transport was refused (%v)", err)
+// The published roles are the core's own, for the same reason. A unit that
+// spells one off the published surface must reach a database CHECK that admits it.
+func TestEveryPublishedRoleIsTheCoresOwn(t *testing.T) {
+	pairs := map[string]string{
+		extension.ParticipantRoleTo:        connector.ParticipantRoleTo,
+		extension.ParticipantRoleCC:        connector.ParticipantRoleCC,
+		extension.ParticipantRoleAttendee:  connector.ParticipantRoleAttendee,
+		extension.ParticipantRoleOrganizer: connector.ParticipantRoleOrganizer,
 	}
-	// A record identified by address binds nothing, and must still land.
-	if err := refuseUnitIdentity("mine", ""); err != nil {
-		t.Errorf("a record with no channel identity was refused (%v); it identifies its counterparty by address", err)
-	}
-	if err := refuseUnitIdentity("mine", "telegram"); err == nil {
-		t.Error("a unit bound an account under telegram; the next reply on that contact's conversation would go to the unit's account")
-	} else if !errors.Is(err, extension.ErrInvalid) {
-		t.Errorf("the refusal is %v, want extension.ErrInvalid", err)
-	}
-
-	// And its REACH, which is the half that regresses. Only the ingress door
-	// maps a Counterparty today — the published core-write request carries no
-	// channel identity — so this pins the one door that does, and fails loudly
-	// if that door stops calling the gate.
-	src, err := os.ReadFile("extingress.go")
-	if err != nil {
-		t.Fatalf("reading extingress.go: %v", err)
-	}
-	if !strings.Contains(string(src), "refuseUnitIdentity(") {
-		t.Error("extingress.go maps a counterparty for a unit and does not call refuseUnitIdentity; that door can bind an account under a transport the unit does not supply")
+	for published, core := range pairs {
+		if published != core {
+			t.Errorf("the published role %q is not the core's %q", published, core)
+		}
 	}
 }

@@ -578,22 +578,25 @@ The 42 tables owned by `compose`, as the migrations build them. [Back to the ent
 
 ## extension_ingest_position
 
-4 columns · primary key `(unit, source_system)` · referenced by 0 foreign keys
+6 columns · primary key `(unit, source_system, member_id)` · referenced by 0 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
+| `member_id` | `uuid`, default `'00000000-0000-0000-0000-000000000000'::uuid` | yes |  |
 | `position` | `text` | yes |  |
 | `saved_at` | `timestamp with time zone`, default `now()` | yes |  |
 | `unit` | `text` | yes |  |
 | `source_system` | `text` | yes | The outside system the record came from, when it came from one. |
+| `version` | `bigint`, default `1` | yes | Optimistic-concurrency counter. Every write bumps it, so an update built on a stale read is refused instead of overwriting. |
 
 **Rules**
 
 - `extension_ingest_position_size`: `CHECK ((("position" <> '') AND (octet_length("position") <= 512)))`
+- `extension_ingest_position_version_bound`: `CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))`
 
 **Indexes**
 
-- `extension_ingest_position_pkey`: `unique, btree (unit, source_system)`
+- `extension_ingest_position_pkey`: `unique, btree (unit, source_system, member_id)`
 
 **Triggers**
 

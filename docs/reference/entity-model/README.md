@@ -31,7 +31,7 @@ module to put a change in, read [modules.md](../modules.md).
 | | |
 |---|--:|
 | Tables | 354 |
-| Columns | 4386 |
+| Columns | 4388 |
 | Foreign keys | 618 |
 | Owning areas | 40 |
 
@@ -306,7 +306,7 @@ erDiagram
 | [`event_outbox`](platform.md#event_outbox) | platform | 7 | 0 |
 | [`existing_customer_notice`](consent.md#existing_customer_notice) | consent | 14 | 1 |
 | [`existing_customer_notice_purpose`](consent.md#existing_customer_notice_purpose) | consent | 2 | 0 |
-| [`extension_ingest_position`](compose.md#extension_ingest_position) | compose | 4 | 0 |
+| [`extension_ingest_position`](compose.md#extension_ingest_position) | compose | 6 | 0 |
 | [`extension_ingest_refusal`](compose.md#extension_ingest_refusal) | compose | 6 | 0 |
 | [`extension_secret`](platform.md#extension_secret) | platform | 7 | 0 |
 | [`federated_identity`](identity.md#federated_identity) | identity | 6 | 0 |

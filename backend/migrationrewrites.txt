@@ -284,3 +284,5 @@
 1795608587_the_array_vocabularies_are_validated.down.sql | * | the down migration is a single SELECT 1 that changes nothing
 1795621953_claude_five_models_are_priced.up.sql | *, ai_model_rate, audit_log | two models on one provider: at most two inserted rows and their audit rows
 1795621953_claude_five_models_are_priced.down.sql | * | the down migration is a single SELECT 1 that changes nothing
+1795630209_a_member_keeps_their_own_ingest_position.down.sql | extension_ingest_position | one row per unit and source, and the dev-only rollback drops the per-member rows
+1795630210_the_ingest_position_version_check_is_validated.down.sql | * | the down migration is a single SELECT 1 that changes nothing
