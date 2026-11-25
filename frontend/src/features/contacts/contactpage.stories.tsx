@@ -713,6 +713,8 @@ const calledBack: View = {
         due_at: "2026-08-12T09:00:00Z",
         is_done: false,
         source_activity_id: "call-7",
+        task_type: "reach_out",
+        reply_channel: "call",
         links: [{ entity_type: "contact", entity_id: "p-1" }],
         source: "manual",
         captured_by: "human:u1",
@@ -729,13 +731,6 @@ export const LeadNextTaskFromCall: Story = {
   render: () => {
     installFetchStub({
       "GET /me": meRoute({ activity: ["read", "update"] }),
-      "GET /activities/call-7": () =>
-        jsonResponse({
-          id: "call-7",
-          kind: "call",
-          content_state: "available",
-          occurred_at: "2026-08-09T15:00:00Z",
-        }),
     });
     return (
       <StoryProviders>
