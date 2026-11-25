@@ -386,7 +386,7 @@ func (s *Dispatcher) call(ctx context.Context, params json.RawMessage, fr framin
 		p.Arguments = json.RawMessage(`{}`)
 	}
 
-	callCtx, err := s.bind(withRecordLinks(ctx, s.publicOrigin))
+	callCtx, err := s.bind(WithRecordLinks(ctx, s.publicOrigin))
 	if err != nil {
 		// The bind failure's cause (revoked vs expired vs infrastructure)
 		// is server-side knowledge; the client only learns that its
