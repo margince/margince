@@ -102,8 +102,19 @@ func linkedOriginalsSQL(column, subject string, erasing bool) string {
 	return query + notTransitivelyHeld("a.id") + `
 	    AND NOT EXISTS (SELECT 1 FROM activity o WHERE o.raw_capture_id = a.raw_capture_id
 	      AND (NOT EXISTS (SELECT 1 FROM activity_link ol WHERE ol.activity_id = o.id AND ol.` + column + ` = ` + subject + `)
-	        OR EXISTS (SELECT 1 FROM activity_link xl JOIN ` + strings.TrimSuffix(column, "_id") + ` s ON s.id = xl.` + column + `
-	          WHERE xl.activity_id = o.id AND xl.` + column + ` <> ` + subject + ` AND s.archived_at IS NULL)))`
+	        OR ` + otherLiveSubjectSQL("contact_id", column, subject) + `
+	        OR ` + otherLiveSubjectSQL("lead_id", column, subject) + `))`
+}
+
+// otherLiveSubjectSQL is true when the activity o is also filed on a live
+// record of this kind. For the kind being erased that means another record.
+func otherLiveSubjectSQL(kind, column, subject string) string {
+	differs := ""
+	if kind == column {
+		differs = ` AND xl.` + kind + ` <> ` + subject
+	}
+	return `EXISTS (SELECT 1 FROM activity_link xl JOIN ` + strings.TrimSuffix(kind, "_id") + ` s ON s.id = xl.` + kind + `
+	          WHERE xl.activity_id = o.id AND s.archived_at IS NULL` + differs + `)`
 }
 
 // deleteLinkedOriginalsTx destroys the originals of messages filed on one record.
