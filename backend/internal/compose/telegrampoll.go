@@ -290,64 +290,27 @@ func (w *telegramPollWorker) persist(wsCtx context.Context, target capture.Chann
 		if err := storekit.LockChannelIdentities(wsCtx, tx, telegramLockKeys(polledBatchAccounts(keep))); err != nil {
 			return err
 		}
-		for _, update := range keep {
-			suppressed, err := telegramAnySubjectSuppressed(wsCtx, tx, update.accounts)
-			if err != nil {
-				return err
-			}
-			if suppressed {
-				// An erased subject. Nothing is preserved for an operator to
-				// inspect and the log names no account: an installation told to
-				// stop profiling a human does not get to keep their words in a
-				// quarantine table, nor their id in a log line.
-				w.log.InfoContext(wsCtx, "telegram_poll: refused an update whose subject has been erased",
-					"connection", target.ID.String(), "update_id", update.updateID)
-				continue
-			}
-			// A business message is stored only through an approved link. Nothing of
-			// one that is not is kept, and the log carries no content.
-			linkID, admitted, err := capture.AdmitTelegramUpdateTx(wsCtx, tx, target.ID, update.raw)
-			if err != nil {
-				return err
-			}
-			if !admitted {
-				w.log.InfoContext(wsCtx, "telegram_poll: refused a business message that no approved link carries",
-					"connection", target.ID.String(), "update_id", update.updateID)
-				continue
-			}
-			rawID, err := capture.InsertRawCaptureTx(wsCtx, tx, capture.RawRecord{
-				SourceSystem: capture.ProviderTelegram,
-				SourceID:     telegram.RawSourceID(target.ChannelID, update.updateID),
-				Payload:      update.raw,
-			})
-			if err != nil {
-				return err
-			}
-			if err := w.inserter.EnqueueTx(wsCtx, tx, TelegramIngestArgs{
-				Workspace:      target.WorkspaceID,
-				ConnectionID:   target.ID.String(),
-				BotID:          target.ChannelID,
-				RawCaptureID:   rawID.String(),
-				BusinessLinkID: linkID,
-			}, &river.InsertOpts{
-				// One-off: this raw payload arrived once and no scan re-ingests
-				// it, so the ladder carries the database blip alone.
-				MaxAttempts: oneOffJobMaxAttempts,
-				UniqueOpts:  river.UniqueOpts{ByArgs: true},
-			}); err != nil {
-				return err
-			}
-		}
 		if highest == 0 {
-			// Nothing in the batch carried a number, so there is nothing this side
-			// could acknowledge — and inventing one would tell Telegram to forget an
-			// update nobody read. The refusals above are logged; the batch will
-			// arrive again until Telegram's own retention drops it.
+			// No update carried a number, so nothing can be acknowledged. The
+			// refusals above are logged and the batch arrives again.
 			return nil
 		}
 		actorCtx := principal.WithCorrelationID(principal.WithActor(wsCtx, telegramChannelPrincipal()), ids.NewV7())
-		if err := capture.RecordTelegramBusinessUpdatesTx(actorCtx, tx, target.ID, batch); err != nil {
-			return err
+		keptByID := make(map[int64]telegramPolledUpdate, len(keep))
+		for _, update := range keep {
+			keptByID[update.updateID] = update
+		}
+		// Telegram's order: a link change applies to the messages after it only.
+		for _, raw := range batch {
+			updateID, _ := telegram.UpdateIDOf(raw)
+			if err := capture.RecordTelegramBusinessUpdateTx(actorCtx, tx, target.ID, raw); err != nil {
+				return err
+			}
+			if update, kept := keptByID[updateID]; kept {
+				if err := w.storePolledUpdate(wsCtx, tx, target, update); err != nil {
+					return err
+				}
+			}
 		}
 		return capture.AdvanceChannelPollOffsetTx(wsCtx, tx, target.ID, target.ChannelID, highest+1)
 	})
@@ -454,4 +417,54 @@ func (w *telegramPollWorker) stopPolling(wsCtx context.Context, target capture.C
 	actorCtx := principal.WithCorrelationID(
 		principal.WithActor(wsCtx, telegramChannelPrincipal()), ids.NewV7())
 	return capture.StopPollingChannelConnection(actorCtx, w.pool, target.ID, status, reason)
+}
+
+// storePolledUpdate stores one kept update and queues its ingest job. It refuses
+// an erased subject and a business message that no approved link carries, and
+// leaves no trace of either.
+func (w *telegramPollWorker) storePolledUpdate(
+	wsCtx context.Context, tx pgx.Tx, target capture.ChannelPollTarget, update telegramPolledUpdate,
+) error {
+	suppressed, err := telegramAnySubjectSuppressed(wsCtx, tx, update.accounts)
+	if err != nil {
+		return err
+	}
+	if suppressed {
+		// An erased subject. Nothing is kept for an operator to inspect, and the
+		// log names no account.
+		w.log.InfoContext(wsCtx, "telegram_poll: refused an update whose subject has been erased",
+			"connection", target.ID.String(), "update_id", update.updateID)
+		return nil
+	}
+	// A business message is stored only through an approved link. Nothing of
+	// one that is not is kept, and the log carries no content.
+	linkID, admitted, err := capture.AdmitTelegramUpdateTx(wsCtx, tx, target.ID, update.raw)
+	if err != nil {
+		return err
+	}
+	if !admitted {
+		w.log.InfoContext(wsCtx, "telegram_poll: refused a business message that no approved link carries",
+			"connection", target.ID.String(), "update_id", update.updateID)
+		return nil
+	}
+	rawID, err := capture.InsertRawCaptureTx(wsCtx, tx, capture.RawRecord{
+		SourceSystem: capture.ProviderTelegram,
+		SourceID:     telegram.RawSourceID(target.ChannelID, update.updateID),
+		Payload:      update.raw,
+	})
+	if err != nil {
+		return err
+	}
+	return w.inserter.EnqueueTx(wsCtx, tx, TelegramIngestArgs{
+		Workspace:      target.WorkspaceID,
+		ConnectionID:   target.ID.String(),
+		BotID:          target.ChannelID,
+		RawCaptureID:   rawID.String(),
+		BusinessLinkID: linkID,
+	}, &river.InsertOpts{
+		// One-off: this raw payload arrived once and no scan re-ingests
+		// it, so the ladder carries the database blip alone.
+		MaxAttempts: oneOffJobMaxAttempts,
+		UniqueOpts:  river.UniqueOpts{ByArgs: true},
+	})
 }

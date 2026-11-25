@@ -13,6 +13,7 @@ package channels
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 	"testing"
@@ -308,5 +309,108 @@ func TestAMessageToTheBotStillFilesInTheBotsOwnNamespace(t *testing.T) {
 	filed, ok := c.filed(t, u.naturalKey())
 	if !ok || filed.audience != "workspace" || filed.direction != "inbound" || filed.thread != fmt.Sprintf("telegram:%d:%d", telegramBotID, u.senderID) {
 		t.Errorf("bot message filed as %+v (%v), want an inbound workspace message in the bot's own thread", filed, ok)
+	}
+}
+
+func TestALinkSwitchedOffAfterThePollAdmittedAMessageFilesNothingAndKeepsNoOriginal(t *testing.T) {
+	cases := map[string]string{
+		"owner turned it off": `UPDATE channel_connection SET status = 'disconnected' WHERE channel_id = $1`,
+		"admin disconnected":  `UPDATE channel_connection SET status = 'disconnected', archived_at = now() WHERE channel_id = $1`,
+	}
+	for name, switchOff := range cases {
+		t.Run(name, func(t *testing.T) {
+			c := setupTelegramConnected(t)
+			runner, sub := newTelegramWorker(t, c, compose.JobRunnerConfig{})
+			startTelegramWorker(t, runner)
+			c.link(t, 880051, "bc-late", "connected")
+			m := businessMessage{updateID: 7701, messageID: 1, chatID: 990051, fromID: 990051, connection: "bc-late", text: "too late"}
+
+			// A connection of its own, because the suite's owner connection is one
+			// session and a second transaction on it would share this one's state.
+			// The uncommitted update holds the link row, so the ingest job the poll
+			// queues waits at its lock until the switch-off commits.
+			hold, err := c.Pool.Begin(context.Background())
+			if err != nil {
+				t.Fatalf("opening the switch-off transaction: %v", err)
+			}
+			defer func() {
+				if err := hold.Rollback(context.Background()); err != nil && !errors.Is(err, pgx.ErrTxClosed) {
+					t.Errorf("rolling back the switch-off: %v", err)
+				}
+			}()
+			if _, err := hold.Exec(context.Background(), switchOff, "bc-late"); err != nil {
+				t.Fatalf("switching the link off: %v", err)
+			}
+			c.api.hold(m.body(t))
+			c.pollNow(t, sub, m.updateID+1)
+			if n := c.rawCaptures(t, m.updateID); n != 1 {
+				t.Errorf("%d raw captures once the poll admitted the message, want 1", n)
+			}
+			if err := hold.Commit(context.Background()); err != nil {
+				t.Fatalf("committing the switch-off: %v", err)
+			}
+			awaitJobKind(t, sub, compose.TelegramIngestArgs{}.Kind())
+
+			if n := c.activitiesOnBot(t); n != 0 {
+				t.Errorf("%d activities, want none", n)
+			}
+			if n := c.rawCaptures(t, m.updateID); n != 0 {
+				t.Errorf("%d raw captures left, want none", n)
+			}
+		})
+	}
+}
+
+func TestABatchAppliesALinkChangeBeforeAdmittingTheMessagesAfterIt(t *testing.T) {
+	const account, connection = 880061, "bc-order"
+	change := func(id int64, enabled bool) businessUpdate {
+		return businessUpdate{updateID: id, connectionID: connection, ownerID: account, firstName: "Ola", enabled: enabled}
+	}
+	message := func(id int64) businessMessage {
+		return businessMessage{updateID: id, messageID: id, chatID: 990061, fromID: 990061, connection: connection, text: "hi"}
+	}
+	cases := []struct {
+		name   string
+		status string
+		batch  func(t *testing.T) []json.RawMessage
+		last   int64
+		stored bool
+	}{
+		{"a message after a disable", "connected", func(t *testing.T) []json.RawMessage {
+			return []json.RawMessage{change(7801, false).body(t), message(7802).body(t)}
+		}, 7802, false},
+		{"a message before an enable", "disconnected", func(t *testing.T) []json.RawMessage {
+			return []json.RawMessage{message(7811).body(t), change(7812, true).body(t)}
+		}, 7812, false},
+		{"a message after an enable", "disconnected", func(t *testing.T) []json.RawMessage {
+			return []json.RawMessage{change(7821, true).body(t), message(7822).body(t)}
+		}, 7822, true},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			c := setupTelegramConnected(t)
+			runner, sub := newTelegramWorker(t, c, compose.JobRunnerConfig{})
+			startTelegramWorker(t, runner)
+			c.link(t, account, connection, tc.status)
+
+			for _, update := range tc.batch(t) {
+				c.api.hold(update)
+			}
+			c.pollNow(t, sub, tc.last+1)
+
+			if !tc.stored {
+				if n := c.ingestJobs(t); n != 0 {
+					t.Fatalf("%d ingest jobs, want none", n)
+				}
+				if n := c.rawCaptures(t, tc.last); n != 0 {
+					t.Errorf("%d raw captures of the refused message, want none", n)
+				}
+				return
+			}
+			awaitJobKind(t, sub, compose.TelegramIngestArgs{}.Kind())
+			if _, ok := c.filed(t, message(tc.last).sourceID(account)); !ok {
+				t.Error("the message after an enable was not filed")
+			}
+		})
 	}
 }

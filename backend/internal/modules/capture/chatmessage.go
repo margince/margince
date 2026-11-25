@@ -95,6 +95,9 @@ func chatRecord(binding connector.ChatBinding, msg connector.ChatMessage) (conne
 // message's key read as another's. The conversation and message ids are the
 // provider's own and are joined with colons, so neither may hold one.
 func validChatKeyParts(binding connector.ChatBinding, msg connector.ChatMessage) error {
+	if err := validChatOwnership(binding); err != nil {
+		return err
+	}
 	switch {
 	case binding.Provider == "" || binding.CapturedBy == "" || binding.KeyScope == "" || binding.ThreadScope == "":
 		return fmt.Errorf("%w: a chat binding names no provider, capturer or key scope", apperrors.ErrInvalidArgument)
@@ -104,6 +107,18 @@ func validChatKeyParts(binding connector.ChatBinding, msg connector.ChatMessage)
 		return fmt.Errorf("%w: a chat conversation or message id holds a colon, which would make its key ambiguous", apperrors.ErrInvalidArgument)
 	case msg.Direction != connector.DirectionInbound && msg.Direction != connector.DirectionOutbound:
 		return fmt.Errorf("%w: a chat message is neither inbound nor outbound", apperrors.ErrInvalidArgument)
+	}
+	return nil
+}
+
+// validChatOwnership refuses a binding whose ownership is neither workspace
+// nor member: the zero value would otherwise file a member's chat workspace-wide.
+func validChatOwnership(binding connector.ChatBinding) error {
+	switch {
+	case binding.Ownership != connector.ChatOwnedByWorkspace && binding.Ownership != connector.ChatOwnedByMember:
+		return fmt.Errorf("%w: a chat binding is owned by neither the workspace nor a member", apperrors.ErrInvalidArgument)
+	case binding.Ownership == connector.ChatOwnedByMember && binding.OwnerUserID.IsZero():
+		return fmt.Errorf("%w: a member-owned chat connection names no member to file for", apperrors.ErrInvalidArgument)
 	}
 	return nil
 }

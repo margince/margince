@@ -122,3 +122,24 @@ func TestAnAdapterCannotNameTheAudienceItself(t *testing.T) {
 		}
 	}
 }
+
+func TestABindingWithoutAKnownOwnershipOrAMemberIsRefused(t *testing.T) {
+	for name, tweak := range map[string]func(*connector.ChatBinding){
+		"zero ownership":    func(b *connector.ChatBinding) { b.Ownership = "" },
+		"unknown ownership": func(b *connector.ChatBinding) { b.Ownership = "team" },
+		"member, no member": func(b *connector.ChatBinding) { b.Ownership = connector.ChatOwnedByMember },
+	} {
+		t.Run(name, func(t *testing.T) {
+			b := botChatBinding()
+			tweak(&b)
+			if _, err := chatRecord(b, aChatMessage()); !errors.Is(err, apperrors.ErrInvalidArgument) {
+				t.Errorf("chatRecord error = %v, want ErrInvalidArgument", err)
+			}
+		})
+	}
+	b := botChatBinding()
+	b.Ownership, b.OwnerUserID = connector.ChatOwnedByMember, ids.NewV7()
+	if _, err := chatRecord(b, aChatMessage()); err != nil {
+		t.Errorf("a member-owned binding naming its member: %v", err)
+	}
+}

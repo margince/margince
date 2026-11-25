@@ -5,8 +5,8 @@ package capture
 
 // The two reads a Telegram Business message needs from its link row. The first
 // says whether the message may be stored at all, and the poller asks it before
-// it persists anything. The second says whose account and ownership a stored
-// message files under.
+// it persists anything. The second says whether the link still carries it, and
+// whose account and ownership a stored message files under.
 
 import (
 	"context"
@@ -64,18 +64,25 @@ func connectedBusinessLinkTx(ctx context.Context, tx pgx.Tx, bot ids.UUID, busin
 	return id, true, nil
 }
 
-// BusinessLinkTx reads the account and ownership of one link by its row id, for
-// the worker that files a message the poller admitted. It skips the status check.
-// Admission was decided on arrival, and a link switched off since must not strand
-// a stored message.
-func BusinessLinkTx(ctx context.Context, tx pgx.Tx, linkID ids.UUID) (telegram.BusinessLink, error) {
+// LockLiveBusinessLinkTx reads the account and ownership of the link a stored
+// message was admitted through. It holds the row FOR SHARE until the caller's
+// transaction ends. Every writer that disconnects, disables or archives the link
+// updates the row and waits on that lock. It answers false for a link that is no
+// longer connected, because a link switched off after admission must not file
+// what it queued.
+func LockLiveBusinessLinkTx(ctx context.Context, tx pgx.Tx, linkID ids.UUID) (telegram.BusinessLink, bool, error) {
 	_, link, err := scanBusinessLink(tx.QueryRow(ctx, `
 		SELECT `+businessLinkColumns+` FROM channel_connection
-		 WHERE id = $1 AND provider = $2 AND parent_connection_id IS NOT NULL`, linkID, telegram.BusinessProvider))
-	if err != nil {
-		return telegram.BusinessLink{}, fmt.Errorf("capture: reading the business link of a stored message: %w", err)
+		 WHERE id = $1 AND provider = $2 AND parent_connection_id IS NOT NULL
+		   AND status = $3 AND archived_at IS NULL FOR SHARE`,
+		linkID, telegram.BusinessProvider, channelStatusConnected))
+	if errors.Is(err, pgx.ErrNoRows) {
+		return telegram.BusinessLink{}, false, nil
 	}
-	return link, nil
+	if err != nil {
+		return telegram.BusinessLink{}, false, fmt.Errorf("capture: reading the business link of a stored message: %w", err)
+	}
+	return link, true, nil
 }
 
 const businessLinkColumns = `id, account_id, ownership, owner_user_id`
@@ -95,19 +102,28 @@ func scanBusinessLink(row pgx.Row) (ids.UUID, telegram.BusinessLink, error) {
 	return id, link, nil
 }
 
-// BusinessLinkOfJob reads the link an ingest job was admitted through. The caller
-// asks only for a job that carries a link id: a job whose update was sent to the
-// bot itself has none.
-func BusinessLinkOfJob(ctx context.Context, pool *pgxpool.Pool, linkID string) (telegram.BusinessLink, error) {
+// FileThroughLiveBusinessLink runs file while the link a stored message came
+// through is still connected. It holds the link row for the whole call, so a
+// disconnect or disable waits for the filing. A link that is no longer live files
+// nothing and the stored original is destroyed. It reports whether file ran.
+func FileThroughLiveBusinessLink(
+	ctx context.Context, pool *pgxpool.Pool, linkID string, rawID ids.UUID, file func(telegram.BusinessLink) error,
+) (bool, error) {
 	id, err := ids.Parse(linkID)
 	if err != nil {
-		return telegram.BusinessLink{}, fmt.Errorf("capture: business link id: %w", err)
+		return false, fmt.Errorf("capture: business link id: %w", err)
 	}
-	var link telegram.BusinessLink
+	live := false
 	err = database.WithWorkspaceTx(ctx, pool, func(tx pgx.Tx) error {
-		var err error
-		link, err = BusinessLinkTx(ctx, tx, id)
-		return err
+		link, found, err := LockLiveBusinessLinkTx(ctx, tx, id)
+		if err != nil {
+			return err
+		}
+		if !found {
+			return DeleteRawCaptureTx(ctx, tx, rawID)
+		}
+		live = true
+		return file(link)
 	})
-	return link, err
+	return live, err
 }

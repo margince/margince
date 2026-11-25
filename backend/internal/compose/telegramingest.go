@@ -158,23 +158,32 @@ func (w *telegramIngestWorker) Work(ctx context.Context, job *river.Job[Telegram
 		return jobs.FaultContext(ctx, w.applyMembership(actorCtx, job.Args.BotID, membership))
 	}
 
-	var link *telegram.BusinessLink
-	if job.Args.BusinessLinkID != "" {
-		found, err := capture.BusinessLinkOfJob(wsCtx, w.pool, job.Args.BusinessLinkID)
-		if err != nil {
-			return jobs.FaultContext(ctx, err)
-		}
-		link = &found
+	return jobs.FaultContext(ctx, w.fileChatUpdate(actorCtx, job.Args.BusinessLinkID, rawID, raw))
+}
+
+// fileChatUpdate files one stored chat update. A business update is filed only
+// while its link is still live, and its original is destroyed when it is not.
+func (w *telegramIngestWorker) fileChatUpdate(actorCtx context.Context, businessLinkID string, rawID ids.UUID, raw connector.RawRecord) error {
+	if businessLinkID == "" {
+		return w.parseAndFile(actorCtx, raw, nil, rawID)
 	}
+	live, err := capture.FileThroughLiveBusinessLink(actorCtx, w.pool, businessLinkID, rawID, func(link telegram.BusinessLink) error {
+		return w.parseAndFile(actorCtx, raw, &link, rawID)
+	})
+	if err == nil && !live {
+		w.log.InfoContext(actorCtx, "telegram_ingest: discarded a business message whose link is no longer connected")
+	}
+	return err
+}
+
+func (w *telegramIngestWorker) parseAndFile(actorCtx context.Context, raw connector.RawRecord, link *telegram.BusinessLink, rawID ids.UUID) error {
 	binding, msg, err := telegram.ParseChatMessage(raw, link)
 	if err != nil {
 		if errors.Is(err, connector.ErrSkip) {
-			// A deliberate exclusion — an update kind neither the membership
-			// classification above nor ParseChatMessage maps as a message
-			// (an edited_message, say) — counted, never a fault.
+			// An update kind that is no message, such as an edited_message: never a fault.
 			return nil
 		}
-		return jobs.FaultContext(ctx, fmt.Errorf("telegram_ingest: normalizing: %w", err))
+		return fmt.Errorf("telegram_ingest: normalizing: %w", err)
 	}
 	// The poll stored the update before this job existed. Naming its row is what
 	// lets a retention purge destroy the original, because raw_capture and the
@@ -190,7 +199,7 @@ func (w *telegramIngestWorker) Work(ctx context.Context, job *river.Job[Telegram
 		}
 		// River persists returned job errors, and the natural key holds the
 		// customer's account id, so the key stays out of this error.
-		return jobs.FaultContext(ctx, fmt.Errorf("telegram_ingest: capturing an update: %w", err))
+		return fmt.Errorf("telegram_ingest: capturing an update: %w", err)
 	}
 	return nil
 }
