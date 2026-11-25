@@ -42,7 +42,7 @@ Also called: upload a CSV, import steps, import a ZIP.
 ### What does the test run tell me?
 **Test run** reads the whole file and writes nothing. For each record type it counts the rows that are new, the rows that update a record, and the rows that stay the same.
 
-It lists each problem with its file, row and column. Each problem has a kind, such as **Broken link**, **Invalid value**, **Unknown owner** or **New tag**. **problems.csv** downloads the list. Its columns are file, row, column, problem and value.
+It lists each problem with its file, row and column. A row with several wrong values lists each of them, so one upload shows all you need to fix. Each problem has a kind, such as **Broken link**, **Invalid value**, **Unknown owner** or **New tag**. **problems.csv** downloads the list. Its columns are file, row, column, problem and value.
 
 The test run also counts the deals that land as closed history. **Stop test** ends a test that is still running.
 
@@ -74,7 +74,7 @@ These stop nothing. The row lands, and the problem is listed:
 Also called: rows skipped, import errors, why was my row not imported.
 
 ### What does **Import anyway** do?
-**Import anyway** lands the rows that have a broken link, without the link. It appears when the test run finds one. Tick the box, and the test runs again. The button then says **Import {count} rows anyway**, with the rows it lands counted.
+**Import anyway** lands the rows that have a broken link, without the link. It appears when the test run finds one. Tick the box, and the test runs again. The button then says **Import {count} rows anyway**, with the rows it lands counted. Each such row then says it will be imported without the link.
 
 The result lists every link that was left out as **Link left out**. A row with another problem is still skipped.
 Also called: keep rows with broken links, import without the company link.
@@ -141,7 +141,7 @@ A `deals.csv` row is one deal. Each row needs a `ref`. A new deal also needs a `
 |---|---|
 | `pipeline` | The pipeline's name. Empty means the default pipeline. |
 | `stage` | The stage's name in that pipeline. Case does not matter. |
-| `amount` and `currency` | The value as a plain number, and its three-letter currency code. An amount needs a currency. |
+| `amount` and `currency` | The value as a plain number, and its three-letter currency code. An amount needs a currency. It cannot be below zero, and it is written the way its currency counts, such as `12000.50` in `EUR` and `12000` in `JPY`. |
 | `close_date` | `YYYY-MM-DD`. An open deal's date cannot be in the past. |
 | `company_ref` | The deal's company, found as a contact's is. |
 | `contact_ref` | A contact on the deal, by `ref`, email or Margince ID. The contact becomes a stakeholder. |

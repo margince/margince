@@ -120,6 +120,9 @@ type csvWriters struct {
 	// predictedWarnings are a predicted row's warnings beyond the one predictRow
 	// returns; predictPages reports and clears them.
 	predictedWarnings []migration.SkippedRow
+	// predictedFaults are the invalid cells of a predicted row beyond the one
+	// predictRow returns; predictPages reports them as that row's skips.
+	predictedFaults []migration.SkippedRow
 	// predictedChange files the record a predicted update leaves (rememberRow).
 	predictedChange func(*contacts.Batch)
 }
@@ -216,7 +219,9 @@ func (w *csvWriters) ensureOne(ctx context.Context, object string, row migration
 	}
 	typed, invalid, unknownOwner := w.landingCells(row)
 	if invalid != nil {
-		return skippedWithProblem(invalid), nil
+		skipped := skippedWithProblem(&invalid[0])
+		skipped.MoreProblems = invalid[1:]
+		return skipped, nil
 	}
 	link, err := w.linkProblemOf(ctx, row)
 	if err != nil {

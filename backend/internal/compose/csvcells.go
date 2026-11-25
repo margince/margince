@@ -7,12 +7,13 @@ package compose
 // the commit both ask here, so a preview cannot promise a row the store refuses.
 
 import (
+	"cmp"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"maps"
 	"slices"
-	"sort"
+	"strconv"
 	"strings"
 
 	"github.com/margince/margince/backend/internal/compose/importtextbounds"
@@ -40,17 +41,24 @@ func problemOf(target, value string, why migration.Reason) *cellProblem {
 	return &cellProblem{Target: target, Value: value, Message: why.English(), Why: why}
 }
 
+// cellProblems collects the cells of one row the store would refuse, in the
+// order they were checked.
+type cellProblems []*cellProblem
+
+// add keeps a check's problem and passes over a check that found none.
+func (p *cellProblems) add(problem *cellProblem) {
+	if problem != nil {
+		*p = append(*p, problem)
+	}
+}
+
 // checkRow checks the core cells, then each custom-field cell in target order.
 // It answers the filled phone, LinkedIn and custom-field cells in the shape the
-// store holds them. The first problem wins.
-func checkRow(object string, fields map[string]string, cat importCatalog) (map[string]any, *cellProblem) {
-	if problem := unwritableReason(object, fields); problem != nil {
-		return nil, problem
-	}
-	typed, problem := checkParsedCells(object, fields)
-	if problem != nil {
-		return nil, problem
-	}
+// store holds them. A row the store would refuse answers each refused cell.
+func checkRow(object string, fields map[string]string, cat importCatalog) (map[string]any, []*cellProblem) {
+	problems := unwritableCells(object, fields)
+	typed, unparsed := checkParsedCells(object, fields)
+	problems = append(problems, unparsed...)
 	for _, target := range slices.Sorted(maps.Keys(fields)) {
 		raw := fields[target]
 		if !datasource.IsCustomFieldKey(target) || strings.TrimSpace(raw) == "" {
@@ -59,24 +67,30 @@ func checkRow(object string, fields map[string]string, cat importCatalog) (map[s
 		col, active := cat.byName[target]
 		if !active {
 			// Retired after the run was staged: the store has no column to bind it to.
-			return nil, problemOf(target, raw, migration.Why(migration.ReasonFieldInactive, "value", strings.TrimSpace(raw)))
+			problems = append(problems, problemOf(target, raw, migration.Why(migration.ReasonFieldInactive, "value", strings.TrimSpace(raw))))
+			continue
 		}
 		value, problem := checkCell(target, col, raw, cat.optionsReadable)
 		if problem != nil {
-			return nil, problem
+			problems = append(problems, problem)
+			continue
 		}
 		if typed == nil {
 			typed = map[string]any{}
 		}
 		typed[target] = value
 	}
+	if len(problems) > 0 {
+		return nil, problems
+	}
 	return typed, nil
 }
 
 // checkParsedCells reads the phone and LinkedIn cells through the parsers the
 // store writes with, so the row carries the spelling the store will hold.
-func checkParsedCells(object string, fields map[string]string) (map[string]any, *cellProblem) {
+func checkParsedCells(object string, fields map[string]string) (map[string]any, []*cellProblem) {
 	var typed map[string]any
+	var problems []*cellProblem
 	for _, target := range []string{fieldPhone, fieldLinkedIn} {
 		text := strings.TrimSpace(fields[target])
 		if text == "" {
@@ -84,14 +98,15 @@ func checkParsedCells(object string, fields map[string]string) (map[string]any, 
 		}
 		stored, err := storedSpelling(object, target, text)
 		if err != nil {
-			return nil, problemOf(target, fields[target], parseReason(text, err))
+			problems = append(problems, problemOf(target, fields[target], parseReason(target, text, err)))
+			continue
 		}
 		if typed == nil {
 			typed = map[string]any{}
 		}
 		typed[target] = stored
 	}
-	return typed, nil
+	return typed, problems
 }
 
 // storedSpelling is the parser each object's store runs on a phone or a
@@ -109,12 +124,27 @@ func storedSpelling(object, target, text string) (string, error) {
 	}
 }
 
-func parseReason(text string, err error) migration.Reason {
+func parseReason(target, text string, err error) migration.Reason {
 	parseErr, ok := errors.AsType[*values.ParseError](err)
 	if !ok {
 		return migration.Why(migration.ReasonValueUnreadable, "value", text)
 	}
-	if parseErr.Code == "phone_needs_country_code" {
+	if target == fieldPhone {
+		return phoneReason(text, parseErr)
+	}
+	return migration.Why(migration.ReasonValueRefused, "value", text, "detail", parseErr.Message)
+}
+
+// phoneReason asks for the country code only of a cell that holds a number.
+// Text with more in it than digits, a plus and separators is no phone number.
+func phoneReason(text string, parseErr *values.ParseError) migration.Reason {
+	const digits = "0123456789"
+	numeric := strings.ContainsAny(text, digits) &&
+		strings.Trim(text, digits+"+"+strings.Join(values.PhoneSeparators(), "")) == ""
+	switch {
+	case !numeric:
+		return migration.Why(migration.ReasonNotAPhone, "value", text)
+	case parseErr.Code == "phone_needs_country_code":
 		return migration.Why(migration.ReasonPhoneNeedsCountry, "value", text)
 	}
 	return migration.Why(migration.ReasonValueRefused, "value", text, "detail", parseErr.Message)
@@ -193,9 +223,25 @@ func currencyValue(col fieldcatalog.Column, text string) (float64, migration.Rea
 	}
 	minor, ok := values.MinorUnits(text, col.Currency)
 	if !ok {
-		return 0, migration.Why(migration.ReasonNotAnAmount, "value", text, "currency", col.Currency)
+		return 0, amountReason(text, col.Currency)
 	}
 	return float64(minor), migration.Reason{}
+}
+
+// amountReason says what is wrong with text as an amount in currency: its
+// sign, its decimal places, or its form. The example is one the currency takes.
+func amountReason(text, currency string) migration.Reason {
+	digits := values.MinorUnitDigits(currency)
+	unsigned, negative := strings.CutPrefix(text, "-")
+	scale := values.MinorUnitScale(currency)
+	example := values.MajorUnits(12000*scale+scale/2, currency)
+	switch {
+	case negative && values.PlainDecimal(unsigned, len(unsigned), len(unsigned)):
+		return migration.Why(migration.ReasonAmountNegative, "value", text)
+	case values.PlainDecimal(text, len(text), len(text)) && !values.PlainDecimal(text, len(text), digits):
+		return migration.Why(migration.ReasonAmountTooManyDecimals, "value", text, "currency", currency, "example", example)
+	}
+	return migration.Why(migration.ReasonNotAnAmount, "value", text, "currency", currency, "example", example)
 }
 
 // spreadsheetBooleans are the spellings a spreadsheet uses for yes and no.
@@ -256,66 +302,81 @@ func (w *csvWriters) headerFor(target string) string {
 	return columnFor(w.columns, target)
 }
 
-// checkedCells is checkRow for one of this part's rows, with a problem
-// rendered as the report's invalid_value issue on the file's column.
-func (w *csvWriters) checkedCells(row migration.Row) (map[string]any, *migration.SkippedRow) {
+// checkedCells is checkRow for one of this part's rows, then the cells only
+// its object has. Every problem is rendered as the report's invalid_value
+// issue on the file's column, so one upload shows all a row needs corrected.
+func (w *csvWriters) checkedCells(row migration.Row) (map[string]any, []migration.SkippedRow) {
 	fields := textFields(row.Fields)
-	typed, problem := checkRow(w.object, fields, w.cols.catalog)
-	if problem == nil && w.object == migration.ObjectDeal {
-		typed, problem = w.dealStages.checkCells(fields, typed)
-	}
-	if problem == nil && w.object == migration.ObjectLead {
+	typed, problems := checkRow(w.object, fields, w.cols.catalog)
+	var own []*cellProblem
+	switch w.object {
+	case migration.ObjectDeal:
+		typed, own = w.dealStages.checkCells(fields, typed)
+	case migration.ObjectLead:
+		var problem *cellProblem
 		typed, problem = checkLeadStatus(fields, typed)
+		if problem != nil {
+			own = append(own, problem)
+		}
+	case migration.ObjectActivity:
+		typed, own = checkActivityCells(fields, typed, w.cellClock())
 	}
-	if problem == nil && w.object == migration.ObjectActivity {
-		typed, problem = checkActivityCells(fields, typed, w.cellClock())
-	}
-	if problem == nil {
+	problems = append(problems, own...)
+	if len(problems) == 0 {
 		return typed, nil
 	}
-	return nil, &migration.SkippedRow{
-		ExternalID: row.ExternalID, Line: row.Line, Column: w.headerFor(problem.Target),
-		Kind: migration.ProblemInvalidValue, Value: problem.Value,
-		Reason: problem.Message, Code: problem.Why.Code, Params: problem.Why.Params,
+	invalid := make([]migration.SkippedRow, 0, len(problems))
+	for _, problem := range problems {
+		invalid = append(invalid, migration.SkippedRow{
+			ExternalID: row.ExternalID, Line: row.Line, Column: w.headerFor(problem.Target),
+			Kind: migration.ProblemInvalidValue, Value: problem.Value,
+			Reason: problem.Message, Code: problem.Why.Code, Params: problem.Why.Params,
+		})
 	}
+	return nil, invalid
 }
 
-// unwritableReason is the core-field half of checkRow: a value the store
+// unwritableCells is the core-field half of checkRow: each value the store
 // refuses before or inside the write transaction.
-//
-// The size_band vocabulary is read off the generated contract, not
-// hand-copied, so a band added to crm.yaml leaves no second list behind.
-// Held by: TestEveryClosedVocabularyOverAContractEnumHoldsAllOfIt (backend/gates/contractvocabulary_test.go)
-func unwritableReason(object string, fields map[string]string) *cellProblem {
+func unwritableCells(object string, fields map[string]string) []*cellProblem {
+	var problems cellProblems
 	if reason := authorUnwritableReason(fields); reason.Code != "" {
-		return problemOf(csvTargetAuthor, fields[csvTargetAuthor], reason)
+		problems.add(problemOf(csvTargetAuthor, fields[csvTargetAuthor], reason))
 	}
-	if problem := tagCellProblem(fields[csvTargetTags]); problem != nil {
-		return problem
-	}
+	problems.add(tagCellProblem(fields[csvTargetTags]))
 	if object == migration.ObjectContact || object == migration.ObjectCompany {
-		if problem := countryCellProblem(fields); problem != nil {
-			return problem
-		}
+		problems.add(countryCellProblem(fields))
 	}
-	if problem := emailCellProblem(object, fields); problem != nil {
-		return problem
-	}
+	problems.add(emailCellProblem(object, fields))
 	if target, value, why, refused := importtextbounds.Refusal(object, fields); refused {
-		return problemOf(target, value, why)
+		problems.add(problemOf(target, value, why))
 	}
-	if object == migration.ObjectContact || object == migration.ObjectLead {
+	if object == migration.ObjectCompany {
+		problems.add(domainCellProblem(fields))
+		problems.add(sizeBandCellProblem(fields))
+	}
+	return problems
+}
+
+// domainCellProblem refuses a domain the companies store's parser cannot read
+// before the write.
+func domainCellProblem(fields map[string]string) *cellProblem {
+	domain := strings.TrimSpace(fields[fieldDomain])
+	if domain == "" {
 		return nil
 	}
-	if object != migration.ObjectCompany {
-		return nil
+	if _, err := owndomain.ParseDomain(domain); err != nil {
+		return problemOf(fieldDomain, fields[fieldDomain], migration.Why(migration.ReasonNotADomain, "value", domain))
 	}
-	// parseCompanyDomains refuses a domain its parser cannot read before the write.
-	if domain := strings.TrimSpace(fields[fieldDomain]); domain != "" {
-		if _, err := owndomain.ParseDomain(domain); err != nil {
-			return problemOf(fieldDomain, fields[fieldDomain], migration.Why(migration.ReasonNotADomain, "value", domain))
-		}
-	}
+	return nil
+}
+
+// sizeBandCellProblem refuses a size band outside the contract's vocabulary.
+//
+// The vocabulary is read off the generated contract, not hand-copied, so a
+// band added to crm.yaml leaves no second list behind.
+// Held by: TestEveryClosedVocabularyOverAContractEnumHoldsAllOfIt (backend/gates/contractvocabulary_test.go)
+func sizeBandCellProblem(fields map[string]string) *cellProblem {
 	band := strings.TrimSpace(fields[fieldSizeBand])
 	if band == "" || importableSizeBands[band] {
 		return nil
@@ -348,15 +409,28 @@ var importableSizeBands = map[string]bool{
 	string(crmcontracts.CompanySizeBandN5000):     true,
 }
 
-// sizeBandVocabulary renders the bands in ascending order, so a refusal reads
-// the same on every call.
+// sizeBandVocabulary renders the bands from the smallest company to the
+// largest, by the head count each band starts at.
 func sizeBandVocabulary() []string {
-	out := make([]string, 0, len(importableSizeBands))
-	for band := range importableSizeBands {
-		out = append(out, band)
+	bands := slices.Collect(maps.Keys(importableSizeBands))
+	slices.SortFunc(bands, func(a, b string) int {
+		return cmp.Or(cmp.Compare(firstHeadCount(a), firstHeadCount(b)), cmp.Compare(a, b))
+	})
+	return bands
+}
+
+// firstHeadCount is the number a band opens with: 11 for "11-50", 5000 for "5000+".
+func firstHeadCount(band string) int {
+	end := strings.IndexFunc(band, func(r rune) bool { return r < '0' || r > '9' })
+	if end < 0 {
+		end = len(band)
 	}
-	sort.Strings(out)
-	return out
+	count, err := strconv.Atoi(band[:end])
+	if err != nil {
+		// A band that opens with no number sorts first, where a reader sees it.
+		return -1
+	}
+	return count
 }
 
 // emailCellProblem refuses an address the store would refuse. Every store
