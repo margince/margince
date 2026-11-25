@@ -289,30 +289,71 @@ const valuesOf = (rule: Rule, properties: readonly string[]) =>
 const ruled = (rule: Rule) =>
   valuesOf(rule, FOOT).some((value) => RULED.test(value));
 
-// A field may clear its other sides when its own foot is a solid line in the
-// control token. Nothing in the rule may take that foot away again.
-function rulesOwnFoot(rule: Rule): boolean {
-  const cleared =
-    valuesOf(rule, FOOT).some((value) => /^(?:0(?:px)?|none)$/.test(value)) ||
-    valuesOf(
-      rule,
-      UNDRAWS.filter((property) => property.endsWith("-width")),
-    ).some((value) => /^0(?:px)?$/.test(value));
-  const footed =
-    valuesOf(rule, FOOT_SIDES).some((value) => RULED.test(value)) ||
-    valuesOf(
-      rule,
-      FOOT_SIDES.map((side) => `${side}-color`),
-    ).includes(CONTROL);
-  return footed && !cleared;
+type Side = { width: string; style: string; color: string };
+const STYLE =
+  /^(?:none|hidden|solid|dashed|dotted|double|groove|ridge|inset|outset)$/;
+const WIDTH = /^(?:\d+(?:\.\d+)?(?:px|r?em)?|thin|medium|thick)$/;
+const FOOT_SHORTHANDS = new Set([...FOOT, "border-block"]);
+const FOOT_PART =
+  /^border(?:-bottom|-block-end|(-block))?-(width|style|color)$/;
+
+// A shorthand resets the side's width, style and colour, then sets those it names.
+function sideOf(value: string): Side {
+  const side = { width: "medium", style: "none", color: "currentcolor" };
+  for (const token of splitTopLevel(value, " ")) {
+    if (STYLE.test(token)) side.style = token;
+    else if (WIDTH.test(token)) side.width = token;
+    else side.color = token;
+  }
+  return side;
 }
 
-// A row is named by its classes. Any rule on a box with those classes that
-// takes the foot away again, in any state, unseats the row.
+// The foot a rule leaves, read in declaration order. It starts as the field's
+// own solid line, so a rule that only recolours the foot draws it.
+function footOf(rule: Rule): Side {
+  let foot: Side = { width: "1px", style: "solid", color: "" };
+  for (const declaration of splitTopLevel(rule.body, ";")) {
+    const at = declaration.indexOf(":");
+    const property = declaration.slice(0, at).trim();
+    const value = declaration.slice(at + 1).trim();
+    const part = FOOT_PART.exec(property);
+    if (FOOT_SHORTHANDS.has(property)) {
+      foot = sideOf(value);
+    } else if (part) {
+      // A box list names the foot third; a block pair names it second.
+      const box = splitTopLevel(value, " ");
+      const named = /^border-(?:width|style|color)$/.test(property)
+        ? (box[2] ?? box[0])
+        : part[1]
+          ? (box[1] ?? box[0])
+          : value;
+      foot = { ...foot, [part[2]]: named };
+    }
+  }
+  return foot;
+}
+
+// A field may clear its other sides when the foot it leaves is a solid line in
+// the control token.
+function rulesOwnFoot(rule: Rule): boolean {
+  const { width, style, color } = footOf(rule);
+  return (
+    !/^0(?:\.0+)?(?:px|r?em)?$/.test(width) &&
+    style === "solid" &&
+    color === CONTROL
+  );
+}
+
+// A row is a box named by a class. Any rule on a box with those classes that
+// takes the foot away, in any state, unseats it.
 function ruledRows(rules: readonly Rule[]) {
   const unseating = rules
     .filter((rule) => valuesOf(rule, UNDRAWS).some(noEdge))
-    .flatMap((rule) => subjectsOf(rule).map(ownClasses));
+    .flatMap((rule) =>
+      subjectsOf(rule)
+        .filter((subject) => !subject.includes("::"))
+        .map(ownClasses),
+    );
   const seated = (alternative: string) => {
     const named = ownClasses(subjectOf(alternative));
     return (
@@ -337,13 +378,17 @@ function weakEdges(
   { fields, framed }: Omit<Frames, "rows">,
 ) {
   const frames = { fields, framed, rows: ruledRows(rules) };
+  // Child and descendant steps compare alike here: reading more boxes as
+  // fields only widens what is checked.
+  const loose = (selector: string) => selector.replaceAll(" > ", " ");
+  const litInContext = new Set([...framed].map(loose));
   return rules.flatMap((rule) =>
     alternativesOf(rule.selector).flatMap((alternative) => {
       const subject = subjectOf(alternative);
       const field =
         (ENTRY_ELEMENT.test(subject) && !TOGGLE.test(subject)) ||
         ownClasses(subject).some((name) => fields.has(name)) ||
-        framed.has(wholeRun(alternative));
+        litInContext.has(loose(wholeRun(alternative)));
       if (!field || !atRest(subject)) return [];
       return findingsOf(rule, alternative, frames);
     }),

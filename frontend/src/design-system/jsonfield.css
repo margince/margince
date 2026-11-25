@@ -18,13 +18,12 @@
   border-color: var(--focusEdge);
   box-shadow: var(--focus-field);
 }
-/* Keyed on the textarea's aria-invalid, as .field-shell is. A refused field
-   keeps its danger edge in focus too. */
+/* Keyed on the textarea's aria-invalid, as .field-shell is. Later than the
+   focus rule, so a refused field keeps its danger edge in focus. */
 .json-field:has([aria-invalid="true"]) {
   border-color: var(--danger);
 }
 .json-field:has([aria-invalid="true"]):focus-within {
-  border-color: var(--danger);
   box-shadow: var(--focus-field-danger);
 }
 /* As .field-shell dims: 1.4.11 exempts a field nobody may use. */

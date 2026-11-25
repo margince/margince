@@ -70,7 +70,7 @@ export function JsonField({
         {...rest}
         className="code-block json-field-text"
         spellCheck={false}
-        aria-invalid={invalid || undefined}
+        aria-invalid={invalid || rest["aria-invalid"] || undefined}
         value={value}
         onChange={(e) => onChange(e.target.value)}
         onScroll={(e) => {

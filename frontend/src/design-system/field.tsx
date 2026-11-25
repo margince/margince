@@ -36,18 +36,11 @@ export function TextInput({
 }
 
 /**
- * The one search field: a text input that announces itself as a search box and
- * carries the magnifier.
- *
- * `flush` is for a field whose container already draws the chrome: the ⌘K
- * palette's own bar, with its own ground, inset and bottom rule. It drops the
- * field's fill, radius and padding; the container's sheet removes the border,
- * since only it knows that its rule is the field's edge.
- * It is a variant rather than a caller overriding `.input` from outside. A call
- * site that reaches in to cancel a primitive's chrome is how the next surface
- * grows a second search field nobody can find. It takes a `ref` for the reason
- * `TextInput` does: a caller moving focus here needs the node. A field labelled
- * by `Field` carries no id the caller minted to find it by. */
+ * The one search field: a search box that carries the magnifier. `flush` drops
+ * the fill, radius and padding where a container draws the chrome, as the ⌘K bar
+ * does. That container's sheet clears the border: only it knows its rule is the
+ * field's edge. A variant, since a caller cancelling `.input` from outside grows
+ * a second search field. `ref` lets a caller move focus here. */
 export function SearchField({
   flush,
   ...props

@@ -1002,7 +1002,7 @@
    last type reads as more to scroll to rather than as clipped. */
 .palette-filter {
   position: relative;
-  padding: var(--space-3) var(--space-8) var(--space-3) var(--space-4);
+  padding: var(--space-2) var(--space-8) var(--space-3) var(--space-4);
   overflow-x: auto;
   scrollbar-width: none;
   mask-image: linear-gradient(

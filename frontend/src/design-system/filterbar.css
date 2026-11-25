@@ -112,7 +112,11 @@
   background: none;
   box-shadow: none;
 }
-.filter-bar[data-labels="inside"] .field:has([aria-invalid="true"]) {
+/* A disabled chip stays dim even when its value was refused. */
+.filter-bar[data-labels="inside"]
+.field:has([aria-invalid="true"]):not(
+  :has(.input:disabled, .input[aria-disabled="true"])
+) {
   border-color: var(--danger);
 }
 .filter-bar[data-labels="inside"]

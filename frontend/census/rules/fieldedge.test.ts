@@ -228,8 +228,14 @@ describe("a text field's resting edge", () => {
         ".a .b .box { border: 0; }",
         ".c:focus-within .d:focus-within { border-color: var(--accent); }",
         ".c .d > .box { border: 0; }",
+        ".e .f:focus-within { border-color: var(--accent); }",
+        `.e > .f { border: ${faint}; }`,
       ]),
-    ).toEqual([`${SHEET}: .a .b draws ${faint}`, bare(".a .b")]);
+    ).toEqual([
+      `${SHEET}: .a .b draws ${faint}`,
+      bare(".a .b"),
+      `${SHEET}: .e > .f draws ${faint}`,
+    ]);
   });
 
   it("unseats a row that any rule on its box takes the foot from", () => {
@@ -242,6 +248,9 @@ describe("a text field's resting edge", () => {
         ".kept { border-bottom: 1px solid var(--borderControl); }",
         ".kept:hover { border-bottom-color: var(--accent); }",
         ".kept .box { border: 0; }",
+        ".marked { border-bottom: 1px solid var(--borderControl); }",
+        ".marked::after { border: 0; }",
+        ".marked .box { border: 0; }",
       ]),
     ).toEqual([bare(".row .box"), bare(".row.flat .box")]);
   });
@@ -256,11 +265,13 @@ describe("a text field's resting edge", () => {
         ".side .box { border: 1px solid transparent; border-left: 1px solid var(--borderControl); }",
         ".dotted .box { border-color: transparent; border-bottom: 1px dotted var(--borderControl); }",
         ".thin .box { border-color: transparent; border-bottom-color: var(--borderControl); border-bottom-width: 0; }",
+        ".flush .box { border: 0; border-bottom: 1px solid var(--borderControl); }",
+        ".late .box { border-bottom: 1px solid var(--borderControl); border: 0; }",
       ]),
     ).toEqual([
       bare(".faint .box"),
       `${SHEET}: .faint .box draws var(--borderSubtle)`,
-      ...[".zero", ".top", ".side", ".dotted", ".thin"].map((row) =>
+      ...[".zero", ".top", ".side", ".dotted", ".thin", ".late"].map((row) =>
         bare(`${row} .box`),
       ),
     ]);
