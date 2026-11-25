@@ -15,7 +15,6 @@ import (
 	"fmt"
 	"strings"
 	"time"
-	"unicode/utf8"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
@@ -24,6 +23,7 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -31,7 +31,7 @@ import (
 )
 
 // maxTeamName mirrors the contract's maxLength.
-const maxTeamName = 120
+const maxTeamName = values.TextLabelCharacters
 
 // Team is one team row as the admin surface returns it.
 type Team struct {
@@ -341,11 +341,11 @@ func (s *Service) CallerLeadsLiveTeam(ctx context.Context, team ids.UUID) (bool,
 // validTeamName trims and bounds a team name.
 func validTeamName(raw string) (string, error) {
 	name := strings.TrimSpace(values.WithoutZeroWidth(raw))
-	if !values.HasVisibleText(name) || utf8.RuneCountInString(name) > maxTeamName {
+	if !values.HasVisibleText(name) {
 		return "", &values.ParseError{
 			Field: "name", Code: "invalid_team_name",
 			Message: fmt.Sprintf("a team name is 1 to %d characters", maxTeamName),
 		}
 	}
-	return name, nil
+	return name, httperr.RequireWithin("name", name, maxTeamName)
 }

@@ -4,6 +4,7 @@
 package contacts
 
 import (
+	"strings"
 	"testing"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
@@ -18,5 +19,22 @@ func TestACapturedNameOfSpacesIsAbsentAndTheRestOfTheFoldStands(t *testing.T) {
 	}
 	if patch.Title == nil || *patch.Title != "CTO" {
 		t.Errorf("the title the same capture carried was lost: %v", patch.Title)
+	}
+}
+
+// A captured name past the name limit could not be stored, so the fold leaves
+// it out and still fills what else the capture carries.
+func TestACapturedNamePastTheLimitIsLeftOutAndTheRestOfTheFoldStands(t *testing.T) {
+	long := strings.Repeat("n", ContactNameLimit+1)
+	patch := emptyFieldPatch(crmcontracts.Lead{}, CapturedLeadFields{FullName: long, Title: "CTO"})
+	if patch.FullName != nil {
+		t.Errorf("a %d-character name was folded in", len(long))
+	}
+	if patch.Title == nil || *patch.Title != "CTO" {
+		t.Errorf("the title the same capture carried was lost: %v", patch.Title)
+	}
+	fits := strings.Repeat("n", ContactNameLimit)
+	if patch := emptyFieldPatch(crmcontracts.Lead{}, CapturedLeadFields{FullName: fits}); patch.FullName == nil {
+		t.Error("a name at the limit was left out")
 	}
 }

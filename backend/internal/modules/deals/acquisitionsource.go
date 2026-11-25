@@ -25,6 +25,7 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -56,6 +57,22 @@ const (
 	// other is a place in a table.
 	codeRequired = "required"
 )
+
+// The indexes holding one source per key and per label (trimmed, case-folded,
+// retired sources included), and the noun their refusal names.
+const (
+	sourceKeyIndex   = "deal_acquisition_source_key_key"
+	sourceLabelIndex = "deal_acquisition_source_label_once"
+	sourceEntry      = "an acquisition source"
+)
+
+// labelAfter is the label a patch leaves: the trimmed new one, or the held one.
+func labelAfter(held string, label *string) string {
+	if label == nil {
+		return held
+	}
+	return strings.TrimSpace(*label)
+}
 
 // acquisitionSourceColumns is the catalog's wire projection.
 const acquisitionSourceColumns = `id, key, label, label_key, sort_order, active, system, version, created_at, updated_at`
@@ -184,6 +201,9 @@ func (s *Store) CreateAcquisitionSource(
 			Field: sourceLabelColumn, Code: codeRequired, Message: "label is required",
 		}
 	}
+	if err := httperr.RequireWithin(sourceLabelColumn, label, values.TextLabelCharacters); err != nil {
+		return crmcontracts.AcquisitionSource{}, err
+	}
 	key := strings.TrimSpace(in.Key)
 	if key == "" {
 		key = values.CatalogKey(label)
@@ -213,11 +233,8 @@ func (s *Store) CreateAcquisitionSource(
 		_, err := tx.Exec(ctx,
 			`INSERT INTO deal_acquisition_source (id, key, label, sort_order) VALUES ($1, $2, $3, $4)`,
 			id, key, label, in.SortOrder)
-		if storekit.IsUniqueViolation(err) {
-			return apperrors.ErrConflict
-		}
 		if err != nil {
-			return fmt.Errorf("insert acquisition source: %w", err)
+			return storekit.NameTaken(fmt.Errorf("insert acquisition source: %w", err), sourceEntry, label, sourceKeyIndex, sourceLabelIndex)
 		}
 		if _, err := storekit.Audit(ctx, tx, "create", "deal_acquisition_source", id, nil,
 			map[string]any{sourceKeyColumn: key, sourceLabelColumn: label}); err != nil {
@@ -242,6 +259,11 @@ func (s *Store) UpdateAcquisitionSource(
 	if in.Label != nil && strings.TrimSpace(*in.Label) == "" {
 		return crmcontracts.AcquisitionSource{}, &values.ParseError{
 			Field: sourceLabelColumn, Code: codeRequired, Message: "label cannot be blank",
+		}
+	}
+	if in.Label != nil {
+		if err := httperr.RequireWithin(sourceLabelColumn, strings.TrimSpace(*in.Label), values.TextLabelCharacters); err != nil {
+			return crmcontracts.AcquisitionSource{}, err
 		}
 	}
 	var out crmcontracts.AcquisitionSource
@@ -279,7 +301,7 @@ func (s *Store) UpdateAcquisitionSource(
 			return err
 		}
 		if err := patch.ApplyLocked(ctx, tx, lock); err != nil {
-			return err
+			return storekit.NameTaken(err, sourceEntry, labelAfter(before.Label, in.Label), sourceLabelIndex)
 		}
 		if _, err := storekit.Audit(ctx, tx, "update", "deal_acquisition_source", id,
 			patch.Before(), patch.After()); err != nil {

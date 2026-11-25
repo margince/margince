@@ -11,6 +11,8 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgtype"
+
+	"github.com/margince/margince/backend/internal/shared/apperrors"
 )
 
 // A number bound into an int4 column fails inside pgx, before any statement is
@@ -53,5 +55,34 @@ func TestIsInvalidValueForType_ignoresUnrelatedErrors(t *testing.T) {
 		if IsInvalidValueForType(err) {
 			t.Errorf("%v read as a caller's bad value", err)
 		}
+	}
+}
+
+func TestNameTakenAnswersOnlyTheNamedIndexes(t *testing.T) {
+	label := fmt.Errorf("insert: %w", &pgconn.PgError{Code: pgUniqueViolation, ConstraintName: "role_label_once"})
+	cases := []struct {
+		name     string
+		err      error
+		indexes  []string
+		conflict bool
+	}{
+		{"the named index", label, []string{"role_key_key", "role_label_once"}, true},
+		{"another index", label, []string{"role_key_key"}, false},
+		{"another SQLSTATE", &pgconn.PgError{Code: pgForeignKeyViolation, ConstraintName: "role_label_once"}, []string{"role_label_once"}, false},
+	}
+	for _, c := range cases {
+		got := NameTaken(c.err, "a role", "Owner", c.indexes...)
+		if errors.Is(got, apperrors.ErrConflict) != c.conflict {
+			t.Errorf("%s: got %v, want a conflict: %v", c.name, got, c.conflict)
+		}
+		if !c.conflict && got != c.err {
+			t.Errorf("%s: got %v, want the error passed through unchanged", c.name, got)
+		}
+	}
+	if got := NameTaken(label, "a role", "Owner", "role_label_once").Error(); got != `conflict: a role called "Owner" already exists` {
+		t.Errorf("the conflict reads %q", got)
+	}
+	if NameTaken(nil, "a role", "Owner", "role_label_once") != nil {
+		t.Error("no error answered an error")
 	}
 }

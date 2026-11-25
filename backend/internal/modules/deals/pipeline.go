@@ -81,6 +81,9 @@ func createPipelineTx(ctx context.Context, tx pgx.Tx, in CreatePipelineInput) (c
 			`INSERT INTO stage (pipeline_id, name, position, semantic, win_probability)
 			 VALUES ($1, $2, $3, $4, $5)`,
 			id, st.Name, st.Position, st.Semantic, st.WinProbability); err != nil {
+			if refused := stageUniqueRefusal(err, &st.Name, &st.Position); refused != nil {
+				return crmcontracts.Pipeline{}, refused
+			}
 			return crmcontracts.Pipeline{}, fmt.Errorf("insert stage: %w", err)
 		}
 	}

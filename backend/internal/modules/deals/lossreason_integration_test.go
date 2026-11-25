@@ -8,15 +8,18 @@ package deals
 import (
 	"context"
 	"errors"
+	"net/http"
 	"strings"
 	"testing"
 
 	"github.com/jackc/pgx/v5"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/kernel/values"
 )
 
 // lossPipeline is a pipeline with one open and one lost stage.
@@ -538,5 +541,123 @@ func TestARedecisionWaitsForTheApplyThatReadsIt(t *testing.T) {
 	}
 	if _, err := e.owner.Exec(context.Background(), `SET lock_timeout = 0`); err != nil {
 		t.Fatal(err)
+	}
+}
+
+// dealList is one administered deal list as a test drives it.
+type dealList struct {
+	name   string
+	create func(key, label string) (ids.UUID, error)
+	rename func(id ids.UUID, label string) error
+	retire func(id ids.UUID) error
+}
+
+func dealLists(e *configEnv, ctx context.Context) []dealList {
+	return []dealList{{
+		name: "loss reason",
+		create: func(key, label string) (ids.UUID, error) {
+			made, err := e.store.CreateLossReason(ctx, CreateLossReasonInput{Key: key, Label: label})
+			return ids.UUID(made.Id), err
+		},
+		rename: func(id ids.UUID, label string) error {
+			_, err := e.store.UpdateLossReason(ctx, id, UpdateLossReasonInput{Label: &label})
+			return err
+		},
+		retire: func(id ids.UUID) error {
+			_, err := e.store.UpdateLossReason(ctx, id, UpdateLossReasonInput{Active: new(false)})
+			return err
+		},
+	}, {
+		name: "acquisition source",
+		create: func(key, label string) (ids.UUID, error) {
+			made, err := e.store.CreateAcquisitionSource(ctx, CreateAcquisitionSourceInput{Key: key, Label: label})
+			return ids.UUID(made.Id), err
+		},
+		rename: func(id ids.UUID, label string) error {
+			_, err := e.store.UpdateAcquisitionSource(ctx, id, UpdateAcquisitionSourceInput{Label: &label})
+			return err
+		},
+		retire: func(id ids.UUID) error {
+			_, err := e.store.UpdateAcquisitionSource(ctx, id, UpdateAcquisitionSourceInput{Active: new(false)})
+			return err
+		},
+	}}
+}
+
+// A deal list holds each label once, compared trimmed and ignoring case, and a
+// retired entry keeps its label. Create and rename answer the same conflict.
+func TestADealListHoldsEachLabelOnce(t *testing.T) {
+	e := setupConfigEnv(t)
+	for _, list := range dealLists(e, e.asLossAdmin()) {
+		t.Run(list.name, func(t *testing.T) {
+			suffix := ids.NewV7().String()[24:]
+			held, err := list.create("", "Freeze "+suffix)
+			if err != nil {
+				t.Fatalf("creating the first entry: %v", err)
+			}
+			if err := list.retire(held); err != nil {
+				t.Fatalf("retiring it: %v", err)
+			}
+			for name, attempt := range map[string]func() error{
+				"a create deriving the same key": func() error {
+					_, err := list.create("", "  FREEZE "+strings.ToUpper(suffix)+" ")
+					return err
+				},
+				"a create under its own key": func() error {
+					_, err := list.create("other_"+suffix, "freeze "+suffix)
+					return err
+				},
+			} {
+				if err := attempt(); !errors.Is(err, apperrors.ErrConflict) {
+					t.Errorf("%s answered %v, want a conflict", name, err)
+				}
+			}
+			other, err := list.create("", "Thaw "+suffix)
+			if err != nil {
+				t.Fatalf("creating a second entry: %v", err)
+			}
+			err = list.rename(other, " freeze "+strings.ToUpper(suffix))
+			if !errors.Is(err, apperrors.ErrConflict) {
+				t.Fatalf("a rename onto the retired entry's label answered %v, want a conflict", err)
+			}
+			if fault, _ := httperr.Classify(err); !strings.Contains(fault.Detail, "already exists") {
+				t.Errorf("the conflict reads %q, want it to say the label is taken", fault.Detail)
+			}
+			if err := list.rename(other, "THAW "+suffix); err != nil {
+				t.Errorf("a rename that changes only the case of its own label: %v", err)
+			}
+		})
+	}
+}
+
+// A label past the limit is refused as too long, naming label, before a key is
+// derived from it or a row is written.
+func TestADealListRefusesALabelPastTheLimitBeforeTheWrite(t *testing.T) {
+	e := setupConfigEnv(t)
+	long := strings.Repeat("a", values.TextLabelCharacters+1)
+	for _, list := range dealLists(e, e.asLossAdmin()) {
+		t.Run(list.name, func(t *testing.T) {
+			_, err := list.create("", long)
+			assertLabelTooLong(t, err, "label")
+			kept, err := list.create("", "Kept "+ids.NewV7().String()[24:])
+			if err != nil {
+				t.Fatalf("creating an entry to rename: %v", err)
+			}
+			assertLabelTooLong(t, list.rename(kept, long), "label")
+		})
+	}
+}
+
+// assertLabelTooLong holds err to the 422 too_long refusal naming field and the
+// label limit.
+func assertLabelTooLong(t *testing.T, err error, field string) {
+	t.Helper()
+	fault, _ := httperr.Classify(err)
+	if fault.Status != http.StatusUnprocessableEntity || len(fault.Fields) != 1 {
+		t.Fatalf("answered %v (status %d), want one 422 field refusal", err, fault.Status)
+	}
+	got := fault.Fields[0]
+	if got.Field != field || got.Code != "too_long" || got.Max != values.TextLabelCharacters {
+		t.Errorf("refusal = %+v, want %s too_long with max %d", got, field, values.TextLabelCharacters)
 	}
 }

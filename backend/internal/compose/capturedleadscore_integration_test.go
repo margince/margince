@@ -8,6 +8,7 @@ package compose
 import (
 	"context"
 	"encoding/json"
+	"strings"
 	"testing"
 
 	"github.com/jackc/pgx/v5"
@@ -17,6 +18,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/values"
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
 )
 
@@ -97,5 +99,34 @@ func TestACapturedLeadOpensWithTheScoreAHandCreatedLeadGets(t *testing.T) {
 	}
 	if n := e.WsCount(t, `SELECT count(*) FROM audit_log WHERE entity_type = 'lead' AND entity_id = $1 AND action = 'create'`, ref.ID); n != 1 {
 		t.Errorf("the captured lead has %d create audit rows, want 1", n)
+	}
+}
+
+// A provider's name, company and title past their columns' limit land cut to
+// it, so a capture never fails on text nobody can shorten.
+func TestACapturedLeadsTextPastItsLimitLandsCut(t *testing.T) {
+	e := integration.Setup(t)
+	sink := newCaptureSink(e.Pool, CaptureConfig{})
+	long := strings.Repeat("x", values.TextLabelCharacters+5)
+	ref, err := sink.Upsert(connectorCtx(e), connector.NormalizedRecord{
+		EntityType: "lead",
+		NaturalKey: connector.NaturalKey{SourceSystem: "test", SourceID: "long-name-1"},
+		Fields:     capture.LeadFields{FullName: long, CompanyName: long, Title: long},
+		Source:     "test:long-name-1", CapturedBy: "connector:test",
+	})
+	if err != nil {
+		t.Fatalf("capturing a lead with long text: %v", err)
+	}
+	var name, company, title string
+	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+		return tx.QueryRow(context.Background(), `SELECT full_name, company_name, title FROM lead WHERE id = $1`, ref.ID).
+			Scan(&name, &company, &title)
+	}); err != nil {
+		t.Fatal(err)
+	}
+	for column, got := range map[string]string{"full_name": name, "company_name": company, "title": title} {
+		if got != long[:values.TextLabelCharacters] {
+			t.Errorf("%s holds %d characters, want the first %d", column, len(got), values.TextLabelCharacters)
+		}
 	}
 }

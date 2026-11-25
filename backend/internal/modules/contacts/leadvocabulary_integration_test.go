@@ -13,7 +13,9 @@ package contacts
 import (
 	"context"
 	"errors"
+	"net/http"
 	"slices"
+	"strings"
 	"testing"
 
 	"github.com/jackc/pgx/v5"
@@ -24,6 +26,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/kernel/values"
 )
 
 // The migration's seed and the code's fixture name the same seven origins with
@@ -474,5 +477,153 @@ func TestADisqualifyReasonLabelIsHeldOnce(t *testing.T) {
 	sortOrder := 5
 	if _, err := e.store.UpdateLeadDisqualifyReason(e.ctx, ids.UUID(custom.Id), UpdateLeadDisqualifyReasonInput{SortOrder: &sortOrder}); err != nil {
 		t.Fatalf("a reorder that leaves the label alone: %v", err)
+	}
+}
+
+// vocabularyList is one administered list as a test drives it. keyed lists
+// take a caller's own key beside the label.
+type vocabularyList struct {
+	name   string
+	keyed  bool
+	create func(key, label string) (ids.UUID, error)
+	rename func(id ids.UUID, label string) error
+	retire func(id ids.UUID) error
+}
+
+func leadVocabularyLists(e *promoteConsentEnv) []vocabularyList {
+	return []vocabularyList{{
+		name: "lead origin", keyed: true,
+		create: func(key, label string) (ids.UUID, error) {
+			made, err := e.store.CreateLeadOrigin(e.ctx, CreateLeadOriginInput{Key: key, Label: label})
+			return ids.UUID(made.Id), err
+		},
+		rename: func(id ids.UUID, label string) error {
+			_, err := e.store.UpdateLeadOrigin(e.ctx, id, UpdateLeadOriginInput{Label: &label})
+			return err
+		},
+		retire: func(id ids.UUID) error {
+			_, err := e.store.UpdateLeadOrigin(e.ctx, id, UpdateLeadOriginInput{Active: new(false)})
+			return err
+		},
+	}, {
+		name: "disqualification reason",
+		create: func(_, label string) (ids.UUID, error) {
+			made, err := e.store.CreateLeadDisqualifyReason(e.ctx, CreateLeadDisqualifyReasonInput{Label: label})
+			return ids.UUID(made.Id), err
+		},
+		rename: func(id ids.UUID, label string) error {
+			_, err := e.store.UpdateLeadDisqualifyReason(e.ctx, id, UpdateLeadDisqualifyReasonInput{Label: &label})
+			return err
+		},
+		retire: func(id ids.UUID) error {
+			_, err := e.store.UpdateLeadDisqualifyReason(e.ctx, id, UpdateLeadDisqualifyReasonInput{Active: new(false)})
+			return err
+		},
+	}}
+}
+
+// requireLabelHeldOnce proves a list holds each label once, compared trimmed and
+// ignoring case. A retired entry keeps its label; create and rename both conflict.
+func requireLabelHeldOnce(t *testing.T, list vocabularyList) {
+	t.Helper()
+	suffix := ids.NewV7().String()[24:]
+	held, err := list.create("", "Freeze "+suffix)
+	if err != nil {
+		t.Fatalf("creating the first entry: %v", err)
+	}
+	if err := list.retire(held); err != nil {
+		t.Fatalf("retiring it: %v", err)
+	}
+	if _, err := list.create("", "  FREEZE "+strings.ToUpper(suffix)+" "); !errors.Is(err, apperrors.ErrConflict) {
+		t.Errorf("a second spelling of a retired entry's label answered %v, want a conflict", err)
+	}
+	if list.keyed {
+		if _, err := list.create("other_"+suffix, "freeze "+suffix); !errors.Is(err, apperrors.ErrConflict) {
+			t.Errorf("the label under a key of its own answered %v, want a conflict", err)
+		}
+	}
+	other, err := list.create("", "Thaw "+suffix)
+	if err != nil {
+		t.Fatalf("creating a second entry: %v", err)
+	}
+	err = list.rename(other, " freeze "+strings.ToUpper(suffix))
+	if !errors.Is(err, apperrors.ErrConflict) {
+		t.Fatalf("a rename onto a held label answered %v, want a conflict", err)
+	}
+	if fault, _ := httperr.Classify(err); !strings.Contains(fault.Detail, "already exists") {
+		t.Errorf("the conflict reads %q, want it to say the label is taken", fault.Detail)
+	}
+	if err := list.rename(other, "THAW "+suffix); err != nil {
+		t.Errorf("a rename that changes only the case of its own label: %v", err)
+	}
+}
+
+// requireLongLabelRefused proves a label past the limit is refused as too long.
+// The refusal names label and comes before a key is derived or a row written.
+func requireLongLabelRefused(t *testing.T, list vocabularyList) {
+	t.Helper()
+	long := strings.Repeat("a", values.TextLabelCharacters+1)
+	_, err := list.create("", long)
+	requireTooLong(t, err, leadOriginLabelField)
+	kept, err := list.create("", "Kept "+ids.NewV7().String()[24:])
+	if err != nil {
+		t.Fatalf("creating an entry to rename: %v", err)
+	}
+	requireTooLong(t, list.rename(kept, long), leadOriginLabelField)
+}
+
+func requireTooLong(t *testing.T, err error, field string) {
+	t.Helper()
+	fault, _ := httperr.Classify(err)
+	if fault.Status != http.StatusUnprocessableEntity || len(fault.Fields) != 1 {
+		t.Fatalf("answered %v (status %d), want one 422 field refusal", err, fault.Status)
+	}
+	got := fault.Fields[0]
+	if got.Field != field || got.Code != "too_long" || got.Max != values.TextLabelCharacters {
+		t.Errorf("refusal = %+v, want %s too_long with max %d", got, field, values.TextLabelCharacters)
+	}
+}
+
+func TestALeadListHoldsEachLabelOnce(t *testing.T) {
+	e := setupPromoteConsent(t)
+	keepOriginCatalogAsSeeded(t, e)
+	keepDisqualifyReasonsAsSeeded(t, e)
+	for _, list := range leadVocabularyLists(e) {
+		t.Run(list.name, func(t *testing.T) {
+			requireLabelHeldOnce(t, list)
+			requireLongLabelRefused(t, list)
+		})
+	}
+}
+
+// keepDisqualifyReasonsAsSeeded removes the reasons a test added and wakes the
+// built-ins it retired. A reset keeps the list, so they would outlive the test.
+func keepDisqualifyReasonsAsSeeded(t *testing.T, e *promoteConsentEnv) {
+	t.Helper()
+	t.Cleanup(func() {
+		for _, statement := range []string{
+			`DELETE FROM lead_disqualify_reason WHERE NOT system`,
+			`UPDATE lead_disqualify_reason SET active = true`,
+		} {
+			if _, err := e.owner.Exec(context.Background(), statement); err != nil {
+				t.Errorf("restoring the disqualification reasons: %v", err)
+			}
+		}
+	})
+}
+
+// A lead's name holds at most a label's characters, typed or changed, and the
+// refusal names full_name before anything is written.
+func TestALeadNamePastTheLimitIsRefusedBeforeTheWrite(t *testing.T) {
+	e := setupPromoteConsent(t)
+	long := strings.Repeat("n", values.TextLabelCharacters+1)
+	_, _, err := e.store.CreateLead(e.ctx, CreateLeadInput{Source: "manual", FullName: &long})
+	requireTooLong(t, err, contactNameColumn)
+	lead := e.seedLead(t, "named-"+ids.NewV7().String()+"@example.test")
+	_, err = e.store.UpdateLead(e.ctx, lead, UpdateLeadInput{FullName: &long})
+	requireTooLong(t, err, contactNameColumn)
+	fits := strings.Repeat("n", values.TextLabelCharacters)
+	if _, err := e.store.UpdateLead(e.ctx, lead, UpdateLeadInput{FullName: &fits}); err != nil {
+		t.Errorf("a name at the limit was refused: %v", err)
 	}
 }

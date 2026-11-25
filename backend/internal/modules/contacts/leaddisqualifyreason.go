@@ -95,10 +95,7 @@ const disqualifyReasonLabelOnce = "lead_disqualify_reason_label_once"
 // disqualifyLabelTaken answers the label index's violation as a 409 naming the
 // label, and passes any other error through.
 func disqualifyLabelTaken(err error, label string) error {
-	if constraint, ok := storekit.UniqueViolation(err); ok && constraint == disqualifyReasonLabelOnce {
-		return fmt.Errorf("%w: a disqualification reason called %q already exists", apperrors.ErrConflict, label)
-	}
-	return err
+	return storekit.NameTaken(err, "a disqualification reason", label, disqualifyReasonLabelOnce)
 }
 
 // UnknownDisqualifyReasonError refuses a reason that is not an active row:
@@ -173,6 +170,9 @@ func (s *Store) CreateLeadDisqualifyReason(ctx context.Context, in CreateLeadDis
 	if label == "" {
 		return crmcontracts.LeadDisqualifyReason{}, &values.ParseError{Field: "label", Code: codeRequired, Message: "label is required"}
 	}
+	if err := requireVocabularyLabelWithin(label); err != nil {
+		return crmcontracts.LeadDisqualifyReason{}, err
+	}
 	var out crmcontracts.LeadDisqualifyReason
 	err := s.tx(ctx, func(tx pgx.Tx) error {
 		id := ids.NewV7()
@@ -203,6 +203,11 @@ func (s *Store) UpdateLeadDisqualifyReason(ctx context.Context, id ids.UUID, in 
 	if in.Label != nil && strings.TrimSpace(*in.Label) == "" {
 		return crmcontracts.LeadDisqualifyReason{}, &values.ParseError{Field: "label", Code: codeRequired, Message: "label must not be empty"}
 	}
+	if in.Label != nil {
+		if err := requireVocabularyLabelWithin(*in.Label); err != nil {
+			return crmcontracts.LeadDisqualifyReason{}, err
+		}
+	}
 	var out crmcontracts.LeadDisqualifyReason
 	err := s.tx(ctx, func(tx pgx.Tx) error {
 		before, err := readLeadDisqualifyReason(ctx, tx, id, true)
@@ -232,10 +237,7 @@ func (s *Store) UpdateLeadDisqualifyReason(ctx context.Context, id ids.UUID, in 
 		// The label AFTER the patch: it is this reason's only identity, so an
 		// event carrying the old one would name something that no longer
 		// exists. readLeadDisqualifyReason below re-reads the row anyway.
-		label := before.Label
-		if in.Label != nil {
-			label = strings.TrimSpace(*in.Label)
-		}
+		label := labelAfter(before.Label, in.Label)
 		if err := p.ApplyLocked(ctx, tx, lock); err != nil {
 			return disqualifyLabelTaken(err, label)
 		}

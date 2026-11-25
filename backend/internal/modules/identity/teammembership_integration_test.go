@@ -18,11 +18,14 @@ package identity
 import (
 	"context"
 	"errors"
+	"strings"
 	"testing"
 
+	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/kernel/values"
 )
 
 func TestATeammateSharesALiveTeamAndAStrangerDoesNot(t *testing.T) {
@@ -234,4 +237,43 @@ func inviteMember(ctx context.Context, t *testing.T, e *revocationEnv, email, na
 		t.Fatalf("redeeming the invite for %s: %v", email, err)
 	}
 	return created
+}
+
+// A live team's name is held once, compared trimmed and ignoring case, on
+// create, rename and restore. An archived team frees its name.
+func TestATeamNameIsHeldOnceAmongLiveTeams(t *testing.T) {
+	e := setupRevocationEnv(t, "team-names")
+	ctx := e.wsCtx(e.admin)
+	sales, err := e.svc.CreateTeam(ctx, e.admin, "DACH Sales")
+	if err != nil {
+		t.Fatalf("creating the team: %v", err)
+	}
+	if _, err := e.svc.CreateTeam(ctx, e.admin, "  dach SALES "); !errors.Is(err, apperrors.ErrConflict) {
+		t.Errorf("a second spelling of a live team's name answered %v, want a conflict", err)
+	}
+	support, err := e.svc.CreateTeam(ctx, e.admin, "Support")
+	if err != nil {
+		t.Fatalf("creating the second team: %v", err)
+	}
+	taken := "DACH SALES"
+	if _, err := e.svc.UpdateTeam(ctx, e.admin, support.ID, UpdateTeamInput{Name: &taken}); !errors.Is(err, apperrors.ErrConflict) {
+		t.Errorf("a rename onto a live team's name answered %v, want a conflict", err)
+	}
+	archived, restored := true, false
+	if _, err := e.svc.UpdateTeam(ctx, e.admin, sales.ID, UpdateTeamInput{Archived: &archived}); err != nil {
+		t.Fatalf("archiving the team: %v", err)
+	}
+	if _, err := e.svc.UpdateTeam(ctx, e.admin, support.ID, UpdateTeamInput{Name: &taken}); err != nil {
+		t.Fatalf("taking an archived team's name: %v", err)
+	}
+	if _, err := e.svc.UpdateTeam(ctx, e.admin, sales.ID, UpdateTeamInput{Archived: &restored}); !errors.Is(err, apperrors.ErrConflict) {
+		t.Errorf("restoring a team whose name a live team took answered %v, want a conflict", err)
+	}
+
+	long := strings.Repeat("t", values.TextLabelCharacters+1)
+	_, err = e.svc.CreateTeam(ctx, e.admin, long)
+	fault, _ := httperr.Classify(err)
+	if len(fault.Fields) != 1 || fault.Fields[0].Field != "name" || fault.Fields[0].Code != "too_long" || fault.Fields[0].Max != values.TextLabelCharacters {
+		t.Errorf("a %d-character name answered %v (%+v), want name too_long with its max", len(long), err, fault.Fields)
+	}
 }

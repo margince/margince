@@ -5,11 +5,15 @@ package storekit
 
 import (
 	"errors"
+	"fmt"
 	"regexp"
+	"slices"
 	"strconv"
 	"strings"
 
 	"github.com/jackc/pgx/v5/pgconn"
+
+	"github.com/margince/margince/backend/internal/shared/apperrors"
 )
 
 // The SQLSTATEs the stores branch on, named once.
@@ -95,6 +99,21 @@ func IsUniqueViolation(err error) bool {
 // duplicates.
 func UniqueViolation(err error) (constraint string, ok bool) {
 	return pgViolation(err, pgUniqueViolation)
+}
+
+// NameTaken answers a 23505 on one of a list's name indexes as a 409 saying
+// which entry already holds the name; any other error passes through.
+func NameTaken(err error, entry, name string, indexes ...string) error {
+	if constraint, ok := UniqueViolation(err); ok && slices.Contains(indexes, constraint) {
+		return NameHeld(entry, name)
+	}
+	return err
+}
+
+// NameHeld is the 409 NameTaken answers, for a name clash a store finds by its
+// own check where no index covers the pair.
+func NameHeld(entry, name string) error {
+	return fmt.Errorf("%w: %s called %q already exists", apperrors.ErrConflict, entry, name)
 }
 
 func IsForeignKeyViolation(err error) bool {
