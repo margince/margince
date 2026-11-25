@@ -7108,6 +7108,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "offer.rejectConfirm": "Dieses Angebot als abgelehnt markieren?",
   "offer.rejectReason": "Grund (optional)",
   "offer.regenerate": "Revision neu erzeugen",
+  "offer.regeneratedPlain": "Ohne Änderungen durch KI kopiert.",
   "offer.writeUnsure":
     "Margince konnte nicht feststellen, ob das geklappt hat. Prüfe die Angebote am Deal, bevor du es noch einmal versuchst.",
   "offer.aiDisclosureTitle": "KI-gestütztes Angebot",
@@ -10138,7 +10139,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "agent.activity.summarize.running": "Die Zusammenfassung wird geschrieben…",
   "agent.activity.summarize.done": "Zusammenfassung bereit",
   "agent.activity.summarize.degraded":
-    "Die Zusammenfassung wurde vorzeitig abgebrochen.",
+    "Zusammenfassung mit eingeschränkter KI-Hilfe erstellt",
   "agent.activity.summarize.failed": "Zusammenfassung fehlgeschlagen",
   "agent.activity.summarize.stalled":
     "Die Zusammenfassung dauert ungewöhnlich lange.",
@@ -10146,24 +10147,34 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "agent.activity.summarizeNamed.running": "{name} wird zusammengefasst…",
   "agent.activity.summarizeNamed.done": "Zusammenfassung von {name} bereit",
   "agent.activity.summarizeNamed.degraded":
-    "Die Zusammenfassung von {name} wurde vorzeitig abgebrochen.",
+    "Zusammenfassung von {name} mit eingeschränkter KI-Hilfe erstellt",
   "agent.activity.summarizeNamed.failed":
     "Zusammenfassung von {name} fehlgeschlagen",
   "agent.activity.summarizeNamed.stalled":
     "Die Zusammenfassung von {name} dauert ungewöhnlich lange.",
-  "agent.activity.draftReply.queued": "Antwortentwurf geplant",
-  "agent.activity.draftReply.running": "Die Antwort wird entworfen…",
-  "agent.activity.draftReply.done": "Antwortentwurf bereit",
-  "agent.activity.draftReply.degraded":
-    "Der Antwortentwurf wurde vorzeitig abgebrochen.",
-  "agent.activity.draftReply.failed": "Antwortentwurf fehlgeschlagen",
-  "agent.activity.draftReply.stalled":
-    "Der Antwortentwurf dauert ungewöhnlich lange.",
+  "agent.activity.draftEmail.queued": "E-Mail-Entwurf geplant",
+  "agent.activity.draftEmail.running": "Die E-Mail wird entworfen…",
+  "agent.activity.draftEmail.done": "E-Mail-Entwurf bereit",
+  "agent.activity.draftEmail.degraded":
+    "E-Mail-Entwurf mit eingeschränkter KI-Hilfe erstellt",
+  "agent.activity.draftEmail.failed": "E-Mail-Entwurf fehlgeschlagen",
+  "agent.activity.draftEmail.stalled":
+    "Der E-Mail-Entwurf dauert ungewöhnlich lange.",
+  "agent.activity.draftEmailNamed.queued": "E-Mail-Entwurf zu {name} geplant",
+  "agent.activity.draftEmailNamed.running":
+    "Die E-Mail zu {name} wird entworfen…",
+  "agent.activity.draftEmailNamed.done": "E-Mail-Entwurf zu {name} bereit",
+  "agent.activity.draftEmailNamed.degraded":
+    "E-Mail-Entwurf zu {name} mit eingeschränkter KI-Hilfe erstellt",
+  "agent.activity.draftEmailNamed.failed":
+    "E-Mail-Entwurf zu {name} fehlgeschlagen",
+  "agent.activity.draftEmailNamed.stalled":
+    "Der E-Mail-Entwurf zu {name} dauert ungewöhnlich lange.",
   "agent.activity.offerDraft.queued": "Angebotsentwurf geplant",
   "agent.activity.offerDraft.running": "Das Angebot wird entworfen…",
   "agent.activity.offerDraft.done": "Angebotsentwurf bereit",
   "agent.activity.offerDraft.degraded":
-    "Der Angebotsentwurf wurde vorzeitig abgebrochen.",
+    "Angebotsentwurf mit eingeschränkter KI-Hilfe erstellt",
   "agent.activity.offerDraft.failed": "Angebotsentwurf fehlgeschlagen",
   "agent.activity.offerDraft.stalled":
     "Der Angebotsentwurf dauert ungewöhnlich lange.",
@@ -10172,7 +10183,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Die Antwort auf „{name}“ wird entworfen…",
   "agent.activity.draftReplyNamed.done": "Antwortentwurf zu „{name}“ bereit",
   "agent.activity.draftReplyNamed.degraded":
-    "Der Antwortentwurf zu „{name}“ wurde vorzeitig abgebrochen.",
+    "Antwortentwurf zu „{name}“ mit eingeschränkter KI-Hilfe erstellt",
   "agent.activity.draftReplyNamed.failed":
     "Antwortentwurf zu „{name}“ fehlgeschlagen",
   "agent.activity.draftReplyNamed.stalled":
@@ -10182,7 +10193,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Das Angebot für {name} wird entworfen…",
   "agent.activity.offerDraftNamed.done": "Angebotsentwurf für {name} bereit",
   "agent.activity.offerDraftNamed.degraded":
-    "Der Angebotsentwurf für {name} wurde vorzeitig abgebrochen.",
+    "Angebotsentwurf für {name} mit eingeschränkter KI-Hilfe erstellt",
   "agent.activity.offerDraftNamed.failed":
     "Angebotsentwurf für {name} fehlgeschlagen",
   "agent.activity.offerDraftNamed.stalled":

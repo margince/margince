@@ -4,7 +4,11 @@ import { de } from "../i18n/de";
 import { en } from "../i18n/en";
 import { vi } from "../i18n/vi";
 import { NAMED, SAID, WROTE } from "./agentrail-copy";
-import { ACTIVITY_LINE, NAMED_LINE } from "./ai-activity-lines";
+import {
+  ACTIVITY_LINE,
+  NAMED_LINE,
+  SUBJECT_NAMED_LINE,
+} from "./ai-activity-lines";
 import {
   displayedKinds,
   displayedLines,
@@ -21,18 +25,28 @@ function lineFor(
   return line === null ? null : spokenText(line);
 }
 
-/** Every message key either map names, which is the whole reachable set. */
+/** Every named variant's line set, whether or not it depends on the subject. */
+function namedLineSets() {
+  return [
+    ...Object.values(NAMED_LINE),
+    ...Object.values(SUBJECT_NAMED_LINE).flatMap((bySubject) =>
+      Object.values(bySubject),
+    ),
+  ];
+}
+
+/** Every message key the maps name, which is the whole reachable set. */
 function namedKeys(): Set<string> {
   return new Set<string>([
     ...displayedLines().flatMap(([, byState]) => Object.values(byState)),
-    ...Object.values(NAMED_LINE).flatMap((byState) => Object.values(byState)),
+    ...namedLineSets().flatMap((byState) => Object.values(byState)),
   ]);
 }
 
 /** The named variants, which are the only lines allowed a placeholder. */
 function namedVariantKeys(): Set<string> {
   return new Set<string>(
-    Object.values(NAMED_LINE).flatMap((byState) => Object.values(byState)),
+    namedLineSets().flatMap((byState) => Object.values(byState)),
   );
 }
 
@@ -98,7 +112,7 @@ describe("the activity copy set", () => {
     ({ catalog, done, ready }) => {
       const degradedKeys = [
         ...displayedLines().map(([, byState]) => byState.degraded),
-        ...Object.values(NAMED_LINE).map((byState) => byState.degraded),
+        ...namedLineSets().map((byState) => byState.degraded),
       ];
       for (const key of degradedKeys) {
         if (key === undefined) continue;
@@ -243,17 +257,48 @@ describe("speak", () => {
   // A failed draft says which thread or deal it was for. An occurrence that
   // carried no name keeps the unnamed line rather than empty quotes.
   it.each([
-    ["draft_reply", "Re: Pricing", "Reply draft for “Re: Pricing” failed"],
-    ["draft_reply", null, "Reply draft failed"],
-    ["offer_draft", "Acme Renewal", "Offer draft for Acme Renewal failed"],
-    ["offer_draft", "", "Offer draft failed"],
-  ])("names the record a failed %s was about (%s)", (kind, label, text) => {
+    [
+      "draft_reply",
+      "Re: Pricing",
+      "activity",
+      "Reply draft for “Re: Pricing” failed",
+    ],
+    ["draft_reply", "Ana Roth", "contact", "Email draft about Ana Roth failed"],
+    [
+      "draft_reply",
+      "Ana Roth",
+      "toString",
+      "Email draft about Ana Roth failed",
+    ],
+    ["draft_reply", null, null, "Email draft failed"],
+    [
+      "offer_draft",
+      "Acme Renewal",
+      "deal",
+      "Offer draft for Acme Renewal failed",
+    ],
+    ["offer_draft", "", null, "Offer draft failed"],
+  ])(
+    "names the record a failed %s was about (%s, %s)",
+    (kind, label, type, text) => {
+      expect(
+        lineFor(
+          { kind, state: "failed", subject_label: label, subject_type: type },
+          (key) => en[key],
+        ),
+      ).toBe(text);
+    },
+  );
+
+  // A new email has no message it answers, so the task is never called a
+  // reply unless the record it is about is that message.
+  it("never calls a new email a reply", () => {
     expect(
-      lineFor(
-        { kind, state: "failed", subject_label: label },
-        (key) => en[key],
-      ),
-    ).toBe(text);
+      lineFor({ kind: "draft_reply", state: "degraded" }, (key) => en[key]),
+    ).toBe("Email draft made with limited AI help");
+    expect(
+      lineFor({ kind: "draft_reply", state: "failed" }, (key) => de[key]),
+    ).toBe("E-Mail-Entwurf fehlgeschlagen");
   });
 
   it("renders the line for a state that has copy", () => {

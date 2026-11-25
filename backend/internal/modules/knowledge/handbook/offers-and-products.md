@@ -130,6 +130,8 @@ A line with no price is marked "unpriced, excluded from total". It is not counte
 
 **Regenerate revision** creates the next version as a new **draft**. It copies the header and every line word for word, and marks the old version as replaced. The **template** is not carried over, so pick it again before you make the PDF. Prices are not updated from today's rate card: a price that changed last week does not change the offer you already sent. A line with a **Tax category** takes today's rate in the new version; a typed rate stays as it was.
 
+Where AI drafting is set up, it may also add lines to the new draft from what the deal has on record. When it adds none, or the AI cannot answer, the draft is still made, and Margince says "Copied without AI changes."
+
 You can make an offer **PDF** at any point, draft included. Where your Margince has no file storage set up, it says "PDF rendering is not available on this installation."
 
 The PDF prints the offer's own **Intro text** above the lines and its **Terms text** under the totals. It leaves either part out when it is empty. The terms always come from the offer, never from the template.

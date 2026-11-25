@@ -10,7 +10,8 @@ import (
 )
 
 // withAmbientIdentity stamps what a trace row is joined on from the call's
-// context: the correlation id, the agent run, the subject and the extension.
+// context: the correlation id, the agent run, the subject and the extension,
+// and whether the site serves a floor when the call fails.
 // Completion and decision attempts both read them here, so one logical call
 // cannot file its rows under two correlations.
 func withAmbientIdentity(ctx context.Context, trace *Call) {
@@ -24,4 +25,5 @@ func withAmbientIdentity(ctx context.Context, trace *Call) {
 		trace.Subject = subject
 	}
 	trace.Extension = extensionOf(ctx)
+	trace.FloorServed = ServesFloor(ctx)
 }

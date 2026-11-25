@@ -4,6 +4,7 @@
 package ai
 
 import (
+	"context"
 	"testing"
 
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -23,6 +24,8 @@ func TestRailStateReadsTheTerminalOutcome(t *testing.T) {
 		{"partial state kept", Call{Degraded: true}, railStateDegraded},
 		{"ended on a sentinel", Call{ErrorSentinel: "budget_exceeded"}, railStateFailed},
 		{"degraded AND errored", Call{Degraded: true, ErrorSentinel: "provider_unavailable"}, railStateFailed},
+		{"errored under a served floor", Call{ErrorSentinel: "output_rejected", FloorServed: true}, railStateDegraded},
+		{"a clean finish under a floor", Call{FloorServed: true}, railStateDone},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			if got := railState(tc.call); got != tc.want {
@@ -169,5 +172,20 @@ func TestACallOutsideACorrelationScopeIsNotAnnounced(t *testing.T) {
 	corr := ids.NewV7()
 	if !announceable(Call{Task: TaskSummarize, LogicalCallID: logical, CorrelationID: &corr}) {
 		t.Error("a call inside a correlation scope is not announceable, so nothing would ever reach the rail")
+	}
+}
+
+// The floor is the site's declaration, made on the context where the floor is
+// served, and every call under it carries the declaration to the rail. A call
+// outside one carries none, so its failure stays a failure.
+func TestACallCarriesTheFloorItsSiteDeclared(t *testing.T) {
+	var under, outside Call
+	withAmbientIdentity(WithFloor(context.Background()), &under)
+	withAmbientIdentity(context.Background(), &outside)
+	if !under.FloorServed {
+		t.Error("a call under WithFloor does not carry the floor, so its failure would read as failed")
+	}
+	if outside.FloorServed {
+		t.Error("a call with no declared floor carries one, so a real failure would read as degraded")
 	}
 }
