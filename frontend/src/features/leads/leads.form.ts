@@ -46,6 +46,25 @@ export type LeadFieldChoices = Readonly<{
   partners: CreateFieldOption[];
 }>;
 
+// Typed, never offered from the contacts: someone is either a lead or a
+// contact, and the server refuses a contact's address.
+export const LEAD_IDENTITY_CREATE_FIELDS: readonly CreateField[] = [
+  {
+    key: "full_name",
+    label: "create.fullName",
+    required: true,
+    maxLength: TEXT_LIMITS.label,
+  },
+  { key: "email", label: "create.email", type: "email" },
+  { key: "linkedin_url", label: "create.linkedinUrl" },
+  { key: "title", label: "create.contactTitle", maxLength: TEXT_LIMITS.label },
+  {
+    key: "company_name",
+    label: "create.companyName",
+    maxLength: TEXT_LIMITS.label,
+  },
+];
+
 export function leadEditFields(choices: LeadFieldChoices): CreateField[] {
   return [
     {

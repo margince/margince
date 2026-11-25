@@ -39,7 +39,6 @@ import {
 import { unwrap } from "../../lib/problem";
 import { useMe } from "../../lib/session";
 import { readStored, STORAGE_KEYS, writeStored } from "../../lib/storage";
-import { TEXT_LIMITS } from "../../lib/textlimits_gen";
 import { replaceDial, useUrlParams } from "../../lib/urlstate";
 import {
   SavedViewsFailure,
@@ -58,6 +57,7 @@ import {
   useRefusalOf,
   useWithheldLeadDials,
 } from "./leads.companydials";
+import { LEAD_IDENTITY_CREATE_FIELDS } from "./leads.form";
 import "./leads.css";
 import { useViewerZone } from "../../lib/viewerzone";
 import { leadPartnerCreateFields, useLeadPartnerOptions } from "./leadpartner";
@@ -292,26 +292,7 @@ function LeadsWorkbench({
                 : { screen: "leads", id }
             }
             fields={[
-              // Typed, never offered from the contacts: someone is either a
-              // lead or a contact, and the server refuses a contact's address.
-              {
-                key: "full_name",
-                label: "create.fullName",
-                required: true,
-                maxLength: TEXT_LIMITS.label,
-              },
-              { key: "email", label: "create.email", type: "email" },
-              { key: "linkedin_url", label: "create.linkedinUrl" },
-              {
-                key: "title",
-                label: "create.contactTitle",
-                maxLength: TEXT_LIMITS.label,
-              },
-              {
-                key: "company_name",
-                label: "create.companyName",
-                maxLength: TEXT_LIMITS.label,
-              },
+              ...LEAD_IDENTITY_CREATE_FIELDS,
               {
                 key: "industry",
                 label: "create.industry",
