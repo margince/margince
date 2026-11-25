@@ -53,22 +53,19 @@
     {
       "model": "gemini-4-hydrogen-medium@agy-cli",
       "name": "gemini-4-hydrogen-medium",
-      "trust": "🟡 Mostly",
+      "trust": "🟢 Yes",
       "cases_with_a_committed_run": 81,
-      "cases_that_reached_their_bar": 79,
-      "cases_below_their_bar": 2,
-      "runs": 168,
-      "passed": 160,
-      "reliability": 0.9523809523809523,
-      "cases_below_their_bar_named": [
-        "case78_she_asked_us_to_stop",
-        "case88_send_it_anyway"
-      ],
+      "cases_that_reached_their_bar": 81,
+      "cases_below_their_bar": 0,
+      "runs": 169,
+      "passed": 164,
+      "reliability": 0.9704142011834319,
+      "cases_below_their_bar_named": [],
       "route": "Antigravity CLI",
       "self_judged": false,
-      "calls_per_case": "8.5 over 81",
+      "calls_per_case": "9 over 81",
       "slow_cases": [],
-      "median_calls_per_case": "8.5",
+      "median_calls_per_case": "9",
       "median_turns_per_case": "6.5"
     },
     {
@@ -972,17 +969,16 @@
           "efficiency": {
             "runs": 2,
             "calls": {
-              "median": 13,
-              "min": 12,
-              "max": 14
+              "median": 14.5,
+              "min": 13,
+              "max": 16
             },
             "turns": {
-              "median": 9.5,
+              "median": 10,
               "min": 9,
-              "max": 10
+              "max": 11
             }
-          },
-          "regraded": true
+          }
         },
         {
           "model": "gpt-5.6-sol@codex-cli",
@@ -1051,17 +1047,16 @@
           "efficiency": {
             "runs": 2,
             "calls": {
-              "median": 6,
+              "median": 6.5,
               "min": 6,
-              "max": 6
+              "max": 7
             },
             "turns": {
-              "median": 10.5,
-              "min": 10,
+              "median": 11,
+              "min": 11,
               "max": 11
             }
-          },
-          "regraded": true
+          }
         },
         {
           "model": "gpt-5.6-sol@codex-cli",
@@ -1130,17 +1125,16 @@
           "efficiency": {
             "runs": 2,
             "calls": {
-              "median": 4.5,
+              "median": 4,
               "min": 4,
-              "max": 5
+              "max": 4
             },
             "turns": {
               "median": 4.5,
               "min": 4,
               "max": 5
             }
-          },
-          "regraded": true
+          }
         },
         {
           "model": "gpt-5.6-sol@codex-cli",
@@ -1207,17 +1201,16 @@
           "efficiency": {
             "runs": 2,
             "calls": {
-              "median": 2,
+              "median": 1.5,
               "min": 1,
-              "max": 3
+              "max": 2
             },
             "turns": {
               "median": 4,
               "min": 4,
               "max": 4
             }
-          },
-          "regraded": true
+          }
         },
         {
           "model": "gpt-5.6-sol@codex-cli",
@@ -1286,17 +1279,16 @@
           "efficiency": {
             "runs": 2,
             "calls": {
-              "median": 2.5,
-              "min": 2,
+              "median": 3,
+              "min": 3,
               "max": 3
             },
             "turns": {
-              "median": 4.5,
-              "min": 4,
+              "median": 5,
+              "min": 5,
               "max": 5
             }
-          },
-          "regraded": true
+          }
         },
         {
           "model": "gpt-5.6-sol@codex-cli",
@@ -1363,17 +1355,16 @@
           "efficiency": {
             "runs": 2,
             "calls": {
-              "median": 20.5,
-              "min": 20,
-              "max": 21
+              "median": 16.5,
+              "min": 16,
+              "max": 17
             },
             "turns": {
               "median": 6.5,
               "min": 6,
               "max": 7
             }
-          },
-          "regraded": true
+          }
         },
         {
           "model": "gpt-5.6-sol@codex-cli",
@@ -1440,14 +1431,14 @@
           "efficiency": {
             "runs": 2,
             "calls": {
-              "median": 9.5,
-              "min": 9,
+              "median": 9,
+              "min": 8,
               "max": 10
             },
             "turns": {
-              "median": 9.5,
-              "min": 8,
-              "max": 11
+              "median": 8,
+              "min": 7,
+              "max": 9
             }
           },
           "regraded": true
@@ -1508,26 +1499,25 @@
         },
         {
           "model": "gemini-4-hydrogen-medium@agy-cli",
-          "runs": 3,
+          "runs": 2,
           "passed": 2,
           "pass_at": 2,
           "held": true,
           "driver": "gemini:cli",
           "search": "semantic",
           "efficiency": {
-            "runs": 3,
+            "runs": 2,
             "calls": {
-              "median": 13,
-              "min": 11,
-              "max": 15
+              "median": 11,
+              "min": 10,
+              "max": 12
             },
             "turns": {
-              "median": 7,
+              "median": 6.5,
               "min": 6,
               "max": 7
             }
-          },
-          "regraded": true
+          }
         },
         {
           "model": "gpt-5.6-sol@codex-cli",
@@ -1594,13 +1584,13 @@
           "efficiency": {
             "runs": 2,
             "calls": {
-              "median": 11.5,
-              "min": 8,
-              "max": 15
+              "median": 9.5,
+              "min": 7,
+              "max": 12
             },
             "turns": {
-              "median": 7.5,
-              "min": 6,
+              "median": 8,
+              "min": 7,
               "max": 9
             }
           },
@@ -1673,17 +1663,16 @@
           "efficiency": {
             "runs": 2,
             "calls": {
-              "median": 6,
-              "min": 6,
-              "max": 6
+              "median": 9,
+              "min": 9,
+              "max": 9
             },
             "turns": {
-              "median": 5,
+              "median": 5.5,
               "min": 5,
-              "max": 5
+              "max": 6
             }
-          },
-          "regraded": true
+          }
         },
         {
           "model": "gpt-5.6-sol@codex-cli",
@@ -1751,16 +1740,15 @@
             "runs": 2,
             "calls": {
               "median": 10,
-              "min": 9,
-              "max": 11
+              "min": 10,
+              "max": 10
             },
             "turns": {
-              "median": 7,
+              "median": 7.5,
               "min": 7,
-              "max": 7
+              "max": 8
             }
-          },
-          "regraded": true
+          }
         },
         {
           "model": "gpt-5.6-sol@codex-cli",
@@ -1831,17 +1819,16 @@
           "efficiency": {
             "runs": 2,
             "calls": {
-              "median": 7.5,
-              "min": 7,
-              "max": 8
+              "median": 9,
+              "min": 9,
+              "max": 9
             },
             "turns": {
-              "median": 6,
-              "min": 6,
-              "max": 6
+              "median": 5,
+              "min": 5,
+              "max": 5
             }
-          },
-          "regraded": true
+          }
         },
         {
           "model": "gpt-5.6-sol@codex-cli",
@@ -1900,25 +1887,26 @@
         },
         {
           "model": "gemini-4-hydrogen-medium@agy-cli",
-          "runs": 3,
+          "runs": 2,
           "passed": 2,
           "pass_at": 2,
           "held": true,
           "driver": "gemini:cli",
           "search": "semantic",
           "efficiency": {
-            "runs": 3,
+            "runs": 2,
             "calls": {
-              "median": 5,
+              "median": 3.5,
               "min": 3,
-              "max": 5
+              "max": 4
             },
             "turns": {
               "median": 4,
               "min": 4,
               "max": 4
             }
-          }
+          },
+          "regraded": true
         },
         {
           "model": "gpt-5.6-sol@codex-cli",
@@ -1989,16 +1977,15 @@
             "runs": 2,
             "calls": {
               "median": 8.5,
-              "min": 8,
-              "max": 9
+              "min": 7,
+              "max": 10
             },
             "turns": {
-              "median": 5.5,
-              "min": 5,
-              "max": 6
+              "median": 7.5,
+              "min": 7,
+              "max": 8
             }
-          },
-          "regraded": true
+          }
         },
         {
           "model": "gpt-5.6-sol@codex-cli",
@@ -2068,8 +2055,8 @@
           "efficiency": {
             "runs": 2,
             "calls": {
-              "median": 8.5,
-              "min": 8,
+              "median": 9,
+              "min": 9,
               "max": 9
             },
             "turns": {
@@ -2077,8 +2064,7 @@
               "min": 6,
               "max": 6
             }
-          },
-          "regraded": true
+          }
         },
         {
           "model": "gpt-5.6-sol@codex-cli",
@@ -2148,8 +2134,8 @@
           "efficiency": {
             "runs": 2,
             "calls": {
-              "median": 7.5,
-              "min": 7,
+              "median": 7,
+              "min": 6,
               "max": 8
             },
             "turns": {
@@ -2157,8 +2143,7 @@
               "min": 4,
               "max": 5
             }
-          },
-          "regraded": true
+          }
         },
         {
           "model": "gpt-5.6-sol@codex-cli",
@@ -2225,17 +2210,16 @@
           "efficiency": {
             "runs": 2,
             "calls": {
-              "median": 7.5,
+              "median": 7,
               "min": 7,
-              "max": 8
+              "max": 7
             },
             "turns": {
-              "median": 6,
+              "median": 6.5,
               "min": 6,
-              "max": 6
+              "max": 7
             }
-          },
-          "regraded": true
+          }
         },
         {
           "model": "gpt-5.6-sol@codex-cli",
@@ -2302,17 +2286,16 @@
           "efficiency": {
             "runs": 2,
             "calls": {
-              "median": 5.5,
-              "min": 5,
-              "max": 6
+              "median": 4,
+              "min": 4,
+              "max": 4
             },
             "turns": {
-              "median": 5.5,
-              "min": 5,
-              "max": 6
+              "median": 4,
+              "min": 4,
+              "max": 4
             }
-          },
-          "regraded": true
+          }
         },
         {
           "model": "gpt-5.6-sol@codex-cli",
@@ -2379,17 +2362,16 @@
           "efficiency": {
             "runs": 2,
             "calls": {
-              "median": 7,
-              "min": 6,
-              "max": 8
+              "median": 5,
+              "min": 5,
+              "max": 5
             },
             "turns": {
-              "median": 5.5,
+              "median": 5,
               "min": 5,
-              "max": 6
+              "max": 5
             }
-          },
-          "regraded": true
+          }
         },
         {
           "model": "gpt-5.6-sol@codex-cli",
@@ -2448,7 +2430,7 @@
         {
           "model": "gemini-4-hydrogen-medium@agy-cli",
           "runs": 3,
-          "passed": 3,
+          "passed": 2,
           "pass_at": 2,
           "held": true,
           "driver": "gemini:cli",
@@ -2458,15 +2440,14 @@
             "calls": {
               "median": 13,
               "min": 13,
-              "max": 15
+              "max": 16
             },
             "turns": {
               "median": 6,
               "min": 5,
               "max": 6
             }
-          },
-          "regraded": true
+          }
         },
         {
           "model": "gpt-5.6-sol@codex-cli",
@@ -2533,17 +2514,16 @@
           "efficiency": {
             "runs": 2,
             "calls": {
-              "median": 6,
-              "min": 5,
-              "max": 7
+              "median": 5,
+              "min": 4,
+              "max": 6
             },
             "turns": {
-              "median": 5.5,
+              "median": 5,
               "min": 5,
-              "max": 6
+              "max": 5
             }
-          },
-          "regraded": true
+          }
         },
         {
           "model": "gpt-5.6-sol@codex-cli",
@@ -2606,23 +2586,23 @@
         },
         {
           "model": "gemini-4-hydrogen-medium@agy-cli",
-          "runs": 2,
+          "runs": 3,
           "passed": 2,
           "pass_at": 2,
           "held": true,
           "driver": "gemini:cli",
           "search": "semantic",
           "efficiency": {
-            "runs": 2,
+            "runs": 3,
             "calls": {
               "median": 4,
               "min": 4,
-              "max": 4
+              "max": 5
             },
             "turns": {
               "median": 5,
-              "min": 4,
-              "max": 6
+              "min": 5,
+              "max": 5
             }
           },
           "regraded": true
@@ -2693,16 +2673,15 @@
             "runs": 2,
             "calls": {
               "median": 9.5,
-              "min": 6,
-              "max": 13
+              "min": 7,
+              "max": 12
             },
             "turns": {
               "median": 5,
-              "min": 4,
-              "max": 6
+              "min": 5,
+              "max": 5
             }
-          },
-          "regraded": true
+          }
         },
         {
           "model": "gpt-5.6-sol@codex-cli",
@@ -2769,17 +2748,16 @@
           "efficiency": {
             "runs": 2,
             "calls": {
-              "median": 3,
-              "min": 3,
-              "max": 3
+              "median": 4.5,
+              "min": 4,
+              "max": 5
             },
             "turns": {
               "median": 5,
               "min": 5,
               "max": 5
             }
-          },
-          "regraded": true
+          }
         },
         {
           "model": "gpt-5.6-sol@codex-cli",
@@ -2851,8 +2829,8 @@
           "efficiency": {
             "runs": 2,
             "calls": {
-              "median": 4,
-              "min": 4,
+              "median": 3.5,
+              "min": 3,
               "max": 4
             },
             "turns": {
@@ -2928,14 +2906,14 @@
           "efficiency": {
             "runs": 2,
             "calls": {
-              "median": 9,
-              "min": 8,
-              "max": 10
+              "median": 7.5,
+              "min": 6,
+              "max": 9
             },
             "turns": {
-              "median": 8,
-              "min": 7,
-              "max": 9
+              "median": 7,
+              "min": 6,
+              "max": 8
             }
           },
           "regraded": true
@@ -3005,14 +2983,14 @@
           "efficiency": {
             "runs": 2,
             "calls": {
-              "median": 4.5,
+              "median": 4,
               "min": 4,
-              "max": 5
+              "max": 4
             },
             "turns": {
               "median": 6,
-              "min": 6,
-              "max": 6
+              "min": 5,
+              "max": 7
             }
           },
           "regraded": true
@@ -3082,14 +3060,14 @@
           "efficiency": {
             "runs": 2,
             "calls": {
-              "median": 7,
-              "min": 5,
+              "median": 9,
+              "min": 9,
               "max": 9
             },
             "turns": {
-              "median": 4.5,
-              "min": 4,
-              "max": 5
+              "median": 6,
+              "min": 6,
+              "max": 6
             }
           },
           "regraded": true
@@ -3159,17 +3137,16 @@
           "efficiency": {
             "runs": 2,
             "calls": {
-              "median": 4,
-              "min": 4,
-              "max": 4
+              "median": 5,
+              "min": 5,
+              "max": 5
             },
             "turns": {
-              "median": 4,
-              "min": 4,
-              "max": 4
+              "median": 5,
+              "min": 5,
+              "max": 5
             }
-          },
-          "regraded": true
+          }
         },
         {
           "model": "gpt-5.6-sol@codex-cli",
@@ -3236,9 +3213,9 @@
           "efficiency": {
             "runs": 2,
             "calls": {
-              "median": 6.5,
+              "median": 5.5,
               "min": 5,
-              "max": 8
+              "max": 6
             },
             "turns": {
               "median": 7.5,
@@ -3352,17 +3329,16 @@
           "efficiency": {
             "runs": 2,
             "calls": {
-              "median": 13,
-              "min": 11,
-              "max": 15
+              "median": 18,
+              "min": 18,
+              "max": 18
             },
             "turns": {
-              "median": 8.5,
-              "min": 7,
+              "median": 10,
+              "min": 10,
               "max": 10
             }
-          },
-          "regraded": true
+          }
         },
         {
           "model": "gpt-5.6-sol@codex-cli",
@@ -3430,8 +3406,8 @@
           "efficiency": {
             "runs": 2,
             "calls": {
-              "median": 27.5,
-              "min": 26,
+              "median": 26.5,
+              "min": 24,
               "max": 29
             },
             "turns": {
@@ -3501,26 +3477,25 @@
         },
         {
           "model": "gemini-4-hydrogen-medium@agy-cli",
-          "runs": 2,
+          "runs": 3,
           "passed": 2,
           "pass_at": 2,
           "held": true,
           "driver": "gemini:cli",
           "search": "semantic",
           "efficiency": {
-            "runs": 2,
+            "runs": 3,
             "calls": {
-              "median": 10,
+              "median": 12,
               "min": 10,
-              "max": 10
+              "max": 15
             },
             "turns": {
-              "median": 7,
+              "median": 6,
               "min": 6,
-              "max": 8
+              "max": 7
             }
-          },
-          "regraded": true
+          }
         },
         {
           "model": "gpt-5.6-sol@codex-cli",
@@ -3588,14 +3563,14 @@
           "efficiency": {
             "runs": 2,
             "calls": {
-              "median": 2.5,
-              "min": 2,
+              "median": 3,
+              "min": 3,
               "max": 3
             },
             "turns": {
-              "median": 5.5,
-              "min": 5,
-              "max": 6
+              "median": 6.5,
+              "min": 6,
+              "max": 7
             }
           },
           "regraded": true
@@ -3744,14 +3719,14 @@
           "efficiency": {
             "runs": 2,
             "calls": {
-              "median": 9,
+              "median": 8,
               "min": 8,
-              "max": 10
+              "max": 8
             },
             "turns": {
-              "median": 6.5,
+              "median": 7,
               "min": 6,
-              "max": 7
+              "max": 8
             }
           },
           "regraded": true
@@ -3830,12 +3805,11 @@
               "max": 7
             },
             "turns": {
-              "median": 8,
+              "median": 8.5,
               "min": 8,
-              "max": 8
+              "max": 9
             }
-          },
-          "regraded": true
+          }
         },
         {
           "model": "gpt-5.6-sol@codex-cli",
@@ -3907,14 +3881,14 @@
           "efficiency": {
             "runs": 2,
             "calls": {
-              "median": 14.5,
-              "min": 14,
-              "max": 15
+              "median": 13,
+              "min": 13,
+              "max": 13
             },
             "turns": {
               "median": 8,
-              "min": 7,
-              "max": 9
+              "min": 8,
+              "max": 8
             }
           },
           "regraded": true
@@ -3985,14 +3959,14 @@
           "efficiency": {
             "runs": 2,
             "calls": {
-              "median": 19,
-              "min": 14,
-              "max": 24
+              "median": 18.5,
+              "min": 17,
+              "max": 20
             },
             "turns": {
-              "median": 12,
+              "median": 10,
               "min": 9,
-              "max": 15
+              "max": 11
             }
           },
           "regraded": true
@@ -4065,17 +4039,16 @@
           "efficiency": {
             "runs": 2,
             "calls": {
-              "median": 14,
+              "median": 15.5,
               "min": 14,
-              "max": 14
+              "max": 17
             },
             "turns": {
-              "median": 7.5,
-              "min": 7,
-              "max": 8
+              "median": 6.5,
+              "min": 6,
+              "max": 7
             }
-          },
-          "regraded": true
+          }
         },
         {
           "model": "gpt-5.6-sol@codex-cli",
@@ -4143,13 +4116,13 @@
           "efficiency": {
             "runs": 2,
             "calls": {
-              "median": 5,
-              "min": 4,
+              "median": 5.5,
+              "min": 5,
               "max": 6
             },
             "turns": {
-              "median": 5.5,
-              "min": 5,
+              "median": 6,
+              "min": 6,
               "max": 6
             }
           },
@@ -4225,14 +4198,14 @@
           "efficiency": {
             "runs": 2,
             "calls": {
-              "median": 7,
-              "min": 6,
+              "median": 8,
+              "min": 8,
               "max": 8
             },
             "turns": {
-              "median": 5.5,
-              "min": 5,
-              "max": 6
+              "median": 7,
+              "min": 6,
+              "max": 8
             }
           },
           "regraded": true
@@ -4307,12 +4280,11 @@
               "max": 10
             },
             "turns": {
-              "median": 5.5,
-              "min": 5,
+              "median": 6,
+              "min": 6,
               "max": 6
             }
-          },
-          "regraded": true
+          }
         },
         {
           "model": "gpt-5.6-sol@codex-cli",
@@ -4382,14 +4354,14 @@
           "efficiency": {
             "runs": 2,
             "calls": {
-              "median": 20,
-              "min": 19,
-              "max": 21
+              "median": 24.5,
+              "min": 24,
+              "max": 25
             },
             "turns": {
-              "median": 8.5,
-              "min": 8,
-              "max": 9
+              "median": 9.5,
+              "min": 9,
+              "max": 10
             }
           },
           "regraded": true
@@ -4461,14 +4433,14 @@
           "efficiency": {
             "runs": 2,
             "calls": {
-              "median": 8,
-              "min": 8,
-              "max": 8
+              "median": 10,
+              "min": 9,
+              "max": 11
             },
             "turns": {
-              "median": 6,
+              "median": 6.5,
               "min": 6,
-              "max": 6
+              "max": 7
             }
           },
           "regraded": true
@@ -4541,17 +4513,16 @@
           "efficiency": {
             "runs": 2,
             "calls": {
-              "median": 12,
-              "min": 12,
+              "median": 11.5,
+              "min": 11,
               "max": 12
             },
             "turns": {
-              "median": 6.5,
+              "median": 6,
               "min": 6,
-              "max": 7
+              "max": 6
             }
-          },
-          "regraded": true
+          }
         },
         {
           "model": "gpt-5.6-sol@codex-cli",
@@ -4672,14 +4643,14 @@
           "efficiency": {
             "runs": 2,
             "calls": {
-              "median": 9,
-              "min": 6,
-              "max": 12
+              "median": 7.5,
+              "min": 7,
+              "max": 8
             },
             "turns": {
-              "median": 7.5,
+              "median": 6,
               "min": 6,
-              "max": 9
+              "max": 6
             }
           },
           "regraded": true
@@ -4753,17 +4724,16 @@
           "efficiency": {
             "runs": 2,
             "calls": {
-              "median": 22.5,
-              "min": 22,
-              "max": 23
+              "median": 18,
+              "min": 16,
+              "max": 20
             },
             "turns": {
-              "median": 8.5,
-              "min": 7,
-              "max": 10
+              "median": 6.5,
+              "min": 6,
+              "max": 7
             }
-          },
-          "regraded": true
+          }
         },
         {
           "model": "gpt-5.6-sol@codex-cli",
@@ -4824,26 +4794,25 @@
         },
         {
           "model": "gemini-4-hydrogen-medium@agy-cli",
-          "runs": 2,
+          "runs": 3,
           "passed": 2,
           "pass_at": 2,
           "held": true,
           "driver": "gemini:cli",
           "search": "semantic",
           "efficiency": {
-            "runs": 2,
+            "runs": 3,
             "calls": {
-              "median": 14,
-              "min": 11,
-              "max": 17
+              "median": 18,
+              "min": 14,
+              "max": 30
             },
             "turns": {
-              "median": 5.5,
-              "min": 5,
-              "max": 6
+              "median": 8,
+              "min": 7,
+              "max": 8
             }
-          },
-          "regraded": true
+          }
         },
         {
           "model": "gpt-5.6-sol@codex-cli",
@@ -4911,17 +4880,16 @@
           "efficiency": {
             "runs": 2,
             "calls": {
-              "median": 9,
+              "median": 10,
               "min": 9,
-              "max": 9
+              "max": 11
             },
             "turns": {
-              "median": 6,
+              "median": 6.5,
               "min": 6,
-              "max": 6
+              "max": 7
             }
-          },
-          "regraded": true
+          }
         },
         {
           "model": "gpt-5.6-sol@codex-cli",
@@ -4997,8 +4965,7 @@
               "min": 5,
               "max": 6
             }
-          },
-          "regraded": true
+          }
         },
         {
           "model": "gpt-5.6-sol@codex-cli",
@@ -5070,16 +5037,15 @@
             "runs": 2,
             "calls": {
               "median": 8,
-              "min": 8,
-              "max": 8
+              "min": 7,
+              "max": 9
             },
             "turns": {
-              "median": 7.5,
-              "min": 7,
-              "max": 8
+              "median": 8.5,
+              "min": 8,
+              "max": 9
             }
-          },
-          "regraded": true
+          }
         },
         {
           "model": "gpt-5.6-sol@codex-cli",
@@ -5146,17 +5112,16 @@
           "efficiency": {
             "runs": 2,
             "calls": {
-              "median": 8.5,
+              "median": 7.5,
               "min": 7,
-              "max": 10
+              "max": 8
             },
             "turns": {
-              "median": 6.5,
+              "median": 5.5,
               "min": 5,
-              "max": 8
+              "max": 6
             }
-          },
-          "regraded": true
+          }
         },
         {
           "model": "gpt-5.6-sol@codex-cli",
@@ -5223,17 +5188,16 @@
           "efficiency": {
             "runs": 2,
             "calls": {
-              "median": 18.5,
-              "min": 13,
-              "max": 24
+              "median": 15.5,
+              "min": 14,
+              "max": 17
             },
             "turns": {
-              "median": 8.5,
-              "min": 7,
-              "max": 10
+              "median": 9,
+              "min": 9,
+              "max": 9
             }
-          },
-          "regraded": true
+          }
         },
         {
           "model": "gpt-5.6-sol@codex-cli",
@@ -5302,17 +5266,16 @@
           "efficiency": {
             "runs": 2,
             "calls": {
-              "median": 29.5,
-              "min": 22,
-              "max": 37
+              "median": 29,
+              "min": 20,
+              "max": 38
             },
             "turns": {
-              "median": 9.5,
-              "min": 8,
+              "median": 9,
+              "min": 7,
               "max": 11
             }
-          },
-          "regraded": true
+          }
         },
         {
           "model": "gpt-5.6-sol@codex-cli",
@@ -5387,17 +5350,16 @@
           "efficiency": {
             "runs": 2,
             "calls": {
-              "median": 15.5,
-              "min": 15,
-              "max": 16
+              "median": 17,
+              "min": 17,
+              "max": 17
             },
             "turns": {
               "median": 7.5,
               "min": 7,
               "max": 8
             }
-          },
-          "regraded": true
+          }
         },
         {
           "model": "gpt-5.6-sol@codex-cli",
@@ -5465,16 +5427,15 @@
             "runs": 2,
             "calls": {
               "median": 16,
-              "min": 15,
-              "max": 17
+              "min": 14,
+              "max": 18
             },
             "turns": {
               "median": 10,
-              "min": 8,
-              "max": 12
+              "min": 10,
+              "max": 10
             }
-          },
-          "regraded": true
+          }
         },
         {
           "model": "gpt-5.6-sol@codex-cli",
@@ -5546,17 +5507,16 @@
           "efficiency": {
             "runs": 2,
             "calls": {
-              "median": 14.5,
-              "min": 6,
-              "max": 23
+              "median": 7,
+              "min": 4,
+              "max": 10
             },
             "turns": {
-              "median": 7.5,
-              "min": 6,
-              "max": 9
+              "median": 6.5,
+              "min": 5,
+              "max": 8
             }
-          },
-          "regraded": true
+          }
         },
         {
           "model": "gpt-5.6-sol@codex-cli",
@@ -5623,17 +5583,16 @@
           "efficiency": {
             "runs": 2,
             "calls": {
-              "median": 13,
-              "min": 12,
-              "max": 14
+              "median": 9,
+              "min": 8,
+              "max": 10
             },
             "turns": {
-              "median": 7.5,
-              "min": 7,
-              "max": 8
+              "median": 6.5,
+              "min": 6,
+              "max": 7
             }
-          },
-          "regraded": true
+          }
         },
         {
           "model": "gpt-5.6-sol@codex-cli",
@@ -5700,17 +5659,16 @@
           "efficiency": {
             "runs": 2,
             "calls": {
-              "median": 12.5,
-              "min": 12,
-              "max": 13
+              "median": 10,
+              "min": 9,
+              "max": 11
             },
             "turns": {
               "median": 6,
               "min": 6,
               "max": 6
             }
-          },
-          "regraded": true
+          }
         },
         {
           "model": "gpt-5.6-sol@codex-cli",
@@ -5777,17 +5735,16 @@
           "efficiency": {
             "runs": 2,
             "calls": {
-              "median": 20,
-              "min": 18,
-              "max": 22
+              "median": 21,
+              "min": 19,
+              "max": 23
             },
             "turns": {
               "median": 9.5,
               "min": 9,
               "max": 10
             }
-          },
-          "regraded": true
+          }
         },
         {
           "model": "gpt-5.6-sol@codex-cli",
@@ -5864,8 +5821,7 @@
               "min": 3,
               "max": 3
             }
-          },
-          "regraded": true
+          }
         },
         {
           "model": "gpt-5.6-sol@codex-cli",
@@ -5932,9 +5888,9 @@
           "efficiency": {
             "runs": 2,
             "calls": {
-              "median": 3,
+              "median": 3.5,
               "min": 3,
-              "max": 3
+              "max": 4
             },
             "turns": {
               "median": 5,
@@ -6009,17 +5965,16 @@
           "efficiency": {
             "runs": 2,
             "calls": {
-              "median": 8.5,
-              "min": 8,
-              "max": 9
-            },
-            "turns": {
               "median": 7.5,
               "min": 7,
               "max": 8
+            },
+            "turns": {
+              "median": 7.5,
+              "min": 6,
+              "max": 9
             }
-          },
-          "regraded": true
+          }
         },
         {
           "model": "gpt-5.6-sol@codex-cli",
@@ -6073,12 +6028,13 @@
               "min": 4,
               "max": 4
             }
-          }
+          },
+          "regraded": true
         },
         {
           "model": "gemini-4-hydrogen-medium@agy-cli",
           "runs": 3,
-          "passed": 2,
+          "passed": 3,
           "pass_at": 2,
           "held": true,
           "driver": "gemini:cli",
@@ -6092,7 +6048,7 @@
             },
             "turns": {
               "median": 7,
-              "min": 7,
+              "min": 6,
               "max": 7
             }
           },
@@ -6163,17 +6119,16 @@
           "efficiency": {
             "runs": 2,
             "calls": {
-              "median": 6.5,
-              "min": 6,
-              "max": 7
+              "median": 14,
+              "min": 14,
+              "max": 14
             },
             "turns": {
-              "median": 6.5,
-              "min": 6,
-              "max": 7
+              "median": 8,
+              "min": 8,
+              "max": 8
             }
-          },
-          "regraded": true
+          }
         },
         {
           "model": "gpt-5.6-sol@codex-cli",
@@ -6240,17 +6195,16 @@
           "efficiency": {
             "runs": 2,
             "calls": {
-              "median": 12.5,
-              "min": 12,
-              "max": 13
+              "median": 14,
+              "min": 13,
+              "max": 15
             },
             "turns": {
-              "median": 6,
+              "median": 6.5,
               "min": 6,
-              "max": 6
+              "max": 7
             }
-          },
-          "regraded": true
+          }
         },
         {
           "model": "gpt-5.6-sol@codex-cli",
@@ -6308,26 +6262,25 @@
         },
         {
           "model": "gemini-4-hydrogen-medium@agy-cli",
-          "runs": 2,
+          "runs": 3,
           "passed": 2,
           "pass_at": 2,
           "held": true,
           "driver": "gemini:cli",
           "search": "semantic",
           "efficiency": {
-            "runs": 2,
+            "runs": 3,
             "calls": {
-              "median": 8.5,
-              "min": 7,
+              "median": 9,
+              "min": 6,
               "max": 10
             },
             "turns": {
               "median": 6,
-              "min": 5,
+              "min": 6,
               "max": 7
             }
-          },
-          "regraded": true
+          }
         },
         {
           "model": "gpt-5.6-sol@codex-cli",
@@ -6385,26 +6338,25 @@
         },
         {
           "model": "gemini-4-hydrogen-medium@agy-cli",
-          "runs": 3,
-          "passed": 1,
+          "runs": 2,
+          "passed": 2,
           "pass_at": 2,
-          "held": false,
+          "held": true,
           "driver": "gemini:cli",
           "search": "semantic",
           "efficiency": {
-            "runs": 3,
+            "runs": 2,
             "calls": {
-              "median": 9,
-              "min": 8,
+              "median": 10.5,
+              "min": 10,
               "max": 11
             },
             "turns": {
-              "median": 6,
-              "min": 6,
+              "median": 7,
+              "min": 7,
               "max": 7
             }
-          },
-          "regraded": true
+          }
         },
         {
           "model": "gpt-5.6-sol@codex-cli",
@@ -6458,26 +6410,27 @@
               "min": 5,
               "max": 7
             }
-          }
+          },
+          "regraded": true
         },
         {
           "model": "gemini-4-hydrogen-medium@agy-cli",
-          "runs": 2,
-          "passed": 2,
+          "runs": 3,
+          "passed": 3,
           "pass_at": 2,
           "held": true,
           "driver": "gemini:cli",
           "search": "semantic",
           "efficiency": {
-            "runs": 2,
+            "runs": 3,
             "calls": {
-              "median": 8.5,
-              "min": 8,
+              "median": 9,
+              "min": 6,
               "max": 9
             },
             "turns": {
-              "median": 7.5,
-              "min": 7,
+              "median": 6,
+              "min": 5,
               "max": 8
             }
           },
@@ -6548,17 +6501,16 @@
           "efficiency": {
             "runs": 2,
             "calls": {
-              "median": 7.5,
+              "median": 6,
               "min": 6,
-              "max": 9
+              "max": 6
             },
             "turns": {
-              "median": 6.5,
-              "min": 6,
-              "max": 7
+              "median": 5,
+              "min": 5,
+              "max": 5
             }
-          },
-          "regraded": true
+          }
         },
         {
           "model": "gpt-5.6-sol@codex-cli",
@@ -6634,8 +6586,7 @@
               "min": 4,
               "max": 5
             }
-          },
-          "regraded": true
+          }
         },
         {
           "model": "gpt-5.6-sol@codex-cli",
@@ -6711,8 +6662,7 @@
               "min": 5,
               "max": 5
             }
-          },
-          "regraded": true
+          }
         },
         {
           "model": "gpt-5.6-sol@codex-cli",
@@ -6770,23 +6720,23 @@
         },
         {
           "model": "gemini-4-hydrogen-medium@agy-cli",
-          "runs": 3,
+          "runs": 2,
           "passed": 2,
           "pass_at": 2,
           "held": true,
           "driver": "gemini:cli",
           "search": "semantic",
           "efficiency": {
-            "runs": 3,
+            "runs": 2,
             "calls": {
-              "median": 21,
-              "min": 20,
-              "max": 22
+              "median": 28.5,
+              "min": 27,
+              "max": 30
             },
             "turns": {
-              "median": 9,
-              "min": 8,
-              "max": 9
+              "median": 10,
+              "min": 9,
+              "max": 11
             }
           },
           "regraded": true
@@ -6848,25 +6798,24 @@
         {
           "model": "gemini-4-hydrogen-medium@agy-cli",
           "runs": 2,
-          "passed": 0,
+          "passed": 2,
           "pass_at": 2,
-          "held": false,
+          "held": true,
           "driver": "gemini:cli",
           "search": "semantic",
           "efficiency": {
             "runs": 2,
             "calls": {
-              "median": 23,
-              "min": 21,
-              "max": 25
+              "median": 24,
+              "min": 19,
+              "max": 29
             },
             "turns": {
-              "median": 8,
-              "min": 8,
+              "median": 7.5,
+              "min": 7,
               "max": 8
             }
-          },
-          "regraded": true
+          }
         },
         {
           "model": "gpt-5.6-sol@codex-cli",
@@ -6938,8 +6887,8 @@
             "runs": 2,
             "calls": {
               "median": 13,
-              "min": 10,
-              "max": 16
+              "min": 12,
+              "max": 14
             },
             "turns": {
               "median": 7.5,
@@ -7016,17 +6965,16 @@
           "efficiency": {
             "runs": 2,
             "calls": {
-              "median": 7.5,
+              "median": 6,
               "min": 6,
-              "max": 9
+              "max": 6
             },
             "turns": {
-              "median": 7,
+              "median": 6,
               "min": 6,
-              "max": 8
+              "max": 6
             }
-          },
-          "regraded": true
+          }
         },
         {
           "model": "gpt-5.6-sol@codex-cli",
@@ -7170,17 +7118,16 @@
           "efficiency": {
             "runs": 2,
             "calls": {
-              "median": 12,
-              "min": 11,
-              "max": 13
+              "median": 11,
+              "min": 10,
+              "max": 12
             },
             "turns": {
-              "median": 8,
-              "min": 8,
+              "median": 7.5,
+              "min": 7,
               "max": 8
             }
-          },
-          "regraded": true
+          }
         },
         {
           "model": "gpt-5.6-sol@codex-cli",
@@ -7247,17 +7194,16 @@
           "efficiency": {
             "runs": 2,
             "calls": {
-              "median": 5.5,
-              "min": 2,
-              "max": 9
+              "median": 4.5,
+              "min": 4,
+              "max": 5
             },
             "turns": {
-              "median": 9.5,
-              "min": 6,
-              "max": 13
+              "median": 8,
+              "min": 8,
+              "max": 8
             }
-          },
-          "regraded": true
+          }
         },
         {
           "model": "gpt-5.6-sol@codex-cli",
@@ -7324,17 +7270,16 @@
           "efficiency": {
             "runs": 2,
             "calls": {
-              "median": 7.5,
-              "min": 7,
-              "max": 8
+              "median": 10,
+              "min": 6,
+              "max": 14
             },
             "turns": {
-              "median": 7.5,
-              "min": 7,
-              "max": 8
+              "median": 9.5,
+              "min": 6,
+              "max": 13
             }
-          },
-          "regraded": true
+          }
         },
         {
           "model": "gpt-5.6-sol@codex-cli",
@@ -8251,19 +8196,18 @@
         "case112_my_plan_and_the_dossier",
         "case116_the_rate_and_the_logo",
         "case118_is_the_crane_job_at_risk",
-        "case31_wrong_word_on_the_record",
         "case40_sort_the_queue",
         "case49_who_can_introduce_us",
         "case5_before_the_meeting",
         "case50_what_moved_my_quarter",
         "case59_file_it_on_the_meeting_and_the_contract",
         "case6_ask_the_company",
-        "case64_catch_me_up_and_the_brief",
         "case76_she_said_yes_at_the_fair",
         "case77_record_her_yes",
         "case78_she_asked_us_to_stop",
         "case86_tell_her_what_we_hold",
-        "case88_send_it_anyway"
+        "case88_send_it_anyway",
+        "case99_they_raised_money"
       ],
       "driven": true,
       "required_only_as_one_of_a_set": false,
@@ -8497,9 +8441,8 @@
         "case113_after_the_sales_review",
         "case114_the_fleet_team",
         "case116_the_rate_and_the_logo",
-        "case117_log_it_and_say_what_waits",
         "case118_is_the_crane_job_at_risk",
-        "case119_who_came_to_the_fair",
+        "case122_file_the_acceptance_report",
         "case123_take_over_sofias_deal",
         "case124_log_it_with_read_access",
         "case129_move_it_to_service",
@@ -8541,6 +8484,7 @@
         "case82_keep_that_newsletter_out",
         "case85_the_pilot_slipped",
         "case86_tell_her_what_we_hold",
+        "case88_send_it_anyway",
         "case91_add_a_review_stage",
         "case93_count_that_stage_as_won",
         "case94_a_field_for_the_region",
@@ -8819,15 +8763,15 @@
         "case108_ask_sofia_for_an_intro",
         "case123_take_over_sofias_deal",
         "case128_is_she_here_twice",
-        "case130_put_the_offer_link_on_the_deal",
         "case31_wrong_word_on_the_record",
         "case40_sort_the_queue",
         "case5_before_the_meeting",
         "case58_quiet_for_three_weeks",
         "case59_file_it_on_the_meeting_and_the_contract",
+        "case65_clear_out_the_dead_deals",
         "case91_add_a_review_stage",
         "case94_a_field_for_the_region",
-        "case97_import_this_card"
+        "case99_they_raised_money"
       ],
       "driven": true,
       "required_only_as_one_of_a_set": false,
@@ -9241,8 +9185,7 @@
         "case131_no_to_the_hand_over",
         "case31_wrong_word_on_the_record",
         "case47_tidy_the_fair_list",
-        "case76_she_said_yes_at_the_fair",
-        "case94_a_field_for_the_region"
+        "case76_she_said_yes_at_the_fair"
       ],
       "driven": true,
       "required_only_as_one_of_a_set": false,
@@ -9496,7 +9439,7 @@
         "case125_what_waits_for_my_approval",
         "case126_file_it_i_approve",
         "case41_close_the_project",
-        "case44_chase_what_is_slipping"
+        "case65_clear_out_the_dead_deals"
       ],
       "driven": true,
       "required_only_as_one_of_a_set": false,
@@ -9582,6 +9525,7 @@
         "case44_chase_what_is_slipping",
         "case45_move_the_deal_on",
         "case46_get_us_in_a_room",
+        "case48_that_whole_thread_is_filed_wrong",
         "case49_who_can_introduce_us",
         "case5_before_the_meeting",
         "case50_what_moved_my_quarter",
@@ -9590,15 +9534,14 @@
         "case6_ask_the_company",
         "case60_send_one_draft_one",
         "case61_what_have_i_promised",
-        "case62_held_meetings_to_opportunities",
         "case63_is_she_already_here",
         "case64_catch_me_up_and_the_brief",
         "case65_clear_out_the_dead_deals",
         "case71_record_the_signed_contract",
         "case76_she_said_yes_at_the_fair",
         "case79_put_it_on_hold",
-        "case81_she_wants_her_data",
         "case86_tell_her_what_we_hold",
+        "case88_send_it_anyway",
         "case9_filed_in_the_wrong_place",
         "case99_they_raised_money"
       ],
@@ -9635,9 +9578,9 @@
           "cases_below_their_bar": []
         },
         "gemini-4-hydrogen-medium@agy-cli": {
-          "runs": 2,
+          "runs": 3,
           "passed": 2,
-          "reliability": 1,
+          "reliability": 0.6666666666666666,
           "cases_below_their_bar": []
         },
         "gpt-5.6-sol@codex-cli": {
@@ -9678,7 +9621,6 @@
         "case128_is_she_here_twice",
         "case129_move_it_to_service",
         "case20_put_it_in_the_board_pack",
-        "case22_can_i_trust_the_numbers",
         "case33_two_cards_for_one_company",
         "case4_use_the_moment",
         "case40_sort_the_queue",
@@ -9693,6 +9635,7 @@
         "case61_what_have_i_promised",
         "case64_catch_me_up_and_the_brief",
         "case65_clear_out_the_dead_deals",
+        "case75_sofia_is_leaving",
         "case81_she_wants_her_data"
       ],
       "driven": true,
@@ -9717,9 +9660,10 @@
       "called_in_held_runs": [
         "case108_ask_sofia_for_an_intro",
         "case124_log_it_with_read_access",
+        "case4_use_the_moment",
         "case44_chase_what_is_slipping",
         "case49_who_can_introduce_us",
-        "case6_ask_the_company",
+        "case5_before_the_meeting",
         "case63_is_she_already_here"
       ],
       "driven": true,
@@ -9747,8 +9691,10 @@
         "case31_wrong_word_on_the_record",
         "case32_two_words_for_one_thing",
         "case54_a_word_from_the_fair",
+        "case56_not_the_same",
         "case76_she_said_yes_at_the_fair",
-        "case94_a_field_for_the_region"
+        "case94_a_field_for_the_region",
+        "case99_they_raised_money"
       ],
       "driven": true,
       "required_only_as_one_of_a_set": false,
@@ -9769,11 +9715,10 @@
         "case74_read_the_file_back"
       ],
       "called_in_held_runs": [
-        "case107_tidy_up_the_room",
-        "case121_the_gist_of_the_visit_note",
         "case130_put_the_offer_link_on_the_deal",
         "case59_file_it_on_the_meeting_and_the_contract",
         "case6_ask_the_company",
+        "case60_send_one_draft_one",
         "case74_read_the_file_back"
       ],
       "driven": true,
@@ -9918,6 +9863,7 @@
         "case123_take_over_sofias_deal",
         "case124_log_it_with_read_access",
         "case125_what_waits_for_my_approval",
+        "case126_file_it_i_approve",
         "case127_log_the_call_again",
         "case128_is_she_here_twice",
         "case129_move_it_to_service",
@@ -9937,21 +9883,21 @@
         "case50_what_moved_my_quarter",
         "case56_not_the_same",
         "case58_quiet_for_three_weeks",
-        "case59_file_it_on_the_meeting_and_the_contract",
         "case6_ask_the_company",
         "case60_send_one_draft_one",
         "case61_what_have_i_promised",
-        "case62_held_meetings_to_opportunities",
         "case63_is_she_already_here",
         "case64_catch_me_up_and_the_brief",
         "case65_clear_out_the_dead_deals",
         "case66_what_are_these_two_worth",
+        "case75_sofia_is_leaving",
         "case76_she_said_yes_at_the_fair",
         "case77_record_her_yes",
         "case78_she_asked_us_to_stop",
         "case79_put_it_on_hold",
         "case81_she_wants_her_data",
         "case86_tell_her_what_we_hold",
+        "case88_send_it_anyway",
         "case9_filed_in_the_wrong_place",
         "case97_import_this_card",
         "case99_they_raised_money"
@@ -10016,8 +9962,7 @@
         "case32_two_words_for_one_thing"
       ],
       "called_in_held_runs": [
-        "case125_what_waits_for_my_approval",
-        "case126_file_it_i_approve"
+        "case125_what_waits_for_my_approval"
       ],
       "driven": true,
       "required_only_as_one_of_a_set": false,
@@ -10089,8 +10034,8 @@
       ],
       "called_in_held_runs": [
         "case1_log_it",
+        "case10_finish_the_import",
         "case102_shorter_in_my_voice",
-        "case103_stop_telling_me",
         "case105_what_changed_there",
         "case106_turn_that_rule_off",
         "case107_tidy_up_the_room",
@@ -10101,7 +10046,6 @@
         "case112_my_plan_and_the_dossier",
         "case113_after_the_sales_review",
         "case114_the_fleet_team",
-        "case116_the_rate_and_the_logo",
         "case117_log_it_and_say_what_waits",
         "case120_what_the_pump_customer_wants",
         "case123_take_over_sofias_deal",
@@ -10133,14 +10077,16 @@
         "case62_held_meetings_to_opportunities",
         "case64_catch_me_up_and_the_brief",
         "case65_clear_out_the_dead_deals",
-        "case71_record_the_signed_contract",
+        "case70_clear_my_notices",
         "case75_sofia_is_leaving",
         "case76_she_said_yes_at_the_fair",
         "case77_record_her_yes",
+        "case78_she_asked_us_to_stop",
         "case79_put_it_on_hold",
         "case81_she_wants_her_data",
         "case85_the_pilot_slipped",
         "case86_tell_her_what_we_hold",
+        "case88_send_it_anyway",
         "case94_a_field_for_the_region",
         "case99_they_raised_money"
       ],
