@@ -306,13 +306,10 @@ export function ContactResearchDrawer({
       labelledBy="contact-research-title"
       intent="drawer-reading"
     >
-      <DrawerHead>
-        <div className="pe-drawer-title">
-          <Heading size="large" id="contact-research-title">
-            {t("contact.research.title", { name: contactName })}
-          </Heading>
-        </div>
-        <Badge>{t("contact.research.publicOnly")}</Badge>
+      <DrawerHead mark={<Badge>{t("contact.research.publicOnly")}</Badge>}>
+        <Heading size="large" id="contact-research-title">
+          {t("contact.research.title", { name: contactName })}
+        </Heading>
       </DrawerHead>
 
       <DrawerBody>

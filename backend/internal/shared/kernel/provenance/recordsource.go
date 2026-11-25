@@ -47,16 +47,32 @@ func RecordSources() []string { return slices.Clone(recordSources) }
 
 // RecordSourceError refuses a source outside the list on a create wire. It is
 // caller-fixable, so every surface answers it as a 422 naming the field.
-type RecordSourceError struct{}
+type RecordSourceError struct {
+	// ChannelOnly marks a wire that takes no source_system and no source_id,
+	// so the message does not send the caller to fields it cannot set.
+	ChannelOnly bool
+}
 
 func (e *RecordSourceError) Error() string {
-	return "source must be one of " + strings.Join(recordSources, ", ") +
-		"; name the other system in source_system and its id in source_id"
+	listed := "source must be one of " + strings.Join(recordSources, ", ")
+	if e.ChannelOnly {
+		return listed + "; send manual for a member and api for an integration"
+	}
+	return listed + "; name the other system in source_system and its id in source_id"
 }
 
 // FieldFault states the refusal for the HTTP mapper and the tool surface alike.
 func (e *RecordSourceError) FieldFault() (field, code, message string) {
 	return "source", "invalid_source", e.Error()
+}
+
+// AdmitRecordChannel is AdmitRecordSource for a wire that carries the channel
+// alone, such as a signal's.
+func AdmitRecordChannel(source string) error {
+	if !slices.Contains(recordSources, source) {
+		return &RecordSourceError{ChannelOnly: true}
+	}
+	return nil
 }
 
 // AdmitRecordSource refuses a source the record tables' CHECK would refuse.

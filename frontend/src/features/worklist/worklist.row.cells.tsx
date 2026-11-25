@@ -2,13 +2,14 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { ReactNode } from "react";
+import { TaskMeta } from "../../components/taskmeta";
 import { Badge } from "../../design-system/atoms";
 import { Heading } from "../../design-system/heading";
 import { formatNumber } from "../../format/format";
 import { useLocale, useT } from "../../i18n";
 import { isUnprepared } from "../../lib/meetingreadiness";
 import { PinnedMark } from "./worklist.pinmark";
-import { RowCaptions } from "./worklist.row.captions";
+import { RowCaptions, useListed } from "./worklist.row.captions";
 import type { RowReadings } from "./worklist.row.compact";
 import { RowName } from "./worklist.rowname";
 import { VerdictLine } from "./worklist.verdict";
@@ -39,6 +40,7 @@ export function RowText({
   badged,
   titleEnd,
   underTitle,
+  chipped = false,
 }: Readonly<{
   readings: RowReadings;
   /** Opens a waiting message. Its presence is what names the row. */
@@ -50,6 +52,8 @@ export function RowText({
   titleEnd?: ReactNode;
   /** Drawn under the title's own lines, such as the card's chips. */
   underTitle?: ReactNode;
+  /** Whether the row says when and with whom in Home's chip line. */
+  chipped?: boolean;
 }>) {
   const {
     item,
@@ -64,6 +68,7 @@ export function RowText({
     zone,
   } = readings;
   const t = useT();
+  const listed = useListed();
   const name = (
     <>
       {emailOpener ? null : (
@@ -135,6 +140,7 @@ export function RowText({
         when={when}
         facts={facts}
         said={said}
+        chips={chipped && <TaskMeta item={item} link={listed} />}
       />
     </>
   );

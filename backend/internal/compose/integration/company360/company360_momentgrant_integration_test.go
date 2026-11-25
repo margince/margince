@@ -13,7 +13,6 @@ package company360
 // gap between them is a real seat and not a hypothetical one.
 
 import (
-	"maps"
 	"testing"
 
 	"github.com/margince/margince/backend/internal/compose/integration"
@@ -25,15 +24,7 @@ import (
 // company360LogReaderPerms is the full account rep with the one grant the card's
 // verb needs taken away, and nothing else changed: whatever the assertions
 // below see is the activity WRITE grant answering, not a narrower page.
-var company360LogReaderPerms = withActivityReadOnly(integration.AccountRepPerms)
-
-func withActivityReadOnly(base principal.Permissions) principal.Permissions {
-	narrowed := base
-	narrowed.Objects = make(map[string]principal.ObjectGrant, len(base.Objects))
-	maps.Copy(narrowed.Objects, base.Objects)
-	narrowed.Objects["activity"] = principal.ObjectGrant{Read: true}
-	return narrowed
-}
+var company360LogReaderPerms = integration.ActivityReadOnly(integration.AccountRepPerms)
 
 func TestTheAccountCardWithholdsItsLogVerbFromAReaderWhoCannotLog(t *testing.T) {
 	e := integration.Setup(t)

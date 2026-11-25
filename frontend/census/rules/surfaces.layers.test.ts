@@ -4,7 +4,8 @@
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { UNDERLAY_HOSTS } from "../../scripts/lib/surface-ladder";
-import { probe, ref } from "../../scripts/lib/surface-sheets";
+import { darkOnlyWash, probe, ref } from "../../scripts/lib/surface-sheets";
+import { themes } from "../../src/design-system/tokens-testing";
 import { plantedFindings, srcDir } from "../tree";
 import {
   hostFindings,
@@ -12,6 +13,8 @@ import {
   rule,
   underlayHosts,
 } from "./surfaces.layers.census";
+
+const darkWash = darkOnlyWash(themes.light, themes.dark);
 
 describe("the layer detectors", () => {
   it("reads a layer's host through a var(), a calc() and a state", () => {
@@ -34,10 +37,12 @@ describe("the layer detectors", () => {
     const planted = probe(
       ".probe",
       "background: linear-gradient(var(--ground), var(--ground)) padding-box, " +
-        "linear-gradient(var(--pane) , var(--pane)) padding-box, " +
+        `linear-gradient(var(${darkWash}) , var(${darkWash})) padding-box, ` +
         "linear-gradient(red, blue) border-box",
     );
-    expect(knockoutFills([planted])).toEqual([".probe: var(--pane) in dark"]);
+    expect(knockoutFills([planted])).toEqual([
+      `.probe: var(${darkWash}) in dark`,
+    ]);
     expect(knockoutFills([])).toEqual(["no knockout background was read"]);
   });
 

@@ -16,7 +16,6 @@ src/features/booking/booking-guest-parts.tsx 1
 src/features/booking/meeting-guest-view.tsx 1
 src/features/booking/meeting-link-drawer.tsx 3
 src/features/booking/meeting-links.tsx 1
-src/features/brief/brief.taskcard.tsx 1
 src/features/capture/blocked-domains.tsx 1
 src/features/capture/capture-exclusions.tsx 2
 src/features/capture/connection-settings.tsx 2

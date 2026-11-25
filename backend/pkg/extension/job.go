@@ -6,7 +6,6 @@ package extension
 import (
 	"context"
 	"fmt"
-	"regexp"
 	"strings"
 	"time"
 )
@@ -149,11 +148,6 @@ func (d JobDeclaration) ChildKind() string {
 	return dispatcher + JobKindSuffix
 }
 
-// jobKindGrammar is gen-jobs' own kindNameRE, restated here because the two
-// sides validate the same strings and this package cannot import a build tool.
-// River persists these in river_job.kind, so they are lower snake_case forever.
-var jobKindGrammar = regexp.MustCompile(`^[a-z][a-z0-9_]*$`)
-
 // Validate enforces everything about a declared job that must hold wherever it
 // is read — the generator that derives it from the merged contract, and the
 // boot that registers it. Both run this, so gen-time acceptance cannot drift
@@ -175,7 +169,7 @@ func (d JobDeclaration) Validate() error {
 	// a derived string that River could not persist has to fail at its own
 	// declaration rather than at the first insert.
 	for _, kind := range []string{d.DispatcherKind(), d.ChildKind()} {
-		if !jobKindGrammar.MatchString(kind) {
+		if !shortNameGrammar.MatchString(kind) {
 			return fmt.Errorf("extension %q, job %q derives kind %q, which River cannot persist (lower snake_case)", d.Unit, d.Job, kind)
 		}
 	}

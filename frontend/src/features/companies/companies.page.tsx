@@ -7,6 +7,7 @@ import {
   useLatestInbound,
 } from "../../components/latestinbound";
 import { useTaskUpdate } from "../../components/taskactions";
+import { ViewOnly } from "../../components/viewonly";
 import { Modal } from "../../design-system/atoms";
 import { DrawerBody, DrawerHead } from "../../design-system/drawerbands";
 import { Heading } from "../../design-system/heading";
@@ -105,7 +106,7 @@ export function CompanyPage({
   // upload and the relationship edges all point at this sentence. A rep on a
   // colleague's account is told once, not offered controls the server refuses.
   const verbRefusal = useCompanyVerbRefusal(company);
-  // Set only when the details' footnote renders. The raw `useId()` value is
+  // Set only when the footnote or the View only pill renders. The raw `useId()` value is
   // always truthy, so passing it always would point `aria-describedby` at an
   // id nothing on the page carries.
   const archivedReasonId = verbRefusal ? archivedParagraphId : undefined;
@@ -122,7 +123,7 @@ export function CompanyPage({
   // The daily brief's leading card opens the same drawer from its own verb, so
   // the header strip is not the only door into it.
   const [activityDrawer, setActivityDrawer] = useState<ActivityDrawer>(null);
-  const activity = useActivityGate(writableTarget(company));
+  const activity = useActivityGate("company", writableTarget(company));
   const [auditOpen, setAuditOpen] = useState(false);
   // Which open task the Tasks tab has expanded into its detail modal. Keyed by
   // activity id rather than a boolean, because the modal reads that row.
@@ -154,8 +155,10 @@ export function CompanyPage({
       // undefined `view` alone cannot tell the rail's sections which of the
       // two holds, and each needs its own drawing.
       loading={loading}
+      // An archived account says why in the details' footnote; a live one
+      // this reader may only view says it in the head's View only pill.
       refusal={
-        verbRefusal && archivedReasonId
+        verbRefusal && archivedReasonId && company.archived_at
           ? { id: archivedReasonId, text: verbRefusal }
           : undefined
       }
@@ -187,7 +190,17 @@ export function CompanyPage({
         <CompanyHeadLines company={company} view={view} loading={loading} />
       }
       // Where it stands, what it is to us and who may read it.
-      pulse={<CompanyMarks company={company} />}
+      pulse={
+        <>
+          <CompanyMarks company={company} />
+          <ViewOnly
+            kind="company"
+            record={company}
+            name={company.display_name}
+            reasonId={archivedParagraphId}
+          />
+        </>
+      }
       latest={
         tab !== "overview" && (
           <LatestInboundLine latest={latest} onOpen={() => onTab("overview")} />

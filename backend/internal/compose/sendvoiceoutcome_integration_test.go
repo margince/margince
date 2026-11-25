@@ -128,8 +128,8 @@ func (e *voiceSendEnv) openDraft(t *testing.T) voiceDraft {
 	if err := e.owner.QueryRow(context.Background(), `
 		INSERT INTO voice_learning_signal
 		  (voice_profile_id, draft_ref_hash, outcome, generated_original,
-		   retention_until, source, captured_by)
-		VALUES ($1, $2, 'drafted', $3, $4, 'draft', $5) RETURNING id`,
+		   retention_until, captured_by)
+		VALUES ($1, $2, 'drafted', $3, $4, $5) RETURNING id`,
 		draft.profile, hash[:], voiceDraftBody,
 		time.Now().UTC().Add(180*24*time.Hour), "human:"+e.Rep1.String()).Scan(&draft.signal); err != nil {
 		t.Fatalf("seeding the drafted learning signal: %v", err)

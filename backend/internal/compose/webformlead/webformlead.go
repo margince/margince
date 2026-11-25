@@ -22,6 +22,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/webforms"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/platform/database/textbounds"
 	"github.com/margince/margince/backend/internal/platform/mailcopy"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/provenance"
@@ -154,8 +155,11 @@ func LeadInput(landing webforms.Landing) contacts.CreateLeadInput {
 	e := landing.Enquiry
 	system, key := provenance.WebFormSource, landing.SourceKey
 	in := contacts.CreateLeadInput{
-		Email: &e.Email, FullName: optional(e.FullName), Title: optional(e.Title),
-		CompanyName: optional(e.Company), SourceSystem: &system, SourceID: &key,
+		Email:        &e.Email,
+		FullName:     optional(textbounds.Fit("public.lead.full_name", e.FullName)),
+		Title:        optional(textbounds.Fit("public.lead.title", e.Title)),
+		CompanyName:  optional(textbounds.Fit("public.lead.company_name", e.Company)),
+		SourceSystem: &system, SourceID: &key,
 		Source: webFormLeadSource, Origin: landing.LeadOrigin, OriginDetail: optional(originDetail(e)),
 	}
 	if landing.OwnerID != nil && landing.HandlingAutomationID == nil {

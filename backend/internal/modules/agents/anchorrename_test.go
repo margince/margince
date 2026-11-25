@@ -84,7 +84,7 @@ func TestUpdateRecordRefusesAMachineRenamingTheAnchorBeforeStaging(t *testing.T)
 				{Type: datasource.EntityCompany, ID: id}: anchorCandidate(id, tc.record),
 			}}
 			tool := updateRecord{p: p}
-			in, err := json.Marshal(map[string]any{"record_type": "company", "id": id, "fields": json.RawMessage(tc.patch)})
+			in, err := json.Marshal(map[string]any{"record_type": "company", "id": id, "fields": json.RawMessage(tc.patch), "why": "A test asks for this change."})
 			if err != nil {
 				t.Fatalf("marshaling args: %v", err)
 			}

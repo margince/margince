@@ -168,6 +168,8 @@ export function useCoachTeammate() {
       recipientUserId: string;
       kind: components["schemas"]["NoticeKind"];
       note: string;
+      /** The deal a next-step note is about; "" on every other kind. */
+      dealId: string;
     }) => {
       unwrap(
         await api.POST("/notices", {
@@ -177,6 +179,7 @@ export function useCoachTeammate() {
             // An empty note is ABSENT rather than an empty string: the coach
             // added none, which the kind's own headline already covers.
             ...(input.note.trim() === "" ? {} : { note: input.note }),
+            ...(input.dealId === "" ? {} : { deal_id: input.dealId }),
           },
         }),
       );

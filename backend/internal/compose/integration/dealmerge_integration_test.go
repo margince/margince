@@ -211,11 +211,9 @@ func TestTwoOppositeDealMergesLeaveOneWinner(t *testing.T) {
 	var wg sync.WaitGroup
 	results := make([]error, 2)
 	for i, pair := range [][2]ids.DealID{{a, b}, {b, a}} {
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
+		wg.Go(func() {
 			_, results[i] = e.Deals.MergeDeal(mergeAdmin(e), pair[0], pair[1], nil)
-		}()
+		})
 	}
 	wg.Wait()
 	wins := 0

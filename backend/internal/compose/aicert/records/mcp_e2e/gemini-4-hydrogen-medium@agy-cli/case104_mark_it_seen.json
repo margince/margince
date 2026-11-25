@@ -13,20 +13,24 @@
   "self_judged": false,
   "stamp": {
     "scenario": "5713fa9fdd1d5e62",
-    "tools": "6dd6ed05b65d4b5f",
-    "instructions": "c5c644eee9719be0",
+    "tools": "78c10b6ad249fb24",
+    "instructions": "4eab26d5fff0793f",
     "judge": "",
-    "harness": "024566e70b0c3db3",
-    "commit": "d76651445fdbe7445b1318837cd33cb56282f221",
-    "ran_at": "2026-11-21T17:05:02Z",
-    "graded_commit": "5808d1c0d9c1a63a8e4b2a14495d96f45c40c7fd",
-    "graded_at": "2026-11-21T23:31:48Z"
+    "harness": "ae24b6799c8461d2",
+    "parsers": {
+      "gemini:cli": "fa1db64bc14e971b",
+      "gpt:cli": "d48ca27c983f8b3f"
+    },
+    "commit": "6d3a5be8c69b862c6c7db3c3534ac5fd705dd41e",
+    "ran_at": "2026-11-25T07:40:28Z",
+    "graded_commit": "6d3a5be8c69b862c6c7db3c3534ac5fd705dd41e",
+    "graded_at": "2026-11-25T07:40:28Z"
   },
   "usage": {
-    "input_tokens": 36330,
-    "output_tokens": 5508,
+    "input_tokens": 42061,
+    "output_tokens": 6410,
     "cache_creation_input_tokens": 0,
-    "cache_read_input_tokens": 55414,
+    "cache_read_input_tokens": 77852,
     "runs_measured": 2,
     "runs_costed": 0,
     "cost_usd": null
@@ -54,29 +58,29 @@
   "efficiency": {
     "runs": 2,
     "calls": {
-      "median": 2.5,
-      "min": 2,
+      "median": 3,
+      "min": 3,
       "max": 3
     },
     "turns": {
-      "median": 4.5,
-      "min": 4,
+      "median": 5,
+      "min": 5,
       "max": 5
     },
     "refused": {
-      "median": 0.5,
-      "min": 0,
+      "median": 1,
+      "min": 1,
       "max": 1
     },
     "prompt_tokens": {
-      "median": 45872,
-      "min": 44401,
-      "max": 47343
+      "median": 59956.5,
+      "min": 59809,
+      "max": 60104
     },
     "output_tokens": {
-      "median": 2754,
-      "min": 2700,
-      "max": 2808
+      "median": 3205,
+      "min": 3160,
+      "max": 3250
     }
   }
 }

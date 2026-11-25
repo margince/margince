@@ -61,8 +61,8 @@ func TestCompanyAskAnswersFromTheModelAndReportsTheWriter(t *testing.T) {
 	}
 	// Nothing is cached: the question is asked once and read once, so no row
 	// may outlive the request.
-	if rows := e.WsCount(t, `SELECT count(*) FROM company_brief`); rows != 0 {
-		t.Errorf("company_brief rows = %d after a question, want 0 — an answer is not a brief", rows)
+	if rows := e.WsCount(t, `SELECT count(*) FROM generated_summary WHERE kind = 'company_brief'`); rows != 0 {
+		t.Errorf("stored company brief rows = %d after a question, want 0 — an answer is not a brief", rows)
 	}
 }
 

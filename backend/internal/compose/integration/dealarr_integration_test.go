@@ -409,8 +409,7 @@ func TestClearingTheAmountOfAnOpenDeal(t *testing.T) {
 	}
 
 	_, err = e.Deals.UpdateDeal(admin, create("Currency alone", false), deals.UpdateDealInput{Clear: []string{"currency"}})
-	var pairErr *deals.AmountCurrencyPairError
-	if !errors.As(err, &pairErr) {
+	if _, ok := errors.AsType[*deals.AmountCurrencyPairError](err); !ok {
 		t.Errorf("clearing the currency under an amount = %v, want deals.AmountCurrencyPairError", err)
 	}
 }
@@ -433,8 +432,7 @@ func TestClearingTheAmountOfAWonDealIsRefused(t *testing.T) {
 		t.Fatalf("winning the deal: %v", err)
 	}
 	_, err = e.Deals.UpdateDeal(admin, id, deals.UpdateDealInput{Clear: []string{"amount_minor"}})
-	var closed *deals.ClosedDealAmountError
-	if !errors.As(err, &closed) {
+	if _, ok := errors.AsType[*deals.ClosedDealAmountError](err); !ok {
 		t.Fatalf("clearing a won deal's amount = %v, want deals.ClosedDealAmountError", err)
 	}
 	after, err := e.Deals.GetDeal(admin, id, storekit.LiveOnly)

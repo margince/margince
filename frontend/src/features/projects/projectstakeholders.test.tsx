@@ -109,6 +109,14 @@ function stubFetch(
 // flake family the frontend rulebook names rather than a wait at all.
 const SEARCH_DEBOUNCE_MS = 250;
 
+const SEAT_MENU = "More actions for Mai Trần";
+
+// The row's menu, then its Remove item, which asks before it writes.
+async function openRemove(user: ReturnType<typeof setup>) {
+  await user.click(screen.getByRole("button", { name: SEAT_MENU }));
+  await user.click(screen.getByRole("button", { name: "Remove" }));
+}
+
 function setup() {
   return userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
 }
@@ -174,7 +182,7 @@ describe("the stakeholders on a project", () => {
     stubFetch((call) => writes.push(call));
     renderCard();
 
-    await user.click(screen.getByTestId("remove-project-stakeholder"));
+    await openRemove(user);
     // Two steps on purpose: the endpoint archives the edge and the card offers
     // no way back, so the first click must not be the write.
     expect(writes.length).toBe(0);
@@ -194,7 +202,7 @@ describe("the stakeholders on a project", () => {
     stubFetch(() => {});
     renderCard();
 
-    await user.click(screen.getByTestId("remove-project-stakeholder"));
+    await openRemove(user);
     await user.click(screen.getByRole("button", { name: "Remove" }));
 
     await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
@@ -213,7 +221,7 @@ describe("the stakeholders on a project", () => {
     renderCard({ view: withheldView() });
 
     expect(screen.queryByTestId("add-project-stakeholder")).toBeNull();
-    expect(screen.queryByTestId("remove-project-stakeholder")).toBeNull();
+    expect(screen.queryByRole("button", { name: SEAT_MENU })).toBeNull();
   });
 
   it("offers no verb on an archived project", () => {
@@ -223,7 +231,7 @@ describe("the stakeholders on a project", () => {
     renderCard({ readOnly: true });
 
     expect(screen.queryByTestId("add-project-stakeholder")).toBeNull();
-    expect(screen.queryByTestId("remove-project-stakeholder")).toBeNull();
+    expect(screen.queryByRole("button", { name: SEAT_MENU })).toBeNull();
   });
 
   // A refused write stays on screen in the server's own words. A dialog that
@@ -257,7 +265,7 @@ describe("the stakeholders on a project", () => {
     );
     renderCard();
 
-    await user.click(screen.getByTestId("remove-project-stakeholder"));
+    await openRemove(user);
     await user.click(screen.getByRole("button", { name: "Remove" }));
 
     expect(await screen.findByText(/this contact is archived/)).toBeTruthy();
@@ -306,6 +314,6 @@ describe("the stakeholders on a project", () => {
     renderCard({ view: view([]) });
 
     expect(screen.getByTestId("add-project-stakeholder")).toBeTruthy();
-    expect(screen.queryByTestId("remove-project-stakeholder")).toBeNull();
+    expect(screen.queryByRole("button", { name: SEAT_MENU })).toBeNull();
   });
 });

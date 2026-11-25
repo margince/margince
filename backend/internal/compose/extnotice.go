@@ -212,7 +212,7 @@ func (d extensionNoticeDoor) deliver(ctx context.Context, in extension.NoticeReq
 			Kind:       notices.KindExtension,
 			Subject:    in.Subject,
 			DedupeKey:  dedupe,
-			Target:     notices.Target{Type: in.Record.Type, ID: record},
+			Target:     notices.Target{Type: noticeTargetType(in.Record.Type), ID: record},
 		})
 		if err != nil {
 			return 0, err
@@ -245,4 +245,13 @@ func noticeCandidates(ctx context.Context, tx pgx.Tx, in extension.NoticeRequest
 		return nil, fmt.Errorf("compose: resolving the recipients of a notice: %w", err)
 	}
 	return pgx.CollectRows(rows, pgx.RowTo[ids.UUID])
+}
+
+// noticeTargetType is the type a notice stores. The notices table names an
+// extension kind by its object, `ext_<unit>_<kind>`, and refuses the wire form.
+func noticeTargetType(recordType string) string {
+	if declared, ok := recordkinds.Lookup(recordType); ok {
+		return declared.Object
+	}
+	return recordType
 }

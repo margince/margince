@@ -228,6 +228,28 @@ func TestEveryCreatingKindNeedsTheHigherFloor(t *testing.T) {
 	}
 }
 
+// A sentence that steers the model to a kind recording no contact must not also
+// ask it to lower its confidence. That kind faces the ordinary floor, so an
+// obedient model would retire the safe answer to a human instead of applying it.
+func TestThePromptNeverAsksForLessConfidenceInTheKindItPrefers(t *testing.T) {
+	t.Parallel()
+	steering := 0
+	for sentence := range strings.SplitSeq(strings.ReplaceAll(verdictSystem, "\n", " "), ". ") {
+		if !strings.Contains(sentence, "Prefer a kind that records no contact") {
+			continue
+		}
+		steering++
+		if strings.Contains(sentence, "lower your confidence") {
+			t.Errorf("the prompt prefers a kind that records no contact and asks for a lower confidence "+
+				"in the same breath, which puts that answer under the %v floor:\n%s", verdictConfidenceFloor, sentence)
+		}
+	}
+	if steering == 0 {
+		t.Fatal("the prompt no longer prefers a kind that records no contact for outbound mail; " +
+			"this test reads nothing and must follow the sentence that does")
+	}
+}
+
 // The create floor is enforced where the record is made, not only where the
 // answer is read.
 //

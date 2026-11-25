@@ -254,7 +254,7 @@ func liveVoiceProfile(t *testing.T, e *apptest.AppEnv) string {
 func seededID(t *testing.T, e *apptest.AppEnv, path string, body integration.AnyMap) string {
 	t.Helper()
 	var created json.RawMessage
-	status := e.Call(t, "POST", path, body, nil, &created)
+	status := e.CallUntilSettled(t, "POST", path, body, nil, &created)
 	var answer struct {
 		ID string `json:"id"`
 	}

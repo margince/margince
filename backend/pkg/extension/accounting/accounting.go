@@ -28,9 +28,9 @@ type Connection struct {
 type Customer struct {
 	ExternalID  string
 	DisplayName string
-	// UpdatedAt is the source's own modification stamp, when it keeps one. It
-	// is reported, never used to detect change: a source that touches every
-	// row nightly would otherwise look like one that changed every row.
+	// UpdatedAt is the source's own modification stamp, when it keeps one. The
+	// mirror never uses it to detect change: a source that touches every row
+	// nightly would otherwise look like one that changed every row.
 	UpdatedAt *time.Time
 }
 

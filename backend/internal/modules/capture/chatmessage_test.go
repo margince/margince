@@ -115,9 +115,9 @@ func TestAnAdapterCannotNameTheAudienceItself(t *testing.T) {
 	// narrows a message is the ownership of the authenticated binding.
 	for _, in := range []any{connector.ChatMessage{}, connector.ChatBinding{}, connector.ChatParty{}} {
 		typ := reflect.TypeOf(in)
-		for i := range typ.NumField() {
-			if strings.Contains(strings.ToLower(typ.Field(i).Name), "audience") {
-				t.Errorf("%s.%s names an audience", typ.Name(), typ.Field(i).Name)
+		for field := range typ.Fields() {
+			if strings.Contains(strings.ToLower(field.Name), "audience") {
+				t.Errorf("%s.%s names an audience", typ.Name(), field.Name)
 			}
 		}
 	}

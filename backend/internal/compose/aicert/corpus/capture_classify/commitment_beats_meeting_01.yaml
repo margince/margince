@@ -17,6 +17,12 @@ expect:
   outcome: accepted
   answer: [commitment]
   rubric: >
+    The candidate output is the harness's record of the run, not one reply.
+    "replies" holds each raw reply in the order the pass asked, and "messages"
+    holds what the pass stored for each message. That wrapper is the harness's,
+    so never score it as a format fault; each reply inside it is the model's.
+    A message answered under the 0.7 floor is re-asked alone, so a second reply
+    is that re-ask and not a contradiction.
     This message is genuinely BOTH: a promise with a date ("signed change
     request on Monday morning") and a scheduling request with offered times
     ("half an hour Wednesday after 2pm"). It exists to make the documented

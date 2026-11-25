@@ -91,6 +91,7 @@ export function projectMock(input: {
     from: string | null,
     to: MockProject["phase"],
     reason: string | null,
+    cause?: Transition["cause"],
   ) => {
     const rows = history.get(project.id) ?? [];
     rows.push({
@@ -100,6 +101,7 @@ export function projectMock(input: {
       reason,
       changed_at: NOW,
       changed_by: ACTOR,
+      ...(cause ? { cause } : {}),
     });
     history.set(project.id, rows);
     project.phase = to;
@@ -171,13 +173,20 @@ export function projectMock(input: {
     projects,
     // The win's side effect: only from initiative or pursuing, never out of
     // closed, and a project already delivering is left as it is.
-    startDelivery(projectId: string | null | undefined) {
+    startDelivery(
+      projectId: string | null | undefined,
+      deal: Readonly<{ id: string; name: string }>,
+    ) {
       const project = projectId ? find(projectId) : undefined;
       if (
         project &&
         (project.phase === "initiative" || project.phase === "pursuing")
       ) {
-        record(project, project.phase, "delivering", null);
+        record(project, project.phase, "delivering", null, {
+          kind: "deal_won",
+          deal_id: deal.id,
+          deal_name: deal.name,
+        });
       }
     },
     async handle(

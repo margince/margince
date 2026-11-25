@@ -104,10 +104,10 @@ func seedSignal(t *testing.T, company ids.UUID, kind, severity, summary, at stri
 	t.Helper()
 	if _, err := integration.OwnerConn(t).Exec(context.Background(), `INSERT INTO signal
 		(id, kind, source_channel, entity_type, entity_id, resolved_company_id,
-		 resolution_state, severity, summary, status, detected_at, source, captured_by)
+		 resolution_state, severity, summary, status, detected_at, source, source_system, captured_by)
 		VALUES ($1, '`+kind+`', 'derived', 'company', '`+company.String()+`',
 		        '`+company.String()+`', 'resolved', '`+severity+`', '`+summary+`', 'open',
-		        '`+at+`', 'signal-scan', 'agent:`+kind+`')`, ids.NewV7()); err != nil {
+		        '`+at+`', 'automation', 'signal-scan', 'agent:`+kind+`')`, ids.NewV7()); err != nil {
 		t.Fatalf("seeding a signal: %v", err)
 	}
 }

@@ -9,6 +9,7 @@ import (
 	"testing"
 
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/ports/extregistrytest"
 	"github.com/margince/margince/backend/internal/shared/ports/recordkinds"
 	"github.com/margince/margince/backend/pkg/extension"
 )
@@ -43,8 +44,7 @@ func TestADeliveryMaySendANoticeAndATickMayNot(t *testing.T) {
 const testNoticeUnit = "delivery-unit"
 
 func TestANoticeMayNameARecordKindOnlyItsOwnUnitDeclared(t *testing.T) {
-	recordkinds.Reset()
-	t.Cleanup(recordkinds.Reset)
+	extregistrytest.Reset(t)
 	recordkinds.Register("delivery-unit", []extension.RecordKindDeclaration{{Kind: "room"}})
 	recordkinds.Register("other-unit", []extension.RecordKindDeclaration{{Kind: "room"}})
 	for name, c := range map[string]struct {
@@ -99,6 +99,24 @@ func TestAUnitThatSendsTooManyNoticesIsRefused(t *testing.T) {
 	core := extensionCore{unit: unit, authority: func(ctx context.Context) (context.Context, error) { return ctx, nil }}
 	if _, err := core.Notices().Send(context.Background(), validNotice()); !errors.Is(err, extension.ErrRateLimited) {
 		t.Fatalf("err = %v, want ErrRateLimited", err)
+	}
+}
+
+// Past the ceiling every send is refused, and the refusal is the unit's own: a
+// neighbouring unit still sends.
+func TestTheNoticeCeilingHoldsPastTheLimitAndOnlyForTheUnitThatReachedIt(t *testing.T) {
+	const unit, neighbour = "past-limit-unit", "quiet-unit"
+	for range extensionNoticesPerMinute {
+		extensionNotices.Allow(unit)
+	}
+	core := extensionCore{unit: unit, authority: func(ctx context.Context) (context.Context, error) { return ctx, nil }}
+	for i := range 3 {
+		if _, err := core.Notices().Send(context.Background(), validNotice()); !errors.Is(err, extension.ErrRateLimited) {
+			t.Fatalf("send %d past the limit = %v, want ErrRateLimited", i+1, err)
+		}
+	}
+	if !extensionNotices.Allow(neighbour) {
+		t.Error("a unit under its limit was refused for another unit's flood")
 	}
 }
 

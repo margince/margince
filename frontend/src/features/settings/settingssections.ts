@@ -3,6 +3,24 @@
 
 import type { MessageKey } from "../../i18n/en";
 import type { SettingsPageId } from "../../lib/settingscatalog";
+import { AGENT_RULES_SUBPAGE } from "../../lib/settingsrouting";
+
+// Agent rules is drawn at an address of its own under its page, led by its own
+// name as a tab is.
+const AGENT_RULES_SECTIONS = [
+  "aiAccess.dev.tab.rules",
+  "tools.title",
+  "settings.autonomy",
+  "settings.tierRead",
+  "settings.tierSend",
+  "settings.tierWait",
+  "settings.tierAdvance",
+] as const satisfies readonly MessageKey[];
+
+/** The sections a tabless page draws at a sub-address, keyed by its segment. */
+export const SUBPAGE_SECTIONS: Partial<
+  Record<SettingsPageId, Readonly<Record<string, readonly MessageKey[]>>>
+> = { agents: { [AGENT_RULES_SUBPAGE]: AGENT_RULES_SECTIONS } };
 
 // The panel titles and setting names each page draws, as catalog keys. Search
 // finds a page by one of its settings in the reader's language. A tabbed page
@@ -62,19 +80,15 @@ export const SETTINGS_SECTIONS = {
     "settings.voice.sentMailLabel",
   ],
   agents: [
+    "aiAccess.yourAgent.title",
     "aiAccess.connect.title",
     "agents.connected",
-    "aiAccess.dev.title",
-    "settings.passports",
-    "tools.title",
-    "settings.autonomy",
     "autonomy.title",
     "approvalPreferences.title",
+    "aiAccess.dev.title",
+    "settings.passports",
     "settings.passportUseAi",
-    "settings.tierRead",
-    "settings.tierSend",
-    "settings.tierWait",
-    "settings.tierAdvance",
+    ...AGENT_RULES_SECTIONS,
   ],
   notifications: [
     "notifications.title",
@@ -409,7 +423,7 @@ export function settingsSectionKeys(
     .flatMap(([, keys]) => keys);
 }
 
-/** The tab of `page` that draws the section `key`, if the page has tabs. */
+/** The tab or sub-address of `page` that draws the section `key`, if any. */
 export function settingsSectionTab(
   page: SettingsPageId,
   key: MessageKey,
@@ -417,8 +431,10 @@ export function settingsSectionTab(
   const sections:
     | readonly MessageKey[]
     | Readonly<Record<string, readonly MessageKey[]>> = SETTINGS_SECTIONS[page];
-  if (Array.isArray(sections)) return undefined;
-  return Object.entries(sections).find(([, keys]) => keys.includes(key))?.[0];
+  const parts = Array.isArray(sections)
+    ? (SUBPAGE_SECTIONS[page] ?? {})
+    : sections;
+  return Object.entries(parts).find(([, keys]) => keys.includes(key))?.[0];
 }
 
 // The company-context card's names, drawn where `companyContextShown` says.

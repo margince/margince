@@ -103,8 +103,8 @@ export function ContactFacts({
 
 /**
  * Who wrote the contact, as a provenance pill. The pill names the kind of
- * source. The popover behind it answers which one, which for a mailbox capture
- * is a message id no reader should have to scan past.
+ * source. The popover behind it names the channel and, for a capture, the
+ * connector it was read from.
  */
 export function ContactSource({ contact }: Readonly<{ contact: Contact }>) {
   const t = useT();
@@ -127,6 +127,9 @@ export function ContactSource({ contact }: Readonly<{ contact: Contact }>) {
       }
     >
       <p className="t-body">{contact.source || t("trust.sourceUnknown")}</p>
+      {contact.source_system && contact.imported_from == null ? (
+        <p className="t-body">{contact.source_system}</p>
+      ) : null}
       {/* Said, not linked: `activity` has no 360 route by design, so there is
           no page to send a reader to. Saying a record was read says more than
           the source stamp alone, which names the door and not the evidence. */}

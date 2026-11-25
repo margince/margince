@@ -35,7 +35,13 @@ func scanReport(row pgx.Row) (crmcontracts.ReportingReport, error) {
 	return report, storedError(err)
 }
 
-func audienceClause(ctx context.Context, b *bindings) (string, error) {
+// ReportAudienceClause is the report library's audience rule, rendered for a
+// statement another module holds. report_definition is aliased d there.
+func ReportAudienceClause(ctx context.Context, arg func(any) int) (string, error) {
+	return audienceClause(ctx, func(value any) string { return fmt.Sprintf("$%d", arg(value)) })
+}
+
+func audienceClause(ctx context.Context, add func(any) string) (string, error) {
 	actor, ok := principal.Actor(ctx)
 	if !ok {
 		return "", apperrors.ErrPermissionDenied
@@ -47,12 +53,12 @@ func audienceClause(ctx context.Context, b *bindings) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	return "(d.owner_id=" + b.add(owner) + " OR d.audience='workspace' OR (d.audience='team' AND d.audience_team_id=ANY(" + b.add(actor.TeamIDs) + ")))", nil
+	return "(d.owner_id=" + add(owner) + " OR d.audience='workspace' OR (d.audience='team' AND d.audience_team_id=ANY(" + add(actor.TeamIDs) + ")))", nil
 }
 
 func (s *Service) report(ctx context.Context, tx pgx.Tx, id ids.UUID, lock bool) (crmcontracts.ReportingReport, error) {
 	var b bindings
-	audience, err := audienceClause(ctx, &b)
+	audience, err := audienceClause(ctx, b.add)
 	if err != nil {
 		return crmcontracts.ReportingReport{}, err
 	}
@@ -104,7 +110,7 @@ func (s *Service) ListReports(ctx context.Context, after *ids.UUID, limit int, s
 	out := crmcontracts.ReportingReportList{Data: []crmcontracts.ReportingReport{}}
 	err := s.store.db.Tx(ctx, func(tx pgx.Tx) error {
 		var b bindings
-		where, err := audienceClause(ctx, &b)
+		where, err := audienceClause(ctx, b.add)
 		if err != nil {
 			return err
 		}
@@ -197,13 +203,17 @@ func (s *Service) validateRevision(ctx context.Context, tx pgx.Tx, selection *cr
 	return refuse("selection.close_window", "invalid", "choose the expected-close window")
 }
 
+// MaxSelectionMetrics bounds the metrics of one selection. Every Analytics view
+// asks all of its metrics in one selection, so it is at least the largest view.
+const MaxSelectionMetrics = 12
+
 func (s *Service) validateSelection(ctx context.Context, selection crmcontracts.ReportingSelection) error {
 	catalog, err := s.evaluator.Catalog(ctx, textlang.English)
 	if err != nil {
 		return err
 	}
-	if len(selection.Metrics) == 0 || len(selection.Metrics) > 8 {
-		return refuse("selection.metrics", "out_of_range", "choose between one and eight supported metrics")
+	if len(selection.Metrics) == 0 || len(selection.Metrics) > MaxSelectionMetrics {
+		return refuse("selection.metrics", "out_of_range", fmt.Sprintf("choose between one and %d supported metrics", MaxSelectionMetrics))
 	}
 	if len(selection.Blocks) > 20 {
 		return refuse("selection.blocks", "out_of_range", "choose at most twenty charts")
