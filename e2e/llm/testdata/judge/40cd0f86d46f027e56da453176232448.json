@@ -1,0 +1,7 @@
+{
+  "verdict": "no",
+  "reason": "The answer reports specific research findings about Nordholz Anlagenbau GmbH (a second plant in Bremen, hiring forty engineers), so it does not say the dossier is empty or built only from record fields.",
+  "model": "claude-haiku-5-5",
+  "criterion": "Criterion 1. The answer says the Nordholz Anlagenbau GmbH dossier holds no research yet: that it is empty, or only built from the company record's own fields (such as its industry). Answer no if it reports research findings about the company, or says a dossier was refreshed or created.",
+  "answer": "You have no weekly plan this week. The dossier on Nordholz Anlagenbau GmbH says they opened a second plant in Bremen this year and are hiring forty engineers."
+}
