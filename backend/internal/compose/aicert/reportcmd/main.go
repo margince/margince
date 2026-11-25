@@ -20,9 +20,12 @@ import (
 	"context"
 	"flag"
 	"fmt"
+	"io"
 	"os"
 
 	"github.com/margince/margince/backend/internal/compose"
+	"github.com/margince/margince/backend/internal/compose/agentloope2e"
+	"github.com/margince/margince/backend/internal/compose/agentloope2e/live"
 	"github.com/margince/margince/backend/internal/compose/aicert"
 	"github.com/margince/margince/backend/internal/compose/aitasks"
 )
@@ -34,6 +37,9 @@ func main() {
 		"directory of certification scenarios, read to tell a current record from a stale one")
 	presetDir := flag.String("presets", "../config/presets",
 		"directory of deploy presets, read to report each task's first rung and fallback per preset")
+	repoRoot := flag.String("repo", "..", "the repository root (relative to backend/), read to tell a current agent loop verdict from a stale one")
+	agentLoopDir := flag.String("agentloop", "internal/compose/aicert/records/agent_loop_e2e",
+		"directory of the agent loop live lane's verdicts")
 	flag.Parse()
 
 	// The census is what says which sites SHOULD have a record: an absent
@@ -70,15 +76,31 @@ func main() {
 		os.Exit(1)
 	}
 
-	fmt.Print(renderReadiness(aicert.Census{Sites: census.All(), Scopes: census.Scopes()}, stamps, perScenario, records)) //nolint:forbidigo // this IS the report — reportcmd's whole job is printing it to stdout, not application logging
-	fmt.Print(renderDecisions(decisionRows))                                                                              //nolint:forbidigo // the report's second table, printed for the same reason
+	contextOwed, err := aicert.ContextOwedTasks(context.Background(), corpus, census)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "reportcmd: %v\n", err)
+		os.Exit(1)
+	}
+	emit(renderReadiness(aicert.Census{Sites: census.All(), Scopes: census.Scopes()}, stamps, perScenario, records, contextOwed))
+	emit(renderDecisions(decisionRows))
 
 	reports, err := presetReports(context.Background(), *presetDir, corpus, census, records)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "reportcmd: %v\n", err)
 		os.Exit(1)
 	}
-	fmt.Print(renderPresets(reports)) //nolint:forbidigo // the report's third table, printed for the same reason
+	emit(renderPresets(reports))
+
+	judgeModel, err := agentloope2e.CommandJudge{Root: *repoRoot}.Model(context.Background())
+	if err != nil {
+		judgeModel = "" // a machine with no judge door still reports, on the pinned judge
+	}
+	verdicts, err := live.Lines(*repoRoot, *agentLoopDir, judgeModel)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "reportcmd: %v\n", err)
+		os.Exit(1)
+	}
+	emit(renderAgentLoop(verdicts))
 }
 
 // presetReports reads the rung states of the presets under dir over the committed records.
@@ -96,4 +118,14 @@ func presetReports(ctx context.Context, dir string, corpus []aicert.Scenario, ce
 		reports = append(reports, presetReport{File: file, Rungs: rungs})
 	}
 	return reports, nil
+}
+
+// emit writes one report section to stdout. A failed write stops the command,
+// so a full disk or a closed pipe never leaves a short report behind a success
+// exit.
+func emit(section string) {
+	if _, err := io.WriteString(os.Stdout, section); err != nil {
+		fmt.Fprintf(os.Stderr, "reportcmd: writing the report: %v\n", err)
+		os.Exit(1)
+	}
 }

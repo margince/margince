@@ -14,9 +14,9 @@ import (
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/database"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
-	"github.com/margince/margince/backend/internal/shared/ports/fieldcatalog"
 )
 
 // Handlers is this module's transport.
@@ -33,7 +33,7 @@ func NewHandlers(db *database.DB, freezeRate FreezeRateFunc, timezone TimezoneFu
 // transport's store. Compose injects modules/customfields' Service here;
 // without it the seam stays nil and every read and write runs
 // core-columns-only, which is a silent no-op rather than an error.
-func (h Handlers) WithFieldCatalog(catalog fieldcatalog.Reader) Handlers {
+func (h Handlers) WithFieldCatalog(catalog storekit.FieldCatalog) Handlers {
 	h.store = h.store.WithFieldCatalog(catalog)
 	return h
 }

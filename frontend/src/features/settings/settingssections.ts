@@ -34,6 +34,8 @@ export const SETTINGS_SECTIONS = {
       "scheduling.linksTitle",
       "scheduling.setup.title",
       "scheduling.acceptBookings",
+      "scheduling.team.title",
+      "scheduling.team.add",
     ],
     availability: [
       "settings.part.meetings.availability",
@@ -216,6 +218,9 @@ export const SETTINGS_SECTIONS = {
       "mailSharing.sharedPosture.label",
       "captureMailSync.interval.label",
       "captureReview.passCap.label",
+      "captureReview.verdictCap.label",
+      "captureReview.classifyCap.label",
+      "captureReview.owedCap.label",
     ],
     domains: [
       "settings.part.capture.domains",
@@ -353,6 +358,7 @@ export const SETTINGS_SECTIONS = {
       "settings.captureHealth",
       "settings.automaticWork",
       "settings.recoveryHealth",
+      "settings.vacuumHealth",
     ],
     configuration: [
       "health.configuration",

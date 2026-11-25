@@ -180,7 +180,7 @@ type Runtime interface {
 	// OAuthApps. It does not revoke the grant at the vendor.
 	OAuthDisconnect(ctx context.Context, provider OAuthProvider) error
 
-	// Deals, Authority, Directory, Activities and SetAside are system reads for a job tick
+	// Deals, Authority, Directory, Activities, SetAside, Companies and MailContent are system reads for a job tick
 	// or a bus delivery, and answer ErrAttendedRead anywhere else. See
 	// systemread.go.
 	Deals() Deals
@@ -188,6 +188,14 @@ type Runtime interface {
 	Directory() Directory
 	Activities() Activities
 	SetAside() SetAside
+	Companies() Companies
+	MailContent() MailContents
+
+	// Models and Objects are the core's AI models and object store. Each
+	// answers ErrNotDeclared until the unit lists the capability in
+	// Extension.Needs. See models.go and objects.go.
+	Models() Models
+	Objects() Objects
 }
 
 // CallerType is which kind of principal an invocation is running as. It mirrors

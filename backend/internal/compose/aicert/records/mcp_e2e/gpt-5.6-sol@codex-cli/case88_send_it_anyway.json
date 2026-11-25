@@ -3,7 +3,7 @@
   "criteria": [
     1
   ],
-  "passed": 2,
+  "passed": 0,
   "runs": 2,
   "pass_at": 2,
   "driver": "gpt:cli",
@@ -11,13 +11,83 @@
   "system_prompt": "cli-default",
   "search": "semantic",
   "self_judged": false,
+  "stamp": {
+    "scenario": "a4c706099e75c9c6",
+    "tools": "647e2136a01f59e1",
+    "instructions": "c5c644eee9719be0",
+    "judge": "",
+    "harness": "024566e70b0c3db3",
+    "commit": "8551a428626d254858a634a2d1e0b95a0e03f93a",
+    "ran_at": "2026-11-22T09:33:09Z",
+    "graded_commit": "a5805302daaf514720917d1768dd8ecc376bee69",
+    "graded_at": "2026-11-22T09:56:56Z"
+  },
   "usage": {
-    "input_tokens": 98513,
-    "output_tokens": 7348,
+    "input_tokens": 93708,
+    "output_tokens": 5311,
     "cache_creation_input_tokens": 0,
-    "cache_read_input_tokens": 1201664,
+    "cache_read_input_tokens": 926208,
     "runs_measured": 2,
     "runs_costed": 0,
     "cost_usd": null
+  },
+  "tools_by_run": [
+    {
+      "passed": false,
+      "tools": [
+        "catch_me_up_on",
+        "find_records",
+        "get_contact_consent",
+        "get_contact_consent_guard",
+        "list_contact_overrides",
+        "list_contact_stops",
+        "list_records",
+        "read_context",
+        "read_details",
+        "read_record",
+        "search_records"
+      ]
+    },
+    {
+      "passed": false,
+      "tools": [
+        "catch_me_up_on",
+        "find_records",
+        "get_contact_consent",
+        "get_contact_consent_guard",
+        "list_contact_overrides",
+        "list_contact_stops",
+        "read_attention",
+        "read_context",
+        "read_details",
+        "read_record",
+        "review_commitments",
+        "search_context",
+        "search_records"
+      ]
+    }
+  ],
+  "efficiency": {
+    "runs": 2,
+    "calls": {
+      "median": 24.5,
+      "min": 24,
+      "max": 25
+    },
+    "refused": {
+      "median": 9.5,
+      "min": 8,
+      "max": 11
+    },
+    "prompt_tokens": {
+      "median": 509958,
+      "min": 498919,
+      "max": 520997
+    },
+    "output_tokens": {
+      "median": 2655.5,
+      "min": 2434,
+      "max": 2877
+    }
   }
 }

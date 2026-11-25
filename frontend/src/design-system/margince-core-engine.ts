@@ -3,16 +3,28 @@
 
 import { useEffect, useRef, useState } from "react";
 import type { MarginceCoreState } from "./margince-core";
-import { readHue } from "./margince-core-color";
+import {
+  dialsFrom,
+  ease,
+  readPalette,
+  SETTLED,
+  step,
+} from "./margince-core-dials";
 import type { CoreFrame, CoreRenderer } from "./margince-core-gl";
 import {
   asHero,
+  CALM_FRAME_MS,
+  CALM_SPEED,
   type CoreBehaviour,
+  CRAWL,
+  CRAWL_FRAME_MS,
+  CRAWL_SPEED,
   EASE,
   FEED_INGEST,
   FRAME_MS,
   MAX_STEP,
   PHASE_SEED,
+  QUIET_AFTER_MS,
   rowFor,
   still,
 } from "./margince-core-motion";
@@ -31,114 +43,35 @@ import {
  *
  * Three rules hold this file together.
  *
- * **Nothing snaps.** Every dial eases toward the current state's target, so a
- * state change reads as the material changing rather than a switch being thrown.
- * The phase is INTEGRATED rather than derived from elapsed time, which is what
- * lets `speed` change without the motion teleporting.
+ * **Nothing snaps**, unless the reader asked for less motion. Every dial eases
+ * toward the current state's target, so a state change reads as the material
+ * changing. The phase is integrated, not derived from elapsed time, so `speed`
+ * can change without the motion jumping.
  *
  * **The loop parks whenever nobody is watching, and only ever resumes on an
- * EVENT.** A window without focus, a state that has finished easing and is not
- * advancing, a document hidden behind another tab: in each case the frames are
- * work with nothing to show for it. The condition a loop parks on must have an
- * announced end, or the sphere freezes for good.
+ * event.** It parks for an unfocused window, a settled state, a hidden tab or a
+ * canvas out of view. Each condition must have an announced end, or the sphere
+ * freezes for good.
  *
  * **It survives the machine.** No WebGL2, a refused compile, a context lost to
  * a GPU reset: the hook reports that it is not live and the component wears its
  * static dress instead.
  */
 
-/** The eased state of the object, as opposed to where it is heading. */
-type Dials = {
-  level: number;
-  speed: number;
-  pulse: number;
-  ingest: number;
-  tint: number;
-  tintCol: [number, number, number];
-};
-
-/** Close enough that another frame would not change a pixel. */
-const SETTLED = 1e-4;
-
-const CHANNELS = [0, 1, 2] as const;
-
-/**
- * The ribbon and body palettes, in the order the shader's uWork and uBody
- * arrays expect. The AI hue opens the ribbon run, amber sits in the middle as
- * the one warm note, and the glow tone bookends it on both sides.
- */
-const WORK_TOKENS = [
-  "--ai",
-  "--orbGlow",
-  "--orbAmber",
-  "--orbGlow",
-  "--orbBright",
-];
-const BODY_TOKENS = ["--orbDeep", "--orbInk"];
-
-type Palette = Readonly<{
-  work: readonly (readonly [number, number, number])[];
-  body: readonly (readonly [number, number, number])[];
-}>;
-
-/**
- * Reads the orb's palette off the document.
- *
- * `getComputedStyle` is a layout read, so this runs on loop start and on a
- * theme flip, never inside the per-frame draw call.
- */
-function readPalette(): Palette {
-  return {
-    work: WORK_TOKENS.map(readHue),
-    body: BODY_TOKENS.map(readHue),
-  };
-}
-
-function dialsFrom(behaviour: CoreBehaviour): Dials {
-  return {
-    level: behaviour.level,
-    speed: behaviour.speed,
-    pulse: behaviour.pulse,
-    ingest: behaviour.ingest,
-    tint: behaviour.tint,
-    tintCol: [...behaviour.tintCol],
-  };
-}
-
-/** Moves one dial a fraction of the way to its target, and says if it moved. */
-function ease(from: number, to: number, rate: number): number {
-  return from + (to - from) * rate;
-}
-
-function step(dials: Dials, target: CoreBehaviour): boolean {
-  dials.level = ease(dials.level, target.level, EASE.level);
-  dials.speed = ease(dials.speed, target.speed, EASE.speed);
-  dials.pulse = ease(dials.pulse, target.pulse, EASE.pulse);
-  dials.ingest = ease(dials.ingest, target.ingest, EASE.ingest);
-  dials.tint = ease(dials.tint, target.tint, EASE.tint);
-  for (const i of CHANNELS) {
-    dials.tintCol[i] = ease(dials.tintCol[i], target.tintCol[i], EASE.tintCol);
-  }
-  return (
-    Math.abs(dials.level - target.level) > SETTLED ||
-    Math.abs(dials.speed - target.speed) > SETTLED ||
-    Math.abs(dials.pulse - target.pulse) > SETTLED ||
-    Math.abs(dials.ingest - target.ingest) > SETTLED ||
-    Math.abs(dials.tint - target.tint) > SETTLED ||
-    CHANNELS.some(
-      (i) => Math.abs(dials.tintCol[i] - target.tintCol[i]) > SETTLED,
-    )
-  );
-}
-
 /** What the hook's callers can change under a running loop. */
 export type Wanted = {
   behaviour: CoreBehaviour;
   paper: number;
+  /** Reduced motion: every dial takes its target on the next frame. */
+  snap?: boolean;
 };
 
 type Loop = Readonly<{
   wake: () => void;
+  /** A reader is there: idle returns to its full drift. */
+  poke: () => void;
+  /** Parks the loop while the canvas is scrolled or clipped out of view. */
+  setOnScreen: (onScreen: boolean) => void;
   /** Re-sizes the drawing buffer and draws once, whether parked or not. */
   remeasure: () => void;
   stop: () => void;
@@ -166,11 +99,6 @@ export function runCoreLoop(
     return null;
   }
   const dials = dialsFrom(wanted.current.behaviour);
-  /* The light in the shader comes from a fixed direction. It used to follow the
-     cursor, and what that produced was an object that reacted to a pointer
-     crossing the page on its way somewhere else, which reads as twitchy rather
-     than alive: the orb has its own motion and does not need a second source. */
-  const mouse: readonly [number, number] = [0, 0];
   let phase = PHASE_SEED;
   let paper = wanted.current.paper;
   let palette = readPalette();
@@ -178,6 +106,10 @@ export function runCoreLoop(
   let last = 0;
   let drawnAt = 0;
   let stopped = false;
+  let onScreen = true;
+  let activeAt = performance.now();
+  let calm = 1;
+  const watched = () => onScreen && !document.hidden && isWindowFocused();
 
   const measure = () => {
     // The Core is a ball, so one side serves: whichever the box gives, the
@@ -191,66 +123,69 @@ export function runCoreLoop(
    *  advancing under its own speed. */
   const advance = (now: number): boolean => {
     const target = wanted.current.behaviour;
+    if (wanted.current.snap) {
+      Object.assign(dials, dialsFrom(target));
+      paper = wanted.current.paper;
+    }
     const moving = step(dials, target);
     paper = ease(paper, wanted.current.paper, EASE.tint);
+    const quiet = now - activeAt > QUIET_AFTER_MS && target.speed < CALM_SPEED;
+    const calmTarget = quiet ? CRAWL : 1;
+    calm = ease(calm, calmTarget, EASE.calm);
     const dt = last === 0 ? 0 : Math.min((now - last) / 1000, MAX_STEP);
     last = now;
-    phase += dt * dials.speed;
+    phase += dt * dials.speed * calm;
     return (
       moving ||
       dials.speed > SETTLED ||
+      Math.abs(calm - calmTarget) > SETTLED ||
       Math.abs(paper - wanted.current.paper) > SETTLED
     );
   };
 
   const shown = (): CoreFrame => ({
     level: dials.level,
+    form: dials.form,
     phase,
     pulse: dials.pulse,
     ingest: dials.ingest,
     tint: dials.tint,
     tintCol: dials.tintCol,
-    mouse,
     paper,
     work: palette.work,
     body: palette.body,
   });
 
   const tick = (now: number) => {
-    // The Core never truly rests: its quietest state still drifts, so this loop
-    // runs for as long as the app is open, on every screen. At the display's own
-    // rate that is a fragment-heavy shader redrawn sixty times a second forever,
-    // which costs a laptop real battery and costs a software renderer (CI, a
-    // machine with no GPU) enough to slow the page around it. The motion here is
-    // a slow drift, and a slow drift does not need every frame: the loop keeps
-    // asking the browser for one, and DRAWS on the ones far enough apart.
-    //
-    // The budget covers the DRAW alone. `advance` eases the dials one step per
-    // call, so skipping the call would stretch every transition by however much
-    // the display outruns the budget: the orb would take twice as long to reach
-    // a state on a 60 Hz screen as the motion is written for, which is a
-    // different animation rather than a cheaper one.
+    // A slow drift needs no draw on every frame, and a heavy shader at the
+    // display's rate costs battery. So the budget spaces out draws only.
+    // `advance` still runs every frame: the dials ease one step per call.
     handle = requestAnimationFrame(tick);
     const drifting = advance(now);
-    if (now - drawnAt >= FRAME_MS || !drifting) {
+    const pace = dials.speed * calm;
+    const budget =
+      pace < CRAWL_SPEED
+        ? CRAWL_FRAME_MS
+        : pace < CALM_SPEED
+          ? CALM_FRAME_MS
+          : FRAME_MS;
+    if (now - drawnAt >= budget || !drifting) {
       drawnAt = now;
       renderer.draw(shown());
     }
     // Parked only after the frame that decides it, so a park is a park: the
     // next callback is never already in flight when the loop stops wanting one.
-    if (!drifting || stopped) {
+    // Every condition but a settled state ends with an event that wakes it.
+    if (!drifting || stopped || !watched()) {
       cancelAnimationFrame(handle);
       handle = 0;
     }
   };
 
   const wake = () => {
-    // Read before the early returns below: the loop is almost always already
-    // running (the orb's quietest state still drifts), so a theme flip while
-    // it animates has to land here rather than only on a fresh start, or a
-    // repainted token would sit unread until the object next settled.
+    // Before the early returns, so a theme flip lands while the loop runs too.
     palette = readPalette();
-    if (stopped || handle !== 0 || !isWindowFocused()) {
+    if (stopped || handle !== 0 || !watched()) {
       return;
     }
     measure();
@@ -289,7 +224,106 @@ export function runCoreLoop(
   // reduced motion) is drawn rather than showing an empty canvas.
   renderer.draw(shown());
   wake();
-  return { wake, remeasure, stop };
+  const setOnScreen = (next: boolean) => {
+    onScreen = next;
+    wake();
+  };
+
+  const poke = () => {
+    activeAt = performance.now();
+    wake();
+  };
+
+  return { wake, poke, setOnScreen, remeasure, stop };
+}
+
+/** Wakes the live loop on what says a reader may be looking: a resize, the
+ *  window's focus, a pointer or focus on the orb, the canvas in view. */
+function watchCanvas(
+  canvas: HTMLCanvasElement,
+  loopRef: { current: Loop | null },
+  seen: (onScreen: boolean) => void,
+): () => void {
+  const poke = () => loopRef.current?.poke();
+  const wake = () => loopRef.current?.wake();
+  const observer = new ResizeObserver(() => {
+    loopRef.current?.remeasure();
+    wake();
+  });
+  observer.observe(canvas);
+  const releaseFocus = subscribeToWindowFocus((focused) => {
+    if (focused) {
+      poke();
+    }
+  });
+  // The row a caller marks with `data-core-wake` counts as the orb: a
+  // pointer or focus there is a reader looking at it.
+  const host =
+    canvas.closest<HTMLElement>("[data-core-wake]") ?? canvas.parentElement;
+  host?.addEventListener("pointerenter", poke);
+  host?.addEventListener("focusin", poke);
+  const sight = new IntersectionObserver((entries) => {
+    for (const entry of entries) {
+      seen(entry.isIntersecting);
+    }
+  });
+  sight.observe(canvas);
+  document.addEventListener("visibilitychange", wake);
+  return () => {
+    host?.removeEventListener("pointerenter", poke);
+    host?.removeEventListener("focusin", poke);
+    document.removeEventListener("visibilitychange", wake);
+    sight.disconnect();
+    releaseFocus();
+    observer.disconnect();
+  };
+}
+
+/** Runs the loop on a canvas through resize, focus, scroll, a hidden tab and a
+ *  GPU reset: a restored context is empty, so the loop is built again. */
+export function attachCoreLoop(
+  canvas: HTMLCanvasElement,
+  wanted: { current: Wanted },
+  makeRenderer: CoreRendererFactory,
+  loopRef: { current: Loop | null },
+  setLive: (live: boolean) => void,
+): () => void {
+  let onScreen = true;
+  let unwatch: (() => void) | undefined;
+  const seen = (next: boolean) => {
+    onScreen = next;
+    loopRef.current?.setOnScreen(onScreen);
+  };
+  const begin = () => {
+    const loop = runCoreLoop(canvas, wanted, makeRenderer);
+    loop?.setOnScreen(onScreen);
+    loopRef.current = loop;
+    setLive(loop !== null);
+    // Watched from the first loop that runs, so a host that cannot draw yet
+    // keeps no observers until a restore lets it.
+    if (loop && !unwatch) {
+      unwatch = watchCanvas(canvas, loopRef, seen);
+    }
+  };
+  // Default prevented, or the browser never offers the context back.
+  const onLost = (event: Event) => {
+    event.preventDefault();
+    loopRef.current?.stop();
+    loopRef.current = null;
+    setLive(false);
+  };
+  // Before the first renderer is asked for, so a context lost at birth still
+  // starts the loop once it is restored.
+  canvas.addEventListener("webglcontextlost", onLost);
+  canvas.addEventListener("webglcontextrestored", begin);
+  begin();
+  return () => {
+    canvas.removeEventListener("webglcontextlost", onLost);
+    canvas.removeEventListener("webglcontextrestored", begin);
+    unwatch?.();
+    loopRef.current?.stop();
+    loopRef.current = null;
+  };
 }
 
 /**
@@ -353,6 +387,7 @@ export function useCoreEngine(
   const wanted = useRef<Wanted>({
     behaviour: wants(state, reduced, feed, hero),
     paper: paper ? 1 : 0,
+    snap: reduced,
   });
 
   useEffect(retainWindowFocusSignal, []);
@@ -369,7 +404,8 @@ export function useCoreEngine(
   useEffect(() => {
     wanted.current.behaviour = wants(state, reduced, feed, hero);
     wanted.current.paper = paper ? 1 : 0;
-    loopRef.current?.wake();
+    wanted.current.snap = reduced;
+    loopRef.current?.poke();
   }, [state, reduced, feed, paper, hero, dark]);
 
   useEffect(() => {
@@ -381,38 +417,15 @@ export function useCoreEngine(
     let release: (() => void) | undefined;
     void import("./margince-core-gl")
       .then(({ createCoreRenderer }) => {
-        if (cancelled) return;
-        const loop = runCoreLoop(canvas, wanted, createCoreRenderer);
-        loopRef.current = loop;
-        setLive(loop !== null);
-        if (!loop) {
-          return;
+        if (!cancelled) {
+          release = attachCoreLoop(
+            canvas,
+            wanted,
+            createCoreRenderer,
+            loopRef,
+            setLive,
+          );
         }
-        const observer = new ResizeObserver(() => {
-          loop.remeasure();
-          loop.wake();
-        });
-        observer.observe(canvas);
-        const releaseFocus = subscribeToWindowFocus((focused) => {
-          if (focused) {
-            loop.wake();
-          }
-        });
-        // A lost context falls back to the static decoration.
-        const onLost = (event: Event) => {
-          event.preventDefault();
-          // The mounted canvas must stop scheduling frames after context loss.
-          loop.stop();
-          setLive(false);
-        };
-        canvas.addEventListener("webglcontextlost", onLost);
-        release = () => {
-          canvas.removeEventListener("webglcontextlost", onLost);
-          releaseFocus();
-          observer.disconnect();
-          loop.stop();
-          loopRef.current = null;
-        };
       })
       .catch((error: unknown) =>
         console.error("Core animation could not be loaded", error),

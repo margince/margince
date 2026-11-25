@@ -12,8 +12,8 @@ import { afterEach, expect, it, vi } from "vitest";
 import { en } from "../../i18n/en";
 import { RecordIntroductionDialog } from "./recordintroduction";
 
-// The server decides who may record. The form only holds the submit back until
-// the two colleagues, the day and the channel are named.
+// The server decides who may record. The form only says on press which of
+// the two colleagues, the day and the channel is missing.
 
 function stubRoster(rosterAnswers: () => boolean = () => true) {
   vi.stubGlobal(
@@ -77,15 +77,27 @@ it("says the colleagues did not load, and Retry reads them again", async () => {
   });
 });
 
-it("holds the record button back until the form is complete", async () => {
+it("says each empty field is required on Record, and sends nothing", async () => {
   stubRoster();
   renderDialog();
 
   await waitFor(() => {
     expect(screen.getByText(en["contact.intro.recordHint"])).toBeTruthy();
   });
-  const submit = screen.getByRole("button", {
-    name: en["contact.intro.recordSubmit"],
-  }) as HTMLButtonElement;
-  expect(submit.disabled).toBe(true);
+  fireEvent.click(
+    screen.getByRole("button", { name: en["contact.intro.recordSubmit"] }),
+  );
+  expect(screen.getByText("Introduced by is required.")).toBeTruthy();
+  expect(screen.getByText("Date is required.")).toBeTruthy();
+  expect(screen.getByText("How it happened is required.")).toBeTruthy();
+  expect(document.activeElement?.getAttribute("aria-invalid")).toBe("true");
+  expect(document.activeElement?.id).toBe(
+    screen.getByText("Introduced by").closest("label")?.htmlFor,
+  );
+  const fetched = vi
+    .mocked(fetch)
+    .mock.calls.map(([input]) =>
+      typeof input === "string" ? input : (input as Request).url,
+    );
+  expect(fetched.some((url) => url.includes("introduc"))).toBe(false);
 });

@@ -55,7 +55,7 @@ func (s *Store) CompleteAnsweredTasksTx(ctx context.Context, tx pgx.Tx, after id
 		if err != nil {
 			return nil, 0, err
 		}
-		n, err := s.closeAnsweredTasksTx(ctx, tx, email, tasks)
+		n, err := s.closeAnsweredTasksTx(ctx, tx, email, tasks, nil)
 		if err != nil {
 			return nil, 0, err
 		}

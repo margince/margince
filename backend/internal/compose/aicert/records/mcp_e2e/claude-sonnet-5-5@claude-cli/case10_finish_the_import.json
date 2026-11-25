@@ -12,13 +12,79 @@
   "system_prompt": "cli-default",
   "search": "semantic",
   "self_judged": true,
+  "stamp": {
+    "scenario": "a07831aa1b353c64",
+    "tools": "bb43c0cbad588045",
+    "instructions": "c5c644eee9719be0",
+    "judge": "",
+    "harness": "024566e70b0c3db3",
+    "commit": "1d06e4e790e4733576f87296a1fcadc09dafe0ae",
+    "ran_at": "2026-11-22T04:54:48Z",
+    "graded_commit": "43efe5d1f04ce6aea932838d625278cfa438cc2f",
+    "graded_at": "2026-11-22T15:28:33Z"
+  },
   "usage": {
-    "input_tokens": 30,
-    "output_tokens": 3544,
-    "cache_creation_input_tokens": 33279,
-    "cache_read_input_tokens": 1244267,
+    "input_tokens": 20,
+    "output_tokens": 2137,
+    "cache_creation_input_tokens": 20483,
+    "cache_read_input_tokens": 817288,
     "runs_measured": 2,
     "runs_costed": 2,
-    "cost_usd": 0.293
+    "cost_usd": 0.1851
+  },
+  "tools_by_run": [
+    {
+      "passed": true,
+      "tools": [
+        "commit_import",
+        "describe_import_format",
+        "preview_import",
+        "read_import",
+        "read_import_report"
+      ]
+    },
+    {
+      "passed": true,
+      "tools": [
+        "commit_import",
+        "describe_import_format",
+        "preview_import",
+        "read_import",
+        "read_import_report"
+      ]
+    }
+  ],
+  "efficiency": {
+    "runs": 2,
+    "calls": {
+      "median": 4,
+      "min": 4,
+      "max": 4
+    },
+    "turns": {
+      "median": 5,
+      "min": 5,
+      "max": 5
+    },
+    "refused": {
+      "median": 0,
+      "min": 0,
+      "max": 0
+    },
+    "prompt_tokens": {
+      "median": 418895.5,
+      "min": 418841,
+      "max": 418950
+    },
+    "output_tokens": {
+      "median": 1068.5,
+      "min": 1063,
+      "max": 1074
+    },
+    "duration_ms": {
+      "median": 12535.5,
+      "min": 12381,
+      "max": 12690
+    }
   }
 }

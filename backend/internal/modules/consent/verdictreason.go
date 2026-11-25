@@ -32,6 +32,7 @@ const (
 	ReasonNoConsentExceptionNotOffered = "no_consent_exception_not_offered"
 	ReasonNoConsent                    = "no_consent"
 	ReasonExistingCustomer             = "existing_customer"
+	ReasonOptOutAllowed                = commsauthz.ReasonOptOutAllowed
 )
 
 // said fills a verdict's sentence from its code.
@@ -81,6 +82,7 @@ var reasonSentences = map[string]string{
 	ReasonNoConsentExceptionNotOffered: "no consent recorded, and no purchase of theirs is covered by a declared collection notice",
 	ReasonNoConsent:                    "no consent recorded",
 	ReasonExistingCustomer:             "they bought from you and were told then that they may object to advertising",
+	ReasonOptOutAllowed:                "advertising here is allowed until they refuse, and no refusal is on file",
 }
 
 func reasonSentence(v Verdict) string {

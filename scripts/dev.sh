@@ -159,6 +159,8 @@ resolve_stack_environment "$MINIO_PORT"
 # look for a file `make dev` no longer wrote.
 # shellcheck source=scripts/lib-devstate.sh
 . "${repo_root}/scripts/lib-devstate.sh"
+# shellcheck source=scripts/lib-devready.sh
+. "${repo_root}/scripts/lib-devready.sh"
 
 # Process helpers, defined HERE rather than beside the sweep that used to be their
 # only caller: the EXIT trap below names release_unconfirmed_stack, and a trap
@@ -924,22 +926,6 @@ log_as() { # role — tag each line of stdin and append to $log
     -f "${repo_root}/scripts/lib/devlog.awk" >>"$log"
 }
 
-# wait_ready url timeout_s pid — 0 once the url answers 2xx (a 401/500/503 is
-# not ready), 2 as soon as pid has exited, 1 when the time runs out. A process
-# that refused its config at boot will never answer, so waiting out the timeout
-# for it only delays its reason. The process is asked first: an old server still
-# holding the port can answer 2xx for a launch that has already died.
-wait_ready() {
-  local url="$1" timeout="$2" pid="$3"
-  for _ in $(seq 1 "$timeout"); do
-    kill -0 "$pid" 2>/dev/null || return 2
-    code=$(curl -s -o /dev/null -w "%{http_code}" "$url" 2>/dev/null || true)
-    [[ "$code" =~ ^2[0-9]{2}$ ]] && return 0
-    sleep 1
-  done
-  return 1
-}
-
 # fail_exited_during_boot role pid consequence — say that role died, show the
 # last lines it wrote, and exit. A boot refusal is the process's final output,
 # so the tail of its own lines is where the reason is.
@@ -1094,8 +1080,12 @@ sweep_stacks() { # kill every margince dev stack: recorded, orphaned, or foreign
 # "unhealthy" and is healthy again within a minute, so only that answer is
 # tried again, for that minute, before it is reported.
 infra_retry_count=6 infra_retry_pause=10
+# How long the boot waits for the api through Vite's proxy once Vite serves its
+# page. The api itself is already ready by then, so this covers Vite alone.
+fe_proxy_wait=30
 ensure_infra() {
   local out tries=0
+  require_docker_compose || exit 1
   until out="$(make db-up 2>&1)"; do
     if grep -q 'is unhealthy' <<<"$out" && ((tries < infra_retry_count)); then
       ((tries > 0)) || echo "dev: a container is not healthy yet; trying again for up to $((infra_retry_count * infra_retry_pause))s" >&2
@@ -1184,6 +1174,7 @@ up)
   : > "$log"
   echo "$label → db=$db api=:$api_port fe=:$fe_port (logs: $log)"
   echo "Development extensions enabled; checks and generation keep the same selection."
+  warn_wsl_mounted_checkout "$PWD"
   # On the console, not in the log: a failure here leaves nothing to tail.
   ensure_infra
   {
@@ -1205,7 +1196,7 @@ up)
       fi
       psql_owner postgres -c "DROP DATABASE IF EXISTS \"${db}\" WITH (FORCE)" </dev/null
       psql_owner postgres -c "CREATE DATABASE \"${db}\"" </dev/null
-      psql_owner "$db" -v ON_ERROR_STOP=1 <scripts/db-init.sql
+      psql_owner postgres -v ON_ERROR_STOP=1 <scripts/db-init.sql
       [[ -z "$slug" ]] || flush_slug_redis "$redis_db"
     fi
     # The base `margince` db already exists (db-up + db-init); only a slugged
@@ -1249,7 +1240,8 @@ up)
   # Scanned only to choose between a real model and the offline fake below. The
   # binding itself is never read from a file by the api or the worker.
   routing_src="config/margince.yaml"
-  if seeded_ai_routing config/margince.dev.yaml | grep -q .; then
+  dev_routing="$(seeded_ai_routing config/margince.dev.yaml)"
+  if [[ -n "$dev_routing" ]]; then
     routing_src="config/margince.dev.yaml"
   fi
 
@@ -1527,6 +1519,17 @@ up)
   ready=0
   wait_ready "http://localhost:${fe_port}/" 90 "$fe_pid" || ready=$?
   [[ "$ready" != 2 ]] || fail_exited_during_boot fe "$fe_pid" "the app has no dev server"
+  # Vite serving its page does not prove its proxy to the api works, and
+  # `make seed-dev` and `make verify-boot` reach the api only through that proxy.
+  if [[ "$ready" == 0 ]]; then
+    wait_ready "http://localhost:${fe_port}/readyz" "$fe_proxy_wait" "$fe_pid" || ready=$?
+    [[ "$ready" != 2 ]] || fail_exited_during_boot fe "$fe_pid" "the app has no dev server"
+    if [[ "$ready" != 0 ]]; then
+      echo "FAIL: $label FE serves its page, but :${fe_port}/readyz does not answer through its proxy, which make seed-dev and make verify-boot use" >&2
+      dev_explain_unready "$fe_port" "$api_port" "$slug" >&2
+      exit 1
+    fi
+  fi
   if [[ "$ready" == 0 ]]; then
     # Asked AGAIN, because the first check only proved the worker was alive
     # three seconds in. The FE probe above has since spent real time, and a
@@ -1557,7 +1560,7 @@ up)
     # The only seat on a cold start is the bootstrap admin, and the deployment
     # config is where it is defined — read the address back from that file
     # rather than restating it, so an edited config prints the truth.
-    admin_email="$(sed -n 's/^[[:space:]]*email:[[:space:]]*\(.*\)$/\1/p' "$deploy_cfg" | head -1)"
+    admin_email="$(sed -n 's/^[[:space:]]*email:[[:space:]]*\(.*\)$/\1/p' "$deploy_cfg" | sed -n 1p)"
     echo "  login    ${admin_email} / $(cat "$admin_pw_file")  (bootstrap admin — cold start, no other data)"
     echo "  demo     make seed-dev  — adds the demo records + rep seats on top"
     # Name the reading tool, not just the file: the raw log interleaves three

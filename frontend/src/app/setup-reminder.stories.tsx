@@ -24,7 +24,6 @@ function reminder(world: SetupWorld = {}) {
         <main className="main">
           <TopBar
             route={parseHash("#/settings")}
-            collapsed={false}
             onOpenSearch={() => undefined}
           />
         </main>
@@ -48,7 +47,7 @@ const openPanel: Story["play"] = async () => {
 
 export const Closed: Story = {};
 export const ClosedDark: Story = { globals: { theme: "dark" } };
-/** Open, hanging at the page gutter like every panel the strip opens. */
+/** Open, on the content card's right and top edges like every panel the strip opens. */
 export const Open: Story = {
   play: async () => {
     await userEvent.click(
@@ -57,13 +56,19 @@ export const Open: Story = {
     const panel = await screen.findByRole("heading", {
       name: "Finish setting up",
     });
-    const bar = document.querySelector<HTMLElement>(".topbar");
     const pop = panel.closest(".popover-panel");
-    if (!bar || !pop) {
-      throw new Error("the top bar or the panel is missing");
+    if (!pop) {
+      throw new Error("the panel is missing");
     }
-    await expect(window.innerWidth - pop.getBoundingClientRect().right).toBe(
-      Number.parseFloat(getComputedStyle(bar).paddingRight),
+    await Promise.all(
+      pop.getAnimations({ subtree: true }).map((a) => a.finished),
+    );
+    const root = getComputedStyle(document.documentElement);
+    const cardInset = Number.parseFloat(root.getPropertyValue("--space-2"));
+    const rect = pop.getBoundingClientRect();
+    await expect(window.innerWidth - rect.right).toBe(cardInset);
+    await expect(rect.top).toBe(
+      Number.parseFloat(root.getPropertyValue("--topbarH")),
     );
   },
 };

@@ -77,7 +77,7 @@ func (s *Store) GetActivityTx(ctx context.Context, tx pgx.Tx, id ids.ActivityID,
 // subject of the issue behind this.
 var activitySortFields = map[string]storekit.SortField{
 	"occurred_at": storekit.Column(storekit.KindTimestamp),
-	"due_at":      {Kind: storekit.KindTimestamp, CursorField: "task_due_v2", Expr: func(context.Context, func(any) int) (string, error) { return storekit.TaskDueSQL("a"), nil }},
+	"due_at":      {Kind: storekit.KindTimestamp, CursorField: "task_due_v3", Expr: func(context.Context, func(any) int) (string, error) { return storekit.TaskDueOrderSQL("a"), nil }},
 	"created_at":  storekit.Column(storekit.KindTimestamp),
 	"updated_at":  storekit.Column(storekit.KindTimestamp),
 	"remind_at":   storekit.Column(storekit.KindTimestamp),
@@ -139,7 +139,7 @@ func timelineSort(ctx context.Context, in ListActivitiesInput, arg func(any) int
 				Message: "the request queue is ordered by what is owed and when it arrived, and cannot be re-ordered",
 			}
 		}
-		return storekit.ParseListSort(ctx, in.Sort, activitySortFields, arg)
+		return storekit.ParseListSort(ctx, in.Sort, activitySortFieldsIn(in.DayZone), arg)
 	}
 	spec := defaultTimelineSort
 	switch {
@@ -148,7 +148,7 @@ func timelineSort(ctx context.Context, in ListActivitiesInput, arg func(any) int
 	case in.OpenAndDueBy != nil || in.OpenAndDueAfter != nil:
 		spec = dueQueueSort
 	}
-	return storekit.ParseListSort(ctx, &spec, activitySortFields, arg)
+	return storekit.ParseListSort(ctx, &spec, activitySortFieldsIn(in.DayZone), arg)
 }
 
 // errRequestReviewWithCursor is refused rather than built into SQL, and it is
@@ -172,11 +172,10 @@ func (s *Store) ListActivities(ctx context.Context, in ListActivitiesInput) ([]c
 	asReminderQueue(ctx, &in)
 	var activities []crmcontracts.Activity
 	var page storekit.Page
-	var err error
-	if in.Columns, err = s.ActiveActivityColumns(ctx); err != nil {
-		return nil, storekit.Page{}, err
-	}
-	err = s.tx(ctx, func(tx pgx.Tx) (err error) {
+	err := s.tx(ctx, func(tx pgx.Tx) (err error) {
+		if in.Columns, err = s.activityColumnsIn(ctx, tx); err != nil {
+			return err
+		}
 		activities, page, err = s.ListActivitiesIn(ctx, tx, in)
 		return err
 	})
@@ -449,17 +448,16 @@ func (s *Store) CountActivities(ctx context.Context, in ListActivitiesInput) (in
 	}
 	asReminderQueue(ctx, &in)
 	var total int
-	var err error
-	if len(in.CustomFilters) > 0 {
-		if in.Columns, err = s.ActiveActivityColumns(ctx); err != nil {
-			return 0, err
-		}
-	}
-	err = s.tx(ctx, func(tx pgx.Tx) error {
+	err := s.tx(ctx, func(tx pgx.Tx) error {
 		if err := requireActivityListScope(ctx, tx, in); err != nil {
 			return err
 		}
 		var err error
+		if len(in.CustomFilters) > 0 {
+			if in.Columns, err = s.activityColumnsIn(ctx, tx); err != nil {
+				return err
+			}
+		}
 		if in.readerAddresses, err = s.readerAddressList(ctx, tx, readerOrNobody(ctx)); err != nil {
 			return err
 		}
@@ -472,19 +470,15 @@ func (s *Store) CountActivities(ctx context.Context, in ListActivitiesInput) (in
 		if in.WithOutsideParty || in.AwaitingOutcomeAsOf != nil {
 			in.outsideParty = outsidePartyClause(ctx, tx)
 		}
+		in.countOnly = true
 		where, content, _, args, err := listActivitiesFilter(ctx, in)
 		if err != nil {
 			return err
 		}
-		columns, err := activityCountColumns(ctx, content, func(v any) int { args = append(args, v); return len(args) })
-		if err != nil {
-			return err
-		}
-		// The list's own projection, counted. Not `count(*)` over the join
-		// directly: the content clauses put placeholders in the SELECT list, and
-		// a statement that binds an argument it never mentions is one Postgres
-		// refuses outright ("could not determine data type of parameter"). The
-		// planner reads the wrapper for what it is.
+		columns := activityCountColumns(content)
+		// The decision column binds the placeholders the filter rendered for it.
+		// Postgres refuses a statement with an unmentioned argument ("could not
+		// determine data type of parameter").
 		return tx.QueryRow(ctx,
 			`SELECT count(*) FROM (SELECT `+columns+
 				` FROM activity a WHERE `+strings.Join(where, " AND ")+`) counted`, waitingListArgs(ctx, in, args)...).Scan(&total)

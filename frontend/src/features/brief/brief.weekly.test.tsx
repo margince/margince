@@ -141,6 +141,33 @@ describe("BriefScreen — the weekly retrospective", () => {
     ).toBeGreaterThan(0);
   });
 
+  it("marks the won figure partial when the week's money leaves deals out", async () => {
+    stubApi({
+      "GET /weekly-reviews/latest": () =>
+        jsonResponse({
+          ...review,
+          pipeline: {
+            created_minor: 4500000,
+            won_minor: 1250000,
+            lost_minor: 0,
+            currency: "EUR",
+          },
+          pipeline_coverage: {
+            aggregates: ["created_minor", "won_minor", "lost_minor"],
+            partial: true,
+            no_value_deals: 0,
+            no_rate_deals: 1,
+            missing_currencies: ["JPY"],
+          },
+        }),
+      "GET /weekly-reviews": () => jsonResponse({ weeks: ["2026-06-29"] }),
+      "GET /deals": () => jsonResponse({ data: [fleetDeal] }),
+    });
+    render(<BriefScreen />);
+
+    expect((await screen.findAllByText("Partial")).length).toBeGreaterThan(0);
+  });
+
   // THE PACE READING. What the wins were worth, and whether that beat the week
   // before — the question a rep opens a closed week to ask.
   it("says whether the week's money beat the week before", async () => {

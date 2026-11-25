@@ -40,8 +40,7 @@
   height: 24px;
   border: 1.5px solid var(--borderControl);
   border-radius: var(--r-full);
-  corner-shape: round;
-  background: var(--bgElevated);
+  background: var(--bgField);
   font: var(--fontHeadingXXSmall);
   color: var(--textSecondary);
 }

@@ -25,6 +25,7 @@ import { useToast } from "../../design-system/toast";
 import { formatDateTime } from "../../format/format";
 import { useLocale, useT } from "../../i18n";
 import { useCanWrite } from "../../lib/capability";
+import { financeSourceName } from "../../lib/financeprovenance";
 import { valueFor } from "../../lib/labelfor";
 import { problemMessageOf, throwProblem, unwrap } from "../../lib/problem";
 import { useMe } from "../../lib/session";
@@ -150,7 +151,7 @@ function ConnectSource({ state }: Readonly<{ state: FinanceSourceState }>) {
               {...control}
               options={state.available.map((option) => ({
                 value: option.provider,
-                label: option.provider,
+                label: financeSourceName(t, option),
               }))}
               value={chosen}
               onChange={setProvider}
@@ -204,7 +205,7 @@ function ConnectedSource({
   return (
     <SettingList>
       <SettingRow
-        label={connection.provider}
+        label={financeSourceName(t, connection)}
         description={lastSync}
         value={
           <Badge tone={valueFor(STATUS_TONE, connection.status, "info")}>

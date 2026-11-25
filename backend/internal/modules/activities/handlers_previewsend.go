@@ -155,6 +155,10 @@ func previewResponse(preview SendPreview) crmcontracts.SendAuthorizationPreview 
 			missing := true
 			entry.LawfulBasisMissing = &missing
 		}
+		if d.AsksCountry && preview.writableSubjects[previewSubject{kind: d.SubjectKind, id: d.SubjectID}] {
+			ask := true
+			entry.AskCountry = &ask
+		}
 		if !d.ConsentPurpose.IsZero() {
 			purpose := openapi_types.UUID(d.ConsentPurpose)
 			entry.ConsentPurposeId = &purpose

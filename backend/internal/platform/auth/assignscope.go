@@ -5,6 +5,7 @@ package auth
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"strings"
 
@@ -23,15 +24,23 @@ import (
 // them apart would let a rep enumerate the roster and read the team graph off
 // the refusals. The caller's remedy is the same in all five — pick somebody the
 // picker offered — so the sentence names the rule rather than the miss.
-type AssigneeNotAllowedError struct{}
+// The task door answers with it too.
+type AssigneeNotAllowedError struct {
+	// Field is the wire field that named the seat; empty means owner_id.
+	Field string
+}
 
 func (e *AssigneeNotAllowedError) Error() string {
 	return "the owner must be an active colleague you may assign work to"
 }
 
-// FieldFault names owner_id, the field the caller actually sent.
+// FieldFault names the field the caller actually sent.
 func (e *AssigneeNotAllowedError) FieldFault() (field, code, message string) {
-	return "owner_id", "owner_not_assignable", e.Error()
+	field = e.Field
+	if field == "" {
+		field = "owner_id"
+	}
+	return field, "owner_not_assignable", e.Error()
 }
 
 // AssigneeEligibleSQL is the destination arm: an active, unarchived human seat
@@ -154,9 +163,10 @@ func ensureAssigneeWith(ctx context.Context, tx pgx.Tx, dest ids.UUID,
 	destPos := arg(dest)
 
 	// An owner a case admission names already holds a merged contact. The
-	// run-as scope is not asked of them, and an invited seat is not admitted.
+	// run-as scope is not asked of them, and an invited seat counts as it does
+	// for a new record.
 	if admittedCaseGrantee(ctx, dest) {
-		eligible = recordOwnerSQL
+		eligible = newRecordOwnerSQL
 	}
 	status := "status"
 	if consolidatingInto(ctx, dest) {
@@ -171,7 +181,7 @@ func ensureAssigneeWith(ctx context.Context, tx pgx.Tx, dest ids.UUID,
 		return err
 	}
 	if !recording(ctx) {
-		return refuseIneligibleAssignee(false)
+		return refuseIneligibleAssignee("")
 	}
 	// A seat that may own the row, outside the caller's scope, is refused by
 	// the scope: the same 422, noted as the gate's refusal.
@@ -184,7 +194,7 @@ func ensureAssigneeWith(ctx context.Context, tx pgx.Tx, dest ids.UUID,
 	} else if seatOK {
 		noteRefusal(ctx, assigneeRefusal)
 	}
-	return refuseIneligibleAssignee(false)
+	return refuseIneligibleAssignee("")
 }
 
 // consentedAssigner is the caller with an unbounded row scope, so a predicate's
@@ -207,18 +217,36 @@ func assigneeAdmitted(ctx context.Context, tx pgx.Tx, destPos int, status, predi
 	return permitted, err
 }
 
-// refuseIneligibleAssignee turns the eligibility answer into the refusal.
+// refuseIneligibleAssignee is the refusal of a seat, on the field that named it.
+// It is a typed error, not a shared sentinel, so the auth census recognizes it
+// by this helper's name in EnsureAssignee and EnsureTaskAssignee.
+func refuseIneligibleAssignee(field string) error {
+	return &AssigneeNotAllowedError{Field: field}
+}
+
+// taskAssigneeField is the wire field a task names its seat in.
+const taskAssigneeField = "assignee_id"
+
+// EnsureTaskAssignee is EnsureAssignee for the seat a task is given, and
+// returns that seat's status. It asks the record-owner rule, so a task and a
+// record refuse the same seats, and refuses on the task's assignee field.
 //
-// Its own named helper so the auth package's own census can see that
-// EnsureAssignee refuses: the refusal is a TYPED error carrying a field fault
-// (422 naming owner_id), not one of the shared sentinels the census greps for,
-// and a gate whose refusal nothing recognizes is one nobody notices going
-// quiet.
-func refuseIneligibleAssignee(permitted bool) error {
-	if permitted {
-		return nil
+// A new task may name an invited colleague, as a new record's owner may
+// (newRecordOwnerSQL): their work waits in their Worklist until they sign in.
+// Moving a task asks the live rule, so nothing moves to a seat nobody answers.
+func EnsureTaskAssignee(ctx context.Context, tx pgx.Tx, dest ids.UUID, newTask bool) (string, error) {
+	eligible := AssigneeEligibleSQL("u")
+	if newTask {
+		eligible = newRecordOwnerSQL(principal.Principal{}, "u", nil)
 	}
-	return &AssigneeNotAllowedError{}
+	var status string
+	err := tx.QueryRow(ctx, `SELECT u.status FROM (
+		   SELECT id AS owner_id, status, archived_at, is_agent, seat_type
+		   FROM app_user WHERE id = $1 AND removed_at IS NULL FOR KEY SHARE) u WHERE `+eligible, dest).Scan(&status)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return "", refuseIneligibleAssignee(taskAssigneeField)
+	}
+	return status, err
 }
 
 // EnsureAssignable is the gate in front of handing a row to somebody else.

@@ -123,7 +123,7 @@ must_not_mention:
   # honest caveat a good answer writes — "I could not get it under two
   # sentences without dropping the deal count" — reaches nothing and stays
   # green.
-  - "(?:cannot|can not|can'?t|could not|couldn'?t|unable to|not able to|no way to|there is no way to)[^.;!?\n]{0,30}(?:compose|produce|generate|build|create|assemble|put)[^.;!?\n]{0,30}(?:report|document|summary|section|board pack)|no (way|means|tool|support) to (compose|produce|generate|build) (a |the )?(report|document)|(does not|doesn'?t) support (composing|producing|building|generating) (a |)(report|document)|(?:report|document|compos\w+)[^.;!?\n]{0,30}(?:is|are)[^.;!?\n]{0,15}(?:(?:not |un)(?:available|supported|possible)|beyond)"
+  - "(?:cannot|can not|can['’]?t|could not|couldn['’]?t|unable to|not able to|n['’]t able to|no way to|there is no way to)[^.;!?\n]{0,30}(?:compose|produce|generate|build|create|assemble|put)[^.;!?\n]{0,30}(?:report|document|summary|section|board pack)|no (way|means|tool|support) to (compose|produce|generate|build) (a |the )?(report|document)|(does not|doesn'?t) support (composing|producing|building|generating) (a |)(report|document)|(?:report|document|compos\w+)[^.;!?\n]{0,30}(?:is|are)[^.;!?\n]{0,15}(?:(?:not |n['’]t |un)(?:available|supported|possible)|beyond)"
   # And it must not report the block grammar instead of the report: a run that
   # spends its turn on describe_vocabulary and hands back the kinds has
   # answered a question nobody asked.

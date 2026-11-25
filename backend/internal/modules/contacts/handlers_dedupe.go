@@ -28,6 +28,10 @@ func (h Handlers) ListDedupeCandidates(w http.ResponseWriter, r *http.Request, p
 	if params.EntityType != nil {
 		in.EntityType = string(*params.EntityType)
 	}
+	if params.RecordId != nil {
+		recordID := ids.UUID(*params.RecordId)
+		in.RecordID = &recordID
+	}
 	if params.Cursor != nil {
 		in.Cursor = *params.Cursor
 	}

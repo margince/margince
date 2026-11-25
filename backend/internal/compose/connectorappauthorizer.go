@@ -22,6 +22,7 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"time"
 
 	"github.com/jackc/pgx/v5/pgxpool"
 
@@ -165,21 +166,29 @@ func (a graphAppAuthorizer) Refresh(
 
 // newGmailAuthorizer builds the mail connector's per-call authorizer: the
 // environment's app where there is one, the stored app otherwise.
+//
+// Its clients share one token cache, so a mailbox reuses its access token for
+// the token's lifetime. A stored app builds a new client per call.
 func newGmailAuthorizer(resolve appResolver, c GmailConfig) googleAppAuthorizer {
+	tokens := oauthflow.NewTokenCache(time.Now, memberMailboxTokenLimit)
 	var env googleconn.Authorizer
 	if c.canSync() {
-		env = newGmailOAuth(c)
+		env = newGmailOAuth(c, tokens)
 	}
 	return googleAppAuthorizer{
 		resolve: resolve,
 		env:     env,
 		build: func(app capture.ConnectorApp) googleconn.Authorizer {
 			return gmail.NewOAuth(gmail.OAuthConfig{
-				ClientID: app.ClientID, ClientSecret: app.ClientSecretRef, Scopes: gmailScopes,
+				ClientID: app.ClientID, ClientSecret: app.ClientSecretRef, Scopes: gmailScopes, Tokens: tokens,
 			})
 		},
 	}
 }
+
+// memberMailboxTokenLimit bounds a process's cache of member mailbox tokens.
+// A token is a few kilobytes, and an evicted one costs a single extra redemption.
+const memberMailboxTokenLimit = 4096
 
 // newGcalAuthorizer is the calendar half of Gmail's app, on its own client so no mail scope accretes into its grant.
 func newGcalAuthorizer(resolve appResolver, c GmailConfig) googleAppAuthorizer {
@@ -218,9 +227,10 @@ func newGdocsAuthorizer(resolve appResolver, c GmailConfig) googleAppAuthorizer 
 // app, and reading the deployment's --graph-tenant over it would authorize a
 // directory they deliberately excluded.
 func newGraphAuthorizer(resolve appResolver, g GraphConfig) graphAppAuthorizer {
+	tokens := oauthflow.NewTokenCache(time.Now, memberMailboxTokenLimit)
 	var env graph.Authorizer
 	if g.canSync() {
-		env = newGraphOAuth(g)
+		env = newGraphOAuth(g, tokens)
 	}
 	return graphAppAuthorizer{
 		resolve: resolve,
@@ -228,7 +238,7 @@ func newGraphAuthorizer(resolve appResolver, g GraphConfig) graphAppAuthorizer {
 		build: func(app capture.ConnectorApp) graph.Authorizer {
 			return graph.NewOAuth(graph.OAuthConfig{
 				ClientID: app.ClientID, ClientSecret: app.ClientSecretRef,
-				Tenant: app.Tenant, Scopes: graphScopes,
+				Tenant: app.Tenant, Scopes: graphScopes, Tokens: tokens,
 			})
 		},
 	}

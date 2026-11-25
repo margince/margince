@@ -57,6 +57,7 @@ var leadGate = objectGate{
 // than in the gated set: removing the lead condition could only WIDEN the
 // result the caller already sees.
 var predicateLeadReads = gatekit.Waive(map[string]string{
+	"internal/modules/contacts/ensurelinkonly.go:memberReadSQL":               "existence only: whether some live member of a shared mailbox's reader team may read the lead, checked against that member's own lead grant, so shared mail is filed only where its readers can find it. No lead field leaves the predicate",
 	"internal/platform/auth/sharedwith.go:ActivityWorksOnClause":              "the done-for-you filter (compose/magic): whether a machine change on an activity is the reader's own work, asked through the owner and grants of the records it is linked to. No column of the record is selected, and the clause only narrows a read the activity audience gate already admitted",
 	"internal/modules/activities/legacysystemtext.go:RestoreTaskSystemTextTx": "System-only descriptor repair asks whether the linked lead has no name or address. Only that boolean selects a catalog phrase; no lead column is returned.",
 
@@ -148,6 +149,7 @@ var lifecycleLeadReads = gatekit.Waive(map[string]string{
 // Store.X would then vouch for an ungated Handlers.X. rbacgate_test.go's header
 // records being bitten by exactly that.
 var calleeGatedLeadReads = gatekit.Waive(map[string]string{
+	"internal/compose/recordowner/recordowner.go:recordOwners":                 "the owner and name of a record a colleague asks its owner about: a handover, or edit access. Read after contacts.OwnerAskableTx asked the record type's read and update grants and its row scope, for the decision precheck under the deciding owner, or for the line telling the colleague who asked, under the decider or the expiry sweep's system principal; the name goes only to the colleague who asked for that record while they could see it",
 	"internal/modules/consent/lift.go:liveStopsOf":                             "the lead's address, read to find the stops held on it. Both callers ask first: ListLeadStops asks auth.Require(lead, read) and EnsureReadable, the lift asks auth.Require(lead, update) and EnsureRetractable. The address never leaves the transaction; the stop rows do, under that gate",
 	"internal/modules/consent/confirmguards.go:linkAddressTx":                  "the address a lead's consent link is mailed to, read after admitLinkTx held the live lead under auth.HoldWritableLive and issueLink asked auth.Require(lead, update). The address becomes the mail recipient and reaches no caller",
 	"internal/compose/schedulingattendees.go:attendeeCandidates":               "the lead ids that hold one invited address, before the host's row scope is asked. resolveAttendee hands each id to contacts.GetLead under the host's principal, which asks the lead object gate and row scope; an id the host may not read never leaves, and only says the consent gate must clear that address",

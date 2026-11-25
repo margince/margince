@@ -169,6 +169,9 @@ func capsFor(t *testing.T, provider string, input []string) []string {
 	if provider == providerGeminiVertex {
 		cfg.Location = "eu"
 	}
+	if provider == providerAzureOpenAI {
+		cfg.BaseURL, cfg.Location = azureTestEndpoint, azureTestRegion
+	}
 	client, err := SelectBrain(cfg, allCloudKeys(t))
 	if err != nil {
 		t.Fatal(err)

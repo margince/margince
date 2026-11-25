@@ -637,7 +637,9 @@ async function submitNewDeal(page: Page) {
 
 // The rail's line for a write in flight, gone once the create has settled.
 const creatingDeal = (page: Page) =>
-  page.getByText(de["agent.ticker.write.dealNew"]);
+  page
+    .locator(".arblock")
+    .getByText(de["agent.ticker.write.dealNew"], { exact: true });
 
 test("a create that answers after the reader left does not pull them back", async ({
   page,

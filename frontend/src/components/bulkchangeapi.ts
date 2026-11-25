@@ -14,6 +14,9 @@ type BulkChangePreview = components["schemas"]["BulkChangePreview"];
 
 /** The contract's bound on one bulk selection (`BulkChangePreviewRequest.items`). */
 export const BULK_MAX_ITEMS = 500;
+
+/** A declared mirror of the server's `bulkConfirmAbove`; frontendbulkconfirm_test.go fails if they differ. */
+export const BULK_CONFIRM_ABOVE = 10;
 type BulkChangeResult = components["schemas"]["BulkChangeResult"];
 
 // The one request body both halves send. The preview and the execute must name
@@ -30,6 +33,7 @@ function bulkBody(request: BulkChangeRequest) {
     list_id: request.list?.id,
     tag_id: request.tag?.id,
     task: request.verb === "create_task" ? request.task : undefined,
+    stage_id: request.verb === "move_stage" ? request.stage?.id : undefined,
   };
 }
 

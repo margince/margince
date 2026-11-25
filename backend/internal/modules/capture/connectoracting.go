@@ -23,22 +23,18 @@ func connectorActing(ctx context.Context, authority authz.Resolver, name string,
 	}
 	// The authz resolver and the principal seam are untyped (ids.UUID);
 	// widen the typed granting-human id at each of those edges.
-	rbac, err := authority.EffectiveRBAC(ctx, wsID, grantedBy.UUID)
+	member, err := authz.MemberPrincipal(ctx, authority, wsID, grantedBy.UUID)
 	if err != nil {
 		return nil, fmt.Errorf("capture: granting human no longer resolves — the grant dies with them: %w", err)
 	}
-	seat, err := authority.SeatType(ctx, wsID, grantedBy.UUID)
-	if err != nil {
-		return nil, err
-	}
-	p := principal.Principal{
-		Type:        principal.PrincipalConnector,
-		ID:          connectorPrincipalID(name),
-		UserID:      grantedBy.UUID,
-		OnBehalfOf:  grantedBy.UUID,
-		TeamIDs:     rbac.TeamIDs,
-		SeatType:    seat,
-		Permissions: rbac.Permissions,
-	}
-	return principal.WithActor(ctx, p), nil
+	return principal.WithActor(ctx, asConnector(member, connectorPrincipalID(name))), nil
+}
+
+// asConnector is the member's principal re-typed as the connector acting for
+// them: the member's grants and seat stay the ceiling, and the audit names both.
+func asConnector(member principal.Principal, id string) principal.Principal {
+	member.Type = principal.PrincipalConnector
+	member.ID = id
+	member.OnBehalfOf = member.UserID
+	return member
 }

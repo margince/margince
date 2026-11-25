@@ -83,8 +83,9 @@ func censusJobConfig() JobRunnerConfig {
 		// Present so the raw-capture part sweep counts as wired. It removes an
 		// attachment's octets from the provider original only once the store
 		// can vouch for them, so the kind is gated on a store existing at all.
-		Blobstore:    blobstore.NewMemory(),
-		SendRegistry: &capture.Registry{},
+		Blobstore:        blobstore.NewMemory(),
+		JournalBlobstore: blobstore.NewMemory(),
+		SendRegistry:     &capture.Registry{},
 		// Present so the scheduled-send alarm counts as wired. Firing one
 		// stages a delivery, so the kind is gated on this machinery existing;
 		// the census supplies every declared dependency so a kind can never be

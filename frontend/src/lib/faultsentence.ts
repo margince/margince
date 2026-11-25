@@ -4,7 +4,7 @@
 import { openingCase } from "../format/collate";
 import { datePattern, formatISODate, isISODate } from "../format/datepattern";
 import { formatMoney, formatNumber } from "../format/format";
-import { INTL_LOCALE } from "../format/intllocale";
+import { numberFormat } from "../format/formatters";
 import { dateTimePreferences } from "../format/preferences";
 import { type Locale, translate } from "../i18n";
 import type { MessageKey } from "../i18n/en";
@@ -137,7 +137,7 @@ export function faultSentence(
   const serverWords =
     locale === "en" && !wordsFaultInEnglish(fault, labels) && fault.message;
   const message = key
-    ? translate(locale, key)
+    ? translate(locale, key, fault.params)
     : serverWords ||
       (codeMessage(fault, locale, label) ?? worded(INVALID, locale, label));
   const sentence = openingCase(message, locale);
@@ -255,7 +255,7 @@ export function moneyLimit(
 
 // A bound in percent, shown with the reader's percent sign.
 export function percentLimit(locale: Locale): (wire: string) => string {
-  const format = new Intl.NumberFormat(INTL_LOCALE[locale], {
+  const format = numberFormat(locale, {
     style: "percent",
     maximumFractionDigits: 2,
   });

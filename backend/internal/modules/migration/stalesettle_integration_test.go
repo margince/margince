@@ -54,7 +54,7 @@ func TestAMoveThatQueuesWorkCountsItsResumesFromZero(t *testing.T) {
 		"an approval again": func(ctx context.Context, t *testing.T, s *RunStore, db *database.DB) RunID {
 			l := approvedRun(ctx, t, s)
 			setRunColumn(ctx, t, db, l.Run, `resume_count = 3`)
-			if err := s.FailLease(ctx, l, CauseStale); err != nil {
+			if err := s.FailLease(ctx, l, stopWith(CauseStale)); err != nil {
 				t.Fatalf("FailLease: %v", err)
 			}
 			if _, err := s.ResumeApproved(ctx, l.Run, 0, queueNothing); err != nil {

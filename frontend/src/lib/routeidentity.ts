@@ -44,7 +44,9 @@ const IDENTITY_DEPTH: Readonly<Record<Screen, number>> = {
   tags: WHOLE_ADDRESS,
   lists: WHOLE_ADDRESS,
   share: WHOLE_ADDRESS,
-  onboarding: WHOLE_ADDRESS,
+  // #/onboarding/<step>: one conversation holds every step in its own state,
+  // and the address follows it, so a step change must not remount it.
+  onboarding: 1,
   client: WHOLE_ADDRESS,
   book: WHOLE_ADDRESS,
   preferences: WHOLE_ADDRESS,
@@ -56,6 +58,7 @@ const IDENTITY_DEPTH: Readonly<Record<Screen, number>> = {
   "oauth-consent": WHOLE_ADDRESS,
   "reset-password": WHOLE_ADDRESS,
   ext: WHOLE_ADDRESS,
+  app: WHOLE_ADDRESS,
   // The key in `#/x/<key>` picks the fork screen, so two keys must remount.
   // One depth serves every fork screen. A fork screen with tabs keeps the tab
   // in its own state, so it never needs an entry here.

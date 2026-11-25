@@ -13,6 +13,7 @@ package compose
 
 import (
 	"context"
+	"errors"
 	"log/slog"
 	"os"
 	"sync"
@@ -72,13 +73,28 @@ func shiftedPool(t *testing.T, shift time.Duration) *pgxpool.Pool {
 	return pool
 }
 
-// runRefold runs the production worker once, on the given pool.
+// runRefold runs the production worker on the given pool until one run reads
+// up to the pool's clock. A run stops at the oldest transaction open in the
+// database, which runs on the real clock. So a background write of the app can
+// hold a shifted run short of everything the test filed.
 func runRefold(t *testing.T, pool *pgxpool.Pool) {
 	t.Helper()
 	worker := &pastActivityClockWorker{pool: pool, identity: identity.NewService(pool), log: slog.New(slog.DiscardHandler)}
-	if err := worker.Work(context.Background(), &river.Job[PastActivityClockRefoldArgs]{}); err != nil {
-		t.Fatalf("running the past-activity clock refold: %v", err)
+	var started time.Time
+	if err := pool.QueryRow(context.Background(), `SELECT now()`).Scan(&started); err != nil {
+		t.Fatalf("reading the refold pool's clock: %v", err)
 	}
+	// Twice clockRefoldSettle: a run held back only by the settle reaches it.
+	reach := started.Add(-10 * time.Minute)
+	testdb.WaitForContention(t, nil, "", "no refold run read up to the pool's clock", func(ctx context.Context) (bool, error) {
+		if err := worker.Work(ctx, &river.Job[PastActivityClockRefoldArgs]{}); err != nil {
+			return false, err
+		}
+		var mark time.Time
+		err := pool.QueryRow(ctx, `SELECT (value->>'passed_up_to')::timestamptz FROM installation_state WHERE key = $1`,
+			string(storekit.StateActivityClockRefoldMark)).Scan(&mark)
+		return err == nil && !mark.Before(reach), err
+	})
 }
 
 // accountFixture is a company, one contact it employs and one of its deals.
@@ -324,6 +340,39 @@ func readClockRow(t *testing.T, e *integration.Env, table string, id ids.UUID) c
 	return row
 }
 
+// A run never reads past a transaction still open, so the meeting waits for
+// the next run after that writer is done.
+func TestARefoldWaitsForATransactionStillOpen(t *testing.T) {
+	f := newAccountFixture(t)
+	mailed := f.now.AddDate(0, 0, -3)
+	f.log(t, "email", mailed)
+	meetsAt := f.now.AddDate(0, 0, 2)
+	f.log(t, "meeting", meetsAt)
+	later := shiftedPool(t, 3*24*time.Hour)
+	open, err := f.e.Pool.Begin(context.Background())
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() {
+		if err := open.Rollback(context.Background()); err != nil && !errors.Is(err, pgx.ErrTxClosed) {
+			t.Error(err)
+		}
+	})
+	if _, err := open.Exec(context.Background(), `SELECT 1`); err != nil {
+		t.Fatal(err)
+	}
+	worker := &pastActivityClockWorker{pool: later, identity: identity.NewService(later), log: slog.New(slog.DiscardHandler)}
+	if err := worker.Work(context.Background(), &river.Job[PastActivityClockRefoldArgs]{}); err != nil {
+		t.Fatal(err)
+	}
+	f.assertClocks(t, mailed, "a run held at an open transaction leaves the meeting ahead")
+	if err := open.Rollback(context.Background()); err != nil {
+		t.Fatal(err)
+	}
+	runRefold(t, later)
+	f.assertClocks(t, meetsAt, "the run after the writer is done counts the meeting")
+}
+
 func TestASecondRefoldWritesNothing(t *testing.T) {
 	f := newAccountFixture(t)
 	f.log(t, "email", f.now.AddDate(0, 0, -3))
@@ -339,7 +388,7 @@ func TestASecondRefoldWritesNothing(t *testing.T) {
 	}
 	// The mark goes back a day, so this run reads the meeting again. A second
 	// pass over the same records must rewrite none of them.
-	f.e.WsExec(t, `UPDATE activity_clock_refold_mark SET passed_up_to = now() - interval '1 day'`)
+	f.e.WsExec(t, `UPDATE installation_state SET value = jsonb_set(value, '{passed_up_to}', to_jsonb(now() - interval '1 day')) WHERE key = 'activity_clock_refold_mark'`)
 	runRefold(t, later)
 	for table, id := range map[string]ids.UUID{"contact": f.contact, "company": f.company, "deal": f.deal} {
 		if after := readClockRow(t, f.e, table, id); after != before[table] {

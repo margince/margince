@@ -13,22 +13,24 @@ import (
 
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
+	"github.com/margince/margince/backend/internal/compose/recordexport"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/provenance"
 )
 
 // The columns of deals.csv beside ref, owner_email, tags, description,
 // company_ref and the deal's custom fields.
 const (
 	dealTargetName       = "name"
-	dealTargetPipeline   = "pipeline"
-	dealTargetStage      = "stage"
-	dealTargetAmount     = "amount"
-	dealTargetCurrency   = "currency"
+	dealTargetPipeline   = recordexport.Pipeline
+	dealTargetStage      = recordexport.Stage
+	dealTargetAmount     = recordexport.Amount
+	dealTargetCurrency   = recordexport.Currency
 	dealTargetCloseDate  = "close_date"
 	dealTargetLostReason = "lost_reason"
-	dealTargetContactRef = "contact_ref"
+	dealTargetContactRef = recordexport.ContactRef
 )
 
 // dealStoredColumns names the stored deal's JSON field for each target the
@@ -62,10 +64,10 @@ type dealPatch struct {
 
 // dealCreateFrom builds the create input for one checked deal row. Only mapped
 // cells are set.
-func dealCreateFrom(fields map[string]string, typed map[string]any, sourceSystem, source string) dealCreate {
+func dealCreateFrom(fields map[string]string, typed map[string]any, sourceSystem string) dealCreate {
 	in := deals.CreateDealInput{
 		SourceSystem:  &sourceSystem,
-		Source:        source,
+		Source:        provenance.RecordSourceImport,
 		AmountMinor:   dealAmount(fields, typed),
 		Currency:      checkedString(fields, typed, dealTargetCurrency),
 		ExpectedClose: dealCloseDate(fields, typed),

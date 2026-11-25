@@ -12,6 +12,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -39,7 +40,7 @@ func TestARevocationEndsACodeIssuedAfterItBegan(t *testing.T) {
 			VALUES ($1, 'client-under-test', $2, 'challenge', 'https://client.test/cb', '{}', $3,
 			        now() + interval '10 minutes')
 			RETURNING created_at`,
-			codeID, "hash-"+codeID.String(), e.member.UserID).Scan(&created); err != nil {
+			codeID, storekit.TokenHash(codeID.String()), e.member.UserID).Scan(&created); err != nil {
 			t.Fatalf("seed the code issued mid-revocation: %v", err)
 		}
 		if !created.After(began) {

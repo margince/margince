@@ -12,6 +12,8 @@ package contact360
 
 import (
 	"context"
+	"fmt"
+	"slices"
 
 	"github.com/jackc/pgx/v5"
 	openapi_types "github.com/oapi-codegen/runtime/types"
@@ -41,7 +43,53 @@ func (s *Service) claimsSection(ctx context.Context, tx pgx.Tx, contactID ids.Co
 	if err != nil {
 		return err
 	}
-	out.Claims = new(withOpenCommitments(claims, owed))
+	page := withOpenCommitments(claims, owed)
+	if err := s.withTaskOpen(ctx, tx, contactID, opts, page); err != nil {
+		return err
+	}
+	out.Claims = &page
+	return nil
+}
+
+// withTaskOpen sets task_open on each claim that names a task. The flag asks
+// the predicate next_steps lists open work under, without its cap. A claim
+// whose task sorts past the cap then still counts as owed. One whose task is
+// done or hidden from this reader does not.
+//
+// Held by: TestALinkedTaskPastTheCapLeavesItsPromiseOwed
+// (internal/compose/integration/contact360_taskopen_integration_test.go)
+func (s *Service) withTaskOpen(
+	ctx context.Context, tx pgx.Tx, contactID ids.ContactID, opts AssembleOptions, claims []crmcontracts.ConversationClaim,
+) error {
+	var tasks []ids.UUID
+	for _, claim := range claims {
+		if claim.TaskActivityId != nil {
+			tasks = append(tasks, ids.UUID(*claim.TaskActivityId))
+		}
+	}
+	if len(tasks) == 0 {
+		return nil
+	}
+	var args []any
+	arg := func(v any) int { args = append(args, v); return len(args) }
+	named := openTaskFilter + " AND a.id = ANY(" + bind(arg(tasks)) + ")"
+	candidates, err := s.activityCandidates(ctx, tx, contactID, opts, named, byUrgencyHumanFirst, arg)
+	if err != nil {
+		return err
+	}
+	rows, err := tx.Query(ctx, `SELECT a.id FROM activity a WHERE `+candidates, args...)
+	if err != nil {
+		return fmt.Errorf("read which claimed tasks are open: %w", err)
+	}
+	open, err := pgx.CollectRows(rows, pgx.RowTo[ids.UUID])
+	if err != nil {
+		return fmt.Errorf("read which claimed tasks are open: %w", err)
+	}
+	for i := range claims {
+		if claims[i].TaskActivityId != nil {
+			claims[i].TaskOpen = new(slices.Contains(open, ids.UUID(*claims[i].TaskActivityId)))
+		}
+	}
 	return nil
 }
 

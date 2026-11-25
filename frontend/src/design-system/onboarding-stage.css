@@ -49,7 +49,7 @@
   isolation: isolate;
   /* What a machine without WebGL2 stands on, and what the ground fades up out
      of on every other one. */
-  background: var(--bgElevated);
+  background: var(--bgField);
 }
 @supports (min-height: 100dvh) {
   /* 100vh on mobile Safari measures the viewport with the URL bar collapsed,
@@ -283,7 +283,6 @@
   width: 22px;
   height: 3px;
   border-radius: var(--r-full);
-  corner-shape: round;
   background: var(--borderSubtle);
   transition:
     background var(--dur-move) var(--ease-out),
@@ -467,6 +466,12 @@
   overflow-wrap: break-word;
 }
 
+/* The step line wears the smallest heading's type without being a heading. */
+.ob-stage-board > .ob-stage-eyebrow {
+  margin: 0;
+  font: var(--fontHeadingXXSmall);
+}
+
 .ob-stage-title {
   margin: 0;
   color: var(--textPrimary);
@@ -560,7 +565,6 @@
   width: 10px;
   height: 10px;
   border-radius: var(--r-full);
-  corner-shape: round;
   pointer-events: none;
   background: radial-gradient(
     circle,
@@ -627,6 +631,12 @@
     align-self: center;
     transform: scale(var(--ob-core-scale, 1));
     padding-top: var(--space-6);
+  }
+  /* Once the reader has work of their own, the orb is decoration whose row
+     stays put while the board scrolls under it. Hidden, never unmounted, for
+     the WebGL reason at `.ob-stage-core[data-hidden]`. */
+  .ob-stage[data-core="work"] .ob-stage-core {
+    display: none;
   }
   /* And its one track may shrink below that line, or the stretch is undone. */
   .ob-stage-board {

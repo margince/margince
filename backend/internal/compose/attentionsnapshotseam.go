@@ -11,6 +11,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/margince/margince/backend/internal/compose/attention"
+	"github.com/margince/margince/backend/internal/compose/dayrule"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 )
@@ -19,7 +20,7 @@ import (
 type attentionSnapshots struct{ pool *pgxpool.Pool }
 
 func (a attentionSnapshots) InSnapshot(ctx context.Context, read string, fn func(context.Context) error) error {
-	return database.WithReadAdmission(ctx, a.pool, func(ctx context.Context) error {
+	return database.WithReadAdmission(dayrule.WithZonesOncePerRead(ctx), a.pool, func(ctx context.Context) error {
 		return a.readSnapshot(ctx, read, fn)
 	})
 }

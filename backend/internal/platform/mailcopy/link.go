@@ -39,12 +39,14 @@ const WorklistFragment = "/#/worklist"
 
 // These destinations are shared by product mail and checked against the router.
 const (
-	PreferencesFragment   = "/#/settings/notifications"
-	DealRecordFragment    = "/#/deals/"
-	ContactRecordFragment = "/#/contacts/"
-	CompanyRecordFragment = "/#/companies/"
-	LeadRecordFragment    = "/#/leads/"
-	ProjectRecordFragment = "/#/projects/"
+	PreferencesFragment = "/#/settings/notifications"
+	// MeetingSettingsFragment is where a colleague confirms or leaves a booking link.
+	MeetingSettingsFragment = "/#/settings/meetings"
+	DealRecordFragment      = "/#/deals/"
+	ContactRecordFragment   = "/#/contacts/"
+	CompanyRecordFragment   = "/#/companies/"
+	LeadRecordFragment      = "/#/leads/"
+	ProjectRecordFragment   = "/#/projects/"
 )
 
 // RecordFragment is shared by item and digest links to authorized record pages.

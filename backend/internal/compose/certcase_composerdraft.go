@@ -119,7 +119,8 @@ func (c *contactDraftCase) Run(ctx context.Context, completer aitasks.Completer)
 	// No voice profile: a certification case measures the prompt this site
 	// sends every user, and a profile is one user's own writing rather than a
 	// property of the site.
-	draft, _, err := contactdraft.Write(ctx, recorder, c.in, draftvoice.Context{})
+	brain := certContextBrain{task: ai.TaskDraftReply, next: recorder}
+	draft, _, err := contactdraft.Write(ctx, brain, c.in, draftvoice.Context{})
 	return composerTrace(contactDraftSite, recorder, draft.Body, err)
 }
 
@@ -138,7 +139,8 @@ type accountDraftCase struct{ in accountdraft.Input }
 
 func (c *accountDraftCase) Run(ctx context.Context, completer aitasks.Completer) (aitasks.Trace, error) {
 	recorder := &composerRecorder{completer: completer}
-	draft, _, err := accountdraft.Write(ctx, recorder, c.in, draftvoice.Context{})
+	brain := certContextBrain{task: ai.TaskDraftReply, next: recorder}
+	draft, _, err := accountdraft.Write(ctx, brain, c.in, draftvoice.Context{})
 	return composerTrace(accountDraftSite, recorder, draft.Body, err)
 }
 

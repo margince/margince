@@ -172,7 +172,7 @@ for dockerfile in $dockerfiles; do
     content="${line#*:}"
     # The image is the first word after FROM, past any --platform= flags.
     image=$(echo "$content" | sed -E 's/^[[:space:]]*[Ff][Rr][Oo][Mm][[:space:]]+//' |
-      tr -s ' ' '\n' | grep -v '^--' | head -1)
+      tr -s ' ' '\n' | grep -v '^--' | sed -n 1p)
     [[ "$image" = "scratch" ]] && continue
     if grep -qix "$image" <<<"$stages"; then
       continue                                      # an earlier stage in this file

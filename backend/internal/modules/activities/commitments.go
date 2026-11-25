@@ -65,6 +65,9 @@ type OpenTask struct {
 	// DueHasTime is true when DueAt names a time of day rather than a day.
 	DueHasTime bool
 	DueIntent  *crmcontracts.IntentTime
+	// Overdue is whether the task is late at the sweep's AsOf. The rule is
+	// storekit.TaskDueBeforeSQL: a chosen date is late once that date is over.
+	Overdue bool
 	// AssigneeID and AssigneeName are absent together for an unassigned
 	// task: a promise with no owner, which is the single most useful thing
 	// this read surfaces.
@@ -114,6 +117,9 @@ type ListOpenTasksInput struct {
 	// caller that DISPLAYS a queue wants the earliest deadline at the top and
 	// leaves this false.
 	MostRecentlySlippedFirst bool
+	// DayZone is the IANA zone a chosen due date is judged and ordered in.
+	// Empty is the installation's zone. Only a member's own list sets it.
+	DayZone string
 }
 
 // openTasksOrder is how one sweep is ranked, and the choice is the caller's
@@ -123,13 +129,15 @@ type ListOpenTasksInput struct {
 // SEPARATES late from not-late for the sort, and every caller re-judges each
 // row against one instant of its own. A row landing on the wrong side at the
 // boundary changes its position in an over-long list, never the verdict shown.
-func openTasksOrder(slippedFirst bool) string {
+func openTasksOrder(slippedFirst bool, zoneSQL string) string {
+	order := storekit.TaskDueOrderInSQL("a", zoneSQL)
 	if slippedFirst {
-		return `(` + storekit.TaskDueSQL("a") + ` IS NOT NULL AND ` + storekit.TaskDueSQL("a") + ` < now()) DESC,
-		         CASE WHEN ` + storekit.TaskDueSQL("a") + ` < now() THEN ` + storekit.TaskDueSQL("a") + ` END DESC,
-		         ` + storekit.TaskDueSQL("a") + ` ASC NULLS LAST, a.created_at ASC, a.id ASC`
+		slipped := storekit.TaskDueBeforeInSQL("a", "now()", zoneSQL)
+		return slipped + ` DESC,
+		         CASE WHEN ` + slipped + ` THEN ` + order + ` END DESC,
+		         ` + order + ` ASC NULLS LAST, a.created_at ASC, a.id ASC`
 	}
-	return storekit.TaskDueSQL("a") + ` ASC NULLS LAST, a.id ASC`
+	return order + ` ASC NULLS LAST, a.id ASC`
 }
 
 // openTasksDefaultLimit and openTasksMaxLimit bound one sweep. The read is a
@@ -192,14 +200,16 @@ func listOpenTasks(ctx context.Context, tx pgx.Tx, in ListOpenTasksInput) ([]Ope
 	if err != nil {
 		return nil, false, err
 	}
-	rows, err := tx.Query(ctx, `SELECT `+openTaskColumns()+`
+	zoneSQL := storekit.DayZoneSQL(in.DayZone, arg)
+	columns := openTaskColumns(openTasksMoment(in, arg), zoneSQL)
+	rows, err := tx.Query(ctx, `SELECT `+columns+`
 		FROM activity a
 		LEFT JOIN app_user u ON u.id = a.assignee_id
 		WHERE `+joinAnd(where)+
 		// NULLS LAST is the ascending default and is spelled anyway: an
 		// undated promise sorts after every dated one, and that is a product
 		// decision rather than a property of the index it happens to match.
-		sprintf(` ORDER BY %s LIMIT %d`, openTasksOrder(in.MostRecentlySlippedFirst), limit+1), args...)
+		sprintf(` ORDER BY %s LIMIT %d`, openTasksOrder(in.MostRecentlySlippedFirst, zoneSQL), limit+1), args...)
 	if err != nil {
 		return nil, false, err
 	}
@@ -360,7 +370,7 @@ func attachTaskAbout(ctx context.Context, tx pgx.Tx, tasks []OpenTask) error {
 
 func scanOpenTask(row pgx.CollectableRow) (OpenTask, error) {
 	var t OpenTask
-	err := row.Scan(&t.ID, &t.Subject, &t.DueAt, &t.DueHasTime, &t.AssigneeID, &t.AssigneeName, &t.CreatedAt, &t.DueIntent, &t.Version)
+	err := row.Scan(&t.ID, &t.Subject, &t.DueAt, &t.DueHasTime, &t.AssigneeID, &t.AssigneeName, &t.CreatedAt, &t.DueIntent, &t.Version, &t.Overdue)
 	t.DueHasTime = t.DueHasTime && t.DueAt != nil
 	return t, err
 }
@@ -392,8 +402,17 @@ func joinAnd(terms []string) string {
 	return out
 }
 
-func openTaskColumns() string {
+func openTaskColumns(moment, zoneSQL string) string {
 	return "a.id, coalesce(a.subject, ''), " + storekit.TaskDueSQL("a") +
 		", a.due_has_time, a.assignee_id, coalesce(u.display_name, ''), a.created_at, " + storekit.IntentWireSQL("a", "due") +
-		", a.version"
+		", a.version, " + storekit.TaskDueBeforeInSQL("a", moment, zoneSQL)
+}
+
+// openTasksMoment is the SQL for the instant a sweep judges lateness against:
+// its AsOf, or the database clock when the caller named none.
+func openTasksMoment(in ListOpenTasksInput, arg func(any) int) string {
+	if in.AsOf.IsZero() {
+		return "now()"
+	}
+	return sprintf("$%d", arg(in.AsOf))
 }

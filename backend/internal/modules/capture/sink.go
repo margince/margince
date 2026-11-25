@@ -49,15 +49,11 @@ type Sink struct {
 	meetingNotes MeetingNotesWriter
 	// now dates the meeting-notes window. Nil is the wall clock.
 	now func() time.Time
-	// projectKeys resolves the subject-line rung of the project attribution
-	// ladder. Nil is a role that attributes nothing — messages still land, and
-	// none of them is filed under a project.
-	projectKeys ProjectKeyMatcher
-	// stampProject classifies the correspondence a project link qualifies. It
-	// arrives with projectKeys in one ProjectAttribution value. attributesProject
-	// checks both anyway: a ladder that files without classifying is the one
-	// outcome this must never reach.
-	stampProject StampProjectCorrespondence
+	// projectAttribution is the project attribution ladder. An incomplete value
+	// is a role that attributes nothing: messages still land, and none of them is
+	// filed under a project. attributesProject checks every part, because a
+	// ladder that files without classifying must never run.
+	projectAttribution ProjectAttribution
 	// taskAssignee refuses a task filed for a seat that cannot hold work. Nil
 	// is a role that lands no task for anyone: such a record is refused.
 	taskAssignee TaskAssigneeCheck
@@ -92,6 +88,8 @@ type Sink struct {
 	// foldMeeting retires one of two live rows holding one meeting. Nil keeps
 	// both.
 	foldMeeting MeetingFolder
+	// replacedSeries folds the meetings a split series replaced. Nil keeps them.
+	replacedSeries SeriesSplitFolder
 	// keepMeetingHost hands a replayed meeting to its organizer. Nil leaves the
 	// first calendar that synced it as its host.
 	keepMeetingHost   MeetingHostKeeper
@@ -260,6 +258,9 @@ func (s *Sink) captureRecord(ctx context.Context, rec connector.NormalizedRecord
 	}
 
 	s = s.withRetryFileStage()
+	if err := s.prestageFiles(ctx, rec); err != nil {
+		return datasource.EntityRef{}, err
+	}
 	// The counterparty ensure acts as the connector, not under the member
 	// authority the admission below binds into the transaction's context.
 	ensureCtx := ctx
@@ -267,7 +268,8 @@ func (s *Sink) captureRecord(ctx context.Context, rec connector.NormalizedRecord
 	txStart := time.Now()
 	original := rec
 	err = storekit.RetryLockCycles(ctx, func() error {
-		return s.db.Tx(ctx, func(tx pgx.Tx) error {
+		s.beginFileAttempt()
+		return s.db.Tx(ctx, s.notingCommit(func(tx pgx.Tx) error {
 			rec = original
 			attempt = captureAttempt{}
 			ctx, err := s.admitWriteTx(withAdmissionNote(ctx, &attempt.admission), tx, rec)
@@ -311,13 +313,15 @@ func (s *Sink) captureRecord(ctx context.Context, rec connector.NormalizedRecord
 			default:
 				return fmt.Errorf("capture: unmapped Fields type %T for %s", rec.Fields, rec.EntityType)
 			}
-		})
+		}))
 	})
 	capturemetrics.ObserveStage(ctx, capturemetrics.StageSink, time.Since(txStart))
 	if err != nil {
+		s.discardFilesOfFailedCapture(ctx)
 		s.traceInvisibleIncumbent(ctx, rec, err)
 		return datasource.EntityRef{}, err
 	}
+	s.discardUnnamedFiles(ctx)
 	return s.finishCapture(ctx, rec, attempt)
 }
 

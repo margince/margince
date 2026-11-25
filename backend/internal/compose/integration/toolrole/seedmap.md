@@ -33,7 +33,7 @@ Each kind of record the role sweep hands a call, the function that seeds it, the
 | `calendar_invitation` | `toolroleseedwork_integration_test.go workSeeders` | `/v1/activities` |  | yes |
 | `capture_trace` | `toolroleseedreports_integration_test.go companySeeders` |  |  |  |
 | `captured_thread` | `toolroleseedwork_integration_test.go workSeeders` | `/v1/activities` |  | yes |
-| `channel_conversation` | `toolroleseedwork_integration_test.go meetingSeeders` |  |  |  |
+| `channel_conversation` | `toolroleseedwork_integration_test.go meetingSeeders` | `/v1/contacts/` |  |  |
 | `channel_deal` | `toolrolechannel_integration_test.go channelSeeders` | `/v1/channel-links/deal/` |  |  |
 | `claim` | `toolroleseedwork_integration_test.go workSeeders` | `/v1/activities` `/v1/contacts/` |  |  |
 | `colleague_legal_review` | `toolroleseedmembers_integration_test.go memberSeeders` | `/v1/deals` `/v1/deals/` |  |  |
@@ -70,6 +70,7 @@ Each kind of record the role sweep hands a call, the function that seeds it, the
 | `double_opt_in_purpose` | `toolrolecompliance_integration_test.go complianceSeeders` |  |  |  |
 | `draft_import_run` | `toolrolecapture_integration_test.go captureSeeders` |  |  |  |
 | `drafted_report` | `toolrolereporting_integration_test.go reportingSeeders` | `/v1/analytics/reports/` |  |  |
+| `edit_asked_company` | `toolroleseedmembers_integration_test.go accessSeeders` | `/v1/companies` `/v1/records/company/` |  |  |
 | `editioned_report` | `toolrolereporting_integration_test.go reportingSeeders` |  |  |  |
 | `enrichable_contact` | `toolrolesetup_integration_test.go setupSeeders` | `/v1/provider-connections/surfe` |  |  |
 | `enrichment_run` | `toolroleseedwork_integration_test.go meetingSeeders` | `/v1/contacts/` |  |  |

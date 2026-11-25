@@ -50,9 +50,9 @@ const fieldDelivery = "delivery"
 
 // The classes a seat decides about.
 //
-// ClassApprovalPending is DEFINED as KindApprovalPending rather than repeating
-// the word: a class holding exactly one kind IS that kind, and two literals
-// would be two strings to keep in step for no reader's benefit.
+// ClassApprovalPending is spelled as KindApprovalPending, its first kind. A
+// colleague's request to join a booking link rides it too: both hold someone
+// up until the reader answers.
 const (
 	classAutomation = "automation"
 	classLeadSLA    = "lead_sla"
@@ -97,6 +97,9 @@ var noticeClasses = []string{
 // KindMeetingInvitationAttention tells a host an invitation of theirs waits for them.
 const KindMeetingInvitationAttention = "meeting_invitation_attention"
 
+// KindMeetingTeamRequest tells a colleague a host named them on a booking link.
+const KindMeetingTeamRequest = "meeting_team_request"
+
 var classByKind = map[string]string{
 	"data_task_failed":             classSystem,
 	KindPrivacyReviewRequired:      classSystem,
@@ -107,6 +110,7 @@ var classByKind = map[string]string{
 	"vcard_staging_failed":         classSystem,
 	KindMeetingInvitationAttention: classSystem,
 	KindApprovalPending:            ClassApprovalPending,
+	KindMeetingTeamRequest:         ClassApprovalPending,
 	KindExtension:                  classSystem,
 	KindProjectHealthAI:            classProjectHealth,
 	// The answer to a colleague's own request to be handed a record.
@@ -114,6 +118,11 @@ var classByKind = map[string]string{
 	"ownership_request_declined":  classSystem,
 	"ownership_request_expired":   classSystem,
 	"ownership_request_withdrawn": classSystem,
+	// The answer to a colleague's own request for edit access to a record.
+	"edit_access_accepted":  classSystem,
+	"edit_access_declined":  classSystem,
+	"edit_access_expired":   classSystem,
+	"edit_access_withdrawn": classSystem,
 }
 
 // ClassFor answers which class a notice kind is decided about under.
@@ -466,13 +475,6 @@ func effective(chosen map[string]string) []Preference {
 func preferenceImage(class string, delivery *string) map[string]any {
 	return map[string]any{class: delivery}
 }
-
-// TargetApproval is the target type of a notice that opens a pending decision.
-const TargetApproval = "approval"
-
-// TargetDataTask is the target type of a notice about one background
-// correction run; a client opens System health on it.
-const TargetDataTask = "data_task"
 
 // ApprovalNoticeKey names one announcement of a pending decision across every
 // seat told about it. The writer, the retraction and the centre's routing all

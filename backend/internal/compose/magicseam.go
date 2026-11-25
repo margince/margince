@@ -45,16 +45,24 @@ func newMagicService(
 ) *magic.Service {
 	db := InstallationDB(pool)
 	return magic.NewService(pool, magicBriefCutoff{
-		engine: briefs.NewBriefEngine(pool, nil),
+		engine: briefs.NewBriefEngine(pool, nil).WithWinChances(chances.WinChances),
 		now:    now,
 	}, now).
 		WithTroubledRuns(automation.NewAutomationStore(db)).
 		WithPendingDecisions(magicPendingDecisions{svc: staged}).
 		WithSourceHealth(magicSourceHealth{registry: captureHealthRegistry(db)}).
-		WithDecidedReceipts(magicDecidedReceipts{
-			receipts: attentionReceipts{tasks: activities.NewStore(db).WithRecordZone(installationZoneTx), svc: staged, deals: deals.NewStore(db, DealsInstallation())},
-		}).
+		WithDecidedReceipts(HomeDecidedReceipts(pool, staged)).
 		WithReferenceNames(newAttentionNames(db))
+}
+
+// HomeDecidedReceipts is the Done for you source Home reads.
+//
+//nolint:ireturn // magic.Service takes the source through its DecidedReceipts seam, and this is that source.
+func HomeDecidedReceipts(pool *pgxpool.Pool, staged *approvals.Service) magic.DecidedReceipts {
+	db := InstallationDB(pool)
+	return magicDecidedReceipts{receipts: attentionReceipts{
+		tasks: activities.NewStore(db).WithRecordZone(installationZoneTx), svc: staged, deals: deals.NewStore(db, DealsInstallation()),
+	}}
 }
 
 type magicDecidedReceipts struct{ receipts attentionReceipts }
@@ -68,7 +76,7 @@ func (m magicDecidedReceipts) DecidedSince(ctx context.Context, since time.Time,
 	for _, receipt := range recent {
 		completedchanges.Remember(ctx, receipt)
 		out = append(out, magic.DecidedReceipt{
-			ID: receipt.ID, Kind: receipt.Kind, Summary: receipt.Summary, OccurredAt: receipt.OccurredAt,
+			ID: receipt.ID, Kind: receipt.Kind, Summary: receipt.Summary, OccurredAt: receipt.OccurredAt, ListedAt: receipt.ListedAt,
 			TargetType: receipt.TargetType, TargetID: receipt.TargetID, TargetLabel: receipt.TargetLabel,
 			Approval: receipt.Source == attention.ReceiptFromApproval,
 			Undo:     decidedUndo(receipt),
@@ -83,7 +91,7 @@ func decidedUndo(receipt attention.Receipt) *crmcontracts.MagicUndo {
 	if receipt.Source != attention.ReceiptFromCorrection || receipt.Undo == nil {
 		return nil
 	}
-	if receipt.TargetType == entityTypeActivity && receipt.Kind == "task_completed" && !receipt.Undo.Reversed {
+	if receipt.TargetType == entityTypeActivity && attention.IsTaskReceipt(receipt.Kind) && !receipt.Undo.Reversed {
 		undo := magicOffer(receipt.Undo.AuditLogID)
 		undo.Version = &receipt.Undo.Version
 		return undo

@@ -51,6 +51,7 @@ var readReportsCopy = toolCopy{
 		"and won companies gone silent. report_run_cell_records, analytics_cell_records and " +
 		"question_card_records name the records behind one figure.",
 	Limits: "Read only. Every figure names its coverage and when it was captured; quote both. " +
+		"A partial coverage with nothing priced is not a figure to report. " +
 		"read_workspace topic report_vocabulary names what each run report takes.",
 	Instead: "For a written section a reader keeps, such as a board pack, use read_analytics: " +
 		"query with save, then compose. Use read_forecast for what a period is expected to close, and " +
@@ -77,7 +78,9 @@ var changeActivitiesCopy = toolCopy{
 	Limits: "relink and relink_many usually run at once; filing under a project, or a move the " +
 		"installation's policy holds, answers staged with an approval id, and nothing has moved " +
 		"until the retry answers. Tell the user before you file under a project, " +
-		"which only a member can undo from the activity. attach checks the record first; read list_documents before " +
+		"which only a member can undo from the activity. Before log, read the record's recent " +
+		"activity with read_context about catch_up: a call or meeting already on it is reported as " +
+		"there, never logged a second time. attach checks the record first; read list_documents before " +
 		"attaching the same file again. A logged meeting names who takes part: leave off anyone " +
 		"whose invitation did not go out.",
 	Instead: "Use schedule_meeting to book a meeting still to come, change_state with " +

@@ -10,6 +10,7 @@ import {
   writableTarget,
 } from "../../components/activitygate";
 import { ArchiveAction } from "../../components/archive";
+import { EditAccessRequest } from "../../components/editaccessrequest";
 import { useRailRename } from "../../components/railfield";
 import { RecordTeam } from "../../components/recordteam";
 import { useFieldsDialog } from "../../components/sectionedit";
@@ -17,9 +18,13 @@ import {
   snoozedDueAt,
   TaskCompleteCheck,
   TaskQuickActions,
-  TaskWriteFailure,
   useTaskUpdate,
 } from "../../components/taskactions";
+import {
+  currentDueFields,
+  useMoveTask,
+} from "../../components/taskduedatepick";
+import { TaskWriteFailure } from "../../components/taskwritefailure";
 import { Badge, Button, OverflowMenu } from "../../design-system/atoms";
 import { QueryGate } from "../../design-system/querystates";
 import { RecordView } from "../../design-system/recordview";
@@ -201,7 +206,10 @@ function ProjectPage({ view }: Readonly<{ view: Project360 }>) {
         // One sentence and nothing else: why this record takes no changes, so
         // every control it refuses points at it.
         readOnlyReason ? (
-          <p id={readOnlyReasonId}>{readOnlyReason}</p>
+          <>
+            <p id={readOnlyReasonId}>{readOnlyReason}</p>
+            <EditAccessRequest kind="project" record={project} />
+          </>
         ) : undefined
       }
     >
@@ -309,6 +317,7 @@ function useNextTaskVerbs(
   enabled: boolean,
 ) {
   const zone = useViewerZone();
+  const move = useMoveTask(update);
   const next = nextCommitment(view);
   if (!next || !enabled) {
     return {};
@@ -337,10 +346,16 @@ function useNextTaskVerbs(
               next.dueIntent,
             );
             if (nextDue)
-              update.mutate({
+              void move({
                 id: next.activityId,
                 version: next.version,
-                body: nextDue,
+                to: nextDue,
+                back: currentDueFields(
+                  next.dueAt,
+                  next.dueHasTime,
+                  zone,
+                  next.dueIntent,
+                ),
               });
           },
           pending: update.isPending,

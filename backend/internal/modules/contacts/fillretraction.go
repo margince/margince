@@ -59,7 +59,7 @@ var retractableFillSources = map[string]bool{enrichSource: true, siteFieldSource
 // profileFields are the fields those passes can land.
 var profileFields = map[string]bool{
 	fieldTitle: true, fieldPhone: true, fieldRole: true, fieldCompanyName: true,
-	fieldAddress: true, fieldLinkedin: true, fieldWebsite: true,
+	fieldAddress: true, fieldLinkedin: true, fieldWebsite: true, fieldEmail: true,
 }
 
 // fillRetractSource marks the audit row of a retraction, so a later reader can
@@ -385,6 +385,9 @@ func clearFilledValue(ctx context.Context, tx pgx.Tx, contactID ids.ContactID, f
 			UPDATE contact_phone SET archived_at = now()
 			 WHERE contact_id = $1 AND phone = $2 AND source = $3 AND created_at = $4 AND archived_at IS NULL`,
 			contactID, value, fill.Source, fill.FilledAt)
+		if err == nil {
+			err = touchChildSetParent(ctx, tx, entityContact, contactID.UUID)
+		}
 	case fieldLinkedin:
 		err = clearClaimedLinkedinSlot(ctx, tx, contactID, fill, value)
 	}

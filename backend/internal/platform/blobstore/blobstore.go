@@ -52,7 +52,8 @@ type Store interface {
 	// returning how many were deleted. It exists for the tenant-wide sweep a
 	// data reset performs: the rows that named these objects are gone, so the
 	// bytes must go with them rather than outliving their only reference.
-	// Idempotent, like Delete — a prefix with no objects reports zero.
+	// Idempotent, like Delete: a prefix with no objects reports zero. On a
+	// store that keeps versions, every version and delete marker goes too.
 	//
 	// prefix MUST be non-empty and end with "/" — keys are
 	// <workspace>/<kind>/<id> (see WorkspaceKey), and every legitimate

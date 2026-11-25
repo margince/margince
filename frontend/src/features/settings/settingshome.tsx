@@ -126,7 +126,7 @@ export function SettingsHome({ reach }: Readonly<{ reach: SettingsReach }>) {
   const openable = [...reach.acts, ...reach.looksUp];
 
   return (
-    <div className="settings-stack arrive-stack">
+    <div className="settings-stack page-pane arrive-stack">
       {/* The rail holds this box above phone width; below it this page is the
           directory, so the box comes here. */}
       {phone && <SettingsSearchBox pages={openable} />}
@@ -154,11 +154,13 @@ export function SettingsHome({ reach }: Readonly<{ reach: SettingsReach }>) {
               <dl className="settings-facts">
                 <dt>{t("settings.home.rolesLabel")}</dt>
                 <dd>
-                  {/* The server's role keys, so a custom role shows the word a
-                      reader would quote when asking for more. */}
                   <div className="settings-home-roles">
                     {(snapshot.roles ?? []).map((role) => (
-                      <RoleBadge key={role} roleKey={role} />
+                      <RoleBadge
+                        key={role}
+                        roleKey={role}
+                        name={snapshot.role_names?.[role]}
+                      />
                     ))}
                   </div>
                 </dd>

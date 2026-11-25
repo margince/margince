@@ -82,10 +82,35 @@ func TestContactSourceReviewRequiresPrivacyAndContactVisibility(t *testing.T) {
 	if page.Moment.Rule == crmcontracts.ContactMomentRulePrivacyNoticeDue || len(*page.PrivacyNoticeDuties) != 0 {
 		t.Fatal("unconfirmed source claimed a legal duty")
 	}
+	if page.PrivacyConfirmedSource != nil {
+		t.Fatalf("an unreviewed source reads as confirmed: %+v", page.PrivacyConfirmedSource)
+	}
+	reviewID := (*page.PrivacySourceReviews)[0]
+	obtained := roomFixedNow.AddDate(0, 0, -8)
+	if _, err := consent.NewStore(e.DB()).AssessNoticeSource(e.Admin(), ids.UUID(reviewID), consent.SourceAssessment{
+		Kind: "referral", ObtainedAt: &obtained, Note: "Introduced by a client", Now: roomFixedNow,
+	}); err != nil {
+		t.Fatal(err)
+	}
+	confirmed, err := svc.Assemble(e.Admin(), ids.From[ids.ContactKind](contact))
+	if err != nil {
+		t.Fatal(err)
+	}
+	source := confirmed.PrivacyConfirmedSource
+	if source == nil || source.CaseId != reviewID || source.SourceKind != "referral" ||
+		source.SourceObtainedAt == nil || !source.SourceObtainedAt.Equal(obtained) {
+		t.Fatalf("the confirmed source reads %+v, want referral on case %s obtained %s", source, reviewID, obtained)
+	}
+	if source.ConfirmedBy == nil || source.ConfirmedBy.ActorType != "human" || source.ConfirmedBy.PassportId != nil {
+		t.Fatalf("the confirmed source names %+v, want the human whose confirm wrote it", source.ConfirmedBy)
+	}
+	if len(*confirmed.PrivacySourceReviews) != 0 {
+		t.Fatalf("a confirmed source still reads as open review %v", *confirmed.PrivacySourceReviews)
+	}
 	rep := e.As(e.Rep1, []ids.UUID{e.Team1}, AccountRepPerms)
 	hidden, err := svc.Assemble(rep, ids.From[ids.ContactKind](contact))
-	if err != nil || hidden.PrivacySourceReviews != nil {
-		t.Fatalf("review leaked without privacy authority: %+v err=%v", hidden, err)
+	if err != nil || hidden.PrivacySourceReviews != nil || hidden.PrivacyConfirmedSource != nil {
+		t.Fatalf("source work leaked without privacy authority: %+v err=%v", hidden, err)
 	}
 	e.MakeCapturePrivate(t, "contact", contact, e.Rep1)
 	other := e.As(e.Rep3, []ids.UUID{e.Team2}, AccountRepPerms)

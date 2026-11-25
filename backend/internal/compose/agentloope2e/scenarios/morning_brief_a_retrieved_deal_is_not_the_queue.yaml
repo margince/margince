@@ -1,0 +1,22 @@
+name: morning_brief_a_retrieved_deal_is_not_the_queue
+agent: morning_brief
+worklist: [warehouse_led_refit]
+forbidden: [lab_ventilation_upgrade]
+criteria:
+  - Does the finding for Warehouse LED Refit say the operations director liked the payback figures and asked for two references from logistics customers?
+  - Does the finding for Warehouse LED Refit give sending those two references as the next move?
+  - Is every finding about a deal on the queue, with none about Lab Ventilation Upgrade?
+seed:
+  deals:
+    - name: warehouse_led_refit
+      title: Warehouse LED Refit
+      activities:
+        - days_ago: 1
+          subject: Proposal walkthrough
+          body: "Operations director liked the payback figures and asked for two references from logistics customers."
+    - name: lab_ventilation_upgrade
+      other_seat: true
+      activities:
+        - days_ago: 2
+          subject: Revised quote
+          body: "The customer asked for a revised quote yesterday; no reply sent yet. Next step: send the quote and follow up on the decision."

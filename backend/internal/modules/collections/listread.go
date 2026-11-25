@@ -82,64 +82,6 @@ func (s *Store) WithRuleUses(read func(ctx context.Context, id ids.ListID) ([]Ru
 	return s
 }
 
-// summarize counts what this reader may see of a list and judges its health.
-// A Live List whose filter no longer compiles reports invalid and no count
-// rather than failing the read, so the library still opens. A list nobody
-// looks after reports that before a retired field, which only its steward can
-// replace.
-func (s *Store) summarize(ctx context.Context, l listRow) (listSummary, error) {
-	out := listSummary{listRow: l, Health: healthOK, CanEdit: mayEditList(ctx, l)}
-	count, err := s.CountMembers(ctx, l.ID)
-	var pred *storekit.PredicateError
-	switch {
-	case errors.As(err, &pred), errors.Is(err, errNotAFilterTree):
-		out.Health = healthInvalid
-	case err != nil:
-		return listSummary{}, err
-	default:
-		out.VisibleCount = &count
-	}
-	if out.Health != healthOK {
-		return out, nil
-	}
-	if out.RetiredFields, err = s.retiredFieldsOf(ctx, l); err != nil {
-		return listSummary{}, err
-	}
-	if out.RetiredTags, err = s.retiredTagsOf(ctx, l); err != nil {
-		return listSummary{}, err
-	}
-	gone, err := s.stewardGone(ctx, l)
-	switch {
-	case err != nil:
-		return listSummary{}, err
-	case gone:
-		out.Health = healthOwnerless
-	case len(out.RetiredFields) > 0:
-		out.Health = healthRetiredField
-	case len(out.RetiredTags) > 0:
-		out.Health = healthRetiredTag
-	}
-	return out, nil
-}
-
-// stewardGone says nobody looks after the list: it has no steward, or one who
-// may no longer act.
-func (s *Store) stewardGone(ctx context.Context, l listRow) (bool, error) {
-	if l.StewardID == nil {
-		return true, nil
-	}
-	if s.liveSteward == "" {
-		return false, nil
-	}
-	var live bool
-	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
-		return tx.QueryRow(ctx,
-			"SELECT EXISTS (SELECT 1 FROM app_user u WHERE u.id = @steward_id AND "+s.liveSteward+")",
-			pgx.StrictNamedArgs{stewardIDField: l.StewardID}).Scan(&live)
-	})
-	return !live, err
-}
-
 // Dependencies reads what uses a list: the active automation rules that watch
 // or write it, then its filtered exports, newest first. None blocks a change:
 // an export is a finished extraction, and a rule pauses itself when its list

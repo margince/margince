@@ -18,6 +18,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/platform/database"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/platform/keyvault"
 	"github.com/margince/margince/backend/internal/platform/mailidentity"
 	"github.com/margince/margince/backend/internal/platform/owndomain"
@@ -45,6 +46,7 @@ type Registry struct {
 	// mailbox import may reach, or 0 for none. See backfillcap.go.
 	maxBackfillMonths int
 	backfillLimit     int
+	backfillPageDelay time.Duration
 	backfillHeld      bool
 	// vault seals and resolves a connection's credential bundle. The row
 	// carries an opaque credential_ref, never the credential bytes; the vault
@@ -422,13 +424,14 @@ func seedDomainOfAddressTx(ctx context.Context, tx pgx.Tx, address string) error
 	// (TrustedOwnDomainsTx). Writing
 	// the answer down would mean a domain that stopped being ours went on
 	// suppressing mail forever.
-	if _, err := tx.Exec(ctx, `
+	seeded, err := tx.Exec(ctx, `
 		INSERT INTO workspace_email_domain (domain, source, verified)
 		VALUES ($1, 'mailbox', false)
-		ON CONFLICT (domain) DO NOTHING`, domain); err != nil {
+		ON CONFLICT (domain) DO NOTHING`, domain)
+	if err != nil {
 		return fmt.Errorf("capture: seeding workspace email domain: %w", err)
 	}
-	return nil
+	return storekit.CaptureFactsChangedBy(ctx, tx, seeded)
 }
 
 // resolveCredential turns a stored connection's credential into the opaque

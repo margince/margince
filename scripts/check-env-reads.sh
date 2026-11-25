@@ -33,7 +33,7 @@ WAIVERS="scripts/env-read-waivers.txt"
 # does not silently lose its exemption — and a product file cannot gain one by
 # being named like a test.
 tagged_integration() {
-    head -20 "$1" | grep -q '^//go:build .*\binteg''ration\b'
+    grep -q '^//go:build .*\binteg''ration\b' < <(head -20 "$1")
 }
 
 # Every way the standard library hands out the environment, not just the one
@@ -59,6 +59,7 @@ while IFS= read -r file; do
 done < <(grep -rlE "$ENV_READ" backend/internal --include='*.go' | grep -v '_test\.go$' | sort)
 
 printf '%s' "$report" | awk -v waivers="$WAIVERS" '
+# early-pipe-ok: this program exits only in END, after it has read all its input
 BEGIN {
   while ((getline line < waivers) > 0) {
     if (line ~ /^[[:space:]]*#/ || line ~ /^[[:space:]]*$/) continue

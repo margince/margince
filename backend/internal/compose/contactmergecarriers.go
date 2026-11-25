@@ -51,7 +51,7 @@ func withContactMergeCarriers[T contactMergeDoor[T]](db *database.DB, door T) T 
 		WithParticipantRosterReader(activities.EnsureParticipantRosterVisibleTx).
 		WithProviderRunReader(integrations.ReadRunForContactTx).
 		WithMergeSignalReader(signals.PreviewSignalCarry(signalSummaryWords)).
-		WithMergeCommitmentReader(weeklyPlanStore(pool).PreviewCommitmentCarryTx).
+		WithMergeCommitmentReader(WeeklyPlanStore(pool).PreviewCommitmentCarryTx).
 		WithMergeNoticeReader(notices.PreviewNoticeCarryTx).
 		WithMergeContentReader(activities.NewStore(db)).
 		WithProfileVerdictReader(profileverdicts.MergeReader(db)).

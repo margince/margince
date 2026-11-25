@@ -13,7 +13,7 @@ The 23 tables owned by `consent`, as the migrations build them. [Back to the ent
 | `id` | `uuid`, default `uuidv7()` | yes | Primary key. |
 | `captured_at` | `timestamp with time zone`, default `now()` | yes |  |
 | `contact_id` | `uuid` |  | Points at `contact.id`. |
-| `kind` | `text` | yes | One of `contract`, `precontract_request`, `subject_initiated_correspondence`, `legitimate_interests`, `legal_obligation`, `vital_or_security_interest` and 2 more. |
+| `kind` | `text` | yes | One of `contract`, `precontract_request`, `subject_initiated_correspondence`, `legitimate_interests`, `legal_obligation`, `vital_or_security_interest` and 1 more. |
 | `lead_id` | `uuid` |  | Points at `lead.id`. |
 | `note` | `text` |  |  |
 | `revoked_at` | `timestamp with time zone` |  |  |
@@ -33,7 +33,7 @@ The 23 tables owned by `consent`, as the migrations build them. [Back to the ent
 
 **Rules**
 
-- `communication_basis_kind`: `CHECK ((kind = ANY (ARRAY['contract', 'precontract_request', 'subject_initiated_correspondence', 'legitimate_interests', 'legal_obligation', 'vital_or_security_interest', 'existing_customer_exception', 'vn_subject_agreement'])))`
+- `communication_basis_kind`: `CHECK ((kind = ANY (ARRAY['contract', 'precontract_request', 'subject_initiated_correspondence', 'legitimate_interests', 'legal_obligation', 'vital_or_security_interest', 'existing_customer_exception'])))`
 - `communication_basis_one_subject`: `CHECK (((contact_id IS NULL) <> (lead_id IS NULL)))`
 - `communication_basis_window`: `CHECK (((valid_until IS NULL) OR (valid_until > valid_from)))`
 
@@ -59,7 +59,7 @@ The 23 tables owned by `consent`, as the migrations build them. [Back to the ent
 | `id` | `uuid`, default `uuidv7()` | yes | Primary key. |
 | `actor` | `text` | yes |  |
 | `attempt` | `integer`, default `0` | yes |  |
-| `basis` | `text` |  | One of `contract`, `precontract_request`, `subject_initiated_correspondence`, `legitimate_interests`, `legal_obligation`, `vital_or_security_interest` and 3 more. |
+| `basis` | `text` |  | One of `contract`, `precontract_request`, `subject_initiated_correspondence`, `legitimate_interests`, `legal_obligation`, `vital_or_security_interest` and 2 more. |
 | `content_fingerprint` | `bytea` |  |  |
 | `country_source` | `text` |  |  |
 | `data_protection_country` | `text` |  |  |
@@ -98,7 +98,7 @@ The 23 tables owned by `consent`, as the migrations build them. [Back to the ent
 
 **Rules**
 
-- `communication_decision_basis`: `CHECK (((basis IS NULL) OR (basis = ANY (ARRAY['contract', 'precontract_request', 'subject_initiated_correspondence', 'legitimate_interests', 'legal_obligation', 'vital_or_security_interest', 'consent', 'existing_customer_exception', 'vn_subject_agreement']))))`
+- `communication_decision_basis`: `CHECK (((basis IS NULL) OR (basis = ANY (ARRAY['contract', 'precontract_request', 'subject_initiated_correspondence', 'legitimate_interests', 'legal_obligation', 'vital_or_security_interest', 'consent', 'existing_customer_exception']))))`
 - `communication_decision_category`: `CHECK ((resolved_category = ANY (ARRAY['reply_to_inbound', 'requested_followup', 'precontract_quote', 'active_deal_followup', 'customer_service', 'account_notice', 'contract_notice', 'invoice_or_payment', 'security_notice', 'privacy_notice', 'record_confirmation', 'consent_confirmation', 'optout_confirmation', 'marketing'])))`
 - `communication_decision_execution_authority`: `CHECK ((execution_authority = ANY (ARRAY['supported', 'instruction'])))`
 - `communication_decision_existing_customer_shape`: `CHECK ((((existing_customer_notice_id IS NULL) = (existing_customer_offer_id IS NULL)) AND ((existing_customer_notice_id IS NULL) = (existing_customer_sold_at IS NULL))))`
@@ -338,7 +338,7 @@ The 23 tables owned by `consent`, as the migrations build them. [Back to the ent
 
 ## confirm_token
 
-18 columns · primary key `(id)` · referenced by 2 foreign keys
+16 columns · primary key `(id)` · referenced by 2 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -348,8 +348,6 @@ The 23 tables owned by `consent`, as the migrations build them. [Back to the ent
 | `contact_id` | `uuid` |  | Points at `contact.id`. |
 | `delivered_to` | `text` | yes |  |
 | `expires_at` | `timestamp with time zone` | yes |  |
-| `fetch_count` | `integer`, default `0` | yes |  |
-| `first_fetched_at` | `timestamp with time zone` |  |  |
 | `issued_at` | `timestamp with time zone`, default `now()` | yes |  |
 | `kind` | `text`, default `'record_confirmation'::text` | yes | One of `record_confirmation`, `consent_confirmation`, `privacy_notice`. |
 | `lead_id` | `uuid` |  | Points at `lead.id`. |
@@ -378,6 +376,7 @@ The 23 tables owned by `consent`, as the migrations build them. [Back to the ent
 - `confirm_token_lead_is_only_told`: `CHECK (((lead_id IS NULL) OR (kind = 'privacy_notice') OR (kind = 'consent_confirmation')))`
 - `confirm_token_one_subject`: `CHECK (((contact_id IS NULL) <> (lead_id IS NULL)))`
 - `confirm_token_purpose_is_consents`: `CHECK (((kind = 'consent_confirmation') = (purpose_id IS NOT NULL)))`
+- `confirm_token_token_hash_check`: `CHECK ((token_hash ~ '^[0-9a-f]{64}$'))`
 
 **Indexes**
 
@@ -418,6 +417,7 @@ The 23 tables owned by `consent`, as the migrations build them. [Back to the ent
 
 - `consent_doi_token_expires_after_issue`: `CHECK ((expires_at > issued_at))`
 - `consent_doi_token_hash_unique`: `UNIQUE (token_hash)`
+- `consent_doi_token_token_hash_check`: `CHECK ((token_hash ~ '^[0-9a-f]{64}$'))`
 
 **Indexes**
 
@@ -935,6 +935,7 @@ The 23 tables owned by `consent`, as the migrations build them. [Back to the ent
 - `preference_token_expires_after_creation`: `CHECK ((expires_at > created_at))`
 - `preference_token_revocation_is_reasoned`: `CHECK (((revoked_at IS NULL) = (revoked_reason IS NULL)))`
 - `preference_token_revoked_reason_check`: `CHECK ((revoked_reason = ANY (ARRAY['rotated', 'expired', 'erasure', 'compromise', 'merged_predecessor', 'merged_into_survivor'])))`
+- `preference_token_token_hash_check`: `CHECK ((token_hash ~ '^[0-9a-f]{64}$'))`
 - `preference_token_token_key`: `UNIQUE (token)`
 
 **Indexes**
@@ -1104,6 +1105,7 @@ The 23 tables owned by `consent`, as the migrations build them. [Back to the ent
 - `withdrawal_credential_revoked_reason_check`: `CHECK ((revoked_reason = ANY (ARRAY['erasure', 'compromise', 'merged_predecessor', 'superseded'])))`
 - `withdrawal_credential_scope_check`: `CHECK ((scope = ANY (ARRAY['named_purpose', 'all_marketing'])))`
 - `withdrawal_credential_scope_names_its_target`: `CHECK (((scope = 'named_purpose') = (purpose_id IS NOT NULL)))`
+- `withdrawal_credential_token_hash_check`: `CHECK ((token_hash ~ '^[0-9a-f]{64}$'))`
 - `withdrawal_credential_token_hash_key`: `UNIQUE (token_hash)`
 
 **Indexes**

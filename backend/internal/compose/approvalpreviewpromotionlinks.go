@@ -33,7 +33,7 @@ func (r approvalPreviewReader) promotionConsentLinkDetails(ctx context.Context, 
 		details = append(details, purpose, previewMoment("promotion_link_issued", &link.IssuedAt), previewMoment("promotion_link_expires", &link.ExpiresAt), previewRevoked(link.RevokedAt))
 	}
 	for _, basis := range links.CommunicationBases {
-		kind := previewDetail("promotion_basis_kind", basis.Kind)
+		kind := previewDetail("promotion_basis_kind", commsauthz.ReadableBasis(basis.Kind))
 		kind.Value.EntityId = new(openapi_types.UUID(basis.ID))
 		details = append(details, kind, previewMoment("promotion_basis_from", &basis.ValidFrom), previewMoment("promotion_basis_until", basis.ValidUntil), previewRevoked(basis.RevokedAt))
 		if basis.SourceActivityID != nil {

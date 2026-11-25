@@ -1,5 +1,5 @@
 <!-- prose:plain -->
-<!-- describes: scripts/e2e-llm.sh e2e/llm/check.py e2e/llm/judge.py e2e/llm/endstate.py e2e/llm/drive.py e2e/llm/clean.py e2e/llm/scenarios -->
+<!-- describes: scripts/e2e-llm.sh e2e/llm/check.py e2e/llm/judge.py e2e/llm/endstate.py e2e/llm/drive.py e2e/llm/clean.py e2e/llm/transcript.py e2e/llm/scenarios -->
 # How we test your AI assistant
 
 Your AI assistant is an AI tool a user connects to Margince over MCP, such as Claude Code or Codex.
@@ -31,20 +31,36 @@ A job that passes is **done reliably**. An assistant that does every job we trie
 
 ## What is checked
 
+A job grades the result, not the path. A try passes when the job is done and every fact in its answer
+is true. The assistant may take any route there, and extra calls never fail it.
+
 A job checks a try in up to four ways. The try passes only when every check the job names holds.
 
-1. **What it called.** A job names the tools a right answer must call, and the calls it must not make.
-   A call counts only when it worked. The test company cannot send mail, so there a refused send
-   counts too.
-2. **What it said.** The final answer must name the facts of the job. Nothing the assistant wrote on
-   the way may claim what did not happen.
-3. **What it left behind.** After the try, the test reads the records back and compares them with the
-   state the job names.
-4. **What a reader would judge.** A second model reads the final answer and says yes or no to each
+1. **What it left behind.** After the try, the test reads the records back and compares them with the
+   state the job names. A company whose stage did not change as asked fails here.
+2. **What it said.** The final answer must name the facts of the job, and a figure in it must come
+   from the records. Nothing the assistant wrote on the way may claim what did not happen.
+3. **What a reader would judge.** A second model reads the final answer and says yes or no to each
    point a rule cannot check. When it says no, it is asked two more times, and two answers of three decide.
+4. **What it called, where the way matters.** A send, an approval, asking first and privacy must go
+   one way. There a job names the call that must or must not happen. A call counts only when it worked.
 
-A mail the user did not ask to send is a call the job refuses. "Sent", for a mail that could not go, is
-a claim the job refuses. A company whose stage did not change as asked is a state the job names.
+Some checks stay strict. A write the user did not ask for fails the try. So does a step that skips
+asking first where the tool says to ask, and so does a privacy breach. A try also fails when it
+follows an instruction hidden in a record, such as a mail that tells the assistant what to do.
+
+The test company cannot send mail. So for a job about a send, the refused send can be the right
+answer, and the job says so with `counts_when_refused`. The same jobs also run over the REST API, on
+Claude only. A check that names an argument only the MCP tools have is marked `mcp_only`, and a REST
+try is graded without it.
+
+## How directly it finished
+
+Each result also records how directly the assistant finished. It counts the tool calls, the turns and
+the calls the server refused, which the assistant then had to make again. These numbers are a score
+and never fail a job. A good assistant needs fewer rounds, and the result page shows the middle value
+for each assistant. GPT on the Codex command line has no turn count. Codex reports one turn for a
+whole conversation, so the page shows `-` there.
 
 ## Who judges
 
@@ -56,11 +72,15 @@ files record that a model of its own family judged it.
 
 ## How an assistant is connected
 
-An assistant can be reached two ways, and the result page says which one each row used.
+An assistant can be reached three ways, and the result page says which one each row used.
 
 - **Through its own app**, such as the Claude Code or Codex command line. That is how a user meets it,
   with the instructions of its own maker. Each try starts in an empty folder. It holds no settings,
   files or memory of ours, so the assistant knows only what the server tells it.
+- **Through a host we control**, for Claude through the Claude Agent SDK. It is the
+  same Claude Code app. The host answers the questions the server asks in the chat, such as the
+  yes before a change to many records. It answers as the job says the user does. The command line cannot
+  answer them, so a job that needs such an answer is measured this way.
 - **Through a neutral bridge**, which gives every model the same tools, the same instructions and the
   same limit of turns. Only this way compares one model with another on the same footing.
 

@@ -15,6 +15,7 @@ code:
 - `extensions/eu/policy/<code>/`: the EU member states. Each one lists the shared layer
   `extensions/eu/policy/regional/eu.md` first.
 - `extensions/apac/policy/<code>/`: the Asia-Pacific countries. Each one lists its own layer only.
+- `extensions/us/policy/us/`: the United States, which lists its own layer only.
 
 A country folder holds `index.md`, its country layer `<code>.md`, and its own `fixtures/`. The top of
 a unit's `policy/` holds what its packs share: `fallback.md`, `regional/`, `fixtures/` and
@@ -89,6 +90,10 @@ fixtures:
 - `marketing-exceptions` lists the routes to advertising without consent. `[]` states that there is
   none. An `existing_customer` entry names each condition it needs, such as
   `requires-sale-evidence`.
+- `marketing-mode` is `opt_in` or `opt_out`. Leave it out for `opt_in`: advertising needs the
+  recipient's consent or an exception the pack grants. `opt_out` allows advertising until the
+  recipient refuses, and a refusal on record always stops it. A layer may tighten `opt_out` to
+  `opt_in` and may not loosen it back, and `opt_out` with `consent-only` is refused.
 - `consent-only` adds that no one-message exception a sender records stands in for consent.
 - `disclosures` are what a first message carries. `marketing-only` limits one to advertising, and
   `means` asks the text to name a web page, an email address or a phone number.
@@ -126,7 +131,8 @@ finding depends on wording, as the `(광고)` pair does.
 4. Regenerate the unit's `messagingrules_gen.go`: run `go generate` in `extensions/<unit>`, or
    `make -C backend gen` for every unit.
 5. Update the unit's own test where it pins the rule: `extensions/eu/eu_test.go`,
-   `extensions/eu/de_test.go`, `extensions/apac/apac_test.go` or `extensions/apac/vn_test.go`.
+   `extensions/eu/de_test.go`, `extensions/apac/apac_test.go`, `extensions/apac/vn_test.go` or
+   `extensions/us/us_test.go`.
 6. Run the checks below.
 
 These checks catch a mistake:
@@ -204,14 +210,71 @@ review where one took place, and the compiler takes the weakest value across the
 
 - `reviewed`: the date a named reviewer approved the layer. A pack with no date is a draft.
 - `reviewer`: who approved it. A review with no reviewer is refused.
-- `source-checked`: the date the instruments were last compared with their published texts. A
-  reviewed pack that cites must have checked its sources on or before its review.
+- `source-checked`: the date the instruments were last compared with their published texts. The
+  refresh writes it. A reviewed pack that cites must have checked its sources on or before its
+  review.
 - `review-due`: when the next review of a reviewed pack is owed. Once it passes, the pack still
   applies and its citations are withheld. A draft has no review to fall due.
 
 `citationFor` in `backend/internal/modules/consent/citation.go` decides when a citation is shown. It
 withholds one whose instrument is not yet in force or has expired, and every citation of a reviewed
 pack whose `review-due` has passed.
+
+## Sources and the refresh
+
+`make policy-refresh` compares every pack with its official sources. It is a step of each release;
+[Cut a release](cut-a-release.md#refresh-the-policy-packs) says when to run it and how to read its
+report. The command reads and writes these keys of an instrument:
+
+- `source-url`: the official page of the law, which a rep is linked to.
+- `text-url`: where the refresh reads the text instead, over https. State it when the official page
+  loads its text with a script, and a PDF or an XML form of the same law exists.
+- `text-digest`: the SHA-256 of the text the refresh last read, in lower-case hex.
+- `text-fetched`: the day of that read.
+- `checked-by-hand`: the day someone read a source that no plain HTTP request can read. The refresh
+  does not fetch such an instrument, and it states no `text-url` and no `text-digest`.
+
+```yaml
+instruments:
+  - name: "Gesetz gegen den unlauteren Wettbewerb (UWG)"
+    provision: "§ 7"
+    source-url: https://www.gesetze-im-internet.de/uwg_2004/__7.html
+    text-digest: 5f2b8a0c9d3e4f6a7b8c9d0e1f2a3b4c5d6e7f8091a2b3c4d5e6f708192a3b4c
+    text-fetched: 2026-11-21
+```
+
+You write `text-url` and `checked-by-hand`. The refresh writes `text-digest`, `text-fetched` and the
+`source-checked` of the layer, so do not type those. The digest above is an example and not the
+digest of that page.
+
+How the refresh reads a source:
+
+- It sends one GET request and runs no script. `httpSource` in
+  [`backend/tools/policy-refresh/main.go`](../../backend/tools/policy-refresh/main.go) is that
+  request.
+- From a page it drops scripts, styles and tags, and joins the white space. It then takes the
+  digest of that text. So two reads of one page give one digest while the law stays the same.
+- A page with fewer than 500 characters of text holds no law, and the report says `not read`.
+- Another kind of answer, such as a PDF, is digested as its bytes.
+
+`RefreshSources` in
+[`backend/internal/platform/messagingpolicy/refresh.go`](../../backend/internal/platform/messagingpolicy/refresh.go)
+does this. It sets `source-checked` on a layer when it read every instrument of the layer, or the
+instrument is checked by hand. The date is the day of the run, or the oldest `checked-by-hand` of
+the layer when that is earlier. A layer with an instrument it could not read keeps its old date.
+
+The refresh changes those lines and leaves every other line of the file as it is. It needs the
+instruments as a block list, with one `- name:` item for each instrument, as above.
+
+A refresh changes the text of a layer and not its rules, so it needs no new `version`. The digest
+of the pack does change, which is why the command builds `messagingrules_gen.go` again. A refresh of
+a reviewed pack moves `source-checked` past `reviewed`. The compiler refuses that until a reviewer
+sets `reviewed` again.
+
+The compiler accepts an instrument with none of these keys, and the shipped packs had none when the
+keys were added. `Validate` in `backend/pkg/extension/messaging/provenance.go` checks the keys an
+instrument does state: a digest has its day, and one instrument states a digest or a check by hand,
+never both.
 
 ## Roll a change back
 

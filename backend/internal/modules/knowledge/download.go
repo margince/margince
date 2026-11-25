@@ -5,6 +5,7 @@ package knowledge
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"io"
 
@@ -34,13 +35,13 @@ func (s *Store) OpenForDownload(ctx context.Context, documentID ids.UUID) (crmco
 		return crmcontracts.KnowledgeDocument{}, nil, err
 	}
 	var doc crmcontracts.KnowledgeDocument
-	var key string
+	var src IngestSource
 	if err := s.tx(ctx, func(tx pgx.Tx) error {
 		var failed bool
 		if err := tx.QueryRow(ctx,
-			`SELECT storage_key, ingest_status = 'failed' FROM knowledge_document
+			`SELECT storage_key, checksum, ingest_status = 'failed' FROM knowledge_document
 			  WHERE id = $1 AND archived_at IS NULL`,
-			documentID).Scan(&key, &failed); err != nil {
+			documentID).Scan(&src.StorageKey, &src.Checksum, &failed); err != nil {
 			return notFoundOr(err, "read the document to download")
 		}
 		// A failed ingest deletes the stored bytes and keeps the row, so there
@@ -62,7 +63,10 @@ func (s *Store) OpenForDownload(ctx context.Context, documentID ids.UUID) (crmco
 	// a handbook page downloads from an installation that has no object storage
 	// at all, and a guard here would have refused exactly those installations
 	// the citation they were just handed.
-	body, err := s.openContent(ctx, key)
+	body, err := s.openIngestContent(ctx, src)
+	if errors.Is(err, ErrHandbookPageGone) {
+		return crmcontracts.KnowledgeDocument{}, nil, fmt.Errorf("%w: this release does not hold that handbook page yet", apperrors.ErrNotFound)
+	}
 	if err != nil {
 		return crmcontracts.KnowledgeDocument{}, nil, err
 	}

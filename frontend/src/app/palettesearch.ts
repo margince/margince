@@ -79,7 +79,10 @@ type SearchArm = Readonly<{
   // that was too broad, otherwise the shared line.
   failure: string;
   // The search answered the words now in the box and found no record.
+  // False while a type is left out: nothing found there is not nothing found.
   empty: boolean;
+  // The types the server could not search in time, for the answer on screen.
+  timedOut: readonly string[];
 }>;
 
 // Live record hits for the palette (RS-1): one request per pause in the typing
@@ -147,6 +150,7 @@ export function useSearchCommands(
         kind,
         hits: data.data,
         more: data.types_with_more ?? [],
+        timedOut: data.types_timed_out ?? [],
       };
     },
   });
@@ -246,14 +250,36 @@ export function useSearchCommands(
     failed,
     // Asked of the hits rather than the rows: the results page lists a hit the
     // palette has no row for. A failed refresh keeps the answer before it.
-    empty:
-      !failed &&
-      !result.isFetching &&
-      answer !== undefined &&
-      foldForSearch(answer.q) === foldForSearch(typed) &&
-      answer.hits.length === 0,
+    empty: !failed && !result.isFetching && foundNoRecord(answer, typed),
+    ...timedOutOf(answer),
     failure: problemMessageOf(result.error, t, t("palette.searchFailed")),
   };
+}
+
+// The answer is for the words in the box and holds no record. No type was left
+// out, because a type that ran out of time may have had matches.
+function foundNoRecord(
+  answer:
+    | Readonly<{
+        q: string;
+        hits: readonly unknown[];
+        timedOut: readonly string[];
+      }>
+    | undefined,
+  typed: string,
+): boolean {
+  return (
+    answer !== undefined &&
+    foldForSearch(answer.q) === foldForSearch(typed) &&
+    answer.hits.length === 0 &&
+    answer.timedOut.length === 0
+  );
+}
+
+function timedOutOf(
+  answer: Readonly<{ timedOut: readonly string[] }> | undefined,
+): Pick<SearchArm, "timedOut"> {
+  return { timedOut: answer?.timedOut ?? [] };
 }
 
 function hitCounts(

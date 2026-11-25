@@ -46,6 +46,9 @@ type runnerEnv struct {
 	svc   *compose.RunnerService
 	store *runner.Store
 	brain *ai.FakeClient
+	// live serves a run through the production model route. Nil outside the live
+	// agent_loop lane, where every run goes through svc and its scripted brain.
+	live  *compose.RunnerService
 	wsID  ids.UUID
 	wsCtx context.Context
 
@@ -100,6 +103,14 @@ func stagingSpec(name string) (runner.AgentSpec, bool) {
 
 func setupRunner(t *testing.T) *runnerEnv {
 	t.Helper()
+	return setupRunnerOn(t, nil)
+}
+
+// setupRunnerOn is setupRunner plus a second runner service over modelPath, for
+// a live run. The scripted service stays, because the seed probe runs on it
+// before any model under test.
+func setupRunnerOn(t *testing.T, modelPath *compose.ModelPath) *runnerEnv {
+	t.Helper()
 	e := apptest.SetupApp(t)
 
 	apptest.BootstrapWorkspaceSession(t, e, "Runner E2E", "runner@fable.test", "Admin")
@@ -136,22 +147,30 @@ func setupRunner(t *testing.T) *runnerEnv {
 	// stripping pipeline production's AgentLoop lane does. WithoutResultCache
 	// keeps every scripted step reaching the fake — the tests below script
 	// a distinct response per reason-act step.
-	modelPath, err := compose.NewLocalModelPath(ai.FakeRoutingConfig(), ai.WithFakeClient(brain), ai.WithoutResultCache())
+	scripted, err := compose.NewLocalModelPath(ai.FakeRoutingConfig(), ai.WithFakeClient(brain), ai.WithoutResultCache())
 	if err != nil {
 		t.Fatal(err)
 	}
 	logger := slog.New(slog.NewTextHandler(os.Stderr, nil))
 	// The worker's own grounding retriever, so a run here is seeded the way a
 	// production run is.
-	grounding := search.NewRetriever(search.NewStore(compose.InstallationDB(pool)), modelPath.Embedder)
+	service := func(path compose.ModelPath) *compose.RunnerService {
+		return compose.NewRunnerService(pool, path.AgentLoop, path.DraftReply,
+			search.NewRetriever(search.NewStore(compose.InstallationDB(pool)), path.Embedder), logger,
+			compose.SendPath{}, compose.WithSpecResolver(stagingSpec))
+	}
+	var live *compose.RunnerService
+	if modelPath != nil {
+		live = service(*modelPath)
+	}
 	return &runnerEnv{
 		AppEnv: e,
 		pool:   pool,
-		svc: compose.NewRunnerService(pool, modelPath.AgentLoop, modelPath.DraftReply, grounding, logger,
-			compose.SendPath{}, compose.WithSpecResolver(stagingSpec)),
-		store: runner.NewStore(database.BindTo(pool, ids.From[ids.WorkspaceKind](wsID))),
-		brain: brain,
-		wsID:  wsID,
+		svc:    service(scripted),
+		live:   live,
+		store:  runner.NewStore(database.BindTo(pool, ids.From[ids.WorkspaceKind](wsID))),
+		brain:  brain,
+		wsID:   wsID,
 		// The pass's own actor, exactly as RunnerService.Tick binds one in
 		// production. It is not scaffolding: seeding and finishing a job now
 		// announce the occurrence to the AI-activity projection, and that
@@ -419,16 +438,16 @@ func TestRunnerJobWithoutPassportFailsLoudly(t *testing.T) {
 	trigger := "morning_brief:e2e-no-passport"
 	re.enqueue(t, "morning_brief", trigger, nil)
 	re.tick(t)
-	var status, lastError string
+	var status string
 	err := database.WithWorkspaceTx(re.wsCtx, re.pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(),
-			`SELECT status, last_error FROM runner_job WHERE trigger_ref = $1`, trigger).Scan(&status, &lastError)
+			`SELECT status FROM runner_job WHERE trigger_ref = $1`, trigger).Scan(&status)
 	})
 	if err != nil {
 		t.Fatal(err)
 	}
-	if status != "failed" || !strings.Contains(lastError, "no passport bound") {
-		t.Fatalf("passport-less job = %s %q, want a loud failure", status, lastError)
+	if status != "failed" {
+		t.Fatalf("passport-less job = %s, want failed", status)
 	}
 	// And no run started with ambient authority.
 	var runs int

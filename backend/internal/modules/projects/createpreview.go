@@ -12,9 +12,13 @@ import (
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/kernel/provenance"
 )
 
 func admitProjectCreation(ctx context.Context, tx pgx.Tx, in CreateProjectInput, fallback *ids.UserID) (CreateProjectInput, error) {
+	if err := provenance.AdmitRecordSource(in.Source); err != nil {
+		return CreateProjectInput{}, err
+	}
 	owner, err := storekit.NewRecordOwnerWithDefault(ctx, tx, in.OwnerID, fallback)
 	if err != nil {
 		return CreateProjectInput{}, err
@@ -86,23 +90,27 @@ func (s *Store) PreviewProjectCreationForActor(ctx context.Context, in CreatePro
 	if _, err := storekit.CapturedBy(creatorCtx); err != nil {
 		return CreateProjectInput{}, err
 	}
-	active, err := s.catalogColumns(ctx)
-	if err != nil {
-		return CreateProjectInput{}, err
-	}
 	var out CreateProjectInput
-	err = s.Tx(ctx, func(tx pgx.Tx) error {
-		var err error
+	err := s.Tx(ctx, func(tx pgx.Tx) error {
+		active, err := s.catalogColumnsIn(ctx, tx)
+		if err != nil {
+			return err
+		}
 		out, err = admitProjectCreation(ctx, tx, in, storekit.OwnerOrActor(creatorCtx))
-		if err != nil || out.DealID == nil {
+		if err != nil {
 			return err
 		}
 		// The creator's authority, because the create links the deal as them.
-		return s.checkDeal(creatorCtx, tx, *out.DealID, out.CompanyID)
+		if out.DealID != nil {
+			if err := s.checkDeal(creatorCtx, tx, *out.DealID, out.CompanyID); err != nil {
+				return err
+			}
+		}
+		out.CustomFields, err = storekit.CreateFieldValues(active, in.CustomFields)
+		return err
 	})
 	if err != nil {
 		return CreateProjectInput{}, err
 	}
-	out.CustomFields, err = storekit.CreateFieldValues(active, in.CustomFields)
-	return out, err
+	return out, nil
 }

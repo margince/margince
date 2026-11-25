@@ -74,7 +74,7 @@ export function SkillDownloadButton() {
       const { data, error, response } = await api.GET("/agent-bundle", {
         parseAs: "blob",
       });
-      if (error) throwProblem(error);
+      if (error !== undefined) throwProblem(error);
       return {
         bytes: data,
         filename: filenameFromDisposition(

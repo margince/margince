@@ -79,7 +79,7 @@ var sendMessageCopy = toolCopy{
 
 var checkAvailabilityCopy = toolCopy{
 	Purpose: "Find candidate times for a host without booking or sending anything.",
-	Limits:  "Set reliable=true to check the acting host's selected Google or Microsoft calendars and pending reservations. Otherwise only meetings recorded in this CRM are considered. calendar_backing=calendar is the evidence that live occupancy was checked. This never checks invitees' availability.",
+	Limits:  "Set reliable=true to check the acting host's selected Google or Microsoft calendars and pending reservations. Otherwise only meetings recorded in this CRM are considered. calendar_backing=calendar is the evidence that live occupancy was checked. This never checks invitees' availability. It reads the host alone: the colleagues a team booking link names are not counted, and the public booking page checks them itself.",
 	Instead: "Use invite_meeting to request an approved calendar invitation after a time is agreed. log_activity records a meeting without inviting anyone. prep_for_meeting prepares for an existing meeting.",
 	Retain:  "Keep the exact start and end, the calendar_backing value, and the truncated flag. Availability is checked again when reserving the time.",
 }
@@ -110,8 +110,7 @@ var sendOutboundCopy = toolCopy{
 		"their sign-in link where the installation can send mail, signature_template and " +
 		"my_signature set the sign-off every later mail carries, and double_opt_in, privacy_notice " +
 		"and details_confirmation mail a contact a link about their data: ask the user first. " +
-		"A message the engine refused and held is sent anyway only by the user, in the app: show " +
-		"them the review and its warning.",
+		sendAnywayRule,
 	Limits: "Every recipient must have granted the consent purpose the call names. A sent message " +
 		"cannot be recalled, and by default nothing holds it: where an installation has raised a " +
 		"send to confirm first, the answer is a staged approval instead. chat_reply cannot start a " +

@@ -29,6 +29,13 @@ describe("recordWriteKeys", () => {
     ]);
   });
 
+  it("stales the company dossier, whose prose cites the fields a write changes", () => {
+    expect(recordWriteKeys("company", "c-1")).toContainEqual([
+      "company-dossier",
+      "c-1",
+    ]);
+  });
+
   it("carries the lead's board and list, which its detail key does not reach", () => {
     expect(recordWriteKeys("lead", "l-1")).toContainEqual(["leads"]);
   });

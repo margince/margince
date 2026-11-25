@@ -12,13 +12,16 @@ import {
   isRecord,
   problemCode,
   problemFieldErrors,
+  problemRequestId,
 } from "./problembody";
 import {
   heldByColleagueCopy,
+  legalReviewRefusalCopy,
   PROBLEM_CODE_COPY,
   roleCannotCaptureCopy,
 } from "./problemcodecopy";
 
+export { blankRequired } from "./blankrequired";
 export type { FieldLabel, FieldLabels } from "./faultsentence";
 export {
   faultSentence,
@@ -44,6 +47,7 @@ function problemDetail(
   const copyKey =
     heldByColleagueCopy(problem) ??
     roleCannotCaptureCopy(problem) ??
+    legalReviewRefusalCopy(problem) ??
     PROBLEM_CODE_COPY.get(problemCode(problem) ?? "") ??
     fieldCopyKey(problem);
   if (t && copyKey) return t(copyKey);
@@ -221,7 +225,12 @@ export function problemMessageOf(
     error instanceof ProblemError
       ? problemDetail(error.problem, t, labels)
       : null;
-  return detail ?? fallback ?? t("common.errorNoCause");
+  const message = detail ?? fallback ?? t("common.errorNoCause");
+  const reference =
+    error instanceof ProblemError ? problemRequestId(error.problem) : null;
+  return reference
+    ? `${message} ${t("common.errorReference")}: ${reference}`
+    : message;
 }
 
 // Its counterpart: the one place a failure the reader is not shown reaches the
@@ -323,6 +332,12 @@ export function isVersionSkew(problem: unknown): boolean {
 // telling a reader somebody changed the record when the request never landed.
 export function isVersionSkewOf(error: unknown): boolean {
   return error instanceof ProblemError && isVersionSkew(error.problem);
+}
+
+// A 403 whose code says an owner filter names someone the reader may not
+// measure. A report the reader may not run at all has another code.
+export function isOwnerNotMeasurable(problem: unknown): boolean {
+  return problemCode(problem) === "owner_not_measurable";
 }
 
 // A 409 whose code names the "already decided" race. Another caller (or the

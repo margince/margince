@@ -202,15 +202,17 @@ func (s *FreemailDomainStore) AddConfirmed(ctx context.Context, domain, kind str
 			return err
 		}
 		if err := tx.QueryRow(ctx, `
-			INSERT INTO capture_freemail_domain (domain, kind, created_by)
-			VALUES ($1, $2, $3)
+			INSERT INTO capture_freemail_domain (domain, kind)
+			VALUES ($1, $2)
 			ON CONFLICT (domain) DO UPDATE SET kind = EXCLUDED.kind
 			RETURNING id, domain, kind, created_at`,
-			base, kind, freemailEntryAuthor(ctx)).
+			base, kind).
 			Scan(&out.ID, &out.Domain, &out.Kind, &out.CreatedAt); err != nil {
 			return err
 		}
-		database.Forget(tx, freemailMemo)
+		if err := storekit.CaptureFactsChanged(ctx, tx); err != nil {
+			return err
+		}
 		if before != nil && *before == kind {
 			// Nothing changed — no audit row for a re-add that said the same
 			// thing, so the trail records decisions rather than clicks.
@@ -260,7 +262,9 @@ func (s *FreemailDomainStore) Remove(ctx context.Context, id ids.UUID) error {
 		if err != nil {
 			return err
 		}
-		database.Forget(tx, freemailMemo)
+		if err := storekit.CaptureFactsChanged(ctx, tx); err != nil {
+			return err
+		}
 		// 'archive', not 'delete': the audit vocabulary is closed (0018) and
 		// carries no delete verb, and withdrawing a list entry IS retiring it.
 		_, auditErr := storekit.Audit(ctx, tx, "archive", freemailDomainObject, id,
@@ -279,16 +283,6 @@ func lockFreemailDomain(ctx context.Context, tx pgx.Tx, domain string) error {
 	return storekit.LockConsumerDomain(ctx, tx, domain)
 }
 
-// freemailEntryAuthor is the human an entry is attributed to, NULL for a system
-// actor. The list is workspace-shared, so this is provenance for the audit
-// trail and never a scope.
-func freemailEntryAuthor(ctx context.Context) *ids.UUID {
-	if author := actorUserID(ctx); !author.IsZero() {
-		return &author
-	}
-	return nil
-}
-
 // MatcherTx builds the consumer-mail matcher this workspace's mail is judged
 // by: the shipped baseline plus its own additions, minus its own carve-outs.
 // Every path that asks "can this domain name a company?" takes its answer from
@@ -302,15 +296,15 @@ func freemailEntryAuthor(ctx context.Context) *ids.UUID {
 // index, so the read costs less than the correspondence check already run for
 // every captured message.
 //
-// One message asks it about ten times in one transaction, so the transaction
-// remembers the answer; an admin's edit lands in its own transaction.
+// One message asks it about ten times. An import run keeps the answer while the
+// capture facts version stands, and an admin's edit moves the version.
 func MatcherTx(ctx context.Context, tx pgx.Tx) (*freemail.Matcher, error) {
-	return database.Remember(tx, freemailMemo, func() (*freemail.Matcher, error) { return readMatcherTx(ctx, tx) })
+	return storekit.RememberCaptureFact(ctx, tx, freemailMemo, func() (*freemail.Matcher, error) { return readMatcherTx(ctx, tx) })
 }
 
 // freemailMemo keys the matcher in a transaction's memo. Every writer of the
-// list forgets it (TestEveryWriterOfAMemoizedReadForgetsIt).
-const freemailMemo = "capture.freemail"
+// list forgets it (gates/capturefactwriters_test.go).
+const freemailMemo = storekit.CaptureFactsMemo + "freemail"
 
 func readMatcherTx(ctx context.Context, tx pgx.Tx) (*freemail.Matcher, error) {
 	rows, err := tx.Query(ctx, `SELECT domain, kind FROM capture_freemail_domain`)

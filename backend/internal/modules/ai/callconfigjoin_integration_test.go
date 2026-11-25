@@ -47,7 +47,7 @@ func TestACallResolvesTheConfigurationItRanUnder(t *testing.T) {
 		LogicalCallID: logical, Attempt: 1, IsTerminal: true,
 		Kind: callKindCompletion, Task: TaskSummarize, Tier: TierCheapCloud,
 		Provider: providerOpenAICompatible, ModelID: "openai/gpt-oss-120b",
-		RequestFingerprint: "fp-config-join", ConfigHash: &snap.Hash,
+		ConfigHash: &snap.Hash,
 	}}); err != nil {
 		t.Fatalf("recording the call: %v", err)
 	}
@@ -99,7 +99,6 @@ func TestACallNamingNoConfigurationResolvesToNothing(t *testing.T) {
 		LogicalCallID: ids.NewV7(), Attempt: 1, IsTerminal: true,
 		Kind: callKindCompletion, Task: TaskSummarize, Tier: TierCheapCloud,
 		Provider: providerOpenAICompatible, ModelID: "openai/gpt-oss-120b",
-		RequestFingerprint: "fp-no-config",
 	}}); err != nil {
 		t.Fatalf("recording the call: %v", err)
 	}
@@ -147,7 +146,7 @@ func TestAStoredJSONNullIsNotReadAsAnEmptyParameterSet(t *testing.T) {
 		LogicalCallID: ids.NewV7(), Attempt: 1, IsTerminal: true,
 		Kind: callKindCompletion, Task: TaskSummarize, Tier: TierCheapCloud,
 		Provider: providerOpenAICompatible, ModelID: "openai/gpt-oss-120b",
-		RequestFingerprint: "fp-null-params", ConfigHash: &snap.Hash,
+		ConfigHash: &snap.Hash,
 	}}); err != nil {
 		t.Fatalf("recording the call: %v", err)
 	}

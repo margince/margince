@@ -301,6 +301,9 @@ func (s *Store) holdRefusedSend(ctx context.Context, origin SendOrigin, in SendE
 // under the same authority, so a second press reuses it. A zero id means there
 // is none.
 //
+// It names the seat itself rather than ScheduledSendReadableSQL. This is the
+// identity the unique index holds, not a read, and the seat is one column.
+//
 // THE MATCH IS THE UNIQUE INDEX, column for column. The database refuses a
 // second row for the same identity (scheduled_send_one_held_message_per_seat),
 // and a query looser than that index would find a twin the index would not

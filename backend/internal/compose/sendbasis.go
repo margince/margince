@@ -29,6 +29,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/kernel/provenance"
+	"github.com/margince/margince/backend/internal/shared/ports/authz"
 )
 
 // sendRefs names what a payload shows: the seat's own tasks, tasks shown as
@@ -38,6 +39,7 @@ import (
 type sendRefs struct {
 	ownTasks, teamTasks, approvals []ids.UUID
 	records                        []notices.Target
+	teamRequests                   []teamRequestRef
 	// changesSince is where the Margince changes a morning counts start; nil
 	// when it counts none.
 	changesSince *time.Time
@@ -55,6 +57,8 @@ func (r *sendRefs) canonical() {
 		return compareUUID(a.ID, b.ID)
 	})
 	r.records = slices.Compact(r.records)
+	slices.SortFunc(r.teamRequests, func(a, b teamRequestRef) int { return compareUUID(a.notice, b.notice) })
+	r.teamRequests = slices.Compact(r.teamRequests)
 }
 
 func compareUUID(a, b ids.UUID) int {
@@ -120,6 +124,9 @@ func readSendBasis(ctx context.Context, tx pgx.Tx, seat ids.UUID, team *ids.UUID
 		for _, record := range refs.records {
 			basis.excluded[record.ID] = true
 		}
+		for _, request := range refs.teamRequests {
+			basis.excluded[request.notice] = true
+		}
 		return basis, nil
 	}
 	return readSendBasisWithAuthority(ctx, tx, seat, team, refs, now)
@@ -135,6 +142,9 @@ func readSendBasisWithAuthority(ctx context.Context, tx pgx.Tx, seat ids.UUID, t
 		}
 	}
 	if err := includeReportedRecords(ctx, tx, refs, &basis); err != nil {
+		return basis, err
+	}
+	if err := teamRequestDependencies(ctx, tx, refs.teamRequests, &basis); err != nil {
 		return basis, err
 	}
 	if refs.changesSince != nil {
@@ -345,7 +355,7 @@ func seatAuthorityTx(ctx context.Context, tx pgx.Tx, seat ids.UUID) (context.Con
 	if err != nil {
 		return ctx, false, fmt.Errorf("send: reading the recipient's current authority: %w", err)
 	}
-	return boundToSeat(ctx, seat, rbac, seatType), true, nil
+	return principal.WithActor(ctx, authz.HumanPrincipal(seat, rbac, seatType)), true, nil
 }
 
 // decisionTargets are the records a decision other than a commitment names.

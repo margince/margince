@@ -31,7 +31,6 @@
   height: 0.5rem;
   border: 0;
   border-radius: var(--r-full);
-  corner-shape: round;
   background: var(--accent);
 }
 .report-chart-key-bar::before {
@@ -46,7 +45,7 @@
   background: color-mix(in srgb, var(--accent) 38%, var(--ground));
 }
 .report-chart-key-range::before {
-  border-color: color-mix(in srgb, var(--accent) 35%, var(--bgElevated));
+  border-color: color-mix(in srgb, var(--accent) 35%, var(--bgField));
   border-top-width: 6px;
 }
 .report-chart-line {
@@ -116,16 +115,14 @@
   padding: 0;
   transform: translate(-50%, -50%);
   border-radius: var(--r-full);
-  corner-shape: round;
 }
 .report-chart-dot {
   display: block;
   width: 10px;
   height: 10px;
   border-radius: var(--r-full);
-  corner-shape: round;
   background: var(--accent);
-  border: 2px solid var(--bgElevated);
+  border: 2px solid var(--ground);
 }
 .report-chart-point:hover .report-chart-dot,
 .report-chart-point:focus-visible .report-chart-dot {
@@ -213,7 +210,6 @@
   align-self: center;
   height: 10px;
   border-radius: var(--r-full);
-  corner-shape: round;
 }
 .report-chart-bullet-fill {
   position: absolute;
@@ -222,14 +218,12 @@
   width: var(--report-mark-width);
   background: linear-gradient(90deg, var(--accentFade), var(--accent));
   border-radius: var(--r-full);
-  corner-shape: round;
 }
 .report-chart-bullet-target {
   position: absolute;
   inset-block: calc(-1 * var(--space-1));
   width: 2px;
   border-radius: var(--r-full);
-  corner-shape: round;
   background: var(--textPrimary);
 }
 .report-chart-row[data-tone="success"] .report-chart-bullet-fill {
@@ -259,7 +253,6 @@
   left: var(--report-mark-left);
   background: linear-gradient(90deg, var(--accentFade), var(--accent));
   border-radius: var(--r-full);
-  corner-shape: round;
 }
 .report-chart-range-dot {
   position: absolute;
@@ -268,7 +261,6 @@
   width: 11px;
   height: 11px;
   border-radius: var(--r-full);
-  corner-shape: round;
   background: var(--accent);
 }
 .report-chart-range-end {
@@ -357,7 +349,7 @@
 }
 .report-chart-column-secondary .report-chart-column-fill {
   height: 100%;
-  background: color-mix(in srgb, var(--accent) 38%, var(--bgElevated));
+  background: color-mix(in srgb, var(--accent) 38%, var(--bgField));
   border: 1px solid var(--accent);
 }
 .report-chart-column-amount {

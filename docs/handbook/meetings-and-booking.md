@@ -66,6 +66,8 @@ A held meeting shows **Add notes** on the timeline and the **Meetings** tab, or 
 Write the notes the next day if you need to, then press **Log**. Anyone who may change the meeting can do this.
 A meeting with a Margince invitation does not offer them.
 
+A meeting whose subject only arranges how you get somewhere, such as "Airport drop-off" or "Flug nach Hamburg", does not ask for an outcome. It still asks when it is on a deal, lead or project.
+
 A colleague's meeting that you were in but cannot change shows as **No outcome yet for** the meeting. Its host records the outcome. Press **Done** to take it off your list.
 Also called: mark a meeting held, meeting outcome, no-show, meeting happened.
 
@@ -131,11 +133,29 @@ A short address belongs to one booking page at a time. Margince refuses one that
 
 When you change or remove your short address, the old one stops working at once. Margince asks first. You can take your old address back at any time. Nobody else can ever take it, so guests who kept it never reach someone else's page. **Replace address** ends the short address too, and you can choose it again after.
 
+### How do I offer times when several colleagues are free?
+<!-- opens: settings/meetings -->
+To offer only times when you and your colleagues are all free in Margince, open Settings → **Meetings** and use **Colleagues on this link**.
+1. Under **Add a colleague**, choose a colleague. Only colleagues with a connected calendar are offered. You can name up to five.
+2. Each colleague gets a notice in the app and an email. Both say who named them on which link, and open their own **Meetings** settings. There they see your link under **Colleagues' links that name you**, and choose **Confirm**. The email follows their setting for **Approvals waiting on you**.
+3. Once all have confirmed, guests see only the times when all of you are free.
+Also called: team booking link, group booking link, shared free time.
+
+Each time must fall in the working hours of every colleague, read in that colleague's own time zone.
+
+A booking lands as one meeting in your calendar, and every colleague is invited to it. Margince checks each colleague's calendar again when the guest books. A time a colleague filled since the guest opened the page is refused, and the guest picks another. A time booked through your link also counts as taken on each colleague's own booking page. Guests never see a colleague's calendar names, event titles or other guests.
+
+The link takes bookings only while every colleague on it is ready. A ready colleague has confirmed, is still on the link and in the workspace, and has a calendar Margince can read. Each colleague's row shows where they stand.
+
+A colleague can choose **Leave** at any time. Remove them from the list to take bookings again.
+
 ## What your guest sees
 
 The Margince booking page shows your name from **Settings → Account**, and the name and logo of the company you work for. An Admin sets that company under **Legal entities**. Unless an Admin sets one, that is your company profile. A company with no logo shows its name only. When new meetings get a video call, it names the video app: Google Meet or Microsoft Teams. Guests never see which calendar provider you use, your calendar names, or other guests.
 
-Your booking link has the form `https://<your Margince address>/book/<code>`. With a short address it is `/book/<your short address>`, and the long form still works. A short address works in capital or small letters. A link in the old form, with `/#/book/` in it, still opens the same page. The page and the guest's own meeting page do not promote Margince. The browser tab names you: "Book a meeting with" and your name.
+Your booking link has the form `https://<your Margince address>/book/<code>`. With a short address it is `/book/<your short address>`, and the long form still works. A short address works in capital or small letters. A link in the old form, with `/#/book/` in it, still opens the same page.
+
+The page and the guest's own meeting page do not promote Margince. The browser tab names you: "Book a meeting with" and your name. The tab shows the company logo when there is one.
 
 When you paste the link into chat or email, the preview card shows your name and the company name. It also shows the meeting title and how long the meeting takes. It shows the company logo when there is one. Without a logo the card is text only.
 
@@ -143,9 +163,11 @@ A paused page gives a card that names nobody. A replaced or unknown address give
 
 If your account is suspended or removed, your page and your short address stop working. Nobody else can take your short address, so it never leads to someone else's page.
 
-A page is paused when **Accept bookings** is off. It is also paused when your calendar cannot take bookings: none is set, it is read-only, or it is disconnected. A guest who opens a paused page reads that you are not taking bookings through it right now. The page names you and shows nothing else: no free times, no meeting details. **My booking link** in the account menu shows **Paused** while it is. A personal link you sent stays open while your calendar can take its booking, even when **Accept bookings** is off.
+A page is paused when **Accept bookings** is off. It is also paused when your calendar cannot take bookings: none is set, it is read-only, or it is disconnected. A link that names colleagues is also paused until every colleague on it has confirmed and has a calendar Margince can read.
 
-Home shows you one card while your page is paused by its calendar, so you can fix it. It shows the card only when **Accept bookings** is on and the page was used: somebody booked through it, or you copied its link. The card names the reason and opens your booking settings.
+A guest who opens a paused page reads that you are not taking bookings through it right now. The page names you and shows nothing else: no free times, no meeting details. **My booking link** in the account menu shows **Paused** while it is. A personal link you sent stays open while your calendar can take its booking, even when **Accept bookings** is off.
+
+Home shows you one card while your page is paused by its calendar or by a colleague on it, so you can fix it. It shows the card only when **Accept bookings** is on and the page was used: somebody booked through it, or you copied its link. The card names the reason and opens your booking settings.
 
 Turning off **Accept bookings** stops new bookings on your public page. Personal links you already sent keep working until they run out. **Replace address** stops the old public address once you confirm, but guests keep the private links that let them change their own meetings.
 

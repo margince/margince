@@ -98,14 +98,14 @@ func emitTestContext() context.Context {
 }
 
 // decodedOutboxRow unmarshals the envelope fakeTx captured from the
-// INSERT INTO event_outbox(stream, envelope) VALUES ($1, $2) call.
+// INSERT INTO event_outbox(stream, envelope, assurance_inputs_read) call.
 func decodedOutboxRow(t *testing.T, tx *fakeTx) (stream string, env events.Envelope) {
 	t.Helper()
 	if !strings.Contains(tx.execSQL, "INSERT INTO event_outbox") {
 		t.Fatalf("Exec SQL = %q, want it to contain %q", tx.execSQL, "INSERT INTO event_outbox")
 	}
-	if len(tx.execArgs) != 2 {
-		t.Fatalf("Exec args = %v, want exactly 2 (stream, envelope)", tx.execArgs)
+	if len(tx.execArgs) != 3 {
+		t.Fatalf("Exec args = %v, want exactly 3 (stream, envelope, assurance_inputs_read)", tx.execArgs)
 	}
 	stream, ok := tx.execArgs[0].(string)
 	if !ok {
@@ -221,7 +221,7 @@ func TestEmitEventEnvelopeReturnsTheExactSavedEvent(t *testing.T) {
 	if returned.EventID == ids.Nil || returned.Trace.AuditLogID != audit || returned.Entity.ID != entity {
 		t.Fatalf("incomplete emitted identity: %+v", returned)
 	}
-	if len(tx.execArgs) != 2 {
+	if len(tx.execArgs) != 3 {
 		t.Fatalf("outbox arguments: %d", len(tx.execArgs))
 	}
 	saved, ok := tx.execArgs[1].([]byte)

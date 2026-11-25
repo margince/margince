@@ -19,7 +19,9 @@ import (
 	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/modules/capture/graph"
 	"github.com/margince/margince/backend/internal/modules/capture/graphcal"
+	"github.com/margince/margince/backend/internal/modules/capture/oauthflow"
 	"github.com/margince/margince/backend/internal/modules/identity"
+	"github.com/margince/margince/backend/internal/shared/ports/connector"
 )
 
 // GraphConfig is the composed Microsoft (Graph) OAuth app for a deployment:
@@ -75,12 +77,13 @@ func (c GraphConfig) TransportMountable() bool { return c.canSignState() }
 func (c GraphConfig) Enabled() bool { return c.canConnect() }
 
 //nolint:ireturn // returns the graph.OAuth seam by design (a fakeable interface)
-func newGraphOAuth(c GraphConfig) graph.OAuth {
+func newGraphOAuth(c GraphConfig, tokens *oauthflow.TokenCache) graph.OAuth {
 	return graph.NewOAuth(graph.OAuthConfig{
 		ClientID:     c.ClientID,
 		ClientSecret: c.ClientSecret,
 		Tenant:       c.Tenant,
 		Scopes:       graphScopes,
+		Tokens:       tokens,
 	})
 }
 
@@ -111,12 +114,13 @@ func newGraphCalOAuth(c GraphConfig) graphcal.OAuth {
 // through Settings be connected at all — the transport asks the registry whether
 // a connector exists before it will run the consent flow.
 func registerMicrosoftConnectors(
-	reg *capture.Registry, resolve appResolver, g GraphConfig, pool *pgxpool.Pool,
+	reg *capture.Registry, resolve appResolver, g GraphConfig, pool *pgxpool.Pool, tuning connector.BackfillTuning,
 ) {
 	if !appReachable(resolve, g.canSync()) {
 		return
 	}
 	reg.Register(graph.New(newGraphAuthorizer(resolve, g), graph.NewAPI(nil, "")).
+		WithBackfillTuning(tuning).
 		WithBounceSink(newBounceSink(pool)).WithSharedMailboxes(graph.SharedMailboxConfig{}))
 	reg.Register(graphcal.New(newGraphCalAuthorizer(resolve, g), graphcal.NewAPI(nil, "")))
 }
@@ -193,7 +197,7 @@ func WithGraphCapture(c GraphConfig) Option {
 		if s.apiBaseURL == "" {
 			s.apiBaseURL = c.APIBaseURL
 		}
-		registerMicrosoftConnectors(s.connectorHandlers.registry, s.microsoftAppResolver, c, pool)
+		registerMicrosoftConnectors(s.connectorHandlers.registry, s.microsoftAppResolver, c, pool, connector.BackfillTuning{})
 		s.microsoftCredentials = s.microsoftAppResolver
 		s.graphAPI = graph.NewAPI(nil, "")
 		s.graphCalAPI = graphcal.NewAPI(nil, "")
@@ -204,7 +208,7 @@ func WithGraphCapture(c GraphConfig) Option {
 		// consent screen with `client_id=`, which fails there rather than here and
 		// gives them nothing to act on.
 		if c.canSync() {
-			s.graphOAuth = newGraphOAuth(c)
+			s.graphOAuth = newGraphOAuth(c, nil)
 			s.graphCalOAuth = newGraphCalOAuth(c)
 		}
 	}

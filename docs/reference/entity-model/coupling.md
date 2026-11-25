@@ -10,41 +10,41 @@ An area with no inbound key is a candidate for a separate module. Its outbound k
 
 | Area | Tables | Columns | Inbound keys | Outbound keys | Outbound cascades |
 |---|--:|--:|--:|--:|--:|
-| [activities](activities.md) | 34 | 433 | 28 | 38 | 18 |
-| [agents](agents.md) | 3 | 35 | 0 | 5 | 1 |
-| [ai](ai.md) | 12 | 207 | 0 | 3 | 0 |
-| [aiactivity](aiactivity.md) | 1 | 25 | 0 | 2 | 0 |
+| [activities](activities.md) | 32 | 430 | 29 | 38 | 18 |
+| [agents](agents.md) | 3 | 28 | 0 | 5 | 1 |
+| [ai](ai.md) | 12 | 196 | 0 | 3 | 0 |
+| [aiactivity](aiactivity.md) | 1 | 24 | 0 | 2 | 0 |
 | [approvals](approvals.md) | 3 | 53 | 4 | 8 | 2 |
 | [assignments](assignments.md) | 2 | 27 | 0 | 5 | 3 |
-| [assurance](assurance.md) | 9 | 105 | 0 | 7 | 5 |
+| [assurance](assurance.md) | 9 | 86 | 0 | 7 | 5 |
 | [automation](automation.md) | 3 | 33 | 1 | 2 | 0 |
-| [capture](capture.md) | 27 | 271 | 6 | 27 | 14 |
-| [chatlinks](chatlinks.md) | 2 | 36 | 0 | 4 | 2 |
-| [collections](collections.md) | 13 | 108 | 1 | 10 | 6 |
+| [capture](capture.md) | 25 | 255 | 6 | 26 | 14 |
+| [chatlinks](chatlinks.md) | 2 | 29 | 0 | 4 | 2 |
+| [collections](collections.md) | 13 | 106 | 1 | 10 | 6 |
 | [commissions](commissions.md) | 1 | 18 | 0 | 2 | 2 |
 | [comms](comms.md) | 1 | 47 | 5 | 6 | 1 |
-| [compose](compose.md) | 48 | 434 | 3 | 40 | 36 |
-| [consent](consent.md) | 23 | 321 | 2 | 42 | 23 |
-| [contacts](contacts.md) | 49 | 707 | 77 | 35 | 12 |
+| [compose](compose.md) | 47 | 427 | 3 | 40 | 36 |
+| [consent](consent.md) | 23 | 319 | 2 | 42 | 23 |
+| [contacts](contacts.md) | 49 | 717 | 77 | 35 | 12 |
 | [continuity](continuity.md) | 1 | 8 | 0 | 0 | 0 |
 | [contracts](contracts.md) | 1 | 29 | 2 | 3 | 0 |
 | [customfields](customfields.md) | 1 | 19 | 0 | 1 | 0 |
 | [dealrooms](dealrooms.md) | 8 | 95 | 0 | 8 | 1 |
-| [deals](deals.md) | 27 | 384 | 26 | 17 | 5 |
+| [deals](deals.md) | 26 | 386 | 26 | 18 | 2 |
 | [finance](finance.md) | 5 | 85 | 0 | 3 | 0 |
-| [forecasting](forecasting.md) | 4 | 95 | 1 | 2 | 0 |
-| [identity](identity.md) | 22 | 206 | 157 | 6 | 5 |
+| [forecasting](forecasting.md) | 4 | 94 | 1 | 2 | 0 |
+| [identity](identity.md) | 22 | 206 | 156 | 6 | 5 |
 | [initiatives](initiatives.md) | 5 | 45 | 0 | 2 | 1 |
-| [integrations](integrations.md) | 5 | 61 | 3 | 3 | 1 |
+| [integrations](integrations.md) | 5 | 59 | 3 | 3 | 1 |
 | [introductions](introductions.md) | 1 | 31 | 0 | 6 | 1 |
 | [knowledge](knowledge.md) | 3 | 39 | 0 | 0 | 0 |
-| [migration](migration.md) | 2 | 41 | 0 | 0 | 0 |
+| [migration](migration.md) | 2 | 42 | 0 | 0 | 0 |
 | [notices](notices.md) | 3 | 26 | 0 | 3 | 3 |
-| [platform](platform.md) | 12 | 90 | 2 | 3 | 1 |
+| [platform](platform.md) | 13 | 94 | 2 | 3 | 1 |
 | [privacy](privacy.md) | 2 | 14 | 0 | 0 | 0 |
 | [projects](projects.md) | 3 | 42 | 11 | 3 | 0 |
 | [recordlinks](recordlinks.md) | 1 | 8 | 0 | 0 | 0 |
-| [reporting](reporting.md) | 14 | 124 | 0 | 10 | 0 |
+| [reporting](reporting.md) | 14 | 122 | 0 | 10 | 0 |
 | [search](search.md) | 4 | 42 | 0 | 4 | 2 |
 | [signals](signals.md) | 2 | 42 | 2 | 9 | 4 |
 | [webforms](webforms.md) | 2 | 27 | 0 | 4 | 0 |
@@ -129,17 +129,17 @@ No outbound foreign keys.
 
 ### initiatives
 
-- `sales_initiative.sales_initiative_owner_id_fkey`: `FOREIGN KEY (owner_id) REFERENCES app_user(id)`
+- `sales_initiative.sales_initiative_owner_id_fkey`: `FOREIGN KEY (owner_id) REFERENCES app_user(id) ON DELETE RESTRICT`
 - `sales_initiative_baseline.sales_initiative_baseline_deal_id_fkey`: `FOREIGN KEY (deal_id) REFERENCES deal(id) ON DELETE CASCADE`
 
 ### introductions
 
 - `intro_request.intro_request_contact_id_fkey`: `FOREIGN KEY (contact_id) REFERENCES contact(id) ON DELETE CASCADE`
-- `intro_request.intro_request_introducer_user_id_fkey`: `FOREIGN KEY (introducer_user_id) REFERENCES app_user(id)`
-- `intro_request.intro_request_requester_user_id_fkey`: `FOREIGN KEY (requester_user_id) REFERENCES app_user(id)`
+- `intro_request.intro_request_introducer_user_id_fkey`: `FOREIGN KEY (introducer_user_id) REFERENCES app_user(id) ON DELETE RESTRICT`
+- `intro_request.intro_request_requester_user_id_fkey`: `FOREIGN KEY (requester_user_id) REFERENCES app_user(id) ON DELETE RESTRICT`
 - `intro_request.intro_request_source_activity_id_fkey`: `FOREIGN KEY (source_activity_id) REFERENCES activity(id) ON DELETE SET NULL`
-- `intro_request.intro_request_suggested_user_id_fkey`: `FOREIGN KEY (suggested_user_id) REFERENCES app_user(id)`
-- `intro_request.intro_request_through_contact_id_fkey`: `FOREIGN KEY (through_contact_id) REFERENCES contact(id)`
+- `intro_request.intro_request_suggested_user_id_fkey`: `FOREIGN KEY (suggested_user_id) REFERENCES app_user(id) ON DELETE RESTRICT`
+- `intro_request.intro_request_through_contact_id_fkey`: `FOREIGN KEY (through_contact_id) REFERENCES contact(id) ON DELETE RESTRICT`
 
 ### knowledge
 
@@ -165,16 +165,16 @@ No outbound foreign keys.
 
 ### reporting
 
-- `report_definition.report_definition_audience_team_id_fkey`: `FOREIGN KEY (audience_team_id) REFERENCES team(id)`
-- `report_definition.report_definition_owner_id_fkey`: `FOREIGN KEY (owner_id) REFERENCES app_user(id)`
-- `report_definition_revision.report_definition_revision_created_by_fkey`: `FOREIGN KEY (created_by) REFERENCES app_user(id)`
-- `report_execution.report_execution_owner_id_fkey`: `FOREIGN KEY (owner_id) REFERENCES app_user(id)`
-- `report_schedule.report_schedule_owner_id_fkey`: `FOREIGN KEY (owner_id) REFERENCES app_user(id)`
-- `reporting_framework_revision.reporting_framework_revision_created_by_fkey`: `FOREIGN KEY (created_by) REFERENCES app_user(id)`
+- `report_definition.report_definition_audience_team_id_fkey`: `FOREIGN KEY (audience_team_id) REFERENCES team(id) ON DELETE RESTRICT`
+- `report_definition.report_definition_owner_id_fkey`: `FOREIGN KEY (owner_id) REFERENCES app_user(id) ON DELETE RESTRICT`
+- `report_definition_revision.report_definition_revision_created_by_fkey`: `FOREIGN KEY (created_by) REFERENCES app_user(id) ON DELETE RESTRICT`
+- `report_execution.report_execution_owner_id_fkey`: `FOREIGN KEY (owner_id) REFERENCES app_user(id) ON DELETE RESTRICT`
+- `report_schedule.report_schedule_owner_id_fkey`: `FOREIGN KEY (owner_id) REFERENCES app_user(id) ON DELETE RESTRICT`
+- `reporting_framework_revision.reporting_framework_revision_created_by_fkey`: `FOREIGN KEY (created_by) REFERENCES app_user(id) ON DELETE RESTRICT`
 - `sales_goal_plan.sales_goal_plan_owner_id_fkey`: `FOREIGN KEY (owner_id) REFERENCES app_user(id) ON DELETE RESTRICT`
 - `sales_goal_plan_revision.sales_goal_plan_revision_created_by_fkey`: `FOREIGN KEY (created_by) REFERENCES app_user(id) ON DELETE RESTRICT`
-- `sales_target.sales_target_pipeline_id_fkey`: `FOREIGN KEY (pipeline_id) REFERENCES pipeline(id)`
-- `sales_target_revision.sales_target_revision_created_by_fkey`: `FOREIGN KEY (created_by) REFERENCES app_user(id)`
+- `sales_target.sales_target_pipeline_id_fkey`: `FOREIGN KEY (pipeline_id) REFERENCES pipeline(id) ON DELETE RESTRICT`
+- `sales_target_revision.sales_target_revision_created_by_fkey`: `FOREIGN KEY (created_by) REFERENCES app_user(id) ON DELETE RESTRICT`
 
 ### search
 
@@ -202,4 +202,4 @@ No outbound foreign keys.
 - `weekly_plan_commitment.weekly_plan_commitment_linked_deal_id_fkey`: `FOREIGN KEY (linked_deal_id) REFERENCES deal(id) ON DELETE SET NULL`
 - `weekly_plan_commitment.weekly_plan_commitment_linked_lead_id_fkey`: `FOREIGN KEY (linked_lead_id) REFERENCES lead(id) ON DELETE SET NULL`
 - `weekly_plan_commitment.weekly_plan_commitment_linked_project_id_fkey`: `FOREIGN KEY (linked_project_id) REFERENCES project(id) ON DELETE SET NULL`
-- `weekly_plan_commitment.weekly_plan_commitment_manager_fkey`: `FOREIGN KEY (manager_user_id) REFERENCES app_user(id)`
+- `weekly_plan_commitment.weekly_plan_commitment_manager_fkey`: `FOREIGN KEY (manager_user_id) REFERENCES app_user(id) ON DELETE RESTRICT`

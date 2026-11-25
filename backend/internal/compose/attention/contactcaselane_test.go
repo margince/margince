@@ -83,7 +83,7 @@ func TestAnAddressedCaseIsOnItsOwnersPersonalPage(t *testing.T) {
 	shared := aContactCase(reader, colleague)
 	theirs := aContactCase(stranger)
 	nobodys := aContactCase()
-	pairs := stubDuplicates{pairs: []DuplicatePair{{ID: ids.NewV7(), EntityType: "company", LeftID: ids.NewV7(), RightID: ids.NewV7()}}, open: 1}
+	pairs := stubDuplicates{pairs: []DuplicatePair{{ID: ids.NewV7(), EntityType: "company", LeftID: ids.NewV7(), RightID: ids.NewV7()}}, open: 1, byOwner: true}
 	for name, tc := range map[string]struct {
 		scope TaskScope
 		word  string
@@ -117,13 +117,13 @@ func TestAnAddressedCaseIsOnItsOwnersPersonalPage(t *testing.T) {
 	}
 }
 
-// The personal case read still runs when the pair store fails, and the pair
-// store is not asked.
+// The personal case read still runs when the pair store fails, because a
+// personal page holds no ownerless pair for it to read.
 func TestAPersonalPagesCasesDoNotDependOnThePairStore(t *testing.T) {
 	reader := readerOf(pageReader())
 	unavailable := errors.New("the pair store is down")
 	cases := &stubContactCases{cases: []ContactCase{aContactCase(reader)}}
-	svc := decisionsService(stubApprovals{}, stubDuplicates{err: unavailable, settleErr: unavailable})
+	svc := decisionsService(stubApprovals{}, stubDuplicates{ownerless: true, err: unavailable, settleErr: unavailable})
 	svc.contactCases = cases
 	svc.taskScope = TasksMine
 	rows, count, err := svc.decisionsToDepth(pageReader(), needsYouPage)
@@ -144,7 +144,7 @@ func TestACaseIsReachedBeforeAFloodOfStrongerPairs(t *testing.T) {
 	}
 	mine := aContactCase(reader)
 	for _, scope := range []TaskScope{TasksMine, TasksVisible} {
-		svc := decisionsService(stubApprovals{}, stubDuplicates{pairs: flood, open: len(flood)})
+		svc := decisionsService(stubApprovals{}, stubDuplicates{pairs: flood, open: len(flood), ownerless: true})
 		svc.contactCases = &stubContactCases{cases: []ContactCase{mine}}
 		svc.taskScope = scope
 		rows, count, err := svc.decisionsToDepth(pageReader(), needsYouPage)
@@ -156,6 +156,61 @@ func TestACaseIsReachedBeforeAFloodOfStrongerPairs(t *testing.T) {
 		}
 		if wantPairs := map[TaskScope]int{TasksMine: 0, TasksVisible: len(flood)}[scope]; count.duplicates != wantPairs+1 {
 			t.Errorf("scope %d: duplicates counted %d, want %d", scope, count.duplicates, wantPairs+1)
+		}
+	}
+}
+
+// A company pair is on the Mine page of each of its owners and on a named
+// member's page. It is under Unassigned only with no owner, and the wider
+// pages read it as owned.
+func TestAnOwnedPairIsOnEachOwnersPage(t *testing.T) {
+	reader, colleague, stranger := readerOf(pageReader()), ids.NewV7(), ids.NewV7()
+	pair := func(owners ...ids.UUID) DuplicatePair {
+		return DuplicatePair{ID: ids.NewV7(), EntityType: "company", LeftID: ids.NewV7(), RightID: ids.NewV7(), Owners: owners}
+	}
+	shared, theirs, nobodys := pair(reader, colleague), pair(stranger), pair()
+	all := []DuplicatePair{shared, theirs, nobodys}
+	for name, tc := range map[string]struct {
+		scope TaskScope
+		word  string
+		owner ids.UUID
+		want  []DuplicatePair
+	}{
+		"mine":          {TasksMine, scopeMine, ids.UUID{}, []DuplicatePair{shared}},
+		"named member":  {TasksOwnedBy, scopeMine, colleague, []DuplicatePair{shared}},
+		"named another": {TasksOwnedBy, scopeMine, stranger, []DuplicatePair{theirs}},
+		"unassigned":    {TasksUnassigned, scopeUnassigned, ids.UUID{}, []DuplicatePair{nobodys}},
+		"all":           {TasksVisible, scopeAll, ids.UUID{}, all},
+	} {
+		t.Run(name, func(t *testing.T) {
+			svc := decisionsService(stubApprovals{}, stubDuplicates{pairs: all, open: len(all), byOwner: true})
+			svc.taskScope, svc.taskOwner = tc.scope, tc.owner
+			if tc.scope == TasksOwnedBy {
+				svc.taskOwner = tc.owner
+			}
+			page := pageOf(t, svc, tc.word, tc.owner)
+			var want []string
+			for _, p := range tc.want {
+				want = append(want, p.ID.String())
+			}
+			if got := page[sourceDuplicate]; !slices.Equal(slices.Sorted(slices.Values(got)), slices.Sorted(slices.Values(want))) {
+				t.Errorf("pairs on the page %v, want %v", got, want)
+			}
+		})
+	}
+
+	svc := decisionsService(stubApprovals{}, stubDuplicates{pairs: all, open: len(all), byOwner: true})
+	svc.taskScope = TasksVisible
+	items, _, err := svc.decisionsToDepth(pageReader(), needsYouPage)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, item := range items {
+		owner := ownerOnTheWire(classifyDecision(item, rankInstant), reader)
+		owned := owner != nil && owner.Id != nil
+		wantOwned := item.Id != nobodys.ID.String()
+		if owned != wantOwned {
+			t.Errorf("pair %s reads as owned=%v on the team page, want %v", item.Id, owned, wantOwned)
 		}
 	}
 }

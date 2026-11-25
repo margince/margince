@@ -5,6 +5,7 @@ import {
   type ActivityGate,
   useActivityGate,
 } from "../../components/activitygate";
+import { EditAccessRequest } from "../../components/editaccessrequest";
 import { MergedIntoSentence } from "../../components/historymergedref";
 import {
   LatestInboundLine,
@@ -39,6 +40,7 @@ import { useConsentGuard } from "./contactconsentpanel";
 import { ContactResearchDrawer } from "./contactdrawers";
 import { useContactEdit } from "./contactedit";
 import { ContactFollowState } from "./contactfollowstate";
+import { ContactImpersonationWarning } from "./contactimpersonation";
 import { ContactOpening } from "./contactopening";
 import { ContactOverview } from "./contactoverview";
 import { ContactRail } from "./contactrail";
@@ -49,10 +51,7 @@ import { RecordGone } from "../../components/recordgone";
 import { useHiddenCoreFeatures } from "../../lib/corefeatures";
 import { isGone } from "../../lib/problem";
 import { useViewerZone } from "../../lib/viewerzone";
-import {
-  openContactTab,
-  WorklistReturnLink,
-} from "../worklist/worklist.return";
+import { openContactTab } from "../worklist/worklist.return";
 import {
   ContactActivityDrawer,
   ContactCallStart,
@@ -83,6 +82,7 @@ function refusalsOf(
   readOnlyReason: string | undefined,
   readOnlyReasonId: string,
   activity: ActivityGate,
+  row: Contact | undefined,
   t: ReturnType<typeof useT>,
 ): ReactNode {
   const activityRefused = activity.refusedId !== undefined;
@@ -97,6 +97,9 @@ function refusalsOf(
         <span id={activity.sentenceId}>
           {t(activity.refusalKey ?? "record.logActivityRefused")}
         </span>
+      )}
+      {readOnlyReason && row && (
+        <EditAccessRequest kind="contact" record={row} />
       )}
     </>
   );
@@ -234,7 +237,13 @@ export function ContactPageV2({
   // What the record refuses this reader, stated once at the foot of the left
   // card: every refused verb points at its sentence by id. The rail adds the
   // Email verb's own refusal, which it reads from the same transports.
-  const refusals = refusalsOf(readOnlyReason, readOnlyReasonId, activity, t);
+  const refusals = refusalsOf(
+    readOnlyReason,
+    readOnlyReasonId,
+    activity,
+    shownRow,
+    t,
+  );
   const contactDetails = (
     <ContactRail
       view={view.data}
@@ -271,7 +280,6 @@ export function ContactPageV2({
         >
           <ContactRecordView
             contact={contact}
-            back={<WorklistReturnLink />}
             // The contact's details, under the head in the left card. They hold
             // for the contact, not the open tab, so a tab change leaves them put.
             // The split folds them above the feed once the row has no room.
@@ -319,6 +327,10 @@ export function ContactPageV2({
               />
             }
           >
+            <ContactImpersonationWarning
+              contact={contact}
+              refusedReasonId={refusedReasonId}
+            />
             {tab === "overview" && (
               <>
                 <ContactFollowState contactId={id} />

@@ -8,12 +8,10 @@ package deals
 
 import (
 	"context"
-	"errors"
 	"strconv"
 	"time"
 
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
-	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -35,15 +33,10 @@ var probeOperands = []string{
 // rows, such as a private company, narrows those rows and refuses no filter.
 func ListFilterReach(ctx context.Context, members storekit.ListMemberFilterResolver) ([]storekit.FilterReach, error) {
 	return storekit.ProbeFilterReach(ctx, dealListFilters, probeOperands, func(ctx context.Context, in *ListDealsInput) error {
-		err := narrowToList(ctx, in, members)
-		// The probe's list id names no list. Not found answers for that id and refuses no dial.
-		if errors.Is(err, apperrors.ErrNotFound) {
-			err = nil
-		}
-		if err != nil {
+		if err := narrowToList(ctx, in, members); err != nil {
 			return err
 		}
-		_, err = appendDealFilters(ctx, nil, *in, func(any) int { return 1 })
+		_, err := appendDealFilters(ctx, nil, *in, func(any) int { return 1 })
 		return err
 	})
 }

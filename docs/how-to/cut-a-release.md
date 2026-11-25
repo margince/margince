@@ -34,7 +34,10 @@ tag, create a draft release for the tag, by hand, with the part no tool can writ
 
 - **Highlights**: what a user gets from this release, in a few lines.
 - **Upgrade notes**: what someone who runs Margince must do or know before the upgrade. That covers a
-  setting that changed, a feature taken out, and an API change that breaks a client.
+  setting that changed, a feature taken out, and an API change that breaks a client. It also covers a new
+  OAuth redirect address, or a Google or Microsoft API, that the provider app must allow. Name the address and
+  the API, because users see a provider error until an operator adds them. The pull request that adds one carries `!`
+  in its title.
 
 ```sh
 gh release create v1.1.0 --draft --title "Margince v1.1.0" --notes-file notes.md
@@ -70,6 +73,38 @@ Update the `Parameters` block of `LICENSE` and nothing else in the file:
 Leave every line after the `Parameters` block alone. What each value must be, and why, is in
 [license-release-rule.md](../reference/license-release-rule.md). `release-tag.yml` refuses a tag
 whose `LICENSE` does not carry both values, so tag on the day the Change Date counts from.
+
+## Refresh the policy packs
+
+A messaging policy pack compiles into the build. So the commit you tag decides which legal text an
+installation names beside a warning. Compare the packs with their sources before you tag:
+
+```sh
+make policy-refresh
+```
+
+The command fetches the source of each act a pack names, and takes the text out of the page. It
+compares the hash of that text with the one the layer records, and prints one line for each act:
+
+| Line | What to do |
+|---|---|
+| `unchanged` | Nothing. |
+| `first digest` | Nothing. The layer records its first hash in this run. |
+| `changed` | Read the source. Where the act changed, update the layer as [Change a rule](update-a-messaging-policy-pack.md#change-a-rule) says. |
+| `not read` | The host refused, or the page loads its text with a script. Give the act a `text-url`, or read the source and set `checked-by-hand`. |
+| `by hand` | Read the source again, and set `checked-by-hand` to the day you did. |
+
+The command then writes each hash and `source-checked` into the layers, and builds each unit's
+`messagingrules_gen.go` again. Open one pull request with those files and merge it.
+`make policy-refresh REPORT=1` prints the same lines and writes nothing. The keys are in
+[Sources and the refresh](update-a-messaging-policy-pack.md#sources-and-the-refresh).
+
+`release-tag.yml` refuses a plain tag when the `source-checked` of a layer is more than 45 days
+before the day of the tag. The check is
+[`scripts/release-policy-sources-fresh.sh`](../../scripts/release-policy-sources-fresh.sh)
+(`make test-release-policy-sources-fresh`). It reads the dates in the tree and fetches nothing, so
+one commit gets one answer. A layer with no `source-checked` is not checked, so the rule holds a
+layer from its first refresh on. A tag with an added part reports an old layer and passes.
 
 ## Tag it
 

@@ -20,6 +20,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/capture/gcal"
 	"github.com/margince/margince/backend/internal/modules/capture/gdocs"
 	"github.com/margince/margince/backend/internal/modules/capture/gmail"
+	"github.com/margince/margince/backend/internal/modules/capture/oauthflow"
 	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/platform/keyvault"
 )
@@ -96,11 +97,12 @@ func (c GmailConfig) Enabled() bool { return c.canConnect() }
 func (c GmailConfig) TransportMountable() bool { return c.canSignState() }
 
 //nolint:ireturn // returns the gmail.OAuth seam by design (a fakeable interface)
-func newGmailOAuth(c GmailConfig) gmail.OAuth {
+func newGmailOAuth(c GmailConfig, tokens *oauthflow.TokenCache) gmail.OAuth {
 	return gmail.NewOAuth(gmail.OAuthConfig{
 		ClientID:     c.ClientID,
 		ClientSecret: c.ClientSecret,
 		Scopes:       gmailScopes,
+		Tokens:       tokens,
 	})
 }
 
@@ -146,6 +148,7 @@ func newCaptureRegistryWithGoogle(
 	reg := NewCaptureRegistry(pool, vault, cfg)
 	if appReachable(resolve, c.canSync()) {
 		reg.Register(gmail.New(newGmailAuthorizer(resolve, c), gmail.NewAPIWithQuota(nil, "", cfg.GmailMailboxQuota, cfg.GmailProjectQuota)).
+			WithBackfillTuning(cfg.historyTuning()).
 			WithBounceSink(newBounceSink(pool)).WithSharedMailboxes(gmail.SharedAuthConfig{}))
 		reg.Register(gcal.New(newGcalAuthorizer(resolve, c), gcal.NewAPI(nil, "")))
 		reg.Register(gdocs.New(newGdocsAuthorizer(resolve, c), gdocs.NewOwner(nil, "")).WithDocs(gdocs.NewDocsAPI(nil, "")))
@@ -174,7 +177,7 @@ func CaptureSyncRegistry(pool *pgxpool.Pool, vault keyvault.Vault, c GmailConfig
 	// silently, which reads as an empty inbox rather than as a broken one.
 	google, microsoft := newConnectorAppResolvers(pool, vault, log)
 	reg := newCaptureRegistryWithGoogle(pool, vault, google, c, cfg)
-	registerMicrosoftConnectors(reg, microsoft, g, pool)
+	registerMicrosoftConnectors(reg, microsoft, g, pool, cfg.historyTuning())
 	return reg
 }
 
@@ -274,7 +277,7 @@ func WithGmailCapture(c GmailConfig, cfg CaptureConfig) Option {
 			gdocsOAuth gdocs.OAuth
 		)
 		if c.canSync() {
-			gmailOAuth, gcalOAuth, gdocsOAuth = newGmailOAuth(c), newGcalOAuth(c), newGdocsOAuth(c)
+			gmailOAuth, gcalOAuth, gdocsOAuth = newGmailOAuth(c, nil), newGcalOAuth(c), newGdocsOAuth(c)
 		}
 		registry := newCaptureRegistryWithGoogle(pool, s.vault, s.googleAppResolver, c, cfg)
 		s.ImportHandlers = gmailsignature.ImportHandlers{Source: registry}

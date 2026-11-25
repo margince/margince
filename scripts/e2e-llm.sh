@@ -44,6 +44,9 @@ ONLY=" ${SCENARIO:-} "
 #                      instructions. The comparable route, filed under the model.
 #                      cli — `claude -p`, `codex exec` or `agy -p`, each with its own system
 #                      prompt and tools, filed apart under <model>@<cli>.
+#                      sdk — the same claude binary under the Agent SDK, which
+#                      answers the server's questions in the chat from the
+#                      scenario's `elicitation:` entries; filed under <model>@claude-sdk.
 #                                                                (default api)
 #   E2E_LLM_MODEL      a different model, or
 #   E2E_LLM_EFFORT     a different effort ('reasoning low|medium|high'), measured
@@ -98,7 +101,7 @@ command -v python3 >/dev/null || { echo "python3 is required to read the scenari
 # that does not compile, a writes:, passport: or setup: value the lane cannot
 # act on. A typo in the last scenario would otherwise stop the lane after every
 # earlier case was paid for, or switch a check off without a word.
-python3 "$ROOT/e2e/llm/check.py" --lint "$SCENARIO_DIR"/*.yaml || exit 1
+python3 "$ROOT/e2e/llm/scenariolint.py" "$SCENARIO_DIR"/*.yaml || exit 1
 
 # A name SCENARIO lists that no scenario carries would run nothing for it and
 # report the sweep as complete, so every listed name is matched before a boot.
@@ -130,13 +133,40 @@ if [[ "${E2E_LLM_ALLOW_LEXICAL:-0}" = "1" && -z "${E2E_LLM_VERDICTS:-}" ]]; then
   exit 1
 fi
 SYSTEM_PROMPT=mcp-instructions
-[[ "$VIA" = cli ]] && SYSTEM_PROMPT=cli-default
+[[ "$VIA" = cli || "$VIA" = sdk ]] && SYSTEM_PROMPT=cli-default
 # A judge of the candidate's own family grades its own kind, which the page shows.
 SELF_JUDGED="$(cd "$ROOT/e2e/llm" && python3 -c 'import sys, judge
 print(str(judge.family(judge.pinned_model()) == sys.argv[1]).lower())' "$CANDIDATE")"
 
-if [[ "$WIRE" = claude-cli || "$E2E_LLM_JUDGE_VIA" = cli ]]; then
+if [[ "$WIRE" = claude-cli || "$WIRE" = claude-sdk || "$E2E_LLM_JUDGE_VIA" = cli ]]; then
   command -v claude >/dev/null || { echo "the claude CLI is not on PATH" >&2; exit 1; }
+fi
+# The runner is no workspace member and has no lockfile, which would put the
+# Agent SDK in the source SBOM. So before every SDK lane: an install whose
+# versions are not package.json's pins is made again, the registry signatures
+# are checked each time (a tree that fails them is removed, so the next lane
+# installs anew), and the runner's own self-check runs against what is installed.
+if [[ "$WIRE" = claude-sdk ]]; then
+  command -v node >/dev/null || { echo "node is not on PATH; the SDK route runs e2e/llm/sdk-runner" >&2; exit 1; }
+  runner_dir="$ROOT/e2e/llm/sdk-runner"
+  if ! (cd "$runner_dir" && node -e 'const pkg = require("./package.json");
+const pins = { ...pkg.dependencies, ...pkg.devDependencies };
+for (const [name, pin] of Object.entries(pins)) {
+  let have = "";
+  try { have = require(`./node_modules/${name}/package.json`).version; } catch {}
+  if (have !== pin) process.exit(1);
+}'); then
+    rm -rf "$runner_dir/node_modules"
+    (cd "$runner_dir" && npm install --no-package-lock --ignore-scripts --no-audit --no-fund >/dev/null) ||
+      { echo "the SDK runner did not install" >&2; exit 1; }
+  fi
+  if ! (cd "$runner_dir" && npm audit signatures >/dev/null); then
+    rm -rf "$runner_dir/node_modules"
+    echo "a registry signature of the SDK runner's packages did not verify; the install was removed" >&2
+    exit 1
+  fi
+  (cd "$runner_dir" && npm run -s selfcheck >/dev/null) ||
+    { echo "the SDK runner's self-check failed: cd $runner_dir && npm run selfcheck" >&2; exit 1; }
 fi
 if [[ "$WIRE" = codex-cli ]]; then
   command -v codex >/dev/null || { echo "the codex CLI is not on PATH" >&2; exit 1; }
@@ -514,25 +544,9 @@ restart_stack snapshot_world
 #
 # e2e/llm/clean.py starts the CLI from an empty directory, with no settings,
 # memory or skills; check.py --clean stops a run whose init line says otherwise.
-run_claude() {
-  local prompt_file="$1" out="$2" exited=0
-  python3 "$ROOT/e2e/llm/clean.py" -p "$(cat "$prompt_file")" \
-    --model "$MODEL" \
-    --mcp-config "$MCP_CONFIG" --strict-mcp-config \
-    --allowedTools "mcp__${MCP_SERVER}__*" --tools "" \
-    --permission-mode dontAsk \
-    --output-format stream-json --verbose \
-    --max-turns 20 \
-    > "$out" 2>"$out.err" || exited=$?
-
-  # An unknown flag produces an empty transcript, which a naive checker reads as
-  # a scenario that called nothing — a false failure that looks like a finding.
-  if [[ ! -s "$out" ]]; then
-    echo "  the CLI produced no transcript:" >&2
-    head -5 "$out.err" >&2
-    return 1
-  fi
-
+# mcp_attached reads the transcript's init line and fails unless the lane's
+# server is connected there. Both claude routes write that line.
+mcp_attached() {
   # THE SERVER HAS TO BE CONNECTED, and the passport probe above does not
   # establish it. That probe talks to the stack directly; this asks the CLI what
   # it actually attached, which is a different question with its own answers.
@@ -542,7 +556,7 @@ run_claude() {
   # fails to attach will be a different one, and what makes any of them
   # expensive is not the cause but that the lane reports it as the product
   # failing.
-  local status
+  local out="$1" status
   status="$(python3 -c '
 import json, sys
 want = sys.argv[2]
@@ -566,8 +580,30 @@ else:
     echo "  product's. A 'disabled' here means this CLI has a server of that name turned off for" >&2
     echo "  this project (disabledMcpServers in ~/.claude.json), which --strict-mcp-config does" >&2
     echo "  not override; anything else points at the stack or the passport." >&2
-    return 3
+    return 1
   fi
+}
+
+run_claude() {
+  local prompt_file="$1" out="$2" exited=0
+  python3 "$ROOT/e2e/llm/clean.py" -p "$(cat "$prompt_file")" \
+    --model "$MODEL" \
+    --mcp-config "$MCP_CONFIG" --strict-mcp-config \
+    --allowedTools "mcp__${MCP_SERVER}__*" --tools "" \
+    --permission-mode dontAsk \
+    --output-format stream-json --verbose \
+    --max-turns 20 \
+    > "$out" 2>"$out.err" || exited=$?
+
+  # An unknown flag produces an empty transcript, which a naive checker reads as
+  # a scenario that called nothing — a false failure that looks like a finding.
+  if [[ ! -s "$out" ]]; then
+    echo "  the CLI produced no transcript:" >&2
+    head -5 "$out.err" >&2
+    return 1
+  fi
+
+  mcp_attached "$out" || return 3
 
   # A NONZERO EXIT IS SCORED ONLY WHEN THE RESULT OWNS IT. The CLI exits nonzero
   # on the turn cap, and its result says so with is_error; a nonzero exit whose
@@ -619,11 +655,13 @@ drive_once() {
     run_claude "$prompt_file" "$out"
     return
   fi
+  local scenario_args=()
+  [[ "$WIRE" = claude-sdk ]] && scenario_args=(--scenario "$scenario")
   [[ "$DOOR" = rest ]] && door_args=(--rest-skill-dir "$SKILL_DIR" --rest-base "$APP_BASE/v1")
   MARGINCE_E2E_TOKEN="$PASSPORT" python3 "$ROOT/e2e/llm/drive.py" \
     --candidate "$CANDIDATE" --via "$VIA" --model "$MODEL" --folder "${FOLDER%@*}" --effort "$EFFORT" \
     --mcp-url "$APP_BASE/mcp" --token-env MARGINCE_E2E_TOKEN \
-    ${door_args[@]+"${door_args[@]}"} \
+    ${door_args[@]+"${door_args[@]}"} ${scenario_args[@]+"${scenario_args[@]}"} \
     --prompt-file "$prompt_file" --out "$out" 2>"$out.err" || status=$?
   if [[ "$status" -eq 3 ]]; then
     return 3
@@ -632,6 +670,9 @@ drive_once() {
     echo "  the bridge produced no transcript (exit $status):" >&2
     head -5 "$out.err" >&2
     return 1
+  fi
+  if [[ "$WIRE" = claude-sdk ]]; then
+    mcp_attached "$out" || return 3
   fi
 }
 
@@ -674,6 +715,8 @@ for scenario in "$SCENARIO_DIR"/*.yaml; do
 
   echo "==> $name ($runs runs, passes at $pass_at)"
   ok=0
+  # The transcripts of the runs that passed: only their tools count as driven.
+  passing=()
   results="$WORK/$name.results"
   : > "$results"
 
@@ -719,6 +762,15 @@ for scenario in "$SCENARIO_DIR"/*.yaml; do
       # while a clone is byte-identical to the world it was already looking at.
       (cd "$ROOT" && make dev-restore DEV_SLUG="$SLUG" >/dev/null)
       WORLD_DIRTY=0
+      # The restore cut every database connection under the api; the run starts
+      # once an authenticated call is answered again, never on the outage.
+      if ! why="$(MARGINCE_E2E_TOKEN="$PASSPORT" python3 "$ROOT/e2e/llm/stackready.py" --settled \
+        --mcp-url "$APP_BASE/mcp" --token-env MARGINCE_E2E_TOKEN --wait 30)"; then
+        echo
+        echo "HARNESS: $name run $i: $why"
+        echo "  This is not a use-case failure. Nothing was scored."
+        exit 2
+      fi
     fi
 
     # Dirty BEFORE the run rather than after it. A run that dies mid-way has
@@ -829,6 +881,7 @@ for scenario in "$SCENARIO_DIR"/*.yaml; do
       0)
         if [[ "$ended" -eq 0 ]]; then
           ok=$((ok + 1))
+          passing+=("$transcript")
           echo "  run $i: pass"
         else
           echo "  run $i: fail"
@@ -884,7 +937,7 @@ for scenario in "$SCENARIO_DIR"/*.yaml; do
     E2E_LLM_SELF_JUDGED="$SELF_JUDGED" E2E_LLM_SEARCH="$SEARCH" \
     E2E_LLM_STAMPS="$STAMP_DIR/stamps.json" E2E_LLM_COMMIT="$COMMIT" \
     python3 "$ROOT/e2e/llm/check.py" --record "$scenario" "$ok" "$made" \
-    ${transcripts[@]+"${transcripts[@]}"} > "$WORK/${name}.verdict.json" || {
+    ${transcripts[@]+"${transcripts[@]}"} --passing ${passing[@]+"${passing[@]}"} > "$WORK/${name}.verdict.json" || {
     echo "HARNESS: the verdict of $name could not be written; the committed one is unchanged." >&2
     exit 2
   }
@@ -896,6 +949,10 @@ for scenario in "$SCENARIO_DIR"/*.yaml; do
   # line is formatted by check.py, which owns what a usage total means, rather
   # than assembled here out of JSON the shell would have to parse.
   python3 "$ROOT/e2e/llm/check.py" --usage "$made" \
+    ${transcripts[@]+"${transcripts[@]}"} | tee -a "$REPORT"
+  # How directly the runs finished, flagged slow past `expected_calls`; a score
+  # beside the verdict, never a part of it.
+  python3 "$ROOT/e2e/llm/check.py" --efficiency "$scenario" \
     ${transcripts[@]+"${transcripts[@]}"} | tee -a "$REPORT"
 
   # A settled scenario makes fewer runs than an earlier lane may have kept.

@@ -37,7 +37,7 @@ func (s *Store) ClaimApprovalBurst(ctx context.Context, first EmailAttempt, wind
 			WITH picked AS MATERIALIZED (
 			       SELECT id FROM notice
 			        WHERE recipient_user_id = @recipient AND kind = @kind AND id <> @first
-			          AND email_attempted_at IS NULL AND read_at IS NULL
+			          AND email_attempted_at IS NULL AND read_at IS NULL AND retracted_at IS NULL
 			          AND created_at BETWEEN @since AND @until
 			        ORDER BY created_at, id
 			        LIMIT @limit

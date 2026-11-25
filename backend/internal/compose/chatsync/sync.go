@@ -5,7 +5,7 @@ package chatsync
 
 // The cg:chat-links consumer. An event on a deal, project, offer, contract or
 // activity becomes a pending item of the channels linked to those records. The flush (flush.go) turns the items into one post.
-// From the contact stream it takes only retention.restricted.
+// From the contact stream it takes retention.restricted and retention.applied.
 //
 // An activity reaches a channel only when the whole workspace may read it.
 // sharedActivity decides that, both when the item is recorded and again
@@ -56,6 +56,11 @@ func (s *Sync) HandleEvent(ctx context.Context, env events.Envelope) error {
 			return err
 		}
 	}
+	if chatReleasingEvents[env.Type] && (env.Entity.Type == chatlinks.RecordDeal || env.Entity.Type == chatlinks.RecordProject) {
+		if err := s.store.ReleaseArchived(ctx, env.Entity.Type, env.Entity.ID); err != nil {
+			return err
+		}
+	}
 	if env.Type == eventDealUpdated && chatChangedField(env.Payload, "project_id") {
 		if err := s.store.AdoptProject(ctx, env.Entity.ID); err != nil {
 			return err
@@ -65,16 +70,16 @@ func (s *Sync) HandleEvent(ctx context.Context, env events.Envelope) error {
 	if !posts {
 		return nil
 	}
-	ev := chatlinks.Event{
-		EventID: env.EventID, EventType: env.Type, EntityType: env.Entity.Type,
-		EntityID: env.Entity.ID, Tier: tier, Detail: detail,
-	}
+	ev := chatlinks.Event{EventID: env.EventID, EventType: env.Type, Tier: tier, Detail: detail}
 	if env.Entity.Type == "activity" {
-		shared, err := s.activityPosts(ctx, env.Entity.ID)
-		if err != nil || !shared {
+		shared, err := s.sharedActivityText(ctx, env.Entity.ID)
+		if err != nil || !shared.ok || shared.sourceSystem == chatlinks.ProviderDispact {
 			return err
 		}
 		ev.ActivityID = &env.Entity.ID
+		if chatChangedField(env.Payload, "relinked") {
+			ev.Tier = activityTier(shared.kind)
+		}
 	}
 	if ev.Deals, ev.Projects, err = s.recordsOf(ctx, env.Entity.Type, env.Entity.ID); err != nil {
 		return err
@@ -100,13 +105,27 @@ var chatLinksPrincipal = principal.Principal{
 // activityPosts reports whether an activity may be posted: shared with the
 // whole workspace, and not one the chat itself delivered.
 func (s *Sync) activityPosts(ctx context.Context, id ids.UUID) (bool, error) {
+	shared, err := s.sharedActivityText(ctx, id)
+	return shared.ok && shared.sourceSystem != chatlinks.ProviderDispact, err
+}
+
+// sharedActivityText reads the activity as a channel may show it.
+func (s *Sync) sharedActivityText(ctx context.Context, id ids.UUID) (sharedText, error) {
 	var shared sharedText
 	err := database.WithWorkspaceTx(ctx, s.pool, func(tx pgx.Tx) error {
 		var err error
 		shared, err = sharedActivity(ctx, tx, id)
 		return err
 	})
-	return shared.ok && shared.sourceSystem != chatlinks.ProviderDispact, err
+	return shared, err
+}
+
+// activityTier is the tier an activity posts at, by its kind.
+func activityTier(kind string) string {
+	if chatImportantKinds[kind] {
+		return chatlinks.TierImportant
+	}
+	return chatlinks.TierEverything
 }
 
 // withdrawIfNarrowed takes an activity out of the channels it reached once the
@@ -216,12 +235,14 @@ func chatTier(env events.Envelope) (string, map[string]any, bool) {
 		if err := json.Unmarshal(env.Payload, &captured); err != nil {
 			return "", nil, false
 		}
-		if chatImportantKinds[captured.Kind] {
-			return chatlinks.TierImportant, nil, true
-		}
-		return chatlinks.TierEverything, nil, true
+		return activityTier(captured.Kind), nil, true
 	case "activity.updated":
 		fields := chatChangedFields(env.Payload)
+		// A newly filed activity reaches the channel of the record it was filed
+		// on, at the tier its kind earns. HandleEvent reads the kind.
+		if _, relinked := fields["relinked"]; relinked {
+			return chatlinks.TierEverything, nil, true
+		}
 		if fields["meeting_status"] == "held" || fields["is_done"] == true {
 			return chatlinks.TierImportant, map[string]any{detailFields: fields}, true
 		}
@@ -235,17 +256,23 @@ func chatTier(env events.Envelope) (string, map[string]any, bool) {
 
 // The event types and changed fields the tiers and the lines both name.
 const (
-	eventDealUpdated    = "deal.updated"
-	eventProjectUpdated = "project.updated"
-	detailFields        = "fields"
-	fieldCurrency       = "currency"
-	fieldName           = "name"
+	eventDealUpdated     = "deal.updated"
+	eventDealArchived    = "deal.archived"
+	eventProjectArchived = "project.archived"
+	eventProjectUpdated  = "project.updated"
+	detailFields         = "fields"
+	fieldCurrency        = "currency"
+	fieldName            = "name"
 )
+
+// chatReleasingEvents may leave a deal or project archived. A retention
+// policy archives a deal under retention.applied, not deal.archived.
+var chatReleasingEvents = map[string]bool{eventDealArchived: true, eventProjectArchived: true, "retention.applied": true}
 
 // chatMilestones are the steps every level but silent posts.
 var chatMilestones = map[string]string{
 	"deal.stage_changed":      chatlinks.TierMilestone,
-	"deal.archived":           chatlinks.TierMilestone,
+	eventDealArchived:         chatlinks.TierMilestone,
 	"deal.restored":           chatlinks.TierMilestone,
 	"offer.sent":              chatlinks.TierMilestone,
 	"offer.accepted":          chatlinks.TierMilestone,

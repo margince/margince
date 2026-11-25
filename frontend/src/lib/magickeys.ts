@@ -31,6 +31,7 @@ export const MAGIC_SENTENCE_KEYS = [
   "magic.action.approval_coldstart",
   "magic.action.approval_send_email",
   "magic.action.approval_advance_deal",
+  "magic.action.approval_deal_proposal_stage",
   "magic.action.approval_promote_lead",
   "magic.action.approval_overnight",
   "magic.action.approval_commitment_task",
@@ -75,6 +76,35 @@ export const MAGIC_SENTENCE_KEYS = [
   "magic.action.archive_deal",
   "magic.action.archive_lead",
   "magic.action.archive_project",
+  "magic.action.create_offer",
+  "magic.action.update_offer",
+  "magic.action.archive_offer",
+  "magic.action.create_contract",
+  "magic.action.update_contract",
+  "magic.action.archive_contract",
+  "magic.action.create_deal_room",
+  "magic.action.update_deal_room",
+  "magic.action.archive_deal_room",
+  "magic.action.create_stage_evidence",
+  "magic.action.update_stage_evidence",
+  "magic.action.archive_stage_evidence",
+  "magic.action.create_introduction",
+  "magic.action.update_introduction",
+  "magic.action.archive_introduction",
+  "magic.action.create_assignment",
+  "magic.action.update_assignment",
+  "magic.action.archive_assignment",
+  "magic.action.create_attachment",
+  "magic.action.update_attachment",
+  "magic.action.archive_attachment",
+  "magic.action.create_deal_suggestion",
+  "magic.action.update_deal_suggestion",
+  "magic.action.schedule_send",
+  "magic.action.update_scheduled_send",
+  "magic.action.create_invoice",
+  "magic.action.update_invoice",
+  "magic.action.create_payment",
+  "magic.action.update_payment",
   "magic.action.archive_activity",
   "magic.action.archive_activity_email",
   "magic.action.archive_activity_meeting",
@@ -148,6 +178,7 @@ function registry(
 const SENTENCES = registry(MAGIC_SENTENCE_KEYS);
 const WHYS = registry(MAGIC_WHY_KEYS);
 const BYS = registry(MAGIC_BY_KEYS);
+const CONSEQUENCES = registry(MAGIC_CONSEQUENCE_KEYS);
 
 /** The sentence key this build carries, or null for one it predates. */
 export function magicSentenceKey(key: string): MessageKey | null {
@@ -157,6 +188,11 @@ export function magicSentenceKey(key: string): MessageKey | null {
 /** The reason key this build carries, or null for one it predates. */
 export function magicWhyKey(key: string): MessageKey | null {
   return WHYS.get(key) ?? null;
+}
+
+/** The consequence key this build carries, or null for one it predates. */
+export function magicConsequenceKey(key: string): MessageKey | null {
+  return CONSEQUENCES.get(key) ?? null;
 }
 
 /** The actor-name key this build carries, or null for one it predates. */

@@ -162,6 +162,7 @@ func TestLocalOnlyMatchesLocalProvidersForEveryProvider(t *testing.T) {
 		"openai":            {Provider: "openai", Model: "m"},
 		"gemini":            {Provider: "gemini", Model: "m"},
 		"gemini_vertex":     {Provider: "gemini_vertex", Location: "eu", Model: "m"},
+		"azure_openai":      {Provider: "azure_openai", BaseURL: azureTestEndpoint, Location: azureTestRegion, Model: "m"},
 	}
 	for _, name := range knownProviders {
 		cfg, ok := built[name]

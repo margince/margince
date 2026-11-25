@@ -3,6 +3,7 @@
 
 import type { Locale } from "../i18n";
 import { INTL_LOCALE } from "./format";
+import { collator } from "./formatters";
 
 // Two ways to order strings, and the whole point of this file is that a caller
 // has to SAY which one it means.
@@ -30,18 +31,6 @@ import { INTL_LOCALE } from "./format";
  */
 export function forReader(a: string, b: string, locale: Locale): number {
   return collator(locale).compare(a, b);
-}
-
-const collators = new Map<Locale, Intl.Collator>();
-
-function collator(locale: Locale): Intl.Collator {
-  const held = collators.get(locale);
-  if (held) {
-    return held;
-  }
-  const made = new Intl.Collator(INTL_LOCALE[locale]);
-  collators.set(locale, made);
-  return made;
 }
 
 /**
@@ -98,11 +87,44 @@ export function holdsEveryWord(
   words: readonly string[],
   fields: readonly string[],
 ): boolean {
+  return everyWordLands(words, fields, (field, word) => field.includes(word));
+}
+
+/** Whether every word begins a word of one or another of `fields`. */
+export function holdsEveryWordStart(
+  words: readonly string[],
+  fields: readonly string[],
+): boolean {
+  return everyWordLands(words, fields, beginsAWord);
+}
+
+function everyWordLands(
+  words: readonly string[],
+  fields: readonly string[],
+  lands: (field: string, word: string) => boolean,
+): boolean {
   if (words.length === 0) {
     return true;
   }
   const folded = fields.map(foldForSearch);
-  return words.every((word) => folded.some((field) => field.includes(word)));
+  return words.every((word) => folded.some((field) => lands(field, word)));
+}
+
+const WORD_CHARACTER = /[\p{L}\p{N}]/u;
+
+// A word may itself hold a separator ("e-mail", "http.port"), so the field is
+// searched whole rather than split into words first.
+function beginsAWord(field: string, word: string): boolean {
+  for (
+    let at = field.indexOf(word);
+    at >= 0;
+    at = field.indexOf(word, at + 1)
+  ) {
+    if (at === 0 || !WORD_CHARACTER.test(field.charAt(at - 1))) {
+      return true;
+    }
+  }
+  return false;
 }
 
 /**

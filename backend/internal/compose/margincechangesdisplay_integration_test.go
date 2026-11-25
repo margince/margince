@@ -48,7 +48,8 @@ func (v *dealVerdictEnv) createDeal(t *testing.T, name string, owner *ids.UserID
 	t.Helper()
 	amount, currency := int64(1_000_000), "EUR"
 	created, err := v.Deals.CreateDeal(v.Admin(), deals.CreateDealInput{
-		Name: name, PipelineID: v.pipeline, StageID: v.stage, OwnerID: owner, AmountMinor: &amount, Currency: &currency,
+		Source: "manual",
+		Name:   name, PipelineID: v.pipeline, StageID: v.stage, OwnerID: owner, AmountMinor: &amount, Currency: &currency,
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -264,7 +265,7 @@ func TestAnAgentActingForTheOwnerReadsNoReasonOnEitherRead(t *testing.T) {
 	v := setupDealVerdict(t)
 	v.run(t)
 	agent := v.ownersAgentReader()
-	applied, _, err := v.Deals.DealChanges(agent, ids.From[ids.DealKind](v.deal), nil, 10)
+	applied, _, err := v.Deals.DealChanges(agent, ids.From[ids.DealKind](v.deal), nil, 10, deals.DealChangeFilter{})
 	if err != nil {
 		t.Fatal(err)
 	}

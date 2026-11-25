@@ -341,16 +341,12 @@ func filterChangedSince(ctx context.Context, tx pgx.Tx, l listRow, version int64
 // last complete one when this one held no members.
 func writeCheckpoint(ctx context.Context, tx pgx.Tx, l listRow, at time.Time, check LiveCheck, snapshot *int64) error {
 	_, err := tx.Exec(ctx, `
-		INSERT INTO list_evaluation (list_id, definition_version, evaluated_at, member_count, outcome, snapshot_version)
-		VALUES (@list_id, @version, @at, @members, @outcome, @snapshot)
-		ON CONFLICT (list_id) DO UPDATE SET definition_version = EXCLUDED.definition_version,
-			evaluated_at = EXCLUDED.evaluated_at, member_count = EXCLUDED.member_count,
+		INSERT INTO list_evaluation (list_id, evaluated_at, outcome, snapshot_version)
+		VALUES (@list_id, @at, @outcome, @snapshot)
+		ON CONFLICT (list_id) DO UPDATE SET evaluated_at = EXCLUDED.evaluated_at,
 			outcome = EXCLUDED.outcome,
 			snapshot_version = COALESCE(EXCLUDED.snapshot_version, list_evaluation.snapshot_version)`,
-		pgx.StrictNamedArgs{
-			listIDField: l.ID, versionField: l.Version, "at": at, "members": check.Members,
-			"outcome": check.Outcome, "snapshot": snapshot,
-		})
+		pgx.StrictNamedArgs{listIDField: l.ID, "at": at, "outcome": check.Outcome, "snapshot": snapshot})
 	return err
 }
 

@@ -21,12 +21,13 @@ func (w *csvWriters) markPredictedRow(row migration.Row, outcome predictedOutcom
 	}
 	w.links.markPending(w.object, row.ExternalID)
 	if outcome == predictHeldKey {
+		// The record keeps its ref, and the row claims none of its keys.
 		return
 	}
 	w.rememberRow(row, outcome)
 	typed, _, _ := w.landingCells(row)
 	w.claimRow(row, typed)
-	w.links.markNaturalPending(w.object, textFields(row.Fields)[naturalKeyField(w.object)])
+	w.links.markNaturalPending(w.object, textFields(row.Fields)[naturalKeyField(w.object)], rowRef(row.ExternalID))
 	if w.object == migration.ObjectCompany {
 		fields := textFields(row.Fields)
 		creates := outcome == predictCreate || outcome == predictCollides

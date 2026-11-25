@@ -1,14 +1,12 @@
-import { CheckSquare, FileText, Search, Send, Users } from "lucide-react";
-import type { ReactNode } from "react";
 import type { components } from "../../api/schema";
-import { useActivityGate } from "../../components/activitygate";
 import { interactionIcon } from "../../components/interactionchrome";
 import { RecordNextBar } from "../../components/latestinbound";
 import { TaskTerms } from "../../components/taskassignee";
 import { TaskCallAction } from "../../components/tasknextsteps";
-import { Button, type ButtonVariant } from "../../design-system/atoms";
+import { Button } from "../../design-system/atoms";
 import { ErrorLine } from "../../design-system/errorline";
 import { SourceLink } from "../../design-system/sourcelink";
+import { taskDueOnDay, taskDueZone } from "../../format/calendarday";
 import { daysPast } from "../../format/lateness";
 import { useLocale, usePlural, useT } from "../../i18n";
 import { latePromise } from "../../lib/latepromise";
@@ -16,7 +14,6 @@ import { useSourceOpener } from "../../lib/opensource";
 import { tasksPeek } from "../../lib/standingpeeks";
 import { displayedSubject } from "../../lib/systemdisplay";
 import { taskDetail } from "../../lib/taskdetail";
-import { momentVerbWrites } from "../../lib/writeverbs";
 import { MoveButton } from "../records/movebutton";
 import { basisAddsARecord } from "../records/record360";
 import {
@@ -24,9 +21,10 @@ import {
   MomentDoneVerb,
   useMomentSetAside,
 } from "./contactmaybedone";
-import { momentTask, owedLateness, recordsTheMoveNames } from "./contactowed";
-import { momentDrafts } from "./contactpage.drawers";
+import { ActionVerb } from "./contactmomentverb";
+import { owedLateness, recordsTheMoveNames } from "./contactowed";
 import "../records/record360/record360.css";
+import { useCompanyZone } from "../../lib/companyzone";
 import { useViewerZone } from "../../lib/viewerzone";
 import { openContactTab } from "../worklist/worklist.return";
 
@@ -88,6 +86,7 @@ export function ContactToday({
   const plural = usePlural();
   const { locale } = useLocale();
   const zone = useViewerZone();
+  const companyZone = useCompanyZone();
   const { move, task, rest } = nextBarChoice(moment, view);
   // The tasks behind "+N tasks": a row leads to the queue, which holds them all.
   const more = (rows: readonly Activity[]) =>
@@ -100,11 +99,23 @@ export function ContactToday({
               id: row.id,
               subject: row.subject ?? t("task.untitled"),
               dueAt: row.due_at,
+              dueHasTime: row.due_has_time,
+              dueIntent: row.due_intent,
               overdue: row.due_at
-                ? daysPast(Date.parse(row.due_at), Date.parse(view.as_of)).late
+                ? daysPast(
+                    Date.parse(
+                      taskDueOnDay(
+                        row.due_at,
+                        row.due_has_time,
+                        row.due_intent,
+                        taskDueZone(row.due_has_time, zone, companyZone),
+                      ),
+                    ),
+                    Date.parse(view.as_of),
+                  ).late
                 : false,
             })),
-            { t, plural, locale, zone },
+            { t, plural, locale, zone, companyZone },
             rows.length,
             onOpenTasks,
           ),
@@ -164,9 +175,17 @@ function MomentBar({
   const late = owedLateness(moment, view, zone, { t, plural, locale });
   const notNow = useMomentSetAside(view.contact.id);
   const defer = notNow.deferOf(moment);
-  const task = momentTask(moment, view);
-  const call = task && (
-    <TaskCallAction task={task} pageContact={view.contact} />
+  // Writing stays one press away when the server leads with the call.
+  const writing =
+    moment.recommended_action.kind === "call"
+      ? moment.secondary_actions?.filter(
+          (action) => action.kind === "draft_reply",
+        )
+      : undefined;
+  // A card asking whether the promise is done leads with Done, and carries the
+  // call as a second action.
+  const calls = moment.secondary_actions?.filter(
+    (action) => action.kind === "call",
   );
   return (
     <RecordNextBar
@@ -196,7 +215,14 @@ function MomentBar({
               question={moment.may_be_done}
               view={view}
             />
-            {call}
+            {calls?.map((action) => (
+              <ActionVerb
+                key={action.kind}
+                action={action}
+                contact={view.contact}
+                onAction={onAction}
+              />
+            ))}
           </>
         ) : (
           <>
@@ -206,10 +232,17 @@ function MomentBar({
               primary
               onAction={onAction}
             />
+            {writing?.map((action) => (
+              <ActionVerb
+                key={action.kind}
+                action={action}
+                contact={view.contact}
+                onAction={onAction}
+              />
+            ))}
             {moment.done && (
               <MomentDoneVerb done={moment.done} contactId={view.contact.id} />
             )}
-            {call}
             {notNow.failure && <ErrorLine error={notNow.failure} inline />}
           </>
         )
@@ -279,9 +312,16 @@ function TaskBar({
   const plural = usePlural();
   const { locale } = useLocale();
   const zone = useViewerZone();
+  const dayZone = taskDueZone(task.due_has_time, zone, useCompanyZone());
   const late =
     task.due_at &&
-    latePromise(task.due_at, view.as_of, zone, "task", { t, plural, locale });
+    latePromise(
+      taskDueOnDay(task.due_at, task.due_has_time, task.due_intent, dayZone),
+      view.as_of,
+      dayZone,
+      "task",
+      { t, plural, locale },
+    );
   return (
     <RecordNextBar
       title={displayedSubject(task) ?? t("task.untitled")}
@@ -362,93 +402,4 @@ function AnswerBar({
       }
     />
   );
-}
-
-// The bar has one filled verb, its lead; indigo when the model writes it.
-function verbVariant(drafts: boolean, lead: boolean): ButtonVariant {
-  if (lead) return drafts ? "ai" : "primary";
-  return drafts ? "aiQuiet" : "ghost";
-}
-
-function ActionVerb({
-  action,
-  contact,
-  primary,
-  onAction,
-}: Readonly<{
-  action: ContactMomentAction;
-  contact: Contact360["contact"];
-  primary?: boolean;
-  onAction: (action: ContactMomentAction) => void;
-}>) {
-  const t = useT();
-  const permissionRefusal =
-    action.kind === "schedule_meeting"
-      ? "scheduling.bookRefused"
-      : "record.logActivityRefused";
-  const gate = useActivityGate(contact, permissionRefusal);
-  const attaches =
-    action.destination?.surface === "booking" ||
-    action.destination?.surface === "activity_log";
-  const blocked = action.state === "blocked";
-  // A rule ladder picks the verb, not a model. Only the bar's lead verb is
-  // filled; a press that has the model write the mail carries the ✦.
-  const drafts = momentDrafts(action);
-  // A sent mail files under this contact as a log or booking does.
-  const files = attaches || drafts;
-  // Not drawn: the press writes an activity, by the server's classification
-  // of its kind, and this seat may not.
-  if (momentVerbWrites(action.kind) && gate.refusalKey === permissionRefusal) {
-    return null;
-  }
-  const variant = verbVariant(drafts, primary === true);
-  return (
-    <span className="today-verb">
-      <Button
-        variant={variant}
-        // The server wrote the label, so it may be one long word that has to wrap.
-        className="btn-valuelabel"
-        onClick={() => onAction(action)}
-        disabled={files && gate.pending}
-        reason={
-          blocked
-            ? blockedReason(action, t)
-            : files && gate.refusalKey
-              ? t(gate.refusalKey)
-              : undefined
-        }
-      >
-        {!drafts && actionIcon(action.kind)}
-        {action.label}
-      </Button>
-    </span>
-  );
-}
-
-// A moment says what to do; it never says what carries it. So the reply verb is
-// drawn as a send and not as an envelope — the envelope told a contact reached
-// only over a chat channel that the button would mail them, which is neither
-// what the action does nor something this card can know.
-function actionIcon(kind: string): ReactNode {
-  switch (kind) {
-    case "schedule_meeting":
-    case "open_meeting_brief":
-    case "ask_colleague":
-      return <Users size={15} aria-hidden="true" />;
-    case "draft_reply":
-      return <Send size={15} aria-hidden="true" />;
-    case "complete_task":
-      return <CheckSquare size={15} aria-hidden="true" />;
-    case "open_research":
-      return <Search size={15} aria-hidden="true" />;
-    default:
-      return <FileText size={15} aria-hidden="true" />;
-  }
-}
-
-function blockedReason(
-  action: ContactMomentAction,
-  t: ReturnType<typeof useT>,
-): string {
-  return action.blocked_reason ?? t("contact.rail.blocked");
 }

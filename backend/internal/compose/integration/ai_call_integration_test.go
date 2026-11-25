@@ -58,7 +58,6 @@ func TestCallMeterWritesTraceAndOptInPayload(t *testing.T) {
 		Provider:             "anthropic",
 		ModelID:              "claude-cheap",
 		ServedIdentitySource: "response",
-		RequestFingerprint:   "fp-1",
 		TokensIn:             100,
 		TokensOut:            40,
 		Payload:              &ai.Payload{Request: request, Response: response},
@@ -110,7 +109,7 @@ func TestCallMeterWritesTraceAndOptInPayload(t *testing.T) {
 		LogicalCallID: ids.NewV7(), Attempt: 1, IsTerminal: true, Kind: "completion",
 		Task: ai.TaskSummarize, Tier: ai.TierPremium, Provider: "anthropic",
 		ModelID: "claude-premium", ServedIdentitySource: "response",
-		RequestFingerprint: "fp-2", TokensIn: 10, TokensOut: 5,
+		TokensIn: 10, TokensOut: 5,
 	}}); err != nil {
 		t.Fatalf("record without payload: %v", err)
 	}
@@ -167,13 +166,13 @@ func TestRecordWritesEveryAttemptOfOneLogicalCallInOneTransaction(t *testing.T) 
 			LogicalCallID: logical, Attempt: 1, IsTerminal: false,
 			Kind: "completion", Task: ai.TaskSummarize, Tier: ai.TierPremium,
 			Provider: "anthropic", ModelID: "claude-premium", ServedIdentitySource: "response",
-			RequestFingerprint: "fp-multi", ErrorSentinel: "provider_error",
+			ErrorSentinel: "provider_error",
 		},
 		{
 			LogicalCallID: logical, Attempt: 2, IsTerminal: true, AttemptReason: "provider_error",
 			Kind: "completion", Task: ai.TaskSummarize, Tier: ai.TierCheapCloud,
 			Provider: "openai", ModelID: "gpt-cheap", ServedIdentitySource: "response",
-			RequestFingerprint: "fp-multi", TokensIn: 5, TokensOut: 3,
+			TokensIn: 5, TokensOut: 3,
 			Payload: terminalPayload,
 		},
 	}
@@ -252,7 +251,7 @@ func TestEnsureConfigIsIdempotentAndFKsFromAICall(t *testing.T) {
 	if err := meter.Record(ctx, []ai.Call{{
 		LogicalCallID: ids.NewV7(), Attempt: 1, IsTerminal: true, Kind: "completion",
 		Task: ai.TaskSummarize, Tier: ai.TierCheapCloud, Provider: "openai", ModelID: "gpt-cheap",
-		ServedIdentitySource: "response", RequestFingerprint: "fp-cfg", ConfigHash: &hash,
+		ServedIdentitySource: "response", ConfigHash: &hash,
 	}}); err != nil {
 		t.Fatalf("record with config_hash: %v", err)
 	}
@@ -266,17 +265,14 @@ func TestEnsureConfigIsIdempotentAndFKsFromAICall(t *testing.T) {
 func seedEmbedCall(t *testing.T, e *Env, daysBack int) ids.UUID {
 	t.Helper()
 	callID := ids.NewV7()
-	e.WsExec(t, `INSERT INTO ai_call (id, logical_call_id, task, tier, kind, request_fingerprint, occurred_at)
-		VALUES ($1, $1, 'embeddings', 'embed', 'embedding', 'fp-embed', now() - make_interval(days => $2))`,
+	e.WsExec(t, `INSERT INTO ai_call (id, logical_call_id, task, tier, kind, occurred_at)
+		VALUES ($1, $1, 'embeddings', 'embed', 'embedding', now() - make_interval(days => $2))`,
 		callID, daysBack)
 	return callID
 }
 
-// TestEmbedCallRetentionAgesOutOverAgeEmbeddingRows drives the nightly
-// retention evaluator over an over-age embedding-kind ai_call row: it is
-// erased outright at the fixed 90-day cap, unlike a completion-kind row
-// (which the evaluator never touches — it is not policy-configurable and
-// carries no per-workspace opt-in).
+// The nightly pass removes an embedding trace past its fixed 90 days and
+// keeps a younger one.
 func TestEmbedCallRetentionAgesOutOverAgeEmbeddingRows(t *testing.T) {
 	e := Setup(t)
 	overAge := seedEmbedCall(t, e, 91)
@@ -309,8 +305,8 @@ func TestEmbedCallRetentionAgesOutOverAgeEmbeddingRows(t *testing.T) {
 func seedAgedPayload(t *testing.T, e *Env, daysBack int, requestJSON string) ids.UUID {
 	t.Helper()
 	callID := ids.NewV7()
-	e.WsExec(t, `INSERT INTO ai_call (id, logical_call_id, task, request_fingerprint, occurred_at)
-		VALUES ($1, $1, 'summarize', 'fp-aged', now() - make_interval(days => $2))`,
+	e.WsExec(t, `INSERT INTO ai_call (id, logical_call_id, task, occurred_at)
+		VALUES ($1, $1, 'summarize', now() - make_interval(days => $2))`,
 		callID, daysBack)
 	e.WsExec(t, `INSERT INTO ai_call_payload (ai_call_id, request_payload, response_payload, occurred_at)
 		VALUES ($1, $2::jsonb, '{}'::jsonb, now() - make_interval(days => $3))`,
@@ -323,7 +319,7 @@ func seedAgedPayload(t *testing.T, e *Env, daysBack int, requestJSON string) ids
 // content row is deleted, the ai_call metadata row survives.
 func TestAICallPayloadRetentionAgesOutContentKeepingMetadata(t *testing.T) {
 	e := Setup(t)
-	callID := seedAgedPayload(t, e, 400, `{"messages":[{"role":"user","content":"old chatter"}]}`)
+	callID := seedAgedPayload(t, e, 380, `{"messages":[{"role":"user","content":"old chatter"}]}`)
 
 	// The bootstrap-seeded payload policy: 365-day erase of the content.
 	e.WsExec(t, `INSERT INTO retention_policy (object_type, category, retain_days, action)
@@ -375,8 +371,8 @@ func TestAICallPayloadErasureCascadePurgesSubjectMentions(t *testing.T) {
 func seedCitedPayload(t *testing.T, e *Env, subjectType string, subjectID ids.UUID, requestJSON string) ids.UUID {
 	t.Helper()
 	callID := ids.NewV7()
-	e.WsExec(t, `INSERT INTO ai_call (id, logical_call_id, task, request_fingerprint, subject_type, subject_id)
-		VALUES ($1, $1, 'summarize', 'fp-cited', $2, $3)`, callID, subjectType, subjectID)
+	e.WsExec(t, `INSERT INTO ai_call (id, logical_call_id, task, subject_type, subject_id)
+		VALUES ($1, $1, 'summarize', $2, $3)`, callID, subjectType, subjectID)
 	e.WsExec(t, `INSERT INTO ai_call_payload (ai_call_id, request_payload, response_payload)
 		VALUES ($1, $2::jsonb, '{}'::jsonb)`, callID, requestJSON)
 	return callID

@@ -31,7 +31,7 @@ func (e *configEnv) seedRate(t *testing.T, from string, rate string, on time.Tim
 	if _, err := e.owner.Exec(context.Background(), `
 		INSERT INTO fx_rate (from_currency, to_currency, rate, rate_date)
 		VALUES ($1, 'EUR', $2::numeric, $3::date)
-		ON CONFLICT (from_currency, to_currency, rate_date) DO UPDATE SET rate = excluded.rate`,
+		ON CONFLICT (from_currency, to_currency, rate_date) WHERE superseded_at IS NULL DO UPDATE SET rate = excluded.rate`,
 		from, rate, on.Format(time.DateOnly)); err != nil {
 		t.Fatalf("seeding the %s rate for %s: %v", from, on.Format(time.DateOnly), err)
 	}

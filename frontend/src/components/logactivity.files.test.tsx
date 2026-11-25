@@ -594,9 +594,16 @@ it("keeps a partially attached outcome open and retries only its missing file", 
   expect(creates(calls)).toBe(1);
 });
 
+// Fakes only Date, at a fixed time. A minute later is the same day in every
+// zone, so a retry is still logged as today, as the form shows it.
+function startAtMidday() {
+  vi.useFakeTimers({ toFake: ["Date"] });
+  vi.setSystemTime(new Date("2026-06-15T12:00:00Z"));
+}
+
 it("resends the identical create under the same key when its answer was lost", async () => {
   // Only Date is faked, so the clock can move between tries while events run.
-  vi.useFakeTimers({ toFake: ["Date"] });
+  startAtMidday();
   const calls = stubApi({ lostCreateAnswers: { left: 1 } });
   renderForm();
   const user = userEvent.setup();
@@ -671,7 +678,7 @@ it("sends a backdated entry's changed day after its answer was lost", async () =
 });
 
 it("stamps a fresh time on a retry after the server refused the create", async () => {
-  vi.useFakeTimers({ toFake: ["Date"] });
+  startAtMidday();
   const calls = stubApi({ refusedCreates: { left: 1 } });
   renderForm();
   const user = userEvent.setup();

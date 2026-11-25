@@ -26,13 +26,13 @@ func (s *Store) GetDeal(ctx context.Context, id ids.DealID, archived storekit.Ar
 	if err := auth.Require(ctx, "deal", principal.ActionRead); err != nil {
 		return crmcontracts.Deal{}, err
 	}
-	active, err := s.activeColumns(ctx)
-	if err != nil {
-		return crmcontracts.Deal{}, err
-	}
 	var out crmcontracts.Deal
-	err = s.Tx(ctx, func(tx pgx.Tx) (err error) {
-		out, err = getDealInTx(ctx, tx, id, archived, active)
+	err := s.Tx(ctx, func(tx pgx.Tx) (err error) {
+		active, err := s.activeColumnsIn(ctx, tx)
+		if err != nil {
+			return err
+		}
+		out, err = s.getDealWithChance(ctx, tx, id, archived, active)
 		return err
 	})
 	return out, err
@@ -44,7 +44,7 @@ func (s *Store) GetDealTx(ctx context.Context, tx pgx.Tx, id ids.DealID, archive
 	if err := auth.Require(ctx, "deal", principal.ActionRead); err != nil {
 		return crmcontracts.Deal{}, err
 	}
-	return getDealInTx(ctx, tx, id, archived, active.cols)
+	return s.getDealWithChance(ctx, tx, id, archived, active.cols)
 }
 
 func getDealInTx(ctx context.Context, tx pgx.Tx, id ids.DealID, archived storekit.ArchivedFilter, active []fieldcatalog.Column) (crmcontracts.Deal, error) {
@@ -222,13 +222,13 @@ func (s *Store) ListDeals(ctx context.Context, in ListDealsInput) ([]crmcontract
 	if err := auth.Require(ctx, "deal", principal.ActionRead); err != nil {
 		return nil, storekit.Page{}, err
 	}
-	active, err := s.activeColumns(ctx)
-	if err != nil {
-		return nil, storekit.Page{}, err
-	}
 	var out []crmcontracts.Deal
 	var page storekit.Page
-	err = s.Tx(ctx, func(tx pgx.Tx) error {
+	err := s.Tx(ctx, func(tx pgx.Tx) error {
+		active, err := s.activeColumnsIn(ctx, tx)
+		if err != nil {
+			return err
+		}
 		pre, where, err := s.dealListQuery(ctx, tx, in, active)
 		if err != nil {
 			return err
@@ -237,9 +237,15 @@ func (s *Store) ListDeals(ctx context.Context, in ListDealsInput) ([]crmcontract
 			func(d crmcontracts.Deal) (time.Time, ids.UUID) { return d.CreatedAt, ids.UUID(d.Id) },
 			func(tx pgx.Tx, page []crmcontracts.Deal) error {
 				if in.FactsOnly {
-					return maskDeals(ctx, tx, page)
+					if err := maskDeals(ctx, tx, page); err != nil {
+						return err
+					}
+					return s.stampWinChances(ctx, tx, page)
 				}
 				if err := finishDealPage(ctx, tx, page); err != nil {
+					return err
+				}
+				if err := s.stampWinChances(ctx, tx, page); err != nil {
 					return err
 				}
 				return storekit.AttachRowTags(ctx, tx, dealTaggableType, page,
@@ -268,9 +274,15 @@ func (s *Store) ListDealsTx(ctx context.Context, tx pgx.Tx, in ListDealsInput, a
 		func(d crmcontracts.Deal) (time.Time, ids.UUID) { return d.CreatedAt, ids.UUID(d.Id) },
 		func(tx pgx.Tx, page []crmcontracts.Deal) error {
 			if in.FactsOnly {
-				return maskDeals(ctx, tx, page)
+				if err := maskDeals(ctx, tx, page); err != nil {
+					return err
+				}
+				return s.stampWinChances(ctx, tx, page)
 			}
-			return finishDealPage(ctx, tx, page)
+			if err := finishDealPage(ctx, tx, page); err != nil {
+				return err
+			}
+			return s.stampWinChances(ctx, tx, page)
 		})
 }
 
@@ -295,6 +307,12 @@ func (s *Store) dealListQuery(ctx context.Context, tx pgx.Tx, in ListDealsInput,
 	if err != nil {
 		return nil, nil, err
 	}
+	if s.winChanceSQL != nil && (in.WinProbabilityMin != nil || in.WinProbabilityMax != nil) {
+		if in.winChance, err = s.winChanceSQL(ctx, tx, s.clock(), dealRef(""), pre.Arg); err != nil {
+			return nil, nil, err
+		}
+	}
+	s.bindMembershipChance(ctx, tx, &in)
 	where, err := appendDealFilters(ctx, pre.Where(), in, pre.Arg)
 	if err != nil {
 		return nil, nil, err

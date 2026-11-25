@@ -20,6 +20,17 @@ admin and ops members whose current grants permit reading data tasks. Only vette
 are stored. A shutdown cancellation does not count as a failure. Reconciliation runs every ten
 minutes and on worker start to restore interrupted execution.
 
+A step can finish and still leave records for someone to act on. A batch names them in
+`BatchOut.Action` with one reason code. The step ends done, so later tasks run. The
+`action_needed` column keeps the reason, the count of distinct records and the first 100 record
+references. System health raises the `updates_action` finding with the reason's sentence and
+remedy. The report names the records only to a reader who may read every audit row with no field
+masks; other readers get the count. Retry on such a step starts it over from its first row under
+the same run ID, and its audit entry keeps the counts it replaced. A step must replay safely, so it
+acts again only on what is still open. A reviewed manual step is not rerun this way, because its
+review would be used a second time. The step that asks privacy reviewers to check old approval
+histories ends this way when no privacy reviewer exists.
+
 Settings → System health shows inspected and changed counts separately. The bounded estimate counts
 rows to inspect; it is not a prediction of how many will change. Seeding records a step without
 counting it; the count is read when the step's first batch runs. A count that cannot finish within

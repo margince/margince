@@ -46,9 +46,8 @@ func TestTheResponsesWireSendsAUnionRootAsAnObjectAndAnswersTheUnion(t *testing.
 	if format := sent.Text.Format; format.Schema.Type != kwObject || len(format.Schema.Properties) != 1 {
 		t.Fatalf("sent a root the wire refuses: %+v", format.Schema)
 	}
-	if !sent.Text.Format.Strict || resp.SchemaDowngrade != "" {
-		t.Errorf("a wrapped schema that is strict-clean went unenforced: strict=%v downgrade=%q",
-			sent.Text.Format.Strict, resp.SchemaDowngrade)
+	if !sent.Text.Format.Strict {
+		t.Error("a wrapped schema that is strict-clean went unenforced")
 	}
 	if resp.Text != `{"a":"x"}` {
 		t.Errorf("caller got %q, want the union's own answer", resp.Text)

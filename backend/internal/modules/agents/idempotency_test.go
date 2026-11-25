@@ -8,8 +8,12 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"slices"
 	"strings"
 	"testing"
+	"time"
+
+	"github.com/jackc/pgx/v5/pgconn"
 
 	"github.com/margince/margince/backend/internal/platform/agentvolume"
 	"github.com/margince/margince/backend/internal/platform/auth"
@@ -398,6 +402,34 @@ func TestAHeldKeyRefusesRatherThanActingTwice(t *testing.T) {
 	}
 }
 
+func TestAKeyHeldForDifferentArgumentsSaysWhenAndHowItWasFirstUsed(t *testing.T) {
+	firstUsed := time.Date(2026, time.March, 4, 9, 15, 0, 0, time.FixedZone("CET", 3600))
+	for _, tc := range []struct {
+		earlier ClaimState
+		says    string
+	}{
+		{earlier: ClaimReplay, says: "first used at 2026-03-04T08:15:00Z; that call succeeded"},
+		{earlier: ClaimFailed, says: "first used at 2026-03-04T08:15:00Z; that call failed"},
+		{earlier: ClaimInFlight, says: "first used at 2026-03-04T08:15:00Z; that call is still running"},
+	} {
+		t.Run(tc.says, func(t *testing.T) {
+			f := newRetryFixture(t)
+			f.claims.verdict = Claim{State: ClaimMismatch, FirstUsedAt: firstUsed, Earlier: tc.earlier}
+
+			_, err := f.invoke(t, `{"idempotency_key":"k-1","note":"a different note"}`)
+			if !errors.Is(err, apperrors.ErrConflict) {
+				t.Fatalf("err = %v, want ErrConflict", err)
+			}
+			if !strings.Contains(err.Error(), tc.says) {
+				t.Errorf("the refusal does not say %q: %v", tc.says, err)
+			}
+			if f.tool.runs != 0 {
+				t.Fatal("the tool ran despite the key being held")
+			}
+		})
+	}
+}
+
 func TestAnUnknownClaimStateIsRefusedRatherThanRun(t *testing.T) {
 	f := newRetryFixture(t)
 	f.claims.verdict = Claim{State: ClaimState(99)}
@@ -458,6 +490,56 @@ func TestAFailedRunKeepsItsKeyRatherThanInvitingASecondAttempt(t *testing.T) {
 	// it is stored for the window and handed to whoever presents the key next.
 	if got := f.claims.failed[0]; got != "send_email/k-1@"+freshAttempt+": it conflicted with another change" {
 		t.Fatalf("recorded %q — a stored reason must not carry the refusal's own text", got)
+	}
+}
+
+// A lock cycle aborts the handler's whole transaction, so nothing was written
+// and the answer to the caller is to send the same call again. Its key goes back
+// with it, whether the database broke a deadlock or refused a serialization.
+func TestARunTheDatabaseRolledBackGivesItsKeyBack(t *testing.T) {
+	for name, code := range map[string]string{"a broken deadlock": "40P01", "a serialization failure": "40001"} {
+		t.Run(name, func(t *testing.T) {
+			f := newRetryFixture(t)
+			f.claims.verdict = Claim{State: ClaimFresh, Attempt: freshAttempt}
+			f.tool.fail = fmt.Errorf("merging: %w", &pgconn.PgError{Code: code})
+
+			if _, err := f.invoke(t, `{"idempotency_key":"k-1"}`); err == nil {
+				t.Fatal("the handler's failure was swallowed")
+			}
+			if want := []string{"send_email/k-1@" + freshAttempt}; !slices.Equal(f.claims.released, want) {
+				t.Errorf("released = %v, want %v", f.claims.released, want)
+			}
+			if len(f.claims.failed) != 0 {
+				t.Errorf("a rolled-back run was recorded as failed: %v", f.claims.failed)
+			}
+		})
+	}
+}
+
+// The key goes back only when nothing of the call can have taken effect. That
+// means a lock cycle, no committed write, and no approval spent before the
+// handler ran.
+func TestOnlyAnUncommittedLockCycleGivesTheKeyBack(t *testing.T) {
+	cycle := &pgconn.PgError{Code: "40P01"}
+	never, once := func() bool { return false }, func() bool { return true }
+	approved := reserved{ApprovalID: ids.From[ids.ApprovalKind](ids.NewV7())}
+	for name, tc := range map[string]struct {
+		err       error
+		res       reserved
+		committed func() bool
+		want      bool
+	}{
+		"a lock cycle with nothing committed":           {cycle, reserved{}, never, true},
+		"a lock cycle after an earlier commit":          {cycle, reserved{}, once, false},
+		"a lock cycle on a call that spent an approval": {cycle, approved, never, false},
+		"any other failure":                             {errors.New("the provider refused"), reserved{}, never, false},
+		"no failure":                                    {nil, reserved{}, never, false},
+	} {
+		t.Run(name, func(t *testing.T) {
+			if got := releasesKey(tc.err, tc.res, tc.committed); got != tc.want {
+				t.Errorf("releasesKey = %v, want %v", got, tc.want)
+			}
+		})
 	}
 }
 
@@ -809,5 +891,41 @@ func TestAnExtensionToolRefusesTheRetryKeyItNeverAdvertised(t *testing.T) {
 	}
 	if ext.runs != 1 {
 		t.Fatalf("the unkeyed call ran %d times, want 1", ext.runs)
+	}
+}
+
+func TestAnInFlightRefusalCarriesItsCodeAndAnyOtherConflictDoesNot(t *testing.T) {
+	for _, tc := range []struct {
+		name  string
+		state ClaimState
+		want  any
+	}{
+		{"the first attempt has not finished", ClaimInFlight, "idempotency_key_in_progress"},
+		{"the key is held against different arguments", ClaimMismatch, nil},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			f := newRetryFixture(t)
+			f.claims.verdict = Claim{State: tc.state}
+			s := NewDispatcher(f.registry, func(context.Context) (context.Context, error) { return f.ctx, nil }, "t", "0")
+			params, err := json.Marshal(map[string]any{
+				"name": "send_email", "arguments": map[string]any{"idempotency_key": "k-1"},
+			})
+			if err != nil {
+				t.Fatalf("encoding the call: %v", err)
+			}
+
+			resp := s.handle(f.ctx, rpcRequest{
+				JSONRPC: "2.0", ID: json.RawMessage(`1`), Method: methodToolsCall, Params: params,
+			}, legacyFraming)
+
+			result, ok := resp.Result.(map[string]any)
+			if !ok || result["isError"] != true {
+				t.Fatalf("result = %#v, want an isError refusal", resp.Result)
+			}
+			meta, _ := result["_meta"].(map[string]any)
+			if got := meta[refusalCodeMeta]; got != tc.want {
+				t.Fatalf("refusal code = %v, want %v", got, tc.want)
+			}
+		})
 	}
 }

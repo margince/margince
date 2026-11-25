@@ -38,6 +38,7 @@ var dealEvidenceReaders = []string{
 // gatekit:fixture the census hits that need not call the check, each with why.
 var dealEvidenceExempt = map[string]string{
 	"internal/compose/dealclosefacts.go":             "keeps a deal open on relstrength.DealKeptOpenSQL, so doubt closes nothing; its refusal reads customerRefusalAnyAudienceSQL, which carries the check",
+	"internal/compose/jobs_dealbackfill.go":          "asks whether a close for silence was premature through customerProgressAnyAudienceSQL, the check dealclosefacts.go makes of the same close, and keeps a deal open on relstrength.DealKeptOpenSQL",
 	"internal/compose/company360/pipelineread.go":    "reads deals.MeetingAheadSQL, which carries it",
 	"internal/modules/deals/closedaterun.go":         "reads deals.MeetingAheadSQL, which carries it",
 	"internal/modules/deals/deal_singleread.go":      "reads deals.MeetingAheadSQL, which carries it",

@@ -35,6 +35,7 @@ var (
 	contractPath = flag.String("contract", "../api/ai-tasks.yaml", "the AI task contract to compile")
 	outGoPath    = flag.String("out-go", "../internal/modules/ai/tasks_gen.go", "generated Go table destination")
 	outEgressDoc = flag.String("out-egress", "../docs/reference/ai-egress.md", "generated egress table destination")
+	validateOnly = flag.Bool("validate", false, "check the contract against every rule and write nothing; make gen runs it over the merged contract so extension tasks meet the core's rules")
 	outOutageDoc = flag.String("out-outage", "../docs/reference/ai-provider-outages.md", "generated outage table destination")
 )
 
@@ -49,6 +50,11 @@ func main() {
 	c, err := parseContract(raw)
 	if err != nil {
 		log.Fatalf("gen-aitasks: %v", err)
+	}
+
+	if *validateOnly {
+		fmt.Printf("%d tasks valid\n", len(c.Tasks))
+		return
 	}
 
 	hash := sha256.Sum256(raw)

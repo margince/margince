@@ -18,6 +18,7 @@ import (
 	"github.com/margince/margince/backend/internal/compose/briefs"
 	"github.com/margince/margince/backend/internal/compose/legalreviewdesk"
 	"github.com/margince/margince/backend/internal/compose/legalreviewrecords"
+	"github.com/margince/margince/backend/internal/compose/vacuumhealth"
 	"github.com/margince/margince/backend/internal/compose/weekly"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/activities"
@@ -165,13 +166,15 @@ func New(pool *pgxpool.Pool, log *slog.Logger, opts ...Option) http.Handler {
 	// decided rather than on whichever proxy the request happened to arrive by.
 	//
 	// instrument.HTTP wraps everything inside the panic guard. A unit's HTTP
-	// hook therefore sees no correlation id or principal on the context.
+	// hook therefore sees no principal on the context.
 	// r.RemoteAddr is still the proxy (before ResolveClientIP). The body is
 	// not yet capped (before LimitBodies).
-	return originalStorageHTTP(pool, srv.blob, httpserver.RecoverPanics(log, instrument.HTTP(
+	// TraceContract sits outside the panic guard, so every /v1 answer (its 500
+	// and a mux redirect included) carries X-Request-Id and an access line.
+	return originalStorageHTTP(pool, srv.blob, httpserver.TraceContract(log, httpserver.RecoverPanics(log, instrument.HTTP(
 		httpserver.ResolveClientIP(srv.trustedProxies,
 			httpserver.LimitBodies(ceiling,
-				httpserver.SecureHeaders(noStoreOnCredentialPaths(mux)))))))
+				httpserver.SecureHeaders(noStoreOnCredentialPaths(mux))))))))
 }
 
 // newServer assembles the module handler sets. Every cross-module edge is
@@ -235,6 +238,7 @@ func newServer(pool *pgxpool.Pool, log *slog.Logger, authH authHandlers, dealsH 
 		captureHealthHandlers:         captureHealthHandlers{pool: pool, now: utcNow},
 		extensionIngestHealthHandlers: extensionIngestHealthHandlers{pool: pool, now: utcNow},
 		automaticWorkHandlers:         automaticWorkHandlers{pool: pool, now: utcNow},
+		Endpoint:                      vacuumhealth.NewEndpoint(pool, utcNow),
 		extensionSettingsHandlers:     extensionSettingsHandlers{store: NewSettingsStore(pool)},
 		recoveryHealthHandlers: recoveryHealthHandlers{
 			ledger: continuity.NewStore(InstallationDB(pool)),
@@ -287,7 +291,7 @@ func newServer(pool *pgxpool.Pool, log *slog.Logger, authH authHandlers, dealsH 
 		},
 		// The Morning Brief always serves on the deterministic §10.1 floor;
 		// the L2 re-order is opt-in via WithBrief (the api role's model path).
-		Handlers: briefs.NewHandlers(briefs.NewBriefEngine(pool, newContactsStore(InstallationDB(pool)))),
+		Handlers: briefs.NewHandlers(briefs.NewBriefEngine(pool, newContactsStore(InstallationDB(pool))).WithWinChances(chances.WinChances)),
 		// The membership seam decides which team's week a lead may open: the
 		// team id arrives from the request, and nothing on the row narrows it
 		// to the reader.
@@ -296,7 +300,7 @@ func newServer(pool *pgxpool.Pool, log *slog.Logger, authH authHandlers, dealsH 
 		// be about the same seven days, and weekly owns that answer. A module
 		// may not import compose, so it takes the function.
 		weeklyPlanHandlers: weeklyplan.NewHandlers(
-			weeklyPlanStore(pool), func() time.Time { return time.Now().UTC() },
+			WeeklyPlanStore(pool), func() time.Time { return time.Now().UTC() },
 		),
 		recordLinksHandlers: recordlinks.NewHandlers(recordlinks.NewStore(InstallationDB(pool))),
 		// The forecast owns its arithmetic and nothing about deals, so the deal
@@ -340,7 +344,7 @@ func newServer(pool *pgxpool.Pool, log *slog.Logger, authH authHandlers, dealsH 
 		// works wherever the readings do. An attachment that has never been read
 		// simply has no grounded field to accept, and the accept says so.
 		accept: NewExtractionAccept(pool),
-		file:   NewChatCaptureFile(pool),
+		file:   NewChatCaptureFile(pool, nil),
 		// A review joins two modules' halves, so the seam is constructed here
 		// rather than either module owning the other.
 		reviews:    NewOutcomeReviews(pool),

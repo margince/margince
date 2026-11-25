@@ -47,6 +47,31 @@ func TestACountryLayerCompilesToItsRules(t *testing.T) {
 	}
 }
 
+func TestAMarketingModeCompilesAndAPackThatStatesNoneKeepsOptIn(t *testing.T) {
+	policy, err := Compile(policyFS(country + "marketing-mode: opt_out\n"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !policy.Rules.MarketingMode.OptOut() {
+		t.Errorf("marketing mode %q, want opt_out", policy.Rules.MarketingMode)
+	}
+	silent, err := Compile(policyFS(country))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if silent.Rules.MarketingMode.OptOut() {
+		t.Errorf("a pack that states no mode compiled to %q, want opt-in", silent.Rules.MarketingMode)
+	}
+	for name, front := range map[string]string{
+		"an unknown mode":           country + "marketing-mode: opt_sideways\n",
+		"opt-out with consent-only": country + "marketing-mode: opt_out\nconsent-only: true\n",
+	} {
+		if _, err := Compile(policyFS(front)); err == nil {
+			t.Errorf("%s compiled", name)
+		}
+	}
+}
+
 func TestTheSourceIsRefused(t *testing.T) {
 	for name, front := range map[string]string{
 		"an unknown key":              country + "reply-windw: 720h\n",
@@ -91,6 +116,26 @@ func TestADraftLayerCompilesItsCitations(t *testing.T) {
 	}
 	if got := policy.Rules.Citations; len(got) != 1 || !policy.Rules.Provenance.ReviewedAt.IsZero() {
 		t.Errorf("citations %+v, provenance %+v", got, policy.Rules.Provenance)
+	}
+}
+
+func TestAnInstrumentCompilesItsRefreshKeys(t *testing.T) {
+	digest := strings.Repeat("0f", 32)
+	policy, err := Compile(policyFS(country + "instruments:\n" +
+		"  - {name: Act A, source-url: https://example.org/a, text-url: https://example.org/a.pdf, text-digest: " + digest + ", text-fetched: 2026-03-09}\n" +
+		"  - {name: Act B, source-url: https://example.org/b, checked-by-hand: 2026-02-20}\n"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	read, byHand := policy.Rules.Instruments[0], policy.Rules.Instruments[1]
+	if read.TextURL != "https://example.org/a.pdf" || read.TextDigest != digest || day(read.TextFetchedAt) != "2026-03-09" {
+		t.Errorf("the fetched instrument compiled to %+v", read)
+	}
+	if day(byHand.CheckedByHandAt) != "2026-02-20" || byHand.TextDigest != "" {
+		t.Errorf("the instrument checked by hand compiled to %+v", byHand)
+	}
+	if _, err := Compile(policyFS(country + "instruments: [{name: Act A, source-url: https://example.org/a, text-digest: " + digest + "}]\n")); err == nil {
+		t.Error("a digest with no fetch day compiled")
 	}
 }
 

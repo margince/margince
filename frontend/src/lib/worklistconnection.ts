@@ -23,6 +23,7 @@ const BOOKING_TITLES: Readonly<Record<string, MessageKey>> = {
   no_calendar: "worklist.untitled.booking_health_no_calendar",
   calendar_read_only: "worklist.untitled.booking_health_calendar_read_only",
   calendar_unavailable: "worklist.untitled.booking_health_calendar_unavailable",
+  team_not_ready: "worklist.untitled.booking_health_team_not_ready",
 };
 
 export function bookingTitleKey(

@@ -103,10 +103,7 @@ func NewApprovalNotify(pool *pgxpool.Pool, db *database.DB, mail noticeMailQueue
 // HandleEvent announces one staged approval. Anything else answers nil so the
 // group keeps flowing rather than wedging on traffic this consumer ignores.
 func (a *ApprovalNotify) HandleEvent(ctx context.Context, env events.Envelope) error {
-	// The generated constant, not a hand-typed event name: a spelling that
-	// drifts from the contract makes this consumer silently never fire, and
-	// nothing fails when a consumer does nothing.
-	if env.Type != string(crmcontracts.ApprovalRequested) || env.Entity.ID == ids.Nil {
+	if !events.ApprovalNotifyTypes.Has(env.Type) || env.Entity.ID == ids.Nil {
 		return nil
 	}
 	var staged crmcontracts.PublicEventApprovalRequested
@@ -239,7 +236,8 @@ type noticeWriter func(ctx context.Context, tx pgx.Tx, line notices.NewNotice) (
 
 // recordApprovalNotice writes one decider's line and, when they asked for
 // email, the message about it, in the caller's transaction. The staging
-// announcement and a deal's owner change both tell a decider this way.
+// announcement, a deal's owner change and a booking link's team request all
+// tell their reader this way.
 func recordApprovalNotice(
 	ctx context.Context, tx pgx.Tx, write noticeWriter, mail noticeMailQueue, wsID ids.UUID, line notices.NewNotice,
 ) error {

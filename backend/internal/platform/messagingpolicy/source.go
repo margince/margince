@@ -77,6 +77,7 @@ type layerFile struct {
 	DealFollowUpWindow                *time.Duration     `yaml:"deal-follow-up-window"`
 	MarketingExceptions               *[]exceptionEntry  `yaml:"marketing-exceptions"`
 	ConsentOnly                       *bool              `yaml:"consent-only"`
+	MarketingMode                     *string            `yaml:"marketing-mode"`
 	Disclosures                       *[]disclosureEntry `yaml:"disclosures"`
 	SubjectPrefix                     *string            `yaml:"subject-prefix"`
 	FrequencyCap                      *frequencyCapEntry `yaml:"frequency-cap"`
@@ -103,13 +104,29 @@ type fixturePair struct {
 	Clears   string `yaml:"clears"`
 }
 
+// instrumentEntry is one law. A refresh writes text-digest and text-fetched;
+// text-url and checked-by-hand are written by whoever maintains the pack.
+//
 //nolint:tagliatelle // policy files spell their keys in kebab case
 type instrumentEntry struct {
-	Name      string    `yaml:"name"`
-	Effective time.Time `yaml:"effective"`
-	Expires   time.Time `yaml:"expires"`
-	Provision string    `yaml:"provision"`
-	SourceURL string    `yaml:"source-url"`
+	Name          string    `yaml:"name"`
+	Effective     time.Time `yaml:"effective"`
+	Expires       time.Time `yaml:"expires"`
+	Provision     string    `yaml:"provision"`
+	SourceURL     string    `yaml:"source-url"`
+	TextURL       string    `yaml:"text-url"`
+	TextDigest    string    `yaml:"text-digest"`
+	TextFetched   time.Time `yaml:"text-fetched"`
+	CheckedByHand time.Time `yaml:"checked-by-hand"`
+}
+
+// readFrom is the address a refresh fetches: the readable form when the layer
+// states one, else the official page.
+func (e instrumentEntry) readFrom() string {
+	if e.TextURL != "" {
+		return e.TextURL
+	}
+	return e.SourceURL
 }
 
 // citationEntry names the law behind one engine code. territorial-test is

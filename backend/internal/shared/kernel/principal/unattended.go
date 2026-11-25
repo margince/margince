@@ -3,7 +3,11 @@
 
 package principal
 
-import "context"
+import (
+	"context"
+
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+)
 
 type unattendedKey struct{}
 
@@ -19,4 +23,15 @@ func Unattended(ctx context.Context) bool {
 		return true
 	}
 	return ctx.Value(unattendedKey{}) != nil
+}
+
+// ConversationUser is the colleague whose live conversation this call comes
+// from, or zero. That is an AI client connected on their own passport, outside
+// an unattended run. A passport minted without a connection is unattended.
+func ConversationUser(ctx context.Context, p Principal) ids.UUID {
+	connected := p.Type == PrincipalAgent && !p.PassportID.IsZero() && !p.ConnectionID.IsZero()
+	if Unattended(ctx) || !connected || p.OnBehalfOf.IsZero() {
+		return ids.Nil
+	}
+	return p.OnBehalfOf
 }

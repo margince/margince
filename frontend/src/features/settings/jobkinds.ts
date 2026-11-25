@@ -98,6 +98,7 @@ const JOB_KIND_NAME: Readonly<Record<string, MessageKey>> = {
   signal_scan: "jobs.kind.signal_scan",
   site_deep_read: "jobs.kind.site_deep_read",
   stage_evidence_read: "systemJob.stage_evidence_read",
+  stage_evidence_reread: "systemJob.stage_evidence_reread",
   stored_object_reap: "jobs.kind.stored_object_reap",
   suppression_journal_export: "jobs.kind.suppression_journal_export",
   tag_scout: "jobs.kind.tag_scout",

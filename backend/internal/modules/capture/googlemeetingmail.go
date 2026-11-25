@@ -27,9 +27,16 @@ import (
 // mail a verdict may judge like any other.
 var googleMeetingSenders = []string{
 	"calendar-notification@google.com",
-	"gemini-notes@google.com",
-	"meetings-noreply@google.com",
+	geminiNotesSender,
+	meetingRecordsSender,
 }
+
+// The senders of the two mails Google sends about a recorded meeting: the notes
+// Gemini wrote, and the list of the meeting's records in Drive.
+const (
+	geminiNotesSender    = "gemini-notes@google.com"
+	meetingRecordsSender = "meetings-noreply@google.com"
+)
 
 // IsGoogleMeetingMail reports whether a message from email is Google's meeting
 // mail. authenticated is the message's inbound_sender_authenticated stamp:

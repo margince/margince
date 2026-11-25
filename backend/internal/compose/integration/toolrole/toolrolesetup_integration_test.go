@@ -127,6 +127,10 @@ var setupFixtures = map[string]func(p *recordPool) map[string]any{
 	"update_web_form": func(p *recordPool) map[string]any {
 		return versioned(p, "versioned_web_form", map[string]any{"name": uniqueName()})
 	},
+	// A server form, because an agent may not give a form the websites a browser form needs.
+	"create_web_form": func(*recordPool) map[string]any {
+		return map[string]any{"request_body": map[string]any{"name": uniqueName(), "sender": "server"}}
+	},
 	"put_product_translation": func(p *recordPool) map[string]any {
 		return map[string]any{"id": p.take("product"), "language": "de", "request_body": map[string]any{"name": "Rollen-Sweep"}}
 	},
@@ -391,8 +395,8 @@ func setupSeeders(s sweepSeed) map[string]func() string {
 		// A model call is written by the model path, which the sweep's calls
 		// never reach for every role.
 		"ai_call": func() string {
-			return s.ownerScalar(`INSERT INTO ai_call (task, tier, provider, model_id, request_fingerprint, logical_call_id)
-				VALUES ('cold_start', 'cheap_cloud', 'anthropic', 'sweep-model', 'print', gen_random_uuid()) RETURNING id::text`)
+			return s.ownerScalar(`INSERT INTO ai_call (task, tier, provider, model_id, logical_call_id)
+				VALUES ('cold_start', 'cheap_cloud', 'anthropic', 'sweep-model', gen_random_uuid()) RETURNING id::text`)
 		},
 	}
 }

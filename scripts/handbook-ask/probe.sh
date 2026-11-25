@@ -42,7 +42,7 @@ curl -sf -c "$JAR" -H 'content-type: application/json' \
 CORPUS=${HANDBOOK_CORPUS_ID:-}
 if [[ -z "$CORPUS" ]]; then
   CORPUS=$(curl -sf -b "$JAR" "$API/v1/knowledge/corpora" \
-    | jq -r '.items[] | select(.name == "Margince handbook") | .id' | head -1)
+    | jq -r '.items[] | select(.name == "Margince handbook") | .id' | sed -n 1p)
   [[ -n "$CORPUS" ]] || { echo "probe: no document set named \"Margince handbook\" — has the handbook been filed yet? Set HANDBOOK_CORPUS_ID to ask another set." >&2; exit 1; }
 fi
 

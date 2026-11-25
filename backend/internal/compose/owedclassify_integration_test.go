@@ -28,6 +28,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/compose/integration"
 	"github.com/margince/margince/backend/internal/modules/activities"
+	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/ports/model"
@@ -231,7 +232,7 @@ func TestABacklogTheModelWillNotCommitToStillEndsThePass(t *testing.T) {
 	if brain.calls == 0 {
 		t.Fatal("the pass made no model call for a seeded backlog")
 	}
-	if brain.calls > owedCatchUpCap {
+	if brain.calls > capture.DefaultOwedClassifyPassCap {
 		t.Errorf("the pass made %d calls on a backlog it cannot finish", brain.calls)
 	}
 }

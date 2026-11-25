@@ -70,12 +70,12 @@ describe("a word typed in one burst", () => {
     vi.stubGlobal("fetch", fetchMock);
     renderPalette();
 
-    await user.type(screen.getByRole("searchbox"), "acme");
+    await user.type(screen.getByRole("combobox"), "acme");
     expect(fetchMock).not.toHaveBeenCalled();
     await pause();
 
     expect(
-      await screen.findByRole("button", { name: /^AG\s*Acme GmbH$/ }),
+      await screen.findByRole("option", { name: /^AG\s*Acme GmbH$/ }),
     ).toBeTruthy();
     expect(askedWords(fetchMock)).toEqual(["acme"]);
   });
@@ -103,10 +103,10 @@ describe("typing past a search that is still running", () => {
     );
     renderPalette();
 
-    await user.type(screen.getByRole("searchbox"), "ac");
+    await user.type(screen.getByRole("combobox"), "ac");
     await pause();
     await waitFor(() => expect(signals.length).toBe(1));
-    await user.type(screen.getByRole("searchbox"), "me");
+    await user.type(screen.getByRole("combobox"), "me");
     await pause();
     await waitFor(() => expect(signals.length).toBeGreaterThan(1));
 
@@ -143,14 +143,14 @@ describe("a hit still showing while the next words are asked", () => {
     vi.stubGlobal("fetch", fetchMock);
     renderPalette();
 
-    await user.type(screen.getByRole("searchbox"), "acme");
+    await user.type(screen.getByRole("combobox"), "acme");
     await pause();
-    await screen.findByRole("button", { name: /Acme renewal/ });
-    await user.type(screen.getByRole("searchbox"), " log");
+    await screen.findByRole("option", { name: /Acme renewal/ });
+    await user.type(screen.getByRole("combobox"), " log");
     await pause();
     expect(askedWords(fetchMock)).toEqual(["acme", "acme log"]);
 
-    await user.click(screen.getByRole("button", { name: /Acme renewal/ }));
+    await user.click(screen.getByRole("option", { name: /Acme renewal/ }));
     expect(window.location.hash).toBe("#/search/acme/a1");
   });
 });
@@ -188,7 +188,7 @@ describe("a search the server refuses as too broad", () => {
     );
     renderPalette();
 
-    await user.type(screen.getByRole("searchbox"), "co");
+    await user.type(screen.getByRole("combobox"), "co");
     await pause();
 
     expect(await screen.findByText(advice)).toBeTruthy();
@@ -209,16 +209,16 @@ describe("words typed before the pause after an earlier answer", () => {
     const user = steppedClock();
     vi.stubGlobal("fetch", answering("Abbott AG"));
     renderPalette();
-    const box = screen.getByRole("searchbox");
+    const box = screen.getByRole("combobox");
 
     await user.type(box, "ab");
     await pause();
-    await screen.findByRole("button", { name: /^AA\s*Abbott AG$/ });
+    await screen.findByRole("option", { name: /^AA\s*Abbott AG$/ });
     await user.clear(box);
     await user.type(box, "nor");
 
     expect(
-      screen.queryByRole("button", { name: /^AA\s*Abbott AG$/ }),
+      screen.queryByRole("option", { name: /^AA\s*Abbott AG$/ }),
     ).toBeNull();
   });
 
@@ -226,15 +226,15 @@ describe("words typed before the pause after an earlier answer", () => {
     const user = steppedClock();
     vi.stubGlobal("fetch", answering("Acme GmbH"));
     renderPalette();
-    const box = screen.getByRole("searchbox");
+    const box = screen.getByRole("combobox");
 
     await user.type(box, "acme");
     await pause();
-    await screen.findByRole("button", { name: /^AG\s*Acme GmbH$/ });
+    await screen.findByRole("option", { name: /^AG\s*Acme GmbH$/ });
     await user.type(box, " log");
 
     expect(
-      screen.getByRole("button", { name: /^AG\s*Acme GmbH$/ }),
+      screen.getByRole("option", { name: /^AG\s*Acme GmbH$/ }),
     ).toBeTruthy();
   });
 
@@ -242,16 +242,16 @@ describe("words typed before the pause after an earlier answer", () => {
     const user = steppedClock();
     vi.stubGlobal("fetch", answering("Acme GmbH"));
     renderPalette();
-    const box = screen.getByRole("searchbox");
+    const box = screen.getByRole("combobox");
 
     await user.type(box, "acme");
     await pause();
-    await screen.findByRole("button", { name: /^AG\s*Acme GmbH$/ });
+    await screen.findByRole("option", { name: /^AG\s*Acme GmbH$/ });
     await user.clear(box);
     await user.type(box, "ACME");
 
     expect(
-      screen.getByRole("button", { name: /^AG\s*Acme GmbH$/ }),
+      screen.getByRole("option", { name: /^AG\s*Acme GmbH$/ }),
     ).toBeTruthy();
   });
 
@@ -262,7 +262,7 @@ describe("words typed before the pause after an earlier answer", () => {
       vi.fn(async () => new Response("{}", { status: 500 })),
     );
     renderPalette();
-    const box = screen.getByRole("searchbox");
+    const box = screen.getByRole("combobox");
 
     await user.type(box, "ab");
     await pause();
@@ -289,7 +289,7 @@ describe("when the palette says nothing matched", () => {
       defaultOptions: { queries: { retry: false } },
     });
     renderPalette(client);
-    await user.type(screen.getByRole("searchbox"), "zzzzqqq");
+    await user.type(screen.getByRole("combobox"), "zzzzqqq");
     await pause();
     expect(await screen.findByText("No matches for “zzzzqqq”.")).toBeTruthy();
 
@@ -317,7 +317,7 @@ describe("when the palette says nothing matched", () => {
       defaultOptions: { queries: { retry: false } },
     });
     renderPalette(client);
-    await user.type(screen.getByRole("searchbox"), "rollout");
+    await user.type(screen.getByRole("combobox"), "rollout");
     await pause();
     await waitFor(() =>
       expect(
@@ -329,6 +329,56 @@ describe("when the palette says nothing matched", () => {
     );
 
     expect(screen.getByText("See all results for “rollout”")).toBeTruthy();
+    expect(screen.queryByText(/No matches/)).toBeNull();
+  });
+});
+
+describe("a grouped answer with a type that ran out of time", () => {
+  const line = /Emails and activities could not be searched for this word/;
+
+  it("shows its hits and one line naming the type", async () => {
+    const user = steppedClock();
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () =>
+        json({
+          data: [{ type: "company", id: "o1", title: "Acme GmbH" }],
+          page: { next_cursor: null, has_more: false },
+          types_timed_out: ["activity"],
+        }),
+      ),
+    );
+    renderPalette();
+
+    await user.type(screen.getByRole("combobox"), "acme");
+    await pause();
+
+    expect(
+      await screen.findByRole("option", { name: /^AG\s*Acme GmbH$/ }),
+    ).toBeTruthy();
+    expect(screen.getByText(line)).toBeTruthy();
+    expect(screen.queryByText(/Search failed/)).toBeNull();
+    expect(screen.queryByText(/No matches/)).toBeNull();
+  });
+
+  it("leaves out No matches when nothing else was found", async () => {
+    const user = steppedClock();
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () =>
+        json({
+          data: [],
+          page: { next_cursor: null, has_more: false },
+          types_timed_out: ["activity"],
+        }),
+      ),
+    );
+    renderPalette();
+
+    await user.type(screen.getByRole("combobox"), "acme");
+    await pause();
+
+    expect(await screen.findByText(line)).toBeTruthy();
     expect(screen.queryByText(/No matches/)).toBeNull();
   });
 });

@@ -16,7 +16,6 @@ import {
   type QueryLike,
   QueryStates,
 } from "../../design-system/querystates";
-import { INTL_LOCALE } from "../../format/format";
 import { objectLabel } from "../../format/rbacobjects";
 import { useLocale, useT } from "../../i18n";
 import { useCan, useCanMutate } from "../../lib/capability";
@@ -34,6 +33,7 @@ import {
 import { routeHash } from "../../lib/router";
 import { useMe } from "../../lib/session";
 import "./extension-access.css";
+import { listFormat } from "../../format/formatters";
 import {
   EXTENSIONS_KEY,
   type ExtensionUnit,
@@ -54,6 +54,7 @@ import {
   nextGrant,
 } from "../settings/grantmatrix";
 import { UnitGovernance } from "./extension-governance";
+import { bringsCount, needsFact } from "./extension-needs";
 
 // Extension access (settings → Extensions): what the composed extension tier
 // brought into this installation, and who may use it.
@@ -240,8 +241,7 @@ function UnitCard({
   // How much this unit contributes at all. A jurisdiction pack contributes
   // none of the three: it supplies policy the core consults and registers no
   // object, route or job, which is a complete answer rather than an empty card.
-  const brings =
-    unit.rbac_objects.length + unit.routes.length + unit.jobs.length;
+  const brings = bringsCount(unit);
   const descriptor = findExtension(unit.name);
   // A descriptor is not a page. `de` has one and publishes NO operations, so
   // the generic fallback App.tsx renders for a unit without its own screen
@@ -318,7 +318,7 @@ function UnitCard({
             title={t("extAccess.nobodyReadsTitle")}
           >
             {t("extAccess.nobodyReads", {
-              object: new Intl.ListFormat(INTL_LOCALE[locale], {
+              object: listFormat(locale, {
                 style: "long",
                 type: "conjunction",
               }).format(unread.map((object) => objectLabel(unit.name, object))),
@@ -392,8 +392,7 @@ function UnitBrings({ unit }: Readonly<{ unit: ExtensionUnit }>) {
         {
           key: "routes",
           term: t("extAccess.brings.routes"),
-          // One entry per method and path: a DELETE must not hide behind the
-          // GET on the same path.
+          // One entry per method and path, so a DELETE never hides behind a GET.
           value: list(
             unit.routes.map((route) => `${route.method} ${route.path}`),
           ),
@@ -403,6 +402,7 @@ function UnitBrings({ unit }: Readonly<{ unit: ExtensionUnit }>) {
           term: t("extAccess.brings.jobs"),
           value: list(unit.jobs),
         },
+        needsFact(unit.needs, t("extAccess.brings.needs")),
       ]}
     />
   );

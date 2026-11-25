@@ -170,14 +170,14 @@ describe("the lead board's terminal columns under the queue's dials", () => {
     );
   });
 
-  it("read a 403 from the report as refused, not as a failure", async () => {
+  it("read the owner gate's 403 from the report as refused, not as a failure", async () => {
     serve(() =>
       json(
         {
           type: "about:blank",
           title: "Forbidden",
           status: 403,
-          code: "permission_denied",
+          code: "owner_not_measurable",
         },
         403,
       ),
@@ -212,7 +212,7 @@ describe("the lead board's terminal columns under the queue's dials", () => {
     expect(column("disqualified").querySelector(STATED_COUNT)).toBeNull();
   });
 
-  it("read a 403 without an owner dial as a failure, not an owner refusal", async () => {
+  it("read a refused report as a failure, not an owner refusal, even under an owner dial", async () => {
     serve(() =>
       json(
         {
@@ -224,7 +224,7 @@ describe("the lead board's terminal columns under the queue's dials", () => {
         403,
       ),
     );
-    drawBoard({ ...UNNARROWED_LIST_QUERY, filters: { status: "promoted" } });
+    drawBoard(mine());
 
     expect(
       await screen.findByText(en["lead.boardCountsUnavailable"]),

@@ -3,6 +3,7 @@
 // use {name} and are filled by t(key, params).
 // Every value is written to docs/reference/ui-copy-style.md.
 export const en = {
+  "systemJob.proposal_stage": "Asking whether a sent proposal moves the deal",
   "systemJob.legal_review_desk": "Legal review desk",
   "systemJob.import_identity_links": "Attaching imported mail links",
   "systemJob.promise_kept": "Closing a commitment a meeting shows kept",
@@ -528,6 +529,7 @@ export const en = {
   "dataTasks.status.running": "Running",
   "dataTasks.status.paused": "Paused",
   "dataTasks.status.done": "Done",
+  "dataTasks.status.doneWithAction": "Done, action needed",
   "dataTasks.status.failed": "Failed",
   "dataTasks.action.pause": "Pause",
   "dataTasks.action.resume": "Resume",
@@ -543,6 +545,8 @@ export const en = {
   "dataTasks.blocked.earlier_step": "An earlier step must finish first.",
   "dataTasks.blocked.missing_prerequisite":
     "Required updates must finish first.",
+  "dataTasks.actionRecords_one": "{count} record left to act on",
+  "dataTasks.actionRecords_other": "{count} records left to act on",
   "approval.preview.createEmployer":
     "Create the missing company and link this contact as an employee.",
   "approval.preview.reuseEmployer":
@@ -754,6 +758,7 @@ export const en = {
   "approval.preview.linkIssued": "Link issued",
   "approval.preview.linkExpires": "Link expires",
   "approval.preview.recordRevoked": "Revoked",
+  "approval.preview.basisAgreement": "Recipient agreement",
   "approval.preview.basisKind": "Recorded communication basis",
   "approval.preview.basisFrom": "Basis valid from",
   "approval.preview.basisUntil": "Basis valid until",
@@ -766,7 +771,6 @@ export const en = {
   "approval.preview.basisObligation": "Legal obligation",
   "approval.preview.basisSecurity": "Vital or security interest",
   "approval.preview.basisCustomer": "Existing customer exception",
-  "approval.preview.basisAgreement": "Recipient agreement",
   "approval.preview.promotionTrigger": "Qualification trigger",
   "approval.preview.promotionNote": "Qualification evidence",
   "approval.preview.promotionEvidence": "Supporting activity",
@@ -885,7 +889,6 @@ export const en = {
     "The AI budget has reached its limit. This work resumes automatically when budget is available.",
   "reporting.latestSnapshot": "Latest snapshot",
   "reporting.contextDetails": "Reporting details",
-  "reporting.pipelineFilter": "Open pipeline · expected close",
   "reporting.targetRemaining": "{amount} remaining",
   "reporting.targetExceeded": "{amount} above target",
   "reporting.targetPeriodSummary": "{actual} of {target} · {percent}%",
@@ -927,12 +930,11 @@ export const en = {
   "reporting.arrivedOn": "Arrived on",
   "reporting.enteredOn": "Entered the stage on",
   "reporting.accruedOn": "Earned on",
-  "reporting.introducedOn": "Introduced on",
+  "reporting.introductionCountedOn": "Made or recorded on",
   "reporting.bookedOn": "Booked on",
   "reporting.commissionAmount": "Commission",
   "reporting.hoursUnit": "Hours",
   "reporting.outOf": "Out of {total}",
-  "reporting.valueChanges": "Value changes",
   "reporting.movement.new": "New deals",
   "reporting.movement.pulled_in": "Pulled into the period",
   "reporting.movement.pushed_out": "Pushed out of the period",
@@ -1024,8 +1026,6 @@ export const en = {
   "reporting.attainment": "{percent}% of target",
   "reporting.remaining": "Remaining",
   "reporting.ownerMetric": "{metric} by team member",
-  "reporting.quarterStart": "Choose the first month of the fiscal quarter.",
-  "reporting.additional": "More analysis",
   "reporting.settings": "Reporting settings",
   "reporting.execution.skipped": "Skipped",
   "reporting.execution.suspended": "Paused",
@@ -1035,7 +1035,6 @@ export const en = {
   "reporting.execution.running": "Capturing…",
   "reporting.execution.pending": "Queued",
   "reporting.targetHistory": "Target history",
-  "reporting.unit": "Unit",
   "reporting.amountUnit": "Value",
   "reporting.daysUnit": "Days",
   "reporting.countUnit": "Count",
@@ -1103,7 +1102,6 @@ export const en = {
   "reporting.status.ok": "Complete coverage",
   "retention.scopeReportEdition": "Saved report editions",
   "reporting.lastCapture": "Last successful capture {at}",
-  "reporting.allocationDifference": "Team target minus allocated targets",
   "reporting.fromDate": "From",
   "reporting.throughDate": "Through",
   "reporting.chooseDates": "Choose a start and end date to view this period.",
@@ -1208,7 +1206,7 @@ export const en = {
   "reporting.questionBoundPeriod":
     "This question has filters. Its periods keep the dates they had when it was placed: a fiscal year starting in {month}, in {zone}.",
   "reporting.fiscalQuarterNote":
-    "This quarter follows the fiscal year that starts in {month}.",
+    "Quarters and years here follow the fiscal year that starts in {month}.",
   "reporting.previewChart": "Preview",
   "reporting.previewLoading": "Loading the preview…",
   "reporting.previewEmpty":
@@ -1243,10 +1241,8 @@ export const en = {
   "reporting.monthly": "Monthly",
   "reporting.day": "Run day",
   "reporting.time": "Local time",
-  "reporting.timezone": "Reporting timezone",
   "reporting.nextRun": "Next run: {at}",
   "reporting.pause": "Paused",
-  "reporting.resume": "Resume",
   "reporting.compare": "Compare snapshots",
   "reporting.left": "Earlier snapshot",
   "reporting.right": "Later snapshot",
@@ -1254,12 +1250,8 @@ export const en = {
   "reporting.value": "Target",
   "reporting.newTarget": "Set target",
   "reporting.revise": "Revise target",
-  "reporting.up": "Move up",
-  "reporting.down": "Move down",
-  "reporting.periodStart": "First day of target period",
   "reporting.noComparison":
     "Choose two snapshots with matching scopes from consecutive completed periods.",
-  "reporting.noSource": "Source details are unavailable.",
   "reporting.framework": "Reporting setup",
   "reporting.template": "Default view",
   "reporting.sales": "Sales",
@@ -1429,38 +1421,6 @@ export const en = {
     "Forecast for the end of the fiscal quarter, as of {date}: {amount}.",
   "reporting.writtenOpen_one": "Open on {date}: {amount} in {count} deal.",
   "reporting.writtenOpen_other": "Open on {date}: {amount} in {count} deals.",
-  "reporting.writtenSomeFailed":
-    "Some figures could not be read just now, so this summary leaves them out.",
-  "reporting.writtenTargetReached":
-    "Sales won in {quarter} have reached the {target} goal.",
-  "reporting.writtenNoTarget":
-    "No sales goal is set for {quarter}, so there is no gap to show.",
-  "reporting.writtenFinish": "Expected finish for {quarter}: {amount}.",
-  "reporting.writtenFinishShort":
-    "Expected finish for {quarter}: {amount}, {gap} short of the {target} goal.",
-  "reporting.writtenFinishAhead":
-    "Expected finish for {quarter}: {amount}, {gap} above the {target} target.",
-  "reporting.writtenFinishOnTarget":
-    "Expected finish for {quarter}: {amount}, exactly the {target} goal.",
-  "reporting.writtenCoverage":
-    "Open deals expected to close this quarter cover {ratio}× of the {remaining} still to win.",
-  "reporting.writtenAccepted_one": "{count} handoff accepted in {period}.",
-  "reporting.writtenAccepted_other": "{count} handoffs accepted in {period}.",
-  "reporting.writtenAcceptedNone": "No handoffs accepted in {period}.",
-  "reporting.writtenQualified_one": "{count} lead qualified in {period}.",
-  "reporting.writtenQualified_other": "{count} leads qualified in {period}.",
-  "reporting.writtenQualifiedNone": "No leads qualified in {period}.",
-  "reporting.writtenMeetings_one": "{count} meeting held in {period}.",
-  "reporting.writtenMeetings_other": "{count} meetings held in {period}.",
-  "reporting.writtenMeetingsNone": "No meetings held in {period}.",
-  "reporting.writtenLeadsWaiting_one":
-    "{count} lead is still waiting for a first reply.",
-  "reporting.writtenLeadsWaiting_other":
-    "{count} leads are still waiting for a first reply.",
-  "reporting.writtenHandoffsWaiting_one":
-    "{count} handoff is waiting for a decision from sales.",
-  "reporting.writtenHandoffsWaiting_other":
-    "{count} handoffs are waiting for a decision from sales.",
   "reporting.prepared.prospectingTitle": "My prospecting progress",
   "reporting.prepared.prospectingPurpose":
     "This week’s meetings held, accepted handoffs and qualified leads, against monthly targets.",
@@ -1556,12 +1516,12 @@ export const en = {
     "It was set in a currency that is no longer the base currency. Set the goal again to compare.",
   "reporting.this_week": "This week",
   "reporting.this_month": "This month",
-  "reporting.last_month": "Last month",
+  "reporting.last_month": "Last completed month",
   "reporting.last_week": "Last completed week",
   "reporting.this_quarter": "This fiscal quarter",
+  "reporting.last_quarter": "Last completed quarter",
+  "reporting.last_year": "Last completed year",
   "reporting.custom": "Custom interval",
-  "reporting.start": "Start date",
-  "reporting.end": "End date (exclusive)",
   "reporting.bookings_trend": "Sales won over time",
   "reporting.stage_distribution": "Open pipeline by stage",
   "reporting.owner_attainment": "Sales won by team member",
@@ -1657,7 +1617,6 @@ export const en = {
   "reporting.metrics": "Metrics",
   "reporting.metric": "Metric",
   "reporting.cancel": "Cancel",
-  "reporting.saved": "Report saved",
   "reporting.live": "Live report",
   "reporting.opening": "Opening",
   "reporting.closing": "Closing",
@@ -1680,8 +1639,6 @@ export const en = {
   "scheduling.pickAgreed": "Pick the agreed time",
   "scheduling.openTimes": "Your open times",
   "scheduling.guestPicks": "{name} picks the time",
-  "scheduling.guestPicksHelp":
-    "You send one personal link. They see your open times and book one.",
   "scheduling.guestPicksOne":
     "They book one of the open times in the calendar.",
   "scheduling.guest": "Your guest",
@@ -1723,27 +1680,7 @@ export const en = {
   "scheduling.linkReplaced":
     "You changed this proposal, so it gets a new link. The earlier link stays open until you withdraw it under the contact’s Meetings.",
   "scheduling.bookWith": "Book a meeting with {name}",
-  "scheduling.setupTitle": "Finish setting up booking · {done} of {total} done",
-  "scheduling.stepCalendar": "A calendar that can send invites",
-  "scheduling.stepHours": "Your hours and timezone",
-  "scheduling.stepLink": "Your booking link turned on",
-  "scheduling.stepDone": "Done",
-  "scheduling.stepOpen": "Still to do",
   "scheduling.calendarTitle": "Calendar",
-  "scheduling.calendarIntro":
-    "Where invites are sent from and where your busy time is read.",
-  "scheduling.availabilityTitle": "Availability",
-  "scheduling.defaultsTitle": "Meeting defaults",
-  "scheduling.defaultsIntro":
-    "Used for every new meeting. You can change them when you book.",
-  "scheduling.videoDefaultGoogle": "Add a Google Meet link to new meetings",
-  "scheduling.videoDefaultTeams": "Add a Microsoft Teams link to new meetings",
-  "scheduling.videoDefaultGeneric": "Add a video call link to new meetings",
-  "scheduling.videoDefaultHelp":
-    "Created with each calendar invite, including bookings from your link. You can switch it off for a single meeting when you book.",
-  "scheduling.videoTeamsHelp": "Needs a work or school Microsoft 365 account.",
-  "scheduling.unsaved": "You have unsaved changes",
-  "scheduling.discard": "Discard",
   "scheduling.back": "Back to Margince",
   "scheduling.prepare": "Prepare for this meeting",
   "scheduling.timezone": "Time zone",
@@ -1758,39 +1695,22 @@ export const en = {
   "scheduling.saveTime": "Confirm new time",
   "scheduling.hostRecovery":
     "Reconnect your calendar if needed, then retry. The time remains reserved while delivery is uncertain.",
-  "scheduling.guestRecovery":
+  "book.recovery":
     "The host needs to check this invitation. Your booking request is saved.",
-  "scheduling.deliveryUnknown":
+  "book.deliveryUnknown":
     "The server did not return an invitation. Check with the host before trying again.",
-  "scheduling.personalGuest":
+  "book.personalGuest":
     "This invitation is for the recipient of this link. The meeting will use the email address chosen by the host.",
-  "scheduling.proposalGreeting": "Hello,",
-  "scheduling.proposalChoose": "Choose a time here, or find another opening:",
-  "scheduling.proposalReply":
-    "You can also reply with a time that works for you.",
-  "scheduling.proposalHelp":
-    "These options do not reserve your calendar. The personal link can book once and expires after seven days or the last offered time.",
-  "scheduling.createPersonalLink": "Create personal link",
-  "scheduling.reviewProposal": "Create proposal",
-  "scheduling.personalLink": "Open personal invitation",
-  "scheduling.expires": "Expires {date}",
-  "scheduling.reviewEmail": "Review email",
+  "book.proposalGreeting": "Hello,",
+  "book.proposalChoose": "Choose a time here, or find another opening:",
+  "book.proposalReply": "You can also reply with a time that works for you.",
   "scheduling.method": "How to arrange the meeting",
   "scheduling.propose": "Propose times",
   "scheduling.sharePersonal": "Share a personal link",
-  "scheduling.selectOptions_one":
-    "Choose two or three options · {count} selected",
-  "scheduling.selectOptions_other":
-    "Choose two or three options · {count} selected",
-  "scheduling.blockingCalendars": "Other calendars that block time",
-  "scheduling.blockingHelp":
-    "The event calendar always blocks time. Private event names stay in your calendar.",
-  "scheduling.savedRequest":
+  "book.savedRequest":
     "Your meeting request is saved. Open it to check the invitation, change the time or cancel.",
   "scheduling.openMeeting": "View your meeting",
   "scheduling.emailReminder": "Email reminder one hour before",
-  "scheduling.reminderHelp":
-    "Applies to future meetings. Uses your connected mailbox and checks email permissions before sending.",
   "scheduling.reminder.pending": "Email reminder scheduled.",
   "scheduling.reminder.queued": "Email reminder queued for delivery.",
   "scheduling.reminder.unavailable":
@@ -1805,7 +1725,6 @@ export const en = {
   "scheduling.copyFallback": "Select and copy the link below.",
   "scheduling.preview": "Preview public page",
   "scheduling.settings": "Meeting settings",
-  "scheduling.save": "Save settings",
   "settings.tab.meetings": "Meetings",
   "settings.page.meetings.sub":
     "Working hours, calendars and booking preferences.",
@@ -1833,17 +1752,8 @@ export const en = {
   "scheduling.findNext": "Find next available times",
   "scheduling.noTimesHorizon":
     "No available times within the booking horizon. Review meeting settings and calendar events.",
-  "scheduling.allDayBlocks":
-    "All-day events marked busy also block available times.",
-  "scheduling.effectiveHours": "Bookable hours: {start} to {end} ({zone}).",
   "scheduling.bookingUntil": "Bookings available through {date}.",
-  "scheduling.outsideHorizon":
-    "This date is outside the booking horizon. Choose an earlier date or update meeting settings.",
   "scheduling.provider": "Calendar provider",
-  "scheduling.proposalChanged":
-    "This link keeps the details you already created. You can create a new link for your changes; the previous link remains valid until it expires.",
-  "scheduling.proposalUpdate": "Create updated proposal",
-  "scheduling.calendar": "Event calendar",
   "scheduling.bookContact": "Book a meeting",
   "scheduling.bookPickContact": "Search this company’s contacts",
   "scheduling.setupCalendar": "Choose your booking calendar",
@@ -1852,10 +1762,6 @@ export const en = {
 
   "scheduling.readOnlyCalendar":
     "Your calendar is connected for reading events. Reconnect it and allow invitation access to create, reschedule and cancel meetings.",
-  "scheduling.disconnectedCalendar":
-    "Connect this calendar before sending invitations. If you connected only your mailbox, connect the calendar separately.",
-  "scheduling.expiredCalendar":
-    "Your calendar connection has expired. Reconnect it to send invitations.",
   "scheduling.bookRefused":
     "An administrator must grant permission to book meetings.",
   "scheduling.meetingChanged":
@@ -1864,28 +1770,16 @@ export const en = {
     "Choose a calendar in Settings → Meetings to preview available times.",
   "scheduling.publicCalendarUnavailable":
     "Your booking page is active, but calendar invitations are unavailable. Open meeting settings to check the connection or pause the page.",
-  "scheduling.manageConnection": "Open calendar connections",
-  "scheduling.calendarConnected":
-    "Connected: {account}. Invitation access granted.",
   "scheduling.noWritableCalendar":
     "No editable calendar is available. Choose another provider or check your calendar permissions.",
   "scheduling.finishSetup":
     "Complete calendar setup in meeting settings to choose available times.",
   "scheduling.readOnlyBadge": "Read-only calendar",
-  "scheduling.accountName":
-    "The name on your booking page comes from Account settings.",
   "scheduling.linkNotCreated":
     "Save meeting settings to create your booking link.",
   "scheduling.calendarSetupNeeded": "Choose and save a calendar first.",
-  "scheduling.noCalendar":
-    "No calendar connected. Connecting your mailbox does not connect its calendar.",
-  "scheduling.hostName": "Your public name",
   "scheduling.subject": "Meeting title",
   "scheduling.location": "Location or meeting link",
-  "scheduling.duration": "Meeting length",
-  "scheduling.noticeHelp": "24 hours means at least one full day ahead.",
-  "scheduling.anchorBrand":
-    "Company name and logo are taken from your company profile.",
   "scheduling.locationExample": "https://meet.google.com/abc-defg-hij",
   "scheduling.locationHelp":
     "Paste your Google Meet, Zoom or Teams link, or enter a meeting address. This is where the meeting takes place, not your booking page.",
@@ -1893,13 +1787,10 @@ export const en = {
     "Preview only. Your booking page is live; no invitations are sent from this preview.",
   "scheduling.previewPaused":
     "Preview only. Public booking is paused. Visitors cannot book until you enable your link in Meetings settings.",
-  "scheduling.notice": "Minimum notice in hours",
-  "scheduling.buffer": "Buffer in minutes",
-  "scheduling.horizon": "Booking horizon in days",
 
   "scheduling.invite": "Send an invite",
   "scheduling.contact": "Who are you meeting?",
-  "scheduling.guestAgenda": "What would you like to discuss?",
+  "book.agenda": "What would you like to discuss?",
   "scheduling.agenda": "Message for your guest",
   "scheduling.chooseTime": "Choose a time",
   "scheduling.date": "Starting date",
@@ -1923,8 +1814,7 @@ export const en = {
   "scheduling.book": "Confirm meeting",
   "scheduling.pausedUnavailable":
     "{host} is not taking bookings through this page right now.",
-  "scheduling.unavailable":
-    "This booking page is unavailable. Contact your host.",
+  "book.unavailable": "This booking page is unavailable. Contact your host.",
   "scheduling.publicUrlMissing":
     "Set a public address for this installation before sharing external booking links.",
   "scheduling.new": "Book a meeting",
@@ -1950,13 +1840,22 @@ export const en = {
   "scheduling.attentionTitle": "The calendar did not accept the invitation",
   "scheduling.retryHelp":
     "Retry sends the same invitation again, so the guest does not get a second one.",
-  "scheduling.videoApp": "{app} · link in your invite",
+  "book.videoApp": "{app} · link in your invite",
+  "book.lengthChoice": "Meeting length",
+  "book.lengthNotOffered":
+    "This meeting length is no longer offered. Choose another length.",
   "scheduling.pickDay": "Choose a day",
   "scheduling.changeTime": "Change time",
   "scheduling.confirmAt": "Confirm {day}, {time}",
   "scheduling.suggestedTimes": "Suggested times",
-  "scheduling.noTimesDay": "No free times on this day. Choose another day.",
-  "scheduling.noTimesMonth": "No free times this month. Try the next month.",
+  "book.noTimesDay": "No free times on this day. Choose another day.",
+  "book.noTimesMonth": "No free times this month. Try the next month.",
+  "book.noTimes": "No available times in this window. Try another date.",
+  "book.rescheduleHelp":
+    "Your current time stays reserved until the calendar confirms the change.",
+  "book.meetingChanged":
+    "The meeting changed. Review the updated details and try again.",
+  "book.cancelConfirm": "The meeting will be canceled.",
   "conversationSuggestions.title": "On this conversation, not in Margince yet",
   "conversationSuggestions.add": "Add as contact",
   "conversationSuggestions.limited":
@@ -2043,6 +1942,14 @@ export const en = {
   "aiAdmin.activity": "Activity",
   "aiAdmin.model": "Model selected by policy",
   "aiAdmin.decisionSkip.unbound": "Decision model not used: none is bound.",
+  "aiAdmin.certification.certified": "{model} is certified for this task.",
+  "aiAdmin.certification.degraded":
+    "{model} is supported for this task with reduced quality.",
+  "aiAdmin.certification.notSupported":
+    "{model} is not certified for this task. It is still used, so check what it produces.",
+  "aiAdmin.certification.unrecorded":
+    "{model} has not been measured for this task with these settings.",
+  "aiAdmin.certification.stale": "The record predates the current prompts.",
   "aiAdmin.inputRate": "Input {input} per 1M tokens",
   "aiAdmin.rates": "Input {input} · Output {output} per 1M tokens",
 
@@ -2197,7 +2104,7 @@ export const en = {
   "brief.weekly.learnings.caveat":
     "These observations describe associations in recorded work; they do not establish what caused the outcome.",
   "brief.plan.open": "Open weekly plan",
-  "worklist.source.weekly_commitment": "Weekly commitment",
+  "worklist.source.weekly_commitment": "Commitment",
   "worklist.untitled.weekly_commitment": "Weekly commitment",
   "worklist.source.awaiting_reply": "Follow-up",
   "worklist.untitled.awaiting_reply": "Follow-up",
@@ -2320,10 +2227,12 @@ export const en = {
   "systemJob.capture_classify": "Mail sorting",
   "systemJob.capture_credential_backfill": "Mail connection update",
   "systemJob.capture_personal_purge": "Personal mail removal",
+  "systemJob.capture_purge_receipt": "Mail removal receipt",
   "systemJob.capture_part_slim_worker": "Mail storage cleanup",
   "systemJob.capture_trace_sweep": "Mail trace cleanup",
   "systemJob.capture_which_deal": "Deal question from mail",
   "systemJob.close_date": "Close date check",
+  "systemJob.installation_zone": "Timezone check",
   "systemJob.commission_accrual": "Commission accrual",
   "systemJob.partner_activation": "Partner activation",
   "systemJob.commitment_settle": "Commitment settlement",
@@ -2395,6 +2304,7 @@ export const en = {
   "systemJob.rbac_defaults": "Extension starting permissions",
   "systemJob.release_version": "Release check",
   "systemJob.report_schedule": "Scheduled reports",
+  "systemJob.chat_task_reader": "Chat and open tasks",
   "systemJob.request_settlement": "Request settlement",
   "systemJob.restore_drill": "Restore drill record",
   "systemJob.risk_verdict": "Deal risk check",
@@ -2405,6 +2315,7 @@ export const en = {
   "systemJob.sign_in_policy_read": "Sign-in policy read",
   "systemJob.stage_evidence": "Deal stage evidence",
   "systemJob.stage_evidence_read": "Deal stage evidence read",
+  "systemJob.stage_evidence_reread": "Deal stage evidence reread",
   "systemJob.suppression_journal_worker": "Erasure journal export",
   "systemJob.stored_object_reap_worker": "File storage cleanup",
   "systemJob.technical_backfill": "Technical lookup backlog",
@@ -2532,6 +2443,14 @@ export const en = {
   "history.reversal.undoneBy": "Undone by {undoer}",
   "history.reversal.unpaired": "Undoes an earlier change",
   "history.edge.marker": "Link",
+  "history.edge.linked": "{subject} linked {name} as {role}",
+  "history.edge.roleChanged":
+    "{subject} changed the role at {name} from {previous} to {role}",
+  "history.edge.roleSet": "{subject} changed the role at {name} to {role}",
+  "history.edge.changed": "{subject} changed {name}: {fields}",
+  "history.edge.unlinked": "{subject} unlinked {name}",
+  "history.edge.roleRemoved": "{subject} removed the role {previous} at {name}",
+  "history.edge.alsoChanged": "also changed: {fields}",
   "history.subject.viaClient": "{name}, via {client},",
   "history.subject.viaAgent": "{name}, via an agent,",
   "history.subject.viaConnector": "{name}, via a connector,",
@@ -2671,6 +2590,11 @@ export const en = {
   "history.field.stage_id": "Stage",
   "history.field.disqualify_reason_id": "Disqualify reason",
   "history.field.trigger": "Qualified by",
+  "history.field.role": "Role",
+  "history.field.is_current_primary": "Primary employer",
+  "history.field.employment_status": "Employment status",
+  "history.field.started_precision": "Start date precision",
+  "history.field.ended_precision": "End date precision",
   "history.field.win_probability_override": "Probability set on the deal",
   "history.field.win_probability_set_by": "Probability set by",
   "history.field.fx_rate_date": "FX rate date",
@@ -2729,6 +2653,10 @@ export const en = {
   "history.field.qualifying_event_retracted": "Recorded exchange withdrawn",
   "history.field.acquisition_request_retracted":
     "Acquisition request withdrawn",
+  "history.field.impersonation_warning_cleared":
+    "Impersonation warning cleared",
+  "history.field.impersonation_warning_carried":
+    "Impersonation warning kept from merged contact",
   "history.field.reason": "Reason",
   "history.field.recorded_at_level": "Recorded at level",
   "history.field.relationship_types": "Relationship types",
@@ -2769,6 +2697,10 @@ export const en = {
   "history.value.meeting_status.no_show": "No-show",
   "history.value.meeting_status.canceled": "Canceled",
   "history.value.relationship_mark.vendor_marketing": "Vendor marketing",
+  "history.value.impersonation.punycode_domain": "Coded mail domain",
+  "history.value.impersonation.display_name_other_domain":
+    "Other domain in sender name",
+  "history.value.impersonation.unrecorded": "Sign not recorded",
 
   "confidence.high": "high",
   "confidence.med": "medium",
@@ -2799,8 +2731,8 @@ export const en = {
   "shell.companyLogoAria": "{company} home, powered by Margince",
   "shell.poweredBy": "Powered by Margince",
   "shell.searchEverything": "Search or ask Margince",
-  "shell.breadcrumbAria": "Breadcrumb",
   "shell.back": "Back",
+  "shell.backToSetup": "Back to setup",
   "shell.license.none": "No license",
   "shell.license.refused": "License refused",
   "shell.signOutAria": "Sign out",
@@ -2909,6 +2841,8 @@ export const en = {
     "Search contacts, companies, deals, projects, products, activities, leads…",
   "search.prompt": "Enter a search term.",
   "search.empty": "No matches for “{q}”.",
+  "search.timedOut":
+    "{kind} could not be searched for this word in time. Add another word to search them.",
   "search.nearMatches": "Did you mean:",
   "search.group.contact": "Contacts",
   "search.group.company": "Companies",
@@ -2923,7 +2857,6 @@ export const en = {
   "search.group.showAllNamed": "Show all {group}",
   "search.kind.contact": "Contact",
   "search.kind.company": "Company",
-  "search.kind.partnerCompany": "Partner company",
   "search.kind.deal": "Deal",
   "search.kind.project": "Project",
   "search.kind.product": "Product",
@@ -3068,14 +3001,14 @@ export const en = {
   "board.count_other": "{count} deals",
   "board.weightedLabel": "weighted",
   "board.ratesOn": "Exchange rates {date}",
-  "board.unpriced_one": "{count} not priced",
-  "board.unpriced_other": "{count} not priced",
+  "coverage.noRate_one": "{count} deal has no exchange rate{currencies}",
+  "coverage.noRate_other": "{count} deals have no exchange rate{currencies}",
+  "coverage.noValue_one": "{count} deal has no value",
+  "coverage.noValue_other": "{count} deals have no value",
+  "coverage.partial": "Partial",
+  "coverage.partialTip": "Partial total: it leaves out these deals.",
   "board.totalsTip":
     "{total} open, {weighted} weighted by each deal’s probability.",
-  "board.unpricedTip_one":
-    "{count} deal has no price and is left out of both totals.",
-  "board.unpricedTip_other":
-    "{count} deals have no price and are left out of both totals.",
   "board.convertedTip": "Converted at exchange rates as of {date}.",
   "board.matchesIn_one": "{count} result in {columns}",
   "board.matchesIn_other": "{count} results in {columns}",
@@ -3350,6 +3283,7 @@ export const en = {
   "partner.company": "Company",
   "partner.certStatus": "Certification status",
   "partner.certStatusAll": "All statuses",
+  "partner.listEmptyNote": "Open a company and choose {more} → {setUp}.",
   "partner.marginTier": "Margin tier",
   "partner.marginTierHint":
     "The share the partner earns on each won deal they sourced. Intro: they only introduced the client. Active collaboration: the deal was worked together. Partner closed: they sold it themselves. Leave it unset when their agreement pays differently.",
@@ -3437,6 +3371,16 @@ export const en = {
   "rel.add": "Add relationship",
   "rel.seatOnDeal": "Add to a deal",
   "rel.addStakeholder": "Add stakeholder",
+  "rel.stakeholderOffer.title": "Add this mail’s contacts to the deal?",
+  "rel.stakeholderOffer.body":
+    "As stakeholders, their next mail goes onto the deal by itself. Untick anyone who is not part of it.",
+  "rel.stakeholderOffer.legend": "Contacts on this mail",
+  "rel.stakeholderOffer.confirm": "Add to deal",
+  "rel.stakeholderOffer.decline": "Not now",
+  "rel.stakeholderOffer.noneTicked": "Tick at least one contact to add.",
+  "rel.stakeholderOffer.added": "Added to the deal",
+  "rel.stakeholderOffer.unread":
+    "The mail is on the deal. Margince could not read who is on it, so it offers nobody to add.",
   "rel.dealStakeholders": "Stakeholders",
   "rel.dealStakeholdersEmpty": "No stakeholders on this deal",
   "rel.employerUnavailable":
@@ -3484,6 +3428,7 @@ export const en = {
   // fetch and a bug in our own code both report in wording nobody authored for
   // a reader, so the screen states the fact it can stand behind and stops.
   "common.errorNoCause": "The request failed. No cause reported.",
+  "common.errorReference": "Reference",
   "common.assistantUnavailable":
     "The AI did not answer. Try again, or ask your admin to check Settings → AI.",
   "common.providerOutOfCredit":
@@ -3508,6 +3453,8 @@ export const en = {
   // about. Two sentences, no dash (VOICE-RULE-5).
   "common.individualPerformanceOff":
     "An administrator switched off individual performance. You can see your own figures. A figure is withheld when fewer than two other members make it up, or when taking another team’s total from it would leave fewer than two. A forecast is withheld in full if any of its groups would show one colleague’s figures.",
+  "common.ownerNotMeasurable":
+    "This owner’s figures are outside what you may measure. Remove the owner filter, or ask an administrator to widen your reach.",
   "common.permissionDenied":
     "You do not have permission for this action. Ask an administrator, or the user who shared this record, to extend your access.",
   // The licensing ceiling, decided before any role is consulted: a read seat is
@@ -3552,7 +3499,6 @@ export const en = {
   // a destination.
   "ref.nameLoadFailed": "Name did not load",
   "ref.memberLeft": "{name} (left)",
-  "ref.leadUnnamed": "Unnamed lead",
   "roster.failedUsers": "Colleagues did not load.",
   "roster.failedTeams": "Teams did not load.",
   "owner.rosterFailed": "Colleagues did not load. Reload the page to pick one.",
@@ -3898,6 +3844,8 @@ export const en = {
   "consent.reason.no_consent": "No consent recorded",
   "consent.reason.existing_customer":
     "They bought from you and were told then that they may object to advertising",
+  "consent.reason.opt_out_allowed":
+    "Advertising is allowed here until they refuse, and no refusal is on file",
   "consent.reason.qualifying.inbound_message": "They wrote to you on {date}",
   "consent.reason.qualifying.inquiry": "They made an inquiry on {date}",
   "consent.reason.qualifying.in_person":
@@ -4001,6 +3949,7 @@ export const en = {
   "co.overview.for": "for {name}",
   "co.overview.noDate": "No date",
   "co.overview.allDeals": "All deals",
+  "co.overview.allContacts": "All contacts",
   "co.overview.noWork": "No open deal or project",
   "co.overview.project": "Project",
   "co.overview.ends": "ends {date}",
@@ -4157,8 +4106,10 @@ export const en = {
   "co.health.reason.lastMetToday": "Last met them today.",
   "co.health.reason.lastMet_one": "Last met them {days} day ago.",
   "co.health.reason.lastMet_other": "Last met them {days} days ago.",
-  "co.health.reason.singleThreaded":
+  "co.health.reason.singleThreaded_one":
     "In contact, but one contact carries the whole company relationship.",
+  "co.health.reason.singleThreaded_other":
+    "In contact, but only {count} contacts carry the whole company relationship.",
   "co.health.reason.severalContacts_one": "{count} contact here is in touch.",
   "co.health.reason.severalContacts_other":
     "{count} contacts here are in touch.",
@@ -4484,6 +4435,9 @@ export const en = {
   "finance.moreInvoices": "More invoices in the accounting system",
   "finance.syncedFrom": "From {provider} · synced {when}",
   "finance.fromNeverSynced": "From {provider} · not yet synced",
+  "finance.syncedFromAccounting": "From your accounting system · synced {when}",
+  "finance.fromAccountingNeverSynced":
+    "From your accounting system · not yet synced",
   "finance.status.draft": "Draft",
   "finance.status.open": "Open",
   "finance.status.partiallyPaid": "Partially paid",
@@ -4874,10 +4828,15 @@ export const en = {
   "approval.kind.site_lead": "Add contact from website",
   "approval.kind.capture_counterparty": "Add contact from mail",
   "approval.kind.ownership_transfer": "Hand over a record",
+  "approval.kind.edit_access": "Give edit access",
   "approval.kind.contact_share": "Share a contact",
   "approval.kind.legal_review_request": "Legal review requested",
   "approval.kind.task_due_date": "Check a due date",
   "approval.kind.employer_change": "Check a new employer",
+  "approval.kind.deal_proposal_stage": "Move the deal to the proposal stage",
+  "approval.kind.dealProposalStageNamed": "Move to {stage}?",
+  "approval.proposalStageAsked":
+    "A proposal went out on {deal}. Move the deal to “{stage}”?",
   "approval.kind.company_name_promotion": "Rename company",
   "approval.kind.vcard_create": "Create contact from card",
   "approval.kind.lifecycle_change": "Lifecycle stage",
@@ -4948,6 +4907,7 @@ export const en = {
   "approval.field.signature": "Signature line",
   "approval.field.to_company": "New employer",
   "approval.field.from_company": "Employer now",
+  "approval.field.skipped_stages": "Skips",
   "approval.field.from_address": "Sent from",
   "approval.field.sender_check": "Sender check",
   "approval.senderCheck.authenticated":
@@ -5016,7 +4976,6 @@ export const en = {
   "co.deals.col.close": "Close",
   "co.deals.col.status": "Status",
   "co.rail.contacts.empty": "No contacts yet.",
-  "co.rail.contacts.add": "Add contact",
 
   "co.commercial.title": "Commercial",
   "linkedinImport.title": "LinkedIn connections",
@@ -5206,6 +5165,28 @@ export const en = {
   "compose.reason.membersOnly": "Held: mail between colleagues",
   "compose.reason.noCounterparty": "Held: no counterparty",
   "compose.audience": "Change visibility",
+  "activity.audience.noteTitle": "Who may read this note?",
+  "activity.audience.noteLegend": "Note visibility",
+  "activity.audience.noteScope":
+    "Applies to this note only, not to the records it is filed on.",
+  "activity.audience.callTitle": "Who may see this call?",
+  "activity.audience.callLegend": "Call visibility",
+  "activity.audience.callScope":
+    "Applies to this call only, not to the records it is filed on.",
+  "activity.audience.meetingTitle": "Who may see this meeting?",
+  "activity.audience.meetingLegend": "Meeting visibility",
+  "activity.audience.meetingScope":
+    "Applies to this meeting only, not to the records it is filed on.",
+  "activity.audience.taskTitle": "Who may see this task?",
+  "activity.audience.taskLegend": "Task visibility",
+  "activity.audience.taskScope":
+    "Applies to this task only, not to the records it is filed on.",
+  "activity.audience.workspaceHint":
+    "Anyone who can open the records this is filed against can read it.",
+  "activity.audience.participantsHint":
+    "Only the people on it can read its details. Others see only that it happened that day.",
+  "activity.audience.selectedHint":
+    "Only the people and teams you name, plus anyone already on it.",
   "compose.audienceTitle": "Who may read this message?",
   "compose.audienceLegend": "Message visibility",
   // The canonical email row and its detail. "Team" never means the whole
@@ -5314,6 +5295,7 @@ export const en = {
   "email.thread.details": "Details",
   "email.thread.textForwarded":
     "The text below is the forwarded mail, not words the sender wrote.",
+  "email.thread.noText": "This message has no text.",
   "email.thread.textPartial":
     "Part of the text of this mail could not be read.",
   "email.thread.textUnassessed": "Email text not verified",
@@ -5483,6 +5465,12 @@ export const en = {
   "co.domainContacts.changed":
     "The list changed while it was open. Check the ticks and link again.",
   "co.domainContacts.dismiss": "Not now",
+  "company.duplicates.entry_one": "Possible duplicate ({count})",
+  "company.duplicates.entry_other": "Possible duplicates ({count})",
+  "company.duplicates.title": "Possible duplicates",
+  "company.duplicates.lead":
+    "These companies look like this one. Open one to compare.",
+  "company.duplicates.created": "A company with this name already exists.",
   "co.domainContacts.link_one": "Link {count} contact",
   "co.domainContacts.link_other": "Link {count} contacts",
   "co.domainContacts.linkNone": "Link contacts",
@@ -5909,6 +5897,9 @@ export const en = {
   "lead.source.referral": "Referral",
   "lead.source.import": "Import",
   "lead.source.crawl": "Web research",
+  "lead.source.api": "Integration",
+  "lead.source.automation": "Automation",
+  "lead.source.capture": "Captured from a conversation",
   "lead.source.siteread": "From company website",
   "lead.source.unknown": "Unknown source",
   "leadSources.removeOnlyTitle":
@@ -5997,6 +5988,8 @@ export const en = {
   "lead.bulkAssignedDone_other": "{count} leads assigned to {owner}.",
   "lead.bulkDisqualifiedDone_one": "{count} lead disqualified.",
   "lead.bulkDisqualifiedDone_other": "{count} leads disqualified.",
+  "lead.bulkAssignTitle_one": "Assign this lead to {owner}?",
+  "lead.bulkAssignTitle_other": "Assign {count} leads to {owner}?",
   "lead.bulkFailed": "{count} not applied:",
   "lead.bulkFailedRow": "not saved",
   "lead.bulkOutcomeConflict": "changed by someone else in the meantime",
@@ -6337,6 +6330,9 @@ export const en = {
   "deal.committee.missing.secondContact": "Only one contact. Add a second one.",
   "deal.committee.missing.secondEngaged":
     "Fewer than two engaged. Reach a second contact.",
+  "deal.committee.missing.anotherContact": "Too few contacts. Add another one.",
+  "deal.committee.missing.anotherEngaged":
+    "Too few engaged. Reach another contact.",
   "deal.committee.foot": "{named} named · {engaged} of {named} engaged",
   "deal.brief.title": "What this deal is",
   "deal.brief.byModel": "Written by Margince from the customer’s email",
@@ -6354,6 +6350,8 @@ export const en = {
   "deal.editDetails": "Edit details",
   "deal.meetNeedsCompany":
     "This deal has no company yet. Add one under Edit details to book a meeting.",
+  "deal.meetCompanyWithheld":
+    "The company on this deal is not shared with you, so a meeting cannot be booked from here.",
   "deal.committee.card": "Committee",
   "deal.committee.change": "Change or remove stakeholders",
   "deal.links.card": "Links",
@@ -6424,6 +6422,27 @@ export const en = {
     "Clear the figure to follow the stage again.",
   "deal.winProbability.reason.stageNamed": "the stage {name}",
   "deal.winProbability.reason.stageUnnamed": "the deal’s stage",
+  "deal.winChance.typed": "Typed at {percent} on {stage}.",
+  "deal.winChance.evidence_one":
+    "{count} deal from here has closed, {percent} won.",
+  "deal.winChance.evidence_other":
+    "{count} deals from here have closed, {percent} won.",
+  "deal.winChance.learningOff": "Learning from closed deals is switched off.",
+  "deal.winChance.signal.quiet": "quiet for {days} days",
+  "deal.winChance.signal.close_pushed": "the close date was pushed",
+  "deal.winChance.signal.no_next_step": "no next step",
+  "deal.winChance.signal.stuck": "stuck for {days} days",
+  "deal.winChance.effect.lowers_one":
+    "{signal} lowers it (learned from {count} closed deal).",
+  "deal.winChance.effect.lowers_other":
+    "{signal} lowers it (learned from {count} closed deals).",
+  "deal.winChance.effect.raises_one":
+    "{signal} raises it (learned from {count} closed deal).",
+  "deal.winChance.effect.raises_other":
+    "{signal} raises it (learned from {count} closed deals).",
+  "deal.winChance.effect.halved":
+    "{signal} halves it, because too few closed deals show the real effect yet.",
+  "deal.winChance.result": "The win chance is {percent}.",
   "deal.winProbability.band.90_plus": "90% or more",
   "deal.winProbability.band.60_89": "60 to 89%",
   "deal.winProbability.band.30_59": "30 to 59%",
@@ -6765,6 +6784,12 @@ export const en = {
   "deal.movePipelinePick": "Pick a pipeline",
   "deal.movePipelineDone": "Moved to {pipeline}.",
   "deal.reopen": "Reopen",
+  "deal.marginceLine.closed": "Margince closed this deal as lost on {date}.",
+  "deal.marginceLine.opened": "Margince opened this deal on {date}.",
+  "deal.marginceLine.reopened": "Margince reopened this deal on {date}.",
+  "deal.marginceLine.undoOff":
+    "This close can no longer be undone, because the deal changed since. Reopen it instead.",
+  "deal.note.undoAll": "Undo all",
   "deal.reopenPick": "Move this deal back to an open stage",
   "deal.reopenConfirm": "Reopen",
   "deal.correctCloseDay": "Correct close day",
@@ -6839,15 +6864,6 @@ export const en = {
   "deals.bulkStage": "Move to stage",
   "deals.bulkStagePick": "Pick a stage",
   "deals.bulkMove": "Move",
-  "deals.bulkMoved_one": "{count} deal moved to {stage}.",
-  "deals.bulkMoved_other": "{count} deals moved to {stage}.",
-  "deals.bulkAlreadyThere_one": "{count} was already in {stage}.",
-  "deals.bulkAlreadyThere_other": "{count} were already in {stage}.",
-  "deals.bulkNothingToMove_one": "The selected deal is already in {stage}.",
-  "deals.bulkNothingToMove_other":
-    "All {count} selected deals are already in {stage}.",
-  "deals.bulkFailed": "{count} not applied:",
-  "deals.bulkFailedRow": "could not be saved",
   "bulk.selected_one": "{count} selected",
   "bulk.selected_other": "{count} selected",
   "bulk.selectRow": "Select {name}",
@@ -6961,6 +6977,12 @@ export const en = {
   "bulk.stateDone": "Done",
   "bulk.stateOpen": "Open",
   "bulk.reason.no_change_done": "Already in that state",
+  "bulk.titleMoveStage": "Move the selected {unit} to {stage}?",
+  "bulk.confirmMoveStage": "Move",
+  "bulk.stateStageUnnamed": "A stage",
+  "bulk.reason.no_change_stage": "Already on this stage",
+  "bulk.refusal.deal_closed": "A won or lost deal moves on its own",
+  "bulk.refusal.stage_not_in_pipeline": "The stage belongs to another pipeline",
   "worklist.bulk.selectAll_one": "Select the {count} item shown",
   "worklist.bulk.selectAll_other": "Select all {count} items shown",
   "worklist.bulk.select": "Select",
@@ -7065,7 +7087,6 @@ export const en = {
   "decision.reject": "Reject",
   "decision.draftSubject": "Subject",
   "decision.draftBody": "Message",
-  "decision.dismiss": "Dismiss",
   "decision.versionSkew":
     "This record changed after it was staged. Stage it again before deciding.",
   "decision.fxRateMoved":
@@ -7324,15 +7345,11 @@ export const en = {
   "plan.contract.unwritten": "Not written yet",
   "plan.contract.nothingToName": "Nothing to name",
   "plan.contract.edit": "Edit",
-  "plan.contract.save": "Save",
-  "plan.contract.cancel": "Cancel",
   "plan.contract.crowded": "Week already full",
   "plan.contract.crowdedBody":
-    "{committed} items are already booked and {commitments} commitments are planned. Something will not fit.",
+    "Already booked: {committed}. Commitments planned: {commitments}. Something will not fit.",
   "plan.help.ask": "Ask for help",
   "plan.help.edit": "Edit request",
-  "plan.help.send": "Send",
-  "plan.help.cancel": "Cancel",
   "plan.help.asked": "Request: {text}",
   "plan.help.waiting": "Help requested · awaiting a response",
   "plan.new.label": "Commitment",
@@ -7685,7 +7702,6 @@ export const en = {
     "A .vcf file, the contact export format of phones and mail clients, or a photo of one or more business cards. A vCard comes from its owner, so imported vCards skip approval. A photo is read by a model and can be wrong, so every card read from a photo waits for your approval.",
   "vcardImport.choose": "Select file or photo",
   "vcardImport.working": "Reading cards…",
-  "vcardImport.back": "Back to contacts",
   "vcardImport.noCards": "The file contains no cards.",
   "vcardImport.failed": "The cards were not imported.",
   "vcardImport.outcome.created": "Added",
@@ -7698,6 +7714,10 @@ export const en = {
   "vcardImport.field.kept": "Record value kept",
   "vcardImport.field.notInCard": "Not in the card",
   "vcardImport.next": "Next vCard",
+  "vcardImport.forCompany": "Contacts created from these cards work for",
+  "vcardImport.companyPhotoTitle": "Photos are not filed under a company",
+  "vcardImport.companyPhoto":
+    "A card read from a photo waits for your approval and is filed under no company. Choose a .vcf file here, or import the photo from the contacts list.",
   "create.quickCapture": "Quick capture",
   "create.quickCaptureSaved": "{name} saved",
   "create.company": "New company",
@@ -7737,7 +7757,7 @@ export const en = {
   "create.city": "City",
   "create.region": "State or region",
   "create.postalCode": "Postal code",
-  "create.country": "Country code (ISO 3166)",
+  "create.country": "Country",
   "create.companyName": "Company",
   "create.companyPicked": "Adds the contact to this existing company.",
   "create.companyNew":
@@ -7753,13 +7773,16 @@ export const en = {
     "This value was erased at its owner’s request and cannot be stored again.",
   "create.linkedinMalformed":
     "This is not a link. Paste the address of the LinkedIn page.",
+  "create.domainMalformed":
+    "This is not a domain. Enter one such as example.com.",
+  "create.parentCompanyBelow": "{name} is already below this company.",
+  "create.parentCompanySelf":
+    "A company cannot be its own parent. Choose another.",
   "create.linkedinNotLinkedin": "Enter a link to a page on linkedin.com.",
   "create.linkedinNotProfile":
     "Enter a link to someone’s own profile, such as linkedin.com/in/name.",
   "create.dateRangeReversed":
     "The end date is before the start date. Choose a later end date.",
-  "create.countryCodeInvalid":
-    "Enter the country as its two-letter code, such as DE or US.",
   "create.referenceNotFound":
     "This record no longer exists, or you cannot see it.",
   "create.currency": "Currency",
@@ -7872,9 +7895,7 @@ export const en = {
   "evidence.fromProvider": "from provider",
   "evidence.confirm": "Confirm",
   "evidence.correct": "Correct",
-  "evidence.save": "Save",
   "evidence.saving": "Saving…",
-  "evidence.cancel": "Cancel",
   "evidence.correctedValue": "Corrected value",
   "evidence.confirmedAt": "Confirmed by a person {when}",
   "evidence.humanSet": "Set by a person",
@@ -7933,6 +7954,8 @@ export const en = {
   "chatCapture.readBadge": "Copied from the screenshot by AI",
   "chatCapture.channel": "Chat app",
   "chatCapture.file": "File on this contact",
+  "chatCapture.fileOnLead": "File on this lead",
+  "chatCapture.fileOnDeal": "File on this deal",
   "chatCapture.fileFailed": "The chat could not be filed",
 
   // Adding one. The "About" wording is doing real work: it decides whether the
@@ -8063,6 +8086,11 @@ export const en = {
   "files.deleteTitle": "Delete {name}?",
   "files.deleteBody":
     "The file is removed from this deal, and buyers no longer see it in any Deal Room. The room entry stays until you remove it from the room.",
+  "files.edit": "Edit",
+  "files.editTitle": "Edit {name}",
+  "files.editState": "State",
+  "files.save": "Save",
+  "files.deleteBodyRecord": "The file is removed from this record’s documents.",
   "files.showHidden": "Show hidden files",
   "files.hideHidden": "Hide hidden files",
   "dealfiles.origin.from": "From {who}",
@@ -8200,6 +8228,13 @@ export const en = {
   "handover.withdraw": "Withdraw request",
   "handover.sent": "Request sent to {owner}",
   "handover.withdrawn": "Request withdrawn",
+  // Asking a record's owner for edit access; the owner stays the owner.
+  "editAccess.ask": "Ask {owner} for edit access",
+  "editAccess.requested":
+    "You asked {owner} for edit access. The request stays open until {date}.",
+  "editAccess.withdraw": "Withdraw edit access request",
+  "editAccess.sent": "Edit access requested from {owner}",
+  "editAccess.withdrawn": "Edit access request withdrawn",
   // The owner offering a record to a colleague, from the access panel.
   "handover.offer": "Hand over to…",
   "handover.offerTo": "Hand over to",
@@ -8545,6 +8580,8 @@ export const en = {
   "sendPermission.footer.phone": "a phone number",
   "sendPermission.footer.web": "a website or social link",
   "sendPermission.footer.privacy": "privacy contact information",
+  "sendPermission.footer.advertisement":
+    "the line that identifies it as an advertisement",
   "sendPermission.footer.advertiser": "advertiser contact information",
   "sendPermission.footer.identity": "the company name and address",
   "sendPermission.footer.unknown": "some company footer text",
@@ -8554,6 +8591,7 @@ export const en = {
   "sendPermission.footer.objection": "opt-out instructions",
   "sendPermission.footer.privateLink": "a private opt-out link",
   "sendPermission.footer.publicLink": "a working opt-out link",
+  "sendPermission.footer.unsubscribeLink": "an opt-out link for this address",
   "sendPermission.reason.lawfulBasisUnconfirmed":
     "No lawful basis is recorded for this contact, and the warning was not confirmed before sending.",
   "sendPermission.appliesTo": "This applies to {address}.",
@@ -8570,6 +8608,14 @@ export const en = {
   "sendPermission.appliesToSome_other":
     "This applies to {count} of {total} recipients.",
   "sendPermission.checking": "Checking whether this message can be sent…",
+  "countryQuestion.title": "Which country is {address} in?",
+  "countryQuestion.body":
+    "Some countries allow advertising until the contact unsubscribes. This contact has no country, so Margince asks for the consent it needs everywhere else. Your answer is saved on the contact.",
+  "countryQuestion.label": "Country",
+  "countryQuestion.none": "Choose a country",
+  "countryQuestion.save": "Save country",
+  "countryQuestion.alreadySet":
+    "This contact has a country now. The check was asked again.",
   "lawfulBasis.title": "No valid basis recorded",
   "lawfulBasis.body":
     "No valid basis under Vietnamese law is recorded for this contact: neither their consent nor a case where the law allows processing without it. Sending is at your own risk.",
@@ -8768,6 +8814,9 @@ export const en = {
   "compose.mailboxNotSendCapable":
     "Your mailbox is connected for capture only, without permission to send. Reconnect it and approve sending; a mailbox connected before sending existed cannot be upgraded in place.",
   "compose.mailboxNotSendCapableGoto": "Reconnect your mailbox",
+  "compose.mailboxNotConnected":
+    "No mailbox is connected. Connect one to send from Margince.",
+  "compose.mailboxNotConnectedGoto": "Connect a mailbox",
   "compose.sharedUnsubscribeToken":
     "A message with an unsubscribe link goes to one recipient at a time, because the link is that recipient’s consent record. Send it once per recipient, with no Cc.",
   "compose.relinkTitle": "Relink this activity",
@@ -8793,6 +8842,29 @@ export const en = {
   "tasks.completeNamed": "Mark {subject} done",
   "tasks.snooze": "Snooze 1 day",
   "tasks.moveTo": "Move to",
+  "tasks.move": "Move",
+  "tasks.moveAnyway": "Move anyway",
+  "tasks.moveSame": "The task is already due then. Pick another day or time.",
+  "tasks.movePastTitle": "Date in the past",
+  "tasks.movePastBody": "Moving the task to this date makes it overdue.",
+  "tasks.movedTo": "Moved to {when}",
+  "tasks.moveUndoFailed": "Task was not moved back. Retry.",
+  "tasks.remind.menu": "Remind me",
+  "tasks.remind.inAnHour": "In 1 hour",
+  "tasks.remind.tomorrowMorning": "Tomorrow morning",
+  "tasks.remind.beforeDue": "1 hour before it is due",
+  "tasks.remind.pick": "Pick a time",
+  "tasks.remind.remove": "Remove reminder",
+  "tasks.remind.current": "Reminder set for {when}",
+  "tasks.remind.set": "Reminder set for {when}.",
+  "tasks.remind.removed": "Reminder removed.",
+  "tasks.remind.failed": "The reminder was not saved. Try again.",
+  "tasks.remind.pickTitle": "Remind me at",
+  "tasks.remind.day": "Day",
+  "tasks.remind.time": "Time",
+  "tasks.remind.save": "Set reminder",
+  "tasks.remind.needsTime": "Enter a day and a time.",
+  "tasks.remind.past": "Pick a time that is still ahead.",
   "tasks.log.action": "Log what happened",
   "tasks.log.record": "Which record is this activity for?",
   "tasks.log.chooseRecord": "Choose another record",
@@ -8815,6 +8887,7 @@ export const en = {
   "tasks.isDone": "Completed",
   "tasks.isOpen": "Open",
   "tasks.logged": "Logged",
+  "tasks.heldBy": "Held by",
   "tasks.origin.no_activity_reminder":
     "Created by the no-activity reminder: nothing was logged on this record for its set number of days. Get in touch, then mark the task done.",
   "tasks.origin.check_in_cadence":
@@ -8851,7 +8924,6 @@ export const en = {
   "analytics.count": "Open deals",
   "analytics.unweighted": "Deal value",
   "analytics.weighted": "Probability-adjusted value",
-  "analytics.priced": "{priced} of {total} priced",
   "analytics.planNote":
     "The executed plan and the rows this number reconciles to",
   "analytics.reportDeals": "Open deals by stage",
@@ -8945,7 +9017,7 @@ export const en = {
   "analytics.prospect.upcomingTitle": "Meetings coming up",
   "analytics.prospect.cohortTitle": "What happened to your handoffs",
   "analytics.prospect.cohortPeriods":
-    "Shown for a week or a month. Choose one of those periods to see it.",
+    "Not shown for this fiscal quarter or a custom interval. Choose another period to see it.",
   "analytics.prospect.cohortCaption_one":
     "{count} handoff you submitted {period}, as it stands now",
   "analytics.prospect.cohortCaption_other":
@@ -9339,7 +9411,6 @@ export const en = {
   "analytics.myPipeline": "My open deals",
   "analytics.sdrLeads": "My leads this month",
   "analytics.sdrReading.leads_promoted": "Leads qualified",
-  "analytics.sdrReading.leads_qualified": "Leads qualified",
   "analytics.sdrReading.lead_first_response":
     "First reply time, answered leads",
   "analytics.sdrReading.leads_awaiting_response":
@@ -9397,7 +9468,6 @@ export const en = {
   "analytics.forecastDeals_other": "{count} deals",
   "analytics.forecastNoAmount": "No amount",
   "analytics.forecastWeighted": "{amount} weighted",
-  "analytics.forecastPriced": "{priced} of {count} priced",
   "analytics.readingNone": "None",
   "analytics.readingLoading": "Loading",
   "analytics.readingUnavailable": "Unavailable",
@@ -9418,7 +9488,7 @@ export const en = {
   "analytics.share.linkWarning":
     "The link is shown only once. Copy it now; it cannot be retrieved later.",
   "analytics.share.leaveWarning":
-    "Leaving without copying discards the link, and a new one must be created.",
+    "If you leave without copying, the link cannot be shown again. It stays open until it expires, you close it under Shared links, or you lose forecast access.",
   "analytics.share.copy": "Copy link",
   "analytics.share.copied": "Copied",
   "analytics.share.copyFailed": "Select the link above and copy it manually.",
@@ -9624,6 +9694,7 @@ export const en = {
   "explain.col.stage": "Stage",
   "explain.col.owner": "Owner",
   "explain.col.pipeline": "Pipeline",
+  "explain.col.inCurrency": "{label} ({currency})",
 
   "settings.profileTitle": "Profile",
   "unsaved.title": "Discard unsaved changes?",
@@ -9746,6 +9817,8 @@ export const en = {
   "delivery.scope.combined": "My work and selected team",
   "delivery.teamHelp":
     "Choose a team before enabling its view. Access is checked again when mail is sent.",
+  "delivery.noTeam": "No team",
+  "delivery.teamGone": "This team no longer exists. Choose another.",
   "delivery.weekday1": "Monday",
   "delivery.weekday2": "Tuesday",
   "delivery.weekday3": "Wednesday",
@@ -10545,7 +10618,6 @@ export const en = {
   "settings.tierWait": "Enrichment from the web: waits in Approvals.",
   "settings.tierAdvance":
     "Advance or close a deal, or file activities under a project: runs immediately if the agent has that permission.",
-  "settings.locked": "Locked",
   "settings.purposes": "Consent purposes",
   "settings.purposesSub":
     "What this installation asks consent for, and which purposes need double opt-in.",
@@ -10986,10 +11058,16 @@ export const en = {
     "“{value}” cannot be written: this field is no longer active.",
   "import.reason.id_not_a_company_id":
     "“{value}” is not a company id. Export the companies to get theirs, or leave the column empty to import this row as a new company.",
+  "import.reason.id_not_a_record_id":
+    "“{value}” is not a record id. Export the list to get the ids, or leave the column empty to import this row as a new record.",
+  "import.reason.id_record_not_visible":
+    "No record you can see has the id “{value}”. It may have been archived or merged away, or come from a different system.",
+  "import.reason.ref_taken_by_another_record":
+    "The reference “{ref}” already stands for another record from an earlier import, so this row is not applied. Use a new reference for this row or fix the id column.",
   "import.reason.id_not_visible":
     "No company you can see has the id “{value}”. It may have been archived or merged away, or come from a different system.",
   "import.reason.id_on_non_company":
-    "Only a company row can name an “{column}”. A {object} row is identified by its own key.",
+    "Only a company, contact, lead or deal row can name an “{column}”. A {object} row is identified by its own key.",
   "import.reason.link_ambiguous":
     "More than one company is named “{name}”, so which one employs this contact is a question only a human can answer.",
   "import.reason.link_ambiguous_dropped":
@@ -11176,8 +11254,6 @@ export const en = {
   "settings.resetDataConfirmName": "Type this company name:",
   "settings.resetDataResult":
     "Cleared: tables {tables}, job rows {jobs}, event streams {streams}, cache keys {keys}, stored files {objects}.",
-  "settings.resetDataDrainWarning":
-    "A background job was running when the reset began. It fails against the deleted data and logs one harmless error.",
 
   "settings.jobs": "Background jobs",
   "settings.jobsSub": "Queued background jobs and failed jobs by owner.",
@@ -11369,6 +11445,40 @@ export const en = {
   "settings.recoveryHealth": "Restore drills",
   "settings.recoveryHealthSub":
     "When the restore from backup was last rehearsed, and how long it took.",
+  "settings.vacuumHealth": "Table space",
+  "settings.vacuumHealthSub":
+    "Tables whose files hold much space without live rows. Margince does not run the fix itself.",
+  "vacuumHealth.adminOnly":
+    "Table space covers the whole installation and needs a permission your role does not have.",
+  "vacuumHealth.scope":
+    "Only the table’s own file is counted. Its indexes and the separate store for long values (TOAST) are not.",
+  "vacuumHealth.thresholds":
+    "A table is listed when at least {percent} of its file, and at least {size}, holds no live row. The sizes are estimates from the database statistics.",
+  "vacuumHealth.empty":
+    "No table has that much space without live rows. There is nothing to run.",
+  "vacuumHealth.unmeasured_one":
+    "{count} large table has no statistics yet, so it has no estimate. The database collects them when it next analyzes the table.",
+  "vacuumHealth.unmeasured_other":
+    "{count} large tables have no statistics yet, so they have no estimate. The database collects them when it next analyzes each table.",
+  "vacuumHealth.col.table": "Table",
+  "vacuumHealth.col.size": "Size",
+  "vacuumHealth.col.waste": "Space without live rows",
+  "vacuumHealth.col.run": "What to run",
+  "vacuumHealth.runAs": "Run as {owner}.",
+  "vacuumHealth.copy": "Copy statement",
+  "vacuumHealth.copied": "Copied",
+  "vacuumHealth.copyRemedy": "Select the statement and copy it by hand.",
+  "vacuumHealth.howTitle": "How to run it",
+  "vacuumHealth.step.window":
+    "Plan a maintenance window. VACUUM FULL locks the table while it runs, so nothing can read or change it until it ends.",
+  "vacuumHealth.step.disk":
+    "Check the free disk space. The rewrite needs room for a new copy of the table and its indexes.",
+  "vacuumHealth.step.owner":
+    "Connect to the database as the role named in the row. It owns the table; the role Margince runs as cannot do this.",
+  "vacuumHealth.step.run":
+    "Run the statement. It also refreshes the statistics, so the table leaves this list on the next read.",
+  "vacuumHealth.repack":
+    "To avoid the lock, the pg_repack tool rewrites a table while it stays in use. It must be installed on the database server.",
   "settings.automaticWork": "Automatic work",
   "settings.automaticWorkSub":
     "What Margince gave each colleague by itself, and how much of it they said was not theirs.",
@@ -11712,6 +11822,11 @@ export const en = {
     "Nobody has confirmed the recorded source of this contact’s details yet.",
   "notice.source.onRecord": "On record",
   "notice.source.needsConfirmation": "Source needs confirmation",
+  "notice.source.confirmedSource": "{source} on {date}",
+  "notice.source.confirmedBy": "Confirmed by {actor} on {date}",
+  "notice.source.confirmedByYou": "Confirmed by you on {date}",
+  "notice.source.confirmedAt": "Confirmed on {date}",
+  "notice.source.saved": "Source confirmed",
   "notice.source.contactExplanation":
     "A privacy officer confirms where their details came from.",
   "notice.rule.art13": "Art. 13 notice",
@@ -11755,6 +11870,7 @@ export const en = {
   "notifications.action.openDeal": "Open deal",
   "notifications.action.openLead": "Open lead",
   "notifications.action.openProject": "Open project",
+  "notifications.action.openExtensionRecord": "Open record",
   "notifications.action.review": "Review request",
   "notifications.action.systemHealth": "Open System health",
   "notifications.markAllFailed": "Nothing was marked read",
@@ -11875,7 +11991,6 @@ export const en = {
     "Needed to keep you or your account safe.",
   "privacynotice.basis.existingCustomer":
     "You are our customer, and we tell you about products like the ones you bought. You can object at any time.",
-  "privacynotice.basis.vnAgreement": "You agreed to receive our advertising.",
   "privacynotice.category.postalAddress": "Your postal address",
   "privacynotice.category.socialProfile":
     "Your profiles and accounts on social networks and chat services",
@@ -12108,12 +12223,10 @@ export const en = {
     "No records held. Every erasure so far was completed in full.",
   "restricted.heldLabel": "Records held now",
   "restricted.kind": "Record",
-  "restricted.occurred": "Dated",
   "restricted.deals": "Deal or project",
   "restricted.noDeal": "No deal on record",
   "restricted.reason": "Held because",
   "restricted.until": "Held until",
-  "restricted.redacted": "Redacted",
   "restricted.since": "Since {date}",
   "restricted.nothingRedacted": "Nothing removed",
   "restricted.redactedCount_one": "{count} field removed",
@@ -12123,7 +12236,6 @@ export const en = {
   "restricted.kind.call": "Call",
   "restricted.kind.meeting": "Meeting",
   "restricted.kind.message": "Message",
-  "restricted.decide": "Decision",
   "restricted.reasonLabel": "Why",
   "restricted.reasonHint":
     "Recorded in the audit trail with your name. State what you decided and on what basis.",
@@ -12613,6 +12725,10 @@ export const en = {
   "backfill.narrowingNote":
     "This mailbox already went back further. Pick the same time or longer.",
   "backfill.staleUpdated": "No progress for {duration}.",
+  "backfill.restartedNote":
+    "The import started over because the mailbox lost its place. The email count begins again; contacts already found stay.",
+  "backfill.retryNote":
+    "The import hit a connection problem and is trying again. The last page is read again, so its emails are counted again.",
   "backfill.countScanned_one": "{count} email checked",
   "backfill.countScanned_other": "{count} emails checked",
   "backfill.errorResumeNote":
@@ -12630,13 +12746,13 @@ export const en = {
   // already holds the kind of credential each one is configured with. The two
   // headings differ because the two pages mean different things: one is your
   // own account somewhere, the other is the installation's.
-  "extUnits.open": "Open",
 
   // The units an installation composed, offered on the settings page that
   // already holds the kind of credential each one is configured with. The two
   // headings differ because the two pages mean different things: one is your
   // own account somewhere, the other is the installation's.
   "extUnits.openNamed": "Settings for {name}",
+  "extUnits.openApp": "Open {name}",
   "extUnits.user.title": "Other accounts",
   "extUnits.user.sub":
     "Add-ons this installation offers that sign in as you. Each is private to you, and disconnecting one affects only you.",
@@ -12660,7 +12776,7 @@ export const en = {
     "It cannot read or annotate your Morning brief. Your records, Worklist and scheduled weekly review remain available.",
   "overnightGrant.saveFailedTitle": "Answer was not saved",
   "overnightGrant.saveFailed":
-    "Everything else is connected. After signing in, set this in Settings under Connections.",
+    "Everything else is connected. After signing in, set this in Settings under Account.",
   "overnightGrant.renewTitle": "Overnight authority expired",
   "overnightGrant.renew":
     "Turn this off and on again to renew it. Until then, your Morning brief is not prepared.",
@@ -12996,10 +13112,10 @@ export const en = {
   "connectors.imapSecretHint":
     "Use an app-specific password. It is stored in the key vault and used to read mail on a schedule until you disconnect, which deletes it.",
   "connectors.imapSubmitCta": "Connect",
-  "connectors.imapNeeded": "Required fields",
-  "connectors.imapStillNeeded": "Required: {fields}",
-  "connectors.imapRange": "From {min} to {max}",
-  "connectors.imapOutOfRange": "Out of range: {fields}",
+  "connectors.imapHostName":
+    "Enter the server name only, such as imap.example.com.",
+  "connectors.imapSecretEmptied":
+    "Emptied after the failed attempt. Enter it again.",
   "connectors.imapLoginRejected":
     "The mailbox rejected these credentials. Check host, email and app password.",
   "connectors.imapUnreachable":
@@ -13343,21 +13459,21 @@ export const en = {
   "ob.conv.company.confirmed":
     "Company profile confirmed. Every stored value records its source.",
   "ob.conv.manual.chosen": "I will enter it manually.",
-  "ob.conv.voice.skipped": "Skip voice for now.",
+  "ob.conv.voice.skipped": "Skip for now",
   "ob.conv.voice.uploadAdded": "Added {name}.",
   "ob.conv.voice.speakerQuestion":
-    "This transcript has several speakers. Which one is you? Only your own words count.",
+    "“{name}” has several speakers. Which one is you? Only your own words count.",
+  "ob.conv.voice.speakerSkip": "Skip this file",
   "ob.conv.voice.speakerOptionDetail": "words: {words} · turns: {turns}",
   "ob.conv.voice.speakerFoot": "Your choice applies to this file only.",
   "ob.conv.voice.speakerContinue": "Use this speaker",
-  "ob.conv.voice.continueSkippedStatus": "Skipped. Add it later in Settings.",
   "ob.conv.voice.continueFailedStatus":
     "Your material is kept. Retry now, or continue and finish this later.",
   "ob.conv.voice.continueDeferredStatus":
     "No action needed. Continue; the build finishes automatically.",
   "ob.conv.voice.composer": "Paste the text you wrote here",
   "ob.conv.voice.dropHint":
-    "You can also drop files anywhere in this conversation: .txt, .md, .pdf, .docx or a .vtt, .srt or .json transcript.",
+    "You can also drop files anywhere in this conversation: .txt, .md, .pdf, .docx or a .vtt, .srt or .json transcript. Each file must stay just under {limit} as sent. Text with many quotation marks or line breaks reaches that sooner.",
   "ob.conv.voice.fileSkipped":
     "I cannot read {name}. Supported formats: .txt, .md, .pdf, .docx, .vtt, .srt, .json.",
   "ob.conv.voice.fileUnreadable":
@@ -13369,12 +13485,14 @@ export const en = {
   "ob.conv.voice.reactionDocument":
     "Words counted: {words}. All words in this file are yours.",
   "ob.conv.voice.refusalUnattributed":
-    "This looks like a conversation, but I cannot tell which words are yours, so none were counted.",
+    "{name} looks like a conversation, but I cannot tell which words are yours, so none were counted.",
   "ob.conv.voice.refusalSpeaker":
-    "I could not find that speaker in the transcript. Nothing was counted.",
+    "I could not find that speaker in {name}. Nothing was counted.",
   "ob.conv.voice.refusalUnsupported":
-    "I could not parse that file as text or a transcript. Nothing was counted.",
-  "ob.conv.voice.ingestFailed": "I could not add that source: {detail}",
+    "I could not read {name} as text or a transcript. Nothing was counted.",
+  "ob.conv.voice.refusalTooLarge":
+    "{name} is too large to add. A file must stay just under {limit} as sent, and quotation marks and line breaks take extra room. Split it into smaller files.",
+  "ob.conv.voice.ingestFailed": "I could not add {name}: {detail}",
   "ob.conv.voice.ingestUnexpected":
     "I could not add that source. Retry shortly.",
   "ob.conv.voice.pasteAdd": "Add to writing samples",
@@ -13398,8 +13516,13 @@ export const en = {
     "Nothing collected yet. Attach a transcript or a text you wrote.",
   "ob.conv.voice.meterWords": "Own words: {words} of {target}",
   "ob.conv.voice.meterBand": "Quality: {band}",
-  "ob.conv.voice.manifestKept": "Kept {kept} of {total} words",
-  "ob.conv.voice.manifestWords": "{words} words",
+  "ob.conv.voice.manifestKept_one": "Kept {kept} of {total} word",
+  "ob.conv.voice.manifestKept_other": "Kept {kept} of {total} words",
+  "ob.conv.voice.manifestWords_one": "{words} word",
+  "ob.conv.voice.manifestWords_other": "{words} words",
+  "ob.conv.voice.floorShort_one": "Add {words} more word to build.",
+  "ob.conv.voice.floorShort_other": "Add {words} more words to build.",
+  "ob.conv.voice.waitForSamples": "Wait until your samples are added.",
   "ob.conv.voice.registerMix": "Registers: {mix}",
   "ob.conv.voice.stageTitle": "Build progress",
   "ob.conv.corpus.words": "Own words in your corpus now: {words}.",
@@ -13515,6 +13638,9 @@ export const en = {
   "ob.conv.voice.browse": "Browse files",
   "ob.conv.voice.pasteInstead": "Paste text instead",
   "ob.conv.voice.sourcesTitle": "Sources",
+  "ob.conv.voice.removeSource": "Remove",
+  "ob.conv.voice.removeSourceNamed": "Remove {name}",
+  "ob.conv.voice.removeFailed": "I could not remove {name}: {detail}",
   "ob.conv.voice.printLabel": "Your voiceprint",
   "voice.kinds.label": "What works best",
   "voice.kinds.best": "Best start",
@@ -13526,6 +13652,8 @@ export const en = {
   "voice.kinds.docBody": "Any text you wrote yourself",
   "ob.conv.voice.meterLabel": "Progress toward the {min}-word minimum",
   "ob.conv.voice.meterProgress": "{words} of {min} words",
+  "ob.conv.voice.meterUnknown":
+    "Word count unavailable. It updates when you add the next sample.",
   "ob.conv.voice.meterReady":
     "{words} words: enough to build. More words improve it.",
   "ob.conv.voice.footReady":
@@ -13636,6 +13764,14 @@ export const en = {
     "Invite the first person who will work here instead, and setup is done.",
   "ob.conv.invite.foot":
     "Voice and accounts can also be set up later in Settings.",
+  // The same question for a seat that may not train a voice: connect is the
+  // one step left.
+  "ob.conv.invite.bodyConnect":
+    "The company is set up. The next step is about you and applies only if you will use Margince.",
+  "ob.conv.invite.yesBodyConnect":
+    "Connect your mailbox and calendar: 1 short step.",
+  "ob.conv.invite.footConnect":
+    "Accounts can also be connected later in Settings.",
   "ob.conv.invite.continue": "Continue",
   "ob.conv.invite.accepted": "Yes, I will be working in it.",
   "ob.conv.invite.declined": "No, I am only setting it up.",
@@ -14108,8 +14244,8 @@ export const en = {
   "book.returnRequestAction": "Send me the link",
   "book.returnRequestSent":
     "Check your inbox. If this address can be stored again, a link to confirm is on its way.",
-  "book.attendee": "Attendee email",
-  "book.subject": "Meeting via Margince",
+  "scheduling.attendeeEmail": "Attendee email",
+  "scheduling.defaultSubject": "Meeting via Margince",
   "book.name": "Your name",
   "book.email": "Your email",
   "book.consentWording":
@@ -14180,12 +14316,13 @@ export const en = {
     "Access to this room has expired. Contact {steward} if you need it again.",
   "buyer.eyebrow": "Deal Room",
   "buyer.closed": "This room is closed. Its content is kept as a record.",
-  "buyer.previewBannerTitle": "You are previewing this room",
-  "buyer.previewBanner":
+  "room.previewBannerTitle": "You are previewing this room",
+  "room.previewBanner":
     "This is the buyer’s view. You can read everything but change nothing.",
   "buyer.previewReadOnly":
     "A preview is read-only. Close this tab to return to the Deal Room page.",
   "buyer.closedNote": "This room is now read-only.",
+  "buyer.readOnly": "Your access to this room is read-only.",
   "buyer.stewardUnknown": "your contact",
   "buyer.signOut": "Sign out",
   "buyer.signedInAs": "Signed in as {name}.",
@@ -14278,20 +14415,18 @@ export const en = {
   "threads.newLabel": "New thread",
   "threads.requireChangeLabel": "This document needs a change",
   "threads.open": "Post",
-  "threads.readOnly": "Your access is read-only.",
   "deal360.blocker": "Blockers",
   "deal360.buyer": "What the buyer wants",
   "deal360.verdict.live": "On track",
   "deal360.verdict.drifting": "Slipping",
   "deal360.verdict.blocked": "Blocked",
   "deal360.verdict.cold": "Cold",
-  "recordmail.title": "Email",
-  "recordmail.reply": "Draft reply",
-  "recordmail.send": "Write email",
   "deal360.rewrite": "Regenerate",
   "deal360.readFull": "Read full brief",
   "deal360.openTask": "Open task",
   "deal360.createTask": "Create follow-up",
+  "deal360.bringInManager": "Bring in manager",
+  "deal360.managerAsked": "Manager asked",
   "deal360.followUpCreated": "Follow-up created",
   "deal360.openBrief": "Open meeting brief",
   "deal360.unreadable":
@@ -14350,6 +14485,8 @@ export const en = {
     "Your answer is recorded. Staff here will handle your request and give you the reason if they need more time. This link is now used up.",
   "confirm.invalidLink":
     "This link is no longer valid. It may have been used or may have expired. If you still need something, reply to the email that brought you here.",
+  "confirm.deadLinkBody":
+    "It may have been used or may have expired. If you still need something, reply to the email that brought you here.",
   "confirm.questionChanged":
     "The question on this page changed after you opened it. Reload the page and answer again.",
   "prefs.lockedWhy": "Needed for something you requested, so it stays on.",
@@ -14811,7 +14948,6 @@ export const en = {
   "audit.kind.customField": "Custom field",
   "audit.kind.activity_review_template": "Activity review template",
   "audit.kind.agent_standing_grant": "Standing agent permission",
-  "audit.kind.ai_call": "AI call",
   "audit.kind.ai_feedback": "AI feedback",
   "audit.kind.ai_model_rate": "AI model price",
   "audit.kind.analytics_share": "Shared report",
@@ -14832,13 +14968,13 @@ export const en = {
   "audit.kind.capture_connection": "Connector",
   "audit.kind.capture_exclusion": "Capture exclusion",
   "audit.kind.capture_pending_counterparty": "New sender to review",
+  "audit.kind.capture_personal_sweep": "Private mail cleanup",
   "audit.kind.capture_settings": "Capture settings",
   "audit.kind.chat_link": "Chat link",
   "audit.kind.commission": "Commission",
   "audit.kind.communication_instruction": "Communication instruction",
   "audit.kind.communication_review": "Communication review",
   "audit.kind.communication_suppression": "Communication block",
-  "audit.kind.company_domain_question_reader": "Company domain question",
   "audit.kind.confirm_token": "Confirmation link",
   "audit.kind.consent_text_version": "Consent text version",
   "audit.kind.contact_acquisition_evidence": "Contact source evidence",
@@ -14950,6 +15086,7 @@ export const en = {
   "cf.audit.footer":
     "Every addition, edit and archive is recorded permanently in the audit log.",
   "cf.retired": "Retired",
+  "cf.retiredLabel": "{label} (retired)",
   "cf.retire.title": "Archive “{label}”?",
   "cf.retire.body":
     "It is hidden from new records and filters. The values already stored are kept. Archiving cannot be undone.",
@@ -15014,8 +15151,6 @@ export const en = {
     "What each role may do, and whose records it reaches.",
   "settings.page.seats.sub":
     "Seats in use against this installation’s entitlement.",
-  "settings.page.stageautomation.sub":
-    "The track record of each stage transition before it moves deals automatically.",
   "settings.page.leads.sub":
     "Where leads come from, why they are disqualified, and how fast they get a first reply.",
   "settings.page.products.sub":
@@ -15506,6 +15641,32 @@ export const en = {
     "The sender is mail infrastructure, not a company you work with",
   "captureActivity.reason.transactional_prefix":
     "The sender looks like an automated mailer, not a person",
+  "captureActivity.filing.core": "Filed on its deal by the CRM: {reason}",
+  "captureActivity.filing.core.moved": "The CRM moved its deal link: {reason}",
+  "captureActivity.filing.core.retracted":
+    "The CRM took its deal link back: {reason}",
+  "captureActivity.filing.basis.project": "the mail’s project",
+  "captureActivity.filing.basis.chosen_thread":
+    "a deal a colleague chose for an earlier mail in the thread",
+  "captureActivity.filing.basis.thread": "an earlier mail in the thread",
+  "captureActivity.filing.basis.sole_open_deal": "the company’s only open deal",
+  "captureActivity.filing.basis.stakeholder": "a stakeholder on the deal",
+  "captureActivity.filing.basis.named_stakeholder":
+    "a stakeholder named in the mail",
+  "captureActivity.filing.basis.ambiguous":
+    "several deals fit, a colleague was asked",
+  "captureActivity.filing.ext.linked": "{unit} filed it on a deal: {reason}",
+  "captureActivity.filing.ext.none": "{unit} kept it off every deal: {reason}",
+  "captureActivity.filing.ext.ambiguous":
+    "{unit} narrowed the deals it could belong to: {reason}",
+  "captureActivity.filing.ext.parties_changed":
+    "{unit} changed the contacts and companies it was read for: {reason}",
+  "captureActivity.filing.ext.failed":
+    "{unit} failed, so the mail is left unfiled and tried again later",
+  "captureActivity.filing.ext.ignored": "{unit}’s answer was ignored: {reason}",
+  "captureActivity.filing.ext.moved": "{unit} moved its deal link: {reason}",
+  "captureActivity.filing.ext.retracted":
+    "{unit} took its deal link back: {reason}",
   "captureActivity.outcome.deferred_capped": "Not queued",
   "captureActivity.outcome.deferred_sent": "Sent for a sender check",
   "captureActivity.resolution.pending": "Still waiting",
@@ -15752,7 +15913,6 @@ export const en = {
     "Add writing samples to build your Voice DNA, which only you can see. It learns only from what you add, and a first build takes about a minute.",
   "settings.voice.privacy": "Only you can see your Voice DNA.",
   "settings.voice.status.collecting": "Collecting",
-  "settings.voice.status.ready": "Ready",
   "settings.voice.status.stale": "Rebuild needed",
   "settings.voice.bandThin": "thin",
   "settings.voice.bandGood": "good",
@@ -15968,7 +16128,7 @@ export const en = {
   "settings.voice.addSource": "Add writing samples",
   "settings.voice.addFirstLabel": "First writing sample",
   "settings.voice.dropHint":
-    "Drop or choose files (.txt, .md, .pdf, .docx, .vtt, .srt or .json), several at once.",
+    "Drop or choose files (.txt, .md, .pdf, .docx, .vtt, .srt or .json), several at once. Each file must stay just under {limit} as sent. Text with many quotation marks or line breaks reaches that sooner.",
   "settings.voice.dropLabel": "Upload files",
   "settings.voice.dropEmpty": "Drop files here, or click to choose",
   "settings.voice.pasteLabel": "Paste text",
@@ -16014,6 +16174,8 @@ export const en = {
   "settings.voice.refusalSpeaker":
     "That speaker was not found in {name}, so nothing was added.",
   "settings.voice.refusalUnsupported": "{name} is in an unsupported format.",
+  "settings.voice.refusalTooLarge":
+    "{name} is too large to add. A file must stay just under {limit} as sent, and quotation marks and line breaks take extra room. Split it into smaller files.",
   "settings.voice.buildsTitle": "Builds",
   "settings.voice.buildRowLabel": "Build from samples",
   "settings.voice.building": "Building…",
@@ -16195,6 +16357,9 @@ export const en = {
   "extAccess.brings.objects": "Permission objects",
   "extAccess.brings.routes": "Routes",
   "extAccess.brings.jobs": "Background jobs",
+  "extAccess.brings.needs": "Uses from the core",
+  "extAccess.need.models": "AI models",
+  "extAccess.need.objects": "File storage",
   "extAccess.brings.none": "None",
   "extAccess.noObjects":
     "This unit registers no permission objects, so there is nothing to grant.",
@@ -16247,6 +16412,16 @@ export const en = {
   "users.teamParent": "Part of {name}",
   "users.teamRename": "Rename",
   "users.teamArchive": "Archive",
+  "users.teamRestore": "Restore",
+  "users.teamArchivedBadge": "Archived",
+  "users.showArchivedTeams": "Show archived teams",
+  "users.showArchivedTeamsSub":
+    "An archived team gives its members no access until you restore it.",
+  "users.archiveTeamTitle": "Archive “{name}”?",
+  "users.archiveTeamBody_one":
+    "The team has {count} member. They lose the access the team gives: records shared with it, and a team lead’s team records. You can restore it under “Show archived teams”.",
+  "users.archiveTeamBody_other":
+    "The team has {count} members. They lose the access the team gives: records shared with it, and a team lead’s team records. You can restore it under “Show archived teams”.",
   "users.teamRenameTitle": "Rename team",
   "users.teamRenameSave": "Save name",
   "users.teamRenamed": "Team renamed to “{name}”",
@@ -16336,7 +16511,6 @@ export const en = {
   "users.rolesReplace": "A role you choose replaces all current roles.",
   "users.deactivate": "Deactivate",
   "users.reactivate": "Reactivate",
-  "users.status.active": "Active",
   "users.status.invited": "Invited",
   "users.status.inviteMailFailed": "Invitation email failed",
   "users.status.deactivated": "Deactivated",
@@ -16499,9 +16673,14 @@ export const en = {
   "settings.companyManualSub":
     "Website reading is not enabled for this installation. These 3 answers create usable company context without a model call or external request.",
   "settings.companyCreateWorkspace": "Create company context",
-  "settings.auditActorExample": "agent:sdr",
-  "settings.auditEntityExample": "deal",
   "settings.auditAnyAction": "Any action",
+  "settings.auditAnyActor": "Anyone",
+  "settings.auditActorDelegated":
+    "Includes what an AI assistant did on their behalf.",
+  "settings.auditAnyEntity": "Any type",
+  "settings.auditEntityIdHint":
+    "Paste the full record ID. Use Copy record ID on a row.",
+  "settings.auditRangeReversed": "Pick a To date on or after the From date.",
   "product.title": "Products",
   "product.settingsSub": "Price list entries that offer lines copy from.",
   "product.readOnly": "Read-only. Your role cannot change products.",
@@ -16809,7 +16988,7 @@ export const en = {
   "aicalls.detail.source": "Served identity source: {source}",
   "aicalls.detail.attempts": "Attempts",
   "aicalls.detail.request": "Request payload",
-  "aicalls.detail.settings": "Request settings sent",
+  "aicalls.detail.settings": "Settings this call was configured with",
   "aicalls.detail.servedBy": "served by {host}",
   "aicalls.detail.response": "Response payload",
   "aicalls.payload.off":
@@ -16888,9 +17067,9 @@ export const en = {
   "installationSettings.fiscalImpactKept_other":
     "{count} reports have a card that filters on a period. They keep their dates.",
   "installationSettings.fiscalImpactRelative_one":
-    "{count} report reads this quarter, a fiscal-quarter target or a fiscal-quarter close window. It follows the new start.",
+    "{count} report reads this quarter, the last completed quarter or year, a fiscal-quarter target or a fiscal-quarter close window. It follows the new start.",
   "installationSettings.fiscalImpactRelative_other":
-    "{count} reports read this quarter, a fiscal-quarter target or a fiscal-quarter close window. They follow the new start.",
+    "{count} reports read this quarter, the last completed quarter or year, a fiscal-quarter target or a fiscal-quarter close window. They follow the new start.",
   "installationSettings.fiscalImpactLoading":
     "Counting the saved work this change concerns…",
   "installationSettings.forwardMeasure": "Projection basis",
@@ -16906,6 +17085,21 @@ export const en = {
   "installationSettings.likelyThreshold.help":
     "The probability from which an open deal with a confirmed close date counts as Likely.",
   "forecast.landing": "Landing",
+  "forecast.accuracy.title": "Forecast accuracy",
+  "forecast.accuracy.none":
+    "Not enough closed deals yet. Once deals the forecast counted have closed, this compares what it said with what happened.",
+  "forecast.accuracy.calibration_one":
+    "{count} closed deal, grouped by the chance the forecast gave it {days} days before it closed.",
+  "forecast.accuracy.calibration_other":
+    "{count} closed deals, grouped by the chance the forecast gave them {days} days before they closed.",
+  "forecast.accuracy.band_one": "Chance {mean}, won {won} ({count} deal)",
+  "forecast.accuracy.band_other": "Chance {mean}, won {won} ({count} deals)",
+  "forecast.accuracy.fewDeals_one": "{count} deal, too few to state a share",
+  "forecast.accuracy.fewDeals_other": "{count} deals, too few to state a share",
+  "forecast.accuracy.landings":
+    "Finished quarters: what the forecast said four weeks before the end against what was won.",
+  "forecast.accuracy.landing": "Said {said}, won {landed}",
+  "forecast.accuracy.saidOn": "Said on {date}",
   "forecast.landingSection": "Where the period lands",
   "forecast.landingRecords": "From the deal records",
   "forecast.landingUnrecorded": "Not recorded",
@@ -16955,6 +17149,10 @@ export const en = {
     "Measured against the call for this period.",
   "forecast.pipelineBasisWhy.historical_median":
     "Measured against the median of the last 4 comparable periods.",
+  "forecast.pipelineBasisLeftOut_one":
+    "{count} won deal in those periods has no amount or exchange rate and is left out of the median.",
+  "forecast.pipelineBasisLeftOut_other":
+    "{count} won deals in those periods have no amount or exchange rate and are left out of the median.",
   "forecast.pipelineAbsentTitle": "No coverage figure for this period",
   "forecast.pipelineAbsent.call_withheld":
     "The manager’s call is not shown here, and fewer than 4 comparable periods have finished. Measuring against these open deals themselves would always look sufficient.",
@@ -17252,6 +17450,7 @@ export const en = {
     "Meetings appear on contacts and deals, and your booking link offers only your free times.",
   "connectFlow.calendarImap": "Not available over IMAP.",
   "connectFlow.pickService": "Tick Mail, Calendar or both.",
+  "connectFlow.pickMail": "Tick Mail.",
   "connectFlow.importLabel": "Import past email",
   "connectFlow.importNone": "None",
   "connectFlow.importAfter":
@@ -17407,6 +17606,8 @@ export const en = {
   "ob.conv.connect.useImap": "Use another mail provider",
   "ob.conv.connect.skipCaptionWaiting":
     "Your setup checklist reminds you to connect once {vendor} is ready.",
+  "ob.conv.connect.skipCaptionNotConfigured":
+    "No mailbox can be connected on this installation, so go on without one.",
   "ob.conv.connect.connectedTitle": "{vendor} is connected",
   "ob.conv.connect.calendarNotConnected":
     "Not connected. Connect it now, or later from your setup checklist.",
@@ -17426,6 +17627,7 @@ export const en = {
     "Optional. All of these can be changed later in Settings.",
   "ob.conv.connect.linkedinRow": "Your LinkedIn profile",
   "ob.conv.connect.linkedinAdd": "Add profile",
+  "ob.conv.connect.linkedinChange": "Change",
   "setup.reminder.trigger": "Finish setup",
   "setup.reminder.count": "{done} of {total}",
   "setup.reminder.title": "Finish setting up",
@@ -17604,7 +17806,32 @@ export const en = {
   "firstRun.ai.keyHint": "Stored in the key vault and never shown again.",
   "firstRun.ai.chatModel": "Model",
   "firstRun.ai.modelHint":
-    "A starting point. Any model the provider serves works.",
+    "Any model the provider serves works. The tests graded the setup above, not one model on every tier.",
+  "firstRun.ai.setupTitle.consumer_class_brokered":
+    "Gemma 4 you could run yourself, through OpenRouter",
+  "firstRun.ai.setupTitle.gemini_cloud": "Google Gemini",
+  "firstRun.ai.setupTitle.gemini_vertex_eu":
+    "Google Gemini in the EU, through Vertex AI",
+  "firstRun.ai.setupTitle.gemma4_local_ollama":
+    "Gemma 4 on your own server, through Ollama",
+  "firstRun.ai.setupTitle.openrouter_cloud":
+    "Open models from OpenAI and Mistral, through OpenRouter",
+  "firstRun.ai.setupTitle.openrouter_cloud_eu":
+    "Mistral models in the EU, through OpenRouter",
+  "firstRun.ai.setupTitle.openrouter_openai":
+    "OpenAI GPT-6, through OpenRouter",
+  "firstRun.ai.setupTitle.qwen3_local_vllm":
+    "Qwen3 on your own server, through vLLM",
+  "firstRun.ai.setup": "Models: {setup}",
+  "firstRun.ai.setupHint":
+    "The setup the tests graded for this provider, one model for each tier. You can change any of them later in Settings under AI.",
+  "firstRun.ai.oneModel": "Use one model for every tier instead",
+  "aiCert.ready": "Ready",
+  "aiCert.withCare": "Usable with care",
+  "aiCert.notReliable": "Not reliable yet",
+  "aiCert.notMeasured": "Not measured",
+  "aiCert.recheckPending": "{grade}, re-check pending",
+  "aiCert.title": "Test grade of {model} on this feature",
   "firstRun.ai.embedModel": "Embedding model",
   "firstRun.ai.keyFailed": "Key not stored",
   "firstRun.ai.bindFailed": "Provider not bound",
@@ -17736,6 +17963,15 @@ export const en = {
   "aiRouting.baseUrl.help.jev":
     "Full endpoint URL. Blank uses TypeSafe’s own API.",
   "aiRouting.baseUrl.placeholder.jev": "https://api.typesafe.ai/v1/systemone",
+  "aiRouting.baseUrl.help.azure":
+    "The resource endpoint, with no path. The API key is sent only to a host ending in .openai.azure.com. Required.",
+  "aiRouting.baseUrl.placeholder.azure": "https://my-resource.openai.azure.com",
+  "aiRouting.azureRegion.label": "Azure region",
+  "aiRouting.azureRegion.placeholder": "swedencentral",
+  "aiRouting.azureRegion.help":
+    "The region the resource runs in, such as swedencentral. A region this installation does not know is blocked, so data stays where you agreed.",
+  "aiRouting.model.help.azure":
+    "Enter the name you gave this model in Azure, not the model’s own name.",
   "aiRouting.baseUrl.help.jevCompatible":
     "Full endpoint URL, used as written. Required.",
   "aiRouting.baseUrl.placeholder.jevCompatible":
@@ -17750,6 +17986,12 @@ export const en = {
   "aiRouting.baseUrl.help.anthropic":
     "Host root; /v1 is added. Blank uses Anthropic’s own API.",
   "aiRouting.baseUrl.placeholder.anthropic": "https://api.anthropic.com",
+  "aiRouting.baseUrl.help.ollama":
+    "Host root, such as http://localhost:11434. Blank uses the default.",
+  "aiRouting.baseUrl.placeholder.ollama": "http://localhost:11434",
+  "aiRouting.baseUrl.help.vllm":
+    "Host root; /v1 is added. Blank uses http://localhost:8000.",
+  "aiRouting.baseUrl.placeholder.vllm": "http://localhost:8000",
   "aiRouting.models.askingLocation":
     "Asking Google which models {location} serves…",
   "aiRouting.models.noKey": "No key, so no model list. Type any ID it serves.",
@@ -17863,10 +18105,9 @@ export const en = {
   "aiTasks.embeddingsEdit":
     "Search and retrieval has no thinking level or timeouts to set. Change its provider and model on the Embedding model row under Model tiers.",
   "workingHours.unsetTitle": "Not set yet",
-  "workingHours.unset":
-    "Customers are offered 09:00 to 17:00, Monday to Friday, in the installation timezone.",
+  "workingHours.unset": "Guests are offered 09:00 to 17:00, Monday to Friday.",
   "workingHours.narrowedTitle": "Fewer bookable hours",
-  "workingHours.narrowed": "Customers have fewer times to choose from.",
+  "workingHours.narrowed": "Guests have fewer times to choose from.",
   "workingHours.day.1": "Monday",
   "workingHours.day.2": "Tuesday",
   "workingHours.day.3": "Wednesday",
@@ -17950,6 +18191,21 @@ export const en = {
     "How many held mail threads one privacy review looks at, 1 to 200. The rest wait for the next run. Raise it when new mail stays hidden from colleagues for longer than the run schedule, which System health sets. Default 40.",
   "captureReview.passCap.refusal":
     "Enter a whole number of threads from 1 to 200.",
+  "captureReview.verdictCap.label": "Senders judged per run",
+  "captureReview.verdictCap.help":
+    "How many unresolved senders one counterparty review run asks the model about, 1 to 1000. The rest wait for the next run. Raise it when new senders stay unresolved for longer than the run schedule. Default 200.",
+  "captureReview.verdictCap.refusal":
+    "Enter a whole number of senders from 1 to 1000.",
+  "captureReview.classifyCap.label": "Messages labeled per run",
+  "captureReview.classifyCap.help":
+    "How many captured messages one labeling run settles, 1 to 2500. The rest wait for the next run. Raise it when new mail stays unlabeled for longer than the run schedule. Default 500.",
+  "captureReview.classifyCap.refusal":
+    "Enter a whole number of messages from 1 to 2500.",
+  "captureReview.owedCap.label": "Messages checked for a reply per run",
+  "captureReview.owedCap.help":
+    "How many new messages one owed-reply run judges, 1 to 2500. The rest wait for the next run. Raise it when mail waiting for your reply shows up late. Default 500.",
+  "captureReview.owedCap.refusal":
+    "Enter a whole number of messages from 1 to 2500.",
   "agentConnections.title": "Agent connections",
   "agentConnections.sub":
     "How long an agent connected over MCP keeps its passport before it renews. A change applies to the next passport issued.",
@@ -18177,6 +18433,25 @@ export const en = {
     "This address is already back in your list.",
   "ownerIdentities.addDescriptionEmpty":
     "None added yet. Colleagues never see this list.",
+  "unroutedMail.title": "Mail sent to addresses that are not yours",
+  "unroutedMail.sub":
+    "Your mailbox holds mail that was sent to other addresses. Nothing checks it until you say whether you receive that address. Only you see this list.",
+  "unroutedMail.summary_one":
+    "{count} message in your mailbox was sent to an address that is not yours.",
+  "unroutedMail.summary_other":
+    "{count} messages in your mailbox were sent to addresses that are not yours.",
+  "unroutedMail.count_one": "{count} message",
+  "unroutedMail.count_other": "{count} messages",
+  "unroutedMail.receive": "This address is mine",
+  "unroutedMail.receiveLabel": "This address is mine: {value}",
+  "unroutedMail.notMine": "Not mine",
+  "unroutedMail.notMineLabel": "Not mine: {value}",
+  "unroutedMail.received": "Address added. Its mail is checked like the rest.",
+  "unroutedMail.refused": "Hidden. This address is no longer counted.",
+  "unroutedMail.restored": "Counted again.",
+  "unroutedMail.removedClaim": "Address removed.",
+  "unroutedMail.more":
+    "The list is cut. Answer these addresses and the next ones appear.",
   "captureValue.refusedAddress":
     "Enter one email address, for example name@example.com.",
   "captureValue.refusedDomain":
@@ -18207,6 +18482,9 @@ export const en = {
   "capturePurge.preview": "Check first",
   "capturePurge.confirm": "Delete permanently",
   "capturePurge.done": "Close",
+  "capturePurge.recheck": "Check again",
+  "capturePurge.changed":
+    "The mail changed since the check. Check the count below before deleting.",
   "capturePurge.failed":
     "The deletion did not finish. Some messages may already have been destroyed. Check again to see what is left.",
   "capturePurge.refused": "The deletion was refused, so nothing was destroyed.",
@@ -18257,7 +18535,12 @@ export const en = {
   "captureExclusions.containersUnreadableBody":
     "The mail provider did not answer, so this list may be missing folders. Try again in a moment, or keep senders out by address or domain instead.",
   "captureExclusions.kindLabel": "Kind",
-  "captureExclusions.addLabel": "Exclude address or domain",
+  "captureExclusions.title.address": "Exclude an address",
+  "captureExclusions.title.domain": "Exclude a domain",
+  "captureExclusions.title.container": "Exclude a folder or label",
+  "captureExclusions.field.address": "Address",
+  "captureExclusions.field.domain": "Domain",
+  "captureExclusions.noMailbox": "Connect a mailbox first.",
   "captureExclusions.placeholder.address": "name@example.com",
   "captureExclusions.placeholder.domain": "example.com",
   "captureExclusions.add": "Exclude",
@@ -18285,6 +18568,7 @@ export const en = {
   "ownDomains.confirmLabel": "Confirm {domain}",
 
   "financeSource.title": "Accounting source",
+  "financeSource.unnamed": "Unnamed source",
   "financeSource.sub":
     "Margince reads invoices and payments from an accounting system and shows them on each company’s Finance tab. It never writes to the source.",
   "financeSource.readOnly":
@@ -19304,6 +19588,7 @@ export const en = {
   "contact.enriched.field.company_name": "Company",
   "contact.enriched.field.address": "Address",
   "contact.enriched.field.website": "Website",
+  "contact.enriched.field.email": "Email",
   "contact.enriched.readFrom": "Read from {source} on {when}",
   "contact.enriched.source.capture_enrich": "their email signature",
   "contact.enriched.source.site_read": "their company website",
@@ -19317,8 +19602,6 @@ export const en = {
   "contact.enriched.correctedByYou": "Corrected by you",
   "contact.enriched.confirmed": "Confirmed",
   "contact.enriched.confirm": "Confirm value",
-  "contact.enriched.save": "Save correction",
-  "contact.enriched.cancel": "Cancel",
   "contact.graph.loading": "Loading contact network…",
   "contact.graph.routeDirect": "{name} already corresponds with them.",
   "contact.graph.routeVia":
@@ -19592,7 +19875,6 @@ export const en = {
     "Moderate: you are in touch from time to time. Last contact was on {last}.",
   "contact.strength.sentence.strong":
     "Strong: you are in regular, two-way touch. Last contact was on {last}.",
-  "contact.bandBadge.none": "No contact",
   "contact.bandBadge.weak": "Weak",
   "contact.bandBadge.moderate": "Moderate",
   "contact.bandBadge.strong": "Strong",
@@ -19728,12 +20010,12 @@ export const en = {
   "contact.action.research": "Research",
   "contact.action.importActivities": "Import activities",
 
-  "contact.strip.never": "Never",
   "contact.strip.today": "Today",
   "contact.strip.yesterday": "Yesterday",
   "contact.strip.days": "{count} days",
   "contact.consent.fact.existingCustomer":
     "Existing customer, marketing allowed",
+  "contact.consent.fact.optOutAllowed": "Advertising allowed until they refuse",
   "contact.consent.fact.saidWeMayWrite": "Permission to write recorded",
   "contact.consent.fact.businessContact": "Recent business contact recorded",
   "contact.consent.fact.serviceMessages": "Service messages allowed",
@@ -19818,7 +20100,6 @@ export const en = {
   "contact.standing.dims": "How the relationship stands",
   "contact.standing.dim.promises": "Your commitments",
   "contact.standing.dim.promisesNone": "None open",
-  "contact.standing.dim.promisesUncounted": "Too many tasks to count",
   "standing.overdue_one": "{count} overdue",
   "standing.overdue_other": "{count} overdue",
   "standing.ofOpen_one": "of {count} open",
@@ -21418,6 +21699,11 @@ export const en = {
   "worklist.gap.tab": "Close the gap",
   "worklist.gap.title": "Close the gap",
   "worklist.gap.loading": "Loading the ranked deals…",
+  "worklist.gap.requested.title": "Asked for your help",
+  "worklist.gap.requested.done": "Mark handled",
+  "worklist.gap.reason.big_deal": "Above the team’s median value",
+  "worklist.gap.reason.single_contact": "Only one contact engaged",
+  "worklist.gap.reason.stuck": "Stuck in its stage",
   "worklist.gap.empty":
     "No team has a ranked list yet. Margince ranks deals once a day for each captured team.",
   "worklist.gap.behind":
@@ -21971,6 +22257,15 @@ export const en = {
   "contact.follow.stopped": "You stopped following this contact.",
   "contact.follow.setAside": "You set this contact aside until {date}.",
   "contact.follow.resume": "Resume following",
+  "contact.impersonation.title":
+    "This sender may be pretending to be someone else",
+  "contact.impersonation.clear": "Looks fine",
+  "contact.impersonation.reason.punycodeDomain":
+    "The mail domain uses a coded spelling that can look like another domain.",
+  "contact.impersonation.reason.displayNameOtherDomain":
+    "The sender name holds an address on a domain other than the one the mail came from.",
+  "contact.impersonation.reason.unrecorded":
+    "The check did not record which sign it found.",
   "worklist.verb.completeUndo": "Undo",
   "worklist.verb.completeUndoFailed": "Task was not reopened. Retry.",
   // The frame states the fact and the source follows it, rather than the
@@ -22232,6 +22527,7 @@ export const en = {
   "aiProviderSettings.service.otherChat": "Other OpenAI-compatible service",
   "aiProviderSettings.service.otherDecisions": "Other decision server",
   "aiProviderSettings.service.otherAddress": "Other address",
+  "aiProviderSettings.service.azureResource": "Your Azure OpenAI resource",
   "aiProviderSettings.service.learnMore": "About OpenRouter EU",
   "aiProviderSettings.host.line": "Host: {host}",
   "aiProviderSettings.host.default": "Uses the service’s own address.",
@@ -22242,6 +22538,7 @@ export const en = {
   "aiProviders.name.openai": "OpenAI",
   "aiProviders.name.gemini": "Google Gemini",
   "aiProviders.name.geminiVertex": "Gemini on Vertex AI",
+  "aiProviders.name.azureOpenai": "Azure OpenAI",
   "aiProviders.name.jev": "TypeSafe Jev",
   "aiProviders.name.jevCompatible": "Jev-compatible",
   "aiProviders.name.geminiDecision": "Gemini Decisions API",
@@ -22497,6 +22794,35 @@ export const en = {
   "magic.action.archive_deal": "Archived deal",
   "magic.action.archive_lead": "Archived lead",
   "magic.action.archive_project": "Archived project",
+  "magic.action.create_offer": "Created an offer on",
+  "magic.action.update_offer": "Changed an offer on",
+  "magic.action.archive_offer": "Archived an offer on",
+  "magic.action.create_contract": "Added a contract to",
+  "magic.action.update_contract": "Changed a contract on",
+  "magic.action.archive_contract": "Archived a contract on",
+  "magic.action.create_deal_room": "Opened a deal room for",
+  "magic.action.update_deal_room": "Changed the deal room for",
+  "magic.action.archive_deal_room": "Archived the deal room for",
+  "magic.action.create_stage_evidence": "Recorded stage evidence on",
+  "magic.action.update_stage_evidence": "Changed stage evidence on",
+  "magic.action.archive_stage_evidence": "Withdrew stage evidence on",
+  "magic.action.create_introduction": "Asked for an introduction to",
+  "magic.action.update_introduction": "Changed an introduction to",
+  "magic.action.archive_introduction": "Archived an introduction to",
+  "magic.action.create_assignment": "Assigned a responsibility on",
+  "magic.action.update_assignment": "Changed a responsibility on",
+  "magic.action.archive_assignment": "Removed a responsibility on",
+  "magic.action.create_attachment": "Added a file to",
+  "magic.action.update_attachment": "Changed a file on",
+  "magic.action.archive_attachment": "Archived a file on",
+  "magic.action.create_deal_suggestion": "Suggested a deal for",
+  "magic.action.update_deal_suggestion": "Changed a deal suggestion for",
+  "magic.action.schedule_send": "Scheduled an email on",
+  "magic.action.update_scheduled_send": "Changed a scheduled email on",
+  "magic.action.create_invoice": "Recorded an invoice for",
+  "magic.action.update_invoice": "Changed an invoice for",
+  "magic.action.create_payment": "Recorded a payment from",
+  "magic.action.update_payment": "Changed a payment from",
   "magic.action.archive_activity": "Archived email or meeting",
   "magic.action.archive_activity_email": "Archived an email",
   "magic.action.archive_activity_meeting": "Archived a meeting",
@@ -22563,6 +22889,8 @@ export const en = {
   "magic.action.approval_coldstart": "Review first approach",
   "magic.action.approval_send_email": "Review message",
   "magic.action.approval_advance_deal": "Review stage change",
+  "magic.action.approval_deal_proposal_stage":
+    "A proposal went out. Move the deal?",
   "magic.action.approval_promote_lead": "Review lead promotion",
   "magic.action.approval_overnight": "Review proposal",
   "approval.commitment.proposalExpiresIn": "Proposal expires in {countdown}",
@@ -22666,6 +22994,7 @@ export const en = {
   "scheduling.videoNotSet": "Not set",
   "scheduling.video.ownShort": "Your own link",
   "scheduling.mainLink": "(main link)",
+  "scheduling.copyLengthLink": "Copy the {length} link",
   "scheduling.linkActions": "More actions for {name}",
   "scheduling.editLink": "Edit link",
   "scheduling.createLink": "Create booking link",
@@ -22695,6 +23024,32 @@ export const en = {
   "scheduling.replaceAliasHelp":
     "Your short address {url} stops working too. You can choose it again afterwards.",
   "scheduling.replaceConfirmTitle": "Replace link address?",
+  "scheduling.team.title": "Colleagues on this link",
+  "scheduling.team.foot":
+    "Guests see only the times when you and every colleague here are free, in each colleague’s own working hours. Each booking invites every colleague.",
+  "scheduling.team.add": "Add a colleague",
+  "scheduling.team.addHelp":
+    "Only colleagues with a connected calendar are offered. Each one confirms before the link takes bookings.",
+  "scheduling.team.full":
+    "This link names five colleagues, which is the most it can hold.",
+  "scheduling.team.choose": "Choose a colleague",
+  "scheduling.team.noneToAdd": "No other colleague has a connected calendar",
+  "scheduling.team.remove": "Remove",
+  "scheduling.team.pending": "Waiting for confirmation",
+  "scheduling.team.confirmed": "Confirmed",
+  "scheduling.team.left": "Left the link",
+  "scheduling.team.unavailable":
+    "Not available: no longer a member, or calendar not readable",
+  "scheduling.team.requestsTitle": "Colleagues’ links that name you",
+  "scheduling.team.requestLabel": "{title} with {name}",
+  "scheduling.team.requestPending":
+    "Confirm to let guests book times when you are free. You are invited to every meeting booked through this link.",
+  "scheduling.team.requestConfirmed":
+    "Guests book times when you are free. You are invited to every meeting booked through this link.",
+  "scheduling.team.confirm": "Confirm",
+  "scheduling.team.leave": "Leave",
+  "worklist.untitled.booking_health_team_not_ready":
+    "Your booking page is paused: a colleague on it has not confirmed, has left, or has no readable calendar",
   "scheduling.personalLinksFoot":
     "Meeting one specific person? Open their contact and choose Book a meeting to send a few times or a personal link that only they can use.",
   "scheduling.liveNoInvitesTitle": "Guests can book, but no invitations go out",
@@ -22721,6 +23076,8 @@ export const en = {
     "Other takes any length from 15 minutes to 8 hours.",
   "scheduling.lengthMinutes": "Length in minutes",
   "scheduling.lengthInvalid": "Enter a length from 15 to 480 minutes.",
+  "scheduling.lengthRepeated": "Name each length once.",
+  "scheduling.lengthsTooMany": "Name at most {max} extra lengths.",
   "scheduling.video.meetHelp":
     "A new Meet link is created for every booking and added to the invitation. Uses your Google Calendar, {account}.",
   "scheduling.video.teamsHelp":
@@ -22741,16 +23098,15 @@ export const en = {
   "scheduling.locationLabel": "Link or address",
   "scheduling.locationRequired": "Enter a link or an address.",
   "scheduling.usesHours":
-    "Uses your hours: {days}, {from} to {until} {zone} time, at least {notice} ahead.",
+    "Uses your hours: {days}, {from} to {until} ({zone}), at least {notice} ahead.",
   "scheduling.usesHoursAnyNotice":
-    "Uses your hours: {days}, {from} to {until} {zone} time.",
+    "Uses your hours: {days}, {from} to {until} ({zone}).",
   "scheduling.dayRange": "{from} to {until}",
   "scheduling.changeHours": "Change hours",
   "scheduling.saveLink": "Save link",
   "scheduling.readsBusy": "Reads busy times",
   "scheduling.sendsInvites": "Sends invitations",
   "scheduling.syncedAgo": "Synced {ago}",
-  "scheduling.reconnectNeeded": "Reconnect needed",
   "scheduling.expiredRow":
     "The connection has expired. Margince cannot read your busy times or send invitations until you reconnect.",
   "scheduling.eventCalendar": "Add booked meetings to",
@@ -22838,6 +23194,7 @@ export const en = {
   "saveBar.save": "Save",
   "saveBar.discard": "Discard",
   "saveBar.unsaved": "Unsaved changes",
+  "saveBar.offered": "Save to make these yours.",
   "saveBar.invalid": "Fix the marked fields to save.",
   "privacy.typeErasePrompt": "Type this word to confirm:",
   "aiFigures.window.24h": "24 h",
@@ -23207,6 +23564,12 @@ export const en = {
   "legalReview.docState.final": "Final",
   "legalReview.advanceRefused":
     "This stage needs legal’s approval first. Request a legal review, then move the deal.",
+  "legalReview.advanceRefused.pending":
+    "This stage needs legal’s approval first. The review is still waiting for an answer from legal.",
+  "legalReview.advanceRefused.changesNeeded":
+    "This stage needs legal’s approval first. Legal asked for changes: make them, then request the review again.",
+  "legalReview.advanceRefused.termsChanged":
+    "The amount or offer changed since legal approved it. Request the review again, then move the deal.",
   "legalReview.packHistory": "Stage history",
   "legalReview.enteredStage": "{stage}, entered {date}",
   "legalReview.settingsTitle": "Legal review",
@@ -23277,6 +23640,7 @@ export const en = {
     "Checking whether the reply answered the request",
   "aiTask.name.rewrite": "Rewriting",
   "aiTask.name.chat_summary": "Chat channel summary",
+  "aiTask.name.chat_task_reading": "Chat and open tasks",
   "aiTask.name.signal_extract": "Signal extraction",
   "aiTask.name.site_extract": "Website research",
   "aiTask.name.site_fact_extract": "Website fact extraction",
@@ -23623,17 +23987,6 @@ export const en = {
   "analytics.decision.unpriced_other": "{count} deals with no amount",
   "analytics.decision.fx_one": "{count} deal with no exchange rate",
   "analytics.decision.fx_other": "{count} deals with no exchange rate",
-  "reporting.writtenChecksFailed":
-    "The open checks could not be read, so nothing is said here about what needs attention.",
-  "reporting.writtenChecksNone": "No open checks need an answer.",
-  "reporting.writtenChecks_one":
-    "{count} open check on {deals} needs an answer.",
-  "reporting.writtenChecks_other":
-    "{count} open checks on {deals} need an answer.",
-  "reporting.writtenChecksOnly_one": "{count} open check needs an answer.",
-  "reporting.writtenChecksOnly_other": "{count} open checks need an answer.",
-  "reporting.writtenChecksDeals_one": "{count} deal",
-  "reporting.writtenChecksDeals_other": "{count} deals",
   "analytics.intervention.notPermitted":
     "Forecast checks are not available to you.",
   "health.needsFix": "Needs fixing",
@@ -23707,12 +24060,19 @@ export const en = {
     "Search may miss records until indexing catches up. The records themselves remain saved.",
   "health.effect.updates":
     "The changes handled by this update remain incomplete. Already saved changes stay saved; some records may still have their previous values.",
+  "health.effect.updatesAction":
+    "The update finished. Some records it found still wait for someone to act on them.",
   "health.effect.recovery":
     "Normal CRM work can continue. During an outage, restoring service may take longer or lose more recent data than the recovery targets allow.",
   "health.effect.automatic":
     "Automatic work may reach the wrong colleague, leaving follow-ups with the wrong owner until routing is corrected.",
   "health.effect.receipts":
     "The refusals stand and advertising to these contacts stays stopped. The contacts were not told, which the rules of their country require at once.",
+  "health.effect.zone":
+    "Background work counts its days in UTC until a timezone is chosen again. Near midnight a report can place a moment on a different day than that work does.",
+  "health.zoneNext":
+    "Open Regional and calendar and choose the reporting timezone again.",
+  "health.code.zone_unresolved": "The reporting timezone cannot be read",
   "health.effect.readFailed":
     "This check cannot show the current state. A failed check does not establish that the underlying feature has stopped.",
   "health.reportCopyFailed": "Could not copy the technical report",
@@ -23840,6 +24200,8 @@ export const en = {
     "Record a successful restore drill within the recovery and data-loss targets.",
   "health.recovery.automatic":
     "Review routing outcomes over a sufficiently large sample.",
+  "health.recovery.zone":
+    "The server reads the stored reporting timezone again.",
   "health.recovery.receipts":
     "Each refusal in the last 30 days must have a sent receipt, or its alert must be settled.",
   "health.ownerHandoff":
@@ -23853,6 +24215,34 @@ export const en = {
   "health.inspect": "See problem and next step",
   "health.openModels": "Open Models",
   "health.openConnections": "Open Connections",
+  "health.openRegional": "Open Regional and calendar",
+  "health.source.footer": "Company details in mail footers",
+  "health.code.footer_complete":
+    "Every mail footer has the company details it must show",
+  "health.code.footer_incomplete": "Mail footers lack company details",
+  "health.footerIncompleteFor": "{entity}: mail footers lack company details",
+  "health.footerDefaultEntity": "The default legal entity",
+  "health.effect.footer":
+    "Mail that must show these details is held for review. Whoever wrote it can still send it with a reason. A background send, such as a meeting reminder, is dropped.",
+  "health.footerNext":
+    "Fill in the missing details. The warning goes once they are complete.",
+  "health.recovery.footer":
+    "Every company detail the jurisdiction packs require is stated.",
+  "health.footerMissing": "Missing details",
+  "health.footerHeldByUser": "Sends by users held since the last change",
+  "health.footerHeldInBackground":
+    "Background sends held or dropped since the last change",
+  "health.footerDetail.controller_identity": "Legal name and postal address",
+  "health.footerDetail.privacy_contact": "Privacy contact",
+  "health.footerDetail.objection_route": "How to object",
+  "health.footerDetail.advertisement": "Advertisement line",
+  "health.footerDetail.advertiser_contact": "Advertiser contact",
+  "health.footerDetail.entity_name": "Company name",
+  "health.measure.messages_one": "{count} message",
+  "health.measure.messages_other": "{count} messages",
+  "health.openLegalEntities": "Open Legal entities",
+  "health.openCompanyProfile": "Open Company profile",
+  "health.openDisclosures": "Open Jurisdiction",
   "health.unit.runs": "runs",
   "health.history": "Retained failure history",
   "health.historyWindow":
@@ -23905,6 +24295,8 @@ export const en = {
   "health.code.updates_failed": "A data update needs technical attention",
   "health.code.updates_retrying": "A data update has another attempt recorded",
   "health.code.updates_review": "A data update needs administrator review",
+  "health.code.updates_action":
+    "A data update finished and left records for someone to act on",
   "health.code.recovery_missing": "No restore test recorded",
   "health.code.recovery_verified":
     "The recorded restore drill met its recovery targets",
@@ -24028,13 +24420,10 @@ export const en = {
     "Goals incomplete: at least one team member has no monthly goal yet, {subtotal} so far",
   "progress.goalIncompleteLine":
     "Goals incomplete: {set} of {needed} months set, {subtotal} so far",
-  "progress.goal.set": "Set",
-  "progress.goal.zero": "Zero",
   "progress.goal.missing": "No goal set",
   "progress.goal.incomplete": "Goals incomplete",
   "progress.goal.withheld": "Hidden",
   "progress.goal.other_currency": "In another currency",
-  "progress.goal.changed_outside_plan": "Changed outside the plan",
   "progress.goalChanged":
     "A month of this goal was changed outside the sales goals. A manager should review the plan.",
   "progress.completion": "{percent}% of the goal",

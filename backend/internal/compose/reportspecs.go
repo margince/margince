@@ -22,11 +22,7 @@ const fieldWinProbabilityBand = "win_probability_band"
 // Today's RSVPs would answer differently once somebody changed their response,
 // which moves a week that has already been read.
 var colMeetingCreditedSeat = "(CASE WHEN t.kind = 'meeting' THEN " +
-	storekit.MeetingCreditedSeatAtChangeSQL("t", heldHostUnrecorded, "held.host_id_at_change") + " END)"
-
-// heldHostUnrecorded is true for a meeting with no recorded held transition,
-// where the current host is the only host there has ever been.
-const heldHostUnrecorded = "held.host_id_at_change IS NULL"
+	storekit.MeetingCreditedSeatAtChangeSQL("t", storekit.LatestHeldCredit.Legacy, storekit.LatestHeldCredit.Host) + " END)"
 
 // creditedSeatIsFilter narrows to the meetings one colleague is credited for.
 //
@@ -34,9 +30,7 @@ const heldHostUnrecorded = "held.host_id_at_change IS NULL"
 // the set holds them finds it. Comparing the single seat a listing shows
 // answered no for every colleague but the one it happened to pick.
 func creditedSeatIsFilter() string {
-	return "(t.kind = 'meeting' AND EXISTS (SELECT 1 FROM " +
-		storekit.MeetingCreditedSeatsAtChangeSQL("t", heldHostUnrecorded, "held.host_id_at_change") +
-		" WHERE credit.id = %s))"
+	return "(t.kind = 'meeting' AND " + storekit.LatestHeldCredit.CreditsSQL("t", "%s") + ")"
 }
 
 // withCommercialFilters adds the deal list's motion, priority and source
@@ -119,8 +113,8 @@ var prebuiltReports = map[string]reportSpec{
 			fieldAmountMinor:     colAmountMinor,
 			fieldAmountBaseMinor: pipelineBaseValueExpr,
 		},
-		sumCoverage:    baseMoneyCoverage(fieldAmountBaseMinor),
-		nativeMeasures: nativeMoney(fieldAmountMinor),
+		sumCoverage: baseMoneyCoverage(fieldAmountBaseMinor),
+		partialSums: true,
 		filters: map[string]string{
 			fieldOwnerID:    colOwnerID,
 			fieldPipelineID: colPipelineID,
@@ -216,8 +210,8 @@ var prebuiltReports = map[string]reportSpec{
 			fieldAmountMinor:         colAmountMinor,
 			fieldWeightedAmountMinor: weightedAmountMinorExpr,
 		}),
-		sumCoverage:    baseMoneyCoverage(),
-		nativeMeasures: nativeMoney(fieldAmountMinor, fieldWeightedAmountMinor),
+		sumCoverage: baseMoneyCoverage(),
+		partialSums: true,
 		// No stage_id filter: nothing serves it (the screen groups BY stage_id
 		// instead), and a filter key this report has no caller for is public
 		// agent surface (the run_report catalog, mcp-info.{json,md}) with no
@@ -244,16 +238,14 @@ var prebuiltReports = map[string]reportSpec{
 		}),
 		listPredicates: deals.CommercialFilterPredicates("t"),
 		filterScopes:   projectFilterScope,
-		// Both company references, which a normal deal read masks per row
-		// when the caller cannot open them. company_id is a FILTER here
-		// and not a dimension, and it needs the scope for that alone: a count
-		// filtered to one company answers whether that company exists and has
-		// a deal, which is the disclosure whether or not the id is printed.
+		// A normal deal read masks both companies per row. The company_id scope
+		// narrows a count filtered to one company and blanks the drill column.
 		referenceScopes: map[string]string{
 			colPartnerCompanyID: tableCompany,
 			colCompanyID:        tableCompany,
 		},
-		defaultBy: moneyDefaultBy(fieldStageID),
+		drillColumns: dealCompanyDrillColumn,
+		defaultBy:    moneyDefaultBy(fieldStageID),
 		defaultAggs: []reportAggregate{
 			{Fn: aggFnCount, As: aliasDeals},
 			{Fn: aggFnSum, Field: fieldAmountMinor, As: "amount_minor_sum"},
@@ -307,7 +299,7 @@ var prebuiltReports = map[string]reportSpec{
 	"activities-by-kind": {
 		entity: datasource.EntityActivity,
 		table:  tableActivity,
-		joins:  []string{heldTransitionJoin},
+		joins:  []string{storekit.LatestHeldJoinSQL("t")},
 		filterPredicates: map[string]string{
 			fieldHostUserID: creditedSeatIsFilter(),
 		},
@@ -435,8 +427,8 @@ var prebuiltReports = map[string]reportSpec{
 			fieldAmountMinor:         colAmountMinor,
 			fieldWeightedAmountMinor: weightedAmountMinorExpr,
 		}),
-		sumCoverage:    baseMoneyCoverage(),
-		nativeMeasures: nativeMoney(fieldAmountMinor, fieldWeightedAmountMinor),
+		sumCoverage: baseMoneyCoverage(),
+		partialSums: true,
 		filters: map[string]string{
 			fieldOwnerID:            colOwnerID,
 			fieldStageID:            colStageID,
@@ -452,10 +444,10 @@ var prebuiltReports = map[string]reportSpec{
 			fieldPartnerCompanyID: colPartnerCompanyID,
 		},
 		filterScopes: projectFilterScope,
-		// partner_company_id points at a company a normal deal read masks
-		// per row when the caller cannot open it, so grouping by it must not
-		// name one they could not have seen.
-		referenceScopes: map[string]string{colPartnerCompanyID: tableCompany},
+		// A normal deal read masks both companies per row. company_id is never
+		// grouped here; its scope blanks the drill column.
+		referenceScopes: map[string]string{colPartnerCompanyID: tableCompany, colCompanyID: tableCompany},
+		drillColumns:    dealCompanyDrillColumn,
 		defaultBy:       moneyDefaultBy(fieldWinProbabilityBand),
 		defaultAggs: []reportAggregate{
 			{Fn: aggFnCount, As: aliasDeals},
@@ -464,17 +456,6 @@ var prebuiltReports = map[string]reportSpec{
 		},
 	},
 }
-
-// heldTransitionJoin is the meeting's own held transition, which recorded the
-// host as it stood then. Its latest one, because a meeting re-held under a new
-// host is credited to that host.
-const heldTransitionJoin = `LEFT JOIN LATERAL (
-        SELECT h.host_id_at_change
-        FROM activity_meeting_history h
-        WHERE h.activity_id = t.id AND h.status = 'held'
-        ORDER BY h.effective_at DESC, h.id DESC
-        LIMIT 1
-      ) held ON true`
 
 const currentStageEntryJoin = `LEFT JOIN LATERAL (
 				SELECT max(h.changed_at) AS entered_at

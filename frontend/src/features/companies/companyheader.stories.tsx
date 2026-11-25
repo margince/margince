@@ -217,42 +217,14 @@ export const AuthorNamed: Story = {
   ),
 };
 
-// A customer that is also a partner: the head draws the lifecycle button and
-// no relationship badge, since the design has none. The relationship types
-// are a field on the Profile tab.
+// A customer that is also a partner: the head draws the Customer and Partner
+// badges. The lifecycle is edited in the side rail only.
 export const CustomerAndPartner: Story = {
   render: () => (
     <Header
       view={withWayIn}
       record={{ ...company, relationship_types: ["customer", "partner"] }}
     />
-  ),
-};
-
-// The account's stage, the header's one real control: a filled button at the
-// control height beside the name, opening the stage list. It was an inline
-// value in the pills row, 24px tall, and read as a tag nobody could act on.
-export const LifecycleOpen: Story = {
-  render: () => <Header view={withWayIn} />,
-  play: async () => {
-    await userEvent.click(
-      await screen.findByRole("combobox", { name: "Lifecycle" }),
-    );
-  },
-};
-
-// The same, in the dark theme, where the accent fill lifts and the list
-// stands on the elevated surface.
-export const LifecycleOpenDark: Story = {
-  ...LifecycleOpen,
-  globals: { theme: "dark" },
-};
-
-// A reader who may not change the stage is shown the stage, not a button that
-// refuses: the record belongs to somebody else.
-export const LifecycleReadOnly: Story = {
-  render: () => (
-    <Header view={withWayIn} record={{ ...company, writable: false }} />
   ),
 };
 

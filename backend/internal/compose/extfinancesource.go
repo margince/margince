@@ -29,7 +29,7 @@ func (composedFinanceSources) Providers() []finance.SourceOption {
 	for _, ext := range ComposedExtensions() {
 		for _, source := range ext.FinanceSources {
 			out = append(out, finance.SourceOption{
-				Provider: source.Provider, Description: string(ext.Description),
+				Provider: source.Provider, DisplayName: source.DisplayName, Description: string(ext.Description),
 				Documents: source.InvoiceDocument != nil,
 			})
 		}

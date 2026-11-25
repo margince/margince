@@ -50,8 +50,8 @@ func seedCalendar(t *testing.T, e *integration.Env, provider, status string, fai
 	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		var id ids.UUID
 		if err := tx.QueryRow(context.Background(), `
-			INSERT INTO capture_connection (provider, user_id, scopes, status, auth)
-			VALUES ($1, $2, '{}', $3, $4) RETURNING id`,
+			INSERT INTO capture_connection (provider, user_id, status, auth)
+			VALUES ($1, $2, $3, $4) RETURNING id`,
 			provider, e.Rep1, status, []byte(`{"refresh_token":"r","granted":[]}`)).Scan(&id); err != nil {
 			return err
 		}

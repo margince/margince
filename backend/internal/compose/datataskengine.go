@@ -21,17 +21,22 @@ import (
 	"github.com/margince/margince/backend/internal/compose/employmentrepair"
 	"github.com/margince/margince/backend/internal/compose/erasedseattraces"
 	"github.com/margince/margince/backend/internal/compose/halfvectors"
+	"github.com/margince/margince/backend/internal/compose/halvedprobabilities"
 	"github.com/margince/margince/backend/internal/compose/importscopes"
 	"github.com/margince/margince/backend/internal/compose/initiativeenrolment"
 	"github.com/margince/margince/backend/internal/compose/invitationsenders"
 	"github.com/margince/margince/backend/internal/compose/meetingrosters"
 	"github.com/margince/margince/backend/internal/compose/provensenders"
 	"github.com/margince/margince/backend/internal/compose/qualifytasks"
+	"github.com/margince/margince/backend/internal/compose/recordsources"
 	"github.com/margince/margince/backend/internal/compose/retiredstagecards"
 	"github.com/margince/margince/backend/internal/compose/retiredthreadsplit"
+	"github.com/margince/margince/backend/internal/compose/rolemailboxseats"
+	"github.com/margince/margince/backend/internal/compose/strengthdates"
 	"github.com/margince/margince/backend/internal/compose/unaskedcommitments"
 	"github.com/margince/margince/backend/internal/compose/viabilitytasks"
 	"github.com/margince/margince/backend/internal/modules/activities"
+	"github.com/margince/margince/backend/internal/modules/ai"
 	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/identity"
@@ -115,9 +120,12 @@ func dataTaskCatalog(pool *pgxpool.Pool, now func() time.Time) []datatask.Task {
 		leadMailDataTask(pool), documentLinksDataTask(), requestProofDataTask(), ownDomainFoldDataTask(), participantEvidenceDataTask(), polymorphicKeysDataTask(), initialsNamesDataTask(), seatEmploymentDataTask(), meetingNoonStartsDataTask(), meetingHistoryPrecisionDataTask(), guessedMailboxSeatsDataTask(), matchedMeetingGuestsDataTask(pool),
 		meetingGuestAnswersDataTask(pool),
 		calendarDescriptionsDataTask(),
-		signalDayCountsDataTask(), meetingDuplicatesDataTask(pool),
+		calendarMethodsDataTask(pool),
+		signalDayCountsDataTask(),
+		meetingDuplicatesDataTask(pool),
 		meetingPairsDataTask(pool),
 		meetingSeriesSlotsDataTask(pool),
+		splitSeriesDataTask(pool),
 		meetingOrganizerHostDataTask(pool),
 		linkedInIdentityDataTask(),
 		leadContactPairsDataTask(pool),
@@ -138,21 +146,24 @@ func dataTaskCatalog(pool *pgxpool.Pool, now func() time.Time) []datatask.Task {
 		linkedAuditRedactionDataTask(pool),
 		markedAuditRedactionDataTask(),
 		keyedIdentifiersDataTask(),
+		stockLaddersDataTask(ai.NewRoutingStore(NewSettingsStore(pool), StoredConfig(pool)).AdoptStockTaskLaddersTx),
 		mailCopiesDataTask(pool),
 		answeredTasksDataTask(pool),
+		halvedprobabilities.DataTask(halvedProbabilityStore(pool)),
 		falseMeetingCancelsDataTask(now),
 		provensenders.DataTask(),
 		importscopes.DataTask(),
 		invitationsenders.DataTask(),
-		meetingrosters.GraphGuestsDataTask(identity.NewService(pool), installationContext(pool)), meetingrosters.BirthRostersDataTask(),
+		meetingrosters.GraphGuestsDataTask(identity.NewService(pool), installationContext(pool)), meetingrosters.BirthRostersDataTask(), meetingrosters.SeatSetsDataTask(),
 		credentialrepair.DataTask(capture.NewPendingStore(InstallationDB(pool)).PurgeRawCaptureTx),
 		erasedseattraces.DataTask(),
 		newslettersDataTask(pool),
 		dealclockrefold.DataTask(), dealclockrefold.PersonalMeetingsTask(),
-		companyclockrefold.DataTask(), companyclockrefold.PersonalMailTask(),
+		companyclockrefold.DataTask(), companyclockrefold.PersonalMailTask(), strengthdates.DataTask(),
 		customerlinks.DataTask(),
 		qualifytasks.DuplicatesDataTask(now), qualifytasks.TextDataTask(),
 		companyprofiles.OfferDuplicatesTask(),
-		qualifytasks.SystemTextDataTask(), employmentrepair.DataTask(contacts.NewStore(InstallationDB(pool))), halfvectors.DataTask(),
+		qualifytasks.SystemTextDataTask(), employmentrepair.DataTask(contacts.NewStore(InstallationDB(pool))), halfvectors.DataTask(), recordsources.DataTask(),
+		rolemailboxseats.DataTask(),
 	}
 }

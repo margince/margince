@@ -251,7 +251,7 @@ Also called: contact already exists, email already taken, hidden contact.
 3. Choose the **Access level**: **Read** or **Write**.
 4. Choose an **Expiry**: **No expiry (until revoked)**, **Expires in 24 hours**, **Expires in 7 days** or **Expires in 30 days**.
 5. If you like, add a **Reason**, then choose **Grant access**. Margince confirms who now has which access, for example "Mira Voss now has Read access to Acme renewal."
-You cannot share more than you hold, and **Grant access** needs the right to change the record. A **Write** share is saved as **Read** if the colleague's role can neither change such records nor log activities. A team share keeps **Write**.
+You cannot share more than you hold, and **Grant access** needs the right to change the record. A **Write** share is saved as **Read** if the colleague's role can neither change such records nor log activities. A team share keeps **Write**. To change a colleague's record, press **Ask … for edit access** below the line saying it is not yours.
 
 On a company, choose **Share contacts** to share contacts who work there now with a person or team. Pick the access level and end date, then choose **Grant access** and confirm **Share these contacts?**. This replaces that recipient's existing shares on those contacts. Other recipients keep their access.
 
@@ -313,7 +313,7 @@ A team in Margince is a named group of colleagues. To create or rename one you n
 
 The Teams page says it: "Membership grants no access, except to a team lead, who can read and edit the team’s records without a share."
 
-When a team is archived, being in it gives nothing any more. You can restore an archived team.
+When a team is archived, being in it gives nothing any more. If the team has members, Margince asks first and says how many lose it. To restore a team, turn on **Show archived teams** on the Teams page and choose **Restore** on its row.
 
 ## Sharing one record
 

@@ -16,6 +16,7 @@ import {
 import { ErrorLine } from "../../design-system/errorline";
 import { Heading } from "../../design-system/heading";
 import { Modal } from "../../design-system/modal";
+import { useFieldFaults } from "../../design-system/savepage";
 import {
   formatAnalyticsMoney,
   formatAnalyticsNumber,
@@ -23,7 +24,7 @@ import {
 import { useLocale, useT } from "../../i18n";
 import { analyticsSectionHref } from "../../lib/analytics.address";
 import { fromHere } from "../../lib/navigatefrom";
-import { unwrap } from "../../lib/problem";
+import { blankRequired, unwrap } from "../../lib/problem";
 import { REPORTING_EVALUATION_KEY } from "../../lib/reportingfigures";
 import { useUrlParams } from "../../lib/urlstate";
 import { useAnalyticsContext } from "./analytics.context";
@@ -123,7 +124,6 @@ function DrawerActions({
   step,
   live,
   saved,
-  goal,
   memberCount,
   pending,
   onClose,
@@ -135,7 +135,6 @@ function DrawerActions({
   step: Step;
   live: boolean;
   saved: SalesInitiative | undefined;
-  goal: Goal;
   memberCount: number;
   pending: { goal: boolean; members: boolean; launch: boolean };
   onClose: () => void;
@@ -151,12 +150,7 @@ function DrawerActions({
         {t("reporting.cancel")}
       </Button>
       {step === "goal" && (
-        <Button
-          variant="primary"
-          pending={pending.goal}
-          disabled={goal.name.trim() === "" || !isoOrBlank(goal.deadline)}
-          onClick={onSaveGoal}
-        >
+        <Button variant="primary" pending={pending.goal} onClick={onSaveGoal}>
           {t("reporting.chooseIncludedRecords")}
         </Button>
       )}
@@ -208,7 +202,9 @@ export function InitiativeDrawer({
   onClose,
 }: Readonly<{ initiative?: SalesInitiative; onClose: () => void }>) {
   const t = useT();
+  const { locale } = useLocale();
   const titleId = useId();
+  const [faults, faultsRoot] = useFieldFaults<HTMLDivElement>();
   const queryClient = useQueryClient();
   const [params] = useUrlParams();
   const live = initiative?.status === "live";
@@ -336,6 +332,8 @@ export function InitiativeDrawer({
           <GoalFields
             goal={goal}
             onChange={setGoal}
+            faults={faults}
+            faultsRoot={faultsRoot}
             onProposal={(proposal) => {
               setGoal((prev) => goalWithProposal(prev, proposal));
               setRule((prev) => ruleWithProposal(prev, proposal));
@@ -369,7 +367,6 @@ export function InitiativeDrawer({
         step={step}
         live={live}
         saved={saved}
-        goal={goal}
         // A pick made here belongs before it is saved, so it counts beside
         // what the server already holds.
         memberCount={
@@ -384,9 +381,15 @@ export function InitiativeDrawer({
         }}
         onClose={onClose}
         onStep={setStep}
-        onSaveGoal={() =>
-          saveGoal.mutate({ body: bodyOf(goal, rule), current: saved })
-        }
+        onSaveGoal={() => {
+          const blank = blankRequired(locale, {
+            name: [t("reporting.initiativeName"), goal.name],
+            deadline: [t("reporting.deadline"), isoOrBlank(goal.deadline)],
+          });
+          if (!faults.show(blank)) {
+            saveGoal.mutate({ body: bodyOf(goal, rule), current: saved });
+          }
+        }}
         onSaveMembers={async (current) => {
           const next = await saveGoal.mutateAsync({
             body: bodyOf(goal, rule),

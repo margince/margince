@@ -149,7 +149,10 @@ describe("PartnerTab — not yet a partner", () => {
       expect(screen.getByText("Not a partner yet")).toBeTruthy(),
     );
     const create = screen.getByRole("button", { name: "Create" });
-    expect(create).toBeDisabled();
+    await user.click(create);
+    expect(screen.getByText("Partner kinds is required.")).toBeVisible();
+    expect(screen.getByLabelText("Partner kinds *")).toHaveFocus();
+    expect(putBody).toBeNull();
     await toggleOptions(user, screen.getByLabelText("Partner kinds *"), [
       "Referral",
       "Consulting",
@@ -301,6 +304,7 @@ describe("PartnerTab — existing partner", () => {
     expect(screen.getByText("Live")).toBeTruthy();
     await user.click(screen.getByTestId("edit-partner"));
 
+    expect(screen.getByRole("dialog", { name: "Edit partner" })).toBeTruthy();
     expect(screen.queryByLabelText("Next step")).toBeNull();
     const segments = await screen.findByLabelText("Served segments");
     await user.clear(segments);
@@ -317,6 +321,7 @@ describe("PartnerTab — existing partner", () => {
     // The old free-text step is never sent, so the save keeps it.
     expect(putBody).not.toHaveProperty("next_step");
     expect(putBody).not.toHaveProperty("next_step_due_at");
+    await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
   });
 
   it("keeps an old next step readable and offers a task for the next one", async () => {
@@ -585,6 +590,43 @@ describe("PartnersScreen", () => {
     }
     expect(
       within(menu).getByRole("button", { name: "Certification status" }),
+    ).toBeTruthy();
+  });
+
+  it("shows each partner's margin tier, and a withheld tier as masked", async () => {
+    stubFetch(async () =>
+      jsonResponse({
+        data: [
+          partner,
+          {
+            ...partner,
+            company_id: "o-2",
+            margin_tier: null,
+            masked_fields: ["margin_tier"],
+          },
+        ],
+        page: { next_cursor: null, has_more: false },
+      }),
+    );
+    render(<PartnersScreen />);
+
+    expect(
+      await screen.findByRole("columnheader", { name: "Margin tier" }),
+    ).toBeTruthy();
+    await waitFor(() => expect(screen.getByText("o-2")).toBeTruthy());
+    expect(screen.getAllByLabelText("Masked value")).toHaveLength(1);
+  });
+
+  it("says how to add a partner when there is none", async () => {
+    stubFetch(async () =>
+      jsonResponse({ data: [], page: { next_cursor: null, has_more: false } }),
+    );
+    render(<PartnersScreen />);
+
+    expect(
+      await screen.findByText(
+        "Open a company and choose More actions → Set up partner program.",
+      ),
     ).toBeTruthy();
   });
 

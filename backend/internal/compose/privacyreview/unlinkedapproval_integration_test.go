@@ -7,7 +7,6 @@ package privacyreview
 
 import (
 	"context"
-	"errors"
 	"testing"
 	"time"
 
@@ -68,7 +67,7 @@ func runBatch(ctx context.Context, e *integration.Env, step datatask.Step) (int,
 
 // runThroughEngine executes the step as the worker does, one audit row per batch.
 // The engine's own checks on a batch's counts then apply to that row.
-func runThroughEngine(ctx context.Context, t *testing.T, e *integration.Env, step datatask.Step) {
+func runThroughEngine(ctx context.Context, t *testing.T, e *integration.Env, step datatask.Step) *datatask.Engine {
 	t.Helper()
 	now := clocktest.Now(t)
 	step.Limit = 1
@@ -80,11 +79,26 @@ func runThroughEngine(ctx context.Context, t *testing.T, e *integration.Env, ste
 	if err := engine.Seed(ctx); err != nil {
 		t.Fatal(err)
 	}
+	drain(ctx, t, e, engine)
+	return engine
+}
+
+func drain(ctx context.Context, t *testing.T, e *integration.Env, engine *datatask.Engine) {
+	t.Helper()
 	for range e.WsCount(t, `SELECT count(*) FROM audit_log`) + 2 {
 		if _, err := engine.Execute(ctx); err != nil {
 			t.Fatal(err)
 		}
 	}
+}
+
+func onlyStep(ctx context.Context, t *testing.T, engine *datatask.Engine) datatask.Progress {
+	t.Helper()
+	rows, err := engine.List(ctx)
+	if err != nil || len(rows) != 1 {
+		t.Fatalf("progress=%+v: %v", rows, err)
+	}
+	return rows[0]
 }
 
 func TestEveryReviewerIsToldOnceAndTheBatchCommits(t *testing.T) {
@@ -128,16 +142,34 @@ func TestALinkProvedAfterTheCorrectionStepIsCorrectedByTheReviewStep(t *testing.
 	}
 }
 
-func TestNoReviewerRefusesTheBatchAndWritesNothing(t *testing.T) {
+func TestNoReviewerFinishesTheStepWithTheHistoriesLeftForAReviewer(t *testing.T) {
 	e := integration.Setup(t)
 	e.WsExec(t, `DELETE FROM role_assignment ra USING role r WHERE ra.role_id=r.id AND r.key IN ('admin','ops')`)
 	unproven, _ := emptiedApproval(t, e, "company", e.SeedCompany(t, "Unproven target", nil))
+	writeAudit(t, e, func(tx pgx.Tx) error {
+		_, err := storekit.AuditWithEvidence(e.Admin(), tx, "update", "approval", unproven, map[string]string{"full_name": "Private Contact"}, map[string]string{"status": "approved"}, nil)
+		return err
+	})
 	ctx := principal.SystemActing(e.Admin(), "system:datatask-test")
-	_, err := runBatch(ctx, e, UnlinkedApprovalReviewStep(notices.NewStore(e.DB())))
-	if _, ok := errors.AsType[*UnavailableError](err); !ok {
-		t.Fatalf("a missing reviewer must refuse the batch: %v", err)
+	engine := runThroughEngine(ctx, t, e, UnlinkedApprovalReviewStep(notices.NewStore(e.DB())))
+	done := onlyStep(ctx, t, engine)
+	if done.Status != datatask.Done || done.ConsecutiveFailures != 0 || done.Action == nil || done.Action.Reason != ReviewerMissing ||
+		done.Action.Count != 1 || done.Action.Records[0] != (datatask.RecordRef{Type: privacy.ApprovalHistoryReview, ID: unproven}) {
+		t.Fatalf("a missing reviewer must finish the step with the history named: %+v / %+v", done, done.Action)
 	}
 	if n := e.WsCount(t, approvalHistoryReviews, unproven); n != 0 {
 		t.Fatalf("wrote %d reviews with nobody to read them", n)
+	}
+
+	grantAdmin(t, e, e.AdminUser)
+	if err := engine.Control(ctx, done.TaskID, done.Step, "retry", done.Version); err != nil {
+		t.Fatal(err)
+	}
+	drain(ctx, t, e, engine)
+	if after := onlyStep(ctx, t, engine); after.Status != datatask.Done || after.Action != nil {
+		t.Fatalf("the rerun with a reviewer kept the action: %+v", after)
+	}
+	if n := e.WsCount(t, approvalHistoryReviews+` AND recipient_user_id=$2`, unproven, e.AdminUser); n != 1 {
+		t.Fatalf("the new reviewer got %d reviews, want 1", n)
 	}
 }

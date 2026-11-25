@@ -12,13 +12,91 @@
   "system_prompt": "cli-default",
   "search": "semantic",
   "self_judged": false,
+  "stamp": {
+    "scenario": "686d502bc3ebe44b",
+    "tools": "8d4c157d93581d9f",
+    "instructions": "c5c644eee9719be0",
+    "judge": "claude-haiku-5-5",
+    "harness": "024566e70b0c3db3",
+    "commit": "3113e9fb6f350addda368cedeb5865ef5276dc41",
+    "ran_at": "2026-11-21T22:15:00Z",
+    "graded_commit": "5808d1c0d9c1a63a8e4b2a14495d96f45c40c7fd",
+    "graded_at": "2026-11-21T23:35:37Z"
+  },
   "usage": {
-    "input_tokens": 51429,
-    "output_tokens": 3528,
+    "input_tokens": 74349,
+    "output_tokens": 4673,
     "cache_creation_input_tokens": 0,
-    "cache_read_input_tokens": 356480,
+    "cache_read_input_tokens": 499584,
     "runs_measured": 2,
     "runs_costed": 0,
     "cost_usd": null
+  },
+  "tools_by_run": [
+    {
+      "passed": true,
+      "tools": [
+        "describe_analytics_vocabulary",
+        "forecast_readings",
+        "get_finance_source",
+        "list_channel_connections",
+        "list_connectors",
+        "list_import_runs",
+        "list_input_checks",
+        "read_analytics",
+        "read_capture_health",
+        "read_extension_ingest_health",
+        "read_forecast",
+        "read_workspace",
+        "run_analytics_query"
+      ]
+    },
+    {
+      "passed": true,
+      "tools": [
+        "describe_analytics_vocabulary",
+        "find_records",
+        "get_company_coverage",
+        "get_finance_source",
+        "list_capture_exclusions",
+        "list_channel_connections",
+        "list_connectors",
+        "list_import_runs",
+        "list_records",
+        "list_web_forms",
+        "list_workspace_capture_activity",
+        "read_analytics",
+        "read_capture_health",
+        "read_extension_ingest_health",
+        "read_reporting",
+        "read_reports",
+        "read_workspace",
+        "run_analytics_query",
+        "whoami"
+      ]
+    }
+  ],
+  "efficiency": {
+    "runs": 2,
+    "calls": {
+      "median": 27.5,
+      "min": 17,
+      "max": 38
+    },
+    "refused": {
+      "median": 7,
+      "min": 4,
+      "max": 10
+    },
+    "prompt_tokens": {
+      "median": 286966.5,
+      "min": 265791,
+      "max": 308142
+    },
+    "output_tokens": {
+      "median": 2336.5,
+      "min": 1938,
+      "max": 2735
+    }
   }
 }

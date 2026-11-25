@@ -46,7 +46,9 @@ operation in the OpenAPI document shows which. A list answers `{ "data": [...], 
 
 ## Errors
 
-An error answers `application/problem+json` (RFC 7807) with a machine `code` to branch on:
+An error answers `application/problem+json` (RFC 7807) with a machine `code` to branch on. A file
+route that a browser tab opens answers its 404 or 403 as a short `text/html` page instead, and the
+contract declares it there:
 
 ```json
 {"type": "https://errors.gradion.com/version_skew", "title": "Conflict", "status": 409,
@@ -109,6 +111,9 @@ says what produced the record (such as `api`), is yours to set; `source_system` 
 when you import. A record is archived, not deleted: an archive operation sets `archived_at`, and the
 record stays readable by id. A few operations remove a part of a record, such as
 `removeOfferLineItem`.
+
+On a deal, an offer and a project, `source` is one of the values the contract lists for that field.
+A program that calls the API sends `api`. Any other value is refused with `422 invalid_source`.
 
 ## An id from your system
 

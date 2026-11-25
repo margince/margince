@@ -152,8 +152,8 @@ func TestIndividualPerformanceOffRefusesACheckRunOfOneColleaguesDeals(t *testing
 	colleague := addColleagues(t, d.e, "run-floor", 1)[0]
 	openDealOf(t, d.e, colleague)
 	scanner := assurance.NewScanner(assurance.NewStore(compose.InstallationDB(d.e.Pool)),
-		compose.AssuranceSubjects, compose.AssuranceCoverage, compose.AssuranceConfig())
-	if _, err := scanner.Scan(apptest.AdminContext(t, d.e, AdminPerms), clocktest.Now(t), nil); err != nil {
+		compose.AssuranceSubjects, compose.AssuranceCoverage, assurance.DefaultConfig())
+	if _, err := scanner.Scan(apptest.AdminContext(t, d.e, AdminPerms), clocktest.Now(t)); err != nil {
 		t.Fatalf("running the check: %v", err)
 	}
 	var run struct {
@@ -170,20 +170,54 @@ func TestIndividualPerformanceOffRefusesACheckRunOfOneColleaguesDeals(t *testing
 }
 
 // A stage's recorded chance is drawn from the deals that passed through it.
-// With only a colleague's deal behind it, it is the colleague's.
-func TestIndividualPerformanceOffRefusesStageChancesOfOneColleaguesDeals(t *testing.T) {
-	e := apptest.SetupApp(t)
-	_, colleague, _ := twoSellerTeam(t, e, "chances-floor")
-	deal := openDealOf(t, e, colleague)
-	if status := e.Call(t, http.MethodPost, "/v1/deals/"+deal+"/advance", AnyMap{"to_stage_id": openStages(t, e)[1]}, nil, nil); status != http.StatusOK {
-		t.Fatalf("moving the deal on = %d", status)
+// With only a colleague's deal behind it, it is the colleague's. While the
+// switch is off the stage shows no recorded outcome on the route or the tool.
+func TestIndividualPerformanceOffLeavesOutStageOutcomesOfOneColleaguesDeals(t *testing.T) {
+	d := newTwoDoors(t, "chances-floor", "read")
+	d.e.DescribeCompany(t)
+	colleague := addColleagues(t, d.e, "chances-floor", 1)[0]
+	stages := apptest.DiscoverSeededPipeline(t, d.e)
+	deal := openDealOf(t, d.e, colleague)
+	if status := d.e.Call(t, http.MethodPost, "/v1/deals/"+deal+"/advance",
+		AnyMap{"to_stage_id": stages.Won, "won_without_contract_reason": "verbal"}, nil, nil); status != http.StatusOK {
+		t.Fatalf("winning the deal = %d", status)
 	}
-	// The evidence counts moves before today, so the move is dated yesterday.
+	// The evidence counts moves before today, so the moves are dated earlier.
 	if _, err := OwnerConn(t).Exec(context.Background(),
 		`UPDATE deal_stage_history SET changed_at = changed_at - interval '2 days' WHERE deal_id = $1`, deal); err != nil {
-		t.Fatalf("dating the move: %v", err)
+		t.Fatalf("dating the moves: %v", err)
 	}
-	mustCall(t, e, http.MethodGet, "/v1/forecast/stage-chances", nil, http.StatusOK, nil)
-	switchOff(t, e)
-	wantFloored(t, e, "/v1/forecast/stage-chances")
+	resolved := func(answer json.RawMessage) int {
+		t.Helper()
+		var chances struct {
+			Stages []struct {
+				StageID   string `json:"stage_id"`
+				EvidenceN int    `json:"evidence_n"`
+			} `json:"stages"`
+		}
+		if err := json.Unmarshal(answer, &chances); err != nil {
+			t.Fatalf("the stage chances do not decode: %v\n%s", err, answer)
+		}
+		for _, stage := range chances.Stages {
+			if stage.StageID == stages.Open {
+				return stage.EvidenceN
+			}
+		}
+		t.Fatalf("the stage chances leave out the deal's stage:\n%s", answer)
+		return 0
+	}
+	route := func() json.RawMessage { return d.rest(t, http.MethodGet, "/v1/forecast/stage-chances", nil) }
+	tool := func() json.RawMessage {
+		return d.tool(t, "read_details", map[string]any{"action": "forecast_stage_chances"})
+	}
+	if resolved(route()) != 1 || resolved(tool()) != 1 {
+		t.Fatal("with the switch on, the stage does not show the colleague's won deal on both doors")
+	}
+	switchOff(t, d.e)
+	if got := resolved(route()); got != 0 {
+		t.Errorf("with the switch off, the route shows %d outcomes of one colleague's deals, want none", got)
+	}
+	if got := resolved(tool()); got != 0 {
+		t.Errorf("with the switch off, the tool shows %d outcomes of one colleague's deals, want none", got)
+	}
 }

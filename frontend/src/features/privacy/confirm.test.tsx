@@ -220,6 +220,28 @@ describe("a confirm page names the seeded purposes in the reader's language", ()
     expect(submitted).toEqual([shown]);
   });
 
+  it("leaves the rights sentence out when the sender states no privacy page", async () => {
+    vi.spyOn(globalThis, "fetch").mockResolvedValue(
+      jsonResponse({
+        ...SUBSCRIPTION,
+        purpose_key: "marketing_email",
+        purpose_label: "Marketing email",
+        frequency: "monthly",
+        controller: { legal_name: "Beispiel GmbH" },
+      }),
+    );
+
+    render(<ConfirmDetailsScreen token="tok-de-no-page" />, "de");
+
+    expect(
+      await screen.findByText(
+        "Bestätigen Sie, dass Beispiel GmbH Ihren Namen und Ihre E-Mail-Adresse verwenden darf, " +
+          "um Ihnen etwa einmal im Monat Produktneuigkeiten per E-Mail zu senden. Sie können Ihre " +
+          "Einwilligung jederzeit über den Abmeldelink in jeder E-Mail widerrufen.",
+      ),
+    ).toBeInTheDocument();
+  });
+
   it("names the purposes a privacy notice lists, and keeps an operator's own", async () => {
     vi.spyOn(globalThis, "fetch").mockResolvedValue(
       jsonResponse({
@@ -322,7 +344,7 @@ describe("the page speaks the language the mail was sent in", () => {
   });
 });
 
-const VI_INVALID_LINK = VIETNAMESE["confirm.invalidLink"];
+const VI_INVALID_LINK = VIETNAMESE["confirm.deadLinkBody"];
 
 describe("an expired link still speaks the language its mail was sent in", () => {
   afterEach(() => {

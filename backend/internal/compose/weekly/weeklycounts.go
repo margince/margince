@@ -73,17 +73,18 @@ func countWeek(ctx context.Context, tx pgx.Tx, userID ids.UUID, start, end time.
 	var c Counts
 	err = tx.QueryRow(ctx, fmt.Sprintf(`
         WITH tasks AS (
-          SELECT `+storekit.TaskDueSQL("a")+` AS due_at, %[6]s AS completed_at FROM activity a
+          SELECT `+storekit.TaskDueFromSQL("a", "$%[1]d")+` AND `+storekit.TaskDueBeforeSQL("a", "$%[2]d")+` AS due_in_week,
+                 `+storekit.TaskDueBeforeSQL("a", "$%[2]d")+` AS due_by_end, %[6]s AS completed_at FROM activity a
            WHERE a.kind='task' AND a.archived_at IS NULL AND (a.is_done OR %[7]s)
              AND a.created_at < $%[2]d AND a.assignee_id=$%[3]d AND (%[4]s)
-             AND ((`+storekit.TaskDueSQL("a")+` >= $%[1]d AND `+storekit.TaskDueSQL("a")+` < $%[2]d)
-               OR a.done_at >= $%[1]d OR (`+storekit.TaskDueSQL("a")+` < $%[2]d AND NOT a.is_done)
+             AND ((`+storekit.TaskDueFromSQL("a", "$%[1]d")+` AND `+storekit.TaskDueBeforeSQL("a", "$%[2]d")+`)
+               OR a.done_at >= $%[1]d OR (`+storekit.TaskDueBeforeSQL("a", "$%[2]d")+` AND NOT a.is_done)
                OR a.updated_at >= $%[2]d))
         SELECT
           (SELECT count(*) FROM tasks WHERE completed_at >= $%[1]d AND completed_at < $%[2]d),
-          (SELECT count(*) FROM tasks WHERE due_at >= $%[1]d AND due_at < $%[2]d),
-          (SELECT count(*) FROM tasks WHERE due_at >= $%[1]d AND due_at < $%[2]d AND completed_at < $%[2]d),
-          (SELECT count(*) FROM tasks WHERE due_at < $%[2]d AND (completed_at IS NULL OR completed_at >= $%[2]d)),
+          (SELECT count(*) FROM tasks WHERE due_in_week),
+          (SELECT count(*) FROM tasks WHERE due_in_week AND completed_at < $%[2]d),
+          (SELECT count(*) FROM tasks WHERE due_by_end AND (completed_at IS NULL OR completed_at >= $%[2]d)),
 		  -- Moved EXCLUDES deals that closed this week. The stage change that
 		  -- closed a deal is the same event as the win, and counting both tells
 		  -- the rep one thing twice — and the deal lines below already exclude
@@ -220,7 +221,9 @@ func countWeekLeads(
 // Only tasks created from the meeting before the week closed count.
 //
 // meetingIsTheirsSQL is "this meeting is that rep's" for the weekly figures:
-// the meeting credit rule analytics counts by, over alias `m`. Filing a
+// the meeting credit rule analytics counts by, over the alias the caller names.
+// The caller says which held transition it reads, so a week already read keeps
+// the guests the meeting was held with. Filing a
 // meeting, importing a copy, or an invitation nobody accepted credits nobody.
 // A meeting two reps attended is in both their weeks: both spent the time.
 //
@@ -230,9 +233,13 @@ func countWeekLeads(
 // still holds the time.
 //
 // Held by: TestTheMeetingAttributionHasOneSpelling (meetingattribution_test.go)
-func meetingIsTheirsSQL(seat string) string {
-	return storekit.MeetingCreditSQL("m", seat)
+func meetingIsTheirsSQL(credit storekit.HeldCredit, meeting, seat string) string {
+	return credit.CreditsSQL(meeting, seat)
 }
+
+// transitionCredit reads the history row h as the transition a funnel counts.
+// A meeting is then credited as it stood at that change.
+var transitionCredit = storekit.HeldCredit{Legacy: "h.host_id_at_change IS NULL", Host: "h.host_id_at_change", Kept: "h.credited_seats_at_change"}
 
 // NextStepTaskSQL is NextStepTaskAtSQL for the meeting as it reads today.
 func NextStepTaskSQL(task, meeting string) string {
@@ -291,7 +298,7 @@ func countWeekMeetings(
 		    FROM activity m `+transition.Join+`
 		   WHERE m.kind = 'meeting' AND m.archived_at IS NULL
 		     AND `+status+` = '`+meetingoutcome.Held+`'
-		     AND `+meetingIsTheirsSQL("$%[3]d")+`
+		     AND `+meetingIsTheirsSQL(storekit.AsOfHeldCredit(transition.Legacy), "m", "$%[3]d")+`
 		     AND `+within+`),
 		next_step AS MATERIALIZED (
 		  SELECT task.id, held_meeting.id AS meeting_id

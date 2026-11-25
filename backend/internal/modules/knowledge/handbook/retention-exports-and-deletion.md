@@ -113,7 +113,7 @@ Team lead, Management, Ops and Admin may archive a contact, company or deal. So 
 Also called: hide, remove, retire a record.
 
 ### How do I restore an archived record?
-An archived contact, company or deal comes back with **Undo** on the entry that archived it, in the record's **History**. Open it with **Show archived** on its list. You cannot bring back a project from the app. You can also take back a single field change with **Undo** in the record's **History**. Tags and pipelines have their own **Restore**; an archived team comes back with **Undo** on the "Team archived" notice.
+An archived contact, company or deal comes back with **Undo** on the entry that archived it, in the record's **History**. Open it with **Show archived** on its list. You cannot bring back a project from the app. You can also take back a single field change with **Undo** in the record's **History**. Tags, pipelines and teams have their own **Restore**; for a team, an Admin turns on **Show archived teams** first.
 Also called: unarchive, undelete, recover.
 
 ### How do I change how long Margince keeps data?
@@ -173,7 +173,7 @@ Margince does not destroy a record just because it is old. Each starting rule ar
 
 **Stored message originals** are the copies that capture keeps of every message it filed, apart from the timeline entry made from each one. On a large mailbox they take the most storage. An original is never destroyed while the law still says its mail must be kept. The timeline entry stays, so the same message cannot be captured again.
 
-If you delete every rule, the screen tells you what that means: "No retention policy yet. Nothing in this installation ages out." One fixed time limit still runs with no rule: traces of AI embedding calls end after 90 days (below).
+If you delete every rule, the screen tells you what that means: "No retention policy yet. Nothing in this installation ages out." Four fixed time limits still run with no rule (below).
 
 ### What each retention window counts from
 Most records have two clocks, and a rule acts only once both are past its window. One clock is the date the record carries. The other is how long the record has been in Margince. So a record you import is not removed on the day it arrives because it was old somewhere else.
@@ -235,9 +235,9 @@ A rule can hold a **Lawful basis** if you like (the Article 6 reason for the tim
 
 Enabled rules act each time the retention pass runs, as the panel says: "Enabled policies act on the data retention schedule." The pass runs once a day by default. An Admin or Ops user can change that from hourly to weekly: in **Settings → System health**, open **All schedules** and set **Data retention**, in seconds. A rule shows a badge only when it is not acting: "Disabled" or "Paused by retain-only mode". Each pass works on up to 200 records for each rule, so years of old records take many passes to clear.
 
-### One window nobody can change
+### Windows nobody can change
 
-Traces of AI embedding calls are kept for **90 days**, fixed. This runs with or without a rule, and no admin can edit it.
+These four run with or without a rule, and no admin can edit them. Traces of AI embedding calls are kept for **90 days**, and traces of every other AI call for **400 days**. Error and skip entries of the system log are kept for **90 days**. Its sign-in, password reset and mailbox credential entries are kept for **400 days**, and every other entry of it is kept. Traces of AI answers that still have their stored content are kept past their window. Retain-only mode keeps all these system log entries, and it still removes old traces that have no stored content.
 
 ### Turning a retention policy off, versus deleting it
 
@@ -377,9 +377,9 @@ An agent can record consent for its user, and it asks them first. It cannot reco
 
 The audit trail, **Settings → Audit log**, records "Every action, attributed to a user, agent or connector."
 
-You can filter it by **Actor**, **Entity type**, **Entity ID**, **Action**, and a date range (**From**, **To**). Choose **Show change detail** on any entry to see the change and the **Authorization rule** that allowed it. Where something was done for someone else, the entry says so.
+You can filter it by **Actor**, **Entity type**, **Entity ID**, **Action**, and a date range (**From**, **To**). Pick a member in **Actor** to see what they did, and what an AI assistant did for them. **Entity ID** takes a record's full ID: use **Copy record ID** on an entry. The address keeps your filters, so you can share the link. Choose **Show change detail** on any entry to see the change and the **Authorization rule** that allowed it. Where something was done for someone else, the entry says so.
 
-Only an admin can read the full trail: "Your role cannot read the full audit log. It records every actor and every record they accessed."
+Only an admin can read the full trail: "Your role cannot read the full audit log. It records every actor and every record they accessed." Margince keeps the trail for good: no retention rule removes an entry because it is old.
 
 It is also where a record's full ID is shown, which you need to pin a record under the retention floor by hand.
 

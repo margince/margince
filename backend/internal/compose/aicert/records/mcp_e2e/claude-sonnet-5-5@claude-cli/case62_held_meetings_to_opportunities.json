@@ -10,14 +10,81 @@
   "effort": "thinking off",
   "system_prompt": "cli-default",
   "search": "semantic",
+  "door": "mcp",
   "self_judged": true,
+  "stamp": {
+    "scenario": "d47f8a817c6ab591",
+    "tools": "8abecad6c4de3657",
+    "instructions": "c5c644eee9719be0",
+    "judge": "claude-haiku-5-5",
+    "harness": "024566e70b0c3db3",
+    "commit": "bcf9db5be3820f3f7331a9b9b73120b83749f027",
+    "ran_at": "2026-11-21T08:54:06Z",
+    "graded_commit": "5808d1c0d9c1a63a8e4b2a14495d96f45c40c7fd",
+    "graded_at": "2026-11-21T23:31:31Z"
+  },
   "usage": {
-    "input_tokens": 12,
-    "output_tokens": 1859,
-    "cache_creation_input_tokens": 11801,
-    "cache_read_input_tokens": 457007,
+    "input_tokens": 16,
+    "output_tokens": 1926,
+    "cache_creation_input_tokens": 12443,
+    "cache_read_input_tokens": 624489,
     "runs_measured": 2,
     "runs_costed": 2,
-    "cost_usd": 0.1115
+    "cost_usd": 0.1315
+  },
+  "tools_by_run": [
+    {
+      "passed": true,
+      "tools": [
+        "find_records",
+        "list_records",
+        "read_reports",
+        "run_report",
+        "whoami"
+      ]
+    },
+    {
+      "passed": true,
+      "tools": [
+        "describe_report_vocabulary",
+        "read_reports",
+        "read_workspace",
+        "run_report",
+        "whoami"
+      ]
+    }
+  ],
+  "efficiency": {
+    "runs": 2,
+    "calls": {
+      "median": 4,
+      "min": 3,
+      "max": 5
+    },
+    "turns": {
+      "median": 5,
+      "min": 4,
+      "max": 6
+    },
+    "refused": {
+      "median": 0,
+      "min": 0,
+      "max": 0
+    },
+    "prompt_tokens": {
+      "median": 318474,
+      "min": 237460,
+      "max": 399488
+    },
+    "output_tokens": {
+      "median": 963,
+      "min": 913,
+      "max": 1013
+    },
+    "duration_ms": {
+      "median": 11361,
+      "min": 10187,
+      "max": 12535
+    }
   }
 }

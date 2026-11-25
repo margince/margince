@@ -544,9 +544,9 @@ func TestNarrowingLeavesAFieldAContactCorrected(t *testing.T) {
 	// The verdict a correction leaves behind, keyed the way refuseIfCorrected
 	// reads it.
 	if _, err := e.Owner.Exec(ctx, `
-		INSERT INTO ai_feedback (subject_type, subject_id, claim_kind, claim_key, verdict, corrected_value, captured_by, source)
+		INSERT INTO ai_feedback (subject_type, subject_id, claim_kind, claim_key, verdict, corrected_value, captured_by)
 		VALUES ('contact', $1, 'profile_field',
-		        encode(sha256(('profile_field:title')::bytea), 'hex'), 'corrected', 'Justiziarin', 'human:someone', 'manual')`,
+		        encode(sha256(('profile_field:title')::bytea), 'hex'), 'corrected', 'Justiziarin', 'human:someone')`,
 		contact); err != nil {
 		t.Fatal(err)
 	}

@@ -25,7 +25,7 @@ type stubDealFacts struct {
 	err     error
 }
 
-func (s *stubDealFacts) Figures(_ context.Context, dealIDs []ids.UUID) (map[ids.UUID]DealFigures, error) {
+func (s *stubDealFacts) Figures(_ context.Context, dealIDs []ids.UUID, _ *time.Location) (map[ids.UUID]DealFigures, error) {
 	s.asked = append(s.asked, dealIDs...)
 	return s.figures, s.err
 }

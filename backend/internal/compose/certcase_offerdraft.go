@@ -281,7 +281,10 @@ func (c *offerDraftCase) Run(ctx context.Context, completer aitasks.Completer) (
 	// one that changed its mind. The rule is PRESENT in the graded request for
 	// the same reason — production sends one, so a case that left it out would
 	// grade a prompt the product does not send.
-	req := offerDraftRequest(c.dealContext, c.catalog, offerDraftCaseLanguage)
+	req, err := withCertCompanyContext(ctx, ai.TaskOfferDraft, offerDraftRequest(c.dealContext, c.catalog, offerDraftCaseLanguage))
+	if err != nil {
+		return aitasks.Trace{}, err
+	}
 	trace := aitasks.Trace{Requests: []model.Request{req}}
 	resp, err := completer.Complete(ctx, req)
 	if err != nil {

@@ -11,6 +11,8 @@ package integration
 
 import (
 	"context"
+	"fmt"
+	"slices"
 	"testing"
 	"time"
 
@@ -32,7 +34,8 @@ func TestTheReviewPackReadsOnlyTheDealsOwnAgreementsTouchesAndTasks(t *testing.T
 	seedDeal := func(name string, company ids.UUID) ids.UUID {
 		companyID := ids.From[ids.CompanyKind](company)
 		created, err := e.Deals.CreateDeal(e.Admin(), deals.CreateDealInput{
-			Name: name, PipelineID: pipeline, StageID: open, CompanyID: &companyID,
+			Source: "manual",
+			Name:   name, PipelineID: pipeline, StageID: open, CompanyID: &companyID,
 		})
 		if err != nil {
 			t.Fatalf("seeding %q: %v", name, err)
@@ -102,7 +105,8 @@ func packDeal(t *testing.T, e *Env) ids.UUID {
 	// Rep1 owns it, so Rep1 may file mail onto it.
 	owner := ids.From[ids.UserKind](e.Rep1)
 	created, err := e.Deals.CreateDeal(e.Admin(), deals.CreateDealInput{
-		Name: "Audience renewal", PipelineID: pipeline, StageID: open, CompanyID: &companyID, OwnerID: &owner,
+		Source: "manual",
+		Name:   "Audience renewal", PipelineID: pipeline, StageID: open, CompanyID: &companyID, OwnerID: &owner,
 	})
 	if err != nil {
 		t.Fatalf("seeding the deal: %v", err)
@@ -175,5 +179,67 @@ func TestTheLatestTouchesSkipAutomaticMailBeforeCounting(t *testing.T) {
 	touches, _, err := reader.ReviewActivity(e.Admin(), deal)
 	if err != nil || len(touches) != 1 || touches[0].ActivityID != note {
 		t.Fatalf("the latest touches were %+v (%v), want the one manual note", touches, err)
+	}
+}
+
+// The deal's list is one page, newest term first. A frozen agreement past it
+// still opens by id, and more than a page of ids is read in full. The read
+// keeps the deal, archive, grant and row-scope rules.
+func TestAFrozenAgreementOpensPastTheDealsNewestPage(t *testing.T) {
+	e := Setup(t)
+	reader := legalreviewrecords.New(e.Contracts, e.Activities)
+	pipeline, open, _ := DealFixture(t, e)
+	company := ids.From[ids.CompanyKind](e.SeedCompany(t, "Paper Holdings", nil))
+	seedDeal := func(name string) ids.UUID {
+		created, err := e.Deals.CreateDeal(e.Admin(), deals.CreateDealInput{
+			Source: "manual",
+			Name:   name, PipelineID: pipeline, StageID: open, CompanyID: &company,
+		})
+		if err != nil {
+			t.Fatalf("seeding %q: %v", name, err)
+		}
+		return ids.UUID(created.Id)
+	}
+	deal := seedDeal("Paper renewal")
+	agreement := func(title string, deal ids.UUID) ids.UUID {
+		return ids.UUID(seedContract(t, e, contracts.CreateContractInput{
+			CompanyID: company, DealID: dealIDPtr(deal), Title: title, ValueBasis: contracts.BasisTotal, Source: "manual",
+		}).UUID)
+	}
+	frozen := agreement("Master agreement", deal)
+	asked := []ids.UUID{frozen}
+	for i := range 200 {
+		asked = append(asked, agreement(fmt.Sprintf("Order form %d", i), deal))
+	}
+	// No writer files an agreement under a company other than its deal's, so
+	// the legacy mismatch is set by hand. Only its own private company admits it.
+	hidden := agreement("Legacy side letter", deal)
+	private := e.SeedCompany(t, "Private Holdings", &e.Rep3)
+	e.WsExec(t, `UPDATE contract SET company_id = $1 WHERE id = $2`, private, hidden)
+	e.MakeCapturePrivate(t, "company", private, e.Rep3)
+	archived := agreement("Withdrawn draft", deal)
+	if err := e.Contracts.ArchiveContract(e.Admin(), ids.From[ids.ContractKind](archived)); err != nil {
+		t.Fatalf("archiving the draft: %v", err)
+	}
+	elsewhere := agreement("The other deal's agreement", seedDeal("Paper side deal"))
+	asked = append(asked, hidden, archived, elsewhere)
+
+	page, err := reader.ReviewContracts(e.Admin(), deal)
+	if err != nil || len(page) != 200 || slices.ContainsFunc(page, func(c deals.PacketContract) bool { return c.ContractID == frozen }) {
+		t.Fatalf("the deal's page held %d agreements (%v), want 200 without the oldest", len(page), err)
+	}
+	owner := e.As(e.Rep3, []ids.UUID{e.Team2}, contractReaderPerms())
+	named, err := reader.OpenableContracts(owner, deal, asked)
+	if err != nil || len(named) != 202 || named[frozen] != "Master agreement" || named[hidden] != "Legacy side letter" {
+		t.Fatalf("the private company's owner read %d of %d ids, frozen %q (%v), want the 202 live ones on the deal", len(named), len(asked), named[frozen], err)
+	}
+	rep := e.As(e.Rep1, []ids.UUID{e.Team1}, contractReaderPerms())
+	seen, err := reader.OpenableContracts(rep, deal, asked)
+	if _, leaked := seen[hidden]; err != nil || len(seen) != 201 || seen[frozen] != "Master agreement" || leaked {
+		t.Fatalf("a rep read %d ids, hidden one leaked %t (%v), want 201 without the private company's", len(seen), leaked, err)
+	}
+	blind := e.As(e.AdminUser, nil, contractReaderPerms("contract"))
+	if named, err := reader.OpenableContracts(blind, deal, []ids.UUID{frozen}); err != nil || len(named) != 0 {
+		t.Fatalf("a seat without contract.read was handed %v (%v)", named, err)
 	}
 }

@@ -15,6 +15,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/compose/recordexport"
 	"github.com/margince/margince/backend/internal/modules/collections"
 	"github.com/margince/margince/backend/internal/modules/migration"
 	"github.com/margince/margince/backend/internal/platform/auth"
@@ -24,7 +25,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
-const csvTargetTags = "tags"
+const csvTargetTags = recordexport.Tags
 
 // splitTags reads a tags cell: semicolon-separated names, spaced as the tag
 // store spells them, each once whatever its case.

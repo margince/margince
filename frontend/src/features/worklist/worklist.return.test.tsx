@@ -1,10 +1,14 @@
 /** @vitest-environment happy-dom */
-import { cleanup, screen } from "@testing-library/react";
+import {
+  cleanup,
+  render as renderLibrary,
+  screen,
+} from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../../api/schema";
+import { AppLink } from "../../design-system/applink";
 import { translate } from "../../i18n";
-import { en } from "../../i18n/en";
 import { readingsDay, taskRow } from "../../testing/brief.fixtures";
 import { jsonResponse, render, stubApi } from "../../testing/brief.testkit";
 import {
@@ -16,8 +20,9 @@ import { BriefQueue } from "../brief/brief.queue";
 import { runContactMomentAction } from "../contacts/contactpage";
 import {
   keptWorklistReturn,
-  WorklistReturnLink,
+  WorklistReturnScope,
   withWorklistReturn,
+  worklistReturnHref,
 } from "./worklist.return";
 
 afterEach(() => {
@@ -86,38 +91,51 @@ describe("a row opened from the Worklist drawer", () => {
       "#/contacts/c-1/network?filter=tasks&from=worklist",
     );
   });
+
+  it("marks a shared component's record link drawn inside the drawer", () => {
+    const drawer = new Map([["queue_scope", "team"]]);
+    renderLibrary(
+      <>
+        <WorklistReturnScope dials={drawer}>
+          <AppLink href="#/contacts/c-1">Open contact</AppLink>
+          <AppLink href="#/settings/privacy">Privacy</AppLink>
+        </WorklistReturnScope>
+        <AppLink href="#/contacts/c-2">Elsewhere</AppLink>
+      </>,
+    );
+
+    expect(linkTo("Open contact").get("from")).toBe("worklist");
+    expect(linkTo("Open contact").get("queue_scope")).toBe("team");
+    expect(linkTo("Privacy").has("from")).toBe(false);
+    expect(linkTo("Elsewhere").has("from")).toBe(false);
+  });
 });
 
-describe("Back to Worklist on the record", () => {
+describe("the way back to the Worklist from a record", () => {
   it("returns to Home with the drawer open on the carried dials", () => {
-    window.location.hash =
-      "#/contacts/c-1?filter=tasks&from=worklist&owner=u-7&queue_scope=team";
-    render(<WorklistReturnLink />);
-
-    const back = screen.getByRole("link", { name: en["brief.queue.back"] });
-    expect(back.getAttribute("href")).toBe(
-      "/#/home?filter=tasks&owner=u-7&queue=1&queue_scope=team",
-    );
+    expect(
+      worklistReturnHref(
+        "#/contacts/c-1?filter=tasks&from=worklist&owner=u-7&queue_scope=team",
+      ),
+    ).toBe("#/home?filter=tasks&owner=u-7&queue=1&queue_scope=team");
   });
 
   it("returns to the view the drawer was on", () => {
-    window.location.hash =
-      "#/contacts/c-1?from=worklist&queue_scope=team&queue_view=decisions";
-    render(<WorklistReturnLink />);
-
-    const back = screen.getByRole("link", { name: en["brief.queue.back"] });
-    expect(back.getAttribute("href")).toBe(
-      "/#/home?queue=1&queue_scope=team&queue_view=decisions",
-    );
+    expect(
+      worklistReturnHref(
+        "#/contacts/c-1?from=worklist&queue_scope=team&queue_view=decisions",
+      ),
+    ).toBe("#/home?queue=1&queue_scope=team&queue_view=decisions");
   });
 
   it("is absent on a record opened any other way", () => {
-    window.location.hash = "#/contacts/c-1?filter=tasks";
-    render(<WorklistReturnLink />);
+    expect(worklistReturnHref("#/contacts/c-1?filter=tasks")).toBeUndefined();
+  });
 
+  it("is absent on a page that is not a returning record", () => {
     expect(
-      screen.queryByRole("link", { name: en["brief.queue.back"] }),
-    ).toBeNull();
+      worklistReturnHref("#/settings/privacy?from=worklist"),
+    ).toBeUndefined();
   });
 
   it("travels with a tab switch inside the record", () => {

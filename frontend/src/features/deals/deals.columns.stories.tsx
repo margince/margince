@@ -65,7 +65,13 @@ export const PartialCoverage: Story = {
                 deals: 2,
                 base_minor: 90_000,
                 weighted_base_minor: 45_000,
-                priced_deals: 1,
+                coverage: {
+                  aggregates: ["raw_minor"],
+                  partial: true,
+                  no_value_deals: 0,
+                  no_rate_deals: 1,
+                  missing_currencies: ["JPY"],
+                },
               },
             ],
             "EUR",
@@ -83,7 +89,9 @@ export const PartialCoverage: Story = {
     const canvas = within(canvasElement);
     await expect(canvas.getByText("Fleet retrofit")).toBeVisible();
     await expect(canvas.getByText("Solar pilot")).toBeVisible();
-    await expect(canvas.getByText("1 not priced")).toBeVisible();
+    await expect(
+      canvas.getByText("1 deal has no exchange rate (JPY)"),
+    ).toBeVisible();
     await expect(
       canvas.getByText(translate("en", "board.ratesOn", { date: "1 Oct" })),
     ).toBeVisible();
@@ -92,7 +100,7 @@ export const PartialCoverage: Story = {
     total.focus();
     await expect(
       await within(document.body).findByRole("tooltip"),
-    ).toHaveTextContent(/1 deal has no price.*01\/10\/2026/);
+    ).toHaveTextContent(/1 deal has no exchange rate \(JPY\).*01\/10\/2026/);
   },
 };
 

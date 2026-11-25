@@ -46,7 +46,7 @@ To add a new contact in Margince, open **Contacts** in the sidebar and choose **
 1. Enter the **Full name** and at least one email, phone number or LinkedIn profile link.
 2. If you like, fill **First name**, **Last name**, **Title**, **Company** and **LinkedIn**.
 3. Choose **Add email** for each address and set its **Type** (Work, Personal or Other); choose **Add phone** for each number.
-4. Fill any custom fields, then choose **Create**. Create stays off until the name and a contact channel are filled.
+4. Fill any custom fields, then choose **Create**. If something is missing, Create says so under each field and takes you to the first one.
 
 The **Company** box lists the companies that match what you type: pick one to link it. A typed name links the company of that name, or creates one if there is none. Until you use the box, a work email fills it with the company whose domain covers the address, such as `example.com` for `dana@eu.example.com`. Margince never makes up a company from a domain alone. On a company's **Contacts** tab, **New contact** files the contact under that company, without the box.
 
@@ -57,7 +57,7 @@ To add a contact quickly in Margince, open **Contacts** and choose **Quick captu
 - **Quick capture** requires **Full name** and at least one **LinkedIn**, **Email** or **Phone**. It also asks for **Title** and **Company**, and confirms with "{name} saved"; the form stays open. Its **Company** box lists and creates companies as in **New contact**, but its **Email** does not fill it. If the email or LinkedIn profile belongs to a live lead, it offers to convert that lead instead. On a company's **Contacts** tab it files the contact under that company, without the **Company** box, if you may change the company.
 - **Import vCards** opens **Import business cards**: choose **Select file or photo** for a **vCard file or card photo**. A name-only card is kept with a warning to add an email, phone or LinkedIn profile link. Each card is Added, Updated, Possible duplicate, Waiting for approval or Skipped; a card for a live lead offers **Convert the lead**. A file card whose email, phone or text cannot be read or stored is Skipped, and the other cards still import. A model reads a photo of up to 20 cards, so every card from a photo waits for your approval.
 
-  A photo card whose email is already a contact is Skipped. So is a card whose name is over 120 characters, the same limit as typing a name. On a card from a file, a job title over 120 characters keeps its first 120. When that title is imported or replaces the old one, the card says so. Each field of a card from a file says Imported, "Replaced, old value can be restored", "Record value kept" or "Not in the card". **Next vCard** clears the result for the next card.
+  A photo card whose email is already a contact is Skipped, as is a card with a name over 120 characters. A job title over 120 characters keeps its first 120, and the card says so. Each field of a card from a file says Imported, "Replaced, old value can be restored", "Record value kept" or "Not in the card". **Next vCard** clears the result for the next card. On a company's **Contacts** tab, the import files the contacts it creates under that company and reads no photos. A contact it only updates keeps its own employer.
 - A card photo must be a JPEG or PNG. An iPhone converts it automatically when you pick it. A photo in another format is refused until you save it as JPEG or PNG.
 
 ### How do I edit a contact?
@@ -73,6 +73,9 @@ A contact or company in Margince takes no edits when it is archived ("This conta
 Where you cannot edit, a section shows no **Edit**, a field shows no box or mark, and other actions are greyed out. The page states the reason once, at the foot of the **Details** panel, or in the band at the top of an archived contact. Except on an archived record, pointing at a greyed-out **Email** or **Log** button in the header shows the same reason. If someone else changed the same field while you were editing, your edit is refused: "This record changed after you opened it. Reload it to see the change, then make yours again."
 Also called: read-only record, edit greyed out, cannot change.
 
+### What does "This sender may be pretending to be someone else" mean?
+The warning shows on a contact when the first email from one of its addresses carried a sign that the sender is someone else. The warning names the sign when one was recorded, such as a mail domain in a coded spelling that can look like another domain. Check the address, then press **Looks fine** if the sender is right. The warning then goes for all users, and the **History** tab records who cleared it. Only a user who can edit the contact can clear it, and an agent cannot.
+Also called: wrong sender, sender warning.
 ### How do I link a contact to a company?
 New contacts use the same company check from every source. A company name can find or create the employer; a work address can find a company or wait for a site check. Personal email domains create no company.
 To link a contact to a company in Margince, open the contact's **Companies** tab and choose **Add company** under **Work history**. The same list shows the companies they worked at before, with role and dates. When the first page holds the whole list, the number on the tab counts them.
@@ -119,7 +122,7 @@ Margince then opens the contact you kept; the first merge settles the group for 
 Also called: combine, deduplicate, remove a duplicate, merge several contacts, duplicate group.
 
 ### How do I call a contact?
-To call a contact, click its number in **Details** or in the header's **Phone** field. It dials that number in your phone app. Margince does not make or record calls, but it opens **Log activity** on **Call** for that contact; close it and nothing is recorded. A logged call's **Call**, the **Call** in a task and the open card under **Needs you** on **Home** do the same. A seat that may not log activity, or an archived contact, only dials; a contact with no number has nothing to dial. A call logged this way is not linked to the task and does not complete it.
+To call a contact, click its number in **Details** or in the header's **Phone** field, and your phone app dials it. Margince does not make or record calls, but it opens **Log activity** on **Call** for that contact; close it and nothing is recorded. A logged call's **Call**, the **Call** in a task and the open card under **Needs you** on **Home** do the same. A seat that may not log activity, or an archived contact, only dials; a contact with no number has nothing to dial. A call logged this way is not linked to the task and does not complete it. A promise on the **Overview** from a logged call leads with **Call them** when the contact has a number, beside **Write to them**.
 
 To write to a contact, press **Email** in its header; a contact reached only on chat shows **Message on** there. Only a number that starts with + gets a chat button, in the header **Phone** field and in **Details**, for **WhatsApp**, **Telegram** and **Zalo**. Each sends the number to the app's website and opens a chat, where you start the call; it does not open **Log activity**. Telegram finds the contact only if the contact allows it. An administrator can turn each link off in [Settings](settings.md).
 Also called: phone a contact, click to call, dial, call result, not reached.
@@ -137,7 +140,7 @@ To add a company (a new customer, client or account) in Margince, open **Compani
 1. Enter the **Company name** (required).
 2. If you like, fill **Legal name**, **Industry**, **Employees**, **Phone** and **Email**. You pick **Industry** from a list.
 3. Choose **Add domain** for each domain; a domain row you add must be filled.
-4. Fill any custom fields, then choose **Create**. If the company is already in Margince, **View existing record** opens it instead. The website address comes from the main domain, so there is no website box.
+4. Fill any custom fields, then choose **Create**. If another company holds the same domain, **View existing record** opens it instead and nothing is created. If a company with the same name exists, Margince still creates yours and shows a notice with **View existing record**. Your company's page then shows **Possible duplicates** and a count. The website address comes from the main domain, so there is no website box.
 
 A new company with a domain lists the unlinked contacts with an email address on it, none ticked. Margince links those with no current job to it each day, ticked or not, so ticks matter most for contacts with another employer. Tick those who work there and choose **Link contacts**, or choose **Review contacts** on its **Contacts** tab later. Also called: new account, new business, add a client or customer.
 
@@ -224,7 +227,7 @@ Right after you archive a contact, the message that says so has **Undo** too, wh
 
 Margince archives some records on its own, such as emails it judged to be of no use. Those show under **Done for you** on Home, with the other work Margince did for you. A contact, company or deal there has its own **Undo**.
 
- You cannot bring back an archived email or meeting yet. You cannot bring back a project from the app; create it again, or ask an admin. An archived record takes no edits or merges. Tags and pipelines do have a **Restore**; an archived team comes back with **Undo** on its archived notice. You can open a disqualified lead again with **Reopen**.
+ You cannot bring back an archived email or meeting yet. You cannot bring back a project from the app; create it again, or ask an admin. An archived record takes no edits or merges. Tags, pipelines and teams do have a **Restore**; for a team, an Admin turns on **Show archived teams** first. You can open a disqualified lead again with **Reopen**.
 Also called: unarchive, undelete, bring back a record.
 
 ### Can I undo a record Margince created?
@@ -319,7 +322,6 @@ Every Margince record keeps a history of what changed, who changed it and when. 
 "{count} fields revert to their values before this change:".
 
 Putting a change back is an ordinary edit. It follows the same rules as typing the old value yourself, and shows in the history as its own entry, which you can undo too.
-
 Not every entry can be put back, and the history says which and why before you press anything. The reasons you will see:
 
 - **The field changed again since.** Putting the entry back would lose whatever was written after it, so it is refused. The reason names the field, so you can look at what happened in between and decide.
@@ -328,7 +330,6 @@ Not every entry can be put back, and the history says which and why before you p
 - **The earlier text held a password.** History keeps a password, an access key or a token only masked. A note still holds the text you typed, so putting the masked text back would replace it, and the change is refused. An email is always stored masked, so an email change can still be put back.
 
 If someone else edits the record between your reading the screen and pressing the button, the change is refused and nothing is written. Read the reason, look at the record again, and decide from what is there now.
-
 **An agent cannot put a change back.** Only a human can undo a change.
 
 ### Can two users edit the same record at the same time?
@@ -396,5 +397,4 @@ You see a suggestion only when you may read the record and every item it lists. 
 ## Money
 
 Margince stores every amount as a whole number of the currency's smallest unit, such as cents for euros, together with its currency. Most currencies have two places after the point; some, such as yen, won and dong, have none.
-
 **Two currencies are never added together.** A column that holds more than one currency shows no total at all; it says "several currencies, no single total". Margince does not guess an exchange rate to add euros to dollars.

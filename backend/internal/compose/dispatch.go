@@ -20,6 +20,8 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/riverqueue/river"
 
+	"github.com/margince/margince/backend/internal/compose/zonefault"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/platform/jobs"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
@@ -35,16 +37,14 @@ func enumerateWorkspaces(ctx context.Context, pool *pgxpool.Pool) ([]ids.UUID, e
 	return pgx.CollectRows(rows, pgx.RowTo[ids.UUID])
 }
 
-// enumerateEveryWorkspace reads EVERY workspace, archived ones included —
-// unlike the passes that work on behalf of a live tenant. Archiving a workspace
-// does not un-store the data inside it, and both retention passes fan out over
-// this enumeration for that reason.
+// enumerateEveryWorkspace reads every workspace, archived ones included,
+// unlike the passes that work on behalf of a live tenant. Both retention passes
+// fan out over this enumeration, because archiving does not un-store data.
 //
 // GDPR storage limitation does not pause because a tenant stopped logging in:
 // skipping archived rows would hold personal data past its retention floor in
 // exactly the workspaces nobody looks at any more. Idempotency claim retention
-// needs them for a second reason — idempotency_key.workspace_id is ON DELETE
-// RESTRICT, so leftover claims also refuse the eventual hard delete.
+// still runs under each workspace's own transaction, so it needs every one.
 func enumerateEveryWorkspace(ctx context.Context, pool *pgxpool.Pool) ([]ids.UUID, error) {
 	// rls-exempt: fleet enumeration — the workspace table is not workspace-scoped; retention reads every tenant, archived included, before any per-workspace tx exists.
 	rows, err := pool.Query(ctx, `SELECT id FROM workspace ORDER BY created_at`)
@@ -230,16 +230,21 @@ func runPerWorkspace(ctx context.Context, pool *pgxpool.Pool, run func(context.C
 	if err != nil {
 		return err
 	}
-	return runEach(ctx, workspaces, run)
+	return runEach(ctx, pool, workspaces, run)
 }
 
 // runEach is the walk both enumerations share: every workspace attempted, the
 // failures joined. One spelling, so the live and the archived-inclusive passes
 // cannot come to differ about what a tenant's failure does to the rest.
-func runEach(ctx context.Context, workspaces []ids.UUID, run func(context.Context, ids.UUID) error) error {
+//
+// A pass that could not load the installation zone counted its days in UTC.
+// The walk records that once per pass. A fault row that cannot be written
+// fails the pass, so the retry writes it.
+func runEach(ctx context.Context, pool *pgxpool.Pool, workspaces []ids.UUID, run func(context.Context, ids.UUID) error) error {
 	var failures []error
 	for _, ws := range workspaces {
-		if err := run(ctx, ws); err != nil {
+		watched, zones := storekit.WatchZones(ctx)
+		if err := errors.Join(run(watched, ws), zonefault.Record(ctx, pool, ws, zones)); err != nil {
 			failures = append(failures, fmt.Errorf("workspace %s: %w", ws, err))
 		}
 	}
@@ -259,7 +264,7 @@ func runPerEveryWorkspace(ctx context.Context, pool *pgxpool.Pool, run func(cont
 	if err != nil {
 		return err
 	}
-	return runEach(ctx, workspaces, run)
+	return runEach(ctx, pool, workspaces, run)
 }
 
 // clientInsertMany binds the fan-out to the River client already in context —

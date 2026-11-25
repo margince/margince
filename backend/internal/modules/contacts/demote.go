@@ -90,12 +90,12 @@ func (s *Store) DemoteLead(
 	if err := auth.Require(ctx, "lead", principal.ActionUpdate); err != nil {
 		return crmcontracts.DemoteLeadResponse{}, err
 	}
-	active, err := s.activeColumns(ctx, "lead")
-	if err != nil {
-		return crmcontracts.DemoteLeadResponse{}, err
-	}
 	var out crmcontracts.DemoteLeadResponse
-	err = s.tx(ctx, func(tx pgx.Tx) error {
+	err := s.tx(ctx, func(tx pgx.Tx) error {
+		active, err := s.activeColumnsIn(ctx, tx, "lead")
+		if err != nil {
+			return err
+		}
 		// CONTACT BEFORE LEAD, which is the order MergeContact takes: it locks
 		// the two contacts (LockPair) and then repoints lead.promoted_contact_id,
 		// and an UPDATE locks the row it writes. Two writers taking the same
@@ -324,7 +324,7 @@ func unwindContact(ctx context.Context, tx pgx.Tx, leadID ids.LeadID, contactID 
 	if _, err := demotionUnwind(ctx, tx, leadID, contactID, outcome); err != nil {
 		return "", err
 	}
-	if err := archiveContactRows(ctx, tx, contactID, time.Now().UTC(), nil); err != nil {
+	if err := archiveContactRows(ctx, tx, contactID, time.Now().UTC(), nil, nil); err != nil {
 		return "", fmt.Errorf("archive promoted contact: %w", err)
 	}
 	if _, err := tx.Exec(ctx,

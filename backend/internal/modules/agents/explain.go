@@ -47,6 +47,7 @@ func (s *Dispatcher) explain(tool string, err error) string {
 		steppedUp      *StepUpStagedError
 		overQuota      *auth.VolumeExceededError
 		staged         *workflow.StagedApprovalError
+		confirmAsk     *ConfirmInConversationError
 		skew           *apperrors.VersionSkewError
 		areaOff        *auth.AreaOffError
 		archiveRefusal *auth.ArchiveAuthorityError
@@ -83,6 +84,8 @@ func (s *Dispatcher) explain(tool string, err error) string {
 		return "This agent has reached a volume limit for this window that no approval lifts. Stop calling this tool " +
 			"and tell the user what is blocking it; the same call can succeed after the window rolls. (" +
 			overQuota.Error() + ")"
+	case errors.As(err, &confirmAsk):
+		return confirmInConversationExplanation(confirmAsk)
 	case errors.As(err, &staged):
 		// A 🟡 call that reached the inbox, and the branch that says WHAT is
 		// waiting there. The contact answers it — in the CRM, or through this
@@ -122,13 +125,7 @@ func (s *Dispatcher) explain(tool string, err error) string {
 	case errors.As(err, &archiveRefusal):
 		return "Refused on authority: " + refusalDetail(err)
 	case errors.Is(err, apperrors.ErrPermissionDenied):
-		// Whose bound it was is in the detail, and the summary must not guess:
-		// an agent has the access of the human it acts for AND no more of it than
-		// they lent, so a refusal here is one of those two and a sentence naming
-		// only the first would send a caller to ask for permissions they already
-		// hold.
-		return "Refused on authority: an agent has exactly the access of the human it acts for, and never " +
-			"more of it than they lent this credential. (" + refusalDetail(err) + ")"
+		return AuthorityRefusal(err)
 	case errors.Is(err, apperrors.ErrNotFound):
 		return "No such record in this workspace (or it is outside the acting user's row scope). (" + refusalDetail(err) + ")"
 	case errors.As(err, &skew):
@@ -202,6 +199,13 @@ func RunRefusal(err error) string {
 	return runFaultAdvice
 }
 
+// AuthorityRefusal is what an agent is told when a gate refused its call. The
+// detail says whose bound it was: the human's own, or what they lent.
+func AuthorityRefusal(err error) string {
+	return "Refused on authority: an agent has exactly the access of the human it acts for, and never " +
+		"more of it than they lent this credential. (" + refusalDetail(err) + ")"
+}
+
 // runFaultAdvice withholds a fault's own words from a run's model.
 const runFaultAdvice = "The tool failed for an internal reason; nothing may have changed."
 
@@ -231,12 +235,10 @@ func (s *Dispatcher) explainClassified(tool string, err error) string {
 		return internalFaultAdvice
 	}
 
-	// A classified refusal is not a fault of ours, so it is not logged as
-	// one — except where a sentinel wrapped a driver failure, which is. In
-	// that case Classify has already withheld the driver's text from Detail,
-	// so the operator's half is logged and the agent still sees only the
-	// sentinel's own words.
-	if fault.InfraCause != nil {
+	// A classified refusal is not our fault and is logged as a refusal. A
+	// driver failure answered as a 5xx is ours. Classify has already withheld
+	// the driver's text from Detail either way.
+	if fault.InfraCause != nil && !fault.CallersToFix() {
 		s.log.Error("mcp: tool call failed", "tool", tool, "err", fault.InfraCause)
 	} else {
 		s.log.Warn("mcp: tool call refused", "tool", tool, "code", fault.Code, "err", err)

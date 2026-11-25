@@ -49,7 +49,7 @@ func embedInclusiveMeta(cfg RoutingConfig) map[Tier]routeMeta {
 // call through — otherwise the same preview would quote different figures as
 // the month's spend drifted across budget bands.
 func (r *Router) BoundLadder(task Task) []ModelRef {
-	tiers := taskLadders[task]
+	tiers, _ := r.binding().ladder(task)
 	if task == TaskEmbeddings {
 		// Embeddings run the embed lane, which is not a completion tier and so
 		// is absent from taskLadders; its binding lives under TierEmbedLane.
@@ -167,6 +167,13 @@ func (r *Router) CurrentModelForTier(tier Tier) (ModelRef, bool) {
 		return ModelRef{}, false
 	}
 	return ModelRef{Provider: m.provider, Model: m.model}, true
+}
+
+// TaskOrder is the order this Router's binding walks task's rungs in now,
+// before any budget band bends a call.
+func (r *Router) TaskOrder(task Task) []Tier {
+	order, _ := r.binding().ladder(task)
+	return order
 }
 
 // BoundModels is the (provider, model) every lane serves under the binding

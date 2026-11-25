@@ -15,13 +15,11 @@ prompt: |
   The Weserbund Pilotphase deal is really a service renewal. Move it into the
   Service renewals pipeline.
 
-must_call:
-  - move_deal_pipeline
-
 may_call:
   - find_records
   - read_record
   - read_workspace
+  - move_deal_pipeline
 
 must_not_call_with:
   - archive_record~.

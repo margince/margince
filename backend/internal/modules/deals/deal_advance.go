@@ -95,17 +95,12 @@ func (s *Store) AdvanceDeal(ctx context.Context, id ids.DealID, in AdvanceDealIn
 	if err := auth.Require(ctx, "deal", principal.ActionUpdate); err != nil {
 		return AdvancedDeal{}, err
 	}
-	// The custom-field catalog is fetched BEFORE the transaction opens: it
-	// reads through its own connection, and a second connection inside a
-	// transaction commits separately and can deadlock undetectably against a
-	// lock that transaction holds.
-	active, err := s.activeColumns(ctx)
-	if err != nil {
-		return AdvancedDeal{}, err
-	}
 	var out AdvancedDeal
-	err = s.Tx(ctx, func(tx pgx.Tx) error {
-		var err error
+	err := s.Tx(ctx, func(tx pgx.Tx) error {
+		active, err := s.activeColumnsIn(ctx, tx)
+		if err != nil {
+			return err
+		}
 		out, err = s.advanceOnTx(ctx, tx, id, in, active)
 		return err
 	})
@@ -172,7 +167,7 @@ func (s *Store) advanceOnTx(
 			if err := storekit.EnsureIfMatch(ctx, tx, dealTable, id.UUID, in.IfVersion); err != nil {
 				return err
 			}
-			out.Deal, err = readDealForCaller(ctx, tx, id, storekit.LiveOnly, active)
+			out.Deal, err = s.readDealStamped(ctx, tx, id, storekit.LiveOnly, active)
 			return err
 		}
 		semantic, winProbability, err := resolveMoveTarget(ctx, tx, &in, current)
@@ -234,8 +229,11 @@ func (s *Store) advanceOnTx(
 		if err := s.onDealWon(ctx, tx, id, status, by, p); err != nil {
 			return err
 		}
-		if out.Deal, err = readDealForCaller(ctx, tx, id, storekit.LiveOnly, active); err != nil {
+		if out.Deal, err = s.readDealStamped(ctx, tx, id, storekit.LiveOnly, active); err != nil {
 			return fmt.Errorf("read advanced deal: %w", err)
+		}
+		if out.WinChance != nil && out.WinProbability != nil {
+			out.Probability = newProbabilitySet(*out.WinProbability, readerName)
 		}
 		return nil
 	}()
@@ -396,6 +394,11 @@ func (s *Store) buildStageAdvance(ctx context.Context, tx pgx.Tx, id ids.DealID,
 	if err != nil {
 		return nil, "", err
 	}
+	if DealStatus(status) != DealOpen && DealStatus(current.Status) == DealOpen {
+		if err := dropManagerRequest(ctx, tx, p, ids.UUID(current.Id)); err != nil {
+			return nil, "", err
+		}
+	}
 	stored, storedBy := storedWinProbability(current)
 	setWinProbability(p, stored, storedBy, nil, SourceStage)
 	return p, status, nil
@@ -440,10 +443,10 @@ func (s *Store) stageTransitionPatch(ctx context.Context, tx pgx.Tx,
 	// The won-without-contract reason is written only on a win, and cleared on
 	// every other landing, for the same reason.
 	if DealStatus(status) == DealWon {
-		p.Set("won_without_contract_reason", current.WonWithoutContractReason, in.WonWithoutContractReason)
+		p.Set(wonWithoutContractReasonField, current.WonWithoutContractReason, in.WonWithoutContractReason)
 		p.Set("won_without_contract_detail", current.WonWithoutContractDetail, in.WonWithoutContractDetail)
 	} else {
-		p.Set("won_without_contract_reason", current.WonWithoutContractReason, nil)
+		p.Set(wonWithoutContractReasonField, current.WonWithoutContractReason, nil)
 		p.Set("won_without_contract_detail", current.WonWithoutContractDetail, nil)
 	}
 	// Closing with an amount freezes the FX rate so base-currency roll-ups stay

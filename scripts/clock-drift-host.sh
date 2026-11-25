@@ -135,6 +135,7 @@ restore() {
 
 # The runner's TLS credentials also expire at the shifted date. Restore in the
 # same shell, before returning control to its agent, even on failure or a hang.
+# Between slices run_shifted restores on its own; this covers an exit in between.
 finish_run() {
 	local status="$1" offset="$2"
 	trap - EXIT INT TERM
@@ -145,23 +146,54 @@ finish_run() {
 	exit "$status"
 }
 
+# One suite slice per shifted window, each at most this long. A hosted runner
+# whose clock stays 200 days ahead for a whole run loses its link to GitHub
+# after about an hour, so the clock goes back between slices and the runner
+# agent gets real time to renew its lease.
+SLICE_BUDGET=15m
+
+# Real seconds the clock stays right between two slices, so the runner agent
+# can renew its credentials before the next jump. Back-to-back jumps would
+# leave it no window at all.
+SLICE_GAP="${SLICE_GAP:-60}"
+
 run_shifted() {
-	local offset status=0
+	local offset status=0 slice slice_status window timed_out=0
+	local slices
 	offset=$(days "$1")
 	export BACKEND_CLOCK_SKEW="machine:$offset"
 	command -v timeout >/dev/null || { echo "clock-drift-host: GNU timeout is required." >&2; exit 1; }
+	slices=$(./scripts/backend-clock-drift.sh slices)
+	[[ -n "$slices" ]] || { echo "clock-drift-host: no suite slices to run." >&2; exit 1; }
 	# Expanded now: offset is local and already validated as digits, and a
 	# newer bash drops a function's locals before it runs an exit trap.
 	trap "finish_run \"\$?\" $offset" EXIT
 	trap 'exit 130' INT
 	trap 'exit 143' TERM
-	move "$offset"
-	# A relative timer survives wall-clock changes. Leave recovery time before
-	# the runner loses its control-plane lease during a long network outage.
-	timeout --signal=TERM --kill-after=30s 45m make backend-clock-drift || status=$?
-	if [[ "$status" -eq 124 ]]; then
-		echo "clock-drift-host: suite exceeded the shifted-clock budget; no complete verdict." >&2
-	fi
+	case "$SLICE_GAP" in '' | *[!0-9]*) echo "clock-drift-host: SLICE_GAP must be whole seconds, got '$SLICE_GAP'" >&2; exit 2 ;; esac
+	local first=1
+	for slice in $slices; do
+		if [[ "$first" -eq 0 && "$SLICE_GAP" -gt 0 ]]; then
+			echo "clock-drift-host: ${SLICE_GAP}s at real time before the next slice."
+			sleep "$SLICE_GAP"
+		fi
+		first=0
+		move "$offset"
+		slice_status=0
+		# A relative timer survives wall-clock changes.
+		BACKEND_CLOCK_SLICE="$slice" timeout --signal=TERM --kill-after=30s "$SLICE_BUDGET" make backend-clock-drift || slice_status=$?
+		# Read before the restore: the shortfall is negative by the time the slice ran.
+		window=$((-$(shortfall "$offset")))
+		restore "$offset" || exit $?
+		echo "clock-drift-host: slice ${slice} ran ${window}s at the moved clock (real time restored)."
+		if [[ "$slice_status" -eq 124 ]]; then
+			timed_out=1
+			echo "clock-drift-host: slice ${slice} exceeded its ${SLICE_BUDGET} shifted-clock budget; it gave no verdict." >&2
+		elif [[ "$slice_status" -ne 0 ]]; then
+			status=$slice_status
+		fi
+	done
+	[[ "$timed_out" -eq 0 ]] || status=124
 	exit "$status"
 }
 

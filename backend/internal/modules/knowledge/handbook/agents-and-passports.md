@@ -116,7 +116,7 @@ A disconnected tool then leaves the list. The link below it that counts the disc
 Also called: kill switch, remove an agent, disconnect, delete an API key.
 
 ### How do I let Margince work overnight for me?
-To let Margince prepare your Morning brief overnight, open **Settings → Connections**. On the **Overnight preparation** card, turn on **Let Margince prepare the Morning brief overnight**.
+To let Margince prepare your Morning brief overnight, open **Settings → Account**. On the **Overnight preparation** card, turn on **Prepare my Morning brief overnight**.
 It acts as you and sees only what you can see; it reads and writes but can never send. If it says **Overnight authority expired**, turn it off and on again to renew it.
 Also called: overnight agent, scheduled agent, background agent.
 
@@ -146,6 +146,11 @@ continue to run automatically. Sending limits and access checks still apply.
 AI names the address Margince reads. Someone who talks the AI round could make
 it reach an address nobody holding the passport ever picked. That is a question
 about where your data goes, so it waits.
+
+When you work with your AI assistant in a chat, it asks you there. It tells you
+what would change and acts only after you say yes. Nothing appears in your
+approvals. A change that cannot be undone still waits in your approvals. So does
+any such change a scheduled agent makes with nobody watching.
 
 The waits below apply only to automatic work with no passport behind it.
 **Folding one tag into another.** A merge renames a word on every record
@@ -327,8 +332,7 @@ so a change applies at once rather than at the next sign-in.
 A scheduled agent runs while you are away, so it cannot take your rights from
 a session you are not in. You have to give them in advance. In
 the app this is the **Overnight preparation** card in **Settings →
-Connections**, with the switch **Let Margince prepare the Morning brief
-overnight**. You were asked the same question once when you first joined.
+Account**, with the switch **Prepare my Morning brief overnight**. If you connected a mailbox when you first joined, you were asked the same question then.
 
 Turning it on creates your own passport in the same step. The overnight run
 then carries a passport that is yours. So everything it does is limited to

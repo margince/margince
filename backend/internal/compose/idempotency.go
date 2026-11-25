@@ -161,6 +161,9 @@ type storedResponse struct {
 	// records is how many records the recorded answer handed over, for the
 	// surface that tells an empty answer from a full one. Zero for a REST claim.
 	records int
+	// Set on a mismatch only: when the key was first spent, and how that call stands.
+	firstUsedAt time.Time
+	earlier     claimOutcome
 }
 
 // claimKey runs the insert-first claim and REPORTS a claim-infrastructure
@@ -267,14 +270,15 @@ func resolveClaimRow(ctx context.Context, tx pgx.Tx, principalID, key, endpoint,
 	var status *int
 	var respBody *string
 	var records int
+	var createdAt time.Time
 	var expired bool
 	err := tx.QueryRow(ctx, `
 		SELECT request_digest, response_status, response_body, response_content_type, response_records,
-		       created_at < now() - make_interval(secs => $4)
+		       created_at, created_at < now() - make_interval(secs => $4)
 		FROM idempotency_key
 		WHERE principal_id = $1 AND key = $2 AND endpoint = $3
 		FOR UPDATE`,
-		principalID, key, endpoint, replayWindow.Seconds()).Scan(&storedDigest, &status, &respBody, &contentType, &records, &expired)
+		principalID, key, endpoint, replayWindow.Seconds()).Scan(&storedDigest, &status, &respBody, &contentType, &records, &createdAt, &expired)
 	if errors.Is(err, pgx.ErrNoRows) {
 		// The retention sweep removed the row between the INSERT above and
 		// this read. It was past the replay window, so it was protecting
@@ -325,15 +329,26 @@ func resolveClaimRow(ctx context.Context, tx pgx.Tx, principalID, key, endpoint,
 			principalID, key, endpoint, digest).Scan(&reclaimed)
 		return claimFresh, reclaimed, storedResponse{}, err
 	}
-	stored := storedResponse{contentType: contentType, records: records}
+	if storedDigest != digest {
+		return claimMismatch, ids.Nil, storedResponse{firstUsedAt: createdAt, earlier: settledVerdict(status)}, nil
+	}
+	verdict := settledVerdict(status)
+	if verdict == claimInProgress {
+		return claimInProgress, ids.Nil, storedResponse{}, nil
+	}
+	stored := storedResponse{status: *status, contentType: contentType, records: records}
 	if respBody != nil {
 		stored.body = *respBody
 	}
+	return verdict, ids.Nil, stored, nil
+}
+
+// settledVerdict reads a claim's recorded status: in flight, failed or succeeded.
+// It answers a same-request retry and describes the first call on a mismatch.
+func settledVerdict(status *int) claimOutcome {
 	switch {
-	case storedDigest != digest:
-		return claimMismatch, ids.Nil, storedResponse{}, nil
 	case status == nil:
-		return claimInProgress, ids.Nil, storedResponse{}, nil
+		return claimInProgress
 	case *status < 200 || *status >= 300:
 		// A RECORDED failure — the attempt reached its handler and answered a
 		// refusal it could not take back. The tool surface writes one for a run
@@ -342,11 +357,9 @@ func resolveClaimRow(ctx context.Context, tx pgx.Tx, principalID, key, endpoint,
 		// replay and not a free key: whether the effect landed is exactly what
 		// the recording could not determine, so the body carries the reason and
 		// the caller decides.
-		stored.status = *status
-		return claimFailed, ids.Nil, stored, nil
+		return claimFailed
 	default:
-		stored.status = *status
-		return claimReplay, ids.Nil, stored, nil
+		return claimReplay
 	}
 }
 

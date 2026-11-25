@@ -25,6 +25,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/modules/capture/graphconn"
 	"github.com/margince/margince/backend/internal/modules/capture/mailmap"
+	"github.com/margince/margince/backend/internal/modules/capture/oauthflow"
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
 )
 
@@ -66,6 +67,8 @@ type Connector struct {
 	// checkpointMessages also checkpoints a round once this many messages
 	// passed since the last one. Zero checkpoints by pages alone.
 	checkpointMessages int
+	// tuning sizes a history page; the zero value keeps the built-in sizes.
+	tuning connector.BackfillTuning
 }
 
 // WithBounceSink returns a copy that records delivery reports instead of
@@ -95,6 +98,15 @@ func (c *Connector) WithClock(now func() time.Time) *Connector {
 func (c *Connector) WithCredentialSink(sink connector.CredentialSink) connector.Connector {
 	copied := *c
 	copied.rotations = sink
+	return &copied
+}
+
+// WithBackfillTuning returns a copy that walks history pages by t. Microsoft
+// allows four requests at once per mailbox, so the fetch workers are held to
+// that however high the setting is.
+func (c *Connector) WithBackfillTuning(t connector.BackfillTuning) *Connector {
+	copied := *c
+	copied.tuning = t
 	return &copied
 }
 
@@ -233,7 +245,7 @@ func (c *Connector) GrantedScopes(auth connector.Auth) ([]string, error) {
 	return st.Granted, nil
 }
 
-// Sync mints a fresh access token, then pulls incrementally: with no cursor
+// Sync takes the mailbox's access token and pulls incrementally. With no cursor
 // it starts a bounded initial delta (messages received within anchorWindow);
 // with a cursor it resumes the stored deltaLink. A deltaLink Graph no longer
 // honors (ErrDeltaGone, HTTP 410) degrades to the same bounded re-anchor
@@ -255,20 +267,22 @@ func (c *Connector) SyncFrom(
 	if err := json.Unmarshal(auth, &st); err != nil {
 		return nil, fmt.Errorf("graph: malformed auth state: %w", err)
 	}
-	owner := st.Owner // local — never stored on the shared instance
+	return authorized(ctx, c, st, func(refreshed oauthflow.TokenRefresh) (connector.Cursor, error) {
+		// Reported before the pull: the replacement is issued and the old token
+		// spent by the time Graph answers. Waiting for the pull would drop the
+		// rotation on every sync that fails for another reason, the mailbox that
+		// most needs its credential kept fresh.
+		graphconn.ReportRotation(ctx, connectorName, c.rotations, st, refreshed.Rotated)
+		return c.syncWith(ctx, refreshed.AccessToken, st.Owner, cursor, from, sink)
+	})
+}
 
-	refreshed, err := c.oauth.Refresh(ctx, st.RefreshToken, st.Granted)
-	if err != nil {
-		return nil, err
-	}
-	access := refreshed.AccessToken
-	// Reported BEFORE the pull, and deliberately: the replacement is already
-	// issued and the old token is already spent by the time Graph answers, so
-	// waiting for the pull to succeed would drop the rotation on every sync
-	// that fails for an unrelated reason — which is exactly the mailbox that
-	// most needs its credential kept fresh.
-	graphconn.ReportRotation(ctx, connectorName, c.rotations, st, refreshed.Rotated)
-
+// syncWith is one SyncFrom's pull under one access token, from the stored
+// cursor each time, so a repeated pull starts where the first one did.
+func (c *Connector) syncWith(
+	ctx context.Context, access, owner string, cursor connector.Cursor,
+	from time.Time, sink connector.Sink,
+) (connector.Cursor, error) {
 	start, err := parseCursor(cursor)
 	if err != nil {
 		// A stored cursor we can't read is a bug/corruption, NOT a fresh mailbox:
@@ -377,15 +391,10 @@ func (c *Connector) HealthCheck(ctx context.Context, auth connector.Auth) error 
 	if err := json.Unmarshal(auth, &st); err != nil {
 		return fmt.Errorf("graph: malformed auth state: %w", err)
 	}
-	refreshed, err := c.oauth.Refresh(ctx, st.RefreshToken, st.Granted)
-	if err != nil {
-		return err
-	}
-	access := refreshed.AccessToken
-	if _, err := c.api.Profile(ctx, access); err != nil {
-		return err
-	}
-	return nil
+	_, err := authorized(ctx, c, st, func(refreshed oauthflow.TokenRefresh) (string, error) {
+		return c.api.Profile(ctx, refreshed.AccessToken)
+	})
+	return err
 }
 
 // parseCursor reads the stored watermark. An empty cursor means a genuinely
@@ -425,9 +434,13 @@ func (c *Connector) ListContainers(
 	if err := json.Unmarshal(auth, &st); err != nil {
 		return nil, false, fmt.Errorf("graph: malformed auth state: %w", err)
 	}
-	refreshed, err := c.oauth.Refresh(ctx, st.RefreshToken, st.Granted)
-	if err != nil {
-		return nil, false, err
+	type listing struct {
+		folders []connector.NamedContainer
+		partial bool
 	}
-	return c.api.ListFolders(ctx, refreshed.AccessToken)
+	listed, err := authorized(ctx, c, st, func(refreshed oauthflow.TokenRefresh) (listing, error) {
+		folders, partial, err := c.api.ListFolders(ctx, refreshed.AccessToken)
+		return listing{folders, partial}, err
+	})
+	return listed.folders, listed.partial, err
 }

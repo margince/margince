@@ -10,6 +10,10 @@ var approvalDefinitions = map[string]Definition{
 
 	"approval.taskCompleted":                {Words: langcopy.Phrase{En: "Done because you wrote to %s on %s", De: "Erledigt, weil du %s am %s geschrieben hast", Vi: "Đã hoàn tất vì bạn đã gửi email cho %s vào %s"}, Arguments: []string{argumentText, argumentText}},
 	"approval.taskBooked":                   {Words: langcopy.Phrase{En: "Done because %s booked a meeting for %s", De: "Erledigt, weil %s ein Meeting für %s gebucht hat", Vi: "Đã hoàn tất vì %s đã đặt cuộc họp vào %s"}, Arguments: []string{argumentText, argumentText}},
+	"approval.taskChatDone":                 {Words: langcopy.Phrase{En: "Done because the chat said “%s”", De: "Erledigt, weil im Chat stand: „%s“", Vi: "Đã hoàn tất vì cuộc trò chuyện có câu “%s”"}, Arguments: []string{argumentText}},
+	"approval.taskChatMoved":                {Words: langcopy.Phrase{En: "Moved to %s because the chat said “%s”", De: "Auf %s verschoben, weil im Chat stand: „%s“", Vi: "Đã dời sang %s vì cuộc trò chuyện có câu “%s”"}, Arguments: []string{argumentText, argumentText}},
+	"approval.taskChatDoneUnquoted":         {Words: langcopy.Phrase{En: "Done because of a filed chat", De: "Erledigt wegen eines abgelegten Chats", Vi: "Đã hoàn tất nhờ một cuộc trò chuyện đã lưu"}, Arguments: []string{}},
+	"approval.taskChatMovedUnquoted":        {Words: langcopy.Phrase{En: "Moved to %s because of a filed chat", De: "Wegen eines abgelegten Chats auf %s verschoben", Vi: "Đã dời sang %s nhờ một cuộc trò chuyện đã lưu"}, Arguments: []string{argumentText}},
 	"approval.taskContact":                  {Words: langcopy.Phrase{En: "the contact", De: "dem Kontakt", Vi: "liên hệ"}, Arguments: []string{}},
 	"approval.taskBooker":                   {Words: langcopy.Phrase{En: "the contact", De: "der Kontakt", Vi: "liên hệ"}, Arguments: []string{}},
 	"approval.signaturePrivate":             {Words: langcopy.Phrase{En: "The sender’s private signature cannot be shown to this reviewer. Ask the sender to review this message.", De: "Die private Signatur des Absenders ist für diese Prüfung nicht freigegeben. Den Absender um Prüfung dieser Nachricht bitten.", Vi: "Không thể hiển thị chữ ký riêng của người gửi cho người xem xét này. Hãy yêu cầu người gửi xem xét tin nhắn."}, Arguments: []string{}},
@@ -17,6 +21,7 @@ var approvalDefinitions = map[string]Definition{
 	"approval.counterpartyWorthKeeping":     {Words: langcopy.Phrase{En: "Is %s a contact worth keeping?", De: "Lohnt es sich, %s als Kontakt zu behalten?", Vi: "%s có phải là một liên hệ đáng giữ lại không?"}, Arguments: []string{argumentText}},
 	"approval.contactShareAsked":            {Words: langcopy.Phrase{En: "%s asks you to share this contact. Approving gives write access, or read access when their seat or role cannot edit contacts.", De: "%s bittet dich, diesen Kontakt zu teilen. Wenn du zustimmst, gibt das Schreibzugriff, oder nur Lesezugriff, wenn Platz oder Rolle das Bearbeiten von Kontakten nicht erlauben.", Vi: "%s đề nghị bạn chia sẻ liên hệ này. Khi duyệt, quyền được cấp là quyền ghi, hoặc quyền đọc nếu tài khoản hoặc vai trò của họ không được sửa liên hệ."}, Arguments: []string{argumentText}},
 	"approval.employerChangeAsked":          {Words: langcopy.Phrase{En: "%s may have moved from %s to %s.", De: "%s ist vielleicht von %s zu %s gewechselt.", Vi: "%s có thể đã chuyển từ %s sang %s."}, Arguments: []string{argumentText, argumentText, argumentText}},
+	"approval.proposalStageAsked":           {Words: langcopy.Phrase{En: "A proposal went out on %s. Move the deal to “%s”?", De: "Zu %s ist ein Angebot rausgegangen. Den Deal in die Phase „%s“ verschieben?", Vi: "Một đề xuất đã được gửi cho %s. Chuyển deal sang giai đoạn “%s”?"}, Arguments: []string{argumentText, argumentText}},
 	"approval.taskDueAsked":                 {Words: langcopy.Phrase{En: "The due date for “%s” looks far off. Keep it, change it or clear it.", De: "Das Fälligkeitsdatum für „%s“ wirkt weit weg. Behalten, ändern oder leeren.", Vi: "Hạn cho “%s” có vẻ quá xa. Giữ, đổi hoặc xóa."}, Arguments: []string{argumentText}},
 	"approval.legalReviewAsked":             {Words: langcopy.Phrase{En: "Legal review requested for %s. Answer it under Legal reviews.", De: "Rechtsprüfung für %s angefragt. Beantworte sie unter Rechtsprüfungen.", Vi: "Đã yêu cầu rà soát pháp lý cho %s. Trả lời trong mục Rà soát pháp lý."}, Arguments: []string{argumentText}},
 	"approval.companyRename":                {Words: langcopy.Phrase{En: "Rename %s to %s?", De: "%s in %s umbenennen?", Vi: "Đổi tên %s thành %s?"}, Arguments: []string{argumentText, argumentText}},
@@ -66,4 +71,19 @@ func TaskClosedContactKey(booking bool) string {
 		return "approval.taskBooker"
 	}
 	return "approval.taskContact"
+}
+
+// TaskChatKey names the receipt sentence that quotes the chat line for a task
+// a filed chat changed: done, or moved to a new day.
+func TaskChatKey(moved bool) string {
+	if moved {
+		return "approval.taskChatMoved"
+	}
+	return "approval.taskChatDone"
+}
+
+// TaskChatUnquotedKey is TaskChatKey's sentence for a reader who may not read
+// the chat, which names no chat line.
+func TaskChatUnquotedKey(moved bool) string {
+	return TaskChatKey(moved) + "Unquoted"
 }

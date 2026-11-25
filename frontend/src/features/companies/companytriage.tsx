@@ -8,7 +8,7 @@ import { Badge, Disclosure } from "../../design-system/atoms";
 import { PanelBody } from "../../design-system/panel";
 import { reasonText, STATUS_TONE } from "../../design-system/pipelineladder";
 import { SurfaceState } from "../../design-system/surfacestate";
-import { formatDateTime } from "../../format/format";
+import { formatDateTimeAbbrev } from "../../format/format";
 import { type Locale, useLocale, useT } from "../../i18n";
 import { unwrap } from "../../lib/problem";
 import { useViewerZone } from "../../lib/viewerzone";
@@ -126,7 +126,7 @@ function TriagedDomainRow({
           <>
             {" · "}
             {t("companyTriage.checkedAt", {
-              when: formatDateTime(rung.at, locale, zone),
+              when: formatDateTimeAbbrev(rung.at, locale, zone),
             })}
           </>
         )}

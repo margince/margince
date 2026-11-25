@@ -12,6 +12,7 @@ import (
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
 	"github.com/margince/margince/backend/internal/platform/database"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/ports/fieldcatalog"
 )
@@ -41,7 +42,7 @@ type Store struct {
 	db *database.DB
 	// catalog is the fieldcatalog seam (custom-field columns); nil means
 	// no catalog is wired and every read/write runs core-columns-only.
-	catalog fieldcatalog.Reader
+	catalog storekit.FieldCatalog
 	// clock is the "today" source for effective-dated writes (fx_rate);
 	// injected so append-forward date validation is deterministic in tests.
 	clock func() time.Time
@@ -60,8 +61,14 @@ type Store struct {
 	ensureProjectAttachable EnsureProjectAttachable
 	startDeliveryForWonDeal StartDeliveryForWonDeal
 
+	// winChances and winChanceSQL are the installation's win chance reads; nil
+	// keeps the stored probability.
+	winChances   WinChanceReader
+	winChanceSQL WinChanceSQL
+
 	// followOwner hands pending proposals to a deal's new owner (ownerfollow.go).
-	followOwner FollowOwner
+	followOwner   FollowOwner
+	managerOwners ManagerOwners
 	// ownDomains, when bound, lets the stage-move check judge activity
 	// evidence against the current own domains (WithOwnDomains).
 	ownDomains OwnDomainReader
@@ -103,11 +110,9 @@ type Installation struct {
 	// KnownCountry answers whether a code is an assigned ISO 3166-1 alpha-2
 	// country. `contacts` owns the list.
 	KnownCountry KnownCountry
-	// Timezone is the IANA zone a "today" is computed in.
-	Timezone InstallationValue
-	// BaseCurrencyApplied and TimezoneApplied answer the same two values
-	// without the installation_settings gate, for a read that only orders by
-	// them (the deal list's Value sort).
+	// BaseCurrencyApplied and TimezoneApplied answer the base currency and the
+	// zone a "today" is computed in. They skip the installation_settings gate,
+	// so counting days and ordering by value need no settings grant.
 	BaseCurrencyApplied InstallationValue
 	TimezoneApplied     InstallationValue
 	// StampCorrespondence shields the correspondence a concluded deal turns
@@ -133,9 +138,17 @@ type Installation struct {
 	// FollowOwner hands a deal's pending proposals to its new owner, in the
 	// transaction that reassigns it (ownerfollow.go).
 	FollowOwner FollowOwner
+	// ManagerOwners answers which owners the caller manages. `identity` owns
+	// teams and leads, so the edge is injected here.
+	ManagerOwners ManagerOwners
 	// ContractVisible is the contracts module's row rule, which stage
 	// evidence asks before it calls a cited contract openable.
 	ContractVisible ContractVisibleClause
+	// WinChances and WinChanceSQL read the one win chance of an open deal and
+	// of every deal in a filter (winchance.go). Unset, a read keeps the stored
+	// probability, which is what a store built outside the composition reads.
+	WinChances   WinChanceReader
+	WinChanceSQL WinChanceSQL
 	// AuthorEntity and IssuerEntity answer which legal entity an offer is
 	// issued by, and what it prints about it. `contacts` owns the entities.
 	AuthorEntity AuthorEntity
@@ -157,6 +170,9 @@ func NewStore(db *database.DB, inst Installation) *Store {
 		ensureProjectAttachable: inst.EnsureProjectAttachable,
 		startDeliveryForWonDeal: inst.StartDeliveryForWonDeal,
 		followOwner:             inst.FollowOwner,
+		winChances:              inst.WinChances,
+		winChanceSQL:            inst.WinChanceSQL,
+		managerOwners:           inst.ManagerOwners,
 	}
 }
 
@@ -168,7 +184,7 @@ func NewStore(db *database.DB, inst Installation) *Store {
 // craft gate's panic-in-domain rule).
 func (i Installation) orRefusing() Installation {
 	for name, f := range map[string]*InstallationValue{
-		"Name": &i.Name, "BaseCurrency": &i.BaseCurrency, "Timezone": &i.Timezone,
+		"Name": &i.Name, "BaseCurrency": &i.BaseCurrency,
 		"IssuerLegalName": &i.IssuerLegalName, "BaseCurrencyApplied": &i.BaseCurrencyApplied,
 		"TimezoneApplied": &i.TimezoneApplied, "Country": &i.Country,
 	} {
@@ -196,6 +212,11 @@ func (i Installation) orRefusing() Installation {
 	}
 	if i.ContractVisible == nil {
 		i.ContractVisible = refusingContractVisible()
+	}
+	if i.ManagerOwners == nil {
+		i.ManagerOwners = func(context.Context, pgx.Tx, []ids.UUID, *ids.UUID) (map[ids.UUID]bool, error) {
+			return nil, errEntitySeamUnwired("ManagerOwners")
+		}
 	}
 	if i.KnownCountry == nil {
 		i.KnownCountry = func(string) (bool, error) {
@@ -230,7 +251,7 @@ func refusing(field string) InstallationValue {
 	return func(context.Context, pgx.Tx) (string, error) {
 		return "", errors.New("deals: the installation " + field + " seam was not injected; " +
 			"construct this store with installseam.Deals(), which binds identity's " +
-			"NameOf/BaseCurrencyOf/TimezoneOf and contacts's ConfirmedIssuerLegalName")
+			"NameOf/BaseCurrencyOf/TimezoneAppliedTx and contacts's ConfirmedIssuerLegalName")
 	}
 }
 
@@ -251,28 +272,19 @@ func (s *Store) SetClock(clock func() time.Time) *Store {
 // (compose injects modules/customfields' Service here — ADR-0054: a
 // module never imports a sibling), making active cf_* columns
 // participate in deal reads and writes.
-func (s *Store) WithFieldCatalog(catalog fieldcatalog.Reader) *Store {
+func (s *Store) WithFieldCatalog(catalog storekit.FieldCatalog) *Store {
 	s.catalog = catalog
 	return s
 }
 
-// activeColumns answers the workspace's active custom columns for the
-// deal object (this store's one record type). It runs its own catalog
-// transaction, so callers fetch BEFORE opening their write/read
-// transaction (never inside it — a nested pool acquire under load is a
-// deadlock shape). A store without a wired catalog answers empty: core
-// columns only.
-func (s *Store) activeColumns(ctx context.Context) ([]fieldcatalog.Column, error) {
-	return s.activeColumnsFor(ctx, "deal")
-}
-
-// activeColumnsFor is activeColumns for the module's other record type.
-// The rule about fetching BEFORE the transaction opens is the same.
-func (s *Store) activeColumnsFor(ctx context.Context, object string) ([]fieldcatalog.Column, error) {
+// activeColumnsIn answers the workspace's active custom columns for the deal
+// object. It reads on the transaction the store's entry point opened, so no
+// second connection is taken. A store without a wired catalog answers empty.
+func (s *Store) activeColumnsIn(ctx context.Context, tx pgx.Tx) ([]fieldcatalog.Column, error) {
 	if s.catalog == nil {
 		return nil, nil
 	}
-	return s.catalog.ActiveColumns(ctx, object)
+	return s.catalog.ActiveColumnsIn(ctx, tx, dealTable)
 }
 
 // CustomColumns is the catalog's answer, carried from a caller that had to
@@ -302,12 +314,15 @@ var ErrCustomFieldsNeedTheStoresOwnTransaction = errors.New(
 
 // ActiveDealColumns is the caller-side half of UpdateDealTx and CreateDealTx.
 // A caller that opens the transaction itself does this read before opening it,
-// the order every store-opened entry point uses.
+// because its catalog read takes a connection of its own.
 //
 // Unlike contacts's twin it takes no grant of its own. Its one caller, the
 // extraction accept-write, has already taken deal:update before the write.
 func (s *Store) ActiveDealColumns(ctx context.Context) (CustomColumns, error) {
-	cols, err := s.activeColumns(ctx)
+	if s.catalog == nil {
+		return CustomColumns{}, nil
+	}
+	cols, err := s.catalog.ActiveColumns(ctx, dealTable)
 	if err != nil {
 		return CustomColumns{}, err
 	}

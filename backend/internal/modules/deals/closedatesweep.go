@@ -136,7 +136,7 @@ func (c *CloseDateCorrector) sweepWorkspace(ctx context.Context) error {
 
 	if err := c.db.Tx(ctx, func(tx pgx.Tx) error {
 		var err error
-		if tzName, err = c.installation.Timezone(ctx, tx); err != nil {
+		if tzName, err = c.installation.TimezoneApplied(ctx, tx); err != nil {
 			return fmt.Errorf("read the installation's timezone: %w", err)
 		}
 		loc, err := installationZone(tzName)
@@ -383,7 +383,7 @@ func (c *CloseDateCorrector) apply(ctx context.Context, cand closeDateCandidate,
 		maps.Copy(auditEvidence, extra)
 		changedFields := map[string]any{CloseDateCorrectionKind: correction}
 		maps.Copy(changedFields, extra)
-		if err := commitCorrection(actor, tx, lock, correctionWrite{
+		if _, err := commitCorrection(actor, tx, lock, correctionWrite{
 			deal: cand.id, correction: correction, patch: patch, auditEvidence: auditEvidence,
 			changedFields: changedFields, evidence: evidence, runID: &runID,
 		}); err != nil {

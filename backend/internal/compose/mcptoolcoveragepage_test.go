@@ -13,7 +13,9 @@ package compose
 
 import (
 	"fmt"
+	"slices"
 	"strings"
+	"testing"
 )
 
 func renderMCPToolCoveragePage(r mcpToolCoverage) []byte {
@@ -25,6 +27,8 @@ func renderMCPToolCoveragePage(r mcpToolCoverage) []byte {
 	writeCoverageIntro(&p, r)
 	writeCoverageAssistants(&p, r)
 	writeCoverageJobs(&p, r)
+	writeCoverageNeutral(&p, r)
+	writeCoverageREST(&p, r)
 	p.WriteString("---\n\n## For engineers\n\nEverything below is the detail behind the two tables above: " +
 		"which tools each job requires, every run's numbers, and what no job tests yet.\n\n")
 	writeCoverageHowToRead(&p)
@@ -56,12 +60,16 @@ func writeCoverageHowToRead(p *strings.Builder) {
 	p.WriteString("| Required as one of a set | Some questions can be answered by more than one tool, so " +
 		"a case can require `A` or `B` and fails if neither is called. Every run reaches for one " +
 		"of the set, and any one member can go uncalled, so this is neither of the two words above. |\n")
-	p.WriteString("| Driven | At least one case requires this tool. A tool no case requires is " +
-		"untried: nothing has ever asked an assistant to reach for it, so nothing says it is broken. |\n")
+	p.WriteString("| Driven | At least one case requires this tool, or a passing run of a case that held called it. " +
+		"A tool neither is untried: nothing says it is broken. |\n")
 	p.WriteString("| Reliability | Of the runs on the cases that require this tool, the share that " +
 		"passed. Each case is run several times because the lane is not deterministic. |\n")
 	p.WriteString("| Bar | Each case carries its own `pass_at`: how many of its runs must pass. " +
-		"Cases are not equally hard, so one shared number would flatter the easy ones. |\n\n")
+		"Cases are not equally hard, so one shared number would flatter the easy ones. |\n")
+	p.WriteString("| Calls, turns | How directly the runs finished: the median tool calls and model turns, " +
+		"with their range. `slow` marks a case past its `expected_calls`. A score, never a fail. |\n")
+	p.WriteString("| Re-graded | A later checker graded the saved transcripts of an earlier run. The model ran " +
+		"once, at the run's commit, and the verdict names both commits. |\n\n")
 }
 
 func writeCoverageTotals(p *strings.Builder, r mcpToolCoverage) {
@@ -86,12 +94,12 @@ func writeCoverageTotals(p *strings.Builder, r mcpToolCoverage) {
 	p.WriteString("Which model drove the lane, and how it went. The tool columns further down are " +
 		"the same for every model, because what a case requires belongs to the scenario. " +
 		"What changes here is whether the driving succeeded.\n\n")
-	p.WriteString("| Model | Cases run | Reached their bar | Below it | Runs passed | Reliability |\n" +
-		"|---|---:|---:|---:|---:|---:|\n")
+	p.WriteString("| Model | Cases run | Reached their bar | Below it | Runs passed | Reliability | " +
+		"Calls per case (median) | Slow |\n|---|---:|---:|---:|---:|---:|---:|---:|\n")
 	for _, m := range r.Models {
-		fmt.Fprintf(p, "| `%s` | %d of %d | %d | %d | %d/%d | %.0f%% |\n",
+		fmt.Fprintf(p, "| `%s` | %d of %d | %d | %d | %d/%d | %.0f%% | %s | %d |\n",
 			m.Model, m.CasesRecorded, r.Totals.Cases, m.CasesHeld, m.CasesBelowBar,
-			m.Passed, m.Runs, 100*m.Reliability)
+			m.Passed, m.Runs, 100*m.Reliability, m.CallsPerCase, len(m.Slow))
 	}
 	p.WriteString("\n")
 	for _, m := range r.Models {
@@ -100,7 +108,11 @@ func writeCoverageTotals(p *strings.Builder, r mcpToolCoverage) {
 				m.Model, r.Totals.Cases-m.CasesRecorded, r.Totals.Cases)
 		}
 		if len(m.BelowBar) > 0 {
-			fmt.Fprintf(p, "> `%s` below its bar on: %s\n\n", m.Model, strings.Join(m.BelowBar, ", "))
+			fmt.Fprintf(p, "<!-- prose:allow sentence a generated list of case names -->\n> `%s` below its bar on: %s\n\n",
+				m.Model, strings.Join(m.BelowBar, ", "))
+		}
+		if len(m.Slow) > 0 {
+			fmt.Fprintf(p, "> `%s` slow on: %s\n\n", m.Model, strings.Join(m.Slow, ", "))
 		}
 	}
 }
@@ -112,13 +124,13 @@ func writeCoverageCases(p *strings.Builder, r mcpToolCoverage) {
 	p.WriteString("One row per case per model that ran it. A case nobody has run appears once, " +
 		"marked `not run`, rather than being dropped: a case missing from this table would read " +
 		"as a case that does not exist.\n\n")
-	p.WriteString("| Case | Model | Result | Passed | Bar | Criteria | Requires |\n" +
-		"|---|---|---|---:|---:|---|---|\n")
+	p.WriteString("| Case | Model | Result | Passed | Bar | Calls (median) | Turns (median) | Criteria | Requires |\n" +
+		"|---|---|---|---:|---:|---:|---:|---|---|\n")
 	for _, c := range r.Cases {
 		criteria := criteriaNames(c.Name, c.Criteria, r.Criteria)
 		link := fmt.Sprintf("[%s](../../e2e/llm/scenarios/%s)", c.Name, c.File)
 		if len(c.ByModel) == 0 {
-			fmt.Fprintf(p, "| %s | - | not run | - | - | %s | %s |\n",
+			fmt.Fprintf(p, "| %s | - | not run | - | - | - | - | %s | %s |\n",
 				link, criteria, requiresColumn(c))
 			continue
 		}
@@ -127,9 +139,15 @@ func writeCoverageCases(p *strings.Builder, r mcpToolCoverage) {
 			if run.Held {
 				result = "pass"
 			}
-			fmt.Fprintf(p, "| %s | `%s` | %s | %d/%d | %d | %s | %s |\n",
+			if run.Slow {
+				result += ", slow"
+			}
+			if run.Regraded {
+				result += ", re-graded"
+			}
+			fmt.Fprintf(p, "| %s | `%s` | %s | %d/%d | %d | %s | %s | %s | %s |\n",
 				link, run.Model, result, run.Passed, run.Runs, run.PassAt,
-				criteria, requiresColumn(c))
+				run.Efficiency.CallsCell(), run.Efficiency.TurnsCell(), criteria, requiresColumn(c))
 		}
 	}
 	p.WriteString("\n")
@@ -347,4 +365,160 @@ func joinOrDash(in []string) string {
 		return "-"
 	}
 	return strings.Join(backticked(in), ", ")
+}
+
+// The two job tables that sit beside the main one: the same scenarios run
+// through the neutral harness, and through the REST door. Each answers a
+// different question, so neither shares a column with a CLI result.
+
+// summariseDoors folds the MCP models the lane ran, and reads the REST door.
+func summariseDoors(t *testing.T, cases []caseRow, ran []string) ([]modelCoverage, doorCoverage) {
+	t.Helper()
+	models := make([]modelCoverage, 0, len(ran))
+	for _, model := range ran {
+		models = append(models, summariseModel(cases, model))
+	}
+	rest, err := readDoor(e2eLLMScenarioDir, e2eLLMRESTDir)
+	if err != nil {
+		t.Fatalf("reading the REST door's verdicts at %s: %v", e2eLLMRESTDir, err)
+	}
+	// The page says the REST door is tested on Claude alone; this keeps that true.
+	for _, m := range rest.Models {
+		if !strings.HasPrefix(m.Model, "claude") {
+			t.Fatalf("%s holds a REST verdict, and the REST door is tested on Claude only; remove it", m.Model)
+		}
+	}
+	return models, rest
+}
+
+// doorCoverage is the lane as it went through one door other than the MCP
+// tools. Cases holds only the jobs some assistant ran through that door.
+type doorCoverage struct {
+	Models []modelCoverage `json:"models"`
+	Cases  []caseRow       `json:"cases"`
+}
+
+// readDoor folds one verdict tree the way the MCP tree is folded. Trust is
+// counted against every scenario, so a door tried on a handful of jobs says so.
+func readDoor(scenarioDir, recordDir string) (doorCoverage, error) {
+	cases, err := readE2ELLMCases(scenarioDir, recordDir)
+	if err != nil {
+		return doorCoverage{}, err
+	}
+	door := doorCoverage{Models: []modelCoverage{}, Cases: []caseRow{}}
+	for _, c := range cases {
+		if len(c.ByModel) > 0 {
+			door.Cases = append(door.Cases, c)
+		}
+	}
+	for _, model := range modelsThatRan(door.Cases) {
+		door.Models = append(door.Models, summariseModel(cases, model))
+	}
+	return door, nil
+}
+
+// onNeutralHarness reports whether a verdict folder holds bridge runs: only a
+// CLI route files its verdicts under an @suffix.
+func onNeutralHarness(folder string) bool {
+	return !strings.Contains(folder, "@")
+}
+
+// splitByHarness parts the models into the CLI ones and the neutral-harness
+// ones, keeping the order they came in.
+func splitByHarness(models []modelCoverage) (cli, neutral []modelCoverage) {
+	for _, m := range models {
+		if onNeutralHarness(m.Model) {
+			neutral = append(neutral, m)
+			continue
+		}
+		cli = append(cli, m)
+	}
+	return cli, neutral
+}
+
+// casesRunBy keeps the jobs at least one of the models ran.
+func casesRunBy(cases []caseRow, models []modelCoverage) []caseRow {
+	var out []caseRow
+	for _, c := range cases {
+		for _, m := range models {
+			if jobMark(c, m.Model) != "-" {
+				out = append(out, c)
+				break
+			}
+		}
+	}
+	return out
+}
+
+// whoAsks names the seat whose passport a job runs on.
+func whoAsks(passport string) string {
+	switch passport {
+	case "rep":
+		return "a rep"
+	case "readonly":
+		return "read-only"
+	default:
+		return "an admin"
+	}
+}
+
+func writeJobTable(p *strings.Builder, cases []caseRow, models []modelCoverage, catalog []criterionRow) {
+	header := "| Job | What a good answer does | Who asks |"
+	rule := "|---|---|---|"
+	var headerCells, ruleCells strings.Builder
+	for _, m := range models {
+		fmt.Fprintf(&headerCells, " `%s`<br>%s |", modelName(m.Model), m.Route)
+		ruleCells.WriteString(":---:|")
+	}
+	p.WriteString(header + headerCells.String() + "\n" + rule + ruleCells.String() + "\n")
+	for _, c := range byCaseNumber(cases) {
+		fmt.Fprintf(p, "| %s | %s | %s |", c.Title, plainCriteria(c.Name, c.Criteria, catalog), whoAsks(c.Passport))
+		for _, m := range models {
+			p.WriteString(" " + jobMark(c, m.Model) + " |")
+		}
+		p.WriteString("\n")
+	}
+	p.WriteString("\n")
+}
+
+func writeCoverageNeutral(p *strings.Builder, r mcpToolCoverage) {
+	p.WriteString("## The same jobs on the neutral harness\n\n")
+	_, neutral := splitByHarness(r.Models)
+	if len(neutral) == 0 {
+		p.WriteString("No job has been run through the neutral harness yet.\n\n")
+		return
+	}
+	p.WriteString("These runs give every model the same tools, the same instructions and the same cap " +
+		"of turns, so this table is the one that compares one model with another. Its results are " +
+		"not mixed into the table above, where each assistant runs with its own vendor's instructions.\n\n")
+	writeJobTable(p, casesRunBy(r.Cases, neutral), neutral, r.Criteria)
+}
+
+func writeCoverageREST(p *strings.Builder, r mcpToolCoverage) {
+	p.WriteString("## The same jobs through the REST API\n\n")
+	if len(r.REST.Models) == 0 {
+		p.WriteString("No job has been run through the REST API yet.\n\n")
+		return
+	}
+	p.WriteString("An assistant can also reach Margince through the REST API, with the downloadable " +
+		"skill and one tool that makes HTTP calls. These runs use the same jobs and the same checks " +
+		"as the tables above. The REST door is tested on Claude only, by decision: the other models " +
+		"are tested through the MCP tools, and no column here is missing for them.\n\n")
+	p.WriteString("| Assistant | How we connected it | Jobs tried | Reliable on |\n|---|---|---:|---:|\n")
+	for _, m := range r.REST.Models {
+		fmt.Fprintf(p, "| `%s` | %s, REST | %d of %d | %d |\n", m.Name, m.Route, m.CasesRecorded, r.Totals.Cases, m.CasesHeld)
+	}
+	p.WriteString("\n")
+	writeJobTable(p, r.REST.Cases, r.REST.Models, r.Criteria)
+}
+
+// calledInHeldRuns names the cases that held where a passing run used tool.
+func calledInHeldRuns(cases []caseRow, tool string) []string {
+	var named []string
+	for _, c := range cases {
+		if slices.ContainsFunc(c.ByModel, func(run caseModelRun) bool { return run.Held && slices.Contains(run.ToolsCalled, tool) }) {
+			named = append(named, c.Name)
+		}
+	}
+	return named
 }

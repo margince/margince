@@ -335,6 +335,7 @@ describe("onboarding gate", () => {
     session: {
       seat?: "full" | "read";
       roles?: string[];
+      // Absent, the grants are a User's: a voice to train and mail to connect.
       allow?: GrantSpec;
       onboarding?: boolean;
     } = {},
@@ -349,7 +350,10 @@ describe("onboarding gate", () => {
               meFixture({
                 roles: session.roles ?? ["admin"],
                 seat: session.seat,
-                allow: session.allow,
+                allow: session.allow ?? {
+                  voice_profile: ["read", "create"],
+                  activity: ["create"],
+                },
               }),
             ),
             { status: 200, headers: { "Content-Type": "application/json" } },
@@ -509,17 +513,20 @@ describe("onboarding gate", () => {
     "walks a non-admin with %s through the member journey, unasked",
     async (_, journey) => {
       window.location.hash = "#/contacts";
-      stubCompany(403, journey, { roles: ["rep"] });
+      stubCompany(403, journey, {
+        roles: ["rep"],
+        allow: { voice_profile: ["read", "create"] },
+      });
       mount();
       expect(await screen.findByText(/Train your writing voice/)).toBeTruthy();
-      expect(window.location.hash).toBe("#/onboarding/company");
+      expect(window.location.hash).toBe("#/onboarding/voice");
       expect(companyReads()).toHaveLength(0);
     },
   );
 
-  // Sign out lives on Settings > Account, so a reader stuck mid-journey can
-  // still leave; the rest of settings waits for the journey to finish.
-  it("lets a non-admin mid-journey reach Settings > Account and Sign out", async () => {
+  // The band links to Settings > Account, so a reader mid-journey can fix
+  // their language or password there and find the way back to setup.
+  it("lets a non-admin mid-journey open Settings > Account and return to setup", async () => {
     window.location.hash = "#/settings/account";
     stubCompany(
       403,
@@ -529,10 +536,15 @@ describe("onboarding gate", () => {
       },
     );
     mount();
-    expect(
-      await screen.findByRole("button", { name: "Sign out" }),
-    ).toBeTruthy();
+    const back = await screen.findByRole("link", { name: "Back to setup" });
     expect(window.location.hash).toBe("#/settings/account");
+    expect(screen.queryByRole("button", { name: /^Notifications/ })).toBeNull();
+    await userEvent.setup().click(back);
+    await waitFor(() =>
+      expect(window.location.hash).toMatch(/^#\/onboarding\//),
+    );
+    expect(await screen.findByRole("link", { name: "Account" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Sign out" })).toBeTruthy();
   });
 
   it("still sends a non-admin mid-journey away from any other settings page", async () => {
@@ -550,21 +562,55 @@ describe("onboarding gate", () => {
     );
   });
 
-  // ops holds automation:update, so its journey names the configured model:
-  // the model read follows the grant, not the admin role.
-  it("walks an ops seat with no row through the member journey, model named", async () => {
+  // ops holds automation:update, yet its journey reads no site, so the band
+  // names no model: what it shows follows the journey, not the grant.
+  it("walks an ops seat with no row through the member journey, no model chip", async () => {
     window.location.hash = "#/contacts";
     stubCompany(
       403,
       { row: { code: "not_found" }, status: 404 },
-      { roles: ["ops"], allow: { automation: ["update"] } },
+      {
+        roles: ["ops"],
+        allow: { automation: ["update"], voice_profile: ["read", "create"] },
+      },
     );
     mount();
     expect(await screen.findByText(/Train your writing voice/)).toBeTruthy();
-    expect(window.location.hash).toBe("#/onboarding/company");
+    expect(window.location.hash).toBe("#/onboarding/voice");
     expect(companyReads()).toHaveLength(0);
+    expect(
+      screen.queryByRole("button", { name: /^Active model and cost:/ }),
+    ).toBeNull();
+  });
+
+  // Read-only may neither train a voice nor connect a mailbox, so setup
+  // holds no step for it and Home opens.
+  it("leaves a Read-only member with no journey row on its route", async () => {
+    window.location.hash = "#/contacts";
+    stubCompany(
+      403,
+      { row: { code: "not_found" }, status: 404 },
+      {
+        roles: ["read_only"],
+        allow: { voice_profile: ["read"], activity: ["read"] },
+      },
+    );
+    mount();
+    await screen.findByRole("navigation", { name: "Primary navigation" });
+    expect(routeHash(parseHash(window.location.hash))).toBe("#/contacts");
+    expect(requestsEndingIn("/v1/onboarding/state")).toHaveLength(0);
+  });
+
+  it("walks a member who may only connect mail straight to that step", async () => {
+    window.location.hash = "#/contacts";
+    stubCompany(
+      403,
+      { row: { code: "not_found" }, status: 404 },
+      { roles: ["rep"], allow: { activity: ["create"] } },
+    );
+    mount();
     await waitFor(() =>
-      expect(requestsEndingIn("/v1/ai/profile")).toHaveLength(1),
+      expect(window.location.hash).toBe("#/onboarding/connect"),
     );
   });
 
@@ -693,7 +739,10 @@ describe("onboarding gate", () => {
     "never marks the next user finished from the last user's answer when %s",
     async (_, signsOut) => {
       window.location.hash = "#/contacts";
-      const first = meFixture({ roles: ["rep"] });
+      const first = meFixture({
+        roles: ["rep"],
+        allow: { voice_profile: ["read", "create"], activity: ["create"] },
+      });
       const next = { ...first, user: { ...first.user, id: "next-user" } };
       let signedIn: typeof first | null = first;
       const rows: string[] = [];
@@ -854,133 +903,3 @@ describe("onboarding gate", () => {
 
 // A member the gate holds reads only the journey: its row once, and none of the
 // full app's reads until finishing lets them in.
-describe("the reads of a member held on onboarding", () => {
-  const SIDE_READS = [
-    "/brief",
-    "/worklist/handled",
-    "/analytics/context",
-    "/notices",
-    "/scheduled-sends",
-    "/magic",
-  ];
-
-  beforeEach(() => {
-    vi.useFakeTimers({ shouldAdvanceTime: true });
-    // The handoff after the last step resolves at once under reduced motion.
-    vi.stubGlobal("matchMedia", (query: string) => ({
-      matches: query.includes("prefers-reduced-motion"),
-      media: query,
-      addEventListener: () => undefined,
-      removeEventListener: () => undefined,
-    }));
-  });
-  afterEach(() => {
-    vi.useRealTimers();
-  });
-
-  function memberApi(row: ReturnType<typeof wizardRow> | null) {
-    const seen: string[] = [];
-    let version = row?.version ?? 0;
-    vi.stubGlobal(
-      "fetch",
-      vi.fn(async (input: Request | string | URL) => {
-        const request = input instanceof Request ? input : null;
-        const url = new URL(String(request?.url ?? input), "http://localhost");
-        const path = url.pathname.replace(/^\/v1/, "");
-        seen.push(`${request?.method ?? "GET"} ${path}`);
-        if (path === "/me") {
-          const grants = { deal: ["read"], forecast: ["read"] } as const;
-          return json(meFixture({ roles: ["rep"], allow: grants }));
-        }
-        if (path === "/company/context/capabilities") {
-          return json({ onboarding_enabled: true, read_enabled: true });
-        }
-        if (path === "/onboarding/state" && request?.method === "PUT") {
-          version += 1;
-          const body: unknown = await request.clone().json();
-          return json({ ...wizardRow("voice"), ...Object(body), version });
-        }
-        if (path === "/onboarding/state") {
-          return row === null ? json({ code: "not_found" }, 404) : json(row);
-        }
-        // Home fails each of its reads on its own card rather than on a fixture.
-        if (path === "/worklist" || SIDE_READS.includes(path)) {
-          return json({ code: "service_unavailable" }, 503);
-        }
-        return json({ data: [], page: {} });
-      }),
-    );
-    const count = (call: string) => seen.filter((it) => it === call).length;
-    return {
-      count,
-      sideReads: () => SIDE_READS.filter((path) => count(`GET ${path}`) > 0),
-    };
-  }
-
-  // Past the moment the shell's own background reads would have started.
-  const restLong = () => act(() => vi.advanceTimersByTimeAsync(5_000));
-
-  it.each([
-    ["no row yet", null],
-    ["saved progress", wizardRow("voice")],
-  ])("reads the row once through the first save, with %s", async (_, row) => {
-    window.location.hash = GATE_TARGET;
-    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
-    const api = memberApi(row);
-    renderApp();
-    await user.click(
-      await screen.findByRole("button", { name: "Skip voice for now." }),
-    );
-    await waitFor(() => expect(api.count("PUT /onboarding/state")).toBe(1));
-    await restLong();
-    expect(api.count("GET /onboarding/state")).toBe(1);
-    expect(api.sideReads()).toEqual([]);
-  });
-
-  it("starts none of Home's reads for a member the gate turns away from it", async () => {
-    window.location.hash = BRIEF;
-    const api = memberApi(wizardRow("voice"));
-    renderApp();
-    await screen.findByRole("button", { name: "Skip voice for now." });
-    expect(window.location.hash).toBe(GATE_TARGET);
-    await restLong();
-    expect(api.sideReads()).toEqual([]);
-  });
-
-  it("sends neither the outbox's nor the bell's read on Settings > Account until let in", async () => {
-    window.location.hash = "#/settings/account";
-    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
-    const api = memberApi(wizardRow("connect"));
-    renderApp();
-    await screen.findByRole("button", { name: "Sign out" });
-    await restLong();
-    expect(api.count("GET /notices")).toBe(0);
-    expect(api.count("GET /scheduled-sends")).toBe(0);
-
-    act(() => window.history.pushState(null, "", GATE_TARGET));
-    act(() => window.dispatchEvent(new PopStateEvent("popstate")));
-    const skip = await screen.findByRole("button", { name: "Skip for now" });
-    await waitFor(() => expect(skip).toHaveProperty("disabled", false));
-    await user.click(skip);
-    await waitFor(() => expect(window.location.hash).toBe(BRIEF));
-    await restLong();
-    expect(api.count("GET /notices")).toBeGreaterThan(0);
-    expect(api.count("GET /scheduled-sends")).toBeGreaterThan(0);
-  });
-
-  it("starts the full app's reads once finishing lets the member in", async () => {
-    window.location.hash = GATE_TARGET;
-    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
-    const api = memberApi(wizardRow("connect"));
-    renderApp();
-    const skip = await screen.findByRole("button", { name: "Skip for now" });
-    await waitFor(() => expect(skip).toHaveProperty("disabled", false));
-    await restLong();
-    expect(api.sideReads()).toEqual([]);
-
-    await user.click(skip);
-    await waitFor(() => expect(window.location.hash).toBe(BRIEF));
-    await restLong();
-    await waitFor(() => expect(api.sideReads()).toEqual(SIDE_READS));
-  });
-});

@@ -7,6 +7,7 @@ package integration
 
 import (
 	"context"
+	"fmt"
 	"net/http"
 	"net/url"
 	"slices"
@@ -293,6 +294,12 @@ func TestHistoryKeepsCurrentRetriesBeyondTheFinishedRunWindow(t *testing.T) {
 func TestMissingRestoreEvidenceLeavesHealthIncomplete(t *testing.T) {
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
+	// A company with no name is a footer gap an admin must close, which would
+	// read as attention rather than as missing evidence.
+	if _, err := e.Owner.Exec(t.Context(), `INSERT INTO company (display_name, is_anchor, source, captured_by)
+		VALUES ('Restore Test GmbH', true, 'manual', 'human:x')`); err != nil {
+		t.Fatal(err)
+	}
 	var report crmcontracts.SystemHealth
 	if status := e.Call(t, "GET", "/v1/admin/system-health", nil, nil, &report); status != http.StatusOK {
 		t.Fatalf("summary: %d", status)
@@ -399,14 +406,21 @@ func TestSystemHealthBreaksDownTheChangesHomeCannotPlace(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	for _, price := range []int64{200, 300} {
+	// A product price change is upkeep and stays out; a pipeline rename is
+	// not, and is counted.
+	pipeline := ids.From[ids.PipelineKind](uuidOf(t, apptest.DiscoverSeededPipeline(t, e).PipelineID))
+	for i, price := range []int64{200, 300} {
 		if _, err := store.UpdateProduct(ctx, ids.From[ids.ProductKind](ids.UUID(product.Id)), deals.UpdateProductInput{UnitPriceMinor: &price}); err != nil {
+			t.Fatal(err)
+		}
+		name := fmt.Sprintf("Synced pipeline %d", i)
+		if _, err := store.UpdatePipeline(ctx, pipeline, deals.UpdatePipelineInput{Name: &name}); err != nil {
 			t.Fatal(err)
 		}
 	}
 
 	source := unplacedSource(t, e)
-	want := []crmcontracts.HealthUnplacedChange{{EntityType: "product", Action: "update", Count: 2}}
+	want := []crmcontracts.HealthUnplacedChange{{EntityType: "pipeline", Action: "update", Count: 2}}
 	if source.Availability != "available" || source.Condition != "information" || source.Code != "unplaced_counted" ||
 		source.Count == nil || *source.Count != 2 || source.UnplacedChanges == nil || !slices.Equal(*source.UnplacedChanges, want) {
 		t.Fatalf("unplaced changes misreported: %+v", source)

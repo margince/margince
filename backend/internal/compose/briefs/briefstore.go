@@ -161,7 +161,7 @@ func (e *BriefEngine) SnapshotRunForDay(ctx context.Context, now time.Time) (Bri
 	queueDeals := make([]ids.UUID, 0, len(ranking.Queue))
 	var joinedExisting bool
 	err = database.WithWorkspaceTx(ctx, e.pool, func(tx pgx.Tx) error {
-		day, err := localDay(ctx, tx, now)
+		day, err := localDay(ctx, tx, userID, now)
 		if err != nil {
 			return err
 		}
@@ -285,7 +285,7 @@ func (e *BriefEngine) LatestRun(ctx context.Context, now time.Time) (BriefRun, e
 
 	var run BriefRun
 	err = database.WithWorkspaceTx(ctx, e.pool, func(tx pgx.Tx) error {
-		day, err := localDay(ctx, tx, now)
+		day, err := localDay(ctx, tx, userID, now)
 		if err != nil {
 			return err
 		}
@@ -328,7 +328,7 @@ func (e *BriefEngine) LatestCutoff(ctx context.Context, now time.Time) (time.Tim
 	}
 	var asOf time.Time
 	err = database.WithWorkspaceTx(ctx, e.pool, func(tx pgx.Tx) error {
-		day, err := localDay(ctx, tx, now)
+		day, err := localDay(ctx, tx, userID, now)
 		if err != nil {
 			return err
 		}

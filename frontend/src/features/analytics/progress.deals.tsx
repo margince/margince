@@ -17,7 +17,7 @@ import { calendarDay, todayIn } from "../../format/calendarday";
 import {
   formatAnalyticsMoney,
   formatDate,
-  formatDateTime,
+  formatDue,
 } from "../../format/format";
 import { type Locale, type Translator, useLocale, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
@@ -190,7 +190,13 @@ export function useDealColumns(
             ? names.get(task.assignee_id)
             : undefined;
         const due = task.due_at
-          ? formatDateTime(task.due_at, locale, progress.timezone)
+          ? formatDue(
+              task.due_at,
+              task.due_has_time ?? undefined,
+              locale,
+              progress.timezone,
+              task.due_intent,
+            )
           : undefined;
         return (
           <span className="progress-work-stack">

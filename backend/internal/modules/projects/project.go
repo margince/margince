@@ -21,6 +21,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/kernel/provenance"
 	"github.com/margince/margince/backend/internal/shared/ports/fieldcatalog"
 )
 
@@ -79,14 +80,13 @@ func (s *Store) CreateProject(ctx context.Context, in CreateProjectInput) (crmco
 	if err != nil {
 		return crmcontracts.Project{}, err
 	}
-	active, err := s.catalogColumns(ctx)
-	if err != nil {
-		return crmcontracts.Project{}, err
-	}
 
 	var out crmcontracts.Project
 	err = s.Tx(ctx, func(tx pgx.Tx) error {
-		var err error
+		active, err := s.catalogColumnsIn(ctx, tx)
+		if err != nil {
+			return err
+		}
 		out, err = createProjectTx(ctx, tx, in, by, active, s.createSeams())
 		return err
 	})
@@ -195,12 +195,12 @@ func (s *Store) ArchiveProject(ctx context.Context, id ids.ProjectID, ifVersion 
 	if err := auth.Require(ctx, projectObject, principal.ActionDelete); err != nil {
 		return crmcontracts.Project{}, err
 	}
-	active, err := s.catalogColumns(ctx)
-	if err != nil {
-		return crmcontracts.Project{}, err
-	}
 	var out crmcontracts.Project
-	err = s.Tx(ctx, func(tx pgx.Tx) error {
+	err := s.Tx(ctx, func(tx pgx.Tx) error {
+		active, err := s.catalogColumnsIn(ctx, tx)
+		if err != nil {
+			return err
+		}
 		if err := auth.EnsureWritable(ctx, tx, projectObject, id.UUID); err != nil {
 			return err
 		}
@@ -316,6 +316,8 @@ func projectCheckError(constraint string, dateField string) error {
 		return &ProjectDateRangeError{Field: dateField}
 	case "project_phase_check":
 		return &ProjectPhaseError{}
+	case "project_source_check":
+		return &provenance.RecordSourceError{}
 	default:
 		return nil
 	}

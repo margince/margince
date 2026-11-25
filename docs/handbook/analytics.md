@@ -64,7 +64,7 @@ To close a forecast link in Margince before its 30 days run out, open **Analytic
    It also shows when the link was created and when it expires.
 2. Press **Close link** on the link's row, then **Close link** again in **Close this link?**.
 
-The row leaves the list, and anyone who opens the link is refused. Only you see and close the links you issued. Right after **Create link**, **Close link** in the **Your link** dialog does the same. A link also stops on its own after 30 days, or when you lose forecast access. Also called: revoke a share, cancel a report link, stop sharing, see my shared links.
+The row leaves the list, and anyone who opens the link is refused. Only you see and close the links you issued. Right after **Create link**, **Close link** in the **Your link** dialog does the same. A link also stops on its own after 30 days, or when you lose forecast access. Leaving **Your link** without copying does not close the link; it cannot be shown again, and it stays open until one of these happens. Also called: revoke a share, cancel a report link, stop sharing, see my shared links.
 
 ### How do I see a win rate or export a report?
 **Performance** offers a closed win rate with a smallest group size, and a CSV export under its rules; see [Performance and saved sales reports](sales-reporting.md).
@@ -76,7 +76,7 @@ When sales reporting is turned on, **Reports** and the **Setup** menu (**Targets
 
 Two sections appear only for some seats. **My outcomes** is for a seat that sees only its own records, such as a rep. Under a wider view, this section counts one person’s own records. **Data coverage** is for a seat with permission to see it, even on a new installation where no check has run yet. The section is part of the address, so a link to one opens it.
 
-**Company coverage** lists the companies at risk among the records you chose, in three views. **Single-contact deals** are open deals where messages or meetings went both ways with at most one contact on the deal within 90 days. **Untouched in pipeline** are companies with an open deal and no exchange either way in the last 21 days. **Won but silent** are companies with a deal won in the last 180 days, no open deal and no exchange in the last 30 days. The line under the filters prints these limits, and an admin changes them under **Setup** → **Metric definitions**. A row opens a side panel with the facts behind the verdict, and a deal whose contacts you may not all see is not judged.
+**Company coverage** lists the companies at risk among the records you chose, in three views. **Single-contact deals** are open deals with a logged activity, where messages or meetings went both ways with at most one contact within 90 days. **Untouched in pipeline** are companies with an open deal and no exchange either way in the last 21 days. **Won but silent** are companies with a deal won in the last 180 days, no open deal and no exchange in the last 30 days. The line under the filters prints these limits, and an admin changes them under **Setup** → **Metric definitions**. A row opens a side panel with the facts behind the verdict, and a deal whose contacts you may not all see is not judged.
 
 ## Overview
 
@@ -100,7 +100,7 @@ A zero, a hidden figure, a failed one and a day that cannot be read each say so 
 
 Under details, **How your outcomes developed** shows more weekly history, and **What happened to your handoffs** follows the ones you sent in the period. **Save view** keeps the view as a report under **Reports** without changing Overview, and **Report templates** opens prepared reports such as **My prospecting progress**.
 
-**Team prospecting** has the record scope, a **Date range** of this or last week or month, and **More**. Its readings lead with accepted handoffs where the company uses SDR handoffs, and with first qualifications where it does not. The readings and **Members** fill the page; the **Team prospecting outlook** and **Where the team stands** sit beside them. **Where the team stands** says how the rounds handed on in the period ended so far. Qualification totals count first qualifications in the selected period. A handoff share shows only when enough rounds are behind it.
+**Team prospecting** has the record scope, a **Date range** of this week or month or the last completed week, month, quarter or year, and **More**. Its readings lead with accepted handoffs where the company uses SDR handoffs, and with first qualifications where it does not. The readings and **Members** fill the page; the **Team prospecting outlook** and **Where the team stands** sit beside them. **Where the team stands** says how the rounds handed on in the period ended so far. Qualification totals count first qualifications in the selected period. A handoff share shows only when enough rounds are behind it.
 
 Under it come what holds the team up: waiting handoffs, handoffs sent back or turned down, and leads waiting for a reply. Each opens its own list, and the reasons count the decisions made in the period.
 
@@ -173,7 +173,8 @@ for the whole open pipeline. **Forecast by probability** sits beside the tables.
 **Open deals by stage**: one row per stage, in pipeline order. It shows the
 stage, how many deals, and the value without and with weighting. Every figure
 is turned into one base currency, so a stage is one row with no currency
-column.
+column. A deal with no exchange rate or no value is left out of a total, and a
+note says how many deals and why. Such a figure carries a **Partial** mark.
 
 **Forecast by probability**: a tile per band (0%, 1 to 29%, 30 to 59%, 60 to
 89%, 90% or more). Each shows the raw total as the value
@@ -194,8 +195,6 @@ two rows.
 
 The share is of the open pipeline in the same currency. It shows only when the
 list holds every row and no deal is hidden from you.
-
-Where not every deal has an amount, a note says "{priced} of {total} priced".
 
 ## Performance
 

@@ -177,7 +177,7 @@ To create a deal in Margince, open **Deals** in the sidebar and choose **New dea
    The form opens on your base currency. Type a code or a name, such as "dong", to find another.
 3. You may add a **Value**, a **Company**, and a **Project** (offered once a company is chosen).
    You may also set the **Owner** (you by default), **Acquisition source**, partner details, **Expected close** and custom fields.
-4. Choose **Create**. It stays turned off until every required field is filled.
+4. Choose **Create**. If a required field is empty, Create says so under it and takes you to the first one.
 The currency is saved only when you also enter a value.
 Also called: new opportunity, add a deal, open a deal.
 
@@ -237,7 +237,7 @@ To add a contact to a deal in Margince as a stakeholder, open the deal. Choose *
 3. Choose **Create**.
 Anyone who may edit the deal can open **Change or remove stakeholders** on the same panel. Choose **Edit stakeholder** on the row to change the role. To take the contact off, choose **Remove** on the row and confirm in **Remove stakeholder?**; there is no undo. A contact with several roles has a row for each role, and each row needs its own **Remove**. The **Buying committee** panel names a contact once, with each role, and counts them once.
 
-To show that a contact no longer takes part, set an **End** date on the row instead. On that date the contact leaves the **Buying committee** and its count. The contact's **Deals** tab still lists the deal and marks it **No longer on this deal**. The row stays under the fold with its dates.
+To show that a contact no longer takes part, set an **End** date on the row instead. On that date the contact leaves the **Buying committee** and its count. The contact's **Deals** tab still lists the deal and marks it **No longer on this deal**. The row stays under the fold with its dates. With too few contacts engaged, the panel asks for another one. An admin sets that limit under **Metric definitions**.
 
 From a contact's **Deals** tab, **Add to a deal** does the same from the other end. Select the search field to see open deals at their current employers. Typing searches open deals, with employer deals first and each deal's company shown.
 Also called: add a stakeholder, add a decision maker, link a contact to an opportunity.
@@ -247,7 +247,7 @@ No. A deal in Margince stays in the pipeline it was created in, and its stage ca
 Also called: change a deal's pipeline, switch pipeline.
 
 ### Can I set the win probability of one deal?
-Yes. Press **Edit** in the **About** section of the deal's **Details**, and enter a number from 0 to 100 under **Probability**. Leave it empty to use the stage's probability again (**Settings → Deals**, **Win probability**). Moving the deal to another stage also sets it back to that stage's. The ⓘ beside the figure says where it comes from: the stage, who set it by hand, or why Margince lowered it.
+Yes. Press **Edit** in the **About** section of the deal's **Details**, and enter a number from 0 to 100 under **Probability**. Leave it empty to use the stage's probability again (**Settings → Deals**, **Win probability**). Moving the deal to another stage also sets it back to that stage's. The ⓘ beside the figure says how it was made ([how it is set](forecast-learning.md)).
 Also called: deal probability, likelihood, confidence, why this probability.
 
 ## Projects

@@ -241,6 +241,31 @@ describe("CompanyRail", () => {
     );
   });
 
+  it("says in the About dialog that only a colleague sets Live", async () => {
+    stub({
+      "/me": () =>
+        jsonResponse({
+          user: { id: "u-1", display_name: "Mira Voss" },
+          authorization: {
+            objects: { company: { update: true } },
+            seat_type: "full",
+          },
+        }),
+      "/companies/o-1": () => jsonResponse(company),
+    });
+    renderRail();
+    const user = userEvent.setup();
+    const about = await openSection(user, "About");
+    await pickOption(
+      user,
+      within(about).getByRole("combobox", { name: /^Lifecycle/ }),
+      "Live",
+    );
+    expect(
+      within(about).getByText(en["company.lifecycle.live.help"]),
+    ).toBeTruthy();
+  });
+
   it("edits lifecycle in the About dialog", async () => {
     let patchBody: unknown;
     stub({

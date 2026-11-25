@@ -9,7 +9,8 @@ export function customerPayments(over: Partial<Payments> = {}): Payments {
   return {
     access_scope: "demo",
     state: "connected",
-    provider: "Demo accounting",
+    provider: "offline_demo",
+    provider_name: "Demo accounting",
     last_synced_at: "2026-09-13T08:00:00Z",
     linked_companies: 3,
     company_count: 1,

@@ -12,6 +12,7 @@ package deals
 
 import (
 	"context"
+	"slices"
 	"testing"
 
 	"github.com/margince/margince/backend/internal/platform/clocktest"
@@ -27,6 +28,9 @@ type recordFixture struct {
 	tasks         []PacketTask
 	subjects      map[ids.UUID]*string
 	contractsOpen map[ids.UUID]bool
+	// contractsPage caps the newest-first list as the real page does; zero is
+	// no cap.
+	contractsPage int
 }
 
 func (e *reviewEnv) ReviewContracts(context.Context, ids.UUID) ([]PacketContract, error) {
@@ -34,6 +38,20 @@ func (e *reviewEnv) ReviewContracts(context.Context, ids.UUID) ([]PacketContract
 	for _, c := range e.records.contracts {
 		if e.records.contractsOpen == nil || e.records.contractsOpen[c.ContractID] {
 			out = append(out, c)
+		}
+	}
+	if e.records.contractsPage > 0 && len(out) > e.records.contractsPage {
+		out = out[:e.records.contractsPage]
+	}
+	return out, nil
+}
+
+func (e *reviewEnv) OpenableContracts(_ context.Context, _ ids.UUID, contractIDs []ids.UUID) (map[ids.UUID]string, error) {
+	out := map[ids.UUID]string{}
+	for _, c := range e.records.contracts {
+		open := e.records.contractsOpen == nil || e.records.contractsOpen[c.ContractID]
+		if open && slices.Contains(contractIDs, c.ContractID) {
+			out[c.ContractID] = c.Title
 		}
 	}
 	return out, nil
@@ -128,5 +146,28 @@ func TestAPackFromBeforeTheRecordSectionsLeavesThemAbsent(t *testing.T) {
 	}
 	if old.Packet.Contracts != nil || old.Packet.Touches != nil || old.Packet.Tasks != nil {
 		t.Fatalf("an older pack showed sections %+v, want them absent", old.Packet)
+	}
+}
+
+// A frozen agreement stays in the pack when newer ones push it off the
+// deal's newest-first page, because the view reads it by id.
+func TestAFrozenAgreementOutlastsNewerOnesOnTheDeal(t *testing.T) {
+	e := setupReviewEnv(t)
+	dealID, _, _ := gatedDeal(t, e)
+	frozen := ids.NewV7()
+	e.records.contracts = []PacketContract{{ContractID: frozen, Status: "active", Title: "Master agreement"}}
+	id := e.request(t, dealID, nil)
+
+	newer := PacketContract{ContractID: ids.NewV7(), Status: "draft", Title: "Newer order form"}
+	e.records.contracts = append([]PacketContract{newer}, e.records.contracts...)
+	e.records.contractsPage = 1
+	reader := humanWith(e.ws, e.reviewer, map[string]principal.ObjectGrant{legalReviewEntity: {Read: true}, "deal": {Read: true}})
+	got, err := e.store.GetLegalReview(reader, id)
+	if err != nil {
+		t.Fatalf("reading the pack: %v", err)
+	}
+	contracts := *got.Packet.Contracts
+	if len(contracts) != 1 || ids.UUID(contracts[0].Id) != frozen || contracts[0].Title != "Master agreement" {
+		t.Fatalf("the pack showed agreements %+v, want the frozen one although it is off the newest page", contracts)
 	}
 }

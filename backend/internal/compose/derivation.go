@@ -21,7 +21,6 @@ import (
 
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
-	"github.com/margince/margince/backend/internal/shared/kernel/moneytotal"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
@@ -42,19 +41,19 @@ const nullPredicateKey = "isnull"
 
 // asOfKey names the instant the headline was computed at.
 //
-// A handle without it resolves at whatever the rate sheet says NOW, which is
-// the same answer for every report whose money is native — none of them convert,
-// so the frame's as-of reaches no arithmetic. It is a different answer for a
-// CONVERTED report: a stage totalled at Thursday's rate, opened on Friday,
-// recomputes at Friday's. The drill-through is where a reader checks a figure
-// they doubt, so a detail set that reconciles to something else is worse than
-// none — it looks like proof.
+// A handle without it resolves at whatever the rate sheet says now. Native
+// money is unaffected. A converted stage totalled at Thursday's rate and opened
+// on Friday would recompute at Friday's. A detail that does not reconcile to its
+// figure looks like proof.
 const asOfKey = "as_of"
+
+// ratesKey names the rate-sheet revision the headline read.
+const ratesKey = "rates"
 
 // reservedDerivationKeys are the query-string names a handle owns. Report
 // vocabularies may not squat on them, or a minted URL would be ambiguous.
 // Derived from here rather than restated, so adding a key updates the gate.
-var reservedDerivationKeys = []string{groupByKey, "agg", nullPredicateKey, asOfKey, baseCurrencyKey, reservedDerivationColumn, reportingScopeKind, "scope_id", reportingHandleVersion}
+var reservedDerivationKeys = []string{groupByKey, aggKey, nullPredicateKey, asOfKey, ratesKey, baseCurrencyKey, reservedDerivationColumn, reportingScopeKind, scopeIDKey, reportingHandleVersion}
 
 // groupByKey names the dimensions a handle groups by. Named because a refusal
 // quotes it back, and a refusal naming an argument the caller did not send is
@@ -78,6 +77,8 @@ type derivationQuery struct {
 	// converts the same way. Zero when the handle predates this key, which
 	// resolves at the current instant exactly as it always did.
 	AsOf time.Time
+	// RatesAt is the rate-sheet revision the headline read, zero for old handles.
+	RatesAt time.Time
 	// BaseCurrency is what the headline converted to, carried for the same
 	// reason. Empty when the handle predates this key, which then resolves at
 	// the installation's current base as it did before.
@@ -119,6 +120,7 @@ type derivationPlan struct {
 	// asOf is the instant the headline was computed at, from the handle. Zero
 	// for a handle minted before this key existed.
 	asOf         time.Time
+	ratesAt      time.Time
 	baseCurrency string
 }
 
@@ -252,35 +254,10 @@ func compileDerivation(spec reportSpec, q derivationQuery) (derivationPlan, erro
 		return derivationPlan{}, err
 	}
 	plan.definition = definition
-	plan.asOf = q.AsOf
+	plan.asOf, plan.ratesAt = q.AsOf, q.RatesAt
 	plan.baseCurrency = q.BaseCurrency
 
-	// Drill-through columns: the row identity plus every dimension and
-	// measure the vocabulary declares — a derived measure (e.g. the
-	// weighted value) sits NEXT TO its inputs, so the lineage bottoms
-	// out at base values with no opaque intermediate step.
-	//
-	// On an install-wide report these rows carry colleagues' owners and
-	// amounts, which adds no disclosure: deal and project are identity tables,
-	// deal values are open to every seat that may read the deal, and the
-	// ordinary read serves this caller the same owner and amount. What that
-	// read withholds, a field mask, is withheld here too (fetchDerivation's
-	// mask exclusion). Held by:
-	// TestADrillThroughShowsWhatTheOrdinaryReadShowsAndNoMore.
-	plan.columns = []string{"id"}
-	plan.selects = []string{"t.id AS id"}
-	for _, name := range sortedKeys(spec.dimensions) {
-		plan.columns = append(plan.columns, name)
-		plan.selects = append(plan.selects, spec.dimensions[name]+" AS "+name)
-	}
-	for _, name := range sortedKeys(spec.measures) {
-		plan.columns = append(plan.columns, name)
-		expression := spec.measures[name]
-		if coverage, ok := spec.sumCoverage[name]; ok {
-			expression = moneytotal.CompleteAggregateSQL(expression, coverage, false)
-		}
-		plan.selects = append(plan.selects, expression+" AS "+name)
-	}
+	plan.columns, plan.selects = derivationColumns(spec)
 	for _, agg := range plan.aggregates {
 		name, sel, err := aggregateSelect(spec, agg)
 		if err != nil {
@@ -292,9 +269,8 @@ func compileDerivation(spec reportSpec, q derivationQuery) (derivationPlan, erro
 	return plan, nil
 }
 
-// grantedSpec is the spec with the dimensions and measures this caller may
-// not read removed, so a drill-through selects only what the caller could
-// have grouped or aggregated by themselves.
+// grantedSpec is the spec without the dimensions, drill columns and measures
+// this caller may not read, so a drill-through selects only what they may read.
 func grantedSpec(ctx context.Context, spec reportSpec) reportSpec {
 	narrowed := spec
 	narrowed.dimensions = map[string]string{}
@@ -304,6 +280,10 @@ func grantedSpec(ctx context.Context, spec reportSpec) reportSpec {
 	narrowed.measures = map[string]string{}
 	for _, name := range grantedNames(ctx, spec, spec.measures) {
 		narrowed.measures[name] = spec.measures[name]
+	}
+	narrowed.drillColumns = map[string]string{}
+	for _, name := range grantedNames(ctx, spec, spec.drillColumns) {
+		narrowed.drillColumns[name] = spec.drillColumns[name]
 	}
 	narrowed.defaultAggs = grantedDefaultAggregates(ctx, spec)
 	if len(narrowed.measures) < len(spec.measures) {

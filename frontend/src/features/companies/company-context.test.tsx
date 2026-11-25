@@ -887,7 +887,7 @@ describe("CompanyContextCard save refusals", () => {
         name: "Company name",
       });
       expect(name.getAttribute("aria-invalid")).toBe("true");
-      expect(name.getAttribute("maxlength")).toBe("120");
+      expect(name.getAttribute("data-character-limit")).toBe("120");
     },
     DIALOG_MS,
   );

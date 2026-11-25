@@ -232,7 +232,7 @@
   z-index: 2;
   border: 1.5px dashed var(--aiMed);
   border-radius: var(--r-md);
-  background: var(--bgElevated);
+  background: var(--bgField);
   box-shadow: var(--shadow-pop);
   pointer-events: none;
 }
@@ -245,19 +245,17 @@
 .ddeck-ghost[data-verdict="accept"] {
   border-color: var(--accent);
   background:
-    linear-gradient(var(--accentLight), var(--accentLight)), var(--bgElevated);
+    linear-gradient(var(--accentLight), var(--accentLight)), var(--bgField);
 }
 
 .ddeck-ghost[data-verdict="reject"] {
   border-color: var(--danger);
-  background:
-    linear-gradient(var(--dangerBg), var(--dangerBg)), var(--bgElevated);
+  background: linear-gradient(var(--dangerBg), var(--dangerBg)), var(--bgField);
 }
 
 .ddeck-ghost[data-verdict="edit"] {
   border-color: var(--ai);
-  background:
-    linear-gradient(var(--aiLight), var(--aiLight)), var(--bgElevated);
+  background: linear-gradient(var(--aiLight), var(--aiLight)), var(--bgField);
 }
 
 .ddeck-ghost[data-verdict="skip"] {

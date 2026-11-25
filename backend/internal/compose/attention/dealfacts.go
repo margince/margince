@@ -58,7 +58,11 @@ func (s *Service) nameTheMoney(ctx context.Context, day *crmcontracts.Attention)
 	if len(wanted) == 0 {
 		return nil
 	}
-	figures, err := s.dealFacts.Figures(ctx, wanted)
+	zone, err := s.location(ctx)
+	if err != nil {
+		return err
+	}
+	figures, err := s.dealFacts.Figures(ctx, wanted, zone)
 	if err != nil {
 		return err
 	}

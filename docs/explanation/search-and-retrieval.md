@@ -123,12 +123,20 @@ subject and again in its body. It ranks above the account, whose name is one wor
 So a short list ranked across types can hold nothing but mail. `per_type=N` asks `GET /v1/search`
 for a **grouped** page instead (`groupedShape`).
 
-Each branch that passes the gate is capped at `N + 1` rows before the `UNION`. The last row is
-dropped and reported in `types_with_more`, and the page takes no cursor or limit. To page through
-the rest, narrow to one type with `types`. The `⌘K` menu asks for it with `per_type=3`, and with
+Each type that passes the gate runs as its own statement, under its own savepoint in one read
+transaction (`groupedHits`). The statement caps the type at `N + 1` rows. The last row is
+dropped and reported in `types_with_more`, and the page takes no cursor or limit.
+
+To page through the rest, narrow to one type with `types`. The `⌘K` menu asks for it with `per_type=3`, and with
 `per_type=8` once one type is picked in its bar. The full results screen with no type set asks with
 `per_type=5`. They show an activity that carries an
 `email_summary` under `Emails`, separate from the calls and notes beside it.
+
+The page has one deadline, the handle's statement budget counted from its start, and each type
+gets what is left of it. The types that rank a bounded sample of their rows (mail today) run last,
+so they keep most of the budget. A type whose statement the budget stops is left out of `data` and
+named in `types_timed_out`, and the other types answer. A ranked page keeps its single statement
+and answers `422 query_too_broad`.
 
 A grouped page of one plain word reads a type's own matches first (`withOwnMatches`). For
 contacts, companies and leads, these are the rows the name index finds. A whole address or domain
@@ -279,15 +287,18 @@ which does not mean it delivers to a process that keeps running. A worker that s
 and write leaves an entity with no embedding row. The vector arm cannot see it until something
 embeds it again. Without a sweep, it would wait until a user confirmed a reindex they never asked for.
 
-- **`embed_drift_sweep`** is the dispatcher. It runs every **15 minutes**, starts one job per
-  workspace, and does no tenant work itself. The contract states the budget. An empty pass is a
-  small number of `NOT EXISTS` checks per workspace, each on an index. And 15 minutes is how long a
-  lost embed event may keep a record out of vector search.
-- **`embed_drift_workspace`** is the pass for one workspace. It has no time limit: the pending set
-  limits the pass, and the time limit per call of the model lane limits each embed. It has three
-  attempts, because the next dispatcher run *is* the real retry.
+- **`embed_drift_sweep`** runs every **15 minutes** and walks the live workspaces itself. It has no
+  time limit. The pending set limits the pass, and the time limit per call of the model lane limits
+  each embed.
+- **Most passes** read only the `activity`, `contact` and `company` rows written in the last hour,
+  through an index on `created_at` or `updated_at`. They read the small `deal`, `lead` and `project`
+  tables in full. So a lost embed event for a new row keeps it out of vector search for up to 15
+  minutes.
+- **The first pass of each UTC day** in a worker process reads every live row of these tables. It
+  finds an edit to a mail whose event was lost. It also finds a row that may now be embedded with no
+  write of its own, such as a mail whose audience was settled. Those wait up to a day.
 
-Both are declared in `backend/api/jobs.yaml`. `compose/embeddriftsweep.go` registers them under a
+It is declared in `backend/api/jobs.yaml`. `compose/embeddriftsweep.go` registers it under a
 rule the contract's `when: [Embedder]` cannot state. The lane must also have a *binding* (an
 `EmbedIdentity()` that is not empty). A lane that is set but has no binding writes no marker, so there
 is nothing to check a row against.
@@ -474,7 +485,7 @@ no hop each way, or when two hops on one record share a name.
 |---|---|
 | Lexical query | `internal/modules/search/store.go` (`Search`) |
 | Ranked page + keyset cursor | `internal/modules/search/ranked.go` (`rankedShape`) |
-| Grouped page (`per_type`) | `internal/modules/search/grouped.go` (`groupedShape`) |
+| Grouped page (`per_type`) | `internal/modules/search/grouped.go` (`groupedShape`), `internal/modules/search/groupedlanes.go` |
 | Contacts through the company that employs them (`with_employees`) | `internal/modules/search/employerarm.go` (`employerArmSQL`) |
 | Company hit logo | `internal/modules/search/companylogo.go` ← `internal/modules/contacts/companylogobatch.go` |
 | Where a hit stands (`standing`) | `internal/modules/search/standing.go` (`attachStandings`) |

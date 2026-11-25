@@ -23,6 +23,7 @@ import (
 	"github.com/margince/margince/backend/internal/compose/integration"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/activities"
+	kevents "github.com/margince/margince/backend/internal/shared/kernel/events"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/ports/datasource"
@@ -274,6 +275,43 @@ func TestLeadSLAEscalationWritesBothHalvesOrNeither(t *testing.T) {
 	}
 	if recipients := leadSLANoticeRecipients(t, owner); len(recipients) != 0 {
 		t.Errorf("notices = %d after a refused notice write, want 0", len(recipients))
+	}
+}
+
+// A failed escalation leaves neither half, and the bus redelivery then writes both once.
+func TestARedeliveredLeadSLAEscalationWritesTheTaskAndNoticeOnce(t *testing.T) {
+	e := integration.Setup(t)
+	owner := integration.OwnerConn(t)
+	lead, ev, deadline, _ := breachedLeadEvent(t, e, owner)
+	failNoticeWrites(t, owner)
+	engine := NewWorkflowEngine(e.DB())
+	engine.RegisterSystemWorkflow(newLeadSLAEscalation(e.DB(), func() time.Time { return deadline.Add(time.Hour) }))
+	env := kevents.Envelope{
+		EventID: ev.ID, Type: ev.Type, OccurredAt: ev.OccurredAt,
+		Entity:  kevents.EntityRef{Type: string(ev.Entity.Type), ID: ev.Entity.ID},
+		Payload: ev.Payload,
+	}
+
+	if err := engine.HandleEvent(context.Background(), env); err == nil {
+		t.Fatal("the first delivery must surface the refused notice write")
+	}
+	if tasks, _ := openTasksOnLead(t, owner, lead); tasks != 0 || len(leadSLANoticeRecipients(t, owner)) != 0 {
+		t.Fatalf("a failed escalation left %d tasks and %d notices, want neither", tasks, len(leadSLANoticeRecipients(t, owner)))
+	}
+
+	if _, err := owner.Exec(context.Background(), `ALTER TABLE notice DISABLE TRIGGER notice_write_fault_trigger`); err != nil {
+		t.Fatalf("disarming the fault: %v", err)
+	}
+	for range 2 {
+		if err := engine.HandleEvent(context.Background(), env); err != nil {
+			t.Fatalf("redelivery: %v", err)
+		}
+	}
+	if tasks, _ := openTasksOnLead(t, owner, lead); tasks != 1 {
+		t.Errorf("open tasks = %d after the redelivery, want 1", tasks)
+	}
+	if recipients := leadSLANoticeRecipients(t, owner); len(recipients) != 1 {
+		t.Errorf("notices = %d after the redelivery, want 1", len(recipients))
 	}
 }
 

@@ -77,7 +77,10 @@ type OwnerIdentity struct {
 
 // OwnerIdentityStore reads and writes the per-seat identity list.
 type OwnerIdentityStore struct {
-	db *database.DB
+	db             *database.DB
+	addressClaimed AddressClaimHook
+	// addressWithdrawn undoes addressClaimed when the claim is withdrawn.
+	addressWithdrawn AddressWithdrawnHook
 }
 
 // NewOwnerIdentityStore builds the store over the app pool.
@@ -189,7 +192,9 @@ func (s *OwnerIdentityStore) AddConfirmed(ctx context.Context, kind, raw string,
 			Scan(&out.ID, &out.UserID, &out.Kind, &out.Value, &out.Source, &out.CreatedAt); err != nil {
 			return fmt.Errorf("capture: adding an owner identity: %w", err)
 		}
-		database.Forget(tx, ownerIdentitiesMemo)
+		if err := storekit.CaptureFactsChanged(ctx, tx); err != nil {
+			return err
+		}
 		// A claim about an address already WAITING on a verdict retires that
 		// question. Without this the gates only bind mail that arrives from
 		// now on: an address deferred moments before the claim keeps its
@@ -198,6 +203,9 @@ func (s *OwnerIdentityStore) AddConfirmed(ctx context.Context, kind, raw string,
 		// close. Only the claimant's own rows — the ledger is owner-scoped,
 		// and a colleague's verdict about the same address is theirs.
 		if err := retirePendingForIdentityTx(ctx, tx, actor.UserID, out); err != nil {
+			return err
+		}
+		if err := s.addressClaimedTx(ctx, tx, out); err != nil {
 			return err
 		}
 		// Audit-only, like the exclusion list and the own-domain list beside
@@ -234,9 +242,11 @@ func (s *OwnerIdentityStore) Remove(ctx context.Context, id ids.UUID) error {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return apperrors.ErrNotFound
 		}
-		database.Forget(tx, ownerIdentitiesMemo)
 		if err != nil {
 			return fmt.Errorf("capture: removing an owner identity: %w", err)
+		}
+		if err := storekit.CaptureFactsChanged(ctx, tx); err != nil {
+			return err
 		}
 		// "archive", not a delete verb: the audit vocabulary is closed and
 		// withdrawing a claim IS retiring it, as the exclusion list reads it.
@@ -246,6 +256,9 @@ func (s *OwnerIdentityStore) Remove(ctx context.Context, id ids.UUID) error {
 			return err
 		}
 		withdrawn.auditID, withdrawn.withdrawnBy = auditID, actor.ID
+		if err := s.addressWithdrawnTx(ctx, tx, withdrawn.OwnerIdentity); err != nil {
+			return err
+		}
 		return keepWithdrawalTx(ctx, tx, withdrawn)
 	})
 }
@@ -285,13 +298,13 @@ func ownerIdentitiesTx(ctx context.Context, tx pgx.Tx) (SelfSet, error) {
 	}
 	// A message asks this about eight times in one transaction; the
 	// transaction remembers it, and every writer of what it reads forgets it.
-	return database.Remember(tx, ownerIdentitiesMemo+user.String(), func() (SelfSet, error) { return readOwnerIdentitiesTx(ctx, tx, user) })
+	return storekit.RememberCaptureFact(ctx, tx, ownerIdentitiesMemo+user.String(), func() (SelfSet, error) { return readOwnerIdentitiesTx(ctx, tx, user) })
 }
 
 // ownerIdentitiesMemo prefixes a seat's identities in a transaction's memo.
 // Every writer of an owner identity or a connection label forgets it
-// (TestEveryWriterOfAMemoizedReadForgetsIt).
-const ownerIdentitiesMemo = "capture.owner_identities:"
+// (gates/capturefactwriters_test.go).
+const ownerIdentitiesMemo = storekit.CaptureFactsMemo + "owner_identities:"
 
 func readOwnerIdentitiesTx(ctx context.Context, tx pgx.Tx, user ids.UUID) (SelfSet, error) {
 	// The MAILBOX OWNER, resolved the way the creation ladder resolves them:

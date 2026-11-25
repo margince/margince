@@ -17,8 +17,8 @@ coverage-extensions.out
 # an unrelated future /build asset is never silently hidden), and
 # extensions/ is the installation-owned enabled set. The vanilla tree
 # ships the placeholder, the approval lock, and the FIRST-PARTY units
-# enabled by default (extensions/eu and extensions/apac, the EU member-state and
-# Asia-Pacific jurisdiction packs; extensions/openchannel, the reference
+# enabled by default (extensions/eu, extensions/apac and extensions/us, the EU member-state,
+# Asia-Pacific and United States jurisdiction packs; extensions/openchannel, the reference
 # connector; extensions/finance-demo, the demonstration accounting source). instance/go.mod
 # turns a unit on, and a unit missing from the un-ignore list below is a unit
 # no clone of this repository has.
@@ -43,10 +43,15 @@ coverage-extensions.out
 !/extensions/eu
 !/extensions/finance-demo
 !/extensions/openchannel
+!/extensions/us
 # A unit's installed frontend dependencies. Its package.json and the workspace
 # lockfile are what ship; node_modules is what pnpm makes from them, and it is
 # per-member now that a unit's frontend layer is a workspace package.
 /extensions/*/frontend/node_modules/
+# The e2e-llm Agent SDK runner's install. It keeps no lockfile, so the source
+# SBOM never lists the Agent SDK, which never ships.
+/e2e/llm/sdk-runner/node_modules/
+/e2e/llm/sdk-runner/package-lock.json
 
 # Compiled cmd binaries left in the module dir by `go build ./cmd/<role>`
 # (anchored so they never match the cmd/<role> source directories; the api
@@ -236,3 +241,4 @@ dump.rdb
 # leaves a __pycache__ beside it — build residue, never product.
 __pycache__/
 *.pyc
+/backend/gen-composition

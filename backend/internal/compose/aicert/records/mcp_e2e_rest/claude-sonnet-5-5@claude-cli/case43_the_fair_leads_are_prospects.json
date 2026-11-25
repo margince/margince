@@ -1,0 +1,91 @@
+{
+  "scenario": "case43_the_fair_leads_are_prospects",
+  "criteria": [
+    1,
+    2
+  ],
+  "passed": 2,
+  "runs": 2,
+  "pass_at": 2,
+  "driver": "claude:cli",
+  "effort": "thinking off",
+  "system_prompt": "cli-default",
+  "search": "semantic",
+  "door": "rest",
+  "self_judged": true,
+  "stamp": {
+    "scenario": "a5a2de08b74e6e1c",
+    "tools": "8b653e7a3d01b493",
+    "instructions": "a0e5174113e30161",
+    "judge": "claude-haiku-5-5",
+    "harness": "024566e70b0c3db3",
+    "commit": "3c5ae56fd224848216c4b07ceb76534496ef14fc",
+    "ran_at": "2026-11-21T22:52:52Z",
+    "graded_commit": "5808d1c0d9c1a63a8e4b2a14495d96f45c40c7fd",
+    "graded_at": "2026-11-21T23:36:47Z"
+  },
+  "usage": {
+    "input_tokens": 40,
+    "output_tokens": 4494,
+    "cache_creation_input_tokens": 26895,
+    "cache_read_input_tokens": 167603,
+    "runs_measured": 2,
+    "runs_costed": 2,
+    "cost_usd": 0.1694
+  },
+  "tools_by_run": [
+    {
+      "passed": true,
+      "tools": [
+        "find_records",
+        "list_approvals",
+        "list_records",
+        "skill_file",
+        "update_record"
+      ]
+    },
+    {
+      "passed": true,
+      "tools": [
+        "find_records",
+        "list_approvals",
+        "list_records",
+        "skill_file",
+        "update_record"
+      ]
+    }
+  ],
+  "efficiency": {
+    "runs": 2,
+    "calls": {
+      "median": 18,
+      "min": 18,
+      "max": 18
+    },
+    "turns": {
+      "median": 19,
+      "min": 19,
+      "max": 19
+    },
+    "refused": {
+      "median": 0,
+      "min": 0,
+      "max": 0
+    },
+    "prompt_tokens": {
+      "median": 97269,
+      "min": 96791,
+      "max": 97747
+    },
+    "output_tokens": {
+      "median": 2247,
+      "min": 2247,
+      "max": 2247
+    },
+    "duration_ms": {
+      "median": 20467,
+      "min": 20153,
+      "max": 20781
+    }
+  }
+}

@@ -93,64 +93,47 @@ func invocableByCaller(ctx context.Context, spec mcp.ToolSpec) bool {
 // serve it, so a client and the operator console read the same text.
 //
 // The written text comes first, because it answers which tool serves a goal.
-// Running at once under the read scope is the default the surface instructions
-// state, so such a tool says nothing more. Every other tier and every scope past
-// read is named, read off the spec the admission gate enforces.
+// The server instructions state the defaults (governanceDefaults), so only what
+// departs from one is named here.
 func DescribeForClient(spec mcp.ToolSpec) string {
-	scope := fmt.Sprintf("requires passport scope %q", spec.RequiredScope)
+	var notes []string
 	// Every arm is named, and the fallthrough is the CONSERVATIVE reading, not
 	// the convenient one: the admission gate treats anything that is not
 	// TierAutoExecute as confirm-first, so a tier added without updating this
 	// switch must not be advertised as running unattended. The same posture
 	// tierWire takes on the REST side, for the same reason.
-	tier := "a human approves every call before it runs"
 	switch spec.Tier {
 	case mcp.TierAutoExecute:
-		if spec.RequiredScope == principal.ScopeRead {
-			// A read tool runs at once and says nothing more. The exception is a
-			// tool that asks for the user's yes first. That sentence is surfaced
-			// even under read scope, so a read of sensitive diagnostics is not
-			// called unasked. It names what the read surfaces, not a change a read
-			// never makes.
-			if ask := askUserReading(spec); ask != "" {
-				return fmt.Sprintf("%s (Runs immediately%s.)", spec.Description, ask)
-			}
-			return spec.Description
-		}
-		return fmt.Sprintf("%s (Runs immediately%s; %s.)", spec.Description, askUserFirst(spec), scope)
-	case mcp.TierConfirmationRequired:
-		tier = "a human approves every call before it runs"
 	case mcp.TierDynamic:
-		tier = "some calls run immediately and others a human approves first, decided per call from its arguments"
+		tier := "some calls run immediately and others a human approves first, decided per call from its arguments"
 		if byAction := actionGovernance(spec.Actions); byAction != "" {
 			tier = byAction
 		}
+		notes = append(notes, "Governance: "+tier)
+	default:
+		notes = append(notes, "Governance: a human approves every call before it runs")
 	}
-	return fmt.Sprintf("%s (Governance: %s%s; %s.)", spec.Description, tier, askUserFirst(spec), scope)
+	if ask := askUserFirst(spec); ask != "" {
+		notes = append(notes, ask)
+	}
+	if spec.RequiredScope != principal.ScopeRead && spec.RequiredScope != principal.ScopeWrite {
+		notes = append(notes, fmt.Sprintf("requires passport scope %q", spec.RequiredScope))
+	}
+	if len(notes) == 0 {
+		return spec.Description
+	}
+	note := strings.Join(notes, "; ")
+	return fmt.Sprintf("%s (%s.)", spec.Description, strings.ToUpper(note[:1])+note[1:])
 }
 
-// askUserFirst is for an MCP client's model only, never the loop agent, which has no one to ask.
-// The server cannot check the yes, and a call a human approves already has it.
+// askUserFirst names the calls that need the user's yes; governanceDefaults says
+// how to get it. A call a human approves already has it, so it is not named.
 func askUserFirst(spec mcp.ToolSpec) string {
-	return askUserAbout(spec, "what the call will change")
-}
-
-// askUserReading is askUserFirst for a read. A read changes nothing, so the
-// client is told what the call surfaces, not a change it never makes.
-func askUserReading(spec mcp.ToolSpec) string {
-	return askUserAbout(spec, "what the call will surface")
-}
-
-// askUserAbout renders the ask-first sentence. consequence is what the client
-// describes to the user before the yes: a write's change, a read's disclosure.
-func askUserAbout(spec mcp.ToolSpec, consequence string) string {
-	ask := "; the user's yes is needed for %s, so tell them " + consequence + " and " +
-		"get it before calling, unless they asked for this call themselves"
 	if len(spec.Actions) == 0 {
 		if !spec.AskUserFirst || spec.Tier == mcp.TierConfirmationRequired {
 			return ""
 		}
-		return fmt.Sprintf(ask, "it")
+		return askFirstOpening
 	}
 	var names []string
 	for _, a := range spec.Actions {
@@ -162,11 +145,35 @@ func askUserAbout(spec mcp.ToolSpec, consequence string) string {
 	case 0:
 		return ""
 	case 1:
-		return fmt.Sprintf(ask, "the action "+names[0])
+		return askFirstOpening + " for the action " + names[0]
 	}
 	slices.Sort(names)
-	return fmt.Sprintf(ask, "the actions "+strings.Join(names, ", "))
+	return askFirstOpening + " for the actions " + strings.Join(names, ", ")
 }
+
+// What a client tells the user before the yes: a write's change, a read's disclosure.
+const (
+	askConsequenceWrite = "what the call will change"
+	askConsequenceRead  = "what the call will surface"
+)
+
+// askFirstOpening is how a description marks a call that needs the user's yes.
+// governanceDefaults quotes it, so the instructions name the words the tools use.
+const askFirstOpening = "ask the user first"
+
+// governanceDefaults is what the server instructions say for every tool. It
+// names the default tier and scope, what the ask-first mark asks for, where a
+// router action's arguments are, and the retry key.
+const governanceDefaults = "A tool whose description names no governance runs immediately. A tool that " +
+	"names no passport scope needs \"read\" if it only reads and \"write\" if it changes anything. " +
+	"Where a description says to " + askFirstOpening + ", for the whole tool or for the actions it names, " +
+	"the user's yes is needed: tell them " + askConsequenceWrite + ", or for a tool that only reads, " +
+	askConsequenceRead + ", and " + askFirstGetYes + ". " + routerArgumentsRule + " " + mcp.ReservedIdempotencyKeyRule
+
+// routerArgumentsRule says where a router action's arguments are when the MCP
+// listing leaves them out (Registry.ForListing).
+const routerArgumentsRule = "Where a tool's input schema does not name an action's arguments, read_workspace " +
+	"with topic=actions and router=<that tool> lists them."
 
 // actionGovernance says which of a router's actions run at once, which wait for
 // a human and which decide per call. Empty for a tool with no actions.
@@ -208,6 +215,7 @@ func (s *Dispatcher) toolList(ctx context.Context, fr framing) []map[string]any 
 	tools := make([]map[string]any, 0, len(specs))
 	actionTools := apps.ActionTools()
 	for _, spec := range specs {
+		spec = s.registry.ForListing(spec)
 		tool := map[string]any{
 			fieldName: spec.Name,
 			// Top-level title outranks annotations.title for display, and both
@@ -231,7 +239,7 @@ func (s *Dispatcher) toolList(ctx context.Context, fr framing) []map[string]any 
 				"openWorldHint": spec.Egress,
 			},
 		}
-		if spec.OutputSchema != nil {
+		if spec.OutputSchema != nil && listsOutputSchema(spec, actionTools) {
 			tool["outputSchema"] = spec.OutputSchema
 		}
 		// The view, offered only where BOTH halves are real: this request
@@ -247,4 +255,17 @@ func (s *Dispatcher) toolList(ctx context.Context, fr framing) []map[string]any 
 		tools = append(tools, tool)
 	}
 	return tools
+}
+
+// listsOutputSchema reports whether tools/list carries spec's result shape. A
+// view renders its tool's answer and reads the answers of the tools it acts
+// through, so those keep the shape. Every other tool keeps it in the server for
+// the result check and the view fixtures. Its answer still carries
+// structuredContent, which the protocol allows without a listed schema.
+func listsOutputSchema(spec mcp.ToolSpec, actionTools map[string]struct{}) bool {
+	if spec.UI != nil {
+		return true
+	}
+	_, acts := actionTools[spec.Name]
+	return acts
 }

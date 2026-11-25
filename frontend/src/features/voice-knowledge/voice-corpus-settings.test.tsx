@@ -250,19 +250,26 @@ describe("handing a file to the Settings voice card", () => {
   it("takes pasted text as a sample and empties the box", async () => {
     const bodies = stubApi(PROSE);
     render(<Intake profileId="vp-1" onChanged={() => {}} />);
-    const box = screen.getByLabelText("Paste text");
+    const box = screen.getByLabelText(/^Paste text/);
     const add = screen.getByRole("button", { name: "Add text" });
-    expect(add).toHaveProperty("disabled", true);
+    await userEvent.click(add);
+    expect(screen.getByText("Paste text is required.")).toBeTruthy();
+    expect(document.activeElement).toBe(box);
+    expect(bodies).toHaveLength(0);
 
     await userEvent.type(box, "Short sentences. Concrete nouns.");
     await userEvent.click(add);
 
+    // The label opens with the text's own words, so two pastes differ.
     expect(
-      await screen.findByText(/Pasted text: 640 words added/),
+      await screen.findByText(
+        "Pasted text – Short sentences. Concrete nouns.: 640 words added",
+        { exact: false },
+      ),
     ).toBeTruthy();
     expect(bodies[0]).toMatchObject({
       kind: "other",
-      source_label: "Pasted text",
+      source_label: "Pasted text – Short sentences. Concrete nouns.",
       content: "Short sentences. Concrete nouns.",
     });
     expect(String(bodies[0]?.source_ref)).toMatch(/^voice:paste:/);
@@ -280,13 +287,13 @@ describe("handing a file to the Settings voice card", () => {
       },
     });
     render(<Intake profileId="vp-1" onChanged={() => {}} />);
-    const box = screen.getByLabelText("Paste text");
+    const box = screen.getByLabelText(/^Paste text/);
 
     await userEvent.type(box, "some words");
     await userEvent.click(screen.getByRole("button", { name: "Add text" }));
 
     expect(
-      await screen.findByText(/Pasted text could not be added/),
+      await screen.findByText(/Pasted text – some words could not be added/),
     ).toBeTruthy();
     expect(box).toHaveProperty("value", "some words");
     expect(screen.getByRole("button", { name: "Add text" })).toHaveProperty(
@@ -424,6 +431,28 @@ describe("handing a file to the Settings voice card", () => {
       ),
     ).toBeTruthy();
     expect(bodies).toHaveLength(0);
+  });
+
+  it("names a file too large to send and the limit, never the server's cap phrase", async () => {
+    stubApi({
+      status: 413,
+      body: {
+        code: "body_too_large",
+        title: "Request Entity Too Large",
+        detail: "request body exceeds the 1 MiB cap",
+      },
+    });
+    const user = userEvent.setup();
+    render(<Intake profileId="vp-1" onChanged={() => {}} />);
+
+    await user.upload(fileInput(), fileOf("big.txt", "many words"));
+
+    expect(
+      await screen.findByText(
+        "big.txt is too large to add. A file must stay just under 1 MB as sent, and quotation marks and line breaks take extra room. Split it into smaller files.",
+      ),
+    ).toBeTruthy();
+    expect(screen.queryByText(/MiB cap/)).toBeNull();
   });
 
   it("quotes the server when it refuses for a reason the client does not know", async () => {

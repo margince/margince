@@ -1,11 +1,11 @@
 import type { Locale, Translator } from "../i18n";
 import { handScaledUnit } from "./compactscale";
 import { calendarDaysBetween } from "./format.dates";
+import { numberFormat } from "./formatters";
 // The presentation edge (architecture/10 §1–3): everything here formats
 // ALREADY-stored values — minor units, UTC instants, IR-provided base
 // aggregates. No FX math, no live rate calls, no calendar arithmetic, and
 // locale never flows back into storage. format.test.ts pins each rule.
-import { INTL_LOCALE } from "./intllocale";
 import { minorUnitDigits, toMajorUnits } from "./minorunits";
 import { formatMoneyOrWord, MONEY_ABSENT } from "./moneyword";
 
@@ -18,6 +18,7 @@ export {
   formatDateAbbrev,
   formatDateAbbrevRange,
   formatDateTime,
+  formatDateTimeAbbrev,
   formatDayLong,
   formatDayMonth,
   formatDayMonthNearYear,
@@ -53,7 +54,7 @@ export function formatMoney(
   locale: Locale,
 ): string {
   const digits = minorUnitDigits(currency);
-  return new Intl.NumberFormat(INTL_LOCALE[locale], {
+  return numberFormat(locale, {
     style: "currency",
     currency,
     minimumFractionDigits: digits,
@@ -74,7 +75,7 @@ export function formatMoneyWhole(
   if (!Number.isInteger(major)) {
     return formatMoney(amountMinor, currency, locale);
   }
-  return new Intl.NumberFormat(INTL_LOCALE[locale], {
+  return numberFormat(locale, {
     style: "currency",
     currency,
     maximumFractionDigits: 0,
@@ -147,7 +148,7 @@ export function formatMoneyCompact(
   }
   const scaled = handScaledUnit(major, locale);
   const unit = abbreviated ? scaled.unit : undefined;
-  const formatter = new Intl.NumberFormat(INTL_LOCALE[locale], {
+  const formatter = numberFormat(locale, {
     style: "currency",
     currency,
     notation: abbreviated && unit === undefined ? "compact" : "standard",
@@ -208,7 +209,7 @@ export function formatUsdPerMTok(price: string, locale: Locale): string {
     value === 0
       ? 2
       : Math.min(6, Math.max(2, Math.ceil(-Math.log10(Math.abs(value)))));
-  return new Intl.NumberFormat(INTL_LOCALE[locale], {
+  return numberFormat(locale, {
     style: "currency",
     currency: "USD",
     minimumFractionDigits: digits,
@@ -221,7 +222,7 @@ export function formatNumber(
   locale: Locale,
   maximumFractionDigits?: number,
 ): string {
-  return new Intl.NumberFormat(INTL_LOCALE[locale], {
+  return numberFormat(locale, {
     maximumFractionDigits,
   }).format(value);
 }
@@ -229,7 +230,7 @@ export function formatNumber(
 // A measured span in hours, to one decimal and in the reader's unit word: a
 // median first response of 3.5 hours reads "3.5 hr", "3,5 Std." or "3,5 giờ".
 export function formatHours(hours: number, locale: Locale): string {
-  return new Intl.NumberFormat(INTL_LOCALE[locale], {
+  return numberFormat(locale, {
     style: "unit",
     unit: "hour",
     unitDisplay: "short",
@@ -252,7 +253,7 @@ export function formatSignedNumber(value: number, locale: Locale): string {
   if (value === 0) {
     return "±0";
   }
-  return new Intl.NumberFormat(INTL_LOCALE[locale], {
+  return numberFormat(locale, {
     signDisplay: "always",
   }).format(value);
 }
@@ -276,7 +277,7 @@ export function formatSignedMoney(
   locale: Locale,
 ): string {
   const digits = minorUnitDigits(currency);
-  const formatted = new Intl.NumberFormat(INTL_LOCALE[locale], {
+  const formatted = numberFormat(locale, {
     style: "currency",
     currency,
     minimumFractionDigits: digits,
@@ -340,7 +341,7 @@ export function formatDecimal(
   locale: Locale,
   fractionDigits: number,
 ): string {
-  return new Intl.NumberFormat(INTL_LOCALE[locale], {
+  return numberFormat(locale, {
     minimumFractionDigits: fractionDigits,
     maximumFractionDigits: fractionDigits,
   }).format(value);
@@ -353,7 +354,7 @@ export function formatDecimal(
 // the short English one never inflects ("98 byte").
 export function formatBytes(bytes: number, locale: Locale): string {
   const [value, unit] = byteScale(bytes);
-  return new Intl.NumberFormat(INTL_LOCALE[locale], {
+  return numberFormat(locale, {
     style: "unit",
     unit,
     unitDisplay: unit === "byte" ? "long" : "short",
@@ -371,34 +372,7 @@ function byteScale(bytes: number): [number, "byte" | "kilobyte" | "megabyte"] {
   return [bytes, "byte"];
 }
 
-/**
- * relativeDays reads a timestamp the way a contact says it: today, yesterday,
- * or "N days".
- *
- * `never` is reserved for a read that HAPPENED and found nothing — the caller
- * decides that by passing null only when the section was readable. A withheld
- * section is not "never"; it is unknown, and its card says so.
- *
- * It lives here because three screens wanted it and each wrote its own: two
- * private copies in contactstrip.tsx and contactrail.tsx, byte-equivalent and
- * both counting milliseconds. format.ts's own INTL_LOCALE comment had been
- * pointing at this gap since it was written — "exported because a relative-time
- * formatter needs the same mapping".
- */
-export function relativeDays(
-  at: string | null | undefined,
-  t: Translator,
-  locale: Locale,
-  zone: string,
-  now: Date = new Date(),
-): string {
-  if (!at) {
-    return t("contact.strip.never");
-  }
-  return daysAgoText(calendarDaysBetween(new Date(at), now, zone), t, locale);
-}
-
-/** A count of dates since a moment, as relativeDays says it. */
+/** A count of calendar days since a moment, said the way a contact says it. */
 export function daysAgoText(
   days: number,
   t: Translator,
@@ -422,7 +396,7 @@ export function daysAgoText(
 export function formatDuration(ms: number, locale: Locale): string {
   const days = Math.floor(ms / 86_400_000);
   const hours = Math.floor((ms % 86_400_000) / 3_600_000);
-  const unit = new Intl.NumberFormat(INTL_LOCALE[locale], {
+  const unit = numberFormat(locale, {
     style: "unit",
     unit: "day",
     unitDisplay: "narrow",
@@ -430,7 +404,7 @@ export function formatDuration(ms: number, locale: Locale): string {
   if (days >= 1) {
     return unit.format(days);
   }
-  return new Intl.NumberFormat(INTL_LOCALE[locale], {
+  return numberFormat(locale, {
     style: "unit",
     unit: "hour",
     unitDisplay: "narrow",
@@ -449,7 +423,7 @@ export function formatAge(
     calendarDaysBetween(new Date(at), new Date(now), zone),
   );
   const hours = Math.max(0, Math.floor((now - Date.parse(at)) / 3_600_000));
-  return new Intl.NumberFormat(INTL_LOCALE[locale], {
+  return numberFormat(locale, {
     style: "unit",
     unit: days > 0 ? "day" : "hour",
     unitDisplay: "narrow",

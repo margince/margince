@@ -80,6 +80,15 @@ var enumBindings = map[string]struct{ pkgDir, typeName string }{
 	// CHECK refuses would be a 500 on a valid create.
 	"activity.occurred_precision": {"internal/contracts", "OccurredPrecision"},
 
+	// What an approval names as its target, and what acquisition evidence cites.
+	// An approval's CHECK also admits a unit's own table, which extensionArm sets
+	// aside; the closed list is what Go declares.
+	"report_edition_contribution.source_type":         {"internal/modules/reporting", "SourceType"},
+	"approval.target_entity_type":                     {"internal/shared/kernel/targettype", "Type"},
+	"approval.co_target_entity_type":                  {"internal/shared/kernel/targettype", "Type"},
+	"contact_acquisition_evidence.source_entity_type": {"internal/modules/contacts", "AcquisitionSource"},
+	"consent_qualifying_event.source_entity_type":     {"internal/modules/contacts", "AcquisitionSource"},
+
 	"activity_link.entity_type": {"internal/shared/ports/datasource", "RecordType"},
 	"list.entity_type":          {"internal/shared/ports/datasource", "RecordType"},
 	"list_member.entity_type":   {"internal/shared/ports/datasource", "RecordType"},
@@ -228,6 +237,11 @@ var enumBindings = map[string]struct{ pkgDir, typeName string }{
 	"company_technical_state.lane":                 {"internal/modules/contacts", "TechnicalLane"},
 	"company_technical_state.last_outcome":         {"internal/contracts", "TechnicalEnrichLaneOutcome"},
 	"contact.narrowing_reason":                     {"internal/modules/contacts", "NarrowingReason"},
+	"deal.source":                                  {"internal/shared/kernel/provenance", "RecordSource"},
+	"offer.source":                                 {"internal/shared/kernel/provenance", "RecordSource"},
+	"partner.source":                               {"internal/shared/kernel/provenance", "RecordSource"},
+	"project.source":                               {"internal/shared/kernel/provenance", "RecordSource"},
+	"contact.quarantine_reason":                    {"internal/contracts", "ContactImpersonationWarningReason"},
 	"contact.visibility":                           {"internal/contracts", "RecordAccessVisibility"},
 	"contact_confirm_submission.resolution":        {"internal/contracts", "ConfirmSubmissionResolution"},
 	"contact_provider_claim.claim_key":             {"internal/shared/ports/provider", "ClaimKey"},
@@ -294,7 +308,6 @@ var enumBindings = map[string]struct{ pkgDir, typeName string }{
 	"weekly_plan_commitment.linked_record_type":    {"internal/shared/ports/datasource", "RecordType"},
 	"weekly_review_driver.period_kind":             {"internal/modules/forecasting", "PeriodKind"},
 	"weekly_review_learning_citation.subject_type": {"internal/contracts", "WeeklyLearningCitationSubjectType"},
-	"weekly_review_movement.period_kind":           {"internal/modules/forecasting", "PeriodKind"},
 	"weekly_review_outlook.period_kind":            {"internal/modules/forecasting", "PeriodKind"},
 }
 

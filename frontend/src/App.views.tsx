@@ -1,10 +1,4 @@
-import {
-  Fragment,
-  type ReactNode,
-  Suspense,
-  useDeferredValue,
-  useState,
-} from "react";
+import { type ReactNode, Suspense, useDeferredValue, useState } from "react";
 import {
   AnalyticsScreen,
   ArchivedRecordHistory,
@@ -19,6 +13,7 @@ import {
   ContactsScreen,
   CustomRoute,
   DealsRoute,
+  ExtensionAppRoute,
   ExtensionRoute,
   FiltersScreen,
   LeadScreen,
@@ -47,6 +42,7 @@ import {
   WorklistRedirect,
 } from "./App.screens";
 import { CUSTOM_SCREEN } from "./app/custom";
+import { ScreenErrorBoundary } from "./app/errorboundary";
 import { CREATE_ID, IMPORT_ID, opensReservedPage } from "./app/nav";
 import { UnsavedGuard } from "./components/unsaved";
 import { RESET_ROUTE } from "./features/sign-in/auth.route";
@@ -58,6 +54,7 @@ import {
   useHiddenCoreFeatures,
 } from "./lib/corefeatures";
 import { paintsFromEssentialCopy } from "./lib/essentialscreens";
+import { EXTENSION_APP_SCREEN } from "./lib/extensionapps";
 import { EXTENSION_SCREEN } from "./lib/extensions";
 import { traversalInFlight, traverseTo } from "./lib/historydepth";
 import { routeIdentity } from "./lib/routeidentity";
@@ -175,6 +172,7 @@ const SCREEN_VIEWS: Readonly<Record<Screen, (args: ScreenArgs) => ReactNode>> =
     "oauth-consent": () => <OAuthConsent />,
     [RESET_ROUTE]: () => <ResetAddressSignedIn />,
     [EXTENSION_SCREEN]: ({ id }) => <ExtensionRoute name={id} />,
+    [EXTENSION_APP_SCREEN]: ({ id }) => <ExtensionAppRoute name={id} />,
     // The fork seam (app/custom.ts). Upstream's registry is empty, so in
     // vanilla this arm renders the not-found card for every address. That is
     // the right answer, so the arm does not need to be conditional.
@@ -276,7 +274,7 @@ export function ScreenView({
         <UnsavedGuard address={shown} samePlace={samePage} onKeep={returnTo}>
           {(held, asking) => (
             <DrawnFor address={held} pending={loading && !asking}>
-              <Fragment key={identityOfAddress(held)}>
+              <ScreenErrorBoundary key={identityOfAddress(held)}>
                 {screenEnabled(parseHash(held).screen, hidden) ? (
                   screenWithLocale(held)
                 ) : screenEnabled(parseHash(held).screen, disabled) ? (
@@ -284,7 +282,7 @@ export function ScreenView({
                 ) : (
                   <UnknownAddress />
                 )}
-              </Fragment>
+              </ScreenErrorBoundary>
             </DrawnFor>
           )}
         </UnsavedGuard>

@@ -35,8 +35,8 @@ import {
   RateLimitedError,
 } from "../settings/preferences";
 import { ControllerCard } from "./confirmprivacyparts";
-import { privacyPageOf } from "./privacypage";
-import { PublicPage } from "./publicpage";
+import { privacyPageOf, withRightsLink } from "./privacypage";
+import { DeadLinkPage, PublicPage } from "./publicpage";
 
 type SubscriptionPage = components["schemas"]["SubscriptionConfirmationPage"];
 
@@ -109,6 +109,9 @@ export function SubscriptionConfirm({
     onSuccess: () => setDone(true),
   });
 
+  if (submit.error instanceof LinkInvalidError) {
+    return <DeadLinkPage>{t("confirm.deadLinkBody")}</DeadLinkPage>;
+  }
   return (
     <SubscriptionConfirmBody
       card={done ? { ...card, state: "granted" } : card}
@@ -148,18 +151,22 @@ function subscriptionQuestion(
     };
   }
   const controller = card.controller;
-  const ask = t("confirm.subscription.ask", {
-    purpose: purposeName(t, card),
-    controller: controller?.legal_name ?? t("confirm.controllerFallback"),
-    frequency: t(
-      valueFor(
-        FREQUENCY_LABEL,
-        card.frequency ?? "monthly",
-        "confirm.frequency.monthly",
-      ),
-    ),
-    privacy_page: privacyPageOf(controller),
-  });
+  const ask = withRightsLink(
+    (privacyPage) =>
+      t("confirm.subscription.ask", {
+        purpose: purposeName(t, card),
+        controller: controller?.legal_name ?? t("confirm.controllerFallback"),
+        frequency: t(
+          valueFor(
+            FREQUENCY_LABEL,
+            card.frequency ?? "monthly",
+            "confirm.frequency.monthly",
+          ),
+        ),
+        privacy_page: privacyPage,
+      }),
+    privacyPageOf(controller),
+  );
   return { ask, confirm: t("confirm.subscription.confirm"), text: ask };
 }
 

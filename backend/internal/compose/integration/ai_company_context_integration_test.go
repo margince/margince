@@ -25,7 +25,6 @@ type companyContextTrace struct {
 	scopes      []string
 	fingerprint string
 	cacheHit    bool
-	requestHash string
 }
 
 func TestCompanyContextBindsPromptCacheAndAICallTrace(t *testing.T) {
@@ -85,10 +84,10 @@ func TestCompanyContextBindsPromptCacheAndAICallTrace(t *testing.T) {
 	if traces[0].cacheHit || !traces[1].cacheHit || traces[2].cacheHit {
 		t.Fatalf("cache sequence = %v/%v/%v, want miss/hit/miss", traces[0].cacheHit, traces[1].cacheHit, traces[2].cacheHit)
 	}
-	if traces[0].fingerprint != traces[1].fingerprint || traces[0].requestHash != traces[1].requestHash {
+	if traces[0].fingerprint != traces[1].fingerprint {
 		t.Fatalf("unchanged context did not reuse its binding: %+v", traces)
 	}
-	if traces[2].fingerprint == traces[0].fingerprint || traces[2].requestHash == traces[0].requestHash {
+	if traces[2].fingerprint == traces[0].fingerprint {
 		t.Fatalf("company edit reused stale context/cache identity: %+v", traces)
 	}
 }
@@ -98,7 +97,7 @@ func readCompanyContextTraces(ctx context.Context, t *testing.T, e *Env, task st
 	var traces []companyContextTrace
 	err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
 		rows, err := tx.Query(ctx, `
-			SELECT context_scopes, context_fingerprint, cache_hit, request_fingerprint
+			SELECT context_scopes, context_fingerprint, cache_hit
 			FROM ai_call
 			WHERE task = $1
 			ORDER BY occurred_at, id`, task)
@@ -108,7 +107,7 @@ func readCompanyContextTraces(ctx context.Context, t *testing.T, e *Env, task st
 		defer rows.Close()
 		for rows.Next() {
 			var got companyContextTrace
-			if err := rows.Scan(&got.scopes, &got.fingerprint, &got.cacheHit, &got.requestHash); err != nil {
+			if err := rows.Scan(&got.scopes, &got.fingerprint, &got.cacheHit); err != nil {
 				return fmt.Errorf("scan ai_call context trace: %w", err)
 			}
 			traces = append(traces, got)

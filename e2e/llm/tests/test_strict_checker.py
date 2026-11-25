@@ -99,6 +99,17 @@ class MustCallSucceededTest(unittest.TestCase):
             out.finish(False, "It is waiting for your approval.", 2)
         self.assertEqual(check.check({"must_call": ["log_activity"], "must_call_with": ["log_activity.kind=call"]}, path), [])
 
+    def test_a_call_asking_its_users_yes_in_the_conversation_is_a_call_that_worked(self):
+        path = tempfile.NamedTemporaryFile(suffix=".jsonl", delete=False).name
+        with transcript.Transcript(path) as out:
+            out.init("m", "claude:cli", "cli-default", "connected", ["relink_activity"])
+            out.assistant("", [("c1", "relink_activity", {"entity_type": "project"})])
+            out.tool_results([("c1", "Needs the user's yes in this conversation. Nothing was changed yet; it would "
+                                     "file the mail. Tell the user in your own words what it would do and ask them.",
+                               True)])
+            out.finish(False, "Shall I file it under the project?", 2)
+        self.assertEqual(check.check({"must_call": ["relink_activity"]}, path), [])
+
     def test_a_send_the_scenario_expects_refused_still_counts(self):
         path = run([("", [("log_activity", {"kind": "note"}, True)])], "Not sent: no mailbox is connected.")
         scenario = {"must_call": ["log_activity"], "must_call_with": ["log_activity.kind=note"],
@@ -162,3 +173,25 @@ class GraderCrashTest(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+def declined_run(answer):
+    """A bulk change the server asked about in the chat, answered with answer."""
+    path = tempfile.NamedTemporaryFile(suffix=".jsonl", delete=False).name
+    with transcript.Transcript(path) as out:
+        out.init("m", "claude:cli", "cli-default", "connected", ["bulk_update_records"])
+        out.assistant("", [("c0", "bulk_update_records", {"mode": "execute"})])
+        out.tool_results([("c0", answer, True)])
+        out.finish(False, "The reassignment did not run.", 2)
+    return path
+
+
+class DeclinedInChatTest(unittest.TestCase):
+    # Nobody answers a lane run's in-chat question, so the client's own no is the harness's.
+    def test_a_question_the_client_declined_stops_the_run_unscored(self):
+        path = declined_run("The user said no in the chat, so nothing was changed. Do not repeat the call.")
+        self.assertIn("declined a question", check.unrun(path))
+
+    def test_any_other_refusal_is_still_a_scored_run(self):
+        path = declined_run("Refused on authority: permission denied.")
+        self.assertEqual(check.unrun(path), "")

@@ -13,7 +13,9 @@ package identity
 
 import (
 	"context"
+	"slices"
 
+	"github.com/jackc/pgx/v5"
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
@@ -98,8 +100,34 @@ func (h Handlers) meResponse(ctx context.Context, id Identity) crmcontracts.MeRe
 			EmbeddingReindex: h.EmbedReindexAvailable(),
 			Lists:            &h.listsAvailable,
 			Reporting:        &reportingAvailable,
+			VatRegister:      &h.vatRegisterAvailable,
 		},
 	}
+}
+
+// heldRoleNames names each of the caller's live roles by key. Nil when the
+// caller holds none, so /me omits it.
+func (s *Service) heldRoleNames(ctx context.Context, held []string) (*map[string]string, error) {
+	if len(held) == 0 {
+		return nil, nil //nolint:nilnil // no role to name, which /me says by omitting it
+	}
+	names := make(map[string]string, len(held))
+	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
+		live, err := liveRolesTx(ctx, tx)
+		if err != nil {
+			return err
+		}
+		for _, r := range live {
+			if slices.Contains(held, r.key) {
+				names[r.key] = r.name
+			}
+		}
+		return nil
+	})
+	if err != nil {
+		return nil, err
+	}
+	return &names, nil
 }
 
 // optionalString omits an empty value rather than sending it.

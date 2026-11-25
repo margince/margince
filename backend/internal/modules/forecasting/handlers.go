@@ -80,7 +80,9 @@ type Handlers struct {
 	readerRows ReaderRowsFunc
 	// goalReadable answers whether the reader may read a team's goal.
 	goalReadable GoalReadableFunc
-	now          func() time.Time
+	// managerRequests lists the deals sellers asked their manager to look at.
+	managerRequests ManagerRequestsFunc
+	now             func() time.Time
 }
 
 // GoalReadableFunc answers whether the reader may read the goal of scope.
@@ -307,7 +309,16 @@ func sufficiencyToWire(in Sufficiency) crmcontracts.ForecastSufficiency {
 		NeededOpenMinor:         &in.NeededOpenMinor,
 		CurrentOpenMinor:        &in.CurrentOpenMinor,
 		CoverageBp:              &in.CoverageBp,
+		ComparableUnpriced:      comparableUnpriced(in.ComparableUnpriced),
 	}
+}
+
+// comparableUnpriced is the median's per-period gaps, absent for a manager call.
+func comparableUnpriced(gaps []int) *[]int {
+	if len(gaps) == 0 {
+		return nil
+	}
+	return &gaps
 }
 
 // requireCalledAmount refuses a call whose body left amount_minor out or sent

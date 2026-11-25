@@ -362,7 +362,7 @@ func WireAutomation(a Automation) (crmcontracts.Automation, error) {
 		OwnerId:                   wireOwner(a.OwnerID),
 		Version:                   &version,
 		CreatedAt:                 a.CreatedAt,
-		UpdatedAt:                 a.UpdatedAt,
+		UpdatedAt:                 &a.UpdatedAt,
 	}
 	if a.Configuration != nil {
 		wire.SetupState = new(a.Configuration.State)

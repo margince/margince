@@ -41,6 +41,8 @@ import (
 //   - a machine local part, wherever it sends from. `noreply@`, `receipts@`,
 //     `calendar-notification@`: a reply to one of these reaches nobody, so a
 //     record naming it promises a contact who does not exist.
+//   - a relay-only domain, such as a CRM's per-deal relay. No human holds a
+//     mailbox there, so this arm outranks the allowlist too.
 //   - registrable mail infrastructure. Mail from a bulk-send relay names the
 //     relay, never the company that hired it.
 //
@@ -84,9 +86,9 @@ func AddressCouldNameAContact(email, domain string, list *TransactionalList) boo
 	if address == "" {
 		return false
 	}
-	// The local part is asked FIRST, and no allowlist overrules it. An operator
-	// vouches for a DOMAIN — that its contacts are real counterparties — and says
-	// nothing about `noreply@` on it, where still nobody answers.
+	// The address shape is asked first, and no allowlist overrules it. It covers
+	// machine local parts and the relay-only domains, where no human holds a
+	// mailbox. An operator vouches for a domain, not for `noreply@` on it.
 	if mailidentity.HasMachineLocalpart(address) {
 		return false
 	}

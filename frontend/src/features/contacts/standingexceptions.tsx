@@ -13,11 +13,12 @@ import { Button } from "../../design-system/atoms";
 import { ConfirmModal } from "../../design-system/confirmmodal";
 import { Field, Textarea } from "../../design-system/field";
 import { Heading } from "../../design-system/heading";
+import { useFieldFaults } from "../../design-system/savepage";
 import { formatDateAbbrev } from "../../format/format";
 import { sendingCompanyScope } from "../../format/sendingcompany";
 import { useLocale, useT } from "../../i18n";
 import { communicationContextLabel } from "../../lib/compose-context";
-import { problemMessageOf, unwrap } from "../../lib/problem";
+import { blankRequired, problemMessageOf, unwrap } from "../../lib/problem";
 import { useViewerZone } from "../../lib/viewerzone";
 
 type StandingOverride = components["schemas"]["StandingOverride"];
@@ -113,9 +114,12 @@ function RevokeException({
   row,
 }: Readonly<{ contactId: string; row: StandingOverride }>) {
   const t = useT();
+  const { locale } = useLocale();
   const client = useQueryClient();
   const [asking, setAsking] = useState(false);
   const [reason, setReason] = useState("");
+  const [faults, faultsRoot] = useFieldFaults<HTMLDivElement>();
+  const reasonLabel = t("consent.stopReason");
   const revoke = useMutation({
     mutationFn: async (words: string) =>
       unwrap(
@@ -141,24 +145,33 @@ function RevokeException({
         onClose={() => {
           setAsking(false);
           revoke.reset();
+          faults.show(new Map());
         }}
         title={t("consent.exceptionRevoke")}
         confirmLabel={t("consent.exceptionRevoke")}
         confirmVariant="danger"
-        confirmDisabled={reason.trim() === ""}
-        onConfirm={() => revoke.mutate(reason.trim())}
+        bodyRef={faultsRoot}
+        onConfirm={() => {
+          const blank = blankRequired(locale, {
+            reason: [undefined, reason],
+          });
+          if (!faults.show(blank)) revoke.mutate(reason.trim());
+        }}
         pending={revoke.isPending}
         error={revoke.isError ? problemMessageOf(revoke.error, t) : null}
       >
         <p>{t("consent.exceptionRevokeBody")}</p>
         <p className="t-caption">{row.reason}</p>
-        <Field label={t("consent.stopReason")} required>
+        <Field label={reasonLabel} required error={faults.of("reason")}>
           {(control) => (
             <Textarea
               {...control}
               value={reason}
               maxLength={500}
-              onChange={(event) => setReason(event.target.value)}
+              onChange={(event) => {
+                setReason(event.target.value);
+                faults.edited("reason");
+              }}
             />
           )}
         </Field>

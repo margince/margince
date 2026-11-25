@@ -97,7 +97,8 @@ func setupDealVerdict(t *testing.T) *dealVerdictEnv {
 	pipeline, open, _ := integration.DealFixture(t, e)
 	owner, amount, currency := ids.From[ids.UserKind](e.Rep1), int64(4_000_000), "EUR"
 	created, err := e.Deals.CreateDeal(e.Admin(), deals.CreateDealInput{
-		Name: "Support rollout", PipelineID: pipeline, StageID: open, OwnerID: &owner,
+		Source: "manual",
+		Name:   "Support rollout", PipelineID: pipeline, StageID: open, OwnerID: &owner,
 		AmountMinor: &amount, Currency: &currency,
 	})
 	if err != nil {
@@ -204,6 +205,10 @@ func TestMarginceSetsWhatTheCustomerSaidAndAnUndoHoldsItBack(t *testing.T) {
 	if n := v.WsCount(t, `SELECT count(*) FROM activity a JOIN activity_link l ON l.activity_id = a.id
 		WHERE l.deal_id = $1 AND a.subject = 'Margince updated this deal'`, v.deal); n != 1 {
 		t.Errorf("timeline notes = %d, want one for the night", n)
+	}
+	if n := v.WsCount(t, `SELECT count(*) FROM deal_correction c JOIN activity a ON a.id = c.note_activity_id
+		WHERE c.deal_id = $1 AND a.subject = 'Margince updated this deal'`, v.deal); n != 3 {
+		t.Errorf("corrections naming the night's note = %d, want all 3", n)
 	}
 	receipts := attentionReceipts{svc: approvals.NewService(InstallationDB(v.Pool)), deals: v.Deals}
 	recent, err := receipts.Recent(v.owner(t), v.now.Add(72*time.Hour), 10)
@@ -330,7 +335,8 @@ func TestACitedNoteMovedAwayWhileTheModelReadsStopsTheWrite(t *testing.T) {
 	v := setupDealVerdict(t)
 	owner := ids.From[ids.UserKind](v.Rep1)
 	other, err := v.Deals.CreateDeal(v.Admin(), deals.CreateDealInput{
-		Name: "Another deal", PipelineID: v.pipeline, StageID: v.stage, OwnerID: &owner,
+		Source: "manual",
+		Name:   "Another deal", PipelineID: v.pipeline, StageID: v.stage, OwnerID: &owner,
 	})
 	if err != nil {
 		t.Fatal(err)

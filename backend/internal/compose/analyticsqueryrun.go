@@ -18,6 +18,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/compose/analyticsquery"
+	"github.com/margince/margince/backend/internal/compose/dealcoverage"
 	"github.com/margince/margince/backend/internal/platform/database/rowvalue"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
@@ -339,6 +340,10 @@ func withheldAnswer(
 			shaped[name] = row[source]
 		}
 		shaped[withheldColumn] = judged[i].Withheld
+		if plan.CoverageColumn > 0 && !judged[i].Withheld {
+			at := plan.CoverageColumn
+			shaped[analyticsquery.CoverageColumnName] = dealcoverage.Object(row[at], row[at+1], row[at+2], plan.Covered)
+		}
 		out[i] = shaped
 	}
 	return AnalyticsAnswer{
@@ -357,7 +362,8 @@ func scanAnalyticsRows(pgRows pgx.Rows) ([][]any, error) {
 	// like the array it is; nil marshals to null, which a model reads as
 	// "unknown".
 	out := [][]any{}
-	reader := rowvalue.NewReader()
+	// Instants, as analytics answers have always been: its screens, shares and the model read them so.
+	reader := rowvalue.NewInstantReader()
 	for pgRows.Next() {
 		values, err := reader.Values(pgRows)
 		if err != nil {

@@ -13,7 +13,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"log/slog"
 	"net/http"
 
 	"github.com/jackc/pgx/v5"
@@ -24,8 +23,6 @@ import (
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/platform/httperr"
-	"github.com/margince/margince/backend/internal/shared/kernel/capabilitypath"
-	"github.com/margince/margince/backend/internal/shared/ports/fieldcatalog"
 )
 
 type Handlers struct {
@@ -54,7 +51,7 @@ func NewHandlers(db *database.DB, inst Installation) Handlers {
 // WithFieldCatalog wires the workspace custom-field catalog into the
 // transport's store (see Store.WithFieldCatalog); compose injects
 // modules/customfields' Service here.
-func (h Handlers) WithFieldCatalog(catalog fieldcatalog.Reader) Handlers {
+func (h Handlers) WithFieldCatalog(catalog storekit.FieldCatalog) Handlers {
 	h.store = h.store.WithFieldCatalog(catalog)
 	return h
 }
@@ -116,21 +113,21 @@ func writeStoreErr(w http.ResponseWriter, r *http.Request, err error) {
 	if writeOfferTemplateConflict(w, r, err) {
 		return
 	}
-	// Defense-in-depth net: a CHECK constraint is a business rule, so a
-	// breach that slipped past the per-path validations still answers a
-	// typed 422 — never an opaque 500. The constraint's NAME stays out of
-	// the body: it is schema, and the one a caller can reach here is a
-	// runtime `cf_*_check` behind a picklist custom field, whose name
-	// tells them our column and nothing they can act on. The operator's
-	// log gets the name instead.
-	if constraint, ok := storekit.CheckViolation(err); ok {
-		slog.WarnContext(r.Context(), "a schema rule with no message of its own refused a write",
-			"method", r.Method, "path", capabilitypath.Redact(r.URL.Path), "constraint", constraint)
-		httperr.Write(w, r, httperr.Validation("body", "value_not_allowed",
-			"a value violates a rule on this record; check the picklist options"))
+	if httperr.WritePicklistRefusal(w, r, err, dealTable, dealPicklists) {
 		return
 	}
 	httperr.Write(w, r, err)
+}
+
+// dealPicklists are the deal's own picklist CHECKs, each with the wire field it
+// holds. TestEveryDealPicklistIsAPicklistCheckOnTheDeal holds them to the schema.
+var dealPicklists = map[string]string{
+	"deal_priority_check":              "priority",
+	"deal_commercial_motion_check":     "commercial_motion",
+	"deal_partner_attribution_check":   partnerAttributionField,
+	"deal_status_check":                filterStatus,
+	"deal_source_check":                sourceColumn,
+	"deal_won_without_contract_reason": wonWithoutContractReasonField,
 }
 
 // writeOfferTemplateConflict maps the two offer_template pre-checked

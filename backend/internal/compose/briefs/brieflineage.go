@@ -26,7 +26,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
-	"github.com/margince/margince/backend/internal/modules/identity"
+	"github.com/margince/margince/backend/internal/compose/dayrule"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -60,11 +60,7 @@ func briefLineage(
 	// brief was FOR, and a rep who opens Tuesday's brief on Wednesday and waves
 	// a deal away is told "flagged Tuesday, you dismissed it" about a Wednesday
 	// act. The sentence says what they did, so it is dated when they did it.
-	zone, err := identity.TimezoneOf(ctx, tx)
-	if err != nil {
-		return nil, err
-	}
-	loc, err := storekit.LoadZone(zone)
+	loc, err := dayrule.Zone(ctx, tx, occurredday.Personal, userID)
 	if err != nil {
 		return nil, err
 	}

@@ -53,6 +53,19 @@ with no router:
 `progress_deal` does what `advance_deal` does, and `relink_activities` what `relink_thread` refuses to.
 `TestThePublishedToolCountStaysUnderItsCeiling` holds the count.
 
+A router's `action` enum lists every action, but its input schema may name fewer arguments. On a router
+that `read_workspace topic=actions` describes, only the actions the use-case lane uses keep theirs. That is
+an action a scenario requires, or one a recorded MCP run called.
+`listedActions` in `internal/modules/agents/routerlisting.go` names them.
+
+Only the MCP `tools/list` leaves arguments out (`Registry.ForListing`); the in-app runner keeps every
+one. A model reads any other action's arguments from `read_workspace topic=actions`, and the server
+instructions tell it so. That catalog lists only the routers and actions the caller's own `tools/list`
+offers. A call still hands every argument to the hidden tool, which checks them against
+its own schema.
+`TestTheToolListNamesTheArgumentsOfEveryActionTheLaneUses`
+(`internal/compose/mcpe2e/listedactions_test.go`) holds the set to the scenarios and the recorded runs.
+
 **Files on MCP and REST.** A passport lists a record's files and uploads one over MCP
 (`list_documents`, `attach_document`) or over REST (`listAttachments`, `listCompanyDocuments`,
 `listDealDocuments`, `uploadAttachment`). An upload carries the whole file in its input, and two
@@ -114,6 +127,17 @@ their tool `ask_user_first`. Who acts on that mark depends on the surface.
   carries each tool's own text, with no line from `DescribeForClient`. It calls `Registry.Invoke`
   directly, and only the MCP server sets a call up for a form. So no form can reach a run, and a change
   to many records goes ahead as it does for a client that cannot show one.
+
+A tool marked `WaitsEvenForItsUser`, called from a live MCP conversation, asks its user there. It needs the
+signing key and Redis.
+The first call changes nothing and answers a preview and a `confirm_code`. The same call with that code runs
+once (`internal/modules/agents/confirmcode.go`). Only the MCP `Dispatcher` arms this, so REST calls and the
+runner still stage into the inbox. The code is offered only where `ReleasableByCaller` says the passport could
+release the call itself.
+
+A change that cannot be undone still waits in the inbox for a colleague. So does a
+call from a passport with no OAuth connection, or on a deployment without the signing key or Redis. When Redis
+cannot answer as the code is spent, the call is refused and runs nothing.
 
 Three things bound a run instead. Its passport holds its scopes, the work it may touch, and its user's
 grants and seat. Its catalog entry names its tools, and the tier decides the rest. The runner marks both fresh and resumed work as having nobody there. `auth.TierFor` makes

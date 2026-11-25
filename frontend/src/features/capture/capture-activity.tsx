@@ -32,6 +32,7 @@ import { CaptureActivityDrawer } from "./capture-activity-drawer";
 import { CaptureMessages } from "./capture-activity-messages";
 import { CaptureExclusionsCard } from "./capture-exclusions";
 import { ConnectionOutcomesCard } from "./connection-outcomes";
+import { UnroutedMailCard } from "./unrouted-mail";
 import { VerdictPassNote } from "./verdictpass";
 
 // Settings → Capture activity: what the pipeline did with the reader's own
@@ -80,6 +81,9 @@ export function CaptureActivityTab() {
           team, which an outage makes urgent because every new one lands held.
           The senders the classifier decided on sit in the same card. */}
       <ConnectionOutcomesCard />
+      {/* Mail sent to addresses the reader has not claimed: nothing judges it
+          until they answer per address. */}
+      <UnroutedMailCard />
       {/* What the reader keeps out. Blocking a sender is a rep's answer to
           what this page asks, not an administrator's posture setting. */}
       <CaptureExclusionsCard />

@@ -90,7 +90,7 @@ export const NOT_DEPTH: readonly string[] = [
   // The ring separating two overlapping faces, in the colour of the surface
   // behind them. A shadow rather than a border so a stacked face stays the
   // size of the lone chip beside it (avatarstack.css says why).
-  "src/design-system/avatarstack.css: box-shadow: 0 0 0 2px var(--bgElevated)",
+  "src/design-system/avatarstack.css: box-shadow: 0 0 0 2px var(--ground)",
   // The verdict a reader gave a drafted card, held as a coloured ring
   // until the card springs back. A ring rather than a tint because the card
   // underneath carries prose somebody is still reading.
@@ -98,11 +98,9 @@ export const NOT_DEPTH: readonly string[] = [
   "src/design-system/decisiondeck.css: box-shadow: 0 0 0 2px var(--ai)",
   "src/design-system/decisiondeck.css: box-shadow: 0 0 0 2px var(--borderStrong)",
   "src/design-system/decisiondeck.css: box-shadow: 0 0 0 2px var(--danger)",
-  // The agent orb is a lit sphere, not a surface at a depth: inner shading,
-  // a hairline inside the edge, and the ball's own bloom. The second value
-  // is the same chrome at the small container rung.
-  "src/design-system/margince-core.css: box-shadow: inset 0 -40px 60px -46px var(--coreC1), inset 0 0 0 1px color-mix(in srgb, var(--overlayLight) 8%, transparent), 0 0 44px -22px var(--coreC2)",
-  "src/design-system/margince-core.css: box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--overlayLight) 6%, transparent), 0 0 12px -7px var(--coreC2)",
+  // The agent orb is a lit sphere, not a surface at a depth: the ring is the
+  // glass's own rim, in the ribbons' colour.
+  "src/design-system/margince-core.css: box-shadow: 0 0 0 1px color-mix(in srgb, var(--coreC1) 35%, transparent)",
   // The capture mark while the agent is reading: a halo in the same tint as
   // the mark's fill. That is the state, not an elevation.
   "src/features/contacts/contactnetwork.css: box-shadow: 0 0 0 4px var(--accentLight)",
@@ -122,7 +120,7 @@ export const NOT_DEPTH: readonly string[] = [
   // Not a shadow at all: a sticky bar's full-bleed fill and the hairline
   // behind it. Only a spread reaches past the bar's own box, and
   // conversation.css explains the ordering that keeps the hairline to one pixel.
-  "src/features/onboarding/onboarding-conversation/conversation.css: box-shadow: 0 calc(100vw + 1px) 0 100vw var(--bgElevated), 0 0 0 100vw var(--borderSubtle)",
+  "src/features/onboarding/onboarding-conversation/conversation.css: box-shadow: 0 calc(100vw + 1px) 0 100vw var(--bgField), 0 0 0 100vw var(--borderSubtle)",
   // The one drop shadow outside --shadow-pop. The reason is the ground: this
   // dialog floats on the rail's own dark brand surface. There
   // --shadow-pop is tinted for the page and reads as a grey smear. Tinted

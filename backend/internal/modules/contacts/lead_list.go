@@ -55,10 +55,11 @@ const (
 // TestEverySortAListOffersIsOneItsResourceAccepts is what keeps the two
 // answering together.
 var leadListFields = map[string]storekit.SortField{
-	createdAtColumn:   storekit.Column(storekit.KindTimestamp),
-	updatedAtColumn:   storekit.Column(storekit.KindTimestamp),
-	leadNameColumn:    storekit.Column(fieldcatalog.TypeText),
-	leadCompanyColumn: storekit.Column(fieldcatalog.TypeText),
+	createdAtColumn: storekit.Column(storekit.KindTimestamp),
+	updatedAtColumn: storekit.Column(storekit.KindTimestamp),
+	leadNameColumn:  storekit.Column(fieldcatalog.TypeText),
+	// The cursor field is renamed so a cursor from the typed-name order is refused.
+	leadCompanyColumn: {Kind: fieldcatalog.TypeText, CursorField: "company_shown", Expr: orderByLeadCompanyShown},
 	// The ladder position, so New sorts before Contacted. The cursor field is
 	// renamed so a cursor from the alphabetical order is refused.
 	leadStatusColumn: {Kind: fieldcatalog.TypeNumber, CursorField: "status_rung", Expr: orderByLeadStatusRung},
@@ -101,6 +102,20 @@ func orderByLeadStatusRung(context.Context, func(any) int) (string, error) {
 	return LeadStatusRungSQL("lead.status", true), nil
 }
 
+// orderByLeadCompanyShown orders by the name the Company column prints: the
+// linked company's own name where the reader may see that company, else the
+// typed name. A position must not reveal a name the reader cannot read.
+func orderByLeadCompanyShown(ctx context.Context, arg func(any) int) (string, error) {
+	if !auth.ReadGranted(ctx, companyEntity) {
+		return "lead.company_name", nil
+	}
+	linked, err := storekit.LinkedCompanyColumn(ctx, "lead.company_id", "display_name", arg)
+	if err != nil {
+		return "", err
+	}
+	return "coalesce(" + linked + ", lead.company_name)", nil
+}
+
 // orderByLeadSourceLabel orders by the words the Source column prints rather
 // than the key behind them: a catalog whose labels and keys disagree would
 // otherwise arrange the list by an identifier no reader can see.
@@ -139,7 +154,7 @@ func (s *Store) ListLeads(ctx context.Context, in ListLeadsInput) ([]crmcontract
 	}
 	// One instant for this read: the sla_state filter is built once for the
 	// page and once for the total, and they must judge the same leads overdue.
-	ctx = withPinnedSLANow(ctx, leadSLAClock().UTC())
+	ctx = pinSLANow(ctx)
 	return listPage(ctx, s, in.Sort, in.Limit, listPageSpec[crmcontracts.Lead]{
 		entity:    leadEntity,
 		firstPage: in.Cursor == nil || *in.Cursor == "",

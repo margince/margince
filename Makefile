@@ -27,10 +27,10 @@ endif
 # consumer — see the comment on check-root-gates for why they are not that
 # target's prerequisites.
 ROOT_SCRIPT_GATES := check-craft-doc test-dev-isolation test-dev-dsn test-dev-env-local test-api-entrypoint \
-  test-dev-cleanup test-disk-headroom \
+  test-dev-cleanup test-disk-headroom test-dev-ready test-compose-recreate-guard \
   test-golangci-guard test-scheduled-report test-clock-drift-host test-renovate-liveness test-pace-workflow test-ci-verdict test-merge-verdict \
   test-review-coverage test-home-budget-compare test-repeat-changed-tests \
-  test-laneorder test-shardqueue test-lane-binaries test-integration-artifacts check-image-pins check-host-ports ci-doc-parity \
+  test-laneorder test-shardqueue test-lane-binaries test-integration-artifacts check-image-pins check-early-pipe-readers check-host-ports ci-doc-parity \
   make-target-parity test-make-target-parity contract-breaking-check \
   test-contract-frontend-drift migration-versions test-migration-versions \
   test-lanes env-reads gofmt go-file-length fe-file-length test-fe-file-length test-test-budget rls-store-path \
@@ -42,6 +42,7 @@ ROOT_SCRIPT_GATES := check-craft-doc test-dev-isolation test-dev-dsn test-dev-en
   test-release-version-stamped test-closing-declaration test-release-patch-base test-release-changelog \
   test-docs-describing \
   test-craft-review test-release-tag-version test-release-dist-version test-release-license-stamped \
+  test-release-policy-sources-fresh \
   test-release-version-file test-build-revision test-release-tag-on-main test-release-tag-go-proxy \
   test-release-notes test-release-bundle test-release-compose test-backend-notices embedded-binary-licenses third-party-files test-third-party-files \
   test-strict-lint-packages
@@ -82,7 +83,7 @@ MINIO_PORT ?= 29000
 
 .PHONY: gate-timings preflight
 .PHONY: repeat-changed-tests test-repeat-changed-tests
-.PHONY: help help-all install dev-fresh prod prod-stop check check-config check-all check-backend check-root-gates check-lane-craft check-lane-gates check-lane-backend check-lane-fe check-q check-go check-gates check-fe test-gate-slot dev dev-stop dev-sweep dev-snapshot dev-restore dev-logs infra-up seed-dev seed-analytics verify-boot frontend-check frontend-e2e bench-mobile bench-mobile-check bench-home home-budget test-home-budget-compare e2e-company e2e-brief e2e-llm e2e-llm-guards e2e-llm-report fe-install fe-typecheck fe-typecheck-composed fe-lint fe-compiler-lint fe-build fe-preview fe-format fe-test fe-test-ext fe-ds-gates fe-drift fe-unit fe-census fe-unit-merge fe-clock-drift backend-clock-drift fe-edge-padding fe-quality fe-bundle fe-storybook ds-purity font-lock icon-lint ds-spacing ds-spacing-roles space-tokens native-controls ext-imports action-rows storybook fe-uat craft-static craft-review test-craft-review craft-residue craft-prose check-craft-doc test-craft-pin test-golangci-guard test-scheduled-report test-clock-drift-host test-renovate-liveness test-pace-workflow test-ci-verdict test-merge-verdict test-review-coverage test-laneorder test-shardqueue test-lane-binaries test-integration-artifacts secret-scan test-secret-scan test-sbom-sign release-sign test-sbom-census embedded-binary-licenses test-embedded-binary-licenses test-dev-dsn test-dev-env-local test-testdb-redis test-lane-timeout-report test-dev-isolation test-dev-cleanup test-disk-headroom test-api-entrypoint check-image-pins check-host-ports ci-doc-parity make-target-parity test-make-target-parity check-ext-migrations check-extension-modules go-work-sum contract-breaking-check messaging-rules-drift contract-frontend-drift test-contract-frontend-drift migration-versions test-migration-versions test-lanes env-reads gofmt lint-modules go-file-length fe-file-length test-fe-file-length test-budget test-input-census test-input-census-judge test-strict-lint-packages test-test-budget comment-budget test-comment-budget comment-density test-keep-unchanged-mtimes test-check-lane-end test-phase-timer comment-stats comment-stats-pin slop-trend rls-store-path no-jurisdiction test-no-jurisdiction pkg-freeze test-pkg-freeze test-release-tag-version test-release-dist-version test-release-license-stamped test-release-version-file test-build-revision test-release-tag-on-main test-release-tag-go-proxy test-release-notes test-release-bundle test-release-compose test-release-version-stamped test-closing-declaration test-release-patch-base test-release-changelog docs-describing test-docs-describing test-dev-postgres-container test-e2e-llm-check hooks sbom sbom-normalize sbom-supplement sbom-parity sbom-census sbom-validate sbom-sign release-sign sbom-check sbom-gate
+.PHONY: help help-all install dev-fresh prod prod-stop check check-config check-all check-backend check-root-gates check-lane-craft check-lane-gates check-lane-backend check-lane-fe check-q check-go check-gates check-fe test-gate-slot dev dev-stop dev-sweep dev-snapshot dev-restore dev-logs infra-up seed-dev seed-analytics verify-boot frontend-check frontend-e2e bench-mobile bench-mobile-check bench-home home-budget test-home-budget-compare e2e-company e2e-brief e2e-llm e2e-llm-guards e2e-llm-report fe-install fe-typecheck fe-typecheck-composed fe-lint fe-compiler-lint fe-build fe-preview fe-format fe-test fe-test-ext fe-ds-gates fe-drift fe-unit fe-census fe-unit-merge fe-clock-drift backend-clock-drift fe-edge-padding fe-quality fe-bundle fe-storybook ds-purity font-lock icon-lint ds-spacing ds-spacing-roles space-tokens native-controls ext-imports action-rows storybook fe-uat craft-static craft-review test-craft-review craft-residue craft-prose check-craft-doc test-craft-pin test-golangci-guard test-scheduled-report test-clock-drift-host test-renovate-liveness test-pace-workflow test-ci-verdict test-merge-verdict test-review-coverage test-laneorder test-shardqueue test-lane-binaries test-integration-artifacts secret-scan test-secret-scan test-sbom-sign release-sign test-sbom-census embedded-binary-licenses test-embedded-binary-licenses test-dev-dsn test-dev-env-local test-testdb-redis test-lane-timeout-report test-dev-isolation test-dev-cleanup test-disk-headroom test-dev-ready test-compose-recreate-guard test-api-entrypoint check-image-pins check-early-pipe-readers check-host-ports ci-doc-parity make-target-parity test-make-target-parity check-ext-migrations check-extension-modules go-work-sum contract-breaking-check messaging-rules-drift policy-refresh contract-frontend-drift test-contract-frontend-drift migration-versions test-migration-versions test-lanes env-reads gofmt lint-modules go-file-length fe-file-length test-fe-file-length test-budget test-input-census test-input-census-judge test-strict-lint-packages test-test-budget comment-budget test-comment-budget comment-density test-keep-unchanged-mtimes test-check-lane-end test-phase-timer comment-stats comment-stats-pin slop-trend rls-store-path no-jurisdiction test-no-jurisdiction pkg-freeze test-pkg-freeze test-release-tag-version test-release-dist-version test-release-license-stamped test-release-policy-sources-fresh test-release-version-file test-build-revision test-release-tag-on-main test-release-tag-go-proxy test-release-notes test-release-bundle test-release-compose test-release-version-stamped test-closing-declaration test-release-patch-base test-release-changelog docs-describing test-docs-describing test-dev-postgres-container test-e2e-llm-check hooks sbom sbom-normalize sbom-supplement sbom-parity sbom-census sbom-validate sbom-sign release-sign sbom-check sbom-gate
 # Bare `make` lists every command instead of running the first target.
 .DEFAULT_GOAL := help
 
@@ -1300,6 +1301,19 @@ test-dev-isolation:
 test-disk-headroom:
 	@bash scripts/lib-diskspace.test.sh
 
+## test-dev-ready — prove `make dev` refuses a machine without Docker or its
+## Compose plugin by name, and that a stack is called ready, seeded and verified
+## only once its app port reaches the api, naming the api or the frontend proxy
+## when it does not.
+test-dev-ready:
+	@bash scripts/lib-devready.test.sh
+
+## test-compose-recreate-guard — prove `make db-up` refuses to recreate a running
+## shared dev container whose config differs from this checkout's, and lets
+## DB_RECREATE=1, a stopped container or a first start through.
+test-compose-recreate-guard:
+	@bash scripts/compose-recreate-guard.test.sh
+
 ## test-dev-cleanup — prove a failed `make dev` leaves nothing running: the EXIT
 ## trap is armed for every `up` rather than only for a stack that claims a port,
 ## it follows TERM with KILL, and it spares a stack that was already up. The
@@ -1403,6 +1417,14 @@ check-image-pins:
 ## the same "image pins OK" as a fully pinned tree.
 	@bash ./scripts/check-image-pins.test.sh
 
+## check-early-pipe-readers — no tracked pipefail script pipes into a reader that
+## stops early (`grep -q`, `grep -m`, `head`, an awk or sed that exits, `tar -x`).
+## The writer then dies of SIGPIPE and the pipeline reads as failed, which an `if`
+## takes as the answer. The test plants a good and a bad case of each form.
+check-early-pipe-readers:
+	@./scripts/check-early-pipe-readers.sh
+	@bash ./scripts/check-early-pipe-readers.test.sh
+
 ## check-host-ports — every host port published by docker-compose.dev.yml
 ## sits BELOW the ephemeral floor (32768). A published port inside the kernel's
 ## ephemeral range can be transiently held as some unrelated process's client
@@ -1445,6 +1467,12 @@ contract-breaking-check:
 ## messagingrules_gen.go is what the folder compiles to. backend drift runs it.
 messaging-rules-drift:
 	$(MAKE) -C backend messaging-rules-drift
+
+## policy-refresh — compare each messaging policy pack with its official
+## sources, stamp the layers it read, and regenerate the rules. A release step:
+## it fetches from the publishers, so no lane runs it. REPORT=1 writes nothing.
+policy-refresh:
+	$(MAKE) -C backend policy-refresh REPORT=$(REPORT)
 
 ## contract-frontend-drift — the THIRD regeneration a crm.yaml change owes.
 ## `make gen` covers the Go artifacts and a unit test covers the MCP surface
@@ -1661,8 +1689,11 @@ rls-store-path:
 ## one, and a genuinely bad answer is still a finding. It also holds the judged
 ## half offline, against verdicts a real judge gave the committed fixtures: a
 ## judge that agreed with everything fails every defect fixture, and a judge that
-## cannot be reached is a stop rather than a pass.
+## cannot be reached is a stop rather than a pass. The aicert sweep wrapper
+## waits out a judge limit or an outage and stops on any other failure.
 test-e2e-llm-check:
+	@./scripts/test-e2e-llm-sweep.sh
+	@./scripts/test-aicert-sweep.sh
 	@./scripts/test-e2e-llm-check.sh
 
 ## test-dev-postgres-container — prove the dev tooling names ONE database: the
@@ -1734,6 +1765,11 @@ test-release-dist-version:
 ## refuses. Its one caller is a tag push, like the tag reader's.
 test-release-license-stamped:
 	@./scripts/release-license-stamped.test.sh
+
+## test-release-policy-sources-fresh — the policy source check's own test:
+## how old a layer's source-checked may be at a plain tag, and what is no layer.
+test-release-policy-sources-fresh:
+	@./scripts/release-policy-sources-fresh.test.sh
 
 ## test-release-version-file — the VERSION release check's own test: the one
 ## spelling of the tag's version it accepts, and the near misses it refuses.

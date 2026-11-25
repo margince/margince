@@ -48,16 +48,17 @@ const laneDeadline = 15 * time.Second
 
 // Service gathers the facts, writes the card, and caches it per reader.
 type Service struct {
-	pool           *pgxpool.Pool
-	deals          *deals.Store
-	activities     *activities.Store
-	rooms          *dealrooms.Store
-	seatsOf        SeatReader
-	seatBatch      SeatBatchReader
-	mailCoverage   mailcoverage.Reader
-	lane           Completer
-	routingVersion func() string
-	now            func() time.Time
+	pool             *pgxpool.Pool
+	deals            *deals.Store
+	activities       *activities.Store
+	rooms            *dealrooms.Store
+	seatsOf          SeatReader
+	seatBatch        SeatBatchReader
+	mailCoverage     mailcoverage.Reader
+	managerStandings ManagerStandings
+	lane             Completer
+	routingVersion   func() string
+	now              func() time.Time
 }
 
 // NewService binds the reads. Each store carries its own gates.

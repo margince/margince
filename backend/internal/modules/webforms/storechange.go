@@ -188,7 +188,7 @@ func (s *Store) UpdateForm(ctx context.Context, id ids.UUID, in UpdateInput) (Fo
 }
 
 func (s *Store) writeFormUpdate(ctx context.Context, id ids.UUID, in UpdateInput) (Form, error) {
-	if err := refuseAgentSecretChange(ctx, in); err != nil {
+	if err := refuseAgentSecret(ctx, in.SenderSecret != nil || slices.Contains(in.Clear, fieldSenderSecret)); err != nil {
 		return Form{}, err
 	}
 	newRef, err := s.replacementSecret(ctx, id, in.SenderSecret)
@@ -406,27 +406,29 @@ func (s *Store) retireForm(ctx context.Context, id ids.UUID) (Form, error) {
 
 const fieldSenderSecret = "sender_secret"
 
-// refuseAgentSecretChange keeps a form's secret with a user. An agent may change
-// the rest of a form, but a secret it chose would let it post leads as that form.
-func refuseAgentSecretChange(ctx context.Context, in UpdateInput) error {
+// actingAgent reports whether an agent makes this call. A form's secret and its
+// promises stay with a user, whichever door the agent comes through.
+func actingAgent(ctx context.Context) bool {
 	actor, ok := principal.Actor(ctx)
-	if !ok || actor.Type != principal.PrincipalAgent {
+	return ok && actor.Type == principal.PrincipalAgent
+}
+
+// refuseAgentSecret keeps a form's secret with a user. An agent may set up the
+// rest of a form, but a secret it chose would let it post leads as that form.
+func refuseAgentSecret(ctx context.Context, setsSecret bool) error {
+	if !setsSecret || !actingAgent(ctx) {
 		return nil
 	}
-	if in.SenderSecret != nil || slices.Contains(in.Clear, fieldSenderSecret) {
-		return &httperr.DetailedError{
-			Status: http.StatusForbidden, Code: "agent_sets_no_form_secret",
-			Detail: "an agent does not set or clear a form's secret; ask the user to do it in the app",
-		}
+	return &httperr.DetailedError{
+		Status: http.StatusForbidden, Code: "agent_sets_no_form_secret",
+		Detail: "an agent does not set or clear a form's secret; ask the user to do it in the app",
 	}
-	return nil
 }
 
 // refuseAgentPromiseChange keeps with a user what a form promises a visitor and
 // where it takes posts from. Each has legal weight, or lets a site post leads.
 func refuseAgentPromiseChange(ctx context.Context, current, next Form) error {
-	actor, ok := principal.Actor(ctx)
-	if !ok || actor.Type != principal.PrincipalAgent {
+	if !actingAgent(ctx) {
 		return nil
 	}
 	same := sameOrigins(current.AllowedOrigins, next.AllowedOrigins) &&

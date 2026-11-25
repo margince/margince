@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
+import { IMPORT_ID } from "../lib/importpage";
 import type { Route, Screen } from "../lib/router";
 
 // Which ids name a page rather than a record. Imports nothing that draws, so
@@ -8,7 +9,7 @@ import type { Route, Screen } from "../lib/router";
 
 // Each on its own screen only: `#/leads/import` is the lead whose id is "import".
 export const CREATE_ID = "new";
-export const IMPORT_ID = "import";
+export { IMPORT_ID };
 
 /** The screens whose list opens a create form at `CREATE_ID`, which `C` opens. */
 export const CREATE_SCREENS: ReadonlySet<Screen> = new Set([

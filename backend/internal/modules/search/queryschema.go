@@ -131,6 +131,9 @@ type querySchemaDoc struct {
 }
 
 type querySchemaGrammar struct {
+	// Plan is the whole object a caller sends, so its member names are read
+	// here and not guessed from the parts below.
+	Plan           string `json:"plan"`
 	Predicates     string `json:"predicates"`
 	SemanticTarget string `json:"semantic_target"`
 	Traversal      string `json:"traversal"`
@@ -175,6 +178,8 @@ func querySchemaDocument(vocab Vocabulary) querySchemaDoc {
 		// client has to special-case.
 		Targets: []querySchemaTarget{},
 		Grammar: querySchemaGrammar{
+			Plan: `{"version": <version above>, "target": <a target below>, "where": [<predicate>, ...], ` +
+				`"similar_to": ..., "traverse": ..., "limit": ...}; every member but version and target may be omitted.`,
 			Predicates: `{"field": <name below>, "op": <op the field admits>, "value": <operand>} — ` +
 				`or "values": [...] for "in". Clauses are combined with AND.`,
 			SemanticTarget: `"similar_to": <free text> — one similarity clause, ranked by the hybrid retriever.`,

@@ -16,7 +16,11 @@ MARGINCE_E2E_LLM=1 E2E_LLM_CANDIDATE=claude E2E_LLM_VIA=cli E2E_LLM_DOOR=rest \
   SCENARIO=case61_what_have_i_promised make e2e-llm
 ```
 
-Only a CLI can use REST mode, so `E2E_LLM_VIA=cli` is needed, with `claude` or `gpt`.
+Only a CLI can use REST mode, so `E2E_LLM_VIA=cli` is needed.
+
+**The REST API is tested on Claude only.** This is a decision, not a gap: the other models are
+tested through the MCP tools. A sweep follows the rules in
+[How a sweep is run](test-the-mcp-surface-end-to-end.md#how-a-sweep-is-run).
 
 ## What the assistant gets
 
@@ -35,15 +39,22 @@ in the contract. `e2e/llm/rest_ops.json` is that table, and the Go tests derive 
 A verb that MCP lists behind a router is read as the call to that router. So `must_call` holds the same in
 both modes, and so does a `must_call_with` on the argument that picks the action, such as `change_tags.action=remove`.
 
-The path, query and body parameters of a call become its arguments. Two names change to the
-MCP names: `entity_type` becomes `record_type` and `entity_id` becomes `record_id`. Every other parameter keeps
-the name the REST route gives it. A `must_call_with` on one of those, such as `tag_id`, can then fail
-in REST mode when the assistant did the right thing. Read the transcript first.
+The path, query and body parameters of a call become its arguments. `entity_type` becomes
+`record_type` and `entity_id` becomes `record_id`, unless the verb's own MCP arguments use the
+`entity_` names. A typed route such as `PATCH /companies/{id}` adds the `record_type` its path
+names. For `create_record` and `update_record` the body goes under `fields`, as on MCP.
+`e2e/llm/rest_ops.json` holds all three facts, derived from the contract and the served schemas.
+
+Some checks pin an argument that only MCP has, or one that REST picks by route, such as
+`create_record.offer_tag` or `bulk_update_records.mode`. A scenario lists those under `mcp_only:`,
+and a REST run is graded on its other checks. `e2e/llm/scenariolint.py` refuses an `mcp_only` entry that
+is not one of the file's own checks. Read the transcript before you add one.
 
 ## The verdicts
 
 The verdicts go to `backend/internal/compose/aicert/records/mcp_e2e_rest/<folder>/` and say
-`door: rest`. [mcp-tool-coverage.md](../reference/mcp-tool-coverage.md) does not read that folder yet.
+`door: rest`. [mcp-tool-coverage.md](../reference/mcp-tool-coverage.md) shows them in a table of
+their own, apart from the MCP results.
 
 ## What it costs
 

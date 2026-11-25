@@ -8,15 +8,13 @@ import (
 	"errors"
 	"time"
 
-	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
 	"github.com/margince/margince/backend/internal/compose/attention"
+	"github.com/margince/margince/backend/internal/compose/dayrule"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
-	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/modules/weeklyplan"
-	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/deadline"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -44,16 +42,14 @@ func (s attentionWeeklyPlan) DuePlan(ctx context.Context, owner ids.UUID, now ti
 	if plan.Status != weeklyplan.StateOpen {
 		return nil, nil
 	}
-	var zone string
-	err = database.WithWorkspaceTx(ctx, s.pool, func(tx pgx.Tx) error {
-		var err error
-		zone, err = identity.TimezoneOf(ctx, tx)
-		return err
-	})
-	if err != nil {
-		return nil, err
+	// The reader's own plan reads their day. A plan opened by id, including
+	// the reader's own on a team screen, reads the installation's.
+	var own *ids.UUID
+	if owner.IsZero() {
+		me := dayrule.ActingUser(ctx)
+		own = &me
 	}
-	location, err := time.LoadLocation(zone)
+	location, _, err := dayrule.ForAssignee(ctx, s.pool, own)
 	if err != nil {
 		return nil, err
 	}

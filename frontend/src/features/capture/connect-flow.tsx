@@ -347,7 +347,7 @@ function BringInStep({
             variant="primary"
             reason={
               draft.services.length === 0
-                ? t("connectFlow.pickService")
+                ? t(imap ? "connectFlow.pickMail" : "connectFlow.pickService")
                 : undefined
             }
             onClick={onNext}

@@ -153,7 +153,7 @@ func (s *Store) PreviewLeadContactChange(ctx context.Context, id ids.LeadID, in 
 	if err := auth.Require(ctx, leadEntity, principal.ActionUpdate); err != nil {
 		return LeadContactChange{}, err
 	}
-	ctx = withPinnedSLANow(ctx, slaNow(ctx))
+	ctx = pinSLANow(ctx)
 	if err := auth.Require(ctx, contactEntity, principal.ActionCreate); err != nil {
 		return LeadContactChange{}, err
 	}

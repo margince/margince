@@ -26,6 +26,7 @@ export const healthSourceLabels: Readonly<Record<string, MessageKey>> = {
   automatic: "health.source.automatic",
   receipts: "health.source.receipts",
   unplaced: "health.source.unplaced",
+  footer: "health.source.footer",
 };
 export const healthCodes: Readonly<Record<string, MessageKey>> = {
   queue_checked: "health.code.queue_checked",
@@ -68,6 +69,7 @@ export const healthCodes: Readonly<Record<string, MessageKey>> = {
   updates_failed: "health.code.updates_failed",
   updates_retrying: "health.code.updates_retrying",
   updates_review: "health.code.updates_review",
+  updates_action: "health.code.updates_action",
   recovery_missing: "health.code.recovery_missing",
   recovery_verified: "health.code.recovery_verified",
   recovery_unverified: "health.code.recovery_unverified",
@@ -77,6 +79,9 @@ export const healthCodes: Readonly<Record<string, MessageKey>> = {
   receipts_missed: "health.code.receipts_missed",
   unplaced_none: "health.code.unplaced_none",
   unplaced_counted: "health.code.unplaced_counted",
+  zone_unresolved: "health.code.zone_unresolved",
+  footer_complete: "health.code.footer_complete",
+  footer_incomplete: "health.code.footer_incomplete",
   withheld: "health.withheld",
   read_failed: "health.failed",
   unknown: "health.unknown",
@@ -117,6 +122,8 @@ export const healthRecovery: Readonly<Record<string, MessageKey>> = {
   recovery: "health.recovery.recovery",
   automatic: "health.recovery.automatic",
   receipts: "health.recovery.receipts",
+  zone: "health.recovery.zone",
+  footer: "health.recovery.footer",
 };
 
 export const healthImpacts: Readonly<Record<string, MessageKey>> = {
@@ -154,4 +161,16 @@ export const healthMeasures: Readonly<
   records: "health.measure.records",
   updates: "health.measure.updates",
   items: "health.measure.items",
+  messages: "health.measure.messages",
+};
+
+export const footerDetails: Readonly<
+  Record<NonNullable<Finding["footer_gap"]>["missing"][number], MessageKey>
+> = {
+  controller_identity: "health.footerDetail.controller_identity",
+  privacy_contact: "health.footerDetail.privacy_contact",
+  objection_route: "health.footerDetail.objection_route",
+  advertiser_contact: "health.footerDetail.advertiser_contact",
+  advertisement: "health.footerDetail.advertisement",
+  entity_name: "health.footerDetail.entity_name",
 };

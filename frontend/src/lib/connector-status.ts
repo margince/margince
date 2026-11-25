@@ -71,6 +71,19 @@ export function missingSendGrant(
   );
 }
 
+/** The statuses the server treats as a live mailbox: `error` is degraded and
+ *  probed daily, and it still sends. A DELIBERATE MIRROR of the status list in
+ *  the server's `capture/sendingmailbox.go`, held by a gate that fails when the
+ *  two differ. */
+const LIVE_STATUSES: ReadonlySet<string> = new Set(["connected", "error"]);
+
+/** Whether a connection counts as a live mailbox, as the server decides it. */
+export function isLiveConnection(
+  connection: Pick<CaptureConnection, "status">,
+): boolean {
+  return LIVE_STATUSES.has(connection.status);
+}
+
 /** Whether this connection's grant can send mail: a sending provider whose
  *  granted scopes carry its send scope. */
 export function holdsSendGrant(

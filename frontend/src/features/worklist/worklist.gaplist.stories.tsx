@@ -3,7 +3,11 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import type { components } from "../../api/schema";
-import { jsonResponse, StoryProviders } from "../../testing/story-utils";
+import {
+  emptyListAnswer,
+  jsonResponse,
+  StoryProviders,
+} from "../../testing/story-utils";
 import { CloseTheGap } from "./worklist.gaplist";
 
 // The deals a team should work to meet its quarter goal, as the daily freeze
@@ -73,7 +77,7 @@ function frame(body: ForecastFocus) {
         page: {},
       });
     }
-    return jsonResponse({ data: [] });
+    return emptyListAnswer(input);
   }) as typeof fetch;
   return (
     <StoryProviders>

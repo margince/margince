@@ -278,7 +278,8 @@ func TestATimeZoneAnAgentSetsHoldsAndNamesIt(t *testing.T) {
 	}
 	for _, source := range []string{"chosen", "browser"} {
 		refusal := d.toolRefused(t, "change_my_settings", map[string]any{"action": "save_timezone", "request_body": AnyMap{"timezone": "Asia/Tokyo", "source": source}})
-		if !strings.Contains(refusal, "an agent does not choose") {
+		// The agent is told the value to send, not sent to ask for a grant.
+		if !strings.Contains(refusal, "call again with source agent") || strings.Contains(refusal, "Refused on authority") {
 			t.Errorf("sending source %s answered %q", source, refusal)
 		}
 	}
@@ -363,8 +364,8 @@ func TestAnAgentReadsAnAICallWithoutItsPayload(t *testing.T) {
 	d := newTwoDoors(t, "agent-ai-call", "read", "write")
 	var call string
 	if err := d.e.Owner.QueryRow(t.Context(), `
-		INSERT INTO ai_call (task, tier, provider, model_id, request_fingerprint, logical_call_id)
-		VALUES ('cold_start', 'cheap_cloud', 'anthropic', 'a-model', 'print', gen_random_uuid()) RETURNING id::text`).Scan(&call); err != nil {
+		INSERT INTO ai_call (task, tier, provider, model_id, logical_call_id)
+		VALUES ('cold_start', 'cheap_cloud', 'anthropic', 'a-model', gen_random_uuid()) RETURNING id::text`).Scan(&call); err != nil {
 		t.Fatalf("seeding the call: %v", err)
 	}
 	if _, err := d.e.Owner.Exec(t.Context(), `

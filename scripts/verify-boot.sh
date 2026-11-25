@@ -29,6 +29,8 @@ REPO_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 # database nobody is looking at. An explicit API_BASE still wins.
 # shellcheck source=scripts/lib-devstate.sh
 . "$(git rev-parse --show-toplevel)/scripts/lib-devstate.sh"
+# shellcheck source=scripts/lib-devready.sh
+. "$(git rev-parse --show-toplevel)/scripts/lib-devready.sh"
 API_BASE="${API_BASE:-$(dev_app_base_url)}"
 ADMIN_EMAIL="${ADMIN_EMAIL:-admin@demo.test}"
 ADMIN_PASSWORD="${ADMIN_PASSWORD:-demo-password-123}"
@@ -42,6 +44,10 @@ fail() {
 
 workdir="$(mktemp -d -t verify-boot.XXXXXX)"
 trap 'rm -rf "$workdir"' EXIT
+
+# A stack started a moment ago gets a bounded wait, and a miss says whether the
+# api or the frontend proxy in front of it is the one not answering.
+dev_require_app "$API_BASE" || exit 1
 
 # A transport failure (refused, timeout) makes curl print status 000 and
 # exit non-zero; `|| true` keeps set -e from eating the fail() message,
@@ -79,7 +85,7 @@ echo "== verify-boot 2/6: the installation describes itself =="
 # companies too, and the first one in the file is only the right one until
 # somebody adds a record above it.
 seeded_company="$(awk '/^describe_company\(\) \{/,/^\}/' "$REPO_DIR/scripts/seed-dev.sh" \
-  | sed -n 's/.*"display_name":"\([^"]*\)".*/\1/p' | head -1)"
+  | sed -n 's/.*"display_name":"\([^"]*\)".*/\1/p' | sed -n 1p)"
 [[ -n "$seeded_company" ]] || fail "found no {\"display_name\":\"…\"} in $REPO_DIR/scripts/seed-dev.sh — this step would pass by reading nothing"
 company_status="$(curl -sS --max-time 15 -o "$workdir/company.json" -w '%{http_code}' \
   "$API_BASE/v1/company" --cookie "crm_session=$session" || true)"
@@ -212,7 +218,7 @@ seeded_company_bodies="$(seeded_payloads company)"
 # The stage the seeder actually writes, read from the seeder. "Anything but the
 # default" would accept a stage nobody wrote — a boot proof reads the state the
 # seed produces, not a range of states it might have.
-seeded_lifecycle="$(sed -n 's/.*{"lifecycle":"\([a-z_]*\)"}.*/\1/p' "$REPO_DIR/scripts/seed-dev.sh" | head -1)"
+seeded_lifecycle="$(sed -n 's/.*{"lifecycle":"\([a-z_]*\)"}.*/\1/p' "$REPO_DIR/scripts/seed-dev.sh" | sed -n 1p)"
 [[ -n "$seeded_lifecycle" ]] || fail "scripts/seed-dev.sh writes no {\"lifecycle\":\"…\"} body — this check has no stage to hold the account to"
 
 while IFS= read -r body; do

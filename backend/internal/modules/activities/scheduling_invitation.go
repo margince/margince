@@ -5,10 +5,6 @@ package activities
 
 import (
 	"context"
-	"crypto/rand"
-	"crypto/sha256"
-	"encoding/base64"
-	"encoding/hex"
 	"errors"
 	"fmt"
 	"net/mail"
@@ -67,6 +63,9 @@ type invitationRow struct {
 	AttentionEpisode *ids.UUID
 	// ClaimedAt is when this delivery attempt began, in memory only.
 	ClaimedAt time.Time
+	// Team is the colleagues of a team booking link whose time this meeting
+	// holds beside its host. Empty on every other booking.
+	Team []ids.UUID
 }
 
 type schedulingArgs []any
@@ -75,16 +74,6 @@ type schedulingArgs []any
 func (a *schedulingArgs) add(value any) string {
 	*a = append(*a, value)
 	return fmt.Sprintf("$%d", len(*a))
-}
-
-func invitationToken() (string, string, error) {
-	var entropy [32]byte
-	if _, err := rand.Read(entropy[:]); err != nil {
-		return "", "", err
-	}
-	token := base64.RawURLEncoding.EncodeToString(entropy[:])
-	hash := sha256.Sum256([]byte(token))
-	return token, hex.EncodeToString(hash[:]), nil
 }
 
 func invitationView(row invitationRow) crmcontracts.MeetingInvitation {
@@ -169,6 +158,9 @@ func (s *Store) reserveAndQueueInvitation(ctx context.Context, host ids.UserID, 
 	if err != nil {
 		return crmcontracts.MeetingInvitation{}, err
 	}
+	if err := s.validateTeamTime(ctx, intent.Team, profile, in.Start, in.End, ids.Nil, nil); err != nil {
+		return crmcontracts.MeetingInvitation{}, err
+	}
 	// A lead booker was found by this very address on this request, and the
 	// provider save checks the lead again (compose schedulingCalendar.Save).
 	if intent.Lead.IsZero() {
@@ -176,11 +168,11 @@ func (s *Store) reserveAndQueueInvitation(ctx context.Context, host ids.UserID, 
 			return crmcontracts.MeetingInvitation{}, err
 		}
 	}
-	roster, err := s.resolveRoster(ctx, host, in, intent)
+	roster, err := s.resolveRoster(ctx, host, withTeamAttendees(in, intent.Team), intent)
 	if err != nil {
 		return crmcontracts.MeetingInvitation{}, err
 	}
-	token, hash, err := invitationToken()
+	token, hash, err := storekit.MintToken()
 	if err != nil {
 		return crmcontracts.MeetingInvitation{}, err
 	}
@@ -191,6 +183,7 @@ func (s *Store) reserveAndQueueInvitation(ctx context.Context, host ids.UserID, 
 	row := invitationRow{PublicIntent: intent.Public, ManagementRef: ref, Host: host, Provider: string(profile.Provider), Calendar: profile.CalendarId, ReminderStatus: "off", Status: invitationPending, Version: 1, Command: "create"}
 	row.Appointment = invitationAppointment(profile, in)
 	row.Appointment.LeadID = intent.Lead.UUID
+	row.Team = teamIDs(intent.Team)
 	row.Appointment.Attendees, row.Appointment.Roster = rosterAddresses(roster), roster
 	if intent.DescriptionFromBooker {
 		row.Appointment.Description = ""
@@ -229,12 +222,12 @@ func reserveInvitation(ctx context.Context, tx pgx.Tx, host ids.UserID, start, e
 
 func readInvitation(ctx context.Context, tx pgx.Tx, id ids.UUID, lock bool) (invitationRow, error) {
 	args := schedulingArgs{}
-	query := `SELECT activity_id,host_user_id,provider,calendar_id,appointment,receipt,status,version,command,attempts,management_ref,reminder_status,public_intent,attention_reason,attention_episode FROM meeting_invitation WHERE activity_id=` + args.add(id)
+	query := `SELECT activity_id,host_user_id,provider,calendar_id,appointment,receipt,status,version,command,attempts,management_ref,reminder_status,public_intent,attention_reason,attention_episode,team_user_ids FROM meeting_invitation WHERE activity_id=` + args.add(id)
 	if lock {
 		query += " FOR UPDATE"
 	}
 	var row invitationRow
-	err := tx.QueryRow(ctx, query, args...).Scan(&row.ID, &row.Host, &row.Provider, &row.Calendar, &row.Appointment, &row.Receipt, &row.Status, &row.Version, &row.Command, &row.Attempts, &row.ManagementRef, &row.ReminderStatus, &row.PublicIntent, &row.AttentionReason, &row.AttentionEpisode)
+	err := tx.QueryRow(ctx, query, args...).Scan(&row.ID, &row.Host, &row.Provider, &row.Calendar, &row.Appointment, &row.Receipt, &row.Status, &row.Version, &row.Command, &row.Attempts, &row.ManagementRef, &row.ReminderStatus, &row.PublicIntent, &row.AttentionReason, &row.AttentionEpisode, &row.Team)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return row, apperrors.ErrNotFound
 	}
@@ -294,13 +287,19 @@ func (s *Store) insertInvitation(ctx context.Context, row *invitationRow, in crm
 				return err
 			}
 		}
-		if err := storekit.LockWriteIdentity(ctx, tx, "meeting_host", host.String()); err != nil {
+		// The page lock comes before every host lock, on every path that takes both.
+		if intent.DescriptionFromBooker || len(row.Team) > 0 {
+			if err := confirmTeamTx(ctx, tx, host, row.Team); err != nil {
+				return err
+			}
+		}
+		if err := lockSlotHolders(ctx, tx, host, row.Team); err != nil {
 			return err
 		}
 		if err := admitPublicBookingIntent(ctx, tx, row.PublicIntent); err != nil {
 			return err
 		}
-		if err := reserveInvitation(ctx, tx, host, in.Start, in.End, buffer, ids.Nil); err != nil {
+		if err := reserveSlotHolders(ctx, tx, host, row.Team, in.Start, in.End, buffer, ids.Nil); err != nil {
 			return err
 		}
 		seconds := int(in.End.Sub(in.Start) / time.Second)
@@ -318,8 +317,10 @@ func (s *Store) insertInvitation(ctx context.Context, row *invitationRow, in crm
 			return err
 		}
 		if invitationSource(ctx) == publicBookingSource {
-			if _, err := s.CloseTasksAnsweredByBookingTx(ctx, tx, ids.From[ids.ActivityKind](row.ID), host, invitationLinks(in, intent)); err != nil {
-				return err
+			for _, holder := range slotHolders(host, row.Team) {
+				if _, err := s.CloseTasksAnsweredByBookingTx(ctx, tx, ids.From[ids.ActivityKind](row.ID), holder, invitationLinks(in, intent)); err != nil {
+					return err
+				}
 			}
 		}
 		if !intent.Lead.IsZero() {
@@ -331,8 +332,8 @@ func (s *Store) insertInvitation(ctx context.Context, row *invitationRow, in crm
 		}
 		row.Appointment.RequestID = row.ID.String()
 		args := schedulingArgs{}
-		values := []string{args.add(row.ID), args.add(host), args.add(row.Provider), args.add(row.Calendar), args.add(row.Appointment), args.add(row.Status), args.add(hash), args.add(row.ManagementRef), args.add(s.now()), args.add(row.ReminderStatus), args.add(row.PublicIntent), args.add(s.now())}
-		_, err = tx.Exec(ctx, `INSERT INTO meeting_invitation(activity_id,host_user_id,provider,calendar_id,appointment,status,management_hash,management_ref,next_attempt_at,reminder_status,public_intent,created_at) VALUES (`+strings.Join(values, ",")+`)`, args...)
+		values := []string{args.add(row.ID), args.add(host), args.add(row.Provider), args.add(row.Calendar), args.add(row.Appointment), args.add(row.Status), args.add(hash), args.add(row.ManagementRef), args.add(s.now()), args.add(row.ReminderStatus), args.add(row.PublicIntent), args.add(s.now()), args.add(row.Team)}
+		_, err = tx.Exec(ctx, `INSERT INTO meeting_invitation(activity_id,host_user_id,provider,calendar_id,appointment,status,management_hash,management_ref,next_attempt_at,reminder_status,public_intent,created_at,team_user_ids) VALUES (`+strings.Join(values, ",")+`)`, args...)
 		if err != nil {
 			return err
 		}

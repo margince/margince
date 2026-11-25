@@ -104,7 +104,7 @@ expect_actions() {
 		echo "FAIL: $name"
 		echo "  exit    want 0 got $status"
 		echo "  actions want '$want' got '$got'"
-		printf '  output: %s\n' "$out" | head -5
+		printf '  output: %s\n' "$out" | sed -n 1,5p
 		failures=$((failures + 1))
 		return
 	fi
@@ -143,7 +143,7 @@ expect_llm() {
 		echo "FAIL: $name"
 		echo "  exit    want 0 got $status"
 		echo "  actions want 'create $want_title' got '$got'"
-		printf '  output: %s\n' "$out" | head -5
+		printf '  output: %s\n' "$out" | sed -n 1,5p
 		failures=$((failures + 1))
 		return
 	fi
@@ -334,6 +334,24 @@ expect_split growth GROWTH_RESULT GROWTH_OUTCOME breach \
 expect_split perf PERF_RESULT PERF_OUTCOME breach \
 	"the weekly PERF-3/PERF-7 run could not complete" \
 	"a PERF-3/PERF-7 budget is breaching on main"
+expect_split perf-mid-market PERF_MM_RESULT PERF_MM_OUTCOME breach \
+	"the weekly PERF-3/PERF-7 run on the mid-market tier could not complete" \
+	"a PERF-3/PERF-7 budget is breaching on main (mid-market tier)"
+
+# A measure-only dispatch runs with the gate off. Its green is no verdict and its
+# lane failure is not the weekly lane's, so no outcome may open or close an issue,
+# on either tier.
+perf_open="$(printf '10\t%s\n20\t%s\n30\t%s\n40\t%s\n' \
+	"the weekly PERF-3/PERF-7 run on the mid-market tier could not complete" \
+	"a PERF-3/PERF-7 budget is breaching on main (mid-market tier)" \
+	"the weekly PERF-3/PERF-7 run could not complete" \
+	"a PERF-3/PERF-7 budget is breaching on main")"
+expect_actions "perf measure-only/a green run closes nothing" "" "$perf_open" \
+	PERF_MEASURE_ONLY=true PERF_MM_RESULT=success PERF_MM_OUTCOME=ok PERF_RESULT=success
+expect_actions "perf measure-only/a breach files nothing" "" "$perf_open" \
+	PERF_MEASURE_ONLY=true PERF_MM_RESULT=failure PERF_MM_OUTCOME=breach
+expect_actions "perf measure-only/a lane failure files nothing" "" "$perf_open" \
+	PERF_MEASURE_ONLY=true PERF_MM_RESULT=failure PERF_MM_OUTCOME=lane-failed
 
 expect_split renovate RENOVATE_RESULT RENOVATE_OUTCOME quiet \
 	"the Renovate liveness check could not run" \
@@ -436,7 +454,7 @@ expect_health() {
 		echo "FAIL: $name"
 		echo "  exit    want 0 got $status"
 		echo "  actions want '$want' got '$got'"
-		printf '  output: %s\n' "$out" | head -5
+		printf '  output: %s\n' "$out" | sed -n 1,5p
 		failures=$((failures + 1))
 		return
 	fi
@@ -539,7 +557,7 @@ expect_merge() {
 		echo "FAIL: $name"
 		echo "  exit    want 0 got $status"
 		echo "  actions want 'create $want_title' got '$got'"
-		printf '  output: %s\n' "$out" | head -5
+		printf '  output: %s\n' "$out" | sed -n 1,5p
 		failures=$((failures + 1))
 		return
 	fi
@@ -975,7 +993,7 @@ if [[ "$label_status" -ne 0 ]] || [[ "$got_labels" != "$want_labels" ]]; then
 	echo "FAIL: a filed issue does not carry its axes"
 	echo "  exit   want 0 got $label_status"
 	echo "  labels want '$want_labels' got '$got_labels'"
-	printf '  output: %s\n' "$label_out" | head -3
+	printf '  output: %s\n' "$label_out" | sed -n 1,3p
 	failures=$((failures + 1))
 else
 	echo "ok: a filed issue carries one priority, one area and its provenance"
@@ -1135,7 +1153,7 @@ noref_status=$?
 set -e
 if [[ "$noref_status" -eq 0 ]]; then
 	echo "FAIL: the reporter ran with no DEFAULT_BRANCH, so it cannot know whose issues it files"
-	printf '  output: %s\n' "$noref_out" | head -3
+	printf '  output: %s\n' "$noref_out" | sed -n 1,3p
 	failures=$((failures + 1))
 else
 	echo "ok: the reporter refuses to run without DEFAULT_BRANCH"

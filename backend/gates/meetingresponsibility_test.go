@@ -21,7 +21,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
-var meetingRuleRenderers = []string{"KnownMeetingHostSQL", "MeetingResponsibilitySQL", "UnclaimedMeetingSQL", "MeetingCreditSQL", "MeetingCreditedSeatSQL", "MeetingCreditedSeatsSQL", "MeetingCreditedSeatsAtChangeSQL", "MeetingCreditedSeatAtChangeSQL"}
+var meetingRuleRenderers = []string{"KnownMeetingHostSQL", "MeetingResponsibilitySQL", "UnclaimedMeetingSQL", "MeetingCreditSQL", "MeetingCreditedSeatsSQL", "MeetingCreditedSeatListSQL", "MeetingLowestCreditedSeatSQL", "MeetingCreditedSeatsAtChangeSQL", "MeetingCreditedSeatAtChangeSQL"}
 
 const meetingRuleFile = "internal/platform/database/storekit/meetingresponsibility.go"
 

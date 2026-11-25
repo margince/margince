@@ -88,7 +88,11 @@ func resolveModelPath(ctx context.Context, spec modelPathSpec, pool *pgxpool.Poo
 	if err != nil {
 		return nil, nil, nil, err
 	}
-	return modelPathFor(ctx, cfg, spec, pool, log)
+	path, state, profile, err := modelPathFor(ctx, cfg, spec, pool, log)
+	if err == nil && path != nil {
+		compose.BindExtensionModels(path.ExtensionTasks)
+	}
+	return path, state, profile, err
 }
 
 // modelPathFor wires the surfaces a resolved binding lights up. A bound
@@ -245,6 +249,7 @@ func coldStartOptions(modelPath *compose.ModelPath) []compose.Option {
 		compose.WithReaderRendering(modelPath.ReaderRendering),
 		// The rewrite verbs, in the composer and in Add task, ride their own premium-first lane.
 		compose.WithRewrite(modelPath.Rewrite),
+		compose.WithChatTasks(modelPath.ChatTaskReading),
 		// The Sales review's assessment caches per reader, so it carries the
 		// routing version like the other cached writers.
 		compose.WithSalesAssessment(modelPath.ReportInterpret, routingVersion),

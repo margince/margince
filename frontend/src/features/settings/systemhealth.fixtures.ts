@@ -95,9 +95,8 @@ export const unplacedSource: components["schemas"]["HealthSource"] = {
   count: 5,
   unit: "items",
   unplaced_changes: [
-    { entity_type: "product", action: "update", count: 3 },
-    { entity_type: "list", action: "added", count: 1 },
-    { entity_type: "tag", action: "applied", count: 1 },
+    { entity_type: "notice", action: "update", count: 3 },
+    { entity_type: "booking_page", action: "update", count: 2 },
   ],
 };
 export const informationReport: Report = {
@@ -120,6 +119,45 @@ export const overdueFinding: components["schemas"]["HealthFinding"] = {
   unit: "runs",
   observed_at: HEALTH_AT,
   action: { destination: "diagnostics", available: true },
+};
+/** What the server raises when the stored installation zone will not load. */
+export const zoneFinding: components["schemas"]["HealthFinding"] = {
+  id: "jobs:zone_unresolved",
+  source: "jobs",
+  code: "zone_unresolved",
+  condition: "waiting_human",
+  requires_action: true,
+  urgency: 1,
+  scope: "installation",
+  impact: "measured",
+  responsible: "administrator",
+  recovery: "zone",
+  observed_at: HEALTH_AT,
+  action: { destination: "regional", available: true },
+};
+export const footerFinding: components["schemas"]["HealthFinding"] = {
+  id: "footer:footer_incomplete:0193a3c4-0000-7000-8000-000000000001",
+  source: "footer",
+  code: "footer_incomplete",
+  condition: "waiting_human",
+  requires_action: true,
+  urgency: 1,
+  scope: "workspace",
+  impact: "measured",
+  responsible: "administrator",
+  recovery: "footer",
+  count: 3,
+  unit: "messages",
+  observed_at: HEALTH_AT,
+  footer_gap: {
+    legal_entity_id: "0193a3c4-0000-7000-8000-000000000001",
+    legal_entity_name: "Beispiel GmbH",
+    is_default: true,
+    missing: ["privacy_contact", "objection_route"],
+    held_by_user: 2,
+    held_in_background: 1,
+  },
+  action: { destination: "disclosures", available: true },
 };
 export const attentionReport: Report = {
   ...healthReport,

@@ -46,6 +46,13 @@
   /* Level 1, a pane on the page ground, and a hairline for its edge. */
   --pane: #fcfffe;
   --paneEdge: #d8e2de;
+  /* The faces a control and a field draw for themselves, at any depth. Copies
+   * of --bgElevated and --pane today, not aliases: a rung moves with the
+   * nesting ladder, and a control face must not follow it. --textInverse is
+   * the ink on a --textPrimary fill. tokens.test.ts holds their contrast. */
+  --bgField: #fbfcfb;
+  --bgControl: #fcfffe;
+  --textInverse: #fbfcfb;
   /* Grounds and hairlines by nesting depth (surfaces.css). Solid is level 1 made
    * opaque, for a band or mark that hides what passes under it. */
   --ladder1: var(--pane);
@@ -54,7 +61,7 @@
   --ladder3: #f1f3f3;
   --ladder4: #e3e7e8;
   --ladder1Edge: var(--paneEdge);
-  --ladder2Edge: #e3e7e8;
+  --ladder2Edge: #f1f3f3;
   --ladder3Edge: #d0d6d8;
   --ladder4Edge: #b6bfc1;
 
@@ -341,9 +348,7 @@
   /* ===== Corners =====
    * One ladder, in fours: 4 / 8, and the pill. Every corner in the tree reads
    * one of these. A raw px radius is a value nobody chose, which is how the
-   * tree came to answer 3, 5, 6, 9, 10, 11 and 28px at once. The squircle block
-   * at the foot of this file doubles the ladder under `corner-shape`, so a
-   * value here also decides what a smooth corner measures. */
+   * tree came to answer 3, 5, 6, 9, 10, 11 and 28px at once. */
   --r-xs: 4px;
   --r-sm: 8px;
   /* A control, a card and a pane round alike, at every width: a box that
@@ -486,6 +491,9 @@
      to read across. */
   --drawerWindowWidth: 1440px;
   --dialogFullWidth: 1240px;
+  /* The content card's inset from the glass's trailing and bottom edges
+     (app/shell.css); a drawer floats at the same gap, so their edges line up. */
+  --cardInset: var(--space-2);
   /* The docked window (DockedWindow): its own size beside the page, and the
      grown one. The glass less a gutter bounds both. */
   --dockWidth: 560px;
@@ -526,7 +534,10 @@
    *                 above the bare card because the band makes it the wider
    *                 surface of the two
    *   --gapActions  between two buttons that sit side by side
-   *   --gapPanes    between two page panes (.page-pane)
+   *   --pageGutter  the page's own inset: the strip, the heading, the
+   *                 screen's block and the phone bar all stand on it
+   *   --gapPanes    between page columns side by side: the page's gutter,
+   *                 so they line up with the scroller's inset
    *   --padPane     inside a page pane that pads itself
    * A screen is held to these in the contexts that HAVE one
    * (check-ds-spacing-roles.sh); everywhere else the raw rung is still the
@@ -535,7 +546,8 @@
   --padCard: var(--space-4);
   --padPanel: var(--space-5);
   --gapActions: var(--space-2);
-  --gapPanes: var(--space-6);
+  --pageGutter: var(--space-5);
+  --gapPanes: var(--pageGutter);
   --padPane: var(--space-5);
 
   /* How far the agent's cell rises above the top edge of the phone bar. The bar
@@ -610,6 +622,13 @@
     var(--fontWeightRegular) 0.75rem / 1rem var(--fontFamilyBody);
   /* The gap between two blocks of S prose. */
   --paragraphSpacingSmall: 0.5rem;
+  /* A key cap's legend (`Kbd`), under Body S: a cap sits beside words and is
+     not read as one of them. */
+  --fontKeycap: var(--fontWeightMedium) 0.625rem / 1rem var(--fontFamilyBody);
+  /* The line under an installation's name in the rail head, set solid so the
+     name and this line fit the top bar's band. */
+  --fontAttribution:
+    var(--fontWeightRegular) 0.625rem / 1 var(--fontFamilyBody);
 
   /* Heading sizes, chosen by the CONTEXT a heading sits in. The level an
      `<h1>`–`<h6>` carries is structure and is chosen separately — README's
@@ -791,6 +810,10 @@
    panes pay it twice. The width is PHONE_MAX_WIDTH in lib/viewport.ts. */
 @media (max-width: 700px) {
   :root {
+    /* The phone's ground is the card's white, so a pane on it takes the edge
+       a pane on the desktop card takes. */
+    --ladder1Edge: var(--ladder2Edge);
+    --pageGutter: var(--space-3);
     --padCard: var(--space-3);
     --padPane: var(--space-3);
     --padPanel: var(--space-3);
@@ -815,13 +838,16 @@
   --bgWell: #111815;
   --pane: rgba(239, 247, 244, 0.045);
   --paneEdge: rgba(239, 247, 244, 0.09);
+  --bgField: #161d1a;
+  --bgControl: rgba(239, 247, 244, 0.045);
+  --textInverse: #161d1a;
   /* Each level lifts toward the light on its light rung's hue, and each edge
      keeps its light contrast. Level 4 stops where a state chip still clears AA. */
   --ladder1Solid: #161d1b;
   --ladder2: #1c2020;
   --ladder3: #1f2323;
   --ladder4: #212628;
-  --ladder2Edge: #292f30;
+  --ladder2Edge: #222626;
   --ladder3Edge: #31383a;
   --ladder4Edge: #3b4345;
 
@@ -981,11 +1007,14 @@
     --bgWell: #111815;
     --pane: rgba(239, 247, 244, 0.045);
     --paneEdge: rgba(239, 247, 244, 0.09);
+    --bgField: #161d1a;
+    --bgControl: rgba(239, 247, 244, 0.045);
+    --textInverse: #161d1a;
     --ladder1Solid: #161d1b;
     --ladder2: #1c2020;
     --ladder3: #1f2323;
     --ladder4: #212628;
-    --ladder2Edge: #292f30;
+    --ladder2Edge: #222626;
     --ladder3Edge: #31383a;
     --ladder4Edge: #3b4345;
 
@@ -1052,47 +1081,6 @@
     --tagViolet: #a78bfa;
     --tagLime: #a3e635;
     --tagOrange: #fb923c;
-  }
-}
-
-/* ===== Smooth corners =====
- *
- * `corner-shape: squircle` draws a superellipse instead of a quarter-circle:
- * the same corner without the two points where a circular arc meets the
- * straight edge. Where an engine has it (CSS Borders and Box Decorations L4),
- * every box in the tree takes it — declared once, here, rather than at each of
- * the several hundred call sites that would each have to remember.
- *
- * The ladder DOUBLES inside the query. A superellipse of radius R reads about
- * as round as a circular corner of R/2, so a corner that kept its number would
- * visibly tighten the day a browser shipped the property. Doubling is what
- * keeps the change to the corner's quality rather than its size.
- *
- * `:where(*)` carries zero specificity on purpose: a pill, a circle or any
- * other genuinely round thing cancels it with a plain `corner-shape: round`
- * beside its own `border-radius`, wherever that rule happens to sit. A
- * superellipse at --r-full is a lozenge and at 50% a squircle tile, and neither
- * is what an avatar or a status pill means. --r-full is therefore NOT doubled:
- * it is already larger than any box it lands on.
- *
- * The generated boxes are listed BESIDE the universal selector, because `*`
- * matches elements and not pseudo-elements — while the doubled tokens reach
- * them anyway, since a custom property inherits and `corner-shape` does not.
- * Left off the list, `::before` and `::after` would keep the initial round
- * shape and draw a corner at twice the radius its author asked for: a dot, a
- * notch or a drawn separator visibly rounder than the box it belongs to. The
- * pseudo-elements a stylesheet in this tree gives a corner to are held against
- * this list by `census/rules/corners.census.ts`, so a new one cannot arrive unlisted. */
-@supports (corner-shape: squircle) {
-  :root {
-    --r-xs: 8px;
-    --r-sm: 16px;
-  }
-  :where(*),
-  :where(*)::before,
-  :where(*)::after,
-  :where(*)::backdrop {
-    corner-shape: squircle;
   }
 }
 

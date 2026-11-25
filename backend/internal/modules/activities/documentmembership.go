@@ -54,10 +54,17 @@ func documentMembership(holder string, pos int) string {
 		linked = fmt.Sprintf(`EXISTS (SELECT 1 FROM activity_link l
 			 WHERE l.activity_id = a.id AND l.entity_type = '%[1]s' AND l.%[1]s_id = $%[2]d)`, holder, pos)
 	case holderCompany:
-		// An upload keeps the company it was stamped with. A mail file is read
-		// through the links and employment walk without participants. A Cc'd
-		// employee does not make the mail a document of their employer.
-		own = fmt.Sprintf("own.company_id = $%d AND own.entity_type <> '%s'", pos, linkEntityActivity)
+		// A deal's upload follows the deal: its company is read as it is now,
+		// so a deal moved to another company takes its files along. The deals
+		// are read first, as an array, so the plan starts from the account.
+		//
+		// A mail file is read through the links and employment walk without
+		// participants, so a Cc'd employee does not file it with their employer.
+		own = fmt.Sprintf(`own.entity_type = '%[1]s' AND own.entity_id = $%[3]d AND own.archived_at IS NULL
+			UNION ALL SELECT own.id FROM attachment own
+			 WHERE own.entity_type = '%[2]s'
+			   AND own.entity_id = ANY (ARRAY(SELECT filed.id FROM deal filed WHERE filed.company_id = $%[3]d))`,
+			linkEntityCompany, linkEntityDeal, pos)
 		linked = CompanyFiledActivityExists(pos)
 	default:
 		//craft:ignore panic-in-domain a holder outside the four constants is a coding error, never request data

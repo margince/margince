@@ -113,8 +113,9 @@ function owner(
   name: string,
   seat: "full" | "read",
   memberIds: string[],
+  status: "active" | "invited" = "active",
 ) {
-  return { user_id: userId, name, seat, member_ids: memberIds };
+  return { user_id: userId, name, seat, status, member_ids: memberIds };
 }
 
 /**

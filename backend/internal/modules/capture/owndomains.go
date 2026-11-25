@@ -14,6 +14,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/platform/auth"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/platform/mailidentity"
 	"github.com/margince/margince/backend/internal/platform/owndomain"
 )
@@ -82,8 +83,15 @@ const anchorDomains = auth.OwnCompanyDomainsSQL
 // decisions that only affect whether a COLLEAGUE becomes a contact; getting
 // that wrong costs a junk record, which a human can see and undo.
 func ownDomainsTx(ctx context.Context, tx pgx.Tx) (InternalDomains, error) {
-	return queryDomains(ctx, tx, `SELECT domain FROM workspace_email_domain UNION `+anchorDomains)
+	return storekit.RememberCaptureFact(ctx, tx, ownDomainsMemo+"candidates", func() (InternalDomains, error) {
+		return queryDomains(ctx, tx, `SELECT domain FROM workspace_email_domain UNION `+anchorDomains)
+	})
 }
+
+// ownDomainsMemo prefixes the two own-domain sets in a transaction's memo.
+// Every writer of a domain, of the own company or of the consumer-mail list
+// forgets them (gates/capturefactwriters_test.go).
+const ownDomainsMemo = storekit.CaptureFactsMemo + "own_domains:"
 
 // TrustedOwnDomainsTx reads only the domains a human vouched for: those the own
 // company claims, and those an administrator confirmed.
@@ -94,12 +102,15 @@ func ownDomainsTx(ctx context.Context, tx pgx.Tx) (InternalDomains, error) {
 // genuine account at a customer's company would otherwise suppress that
 // customer's correspondence workspace-wide.
 //
-// Asked fresh every time rather than stamped on the row when the mailbox was
-// seen. A company that corrects a mistyped domain, or changes it, stops
-// suppressing the old one immediately — a cached answer would go on hiding mail
-// for a domain nobody claims any more, and nothing would ever revoke it.
+// Never stamped on the row when the mailbox was seen. A company that corrects a
+// mistyped domain, or changes it, stops suppressing the old one at once. A
+// stamped answer would go on hiding mail for a domain nobody claims any more,
+// and nothing would ever revoke it. An import run keeps the set only while the
+// capture facts version stands, and every writer of the set moves it.
 func TrustedOwnDomainsTx(ctx context.Context, tx pgx.Tx) (InternalDomains, error) {
-	return queryDomains(ctx, tx, auth.TrustedOwnDomainsSQL)
+	return storekit.RememberCaptureFact(ctx, tx, ownDomainsMemo+"trusted", func() (InternalDomains, error) {
+		return queryDomains(ctx, tx, auth.TrustedOwnDomainsSQL)
+	})
 }
 
 // queryDomains reads one own-domain set, less the consumer-mail domains.
@@ -190,6 +201,19 @@ func NewSelfSetWithIdentityOnly(addresses, identityOnly, domains []string) SelfS
 // foldAddress is one address in the form both sides of a comparison agree on.
 // Plus-addressing is kept: `me+news@` is a different address.
 func foldAddress(address string) string { return mailidentity.FoldAddress(address) }
+
+// Addresses lists every exact address the seat is known by, proven or identity
+// only, in no particular order.
+func (s SelfSet) Addresses() []string {
+	out := make([]string, 0, len(s.addresses)+len(s.identityOnly))
+	for address := range s.addresses {
+		out = append(out, address)
+	}
+	for address := range s.identityOnly {
+		out = append(out, address)
+	}
+	return out
+}
 
 // Covers reports whether this address is one the seat declared as their own,
 // exactly or by one of their domains.

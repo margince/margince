@@ -35,6 +35,7 @@ function renderConnectAct(
   linkedinStatus: ConversationState["linkedinStatus"] = "pending",
   phase: ConversationState["phase"] = "cn.consent",
   returningProvider?: string,
+  saves = true,
 ) {
   const state: ConversationState = {
     ...initialConversationState,
@@ -43,7 +44,7 @@ function renderConnectAct(
     linkedinStatus,
   };
   const dispatch = vi.fn();
-  const persist = vi.fn(async () => true);
+  const persist = vi.fn(async () => saves);
   const view = render(
     <QueryClientProvider
       client={
@@ -111,7 +112,9 @@ it("refuses a provider this deployment does not serve", async () => {
 
   expect(await screen.findByText(/does not serve Microsoft/)).toBeTruthy();
   expect(screen.getByRole("radio", { name: /Microsoft/ })).toBeDisabled();
-  expect(screen.queryByRole("link")).toBeNull();
+  expect(
+    screen.queryAllByRole("link").map((link) => link.getAttribute("href")),
+  ).toEqual(["/#/settings/account"]);
 });
 
 // An account left pickable while the roster is unread would let a reader
@@ -161,6 +164,56 @@ it("withholds every account when the roster fetch fails", async () => {
   expect(
     screen.getByRole("radio", { name: /Other mail provider/ }),
   ).toBeDisabled();
+});
+
+// The onboarding gate sends every other address back here, so a step that
+// holds its skip on a failed read has no exit at all.
+it("still lets the reader skip once the roster fetch has failed", async () => {
+  stubWithSession(
+    {
+      "GET /connectors": () => jsonResponse({ code: "internal" }, 500),
+    },
+    {},
+  );
+  const { persist } = renderConnectAct();
+
+  expect(
+    await screen.findByText(en["ob.conv.connect.rosterFailedTitle"]),
+  ).toBeTruthy();
+  expect(screen.getByRole("button", { name: "Retry" })).toBeTruthy();
+  const skip = screen.getByRole("button", { name: "Skip for now" });
+  expect(skip).not.toBeDisabled();
+  await userEvent.click(skip);
+  await waitFor(() =>
+    expect(persist).toHaveBeenCalledWith(
+      expect.objectContaining({ step: "complete", connectSkipped: true }),
+    ),
+  );
+});
+
+// Mail capture switched off is an answer, not a failure: nothing to retry and
+// nothing to pick, and the step can still be left.
+it("says mail capture is off on an installation that never wired it", async () => {
+  stubWithSession(
+    {
+      "GET /connectors": () => jsonResponse({ code: "not_implemented" }, 501),
+    },
+    {},
+  );
+  renderConnectAct();
+
+  expect(await screen.findByText(en["connectors.notConfigured"])).toBeTruthy();
+  expect(
+    screen.queryByText(en["ob.conv.connect.rosterFailedTitle"]),
+  ).toBeNull();
+  expect(screen.queryByRole("button", { name: "Retry" })).toBeNull();
+  expect(screen.queryByRole("radio", { name: /Google/ })).toBeNull();
+  expect(
+    screen.getByText(en["ob.conv.connect.skipCaptionNotConfigured"]),
+  ).toBeTruthy();
+  expect(
+    screen.getByRole("button", { name: "Skip for now" }),
+  ).not.toBeDisabled();
 });
 
 // The mark tells a real return apart from a stale or bookmarked outcome URL
@@ -220,6 +273,33 @@ it("offers to skip before any consent round trip", () => {
   expect(screen.getByRole("button", { name: "Skip for now" })).toBeTruthy();
 });
 
+// The voice step stays reachable from here, by the same move the browser's
+// Back key makes.
+it("offers a way back to the voice step", async () => {
+  stubWithSession({ "GET /connectors": () => jsonResponse({ data: [] }) }, {});
+  const { dispatch } = renderConnectAct();
+  await userEvent.click(screen.getByRole("button", { name: en["ob.back"] }));
+  expect(dispatch).toHaveBeenCalledWith({ type: "CONNECT_BACK" });
+});
+
+it("offers no way back where the journey has no voice step", () => {
+  stubWithSession({ "GET /connectors": () => jsonResponse({ data: [] }) }, {});
+  const state: ConversationState = {
+    ...initialConversationState,
+    act: "connect",
+    phase: "cn.consent",
+    voiceStep: false,
+  };
+  render(
+    <QueryClientProvider client={new QueryClient()}>
+      <LocaleProvider initial="en">
+        <ConnectAct state={state} dispatch={vi.fn()} persist={vi.fn()} />
+      </LocaleProvider>
+    </QueryClientProvider>,
+  );
+  expect(screen.queryByRole("button", { name: en["ob.back"] })).toBeNull();
+});
+
 // After a successful consent it is no longer true, and recording the step as
 // skipped would persist a fact contradicted by the roster.
 it("stops offering the skip once consent has returned", async () => {
@@ -260,6 +340,32 @@ describe("the way onward", () => {
     const onward = screen.getByRole("button", { name: "Skip for now" });
     expect(onward.closest(".ob-stage-acts")).toBeTruthy();
   });
+
+  // The board scrolls and the rail does not. A refusal drawn under the scene
+  // lands below the fold while the pressed button just stops spinning.
+  it("says a finish that could not be saved beside the button pressed", async () => {
+    stubWithSession(
+      { "GET /connectors": () => jsonResponse({ data: [] }) },
+      {},
+    );
+    const { dispatch } = renderConnectAct(
+      undefined,
+      "pending",
+      "cn.consent",
+      undefined,
+      false,
+    );
+    const onward = screen.getByRole("button", { name: "Skip for now" });
+    await waitFor(() => expect(onward).not.toBeDisabled());
+    await userEvent.click(onward);
+
+    const alert = await screen.findByRole("alert");
+    expect(alert.textContent).toBe(en["ob.conv.connect.persistFailed"]);
+    expect(alert.closest(".ob-stage-acts")).toBe(
+      onward.closest(".ob-stage-acts"),
+    );
+    expect(dispatch).not.toHaveBeenCalledWith({ type: "CONNECT_DONE" });
+  });
 });
 
 describe("the IMAP form", () => {
@@ -282,8 +388,7 @@ describe("the IMAP form", () => {
     expect(screen.getByLabelText("App password *")).toBeTruthy();
     expect(screen.getByLabelText("Mailbox")).toBeTruthy();
     // Sending is opt-in: the one tick in the form starts off, and the
-    // outgoing server's fields show only once it is on. Scoped to the form:
-    // the step around it carries the overnight question's own checkbox.
+    // outgoing server's fields show only once it is on.
     const send = within(form).getByRole("checkbox");
     expect(send).not.toBeChecked();
     expect(within(form).queryByLabelText(/smtp/i)).toBeNull();
@@ -441,10 +546,8 @@ it("grants nothing when the reader skips connecting a mailbox", async () => {
   const without = screen.getByRole("button", { name: "Skip for now" });
   await waitFor(() => expect(without).not.toBeDisabled());
   await userEvent.click(without);
-  // The agent reads their mail to build the brief, so authority over a mailbox
-  // that was never connected is authority over nothing — recorded as though
-  // the rep had agreed to something real. The box stays ticked; going on
-  // without a mailbox is what decides.
+  // The agent reads their mail to build the brief. Authority over a mailbox
+  // that was never connected is authority over nothing, so none is recorded.
   await waitFor(() =>
     expect(dispatch).toHaveBeenCalledWith({ type: "CONNECT_DONE" }),
   );

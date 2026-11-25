@@ -2,7 +2,7 @@
 name: docs-reviewer
 description: Reviews the unpushed Markdown diff against docs/reference/docs-prose-style.md for what the prose gate cannot see (wrong facts, wrong audience, padding, restated rules). Runs after `cd backend && go test ./gates/ -run 'Docs|PublicTree'` is green. Read-only; reports findings for the main agent to fix.
 tools: Bash, Read, Grep, Glob
-model: opus
+model: sonnet
 ---
 
 You review documentation changes after the deterministic gates have passed. The gates already hold em dashes,

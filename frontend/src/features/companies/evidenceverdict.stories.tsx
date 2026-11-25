@@ -106,18 +106,20 @@ export const SavingCorrection: Story = {
   render: verdict({ [CORRECT]: neverAnswers }),
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
+    // The correction opens in a dialog, outside the canvas.
+    const dialogs = within(canvasElement.ownerDocument.body);
     const user = userEvent.setup();
     await user.click(
       await canvas.findByRole("button", { name: en["evidence.correct"] }),
     );
-    const field = await canvas.findByRole("textbox", {
-      name: en["evidence.correctedValue"],
+    const field = await dialogs.findByRole("textbox", {
+      name: new RegExp(`^${en["evidence.correctedValue"]}`),
     });
     await user.clear(field);
     await user.type(field, "Automotive tier-one supply");
-    await user.click(canvas.getByRole("button", { name: en["evidence.save"] }));
-    const save = await canvas.findByRole("button", {
-      name: en["evidence.save"],
+    await user.click(dialogs.getByRole("button", { name: en["record.save"] }));
+    const save = await dialogs.findByRole("button", {
+      name: en["record.save"],
     });
     await waitFor(() => {
       expect(save).toHaveAttribute("aria-busy", "true");
@@ -138,17 +140,19 @@ export const CorrectionRefused: Story = {
   }),
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
+    // The correction opens in a dialog, outside the canvas.
+    const dialogs = within(canvasElement.ownerDocument.body);
     const user = userEvent.setup();
     await user.click(
       await canvas.findByRole("button", { name: en["evidence.correct"] }),
     );
-    const field = await canvas.findByRole("textbox", {
-      name: en["evidence.correctedValue"],
+    const field = await dialogs.findByRole("textbox", {
+      name: new RegExp(`^${en["evidence.correctedValue"]}`),
     });
     await user.clear(field);
     await user.type(field, "Automotive tier-one supply");
-    await user.click(canvas.getByRole("button", { name: en["evidence.save"] }));
-    const refusal = await canvas.findByRole("alert");
+    await user.click(dialogs.getByRole("button", { name: en["record.save"] }));
+    const refusal = await dialogs.findByRole("alert");
     await expect(refusal).toHaveTextContent(en["common.versionSkew"]);
     await expect(refusal).toHaveClass("field-error");
     await expect(field).toHaveAttribute("aria-invalid", "true");

@@ -312,13 +312,16 @@ export function BriefReadingsStrip({ day }: Readonly<{ day: Worklist }>) {
         <LaneReading
           scope={day.scope}
           label={t("brief.readings.decisions")}
+          // The Worklist strip's figure, which the server states as the exact
+          // decisions total wherever it has one.
           count={
-            decisionsTotal ??
-            (day.sources_unavailable.some(
+            decisionsTotal === undefined &&
+            day.sources_unavailable.some(
               (entry) => entry.category === DECISIONS || !entry.category,
-            ) && readings.review === 0
+            ) &&
+            readings.review === 0
               ? null
-              : readings.review)
+              : readings.review
           }
           floor={decisionsTotal === undefined && floorOf(DECISIONS)}
           // Only where something IS held up, and how much of it. Otherwise the

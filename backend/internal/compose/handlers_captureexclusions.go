@@ -13,6 +13,7 @@ import (
 
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
+	"github.com/margince/margince/backend/internal/compose/capturepurgebind"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/platform/httperr"
@@ -94,7 +95,12 @@ func (h captureExclusionHandlers) PurgeCaptureExclusion(
 		return
 	}
 	preview := params.Preview != nil && *params.Preview
-	outcome, err := h.purger.Purge(r.Context(), ids.UUID(id), preview)
+	ctx, err := capturepurgebind.Bind(r.Context(), params.ExpectDestroyed, params.ExpectReleased, params.ExpectAnonymised)
+	if err != nil {
+		httperr.Write(w, r, err)
+		return
+	}
+	outcome, err := h.purger.Purge(ctx, ids.UUID(id), preview)
 	if err != nil {
 		httperr.Write(w, r, err)
 		return
@@ -114,9 +120,10 @@ func (h captureExclusionHandlers) PurgeCaptureExclusion(
 // rather than sending an empty class beside a zero.
 func keptContract(kept KeptBreakdown) crmcontracts.CaptureKeptBreakdown {
 	out := crmcontracts.CaptureKeptBreakdown{
-		Held:         kept.Held,
-		UnderStatute: kept.UnderStatute,
-		UnderRequest: kept.UnderRequest,
+		Held:                   kept.Held,
+		UnderStatute:           kept.UnderStatute,
+		UnderRequest:           kept.UnderRequest,
+		UnderUndeterminedFloor: kept.UnderUndeterminedFloor,
 	}
 	if kept.StatutoryClass != "" {
 		out.StatutoryClass = &kept.StatutoryClass

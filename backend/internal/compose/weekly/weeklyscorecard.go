@@ -27,6 +27,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/modules/privacy"
+	"github.com/margince/margince/backend/internal/modules/reporting"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
@@ -127,10 +128,18 @@ type DealBlock struct {
 // this week.
 const multiThreadWindow = 30 * 24 * time.Hour
 
-// minStakeholders is how many distinct contacts a deal needs to count as
-// multi-threaded. Two, because the risk being measured is the single point of
-// failure: one contact who leaves takes the deal with them.
-const minStakeholders = 2
+// multiThreadFloor is how many distinct contacts a deal needs to count as
+// multi-threaded: one more than the published threshold allows a
+// single-threaded deal. reporting.SingleThreaded is not called here because
+// its touch arm answers the other question: an untouched deal is not
+// single-threaded, and it is not multi-threaded either.
+func multiThreadFloor(ctx context.Context, tx pgx.Tx) (int, error) {
+	thresholds, _, err := reporting.AccountCoverageThresholds(ctx, tx)
+	if err != nil {
+		return 0, err
+	}
+	return *thresholds.MaxEngagedSeats + 1, nil
+}
 
 // scoreWeek reads both blocks for one rep's closed week.
 //
@@ -231,7 +240,7 @@ func scoreLeads(
 		    FROM activity_meeting_history h
 		    JOIN activity m ON m.id = h.activity_id
 		   WHERE m.kind = 'meeting'
-		     AND `+meetingIsTheirsSQL("$%[3]d")+`
+		     AND `+meetingIsTheirsSQL(transitionCredit, "m", "$%[3]d")+`
 		     AND m.archived_at IS NULL
 		     AND h.effective_at >= $%[1]d AND h.effective_at < $%[2]d
 		     AND NOT `+activities.ReversedCancellationSQL("h")+`
@@ -320,7 +329,7 @@ func scoreDeals(
 	// The reporting zone, because expected_close_date is a DATE and the window
 	// is an instant: cast without it and Postgres uses the session zone, which
 	// puts a deal closing near midnight on the wrong side of the boundary.
-	zone, err := identity.TimezoneOf(ctx, tx)
+	zone, err := identity.TimezoneAppliedTx(ctx, tx)
 	if err != nil {
 		return nil, err
 	}
@@ -328,7 +337,11 @@ func scoreDeals(
 	arg := func(v any) int { args = append(args, v); return len(args) }
 	startPos, endPos, userPos := arg(start), arg(end), arg(userID)
 	sincePos := arg(end.Add(-multiThreadWindow))
-	stakeholdersPos := arg(minStakeholders)
+	stakeholders, err := multiThreadFloor(ctx, tx)
+	if err != nil {
+		return nil, err
+	}
+	stakeholdersPos := arg(stakeholders)
 	zonePos := arg(zone)
 	// The erasure boundary's vocabulary, bound once and read by the rewind.
 	// privacy owns the list; a literal here would be a second copy of the one

@@ -129,6 +129,15 @@ func refusedFor(t *testing.T, err error, want LegalReviewStatus) {
 	if required.ReviewStatus != want {
 		t.Fatalf("the refusal named a %q review, want %q", required.ReviewStatus, want)
 	}
+	wantState := map[LegalReviewStatus]string{
+		ReviewRequested: reviewStatePending, ReviewChangesNeeded: reviewStateChangesNeeded,
+	}[want]
+	if wantState == "" {
+		wantState = reviewStateNone
+	}
+	if got := wireReviewState(t, err); got != wantState {
+		t.Fatalf("the refusal sent review_state %q for a %q review, want %q", got, want, wantState)
+	}
 }
 
 func (e *reviewEnv) request(t *testing.T, dealID ids.DealID, previous *ids.UUID) ids.UUID {
@@ -351,7 +360,7 @@ func queueDeal(t *testing.T, e *reviewEnv, stageID ids.StageID, name string, amo
 	if err := e.owner.QueryRow(t.Context(), `SELECT pipeline_id FROM stage WHERE id = $1`, stageID).Scan(&pipelineID); err != nil {
 		t.Fatal(err)
 	}
-	in := CreateDealInput{Name: name, PipelineID: pipelineID, StageID: stageID, AmountMinor: amount, ExpectedClose: closeOn}
+	in := CreateDealInput{Source: "manual", Name: name, PipelineID: pipelineID, StageID: stageID, AmountMinor: amount, ExpectedClose: closeOn}
 	if amount != nil {
 		in.Currency = new("EUR")
 	}
@@ -462,7 +471,7 @@ func TestADealCannotBeCreatedPastAStageThatNeedsLegal(t *testing.T) {
 	if err := e.owner.QueryRow(t.Context(), `SELECT pipeline_id FROM stage WHERE id = $1`, last).Scan(&pipelineID); err != nil {
 		t.Fatal(err)
 	}
-	_, err := e.store.CreateDeal(e.asRequester(), CreateDealInput{Name: "Skipped legal", PipelineID: pipelineID, StageID: last})
+	_, err := e.store.CreateDeal(e.asRequester(), CreateDealInput{Source: "manual", Name: "Skipped legal", PipelineID: pipelineID, StageID: last})
 	if _, refused := errors.AsType[*LegalGateOnCreateError](err); !refused {
 		t.Fatalf("a deal born past the gated stage answered %v, want legal_review_required", err)
 	}
@@ -479,7 +488,11 @@ func TestAnApprovalLapsesWhenTheAmountChanges(t *testing.T) {
 		t.Fatalf("changing the amount: %v", err)
 	}
 	var required *LegalReviewRequiredError
-	if err := e.advance(dealID, toID); !errors.As(err, &required) || !required.TermsChanged {
+	err := e.advance(dealID, toID)
+	if !errors.As(err, &required) || !required.TermsChanged {
 		t.Fatalf("a deal whose amount changed after approval answered %v, want the terms-changed refusal", err)
+	}
+	if got := wireReviewState(t, err); got != reviewStateTermsChanged {
+		t.Fatalf("the refusal sent review_state %q, want %q", got, reviewStateTermsChanged)
 	}
 }

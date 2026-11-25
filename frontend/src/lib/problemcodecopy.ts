@@ -2,7 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { MessageKey } from "../i18n/en";
-import { problemCode, problemDetails } from "./problembody";
+import { problemCode, problemDetails, problemFieldErrors } from "./problembody";
 
 // Wire codes whose server detail is not a sentence for this screen's reader,
 // and the catalog copy problemDetail (problem.ts) shows in its place.
@@ -12,6 +12,7 @@ export const PROBLEM_CODE_COPY = new Map<string, MessageKey>([
   ["booking_horizon", "scheduling.windowHorizon"],
   ["booking_notice", "scheduling.windowNotice"],
   ["booking_limits", "scheduling.windowLimits"],
+  ["length_not_offered", "book.lengthNotOffered"],
   ["approval_preview_incomplete", "approval.preview.incomplete"],
   ["approval_preview_unavailable", "approval.preview.unavailable"],
   ["approval_preview_conflict", "approval.preview.resolveConflict"],
@@ -36,6 +37,8 @@ export const PROBLEM_CODE_COPY = new Map<string, MessageKey>([
   ["role_cannot_capture", "connectors.roleCannotCapture"],
   // The installation switched off individual performance; the detail is English.
   ["individual_performance_off", "common.individualPerformanceOff"],
+  // An owner filter naming someone the reader may not measure; the detail is English.
+  ["owner_not_measurable", "common.ownerNotMeasurable"],
   // The server's skew detail is English, worded for API and agent readers.
   ["version_skew", "common.versionSkew"],
   // The detail names a stage or a kind of stage in English.
@@ -63,7 +66,8 @@ export const PROBLEM_CODE_COPY = new Map<string, MessageKey>([
   ["website_form_busy", "webForms.handlingBusy"],
   // The server's detail lists the closed vocabulary by its wire spellings.
   ["win_evidence_required", "deals.winEvidenceRequired"],
-  // The detail is one English sentence per review state.
+  // The detail is one English sentence per review state; legalReviewRefusalCopy
+  // picks the state's own sentence when the fault names it.
   ["legal_review_required", "legalReview.advanceRefused"],
   ["run_in_flight", "import.reason.run_in_flight"],
   // A date-only meeting cannot hold its host's calendar hour.
@@ -94,7 +98,12 @@ export const PROBLEM_CODE_COPY = new Map<string, MessageKey>([
   ["linkedin_url_not_linkedin", "create.linkedinNotLinkedin"],
   ["linkedin_url_not_profile", "create.linkedinNotProfile"],
   ["invalid_date_range", "create.dateRangeReversed"],
-  ["invalid_country_code", "create.countryCodeInvalid"],
+  ["domain_malformed", "create.domainMalformed"],
+  // params.name names the chosen parent, which already sits below the company.
+  ["parent_company_below", "create.parentCompanyBelow"],
+  ["parent_company_self", "create.parentCompanySelf"],
+  ["delivery_team_gone", "delivery.teamGone"],
+  ["invalid_country_code", "legalEntities.invalidCountry"],
   // A Deal Room refusal: the detail is an English API sentence.
   ["deal_room_document_already_present", "room.docs.alreadyPresent"],
   // The detail says to regenerate, which a draft cannot; one sentence serves both.
@@ -120,6 +129,27 @@ export function heldByColleagueCopy(problem: unknown): MessageKey | undefined {
   return problemDetails(problem)?.share_requested === true
     ? "common.heldByColleague.asked"
     : "common.heldByColleague";
+}
+
+// The next step a legal refusal asks for, by the review state it names. An
+// older server and the create refusal name none, and keep the generic sentence.
+const LEGAL_REVIEW_STATE_COPY: Readonly<Record<string, MessageKey>> = {
+  none: "legalReview.advanceRefused",
+  pending: "legalReview.advanceRefused.pending",
+  changes_needed: "legalReview.advanceRefused.changesNeeded",
+  terms_changed: "legalReview.advanceRefused.termsChanged",
+};
+
+export function legalReviewRefusalCopy(
+  problem: unknown,
+): MessageKey | undefined {
+  const fault = problemFieldErrors(problem).find(
+    (f) => f.code === "legal_review_required",
+  );
+  const state = fault?.params?.review_state;
+  return state !== undefined && Object.hasOwn(LEGAL_REVIEW_STATE_COPY, state)
+    ? LEGAL_REVIEW_STATE_COPY[state]
+    : undefined;
 }
 
 // The grant a capture refusal names; an older server sends none, and the

@@ -23,7 +23,7 @@ func TestGroupingDealsByLinkTypeCountsEveryDealOnce(t *testing.T) {
 	store := deals.NewStore(e.DB(), installseam.Deals())
 	var seeded []ids.UUID
 	for _, name := range []string{"Original", "Follow-up", "Renewal", "Alone", "Linked to a company"} {
-		deal, err := store.CreateDeal(e.Admin(), deals.CreateDealInput{Name: name, PipelineID: pipeline, StageID: open})
+		deal, err := store.CreateDeal(e.Admin(), deals.CreateDealInput{Source: "manual", Name: name, PipelineID: pipeline, StageID: open})
 		if err != nil {
 			t.Fatal(err)
 		}

@@ -39,6 +39,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/riverqueue/river"
 
+	"github.com/margince/margince/backend/internal/compose/proposalstage"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/modules/deals"
@@ -81,6 +82,8 @@ const (
 	eventContractStatusChanged = "contract.status_changed"
 	eventActivityCaptured      = "activity.captured"
 	eventActivityUpdated       = "activity.updated"
+	eventOfferSent             = "offer.sent"
+	eventDealStageChanged      = "deal.stage_changed"
 )
 
 // activityKindMeeting is the activity.kind a meeting carries. Read from the row
@@ -109,6 +112,9 @@ type StageEvidenceTrigger struct {
 	// reading runs in. A seam rather than a call, so a test can drive the
 	// trigger without bootstrapping one.
 	workspace func(context.Context) (ids.WorkspaceID, error)
+	// proposals asks a deal's owner to move it to the proposal stage when a
+	// proposal went out. It retires the question once the deal has moved.
+	proposals *proposalstage.Suggester
 	log       *slog.Logger
 	// now is the clock the backlog window is measured on.
 	now func() time.Time
@@ -123,6 +129,7 @@ func NewStageEvidenceTrigger(
 	return &StageEvidenceTrigger{
 		pool: pool, deals: store, own: own, read: read,
 		workspace: identity.NewService(pool).InstallationWorkspace,
+		proposals: proposalstage.New(InstallationDB(pool), NewApprovalsService(InstallationDB(pool))),
 		log:       log, now: time.Now,
 	}
 }
@@ -158,11 +165,17 @@ func StageEvidenceDomains(pool *pgxpool.Pool) ownDomainReader {
 // HandleEvent routes one envelope. An event this consumer does not care about
 // answers nil so the group keeps flowing.
 func (t *StageEvidenceTrigger) HandleEvent(ctx context.Context, env events.Envelope) error {
+	if !events.StageEvidenceTypes.Has(env.Type) {
+		return nil
+	}
 	// Older than the window is replayed history, not news. Writing evidence
 	// from it would place a row against a stage the deal reached long
 	// afterwards, so skipping is nil rather than an error — an error would
 	// redeliver it forever.
-	if t.now().Sub(env.OccurredAt) > stageEvidenceBacklogWindow {
+	//
+	// A stage change only retires a question. An old one is as true as a new
+	// one, because the deal reached that stage whenever it did.
+	if env.Type != eventDealStageChanged && t.now().Sub(env.OccurredAt) > stageEvidenceBacklogWindow {
 		return nil
 	}
 	// Bound HERE rather than at the write, because the READS need it too: the
@@ -183,6 +196,10 @@ func (t *StageEvidenceTrigger) HandleEvent(ctx context.Context, env events.Envel
 		return t.onActivityCaptured(ctx, env)
 	case eventActivityUpdated:
 		return t.onActivityUpdated(ctx, env)
+	case eventOfferSent:
+		return t.proposals.OnOfferSent(ctx, env.Entity.ID, env.Payload)
+	case eventDealStageChanged:
+		return t.proposals.Retire(ctx, ids.From[ids.DealKind](env.Entity.ID))
 	}
 	return nil
 }
@@ -338,6 +355,10 @@ func (t *StageEvidenceTrigger) judgeActivity(ctx context.Context, activityID ids
 	// meeting or not: a criterion settled in prose is settled in an ordinary
 	// email, and the deterministic arm below has nothing to say about one.
 	if err := t.queueReading(ctx, facts.DealID, activityID); err != nil {
+		return err
+	}
+	// A proposal attached under a file name that says so needs no reading.
+	if err := t.proposals.SuggestForAttachedFile(ctx, facts, activityID); err != nil {
 		return err
 	}
 	if facts.Kind != activityKindMeeting {

@@ -10,6 +10,7 @@ import {
   derivationColumns,
   parseDerivationQuery,
 } from "./analytics.explain";
+import { REPORT_SCHEMA } from "./analytics.questions.testkit";
 import { type ReportsStubOpts, render, reportsStub } from "./analytics.testkit";
 
 // "Explain this number" in both of its hosts: the panel under a report card,
@@ -462,6 +463,41 @@ describe("what the explanation owns up to", () => {
     ).toBeTruthy();
   });
 
+  it("heads the partner column apart from the company column", async () => {
+    const drawer = await drawerWith({
+      columns: ["label", "company_id", "partner_company_id"],
+      rows: [{ label: "Fleet retrofit" }],
+    });
+    const headers = within(drawer)
+      .getAllByRole("columnheader")
+      .map((header) => header.textContent);
+    expect(headers).toEqual(["Deal", "Company", "Partner company"]);
+  });
+
+  // The row's `currency` is the deal's own, so a converted column says it is not.
+  it("names the base currency over converted money and only there", async () => {
+    const drawer = await drawerWith({
+      columns: ["label", "amount_base_minor", "amount_minor", "currency"],
+      rows: [
+        {
+          label: "Fleet retrofit",
+          amount_base_minor: 736000,
+          amount_minor: 800000,
+          currency: "USD",
+        },
+      ],
+    });
+    const headers = within(drawer)
+      .getAllByRole("columnheader")
+      .map((header) => header.textContent);
+    expect(headers).toEqual([
+      "Deal",
+      "Deal value (EUR)",
+      "Deal value",
+      "Currency",
+    ]);
+  });
+
   // The server caps the rows and still counts them all; a capped list that
   // did not say so would read as the whole set.
   it("states the rows the cap left off", async () => {
@@ -502,38 +538,48 @@ describe("parseDerivationQuery", () => {
 // same row. Formatting both against the base currency puts a euro sign on a
 // dollar deal — a wrong number wearing a right-looking symbol.
 describe("drill-through money", () => {
+  // What the server marks each column as, across the deal and project reports.
+  const MONEY = Object.assign(
+    {},
+    ...REPORT_SCHEMA.entities.map((entity) => entity.money),
+  );
+
   it("writes a converted measure in the base currency", () => {
     const row = { amount_base_minor: 500000, currency: "USD" };
-    expect(derivationCellCurrency("amount_base_minor", row, "EUR")).toBe("EUR");
+    expect(derivationCellCurrency("amount_base_minor", row, "EUR", MONEY)).toBe(
+      "EUR",
+    );
   });
 
   it("writes an unconverted measure in the deal's own currency", () => {
     const row = { amount_minor: 500000, currency: "USD" };
-    expect(derivationCellCurrency("amount_minor", row, "EUR")).toBe("USD");
+    expect(derivationCellCurrency("amount_minor", row, "EUR", MONEY)).toBe(
+      "USD",
+    );
   });
 
   // The two project measures are named `_minor` and are already folded into
-  // the base currency. The name says native and the declaration says
+  // the base currency. The name says native and the served mark says
   // converted.
   //
-  // The declaration is the one that is right. A row carrying a currency beside
+  // The served mark is the one that is right. A row carrying a currency beside
   // them would otherwise stamp it on a converted total.
   it("writes a converted measure named _minor in the base currency", () => {
     const row = { open_deal_value_minor: 500000, currency: "USD" };
-    expect(derivationCellCurrency("open_deal_value_minor", row, "EUR")).toBe(
-      "EUR",
-    );
-    expect(derivationCellCurrency("won_deal_value_minor", row, "EUR")).toBe(
-      "EUR",
-    );
+    expect(
+      derivationCellCurrency("open_deal_value_minor", row, "EUR", MONEY),
+    ).toBe("EUR");
+    expect(
+      derivationCellCurrency("won_deal_value_minor", row, "EUR", MONEY),
+    ).toBe("EUR");
   });
 
   // A row that names no currency has nothing to write the figure in. Falling
   // back to the base currency would be a guess presented as a fact.
   it("names no currency for an unconverted measure on a row without one", () => {
-    expect(derivationCellCurrency("amount_minor", {}, "EUR")).toBeNull();
+    expect(derivationCellCurrency("amount_minor", {}, "EUR", MONEY)).toBeNull();
     expect(
-      derivationCellCurrency("amount_minor", { currency: "" }, "EUR"),
+      derivationCellCurrency("amount_minor", { currency: "" }, "EUR", MONEY),
     ).toBeNull();
   });
 });
@@ -583,6 +629,32 @@ describe("drill-through columns", () => {
         ),
       ),
     ).toEqual(["label", "currency", "owner_id", "amount_base_minor"]);
+  });
+
+  it("puts the deal's own company right after the record", () => {
+    expect(
+      derivationColumns(
+        shaped(
+          [
+            "id",
+            "label",
+            "close_month",
+            "currency",
+            "partner_company_id",
+            "company_id",
+            "amount_base_minor",
+          ],
+          [{ id: "a", label: "Acme" }],
+        ),
+      ),
+    ).toEqual([
+      "label",
+      "company_id",
+      "close_month",
+      "currency",
+      "partner_company_id",
+      "amount_base_minor",
+    ]);
   });
 
   it("keeps the id when no row could be named", () => {

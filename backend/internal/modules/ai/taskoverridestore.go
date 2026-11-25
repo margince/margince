@@ -64,7 +64,7 @@ func (s *RoutingStore) PreviewTaskOverrides(ctx context.Context, next TaskOverri
 	if err != nil {
 		return TaskOverridesPreview{}, err
 	}
-	for _, task := range AllTasks() {
+	for _, task := range RoutedTasks() {
 		plan, _ := boundPlan(routing, task, BandNormal)
 		out.Effective[task] = next.Effective(task, plannedModels(plan))
 	}

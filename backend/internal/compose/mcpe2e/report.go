@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"slices"
 	"sort"
 	"strings"
 )
@@ -22,10 +23,19 @@ var VerdictTrees = map[Door]string{
 var doors = []Door{DoorMCP, DoorREST}
 
 // RecordedStamp is the stamp a verdict carries: what it measured, and when.
+// Commit and RanAt are the model run's; GradedCommit and GradedAt are the
+// checker's, which differ when saved transcripts were graded again later.
 type RecordedStamp struct {
 	Stamp
-	Commit string `json:"commit"`
-	RanAt  string `json:"ran_at"`
+	Commit       string `json:"commit"`
+	RanAt        string `json:"ran_at"`
+	GradedCommit string `json:"graded_commit,omitempty"`
+	GradedAt     string `json:"graded_at,omitempty"`
+}
+
+// Regraded is whether a later checker graded the run's saved transcripts.
+func (r *RecordedStamp) Regraded() bool {
+	return r != nil && r.GradedCommit != "" && r.GradedCommit != r.Commit
 }
 
 // Verdict is one committed verdict file: how it went, how it was measured,
@@ -42,6 +52,40 @@ type Verdict struct {
 	Search     string         `json:"search"`
 	SelfJudged bool           `json:"self_judged"`
 	Stamp      *RecordedStamp `json:"stamp"`
+	// Efficiency is nil on a verdict recorded before the lane measured it.
+	// Slow is its median calls past the case's `expected_calls`.
+	Efficiency *Efficiency `json:"efficiency"`
+	Slow       bool        `json:"slow"`
+	// ToolsByRun is each run's tools that worked, by bare name, and whether
+	// that run passed. ToolsCalled is the older union over every run.
+	ToolsByRun  []RunTools `json:"tools_by_run"`
+	ToolsCalled []string   `json:"tools_called"`
+}
+
+// RunTools is one run's tools that worked, and whether the run passed.
+type RunTools struct {
+	Passed bool     `json:"passed"`
+	Tools  []string `json:"tools"`
+}
+
+// PassingTools names the tools a passing run used, sorted. An older verdict
+// holds only the union over every run, which is a passing run's only when
+// every run passed.
+func (v Verdict) PassingTools() []string {
+	if v.ToolsByRun == nil {
+		if v.Runs > 0 && v.Passed == v.Runs {
+			return v.ToolsCalled
+		}
+		return nil
+	}
+	var tools []string
+	for _, run := range v.ToolsByRun {
+		if run.Passed {
+			tools = append(tools, run.Tools...)
+		}
+	}
+	slices.Sort(tools)
+	return slices.Compact(tools)
 }
 
 // Unstamped is the reason a verdict made before the stamp existed gives.
@@ -49,14 +93,14 @@ const Unstamped = "no stamp"
 
 // Recheck names why a verdict no longer describes the product. It answers the
 // parts that moved, "no stamp" or "no scenario"; empty means it is current.
-func Recheck(recorded *RecordedStamp, current Stamp, scenarioExists bool) []string {
+func Recheck(recorded *RecordedStamp, current Stamp, scenarioExists bool, driver string) []string {
 	switch {
 	case !scenarioExists:
 		return []string{"no scenario"}
 	case recorded == nil:
 		return []string{Unstamped}
 	default:
-		return recorded.Moved(current)
+		return recorded.Moved(current, driver)
 	}
 }
 
@@ -140,7 +184,7 @@ func Report(root string) ([]Line, error) {
 	out := make([]Line, 0, len(verdicts))
 	for _, v := range verdicts {
 		stamp, exists := current[v.Door][v.Scenario]
-		out = append(out, Line{Verdict: v, Why: Recheck(v.Stamp, stamp, exists)})
+		out = append(out, Line{Verdict: v, Why: Recheck(v.Stamp, stamp, exists, v.Driver)})
 	}
 	return out, nil
 }
@@ -171,7 +215,7 @@ func NewlyStale(baseRoot, headRoot string) ([]Line, error) {
 	var out []Line
 	for _, line := range lines {
 		was, existed := base[line.Door][line.Scenario]
-		if len(line.Why) > 0 && len(Recheck(line.Stamp, was, existed)) == 0 {
+		if len(line.Why) > 0 && len(Recheck(line.Stamp, was, existed, line.Driver)) == 0 {
 			out = append(out, line)
 		}
 	}
@@ -183,11 +227,15 @@ func NewlyStale(baseRoot, headRoot string) ([]Line, error) {
 func Summarise(lines []Line) string {
 	type tally struct{ current, stale int }
 	counts := map[string]*tally{}
-	var stale []string
+	var stale, regraded []string
 	for _, line := range lines {
 		key := line.Tree + "/" + line.Folder
 		if counts[key] == nil {
 			counts[key] = &tally{}
+		}
+		if line.Stamp.Regraded() {
+			regraded = append(regraded, fmt.Sprintf("  re-graded  %s %s: run at %s, graded at %s",
+				key, line.Scenario, line.Stamp.Commit, line.Stamp.GradedCommit))
 		}
 		if len(line.Why) == 0 {
 			counts[key].current++
@@ -205,9 +253,8 @@ func Summarise(lines []Line) string {
 	for _, key := range keys {
 		fmt.Fprintf(&b, "%s: %d current, %d stale\n", key, counts[key].current, counts[key].stale)
 	}
-	b.WriteString(strings.Join(stale, "\n"))
-	if len(stale) > 0 {
-		b.WriteString("\n")
+	for _, detail := range append(stale, regraded...) {
+		b.WriteString(detail + "\n")
 	}
 	return b.String()
 }

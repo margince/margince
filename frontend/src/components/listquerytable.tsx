@@ -9,6 +9,7 @@ import { Button } from "../design-system/atoms";
 import {
   type ListChip,
   type ListColumn,
+  type ListRefusal,
   type ListSelection,
   ListTable as ListSurface,
   type ViewRow,
@@ -27,7 +28,11 @@ import {
   watchAddress,
 } from "../lib/router";
 import { useScrollMemory } from "../lib/scrollmemory";
-import { currentParams, useUrlParams } from "../lib/urlstate";
+import {
+  currentParams,
+  useNarrowedFromOutside,
+  useUrlParams,
+} from "../lib/urlstate";
 import type {
   FilterSpec,
   ListState,
@@ -73,6 +78,7 @@ export function ListTable<Row>({
   views = [],
   dataViews = [],
   action,
+  refusal,
   caption,
   footer,
   searchable = true,
@@ -150,6 +156,8 @@ export function ListTable<Row>({
    */
   dataViews?: readonly SavedViewTab[];
   action?: ReactNode;
+  /** Why `action` is refused; see the design-system ListTable. */
+  refusal?: ListRefusal;
   /** What this list is, for the lists that need saying. Never the screen name. */
   caption?: MessageKey;
   footer?: ReactNode;
@@ -189,9 +197,9 @@ export function ListTable<Row>({
   const { rows, query, setQuery, isPending, isError, error, refetch } = state;
   // The rendered page is a dial like the rest, so it comes from the address.
   // Read here rather than threaded through ListState: it is the only dial the
-  // table owns by default. A screen that never puts it in the URL keeps the
-  // table's own number.
+  // table owns by default.
   const [params, setParams] = useUrlParams();
+  const narrowedFromOutside = useNarrowedFromOutside(JSON.stringify(query));
   // Where the reader was in the rows, which the shell cannot remember for them.
   // A full-height list takes the overflow itself, so the page column the shell
   // watches is at zero on every one of these screens. Back then returned
@@ -237,15 +245,6 @@ export function ListTable<Row>({
   const [view, pickView] = useActiveView(railViews, query);
   // No tab lit means the list departs from every view this rail offers.
   const changed = railViews.length > 0 && view < 0;
-  // Keyed on the values, not on the arrays that carry them. The table treats a
-  // new `chosen` object as the reader narrowing the list and resets to page 1.
-  // So an object rebuilt every render resets on every render. Pressing Next
-  // re-read page 2, then snapped back to page 1, and the list flipped between
-  // the first two pages forever.
-  //
-  // `chips` cannot be the key: screens declare it as an inline array literal,
-  // which is a fresh reference each render. The option values are what
-  // chosenFor reads, and they are strings.
   // Every chip on the surface, declared and data-driven alike. The owner dial
   // is a dataChip because it names colleagues at runtime, and code that asks
   // which chips there are must see it. Reading `chips` alone once made picking
@@ -420,6 +419,7 @@ export function ListTable<Row>({
       emptyNote={emptyNote}
       emptyLine={emptyLine}
       action={action}
+      refusal={refusal}
       caption={caption ? t(caption) : undefined}
       footer={footer}
       tools={tools}
@@ -479,6 +479,7 @@ export function ListTable<Row>({
       onPage={(next) =>
         setParams(withListPage(currentParams(), next, state.paramScope))
       }
+      keepsPage={narrowedFromOutside}
       bodyRef={rowsScroller}
       widthsKey={layoutKey}
       body={body}

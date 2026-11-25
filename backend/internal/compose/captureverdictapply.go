@@ -252,7 +252,7 @@ func (e *CounterpartyVerdictEngine) hideNoise(ctx context.Context, tx pgx.Tx, ro
 // owner's click do" finds one function and the answer beside it.
 func (e *CounterpartyVerdictEngine) applyOwnerDecision(ctx context.Context, row capture.PendingCounterparty, kind string) (int, error) {
 	// No measurement: a human decided, and no model was asked.
-	done, err := e.apply(ctx, row, kind, true, capture.VerdictMeasurement{})
+	done, err := e.ledgerOf().Settle(ctx, row, kind, true, capture.VerdictMeasurement{})
 	if err != nil {
 		return 0, err
 	}
@@ -285,7 +285,7 @@ func (e *CounterpartyVerdictEngine) applyJudged(
 		return 0, fmt.Errorf(
 			"verdict: refusing to create a %s record below the create floor", verdict)
 	}
-	done, err := e.apply(ctx, row, verdict, false, measured)
+	done, err := e.ledgerOf().Settle(ctx, row, verdict, false, measured)
 	if err != nil {
 		return 0, err
 	}
@@ -303,14 +303,12 @@ func (e *CounterpartyVerdictEngine) applyJudged(
 // reply is dropped by the validator before it reaches here — so the fallback is
 // not decoration: without it a retirement after a failed re-ask would record
 // nothing, which reads as "no model was asked" when two were.
-func lastMeasurement(
-	retry []verdictResult, retryModel string, first []verdictResult, firstModel string,
-) capture.VerdictMeasurement {
+func lastMeasurement(retry, first []verdictResult) capture.VerdictMeasurement {
 	if len(retry) == 1 {
-		return capture.MeasuredVerdict(float64(retry[0].Confidence), retryModel)
+		return capture.MeasuredVerdict(float64(retry[0].Confidence))
 	}
 	if len(first) == 1 {
-		return capture.MeasuredVerdict(float64(first[0].Confidence), firstModel)
+		return capture.MeasuredVerdict(float64(first[0].Confidence))
 	}
 	return capture.VerdictMeasurement{}
 }

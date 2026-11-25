@@ -3,6 +3,7 @@ import "@testing-library/jest-dom/vitest";
 
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import {
+  act,
   cleanup,
   render as rtlRender,
   screen,
@@ -10,7 +11,7 @@ import {
   within,
 } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import type { ReactNode } from "react";
+import { type ReactNode, useState } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../../api/schema";
 import { LocaleProvider } from "../../i18n";
@@ -189,19 +190,55 @@ describe("the bulk bar's roster caveat", () => {
   });
 });
 
-// Moving a stage fans out one advance per deal, each with the row's own
-// version guard: a guard pinned to the wrong revision refuses a write nobody
-// raced, and one missing lets a stale move overwrite a concurrent edit.
+// A stage move is one preview and one change on the server, each deal carrying
+// its own version. A fan-out of one advance per deal from the browser is what
+// this replaced, and it left no Undo.
 describe("the bulk bar's stage move", () => {
-  it("pins the row's version when moving a stage", async () => {
-    const sent: Request[] = [];
+  const SECOND: Deal = {
+    ...DEAL,
+    id: "d-2",
+    name: "Ott expansion",
+    version: 5,
+  };
+  const THIRD: Deal = { ...DEAL, id: "d-3", name: "Kern pilot" };
+  const PIPELINE = {
+    id: "p-1",
+    name: "Sales",
+    is_default: true,
+    stages: [STAGE, OTHER_STAGE],
+  };
+
+  type Write = { path: string; body: unknown };
+
+  // The server's answer to the preview: what it would change, and what it would
+  // leave alone with the reason it gives.
+  function stubMove(preview: Record<string, unknown>) {
+    const writes: Write[] = [];
     vi.stubGlobal(
       "fetch",
-      vi.fn(async (input: RequestInfo | URL) => {
-        const request = input instanceof Request ? input : null;
-        if (request && request.method !== "GET") {
-          sent.push(request);
-          return json(DEAL);
+      vi.fn(async (input: Request) => {
+        const path = new URL(input.url, "https://test.local").pathname;
+        if (input.method !== "GET") {
+          writes.push({ path, body: await input.clone().json() });
+        }
+        if (path === "/v1/bulk/preview") {
+          return json({
+            record_type: "deal",
+            verb: "move_stage",
+            count: 2,
+            affected: ["d-1", "d-2"],
+            excluded: [],
+            sample: [],
+            requires_confirmation: false,
+            confirm_token: "tok-1",
+            ...preview,
+          });
+        }
+        if (path === "/v1/bulk/execute") {
+          return json({ batch_id: "b-1", changed: 2, skipped: [] });
+        }
+        if (path === "/v1/pipelines") {
+          return json({ data: [PIPELINE], page: { has_more: false } });
         }
         return json({
           data: [{ id: "u-1", display_name: "Member" }],
@@ -209,17 +246,10 @@ describe("the bulk bar's stage move", () => {
         });
       }),
     );
-    const user = userEvent.setup();
-    render(
-      <DealBulkBar
-        deals={[DEAL]}
-        stages={[STAGE, OTHER_STAGE]}
-        onDone={() => {}}
-      />,
-    );
+    return writes;
+  }
 
-    // The deal is in s-1 already, and the bar skips a row that would not move —
-    // so the fixture needs a SECOND stage for the move to be a move at all.
+  async function pressMove(user: ReturnType<typeof userEvent.setup>) {
     await user.click(
       screen.getByRole("combobox", { name: en["deals.bulkStage"] }),
     );
@@ -231,96 +261,181 @@ describe("the bulk bar's stage move", () => {
     await user.click(
       screen.getByRole("button", { name: en["deals.bulkMove"] }),
     );
-
-    await waitFor(() => expect(sent).toHaveLength(1));
-    expect(sent[0].method).toBe("POST");
-    expect(new URL(sent[0].url, "https://test.local").pathname).toBe(
-      "/v1/deals/d-1/advance",
-    );
-    expect(sent[0].headers.get("If-Match")).toBe(String(DEAL.version));
-  });
-});
-
-describe("the bulk bar's stage move result", () => {
-  const SECOND: Deal = { ...DEAL, id: "d-2", name: "Ott expansion" };
-  const THIRD: Deal = { ...DEAL, id: "d-3", name: "Kern pilot" };
-
-  function stubAdvances() {
-    const advanced: string[] = [];
-    vi.stubGlobal(
-      "fetch",
-      vi.fn(async (input: Request) => {
-        const path = new URL(input.url, "https://test.local").pathname;
-        if (input.method === "POST") {
-          advanced.push(path);
-          return json(DEAL);
-        }
-        return json({ data: [], page: { has_more: false } });
-      }),
-    );
-    return advanced;
+    return screen.findByRole("dialog");
   }
 
-  async function moveTo(
-    user: ReturnType<typeof userEvent.setup>,
-    stage: Stage,
-  ) {
-    await user.click(
-      screen.getByRole("combobox", { name: en["deals.bulkStage"] }),
-    );
-    await user.click(
-      within(screen.getByRole("listbox")).getByRole("option", {
-        name: stage.name,
-      }),
-    );
-    await user.click(
-      screen.getByRole("button", { name: en["deals.bulkMove"] }),
-    );
-  }
-
-  it("says how many moved and how many were already there", async () => {
-    const advanced = stubAdvances();
-    const user = userEvent.setup();
-    renderBar(
-      <DealBulkBar
-        deals={[DEAL, SECOND, { ...THIRD, stage_id: OTHER_STAGE.id }]}
-        stages={[STAGE, OTHER_STAGE]}
-        onDone={() => {}}
-      />,
-    );
-
-    await moveTo(user, OTHER_STAGE);
-
-    expect(
-      await screen.findByText(
-        "2 deals moved to Proposal. 1 was already in Proposal.",
-      ),
-    ).toBeTruthy();
-    expect(advanced).toEqual([
-      "/v1/deals/d-1/advance",
-      "/v1/deals/d-2/advance",
-    ]);
-  });
-
-  it("sends nothing and keeps the selection when every deal is already there", async () => {
-    const advanced = stubAdvances();
+  it("previews, then changes once with each deal's version and the preview's token", async () => {
+    const writes = stubMove({});
     const onDone = vi.fn();
     const user = userEvent.setup();
     renderBar(
       <DealBulkBar
-        deals={[DEAL, SECOND, THIRD]}
+        deals={[DEAL, SECOND]}
         stages={[STAGE, OTHER_STAGE]}
         onDone={onDone}
       />,
     );
 
-    await moveTo(user, STAGE);
+    const dialog = await pressMove(user);
+    expect(
+      within(dialog).getByText("Move the selected deals to Proposal?"),
+    ).toBeTruthy();
+    // Nothing but the preview has reached the server before the confirm.
+    expect(writes.map((write) => write.path)).toEqual(["/v1/bulk/preview"]);
+    await user.click(
+      await within(dialog).findByRole("button", {
+        name: en["bulk.confirmMoveStage"],
+      }),
+    );
+
+    await waitFor(() => expect(onDone).toHaveBeenCalled());
+    const items = [
+      { id: "d-1", version: DEAL.version },
+      { id: "d-2", version: 5 },
+    ];
+    expect(writes).toEqual([
+      {
+        path: "/v1/bulk/preview",
+        body: {
+          record_type: "deal",
+          verb: "move_stage",
+          items,
+          stage_id: "s-2",
+        },
+      },
+      {
+        path: "/v1/bulk/execute",
+        body: {
+          record_type: "deal",
+          verb: "move_stage",
+          items,
+          stage_id: "s-2",
+          confirm_token: "tok-1",
+        },
+      },
+    ]);
+  });
+
+  it("lists a deal the server leaves alone, with its reason, before anything changes", async () => {
+    const writes = stubMove({
+      count: 1,
+      affected: ["d-1"],
+      excluded: [
+        { id: "d-2", reason: "no_change" },
+        { id: "d-3", reason: "refused", code: "deal_closed" },
+      ],
+    });
+    const user = userEvent.setup();
+    renderBar(
+      <DealBulkBar
+        deals={[DEAL, SECOND, THIRD]}
+        stages={[STAGE, OTHER_STAGE]}
+        onDone={() => {}}
+      />,
+    );
+
+    const dialog = await pressMove(user);
 
     expect(
-      await screen.findByText("All 3 selected deals are already in Qualified."),
+      await within(dialog).findByText(en["bulk.reason.no_change_stage"]),
     ).toBeTruthy();
-    expect(advanced).toEqual([]);
+    expect(
+      within(dialog).getByText(en["bulk.refusal.deal_closed"]),
+    ).toBeTruthy();
+    expect(within(dialog).getByText("Ott expansion")).toBeTruthy();
+    expect(within(dialog).getByText("Kern pilot")).toBeTruthy();
+    expect(writes.map((write) => write.path)).toEqual(["/v1/bulk/preview"]);
+  });
+
+  it("names the stage a deal is on and the stage it moves to in the sample", async () => {
+    stubMove({
+      count: 1,
+      affected: ["d-1"],
+      sample: [
+        {
+          id: "d-1",
+          label: "Brandt renewal",
+          before: { owner_id: null, archived: false, stage_id: "s-1" },
+          after: { owner_id: null, archived: false, stage_id: "s-2" },
+        },
+      ],
+    });
+    const user = userEvent.setup();
+    renderBar(
+      <DealBulkBar
+        deals={[DEAL]}
+        stages={[STAGE, OTHER_STAGE]}
+        onDone={() => {}}
+      />,
+    );
+
+    const dialog = await pressMove(user);
+
+    const row = (await within(dialog).findByText("Brandt renewal")).closest(
+      "tr",
+    );
+    expect(row).not.toBeNull();
+    await waitFor(() => {
+      expect(within(row as HTMLElement).getByText("Qualified")).toBeTruthy();
+      expect(within(row as HTMLElement).getByText("Proposal")).toBeTruthy();
+    });
+  });
+
+  it("changes nothing when the reader cancels", async () => {
+    const writes = stubMove({});
+    const onDone = vi.fn();
+    const user = userEvent.setup();
+    renderBar(
+      <DealBulkBar
+        deals={[DEAL, SECOND]}
+        stages={[STAGE, OTHER_STAGE]}
+        onDone={onDone}
+      />,
+    );
+
+    const dialog = await pressMove(user);
+    await user.click(
+      await within(dialog).findByRole("button", {
+        name: en["create.cancel"],
+      }),
+    );
+
+    await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+    expect(writes.map((write) => write.path)).toEqual(["/v1/bulk/preview"]);
     expect(onDone).not.toHaveBeenCalled();
+  });
+
+  it("closes the dialog when the selection changes under it, so no empty stage is sent", async () => {
+    const writes = stubMove({});
+    function Harness() {
+      const [rows, setRows] = useState([DEAL, SECOND]);
+      return (
+        <>
+          <button type="button" onClick={() => setRows([THIRD])}>
+            swap selection
+          </button>
+          <DealBulkBar
+            deals={rows}
+            stages={[STAGE, OTHER_STAGE]}
+            onDone={() => {}}
+          />
+        </>
+      );
+    }
+    const user = userEvent.setup();
+    renderBar(<Harness />);
+
+    await pressMove(user);
+    expect(await screen.findByRole("dialog")).toBeTruthy();
+    // The dialog is modal, so the selection changes from the outside.
+    act(() => {
+      screen.getByText("swap selection").click();
+    });
+
+    await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+    expect(writes.some((write) => write.path === "/v1/bulk/execute")).toBe(
+      false,
+    );
   });
 });
 
@@ -400,7 +515,7 @@ describe("the bulk bar's owner and archive verbs", () => {
       }),
     );
 
-    await waitFor(() => expect(onDone).toHaveBeenCalledWith([]));
+    await waitFor(() => expect(onDone).toHaveBeenCalled());
     expect(writes).toEqual([
       {
         path: "/v1/bulk/preview",

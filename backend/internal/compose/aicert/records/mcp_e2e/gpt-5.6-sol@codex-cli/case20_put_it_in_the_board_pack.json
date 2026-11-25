@@ -12,13 +12,82 @@
   "system_prompt": "cli-default",
   "search": "semantic",
   "self_judged": false,
+  "stamp": {
+    "scenario": "e64b1e840f9a659d",
+    "tools": "3e7244bead932e3a",
+    "instructions": "c5c644eee9719be0",
+    "judge": "",
+    "harness": "024566e70b0c3db3",
+    "commit": "8551a428626d254858a634a2d1e0b95a0e03f93a",
+    "ran_at": "2026-11-22T09:17:17Z",
+    "graded_commit": "c7d8c959b7e859b9765ae0637afffe55d0de36a2",
+    "graded_at": "2026-11-22T14:05:56Z"
+  },
   "usage": {
-    "input_tokens": 53483,
-    "output_tokens": 5669,
+    "input_tokens": 92995,
+    "output_tokens": 6897,
     "cache_creation_input_tokens": 0,
-    "cache_read_input_tokens": 572800,
+    "cache_read_input_tokens": 908928,
     "runs_measured": 2,
     "runs_costed": 0,
     "cost_usd": null
+  },
+  "tools_by_run": [
+    {
+      "passed": true,
+      "tools": [
+        "compose_analytics_report",
+        "describe_analytics_vocabulary",
+        "describe_report_blocks",
+        "read_analytics",
+        "read_reporting",
+        "read_reports",
+        "read_workspace",
+        "run_analytics_query"
+      ]
+    },
+    {
+      "passed": true,
+      "tools": [
+        "change_reports",
+        "compose_analytics_report",
+        "create_reporting_report",
+        "describe_analytics_vocabulary",
+        "describe_report_blocks",
+        "describe_report_vocabulary",
+        "describe_router_actions",
+        "read_analytics",
+        "read_attention",
+        "read_reporting",
+        "read_reports",
+        "read_workspace",
+        "run_analytics_query",
+        "whats_slipping_this_week",
+        "whoami"
+      ]
+    }
+  ],
+  "efficiency": {
+    "runs": 2,
+    "calls": {
+      "median": 12.5,
+      "min": 8,
+      "max": 17
+    },
+    "refused": {
+      "median": 2.5,
+      "min": 2,
+      "max": 3
+    },
+    "prompt_tokens": {
+      "median": 500961.5,
+      "min": 244891,
+      "max": 757032
+    },
+    "output_tokens": {
+      "median": 3448.5,
+      "min": 2159,
+      "max": 4738
+    }
   }
 }

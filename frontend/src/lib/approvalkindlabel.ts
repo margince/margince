@@ -59,6 +59,9 @@ export const KIND_LABEL: Readonly<Record<string, MessageKey>> = {
   linkedin_match: "approval.kind.linkedin_match",
   site_lead: "approval.kind.site_lead",
   close_date_correction: "approval.kind.close_date_correction",
+  // A proposal went out on the deal; the owner decides whether it moves to the
+  // proposal stage. Nothing moves until they accept.
+  deal_proposal_stage: "approval.kind.deal_proposal_stage",
   deal_follow_up: "approval.kind.deal_follow_up",
   capture_counterparty: "approval.kind.capture_counterparty",
   // A colleague asks the owner to share a contact capture kept private.
@@ -68,6 +71,8 @@ export const KIND_LABEL: Readonly<Record<string, MessageKey>> = {
   employer_change: "approval.kind.employer_change",
   // A colleague asks the owner to hand over a contact or company.
   ownership_transfer: "approval.kind.ownership_transfer",
+  // A colleague asks the owner for edit access; the owner stays the owner.
+  edit_access: "approval.kind.edit_access",
   company_name_promotion: "approval.kind.company_name_promotion",
   vcard_create: "approval.kind.vcard_create",
   lifecycle_change: "approval.kind.lifecycle_change",
@@ -125,6 +130,10 @@ export function approvalLabel(
     );
     if (outcome === "won") return t("approval.kind.closeDealWon");
     if (outcome === "lost") return t("approval.kind.closeDealLost");
+  }
+  const stage = approval.proposed_change?.to_stage_name;
+  if (approval.kind === "deal_proposal_stage" && typeof stage === "string") {
+    return t("approval.kind.dealProposalStageNamed", { stage });
   }
   return approvalKindLabel(approval.kind, t);
 }

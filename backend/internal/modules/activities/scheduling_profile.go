@@ -156,20 +156,27 @@ func (s *Store) SchedulingProfile(ctx context.Context) (crmcontracts.SchedulingP
 	if err != nil {
 		return profile, err
 	}
-	blocker, err := s.calendarBlocker(ctx, host, profile)
+	blocker, err := s.pageBlocker(ctx, host, profile)
 	profile.Blocker = &blocker
-	return s.brandSchedulingProfile(ctx, host, profile), err
+	if err != nil {
+		return profile, err
+	}
+	if err := s.describeTeam(ctx, &profile); err != nil {
+		return profile, err
+	}
+	return s.brandSchedulingProfile(ctx, host, profile), nil
 }
 
 // pagePaused is the one answer to whether a standing booking page takes
-// bookings: the host switched it on, and its calendar can take them. The
-// guest profile, the free-time read and both booking reads ask it.
-func (s *Store) pagePaused(ctx context.Context, host ids.UserID, profile crmcontracts.SchedulingProfile) (bool, error) {
+// bookings. The host switched it on, its calendar can take them, and its team
+// is ready. The guest profile, the free-time read and both booking reads ask it.
+// An open page also answers its team, so a request reads the team once.
+func (s *Store) pagePaused(ctx context.Context, host ids.UserID, profile crmcontracts.SchedulingProfile) (bool, []teamCalendar, error) {
 	if !profile.Enabled {
-		return true, nil
+		return true, nil, nil
 	}
-	blocker, err := s.calendarBlocker(ctx, host, profile)
-	return blocker != crmcontracts.SchedulingProfileBlockerNone, err
+	blocker, team, err := s.pageReadiness(ctx, host, profile)
+	return blocker != crmcontracts.SchedulingProfileBlockerNone, team, err
 }
 
 // calendarBlocker is why bookings cannot reach the host's calendar. A page that
@@ -268,6 +275,9 @@ func (s *Store) SaveSchedulingProfile(ctx context.Context, profile crmcontracts.
 	profile.HostName = stored.HostName
 	profile.CompanyName, profile.LogoUrl = nil, nil
 	if err := validateSchedulingProfile(profile); err != nil {
+		return profile, err
+	}
+	if err := s.admitTeam(ctx, host, stored, profile); err != nil {
 		return profile, err
 	}
 	if profile.Enabled {
@@ -439,9 +449,13 @@ func (s *Store) persistSchedulingProfile(ctx context.Context, host ids.UserID, p
 		}
 		profile.Slug, profile.Alias, profile.PublicUrl, profile.ReplaceLink = nil, nil, nil, nil
 		profile.HostName, profile.Blocker = nil, nil
+		profile.TeamMembers = mergeTeam(before, profile.TeamMembers)
 		stored := schedulingProfileToStore(ctx, profile, before, canonicalDefault)
 		args = []any{stored, id}
 		if _, err := tx.Exec(ctx, fmt.Sprintf(`UPDATE booking_page SET scheduling_policy=$%d WHERE id=$%d`, len(args)-1, len(args)), args...); err != nil {
+			return err
+		}
+		if err := s.tellTeamChanges(ctx, tx, host, before, profile); err != nil {
 			return err
 		}
 		var audit ids.UUID

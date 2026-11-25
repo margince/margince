@@ -28,6 +28,7 @@ import (
 	"github.com/margince/margince/backend/internal/compose/homecache"
 	"github.com/margince/margince/backend/internal/compose/hostauthority"
 	"github.com/margince/margince/backend/internal/compose/magic"
+	"github.com/margince/margince/backend/internal/compose/managermove"
 	"github.com/margince/margince/backend/internal/compose/partnersteps"
 	"github.com/margince/margince/backend/internal/compose/requesttask"
 	"github.com/margince/margince/backend/internal/compose/salesprogress"
@@ -96,6 +97,7 @@ func newActivitiesHandlers(pool *pgxpool.Pool) activitiesHandlers {
 		WithTaskRecommendation(taskRecommendationReader(pool)).
 		WithInquiryAssignment(newInquiryAssignment(InstallationDB(pool))).
 		WithLeadQualifyTasks(newLeadWorkTasks(InstallationDB(pool), slog.Default())).
+		WithTeamRequestNotice(teamRequestNotice{}).
 		WithFieldCatalog(customfields.NewService(pool, nil)).
 		WithRecordZone(installationZoneTx).
 		WithSettings(StoredConfig(pool)).
@@ -174,7 +176,7 @@ func (o ownDomainReader) ReaderAddresses(
 // needing one gate per independently-built store.
 func NewCollectionsStore(pool *pgxpool.Pool) *collections.Store {
 	return collections.NewStore(InstallationDB(pool)).WithFieldCatalog(customfields.NewService(pool, nil)).
-		WithLiveSteward(identity.LiveMemberSQL("u")).WithDealAmount(dealWorthTodaySQL).WithBaseCurrency(identity.BaseCurrencyOf).
+		WithLiveSteward(identity.LiveMemberSQL("u")).WithDealAmount(dealWorthTodaySQL).WithWinChance(chances.WinChanceSQLNow).WithBaseCurrency(identity.BaseCurrencyOf).
 		WithRuleUses(ruleUsesOf(pool))
 }
 
@@ -253,8 +255,9 @@ func newForecastHandlers(pool *pgxpool.Pool, now func() time.Time) forecasting.H
 		newForecastStoreFor(pool),
 		ForecastAssemble, ForecastPeriodAt, ForecastWritableScope,
 		ForecastConversionHistory, ForecastForwardMeasure, ForecastScopeHoldsDeals, now,
-	).WithCallBaseline(ForecastCallBaseline).WithStageChances(ForecastStageChances).
-		WithReaderRows(ForecastReaderContributions).WithGoalReadable(newReportingService(pool, now).GoalReadable)
+	).WithCallBaseline(ForecastCallBaseline).WithStageChances(chances.StageChances).
+		WithReaderRows(ForecastReaderContributions).WithGoalReadable(newReportingService(pool, now).GoalReadable).
+		WithManagerRequests(managermove.Requests(deals.NewStore(InstallationDB(pool), DealsInstallation())))
 }
 
 func (s *Server) wireAnalyticsSurface(pool *pgxpool.Pool) {
@@ -311,7 +314,7 @@ func (s *Server) wireCaptureSettingsSurface(pool *pgxpool.Pool, log *slog.Logger
 	s.voiceHandlers = s.WithPriceSync(newAIPriceSync(pool, s.vault, log, s.priceCatalogues))
 	s.aiAdminHandlers = aiAdminHandlers{store: ai.NewAdminStore(InstallationDB(pool), NewSettingsStore(pool), StoredConfig(pool), budgetFullUsers, aiDeferredWork(pool))}
 	s.ownDomainHandlers = ownDomainHandlers{
-		store:    capture.NewOwnDomainStore(InstallationDB(pool)),
+		store:    capture.NewOwnDomainStore(InstallationDB(pool)).WithRemoved(queueStageEvidenceReread),
 		evidence: deals.NewStore(InstallationDB(pool), DealsInstallation()), log: log,
 	}
 	// The installation's own identity and reporting basis (ADR-0090/A135):

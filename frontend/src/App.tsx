@@ -23,7 +23,7 @@ import { lockScreen, useProbeAnswer } from "./app/confinement";
 import { DateFormatsProvider } from "./app/dateformats";
 import { useFeatureLanding } from "./app/featurelanding";
 import { useHomePrefetch } from "./app/homeprefetch";
-import { passesOnboardingGate } from "./app/onboarding-gate";
+import { ONBOARDING_ENTRY, passesOnboardingGate } from "./app/onboarding-gate";
 import { useCommandPalette } from "./app/palettehotkey";
 import { Shell, useRoute } from "./app/shell";
 import { SourceHost } from "./app/sourcehost";
@@ -225,7 +225,7 @@ function useOnboardingHold(
       // reader away from answers by sending them here again. Pushed, Back
       // lands on that address and the effect fires. The one key meant for
       // getting out of things then returns the reader to onboarding.
-      navigateReplacing({ screen: "onboarding", id: "company" });
+      navigateReplacing(ONBOARDING_ENTRY);
     }
   }, [held, screen, id, id2, navigateReplacing]);
   return { held, turnedAway: held && !passesOnboardingGate(route) };
@@ -282,13 +282,7 @@ function AuthedApp({
     authed,
     { readProfile: false },
   );
-  const progress = useJourneyProgress(
-    authed,
-    authed &&
-      described === true &&
-      me.data?.authorization?.seat_type === "full",
-    me.data?.user?.id,
-  );
+  const progress = useJourneyProgress(authed, described, me.data?.user?.id);
   // The company's clock, for every record date under this boundary. Read
   // here rather than per screen so all of them agree, and gated on the session
   // for the same reason the company probe is: an unauthenticated read would
@@ -310,7 +304,7 @@ function AuthedApp({
     sessionSeenNow,
     sessionSeenNow,
   );
-  const palette = useCommandPalette(route);
+  const palette = useCommandPalette(route, !hold.held);
   const gatesPending =
     companyPending || companyZone.pending || progress.pending;
   const shellReady = authed && !gatesPending;

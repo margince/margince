@@ -17,6 +17,7 @@ import (
 	"golang.org/x/sync/semaphore"
 
 	"github.com/margince/margince/backend/internal/modules/capture/graphconn"
+	"github.com/margince/margince/backend/internal/modules/capture/oauthflow"
 	"github.com/margince/margince/backend/internal/modules/capture/orderedfetch"
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
 )
@@ -24,6 +25,20 @@ import (
 // backfillPageSize bounds one BackfillPage call ($top); the engine commits
 // cursor and counters between pages, so this is also the resume granularity.
 const backfillPageSize = 100
+
+// maxBackfillFetchWorkers is Microsoft's limit of concurrent requests per
+// mailbox. Live sync and a send need requests of their own, so the built-in
+// two leave room for both; a setting may use all four.
+const maxBackfillFetchWorkers = 4
+
+// walk answers the page's page size and its walk, tuned by the installation.
+func (c *Connector) walk() (pageSize int, walk orderedfetch.Walk[[]byte]) {
+	pageSize, workers, lookahead := c.tuning.Resolve(backfillPageSize, backfillWalk.Workers)
+	walk = backfillWalk
+	walk.Workers = min(workers, maxBackfillFetchWorkers)
+	walk.Lookahead = max(lookahead, walk.Workers)
+	return pageSize, walk
+}
 
 // EstimateBackfill asks the provider how many messages the window holds.
 //
@@ -34,15 +49,13 @@ func (c *Connector) EstimateBackfill(ctx context.Context, auth connector.Auth, a
 	if err != nil {
 		return connector.BackfillEstimate{}, err
 	}
-	refreshed, err := c.oauth.Refresh(ctx, st.RefreshToken, st.Granted)
-	if err != nil {
-		return connector.BackfillEstimate{}, err
-	}
-	count, err := c.api.EstimateAfter(ctx, refreshed.AccessToken, after)
-	if err != nil {
-		return connector.BackfillEstimate{}, err
-	}
-	return connector.BackfillEstimate{Messages: count}, nil
+	return authorized(ctx, c, st, func(refreshed oauthflow.TokenRefresh) (connector.BackfillEstimate, error) {
+		count, err := c.api.EstimateAfter(ctx, refreshed.AccessToken, after)
+		if err != nil {
+			return connector.BackfillEstimate{}, err
+		}
+		return connector.BackfillEstimate{Messages: count}, nil
+	})
 }
 
 // BackfillPage pulls one page of the window, oldest-boundary inclusive,
@@ -54,11 +67,15 @@ func (c *Connector) BackfillPage(ctx context.Context, auth connector.Auth, after
 	if err != nil {
 		return connector.BackfillPageResult{}, err
 	}
-	refreshed, err := c.oauth.Refresh(ctx, st.RefreshToken, st.Granted)
-	if err != nil {
-		return connector.BackfillPageResult{}, err
-	}
-	access := refreshed.AccessToken
+	return authorized(ctx, c, st, func(refreshed oauthflow.TokenRefresh) (connector.BackfillPageResult, error) {
+		return c.backfillPageWith(ctx, refreshed.AccessToken, st.Owner, after, pageToken, sink)
+	})
+}
+
+// backfillPageWith is one BackfillPage under one access token.
+func (c *Connector) backfillPageWith(
+	ctx context.Context, access, owner string, after time.Time, pageToken string, sink connector.Sink,
+) (connector.BackfillPageResult, error) {
 	// The listing spans the whole mailbox, so the page resolves the synced
 	// folders' opaque ids first and steps over mail filed anywhere else. Sent
 	// Items is also the proof the owner sent a message. Without it the page
@@ -67,7 +84,8 @@ func (c *Connector) BackfillPage(ctx context.Context, auth connector.Auth, after
 	if err != nil {
 		return connector.BackfillPageResult{}, err
 	}
-	msgs, next, err := c.api.ListAfter(ctx, access, after, pageToken, backfillPageSize)
+	pageSize, walk := c.walk()
+	msgs, next, err := c.api.ListAfter(ctx, access, after, pageToken, pageSize)
 	if err != nil {
 		return connector.BackfillPageResult{}, err
 	}
@@ -82,7 +100,7 @@ func (c *Connector) BackfillPage(ctx context.Context, auth connector.Auth, after
 			walked = append(walked, msg)
 		}
 	}
-	err = backfillWalk.InOrder(ctx, len(walked),
+	err = walk.InOrder(ctx, len(walked),
 		func(ctx context.Context, i int) ([]byte, error) {
 			// Through the folder the listing found it in, so a message moved to
 			// Junk Email since is refused by Graph instead of read.
@@ -90,7 +108,7 @@ func (c *Connector) BackfillPage(ctx context.Context, auth connector.Auth, after
 		},
 		func(i int, raw []byte, err error) error {
 			msg := walked[i]
-			captured, err := c.backfillOne(ctx, raw, err, msg, sink, st.Owner, folders[msg.ParentFolderID] == folderSent)
+			captured, err := c.backfillOne(ctx, raw, err, msg, sink, owner, folders[msg.ParentFolderID] == folderSent)
 			if err != nil {
 				return err
 			}

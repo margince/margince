@@ -17,7 +17,6 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
-	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -120,6 +119,9 @@ func (s *OwnerIdentityStore) RestoreRemoval(ctx context.Context, id ids.UUID) (O
 		if err := retirePendingForIdentityTx(ctx, tx, actor.UserID, out); err != nil {
 			return err
 		}
+		if err := s.addressClaimedTx(ctx, tx, out); err != nil {
+			return err
+		}
 		ws := storekit.MustWorkspace(ctx)
 		_, err = storekit.AuditEvent(storekit.WithReversal(ctx, captureSettingsObject, ws, withdrawn.auditID), tx,
 			"update", captureSettingsObject, ws, ownerIdentityAuditImage(out))
@@ -189,9 +191,11 @@ func reinstateTx(ctx context.Context, tx pgx.Tx, w withdrawnIdentity) (OwnerIden
 	if errors.Is(err, pgx.ErrNoRows) {
 		return OwnerIdentity{}, ErrIdentityDeclaredAgain
 	}
-	database.Forget(tx, ownerIdentitiesMemo)
 	if err != nil {
 		return OwnerIdentity{}, fmt.Errorf("capture: restoring an owner identity: %w", err)
+	}
+	if err := storekit.CaptureFactsChanged(ctx, tx); err != nil {
+		return OwnerIdentity{}, err
 	}
 	if _, err := tx.Exec(ctx, `DELETE FROM capture_owner_identity_withdrawn WHERE id = $1`, w.ID); err != nil {
 		return OwnerIdentity{}, fmt.Errorf("capture: restoring an owner identity: %w", err)

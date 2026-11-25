@@ -9,6 +9,7 @@ import (
 	"testing"
 
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/ports/recordkinds"
 	"github.com/margince/margince/backend/pkg/extension"
 )
 
@@ -39,6 +40,32 @@ func TestADeliveryMaySendANoticeAndATickMayNot(t *testing.T) {
 	}
 }
 
+const testNoticeUnit = "delivery-unit"
+
+func TestANoticeMayNameARecordKindOnlyItsOwnUnitDeclared(t *testing.T) {
+	recordkinds.Reset()
+	t.Cleanup(recordkinds.Reset)
+	recordkinds.Register("delivery-unit", []extension.RecordKindDeclaration{{Kind: "room"}})
+	recordkinds.Register("other-unit", []extension.RecordKindDeclaration{{Kind: "room"}})
+	for name, c := range map[string]struct {
+		recordType string
+		wantErr    bool
+	}{
+		"its own kind":           {"ext:delivery-unit:room", false},
+		"another unit's kind":    {"ext:other-unit:room", true},
+		"a kind nobody declared": {"ext:delivery-unit:ghost", true},
+	} {
+		t.Run(name, func(t *testing.T) {
+			in := validNotice()
+			in.Record.Type = c.recordType
+			err := validateNotice(testNoticeUnit, in)
+			if c.wantErr != errors.Is(err, extension.ErrInvalid) {
+				t.Errorf("validateNotice(%s) = %v, want refusal %v", c.recordType, err, c.wantErr)
+			}
+		})
+	}
+}
+
 func TestANoticeNamesOneRecipientAndAKnownRecord(t *testing.T) {
 	good := validNotice()
 	for name, mutate := range map[string]func(*extension.NoticeRequest){
@@ -52,12 +79,12 @@ func TestANoticeNamesOneRecipientAndAKnownRecord(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			in := good
 			mutate(&in)
-			if err := validateNotice(in); !errors.Is(err, extension.ErrInvalid) {
+			if err := validateNotice(testNoticeUnit, in); !errors.Is(err, extension.ErrInvalid) {
 				t.Errorf("validateNotice = %v, want ErrInvalid", err)
 			}
 		})
 	}
-	if err := validateNotice(good); err != nil {
+	if err := validateNotice(testNoticeUnit, good); err != nil {
 		t.Errorf("a well-formed notice was refused: %v", err)
 	}
 }

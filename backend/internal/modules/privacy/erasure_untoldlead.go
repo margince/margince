@@ -17,6 +17,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/platform/approvalsubject"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/platform/extprivacy"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -75,6 +76,9 @@ func EraseUntoldLeadTx(ctx context.Context, tx pgx.Tx, in UntoldLead) error {
 	if in.LeadID.IsZero() {
 		return nil
 	}
+	if err := withdrawRequestsOnLead(ctx, tx, in.LeadID.UUID); err != nil {
+		return err
+	}
 	notices, err := deleteNoticeActivities(ctx, tx, in.DeliveryID, in.LeadID.UUID)
 	if err != nil {
 		return err
@@ -106,6 +110,37 @@ func EraseUntoldLeadTx(ctx context.Context, tx pgx.Tx, in UntoldLead) error {
 		return err
 	}
 	return tombstoneCollateralScrubs(ctx, tx, "activity", notices, untoldLeadReason, causeUntoldLead)
+}
+
+// colleagueRequestKinds are the requests a colleague puts to a record's owner.
+// They name nothing but the record, so once the lead is gone they ask nothing.
+var colleagueRequestKinds = []string{approvalsubject.KindEditAccess, approvalsubject.KindOwnershipTransfer}
+
+// withdrawRequestsOnLead closes the open colleague requests on the lead before
+// it is deleted. Its owner could otherwise answer a card for a lead that is
+// gone. The colleague who asked is told nothing that names it.
+func withdrawRequestsOnLead(ctx context.Context, tx pgx.Tx, leadID ids.UUID) error {
+	const onLead = `status = 'pending' AND kind = ANY(@request_kinds) AND target_entity_type = 'lead' AND target_entity_id = @lead_id`
+	args := pgx.NamedArgs{"request_kinds": colleagueRequestKinds, "lead_id": leadID, "withdrawal": untoldLeadReason}
+	if err := eraseApprovalNoticesMatching(ctx, tx, untoldLeadReason, causeUntoldLead, onLead, args); err != nil {
+		return err
+	}
+	rows, err := tx.Query(ctx, `
+		UPDATE approval
+		   SET `+blankStagedProposal+`,
+		       status = 'expired',
+		       decision_reason = @withdrawal,
+		       decided_at = now()
+		 WHERE `+onLead+`
+		RETURNING id`, args)
+	if err != nil {
+		return fmt.Errorf("withdrawing the requests on the untold lead: %w", err)
+	}
+	withdrawn, err := pgx.CollectRows(rows, pgx.RowTo[ids.UUID])
+	if err != nil {
+		return fmt.Errorf("withdrawing the requests on the untold lead: %w", err)
+	}
+	return tombstoneCollateralScrubs(ctx, tx, "approval", withdrawn, untoldLeadReason, causeUntoldLead)
 }
 
 // deleteNoticeActivities deletes the timeline row of the notice mail, which

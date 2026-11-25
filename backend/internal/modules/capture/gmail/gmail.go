@@ -55,6 +55,7 @@ type Connector struct {
 	// dropped with the rest of the delivery-system mail.
 	bounces   connector.BounceSink
 	rawMemory *semaphore.Weighted
+	tuning    connector.BackfillTuning
 	// shared mints shared mailboxes' tokens; nil on a connector that reads none.
 	shared *SharedAuthorizer
 }
@@ -158,9 +159,9 @@ func (c *Connector) Authenticate(ctx context.Context, req connector.AuthRequest)
 	return auth, nil
 }
 
-// Sync mints a fresh access token, then pulls incrementally: with no cursor
+// Sync takes the mailbox's access token and pulls incrementally. With no cursor
 // it anchors at the mailbox's current historyId and backfills a bounded
-// window; with a cursor it walks the history API for messages added since.
+// window. With a cursor it walks the history API for messages added since.
 // A cursor Gmail no longer holds (ErrHistoryGone) degrades to a bounded
 // re-list rather than a full re-scan. The advanced historyId is returned as
 // the new cursor; the registry persists it only on a fully-successful Sync.
@@ -169,13 +170,6 @@ func (c *Connector) Sync(ctx context.Context, auth connector.Auth, cursor connec
 	if err := json.Unmarshal(auth, &st); err != nil {
 		return nil, fmt.Errorf("gmail: malformed auth state: %w", err)
 	}
-	owner := st.Owner // local — never stored on the shared instance
-
-	ctx, access, err := c.authorize(ctx, st)
-	if err != nil {
-		return nil, err
-	}
-
 	start, err := parseCursor(cursor)
 	if err != nil {
 		// A stored cursor we can't read is a bug/corruption, NOT a fresh mailbox:
@@ -183,6 +177,15 @@ func (c *Connector) Sync(ctx context.Context, auth connector.Auth, cursor connec
 		// overwriting the watermark (which would drop everything in between).
 		return nil, err
 	}
+	return authorized(ctx, c, st, func(ctx context.Context, access string) (connector.Cursor, error) {
+		return c.syncFrom(ctx, access, st.Owner, start, sink)
+	})
+}
+
+// syncFrom is one Sync's pull under one access token.
+func (c *Connector) syncFrom(
+	ctx context.Context, access, owner, start string, sink connector.Sink,
+) (connector.Cursor, error) {
 	ids, deleted, nextHistory, relisted, err := c.selectMessages(ctx, access, start)
 	if err != nil {
 		return nil, err
@@ -347,23 +350,21 @@ func (c *Connector) Normalize(_ context.Context, raw connector.RawRecord) ([]con
 // Watch registers a Gmail users.watch against the Pub/Sub topic so Gmail
 // publishes change notifications for the mailbox, returning the mailbox's
 // historyId at watch time and when the watch expires (Gmail caps it at 7 days).
-// Re-calling it renews the watch. Like Sync, it mints a fresh access token from
-// the stored refresh token; it never touches the CRM or the connection row —
-// the registry persists the expiration into capture_connection.watch_expires_at.
+// Re-calling it renews the watch. Like Sync, it takes an access token from the
+// stored refresh token. It never touches the CRM or the connection row: the
+// registry persists the expiration into capture_connection.watch_expires_at.
 func (c *Connector) Watch(ctx context.Context, auth connector.Auth, topic string) (connector.WatchResult, error) {
 	var st authState
 	if err := json.Unmarshal(auth, &st); err != nil {
 		return connector.WatchResult{}, fmt.Errorf("gmail: malformed auth state: %w", err)
 	}
-	ctx, access, err := c.authorize(ctx, st)
-	if err != nil {
-		return connector.WatchResult{}, err
-	}
-	historyID, expiration, err := c.api.Watch(ctx, access, topic)
-	if err != nil {
-		return connector.WatchResult{}, err
-	}
-	return connector.WatchResult{HistoryID: historyID, ExpiresAt: expiration}, nil
+	return authorized(ctx, c, st, func(ctx context.Context, access string) (connector.WatchResult, error) {
+		historyID, expiration, err := c.api.Watch(ctx, access, topic)
+		if err != nil {
+			return connector.WatchResult{}, err
+		}
+		return connector.WatchResult{HistoryID: historyID, ExpiresAt: expiration}, nil
+	})
 }
 
 // HealthCheck confirms the stored credential still mints a token and the
@@ -373,14 +374,11 @@ func (c *Connector) HealthCheck(ctx context.Context, auth connector.Auth) error 
 	if err := json.Unmarshal(auth, &st); err != nil {
 		return fmt.Errorf("gmail: malformed auth state: %w", err)
 	}
-	ctx, access, err := c.authorize(ctx, st)
-	if err != nil {
-		return err
-	}
-	if _, _, err := c.api.Profile(ctx, access); err != nil {
-		return err
-	}
-	return nil
+	_, err := authorized(ctx, c, st, func(ctx context.Context, access string) (string, error) {
+		_, historyID, err := c.api.Profile(ctx, access)
+		return historyID, err
+	})
+	return err
 }
 
 // AccountLabel reports the authorizing mailbox, read from the sealed bundle the
@@ -465,11 +463,7 @@ func (c *Connector) ListContainers(
 	if err := json.Unmarshal(auth, &st); err != nil {
 		return nil, false, fmt.Errorf("gmail: malformed auth state: %w", err)
 	}
-	ctx, access, err := c.authorize(ctx, st)
-	if err != nil {
-		return nil, false, err
-	}
-	labels, err := c.api.ListLabels(ctx, access)
+	labels, err := authorized(ctx, c, st, c.api.ListLabels)
 	return labels, false, err
 }
 

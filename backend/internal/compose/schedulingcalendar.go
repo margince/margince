@@ -21,6 +21,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/ports/authz"
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
 )
 
@@ -52,14 +53,11 @@ func (c schedulingCalendar) hostMayBook(ctx context.Context, host ids.UserID) er
 	if !ok {
 		return apperrors.ErrPermissionDenied
 	}
-	rbac, seat, err := c.Seats.EffectiveAuthority(ctx, workspace, host.UUID)
+	member, err := authz.MemberPrincipal(ctx, c.Seats, workspace, host.UUID)
 	if err != nil {
 		return err
 	}
-	hostCtx := principal.WithActor(ctx, principal.Principal{
-		Type: principal.PrincipalHuman, ID: "human:" + host.String(), UserID: host.UUID,
-		SeatType: seat, Permissions: rbac.Permissions, TeamIDs: rbac.TeamIDs,
-	})
+	hostCtx := principal.WithActor(ctx, member)
 	return auth.Require(hostCtx, "activity", principal.ActionCreate)
 }
 

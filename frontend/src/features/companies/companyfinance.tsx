@@ -9,9 +9,10 @@ import {
   type SectionState,
   SurfaceState,
 } from "../../design-system/surfacestate";
-import { formatDate, formatMoney } from "../../format/format";
+import { formatDateAbbrev, formatMoneyWhole } from "../../format/format";
 import { useLocale, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
+import { financeProvenance } from "../../lib/financeprovenance";
 import { problemCodeOf } from "../../lib/problem";
 import { BillingContactsPanel } from "../projects/billingcontacts";
 import { RecentInvoices } from "./financeinvoices";
@@ -179,7 +180,7 @@ export function CompanyFinanceCard({
             detail={{
               onRetry: () => void query.refetch(),
               staleAsOf: summary.last_synced_at
-                ? formatDate(summary.last_synced_at, locale, readerZone)
+                ? formatDateAbbrev(summary.last_synced_at, locale, readerZone)
                 : undefined,
             }}
           >
@@ -275,8 +276,8 @@ function CoveragePeriod({ summary }: Readonly<{ summary: FinanceSummary }>) {
   return (
     <p className="fin-coverage t-caption">
       {t("finance.coveragePeriod", {
-        from: formatDate(summary.coverage_start, locale, readerZone),
-        to: formatDate(summary.coverage_end, locale, readerZone),
+        from: formatDateAbbrev(summary.coverage_start, locale, readerZone),
+        to: formatDateAbbrev(summary.coverage_end, locale, readerZone),
       })}
     </p>
   );
@@ -297,7 +298,7 @@ export function amountOf(
   if (money?.amount_minor == null || !money.currency) {
     return undefined;
   }
-  return formatMoney(money.amount_minor, money.currency, locale);
+  return formatMoneyWhole(money.amount_minor, money.currency, locale);
 }
 
 // One reading. An absent value renders as a dash with its label intact, so the
@@ -359,12 +360,12 @@ function FinanceProvenance({ summary }: Readonly<{ summary: FinanceSummary }>) {
   return (
     <p className="t-caption fin-provenance">
       <Landmark size={12} aria-hidden="true" />
-      {summary.last_synced_at
-        ? t("finance.syncedFrom", {
-            provider: summary.provider,
-            when: formatDate(summary.last_synced_at, locale, readerZone),
-          })
-        : t("finance.fromNeverSynced", { provider: summary.provider })}
+      {financeProvenance(
+        t,
+        summary.provider_name,
+        summary.last_synced_at &&
+          formatDateAbbrev(summary.last_synced_at, locale, readerZone),
+      )}
     </p>
   );
 }

@@ -105,7 +105,7 @@ func (e *CounterpartyVerdictEngine) strayAgainstItsOwnHistory(
 	if !createsARecord(answer.Verdict) {
 		return false, 0, nil
 	}
-	settled, err := e.pending.TimesJudgedNotAContact(ctx, row.Email)
+	settled, err := e.ledgerOf().TimesJudgedNotAContact(ctx, row.Email)
 	if err != nil {
 		return false, 0, err
 	}
@@ -121,22 +121,17 @@ func (e *CounterpartyVerdictEngine) strayAgainstItsOwnHistory(
 // "it answered contact at 0.95 after fifteen transactional answers" is the whole
 // question.
 func (e *CounterpartyVerdictEngine) askAboutAStrayAnswer(
-	ctx context.Context, row capture.PendingCounterparty, answers []verdictResult,
-	servedModel string, settled int,
+	ctx context.Context, row capture.PendingCounterparty, answers []verdictResult, settled int,
 ) (int, error) {
-	// The reason carries the KIND and the COUNT, because the confidence and the
-	// model are all Retire stores and neither says what the disagreement was. A
-	// human opening this row is being asked to settle "it answered contact once,
-	// after fifteen answers saying nobody is there" — and without both numbers
-	// they get the question with none of the evidence.
+	// The reason carries the kind and the count, because Retire stores only the
+	// confidence. A human who opens this row needs both to settle it.
 	kind := ""
 	if len(answers) == 1 {
 		kind = answers[0].Verdict
 	}
 	reason := fmt.Sprintf(
 		"answered %q against %d settled answers naming no contact at this address", kind, settled)
-	if err := e.pending.Retire(ctx, row, reason,
-		lastMeasurement(nil, "", answers, servedModel)); err != nil {
+	if err := e.ledgerOf().Retire(ctx, row, reason, lastMeasurement(nil, answers)); err != nil {
 		return 0, err
 	}
 	return 1, nil
@@ -157,7 +152,7 @@ func (e *CounterpartyVerdictEngine) askAHumanInstead(
 	ctx context.Context, row capture.PendingCounterparty,
 ) (int, error) {
 	// No measurement: there was no model to ask.
-	if err := e.pending.Retire(ctx, row, "no model is configured to judge this sender",
+	if err := e.ledgerOf().Retire(ctx, row, "no model is configured to judge this sender",
 		capture.VerdictMeasurement{}); err != nil {
 		return 0, err
 	}

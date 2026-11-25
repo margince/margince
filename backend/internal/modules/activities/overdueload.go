@@ -50,7 +50,7 @@ var overdueLoadSQL = `
 	  FROM activity a
 	 WHERE a.kind = 'task' AND NOT a.is_done
 	   AND a.archived_at IS NULL
-	   AND ` + storekit.TaskDueSQL("a") + ` IS NOT NULL AND ` + storekit.TaskDueSQL("a") + ` %[4]s $%[1]d
+	   AND %[4]s
 	   AND %[2]s
 	   AND %[3]s
 	   %[5]s
@@ -86,13 +86,14 @@ func (s *Store) taskLoadByAssignee(ctx context.Context, asOf time.Time, commitme
 		if err != nil {
 			return err
 		}
-		agedOut := worklistAgeOutClause(asOf, "a.assignee_id", identities, arg)
-		comparison, source := "<", ""
+		agedOut := worklistAgeOutClause(asOf, "a.assignee_id", identities, storekit.DayZoneSQL("", arg), arg)
+		moment := fmt.Sprintf("$%d", instant)
+		due, source := storekit.TaskDueBeforeSQL("a", moment), ""
 		if commitments {
-			comparison = "<="
+			due = storekit.TaskDueByNowSQL("a", moment)
 			source = fmt.Sprintf("AND a.source_system = $%d", arg(CommitmentTaskSource))
 		}
-		rows, err := tx.Query(ctx, fmt.Sprintf(overdueLoadSQL, instant, scope, agedOut, comparison, source), args...)
+		rows, err := tx.Query(ctx, fmt.Sprintf(overdueLoadSQL, instant, scope, agedOut, due, source), args...)
 		if err != nil {
 			return err
 		}

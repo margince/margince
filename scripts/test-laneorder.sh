@@ -69,7 +69,7 @@ expect_order "named packages must sort longest-first" \
 ./cmd/worker' \
   "$(order_by_hint "$work/grouped" "$work/measured" | cut -d'|' -f2)"
 
-if ! order_by_hint "$work/grouped" "$work/measured" | grep -qxF 'backend|./internal/compose/integration|^(TestA|TestB)$'; then
+if ! order_by_hint "$work/grouped" "$work/measured" | grep -xF 'backend|./internal/compose/integration|^(TestA|TestB)$' >/dev/null; then
   fail "the -run regex did not survive ordering — its own pipes were treated as fields"
 fi
 
@@ -370,7 +370,7 @@ expect_fail "a Fuzz function in a tagged file must fail discovery" \
 # The committed shard timing has to be readable by assign_shard: four fields,
 # a number last. A line it cannot read silently weighs its test at the mean.
 shard_timing="$root_dir/scripts/integration-test-timing.txt"
-bad=$(grep -v '^#' "$shard_timing" | awk -F'|' 'NF != 4 || $4 !~ /^[0-9]+(\.[0-9]+)?$/' | head -3)
+bad=$(grep -v '^#' "$shard_timing" | awk -F'|' 'NF != 4 || $4 !~ /^[0-9]+(\.[0-9]+)?$/' | sed -n 1,3p)
 [[ -z "$bad" ]] || fail "$shard_timing has lines assign_shard cannot read: $bad"
 live=$(grep -v '^#' "$shard_timing" | cut -d'|' -f2 | LC_ALL=C sort -u | while read -r pkg; do
   [[ -d "$root_dir/backend/${pkg#./}" ]] && echo "$pkg"

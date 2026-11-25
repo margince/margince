@@ -11,20 +11,14 @@ prompt: |
   of the month. I own it. Record it as the review's decision, to be reviewed in four weeks. And record my forecast
   call for this quarter: 450,000 EUR.
 
+# The end state reads the decision and the call. The decision's owner and its
+# review date are in no form it reads, so they are held on the call.
 must_call:
   - change_reports
 
-must_call_with:
-  - change_reports.action=record_decision
-  - change_reports.action=record_forecast_call
-
 must_call_matching:
-  - record_sales_decision~"deal_id"
-  - record_sales_decision~CFO
   - record_sales_decision~"owner_id"
   - record_sales_decision~"review_on"
-  - record_forecast_call~"amount_minor": 45000000\b
-  - record_forecast_call~"currency": "EUR"
 
 must_not_call_with:
   - change_state~.

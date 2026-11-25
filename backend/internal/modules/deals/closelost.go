@@ -60,8 +60,9 @@ type CloseLostInput struct {
 	// StillDue asks again, under the deal row lock, whether the deal should
 	// close. The evidence it reads is not this module's.
 	StillDue func(ctx context.Context, tx pgx.Tx) (bool, error)
-	// Record writes the entry on the deal's timeline, in the close's transaction.
-	Record func(ctx context.Context, tx pgx.Tx, correction ids.UUID) error
+	// Record writes the entry on the deal's timeline, in the close's transaction,
+	// and answers the id of the note it wrote.
+	Record func(ctx context.Context, tx pgx.Tx) (ids.UUID, error)
 	// AsOwner binds the owner's agent as of the close's transaction, so a
 	// role change or suspension that committed before the close stops it.
 	AsOwner OwnerAuthorityTx
@@ -74,15 +75,15 @@ func (s *Store) CloseAsLost(ctx context.Context, in CloseLostInput) (bool, error
 	if err := auth.Require(ctx, "deal", principal.ActionUpdate); err != nil {
 		return false, err
 	}
-	active, err := s.activeColumns(ctx)
-	if err != nil {
-		return false, err
-	}
 	var closed bool
 	// A lock cycle with a writer that took the deal before its activity is
 	// retried, and the close re-reads everything.
-	err = storekit.RetryLockCycles(ctx, func() error {
+	err := storekit.RetryLockCycles(ctx, func() error {
 		return s.Tx(ctx, func(tx pgx.Tx) error {
+			active, err := s.activeColumnsIn(ctx, tx)
+			if err != nil {
+				return err
+			}
 			actor, ok, err := actAsOwnerNow(ctx, tx, in.AsOwner, requireDealUpdate)
 			if err != nil || !ok {
 				return err
@@ -122,7 +123,11 @@ func (s *Store) closeAsLostTx(ctx context.Context, tx pgx.Tx, in CloseLostInput,
 	if err != nil {
 		return false, err
 	}
-	if err := in.Record(ctx, tx, correction); err != nil {
+	note, err := in.Record(ctx, tx)
+	if err != nil {
+		return false, err
+	}
+	if err := linkCorrectionNote(ctx, tx, []ids.UUID{correction}, note); err != nil {
 		return false, err
 	}
 	return true, nil

@@ -26,12 +26,14 @@ prompt: |
   one, at another company, nothing to do with her. Make sure the two are
   not flagged as the same woman.
 
+# Two contacts share the name, so no end-state entry can read either one's
+# fields, and no form reads a dismissed pair. The dismissal and the card's own
+# words are held on their calls.
 must_call:
-  - create_record
   - resolve_duplicates
+  - create_record
 
 must_call_with:
-  - create_record.record_type=contact
   - resolve_duplicates.decision=not_the_same
 
 # The card's own words make the contact. The address carries the company's
@@ -42,6 +44,12 @@ must_call_matching:
 
 must_not_call_with:
   - change_capture~import_vcards
+
+# Held on the MCP door only: the REST door names the decision on the pair's disposition
+# route, not as a decision argument. A REST run is graded on everything else: the answer,
+# and the records it leaves.
+mcp_only:
+  - resolve_duplicates.decision=not_the_same
 
 may_call:
   - read_tags
@@ -54,7 +62,7 @@ may_call:
 
 must_mention:
   - "Lucy Vo"
-  - "not (?:the same|a duplicate|flagged)|different (?:pers\w+|woman|contact)|dismiss|keep(?:ing)? (?:them )?separate"
+  - "(?:not|n['’]t) (?:the same|a duplicate|duplicates|flagged)|different (?:pers\w+|woman|contact)|dismiss|keep(?:ing)? (?:them )?separate"
 
 must_not_mention:
   # A merge reported: the user said they are different contacts.

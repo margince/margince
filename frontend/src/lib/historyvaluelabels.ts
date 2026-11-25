@@ -60,6 +60,23 @@ const MEETING_STATUS_WORDS: Readonly<
   canceled: "history.value.meeting_status.canceled",
 };
 
+// The reason a cleared or carried impersonation warning names. `unrecorded` is the
+// audit's own word for a warning stored without one.
+const IMPERSONATION_WORDS: Readonly<
+  Record<
+    | NonNullable<
+        components["schemas"]["ContactImpersonationWarning"]["reason"]
+      >
+    | "unrecorded",
+    MessageKey
+  >
+> = {
+  punycode_domain: "history.value.impersonation.punycode_domain",
+  display_name_other_domain:
+    "history.value.impersonation.display_name_other_domain",
+  unrecorded: "history.value.impersonation.unrecorded",
+};
+
 const MARK_WORDS: Readonly<
   Record<
     NonNullable<components["schemas"]["Contact"]["relationship_mark"]>,
@@ -106,6 +123,8 @@ const HISTORY_VALUE_LABELS = new Map<
   ["partner_attribution", DEAL_ATTRIBUTION_LABEL],
   ["greeting_register", GREETING_REGISTER_LABEL],
   ["relationship_mark", MARK_WORDS],
+  ["impersonation_warning_cleared", IMPERSONATION_WORDS],
+  ["impersonation_warning_carried", IMPERSONATION_WORDS],
   ["visibility", VISIBILITY_WORDS],
   ["direction", DIRECTION_WORDS],
   ["meeting_status", MEETING_STATUS_WORDS],

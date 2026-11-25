@@ -48,6 +48,7 @@ function Dialog({
         pending={false}
         error={refused ?? null}
         refusedAt={refused ? 1 : undefined}
+        dirty={false}
         onChange={setForm}
         onClose={vi.fn()}
         onSubmit={onSubmit}
@@ -80,7 +81,7 @@ describe("CompanyProfileDialog", () => {
     const view = render(<Dialog onSubmit={onSubmit} />);
     const name = await screen.findByRole("textbox", { name: "Company name" });
     view.rerender(<Dialog onSubmit={onSubmit} refused={TOO_LONG} />);
-    expect(name).toHaveAttribute("maxlength", "120");
+    expect(name).toHaveAttribute("data-character-limit", "120");
     expect(
       await screen.findByText("Company name: at most 120 characters."),
     ).toBeVisible();

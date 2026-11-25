@@ -13,7 +13,7 @@ import type { ComponentProps, ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../../api/schema";
 import { stubClipboard } from "../../design-system/clipboard-testing";
-import { formatDate } from "../../format/format";
+import { formatDate, formatDateTime } from "../../format/format";
 import { browserZone } from "../../format/timezone";
 import { LocaleProvider } from "../../i18n";
 import { type GrantSpec, meFixture } from "../../testing/mefixture";
@@ -123,8 +123,34 @@ describe("sharing a forecast view", () => {
     expect(link.textContent).toContain("tok-xyz");
     expect(screen.getByText(/link is shown only once/)).toBeTruthy();
     expect(
-      screen.getByText(/Leaving without copying discards the link/),
+      screen.getByText(
+        "If you leave without copying, the link cannot be shown again. It stays open until it expires, you close it under Shared links, or you lose forecast access.",
+      ),
     ).toBeTruthy();
+    expect(screen.queryByText(/discards the link/)).toBeNull();
+  });
+
+  it("asks before leaving an uncopied link, in words that are true", async () => {
+    vi.stubGlobal("fetch", shareStub("tok-xyz"));
+    render(
+      <ShareViewButton
+        target="forecast"
+        scope={{ kind: "workspace", label: "Whole company" }}
+      />,
+    );
+
+    await userEvent.click(screen.getByRole("button", { name: "Share view" }));
+    await userEvent.click(screen.getByRole("button", { name: "Create link" }));
+    await screen.findByTestId("forecast-share-link");
+    await userEvent.keyboard("{Escape}");
+
+    const guard = await screen.findByRole("dialog", {
+      name: "Discard unsaved changes?",
+    });
+    expect(guard.textContent).toContain(
+      "It stays open until it expires, you close it under Shared links, or you lose forecast access.",
+    );
+    expect(guard.textContent).not.toMatch(/discards the link/);
   });
 
   it("tells the reader to copy by hand when the clipboard refuses", async () => {
@@ -383,7 +409,7 @@ describe("the links a reader has shared", () => {
     const northRow = rowOf("Team North");
     expect(northRow.textContent).toContain("Live view");
     expect(northRow.textContent).toContain(
-      `Created ${formatDate(northLink.created_at, "en", zone)}`,
+      `Created ${formatDateTime(northLink.created_at, "en", zone)}`,
     );
     expect(northRow.textContent).toContain(
       `Expires ${formatDate(northLink.expires_at, "en", zone)}`,
@@ -435,7 +461,7 @@ describe("the links a reader has shared", () => {
     // are told apart by the verb that ends each.
     expect(verb).toHaveAccessibleDescription(
       new RegExp(
-        `Live view.*Created ${formatDate(northLink.created_at, "en", browserZone())}.*Team North`,
+        `Live view.*Created ${formatDateTime(northLink.created_at, "en", browserZone())}.*Team North`,
       ),
     );
     await user.click(verb);

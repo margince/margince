@@ -311,7 +311,7 @@ function ContactsCard({
       title={t("tab.contacts")}
       action={
         <Button variant="link" onClick={() => onOpenTab("contacts")}>
-          {t("co.rail.contacts.add")}
+          {t("co.overview.allContacts")}
         </Button>
       }
       empty={t(emptyWords(view, ["contacts"]) ?? "co.rail.contacts.empty")}

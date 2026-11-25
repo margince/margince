@@ -142,13 +142,34 @@ func TestARefusedTestRunReturnsToDraftOnlyFromItsOwnAttempt(t *testing.T) {
 	if err := s.RefuseValidation(ctx, stale, CauseStopped); !errors.Is(err, ErrSuperseded) {
 		t.Fatalf("refusing from an older attempt = %v, want ErrSuperseded", err)
 	}
-	if err := s.FailLease(ctx, l, CauseValidateOverBudget); err != nil {
+	if err := s.FailLease(ctx, l, stopWith(CauseValidateOverBudget)); err != nil {
 		t.Fatalf("FailLease of a test run = %v, want it refused to its draft", err)
 	}
 	got := mustGetStaged(ctx, t, s, l.Run)
 	if got.Status != StatusPending || got.Error != CauseValidateOverBudget || got.Phase != "" || got.Progress != nil {
 		t.Errorf("the refused test run reads %s with %q, phase %q, progress %+v; want its draft with the cause and no progress",
 			got.Status, got.Error, got.Phase, got.Progress)
+	}
+}
+
+func TestARefusedTestRunKeepsItsRefusalUntilTheNextTest(t *testing.T) {
+	ctx, db := testWorkspaceCtx(t, adminImportRunGrant())
+	s := NewRunStore(db)
+	l := claimedTest(ctx, t, s)
+	refusal := &StopRefusal{Field: "file", Code: "unreadable", Params: map[string]string{"line": "7"}}
+	stop := RunStop{Cause: "Line 7 could not be read.", Refusal: refusal, Err: ErrSourceUnreadable}
+	if err := s.FailLease(ctx, l, stop); err != nil {
+		t.Fatalf("FailLease of a test run = %v, want it refused to its draft", err)
+	}
+	got := mustGetStaged(ctx, t, s, l.Run)
+	if got.ErrorRefusal == nil || got.ErrorRefusal.Code != "unreadable" || got.ErrorRefusal.Params["line"] != "7" {
+		t.Fatalf("the refused draft reads refusal %+v, want file/unreadable on line 7", got.ErrorRefusal)
+	}
+	if _, _, err := s.QueueValidation(ctx, got.ID, got.Version, RunMapping{}, (&jobQueue{}).enqueue); err != nil {
+		t.Fatalf("testing the draft again: %v", err)
+	}
+	if again := mustGetStaged(ctx, t, s, l.Run); again.Error != "" || again.ErrorRefusal != nil {
+		t.Errorf("a new test reads %q with refusal %+v, want both cleared", again.Error, again.ErrorRefusal)
 	}
 }
 

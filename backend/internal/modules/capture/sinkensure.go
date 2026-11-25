@@ -115,9 +115,11 @@ type counterpartyDecision struct {
 	// by an address, the other by a provider identity. So the seam a record
 	// belongs to is decided once, here, and not re-derived downstream.
 	channel bool
-	// linkOnly files the mail under existing records and mints none.
+	// linkOnly files the mail under existing records, and mints a record only
+	// for a shared mailbox's backup owner (acting) when the ladder said create.
 	linkOnly   bool
 	readerTeam ids.UUID
+	acting     *principal.Principal
 	// subject is the party this decision is ABOUT, which is the message's
 	// counterparty except where a colleague's message named an external one
 	// (ladderSubjectTx). It is carried, not re-derived, so the create acts on
@@ -134,6 +136,9 @@ type counterpartyDecision struct {
 	// learn something this function just decided.
 	traceOutcome TraceOutcome
 	traceReason  string
+	// notesMail marks Google's mail about a meeting: held to its participants,
+	// filed under no contact, its notes landed on the meeting (meetingnotesmail.go).
+	notesMail bool
 }
 
 // traced is the decision with its trace fields set, so a tier can answer in one
@@ -194,7 +199,7 @@ func (s *Sink) decideMailSubject(ctx context.Context, tx pgx.Tx, rec connector.N
 		return decision, err
 	}
 	decision.subject = cp
-	private, _, err := threadIsPrivateTx(ctx, tx, rec)
+	private, err := capturedThreadIsPrivateTx(ctx, tx, rec)
 	if err != nil {
 		return counterpartyDecision{}, err
 	}

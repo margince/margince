@@ -396,19 +396,16 @@ func (r *Registry) Scopes() map[string]string {
 // CertifiedScope reports how much of this site a run covers when its case
 // declares nothing.
 //
-// A one-shot site's whole invocation IS one request, so a scored request is a
-// scored site. A multi-turn or agent-loop site is different in kind: its
-// committed scenarios seed the prior turns (an agent scenario supplies the tool
-// result as context) and grade the single reply that follows. That is a real
-// measurement — it is what the shipped prompt does with that window — but it is
-// not the loop, and a record that does not distinguish them claims more than it
-// tested.
+// A one-shot site's whole invocation is one request, so a scored request is a
+// scored site. An agent-loop site's loop does no I/O of its own: every outside
+// reach is through the seams a case hands it. So a case can drive the whole run
+// on its fixture's tool answers. A multi-turn site's scenarios seed the prior
+// turns and grade the one reply that follows, which is not the conversation.
 //
-// The kind is a floor, not the answer: it says what a site of this shape could
-// be covered to, and a case that measures less than its whole path says so
-// itself through ScopedCase.
+// The kind is a ceiling. A case measuring less than its whole path says so
+// through ScopedCase.
 func (s Site) CertifiedScope() string {
-	if s.Kind == ai.SiteKindOneShot {
+	if s.Kind == ai.SiteKindOneShot || s.Kind == ai.SiteKindAgentLoop {
 		return ScopeFullInvocation
 	}
 	return ScopeSingleTurn

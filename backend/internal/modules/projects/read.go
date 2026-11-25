@@ -28,12 +28,12 @@ func (s *Store) GetProject(ctx context.Context, id ids.ProjectID, archived store
 	if err := auth.Require(ctx, projectObject, principal.ActionRead); err != nil {
 		return crmcontracts.Project{}, err
 	}
-	active, err := s.catalogColumns(ctx)
-	if err != nil {
-		return crmcontracts.Project{}, err
-	}
 	var out crmcontracts.Project
-	err = s.Tx(ctx, func(tx pgx.Tx) (err error) {
+	err := s.Tx(ctx, func(tx pgx.Tx) (err error) {
+		active, err := s.catalogColumnsIn(ctx, tx)
+		if err != nil {
+			return err
+		}
 		if err := auth.EnsureVisible(ctx, tx, projectObject, id.UUID); err != nil {
 			return err
 		}
@@ -47,10 +47,9 @@ func (s *Store) GetProject(ctx context.Context, id ids.ProjectID, archived store
 	return out, err
 }
 
-// ActiveProjectColumns is the caller-side half of GetProjectTx: a caller that
-// opens the transaction itself reads the catalog BEFORE opening it, then
-// threads the answer in — the same order every store-opened entry point keeps,
-// because the catalog read takes a connection of its own. It takes
+// ActiveProjectColumns is the caller-side half of GetProjectTx. A caller that
+// opens the transaction itself reads this first and threads the answer in.
+// The read takes a connection of its own. It takes
 // project:read, as contacts's ActiveCompanyColumns takes company:read:
 // which columns a record type carries is a fact about that record type.
 func (s *Store) ActiveProjectColumns(ctx context.Context) (CustomColumns, error) {
@@ -165,25 +164,32 @@ func (s *Store) ListProjects(ctx context.Context, in ListProjectsInput) ([]crmco
 	if err := auth.Require(ctx, projectObject, principal.ActionRead); err != nil {
 		return nil, storekit.Page{}, err
 	}
-	active, err := s.catalogColumns(ctx)
-	if err != nil {
-		return nil, storekit.Page{}, err
-	}
-	pre, err := storekit.BuildListPrelude(ctx, projectObject, "projects", projectListFields, active,
-		in.Sort, in.Limit, in.Cursor, in.CustomFilters)
-	if err != nil {
-		return nil, storekit.Page{}, err
-	}
-	where, err := appendProjectFilters(ctx, pre.Where(), in, pre.Arg)
-	if err != nil {
-		return nil, storekit.Page{}, err
-	}
-
-	return storekit.RunListPage(ctx, s, pre, projectObject, projectColumns, active, where, scanProjectPage,
-		func(p crmcontracts.Project) (time.Time, ids.UUID) { return p.CreatedAt, ids.UUID(p.Id) },
-		func(tx pgx.Tx, page []crmcontracts.Project) error {
-			return maskProjects(ctx, tx, page, s.projectCustomers)
-		})
+	var (
+		out  []crmcontracts.Project
+		page storekit.Page
+	)
+	err := s.Tx(ctx, func(tx pgx.Tx) error {
+		active, err := s.catalogColumnsIn(ctx, tx)
+		if err != nil {
+			return err
+		}
+		pre, err := storekit.BuildListPrelude(ctx, projectObject, "projects", projectListFields, active,
+			in.Sort, in.Limit, in.Cursor, in.CustomFilters)
+		if err != nil {
+			return err
+		}
+		where, err := appendProjectFilters(ctx, pre.Where(), in, pre.Arg)
+		if err != nil {
+			return err
+		}
+		out, page, err = storekit.RunListPageTx(ctx, tx, pre, projectObject, projectColumns, active, where, scanProjectPage,
+			func(p crmcontracts.Project) (time.Time, ids.UUID) { return p.CreatedAt, ids.UUID(p.Id) },
+			func(tx pgx.Tx, page []crmcontracts.Project) error {
+				return maskProjects(ctx, tx, page, s.projectCustomers)
+			})
+		return err
+	})
+	return out, page, err
 }
 
 // scanProjectPage drains one list query's rows: each project plus, under a

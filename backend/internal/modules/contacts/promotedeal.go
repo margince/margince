@@ -18,6 +18,7 @@ import (
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/provenance"
 )
 
 // QualifyDealInput is what a qualify call asks the deal opener for. Nil
@@ -88,7 +89,7 @@ func (s *Store) openQualifiedDeal(ctx context.Context, tx pgx.Tx, leadID ids.Lea
 	if err != nil {
 		return nil, fmt.Errorf("open deal for qualified lead: %w", err)
 	}
-	err = s.seatQualifiedContact(ctx, tx, contactID, dealID, deal.Source)
+	err = s.seatQualifiedContact(ctx, tx, contactID, dealID, promotionSource(leadID))
 	if err != nil {
 		return nil, fmt.Errorf("seat the contact on the qualified deal: %w", err)
 	}
@@ -116,7 +117,7 @@ func qualifiedDealInput(leadID ids.LeadID, lead crmcontracts.Lead, in QualifyDea
 		deal.Name = defaultQualifiedDealName(lead)
 	}
 	deal.OwnerID = idArg[ids.UserKind](lead.OwnerId)
-	deal.Source = promotionSource(leadID)
+	deal.Source = provenance.RecordSourceManual
 	return deal
 }
 
@@ -143,4 +144,6 @@ func (s *Store) previewQualifiedDeal(ctx context.Context, tx pgx.Tx, lead crmcon
 	return &resolved, nil
 }
 
+// promotionSource stamps the stakeholder edge a promotion seats; the deal itself
+// is the promoting member's, and the lead row names the deal it opened.
 func promotionSource(lead ids.LeadID) string { return "lead:" + lead.String() }

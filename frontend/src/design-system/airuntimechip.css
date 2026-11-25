@@ -17,7 +17,6 @@
   padding-inline: var(--space-2);
   border: 1px solid var(--aiMed);
   border-radius: var(--r-full);
-  corner-shape: round;
   background: var(--aiLight);
   cursor: pointer;
   transition:
@@ -26,7 +25,7 @@
 }
 .mw-aistat-btn:hover {
   border-color: var(--ai);
-  background: color-mix(in srgb, var(--ai) 14%, var(--bgElevated));
+  background: color-mix(in srgb, var(--ai) 14%, var(--bgField));
 }
 /* The AI family's focus on both boxes, as the onboarding fields draw it: the
    edge in --aiText, which clears 3:1 in both themes, and the glow around it. */
@@ -53,7 +52,6 @@
   width: 6px;
   height: 6px;
   border-radius: var(--r-full);
-  corner-shape: round;
   background: var(--aiText);
 }
 

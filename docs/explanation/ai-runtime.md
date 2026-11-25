@@ -125,9 +125,10 @@ embeddings:    {provider: gemini}
 - **`profile`** is the location ladder: where the model may run. `eu_hosted` means a partner runs the
   model in the EU. `sovereign` means no data leaves, by the way it is built. `cloud_frontier` means a
   vendor's cloud, where the vendor serves.
-- Only `sovereign` limits anything: it refuses a cloud provider. `eu_hosted` and `cloud_frontier` are
-  labels that refuse no binding on location grounds. Where a lane is served is the connection's choice
-  (`only` on the broker `upstream`, or a Vertex `location`).
+- `sovereign` refuses a cloud provider. `eu_hosted` refuses an `azure_openai` binding whose Azure region
+  is outside the EU; the regions of `GB`, `NO` and `CH` count as outside it. Otherwise
+  `eu_hosted` and `cloud_frontier` are labels that refuse no binding on location grounds. Where a lane is
+  served is the connection's choice (`only` on the broker `upstream`, or a Vertex `location`).
 - **No key ever sits in the binding.** A provider names only itself, and an `api_key:` left in it is a *boot
   error*. Where the key comes from depends on who asks. A served installation reads it from the **key
   vault**.
@@ -149,8 +150,8 @@ embeddings:    {provider: gemini}
 - `/readyz` names the AI state (`configured` | `fake` | `unconfigured`). So an operator reads the gap
   off the boot log, not off a refused call at `3am`.
 - **The models that can serve a task** are the ladder plus its closure under `degrade_to`, and readers
-  tend to forget the second half. `ai.LeadingTier` is the rung that answers when nothing has gone wrong (the
-  first rung of the ladder). `ai.ServableTiers` is every rung that can end up answering: the ladder,
+  tend to forget the second half. The first rung of `RoutingConfig.Ladder(task)` is the rung that answers when
+  nothing has gone wrong, in the order `task_ladders` gives. `ai.ServableTiers` is every rung that can end up answering: the ladder,
   then every tier that `degrade_to` reaches from it, step after step.
 - An example: `draft_reply` has the ladder `[cheap_cloud, premium]`, and `cheap_cloud` moves down to
   `local_small`. So the model bound at `local_small` serves `draft_reply` when the budget runs low, while
@@ -352,9 +353,9 @@ Every call ends at the Router (`internal/modules/ai`). In one pass it:
 
 **Company context** is the installation's own profile (offer, ICP, voice: what the onboarding steps
 confirm). It goes into task prompts as data under rules, not as free text. A request holds typed
-`ContextScopes`, a `ContextFingerprint`, and byte and token estimates (`ports/model`). All of them go into
-the `ai_call` trace and key the answer cache (the same prompt with different context is a different call).
-They also show up as `/metrics` counters per task.
+`ContextScopes`, a `ContextFingerprint`, and byte and token estimates (`ports/model`). The scopes and the
+fingerprint go into the `ai_call` trace and key the answer cache (the same prompt with different
+context is a different call). The estimates show up as `/metrics` counters per task.
 
 The whole lane sits behind the `company_context.rollout` switch in `margince.yaml`, which can turn it
 off. Its steps are ordered `off < read < tasks < onboarding` (default `onboarding` = all the way on;
@@ -392,8 +393,8 @@ Every attempt writes one `ai_call` row (migration `0100`), not one row per final
   *claim* a source of higher trust than its adapter has proved.
 - **The config snapshot** for each call is keyed by hash in `ai_call_config` (task contract hash + routing config hash).
   It holds the fixed facts of the build and the deployment, never a key or a prompt.
-- **Company context provenance** goes on the same row (migration `0102`): the context scopes,
-  fingerprint and size that shaped the prompt. So "what did the model know about us" can be answered per
+- **Company context provenance** goes on the same row (migration `0102`): the context scopes and
+  fingerprint that shaped the prompt. So "what did the model know about us" can be answered per
   attempt.
 - Embedding calls are traced too. A new one keeps no payload, as the `embed` row of
   [ai-egress.md](../reference/ai-egress.md) says. The privacy retention check removes their rows after
@@ -511,7 +512,8 @@ The full steps: [how-to/certify-an-ai-model.md](../how-to/certify-an-ai-model.md
 | BYOK keys | one stored secret setting per provider (`ai.provider_keys_<provider>`), sealed in the key vault and set under Settings → AI → AI models → Providers. The usual environment values (`GEMINI_API_KEY`, `GEMINI_VERTEX_SA_JSON`, `ANTHROPIC_API_KEY`, `OPENAI_API_KEY`, `OPENAI_COMPATIBLE_API_KEY`, `TYPESAFE_API_KEY`, `JEV_COMPATIBLE_API_KEY`) win over the vault and lock the key; they are never sealed |
 | The gate | `internal/modules/ai`: `ai.Router` / `ai.NewLocalRouter`; `--ai-fake` flag |
 | Decision lane | `decisions:` in the routing setting · `Router.Decide` (`decideroute.go`) · certified rows in `decisioncert_gen.go` |
-| Providers | `anthropic`, `openai`, `gemini`, `gemini_vertex` (built in; `gemini_vertex` is the `gemini` wire on Vertex AI, bound by `location`) · `ollama`, `vllm`, `openai_compatible` · `fake` · decision lane only: `jev`, `jev_compatible`, `gemini_decision` (`providerregistry.go`) |
+| Certification shown per task | the AI admin screen reads each task's grade and each candidate's verdict from `taskgrades_gen.go` through `ai.CertificationFor`, the rule `make e2e-ai-report` prints. `make gen` writes the table from the committed records. A binding is never refused for its verdict |
+| Providers | `anthropic`, `openai`, `gemini`, `gemini_vertex` (built in; `gemini_vertex` is the `gemini` wire on Vertex AI, bound by `location`), `azure_openai` (the OpenAI wire on an Azure resource, bound by an Azure region) · `ollama`, `vllm`, `openai_compatible` · `fake` · decision lane only: `jev`, `jev_compatible`, `gemini_decision` (`providerregistry.go`) |
 | Tracing | `ai_call` / `ai_call_payload` / `ai_call_config` (migrations `0088`, `0089`, `0100`, `0102`) |
 | Cost rates | `ai_model_rate` (per provider and model, dated, micro-USD) · seeded by `SeedModelRates` |
 | Pricer (actuals) | `PriceCall` + `RateStore` (`internal/modules/ai`) → `/ai/usage` `cost_est_minor` |

@@ -2,6 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { components } from "../../src/api/schema";
+import { REPORT_SCHEMA } from "../../src/features/analytics/analytics.questions.testkit";
 import {
   reportingStoryCatalog,
   reportingStoryEvaluation,
@@ -12,13 +13,7 @@ import {
   isPreviewDoor,
   previewedAddresses,
 } from "../../src/testing/sendpermission.testkit";
-import * as ai from "./ai";
-import * as booking from "./booking";
-import * as calls from "./calls";
-import * as capture from "./capture";
-import * as dataTasks from "./datatasks";
 import {
-  agentUsageByUser,
   aiCalls,
   aiHealth,
   aiProviderHealth,
@@ -26,18 +21,26 @@ import {
   aiRouting,
   aiUsage,
   aiUsageSummary,
+  captureHealth,
+  extensionIngestHealth,
+  installationJurisdiction,
+  jobHealth,
+  recoveryHealth,
+} from "./adminfixtures";
+import * as ai from "./ai";
+import * as booking from "./booking";
+import * as calls from "./calls";
+import * as capture from "./capture";
+import * as dataTasks from "./datatasks";
+import {
+  agentUsageByUser,
   anna,
   approval,
   automationCatalog,
   brandt,
   captureActivity,
-  captureHealth,
-  extensionIngestHealth,
-  installationJurisdiction,
-  jobHealth,
   knowledgeCorpora,
   passports,
-  recoveryHealth,
   seats,
   seededLead,
 } from "./fixtures";
@@ -405,6 +408,9 @@ export const routes: readonly MockRoute[] = [
     handle: reply(booking.schedulingProfile),
   },
   { path: "/scheduling/calendars", handle: reply(booking.calendars) },
+  // Both answer a bare array, so the empty list page would break the cards.
+  { path: "/scheduling/team-candidates", handle: reply([]) },
+  { path: "/scheduling/team-requests", handle: reply([]) },
   {
     path: "/public/meeting/guest-booking",
     handle: reply(booking.guestBooking),
@@ -417,6 +423,8 @@ export const routes: readonly MockRoute[] = [
   { path: "/availability", handle: reply(booking.availability) },
   { path: "/search", handle: insight.search },
   { path: "/analytics/context", handle: reply(insight.analyticsContext) },
+  // The explain drawer draws no amount before the schema marks the money columns.
+  { path: "/analytics/schema", handle: reply(REPORT_SCHEMA) },
   { path: "/forecast", handle: reply(insight.forecast) },
   { path: "/analytics/framework", handle: reply(reportingStoryFramework) },
   { path: "/analytics/metrics", handle: reply(reportingStoryCatalog) },

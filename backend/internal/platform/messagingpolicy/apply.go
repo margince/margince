@@ -39,6 +39,9 @@ func (l layerFile) apply(name string, r *messaging.Rules) error {
 	}
 	l.applyWindows(r)
 	l.applyFlags(r)
+	if l.MarketingMode != nil {
+		r.MarketingMode = messaging.MarketingMode(*l.MarketingMode)
+	}
 	set(&r.SubjectPrefix, l.SubjectPrefix)
 	set(&r.DisclosureLanguage, l.DisclosureLanguage)
 	set(&r.ClaimsNeedProof, l.ClaimsNeedProof)
@@ -88,6 +91,8 @@ func (l layerFile) addInstruments(name string, r *messaging.Rules) error {
 		r.Instruments = append(r.Instruments, messaging.Instrument{
 			Name: in.Name, EffectiveFrom: in.Effective, ExpiresFrom: in.Expires,
 			Provision: in.Provision, SourceURL: in.SourceURL,
+			TextURL: in.TextURL, TextDigest: in.TextDigest, TextFetchedAt: in.TextFetched,
+			CheckedByHandAt: in.CheckedByHand,
 		})
 	}
 	return nil

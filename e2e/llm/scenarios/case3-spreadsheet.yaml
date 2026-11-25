@@ -27,9 +27,10 @@ prompt: |
   ,Köln,201-500,DE
   Alpenblick Sensorik GmbH,München,11-50,DE
 
-must_call:
-  - preview_import
 may_call:
+  # The dry run is the product's way to show the numbers first; the answer and
+  # the end state below are the test.
+  - preview_import
   # NOT commit_import, and its absence is the case. Criterion 1 is that the
   # numbers are shown BEFORE anything is written, and the prose half now fails a
   # run that reports the import as done — so permitting the tool that does it
@@ -50,7 +51,7 @@ must_mention:
   - "(?:creat\w*|import\w*|add\w*|anleg\w*)[^.]{0,20}\(?\*{0,2}\b(?:3|three|drei)\b\)?(?:[^.]{0,20}(?:rows?|records?|companies|organi[sz]ations?|contacts?|contacts|Zeilen|Datensätze)|\s*[:\-*•—|]|\s*\n)|\b(?:3|three|drei)\b[^.]{0,20}(?:creat\w*|import\w*|new\b|angelegt)(?:[^.]{0,20}(?:rows?|records?|companies|organi[sz]ations?|contacts?|contacts|Zeilen|Datensätze)|\s*[:\-*•—|]|\s*\n)|\b(?:3|three|drei)\s+(?:\w+\s+){0,3}(?:rows?|records?|companies|organi[sz]ations?|contacts?|contacts|Zeilen|Datensätze)"
   # And the unusable row is REPORTED, not merely a sentence containing the
   # word "row". Anchored to the row being left out, in either order.
-  - "(?:skip\w*|left out|not imported|unusable|rejected|übersprung\w*)[^.]{0,60}(?:row|record|line|name|Zeile|Datensatz)|(?:row|record|line|Zeile)[^.]{0,60}(?:skip\w*|left out|no name|blank|unusable|leer|fehlt|could not be (?:used|imported))"
+  - "(?:skip\w*|left out|(?:not|n['’]t) imported|unusable|rejected|übersprung\w*)[^.]{0,60}(?:row|record|line|name|Zeile|Datensatz)|(?:row|record|line|Zeile)[^.]{0,60}(?:skip\w*|left out|no name|blank|unusable|leer|fehlt|could(?: not|n['’]t) be (?:used|imported))"
 
 # CRITERION 1's REAL QUESTION IS SEMANTIC and had no guard that could fail.
 # The case is about showing the numbers BEFORE anything is written, and the only

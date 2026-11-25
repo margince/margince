@@ -17,7 +17,6 @@ import (
 	"context"
 	"errors"
 	"net/http"
-	"slices"
 	"strings"
 	"time"
 
@@ -231,7 +230,7 @@ func (h Handlers) GetPublicAvailability(w http.ResponseWriter, r *http.Request, 
 		httperr.Write(w, r, err)
 		return
 	}
-	profile, ok := h.openBookingPage(w, r, page)
+	profile, team, ok := h.openBookingPage(w, r, page)
 	if !ok {
 		return
 	}
@@ -239,14 +238,28 @@ func (h Handlers) GetPublicAvailability(w http.ResponseWriter, r *http.Request, 
 		httperr.Write(w, r, httperr.Validation("duration_minutes", "duration", "Choose the duration offered by this booking page"))
 		return
 	}
-	profile = bookingLength(profile, params.L)
-	duration := time.Duration(profile.DurationMinutes) * time.Minute
-	slots, truncated, err := h.store.ReliableAvailability(r.Context(), page.HostUserID, params.From, params.To, duration)
+	profile, err = chosenLength(profile, params.L)
 	if err != nil {
-		writeStoreErr(w, r, err)
+		httperr.Write(w, r, err)
+		return
+	}
+	duration := time.Duration(profile.DurationMinutes) * time.Minute
+	slots, truncated, err := h.store.PageAvailability(r.Context(), page.HostUserID, team, params.From, params.To, duration)
+	if err != nil {
+		writeGuestAvailabilityErr(w, r, err)
 		return
 	}
 	httperr.WriteJSON(w, http.StatusOK, map[string]any{"slots": slots, "truncated": truncated})
+}
+
+// writeGuestAvailabilityErr answers a guest's availability read. A host with no
+// calendar reads as a paused page, so the guest learns nothing of the host's setup.
+func writeGuestAvailabilityErr(w http.ResponseWriter, r *http.Request, err error) {
+	if errors.Is(err, errNoCalendarToRead) {
+		httperr.Write(w, r, apperrors.ErrNotFound)
+		return
+	}
+	writeStoreErr(w, r, err)
 }
 
 // bookingRequestIsWritable refuses a request before anything is written.
@@ -327,11 +340,15 @@ func (h Handlers) BookPublicMeeting(w http.ResponseWriter, r *http.Request, host
 		writePublicInvitation(w, *recovered, intent.Marketing)
 		return
 	}
-	if _, err := h.store.validateInvitationTime(r.Context(), page.HostUserID, req.Start, req.End); err != nil {
+	if err := h.store.validatePageTime(r.Context(), page.HostUserID, open.team, req.Start, req.End); err != nil {
 		writeStoreErr(w, r, err)
 		return
 	}
-	profile = bookingLength(profile, params.L)
+	profile, err = chosenLength(profile, params.L)
+	if err != nil {
+		httperr.Write(w, r, err)
+		return
+	}
 	if req.End.Sub(req.Start) != time.Duration(profile.DurationMinutes)*time.Minute {
 		httperr.Write(w, r, httperr.Validation("end", "duration", "Choose a time offered by this booking page"))
 		return
@@ -465,11 +482,4 @@ func (h Handlers) captureBookingConsent(w http.ResponseWriter, r *http.Request, 
 		return false
 	}
 	return true
-}
-
-func bookingLength(profile crmcontracts.SchedulingProfile, requested *int) crmcontracts.SchedulingProfile {
-	if requested != nil && (profile.DurationMinutes == *requested || (profile.OfferedLengths != nil && slices.Contains(*profile.OfferedLengths, *requested))) {
-		profile.DurationMinutes = *requested
-	}
-	return profile
 }

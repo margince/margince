@@ -55,15 +55,13 @@ const (
 	// verdictCreateFloor is what a CREATING answer needs, and it is higher —
 	// see clearsItsFloor for why the two mistakes are not the same size.
 	verdictCreateFloor = 0.85
-	// verdictCatchUpCap bounds one pass so a large backlog is drained over
-	// several cycles rather than in one unbounded run.
-	verdictCatchUpCap = 200
 )
 
 // CounterpartyVerdictEngine drains the capture disposition ledger.
 type CounterpartyVerdictEngine struct {
 	pool       *pgxpool.Pool
 	pending    *capture.PendingStore
+	caps       *capture.PassCaps
 	contacts   *contacts.Store
 	activities *activities.Store
 	approvals  *approvals.Service
@@ -86,6 +84,10 @@ type CounterpartyVerdictEngine struct {
 	// skipReservedDomains closes a review row for a sender on a reserved name
 	// instead of staging its proposal (captureverdictsweeps.go).
 	skipReservedDomains bool
+	// ledger is what judgeOne settles a sender through. It is nil in production,
+	// which settles through the database; a certification run stands an
+	// in-memory one here. See ledgerOf.
+	ledger verdictLedger
 	// answeredPage is how many contacts one reconciling pass publishes.
 	answeredPage int
 	// markLift is where the vendor-mark pass continues on its next tick.
@@ -106,6 +108,7 @@ func NewCounterpartyVerdictEngine(
 	return &CounterpartyVerdictEngine{
 		pool:       pool,
 		pending:    capture.NewPendingStore(InstallationDB(pool)),
+		caps:       capture.NewPassCaps(InstallationDB(pool)),
 		contacts:   newCounterpartyStore(pool),
 		activities: activities.NewStore(InstallationDB(pool)).WithFieldCatalog(customfields.NewService(pool, nil)),
 		approvals:  NewApprovalsService(InstallationDB(pool)),
@@ -174,16 +177,19 @@ type verdictPayload struct {
 }
 
 // RunWorkspace judges up to maxVerdicts deferred dispositions in the workspace
-// already bound in ctx. Every sender the pass reaches counts, answered or not,
-// so a failing model cannot make the cap a suggestion. A budget stop ends the
-// pass cleanly: what was decided is committed, and the rest stays claimable for
-// the next cycle.
+// already bound in ctx. A maxVerdicts that is not positive means the admin's
+// pass cap. Every sender the pass reaches counts, answered or not. A failing
+// model cannot make the cap a suggestion. A budget stop ends the pass cleanly.
+// What was decided is committed, and the rest stays claimable.
 //
 // The cap is per workspace, not per pass: a shared counter lets one large
 // backlog consume the whole budget and starve every workspace after it.
 func (e *CounterpartyVerdictEngine) RunWorkspace(ctx context.Context, maxVerdicts int) error {
 	if maxVerdicts <= 0 {
-		maxVerdicts = verdictCatchUpCap
+		var err error
+		if maxVerdicts, err = e.caps.Verdict(ctx); err != nil {
+			return err
+		}
 	}
 	budget := reAskBudgetFor(maxVerdicts)
 	return e.inWorkspace(ctx, func(wsCtx context.Context, _ ids.UUID) error {
@@ -300,37 +306,14 @@ func (e *CounterpartyVerdictEngine) judgeOne(
 	// question; asking anyway would spend a call to be told something we then
 	// have to discard, and a machine that could overturn them would make every
 	// correction temporary.
-	decided, kind, err := e.ownerDecided(ctx, row)
+	decided, kind, err := e.ledgerOf().OwnerDecided(ctx, row)
 	if err != nil {
 		return 0, err
 	}
 	if decided {
 		return e.applyOwnerDecision(ctx, row, kind)
 	}
-	if addressIsARoleMailbox(row.Email) {
-		return e.applyJudged(ctx, row, capture.KindRoleMailbox, capture.VerdictMeasurement{})
-	}
-	// Google's meeting mail is evidence a meeting took place, and a model's
-	// noise answer would hide every later message from that sender. Settled as
-	// a role mailbox: the mail stays visible and nobody is recorded.
-	if capture.IsGoogleMeetingMail(row.Email, row.SenderAuthenticated) {
-		return e.applyJudged(ctx, row, capture.KindRoleMailbox, capture.VerdictMeasurement{})
-	}
-	// The other address-only refusal, and the one this lane was missing: an
-	// address nobody answers at all. See addressNamesNoContact for what the gap
-	// cost — a stray `contact` answer at 0.95 for an expense tool's receipts
-	// address, and the contact it minted.
-	//
-	// Settled as a ROLE MAILBOX rather than as transactional, and the difference
-	// is what the kind authorizes rather than what it reads like. `transactional`
-	// takes apply's noise arm, which suppresses the sender's whole DOMAIN for
-	// company creation and hides their mail — so one `noreply@` at a real
-	// customer would refuse that customer a company record for every colleague,
-	// on the strength of a local part. This kind creates no contact and touches
-	// nothing else, which is the whole claim being made here: nobody answers at
-	// this ADDRESS. What the domain is remains the model's question, and the
-	// mail stays where a human can read it.
-	if addressNamesNoContact(row.Email, row.Domain, e.transactional) {
+	if e.settledByTheAddress(row) {
 		return e.applyJudged(ctx, row, capture.KindRoleMailbox, capture.VerdictMeasurement{})
 	}
 	// Everything above answers from the address and the ledger alone; what
@@ -339,7 +322,7 @@ func (e *CounterpartyVerdictEngine) judgeOne(
 	if !e.CanJudge() {
 		return e.askAHumanInstead(ctx, row)
 	}
-	answers, servedModel, err := e.ask(ctx, row)
+	answers, err := e.ask(ctx, row)
 	if err != nil {
 		return 0, err
 	}
@@ -349,10 +332,9 @@ func (e *CounterpartyVerdictEngine) judgeOne(
 			return 0, err
 		}
 		if stray {
-			return e.askAboutAStrayAnswer(ctx, row, answers, servedModel, settled)
+			return e.askAboutAStrayAnswer(ctx, row, answers, settled)
 		}
-		return e.applyJudged(ctx, row, answers[0].Verdict,
-			capture.MeasuredVerdict(float64(answers[0].Confidence), servedModel))
+		return e.applyJudged(ctx, row, answers[0].Verdict, capture.MeasuredVerdict(float64(answers[0].Confidence)))
 	}
 	// One re-ask below the floor, then terminal (ADR-0072). The retry asks for a
 	// fresh answer, because the result cache would hand back the first one. It
@@ -367,13 +349,13 @@ func (e *CounterpartyVerdictEngine) judgeOne(
 	if !budget.spend() {
 		// The same helper, asked with no retry answer to prefer: a human is
 		// owed what the model DID say, which here is the one answer it gave.
-		if err := e.pending.Retire(ctx, row, "below the confidence floor, and this pass had no re-ask left",
-			lastMeasurement(nil, "", answers, servedModel)); err != nil {
+		if err := e.ledgerOf().Retire(ctx, row, "below the confidence floor, and this pass had no re-ask left",
+			lastMeasurement(nil, answers)); err != nil {
 			return 0, err
 		}
 		return 1, nil
 	}
-	retry, retryModel, err := e.ask(ai.WithFreshAnswer(ctx), row)
+	retry, err := e.ask(ai.WithFreshAnswer(ctx), row)
 	if err != nil {
 		return 0, err
 	}
@@ -388,10 +370,9 @@ func (e *CounterpartyVerdictEngine) judgeOne(
 			return 0, err
 		}
 		if stray {
-			return e.askAboutAStrayAnswer(ctx, row, retry, retryModel, settled)
+			return e.askAboutAStrayAnswer(ctx, row, retry, settled)
 		}
-		return e.applyJudged(ctx, row, retry[0].Verdict,
-			capture.MeasuredVerdict(float64(retry[0].Confidence), retryModel))
+		return e.applyJudged(ctx, row, retry[0].Verdict, capture.MeasuredVerdict(float64(retry[0].Confidence)))
 	}
 	// Terminally unsure: a human decides, and the ledger says so explicitly
 	// rather than by having quietly run out of attempts.
@@ -399,9 +380,19 @@ func (e *CounterpartyVerdictEngine) judgeOne(
 	// the model had an opinion it could not hold confidently enough — "it said
 	// contact at 0.78 twice" is why a human is now being asked, and dropping it
 	// would hand them the question with none of the evidence.
-	if err := e.pending.Retire(ctx, row, "below the confidence floor on a re-ask",
-		lastMeasurement(retry, retryModel, answers, servedModel)); err != nil {
+	if err := e.ledgerOf().Retire(ctx, row, "below the confidence floor on a re-ask",
+		lastMeasurement(retry, answers)); err != nil {
 		return 0, err
 	}
 	return 1, nil
+}
+
+// settledByTheAddress says whether the address alone settles the sender as a
+// role mailbox, with no model call. The certification case asks it too, since it
+// must refuse a sender the engine would never ask about.
+func (e *CounterpartyVerdictEngine) settledByTheAddress(row capture.PendingCounterparty) bool {
+	// Role mailbox and never noise: noise suppresses the sender's whole domain.
+	return addressIsARoleMailbox(row.Email) ||
+		capture.IsGoogleMeetingMail(row.Email, row.SenderAuthenticated) ||
+		addressNamesNoContact(row.Email, row.Domain, e.transactional)
 }

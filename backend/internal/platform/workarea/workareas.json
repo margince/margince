@@ -130,6 +130,7 @@
     "changeUserRole": "admin_settings",
     "claimRecord": "business",
     "clearActivityDisposition": "business",
+    "clearDealManagerRequest": "business",
     "clearLeadManualSignal": "business",
     "closeDealRoom": "business",
     "compareReportingEditions": "business",
@@ -195,6 +196,7 @@
     "createTeam": "admin_settings",
     "createVoiceBuild": "business",
     "createVoiceProfile": "business",
+    "createWebForm": "admin_settings",
     "createWorkspaceEmailDomain": "admin_settings",
     "deactivateUser": "admin_settings",
     "decideCommissionEntry": "business",
@@ -357,6 +359,7 @@
     "getDealSuggestion": "business",
     "getDealWinEvidence": "business",
     "getDedupeCandidate": "business",
+    "getEditAccessRequest": "business",
     "getEmailPresentation": "business",
     "getEmailSignatureTemplate": "workspace_settings",
     "getExtensionIngestHealth": "operator",
@@ -619,6 +622,8 @@
     "listSalesProgressDeals": "business",
     "listSavedViews": "business",
     "listScheduledSends": "business",
+    "listSchedulingTeamCandidates": "business",
+    "listSchedulingTeamRequests": "business",
     "listSdrUpcomingMeetings": "business",
     "listSdrWaitingHandoffs": "business",
     "listSignals": "business",
@@ -760,7 +765,9 @@
     "replyDealRoomThread": "business",
     "requestAttachmentAccess": "business",
     "requestCompanyVatCheck": "business",
+    "requestDealManager": "business",
     "requestDetailsConfirmation": "compliance",
+    "requestEditAccess": "business",
     "requestLegalReview": "business",
     "requestOwnershipTransfer": "business",
     "rescheduleScheduledSend": "business",
@@ -920,6 +927,7 @@
     "useDealEstimate": "business",
     "validateImportRun": "business",
     "visitList": "business",
+    "withdrawEditAccessRequest": "business",
     "withdrawLegalReview": "business",
     "withdrawOwnershipOffer": "business",
     "withdrawOwnershipRequest": "business"
@@ -954,6 +962,7 @@
     "annotateMorningBrief": "worklist",
     "answerCalendarInvitation": "activities",
     "answerReportingQuestionCard": "reports",
+    "answerSchedulingTeamRequest": "scheduling",
     "answerWeeklyPlanCommitment": "worklist",
     "applyContactEmploymentImport": "contacts",
     "applyLegacyLossReasons": "sales_lists",
@@ -1017,6 +1026,8 @@
     "claimRecord": "sharing",
     "claimTaskReminderDelivery": "activities",
     "clearActivityDisposition": "activities",
+    "clearContactImpersonationWarning": "contacts",
+    "clearDealManagerRequest": "deals",
     "clearLeadManualSignal": "leads",
     "clearVoiceCorpus": "voice",
     "closeDealRoom": "deal_rooms",
@@ -1314,6 +1325,7 @@
     "getDealWinEvidence": "deals",
     "getDedupeCandidate": "duplicates",
     "getDispactAppManifest": "connectors",
+    "getEditAccessRequest": "sharing",
     "getEmailPresentation": "activities",
     "getEmailSignatureTemplate": "sales_rules",
     "getExtensionIngestHealth": "system_health",
@@ -1448,6 +1460,7 @@
     "getUserAccess": "members",
     "getUserAvatar": "members",
     "getUserHandover": "members",
+    "getVacuumRecommendations": "system_health",
     "getVoiceBuild": "voice",
     "getVoiceLearningSummary": "voice",
     "getVoiceProfile": "voice",
@@ -1456,6 +1469,7 @@
     "getWorklist": "worklist",
     "handOverUserWork": "members",
     "handleExistingWebFormInquiries": "web_forms",
+    "headStatus": "sign_in",
     "hideDealDocument": "documents",
     "importCardPhoto": "contacts",
     "importLinkedInConnections": "own_profile",
@@ -1633,6 +1647,8 @@
     "listSalesProgressDeals": "reports",
     "listSavedViews": "lists",
     "listScheduledSends": "activities",
+    "listSchedulingTeamCandidates": "scheduling",
+    "listSchedulingTeamRequests": "scheduling",
     "listSdrUpcomingMeetings": "reports",
     "listSdrWaitingHandoffs": "reports",
     "listSharedMailboxes": "connectors",
@@ -1645,6 +1661,7 @@
     "listTaxRates": "rates",
     "listTeams": "members",
     "listTransitionPolicies": "pipelines",
+    "listUnroutedMail": "capture_triage",
     "listUserSessions": "members",
     "listUsers": "members",
     "listVoiceCorpusSources": "voice",
@@ -1765,6 +1782,7 @@
     "refreshCompanyDossier": "companies",
     "refreshCompanyGrowthFit": "companies",
     "refreshOfferFromDeal": "offers",
+    "refuseUnroutedAddress": "capture_triage",
     "regenerateCompanyBrief": "companies",
     "regenerateContactBrief": "contacts",
     "regenerateOffer": "offers",
@@ -1817,8 +1835,10 @@
     "requestAttachmentAccess": "documents",
     "requestBookingReturn": "booking_pages",
     "requestCompanyVatCheck": "companies",
+    "requestDealManager": "deals",
     "requestDealRoomLink": "buyer_rooms",
     "requestDetailsConfirmation": "consent",
+    "requestEditAccess": "sharing",
     "requestLegalReview": "legal_reviews",
     "requestOwnershipTransfer": "sharing",
     "requestPasswordReset": "sign_in",
@@ -1848,6 +1868,7 @@
     "restoreRoleGrants": "members",
     "restoreTag": "tags",
     "restoreTagApplication": "tags",
+    "restoreUnroutedAddress": "capture_triage",
     "resumeDealRoom": "deal_rooms",
     "resumeTransitionPolicy": "pipelines",
     "retireCustomField": "custom_fields",
@@ -2041,6 +2062,7 @@
     "validateImportRun": "imports",
     "visitList": "lists",
     "waitInputCheck": "forecast",
+    "withdrawEditAccessRequest": "sharing",
     "withdrawExistingCustomerNotice": "consent",
     "withdrawLegalReview": "legal_reviews",
     "withdrawOwnershipOffer": "sharing",
@@ -2284,6 +2306,9 @@
     "clear_activity_disposition": [
       "activities"
     ],
+    "clear_deal_manager_request": [
+      "deals"
+    ],
     "clear_lead_manual_signal": [
       "leads"
     ],
@@ -2428,6 +2453,9 @@
     ],
     "create_voice_profile": [
       "voice"
+    ],
+    "create_web_form": [
+      "web_forms"
     ],
     "data_coverage": [
       "reports"
@@ -2788,6 +2816,9 @@
     ],
     "get_deal_win_evidence": [
       "deals"
+    ],
+    "get_edit_access_request": [
+      "sharing"
     ],
     "get_extension_settings": [
       "extensions"
@@ -3724,8 +3755,14 @@
     "request_company_vat_check": [
       "companies"
     ],
+    "request_deal_manager": [
+      "deals"
+    ],
     "request_details_confirmation": [
       "consent"
+    ],
+    "request_edit_access": [
+      "sharing"
     ],
     "request_legal_review": [
       "legal_reviews"
@@ -4172,6 +4209,9 @@
     "withdraw_capture_sender_decision": [
       "capture_triage"
     ],
+    "withdraw_edit_access_request": [
+      "sharing"
+    ],
     "withdraw_legal_review": [
       "legal_reviews"
     ],
@@ -4415,6 +4455,9 @@
     "clear_activity_disposition": [
       "business"
     ],
+    "clear_deal_manager_request": [
+      "business"
+    ],
     "clear_lead_manual_signal": [
       "business"
     ],
@@ -4553,6 +4596,9 @@
     ],
     "create_voice_profile": [
       "business"
+    ],
+    "create_web_form": [
+      "admin_settings"
     ],
     "data_coverage": [
       "business"
@@ -4912,6 +4958,9 @@
       "business"
     ],
     "get_deal_win_evidence": [
+      "business"
+    ],
+    "get_edit_access_request": [
       "business"
     ],
     "get_extension_settings": [
@@ -5809,8 +5858,14 @@
     "request_company_vat_check": [
       "business"
     ],
+    "request_deal_manager": [
+      "business"
+    ],
     "request_details_confirmation": [
       "compliance"
+    ],
+    "request_edit_access": [
+      "business"
     ],
     "request_legal_review": [
       "business"
@@ -6250,6 +6305,9 @@
     ],
     "withdraw_capture_sender_decision": [
       "capture"
+    ],
+    "withdraw_edit_access_request": [
+      "business"
     ],
     "withdraw_legal_review": [
       "business"

@@ -11,8 +11,8 @@ import (
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
 )
 
-// Basis is what makes a message lawful. It is EVIDENCE, not consent: eight of
-// the nine are things that happened and were recorded, and only BasisConsent
+// Basis is what makes a message lawful. It is EVIDENCE, not consent: seven of
+// the eight are things that happened and were recorded, and only BasisConsent
 // is somebody agreeing to something.
 type Basis string
 
@@ -33,8 +33,6 @@ const (
 	BasisConsent Basis = "consent"
 	// BasisExistingCustomerException is the narrow own-similar-products lane.
 	BasisExistingCustomerException Basis = "existing_customer_exception"
-	// BasisVNSubjectAgreement is the Vietnamese advertising agreement.
-	BasisVNSubjectAgreement Basis = "vn_subject_agreement"
 )
 
 // Verdict is what the engine answered.
@@ -255,6 +253,11 @@ type Decision struct {
 	// ConsentPurpose is the purpose a consent request to a LawfulBasisMissing
 	// recipient would ask about, zero when none can be asked.
 	ConsentPurpose ids.UUID
+
+	// AsksCountry says the recipient's country could turn this refusal into an
+	// allow. The record states none, the refusal is for want of marketing
+	// consent, and an installed pack is opt-out. Only a preview fills it.
+	AsksCountry bool
 
 	// Citations are the provisions shown for each code, resolved when the
 	// decision was taken: the recipient's pack's first, then the sending

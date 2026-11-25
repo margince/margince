@@ -13,7 +13,6 @@ package compose
 import (
 	"context"
 	"errors"
-	"fmt"
 	"sort"
 	"time"
 
@@ -25,7 +24,6 @@ import (
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
-	"github.com/margince/margince/backend/internal/shared/kernel/systemtext"
 )
 
 // approvalStatusApproved is the decided status a receipt is read from. Spelled
@@ -102,13 +100,8 @@ func (r attentionReceipts) RecentWithMore(ctx context.Context, since time.Time, 
 			if completed.Writable {
 				undo = &attention.ReceiptUndo{AuditLogID: completed.AuditID, Version: completed.Version}
 			}
-			locale := systemtext.Locale(ctx)
-			contact := completed.Contact
-			if contact == "" {
-				contact = systemtext.Copy(systemtext.TaskClosedContactKey(completed.Booking), locale)
-			}
-			reason := fmt.Sprintf(systemtext.Copy(systemtext.TaskClosedKey(completed.Booking), locale), contact, completed.WrittenAt.Format(time.DateOnly))
-			decided = append(decided, attention.Receipt{Source: attention.ReceiptFromCorrection, ID: completed.AuditID, AuditLogID: completed.AuditID, Kind: "task_completed", Summary: reason, Headline: completed.Subject, Reason: reason, OccurredAt: completed.At, TargetType: string(recordTypeActivity), TargetID: completed.ID, Actor: attention.ReceiptActor{Type: systemActor}, Undo: undo})
+			reason := attention.TaskReceiptReason(ctx, completed)
+			decided = append(decided, attention.Receipt{Source: attention.ReceiptFromCorrection, ID: completed.AuditID, AuditLogID: completed.AuditID, Kind: attention.TaskReceiptKind(completed), Summary: reason, Headline: completed.Subject, Reason: reason, OccurredAt: completed.At, TargetType: string(recordTypeActivity), TargetID: completed.ID, Actor: attention.ReceiptActor{Type: systemActor}, Undo: undo})
 		}
 	}
 	decided, err = r.withChangeReviews(ctx, decided)
@@ -120,8 +113,8 @@ func (r attentionReceipts) RecentWithMore(ctx context.Context, since time.Time, 
 	// recent news would be the furthest down the card.
 	// The id breaks a tie, so every read of one window pages it alike.
 	sort.Slice(decided, func(i, j int) bool {
-		if !decided[i].OccurredAt.Equal(decided[j].OccurredAt) {
-			return decided[i].OccurredAt.After(decided[j].OccurredAt)
+		if !listed(decided[i]).Equal(listed(decided[j])) {
+			return listed(decided[i]).After(listed(decided[j]))
 		}
 		return decided[i].ID.String() > decided[j].ID.String()
 	})
@@ -156,4 +149,12 @@ func (r attentionReceipts) withChangeReviews(ctx context.Context, receipts []att
 		}
 	}
 	return receipts, nil
+}
+
+// listed is the instant a receipt orders by: when it joined the list.
+func listed(r attention.Receipt) time.Time {
+	if r.ListedAt.IsZero() {
+		return r.OccurredAt
+	}
+	return r.ListedAt
 }

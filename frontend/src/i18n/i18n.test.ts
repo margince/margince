@@ -28,6 +28,8 @@ const KEPT_IN_ENGLISH = new Set<string>([
   "docs.kind.drive",
   "docs.kind.web",
   "docs.add.urlPlaceholder",
+  // A model setup named only by its vendor's product name.
+  "firstRun.ai.setupTitle.gemini_cloud",
   // ui-copy-style-vi.md retires the Vietnamese phrase for a best case.
   "progress.scenario.best",
   // Product and protocol names, an example address and an example header name.
@@ -58,6 +60,7 @@ const KEPT_IN_ENGLISH = new Set<string>([
   "contact.chapter.wayInAnswer",
   "contact.chapter.withDetail",
   "merge.recordDetail",
+  "explain.col.inCurrency",
   // The promiser and stored summary are values separated by punctuation.
   "magic.action.approval_commitment_task_named",
   "magic.action.approval_commitment_task_summary",
@@ -69,9 +72,6 @@ const KEPT_IN_ENGLISH = new Set<string>([
   "aiServing.openRouter",
   "aiServing.openRouterDocs",
   "aiServing.say.raw",
-  // Audit filter examples in the stored spelling the filter matches.
-  "settings.auditActorExample",
-  "settings.auditEntityExample",
   // A file name the server sends, so every catalog shows the same one.
   "import.result.problemsFile",
   // The product's own name, as the agent that made a change.
@@ -108,6 +108,8 @@ const KEPT_IN_ENGLISH = new Set<string>([
   "aiProviders.name.anthropic",
   "aiProviders.name.openai",
   "aiProviders.name.gemini",
+  "aiProviders.name.azureOpenai",
+  "aiRouting.azureRegion.placeholder",
   "aiProviders.name.jev",
   "aiProviders.name.geminiDecision",
   "aiProviders.name.ollama",
@@ -148,9 +150,6 @@ const KEPT_IN_ENGLISH = new Set<string>([
   "co.tech.lane.dns",
   // Vietnamese uses "Email" for the noun; German has its own spelling and
   // carries it. Only the vi value matches English, and it is the right word.
-  // Same word, same reason, on the generic record mail box every other page
-  // shares.
-  "recordmail.title",
   // Same word, same reason: the exchange kind on the account's recent list.
   "co.recent.kind.email",
   // And on the record's chronology, for the same reason again.
@@ -182,6 +181,8 @@ const KEPT_IN_ENGLISH = new Set<string>([
   "aiRouting.baseUrl.placeholder.gemini",
   "aiRouting.baseUrl.placeholder.anthropic",
   "aiRouting.baseUrl.placeholder.openai",
+  "aiRouting.baseUrl.placeholder.ollama",
+  "aiRouting.baseUrl.placeholder.vllm",
   // A pattern of placeholders with no words in it, and the EU's own
   // abbreviation, which Vietnamese writes the same way.
   "aiRouting.location.option",
