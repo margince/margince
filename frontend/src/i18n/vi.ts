@@ -12903,6 +12903,44 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "connectors.telegramConnectedAs": "Đã kết nối với tên @{username}.",
   "connectors.telegramConnectFailed": "Không thể kết nối bot",
 
+  "connectors.tgbiz.title": "Telegram cho doanh nghiệp",
+  "connectors.tgbiz.intro":
+    "Liên kết tài khoản Telegram Business của công ty với bot. Tin nhắn của khách và phản hồi của chủ tài khoản sẽ xuất hiện trong Lịch sử của từng liên hệ. Nhân viên vẫn trả lời trong Telegram.",
+  "connectors.tgbiz.stepsTitle": "Để liên kết tài khoản, chủ tài khoản:",
+  "connectors.tgbiz.step1":
+    "Mở Telegram, rồi Cài đặt, Telegram Business, Chatbots.",
+  "connectors.tgbiz.step2":
+    "Nhập @{username} và chọn các cuộc trò chuyện bot được xem.",
+  "connectors.tgbiz.step3":
+    "Tài khoản sẽ hiện ở đây với trạng thái Chờ phê duyệt. Không có gì được ghi nhận cho đến khi quản trị viên phê duyệt.",
+  "connectors.tgbiz.emptyTitle": "Chưa liên kết tài khoản doanh nghiệp",
+  "connectors.tgbiz.emptyNote":
+    "Khi chủ tài khoản liên kết bot trong Telegram, tài khoản sẽ xuất hiện ở đây.",
+  "connectors.tgbiz.statusPending": "Chờ phê duyệt",
+  "connectors.tgbiz.statusConnected": "Đã kết nối",
+  "connectors.tgbiz.statusOff": "Đã tắt trong Telegram",
+  "connectors.tgbiz.linked": "Liên kết {date}",
+  "connectors.tgbiz.approvedOn": "Phê duyệt {date}",
+  "connectors.tgbiz.offReason":
+    "Chủ tài khoản đã tắt liên kết này trong Telegram. Không có gì mới được ghi nhận. Nếu họ liên kết lại bot, tài khoản sẽ lại chờ phê duyệt.",
+  "connectors.tgbiz.approve": "Phê duyệt làm tài khoản công ty",
+  "connectors.tgbiz.approveTitle": "Phê duyệt {owner} làm tài khoản công ty?",
+  "connectors.tgbiz.approveBody":
+    "Tin nhắn của khách và phản hồi của chủ tài khoản từ ứng dụng Telegram xuất hiện trong Lịch sử của khách. Cho đến khi bạn đổi chế độ hiển thị, chỉ nhóm bạn chọn và mọi thành viên tham gia từng cuộc trò chuyện được đọc chúng. Trước khi bạn phê duyệt, không có gì được ghi nhận.",
+  "connectors.tgbiz.ownAccount":
+    "Tài khoản riêng của thành viên · mỗi cuộc trò chuyện được giữ riêng",
+  "connectors.tgbiz.changeReaders": "Đổi nhóm đọc",
+  "connectors.tgbiz.readerTeamRequired":
+    "Hãy chọn nhóm đọc tin nhắn của tài khoản này.",
+  "connectors.tgbiz.visibilityTitle": "Đổi nhóm đọc tin nhắn của {owner}",
+  "connectors.tgbiz.visibilityWarning":
+    "Thay đổi này áp dụng cho mọi tin nhắn tài khoản đã ghi nhận, không chỉ tin nhắn mới.",
+  "connectors.tgbiz.approveConflict":
+    "Không thể phê duyệt tài khoản này. Hoặc chủ tài khoản đã tắt liên kết trong Telegram (hãy nhờ họ liên kết lại bot), hoặc nhóm này khác với nhóm đang đọc tài khoản. Danh sách đã được tải lại.",
+  "connectors.tgbiz.disconnectTitle": "Ngắt kết nối tài khoản của {owner}?",
+  "connectors.tgbiz.disconnectBody":
+    "Margince ngừng ghi nhận từ tài khoản này. Những gì đã ghi nhận vẫn nằm trong CRM. Nếu chủ tài khoản liên kết lại bot, tài khoản sẽ chờ phê duyệt.",
+
   "connectors.bot.provDispact": "Dispact",
   "connectors.bot.dispactTitle": "Bot Dispact",
   "connectors.bot.dispactSub":

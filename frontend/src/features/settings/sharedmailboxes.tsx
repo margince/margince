@@ -23,6 +23,7 @@ import { useViewerZone } from "../../lib/viewerzone";
 import {
   ChangeSharedMailboxDialog,
   ConnectSharedMailboxDialog,
+  isTeam,
   SHARED_MAILBOXES_KEY,
   SharedMailboxHistoryDialog,
   VISIBILITY_LABEL,
@@ -33,13 +34,6 @@ import {
 // admin-only, so a reader without the role sees why rather than an error.
 
 type SharedMailbox = components["schemas"]["SharedMailbox"];
-type Team = components["schemas"]["Team"];
-
-// The team roster's entries, typed as teams: the shared roster cache holds
-// seats and teams under one entry type.
-function isTeam(entry: { id: string }): entry is Team {
-  return "name" in entry;
-}
 
 type SharedMailboxesResult =
   | { allowed: false }

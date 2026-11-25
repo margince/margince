@@ -13255,6 +13255,45 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "connectors.telegramConnectedAs": "Verbunden als @{username}.",
   "connectors.telegramConnectFailed": "Bot nicht verbunden",
 
+  "connectors.tgbiz.title": "Telegram Business",
+  "connectors.tgbiz.intro":
+    "Verknüpfe ein Telegram-Business-Konto der Firma mit dem Bot. Kundennachrichten und die Antworten des Inhabers aus diesem Konto erscheinen dann im Verlauf des jeweiligen Kontakts. Das Team antwortet weiter in Telegram.",
+  "connectors.tgbiz.stepsTitle": "So verknüpft der Inhaber ein Konto:",
+  "connectors.tgbiz.step1":
+    "Öffnet Telegram, dann Einstellungen, Telegram Business, Chatbots.",
+  "connectors.tgbiz.step2":
+    "Gibt @{username} ein und wählt, welche Chats der Bot sehen darf.",
+  "connectors.tgbiz.step3":
+    "Das Konto erscheint dann hier als Wartet auf Freigabe. Bis ein Admin es freigibt, wird nichts daraus erfasst.",
+  "connectors.tgbiz.emptyTitle": "Kein Business-Konto verknüpft",
+  "connectors.tgbiz.emptyNote":
+    "Sobald ein Inhaber den Bot in Telegram verknüpft, erscheint das Konto hier.",
+  "connectors.tgbiz.statusPending": "Wartet auf Freigabe",
+  "connectors.tgbiz.statusConnected": "Verbunden",
+  "connectors.tgbiz.statusOff": "In Telegram ausgeschaltet",
+  "connectors.tgbiz.linked": "Verknüpft am {date}",
+  "connectors.tgbiz.approvedOn": "Freigegeben am {date}",
+  "connectors.tgbiz.offReason":
+    "Der Inhaber hat diese Verknüpfung in Telegram ausgeschaltet. Es wird nichts Neues erfasst. Verknüpft er den Bot erneut, wartet das Konto wieder auf Freigabe.",
+  "connectors.tgbiz.approve": "Als Firmenkonto freigeben",
+  "connectors.tgbiz.approveTitle": "{owner} als Firmenkonto freigeben?",
+  "connectors.tgbiz.approveBody":
+    "Kundennachrichten und die Antworten des Inhabers aus der Telegram-App erscheinen im Verlauf des Kunden. Bis du die Sichtbarkeit änderst, können nur das gewählte Team und alle Teilnehmenden des jeweiligen Chats sie lesen. Vor deiner Freigabe wird nichts aus dem Konto erfasst.",
+  "connectors.tgbiz.ownAccount":
+    "Eigenes Konto eines Mitglieds · jeder Chat wird zurückgehalten",
+  "connectors.tgbiz.changeReaders": "Leserkreis ändern",
+  "connectors.tgbiz.readerTeamRequired":
+    "Wähle das Team, das die Nachrichten dieses Kontos liest.",
+  "connectors.tgbiz.visibilityTitle":
+    "Leserkreis für die Nachrichten von {owner} ändern",
+  "connectors.tgbiz.visibilityWarning":
+    "Das gilt für alle Nachrichten, die das Konto schon erfasst hat, nicht nur für neue.",
+  "connectors.tgbiz.approveConflict":
+    "Dieses Konto lässt sich nicht freigeben. Entweder hat der Inhaber die Verknüpfung in Telegram ausgeschaltet (bitte ihn, den Bot erneut zu verknüpfen), oder das Team weicht von dem ab, das das Konto schon liest. Die Liste ist neu geladen.",
+  "connectors.tgbiz.disconnectTitle": "Konto von {owner} trennen?",
+  "connectors.tgbiz.disconnectBody":
+    "Margince erfasst nichts mehr aus diesem Konto. Was bereits erfasst wurde, bleibt im CRM. Verknüpft der Inhaber den Bot erneut, wartet das Konto auf Freigabe.",
+
   "connectors.bot.provDispact": "Dispact",
   "connectors.bot.dispactTitle": "Dispact-Bot",
   "connectors.bot.dispactSub":

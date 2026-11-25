@@ -36,6 +36,13 @@ import {
 
 type SharedMailbox = components["schemas"]["SharedMailbox"];
 type Team = components["schemas"]["Team"];
+
+// The team roster's entries, typed as teams: the shared roster cache holds
+// seats and teams under one entry type.
+export function isTeam(entry: { id: string }): entry is Team {
+  return "name" in entry;
+}
+
 type Visibility = SharedMailbox["mail_visibility"];
 type ConnectRequest = components["schemas"]["ConnectSharedMailboxRequest"];
 type UpdateRequest = components["schemas"]["UpdateSharedMailboxRequest"];
@@ -67,7 +74,7 @@ function useInvalidateMailboxes() {
   return () => qc.invalidateQueries({ queryKey: SHARED_MAILBOXES_KEY });
 }
 
-function TeamPicker({
+export function TeamPicker({
   teams,
   value,
   onChange,
@@ -94,7 +101,7 @@ function TeamPicker({
   );
 }
 
-function VisibilityChoice({
+export function VisibilityChoice({
   value,
   onChange,
 }: Readonly<{ value: Visibility; onChange: (next: Visibility) => void }>) {
