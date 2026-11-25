@@ -74,10 +74,10 @@ const (
 	// extractor and transcript proposer.
 	// Raised by 244 test lines for the data reset cases of an event the sweep
 	// orphaned, which drive the unexported reset handlers.
-	// Raised by 63 production and 96 test lines for path ids in extension routes
+	// Raised by 68 production and 96 test lines for path ids in extension routes
 	// and the mail hooks in the extension inventory. They extend the unexported
 	// route argument reader and inventory builder, and their cases drive them.
-	composeRootProductionLines = 230_808
+	composeRootProductionLines = 230_813
 	composeRootTestLines       = 361_027
 )
 

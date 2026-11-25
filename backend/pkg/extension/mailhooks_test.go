@@ -17,8 +17,8 @@ func TestMailViewReadsNamesEveryContentField(t *testing.T) {
 	notContent := []string{"Activity", "Meeting", "Lookup"}
 	view := reflect.TypeFor[MailView]()
 	var content []string
-	for i := range view.NumField() {
-		if name := view.Field(i).Name; !slices.Contains(notContent, name) {
+	for field := range view.Fields() {
+		if name := field.Name; !slices.Contains(notContent, name) {
 			content = append(content, strings.ToLower(name))
 		}
 	}
