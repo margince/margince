@@ -12,6 +12,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -212,18 +213,25 @@ func importNamesIncumbentSeat(ctx context.Context, tx pgx.Tx, incumbent ids.Acti
 
 // importAuthorHoldsMeeting answers whether the incumbent meeting came from the
 // calendar or the hand of the seat a declared importer names as the author.
-// The author claim is admitted from a declared importer alone
-// (provenance.AdmitSourceAuthor), and the bind still returns the row only
-// when the importer may read it.
+// Only a declared importer may state an author (provenance.AdmitSourceAuthor),
+// and the importer must already be able to change the meeting. So the bind,
+// which may move its status and file it under more records, grants nothing new.
 func importAuthorHoldsMeeting(ctx context.Context, tx pgx.Tx, incumbent ids.ActivityID, author ids.UUID) (bool, error) {
 	var stamp string
 	args := schedulingArgs{}
-	err := tx.QueryRow(ctx, `SELECT captured_by FROM activity WHERE id=`+args.add(incumbent), args...).Scan(&stamp)
+	err := tx.QueryRow(ctx, `SELECT captured_by FROM activity WHERE archived_at IS NULL AND restricted_at IS NULL AND id=`+args.add(incumbent), args...).Scan(&stamp)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return false, nil
 	}
 	if err != nil {
 		return false, fmt.Errorf("activities: reading who holds a meeting: %w", err)
 	}
-	return actingHumanOf(stamp) == author.String(), nil
+	if actingHumanOf(stamp) != author.String() {
+		return false, nil
+	}
+	err = auth.EnsureActivityWritableIn(ctx, tx, incumbent.UUID, true)
+	if errors.Is(err, apperrors.ErrNotFound) || errors.Is(err, apperrors.ErrPermissionDenied) {
+		return false, nil
+	}
+	return err == nil, err
 }

@@ -16,6 +16,7 @@ import (
 	"github.com/margince/margince/backend/internal/compose/integration"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/activities"
+	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -70,6 +71,81 @@ func TestAnImportNamingAnotherAuthorFilesItsOwnMeeting(t *testing.T) {
 	}
 }
 
+// An importer that may read the calendar owner's meeting but not change it
+// files its own meeting, because the bind could move the meeting's status.
+func TestAnImporterWhoCannotChangeTheMeetingFilesItsOwn(t *testing.T) {
+	env := newCaptureEnv(t)
+	e := env.e
+	ensureGuestContact(t, e, guestKnown)
+	own, err := contacts.NewStore(e.DB()).CreateContact(declaredImporterCtx(e, e.Rep3, principal.RowScopeOwn),
+		contacts.CreateContactInput{FullName: "Importer's own contact", Source: "manual"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	contact := ids.From[ids.ContactKind](ids.UUID(own.Id))
+	start := captureNow.AddDate(0, 0, 2).Truncate(time.Hour)
+	feed := &calendarFeed{}
+	feed.set(lateGuestEvent("review", "confirmed", start, captureOwner, guestEntry(guestKnown, "accepted")))
+	connectFeed(t, env, feed)()
+	calendarMeeting := onlyCalendarMeeting(t, e)
+
+	landed := importTitledMeeting(t, e, principal.RowScopeOwn, contact, e.Rep1, "review@google.com", "Kick-off review", start)
+
+	if landed == calendarMeeting {
+		t.Fatal("an importer who may not change the meeting landed on it")
+	}
+}
+
+// A copy stored before imports bound to the author's calendar is folded onto
+// the author's calendar meeting at the same instant under the same title. The
+// calendar meeting gains the copy's records. Any other import stays as it is.
+func TestTheImportedCopiesTaskFoldsOnlyTheAuthorsCalendarCopy(t *testing.T) {
+	for _, tc := range []struct {
+		name    string
+		subject string
+		author  func(e *integration.SearchEnv) ids.UUID
+		folded  bool
+	}{
+		{name: "the author's calendar holds it", subject: "Kick-off review",
+			author: func(e *integration.SearchEnv) ids.UUID { return e.Rep1 }, folded: true},
+		{name: "another title", subject: "Another meeting",
+			author: func(e *integration.SearchEnv) ids.UUID { return e.Rep1 }},
+		{name: "another author", subject: "Kick-off review",
+			author: func(e *integration.SearchEnv) ids.UUID { return e.Rep3 }},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			env := newCaptureEnv(t)
+			e := env.e
+			ensureGuestContact(t, e, guestKnown)
+			contact := ensureGuestContact(t, e, guestLater)
+			start := captureNow.AddDate(0, 0, 2).Truncate(time.Hour)
+			feed := &calendarFeed{}
+			feed.set(lateGuestEvent("review", "confirmed", start, captureOwner, guestEntry(guestKnown, "accepted")))
+			connectFeed(t, env, feed)()
+			calendarMeeting := onlyCalendarMeeting(t, e)
+			imported := importTitledMeeting(t, e, principal.RowScopeAll, contact, tc.author(e), "", tc.subject, start)
+			task := activities.ImportedMeetingCopiesDataTask(activities.NewStore(e.DB()))
+			ctx := principal.SystemActing(principal.WithWorkspaceID(context.Background(), e.WS), "system:datatask-test")
+
+			for range 2 {
+				e.RunDataTask(ctx, t, task)
+			}
+
+			live := countRows(t, e, `SELECT count(*) FROM activity WHERE archived_at IS NULL AND id = '`+imported.String()+`'`)
+			if tc.folded != (live == 0) {
+				t.Fatalf("the import is live=%v after the task, want folded=%v", live == 1, tc.folded)
+			}
+			want := 0
+			if tc.folded {
+				want = 1
+			}
+			if got := contactLinksOn(t, e, calendarMeeting, contact); got != want {
+				t.Errorf("the calendar meeting is filed under the import's contact %d times, want %d", got, want)
+			}
+		})
+	}
+}
+
 func contactLinksOn(t *testing.T, e *integration.SearchEnv, meeting ids.UUID, contact ids.ContactID) int {
 	t.Helper()
 	var n int
@@ -96,8 +172,17 @@ func importAuthoredMeeting(
 	t *testing.T, e *integration.SearchEnv, contact ids.ContactID, author ids.UUID, uid string, start time.Time,
 ) ids.UUID {
 	t.Helper()
-	instance := start.UTC().Format(time.RFC3339)
-	system, sourceID, subject := "mirror:hubspot", "engagement-1", "Kick-off review"
+	return importTitledMeeting(t, e, principal.RowScopeAll, contact, author, uid, "Kick-off review", start)
+}
+
+// importTitledMeeting is importAuthoredMeeting under subject. An empty uid
+// states no calendar identity.
+func importTitledMeeting(
+	t *testing.T, e *integration.SearchEnv, scope principal.RowScope,
+	contact ids.ContactID, author ids.UUID, uid, subject string, start time.Time,
+) ids.UUID {
+	t.Helper()
+	system, sourceID := "mirror:hubspot", "engagement-1"
 	authorID := openapi_types.UUID(author)
 	req := crmcontracts.CreateActivityRequest{
 		Kind:           crmcontracts.CreateActivityRequestKindCreateActivityRequestKindMeeting,
@@ -107,8 +192,10 @@ func importAuthoredMeeting(
 		SourceId:       &sourceID,
 		Source:         "hubspot_import:1",
 		SourceAuthorId: &authorID,
-		IcalUid:        &uid,
-		IcalInstance:   &instance,
+	}
+	if uid != "" {
+		instance := start.UTC().Format(time.RFC3339)
+		req.IcalUid, req.IcalInstance = &uid, &instance
 	}
 	// The link list is an anonymous contract struct, so it is filled the way a client sends it.
 	if err := json.Unmarshal([]byte(`[{"entity_type":"contact","entity_id":"`+contact.String()+`"}]`), &req.Links); err != nil {
@@ -118,14 +205,14 @@ func importAuthoredMeeting(
 	if err != nil {
 		t.Fatalf("mapping the import: %v", err)
 	}
-	created, _, err := activities.NewStore(e.DB()).LogActivity(declaredImporterCtx(e, e.Rep3), in)
+	created, _, err := activities.NewStore(e.DB()).LogActivity(declaredImporterCtx(e, e.Rep3, scope), in)
 	if err != nil {
 		t.Fatalf("importing the meeting: %v", err)
 	}
 	return ids.UUID(created.Id)
 }
 
-func declaredImporterCtx(e *integration.SearchEnv, seat ids.UUID) context.Context {
+func declaredImporterCtx(e *integration.SearchEnv, seat ids.UUID, scope principal.RowScope) context.Context {
 	ctx := principal.WithWorkspaceID(context.Background(), e.WS)
 	ctx = principal.WithCorrelationID(ctx, ids.NewV7())
 	return principal.WithActor(ctx, principal.Principal{
@@ -135,7 +222,7 @@ func declaredImporterCtx(e *integration.SearchEnv, seat ids.UUID) context.Contex
 				"activity": {Create: true, Read: true, Update: true},
 				"contact":  {Create: true, Read: true, Update: true},
 			},
-			RowScope: principal.RowScopeAll,
+			RowScope: scope,
 		},
 	})
 }
