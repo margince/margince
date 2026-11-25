@@ -65,7 +65,7 @@ func toContractImportReport(run migration.Run) crmcontracts.ImportRunReport {
 			RowsRead: rowsRead, Disposition: d,
 			ClosedWon: countOrAbsent(o.ClosedWon), ClosedLost: countOrAbsent(o.ClosedLost),
 		})
-		appendIssues(&out.Issues, seen, issueKey, o, o.Skipped)
+		appendIssues(&out.Issues, seen, skipKey, o, o.Skipped)
 		// A collision is reported the same way a skip is — by line, in the
 		// file's own terms — but it does NOT touch Disposition.Skipped: the
 		// row is counted in Created, and adding it here too would report two
@@ -77,9 +77,7 @@ func toContractImportReport(run migration.Run) crmcontracts.ImportRunReport {
 	}
 	out.Parts = &parts
 	out.Issues = collapseUnknownOwners(out.Issues)
-	if committed && run.Error != importTagsFailedCause {
-		reportTagsCreated(out.Issues)
-	}
+	retell(out.Issues, runTense{written: committed, tagsCreated: committed && run.Error != importTagsFailedCause})
 
 	// Reported even when zero: "0 duplicates" is the answer to the question a
 	// contact is asking before they approve, and an omitted field reads as "not
@@ -137,16 +135,42 @@ func rowsReachedOf(run migration.Run) []int {
 	return reached
 }
 
-// reportTagsCreated rewords each new_tag issue as done: the commit creates
-// every new tag before its first row.
-func reportTagsCreated(issues []crmcontracts.ImportRowIssue) {
+// runTense is what a run has done by the time its report is read.
+type runTense struct {
+	// written: the run has written, so a dropped link was left out, not will be.
+	written bool
+	// tagsCreated: the commit created every new tag before its first row.
+	tagsCreated bool
+}
+
+// retell words each issue in the tense of its run.
+func retell(issues []crmcontracts.ImportRowIssue, tense runTense) {
 	for i := range issues {
-		if kind := issues[i].Kind; kind != nil && string(*kind) == migration.ProblemNewTag {
-			issues[i].Reason = createdTagWhy.English()
-			issues[i].ReasonCode = reasonCodeOrAbsent(createdTagWhy.Code)
-			issues[i].Params = paramsOrAbsent(createdTagWhy.Params)
+		why, reworded := retold(issues[i], tense)
+		if !reworded {
+			continue
 		}
+		issues[i].Reason = why.English()
+		issues[i].ReasonCode = reasonCodeOrAbsent(why.Code)
+		issues[i].Params = paramsOrAbsent(why.Params)
 	}
+}
+
+// retold is the reason an issue takes in the tense of its run, and whether
+// that is another reason than the one it carries.
+func retold(issue crmcontracts.ImportRowIssue, tense runTense) (migration.Reason, bool) {
+	if kind := issue.Kind; tense.tagsCreated && kind != nil && string(*kind) == migration.ProblemNewTag {
+		return createdTagWhy, true
+	}
+	if issue.ReasonCode == nil {
+		return migration.Reason{}, false
+	}
+	stored := migration.Reason{Code: migration.ReasonCode(*issue.ReasonCode)}
+	if issue.Params != nil {
+		stored.Params = *issue.Params
+	}
+	told := stored.Told(tense.written)
+	return told, told.Code != stored.Code
 }
 
 // walksWithoutAResume is how many times an ordinary committed run is walked:
@@ -333,6 +357,12 @@ func distinctIssues(o migration.ObjectReport, rows []migration.SkippedRow) int {
 // two files of a ZIP may each have a row `line 7`.
 func issueKey(o migration.ObjectReport, row migration.SkippedRow) string {
 	return o.Object + "\x00" + row.ExternalID + "\x00" + strconv.Itoa(row.Line)
+}
+
+// skipKey is issueKey with the column, so each cell a skipped row has to have
+// corrected is named. The dry run's skip and the commit's still fold to one.
+func skipKey(o migration.ObjectReport, row migration.SkippedRow) string {
+	return issueKey(o, row) + "\x00" + row.Column
 }
 
 // warningKey is issueKey with the kind and value. One row may carry several

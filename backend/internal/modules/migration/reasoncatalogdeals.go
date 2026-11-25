@@ -75,9 +75,9 @@ var dealReasons = map[ReasonCode]reasonEntry{
 		textlang.Vietnamese: "{value:q} không phải mã tiền tệ. Hãy viết ba chữ cái, ví dụ EUR.",
 	}},
 	ReasonAmountNegative: {params: []string{paramValue}, text: map[textlang.Lang]string{
-		textlang.English:    "“{value}” is below zero, and a deal’s amount cannot be.",
-		textlang.German:     "{value:q} liegt unter null, und der Betrag eines Deals darf das nicht sein.",
-		textlang.Vietnamese: "{value:q} nhỏ hơn 0, mà số tiền của deal thì không được âm.",
+		textlang.English:    "“{value}” is below zero, and an imported amount cannot be.",
+		textlang.German:     "{value:q} liegt unter null, und ein importierter Betrag darf das nicht sein.",
+		textlang.Vietnamese: "{value:q} nhỏ hơn 0, mà số tiền nhập vào thì không được âm.",
 	}},
 	ReasonCloseDatePast: {params: []string{paramValue}, text: map[textlang.Lang]string{
 		textlang.English:    "“{value}” is in the past, and an open deal’s close date cannot be.",

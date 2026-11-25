@@ -23,6 +23,8 @@ func TestAPhoneAndALinkedInURLAreCheckedAndCarriedInTheStoresSpelling(t *testing
 		{migration.ObjectLead, fieldPhone, "0049 30 1234567", "+49301234567", ""},
 		{migration.ObjectContact, fieldPhone, "030 1234567", nil, `“030 1234567” needs its country code, like +49 30 1234567`},
 		{migration.ObjectContact, fieldPhone, "+49 30 1", nil, "not an E.164 number"},
+		{migration.ObjectContact, fieldPhone, "abc", nil, "“abc” is not a phone number."},
+		{migration.ObjectLead, fieldPhone, "call 030 1234567", nil, "is not a phone number."},
 		{migration.ObjectContact, fieldLinkedIn, "http://www.linkedin.com/in/ada/?trk=x", "https://www.linkedin.com/in/ada", ""},
 		{migration.ObjectContact, fieldLinkedIn, "https://example.com/in/ada", nil, "linkedin.com"},
 		{migration.ObjectLead, fieldLinkedIn, "linkedin.com/in/ada", "https://www.linkedin.com/in/ada", ""},
@@ -30,7 +32,7 @@ func TestAPhoneAndALinkedInURLAreCheckedAndCarriedInTheStoresSpelling(t *testing
 		{migration.ObjectCompany, fieldLinkedIn, "https://www.linkedin.com/in/ada", nil, "linkedin.com/company/"},
 	} {
 		fields := map[string]string{fieldDisplayName: "Acme", fieldFullName: "Ada", tc.target: tc.raw}
-		typed, problem := checkRow(tc.object, fields, importCatalog{})
+		typed, problem := firstOf(checkRow(tc.object, fields, importCatalog{}))
 		if tc.problem == "" {
 			if problem != nil || !reflect.DeepEqual(typed[tc.target], tc.want) {
 				t.Errorf("%s %s %q → %v, %+v; want %v", tc.object, tc.target, tc.raw, typed[tc.target], problem, tc.want)
@@ -47,14 +49,14 @@ func TestAnAddressCountryCellIsHeldToTheStoresRule(t *testing.T) {
 	for _, object := range []string{migration.ObjectContact, migration.ObjectCompany} {
 		for _, bad := range []string{"Vietnam", "zz", "DEU", "12"} {
 			fields := map[string]string{fieldDisplayName: "Acme", fieldFullName: "Ada", fieldAddressCountry: bad}
-			_, problem := checkRow(object, fields, importCatalog{})
+			_, problem := firstOf(checkRow(object, fields, importCatalog{}))
 			if problem == nil || problem.Target != fieldAddressCountry || problem.Value != bad || !strings.Contains(problem.Message, "ISO 3166-1") {
 				t.Errorf("%s country %q → %+v, want a problem on the country cell naming the rule", object, bad, problem)
 			}
 		}
 		for _, ok := range []string{"DE", "de", "", "  "} {
 			fields := map[string]string{fieldDisplayName: "Acme", fieldFullName: "Ada", fieldAddressCountry: ok}
-			if _, problem := checkRow(object, fields, importCatalog{}); problem != nil {
+			if _, problem := firstOf(checkRow(object, fields, importCatalog{})); problem != nil {
 				t.Errorf("%s country %q refused: %+v", object, ok, problem)
 			}
 		}
@@ -66,7 +68,7 @@ func TestACheckedPhoneComparesUnchangedAgainstTheStoredPrimary(t *testing.T) {
 		`{"phone":"+49301234567","phone_type":"work","is_primary":true}],` +
 		`"social":{"linkedin":"https://www.linkedin.com/in/ada"}}`)
 	fields := map[string]string{fieldPhone: "+49 30 1234567", fieldLinkedIn: "http://www.linkedin.com/in/ada/?trk=x"}
-	typed, problem := checkRow(migration.ObjectContact, fields, importCatalog{})
+	typed, problem := firstOf(checkRow(migration.ObjectContact, fields, importCatalog{}))
 	if problem != nil {
 		t.Fatal(problem)
 	}

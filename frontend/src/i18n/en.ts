@@ -11000,7 +11000,7 @@ export const en = {
     "This import is already running. It finishes on its own and this page updates.",
   "import.reason.undo_failed": "The record could not be undone.",
   "import.reason.amount_negative":
-    "“{value}” is below zero, and a deal’s amount cannot be.",
+    "“{value}” is below zero, and an imported amount cannot be.",
   "import.reason.author_too_long": "Author is longer than {max} characters.",
   "import.reason.cannot_create":
     "You cannot create {plural}, so the {plural} file is skipped.",
@@ -11046,10 +11046,14 @@ export const en = {
     "The company column is empty, so the row names no employer.",
   "import.reason.employer_column_empty_dropped":
     "The company column is empty, so the row names no employer. The row was imported without the link.",
+  "import.reason.employer_column_empty_will_drop":
+    "The company column is empty, so the row names no employer. The row will be imported without the link.",
   "import.reason.employer_not_found":
-    "No company named “{name}” is in the CRM, so there was nothing to link this contact to.",
+    "No company named “{name}” is in the CRM, so there is nothing to link this contact to.",
   "import.reason.employer_not_found_dropped":
-    "No company named “{name}” is in the CRM, so there was nothing to link this contact to. The row was imported without the link.",
+    "No company named “{name}” is in the CRM, so there is nothing to link this contact to. The row was imported without the link.",
+  "import.reason.employer_not_found_will_drop":
+    "No company named “{name}” is in the CRM, so there is nothing to link this contact to. The row will be imported without the link.",
   "import.reason.employer_refused":
     "The employer could not be resolved. Choose an unambiguous company that you may link.",
   "import.reason.employer_will_create":
@@ -11073,10 +11077,14 @@ export const en = {
     "More than one company is named “{name}”, so which one employs this contact is a question only a human can answer.",
   "import.reason.link_ambiguous_dropped":
     "More than one company is named “{name}”, so which one employs this contact is a question only a human can answer. The row was imported without the link.",
+  "import.reason.link_ambiguous_will_drop":
+    "More than one company is named “{name}”, so which one employs this contact is a question only a human can answer. The row will be imported without the link.",
   "import.reason.link_not_found":
     "No company with “{ref}” in this upload, in an earlier import, or in Margince.",
   "import.reason.link_not_found_dropped":
     "No company with “{ref}” in this upload, in an earlier import, or in Margince. The row was imported without the link.",
+  "import.reason.link_not_found_will_drop":
+    "No company with “{ref}” in this upload, in an earlier import, or in Margince. The row will be imported without the link.",
   "import.reason.linkedin_held":
     "This LinkedIn URL is already held by another record in the CRM, so the row cannot claim it.",
   "import.reason.natural_key_taken": "A record with this key already exists.",
@@ -11086,7 +11094,13 @@ export const en = {
     "“{value}” is not a domain that can be written.",
   "import.reason.not_a_number": "“{value}” is not a number.",
   "import.reason.not_an_amount":
-    "“{value}” is not an amount in {currency}. Write it like 12000.50.",
+    "“{value}” is not an amount in {currency}. Write it like {example}.",
+  "import.reason.amount_too_many_decimals":
+    "“{value}” has more decimal places than {currency} takes. Write it like {example}.",
+  "import.reason.amount_needs_currency":
+    "The amount “{value}” has no currency. Fill the currency column of this row with a code, like EUR.",
+  "import.reason.not_a_phone":
+    "“{value}” is not a phone number. Write it with its country code, like +49 30 1234567.",
   "import.reason.not_an_email":
     "“{value}” is not an email address that can be written.",
   "import.reason.not_yes_no": "“{value}” is not yes or no.",
@@ -11166,6 +11180,8 @@ export const en = {
     "No contact with “{ref}” in this upload, in an earlier import, or in Margince.",
   "import.reason.contact_not_found_dropped":
     "No contact with “{ref}” in this upload, in an earlier import, or in Margince. The row was imported without the link.",
+  "import.reason.contact_not_found_will_drop":
+    "No contact with “{ref}” in this upload, in an earlier import, or in Margince. The row will be imported without the link.",
   "import.reason.activity_type_unnamed":
     "Name the activity’s type: note, call, meeting or email.",
   "import.reason.activity_type_unknown":
@@ -11213,12 +11229,16 @@ export const en = {
     "No lead with “{ref}” in this upload, in an earlier import, or in Margince.",
   "import.reason.lead_not_found_dropped":
     "No lead with “{ref}” in this upload, in an earlier import, or in Margince. The row was imported without the link.",
+  "import.reason.lead_not_found_will_drop":
+    "No lead with “{ref}” in this upload, in an earlier import, or in Margince. The row will be imported without the link.",
   "import.reason.deal_not_found":
     "No deal with “{ref}” in this upload, in an earlier import, or in Margince.",
   "import.reason.link_row_skipped":
     "The row “{ref}” was skipped in this import, so there is nothing to link to.",
   "import.reason.link_row_skipped_dropped":
     "The row “{ref}” was skipped in this import, so there is nothing to link to. The row was imported without the link.",
+  "import.reason.link_row_skipped_will_drop":
+    "The row “{ref}” was skipped in this import, so there is nothing to link to. The row will be imported without the link.",
   "import.reason.undo_edited":
     "Someone changed this record after the import, so it was left in place.",
   "import.reason.undo_still_referenced":
@@ -11229,10 +11249,14 @@ export const en = {
     "A file cannot set the status “{value}”. Use Qualify or Disqualify on the lead. The statuses a file may set are: {allowed}.",
   "import.reason.deal_not_found_dropped":
     "No deal with “{ref}” in this upload, in an earlier import, or in Margince. The row was imported without the link.",
+  "import.reason.deal_not_found_will_drop":
+    "No deal with “{ref}” in this upload, in an earlier import, or in Margince. The row will be imported without the link.",
   "import.reason.activity_link_ambiguous":
     "More than one company is named “{name}”, so which one this activity is about is a question only a human can answer.",
   "import.reason.activity_link_ambiguous_dropped":
     "More than one company is named “{name}”, so which one this activity is about is a question only a human can answer. The row was imported without the link.",
+  "import.reason.activity_link_ambiguous_will_drop":
+    "More than one company is named “{name}”, so which one this activity is about is a question only a human can answer. The row will be imported without the link.",
   "import.reason.value_unreadable": "“{value}” cannot be read.",
   "import.problem.broken_link": "Broken link",
   "import.problem.dropped_link": "Link left out",

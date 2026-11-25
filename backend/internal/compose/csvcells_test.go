@@ -40,7 +40,10 @@ func TestEveryCellIsCheckedAgainstItsFieldsType(t *testing.T) {
 		{money, "€ 12,000", nil, "not an amount in EUR"},
 		{money, "12k", nil, "not an amount in EUR"},
 		{vnd, "1500000", float64(1500000), ""},
-		{vnd, "1500000.5", nil, "not an amount in VND"},
+		{vnd, "1500000.5", nil, "more decimal places than VND takes. Write it like 12000."},
+		{money, "12.345", nil, "more decimal places than EUR takes. Write it like 12000.50."},
+		{money, "-500", nil, "is below zero"},
+		{money, "1e5", nil, "not an amount in EUR. Write it like 12000.50."},
 		{noCurrency, "12000.50", nil, "has no currency set"},
 		{date, "2026-03-02", "2026-03-02", ""},
 		{date, "03/02/2026", nil, "Write it as YYYY-MM-DD"},
@@ -95,24 +98,35 @@ func seatsCatalog() importCatalog {
 	}}
 }
 
-func TestACoreProblemWinsOverACustomFieldProblem(t *testing.T) {
-	fields := map[string]string{fieldDisplayName: "Acme", fieldSizeBand: "240", "cf_seats": "many"}
-	if _, problem := checkRow(migration.ObjectCompany, fields, seatsCatalog()); problem == nil || problem.Target != fieldSizeBand {
-		t.Fatalf("problem = %+v, want the size_band one", problem)
+// firstOf is a check's typed cells and the first problem it found, for a test
+// about one cell.
+func firstOf(typed map[string]any, problems []*cellProblem) (map[string]any, *cellProblem) {
+	if len(problems) == 0 {
+		return typed, nil
 	}
-	delete(fields, fieldSizeBand)
-	if _, problem := checkRow(migration.ObjectCompany, fields, seatsCatalog()); problem == nil || problem.Target != "cf_seats" {
-		t.Fatalf("problem = %+v, want the cf_seats one", problem)
+	return typed, problems[0]
+}
+
+// A row is checked to its last cell, so one upload names every cell to correct.
+func TestEveryProblemOfARowIsListedCoreCellsFirst(t *testing.T) {
+	fields := map[string]string{fieldDisplayName: "Acme", fieldSizeBand: "240", fieldDomain: "not a domain", "cf_seats": "many"}
+	typed, problems := checkRow(migration.ObjectCompany, fields, seatsCatalog())
+	var targets []string
+	for _, problem := range problems {
+		targets = append(targets, problem.Target)
+	}
+	if typed != nil || !reflect.DeepEqual(targets, []string{fieldDomain, fieldSizeBand, "cf_seats"}) {
+		t.Fatalf("typed = %v, problems on %v; want none typed and the domain, size_band and cf_seats cells", typed, targets)
 	}
 }
 
 func TestACheckedRowCarriesOnlyItsFilledCustomFieldsTyped(t *testing.T) {
 	fields := map[string]string{fieldDisplayName: "Acme", "cf_tier": "gold", "cf_seats": ""}
-	typed, problem := checkRow(migration.ObjectCompany, fields, seatsCatalog())
+	typed, problem := firstOf(checkRow(migration.ObjectCompany, fields, seatsCatalog()))
 	if problem != nil || !reflect.DeepEqual(typed, map[string]any{"cf_tier": "Gold"}) {
 		t.Fatalf("typed = %v, problem %+v; want only cf_tier in the catalog's spelling", typed, problem)
 	}
-	if typed, _ := checkRow(migration.ObjectCompany, map[string]string{fieldDisplayName: "Acme"}, seatsCatalog()); typed != nil {
+	if typed, _ := firstOf(checkRow(migration.ObjectCompany, map[string]string{fieldDisplayName: "Acme"}, seatsCatalog())); typed != nil {
 		t.Fatalf("typed = %v, want nil for a row with no custom field", typed)
 	}
 }
@@ -121,7 +135,7 @@ func TestACheckedRowCarriesOnlyItsFilledCustomFieldsTyped(t *testing.T) {
 // value is refused rather than reaching a store that has no column for it.
 func TestAValueForAFieldNoLongerActiveIsRefused(t *testing.T) {
 	fields := map[string]string{fieldDisplayName: "Acme", "cf_gone": "x"}
-	if _, problem := checkRow(migration.ObjectCompany, fields, seatsCatalog()); problem == nil || problem.Target != "cf_gone" {
+	if _, problem := firstOf(checkRow(migration.ObjectCompany, fields, seatsCatalog())); problem == nil || problem.Target != "cf_gone" {
 		t.Fatalf("problem = %+v, want one on cf_gone", problem)
 	}
 }
@@ -137,11 +151,11 @@ func TestAProblemNamesTheFilesOwnHeader(t *testing.T) {
 // multi-byte letters lands and one more character does not.
 func TestADescriptionOverTheColumnsLengthIsAProblemOfItsCell(t *testing.T) {
 	atCap := strings.Repeat("ü", contacts.CompanyDescriptionMax)
-	if _, problem := checkRow(migration.ObjectCompany, map[string]string{fieldDisplayName: "Acme", descriptionField: atCap}, importCatalog{}); problem != nil {
+	if _, problem := firstOf(checkRow(migration.ObjectCompany, map[string]string{fieldDisplayName: "Acme", descriptionField: atCap}, importCatalog{})); problem != nil {
 		t.Fatalf("problem = %+v, want none for a description at the cap", problem)
 	}
 	over := atCap + "x"
-	_, problem := checkRow(migration.ObjectCompany, map[string]string{fieldDisplayName: "Acme", descriptionField: over}, importCatalog{})
+	_, problem := firstOf(checkRow(migration.ObjectCompany, map[string]string{fieldDisplayName: "Acme", descriptionField: over}, importCatalog{}))
 	if problem == nil || problem.Target != descriptionField || problem.Why.Code != migration.ReasonDescriptionTooLong ||
 		!strings.Contains(problem.Message, strconv.Itoa(contacts.CompanyDescriptionMax+1)) {
 		t.Fatalf("problem = %+v, want the description refused with its length", problem)
@@ -152,15 +166,15 @@ func TestADescriptionOverTheColumnsLengthIsAProblemOfItsCell(t *testing.T) {
 // the row with the same reason the commit gives. A lead may still hold one.
 func TestAContactRowWithASendingSystemsAddressIsSkipped(t *testing.T) {
 	fields := map[string]string{fieldFullName: "Signing-Noreply", fieldEmail: "signing-noreply@example.com"}
-	_, problem := checkRow(migration.ObjectContact, fields, importCatalog{})
+	_, problem := firstOf(checkRow(migration.ObjectContact, fields, importCatalog{}))
 	if problem == nil || problem.Target != fieldEmail || problem.Why.Code != migration.ReasonEmailNamesNoContact {
 		t.Fatalf("problem = %+v, want the email refused as %s", problem, migration.ReasonEmailNamesNoContact)
 	}
-	if _, problem := checkRow(migration.ObjectLead, fields, importCatalog{}); problem != nil {
+	if _, problem := firstOf(checkRow(migration.ObjectLead, fields, importCatalog{})); problem != nil {
 		t.Fatalf("lead problem = %+v, want none: only the contacts store refuses the address", problem)
 	}
 	fields[fieldEmail] = "anna.notify.weber@example.com"
-	if _, problem := checkRow(migration.ObjectContact, fields, importCatalog{}); problem != nil {
+	if _, problem := firstOf(checkRow(migration.ObjectContact, fields, importCatalog{})); problem != nil {
 		t.Fatalf("problem = %+v, want none for a human whose name holds a marker word", problem)
 	}
 }
@@ -169,12 +183,12 @@ func TestAContactRowWithASendingSystemsAddressIsSkipped(t *testing.T) {
 // provider's own domain is not.
 func TestImportRefusesHubSpotBCC(t *testing.T) {
 	fields := map[string]string{fieldFullName: "Logger", fieldEmail: "4711@bcc.eu1.hubspot.com"}
-	if _, problem := checkRow(migration.ObjectContact, fields, importCatalog{}); problem == nil ||
+	if _, problem := firstOf(checkRow(migration.ObjectContact, fields, importCatalog{})); problem == nil ||
 		problem.Why.Code != migration.ReasonEmailNamesNoContact {
 		t.Fatalf("problem = %+v, want the BCC address refused", problem)
 	}
 	fields[fieldEmail] = "anna@hubspot.com"
-	if _, problem := checkRow(migration.ObjectContact, fields, importCatalog{}); problem != nil {
+	if _, problem := firstOf(checkRow(migration.ObjectContact, fields, importCatalog{})); problem != nil {
 		t.Fatalf("problem = %+v, want none for a human at the provider", problem)
 	}
 }
@@ -205,5 +219,13 @@ func TestAnImportRowsNamePartsSetItsFullName(t *testing.T) {
 	delete(fields, "last_name")
 	if got := contactCreateFrom(fields, nil, "csv", "src").FullName; got != "Signing-Noreply" {
 		t.Errorf("full name with one part = %q, want the row's own full name", got)
+	}
+}
+
+// A refused size band lists the bands from the smallest company to the largest.
+func TestARefusedSizeBandListsTheBandsBySize(t *testing.T) {
+	_, problem := firstOf(checkRow(migration.ObjectCompany, map[string]string{fieldDisplayName: "Acme", fieldSizeBand: "12"}, importCatalog{}))
+	if problem == nil || problem.Why.Params["allowed"] != "1-10, 11-50, 51-200, 201-500, 501-1000, 1001-5000, 5000+" {
+		t.Fatalf("problem = %+v, want the bands listed by size", problem)
 	}
 }

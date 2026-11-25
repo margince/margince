@@ -97,12 +97,22 @@ function issuesOf(report: ImportReport): readonly ImportRowIssue[] {
   return report.issues ?? [];
 }
 
+// The rows with an issue of these kinds. A row with several cells at fault has
+// an issue for each, and still counts once.
 function countOf(
   issues: readonly ImportRowIssue[],
   ...kinds: ImportProblemKind[]
 ): number {
-  return issues.filter((issue) => issue.kind && kinds.includes(issue.kind))
-    .length;
+  const rows = new Set<string>();
+  issues.forEach((issue, index) => {
+    if (!issue.kind || !kinds.includes(issue.kind)) return;
+    rows.add(
+      issue.line === undefined
+        ? `issue ${index}`
+        : `${issue.file ?? ""}\u0000${issue.line}`,
+    );
+  });
+  return rows.size;
 }
 
 // How many deals the parts say land already closed, by the part field named.

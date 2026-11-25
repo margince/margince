@@ -19,27 +19,26 @@ import (
 )
 
 // checkCells reads a deal row's stage, amount, currency and close date into
-// typed. The first problem wins.
-func (d dealStages) checkCells(fields map[string]string, typed map[string]any) (map[string]any, *cellProblem) {
+// typed, or answers each of them the deals store would refuse. A row whose
+// stage is refused has its close date read as a day and no more.
+func (d dealStages) checkCells(fields map[string]string, typed map[string]any) (map[string]any, []*cellProblem) {
 	if typed == nil {
 		typed = map[string]any{}
 	}
+	var problems cellProblems
 	choice, staged, problem := d.stageOf(fields)
-	if problem != nil {
-		return nil, problem
-	}
+	problems.add(problem)
 	if staged {
 		typed[dealTargetPipeline], typed[dealTargetStage] = choice.pipeline, choice.stage
 	}
-	if problem := checkDealMoney(fields, typed); problem != nil {
-		return nil, problem
-	}
-	if problem := d.checkCloseDate(fields, choice, typed); problem != nil {
-		return nil, problem
-	}
+	problems.add(checkDealMoney(fields, typed))
+	problems.add(d.checkCloseDate(fields, choice, typed))
 	if choice.semantic == crmcontracts.StageSemanticLost && strings.TrimSpace(fields[dealTargetLostReason]) == "" {
-		return nil, problemOf(dealTargetLostReason, fields[dealTargetLostReason],
-			migration.Why(migration.ReasonLostReasonMissing))
+		problems.add(problemOf(dealTargetLostReason, fields[dealTargetLostReason],
+			migration.Why(migration.ReasonLostReasonMissing)))
+	}
+	if len(problems) > 0 {
+		return nil, problems
 	}
 	return typed, nil
 }
@@ -76,16 +75,11 @@ func checkDealMoney(fields map[string]string, typed map[string]any) *cellProblem
 	}
 	if currency == "" {
 		return problemOf(dealTargetAmount, fields[dealTargetAmount],
-			migration.Why(migration.ReasonCurrencyUnset, "value", amount))
+			migration.Why(migration.ReasonAmountNeedsCurrency, "value", amount))
 	}
 	minor, ok := values.MinorUnits(amount, currency)
 	if !ok {
-		return problemOf(dealTargetAmount, fields[dealTargetAmount],
-			migration.Why(migration.ReasonNotAnAmount, "value", amount, "currency", currency))
-	}
-	if minor < 0 {
-		return problemOf(dealTargetAmount, fields[dealTargetAmount],
-			migration.Why(migration.ReasonAmountNegative, "value", amount))
+		return problemOf(dealTargetAmount, fields[dealTargetAmount], amountReason(amount, currency))
 	}
 	typed[dealTargetAmount] = minor
 	return nil
