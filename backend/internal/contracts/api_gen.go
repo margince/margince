@@ -46240,7 +46240,7 @@ type ContactGraphRouteEvidence struct {
 // ContactGraphRouteType `direct` is a colleague who corresponds with the contact themselves. `through_contact` goes via someone else at the contact's company.
 type ContactGraphRouteType string
 
-// ContactImpersonationWarning The sign of impersonation the sender check saw when capture made this contact from a mail.
+// ContactImpersonationWarning The sign of impersonation the sender check saw on a captured mail from this contact.
 type ContactImpersonationWarning struct {
 	// DetectedAt When the sender check recorded it.
 	DetectedAt time.Time `json:"detected_at"`
@@ -63373,6 +63373,9 @@ type RecordAccessMember struct {
 	// Group The group the panel lists this member under, from their first reason.
 	Group       RecordAccessMemberGroup `json:"group"`
 	ReadReasons []RecordAccessReason    `json:"read_reasons"`
+
+	// RoleNames The name an admin gave each live role in `roles`, keyed by role key, so a reader who may not read the role directory still sees a custom role by its name. Present only when `detail` is true. Absent from an older server; a key it does not name is shown as the key.
+	RoleNames *map[string]string `json:"role_names,omitempty"`
 
 	// Roles The member's role keys. Present only when `detail` is true.
 	Roles  *[]string          `json:"roles,omitempty"`

@@ -123,6 +123,7 @@ const HISTORY_VALUE_LABELS = new Map<
   ["partner_attribution", DEAL_ATTRIBUTION_LABEL],
   ["greeting_register", GREETING_REGISTER_LABEL],
   ["relationship_mark", MARK_WORDS],
+  ["impersonation_warning_raised", IMPERSONATION_WORDS],
   ["impersonation_warning_cleared", IMPERSONATION_WORDS],
   ["impersonation_warning_carried", IMPERSONATION_WORDS],
   ["visibility", VISIBILITY_WORDS],
