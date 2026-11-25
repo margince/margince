@@ -185,19 +185,12 @@ func (w wireMessage) fillContent(msg *Message) {
 // fill reads the body named by typ; an empty typ takes the first body present,
 // for an edit that states no type of its own.
 func (b wireBody) fill(msg *Message, typ string) {
-	media := map[string]*wireMedia{
-		"image": b.Image, "video": b.Video, "audio": b.Audio, "document": b.Document, "sticker": b.Sticker,
-	}
+	media := b.media()
 	if typ == "" {
-		for _, name := range []string{"text", "image", "video", "audio", "document", "sticker"} {
-			if media[name] != nil || (name == "text" && b.Text != nil) {
-				typ = name
-				break
-			}
-		}
+		typ = b.firstType(media)
 	}
 	switch {
-	case typ == "text" && b.Text != nil:
+	case typ == typeText && b.Text != nil:
 		msg.Kind, msg.Text = KindText, b.Text.Body
 	case media[typ] != nil:
 		m := media[typ]
@@ -241,4 +234,23 @@ func parseUnix(s string) (time.Time, error) {
 		return time.Time{}, ErrMalformedItem
 	}
 	return time.Unix(secs, 0).UTC(), nil
+}
+
+func (b wireBody) media() map[string]*wireMedia {
+	return map[string]*wireMedia{
+		"image": b.Image, "video": b.Video, "audio": b.Audio, "document": b.Document, "sticker": b.Sticker,
+	}
+}
+
+// firstType names the body present, text before media.
+func (b wireBody) firstType(media map[string]*wireMedia) string {
+	if b.Text != nil {
+		return typeText
+	}
+	for _, name := range []string{"image", "video", "audio", "document", "sticker"} {
+		if media[name] != nil {
+			return name
+		}
+	}
+	return ""
 }

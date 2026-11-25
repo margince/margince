@@ -73,23 +73,16 @@ func TestVerifySignature(t *testing.T) {
 	}
 }
 
-func TestReadSignedBody(t *testing.T) {
-	post := func(body []byte, header string) ([]byte, error) {
+func TestReadBodyStopsAtTheLimit(t *testing.T) {
+	post := func(body []byte) ([]byte, error) {
 		req := httptest.NewRequest(http.MethodPost, "/hook", strings.NewReader(string(body)))
-		if header != "" {
-			req.Header.Set("X-Hub-Signature-256", header)
-		}
-		return ReadSignedBody(httptest.NewRecorder(), req, "secret")
+		return ReadBody(httptest.NewRecorder(), req)
 	}
 	body := []byte(`{"a":1}`)
-	if got, err := post(body, sign("secret", body)); err != nil || string(got) != string(body) {
-		t.Fatalf("signed body = %q, %v", got, err)
+	if got, err := post(body); err != nil || string(got) != string(body) {
+		t.Fatalf("body = %q, %v", got, err)
 	}
-	if _, err := post(body, ""); !errors.Is(err, ErrBadSignature) {
-		t.Fatalf("unsigned body err = %v, want ErrBadSignature", err)
-	}
-	big := []byte(strings.Repeat("x", MaxWebhookBodyBytes+1))
-	if _, err := post(big, sign("secret", big)); !errors.Is(err, ErrBodyTooLarge) {
+	if _, err := post([]byte(strings.Repeat("x", MaxWebhookBodyBytes+1))); !errors.Is(err, ErrBodyTooLarge) {
 		t.Fatalf("oversize body err = %v, want ErrBodyTooLarge", err)
 	}
 }

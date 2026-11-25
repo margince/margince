@@ -2229,6 +2229,21 @@ kinds:
       One raw payload read back, normalized, and put through the capture sink —
       database-only, one update at a time, with no provider call in it at all.
 
+  whatsapp_ingest:
+    role: worker
+    go_type: WhatsAppIngestArgs
+    queue: default
+    timeout: 2m
+    opts_owner: caller
+    args:
+      Workspace: id
+      ConnectionID: id
+      RawCaptureID: id
+    reason: >-
+      One webhook item the WhatsApp edge stored, read back and decoded. The
+      worker files nothing yet and only counts what it read — database-only,
+      one item at a time, with no Graph call in it.
+
   telegram_poll:
     role: worker
     go_type: TelegramPollArgs

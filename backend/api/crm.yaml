@@ -18065,6 +18065,132 @@ paths:
             application/problem+json:
               schema: { $ref: '#/components/schemas/Problem' }
 
+  # ------------------- /channel-connections/whatsapp -------------------
+  # One WhatsApp Business phone number, connected by an admin with the credentials of the Meta
+  # app that serves it. The admin is the approver, so a connection is `connected` as soon as it
+  # exists. All three operations are admin-only and human-only: they decide whose chats are
+  # captured and they take secrets.
+  /channel-connections/whatsapp:
+    get:
+      tags: [Connectors]
+      operationId: listWhatsAppConnections
+      security: [ { cookieAuth: [] } ]
+      x-agent-access: human-only
+      x-human-only-reason: security
+      summary: List the WhatsApp Business numbers connected to the workspace.
+      description: Newest first. No secret is returned.
+      responses:
+        '200':
+          description: WhatsApp connections.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/WhatsAppConnectionListResponse' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/PermissionDenied' }
+        '503':
+          description: 'This deployment serves no messaging channels (`code: channel_connections_not_configured`).'
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+    post:
+      tags: [Connectors]
+      operationId: createWhatsAppConnection
+      security: [ { cookieAuth: [] } ]
+      x-agent-access: human-only
+      x-human-only-reason: security
+      summary: Connect a WhatsApp Business number to the workspace.
+      description: |
+        Seals the access token and the app secret in the credential store and makes a live
+        connection for the phone number. No call to Meta is made. The response carries the
+        webhook verify token once; paste it into the Meta app's webhook settings together with
+        `<public_base_url>/v1/channel-events/whatsapp`. Margince keeps no copy the admin can read
+        again, so a lost verify token means disconnecting the number and connecting it again.
+
+        One live connection exists per phone number: connecting a number that is already
+        connected is a `409`.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/CreateWhatsAppConnectionRequest' }
+      responses:
+        '201':
+          description: The connection and its verify token.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/WhatsAppConnectionCreated' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/PermissionDenied' }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+        '503':
+          description: 'This deployment serves no messaging channels (`code: channel_connections_not_configured`), or has no credential store configured to seal the secrets in (`code: channel_credentials_not_configured`).'
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+
+  /channel-connections/whatsapp/{id}/visibility:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+    patch:
+      tags: [Connectors]
+      operationId: updateWhatsAppConnectionVisibility
+      security: [ { cookieAuth: [] } ]
+      x-agent-access: human-only
+      x-human-only-reason: security
+      summary: Change who may read a WhatsApp number's messages.
+      description: |
+        Sets the mail visibility of the number's seat, as `PATCH /shared-mailboxes/{id}` does for a
+        shared mailbox and the Telegram Business route does for its accounts: the next message
+        follows it. `shared` needs `capture.shared_posture_allowed` and `classified` is refused,
+        both with `422`. The request must carry `confirm: true`. Admin only, in a signed-in session.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/UpdateTelegramBusinessConnectionVisibilityRequest' }
+      responses:
+        '200':
+          description: The connection as it now stands.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/WhatsAppConnection' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/PermissionDenied' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+        '503':
+          description: 'This deployment serves no messaging channels (`code: channel_connections_not_configured`).'
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+
+  /channel-connections/whatsapp/{id}:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+    delete:
+      tags: [Connectors]
+      operationId: disconnectWhatsAppConnection
+      security: [ { cookieAuth: [] } ]
+      x-agent-access: human-only
+      x-human-only-reason: security
+      summary: Disconnect a WhatsApp Business number from the workspace.
+      description: |
+        Archives the connection and destroys the sealed secrets. From then on the webhook route
+        stores nothing for the number. What its chats already filed stays.
+      responses:
+        '204': { description: Disconnected. }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/PermissionDenied' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+        '503':
+          description: 'This deployment serves no messaging channels (`code: channel_connections_not_configured`), or has no credential store configured (`code: channel_credentials_not_configured`).'
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+
   # --------------------------- /channel-links -------------------------------
   # A deal or a project linked to one channel of the team chat (Dispact). Margince
   # keeps a card in the channel and posts what happens on the record; what the
@@ -18376,6 +18502,94 @@ paths:
               schema: { $ref: '#/components/schemas/Problem' }
         '503':
           description: 'This deployment takes no chat notices, or could not record the notice id (`code: channel_events_unavailable`); Dispact retries.'
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+
+  # ----------------------- /channel-events/whatsapp -------------------------
+  # Meta's webhook for WhatsApp Business. Both methods are anonymous: the verify token
+  # (GET) and the HMAC signature with the app secret (POST) are the credentials, and both
+  # are checked against the secrets sealed on the connected numbers.
+  /channel-events/whatsapp:
+    get:
+      tags: [Connectors]
+      operationId: verifyWhatsAppWebhook
+      security: []   # anonymous: the verify token sealed on a connected number is the authentication
+      x-agent-access: human-only
+      summary: Answer Meta's webhook subscription check (anonymous).
+      description: |
+        Meta calls this with `hub.mode=subscribe`, `hub.verify_token` and `hub.challenge` when
+        the webhook is saved. The answer is the challenge as plain text when the token is the
+        verify token of a connected number, and `403` otherwise, whether or not any number is
+        connected.
+      parameters:
+        - { name: hub.mode, in: query, schema: { type: string }, description: Always `subscribe`. }
+        - { name: hub.verify_token, in: query, schema: { type: string, maxLength: 500 } }
+        - { name: hub.challenge, in: query, schema: { type: string, maxLength: 500 } }
+      responses:
+        '200':
+          description: The challenge, echoed.
+          content:
+            text/plain:
+              schema: { type: string }
+        '403':
+          description: 'The token matches no connected number (`code: channel_event_rejected`).'
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+        '429':
+          description: Rate-limited.
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+        '503':
+          description: 'This deployment takes no WhatsApp events (`code: channel_events_unavailable`).'
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+    post:
+      tags: [Connectors]
+      operationId: receiveWhatsAppWebhook
+      security: []   # anonymous: the X-Hub-Signature-256 HMAC with a connected number's app secret is the authentication
+      x-agent-access: human-only
+      summary: Take a signed WhatsApp Business webhook delivery (anonymous).
+      description: |
+        Meta posts a batch of messages, message echoes and delivery statuses, signed in
+        `X-Hub-Signature-256` (`sha256=<hex HMAC-SHA256 of the raw body>`) with the app secret.
+        The signature is checked against every connected number's app secret before the body is
+        read. Only items for a number whose own secret verified are kept: each is stored once
+        and queued for filing, in one transaction. An item for a number that is not connected, a
+        field this version does not handle and an item that cannot be decoded are skipped, and
+        the answer is still `200`, so Meta does not retry them. A redelivered item is stored
+        once.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/WhatsAppWebhookDelivery' }
+      responses:
+        '200':
+          description: The delivery was taken.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/WhatsAppWebhookReceipt' }
+        '401':
+          description: 'The body is signed by no connected number (`code: channel_event_rejected`). The answer is the same for each cause.'
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+        '413':
+          description: 'The body is larger than a delivery can be (`code: channel_event_too_large`).'
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+        '429':
+          description: Rate-limited; Meta retries.
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+        '503':
+          description: 'This deployment takes no WhatsApp events, or could not store the delivery (`code: channel_events_unavailable`); Meta retries.'
           content:
             application/problem+json:
               schema: { $ref: '#/components/schemas/Problem' }
@@ -47880,6 +48094,72 @@ components:
       required: [data]
       properties:
         data: { type: array, items: { $ref: '#/components/schemas/TelegramBusinessConnection' } }
+    WhatsAppConnection:
+      type: object
+      description: One WhatsApp Business phone number connected to the workspace. No secret is part of it.
+      required: [id, wabaId, phoneNumberId, displayPhoneNumber, status, connectedAt]
+      properties:
+        id: { type: string, format: uuid }
+        wabaId: { type: string, description: The WhatsApp Business Account id. }
+        phoneNumberId: { type: string, description: 'Meta''s id of the phone number, the key a webhook item is matched to its connection by.' }
+        displayPhoneNumber: { type: string, description: The number in the form WhatsApp shows it. Display only. }
+        status:
+          type: string
+          enum: [connected, disconnected]
+          x-extensible-enum: true
+        connectedAt: { type: string, format: date-time }
+        seatId: { type: [string, 'null'], format: uuid, description: The seat the number's messages file through. }
+        readerTeamId: { type: [string, 'null'], format: uuid, description: The team that reads the number's messages. }
+        mailVisibility:
+          type: [string, 'null']
+          enum: [held, shared, null]
+          x-extensible-enum: true
+          description: What the seat asks of the number's messages. Changed with `PATCH /channel-connections/whatsapp/{id}/visibility`.
+    WhatsAppConnectionListResponse:
+      type: object
+      required: [data]
+      properties:
+        data: { type: array, items: { $ref: '#/components/schemas/WhatsAppConnection' } }
+    CreateWhatsAppConnectionRequest:
+      type: object
+      required: [wabaId, phoneNumberId, displayPhoneNumber, accessToken, appSecret, readerTeamId]
+      properties:
+        readerTeamId: { type: string, format: uuid, description: 'The team that reads the number''s messages. The number''s seat starts `held`: only this team reads them until an admin shares them.' }
+        wabaId: { type: string, minLength: 1, maxLength: 64, pattern: '^[0-9]+$' }
+        phoneNumberId: { type: string, minLength: 1, maxLength: 64, pattern: '^[0-9]+$' }
+        displayPhoneNumber: { type: string, minLength: 1, maxLength: 64 }
+        accessToken:
+          type: string
+          minLength: 1
+          maxLength: 1000
+          description: The system-user access token for the WhatsApp Business Account. Sealed into the credential store on arrival and never echoed back.
+        appSecret:
+          type: string
+          minLength: 1
+          maxLength: 200
+          description: The Meta app's secret, which signs each webhook delivery. Sealed into the credential store on arrival and never echoed back.
+    WhatsAppConnectionCreated:
+      type: object
+      required: [connection, verifyToken]
+      properties:
+        connection: { $ref: '#/components/schemas/WhatsAppConnection' }
+        verifyToken:
+          type: string
+          description: The token Meta sends in the webhook subscription check. Made by the server and shown only in this response.
+    WhatsAppWebhookDelivery:
+      type: object
+      description: One batch of changes from Meta, as the signature covers it. The route reads the raw body, so the items inside `entry` are decoded by the server and not described here.
+      required: [object, entry]
+      additionalProperties: false
+      properties:
+        object: { type: string, description: Always `whatsapp_business_account`. }
+        entry: { type: array, items: { type: object, additionalProperties: true } }
+    WhatsAppWebhookReceipt:
+      type: object
+      required: [stored, skipped]
+      properties:
+        stored: { type: integer, minimum: 0, description: 'Items kept and queued for filing. A redelivered item counts again and is stored once.' }
+        skipped: { type: integer, minimum: 0, description: 'Items not kept: a number that is not connected, a field not handled, or an item that could not be decoded.' }
     ChannelConnectionListResponse:
       type: object
       required: [data]

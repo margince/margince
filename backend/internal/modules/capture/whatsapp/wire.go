@@ -25,6 +25,7 @@ func (t *wireTime) UnmarshalJSON(b []byte) error {
 // turns them into Message and Status, so no wire detail leaks to a caller.
 
 const (
+	typeText      = "text"
 	fieldMessages = "messages"
 	fieldEchoes   = "smb_message_echoes"
 	objectWABA    = "whatsapp_business_account"

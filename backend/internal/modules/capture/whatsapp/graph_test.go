@@ -265,3 +265,26 @@ func TestTransportFailureIsUnreachable(t *testing.T) {
 		t.Fatalf("err = %v", err)
 	}
 }
+
+func TestDownloadURLRefusesARedirectToAHostOutsideTheAllowlist(t *testing.T) {
+	srv := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		http.Redirect(w, r, "https://example.com/steal", http.StatusFound)
+	}))
+	t.Cleanup(srv.Close)
+	c := NewClient(srv.Client(), srv.URL, "", WithMediaHosts("127.0.0.1"))
+	if _, err := c.DownloadURL(context.Background(), testToken, srv.URL+"/m", 100); !errors.Is(err, ErrRejected) {
+		t.Fatalf("a redirect off the allowlist gave %v, want ErrRejected", err)
+	}
+}
+
+func TestDownloadURLStopsAfterTooManyRedirects(t *testing.T) {
+	var srv *httptest.Server
+	srv = httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		http.Redirect(w, r, srv.URL+"/again", http.StatusFound)
+	}))
+	t.Cleanup(srv.Close)
+	c := NewClient(srv.Client(), srv.URL, "", WithMediaHosts("127.0.0.1"))
+	if _, err := c.DownloadURL(context.Background(), testToken, srv.URL+"/m", 100); !errors.Is(err, ErrRejected) {
+		t.Fatalf("an endless redirect gave %v, want ErrRejected", err)
+	}
+}

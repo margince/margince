@@ -5,6 +5,10 @@ package whatsapp
 
 import "time"
 
+// Provider names WhatsApp Business in channel_connection.provider and in
+// raw_capture.source_system.
+const Provider = "whatsapp"
+
 // Direction says which side of the conversation a message came from.
 type Direction string
 
@@ -21,7 +25,7 @@ type Kind string
 
 const (
 	// KindText carries Text.
-	KindText Kind = "text"
+	KindText Kind = typeText
 	// KindMedia carries Media (image, video, audio, document, sticker).
 	KindMedia Kind = "media"
 	// KindReaction is an emoji reaction (Text) to the message ReplyToID.

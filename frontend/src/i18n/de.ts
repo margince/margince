@@ -11446,6 +11446,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "jobs.kind.technical_enrich_backfill": "Nachholen der technischen Abfrage",
   "jobs.kind.technical_enrich_company": "Technische Abfrage für Unternehmen",
   "jobs.kind.telegram_ingest": "Übernahme von Telegram-Nachrichten",
+  "jobs.kind.whatsapp_ingest": "Übernahme von WhatsApp-Nachrichten",
   "jobs.kind.telegram_poll": "Abruf von Telegram-Nachrichten",
   "jobs.kind.chat_link_flush": "Beiträge in Chat-Kanälen",
   "jobs.kind.chat_pull": "Zusammenfassungen aus Chat-Kanälen",

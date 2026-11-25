@@ -11401,6 +11401,7 @@ export const en = {
   "jobs.kind.technical_enrich_backfill": "Technical lookup backlog",
   "jobs.kind.technical_enrich_company": "Company technical lookup",
   "jobs.kind.telegram_ingest": "Telegram message intake",
+  "jobs.kind.whatsapp_ingest": "WhatsApp message intake",
   "jobs.kind.telegram_poll": "Telegram message fetch",
   "jobs.kind.chat_link_flush": "Chat channel posts",
   "jobs.kind.chat_pull": "Chat channel summaries",

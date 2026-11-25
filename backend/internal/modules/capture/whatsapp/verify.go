@@ -76,18 +76,15 @@ func VerifySignature(appSecret string, body []byte, header string) error {
 	return nil
 }
 
-// ReadSignedBody reads a webhook POST body under the size limit. It returns the
-// body only if the signature verifies, so nothing is decoded unauthenticated.
-func ReadSignedBody(w http.ResponseWriter, r *http.Request, appSecret string) ([]byte, error) {
+// ReadBody reads a webhook POST body under the size limit. The caller checks the
+// signature against the secrets it holds before it decodes anything.
+func ReadBody(w http.ResponseWriter, r *http.Request) ([]byte, error) {
 	body, err := io.ReadAll(http.MaxBytesReader(w, r.Body, MaxWebhookBodyBytes))
 	if err != nil {
 		var tooLarge *http.MaxBytesError
 		if errors.As(err, &tooLarge) {
 			return nil, ErrBodyTooLarge
 		}
-		return nil, err
-	}
-	if err := VerifySignature(appSecret, body, r.Header.Get("X-Hub-Signature-256")); err != nil {
 		return nil, err
 	}
 	return body, nil

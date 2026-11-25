@@ -72,7 +72,35 @@ func NewClient(hc *http.Client, base, version string, opts ...Option) *Client {
 	for _, opt := range opts {
 		opt(c)
 	}
+	// The caller's client is copied, so its redirect policy stays its own. Every
+	// hop is checked like the first request, because a redirect from an allowed
+	// host could otherwise carry the bearer token to any other.
+	own := *hc
+	own.CheckRedirect = c.checkRedirect
+	c.http = &own
 	return c
+}
+
+// maxRedirects bounds a media fetch's hops.
+const maxRedirects = 3
+
+// errRedirectRefused marks a redirect the policy stopped.
+var errRedirectRefused = errors.New("whatsapp: redirect refused")
+
+// checkRedirect lets a request follow a redirect only to an https media host or
+// to the Graph host, and only a few times.
+func (c *Client) checkRedirect(req *http.Request, via []*http.Request) error {
+	if len(via) > maxRedirects {
+		return errRedirectRefused
+	}
+	base, err := url.Parse(c.base)
+	if err == nil && req.URL.Scheme == "https" && strings.EqualFold(req.URL.Host, base.Host) {
+		return nil
+	}
+	if !c.allowedMediaURL(req.URL.String()) {
+		return errRedirectRefused
+	}
+	return nil
 }
 
 // allowedMediaURL reports whether raw is an https URL on an allowed host.
@@ -171,7 +199,7 @@ func (c *Client) SendText(ctx context.Context, token, phoneNumberID, to, text st
 			Body string `json:"body"`
 		} `json:"text"`
 	}{
-		MessagingProduct: "whatsapp", RecipientType: "individual", To: to, Type: "text",
+		MessagingProduct: "whatsapp", RecipientType: "individual", To: to, Type: typeText,
 		Text: struct {
 			Body string `json:"body"`
 		}{Body: text},
@@ -212,6 +240,9 @@ func (c *Client) do(ctx context.Context, method, target, token string, body []by
 		req.Header.Set("Content-Type", "application/json")
 	}
 	resp, err := c.http.Do(req)
+	if errors.Is(err, errRedirectRefused) {
+		return nil, fmt.Errorf("whatsapp: a redirect left the allowed hosts: %w", ErrRejected)
+	}
 	if err != nil {
 		return nil, fmt.Errorf("whatsapp: transport failure: %w", ErrUnreachable)
 	}

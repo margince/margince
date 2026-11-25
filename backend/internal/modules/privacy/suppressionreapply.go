@@ -185,15 +185,15 @@ func (e *Eraser) contactsMatchingSuppression(ctx context.Context, suppressed map
 		{
 			kind: "channel_identity",
 			query: `
-				SELECT ci.contact_id, c.created_at, ci.provider, ci.channel_user_id
+				SELECT ci.contact_id, c.created_at, ci.provider, ci.channel_user_id, ci.account_scope
 				  FROM contact_channel_identity ci
 				  JOIN contact c ON c.id = ci.contact_id AND c.archived_at IS NULL
 				 ORDER BY ci.contact_id`,
 			scan: func(rows pgx.Rows) (liveIdentifier, error) {
 				var live liveIdentifier
-				var provider, account string
-				err := rows.Scan(&live.contact, &live.created, &provider, &account)
-				live.forms = storekit.ChannelIdentityForms(provider, account)
+				var provider, account, scope string
+				err := rows.Scan(&live.contact, &live.created, &provider, &account, &scope)
+				live.forms = storekit.ChannelIdentityForms(provider, storekit.ChannelSuppressionAccount(scope, account))
 				return live, err
 			},
 		},
