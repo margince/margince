@@ -40,17 +40,6 @@ func readsActivities() principal.Permissions {
 	return perms
 }
 
-// readsOnly is the admin's grants cut to reading, so the reader sees every row
-// and may change none.
-func readsOnly() principal.Permissions {
-	perms := integration.AdminPerms
-	perms.Objects = make(map[string]principal.ObjectGrant, len(integration.AdminPerms.Objects))
-	for object, grant := range integration.AdminPerms.Objects {
-		perms.Objects[object] = principal.ObjectGrant{Read: grant.Read}
-	}
-	return perms
-}
-
 func TestTheWorklistOffersAMailMoveOnlyToASeatThatMayWrite(t *testing.T) {
 	quiet := seedQuietRelationship(t)
 	e := quiet.e
@@ -61,7 +50,7 @@ func TestTheWorklistOffersAMailMoveOnlyToASeatThatMayWrite(t *testing.T) {
 	}{
 		"a full seat that may write":    {integration.OnSeat(e.As(e.Rep1, team, integration.AdminPerms), principal.SeatFull), nil},
 		"a full seat without the grant": {integration.OnSeat(e.As(e.Rep1, team, readsActivities()), principal.SeatFull), new(refusedAction)},
-		"a role that only reads":        {integration.OnSeat(e.As(e.Rep1, team, readsOnly()), principal.SeatFull), new(refusedRole)},
+		"a role that only reads":        {integration.OnSeat(e.As(e.Rep1, team, integration.ReadingOnly(integration.AdminPerms)), principal.SeatFull), new(refusedRole)},
 		"a read seat holding the grant": {integration.OnSeat(e.As(e.Rep1, team, integration.AdminPerms), principal.SeatRead), new(refusedSeat)},
 		"an agent whose human lacks it": {e.AgentFor(t, e.Rep1, team, readsActivities()), new(refusedAction)},
 	} {
@@ -100,7 +89,7 @@ func TestTheCompanyPageOffersADraftReplyOnlyToASeatThatMayWrite(t *testing.T) {
 	}{
 		"a full seat that may write":    {integration.OnSeat(e.Admin(), principal.SeatFull), nil},
 		"a full seat without the grant": {integration.OnSeat(e.As(e.AdminUser, nil, readsActivities()), principal.SeatFull), new(refusedAction)},
-		"a role that only reads":        {integration.OnSeat(e.As(e.AdminUser, nil, readsOnly()), principal.SeatFull), new(refusedRole)},
+		"a role that only reads":        {integration.OnSeat(e.As(e.AdminUser, nil, integration.ReadingOnly(integration.AdminPerms)), principal.SeatFull), new(refusedRole)},
 		"a read seat holding the grant": {integration.OnSeat(e.Admin(), principal.SeatRead), new(refusedSeat)},
 	} {
 		page, err := service.Assemble(reader.ctx, ids.From[ids.CompanyKind](company))
@@ -139,7 +128,7 @@ func TestTheDealCardOffersItsTaskOnlyToASeatThatMayWrite(t *testing.T) {
 	}{
 		{"a full seat that may write", integration.OnSeat(e.As(e.Rep1, team, integration.AdminPerms), principal.SeatFull), nil},
 		{"a full seat without the grant", integration.OnSeat(e.As(e.Rep1, team, readsActivities()), principal.SeatFull), new(refusedAction)},
-		{"a role that only reads", integration.OnSeat(e.As(e.Rep1, team, readsOnly()), principal.SeatFull), new(refusedRole)},
+		{"a role that only reads", integration.OnSeat(e.As(e.Rep1, team, integration.ReadingOnly(integration.AdminPerms)), principal.SeatFull), new(refusedRole)},
 		{"a read seat holding the grant", integration.OnSeat(e.As(e.Rep1, team, integration.AdminPerms), principal.SeatRead), new(refusedSeat)},
 		{"the writer again, after the cache was filled", integration.OnSeat(e.As(e.Rep1, team, integration.AdminPerms), principal.SeatFull), nil},
 	} {

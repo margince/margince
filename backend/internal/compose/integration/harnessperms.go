@@ -322,3 +322,14 @@ func withoutGovernance(objects map[string]principal.ObjectGrant) map[string]prin
 	}
 	return out
 }
+
+// ReadingOnly cuts perms to its read grants, so the actor sees every row perms
+// sees and may change none. ReadOnlyPerms is narrower: it mirrors the seeded role.
+func ReadingOnly(perms principal.Permissions) principal.Permissions {
+	objects := make(map[string]principal.ObjectGrant, len(perms.Objects))
+	for object, grant := range perms.Objects {
+		objects[object] = principal.ObjectGrant{Read: grant.Read}
+	}
+	perms.Objects = objects
+	return perms
+}

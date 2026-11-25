@@ -13,7 +13,7 @@ import (
 
 func TestAManualMoveCarriesNoCause(t *testing.T) {
 	if got := phaseCause(nil, map[ids.UUID]string{}); got != nil {
-		t.Errorf("cause = %+v, want nil for a move a person made", got)
+		t.Errorf("cause = %+v, want nil for a move made by hand", got)
 	}
 }
 

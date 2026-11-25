@@ -15,7 +15,6 @@ import (
 
 func TestBlockedCopyCatalog(t *testing.T) { langcopytest.Census(t, blockedWords) }
 
-// spoken is every language the blocked copy is written in.
 var spoken = []string{"en", "de", "vi"}
 
 // promised turns the card's recommended action into Done on a task or a claim.

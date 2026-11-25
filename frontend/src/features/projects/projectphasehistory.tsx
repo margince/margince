@@ -69,7 +69,7 @@ function VisitRow({
         to: formatDayMonth(leftAt, locale, zone),
       })
     : t("project.history.since", { date: from });
-  // A caused move names its cause in place of the person whose act set it off.
+  // A caused move names its cause in place of whoever set it off.
   const credit = isKnownCause(visit.cause) ? (
     <PhaseCauseWords cause={visit.cause} />
   ) : (

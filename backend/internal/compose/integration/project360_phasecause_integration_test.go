@@ -6,7 +6,7 @@
 package integration
 
 // A phase move a won deal caused names that cause on the project page. It is a
-// code and the deal behind it, so a client can word it. A move a person made
+// code and the deal behind it, so a client can word it. A move made by hand
 // names none. The win runs through the real deals store.
 
 import (
@@ -47,7 +47,7 @@ func TestAWonDealNamesItselfAsTheCauseOfTheDeliveryMove(t *testing.T) {
 	}
 	for i, row := range rows[:2] {
 		if row.Cause != nil {
-			t.Errorf("row %d (to %s) cause = %+v, want none: a person made that move", i, row.ToPhase, row.Cause)
+			t.Errorf("row %d (to %s) cause = %+v, want none: that move was made by hand", i, row.ToPhase, row.Cause)
 		}
 	}
 	won := rows[2]

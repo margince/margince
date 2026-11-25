@@ -27,7 +27,7 @@ type PhaseTransition struct {
 	ToPhase   string
 	Reason    *string
 	// Cause is what moved the project when no one chose the phase by hand;
-	// nil on a move a person made.
+	// nil on a move made by hand.
 	Cause *PhaseCause
 	// AuditLogID is the audit row the writer wrote in the same transaction; it
 	// holds who moved the project. Nil when the link is unknown, for a row older

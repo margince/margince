@@ -42783,10 +42783,10 @@ export interface components {
             /** @description Null on the birth row. */
             from_phase: string | null;
             to_phase: string;
-            /** @description What the person who made the move typed. */
+            /** @description The reason typed with the move. */
             reason: string | null;
             /**
-             * @description What caused a move no one chose by hand. Absent on a move a person made, and on
+             * @description What caused a move no one chose by hand. Absent on a move made by hand, and on
              *     every move recorded before causes were stored. A client words the cause itself.
              */
             cause?: components["schemas"]["Project360PhaseCause"];

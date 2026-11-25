@@ -62281,7 +62281,7 @@ type Project360PhaseHistory struct {
 
 // Project360PhaseTransition defines model for Project360PhaseTransition.
 type Project360PhaseTransition struct {
-	// Cause What caused a move no one chose by hand. Absent on a move a person made, and on
+	// Cause What caused a move no one chose by hand. Absent on a move made by hand, and on
 	// every move recorded before causes were stored. A client words the cause itself.
 	Cause     *Project360PhaseCause `json:"cause,omitempty"`
 	ChangedAt time.Time             `json:"changed_at"`
@@ -62297,7 +62297,7 @@ type Project360PhaseTransition struct {
 	FromPhase *string            `json:"from_phase"`
 	Id        openapi_types.UUID `json:"id"`
 
-	// Reason What the person who made the move typed.
+	// Reason The reason typed with the move.
 	Reason  *string `json:"reason"`
 	ToPhase string  `json:"to_phase"`
 }
