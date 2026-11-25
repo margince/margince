@@ -3615,7 +3615,7 @@ paths:
           in: query
           schema: { type: string }
           description: Lookup by normalized domain (the employer-inference index).
-        - name: lifecycle
+        - name: status
           in: query
           schema: { type: string, enum: [unknown, target, prospect, opportunity, onboarding, live, customer, former_customer, disqualified] }
           description: Where the account stands with us (DM-VOCAB-2, ADR-0079).
@@ -17882,6 +17882,91 @@ paths:
         '422': { $ref: '#/components/responses/ValidationError' }
         '503':
           description: 'This deployment serves no messaging channels (`code: channel_connections_not_configured`), or has no credential store configured to seal a bot token in (`code: channel_credentials_not_configured`).'
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+
+  # ------------------- /channel-connections/telegram-business -------------------
+  # A Telegram Business account owner links the workspace's bot to their account inside
+  # Telegram, so the link exists before anyone here has seen it. It is not company
+  # correspondence until an admin approves it, and until then nothing from that account is
+  # stored. All three operations are admin-only and human-only: they decide whose chats are
+  # captured.
+  /channel-connections/telegram-business:
+    get:
+      tags: [Connectors]
+      operationId: listTelegramBusinessConnections
+      security: [ { cookieAuth: [] } ]
+      x-agent-access: human-only
+      x-human-only-reason: security
+      summary: List the Telegram Business accounts linked to the workspace's bot.
+      description: Newest first. Each is `pending_approval` until an admin approves it.
+      responses:
+        '200':
+          description: Telegram Business connections.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/TelegramBusinessConnectionListResponse' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/PermissionDenied' }
+        '503':
+          description: 'This deployment serves no messaging channels (`code: channel_connections_not_configured`).'
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+
+  /channel-connections/telegram-business/{id}:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+    delete:
+      tags: [Connectors]
+      operationId: disconnectTelegramBusinessConnection
+      security: [ { cookieAuth: [] } ]
+      x-agent-access: human-only
+      x-human-only-reason: security
+      summary: Disconnect a Telegram Business account from the workspace.
+      description: |
+        Archives the link. It holds no credential, so nothing is destroyed, and what the
+        account's chats already filed stays. If the owner links the bot again, the new link
+        waits for approval.
+      responses:
+        '204': { description: Disconnected. }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/PermissionDenied' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+        '503':
+          description: 'This deployment serves no messaging channels (`code: channel_connections_not_configured`).'
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+
+  /channel-connections/telegram-business/{id}/approve:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+    post:
+      tags: [Connectors]
+      operationId: approveTelegramBusinessConnection
+      security: [ { cookieAuth: [] } ]
+      x-agent-access: human-only
+      x-human-only-reason: security
+      summary: Approve a Telegram Business account for the workspace.
+      description: |
+        Moves a `pending_approval` link to `connected`. Approving a link that is already
+        `connected` changes nothing. A `409` means the owner switched the link off in Telegram.
+      responses:
+        '200':
+          description: The approved connection.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/TelegramBusinessConnection' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/PermissionDenied' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '503':
+          description: 'This deployment serves no messaging channels (`code: channel_connections_not_configured`).'
           content:
             application/problem+json:
               schema: { $ref: '#/components/schemas/Problem' }
@@ -33442,10 +33527,11 @@ paths:
     post:
       tags: [Offers]
       operationId: acceptOffer
-      summary: Record the buyer's acceptance — syncs the deal's amount from the offer's gross.
+      summary: Record the buyer's acceptance — syncs the deal's amount from the offer's net.
       description: |
         sent → accepted; sets `accepted_at`, syncs `deal.amount_minor`/`currency` from the
-        accepted offer's `gross_minor` (the offer becomes the deal's value source) and emits
+        accepted offer's `net_minor`, the figure without tax, because a deal's value never
+        carries tax (the offer becomes the deal's value source), and emits
         `offer.accepted`. An offer whose `valid_until` day has passed is refused
         422 `offer_lapsed`, since accepting it would re-price the deal from a lapsed quote.
       security: [ { bearerAuth: [] }, { cookieAuth: [] } ]
@@ -47582,7 +47668,7 @@ components:
       required: [id, provider, channelId, channelLabel, status, version]
       properties:
         id: { type: string, format: uuid }
-        provider: { type: string, enum: [telegram, dispact], x-extensible-enum: true }
+        provider: { type: string, enum: [telegram, telegram_business, dispact, whatsapp, zalo_oa], x-extensible-enum: true }
         channelId:
           type: string
           description: The provider's own id for the bot — the key the binding is unique on. For Dispact it is the chat's team id.
@@ -47594,15 +47680,15 @@ components:
           description: The web address of a self-hosted provider's install (Dispact). Absent for Telegram.
         status:
           type: string
-          enum: [pending, connected, disconnected, error, reauth_required]
+          enum: [pending_approval, connected, disconnected, error, reauth_required]
           x-extensible-enum: true
           description: >-
             Only `connected` is live, and it is the only state a connect can produce: a pull ingress makes no provider call after the write, so there is no half-connected state.
             `error` and `reauth_required` are where ingress parks a binding it can no longer poll
             (another consumer holds the bot's updates; the token was refused), and neither is
-            polled again until an operator acts. `pending` is a value NO server produces: it is
-            retained because the code generator disambiguates enum member names across the whole
-            document, so dropping it renames unrelated generated constants in other schemas.
+            polled again until an operator acts. `pending_approval` is the state of a Telegram
+            Business link nobody has approved. It is served by the telegram-business operations
+            and never appears on a bot connection.
         eventsSecretSet:
           type: boolean
           readOnly: true
@@ -47610,6 +47696,32 @@ components:
         version: { type: integer, format: int64 }
         createdAt: { type: string, format: date-time }
         updatedAt: { type: string, format: date-time }
+    TelegramBusinessConnection:
+      type: object
+      description: >-
+        One Telegram Business account the owner linked to the workspace's bot. Nothing from the
+        account is stored until an admin approves it.
+      required: [id, accountId, ownerLabel, status, connectedAt]
+      properties:
+        id: { type: string, format: uuid }
+        accountId:
+          type: string
+          description: The owner's Telegram user id, the key a repeated link keeps its row by.
+        ownerLabel:
+          type: string
+          description: The owner's name as Telegram last reported it. Display only, since a name is mutable and identifies nothing.
+        status:
+          type: string
+          enum: [pending_approval, connected, disconnected]
+          x-extensible-enum: true
+          description: '`pending_approval` waits for an admin; `disconnected` means the owner switched the link off in Telegram.'
+        connectedAt: { type: string, format: date-time, description: When the owner first linked the bot. }
+        approvedAt: { type: [string, 'null'], format: date-time, description: When an admin approved the link; absent until then. }
+    TelegramBusinessConnectionListResponse:
+      type: object
+      required: [data]
+      properties:
+        data: { type: array, items: { $ref: '#/components/schemas/TelegramBusinessConnection' } }
     ChannelConnectionListResponse:
       type: object
       required: [data]
@@ -48929,12 +49041,12 @@ components:
       type: [object, 'null']
       description: Structured postal address.
       properties:
-        line1: { type: [string, 'null'] }
-        line2: { type: [string, 'null'] }
-        city: { type: [string, 'null'] }
-        region: { type: [string, 'null'] }
-        postal_code: { type: [string, 'null'] }
-        country: { type: [string, 'null'], description: 'ISO-3166 alpha-2. A contact or company write (and a CSV import cell) that changes the country to a name, an alpha-3 code or an unassigned pair answers 422 `invalid_country_code` on `address.country`; a code is stored upper-case. A country stored before this rule is kept as it is when a save carries it back unchanged.' }
+        line1: { type: [string, 'null'], maxLength: 500 }
+        line2: { type: [string, 'null'], maxLength: 500 }
+        city: { type: [string, 'null'], maxLength: 20000 }
+        region: { type: [string, 'null'], maxLength: 20000 }
+        postal_code: { type: [string, 'null'], maxLength: 20000 }
+        country: { type: [string, 'null'], maxLength: 20000, description: 'ISO-3166 alpha-2. A contact or company write (and a CSV import cell) that changes the country to a name, an alpha-3 code or an unassigned pair answers 422 `invalid_country_code` on `address.country`; a code is stored upper-case. A country stored before this rule is kept as it is when a save carries it back unchanged.' }
       additionalProperties: true
 
     AddressCountryMismatch:
@@ -50585,7 +50697,7 @@ components:
         domains:
           type: array
           items: { $ref: '#/components/schemas/CompanyDomain' }
-        lifecycle:
+        status:
           type: string
           enum: [unknown, target, prospect, opportunity, onboarding, live, customer, former_customer, disqualified]
           x-extensible-enum: true
@@ -50736,10 +50848,11 @@ components:
         linkedin_url:
           type: [string, 'null']
           description: Canonical LinkedIn company URL, held to the rule the update holds it to. website_url is derived and refused here.
+          maxLength: 20000
           pattern: '^https://([a-z]{2,3}\.)?linkedin\.com/company/[^/?#]+/?$'
         legal_name: { x-single-line: true, type: [string, 'null'], maxLength: 500 }
-        phone: { type: [string, 'null'], description: "The company's main number. A formatted number is accepted and stored in E.164 form (for example +49301234567). It is never a contact's own number." }
-        email: { type: [string, 'null'], format: email, description: "The company's general address, for example info@example.com. It never creates or matches a contact." }
+        phone: { type: [string, 'null'], maxLength: 20000, description: "The company's main number. A formatted number is accepted and stored in E.164 form (for example +49301234567). It is never a contact's own number." }
+        email: { type: [string, 'null'], format: email, maxLength: 20000, description: "The company's general address, for example info@example.com. It never creates or matches a contact." }
         description: { type: [string, 'null'], maxLength: 20000, description: A description of what the company does. }
         industry: { type: [string, 'null'], maxLength: 2000, description: 'An industry code, or text the server can map to one. Text that names no code stores no code and is kept in the description.' }
         size_band: { type: [string, 'null'], enum: [null, '1-10', '11-50', '51-200', '201-500', '501-1000', '1001-5000', '5000+'] }
@@ -50749,7 +50862,7 @@ components:
         domains:
           type: array
           items: { $ref: '#/components/schemas/CompanyDomainInput' }
-        source: { type: string }
+        source: { type: string, maxLength: 20000 }
         source_system: { type: [string, 'null'], maxLength: 128, description: 'Which external system this record came from, when a caller imported it. The reserved mirror: namespace is refused on this wire except for a declared importer: a signed-in human holding import_run:create (an agent carrying those grants is still refused).' }
         source_id: { type: [string, 'null'], maxLength: 128, description: 'The id this company has in source_system. Needs source_system, and the pair is unique: a second company with the same pair is 409. Look a company up by it with the `source_system` and `source_id` filters on `listCompanies`.' }
         source_author_id: { type: [string, 'null'], format: uuid, description: 'Who wrote this record in the system it came from, when the author holds a seat here. Written only by a declared importer (a signed-in human holding import_run:create), only beside a source_system; either author field or both may be sent, and the seat''s current name wins on read. captured_by still names the caller.' }
@@ -50763,11 +50876,12 @@ components:
         linkedin_url:
           type: [string, 'null']
           description: Canonical LinkedIn company URL. Null clears it. website_url is derived and refused here.
+          maxLength: 20000
           pattern: '^https://([a-z]{2,3}\.)?linkedin\.com/company/[^/?#]+/?$'
         display_name: { x-single-line: true, type: string, maxLength: 120 }
         legal_name: { x-single-line: true, type: [string, 'null'], maxLength: 500 }
-        phone: { type: [string, 'null'], description: "The company's main number. A formatted number is accepted and stored in E.164 form (for example +49301234567). It is never a contact's own number." }
-        email: { type: [string, 'null'], format: email, description: "The company's general address, for example info@example.com. It never creates or matches a contact." }
+        phone: { type: [string, 'null'], maxLength: 20000, description: "The company's main number. A formatted number is accepted and stored in E.164 form (for example +49301234567). It is never a contact's own number." }
+        email: { type: [string, 'null'], format: email, maxLength: 20000, description: "The company's general address, for example info@example.com. It never creates or matches a contact." }
         description: { type: [string, 'null'], maxLength: 20000, description: 'A description of what the company does. Absent leaves it untouched; an empty string clears it, the same spelling every other nullable text field on this record uses.' }
         industry: { type: [string, 'null'], maxLength: 2000, description: 'An industry code, or text the server can map to one. Text that names no code stores no code and is kept in the description.' }
         size_band: { type: [string, 'null'], enum: [null, '1-10', '11-50', '51-200', '201-500', '501-1000', '1001-5000', '5000+'] }
@@ -50808,7 +50922,7 @@ components:
             its author and an admin, so the pair is refused rather than written: sending
             `{"visibility":"owner","owner_id":null}`, or narrowing a company that has no owner,
             answers 422 naming `owner_id`.
-        lifecycle:
+        status:
           type: string
           enum: [unknown, target, prospect, opportunity, onboarding, live, customer, former_customer, disqualified]
           description: >-
@@ -51775,7 +51889,7 @@ components:
           description: >-
             The share of the open balance already past its due date.
 
-            ABSENT on an account whose relationship has ended (`lifecycle:
+            ABSENT on an account whose relationship has ended (`status:
             former_customer`), and a client should expect the null. An overdue figure
             reads as an outstanding collection, and a rep acting on the most natural
             reading makes a collection call about a relationship that finished — a
@@ -52077,9 +52191,9 @@ components:
       properties:
         account:
           type: object
-          required: [lifecycle, relationship_types]
+          required: [status, relationship_types]
           properties:
-            lifecycle:
+            status:
               type: string
               enum: [unknown, target, prospect, opportunity, onboarding, live, customer, former_customer, disqualified]
               x-extensible-enum: true
@@ -57943,7 +58057,7 @@ components:
       properties:
         deal_id: { type: string, format: uuid }
         mode: { type: string, enum: [estimate, lines, legacy], x-extensible-enum: true, description: '`estimate` is a value a human typed, `lines` the sum of the lines, `legacy` a deal from before deals had lines.' }
-        amount_basis: { type: [string, 'null'], enum: [lines_net_committed, offer_gross, estimate, unknown, null], x-extensible-enum: true, description: 'What the deal''s amount means. Null while the deal has no amount.' }
+        amount_basis: { type: [string, 'null'], enum: [lines_net_committed, offer_net, offer_gross, estimate, unknown, null], x-extensible-enum: true, description: 'What the deal''s amount means. `offer_net` is an accepted offer''s figure without tax. `offer_gross` is an older amount that took an accepted offer''s gross with tax. Null while the deal has no amount.' }
         commercial_revision: { type: integer, format: int64, description: Counts the accepted changes to the lines. Send it back as `expected_revision`. }
         currency: { type: [string, 'null'], pattern: '^[A-Z]{3}$' }
         lines: { type: array, items: { $ref: '#/components/schemas/DealLine' } }
@@ -61225,8 +61339,16 @@ components:
           items: { $ref: '#/components/schemas/ExtensionReport' }
     ExtensionReport:
       type: object
-      required: [name, unit, label, kind, population, groups, withheld, total, excluded_by_permission]
+      required: [name, unit, label, kind, population, status, groups, withheld, total, excluded_by_permission]
       properties:
+        status:
+          type: string
+          enum: [ok, unavailable]
+          x-extensible-enum: true
+          description: >-
+            `unavailable` when the report could not run. It then carries no groups, no total and
+            no exclusion count, and the other reports still answer. The cause is logged on the
+            server, never sent.
         name:
           type: string
           description: The report as `ext:<unit>:<name>`.
@@ -66083,13 +66205,17 @@ components:
           type: [integer, 'null']
           description: >-
             How many members this caller may see. Null when the list's filter can no longer be
-            evaluated (health `invalid`). Never the list's whole size.
+            evaluated (health `invalid`) or its records are unavailable (health `unavailable`).
+            Never the list's whole size.
         health:
           type: string
-          enum: [ok, ownerless, invalid, retired_field, retired_tag]
+          enum: [ok, ownerless, invalid, retired_field, retired_tag, unavailable]
           x-extensible-enum: true
           description: >-
-            `ownerless` when nobody looks after the list — no steward, or one who can no longer
+            `unavailable` when no installed extension declares the list's record kind any more. Such a
+            list has no count, no members, no filter definition and no export, and comes back when
+            the extension is installed again; it outranks every other value. A list over a declared
+            kind the caller may not read is left out of the library instead. `ownerless` when nobody looks after the list — no steward, or one who can no longer
             sign in — so somebody should take it over. `invalid` when a Live List's filter no
             longer compiles. `retired_field` when a Live List's filter names a custom field that
             has been retired: the list still evaluates on the kept values, and its steward should

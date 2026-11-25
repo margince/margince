@@ -90,7 +90,7 @@ func (o *owedEnv) customerContact(t *testing.T, name, address string) ids.UUID {
 	contact := o.contact(t, name, address)
 	if err := database.WithWorkspaceTx(o.e.Admin(), o.e.Pool, func(tx pgx.Tx) error {
 		company := ids.NewV7()
-		if _, err := tx.Exec(t.Context(), `INSERT INTO company (id, display_name, lifecycle, source, captured_by)
+		if _, err := tx.Exec(t.Context(), `INSERT INTO company (id, display_name, status, source, captured_by)
 			VALUES ($1, 'Customer Co', 'customer', 'seed', 'system')`, company); err != nil {
 			return err
 		}

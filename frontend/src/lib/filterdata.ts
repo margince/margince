@@ -219,6 +219,7 @@ const FILTER_ONLY_FIELD_LABELS = new Map<string, MessageKey>([
   ["company_industry", "filters.field.company_industry"],
   ["company_lifecycle", "filters.field.company_lifecycle"],
   ["company_size_band", "filters.field.company_size_band"],
+  ["company_status", "filters.field.company_lifecycle"],
   ["country", "filters.field.country"],
   ["created_at", "filters.field.created_at"],
   ["domain", "history.field.domain"],

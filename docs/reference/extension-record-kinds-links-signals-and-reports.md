@@ -148,7 +148,7 @@ name.
 | Row scope | A unit's kind has no owner, so the kind's `read` right is its whole scope: a seat without it gets nothing and the report is left out. A core population keeps its own row scope. |
 | Field masks | A mask that reaches the kind or the population takes the rows out of every group. The answer carries how many in `excluded_by_permission`. |
 | Group floor | A group below the analytics group floor is withheld. The floor is the one the analytics questions use, five by default. The smallest remaining group goes with it, and so does the total. A count under the floor is withheld too. |
-| `GET /v1/extension-reports` | Answers every report the seat may read. A report whose custom field this installation does not define is left out. |
+| `GET /v1/extension-reports` | Answers every report the seat may read. A report whose custom field this installation does not define is left out. A report that fails to run is listed with `status: unavailable` and no figures, and the others still answer; the cause goes to the server log. |
 | Reports | The Reports Pipeline page draws each answer in a panel. |
 
 The frontend holds no list of registered names. The label and the groups come from the answer, so the screens cannot

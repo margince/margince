@@ -95,6 +95,9 @@ export function ListHealthBadge({
   list,
 }: Readonly<{ list: Pick<List, "health"> }>) {
   const t = useT();
+  if (list.health === "unavailable") {
+    return <Badge>{t("lists.health.unavailable")}</Badge>;
+  }
   if (list.health === "ownerless") {
     return <Badge tone="warning">{t("lists.health.ownerless")}</Badge>;
   }

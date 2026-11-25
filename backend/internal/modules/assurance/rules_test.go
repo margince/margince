@@ -87,10 +87,10 @@ func TestEveryRuleAdmitsAndRefuses(t *testing.T) {
 		},
 		{
 			ruleType: TypeAmountVsOffer,
-			fires:    func(s Subject) Subject { s.OfferTotalMinor = new(int64(300_000)); return s },
+			fires:    func(s Subject) Subject { s.OfferNetMinor = new(int64(300_000)); return s },
 			// A gap below materiality is rounding somewhere, and a finding
 			// about it costs a contact's morning to dismiss.
-			quiet: func(s Subject) Subject { s.OfferTotalMinor = new(int64(499_990)); return s },
+			quiet: func(s Subject) Subject { s.OfferNetMinor = new(int64(499_990)); return s },
 		},
 		{
 			ruleType: TypeAmountVsContract,
@@ -193,10 +193,10 @@ func TestEveryRuleQuotingMoneyIsADealAmountType(t *testing.T) {
 	loaded.CloseDatePushes = 5
 	loaded.Viability = reviewRequired()
 	loaded.HasNextStep, loaded.HasEconomicBuyer = false, false
-	loaded.OfferTotalMinor = new(int64(123_456_789))
+	loaded.OfferNetMinor = new(int64(123_456_789))
 	loaded.ContractTotalMinor = new(int64(234_567_891))
 	money := map[int64]bool{
-		*loaded.AmountMinor: true, *loaded.OfferTotalMinor: true, *loaded.ContractTotalMinor: true,
+		*loaded.AmountMinor: true, *loaded.OfferNetMinor: true, *loaded.ContractTotalMinor: true,
 	}
 
 	quoting := map[string]bool{}
@@ -246,7 +246,7 @@ func TestNoRuleCopiesFreeTextIntoAFinding(t *testing.T) {
 	loaded.CloseDatePushes = 5
 	loaded.Viability = reviewRequired()
 	loaded.HasEconomicBuyer = false
-	loaded.OfferTotalMinor = new(int64(100_000))
+	loaded.OfferNetMinor = new(int64(100_000))
 	loaded.ContractTotalMinor = new(int64(90_000))
 
 	for _, rule := range Rules() {
@@ -341,5 +341,29 @@ func TestClosePastReadsTheDayWestOfUTC(t *testing.T) {
 	due.Zone = losAngeles
 	if got := ask(t, TypeClosePast, asOf, due, DefaultConfig()); got != nil {
 		t.Errorf("in Los Angeles the 14th is still today, got %+v", got)
+	}
+}
+
+// The deal's value has no tax, so an offer is compared by its net. A deal that
+// equals the offer's net raises nothing, and one that differs by a real amount
+// still does.
+func TestAnOfferIsComparedWithoutTax(t *testing.T) {
+	t.Parallel()
+	cfg := DefaultConfig()
+	deal := healthy()
+	deal.AmountMinor = new(int64(1_000_000))
+
+	deal.OfferNetMinor = new(int64(1_000_000))
+	if f := ask(t, TypeAmountVsOffer, at(time.May, 14), deal, cfg); f != nil {
+		t.Errorf("a deal equal to its offer's net raised %+v", f)
+	}
+
+	deal.OfferNetMinor = new(int64(1_200_000))
+	f := ask(t, TypeAmountVsOffer, at(time.May, 14), deal, cfg)
+	if f == nil || f.AffectedMinor == nil || *f.AffectedMinor != 200_000 {
+		t.Fatalf("a deal 200000 under its offer's net raised %+v, want a finding with that gap", f)
+	}
+	if f.Observed["offer_net"] != int64(1_200_000) {
+		t.Errorf("observed = %v, want the offer's net under offer_net", f.Observed)
 	}
 }

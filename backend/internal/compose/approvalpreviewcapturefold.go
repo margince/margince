@@ -82,7 +82,7 @@ func (r approvalPreviewReader) capturedLeadChanges(ctx context.Context, plan con
 	if err != nil {
 		return nil, err
 	}
-	return r.changedValues(ctx, captureCollisionKind, before, changes)
+	return r.changedValues(ctx, captureCollisionKind, captureCollisionTarget, before, changes)
 }
 
 func capturedLeadTargetPinned(approval crmcontracts.Approval) bool {

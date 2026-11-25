@@ -7350,6 +7350,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "brief.rail": "Ngữ cảnh",
   "brief.rail.numbers": "Số liệu",
   "extensionReports.withheld": "Đã ẩn: quá ít bản ghi để hiển thị",
+  "extensionReports.unavailable": "Không tải được báo cáo này.",
   "extensionReports.noValue": "Không có giá trị",
   "extensionReports.excluded_one":
     "{count} bản ghi bị ẩn với bạn do quyền trên trường.",
@@ -20313,6 +20314,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "lists.audience.ownerAndSteward": "Người chịu trách nhiệm và người phụ trách",
   "lists.audience.unknownTeam":
     "M\u1ed9t nh\u00f3m b\u1ea1n kh\u00f4ng xem \u0111\u01b0\u1ee3c",
+  "lists.health.unavailable": "Bản ghi không khả dụng",
   "lists.health.ownerless": "Chưa ai phụ trách",
   "lists.health.invalid":
     "B\u1ed9 l\u1ecdc kh\u00f4ng c\u00f2n d\u00f9ng \u0111\u01b0\u1ee3c",
@@ -20361,6 +20363,9 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "B\u1ed9 l\u1ecdc n\u00e0y kh\u00f4ng c\u00f2n d\u00f9ng \u0111\u01b0\u1ee3c",
   "lists.invalid.body":
     "Một trường trong bộ lọc đã thay đổi. Người phụ trách danh sách có thể sửa bộ lọc trong trình tạo bộ lọc.",
+  "lists.unavailable.title": "Các bản ghi này không khả dụng",
+  "lists.unavailable.body":
+    "Danh sách này chứa bản ghi do một tiện ích mở rộng thêm vào, và tiện ích đó chưa được cài đặt. Danh sách sẽ hoạt động lại khi tiện ích được cài đặt lại.",
   "lists.ownerless.title":
     "Kh\u00f4ng ai ph\u1ee5 tr\u00e1ch danh s\u00e1ch n\u00e0y",
   "lists.ownerless.body":

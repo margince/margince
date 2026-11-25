@@ -306,7 +306,7 @@ func (c extensionCompanies) List(ctx context.Context, q extension.CompanyQuery) 
 	}
 	rows, page, err := c.store().ListCompaniesTx(ctx, c.core.tx, contacts.ListCompaniesInput{
 		Cursor: optional(q.Cursor), Limit: limit, Query: optional(q.Search), OwnerID: owner,
-		Domain: optional(q.Domain), Lifecycle: optional(q.Lifecycle),
+		Domain: optional(q.Domain), Status: optional(q.Status),
 		SourceSystem: optional(q.SourceSystem), SourceID: optional(q.SourceID),
 		CustomFilters: q.CustomFields, IncludeArchived: q.IncludeArchived,
 	}, cols)
@@ -315,7 +315,7 @@ func (c extensionCompanies) List(ctx context.Context, q extension.CompanyQuery) 
 	}
 	names := filterNames(q.CustomFields,
 		usedFilter{filterSearch, q.Search}, usedFilter{filterOwner, q.OwnerID}, usedFilter{"domain", q.Domain},
-		usedFilter{"lifecycle", q.Lifecycle}, usedFilter{filterSource, q.SourceID})
+		usedFilter{previewFieldStatus, q.Status}, usedFilter{filterSource, q.SourceID})
 	if err := c.core.auditBulkRead(string(recordTypeCompany), len(rows), names); err != nil {
 		return extension.Page[crm.Company]{}, portRefusal(err)
 	}
