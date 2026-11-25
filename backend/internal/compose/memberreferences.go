@@ -152,6 +152,7 @@ var memberReferences = map[string]memberReference{
 	"relationship_nudge_dismissal.reader_id":   {disposition: referenceRetain},
 	"report_definition.owner_id":               {disposition: referenceResolve, live: memberLiveRows, remedy: "reports"},
 	"report_definition_revision.created_by":    {disposition: referenceRetain},
+	"report_edition.owner_id":                  {disposition: referenceRetain},
 	"report_execution.owner_id":                {disposition: referenceRetain},
 	"report_run.asked_by":                      {disposition: referenceRetain},
 	"report_schedule.owner_id":                 {disposition: referenceResolve, live: `enabled`, remedy: "report_schedules"},

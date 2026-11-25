@@ -78,7 +78,7 @@ const (
 	// orphaned, which drive the unexported reset handlers.
 	// Raised by 21 test lines when main's root compose cases met develop's in the
 	// back-sync; each side stayed under its own ceiling.
-	composeRootProductionLines = 230_732
+	composeRootProductionLines = 230_733
 	composeRootTestLines       = 360_940
 )
 
