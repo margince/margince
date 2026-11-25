@@ -651,6 +651,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `calendarday_test.go` | H2 | A calendar day is one derivation, and this is the census that keeps it one. |
 | `calendarverbseat_test.go` | H2 | A calendar verb acting on a row it found by the provider's event id proves the acting seat holds that row. |
 | `capabilitypathlog_test.go` | H2 | A request path reaches a log line through capabilitypath.Redact, never raw. |
+| `catalogrequirementcodes_test.go` | H2 | No internal requirement code reaches the copy a model reads. |
 | `catalogvocabulary_test.go` | H2 | The tool catalog calls the record a company, and the other word for it fails here. |
 | `claimpickonce_test.go` | H2 | A claim query picks its rows once, in a MATERIALIZED CTE, and never in an IN subquery. |
 | `commentnamedtests_test.go` | H1 | A test named in a comment exists. |
