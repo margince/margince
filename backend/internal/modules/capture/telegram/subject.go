@@ -92,7 +92,7 @@ func InScopeSubjects(update []byte) ([]string, error) {
 		return nil, nil
 	case env.BusinessMessage != nil && env.Message == nil && env.MyChatMember == nil:
 		// The customer is the chat, whoever typed: the owner's own replies have
-		// the owner as sender, and the owner is not the person kept.
+		// the owner as sender, and the owner is not the contact kept.
 		// A message with no addressable sender is refused as the bot's are, so
 		// it is never stored without a subject to reach it by.
 		if env.BusinessMessage.From.ID <= 0 {

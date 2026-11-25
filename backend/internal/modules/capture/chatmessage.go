@@ -61,7 +61,7 @@ func chatRecord(binding connector.ChatBinding, msg connector.ChatMessage) (conne
 		NaturalKey: connector.NaturalKey{
 			SourceSystem: binding.Provider,
 			SourceID:     sourceID,
-			// The conversation id of a private chat is the person's own account
+			// The conversation id of a private chat is the contact's own account
 			// id, so the pipeline trace stores a hash of the key.
 			SourceIDNamesAContact: true,
 		},

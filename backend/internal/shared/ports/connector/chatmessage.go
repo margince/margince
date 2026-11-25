@@ -50,7 +50,7 @@ type ChatBinding struct {
 	OwnerUserID ids.UUID
 }
 
-// ChatParty is the person on the other side of a conversation.
+// ChatParty is the contact on the other side of a conversation.
 type ChatParty struct {
 	// UserID is the provider's id for them. It is the identity, so it is never empty.
 	UserID      string

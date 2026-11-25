@@ -158,9 +158,13 @@ func (w *telegramIngestWorker) Work(ctx context.Context, job *river.Job[Telegram
 		return jobs.FaultContext(ctx, w.applyMembership(actorCtx, job.Args.BotID, membership))
 	}
 
-	link, err := capture.BusinessLinkOfJob(wsCtx, w.pool, job.Args.BusinessLinkID)
-	if err != nil {
-		return jobs.FaultContext(ctx, err)
+	var link *telegram.BusinessLink
+	if job.Args.BusinessLinkID != "" {
+		found, err := capture.BusinessLinkOfJob(wsCtx, w.pool, job.Args.BusinessLinkID)
+		if err != nil {
+			return jobs.FaultContext(ctx, err)
+		}
+		link = &found
 	}
 	binding, msg, err := telegram.ParseChatMessage(raw, link)
 	if err != nil {

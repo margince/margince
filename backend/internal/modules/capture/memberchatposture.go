@@ -47,10 +47,10 @@ func seatStrictestPostureTx(ctx context.Context, tx pgx.Tx, seat ids.UUID) (stri
 	}
 	strictest := PostureShared
 	for _, posture := range postures {
-		switch {
-		case posture == PostureHeld:
+		switch posture {
+		case PostureHeld:
 			return PostureHeld, nil
-		case posture == PostureClassified:
+		case PostureClassified:
 			strictest = PostureClassified
 		}
 	}

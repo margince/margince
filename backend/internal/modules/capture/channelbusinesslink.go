@@ -95,15 +95,13 @@ func scanBusinessLink(row pgx.Row) (ids.UUID, telegram.BusinessLink, error) {
 	return id, link, nil
 }
 
-// BusinessLinkOfJob reads the link an ingest job was admitted through, nil for a
-// job whose update was sent to the bot itself (an empty id).
-func BusinessLinkOfJob(ctx context.Context, pool *pgxpool.Pool, linkID string) (*telegram.BusinessLink, error) {
-	if linkID == "" {
-		return nil, nil
-	}
+// BusinessLinkOfJob reads the link an ingest job was admitted through. The caller
+// asks only for a job that carries a link id: a job whose update was sent to the
+// bot itself has none.
+func BusinessLinkOfJob(ctx context.Context, pool *pgxpool.Pool, linkID string) (telegram.BusinessLink, error) {
 	id, err := ids.Parse(linkID)
 	if err != nil {
-		return nil, fmt.Errorf("capture: business link id: %w", err)
+		return telegram.BusinessLink{}, fmt.Errorf("capture: business link id: %w", err)
 	}
 	var link telegram.BusinessLink
 	err = database.WithWorkspaceTx(ctx, pool, func(tx pgx.Tx) error {
@@ -111,8 +109,5 @@ func BusinessLinkOfJob(ctx context.Context, pool *pgxpool.Pool, linkID string) (
 		link, err = BusinessLinkTx(ctx, tx, id)
 		return err
 	})
-	if err != nil {
-		return nil, err
-	}
-	return &link, nil
+	return link, err
 }

@@ -59,15 +59,15 @@ func (m businessMessage) sourceID(account int64) string {
 }
 
 // link writes one business link row of this bot.
-func (c *telegramEnv) link(t *testing.T, account int64, connection, status, ownership string, owner *string) {
+func (c *telegramEnv) link(t *testing.T, account int64, connection, status string) {
 	t.Helper()
 	if err := apptest.InWorkspace(c.AppEnv, t, func(tx pgx.Tx) error {
 		_, err := tx.Exec(context.Background(), `
 			INSERT INTO channel_connection
 			  (provider, channel_id, channel_label, credential_ref, status, connected_by, account_id,
-			   parent_connection_id, ownership, owner_user_id, approved_at)
-			VALUES ('telegram_business', $1, 'Mia', '', $2, $3, $4, $5, $6, $7::uuid, now())`,
-			connection, status, c.admin, fmt.Sprintf("%d", account), c.conn.ID, ownership, owner)
+			   parent_connection_id, ownership, approved_at)
+			VALUES ('telegram_business', $1, 'Mia', '', $2, $3, $4, $5, 'workspace', now())`,
+			connection, status, c.admin, fmt.Sprintf("%d", account), c.conn.ID)
 		return err
 	}); err != nil {
 		t.Fatalf("writing the business link: %v", err)
@@ -130,7 +130,7 @@ func TestACustomerMessageAndTheOwnersReplyFileInOneThreadOnOneContact(t *testing
 	c := setupTelegramConnected(t)
 	runner, sub := newTelegramWorker(t, c, compose.JobRunnerConfig{})
 	startTelegramWorker(t, runner)
-	c.link(t, 880001, "bc-mia", "connected", "workspace", nil)
+	c.link(t, 880001, "bc-mia", "connected")
 	in := businessMessage{updateID: 7001, messageID: 11, chatID: 990001, fromID: 990001, connection: "bc-mia", text: "Is it in stock?"}
 	out := businessMessage{updateID: 7002, messageID: 12, chatID: 990001, fromID: 880001, connection: "bc-mia", text: "Yes, shipping Monday."}
 
@@ -177,7 +177,7 @@ func TestAMessageOnALinkThatIsNotConnectedStoresNothing(t *testing.T) {
 			c := setupTelegramConnected(t)
 			runner, sub := newTelegramWorker(t, c, compose.JobRunnerConfig{})
 			startTelegramWorker(t, runner)
-			c.link(t, 880002, "bc-"+status, status, "workspace", nil)
+			c.link(t, 880002, "bc-"+status, status)
 			m := businessMessage{updateID: 7101, messageID: 1, chatID: 990002, fromID: 990002, connection: "bc-" + status, text: "hello"}
 
 			c.deliverMessage(t, sub, m)
@@ -191,7 +191,7 @@ func TestABusinessMessageNamingNoKnownLinkOrAGroupStoresNothing(t *testing.T) {
 	c := setupTelegramConnected(t)
 	runner, sub := newTelegramWorker(t, c, compose.JobRunnerConfig{})
 	startTelegramWorker(t, runner)
-	c.link(t, 880003, "bc-known", "connected", "workspace", nil)
+	c.link(t, 880003, "bc-known", "connected")
 	unknown := businessMessage{updateID: 7201, messageID: 1, chatID: 990003, fromID: 990003, connection: "bc-unknown", text: "hi"}
 	group := businessMessage{updateID: 7202, messageID: 2, chatID: -100777, fromID: 990003, connection: "bc-known", chatType: "supergroup", text: "hi all"}
 
@@ -206,8 +206,8 @@ func TestTwoBusinessAccountsOnOneBotKeepTheSameChatAndMessageIDApart(t *testing.
 	c := setupTelegramConnected(t)
 	runner, sub := newTelegramWorker(t, c, compose.JobRunnerConfig{})
 	startTelegramWorker(t, runner)
-	c.link(t, 880011, "bc-a", "connected", "workspace", nil)
-	c.link(t, 880012, "bc-b", "connected", "workspace", nil)
+	c.link(t, 880011, "bc-a", "connected")
+	c.link(t, 880012, "bc-b", "connected")
 	a := businessMessage{updateID: 7301, messageID: 5, chatID: 990004, fromID: 990004, connection: "bc-a", text: "to a"}
 	b := businessMessage{updateID: 7302, messageID: 5, chatID: 990004, fromID: 990004, connection: "bc-b", text: "to b"}
 
@@ -230,7 +230,7 @@ func TestAReconnectedAccountKeepsItsKeys(t *testing.T) {
 	c := setupTelegramConnected(t)
 	runner, sub := newTelegramWorker(t, c, compose.JobRunnerConfig{})
 	startTelegramWorker(t, runner)
-	c.link(t, 880021, "bc-old", "connected", "workspace", nil)
+	c.link(t, 880021, "bc-old", "connected")
 	m := businessMessage{updateID: 7401, messageID: 9, chatID: 990005, fromID: 990005, connection: "bc-old", text: "first"}
 	c.deliverMessage(t, sub, m)
 	awaitJobKind(t, sub, compose.TelegramIngestArgs{}.Kind())
@@ -256,7 +256,7 @@ func TestABusinessThreadCannotBeRepliedToAndABotThreadCan(t *testing.T) {
 	c := setupTelegramConnected(t)
 	runner, sub := newTelegramWorker(t, c, compose.JobRunnerConfig{SendRegistry: c.sendRegistry()})
 	startTelegramWorker(t, runner)
-	c.link(t, 880041, "bc-ro", "connected", "workspace", nil)
+	c.link(t, 880041, "bc-ro", "connected")
 	biz := businessMessage{updateID: 7601, messageID: 4, chatID: 990007, fromID: 990007, connection: "bc-ro", text: "question"}
 	bot := telegramUpdate{updateID: 7602, messageID: 5, senderID: 990008, username: "bob", firstName: "Bob", text: "hello bot"}
 
