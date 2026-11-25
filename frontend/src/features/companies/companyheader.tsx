@@ -34,7 +34,7 @@ import { mayLeaveReach, useLeaveIfOutOfReach } from "../../lib/outofreach";
 import { unwrap } from "../../lib/problem";
 import { useMe, useViewerId } from "../../lib/session";
 import { useShortcut } from "../../lib/shortcuts";
-import { useKindWriteRefusal } from "../../lib/writerefusal";
+import { useArchiveRefusal, useKindWriteRefusal } from "../../lib/writerefusal";
 import { ShareAction } from "../records/share";
 import { CompanyRejectAction } from "./companyreject";
 import { displayDomain } from "./domaindisplay";
@@ -284,6 +284,7 @@ export function CompanyActionBadges({
   const menuReasonId = archivedReasonId ?? ownReasonId;
   const refusedReason = useCompanyVerbRefusal(company);
   const refusedByState = refusedReason ? menuReasonId : undefined;
+  const archiveRefusal = useArchiveRefusal("company");
   // The program opens on the Partner tab, which reads the partner register.
   const partnerUnreadableId = useId();
   const readsPartners = useCan("partner", "read");
@@ -415,7 +416,7 @@ export function CompanyActionBadges({
         <ArchiveAction
           requires={{ object: "company", action: "delete" }}
           archivable={company.archivable ?? false}
-          refusedReason={t("company.archiveRefused")}
+          refusedReason={archiveRefusal}
           disabledReasonId={refusedByState}
           label={t("record.archive")}
           confirmText={t("record.archiveConfirm")}

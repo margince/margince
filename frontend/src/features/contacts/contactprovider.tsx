@@ -17,6 +17,7 @@ import {
   profileTone,
   useProviderConnections,
 } from "../../lib/provider-status";
+import { WRITE_BLOCK_REFUSAL } from "../../lib/writerefusal";
 // What a licensed data provider was PAID to tell us about this contact
 // (ADR-0101), shown BESIDE the canonical record and never folded into it.
 //
@@ -106,6 +107,8 @@ function useLookupRefusal(contactId: string): string | undefined {
   const record = useContact360(contactId);
   const refusal = useRecordWriteRefusal("contact", record.data?.contact, {
     archived: t("contact.rail.archivedReadOnly"),
+    seat: t(WRITE_BLOCK_REFUSAL.seat),
+    readOnlyRole: t(WRITE_BLOCK_REFUSAL.role),
     notYours: t("provider.profile.lookupNotYours"),
   });
   return record.data?.contact ? refusal : undefined;

@@ -72,10 +72,10 @@
    The row's size and weight, the accent kept. `overflow-wrap: anywhere` above
    lets a long address break inside the rung, and a button centres every line
    it breaks into, so the tail of a wrapped address floated to the middle of
-   the column under a first line that started at the edge. Left, like every
-   other value. */
+   the column under a first line that started at the edge. From the start
+   edge, like every other value. */
 .fieldgrid-value .link-button {
-  text-align: left;
+  text-align: start;
   font-weight: var(--fontWeightRegular);
 }
 /* A value and the link that opens it stack, or the two run into one string;

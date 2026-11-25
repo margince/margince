@@ -1131,8 +1131,8 @@
 }
 .recordpicker-option {
   width: 100%;
-  text-align: left;
-  /* The name with its detail line beneath it, both from the left edge. */
+  text-align: start;
+  /* The name with its detail line beneath it, both from the start edge. */
   flex-direction: column;
   align-items: flex-start;
   gap: 0;

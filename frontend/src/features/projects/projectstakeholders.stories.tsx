@@ -91,3 +91,29 @@ export const RemoveWithheldContact: Story = {
     );
   },
 };
+
+/** The row's menu open: Remove, which asks before it writes. */
+export const RemoveMenuOpen: Story = {
+  render: () => {
+    stubContacts();
+    return (
+      <StoryProviders>
+        <RemoveProjectStakeholder
+          projectId="pr-1"
+          contactId="p-1"
+          contactName="Mai Trần"
+        />
+      </StoryProviders>
+    );
+  },
+  play: async ({ canvasElement }) => {
+    await userEvent.click(
+      await within(canvasElement).findByRole("button", {
+        name: "More actions for Mai Trần",
+      }),
+    );
+    await within(canvasElement.ownerDocument.body).findByRole("button", {
+      name: "Remove",
+    });
+  },
+};

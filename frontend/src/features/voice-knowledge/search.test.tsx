@@ -803,7 +803,7 @@ describe("SearchScreen — grouped by what each hit is", () => {
     render(<SearchScreen q="rennsteig" />);
 
     expect(
-      await screen.findByRole("heading", { name: "Activities" }),
+      await screen.findByRole("heading", { name: "Emails and activities" }),
     ).toBeTruthy();
     const offers = screen.getAllByRole("button", { name: /^Show all/ });
     expect(offers.map((button) => button.getAttribute("aria-label"))).toEqual([
@@ -812,7 +812,7 @@ describe("SearchScreen — grouped by what each hit is", () => {
   });
 
   // The activity pill narrows to the emails AND the calls and notes beside
-  // them, so it says both rather than reading as the Activities heading.
+  // them, and its name matches the group heading.
   it("names the activity pill for everything it narrows to", () => {
     vi.stubGlobal(
       "fetch",

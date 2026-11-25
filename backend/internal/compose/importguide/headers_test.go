@@ -12,7 +12,8 @@ func TestAHeaderNamesItsFieldByTheLabelInEveryLanguage(t *testing.T) {
 	names := HeaderNames("company", []string{"display_name", "phone", "size_band"}, strings.ToLower)
 	for header, want := range map[string]string{
 		"company name": "display_name", "firmenname": "display_name", "tên công ty": "display_name",
-		"telefon": "phone", "phone number": "phone", "mitarbeitende": "size_band", "name": "display_name",
+		"telefon": "phone", "phone number": "phone", "mitarbeitende": "size_band", "employees": "size_band", "số nhân viên": "size_band",
+		"company size": "size_band", "unternehmensgröße": "size_band", "quy mô công ty": "size_band", "name": "display_name",
 	} {
 		if names[header] != want {
 			t.Errorf("%q → %q, want %q", header, names[header], want)
