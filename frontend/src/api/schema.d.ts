@@ -32817,7 +32817,7 @@ export interface components {
             processing: "cloud_provider" | "configured_endpoint";
             certification?: components["schemas"]["AiRouteCertification"];
         };
-        /** @description What the certification records say about this model for this task. Absent on a candidate no record measured, which the screen reads as not certified. */
+        /** @description What the certification records say about this model for this task, read by the same rule as the feature's `certification` grade, so the lead candidate and the feature never disagree. Absent on a candidate that grade calls not_measured. */
         AiRouteCertification: {
             /**
              * @description The worst verdict across the task's sites and across the records of this model.
@@ -32860,9 +32860,9 @@ export interface components {
         };
         /**
          * @description The certification grade of the model that answers this feature first (the lead of
-         *     `normal_candidates`), read from the committed certification records by the readiness
+         *     `effective_candidates`), read from the committed certification records by the readiness
          *     report's rule: the worst grade over every site the feature ships, and not measured when
-         *     any site has no record for that model. Absent when no model is bound, and for embeddings.
+         *     any site has no record for that model. Absent when no model is bound or the budget blocks the feature, and for embeddings.
          */
         AiTaskCertification: {
             /**
@@ -38447,7 +38447,7 @@ export interface components {
              *     `reason_at` when the date is known.
              * @enum {string}
              */
-            reason_code: "objection" | "suppressed_objection" | "suppressed_restricted" | "suppressed_subject_request" | "suppressed_hard_bounce" | "suppressed" | "contract_notice" | "no_call_path" | "said_we_may_write" | "unconfirmed_double_opt_in" | "no_connection" | "qualifying_event" | "consent_confirmed" | "consent_withdrawn" | "no_consent_exception_not_offered" | "no_consent" | "existing_customer";
+            reason_code: "objection" | "suppressed_objection" | "suppressed_restricted" | "suppressed_subject_request" | "suppressed_hard_bounce" | "suppressed" | "contract_notice" | "no_call_path" | "said_we_may_write" | "unconfirmed_double_opt_in" | "no_connection" | "qualifying_event" | "consent_confirmed" | "consent_withdrawn" | "no_consent_exception_not_offered" | "no_consent" | "existing_customer" | "opt_out_allowed";
             /**
              * Format: date-time
              * @description When the objection behind an `objection` reason was recorded, when the record carries it.
@@ -44048,7 +44048,7 @@ export interface components {
             readonly writable?: boolean;
             /** @description Whether THIS caller may archive THIS activity: the row write gate `writable` asks, plus the `activity:delete` grant, or `activity:update` on a note, task, call or meeting the caller logged by hand (under their own stamp or through an agent acting for them) that no provider import backs. Sent and captured correspondence, a calendar-synced meeting and a colleague's entry need the delete grant. A meeting a live invitation holds is never archivable. Server-computed per row, per caller. A UX signal, never the enforcement, exactly like `writable`; absent means NOT archivable. */
             readonly archivable?: boolean;
-            /** @description Whether this meeting still owes an answer about how it went, by the rule the Worklist's outcome lane asks: a meeting linked to a customer record the caller may see, with no `meeting_status` or `booked`, whose start has passed (a date-only meeting once its date is over in the installation's timezone) by the server's clock, and whose content the caller may read. Unlike the lane it has no look-back window, so an old booked meeting still asks. Every read that carries `writable` carries this. A client offers the outcome control when this and `writable` are both true. Absent means false. */
+            /** @description Whether this meeting still owes an answer about how it went, by the rule the Worklist's outcome lane asks: a meeting linked to a customer record the caller may see, with no `meeting_status` or `booked`, whose start has passed (a date-only meeting once its date is over in the installation's timezone) by the server's clock, and whose content the caller may read. A meeting whose subject names travel logistics (a flight, an airport, a pickup) asks only when it links a deal, lead or project the caller may see. Unlike the lane it has no look-back window, so an old booked meeting still asks. Every read that carries `writable` carries this. A client offers the outcome control when this and `writable` are both true. Absent means false. */
             readonly awaiting_outcome?: boolean;
             /** @description Whether a live calendar invitation holds this meeting. Then a write through this activity that sets `subject`, `body`, `occurred_at`, `occurred_precision` or a `meeting_status` other than `held` or `no_show` is refused with `calendar_managed`; that change goes through the invitation (`PATCH /scheduling/invitations/{id}`). Archiving or restoring the activity is refused with `calendar_managed` too, and the undo of its creation is refused. Every read that carries `writable` carries this. Absent means false. */
             readonly calendar_managed?: boolean;
@@ -46396,6 +46396,14 @@ export interface components {
              */
             lawful_basis_missing?: boolean;
             /**
+             * @description The record states no country for this recipient, the refusal is for want of marketing
+             *     consent, and an installed pack allows advertising until the recipient refuses. A composer
+             *     asks the sender for the country, saves it on the contact with `PATCH /contacts/{id}`
+             *     (`address_country`) and asks the preview again. Absent or false when no answer could
+             *     change the decision, and for a recipient the caller cannot read.
+             */
+            ask_country?: boolean;
+            /**
              * Format: uuid
              * @description For a recipient marked `lawful_basis_missing`: the purpose a consent request would ask
              *     about for this use: the oldest live purpose whose class covers it, that the contact has
@@ -47351,7 +47359,10 @@ export interface components {
             revision: number;
             /** Format: date-time */
             created_at: string;
-            /** Format: date-time */
+            /**
+             * Format: date-time
+             * @description Always equal to `created_at`: a review is not edited after it is submitted.
+             */
             updated_at: string;
         };
         OutcomeReviewListResponse: {
@@ -53264,19 +53275,34 @@ export interface components {
             next_attempt_at?: string;
             count?: number;
             /** @enum {string} */
-            unit?: "runs" | "mailboxes" | "records" | "updates" | "items" | "threads";
+            unit?: "runs" | "mailboxes" | "records" | "updates" | "items" | "threads" | "messages";
             /** Format: date-time */
             window_start?: string;
             /** Format: date-time */
             window_end?: string;
+            footer_gap?: components["schemas"]["HealthFooterGap"];
             action: components["schemas"]["HealthAction"];
+        };
+        /** @description A legal entity whose mail owes a company detail nobody stated. A send that owes it is held for review with `footer_incomplete`, and a background send is dropped. The finding goes once the details are complete. */
+        HealthFooterGap: {
+            /** Format: uuid */
+            legal_entity_id: string;
+            /** @description Empty for a default entity that states no name. */
+            legal_entity_name: string;
+            is_default: boolean;
+            /** @description The owed disclosure kinds with no text, then `entity_name` for a default entity with neither a display name nor a legal name. */
+            missing: ("controller_identity" | "privacy_contact" | "objection_route" | "advertiser_contact" | "advertisement" | "entity_name")[];
+            /** @description Sends a user pressed that were held for this since the details last changed. */
+            held_by_user: number;
+            /** @description Background sends, such as a meeting reminder, that were held or dropped for this since the details last changed. */
+            held_in_background: number;
         };
         HealthAction: {
             /**
-             * @description Where the finding is acted on. `regional` is the Company settings part that holds the installation timezone.
+             * @description Where the finding is acted on. `regional` is the Company settings part that holds the installation timezone. `legal_entities` is the Company settings part that lists the legal entities, and `company_profile` the one that names the company. `disclosures` is the jurisdiction page that holds the company details every mail discloses.
              * @enum {string}
              */
-            destination: "diagnostics" | "connections" | "models" | "search" | "updates" | "configuration" | "regional";
+            destination: "diagnostics" | "connections" | "models" | "search" | "updates" | "configuration" | "regional" | "legal_entities" | "company_profile" | "disclosures";
             available: boolean;
             reason?: string;
         };
@@ -53414,7 +53440,7 @@ export interface components {
             on_behalf_of_name?: string | null;
             /**
              * Format: uuid
-             * @description The bulk change that wrote this row; null for a change made on its own.
+             * @description The operation group that wrote this row: a bulk change, or one run of a capture purge. Null for a change made on its own.
              */
             batch_id?: string | null;
             action: components["schemas"]["AuditAction"];
@@ -54132,7 +54158,7 @@ export interface components {
          * @description AI task key from the task catalog, used to localize its display name.
          * @enum {string}
          */
-        AiTask: "account_scan" | "agent_loop" | "brief_ranking" | "capture_classify" | "capture_confidentiality_verdict" | "capture_counterparty_verdict" | "chat_summary" | "chat_task_reading" | "cert_judge" | "cold_start" | "corpus_ask" | "deal_health" | "deal_verdict" | "document_extract" | "draft_reply" | "enrich" | "extension_task" | "growth_fit" | "nl_search" | "offer_draft" | "owed_verdict" | "propose_roles" | "rate_extract" | "reader_rendering" | "report_interpret" | "report_setup" | "request_settlement" | "rewrite" | "signal_extract" | "site_extract" | "site_fact_extract" | "site_triage" | "stage_evidence_extract" | "summarize" | "tag_suggest" | "transcript" | "transcript_propose" | "voice_build" | "weekly_learnings" | "weekly_review";
+        AiTask: "account_scan" | "agent_loop" | "brief_ranking" | "capture_classify" | "capture_confidentiality_verdict" | "capture_counterparty_verdict" | "chat_summary" | "chat_task_reading" | "cert_judge" | "cold_start" | "corpus_ask" | "deal_health" | "deal_verdict" | "document_extract" | "draft_reply" | "enrich" | "growth_fit" | "nl_search" | "offer_draft" | "owed_verdict" | "propose_roles" | "rate_extract" | "reader_rendering" | "report_interpret" | "report_setup" | "request_settlement" | "rewrite" | "signal_extract" | "site_extract" | "site_fact_extract" | "site_triage" | "stage_evidence_extract" | "summarize" | "tag_suggest" | "transcript" | "transcript_propose" | "voice_build" | "weekly_learnings" | "weekly_review";
         /**
          * @description What kind of AI work an occurrence is. Every AI task this build can run reports here,
          *     because a task that reports nothing is AI work the product performed and then denied.
@@ -54152,6 +54178,9 @@ export interface components {
          *     also what a caller may FILTER on, and rows written before they were retired are served
          *     until the projection's retention window closes over them — narrowing the filter would
          *     refuse a query that still has answers.
+         *
+         *     `extension_task` is RETIRED for the same reason: the task was removed, and an extension's
+         *     AI task now reports under its own `ext_<unit>_<task>` name. `ai.RetiredTasks` lists it.
          *
          *     Its own schema because the item that reports a kind and the query that asks for kinds
          *     must be ONE list — two copies of a vocabulary are two vocabularies as soon as somebody
@@ -65925,7 +65954,7 @@ export interface operations {
         responses: {
             /**
              * @description Installation reset to first-boot state.
-             *     Five of these fields — `jobs_deleted`, `streams_purged`, `cache_keys_deleted`, `objects_deleted` and `drain_timed_out` — exist here and not in the retired upstream copy of this contract, and that is deliberate rather than drift anyone should reconcile away. A reset clears the job queue, the event bus, the Redis counters and the object bytes, and an operator who is told only how many table rows went has no way to tell "nothing to delete" from "this build cannot tell you". This file is the authority and the build follows it; the note is here so the next reader meets the divergence rather than re-deriving it.
+             *     Four of these fields — `jobs_deleted`, `streams_purged`, `cache_keys_deleted` and `objects_deleted` — exist here and not in the retired upstream copy of this contract, and that is deliberate rather than drift anyone should reconcile away. A reset clears the job queue, the event bus, the Redis counters and the object bytes, and an operator who is told only how many table rows went has no way to tell "nothing to delete" from "this build cannot tell you". This file is the authority and the build follows it; the note is here so the next reader meets the divergence rather than re-deriving it.
              */
             200: {
                 headers: {
@@ -65944,7 +65973,10 @@ export interface operations {
                         cache_keys_deleted: number;
                         /** @description Objects removed from the blob store under this workspace's key prefix. */
                         objects_deleted: number;
-                        /** @description True when a job was still running when the bounded drain window expired. The reset proceeded — a long pass must not make an installation unresettable — and the surviving job's completion write will fail against rows that no longer exist. */
+                        /**
+                         * @deprecated
+                         * @description Always false. A reset whose job drain timed out is refused with 409 before anything is deleted, so a successful reset never has this state. Kept so existing clients keep parsing.
+                         */
                         drain_timed_out: boolean;
                     };
                 };
@@ -65961,6 +65993,15 @@ export interface operations {
             };
             /** @description This installation did not arm `operations.allow_data_reset`, so the operation does not exist here. Checked before authentication, so it is a 404 rather than a 403 for every caller — the answer discloses nothing about who asked. The body is the standard problem document. */
             404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Refused with nothing deleted: another reset is running, or a background job was still running when the bounded drain window expired (the queues run again; run the reset again), or the queues could not be resumed after the reset (code `reset_queues_not_resumed`; the body says whether the reset had finished). */
+            409: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -93778,7 +93819,7 @@ export interface operations {
                 actor?: string;
                 entity_type?: string;
                 entity_id?: string;
-                /** @description Only the rows one bulk change wrote (`executeBulkChange` answers the id). */
+                /** @description Only the rows one operation group wrote: a bulk change (`executeBulkChange` answers the id) or one run of a capture purge. */
                 batch_id?: string;
                 /** @description One of the AuditLogEntry.action values. */
                 action?: string;

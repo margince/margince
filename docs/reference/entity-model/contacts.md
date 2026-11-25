@@ -2264,7 +2264,7 @@ The 49 tables owned by `contacts`, as the migrations build them. [Back to the en
 
 ## sdr_handoff_reason
 
-9 columns · primary key `(id)` · referenced by 2 foreign keys
+7 columns · primary key `(id)` · referenced by 2 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -2275,15 +2275,12 @@ The 49 tables owned by `contacts`, as the migrations build them. [Back to the en
 | `sort_order` | `integer`, default `0` | yes |  |
 | `system` | `boolean`, default `false` | yes |  |
 | `created_at` | `timestamp with time zone`, default `now()` | yes | When the row was created. Set once. |
-| `updated_at` | `timestamp with time zone`, default `now()` | yes | When the row last changed. Refreshed on every write. |
-| `version` | `bigint`, default `1` | yes | Optimistic-concurrency counter. Every write bumps it, so an update built on a stale read is refused instead of overwriting. |
 
 **Rules**
 
 - `sdr_handoff_reason_applies_to`: `CHECK ((applies_to = ANY (ARRAY['rejected', 'recycled'])))`
 - `sdr_handoff_reason_id_kind`: `UNIQUE (id, applies_to)`
 - `sdr_handoff_reason_label_present`: `CHECK ((length(btrim(label)) > 0))`
-- `sdr_handoff_reason_version_js_safe`: `CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))`
 
 **Indexes**
 

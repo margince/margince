@@ -877,8 +877,6 @@ public.activity_review_response.template_key text NOT NULL gen=- def=-
 public.activity_review_response.template_version integer NOT NULL gen=- def=-
 public.activity_review_response.text_bound_insert CREATE TRIGGER text_bound_insert AFTER INSERT ON public.activity_review_response FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"source": 20000, "outcome": 20000, "captured_by": 20000, "template_key": 20000}'::jsonb)) EXECUTE FUNCTION refuse_oversized_text('{"captured_by":20000,"outcome":20000,"source":20000,"template_key":20000}')
 public.activity_review_response.text_bound_update CREATE TRIGGER text_bound_update AFTER UPDATE ON public.activity_review_response FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"source": 20000, "outcome": 20000, "captured_by": 20000, "template_key": 20000}'::jsonb)) EXECUTE FUNCTION refuse_oversized_text('{"captured_by":20000,"outcome":20000,"source":20000,"template_key":20000}')
-public.activity_review_response.trg_activity_review_response_updated CREATE TRIGGER trg_activity_review_response_updated BEFORE UPDATE ON public.activity_review_response FOR EACH ROW EXECUTE FUNCTION set_updated_at()
-public.activity_review_response.updated_at timestamp with time zone NOT NULL gen=- def=now()
 public.activity_review_response_activity_id_key CREATE UNIQUE INDEX activity_review_response_activity_id_key ON public.activity_review_response USING btree (activity_id)
 public.activity_review_response_by_occurrence CREATE INDEX activity_review_response_by_occurrence ON public.activity_review_response USING btree (deal_id, closing_occurrence_id)
 public.activity_review_response_pkey CREATE UNIQUE INDEX activity_review_response_pkey ON public.activity_review_response USING btree (id)
@@ -1589,7 +1587,6 @@ public.assurance_resolution.assurance_resolution_expiry_after_creation CHECK (((
 public.assurance_resolution.assurance_resolution_outcome_check CHECK ((outcome = ANY (ARRAY['fixed_record'::text, 'added_evidence'::text, 'value_correct'::text, 'not_relevant'::text, 'remind_later'::text, 'reassign'::text, 'condition_cleared'::text])))
 public.assurance_resolution.assurance_resolution_pkey PRIMARY KEY (id)
 public.assurance_resolution.assurance_resolution_suppression_expires CHECK (((outcome <> ALL (ARRAY['value_correct'::text, 'not_relevant'::text])) OR (expires_at IS NOT NULL)))
-public.assurance_resolution.assurance_resolution_version_js_safe CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))
 public.assurance_resolution.captured_by text NOT NULL gen=- def=-
 public.assurance_resolution.created_at timestamp with time zone NOT NULL gen=- def=now()
 public.assurance_resolution.evidence_ref text gen=- def=-
@@ -1601,8 +1598,6 @@ public.assurance_resolution.reason text gen=- def=-
 public.assurance_resolution.remind_at timestamp with time zone gen=- def=-
 public.assurance_resolution.text_bound_insert CREATE TRIGGER text_bound_insert AFTER INSERT ON public.assurance_resolution FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"reason": 2000, "outcome": 20000, "captured_by": 20000, "evidence_ref": 20000}'::jsonb)) EXECUTE FUNCTION refuse_oversized_text('{"captured_by":20000,"evidence_ref":20000,"outcome":20000,"reason":2000}')
 public.assurance_resolution.text_bound_update CREATE TRIGGER text_bound_update AFTER UPDATE ON public.assurance_resolution FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"reason": 2000, "outcome": 20000, "captured_by": 20000, "evidence_ref": 20000}'::jsonb)) EXECUTE FUNCTION refuse_oversized_text('{"captured_by":20000,"evidence_ref":20000,"outcome":20000,"reason":2000}')
-public.assurance_resolution.updated_at timestamp with time zone NOT NULL gen=- def=now()
-public.assurance_resolution.version bigint NOT NULL gen=- def=1
 public.assurance_resolution_pkey CREATE UNIQUE INDEX assurance_resolution_pkey ON public.assurance_resolution USING btree (id)
 public.assurance_run acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.assurance_run.as_of timestamp with time zone NOT NULL gen=- def=-
@@ -6046,7 +6041,6 @@ public.forecast_call.forecast_call_pkey PRIMARY KEY (id)
 public.forecast_call.forecast_call_scope_id_matches_kind CHECK (((scope_kind = 'workspace'::text) = (scope_id IS NULL)))
 public.forecast_call.forecast_call_scope_kind_check CHECK ((scope_kind = ANY (ARRAY['workspace'::text, 'team'::text, 'owner'::text])))
 public.forecast_call.forecast_call_supersedes_fkey FOREIGN KEY (supersedes_id) REFERENCES forecast_call(id) ON DELETE RESTRICT
-public.forecast_call.forecast_call_version_js_safe CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))
 public.forecast_call.id uuid NOT NULL gen=- def=uuidv7()
 public.forecast_call.note text gen=- def=-
 public.forecast_call.period_end date NOT NULL gen=- def=-
@@ -6056,8 +6050,6 @@ public.forecast_call.scope_kind text NOT NULL gen=- def=-
 public.forecast_call.supersedes_id uuid gen=- def=-
 public.forecast_call.text_bound_insert CREATE TRIGGER text_bound_insert AFTER INSERT ON public.forecast_call FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"note": 2000, "scope_kind": 20000, "captured_by": 20000}'::jsonb)) EXECUTE FUNCTION refuse_oversized_text('{"captured_by":20000,"note":2000,"scope_kind":20000}')
 public.forecast_call.text_bound_update CREATE TRIGGER text_bound_update AFTER UPDATE ON public.forecast_call FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"note": 2000, "scope_kind": 20000, "captured_by": 20000}'::jsonb)) EXECUTE FUNCTION refuse_oversized_text('{"captured_by":20000,"note":2000,"scope_kind":20000}')
-public.forecast_call.updated_at timestamp with time zone NOT NULL gen=- def=now()
-public.forecast_call.version bigint NOT NULL gen=- def=1
 public.forecast_call_pkey CREATE UNIQUE INDEX forecast_call_pkey ON public.forecast_call USING btree (id)
 public.forecast_capture_status acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.forecast_capture_status.context_key text NOT NULL gen=- def=-
@@ -6107,7 +6099,6 @@ public.forecast_contribution.forecast_contribution_risk_signal_facts_list CHECK 
 public.forecast_contribution.forecast_contribution_risk_signals_known CHECK (((risk_signals IS NULL) OR (risk_signals <@ ARRAY['close_pushed'::text, 'no_next_step'::text, 'quiet'::text, 'stuck'::text])))
 public.forecast_contribution.forecast_contribution_snapshot_fkey FOREIGN KEY (snapshot_id) REFERENCES forecast_snapshot(id) ON DELETE CASCADE
 public.forecast_contribution.forecast_contribution_typed_probability_is_a_percent CHECK (((typed_probability IS NULL) OR ((typed_probability >= 0) AND (typed_probability <= 100))))
-public.forecast_contribution.forecast_contribution_version_js_safe CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))
 public.forecast_contribution.forecast_contribution_weighted_minor_js_safe CHECK (((weighted_minor >= '-9007199254740991'::bigint) AND (weighted_minor <= '9007199254740991'::bigint)))
 public.forecast_contribution.forecast_contribution_weighted_needs_a_base CHECK (((weighted_minor IS NULL) = (base_minor IS NULL)))
 public.forecast_contribution.fx_date date gen=- def=-
@@ -6129,9 +6120,7 @@ public.forecast_contribution.stage_probability integer gen=- def=-
 public.forecast_contribution.text_bound_insert CREATE TRIGGER text_bound_insert AFTER INSERT ON public.forecast_contribution FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"captured_by": 20000, "risk_signals": 20000, "qualification": 20000, "exclusion_reason": 2000, "probability_source": 20000}'::jsonb)) EXECUTE FUNCTION refuse_oversized_text('{"captured_by":20000,"exclusion_reason":2000,"probability_source":20000,"qualification":20000,"risk_signals":20000}')
 public.forecast_contribution.text_bound_update CREATE TRIGGER text_bound_update AFTER UPDATE ON public.forecast_contribution FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"captured_by": 20000, "risk_signals": 20000, "qualification": 20000, "exclusion_reason": 2000, "probability_source": 20000}'::jsonb)) EXECUTE FUNCTION refuse_oversized_text('{"captured_by":20000,"exclusion_reason":2000,"probability_source":20000,"qualification":20000,"risk_signals":20000}')
 public.forecast_contribution.typed_probability integer gen=- def=-
-public.forecast_contribution.updated_at timestamp with time zone NOT NULL gen=- def=now()
 public.forecast_contribution.uq_forecast_contribution_deal UNIQUE (snapshot_id, deal_id)
-public.forecast_contribution.version bigint NOT NULL gen=- def=1
 public.forecast_contribution.weighted_minor bigint gen=- def=-
 public.forecast_contribution_is_frozen() secdef=false cfg=- acl=- 
 BEGIN
@@ -6178,7 +6167,6 @@ public.forecast_snapshot.forecast_snapshot_risk_signals_version_present CHECK ((
 public.forecast_snapshot.forecast_snapshot_scope_id_matches_kind CHECK (((scope_kind = 'workspace'::text) = (scope_id IS NULL)))
 public.forecast_snapshot.forecast_snapshot_scope_kind_check CHECK ((scope_kind = ANY (ARRAY['workspace'::text, 'team'::text, 'owner'::text])))
 public.forecast_snapshot.forecast_snapshot_trigger_check CHECK ((trigger = ANY (ARRAY['daily'::text, 'call'::text, 'period_close'::text, 'recheck'::text])))
-public.forecast_snapshot.forecast_snapshot_version_js_safe CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))
 public.forecast_snapshot.forecast_snapshot_weighted_minor_js_safe CHECK (((weighted_minor >= '-9007199254740991'::bigint) AND (weighted_minor <= '9007199254740991'::bigint)))
 public.forecast_snapshot.forecast_snapshot_won_minor_js_safe CHECK (((won_minor >= '-9007199254740991'::bigint) AND (won_minor <= '9007199254740991'::bigint)))
 public.forecast_snapshot.forward_measure text gen=- def=-
@@ -6209,8 +6197,6 @@ public.forecast_snapshot.taken_at timestamp with time zone NOT NULL gen=- def=no
 public.forecast_snapshot.text_bound_insert CREATE TRIGGER text_bound_insert AFTER INSERT ON public.forecast_snapshot FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"trigger": 20000, "scope_kind": 20000, "captured_by": 20000, "range_version": 20000, "forward_measure": 20000, "landing_measure": 20000, "range_quantiles": 20000, "input_fingerprint": 20000, "definition_version": 20000, "risk_signals_version": 20000, "population_fingerprint": 20000, "qualified_policy_version": 20000}'::jsonb)) EXECUTE FUNCTION refuse_oversized_text('{"captured_by":20000,"definition_version":20000,"forward_measure":20000,"input_fingerprint":20000,"landing_measure":20000,"population_fingerprint":20000,"qualified_policy_version":20000,"range_quantiles":20000,"range_version":20000,"risk_signals_version":20000,"scope_kind":20000,"trigger":20000}')
 public.forecast_snapshot.text_bound_update CREATE TRIGGER text_bound_update AFTER UPDATE ON public.forecast_snapshot FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"trigger": 20000, "scope_kind": 20000, "captured_by": 20000, "range_version": 20000, "forward_measure": 20000, "landing_measure": 20000, "range_quantiles": 20000, "input_fingerprint": 20000, "definition_version": 20000, "risk_signals_version": 20000, "population_fingerprint": 20000, "qualified_policy_version": 20000}'::jsonb)) EXECUTE FUNCTION refuse_oversized_text('{"captured_by":20000,"definition_version":20000,"forward_measure":20000,"input_fingerprint":20000,"landing_measure":20000,"population_fingerprint":20000,"qualified_policy_version":20000,"range_quantiles":20000,"range_version":20000,"risk_signals_version":20000,"scope_kind":20000,"trigger":20000}')
 public.forecast_snapshot.trigger text NOT NULL gen=- def=-
-public.forecast_snapshot.updated_at timestamp with time zone NOT NULL gen=- def=now()
-public.forecast_snapshot.version bigint NOT NULL gen=- def=1
 public.forecast_snapshot.weighted_minor bigint NOT NULL gen=- def=-
 public.forecast_snapshot.won_minor bigint NOT NULL gen=- def=-
 public.forecast_snapshot_is_frozen() secdef=false cfg=- acl=- 
@@ -9638,8 +9624,6 @@ public.role_assignment.role_assignment_team_id_fkey FOREIGN KEY (team_id) REFERE
 public.role_assignment.role_assignment_user_id_fkey FOREIGN KEY (user_id) REFERENCES app_user(id) ON DELETE CASCADE
 public.role_assignment.role_id uuid NOT NULL gen=- def=-
 public.role_assignment.team_id uuid gen=- def=-
-public.role_assignment.trg_role_assignment_updated CREATE TRIGGER trg_role_assignment_updated BEFORE UPDATE ON public.role_assignment FOR EACH ROW EXECUTE FUNCTION set_updated_at()
-public.role_assignment.updated_at timestamp with time zone NOT NULL gen=- def=now()
 public.role_assignment.user_id uuid NOT NULL gen=- def=-
 public.role_assignment_pkey CREATE UNIQUE INDEX role_assignment_pkey ON public.role_assignment USING btree (id)
 public.role_key_unique CREATE UNIQUE INDEX role_key_unique ON public.role USING btree (key)
@@ -9972,13 +9956,10 @@ public.sdr_handoff_reason.sdr_handoff_reason_applies_to CHECK ((applies_to = ANY
 public.sdr_handoff_reason.sdr_handoff_reason_id_kind UNIQUE (id, applies_to)
 public.sdr_handoff_reason.sdr_handoff_reason_label_present CHECK ((length(btrim(label)) > 0))
 public.sdr_handoff_reason.sdr_handoff_reason_pkey PRIMARY KEY (id)
-public.sdr_handoff_reason.sdr_handoff_reason_version_js_safe CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))
 public.sdr_handoff_reason.sort_order integer NOT NULL gen=- def=0
 public.sdr_handoff_reason.system boolean NOT NULL gen=- def=false
 public.sdr_handoff_reason.text_bound_insert CREATE TRIGGER text_bound_insert AFTER INSERT ON public.sdr_handoff_reason FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"label": 120, "applies_to": 20000}'::jsonb)) EXECUTE FUNCTION refuse_oversized_text('{"applies_to":20000,"label":120}')
 public.sdr_handoff_reason.text_bound_update CREATE TRIGGER text_bound_update AFTER UPDATE ON public.sdr_handoff_reason FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"label": 120, "applies_to": 20000}'::jsonb)) EXECUTE FUNCTION refuse_oversized_text('{"applies_to":20000,"label":120}')
-public.sdr_handoff_reason.updated_at timestamp with time zone NOT NULL gen=- def=now()
-public.sdr_handoff_reason.version bigint NOT NULL gen=- def=1
 public.sdr_handoff_reason_id_kind CREATE UNIQUE INDEX sdr_handoff_reason_id_kind ON public.sdr_handoff_reason USING btree (id, applies_to)
 public.sdr_handoff_reason_label_once CREATE UNIQUE INDEX sdr_handoff_reason_label_once ON public.sdr_handoff_reason USING btree (applies_to, lower(btrim(label)))
 public.sdr_handoff_reason_pkey CREATE UNIQUE INDEX sdr_handoff_reason_pkey ON public.sdr_handoff_reason USING btree (id)
@@ -10554,8 +10535,6 @@ public.team_membership.team_membership_pkey PRIMARY KEY (id)
 public.team_membership.team_membership_team_id_fkey FOREIGN KEY (team_id) REFERENCES team(id) ON DELETE CASCADE
 public.team_membership.team_membership_unique UNIQUE (team_id, user_id)
 public.team_membership.team_membership_user_id_fkey FOREIGN KEY (user_id) REFERENCES app_user(id) ON DELETE CASCADE
-public.team_membership.trg_team_membership_updated CREATE TRIGGER trg_team_membership_updated BEFORE UPDATE ON public.team_membership FOR EACH ROW EXECUTE FUNCTION set_updated_at()
-public.team_membership.updated_at timestamp with time zone NOT NULL gen=- def=now()
 public.team_membership.user_id uuid NOT NULL gen=- def=-
 public.team_membership_pkey CREATE UNIQUE INDEX team_membership_pkey ON public.team_membership USING btree (id)
 public.team_membership_unique CREATE UNIQUE INDEX team_membership_unique ON public.team_membership USING btree (team_id, user_id)
@@ -12218,8 +12197,6 @@ public.workspace acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/mar
 public.workspace.archived_at timestamp with time zone gen=- def=-
 public.workspace.created_at timestamp with time zone NOT NULL gen=- def=now()
 public.workspace.id uuid NOT NULL gen=- def=uuidv7()
-public.workspace.trg_workspace_updated CREATE TRIGGER trg_workspace_updated BEFORE UPDATE ON public.workspace FOR EACH ROW EXECUTE FUNCTION set_updated_at()
-public.workspace.updated_at timestamp with time zone NOT NULL gen=- def=now()
 public.workspace.workspace_pkey PRIMARY KEY (id)
 public.workspace_email_domain acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.workspace_email_domain.created_at timestamp with time zone NOT NULL gen=- def=now()
