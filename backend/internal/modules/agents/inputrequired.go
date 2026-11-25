@@ -16,6 +16,7 @@ import (
 	"bytes"
 	"context"
 	"crypto/hmac"
+	"crypto/rand"
 	"crypto/sha256"
 	"crypto/subtle"
 	"encoding/base64"
@@ -36,6 +37,8 @@ const (
 	// inputStateTTL is how long the user has to answer before the question
 	// must be asked again.
 	inputStateTTL = 10 * time.Minute
+	// inputStateOnceBytes is the entropy of the id the replay guard spends.
+	inputStateOnceBytes = 16
 	// minInputStateKeyLen matches the floor the other signers of the
 	// deployment key hold.
 	minInputStateKeyLen = 32
@@ -158,11 +161,18 @@ type wireInputState struct {
 	Tool     string `json:"tool"`
 	Args     string `json:"args"`
 	Question string `json:"q"`
-	Exp      int64  `json:"exp"`
+	// Once is the id the replay guard spends, so one answer covers one retry.
+	Once string `json:"n"`
+	Exp  int64  `json:"exp"`
 }
 
 func (s inputStateSigner) sign(state wireInputState) (string, error) {
+	once := make([]byte, inputStateOnceBytes)
+	if _, err := rand.Read(once); err != nil {
+		return "", err
+	}
 	state.Typ, state.Exp = inputStateTyp, s.now().Add(inputStateTTL).Unix()
+	state.Once = base64.RawURLEncoding.EncodeToString(once)
 	payload, err := json.Marshal(state)
 	if err != nil {
 		return "", err
@@ -193,20 +203,21 @@ func (s inputStateSigner) open(token string) ([]byte, bool) {
 	return payload, true
 }
 
-// verify reports whether token was minted for this very call. Any failure
-// is the same false: the caller is asked again, which is what the
+// verify answers the state token claims when it was minted for this very call.
+// Any failure is the same false: the caller is asked again, which is what the
 // specification asks of a retry the server cannot use.
-func (s inputStateSigner) verify(token string, want wireInputState) bool {
+func (s inputStateSigner) verify(token string, want wireInputState) (wireInputState, bool) {
 	payload, ok := s.open(token)
 	if !ok {
-		return false
+		return wireInputState{}, false
 	}
 	var got wireInputState
 	if err := json.Unmarshal(payload, &got); err != nil {
-		return false
+		return wireInputState{}, false
 	}
-	return got.Typ == inputStateTyp && got.Sub == want.Sub && got.Tool == want.Tool &&
-		got.Args == want.Args && s.now().Unix() <= got.Exp
+	valid := got.Typ == inputStateTyp && got.Sub == want.Sub && got.Tool == want.Tool &&
+		got.Args == want.Args && got.Question != "" && got.Once != "" && s.now().Unix() <= got.Exp
+	return got, valid
 }
 
 func (s inputStateSigner) mac(enc string) []byte {
@@ -249,20 +260,37 @@ type chatInputParams struct {
 	RequestState string `json:"requestState"`
 }
 
-// withChatInput readies ctx for questions when this caller can be asked. The
-// answers count only under a state this server minted for this very call.
+// withChatInput readies ctx for questions when this caller can be asked. An
+// answer counts only under a state this server minted for this very call and
+// question, and only once. Without a guard to spend it, nothing is asked.
 func (s *Dispatcher) withChatInput(ctx context.Context, fr framing, tool string, args, params json.RawMessage) context.Context {
-	if !fr.modern || !fr.elicit || !s.inputState.armed() {
+	if !fr.modern || !fr.elicit || !s.inputState.armed() || s.replayGuard == nil {
 		return ctx
 	}
 	var p chatInputParams
 	if err := json.Unmarshal(params, &p); err != nil || p.RequestState == "" {
 		return withChatAnswers(ctx, chatAnswers{})
 	}
-	if !s.inputState.verify(p.RequestState, callIdentity(ctx, tool, args)) {
+	state, ok := s.inputState.verify(p.RequestState, callIdentity(ctx, tool, args))
+	if !ok || !s.spendInputState(ctx, state) {
 		return withChatAnswers(ctx, chatAnswers{})
 	}
-	return withChatAnswers(ctx, p.InputResponses)
+	answer, answered := p.InputResponses[state.Question]
+	if !answered {
+		return withChatAnswers(ctx, chatAnswers{})
+	}
+	return withChatAnswers(ctx, chatAnswers{state.Question: answer})
+}
+
+// spendInputState reports whether this is the state's first use. A guard that
+// cannot answer cannot prove it, so the answer is refused and the user asked again.
+func (s *Dispatcher) spendInputState(ctx context.Context, state wireInputState) bool {
+	first, err := s.replayGuard.FirstUse(ctx, inputStateTyp+":"+state.Once, inputStateTTL+replayGuardMargin)
+	if err != nil {
+		s.log.Error("mcp: an in-chat answer's one-use check could not be made", "err", err)
+		return false
+	}
+	return first
 }
 
 // askedInChat turns a tool's question into the input_required answer, or

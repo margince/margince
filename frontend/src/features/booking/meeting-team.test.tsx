@@ -67,6 +67,7 @@ type Link = components["schemas"]["SchedulingTeamLink"];
 const GRACE = "0198f011-bbbb-7000-8000-000000000001";
 const ALAN = "0198f011-bbbb-7000-8000-000000000002";
 const LINK = "0198f011-bbbb-7000-8000-000000000005";
+const CREATE_LABEL = "New team link with";
 
 const link: Link = {
   id: LINK,
@@ -205,7 +206,8 @@ it("deletes a team link only after the host confirms", async () => {
   const user = userEvent.setup();
   const deleted: string[] = [];
   mountLinks({
-    "GET /scheduling/team-links": () => jsonResponse([link]),
+    "GET /scheduling/team-links": () =>
+      jsonResponse(deleted.length ? [] : [link]),
     "GET /scheduling/team-candidates": () => jsonResponse(candidates),
     [`DELETE /scheduling/team-links/${LINK}`]: () => {
       deleted.push(LINK);
@@ -219,4 +221,11 @@ it("deletes a team link only after the host confirms", async () => {
   const [, confirm] = screen.getAllByRole("button", { name: "Delete link" });
   await user.click(confirm);
   await waitFor(() => expect(deleted).toEqual([LINK]));
+  // The Delete button went with its link, so focus waits on creating another.
+  await waitFor(() =>
+    expect(screen.queryByRole("button", { name: "Delete link" })).toBeNull(),
+  );
+  expect(document.activeElement).toBe(
+    screen.getByRole("combobox", { name: CREATE_LABEL }),
+  );
 });

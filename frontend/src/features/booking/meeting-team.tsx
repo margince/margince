@@ -3,7 +3,7 @@
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Copy } from "lucide-react";
-import { useState } from "react";
+import { useId, useState } from "react";
 import { api } from "../../api/client";
 import type { components } from "../../api/schema";
 import { Button } from "../../design-system/atoms";
@@ -219,6 +219,7 @@ export function TeamLinksCard({ hostName }: Readonly<{ hostName: string }>) {
     queryFn: async () => unwrap(await api.GET("/scheduling/team-candidates")),
   });
   const writes = useTeamLinkWrites();
+  const createId = useId();
   const named = (link: Link, members: readonly Member[]) => {
     const names = members.map((member) => nameOf(member, candidates.data));
     const derived = teamLinkTitle(
@@ -254,6 +255,7 @@ export function TeamLinksCard({ hostName }: Readonly<{ hostName: string }>) {
             pending={writes.save.isPending || writes.remove.isPending}
             onMembers={(members) => named(link, members)}
             onDelete={() => writes.remove.mutate(link.id)}
+            afterDelete={() => document.getElementById(createId)}
           />
         ))}
         <SettingList>
@@ -262,6 +264,7 @@ export function TeamLinksCard({ hostName }: Readonly<{ hostName: string }>) {
             description={t("scheduling.teamLinks.createHelp")}
             control={(control) => (
               <Select
+                id={createId}
                 aria-labelledby={control["aria-labelledby"]}
                 aria-describedby={control["aria-describedby"]}
                 options={(candidates.data ?? []).map((candidate) => ({
@@ -325,12 +328,15 @@ function TeamLinkRows({
   pending,
   onMembers,
   onDelete,
+  afterDelete,
 }: Readonly<{
   link: Link;
   candidates: readonly Candidate[];
   pending: boolean;
   onMembers: (members: readonly Member[]) => void;
   onDelete: () => void;
+  // Where focus goes once the link and its Delete button are gone.
+  afterDelete: () => HTMLElement | null;
 }>) {
   const t = useT();
   const [deleting, setDeleting] = useState(false);
@@ -410,6 +416,7 @@ function TeamLinkRows({
         title={t("scheduling.teamLinks.deleteTitle", { title: link.title })}
         confirmLabel={t("scheduling.teamLinks.delete")}
         pending={pending}
+        returnFocusTo={afterDelete}
         onConfirm={() => {
           setDeleting(false);
           onDelete();

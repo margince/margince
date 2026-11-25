@@ -26,15 +26,18 @@ var updateGradingRule = flag.Bool("update-grading-rule", false,
 
 const gradingRuleGolden = "testdata/grading_rule.golden"
 
+// ruleOwner names the declarations one file contributes to a digest.
+type ruleOwner struct {
+	file  string
+	names []string
+}
+
 // gradingRuleOwners are the declarations that decide which runs enter the tally
 // and turn a judge's replies into a verdict, so an edit to any of them changes
 // what a committed record would score today. defaultRepeats is not one: a record
 // stores its own run counts and the verdict is recomputed from them. The
 // adaptive rounds are: they decide which runs a record holds at all.
-var gradingRuleOwners = []struct {
-	file  string
-	names []string
-}{
+var gradingRuleOwners = []ruleOwner{
 	{"score.go", []string{
 		"Verdict", "caseOf", "passVetoed", "runLeaked", "leaked", "judgeUpper", "underFloor", "rowCase", "verdictOver", "mechanicalBand",
 		"judgeBand", "marginsOver", "lowerVerdict", "verdictRank", "majorityOf", "judgeMedianAndMin", "medianOf",
@@ -69,6 +72,12 @@ func gradingRuleDigest(t *testing.T) string {
 // gradingRuleClosure is the digest and the sorted names it covers.
 func gradingRuleClosure(t *testing.T) (digest string, names []string) {
 	t.Helper()
+	return closureOf(t, gradingRuleOwners)
+}
+
+// closureOf is the digest and the sorted names of owners and what they call.
+func closureOf(t *testing.T, owners []ruleOwner) (digest string, names []string) {
+	t.Helper()
 	fset := token.NewFileSet()
 	index := indexPackage(t, fset)
 	var material strings.Builder
@@ -81,7 +90,7 @@ func gradingRuleClosure(t *testing.T) (digest string, names []string) {
 		}
 		fmt.Fprintf(&material, "%s\n%s\n", label, dropBlankLines(src.String()))
 	}
-	for _, owner := range gradingRuleOwners {
+	for _, owner := range owners {
 		file, err := parser.ParseFile(fset, owner.file, nil, parser.SkipObjectResolution)
 		if err != nil {
 			t.Fatalf("parsing %s: %v", owner.file, err)
