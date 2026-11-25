@@ -54,6 +54,9 @@ func (s *Sink) captureActivity(ctx context.Context, tx pgx.Tx, rec connector.Nor
 	if err != nil {
 		return datasource.EntityRef{}, false, counterpartyDecision{}, err
 	}
+	// A transport the installation shares can still carry one member's own
+	// account, which makes the message that member's correspondence.
+	memberBound = memberBound || fields.memberOwned
 	// ONE decision per capture, taken before the row exists and carried to both
 	// the insert and this seat's import row. Asking twice would not merely cost
 	// two reads: the marker step RE-OPENS a settled thread verdict as it
