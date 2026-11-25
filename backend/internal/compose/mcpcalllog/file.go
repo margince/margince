@@ -8,6 +8,7 @@ package mcpcalllog
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"log/slog"
 	"os"
@@ -29,12 +30,15 @@ type File struct {
 	log   *slog.Logger
 }
 
-// Open opens path for appending, creating it readable by its owner
-// only, because its lines hold personal data.
+// Open opens path for appending, readable by its owner only, because its lines
+// hold personal data. A file already there is narrowed to that mode too.
 func Open(path string, log *slog.Logger) (*File, error) {
 	file, err := os.OpenFile(path, os.O_WRONLY|os.O_APPEND|os.O_CREATE, 0o600) // #nosec G304 G703 -- the path IS the operator's mcp.call_log setting
 	if err != nil {
 		return nil, fmt.Errorf("mcp.call_log: open %s: %w", path, err)
+	}
+	if err := file.Chmod(0o600); err != nil {
+		return nil, errors.Join(fmt.Errorf("mcp.call_log: make %s owner-only: %w", path, err), file.Close())
 	}
 	return &File{file: file, strip: ai.NewSecretStripper(), log: log}, nil
 }

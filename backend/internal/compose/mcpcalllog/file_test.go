@@ -82,3 +82,24 @@ func TestARecordThatCannotBeWrittenIsDroppedAndLogged(t *testing.T) {
 		t.Errorf("a record written after the file closed logged %q, want the drop named", logged.String())
 	}
 }
+
+func TestAnExistingWiderFileIsNarrowedToItsOwner(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "calls.jsonl")
+	if err := os.WriteFile(path, nil, 0o644); err != nil { // #nosec G306 -- the wider mode is what the test narrows
+		t.Fatal(err)
+	}
+	file, err := Open(path, slog.New(slog.DiscardHandler))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := file.Close(); err != nil {
+		t.Fatal(err)
+	}
+	info, err := os.Stat(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if mode := info.Mode().Perm(); mode != 0o600 {
+		t.Errorf("an existing 0644 log is mode %o after Open, want 0600", mode)
+	}
+}

@@ -470,11 +470,17 @@ def read_run(path):
     # and how each was answered; the transcript keeps the prose.
     server = server_calls(path)
     if server is not None:
+        # An attempt the server never received still counts as one, so a
+        # forbidding check reads it; it is a refused call.
+        unreceived = _unreceived(attempts, server)
         attempts, failed, results = [], {}, {}
         for index, record in enumerate(server):
             attempts.append((index, record.get("tool", ""), record.get("arguments") or {}))
             failed[index] = not calllog.worked(record) and not staged(record.get("answer"))
             results[index] = record.get("answer") or ""
+        for index, (_, name, arguments) in enumerate(unreceived):
+            attempts.append((("client", index), name, arguments))
+            failed[("client", index)] = True
 
     routes = load_routes()
     called, calls, worked, refused, answers = [], [], [], [], []
@@ -494,6 +500,18 @@ def read_run(path):
         if call_id in results:
             answers += [(each, results[call_id]) for each, _ in both]
     return Run(called, "\n".join(said), calls, final, worked, refused, answers)
+
+
+def _unreceived(attempts, server):
+    """The transcript's attempts that no server record answers, matched by bare
+    tool name and arguments, one record each."""
+    left = list(attempts)
+    for record in server:
+        for at, (_, name, arguments) in enumerate(left):
+            if name.rsplit("__", 1)[-1] == record.get("tool") and (arguments or {}) == (record.get("arguments") or {}):
+                del left[at]
+                break
+    return left
 
 
 # A confirm-first write comes back as an error that staged it for a human, or

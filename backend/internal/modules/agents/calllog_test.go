@@ -150,3 +150,53 @@ func TestARefusalThatWritesItsOwnAnswerIsRecordedWithItsStatus(t *testing.T) {
 		t.Errorf("recorded %+v, want one refusal with status 429", kept.records)
 	}
 }
+
+func TestARefusalPastAuthenticationKeepsItsCaller(t *testing.T) {
+	passport := ids.NewV7()
+	authenticated := asConnectedAgent(passport, ids.NewV7(), ids.NewV7())
+	door, kept := loggedDoor(t, `{}`, func(r *http.Request) (context.Context, error) {
+		ctx, err := authenticated(r)
+		if err != nil {
+			return nil, err
+		}
+		return ctx, paced{}
+	})
+	if got := post(t, door, `{"jsonrpc":"2.0","id":1,"method":"tools/list"}`); got != http.StatusTooManyRequests {
+		t.Fatalf("answered %d, want 429", got)
+	}
+	if len(kept.records) != 1 || kept.records[0].Caller.PassportID != passport.String() {
+		t.Errorf("recorded %+v, want the paced refusal with its passport", kept.records)
+	}
+}
+
+func TestARequestRefusedBeforeDispatchIsRecordedOnce(t *testing.T) {
+	door, kept := loggedDoor(t, `{}`, asConnectedAgent(ids.NewV7(), ids.NewV7(), ids.NewV7()))
+	srv := httptest.NewServer(door)
+	defer srv.Close()
+	req, err := http.NewRequest(http.MethodPost, srv.URL,
+		strings.NewReader(`{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"read_record","arguments":{}}}`))
+	if err != nil {
+		t.Fatal(err)
+	}
+	req.Header.Add(headerProtocolVersion, "2025-06-18")
+	req.Header.Add(headerProtocolVersion, "2025-03-26")
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := resp.Body.Close(); err != nil {
+		t.Error(err)
+	}
+	post(t, door, `{"jsonrpc":"2.0","id":2,`)
+	if len(kept.records) != 2 {
+		t.Fatalf("recorded %d exchanges, want one per refused request: %+v", len(kept.records), kept.records)
+	}
+	twice, unreadable := kept.records[0], kept.records[1]
+	if twice.Outcome != OutcomeRPCError || twice.ErrorCode != codeHeaderMismatch || twice.Tool != "read_record" ||
+		twice.HTTPStatus != http.StatusBadRequest {
+		t.Errorf("a version header sent twice was recorded as %+v", twice)
+	}
+	if unreadable.Outcome != OutcomeRPCError || unreadable.ErrorCode != codeParseError {
+		t.Errorf("a body that does not decode was recorded as %+v", unreadable)
+	}
+}

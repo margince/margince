@@ -195,7 +195,8 @@ func mcpPaceAfterAuth(
 			return ctx, err
 		}
 		if !calls.Allow(dispactapp.PaceKey(ctx, passportBucket(r))) {
-			return nil, mcpPacingRefusal{bucket: calls}
+			// The caller is known; the door names it in the refusal it records.
+			return ctx, mcpPacingRefusal{bucket: calls}
 		}
 		return ctx, nil
 	}

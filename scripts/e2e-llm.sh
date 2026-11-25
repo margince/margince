@@ -975,7 +975,10 @@ for scenario in "$SCENARIO_DIR"/*.yaml; do
   # run's cut of the server's call log stays beside its transcript.
   rm -f "$RECORD_DIR/$name".run*.jsonl "$RECORD_DIR/$name".run*.jsonl.calls
   cp "$WORK/$name".run*.jsonl "$RECORD_DIR/" 2>/dev/null || true
-  cp "$WORK/$name".run*.jsonl.calls "$RECORD_DIR/" 2>/dev/null || true
+  for calls in "$WORK/$name".run*.jsonl.calls; do
+    [[ -e "$calls" ]] || continue
+    cp "$calls" "$RECORD_DIR/" || echo "  the server's call log could not be kept: $calls" >&2
+  done
 done
 
 # A run that called nothing is scored on its answer, but a sweep in which no run

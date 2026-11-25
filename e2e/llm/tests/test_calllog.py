@@ -68,11 +68,28 @@ class ServerRecordTest(unittest.TestCase):
     def test_a_call_only_the_client_saw_never_reached_the_server(self):
         path = client_run([(PREVIEW, True), ("No such tool available: relink", True)])
         server_saw(path, ("tool_error", PREVIEW))
-        self.assertEqual(len(check.read_run(path).calls), 2)
+        run = check.read_run(path)
+        self.assertEqual(len(run.calls), 4, "the attempt the client refused is still an attempt")
+        self.assertEqual(len(run.refused), 2)
         effort = check.read_effort(path)
         self.assertEqual(effort["client_refused"], 1)
         line = check.efficiency_line(check.efficiency([path]))
         self.assertIn("refused by the client 1 (1-1)", line)
+
+    def test_an_attempt_the_client_refused_still_counts_for_a_forbidding_check(self):
+        path = client_run([(PREVIEW, True), ("No such tool available: relink", True)])
+        server_saw(path)
+        problems = check.check({"must_not_call_with": ["change_activities~relink"]}, path)
+        self.assertEqual(len(problems), 2, "one for each attempt, neither of which reached the server")
+        self.assertIn("change_activities", problems[0])
+        run = check.read_run(path)
+        self.assertEqual(run.worked, [])
+        self.assertEqual(len(run.refused), 4)
+
+    def test_a_received_call_is_not_counted_again_as_a_client_refusal(self):
+        path = client_run([(PREVIEW, True)])
+        server_saw(path, ("tool_error", PREVIEW))
+        self.assertEqual(len(check.read_run(path).calls), 2)
 
     def test_a_run_with_no_log_reports_no_client_refusals(self):
         self.assertNotIn("client_refused", check.read_effort(client_run([(PREVIEW, True)])))

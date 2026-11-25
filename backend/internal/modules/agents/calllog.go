@@ -111,7 +111,14 @@ func (h *httpMCPHandler) recordRefusal(r *http.Request, start time.Time, status 
 	h.server.callLog.Record(r.Context(), record)
 }
 
-// recordExchange logs one dispatched request and its answer.
+// answer records one answered request, then writes it. The record comes first,
+// so a client that holds the answer can find its line in the log.
+func (h *httpMCPHandler) answer(w http.ResponseWriter, r *http.Request, start time.Time, req rpcRequest, resp rpcResponse, status int) {
+	h.recordExchange(r.Context(), start, req, resp, status)
+	writeRPCResponse(w, r, resp, status)
+}
+
+// recordExchange logs one answered request and its answer.
 func (h *httpMCPHandler) recordExchange(ctx context.Context, start time.Time, req rpcRequest, resp rpcResponse, status int) {
 	if h.server.callLog == nil {
 		return
