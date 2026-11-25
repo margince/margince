@@ -46,9 +46,9 @@
   /* Level 1, a pane on the page ground, and a hairline for its edge. */
   --pane: #fcfffe;
   --paneEdge: #d8e2de;
-  /* The faces a control and a field draw for themselves, at any depth. Copies
-   * of --bgElevated and --pane today, not aliases: a rung moves with the
-   * nesting ladder, and a control face must not follow it. --textInverse is
+  /* The faces a control and a field draw for themselves, at any depth. Values
+   * of their own, not aliases of a rung: a rung moves with the nesting ladder,
+   * and a control face must not follow it. --textInverse is
    * the ink on a --textPrimary fill. tokens.test.ts holds their contrast. */
   --bgField: #fbfcfb;
   --bgControl: #fcfffe;
@@ -905,7 +905,7 @@
      ink is lighter than this one, so the dark theme dims with black. */
   --overlayScrim: rgba(0, 0, 0, 0.55);
 
-  /* Lifted teal mark: the light --tealText (#0e7490) is dark-on-dark over a
+  /* Lifted teal mark: the light --tealText (#0d6882) is dark-on-dark over a
    * dark card, below AA — brighten it for dark. --teal is unthemed. */
   --tealText: #66c0d9;
 

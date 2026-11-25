@@ -275,9 +275,8 @@
   place-items: center;
   z-index: 50;
 }
-/* Every dialog and drawer is drawn on the page card's white (its rung is pinned
-   in the ladder), and paints that solid ground, which level 1 leaves see-through
-   in dark. */
+/* Every dialog and drawer is drawn on the page card's ground: its rung is pinned
+   in the ladder. */
 /* The box takes focus only when it holds nothing else to land on. It is not a
    control, so it draws no ring; the first Tab reaches the close door, which does. */
 .modal:focus {

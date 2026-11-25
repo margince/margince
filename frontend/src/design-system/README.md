@@ -218,8 +218,8 @@ The ground of a filled control is the tone's `--<state>Text`, never its base. A 
 seen at the size of a bar or a dot, and no one ink sits on all five. White gives 2.04:1 on
 `--warning`, an almost black ink gives 3.19:1 on `--discovery`, and the dark danger base takes
 neither. The Text token carries ink, so it fills a button that deletes, a done disc and a `primary`
-badge. Their letters are in `--textOnStatusControl`. It is the one token in the palette that changes
-with the theme, because the ground under it does.
+badge. Their letters are in `--textOnStatusControl`. It changes with the theme, because the ground under
+it does.
 
 The light ink, surface and border of discovery are stated as hex values (`#48245d`, `#eed7fc`,
 `#d8a0f7`). The design source gives those values directly. No share of `#964ac0` over

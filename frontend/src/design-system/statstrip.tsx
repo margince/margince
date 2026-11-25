@@ -18,8 +18,7 @@ const fullRow = 6;
 // StatStrip is the record page's readings row: ONE comparison of equal slots,
 // each a reading pane, with air between them and no plate around them. The
 // row is read across as a single comparison, which is what the equal slots
-// hold; the panes are what keeps every reading on the same translucent ground
-// as every other zone of the page.
+// hold.
 //
 // It takes StatCards as children and owns only the row: the slot count, the
 // gaps between slots, and the fold when the row stops being legible. A slot
