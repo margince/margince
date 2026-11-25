@@ -46,6 +46,9 @@ store writes, which step 3 needs: [explanation/write-backbone.md](../explanation
    says whether a human confirms the act. The scope says whether the act could be handed to an agent at
    all.
 
+   Then decide how the act asks the user first. Use a hold for an act with serious risk, and an
+   `ask_user_first` mark for one with small risk. See [choose-how-a-tool-asks-first.md](choose-how-a-tool-asks-first.md).
+
    Choose the scope by what the act is for. `send` delivers to the other party, and `enrich` pulls
    from a third-party site or system. An act that makes a lasting change of state is `write`, even
    when it makes network calls to do it.
