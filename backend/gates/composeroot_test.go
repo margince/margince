@@ -39,8 +39,9 @@ const (
 	// receipt cases, which drive this package's unexported seams. Raised by 1
 	// production and 1 test file for the series-split fold and its cases.
 	// Raised by 1 for the removed-unit list cases, which drive the unexported
-	// Live List check and list export over a kind no unit declares.
-	composeRootTestFiles = 1912
+	// Live List check and list export over a kind no unit declares. Raised by 1
+	// test file for the data reset cases of an event the sweep orphaned.
+	composeRootTestFiles = 1913
 	// Raised by 107 for the floor of a figure every reader is shown alike. Raised
 	// by 1 for the import that binds one zone lookup to each attention read.
 	// Raised by 249 production and 62 test lines for the full-path certification
@@ -71,8 +72,10 @@ const (
 	// Raised by 12 production and 73 test lines for the reading refusal that
 	// names its cause per question. Its cases drive the unexported document
 	// extractor and transcript proposer.
+	// Raised by 244 test lines for the data reset cases of an event the sweep
+	// orphaned, which drive the unexported reset handlers.
 	composeRootProductionLines = 230_745
-	composeRootTestLines       = 360_687
+	composeRootTestLines       = 360_931
 )
 
 // A read under these floors stopped early or read the wrong place, and would

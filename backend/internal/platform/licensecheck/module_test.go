@@ -22,9 +22,7 @@ var recordedDigest string
 // truncated, or edited on one side alone fails the build gate rather than booting
 // and quietly trusting a different keyset than the one that was reviewed.
 //
-// This does not hold module/VERSION. A refresh that replaces the blob and its
-// digest but not the pin passes, and every posture then names the wrong module.
-// Only review of the commit that moved the pin holds it.
+// module/VERSION is held to the blob by TestModuleVersionWasWrittenForTheBundledModule.
 func TestBundledModuleMatchesItsRecordedDigest(t *testing.T) {
 	t.Parallel()
 	want, name, ok := strings.Cut(strings.TrimSpace(recordedDigest), " ")
@@ -39,7 +37,7 @@ func TestBundledModuleMatchesItsRecordedDigest(t *testing.T) {
 	sum := sha256.Sum256(bundledModule)
 	if got := hex.EncodeToString(sum[:]); got != want {
 		t.Errorf("the bundled module hashes to %s but module/licensecheck.wasm.module.sha256 records %s —\n"+
-			"re-install the pair with the publisher's tooling in margince-constellation, which rewrites the blob, "+
+			"re-install the pair with the publisher's tooling, which rewrites the blob, "+
 			"the pin and this digest together; editing either file so they agree is not the fix", got, want)
 	}
 }
@@ -63,6 +61,40 @@ func TestBundledModuleUnwrapsToAWebAssemblyModule(t *testing.T) {
 	if len(bundledModule) >= len(raw) {
 		t.Errorf("the bundled module is %d bytes and unwraps to %d — it is not the compressed artifact",
 			len(bundledModule), len(raw))
+	}
+}
+
+// VERSION records the digest of the blob its tag was written for. A refresh that
+// leaves VERSION alone would make every posture name the wrong release, so it
+// fails the build gate here. The tree cannot prove the tag is right, because the
+// blob carries no release of its own. This only forces whoever refreshes the
+// pair to touch the line that holds the tag.
+func TestModuleVersionWasWrittenForTheBundledModule(t *testing.T) {
+	t.Parallel()
+	_, forDigest := parseModuleVersion(moduleVersion)
+	sum := sha256.Sum256(bundledModule)
+	got := hex.EncodeToString(sum[:])
+	if forDigest != got {
+		t.Errorf("module/VERSION says its tag was written for blob %q but the bundled module hashes to %s: "+
+			"the blob changed and VERSION did not. Confirm the release tag of the artifact you fetched, "+
+			"then write both lines of VERSION (the tag, then `for <sha256 of the blob>`)", forDigest, got)
+	}
+	recorded, _, _ := strings.Cut(strings.TrimSpace(recordedDigest), " ")
+	if forDigest != recorded {
+		t.Errorf("module/VERSION is written for %q but module/licensecheck.wasm.module.sha256 records %q",
+			forDigest, recorded)
+	}
+}
+
+func TestParseModuleVersionReadsTagAndDigest(t *testing.T) {
+	t.Parallel()
+	tag, digest := parseModuleVersion("sha-abc123def456\nfor 00ff\n")
+	if tag != "sha-abc123def456" || digest != "00ff" {
+		t.Errorf("parsed (%q, %q), want (sha-abc123def456, 00ff)", tag, digest)
+	}
+	tag, digest = parseModuleVersion("sha-abc123def456\n")
+	if tag != "sha-abc123def456" || digest != "" {
+		t.Errorf("one-line file parsed (%q, %q), want the tag and no digest", tag, digest)
 	}
 }
 
