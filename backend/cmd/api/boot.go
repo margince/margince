@@ -266,7 +266,7 @@ func declaredSurfaceOptions(ctx context.Context, cfg apiConfig, bootstrap deploy
 		opts = append(opts, compose.WithMCPConnector(), compose.WithClientRegistrationLimit(cfg.clientRegistration),
 			compose.WithUnusedClientLimit(config.Val(cfg.settings, ps.MCPUnusedClientLimit)),
 			compose.WithDispactCalls(replayguard.New(rdb), cfg.posture.IsNonProduction()),
-			compose.WithMCPConfirmGuard(replayguard.New(rdb)))
+			compose.WithMCPReplayGuard(replayguard.New(rdb)))
 	}
 
 	passwordOpts, err := passwordResetOptions(ctx, cfg.settings, pool, vault, cfg.publicBaseURL, logger, stdout)

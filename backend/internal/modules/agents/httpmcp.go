@@ -205,11 +205,11 @@ func WithInputStateKey(key string) HTTPOption {
 	return func(d *Dispatcher) { d.inputState = newInputStateSigner([]byte(key)) }
 }
 
-// WithConfirmGuard lets a call that waits for its own user be confirmed in the
-// conversation, spending each code once through guard. It needs the input-state
-// key too; without either, such calls stage into the approval inbox.
-func WithConfirmGuard(guard ConfirmGuard) HTTPOption {
-	return func(d *Dispatcher) { d.confirmGuard = guard }
+// WithReplayGuard spends each confirm code and each answered chat question once.
+// It needs the input-state key too. Without either, no tool asks in the chat,
+// and a call that waits for its own user stages into the approval inbox.
+func WithReplayGuard(guard ReplayGuard) HTTPOption {
+	return func(d *Dispatcher) { d.replayGuard = guard }
 }
 
 // WithHeldViews tells the tool surface which `ui://` documents are actually
