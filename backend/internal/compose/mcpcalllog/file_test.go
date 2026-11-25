@@ -85,7 +85,11 @@ func TestARecordThatCannotBeWrittenIsDroppedAndLogged(t *testing.T) {
 
 func TestAnExistingWiderFileIsNarrowedToItsOwner(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "calls.jsonl")
-	if err := os.WriteFile(path, nil, 0o644); err != nil { // #nosec G306 -- the wider mode is what the test narrows
+	if err := os.WriteFile(path, nil, 0o600); err != nil {
+		t.Fatal(err)
+	}
+	// Set after writing, so the process umask cannot hand the test a narrow file.
+	if err := os.Chmod(path, 0o644); err != nil { // #nosec G302 -- the wider mode is what the test narrows
 		t.Fatal(err)
 	}
 	file, err := Open(path, slog.New(slog.DiscardHandler))
