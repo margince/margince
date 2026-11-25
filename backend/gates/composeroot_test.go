@@ -41,7 +41,7 @@ const (
 	// Raised by 1 for the removed-unit list cases, which drive the unexported
 	// Live List check and list export over a kind no unit declares. Raised by 1
 	// test file for the data reset cases of an event the sweep orphaned.
-	composeRootTestFiles = 1916
+	composeRootTestFiles = 1917
 	// Raised by 107 for the floor of a figure every reader is shown alike. Raised
 	// by 1 for the import that binds one zone lookup to each attention read.
 	// Raised by 249 production and 62 test lines for the full-path certification
@@ -92,8 +92,10 @@ const (
 	// Raised by 60 production and 65 test lines for the record kind index checks
 	// and the History type check. They extend VerifyRecordKinds and the
 	// unexported History query, and their cases drive the History query plan.
-	composeRootProductionLines = 230_980
-	composeRootTestLines       = 361_394
+	// Raised by 14 production and 42 test lines, and 1 test file, for main's
+	// signal evidence and correction cases, met in the back-sync.
+	composeRootProductionLines = 230_994
+	composeRootTestLines       = 361_436
 )
 
 // A read under these floors stopped early or read the wrong place, and would
