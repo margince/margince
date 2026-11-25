@@ -13,6 +13,9 @@ import (
 
 func TestDocumentExplanationsCoverEveryLanguage(t *testing.T) {
 	langcopytest.Census(t, documentWords)
+	langcopytest.GermanStyle(t, documentWords)
+	langcopytest.Census(t, chatWords)
+	langcopytest.GermanStyle(t, chatWords)
 }
 
 func TestDocumentLengthExplainsCharactersRatherThanBytes(t *testing.T) {

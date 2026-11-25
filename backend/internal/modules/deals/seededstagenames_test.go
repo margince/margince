@@ -30,6 +30,8 @@ func TestASeededStageHandsOutACopyOfItsTranslations(t *testing.T) {
 func TestARenameDropsOnlyTheSeededTranslations(t *testing.T) {
 	newName := "Contract sent"
 	admin := map[string]string{"de": "Vertrag raus"}
+	seeded := stageConfig{name: "Negotiation", translations: seededTranslations("Negotiation"), seeded: true}
+	typed := stageConfig{name: "Negotiation", translations: seededTranslations("Negotiation")}
 	cases := []struct {
 		name    string
 		current stageConfig
@@ -37,16 +39,13 @@ func TestARenameDropsOnlyTheSeededTranslations(t *testing.T) {
 		want    map[string]string
 		changes bool
 	}{
-		{"seeded stage renamed alone", stageConfig{name: "Negotiation", translations: seededTranslations("Negotiation")},
-			UpdateStageInput{Name: &newName}, map[string]string{}, true},
-		{"seeded stage renamed with the seeded set sent back", stageConfig{name: "Negotiation", translations: seededTranslations("Negotiation")},
-			UpdateStageInput{Name: &newName, NameTranslations: seededTranslations("Negotiation")}, map[string]string{}, true},
-		{"seeded stage renamed with new translations", stageConfig{name: "Negotiation", translations: seededTranslations("Negotiation")},
-			UpdateStageInput{Name: &newName, NameTranslations: admin}, admin, true},
-		{"admin translations survive a rename", stageConfig{name: "Negotiation", translations: admin},
-			UpdateStageInput{Name: &newName}, nil, false},
-		{"no rename keeps the seeded set", stageConfig{name: "Negotiation", translations: seededTranslations("Negotiation")},
-			UpdateStageInput{}, nil, false},
+		{"seeded stage renamed alone", seeded, UpdateStageInput{Name: &newName}, map[string]string{}, true},
+		{"a sent map equal to the seeded set is kept", seeded,
+			UpdateStageInput{Name: &newName, NameTranslations: seededTranslations("Negotiation")}, seededTranslations("Negotiation"), true},
+		{"seeded stage renamed with new translations", seeded, UpdateStageInput{Name: &newName, NameTranslations: admin}, admin, true},
+		{"the seeded words an admin typed survive a rename", typed, UpdateStageInput{Name: &newName}, nil, false},
+		{"no rename keeps the seeded set", seeded, UpdateStageInput{}, nil, false},
+		{"the same name is no rename", seeded, UpdateStageInput{Name: &seeded.name}, nil, false},
 	}
 	for _, c := range cases {
 		got, changes := renamedTranslations(c.current, c.in)

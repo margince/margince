@@ -8,9 +8,9 @@ import (
 	"fmt"
 	"html/template"
 	"io"
+	"mime"
 	"net/http"
 	"strconv"
-	"strings"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/httperr"
@@ -119,11 +119,15 @@ func allowReading(w http.ResponseWriter, origin string) {
 	}
 }
 
-// wantsPage reports a plain HTML form post: a browser navigating, which reads
-// a page or follows a redirect, rather than a script reading JSON.
+// wantsPage reports a plain HTML form post: a browser sending a form body that
+// ranks a page at least as high as JSON. It reads a page or follows a
+// redirect, where a script reads JSON.
 func wantsPage(r *http.Request) bool {
-	return strings.Contains(r.Header.Get("Accept"), "text/html") &&
-		!strings.HasPrefix(r.Header.Get("Content-Type"), "application/json")
+	mediaType, _, err := mime.ParseMediaType(r.Header.Get("Content-Type"))
+	if err != nil || (mediaType != "application/x-www-form-urlencoded" && mediaType != "multipart/form-data") {
+		return false
+	}
+	return httperr.PrefersHTML(r.Header.Get("Accept"))
 }
 
 var pageTemplate = template.Must(template.New("page").Parse(`<!doctype html>

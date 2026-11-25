@@ -67,8 +67,10 @@ func pipelineUpdatePatch(current pipelineConfig, in UpdatePipelineInput) *storek
 // stageConfig is the pre-update image of the four editable stage columns, plus
 // the version an If-Match is judged against.
 type stageConfig struct {
-	name           string
-	translations   map[string]string
+	name         string
+	translations map[string]string
+	// seeded is true while the translations are the ones the product wrote.
+	seeded         bool
 	position       int
 	semantic       string
 	winProbability int
@@ -87,7 +89,10 @@ func readStageConfig(ctx context.Context, tx pgx.Tx, id ids.StageID) (stageConfi
 	if err != nil {
 		return current, fmt.Errorf("read stage before update: %w", err)
 	}
-	return current, nil
+	if carriesSeededTranslations(current.name, current.translations) {
+		current.seeded, err = translationsWrittenBySeed(ctx, tx, id)
+	}
+	return current, err
 }
 
 // terminalWinProbability is the odds the stage_terminal_prob CHECK pins a won
@@ -131,16 +136,15 @@ func committedWinProbability(in UpdateStageInput) *int {
 }
 
 // renamedTranslations answers the translations the update stores, and false
-// when it leaves them as they are. Renaming a stage drops the seeded
-// translations unless the request sends others. The admin's new name then
-// shows in every language. Translations an admin wrote stay.
+// when it leaves them as they are. A sent map always replaces the stored one.
+// A rename that sends none drops translations the product seeded, so the
+// admin's new name shows in every language.
 func renamedTranslations(current stageConfig, in UpdateStageInput) (map[string]string, bool) {
-	renamed := in.Name != nil && *in.Name != current.name && carriesSeededTranslations(current.name, current.translations)
 	switch {
-	case renamed && (in.NameTranslations == nil || maps.Equal(in.NameTranslations, current.translations)):
-		return map[string]string{}, true
 	case in.NameTranslations != nil:
 		return in.NameTranslations, true
+	case current.seeded && in.Name != nil && *in.Name != current.name:
+		return map[string]string{}, true
 	}
 	return nil, false
 }

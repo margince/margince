@@ -36,8 +36,15 @@ func TestOnlyAPlainFormPostIsAnsweredWithAPage(t *testing.T) {
 		page                bool
 	}{
 		{"text/html,application/xhtml+xml", "application/x-www-form-urlencoded", true},
+		{"text/html", "multipart/form-data; boundary=x", true},
+		{"text/html", "Application/X-WWW-Form-Urlencoded; charset=utf-8", true},
 		{"*/*", "application/x-www-form-urlencoded", false},
+		{"text/html;q=0", "application/x-www-form-urlencoded", false},
+		{"text/html;q=0.5, application/json", "application/x-www-form-urlencoded", false},
 		{"text/html", "application/json", false},
+		{"text/html", "text/plain", false},
+		{"text/html", "application/x-www-form-urlencoded; =broken", false},
+		{"text/html", "", false},
 		{"application/json", "multipart/form-data; boundary=x", false},
 	}
 	for _, c := range cases {

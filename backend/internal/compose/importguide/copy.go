@@ -196,12 +196,12 @@ var Columns = withLabels(withActivityColumns(map[string]Column{
 	}, Example: langcopy.Phrase{En: "Acme pumps renewal", De: "Acme Pumpen Verlängerung", Vi: "Gia hạn máy bơm Acme"}, RequiredOnNew: true},
 	"pipeline": {Description: langcopy.Phrase{
 		En: "The pipeline's name, as Margince spells it; case does not matter. Leave it empty to use the default pipeline.",
-		De: "Der Name der Pipeline, wie Margince ihn schreibt; Groß- und Kleinschreibung zählt nicht. Leer lassen, um die Standard-Pipeline zu nutzen.",
+		De: "Der Name der Pipeline, wie Margince ihn schreibt. Groß- und Kleinschreibung zählt nicht. Leer lassen, um die Standard-Pipeline zu nutzen.",
 		Vi: "Tên pipeline, đúng như Margince ghi; không phân biệt chữ hoa, chữ thường. Để trống để dùng pipeline mặc định.",
 	}, Example: same("Sales")},
 	"stage": {Description: langcopy.Phrase{
 		En: "The stage's name in that pipeline; case does not matter. A won or lost stage imports the deal as closed.",
-		De: "Der Name der Phase in dieser Pipeline; Groß- und Kleinschreibung zählt nicht. Mit einer gewonnenen oder verlorenen Phase wird der Deal als abgeschlossen importiert.",
+		De: "Der Name der Phase in dieser Pipeline. Groß- und Kleinschreibung zählt nicht. Mit einer gewonnenen oder verlorenen Phase wird der Deal als abgeschlossen importiert.",
 		Vi: "Tên giai đoạn trong pipeline đó; không phân biệt chữ hoa, chữ thường. Giai đoạn thắng hoặc thua sẽ nhập deal ở trạng thái đã đóng.",
 	}, Example: same("Qualified"), RequiredOnNew: true},
 	"amount": {Description: langcopy.Phrase{
@@ -236,7 +236,7 @@ var Columns = withLabels(withActivityColumns(map[string]Column{
 	}, Example: langcopy.Phrase{En: "Three pumps and a service contract", De: "Drei Pumpen und ein Wartungsvertrag", Vi: "Ba máy bơm và một hợp đồng bảo trì"}},
 	"lost_reason": {Description: langcopy.Phrase{
 		En: "Why a lost deal was lost. Needed when the stage is lost; written only when the row creates the deal.",
-		De: "Warum ein verlorener Deal verloren ging. Nötig, wenn die Phase verloren ist; wird nur geschrieben, wenn die Zeile den Deal erstellt.",
+		De: "Warum ein verlorener Deal verloren ging. Nötig, wenn die Phase verloren ist. Wird nur geschrieben, wenn die Zeile den Deal erstellt.",
 		Vi: "Lý do deal bị thua. Bắt buộc khi giai đoạn là thua; chỉ được ghi khi dòng tạo deal mới.",
 	}, Example: langcopy.Phrase{En: "Chose a cheaper supplier", De: "Günstigeren Anbieter gewählt", Vi: "Chọn nhà cung cấp rẻ hơn"}},
 }))

@@ -28,14 +28,27 @@ func GermanStyle(t reporter, table any) {
 
 func germanStyleEntry(t reporter, name string, p langcopy.Phrase) {
 	t.Helper()
-	german := p.In(textlang.German)
+	GermanText(t, name, p.In(textlang.German))
+}
+
+// GermanText is GermanStyle for one German sentence of a table that is not
+// made of phrases, such as a struct of strings per language.
+func GermanText(t reporter, name, german string) {
+	t.Helper()
+	GermanPunctuation(t, name, german)
+	if formalAddress.MatchString(german) {
+		t.Errorf("de %s addresses a member as Sie; the product says du: %q", name, german)
+	}
+}
+
+// GermanPunctuation holds the page's punctuation rules alone, for a table
+// whose sentences go to readers in either register.
+func GermanPunctuation(t reporter, name, german string) {
+	t.Helper()
 	if strings.ContainsAny(german, "–—") || strings.Contains(german, "--") {
 		t.Errorf("de %s uses a long dash; rewrite with a comma, period, colon or parentheses: %q", name, german)
 	}
 	if strings.Contains(german, ";") {
 		t.Errorf("de %s joins two facts with a semicolon; split the sentence: %q", name, german)
-	}
-	if formalAddress.MatchString(german) {
-		t.Errorf("de %s addresses a member as Sie; the product says du: %q", name, german)
 	}
 }

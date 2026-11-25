@@ -36,19 +36,53 @@ func seededTranslations(name string) map[string]string {
 	return maps.Clone(seededStageNames[name])
 }
 
-// carriesSeededTranslations reports a stage whose translations are still the
-// ones the product seeded for name. A rename drops them, and the repair
-// fills them only where none were ever written.
+// carriesSeededTranslations reports a stage whose translations are the set
+// the product seeds for name. Whether the product wrote them is
+// translationsWrittenBySeed's question.
 func carriesSeededTranslations(name string, translations map[string]string) bool {
 	seeded, ok := seededStageNames[name]
 	return ok && maps.Equal(seeded, translations)
 }
 
-// TranslateSeededStagesTx gives a page of live stages after `after` that still
-// carry a seeded English name and no translations the seeded translations of
-// that name. A stage an admin renamed or translated is not selected, so a
-// second run changes nothing. It answers the stages it read and how many it
-// changed.
+// seededTranslationsMark is the audit-image key a seeding writer adds when it
+// writes a stage's translations. A stage's audit trail then tells the
+// product's translations from the same words an admin typed.
+const seededTranslationsMark = "name_translations_seeded"
+
+// translationsWrittenBySeed reports that no one but a seeding writer ever
+// wrote translations on the stage. A stage born with its pipeline has no
+// audit row of its own, so it counts as seeded.
+func translationsWrittenBySeed(ctx context.Context, tx pgx.Tx, id ids.StageID) (bool, error) {
+	var adminWrote bool
+	err := tx.QueryRow(ctx, `
+		SELECT EXISTS (
+		  SELECT 1 FROM audit_log
+		   WHERE entity_type = 'stage' AND entity_id = $1 AND after ? $2
+		     AND after->$2 <> '{}'::jsonb AND NOT COALESCE((after->>$3)::boolean, false))`,
+		id, stageNameTranslationsField, seededTranslationsMark).Scan(&adminWrote)
+	if err != nil {
+		return false, fmt.Errorf("deals: reading who translated a stage: %w", err)
+	}
+	return !adminWrote, nil
+}
+
+// seededStageSQL selects the live stages the product seeded that still have
+// no translations. A seeded stage was born with a pipeline a system writer
+// created. It has no create row of its own and was never renamed. A stage an
+// admin added, or renamed back to a seeded name, is not one.
+const seededStageSQL = `
+	FROM stage s
+	WHERE s.archived_at IS NULL AND s.name = ANY(@names) AND s.name_translations = '{}'::jsonb
+	  AND EXISTS (SELECT 1 FROM audit_log p
+	               WHERE p.entity_type = 'pipeline' AND p.entity_id = s.pipeline_id
+	                 AND p.action = 'create' AND p.actor_type = 'system')
+	  AND NOT EXISTS (SELECT 1 FROM audit_log a
+	                   WHERE a.entity_type = 'stage' AND a.entity_id = s.id
+	                     AND (a.action = 'create' OR a.after ? 'name'))`
+
+// TranslateSeededStagesTx gives a page of the stages seededStageSQL selects
+// after `after` the seeded translations of their name. A second run changes
+// nothing. It answers the stages it read and how many it changed.
 func TranslateSeededStagesTx(ctx context.Context, tx pgx.Tx, after ids.UUID, limit int) (scanned []ids.UUID, changed int, err error) {
 	if err := auth.RequireSystem(ctx); err != nil {
 		return nil, 0, err
@@ -56,10 +90,9 @@ func TranslateSeededStagesTx(ctx context.Context, tx pgx.Tx, after ids.UUID, lim
 	if err := auth.Require(ctx, "pipeline", principal.ActionUpdate); err != nil {
 		return nil, 0, err
 	}
-	rows, err := tx.Query(ctx, `
-		SELECT id, pipeline_id, name FROM stage
-		 WHERE id > $1 AND archived_at IS NULL AND name = ANY($2) AND name_translations = '{}'::jsonb
-		 ORDER BY id LIMIT $3 FOR UPDATE`, after, seededNameList(), limit)
+	rows, err := tx.Query(ctx, `SELECT s.id, s.pipeline_id, s.name `+seededStageSQL+`
+		AND s.id > @after ORDER BY s.id LIMIT @limit FOR UPDATE OF s`,
+		pgx.NamedArgs{"names": seededNameList(), "after": after, "limit": limit})
 	if err != nil {
 		return nil, 0, fmt.Errorf("deals: reading stages that lack their seeded translations: %w", err)
 	}
@@ -83,7 +116,8 @@ func TranslateSeededStagesTx(ctx context.Context, tx pgx.Tx, after ids.UUID, lim
 			return nil, 0, fmt.Errorf("deals: giving a seeded stage its translations: %w", err)
 		}
 		auditID, err := storekit.Audit(ctx, tx, "update", "stage", st.id,
-			map[string]any{stageNameTranslationsField: map[string]string{}}, map[string]any{stageNameTranslationsField: translations})
+			map[string]any{stageNameTranslationsField: map[string]string{}},
+			map[string]any{stageNameTranslationsField: translations, seededTranslationsMark: true})
 		if err != nil {
 			return nil, 0, fmt.Errorf("deals: auditing a seeded stage's translations: %w", err)
 		}
@@ -104,11 +138,8 @@ func CountUntranslatedSeededStages(ctx context.Context, q interface {
 }, limit int64,
 ) (int64, error) {
 	var count int64
-	err := q.QueryRow(ctx, `
-		SELECT count(*) FROM (
-		  SELECT 1 FROM stage
-		   WHERE archived_at IS NULL AND name = ANY($1) AND name_translations = '{}'::jsonb
-		   LIMIT $2) AS page`, seededNameList(), limit+1).Scan(&count)
+	err := q.QueryRow(ctx, `SELECT count(*) FROM (SELECT 1 `+seededStageSQL+` LIMIT @limit) AS page`,
+		pgx.NamedArgs{"names": seededNameList(), "limit": limit + 1}).Scan(&count)
 	if err != nil {
 		return 0, fmt.Errorf("deals: counting stages that lack their seeded translations: %w", err)
 	}
