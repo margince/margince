@@ -70,7 +70,7 @@ const (
 	// sweep's outcome check. It is wired into this package's runner service and
 	// resume path, and it needs their unexported run types.
 	composeRootProductionLines = 230_800
-	composeRootTestLines       = 360_420
+	composeRootTestLines       = 360_439
 )
 
 // A read under these floors stopped early or read the wrong place, and would
