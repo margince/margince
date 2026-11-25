@@ -5,6 +5,7 @@ import type { MessageKey } from "../../i18n/en";
 
 // The words for each record type an audit row names, by its wire value.
 export const AUDIT_KIND_LABEL: Readonly<Record<string, MessageKey>> = {
+  activity_retention_evidence: "audit.kind.activity_retention_evidence",
   activity_review_template: "audit.kind.activity_review_template",
   agent_client: "audit.kind.agent_client",
   agent_standing_grant: "audit.kind.agent_standing_grant",
@@ -45,12 +46,14 @@ export const AUDIT_KIND_LABEL: Readonly<Record<string, MessageKey>> = {
   confirm_token: "audit.kind.confirm_token",
   consent_text_version: "audit.kind.consent_text_version",
   contact_acquisition_evidence: "audit.kind.contact_acquisition_evidence",
+  commission_entry: "audit.kind.commission_entry",
   contract: "audit.kind.contract",
   data_subject_request: "audit.kind.data_subject_request",
   deal_acquisition_source: "audit.kind.deal_acquisition_source",
   deal_loss_reason: "audit.kind.deal_loss_reason",
   deal_loss_reason_mapping: "audit.kind.deal_loss_reason_mapping",
   deal_risk_day: "audit.kind.deal_risk_day",
+  deal_document_hide: "audit.kind.deal_document_hide",
   deal_room: "audit.kind.deal_room",
   deal_room_comment: "audit.kind.deal_room_comment",
   deal_room_document: "audit.kind.deal_room_document",

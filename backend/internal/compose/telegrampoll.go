@@ -306,7 +306,7 @@ func (w *telegramPollWorker) persist(wsCtx context.Context, target capture.Chann
 			}
 			rawID, err := capture.InsertRawCaptureTx(wsCtx, tx, capture.RawRecord{
 				SourceSystem: capture.ProviderTelegram,
-				SourceID:     telegramRawSourceID(target.ChannelID, update.updateID),
+				SourceID:     telegram.RawSourceID(target.ChannelID, update.updateID),
 				Payload:      update.raw,
 			})
 			if err != nil {
@@ -332,6 +332,10 @@ func (w *telegramPollWorker) persist(wsCtx context.Context, target capture.Chann
 			// update nobody read. The refusals above are logged; the batch will
 			// arrive again until Telegram's own retention drops it.
 			return nil
+		}
+		actorCtx := principal.WithCorrelationID(principal.WithActor(wsCtx, telegramChannelPrincipal()), ids.NewV7())
+		if err := capture.RecordTelegramBusinessUpdatesTx(actorCtx, tx, target.ID, batch); err != nil {
+			return err
 		}
 		return capture.AdvanceChannelPollOffsetTx(wsCtx, tx, target.ID, target.ChannelID, highest+1)
 	})

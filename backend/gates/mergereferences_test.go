@@ -37,7 +37,10 @@ import (
 	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
-const contactsPkg = "internal/modules/contacts"
+const (
+	contactsPkg    = "internal/modules/contacts"
+	recordmergePkg = "internal/platform/recordmerge"
+)
 
 // mergedRecords are the record kinds a merge retires, the contacts function
 // that runs each merge, and the fewest columns the catalog has referencing each.
@@ -60,7 +63,7 @@ var carriedOutOfSight = map[string]string{
 	// Only the provenance of the fields the survivor took from the retired
 	// record moves. The rest describes a value the merge did not keep.
 	"field_provenance.object_id":                storekitOwned + ":MoveFieldProvenance",
-	"activity_link.contact_id":                  "relinkLinkRows",
+	"activity_link.contact_id":                  recordmergePkg + ":RelinkLinkRows",
 	"consent_event.contact_id":                  "carryConsent",
 	"consent_event.lead_id":                     "carryConsent",
 	"contact_consent.contact_id":                "repointCarriedConsent",
@@ -186,13 +189,18 @@ func obligationsOf(references []string, mirrors map[string]string) []string {
 	return slices.Compact(columns)
 }
 
+// namedByAny reports whether a function the merge reaches names fn.
+func namedByAny(contacts map[string]*graphFunc, reached map[string]bool, fn string) bool {
+	return slices.ContainsFunc(slices.Collect(maps.Keys(reached)), func(name string) bool { return contacts[name].reads[fn] })
+}
+
 // movesOutOfSight checks a carriedOutOfSight entry: the merge reaches the
 // function, and one of its statements writes the table.
 func movesOutOfSight(t *testing.T, contacts map[string]*graphFunc, reached map[string]bool, by, column string) error {
 	table, _, _ := strings.Cut(column, ".")
 	var statements []string
 	if pkg, fn, elsewhere := strings.Cut(by, ":"); elsewhere {
-		if !slices.ContainsFunc(slices.Collect(maps.Keys(reached)), func(name string) bool { return contacts[name].reads[fn] }) {
+		if !namedByAny(contacts, reached, fn) {
 			return fmt.Errorf("no function the merge reaches names %s", fn)
 		}
 		statements = reachedStatements(t, pkg, fn)
@@ -336,6 +344,14 @@ func carriedBy(t *testing.T, contacts map[string]*graphFunc, entry, record strin
 	carried := map[string]bool{}
 	for name := range reached {
 		movedColumns(carried, contacts[name].statements, nil)
+	}
+	// The steps every merge shares live in recordmerge; a step counts when a
+	// function the merge reaches names it.
+	shared := packageCallGraph(t, recordmergePkg)
+	for _, step := range slices.Sorted(maps.Keys(shared)) {
+		if namedByAny(contacts, reached, step) {
+			movedColumns(carried, reachedStatements(t, recordmergePkg, step), nil)
+		}
 	}
 	for _, table := range slices.Sorted(maps.Keys(carriedThroughAPort)) {
 		port := carriedThroughAPort[table]

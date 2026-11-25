@@ -21,23 +21,29 @@ import (
 	"fmt"
 )
 
-// AllowedUpdates narrows what the poller asks Telegram for: the messages a
-// contact writes, and the membership changes that tell us a contact blocked or
-// unblocked the bot. Anything else (polls, inline queries, edited channel
-// posts) is bandwidth this system has no reader for, and asking for it would
-// mean fetching updates nobody consumes.
+// AllowedUpdates narrows what the poller asks Telegram for. It asks for three kinds.
+//   - message: what a contact writes.
+//   - my_chat_member: a contact blocked or unblocked the bot.
+//   - business_connection: a business account owner linked or unlinked the bot.
 //
-// It lives beside subjectEnvelope because the two must name the SAME set. A
-// kind subscribed here with no arm below falls to InScopeSubjects' `default:
-// return nil, nil` and is dropped silently at ingress — which reads exactly
-// like a bot nobody is messaging.
-func AllowedUpdates() []string { return []string{"message", "my_chat_member"} }
+// Any other kind has no reader here, so asking for it only costs bandwidth.
+//
+// It lives beside subjectEnvelope because both must name the same set. A kind
+// subscribed here with no arm in InScopeSubjects is dropped silently at ingress,
+// which reads like a bot nobody is messaging. A business_connection has an arm
+// that names no subject, because it carries no customer.
+func AllowedUpdates() []string {
+	return []string{"message", "my_chat_member", "business_connection"}
+}
 
 // subjectEnvelope decodes only the update kinds this connector subscribes to
 // (AllowedUpdates), each narrowed to the object the account id is read from.
 type subjectEnvelope struct {
 	Message      *telegramMessage   `json:"message"`
 	MyChatMember *chatMemberUpdated `json:"my_chat_member"`
+	// BusinessConnection is decoded so every subscribed kind has an arm. It
+	// names no customer, so that arm answers no subject.
+	BusinessConnection *businessConnectionPayload `json:"business_connection"`
 }
 
 // InScopeSubjects returns the channel_user_id of every account one verbatim
@@ -79,6 +85,8 @@ func InScopeSubjects(update []byte) ([]string, error) {
 		return nil, fmt.Errorf("telegram: decoding the update to read its subject account: %w", err)
 	}
 	switch {
+	case env.BusinessConnection != nil:
+		return nil, nil
 	case env.Message != nil && env.MyChatMember == nil:
 		return subjectOf(env.Message.Chat, env.Message.From.ID), nil
 	case env.MyChatMember != nil && env.Message == nil:

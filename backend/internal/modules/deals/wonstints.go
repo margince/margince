@@ -37,7 +37,8 @@ func wonStints(recordedOnly bool, pipeline ...string) string {
 	live := " AND d.archived_at IS NULL"
 	ends := stagemove.NotMadeElsewhereSQL("provenance") + " AND " + stagemove.NotMadeElsewhereSQL("left_provenance")
 	if recordedOnly {
-		live = ""
+		// Archived wins count, but a duplicate merged into another does not.
+		live = " AND " + StandingSQL("d")
 		ends = "provenance = '" + stagemove.Recorded + "' AND left_provenance = '" + stagemove.Recorded + "'"
 	}
 	return `

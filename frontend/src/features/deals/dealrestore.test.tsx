@@ -70,6 +70,34 @@ describe("an archived deal", () => {
     expect((await screen.findAllByText("Archived")).length).toBeGreaterThan(0);
   });
 
+  it("says where a merged-away deal went and offers no Restore", async () => {
+    const merged = { ...archived, merged_into_id: "y" };
+    const rest = stubBackend([merged], { single: merged });
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+        const request = input instanceof Request ? input : null;
+        const url = new URL(String(request ? request.url : input), "http://x");
+        if (url.pathname.endsWith("/records/deal/x/history")) {
+          return jsonResponse({
+            data: [archiveEntry({ undoable: true })],
+            page: { next_cursor: null, has_more: false },
+          });
+        }
+        return rest(input, init);
+      }),
+    );
+    render(<DealScreen id="x" />);
+    expect(
+      (
+        await screen.findAllByText(en["history.field.merged_into_id"], {
+          exact: false,
+        })
+      ).length,
+    ).toBeGreaterThan(0);
+    expect(screen.queryByTestId("restore-record")).toBeNull();
+  });
+
   it("offers Restore deal on the band beside the archive sentence, and restores its archive entry", async () => {
     const user = userEvent.setup();
     const restores: Request[] = [];

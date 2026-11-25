@@ -210,6 +210,7 @@ var replayableOperations = map[string]replayTarget{
 	"POST /v1/companies":                     {object: tableCompany, table: tableCompany, idPath: "id"},
 	"PATCH /v1/companies/{id}":               {object: tableCompany, table: tableCompany, idPath: "id"},
 	"POST /v1/companies/{id}/merge":          {object: tableCompany, table: tableCompany, idPath: "id"},
+	"POST /v1/deals/{id}/merge":              {object: tableDeal, table: tableDeal, idPath: "id"},
 	"POST /v1/companies/{id}/share-contacts": {object: tableCompany, table: tableCompany, pathParam: "id"}, //nolint:goconst // the replay gates read this map's keys as string literals
 	"POST /v1/companies/{id}/link-contacts": {
 		object: tableCompany, table: tableCompany, pathParam: "id",
