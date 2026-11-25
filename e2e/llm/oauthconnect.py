@@ -27,6 +27,7 @@ import urllib.request
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 from casesetup import cookie_header  # noqa: E402
+from check import checked_path  # noqa: E402
 
 # Never fetched: the code is read from the Location header the server answers.
 REDIRECT = "http://127.0.0.1:9/callback"
@@ -136,7 +137,7 @@ def main(argv):
         return 1
     base, jar, client_name, scopes = argv[1], argv[2], argv[3], argv[4:]
     try:
-        with open(jar, encoding="utf-8") as handle:
+        with open(checked_path(jar), encoding="utf-8") as handle:
             cookie = cookie_header(handle.read())
         if not cookie:
             raise ConnectFault(f"the cookie jar {jar} holds no session")

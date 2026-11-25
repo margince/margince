@@ -141,6 +141,11 @@ class MainTest(unittest.TestCase):
         self.assertEqual((code, out), (1, ""))
         self.assertIn("holds no session", err)
 
+    def test_a_jar_outside_the_repo_and_the_temp_directory_is_never_opened(self):
+        code, out, err = self.run_main(["oauthconnect.py", "http://127.0.0.1:9", os.devnull, "e2e-llm", "read"])
+        self.assertEqual((code, out), (1, ""))
+        self.assertIn("refusing to open", err)
+
     def test_too_few_arguments_print_the_usage(self):
         code, _, err = self.run_main(["oauthconnect.py", "http://127.0.0.1:9"])
         self.assertEqual(code, 1)
