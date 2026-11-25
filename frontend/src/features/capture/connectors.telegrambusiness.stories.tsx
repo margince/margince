@@ -10,7 +10,7 @@ import {
 import { TelegramBusinessPanel } from "./connectors.telegrambusiness";
 
 const meta: Meta<typeof TelegramBusinessPanel> = {
-  title: "Settings/Data/Integrations/Telegram Business",
+  title: "Settings/Data/Integrations/Telegram business",
   component: TelegramBusinessPanel,
 };
 export default meta;

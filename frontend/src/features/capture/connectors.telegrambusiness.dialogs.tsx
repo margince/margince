@@ -5,23 +5,28 @@ import { useMutation } from "@tanstack/react-query";
 import { useState } from "react";
 import { api } from "../../api/client";
 import type { components } from "../../api/schema";
+import { TeamPicker, VisibilityChoice } from "../../components/readerteam";
 import { Callout } from "../../design-system/callout";
 import { ConfirmModal } from "../../design-system/confirmmodal";
-import { useT } from "../../i18n";
+import { useFieldFaults } from "../../design-system/savepage";
+import { useLocale, useT } from "../../i18n";
+import type { MessageKey } from "../../i18n/en";
 import {
+  blankRequired,
   problemCodeOf,
   problemMessageOf,
   problemStatus,
   unwrap,
 } from "../../lib/problem";
-import {
-  TeamPicker,
-  VisibilityChoice,
-} from "../settings/sharedmailboxes.forms";
 
 type BusinessConnection = components["schemas"]["TelegramBusinessConnection"];
 type Team = components["schemas"]["Team"];
 type Visibility = "held" | "shared";
+
+const HINTS: Record<Visibility, MessageKey> = {
+  held: "connectors.tgbiz.visibilityHeldHint",
+  shared: "connectors.tgbiz.visibilitySharedHint",
+};
 
 // A 409 is either the owner switching the link off while the dialog was open
 // or a team other than the seat's. The server gives no code to tell them
@@ -57,6 +62,8 @@ export function ApproveBusinessDialog({
   onSwitchedOff: () => void;
 }>) {
   const t = useT();
+  const { locale } = useLocale();
+  const [faults, faultsRoot] = useFieldFaults<HTMLDivElement>();
   const [team, setTeam] = useState(connection.readerTeamId ?? "");
   const approve = useMutation({
     mutationFn: async (readerTeamId: string) =>
@@ -82,14 +89,29 @@ export function ApproveBusinessDialog({
         owner: connection.ownerLabel,
       })}
       confirmLabel={t("connectors.tgbiz.approve")}
-      confirmDisabled={team === ""}
+      bodyRef={faultsRoot}
       pending={approve.isPending}
       error={approveError(approve.error, t)}
-      onConfirm={() => approve.mutate(team)}
+      onConfirm={() => {
+        const blank = blankRequired(locale, {
+          readerTeamId: [t("sharedMailboxes.readerTeam"), team],
+        });
+        if (!faults.show(blank)) {
+          approve.mutate(team);
+        }
+      }}
     >
       <div className="form-stack">
         <p>{t("connectors.tgbiz.approveBody")}</p>
-        <TeamPicker teams={teams} value={team} onChange={setTeam} />
+        <TeamPicker
+          teams={teams}
+          value={team}
+          onChange={(id) => {
+            setTeam(id);
+            faults.edited("readerTeamId");
+          }}
+          error={faults.of("readerTeamId")}
+        />
       </div>
     </ConfirmModal>
   );
@@ -130,14 +152,18 @@ export function BusinessVisibilityDialog({
       title={t("connectors.tgbiz.visibilityTitle", {
         owner: connection.ownerLabel,
       })}
-      confirmLabel={t("sharedMailboxes.changeConfirm")}
+      confirmLabel={t("connectors.tgbiz.visibilityConfirm")}
       confirmDisabled={visibility === current}
       pending={change.isPending}
       error={change.isError ? problemMessageOf(change.error, t) : null}
       onConfirm={() => change.mutate(visibility)}
     >
       <div className="form-stack">
-        <VisibilityChoice value={visibility} onChange={setVisibility} />
+        <VisibilityChoice
+          value={visibility}
+          onChange={setVisibility}
+          hints={HINTS}
+        />
         <Callout
           tone="warning"
           title={t("connectors.tgbiz.visibilityWarning")}

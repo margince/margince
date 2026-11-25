@@ -6,6 +6,11 @@ import { useState } from "react";
 import { api } from "../../api/client";
 import type { components } from "../../api/schema";
 import {
+  TeamPicker,
+  type Visibility,
+  VisibilityChoice,
+} from "../../components/readerteam";
+import {
   Checkbox,
   Field,
   Textarea,
@@ -15,11 +20,9 @@ import { Callout } from "../../design-system/callout";
 import { ChoiceList } from "../../design-system/choicelist";
 import { ConfirmModal } from "../../design-system/confirmmodal";
 import { useFieldFaults } from "../../design-system/savepage";
-import { Select } from "../../design-system/select";
 import { useLocale, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import { IMAP_PORT_DEFAULT, imapRefusal } from "../../lib/imapconnect";
-import { labelFor } from "../../lib/labelfor";
 import { problemMessageOf, unwrap } from "../../lib/problem";
 import { ImportWindowPicker } from "../../mail-history/window-picker";
 import {
@@ -37,31 +40,12 @@ import {
 type SharedMailbox = components["schemas"]["SharedMailbox"];
 type Team = components["schemas"]["Team"];
 
-// The team roster's entries, typed as teams: the shared roster cache holds
-// seats and teams under one entry type.
-export function isTeam(entry: { id: string }): entry is Team {
-  return "name" in entry;
-}
-
-type Visibility = SharedMailbox["mail_visibility"];
 type ConnectRequest = components["schemas"]["ConnectSharedMailboxRequest"];
 type UpdateRequest = components["schemas"]["UpdateSharedMailboxRequest"];
 type ImportWindow =
   components["schemas"]["SharedMailboxHistoryImportRequest"]["window"];
 
 export const SHARED_MAILBOXES_KEY = ["shared-mailboxes"] as const;
-
-export const VISIBILITY_LABEL: Record<Visibility, MessageKey> = {
-  held: "sharedMailboxes.visibilityHeld",
-  shared: "sharedMailboxes.visibilityShared",
-};
-
-const VISIBILITIES: readonly Visibility[] = ["held", "shared"];
-
-const VISIBILITY_HINT: Record<Visibility, MessageKey> = {
-  held: "sharedMailboxes.visibilityHeldHint",
-  shared: "sharedMailboxes.visibilitySharedHint",
-};
 
 const PROVIDERS: readonly { value: Provider; label: MessageKey }[] = [
   { value: "imap", label: "firstRun.platform.imap" },
@@ -72,52 +56,6 @@ const PROVIDERS: readonly { value: Provider; label: MessageKey }[] = [
 function useInvalidateMailboxes() {
   const qc = useQueryClient();
   return () => qc.invalidateQueries({ queryKey: SHARED_MAILBOXES_KEY });
-}
-
-export function TeamPicker({
-  teams,
-  value,
-  onChange,
-  error,
-}: Readonly<{
-  teams: readonly Team[];
-  value: string;
-  onChange: (id: string) => void;
-  error?: string;
-}>) {
-  const t = useT();
-  return (
-    <Field label={t("sharedMailboxes.readerTeam")} required error={error}>
-      {(control) => (
-        <Select
-          {...control}
-          value={value}
-          onChange={onChange}
-          placeholder={t("sharedMailboxes.readerTeamPlaceholder")}
-          options={teams.map((team) => ({ value: team.id, label: team.name }))}
-        />
-      )}
-    </Field>
-  );
-}
-
-export function VisibilityChoice({
-  value,
-  onChange,
-}: Readonly<{ value: Visibility; onChange: (next: Visibility) => void }>) {
-  const t = useT();
-  return (
-    <ChoiceList
-      legend={t("sharedMailboxes.visibility")}
-      value={value}
-      onChange={onChange}
-      choices={VISIBILITIES.map((choice) => ({
-        value: choice,
-        label: t(labelFor(VISIBILITY_LABEL, choice)),
-        description: t(labelFor(VISIBILITY_HINT, choice)),
-      }))}
-    />
-  );
 }
 
 /** One text field of the connect form: its label, value, setter and refusal. */

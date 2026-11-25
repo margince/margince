@@ -12926,7 +12926,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "connectors.tgbiz.approve": "Phê duyệt làm tài khoản công ty",
   "connectors.tgbiz.approveTitle": "Phê duyệt {owner} làm tài khoản công ty?",
   "connectors.tgbiz.approveBody":
-    "Tin nhắn của khách và phản hồi của chủ tài khoản từ ứng dụng Telegram xuất hiện trong Lịch sử của khách. Cho đến khi bạn đổi chế độ hiển thị, chỉ nhóm bạn chọn và mọi thành viên tham gia từng cuộc trò chuyện được đọc chúng. Trước khi bạn phê duyệt, không có gì được ghi nhận.",
+    "Tin nhắn của khách và phản hồi của chủ tài khoản từ ứng dụng Telegram xuất hiện trong Lịch sử của khách. Cho đến khi bạn đổi chế độ hiển thị, chỉ nhóm bạn chọn được đọc chúng. Trước khi bạn phê duyệt, không có gì được ghi nhận.",
   "connectors.tgbiz.ownAccount":
     "Tài khoản riêng của thành viên · mỗi cuộc trò chuyện được giữ riêng",
   "connectors.tgbiz.changeReaders": "Đổi nhóm đọc",
@@ -12934,7 +12934,11 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Hãy chọn nhóm đọc tin nhắn của tài khoản này.",
   "connectors.tgbiz.visibilityTitle": "Đổi nhóm đọc tin nhắn của {owner}",
   "connectors.tgbiz.visibilityWarning":
-    "Thay đổi này áp dụng cho mọi tin nhắn tài khoản đã ghi nhận, không chỉ tin nhắn mới.",
+    "Thay đổi này áp dụng cho tin nhắn tài khoản ghi nhận sau thay đổi. Tin nhắn đã được giữ riêng trước đó vẫn được giữ riêng.",
+  "connectors.tgbiz.visibilityHeldHint": "Chỉ nhóm đọc được đọc tin nhắn.",
+  "connectors.tgbiz.visibilitySharedHint":
+    "Tin nhắn theo chế độ chia sẻ của liên hệ mà nó được gắn vào.",
+  "connectors.tgbiz.visibilityConfirm": "Đổi chế độ hiển thị",
   "connectors.tgbiz.approveConflict":
     "Không thể phê duyệt tài khoản này. Hoặc chủ tài khoản đã tắt liên kết trong Telegram (hãy nhờ họ liên kết lại bot), hoặc nhóm này khác với nhóm đang đọc tài khoản. Danh sách đã được tải lại.",
   "connectors.tgbiz.disconnectTitle": "Ngắt kết nối tài khoản của {owner}?",

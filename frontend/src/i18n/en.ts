@@ -13205,14 +13205,19 @@ export const en = {
   "connectors.tgbiz.approve": "Approve as company account",
   "connectors.tgbiz.approveTitle": "Approve {owner} as a company account?",
   "connectors.tgbiz.approveBody":
-    "Customer messages and the owner’s replies from the Telegram app appear in the customer’s History. Until you change the visibility, only the team you choose, and everyone taking part in each chat, can read them. Nothing from the account is captured before you approve.",
+    "Customer messages and the owner’s replies from the Telegram app appear in the customer’s History. Until you change the visibility, only the team you choose can read them. Nothing from the account is captured before you approve.",
   "connectors.tgbiz.ownAccount": "Member’s own account · each chat is held",
   "connectors.tgbiz.changeReaders": "Change who reads",
   "connectors.tgbiz.readerTeamRequired":
     "Choose the team that reads this account’s messages.",
   "connectors.tgbiz.visibilityTitle": "Change who reads {owner}’s messages",
   "connectors.tgbiz.visibilityWarning":
-    "This applies to all messages the account already captured, not only to new ones.",
+    "This applies to messages the account captures after the change. Messages held before stay held.",
+  "connectors.tgbiz.visibilityHeldHint":
+    "Only the reader team can read a message.",
+  "connectors.tgbiz.visibilitySharedHint":
+    "A message follows the sharing of the contact it is filed on.",
+  "connectors.tgbiz.visibilityConfirm": "Change visibility",
   "connectors.tgbiz.approveConflict":
     "This account cannot be approved. Either the owner switched the link off in Telegram (ask them to link the bot again), or this team differs from the one that already reads the account. The list is refreshed.",
   "connectors.tgbiz.disconnectTitle": "Disconnect {owner}’s account?",

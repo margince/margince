@@ -6,6 +6,7 @@ import { Inbox, Plus } from "lucide-react";
 import { useState } from "react";
 import { api } from "../../api/client";
 import type { components } from "../../api/schema";
+import { isTeam, VISIBILITY_LABEL } from "../../components/readerteam";
 import { RosterFailedLine, useRoster } from "../../components/roster";
 import { Button, EmptyState } from "../../design-system/atoms";
 import { ConfirmModal } from "../../design-system/confirmmodal";
@@ -23,10 +24,8 @@ import { useViewerZone } from "../../lib/viewerzone";
 import {
   ChangeSharedMailboxDialog,
   ConnectSharedMailboxDialog,
-  isTeam,
   SHARED_MAILBOXES_KEY,
   SharedMailboxHistoryDialog,
-  VISIBILITY_LABEL,
 } from "./sharedmailboxes.forms";
 
 // The installation's shared mailboxes (sales@, an operations desk): mailboxes

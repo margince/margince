@@ -3,12 +3,14 @@
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Briefcase } from "lucide-react";
-import { useState } from "react";
+import { useId, useState } from "react";
 import { api } from "../../api/client";
 import type { components } from "../../api/schema";
+import { isTeam, VISIBILITY_LABEL } from "../../components/readerteam";
 import { RosterFailedLine, useRoster } from "../../components/roster";
 import { Button, EmptyState } from "../../design-system/atoms";
 import { ConfirmModal } from "../../design-system/confirmmodal";
+import { OverflowMenu } from "../../design-system/overflowmenu";
 import { Panel, PanelBody, PanelIntro } from "../../design-system/panel";
 import { ProviderList, ProviderRow } from "../../design-system/providerrow";
 import { QueryStates } from "../../design-system/querystates";
@@ -16,10 +18,9 @@ import { formatDate } from "../../format/format";
 import { useLocale, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import { useCanWrite } from "../../lib/capability";
-import { labelFor } from "../../lib/labelfor";
+import { labelFor, valueFor } from "../../lib/labelfor";
 import { problemMessageOf, throwProblem, unwrap } from "../../lib/problem";
 import { useViewerZone } from "../../lib/viewerzone";
-import { isTeam, VISIBILITY_LABEL } from "../settings/sharedmailboxes.forms";
 import { useChannelConnections } from "./connectors.telegram";
 import {
   ApproveBusinessDialog,
@@ -48,6 +49,11 @@ const STATUS: Readonly<
   connected: { tone: "success", label: "connectors.tgbiz.statusConnected" },
   disconnected: { tone: "default", label: "connectors.tgbiz.statusOff" },
 };
+
+const UNKNOWN_STATUS = {
+  tone: "default",
+  label: "connectors.tgbiz.statusOff",
+} as const;
 
 function useBusinessConnections(enabled: boolean) {
   return useQuery({
@@ -101,7 +107,7 @@ function BusinessRow({
   const t = useT();
   const { locale } = useLocale();
   const zone = useViewerZone();
-  const status = STATUS[connection.status];
+  const status = valueFor(STATUS, connection.status, UNKNOWN_STATUS);
   const approve = connection.status === "pending_approval" && onApprove;
   const readBy = readers(connection, teamName, t);
   const changeReaders =
@@ -133,29 +139,26 @@ function BusinessRow({
             : undefined
         }
         action={
-          approve || changeReaders || onDisconnect ? (
-            <>
-              {approve && (
-                <Button aria-haspopup="dialog" onClick={onApprove}>
-                  {t("connectors.tgbiz.approve")}
-                </Button>
-              )}
-              {changeReaders && (
-                <Button aria-haspopup="dialog" onClick={onVisibility}>
-                  {t("connectors.tgbiz.changeReaders")}
-                </Button>
-              )}
-              {onDisconnect && (
-                <Button
-                  variant="ghost"
-                  aria-haspopup="dialog"
-                  onClick={onDisconnect}
-                >
-                  {t("connectors.disconnect")}
-                </Button>
-              )}
-            </>
+          approve ? (
+            <Button aria-haspopup="dialog" onClick={onApprove}>
+              {t("connectors.tgbiz.approve")}
+            </Button>
+          ) : changeReaders ? (
+            <Button aria-haspopup="dialog" onClick={onVisibility}>
+              {t("connectors.tgbiz.changeReaders")}
+            </Button>
           ) : undefined
+        }
+        menu={
+          onDisconnect && (
+            <OverflowMenu
+              label={t("table.rowActions", { name: connection.ownerLabel })}
+            >
+              <Button aria-haspopup="dialog" onClick={onDisconnect}>
+                {t("connectors.disconnect")}
+              </Button>
+            </OverflowMenu>
+          )
         }
       />
     </div>
@@ -163,7 +166,7 @@ function BusinessRow({
 }
 
 // The panel withdraws itself unless a Telegram bot is connected and the reader
-// may approve or disconnect: the list answers 403 to anyone else.
+// holds update: the list answers 403 to anyone without it, delete or not.
 export function TelegramBusinessPanel() {
   const t = useT();
   const qc = useQueryClient();
@@ -174,13 +177,14 @@ export function TelegramBusinessPanel() {
     (connection) =>
       connection.provider === "telegram" && connection.status === "connected",
   );
-  const allowed = canApprove || canDisconnect;
+  const allowed = canApprove;
   const query = useBusinessConnections(Boolean(bot) && allowed);
   const roster = useRoster("team", Boolean(bot) && allowed);
   const teams = (roster.data ?? []).filter(isTeam);
   const teamName = (id: string | null | undefined) =>
     teams.find((team) => team.id === id)?.name ??
     t("sharedMailboxes.unknownTeam");
+  const titleId = useId();
   const [approving, setApproving] = useState<BusinessConnection | null>(null);
   const [changing, setChanging] = useState<BusinessConnection | null>(null);
   const [disconnecting, setDisconnecting] = useState<BusinessConnection | null>(
@@ -212,7 +216,13 @@ export function TelegramBusinessPanel() {
   };
   const owner = disconnecting?.ownerLabel ?? "";
   return (
-    <Panel title={t("connectors.tgbiz.title")}>
+    <Panel
+      title={
+        <span id={titleId} tabIndex={-1}>
+          {t("connectors.tgbiz.title")}
+        </span>
+      }
+    >
       <PanelBody>
         <PanelIntro>{t("connectors.tgbiz.intro")}</PanelIntro>
         <p>{t("connectors.tgbiz.stepsTitle")}</p>
@@ -277,6 +287,7 @@ export function TelegramBusinessPanel() {
       <ConfirmModal
         open={disconnecting !== null}
         onClose={closeDisconnect}
+        returnFocusTo={() => document.getElementById(titleId)}
         title={t("connectors.tgbiz.disconnectTitle", { owner })}
         confirmLabel={t("connectors.disconnect")}
         confirmVariant="danger"

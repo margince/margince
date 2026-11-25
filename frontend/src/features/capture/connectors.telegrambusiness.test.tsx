@@ -191,7 +191,10 @@ describe("the Telegram Business panel", () => {
       }),
     ).toBeNull();
     expect(
-      within(rows[1]).getByRole("button", { name: "Disconnect" }),
+      within(rows[1]).getByRole("button", { name: "Change who reads" }),
+    ).toBeVisible();
+    expect(
+      within(rows[1]).getByRole("button", { name: "Actions for Jonas Weiss" }),
     ).toBeVisible();
 
     expect(within(rows[2]).getByText("Switched off in Telegram")).toBeVisible();
@@ -219,7 +222,14 @@ describe("the Telegram Business panel", () => {
     const confirm = within(dialog).getByRole("button", {
       name: "Approve as company account",
     });
-    expect(confirm).toBeDisabled();
+    await user.click(confirm);
+    await waitFor(() =>
+      expect(within(dialog).getByRole("combobox")).toHaveAttribute(
+        "aria-invalid",
+        "true",
+      ),
+    );
+    expect(calls.some((c) => c.endsWith("/approve"))).toBe(false);
 
     await user.click(within(dialog).getByRole("combobox"));
     await user.click(await screen.findByRole("option", { name: "Sales desk" }));
@@ -315,7 +325,7 @@ describe("the Telegram Business panel", () => {
     const dialog = await screen.findByRole("dialog");
     await user.click(within(dialog).getByRole("radio", { name: /Shared/ }));
     await user.click(
-      within(dialog).getByRole("button", { name: "Apply to all mail" }),
+      within(dialog).getByRole("button", { name: "Change visibility" }),
     );
     return dialog;
   }
@@ -358,6 +368,9 @@ describe("the Telegram Business panel", () => {
     const calls = stubApi({ accounts: [live] });
     const user = userEvent.setup();
     render();
+    await user.click(
+      await screen.findByRole("button", { name: "Actions for Jonas Weiss" }),
+    );
     await user.click(await screen.findByRole("button", { name: "Disconnect" }));
     const dialog = await screen.findByRole("dialog");
     expect(
@@ -376,6 +389,18 @@ describe("the Telegram Business panel", () => {
 
   it("withdraws when no Telegram bot is connected", async () => {
     const calls = stubApi({ bots: [] });
+    const { container } = render();
+    await waitFor(() => expect(container).toBeEmptyDOMElement());
+    expect(calls).not.toContain("GET /telegram-business");
+  });
+
+  it("withdraws from a reader who may delete but not update", async () => {
+    const calls = stubApi({
+      me: meFixture({
+        roles: ["rep"],
+        allow: { channel_connection: ["read", "delete"] },
+      }),
+    });
     const { container } = render();
     await waitFor(() => expect(container).toBeEmptyDOMElement());
     expect(calls).not.toContain("GET /telegram-business");
