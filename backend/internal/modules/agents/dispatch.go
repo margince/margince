@@ -108,9 +108,11 @@ type Binder func(ctx context.Context) (context.Context, error)
 // caller owns framing and hands it one rpcRequest at a time.
 type Dispatcher struct {
 	registry *Registry
-	bind     Binder
-	name     string
-	version  string
+	// callLog is where the HTTP door records each exchange; nil keeps none.
+	callLog CallLog
+	bind    Binder
+	name    string
+	version string
 	// resources publishes the read-only documents beside the tool surface
 	// (the query vocabulary today). Nil is a server with no resources, which
 	// is why the capability is advertised conditionally: claiming one with
