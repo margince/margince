@@ -21,6 +21,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/knowledge"
 	"github.com/margince/margince/backend/internal/modules/knowledge/handbook"
 	"github.com/margince/margince/backend/internal/platform/blobstore"
+	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -116,5 +117,59 @@ func TestAnUploadCannotReplaceAFailedShippedPage(t *testing.T) {
 	}
 	if _, err := store.ReconcileHandbook(bootCtx, noSerialize, q.queue()); err != nil {
 		t.Fatalf("the next boot's reconcile failed: %v", err)
+	}
+}
+
+// A live document set's name is held once, compared trimmed and ignoring case.
+// The shipped set's name is held against the sets a workspace makes.
+func TestADocumentSetNameIsHeldOnceAmongLiveSets(t *testing.T) {
+	e := Setup(t)
+	bootCtx := handbookBootCtx(e.WS)
+	store := knowledge.NewStore(e.DB())
+	var q recordingQueue
+	if _, err := store.ReconcileHandbook(bootCtx, noSerialize, q.queue()); err != nil {
+		t.Fatalf("reconcile: %v", err)
+	}
+	shipped := handbookCorpusID(bootCtx, t, e)
+	human := e.As(e.Rep1, nil, corpusAdminPerms)
+	shippedSet, err := store.ReadCorpus(human, shipped)
+	if err != nil {
+		t.Fatalf("read the shipped set: %v", err)
+	}
+	own, err := store.CreateCorpus(human, howTo("Pricing notes"))
+	if err != nil {
+		t.Fatalf("create the workspace's own set: %v", err)
+	}
+	other, err := store.CreateCorpus(human, howTo("Playbooks"))
+	if err != nil {
+		t.Fatalf("create a second set: %v", err)
+	}
+	rename := func(id ids.UUID, name string) error {
+		_, err := store.EditCorpus(human, id, knowledge.UpdateCorpus{Name: &name})
+		return err
+	}
+	create := func(name string) error {
+		_, err := store.CreateCorpus(human, howTo(name))
+		return err
+	}
+	for name, err := range map[string]error{
+		"a new set named as the shipped one":      create(" " + strings.ToUpper(shippedSet.Name)),
+		"a new set named as a live one":           create("pricing NOTES "),
+		"a rename onto the shipped set's name":    rename(ids.UUID(other.Id), strings.ToLower(shippedSet.Name)),
+		"a rename onto a live set's name":         rename(ids.UUID(other.Id), "PRICING notes"),
+		"the shipped set renamed onto a live one": rename(shipped, "playbooks"),
+	} {
+		if !errors.Is(err, apperrors.ErrConflict) {
+			t.Errorf("%s answered %v, want a conflict", name, err)
+		}
+	}
+	if err := rename(ids.UUID(other.Id), "PLAYBOOKS"); err != nil {
+		t.Errorf("a rename that changes only the case of its own name: %v", err)
+	}
+	if err := store.ArchiveCorpus(human, ids.UUID(own.Id)); err != nil {
+		t.Fatalf("archive the set: %v", err)
+	}
+	if err := create("Pricing notes"); err != nil {
+		t.Errorf("an archived set's name was not free again: %v", err)
 	}
 }

@@ -59,11 +59,11 @@ func newStageNoticeFixture(t *testing.T, fromName, toName, dealName string) stag
 	if err != nil {
 		t.Fatal(err)
 	}
-	from, err := store.CreateStage(ctx, deals.CreateStageInput{PipelineID: ids.From[ids.PipelineKind](ids.UUID(pipeline.Id)), Name: storableStageName(fromName), Position: 1, Semantic: "open"})
+	from, err := store.CreateStage(ctx, deals.CreateStageInput{PipelineID: ids.From[ids.PipelineKind](ids.UUID(pipeline.Id)), Name: storableStageName(fromName, "Earlier from"), Position: 1, Semantic: "open"})
 	if err != nil {
 		t.Fatal(err)
 	}
-	to, err := store.CreateStage(ctx, deals.CreateStageInput{PipelineID: ids.From[ids.PipelineKind](ids.UUID(pipeline.Id)), Name: storableStageName(toName), Position: 2, Semantic: "open"})
+	to, err := store.CreateStage(ctx, deals.CreateStageInput{PipelineID: ids.From[ids.PipelineKind](ids.UUID(pipeline.Id)), Name: storableStageName(toName, "Earlier to"), Position: 2, Semantic: "open"})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -139,12 +139,13 @@ func TestStageNoticeRecoversItsExactMoveAndLeavesUnlinkedNoticesAlone(t *testing
 }
 
 // storableStageName is the name a stage is created with: the fixture's own when
-// it fits the label limit, else a stand-in that writeEarlierStageName replaces.
-func storableStageName(name string) string {
+// it fits the label limit, else standIn, which writeEarlierStageName replaces.
+// Each stage gets its own stand-in, because one pipeline holds a name once.
+func storableStageName(name, standIn string) string {
 	if utf8.RuneCountInString(name) <= values.TextLabelCharacters {
 		return name
 	}
-	return "Earlier"
+	return standIn
 }
 
 // writeEarlierStageName models a name stored before stage names had a length
