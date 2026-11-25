@@ -270,10 +270,10 @@ var segmentEngines = map[string]storekit.Query{
 			ownerTeamIDField:    ownerTeamField,
 			"industry":          {Expr: "t.industry", Type: storekit.FieldPicklist, Options: industryValues},
 			"size_band":         {Expr: "t.size_band", Type: storekit.FieldPicklist, Options: sizeBandValues},
-			companyStatusColumn: {Expr: "t.status", Type: storekit.FieldPicklist, Options: lifecycleValues},
+			companyStatusColumn: {Expr: statusExpr, Type: storekit.FieldPicklist, Options: lifecycleValues},
 			// The name status had before its rename, kept so a saved segment
 			// that says it still evaluates. Named in retiredCoreFields below.
-			"lifecycle": {Expr: "t.status", Type: storekit.FieldPicklist},
+			"lifecycle": {Expr: statusExpr, Type: storekit.FieldPicklist},
 			// RETIRED with the column (ADR-0079/A124), and kept here for the one
 			// release it survives. A saved segment written against it must keep
 			// evaluating until its author moves it to status. Dropping the
@@ -307,7 +307,7 @@ var segmentEngines = map[string]storekit.Query{
 			"company_id":         {Expr: "t.company_id", Type: storekit.FieldID, References: storekit.RefCompany},
 			"partner_company_id": {Expr: "t.partner_company_id", Type: storekit.FieldID, References: storekit.RefCompany},
 			"project_id":         {Expr: "t.project_id", Type: storekit.FieldID, References: storekit.RefProject},
-			"status":             {Expr: "t.status", Type: storekit.FieldPicklist, Options: dealStatusValues},
+			"status":             {Expr: statusExpr, Type: storekit.FieldPicklist, Options: dealStatusValues},
 			"win_probability":    {Expr: winprobability.SQL("t"), Type: storekit.FieldNumber},
 			tagFilterField:       tagLinkFor("deal"),
 			// The customer's own attributes, so "the pipeline for manufacturing"
@@ -332,7 +332,7 @@ var segmentEngines = map[string]storekit.Query{
 		Table:     "lead",
 		BaseWhere: whereArchivedNull,
 		Fields: withFields(standardFields[typeLead], map[string]storekit.Field{
-			"status":                {Expr: "t.status", Type: storekit.FieldPicklist, Options: leadStatusValues},
+			"status":                {Expr: statusExpr, Type: storekit.FieldPicklist, Options: leadStatusValues},
 			ownerIDField:            {Expr: colOwnerID, Type: storekit.FieldID, References: storekit.RefAppUser},
 			ownerTeamIDField:        ownerTeamField,
 			"candidate_company_key": {Expr: "t.candidate_company_key", Type: storekit.FieldCompanyKey, FoldCase: true},
@@ -379,6 +379,9 @@ var segmentEngines = map[string]storekit.Query{
 // companyStatusColumn is the company column a deal or contact filter reads
 // through its customer.
 const companyStatusColumn = "status"
+
+// statusExpr reads the status column of the row a filter is over.
+const statusExpr = "t." + companyStatusColumn
 
 var retiredCoreFields = map[string]map[string]bool{
 	// classification was retired from the company record; lifecycle is status under its old name.
