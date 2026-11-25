@@ -40,7 +40,7 @@ func seedAccountAtStage(t *testing.T, e *integration.Env, stage string) ids.UUID
 	company := ids.NewV7()
 	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		_, err := tx.Exec(context.Background(), `
-			INSERT INTO company (id, display_name, lifecycle, source, captured_by, owner_id)
+			INSERT INTO company (id, display_name, status, source, captured_by, owner_id)
 			VALUES ($1, 'ScaleCommerce', $2, 'gmail:seed', 'connector:gmail', $3)`, company, stage, e.AdminUser)
 		return err
 	}); err != nil {
@@ -296,7 +296,7 @@ func TestAnAcceptOverACorrectedRecordIsRefused(t *testing.T) {
 	// Someone reads the same mail and files the account as disqualified.
 	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		_, err := tx.Exec(context.Background(),
-			`UPDATE company SET lifecycle = 'disqualified' WHERE id = $1`, company)
+			`UPDATE company SET status = 'disqualified' WHERE id = $1`, company)
 		return err
 	}); err != nil {
 		t.Fatal(err)

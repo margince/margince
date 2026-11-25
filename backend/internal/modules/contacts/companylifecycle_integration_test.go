@@ -39,7 +39,7 @@ func (e *dedupeEnv) companyAtStage(ctx context.Context, t *testing.T, name, life
 		t.Fatal(err)
 	}
 	id := ids.From[ids.CompanyKind](ids.UUID(company.Id))
-	if _, err := e.store.UpdateCompany(ctx, id, UpdateCompanyInput{Lifecycle: &lifecycle}); err != nil {
+	if _, err := e.store.UpdateCompany(ctx, id, UpdateCompanyInput{Status: &lifecycle}); err != nil {
 		t.Fatalf("setting %s to %s: %v", name, lifecycle, err)
 	}
 	return id
@@ -65,12 +65,12 @@ func TestAUserWalksAnAccountFromOpportunityThroughLiveToCustomer(t *testing.T) {
 			`SELECT count(*) FROM audit_log WHERE entity_type = 'company' AND entity_id = $1`, id)
 		events := countCompanyUpdatedEvents(ctx, t, e, id)
 		next := stage
-		updated, err := e.store.UpdateCompany(e.as(), id, UpdateCompanyInput{Lifecycle: &next})
+		updated, err := e.store.UpdateCompany(e.as(), id, UpdateCompanyInput{Status: &next})
 		if err != nil {
 			t.Fatalf("moving to %s: %v", stage, err)
 		}
-		if updated.Lifecycle == nil || string(*updated.Lifecycle) != stage {
-			t.Fatalf("lifecycle = %v, want %s", updated.Lifecycle, stage)
+		if updated.Status == nil || string(*updated.Status) != stage {
+			t.Fatalf("lifecycle = %v, want %s", updated.Status, stage)
 		}
 		if got := e.countInWorkspace(ctx, t,
 			`SELECT count(*) FROM audit_log WHERE entity_type = 'company' AND entity_id = $1`, id); got != audits+1 {
@@ -88,7 +88,7 @@ func TestNoAgentAutomationOrConnectorSetsAnAccountLive(t *testing.T) {
 	for _, kind := range []principal.PrincipalType{principal.PrincipalAgent, principal.PrincipalSystem, principal.PrincipalConnector} {
 		t.Run(string(kind), func(t *testing.T) {
 			live := "live"
-			_, err := e.store.UpdateCompany(e.asNonHuman(kind), id, UpdateCompanyInput{Lifecycle: &live})
+			_, err := e.store.UpdateCompany(e.asNonHuman(kind), id, UpdateCompanyInput{Status: &live})
 			requireLiveRefusal(t, err)
 			if got := e.lifecycleOf(e.as(), t, id); got != "onboarding" {
 				t.Errorf("the refused write left the account at %s, want onboarding", got)
@@ -98,7 +98,7 @@ func TestNoAgentAutomationOrConnectorSetsAnAccountLive(t *testing.T) {
 	// Onboarding is an ordinary stage: an agent may set it.
 	onboarding := "onboarding"
 	if _, err := e.store.UpdateCompany(e.asNonHuman(principal.PrincipalAgent), e.companyAtStage(e.as(), t, "Signed GmbH", "opportunity"),
-		UpdateCompanyInput{Lifecycle: &onboarding}); err != nil {
+		UpdateCompanyInput{Status: &onboarding}); err != nil {
 		t.Fatalf("an agent setting onboarding was refused: %v", err)
 	}
 }
@@ -121,7 +121,7 @@ func TestSettingLiveKeepsTheRowAndObjectGates(t *testing.T) {
 	e := setupDedupe(t)
 	id := e.companyAtStage(e.as(), t, "Gated GmbH", "onboarding")
 	live := "live"
-	if _, err := e.store.UpdateCompany(e.asCompanyReader(), id, UpdateCompanyInput{Lifecycle: &live}); !errors.Is(err, apperrors.ErrPermissionDenied) {
+	if _, err := e.store.UpdateCompany(e.asCompanyReader(), id, UpdateCompanyInput{Status: &live}); !errors.Is(err, apperrors.ErrPermissionDenied) {
 		t.Errorf("a read-only seat setting live: err = %v, want permission denied", err)
 	}
 	if _, err := e.store.UpdateCompany(asAdmin(e), id, UpdateCompanyInput{OwnerID: new(ids.From[ids.UserKind](e.otherRep))}); err != nil {
@@ -134,14 +134,14 @@ func TestSettingLiveKeepsTheRowAndObjectGates(t *testing.T) {
 	ownOnly.Permissions.RowScope = principal.RowScopeOwn
 	ctx := principal.WithActor(e.as(), ownOnly)
 	// Everyone reads a workspace company, so a colleague's is refused, not hidden.
-	if _, err := e.store.UpdateCompany(ctx, id, UpdateCompanyInput{Lifecycle: &live}); !errors.Is(err, apperrors.ErrPermissionDenied) {
+	if _, err := e.store.UpdateCompany(ctx, id, UpdateCompanyInput{Status: &live}); !errors.Is(err, apperrors.ErrPermissionDenied) {
 		t.Errorf("setting live on a colleague's company: err = %v, want permission denied", err)
 	}
 	ownerOnly := "owner"
 	if _, err := e.store.UpdateCompany(asAdmin(e), id, UpdateCompanyInput{Visibility: &ownerOnly}); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := e.store.UpdateCompany(ctx, id, UpdateCompanyInput{Lifecycle: &live}); !errors.Is(err, apperrors.ErrNotFound) {
+	if _, err := e.store.UpdateCompany(ctx, id, UpdateCompanyInput{Status: &live}); !errors.Is(err, apperrors.ErrNotFound) {
 		t.Errorf("setting live on a company the caller cannot see: err = %v, want not found", err)
 	}
 	if got := e.lifecycleOf(asAdmin(e), t, id); got != "onboarding" {
@@ -159,7 +159,7 @@ func TestTheLifecycleFilterReachesOnboardingAndLive(t *testing.T) {
 	e.companyAtStage(ctx, t, "Plain Customer GmbH", "customer")
 	for stage, id := range want {
 		filter := stage
-		found, _, err := e.store.ListCompanies(ctx, ListCompaniesInput{Lifecycle: &filter})
+		found, _, err := e.store.ListCompanies(ctx, ListCompaniesInput{Status: &filter})
 		if err != nil {
 			t.Fatalf("listing %s: %v", stage, err)
 		}

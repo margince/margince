@@ -41,7 +41,7 @@ func TestACompanyLogoKeyWithoutAnOriginIsRefused(t *testing.T) {
 		// row read from the other side, and names the same pair.
 		{
 			name:       "an origin with no key",
-			statement:  `UPDATE company SET logo_origin = 'upload' WHERE id = $1`,
+			statement:  `UPDATE company SET logo_source = 'upload' WHERE id = $1`,
 			constraint: "company_logo_names_its_origin",
 		},
 	} {
@@ -75,8 +75,8 @@ func TestACompanyLogoWithItsOriginIsAccepted(t *testing.T) {
 	if err := e.store.tx(ctx, func(tx pgx.Tx) error {
 		_, err := tx.Exec(ctx, `
 			UPDATE company
-			   SET logo_object_key = 'logos/whole.png', logo_origin = 'upload',
-			       logo_icon_object_key = 'logos/whole-icon.png', logo_icon_origin = 'upload'
+			   SET logo_object_key = 'logos/whole.png', logo_source = 'upload',
+			       logo_icon_object_key = 'logos/whole-icon.png', logo_icon_source = 'upload'
 			 WHERE id = $1`, companyID)
 		return err
 	}); err != nil {

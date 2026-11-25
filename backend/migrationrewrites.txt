@@ -254,3 +254,7 @@
 1795449105_an_archived_record_leaves_its_chat_channel.down.sql | * | the down migration is a single SELECT 1 that changes nothing
 1795540594_a_host_keeps_team_links_beside_the_personal_link.up.sql | booking_page | revokes a host's older live booking pages; every writer kept one live page per host, so the set is empty or a handful
 1795540594_a_host_keeps_team_links_beside_the_personal_link.down.sql | booking_page | revokes the live team links, at most a few per member
+1795568046_a_company_says_status_and_source.up.sql | saved_view | only company list views a reader saved with the status filter or sort are rewritten, one row each, and each was saved by hand, so the set is small
+1795568046_a_company_says_status_and_source.down.sql | saved_view | runs only on a rollback and moves back the same hand-saved company list views
+1795578268_a_company_bounds_its_text_by_the_contract.up.sql | * | replaces the two text guards on company and on site_read; the guards act on later writes only, and it changes no existing row
+1795578268_a_company_bounds_its_text_by_the_contract.down.sql | * | restores the two text guards on company and on site_read as they stood before; no existing row is changed

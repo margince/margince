@@ -426,7 +426,7 @@ export function editedCommercialPreview(
     ...preview,
     changes: preview.changes.map((change) => {
       const key =
-        change.field === "lifecycle" ? "proposed_lifecycle" : change.field;
+        change.after.kind === "lifecycle" ? "proposed_lifecycle" : change.field;
       const text = draft[key];
       if (
         !Object.hasOwn(draft, key) ||

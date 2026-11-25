@@ -36,7 +36,7 @@ func TestLifecyclePreviewResolvesItsActualSourceForTheReader(t *testing.T) {
 		t.Fatal(err)
 	}
 	id := ids.From[ids.CompanyKind](ids.UUID(company.Id))
-	if _, err := e.Contacts.UpdateCompany(ctx, id, contacts.UpdateCompanyInput{Lifecycle: new("customer")}); err != nil {
+	if _, err := e.Contacts.UpdateCompany(ctx, id, contacts.UpdateCompanyInput{Status: new("customer")}); err != nil {
 		t.Fatal(err)
 	}
 	contact := e.SeedContact(t, "Dana Buyer", &e.Rep1)

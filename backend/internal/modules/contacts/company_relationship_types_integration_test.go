@@ -79,8 +79,8 @@ func TestCompanyStartsAtUnknownRatherThanClaimingToBeAProspect(t *testing.T) {
 	// The retired classification defaulted to 'prospect' and had no writer, so
 	// every untouched account rendered that default as though someone had
 	// judged it. 'unknown' is the honest answer to a question nobody asked.
-	if company.Lifecycle == nil || *company.Lifecycle != crmcontracts.CompanyLifecycleUnknown {
-		t.Errorf("lifecycle at birth = %v, want unknown", company.Lifecycle)
+	if company.Status == nil || *company.Status != crmcontracts.CompanyStatusUnknown {
+		t.Errorf("lifecycle at birth = %v, want unknown", company.Status)
 	}
 	if company.RelationshipTypes == nil || len(*company.RelationshipTypes) != 0 {
 		t.Errorf("relationship types at birth = %v, want an empty set", company.RelationshipTypes)
@@ -98,10 +98,10 @@ func TestUpdateCompanyRelationshipTypesReplaceSet(t *testing.T) {
 	}
 	companyID := ids.From[ids.CompanyKind](ids.UUID(company.Id))
 
-	lifecycle := string(crmcontracts.CompanyLifecycleFormerCustomer)
+	lifecycle := string(crmcontracts.CompanyStatusFormerCustomer)
 	types := []string{"customer", "supplier"}
 	updated, err := e.store.UpdateCompany(ctx, companyID, UpdateCompanyInput{
-		Lifecycle:         &lifecycle,
+		Status:            &lifecycle,
 		RelationshipTypes: &types,
 	})
 	if err != nil {
@@ -109,8 +109,8 @@ func TestUpdateCompanyRelationshipTypesReplaceSet(t *testing.T) {
 	}
 	// The account the whole arc is named for: its contract ended AND it is
 	// still several things to us. The retired enum could hold one of these.
-	if updated.Lifecycle == nil || *updated.Lifecycle != crmcontracts.CompanyLifecycleFormerCustomer {
-		t.Errorf("lifecycle = %v, want former_customer", updated.Lifecycle)
+	if updated.Status == nil || *updated.Status != crmcontracts.CompanyStatusFormerCustomer {
+		t.Errorf("lifecycle = %v, want former_customer", updated.Status)
 	}
 	if live := liveTypesOf(ctx, t, e, companyID); !live["customer"] || !live["supplier"] || len(live) != 2 {
 		t.Fatalf("types after first set = %+v, want {customer, supplier}", live)

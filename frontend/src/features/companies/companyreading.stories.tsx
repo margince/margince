@@ -66,7 +66,7 @@ const standing: components["schemas"]["Company360"] = {
     },
   },
   state_strip: {
-    account: { lifecycle: "customer", relationship_types: ["customer"] },
+    account: { status: "customer", relationship_types: ["customer"] },
     engagement: { state: "waiting_on_us" },
     commercial: {
       open_count: 1,

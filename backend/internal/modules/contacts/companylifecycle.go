@@ -47,7 +47,7 @@ func checkLifecycleWriter(ctx context.Context, to string) error {
 	if actor, ok := principal.Actor(ctx); ok && actor.Type == principal.PrincipalHuman {
 		return nil
 	}
-	return httperr.Validation("lifecycle", "lifecycle_live_needs_a_human",
+	return httperr.Validation(filterStatus, "lifecycle_live_needs_a_human",
 		"only a signed-in user can set an account live; ask the colleague who knows the first scope is in use")
 }
 
@@ -76,7 +76,7 @@ func (s *Store) SetCompanyLifecycleTx(
 	// commits first is read by the other, so the comparison below cannot be
 	// decided against a stage that has already been replaced.
 	err := tx.QueryRow(ctx, `
-		SELECT lifecycle FROM company
+		SELECT status FROM company
 		 WHERE id = $1 AND archived_at IS NULL
 		 FOR UPDATE`, companyID).Scan(&current)
 	if err != nil {
@@ -89,8 +89,8 @@ func (s *Store) SetCompanyLifecycleTx(
 		return false, nil
 	}
 	tag, err := tx.Exec(ctx, `
-		UPDATE company SET lifecycle = $2
-		 WHERE id = $1 AND lifecycle = $3`, companyID, to, from)
+		UPDATE company SET status = $2
+		 WHERE id = $1 AND status = $3`, companyID, to, from)
 	if err != nil {
 		return false, fmt.Errorf("contacts: moving the account's stage: %w", err)
 	}
@@ -101,8 +101,8 @@ func (s *Store) SetCompanyLifecycleTx(
 		return false, nil
 	}
 
-	before := map[string]any{"lifecycle": from}
-	after := map[string]any{"lifecycle": to, auditKeySource: "signal"}
+	before := map[string]any{filterStatus: from}
+	after := map[string]any{filterStatus: to, auditKeySource: "signal"}
 	auditID, err := storekit.Audit(ctx, tx, actionUpdate, "company", companyID.UUID, before, after)
 	if err != nil {
 		return false, fmt.Errorf("contacts: auditing the stage change: %w", err)

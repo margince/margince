@@ -249,7 +249,7 @@ func (s dailySeeder) companies() {
 	            FROM generate_series(1, $6) AS i) c`,
 		s.reps, dailyOwnerSkew, dailyCompanyStems, dailyCompanySectors, dailyCompanySuffixes, s.n.Companies)
 	s.analyze("daily_seed_company")
-	s.exec("company", `INSERT INTO company (id, display_name, legal_name, industry, size_band, owner_id, lifecycle,
+	s.exec("company", `INSERT INTO company (id, display_name, legal_name, industry, size_band, owner_id, status,
 	                                       address_city, address_country, source, captured_by, created_at)
 	      SELECT c.id, c.stem || ' ' || c.suffix, c.stem || ' ' || c.suffix,
 	             ($1::text[])[1 + c.i % cardinality($1::text[])],

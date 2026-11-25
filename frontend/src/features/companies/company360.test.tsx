@@ -135,7 +135,7 @@ describe("company view — withheld sections", () => {
         health: undefined,
         sections_omitted: ["health"],
         state_strip: {
-          account: { lifecycle: "prospect", relationship_types: [] },
+          account: { status: "prospect", relationship_types: [] },
         },
       }),
     );
@@ -160,7 +160,7 @@ describe("company view — withheld sections", () => {
       view({
         health: {},
         state_strip: {
-          account: { lifecycle: "prospect", relationship_types: [] },
+          account: { status: "prospect", relationship_types: [] },
         },
       }),
     );

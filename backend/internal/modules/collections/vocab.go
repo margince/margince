@@ -270,10 +270,13 @@ var segmentEngines = map[string]storekit.Query{
 			ownerTeamIDField: ownerTeamField,
 			"industry":       {Expr: "t.industry", Type: storekit.FieldPicklist, Options: industryValues},
 			"size_band":      {Expr: "t.size_band", Type: storekit.FieldPicklist, Options: sizeBandValues},
-			"lifecycle":      {Expr: "t.lifecycle", Type: storekit.FieldPicklist, Options: lifecycleValues},
+			"status":         {Expr: "t.status", Type: storekit.FieldPicklist, Options: lifecycleValues},
+			// The name status had before its rename, kept so a saved segment
+			// that says it still evaluates. Named in retiredCoreFields below.
+			"lifecycle": {Expr: "t.status", Type: storekit.FieldPicklist},
 			// RETIRED with the column (ADR-0079/A124), and kept here for the one
-			// release it survives: a saved segment written against it must keep
-			// evaluating until its author has moved it to lifecycle. Dropping the
+			// release it survives. A saved segment written against it must keep
+			// evaluating until its author moves it to status. Dropping the
 			// field would turn every such list into an error at read time, which
 			// is a worse answer than a stale one. Named in retiredCoreFields
 			// below, so no surface OFFERS it for a new clause.
@@ -318,7 +321,8 @@ var segmentEngines = map[string]storekit.Query{
 			// a fresh dependency on a column that is going away.
 			"company_industry":  customerField("industry", storekit.FieldPicklist, industryValues...),
 			"company_size_band": customerField("size_band", storekit.FieldPicklist, sizeBandValues...),
-			"company_lifecycle": customerField("lifecycle", storekit.FieldPicklist, lifecycleValues...),
+			"company_status":    customerField("status", storekit.FieldPicklist, lifecycleValues...),
+			"company_lifecycle": customerField("status", storekit.FieldPicklist),
 			"company_country":   customerField("address_country", storekit.FieldText),
 			// The products a deal sells, from its accepted offer or set by hand.
 			"product_id": productLinkField("EXISTS (SELECT 1 FROM deal_product dp WHERE dp.deal_id = t.id AND %s)"),
@@ -373,8 +377,9 @@ var segmentEngines = map[string]storekit.Query{
 // Keyed by resource rather than by bare name: two resources may legitimately
 // carry a field of the same name where only one of them has retired it.
 var retiredCoreFields = map[string]map[string]bool{
-	// ADR-0079/A124 replaced it with lifecycle.
-	typeCompany: {"classification": true},
+	// ADR-0079/A124 replaced classification; lifecycle is status under its old name.
+	typeCompany: {"classification": true, "lifecycle": true},
+	typeDeal:    {"company_lifecycle": true},
 }
 
 // SegmentEngine returns the ONE predicate engine for a filterable resource: the

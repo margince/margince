@@ -300,7 +300,7 @@ BEGIN
   SELECT conn, unlinked.id, free.external_id, 'seed', 'system', 'system:seed'
     FROM (SELECT c.id, row_number() OVER (ORDER BY c.created_at, c.id) AS n
             FROM company c
-           WHERE c.archived_at IS NULL AND c.lifecycle = 'customer'
+           WHERE c.archived_at IS NULL AND c.status = 'customer'
              AND NOT EXISTS (SELECT 1 FROM finance_customer_link l
                               WHERE l.connection_id = conn AND l.company_id = c.id
                                 AND l.archived_at IS NULL)) unlinked
@@ -314,7 +314,7 @@ BEGIN
 
   SELECT count(*) INTO unmatched
     FROM company c
-   WHERE c.archived_at IS NULL AND c.lifecycle = 'customer'
+   WHERE c.archived_at IS NULL AND c.status = 'customer'
      AND NOT EXISTS (SELECT 1 FROM finance_customer_link l
                       WHERE l.connection_id = conn AND l.company_id = c.id
                         AND l.archived_at IS NULL);

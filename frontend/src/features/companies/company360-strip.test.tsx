@@ -33,7 +33,7 @@ const company: components["schemas"]["Company"] = {
 };
 
 const customer: StateStripSection = {
-  account: { lifecycle: "customer", relationship_types: ["customer"] },
+  account: { status: "customer", relationship_types: ["customer"] },
   commercial: {
     open_count: 1,
     stalled_count: 0,
@@ -47,7 +47,7 @@ const customer: StateStripSection = {
 
 const prospect: StateStripSection = {
   ...customer,
-  account: { lifecycle: "prospect", relationship_types: [] },
+  account: { status: "prospect", relationship_types: [] },
 };
 
 function view(overrides: Partial<Company360> = {}): Company360 {

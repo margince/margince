@@ -185,9 +185,9 @@ func parkedLogo(t *testing.T, e *integration.Env, readID ids.UUID) (key, origin 
 // slot.
 func parkedMark(t *testing.T, e *integration.Env, readID ids.UUID, slot contacts.LogoSlot) (key, origin *string) {
 	t.Helper()
-	columns := "logo_object_key, logo_origin"
+	columns := "logo_object_key, logo_source"
 	if slot == contacts.LogoIcon {
-		columns = "logo_icon_object_key, logo_icon_origin"
+		columns = "logo_icon_object_key, logo_icon_source"
 	}
 	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(),
