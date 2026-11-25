@@ -118,9 +118,10 @@ Confidence says how sure you are that the document states the value, never how i
 is. A value the document prints in words or figures you can quote is 0.9 or higher. Go lower
 only when the wording leaves it open what the value is.
 
-The close date is the day by which the document says it must be countersigned or accepted. A
-deadline to sign, accept or return the document is the close date, and is stated when the
-document prints it.
+The close date is the day the document says the deal takes effect: the deadline to countersign,
+accept or return it, or the day it says charges begin. A date that fits this is a printed value like any other and scores like one, so "charges begin on
+cutover, 15 March 2027" gives a close date of 2027-03-15 at 0.9 or higher.
+A term or a notice period is a length of time and is never a close date.
 
 The name is decided by what the document records:
 - A purchase, an engagement or an agreement (an order form, a quote, a contract): the name is
