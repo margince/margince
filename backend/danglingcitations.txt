@@ -57,7 +57,6 @@ backend/internal/compose/channelproviderfacts_test.go migration 0247
 backend/internal/compose/commsscheduled.go core 0260
 backend/internal/compose/company360/dismissal.go core 0225
 backend/internal/compose/company360/viewbaseline.go core 0225
-backend/internal/compose/companybrief/service.go core 0225
 backend/internal/compose/companydossier/evidence.go migration 0099
 backend/internal/compose/companydossier/growthfit.go migration 0194
 backend/internal/compose/companyrollup_test.go core 0006

@@ -21426,6 +21426,9 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "worklist.manager.kind.next_step": "Bước tiếp theo của deal",
   "worklist.manager.kind.review_backlog": "Tồn đọng cần xem lại",
   "worklist.manager.kind.general": "Khác",
+  "worklist.manager.coachDeal": "Deal liên quan",
+  "worklist.manager.coachNoDeal":
+    "Không có deal nào trong ngày của họ để chọn.",
   "worklist.board.title": "Việc của nhóm cần chú ý",
   "worklist.gap.rankedOn": "Xếp hạng ngày {date}.",
   "worklist.gap.masked_one":
@@ -22554,6 +22557,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "magic.why.site_read_unnamed": "Đọc trên trang web của công ty.",
   "magic.why.site_read_each": "Đọc trên trang web riêng của từng công ty.",
   "magic.why.signature": "Lấy từ chữ ký email.",
+  "magic.why.stated": "Lý do đã nêu: {why}",
   "magic.why.retention": "Quy tắc lưu trữ: sau {days} ngày.",
   "magic.by.retention": "Quy tắc lưu trữ",
   "magic.by.mail_filing": "Xếp email",

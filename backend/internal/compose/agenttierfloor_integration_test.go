@@ -112,7 +112,7 @@ func TestATightenedUpdateAlsoHoldsBackTheToolDoor(t *testing.T) {
 	project := seedProjectForTierFloor(human, t, native, company)
 
 	_, err := registry.Invoke(tierFloorAgent(t, e), "update_record",
-		json.RawMessage(`{"record_type":"project","id":"`+project.String()+
+		json.RawMessage(`{"why":"A test asks for this change.","record_type":"project","id":"`+project.String()+
 			`","fields":{"name":"Renamed without asking"}}`))
 	if !refusedForWantOfAPassport(err) {
 		t.Errorf("update_record{project} answered %v, want the floor to hold the patch back", err)
@@ -137,7 +137,7 @@ func TestAnOrdinaryCompanyPatchStillRunsUnattended(t *testing.T) {
 	company := seedCompanyForTierFloor(human, t, native)
 
 	if _, err := registry.Invoke(tierFloorAgent(t, e), "update_record",
-		json.RawMessage(`{"record_type":"company","id":"`+company.String()+
+		json.RawMessage(`{"why":"A test asks for this change.","record_type":"company","id":"`+company.String()+
 			`","fields":{"industry":"Logistics"}}`)); err != nil {
 		t.Fatalf("an ordinary company patch answered %v, want it to run — the contract "+
 			"declares updateCompany auto-execute, and tightening it here would make the tool "+
