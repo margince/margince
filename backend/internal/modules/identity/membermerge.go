@@ -67,7 +67,7 @@ func mergeSideState(sourceUsed bool, status string, token *mergeToken) string {
 }
 
 // mergeSideSuspended reports a side that is neither deactivated nor able to take
-// a mailed link: a suspended account is locked out, so its holder can confirm
+// a mailed link. A suspended account is locked out, so its holder can confirm
 // nothing until an administrator reactivates or deactivates it.
 func mergeSideSuspended(status string) bool {
 	return !alreadyDeactivated(status) && status != userStatusActive && status != userStatusInvited
@@ -78,10 +78,19 @@ func stillOpen(state string) bool {
 	return state == confirmationRequested || state == confirmationNotRequested
 }
 
+// mergeRole is the part an account plays in the merge a token confirms. A
+// confirmation of A into B says nothing about B into A.
+type mergeRole bool
+
+const (
+	roleSource   mergeRole = false
+	roleSurvivor mergeRole = true
+)
+
 // readMergeToken reads the live token side holds for a merge with other in the
-// given role (survivor or source: a confirmation of A into B says nothing about B
-// into A), preferring a confirmed one. Locked when the caller is about to rely on it.
-func readMergeToken(ctx context.Context, tx pgx.Tx, side, other ids.UUID, survivor, lock bool) (*mergeToken, error) {
+// given role, preferring a confirmed one. It locks the row when the caller is
+// about to rely on it.
+func readMergeToken(ctx context.Context, tx pgx.Tx, side, other ids.UUID, survivor mergeRole, lock bool) (*mergeToken, error) {
 	query := `SELECT id, used_at IS NOT NULL FROM auth_token
  WHERE user_id = @side AND counterpart_user_id = @other AND merge_survivor = @survivor AND purpose = @purpose AND expires_at > now()
  ORDER BY (used_at IS NOT NULL) DESC, created_at DESC, id DESC LIMIT 1`
@@ -89,7 +98,7 @@ func readMergeToken(ctx context.Context, tx pgx.Tx, side, other ids.UUID, surviv
 		query += " FOR UPDATE"
 	}
 	var token mergeToken
-	err := tx.QueryRow(ctx, query, pgx.StrictNamedArgs{"side": side, "other": other, "survivor": survivor, "purpose": purposeMemberMergeConfirm}).
+	err := tx.QueryRow(ctx, query, pgx.StrictNamedArgs{"side": side, "other": other, "survivor": bool(survivor), "purpose": purposeMemberMergeConfirm}).
 		Scan(&token.ID, &token.Confirmed)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return nil, nil
@@ -122,7 +131,7 @@ func applyMergeConfirmations(
 	confirmations := make([]crmcontracts.MemberMergeConfirmation, 0, len(sides))
 	open, suspended := false, false
 	for _, s := range sides {
-		token, err := readMergeToken(ctx, tx, s.id, s.of, s.side == "survivor", lock)
+		token, err := readMergeToken(ctx, tx, s.id, s.of, mergeRole(s.side == "survivor"), lock)
 		if err != nil {
 			return err
 		}
@@ -226,9 +235,9 @@ func (s *Service) requestMemberMergeTx(
 		if !stillOpen(string(side.State)) {
 			continue
 		}
-		other, survivor := target, false
+		other, survivor := target, roleSource
 		if ids.UUID(side.UserId) == target {
-			other, survivor = source.UUID, true
+			other, survivor = source.UUID, roleSurvivor
 		}
 		link, err := mintMergeConfirmation(ctx, tx, ids.UUID(side.UserId), other, survivor)
 		if err != nil {
@@ -250,7 +259,7 @@ var (
 // mintMergeConfirmation supersedes the side's open link for this pair, mints a
 // new one, and records the request on the side's account. The address the mail
 // goes to is read here, under the transaction's locks.
-func mintMergeConfirmation(ctx context.Context, tx pgx.Tx, side, other ids.UUID, survivor bool) (MergeConfirmationLink, error) {
+func mintMergeConfirmation(ctx context.Context, tx pgx.Tx, side, other ids.UUID, survivor mergeRole) (MergeConfirmationLink, error) {
 	raw, hash, err := mintSessionToken()
 	if err != nil {
 		return MergeConfirmationLink{}, err
@@ -261,21 +270,21 @@ func mintMergeConfirmation(ctx context.Context, tx pgx.Tx, side, other ids.UUID,
 	}
 	if _, err := tx.Exec(ctx, `UPDATE auth_token SET `+expireTokenSQL+`
  WHERE user_id = @side AND counterpart_user_id = @other AND merge_survivor = @survivor AND purpose = @purpose AND used_at IS NULL AND expires_at > now()`,
-		pgx.StrictNamedArgs{"side": side, "other": other, "survivor": survivor, "purpose": purposeMemberMergeConfirm}); err != nil {
+		pgx.StrictNamedArgs{"side": side, "other": other, "survivor": bool(survivor), "purpose": purposeMemberMergeConfirm}); err != nil {
 		return link, err
 	}
 	var tokenID ids.UUID
 	var expires time.Time
 	if err := tx.QueryRow(ctx, `INSERT INTO auth_token (user_id, counterpart_user_id, merge_survivor, purpose, token_hash, expires_at, mail_queued_at)
  VALUES (@side, @other, @survivor, @purpose, @hash, now() + @ttl::interval, now()) RETURNING id, expires_at`,
-		pgx.StrictNamedArgs{"side": side, "other": other, "survivor": survivor, "purpose": purposeMemberMergeConfirm, "hash": hash, "ttl": mergeConfirmTTL.String()}).
+		pgx.StrictNamedArgs{"side": side, "other": other, "survivor": bool(survivor), "purpose": purposeMemberMergeConfirm, "hash": hash, "ttl": mergeConfirmTTL.String()}).
 		Scan(&tokenID, &expires); err != nil {
 		return link, err
 	}
 	// Audit-only: the closed event catalog has no member-merge type, and a
 	// confirmation request changes nothing a subscriber could act on.
 	_, err = storekit.Audit(ctx, tx, "invite", "user", side, nil, map[string]any{
-		"purpose": purposeMemberMergeConfirm, "counterpart_user_id": other, "merge_survivor": survivor, "token_id": tokenID, "expires_at": expires,
+		"purpose": purposeMemberMergeConfirm, "counterpart_user_id": other, "merge_survivor": bool(survivor), "token_id": tokenID, "expires_at": expires,
 	})
 	return link, err
 }
