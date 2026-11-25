@@ -45,7 +45,7 @@ func insertLoggedActivityRow(ctx context.Context, tx pgx.Tx, in LogActivityInput
 	})
 	args = append(args, entity)
 	entityHolder := storekit.SQLf("$%d", len(args))
-	args = append(args, mailquote.OwnEnd(in.Kind, in.Body))
+	args = append(args, mailquote.OwnEnd(in.Kind, deref(in.Subject), in.Body))
 	ownEndHolder := storekit.SQLf(", $%d", len(args))
 	args = append(args, orWallClock(in.recordedAt))
 	undated := occurredday.UndatedSQL(storekit.SQLf("$%d", len(args)))

@@ -46,7 +46,23 @@ var (
 	replyPrefixes = regexp.MustCompile(`(?i)` + ReplyPrefixPattern())
 	innerSpaces   = regexp.MustCompile(`\s+`)
 	anyPrefixes   = regexp.MustCompile(`^(\s*(` + strings.Join(PrefixWords(), "|") + `)\s*:)+\s*`)
+	outerForward  = regexp.MustCompile(`(?i)^[\s\x{00A0}]*(` + strings.Join(forwardWords(), "|") + `)[\s\x{00A0}]*:`)
 )
+
+// IsForward reports whether the subject's outermost prefix marks a forward.
+// Its spaces are the ASCII ones and U+00A0, as the browser's mirror reads them.
+// "Re: Fwd:" answers a forward, so it is a reply.
+func IsForward(subject string) bool {
+	return outerForward.MatchString(subject)
+}
+
+func forwardWords() []string {
+	words := make([]string, 0, len(ForwardPrefixes()))
+	for _, prefix := range ForwardPrefixes() {
+		words = append(words, strings.TrimSuffix(prefix, ":"))
+	}
+	return words
+}
 
 // PrefixWords are the reply and forward prefixes without their colon, for a
 // reader that matches whole words rather than a subject's start.
