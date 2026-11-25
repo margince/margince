@@ -1084,7 +1084,7 @@ The 32 tables owned by `activities`, as the migrations build them. [Back to the 
 
 ## booking_page
 
-7 columns · primary key `(id)` · referenced by 1 foreign key
+8 columns · primary key `(id)` · referenced by 2 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -1094,6 +1094,7 @@ The 32 tables owned by `activities`, as the migrations build them. [Back to the 
 | `revoked_at` | `timestamp with time zone` |  |  |
 | `scheduling_policy` | `jsonb` |  |  |
 | `slug` | `text` | yes |  |
+| `team_link` | `boolean`, default `false` | yes |  |
 | `created_at` | `timestamp with time zone`, default `now()` | yes | When the row was created. Set once. |
 
 **Points at**
@@ -1108,6 +1109,7 @@ The 32 tables owned by `activities`, as the migrations build them. [Back to the 
 
 **Indexes**
 
+- `booking_page_one_personal_per_host`: `unique, btree (host_user_id) WHERE ((revoked_at IS NULL) AND (NOT team_link))`
 - `booking_page_pkey`: `unique, btree (id)`
 - `booking_page_slug_key`: `unique, btree (slug)`
 - `idx_booking_page_host_user`: `btree (host_user_id)`
@@ -1235,7 +1237,7 @@ The 32 tables owned by `activities`, as the migrations build them. [Back to the 
 
 ## meeting_invitation
 
-22 columns · primary key `(activity_id)` · referenced by 1 foreign key
+23 columns · primary key `(activity_id)` · referenced by 1 foreign key
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -1244,6 +1246,7 @@ The 32 tables owned by `activities`, as the migrations build them. [Back to the 
 | `attempts` | `integer`, default `0` | yes |  |
 | `attention_episode` | `uuid` |  |  |
 | `attention_reason` | `text` |  | Why a `needs_attention` invitation waits. |
+| `booking_page_id` | `uuid` |  | Points at `booking_page.id`. |
 | `calendar_id` | `text` | yes |  |
 | `cleanup_complete` | `boolean`, default `false` | yes |  |
 | `command` | `text`, default `'create'::text` | yes | One of `create`, `update`, `cancel`. |
@@ -1267,6 +1270,7 @@ The 32 tables owned by `activities`, as the migrations build them. [Back to the 
 | Columns | Table | When the parent goes |
 |---|---|---|
 | `activity_id` | `activity` | deleting the parent deletes this row |
+| `booking_page_id` | `booking_page` | deleting the parent keeps this row and clears the link |
 | `host_user_id` | `app_user` | the parent cannot be deleted while this row points at it |
 
 **Rules**
@@ -1281,6 +1285,7 @@ The 32 tables owned by `activities`, as the migrations build them. [Back to the 
 
 **Indexes**
 
+- `meeting_invitation_booking_page_idx`: `btree (booking_page_id)`
 - `meeting_invitation_due`: `btree (next_attempt_at) WHERE (status = ANY (ARRAY['pending', 'rescheduling', 'canceling']))`
 - `meeting_invitation_management_hash_key`: `unique, btree (management_hash)`
 - `meeting_invitation_pkey`: `unique, btree (activity_id)`

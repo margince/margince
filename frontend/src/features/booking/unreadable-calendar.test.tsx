@@ -59,6 +59,7 @@ function routes(extra = {}) {
     "GET /scheduling/profile": () => jsonResponse(profile),
     "GET /scheduling/calendars": () => jsonResponse(calendars),
     "GET /scheduling/team-candidates": () => jsonResponse([]),
+    "GET /scheduling/team-links": () => jsonResponse([]),
     "GET /scheduling/team-requests": () => jsonResponse([]),
     "GET /availability": () => unreadable(),
     ...extra,
