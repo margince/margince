@@ -11,20 +11,26 @@ import {
   Disclosure,
   EmptyState,
   Field,
+  Textarea,
   TextInput,
 } from "../../design-system/atoms";
 import { Callout } from "../../design-system/callout";
 import { Heading } from "../../design-system/heading";
 import { Panel, PanelBody, PanelIntro } from "../../design-system/panel";
-import { QueryStates } from "../../design-system/querystates";
+import { QueryGate, QueryStates } from "../../design-system/querystates";
 import { Meter } from "../../design-system/readings";
 import { RecordFormDialog } from "../../design-system/recordformdialog";
+import { useSaveDraft } from "../../design-system/savepage";
 import { SettingList, SettingRow } from "../../design-system/settingrow";
 import { formatDateTime, formatNumber } from "../../format/format";
 import { lockFor } from "../../format/settinglocks";
 import { useLocale, usePlural, useT } from "../../i18n";
 import { useCan, useCanWrite } from "../../lib/capability";
-import { problemMessageOf, unwrap } from "../../lib/problem";
+import {
+  problemFieldSentencesOf,
+  problemMessageOf,
+  unwrap,
+} from "../../lib/problem";
 import { wholeNumberFault } from "../../lib/wholenumber";
 import { AiFeatureTable } from "./ai-feature-table";
 import { formatTokens } from "./tokens";
@@ -33,6 +39,11 @@ import "./ai-admin.css";
 type Budget = components["schemas"]["AiBudgetSnapshot"];
 type Change = components["schemas"]["AiBudgetChange"];
 type Deferred = components["schemas"]["AiDeferredWork"];
+type TeamRules = components["schemas"]["AiTeamRules"];
+
+const TEAM_RULES_KEY = ["ai-team-rules"];
+// The maxLength of text in crm.yaml (AiTeamRules).
+const TEAM_RULES_MAX_LENGTH = 20000;
 
 export function useAiStatus(enabled: boolean) {
   return useQuery({
@@ -458,5 +469,85 @@ function DeferredWork({ rows }: Readonly<{ rows: Deferred[] }>) {
       </ul>
       <p>{t("aiAdmin.recovery")}</p>
     </Disclosure>
+  );
+}
+
+/** Settings → AI → Rules: the one text every AI draft in the workspace follows. */
+export function TeamRulesCard() {
+  const t = useT();
+  const query = useQuery({
+    queryKey: TEAM_RULES_KEY,
+    queryFn: async () => {
+      const data = unwrap(await api.GET("/ai/team-rules"));
+      if (!data) throw new Error("Team rules are unavailable");
+      return data;
+    },
+  });
+  return (
+    <QueryGate query={query} pendingLabel={t("teamRules.title")}>
+      {(rules) => <TeamRulesEditor rules={rules} />}
+    </QueryGate>
+  );
+}
+
+function TeamRulesEditor({ rules }: Readonly<{ rules: TeamRules }>) {
+  const t = useT();
+  const { locale } = useLocale();
+  const client = useQueryClient();
+  const canEdit = useCanWrite("ai_team_rules", "update");
+  const [draft, setDraft] = useState<string | null>(null);
+  const text = draft ?? rules.text;
+  const save = useMutation({
+    mutationFn: async (next: string) =>
+      unwrap(
+        await api.PUT("/ai/team-rules", {
+          body: { text: next, expected_updated_at: rules.updated_at },
+        }),
+      ),
+    onSuccess: (data) => client.setQueryData(TEAM_RULES_KEY, data),
+  });
+  useSaveDraft({
+    dirty: text !== rules.text,
+    save: async () => {
+      await save.mutateAsync(text);
+      setDraft(null);
+    },
+    placed: ["text"],
+    discard: () => setDraft(null),
+  });
+  const faults = problemFieldSentencesOf(save.error, locale);
+  return (
+    <Panel title={t("teamRules.title")}>
+      <PanelBody className="form-stack">
+        <PanelIntro>{t("teamRules.intro")}</PanelIntro>
+        <Field
+          label={t("teamRules.label")}
+          hint={t("teamRules.length", {
+            used: formatNumber(text.length, locale),
+            max: formatNumber(TEAM_RULES_MAX_LENGTH, locale),
+          })}
+          error={faults.get("text")}
+        >
+          {(control) => (
+            <Textarea
+              {...control}
+              rows={12}
+              maxLength={TEAM_RULES_MAX_LENGTH}
+              disabled={!canEdit || save.isPending}
+              value={text}
+              onChange={(event) => setDraft(event.target.value)}
+            />
+          )}
+        </Field>
+        <p className="t-caption">
+          {rules.updated_at
+            ? t("teamRules.savedBy", {
+                who: rules.updated_by ?? t("teamRules.unknownEditor"),
+                when: formatDateTime(rules.updated_at, locale, "UTC"),
+              })
+            : t("teamRules.none")}
+        </p>
+      </PanelBody>
+    </Panel>
   );
 }

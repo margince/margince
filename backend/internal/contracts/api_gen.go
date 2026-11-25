@@ -36401,6 +36401,24 @@ type AiTaskSettings struct {
 	Thinking *string `json:"thinking,omitempty"`
 }
 
+// AiTeamRules defines model for AiTeamRules.
+type AiTeamRules struct {
+	Text string `json:"text"`
+
+	// UpdatedAt When the text was last saved. Left out while none was saved.
+	UpdatedAt *time.Time `json:"updated_at,omitempty"`
+
+	// UpdatedBy Who saved it last. Left out while none was saved.
+	UpdatedBy *string `json:"updated_by,omitempty"`
+}
+
+// AiTeamRulesChange defines model for AiTeamRulesChange.
+type AiTeamRulesChange struct {
+	// ExpectedUpdatedAt The updated_at the editor read. Left out when the editor read no saved version.
+	ExpectedUpdatedAt *time.Time `json:"expected_updated_at,omitempty"`
+	Text              string     `json:"text"`
+}
+
 // AiTierBinding One tier's binding. A key this schema does not declare is refused with a 422 naming its
 // path, on every routing write.
 type AiTierBinding struct {
@@ -86363,6 +86381,9 @@ type ReplaceAiTaskOverridesJSONRequestBody = AiTaskOverrides
 // PreviewAiTaskOverridesJSONRequestBody defines body for PreviewAiTaskOverrides for application/json ContentType.
 type PreviewAiTaskOverridesJSONRequestBody = AiTaskOverrides
 
+// ReplaceAiTeamRulesJSONRequestBody defines body for ReplaceAiTeamRules for application/json ContentType.
+type ReplaceAiTeamRulesJSONRequestBody = AiTeamRulesChange
+
 // AssessSalesReviewJSONRequestBody defines body for AssessSalesReview for application/json ContentType.
 type AssessSalesReviewJSONRequestBody = SalesAssessmentRequest
 
@@ -101602,6 +101623,12 @@ type ServerInterface interface {
 	// Judge a draft of the overrides without saving it (ai_routing read and update).
 	// (POST /ai/task-overrides/preview)
 	PreviewAiTaskOverrides(w http.ResponseWriter, r *http.Request)
+	// Read the team rules every AI draft follows (ai_team_rules read).
+	// (GET /ai/team-rules)
+	GetAiTeamRules(w http.ResponseWriter, r *http.Request)
+	// Replace the team rules every AI draft follows (ai_team_rules update).
+	// (PUT /ai/team-rules)
+	ReplaceAiTeamRules(w http.ResponseWriter, r *http.Request)
 	// AI usage + budget — the spend is never invisible.
 	// (GET /ai/usage)
 	GetAiUsage(w http.ResponseWriter, r *http.Request, params GetAiUsageParams)
@@ -105322,6 +105349,18 @@ func (_ Unimplemented) ReplaceAiTaskOverrides(w http.ResponseWriter, r *http.Req
 // Judge a draft of the overrides without saving it (ai_routing read and update).
 // (POST /ai/task-overrides/preview)
 func (_ Unimplemented) PreviewAiTaskOverrides(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Read the team rules every AI draft follows (ai_team_rules read).
+// (GET /ai/team-rules)
+func (_ Unimplemented) GetAiTeamRules(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Replace the team rules every AI draft follows (ai_team_rules update).
+// (PUT /ai/team-rules)
+func (_ Unimplemented) ReplaceAiTeamRules(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -115391,6 +115430,46 @@ func (siw *ServerInterfaceWrapper) PreviewAiTaskOverrides(w http.ResponseWriter,
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.PreviewAiTaskOverrides(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetAiTeamRules operation middleware
+func (siw *ServerInterfaceWrapper) GetAiTeamRules(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetAiTeamRules(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ReplaceAiTeamRules operation middleware
+func (siw *ServerInterfaceWrapper) ReplaceAiTeamRules(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ReplaceAiTeamRules(w, r)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -162466,6 +162545,12 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/ai/task-overrides/preview", wrapper.PreviewAiTaskOverrides)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/ai/team-rules", wrapper.GetAiTeamRules)
+	})
+	r.Group(func(r chi.Router) {
+		r.Put(options.BaseURL+"/ai/team-rules", wrapper.ReplaceAiTeamRules)
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/ai/usage", wrapper.GetAiUsage)

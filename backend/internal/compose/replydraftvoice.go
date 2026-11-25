@@ -77,11 +77,11 @@ func (d replyDrafter) voicedDraft(ctx context.Context, anchor ids.UUID, data rep
 	// subject line names it on the rail, so a failed draft names its thread.
 	ctx = ai.WithSubject(ctx, ids.From[ids.ActivityKind](anchor).Ref(), data.Subject)
 	if !voice.OK {
-		draft, err := d.completeChecked(ctx, data, nil)
+		draft, err := d.completeChecked(ctx, data, voice.TeamRules, nil)
 		return draft, nil, nil, err
 	}
 	block := voice.Block
-	draft, err := d.completeChecked(ctx, data, block)
+	draft, err := d.completeChecked(ctx, data, voice.TeamRules, block)
 	if err != nil {
 		return replyDraft{}, nil, nil, err
 	}
@@ -93,9 +93,9 @@ func (d replyDrafter) voicedDraft(ctx context.Context, anchor ids.UUID, data rep
 		withFeedback := func(fence promptfence.Fence) string {
 			return block(fence) + draftvoice.Feedback(violations)
 		}
-		retried, retryErr := d.complete(ctx, data, withFeedback)
+		retried, retryErr := d.completeWith(ctx, data, voice.TeamRules, withFeedback, "")
 		if retryErr != nil {
-			// This is the one call in the lane that goes to d.complete rather
+			// This is the one call in the lane that goes to d.completeWith rather
 			// than completeChecked, so draftRetryLog never sees it: unlogged,
 			// the failure is recorded nowhere at all. Keeping the first draft
 			// is the right answer — the re-check below still decides whether
@@ -115,7 +115,7 @@ func (d replyDrafter) voicedDraft(ctx context.Context, anchor ids.UUID, data rep
 		// The voice-styled draft kept tripping the floor: serve the plain
 		// draft instead and let the failure feed the learning panel.
 		d.recordVoiceRejection(ctx, voice, anchor, draft)
-		plain, plainErr := d.completeChecked(ctx, data, nil)
+		plain, plainErr := d.completeChecked(ctx, data, voice.TeamRules, nil)
 		return plain, nil, nil, plainErr
 	}
 	ref := voiceDraftRef(voice, anchor, draft)

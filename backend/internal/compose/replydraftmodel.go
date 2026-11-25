@@ -77,7 +77,7 @@ func replyDraftSystemFor(fence promptfence.Fence, voiced bool) string {
 // same invocation site: same schema, same bounds, same data boundary.
 //
 //promptvoice:exempt the reply is an email sent to a customer under the user's own name, and draftrules carries that user's voice; Margince's register belongs to what it says TO the user, never to what it writes AS them.
-func replyDraftRequest(activity replyActivityData, voiceBlock voiceBlockFor, correction string) (model.Request, error) {
+func replyDraftRequest(activity replyActivityData, teamRules string, voiceBlock voiceBlockFor, correction string) (model.Request, error) {
 	payload, err := json.Marshal(activity)
 	if err != nil {
 		return model.Request{}, fmt.Errorf("compose: encode reply activity context: %w", err)
@@ -91,6 +91,7 @@ func replyDraftRequest(activity replyActivityData, voiceBlock voiceBlockFor, cor
 	if voiceBlock != nil {
 		content = voiceBlock(fence) + "\n\n" + content
 	}
+	content = draftvoice.WithTeamRules(fence, teamRules, content)
 	// The correction rides the USER turn and never the variant choice: it is
 	// feedback about one attempt, and a plain draft told to fix a phrase must
 	// stay a plain draft rather than silently becoming a voiced one.
@@ -108,13 +109,9 @@ func replyDraftRequest(activity replyActivityData, voiceBlock voiceBlockFor, cor
 	}, nil
 }
 
-func (d replyDrafter) complete(ctx context.Context, activity replyActivityData, voiceBlock voiceBlockFor) (replyDraft, error) {
-	return d.completeWith(ctx, activity, voiceBlock, "")
-}
-
-// completeWith is complete plus the correction a retry carries.
-func (d replyDrafter) completeWith(ctx context.Context, activity replyActivityData, voiceBlock voiceBlockFor, correction string) (replyDraft, error) {
-	req, err := replyDraftRequest(activity, voiceBlock, correction)
+// completeWith asks once. The correction is what a retry carries about the last attempt.
+func (d replyDrafter) completeWith(ctx context.Context, activity replyActivityData, teamRules string, voiceBlock voiceBlockFor, correction string) (replyDraft, error) {
+	req, err := replyDraftRequest(activity, teamRules, voiceBlock, correction)
 	if err != nil {
 		return replyDraft{}, err
 	}
@@ -140,14 +137,14 @@ func (d replyDrafter) completeWith(ctx context.Context, activity replyActivityDa
 // The voice block rides along unchanged: it selects the system variant, and the
 // correction rides the user turn, so a plain draft told to fix a phrase stays a
 // plain draft rather than silently becoming a voiced one.
-func (d replyDrafter) completeChecked(ctx context.Context, data replyActivityData, voiceBlock voiceBlockFor) (replyDraft, error) {
+func (d replyDrafter) completeChecked(ctx context.Context, data replyActivityData, teamRules string, voiceBlock voiceBlockFor) (replyDraft, error) {
 	record := draftcheck.Grounds{
 		Booked: data.Booked(), Met: draftcheck.IntentNamesMeeting(data.Intent),
 		FirstName: data.Recipient, LastName: data.RecipientLastName,
 	}
 	draft, err := draftcore.CorrectOnce(ctx, data.Lang(), data.Band(), record,
 		func(ctx context.Context, correction string) (replyDraft, error) {
-			return d.completeWith(ctx, data, voiceBlock, correction)
+			return d.completeWith(ctx, data, teamRules, voiceBlock, correction)
 		},
 		// The reply site returns no reasoning: its schema is subject and body
 		// alone, so there is no second channel to judge here.

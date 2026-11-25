@@ -14,10 +14,11 @@ import {
 import userEvent from "@testing-library/user-event";
 import { afterEach, expect, it, vi } from "vitest";
 import { UnsavedGuard, useHasUnsavedChanges } from "../../components/unsaved";
+import { PageSaveBar, SavePageProvider } from "../../design-system/savepage";
 import { LocaleProvider } from "../../i18n";
 import { allowance, feature, status } from "../../testing/ai-admin.testkit";
 import { type GrantSpec, meFixture } from "../../testing/mefixture";
-import { AiBudgetCard } from "./ai-admin";
+import { AiBudgetCard, TeamRulesCard } from "./ai-admin";
 import { AiFeatureTable } from "./ai-feature-table";
 import { openTaskDetails } from "./ai-task-details-testing";
 
@@ -665,4 +666,73 @@ it("hands focus back to Edit when the editor closes", async () => {
   await user.click(screen.getByRole("button", { name: "Save allowance" }));
   await screen.findByText("Allowance saved");
   expect(screen.getByRole("button", { name: "Edit allowance" })).toHaveFocus();
+});
+
+const savedRules = {
+  text: "Never quote a discount.",
+  updated_at: "2026-11-20T10:00:00Z",
+  updated_by: "Ada Admin",
+};
+
+function mountTeamRules(allow: GrantSpec) {
+  const writes: unknown[] = [];
+  vi.stubGlobal(
+    "fetch",
+    vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+      const req = new Request(input, init);
+      const path = new URL(req.url).pathname;
+      let body: unknown = savedRules;
+      if (path.endsWith("/me")) body = meFixture({ allow });
+      else if (req.method === "PUT") {
+        const sent = (await req.json()) as { text: string };
+        writes.push(sent);
+        body = { ...savedRules, text: sent.text };
+      }
+      return new Response(JSON.stringify(body), {
+        headers: { "Content-Type": "application/json" },
+      });
+    }),
+  );
+  const client = new QueryClient({
+    defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
+  });
+  render(
+    <QueryClientProvider client={client}>
+      <LocaleProvider initial="en">
+        <SavePageProvider>
+          <TeamRulesCard />
+          <PageSaveBar />
+        </SavePageProvider>
+      </LocaleProvider>
+    </QueryClientProvider>,
+  );
+  return writes;
+}
+
+it("saves the team rules against the version the editor read", async () => {
+  const user = userEvent.setup();
+  const writes = mountTeamRules({ ai_team_rules: ["read", "update"] });
+  const box = await screen.findByRole("textbox", {
+    name: "Rules for every draft",
+  });
+  expect(box).toHaveValue("Never quote a discount.");
+  expect(screen.getByText(/Last saved by Ada Admin/)).toBeInTheDocument();
+  await waitFor(() => expect(box).toBeEnabled());
+  await user.type(box, " Write licence.");
+  await user.click(screen.getByRole("button", { name: "Save" }));
+  await waitFor(() =>
+    expect(writes).toEqual([
+      {
+        text: "Never quote a discount. Write licence.",
+        expected_updated_at: "2026-11-20T10:00:00Z",
+      },
+    ]),
+  );
+});
+
+it("shows the team rules read-only to a seat that cannot update them", async () => {
+  mountTeamRules({ ai_team_rules: ["read"] });
+  expect(
+    await screen.findByRole("textbox", { name: "Rules for every draft" }),
+  ).toBeDisabled();
 });

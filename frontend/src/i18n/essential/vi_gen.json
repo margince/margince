@@ -4250,6 +4250,7 @@
   "roles.object.voice_profile": "Giọng văn",
   "roles.object.ai_routing": "Định tuyến AI",
   "roles.object.ai_budget": "Hạn mức AI",
+  "roles.object.ai_team_rules": "Quy tắc của nhóm",
   "roles.object.ai_diagnostics": "Mức sử dụng AI",
   "roles.object.ai_model_rate": "Giá mô hình",
   "roles.object.embedding_reindex": "Chỉ mục tìm kiếm",

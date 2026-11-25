@@ -86,6 +86,7 @@ type (
 	privacyHandlers         = privacy.Handlers
 	automationHandlers      = automation.Handlers
 	voiceHandlers           = ai.Handlers
+	teamRulesHandlers       = ai.TeamRulesHandlers
 	customfieldsHandlers    = customfields.Handlers
 	webhooksHandlers        = webhooks.Handlers
 	webFormsHandlers        = webforms.Handlers

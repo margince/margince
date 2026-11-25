@@ -298,6 +298,7 @@ export const SETTINGS_SECTIONS = {
       "aiPriceSync.autoSync.label",
       "aiPriceSync.lastSyncedLabel",
     ],
+    rules: ["settings.part.models.rules", "teamRules.title", "teamRules.label"],
   },
   mcp: [
     "agentClients.methods.title",

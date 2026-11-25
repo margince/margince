@@ -351,6 +351,7 @@ export const SETTINGS_PAGE_VIEWS = {
         import("./followupsettings"),
         import("../ai/ai-price-sync"),
         import("../ai/ai-provider-keys"),
+        import("../ai/ai-admin"),
       ]),
     (
       [
@@ -359,6 +360,7 @@ export const SETTINGS_PAGE_VIEWS = {
         { PrivateMailRequestsCard },
         { ModelPricesCard },
         { AiProviderKeysCard },
+        { TeamRulesCard },
       ],
       { tab },
     ) =>
@@ -371,6 +373,7 @@ export const SETTINGS_PAGE_VIEWS = {
           </>
         ),
         prices: <ModelPricesCard />,
+        rules: <TeamRulesCard />,
       }),
   ),
   mcp: page(

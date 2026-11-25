@@ -191,6 +191,8 @@ func (ownVoice) ActiveVoiceForActor(context.Context) (ai.VoiceProfile, ai.VoiceP
 	return ai.VoiceProfile{}, ai.VoiceProfileVersion{ProfileVersion: 4, VoiceProfileMD: voiceMarker}, true, nil
 }
 
+func (ownVoice) TeamRules(context.Context) (string, error) { return "", nil }
+
 func TestAnEmailRewriteCarriesTheSendersVoiceAndANoteRewriteNone(t *testing.T) {
 	email := &recordingLane{reply: `{"subject": "", "body": "Hello Anna,\n\nCan we talk pricing next week?"}`}
 	got, err := NewService(email, asCompany).WithVoice(ownVoice{}).Rewrite(rep(true), Ask{
@@ -241,5 +243,18 @@ func TestAWordingActionStillKeepsTheMessageItIsGiven(t *testing.T) {
 		if strings.Contains(req.System, "names a different topic or format") {
 			t.Errorf("%s: a wording action may change the topic", verb)
 		}
+	}
+}
+
+func TestTeamRulesReachAnEmailRewriteAndNotANote(t *testing.T) {
+	voice := draftvoice.Context{TeamRules: "Write licence, never license."}
+	about := model.AboutNoContact("team rules")
+	email := Request(Input{Envelope: EnvelopeEmail, Verb: VerbPolish, Body: "hello anna"}, about, voice)
+	note := Request(Input{Envelope: EnvelopeNote, Verb: VerbShorter, Body: "call anna"}, about, voice)
+	if !strings.Contains(email.Messages[0].Content, voice.TeamRules) || !strings.Contains(email.System, draftrules.TeamRules) {
+		t.Error("an email rewrite goes out over the sender's name, so it carries the team rules and says what they rank above")
+	}
+	if strings.Contains(note.Messages[0].Content, voice.TeamRules) || strings.Contains(note.System, draftrules.TeamRules) {
+		t.Error("a note rewrite is read inside the team, so it carries no team rules")
 	}
 }

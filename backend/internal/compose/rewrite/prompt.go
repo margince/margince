@@ -66,10 +66,16 @@ func Request(in Input, about *model.Subjects, voice draftvoice.Context) model.Re
 	fence := promptfence.New()
 	var prompt strings.Builder
 	system := systemPrompt + "\n\n" + envelopeRules[in.Envelope]
-	// Only an email goes out over the sender's name, so only it takes their voice.
-	if in.Envelope == EnvelopeEmail && voice.OK {
-		system += "\n\n" + draftvoice.SystemRule
-		prompt.WriteString(voice.Block(fence) + "\n\n")
+	// Only an email goes out over the sender's name, so only it takes their voice
+	// and the team rules.
+	if in.Envelope == EnvelopeEmail {
+		system += "\n\n" + draftrules.TeamRules
+		if voice.OK {
+			system += "\n\n" + draftvoice.SystemRule
+		}
+		if preamble := voice.Preamble(fence); preamble != "" {
+			prompt.WriteString(preamble + "\n\n")
+		}
 	}
 	prompt.WriteString("rewrite_of\nSubject:\n" + fence.Wrap(in.Subject) + "\n\nBody:\n" + fence.Wrap(in.Body))
 	prompt.WriteString("\n\nAsk: " + instructions[in.Verb])

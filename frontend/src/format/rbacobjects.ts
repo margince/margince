@@ -110,6 +110,7 @@ export const CORE_OBJECTS: Readonly<Record<CoreRbacObject, CoreObjectName>> = {
   voice_profile: { area: "ai", label: "roles.object.voice_profile" },
   ai_routing: { area: "ai", label: "roles.object.ai_routing" },
   ai_budget: { area: "ai", label: "roles.object.ai_budget" },
+  ai_team_rules: { area: "ai", label: "roles.object.ai_team_rules" },
   ai_diagnostics: { area: "ai", label: "roles.object.ai_diagnostics" },
   ai_model_rate: { area: "ai", label: "roles.object.ai_model_rate" },
   embedding_reindex: { area: "ai", label: "roles.object.embedding_reindex" },

@@ -4250,6 +4250,7 @@
   "roles.object.voice_profile": "Writing voice",
   "roles.object.ai_routing": "AI routing",
   "roles.object.ai_budget": "AI allowance",
+  "roles.object.ai_team_rules": "Team rules",
   "roles.object.ai_diagnostics": "AI usage",
   "roles.object.ai_model_rate": "Model prices",
   "roles.object.embedding_reindex": "Search index",

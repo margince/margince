@@ -13,12 +13,14 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/promptfence"
 )
 
-// Reader is the seam a surface binds to load the acting user's voice. It is an
-// interface rather than *ai.VoiceStore so the two composers can take one
-// without taking a pool: what they need is a read, and a store handed to them
-// whole would also hand them the writes their packages promise not to have.
+// Reader is the seam a surface binds to load the acting user's voice and the
+// workspace's team rules. It is an interface rather than *ai.VoiceStore so the
+// two composers can take one without a pool. A store handed to them whole would
+// also hand them writes their packages promise not to have. TeamRules is read
+// ungated, because a draft follows them whoever asked for it.
 type Reader interface {
 	ActiveVoiceForActor(ctx context.Context) (ai.VoiceProfile, ai.VoiceProfileVersion, bool, error)
+	TeamRules(ctx context.Context) (string, error)
 }
 
 // Context is a loaded profile, or the absence of one.
@@ -35,10 +37,11 @@ type Reader interface {
 // response that could have been voiced carries this flag so the surface can
 // say so instead of passing the draft off as the plain kind.
 type Context struct {
-	Profile  ai.VoiceProfile
-	Version  ai.VoiceProfileVersion
-	OK       bool
-	Degraded bool
+	Profile   ai.VoiceProfile
+	Version   ai.VoiceProfileVersion
+	TeamRules string
+	OK        bool
+	Degraded  bool
 }
 
 // Load resolves the actor's active voice. A lookup failure degrades to no voice
@@ -51,15 +54,75 @@ func Load(ctx context.Context, reader Reader, log *slog.Logger) Context {
 	if reader == nil {
 		return Context{}
 	}
+	rules, rulesRead := readTeamRules(ctx, reader, log)
+	loaded := Context{TeamRules: rules, Degraded: !rulesRead}
 	profile, version, ok, err := reader.ActiveVoiceForActor(ctx)
 	if err != nil {
-		if log == nil {
-			log = slog.Default()
-		}
-		log.WarnContext(ctx, "voice profile lookup failed; drafting without voice", "err", err)
-		return Context{Degraded: true}
+		loggerOr(log).WarnContext(ctx, "voice profile lookup failed; drafting without voice", "err", err)
+		loaded.Degraded = true
+		return loaded
 	}
-	return Context{Profile: profile, Version: version, OK: ok}
+	loaded.Profile, loaded.Version, loaded.OK = profile, version, ok
+	return loaded
+}
+
+func loggerOr(log *slog.Logger) *slog.Logger {
+	if log == nil {
+		return slog.Default()
+	}
+	return log
+}
+
+// LoadTeamRules loads the workspace's team rules alone, for a draft that takes
+// no voice. A failed read drafts without them and logs it. reader may be nil.
+func LoadTeamRules(ctx context.Context, reader Reader, log *slog.Logger) string {
+	if reader == nil {
+		return ""
+	}
+	rules, _ := readTeamRules(ctx, reader, log)
+	return rules
+}
+
+// readTeamRules reports whether the read worked, so Load can mark the loss.
+func readTeamRules(ctx context.Context, reader Reader, log *slog.Logger) (string, bool) {
+	rules, err := reader.TeamRules(ctx)
+	if err != nil {
+		loggerOr(log).WarnContext(ctx, "team rules lookup failed; drafting without them", "err", err)
+		return "", false
+	}
+	return strings.TrimSpace(rules), true
+}
+
+// WithTeamRules puts the team rules block ahead of a user turn, or leaves the
+// turn as it is when the workspace saved none.
+func WithTeamRules(fence promptfence.Fence, rules, turn string) string {
+	if block := TeamRulesBlock(fence, rules); block != "" {
+		return block + "\n\n" + turn
+	}
+	return turn
+}
+
+// TeamRulesBlock renders the workspace's rules for the user turn, inside the
+// calling call's fence, or nothing when none are saved. A surface puts it ahead
+// of the voice block, and draftrules.TeamRules tells the model what it outranks.
+func TeamRulesBlock(fence promptfence.Fence, rules string) string {
+	rules = strings.TrimSpace(rules)
+	if rules == "" {
+		return ""
+	}
+	return "Team rules:\n" + fence.Wrap(rules)
+}
+
+// Preamble is what a surface prepends to its user turn: the team rules, then the
+// voice profile, each only when there is one.
+func (c Context) Preamble(fence promptfence.Fence) string {
+	parts := make([]string, 0, 2)
+	for _, block := range []string{TeamRulesBlock(fence, c.TeamRules), c.Block(fence)} {
+		if block != "" {
+			parts = append(parts, block)
+		}
+	}
+	return strings.Join(parts, "\n\n")
 }
 
 // Block renders the profile for the CALLING call's user turn.
@@ -112,6 +175,7 @@ const SystemRule = `VOICE PROFILE
 The user turn carries the sender's own voice profile. It controls expression — rhythm, vocabulary, directness, sentence length, structure — and never facts.
 Obey its avoid rules. Treat its style metrics as limits, not targets.
 Where the profile and a grounding rule disagree, the grounding rule wins: a fact bent to fit a phrasing is the one error the sender cannot see before it goes out.
+Where the profile, its human-authored identity included, and the team rules disagree, the team rules win.
 The profile never chooses the LANGUAGE. Its samples are whatever their author happened to write, and a profile built from one language does not mean its owner writes only that language. Write in output_language even when every sample you were given is in another, and carry the profile across: rhythm, directness, sentence length and structure are the same contact's in any language, and the words are not.`
 
 // Violations runs the deterministic floor over the two texts a draft is made

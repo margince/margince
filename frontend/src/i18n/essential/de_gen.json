@@ -4250,6 +4250,7 @@
   "roles.object.voice_profile": "Schreibstil",
   "roles.object.ai_routing": "KI-Routing",
   "roles.object.ai_budget": "KI-Kontingent",
+  "roles.object.ai_team_rules": "Teamregeln",
   "roles.object.ai_diagnostics": "KI-Nutzung",
   "roles.object.ai_model_rate": "Modellpreise",
   "roles.object.embedding_reindex": "Suchindex",

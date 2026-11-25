@@ -254,7 +254,7 @@ describe("what each page lets a reader change", () => {
 
     // The provider sheets price models on the same page as the bindings.
     models:
-      "all(full-seat, any(any(ai_routing:update), any(ai_model_rate:update, ai_model_rate:create)))",
+      "all(full-seat, any(any(ai_routing:update), any(ai_model_rate:update, ai_model_rate:create), any(ai_team_rules:update)))",
     automations:
       "all(full-seat, any(any(automation:update, automation:create), automation:delete))",
     usage: "all(full-seat, any(any(ai_budget:update)))",
