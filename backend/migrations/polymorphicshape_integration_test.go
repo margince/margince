@@ -225,7 +225,7 @@ func TestASignalGoesWithItsRecord(t *testing.T) {
 	insert := func(entityType string) error {
 		_, err := owner.Exec(context.Background(), `
 			INSERT INTO signal (kind, entity_type, entity_id, summary, source, captured_by)
-			VALUES ('risk', $1, $2, 'Went quiet', 'test', 'human:seed')`, entityType, contact)
+			VALUES ('risk', $1, $2, 'Went quiet', 'manual', 'human:seed')`, entityType, contact)
 		return err
 	}
 	expectRefusedAs(t, insert("deal"), "signal_entity_deal_id_fkey")

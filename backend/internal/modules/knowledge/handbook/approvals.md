@@ -1,5 +1,5 @@
 <!-- prose:plain -->
-<!-- describes: frontend/src/features/automations/approvalrow.tsx frontend/src/design-system/decisionhead.tsx frontend/src/features/automations/approvaldrawer.tsx frontend/src/features/automations/approvaleditor.tsx frontend/src/features/automations/approvaldetail.tsx frontend/src/features/automations/approval-preferences.tsx frontend/src/features/settings/autonomy-settings.tsx backend/internal/modules/approvals/decide.go backend/internal/modules/approvals/expiry.go backend/internal/modules/approvals/authority.go frontend/src/features/records/handoverrequest.tsx frontend/src/components/editaccessrequest.tsx frontend/src/features/records/handoveroffer.tsx backend/internal/compose/editaccess/editaccess.go backend/internal/compose/ownershiptransfer.go backend/internal/compose/ownershipoffer.go backend/internal/compose/approvalpreviewsight.go -->
+<!-- describes: frontend/src/features/automations/approvalrow.tsx frontend/src/design-system/decisionhead.tsx frontend/src/features/automations/approvaldrawer.tsx frontend/src/features/automations/approvaleditor.tsx frontend/src/features/automations/approvaldetail.tsx frontend/src/features/automations/approval-preferences.tsx frontend/src/features/settings/autonomy-settings.tsx backend/internal/modules/approvals/decide.go backend/internal/modules/approvals/expiry.go backend/internal/modules/approvals/authority.go frontend/src/components/handoverrequest.tsx frontend/src/components/editaccessrequest.tsx frontend/src/features/records/handoveroffer.tsx backend/internal/compose/editaccess/editaccess.go backend/internal/compose/ownershiptransfer.go backend/internal/compose/ownershipoffer.go backend/internal/compose/approvalpreviewsight.go -->
 # Approvals
 
 An approval in Margince is a change an agent proposed but was not allowed to make on its own. The agent does not do it. It writes down what it means to do and puts it before a human, who accepts, edits or rejects it. The product calls the waiting items **Approvals**.
@@ -111,7 +111,7 @@ The email for such a request names the deal or company and the mail or meeting i
 Also called: commitment, promise task, promised by, who owns this promise, take over a promise.
 
 ### How do I ask a colleague for edit access to their record?
-To change a contact, company, lead, deal or project a colleague owns, press **Ask … for edit access**, which names the owner. On a contact or company it is in the access chip under the name. On a lead, deal or project it is under the line that says the record is not yours to change.
+To change a contact, company, lead, deal or project a colleague owns, press **Ask … for edit access**, which names the owner. It is in the **View only** chip under the record's name, and under **Access** in the record's **Ownership** details.
 The request waits on the owner's **Worklist** for 7 days. Only the owner can answer it, and their agent can decline it but not accept it.
 
 If the owner approves, the record is shared with you for writing, and the owner stays its owner. A notice tells you when the owner approves or declines and when the request runs out. After a decline the same owner is not asked again; if the record changes owner, you can ask the new one. **Withdraw edit access request** in the same place takes it back.
@@ -120,7 +120,7 @@ You can ask only on a seat that can edit records, for a record you can see but n
 Also called: request write access, ask to edit, edit rights on a colleague's lead.
 
 ### How do I ask a colleague to hand over a contact or company?
-To ask a colleague for a contact or company they own, open the record and press the access chip under its name. Then press **Ask … to hand it over**, which names the owner.
+To ask a colleague for a contact or company they own, open the record and press the **View only** chip under its name. Then press **Ask … to hand it over**, which names the owner.
 The request waits as an approval on the owner's **Worklist** for 7 days. Only the owner can answer it, and their agent can decline it but not accept it.
 
 If the owner accepts, the record is yours. A company brings the owner's open deals on it. A contact brings the owner's open deals on which it is the only contact and that name no company. Either brings the owner's open tasks filed under it alone. Everything else stays with the owner, and the notice says how many deals and tasks stayed.

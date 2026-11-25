@@ -1322,6 +1322,7 @@ public.signal.resolution_state document
 public.signal.severity document
 public.signal.source document
 public.signal.source_channel document
+public.signal.source_system document
 public.signal.status document
 public.signal.summary line
 public.signal.visibility document
