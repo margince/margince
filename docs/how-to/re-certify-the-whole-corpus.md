@@ -75,6 +75,10 @@ would record. Add each new `gradingRule` to `collectionOfRule` with the version 
 
 A record that fails a check stays stale, and the list says why. Those need the sweep below.
 
+A change to how a site check is hashed, and not to what it grades, is re-stamped the same way. Name
+the earlier file: `make e2e-ai-restamp SITE_CHECKS_FROM=<earlier site_checks.golden>`. The tool
+refuses a pair of files that `restampableSiteChecks` does not list.
+
 ## 2. Run both preset sweeps
 
 The presets in [`config/presets/`](../../config/presets/README.md) are the two
