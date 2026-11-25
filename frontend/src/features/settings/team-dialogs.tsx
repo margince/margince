@@ -26,6 +26,7 @@ import { useLocale, useT } from "../../i18n";
 import type { Locale } from "../../i18n/locale";
 import { ANALYTICS_CONTEXT_KEY } from "../../lib/analyticskeys";
 import { problemMessageOf, unwrap } from "../../lib/problem";
+import { TEXT_LIMITS } from "../../lib/textlimits_gen";
 import { matchingMembers } from "./users-members";
 import "./users-access.css";
 
@@ -331,7 +332,10 @@ export function RenameTeamAction({ team }: Readonly<{ team: Team }>) {
       toast.show(t("users.teamRenamed", { name }));
     },
   });
-  const renameRefused = nameRefusal(rename.error, t, "users.teamDuplicate");
+  const renameRefused = nameRefusal(rename.error, t, {
+    label: t("users.teamNameLabel"),
+    duplicate: "users.teamDuplicate",
+  });
   return (
     <>
       <Button
@@ -353,6 +357,7 @@ export function RenameTeamAction({ team }: Readonly<{ team: Team }>) {
         pending={rename.isPending}
         problem={renameRefused.problem}
         nameProblem={renameRefused.nameProblem}
+        maxLength={TEXT_LIMITS.label}
         onSave={(name) => rename.mutate({ id: team.id, name })}
       />
     </>
@@ -379,7 +384,10 @@ export function NewTeamAction() {
   const t = useT();
   const [open, setOpen] = useState(false);
   const create = useCreateTeam(() => setOpen(false));
-  const createRefused = nameRefusal(create.error, t, "users.teamDuplicate");
+  const createRefused = nameRefusal(create.error, t, {
+    label: t("users.teamNameLabel"),
+    duplicate: "users.teamDuplicate",
+  });
   return (
     <>
       {/* Named for what it opens; the dialog's submit reads "Create team". */}
@@ -401,6 +409,7 @@ export function NewTeamAction() {
         pending={create.isPending}
         problem={createRefused.problem}
         nameProblem={createRefused.nameProblem}
+        maxLength={TEXT_LIMITS.label}
         onSave={(name) => create.mutate(name)}
       />
     </>

@@ -83,6 +83,14 @@ func requireNameWithin(field, name string) error {
 	return nil
 }
 
+func requireLeadName(raw string) (string, error) {
+	name, err := httperr.RequireNonBlank(contactNameColumn, raw)
+	if err != nil {
+		return "", err
+	}
+	return name, requireNameWithin(contactNameColumn, name)
+}
+
 func checkTypedContactNames(full string, first, last *string) error {
 	for _, field := range []struct {
 		name  string

@@ -688,3 +688,31 @@ func TestAFormKnowsWhenItLastLandedAPost(t *testing.T) {
 		t.Fatalf("a landed post moved the form's version from %d to %d, which fails an admin's edit in progress", form.Version, got.Version)
 	}
 }
+
+// A visitor's name, company and title past their columns' limit land cut on the
+// lead; the note keeps what they typed. A form post never fails on its length.
+func TestAFormPostWithLongNameCompanyAndTitleLandsTheLeadCut(t *testing.T) {
+	e := setupFormsApp(t)
+	form := createForm(t, e, integration.AnyMap{"name": "Contact", "sender": "browser", "allowed_origins": []string{siteOrigin}})
+	long := strings.Repeat("y", 200)
+	answer := browserPost(t, e, form.FormKey, url.Values{
+		"email": {"long@visitor.example"}, "name": {long}, "company": {long}, "title": {long}, "message": {"Hello"},
+	}, siteOrigin)
+	if answer.Status != http.StatusAccepted {
+		t.Fatalf("browser post → %d %s", answer.Status, answer.Body)
+	}
+	var name, company, title string
+	if err := e.Owner.QueryRow(context.Background(),
+		`SELECT full_name, company_name, title FROM lead WHERE email = $1`, "long@visitor.example").
+		Scan(&name, &company, &title); err != nil {
+		t.Fatalf("reading the landed lead: %v", err)
+	}
+	for column, got := range map[string]string{"full_name": name, "company_name": company, "title": title} {
+		if got != long[:120] {
+			t.Errorf("%s holds %d characters, want the first 120", column, len(got))
+		}
+	}
+	if notes := notesOnLeadWithEmail(t, e, "long@visitor.example"); len(notes) != 1 || !strings.Contains(notes[0], long) {
+		t.Errorf("the note does not keep the visitor's whole text: %v", notes)
+	}
+}
