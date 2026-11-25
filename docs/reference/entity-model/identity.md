@@ -6,7 +6,7 @@ The 22 tables owned by `identity`, as the migrations build them. [Back to the en
 
 ## app_user
 
-39 columns · primary key `(id)` · referenced by 155 foreign keys
+39 columns · primary key `(id)` · referenced by 156 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -106,16 +106,17 @@ The 22 tables owned by `identity`, as the migrations build them. [Back to the en
 
 ## auth_token
 
-10 columns · primary key `(id)` · referenced by 0 foreign keys
+11 columns · primary key `(id)` · referenced by 0 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
 | `id` | `uuid`, default `uuidv7()` | yes | Primary key. |
+| `counterpart_user_id` | `uuid` |  | Points at `app_user.id`. |
 | `expires_at` | `timestamp with time zone` | yes |  |
 | `mail_failed_at` | `timestamp with time zone` |  |  |
 | `mail_queued_at` | `timestamp with time zone` |  |  |
 | `mail_sent_at` | `timestamp with time zone` |  |  |
-| `purpose` | `text` | yes | One of `password_reset`, `email_verify`, `invite`. |
+| `purpose` | `text` | yes | One of `password_reset`, `email_verify`, `invite`, `member_merge_confirm`. |
 | `token_hash` | `text` | yes |  |
 | `used_at` | `timestamp with time zone` |  |  |
 | `user_id` | `uuid` | yes | Points at `app_user.id`. |
@@ -125,17 +126,20 @@ The 22 tables owned by `identity`, as the migrations build them. [Back to the en
 
 | Columns | Table | When the parent goes |
 |---|---|---|
+| `counterpart_user_id` | `app_user` | deleting the parent deletes this row |
 | `user_id` | `app_user` | deleting the parent deletes this row |
 
 **Rules**
 
+- `auth_token_counterpart_check`: `CHECK (((purpose = 'member_merge_confirm') = (counterpart_user_id IS NOT NULL)))`
 - `auth_token_expires_after_creation`: `CHECK ((expires_at > created_at))`
-- `auth_token_purpose_check`: `CHECK ((purpose = ANY (ARRAY['password_reset', 'email_verify', 'invite'])))`
+- `auth_token_purpose_check`: `CHECK ((purpose = ANY (ARRAY['password_reset', 'email_verify', 'invite', 'member_merge_confirm'])))`
 - `auth_token_token_hash_check`: `CHECK ((token_hash ~ '^[0-9a-f]{64}$'))`
 
 **Indexes**
 
 - `auth_token_pkey`: `unique, btree (id)`
+- `idx_auth_token_counterpart`: `btree (counterpart_user_id)`
 - `idx_auth_token_hash`: `unique, btree (token_hash)`
 - `idx_auth_token_user`: `btree (user_id, purpose) WHERE (used_at IS NULL)`
 - `idx_auth_token_user_cascade`: `btree (user_id)`

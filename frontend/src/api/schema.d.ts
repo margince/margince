@@ -20493,6 +20493,60 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/users/{id}/merge-requests": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Ask the holders of two accounts to confirm merging them. Admin-only, human-only.
+         * @description For a source account that has been used. Mails a single-use confirmation link to the
+         *     sign-in address of each side that is not deactivated and has not confirmed yet, and
+         *     supersedes any link still open for that side. The merge itself still goes through
+         *     `mergeMembers`, and refuses until every such side has confirmed. A link confirms and
+         *     signs nobody in. It dies when the account's address changes, its credentials end or it is
+         *     deactivated, and after three days.
+         *
+         *     Refused (409) unless the preview the token names has no blocker other than
+         *     `confirmation_missing`, and when this installation cannot send email. Answers the
+         *     preview as it stands after the request, with a token to merge from once every side has
+         *     confirmed. Shares the set-password link limits per actor and per target. Audited on each
+         *     side's account.
+         */
+        post: operations["requestMemberMerge"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/auth/confirm-member-merge": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Confirm that this account may be merged into another, from the mailed link.
+         * @description Spends the single-use token mailed by `requestMemberMerge`. It signs nobody in and changes nothing about the account. An expired, used, unknown or withdrawn token, and one whose account has since left, produce one neutral error. Audited.
+         */
+        post: operations["confirmMemberMerge"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/users/{id}/merge": {
         parameters: {
             query?: never;
@@ -20507,7 +20561,7 @@ export interface paths {
         put?: never;
         /**
          * Merge a duplicate into the selected surviving member.
-         * @description The source must be an unused imported or invited identity. The acting administrator cannot be the survivor.
+         * @description An unused source merges at once. A used source merges only after the holder of each side that is not deactivated has confirmed through `requestMemberMerge`; a deactivated side needs no confirmation, so two deactivated accounts merge on an administrator's say alone. The acting administrator can be neither side.
          */
         post: operations["mergeMembers"];
         delete?: never;
@@ -51092,9 +51146,9 @@ export interface components {
             reason: "password_set" | "signed_in" | "provider_linked" | "sole_admin" | "self" | "agent_seat";
         };
         /** @enum {string} */
-        MemberRetirementBlocker: "approval_decisions" | "automations" | "booking_pages" | "data_requests" | "deal_rooms" | "introductions" | "lists" | "stewarded_lists" | "mail_drafts" | "meeting_invitations" | "meeting_proposals" | "privacy_notices" | "record_responsibilities" | "reports" | "report_schedules" | "saved_views" | "scheduled_mail" | "handoffs" | "voice_profiles" | "web_forms" | "webhooks" | "weekly_plans" | "analytics_shares" | "source_used" | "self_survivor" | "deactivate_first" | "choose_survivor" | "choose_receiver" | "private_tasks" | "work_not_transferable" | "state_changed";
+        MemberRetirementBlocker: "approval_decisions" | "automations" | "booking_pages" | "data_requests" | "deal_rooms" | "introductions" | "lists" | "stewarded_lists" | "mail_drafts" | "meeting_invitations" | "meeting_proposals" | "privacy_notices" | "record_responsibilities" | "reports" | "report_schedules" | "saved_views" | "scheduled_mail" | "handoffs" | "voice_profiles" | "web_forms" | "webhooks" | "weekly_plans" | "analytics_shares" | "confirmation_missing" | "self_survivor" | "deactivate_first" | "choose_survivor" | "choose_receiver" | "private_tasks" | "work_not_transferable" | "state_changed";
         /** @enum {string} */
-        MemberRetirementConsequence: "source_signed_out" | "connectors_reconnect" | "survivor_access" | "original_attribution" | "private_alerts_archived" | "crm_private_records_move" | "private_audiences_retained" | "email_reserved" | "survivor_inactive";
+        MemberRetirementConsequence: "source_signed_out" | "connectors_reconnect" | "survivor_access" | "original_attribution" | "private_alerts_archived" | "crm_private_records_move" | "private_audiences_retained" | "email_reserved" | "survivor_inactive" | "sign_in_dropped";
         MemberRetirementPreview: {
             owned: components["schemas"]["HandoverCounts"];
             signal_count: number;
@@ -51107,6 +51161,20 @@ export interface components {
             survivor_name?: string;
             /** Format: email */
             survivor_email?: string;
+            /** @description Present for a merge whose source account has been used: one entry per side, saying whether that side's holder has confirmed. `confirmation_missing` is in `blockers` while any side is `requested` or `not_requested`. */
+            confirmations?: components["schemas"]["MemberMergeConfirmation"][];
+        };
+        MemberMergeConfirmation: {
+            /** Format: uuid */
+            user_id: string;
+            /** @enum {string} */
+            side: "source" | "survivor";
+            display_name: string;
+            /**
+             * @description `confirmed` once the holder used the mailed link; `requested` while a link is out; `not_requested` when none was sent yet; `not_needed` for a deactivated account, whose holder cannot confirm, and for a merge whose source was never used.
+             * @enum {string}
+             */
+            state: "confirmed" | "requested" | "not_requested" | "not_needed";
         };
         MergeMembersRequest: {
             /** Format: uuid */
@@ -97725,6 +97793,98 @@ export interface operations {
             404: components["responses"]["NotFound"];
             409: components["responses"]["VersionConflict"];
             422: components["responses"]["ValidationError"];
+        };
+    };
+    requestMemberMerge: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["MergeMembersRequest"];
+            };
+        };
+        responses: {
+            /** @description The preview after the request. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MemberRetirementPreview"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            /** @description Another change since the preview, a blocker still open, nothing left to confirm, or no way to send email. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            422: components["responses"]["ValidationError"];
+            /** @description Rate-limited. */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    confirmMemberMerge: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    token: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Confirmed. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Invalid, used, or expired token (one neutral error for all of them). */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            422: components["responses"]["ValidationError"];
+            /** @description Rate-limited. */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
         };
     };
     mergeMembers: {

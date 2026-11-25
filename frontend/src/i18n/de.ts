@@ -97,8 +97,28 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Offene Wochenpläne dieses Mitglieds abschließen.",
   "users.retirement.analytics_shares":
     "Aktive geteilte Analytics-Ansichten für dieses Mitglied widerrufen.",
-  "users.retirement.source_used":
-    "Hier lässt sich nur ein Konto zusammenführen, das niemand benutzt hat: kein Passwort, keine Anmeldung und kein verknüpfter Anbieter. Übergeben Sie stattdessen die Arbeit und deaktivieren Sie das Mitglied.",
+  "users.retirement.confirmation_missing":
+    "Der Inhaber jedes Kontos, das sich noch anmelden kann, muss diese Zusammenführung bestätigen. Fordere unten die Bestätigung an; ein deaktiviertes Konto braucht keine.",
+  "users.retirement.sign_in_dropped":
+    "Passwort, verknüpfte Anmeldeanbieter und zweiter Faktor des zusammengeführten Kontos werden nicht übernommen. Der Inhaber meldet sich mit dem Konto an, das bleibt.",
+  "users.merge.confirmTitle": "Bestätigung durch die Kontoinhaber",
+  "users.merge.state.confirmed": "Bestätigt",
+  "users.merge.state.requested": "Link gesendet, Antwort offen",
+  "users.merge.state.not_requested": "Noch nicht angefragt",
+  "users.merge.state.not_needed": "Nicht nötig",
+  "users.merge.ask": "Bestätigung anfordern",
+  "users.merge.askAgain": "Links erneut senden",
+  "users.merge.asked": "Bestätigungslinks gesendet.",
+  "users.mergeConfirm.title": "Zusammenführung deiner Konten bestätigen",
+  "users.mergeConfirm.body":
+    "Ein Administrator möchte zwei Konten zusammenführen, die dir gehören. Private E-Mails und Aktivitäten des Kontos, das entfällt, wandern in das Konto, das bleibt. Das meldet dich nicht an.",
+  "users.mergeConfirm.action": "Zusammenführung bestätigen",
+  "users.mergeConfirm.done":
+    "Bestätigt. Der Administrator kann die Zusammenführung jetzt abschließen. Du kannst diese Seite schließen.",
+  "users.mergeConfirm.dead":
+    "Dieser Link gilt nicht mehr. Er ist vielleicht abgelaufen, schon benutzt oder ersetzt worden. Bitte den Administrator, einen neuen zu senden.",
+  "users.mergeConfirm.failed":
+    "Die Bestätigung ist nicht durchgegangen. Versuche es gleich noch einmal.",
   "users.retirement.self_survivor":
     "Ein anderes Mitglied als sich selbst als Ziel wählen.",
   "users.retirement.deactivate_first":

@@ -99,8 +99,27 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Đóng các kế hoạch tuần đang mở của thành viên này.",
   "users.retirement.analytics_shares":
     "Thu hồi các liên kết chia sẻ phân tích đang hoạt động theo thành viên này.",
-  "users.retirement.source_used":
-    "Chỉ gộp được tài khoản chưa ai dùng: chưa có mật khẩu, chưa đăng nhập và chưa liên kết nhà cung cấp. Hãy bàn giao công việc và vô hiệu hóa thành viên.",
+  "users.retirement.confirmation_missing":
+    "Chủ của mỗi tài khoản còn đăng nhập được phải xác nhận việc gộp này. Hãy yêu cầu xác nhận bên dưới; tài khoản đã vô hiệu hóa không cần xác nhận.",
+  "users.retirement.sign_in_dropped":
+    "Mật khẩu, nhà cung cấp đăng nhập đã liên kết và yếu tố thứ hai của tài khoản bị gộp không được chuyển. Chủ tài khoản đăng nhập bằng tài khoản được giữ lại.",
+  "users.merge.confirmTitle": "Xác nhận của chủ tài khoản",
+  "users.merge.state.confirmed": "Đã xác nhận",
+  "users.merge.state.requested": "Đã gửi liên kết, đang chờ",
+  "users.merge.state.not_requested": "Chưa yêu cầu",
+  "users.merge.state.not_needed": "Không cần",
+  "users.merge.ask": "Yêu cầu xác nhận",
+  "users.merge.askAgain": "Gửi lại liên kết",
+  "users.merge.asked": "Đã gửi liên kết xác nhận.",
+  "users.mergeConfirm.title": "Xác nhận gộp các tài khoản của bạn",
+  "users.mergeConfirm.body":
+    "Quản trị viên đề nghị gộp hai tài khoản của bạn. Thư và hoạt động riêng của tài khoản bị bỏ sẽ chuyển sang tài khoản được giữ lại. Việc này không đăng nhập cho bạn.",
+  "users.mergeConfirm.action": "Xác nhận gộp",
+  "users.mergeConfirm.done":
+    "Đã xác nhận. Quản trị viên có thể hoàn tất việc gộp. Bạn có thể đóng trang này.",
+  "users.mergeConfirm.dead":
+    "Liên kết này không còn hiệu lực. Có thể nó đã hết hạn, đã dùng hoặc đã được thay. Hãy nhờ quản trị viên gửi liên kết mới.",
+  "users.mergeConfirm.failed": "Chưa xác nhận được. Hãy thử lại sau ít phút.",
   "users.retirement.self_survivor":
     "Chọn một thành viên khác bạn làm tài khoản giữ lại.",
   "users.retirement.deactivate_first": "Tắt thành viên này trước khi xóa.",

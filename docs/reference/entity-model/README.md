@@ -31,8 +31,8 @@ module to put a change in, read [modules.md](../modules.md).
 | | |
 |---|--:|
 | Tables | 358 |
-| Columns | 4429 |
-| Foreign keys | 625 |
+| Columns | 4430 |
+| Foreign keys | 626 |
 | Owning areas | 40 |
 
 ## The 12 records everything else hangs off
@@ -41,7 +41,7 @@ Ranked by how many foreign keys point at them.
 
 | Record | Lives in | Columns | Foreign keys pointing at it |
 |---|---|--:|--:|
-| [`app_user`](identity.md#app_user) | [identity](identity.md) | 39 | 155 |
+| [`app_user`](identity.md#app_user) | [identity](identity.md) | 39 | 156 |
 | [`company`](contacts.md#company) | [contacts](contacts.md) | 46 | 51 |
 | [`contact`](contacts.md#contact) | [contacts](contacts.md) | 49 | 50 |
 | [`activity`](activities.md#activity) | [activities](activities.md) | 90 | 49 |
@@ -174,7 +174,7 @@ erDiagram
 | [`ai_task_run`](aiactivity.md#ai_task_run) | aiactivity | 24 | 0 |
 | [`ai_usage`](ai.md#ai_usage) | ai | 7 | 0 |
 | [`analytics_share`](compose.md#analytics_share) | compose | 16 | 0 |
-| [`app_user`](identity.md#app_user) | identity | 39 | 155 |
+| [`app_user`](identity.md#app_user) | identity | 39 | 156 |
 | [`approval`](approvals.md#approval) | approvals | 38 | 4 |
 | [`approval_autonomy_policy`](approvals.md#approval_autonomy_policy) | approvals | 12 | 0 |
 | [`approval_preference`](approvals.md#approval_preference) | approvals | 3 | 0 |
@@ -190,7 +190,7 @@ erDiagram
 | [`attachment`](activities.md#attachment) | activities | 28 | 6 |
 | [`attachment_extraction`](activities.md#attachment_extraction) | activities | 13 | 0 |
 | [`audit_log`](platform.md#audit_log) | platform | 15 | 2 |
-| [`auth_token`](identity.md#auth_token) | identity | 10 | 0 |
+| [`auth_token`](identity.md#auth_token) | identity | 11 | 0 |
 | [`automation`](automation.md#automation) | automation | 17 | 1 |
 | [`automation_effect_claim`](automation.md#automation_effect_claim) | automation | 7 | 0 |
 | [`booking_alias`](activities.md#booking_alias) | activities | 6 | 0 |

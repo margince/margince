@@ -20174,7 +20174,7 @@ paths:
       operationId: mergeMembers
       summary: Merge a duplicate into the selected surviving member.
       description: |-
-        The source must be an unused imported or invited identity. The acting administrator cannot be the survivor.
+        An unused source merges at once. A used source merges only after the holder of each side that is not deactivated has confirmed through `requestMemberMerge`; a deactivated side needs no confirmation, so two deactivated accounts merge on an administrator's say alone. The acting administrator can be neither side.
 
         Needs the passport permission Change records.
 
@@ -48048,10 +48048,10 @@ components:
             Why the verb is refused. `password_set`, `signed_in` and `provider_linked` are the three signs that an account has been used; a used account shows each one that applies. `sole_admin` is the last active administrator, `self` is the caller's own account and `agent_seat` is an agent.
     MemberRetirementBlocker:
       type: string
-      enum: [approval_decisions, automations, booking_pages, data_requests, deal_rooms, introductions, lists, stewarded_lists, mail_drafts, meeting_invitations, meeting_proposals, privacy_notices, record_responsibilities, reports, report_schedules, saved_views, scheduled_mail, handoffs, voice_profiles, web_forms, webhooks, weekly_plans, analytics_shares, source_used, self_survivor, deactivate_first, choose_survivor, choose_receiver, private_tasks, work_not_transferable, state_changed]
+      enum: [approval_decisions, automations, booking_pages, data_requests, deal_rooms, introductions, lists, stewarded_lists, mail_drafts, meeting_invitations, meeting_proposals, privacy_notices, record_responsibilities, reports, report_schedules, saved_views, scheduled_mail, handoffs, voice_profiles, web_forms, webhooks, weekly_plans, analytics_shares, confirmation_missing, self_survivor, deactivate_first, choose_survivor, choose_receiver, private_tasks, work_not_transferable, state_changed]
     MemberRetirementConsequence:
       type: string
-      enum: [source_signed_out, connectors_reconnect, survivor_access, original_attribution, private_alerts_archived, crm_private_records_move, private_audiences_retained, email_reserved, survivor_inactive]
+      enum: [source_signed_out, connectors_reconnect, survivor_access, original_attribution, private_alerts_archived, crm_private_records_move, private_audiences_retained, email_reserved, survivor_inactive, sign_in_dropped]
     MemberRetirementPreview:
       type: object
       required: [owned, signal_count, blockers, token, source_name, source_email, consequences]
@@ -48069,6 +48069,23 @@ components:
         source_email: {type: string, format: email}
         survivor_name: {type: string}
         survivor_email: {type: string, format: email}
+        confirmations:
+          type: array
+          items: {$ref: '#/components/schemas/MemberMergeConfirmation'}
+          description: >-
+            Present for a merge whose source account has been used: one entry per side, saying whether that side's holder has confirmed. `confirmation_missing` is in `blockers` while any side is `requested` or `not_requested`.
+    MemberMergeConfirmation:
+      type: object
+      required: [user_id, side, display_name, state]
+      properties:
+        user_id: {type: string, format: uuid}
+        side: {type: string, enum: [source, survivor]}
+        display_name: {type: string}
+        state:
+          type: string
+          enum: [confirmed, requested, not_requested, not_needed]
+          description: >-
+            `confirmed` once the holder used the mailed link; `requested` while a link is out; `not_requested` when none was sent yet; `not_needed` for a deactivated account, whose holder cannot confirm, and for a merge whose source was never used.
     MergeMembersRequest:
       type: object
       additionalProperties: false

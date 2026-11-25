@@ -5,6 +5,7 @@ import "./users-admin.css";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { useCallback, useState } from "react";
 import { api } from "../../api/client";
+import type { components } from "../../api/schema";
 import { Button, Field } from "../../design-system/atoms";
 import { Callout } from "../../design-system/callout";
 import { ConfirmModal } from "../../design-system/confirmmodal";
@@ -12,6 +13,7 @@ import { QueryStates } from "../../design-system/querystates";
 import { RecordPicker } from "../../design-system/recordpicker";
 import { useToast } from "../../design-system/toast";
 import { usePlural, useT } from "../../i18n";
+import type { MessageKey } from "../../i18n/en";
 import {
   memberRetirementBlocker,
   memberRetirementConsequence,
@@ -43,6 +45,8 @@ export function RetireMember({
   const [target, setTarget] = useState("");
   const preview = useQuery({
     queryKey: ["member-retirement-preview", member.id, target, merge],
+    // A holder confirms from their own mail, so the answer arrives unasked.
+    refetchInterval: (query) => confirmationPollInterval(query.state.data),
     queryFn: async () =>
       unwrap(
         await api.GET("/users/{id}/retirement-preview", {
@@ -152,6 +156,14 @@ export function RetireMember({
           </ul>
         </div>
       )}
+      {merge && (
+        <MergeConfirmations
+          memberId={member.id}
+          target={target}
+          preview={preview.data}
+          refetch={() => preview.refetch()}
+        />
+      )}
       {merge && <p>{t("users.visibleWorkNote")}</p>}
       <p className="users-retirement-address">
         {t(addressLabel)}: {preview.data?.source_email ?? member.email}
@@ -167,6 +179,90 @@ export function RetireMember({
     </ConfirmModal>
   );
 }
+
+const CONFIRMATION_POLL_MS = 10_000;
+
+type MergePreview = components["schemas"]["MemberRetirementPreview"];
+
+function confirmationPollInterval(
+  preview: MergePreview | undefined,
+): number | false {
+  const waiting = preview?.confirmations?.some(
+    (side) => side.state === "requested",
+  );
+  return waiting ? CONFIRMATION_POLL_MS : false;
+}
+
+// Where each holder stands on a merge of a used account, and the button that
+// mails the links. Asking is offered only while confirmation is all that holds
+// the merge, because the server refuses it for any other blocker.
+function MergeConfirmations({
+  memberId,
+  target,
+  preview,
+  refetch,
+}: Readonly<{
+  memberId: string;
+  target: string;
+  preview: MergePreview | undefined;
+  refetch: () => Promise<unknown>;
+}>) {
+  const t = useT();
+  const toast = useToast();
+  const ask = useMutation({
+    mutationKey: memberMutationKey(memberId, "merge-request"),
+    mutationFn: async (token: string) =>
+      unwrap(
+        await api.POST("/users/{id}/merge-requests", {
+          params: { path: { id: memberId } },
+          body: { to_user_id: target, preview_token: token },
+        }),
+      ),
+    onSuccess: async () => {
+      await refetch();
+      toast.show(t("users.merge.asked"));
+    },
+  });
+  if (!preview?.confirmations) return null;
+  const sides = preview.confirmations;
+  const open = sides.some(
+    (side) => side.state === "requested" || side.state === "not_requested",
+  );
+  const onlyConfirmationsHold = preview.blockers.every(
+    (blocker) => blocker === "confirmation_missing",
+  );
+  const asked = sides.some((side) => side.state === "requested");
+  return (
+    <div>
+      <p>{t("users.merge.confirmTitle")}</p>
+      <ul>
+        {sides.map((side) => (
+          <li key={side.user_id}>
+            {side.display_name}: {t(CONFIRMATION_STATE[side.state])}
+          </li>
+        ))}
+      </ul>
+      {open && onlyConfirmationsHold && (
+        <Button
+          disabled={ask.isPending}
+          onClick={() => ask.mutate(preview.token)}
+        >
+          {t(asked ? "users.merge.askAgain" : "users.merge.ask")}
+        </Button>
+      )}
+      {ask.error && <p role="alert">{problemMessageOf(ask.error, t)}</p>}
+    </div>
+  );
+}
+
+const CONFIRMATION_STATE: Readonly<
+  Record<components["schemas"]["MemberMergeConfirmation"]["state"], MessageKey>
+> = {
+  confirmed: "users.merge.state.confirmed",
+  requested: "users.merge.state.requested",
+  not_requested: "users.merge.state.not_requested",
+  not_needed: "users.merge.state.not_needed",
+};
 
 // What holds the confirm, read before anything else in the dialog.
 function RetirementBlockers({

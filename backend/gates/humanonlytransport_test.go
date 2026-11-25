@@ -62,6 +62,7 @@ const theHumanSessionScheme = "cookieAuth"
 // Joining this set is a decision about who may reach an endpoint holding no
 // seat, and it should cost somebody an edit here.
 var humanOnlyWithoutASession = gatekit.Waive(map[string]string{
+	"confirmMemberMerge":            "the single-use, expiring, hashed confirmation mailed to the account's own address authenticates its holder; it signs nobody in and changes nothing but the confirmation",
 	"changePublicMeetingInvitation": "the expiring, hashed management capability authenticates a guest without a seat",
 	"acceptPublicMeetingProposal":   "an expiring recipient-bound capability authorizes one atomic acceptance without a seat",
 	// The public booking page, opened by somebody who has never been here.

@@ -59,6 +59,7 @@ var memberReferences = map[string]memberReference{
 	"approval_preference.user_id":              {disposition: referenceRetain},
 	"assurance_resolution.actor_id":            {disposition: referenceRetain},
 	"audit_log.on_behalf_of":                   {disposition: referenceRetain},
+	"auth_token.counterpart_user_id":           {disposition: referenceRetain},
 	"auth_token.user_id":                       {disposition: referenceRetain},
 	"automation.owner_id":                      {disposition: referenceResolve, live: `enabled AND archived_at IS NULL`, remedy: "automations"},
 	"booking_page.host_user_id":                {disposition: referenceResolve, live: jsonTrue, remedy: "booking_pages"},

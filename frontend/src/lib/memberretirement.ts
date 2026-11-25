@@ -32,7 +32,7 @@ const BLOCKERS: Readonly<Record<Blocker, MessageKey>> = {
   webhooks: "users.retirement.webhooks",
   weekly_plans: "users.retirement.weekly_plans",
   analytics_shares: "users.retirement.analytics_shares",
-  source_used: "users.retirement.source_used",
+  confirmation_missing: "users.retirement.confirmation_missing",
   self_survivor: "users.retirement.self_survivor",
   deactivate_first: "users.retirement.deactivate_first",
   choose_survivor: "users.retirement.choose_survivor",
@@ -51,6 +51,7 @@ const CONSEQUENCES: Readonly<Record<Consequence, MessageKey>> = {
   private_audiences_retained: "users.retirement.private_audiences_retained",
   email_reserved: "users.retirement.email_reserved",
   survivor_inactive: "users.retirement.survivor_inactive",
+  sign_in_dropped: "users.retirement.sign_in_dropped",
 };
 export const MEMBER_RETIREMENT_EFFECT_LABELS = Object.fromEntries(
   Object.entries(CONSEQUENCES).map(([code, key]) => [`member_${code}`, key]),

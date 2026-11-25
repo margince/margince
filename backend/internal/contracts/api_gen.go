@@ -18532,6 +18532,48 @@ func (e MeetingResponse) Valid() bool {
 	}
 }
 
+// Defines values for MemberMergeConfirmationSide.
+const (
+	MemberMergeConfirmationSideSource   MemberMergeConfirmationSide = "source"
+	MemberMergeConfirmationSideSurvivor MemberMergeConfirmationSide = "survivor"
+)
+
+// Valid indicates whether the value is a known member of the MemberMergeConfirmationSide enum.
+func (e MemberMergeConfirmationSide) Valid() bool {
+	switch e {
+	case MemberMergeConfirmationSideSource:
+		return true
+	case MemberMergeConfirmationSideSurvivor:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for MemberMergeConfirmationState.
+const (
+	MemberMergeConfirmationStateConfirmed    MemberMergeConfirmationState = "confirmed"
+	MemberMergeConfirmationStateNotNeeded    MemberMergeConfirmationState = "not_needed"
+	MemberMergeConfirmationStateNotRequested MemberMergeConfirmationState = "not_requested"
+	MemberMergeConfirmationStateRequested    MemberMergeConfirmationState = "requested"
+)
+
+// Valid indicates whether the value is a known member of the MemberMergeConfirmationState enum.
+func (e MemberMergeConfirmationState) Valid() bool {
+	switch e {
+	case MemberMergeConfirmationStateConfirmed:
+		return true
+	case MemberMergeConfirmationStateNotNeeded:
+		return true
+	case MemberMergeConfirmationStateNotRequested:
+		return true
+	case MemberMergeConfirmationStateRequested:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for MemberRetirementBlocker.
 const (
 	MemberRetirementBlockerAnalyticsShares        MemberRetirementBlocker = "analytics_shares"
@@ -18540,6 +18582,7 @@ const (
 	MemberRetirementBlockerBookingPages           MemberRetirementBlocker = "booking_pages"
 	MemberRetirementBlockerChooseReceiver         MemberRetirementBlocker = "choose_receiver"
 	MemberRetirementBlockerChooseSurvivor         MemberRetirementBlocker = "choose_survivor"
+	MemberRetirementBlockerConfirmationMissing    MemberRetirementBlocker = "confirmation_missing"
 	MemberRetirementBlockerDataRequests           MemberRetirementBlocker = "data_requests"
 	MemberRetirementBlockerDeactivateFirst        MemberRetirementBlocker = "deactivate_first"
 	MemberRetirementBlockerDealRooms              MemberRetirementBlocker = "deal_rooms"
@@ -18557,7 +18600,6 @@ const (
 	MemberRetirementBlockerSavedViews             MemberRetirementBlocker = "saved_views"
 	MemberRetirementBlockerScheduledMail          MemberRetirementBlocker = "scheduled_mail"
 	MemberRetirementBlockerSelfSurvivor           MemberRetirementBlocker = "self_survivor"
-	MemberRetirementBlockerSourceUsed             MemberRetirementBlocker = "source_used"
 	MemberRetirementBlockerStateChanged           MemberRetirementBlocker = "state_changed"
 	MemberRetirementBlockerStewardedLists         MemberRetirementBlocker = "stewarded_lists"
 	MemberRetirementBlockerVoiceProfiles          MemberRetirementBlocker = "voice_profiles"
@@ -18581,6 +18623,8 @@ func (e MemberRetirementBlocker) Valid() bool {
 	case MemberRetirementBlockerChooseReceiver:
 		return true
 	case MemberRetirementBlockerChooseSurvivor:
+		return true
+	case MemberRetirementBlockerConfirmationMissing:
 		return true
 	case MemberRetirementBlockerDataRequests:
 		return true
@@ -18616,8 +18660,6 @@ func (e MemberRetirementBlocker) Valid() bool {
 		return true
 	case MemberRetirementBlockerSelfSurvivor:
 		return true
-	case MemberRetirementBlockerSourceUsed:
-		return true
 	case MemberRetirementBlockerStateChanged:
 		return true
 	case MemberRetirementBlockerStewardedLists:
@@ -18645,6 +18687,7 @@ const (
 	MemberRetirementConsequenceOriginalAttribution      MemberRetirementConsequence = "original_attribution"
 	MemberRetirementConsequencePrivateAlertsArchived    MemberRetirementConsequence = "private_alerts_archived"
 	MemberRetirementConsequencePrivateAudiencesRetained MemberRetirementConsequence = "private_audiences_retained"
+	MemberRetirementConsequenceSignInDropped            MemberRetirementConsequence = "sign_in_dropped"
 	MemberRetirementConsequenceSourceSignedOut          MemberRetirementConsequence = "source_signed_out"
 	MemberRetirementConsequenceSurvivorAccess           MemberRetirementConsequence = "survivor_access"
 	MemberRetirementConsequenceSurvivorInactive         MemberRetirementConsequence = "survivor_inactive"
@@ -18664,6 +18707,8 @@ func (e MemberRetirementConsequence) Valid() bool {
 	case MemberRetirementConsequencePrivateAlertsArchived:
 		return true
 	case MemberRetirementConsequencePrivateAudiencesRetained:
+		return true
+	case MemberRetirementConsequenceSignInDropped:
 		return true
 	case MemberRetirementConsequenceSourceSignedOut:
 		return true
@@ -59768,6 +59813,22 @@ type MeetingRecordLinkEntityType string
 // MeetingResponse A guest's answer to a calendar invitation. `needs_action` is an invitation not answered yet.
 type MeetingResponse string
 
+// MemberMergeConfirmation defines model for MemberMergeConfirmation.
+type MemberMergeConfirmation struct {
+	DisplayName string                      `json:"display_name"`
+	Side        MemberMergeConfirmationSide `json:"side"`
+
+	// State `confirmed` once the holder used the mailed link; `requested` while a link is out; `not_requested` when none was sent yet; `not_needed` for a deactivated account, whose holder cannot confirm, and for a merge whose source was never used.
+	State  MemberMergeConfirmationState `json:"state"`
+	UserId openapi_types.UUID           `json:"user_id"`
+}
+
+// MemberMergeConfirmationSide defines model for MemberMergeConfirmation.Side.
+type MemberMergeConfirmationSide string
+
+// MemberMergeConfirmationState `confirmed` once the holder used the mailed link; `requested` while a link is out; `not_requested` when none was sent yet; `not_needed` for a deactivated account, whose holder cannot confirm, and for a merge whose source was never used.
+type MemberMergeConfirmationState string
+
 // MemberRetirementBlocker defines model for MemberRetirementBlocker.
 type MemberRetirementBlocker string
 
@@ -59776,8 +59837,11 @@ type MemberRetirementConsequence string
 
 // MemberRetirementPreview defines model for MemberRetirementPreview.
 type MemberRetirementPreview struct {
-	Blockers     []MemberRetirementBlocker     `json:"blockers"`
-	Consequences []MemberRetirementConsequence `json:"consequences"`
+	Blockers []MemberRetirementBlocker `json:"blockers"`
+
+	// Confirmations Present for a merge whose source account has been used: one entry per side, saying whether that side's holder has confirmed. `confirmation_missing` is in `blockers` while any side is `requested` or `not_requested`.
+	Confirmations *[]MemberMergeConfirmation    `json:"confirmations,omitempty"`
+	Consequences  []MemberRetirementConsequence `json:"consequences"`
 
 	// Owned Live records per kind.
 	Owned         HandoverCounts       `json:"owned"`
@@ -78326,6 +78390,11 @@ type ChangePasswordJSONBody struct {
 	NewPassword     string `json:"new_password"`
 }
 
+// ConfirmMemberMergeJSONBody defines parameters for ConfirmMemberMerge.
+type ConfirmMemberMergeJSONBody struct {
+	Token string `json:"token"`
+}
+
 // RequestPasswordResetJSONBody defines parameters for RequestPasswordReset.
 type RequestPasswordResetJSONBody struct {
 	Email openapi_types.Email `json:"email"`
@@ -86626,6 +86695,9 @@ type UpdateAttachmentMetadataJSONRequestBody = UpdateAttachmentMetadataRequest
 // ChangePasswordJSONRequestBody defines body for ChangePassword for application/json ContentType.
 type ChangePasswordJSONRequestBody ChangePasswordJSONBody
 
+// ConfirmMemberMergeJSONRequestBody defines body for ConfirmMemberMerge for application/json ContentType.
+type ConfirmMemberMergeJSONRequestBody ConfirmMemberMergeJSONBody
+
 // RequestPasswordResetJSONRequestBody defines body for RequestPasswordReset for application/json ContentType.
 type RequestPasswordResetJSONRequestBody RequestPasswordResetJSONBody
 
@@ -87687,6 +87759,9 @@ type HandOverUserWorkJSONRequestBody = HandOverUserWorkRequest
 
 // MergeMembersJSONRequestBody defines body for MergeMembers for application/json ContentType.
 type MergeMembersJSONRequestBody = MergeMembersRequest
+
+// RequestMemberMergeJSONRequestBody defines body for RequestMemberMerge for application/json ContentType.
+type RequestMemberMergeJSONRequestBody = MergeMembersRequest
 
 // RemoveMemberJSONRequestBody defines body for RemoveMember for application/json ContentType.
 type RemoveMemberJSONRequestBody = RemoveMemberRequest
@@ -102063,6 +102138,9 @@ type ServerInterface interface {
 	// Change your own password.
 	// (POST /auth/change-password)
 	ChangePassword(w http.ResponseWriter, r *http.Request)
+	// Confirm that this account may be merged into another, from the mailed link.
+	// (POST /auth/confirm-member-merge)
+	ConfirmMemberMerge(w http.ResponseWriter, r *http.Request)
 	// Request a password-reset email.
 	// (POST /auth/forgot-password)
 	RequestPasswordReset(w http.ResponseWriter, r *http.Request)
@@ -104661,6 +104739,9 @@ type ServerInterface interface {
 	// Merge a duplicate into the selected surviving member.
 	// (POST /users/{id}/merge)
 	MergeMembers(w http.ResponseWriter, r *http.Request, id Id, params MergeMembersParams)
+	// Ask the holders of two accounts to confirm merging them. Admin-only, human-only.
+	// (POST /users/{id}/merge-requests)
+	RequestMemberMerge(w http.ResponseWriter, r *http.Request, id Id)
 	// Remove a member's second factor. Admin-only, human-only.
 	// (DELETE /users/{id}/mfa)
 	RemoveUserMfa(w http.ResponseWriter, r *http.Request, id Id)
@@ -106101,6 +106182,12 @@ func (_ Unimplemented) GetAuthCapabilities(w http.ResponseWriter, r *http.Reques
 // Change your own password.
 // (POST /auth/change-password)
 func (_ Unimplemented) ChangePassword(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Confirm that this account may be merged into another, from the mailed link.
+// (POST /auth/confirm-member-merge)
+func (_ Unimplemented) ConfirmMemberMerge(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -111297,6 +111384,12 @@ func (_ Unimplemented) HandOverUserWork(w http.ResponseWriter, r *http.Request, 
 // Merge a duplicate into the selected surviving member.
 // (POST /users/{id}/merge)
 func (_ Unimplemented) MergeMembers(w http.ResponseWriter, r *http.Request, id Id, params MergeMembersParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Ask the holders of two accounts to confirm merging them. Admin-only, human-only.
+// (POST /users/{id}/merge-requests)
+func (_ Unimplemented) RequestMemberMerge(w http.ResponseWriter, r *http.Request, id Id) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -121392,6 +121485,20 @@ func (siw *ServerInterfaceWrapper) ChangePassword(w http.ResponseWriter, r *http
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.ChangePassword(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ConfirmMemberMerge operation middleware
+func (siw *ServerInterfaceWrapper) ConfirmMemberMerge(w http.ResponseWriter, r *http.Request) {
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ConfirmMemberMerge(w, r)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -158763,6 +158870,38 @@ func (siw *ServerInterfaceWrapper) MergeMembers(w http.ResponseWriter, r *http.R
 	handler.ServeHTTP(w, r)
 }
 
+// RequestMemberMerge operation middleware
+func (siw *ServerInterfaceWrapper) RequestMemberMerge(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.RequestMemberMerge(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // RemoveUserMfa operation middleware
 func (siw *ServerInterfaceWrapper) RemoveUserMfa(w http.ResponseWriter, r *http.Request) {
 
@@ -162929,6 +163068,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 		r.Post(options.BaseURL+"/auth/change-password", wrapper.ChangePassword)
 	})
 	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/auth/confirm-member-merge", wrapper.ConfirmMemberMerge)
+	})
+	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/auth/forgot-password", wrapper.RequestPasswordReset)
 	})
 	r.Group(func(r chi.Router) {
@@ -165525,6 +165667,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/users/{id}/merge", wrapper.MergeMembers)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/users/{id}/merge-requests", wrapper.RequestMemberMerge)
 	})
 	r.Group(func(r chi.Router) {
 		r.Delete(options.BaseURL+"/users/{id}/mfa", wrapper.RemoveUserMfa)

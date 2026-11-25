@@ -15,6 +15,7 @@ import { Heading } from "../../design-system/heading";
 import { INTL_LOCALE } from "../../format/intllocale";
 import { type Locale, useLocale, useT } from "../../i18n";
 import { throwProblem } from "../../lib/problem";
+import { forgetHashCredential, takeHashCredential } from "../../lib/router";
 import { LinkInvalidError, RateLimitedError } from "../settings/preferences";
 import {
   CORRECTABLE,
@@ -93,6 +94,57 @@ function RefusedPage({ error }: Readonly<{ error: unknown }>) {
   return (
     <PublicPage>
       <EmptyState>{explainConfirmError(error, t)}</EmptyState>
+    </PublicPage>
+  );
+}
+
+// #/confirm-merge?token=<token>: the holder of an account confirms that it may
+// be merged into another. The page asks before it spends the link, because a
+// mail scanner that follows the link is not the holder pressing a button. The
+// link signs nobody in.
+export function MergeConfirmScreen() {
+  const t = useT();
+  const [token] = useState(() => takeHashCredential("confirm-merge"));
+  const confirm = useMutation({
+    mutationFn: async (credential: string) => {
+      const { error, response } = await api.POST("/auth/confirm-member-merge", {
+        body: { token: credential },
+      });
+      // Spent or refused, the link is no use again, so memory lets it go.
+      if (response.status !== 429 && response.status < 500) {
+        forgetHashCredential("confirm-merge", credential);
+      }
+      if (error) {
+        throw response.status === 401 ? new LinkInvalidError() : error;
+      }
+    },
+  });
+  if (!token || isDeadLink(confirm.error)) {
+    return <DeadLinkPage>{t("users.mergeConfirm.dead")}</DeadLinkPage>;
+  }
+  return (
+    <PublicPage>
+      <Heading size="xlarge" className="t-display">
+        {t("users.mergeConfirm.title")}
+      </Heading>
+      <Card>
+        {confirm.isSuccess ? (
+          <p>{t("users.mergeConfirm.done")}</p>
+        ) : (
+          <>
+            <p>{t("users.mergeConfirm.body")}</p>
+            {confirm.isError && (
+              <p role="alert">{t("users.mergeConfirm.failed")}</p>
+            )}
+            <Button
+              disabled={confirm.isPending}
+              onClick={() => confirm.mutate(token)}
+            >
+              {t("users.mergeConfirm.action")}
+            </Button>
+          </>
+        )}
+      </Card>
     </PublicPage>
   );
 }

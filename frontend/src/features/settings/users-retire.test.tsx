@@ -236,3 +236,90 @@ it("puts a blocker at the top of the removal dialog and labels the address as th
   ).toBeTruthy();
   expect(screen.queryByText(new RegExp(en["users.mergeSource"]))).toBeNull();
 });
+
+it("lists each holder's confirmation and asks for them from the reviewed preview", async () => {
+  vi.useFakeTimers({ shouldAdvanceTime: true });
+  const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+  const routed = backend([]);
+  const asked: unknown[] = [];
+  let requested = false;
+  const preview = () =>
+    jsonResponse({
+      source_name: SOURCE.display_name,
+      source_email: SOURCE.email,
+      survivor_email: SURVIVOR.email,
+      owned: { contact: 0, company: 0, lead: 0, deal: 0, project: 0, task: 0 },
+      signal_count: 0,
+      blockers: ["confirmation_missing"],
+      consequences: ["sign_in_dropped"],
+      confirmations: [
+        {
+          user_id: SOURCE.id,
+          side: "source",
+          display_name: SOURCE.display_name,
+          state: requested ? "requested" : "not_requested",
+        },
+        {
+          user_id: SURVIVOR.id,
+          side: "survivor",
+          display_name: SURVIVOR.display_name,
+          state: requested ? "confirmed" : "not_requested",
+        },
+      ],
+      token: requested ? "after-request" : "before-request",
+    });
+  vi.stubGlobal(
+    "fetch",
+    vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+      const req =
+        input instanceof Request ? input : new Request(String(input), init);
+      const url = new URL(req.url);
+      if (url.pathname.endsWith("/retirement-preview")) return preview();
+      if (req.method === "POST" && url.pathname.endsWith("/merge-requests")) {
+        asked.push(await req.json());
+        requested = true;
+        return preview();
+      }
+      return routed(input, init);
+    }),
+  );
+  render(
+    <RetireMember
+      member={SOURCE}
+      members={[SOURCE, SURVIVOR]}
+      merge
+      onClose={vi.fn()}
+    />,
+  );
+  await user.type(
+    screen.getByRole("searchbox", { name: en["users.survivingMember"] }),
+    SURVIVOR.email,
+  );
+  await user.click(
+    await screen.findByRole("button", {
+      name: `${SURVIVOR.display_name} ${SURVIVOR.email}`,
+    }),
+  );
+  expect(
+    await screen.findByText(en["users.retirement.confirmation_missing"]),
+  ).toBeTruthy();
+  expect(
+    screen.getByRole("button", { name: en["users.merge"] }),
+  ).toHaveProperty("disabled", true);
+  await user.click(
+    await screen.findByRole("button", { name: en["users.merge.ask"] }),
+  );
+  await waitFor(() =>
+    expect(asked).toEqual([
+      { to_user_id: SURVIVOR.id, preview_token: "before-request" },
+    ]),
+  );
+  expect(
+    await screen.findByRole("button", { name: en["users.merge.askAgain"] }),
+  ).toBeTruthy();
+  expect(
+    screen.getByText(
+      `${SOURCE.display_name}: ${en["users.merge.state.requested"]}`,
+    ),
+  ).toBeTruthy();
+});
