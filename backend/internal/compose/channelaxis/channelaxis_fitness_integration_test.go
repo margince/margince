@@ -113,7 +113,7 @@ func TestNoContractEnumSpellsARegisteredTransport(t *testing.T) {
 		for _, m := range members {
 			trimmed[strings.Trim(strings.TrimSpace(m), `'"`)] = true
 		}
-		if allowed[enumKey(trimmed)] {
+		if allowed[enumKey(trimmed)] || connectsABotTheSchemaAdmits(item.Path, trimmed, allowed) {
 			continue
 		}
 		for _, provider := range providers {
@@ -190,4 +190,32 @@ func TestActivityKindTableMatchesTheContractKindEnum(t *testing.T) {
 			t.Errorf("the contract admits kind %q and activity_kind does not carry it: a contract-valid request would fail a foreign key the caller cannot see", k)
 		}
 	}
+}
+
+// connectRequestProviderPath is the enum of the bot connectors ConnectChannel
+// takes a token for. An account connection rides on one of them and is never
+// connected this way, so the enum is narrower than the connection table's check.
+const connectRequestProviderPath = "components/schemas/ConnectChannelRequest/properties/provider"
+
+// connectsABotTheSchemaAdmits exempts that one enum while every member is one a
+// bot-binding table's provider check admits, so a provider the schema refuses
+// still fails here.
+func connectsABotTheSchemaAdmits(path string, members map[string]bool, allowed map[string]bool) bool {
+	if path != connectRequestProviderPath {
+		return false
+	}
+	for set := range allowed {
+		admits := map[string]bool{}
+		for provider := range strings.SplitSeq(set, ",") {
+			admits[provider] = true
+		}
+		within := true
+		for member := range members {
+			within = within && admits[member]
+		}
+		if within {
+			return true
+		}
+	}
+	return false
 }
