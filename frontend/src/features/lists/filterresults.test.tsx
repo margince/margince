@@ -394,6 +394,35 @@ describe("a first page of many", () => {
 
     expect(onLoadMore).toHaveBeenCalled();
   });
+
+  it("calls every page a sample of the matches", async () => {
+    const user = userEvent.setup();
+    const twoPages = [
+      ...PAGE,
+      ...PAGE.map((row) => ({ ...row, id: `${row.id}b` })),
+    ];
+    render(
+      <FilterResults
+        preview={{ ...preview(twoPages), match_count: 214, truncated: true }}
+        resource="contact"
+        fields={[TIER_FIELD]}
+        named={["cf_loyalty_tier"]}
+        unit="contacts"
+        widthsKey="filter-preview-contacts"
+        pending={false}
+        total={214}
+        hasMore
+        onLoadMore={() => {}}
+      />,
+      { wrapper },
+    );
+    expect(screen.getByText(en["filters.resultsCaption"])).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "Next" }));
+
+    expect(screen.getByText(/26 to 50 of 214 contacts/)).toBeInTheDocument();
+    expect(screen.getByText(en["filters.resultsCaption"])).toBeInTheDocument();
+  });
 });
 
 describe("a row", () => {

@@ -1,7 +1,7 @@
 import type { PeekContent } from "../../design-system/peek";
 import type { StandingPeek } from "../../design-system/standingdims";
 import { DEAL_STATUS_LABEL } from "../../format/dealstatus";
-import { formatMoney } from "../../format/format";
+import { formatMoneyWhole } from "../../format/format";
 import { formatDayMonth } from "../../format/format.dates";
 import { attachmentTitle } from "../../lib/attachmentlink";
 import { labelFor } from "../../lib/labelfor";
@@ -74,7 +74,7 @@ export function dealsPeek(
       sub: dealStanding(deal, { t, locale, zone }),
       right:
         deal.amount_minor != null && deal.currency
-          ? formatMoney(deal.amount_minor, deal.currency, locale)
+          ? formatMoneyWhole(deal.amount_minor, deal.currency, locale)
           : undefined,
       href: routeHash({ screen: "deals", id: deal.id }),
     })),
@@ -117,7 +117,7 @@ export function timePeek(
       },
       {
         key: "end",
-        title: t("project.aside.targetEnd"),
+        title: t("project.targetEnd"),
         sub: formatDayMonth(end, locale, zone),
       },
     ],

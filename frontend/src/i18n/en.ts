@@ -1762,8 +1762,6 @@ export const en = {
 
   "scheduling.readOnlyCalendar":
     "Your calendar is connected for reading events. Reconnect it and allow invitation access to create, reschedule and cancel meetings.",
-  "scheduling.bookRefused":
-    "An administrator must grant permission to book meetings.",
   "scheduling.meetingChanged":
     "The meeting changed. Review the updated details and try again.",
   "scheduling.previewCalendarSetup":
@@ -2653,6 +2651,8 @@ export const en = {
   "history.field.qualifying_event_retracted": "Recorded exchange withdrawn",
   "history.field.acquisition_request_retracted":
     "Acquisition request withdrawn",
+  "history.field.impersonation_warning_raised":
+    "Impersonation warning raised by a later email",
   "history.field.impersonation_warning_cleared":
     "Impersonation warning cleared",
   "history.field.impersonation_warning_carried":
@@ -2669,7 +2669,7 @@ export const en = {
   "history.field.resolved_category": "Message category",
   "history.field.score": "Score",
   "history.field.score_override_reason": "Score override reason",
-  "history.field.size_band": "Employees",
+  "history.field.size_band": "Company size",
   "history.field.social": "Social profiles",
   "history.field.source": "Source",
   "history.field.origin": "Origin",
@@ -2850,7 +2850,7 @@ export const en = {
   "search.group.project": "Projects",
   "search.group.product": "Products",
   "search.group.offerTemplate": "Offer templates",
-  "search.group.activity": "Activities",
+  "search.group.activity": "Emails and activities",
   "search.group.lead": "Leads",
   "search.group.tag": "Tags",
   "search.group.email": "Emails",
@@ -3102,14 +3102,15 @@ export const en = {
     "You cannot edit this company. Ask its owner to hand it over or share it, or ask an administrator.",
   "record.actionRefused":
     "Your role does not include this action. Ask an administrator for the right.",
+  "record.roleReadsOnly":
+    "Your role can only read. Ask an administrator for another role.",
+  "record.archiveRefused": "Only its owner or a manager can archive this.",
   "record.accessUnknown":
     "Your access could not be read. Reload the page to check it again.",
   "contact.attachRefused":
     "You can only read this contact. Ask its owner for write access.",
   "record.attachRefused":
     "You can only read this record. Ask its owner for write access.",
-  "record.logActivityRefused":
-    "You do not have permission to log activities on this record.",
   "record.share": "Share",
   "record.moreActions": "More actions",
   "record.moreActionsFor": "More actions for {subject}",
@@ -3330,6 +3331,7 @@ export const en = {
   "partnerStages.addOpen": "New stage",
   "partnerStages.addTitle": "New partner stage",
   "partnerStages.addConfirm": "Add stage",
+  "partnerStages.labelField": "Label",
   "partnerStages.renameTitle": "Rename stage",
   "partnerStages.colStage": "Stage",
   "partnerStages.colMeaning": "Meaning",
@@ -3873,7 +3875,7 @@ export const en = {
   // questions the retired classification answered with one value.
   "company.lifecycle": "Lifecycle",
   "company.relationshipTypes": "Relationship type",
-  "company.sizeBand": "Employees",
+  "company.sizeBand": "Company size",
   "company.sizeBandValue": "{band} employees",
   "company.lifecycle.unknown": "Unknown",
   "company.lifecycle.target": "Target",
@@ -3968,7 +3970,7 @@ export const en = {
   "record.details.about": "About",
   "section.help": "About this section",
   "record.details.ownership": "Ownership",
-  "co.aside.size": "Employees",
+  "co.aside.size": "Company size",
   "co.aside.wayIn": "Way in",
   "record.details.visibleTo": "Visible to",
   "co.aside.visibleEveryone": "Everyone",
@@ -6243,6 +6245,8 @@ export const en = {
   "deals.confirmAdvance": "Move to {stage}?",
   "deals.confirmTerminal":
     "This closes the deal as {status}. Nothing changes until you confirm.",
+  "deals.confirmMovesProject": "This also moves {project} to {phase}.",
+  "deals.confirmMovesUnreadProject": "This also moves its project to {phase}.",
   "deals.lostReason": "Lost reason",
   "deals.lostReasonNeeded": "Pick why the deal was lost.",
   "deals.lostReasonCode": "Why was it lost?",
@@ -6585,6 +6589,7 @@ export const en = {
   "lossReasons.addOpen": "New reason",
   "lossReasons.addTitle": "New loss reason",
   "lossReasons.addConfirm": "Add reason",
+  "lossReasons.labelField": "Label",
   "lossReasons.renameTitle": "Rename reason",
   "lossReasons.activeFor": "{label} can be picked when a deal is lost",
   "lossReasons.colReason": "Reason",
@@ -6765,14 +6770,8 @@ export const en = {
   "deal.acquisitionRetired": "(retired)",
   "deal.waitUntil": "Wait until",
   "deal.fxBase": "{value} · rate {rate} on {date}",
-  "deal.archiveRefused":
-    "Only the deal’s owner or a manager can archive this deal.",
-  "contact.archiveRefused":
-    "Only the contact’s owner or a manager can archive this contact.",
   "contact.undoArchiveNothing":
     "This archive could not be undone, because the contact’s history holds no archive to put back. Open the contact to see whether it is still archived.",
-  "company.archiveRefused":
-    "Only the company’s owner or a manager can archive this company.",
   "deal.archive": "Archive deal",
   "deal.restore": "Restore deal",
   "deal.archiveConfirm":
@@ -7733,7 +7732,7 @@ export const en = {
   "create.fullName": "Full name",
   "create.firstName": "First name",
   "create.lastName": "Last name",
-  "create.contactTitle": "Title",
+  "create.contactTitle": "Job title",
   "create.greetingRegister": "How to greet them",
   "create.greetingRegisterHint": "Drafts to this contact open this way.",
   "create.greetingRegister.unset": "Let Margince decide",
@@ -7755,7 +7754,7 @@ export const en = {
   "create.displayName": "Company name",
   "create.legalName": "Legal name",
   "create.industry": "Industry",
-  "create.sizeBand": "Employees",
+  "create.sizeBand": "Company size",
   "co.address.summary": "Address",
   "co.address.countryMismatch": "Postal code and city are in {country}",
 
@@ -8244,6 +8243,12 @@ export const en = {
   "editAccess.withdraw": "Withdraw edit access request",
   "editAccess.sent": "Edit access requested from {owner}",
   "editAccess.withdrawn": "Edit access request withdrawn",
+  // A record this reader may view but not change. The head's pill and the
+  // Ownership row say so, and the panel names the owner.
+  "viewOnly.pill": "View only",
+  "viewOnly.label": "Your access",
+  "viewOnly.owns": "{owner} owns {name}",
+  "record.details.access": "Access",
   // The owner offering a record to a colleague, from the access panel.
   "handover.offer": "Hand over to…",
   "handover.offerTo": "Hand over to",
@@ -9279,7 +9284,7 @@ export const en = {
   "analytics.field.project": "Project label",
   "analytics.field.project_id": "Project",
   "analytics.field.quiet_since": "Quiet since",
-  "analytics.field.size_band": "Employees",
+  "analytics.field.size_band": "Company size",
   "analytics.field.source": "Source",
   "analytics.field.origin": "Origin",
   "analytics.field.stage_id": "Stage",
@@ -9877,7 +9882,7 @@ export const en = {
   "rbac.masked": "Masked value",
   "settings.passports": "Passports",
   "settings.passportsSub":
-    "A passport is your personal API key for scripts and your own code. Whatever uses it acts as you, with the permissions you tick, and never more. To use Margince in an AI tool, connect the tool above instead.",
+    "A passport is for scripts and your own code. Whatever uses it acts as you, with the permissions you tick, and never more. To use Margince in an AI tool, connect the tool above instead.",
   // What each passport scope admits, in words. The wire carries `read`/`draft`/
   // `write`/`send`/`enrich`; a human granting them is choosing what an agent may
   // do on their behalf, and the protocol token alone does not say — "write" and
@@ -9959,8 +9964,8 @@ export const en = {
   "settings.passportUnnamed": "Unnamed passport",
   "settings.passportNameRequired": "Give the agent a name",
   "settings.passportNameTooLong": "Use at most 120 characters.",
-  "settings.mint": "Mint passport",
-  "settings.minting": "Minting…",
+  "settings.mint": "Create passport",
+  "settings.minting": "Creating…",
   "settings.mintCancel": "Cancel",
   "settings.mintDone": "Done",
   "settings.mintOpen": "New passport",
@@ -10451,7 +10456,7 @@ export const en = {
   "aiAccess.connect.help": "Help from {vendor}",
   "aiAccess.connect.helpAdmin": "Help from {vendor} for your admin",
   "aiAccess.connect.devHint":
-    "Writing your own code? Create an API key under For developers below.",
+    "Writing your own code? Create a passport under For developers below.",
   "aiAccess.step.allow": "Margince opens. Sign in and choose Authorize. Done.",
   "aiAccess.claude.openConnectors":
     "In Claude, open “Customize”, then “Connectors”.",
@@ -10529,9 +10534,10 @@ export const en = {
   "aiAccess.guide.officialHead": "Official guide",
   "aiAccess.guide.checked": "These steps were checked on {date}.",
   "aiAccess.dev.title": "For developers",
+  "aiAccess.yourAgent.title": "Your agent",
   "aiAccess.dev.sub":
-    "API keys for your own code, and what agents may do without you.",
-  "aiAccess.dev.tab.passports": "API keys",
+    "Passports for your own code, and what agents may do without you.",
+  "aiAccess.dev.tab.passports": "Passports (API keys)",
   "aiAccess.dev.tab.rules": "Agent rules",
   "aiAccess.connect.placeQuestion": "Where do you use it?",
   "aiAccess.connect.copy": "Copy",
@@ -10585,6 +10591,16 @@ export const en = {
     "Put this text in ~/.gemini/config/mcp_config.json. If the file already lists servers, add only the margince entry beside them.",
   "aiAccess.local.antigravity.signIn":
     "Open the agent settings, then “Customizations”, and choose “Authenticate” next to margince.",
+  "aiAccess.place.lumoNote":
+    "Lumo on the web cannot connect to other apps yet. Use the Lumo desktop app, which you can download from proton.me/lumo/download.",
+  "aiAccess.local.lumo.open":
+    "In Lumo Desktop, choose “Settings” at the bottom of the sidebar, then “Desktop app” and “Connectors”.",
+  "aiAccess.local.lumo.add":
+    "Choose “Add MCP server…” and set “Transport” to “Remote (HTTP)”.",
+  "aiAccess.local.lumo.fill":
+    "Enter margince as the ID and Margince as the Display name, add a short description, and paste the address.",
+  "aiAccess.local.lumo.signIn":
+    "Choose “Add server”. Margince opens when Lumo asks: sign in and choose Authorize.",
   "aiAccess.other.sub":
     "Margince works with any AI tool that can add a remote MCP server. Look for “MCP”, “connectors” or “tools” in its settings.",
   "aiAccess.other.typeLabel": "Type",
@@ -10594,7 +10610,9 @@ export const en = {
   "aiAccess.other.signIn":
     "OAuth in your browser. Most tools start it the first time they connect.",
   "aiAccess.other.apiKey":
-    "No sign-in in the tool? Create an API key in Settings under AI assistants, For developers, and send it as the header “Authorization: Bearer” followed by the key.",
+    "No sign-in in the tool? Create a passport in Settings under AI assistants, For developers, and send it as the header “Authorization: Bearer” followed by the passport.",
+  "aiAccess.other.apiKeyBelow":
+    "No sign-in in the tool? Create a passport under For developers below, and send it as the header “Authorization: Bearer” followed by the passport.",
   "aiAccess.other.notAllowed":
     "If sign-in says the tool is not allowed, an administrator chooses which tools may connect in Settings under AI tool access.",
   "setup.step.ai": "Connect your AI tool",
@@ -12379,6 +12397,8 @@ export const en = {
   "translation.nameIn.vi": "Name in Vietnamese",
   "translation.given": "{language}: {name}",
   "stage.name": "Name",
+  "stage.nameTaken":
+    "A stage with this name already exists in this pipeline. Choose another name.",
   "stage.semantic": "Stage type",
   "stage.lastClosing":
     "A pipeline needs a Won and a Lost stage. Add another of this type first.",
@@ -15236,7 +15256,7 @@ export const en = {
   "settings.page.model-calls.sub": "Each model request and its response.",
   "settings.page.privacy.sub":
     "Data subject requests, consent purposes and record retention.",
-  "settings.page.audit.sub": "Every actor and every record they accessed.",
+  "settings.page.audit.sub": "Every change and who made it.",
   "settings.page.system-health.sub":
     "Whether background processing is keeping up.",
   "settings.page.extensions.sub":
@@ -15635,6 +15655,8 @@ export const en = {
   "knowledge.upload.submit_one": "Add document",
   "knowledge.new.title": "New document set",
   "knowledge.new.name": "Name",
+  "knowledge.new.nameTaken":
+    "A document set with this name already exists. Choose another name.",
   "knowledge.new.topic": "What this set covers",
   "knowledge.new.topicHint":
     "One sentence. It is shown to anyone whose question this set does not cover.",
@@ -16435,8 +16457,7 @@ export const en = {
   "extAccess.need.models": "AI models",
   "extAccess.need.objects": "File storage",
   "extAccess.brings.none": "None",
-  "extAccess.noObjects":
-    "This unit registers no permission objects, so there is nothing to grant.",
+  "extAccess.noObjects": "This extension has no permissions to grant.",
   "extAccess.roleColumn": "Role",
   "extAccess.action.read": "Read",
   "extAccess.action.create": "Create",
@@ -17887,6 +17908,7 @@ export const en = {
   "firstRun.ai.chatModel": "Model",
   "firstRun.ai.modelHint":
     "Any model the provider serves works. The tests graded the setup above, not one model on every tier.",
+  "firstRun.ai.setupTitle.anthropic_cloud": "Anthropic Claude",
   "firstRun.ai.setupTitle.consumer_class_brokered":
     "Gemma 4 you could run yourself, through OpenRouter",
   "firstRun.ai.setupTitle.gemini_cloud": "Google Gemini",
@@ -19663,7 +19685,7 @@ export const en = {
     "Each value with the text it was read from. A corrected value is kept.",
   "contact.enriched.field.first_name": "First name",
   "contact.enriched.field.last_name": "Last name",
-  "contact.enriched.field.title": "Title",
+  "contact.enriched.field.title": "Job title",
   "contact.enriched.field.phone": "Phone",
   "contact.enriched.field.role": "Role",
   "contact.enriched.field.linkedin": "LinkedIn",
@@ -20560,7 +20582,7 @@ export const en = {
   "filters.field.company_country": "Company country",
   "filters.field.company_industry": "Company industry",
   "filters.field.company_lifecycle": "Company lifecycle",
-  "filters.field.company_size_band": "Employees",
+  "filters.field.company_size_band": "Company size",
   "filters.field.country": "Country code",
   "filters.field.created_at": "Created",
   "filters.field.hosting_provider": "Hosting",
@@ -20573,7 +20595,7 @@ export const en = {
   "filters.field.pipeline_id": "Pipeline",
   "filters.field.relationship_type": "Relationship type",
   "filters.field.stage_id": "Stage",
-  "filters.field.tag": "Tag",
+  "filters.field.tag": "Tags",
   "filters.field.technology": "Technology",
   "filters.choosePlaceholder": "Select field",
   "filters.customBadge": "Custom field",
@@ -20582,6 +20604,7 @@ export const en = {
   "filters.values": "Values",
   "filters.addValue": "Add value",
   "filters.removeClause": "Remove {field} condition",
+  "filters.removeEmptyClause": "Remove condition",
   "filters.existsLabel": "Field has value",
   "filters.hasValue": "has a value",
   "filters.isEmpty": "is empty",
@@ -20601,6 +20624,12 @@ export const en = {
   "filters.op.lessThan": "is less than",
   "filters.op.atMost": "is at most",
   "filters.op.withinRadius": "is within",
+  "filters.op.include": "include",
+  "filters.op.notInclude": "do not include",
+  "filters.op.includeAny": "include any of",
+  "filters.op.includeSome": "include at least one",
+  "filters.op.includeNone": "include none",
+  "filters.op.includeSomeOrNone": "include some or none",
   "filters.sentence.radiusOf": "{km} km of {place}",
   "filters.radius.km": "Distance (km)",
   "filters.radius.place": "Place name (optional)",
@@ -20978,13 +21007,19 @@ export const en = {
   "filters.noFields": "No filterable fields for this record type.",
   "filters.resultsTitle": "Matching records",
   "filters.resultRefGone": "Removed, or hidden from you",
-  "filters.resultsCaption":
-    "First page of matches, for checking the filter. Not the full selection.",
+  "filters.resultsCaption": "A sample of the matches",
   "filters.noMatches":
     "No {records} match these conditions. Loosen one: switch a connector to “or”, or remove the most specific condition.",
   "filters.noMatchesLoosen":
     "No {records} match this filter. Loosen or remove a condition.",
-  "filters.pickRecord": "Select record",
+  "filters.pickTag": "Select tag",
+  "filters.pickOwner": "Select owner",
+  "filters.pickTeam": "Select team",
+  "filters.pickCompany": "Select company",
+  "filters.pickPipeline": "Select pipeline",
+  "filters.pickStage": "Select stage",
+  "filters.pickProject": "Select project",
+  "filters.pickProduct": "Select product",
   "filters.searchRecords": "Search companies",
   "filters.typeToSearch": "Type to search",
   "filters.searching": "Searching…",
@@ -20994,6 +21029,7 @@ export const en = {
   "filters.removeRecord": "Remove {record}",
   "filters.loadingRecords": "Loading choices…",
   "filters.pickValue": "Select value",
+  "filters.you": "You",
   "filters.amountUnpriced":
     "This amount has no known currency, so it cannot be shown or changed.",
   "filters.exportCsv": "Export CSV",
@@ -21124,11 +21160,9 @@ export const en = {
   "projectRole.subcontractor": "Subcontractor",
   "projectLinks.attach": "Attach project",
   "projectLinks.move": "Move to another project",
-  "projectLinks.detach": "Detach",
-  "projectLinks.detachConfirm": "Detach project",
-  "projectLinks.detachNamed": "Detach {name}",
+  "projectLinks.detachConfirm": "Remove from project",
   "projectLinks.roleLabel": "As",
-  "projectLinks.detachTitle": "Detach this project?",
+  "projectLinks.detachTitle": "Remove from project?",
   "projectLinks.detachBody":
     "{name} is unchanged. Only its link to this record ends; nothing is deleted.",
   "projectLinks.emptyTitle": "No projects yet",
@@ -21166,7 +21200,7 @@ export const en = {
   "project.ownerMe": "Me",
   "project.assignOwner": "Assign to a colleague",
   "project.description": "Description",
-  "project.targetEnd": "Target end date",
+  "project.targetEnd": "Target end",
   "project.startDate": "Start date",
   "project.endDate": "End date",
   "project.noCustomer": "No customer company",
@@ -21187,7 +21221,7 @@ export const en = {
     "You cannot edit this project. Ask its owner to share it, or an administrator for edit rights.",
   "project.phaseLabel": "Phase",
   "project.filterPhaseAll": "All phases",
-  "project.viewDelivering": "In delivery",
+  "project.viewDelivering": "Delivering",
   "project.phase.initiative": "Initiative",
   "project.phase.pursuing": "Pursuing",
   "project.phase.delivering": "Delivering",
@@ -21215,7 +21249,6 @@ export const en = {
   "project.stakeholders.removeTitle": "Remove stakeholder?",
   "project.stakeholders.removeConfirm":
     "{name} is no longer a stakeholder on this project. Their activity stays where it is.",
-  "project.stakeholders.removeOne": "Remove {name} from project",
   "project.role.sponsor": "Sponsor",
   "project.role.project_lead": "Project lead",
   "project.role.delivery_lead": "Delivery lead",
@@ -21260,13 +21293,14 @@ export const en = {
   "record.details.notShared": "Not shared",
   "project.visibility.sharedWith_one": "Shared with {count}",
   "project.visibility.sharedWith_other": "Shared with {count}",
-  "project.aside.targetEnd": "Target end",
   "project.aside.ended": "Ended",
   "project.aside.closedReason": "Closing reason",
   "project.history.since": "Since {date}",
   "project.history.movedBy": "{subject} moved it",
   "project.history.openedBy": "{subject} opened it",
   "project.history.unknown": "Who made this move was not recorded",
+  "project.history.dealWon": "Deal {name} won",
+  "project.history.dealWonUnnamed": "A deal was won",
   "project.standing.unassessed":
     "Nobody has recorded how delivery is going yet.",
   "project.standing.assessedBy": "Assessed {date} by {author}.",
@@ -21288,7 +21322,6 @@ export const en = {
   "project.standing.event.opened": "{phase} opened",
   "project.standing.event.signed": "Contract signed",
   "project.standing.event.won": "{name} won",
-  "project.standing.event.end": "Target end",
   "project.standing.event.dueLate": "due {date} · late",
   "project.standing.event.due": "due {date}",
   "project.standing.lastUpdate": "Last update",
@@ -21772,6 +21805,9 @@ export const en = {
   "worklist.manager.kind.next_step": "Deal next step",
   "worklist.manager.kind.review_backlog": "Review backlog",
   "worklist.manager.kind.general": "Other",
+  "worklist.manager.coachDeal": "Deal",
+  "worklist.manager.coachNoDeal":
+    "No deal is in their day, so there is none to name.",
   "worklist.board.title": "Team work needing attention",
   "worklist.gap.rankedOn": "Ranked on {date}.",
   "worklist.gap.masked_one":
@@ -22924,6 +22960,7 @@ export const en = {
   "magic.why.site_read_unnamed": "Read on the company’s website.",
   "magic.why.site_read_each": "Read on each company’s own website.",
   "magic.why.signature": "Taken from an email signature.",
+  "magic.why.stated": "Reason given: {why}",
   "magic.why.retention": "Retention rule: after {days} days.",
   "magic.by.retention": "Retention",
   "magic.by.mail_filing": "Mail filing",
@@ -23917,7 +23954,7 @@ export const en = {
   "contactCase.prefer.name": "Name",
   "contactCase.prefer.email": "Primary email",
   "contactCase.prefer.employment": "Current employer",
-  "contactCase.prefer.title": "Title",
+  "contactCase.prefer.title": "Job title",
   "contactCase.prefer.placeholder": "Choose a value",
   "contactCase.previewVerb": "Preview merge",
   "contactCase.merge_one": "Merge {count} contact",

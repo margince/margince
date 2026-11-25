@@ -27,6 +27,7 @@ import { useLocale, usePlural, useT } from "../../i18n";
 import { useCanWrite, useWriteRefusal } from "../../lib/capability";
 import { unwrap } from "../../lib/problem";
 import { useMe } from "../../lib/session";
+import { TEXT_LIMITS } from "../../lib/textlimits_gen";
 import { useUrlParams } from "../../lib/urlstate";
 import { SETTINGS_PIPELINES, usePipelineOrder } from "./settings.pipelineorder";
 import { MakeDefault, PipelineRetirement } from "./settings.pipelineverbs";
@@ -42,7 +43,12 @@ const PIPELINE_PARAM = "pipeline";
 
 function createFields(t: T): CreateField[] {
   return [
-    { key: "name", label: "pipeline.name", required: true },
+    {
+      key: "name",
+      label: "pipeline.name",
+      required: true,
+      maxLength: TEXT_LIMITS.label,
+    },
     {
       key: "is_default",
       label: "pipeline.default",
@@ -57,7 +63,12 @@ function createFields(t: T): CreateField[] {
 }
 
 const RENAME_FIELDS: CreateField[] = [
-  { key: "name", label: "pipeline.name", required: true },
+  {
+    key: "name",
+    label: "pipeline.name",
+    required: true,
+    maxLength: TEXT_LIMITS.label,
+  },
 ];
 
 // The pipeline the address names, or the one a reader would expect without it:

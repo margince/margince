@@ -251,6 +251,7 @@ jobs:
               - 'README.md'
               - 'CLA.md'
               - 'LICENSING.md'
+              - 'MAINTAINERS.md'
               - 'CODE_OF_CONDUCT.md'
               - 'CONTRIBUTING.md'
               - 'SECURITY.md'

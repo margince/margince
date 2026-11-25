@@ -712,10 +712,10 @@ describe("SettingsScreen restructured pages", () => {
     expect(developers.textContent).toContain("Passports");
     await userEvent.setup().click(screen.getByText("For developers"));
     expect(developers.open).toBe(true);
-    // API keys open first: the passports, not the agent rules.
+    // Passports open first, not the agent rules.
     expect(
       screen
-        .getByRole("button", { name: "API keys" })
+        .getByRole("button", { name: "Passports (API keys)" })
         .getAttribute("aria-pressed"),
     ).toBe("true");
   });

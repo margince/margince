@@ -176,7 +176,7 @@ func createContact(ctx context.Context, tx pgx.Tx, s *Store, match ContactResolu
 		spec.SourceSystem, spec.Narrowing, string(spec.RelationshipMark), spec.RelationshipMarkSetBy,
 		spec.CreatedFromActivityID,
 	})
-	cfCols, cfHolders, args, err := storekit.InsertFragments(spec.Active, spec.CustomFields, base)
+	cfCols, cfHolders, args, err := storekit.InsertFragmentsIn(ctx, tx, spec.Active, spec.CustomFields, base)
 	if err != nil {
 		return ids.ContactID{}, err
 	}
@@ -333,7 +333,7 @@ func createCompany(ctx context.Context, tx pgx.Tx, match CompanyMatch, spec Comp
 		spec.Source, spec.CapturedBy, spec.NameSource, spec.Visibility, spec.IsAnchor,
 		spec.SourceSystem, spec.LinkedInURL, spec.Phone, spec.Email,
 	})
-	cfCols, cfHolders, args, err := storekit.InsertFragments(spec.Active, spec.CustomFields, base)
+	cfCols, cfHolders, args, err := storekit.InsertFragmentsIn(ctx, tx, spec.Active, spec.CustomFields, base)
 	if err != nil {
 		return ids.CompanyID{}, err
 	}

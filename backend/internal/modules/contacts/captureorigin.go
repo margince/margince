@@ -15,7 +15,9 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/platform/captureorigin"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/provenance"
 )
 
 // captureWriterSQL is the test that capture or the display-name repair is the
@@ -64,6 +66,7 @@ func CaptureMintedForSeatTx(ctx context.Context, tx pgx.Tx, seat ids.UUID, candi
 		       SELECT 1 FROM audit_log a
 		        WHERE a.entity_type = 'contact' AND a.entity_id = p.id
 		          AND a.action <> 'create'
+		          AND NOT `+storekit.RecordSourceCorrectionSQL("a")+`
 		          AND NOT `+captureWriterSQL("a.actor_id", "$3", "$4", "$6")+`)
 		   -- A merge is audited on the contact it retired, naming the survivor.
 		   AND NOT EXISTS (
@@ -72,7 +75,7 @@ func CaptureMintedForSeatTx(ctx context.Context, tx pgx.Tx, seat ids.UUID, candi
 		          AND m.after ->> $7 = p.id::text)
 		   AND NOT `+writtenAboutByAnybodySQL("$3", "$4", "$6")+`
 		 ORDER BY p.id`,
-		candidates, seat, CaptureVerdictActor, CaptureAcceptActor, vcardSource, DisplayNameRepairActor,
+		candidates, seat, CaptureVerdictActor, CaptureAcceptActor, provenance.RecordSourceImport, DisplayNameRepairActor,
 		auditKeyMergedInto)
 	if err != nil {
 		return nil, fmt.Errorf("contacts: reading which contacts capture made for a seat: %w", err)

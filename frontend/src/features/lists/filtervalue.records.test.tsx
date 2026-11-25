@@ -4,11 +4,16 @@
 
 import "@testing-library/jest-dom/vitest";
 
-import { cleanup, render, screen } from "@testing-library/react";
+import { cleanup, render, screen, within } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
+import { useState } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { en } from "../../i18n/en";
+import type { LeafValue } from "../../lib/segmentpredicate";
 import { recordNamesRoutes } from "../../testing/recordnames.testkit";
 import {
   installFetchStub,
+  jsonResponse,
   meRoute,
   StoryProviders,
 } from "../../testing/story-utils";
@@ -26,7 +31,12 @@ describe("a company clause restored from a saved view", () => {
     });
     render(
       <StoryProviders>
-        <SearchedRecordValue many value={[ID]} onChange={vi.fn()} />
+        <SearchedRecordValue
+          many
+          value={[ID]}
+          onChange={vi.fn()}
+          placeholder={en["filters.pickCompany"]}
+        />
       </StoryProviders>,
     );
     expect(await screen.findByText("Demo GmbH")).toBeInTheDocument();
@@ -34,5 +44,173 @@ describe("a company clause restored from a saved view", () => {
       screen.getByRole("button", { name: "Remove Demo GmbH" }),
     ).toBeInTheDocument();
     expect(screen.queryByText(ID)).not.toBeInTheDocument();
+  });
+});
+
+// `arrive` is what the owner stores for a sent value: the same, or reshaped.
+function OneCompany({
+  arrive = (sent) => sent,
+}: Readonly<{ arrive?: (sent: LeafValue) => LeafValue }>) {
+  const [value, setValue] = useState<LeafValue>("");
+  return (
+    <>
+      <SearchedRecordValue
+        many={false}
+        value={value}
+        onChange={(sent) => setValue(arrive(sent))}
+        placeholder={en["filters.pickCompany"]}
+      />
+      <output>{JSON.stringify(value)}</output>
+      <button type="button" onClick={() => setValue("")}>
+        Clear from outside
+      </button>
+      <button type="button" onClick={() => setValue(ID)}>
+        Choose from outside
+      </button>
+    </>
+  );
+}
+
+function stubOneAnswer() {
+  installFetchStub({
+    "GET /me": meRoute({ company: ["read"] }),
+    "GET /companies": () =>
+      jsonResponse({
+        data: [{ id: ID, display_name: "Demo GmbH" }],
+        page: { next_cursor: null, has_more: false },
+      }),
+    ...recordNamesRoutes({ company: { [ID]: "Demo GmbH", other: "Other" } }),
+  });
+}
+
+async function pickDemo(user: ReturnType<typeof userEvent.setup>) {
+  await user.type(
+    screen.getByRole("combobox", { name: en["filters.searchRecords"] }),
+    "Demo",
+  );
+  await screen.findByRole("listbox");
+  await user.keyboard("{ArrowDown}{Enter}");
+}
+
+describe("searching for a company", () => {
+  it("offers the answers as a suggestion list the keyboard walks", async () => {
+    installFetchStub({
+      "GET /me": meRoute({ company: ["read"] }),
+      "GET /companies": () =>
+        jsonResponse({
+          data: [
+            { id: ID, display_name: "Demo GmbH" },
+            { id: "c-2", display_name: "Demo Labs" },
+          ],
+          page: { next_cursor: null, has_more: false },
+        }),
+      ...recordNamesRoutes({ company: { [ID]: "Demo GmbH" } }),
+    });
+    const user = userEvent.setup();
+    render(
+      <StoryProviders>
+        <OneCompany />
+      </StoryProviders>,
+    );
+
+    const box = screen.getByRole("combobox", {
+      name: en["filters.searchRecords"],
+    });
+    expect(box).toHaveAttribute("placeholder", en["filters.pickCompany"]);
+    await user.type(box, "Demo");
+    const list = await screen.findByRole("listbox");
+    expect(
+      within(list)
+        .getAllByRole("option")
+        .map((option) => option.textContent),
+    ).toEqual(["Demo GmbH", "Demo Labs"]);
+
+    await user.keyboard("{Escape}");
+    expect(screen.queryByRole("listbox")).toBeNull();
+    expect(box).toHaveValue("Demo");
+    expect(screen.getByRole("status", { hidden: true })).toHaveTextContent(
+      '""',
+    );
+
+    await user.keyboard("{ArrowDown}{Enter}");
+    expect(screen.getByRole("status", { hidden: true })).toHaveTextContent(
+      JSON.stringify(ID),
+    );
+    // The name stands where the box was, and focus moves to the way back.
+    expect(screen.getByText("Demo GmbH")).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: en["filters.changeRecord"] }),
+    ).toHaveFocus();
+  });
+
+  it("moves focus only after the reader's own pick, not on a later outside change", async () => {
+    installFetchStub({
+      "GET /me": meRoute({ company: ["read"] }),
+      "GET /companies": () =>
+        jsonResponse({
+          data: [{ id: ID, display_name: "Demo GmbH" }],
+          page: { next_cursor: null, has_more: false },
+        }),
+      ...recordNamesRoutes({ company: { [ID]: "Demo GmbH" } }),
+    });
+    const user = userEvent.setup();
+    render(
+      <StoryProviders>
+        <OneCompany />
+      </StoryProviders>,
+    );
+    await user.type(
+      screen.getByRole("combobox", { name: en["filters.searchRecords"] }),
+      "Demo",
+    );
+    await screen.findByRole("listbox");
+    await user.keyboard("{ArrowDown}{Enter}");
+    expect(
+      screen.getByRole("button", { name: en["filters.changeRecord"] }),
+    ).toHaveFocus();
+
+    const outside = screen.getByRole("button", { name: "Clear from outside" });
+    await user.click(outside);
+    expect(
+      screen.getByRole("combobox", { name: en["filters.searchRecords"] }),
+    ).not.toHaveFocus();
+    expect(outside).toHaveFocus();
+  });
+
+  it("moves focus when the pick arrives in another shape", async () => {
+    stubOneAnswer();
+    const user = userEvent.setup();
+    render(
+      <StoryProviders>
+        <OneCompany arrive={(sent) => (Array.isArray(sent) ? sent : [sent])} />
+      </StoryProviders>,
+    );
+    await pickDemo(user);
+    expect(screen.getByRole("status", { hidden: true })).toHaveTextContent(
+      JSON.stringify([ID]),
+    );
+    expect(
+      screen.getByRole("button", { name: en["filters.changeRecord"] }),
+    ).toHaveFocus();
+  });
+
+  it("stops waiting for the pick once the value changes to something else", async () => {
+    stubOneAnswer();
+    const user = userEvent.setup();
+    render(
+      <StoryProviders>
+        <OneCompany arrive={() => "other"} />
+      </StoryProviders>,
+    );
+    await pickDemo(user);
+    const change = screen.getByRole("button", {
+      name: en["filters.changeRecord"],
+    });
+    expect(change).not.toHaveFocus();
+
+    const outside = screen.getByRole("button", { name: "Choose from outside" });
+    await user.click(outside);
+    expect(change).not.toHaveFocus();
+    expect(outside).toHaveFocus();
   });
 });

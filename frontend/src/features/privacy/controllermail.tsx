@@ -193,7 +193,7 @@ function MailPreviewBody({
             },
           ]}
         />
-        <EmailText body={preview.text} />
+        <EmailText body={preview.text} subject={preview.subject} />
       </div>
     </>
   );

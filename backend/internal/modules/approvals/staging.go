@@ -379,7 +379,7 @@ func (s *Service) insertProposalInTx(ctx context.Context, tx pgx.Tx, in StageInp
 		return ids.ApprovalID{}, err
 	}
 
-	summaryParts, err := marshalSystemSummary(ctx, in.Summary, in.SummaryParts, in.SystemText, in.EffectSystemText)
+	summaryParts, err := marshalSystemSummary(ctx, in)
 	if err != nil {
 		return ids.ApprovalID{}, err
 	}

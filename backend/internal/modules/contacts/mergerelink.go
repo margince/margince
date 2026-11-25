@@ -289,6 +289,9 @@ func relinkProviderPurchases(ctx context.Context, tx pgx.Tx, sourceID, targetID 
 // Rows differing by address or by account are two ways to reach one party and both repoint.
 // A sweep by contact takes no meeting's attendee lock; the hourly evidence pass corrects it.
 func relinkParticipantRows(ctx context.Context, tx pgx.Tx, sourceID, targetID ids.ContactID) error {
+	if _, err := storekit.LowercaseOlderParticipantAddresses(ctx, tx, `ap.contact_id = ANY($1)`, []ids.UUID{sourceID.UUID, targetID.UUID}); err != nil {
+		return err
+	}
 	if _, err := tx.Exec(ctx, `
 		DELETE FROM activity_participant ap
 		 WHERE ap.contact_id = @source

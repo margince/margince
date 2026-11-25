@@ -40,6 +40,10 @@ func contactCreateInputAdmitting(req crmcontracts.CreateContactRequest, importer
 	if err := provenance.RefuseWireAdmitting(req.Source, req.SourceSystem, importer); err != nil {
 		return CreateContactInput{}, err
 	}
+	// After the namespace refusal, which names the reserved field more precisely.
+	if err := provenance.AdmitRecordSource(req.Source); err != nil {
+		return CreateContactInput{}, err
+	}
 	author, err := storekit.AdmitSourceAuthor(req.SourceAuthorId, req.SourceAuthorName, req.SourceSystem, importer)
 	if err != nil {
 		return CreateContactInput{}, err

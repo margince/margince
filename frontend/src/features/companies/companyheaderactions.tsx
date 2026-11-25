@@ -51,19 +51,14 @@ function stripRefusals(
 ): Readonly<{
   ownArchived?: string;
   activityRefusal?: string;
-  bookRefusal?: string;
 }> {
   if (state.archived) {
     return state.pageStatesArchive
       ? {}
       : { ownArchived: t("record.archivedReadOnly") };
   }
-  return state.activityRefusalKey
-    ? {
-        activityRefusal: t(state.activityRefusalKey),
-        bookRefusal: t("scheduling.bookRefused"),
-      }
-    : {};
+  const key = state.activityRefusalKey;
+  return key ? { activityRefusal: t(key) } : {};
 }
 
 export function CompanyHeaderActions({
@@ -101,11 +96,8 @@ export function CompanyHeaderActions({
   const ownReasonId = useId();
   const reasonId = archivedReasonId ?? ownReasonId;
   const archived = company.archived_at ? reasonId : undefined;
-  // Independent of `archived`: a live record a seat may not write to is
-  // refused for this reason, not that one.
-  const bookRefusedId = useId();
   const logRefused = archived ?? activity.refusedId;
-  const { ownArchived, activityRefusal, bookRefusal } = stripRefusals(t, {
+  const { ownArchived, activityRefusal } = stripRefusals(t, {
     archived: archived !== undefined,
     pageStatesArchive: archivedReasonId !== undefined,
     activityRefusalKey: activity.refusalKey,
@@ -149,14 +141,9 @@ export function CompanyHeaderActions({
         view={view}
         allowed={!logPending && !logRefused}
         pending={logPending}
-        reasonId={archived ?? (activity.pending ? undefined : bookRefusedId)}
-        reasonTip={ownArchived ?? bookRefusal}
+        reasonId={logRefused}
+        reasonTip={logRefusal}
       />
-      {bookRefusal && (
-        <p className="t-caption" id={bookRefusedId}>
-          {bookRefusal}
-        </p>
-      )}
       <Button
         disabled={logPending}
         reasonId={logRefused}

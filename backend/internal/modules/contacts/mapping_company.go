@@ -48,6 +48,10 @@ func companyCreateInputAdmitting(req crmcontracts.CreateCompanyRequest, importer
 	if err := provenance.RefuseWireAdmitting(req.Source, req.SourceSystem, importer); err != nil {
 		return CreateCompanyInput{}, err
 	}
+	// After the namespace refusal, which names the reserved field more precisely.
+	if err := provenance.AdmitRecordSource(req.Source); err != nil {
+		return CreateCompanyInput{}, err
+	}
 	author, err := storekit.AdmitSourceAuthor(req.SourceAuthorId, req.SourceAuthorName, req.SourceSystem, importer)
 	if err != nil {
 		return CreateCompanyInput{}, err

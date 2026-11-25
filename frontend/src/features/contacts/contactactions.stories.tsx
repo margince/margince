@@ -236,9 +236,8 @@ export const NoTransportStatedByThePage: Story = {
   },
 };
 
-// A role that may not log activity: the two log verbs are refused and the one
-// sentence saying why hangs under the row as a caption, at the verbs' width,
-// rather than setting the row's width and pushing the header's name aside.
+// A role that may change the contact but not log activity. Both log verbs are
+// refused, and the one sentence hangs under the row as a caption at their width.
 export const LogRefused: Story = {
   render: () => {
     installFetchStub({
@@ -256,9 +255,7 @@ export const LogRefused: Story = {
       name: "Email",
     });
     await waitFor(() =>
-      expect(email).toHaveAccessibleDescription(
-        "You do not have permission to log activities on this record.",
-      ),
+      expect(email).toHaveAccessibleDescription(en["record.actionRefused"]),
     );
     await expect(email).toBeDisabled();
   },

@@ -144,8 +144,8 @@ func seedVoiceDraftSignal(t *testing.T, e *apptest.AppEnv, profileID string, own
 	if _, err := e.Owner.Exec(context.Background(), `
 		INSERT INTO voice_learning_signal
 		  (voice_profile_id, profile_version, draft_ref_hash, outcome,
-		   generated_original, transformations, retention_until, source, captured_by)
-		VALUES ($1, 2, $2, 'drafted', 'generated draft', '[]', $3, 'system', $4)`,
+		   generated_original, transformations, retention_until, captured_by)
+		VALUES ($1, 2, $2, 'drafted', 'generated draft', '[]', $3, $4)`,
 		profileID, hash[:], time.Now().UTC().Add(30*24*time.Hour),
 		"human:"+ownerID.String()); err != nil {
 		t.Fatal(err)

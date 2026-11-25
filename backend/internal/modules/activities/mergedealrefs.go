@@ -36,7 +36,7 @@ func MoveDealRefsTx(ctx context.Context, tx pgx.Tx, from, to ids.UUID) ([]record
 		return nil, err
 	}
 	if err := storekit.AuditEach(ctx, tx, "update", "activity_retention_evidence", evidence,
-		map[string]any{"deal_id": from}, map[string]any{"deal_id": to}); err != nil {
+		map[string]any{fieldDealID: from}, map[string]any{fieldDealID: to}); err != nil {
 		return nil, fmt.Errorf("audit the activity_retention_evidence rows of the merge: %w", err)
 	}
 	moved = append(moved, recordmerge.Moved{Table: "activity_retention_evidence", IDs: evidence})
@@ -54,7 +54,7 @@ func MoveDealRefsTx(ctx context.Context, tx pgx.Tx, from, to ids.UUID) ([]record
 		return nil, err
 	}
 	if err := storekit.AuditEach(ctx, tx, "update", "deal_document_hide", hides,
-		map[string]any{"deal_id": from}, map[string]any{"deal_id": to}); err != nil {
+		map[string]any{fieldDealID: from}, map[string]any{fieldDealID: to}); err != nil {
 		return nil, fmt.Errorf("audit the deal_document_hide rows of the merge: %w", err)
 	}
 	moved = append(moved, recordmerge.Moved{Table: "deal_document_hide", IDs: hides})

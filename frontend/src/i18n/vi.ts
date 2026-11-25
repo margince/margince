@@ -1789,7 +1789,6 @@ export const vi: Readonly<Record<MessageKey, string>> = {
 
   "scheduling.readOnlyCalendar":
     "Lịch đang kết nối để đọc sự kiện. Kết nối lại và cấp quyền gửi lời mời để tạo, đổi giờ và hủy cuộc họp.",
-  "scheduling.bookRefused": "Quản trị viên cần cấp quyền đặt lịch họp.",
   "scheduling.meetingChanged":
     "Cuộc họp đã thay đổi. Xem lại thông tin mới và thử lại.",
   "scheduling.previewCalendarSetup":
@@ -2672,6 +2671,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "history.field.qualifying_event_retracted": "Trao đổi đã ghi nhận bị rút lại",
   "history.field.acquisition_request_retracted":
     "Yêu cầu khi thu nhận đã bị rút lại",
+  "history.field.impersonation_warning_raised":
+    "Cảnh báo mạo danh do một email sau đó",
   "history.field.impersonation_warning_cleared": "Đã gỡ cảnh báo mạo danh",
   "history.field.impersonation_warning_carried":
     "Giữ cảnh báo mạo danh từ liên hệ đã gộp",
@@ -2687,7 +2688,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "history.field.resolved_category": "Loại tin nhắn",
   "history.field.score": "Điểm",
   "history.field.score_override_reason": "Lý do chỉnh điểm",
-  "history.field.size_band": "Số nhân viên",
+  "history.field.size_band": "Quy mô công ty",
   "history.field.social": "Hồ sơ mạng xã hội",
   "history.field.source": "Nguồn",
   "history.field.origin": "Nguồn gốc",
@@ -2848,7 +2849,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "search.group.project": "Dự án",
   "search.group.product": "Sản phẩm",
   "search.group.offerTemplate": "Mẫu báo giá",
-  "search.group.activity": "Hoạt động",
+  "search.group.activity": "Email và hoạt động",
   "search.group.lead": "Lead",
   "search.group.tag": "Thẻ",
   "search.group.email": "Email",
@@ -3094,14 +3095,16 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Bạn không có quyền sửa công ty này. Đề nghị người chịu trách nhiệm chuyển giao hoặc chia sẻ, hoặc liên hệ quản trị viên.",
   "record.actionRefused":
     "Vai trò của bạn không bao gồm thao tác này. Liên hệ quản trị viên để được cấp thêm quyền.",
+  "record.roleReadsOnly":
+    "Vai trò của bạn chỉ có quyền xem. Liên hệ quản trị viên để được cấp vai trò khác.",
+  "record.archiveRefused":
+    "Chỉ ai chịu trách nhiệm hồ sơ này hoặc quản lý mới lưu trữ được.",
   "record.accessUnknown":
     "Không đọc được quyền truy cập của bạn. Tải lại trang để kiểm tra lại.",
   "contact.attachRefused":
     "Bạn chỉ có quyền xem liên hệ này. Hãy nhờ chủ sở hữu cấp quyền ghi.",
   "record.attachRefused":
     "Bạn chỉ có quyền xem hồ sơ này. Hãy nhờ chủ sở hữu cấp quyền ghi.",
-  "record.logActivityRefused":
-    "Bạn không có quyền ghi nhận hoạt động trên hồ sơ này.",
   "record.share": "Chia sẻ",
   "record.moreActions": "Thao tác khác",
   "record.moreActionsFor": "Thao tác khác cho {subject}",
@@ -3326,6 +3329,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "partnerStages.addOpen": "Giai đoạn mới",
   "partnerStages.addTitle": "Giai đoạn đối tác mới",
   "partnerStages.addConfirm": "Thêm giai đoạn",
+  "partnerStages.labelField": "Nhãn",
   "partnerStages.renameTitle": "Đổi tên giai đoạn",
   "partnerStages.colStage": "Giai đoạn",
   "partnerStages.colMeaning": "Ý nghĩa",
@@ -3817,7 +3821,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   // questions the retired classification answered with one value.
   "company.lifecycle": "Vòng đời",
   "company.relationshipTypes": "Loại quan hệ",
-  "company.sizeBand": "Số nhân viên",
+  "company.sizeBand": "Quy mô công ty",
   "company.sizeBandValue": "{band} nhân viên",
   "company.lifecycle.unknown": "Chưa rõ",
   "company.lifecycle.target": "Mục tiêu",
@@ -3905,7 +3909,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "record.details.about": "Thông tin",
   "section.help": "Về mục này",
   "record.details.ownership": "Phụ trách",
-  "co.aside.size": "Số nhân viên",
+  "co.aside.size": "Quy mô công ty",
   "co.aside.wayIn": "Đường vào",
   "record.details.visibleTo": "Ai xem được",
   "co.aside.visibleEveryone": "Mọi người",
@@ -6157,6 +6161,10 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "deals.confirmAdvance": "Chuyển sang {stage}?",
   "deals.confirmTerminal":
     "Thao tác này sẽ đóng deal với trạng thái {status}. Chưa có gì thay đổi cho đến khi bạn xác nhận.",
+  "deals.confirmMovesProject":
+    "Thao tác này cũng chuyển {project} sang {phase}.",
+  "deals.confirmMovesUnreadProject":
+    "Thao tác này cũng chuyển dự án của deal sang {phase}.",
   "deals.lostReason": "Lý do thua",
   "deals.lostReasonNeeded": "Hãy chọn lý do deal bị thua.",
   "deals.lostReasonCode": "Vì sao thua?",
@@ -6440,6 +6448,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "lossReasons.addOpen": "Lý do mới",
   "lossReasons.addTitle": "Lý do thua mới",
   "lossReasons.addConfirm": "Thêm lý do",
+  "lossReasons.labelField": "Nhãn",
   "lossReasons.renameTitle": "Đổi tên lý do",
   "lossReasons.activeFor": "Có thể chọn {label} khi deal bị thua",
   "lossReasons.colReason": "Lý do",
@@ -6618,14 +6627,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "deal.acquisitionRetired": "(đã ngừng dùng)",
   "deal.waitUntil": "Chờ đến",
   "deal.fxBase": "{value} · tỷ giá {rate} ngày {date}",
-  "deal.archiveRefused":
-    "Chỉ chủ deal hoặc quản lý mới có thể lưu trữ deal này.",
-  "contact.archiveRefused":
-    "Chỉ chủ sở hữu liên hệ hoặc quản lý mới có thể lưu trữ liên hệ này.",
   "contact.undoArchiveNothing":
     "Không thể hoàn tác việc lưu trữ vì lịch sử của liên hệ không có lần lưu trữ nào để khôi phục. Hãy mở liên hệ để xem liên hệ còn được lưu trữ hay không.",
-  "company.archiveRefused":
-    "Chỉ chủ sở hữu công ty hoặc quản lý mới có thể lưu trữ công ty này.",
   "deal.archive": "Chuyển deal vào kho lưu trữ",
   "deal.restore": "Khôi phục deal",
   "deal.archiveConfirm":
@@ -7551,7 +7554,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "create.displayName": "Tên công ty",
   "create.legalName": "Tên pháp lý",
   "create.industry": "Ngành",
-  "create.sizeBand": "Số nhân viên",
+  "create.sizeBand": "Quy mô công ty",
   "co.address.summary": "Địa chỉ",
   "co.address.countryMismatch": "Mã bưu chính và thành phố thuộc {country}",
 
@@ -8037,6 +8040,12 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "editAccess.withdraw": "Rút yêu cầu quyền chỉnh sửa",
   "editAccess.sent": "Đã xin {owner} quyền chỉnh sửa",
   "editAccess.withdrawn": "Đã rút yêu cầu quyền chỉnh sửa",
+  // A record this reader may view but not change. The head's pill and the
+  // Ownership row say so, and the panel names the owner.
+  "viewOnly.pill": "Chỉ xem",
+  "viewOnly.label": "Quyền của bạn",
+  "viewOnly.owns": "{owner} phụ trách {name}",
+  "record.details.access": "Quyền truy cập",
   // The owner offering a record to a colleague, from the access panel.
   "handover.offer": "Chuyển giao cho…",
   "handover.offerTo": "Giao cho",
@@ -9064,7 +9073,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "analytics.field.project": "Nhãn dự án",
   "analytics.field.project_id": "Dự án",
   "analytics.field.quiet_since": "Im lặng từ",
-  "analytics.field.size_band": "Số nhân viên",
+  "analytics.field.size_band": "Quy mô công ty",
   "analytics.field.source": "Nguồn",
   "analytics.field.origin": "Nguồn gốc",
   "analytics.field.stage_id": "Giai đoạn",
@@ -9668,7 +9677,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "rbac.masked": "Giá trị đã che",
   "settings.passports": "Passport",
   "settings.passportsSub":
-    "Passport là khóa API cá nhân cho script và mã của riêng bạn. Bất kỳ thứ gì dùng passport đều hành động với tư cách của bạn, trong phạm vi các quyền đã chọn và không bao giờ vượt quá. Để dùng Margince trong công cụ AI, hãy kết nối công cụ ở phía trên.",
+    "Passport dành cho script và mã của riêng bạn. Bất kỳ thứ gì dùng passport đều hành động với tư cách của bạn, trong phạm vi các quyền đã chọn và không bao giờ vượt quá. Để dùng Margince trong công cụ AI, hãy kết nối công cụ ở phía trên.",
   "passport.scope.read": "Đọc hồ sơ",
   "passport.scope.draft": "Soạn nháp tin nhắn",
   "passport.scope.write": "Sửa hồ sơ",
@@ -10173,7 +10182,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "aiAccess.connect.help": "Trợ giúp từ {vendor}",
   "aiAccess.connect.helpAdmin": "Trợ giúp từ {vendor} cho quản trị viên",
   "aiAccess.connect.devHint":
-    "Bạn tự viết mã? Tạo khóa API trong mục Dành cho nhà phát triển bên dưới.",
+    "Bạn tự viết mã? Tạo passport trong mục Dành cho nhà phát triển bên dưới.",
   "aiAccess.step.allow": "Margince mở ra. Đăng nhập và chọn Cấp quyền. Xong.",
   "aiAccess.claude.openConnectors":
     "Trong Claude, mở “Customize”, rồi “Connectors”.",
@@ -10252,9 +10261,10 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "aiAccess.guide.officialHead": "Hướng dẫn chính thức",
   "aiAccess.guide.checked": "Các bước này được kiểm tra vào {date}.",
   "aiAccess.dev.title": "Dành cho nhà phát triển",
+  "aiAccess.yourAgent.title": "Trợ lý AI của bạn",
   "aiAccess.dev.sub":
-    "Khóa API cho mã của riêng bạn, và những gì agent được làm khi không có bạn.",
-  "aiAccess.dev.tab.passports": "Khóa API",
+    "Passport cho mã của riêng bạn, và những gì agent được làm khi không có bạn.",
+  "aiAccess.dev.tab.passports": "Passport (khóa API)",
   "aiAccess.dev.tab.rules": "Quy tắc cho agent",
   "aiAccess.connect.placeQuestion": "Bạn dùng nó ở đâu?",
   "aiAccess.connect.copy": "Sao chép",
@@ -10310,6 +10320,16 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Thêm nội dung này vào ~/.gemini/config/mcp_config.json. Nếu tệp đã có máy chủ khác, chỉ thêm mục margince bên cạnh chúng.",
   "aiAccess.local.antigravity.signIn":
     "Mở cài đặt agent, rồi “Customizations”, và chọn “Authenticate” bên cạnh margince.",
+  "aiAccess.place.lumoNote":
+    "Lumo trên web chưa thể kết nối với ứng dụng khác. Hãy dùng ứng dụng Lumo cho máy tính, tải tại https://proton.me/lumo/download.",
+  "aiAccess.local.lumo.open":
+    "Trong Lumo Desktop, chọn “Settings” ở cuối thanh bên, rồi “Desktop app” và “Connectors”.",
+  "aiAccess.local.lumo.add":
+    "Chọn “Add MCP server…” và đặt “Transport” thành “Remote (HTTP)”.",
+  "aiAccess.local.lumo.fill":
+    "Nhập margince làm ID và Margince làm Display name, thêm mô tả ngắn rồi dán địa chỉ.",
+  "aiAccess.local.lumo.signIn":
+    "Chọn “Add server”. Khi Lumo yêu cầu, Margince mở ra: hãy đăng nhập và chọn Cấp quyền.",
   "aiAccess.other.sub":
     "Margince hoạt động với mọi công cụ AI có thể thêm máy chủ MCP từ xa. Hãy tìm “MCP”, “connectors” hoặc “tools” trong phần cài đặt của nó.",
   "aiAccess.other.typeLabel": "Loại",
@@ -10319,7 +10339,9 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "aiAccess.other.signIn":
     "OAuth trong trình duyệt. Hầu hết công cụ tự bắt đầu ở lần kết nối đầu tiên.",
   "aiAccess.other.apiKey":
-    "Công cụ không đăng nhập được? Tạo khóa API trong Cài đặt, mục Trợ lý AI, Dành cho nhà phát triển, rồi gửi nó trong header “Authorization: Bearer” kèm khóa phía sau.",
+    "Công cụ không đăng nhập được? Tạo passport trong Cài đặt, mục Trợ lý AI, Dành cho nhà phát triển, rồi gửi nó trong header “Authorization: Bearer” kèm passport phía sau.",
+  "aiAccess.other.apiKeyBelow":
+    "Công cụ không đăng nhập được? Tạo passport trong mục Dành cho nhà phát triển bên dưới, rồi gửi nó trong header “Authorization: Bearer” kèm passport phía sau.",
   "aiAccess.other.notAllowed":
     "Nếu khi đăng nhập có thông báo công cụ không được phép, quản trị viên chọn các công cụ được phép kết nối trong Cài đặt, mục Quyền cho công cụ AI.",
   "setup.step.ai": "Kết nối công cụ AI của bạn",
@@ -12110,6 +12132,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "translation.nameIn.vi": "Tên tiếng Việt",
   "translation.given": "{name} ({language})",
   "stage.name": "Tên",
+  "stage.nameTaken":
+    "Pipeline này đã có giai đoạn mang tên này. Hãy chọn tên khác.",
   "stage.semantic": "Loại giai đoạn",
   "stage.lastClosing":
     "Pipeline cần một giai đoạn Thắng và một giai đoạn Thua. Hãy thêm một giai đoạn cùng loại trước.",
@@ -14255,8 +14279,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "auto.setup.noAuthorizer": "Chọn người cấp quyền cho tự động hóa này.",
   "auto.setup.inactive":
     "Tài khoản của người cấp quyền không hoạt động. Chọn người khác.",
-  "auto.stages.loadError": "Không thể tải quy trình bán hàng.",
-  "auto.stages.choosePipeline": "Chọn quy trình bán hàng",
+  "auto.stages.loadError": "Không thể tải pipeline.",
+  "auto.stages.choosePipeline": "Chọn pipeline",
   "auto.stages.chooseStages": "Chọn giai đoạn",
   "auto.quiet.customerList": "Danh sách khách hàng",
   "auto.quiet.days": "Số ngày không liên lạc",
@@ -14891,8 +14915,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Từng yêu cầu gửi đến mô hình và phản hồi tương ứng.",
   "settings.page.privacy.sub":
     "Yêu cầu của chủ thể dữ liệu, mục đích xin sự đồng ý và thời hạn lưu trữ hồ sơ.",
-  "settings.page.audit.sub":
-    "Mọi tác nhân và mọi hồ sơ mà tác nhân đó đã truy cập.",
+  "settings.page.audit.sub": "Mọi thay đổi và ai đã thực hiện.",
   "settings.page.system-health.sub": "Xử lý nền có theo kịp hay không.",
   "settings.page.extensions.sub":
     "Tiện ích mở rộng trong bản dựng này, và vai trò nào truy cập được.",
@@ -15289,6 +15312,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "knowledge.upload.submit_one": "Thêm 1 tài liệu",
   "knowledge.new.title": "Bộ tài liệu mới",
   "knowledge.new.name": "Tên",
+  "knowledge.new.nameTaken":
+    "Đã có bộ tài liệu mang tên này. Hãy chọn tên khác.",
   "knowledge.new.topic": "Phạm vi của bộ tài liệu",
   "knowledge.new.topicHint":
     "Một câu. Câu này hiển thị cho bất kỳ ai có câu hỏi nằm ngoài phạm vi của bộ này.",
@@ -16103,8 +16128,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "extAccess.need.models": "Mô hình AI",
   "extAccess.need.objects": "Lưu trữ tệp",
   "extAccess.brings.none": "Không có",
-  "extAccess.noObjects":
-    "Đơn vị này không đăng ký đối tượng phân quyền nào, nên không có gì để cấp.",
+  "extAccess.noObjects": "Tiện ích mở rộng này không có quyền nào để cấp.",
   "extAccess.roleColumn": "Vai trò",
   "extAccess.action.read": "Đọc",
   "extAccess.action.create": "Tạo",
@@ -17570,6 +17594,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "firstRun.ai.chatModel": "Mô hình",
   "firstRun.ai.modelHint":
     "Mô hình nào nhà cung cấp phục vụ cũng dùng được. Các bài kiểm tra đã chấm bộ mô hình ở trên, không phải một mô hình cho mọi tầng.",
+  "firstRun.ai.setupTitle.anthropic_cloud": "Anthropic Claude",
   "firstRun.ai.setupTitle.consumer_class_brokered":
     "Gemma 4 bạn có thể tự chạy, qua OpenRouter",
   "firstRun.ai.setupTitle.gemini_cloud": "Google Gemini",
@@ -20227,7 +20252,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "filters.field.company_country": "Quốc gia của công ty",
   "filters.field.company_industry": "Ngành của công ty",
   "filters.field.company_lifecycle": "Vòng đời của công ty",
-  "filters.field.company_size_band": "Số nhân viên",
+  "filters.field.company_size_band": "Quy mô công ty",
   "filters.field.country": "Mã quốc gia",
   "filters.field.created_at": "Ngày tạo",
   "filters.field.hosting_provider": "Nhà cung cấp máy chủ",
@@ -20249,6 +20274,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "filters.values": "Danh sách giá trị",
   "filters.addValue": "Th\u00eam gi\u00e1 tr\u1ecb",
   "filters.removeClause": "Gỡ điều kiện {field}",
+  "filters.removeEmptyClause": "Gỡ điều kiện",
   "filters.existsLabel": "Trường có giá trị",
   "filters.hasValue": "c\u00f3 gi\u00e1 tr\u1ecb",
   "filters.isEmpty": "trống",
@@ -20268,6 +20294,12 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "filters.op.lessThan": "nh\u1ecf h\u01a1n",
   "filters.op.atMost": "nhi\u1ec1u nh\u1ea5t l\u00e0",
   "filters.op.withinRadius": "n\u1eb1m trong b\u00e1n k\u00ednh",
+  "filters.op.include": "bao gồm",
+  "filters.op.notInclude": "không bao gồm",
+  "filters.op.includeAny": "bao gồm ít nhất một trong",
+  "filters.op.includeSome": "bao gồm ít nhất một",
+  "filters.op.includeNone": "không bao gồm thẻ nào",
+  "filters.op.includeSomeOrNone": "có thẻ hay không",
   "filters.sentence.radiusOf": "{km} km quanh {place}",
   "filters.radius.km": "Kho\u1ea3ng c\u00e1ch (km)",
   "filters.radius.place":
@@ -20660,13 +20692,19 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "filters.noFields": "Loại hồ sơ này không có trường nào lọc được.",
   "filters.resultsTitle": "Hồ sơ khớp",
   "filters.resultRefGone": "Đã bị xóa hoặc bạn không xem được",
-  "filters.resultsCaption":
-    "Trang đầu của kết quả khớp, để kiểm tra bộ lọc. Không phải toàn bộ lựa chọn.",
+  "filters.resultsCaption": "Một phần kết quả khớp",
   "filters.noMatches":
     "Không có {records} nào khớp các điều kiện này. Nới lỏng một điều kiện: đổi một “và” thành “hoặc”, hoặc gỡ điều kiện cụ thể nhất.",
   "filters.noMatchesLoosen":
     "Không có {records} nào khớp bộ lọc này. Nới lỏng hoặc gỡ một điều kiện.",
-  "filters.pickRecord": "Chọn hồ sơ",
+  "filters.pickTag": "Chọn thẻ",
+  "filters.pickOwner": "Chọn người chịu trách nhiệm",
+  "filters.pickTeam": "Chọn nhóm",
+  "filters.pickCompany": "Chọn công ty",
+  "filters.pickPipeline": "Chọn pipeline",
+  "filters.pickStage": "Chọn giai đoạn",
+  "filters.pickProject": "Chọn dự án",
+  "filters.pickProduct": "Chọn sản phẩm",
   "filters.searchRecords": "Tìm công ty",
   "filters.typeToSearch": "Nhập để tìm",
   "filters.searching": "Đang tìm…",
@@ -20676,6 +20714,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "filters.removeRecord": "Gỡ {record}",
   "filters.loadingRecords": "\u0110ang t\u1ea3i l\u1ef1a ch\u1ecdn\u2026",
   "filters.pickValue": "Ch\u1ecdn gi\u00e1 tr\u1ecb",
+  "filters.you": "Bạn",
   "filters.amountUnpriced":
     "Số tiền này không có loại tiền xác định nên không thể hiển thị hoặc thay đổi.",
   "filters.exportCsv": "Xu\u1ea5t CSV",
@@ -20794,11 +20833,9 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "projectRole.subcontractor": "Nhà thầu phụ",
   "projectLinks.attach": "Gắn dự án",
   "projectLinks.move": "Chuyển sang dự án khác",
-  "projectLinks.detach": "Bỏ liên kết",
-  "projectLinks.detachConfirm": "Bỏ liên kết dự án",
-  "projectLinks.detachNamed": "Bỏ liên kết {name}",
+  "projectLinks.detachConfirm": "Gỡ khỏi dự án",
   "projectLinks.roleLabel": "Vai trò",
-  "projectLinks.detachTitle": "Bỏ liên kết dự án này?",
+  "projectLinks.detachTitle": "Gỡ khỏi dự án?",
   "projectLinks.detachBody":
     "{name} vẫn giữ nguyên. Chỉ gỡ liên kết với hồ sơ này; không có gì bị xóa.",
   "projectLinks.emptyTitle": "Chưa có dự án nào",
@@ -20837,7 +20874,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "project.ownerMe": "Tôi",
   "project.assignOwner": "Giao cho một đồng nghiệp",
   "project.description": "Mô tả",
-  "project.targetEnd": "Ngày kết thúc dự kiến",
+  "project.targetEnd": "Ngày kết thúc mục tiêu",
   "project.startDate": "Ngày bắt đầu",
   "project.endDate": "Ngày kết thúc",
   "project.noCustomer": "Chưa có công ty khách hàng",
@@ -20888,7 +20925,6 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "project.stakeholders.removeTitle": "Gỡ bên liên quan?",
   "project.stakeholders.removeConfirm":
     "{name} không còn là bên liên quan của dự án này. Hoạt động của liên hệ này vẫn giữ nguyên.",
-  "project.stakeholders.removeOne": "Gỡ {name} khỏi dự án",
   "project.role.sponsor": "Nhà tài trợ",
   "project.role.project_lead": "Trưởng dự án",
   "project.role.delivery_lead": "Trưởng triển khai",
@@ -20922,6 +20958,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "project.history.movedBy": "{subject} đã chuyển giai đoạn",
   "project.history.openedBy": "{subject} đã tạo dự án",
   "project.history.unknown": "Không ghi nhận ai đã thực hiện thay đổi này",
+  "project.history.dealWon": "Deal {name} đã chốt",
+  "project.history.dealWonUnnamed": "Một deal đã chốt",
   "project.standing.unassessed": "Chưa ai ghi nhận tình hình triển khai.",
   "project.standing.assessedBy": "{author} đánh giá ngày {date}.",
   "project.standing.assessedOn": "Đánh giá ngày {date}.",
@@ -20942,7 +20980,6 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "project.standing.event.opened": "Mở {phase}",
   "project.standing.event.signed": "Đã ký hợp đồng",
   "project.standing.event.won": "Thắng {name}",
-  "project.standing.event.end": "Kết thúc dự kiến",
   "project.standing.event.dueLate": "hạn {date} · trễ",
   "project.standing.event.due": "hạn {date}",
   "project.standing.event.lastUpdate": "{date} · cập nhật gần nhất",
@@ -20960,7 +20997,6 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "record.details.notShared": "Chưa chia sẻ",
   "project.visibility.sharedWith_one": "Chia sẻ với {count}",
   "project.visibility.sharedWith_other": "Chia sẻ với {count}",
-  "project.aside.targetEnd": "Dự kiến kết thúc",
   "project.aside.ended": "Kết thúc",
   "project.aside.closedReason": "Lý do đóng",
   "project.standing.lastUpdate": "Cập nhật gần nhất",
@@ -21510,6 +21546,9 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "worklist.manager.kind.next_step": "Bước tiếp theo của deal",
   "worklist.manager.kind.review_backlog": "Tồn đọng cần xem lại",
   "worklist.manager.kind.general": "Khác",
+  "worklist.manager.coachDeal": "Deal liên quan",
+  "worklist.manager.coachNoDeal":
+    "Không có deal nào trong ngày của họ để chọn.",
   "worklist.board.title": "Việc của nhóm cần chú ý",
   "worklist.gap.rankedOn": "Xếp hạng ngày {date}.",
   "worklist.gap.masked_one":
@@ -22638,6 +22677,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "magic.why.site_read_unnamed": "Đọc trên trang web của công ty.",
   "magic.why.site_read_each": "Đọc trên trang web riêng của từng công ty.",
   "magic.why.signature": "Lấy từ chữ ký email.",
+  "magic.why.stated": "Lý do đã nêu: {why}",
   "magic.why.retention": "Quy tắc lưu trữ: sau {days} ngày.",
   "magic.by.retention": "Quy tắc lưu trữ",
   "magic.by.mail_filing": "Xếp email",
