@@ -2282,6 +2282,7 @@
           },
           "regraded": true,
           "measured_on_an_earlier_listing": [
+            "scenario",
             "tool copy",
             "server instructions and resources",
             "harness",
