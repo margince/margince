@@ -9368,7 +9368,9 @@ public.report_edition.publication_team_id uuid gen=- def=-
 public.report_edition.redacted_at timestamp with time zone gen=- def=-
 public.report_edition.report_edition_execution_id_fkey FOREIGN KEY (execution_id) REFERENCES report_execution(id) ON DELETE RESTRICT
 public.report_edition.report_edition_execution_id_key UNIQUE (execution_id)
+public.report_edition.report_edition_owner_id_fkey FOREIGN KEY (owner_id) REFERENCES app_user(id) ON DELETE RESTRICT
 public.report_edition.report_edition_pkey PRIMARY KEY (id)
+public.report_edition.report_edition_publication_team_id_fkey FOREIGN KEY (publication_team_id) REFERENCES team(id) ON DELETE RESTRICT
 public.report_edition.report_edition_report_id_fkey FOREIGN KEY (report_id) REFERENCES report_definition(id) ON DELETE RESTRICT
 public.report_edition.report_edition_report_revision_js_safe CHECK (((report_revision >= '-9007199254740991'::bigint) AND (report_revision <= '9007199254740991'::bigint)))
 public.report_edition.report_id uuid NOT NULL gen=- def=-
