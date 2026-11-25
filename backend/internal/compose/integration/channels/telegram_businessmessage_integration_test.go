@@ -59,8 +59,8 @@ func (m businessMessage) sourceID(account int64) string {
 	return fmt.Sprintf("%d:biz:%d:%d:%d", telegramBotID, account, m.chatID, m.messageID)
 }
 
-// link writes one business link row of this bot. A connected link gets the seat
-// that approval would give it, shared. Cases that are not about a seat's posture
+// link writes one business link row of this bot. A link an admin approved, now
+// connected or switched off, has the seat approval gave it, shared. Cases that are not about a seat's posture
 // then read as they would on an opened account.
 func (c *telegramEnv) link(t *testing.T, account int64, connection, status string) {
 	t.Helper()
@@ -73,12 +73,12 @@ func (c *telegramEnv) linkOnSeat(t *testing.T, account int64, connection, status
 	team := c.readerTeam(t)
 	if err := apptest.InWorkspace(c.AppEnv, t, func(tx pgx.Tx) error {
 		var seat *string
-		if status == "connected" {
+		if status == "connected" || status == "disconnected" {
 			var id string
 			if err := tx.QueryRow(context.Background(), `
 				INSERT INTO capture_connection (provider, user_id, connected_by, reader_team_id, account_label, mail_posture, status)
-				VALUES ('telegram_business', NULL, $1::uuid, $2, $3, $4, 'connected') RETURNING id::text`,
-				c.admin, team, fmt.Sprintf("%d", account), posture).Scan(&id); err != nil {
+				VALUES ('telegram_business', NULL, $1::uuid, $2, $3, $4, $5) RETURNING id::text`,
+				c.admin, team, fmt.Sprintf("%d", account), posture, status).Scan(&id); err != nil {
 				return err
 			}
 			seat = &id
