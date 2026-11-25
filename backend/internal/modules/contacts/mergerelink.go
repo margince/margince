@@ -311,12 +311,10 @@ func relinkParticipantRows(ctx context.Context, tx pgx.Tx, sourceID, targetID id
 // relinkAcquisitionAndDuty moves why the contact exists, and what that obliged,
 // onto the survivor.
 //
-// One function because they are one fact over two tables: the evidence says how
-// the contact arrived and the case says what the installation owes for it, and
-// a case left on the retired record is a disclosure still owed that the
-// survivor's queue can no longer see. In this file because the lifecycle census
-// (gates/satellite_lifecycle_test.go) reads this FILE's SQL literals to prove
-// every satellite joins the merge path.
+// One function because they are one fact over two tables. The evidence says how
+// the contact arrived, and the case says what the installation owes for it. A
+// case left on the retired record is a disclosure still owed that the
+// survivor's queue can no longer see.
 func relinkAcquisitionAndDuty(ctx context.Context, tx pgx.Tx, sourceID, targetID ids.ContactID) error {
 	if _, err := tx.Exec(ctx, `
 		UPDATE contact_acquisition_evidence SET contact_id = $2

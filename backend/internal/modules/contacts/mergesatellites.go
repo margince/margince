@@ -11,10 +11,9 @@ package contacts
 // of either kind stranded on the merged-away contact is worse than invisible,
 // because it silently changes what the product does next.
 //
-// Nothing here is reached by file name. The lifecycle census
-// (gates/satellite_lifecycle_test.go) walks what relinkContactReferences can
-// CALL, so a satellite joins the merge by being written somewhere under it,
-// wherever that happens to live.
+// Nothing here is reached by file name. The merge census
+// (gates/mergereferences_test.go) walks what MergeContact can CALL. A
+// satellite joins the merge by being written somewhere under it.
 
 import (
 	"context"

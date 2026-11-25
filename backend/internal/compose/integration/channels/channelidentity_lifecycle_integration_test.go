@@ -9,8 +9,9 @@ package channels
 // path its siblings ride: Art. 17 erasure (plus the suppression row that makes
 // the erasure stick), Art. 15 subject access, the retention anonymizer, the
 // merge relink, and the archive cascade. backend/gates/satellite_lifecycle_test.go
-// proves each path WRITES the table; this suite proves the writes do the right
-// thing on real rows, which is the half a source scan cannot see.
+// and backend/gates/mergereferences_test.go prove each path WRITES the table.
+// This suite proves the writes do the right thing on real rows, which is the
+// half a source scan cannot see.
 //
 // Every failure mode here is silent in production: a satellite nobody archived
 // keeps resolving messages onto a soft-deleted record, one nobody relinked is
