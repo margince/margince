@@ -209,8 +209,9 @@ func TestAStateForAnotherQuestionDoesNotAnswerThisOne(t *testing.T) {
 
 // A state past its window, or one with no id to spend, is asked again.
 func TestAnExpiredOrUnspendableStateIsAskedAgain(t *testing.T) {
+	signedAt := bulkDispatcher(t, &countingChanger{}).inputState.now()
 	for name, change := range map[string]func(*wireInputState){
-		"expired":     func(claims *wireInputState) { claims.Exp = time.Now().Add(-time.Minute).Unix() },
+		"expired":     func(claims *wireInputState) { claims.Exp = signedAt.Add(-time.Minute).Unix() },
 		"with no id":  func(claims *wireInputState) { claims.Once = "" },
 		"no question": func(claims *wireInputState) { claims.Question = "" },
 	} {
