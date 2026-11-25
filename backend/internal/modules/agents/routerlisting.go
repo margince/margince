@@ -16,6 +16,8 @@ import (
 // and a model reads its arguments from read_workspace topic=actions. The set is
 // what the use-case lane uses: actions a scenario requires or a recorded MCP
 // run called. A test in compose/mcpe2e holds the two together.
+//
+//nolint:goconst // A table of action names: each one names a router action, not a shared value.
 var listedActions = map[string][]string{
 	"change_access":      {"add_team_member", "share"},
 	"change_activities":  {"attach", "check_send", "log", "relink", "relink_many", "save_draft"},
@@ -80,7 +82,9 @@ func (r *Registry) ForListing(spec mcp.ToolSpec) mcp.ToolSpec {
 		return spec
 	}
 	spec.InputSchema = schema
-	return spec
+	// The schema is built again from the targets' own wording, so it is worded
+	// for the listing again, as Listed words it.
+	return r.lister().listed(spec)
 }
 
 // routerChoices names every action of a router, and none for a tool that is

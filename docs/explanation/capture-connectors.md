@@ -453,10 +453,10 @@ The user can clear the calendar on that screen. A grant without `calendar.readon
 mailbox alone and lands as a refused calendar. Disconnecting one row deletes only its own vault copy.
 
 The sync of new mail uses a `syncToken`, with no push and no `Backfiller`. A stale token
-(`ErrSyncTokenGone`) starts it again. The first sync takes a full list
-that reaches 90 days back. Every pull keeps only meetings up to 365 days ahead. The connector takes a
-full list again after 30 days, so a later meeting comes in once it is within a year.
-A full list that landed whole retires a future meeting it left out (`RetireUnlistedMeetings`).
+(`ErrSyncTokenGone`) starts it again. The first sync takes a full list that reaches 90 days back.
+Every pull keeps only meetings up to 365 days ahead. The connector takes a full list again after 30
+days, so a later meeting comes in once it is within a year. A complete list drops this calendar's
+copy of a meeting it left out, and cancels one no other calendar holds (`RetireUnlistedMeetings`).
 
 **To run:** the *same* Google app as Gmail, with the calendar scope turned on and a
 `/connectors/gcal/callback` redirect URI added, + the vault key.

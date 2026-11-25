@@ -67,6 +67,6 @@ func teamRequestStandingTx(ctx context.Context, tx pgx.Tx, page ids.UUID, member
 	standing.Request.HostName, standing.Request.Title = schedulingDisplayName(name), stored.Title
 	standing.Pending = state == crmcontracts.SchedulingTeamMemberStatePending
 	words := strings.Join([]string{page.String(), string(state), standing.Request.HostName, standing.Request.Title}, "\x00")
-	standing.Fingerprint = int64(maphash.String(teamRequestSeed, words)) //nolint:gosec // A fingerprint compares equal or not; the wrap changes nothing.
+	standing.Fingerprint = int64(maphash.String(teamRequestSeed, words) >> 1)
 	return standing, nil
 }

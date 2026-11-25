@@ -53,9 +53,11 @@ as an approval is unless the member chose otherwise. A member kept on the list g
 Answering, being taken off the list or a deleted link takes the notice back, and a notice taken
 back is never mailed.
 
-The mail reads its team link again, by the link's id, when it leaves. It names the current title, and
-it is not sent once the member is no longer pending. The send holds the link while it is booked in, so
-an answer, or taking the member off, waits for it. Naming a member again opens the same notice, with the current title.
+The mail reads its team link again, by the link's id, when it leaves. It names the current title,
+and it is not sent if the member is no longer pending at that check. The send holds the link while
+it is booked in, so an answer, or taking the member off, waits for it. An answer that commits after
+the send is booked in cannot stop that mail. Naming a member again opens the same notice, with the
+current title.
 
 A team stored on a personal page moves onto a new team link with a new address, through the data task
 `core/1795540594_teams_move_to_team_links`. Each member keeps their answer.

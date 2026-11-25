@@ -1062,7 +1062,7 @@
   "scheduling.readOnlyCalendar": "Dein Kalender ist zum Lesen verbunden. Verbinde den Kalender erneut und erlaube den Zugriff für Einladungen, um Termine zu erstellen, zu verschieben und abzusagen.",
   "scheduling.readOnlyBadge": "Schreibgeschützter Kalender",
   "scheduling.location": "Ort oder Terminlink",
-  "book.lengthNotOffered": "Diese Termindauer wird nicht mehr angeboten. Wähle eine andere Dauer.",
+  "book.lengthNotOffered": "Diese Termindauer wird nicht mehr angeboten. Wählen Sie eine andere Dauer.",
   "aiAdmin.decisionSkip.unbound": "Entscheidungsmodell nicht genutzt: keines zugeordnet.",
   "brief.weekly.leadsUnavailable": "Lead-Zahlen sind für diese Woche nicht verfügbar.",
   "brief.weekly.notRecorded": "Nicht erfasst",

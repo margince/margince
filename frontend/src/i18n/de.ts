@@ -1914,7 +1914,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "book.videoApp": "{app} · Link in Ihrer Einladung",
   "book.lengthChoice": "Dauer des Termins",
   "book.lengthNotOffered":
-    "Diese Termindauer wird nicht mehr angeboten. Wähle eine andere Dauer.",
+    "Diese Termindauer wird nicht mehr angeboten. Wählen Sie eine andere Dauer.",
   "scheduling.pickDay": "Tag auswählen",
   "scheduling.changeTime": "Zeit ändern",
   "scheduling.confirmAt": "{day}, {time} bestätigen",
