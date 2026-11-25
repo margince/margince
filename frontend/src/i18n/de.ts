@@ -3738,6 +3738,10 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "views.save": "Ansicht speichern",
   "views.saveConfirm": "Speichern",
   "views.saveTitle": "Diese Ansicht speichern",
+  "views.update": "„{name}“ aktualisieren",
+  "views.updated": "Ansicht aktualisiert: „{name}“",
+  "views.nameTaken":
+    "Eine Ansicht mit diesem Namen gibt es schon. Wähle einen anderen Namen.",
   "views.name": "Name",
   "views.rail": "Gespeicherte Ansichten",
   "views.loadFailed":

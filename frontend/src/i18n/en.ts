@@ -3670,6 +3670,10 @@ export const en = {
   "views.save": "Save view",
   "views.saveConfirm": "Save",
   "views.saveTitle": "Save this view",
+  "views.update": "Update “{name}”",
+  "views.updated": "View updated: “{name}”",
+  "views.nameTaken":
+    "A view with this name already exists. Choose another name.",
   "views.name": "Name",
   // Names the saved-view rail where the rail itself cannot: a failure notice
   // lands beside the list's own tools, and "this section did not load" under a
