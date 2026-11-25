@@ -12,6 +12,7 @@ import { RecordCustomFields } from "../../components/recordcustomfields";
 import { type SectionLock, useSectionEdit } from "../../components/sectionedit";
 import { LeadStops } from "../../components/stops";
 import { useTagsRow } from "../../components/tagsflow";
+import { useViewOnlyAccess } from "../../components/viewonly";
 import { Badge, PendingBody } from "../../design-system/atoms";
 import { ContactLink } from "../../design-system/contactlink";
 import { InfoTip } from "../../design-system/infotip";
@@ -349,6 +350,7 @@ function LeadDetailsBody({
     flows: owner.flow && { owner: owner.flow },
   });
   const setBy = statusSetBy(lead, t);
+  const access = useViewOnlyAccess("lead", lead);
   const companyFacts = useLeadCompanyFactsSection(lead);
   const sections: DetailSection[] = [
     { ...aboutPart.part, rows: shown(about), edit: aboutEdit.edit },
@@ -388,7 +390,11 @@ function LeadDetailsBody({
   ];
   return (
     <>
-      <RecordDetails sections={sections} footnote={t("lead.aside.footnote")} />
+      <RecordDetails
+        sections={sections}
+        footnote={t("lead.aside.footnote")}
+        access={access}
+      />
       <RecordCustomFields kind="lead" record={lead} />
       {aboutEdit.element}
       {reachEdit.element}

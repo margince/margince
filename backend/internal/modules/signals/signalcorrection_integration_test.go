@@ -74,7 +74,7 @@ func TestACorrectedSignalKeepsItsOldKindAndEvidenceInTheAudit(t *testing.T) {
 
 	rawRef := "mail:thread-1"
 	made, err := store.CreateSignal(ctx, CreateSignalInput{
-		Kind: "risk", RawRef: &rawRef, Summary: "They went quiet",
+		Kind: "risk", RawRef: &rawRef, Summary: "They went quiet", Source: "manual",
 		Evidence: []crmcontracts.SignalEvidence{{Snippet: "no reply for a month"}},
 	})
 	if err != nil {
@@ -104,7 +104,7 @@ func TestACorrectedSignalKeepsItsOldKindAndEvidenceInTheAudit(t *testing.T) {
 		INSERT INTO signal (id, kind, source_channel, resolution_state, severity, summary,
 		                    evidence, status, detected_at, source, captured_by)
 		VALUES ($1, 'ghosted_thread', 'derived', 'unresolved', 'info', 'No reply',
-		        '[]'::jsonb, 'open', now(), 'scan', 'test')`, produced); err != nil {
+		        '[]'::jsonb, 'open', now(), 'automation', 'test')`, produced); err != nil {
 		t.Fatalf("seeding the produced signal: %v", err)
 	}
 	if _, err := store.UpdateSignal(ctx, produced, UpdateSignalInput{Kind: &producerKind, Evidence: &evidence}); err != nil {

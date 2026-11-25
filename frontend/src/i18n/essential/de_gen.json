@@ -3001,6 +3001,7 @@
   "log.unassigned": "Nicht zugewiesen",
   "log.save": "Erfassen",
   "log.saving": "Wird erfasst…",
+  "viewOnly.pill": "Nur lesen",
   "compose.reply": "Antworten",
   "invitation.answer.label": "Auf die Einladung antworten",
   "invitation.answer.accepted": "Zusagen",

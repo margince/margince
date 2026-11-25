@@ -3,9 +3,11 @@ import type { components } from "../../api/schema";
 import { RecordListsActions } from "../../components/addtoshortlist";
 import { ConversationSuggestionsCard } from "../../components/conversationsuggestions";
 import { CounterpartyHoldRow } from "../../components/counterparty-hold";
+import { useViewOnlyAccess } from "../../components/viewonly";
 import { Badge } from "../../design-system/atoms";
 import { Panel, PanelBody } from "../../design-system/panel";
 import {
+  type DetailAccess,
   type DetailSection,
   RecordDetails,
 } from "../../design-system/recorddetails";
@@ -92,6 +94,7 @@ export function ContactRail({
 }>) {
   const t = useT();
   const writeRefusal = useWriteRefusal(view);
+  const access = useViewOnlyAccess("contact", view.contact);
   const footnote = (refusals || writeRefusal) && (
     <>
       {writeRefusal && <span id={writeRefusalId}>{writeRefusal}</span>}
@@ -139,9 +142,14 @@ export function ContactRail({
           contactId={view.contact.id}
           sections={sections}
           footnote={footnote}
+          access={access}
         />
       ) : (
-        <RecordDetails sections={sections} footnote={footnote} />
+        <RecordDetails
+          sections={sections}
+          footnote={footnote}
+          access={access}
+        />
       )}
       {about.element}
       {manageConsent.element}
@@ -159,10 +167,12 @@ function ContactRailWithLists({
   contactId,
   sections,
   footnote,
+  access,
 }: Readonly<{
   contactId: string;
   sections: readonly DetailSection[];
   footnote?: ReactNode;
+  access?: DetailAccess;
 }>) {
   const t = useT();
   const lists = useRecordLists("contact", contactId).data?.data ?? [];
@@ -192,7 +202,9 @@ function ContactRailWithLists({
       ),
     },
   ];
-  return <RecordDetails sections={withLists} footnote={footnote} />;
+  return (
+    <RecordDetails sections={withLists} footnote={footnote} access={access} />
+  );
 }
 
 // --- Keeping this correspondence private -------------------------------
