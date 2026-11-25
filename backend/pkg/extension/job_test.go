@@ -73,6 +73,12 @@ func TestJobDeclarationValidateRefusesEveryAbsenceThatWouldReachRiverAsADefault(
 		{"no queue", func(d *JobDeclaration) { d.Queue = " " }, "declares no queue"},
 		{"no cadence", func(d *JobDeclaration) { d.Cadence = 0 }, "declares cadence"},
 		{"negative cadence", func(d *JobDeclaration) { d.Cadence = -time.Second }, "declares cadence"},
+		{"cadence and a time of day", func(d *JobDeclaration) { d.At = &TimeOfDay{Minute: 450} }, "both a cadence and a time of day"},
+		{"a minute past the day", func(d *JobDeclaration) { d.Cadence, d.At = 0, &TimeOfDay{Minute: minutesPerDay} }, "not a minute of the day"},
+		{"a day that is no weekday", func(d *JobDeclaration) { d.Cadence, d.At = 0, &TimeOfDay{Days: []time.Weekday{7}} }, "not a weekday"},
+		{"a day named twice", func(d *JobDeclaration) {
+			d.Cadence, d.At = 0, &TimeOfDay{Days: []time.Weekday{time.Monday, time.Monday}}
+		}, "named twice"},
 		{"no dispatcher timeout", func(d *JobDeclaration) { d.DispatcherTimeout = 0 }, "no dispatcher timeout"},
 		{"no workspace timeout", func(d *JobDeclaration) { d.Timeout = 0 }, "no workspace timeout"},
 		{"no attempt cap", func(d *JobDeclaration) { d.MaxAttempts = 0 }, "max_attempts"},
@@ -108,6 +114,32 @@ func TestJobValidateChecksTheVerbGrammarAndNothingElse(t *testing.T) {
 	for _, bad := range []string{"", "RefreshQuotes", "refresh-quotes", "_refresh", "refresh__quotes", "9lives"} {
 		if err := (Job{Name: bad}).Validate(); err == nil {
 			t.Errorf("Validate accepted job name %q", bad)
+		}
+	}
+}
+
+func TestAJobMayRunAtALocalClockTimeInsteadOfAnInterval(t *testing.T) {
+	d := validJobDeclaration()
+	d.Cadence, d.At = 0, &TimeOfDay{Minute: 7*60 + 30, Days: []time.Weekday{time.Monday, time.Friday}}
+	if err := d.Validate(); err != nil {
+		t.Fatalf("Validate: %v", err)
+	}
+}
+
+func TestTheLongestGapIsTheLongestWaitBetweenTwoRuns(t *testing.T) {
+	weekdays := []time.Weekday{time.Monday, time.Tuesday, time.Wednesday, time.Thursday, time.Friday}
+	for name, tc := range map[string]struct {
+		days []time.Weekday
+		want time.Duration
+	}{
+		"every day":     {nil, 24 * time.Hour},
+		"weekdays":      {weekdays, 72 * time.Hour},
+		"sundays":       {[]time.Weekday{time.Sunday}, 7 * 24 * time.Hour},
+		"sat and sun":   {[]time.Weekday{time.Saturday, time.Sunday}, 6 * 24 * time.Hour},
+		"mon and thurs": {[]time.Weekday{time.Monday, time.Thursday}, 4 * 24 * time.Hour},
+	} {
+		if got := (TimeOfDay{Days: tc.days}).LongestGap(); got != tc.want {
+			t.Errorf("%s: LongestGap = %s, want %s", name, got, tc.want)
 		}
 	}
 }

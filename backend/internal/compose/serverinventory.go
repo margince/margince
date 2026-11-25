@@ -157,7 +157,7 @@ type Server struct {
 	recoveryHealthHandlers
 	vacuumhealth.Endpoint
 	automaticWorkHandlers
-	// Extension inventory, settings, transports: stateless, embedded as the zero value.
+	// Extension inventory, settings, transports.
 	extensionsHandlers
 	extensionSettingsHandlers
 	channelProvidersHandlers
