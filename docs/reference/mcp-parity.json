@@ -11,18 +11,18 @@
       "covered": 41,
       "sign_in": 1,
       "no_signed_in_user": 0,
-      "web_app_calls": 961,
+      "web_app_calls": 962,
       "web_app_calls_open": 779,
       "web_app_calls_ask_first": 109,
       "web_app_calls_pending": 0,
-      "web_app_calls_security": 154,
+      "web_app_calls_security": 155,
       "web_app_calls_covered": 27,
       "parity_signed_in_percent": 80.4,
-      "parity_web_app_percent": 81
+      "parity_web_app_percent": 80.9
     },
     "open_with_no_web_app_call_found": 103,
-    "parity_web_app_counting_covered_percent": 83.8,
-    "parity_web_app_once_pending_is_open_percent": 83.8
+    "parity_web_app_counting_covered_percent": 83.7,
+    "parity_web_app_once_pending_is_open_percent": 83.7
   },
   "web_app_scan": {
     "computed_calls_no_path_was_found_for": []
@@ -41,14 +41,14 @@
       "covered": 28,
       "sign_in": 0,
       "no_signed_in_user": 0,
-      "web_app_calls": 528,
+      "web_app_calls": 529,
       "web_app_calls_open": 476,
       "web_app_calls_ask_first": 37,
       "web_app_calls_pending": 0,
-      "web_app_calls_security": 33,
+      "web_app_calls_security": 34,
       "web_app_calls_covered": 19,
       "parity_signed_in_percent": 89.3,
-      "parity_web_app_percent": 90.1,
+      "parity_web_app_percent": 89.9,
       "areas": [
         {
           "key": "contacts",
@@ -141,14 +141,14 @@
           "covered": 2,
           "sign_in": 0,
           "no_signed_in_user": 0,
-          "web_app_calls": 33,
+          "web_app_calls": 34,
           "web_app_calls_open": 31,
           "web_app_calls_ask_first": 0,
           "web_app_calls_pending": 0,
-          "web_app_calls_security": 2,
+          "web_app_calls_security": 3,
           "web_app_calls_covered": 0,
           "parity_signed_in_percent": 88.6,
-          "parity_web_app_percent": 93.9
+          "parity_web_app_percent": 91.1
         },
         {
           "key": "deal_rooms",
@@ -10401,7 +10401,8 @@
       ],
       "group": "business",
       "area": "deals",
-      "state": "security"
+      "state": "security",
+      "web_app": "direct"
     },
     {
       "method": "POST",
