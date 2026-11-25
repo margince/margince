@@ -76852,6 +76852,9 @@ type Limit = int
 // ListMembershipFilter defines model for ListMembershipFilter.
 type ListMembershipFilter = openapi_types.UUID
 
+// PreferAbsent defines model for PreferAbsent.
+type PreferAbsent = string
+
 // ProfileFieldKey defines model for ProfileFieldKey.
 type ProfileFieldKey string
 
@@ -77412,6 +77415,15 @@ type SendMessageParams struct {
 	XApprovalToken *ApprovalToken `json:"X-Approval-Token,omitempty"`
 }
 
+// GetLatestTranscriptReadParams defines parameters for GetLatestTranscriptRead.
+type GetLatestTranscriptReadParams struct {
+	// Prefer An RFC 7240 preference. `absent=204` asks for `204 No Content` instead of `404` when the
+	// read finds nothing yet. The token is matched without case, and every other preference is
+	// ignored. A row the caller may not see still answers `404`. Every answer of an operation
+	// that takes this header carries `Vary: Prefer`.
+	Prefer *PreferAbsent `json:"Prefer,omitempty"`
+}
+
 // CreateActivityReviewTemplateParams defines parameters for CreateActivityReviewTemplate.
 type CreateActivityReviewTemplateParams struct {
 	// IdempotencyKey Client-supplied key making a mutation safe to retry — an update exactly as much as a
@@ -77624,6 +77636,15 @@ type GetAccountCoverageParamsScopeKind string
 
 // GetAccountCoverageParamsView defines parameters for GetAccountCoverage.
 type GetAccountCoverageParamsView string
+
+// GetDataCoverageParams defines parameters for GetDataCoverage.
+type GetDataCoverageParams struct {
+	// Prefer An RFC 7240 preference. `absent=204` asks for `204 No Content` instead of `404` when the
+	// read finds nothing yet. The token is matched without case, and every other preference is
+	// ignored. A row the caller may not see still answers `404`. Every answer of an operation
+	// that takes this header carries `Vary: Prefer`.
+	Prefer *PreferAbsent `json:"Prefer,omitempty"`
+}
 
 // ListSalesDecisionsParams defines parameters for ListSalesDecisions.
 type ListSalesDecisionsParams struct {
@@ -78376,6 +78397,12 @@ type PreviewAttachmentLinkJSONBody struct {
 // GetAttachmentExtractionParams defines parameters for GetAttachmentExtraction.
 type GetAttachmentExtractionParams struct {
 	Question *GetAttachmentExtractionParamsQuestion `form:"question,omitempty" json:"question,omitempty"`
+
+	// Prefer An RFC 7240 preference. `absent=204` asks for `204 No Content` instead of `404` when the
+	// read finds nothing yet. The token is matched without case, and every other preference is
+	// ignored. A row the caller may not see still answers `404`. Every answer of an operation
+	// that takes this header carries `Vary: Prefer`.
+	Prefer *PreferAbsent `json:"Prefer,omitempty"`
 }
 
 // GetAttachmentExtractionParamsQuestion defines parameters for GetAttachmentExtraction.
@@ -78568,6 +78595,15 @@ type BookMeetingParams struct {
 	// than half-honouring it, so read this contract, not the client, to know which calls are safe
 	// to retry blind.
 	IdempotencyKey *IdempotencyKey `json:"Idempotency-Key,omitempty"`
+}
+
+// GetMorningBriefParams defines parameters for GetMorningBrief.
+type GetMorningBriefParams struct {
+	// Prefer An RFC 7240 preference. `absent=204` asks for `204 No Content` instead of `404` when the
+	// read finds nothing yet. The token is matched without case, and every other preference is
+	// ignored. A row the caller may not see still answers `404`. Every answer of an operation
+	// that takes this header carries `Vary: Prefer`.
+	Prefer *PreferAbsent `json:"Prefer,omitempty"`
 }
 
 // ExecuteBulkChangeParams defines parameters for ExecuteBulkChange.
@@ -79578,6 +79614,15 @@ type MergeCompanyParams struct {
 	IfMatch *IfMatch `json:"If-Match,omitempty"`
 }
 
+// GetPartnerParams defines parameters for GetPartner.
+type GetPartnerParams struct {
+	// Prefer An RFC 7240 preference. `absent=204` asks for `204 No Content` instead of `404` when the
+	// read finds nothing yet. The token is matched without case, and every other preference is
+	// ignored. A row the caller may not see still answers `404`. Every answer of an operation
+	// that takes this header carries `Vary: Prefer`.
+	Prefer *PreferAbsent `json:"Prefer,omitempty"`
+}
+
 // UpsertPartnerParams defines parameters for UpsertPartner.
 type UpsertPartnerParams struct {
 	// IfMatch Optional optimistic-concurrency precondition for a mutating request (PATCH/advance/merge):
@@ -79757,6 +79802,15 @@ type ShareCompanyContactsParams struct {
 	IdempotencyKey *IdempotencyKey `json:"Idempotency-Key,omitempty"`
 }
 
+// GetLatestSiteReadParams defines parameters for GetLatestSiteRead.
+type GetLatestSiteReadParams struct {
+	// Prefer An RFC 7240 preference. `absent=204` asks for `204 No Content` instead of `404` when the
+	// read finds nothing yet. The token is matched without case, and every other preference is
+	// ignored. A row the caller may not see still answers `404`. Every answer of an operation
+	// that takes this header carries `Vary: Prefer`.
+	Prefer *PreferAbsent `json:"Prefer,omitempty"`
+}
+
 // RestoreCompanySuggestionParams defines parameters for RestoreCompanySuggestion.
 type RestoreCompanySuggestionParams struct {
 	// Fingerprint The `fingerprint` that was dismissed, unchanged.
@@ -79788,6 +79842,33 @@ type DismissCompanySuggestionJSONBody struct {
 	// from a scoped page matches nothing and silently stores nothing, which
 	// a reader sees as the card refusing to go away.
 	ProjectId *openapi_types.UUID `json:"project_id,omitempty"`
+}
+
+// GetLatestTechnicalEnrichParams defines parameters for GetLatestTechnicalEnrich.
+type GetLatestTechnicalEnrichParams struct {
+	// Prefer An RFC 7240 preference. `absent=204` asks for `204 No Content` instead of `404` when the
+	// read finds nothing yet. The token is matched without case, and every other preference is
+	// ignored. A row the caller may not see still answers `404`. Every answer of an operation
+	// that takes this header carries `Vary: Prefer`.
+	Prefer *PreferAbsent `json:"Prefer,omitempty"`
+}
+
+// GetCompanyVatCheckParams defines parameters for GetCompanyVatCheck.
+type GetCompanyVatCheckParams struct {
+	// Prefer An RFC 7240 preference. `absent=204` asks for `204 No Content` instead of `404` when the
+	// read finds nothing yet. The token is matched without case, and every other preference is
+	// ignored. A row the caller may not see still answers `404`. Every answer of an operation
+	// that takes this header carries `Vary: Prefer`.
+	Prefer *PreferAbsent `json:"Prefer,omitempty"`
+}
+
+// GetAnchorCompanyParams defines parameters for GetAnchorCompany.
+type GetAnchorCompanyParams struct {
+	// Prefer An RFC 7240 preference. `absent=204` asks for `204 No Content` instead of `404` when the
+	// read finds nothing yet. The token is matched without case, and every other preference is
+	// ignored. A row the caller may not see still answers `404`. Every answer of an operation
+	// that takes this header carries `Vary: Prefer`.
+	Prefer *PreferAbsent `json:"Prefer,omitempty"`
 }
 
 // GetAnchorCompanyContextParams defines parameters for GetAnchorCompanyContext.
@@ -81750,6 +81831,15 @@ type ListContactCasesParams struct {
 // ListContactCasesParamsScope defines parameters for ListContactCases.
 type ListContactCasesParamsScope string
 
+// GetContactCaseParams defines parameters for GetContactCase.
+type GetContactCaseParams struct {
+	// Prefer An RFC 7240 preference. `absent=204` asks for `204 No Content` instead of `404` when the
+	// read finds nothing yet. The token is matched without case, and every other preference is
+	// ignored. A row the caller may not see still answers `404`. Every answer of an operation
+	// that takes this header carries `Vary: Prefer`.
+	Prefer *PreferAbsent `json:"Prefer,omitempty"`
+}
+
 // SendCompanyEmailParams defines parameters for SendCompanyEmail.
 type SendCompanyEmailParams struct {
 	// IdempotencyKey Client-supplied key making a mutation safe to retry — an update exactly as much as a
@@ -81902,6 +81992,15 @@ type GetForecastParamsPeriod string
 
 // GetForecastParamsScopeKind defines parameters for GetForecast.
 type GetForecastParamsScopeKind string
+
+// GetForecastAssuranceParams defines parameters for GetForecastAssurance.
+type GetForecastAssuranceParams struct {
+	// Prefer An RFC 7240 preference. `absent=204` asks for `204 No Content` instead of `404` when the
+	// read finds nothing yet. The token is matched without case, and every other preference is
+	// ignored. A row the caller may not see still answers `404`. Every answer of an operation
+	// that takes this header carries `Vary: Prefer`.
+	Prefer *PreferAbsent `json:"Prefer,omitempty"`
+}
 
 // SetForecastAssuranceEnforcementJSONBody defines parameters for SetForecastAssuranceEnforcement.
 type SetForecastAssuranceEnforcementJSONBody struct {
@@ -82925,6 +83024,12 @@ type GetMagicLineRecordsParams struct {
 type GetMailDraftParams struct {
 	AnchorType MailDraftAnchorType `form:"anchor_type" json:"anchor_type"`
 	AnchorId   openapi_types.UUID  `form:"anchor_id" json:"anchor_id"`
+
+	// Prefer An RFC 7240 preference. `absent=204` asks for `204 No Content` instead of `404` when the
+	// read finds nothing yet. The token is matched without case, and every other preference is
+	// ignored. A row the caller may not see still answers `404`. Every answer of an operation
+	// that takes this header carries `Vary: Prefer`.
+	Prefer *PreferAbsent `json:"Prefer,omitempty"`
 }
 
 // SaveMailDraftParams defines parameters for SaveMailDraft.
@@ -83318,10 +83423,25 @@ type SendOfferParams struct {
 type GetOnboardingCompanyProposalParams struct {
 	// Locale Language for the open questions' copy; option values are locale-invariant.
 	Locale *GetOnboardingCompanyProposalParamsLocale `form:"locale,omitempty" json:"locale,omitempty"`
+
+	// Prefer An RFC 7240 preference. `absent=204` asks for `204 No Content` instead of `404` when the
+	// read finds nothing yet. The token is matched without case, and every other preference is
+	// ignored. A row the caller may not see still answers `404`. Every answer of an operation
+	// that takes this header carries `Vary: Prefer`.
+	Prefer *PreferAbsent `json:"Prefer,omitempty"`
 }
 
 // GetOnboardingCompanyProposalParamsLocale defines parameters for GetOnboardingCompanyProposal.
 type GetOnboardingCompanyProposalParamsLocale string
+
+// GetOnboardingStateParams defines parameters for GetOnboardingState.
+type GetOnboardingStateParams struct {
+	// Prefer An RFC 7240 preference. `absent=204` asks for `204 No Content` instead of `404` when the
+	// read finds nothing yet. The token is matched without case, and every other preference is
+	// ignored. A row the caller may not see still answers `404`. Every answer of an operation
+	// that takes this header carries `Vary: Prefer`.
+	Prefer *PreferAbsent `json:"Prefer,omitempty"`
+}
 
 // PutOnboardingStateParams defines parameters for PutOnboardingState.
 type PutOnboardingStateParams struct {
@@ -84591,6 +84711,15 @@ type RequestEditAccessParams struct {
 	IdempotencyKey *IdempotencyKey `json:"Idempotency-Key,omitempty"`
 }
 
+// GetOwnershipOfferParams defines parameters for GetOwnershipOffer.
+type GetOwnershipOfferParams struct {
+	// Prefer An RFC 7240 preference. `absent=204` asks for `204 No Content` instead of `404` when the
+	// read finds nothing yet. The token is matched without case, and every other preference is
+	// ignored. A row the caller may not see still answers `404`. Every answer of an operation
+	// that takes this header carries `Vary: Prefer`.
+	Prefer *PreferAbsent `json:"Prefer,omitempty"`
+}
+
 // OfferOwnershipTransferParams defines parameters for OfferOwnershipTransfer.
 type OfferOwnershipTransferParams struct {
 	// IdempotencyKey Client-supplied key making a mutation safe to retry — an update exactly as much as a
@@ -84618,6 +84747,15 @@ type OfferOwnershipTransferParams struct {
 	// than half-honouring it, so read this contract, not the client, to know which calls are safe
 	// to retry blind.
 	IdempotencyKey *IdempotencyKey `json:"Idempotency-Key,omitempty"`
+}
+
+// GetOwnershipRequestParams defines parameters for GetOwnershipRequest.
+type GetOwnershipRequestParams struct {
+	// Prefer An RFC 7240 preference. `absent=204` asks for `204 No Content` instead of `404` when the
+	// read finds nothing yet. The token is matched without case, and every other preference is
+	// ignored. A row the caller may not see still answers `404`. Every answer of an operation
+	// that takes this header carries `Vary: Prefer`.
+	Prefer *PreferAbsent `json:"Prefer,omitempty"`
 }
 
 // RequestOwnershipTransferParams defines parameters for RequestOwnershipTransfer.
@@ -86109,16 +86247,40 @@ type SetWeeklyPlanCommitmentStateJSONBody struct {
 // SetWeeklyPlanCommitmentStateJSONBodyState defines parameters for SetWeeklyPlanCommitmentState.
 type SetWeeklyPlanCommitmentStateJSONBodyState string
 
+// GetCurrentWeeklyPlanParams defines parameters for GetCurrentWeeklyPlan.
+type GetCurrentWeeklyPlanParams struct {
+	// Prefer An RFC 7240 preference. `absent=204` asks for `204 No Content` instead of `404` when the
+	// read finds nothing yet. The token is matched without case, and every other preference is
+	// ignored. A row the caller may not see still answers `404`. Every answer of an operation
+	// that takes this header carries `Vary: Prefer`.
+	Prefer *PreferAbsent `json:"Prefer,omitempty"`
+}
+
 // SetWeeklyPlanContractJSONBody defines parameters for SetWeeklyPlanContract.
 type SetWeeklyPlanContractJSONBody struct {
 	CapacityNote *string `json:"capacity_note,omitempty"`
 	Risks        *string `json:"risks,omitempty"`
 }
 
+// GetTeammateWeeklyPlanParams defines parameters for GetTeammateWeeklyPlan.
+type GetTeammateWeeklyPlanParams struct {
+	// Prefer An RFC 7240 preference. `absent=204` asks for `204 No Content` instead of `404` when the
+	// read finds nothing yet. The token is matched without case, and every other preference is
+	// ignored. A row the caller may not see still answers `404`. Every answer of an operation
+	// that takes this header carries `Vary: Prefer`.
+	Prefer *PreferAbsent `json:"Prefer,omitempty"`
+}
+
 // GetLatestWeeklyReviewParams defines parameters for GetLatestWeeklyReview.
 type GetLatestWeeklyReviewParams struct {
 	// Week The Monday of the week to open, in the installation reporting timezone. Omitted serves the most recent.
 	Week *openapi_types.Date `form:"week,omitempty" json:"week,omitempty"`
+
+	// Prefer An RFC 7240 preference. `absent=204` asks for `204 No Content` instead of `404` when the
+	// read finds nothing yet. The token is matched without case, and every other preference is
+	// ignored. A row the caller may not see still answers `404`. Every answer of an operation
+	// that takes this header carries `Vary: Prefer`.
+	Prefer *PreferAbsent `json:"Prefer,omitempty"`
 }
 
 // GetTeamWeeklyReviewParams defines parameters for GetTeamWeeklyReview.
@@ -86129,6 +86291,12 @@ type GetTeamWeeklyReviewParams struct {
 	// Week The Monday of the week wanted. Omitted means the most recent snapshot this team
 	// has.
 	Week *openapi_types.Date `form:"week,omitempty" json:"week,omitempty"`
+
+	// Prefer An RFC 7240 preference. `absent=204` asks for `204 No Content` instead of `404` when the
+	// read finds nothing yet. The token is matched without case, and every other preference is
+	// ignored. A row the caller may not see still answers `404`. Every answer of an operation
+	// that takes this header carries `Vary: Prefer`.
+	Prefer *PreferAbsent `json:"Prefer,omitempty"`
 }
 
 // GetWorklistParams defines parameters for GetWorklist.
@@ -101628,7 +101796,7 @@ type ServerInterface interface {
 	ReadTranscriptForNextSteps(w http.ResponseWriter, r *http.Request, id Id)
 	// The newest reading of this transcript, so one that ended after the rep navigated away is still visible.
 	// (GET /activities/{id}/transcript-proposals/latest)
-	GetLatestTranscriptRead(w http.ResponseWriter, r *http.Request, id Id)
+	GetLatestTranscriptRead(w http.ResponseWriter, r *http.Request, id Id, params GetLatestTranscriptReadParams)
 	// One reading's progress and outcome — how many lines it addressed, what it staged, and why it produced nothing.
 	// (GET /activities/{id}/transcript-proposals/{readId})
 	GetTranscriptRead(w http.ResponseWriter, r *http.Request, id Id, readId openapi_types.UUID)
@@ -101811,7 +101979,7 @@ type ServerInterface interface {
 	GetAnalyticsContext(w http.ResponseWriter, r *http.Request)
 	// How current the sources behind the numbers are.
 	// (GET /analytics/coverage)
-	GetDataCoverage(w http.ResponseWriter, r *http.Request)
+	GetDataCoverage(w http.ResponseWriter, r *http.Request, params GetDataCoverageParams)
 	// The decisions recorded from a sales review, newest first, as tasks the reader may see.
 	// (GET /analytics/decisions)
 	ListSalesDecisions(w http.ResponseWriter, r *http.Request, params ListSalesDecisionsParams)
@@ -102177,7 +102345,7 @@ type ServerInterface interface {
 	BookMeeting(w http.ResponseWriter, r *http.Request, params BookMeetingParams)
 	// Your morning brief for today, its ranked items. 404 means none has been made yet; generateMorningBrief makes one.
 	// (GET /brief)
-	GetMorningBrief(w http.ResponseWriter, r *http.Request)
+	GetMorningBrief(w http.ResponseWriter, r *http.Request, params GetMorningBriefParams)
 	// Assemble the acting rep's brief for today if the overnight pass has not already.
 	// (POST /brief)
 	GenerateMorningBrief(w http.ResponseWriter, r *http.Request)
@@ -102546,7 +102714,7 @@ type ServerInterface interface {
 	ListCompanyOfferedValues(w http.ResponseWriter, r *http.Request, id Id)
 	// Read the partner extension on a company (404 if the company is not a partner).
 	// (GET /companies/{id}/partner)
-	GetPartner(w http.ResponseWriter, r *http.Request, id Id)
+	GetPartner(w http.ResponseWriter, r *http.Request, id Id, params GetPartnerParams)
 	// Create/update the partner extension on a company (adds `partner` to its relationship types).
 	// (PUT /companies/{id}/partner)
 	UpsertPartner(w http.ResponseWriter, r *http.Request, id Id, params UpsertPartnerParams)
@@ -102576,7 +102744,7 @@ type ServerInterface interface {
 	ShareCompanyContacts(w http.ResponseWriter, r *http.Request, id Id, params ShareCompanyContactsParams)
 	// The newest deep read on this account, so a crawl that failed after the rep navigated away is still visible.
 	// (GET /companies/{id}/site-reads/latest)
-	GetLatestSiteRead(w http.ResponseWriter, r *http.Request, id Id)
+	GetLatestSiteRead(w http.ResponseWriter, r *http.Request, id Id, params GetLatestSiteReadParams)
 	// One deep read's progress and outcome — pages read, pages skipped and WHY, what got staged.
 	// (GET /companies/{id}/site-reads/{readId})
 	GetSiteRead(w http.ResponseWriter, r *http.Request, id Id, readId openapi_types.UUID)
@@ -102594,10 +102762,10 @@ type ServerInterface interface {
 	TechnicalEnrichCompany(w http.ResponseWriter, r *http.Request, id Id)
 	// What the last technical lookup did, per source, so a run that ended after the rep left is still visible.
 	// (GET /companies/{id}/technical-enrich/latest)
-	GetLatestTechnicalEnrich(w http.ResponseWriter, r *http.Request, id Id)
+	GetLatestTechnicalEnrich(w http.ResponseWriter, r *http.Request, id Id, params GetLatestTechnicalEnrichParams)
 	// What the EU VAT register answered about this company's VAT ID, and the receipt for having asked.
 	// (GET /companies/{id}/vat-check)
-	GetCompanyVatCheck(w http.ResponseWriter, r *http.Request, id Id)
+	GetCompanyVatCheck(w http.ResponseWriter, r *http.Request, id Id, params GetCompanyVatCheckParams)
 	// Ask the register again about the number this company states.
 	// (POST /companies/{id}/vat-check)
 	RequestCompanyVatCheck(w http.ResponseWriter, r *http.Request, id Id)
@@ -102606,7 +102774,7 @@ type ServerInterface interface {
 	AcknowledgeCompanyView(w http.ResponseWriter, r *http.Request, id Id)
 	// The installation's own company (the anchor company).
 	// (GET /company)
-	GetAnchorCompany(w http.ResponseWriter, r *http.Request)
+	GetAnchorCompany(w http.ResponseWriter, r *http.Request, params GetAnchorCompanyParams)
 	// Save the installation's own company.
 	// (PUT /company)
 	PutAnchorCompany(w http.ResponseWriter, r *http.Request)
@@ -103179,7 +103347,7 @@ type ServerInterface interface {
 	ListContactCases(w http.ResponseWriter, r *http.Request, params ListContactCasesParams)
 	// The duplicate case this contact belongs to.
 	// (GET /dedupe/contact-cases/{contact_id})
-	GetContactCase(w http.ResponseWriter, r *http.Request, contactId openapi_types.UUID)
+	GetContactCase(w http.ResponseWriter, r *http.Request, contactId openapi_types.UUID, params GetContactCaseParams)
 	// Merge the selected members of a case into one contact. Not reversible.
 	// (POST /dedupe/contact-cases/{contact_id}/merge)
 	MergeContactCase(w http.ResponseWriter, r *http.Request, contactId openapi_types.UUID)
@@ -103308,7 +103476,7 @@ type ServerInterface interface {
 	GetForecast(w http.ResponseWriter, r *http.Request, params GetForecastParams)
 	// What last night's input check found, and how much of the pipeline it reached.
 	// (GET /forecast/assurance)
-	GetForecastAssurance(w http.ResponseWriter, r *http.Request)
+	GetForecastAssurance(w http.ResponseWriter, r *http.Request, params GetForecastAssuranceParams)
 	// Whether the qualified forecast applies the viability reviews.
 	// (GET /forecast/assurance/enforcement)
 	GetForecastAssuranceEnforcement(w http.ResponseWriter, r *http.Request)
@@ -103941,7 +104109,7 @@ type ServerInterface interface {
 	GetOnboardingCompanyProposal(w http.ResponseWriter, r *http.Request, params GetOnboardingCompanyProposalParams)
 	// Get the acting user's resumable onboarding state.
 	// (GET /onboarding/state)
-	GetOnboardingState(w http.ResponseWriter, r *http.Request)
+	GetOnboardingState(w http.ResponseWriter, r *http.Request, params GetOnboardingStateParams)
 	// Create or replace the acting user's resumable onboarding state.
 	// (PUT /onboarding/state)
 	PutOnboardingState(w http.ResponseWriter, r *http.Request, params PutOnboardingStateParams)
@@ -104313,7 +104481,7 @@ type ServerInterface interface {
 	WithdrawOwnershipOffer(w http.ResponseWriter, r *http.Request, recordType string, id Id)
 	// The caller's open offer of this record.
 	// (GET /records/{record_type}/{id}/ownership-offer)
-	GetOwnershipOffer(w http.ResponseWriter, r *http.Request, recordType string, id Id)
+	GetOwnershipOffer(w http.ResponseWriter, r *http.Request, recordType string, id Id, params GetOwnershipOfferParams)
 	// Offer the caller's own record to a colleague.
 	// (POST /records/{record_type}/{id}/ownership-offer)
 	OfferOwnershipTransfer(w http.ResponseWriter, r *http.Request, recordType string, id Id, params OfferOwnershipTransferParams)
@@ -104325,7 +104493,7 @@ type ServerInterface interface {
 	WithdrawOwnershipRequest(w http.ResponseWriter, r *http.Request, recordType string, id Id)
 	// The caller's open request to be handed this record.
 	// (GET /records/{record_type}/{id}/ownership-request)
-	GetOwnershipRequest(w http.ResponseWriter, r *http.Request, recordType string, id Id)
+	GetOwnershipRequest(w http.ResponseWriter, r *http.Request, recordType string, id Id, params GetOwnershipRequestParams)
 	// Ask a record's owner to hand it over to the caller.
 	// (POST /records/{record_type}/{id}/ownership-request)
 	RequestOwnershipTransfer(w http.ResponseWriter, r *http.Request, recordType string, id Id, params RequestOwnershipTransferParams)
@@ -104874,7 +105042,7 @@ type ServerInterface interface {
 	SetWeeklyPlanCommitmentState(w http.ResponseWriter, r *http.Request, id openapi_types.UUID)
 	// The caller's plan for this week — what they said they would do.
 	// (GET /weekly-plans/current)
-	GetCurrentWeeklyPlan(w http.ResponseWriter, r *http.Request)
+	GetCurrentWeeklyPlan(w http.ResponseWriter, r *http.Request, params GetCurrentWeeklyPlanParams)
 	// Open a plan for this week.
 	// (POST /weekly-plans/current)
 	StartWeeklyPlan(w http.ResponseWriter, r *http.Request)
@@ -104883,7 +105051,7 @@ type ServerInterface interface {
 	SetWeeklyPlanContract(w http.ResponseWriter, r *http.Request)
 	// A teammate's plan for this week, for their lead.
 	// (GET /weekly-plans/{owner_id}/current)
-	GetTeammateWeeklyPlan(w http.ResponseWriter, r *http.Request, ownerId openapi_types.UUID)
+	GetTeammateWeeklyPlan(w http.ResponseWriter, r *http.Request, ownerId openapi_types.UUID, params GetTeammateWeeklyPlanParams)
 	// The weeks the acting rep has a review for, newest first.
 	// (GET /weekly-reviews)
 	ListWeeklyReviews(w http.ResponseWriter, r *http.Request)
@@ -105177,7 +105345,7 @@ func (_ Unimplemented) ReadTranscriptForNextSteps(w http.ResponseWriter, r *http
 
 // The newest reading of this transcript, so one that ended after the rep navigated away is still visible.
 // (GET /activities/{id}/transcript-proposals/latest)
-func (_ Unimplemented) GetLatestTranscriptRead(w http.ResponseWriter, r *http.Request, id Id) {
+func (_ Unimplemented) GetLatestTranscriptRead(w http.ResponseWriter, r *http.Request, id Id, params GetLatestTranscriptReadParams) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -105543,7 +105711,7 @@ func (_ Unimplemented) GetAnalyticsContext(w http.ResponseWriter, r *http.Reques
 
 // How current the sources behind the numbers are.
 // (GET /analytics/coverage)
-func (_ Unimplemented) GetDataCoverage(w http.ResponseWriter, r *http.Request) {
+func (_ Unimplemented) GetDataCoverage(w http.ResponseWriter, r *http.Request, params GetDataCoverageParams) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -106275,7 +106443,7 @@ func (_ Unimplemented) BookMeeting(w http.ResponseWriter, r *http.Request, param
 
 // Your morning brief for today, its ranked items. 404 means none has been made yet; generateMorningBrief makes one.
 // (GET /brief)
-func (_ Unimplemented) GetMorningBrief(w http.ResponseWriter, r *http.Request) {
+func (_ Unimplemented) GetMorningBrief(w http.ResponseWriter, r *http.Request, params GetMorningBriefParams) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -107013,7 +107181,7 @@ func (_ Unimplemented) ListCompanyOfferedValues(w http.ResponseWriter, r *http.R
 
 // Read the partner extension on a company (404 if the company is not a partner).
 // (GET /companies/{id}/partner)
-func (_ Unimplemented) GetPartner(w http.ResponseWriter, r *http.Request, id Id) {
+func (_ Unimplemented) GetPartner(w http.ResponseWriter, r *http.Request, id Id, params GetPartnerParams) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -107073,7 +107241,7 @@ func (_ Unimplemented) ShareCompanyContacts(w http.ResponseWriter, r *http.Reque
 
 // The newest deep read on this account, so a crawl that failed after the rep navigated away is still visible.
 // (GET /companies/{id}/site-reads/latest)
-func (_ Unimplemented) GetLatestSiteRead(w http.ResponseWriter, r *http.Request, id Id) {
+func (_ Unimplemented) GetLatestSiteRead(w http.ResponseWriter, r *http.Request, id Id, params GetLatestSiteReadParams) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -107109,13 +107277,13 @@ func (_ Unimplemented) TechnicalEnrichCompany(w http.ResponseWriter, r *http.Req
 
 // What the last technical lookup did, per source, so a run that ended after the rep left is still visible.
 // (GET /companies/{id}/technical-enrich/latest)
-func (_ Unimplemented) GetLatestTechnicalEnrich(w http.ResponseWriter, r *http.Request, id Id) {
+func (_ Unimplemented) GetLatestTechnicalEnrich(w http.ResponseWriter, r *http.Request, id Id, params GetLatestTechnicalEnrichParams) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
 // What the EU VAT register answered about this company's VAT ID, and the receipt for having asked.
 // (GET /companies/{id}/vat-check)
-func (_ Unimplemented) GetCompanyVatCheck(w http.ResponseWriter, r *http.Request, id Id) {
+func (_ Unimplemented) GetCompanyVatCheck(w http.ResponseWriter, r *http.Request, id Id, params GetCompanyVatCheckParams) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -107133,7 +107301,7 @@ func (_ Unimplemented) AcknowledgeCompanyView(w http.ResponseWriter, r *http.Req
 
 // The installation's own company (the anchor company).
 // (GET /company)
-func (_ Unimplemented) GetAnchorCompany(w http.ResponseWriter, r *http.Request) {
+func (_ Unimplemented) GetAnchorCompany(w http.ResponseWriter, r *http.Request, params GetAnchorCompanyParams) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -108279,7 +108447,7 @@ func (_ Unimplemented) ListContactCases(w http.ResponseWriter, r *http.Request, 
 
 // The duplicate case this contact belongs to.
 // (GET /dedupe/contact-cases/{contact_id})
-func (_ Unimplemented) GetContactCase(w http.ResponseWriter, r *http.Request, contactId openapi_types.UUID) {
+func (_ Unimplemented) GetContactCase(w http.ResponseWriter, r *http.Request, contactId openapi_types.UUID, params GetContactCaseParams) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -108537,7 +108705,7 @@ func (_ Unimplemented) GetForecast(w http.ResponseWriter, r *http.Request, param
 
 // What last night's input check found, and how much of the pipeline it reached.
 // (GET /forecast/assurance)
-func (_ Unimplemented) GetForecastAssurance(w http.ResponseWriter, r *http.Request) {
+func (_ Unimplemented) GetForecastAssurance(w http.ResponseWriter, r *http.Request, params GetForecastAssuranceParams) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -109803,7 +109971,7 @@ func (_ Unimplemented) GetOnboardingCompanyProposal(w http.ResponseWriter, r *ht
 
 // Get the acting user's resumable onboarding state.
 // (GET /onboarding/state)
-func (_ Unimplemented) GetOnboardingState(w http.ResponseWriter, r *http.Request) {
+func (_ Unimplemented) GetOnboardingState(w http.ResponseWriter, r *http.Request, params GetOnboardingStateParams) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -110547,7 +110715,7 @@ func (_ Unimplemented) WithdrawOwnershipOffer(w http.ResponseWriter, r *http.Req
 
 // The caller's open offer of this record.
 // (GET /records/{record_type}/{id}/ownership-offer)
-func (_ Unimplemented) GetOwnershipOffer(w http.ResponseWriter, r *http.Request, recordType string, id Id) {
+func (_ Unimplemented) GetOwnershipOffer(w http.ResponseWriter, r *http.Request, recordType string, id Id, params GetOwnershipOfferParams) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -110571,7 +110739,7 @@ func (_ Unimplemented) WithdrawOwnershipRequest(w http.ResponseWriter, r *http.R
 
 // The caller's open request to be handed this record.
 // (GET /records/{record_type}/{id}/ownership-request)
-func (_ Unimplemented) GetOwnershipRequest(w http.ResponseWriter, r *http.Request, recordType string, id Id) {
+func (_ Unimplemented) GetOwnershipRequest(w http.ResponseWriter, r *http.Request, recordType string, id Id, params GetOwnershipRequestParams) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -111669,7 +111837,7 @@ func (_ Unimplemented) SetWeeklyPlanCommitmentState(w http.ResponseWriter, r *ht
 
 // The caller's plan for this week — what they said they would do.
 // (GET /weekly-plans/current)
-func (_ Unimplemented) GetCurrentWeeklyPlan(w http.ResponseWriter, r *http.Request) {
+func (_ Unimplemented) GetCurrentWeeklyPlan(w http.ResponseWriter, r *http.Request, params GetCurrentWeeklyPlanParams) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -111687,7 +111855,7 @@ func (_ Unimplemented) SetWeeklyPlanContract(w http.ResponseWriter, r *http.Requ
 
 // A teammate's plan for this week, for their lead.
 // (GET /weekly-plans/{owner_id}/current)
-func (_ Unimplemented) GetTeammateWeeklyPlan(w http.ResponseWriter, r *http.Request, ownerId openapi_types.UUID) {
+func (_ Unimplemented) GetTeammateWeeklyPlan(w http.ResponseWriter, r *http.Request, ownerId openapi_types.UUID, params GetTeammateWeeklyPlanParams) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -113774,8 +113942,32 @@ func (siw *ServerInterfaceWrapper) GetLatestTranscriptRead(w http.ResponseWriter
 
 	r = r.WithContext(ctx)
 
+	// Parameter object where we will unmarshal all parameters from the context
+	var params GetLatestTranscriptReadParams
+
+	headers := r.Header
+
+	// ------------- Optional header parameter "Prefer" -------------
+	if valueList, found := headers[http.CanonicalHeaderKey("Prefer")]; found {
+		var Prefer PreferAbsent
+		n := len(valueList)
+		if n != 1 {
+			siw.ErrorHandlerFunc(w, r, &TooManyValuesForParamError{ParamName: "Prefer", Count: n})
+			return
+		}
+
+		err = runtime.BindStyledParameterWithOptions("simple", "Prefer", valueList[0], &Prefer, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "string", Format: ""})
+		if err != nil {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "Prefer", Err: err})
+			return
+		}
+
+		params.Prefer = &Prefer
+
+	}
+
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.GetLatestTranscriptRead(w, r, id)
+		siw.Handler.GetLatestTranscriptRead(w, r, id, params)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -115816,6 +116008,9 @@ func (siw *ServerInterfaceWrapper) GetAnalyticsContext(w http.ResponseWriter, r 
 // GetDataCoverage operation middleware
 func (siw *ServerInterfaceWrapper) GetDataCoverage(w http.ResponseWriter, r *http.Request) {
 
+	var err error
+	_ = err
+
 	ctx := r.Context()
 
 	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
@@ -115824,8 +116019,32 @@ func (siw *ServerInterfaceWrapper) GetDataCoverage(w http.ResponseWriter, r *htt
 
 	r = r.WithContext(ctx)
 
+	// Parameter object where we will unmarshal all parameters from the context
+	var params GetDataCoverageParams
+
+	headers := r.Header
+
+	// ------------- Optional header parameter "Prefer" -------------
+	if valueList, found := headers[http.CanonicalHeaderKey("Prefer")]; found {
+		var Prefer PreferAbsent
+		n := len(valueList)
+		if n != 1 {
+			siw.ErrorHandlerFunc(w, r, &TooManyValuesForParamError{ParamName: "Prefer", Count: n})
+			return
+		}
+
+		err = runtime.BindStyledParameterWithOptions("simple", "Prefer", valueList[0], &Prefer, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "string", Format: ""})
+		if err != nil {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "Prefer", Err: err})
+			return
+		}
+
+		params.Prefer = &Prefer
+
+	}
+
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.GetDataCoverage(w, r)
+		siw.Handler.GetDataCoverage(w, r, params)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -121033,6 +121252,27 @@ func (siw *ServerInterfaceWrapper) GetAttachmentExtraction(w http.ResponseWriter
 		return
 	}
 
+	headers := r.Header
+
+	// ------------- Optional header parameter "Prefer" -------------
+	if valueList, found := headers[http.CanonicalHeaderKey("Prefer")]; found {
+		var Prefer PreferAbsent
+		n := len(valueList)
+		if n != 1 {
+			siw.ErrorHandlerFunc(w, r, &TooManyValuesForParamError{ParamName: "Prefer", Count: n})
+			return
+		}
+
+		err = runtime.BindStyledParameterWithOptions("simple", "Prefer", valueList[0], &Prefer, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "string", Format: ""})
+		if err != nil {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "Prefer", Err: err})
+			return
+		}
+
+		params.Prefer = &Prefer
+
+	}
+
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.GetAttachmentExtraction(w, r, id, params)
 	}))
@@ -122209,6 +122449,9 @@ func (siw *ServerInterfaceWrapper) BookMeeting(w http.ResponseWriter, r *http.Re
 // GetMorningBrief operation middleware
 func (siw *ServerInterfaceWrapper) GetMorningBrief(w http.ResponseWriter, r *http.Request) {
 
+	var err error
+	_ = err
+
 	ctx := r.Context()
 
 	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
@@ -122217,8 +122460,32 @@ func (siw *ServerInterfaceWrapper) GetMorningBrief(w http.ResponseWriter, r *htt
 
 	r = r.WithContext(ctx)
 
+	// Parameter object where we will unmarshal all parameters from the context
+	var params GetMorningBriefParams
+
+	headers := r.Header
+
+	// ------------- Optional header parameter "Prefer" -------------
+	if valueList, found := headers[http.CanonicalHeaderKey("Prefer")]; found {
+		var Prefer PreferAbsent
+		n := len(valueList)
+		if n != 1 {
+			siw.ErrorHandlerFunc(w, r, &TooManyValuesForParamError{ParamName: "Prefer", Count: n})
+			return
+		}
+
+		err = runtime.BindStyledParameterWithOptions("simple", "Prefer", valueList[0], &Prefer, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "string", Format: ""})
+		if err != nil {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "Prefer", Err: err})
+			return
+		}
+
+		params.Prefer = &Prefer
+
+	}
+
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.GetMorningBrief(w, r)
+		siw.Handler.GetMorningBrief(w, r, params)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -127729,8 +127996,32 @@ func (siw *ServerInterfaceWrapper) GetPartner(w http.ResponseWriter, r *http.Req
 
 	r = r.WithContext(ctx)
 
+	// Parameter object where we will unmarshal all parameters from the context
+	var params GetPartnerParams
+
+	headers := r.Header
+
+	// ------------- Optional header parameter "Prefer" -------------
+	if valueList, found := headers[http.CanonicalHeaderKey("Prefer")]; found {
+		var Prefer PreferAbsent
+		n := len(valueList)
+		if n != 1 {
+			siw.ErrorHandlerFunc(w, r, &TooManyValuesForParamError{ParamName: "Prefer", Count: n})
+			return
+		}
+
+		err = runtime.BindStyledParameterWithOptions("simple", "Prefer", valueList[0], &Prefer, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "string", Format: ""})
+		if err != nil {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "Prefer", Err: err})
+			return
+		}
+
+		params.Prefer = &Prefer
+
+	}
+
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.GetPartner(w, r, id)
+		siw.Handler.GetPartner(w, r, id, params)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -128343,8 +128634,32 @@ func (siw *ServerInterfaceWrapper) GetLatestSiteRead(w http.ResponseWriter, r *h
 
 	r = r.WithContext(ctx)
 
+	// Parameter object where we will unmarshal all parameters from the context
+	var params GetLatestSiteReadParams
+
+	headers := r.Header
+
+	// ------------- Optional header parameter "Prefer" -------------
+	if valueList, found := headers[http.CanonicalHeaderKey("Prefer")]; found {
+		var Prefer PreferAbsent
+		n := len(valueList)
+		if n != 1 {
+			siw.ErrorHandlerFunc(w, r, &TooManyValuesForParamError{ParamName: "Prefer", Count: n})
+			return
+		}
+
+		err = runtime.BindStyledParameterWithOptions("simple", "Prefer", valueList[0], &Prefer, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "string", Format: ""})
+		if err != nil {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "Prefer", Err: err})
+			return
+		}
+
+		params.Prefer = &Prefer
+
+	}
+
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.GetLatestSiteRead(w, r, id)
+		siw.Handler.GetLatestSiteRead(w, r, id, params)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -128572,8 +128887,32 @@ func (siw *ServerInterfaceWrapper) GetLatestTechnicalEnrich(w http.ResponseWrite
 
 	r = r.WithContext(ctx)
 
+	// Parameter object where we will unmarshal all parameters from the context
+	var params GetLatestTechnicalEnrichParams
+
+	headers := r.Header
+
+	// ------------- Optional header parameter "Prefer" -------------
+	if valueList, found := headers[http.CanonicalHeaderKey("Prefer")]; found {
+		var Prefer PreferAbsent
+		n := len(valueList)
+		if n != 1 {
+			siw.ErrorHandlerFunc(w, r, &TooManyValuesForParamError{ParamName: "Prefer", Count: n})
+			return
+		}
+
+		err = runtime.BindStyledParameterWithOptions("simple", "Prefer", valueList[0], &Prefer, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "string", Format: ""})
+		if err != nil {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "Prefer", Err: err})
+			return
+		}
+
+		params.Prefer = &Prefer
+
+	}
+
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.GetLatestTechnicalEnrich(w, r, id)
+		siw.Handler.GetLatestTechnicalEnrich(w, r, id, params)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -128606,8 +128945,32 @@ func (siw *ServerInterfaceWrapper) GetCompanyVatCheck(w http.ResponseWriter, r *
 
 	r = r.WithContext(ctx)
 
+	// Parameter object where we will unmarshal all parameters from the context
+	var params GetCompanyVatCheckParams
+
+	headers := r.Header
+
+	// ------------- Optional header parameter "Prefer" -------------
+	if valueList, found := headers[http.CanonicalHeaderKey("Prefer")]; found {
+		var Prefer PreferAbsent
+		n := len(valueList)
+		if n != 1 {
+			siw.ErrorHandlerFunc(w, r, &TooManyValuesForParamError{ParamName: "Prefer", Count: n})
+			return
+		}
+
+		err = runtime.BindStyledParameterWithOptions("simple", "Prefer", valueList[0], &Prefer, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "string", Format: ""})
+		if err != nil {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "Prefer", Err: err})
+			return
+		}
+
+		params.Prefer = &Prefer
+
+	}
+
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.GetCompanyVatCheck(w, r, id)
+		siw.Handler.GetCompanyVatCheck(w, r, id, params)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -128688,6 +129051,9 @@ func (siw *ServerInterfaceWrapper) AcknowledgeCompanyView(w http.ResponseWriter,
 // GetAnchorCompany operation middleware
 func (siw *ServerInterfaceWrapper) GetAnchorCompany(w http.ResponseWriter, r *http.Request) {
 
+	var err error
+	_ = err
+
 	ctx := r.Context()
 
 	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
@@ -128696,8 +129062,32 @@ func (siw *ServerInterfaceWrapper) GetAnchorCompany(w http.ResponseWriter, r *ht
 
 	r = r.WithContext(ctx)
 
+	// Parameter object where we will unmarshal all parameters from the context
+	var params GetAnchorCompanyParams
+
+	headers := r.Header
+
+	// ------------- Optional header parameter "Prefer" -------------
+	if valueList, found := headers[http.CanonicalHeaderKey("Prefer")]; found {
+		var Prefer PreferAbsent
+		n := len(valueList)
+		if n != 1 {
+			siw.ErrorHandlerFunc(w, r, &TooManyValuesForParamError{ParamName: "Prefer", Count: n})
+			return
+		}
+
+		err = runtime.BindStyledParameterWithOptions("simple", "Prefer", valueList[0], &Prefer, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "string", Format: ""})
+		if err != nil {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "Prefer", Err: err})
+			return
+		}
+
+		params.Prefer = &Prefer
+
+	}
+
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.GetAnchorCompany(w, r)
+		siw.Handler.GetAnchorCompany(w, r, params)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -138109,8 +138499,32 @@ func (siw *ServerInterfaceWrapper) GetContactCase(w http.ResponseWriter, r *http
 
 	r = r.WithContext(ctx)
 
+	// Parameter object where we will unmarshal all parameters from the context
+	var params GetContactCaseParams
+
+	headers := r.Header
+
+	// ------------- Optional header parameter "Prefer" -------------
+	if valueList, found := headers[http.CanonicalHeaderKey("Prefer")]; found {
+		var Prefer PreferAbsent
+		n := len(valueList)
+		if n != 1 {
+			siw.ErrorHandlerFunc(w, r, &TooManyValuesForParamError{ParamName: "Prefer", Count: n})
+			return
+		}
+
+		err = runtime.BindStyledParameterWithOptions("simple", "Prefer", valueList[0], &Prefer, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "string", Format: ""})
+		if err != nil {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "Prefer", Err: err})
+			return
+		}
+
+		params.Prefer = &Prefer
+
+	}
+
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.GetContactCase(w, r, contactId)
+		siw.Handler.GetContactCase(w, r, contactId, params)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -139495,6 +139909,9 @@ func (siw *ServerInterfaceWrapper) GetForecast(w http.ResponseWriter, r *http.Re
 // GetForecastAssurance operation middleware
 func (siw *ServerInterfaceWrapper) GetForecastAssurance(w http.ResponseWriter, r *http.Request) {
 
+	var err error
+	_ = err
+
 	ctx := r.Context()
 
 	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
@@ -139503,8 +139920,32 @@ func (siw *ServerInterfaceWrapper) GetForecastAssurance(w http.ResponseWriter, r
 
 	r = r.WithContext(ctx)
 
+	// Parameter object where we will unmarshal all parameters from the context
+	var params GetForecastAssuranceParams
+
+	headers := r.Header
+
+	// ------------- Optional header parameter "Prefer" -------------
+	if valueList, found := headers[http.CanonicalHeaderKey("Prefer")]; found {
+		var Prefer PreferAbsent
+		n := len(valueList)
+		if n != 1 {
+			siw.ErrorHandlerFunc(w, r, &TooManyValuesForParamError{ParamName: "Prefer", Count: n})
+			return
+		}
+
+		err = runtime.BindStyledParameterWithOptions("simple", "Prefer", valueList[0], &Prefer, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "string", Format: ""})
+		if err != nil {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "Prefer", Err: err})
+			return
+		}
+
+		params.Prefer = &Prefer
+
+	}
+
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.GetForecastAssurance(w, r)
+		siw.Handler.GetForecastAssurance(w, r, params)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -145400,6 +145841,27 @@ func (siw *ServerInterfaceWrapper) GetMailDraft(w http.ResponseWriter, r *http.R
 		return
 	}
 
+	headers := r.Header
+
+	// ------------- Optional header parameter "Prefer" -------------
+	if valueList, found := headers[http.CanonicalHeaderKey("Prefer")]; found {
+		var Prefer PreferAbsent
+		n := len(valueList)
+		if n != 1 {
+			siw.ErrorHandlerFunc(w, r, &TooManyValuesForParamError{ParamName: "Prefer", Count: n})
+			return
+		}
+
+		err = runtime.BindStyledParameterWithOptions("simple", "Prefer", valueList[0], &Prefer, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "string", Format: ""})
+		if err != nil {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "Prefer", Err: err})
+			return
+		}
+
+		params.Prefer = &Prefer
+
+	}
+
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.GetMailDraft(w, r, params)
 	}))
@@ -147547,6 +148009,27 @@ func (siw *ServerInterfaceWrapper) GetOnboardingCompanyProposal(w http.ResponseW
 		return
 	}
 
+	headers := r.Header
+
+	// ------------- Optional header parameter "Prefer" -------------
+	if valueList, found := headers[http.CanonicalHeaderKey("Prefer")]; found {
+		var Prefer PreferAbsent
+		n := len(valueList)
+		if n != 1 {
+			siw.ErrorHandlerFunc(w, r, &TooManyValuesForParamError{ParamName: "Prefer", Count: n})
+			return
+		}
+
+		err = runtime.BindStyledParameterWithOptions("simple", "Prefer", valueList[0], &Prefer, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "string", Format: ""})
+		if err != nil {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "Prefer", Err: err})
+			return
+		}
+
+		params.Prefer = &Prefer
+
+	}
+
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.GetOnboardingCompanyProposal(w, r, params)
 	}))
@@ -147561,6 +148044,9 @@ func (siw *ServerInterfaceWrapper) GetOnboardingCompanyProposal(w http.ResponseW
 // GetOnboardingState operation middleware
 func (siw *ServerInterfaceWrapper) GetOnboardingState(w http.ResponseWriter, r *http.Request) {
 
+	var err error
+	_ = err
+
 	ctx := r.Context()
 
 	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
@@ -147569,8 +148055,32 @@ func (siw *ServerInterfaceWrapper) GetOnboardingState(w http.ResponseWriter, r *
 
 	r = r.WithContext(ctx)
 
+	// Parameter object where we will unmarshal all parameters from the context
+	var params GetOnboardingStateParams
+
+	headers := r.Header
+
+	// ------------- Optional header parameter "Prefer" -------------
+	if valueList, found := headers[http.CanonicalHeaderKey("Prefer")]; found {
+		var Prefer PreferAbsent
+		n := len(valueList)
+		if n != 1 {
+			siw.ErrorHandlerFunc(w, r, &TooManyValuesForParamError{ParamName: "Prefer", Count: n})
+			return
+		}
+
+		err = runtime.BindStyledParameterWithOptions("simple", "Prefer", valueList[0], &Prefer, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "string", Format: ""})
+		if err != nil {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "Prefer", Err: err})
+			return
+		}
+
+		params.Prefer = &Prefer
+
+	}
+
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.GetOnboardingState(w, r)
+		siw.Handler.GetOnboardingState(w, r, params)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -153112,8 +153622,32 @@ func (siw *ServerInterfaceWrapper) GetOwnershipOffer(w http.ResponseWriter, r *h
 
 	r = r.WithContext(ctx)
 
+	// Parameter object where we will unmarshal all parameters from the context
+	var params GetOwnershipOfferParams
+
+	headers := r.Header
+
+	// ------------- Optional header parameter "Prefer" -------------
+	if valueList, found := headers[http.CanonicalHeaderKey("Prefer")]; found {
+		var Prefer PreferAbsent
+		n := len(valueList)
+		if n != 1 {
+			siw.ErrorHandlerFunc(w, r, &TooManyValuesForParamError{ParamName: "Prefer", Count: n})
+			return
+		}
+
+		err = runtime.BindStyledParameterWithOptions("simple", "Prefer", valueList[0], &Prefer, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "string", Format: ""})
+		if err != nil {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "Prefer", Err: err})
+			return
+		}
+
+		params.Prefer = &Prefer
+
+	}
+
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.GetOwnershipOffer(w, r, recordType, id)
+		siw.Handler.GetOwnershipOffer(w, r, recordType, id, params)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -153308,8 +153842,32 @@ func (siw *ServerInterfaceWrapper) GetOwnershipRequest(w http.ResponseWriter, r 
 
 	r = r.WithContext(ctx)
 
+	// Parameter object where we will unmarshal all parameters from the context
+	var params GetOwnershipRequestParams
+
+	headers := r.Header
+
+	// ------------- Optional header parameter "Prefer" -------------
+	if valueList, found := headers[http.CanonicalHeaderKey("Prefer")]; found {
+		var Prefer PreferAbsent
+		n := len(valueList)
+		if n != 1 {
+			siw.ErrorHandlerFunc(w, r, &TooManyValuesForParamError{ParamName: "Prefer", Count: n})
+			return
+		}
+
+		err = runtime.BindStyledParameterWithOptions("simple", "Prefer", valueList[0], &Prefer, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "string", Format: ""})
+		if err != nil {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "Prefer", Err: err})
+			return
+		}
+
+		params.Prefer = &Prefer
+
+	}
+
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.GetOwnershipRequest(w, r, recordType, id)
+		siw.Handler.GetOwnershipRequest(w, r, recordType, id, params)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -161218,6 +161776,9 @@ func (siw *ServerInterfaceWrapper) SetWeeklyPlanCommitmentState(w http.ResponseW
 // GetCurrentWeeklyPlan operation middleware
 func (siw *ServerInterfaceWrapper) GetCurrentWeeklyPlan(w http.ResponseWriter, r *http.Request) {
 
+	var err error
+	_ = err
+
 	ctx := r.Context()
 
 	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
@@ -161226,8 +161787,32 @@ func (siw *ServerInterfaceWrapper) GetCurrentWeeklyPlan(w http.ResponseWriter, r
 
 	r = r.WithContext(ctx)
 
+	// Parameter object where we will unmarshal all parameters from the context
+	var params GetCurrentWeeklyPlanParams
+
+	headers := r.Header
+
+	// ------------- Optional header parameter "Prefer" -------------
+	if valueList, found := headers[http.CanonicalHeaderKey("Prefer")]; found {
+		var Prefer PreferAbsent
+		n := len(valueList)
+		if n != 1 {
+			siw.ErrorHandlerFunc(w, r, &TooManyValuesForParamError{ParamName: "Prefer", Count: n})
+			return
+		}
+
+		err = runtime.BindStyledParameterWithOptions("simple", "Prefer", valueList[0], &Prefer, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "string", Format: ""})
+		if err != nil {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "Prefer", Err: err})
+			return
+		}
+
+		params.Prefer = &Prefer
+
+	}
+
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.GetCurrentWeeklyPlan(w, r)
+		siw.Handler.GetCurrentWeeklyPlan(w, r, params)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -161304,8 +161889,32 @@ func (siw *ServerInterfaceWrapper) GetTeammateWeeklyPlan(w http.ResponseWriter, 
 
 	r = r.WithContext(ctx)
 
+	// Parameter object where we will unmarshal all parameters from the context
+	var params GetTeammateWeeklyPlanParams
+
+	headers := r.Header
+
+	// ------------- Optional header parameter "Prefer" -------------
+	if valueList, found := headers[http.CanonicalHeaderKey("Prefer")]; found {
+		var Prefer PreferAbsent
+		n := len(valueList)
+		if n != 1 {
+			siw.ErrorHandlerFunc(w, r, &TooManyValuesForParamError{ParamName: "Prefer", Count: n})
+			return
+		}
+
+		err = runtime.BindStyledParameterWithOptions("simple", "Prefer", valueList[0], &Prefer, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "string", Format: ""})
+		if err != nil {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "Prefer", Err: err})
+			return
+		}
+
+		params.Prefer = &Prefer
+
+	}
+
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.GetTeammateWeeklyPlan(w, r, ownerId)
+		siw.Handler.GetTeammateWeeklyPlan(w, r, ownerId, params)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -161367,6 +161976,27 @@ func (siw *ServerInterfaceWrapper) GetLatestWeeklyReview(w http.ResponseWriter, 
 		return
 	}
 
+	headers := r.Header
+
+	// ------------- Optional header parameter "Prefer" -------------
+	if valueList, found := headers[http.CanonicalHeaderKey("Prefer")]; found {
+		var Prefer PreferAbsent
+		n := len(valueList)
+		if n != 1 {
+			siw.ErrorHandlerFunc(w, r, &TooManyValuesForParamError{ParamName: "Prefer", Count: n})
+			return
+		}
+
+		err = runtime.BindStyledParameterWithOptions("simple", "Prefer", valueList[0], &Prefer, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "string", Format: ""})
+		if err != nil {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "Prefer", Err: err})
+			return
+		}
+
+		params.Prefer = &Prefer
+
+	}
+
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.GetLatestWeeklyReview(w, r, params)
 	}))
@@ -161419,6 +162049,27 @@ func (siw *ServerInterfaceWrapper) GetTeamWeeklyReview(w http.ResponseWriter, r 
 			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "week", Err: err})
 		}
 		return
+	}
+
+	headers := r.Header
+
+	// ------------- Optional header parameter "Prefer" -------------
+	if valueList, found := headers[http.CanonicalHeaderKey("Prefer")]; found {
+		var Prefer PreferAbsent
+		n := len(valueList)
+		if n != 1 {
+			siw.ErrorHandlerFunc(w, r, &TooManyValuesForParamError{ParamName: "Prefer", Count: n})
+			return
+		}
+
+		err = runtime.BindStyledParameterWithOptions("simple", "Prefer", valueList[0], &Prefer, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "string", Format: ""})
+		if err != nil {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "Prefer", Err: err})
+			return
+		}
+
+		params.Prefer = &Prefer
+
 	}
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {

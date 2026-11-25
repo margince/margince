@@ -34,12 +34,18 @@ func contractRouter(srv crmcontracts.ServerInterface, outer ...crmcontracts.Midd
 	crmcontracts.HandlerWithOptions(srv, crmcontracts.ChiServerOptions{
 		BaseURL:     httpserver.BaseURL,
 		BaseRouter:  router,
-		Middlewares: append(middlewares, announceDeprecatedOperation, filepage.Refusals(chiRoutePattern)),
+		Middlewares: append(middlewares, announceDeprecatedOperation, filepage.Refusals(chiRoutePattern), httperr.AbsentPreferenceFor(declaresAbsentPreference)),
 		// The generated default writes err.Error() as text/plain, an
 		// off-contract shape that also leaks the parser's internal text.
 		ErrorHandlerFunc: paramParseError,
 	})
 	return router
+}
+
+// declaresAbsentPreference says whether the routed operation declares the
+// Prefer header, from the table the contract generates.
+func declaresAbsentPreference(r *http.Request) bool {
+	return absentPreferenceRoutes[r.Method+" "+chiRoutePattern(r)]
 }
 
 // paramParseError maps a generated request-parameter parse failure onto

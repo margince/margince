@@ -345,6 +345,9 @@ func loggedPath(r *http.Request) string {
 // Write maps err onto the wire. Unknown errors become an opaque 500 — the
 // cause is logged server-side, never leaked to the client.
 func Write(w http.ResponseWriter, r *http.Request, err error) {
+	if answeredAbsent(w, r, err) {
+		return
+	}
 	fault, ok := Classify(err)
 	if timedOut, late := timedOutFault(r, err, ok); late {
 		fault, ok = timedOut, true
