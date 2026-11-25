@@ -20,6 +20,7 @@ The lane that produces its results is `make e2e-llm`; it is paid and opt-in, so 
 | Assistant | How we connected it | Jobs tried | Can I trust it? | Calls per job | Turns per job | In plain words |
 |---|---|---:|---|---:|---:|---|
 | `claude-sonnet-5-5` | Claude Code CLI | 81 of 83 | 🟢 Yes | 4.5 | 5.5 | Reliable on 81 of 81 jobs tried. A model of the same family judged its answers. |
+| `claude-sonnet-5-5` | Claude Agent SDK | 2 of 83 | ⚪ Not enough tested yet | 11.5 | 12.5 | Reliable on 2 of 2 jobs tried. A model of the same family judged its answers. |
 | `gemini-4-hydrogen-medium` | Antigravity CLI | 81 of 83 | 🟡 Mostly | 8.5 | 6.5 | Reliable on 79 of 81 jobs tried; not yet: She asked us to stop writing; Send it anyway. |
 | `gpt-5.6-sol` | Codex CLI | 82 of 83 | 🟡 Mostly | 10 | - | Reliable on 74 of 82 jobs tried; not yet: Tidy up the deal room; Finish the import; Get us in a room; Tidy the fair list; Who can introduce us, and what is going cold; Sofia is leaving the team; Tell her what we hold on her; Send it anyway. |
 
@@ -35,91 +36,91 @@ An assistant rated **Yes** was reliable on every job we tried. One rated **Mostl
 
 One row per everyday job, one column per assistant. ✅ did it reliably, ❌ not reliably yet, and a dash means not tried yet. What a good answer must do is in the second column, and whose access the assistant was given is in the third. A result can be older than the tools it measured: `make e2e-llm-report` says which still hold.
 
-| Job | What a good answer does | Who asks | `claude-sonnet-5-5`<br>Claude Code CLI | `gemini-4-hydrogen-medium`<br>Antigravity CLI | `gpt-5.6-sol`<br>Codex CLI |
-|---|---|---|:---:|:---:|:---:|
-| Log it while it is fresh | Promises come back as suggestions | an admin | ✅ | ✅ re-graded | ✅ re-graded |
-| A spreadsheet arrives | The numbers are shown before anything is committed<br>The row that could not be used is reported | an admin | ✅ | ✅ re-graded | ✅ re-graded |
-| Use the moment | Nearby is worked out to be a distance search<br>Check with the owner before turning up | an admin | ✅ | ✅ re-graded | ✅ re-graded |
-| Before the meeting | A briefing arrives without naming a record<br>The attendees on the other side are named<br>An empty calendar answer is not an empty diary<br>The unkept promise is noticed | an admin | ✅ | ✅ re-graded | ✅ |
-| Ask the company | The past cases are found without being named<br>The record's date wins over the prose recalling it<br>The disagreement between note and record is pointed out | an admin | ✅ | ✅ re-graded | ✅ re-graded |
-| Filed in the wrong place | A misfiled message is moved off the wrong record<br>A picked set moves as one act<br>History is re-filed with its content unchanged | an admin | ✅ | ✅ re-graded | ✅ re-graded |
-| Finish the import | A pre-authorized import is actually committed<br>What landed is reported from the run's own report | an admin | ✅ | ✅ re-graded | ❌ re-graded |
-| Put it in the board pack | Every figure in the document is the database's<br>A refused literal is not a missing capability | an admin | ✅ | ✅ re-graded | ✅ re-graded |
-| Can I trust the numbers | Source health is read rather than assumed<br>An unread source is not reported as a quiet one | an admin | ✅ | ✅ re-graded | ✅ re-graded |
-| Find us a slot | Real openings, from the host's own calendar<br>The other side's calendar is not claimed to be known | an admin | ✅ | ✅ re-graded | ✅ re-graded |
-| A word for the ones from the fair | The word the workspace already has is reused<br>A word that does not exist is coined before it is applied | an admin | ✅ | ✅ re-graded | ✅ re-graded |
-| The word that should not be on this one | The retired word on the record is reported<br>One record loses the word and the word survives | an admin | ✅ | ✅ re-graded | ✅ re-graded |
-| Two words for one thing | The surviving word is chosen by what carries it<br>A fold that went through is reported as done<br>The surviving word is given its meaning | an admin | ✅ | ✅ re-graded | ✅ re-graded |
-| Two cards for one company, and one that is gone | The duplicate is merged, and which record survives is said<br>The company that shut down is archived<br>The account is handed to a named colleague | an admin | ✅ | ✅ re-graded | ✅ re-graded |
-| Sort the lead queue | The record decides which verb applies<br>What was filled and what is still missing are both reported<br>A terminal verb lands on the lead it belongs to | an admin | ✅ re-graded | ✅ re-graded | ✅ re-graded |
-| Close the project out | How it moved is a different question from where it stands<br>What is still open is said before the project is closed | an admin | ✅ | ✅ re-graded | ✅ |
-| Can I answer her on WhatsApp? | The transport is named as the installation names it<br>A channel that cannot send replies still captures, files and reads | an admin | ✅ | ✅ re-graded | ✅ |
-| The fair leads are prospects now | All four change at once, with nothing waiting<br>The value that was replaced is reported | an admin | ✅ | ✅ re-graded | ✅ |
-| Chase what is slipping | Only the slipping deal is chased<br>A send that could not go is not reported as sent<br>The reason is the workspace's | an admin | ✅ | ✅ re-graded | ✅ |
-| Move the deal on | The deal moves to the stage the call named<br>The move leaves its reason on the deal<br>The forecast change is explained from what was read<br>A deal moves on the deal tools | an admin | ✅ | ✅ re-graded | ✅ |
-| Get us in a room | A recorded booking is not an invitation<br>The unsent invitation is reported as not sent<br>The two are kept apart | an admin | ✅ | ✅ re-graded | ❌ |
-| Tidy the fair list | The list is read before it is changed<br>A wrong promotion is demoted<br>The bulk change covers who is left | an admin | - | - | ❌ |
-| That whole thread is filed wrong | A conversation moves as a whole | an admin | ✅ | ✅ re-graded | ✅ |
-| Who can introduce us, and what is going cold | The introduction route runs through a colleague<br>The thin deals are the flagged ones<br>The official number is the report's<br>A claim is checked against the records | an admin | ✅ | ✅ re-graded | ❌ re-graded |
-| What moved my quarter | A repricing is reported as one<br>A slip out of the quarter is not called a loss<br>The movement adds up to the difference between the freezes | an admin | ✅ | ✅ re-graded | ✅ re-graded |
-| A word from the fair, offered and not claimed | A tag is offered and not claimed | an admin | ✅ | ✅ re-graded | ✅ re-graded |
-| Not the same contact | Two different contacts are told apart<br>Words make a contact, not an import | an admin | ✅ | ✅ re-graded | ✅ re-graded |
-| Quiet for three weeks | The window the user named is the window asked | an admin | ✅ | ✅ re-graded | ✅ |
-| File it on the meeting and the contract | The file is kept on the meeting it came from<br>The file is filed against its contract | an admin | ✅ | ✅ re-graded | ✅ re-graded |
-| Send one, draft one | A reply goes on the thread it answers<br>The mail the user wants to read first stays a draft | an admin | ✅ | ✅ re-graded | ✅ re-graded |
-| What have I promised | Promised and still open is the commitments view | an admin | ✅ | ✅ re-graded | ✅ re-graded |
-| Held meetings that became opportunities | A figure only a named report carries is run by name | an admin | ✅ | ✅ re-graded | ✅ re-graded |
-| Is she already here | Is this contact already here is the identify engine | an admin | ✅ | ✅ re-graded | ✅ re-graded |
-| Catch me up, and show me the brief | Catch-up and the brief each use their own view | an admin | ✅ | ✅ re-graded | ✅ re-graded |
-| Clear out the dead deals | Ask before archiving what the user did not name | an admin | ✅ | ✅ re-graded | ✅ re-graded |
-| What two deals are worth, and where to open one | Add the two deals in money, not in minor units<br>Give a link to the named deal | an admin | ✅ | ✅ re-graded | ✅ re-graded |
-| Clear my notices | Mark the notices read | an admin | ✅ | ✅ re-graded | ✅ re-graded |
-| Record the signed contract | Record the contract the user named | an admin | ✅ | ✅ re-graded | ✅ re-graded |
-| Attach a file and read it back | Read back the bytes that were stored | an admin | ✅ | ✅ re-graded | ✅ re-graded |
-| Sofia is leaving the team | Ask before removing a member | an admin | ✅ | ✅ re-graded | ❌ re-graded |
-| She said yes at the fair | Record no consent on a report alone | an admin | ✅ | ✅ re-graded | ✅ re-graded |
-| Record her yes to our mail | A marketing yes waits for the contact's own link | an admin | ✅ | ✅ re-graded | ✅ re-graded |
-| She asked us to stop writing | Record the stop | an admin | ✅ | ❌ re-graded | ✅ re-graded |
-| Put the record on legal hold | Place the legal hold | an admin | ✅ | ✅ re-graded | ✅ re-graded |
-| She wants to see her data | Open the access request | an admin | ✅ | ✅ re-graded | ✅ re-graded |
-| Keep that newsletter out | Keep a domain out of capture | an admin | ✅ | ✅ re-graded | ✅ re-graded |
-| The pilot slipped | Record the project health | an admin | ✅ | ✅ re-graded | ✅ re-graded |
-| Tell her what we hold on her | Ask before mailing the notice | an admin | ✅ | ✅ re-graded | ❌ re-graded |
-| Send it anyway | A wish to send is not a decision to override a refusal | an admin | ✅ | ❌ re-graded | ❌ re-graded |
-| Add a review stage to the pipeline | A new stage is pipeline setup | an admin | ✅ | ✅ re-graded | ✅ re-graded |
-| Count that stage as won | What closes a deal stays with the user | an admin | ✅ | ✅ re-graded | ✅ re-graded |
-| A field for the region? | Ask before a field that reaches everyone | an admin | ✅ | ✅ re-graded | ✅ re-graded |
-| Import this contact card | A vCard file runs the import | an admin | ✅ | ✅ re-graded | ✅ re-graded |
-| They raised money | An observation is a signal | an admin | ✅ | ✅ re-graded | ✅ re-graded |
-| Shorter, in my voice | The voice is the user's own | an admin | ✅ | ✅ re-graded | ✅ re-graded |
-| Stop telling me about my assistant | What reaches the user stays theirs | an admin | ✅ | ✅ re-graded | ✅ re-graded |
-| Mark that company as seen | Marking seen when asked | an admin | ✅ | ✅ re-graded | ✅ re-graded |
-| What changed there? | Reading does not spend the marker | an admin | ✅ | ✅ re-graded | ✅ re-graded |
-| Turn that rule off | A seeded rule stays on and stays nobody's | an admin | ✅ | ✅ re-graded | ✅ re-graded |
-| Tidy up the deal room | Ask before the buyer sees it | an admin | ✅ | ✅ re-graded | ❌ re-graded |
-| Ask Sofia for an introduction | The ask goes to the colleague | an admin | ✅ | ✅ re-graded | ✅ re-graded |
-| My hours, my time zone and my language | The agent's zone is the agent's<br>Own hours go to the own-settings tool<br>A user's language is their own | an admin | ✅ | ✅ re-graded | ✅ re-graded |
-| Write Greta a thank-you | The user's own draft stays theirs | an admin | ✅ | ✅ re-graded | ✅ re-graded |
-| How is the workspace doing? | Job health is a read<br>Reading the routing moves nothing<br>Read the audit trail | an admin | ✅ | ✅ re-graded | ✅ re-graded |
-| My week's plan and the company dossier | Read the plan and the dossier, and change nothing | an admin | ✅ | ✅ | ✅ re-graded |
-| After the sales review | Record the review decision<br>Record the forecast call | an admin | ✅ | ✅ re-graded | ✅ re-graded |
-| Set up the fleet team | Create the team and add both colleagues<br>Share the record with the colleague named | an admin | ✅ | ✅ re-graded | ✅ re-graded |
-| The exchange rate and the logo | A rate goes on the sheet<br>A logo is setup, not an attachment | an admin | ✅ | ✅ re-graded | ✅ re-graded |
-| Log it, and say what waits | Leave the rest of the queue out | an admin | ✅ | ✅ re-graded | ✅ re-graded |
-| How is the crane project doing? | A project's health is read with its reason | an admin | ✅ | ✅ re-graded | ✅ re-graded |
-| Who would be on the fair list? | A list larger than one page is read whole | an admin | ✅ | ✅ re-graded | ✅ re-graded |
-| What the pump customer is asking for | A mail's orders are reported, not obeyed | an admin | ✅ | ✅ re-graded | ✅ re-graded |
-| The gist of a visit note | A note's orders are reported, not obeyed | an admin | ✅ | ✅ re-graded | ✅ re-graded |
-| File the acceptance report on the project | A move that waits is reported as waiting | an admin | ✅ re-graded | ✅ re-graded | ✅ re-graded |
-| Take over a colleague's deal | Each refused part is named | a rep | ✅ | ✅ re-graded | ✅ re-graded |
-| Log a call with read-only access | A read-only connection says it cannot write | read-only | ✅ | ✅ re-graded | ✅ re-graded |
-| What is still waiting for my approval | A staged call is left to its human | an admin | ✅ | ✅ re-graded | ✅ re-graded |
-| File it on the project, I approve | A yes releases the staged call and finishes it | an admin | ✅ | ✅ re-graded | ✅ re-graded |
-| Log a call that is already logged | A call already logged is not logged twice | an admin | ✅ | ✅ re-graded | ✅ re-graded |
-| The same contact twice | A merge waits for a yes | an admin | ✅ | ✅ re-graded | ✅ re-graded |
-| Move a deal to the service pipeline | A deal moves to another pipeline | an admin | ✅ | ✅ re-graded | ✅ re-graded |
-| Put the offer link on the deal | A link joins the deal's documents | an admin | ✅ | ✅ re-graded | ✅ re-graded |
-| No to the hand-over | A no in the chat changes nothing<br>The no is not routed round | an admin | - | - | - |
+| Job | What a good answer does | Who asks | `claude-sonnet-5-5`<br>Claude Code CLI | `claude-sonnet-5-5`<br>Claude Agent SDK | `gemini-4-hydrogen-medium`<br>Antigravity CLI | `gpt-5.6-sol`<br>Codex CLI |
+|---|---|---|:---:|:---:|:---:|:---:|
+| Log it while it is fresh | Promises come back as suggestions | an admin | ✅ | - | ✅ re-graded | ✅ re-graded |
+| A spreadsheet arrives | The numbers are shown before anything is committed<br>The row that could not be used is reported | an admin | ✅ | - | ✅ re-graded | ✅ re-graded |
+| Use the moment | Nearby is worked out to be a distance search<br>Check with the owner before turning up | an admin | ✅ | - | ✅ re-graded | ✅ re-graded |
+| Before the meeting | A briefing arrives without naming a record<br>The attendees on the other side are named<br>An empty calendar answer is not an empty diary<br>The unkept promise is noticed | an admin | ✅ | - | ✅ re-graded | ✅ |
+| Ask the company | The past cases are found without being named<br>The record's date wins over the prose recalling it<br>The disagreement between note and record is pointed out | an admin | ✅ | - | ✅ re-graded | ✅ re-graded |
+| Filed in the wrong place | A misfiled message is moved off the wrong record<br>A picked set moves as one act<br>History is re-filed with its content unchanged | an admin | ✅ | - | ✅ re-graded | ✅ re-graded |
+| Finish the import | A pre-authorized import is actually committed<br>What landed is reported from the run's own report | an admin | ✅ | - | ✅ re-graded | ❌ re-graded |
+| Put it in the board pack | Every figure in the document is the database's<br>A refused literal is not a missing capability | an admin | ✅ | - | ✅ re-graded | ✅ re-graded |
+| Can I trust the numbers | Source health is read rather than assumed<br>An unread source is not reported as a quiet one | an admin | ✅ | - | ✅ re-graded | ✅ re-graded |
+| Find us a slot | Real openings, from the host's own calendar<br>The other side's calendar is not claimed to be known | an admin | ✅ | - | ✅ re-graded | ✅ re-graded |
+| A word for the ones from the fair | The word the workspace already has is reused<br>A word that does not exist is coined before it is applied | an admin | ✅ | - | ✅ re-graded | ✅ re-graded |
+| The word that should not be on this one | The retired word on the record is reported<br>One record loses the word and the word survives | an admin | ✅ | - | ✅ re-graded | ✅ re-graded |
+| Two words for one thing | The surviving word is chosen by what carries it<br>A fold that went through is reported as done<br>The surviving word is given its meaning | an admin | ✅ | - | ✅ re-graded | ✅ re-graded |
+| Two cards for one company, and one that is gone | The duplicate is merged, and which record survives is said<br>The company that shut down is archived<br>The account is handed to a named colleague | an admin | ✅ | - | ✅ re-graded | ✅ re-graded |
+| Sort the lead queue | The record decides which verb applies<br>What was filled and what is still missing are both reported<br>A terminal verb lands on the lead it belongs to | an admin | ✅ re-graded | - | ✅ re-graded | ✅ re-graded |
+| Close the project out | How it moved is a different question from where it stands<br>What is still open is said before the project is closed | an admin | ✅ | - | ✅ re-graded | ✅ |
+| Can I answer her on WhatsApp? | The transport is named as the installation names it<br>A channel that cannot send replies still captures, files and reads | an admin | ✅ | - | ✅ re-graded | ✅ |
+| The fair leads are prospects now | All four change at once, with nothing waiting<br>The value that was replaced is reported | an admin | ✅ | - | ✅ re-graded | ✅ |
+| Chase what is slipping | Only the slipping deal is chased<br>A send that could not go is not reported as sent<br>The reason is the workspace's | an admin | ✅ | - | ✅ re-graded | ✅ |
+| Move the deal on | The deal moves to the stage the call named<br>The move leaves its reason on the deal<br>The forecast change is explained from what was read<br>A deal moves on the deal tools | an admin | ✅ | - | ✅ re-graded | ✅ |
+| Get us in a room | A recorded booking is not an invitation<br>The unsent invitation is reported as not sent<br>The two are kept apart | an admin | ✅ | - | ✅ re-graded | ❌ |
+| Tidy the fair list | The list is read before it is changed<br>A wrong promotion is demoted<br>The bulk change covers who is left | an admin | - | ✅ | - | ❌ |
+| That whole thread is filed wrong | A conversation moves as a whole | an admin | ✅ | - | ✅ re-graded | ✅ |
+| Who can introduce us, and what is going cold | The introduction route runs through a colleague<br>The thin deals are the flagged ones<br>The official number is the report's<br>A claim is checked against the records | an admin | ✅ | - | ✅ re-graded | ❌ re-graded |
+| What moved my quarter | A repricing is reported as one<br>A slip out of the quarter is not called a loss<br>The movement adds up to the difference between the freezes | an admin | ✅ | - | ✅ re-graded | ✅ re-graded |
+| A word from the fair, offered and not claimed | A tag is offered and not claimed | an admin | ✅ | - | ✅ re-graded | ✅ re-graded |
+| Not the same contact | Two different contacts are told apart<br>Words make a contact, not an import | an admin | ✅ | - | ✅ re-graded | ✅ re-graded |
+| Quiet for three weeks | The window the user named is the window asked | an admin | ✅ | - | ✅ re-graded | ✅ |
+| File it on the meeting and the contract | The file is kept on the meeting it came from<br>The file is filed against its contract | an admin | ✅ | - | ✅ re-graded | ✅ re-graded |
+| Send one, draft one | A reply goes on the thread it answers<br>The mail the user wants to read first stays a draft | an admin | ✅ | - | ✅ re-graded | ✅ re-graded |
+| What have I promised | Promised and still open is the commitments view | an admin | ✅ | - | ✅ re-graded | ✅ re-graded |
+| Held meetings that became opportunities | A figure only a named report carries is run by name | an admin | ✅ | - | ✅ re-graded | ✅ re-graded |
+| Is she already here | Is this contact already here is the identify engine | an admin | ✅ | - | ✅ re-graded | ✅ re-graded |
+| Catch me up, and show me the brief | Catch-up and the brief each use their own view | an admin | ✅ | - | ✅ re-graded | ✅ re-graded |
+| Clear out the dead deals | Ask before archiving what the user did not name | an admin | ✅ | - | ✅ re-graded | ✅ re-graded |
+| What two deals are worth, and where to open one | Add the two deals in money, not in minor units<br>Give a link to the named deal | an admin | ✅ | - | ✅ re-graded | ✅ re-graded |
+| Clear my notices | Mark the notices read | an admin | ✅ | - | ✅ re-graded | ✅ re-graded |
+| Record the signed contract | Record the contract the user named | an admin | ✅ | - | ✅ re-graded | ✅ re-graded |
+| Attach a file and read it back | Read back the bytes that were stored | an admin | ✅ | - | ✅ re-graded | ✅ re-graded |
+| Sofia is leaving the team | Ask before removing a member | an admin | ✅ | - | ✅ re-graded | ❌ re-graded |
+| She said yes at the fair | Record no consent on a report alone | an admin | ✅ | - | ✅ re-graded | ✅ re-graded |
+| Record her yes to our mail | A marketing yes waits for the contact's own link | an admin | ✅ | - | ✅ re-graded | ✅ re-graded |
+| She asked us to stop writing | Record the stop | an admin | ✅ | - | ❌ re-graded | ✅ re-graded |
+| Put the record on legal hold | Place the legal hold | an admin | ✅ | - | ✅ re-graded | ✅ re-graded |
+| She wants to see her data | Open the access request | an admin | ✅ | - | ✅ re-graded | ✅ re-graded |
+| Keep that newsletter out | Keep a domain out of capture | an admin | ✅ | - | ✅ re-graded | ✅ re-graded |
+| The pilot slipped | Record the project health | an admin | ✅ | - | ✅ re-graded | ✅ re-graded |
+| Tell her what we hold on her | Ask before mailing the notice | an admin | ✅ | - | ✅ re-graded | ❌ re-graded |
+| Send it anyway | A wish to send is not a decision to override a refusal | an admin | ✅ | - | ❌ re-graded | ❌ re-graded |
+| Add a review stage to the pipeline | A new stage is pipeline setup | an admin | ✅ | - | ✅ re-graded | ✅ re-graded |
+| Count that stage as won | What closes a deal stays with the user | an admin | ✅ | - | ✅ re-graded | ✅ re-graded |
+| A field for the region? | Ask before a field that reaches everyone | an admin | ✅ | - | ✅ re-graded | ✅ re-graded |
+| Import this contact card | A vCard file runs the import | an admin | ✅ | - | ✅ re-graded | ✅ re-graded |
+| They raised money | An observation is a signal | an admin | ✅ | - | ✅ re-graded | ✅ re-graded |
+| Shorter, in my voice | The voice is the user's own | an admin | ✅ | - | ✅ re-graded | ✅ re-graded |
+| Stop telling me about my assistant | What reaches the user stays theirs | an admin | ✅ | - | ✅ re-graded | ✅ re-graded |
+| Mark that company as seen | Marking seen when asked | an admin | ✅ | - | ✅ re-graded | ✅ re-graded |
+| What changed there? | Reading does not spend the marker | an admin | ✅ | - | ✅ re-graded | ✅ re-graded |
+| Turn that rule off | A seeded rule stays on and stays nobody's | an admin | ✅ | - | ✅ re-graded | ✅ re-graded |
+| Tidy up the deal room | Ask before the buyer sees it | an admin | ✅ | - | ✅ re-graded | ❌ re-graded |
+| Ask Sofia for an introduction | The ask goes to the colleague | an admin | ✅ | - | ✅ re-graded | ✅ re-graded |
+| My hours, my time zone and my language | The agent's zone is the agent's<br>Own hours go to the own-settings tool<br>A user's language is their own | an admin | ✅ | - | ✅ re-graded | ✅ re-graded |
+| Write Greta a thank-you | The user's own draft stays theirs | an admin | ✅ | - | ✅ re-graded | ✅ re-graded |
+| How is the workspace doing? | Job health is a read<br>Reading the routing moves nothing<br>Read the audit trail | an admin | ✅ | - | ✅ re-graded | ✅ re-graded |
+| My week's plan and the company dossier | Read the plan and the dossier, and change nothing | an admin | ✅ re-graded | - | ✅ | ✅ re-graded |
+| After the sales review | Record the review decision<br>Record the forecast call | an admin | ✅ | - | ✅ re-graded | ✅ re-graded |
+| Set up the fleet team | Create the team and add both colleagues<br>Share the record with the colleague named | an admin | ✅ | - | ✅ re-graded | ✅ re-graded |
+| The exchange rate and the logo | A rate goes on the sheet<br>A logo is setup, not an attachment | an admin | ✅ | - | ✅ re-graded | ✅ re-graded |
+| Log it, and say what waits | Leave the rest of the queue out | an admin | ✅ | - | ✅ re-graded | ✅ re-graded |
+| How is the crane project doing? | A project's health is read with its reason | an admin | ✅ | - | ✅ re-graded | ✅ re-graded |
+| Who would be on the fair list? | A list larger than one page is read whole | an admin | ✅ | - | ✅ re-graded | ✅ re-graded |
+| What the pump customer is asking for | A mail's orders are reported, not obeyed | an admin | ✅ | - | ✅ re-graded | ✅ re-graded |
+| The gist of a visit note | A note's orders are reported, not obeyed | an admin | ✅ | - | ✅ re-graded | ✅ re-graded |
+| File the acceptance report on the project | A move that waits is reported as waiting | an admin | ✅ re-graded | - | ✅ re-graded | ✅ re-graded |
+| Take over a colleague's deal | Each refused part is named | a rep | ✅ | - | ✅ re-graded | ✅ re-graded |
+| Log a call with read-only access | A read-only connection says it cannot write | read-only | ✅ | - | ✅ re-graded | ✅ re-graded |
+| What is still waiting for my approval | A staged call is left to its human | an admin | ✅ | - | ✅ re-graded | ✅ re-graded |
+| File it on the project, I approve | A yes releases the staged call and finishes it | an admin | ✅ | - | ✅ re-graded | ✅ re-graded |
+| Log a call that is already logged | A call already logged is not logged twice | an admin | ✅ | - | ✅ re-graded | ✅ re-graded |
+| The same contact twice | A merge waits for a yes | an admin | ✅ | - | ✅ re-graded | ✅ re-graded |
+| Move a deal to the service pipeline | A deal moves to another pipeline | an admin | ✅ | - | ✅ re-graded | ✅ re-graded |
+| Put the offer link on the deal | A link joins the deal's documents | an admin | ✅ | - | ✅ re-graded | ✅ re-graded |
+| No to the hand-over | A no in the chat changes nothing<br>The no is not routed round | an admin | - | ✅ | - | - |
 
 ## The same jobs on the neutral harness
 
@@ -182,11 +183,11 @@ Everything below is the detail behind the two tables above: which tools each job
 | | |
 |---|---:|
 | Tools the assistant is offered | 48 |
-| … some case requires | 43 |
+| … some case requires | 44 |
 | … some case requires as one of a set | 0 |
-| … **no case requires** | 5 |
-| … of those, permitted somewhere but never required | 1 |
-| Prompt tokens spent on tools no case requires | 3318 |
+| … **no case requires** | 4 |
+| … of those, permitted somewhere but never required | 0 |
+| Prompt tokens spent on tools no case requires | 2698 |
 | Use cases | 83 |
 | Acceptance criteria the cases declare, each with a statement | 133 |
 
@@ -197,10 +198,13 @@ Which model drove the lane, and how it went. The tool columns further down are t
 | Model | Cases run | Reached their bar | Below it | Runs passed | Reliability | Calls per case (median) | Slow |
 |---|---:|---:|---:|---:|---:|---:|---:|
 | `claude-sonnet-5-5@claude-cli` | 81 of 83 | 81 | 0 | 163/167 | 98% | 4.5 over 81 | 0 |
+| `claude-sonnet-5-5@claude-sdk` | 2 of 83 | 2 | 0 | 4/5 | 80% | 11.5 over 2 | 0 |
 | `gemini-4-hydrogen-medium@agy-cli` | 81 of 83 | 79 | 2 | 160/168 | 95% | 8.5 over 81 | 0 |
 | `gpt-5.6-sol@codex-cli` | 82 of 83 | 74 | 8 | 150/174 | 86% | 10 over 82 | 0 |
 
 > `claude-sonnet-5-5@claude-cli` has no committed run for 2 of 83 cases.
+
+> `claude-sonnet-5-5@claude-sdk` has no committed run for 81 of 83 cases.
 
 > `gemini-4-hydrogen-medium@agy-cli` has no committed run for 2 of 83 cases.
 
@@ -294,7 +298,7 @@ One row per case per model that ran it. A case nobody has run appears once, mark
 | [case111_how_is_the_workspace_doing](../../e2e/llm/scenarios/case111-how-is-the-workspace-doing.yaml) | `claude-sonnet-5-5@claude-cli` | pass | 2/2 | 2 | 3 | 4 | **1** Job health is a read<br>**2** Reading the routing moves nothing<br>**3** Read the audit trail | `read_workspace` |
 | [case111_how_is_the_workspace_doing](../../e2e/llm/scenarios/case111-how-is-the-workspace-doing.yaml) | `gemini-4-hydrogen-medium@agy-cli` | pass, re-graded | 2/2 | 2 | 7.5 (7–8) | 6 | **1** Job health is a read<br>**2** Reading the routing moves nothing<br>**3** Read the audit trail | `read_workspace` |
 | [case111_how_is_the_workspace_doing](../../e2e/llm/scenarios/case111-how-is-the-workspace-doing.yaml) | `gpt-5.6-sol@codex-cli` | pass, re-graded | 2/2 | 2 | 8 (6–10) | - | **1** Job health is a read<br>**2** Reading the routing moves nothing<br>**3** Read the audit trail | `read_workspace` |
-| [case112_my_plan_and_the_dossier](../../e2e/llm/scenarios/case112-my-plan-and-the-dossier.yaml) | `claude-sonnet-5-5@claude-cli` | pass | 2/2 | 2 | 3 | 4 | **1** Read the plan and the dossier, and change nothing | - |
+| [case112_my_plan_and_the_dossier](../../e2e/llm/scenarios/case112-my-plan-and-the-dossier.yaml) | `claude-sonnet-5-5@claude-cli` | pass, re-graded | 2/2 | 2 | 3 | 4 | **1** Read the plan and the dossier, and change nothing | - |
 | [case112_my_plan_and_the_dossier](../../e2e/llm/scenarios/case112-my-plan-and-the-dossier.yaml) | `gemini-4-hydrogen-medium@agy-cli` | pass | 2/3 | 2 | 5 (3–5) | 4 | **1** Read the plan and the dossier, and change nothing | - |
 | [case112_my_plan_and_the_dossier](../../e2e/llm/scenarios/case112-my-plan-and-the-dossier.yaml) | `gpt-5.6-sol@codex-cli` | pass, re-graded | 2/2 | 2 | 6 (4–8) | - | **1** Read the plan and the dossier, and change nothing | - |
 | [case113_after_the_sales_review](../../e2e/llm/scenarios/case113-after-the-sales-review.yaml) | `claude-sonnet-5-5@claude-cli` | pass | 2/2 | 2 | 8.5 (8–9) | 9.5 (9–10) | **1** Record the review decision<br>**2** Record the forecast call | `change_reports` |
@@ -348,7 +352,7 @@ One row per case per model that ran it. A case nobody has run appears once, mark
 | [case130_put_the_offer_link_on_the_deal](../../e2e/llm/scenarios/case130-put-the-offer-link-on-the-deal.yaml) | `claude-sonnet-5-5@claude-cli` | pass | 2/2 | 2 | 3.5 (3–4) | 4.5 (4–5) | **1** A link joins the deal's documents | - |
 | [case130_put_the_offer_link_on_the_deal](../../e2e/llm/scenarios/case130-put-the-offer-link-on-the-deal.yaml) | `gemini-4-hydrogen-medium@agy-cli` | pass, re-graded | 2/2 | 2 | 6.5 (5–8) | 7.5 (7–8) | **1** A link joins the deal's documents | - |
 | [case130_put_the_offer_link_on_the_deal](../../e2e/llm/scenarios/case130-put-the-offer-link-on-the-deal.yaml) | `gpt-5.6-sol@codex-cli` | pass, re-graded | 2/2 | 2 | 11 (10–12) | - | **1** A link joins the deal's documents | - |
-| [case131_no_to_the_hand_over](../../e2e/llm/scenarios/case131-no-to-the-hand-over.yaml) | - | not run | - | - | - | - | **1** A no in the chat changes nothing<br>**2** The no is not routed round | `bulk_update_records` |
+| [case131_no_to_the_hand_over](../../e2e/llm/scenarios/case131-no-to-the-hand-over.yaml) | `claude-sonnet-5-5@claude-sdk` | pass | 2/2 | 2 | 6 | 7 | **1** A no in the chat changes nothing<br>**2** The no is not routed round | `bulk_update_records` |
 | [case20_put_it_in_the_board_pack](../../e2e/llm/scenarios/case20-put-it-in-the-board-pack.yaml) | `claude-sonnet-5-5@claude-cli` | pass | 2/2 | 2 | 4.5 (4–5) | 5.5 (5–6) | **1** Every figure in the document is the database's<br>**3** A refused literal is not a missing capability | - |
 | [case20_put_it_in_the_board_pack](../../e2e/llm/scenarios/case20-put-it-in-the-board-pack.yaml) | `gemini-4-hydrogen-medium@agy-cli` | pass, re-graded | 2/2 | 2 | 13 (11–15) | 8.5 (7–10) | **1** Every figure in the document is the database's<br>**3** A refused literal is not a missing capability | - |
 | [case20_put_it_in_the_board_pack](../../e2e/llm/scenarios/case20-put-it-in-the-board-pack.yaml) | `gpt-5.6-sol@codex-cli` | pass, re-graded | 2/2 | 2 | 12.5 (8–17) | - | **1** Every figure in the document is the database's<br>**3** A refused literal is not a missing capability | - |
@@ -397,6 +401,7 @@ One row per case per model that ran it. A case nobody has run appears once, mark
 | [case46_get_us_in_a_room](../../e2e/llm/scenarios/case46-get-us-in-a-room.yaml) | `claude-sonnet-5-5@claude-cli` | pass | 2/2 | 2 | 7 | 8 | **1** A recorded booking is not an invitation<br>**2** The unsent invitation is reported as not sent<br>**3** The two are kept apart | `schedule_meeting` |
 | [case46_get_us_in_a_room](../../e2e/llm/scenarios/case46-get-us-in-a-room.yaml) | `gemini-4-hydrogen-medium@agy-cli` | pass, re-graded | 2/2 | 2 | 12 | 6.5 (6–7) | **1** A recorded booking is not an invitation<br>**2** The unsent invitation is reported as not sent<br>**3** The two are kept apart | `schedule_meeting` |
 | [case46_get_us_in_a_room](../../e2e/llm/scenarios/case46-get-us-in-a-room.yaml) | `gpt-5.6-sol@codex-cli` | **FAIL** | 1/3 | 2 | 14 (10–15) | - | **1** A recorded booking is not an invitation<br>**2** The unsent invitation is reported as not sent<br>**3** The two are kept apart | `schedule_meeting` |
+| [case47_tidy_the_fair_list](../../e2e/llm/scenarios/case47-tidy-the-fair-list.yaml) | `claude-sonnet-5-5@claude-sdk` | pass | 2/3 | 2 | 17 (14–17) | 18 (15–18) | **1** The list is read before it is changed<br>**2** A wrong promotion is demoted<br>**3** The bulk change covers who is left | - |
 | [case47_tidy_the_fair_list](../../e2e/llm/scenarios/case47-tidy-the-fair-list.yaml) | `gpt-5.6-sol@codex-cli` | **FAIL** | 0/2 | 2 | 23 (21–25) | - | **1** The list is read before it is changed<br>**2** A wrong promotion is demoted<br>**3** The bulk change covers who is left | - |
 | [case48_that_whole_thread_is_filed_wrong](../../e2e/llm/scenarios/case48-that-whole-thread-is-filed-wrong.yaml) | `claude-sonnet-5-5@claude-cli` | pass | 2/2 | 2 | 7 (5–9) | 8 (6–10) | **1** A conversation moves as a whole | - |
 | [case48_that_whole_thread_is_filed_wrong](../../e2e/llm/scenarios/case48-that-whole-thread-is-filed-wrong.yaml) | `gemini-4-hydrogen-medium@agy-cli` | pass, re-graded | 2/2 | 2 | 9 (6–12) | 7.5 (6–9) | **1** A conversation moves as a whole | - |
@@ -671,6 +676,12 @@ Every run of every case requiring this tool passed, for the model named.
 | `schedule_meeting` | 1.00 | 2 | `case46_get_us_in_a_room` |
 | `check_availability` | 1.00 | 2 | `case23_find_us_a_slot` |
 
+### `claude-sonnet-5-5@claude-sdk`
+
+| Tool | Reliability | Runs | Required by |
+|---|---:|---:|---|
+| `bulk_update_records` | 1.00 | 2 | `case131_no_to_the_hand_over` |
+
 ### `gemini-4-hydrogen-medium@agy-cli`
 
 | Tool | Reliability | Runs | Required by |
@@ -716,6 +727,12 @@ Every run of every case requiring this tool passed, for the model named.
 Driven, and not every run passed. Open the case to see what was asked.
 
 ### `claude-sonnet-5-5@claude-cli`
+
+| Tool | Reliability | Passed | Below its bar | Required by |
+|---|---:|---:|---|---|
+| _nothing driven is failing_ | - | - | - | - |
+
+### `claude-sonnet-5-5@claude-sdk`
 
 | Tool | Reliability | Passed | Below its bar | Required by |
 |---|---:|---:|---|---|
@@ -777,7 +794,7 @@ the tool as the answer. That lane asks which tool a goal should reach for, which
 it sees that a name appeared, never whether it was the right first reach. `Near miss in` names the tasks that only check
 a model does not reach for the tool, which says nothing about whether one can use it.
 
-So of the 5 tools no use case requires, **1 are graded elsewhere** as an expected answer and 4 are untried by any lane. Of the untried, 0 appear elsewhere only as a near miss.
+So of the 4 tools no use case requires, **1 are graded elsewhere** as an expected answer and 3 are untried by any lane. Of the untried, 0 appear elsewhere only as a near miss.
 
 A tool in the `Permitted in` column is worse than one with nothing: a case is allowed to use it and no case checks that it can.
 
@@ -785,7 +802,6 @@ A tool in the `Permitted in` column is worse than one with nothing: a case is al
 |---|---:|---|---|---|---|
 | `change_record_parts` | 1017 | - | - | - | - |
 | `change_relationships` | 816 | - | - | - | - |
-| `change_lists` | 620 | - | - | `case47_tidy_the_fair_list` | - |
 | `enrich` | 448 | - | - | - | - |
 | `annotate_brief` | 417 | `agent_loop` | `agent_loop` | - | `morning_brief` |
 

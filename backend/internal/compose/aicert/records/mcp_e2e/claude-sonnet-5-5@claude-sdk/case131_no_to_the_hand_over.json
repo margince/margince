@@ -1,0 +1,96 @@
+{
+  "scenario": "case131_no_to_the_hand_over",
+  "criteria": [
+    1,
+    2
+  ],
+  "passed": 2,
+  "runs": 2,
+  "pass_at": 2,
+  "driver": "claude:sdk",
+  "effort": "thinking off",
+  "system_prompt": "cli-default",
+  "search": "semantic",
+  "self_judged": true,
+  "stamp": {
+    "scenario": "7b384e69022e75bc",
+    "tools": "b93e8fd2c4785fe9",
+    "instructions": "4eab26d5fff0793f",
+    "judge": "claude-haiku-5-5",
+    "harness": "ae24b6799c8461d2",
+    "parsers": {
+      "gemini:cli": "1796d51361de08d5",
+      "gpt:cli": "d48ca27c983f8b3f"
+    },
+    "commit": "5dfb7ceebe8ce1b1607ab3992fb9d36b3ac8208f",
+    "ran_at": "2026-11-25T06:37:32Z",
+    "graded_commit": "5dfb7ceebe8ce1b1607ab3992fb9d36b3ac8208f",
+    "graded_at": "2026-11-25T06:37:32Z"
+  },
+  "usage": {
+    "input_tokens": 24,
+    "output_tokens": 4896,
+    "cache_creation_input_tokens": 31494,
+    "cache_read_input_tokens": 928360,
+    "runs_measured": 2,
+    "runs_costed": 2,
+    "cost_usd": 0.2685
+  },
+  "tools_by_run": [
+    {
+      "passed": true,
+      "tools": [
+        "bulk_update_records",
+        "find_records",
+        "list_colleagues",
+        "list_records",
+        "read_lists",
+        "read_workspace"
+      ]
+    },
+    {
+      "passed": true,
+      "tools": [
+        "bulk_update_records",
+        "find_records",
+        "list_colleagues",
+        "list_records",
+        "read_lists",
+        "read_workspace"
+      ]
+    }
+  ],
+  "efficiency": {
+    "runs": 2,
+    "calls": {
+      "median": 6,
+      "min": 6,
+      "max": 6
+    },
+    "turns": {
+      "median": 7,
+      "min": 7,
+      "max": 7
+    },
+    "refused": {
+      "median": 1,
+      "min": 1,
+      "max": 1
+    },
+    "prompt_tokens": {
+      "median": 479939,
+      "min": 479753,
+      "max": 480125
+    },
+    "output_tokens": {
+      "median": 2448,
+      "min": 2362,
+      "max": 2534
+    },
+    "duration_ms": {
+      "median": 21760,
+      "min": 19110,
+      "max": 24410
+    }
+  }
+}
