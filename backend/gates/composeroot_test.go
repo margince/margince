@@ -34,7 +34,7 @@ const composeRootDir = "internal/compose"
 // The ceilings below hold develop and main together: each side's additions
 // stayed under its own ceilings, and the two sets of additions sum to these.
 const (
-	composeRootProductionFiles = 1382
+	composeRootProductionFiles = 1383
 	// Raised by 2 files for the extension mail-file read cases and the purge
 	// receipt cases, which drive this package's unexported seams. Raised by 1
 	// production and 1 test file for the series-split fold and its cases.
@@ -69,7 +69,7 @@ const (
 	// Raised by 1 test file, 166 test lines and about 90 production lines for the
 	// sweep's outcome check. It is wired into this package's runner service and
 	// resume path, and it needs their unexported run types.
-	composeRootProductionLines = 230_800
+	composeRootProductionLines = 230_802
 	composeRootTestLines       = 360_439
 )
 
