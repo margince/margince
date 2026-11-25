@@ -32,6 +32,7 @@ import (
 	"io"
 	"log/slog"
 	"net/http"
+	"strings"
 	"testing"
 
 	"github.com/jackc/pgx/v5"
@@ -358,4 +359,39 @@ func (a *accountSendEnv) mintAccountSendPassport(t *testing.T) string {
 		t.Fatalf("issue passport → %d", status)
 	}
 	return minted.Token
+}
+
+// An agent's preview of a first message answers what its send would. The send
+// refuses a project link, so the preview refuses it with the same code.
+func TestAnAgentsPreviewAndSendAgreeOnAProjectLink(t *testing.T) {
+	a := setupAccountSend(t)
+	project := createdRecord(t, a.AppEnv, "/v1/projects", AnyMap{"name": "Rollout", "company_id": a.company, "source": "manual"})
+	var minted struct {
+		Token string `json:"token"`
+	}
+	if status := a.Call(t, "POST", "/v1/passports", AnyMap{
+		"label": "outreach agent", "scopes": []string{"read", "write", "send"},
+	}, nil, &minted); status != http.StatusCreated {
+		t.Fatalf("issue passport → %d", status)
+	}
+	agent := apptest.NewMCPClient(a.AppEnv, minted.Token)
+	body := accountSendBody(a.company, a.deal, "Hello from an agent")
+	body["links"] = []AnyMap{{"entity_type": "company", "entity_id": a.company}, {"entity_type": "project", "entity_id": project}}
+
+	send := map[string]any{"as": "email_new"}
+	for key, value := range body {
+		send[key] = value
+	}
+	answers := map[string]apptest.MCPResult{
+		"preview": agent.Call(t, "change_activities", map[string]any{"action": "check_new_send", "request_body": body}),
+		"send":    agent.Call(t, "send_outbound", send),
+	}
+	for door, got := range answers {
+		if !got.IsError || !strings.Contains(got.Text, projectFilingCode) {
+			t.Errorf("the %s answered %s, want the %s refusal", door, got.Text, projectFilingCode)
+		}
+	}
+	if n := a.deliveryCount(t); n != 0 {
+		t.Errorf("%d deliveries after a refused send, want 0", n)
+	}
 }
