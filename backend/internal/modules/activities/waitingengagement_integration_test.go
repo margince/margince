@@ -30,6 +30,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/clocktest"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/owndomain"
+	"github.com/margince/margince/backend/internal/shared/kernel/correspondence"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -101,7 +102,7 @@ func (e *loadEnv) waitingFrom(t *testing.T, subject, address string, contact ids
 		VALUES ($1, 'email', 'inbound', $2, now() - interval '2 days', $3, 'seed', 'system')`,
 		activity, subject, "thread-"+activity.String())
 	e.exec(t, `INSERT INTO activity_participant (id, activity_id, role, address, address_domain_folded)
-		VALUES ($1, $2, 'from', $3, $4)`, ids.NewV7(), activity, address, owndomain.StoredOfAddress(address))
+		VALUES ($1, $2, 'from', $3, $4)`, ids.NewV7(), activity, correspondence.Fold(address), owndomain.StoredOfAddress(address))
 	e.exec(t, `INSERT INTO activity_link (id, activity_id, entity_type, contact_id)
 		VALUES ($1, $2, 'contact', $3)`, ids.NewV7(), activity, contact)
 	return activity

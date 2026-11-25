@@ -11034,7 +11034,7 @@ paths:
             type: array
             items:
               $ref: '#/components/schemas/ReportingMetricID'
-            maxItems: 8
+            maxItems: 12
         - name: blocks
           in: query
           required: false
@@ -11213,7 +11213,7 @@ paths:
             type: array
             items:
               $ref: '#/components/schemas/ReportingMetricID'
-            maxItems: 8
+            maxItems: 12
         - name: blocks
           in: query
           required: false
@@ -11374,7 +11374,7 @@ paths:
             type: array
             items:
               $ref: '#/components/schemas/ReportingMetricID'
-            maxItems: 8
+            maxItems: 12
         - name: blocks
           in: query
           required: false
@@ -46356,7 +46356,7 @@ components:
           items:
             $ref: '#/components/schemas/ReportingMetricID'
           minItems: 1
-          maxItems: 8
+          maxItems: 12
         blocks:
           type: array
           items:
