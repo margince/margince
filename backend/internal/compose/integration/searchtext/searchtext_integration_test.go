@@ -71,8 +71,8 @@ func TestMailSearchReadsTheSendersWordsAndNotTheMailTheyQuote(t *testing.T) {
 	assertFound(t, e, mail, "walnut", false)
 }
 
-// An Outlook forward and reply carry the same header block, and only the
-// subject tells search whether the mail under it is passed on or quoted.
+// An Outlook forward and reply carry the same header block. Only the subject
+// tells search whether the mail under it is passed on or quoted.
 func TestAForwardIsFoundByTheMailItPassesOn(t *testing.T) {
 	e := integration.Setup(t)
 	body := "Zur Info.\n\nVon: Max Muster <max@kunde.de>\nGesendet: Dienstag, 12. August 2026 09:14\nAn: Vertrieb\nBetreff: Schrank\n\nDer Nussbaum passt.\n"

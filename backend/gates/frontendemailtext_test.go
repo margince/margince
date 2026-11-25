@@ -56,12 +56,6 @@ const quotedString = `"(?:[^"\\]|\\.)*"`
 // to a `const body` first when the same string is asserted against twice. Both
 // are read: a case this pattern cannot see is a case the gate silently agrees
 // with, which is the failure direction a census must not have.
-//
-// A case that turns on the mail's subject names it, the Go table on the line
-// above the body and the TypeScript call as its second argument. The subject
-// joins the body in the key, so a forward case run without its subject on one
-// side is drift too. A const body takes no subject, so a forward case passes
-// its body inline.
 var (
 	goCaseBody = regexp.MustCompile(`(?m)^\s*(?:subject:\s*(` + quotedString + `)\s*,\s*\n\s*)?` +
 		`body:\s*(` + quotedString + `)\s*,\s*$`)
@@ -71,7 +65,8 @@ var (
 )
 
 // caseGroup names the submatch groups of one alternative: the body, and the
-// subject beside it, 0 where the alternative has none.
+// subject beside it, 0 where the alternative has none. The subject joins the
+// body in the key, so a case run without its subject on one side is drift.
 type caseGroup struct{ body, subject int }
 
 var (

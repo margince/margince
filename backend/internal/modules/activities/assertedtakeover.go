@@ -150,7 +150,7 @@ func TakeOverAssertedActivityTx(
 func takenOverOwnEnd(ctx context.Context, tx pgx.Tx, activityID ids.ActivityID, subject, body string) (*int, error) {
 	var kind string
 	var storedSubject, storedBody *string
-	if err := tx.QueryRow(ctx, `SELECT kind, subject, body FROM activity WHERE id = $1`, activityID).
+	if err := tx.QueryRow(ctx, `SELECT kind, subject, body FROM activity WHERE id = $1 AND archived_at IS NULL`, activityID).
 		Scan(&kind, &storedSubject, &storedBody); err != nil {
 		return nil, fmt.Errorf("activities: reading the asserted row %s for its own text: %w", activityID, err)
 	}

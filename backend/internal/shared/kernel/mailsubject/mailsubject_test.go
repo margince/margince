@@ -70,7 +70,7 @@ func TestTopicStripsRepliesAndForwards(t *testing.T) {
 	}
 }
 
-// A subject forwards when its outermost prefix does: an answer to a forward is
+// A subject forwards when its outermost prefix does. An answer to a forward is
 // a reply, and a word that only starts like a prefix is the subject.
 func TestIsForwardReadsTheOutermostPrefix(t *testing.T) {
 	cases := map[string]bool{

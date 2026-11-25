@@ -243,10 +243,7 @@ function forwardedBlockEnd(lines: readonly string[]): number {
  *
  * A line a mail program writes above quoted mail ends the text. A quote marked
  * with ">" ends it only when nothing follows, so an inline reply stays whole.
- * The server stores the same boundary for search.
- *
- * A forward passes its first quoted mail on as its own text. Outlook writes a
- * forward and a reply alike, so only the subject tells them apart.
+ * A forward passes its first quoted mail on, which only its subject tells.
  */
 function ownTextEnd(lines: readonly string[], subject: string): number {
   const start = isForwardSubject(subject) ? forwardedBlockEnd(lines) : 0;
