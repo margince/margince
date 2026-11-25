@@ -3,9 +3,9 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { cleanup, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { ToastProvider, ToastRegion } from "../../design-system/toast";
-import { en } from "../../i18n/en";
-import { useMe } from "../../lib/session";
+import { ToastProvider, ToastRegion } from "../design-system/toast";
+import { en } from "../i18n/en";
+import { useMe } from "../lib/session";
 import { HandoverRequest } from "./handoverrequest";
 
 type Seat = "full" | "read";

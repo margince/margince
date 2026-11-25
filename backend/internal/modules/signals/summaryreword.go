@@ -15,8 +15,15 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
-// scanSource is the source the signal scan stamps on what it writes.
-const scanSource = "signal-scan"
+// scanProducer is the name the signal scan stamps in source_system.
+const scanProducer = "signal-scan"
+
+// ScanWrittenSQL tests that the signal scan wrote a row. A row older than
+// source_system holds the name in source until the source data task moves it.
+// prefix is a compile-time alias with its dot, or empty.
+func ScanWrittenSQL(prefix string) string {
+	return "'" + scanProducer + "' IN (" + prefix + "source_system, " + prefix + "source)"
+}
 
 // ScanSummaryReword is one stored scan summary and the sentence that replaces it.
 type ScanSummaryReword struct {
@@ -40,11 +47,12 @@ func RewordScanSummaryTx(ctx context.Context, tx pgx.Tx, in ScanSummaryReword) (
 	if err != nil {
 		return false, err
 	}
-	var summary, source string
-	if err := tx.QueryRow(ctx, `SELECT summary, source FROM signal WHERE id = $1`, in.Signal).Scan(&summary, &source); err != nil {
+	var summary string
+	var scanWritten bool
+	if err := tx.QueryRow(ctx, `SELECT summary, COALESCE(`+ScanWrittenSQL("")+`, false) FROM signal WHERE id = $1`, in.Signal).Scan(&summary, &scanWritten); err != nil {
 		return false, fmt.Errorf("signals: reading the summary to reword: %w", err)
 	}
-	if source != scanSource || summary != in.From {
+	if !scanWritten || summary != in.From {
 		return false, nil
 	}
 	patch := storekit.NewPatch()

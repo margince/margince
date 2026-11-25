@@ -72,8 +72,8 @@ func TestThePolymorphicKeysTaskKeysLiveRowsAndEndsTheRest(t *testing.T) {
 	writeBeforeTheKeys(t, owner, func(tx pgx.Tx) error {
 		if _, err := tx.Exec(ctx, `
 			INSERT INTO signal (kind, entity_type, entity_id, summary, source, captured_by)
-			VALUES ('risk', 'contact', $1, 'Live', 'test', 'human:seed'),
-			       ('risk', 'deal', $2, 'Orphan', 'test', 'human:seed')`, contact, gone); err != nil {
+			VALUES ('risk', 'contact', $1, 'Live', 'manual', 'human:seed'),
+			       ('risk', 'deal', $2, 'Orphan', 'manual', 'human:seed')`, contact, gone); err != nil {
 			return err
 		}
 		if err := seedContractEndedSignal(ctx, tx, company); err != nil {
@@ -185,7 +185,7 @@ func seedContractEndedSignal(ctx context.Context, tx pgx.Tx, company ids.UUID) e
 		"source_quote": {"start": 0, "end": %d, "sha256": %q}}]`, body, activity.String(), len(body), hex.EncodeToString(digest[:]))
 	_, err := tx.Exec(ctx, `
 		INSERT INTO signal (kind, entity_type, entity_id, resolved_company_id, summary, evidence, source, captured_by)
-		VALUES ('contract_ended', 'company', $1, $1, 'Contract ends', $2::jsonb, 'test', 'human:seed')`,
+		VALUES ('contract_ended', 'company', $1, $1, 'Contract ends', $2::jsonb, 'manual', 'human:seed')`,
 		company, evidence)
 	return err
 }

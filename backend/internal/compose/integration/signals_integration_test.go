@@ -143,7 +143,7 @@ func createRaw(t *testing.T, store *signals.Store, ctx context.Context, rawRef s
 	t.Helper()
 	sig, err := store.CreateSignal(ctx, signals.CreateSignalInput{
 		Kind: "buying_intent", SourceChannel: "inbound", RawRef: &rawRef,
-		Summary: "inbound interest", Source: "connector:imap:msg-1",
+		Summary: "inbound interest", Source: "api",
 	})
 	if err != nil {
 		t.Fatalf("create raw signal: %v", err)
@@ -167,7 +167,7 @@ func TestSignalRowScopeFollowsSubjectEntity(t *testing.T) {
 	pid := ids.UUID(foreignContact)
 	sig, err := store.CreateSignal(e.adminSignals(), signals.CreateSignalInput{
 		Kind: "risk", EntityType: &contactType, EntityID: &pid,
-		Summary: "subject-bound signal", Source: "derived",
+		Summary: "subject-bound signal", Source: "manual",
 	})
 	if err != nil {
 		t.Fatalf("admin create: %v", err)
