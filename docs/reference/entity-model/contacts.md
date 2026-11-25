@@ -816,7 +816,8 @@ The 49 tables owned by `contacts`, as the migrations build them. [Back to the en
 
 - `contact_channel_identity_pkey`: `unique, btree (id)`
 - `idx_contact_channel_identity_contact`: `btree (contact_id)`
-- `uq_contact_channel_identity`: `unique, btree (provider, account_scope, channel_user_id) WHERE (archived_at IS NULL)`
+- `uq_contact_channel_identity`: `unique, btree (provider, channel_user_id) WHERE (archived_at IS NULL)`
+- `uq_contact_channel_identity_scoped`: `unique, btree (provider, account_scope, channel_user_id) WHERE (archived_at IS NULL)`
 
 **Triggers**
 

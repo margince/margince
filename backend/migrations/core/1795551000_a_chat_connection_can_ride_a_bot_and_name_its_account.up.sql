@@ -50,7 +50,11 @@ CREATE UNIQUE INDEX IF NOT EXISTS uq_channel_connection_account ON channel_conne
 -- under one id on every account it serves, so an identity reached through a
 -- business account is told apart by that account. Every identity so far came
 -- through the workspace bot and keeps the empty scope.
+--
+-- uq_contact_channel_identity stays as it is, so a binary that still names its
+-- columns in ON CONFLICT keeps inserting. A later migration drops it. Until then
+-- one user id binds once across all scopes, and the scoped index below only
+-- takes over as the arbiter of the new code.
 ALTER TABLE contact_channel_identity ADD COLUMN IF NOT EXISTS account_scope text NOT NULL DEFAULT '';
-DROP INDEX IF EXISTS uq_contact_channel_identity;
-CREATE UNIQUE INDEX uq_contact_channel_identity ON contact_channel_identity (provider, account_scope, channel_user_id)
-    WHERE archived_at IS NULL;
+CREATE UNIQUE INDEX IF NOT EXISTS uq_contact_channel_identity_scoped
+    ON contact_channel_identity (provider, account_scope, channel_user_id) WHERE archived_at IS NULL;

@@ -1,11 +1,6 @@
 SET LOCAL lock_timeout = '3s';
 
-DROP INDEX IF EXISTS uq_contact_channel_identity;
-DELETE FROM contact_channel_identity a USING contact_channel_identity b
- WHERE a.account_scope <> '' AND a.archived_at IS NULL AND b.archived_at IS NULL
-   AND a.provider = b.provider AND a.channel_user_id = b.channel_user_id AND a.id > b.id;
-CREATE UNIQUE INDEX uq_contact_channel_identity ON contact_channel_identity (provider, channel_user_id)
-    WHERE archived_at IS NULL;
+DROP INDEX IF EXISTS uq_contact_channel_identity_scoped;
 ALTER TABLE contact_channel_identity DROP COLUMN IF EXISTS account_scope;
 
 DELETE FROM channel_connection WHERE parent_connection_id IS NOT NULL OR account_id IS NOT NULL;
