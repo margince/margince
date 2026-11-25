@@ -2,12 +2,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useId, useState } from "react";
 import { api } from "../../api/client";
 import type { components } from "../../api/schema";
-import {
-  Button,
-  Disclosure,
-  EmptyState,
-  Modal,
-} from "../../design-system/atoms";
+import { Button, EmptyState, Modal } from "../../design-system/atoms";
 import { Heading } from "../../design-system/heading";
 import { NameDialog, nameRefusal } from "../../design-system/namedialog";
 import { Panel, PanelBody, PanelIntro } from "../../design-system/panel";
@@ -17,7 +12,7 @@ import { SettingList, SettingRow } from "../../design-system/settingrow";
 import { useToast } from "../../design-system/toast";
 import { useT } from "../../i18n";
 import { ANALYTICS_SCHEMA_KEY } from "../../lib/analyticskeys";
-import { useCan, useCanWrite } from "../../lib/capability";
+import { useCanWrite } from "../../lib/capability";
 import {
   CF_OBJECTS,
   type CfObject,
@@ -33,14 +28,13 @@ import { activityKindsOf, useSetActivityKinds } from "./customfields.kinds";
 import { objectLabels } from "./customfields.labels";
 import { RetireFieldConfirm } from "./customfields.retire";
 import {
-  AuditRail,
-  auditState,
   type CustomField,
   type FieldSetting,
   FieldTable,
   SETTING_TOAST,
   STAGED_ID,
 } from "./customfields.table";
+import { FieldChangeTrail } from "./customfields.trail";
 import "./customfields.css";
 
 // The add-field create body (CUSTOM-FIELDS-WIRE-2): a plain manual field carries
@@ -130,10 +124,6 @@ export function CustomFieldsAdmin() {
   // while rename and retire change one that already exists.
   const canCreate = useCanWrite("custom_field", "create");
   const canEdit = useCanWrite("custom_field", "update");
-  // The trail is not this screen's: /audit-log asks for `audit_log:read`
-  // (privacy.ListAuditLog), while this page opens for anyone holding
-  // custom_field:read. So the rail below asks for the trail's own grant.
-  const readsAuditTrail = useCan("audit_log", "read");
   const meUserId = me.data?.user?.id;
 
   const [object, setObject] = useState<CfObject>("deal");
@@ -149,22 +139,6 @@ export function CustomFieldsAdmin() {
   const addId = useId();
 
   const list = useQuery(customFieldsQuery(object));
-
-  const audit = useQuery({
-    queryKey: ["cf-audit"],
-    // A denial that is already known is not worth a request. Without this a
-    // reader without the grant fired a call that could only 403 and got the
-    // rail's red role="alert" back — a failure with a retry that can never
-    // succeed, over a refusal they cannot act on.
-    enabled: readsAuditTrail,
-    queryFn: async () => {
-      return unwrap(
-        await api.GET("/audit-log", {
-          params: { query: { entity_type: "custom_field" } },
-        }),
-      );
-    },
-  });
 
   const invalidate = () => {
     queryClient.invalidateQueries({
@@ -377,27 +351,7 @@ export function CustomFieldsAdmin() {
         />
       )}
       <PanelBody>
-        {/* Withheld, not absent: the trail keeps its place for every reader,
-            because a section that simply were not there would read as "nobody
-            has changed a field" — a claim about the data in place of one about
-            who may read it. Closed by default because it is a secondary read;
-            the state inside it is settled before it is ever opened. */}
-        <Disclosure summary={t("cf.audit.title")}>
-          <AuditRail
-            entries={audit.data?.data ?? []}
-            state={auditState(
-              readsAuditTrail,
-              audit.isPending,
-              audit.isError,
-              audit.data?.data.length ?? 0,
-            )}
-            meUserId={meUserId}
-            onRetry={() => void audit.refetch()}
-          />
-          {/* True for every reader: the recording happens whether or not this
-              one may read it back. */}
-          <p className="cf-hint t-caption">{t("cf.audit.footer")}</p>
-        </Disclosure>
+        <FieldChangeTrail meUserId={meUserId} />
       </PanelBody>
 
       <Modal
