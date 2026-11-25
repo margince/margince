@@ -161,6 +161,17 @@ class FromAgyTest(unittest.TestCase):
             lines = before_answer(sample(), tool_step(9, "read_file", Path=path))
             self.assertEqual(convert(lines)[0], 3, path)
 
+    def test_a_failed_read_of_a_mangled_schema_path_read_nothing(self):
+        # Seen on Gemini: the home's name glued to the server's, a file that does not exist.
+        path = f"{HOME}_e2e_llm/mcp/{transcript.SERVER}/schedule_meeting.json"
+        lines = before_answer(sample(), tool_step(9, "read_file", state="ERROR", Path=path))
+        self.assertEqual(convert(lines)[0], 0)
+
+    def test_the_same_read_that_answered_still_stops_the_run(self):
+        path = f"{HOME}_e2e_llm/mcp/{transcript.SERVER}/schedule_meeting.json"
+        lines = before_answer(sample(), tool_step(9, "read_file", Path=path))
+        self.assertEqual(convert(lines)[0], 3)
+
     def test_a_path_that_climbs_out_of_the_runs_home_stops_the_run(self):
         lines = before_answer(sample(), tool_step(9, "read_file", Path=f"{HOME}/../operator/.gemini/x.json"))
         self.assertEqual(convert(lines)[0], 3)

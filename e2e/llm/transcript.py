@@ -238,6 +238,10 @@ def _agy_tool(out, step, conversation, workspace="", home=""):
     params = info.get("parameters") or {}
     if name in _AGY_LOOKS and _agy_inside((workspace, home), params):
         return ""
+    # A look that ended in an error read nothing, as a failed outside call below
+    # reached nothing; Gemini sometimes mangles the path of a schema file it reads.
+    if name in _AGY_LOOKS and step.get("state") == "ERROR":
+        return ""
     if name in _AGY_RESOURCE_HELPERS and params.get("ServerName") == SERVER:
         return ""
     # A call that names no server, or another, and ended in an error reached
