@@ -9,14 +9,14 @@ import (
 	"testing"
 
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/ports/extregistrytest"
 	"github.com/margince/margince/backend/internal/shared/ports/recordkinds"
 	"github.com/margince/margince/backend/pkg/extension"
 )
 
 func registerAlphaVisit(t *testing.T) {
 	t.Helper()
-	recordkinds.Reset()
-	t.Cleanup(recordkinds.Reset)
+	extregistrytest.Reset(t)
 	recordkinds.Register("alpha", []extension.RecordKindDeclaration{{
 		Kind: "visit", DisplayName: "Visit", Table: "ext_alpha_visit",
 		Fields:     []extension.RecordKindField{{Name: "code", Label: "Code"}},

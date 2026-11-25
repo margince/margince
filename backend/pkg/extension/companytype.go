@@ -10,12 +10,11 @@ import (
 )
 
 // CompanyTypePrefix opens every company type an extension declares, so a stored
-// value says at a glance that it is not one of core's seven.
-const CompanyTypePrefix = "ext:"
+// value says at a glance that it is not one of core's seven. It is
+// QualifiedPrefix.
+const CompanyTypePrefix = QualifiedPrefix
 
-// companyTypeGrammar is the type half of `ext:<unit>:<type>`. The database CHECK
-// on company_relationship_type spells the same shape, so a value this accepts is
-// one the table accepts.
+// companyTypeGrammar is the type half of CompanyTypeNamePattern.
 var companyTypeGrammar = regexp.MustCompile(`^[a-z0-9]+(_[a-z0-9]+)*$`)
 
 // CompanyType is one thing a unit says a company can be, beside core's own
@@ -44,5 +43,5 @@ func (t CompanyType) Validate() error {
 // place the form is built, so a unit can only ever name a value under its own
 // name.
 func CompanyTypeValue(unit Name, typ string) string {
-	return CompanyTypePrefix + string(unit) + ":" + typ
+	return QualifiedName(unit, typ)
 }

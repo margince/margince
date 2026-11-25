@@ -9,6 +9,7 @@ import (
 	"testing"
 
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/ports/extregistrytest"
 	"github.com/margince/margince/backend/internal/shared/ports/recordkinds"
 	"github.com/margince/margince/backend/pkg/extension"
 )
@@ -43,8 +44,7 @@ func TestADeliveryMaySendANoticeAndATickMayNot(t *testing.T) {
 const testNoticeUnit = "delivery-unit"
 
 func TestANoticeMayNameARecordKindOnlyItsOwnUnitDeclared(t *testing.T) {
-	recordkinds.Reset()
-	t.Cleanup(recordkinds.Reset)
+	extregistrytest.Reset(t)
 	recordkinds.Register("delivery-unit", []extension.RecordKindDeclaration{{Kind: "room"}})
 	recordkinds.Register("other-unit", []extension.RecordKindDeclaration{{Kind: "room"}})
 	for name, c := range map[string]struct {

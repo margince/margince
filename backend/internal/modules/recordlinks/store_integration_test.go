@@ -22,6 +22,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/kernel/values"
+	"github.com/margince/margince/backend/internal/shared/ports/extregistrytest"
 	"github.com/margince/margince/backend/internal/shared/ports/recordkinds"
 	"github.com/margince/margince/backend/pkg/extension"
 )
@@ -175,8 +176,7 @@ func TestLinkingAPairTwiceWritesOnce(t *testing.T) {
 
 func TestALinkTheTypeOrTheShapeForbidsIsRefused(t *testing.T) {
 	e := setupLinks(t)
-	recordkinds.Reset()
-	t.Cleanup(recordkinds.Reset)
+	extregistrytest.Reset(t)
 	recordkinds.RegisterLinkTypes("links-test", []extension.LinkType{
 		{Type: "follow_up_of", Label: "Follow-up", From: []string{"deal"}, To: []string{"deal"}},
 	})

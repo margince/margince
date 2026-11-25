@@ -39,6 +39,13 @@ func Register(unit extension.Name, types []extension.SignalTypeDeclaration) {
 	}
 }
 
+// Reset empties the registry for a test that composes its own set.
+func Reset() {
+	mu.Lock()
+	defer mu.Unlock()
+	byName = map[string]Declared{}
+}
+
 // IsExtensionName reports whether a stored signal kind is an extension's rather
 // than one of core's. It says nothing about whether any unit declared it.
 func IsExtensionName(name string) bool {
