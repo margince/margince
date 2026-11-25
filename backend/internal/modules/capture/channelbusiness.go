@@ -47,13 +47,24 @@ type BusinessConnection struct {
 	// ConnectedAt is when the owner first linked the bot.
 	ConnectedAt time.Time
 	ApprovedAt  *time.Time
+	// SeatID, ReaderTeam and Visibility are the account's seat, the team that
+	// reads it and its mail visibility (held or shared, or classified for a
+	// member). All nil until an admin approves the account.
+	SeatID     *ids.UUID
+	ReaderTeam *ids.UUID
+	Visibility *string
+	// Owner is the member behind a member-owned account, nil for a company's.
+	Owner *ids.UUID
 }
 
-const businessConnectionColumns = `id, account_id, channel_label, status, version, created_at, approved_at`
+const businessConnectionColumns = `id, account_id, channel_label, status, version, created_at, approved_at, seat_id,
+	(SELECT s.reader_team_id FROM capture_connection s WHERE s.id = channel_connection.seat_id),
+	(SELECT s.mail_posture FROM capture_connection s WHERE s.id = channel_connection.seat_id), owner_user_id`
 
 func scanBusinessConnection(r pgx.Row) (BusinessConnection, error) {
 	var c BusinessConnection
-	err := r.Scan(&c.ID, &c.AccountID, &c.OwnerLabel, &c.Status, &c.Version, &c.ConnectedAt, &c.ApprovedAt)
+	err := r.Scan(&c.ID, &c.AccountID, &c.OwnerLabel, &c.Status, &c.Version, &c.ConnectedAt, &c.ApprovedAt,
+		&c.SeatID, &c.ReaderTeam, &c.Visibility, &c.Owner)
 	return c, err
 }
 
@@ -108,7 +119,7 @@ func recordTelegramBusinessConnection(ctx context.Context, tx pgx.Tx, botConnect
 		 WHERE provider = $1 AND account_id = $2 AND archived_at IS NULL FOR UPDATE`,
 		telegram.BusinessProvider, bc.OwnerID).
 		Scan(&current.ID, &current.AccountID, &current.OwnerLabel, &current.Status, &current.Version,
-			&current.ConnectedAt, &current.ApprovedAt, &storedID)
+			&current.ConnectedAt, &current.ApprovedAt, &current.SeatID, &current.ReaderTeam, &current.Visibility, &current.Owner, &storedID)
 	if errors.Is(err, pgx.ErrNoRows) {
 		if !bc.Enabled {
 			return nil
@@ -118,7 +129,7 @@ func recordTelegramBusinessConnection(ctx context.Context, tx pgx.Tx, botConnect
 	if err != nil {
 		return fmt.Errorf("capture: reading the business connection of an account: %w", err)
 	}
-	want := businessStatusFor(bc, current.ApprovedAt != nil)
+	want := businessStatusFor(bc, current.ApprovedAt != nil && current.SeatID != nil)
 	if want == current.Status && storedID == bc.ID && current.OwnerLabel == bc.OwnerLabel {
 		return nil
 	}
@@ -133,8 +144,25 @@ func recordTelegramBusinessConnection(ctx context.Context, tx pgx.Tx, botConnect
 	if tag.RowsAffected() == 0 {
 		return apperrors.ErrVersionSkew
 	}
+	if err := moveBusinessSeatTx(ctx, tx, current.SeatID, want); err != nil {
+		return err
+	}
 	return auditLifecycle(ctx, tx, "update", channelConnectionObject, current.ID,
 		businessAuditImage(current, botConnection), businessAuditImage(after, botConnection))
+}
+
+// moveBusinessSeatTx keeps a link's seat as live as the link. The seat ends when
+// the owner switches the link off in Telegram. It wakes when they switch it on.
+func moveBusinessSeatTx(ctx context.Context, tx pgx.Tx, seat *ids.UUID, linkStatus string) error {
+	switch {
+	case seat == nil:
+		return nil
+	case linkStatus == channelStatusConnected:
+		return setChatSeatStatusTx(ctx, tx, *seat, channelStatusConnected)
+	case linkStatus == channelStatusDisconnected:
+		return EndChatSeatTx(ctx, tx, *seat)
+	}
+	return nil
 }
 
 // RecordTelegramBusinessUpdateTx applies one polled update when it is a
@@ -199,6 +227,11 @@ func archiveBusinessConnectionTx(ctx context.Context, tx pgx.Tx, link BusinessCo
 	if tag.RowsAffected() == 0 {
 		return apperrors.ErrVersionSkew
 	}
+	if link.SeatID != nil {
+		if err := EndChatSeatTx(ctx, tx, *link.SeatID); err != nil {
+			return err
+		}
+	}
 	return auditLifecycle(ctx, tx, "archive", channelConnectionObject, link.ID,
 		businessAuditImage(link, bot), businessAuditImage(after, bot))
 }
@@ -235,10 +268,12 @@ func (s *ChannelStore) ListBusinessConnections(ctx context.Context) ([]BusinessC
 	return out, nil
 }
 
-// ApproveBusinessConnection makes a waiting link `connected`. Approving a
-// connected link changes nothing. A link the owner switched off cannot be
+// ApproveBusinessConnection makes a waiting link `connected` and gives its account
+// its seat. A company account needs the team that reads it (readerTeam) the first
+// time, and starts held. Approving a connected link changes nothing except that
+// it makes a seat that is missing. A link the owner switched off cannot be
 // approved, because it would read as live while Telegram sends nothing.
-func (s *ChannelStore) ApproveBusinessConnection(ctx context.Context, id ids.UUID) (BusinessConnection, error) {
+func (s *ChannelStore) ApproveBusinessConnection(ctx context.Context, id, readerTeam ids.UUID) (BusinessConnection, error) {
 	if err := requireBusinessAdmin(ctx, principal.ActionUpdate); err != nil {
 		return BusinessConnection{}, err
 	}
@@ -250,17 +285,23 @@ func (s *ChannelStore) ApproveBusinessConnection(ctx context.Context, id ids.UUI
 		}
 		out = current
 		switch current.Status {
-		case channelStatusConnected:
-			return nil
-		case channelStatusPendingApproval:
+		case channelStatusConnected, channelStatusPendingApproval:
 		default:
 			return fmt.Errorf("the owner has switched this business connection off in Telegram; ask them to turn it on first: %w", apperrors.ErrConflict)
 		}
-		out, err = scanBusinessConnection(tx.QueryRow(ctx, `
-			UPDATE channel_connection SET status = $2, approved_at = now() WHERE id = $1 AND version = $3 AND archived_at IS NULL
-			RETURNING `+businessConnectionColumns, id, channelStatusConnected, current.Version))
+		seat, err := seatBusinessConnectionTx(ctx, tx, current, readerTeam)
 		if err != nil {
 			return err
+		}
+		out, err = scanBusinessConnection(tx.QueryRow(ctx, `
+			UPDATE channel_connection SET status = $2, approved_at = coalesce(approved_at, now()), seat_id = $4
+			 WHERE id = $1 AND version = $3 AND archived_at IS NULL
+			RETURNING `+businessConnectionColumns, id, channelStatusConnected, current.Version, seat))
+		if err != nil {
+			return err
+		}
+		if current.Status == channelStatusConnected && holdsSeat(current.SeatID, seat) {
+			return nil
 		}
 		return auditLifecycle(ctx, tx, "update", channelConnectionObject, id,
 			businessAuditImage(current, parent), businessAuditImage(out, parent))
@@ -269,6 +310,18 @@ func (s *ChannelStore) ApproveBusinessConnection(ctx context.Context, id ids.UUI
 		return BusinessConnection{}, businessErr("approving", err)
 	}
 	return out, nil
+}
+
+func holdsSeat(a *ids.UUID, b ids.UUID) bool { return a != nil && *a == b }
+
+// seatBusinessConnectionTx finds or makes the seat of an approved account.
+func seatBusinessConnectionTx(ctx context.Context, tx pgx.Tx, link BusinessConnection, readerTeam ids.UUID) (ids.UUID, error) {
+	actor, _ := principal.Actor(ctx)
+	seat := ChatSeat{Provider: telegram.BusinessProvider, Account: link.AccountID, ReaderTeam: readerTeam, By: actor.UserID}
+	if link.Owner != nil {
+		seat.Owner = *link.Owner
+	}
+	return EnsureChatSeatTx(ctx, tx, seat)
 }
 
 // DisconnectBusinessConnection withdraws the workspace's acceptance of a link and
@@ -297,7 +350,7 @@ func lockBusinessConnection(ctx context.Context, tx pgx.Tx, id ids.UUID) (Busine
 		SELECT `+businessConnectionColumns+`, parent_connection_id FROM channel_connection
 		 WHERE id = $1 AND archived_at IS NULL AND `+businessConnectionRow+` FOR UPDATE`, id).
 		Scan(&current.ID, &current.AccountID, &current.OwnerLabel, &current.Status, &current.Version,
-			&current.ConnectedAt, &current.ApprovedAt, &parent)
+			&current.ConnectedAt, &current.ApprovedAt, &current.SeatID, &current.ReaderTeam, &current.Visibility, &current.Owner, &parent)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return BusinessConnection{}, ids.Nil, apperrors.ErrNotFound
 	}

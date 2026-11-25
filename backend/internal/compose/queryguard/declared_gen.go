@@ -571,6 +571,7 @@ var Declared = map[string][]string{
 	"PATCH /v1/automations/{id}":                                               {},
 	"PATCH /v1/autonomy":                                                       {},
 	"PATCH /v1/capture/settings":                                               {},
+	"PATCH /v1/channel-connections/telegram-business/{id}/visibility":          {},
 	"PATCH /v1/channel-connections/{id}":                                       {},
 	"PATCH /v1/channel-links/{record_type}/{id}":                               {},
 	"PATCH /v1/companies/{id}":                                                 {},

@@ -25909,6 +25909,27 @@ func (e TechnicalEnrichStartedStatus) Valid() bool {
 	}
 }
 
+// Defines values for TelegramBusinessConnectionMailVisibility.
+const (
+	TelegramBusinessConnectionMailVisibilityClassified TelegramBusinessConnectionMailVisibility = "classified"
+	TelegramBusinessConnectionMailVisibilityHeld       TelegramBusinessConnectionMailVisibility = "held"
+	TelegramBusinessConnectionMailVisibilityShared     TelegramBusinessConnectionMailVisibility = "shared"
+)
+
+// Valid indicates whether the value is a known member of the TelegramBusinessConnectionMailVisibility enum.
+func (e TelegramBusinessConnectionMailVisibility) Valid() bool {
+	switch e {
+	case TelegramBusinessConnectionMailVisibilityClassified:
+		return true
+	case TelegramBusinessConnectionMailVisibilityHeld:
+		return true
+	case TelegramBusinessConnectionMailVisibilityShared:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for TelegramBusinessConnectionStatus.
 const (
 	TelegramBusinessConnectionStatusConnected       TelegramBusinessConnectionStatus = "connected"
@@ -27130,6 +27151,27 @@ func (e UpdateTagRequestColor) Valid() bool {
 	case UpdateTagRequestColorTeal:
 		return true
 	case UpdateTagRequestColorViolet:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for UpdateTelegramBusinessConnectionVisibilityRequestMailVisibility.
+const (
+	UpdateTelegramBusinessConnectionVisibilityRequestMailVisibilityClassified UpdateTelegramBusinessConnectionVisibilityRequestMailVisibility = "classified"
+	UpdateTelegramBusinessConnectionVisibilityRequestMailVisibilityHeld       UpdateTelegramBusinessConnectionVisibilityRequestMailVisibility = "held"
+	UpdateTelegramBusinessConnectionVisibilityRequestMailVisibilityShared     UpdateTelegramBusinessConnectionVisibilityRequestMailVisibility = "shared"
+)
+
+// Valid indicates whether the value is a known member of the UpdateTelegramBusinessConnectionVisibilityRequestMailVisibility enum.
+func (e UpdateTelegramBusinessConnectionVisibilityRequestMailVisibility) Valid() bool {
+	switch e {
+	case UpdateTelegramBusinessConnectionVisibilityRequestMailVisibilityClassified:
+		return true
+	case UpdateTelegramBusinessConnectionVisibilityRequestMailVisibilityHeld:
+		return true
+	case UpdateTelegramBusinessConnectionVisibilityRequestMailVisibilityShared:
 		return true
 	default:
 		return false
@@ -37219,6 +37261,12 @@ type ApproveRequest struct {
 
 	// Reason Why, in the approver's own words. Recorded with the decision, as a rejection's reason is.
 	Reason *string `json:"reason,omitempty"`
+}
+
+// ApproveTelegramBusinessConnectionRequest defines model for ApproveTelegramBusinessConnectionRequest.
+type ApproveTelegramBusinessConnectionRequest struct {
+	// ReaderTeamId The team that reads the account's messages.
+	ReaderTeamId *openapi_types.UUID `json:"readerTeamId,omitempty"`
 }
 
 // ArchiveDeletionRequest defines model for ArchiveDeletionRequest.
@@ -70809,12 +70857,24 @@ type TelegramBusinessConnection struct {
 	ConnectedAt time.Time          `json:"connectedAt"`
 	Id          openapi_types.UUID `json:"id"`
 
+	// MailVisibility What the seat asks of the account's messages. `held` keeps them from colleagues outside the reader team and `shared` opens them as the contact's sharing allows. A member's own account starts `classified`, which holds a chat.
+	MailVisibility *TelegramBusinessConnectionMailVisibility `json:"mailVisibility,omitempty"`
+
 	// OwnerLabel The owner's name as Telegram last reported it. Display only, since a name is mutable and identifies nothing.
 	OwnerLabel string `json:"ownerLabel"`
+
+	// ReaderTeamId The team that reads a company account's messages. Null for a member's own account and before approval.
+	ReaderTeamId *openapi_types.UUID `json:"readerTeamId,omitempty"`
+
+	// SeatId The seat the account's messages file through. Its mail visibility is changed with `PATCH /channel-connections/telegram-business/{id}/visibility`. Null until an admin approves the link.
+	SeatId *openapi_types.UUID `json:"seatId,omitempty"`
 
 	// Status `pending_approval` waits for an admin; `disconnected` means the owner switched the link off in Telegram.
 	Status TelegramBusinessConnectionStatus `json:"status"`
 }
+
+// TelegramBusinessConnectionMailVisibility What the seat asks of the account's messages. `held` keeps them from colleagues outside the reader team and `shared` opens them as the contact's sharing allows. A member's own account starts `classified`, which holds a chat.
+type TelegramBusinessConnectionMailVisibility string
 
 // TelegramBusinessConnectionStatus `pending_approval` waits for an admin; `disconnected` means the owner switched the link off in Telegram.
 type TelegramBusinessConnectionStatus string
@@ -72596,6 +72656,18 @@ type UpdateTeamRequest struct {
 	Archived *bool   `json:"archived,omitempty"`
 	Name     *string `json:"name,omitempty"`
 }
+
+// UpdateTelegramBusinessConnectionVisibilityRequest defines model for UpdateTelegramBusinessConnectionVisibilityRequest.
+type UpdateTelegramBusinessConnectionVisibilityRequest struct {
+	// Confirm Must be true: the change decides what every reader of the seat sees.
+	Confirm bool `json:"confirm"`
+
+	// MailVisibility `classified` is refused with `422`.
+	MailVisibility UpdateTelegramBusinessConnectionVisibilityRequestMailVisibility `json:"mail_visibility"`
+}
+
+// UpdateTelegramBusinessConnectionVisibilityRequestMailVisibility `classified` is refused with `422`.
+type UpdateTelegramBusinessConnectionVisibilityRequestMailVisibility string
 
 // UpdateVoiceCorpusSourceRequest defines model for UpdateVoiceCorpusSourceRequest.
 type UpdateVoiceCorpusSourceRequest struct {
@@ -86485,6 +86557,12 @@ type UpdateCaptureSettingsJSONRequestBody = UpdateCaptureSettingsRequest
 
 // ConnectChannelJSONRequestBody defines body for ConnectChannel for application/json ContentType.
 type ConnectChannelJSONRequestBody = ConnectChannelRequest
+
+// ApproveTelegramBusinessConnectionJSONRequestBody defines body for ApproveTelegramBusinessConnection for application/json ContentType.
+type ApproveTelegramBusinessConnectionJSONRequestBody = ApproveTelegramBusinessConnectionRequest
+
+// UpdateTelegramBusinessConnectionVisibilityJSONRequestBody defines body for UpdateTelegramBusinessConnectionVisibility for application/json ContentType.
+type UpdateTelegramBusinessConnectionVisibilityJSONRequestBody = UpdateTelegramBusinessConnectionVisibilityRequest
 
 // ReplaceChannelTokenJSONRequestBody defines body for ReplaceChannelToken for application/json ContentType.
 type ReplaceChannelTokenJSONRequestBody = ReplaceChannelTokenRequest
@@ -102076,6 +102154,9 @@ type ServerInterface interface {
 	// Approve a Telegram Business account for the workspace.
 	// (POST /channel-connections/telegram-business/{id}/approve)
 	ApproveTelegramBusinessConnection(w http.ResponseWriter, r *http.Request, id Id)
+	// Change who may read a business account's messages.
+	// (PATCH /channel-connections/telegram-business/{id}/visibility)
+	UpdateTelegramBusinessConnectionVisibility(w http.ResponseWriter, r *http.Request, id Id)
 	// Disconnect a messaging channel (archives the binding and destroys the credential).
 	// (DELETE /channel-connections/{id})
 	DisconnectChannel(w http.ResponseWriter, r *http.Request, id Id)
@@ -106345,6 +106426,12 @@ func (_ Unimplemented) DisconnectTelegramBusinessConnection(w http.ResponseWrite
 // Approve a Telegram Business account for the workspace.
 // (POST /channel-connections/telegram-business/{id}/approve)
 func (_ Unimplemented) ApproveTelegramBusinessConnection(w http.ResponseWriter, r *http.Request, id Id) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Change who may read a business account's messages.
+// (PATCH /channel-connections/telegram-business/{id}/visibility)
+func (_ Unimplemented) UpdateTelegramBusinessConnectionVisibility(w http.ResponseWriter, r *http.Request, id Id) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -123936,6 +124023,38 @@ func (siw *ServerInterfaceWrapper) ApproveTelegramBusinessConnection(w http.Resp
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.ApproveTelegramBusinessConnection(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// UpdateTelegramBusinessConnectionVisibility operation middleware
+func (siw *ServerInterfaceWrapper) UpdateTelegramBusinessConnectionVisibility(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.UpdateTelegramBusinessConnectionVisibility(w, r, id)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -162899,6 +163018,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/channel-connections/telegram-business/{id}/approve", wrapper.ApproveTelegramBusinessConnection)
+	})
+	r.Group(func(r chi.Router) {
+		r.Patch(options.BaseURL+"/channel-connections/telegram-business/{id}/visibility", wrapper.UpdateTelegramBusinessConnectionVisibility)
 	})
 	r.Group(func(r chi.Router) {
 		r.Delete(options.BaseURL+"/channel-connections/{id}", wrapper.DisconnectChannel)
