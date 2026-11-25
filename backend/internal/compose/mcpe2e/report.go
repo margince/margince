@@ -201,21 +201,36 @@ func stampsByDoor(root string) (map[Door]map[string]Stamp, error) {
 	return out, nil
 }
 
-// NewlyStale is what a change makes stale: the verdicts under head that were
-// current against the base tree's files and are not against head's.
-func NewlyStale(baseRoot, headRoot string) ([]Line, error) {
-	base, err := stampsByDoor(baseRoot)
+// Key names one verdict file the same way in every tree: its folder under the
+// records and its scenario. A base and a head report meet on it.
+func (v Verdict) Key() string { return v.Tree + "/" + v.Folder + "/" + v.Scenario }
+
+// Currency says, for each verdict in the tree, whether it describes the
+// product. The tree's own code judges it, so a change to how a stamp is
+// computed cannot move the base's answer.
+func Currency(root string) (map[string]bool, error) {
+	lines, err := Report(root)
 	if err != nil {
-		return nil, fmt.Errorf("the base tree: %w", err)
+		return nil, err
 	}
+	out := make(map[string]bool, len(lines))
+	for _, line := range lines {
+		out[line.Key()] = len(line.Why) == 0
+	}
+	return out, nil
+}
+
+// NewlyStale is what a change makes stale. That is each verdict stale under
+// head's code that the base's own code found current, or that the base lacks.
+func NewlyStale(baseCurrent map[string]bool, headRoot string) ([]Line, error) {
 	lines, err := Report(headRoot)
 	if err != nil {
 		return nil, err
 	}
 	var out []Line
 	for _, line := range lines {
-		was, existed := base[line.Door][line.Scenario]
-		if len(line.Why) > 0 && len(Recheck(line.Stamp, was, existed, line.Driver)) == 0 {
+		current, held := baseCurrent[line.Key()]
+		if len(line.Why) > 0 && (current || !held) {
 			out = append(out, line)
 		}
 	}

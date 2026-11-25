@@ -89,6 +89,10 @@ each audit row it writes on another record carries `released_by_approval_id` in 
 approval's own rows are the decision and carry no link. That link is how a receipt finds the values
 its approval moved.
 
+An agent tool call runs under `storekit.WithStatedReason`, so each audit row it writes carries the
+reason the agent gave as `stated_reason` in `evidence`. **Done for you** shows that reason as the
+line's why.
+
 **Safe updates.** A by-id UPDATE of a row with a version never uses an `UPDATE` alone; it goes
 through `storekit.Patch`:
 

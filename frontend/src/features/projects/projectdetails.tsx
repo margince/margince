@@ -13,6 +13,7 @@ import {
 } from "../../components/customfields.form";
 import { EntityRef, OwnerName } from "../../components/entityref";
 import { useSectionEdit } from "../../components/sectionedit";
+import { useViewOnlyAccess } from "../../components/viewonly";
 import { Badge } from "../../design-system/atoms";
 import { RecordCard } from "../../design-system/recordcard";
 import {
@@ -204,6 +205,7 @@ export function ProjectDetails({ view }: Readonly<{ view: Project360 }>) {
     date ? formatDateAbbrev(date, locale, zone) : unset;
   const closed = project.phase === "closed";
   const edits = useSectionEdits(project);
+  const access = useViewOnlyAccess("project", project);
   const about: DetailRow[] = [
     {
       key: "company",
@@ -294,6 +296,7 @@ export function ProjectDetails({ view }: Readonly<{ view: Project360 }>) {
           },
         ]}
         footnote={closed ? undefined : t("project.aside.closeNote")}
+        access={access}
       />
       {edits.element}
     </>

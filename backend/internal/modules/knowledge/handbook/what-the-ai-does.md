@@ -110,6 +110,9 @@ moves it to the day the chat names, only when the chat clearly settles it. The
 change shows in **Done for you** with **Undo**. See
 [Documents and files](documents-and-files.md).
 
+**Saying why.** When an agent changes a field on a record, it must say why. Its
+line in **Done for you** shows that reason as the agent wrote it.
+
 **Filling in a record from the web.** Reading a company's site, matching a
 LinkedIn connection, filling in a new company. Every one of these shows a card
 for you to check, instead of writing right into the record.

@@ -6,7 +6,7 @@ The 22 tables owned by `identity`, as the migrations build them. [Back to the en
 
 ## app_user
 
-39 columns · primary key `(id)` · referenced by 154 foreign keys
+39 columns · primary key `(id)` · referenced by 151 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -737,7 +737,7 @@ The 22 tables owned by `identity`, as the migrations build them. [Back to the en
 
 ## team
 
-6 columns · primary key `(id)` · referenced by 10 foreign keys
+6 columns · primary key `(id)` · referenced by 11 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -756,7 +756,7 @@ The 22 tables owned by `identity`, as the migrations build them. [Back to the en
 
 **Indexes**
 
-- `team_name_unique`: `unique, btree (name) WHERE (archived_at IS NULL)`
+- `team_name_unique`: `unique, btree (lower(btrim(name))) WHERE (archived_at IS NULL)`
 - `team_pkey`: `unique, btree (id)`
 
 **Triggers**

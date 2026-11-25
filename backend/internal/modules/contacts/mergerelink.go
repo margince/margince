@@ -172,10 +172,8 @@ func readContactMergeState(ctx context.Context, tx pgx.Tx, id ids.ContactID) (cr
 // The source must be live and writable; a source that was already merged away
 // answers 409 with the pointer (the caller just proved they can address the
 // row, so the outcome discloses nothing new — the AlreadyPromoted precedent).
-// The target must be live too, and a target the caller cannot change answers a
-// bare conflict rather than naming itself, exactly as an out-of-scope one does:
-// merging returns the survivor, so the refusal must disclose no more than the
-// caller could already read. An archived target can survive nothing.
+// The target must be live and writable too (ensureMergeTarget). An archived
+// target can survive nothing.
 func mergePair[T any, K ids.EntityKind](ctx context.Context, tx pgx.Tx, kind string, sourceID, targetID ids.ID[K],
 	ifVersion *int64,
 	read func(context.Context, pgx.Tx, ids.ID[K]) (T, *ids.UUID, error),
@@ -196,12 +194,8 @@ func mergePair[T any, K ids.EntityKind](ctx context.Context, tx pgx.Tx, kind str
 		return zero, zero, err
 	}
 
-	writable, err := auth.WritableBy(ctx, tx, kind, targetID.UUID)
-	if err != nil {
+	if err := ensureMergeTarget(ctx, tx, kind, targetID.UUID); err != nil {
 		return zero, zero, err
-	}
-	if !writable {
-		return zero, zero, apperrors.ErrConflict
 	}
 	target, _, err = read(ctx, tx, targetID)
 	if err != nil {
@@ -217,6 +211,41 @@ func mergePair[T any, K ids.EntityKind](ctx context.Context, tx pgx.Tx, kind str
 	}
 	return source, target, nil
 }
+
+// ensureMergeTarget refuses a target the caller cannot change. One they cannot
+// see answers the bare conflict, since merging returns the survivor and the
+// refusal must not confirm that it exists. One they may read answers 403 with
+// the reason, which a retry with a fresh version can never cure.
+func ensureMergeTarget(ctx context.Context, tx pgx.Tx, kind string, targetID ids.UUID) error {
+	writable, err := auth.WritableBy(ctx, tx, kind, targetID)
+	if err != nil || writable {
+		return err
+	}
+	visible, err := auth.VisibleTo(ctx, tx, kind, targetID)
+	switch {
+	case err != nil:
+		return err
+	case visible:
+		return errMergeTargetReadOnly
+	}
+	return apperrors.ErrConflict
+}
+
+// errMergeTargetReadOnly refuses a merge into a record the caller may read but
+// not change. Its sentence is the one the merge picker shows for that record.
+var errMergeTargetReadOnly = &mergeTargetReadOnlyError{}
+
+type mergeTargetReadOnlyError struct{}
+
+func (*mergeTargetReadOnlyError) Error() string {
+	return "contacts: the merge target is read-only to the caller, so it cannot survive a merge"
+}
+
+func (*mergeTargetReadOnlyError) MessageFault() (code, message string) {
+	return "merge_target_read_only", "You can only read the record to keep, so it cannot be kept. Keep a record you can change, or ask its owner to merge."
+}
+
+func (*mergeTargetReadOnlyError) Unwrap() error { return apperrors.ErrPermissionDenied }
 
 // requireSourceVersion refuses the merge when the source's version differs from
 // the caller's If-Match. The pair lock is already held, so the version checked
@@ -363,6 +392,9 @@ func relinkProviderPurchases(ctx context.Context, tx pgx.Tx, sourceID, targetID 
 // Rows differing by address or by account are two ways to reach one party and both repoint.
 // A sweep by contact takes no meeting's attendee lock; the hourly evidence pass corrects it.
 func relinkParticipantRows(ctx context.Context, tx pgx.Tx, sourceID, targetID ids.ContactID) error {
+	if _, err := storekit.LowercaseOlderParticipantAddresses(ctx, tx, `ap.contact_id = ANY($1)`, []ids.UUID{sourceID.UUID, targetID.UUID}); err != nil {
+		return err
+	}
 	if _, err := tx.Exec(ctx, `
 		DELETE FROM activity_participant ap
 		 WHERE ap.contact_id = @source

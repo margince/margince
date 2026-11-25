@@ -64,7 +64,7 @@ import { answerBelow } from "./worklist.suggestion";
  * All three are optional. A row the server named no verb on returns none: it is
  * still real work, with nothing to press.
  */
-type RowPlacement = Readonly<{
+export type RowPlacement = Readonly<{
   /** The lane's one call to action, at the trailing end of the row's verbs. */
   primary?: ReactNode;
   /** Verbs of equal weight, among the row's quieter ones. */

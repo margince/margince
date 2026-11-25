@@ -2653,6 +2653,8 @@ export const en = {
   "history.field.qualifying_event_retracted": "Recorded exchange withdrawn",
   "history.field.acquisition_request_retracted":
     "Acquisition request withdrawn",
+  "history.field.impersonation_warning_raised":
+    "Impersonation warning raised by a later email",
   "history.field.impersonation_warning_cleared":
     "Impersonation warning cleared",
   "history.field.impersonation_warning_carried":
@@ -3329,6 +3331,7 @@ export const en = {
   "partnerStages.addOpen": "New stage",
   "partnerStages.addTitle": "New partner stage",
   "partnerStages.addConfirm": "Add stage",
+  "partnerStages.labelField": "Label",
   "partnerStages.renameTitle": "Rename stage",
   "partnerStages.colStage": "Stage",
   "partnerStages.colMeaning": "Meaning",
@@ -6581,6 +6584,7 @@ export const en = {
   "lossReasons.addOpen": "New reason",
   "lossReasons.addTitle": "New loss reason",
   "lossReasons.addConfirm": "Add reason",
+  "lossReasons.labelField": "Label",
   "lossReasons.renameTitle": "Rename reason",
   "lossReasons.activeFor": "{label} can be picked when a deal is lost",
   "lossReasons.colReason": "Reason",
@@ -8235,6 +8239,12 @@ export const en = {
   "editAccess.withdraw": "Withdraw edit access request",
   "editAccess.sent": "Edit access requested from {owner}",
   "editAccess.withdrawn": "Edit access request withdrawn",
+  // A record this reader may view but not change. The head's pill and the
+  // Ownership row say so, and the panel names the owner.
+  "viewOnly.pill": "View only",
+  "viewOnly.label": "Your access",
+  "viewOnly.owns": "{owner} owns {name}",
+  "record.details.access": "Access",
   // The owner offering a record to a colleague, from the access panel.
   "handover.offer": "Hand over to…",
   "handover.offerTo": "Hand over to",
@@ -10568,6 +10578,16 @@ export const en = {
     "Put this text in ~/.gemini/config/mcp_config.json. If the file already lists servers, add only the margince entry beside them.",
   "aiAccess.local.antigravity.signIn":
     "Open the agent settings, then “Customizations”, and choose “Authenticate” next to margince.",
+  "aiAccess.place.lumoNote":
+    "Lumo on the web cannot connect to other apps yet. Use the Lumo desktop app, which you can download from proton.me/lumo/download.",
+  "aiAccess.local.lumo.open":
+    "In Lumo Desktop, choose “Settings” at the bottom of the sidebar, then “Desktop app” and “Connectors”.",
+  "aiAccess.local.lumo.add":
+    "Choose “Add MCP server…” and set “Transport” to “Remote (HTTP)”.",
+  "aiAccess.local.lumo.fill":
+    "Enter margince as the ID and Margince as the Display name, add a short description, and paste the address.",
+  "aiAccess.local.lumo.signIn":
+    "Choose “Add server”. Margince opens when Lumo asks: sign in and choose Authorize.",
   "aiAccess.other.sub":
     "Margince works with any AI tool that can add a remote MCP server. Look for “MCP”, “connectors” or “tools” in its settings.",
   "aiAccess.other.typeLabel": "Type",
@@ -12362,6 +12382,8 @@ export const en = {
   "translation.nameIn.vi": "Name in Vietnamese",
   "translation.given": "{language}: {name}",
   "stage.name": "Name",
+  "stage.nameTaken":
+    "A stage with this name already exists in this pipeline. Choose another name.",
   "stage.semantic": "Stage type",
   "stage.lastClosing":
     "A pipeline needs a Won and a Lost stage. Add another of this type first.",
@@ -15571,6 +15593,8 @@ export const en = {
   "knowledge.upload.submit_one": "Add document",
   "knowledge.new.title": "New document set",
   "knowledge.new.name": "Name",
+  "knowledge.new.nameTaken":
+    "A document set with this name already exists. Choose another name.",
   "knowledge.new.topic": "What this set covers",
   "knowledge.new.topicHint":
     "One sentence. It is shown to anyone whose question this set does not cover.",
@@ -21686,6 +21710,9 @@ export const en = {
   "worklist.manager.kind.next_step": "Deal next step",
   "worklist.manager.kind.review_backlog": "Review backlog",
   "worklist.manager.kind.general": "Other",
+  "worklist.manager.coachDeal": "Deal",
+  "worklist.manager.coachNoDeal":
+    "No deal is in their day, so there is none to name.",
   "worklist.board.title": "Team work needing attention",
   "worklist.gap.rankedOn": "Ranked on {date}.",
   "worklist.gap.masked_one":
@@ -22838,6 +22865,7 @@ export const en = {
   "magic.why.site_read_unnamed": "Read on the company’s website.",
   "magic.why.site_read_each": "Read on each company’s own website.",
   "magic.why.signature": "Taken from an email signature.",
+  "magic.why.stated": "Reason given: {why}",
   "magic.why.retention": "Retention rule: after {days} days.",
   "magic.by.retention": "Retention",
   "magic.by.mail_filing": "Mail filing",
@@ -23024,9 +23052,23 @@ export const en = {
   "scheduling.replaceAliasHelp":
     "Your short address {url} stops working too. You can choose it again afterwards.",
   "scheduling.replaceConfirmTitle": "Replace link address?",
-  "scheduling.team.title": "Colleagues on this link",
-  "scheduling.team.foot":
-    "Guests see only the times when you and every colleague here are free, in each colleague’s own working hours. Each booking invites every colleague.",
+  "scheduling.teamLinks.title": "Team links",
+  "scheduling.teamLinks.foot":
+    "A team link offers only the times when you and every colleague on it are free, in each one’s own working hours, and invites every colleague to each meeting. It uses the calendar and settings of your personal link, which always offers only your own free time.",
+  "scheduling.teamLinks.create": "New team link with",
+  "scheduling.teamLinks.createHelp":
+    "Choose a colleague to make a new link with its own address. Only colleagues with a connected calendar are offered. Each colleague confirms before the link takes bookings.",
+  "scheduling.teamLinks.defaultTitle": "Meet {names}",
+  "scheduling.teamLinks.off": "Off: takes no bookings",
+  "scheduling.teamLinks.ready": "Takes bookings",
+  "scheduling.teamLinks.waiting": "Waiting for colleagues",
+  "scheduling.teamLinks.paused": "Paused: your calendar cannot take meetings",
+  "scheduling.teamLinks.delete": "Delete link",
+  "scheduling.teamLinks.deleteTitle": "Delete “{title}”?",
+  "scheduling.teamLinks.deleteHelp":
+    "The link’s address stops working. Meetings already booked through it stay. Your personal link does not change.",
+  "scheduling.teamLinks.lastMember":
+    "A team link needs at least one colleague. Delete the link instead.",
   "scheduling.team.add": "Add a colleague",
   "scheduling.team.addHelp":
     "Only colleagues with a connected calendar are offered. Each one confirms before the link takes bookings.",
@@ -23049,7 +23091,7 @@ export const en = {
   "scheduling.team.confirm": "Confirm",
   "scheduling.team.leave": "Leave",
   "worklist.untitled.booking_health_team_not_ready":
-    "Your booking page is paused: a colleague on it has not confirmed, has left, or has no readable calendar",
+    "Your team link is paused: a colleague on it has not confirmed, has left, or has no readable calendar",
   "scheduling.personalLinksFoot":
     "Meeting one specific person? Open their contact and choose Book a meeting to send a few times or a personal link that only they can use.",
   "scheduling.liveNoInvitesTitle": "Guests can book, but no invitations go out",

@@ -14,20 +14,24 @@
   "self_judged": false,
   "stamp": {
     "scenario": "0861ff98a78eb850",
-    "tools": "5856c0e9e82a006d",
-    "instructions": "c5c644eee9719be0",
+    "tools": "11c215ce6fc04256",
+    "instructions": "4eab26d5fff0793f",
     "judge": "claude-haiku-5-5",
-    "harness": "024566e70b0c3db3",
-    "commit": "d76651445fdbe7445b1318837cd33cb56282f221",
-    "ran_at": "2026-11-21T18:48:06Z",
-    "graded_commit": "5808d1c0d9c1a63a8e4b2a14495d96f45c40c7fd",
-    "graded_at": "2026-11-21T23:34:17Z"
+    "harness": "ae24b6799c8461d2",
+    "parsers": {
+      "gemini:cli": "fa1db64bc14e971b",
+      "gpt:cli": "d48ca27c983f8b3f"
+    },
+    "commit": "6d3a5be8c69b862c6c7db3c3534ac5fd705dd41e",
+    "ran_at": "2026-11-25T10:03:27Z",
+    "graded_commit": "6d3a5be8c69b862c6c7db3c3534ac5fd705dd41e",
+    "graded_at": "2026-11-25T10:03:27Z"
   },
   "usage": {
-    "input_tokens": 76105,
-    "output_tokens": 20179,
+    "input_tokens": 90995,
+    "output_tokens": 19764,
     "cache_creation_input_tokens": 0,
-    "cache_read_input_tokens": 347631,
+    "cache_read_input_tokens": 391542,
     "runs_measured": 2,
     "runs_costed": 0,
     "cost_usd": null
@@ -39,14 +43,15 @@
         "attach_document",
         "catch_me_up_on",
         "change_activities",
+        "describe_router_actions",
         "find_records",
         "list_documents",
         "read_context",
         "read_project",
         "read_project_360",
-        "read_record",
-        "read_view",
+        "read_workspace",
         "search_records",
+        "update_attachment_metadata",
         "whoami"
       ]
     },
@@ -56,18 +61,16 @@
         "attach_document",
         "catch_me_up_on",
         "change_activities",
-        "describe_router_actions",
         "find_records",
+        "get_contract",
+        "list_company_contracts",
         "list_documents",
-        "list_records",
         "read_context",
+        "read_details",
         "read_project",
         "read_project_360",
-        "read_record",
         "read_view",
-        "read_workspace",
         "search_records",
-        "update_attachment_metadata",
         "whoami"
       ]
     }
@@ -75,29 +78,29 @@
   "efficiency": {
     "runs": 2,
     "calls": {
-      "median": 18.5,
-      "min": 13,
-      "max": 24
+      "median": 15.5,
+      "min": 14,
+      "max": 17
     },
     "turns": {
-      "median": 8.5,
-      "min": 7,
-      "max": 10
+      "median": 9,
+      "min": 9,
+      "max": 9
     },
     "refused": {
-      "median": 0.5,
+      "median": 0,
       "min": 0,
-      "max": 1
+      "max": 0
     },
     "prompt_tokens": {
-      "median": 211868,
-      "min": 141563,
-      "max": 282173
+      "median": 241268.5,
+      "min": 211037,
+      "max": 271500
     },
     "output_tokens": {
-      "median": 10089.5,
-      "min": 8135,
-      "max": 12044
+      "median": 9882,
+      "min": 9541,
+      "max": 10223
     }
   }
 }

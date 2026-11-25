@@ -6,7 +6,7 @@ The 32 tables owned by `activities`, as the migrations build them. [Back to the 
 
 ## activity
 
-90 columns · primary key `(id)` · referenced by 49 foreign keys
+91 columns · primary key `(id)` · referenced by 49 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -18,6 +18,7 @@ The 32 tables owned by `activities`, as the migrations build them. [Back to the 
 | `audience_reason` | `text` |  | Why `audience` is what it is, for a captured message whose audience the system derived rather than a human set: `posture` (a mailbox asked for it), `workspace_floor` (the workspace turned mail sharing off), `no_record` (the message is filed under no record), `no_counterparty` (the message named nobody a record could be filed under), `pending_verdict` (nothing has judged the message yet), `verdict` (a classifier held the thread), `counterparty` (the importing seat holds mail with one of its parties), `explicitly_confidential` (the subject marks it confidential), `members_only` (every party is a member of the workspace; no verdict opens it, the mailbox owner sharing the thread does), `manual` (a human said so). |
 | `body` | `text` |  |  |
 | `body_completeness` | `text`, default `'complete'::text` | yes | How much of a mail's text Margince could decode. |
+| `body_own_end` | `integer` |  |  |
 | `booking_interval_exact` | `boolean`, default `false` | yes |  |
 | `bulk_mail_attested` | `boolean`, default `false` | yes | This message carried an RFC 2369 List-Unsubscribe header, so the SENDER declared it bulk. |
 | `calendar_event` | `jsonb` |  |  |
@@ -95,7 +96,7 @@ The 32 tables owned by `activities`, as the migrations build them. [Back to the 
 | `captured_by` | `text` | yes | Server-stamped from the authenticated principal (human:<uuid> \| agent:<id> \| connector:<name>); never client-supplied. |
 | `created_at` | `timestamp with time zone`, default `now()` | yes | When the row was created. Set once. |
 | `raw` | `jsonb` |  | The unparsed upstream payload the row was built from, kept for replay and debugging. |
-| `search_tsv` | `tsvector`, generated as `(((setweight(to_tsvector('simple'::regconfig, f_unaccent(COALESCE(subject, ''::text))), 'A'::"char") \|\| setweight(to_tsvector('simple'::regconfig, f_fold_apostrophes(COALESCE(subject, ''::text))), 'A'::"char")) \|\| setweight(to_tsvector(activity_ts_config(language), f_unaccent(((COALESCE(subject, ''::text) \|\| ' '::text) \|\| COALESCE(body, ''::text)))), 'B'::"char")) \|\| setweight(to_tsvector('simple'::regconfig, f_unaccent(COALESCE(body, ''::text))), 'C'::"char"))` |  | Computed by the database. It cannot be written directly. |
+| `search_tsv` | `tsvector` |  | Full-text search vector, maintained by the database. |
 | `source` | `text` | yes | Where the row came from. |
 | `source_system` | `text` |  | Which system this record came from: `email` for any captured or sent mail (one identity across gmail/outlook/imap), else gcal/outlook/transcript or a caller's own. |
 | `updated_at` | `timestamp with time zone`, default `now()` | yes | When the row last changed. Refreshed on every write. |
@@ -208,6 +209,8 @@ The 32 tables owned by `activities`, as the migrations build them. [Back to the 
 - `activity_no_company_meeting_on_rekind`: `BEFORE UPDATE OF kind FOR EACH ROW EXECUTE FUNCTION activity_refuses_becoming_a_company_meeting()`
 - `activity_project_last_activity`: `AFTER UPDATE OF occurred_at, archived_at, audience, origin, kind, meeting_status, occurred_precision, call_outcome, bulk_mail_attested FOR EACH ROW WHEN (((old.occurred_at IS DISTINCT FROM new.occurred_at) OR (old.archived_at IS DISTINCT FROM new.archived_at) OR (old.audience IS DISTINCT FROM new.audience) OR (old.origin IS DISTINCT FROM new.origin) OR (old.kind IS DISTINCT FROM new.kind) OR (old.meeting_status IS DISTINCT FROM new.meeting_status) OR (old.occurred_precision IS DISTINCT FROM new.occurred_precision) OR (old.call_outcome IS DISTINCT FROM new.call_outcome) OR (old.bulk_mail_attested IS DISTINCT FROM new.bulk_mail_attested))) EXECUTE FUNCTION trg_activity_project_last_activity()`
 - `activity_refuse_restricted_mutation`: `BEFORE DELETE OR UPDATE FOR EACH ROW EXECUTE FUNCTION activity_refuse_restricted_mutation()`
+- `activity_search_tsv_insert`: `BEFORE INSERT FOR EACH ROW EXECUTE FUNCTION activity_keeps_search_tsv()`
+- `activity_search_tsv_update`: `BEFORE UPDATE OF subject, body, language, body_own_end, search_tsv FOR EACH ROW WHEN ((((((old.subject IS DISTINCT FROM new.subject) OR (old.body IS DISTINCT FROM new.body)) OR (old.language IS DISTINCT FROM new.language)) OR (old.body_own_end IS DISTINCT FROM new.body_own_end)) OR (old.search_tsv IS DISTINCT FROM new.search_tsv))) EXECUTE FUNCTION activity_keeps_search_tsv()`
 - `activity_strength_dates`: `AFTER UPDATE REFERENCING OLD TABLE AS changed_from NEW TABLE AS changed_to FOR EACH STATEMENT EXECUTE FUNCTION trg_activity_strength_dates()`
 - `activity_system_text_retire`: `BEFORE UPDATE FOR EACH ROW EXECUTE FUNCTION retire_changed_system_text()`
 - `advance_activity_domain_evidence_version`: `BEFORE UPDATE OF occurred_at, occurred_precision, archived_at, restricted_at FOR EACH ROW EXECUTE FUNCTION advance_activity_domain_evidence_version()`
@@ -584,6 +587,7 @@ The 32 tables owned by `activities`, as the migrations build them. [Back to the 
 
 **Rules**
 
+- `activity_participant_address_is_canonical`: `CHECK ((address = lower(btrim(address)))) NOT VALID`
 - `activity_participant_identity`: `CHECK (((user_id IS NOT NULL) OR (contact_id IS NOT NULL) OR (address IS NOT NULL) OR (channel_user_id IS NOT NULL)))`
 - `activity_participant_past_party_cap_unresolved`: `CHECK (((NOT past_party_cap) OR ((user_id IS NULL) AND (contact_id IS NULL))))`
 - `activity_participant_response_check`: `CHECK ((response = ANY (ARRAY['accepted', 'declined', 'tentative', 'needs_action'])))`
@@ -593,6 +597,7 @@ The 32 tables owned by `activities`, as the migrations build them. [Back to the 
 
 - `activity_participant_pkey`: `unique, btree (id)`
 - `idx_aparticipant_address`: `btree (lower(address)) WHERE (address IS NOT NULL)`
+- `idx_aparticipant_address_to_lowercase`: `btree (id) WHERE (address <> lower(btrim(address)))`
 - `idx_aparticipant_contact`: `btree (contact_id, activity_id) WHERE (contact_id IS NOT NULL)`
 - `idx_aparticipant_one_roster_seat`: `btree (id) WHERE (roster_seat IS NOT NULL)`
 - `idx_aparticipant_sender_domain_reversed`: `btree (reverse(address_domain_folded) COLLATE "C") WHERE ((role = 'from') AND (address_domain_folded IS NOT NULL))`
@@ -607,6 +612,7 @@ The 32 tables owned by `activities`, as the migrations build them. [Back to the 
 - `activity_participant_strength_dates_added`: `AFTER INSERT REFERENCING NEW TABLE AS added FOR EACH STATEMENT EXECUTE FUNCTION trg_activity_participant_strength_dates_added()`
 - `activity_participant_strength_dates_moved`: `AFTER UPDATE REFERENCING OLD TABLE AS moved_from NEW TABLE AS moved_to FOR EACH STATEMENT EXECUTE FUNCTION trg_activity_participant_strength_dates_moved()`
 - `activity_participant_strength_dates_removed`: `AFTER DELETE REFERENCING OLD TABLE AS removed FOR EACH STATEMENT EXECUTE FUNCTION trg_activity_participant_strength_dates_removed()`
+- `address_is_stored_lowercase`: `BEFORE UPDATE FOR EACH ROW WHEN ((new.address <> lower(btrim(new.address)))) EXECUTE FUNCTION store_participant_address_lowercase()`
 - `deleted_participant_clears_reply_settled`: `AFTER DELETE REFERENCING OLD TABLE AS written_participant FOR EACH STATEMENT EXECUTE FUNCTION written_participant_clears_reply_settled()`
 - `home_read_fence_participant`: `AFTER UPDATE FOR EACH ROW WHEN (((old.user_id IS NOT NULL) AND ((old.user_id IS DISTINCT FROM new.user_id) OR (old.activity_id IS DISTINCT FROM new.activity_id) OR ((old.address IS NOT NULL) AND (new.address IS NULL)) OR ((old.contact_id IS NOT NULL) AND (new.contact_id IS NULL)) OR ((old.channel_user_id IS NOT NULL) AND (new.channel_user_id IS NULL))))) EXECUTE FUNCTION advance_home_read_fence()`
 - `home_read_fence_participant_removed`: `AFTER DELETE FOR EACH ROW WHEN ((old.user_id IS NOT NULL)) EXECUTE FUNCTION advance_home_read_fence()`
@@ -1084,7 +1090,7 @@ The 32 tables owned by `activities`, as the migrations build them. [Back to the 
 
 ## booking_page
 
-7 columns · primary key `(id)` · referenced by 1 foreign key
+8 columns · primary key `(id)` · referenced by 2 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -1094,6 +1100,7 @@ The 32 tables owned by `activities`, as the migrations build them. [Back to the 
 | `revoked_at` | `timestamp with time zone` |  |  |
 | `scheduling_policy` | `jsonb` |  |  |
 | `slug` | `text` | yes |  |
+| `team_link` | `boolean`, default `false` | yes |  |
 | `created_at` | `timestamp with time zone`, default `now()` | yes | When the row was created. Set once. |
 
 **Points at**
@@ -1108,6 +1115,7 @@ The 32 tables owned by `activities`, as the migrations build them. [Back to the 
 
 **Indexes**
 
+- `booking_page_one_personal_per_host`: `unique, btree (host_user_id) WHERE ((revoked_at IS NULL) AND (NOT team_link))`
 - `booking_page_pkey`: `unique, btree (id)`
 - `booking_page_slug_key`: `unique, btree (slug)`
 - `idx_booking_page_host_user`: `btree (host_user_id)`
@@ -1235,7 +1243,7 @@ The 32 tables owned by `activities`, as the migrations build them. [Back to the 
 
 ## meeting_invitation
 
-22 columns · primary key `(activity_id)` · referenced by 1 foreign key
+23 columns · primary key `(activity_id)` · referenced by 1 foreign key
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -1244,6 +1252,7 @@ The 32 tables owned by `activities`, as the migrations build them. [Back to the 
 | `attempts` | `integer`, default `0` | yes |  |
 | `attention_episode` | `uuid` |  |  |
 | `attention_reason` | `text` |  | Why a `needs_attention` invitation waits. |
+| `booking_page_id` | `uuid` |  | Points at `booking_page.id`. |
 | `calendar_id` | `text` | yes |  |
 | `cleanup_complete` | `boolean`, default `false` | yes |  |
 | `command` | `text`, default `'create'::text` | yes | One of `create`, `update`, `cancel`. |
@@ -1267,6 +1276,7 @@ The 32 tables owned by `activities`, as the migrations build them. [Back to the 
 | Columns | Table | When the parent goes |
 |---|---|---|
 | `activity_id` | `activity` | deleting the parent deletes this row |
+| `booking_page_id` | `booking_page` | deleting the parent keeps this row and clears the link |
 | `host_user_id` | `app_user` | the parent cannot be deleted while this row points at it |
 
 **Rules**
@@ -1281,6 +1291,7 @@ The 32 tables owned by `activities`, as the migrations build them. [Back to the 
 
 **Indexes**
 
+- `meeting_invitation_booking_page_idx`: `btree (booking_page_id)`
 - `meeting_invitation_due`: `btree (next_attempt_at) WHERE (status = ANY (ARRAY['pending', 'rescheduling', 'canceling']))`
 - `meeting_invitation_management_hash_key`: `unique, btree (management_hash)`
 - `meeting_invitation_pkey`: `unique, btree (activity_id)`

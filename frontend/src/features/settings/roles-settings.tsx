@@ -40,6 +40,7 @@ import {
   useRoles,
   useRoleVerbs,
 } from "../../lib/roles.queries";
+import { TEXT_LIMITS } from "../../lib/textlimits_gen";
 import {
   replaceDial,
   useAddressWriters,
@@ -373,7 +374,7 @@ function NewRoleAction({
               <TextInput
                 {...control}
                 value={name}
-                maxLength={120}
+                maxLength={TEXT_LIMITS.label}
                 disabled={create.isPending}
                 onChange={(event) => {
                   setName(event.target.value);

@@ -26,7 +26,6 @@ import {
   type AiPlace,
   type AiPlan,
   type AiTool,
-  adminGuide,
   CLI_NAMES,
   type CliPath,
   type ConnectPath,
@@ -34,6 +33,7 @@ import {
   connectPath,
   STEPS_CHECKED_ON,
 } from "../lib/aiconnect";
+import { adminGuide } from "../lib/aiconnectguide";
 import { useConnectorState } from "../lib/connector-state";
 import { downloadBytes } from "../lib/download";
 import { useViewerZone } from "../lib/viewerzone";

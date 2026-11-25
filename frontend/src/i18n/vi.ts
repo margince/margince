@@ -2672,6 +2672,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "history.field.qualifying_event_retracted": "Trao đổi đã ghi nhận bị rút lại",
   "history.field.acquisition_request_retracted":
     "Yêu cầu khi thu nhận đã bị rút lại",
+  "history.field.impersonation_warning_raised":
+    "Cảnh báo mạo danh do một email sau đó",
   "history.field.impersonation_warning_cleared": "Đã gỡ cảnh báo mạo danh",
   "history.field.impersonation_warning_carried":
     "Giữ cảnh báo mạo danh từ liên hệ đã gộp",
@@ -3325,6 +3327,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "partnerStages.addOpen": "Giai đoạn mới",
   "partnerStages.addTitle": "Giai đoạn đối tác mới",
   "partnerStages.addConfirm": "Thêm giai đoạn",
+  "partnerStages.labelField": "Nhãn",
   "partnerStages.renameTitle": "Đổi tên giai đoạn",
   "partnerStages.colStage": "Giai đoạn",
   "partnerStages.colMeaning": "Ý nghĩa",
@@ -6437,6 +6440,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "lossReasons.addOpen": "Lý do mới",
   "lossReasons.addTitle": "Lý do thua mới",
   "lossReasons.addConfirm": "Thêm lý do",
+  "lossReasons.labelField": "Nhãn",
   "lossReasons.renameTitle": "Đổi tên lý do",
   "lossReasons.activeFor": "Có thể chọn {label} khi deal bị thua",
   "lossReasons.colReason": "Lý do",
@@ -8029,6 +8033,12 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "editAccess.withdraw": "Rút yêu cầu quyền chỉnh sửa",
   "editAccess.sent": "Đã xin {owner} quyền chỉnh sửa",
   "editAccess.withdrawn": "Đã rút yêu cầu quyền chỉnh sửa",
+  // A record this reader may view but not change. The head's pill and the
+  // Ownership row say so, and the panel names the owner.
+  "viewOnly.pill": "Chỉ xem",
+  "viewOnly.label": "Quyền của bạn",
+  "viewOnly.owns": "{owner} phụ trách {name}",
+  "record.details.access": "Quyền truy cập",
   // The owner offering a record to a colleague, from the access panel.
   "handover.offer": "Chuyển giao cho…",
   "handover.offerTo": "Giao cho",
@@ -10294,6 +10304,16 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Thêm nội dung này vào ~/.gemini/config/mcp_config.json. Nếu tệp đã có máy chủ khác, chỉ thêm mục margince bên cạnh chúng.",
   "aiAccess.local.antigravity.signIn":
     "Mở cài đặt agent, rồi “Customizations”, và chọn “Authenticate” bên cạnh margince.",
+  "aiAccess.place.lumoNote":
+    "Lumo trên web chưa thể kết nối với ứng dụng khác. Hãy dùng ứng dụng Lumo cho máy tính, tải tại https://proton.me/lumo/download.",
+  "aiAccess.local.lumo.open":
+    "Trong Lumo Desktop, chọn “Settings” ở cuối thanh bên, rồi “Desktop app” và “Connectors”.",
+  "aiAccess.local.lumo.add":
+    "Chọn “Add MCP server…” và đặt “Transport” thành “Remote (HTTP)”.",
+  "aiAccess.local.lumo.fill":
+    "Nhập margince làm ID và Margince làm Display name, thêm mô tả ngắn rồi dán địa chỉ.",
+  "aiAccess.local.lumo.signIn":
+    "Chọn “Add server”. Khi Lumo yêu cầu, Margince mở ra: hãy đăng nhập và chọn Cấp quyền.",
   "aiAccess.other.sub":
     "Margince hoạt động với mọi công cụ AI có thể thêm máy chủ MCP từ xa. Hãy tìm “MCP”, “connectors” hoặc “tools” trong phần cài đặt của nó.",
   "aiAccess.other.typeLabel": "Loại",
@@ -12094,6 +12114,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "translation.nameIn.vi": "Tên tiếng Việt",
   "translation.given": "{name} ({language})",
   "stage.name": "Tên",
+  "stage.nameTaken":
+    "Pipeline này đã có giai đoạn mang tên này. Hãy chọn tên khác.",
   "stage.semantic": "Loại giai đoạn",
   "stage.lastClosing":
     "Pipeline cần một giai đoạn Thắng và một giai đoạn Thua. Hãy thêm một giai đoạn cùng loại trước.",
@@ -15226,6 +15248,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "knowledge.upload.submit_one": "Thêm 1 tài liệu",
   "knowledge.new.title": "Bộ tài liệu mới",
   "knowledge.new.name": "Tên",
+  "knowledge.new.nameTaken":
+    "Đã có bộ tài liệu mang tên này. Hãy chọn tên khác.",
   "knowledge.new.topic": "Phạm vi của bộ tài liệu",
   "knowledge.new.topicHint":
     "Một câu. Câu này hiển thị cho bất kỳ ai có câu hỏi nằm ngoài phạm vi của bộ này.",
@@ -21424,6 +21448,9 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "worklist.manager.kind.next_step": "Bước tiếp theo của deal",
   "worklist.manager.kind.review_backlog": "Tồn đọng cần xem lại",
   "worklist.manager.kind.general": "Khác",
+  "worklist.manager.coachDeal": "Deal liên quan",
+  "worklist.manager.coachNoDeal":
+    "Không có deal nào trong ngày của họ để chọn.",
   "worklist.board.title": "Việc của nhóm cần chú ý",
   "worklist.gap.rankedOn": "Xếp hạng ngày {date}.",
   "worklist.gap.masked_one":
@@ -22552,6 +22579,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "magic.why.site_read_unnamed": "Đọc trên trang web của công ty.",
   "magic.why.site_read_each": "Đọc trên trang web riêng của từng công ty.",
   "magic.why.signature": "Lấy từ chữ ký email.",
+  "magic.why.stated": "Lý do đã nêu: {why}",
   "magic.why.retention": "Quy tắc lưu trữ: sau {days} ngày.",
   "magic.by.retention": "Quy tắc lưu trữ",
   "magic.by.mail_filing": "Xếp email",
@@ -22735,9 +22763,24 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "scheduling.replaceAliasHelp":
     "Địa chỉ ngắn {url} của bạn cũng ngừng hoạt động. Bạn có thể chọn lại sau đó.",
   "scheduling.replaceConfirmTitle": "Thay địa chỉ liên kết?",
-  "scheduling.team.title": "Đồng nghiệp trên liên kết này",
-  "scheduling.team.foot":
-    "Khách chỉ thấy những khung giờ mà bạn và mọi đồng nghiệp ở đây đều rảnh, theo giờ làm việc riêng của từng đồng nghiệp. Mỗi lượt đặt lịch đều mời tất cả đồng nghiệp.",
+  "scheduling.teamLinks.title": "Liên kết nhóm",
+  "scheduling.teamLinks.foot":
+    "Liên kết nhóm chỉ hiện những khung giờ mà bạn và mọi đồng nghiệp trên đó đều rảnh, theo giờ làm việc riêng của từng đồng nghiệp, và mời tất cả đồng nghiệp vào mỗi cuộc họp. Liên kết dùng lịch và cài đặt của liên kết cá nhân, vốn luôn chỉ hiện thời gian rảnh của riêng bạn.",
+  "scheduling.teamLinks.create": "Liên kết nhóm mới với",
+  "scheduling.teamLinks.createHelp":
+    "Chọn một đồng nghiệp để tạo liên kết mới có địa chỉ riêng. Chỉ hiện những đồng nghiệp đã kết nối lịch. Mỗi đồng nghiệp phải xác nhận trước khi liên kết nhận lượt đặt lịch.",
+  "scheduling.teamLinks.defaultTitle": "Gặp {names}",
+  "scheduling.teamLinks.off": "Tắt: không nhận đặt lịch",
+  "scheduling.teamLinks.ready": "Đang nhận đặt lịch",
+  "scheduling.teamLinks.waiting": "Đang chờ đồng nghiệp",
+  "scheduling.teamLinks.paused":
+    "Tạm dừng: lịch của bạn không nhận được cuộc họp",
+  "scheduling.teamLinks.delete": "Xóa liên kết",
+  "scheduling.teamLinks.deleteTitle": "Xóa “{title}”?",
+  "scheduling.teamLinks.deleteHelp":
+    "Địa chỉ của liên kết sẽ ngừng hoạt động. Các cuộc họp đã đặt qua liên kết vẫn giữ nguyên. Liên kết cá nhân của bạn không thay đổi.",
+  "scheduling.teamLinks.lastMember":
+    "Liên kết nhóm cần ít nhất một đồng nghiệp. Hãy xóa liên kết.",
   "scheduling.team.add": "Thêm đồng nghiệp",
   "scheduling.team.addHelp":
     "Chỉ hiện những đồng nghiệp đã kết nối lịch. Mỗi đồng nghiệp phải xác nhận trước khi liên kết nhận lượt đặt lịch.",
@@ -22759,7 +22802,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "scheduling.team.confirm": "Xác nhận",
   "scheduling.team.leave": "Rời",
   "worklist.untitled.booking_health_team_not_ready":
-    "Trang đặt lịch của bạn đang tạm dừng: một đồng nghiệp trên đó chưa xác nhận, đã rời đi hoặc không có lịch đọc được",
+    "Liên kết nhóm của bạn đang tạm dừng: một đồng nghiệp trên đó chưa xác nhận, đã rời đi hoặc không có lịch đọc được",
   "scheduling.personalLinksFoot":
     "Hẹn với một người cụ thể? Mở liên hệ của họ và chọn Đặt cuộc hẹn để gửi vài khung giờ hoặc một liên kết riêng chỉ họ dùng được.",
   "scheduling.liveNoInvitesTitle":

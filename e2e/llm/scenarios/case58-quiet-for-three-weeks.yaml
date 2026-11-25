@@ -15,9 +15,7 @@
 # "The pipeline", not "my deals": Sofia Meier owns every seeded deal, and a
 # careful run that filters "my deals" by owner would rightly find none.
 #
-# WHAT IS HELD, and where:
-#   - quiet_days=21 on the call: must_call_with. Three weeks is 21 days, and a
-#     model rounding it to a month has answered a different question;
+# WHAT IS HELD, and where. The result, not the window's argument:
 #   - both deals named in the answer: must_mention;
 #   - Körber described truthfully: judged, because "under the sixty-day line"
 #     is true and "slipping past the sixty-day line" is not, and both carry the
