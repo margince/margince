@@ -96,8 +96,7 @@ You can sort the **Company** column on **Contacts**, so sorting by it groups con
 Also called: contacts at an account, everyone at a customer, staff of a client.
 
 ### How do I filter a list by tag?
-To filter a list by tag in Margince, open **Contacts**, **Companies** or **Deals**, press **View** → **Filters** → **Tags**, and pick the tag.
-One tag at a time: a second tag takes the place of the first. **Any tag** takes the filter off. To see every record with a tag across all record types, open the tag's own page. A record shows its tags under **Tags**; see [Tags](records.md#tags).
+To filter a list by tag in Margince, open **Contacts**, **Companies** or **Deals**, press **View** → **Filters** → **Tags**, and pick the tag. One tag at a time: a second tag takes the place of the first. **Any tag** takes the filter off. To see every record with a tag across all record types, open the tag's own page. A record shows its tags under **Tags**; see [Tags](records.md#tags).
 Also called: filter by label, show tagged records, segment by tag.
 
 ### Why are some contacts tagged `machine-address`?
@@ -155,7 +154,6 @@ Also called: add column, remove column, reorder columns, change table layout.
 
 ### How do I show more rows per page?
 To show more rows on a Margince list, open **Rows per page** at the bottom of the list. Pick **25 per page**, **50 per page** or **100 per page**.
-
 Use **Previous** and **Next**, or a page number, to move through the pages. The count at the top says how many match, for example "1 to 25 of 200 contacts". The page numbers end with the last page: press it to go to the end. Where Margince does not have the full count, it says "loaded" instead, and the numbers stop at the pages read so far.
 
 Also called: page size, see all records, load more.
@@ -163,8 +161,7 @@ Also called: page size, see all records, load more.
 ## Archived records on a list
 
 ### How do I see archived records?
-To see archived records in Margince, open the list (**Contacts**, **Companies**, **Leads**, **Deals** or **Projects**) and press **View** → **Show archived**.
-Archived rows show with the live ones, with an **Archived** mark, until you press **Show archived** again. On **Leads**, disqualified and qualified leads are the archived ones, and the **Status** filter set to **Qualified** or **Disqualified** lists them without **Show archived**. An archived record opens read-only, and **Undo** on its archive entry in its history brings back a contact, company or deal. See [Contacts, companies, leads, deals and projects](records.md).
+To see archived records in Margince, open the list (**Contacts**, **Companies**, **Leads**, **Deals** or **Projects**) and press **View** → **Show archived**. Archived rows show with the live ones, with an **Archived** mark, until you press **Show archived** again. On **Leads**, disqualified and qualified leads are the archived ones, and the **Status** filter set to **Qualified** or **Disqualified** lists them without **Show archived**. An archived record opens read-only, and **Undo** on its archive entry in its history brings back a contact, company or deal. See [Contacts, companies, leads, deals and projects](records.md).
 Also called: show deleted, find an archived contact, closed records, inactive.
 
 ## Views
@@ -177,13 +174,16 @@ A view in Margince is a tab in a list's header row that sets the list's filters 
 To save a view of a list in Margince, set the list up as you want it. Press **View**, then **Save view** at the bottom of the panel. Give it a **Name** and press **Save**.
 1. Search, filter, sort or press **Show archived**. **Save view** shows once one of these differs from how the list opened.
 2. Press **View** → **Save view** and, in **Save this view**, type a **Name**.
-3. Press **Save**. The view becomes a new tab next to the others.
-On **Deals**, **Save view** is on the **Table** only, and the view also keeps the pipeline.
+3. Press **Save**. The view becomes a new tab next to the others, and "View saved" shows.
+On **Deals**, **Save view** is on the **Table** only, and the view also keeps the pipeline. Two views of one list cannot have the same name: Margince asks for another one. While the list is the same as one of your saved views, the panel offers no **Save view**.
 Also called: save a filter, save a search, bookmark a list, smart list, saved list.
 
+### How do I change a saved view?
+To change a saved view in Margince, press its tab and change the search, the filters, the sort or **Show archived**. Then press **View** → **Update “{name}”** at the bottom of the panel, and the view opens with the changed list from then on. To keep the old view as well, press **Save as new view** beside it instead. If the view changed somewhere else since the list loaded, Margince saves nothing and says so. Open the list again and make the change again.
+Also called: edit a saved view, update a view, replace a view.
+
 ### How do I open a saved view?
-To open a saved view in Margince, open the list it was saved on. Press its tab in the header row, next to **All** and **Mine**. The list takes the saved filters, search, sort and **Show archived** at once.
-A view saved on **Filters and views** opens there instead: press its name in the library.
+To open a saved view in Margince, open the list it was saved on. Press its tab in the header row, next to **All** and **Mine**. The list takes the saved filters, search, sort and **Show archived** at once. A view saved on **Filters and views** opens there instead: press its name in the library.
 Also called: use my saved list, go back to my filter.
 
 ### How do I rename or delete a saved view?
@@ -256,7 +256,6 @@ Also called: save a segment, keep an advanced search.
 To select many records in Margince, open **Contacts**, **Companies**, **Leads** or **Deals** as a **Table**. Tick the box at the start of each row. A bar shows above the rows saying "{count} selected", with the actions for that list. Archived rows have no box, and neither do closed deals or qualified and disqualified leads. **Projects** have no way to tick many rows: change those one at a time.
 
 The box in the name column's heading ticks every row on the page that has a box. Once one row is ticked, the bar ends with **Select all**, which ticks every record that matches the list. One change takes at most 500 records, so **Select all** stops at 500 and says so. On a long list it takes a moment, and the bar says how far it is, for example "Selecting 150 of 500…". **Clear selection** unticks them all.
-
 Also called: multi-select, bulk edit, mass update, select all.
 
 ### How do I reassign several contacts, companies or deals to a colleague?
@@ -355,7 +354,6 @@ Also called: bulk edit a list, reassign everyone on a list, export a list.
 A Live List's row in the library shows **Uses a retired field** when its filter names a custom field that has been archived. Its page says "This filter uses a retired field". The list still works on the values already stored, but nothing new is recorded in that field. Its steward should change the clause with **Edit filter** on the notice. Before you archive a custom field, Margince names the Live Lists that filter on it.
 
 In the library, **Filter no longer works** means a field the filter names has changed, so the filter cannot run. The list's page says "This filter no longer works". Its steward fixes it the same way, with **Edit filter**.
-
 Also called: broken list, list warning, archived custom field.
 
 ### How do I change a Live List's filter?
@@ -384,7 +382,6 @@ Yes. **Settings** → **Automations** has these rules that watch a Live List:
 It also pauses when the list is archived, when its filter stops working, or when you can no longer find the list. A paused rule says why and stays paused until its owner starts it again. Restoring or fixing the list does not start it again. A rule cannot start again while its list is archived or its filter is broken. A follow-up task never names the list, because the list may be private.
 
 The first check of a Live List sets its starting members and makes no work. The first check after a filter change also makes no work. New rules skip records changed by an import. To include them, choose **Also act on records changed by imports**. A rule set up before this choice was added keeps its old setting until you review it.
-
 Also called: list trigger, when someone joins a list, list workflow.
 
 ### Why can I not find Lists?

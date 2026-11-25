@@ -1,9 +1,13 @@
-import { useState } from "react";
+import { createContext, createElement, type ReactNode, useState } from "react";
 import type { ListChip, ListView } from "../design-system/listtable";
 import type { useT } from "../i18n";
 import { withoutStrandedTagMode } from "../lib/tagfilter";
 import type { FilterSpec, RailView, ViewSpec } from "./listquery";
-import type { ListQuery } from "./listqueryparams";
+import {
+  isNarrowed,
+  type ListOpening,
+  type ListQuery,
+} from "./listqueryparams";
 
 type Translate = ReturnType<typeof useT>;
 
@@ -88,8 +92,10 @@ export function translateView(spec: ViewSpec, t: Translate): ListView {
 export function useActiveView(
   views: readonly RailView[],
   query: ListQuery,
-): [number, (index: number) => void] {
+  opening: ListOpening,
+): [number, (index: number) => void, string | null] {
   const [pickedId, setPickedId] = useState<string | null>(null);
+  const [openedId, setOpenedId] = useState<string | null>(null);
   const matched = views.findIndex((spec) => matchesView(spec, query));
   const pinned = views.findIndex((spec) => spec.id === pickedId);
   const pinnedView = views[pinned];
@@ -97,11 +103,40 @@ export function useActiveView(
     pinnedView !== undefined && matchesView(pinnedView, query)
       ? pinned
       : matched;
+  // The opened view is the tab last lit or pressed. With no tab lit the reader
+  // is changing that view, until the list is back to how it opens.
+  const litId =
+    views[view]?.id ?? (isNarrowed(query, opening) ? openedId : null);
+  if (litId !== openedId) {
+    setOpenedId(litId);
+  }
   // The press reports an index into the rail just rendered, which is where the
   // id it names comes from. A press on nothing (the surface's own "clear
   // everything" reports index 0 against an empty rail) unpins rather than
   // pinning a view that is not there.
-  return [view, (index: number) => setPickedId(views[index]?.id ?? null)];
+  const pick = (index: number) => {
+    const id = views[index]?.id ?? null;
+    setPickedId(id);
+    setOpenedId(id);
+  };
+  return [view, pick, openedId];
+}
+
+/**
+ * The id of the view the reader opened and may since have changed, for the
+ * Save view verbs in the View panel. A preset's id names no saved view.
+ */
+export const OpenedViewContext = createContext<string | null>(null);
+
+/** A surface's save verbs, told which view the reader opened. */
+export function withOpenedView(
+  saveView: ReactNode,
+  openedId: string | null,
+): ReactNode {
+  return (
+    saveView &&
+    createElement(OpenedViewContext.Provider, { value: openedId }, saveView)
+  );
 }
 
 /**
@@ -122,7 +157,7 @@ export function useActiveView(
  * names, down to the search box. Page size is the one allowed exception. It
  * changes how many of those rows are drawn at once, not which rows they are.
  */
-function matchesView(
+export function matchesView(
   spec: Readonly<{
     q?: string;
     sort?: string;

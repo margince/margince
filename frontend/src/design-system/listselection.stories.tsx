@@ -6,8 +6,8 @@ import { LocaleProvider } from "../i18n";
 import { type SelectAll, SelectAllControls } from "./listselection";
 import { SelectionBar } from "./selectionbar";
 
-// The end of a list's bulk bar: Select all and Clear selection, and what the
-// bar says while Select all reads the pages it does not hold yet.
+// The end of a list's bulk bar: Select all and Clear selection. While Select
+// all reads the pages it does not hold yet, the bar says how far it got.
 const meta: Meta<typeof SelectAllControls> = {
   title: "Components/Text and data display/List selection",
   component: SelectAllControls,
