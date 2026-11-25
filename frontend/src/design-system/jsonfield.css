@@ -18,8 +18,17 @@
   border-color: var(--focusEdge);
   box-shadow: var(--focus-field);
 }
+/* After the focus rule, so a refused field keeps its danger edge in focus. */
 .json-field-invalid {
   border-color: var(--danger);
+}
+.json-field-invalid:focus-within {
+  box-shadow: var(--focus-field-danger);
+}
+/* As .field-shell dims: 1.4.11 exempts a field nobody may use. */
+.json-field:has(:disabled) {
+  background: var(--bgInset);
+  border-color: var(--borderStrong);
 }
 .json-field-gutter {
   display: flex;

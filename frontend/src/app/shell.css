@@ -993,9 +993,10 @@
   background: transparent;
   font: var(--fontBodyLarge);
 }
+/* The bar's foot is its field's edge, so it takes the control token. */
 .palette-input,
 .palette-filter {
-  border-bottom: 1px solid var(--borderSubtle);
+  border-bottom: 1px solid var(--borderControl);
 }
 .palette-input:has(+ .palette-filter) {
   border-bottom: 0;
@@ -1718,8 +1719,8 @@
 }
 
 /* The floor comes up to meet the pointer, as it does on every other field. */
-.settingssearch input:hover:not(:disabled, [aria-disabled="true"]),
-.settingssearch input:active:not(:disabled, [aria-disabled="true"]) {
+.settingssearch input:hover:where(:not(:disabled, [aria-disabled="true"])),
+.settingssearch input:active:where(:not(:disabled, [aria-disabled="true"])) {
   box-shadow: none;
 }
 
@@ -1727,6 +1728,10 @@
   outline: none;
   border-color: var(--focusEdge);
   box-shadow: var(--focus-field);
+}
+.settingssearch input:disabled {
+  background: var(--bgInset);
+  border-color: var(--borderStrong);
 }
 
 /* Over the rows rather than pushing them down: a rail that grew by four rows

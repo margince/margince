@@ -93,11 +93,20 @@
   box-shadow: none;
   font-weight: var(--fontWeightMedium);
 }
-/* The bare lines still show which one the keyboard is in. */
-.compose-address-field .token-input:focus-within,
+/* The bare lines still show which one the keyboard is in. With a trailing
+   link the shell is the box, since it holds the token field's edge. */
+.compose-address-field .field-shell:focus-within,
+.compose-address-field > .token-input:focus-within,
 .compose-subject-field .input:focus {
   border-color: var(--focusEdge);
   box-shadow: var(--focus-field);
+}
+/* A refused line keeps the danger edge while the caret is in it. */
+.compose-address-field .field-shell:has([aria-invalid="true"]):focus-within,
+.compose-address-field > .token-input:has([aria-invalid="true"]):focus-within,
+.compose-subject-field .input[aria-invalid="true"]:focus {
+  border-color: var(--danger);
+  box-shadow: var(--focus-field-danger);
 }
 
 /* The country a recipient's chip carries: a glyph and the code, as small as

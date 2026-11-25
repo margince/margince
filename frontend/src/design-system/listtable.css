@@ -624,6 +624,10 @@
   border-color: var(--focusEdge);
   box-shadow: var(--focus-field);
 }
+.lt-fsearch-input:disabled {
+  background: var(--bgInset);
+  border-color: var(--borderStrong);
+}
 
 /* ONE ENTRY, and it stands --controlHeight tall like every other option row in
    the product: the anatomy's inset above and below a --fontBody line is

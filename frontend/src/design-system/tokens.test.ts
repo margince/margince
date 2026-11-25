@@ -510,17 +510,21 @@ describe("Ledger-Green token layer (B-EP09.1)", () => {
       expect(failures.join("\n")).toBe("");
     });
 
-    // The compose strip's warning wash holds a Select; no other tinted ground
-    // (accent rows, chip tracks, pressed segments) holds a field today.
+    // Tinted grounds known to hold a field, named by hand: which box holds a
+    // field is a fact of the markup, not of the sheet. The warning strip holds
+    // a Select; the AI band holds the Purpose line and the language Select.
+    const washedBoxes = [".compose-strip-warning", ".compose-aiband"];
     const fieldWashes = rulesOf([join(here, "../features/mail/compose.css")])
-      .filter((rule) => rule.selector.trim() === ".compose-strip-warning")
+      .filter((rule) => washedBoxes.includes(rule.selector.trim()))
       .flatMap((rule) => declaredValues(rule.body, "background"))
       .map((value) => /^var\((--[\w-]+)\)$/.exec(value)?.[1] ?? value);
 
     // WCAG 1.4.11: a control's edge is often all that parts it from its ground.
     // So it holds 3:1 on every ground, bare, hovered or striped, and under its face.
     it("draws a control's border at 3:1 on every ground, both themes", () => {
-      expect(fieldWashes, "the compose strip paints no wash").not.toEqual([]);
+      expect(fieldWashes, "a washed box paints no wash").toHaveLength(
+        washedBoxes.length,
+      );
       const failures: string[] = [];
       for (const [theme, pal] of Object.entries(themes)) {
         const border = pal["--borderControl"];

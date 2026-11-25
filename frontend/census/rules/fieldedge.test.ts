@@ -19,6 +19,8 @@ const findings = (tsx: string, css: readonly string[]) =>
 const markup = (...lines: string[]) =>
   ["export const F = () => (", "  <>", ...lines, "  </>", ");"].join("\n");
 const faint = "1px solid var(--borderSubtle)";
+const bare = (selector: string) =>
+  `${SHEET}: ${selector} draws no edge of its own and names no field or ruled row around it`;
 
 describe("a text field's resting edge", () => {
   it("reports a field written on an <input> that rests on a faint edge", () => {
@@ -137,39 +139,87 @@ describe("a text field's resting edge", () => {
   it("passes no edge only inside a field, or where the exception names it", () => {
     expect(
       findings(
-        markup('<input className="box" />', '<input className="input" />'),
+        markup(
+          '<input className="box" />',
+          '<textarea className="richtext" />',
+        ),
         [
           ".shell:focus-within { border-color: var(--accent); }",
           ".shell > .box { border: 0; }",
           ".shell .box { border-color: transparent; }",
           ".loose .box { border: none; }",
           ".box { border: 1px solid transparent; }",
-          ".palette-input input { border-color: transparent; }",
+          ".compose-sheet > .richtext { border-color: transparent; }",
         ],
       ),
-    ).toEqual([
-      `${SHEET}: .loose .box draws no edge of its own and names no field or ruled row around it`,
-      `${SHEET}: .box draws no edge of its own and names no field or ruled row around it`,
-    ]);
+    ).toEqual([bare(".loose .box"), bare(".box")]);
   });
 
-  it("passes no edge on a row ruled whole in the control edge, at rest", () => {
-    const bare = (row: string) => `.${row} .box { border-color: transparent; }`;
+  it("passes no edge right on a row ruled solid in the control edge, at rest", () => {
+    const control = "1px solid var(--borderControl)";
     const mixed = "color-mix(in srgb, var(--borderControl) 50%, transparent)";
+    const rows = [
+      `.ruled { border-bottom: ${control}; }`,
+      `.boxed { border: ${control}; }`,
+      `.foot { border-block-end: ${control}; }`,
+      `.faint { border-bottom: ${faint}; }`,
+      `.mixed { border-bottom: 1px solid ${mixed}; }`,
+      `.lit:hover { border-bottom: ${control}; }`,
+      `.top { border-top: ${control}; }`,
+      ".legend { border-block-start: 2px dashed var(--borderControl); }",
+      ".dashed { border-bottom: 1px dashed var(--borderControl); }",
+    ];
+    const passing = [
+      ".ruled .box",
+      ".boxed > .box",
+      ".foot .box",
+      ".page .ruled .box",
+      ".ruled > .wrap .box",
+    ];
+    const failing = [
+      ".faint .box",
+      ".mixed .box",
+      ".lit .box",
+      ".top .box",
+      ".legend .box",
+      ".dashed .box",
+      ".ruled .x .y .box",
+      ".ruled + .box",
+    ];
     expect(
       findings(markup('<input className="box" />'), [
-        ".ruled { border-bottom: 1px solid var(--borderControl); }",
-        `.faint { border-bottom: ${faint}; }`,
-        `.mixed { border-bottom: 1px solid ${mixed}; }`,
-        ".lit:hover { border-bottom: 1px solid var(--borderControl); }",
-        ...["ruled", "faint", "mixed", "lit"].map(bare),
+        ...rows,
+        ...[...passing, ...failing].map(
+          (selector) => `${selector} { border-color: transparent; }`,
+        ),
       ]),
-    ).toEqual(
-      ["faint", "mixed", "lit"].map(
-        (row) =>
-          `${SHEET}: .${row} .box draws no edge of its own and names no field or ruled row around it`,
-      ),
-    );
+    ).toEqual(failing.map(bare));
+  });
+
+  it("keeps a row's or a field's context with it", () => {
+    expect(
+      findings(markup('<input className="box" />'), [
+        ".bar[data-x] .row { border-bottom: 1px solid var(--borderControl); }",
+        ".bar[data-x] .row .box { border: 0; }",
+        ".row .box { border: 0; }",
+        ".bar[data-x] .field:focus-within { border-color: var(--accent); }",
+        ".bar[data-x] .field > .box { border: 0; }",
+        ".field > .box { border: 0; }",
+        `.field { border: ${faint}; }`,
+      ]),
+    ).toEqual([bare(".row .box"), bare(".field > .box")]);
+  });
+
+  it("passes a field that clears its sides and rules its foot in the control edge", () => {
+    expect(
+      findings(markup('<input className="box" />'), [
+        ".ruled .box { border-color: transparent; border-block-end-color: var(--borderControl); }",
+        ".faint .box { border-color: transparent; border-block-end-color: var(--borderSubtle); }",
+      ]),
+    ).toEqual([
+      bare(".faint .box"),
+      `${SHEET}: .faint .box draws var(--borderSubtle)`,
+    ]);
   });
 
   it("leaves out a button, a lit tile, a field's states and a shared class", () => {

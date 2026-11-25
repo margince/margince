@@ -66,6 +66,10 @@ describe("focus", () => {
         ".x:focus { box-shadow: var(--focus-field-ai); }",
       ),
     ).toEqual([]);
+    const stacked = "0 0 0 4px red, var(--focus-field)";
+    expect(
+      handSpelledGlows("a.css", `.x:focus { box-shadow: ${stacked}; }`),
+    ).toEqual([`a.css: box-shadow: ${stacked}`]);
   });
 });
 

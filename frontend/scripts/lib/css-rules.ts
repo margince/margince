@@ -239,6 +239,8 @@ export function compounds(selector: string): string[] {
   return chain(selector).compounds;
 }
 
+export const combinators = (selector: string) => chain(selector).combinators;
+
 const MAX_ALTERNATIVES = 256;
 
 type Alternatives = { selectors: readonly string[]; everyCombination: boolean };

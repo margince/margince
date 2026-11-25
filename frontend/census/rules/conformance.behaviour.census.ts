@@ -160,7 +160,7 @@ export function handSpelledGlows(rel: string, text: string): string[] {
       .map((match) => match[1].trim())
       .filter((value) => !/^(none|0)$/.test(value))
       .filter(
-        (value) => !/var\(--focus-(glow|field)(-danger|-ai)?\)/.test(value),
+        (value) => !/^var\(--focus-(glow|field)(-danger|-ai)?\)$/.test(value),
       )
       .map((value) => `${rel}: box-shadow: ${value}`),
   );

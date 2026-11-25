@@ -9,6 +9,7 @@ import ts from "typescript";
 import {
   alternativesOf,
   classesOf,
+  combinators,
   compounds,
   declaredValues,
   type Rule,
@@ -25,13 +26,10 @@ import {
   sheetRules,
 } from "../tree";
 
-// Fields that rest with no edge inside a container another rule draws. Each
-// is named with why until the owner settles it.
+// Fields that rest with no edge inside a container no rule here can read.
 const EDGELESS: Readonly<Record<string, string>> = {
-  ".compose-sheet > .richtext": "the message body fills the composer's sheet",
-  ".palette-input input": "the palette's bar is the field the dialog opens on",
-  ".input-icon-flush .input":
-    "the palette's bar is the field the dialog opens on",
+  ".compose-sheet > .richtext":
+    "the message body fills the composer's window, whose frame is its edge",
 };
 
 const ENTRY_TAGS = new Set(["input", "textarea", "select"]);
@@ -56,6 +54,10 @@ const EDGES = ["border", ...SIDES.map((side) => `border-${side}`)].flatMap(
 );
 const CONTROL = "var(--borderControl)";
 const DRAWN = /^\d+(?:\.\d+)?px\s+(?:solid|dashed|dotted)\s+(.+)$/;
+// A row rules a bare field when its rest rule draws a solid line in the
+// control token all round it or along its foot.
+const FOOT = ["border", "border-bottom", "border-block-end"];
+const RULED = /^\d+(?:\.\d+)?px\s+solid\s+var\(--borderControl\)$/;
 const RING =
   /^inset\s+0(?:px)?\s+0(?:px)?\s+0(?:px)?\s+\d+(?:\.\d+)?px\s+(.+)$/;
 
@@ -67,6 +69,33 @@ const noEdge = (value: string) =>
   DRAWN.exec(value)?.[1] === "transparent";
 const ownClasses = (compound: string) =>
   [...classesOf(compound)].filter((name) => !STATE_CLASS.test(name));
+const atRest = (subject: string) =>
+  !NOT_REST.test(subject.replace(NEGATED, ""));
+
+// A run of compounds written back as one selector, so a field's ancestors can
+// be matched against a frame's whole selector, context and all.
+const runOf = (parts: readonly string[], links: readonly string[]) =>
+  parts.reduce(
+    (out, part, at) => `${out}${links[at - 1] === ">" ? " > " : " "}${part}`,
+  );
+// Every run of a selector's compounds that ends at compound `end`.
+const runsEndingAt = (selector: string, end: number) => {
+  const [parts, links] = [compounds(selector), combinators(selector)];
+  return parts
+    .slice(0, end + 1)
+    .map((_, start) =>
+      runOf(parts.slice(start, end + 1), links.slice(start, end)),
+    );
+};
+
+type Frames = {
+  /** Classes a field carries wherever it is written. */
+  fields: ReadonlySet<string>;
+  /** Whole selectors of fields a focus rule names only inside some context. */
+  framed: ReadonlySet<string>;
+  /** Whole selectors of rows ruled in the control token. */
+  rows: ReadonlySet<string>;
+};
 
 function isEntry(element: ts.JsxOpeningLikeElement): boolean {
   const said = (name: string) =>
@@ -136,19 +165,29 @@ const litLikeHover = (rule: Rule, subject: string, rules: readonly Rule[]) => {
 const subjectsOf = (rule: Rule) => alternativesOf(rule.selector).map(subjectOf);
 
 // The classes a field carries. One is written only on a field, or it names a
-// box that recolours its edge where the caret is. A class compounded with a
-// field class joins them, round after round, until none does.
+// box that recolours its edge where the caret is. A box lit only inside some
+// context is a field there alone, so its whole selector is kept instead. A
+// class compounded with a field class joins them, round after round.
 function fieldClasses(rules: readonly Rule[], entry: ReadonlySet<string>) {
   const fields = new Set(entry);
+  const framed = new Set<string>();
   for (const rule of rules) {
-    for (const subject of subjectsOf(rule)) {
+    for (const alternative of alternativesOf(rule.selector)) {
+      const subject = subjectOf(alternative);
       const caret = CARET_FOCUS.test(subject.replace(NEGATED, ""));
       if (
-        caret &&
-        edgesOf(rule).length > 0 &&
-        !litLikeHover(rule, subject, rules)
+        !caret ||
+        edgesOf(rule).length === 0 ||
+        litLikeHover(rule, subject, rules)
       ) {
+        continue;
+      }
+      const parts = compounds(alternative);
+      if (parts.length === 1) {
         for (const name of ownClasses(subject)) fields.add(name);
+      } else {
+        const unlit = alternative.replace(CARET_FOCUS, "");
+        framed.add(runsEndingAt(unlit, parts.length - 1)[0]);
       }
     }
   }
@@ -164,7 +203,7 @@ function fieldClasses(rules: readonly Rule[], entry: ReadonlySet<string>) {
       }
     }
   }
-  return fields;
+  return { fields, framed };
 }
 
 // What an edge declaration draws in, or undefined when it draws nothing.
@@ -184,22 +223,45 @@ const ringsOf = (rule: Rule) => [
   }),
 ];
 
-function findingsOf(
-  rule: Rule,
-  alternative: string,
-  framing: ReadonlySet<string>,
-): string[] {
+// A field inside another field's frame, at any depth; or on a ruled row: right
+// inside it, or in a child the row holds directly.
+function enclosed(alternative: string, { fields, framed, rows }: Frames) {
+  const parts = compounds(alternative);
+  const links = combinators(alternative);
+  const end = parts.length - 2;
+  const ancestors = parts.slice(0, -1);
+  if (
+    ancestors.some((compound) =>
+      ownClasses(compound).some((name) => fields.has(name)),
+    ) ||
+    ancestors.some((_, at) =>
+      runsEndingAt(alternative, at).some((run) => framed.has(run)),
+    )
+  ) {
+    return true;
+  }
+  if (end < 0 || ![" ", ">"].includes(links[end])) return false;
+  const near = links[end - 1] === ">" ? [end, end - 1] : [end];
+  return near.some((at) =>
+    runsEndingAt(alternative, at).some((run) => rows.has(run)),
+  );
+}
+
+function findingsOf(rule: Rule, alternative: string, frames: Frames): string[] {
   const where = `${relative(rule)}: ${alternative}`;
-  const shelled = compounds(alternative)
-    .slice(0, -1)
-    .some((compound) => ownClasses(compound).some((name) => framing.has(name)));
   const edges = EDGES.flatMap((property) =>
     declaredValues(rule.body, property).map((value) => ({ property, value })),
+  );
+  // A field may clear its other sides and draw one in the control token.
+  const drawsOwn = edges.some(
+    ({ property, value }) => inkOf(property, value) === CONTROL,
   );
   return [
     ...edges.flatMap(({ property, value }) => {
       if (noEdge(value)) {
-        return shelled || alternative in EDGELESS
+        return drawsOwn ||
+          alternative in EDGELESS ||
+          enclosed(alternative, frames)
           ? []
           : [
               `${where} draws no edge of its own and names no field or ruled row around it`,
@@ -215,34 +277,36 @@ function findingsOf(
   ];
 }
 
-// Classes of a box whose rest rule draws an edge in --borderControl: a bare
-// field on such a row has its edge drawn for it.
-const controlRows = (rules: readonly Rule[]) =>
+const ruledRows = (rules: readonly Rule[]) =>
   new Set(
     rules.flatMap((rule) =>
-      EDGES.some((property) =>
-        declaredValues(rule.body, property).some(
-          (value) => inkOf(property, value) === CONTROL,
-        ),
+      FOOT.some((property) =>
+        declaredValues(rule.body, property).some((value) => RULED.test(value)),
       )
-        ? subjectsOf(rule)
-            .filter((subject) => !NOT_REST.test(subject.replace(NEGATED, "")))
-            .flatMap(ownClasses)
+        ? alternativesOf(rule.selector)
+            .filter((alternative) => atRest(subjectOf(alternative)))
+            .map(
+              (alternative) =>
+                runsEndingAt(alternative, compounds(alternative).length - 1)[0],
+            )
         : [],
     ),
   );
 
 // A field's rest rule that draws its edge in anything but --borderControl.
-function weakEdges(rules: readonly Rule[], fields: ReadonlySet<string>) {
-  const framing = new Set([...fields, ...controlRows(rules)]);
+function weakEdges(
+  rules: readonly Rule[],
+  { fields, framed }: Omit<Frames, "rows">,
+) {
+  const frames = { fields, framed, rows: ruledRows(rules) };
   return rules.flatMap((rule) =>
     alternativesOf(rule.selector).flatMap((alternative) => {
       const subject = subjectOf(alternative);
       const field =
         (ENTRY_ELEMENT.test(subject) && !TOGGLE.test(subject)) ||
         ownClasses(subject).some((name) => fields.has(name));
-      if (!field || NOT_REST.test(subject.replace(NEGATED, ""))) return [];
-      return findingsOf(rule, alternative, framing);
+      if (!field || !atRest(subject)) return [];
+      return findingsOf(rule, alternative, frames);
     }),
   );
 }
@@ -256,7 +320,7 @@ const fieldsOf = (corpus: readonly CensusFile[]) => {
   const rules = sheetRules(corpus.filter(isAppSheet));
   return {
     rules,
-    fields: fieldClasses(rules, entryClasses(corpus.filter(isAppModule))),
+    ...fieldClasses(rules, entryClasses(corpus.filter(isAppModule))),
   };
 };
 
@@ -273,9 +337,9 @@ export const rule: CensusRule = {
       .map((name) => `.${name} no longer reads as a field`);
   },
   across: (corpus) => {
-    const { rules, fields } = fieldsOf(corpus);
-    return weakEdges(rules, fields);
+    const { rules, fields, framed } = fieldsOf(corpus);
+    return weakEdges(rules, { fields, framed });
   },
   advice:
-    "draw a text field's resting edge in var(--borderControl), the token that holds 1.4.11's 3:1; a field with no edge sits inside a field or a row ruled in that token",
+    "draw a text field's resting edge in var(--borderControl), the token that holds 1.4.11's 3:1; a field with no edge sits inside a field, or right inside a row whose rest rule draws a solid line in that token round it or at its foot",
 };

@@ -88,6 +88,10 @@
 .ob-gate-field:has([aria-invalid="true"]):focus-within {
   box-shadow: var(--focus-field-danger);
 }
+.ob-gate-field:has(:disabled) {
+  background: var(--bgInset);
+  border-color: var(--borderStrong);
+}
 /* The shell above owns the box and the leading inset, so this owns the rest of
    the inset and the type — the field's own, not the engine's. */
 .ob-gate-field .ob-gate-input {

@@ -906,8 +906,8 @@
   border-radius: 50%;
   background: var(--accent);
 }
-/* Keyboard focus reads an accent-token ring (matches .input/.textarea) rather
- * than the browser's off-palette native outline. */
+/* Keyboard focus reads the house ring (--focus-ring-forced) rather than the
+ * browser's off-palette native outline. */
 .segmented button:focus-visible {
   outline: var(--focus-ring-forced);
   outline-offset: 2px;
@@ -1597,7 +1597,8 @@ span.error-line {
 /* The field whose container draws the chrome (SearchField `flush`): the ⌘K
    palette's bar has its own ground, inset and bottom rule, so a bordered field
    nested inside it reads as a box in a box. The magnifier stays — it is the
-   affordance, not the chrome — and moves to the bar's own left inset. */
+   affordance, not the chrome — and moves to the bar's own left inset. The
+   container clears the field's edge, since only its sheet knows it rules one. */
 .input-icon-flush {
   display: flex;
   flex: 1;
@@ -1607,7 +1608,6 @@ span.error-line {
   left: 0;
 }
 .input-icon-flush .input {
-  border: 0;
   background: transparent;
   box-shadow: none;
   border-radius: 0;

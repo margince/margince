@@ -119,6 +119,11 @@
   .field:has([aria-invalid="true"]):focus-within {
   box-shadow: var(--focus-field-danger);
 }
+.filter-bar[data-labels="inside"]
+  .field:has(:disabled, [aria-disabled="true"]) {
+  background: var(--bgInset);
+  border-color: var(--borderStrong);
+}
 
 /* On a phone the dials own the line: a labelled field spans the bar, so its
    control starts and ends on the card's edges instead of at its own content

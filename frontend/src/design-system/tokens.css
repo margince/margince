@@ -756,8 +756,8 @@
    * --focus-glow-danger is one, not a second spelling. Six rules hand-spelled
    * it before it existed. */
   --focus-glow-ai: 0 0 0 3px var(--aiMed);
-  /* A focused field: the 1px border plus a 1px ring in one colour, so the edge
-     doubles in width and focus does not rest on hue. The glow sits outside it. */
+  /* A focused field: every user draws a 1px border, and this ring doubles it in
+     one colour, so focus does not rest on hue. The glow sits outside it. */
   --focus-field: 0 0 0 1px var(--focusEdge), var(--focus-glow);
   --focus-field-danger: 0 0 0 1px var(--danger), var(--focus-glow-danger);
   --focus-field-ai: 0 0 0 1px var(--aiText), var(--focus-glow-ai);
