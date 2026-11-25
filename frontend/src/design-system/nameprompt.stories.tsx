@@ -3,7 +3,7 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { Bookmark } from "lucide-react";
-import { userEvent, within } from "storybook/test";
+import { expect, userEvent, waitFor, within } from "storybook/test";
 import { LocaleProvider } from "../i18n";
 import { NamePrompt } from "./nameprompt";
 
@@ -87,5 +87,28 @@ export const Refused: Story = {
       await page.findByRole("button", { name: "Save as list" }),
     );
     await userEvent.type(await page.findByLabelText("List name"), "Anns");
+  },
+};
+
+export const NameTaken: Story = {
+  // The name itself was refused: the field says so until the name changes.
+  args: {
+    ...shared,
+    maxLength: 120,
+    nameProblem: "A list with this name already exists.",
+  },
+  play: async ({ canvasElement }) => {
+    const page = within(canvasElement.ownerDocument.body);
+    await userEvent.click(
+      await page.findByRole("button", { name: "Save as list" }),
+    );
+    const field = await page.findByLabelText("List name");
+    await expect(field).toHaveAttribute("data-character-limit", "120");
+    await userEvent.type(field, "Anns{Enter}");
+    await waitFor(() =>
+      expect(field).toHaveAccessibleDescription(
+        "A list with this name already exists.",
+      ),
+    );
   },
 };

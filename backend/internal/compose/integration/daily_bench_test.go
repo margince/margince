@@ -43,6 +43,7 @@ func TestDailyUseBudgets(t *testing.T) {
 
 	var seats Seats
 	var corpus DailyCorpus
+	var history dailyHistory
 	var made DailyApprovals
 	var aiCalls int
 	var rows []dailyRow
@@ -61,9 +62,11 @@ func TestDailyUseBudgets(t *testing.T) {
 
 	step("seed", func(t *testing.T) {
 		start := time.Now()
-		corpus = seedDailyCorpus(t, e, seats, scale)
+		corpus, history = seedDailyCorpusWithHistory(t, e, seats, scale)
 		t.Logf("seed: corpus at scale %g in %s; flows open deals %q and companies %q",
 			scale, time.Since(start).Round(time.Second), corpus.DealNames, corpus.CompanyNames)
+		t.Logf("seed: longest histories %+v; the history flows open company %q, deal %q and a thread of %d mails",
+			history.Longest, history.CompanyName, history.DealName, history.Sizes.Thread)
 		assertDailyContactScope(t, e, seats, corpus)
 	})
 
@@ -87,6 +90,9 @@ func TestDailyUseBudgets(t *testing.T) {
 			in.EvaluateArgs = dailyEvaluateArgs(t, e, seat)
 			for _, f := range dailyFlows {
 				rows = append(rows, runDailyFlow(t, e, f, in)...)
+			}
+			for _, f := range dailyHistoryFlows {
+				rows = append(rows, runDailyFlow(t, e, f, history.input(in))...)
 			}
 			logWorklistStages(t, seat.Role, stagesBefore)
 		}
@@ -124,6 +130,7 @@ func TestDailyUseBudgets(t *testing.T) {
 	}
 	record := newPerfRecord("bench-daily", benchPostgresVersion(e.Owner), measurements)
 	record.Corpus = dailyCorpusFacts(scale, seats)
+	history.addTo(record.Corpus)
 	record.Corpus.AICalls = aiCalls
 	record.Corpus.PendingApprovals, record.Corpus.AppliedApprovals, record.Corpus.ExpiredApprovals = made.Pending, made.Applied, made.Expired
 	record.Advisories = DailyAdvisories(results, scale)
