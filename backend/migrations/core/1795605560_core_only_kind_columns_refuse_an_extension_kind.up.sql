@@ -10,9 +10,11 @@
 -- decided.
 --
 -- dedupe_candidate loses its extension branch: the two id columns, their shape
--- CHECK and their index. No code reads or writes them.
+-- CHECK and their index. No code reads or writes them. They are dropped only
+-- when no row holds an extension pair, so no stored id is lost.
 --
--- The CHECKs are NOT VALID, and the next migration validates them.
+-- The CHECKs are NOT VALID, so they refuse new rows at once and leave stored
+-- ones in place. The next migration validates each one that no row breaks.
 SET LOCAL lock_timeout = '3s';
 
 ALTER TABLE attachment DROP CONSTRAINT IF EXISTS attachment_entity_type_check;
@@ -37,11 +39,18 @@ ALTER TABLE signal
         entity_type IS NULL OR entity_type IN ('deal', 'company', 'contact', 'project')
     ) NOT VALID;
 
-DROP INDEX IF EXISTS uq_dedupe_candidate_pair_ext;
-ALTER TABLE dedupe_candidate DROP CONSTRAINT IF EXISTS dedupe_candidate_ext_shape;
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM dedupe_candidate WHERE left_ext_id IS NOT NULL OR right_ext_id IS NOT NULL
+    ) THEN
+        DROP INDEX IF EXISTS uq_dedupe_candidate_pair_ext;
+        ALTER TABLE dedupe_candidate DROP CONSTRAINT IF EXISTS dedupe_candidate_ext_shape;
+        ALTER TABLE dedupe_candidate DROP COLUMN IF EXISTS left_ext_id, DROP COLUMN IF EXISTS right_ext_id;
+    END IF;
+END $$;
 ALTER TABLE dedupe_candidate DROP CONSTRAINT IF EXISTS dedupe_candidate_entity_type_check;
 ALTER TABLE dedupe_candidate DROP CONSTRAINT IF EXISTS dedupe_candidate_shape;
-ALTER TABLE dedupe_candidate DROP COLUMN IF EXISTS left_ext_id, DROP COLUMN IF EXISTS right_ext_id;
 ALTER TABLE dedupe_candidate
     ADD CONSTRAINT dedupe_candidate_entity_type_check CHECK (entity_type IN ('contact', 'company', 'lead')) NOT VALID,
     ADD CONSTRAINT dedupe_candidate_shape CHECK (

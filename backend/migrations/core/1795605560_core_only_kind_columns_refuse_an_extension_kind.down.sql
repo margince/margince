@@ -2,7 +2,7 @@
 -- SPDX-FileCopyrightText: 2026 Gradion
 
 -- The six columns accept an extension kind again, and dedupe_candidate gets its
--- extension branch back, empty. No row held an extension kind, so none is lost.
+-- extension branch back. A pair the up migration kept keeps its ids.
 SET LOCAL lock_timeout = '3s';
 
 ALTER TABLE attachment DROP CONSTRAINT IF EXISTS attachment_entity_type_check;
@@ -43,6 +43,7 @@ ALTER TABLE signal
 
 ALTER TABLE dedupe_candidate DROP CONSTRAINT IF EXISTS dedupe_candidate_entity_type_check;
 ALTER TABLE dedupe_candidate DROP CONSTRAINT IF EXISTS dedupe_candidate_shape;
+ALTER TABLE dedupe_candidate DROP CONSTRAINT IF EXISTS dedupe_candidate_ext_shape;
 ALTER TABLE dedupe_candidate ADD COLUMN IF NOT EXISTS left_ext_id uuid, ADD COLUMN IF NOT EXISTS right_ext_id uuid;
 ALTER TABLE dedupe_candidate
     ADD CONSTRAINT dedupe_candidate_entity_type_check CHECK (

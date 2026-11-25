@@ -6,10 +6,13 @@ package search
 import (
 	"context"
 	"slices"
+	"strings"
 	"testing"
 
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/ports/extregistrytest"
+	"github.com/margince/margince/backend/internal/shared/ports/model"
 	"github.com/margince/margince/backend/internal/shared/ports/recordkinds"
 	"github.com/margince/margince/backend/pkg/extension"
 )
@@ -63,5 +66,26 @@ func TestASearchOverEveryTypeLeavesOutAKindTheCallerMayNotRead(t *testing.T) {
 	}
 	if types := requestedTypes(reader("ext_alpha_visit"), in); !slices.Contains(types, "ext:alpha:visit") {
 		t.Errorf("types = %v, want the readable kind in", types)
+	}
+}
+
+// boundPanickingEmbedder is a bound lane whose model call must not happen.
+type boundPanickingEmbedder struct{}
+
+func (boundPanickingEmbedder) EmbedIdentity() (string, int) { return "test/embed@3", 3 }
+
+func (boundPanickingEmbedder) Embed(context.Context, model.EmbedRequest) (model.Embeddings, error) {
+	panic("Embed must not be called for a kind the embedding table refuses")
+}
+
+func TestAReadableExtensionKindIsRefusedBeforeAnyEmbeddingIsPaidFor(t *testing.T) {
+	registerAlphaVisit(t)
+	ctx := reader("ext_alpha_visit")
+	if !knownEntity(ctx, "ext:alpha:visit") {
+		t.Fatal("the fixture kind is not readable, so the refusal below would prove nothing")
+	}
+	_, err := NewStore(nil).UpsertEmbedding(ctx, "ext:alpha:visit", ids.NewV7(), "a visit", boundPanickingEmbedder{})
+	if err == nil || !strings.Contains(err.Error(), "unembeddable entity type") {
+		t.Fatalf("err = %v, want the kind refused as unembeddable before the stored stamp is read", err)
 	}
 }
