@@ -306,8 +306,11 @@ func TestAJoinLeavesTheLinksTheLaterWritersNeed(t *testing.T) {
 	mail := emailCC("sender@partner.example", "Sender", captureOwner, strings.Join(copied, ", "), "crowd@partner.example")
 	sync(t, mail)
 	before := len(contactsFiledUnder(t, e, "crowd@partner.example"))
+	if before != 22 {
+		t.Fatalf("the first capture filed %d contact links, want 22, so the join never meets the reservation", before)
+	}
 	syncSecond(t, mail)
-	if after := len(contactsFiledUnder(t, e, "crowd@partner.example")); after != before || after > 22 {
+	if after := len(contactsFiledUnder(t, e, "crowd@partner.example")); after != before {
 		t.Fatalf("the join took the activity from %d to %d contact links; it must leave the three later writers their room", before, after)
 	}
 }
