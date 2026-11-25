@@ -291,7 +291,7 @@ type FrozenValue struct {
 }
 
 // Freeze is why a setting cannot change: the owning module's sentence, and the
-// facts it was worded from, for a client that words the refusal itself.
+// facts a client words the refusal from.
 type Freeze struct {
 	Reason string
 	Params map[string]string

@@ -13,10 +13,8 @@ import { BasisAct } from "./basis-act";
 import { initialConversationState } from "./conversation-machine";
 import type { ConversationState } from "./conversation-types";
 
-// The basis, asked right after the company is confirmed: base currency and
-// reporting timezone, prefilled from the installation, with the currency shown
-// locked once a deal has frozen it, and a refused save with each refusal
-// beside its field.
+// The basis step: base currency and reporting timezone, prefilled from the
+// installation. Stories cover a locked currency and a refused save.
 
 const asking: ConversationState = {
   ...initialConversationState,

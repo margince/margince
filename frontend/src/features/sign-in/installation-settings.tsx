@@ -236,11 +236,8 @@ function InstallationSettingsForm({
   const { locale } = useLocale();
   const toast = useToast();
   const [editing, setEditing] = useState<EditedFact | null>(null);
-  // The save's only visible answer was the button going disabled, because the
-  // draft now matched the server. A control losing its affordance reads as the
-  // form having given up, not as the write having landed — and on this form the
-  // patch is SPARSE, so an operator who changed one field of three had no way to
-  // tell which of them the installation now holds.
+  // The toast says the sparse write landed. A save button that only goes
+  // disabled reads as the form giving up.
   const update = useUpdateInstallationSettings(() => {
     toast.show(t("settings.saved"));
     setEditing(null);
@@ -251,16 +248,9 @@ function InstallationSettingsForm({
   const [draft, setDraft] = useState(settings);
   const seeded = useRef(serverSignature(settings));
 
-  // Re-seed when the server answers with DIFFERENT values than the draft was
-  // built from — another admin's change arriving — and only then.
-  //
-  // The identity of `settings` is not that question. Every refetch mints a new
-  // object, and `refetchOnWindowFocus` means a reader who tabs away to look up
-  // their IANA zone and tabs back triggers one: the values come back
-  // unchanged, the object does not, and the effect used to throw away
-  // everything they had typed. Comparing what the server SAID, rather than
-  // which object said it, leaves an unsaved draft alone across every refetch
-  // that changes nothing.
+  // Re-seed only when the server's values differ from the draft's source. A
+  // focus refetch mints a new object with the same values, and must keep the
+  // reader's unsaved draft.
   useEffect(() => {
     const signature = serverSignature(settings);
     if (seeded.current === signature) {
@@ -280,16 +270,8 @@ function InstallationSettingsForm({
   const describe = (control: FieldControl): string | undefined =>
     describedByIds(control["aria-describedby"], !canManage && denialId);
 
-  // The server's per-field assertions, put on the FIELDS. A 422 on this form
-  // names which of the three values it refused — an unknown IANA zone, a
-  // currency that is not a currency — and until now all of that arrived as one
-  // paragraph under the last field, so a reader had to guess which input to fix.
-  // `Field`'s `error` slot has existed the whole time; nothing routed anything
-  // into it, on any settings page.
-  //
-  // Keyed by the wire field name because that is what the server asserts. The
-  // patch is sparse and built from the same names, so the two cannot drift
-  // without the request itself being wrong.
+  // A 422 names the value it refused, so each sentence goes on its field,
+  // keyed by the wire name the sparse patch also sends.
   const labels = factLabels(t, locale, part);
   const [faults, faultsRoot] = useFieldFaults();
   const refused = new Map(
