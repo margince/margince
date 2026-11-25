@@ -35,10 +35,13 @@ func (s *Sink) joinActivityTx(
 
 // ladderSuppressedClause holds for activity a when the counterparty ladder
 // suppressed its message. Such a message is filed under nobody, whichever
-// mailbox delivers it.
-const ladderSuppressedClause = `EXISTS (SELECT 1 FROM capture_trace t
+// mailbox delivers it. The trace says so for the message itself. The
+// disposition ledger still says so for its counterparty after the trace sweep.
+const ladderSuppressedClause = `(EXISTS (SELECT 1 FROM capture_trace t
 	WHERE t.source_system = a.source_system AND t.source_id = a.source_id
-	  AND t.stage = 'tier_ladder' AND t.outcome = 'suppressed')`
+	  AND t.stage = 'tier_ladder' AND t.outcome = 'suppressed')
+ OR EXISTS (SELECT 1 FROM capture_pending_counterparty d
+	WHERE d.email = lower(btrim(a.counterparty_email)) AND d.status = 'suppressed'))`
 
 // seatHoldsImportTx answers whether the seat has an import row on the activity.
 func seatHoldsImportTx(ctx context.Context, tx pgx.Tx, id ids.ActivityID, seat ids.UUID) (bool, error) {
@@ -83,8 +86,12 @@ func (s *Sink) fileJoinedMailForSeatTx(
 	if err != nil {
 		return err
 	}
+	var filed int
+	if err := tx.QueryRow(ctx, `SELECT count(*) FROM activity_link WHERE activity_id = $1`, id).Scan(&filed); err != nil {
+		return fmt.Errorf("capture: counting a joined mail's links: %w", err)
+	}
 	_, err = fileUnderRecords(tx, records, participantFiling{
-		decider: ctx, budget: laterLinkReservation, private: private, write: insertParticipantLink(ctx, tx, id),
+		decider: ctx, budget: max(maxDerivedMeetingLinks-filed, 0), private: private, write: insertParticipantLink(ctx, tx, id),
 	})
 	return err
 }
