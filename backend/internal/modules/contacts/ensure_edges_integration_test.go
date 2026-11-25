@@ -20,6 +20,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/platform/owndomain"
+	"github.com/margince/margince/backend/internal/shared/kernel/correspondence"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -42,7 +43,7 @@ func (e *dedupeEnv) ensureInput(ctx context.Context, t *testing.T, email, displa
 			INSERT INTO activity_participant (activity_id, role, address, user_id, address_domain_folded)
 			SELECT $1::uuid, 'from', $2::text, NULL::uuid, $4::text
 			UNION ALL SELECT $1::uuid, 'to', lower(u.email), u.id, u.email_domain_folded FROM app_user u WHERE u.id = $3`,
-			activityID, email, e.rep, owndomain.StoredOfAddress(email))
+			activityID, correspondence.Fold(email), e.rep, owndomain.StoredOfAddress(email))
 		return err
 	}); err != nil {
 		t.Fatal(err)
