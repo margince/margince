@@ -4,21 +4,25 @@
 // A Button's label goes to the start edge through `align="start"` in base.css.
 // A screen rule that does the same drifts: `left` for `start`, or text moved
 // while the flex content stays centred.
-// A rule is a Button's when a compound names `.btn`, a class handed to a
-// `<Button>`, or `button`. A compound only before `+` or `~` is a sibling.
+// A rule is a Button's when a compound names a class Button renders on its
+// `<button>`, a class handed to a `<Button>`, or `button`. A compound only
+// before `+` or `~` is a sibling.
 
+import ts from "typescript";
 import {
   alternativesOf,
   classesOf,
   compounds,
   splitTopLevel,
 } from "../../scripts/lib/css-rules";
+import { faceClass } from "../../src/design-system/button";
 import { classNamesOn } from "../../src/testing/classnames";
 import { rulesIn } from "../../src/testing/css";
 import { type CensusFile, type CensusRule, isAppSheet } from "../tree";
 import { ownDeclarations, selectorsOf } from "./badge-spelling.census";
 
 const homeSheet = "src/design-system/base.css";
+const buttonModule = "src/design-system/button.tsx";
 
 const JUSTIFY_START = new Set(["flex-start", "start", "left"]);
 const TEXT_START = new Set(["left", "start"]);
@@ -109,7 +113,7 @@ export function alignedIn(
       .filter((selector) => selectsButton(selector, buttonClasses))
       .flatMap((selector) =>
         declarations.map((one) => ({
-          key: `${rel} ${selector}`,
+          key: `${rel} ${selector} ${one.property}`,
           says: `${rel}:${one.line} ${selector} { ${one.property}: ${one.value} }`,
           left: /\bleft\b/i.test(one.value),
         })),
@@ -117,28 +121,77 @@ export function alignedIn(
   });
 }
 
-/** `btn`, and every class the shipped markup hands a `<Button>`. */
-export function buttonClassesIn(modules: readonly CensusFile[]): Set<string> {
-  return new Set([
-    "btn",
-    ...modules.flatMap((file) =>
-      file.source
-        ? classNamesOn(file.source, "Button").map(({ name }) => name)
-        : [],
-    ),
-  ]);
+type FaceVariant = Parameters<typeof faceClass>[0];
+
+/** The string literals of `faceClass`'s parameter type, aliases followed. */
+export function faceVariantsIn(source: ts.SourceFile): string[] {
+  const aliases = new Map<string, ts.TypeNode>();
+  let parameter: ts.TypeNode | undefined;
+  for (const statement of source.statements) {
+    if (ts.isTypeAliasDeclaration(statement)) {
+      aliases.set(statement.name.text, statement.type);
+    } else if (
+      ts.isFunctionDeclaration(statement) &&
+      statement.name?.text === "faceClass"
+    ) {
+      parameter = statement.parameters[0]?.type;
+    }
+  }
+  const literals = (node: ts.TypeNode): string[] => {
+    if (ts.isUnionTypeNode(node)) return node.types.flatMap(literals);
+    if (ts.isLiteralTypeNode(node) && ts.isStringLiteral(node.literal)) {
+      return [node.literal.text];
+    }
+    const alias = ts.isTypeReferenceNode(node)
+      ? aliases.get(node.typeName.getText(source))
+      : undefined;
+    return alias ? literals(alias) : [];
+  };
+  return parameter ? [...new Set(literals(parameter))] : [];
 }
 
-/** The findings BASELINE does not excuse, and its entries nothing matches. */
+/** What Button renders on its `<button>`: its own classes and every variant's face. */
+export function ownClassesIn(source: ts.SourceFile): string[] {
+  const variants = new Set(faceVariantsIn(source));
+  const isVariant = (name: string): name is FaceVariant => variants.has(name);
+  return [
+    ...classNamesOn(source, "button").map(({ name }) => name),
+    ...[...variants]
+      .filter(isVariant)
+      .flatMap((variant) => faceClass(variant).split(" ")),
+  ];
+}
+
+/** The classes on a Button: its own, and every class the markup hands it. */
+export function buttonClassesIn(modules: readonly CensusFile[]): Set<string> {
+  return new Set(
+    modules.flatMap((file) => {
+      if (!file.source) return [];
+      const handed = classNamesOn(file.source, "Button").map(
+        ({ name }) => name,
+      );
+      return file.rel === buttonModule
+        ? [...ownClassesIn(file.source), ...handed]
+        : handed;
+    }),
+  );
+}
+
+/** The findings BASELINE does not excuse, and its entries nothing matches.
+ * An entry excuses one declaration, so a second one under its key is a finding. */
 export function judged(
   found: readonly Aligned[],
   baseline: ReadonlyMap<string, string>,
 ): string[] {
   const keys = new Set(found.map((one) => one.key));
+  const excused = new Set<string>();
+  const unexcused = found.filter((one) => {
+    if (one.left || !baseline.has(one.key) || excused.has(one.key)) return true;
+    excused.add(one.key);
+    return false;
+  });
   return [
-    ...found
-      .filter((one) => one.left || !baseline.has(one.key))
-      .map((one) => one.says),
+    ...unexcused.map((one) => one.says),
     ...[...baseline.keys()]
       .filter((key) => !keys.has(key))
       .map(
@@ -148,39 +201,43 @@ export function judged(
   ];
 }
 
-// Rules that keep their own alignment, keyed by sheet and resolved selector.
-// It only shrinks: a new entry needs a reason `align="start"` cannot serve.
+// Declarations that keep their own alignment, keyed by sheet, resolved selector
+// and property. Its size is pinned in the test, so it only shrinks.
 export const BASELINE = new Map<string, string>([
   [
-    "src/design-system/atoms.css .overflow-menu-items .btn",
+    "src/design-system/atoms.css .overflow-menu-items .btn justify-content",
     "the menu's rows are whatever Buttons a caller hands it; the panel's anatomy sets them as list lines",
   ],
   [
-    "src/design-system/select.css .select-button",
+    "src/design-system/atoms.css .overflow-menu-items .btn text-align",
+    "the same list lines: a wrapped row label reads from the start edge whatever the caller passed",
+  ],
+  [
+    "src/design-system/select.css .select-button text-align",
     "a trigger whose face and chevron stand apart (space-between), which align would undo",
   ],
   [
-    "src/features/records/share.css .share-subject-row",
+    "src/features/records/share.css .share-subject-row text-align",
     "a picker row whose name and level stand apart (space-between), which align would undo",
   ],
   [
-    "src/design-system/atoms.css .recordpicker-option",
+    "src/design-system/atoms.css .recordpicker-option text-align",
     "a column whose label is centred on the block axis, which align's justify-content would move",
   ],
   [
-    "src/design-system/stageladder.css .stage-ladder-bar-step",
+    "src/design-system/stageladder.css .stage-ladder-bar-step text-align",
     "the same rule draws a span step and a Button step, a column whose cross axis holds the bar",
   ],
   [
-    "src/design-system/stageladder.css .stage-ladder-bar-step.btn",
+    "src/design-system/stageladder.css .stage-ladder-bar-step.btn text-align",
     "the Button half of the step rule above; align would set the column's block axis",
   ],
   [
-    "src/design-system/companycard.css .company-card-name > :is(a, button)",
+    "src/design-system/companycard.css .company-card-name > :is(a, button) text-align",
     "a raw button or link a caller puts in the card's title, drawn as the card's name",
   ],
   [
-    "src/features/onboarding/onboarding-conversation/conversation.css .ob-company-card-facts dd button",
+    "src/features/onboarding/onboarding-conversation/conversation.css .ob-company-card-facts dd button text-align",
     "a raw dotted-underline button inside a fact, which no Button variant draws",
   ],
 ]);
@@ -194,8 +251,10 @@ const shippedModule = (file: CensusFile) =>
 const readingOf = (corpus: readonly CensusFile[]) => {
   const buttonClasses = buttonClassesIn(corpus.filter(shippedModule));
   const sheets = corpus.filter(isAppSheet);
+  const button = corpus.find((file) => file.rel === buttonModule)?.source;
   return {
     buttonClasses,
+    variants: button ? faceVariantsIn(button) : [],
     sheets,
     found: sheets
       .filter((sheet) => sheet.rel !== homeSheet)
@@ -211,7 +270,7 @@ export const rule: CensusRule = {
   corpus: (tree) =>
     tree.files.filter((file) => isAppSheet(file) || shippedModule(file)),
   floors: (corpus) => {
-    const { buttonClasses, sheets, home } = readingOf(corpus);
+    const { buttonClasses, variants, sheets, home } = readingOf(corpus);
     const rules = sheets.reduce(
       (count, sheet) => count + rulesIn(sheet.text).length,
       0,
@@ -219,6 +278,11 @@ export const rule: CensusRule = {
     return [
       ...(sheets.length > 100 ? [] : ["fewer than 100 stylesheets were read"]),
       ...(rules > 2000 ? [] : ["fewer than 2000 CSS rules were read"]),
+      ...(variants.length >= 7 && buttonClasses.has("btn")
+        ? []
+        : [
+            "button.tsx no longer reads as the btn class and faceClass's seven or more variants",
+          ]),
       ...(buttonClasses.size > 30
         ? []
         : ["30 or fewer classes were read off a <Button>"]),

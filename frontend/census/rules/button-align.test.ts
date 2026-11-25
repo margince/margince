@@ -1,15 +1,18 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
+import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { parseSource } from "../../scripts/lib/source-tree";
-import { stable } from "../../src/format/collate";
-import { plantedFindings, srcDir } from "../tree";
+import { plantedFindings, srcDir, treeOf } from "../tree";
 import {
   alignedIn,
+  BASELINE,
   buttonClassesIn,
+  faceVariantsIn,
   judged,
+  ownClassesIn,
   rule,
   startsLabel,
 } from "./button-align.census";
@@ -83,7 +86,10 @@ describe("what a local start alignment on a Button looks like", () => {
   });
 });
 
-describe("the classes a Button is handed", () => {
+describe("the classes on a Button", () => {
+  const buttonPath = join(srcDir, "design-system", "button.tsx");
+  const button = parseSource(buttonPath, readFileSync(buttonPath, "utf8"));
+
   it("reads className on <Button> and not on another element", () => {
     const source = parseSource(
       "probe.tsx",
@@ -93,13 +99,54 @@ describe("the classes a Button is handed", () => {
     const read = buttonClassesIn([
       { path: "probe.tsx", rel: "probe.tsx", area: "src", text: "", source },
     ]);
-    expect([...read].sort(stable)).toEqual(["btn", "pick-row"]);
+    expect([...read]).toEqual(["pick-row"]);
+  });
+
+  it("reads every variant faceClass takes, through a type alias", () => {
+    const source = parseSource(
+      "probe.tsx",
+      `type Variant = "primary" | "link";
+       export function faceClass(variant: Variant | "bare") { return ""; }`,
+    );
+    expect(faceVariantsIn(source)).toEqual(["primary", "link", "bare"]);
+  });
+
+  it("reads the classes Button renders on its <button>, faces included", () => {
+    const own = new Set(ownClassesIn(button));
+    for (const name of ["btn", "btn-icon", "btn-ghost", "btn-aiQuiet"]) {
+      expect(own).toContain(name);
+    }
+    for (const name of ["btn-link", "btn-danger", "btn-bare"]) {
+      expect(own).toContain(name);
+    }
+    for (const name of ["btn-shell", "btn-with-reason", "link-button"]) {
+      expect(own).not.toContain(name);
+    }
+  });
+
+  it("finds a start alignment on a compound naming a face class", () => {
+    const fromButton = buttonClassesIn([
+      {
+        path: buttonPath,
+        rel: "src/design-system/button.tsx",
+        area: "src",
+        text: "",
+        source: button,
+      },
+    ]);
+    const on = (css: string) => alignedIn("probe.css", css, fromButton);
+    expect(on(".x .btn-link { text-align: start; }")).toHaveLength(1);
+    expect(on(".x .btn-aiQuiet { justify-content: flex-start; }")).toHaveLength(
+      1,
+    );
+    expect(on(".x .btn-shell { text-align: start; }")).toEqual([]);
+    expect(on(".x .link-button { text-align: start; }")).toEqual([]);
   });
 });
 
 describe("the baseline", () => {
   const one = {
-    key: "a.css .x .btn",
+    key: "a.css .x .btn text-align",
     says: "a.css:3 .x .btn { text-align: start }",
     left: false,
   };
@@ -118,9 +165,32 @@ describe("the baseline", () => {
     expect(judged([left], new Map([[one.key, "why"]]))).toEqual([left.says]);
   });
 
+  it("excuses one declaration per entry, so a second one under its key is a finding", () => {
+    const again = { ...one, says: "a.css:9 .x .btn { text-align: start }" };
+    expect(judged([one, again], new Map([[one.key, "why"]]))).toEqual([
+      again.says,
+    ]);
+  });
+
+  it("keys a declaration by sheet, selector and property", () => {
+    const [aligned] = alignedIn(
+      "a.css",
+      ".x .btn { text-align: start; }",
+      classes,
+    );
+    expect(aligned.key).toBe("a.css .x .btn text-align");
+  });
+
+  it("only shrinks", () => {
+    expect(
+      BASELINE.size,
+      'Give the Button align="start" instead of a new BASELINE entry. When you delete one, lower this number.',
+    ).toBe(9);
+  });
+
   it("reports an entry no rule matches any more", () => {
     expect(judged([], new Map([[one.key, "why"]]))).toEqual([
-      "BASELINE excuses a.css .x .btn, which no rule start-aligns any more; delete the line",
+      "BASELINE excuses a.css .x .btn text-align, which no rule start-aligns any more; delete the line",
     ]);
   });
 });
@@ -154,6 +224,30 @@ describe("the census over a planted tree", () => {
     ]);
     expect(unbaselined(findings)).toEqual([
       "src/features/x/x.css:1 .x-row { text-align: left }",
+    ]);
+  });
+});
+
+describe("the floors", () => {
+  it("fail a corpus too small to judge", () => {
+    const tree = treeOf([
+      {
+        path: join(srcDir, "design-system", "base.css"),
+        area: "src",
+        text: ".btn { justify-content: center; }",
+      },
+      {
+        path: join(srcDir, "features", "x", "x.tsx"),
+        area: "src",
+        text: 'export const X = () => <Button className="x-row">Go</Button>;',
+      },
+    ]);
+    expect(rule.floors?.(rule.corpus(tree), tree)).toEqual([
+      "fewer than 100 stylesheets were read",
+      "fewer than 2000 CSS rules were read",
+      "button.tsx no longer reads as the btn class and faceClass's seven or more variants",
+      "30 or fewer classes were read off a <Button>",
+      "base.css's own align rule no longer reads as start alignment, so the reader is blind",
     ]);
   });
 });
