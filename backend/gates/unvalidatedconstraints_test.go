@@ -68,6 +68,7 @@ var permanentlyUnvalidated = gatekit.Waive(map[unvalidatedSubject]string{
 	"deal.deal_source_check":                                  unlistedRecordSource,
 	"offer.offer_source_check":                                unlistedRecordSource,
 	"project.project_source_check":                            unlistedRecordSource,
+	"signal.signal_source_check":                              unlistedRecordSource,
 	"finance_payment.finance_payment_names_its_customer_link": unnamedCustomerLink,
 })
 

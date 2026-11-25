@@ -30,6 +30,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/kernel/provenance"
 	"github.com/margince/margince/backend/internal/shared/kernel/values"
 )
 
@@ -72,9 +73,9 @@ type DerivedSignal struct {
 	// workspace already holds, which is what every producer was until a
 	// company's own newsroom became one.
 	Channel string
-	// Source names the producer for the audit trail. Empty means the signal
-	// scan, for the same reason.
-	Source string
+	// Producer names the code that wrote the finding, stored in source_system.
+	// Empty means the signal scan, for the same reason.
+	Producer string
 	// PrivateTo is the one reader this finding answers to, or the zero value
 	// when the whole workspace may read it.
 	//
@@ -155,7 +156,7 @@ func RecordDerived(ctx context.Context, tx pgx.Tx, in DerivedSignal, detectedAt 
 		return false, err
 	}
 	subjectType, subjectID := in.subject()
-	channel, source := in.channelAndSource()
+	channel, producer := in.channelAndProducer()
 	// Every placeholder is derived from the argument slice, so a column added
 	// to this statement cannot bind to its neighbour's value.
 	var args []any
@@ -168,10 +169,10 @@ func RecordDerived(ctx context.Context, tx pgx.Tx, in DerivedSignal, detectedAt 
 		INSERT INTO signal
 		  (kind, entity_type, entity_id, resolved_company_id, summary, summary_params,
 		   evidence, fingerprint, source_channel, resolution_state, severity,
-		   status, detected_at, source, captured_by, visibility, owner_id)
+		   status, detected_at, source, source_system, captured_by, visibility, owner_id)
 		VALUES (` + arg(in.Kind) + `, ` + arg(subjectType) + `, ` + arg(subjectID) + `, ` + arg(in.CompanyID) + `, ` + arg(in.Summary) + `, ` + arg(in.SummaryParams) + `,
 		        ` + arg(evidence) + `, ` + arg(in.Fingerprint) + `, ` + arg(channel) + `, 'resolved', ` + arg(in.Severity) + `,
-		        'open', ` + arg(detectedAt) + `, ` + arg(source) + `, ` + arg(by) + `, ` + arg(visibility) + `, ` + arg(nullableOwner(in.PrivateTo)) + `)
+		        'open', ` + arg(detectedAt) + `, ` + arg(provenance.RecordSourceAutomation) + `, ` + arg(producer) + `, ` + arg(by) + `, ` + arg(visibility) + `, ` + arg(nullableOwner(in.PrivateTo)) + `)
 		ON CONFLICT DO NOTHING
 		RETURNING id`
 	err = tx.QueryRow(ctx, query, args...).Scan(&signalID)
@@ -204,18 +205,18 @@ func RecordDerived(ctx context.Context, tx pgx.Tx, in DerivedSignal, detectedAt 
 	return true, nil
 }
 
-// channelAndSource fills in what a producer left unsaid. The defaults are what
+// channelAndProducer fills in what a producer left unsaid. The defaults are what
 // every producer meant before there was a second kind: a finding computed from
 // this workspace's own records, by the signal scan.
-func (in DerivedSignal) channelAndSource() (channel, source string) {
-	channel, source = in.Channel, in.Source
+func (in DerivedSignal) channelAndProducer() (channel, producer string) {
+	channel, producer = in.Channel, in.Producer
 	if channel == "" {
 		channel = "derived"
 	}
-	if source == "" {
-		source = scanSource
+	if producer == "" {
+		producer = scanProducer
 	}
-	return channel, source
+	return channel, producer
 }
 
 // subject is the (entity_type, entity_id) pair the row carries: the project

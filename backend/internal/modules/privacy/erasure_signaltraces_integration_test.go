@@ -56,7 +56,7 @@ func seedSignalTraces(t *testing.T) signalTraceFixture {
 				severity, summary, evidence, fingerprint, status, detected_at, source, captured_by)
 			VALUES ($1::uuid, 'ext:erasetest:loss', 'derived', 'contact', $2, 'resolved', 'info', 'Quiet',
 				'[{"snippet":"Hedda wrote she is leaving"}]'::jsonb, 'ext:erasetest:loss|hedda@signals.test|'||$1::uuid::text,
-				'open', now(), 'erasetest', 'test')`, id, about)
+				'open', now(), 'automation', 'test')`, id, about)
 	}
 	seedSignal(f.subjectSignal, f.subject)
 	seedSignal(f.otherSig, f.other)
@@ -228,7 +228,7 @@ func TestScrubbingASubjectEmptiesDerivedSignalsOnOtherRecordsThatCiteThem(t *tes
 				mustExec(f.ctx, t, f.tx, `INSERT INTO signal (id, kind, source_channel, entity_type, entity_id, resolution_state,
 						severity, summary, evidence, status, detected_at, source, captured_by)
 					VALUES ($1, 'risk', 'derived', 'company', $2, 'resolved', 'info', 'Hedda is leaving', $3::jsonb,
-						'open', now(), 'derived', 'test')`, id, company, evidence)
+						'open', now(), 'automation', 'test')`, id, company, evidence)
 			}
 			byBuyer, byMessage, unrelated := ids.NewV7(), ids.NewV7(), ids.NewV7()
 			derive(byBuyer, `[{"snippet":"Hedda is leaving","buyer_contact_id":"`+f.subject.String()+`"}]`)

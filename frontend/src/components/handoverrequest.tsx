@@ -5,16 +5,16 @@
 // access panel. The owner answers on their Worklist.
 
 import {
+  type TransferableRecordType,
+  useOwnershipRequest,
+  useOwnershipRequestActions,
+} from "../lib/ownershiprequest";
+import {
   type AskedRecord,
   type AskWords,
   OwnerAsk,
   useOwnerToAsk,
-} from "../../components/ownerask";
-import {
-  type TransferableRecordType,
-  useOwnershipRequest,
-  useOwnershipRequestActions,
-} from "./ownershiprequest";
+} from "./ownerask";
 
 const HANDOVER_WORDS: AskWords = {
   ask: "handover.ask",

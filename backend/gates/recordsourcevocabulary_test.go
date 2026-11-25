@@ -29,6 +29,7 @@ var recordSourceHeld = map[string]string{
 	"offer":   "CreateOfferRequest",
 	"partner": "",
 	"project": "CreateProjectRequest",
+	"signal":  "CreateSignalRequest",
 }
 
 // recordSourceFree names each create request whose source is still free text,
@@ -39,7 +40,6 @@ var recordSourceFree = gatekit.Waive(map[string]string{
 	"CreateCompanyRequest":      "capture and domain triage store a message id or a domain in a company's source",
 	"CreateContactRequest":      "capture stores the message a contact was read from in its source",
 	"CreateLeadRequest":         "a lead's source is matched against the administered lead source list",
-	"CreateSignalRequest":       "a signal's source names its producer, and the scan's readers select on it",
 	"CreateRelationshipRequest": "a relationship's source cites the record or mail the edge was read from",
 	"CreateCustomFieldRequest":  "a custom field is configuration, not a record that arrives by a channel",
 	"CreateProductRequest":      "a product is catalog data, not a record that arrives by a channel",
@@ -215,7 +215,7 @@ func TestTheRecordSourceGateSeesEachWayTheListCanDrift(t *testing.T) {
 		"a free request that gained an enum": func(_, _, requests map[string][]string) {
 			requests["CreateLeadRequest"] = vocabulary
 		},
-		"a free request that lost its source": func(_, _, requests map[string][]string) { delete(requests, "CreateSignalRequest") },
+		"a free request that lost its source": func(_, _, requests map[string][]string) { delete(requests, "CreateProductRequest") },
 	} {
 		checks, triggers, requests := agreeing()
 		drift(checks, triggers, requests)

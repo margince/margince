@@ -3001,6 +3001,7 @@
   "log.unassigned": "Unassigned",
   "log.save": "Log",
   "log.saving": "Logging…",
+  "viewOnly.pill": "View only",
   "compose.reply": "Reply",
   "invitation.answer.label": "Answer the invitation",
   "invitation.answer.accepted": "Accept",

@@ -52,11 +52,9 @@ it("links the record a message row is about", async () => {
   renderWorklist();
 
   // The pane beside the queue names her too; the row's own link is the one
-  // in its facts line.
+  // in its chip line.
   await screen.findAllByRole("link", { name: "Sonya Beck" });
-  expect(
-    document.querySelector(".worklist-row-about a")?.getAttribute("href"),
-  ).toBe(
+  expect(document.querySelector(".task-meta a")?.getAttribute("href")).toBe(
     "/r/contacts/01a05500-0000-7000-8000-000000000009#/contacts/01a05500-0000-7000-8000-000000000009",
   );
 });
@@ -107,9 +105,7 @@ it("names the sender behind a deal-filed thread, and which side wrote last", asy
   renderWorklist();
 
   await screen.findAllByRole("link", { name: "Sonya Beck" });
-  expect(
-    document.querySelector(".worklist-row-about a")?.getAttribute("href"),
-  ).toBe(
+  expect(document.querySelector(".task-meta a")?.getAttribute("href")).toBe(
     "/r/contacts/01a05500-0000-7000-8000-000000000009#/contacts/01a05500-0000-7000-8000-000000000009",
   );
   const touch = document.querySelector(".worklist-row-touch");
@@ -215,7 +211,7 @@ it("says which side wrote last on a row about an account", async () => {
   );
   renderWorklist();
 
-  await screen.findByText("Send the renewal terms · Turbinenbau GmbH");
+  await screen.findByText("Send the renewal terms");
   const touch = document.querySelector(".worklist-row-touch");
   expect(touch?.textContent).toContain("Last from this company Never");
   expect(touch?.textContent).toContain("Last to this company");
@@ -227,7 +223,7 @@ it("claims no moments for an account whose activity was withheld", async () => {
   stub(accountTask({ id: ACCOUNT }));
   renderWorklist();
 
-  await screen.findByText("Send the renewal terms · Turbinenbau GmbH");
+  await screen.findByText("Send the renewal terms");
   expect(document.querySelector(".worklist-row-touch")).toBeNull();
 });
 
@@ -308,7 +304,7 @@ it("names the recipient of a follow-up and their company", async () => {
   expect(
     (await screen.findAllByText("Sent to Contact A")).length,
   ).toBeGreaterThan(0);
-  const about = [...document.querySelectorAll(".worklist-row-about a")].map(
+  const about = [...document.querySelectorAll(".task-meta a .chip-label")].map(
     (link) => link.textContent,
   );
   expect(about).toEqual(["Contact A", "Company A"]);
