@@ -21,8 +21,9 @@ import (
 )
 
 // teamRequestNotice is the line, and the mail an approval would send, that a
-// colleague named on a host's booking link gets. One request per host and
-// member: a member taken off and named again gets the same line back unread.
+// colleague named on a host's team link gets. There is one request per team
+// link and member. A member taken off and named again gets the same line back
+// unread. A member named on two team links gets a line for each.
 type teamRequestNotice struct{}
 
 func (teamRequestNotice) TeamRequestTx(ctx context.Context, tx pgx.Tx, request activities.TeamRequest) error {
@@ -37,9 +38,13 @@ func (teamRequestNotice) TeamRequestTx(ctx context.Context, tx pgx.Tx, request a
 	return recordApprovalNotice(ctx, tx, notices.NewStore(nil).HandOverTx, mail, wsID, teamRequestLine(request))
 }
 
-func (teamRequestNotice) TeamRequestSettledTx(ctx context.Context, tx pgx.Tx, host, member ids.UserID) error {
-	_, err := notices.NewStore(nil).Retract(ctx, tx, notices.TeamRequestNoticeKey(host, member))
+func (teamRequestNotice) TeamRequestSettledTx(ctx context.Context, tx pgx.Tx, page ids.UUID, member ids.UserID) error {
+	_, err := notices.NewStore(nil).Retract(ctx, tx, notices.TeamRequestNoticeKey(page, member))
 	return err
+}
+
+func (teamRequestNotice) TeamRequestRetitledTx(ctx context.Context, tx pgx.Tx, request activities.TeamRequest) error {
+	return notices.NewStore(nil).RewordLiveTx(ctx, tx, teamRequestLine(request))
 }
 
 // teamRequestLine is the request in words: when it is written, and again from
@@ -51,7 +56,7 @@ func teamRequestLine(request activities.TeamRequest) notices.NewNotice {
 		Recipient: request.Member, Kind: notices.KindMeetingTeamRequest,
 		Subject: systemtext.Canonical(subject, textlang.English), Body: systemtext.Canonical(body, textlang.English),
 		SystemText: &systemtext.Message{Version: 1, Subject: subject, Body: body},
-		DedupeKey:  notices.TeamRequestNoticeKey(request.Host, request.Member),
+		DedupeKey:  notices.TeamRequestNoticeKey(request.Page, request.Member),
 	}
 }
 
@@ -61,7 +66,7 @@ func refreshTeamRequest(ctx context.Context, pool *pgxpool.Pool, attempt notices
 	var standing activities.TeamRequestStanding
 	err := database.WithWorkspaceTx(ctx, pool, func(tx pgx.Tx) error {
 		var err error
-		standing, err = activities.ReadTeamRequestTx(ctx, tx, *attempt.TeamRequestHost, attempt.Recipient)
+		standing, err = activities.ReadTeamRequestTx(ctx, tx, *attempt.TeamRequestPage, attempt.Recipient)
 		return err
 	})
 	if err != nil || !standing.Pending {
@@ -73,19 +78,19 @@ func refreshTeamRequest(ctx context.Context, pool *pgxpool.Pool, attempt notices
 }
 
 // teamRequestBasis names a team request a delayed send rests on. Its id is the
-// notice, its key the host and member, its version the request's fingerprint.
+// notice, its key the team link and member, its version the request's fingerprint.
 const teamRequestBasis = "booking_page_team_request"
 
 type teamRequestRef struct {
-	notice       ids.UUID
-	host, member ids.UserID
+	notice, page ids.UUID
+	member       ids.UserID
 }
 
 // teamRequestDependencies reads each request a payload names: one still pending
 // is held at its fingerprint, any other is excluded.
 func teamRequestDependencies(ctx context.Context, tx pgx.Tx, refs []teamRequestRef, basis *sendBasis) error {
 	for _, ref := range refs {
-		standing, err := activities.ReadTeamRequestTx(ctx, tx, ref.host, ref.member)
+		standing, err := activities.ReadTeamRequestTx(ctx, tx, ref.page, ref.member)
 		if err != nil {
 			return err
 		}
@@ -93,7 +98,7 @@ func teamRequestDependencies(ctx context.Context, tx pgx.Tx, refs []teamRequestR
 			basis.excluded[ref.notice] = true
 			continue
 		}
-		basis.rows = append(basis.rows, basisRow{table: teamRequestBasis, id: ref.notice, key: ref.host.String() + ":" + ref.member.String(), version: standing.Fingerprint})
+		basis.rows = append(basis.rows, basisRow{table: teamRequestBasis, id: ref.notice, key: ref.page.String() + ":" + ref.member.String(), version: standing.Fingerprint})
 	}
 	return nil
 }
@@ -101,13 +106,13 @@ func teamRequestDependencies(ctx context.Context, tx pgx.Tx, refs []teamRequestR
 // holdTeamRequest holds the link a basis row names and refuses a request that
 // moved since it was read.
 func holdTeamRequest(ctx context.Context, tx pgx.Tx, row basisRow) error {
-	host, member, ok := strings.Cut(row.key, ":")
-	hostID, hostErr := ids.Parse(host)
+	page, member, ok := strings.Cut(row.key, ":")
+	pageID, pageErr := ids.Parse(page)
 	memberID, memberErr := ids.Parse(member)
-	if !ok || hostErr != nil || memberErr != nil {
-		return errors.New("send: a team request basis names no host and member")
+	if !ok || pageErr != nil || memberErr != nil {
+		return errors.New("send: a team request basis names no team link and member")
 	}
-	standing, err := activities.HoldTeamRequestTx(ctx, tx, ids.From[ids.UserKind](hostID), ids.From[ids.UserKind](memberID))
+	standing, err := activities.HoldTeamRequestTx(ctx, tx, pageID, ids.From[ids.UserKind](memberID))
 	if err != nil {
 		return err
 	}

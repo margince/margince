@@ -23028,9 +23028,23 @@ export const en = {
   "scheduling.replaceAliasHelp":
     "Your short address {url} stops working too. You can choose it again afterwards.",
   "scheduling.replaceConfirmTitle": "Replace link address?",
-  "scheduling.team.title": "Colleagues on this link",
-  "scheduling.team.foot":
-    "Guests see only the times when you and every colleague here are free, in each colleague’s own working hours. Each booking invites every colleague.",
+  "scheduling.teamLinks.title": "Team links",
+  "scheduling.teamLinks.foot":
+    "A team link offers only the times when you and every colleague on it are free, in each one’s own working hours, and invites every colleague to each meeting. It uses the calendar and settings of your personal link, which always offers only your own free time.",
+  "scheduling.teamLinks.create": "New team link with",
+  "scheduling.teamLinks.createHelp":
+    "Choose a colleague to make a new link with its own address. Only colleagues with a connected calendar are offered. Each colleague confirms before the link takes bookings.",
+  "scheduling.teamLinks.defaultTitle": "Meet {names}",
+  "scheduling.teamLinks.off": "Off: takes no bookings",
+  "scheduling.teamLinks.ready": "Takes bookings",
+  "scheduling.teamLinks.waiting": "Waiting for colleagues",
+  "scheduling.teamLinks.paused": "Paused: your calendar cannot take meetings",
+  "scheduling.teamLinks.delete": "Delete link",
+  "scheduling.teamLinks.deleteTitle": "Delete “{title}”?",
+  "scheduling.teamLinks.deleteHelp":
+    "The link’s address stops working. Meetings already booked through it stay. Your personal link does not change.",
+  "scheduling.teamLinks.lastMember":
+    "A team link needs at least one colleague. Delete the link instead.",
   "scheduling.team.add": "Add a colleague",
   "scheduling.team.addHelp":
     "Only colleagues with a connected calendar are offered. Each one confirms before the link takes bookings.",
@@ -23053,7 +23067,7 @@ export const en = {
   "scheduling.team.confirm": "Confirm",
   "scheduling.team.leave": "Leave",
   "worklist.untitled.booking_health_team_not_ready":
-    "Your booking page is paused: a colleague on it has not confirmed, has left, or has no readable calendar",
+    "Your team link is paused: a colleague on it has not confirmed, has left, or has no readable calendar",
   "scheduling.personalLinksFoot":
     "Meeting one specific person? Open their contact and choose Book a meeting to send a few times or a personal link that only they can use.",
   "scheduling.liveNoInvitesTitle": "Guests can book, but no invitations go out",

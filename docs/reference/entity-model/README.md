@@ -31,8 +31,8 @@ module to put a change in, read [modules.md](../modules.md).
 | | |
 |---|--:|
 | Tables | 358 |
-| Columns | 4417 |
-| Foreign keys | 620 |
+| Columns | 4419 |
+| Foreign keys | 621 |
 | Owning areas | 40 |
 
 ## The 12 records everything else hangs off
@@ -194,7 +194,7 @@ erDiagram
 | [`automation`](automation.md#automation) | automation | 17 | 1 |
 | [`automation_effect_claim`](automation.md#automation_effect_claim) | automation | 7 | 0 |
 | [`booking_alias`](activities.md#booking_alias) | activities | 6 | 0 |
-| [`booking_page`](activities.md#booking_page) | activities | 7 | 1 |
+| [`booking_page`](activities.md#booking_page) | activities | 8 | 2 |
 | [`brief_item`](compose.md#brief_item) | compose | 17 | 0 |
 | [`brief_run`](compose.md#brief_run) | compose | 13 | 1 |
 | [`bulk_confirmation`](compose.md#bulk_confirmation) | compose | 7 | 0 |
@@ -366,7 +366,7 @@ erDiagram
 | [`mail_draft`](activities.md#mail_draft) | activities | 23 | 0 |
 | [`maskable_field`](identity.md#maskable_field) | identity | 2 | 1 |
 | [`meeting_calendar_episode`](activities.md#meeting_calendar_episode) | activities | 5 | 0 |
-| [`meeting_invitation`](activities.md#meeting_invitation) | activities | 22 | 1 |
+| [`meeting_invitation`](activities.md#meeting_invitation) | activities | 23 | 1 |
 | [`meeting_proposal`](activities.md#meeting_proposal) | activities | 9 | 0 |
 | [`meeting_readiness`](activities.md#meeting_readiness) | activities | 9 | 0 |
 | [`mfa_challenge_spent`](identity.md#mfa_challenge_spent) | identity | 2 | 0 |
