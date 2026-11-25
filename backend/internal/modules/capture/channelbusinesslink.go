@@ -54,7 +54,7 @@ func connectedBusinessLinkTx(ctx context.Context, tx pgx.Tx, bot ids.UUID, busin
 		SELECT `+businessLinkColumns+` FROM channel_connection
 		 WHERE provider = $1 AND channel_id = $2 AND parent_connection_id = $3
 		   AND status = $4 AND archived_at IS NULL`,
-		telegram.BusinessLinkProvider, businessConnectionID, bot, channelStatusConnected))
+		telegram.BusinessProvider, businessConnectionID, bot, channelStatusConnected))
 	if errors.Is(err, pgx.ErrNoRows) {
 		return ids.Nil, false, nil
 	}
@@ -71,7 +71,7 @@ func connectedBusinessLinkTx(ctx context.Context, tx pgx.Tx, bot ids.UUID, busin
 func BusinessLinkTx(ctx context.Context, tx pgx.Tx, linkID ids.UUID) (telegram.BusinessLink, error) {
 	_, link, err := scanBusinessLink(tx.QueryRow(ctx, `
 		SELECT `+businessLinkColumns+` FROM channel_connection
-		 WHERE id = $1 AND provider = $2 AND parent_connection_id IS NOT NULL`, linkID, telegram.BusinessLinkProvider))
+		 WHERE id = $1 AND provider = $2 AND parent_connection_id IS NOT NULL`, linkID, telegram.BusinessProvider))
 	if err != nil {
 		return telegram.BusinessLink{}, fmt.Errorf("capture: reading the business link of a stored message: %w", err)
 	}
