@@ -12,6 +12,7 @@ import {
 } from "../../design-system/recordpicker";
 import { useFieldFaults } from "../../design-system/savepage";
 import { useLocale, useT } from "../../i18n";
+import { today, useEmploymentZone } from "../../lib/employmentcurrency";
 import { blankRequired, unwrap } from "../../lib/problem";
 import { invalidateRecord } from "../../lib/recordwritekeys";
 import { navigate } from "../../lib/router";
@@ -253,6 +254,7 @@ function EmploymentMatchModal({
   const { locale } = useLocale();
   const heading = useId();
   const [faults, faultsRoot] = useFieldFaults<HTMLDivElement>();
+  const employmentZone = useEmploymentZone();
   const [company, setCompany] = useState<RecordPickerCandidate | null>(null);
   const [domain, setDomain] = useState(item.domain ?? "");
   const [started, setStarted] = useState(item.started ?? "");
@@ -352,6 +354,8 @@ function EmploymentMatchModal({
               ...employmentDateFaults(locale, t, {
                 start: started,
                 end: ended,
+                status,
+                today: today(employmentZone),
               }),
             ]);
             if (faults.show(found)) return;

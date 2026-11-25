@@ -66,5 +66,21 @@ func refusePatch(ctx context.Context, tx pgx.Tx, current relationshipRow, in Upd
 	if in.IfVersion != nil && *in.IfVersion != current.Version {
 		return apperrors.ErrVersionSkew
 	}
-	return nil
+	return refusePatchedFormerEndingAhead(ctx, tx, current, in)
+}
+
+// refusePatchedFormerEndingAhead asks refuseFormerEndingAhead of the row the
+// patch leaves. A patch that sets neither field keeps what already passed.
+func refusePatchedFormerEndingAhead(ctx context.Context, tx pgx.Tx, current relationshipRow, in UpdateRelationshipInput) error {
+	if in.EmploymentStatus == nil && in.EndedAt == nil {
+		return nil
+	}
+	status, endedAt := in.EmploymentStatus, in.EndedAt
+	if status == nil && !in.ClearEmploymentStatus {
+		status = current.EmploymentStatus
+	}
+	if endedAt == nil && !in.ClearEndedAt {
+		endedAt = current.EndedAt
+	}
+	return refuseFormerEndingAhead(ctx, tx, status, endedAt)
 }

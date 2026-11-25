@@ -44,7 +44,11 @@ func replaceContactEmails(ctx context.Context, tx pgx.Tx, wsID ids.WorkspaceID, 
 	if emails == nil {
 		return nil
 	}
-	if err := parseContactContacts(emails, nil); err != nil {
+	held, err := liveContactEmails(ctx, tx, contactID)
+	if err != nil {
+		return err
+	}
+	if err := parseContactHandles(emails, nil, held); err != nil {
 		return err
 	}
 	// The claim check runs before anything is written and skips this contact's
@@ -53,11 +57,6 @@ func replaceContactEmails(ctx context.Context, tx pgx.Tx, wsID ids.WorkspaceID, 
 	// refuse the insert, but the aborted transaction cannot re-query — so the
 	// refusal would reach the caller with no incumbent id to name.
 	if err := ensureContactEmailsUnclaimedExcept(ctx, tx, contactID, emails); err != nil {
-		return err
-	}
-
-	held, err := liveContactEmails(ctx, tx, contactID)
-	if err != nil {
 		return err
 	}
 
@@ -142,19 +141,23 @@ func liveContactEmails(ctx context.Context, tx pgx.Tx, contactID ids.ContactID) 
 	return held, nil
 }
 
-// parseContactContacts is the parse-don't-validate seam for a contact's
-// contact rows: addresses normalize to the lowercased form the dedupe
-// index compares (the SQL lower() below stays as defense in depth) and
-// phones normalize to E.164 — making the schema's "E.164 normalized at
-// write" contract true instead of documentary. Values are written back
-// in place so everything downstream handles only normalized strings.
-//
-// It also refuses a set that marks two addresses, or two numbers, primary.
-// Create, update and vCard import all pass through here. The refusal is typed
-// and comes before any write, instead of the bare conflict that
-// uq_contact_{email,phone}_primary would raise.
+// parseContactContacts is parseContactHandles for a contact that holds no
+// address yet.
 func parseContactContacts(emails []ContactEmailInput, phones []ContactPhoneInput) error {
+	return parseContactHandles(emails, phones, nil)
+}
+
+// parseContactHandles normalizes a contact's rows in place: addresses to the
+// lowercase the dedupe index compares, phones to E.164. It refuses two primary
+// rows of a kind before any write, where uq_contact_{email,phone}_primary would
+// raise a bare conflict. An address in held is one the contact already holds:
+// restating it writes nothing new, so it passes as stored.
+func parseContactHandles(emails []ContactEmailInput, phones []ContactPhoneInput, held map[string]bool) error {
 	for i, e := range emails {
+		if stored := strings.ToLower(strings.TrimSpace(e.Email)); held[stored] {
+			emails[i].Email = stored
+			continue
+		}
 		parsed, err := values.ParseEmail(e.Email)
 		if err != nil {
 			return err

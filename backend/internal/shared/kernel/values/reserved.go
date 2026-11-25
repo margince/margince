@@ -6,7 +6,7 @@ package values
 import "strings"
 
 // ErasedEmail is the address an Art. 17 erasure writes over a record it cannot
-// delete, and the one address ParseEmail refuses outright.
+// delete, and the one reserved name ParseEmail refuses outright.
 //
 // Reserved in a second, stronger sense than the RFC 2606 names below. Those cannot
 // receive mail but are perfectly storable — the test mailbox exists to send to them,

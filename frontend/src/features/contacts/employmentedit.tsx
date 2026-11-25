@@ -12,7 +12,11 @@ import { ErrorLine } from "../../design-system/errorline";
 import { Heading } from "../../design-system/heading";
 import { useFieldFaults } from "../../design-system/savepage";
 import { useLocale, useT } from "../../i18n";
-import { stillHeld, useEmploymentZone } from "../../lib/employmentcurrency";
+import {
+  stillHeld,
+  today,
+  useEmploymentZone,
+} from "../../lib/employmentcurrency";
 import { blankRequired } from "../../lib/problem";
 import { datePatch, patchEmployment } from "./employmentpatch";
 import {
@@ -150,7 +154,12 @@ export function EmploymentEdit({
               ...blankRequired(locale, {
                 status: [t("employment.statusLabel"), status],
               }),
-              ...employmentDateFaults(locale, t, { start, end }),
+              ...employmentDateFaults(locale, t, {
+                start,
+                end,
+                status,
+                today: today(employmentZone),
+              }),
             ]);
             if (faults.show(found)) return;
             const started = datePatch(start),

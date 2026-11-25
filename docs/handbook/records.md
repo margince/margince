@@ -81,7 +81,7 @@ New contacts use the same company check from every source. A company name can fi
 To link a contact to a company in Margince, open the contact's **Companies** tab and choose **Add company** under **Work history**. The same list shows the companies they worked at before, with role and dates. When the first page holds the whole list, the number on the tab counts them.
 1. Under **Employer**, search for the company and pick it. It must already be in Margince; create it first under **Companies** if it is not.
 2. If you like, enter the **Role** and a **Start date** (`YYYY-MM` or `YYYY-MM-DD`).
-3. For a past job, set **Employment status** to **Former** and enter the **End date**.
+3. For a past job, set **Employment status** to **Former** and enter the **End date**, today or earlier.
 4. Tick **This is their primary employer** if it is their main job now, and choose **Create**.
 To change or end the link later, use the row's **More actions** menu: **Edit employment**, **Mark as ended** or **Remove**. To move a contact, press **Edit** in **About**, then **Change Employer**, and pick the company or tick **No current employer**. Then say if they left the old one or it was never their employer. In **Edit employment**, choose **Current** or **Former**. An imported link marked **Status unknown** needs a choice before you save.
 
