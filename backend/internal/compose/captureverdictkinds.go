@@ -134,8 +134,9 @@ school, their personal bank — is "personal". Ask who the matter belongs to, no
 company it is.
 DIRECTION matters where you are told it. A message the mailbox owner WROTE to an address is an
 intention, not yet a relationship, and an address that has never written back has told you
-nothing about itself. Prefer a kind that records no contact — "personal" when the owner wrote
-about their own private affair — and lower your confidence.
+nothing about itself. Prefer a kind that records no contact, "personal" when the owner wrote
+about their own private affair, and state the confidence that kind earns. Lower your confidence
+only when you still answer a kind that records a contact.
 Judge the DIRECTION of the offer, not its politeness. A "contact" wants something this business
 sells, or supplies something it was engaged to supply. Someone offering to sell this business a
 service it shows no sign of having asked for — financing, capital, leads, SEO, staffing,

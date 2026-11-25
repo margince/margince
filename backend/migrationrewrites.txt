@@ -256,3 +256,5 @@
 1795449105_an_archived_record_leaves_its_chat_channel.down.sql | * | the down migration is a single SELECT 1 that changes nothing
 1795540594_a_host_keeps_team_links_beside_the_personal_link.up.sql | booking_page | revokes a host's older live booking pages; every writer kept one live page per host, so the set is empty or a handful
 1795540594_a_host_keeps_team_links_beside_the_personal_link.down.sql | booking_page | revokes the live team links, at most a few per member
+1795591196_claude_five_models_are_priced.up.sql | *, ai_model_rate, audit_log | two models on one provider: at most two inserted rows and their audit rows
+1795591196_claude_five_models_are_priced.down.sql | * | the down migration is a single SELECT 1 that changes nothing

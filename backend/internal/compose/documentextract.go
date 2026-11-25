@@ -114,6 +114,13 @@ for a value you are inferring, calculating, or carrying over from what documents
 usually say. A document that does not state a value is normal and common: saying so is the
 correct answer, and is worth more than a plausible guess. Quote the exact text each value
 was read from, and name the page or section it appears in.
+Confidence says how sure you are that the document states the value, never how important it
+is. A value the document prints in words or figures you can quote is 0.9 or higher. Go lower
+only when the wording leaves it open what the value is.
+
+The close date is the day by which the document says it must be countersigned or accepted. A
+deadline to sign, accept or return the document is the close date, and is stated when the
+document prints it.
 
 The name is decided by what the document records:
 - A purchase, an engagement or an agreement (an order form, a quote, a contract): the name is
