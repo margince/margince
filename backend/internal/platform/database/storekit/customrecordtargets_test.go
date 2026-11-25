@@ -32,8 +32,8 @@ func TestRecordTargetsSkipWhatIsNotAWellFormedRecordValue(t *testing.T) {
 	}
 }
 
-// A caller with no read right on the target kind is told the record does not
-// exist, so the answer is the same as for a missing one. No transaction is used.
+// A caller with no read right on the target kind is told the record is missing.
+// The answer is the same as for a record that does not exist. No transaction is used.
 func TestRecordTargetsAnswerNotFoundWhenTheCallerCannotReadTheKind(t *testing.T) {
 	active := []fieldcatalog.Column{{Name: "cf_contact", Type: fieldcatalog.TypeRecord, Options: []string{"contact"}}}
 	values := map[string]any{"cf_contact": "0194f3a0-0000-7000-8000-000000000001"}
