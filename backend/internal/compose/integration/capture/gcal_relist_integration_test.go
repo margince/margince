@@ -13,15 +13,17 @@ import (
 	"context"
 	"net/http"
 	"net/http/httptest"
-	"strings"
 	"sync"
 	"testing"
 	"time"
+
+	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/compose/integration"
 	"github.com/margince/margince/backend/internal/modules/capture/gcal"
 	"github.com/margince/margince/backend/internal/modules/capture/gmail"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/platform/owndomain"
 	"github.com/margince/margince/backend/internal/platform/testdb"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -204,29 +206,41 @@ func TestARelistDoesNotCancelAMeetingAnotherSeatHolds(t *testing.T) {
 	}
 }
 
-// A seat that left the guest list keeps its import row, which still decides
-// who reads the meeting, but no longer holds the meeting open.
+// A colleague whose calendar dropped the meeting keeps its import row, which
+// still decides who reads it. A from or to row records whose calendar the
+// meeting came off, and is no attendance. Neither keeps the meeting open.
 func TestARelistCancelsAMeetingWhoseOtherImporterLeftTheGuestList(t *testing.T) {
-	r := newRelistEnv(t)
-	meeting := r.droppedMeeting(t)
-	exec(t, r.env.e, `INSERT INTO capture_import (activity_id, user_id) VALUES ($1, $2)`, meeting, r.env.e.Rep3)
-
-	if err := r.relist(false); err != nil {
-		t.Fatalf("the re-list: %v", err)
+	p := newPairEnv(t)
+	p.bookOrganizedBy(wallDay(5), relistOrganizer)
+	p.sync(t, "b")
+	p.sync(t, "a")
+	meeting := p.rowOf(t, "b")
+	p.omit(t, "b")
+	if p.cancelled(t, meeting) {
+		t.Fatal("the first calendar to drop the meeting cancelled it while the other seat holds it")
 	}
+	p.exec(t, `INSERT INTO activity_participant (activity_id, user_id, role, response) VALUES ($1, $2, 'from', 'accepted')
+		ON CONFLICT DO NOTHING`, meeting, p.guestSeat)
 
-	if got := r.cancelled(t, "evt-dropped"); got != 1 {
-		t.Error("an importer no longer on the guest list kept the meeting open")
+	p.omit(t, "a")
+
+	if !p.cancelled(t, meeting) {
+		t.Error("a seat that left the meeting kept it open")
 	}
-	if countRows(t, r.env.e, `SELECT count(*) FROM capture_import
-		WHERE activity_id = '`+meeting.String()+`' AND user_id = '`+r.env.e.Rep3.String()+`'`) != 1 {
+	if countRows(t, p.env.e, `SELECT count(*) FROM capture_import
+		WHERE activity_id = '`+meeting.String()+`' AND user_id = '`+p.guestSeat.String()+`'`) != 1 {
 		t.Error("the seat that left lost its import row")
 	}
 }
 
 // A shared mailbox has no seat on the guest list. It holds the meeting while
-// its address is a guest, and not once the address is gone.
+// its address is a guest, in either spelling of its domain, and not once the
+// address is gone.
 func TestARelistKeepsAMeetingASharedMailboxGuestImports(t *testing.T) {
+	const (
+		unicodeLabel  = "desk@bücher.example"
+		punycodeGuest = "desk@xn--bcher-kva.example"
+	)
 	for _, tc := range []struct {
 		name    string
 		guest   bool
@@ -238,10 +252,12 @@ func TestARelistKeepsAMeetingASharedMailboxGuestImports(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			r := newRelistEnv(t)
 			meeting := r.droppedMeeting(t)
-			exec(t, r.env.e, `INSERT INTO capture_import (activity_id, connection_id) VALUES ($1, $2)`, meeting, r.fixtureMailboxConnection(t))
+			box := r.fixtureMailboxConnection(t)
+			exec(t, r.env.e, `UPDATE capture_connection SET account_label = $2 WHERE id = $1`, box, unicodeLabel)
+			exec(t, r.env.e, `INSERT INTO capture_import (activity_id, connection_id) VALUES ($1, $2)`, meeting, box)
 			if tc.guest {
-				exec(t, r.env.e, `INSERT INTO activity_participant (activity_id, address, role) VALUES ($1, $2, 'attendee')`,
-					meeting, strings.ToUpper(fixtureSharedMailbox))
+				exec(t, r.env.e, `INSERT INTO activity_participant (activity_id, address, role, address_domain_folded) VALUES ($1, $2, 'attendee', $3)`,
+					meeting, punycodeGuest, owndomain.StoredOfAddress(punycodeGuest))
 			}
 
 			if err := r.relist(false); err != nil {
@@ -255,44 +271,70 @@ func TestARelistKeepsAMeetingASharedMailboxGuestImports(t *testing.T) {
 	}
 }
 
-// An import of the meeting still in flight when the re-list reads it holds the
-// meeting's locks. The re-list waits for it, and then sees the other seat and
-// takes only its own seat off the meeting.
-func TestARelistWaitsForAnImportOfTheMeetingInFlight(t *testing.T) {
-	r := newRelistEnv(t)
-	meeting := r.droppedMeeting(t)
+// heldImport is an import of the meeting that has taken the meeting's locks,
+// written its rows and not yet committed, as an import in flight has.
+type heldImport struct {
+	tx  pgx.Tx
+	pid uint32
+}
+
+func holdImport(t *testing.T, meeting ids.UUID, writes func(ctx context.Context, tx pgx.Tx) error) heldImport {
+	t.Helper()
 	ctx := context.Background()
-	importer, err := integration.FreshOwnerConn(t).Begin(ctx)
+	conn := integration.FreshOwnerConn(t)
+	tx, err := conn.Begin(ctx)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := storekit.LockMeetingAttendeePage(ctx, importer, []ids.UUID{meeting}); err != nil {
+	if err := storekit.LockMeetingAttendeePage(ctx, tx, []ids.UUID{meeting}); err != nil {
 		t.Fatal(err)
 	}
-	for _, sql := range []string{
-		`INSERT INTO capture_import (activity_id, user_id) VALUES ($1, $2)`,
-		`INSERT INTO activity_participant (activity_id, user_id, role) VALUES ($1, $2, 'attendee')`,
-	} {
-		if _, err := importer.Exec(ctx, sql, meeting, r.env.e.Rep3); err != nil {
-			t.Fatal(err)
-		}
+	if err := writes(ctx, tx); err != nil {
+		t.Fatal(err)
 	}
+	return heldImport{tx: tx, pid: conn.PgConn().PID()}
+}
 
+// relistPast runs the re-list, waits until the held import blocks it, commits
+// the import and answers the re-list's outcome.
+func (r relistEnv) relistPast(t *testing.T, held heldImport) error {
+	t.Helper()
 	done := make(chan struct{})
 	var relisted error
 	go func() {
 		defer close(done)
 		relisted = r.relist(false)
 	}()
-	waitForALockWaiter(t, done)
-	if err := importer.Commit(ctx); err != nil {
+	waitUntilBlockedBy(t, done, held.pid)
+	if err := held.tx.Commit(context.Background()); err != nil {
 		t.Fatal(err)
 	}
 	<-done
+	return relisted
+}
 
-	if relisted != nil {
-		t.Fatalf("the re-list: %v", relisted)
+// An import of the meeting still in flight when the re-list reads it holds the
+// meeting's locks. The re-list waits for it, and then sees the other seat and
+// takes only its own seat off the meeting.
+func TestARelistWaitsForAnImportOfTheMeetingInFlight(t *testing.T) {
+	r := newRelistEnv(t)
+	meeting := r.droppedMeeting(t)
+	held := holdImport(t, meeting, func(ctx context.Context, tx pgx.Tx) error {
+		for _, sql := range []string{
+			`INSERT INTO capture_import (activity_id, user_id) VALUES ($1, $2)`,
+			`INSERT INTO activity_participant (activity_id, user_id, role) VALUES ($1, $2, 'attendee')`,
+		} {
+			if _, err := tx.Exec(ctx, sql, meeting, r.env.e.Rep3); err != nil {
+				return err
+			}
+		}
+		return nil
+	})
+
+	if err := r.relistPast(t, held); err != nil {
+		t.Fatalf("the re-list: %v", err)
 	}
+
 	if r.cancelled(t, "evt-dropped") != 0 {
 		t.Error("the re-list cancelled a meeting an import in flight now holds")
 	}
@@ -304,15 +346,45 @@ func TestARelistWaitsForAnImportOfTheMeetingInFlight(t *testing.T) {
 	}
 }
 
-// waitForALockWaiter returns once a backend of this database waits on a lock.
-func waitForALockWaiter(t *testing.T, done <-chan struct{}) {
+// The seat's second calendar importing the meeting while the first relists
+// keeps it: once the import commits, the seat still holds the meeting.
+func TestARelistWaitsForTheSeatsOtherCalendarImportingTheMeeting(t *testing.T) {
+	r := newRelistEnv(t)
+	meeting := r.droppedMeeting(t)
+	var second ids.UUID
+	if err := r.env.e.Owner.QueryRow(context.Background(), `INSERT INTO capture_connection (user_id, provider, status, credential_ref, account_label)
+		VALUES ($1, 'gcal', 'connected', 'vault:test', 'owner.second@myco.example') RETURNING id`, r.env.e.Rep1).Scan(&second); err != nil {
+		t.Fatal(err)
+	}
+	held := holdImport(t, meeting, func(ctx context.Context, tx pgx.Tx) error {
+		_, err := tx.Exec(ctx, `UPDATE capture_import SET provider_message_ids = provider_message_ids ||
+			(SELECT `+storekit.MailboxMarkSQL("c")+` || ':evt-second' FROM capture_connection c WHERE c.id = $2)
+			WHERE activity_id = $1 AND user_id = $3`, meeting, second, r.env.e.Rep1)
+		return err
+	})
+
+	if err := r.relistPast(t, held); err != nil {
+		t.Fatalf("the re-list: %v", err)
+	}
+
+	if r.cancelled(t, "evt-dropped") != 0 {
+		t.Error("the re-list cancelled a meeting the seat's other calendar now holds")
+	}
+	if seatRowsOnMeeting(t, r.env.e, meeting, r.env.e.Rep1) == 0 {
+		t.Error("the seat lost a meeting its other calendar now holds")
+	}
+}
+
+// waitUntilBlockedBy returns once a backend of this database waits on a lock
+// the import's backend holds.
+func waitUntilBlockedBy(t *testing.T, done <-chan struct{}, importer uint32) {
 	t.Helper()
 	owner := integration.FreshOwnerConn(t)
 	testdb.WaitForContention(t, done, "the re-list finished without waiting for the import in flight",
-		"the re-list never waited on the meeting's locks", func(ctx context.Context) (bool, error) {
+		"the re-list never waited on the import's locks", func(ctx context.Context) (bool, error) {
 			var waiting bool
-			err := owner.QueryRow(ctx, `SELECT EXISTS (SELECT 1 FROM pg_locks l JOIN pg_stat_activity a ON a.pid = l.pid
-				 WHERE NOT l.granted AND a.datname = current_database())`).Scan(&waiting)
+			err := owner.QueryRow(ctx, `SELECT EXISTS (SELECT 1 FROM pg_stat_activity a
+				 WHERE a.datname = current_database() AND $1::int = ANY(pg_blocking_pids(a.pid)))`, int32(importer)).Scan(&waiting)
 			return waiting, err
 		})
 }

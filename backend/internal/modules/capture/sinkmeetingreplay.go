@@ -84,7 +84,7 @@ func (s *Sink) meetingForSeat(ctx context.Context, tx pgx.Tx, rec connector.Norm
 // every meeting writer keeps. It answers the meeting when it is live and the seat's.
 func lockedMeetingForSeat(ctx context.Context, tx pgx.Tx, id ids.ActivityID) (ids.ActivityID, bool, error) {
 	if err := storekit.LockMeetingAttendeePage(ctx, tx, []ids.UUID{id.UUID}); err != nil {
-		return ids.ActivityID{}, false, fmt.Errorf("capture: locking the meeting to replay: %w", err)
+		return ids.ActivityID{}, false, fmt.Errorf("capture: locking the meeting a calendar names: %w", err)
 	}
 	var live bool
 	err := tx.QueryRow(ctx, `SELECT kind='meeting' AND archived_at IS NULL AND restricted_at IS NULL FROM activity WHERE id=$1`, id).Scan(&live)
@@ -92,7 +92,7 @@ func lockedMeetingForSeat(ctx context.Context, tx pgx.Tx, id ids.ActivityID) (id
 		return ids.ActivityID{}, false, nil
 	}
 	if err != nil {
-		return ids.ActivityID{}, false, fmt.Errorf("capture: reading the meeting to replay: %w", err)
+		return ids.ActivityID{}, false, fmt.Errorf("capture: reading the meeting a calendar names: %w", err)
 	}
 	held, err := SeatHoldsActivityTx(ctx, tx, id)
 	return id, held, err
