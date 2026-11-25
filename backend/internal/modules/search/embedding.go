@@ -17,6 +17,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/ports/model"
+	"github.com/margince/margince/backend/internal/shared/ports/recordkinds"
 )
 
 // Embedder is the embed lane this module consumes; compose injects the
@@ -50,7 +51,9 @@ func isZero(vec []float32) bool {
 // model no longer serving the workspace, indistinguishable from a live
 // one.
 func (s *Store) UpsertEmbedding(ctx context.Context, entityType string, entityID ids.UUID, text string, embedder Embedder) (bool, error) {
-	if !knownEntity(ctx, entityType) {
+	// embedding.entity_type holds core kinds only, so an extension kind is
+	// refused here, before a model call is paid for a row the table refuses.
+	if recordkinds.IsExtensionName(entityType) || !knownEntity(ctx, entityType) {
 		return false, fmt.Errorf("search: unembeddable entity type %q", entityType)
 	}
 	text = strings.TrimSpace(text)

@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-package main
+package unitset
 
 import (
 	"fmt"
@@ -16,7 +16,7 @@ func validateDevelopmentMarkers(file *modfile.File) error {
 	allowed := map[int]bool{}
 	for _, requirement := range file.Require {
 		for _, comment := range requirement.Syntax.Suffix {
-			if strings.TrimSpace(strings.TrimPrefix(comment.Token, "//")) == developmentOnlyMarker {
+			if strings.TrimSpace(strings.TrimPrefix(comment.Token, "//")) == DevelopmentOnlyMarker {
 				allowed[comment.Start.Byte] = true
 			}
 		}
@@ -35,7 +35,7 @@ func validateDevelopmentMarkers(file *modfile.File) error {
 		for _, group := range [][]modfile.Comment{comments.Before, comments.Suffix, comments.After} {
 			for _, comment := range group {
 				if strings.Contains(strings.ToLower(comment.Token), "margince:") && !allowed[comment.Start.Byte] {
-					return fmt.Errorf("line %d: put // %s at the end of its require line, with no other text", comment.Start.Line, developmentOnlyMarker)
+					return fmt.Errorf("line %d: put // %s at the end of its require line, with no other text", comment.Start.Line, DevelopmentOnlyMarker)
 				}
 			}
 		}

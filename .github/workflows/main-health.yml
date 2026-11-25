@@ -86,7 +86,7 @@ jobs:
             legs: lint-base vet arch-lint
             tree-gates: "off"
           - part: lint-strict
-            legs: lint-strict lint-modules
+            legs: lint-strict lint-untagged lint-modules
             tree-gates: "off"
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1

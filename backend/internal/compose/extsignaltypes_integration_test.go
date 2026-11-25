@@ -15,6 +15,7 @@ import (
 	"testing"
 
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/ports/extregistrytest"
 	"github.com/margince/margince/backend/internal/shared/ports/signaltypes"
 	"github.com/margince/margince/backend/pkg/extension"
 )
@@ -29,6 +30,7 @@ func signalFiler(objects ...string) principal.Permissions {
 
 func TestAUnitFilesItsOwnSignalKindAndARepeatIsTheSameSignal(t *testing.T) {
 	w := setupReads(t)
+	extregistrytest.Reset(t)
 	signaltypes.Register(coreUnit, []extension.SignalTypeDeclaration{{
 		Kind: "loss", Label: "Loss reported",
 		Evidence: []extension.SignalEvidenceField{{Name: "amount", Label: "Amount", Type: extension.SignalFieldNumber, Required: true}},
@@ -69,6 +71,7 @@ func TestAUnitFilesItsOwnSignalKindAndARepeatIsTheSameSignal(t *testing.T) {
 
 func TestAUnitCannotFileASignalAboutARecordTheCallerCannotSee(t *testing.T) {
 	w := setupReads(t)
+	extregistrytest.Reset(t)
 	signaltypes.Register(coreUnit, []extension.SignalTypeDeclaration{{Kind: "loss", Label: "Loss reported"}})
 	err := w.readAs(t, w.user, signalFiler("signal", "company"), func(ctx context.Context, core extension.Core) error {
 		_, _, err := core.Signals().Create(ctx, "loss",
