@@ -11,6 +11,7 @@ package integration
 import (
 	"context"
 	"errors"
+	"maps"
 	"sync"
 	"testing"
 
@@ -23,22 +24,58 @@ import (
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/platform/recordmerge"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
+
+type dealFixtureIDs struct {
+	pipeline ids.PipelineID
+	open     ids.StageID
+}
+
+var dealFixtures sync.Map
+
+// openMergeDeal creates an open deal on a company. The default pipeline is seeded
+// once per environment, because seeding it twice is refused.
+func openMergeDeal(t *testing.T, e *Env, name string, company ids.UUID) ids.UUID {
+	t.Helper()
+	fixture, ok := dealFixtures.Load(e)
+	if !ok {
+		pipeline, open, _ := DealFixture(t, e)
+		fixture, _ = dealFixtures.LoadOrStore(e, dealFixtureIDs{pipeline, open})
+	}
+	fx := fixture.(dealFixtureIDs)
+	companyID := ids.From[ids.CompanyKind](company)
+	d, err := e.Deals.CreateDeal(mergeAdmin(e), deals.CreateDealInput{
+		Name: name, PipelineID: fx.pipeline, StageID: fx.open, CompanyID: &companyID, Source: "manual",
+	})
+	if err != nil {
+		t.Fatalf("creating deal %q: %v", name, err)
+	}
+	return ids.UUID(d.Id)
+}
+
+// mergeAdmin is the harness admin plus the offer grants a deal's offers need.
+func mergeAdmin(e *Env) context.Context {
+	perms := AdminPerms
+	perms.Objects = maps.Clone(AdminPerms.Objects)
+	perms.Objects["offer"] = principal.ObjectGrant{Create: true, Read: true, Update: true, Delete: true}
+	return e.As(e.AdminUser, nil, perms)
+}
 
 // twoDealsOnOneCompany seeds the merge's usual pair: a source and a target
 // that name the same company.
 func twoDealsOnOneCompany(t *testing.T, e *Env) (company ids.UUID, source, target ids.DealID) {
 	t.Helper()
 	company = e.SeedCompany(t, "Merge Works GmbH", nil)
-	source = ids.From[ids.DealKind](e.SeedOpenDealOn(t, "Duplicate", company))
-	target = ids.From[ids.DealKind](e.SeedOpenDealOn(t, "Original", company))
+	source = ids.From[ids.DealKind](openMergeDeal(t, e, "Duplicate", company))
+	target = ids.From[ids.DealKind](openMergeDeal(t, e, "Original", company))
 	return company, source, target
 }
 
 func addStakeholder(t *testing.T, e *Env, deal ids.DealID, contact ids.UUID) {
 	t.Helper()
 	contactID := ids.From[ids.ContactKind](contact)
-	if _, err := e.Contacts.CreateRelationship(e.Admin(), contacts.CreateRelationshipInput{
+	if _, err := e.Contacts.CreateRelationship(mergeAdmin(e), contacts.CreateRelationshipInput{
 		Kind: "deal_stakeholder", ContactID: &contactID, DealID: &deal, Source: "manual",
 	}); err != nil {
 		t.Fatalf("adding a stakeholder: %v", err)
@@ -47,7 +84,7 @@ func addStakeholder(t *testing.T, e *Env, deal ids.DealID, contact ids.UUID) {
 
 func TestDealMergeMovesTheFactsAndLeavesThePathOnTheLoser(t *testing.T) {
 	e := Setup(t)
-	admin := e.Admin()
+	admin := mergeAdmin(e)
 	_, source, target := twoDealsOnOneCompany(t, e)
 	shared, only := e.SeedContact(t, "Shared Buyer", nil), e.SeedContact(t, "Only On Duplicate", nil)
 	addStakeholder(t, e, source, shared)
@@ -92,7 +129,7 @@ func TestDealMergeMovesTheFactsAndLeavesThePathOnTheLoser(t *testing.T) {
 
 func TestDealMergeRefusesWhatCannotJoin(t *testing.T) {
 	e := Setup(t)
-	admin := e.Admin()
+	admin := mergeAdmin(e)
 	_, source, target := twoDealsOnOneCompany(t, e)
 
 	var self *recordmerge.MergeSelfError
@@ -101,7 +138,7 @@ func TestDealMergeRefusesWhatCannotJoin(t *testing.T) {
 	}
 
 	otherCompany := e.SeedCompany(t, "Another Buyer AG", nil)
-	elsewhere := ids.From[ids.DealKind](e.SeedOpenDealOn(t, "Elsewhere", otherCompany))
+	elsewhere := ids.From[ids.DealKind](openMergeDeal(t, e, "Elsewhere", otherCompany))
 	var refused *deals.MergeRefusedError
 	if _, err := e.Deals.MergeDeal(admin, elsewhere, target, nil); !errors.As(err, &refused) || refused.Code != "different_company" {
 		t.Errorf("deals of two companies → %v, want MergeRefusedError different_company", err)
@@ -119,7 +156,7 @@ func TestDealMergeRefusesWhatCannotJoin(t *testing.T) {
 	if _, err := e.Deals.MergeDeal(admin, source, target, nil); !errors.As(err, &already) || already.IntoID != target.UUID {
 		t.Errorf("merging the same source again → %v, want AlreadyMergedError naming the survivor", err)
 	}
-	third := ids.From[ids.DealKind](e.SeedOpenDealOn(t, "Third", e.SeedCompany(t, "Third Co", nil)))
+	third := ids.From[ids.DealKind](openMergeDeal(t, e, "Third", e.SeedCompany(t, "Third Co", nil)))
 	var dead *recordmerge.MergedTargetError
 	if _, err := e.Deals.MergeDeal(admin, third, source, nil); !errors.As(err, &dead) {
 		t.Errorf("merging into a merged-away deal → %v, want MergedTargetError", err)
@@ -129,13 +166,13 @@ func TestDealMergeRefusesWhatCannotJoin(t *testing.T) {
 func TestDealMergeMovesTheLosersPinnedOffer(t *testing.T) {
 	e := Setup(t)
 	_, source, target := twoDealsOnOneCompany(t, e)
-	offer, err := e.Deals.CreateOffer(e.Admin(), source, deals.CreateOfferInput{Currency: "EUR", Source: "manual"})
+	offer, err := e.Deals.CreateOffer(mergeAdmin(e), source, deals.CreateOfferInput{Currency: "EUR", Source: "manual"})
 	if err != nil {
 		t.Fatalf("create offer: %v", err)
 	}
 	e.WsExec(t, `UPDATE deal SET arr_source_offer_id = $2, expected_arr_minor = 1200, currency = 'EUR' WHERE id = $1`, source, ids.UUID(offer.Id))
 
-	if _, err := e.Deals.MergeDeal(e.Admin(), source, target, nil); err != nil {
+	if _, err := e.Deals.MergeDeal(mergeAdmin(e), source, target, nil); err != nil {
 		t.Fatalf("merging a deal whose recurring revenue is pinned to its own offer: %v", err)
 	}
 	if n := e.WsCount(t, `SELECT count(*) FROM offer WHERE id = $1 AND deal_id = $2`, ids.UUID(offer.Id), target); n != 1 {
@@ -146,15 +183,15 @@ func TestDealMergeMovesTheLosersPinnedOffer(t *testing.T) {
 func TestAMergedAwayDealCannotBeRestored(t *testing.T) {
 	e := Setup(t)
 	_, source, target := twoDealsOnOneCompany(t, e)
-	if _, err := e.Deals.MergeDeal(e.Admin(), source, target, nil); err != nil {
+	if _, err := e.Deals.MergeDeal(mergeAdmin(e), source, target, nil); err != nil {
 		t.Fatalf("merge: %v", err)
 	}
-	err := e.DB().Tx(e.Admin(), func(tx pgx.Tx) error {
+	err := e.DB().Tx(mergeAdmin(e), func(tx pgx.Tx) error {
 		with := storekit.RestoreWith{
 			Erased: func(context.Context, pgx.Tx, ids.UUID) (bool, error) { return false, nil },
 			Links:  collections.ArchivedLinkRestore(),
 		}
-		_, err := e.Deals.RestoreDealTx(e.Admin(), tx, source, nil, with)
+		_, err := e.Deals.RestoreDealTx(mergeAdmin(e), tx, source, nil, with)
 		return err
 	})
 	var refusal *storekit.RestoreRefusal
@@ -174,7 +211,7 @@ func TestTwoOppositeDealMergesLeaveOneWinner(t *testing.T) {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			_, results[i] = e.Deals.MergeDeal(e.Admin(), pair[0], pair[1], nil)
+			_, results[i] = e.Deals.MergeDeal(mergeAdmin(e), pair[0], pair[1], nil)
 		}()
 	}
 	wg.Wait()
@@ -196,7 +233,7 @@ func TestTwoOppositeDealMergesLeaveOneWinner(t *testing.T) {
 // and never the merged-away one it came from.
 func TestAnOfferMovedByTheMergeRepricesTheSurvivorOnly(t *testing.T) {
 	e := Setup(t)
-	admin := e.Admin()
+	admin := mergeAdmin(e)
 	_, source, target := twoDealsOnOneCompany(t, e)
 	description, price, taxRate := "Implementation", int64(10000), "19.00"
 	created, err := e.Deals.CreateOffer(admin, source, deals.CreateOfferInput{
@@ -235,7 +272,7 @@ func TestAMergedAwayDealLeavesTheStageEntriesTheReportsCount(t *testing.T) {
 	if entries(source) == 0 {
 		t.Fatal("the duplicate has no stage entry before the merge, so this test proves nothing")
 	}
-	if _, err := e.Deals.MergeDeal(e.Admin(), source, target, nil); err != nil {
+	if _, err := e.Deals.MergeDeal(mergeAdmin(e), source, target, nil); err != nil {
 		t.Fatalf("merge: %v", err)
 	}
 	if got := entries(source); got != 0 {
