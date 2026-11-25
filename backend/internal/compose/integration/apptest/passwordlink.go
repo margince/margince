@@ -19,11 +19,11 @@ func SetPasswordByLink(t *testing.T, e *AppEnv, userID, password string) {
 	var link struct {
 		SetPasswordURL string `json:"set_password_url"`
 	}
-	if status := e.Call(t, "POST", "/v1/users/"+userID+"/password-link", nil, nil, &link); status != http.StatusCreated {
+	if status := e.CallUntilSettled(t, "POST", "/v1/users/"+userID+"/password-link", nil, nil, &link); status != http.StatusCreated {
 		t.Fatalf("issuing a set-password link for %s → %d", userID, status)
 	}
 	body := map[string]string{"token": PasswordLinkToken(t, link.SetPasswordURL), "new_password": password}
-	if status := e.Call(t, "POST", "/v1/auth/reset-password", body, nil, nil); status != http.StatusNoContent {
+	if status := e.CallUntilSettled(t, "POST", "/v1/auth/reset-password", body, nil, nil); status != http.StatusNoContent {
 		t.Fatalf("following the set-password link for %s → %d", userID, status)
 	}
 }
