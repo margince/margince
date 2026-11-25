@@ -223,8 +223,8 @@ func TestOnboardingBindsAPresetOfTheChosenVendor(t *testing.T) {
 // fails AssertAllMatched.
 var ungradedSetupWaivers = gatekit.Waive(map[string]string{
 	"openrouter":    "openrouter_cloud is re-certified in the full sweep of #12751; until then its records are stale or absent",
-	"gemini":        "the MCP copy round changes the tool copy agent_loop reads, so its record reads stale until the next sweep re-certifies it",
-	"gemini_vertex": "the same agent_loop record as gemini; the vertex preset binds the same model",
+	"gemini":        "the contact and company create tools now hold source to the six channels, which changed the agent_loop site check; agent_loop and nl_search wait for a paid re-certification of gemini_cloud",
+	"gemini_vertex": "the same agent_loop site check as gemini, on the same models",
 })
 
 // Every task the binding onboarding writes answers on a model whose grade is

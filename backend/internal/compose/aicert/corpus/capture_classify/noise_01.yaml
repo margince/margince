@@ -14,6 +14,12 @@ expect:
   outcome: accepted
   answer: [other]
   rubric: >
+    The candidate output is the harness's record of the run, not one reply.
+    "replies" holds each raw reply in the order the pass asked, and "messages"
+    holds what the pass stored for each message. That wrapper is the harness's,
+    so never score it as a format fault; each reply inside it is the model's.
+    A message answered under the 0.7 floor is re-asked alone, so a second reply
+    is that re-ask and not a contradiction.
     An out-of-office autoresponder. It contains a date and the word "respond",
     which is the whole trap: neither is a promise the sender made about the
     business, and no time with anybody is proposed or requested.

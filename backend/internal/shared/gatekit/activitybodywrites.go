@@ -17,33 +17,43 @@ var (
 	setClauseEnd    = regexp.MustCompile(`^(?:where|from|returning)\b`)
 )
 
-// ActivityBodyWrites counts the clauses of a SQL statement that assign an
-// activity's body, and those among them that leave body_own_end unassigned.
-// The stored end is read with the body, so a writer of one sets the other.
-func ActivityBodyWrites(statement string) (writers, unpaired int) {
+// ActivityTextWrites counts the clauses of a SQL statement that assign an
+// activity's body, or change its subject, and those among them that leave
+// body_own_end unassigned. A forward subject moves the end. An insert with no
+// body stores no end, whatever its subject.
+func ActivityTextWrites(statement string) (writers, unpaired int) {
 	low := withoutSQLSpans(strings.ToLower(statement))
-	var clauses [][]string
+	var inserts, sets [][]string
 	for _, at := range insertsActivity.FindAllStringIndex(low, -1) {
-		clauses = append(clauses, bareColumns(sqlListAt(low, at[1], false)))
+		inserts = append(inserts, bareColumns(sqlListAt(low, at[1], false)))
 		if set := upsertSet.FindStringIndex(low[at[1]:insertEnd(low, at[1])]); set != nil {
-			clauses = append(clauses, assignedColumns(sqlListAt(low, at[1]+set[1], true)))
+			sets = append(sets, assignedColumns(sqlListAt(low, at[1]+set[1], true)))
 		}
 	}
 	for _, at := range updatesActivity.FindAllStringIndex(low, -1) {
 		if set := setKeyword.FindStringIndex(low[at[1]:]); set != nil {
-			clauses = append(clauses, assignedColumns(sqlListAt(low, at[1]+set[1], true)))
+			sets = append(sets, assignedColumns(sqlListAt(low, at[1]+set[1], true)))
 		}
 	}
-	for _, columns := range clauses {
-		if !slices.Contains(columns, "body") {
-			continue
-		}
-		writers++
-		if !slices.Contains(columns, "body_own_end") {
-			unpaired++
-		}
+	for _, columns := range inserts {
+		writers, unpaired = countTextWrite(columns, writers, unpaired, "body")
+	}
+	for _, columns := range sets {
+		writers, unpaired = countTextWrite(columns, writers, unpaired, "body", "subject")
 	}
 	return writers, unpaired
+}
+
+// countTextWrite adds one clause to the counts when it assigns any of the text
+// columns, and to unpaired when it leaves body_own_end out.
+func countTextWrite(columns []string, writers, unpaired int, text ...string) (int, int) {
+	if !slices.ContainsFunc(text, func(column string) bool { return slices.Contains(columns, column) }) {
+		return writers, unpaired
+	}
+	if !slices.Contains(columns, "body_own_end") {
+		unpaired++
+	}
+	return writers + 1, unpaired
 }
 
 // insertEnd is where the insert ends whose column list opens before pos. That is

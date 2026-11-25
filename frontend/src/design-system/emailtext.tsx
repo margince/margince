@@ -5,11 +5,18 @@ import { type MessageLanguage, ReaderRendering } from "./readerrendering";
 import "./emailtext.css";
 
 // Both the full reader and preview preserve the author's paragraphs and sign-off.
-export function EmailText({ body }: Readonly<{ body: string }>) {
+export function EmailText({
+  body,
+  subject,
+}: Readonly<{
+  body: string;
+  /** The mail's own subject, which says whether it forwards. */
+  subject: string | null | undefined;
+}>) {
   const t = useT();
   // Envelope fields are rendered by the reader; the body splitter can also
   // identify a quoted envelope header, which is not part of the message text.
-  const parts = splitEmailBody(body);
+  const parts = splitEmailBody(body, subject ?? "");
   return (
     <div className="emailtext">
       <p className="emailtext__main">{parts.main}</p>
@@ -34,11 +41,14 @@ export function EmailReading({
   activityId,
   language,
   body,
+  subject,
   textUnreadable = false,
 }: Readonly<{
   activityId: string;
   language: MessageLanguage | null | undefined;
   body: string | null | undefined;
+  /** The mail's own subject, which says whether it forwards. */
+  subject: string | null | undefined;
   /** The reader already says why the text is missing. */
   textUnreadable?: boolean;
 }>) {
@@ -50,7 +60,7 @@ export function EmailReading({
   }
   return (
     <ReaderRendering activityId={activityId} language={language}>
-      <EmailText body={body} />
+      <EmailText body={body} subject={subject} />
     </ReaderRendering>
   );
 }
