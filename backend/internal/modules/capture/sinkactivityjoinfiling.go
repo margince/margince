@@ -34,19 +34,6 @@ func (s *Sink) joinActivityTx(
 	return s.fileJoinedMailForSeatTx(ctx, tx, id, rec, fields)
 }
 
-// ladderSuppressedClause holds for activity a when the counterparty ladder
-// suppressed its message, given subject, the SQL expression for the address the
-// ladder judged. Such a message is filed under nobody, whichever mailbox
-// delivers it. The trace says so for the message itself, and the disposition
-// ledger still says so for the judged address after the trace sweep.
-func ladderSuppressedClause(subject string) string {
-	return `(EXISTS (SELECT 1 FROM capture_trace t
-	WHERE t.source_system = a.source_system AND t.source_id = a.source_id
-	  AND t.stage = 'tier_ladder' AND t.outcome = 'suppressed')
- OR EXISTS (SELECT 1 FROM capture_pending_counterparty d
-	WHERE d.email = lower(btrim(` + subject + `)) AND d.status = 'suppressed'))`
-}
-
 // seatHoldsImportTx answers whether the seat has an import row on the activity.
 func seatHoldsImportTx(ctx context.Context, tx pgx.Tx, id ids.ActivityID, seat ids.UUID) (bool, error) {
 	var held bool
@@ -116,10 +103,8 @@ func (s *Sink) joinedMailTx(
 	if private, err := capturedThreadIsPrivateTx(ctx, tx, rec); err != nil || private {
 		return joinedMail{}, err
 	}
-	// The party this message's ladder judges, which on an introduction is a
-	// copied outsider rather than the stored counterparty.
-	subject, err := s.ladderSubjectTx(ctx, tx, rec)
-	if err != nil {
+	suppressed, err := s.ladderSuppressesTx(ctx, tx, id, rec)
+	if err != nil || suppressed {
 		return joinedMail{}, err
 	}
 	var joined joinedMail
@@ -129,9 +114,9 @@ func (s *Sink) joinedMailTx(
 		  FROM activity a
 		  JOIN activity_participant ap ON ap.activity_id = a.id
 		       AND ap.address IS NOT NULL AND NOT ap.past_party_cap
-		 WHERE a.id = $1 AND a.restricted_at IS NULL AND NOT `+ladderSuppressedClause("$2::text")+`
-		   AND EXISTS (SELECT 1 FROM capture_import ci WHERE ci.activity_id = a.id AND ci.user_id = $3)
-		 GROUP BY a.id`, id, subject.Email, actorUserID(ctx)).Scan(&joined.addresses, &joined.filed)
+		 WHERE a.id = $1 AND a.restricted_at IS NULL
+		   AND EXISTS (SELECT 1 FROM capture_import ci WHERE ci.activity_id = a.id AND ci.user_id = $2)
+		 GROUP BY a.id`, id, actorUserID(ctx)).Scan(&joined.addresses, &joined.filed)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return joinedMail{}, nil
 	}
@@ -139,4 +124,25 @@ func (s *Sink) joinedMailTx(
 		return joinedMail{}, fmt.Errorf("capture: reading what a joined mail is filed by: %w", err)
 	}
 	return joined, nil
+}
+
+// ladderSuppressesTx asks what the counterparty ladder asks of a capture. Does
+// the registry suppress the party it judges, with no correspondence to spare
+// it? It only reads, so a join records no disposition and needs no trace.
+func (s *Sink) ladderSuppressesTx(ctx context.Context, tx pgx.Tx, id ids.ActivityID, rec connector.NormalizedRecord) (bool, error) {
+	if s.transactional == nil {
+		return false, nil
+	}
+	subject, err := s.ladderSubjectTx(ctx, tx, rec)
+	if err != nil || subject.Email == "" {
+		return false, err
+	}
+	if suppress, _ := s.transactional.Suppress(transactionalInput(subject)); !suppress {
+		return false, nil
+	}
+	dealt, err := s.dealtWithEnoughToRecord(ctx, tx, subject, id.UUID)
+	if err != nil {
+		return false, err
+	}
+	return !dealt.positive(), nil
 }

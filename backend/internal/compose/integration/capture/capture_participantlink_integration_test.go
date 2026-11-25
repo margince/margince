@@ -214,6 +214,39 @@ func TestAJoinedMailCopyingASuppressedAddressIsStillFiled(t *testing.T) {
 	}
 }
 
+// A sender the ladder once suppressed is spared once the workspace writes to
+// it. A join then files its later mail as the first capture would.
+func TestAJoinFilesMailFromASuppressedSenderTheWorkspaceLaterWroteTo(t *testing.T) {
+	env := newCaptureEnv(t)
+	e, sync := env.e, env.sync
+	syncSecond := secondMailbox(t, e, e.Rep3)
+	blast := func(msgID string) []byte {
+		return []byte(strings.Join([]string{
+			"From: GITEX <hello@event.gitex.com>", "To: " + captureOwner, "Cc: " + secondSeatAddress,
+			"Subject: newsletter", "Date: Wed, 04 Jun 2026 08:00:00 +0000", "Message-ID: <" + msgID + ">",
+			"List-Unsubscribe: <https://example.com/unsub>", "Content-Type: text/plain", "", "hello", "",
+		}, "\r\n"))
+	}
+	sync(t, blast("gx-first@event.gitex.com"))
+	if n := countRows(t, e, `SELECT count(*) FROM capture_pending_counterparty WHERE email = 'hello@event.gitex.com' AND status = 'suppressed'`); n == 0 {
+		t.Fatal("the first blast left no suppressed ledger row, so this test proves nothing")
+	}
+	env.syncSent(t, map[string]bool{"reply-gitex@myco.example": true},
+		email(captureOwner, "", "hello@event.gitex.com", "reply-gitex@myco.example", ""))
+	store := contacts.NewStore(e.DB())
+	private, err := store.EnsureContactByEmail(contactCreator(e), "Gitex Events", "hello@event.gitex.com", "manual", storekit.RefuseErased)
+	if err != nil {
+		t.Fatalf("seeding the second seat's contact: %v", err)
+	}
+	ownerExec(t, e, `UPDATE contact SET owner_id = $2, visibility = 'owner' WHERE id = $1`, private, e.Rep3)
+	later := blast("gx-later@event.gitex.com")
+	sync(t, later)
+	syncSecond(t, later)
+	if filed := contactsFiledUnder(t, e, "gx-later@event.gitex.com"); !slices.Contains(filed, private) {
+		t.Fatalf("the spared mail is filed under %v, want the second seat's private contact among them", filed)
+	}
+}
+
 // A join leaves the links the project and deal attribution after it may still
 // need, as a new capture does. A mail copying more contacts than the ceiling
 // holds is filed up to that reservation, and the join adds nothing past it.
