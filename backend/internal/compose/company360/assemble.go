@@ -367,7 +367,7 @@ func (a *assembly) suggestionInputsOnce() (suggestionInputs, error) {
 			if owner := a.out.Company.OwnerId; owner != nil {
 				heading.owner = new(ids.UUID(*owner))
 			}
-			if lc := a.out.Company.Lifecycle; lc != nil {
+			if lc := a.out.Company.Status; lc != nil {
 				heading.lifecycle = string(*lc)
 			}
 			var base string

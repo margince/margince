@@ -135,7 +135,7 @@ func TestAcceptingAnOfferInAnotherCurrencyRefusesOverRecurringRevenue(t *testing
 	e := Setup(t)
 	pipeline, open, _ := DealFixture(t, e)
 	deal := e.SeedDeal(t, "Subscription plus project", pipeline, open, &e.Rep1)
-	ctx := e.As(e.Rep1, []ids.UUID{e.Team1}, offerDeskPerms)
+	ctx := e.As(e.Rep1, []ids.UUID{e.Team1}, OfferDeskPerms)
 	admin := e.Admin()
 
 	// The deal is priced in euros and carries a euro subscription.
@@ -193,7 +193,7 @@ func TestAcceptingAnOfferInTheSameCurrencyKeepsRecurringRevenue(t *testing.T) {
 	e := Setup(t)
 	pipeline, open, _ := DealFixture(t, e)
 	deal := e.SeedDeal(t, "Subscription, same currency", pipeline, open, &e.Rep1)
-	ctx := e.As(e.Rep1, []ids.UUID{e.Team1}, offerDeskPerms)
+	ctx := e.As(e.Rep1, []ids.UUID{e.Team1}, OfferDeskPerms)
 	admin := e.Admin()
 
 	amount, arr, currency := int64(500000), int64(1200000), "EUR"
@@ -221,14 +221,14 @@ func TestAcceptingAnOfferInTheSameCurrencyKeepsRecurringRevenue(t *testing.T) {
 		t.Fatalf("accepting a EUR offer over EUR recurring revenue: %v", err)
 	}
 
-	// The one-off amount takes the accepted gross; the subscription is
+	// The one-off amount takes the accepted net; the subscription is
 	// untouched, because the offer said nothing about it.
-	const acceptedGross = int64(11900)
+	const acceptedNet = int64(10000)
 	if got := e.WsCount(t,
 		`SELECT count(*) FROM deal
 		  WHERE id = $1 AND amount_minor = $2 AND expected_arr_minor = $3 AND currency = 'EUR'`,
-		deal, acceptedGross, arr); got != 1 {
-		t.Fatalf("the accept did not leave the deal with the accepted gross beside its untouched ARR")
+		deal, acceptedNet, arr); got != 1 {
+		t.Fatalf("the accept did not leave the deal with the accepted net beside its untouched ARR")
 	}
 }
 

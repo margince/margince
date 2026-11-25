@@ -55,3 +55,33 @@ func TestPreviewReadingTranslatesLocaleCodesWithRegionNames(t *testing.T) {
 		}
 	}
 }
+
+// A company's status and a deal's share the field name `status`; the value's
+// kind tells the two vocabularies apart.
+func TestACompanyStatusChangeReadsInWordsBesideADealStatus(t *testing.T) {
+	preview := crmcontracts.ApprovalPreview{Version: 2, State: "ready", Changes: []crmcontracts.ApprovalPreviewChange{
+		{
+			Field:  "status",
+			Before: crmcontracts.ApprovalPreviewValue{Kind: "lifecycle", Text: "customer"},
+			After:  crmcontracts.ApprovalPreviewValue{Kind: "lifecycle", Text: "former_customer"},
+		},
+		{
+			Field:  "status",
+			Before: crmcontracts.ApprovalPreviewValue{Kind: "text", Text: "open"},
+			After:  crmcontracts.ApprovalPreviewValue{Kind: "text", Text: "won"},
+		},
+	}}
+	english := ReadPreview(textlang.English, &preview)
+	if got := english.Changes[0].After.Text; got != "Former customer" {
+		t.Errorf("a company moving to former_customer reads %q, want Former customer", got)
+	}
+	if got := english.Changes[1].After.Text; got != "Won" {
+		t.Errorf("a deal moving to won reads %q, want Won", got)
+	}
+	for _, lang := range textlang.Shipped {
+		got := ReadPreview(lang, &preview).Changes[0]
+		if got.Before.Text == "customer" || got.After.Text == "former_customer" {
+			t.Errorf("%s: the company status reads as its codes %q to %q", lang, got.Before.Text, got.After.Text)
+		}
+	}
+}

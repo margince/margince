@@ -124,7 +124,7 @@ func accountTerminationPreview(approval crmcontracts.Approval) bool {
 		return false
 	}
 	for _, change := range approval.Preview.Changes {
-		if change.Field == "lifecycle" && change.After.Text == string(crmcontracts.CompanyLifecycleFormerCustomer) {
+		if change.Field == "status" && change.After.Text == string(crmcontracts.CompanyStatusFormerCustomer) {
 			return true
 		}
 	}

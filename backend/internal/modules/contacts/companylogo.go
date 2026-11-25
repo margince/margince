@@ -146,7 +146,7 @@ func bindSiteReadLogo(ctx context.Context, tx pgx.Tx, readID ids.UUID, companyID
 	var unadopted *string
 	var objectKey, originURL *string
 	if err := tx.QueryRow(ctx, `SELECT `+siteReadLogoSlotKey+`,
-		CASE WHEN $2::boolean THEN sr.logo_origin ELSE sr.logo_icon_origin END
+		CASE WHEN $2::boolean THEN sr.logo_source ELSE sr.logo_icon_source END
 		FROM site_read sr WHERE sr.id = $1`, readID, slot.wide()).
 		Scan(&objectKey, &originURL); err != nil {
 		return nil, fmt.Errorf("read the website read's %s: %w", slot, err)
@@ -194,9 +194,9 @@ func bindSiteReadLogo(ctx context.Context, tx pgx.Tx, readID ids.UUID, companyID
 	// and the reason this clears only on the run that actually adopted.
 	if _, err := tx.Exec(ctx, `UPDATE site_read SET
 		logo_object_key      = CASE WHEN $2::boolean THEN NULL ELSE logo_object_key END,
-		logo_origin          = CASE WHEN $2::boolean THEN NULL ELSE logo_origin END,
+		logo_source          = CASE WHEN $2::boolean THEN NULL ELSE logo_source END,
 		logo_icon_object_key = CASE WHEN $2::boolean THEN logo_icon_object_key ELSE NULL END,
-		logo_icon_origin     = CASE WHEN $2::boolean THEN logo_icon_origin ELSE NULL END,
+		logo_icon_source     = CASE WHEN $2::boolean THEN logo_icon_source ELSE NULL END,
 		updated_at = now()
 		WHERE id = $1`, readID, slot.wide()); err != nil {
 		return nil, fmt.Errorf("hand the website read's %s to the company: %w", slot, err)

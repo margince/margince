@@ -122,8 +122,8 @@ func summarizeCompany(ctx context.Context, c crmcontracts.Company, source outsid
 		ID: ids.UUID(c.Id).String(), Name: c.DisplayName, LegalName: derefString(c.LegalName),
 		SourceSystem: source.system, SourceID: source.id, UpdatedAt: c.UpdatedAt, Archived: c.ArchivedAt != nil,
 	}
-	if c.Lifecycle != nil {
-		out.Lifecycle = string(*c.Lifecycle)
+	if c.Status != nil {
+		out.Status = string(*c.Status)
 	}
 	if c.OwnerId != nil {
 		out.OwnerID = extension.UserID(ids.UUID(*c.OwnerId).String())
@@ -134,7 +134,7 @@ func summarizeCompany(ctx context.Context, c crmcontracts.Company, source outsid
 	}
 	masked := auth.MaskedFields(own, string(recordTypeCompany), false)
 	for field, text := range map[string]*string{
-		"display_name": &out.Name, "legal_name": &out.LegalName, previewValueLifecycle: &out.Lifecycle,
+		"display_name": &out.Name, "legal_name": &out.LegalName, previewFieldStatus: &out.Status,
 		"source_system": &out.SourceSystem, memberSourceArgument: &out.SourceID,
 	} {
 		if slices.Contains(masked, field) {

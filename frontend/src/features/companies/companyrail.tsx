@@ -216,14 +216,14 @@ export function useRowBuilders(company: Company, edit: Edit) {
     ),
   });
   const choice = (
-    key: "size_band" | "lifecycle" | "industry",
+    key: "size_band" | "status" | "industry",
     label: MessageKey,
     listed: readonly { value: string; label: string }[],
   ): DetailRow => {
     // Industry and size band may be cleared, which the mapper sends as null;
-    // lifecycle has its own "unknown" stage instead.
+    // status has its own "unknown" stage instead.
     const options =
-      key === "lifecycle"
+      key === "status"
         ? listed
         : [{ value: "", label: t("field.unset") }, ...listed];
     return {
@@ -271,7 +271,7 @@ export function useRowBuilders(company: Company, edit: Edit) {
   return { text, choice, compound };
 }
 
-const ABOUT_KEYS = ["domains", "industry", "size_band", "lifecycle"];
+const ABOUT_KEYS = ["domains", "industry", "size_band", "status"];
 
 function useAboutSection(
   company: Company,
@@ -338,7 +338,7 @@ function useAboutRows(
   const wayIn = useWayIn(company, view, loading);
   const tagged = useRecordCarriesTags("company", company.id, view?.tags);
   const choice = (
-    key: "size_band" | "lifecycle" | "industry",
+    key: "size_band" | "status" | "industry",
     label: MessageKey,
     options: readonly { value: string; label: string }[],
   ): DetailRow => ({
@@ -367,7 +367,7 @@ function useAboutRows(
       })),
     ),
     choice(
-      "lifecycle",
+      "status",
       "company.lifecycle",
       LIFECYCLE_OPTIONS.map((value) => ({
         value,

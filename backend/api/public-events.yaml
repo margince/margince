@@ -1404,9 +1404,10 @@ components:
       x-entity-type: offer
       x-version: 1
       description: >-
-        Payload for offer.accepted — a sent offer was accepted. The deal's
-        headline amount is synced from this offer's gross in the same
-        transaction (see deal.updated on the paired deal entity).
+        Payload for offer.accepted: a sent offer was accepted. The deal's
+        headline amount is synced from this offer's net, the figure without tax, in
+        the same transaction. The paired deal.updated carries that net. This
+        payload still states the offer's own gross.
       required:
         - offer_id
         - deal_id
@@ -1932,11 +1933,14 @@ components:
           additionalProperties: true
           description: >-
             What this update touched, incl. runtime cf_* custom fields.
-            The value shape depends on the emit site: a column patch
-            carries a flat field → new-value entry, while the
+            The value shape depends on the emit site. A column patch
+            carries a flat field → new-value entry. The
             recompute/routing/relationship sites carry a `{delta: {...}}`
-            sub-object (occasionally with a sibling `source`). Read a
-            key's value as either form.
+            sub-object, sometimes with a sibling `source`. Read a key's
+            value as either form. A change to the company's `status`
+            also carries the value under `lifecycle`, the key this
+            version first gave it. `lifecycle` is deprecated; read
+            `status`.
       additionalProperties: false
 
     PublicEventLeadCreated:

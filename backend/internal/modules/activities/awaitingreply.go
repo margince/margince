@@ -109,14 +109,14 @@ func customerArms(ctx context.Context, arg func(any) int, openDeal, workingLead 
 		{[]string{"company"}, func() string {
 			return `EXISTS (SELECT 1 FROM company co
 		    WHERE co.id = sales.company_id AND co.archived_at IS NULL
-		      AND co.lifecycle = ANY(` + engagedLifecycle() + `))`
+		      AND co.status = ANY(` + engagedLifecycle() + `))`
 		}},
 		{[]string{"company", "relationship"}, func() string {
 			return `EXISTS (SELECT 1 FROM relationship job
 		    JOIN company co ON co.id = job.company_id
 		    WHERE job.contact_id = sales.contact_id AND job.kind = 'employment'
 		      AND ` + employment.IsCurrentSQL("job.ended_at") + ` AND co.archived_at IS NULL
-		      AND co.lifecycle = ANY(` + engagedLifecycle() + `))`
+		      AND co.status = ANY(` + engagedLifecycle() + `))`
 		}},
 		{[]string{"lead"}, func() string {
 			return `EXISTS (SELECT 1 FROM lead ld
