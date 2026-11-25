@@ -5,11 +5,9 @@
 
 package compose
 
-// What one Telegram message persists once the ingest worker has filed it, and what
-// a second delivery of the same message leaves behind. The natural key, the audit
-// and outbox rows, the audience and the channel identity are read back from the
-// database after the real worker has run, so a change to the shared filing code
-// that moves any of them fails here by name.
+// These tests pin what one Telegram message persists after the real ingest worker.
+// A change to the shared filing code that moves its key, audience, audit, outbox or
+// identity rows fails here by name.
 
 import (
 	"context"
@@ -22,7 +20,7 @@ import (
 )
 
 // workTelegramIngestFixtureJob runs the fixture's raw update through the real
-// worker, exactly as a queued job would.
+// worker, as a queued job would.
 func workTelegramIngestFixtureJob(t *testing.T, e *integration.Env, connID, rawID ids.UUID) {
 	t.Helper()
 	worker := newTelegramIngestWorker(e.Pool, CaptureConfig{}, quietTestLogger())

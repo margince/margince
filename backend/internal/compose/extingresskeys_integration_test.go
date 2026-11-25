@@ -5,10 +5,9 @@
 
 package compose
 
-// What a unit's chat message persists through the extension ingress, and what a
-// replay leaves behind: the natural key, the audit and outbox rows, the audience
-// and the channel identity. Read back after the real ingest, so a change to the
-// shared filing code that moves any of them fails here by name.
+// These tests pin what a unit's chat message persists through the extension ingress.
+// A change to the shared filing code that moves its key, audience, audit, outbox or
+// identity rows fails here by name.
 
 import (
 	"context"
