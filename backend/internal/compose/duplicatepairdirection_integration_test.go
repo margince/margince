@@ -87,7 +87,7 @@ func (l leadPairs) collide(t *testing.T, name string) (mine, theirs ids.LeadID) 
 	if n := l.filed(t, mine, theirs); n != 0 {
 		t.Fatalf("the unalike leads were filed %d time(s)", n)
 	}
-	if _, err := l.c.store.MergeLead(l.rep, mine, theirs); !isMergeTargetReadOnly(err) {
+	if _, err := l.c.store.MergeLead(l.rep, mine, theirs); caseCode(err) != "merge_target_read_only" {
 		t.Fatalf("a merge into a colleague's unfiled lead = %v, want the merge_target_read_only refusal", err)
 	}
 	if _, err := l.c.store.UpdateLead(l.rep, mine, contacts.UpdateLeadInput{FullName: &name}); err != nil {
@@ -137,7 +137,7 @@ func TestTheOwnerOfOneLeadOfAFiledPairOnlyGivesTheirsAway(t *testing.T) {
 	if _, err := c.store.DisposeDedupeCandidate(c.e.Admin(), leadPairID(t, c, mine, theirs), "not_a_duplicate", nil); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := c.store.MergeLead(l.rep, mine, theirs); !isMergeTargetReadOnly(err) {
+	if _, err := c.store.MergeLead(l.rep, mine, theirs); caseCode(err) != "merge_target_read_only" {
 		t.Errorf("a merge into a colleague's lead of a dismissed pair = %v, want the merge_target_read_only refusal", err)
 	}
 }
