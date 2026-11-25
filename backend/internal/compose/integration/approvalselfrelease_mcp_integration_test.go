@@ -26,7 +26,7 @@ func TestACredentialOverwritesATypedValueAtOnceAndStagesNothing(t *testing.T) {
 	invoke := q.invoker(t, q.mintPassport(t, "overwriting agent", "read", "write"))
 
 	out, err := invoke("update_record", fmt.Sprintf(
-		`{"record_type":"contact","id":%q,"fields":{"full_name":"Selma Machine","title":"COO"}}`, contactID,
+		`{"why":"A test asks for this change.","record_type":"contact","id":%q,"fields":{"full_name":"Selma Machine","title":"COO"}}`, contactID,
 	))
 	if err != nil {
 		t.Fatalf("update_record → %v", err)

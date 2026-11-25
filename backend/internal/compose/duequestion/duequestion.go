@@ -60,6 +60,7 @@ func (a Asker) AskDueTx(ctx context.Context, tx pgx.Tx, q capture.DueQuestion) e
 	}
 	digest := sha256.Sum256(body)
 	_, _, err = a.Approvals.StageUnlessDeclinedTx(principal.SystemActing(ctx, actor), tx, approvals.StageInput{
+		Why:            approvals.HeadlineSaysWhy,
 		Kind:           Kind,
 		ProposedChange: body,
 		DiffHash:       hex.EncodeToString(digest[:]),

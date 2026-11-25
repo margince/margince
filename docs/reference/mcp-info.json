@@ -10,16 +10,16 @@
   "totals": {
     "tools": 48,
     "resources": 14,
-    "tool_catalog_bytes": 248960,
+    "tool_catalog_bytes": 249249,
     "resource_catalog_bytes": 5622,
-    "approx_wire_tokens_total": 63645,
+    "approx_wire_tokens_total": 63717,
     "largest_tool_bytes": 16204,
     "largest_tool": "read_details",
     "tool_catalog_composition": {
       "description_bytes": 52248,
-      "input_schema_bytes": 150393,
+      "input_schema_bytes": 150682,
       "output_schema_bytes": 34465,
-      "description_plus_input_schema_bytes": 202641
+      "description_plus_input_schema_bytes": 202930
     }
   },
   "tools": {
@@ -9673,12 +9673,19 @@
                 "offer"
               ],
               "type": "string"
+            },
+            "why": {
+              "description": "Why you are making this change, in one sentence the user reads beside it. Name who, which record or message, and the fact that prompted it, for example: Anna Weber wrote on 14 Nov that the rollout moves to March.",
+              "maxLength": 600,
+              "minLength": 1,
+              "type": "string"
             }
           },
           "required": [
             "record_type",
             "id",
-            "fields"
+            "fields",
+            "why"
           ],
           "type": "object"
         },
@@ -12715,6 +12722,15 @@
                 "type": "string"
               },
               "source": {
+                "description": "The channel this signal arrived by. A client that files it for a member sends `manual`; an integration sends `api`. Any other value is 422 `invalid_source`.",
+                "enum": [
+                  "api",
+                  "automation",
+                  "capture",
+                  "import",
+                  "manual",
+                  "webform"
+                ],
                 "type": "string"
               },
               "source_channel": {
@@ -13042,6 +13058,11 @@
           "body": {
             "additionalProperties": false,
             "properties": {
+              "deal_id": {
+                "description": "The deal the notice is about. Required for `coach_deal_needs_next_step`, and refused on every other kind. The deal must be open, owned by the recipient, and one the caller can read. The headline then names the deal and what Margince sees on it: whether a next step is planned, and the day of its last activity. The recipient's row links to the deal.",
+                "format": "uuid",
+                "type": "string"
+              },
               "kind": {
                 "description": "What a coaching notice is about. A closed vocabulary, because a notice addressed to a colleague is words in their queue: the kind is what the recipient reads as the headline, and the coach supplies only the note beneath it. The kinds an automation raises under the system principal (`automation`, `lead_sla`) are deliberately absent — a contact may not raise a notice that looks like the system spoke.",
                 "enum": [
@@ -17205,7 +17226,7 @@
                       "type": "string",
                       "x-extensible-enum": true
                     },
-                    "maxItems": 8,
+                    "maxItems": 12,
                     "minItems": 1,
                     "type": "array"
                   },
@@ -18618,7 +18639,7 @@
                       "type": "string",
                       "x-extensible-enum": true
                     },
-                    "maxItems": 8,
+                    "maxItems": 12,
                     "minItems": 1,
                     "type": "array"
                   },
@@ -28587,7 +28608,7 @@
                       "type": "string",
                       "x-extensible-enum": true
                     },
-                    "maxItems": 8,
+                    "maxItems": 12,
                     "minItems": 1,
                     "type": "array"
                   },

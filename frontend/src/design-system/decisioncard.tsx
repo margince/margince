@@ -21,6 +21,7 @@ import type { ConfidenceLevel, Provenance } from "./trust";
 import "./decisioncard.css";
 
 import {
+  ApprovalGrounds,
   cardName,
   type DecisionCardLabels,
   type DecisionCompactWords,
@@ -338,6 +339,7 @@ export function DecisionCard({
             <Popover label={dense.detail} className="dcard-detail">
               {/* The sentence that says WHY, which the line gave up to stay
                   one line. It leads here for the same reason it led the card. */}
+              <ApprovalGrounds approval={approval} />
               {named && summarySentence(approval) && (
                 <p className="approval-why">{summarySentence(approval)}</p>
               )}

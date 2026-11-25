@@ -39,7 +39,7 @@ func TestAPassportLentByAReadSeatRunsNoWrite(t *testing.T) {
 	e.SetWorkspaceSeat(t, "read")
 	for _, record := range records {
 		target := AnyMap{"record_type": record.recordType, "id": record.id}
-		update := AnyMap{"record_type": record.recordType, "id": record.id, "fields": record.fields}
+		update := AnyMap{"why": "A test asks for this change.", "record_type": record.recordType, "id": record.id, "fields": record.fields}
 		requireSeatRefusal(t, record.recordType+" update_record", d.toolRefused(t, "update_record", update))
 		if record.archives {
 			requireSeatRefusal(t, record.recordType+" archive_record", d.toolRefused(t, "archive_record", target))
@@ -62,7 +62,7 @@ func TestAPassportLentByAReadSeatRunsNoWrite(t *testing.T) {
 
 	e.SetWorkspaceSeat(t, "full")
 	deal := records[1]
-	d.toolSeed(t, "update_record", AnyMap{"record_type": deal.recordType, "id": deal.id, "fields": deal.fields})
+	d.toolSeed(t, "update_record", AnyMap{"why": "A test asks for this change.", "record_type": deal.recordType, "id": deal.id, "fields": deal.fields})
 }
 
 func requireSeatRefusal(t *testing.T, call, refusal string) {

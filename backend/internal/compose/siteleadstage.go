@@ -220,6 +220,7 @@ func siteLeadStageInput(said approvalSummaryCopy, readID, companyID ids.UUID, se
 	}
 	digest := sha256.Sum256(proposedChange)
 	return approvals.StageInput{
+		Why:            approvals.HeadlineSaysWhy,
 		Kind:           siteLeadProposalKind,
 		ProposedChange: proposedChange,
 		DiffHash:       hex.EncodeToString(digest[:]),

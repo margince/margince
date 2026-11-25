@@ -78,6 +78,7 @@ here: put it in the area's word list instead. A name that no plain page uses mus
 | LICENSE | The file at the repository root that holds the license text. |
 | LinkedIn | The professional network whose contact export Margince can import. |
 | locale | The date or time format of the reader's language, as a setting value. |
+| Lumo | Proton's AI assistant, which connects to Margince through its desktop app. |
 | macOS | Apple's desktop operating system. |
 | Margince | The CRM this repository builds. |
 | mask | A field permission that hides one field of a record from a role. |

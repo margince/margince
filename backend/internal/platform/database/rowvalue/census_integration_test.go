@@ -204,7 +204,8 @@ func censusPool(ctx context.Context, t *testing.T) *pgxpool.Pool {
 }
 
 // schemaColumnTypes lists the distinct types the stored columns of public tables
-// hold, in name order.
+// hold, in name order. A tsvector is left out, as the export's column list
+// leaves it out: a search value repeats text another column carries.
 func schemaColumnTypes(ctx context.Context, t *testing.T, pool *pgxpool.Pool) []columnType {
 	t.Helper()
 	rows, err := pool.Query(ctx, `
@@ -215,7 +216,7 @@ func schemaColumnTypes(ctx context.Context, t *testing.T, pool *pgxpool.Pool) []
 		    ON tb.table_schema = c.table_schema AND tb.table_name = c.table_name AND tb.table_type = 'BASE TABLE'
 		  JOIN pg_type t ON t.typname = c.udt_name AND t.typnamespace = c.udt_schema::regnamespace
 		  LEFT JOIN pg_type el ON el.oid = t.typelem AND t.typcategory = 'A'
-		 WHERE c.table_schema = 'public' AND c.is_generated = 'NEVER'
+		 WHERE c.table_schema = 'public' AND c.is_generated = 'NEVER' AND c.udt_name <> 'tsvector'
 		 ORDER BY 1`)
 	if err != nil {
 		t.Fatal(err)

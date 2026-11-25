@@ -11,6 +11,7 @@ import (
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/contacts"
+	"github.com/margince/margince/backend/internal/modules/reporting"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/kernel/textlang"
 )
@@ -47,6 +48,10 @@ func TestEveryPresetIsPublishedWholeToAReaderOfEveryMetric(t *testing.T) {
 			t.Errorf("preset %q is repeated or not in the contract", preset.Id)
 		}
 		seen[preset.Id] = true
+		// The screen adds the expected finish to a preset on this quarter's page.
+		if len(preset.Metrics)+1 > reporting.MaxSelectionMetrics {
+			t.Errorf("preset %q asks %d metrics, and with the expected finish a selection holds at most %d", preset.Id, len(preset.Metrics), reporting.MaxSelectionMetrics)
+		}
 	}
 }
 
