@@ -247,6 +247,46 @@ func TestAJoinFilesMailFromASuppressedSenderTheWorkspaceLaterWroteTo(t *testing.
 	}
 }
 
+// A join files under a lead that holds an address on the mail, once, however
+// many mailboxes deliver it.
+func TestAJoinFilesALeadOnce(t *testing.T) {
+	env := newCaptureEnv(t)
+	e, sync := env.e, env.sync
+	syncSecond := secondMailbox(t, e, e.Rep3)
+	address := "lena@prospect.example"
+	lead, _, err := contacts.NewStore(e.DB()).CreateLead(e.AsFullUser(), contacts.CreateLeadInput{FullName: new("Lena Prospect"), Email: &address, Source: "manual"})
+	if err != nil {
+		t.Fatalf("creating the lead: %v", err)
+	}
+	mail := emailCC(address, "Lena", captureOwner, secondSeatAddress, "lead-join@prospect.example")
+	sync(t, mail)
+	syncSecond(t, mail)
+	if n := countRows(t, e, `SELECT count(*) FROM activity_link l JOIN activity a ON a.id = l.activity_id
+		WHERE a.source_id = 'lead-join@prospect.example' AND l.lead_id = '`+lead.Id.String()+`'`); n != 1 {
+		t.Fatalf("the mail is filed %d times under the lead, want once", n)
+	}
+}
+
+// A mailbox the mail was never delivered to gains no import and files nothing
+// when it presents the same message.
+func TestAMailboxThatWasNotARecipientFilesNothingOnAJoin(t *testing.T) {
+	env := newCaptureEnv(t)
+	e, sync := env.e, env.sync
+	syncSecond := secondMailbox(t, e, e.Rep3)
+	store := contacts.NewStore(e.DB())
+	private, err := store.EnsureContactByEmail(contactCreator(e), "Private Contact", "private@partner.example", "manual", storekit.RefuseErased)
+	if err != nil {
+		t.Fatalf("seeding the second seat's contact: %v", err)
+	}
+	ownerExec(t, e, `UPDATE contact SET owner_id = $2, visibility = 'owner' WHERE id = $1`, private, e.Rep3)
+	mail := emailCC("sender@partner.example", "Sender", captureOwner, "private@partner.example", "not-delivered@partner.example")
+	sync(t, mail)
+	syncSecond(t, mail)
+	if filed := contactsFiledUnder(t, e, "not-delivered@partner.example"); slices.Contains(filed, private) {
+		t.Fatalf("a mailbox that never received the mail filed it under its seat's contact: %v", filed)
+	}
+}
+
 // A join leaves the links the project and deal attribution after it may still
 // need, as a new capture does. A mail copying more contacts than the ceiling
 // holds is filed up to that reservation, and the join adds nothing past it.
