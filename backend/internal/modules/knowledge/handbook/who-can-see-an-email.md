@@ -205,7 +205,7 @@ To change who can read mail captured from your mailbox in Margince, open **Setti
 1. Open the account menu, choose **Settings**, then **Connections**.
 2. Press the arrow at the end of the mailbox's row.
 3. Set **Mail visibility** to **Held until checked**, **Always held** or **Shared with the team**.
-4. When you narrow it, the row **Apply to captured mail?** shows. Tick **Also narrow captured mail** to narrow mail already captured too. Margince narrows it in the background and shows how many messages are left; a message keeps its visibility until it is reached.
+4. When you narrow it, the row **Apply to captured mail?** shows. Tick **Also narrow captured mail** to narrow mail already captured too. Margince narrows it in the background and shows how many messages are left. A message keeps its visibility until Margince reaches it.
 5. Press **Save** on the **Unsaved changes** bar.
 
 **Shared with the team** is refused until an administrator allows it for the company.

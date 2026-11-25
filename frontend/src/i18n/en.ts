@@ -13188,6 +13188,48 @@ export const en = {
   "connectors.telegramConnectedAs": "Connected as @{username}.",
   "connectors.telegramConnectFailed": "Bot not connected",
 
+  "connectors.tgbiz.title": "Telegram Business",
+  "connectors.tgbiz.intro":
+    "Link a company Telegram Business account to the bot. Customer messages and the owner’s replies from that account then appear in each contact’s History. Staff keep replying in Telegram.",
+  "connectors.tgbiz.stepsTitle": "To link an account, its owner:",
+  "connectors.tgbiz.step1":
+    "Opens Telegram, then Settings, then Telegram Business, then Chatbots.",
+  "connectors.tgbiz.step2":
+    "Enters @{username} and chooses which chats the bot may see.",
+  "connectors.tgbiz.step3":
+    "The account then shows here as Waiting for approval. Nothing from it is captured until an admin approves it.",
+  "connectors.tgbiz.emptyTitle": "No business account linked",
+  "connectors.tgbiz.emptyNote":
+    "When an owner links the bot in Telegram, the account appears here.",
+  "connectors.tgbiz.statusPending": "Waiting for approval",
+  "connectors.tgbiz.statusConnected": "Connected",
+  "connectors.tgbiz.statusOff": "Switched off in Telegram",
+  "connectors.tgbiz.linked": "Linked {date}",
+  "connectors.tgbiz.approvedOn": "Approved {date}",
+  "connectors.tgbiz.offReason":
+    "The owner switched this link off in Telegram. Nothing new is captured. If they link the bot again, the account waits for approval again.",
+  "connectors.tgbiz.approve": "Approve as company account",
+  "connectors.tgbiz.approveTitle": "Approve {owner} as a company account?",
+  "connectors.tgbiz.approveBody":
+    "Customer messages and the owner’s replies from the Telegram app appear in the customer’s History. Until you change the visibility, only the team you choose can read them. Nothing from the account is captured before you approve.",
+  "connectors.tgbiz.ownAccount": "Member’s own account · each chat is held",
+  "connectors.tgbiz.changeReaders": "Change who reads",
+  "connectors.tgbiz.readerTeamRequired":
+    "Choose the team that reads this account’s messages.",
+  "connectors.tgbiz.visibilityTitle": "Change who reads {owner}’s messages",
+  "connectors.tgbiz.visibilityWarning":
+    "This applies to messages the account captures after the change. Messages held before stay held.",
+  "connectors.tgbiz.visibilityHeldHint":
+    "Only the reader team can read a message.",
+  "connectors.tgbiz.visibilitySharedHint":
+    "A message follows the sharing of the contact it is filed on.",
+  "connectors.tgbiz.visibilityConfirm": "Change visibility",
+  "connectors.tgbiz.approveConflict":
+    "This account cannot be approved. Either the owner switched the link off in Telegram (ask them to link the bot again), or this team differs from the one that already reads the account. The list is refreshed.",
+  "connectors.tgbiz.disconnectTitle": "Disconnect {owner}’s account?",
+  "connectors.tgbiz.disconnectBody":
+    "Margince stops capturing from this account. What it already captured stays in the CRM. If the owner links the bot again, the account waits for approval.",
+
   // The Dispact bot: the self-hosted team chat a deal or project links a
   // private channel in. Words it shares with the Telegram bot stay on those keys.
   "connectors.bot.provDispact": "Dispact",
@@ -15017,6 +15059,7 @@ export const en = {
   "audit.kind.deal_suggestion": "Deal suggestion",
   "audit.kind.dedupe_candidate": "Possible duplicate",
   "audit.kind.existing_customer_notice": "Existing customer notice",
+  "audit.kind.field_provenance": "Field source",
   "audit.kind.finance_connection": "Accounting connection",
   "audit.kind.finance_customer_link": "Accounting customer link",
   "audit.kind.finance_external_customer": "Accounting customer",
@@ -15066,6 +15109,7 @@ export const en = {
   "audit.kind.scheduled_send": "Scheduled email",
   "audit.kind.sdr_handoff": "SDR handoff",
   "audit.kind.signal": "Signal",
+  "audit.kind.signal_resolution": "Signal match",
   "audit.kind.site_read": "Website analysis",
   "audit.kind.stage": "Stage",
   "audit.kind.stage_exit_criterion": "Stage exit criterion",

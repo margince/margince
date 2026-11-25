@@ -57,6 +57,9 @@ func requestHistoryNarrowingTx(ctx context.Context, tx pgx.Tx, match connectionM
 	if err != nil {
 		return fmt.Errorf("capture: recording the history narrowing: %w", err)
 	}
+	if err := storekit.CaptureFactsChanged(ctx, tx); err != nil {
+		return err
+	}
 	return narrowingTrailTx(ctx, tx, match.id, match.shared(),
 		map[string]any{historyNarrowingKey: pendingPosture(before)},
 		map[string]any{historyNarrowingKey: narrowingPosture(after)})
@@ -211,6 +214,9 @@ func endNarrowingTx(ctx context.Context, tx pgx.Tx, p pendingNarrowing) error {
 	if err != nil {
 		return fmt.Errorf("capture: ending the history narrowing: %w", err)
 	}
+	if err := storekit.CaptureFactsChangedBy(ctx, tx, tag); err != nil {
+		return err
+	}
 	if tag.RowsAffected() != 1 {
 		return fmt.Errorf("the history narrowing of %s changed before it ended: %w", p.connection, apperrors.ErrConflict)
 	}
@@ -224,6 +230,9 @@ func dropArchivedNarrowingTx(ctx context.Context, tx pgx.Tx, p pendingNarrowing)
 		WHERE id = $1 AND archived_at IS NOT NULL AND history_narrowing_held = $2`, p.connection, p.posture == PostureHeld)
 	if err != nil {
 		return fmt.Errorf("capture: dropping the history narrowing: %w", err)
+	}
+	if err := storekit.CaptureFactsChangedBy(ctx, tx, tag); err != nil {
+		return err
 	}
 	if tag.RowsAffected() != 1 {
 		return fmt.Errorf("the history narrowing of %s changed before it was dropped: %w", p.connection, apperrors.ErrConflict)

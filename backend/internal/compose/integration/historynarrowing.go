@@ -31,7 +31,7 @@ func NarrowHistoryBatch(t *testing.T, workspace ids.UUID, registry *capture.Regi
 // pending, and answers how many batches did work.
 func NarrowHistoryToTheEnd(t *testing.T, workspace ids.UUID, registry *capture.Registry) int {
 	t.Helper()
-	for batches := 0; batches < 100; batches++ {
+	for batches := range 100 {
 		if !NarrowHistoryBatch(t, workspace, registry) {
 			return batches
 		}

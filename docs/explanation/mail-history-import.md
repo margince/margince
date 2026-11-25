@@ -170,15 +170,15 @@ the connector's built-in value. The values and ranges are in
 [configuration.md](../reference/configuration.md).
 
 - `capture.history_page_size`: how many messages one page lists.
-- `capture.history_fetch_workers`: how many messages one page downloads at once.
-- `capture.history_lookahead`: how many messages a page may download before the earlier ones are
+- `capture.history_fetch_workers`: how many messages one page fetches at once.
+- `capture.history_lookahead`: how many messages a page may fetch before the earlier ones are
   saved.
 - `capture.history_page_delay`: how long an import waits after it saves a page, before it starts
   the next.
 
 When an import puts load on the database or the worker, raise `capture.history_page_delay` first.
 It spaces out the pages and leaves each page as it is. Fewer fetch workers lower the load on the
-provider and on the worker's network, and make each page take longer. A smaller page makes each
+provider and on the network of the worker, and make each page take longer. A smaller page makes each
 step of the import shorter.
 
 These four only slow an import. `capture.history_hold` stops it: queued imports wait, and no new page

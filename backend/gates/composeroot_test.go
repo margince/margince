@@ -79,9 +79,12 @@ const (
 	// Raised by 68 production and 96 test lines for path ids in extension routes
 	// and the mail hooks in the extension inventory. They extend the unexported
 	// route argument reader and inventory builder, and their cases drive them.
+	// Raised by 6 production lines for the signals and initiatives carriers
+	// every contact merge door is wired with. Raised by 6 test lines for the
+	// seat without an introduction grant that the preview refusal case needs.
 	// Raised by 61 production lines for the history-narrowing fleet worker.
-	composeRootProductionLines = 230_874
-	composeRootTestLines       = 361_027
+	composeRootProductionLines = 230_880
+	composeRootTestLines       = 361_033
 )
 
 // A read under these floors stopped early or read the wrong place, and would

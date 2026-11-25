@@ -6,6 +6,7 @@ import { Inbox, Plus } from "lucide-react";
 import { useState } from "react";
 import { api } from "../../api/client";
 import type { components } from "../../api/schema";
+import { isTeam, VISIBILITY_LABEL } from "../../components/readerteam";
 import { RosterFailedLine, useRoster } from "../../components/roster";
 import { Button, EmptyState } from "../../design-system/atoms";
 import { ConfirmModal } from "../../design-system/confirmmodal";
@@ -25,7 +26,6 @@ import {
   ConnectSharedMailboxDialog,
   SHARED_MAILBOXES_KEY,
   SharedMailboxHistoryDialog,
-  VISIBILITY_LABEL,
 } from "./sharedmailboxes.forms";
 
 // The installation's shared mailboxes (sales@, an operations desk): mailboxes
@@ -33,13 +33,6 @@ import {
 // admin-only, so a reader without the role sees why rather than an error.
 
 type SharedMailbox = components["schemas"]["SharedMailbox"];
-type Team = components["schemas"]["Team"];
-
-// The team roster's entries, typed as teams: the shared roster cache holds
-// seats and teams under one entry type.
-function isTeam(entry: { id: string }): entry is Team {
-  return "name" in entry;
-}
 
 type SharedMailboxesResult =
   | { allowed: false }
