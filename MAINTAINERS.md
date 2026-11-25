@@ -1,8 +1,8 @@
 # Maintainers
 
-This page names the roles that decide things in Margince and how to reach each one. It names roles,
-not people: a person is added next to a role only after they agree to be named. Who reviews which
-path is a separate question, and [CODEOWNERS](CODEOWNERS) answers it.
+This page names the roles that decide things in Margince and how to reach each one. A name is added
+next to a role only after its owner agrees to it. Who reviews which path is a separate question, and
+[CODEOWNERS](CODEOWNERS) answers it.
 
 | Role | Decides | How to reach it |
 |---|---|---|
@@ -14,6 +14,6 @@ path is a separate question, and [CODEOWNERS](CODEOWNERS) answers it.
 
 ## Where Margince is going
 
-The public [Margince roadmap](https://github.com/orgs/margince/projects/2) groups issues by their
+The public [Margince roadmap](https://github.com/margince/margince/projects) groups issues by their
 milestone into **Now**, **Next** and **Later**. A maintainer brings it up to date by hand, so it can lag
 behind. An issue's own milestone and state are the source of truth, and the board only sorts them.
