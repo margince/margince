@@ -72862,6 +72862,34 @@ components:
             the unit can borrow from the core (its AI models, its object store). Sorted by
             capability; absent for a unit that declares none.
           items: { $ref: '#/components/schemas/ComposedExtensionNeed' }
+        mail_hooks:
+          $ref: '#/components/schemas/ComposedExtensionMailHooks'
+
+    ComposedExtensionMailHooks:
+      type: object
+      additionalProperties: false
+      required: [parties, deal, reads, body_characters, reasons]
+      description: >-
+        The unit's mail-capture hooks and what of each captured mail they read. Absent for a unit
+        with no hook. A unit may send what a hook read to its own provider.
+      properties:
+        parties:
+          type: boolean
+          description: True when the unit may change the contacts and companies core found for a mail.
+        deal:
+          type: boolean
+          description: True when the unit may change the deal core files a mail on.
+        reads:
+          type: array
+          description: The parts of every captured mail the hooks read.
+          items: { type: string, enum: [subject, addresses, body], x-extensible-enum: true }
+        body_characters:
+          type: integer
+          description: How many characters of the mail's text a hook reads.
+        reasons:
+          type: array
+          description: The reason keys the unit's answers may give, sorted.
+          items: { type: string }
 
     ComposedExtensionNeed:
       type: object

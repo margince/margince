@@ -80,8 +80,12 @@ const (
 	// back-sync; each side stayed under its own ceiling.
 	// Raised by 10 production lines when develop's rate sheet removal and main's
 	// call log met in the back-sync; develop's own ceiling already covers them.
-	composeRootProductionLines = 230_743
-	composeRootTestLines       = 360_940
+	// Raised by 68 production and 96 test lines for path ids in extension routes
+	// and the mail hooks in the extension inventory. They extend the unexported
+	// route argument reader and inventory builder, and their cases drive them.
+	// Raised by 9 test lines when the back-sync met develop's extension route cases.
+	composeRootProductionLines = 230_813
+	composeRootTestLines       = 361_036
 )
 
 // A read under these floors stopped early or read the wrong place, and would

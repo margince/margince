@@ -53057,6 +53057,20 @@ export interface components {
             jobs: string[];
             /** @description The core capabilities the unit declares it uses, each with the reason its author gave. The core grants exactly these and refuses the rest, so this list is the whole of what the unit can borrow from the core (its AI models, its object store). Sorted by capability; absent for a unit that declares none. */
             needs?: components["schemas"]["ComposedExtensionNeed"][];
+            mail_hooks?: components["schemas"]["ComposedExtensionMailHooks"];
+        };
+        /** @description The unit's mail-capture hooks and what of each captured mail they read. Absent for a unit with no hook. A unit may send what a hook read to its own provider. */
+        ComposedExtensionMailHooks: {
+            /** @description True when the unit may change the contacts and companies core found for a mail. */
+            parties: boolean;
+            /** @description True when the unit may change the deal core files a mail on. */
+            deal: boolean;
+            /** @description The parts of every captured mail the hooks read. */
+            reads: ("subject" | "addresses" | "body")[];
+            /** @description How many characters of the mail's text a hook reads. */
+            body_characters: number;
+            /** @description The reason keys the unit's answers may give, sorted. */
+            reasons: string[];
         };
         /** @description One core capability a unit declares it uses. */
         ComposedExtensionNeed: {

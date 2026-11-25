@@ -302,7 +302,7 @@ func TestExtensionVerbRefusals(t *testing.T) {
 		},
 		"a parameter that is not in the query": {
 			pathItem: getOperationWith("        - name: id\n          in: header\n          schema: {type: string}\n"),
-			wantErr:  "arguments from the query string only",
+			wantErr:  "from the path, the query string or the body",
 		},
 		"the same query parameter twice": {
 			pathItem: getOperationWith(

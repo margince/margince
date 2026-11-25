@@ -222,9 +222,9 @@ type operationDoc struct {
 	// RbacDefaults is read by rbacDefaultsOf, which owns the key's spelling.
 	RbacDefaults yaml.Node `yaml:"x-rbac-defaults"`
 	RequestBody  yaml.Node `yaml:"requestBody"`
-	// Parameters is where a BODYLESS operation's arguments live. A GET and a
-	// DELETE carry no body, so the tool's input schema is assembled from the
-	// declared query parameters instead — see argumentSchema.
+	// Parameters are the path arguments of any operation, and the query
+	// arguments of a BODYLESS one. A GET and a DELETE carry no body, so their
+	// input schema is assembled from the parameters instead (argumentSchema).
 	Parameters yaml.Node `yaml:"parameters"`
 	Responses  yaml.Node `yaml:"responses"`
 }
@@ -296,8 +296,8 @@ func requireOneAccessKind(op *operationDoc) error {
 }
 
 // operationSchemas reads the operation's input and output schemas.
-func operationSchemas(method string, op *operationDoc) (input, output json.RawMessage, err error) {
-	if input, err = argumentSchema(strings.ToUpper(method), &op.RequestBody, &op.Parameters); err != nil {
+func operationSchemas(method, route string, op *operationDoc) (input, output json.RawMessage, err error) {
+	if input, err = argumentSchema(strings.ToUpper(method), route, &op.RequestBody, &op.Parameters); err != nil {
 		return nil, nil, err
 	}
 	output, err = responseSchema(&op.Responses)
@@ -315,7 +315,7 @@ func readOperation(base, unit, route, method string, node *yaml.Node) (declaredV
 	if err := requireOneAccessKind(&op); err != nil {
 		return declaredVerb{}, err
 	}
-	input, output, err := operationSchemas(method, &op)
+	input, output, err := operationSchemas(method, route, &op)
 	if err != nil {
 		return declaredVerb{}, err
 	}

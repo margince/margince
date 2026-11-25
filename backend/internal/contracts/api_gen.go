@@ -7771,6 +7771,27 @@ func (e CompanyVatCheckStatus) Valid() bool {
 	}
 }
 
+// Defines values for ComposedExtensionMailHooksReads.
+const (
+	ComposedExtensionMailHooksReadsAddresses ComposedExtensionMailHooksReads = "addresses"
+	ComposedExtensionMailHooksReadsBody      ComposedExtensionMailHooksReads = "body"
+	ComposedExtensionMailHooksReadsSubject   ComposedExtensionMailHooksReads = "subject"
+)
+
+// Valid indicates whether the value is a known member of the ComposedExtensionMailHooksReads enum.
+func (e ComposedExtensionMailHooksReads) Valid() bool {
+	switch e {
+	case ComposedExtensionMailHooksReadsAddresses:
+		return true
+	case ComposedExtensionMailHooksReadsBody:
+		return true
+	case ComposedExtensionMailHooksReadsSubject:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for ComputedFieldKind.
 const (
 	ComputedFieldKindCount          ComputedFieldKind = "count"
@@ -44665,6 +44686,9 @@ type ComposedExtension struct {
 	// Jobs The scheduled jobs this boot actually RUNS for the unit — a job the unit declared with no handler ticks nothing and is deliberately absent, because an operator reading this list is asking what runs, not what was written down. Sorted.
 	Jobs []string `json:"jobs"`
 
+	// MailHooks The unit's mail-capture hooks and what of each captured mail they read. Absent for a unit with no hook. A unit may send what a hook read to its own provider.
+	MailHooks *ComposedExtensionMailHooks `json:"mail_hooks,omitempty"`
+
 	// Name The unit name — its `extensions/<name>` directory, and the namespace token in `ext_<name>_…` objects and `/ext/<name>/…` routes. This is what joins an entry here to a grant in `Role.objects`.
 	Name string `json:"name"`
 
@@ -44680,6 +44704,27 @@ type ComposedExtension struct {
 	// Version The unit's own declared version. It carries NO authority (ADR-0120 §7): operator decisions bind to manifest digests, never to this string. Display only.
 	Version string `json:"version"`
 }
+
+// ComposedExtensionMailHooks The unit's mail-capture hooks and what of each captured mail they read. Absent for a unit with no hook. A unit may send what a hook read to its own provider.
+type ComposedExtensionMailHooks struct {
+	// BodyCharacters How many characters of the mail's text a hook reads.
+	BodyCharacters int `json:"body_characters"`
+
+	// Deal True when the unit may change the deal core files a mail on.
+	Deal bool `json:"deal"`
+
+	// Parties True when the unit may change the contacts and companies core found for a mail.
+	Parties bool `json:"parties"`
+
+	// Reads The parts of every captured mail the hooks read.
+	Reads []ComposedExtensionMailHooksReads `json:"reads"`
+
+	// Reasons The reason keys the unit's answers may give, sorted.
+	Reasons []string `json:"reasons"`
+}
+
+// ComposedExtensionMailHooksReads defines model for ComposedExtensionMailHooks.Reads.
+type ComposedExtensionMailHooksReads string
 
 // ComposedExtensionNeed One core capability a unit declares it uses.
 type ComposedExtensionNeed struct {
