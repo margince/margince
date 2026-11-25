@@ -2,10 +2,11 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { expect, it } from "vitest";
+import { cardWhen } from "../../components/taskmeta";
 import { translate, translatePlural, type Words } from "../../i18n";
 import type { WorklistItem } from "../../lib/worklisttypes";
 import { taskRow, waitingEmailRow } from "../../testing/brief.fixtures";
-import { cardWhen, taskName } from "./brief.taskcard";
+import { taskName } from "./brief.taskcard";
 
 const english: Words = {
   t: (key, params) => translate("en", key, params),
