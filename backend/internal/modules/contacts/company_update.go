@@ -228,8 +228,7 @@ func recordCompanyUpdate(
 	if err != nil {
 		return fmt.Errorf("audit company update: %w", err)
 	}
-	if err := storekit.EmitEvent(ctx, tx, auditID, id.UUID,
-		crmcontracts.PublicEventCompanyUpdated{ChangedFields: after}); err != nil {
+	if err := storekit.EmitEvent(ctx, tx, auditID, id.UUID, companyUpdatedEvent(after)); err != nil {
 		return fmt.Errorf("emit company.updated: %w", err)
 	}
 	return nil

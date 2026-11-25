@@ -25,6 +25,20 @@ import (
 // columns of the same name.
 var companyWriteBodies = []string{"CreateCompanyRequest", "UpdateCompanyRequest"}
 
+// serverWrittenCompanyColumns are the bounded company text columns no request
+// body writes, each with the writer that fills it instead.
+var serverWrittenCompanyColumns = map[string]string{
+	"captured_by":          "the signed-in caller, never a request body",
+	"geocode_input_hash":   "the geocoder",
+	"geocode_source":       "the geocoder",
+	"geocode_status":       "the geocoder",
+	"logo_object_key":      "a logo upload or a site read, which carry a file",
+	"logo_source":          "a logo upload or a site read, which carry a file",
+	"logo_icon_object_key": "a logo upload or a site read, which carry a file",
+	"logo_icon_source":     "a logo upload or a site read, which carry a file",
+	"name_source":          "the writer that named the company",
+}
+
 func TestEveryCompanyTextFieldPublishesItsColumnsLimit(t *testing.T) {
 	t.Parallel()
 	raw, err := gatekit.ReadFile(vocabularyCatalog)
@@ -46,7 +60,7 @@ func TestEveryCompanyTextFieldPublishesItsColumnsLimit(t *testing.T) {
 		}
 	}
 	contract := loadContractDocument(t)
-	checked := map[string]bool{}
+	reached := map[string]bool{}
 	for _, body := range companyWriteBodies {
 		fields := companyFieldSchemas(t, contract, body)
 		for name, field := range fields {
@@ -58,13 +72,13 @@ func TestEveryCompanyTextFieldPublishesItsColumnsLimit(t *testing.T) {
 				}
 				continue
 			}
+			reached[name] = true
 			// An enum is held by the column's CHECK, and an exempt column has no
 			// guard limit to agree with; its writers check the contract's bound.
 			limit := policies[column.Key].Limit
 			if field["enum"] != nil || limit == 0 {
 				continue
 			}
-			checked[name] = true
 			switch {
 			case !bounded:
 				t.Errorf("%s.%s publishes no maxLength, and the database refuses past %d: add maxLength: %d to api/crm.yaml", body, name, limit, limit)
@@ -73,12 +87,21 @@ func TestEveryCompanyTextFieldPublishesItsColumnsLimit(t *testing.T) {
 			}
 		}
 	}
-	// The address arrives as one nested object. A walk that stopped resolving it
-	// would check fewer columns and still pass, so each bounded address column
-	// must have been reached.
+	// A walk that misses a field checks less and still passes. So every bounded
+	// column is reached by a body or named as one the server writes.
 	for name, column := range companyText {
-		if strings.HasPrefix(name, "address_") && policies[column.Key].Limit != 0 && !checked[name] {
-			t.Errorf("no company write body reached %s: the walk over nested objects no longer matches the contract", column.Key)
+		writer, serverWritten := serverWrittenCompanyColumns[name]
+		switch {
+		case policies[column.Key].Limit == 0:
+		case reached[name] && serverWritten:
+			t.Errorf("%s is named as written by %s, and a company write body sends it: drop it from serverWrittenCompanyColumns", column.Key, writer)
+		case !reached[name] && !serverWritten:
+			t.Errorf("no company write body reaches %s: publish it in api/crm.yaml or name its writer in serverWrittenCompanyColumns", column.Key)
+		}
+	}
+	for name := range serverWrittenCompanyColumns {
+		if _, exists := companyText[name]; !exists {
+			t.Errorf("serverWrittenCompanyColumns names %s, which is no company text column", name)
 		}
 	}
 }

@@ -261,9 +261,9 @@ export function previewLabel(
       withdrawn: "approval.preview.consentWithdrawn",
     },
   };
+  // A company's status is named `status` like a deal's, so its kind decides.
   const labels =
-    catalogs[catalogField] ??
-    (value.kind === "lifecycle" ? LIFECYCLE_LABELS : undefined);
+    value.kind === "lifecycle" ? LIFECYCLE_LABELS : catalogs[catalogField];
   const label = Object.entries(labels ?? {}).find(
     ([code]) => code === value.text,
   )?.[1];

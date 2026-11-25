@@ -8,6 +8,7 @@ package contacts
 import (
 	"context"
 	"errors"
+	"slices"
 	"testing"
 
 	"github.com/jackc/pgx/v5"
@@ -49,7 +50,7 @@ func (e *dedupeEnv) lifecycleOf(ctx context.Context, t *testing.T, id ids.Compan
 	t.Helper()
 	var stage string
 	if err := e.store.tx(ctx, func(tx pgx.Tx) error {
-		return tx.QueryRow(ctx, `SELECT lifecycle FROM company WHERE id = $1`, id).Scan(&stage)
+		return tx.QueryRow(ctx, `SELECT status FROM company WHERE id = $1`, id).Scan(&stage)
 	}); err != nil {
 		t.Fatal(err)
 	}
@@ -174,5 +175,43 @@ func requireLiveRefusal(t *testing.T, err error) {
 	var refusal *httperr.DetailedError
 	if !errors.As(err, &refusal) || len(refusal.Fields) != 1 || refusal.Fields[0].Code != "lifecycle_live_needs_a_human" {
 		t.Fatalf("want a lifecycle_live_needs_a_human refusal, got %v", err)
+	}
+}
+
+func TestAStatusChangeWebhookCarriesStatusAndItsVersionOneName(t *testing.T) {
+	e := setupDedupe(t)
+	ctx := e.as()
+	id := e.companyAtStage(ctx, t, "Webhook GmbH", "prospect")
+	customer := "customer"
+	if _, err := e.store.UpdateCompany(ctx, id, UpdateCompanyInput{Status: &customer}); err != nil {
+		t.Fatal(err)
+	}
+	approved := principal.SystemActing(ctx, "approval-executor")
+	if err := e.store.tx(approved, func(tx pgx.Tx) error {
+		_, err := e.store.SetCompanyLifecycleTx(approved, tx, id, "customer", "former_customer")
+		return err
+	}); err != nil {
+		t.Fatal(err)
+	}
+	var pairs []string
+	if err := e.store.tx(ctx, func(tx pgx.Tx) error {
+		rows, err := tx.Query(ctx, `
+			SELECT coalesce(envelope->'payload'->'changed_fields'->>'status', '') || '/' ||
+			       coalesce(envelope->'payload'->'changed_fields'->>'lifecycle', '')
+			  FROM event_outbox
+			 WHERE envelope->>'type' = 'company.updated' AND envelope->'entity'->>'id' = $1
+			   AND envelope->'payload'->'changed_fields' ? 'status'`, id.String())
+		if err != nil {
+			return err
+		}
+		pairs, err = pgx.CollectRows(rows, pgx.RowTo[string])
+		return err
+	}); err != nil {
+		t.Fatal(err)
+	}
+	slices.Sort(pairs)
+	want := []string{"customer/customer", "former_customer/former_customer", "prospect/prospect"}
+	if !slices.Equal(pairs, want) {
+		t.Errorf("company.updated status/lifecycle pairs = %v, want %v", pairs, want)
 	}
 }

@@ -22,6 +22,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"maps"
 
 	"github.com/jackc/pgx/v5"
 
@@ -107,9 +108,22 @@ func (s *Store) SetCompanyLifecycleTx(
 	if err != nil {
 		return false, fmt.Errorf("contacts: auditing the stage change: %w", err)
 	}
-	if err := storekit.EmitEvent(ctx, tx, auditID, companyID.UUID,
-		crmcontracts.PublicEventCompanyUpdated{ChangedFields: after}); err != nil {
+	if err := storekit.EmitEvent(ctx, tx, auditID, companyID.UUID, companyUpdatedEvent(after)); err != nil {
 		return false, fmt.Errorf("contacts: emitting company.updated for the stage change: %w", err)
 	}
 	return true, nil
 }
+
+// companyUpdatedEvent is the company.updated payload of a column change.
+// Version 1 named the status column `lifecycle`, so a change to it carries the
+// value under both keys and a receiver of version 1 keeps reading it.
+func companyUpdatedEvent(changed map[string]any) crmcontracts.PublicEventCompanyUpdated {
+	fields := maps.Clone(changed)
+	if status, ok := changed[filterStatus]; ok {
+		fields[companyEventLegacyStatus] = status
+	}
+	return crmcontracts.PublicEventCompanyUpdated{ChangedFields: fields}
+}
+
+// companyEventLegacyStatus is the key company.updated version 1 gave the status.
+const companyEventLegacyStatus = "lifecycle"
