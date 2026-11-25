@@ -164,6 +164,11 @@ Run it when the app is not busy, and run `migrate up` again if it timed out.
 
 ## Build an index while the app still writes
 
+A plain `CREATE INDEX` blocks every write to its table until the build has read all rows. So an index
+on a table that an earlier migration made is built `CONCURRENTLY`.
+`TestAnIndexOnAPreExistingTableIsBuiltConcurrently` fails a newer migration that builds it plainly.
+A table made earlier in the same file has no rows yet, so its index needs no `CONCURRENTLY`.
+
 Put `-- pgmigrate:no-transaction` on a line by itself in the up file of such a migration.
 The [runner](../../backend/internal/platform/dbmigrate/notransaction.go) records the version after
 all statements finish, so each statement must be safe to run again.

@@ -34,7 +34,9 @@ func (s *Store) AnswerSchedulingTeamRequest(ctx context.Context, page ids.UUID, 
 // AnswerHostTeamRequests records the acting colleague's answer on every live
 // team link of host that names them and that the answer changes. Confirming
 // answers each pending one, and leaving each one not yet left. It serves
-// clients that answer a host rather than a link.
+// clients that answer a host rather than a link. A repeat that changes no link
+// succeeds, as it does on one link; only a host with no live link naming the
+// caller is not found.
 func (s *Store) AnswerHostTeamRequests(ctx context.Context, host ids.UserID, answer crmcontracts.SchedulingTeamAnswerState) error {
 	me, err := s.admitTeamAnswer(ctx, answer)
 	if err != nil {
@@ -56,21 +58,16 @@ func (s *Store) AnswerHostTeamRequests(ctx context.Context, host ids.UserID, ans
 		if err != nil {
 			return err
 		}
-		answered := 0
+		if len(pages) == 0 {
+			return apperrors.ErrNotFound
+		}
 		for _, page := range pages {
 			if !answerChanges(page.Policy.SchedulingProfile, me, answer) {
 				continue
 			}
-			written, err := s.answerTeamLinkIfItChangesTx(ctx, tx, page.ID, me, answer)
-			if err != nil {
+			if err := s.answerTeamLinkIfItChangesTx(ctx, tx, page.ID, me, answer); err != nil {
 				return err
 			}
-			if written {
-				answered++
-			}
-		}
-		if answered == 0 {
-			return apperrors.ErrNotFound
 		}
 		return nil
 	})
@@ -81,15 +78,15 @@ func (s *Store) AnswerHostTeamRequests(ctx context.Context, host ids.UserID, ans
 // may have committed after the pages were read.
 func (s *Store) answerTeamLinkIfItChangesTx(
 	ctx context.Context, tx pgx.Tx, page ids.UUID, me ids.UserID, answer crmcontracts.SchedulingTeamAnswerState,
-) (bool, error) {
+) error {
 	stored, err := lockLivePageTx(ctx, tx, page)
 	if errors.Is(err, apperrors.ErrNotFound) || (err == nil && (stored == nil || !answerChanges(stored.SchedulingProfile, me, answer))) {
-		return false, nil
+		return nil
 	}
 	if err != nil {
-		return false, err
+		return err
 	}
-	return true, s.writeTeamAnswerTx(ctx, tx, page, stored, me, answer)
+	return s.writeTeamAnswerTx(ctx, tx, page, stored, me, answer)
 }
 
 // answerChanges is whether answer moves member on a page: confirming a pending

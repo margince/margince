@@ -187,7 +187,8 @@ func TestOnlyTheOwnerChangesATeamLink(t *testing.T) {
 }
 
 // A client that answers by host, as it did when a host had one link, still
-// works. Its answer confirms every team link of that host that waits for it.
+// works. Its answer confirms every team link of that host that waits for it, and
+// only a caller no link of that host names is not found.
 func TestTheAnswerByHostConfirmsEveryTeamLinkOfThatHost(t *testing.T) {
 	e := apptest.SetupBookingApp(t)
 	e.DescribeCompany(t)
@@ -215,5 +216,20 @@ func TestTheAnswerByHostConfirmsEveryTeamLinkOfThatHost(t *testing.T) {
 	if _, live := teamRequestLines(t, e, member); live != 0 {
 		t.Fatalf("%d team request notices still interrupt the colleague, want none", live)
 	}
-	mustCall(t, colleague, http.MethodPut, "/v1/scheduling/team-requests/"+host.User.ID, AnyMap{"state": "confirmed"}, http.StatusNotFound, nil)
+
+	// A repeat changes nothing and answers as the one-link answer does: 204, no audit row.
+	pageAudits := func() (n int) {
+		if err := e.Owner.QueryRow(context.Background(), `SELECT count(*) FROM audit_log WHERE entity_type = 'booking_page'`).Scan(&n); err != nil {
+			t.Fatalf("counting booking page audit rows: %v", err)
+		}
+		return n
+	}
+	before := pageAudits()
+	mustCall(t, colleague, http.MethodPut, "/v1/scheduling/team-requests/"+host.User.ID, AnyMap{"state": "confirmed"}, http.StatusNoContent, nil)
+	if after := pageAudits(); after != before {
+		t.Errorf("a repeat answer by host that changes nothing wrote %d audit row(s), want none", after-before)
+	}
+
+	_, stranger := bookingColleague(t, e, "unnamed@team-notice.test", "Una")
+	mustCall(t, stranger, http.MethodPut, "/v1/scheduling/team-requests/"+host.User.ID, AnyMap{"state": "confirmed"}, http.StatusNotFound, nil)
 }
