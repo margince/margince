@@ -3194,6 +3194,7 @@ export const en = {
 
   "merge.contact": "Merge contact",
   "merge.company": "Merge company",
+  "merge.deal": "Merge deal",
   "merge.searchPlaceholder": "Search…",
   "merge.pickTarget": "Select record to keep",
   "merge.confirm":
@@ -6476,7 +6477,7 @@ export const en = {
   "deal.standing.risk.replyOwed": "Team reply owed",
   "deal.standing.risk.closePassed": "Close date passed",
   "deal.details.closingFootnote":
-    "Closing stages ask first: Won and Lost open a short dialog.",
+    "A closing stage asks first and opens a short dialog.",
   "deal.timeline.empty": "No activity on this deal yet.",
   "legalEntities.title": "Legal entities",
   "legalEntities.sub":
@@ -7532,6 +7533,7 @@ export const en = {
   "brief.rail": "Context",
   "brief.rail.numbers": "Numbers",
   "extensionReports.withheld": "Withheld: too few records to show",
+  "extensionReports.unavailable": "This report could not be loaded.",
   "extensionReports.noValue": "No value",
   "extensionReports.excluded_one":
     "{count} record is hidden from you by a field permission.",
@@ -8067,6 +8069,8 @@ export const en = {
   "docs.category.message": "Message attachment",
   "docs.category.other": "Other",
   "docs.category.link": "Links sent",
+  "docs.source.upload": "Uploaded",
+  "docs.source.link": "Link added",
   "docs.view.label": "Show documents as",
   "docs.view.grid": "Grid",
   "docs.view.list": "List",
@@ -14949,6 +14953,7 @@ export const en = {
   "cf.removedFromReports": "“{label}” removed from reports",
   "cf.audit.title": "Recent field changes",
   "audit.kind.customField": "Custom field",
+  "audit.kind.activity_retention_evidence": "Retention evidence",
   "audit.kind.activity_review_template": "Activity review template",
   "audit.kind.agent_standing_grant": "Standing agent permission",
   "audit.kind.ai_feedback": "AI feedback",
@@ -14981,12 +14986,14 @@ export const en = {
   "audit.kind.confirm_token": "Confirmation link",
   "audit.kind.consent_text_version": "Consent text version",
   "audit.kind.contact_acquisition_evidence": "Contact source evidence",
+  "audit.kind.commission_entry": "Commission entry",
   "audit.kind.contract": "Contract",
   "audit.kind.data_subject_request": "Data subject request",
   "audit.kind.deal_acquisition_source": "Deal source",
   "audit.kind.deal_loss_reason": "Loss reason",
   "audit.kind.deal_loss_reason_mapping": "Loss reason mapping",
   "audit.kind.deal_risk_day": "Deal risk check",
+  "audit.kind.deal_document_hide": "Hidden deal file",
   "audit.kind.deal_room": "Deal Room",
   "audit.kind.deal_room_comment": "Deal Room comment",
   "audit.kind.deal_room_document": "Deal Room document",
@@ -18641,6 +18648,7 @@ export const en = {
   "webForms.rotateConfirm.body":
     "The current secret stops working at once, and the new one is shown once. Paste it where the old one was right away.",
   "webForms.archive": "Archive",
+  "webForms.archiveTitle": "Archive {name}?",
   "webForms.archiveConfirm":
     "Archiving stops this form from taking submissions. This cannot be undone.",
   "webForms.archiveDone": "Website form archived",
@@ -19025,7 +19033,7 @@ export const en = {
     "A deal’s fields change, other than its stage or owner.",
   "webhooks.event.deal.stage_changed.label": "Deal moved to another stage",
   "webhooks.event.deal.stage_changed.when":
-    "A deal moves to a new stage, won and lost included.",
+    "A deal moves to a new stage, closing stages included.",
   "webhooks.event.deal.owner_changed.label": "Deal owner changed",
   "webhooks.event.deal.owner_changed.when":
     "A deal is reassigned to another owner.",
@@ -20643,6 +20651,7 @@ export const en = {
   "lists.audience.youAndSteward": "You and its steward",
   "lists.audience.ownerAndSteward": "Its owner and steward",
   "lists.audience.unknownTeam": "A team you cannot see",
+  "lists.health.unavailable": "Records unavailable",
   "lists.health.ownerless": "Needs a steward",
   "lists.health.invalid": "Filter no longer works",
   "lists.health.retiredField": "Uses a retired field",
@@ -20685,6 +20694,9 @@ export const en = {
   "lists.invalid.title": "This filter no longer works",
   "lists.invalid.body":
     "A field it names has changed. Its steward can fix the filter in the builder.",
+  "lists.unavailable.title": "These records are unavailable",
+  "lists.unavailable.body":
+    "This list holds records an extension adds, and that extension is not installed. The list works again when the extension is installed again.",
   "lists.ownerless.title": "Nobody looks after this list",
   "lists.ownerless.body":
     "Its steward has left or was never set. Somebody who may change the list should take it over.",

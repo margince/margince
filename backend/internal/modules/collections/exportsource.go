@@ -8,6 +8,7 @@ import (
 	"fmt"
 
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -98,6 +99,12 @@ func (s *Store) ListFilterSource(ctx context.Context, id ids.ListID) (FilterSour
 	list, err := s.GetList(ctx, id)
 	if err != nil {
 		return FilterSource{}, err
+	}
+	if kindRemoved(list.EntityType) {
+		return FilterSource{}, &BadInputError{Field: listIDField, Reason: "the records of this list are unavailable"}
+	}
+	if kindUnavailable(ctx, list.EntityType) {
+		return FilterSource{}, apperrors.ErrPermissionDenied
 	}
 	if list.ListType != listTypeDynamic {
 		members, err := s.MemberFilter(ctx, list.ID.UUID, list.EntityType)

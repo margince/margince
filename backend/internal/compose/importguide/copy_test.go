@@ -5,6 +5,8 @@ package importguide
 
 import (
 	"fmt"
+	"maps"
+	"strings"
 	"testing"
 
 	"github.com/margince/margince/backend/internal/shared/kernel/langcopy"
@@ -25,6 +27,11 @@ func TestEveryShippedLanguageWritesTheImportGuide(t *testing.T) {
 	}
 	langcopytest.Census(t, phrases)
 	langcopytest.Census(t, Template)
+	langcopytest.GermanStyle(t, Template)
+	// An example is a sample cell, where a semicolon separates list values.
+	sentences := maps.Clone(phrases)
+	maps.DeleteFunc(sentences, func(key string, _ langcopy.Phrase) bool { return strings.HasSuffix(key, ".example") })
+	langcopytest.GermanStyle(t, sentences)
 }
 
 func TestEveryCustomFieldTypeHasAGuide(t *testing.T) {

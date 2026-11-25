@@ -23,6 +23,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/platform/httperr"
+	"github.com/margince/margince/backend/internal/platform/recordmerge"
 )
 
 type Handlers struct {
@@ -114,6 +115,16 @@ func writeStoreErr(w http.ResponseWriter, r *http.Request, err error) {
 		return
 	}
 	if httperr.WritePicklistRefusal(w, r, err, dealTable, dealPicklists) {
+		return
+	}
+	if recordmerge.WriteAlreadyMerged(w, r, err) {
+		return
+	}
+	if refused, ok := errors.AsType[*MergeRefusedError](err); ok {
+		httperr.Write(w, r, &httperr.DetailedError{
+			Status: http.StatusConflict, Code: "merge_refused", Detail: refused.Message,
+			Fields: []httperr.FieldError{{Field: "target_id", Code: refused.Code, Message: refused.Message}},
+		})
 		return
 	}
 	httperr.Write(w, r, err)

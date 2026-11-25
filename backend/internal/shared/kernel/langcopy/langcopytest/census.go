@@ -62,19 +62,24 @@ type reporter interface {
 // "Field[key]", because "something in Field is unwritten" sends the reader
 // grepping for which one.
 //
-// It refuses a table it cannot read rather than certifying nothing: a struct
-// with no Phrase fields, or a table with no entries by either route, passes
-// every assertion below without making a claim, which is how a census comes
-// to report PASS over a subject it never saw.
-//
 // This is the one census every langcopy.Phrase table calls. A copy table
 // written as a map keyed by language rather than a struct of phrases keeps its
 // own walk until it is migrated onto Phrase.
 //
 // Held by: TestOneCensusReadsEveryPhraseTable (backend/gates/langcopyonecensus_test.go)
 //
-//craft:ignore naked-any every caller passes a different copy table's own struct or map type — the parameter names the shape this walks, not a shape of ours
+//craft:ignore naked-any every caller passes its own copy table's struct or map type
 func Census(t reporter, table any) {
+	t.Helper()
+	walk(t, table, censusEntry)
+}
+
+// walk hands every phrase a table holds to entry, so each check over a table
+// reads the same subjects. It fails a table with no phrases. Such a table
+// would pass every check without the check seeing anything.
+//
+//craft:ignore naked-any the table is the caller's own copy struct or map, as for Census
+func walk(t reporter, table any, entry phraseCheck) {
 	t.Helper()
 	shape := reflect.TypeOf(table)
 	value := reflect.ValueOf(table)
@@ -82,10 +87,10 @@ func Census(t reporter, table any) {
 	switch {
 	case shape != nil && shape.Kind() == reflect.Struct:
 		for i := range shape.NumField() {
-			phrases += censusField(t, shape.Field(i).Name, value.Field(i))
+			phrases += censusField(t, shape.Field(i).Name, value.Field(i), entry)
 		}
 	case shape != nil && shape.Kind() == reflect.Map:
-		phrases += censusMap(t, "", value)
+		phrases += censusMap(t, "", value, entry)
 	default:
 		t.Fatalf("a census needs a struct or map of phrases, got %T", table)
 	}
@@ -96,14 +101,14 @@ func Census(t reporter, table any) {
 
 // censusField reads one struct field, which is either a phrase directly or a
 // map of them, and reports how many phrases it found.
-func censusField(t reporter, name string, field reflect.Value) int {
+func censusField(t reporter, name string, field reflect.Value, entry phraseCheck) int {
 	t.Helper()
 	if p, ok := reflect.TypeAssert[langcopy.Phrase](field); ok {
-		censusEntry(t, name, p)
+		entry(t, name, p)
 		return 1
 	}
 	if field.Kind() == reflect.Map {
-		return censusMap(t, name, field)
+		return censusMap(t, name, field, entry)
 	}
 	t.Errorf("%s is not a phrase, so this census says nothing about it", name)
 	return 0
@@ -113,7 +118,7 @@ func censusField(t reporter, name string, field reflect.Value) int {
 // map's own random iteration order. An unsorted walk reorders its failures
 // between runs, and a reader comparing two runs cannot tell what changed.
 // prefix names the enclosing field, empty for a table that is itself a map.
-func censusMap(t reporter, prefix string, table reflect.Value) int {
+func censusMap(t reporter, prefix string, table reflect.Value, entry phraseCheck) int {
 	t.Helper()
 	keys := table.MapKeys()
 	sort.Slice(keys, func(i, j int) bool {
@@ -127,11 +132,14 @@ func censusMap(t reporter, prefix string, table reflect.Value) int {
 			t.Errorf("%s is not a phrase, so this census says nothing about it", name)
 			continue
 		}
-		censusEntry(t, name, p)
+		entry(t, name, p)
 		phrases++
 	}
 	return phrases
 }
+
+// phraseCheck is one check applied to every phrase a table holds.
+type phraseCheck func(t reporter, name string, p langcopy.Phrase)
 
 // censusEntry holds the one check every phrase answers to, however it was
 // reached. It is written in every shipped language, with the placeholders of

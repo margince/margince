@@ -96,6 +96,7 @@ export function useArchiveRecord<Archived extends { id: string }, Vars = void>({
 // its DELETE transport — nothing else.
 export function ArchiveAction<Archived extends { id: string }>({
   label,
+  title,
   confirmText,
   archive,
   invalidate,
@@ -109,6 +110,8 @@ export function ArchiveAction<Archived extends { id: string }>({
   undo,
 }: Readonly<{
   label: string;
+  // The dialog's heading, where it names the record; the button label by default.
+  title?: string;
   confirmText: string;
   archive: () => Promise<Archived>;
   invalidate: string | readonly QueryKey[];
@@ -170,7 +173,7 @@ export function ArchiveAction<Archived extends { id: string }>({
           setConfirming(false);
           mutation.reset();
         }}
-        title={label}
+        title={title ?? label}
         confirmLabel={label}
         confirmVariant="danger"
         onConfirm={() => mutation.mutate()}

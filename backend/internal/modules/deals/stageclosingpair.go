@@ -76,8 +76,8 @@ func missingClosingStages(stages []StageInput) []StageInput {
 	}
 	var missing []StageInput
 	for _, closing := range []StageInput{
-		{Name: defaultWonStageName, Semantic: string(SemanticWon), WinProbability: 100},
-		{Name: defaultLostStageName, Semantic: string(SemanticLost), WinProbability: 0},
+		{Name: defaultWonStageName, Semantic: string(SemanticWon), WinProbability: 100, NameTranslations: seededTranslations(defaultWonStageName)},
+		{Name: defaultLostStageName, Semantic: string(SemanticLost), WinProbability: 0, NameTranslations: seededTranslations(defaultLostStageName)},
 	} {
 		if has[StageSemantic(closing.Semantic)] {
 			continue
@@ -126,16 +126,17 @@ func ensureClosingPair(ctx context.Context, tx pgx.Tx, pipelineID ids.PipelineID
 func insertClosingStage(ctx context.Context, tx pgx.Tx, pipelineID ids.PipelineID, st StageInput) error {
 	var stageID ids.StageID
 	if err := tx.QueryRow(ctx, `
-		INSERT INTO stage (pipeline_id, name, position, semantic, win_probability)
-		VALUES ($1, $2, $3, $4, $5) RETURNING id`,
-		pipelineID, st.Name, st.Position, st.Semantic, st.WinProbability).Scan(&stageID); err != nil {
+		INSERT INTO stage (pipeline_id, name, position, semantic, win_probability, name_translations)
+		VALUES ($1, $2, $3, $4, $5, $6) RETURNING id`,
+		pipelineID, st.Name, st.Position, st.Semantic, st.WinProbability, st.NameTranslations).Scan(&stageID); err != nil {
 		return fmt.Errorf("insert the missing closing stage: %w", err)
 	}
 	if err := markLadderChanged(ctx, tx, pipelineID); err != nil {
 		return err
 	}
-	auditID, err := storekit.Audit(ctx, tx, "create", "stage", stageID.UUID, nil,
-		stageCreateImage(pipelineID, st.Name, st.Semantic, nil))
+	image := stageCreateImage(pipelineID, st.Name, st.Semantic, st.NameTranslations)
+	image[seededTranslationsMark] = true
+	auditID, err := storekit.Audit(ctx, tx, "create", "stage", stageID.UUID, nil, image)
 	if err != nil {
 		return fmt.Errorf("audit the missing closing stage: %w", err)
 	}

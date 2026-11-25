@@ -26,8 +26,8 @@ func TestOnlyABrowserNavigationPrefersHTML(t *testing.T) {
 		"text/html;q=abc":             false,
 		"text/html, application/json": true,
 	} {
-		if got := prefersHTML(accept); got != want {
-			t.Errorf("prefersHTML(%q) = %v, want %v", accept, got, want)
+		if got := PrefersHTML(accept); got != want {
+			t.Errorf("PrefersHTML(%q) = %v, want %v", accept, got, want)
 		}
 	}
 }

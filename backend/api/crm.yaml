@@ -297,9 +297,10 @@ paths:
       description: |
         Anonymous, minimal capability probe (ADR-0061). The login UI renders exactly
         the methods reported here — a disabled provider button or a dead "Forgot password?"
-        link is a misleading affordance. `password_reset` is true only when the operator's
-        system-email channel (ADR-0056) is configured and healthy. An OIDC provider is
-        listed only when its end-to-end flow is wired and healthy. Discloses nothing beyond
+        link is a misleading affordance. `password_reset` is true when password sign-in is on
+        and the operator's system-email channel (ADR-0056) is configured: a mailer and a link
+        base URL are set. Nothing checks that the channel delivers mail. An OIDC provider is
+        listed when the admin policy enables it and a client is configured for it. Discloses nothing beyond
         what the login UI needs — no secrets, endpoints, allowlists, or bootstrap state.
 
         It also reports the release this api was built from, which a client compares
@@ -7249,6 +7250,57 @@ paths:
           content:
             application/json:
               schema: { $ref: '#/components/schemas/ProgressDealResult' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
+  /deals/{id}/merge:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+    post:
+      tags: [Deals]
+      operationId: mergeDeal
+      security: [ { cookieAuth: [] } ]
+      x-agent-access: human-only
+      x-human-only-reason: security   # an irreversible relink; the agent's merge_records verb does not take deals
+      summary: Merge this deal into a target deal.
+      description: |
+        Merge A->B moves the facts about the opportunity from A to B and archives A with
+        `merged_into_id = B`, in one transaction under both rows' locks. Moved: offers, activity
+        links, stakeholders, contracts, brief items, qualified leads, list and tag membership,
+        grants and assignments, and the rest of the rows that name the deal. Not moved: the
+        stage and forecast history and the closing review, which describe the path A took and stay
+        on A so B's stage age is not read younger. A scalar B leaves empty is filled from A.
+
+        The caller must be able to change both deals. The merge is refused with `409` when the
+        deals name different companies (merge the companies first), when both hold a live
+        commission, an open legal review, a live chat link or an open Deal Room, or when A is
+        already merged away (the answer names where it went). It answers `422` for a merge into
+        itself or into a deal that is archived.
+
+        **Not reversible.** A merged-away deal cannot be restored: its offers and contracts now
+        belong to the survivor.
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+        - $ref: '#/components/parameters/ApprovalToken'
+        - $ref: '#/components/parameters/IfMatch'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [target_id]
+              properties:
+                target_id: { type: string, format: uuid, description: The surviving deal (B). This row (A) is archived. }
+      responses:
+        '200':
+          description: The surviving (target) deal after the merge.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Deal' }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
         '404': { $ref: '#/components/responses/NotFound' }
@@ -17881,6 +17933,91 @@ paths:
         '422': { $ref: '#/components/responses/ValidationError' }
         '503':
           description: 'This deployment serves no messaging channels (`code: channel_connections_not_configured`), or has no credential store configured to seal a bot token in (`code: channel_credentials_not_configured`).'
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+
+  # ------------------- /channel-connections/telegram-business -------------------
+  # A Telegram Business account owner links the workspace's bot to their account inside
+  # Telegram, so the link exists before anyone here has seen it. It is not company
+  # correspondence until an admin approves it, and until then nothing from that account is
+  # stored. All three operations are admin-only and human-only: they decide whose chats are
+  # captured.
+  /channel-connections/telegram-business:
+    get:
+      tags: [Connectors]
+      operationId: listTelegramBusinessConnections
+      security: [ { cookieAuth: [] } ]
+      x-agent-access: human-only
+      x-human-only-reason: security
+      summary: List the Telegram Business accounts linked to the workspace's bot.
+      description: Newest first. Each is `pending_approval` until an admin approves it.
+      responses:
+        '200':
+          description: Telegram Business connections.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/TelegramBusinessConnectionListResponse' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/PermissionDenied' }
+        '503':
+          description: 'This deployment serves no messaging channels (`code: channel_connections_not_configured`).'
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+
+  /channel-connections/telegram-business/{id}:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+    delete:
+      tags: [Connectors]
+      operationId: disconnectTelegramBusinessConnection
+      security: [ { cookieAuth: [] } ]
+      x-agent-access: human-only
+      x-human-only-reason: security
+      summary: Disconnect a Telegram Business account from the workspace.
+      description: |
+        Archives the link. It holds no credential, so nothing is destroyed, and what the
+        account's chats already filed stays. If the owner links the bot again, the new link
+        waits for approval.
+      responses:
+        '204': { description: Disconnected. }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/PermissionDenied' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+        '503':
+          description: 'This deployment serves no messaging channels (`code: channel_connections_not_configured`).'
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+
+  /channel-connections/telegram-business/{id}/approve:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+    post:
+      tags: [Connectors]
+      operationId: approveTelegramBusinessConnection
+      security: [ { cookieAuth: [] } ]
+      x-agent-access: human-only
+      x-human-only-reason: security
+      summary: Approve a Telegram Business account for the workspace.
+      description: |
+        Moves a `pending_approval` link to `connected`. Approving a link that is already
+        `connected` changes nothing. A `409` means the owner switched the link off in Telegram.
+      responses:
+        '200':
+          description: The approved connection.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/TelegramBusinessConnection' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/PermissionDenied' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '503':
+          description: 'This deployment serves no messaging channels (`code: channel_connections_not_configured`).'
           content:
             application/problem+json:
               schema: { $ref: '#/components/schemas/Problem' }
@@ -47602,7 +47739,7 @@ components:
       required: [id, provider, channelId, channelLabel, status, version]
       properties:
         id: { type: string, format: uuid }
-        provider: { type: string, enum: [telegram, dispact], x-extensible-enum: true }
+        provider: { type: string, enum: [telegram, telegram_business, dispact, whatsapp, zalo_oa], x-extensible-enum: true }
         channelId:
           type: string
           description: The provider's own id for the bot — the key the binding is unique on. For Dispact it is the chat's team id.
@@ -47614,15 +47751,15 @@ components:
           description: The web address of a self-hosted provider's install (Dispact). Absent for Telegram.
         status:
           type: string
-          enum: [pending, connected, disconnected, error, reauth_required]
+          enum: [pending_approval, connected, disconnected, error, reauth_required]
           x-extensible-enum: true
           description: >-
             Only `connected` is live, and it is the only state a connect can produce: a pull ingress makes no provider call after the write, so there is no half-connected state.
             `error` and `reauth_required` are where ingress parks a binding it can no longer poll
             (another consumer holds the bot's updates; the token was refused), and neither is
-            polled again until an operator acts. `pending` is a value NO server produces: it is
-            retained because the code generator disambiguates enum member names across the whole
-            document, so dropping it renames unrelated generated constants in other schemas.
+            polled again until an operator acts. `pending_approval` is the state of a Telegram
+            Business link nobody has approved. It is served by the telegram-business operations
+            and never appears on a bot connection.
         eventsSecretSet:
           type: boolean
           readOnly: true
@@ -47630,6 +47767,32 @@ components:
         version: { type: integer, format: int64 }
         createdAt: { type: string, format: date-time }
         updatedAt: { type: string, format: date-time }
+    TelegramBusinessConnection:
+      type: object
+      description: >-
+        One Telegram Business account the owner linked to the workspace's bot. Nothing from the
+        account is stored until an admin approves it.
+      required: [id, accountId, ownerLabel, status, connectedAt]
+      properties:
+        id: { type: string, format: uuid }
+        accountId:
+          type: string
+          description: The owner's Telegram user id, the key a repeated link keeps its row by.
+        ownerLabel:
+          type: string
+          description: The owner's name as Telegram last reported it. Display only, since a name is mutable and identifies nothing.
+        status:
+          type: string
+          enum: [pending_approval, connected, disconnected]
+          x-extensible-enum: true
+          description: '`pending_approval` waits for an admin; `disconnected` means the owner switched the link off in Telegram.'
+        connectedAt: { type: string, format: date-time, description: When the owner first linked the bot. }
+        approvedAt: { type: [string, 'null'], format: date-time, description: When an admin approved the link; absent until then. }
+    TelegramBusinessConnectionListResponse:
+      type: object
+      required: [data]
+      properties:
+        data: { type: array, items: { $ref: '#/components/schemas/TelegramBusinessConnection' } }
     ChannelConnectionListResponse:
       type: object
       required: [data]
@@ -58195,6 +58358,15 @@ components:
         amount_minor: { type: [integer, 'null'], format: int64 }
         currency: { type: [string, 'null'], pattern: '^[A-Z]{3}$' }
         expected_arr_minor: { type: [integer, 'null'], format: int64, description: 'Expected annual recurring revenue in minor units of `currency`. Null means the deal carries no recurring component, which is not the same as zero. `currency` is present exactly when `amount_minor` or `expected_arr_minor` is.' }
+        merged_into_id:
+          type: [string, 'null']
+          format: uuid
+          readOnly: true
+          description: >-
+            Set when this deal was merged away into another, and null otherwise. It separates a
+            merged-away deal from one that was only archived: both are hidden from lists, but a
+            merged one cannot be restored, and its id names the surviving deal to read instead.
+            `contact`, `company` and `lead` carry the same field for the same reason.
         arr_source_offer_id: { type: [string, 'null'], format: uuid, readOnly: true, description: 'The accepted offer `expected_arr_minor` came from, or null where a human set the figure. While it is set the recurring figure is the offer''s to state: an ordinary edit that would change or clear it is refused, and accepting another offer replaces both together.' }
         closing_occurrence_id: { type: [string, 'null'], format: uuid, readOnly: true, description: 'Which CLOSING this deal is currently on, as the id of the stage-history row that made it. Null while the deal is open, and null on a closed deal whose history does not record the move that closed it — an imported row, typically, where manufacturing an occurrence would invite a review of a closing nobody can point at. Reopening and re-closing yields a new one: the old closing stays in history and stays readable, it simply stops being the one this deal is on.' }
         masked_fields:
@@ -61247,8 +61419,16 @@ components:
           items: { $ref: '#/components/schemas/ExtensionReport' }
     ExtensionReport:
       type: object
-      required: [name, unit, label, kind, population, groups, withheld, total, excluded_by_permission]
+      required: [name, unit, label, kind, population, status, groups, withheld, total, excluded_by_permission]
       properties:
+        status:
+          type: string
+          enum: [ok, unavailable]
+          x-extensible-enum: true
+          description: >-
+            `unavailable` when the report could not run. It then carries no groups, no total and
+            no exclusion count, and the other reports still answer. The cause is logged on the
+            server, never sent.
         name:
           type: string
           description: The report as `ext:<unit>:<name>`.
@@ -66105,13 +66285,17 @@ components:
           type: [integer, 'null']
           description: >-
             How many members this caller may see. Null when the list's filter can no longer be
-            evaluated (health `invalid`). Never the list's whole size.
+            evaluated (health `invalid`) or its records are unavailable (health `unavailable`).
+            Never the list's whole size.
         health:
           type: string
-          enum: [ok, ownerless, invalid, retired_field, retired_tag]
+          enum: [ok, ownerless, invalid, retired_field, retired_tag, unavailable]
           x-extensible-enum: true
           description: >-
-            `ownerless` when nobody looks after the list — no steward, or one who can no longer
+            `unavailable` when no installed extension declares the list's record kind any more. Such a
+            list has no count, no members, no filter definition and no export, and comes back when
+            the extension is installed again; it outranks every other value. A list over a declared
+            kind the caller may not read is left out of the library instead. `ownerless` when nobody looks after the list — no steward, or one who can no longer
             sign in — so somebody should take it over. `invalid` when a Live List's filter no
             longer compiles. `retired_field` when a Live List's filter names a custom field that
             has been retired: the list still evaluates on the kept values, and its steward should
@@ -69824,7 +70008,7 @@ components:
       required: [password, password_reset, oidc_providers, first_run]
       properties:
         password: { type: boolean, description: Email + password login is enabled. }
-        password_reset: { type: boolean, description: The A74 reset flow can complete end to end (outbound email configured + healthy). }
+        password_reset: { type: boolean, description: Password sign-in is on and the reset mail channel is configured. Nothing checks that mail is delivered. }
         first_run:
           type: boolean
           description: >

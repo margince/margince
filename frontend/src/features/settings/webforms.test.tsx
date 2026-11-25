@@ -204,6 +204,19 @@ describe("WebFormsCard", () => {
     expect(await screen.findByText("Waiting for its secret")).toBeTruthy();
   });
 
+  it("names the form in the heading of its Archive dialog", async () => {
+    vi.stubGlobal("fetch", backendFor(OPERATOR, [contactForm]).fetch);
+    const user = userEvent.setup();
+    render(<WebFormsCard />);
+    await user.click(
+      await screen.findByRole("button", { name: "More actions" }),
+    );
+    await user.click(await screen.findByTestId("archive-record"));
+    expect(
+      await screen.findByRole("heading", { name: "Archive Contact page?" }),
+    ).toBeTruthy();
+  });
+
   it("offers no write control to a role without the integrations grants", async () => {
     vi.stubGlobal("fetch", backendFor({}, [contactForm]).fetch);
     render(<WebFormsCard />);

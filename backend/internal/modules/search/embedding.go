@@ -51,7 +51,7 @@ func isZero(vec []float32) bool {
 // model no longer serving the workspace, indistinguishable from a live
 // one.
 func (s *Store) UpsertEmbedding(ctx context.Context, entityType string, entityID ids.UUID, text string, embedder Embedder) (bool, error) {
-	if !knownEntity(entityType) {
+	if !knownEntity(ctx, entityType) {
 		return false, fmt.Errorf("search: unembeddable entity type %q", entityType)
 	}
 	text = strings.TrimSpace(text)

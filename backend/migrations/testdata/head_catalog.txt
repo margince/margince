@@ -2700,13 +2700,20 @@ public.capture_trace_pkey CREATE UNIQUE INDEX capture_trace_pkey ON public.captu
 public.capture_trace_user_window CREATE INDEX capture_trace_user_window ON public.capture_trace USING btree (user_id, occurred_at DESC)
 public.capture_trace_window CREATE INDEX capture_trace_window ON public.capture_trace USING btree (occurred_at DESC)
 public.channel_connection acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
+public.channel_connection.account_id text gen=- def=-
 public.channel_connection.address text gen=- def=-
+public.channel_connection.approved_at timestamp with time zone gen=- def=-
 public.channel_connection.archived_at timestamp with time zone gen=- def=-
 public.channel_connection.channel_connection_address_check CHECK ((((provider = 'dispact'::text) = (address IS NOT NULL)) AND ((address IS NULL) OR (address ~ '^https?://'::text))))
+public.channel_connection.channel_connection_child_names_account CHECK (((parent_connection_id IS NULL) OR (account_id IS NOT NULL)))
 public.channel_connection.channel_connection_connected_by_fkey FOREIGN KEY (connected_by) REFERENCES app_user(id) ON DELETE RESTRICT
+public.channel_connection.channel_connection_owner_shape CHECK (((ownership = 'member'::text) = (owner_user_id IS NOT NULL)))
+public.channel_connection.channel_connection_owner_user_id_fkey FOREIGN KEY (owner_user_id) REFERENCES app_user(id) ON DELETE RESTRICT
+public.channel_connection.channel_connection_ownership_check CHECK ((ownership = ANY (ARRAY['workspace'::text, 'member'::text])))
+public.channel_connection.channel_connection_parent_connection_id_fkey FOREIGN KEY (parent_connection_id) REFERENCES channel_connection(id) ON DELETE RESTRICT
 public.channel_connection.channel_connection_pkey PRIMARY KEY (id)
-public.channel_connection.channel_connection_provider_check CHECK ((provider = ANY (ARRAY['telegram'::text, 'dispact'::text])))
-public.channel_connection.channel_connection_status_check CHECK ((status = ANY (ARRAY['connected'::text, 'disconnected'::text, 'error'::text, 'reauth_required'::text])))
+public.channel_connection.channel_connection_provider_check CHECK ((provider = ANY (ARRAY['telegram'::text, 'telegram_business'::text, 'dispact'::text, 'whatsapp'::text, 'zalo_oa'::text])))
+public.channel_connection.channel_connection_status_check CHECK ((status = ANY (ARRAY['connected'::text, 'disconnected'::text, 'error'::text, 'reauth_required'::text, 'pending_approval'::text])))
 public.channel_connection.channel_connection_version_js_safe CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))
 public.channel_connection.channel_id text NOT NULL gen=- def=-
 public.channel_connection.channel_label text NOT NULL gen=- def=-
@@ -2715,14 +2722,19 @@ public.channel_connection.created_at timestamp with time zone NOT NULL gen=- def
 public.channel_connection.credential_ref text NOT NULL gen=- def=-
 public.channel_connection.events_credential_ref text gen=- def=-
 public.channel_connection.id uuid NOT NULL gen=- def=uuidv7()
+public.channel_connection.owner_user_id uuid gen=- def=-
+public.channel_connection.ownership text NOT NULL gen=- def='workspace'::text
+public.channel_connection.parent_connection_id uuid gen=- def=-
 public.channel_connection.poll_offset bigint NOT NULL gen=- def=0
 public.channel_connection.provider text NOT NULL gen=- def=-
 public.channel_connection.status text NOT NULL gen=- def=-
-public.channel_connection.text_bound_insert CREATE TRIGGER text_bound_insert AFTER INSERT ON public.channel_connection FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"status": 20000, "address": 500, "provider": 20000, "channel_id": 20000, "channel_label": 120, "credential_ref": 20000, "events_credential_ref": 20000}'::jsonb)) EXECUTE FUNCTION refuse_oversized_text('{"address":500,"channel_id":20000,"channel_label":120,"credential_ref":20000,"events_credential_ref":20000,"provider":20000,"status":20000}')
-public.channel_connection.text_bound_update CREATE TRIGGER text_bound_update AFTER UPDATE ON public.channel_connection FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"status": 20000, "address": 500, "provider": 20000, "channel_id": 20000, "channel_label": 120, "credential_ref": 20000, "events_credential_ref": 20000}'::jsonb)) EXECUTE FUNCTION refuse_oversized_text('{"address":500,"channel_id":20000,"channel_label":120,"credential_ref":20000,"events_credential_ref":20000,"provider":20000,"status":20000}')
+public.channel_connection.text_bound_insert CREATE TRIGGER text_bound_insert AFTER INSERT ON public.channel_connection FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"status": 20000, "address": 500, "provider": 20000, "ownership": 20000, "account_id": 20000, "channel_id": 20000, "channel_label": 120, "credential_ref": 20000, "events_credential_ref": 20000}'::jsonb)) EXECUTE FUNCTION refuse_oversized_text('{"account_id":20000,"address":500,"channel_id":20000,"channel_label":120,"credential_ref":20000,"events_credential_ref":20000,"ownership":20000,"provider":20000,"status":20000}')
+public.channel_connection.text_bound_update CREATE TRIGGER text_bound_update AFTER UPDATE ON public.channel_connection FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"status": 20000, "address": 500, "provider": 20000, "ownership": 20000, "account_id": 20000, "channel_id": 20000, "channel_label": 120, "credential_ref": 20000, "events_credential_ref": 20000}'::jsonb)) EXECUTE FUNCTION refuse_oversized_text('{"account_id":20000,"address":500,"channel_id":20000,"channel_label":120,"credential_ref":20000,"events_credential_ref":20000,"ownership":20000,"provider":20000,"status":20000}')
 public.channel_connection.trg_channel_connection_updated CREATE TRIGGER trg_channel_connection_updated BEFORE UPDATE ON public.channel_connection FOR EACH ROW WHEN (((to_jsonb(old.*) - 'poll_offset'::text) IS DISTINCT FROM (to_jsonb(new.*) - 'poll_offset'::text))) EXECUTE FUNCTION set_updated_at_bump_version()
 public.channel_connection.updated_at timestamp with time zone NOT NULL gen=- def=now()
 public.channel_connection.version bigint NOT NULL gen=- def=1
+public.channel_connection_owner_idx CREATE INDEX channel_connection_owner_idx ON public.channel_connection USING btree (owner_user_id) WHERE (owner_user_id IS NOT NULL)
+public.channel_connection_parent_idx CREATE INDEX channel_connection_parent_idx ON public.channel_connection USING btree (parent_connection_id) WHERE (parent_connection_id IS NOT NULL)
 public.channel_connection_pkey CREATE UNIQUE INDEX channel_connection_pkey ON public.channel_connection USING btree (id)
 public.channel_provider acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.channel_provider.channel_provider_credential_model_check CHECK ((credential_model = ANY (ARRAY['workspace_bot'::text, 'per_member'::text])))
@@ -4160,6 +4172,7 @@ public.contact_brief.user_id uuid NOT NULL gen=- def=-
 public.contact_brief_contact_ix CREATE INDEX contact_brief_contact_ix ON public.contact_brief USING btree (contact_id)
 public.contact_brief_pkey CREATE UNIQUE INDEX contact_brief_pkey ON public.contact_brief USING btree (user_id, contact_id)
 public.contact_channel_identity acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
+public.contact_channel_identity.account_scope text NOT NULL gen=- def=''::text
 public.contact_channel_identity.archived_at timestamp with time zone gen=- def=-
 public.contact_channel_identity.blocked_at timestamp with time zone gen=- def=-
 public.contact_channel_identity.captured_by text NOT NULL gen=- def=-
@@ -4175,8 +4188,8 @@ public.contact_channel_identity.membership_bot_id text gen=- def=-
 public.contact_channel_identity.membership_update_id bigint gen=- def=-
 public.contact_channel_identity.provider text NOT NULL gen=- def=-
 public.contact_channel_identity.source text NOT NULL gen=- def=-
-public.contact_channel_identity.text_bound_insert CREATE TRIGGER text_bound_insert AFTER INSERT ON public.contact_channel_identity FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"source": 20000, "provider": 20000, "username": 20000, "captured_by": 20000, "channel_user_id": 20000, "membership_bot_id": 20000}'::jsonb)) EXECUTE FUNCTION refuse_oversized_text('{"captured_by":20000,"channel_user_id":20000,"membership_bot_id":20000,"provider":20000,"source":20000,"username":20000}')
-public.contact_channel_identity.text_bound_update CREATE TRIGGER text_bound_update AFTER UPDATE ON public.contact_channel_identity FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"source": 20000, "provider": 20000, "username": 20000, "captured_by": 20000, "channel_user_id": 20000, "membership_bot_id": 20000}'::jsonb)) EXECUTE FUNCTION refuse_oversized_text('{"captured_by":20000,"channel_user_id":20000,"membership_bot_id":20000,"provider":20000,"source":20000,"username":20000}')
+public.contact_channel_identity.text_bound_insert CREATE TRIGGER text_bound_insert AFTER INSERT ON public.contact_channel_identity FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"source": 20000, "provider": 20000, "username": 20000, "captured_by": 20000, "account_scope": 20000, "channel_user_id": 20000, "membership_bot_id": 20000}'::jsonb)) EXECUTE FUNCTION refuse_oversized_text('{"account_scope":20000,"captured_by":20000,"channel_user_id":20000,"membership_bot_id":20000,"provider":20000,"source":20000,"username":20000}')
+public.contact_channel_identity.text_bound_update CREATE TRIGGER text_bound_update AFTER UPDATE ON public.contact_channel_identity FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"source": 20000, "provider": 20000, "username": 20000, "captured_by": 20000, "account_scope": 20000, "channel_user_id": 20000, "membership_bot_id": 20000}'::jsonb)) EXECUTE FUNCTION refuse_oversized_text('{"account_scope":20000,"captured_by":20000,"channel_user_id":20000,"membership_bot_id":20000,"provider":20000,"source":20000,"username":20000}')
 public.contact_channel_identity.trg_contact_channel_identity_updated CREATE TRIGGER trg_contact_channel_identity_updated BEFORE UPDATE ON public.contact_channel_identity FOR EACH ROW EXECUTE FUNCTION set_updated_at_bump_version()
 public.contact_channel_identity.updated_at timestamp with time zone NOT NULL gen=- def=now()
 public.contact_channel_identity.username text gen=- def=-
@@ -4919,6 +4932,7 @@ public.deal.deal_lost_reason_basis_check CHECK ((((lost_reason_code IS NULL) = (
 public.deal.deal_lost_reason_code_fkey FOREIGN KEY (lost_reason_code) REFERENCES deal_loss_reason(key) ON UPDATE RESTRICT ON DELETE RESTRICT
 public.deal.deal_lost_reason_code_only_when_lost CHECK (((lost_reason_code IS NULL) OR (status = 'lost'::text)))
 public.deal.deal_lost_reason_only_when_lost CHECK (((lost_reason IS NULL) OR (status = 'lost'::text)))
+public.deal.deal_merged_into_id_fkey FOREIGN KEY (merged_into_id) REFERENCES deal(id) ON DELETE SET NULL (merged_into_id)
 public.deal.deal_money_currency_pair CHECK ((((amount_minor IS NULL) AND (expected_arr_minor IS NULL)) = (currency IS NULL)))
 public.deal.deal_owner_id_fkey FOREIGN KEY (owner_id) REFERENCES app_user(id) ON DELETE SET NULL (owner_id)
 public.deal.deal_owner_id_retirement_guard CREATE TRIGGER deal_owner_id_retirement_guard BEFORE INSERT OR UPDATE ON public.deal FOR EACH ROW WHEN (((new.owner_id IS NOT NULL) AND (new.archived_at IS NULL))) EXECUTE FUNCTION refuse_retired_member_work('owner_id')
@@ -4960,6 +4974,7 @@ public.deal.lost_reason_code text gen=- def=-
 public.deal.manager_request_reasons text[] gen=- def=-
 public.deal.manager_requested_at timestamp with time zone gen=- def=-
 public.deal.manager_requested_by uuid gen=- def=-
+public.deal.merged_into_id uuid gen=- def=-
 public.deal.name text NOT NULL gen=- def=-
 public.deal.owner_id uuid gen=- def=-
 public.deal.partner_attribution text gen=- def=-
@@ -6596,6 +6611,7 @@ public.idx_deal_live_newest CREATE INDEX idx_deal_live_newest ON public.deal USI
 public.idx_deal_loss_reason_mapping_reason CREATE INDEX idx_deal_loss_reason_mapping_reason ON public.deal_loss_reason_mapping USING btree (reason_key)
 public.idx_deal_lost_reason_code CREATE INDEX idx_deal_lost_reason_code ON public.deal USING btree (lost_reason_code) WHERE (lost_reason_code IS NOT NULL)
 public.idx_deal_lost_reason_note_key CREATE INDEX idx_deal_lost_reason_note_key ON public.deal USING btree (md5(lower(btrim(lost_reason)))) WHERE (lost_reason IS NOT NULL)
+public.idx_deal_merged_into CREATE INDEX idx_deal_merged_into ON public.deal USING btree (merged_into_id) WHERE (merged_into_id IS NOT NULL)
 public.idx_deal_name_trgm CREATE INDEX idx_deal_name_trgm ON public.deal USING gin (f_fold_apostrophes(lower(name)) gin_trgm_ops)
 public.idx_deal_owner CREATE INDEX idx_deal_owner ON public.deal USING btree (owner_id) WHERE (archived_at IS NULL)
 public.idx_deal_partner CREATE INDEX idx_deal_partner ON public.deal USING btree (partner_company_id) WHERE ((partner_company_id IS NOT NULL) AND (archived_at IS NULL))
@@ -11307,7 +11323,8 @@ public.uq_capture_backfill_admission_slot CREATE UNIQUE INDEX uq_capture_backfil
 public.uq_capture_backfill_live CREATE UNIQUE INDEX uq_capture_backfill_live ON public.capture_backfill USING btree (connection_id) WHERE (status = ANY (ARRAY['queued'::text, 'running'::text]))
 public.uq_capture_exclusion CREATE UNIQUE INDEX uq_capture_exclusion ON public.capture_exclusion USING btree (scope, user_id, kind, value, connection_id) NULLS NOT DISTINCT
 public.uq_capture_freemail_domain CREATE UNIQUE INDEX uq_capture_freemail_domain ON public.capture_freemail_domain USING btree (domain)
-public.uq_channel_connection_provider CREATE UNIQUE INDEX uq_channel_connection_provider ON public.channel_connection USING btree (provider) WHERE (archived_at IS NULL)
+public.uq_channel_connection_account CREATE UNIQUE INDEX uq_channel_connection_account ON public.channel_connection USING btree (provider, account_id) WHERE ((archived_at IS NULL) AND (account_id IS NOT NULL))
+public.uq_channel_connection_provider CREATE UNIQUE INDEX uq_channel_connection_provider ON public.channel_connection USING btree (provider) WHERE ((archived_at IS NULL) AND (account_id IS NULL))
 public.uq_chat_link_channel CREATE UNIQUE INDEX uq_chat_link_channel ON public.chat_link USING btree (provider, channel_slug) WHERE (archived_at IS NULL)
 public.uq_chat_link_deal CREATE UNIQUE INDEX uq_chat_link_deal ON public.chat_link USING btree (deal_id) WHERE ((archived_at IS NULL) AND (deal_id IS NOT NULL))
 public.uq_chat_link_project CREATE UNIQUE INDEX uq_chat_link_project ON public.chat_link USING btree (project_id) WHERE ((archived_at IS NULL) AND (project_id IS NOT NULL))
@@ -11325,6 +11342,7 @@ public.uq_company_profile_field CREATE UNIQUE INDEX uq_company_profile_field ON 
 public.uq_company_rel_type CREATE UNIQUE INDEX uq_company_rel_type ON public.company_relationship_type USING btree (company_id, relationship_type) WHERE (archived_at IS NULL)
 public.uq_company_source CREATE UNIQUE INDEX uq_company_source ON public.company USING btree (source_system, source_id) WHERE ((source_system IS NOT NULL) AND (source_id IS NOT NULL))
 public.uq_contact_channel_identity CREATE UNIQUE INDEX uq_contact_channel_identity ON public.contact_channel_identity USING btree (provider, channel_user_id) WHERE (archived_at IS NULL)
+public.uq_contact_channel_identity_scoped CREATE UNIQUE INDEX uq_contact_channel_identity_scoped ON public.contact_channel_identity USING btree (provider, account_scope, channel_user_id) WHERE (archived_at IS NULL)
 public.uq_contact_email_dedupe CREATE UNIQUE INDEX uq_contact_email_dedupe ON public.contact_email USING btree (email) WHERE (archived_at IS NULL)
 public.uq_contact_email_primary CREATE UNIQUE INDEX uq_contact_email_primary ON public.contact_email USING btree (contact_id) WHERE (is_primary AND (archived_at IS NULL))
 public.uq_contact_phone_primary CREATE UNIQUE INDEX uq_contact_phone_primary ON public.contact_phone USING btree (contact_id) WHERE (is_primary AND (archived_at IS NULL))

@@ -60,7 +60,7 @@ func TestAReadingWithNoModelLaneFailsWithAReasonRatherThanWaiting(t *testing.T) 
 	if store.outcome == nil || store.outcome.Status != activities.ExtractionReadFailed {
 		t.Fatalf("outcome = %+v, want failed", store.outcome)
 	}
-	if !strings.Contains(store.outcome.Detail, "no AI model configured") {
+	if !strings.Contains(store.outcome.Detail, "no AI provider is set up") {
 		t.Errorf("detail = %q, want the reason an operator can act on", store.outcome.Detail)
 	}
 	// Under this worker's own claim, like every other write.
