@@ -24,10 +24,8 @@ import (
 // on the published request. A unit could name a core connector's transport and
 // mint a row that is a valid send anchor for a conversation it does not own.
 //
-// The test has two halves because the rule and its reach can fail separately.
 // The block below pins what the gate does. The source assertion after it pins
-// that both doors call it. That half regresses, because a door can be added or
-// rewritten without anyone noticing the gate went missing.
+// that both doors call it, which is the half that regresses.
 func TestAUnitMayNameOnlyItsOwnTransportThroughEitherDoor(t *testing.T) {
 	declaresTransport(t, "mine", extension.Channel{Provider: "mine_chat", CredentialModel: extension.CredentialPerMember})
 
@@ -63,11 +61,7 @@ func TestAUnitMayNameOnlyItsOwnTransportThroughEitherDoor(t *testing.T) {
 		}
 	}
 
-	// Both doors reach it. A walk of the core-write door needs a live pool and
-	// transaction, so this is a source assertion instead, like the other
-	// whole-tree greps. It fails when a door stops calling the gate, not when
-	// someone happens to test
-	// that door.
+	// The core-write door needs a live pool to walk, so this reads the source.
 	for _, door := range []string{"extingress.go", "extcore.go"} {
 		src, err := os.ReadFile(door)
 		if err != nil {

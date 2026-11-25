@@ -5,13 +5,7 @@
 
 package compose
 
-// A member-owned chat source of an extension unit, end to end over a real
-// Postgres. A neutral unit stores a member's hand-filed message in its own
-// table and asks for an unattended run with SyncNow. The run ingests it on that
-// member's authority, filed on a contact or lead the member chose.
-//
-// The unit goes through RegisterExtensions, so it passes the admission a shipped
-// unit does. Its job handler runs on a Runtime minted the way a tick's is.
+// A neutral member-owned chat unit, registered through RegisterExtensions.
 
 import (
 	"context"
@@ -39,7 +33,6 @@ const (
 	chatTable     = "ext.ext_memberchat_filed"
 )
 
-// filedMessage is what the unit's route stores for a member's hand-filed message.
 type filedMessage struct {
 	Member, Key, Account, Text string
 	Precision                  extension.OccurredPrecision
@@ -48,7 +41,6 @@ type filedMessage struct {
 	Files                      []extension.InboundFile
 }
 
-// fileByHand is the unit's route body: store the message, then ask for a run.
 func fileByHand(ctx context.Context, rt extension.Runtime, msg filedMessage) error {
 	body, err := json.Marshal(msg)
 	if err != nil {
@@ -87,8 +79,6 @@ func (m filedMessage) record() extension.Record {
 }
 
 // ingestFiled is the unit's job. It reads what members filed and each member's
-// own position, ingests their messages as one member-owned batch, and forgets
-// what it filed. It answers every result so a test can read them.
 func ingestFiled(ctx context.Context, rt extension.Runtime) (map[string][]extension.Result, error) {
 	var rows []filedMessage
 	if err := rt.Tx(ctx, func(ctx context.Context, tx extension.Tx) error {
@@ -188,7 +178,6 @@ func (e *chatEnv) job() *callRuntime {
 	return jobRuntimeFor(e.callCtx(e.WS), chatUnit, "1.0.0", "job/ingest", boundExtensionRuntime())
 }
 
-// runJob runs the unit's job tick and answers what it ingested.
 func (e *chatEnv) runJob(t *testing.T) map[string][]extension.Result {
 	t.Helper()
 	results, err := ingestFiled(context.Background(), e.job())
@@ -198,7 +187,6 @@ func (e *chatEnv) runJob(t *testing.T) map[string][]extension.Result {
 	return results
 }
 
-// file stores a member's message through the route and runs the tick.
 func (e *chatEnv) file(t *testing.T, msg filedMessage) extension.Result {
 	t.Helper()
 	rt, ctx := e.runtime(chatUnit)
@@ -272,7 +260,6 @@ func TestAHandFiledMessageIsFiledOnTheChosenContactAndBornHeldUnderTheSourcesPos
 }
 
 // A subject the member cannot see answers as one that is not there. It stores
-// nothing and does not stop the rest of the batch.
 func TestAChosenSubjectTheMemberCannotSeeIsRefusedAsNotFound(t *testing.T) {
 	e := setupMemberChat(t, extension.PostureClassified)
 	revokeRoles(t, e.extRuntimeEnv, e.member)
@@ -338,7 +325,6 @@ func TestAChosenLeadReceivesTheMessage(t *testing.T) {
 }
 
 // A day-only time keeps its precision, and an unknown one is dated on the day
-// the core received it, as a day.
 func TestAMessageKeepsHowPreciselItsTimeIsKnown(t *testing.T) {
 	e := setupMemberChat(t, extension.PostureClassified)
 	day := e.message("day")
@@ -374,7 +360,6 @@ func TestAMessageKeepsHowPreciselItsTimeIsKnown(t *testing.T) {
 }
 
 // Two members of one source keep their own positions. A stale writer is
-// refused, a partial batch moves nothing, and a restart reads what was saved.
 func TestEachMemberOfASourceKeepsTheirOwnPositionAndAStaleWriterIsRefused(t *testing.T) {
 	e := setupMemberChat(t, extension.PostureClassified)
 	one, two := extension.UserID(e.member.String()), extension.UserID(e.second.String())
@@ -440,7 +425,6 @@ func TestEachMemberOfASourceKeepsTheirOwnPositionAndAStaleWriterIsRefused(t *tes
 }
 
 // A request that carries a caller never ingests, and a unit with no pin lands
-// as before.
 func TestAMemberOwnedSourceStillRefusesAnAttendedIngest(t *testing.T) {
 	e := setupMemberChat(t, extension.PostureClassified)
 	rt, ctx := e.runtime(chatUnit)
@@ -452,5 +436,26 @@ func TestAMemberOwnedSourceStillRefusesAnAttendedIngest(t *testing.T) {
 	_, err = rt.IngestMemberBatch(ctx, extension.UserID(e.member.String()), chatSource0, nil, "p", 0)
 	if !errors.Is(err, extension.ErrAttendedIngest) {
 		t.Errorf("IngestMemberBatch on a caller's invocation = %v, want ErrAttendedIngest", err)
+	}
+	if _, err = rt.MemberIngestPosition(ctx, extension.UserID(e.second.String()), chatSource0); !errors.Is(err, extension.ErrAttendedIngest) {
+		t.Errorf("reading another member's place on a caller's invocation = %v, want ErrAttendedIngest", err)
+	}
+}
+
+// A replay files the stored message on the subject it names, once.
+func TestAReplayNamingAnotherSubjectIsFiledOnItToo(t *testing.T) {
+	e := setupMemberChat(t, extension.PostureClassified)
+	first, second := e.SeedContact(t, "First", &e.member), e.SeedContact(t, "Second", &e.member)
+	msg := e.message("replay")
+	msg.SubjectKind, msg.SubjectID = extension.SubjectContact, first.String()
+	e.file(t, msg)
+	e.file(t, msg)
+	id, _, _ := e.activityOf(t, "replay")
+	if got := e.links(t, id, "contact_id"); got != 1 {
+		t.Fatalf("%d contact links after a same-subject replay, want 1", got)
+	}
+	msg.SubjectID = second.String()
+	if r := e.file(t, msg); r.Disposition != extension.DispositionAccepted || e.links(t, id, "contact_id") != 2 {
+		t.Errorf("a replay naming a second subject answered %q with %d links, want accepted and 2", r.Disposition, e.links(t, id, "contact_id"))
 	}
 }

@@ -82,12 +82,9 @@ func (r *callRuntime) Ingest(ctx context.Context, on extension.UserID, rec exten
 		return extension.Result{}, err
 	}
 	defer r.endIngest()
-	// A record the grammar refuses is a disposition, not an error. The unit moves
-	// its cursor past it either way, and the complaint travels in Reason.
 	if err := rec.Validate(); err != nil {
 		return r.refusedRecord(ctx, extension.RefusalOf(err), err.Error()), nil
 	}
-	// A pinned posture is a statement about chat, so such a source lands chat only.
 	if declared.PinnedPosture != "" && !extingress.IsChatMessage(rec) {
 		return r.refusedRecord(ctx, extension.RefusalActivity, "a member-owned chat source lands chat messages only"), nil
 	}
@@ -119,7 +116,6 @@ func (r *callRuntime) Ingest(ctx context.Context, on extension.UserID, rec exten
 	return r.landRecord(runCtx, sink, rec, declared, on)
 }
 
-// refusedRecord answers a refused record after leaving the breadcrumb.
 func (r *callRuntime) refusedRecord(ctx context.Context, class extension.RecordRefusal, reason string) extension.Result {
 	r.noteRefusal(ctx, class)
 	return extension.Result{Disposition: extension.DispositionUnrepresentable, Refusal: class, Reason: reason}
@@ -135,6 +131,7 @@ func (r *callRuntime) refusedRecord(ctx context.Context, class extension.RecordR
 // unit retry a deliberate drop on every poll, forever, so it is a success here
 // with a disposition that says what happened.
 func (r *callRuntime) landRecord(ctx context.Context, sink *capture.Sink, rec extension.Record, declared extension.IngressSource, on extension.UserID) (extension.Result, error) {
+	ctx = capture.WithMemberGuard(ctx, extingress.MemberGuard(r.unit, memberConsentedTx))
 	chosen, err := extingress.ChosenRef(rec.ChosenSubject)
 	if err != nil {
 		return extension.Result{}, r.ingressRefusal(ctx, err)
@@ -153,13 +150,17 @@ func (r *callRuntime) landRecord(ctx context.Context, sink *capture.Sink, rec ex
 	case err != nil:
 		return extension.Result{}, r.ingressRefusal(ctx, err)
 	}
+	if chosen != nil {
+		if err := extingress.EnsureChosenLink(ctx, r.deps.pool, ref, *chosen); err != nil {
+			return r.subjectResult(ctx, err)
+		}
+	}
 	return extension.Result{
 		Ref:         extension.Ref{Type: string(ref.Type), ID: ref.ID.String()},
 		Disposition: extension.DispositionAccepted,
 	}, nil
 }
 
-// subjectResult answers an unseen chosen subject as its own disposition.
 func (r *callRuntime) subjectResult(ctx context.Context, err error) (extension.Result, error) {
 	if errors.Is(err, extingress.ErrSubjectNotFound) {
 		return extension.Result{Disposition: extension.DispositionSubjectNotFound, Reason: "no such contact or lead"}, nil
@@ -167,7 +168,6 @@ func (r *callRuntime) subjectResult(ctx context.Context, err error) (extension.R
 	return extension.Result{}, r.ingressRefusal(ctx, err)
 }
 
-// fileRecord files a chat message through capture.FileChatMessage, the rest as before.
 func (r *callRuntime) fileRecord(
 	ctx context.Context, sink *capture.Sink, rec extension.Record, declared extension.IngressSource,
 	on extension.UserID, chosen *datasource.EntityRef,
@@ -175,7 +175,8 @@ func (r *callRuntime) fileRecord(
 	if extingress.IsChatMessage(rec) {
 		binding, msg, err := extingress.ChatInput(extingress.ChatSource{
 			CapturedBy: ingressPrincipalPrefix + r.unit, SourceSystem: r.sourceSystem(rec.System),
-			Member: extingress.UserUUID(on), Source: declared, Now: time.Now().UTC(),
+			Member: extingress.UserUUID(on), Source: declared,
+			Credential: extingress.ChannelModel(composedChannelsFor(r.unit), rec.Activity.ChannelProvider), Now: time.Now().UTC(),
 		}, rec)
 		if err != nil {
 			return datasource.EntityRef{}, err

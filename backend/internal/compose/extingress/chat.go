@@ -5,6 +5,7 @@ package extingress
 
 import (
 	"fmt"
+	"slices"
 	"time"
 
 	"github.com/margince/margince/backend/internal/shared/apperrors"
@@ -34,7 +35,10 @@ type ChatSource struct {
 	SourceSystem string
 	// Member is the member whose credential produced the record.
 	Member ids.UUID
-	Source extension.IngressSource
+	// Credential is the declared credential model of the channel the record
+	// travelled on. It alone decides whose correspondence a message is.
+	Credential extension.CredentialModel
+	Source     extension.IngressSource
 	// Now dates a record whose original time the unit does not know.
 	Now time.Time
 }
@@ -54,6 +58,9 @@ func ChatInput(src ChatSource, rec extension.Record) (connector.ChatBinding, con
 		PinnedPosture: string(src.Source.PinnedPosture),
 	}
 	if src.Source.PinnedPosture != "" {
+		if src.Credential != extension.CredentialPerMember || src.Member.IsZero() {
+			return binding, connector.ChatMessage{}, fmt.Errorf("%w: a pinned posture belongs to a per-member channel with a member to bind", extension.ErrInvalid)
+		}
 		binding.Ownership = connector.ChatOwnedByMember
 		binding.OwnerUserID = src.Member
 	}
@@ -116,4 +123,28 @@ func ChosenRef(subject *extension.ChosenSubject) (ref *datasource.EntityRef, err
 		return &datasource.EntityRef{Type: datasource.EntityLead, ID: id}, nil
 	}
 	return nil, fmt.Errorf("%w: the chosen subject is neither a contact nor a lead", apperrors.ErrInvalidArgument)
+}
+
+// ChannelModel is the credential model a unit declared for one provider.
+func ChannelModel(channels []extension.Channel, provider string) extension.CredentialModel {
+	for _, channel := range channels {
+		if channel.Provider == provider {
+			return channel.CredentialModel
+		}
+	}
+	return ""
+}
+
+// RefusePinWithoutMemberChannel refuses, at boot, a pinned source in a unit
+// that declares no per-member channel to file through, or declares a bot only.
+func RefusePinWithoutMemberChannel(sources []extension.IngressSource, channels []extension.Channel) error {
+	for _, source := range sources {
+		if source.PinnedPosture == "" {
+			continue
+		}
+		if !slices.ContainsFunc(channels, func(c extension.Channel) bool { return c.CredentialModel == extension.CredentialPerMember }) {
+			return fmt.Errorf("%w: source %q pins a posture and its unit declares no per-member channel", extension.ErrInvalid, source.System)
+		}
+	}
+	return nil
 }

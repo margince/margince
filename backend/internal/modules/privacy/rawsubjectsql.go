@@ -106,15 +106,19 @@ func linkedOriginalsSQL(column, subject string, erasing bool) string {
 	        OR ` + otherLiveSubjectSQL("lead_id", column, subject) + `))`
 }
 
-// otherLiveSubjectSQL is true when the activity o is also filed on a live
-// record of this kind. For the kind being erased that means another record.
+// otherLiveSubjectSQL is true when the activity o is also filed on a record of
+// this kind that was not erased. An archived record still holds its link and
+// its export, so only an erasure tombstone releases the original. For the kind
+// being erased that means another record.
 func otherLiveSubjectSQL(kind, column, subject string) string {
 	differs := ""
 	if kind == column {
 		differs = ` AND xl.` + kind + ` <> ` + subject
 	}
-	return `EXISTS (SELECT 1 FROM activity_link xl JOIN ` + strings.TrimSuffix(kind, "_id") + ` s ON s.id = xl.` + kind + `
-	          WHERE xl.activity_id = o.id AND s.archived_at IS NULL` + differs + `)`
+	table := strings.TrimSuffix(kind, "_id")
+	return `EXISTS (SELECT 1 FROM activity_link xl JOIN ` + table + ` s ON s.id = xl.` + kind + `
+	          WHERE xl.activity_id = o.id` + differs + ` AND NOT EXISTS (SELECT 1 FROM audit_log t
+	            WHERE t.entity_type = '` + table + `' AND t.entity_id = s.id AND t.action = ANY(ARRAY['` + actionErase + `','anonymize` + `'])))`
 }
 
 // deleteLinkedOriginalsTx destroys the originals of messages filed on one record.

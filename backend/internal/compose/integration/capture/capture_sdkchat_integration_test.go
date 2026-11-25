@@ -73,7 +73,7 @@ func unitChat(
 		Raw:           []byte(`{"id":"` + key + `"}`),
 	}
 	binding, msg, err := extingress.ChatInput(extingress.ChatSource{
-		CapturedBy: unitCapturedBy, SourceSystem: "ext:memberchat:member-chat", Member: e.Rep1,
+		CapturedBy: unitCapturedBy, SourceSystem: "ext:memberchat:member-chat", Member: e.Rep1, Credential: extension.CredentialPerMember,
 		Source: extension.IngressSource{System: "member-chat", PinnedPosture: extension.PostureClassified}, Now: clocktest.Now(t).UTC(),
 	}, rec)
 	if err != nil {
@@ -300,5 +300,32 @@ func TestAMessageFiledOnTwoSubjectsIsExportedForBothAndErasedWithTheLast(t *test
 	}
 	if held() != 0 {
 		t.Fatal("the original survives the erasure of the last subject")
+	}
+}
+
+// An archived second subject still holds its link and its export, so erasing
+// the first keeps the original for it.
+func TestAnOriginalIsKeptForAnArchivedSecondSubject(t *testing.T) {
+	env := newCaptureEnvWithBlob(t, captureNow, blobstore.NewMemory())
+	e := env.e
+	first, second := seedContactNamed(t, e, "First"), seedContactNamed(t, e, "Archived")
+	chat := unitChat(t, e, nil, "arch-1", first)
+	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+		if _, err := tx.Exec(context.Background(), `UPDATE contact SET archived_at = now() WHERE id = $1`, second); err != nil {
+			return err
+		}
+		_, err := tx.Exec(context.Background(), `INSERT INTO activity_link (activity_id, entity_type, contact_id) VALUES ($1, 'contact', $2)`, chat, second)
+		return err
+	}); err != nil {
+		t.Fatal(err)
+	}
+	if err := compose.ComposedEraser(e.Pool, blobstore.NewMemory()).EraseContact(erasureCtx(e), first, "subject request"); err != nil {
+		t.Fatalf("erasing the first subject: %v", err)
+	}
+	var held int
+	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+		return tx.QueryRow(context.Background(), `SELECT count(*) FROM raw_capture WHERE source_id = 'arch-1'`).Scan(&held)
+	}); err != nil || held != 1 {
+		t.Fatalf("%d originals after erasing one of two subjects, the other archived (%v), want 1", held, err)
 	}
 }

@@ -4,6 +4,7 @@
 package extingress_test
 
 import (
+	"errors"
 	"testing"
 	"time"
 
@@ -36,7 +37,8 @@ func aChatRecord() extension.Record {
 func aSource(pin extension.Posture) extingress.ChatSource {
 	return extingress.ChatSource{
 		CapturedBy: "connector:ext:memberchat", SourceSystem: "ext:memberchat:member-chat",
-		Member: ids.NewV7(), Source: extension.IngressSource{System: "member-chat", PinnedPosture: pin}, Now: received,
+		Member: ids.NewV7(), Credential: extension.CredentialPerMember,
+		Source: extension.IngressSource{System: "member-chat", PinnedPosture: pin}, Now: received,
 	}
 }
 
@@ -147,5 +149,27 @@ func TestThePublishedVocabulariesAreTheCores(t *testing.T) {
 		if pair[0] != pair[1] {
 			t.Errorf("published %q, core %q", pair[0], pair[1])
 		}
+	}
+}
+
+// Ownership comes from the channel's declared credential model, and a pin only
+// sets posture. A pin on a bot channel, or with no member to bind, is refused.
+func TestAPinNeverMakesABotChannelMemberOwned(t *testing.T) {
+	bot := aSource(extension.PostureClassified)
+	bot.Credential = extension.CredentialWorkspaceBot
+	if _, _, err := extingress.ChatInput(bot, aChatRecord()); !errors.Is(err, extension.ErrInvalid) {
+		t.Errorf("a pinned source on a workspace bot channel = %v, want ErrInvalid", err)
+	}
+	nobody := aSource(extension.PostureHeld)
+	nobody.Member = ids.UUID{}
+	if _, _, err := extingress.ChatInput(nobody, aChatRecord()); !errors.Is(err, extension.ErrInvalid) {
+		t.Errorf("a pinned source with no member to bind = %v, want ErrInvalid", err)
+	}
+	source := []extension.IngressSource{{System: "member-chat", PinnedPosture: extension.PostureHeld}}
+	if err := extingress.RefusePinWithoutMemberChannel(source, []extension.Channel{{Provider: "bot", CredentialModel: extension.CredentialWorkspaceBot}}); err == nil {
+		t.Error("boot admitted a pinned source whose unit declares only a bot channel")
+	}
+	if err := extingress.RefusePinWithoutMemberChannel(source, []extension.Channel{{Provider: "mine", CredentialModel: extension.CredentialPerMember}}); err != nil {
+		t.Errorf("boot refused a pinned source with a per-member channel: %v", err)
 	}
 }

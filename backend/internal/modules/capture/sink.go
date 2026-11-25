@@ -297,6 +297,9 @@ func (s *Sink) captureRecord(ctx context.Context, rec connector.NormalizedRecord
 
 			switch fields := rec.Fields.(type) {
 			case ActivityFields:
+				if err := memberGuardTx(ctx, tx, actor.UserID); err != nil {
+					return err
+				}
 				if attempt.activityLanding, err = s.landActivityTx(ctx, tx, rec, fields, actor.UserID); err != nil {
 					return err
 				}

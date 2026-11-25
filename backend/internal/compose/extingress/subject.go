@@ -10,9 +10,11 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/ports/datasource"
 )
@@ -44,4 +46,13 @@ func refuseSubject(err error) error {
 		return ErrSubjectNotFound
 	}
 	return err
+}
+
+// EnsureChosenLink files a stored message on the subject a replay names. The
+// member's authority was checked by CheckSubject, and the capture link probe
+// checks it again.
+func EnsureChosenLink(ctx context.Context, pool *pgxpool.Pool, activity datasource.EntityRef, subject datasource.EntityRef) error {
+	return database.WithWorkspaceTx(ctx, pool, func(tx pgx.Tx) error {
+		return capture.EnsureChosenLinkTx(ctx, tx, ids.From[ids.ActivityKind](activity.ID), subject)
+	})
 }
