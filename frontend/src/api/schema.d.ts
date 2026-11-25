@@ -62171,6 +62171,8 @@ export interface components {
             /** @description On a task row: true when `due_at` names an agreed time of day, false when the task is due by that day. Absent on other rows. */
             due_has_time?: boolean;
             due_intent?: components["schemas"]["IntentTime"];
+            /** @description On a task row: the kind of work it asks for, so a card names it without reading the task. Absent on other rows. */
+            task_type?: components["schemas"]["TaskType"];
             /** @description Past due at the read instant, resolved server-side so every surface agrees. */
             overdue?: boolean;
             /**
@@ -63916,6 +63918,8 @@ export interface components {
             /** @description On a task row: true when `due_at` names an agreed time of day, false when the task is due by that day. Absent on other rows. */
             due_has_time?: boolean;
             due_intent?: components["schemas"]["IntentTime"];
+            /** @description On a task row: the kind of work it asks for, so a card names it without reading the task. Absent on other rows. */
+            task_type?: components["schemas"]["TaskType"];
             /** @description Past due at the read instant, resolved server-side so every surface agrees. */
             overdue?: boolean;
             /**

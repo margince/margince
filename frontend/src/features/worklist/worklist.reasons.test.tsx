@@ -209,7 +209,7 @@ describe("a row says its deadline once", () => {
     // installation's own zone, so a hard-coded hour would assert the suite's
     // timezone rather than that the line was drawn.
     const when = await screen.findByText(/^due \d/);
-    expect(when.className).toContain("worklist-row-when");
+    expect(when.closest(".task-meta")).not.toBeNull();
 
     // The coarser phrase is gone, so the clock is stated once. Read from the
     // because line itself: "due today" as a page-wide query would also match
@@ -297,7 +297,7 @@ describe("a row says its deadline once", () => {
 
     // No moment is drawn for this source, so the phrase is the only place the
     // fact is said.
-    expect(container.querySelector(".worklist-row-when")).toBeNull();
+    expect(container.querySelector(".task-meta > .badge")).toBeNull();
     // The PHRASE ITSELF, not merely a non-empty line: a row carries other
     // reasons, so asserting the line has text would pass just as happily with
     // this fact dropped.
