@@ -140,9 +140,9 @@ func TestEveryCompanyForeignKeyJoinsTheMerge(t *testing.T) {
 	})
 }
 
-// mergeCensus is what the foreign-key census needs to know about one merge: the
-// table the keys point at, the statements it moves, and where a missing move
-// would be added.
+// mergeCensus is what the foreign-key census needs to know about one merge. It
+// names the table the keys point at, the statements that move them, and where
+// a missing move would be added.
 type mergeCensus struct {
 	table      string
 	floor      int

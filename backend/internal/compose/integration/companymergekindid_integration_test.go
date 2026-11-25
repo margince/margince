@@ -56,10 +56,10 @@ func TestEveryCompanyKindIDReferenceJoinsTheMerge(t *testing.T) {
 	assertEveryKindIDReferenceJoinsTheMerge(t, reach.Company, mergePathFiles, nil)
 }
 
-// assertEveryKindIDReferenceJoinsTheMerge is the census for one record kind; own
-// holds the pairs only that kind's vocabulary reaches. The
-// kind-and-id rows are moved by the one recordmerge path every merge shares, so
-// the pairs a merge leaves are the same for every kind and read the same map.
+// assertEveryKindIDReferenceJoinsTheMerge is the census for one record kind.
+// own holds the pairs only that kind's vocabulary reaches. One recordmerge path
+// moves the kind-and-id rows for every merge. The pairs a merge leaves are
+// therefore the same for every kind, and they read the same map.
 func assertEveryKindIDReferenceJoinsTheMerge(t *testing.T, kind reach.Record, files []string, own *gatekit.Waivers[string]) {
 	t.Helper()
 	written := tablesTheMergeWrites(t, files, kind)

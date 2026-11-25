@@ -3,11 +3,10 @@
 
 package deals
 
-// The two-deal merge. Facts about the opportunity move to the survivor and the
-// path one deal took stays on the deal that took it: the stage-age report reads
-// the most recent entry into a deal's current stage, so a loser's history
-// copied onto the survivor would make the survivor look younger than it is.
-// dealmergerelink.go holds the statements and says what each row does.
+// The two-deal merge. Facts about the opportunity move to the survivor. The
+// path a deal took stays on that deal. The stage-age report reads the latest
+// entry into the current stage, so a copied history would make the survivor
+// look younger than it is. dealmergerelink.go holds the statements.
 
 import (
 	"context"
@@ -33,8 +32,8 @@ import (
 // the merge's transaction.
 type CarryGrants func(ctx context.Context, tx pgx.Tx, recordType string, from, to ids.UUID) error
 
-// MergeRefusedError maps to 409: the two deals cannot be merged as they stand,
-// and Reason says what to change first.
+// MergeRefusedError maps to 409: the two deals cannot be merged as they stand.
+// Message says what to change first.
 type MergeRefusedError struct {
 	Code    string
 	Message string
@@ -99,11 +98,9 @@ func (s *Store) MergeDeal(ctx context.Context, sourceID, targetID ids.DealID, if
 	return out, err
 }
 
-// mergeDealTx locks both ends in id order, resolves them, refuses a pair that
-// cannot join, moves the references, fills the survivor's gaps, retires the
-// source and writes the audit rows and the event. The pair lock is what makes
-// the target check hold to commit: without it a concurrent merge of the target
-// elsewhere would leave moved rows on a dead record.
+// mergeDealTx runs the merge inside the caller's transaction. The pair lock
+// holds the target check to commit. Without it, a concurrent merge of the
+// target elsewhere would leave moved rows on a dead record.
 func (s *Store) mergeDealTx(ctx context.Context, tx pgx.Tx, sourceID, targetID ids.DealID, ifVersion *int64,
 	active []fieldcatalog.Column,
 ) (crmcontracts.Deal, error) {
@@ -137,8 +134,8 @@ func (s *Store) mergeDealTx(ctx context.Context, tx pgx.Tx, sourceID, targetID i
 }
 
 // releaseMergedDealPin clears the retired deal's pin on its own accepted offer
-// before the offer moves: deal_arr_source_same_deal ties the pin to an offer of
-// the same deal, so the offer cannot change deals while the source names it.
+// before the offer moves. deal_arr_source_same_deal ties the pin to an offer of
+// the same deal.
 func (s *Store) releaseMergedDealPin(ctx context.Context, tx pgx.Tx, srcLock storekit.RowLock, src crmcontracts.Deal) error {
 	if src.ArrSourceOfferId == nil {
 		return nil
@@ -151,8 +148,8 @@ func (s *Store) releaseMergedDealPin(ctx context.Context, tx pgx.Tx, srcLock sto
 	return nil
 }
 
-// readDealMergeState loads one end of a deal merge: a live row returns itself;
-// an archived one returns its redirect pointer, nil when it was only archived.
+// readDealMergeState loads one end of a deal merge. A live row returns itself.
+// An archived one returns its redirect pointer, nil when it was only archived.
 func readDealMergeState(ctx context.Context, tx pgx.Tx, id ids.DealID) (crmcontracts.Deal, *ids.UUID, error) {
 	d, err := readDeal(ctx, tx, id, storekit.IncludeArchived, nil)
 	if err != nil {

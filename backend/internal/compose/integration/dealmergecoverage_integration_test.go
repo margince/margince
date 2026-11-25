@@ -6,10 +6,10 @@
 package integration
 
 // The deal merge's coverage census. Every foreign key pointing at deal is a
-// row the merge has to decide about, and the decision comes from the database,
-// so a table that gains a deal_id is enrolled by its migration. The rule and
-// the failure it guards are the company census's (companymergecoverage_integration_test.go);
-// this file holds the deal's own paths, floor and waivers.
+// row the merge has to decide about. The database supplies the list, so a table
+// that gains a deal_id is enrolled by its migration. The rule is the company
+// census's, in companymergecoverage_integration_test.go. This file holds the
+// deal's own paths, floor and waivers.
 
 import (
 	"testing"
@@ -22,8 +22,8 @@ import (
 // schema having shrunk. 30 columns point at deal today.
 const theDealFKFloor = 28
 
-// dealMergePathFiles are the files that, between them, ARE the deal merge's
-// relink: its own statements and the shared steps it calls.
+// dealMergePathFiles are the files that make up the deal merge's relink: its
+// own statements and the shared steps it calls.
 var dealMergePathFiles = []string{
 	"internal/modules/deals/dealmerge.go",
 	"internal/modules/deals/dealmergerelink.go",
@@ -34,9 +34,9 @@ var dealMergePathFiles = []string{
 }
 
 // dealFKsTheMergeLeaves are the deal-pointing columns the merge does not move.
-// A deal's own path stays with the deal that took it, because the stage-age
-// report counts from the most recent entry into the current stage and a copied
-// history would make the survivor look younger than it is.
+// A deal's own path stays with the deal that took it. The stage-age report
+// counts from the latest entry into the current stage, so a copied history
+// would make the survivor look younger.
 var dealFKsTheMergeLeaves = gatekit.Waive(map[string]string{
 	"deal_stage_history.deal_id":            "the path this deal took through its stages; the survivor did not take it, and the stage-age report would read a copied history as a younger deal",
 	"deal_stage_evidence.deal_id":           "what supported the retired deal's stage moves; it belongs to the history above and goes with it",

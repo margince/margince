@@ -16,18 +16,18 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
-// Pair resolves and validates both ends. A merge CHANGES both of them —
-// the source is archived onto the survivor, the survivor absorbs it — so both
-// ends carry the write-authority probe rather than the visibility one: a
-// colleague handed a `read` share of either record may not spend it on a merge.
+// Pair resolves and validates both ends. A merge changes both records, so both
+// carry the write-authority probe and not the visibility one. A colleague with
+// a `read` share of either record may not spend it on a merge.
 //
-// The source must be live and writable; a source that was already merged away
-// answers 409 with the pointer (the caller just proved they can address the
-// row, so the outcome discloses nothing new — the AlreadyPromoted precedent).
-// The target must be live too, and a target the caller cannot change answers a
-// bare conflict rather than naming itself, exactly as an out-of-scope one does:
-// merging returns the survivor, so the refusal must disclose no more than the
-// caller could already read. An archived target can survive nothing.
+// The source must be live and writable. A source already merged away answers
+// 409 with the pointer, which discloses nothing new because the caller just
+// proved they can address the row.
+//
+// The target must be live too. A target the caller cannot change answers a bare
+// conflict and does not name itself, as an out-of-scope one does. Merging
+// returns the survivor, so the refusal discloses no more than the caller could
+// already read.
 func Pair[T any, K ids.EntityKind](ctx context.Context, tx pgx.Tx, kind string, sourceID, targetID ids.ID[K],
 	ifVersion *int64,
 	read func(context.Context, pgx.Tx, ids.ID[K]) (T, *ids.UUID, error),
@@ -88,9 +88,8 @@ func requireSourceVersion(ctx context.Context, tx pgx.Tx, kind string, sourceID 
 	return nil
 }
 
-// ArchiveMergedAway retires the source row: archived + the redirect
-// pointer, in one statement so a concurrent merge of the same source
-// loses the race instead of double-writing.
+// ArchiveMergedAway retires the source row with its redirect pointer in one
+// statement, so a concurrent merge of the same source loses the race.
 func ArchiveMergedAway(ctx context.Context, tx pgx.Tx, table string, sourceID, targetID ids.UUID) error {
 	tag, err := tx.Exec(ctx,
 		`UPDATE `+table+` SET archived_at = $3, merged_into_id = $2

@@ -1,11 +1,10 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-// Package recordmerge holds the steps every two-record merge shares: resolving
-// and admitting both ends, retiring the source, and re-homing the rows that
+// Package recordmerge holds the steps every two-record merge shares. It
+// resolves and admits both ends, retires the source, and re-homes the rows that
 // name a record by id or by kind and id. The contact, company, lead and deal
-// merges call it; what each record kind moves beyond that stays with its
-// module.
+// merges call it, and each module keeps what its own kind moves beyond that.
 package recordmerge
 
 import "github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -29,15 +28,15 @@ type AlreadyMergedError struct {
 
 func (e *AlreadyMergedError) Error() string { return e.Kind + " is already merged" }
 
-// MergedTargetError maps to 422: the chosen survivor is itself archived
-// or merged away — nothing can merge INTO a dead record.
+// MergedTargetError maps to 422: the chosen survivor is itself archived or
+// merged away, and nothing can merge into a dead record.
 type MergedTargetError struct{ Kind string }
 
 func (e *MergedTargetError) Error() string {
 	return "merge target " + e.Kind + " is archived; the survivor must be live"
 }
 
-// FieldFault refuses merging INTO a record that was itself already merged away.
+// FieldFault refuses merging into a record that was itself already merged away.
 func (e *MergedTargetError) FieldFault() (field, code, message string) {
 	return "target_id", "merged_target", e.Error()
 }

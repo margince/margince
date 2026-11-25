@@ -36,9 +36,9 @@ var activityLinkColumns = map[string]string{
 	"deal":    "deal_id",
 }
 
-// ActivityPredicates answers the activity_link column for a record kind, the
-// predicate that selects the retired record's links and the one that finds a
-// link the survivor already holds on the same activity.
+// ActivityPredicates answers the activity_link column for a record kind. It
+// also answers the predicate that selects the retired record's links and the
+// one that finds a link the survivor holds on the same activity.
 func ActivityPredicates(kind string) (column, source, duplicate string, err error) {
 	column, ok := activityLinkColumns[kind]
 	if !ok {

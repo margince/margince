@@ -200,8 +200,8 @@ func TestAMergedAwayDealCannotBeRestored(t *testing.T) {
 	}
 }
 
-// Two merges of one pair in opposite directions run under one pair lock, so one
-// wins and the other finds its source or target already gone.
+// Two merges of one pair in opposite directions share one pair lock. One wins
+// and the other finds its source or target gone.
 func TestTwoOppositeDealMergesLeaveOneWinner(t *testing.T) {
 	e := Setup(t)
 	_, a, b := twoDealsOnOneCompany(t, e)

@@ -4,9 +4,8 @@
 package deals
 
 // What a deal merge does with each row that names the merged-away deal.
-// TestEveryDealForeignKeyJoinsTheMerge reads these statements and the waiver
-// map beside it, so a table that points at deal is either moved here or
-// declared there with the reason it stays.
+// TestEveryDealForeignKeyJoinsTheMerge reads these statements and its waiver
+// map, so a table pointing at deal is moved here or declared there.
 //
 // A row the survivor already holds under the same unique key stands, and the
 // retired copy is dropped or archived. That is the rule recordmerge.RelinkLinkRows
@@ -102,10 +101,10 @@ func relinkDealOwnedRows(ctx context.Context, tx pgx.Tx, sourceID, targetID ids.
 	return nil
 }
 
-// refuseDoubleHolders refuses a merge where both deals hold something the
-// schema lets a deal hold once: a live commission, an open legal review, a
-// live chat link or an open Deal Room. Moving the source's would break the
-// unique index, and dropping either would lose a decision.
+// refuseDoubleHolders refuses a merge where both deals hold what a deal holds
+// once. That is a live commission, an open legal review, a live chat link or an
+// open Deal Room. Moving the source's would break the unique index. Dropping
+// either would lose a decision.
 func refuseDoubleHolders(ctx context.Context, tx pgx.Tx, sourceID, targetID ids.DealID) error {
 	var commission, review, chat, room bool
 	err := tx.QueryRow(ctx, `SELECT
