@@ -8031,6 +8031,12 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "editAccess.withdraw": "Rút yêu cầu quyền chỉnh sửa",
   "editAccess.sent": "Đã xin {owner} quyền chỉnh sửa",
   "editAccess.withdrawn": "Đã rút yêu cầu quyền chỉnh sửa",
+  // A record this reader may view but not change. The head's pill and the
+  // Ownership row say so, and the panel names the owner.
+  "viewOnly.pill": "Chỉ xem",
+  "viewOnly.label": "Quyền của bạn",
+  "viewOnly.owns": "{owner} phụ trách {name}",
+  "record.details.access": "Quyền truy cập",
   // The owner offering a record to a colleague, from the access panel.
   "handover.offer": "Chuyển giao cho…",
   "handover.offerTo": "Giao cho",

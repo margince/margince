@@ -429,6 +429,40 @@
 .btn-federated.btn-unavailable:disabled {
   border-color: var(--borderSubtle);
 }
+/* Refused for this reader (`reason`/`reasonId`): locked, not faded. A filled
+   green or indigo face at half strength read as broken; an unfilled face in
+   full ink with a lock reads as kept from them on purpose. */
+.btn:disabled:has(> .btn-lock) {
+  opacity: 1;
+  cursor: default;
+  background: var(--bgControl);
+  border-color: var(--borderSubtle);
+  color: var(--textSecondary);
+  box-shadow: none;
+}
+.btn-link:disabled:has(> .btn-lock) {
+  background: none;
+  border-color: transparent;
+}
+/* The lock stands in for the control's own leading mark. */
+.btn:not(.btn-icon) > .btn-lock + svg {
+  display: none;
+}
+/* An icon-only control keeps its glyph, with the lock on its corner. */
+.btn-icon:has(> .btn-lock) {
+  position: relative;
+}
+.btn-icon > .btn-lock {
+  position: absolute;
+  inset-block-start: var(--space-1);
+  inset-inline-end: var(--space-1);
+  inline-size: 10px;
+  block-size: 10px;
+  padding: 1px;
+  border-radius: var(--r-full);
+  background: var(--bgControl);
+  color: var(--textPrimary);
+}
 /* A control that is WORKING must not be drawn as one that was REFUSED, and
    until this rule existed every button in the product drew both the same way:
    a write in flight set `disabled`, so it dimmed to 0.5 with a barred cursor —
@@ -509,6 +543,38 @@
   flex-direction: column;
   align-items: flex-start;
   gap: var(--space-1);
+}
+/* Outside a dialog the sentence is a tip under the locked control, shown on
+   hover or focus, so a card's verbs keep one height. A dialog keeps it as a
+   line: there the reason is what the reader must act on before going on. */
+.btn-with-reason:not(.modal .btn-with-reason) {
+  position: relative;
+}
+.btn-with-reason:not(.modal .btn-with-reason) > .btn-reason {
+  position: absolute;
+  inset-block-start: calc(100% + var(--space-1));
+  inset-inline-start: 0;
+  z-index: 2;
+  inline-size: max-content;
+  max-inline-size: 18rem;
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--r-sm);
+  background: var(--textPrimary);
+  color: var(--bgInset);
+  font: var(--fontBodySmall);
+  white-space: normal;
+  box-shadow: var(--shadow-pop);
+  pointer-events: none;
+  opacity: 0;
+  visibility: hidden;
+  transition:
+    opacity var(--dur-state) var(--ease-out),
+    visibility var(--dur-state);
+}
+.btn-with-reason:not(.modal .btn-with-reason):is(:hover, :focus-within)
+  > .btn-reason {
+  opacity: 1;
+  visibility: visible;
 }
 
 /* A link in prose, and nothing else.

@@ -40,10 +40,8 @@
   gap: var(--gapActions);
   align-items: stretch;
 }
-/* The narrowest a verb column may be. A refused verb drawn outside one, in a
-   Next bar's verb row, keeps the same floor so its sentence stays readable. */
-.today-actions,
-.today-verb:has(> .btn-with-reason) {
+/* The narrowest a verb column may be. */
+.today-actions {
   min-inline-size: 160px;
 }
 .today-verb > .btn,
@@ -58,11 +56,6 @@
   /* ds:ignore the column stacks the verb over its sentence, an interval the
      row-shaped primitive does not carry */
   gap: var(--space-1);
-}
-/* A refused verb's sentence takes the verb's width and wraps inside it. Not
-   the wrapper: containing it as well measures the button as zero wide too. */
-.today-verb > .btn-with-reason > .t-caption {
-  contain: inline-size;
 }
 
 /* A verb and what pressing it will do, as one block: the readiness belongs to
