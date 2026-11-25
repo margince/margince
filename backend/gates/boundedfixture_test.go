@@ -73,6 +73,9 @@ var permsValuesThisCannotRead = gatekit.Waive(map[string]string{
 // measurement in a test binary of its own is the one exception. Its actors are
 // the database's seeded roles, so it has no fixture principal to bound.
 var suitesWithNoBoundedActor = gatekit.Waive(map[string]string{
+	"searchtext": "the search value a database trigger and a system data task keep for an activity row: " +
+		"every case reads that stored column, which no principal's row scope changes, and the search " +
+		"suite in the parent package holds the row scope of the hits",
 	"agentaccess": "the MCP transport and its authorization server: every case is about a " +
 		"passport's own authority, and the row scope behind it is exercised by the tool suites " +
 		"in the parent package rather than here",

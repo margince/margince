@@ -338,3 +338,24 @@ describe("the bodies the server's table holds", () => {
     expect(parts.tail).toBe("none");
   });
 });
+
+describe("only quoted earlier mail leaves the message", () => {
+  it("keeps the answers of an inline reply", () => {
+    const body =
+      "On Mon, 3 Mar 2025, Sales wrote:\n> Can you do Friday?\nFriday works.\n> And the price?\nAs quoted.";
+    const parts = splitEmailBody(body);
+    expect(parts.main).toBe(
+      "On Mon, 3 Mar 2025, Sales wrote:\n> Can you do Friday?\nFriday works.\n> And the price?\nAs quoted.",
+    );
+    expect(parts.trimmed).toBe("");
+    expect(parts.tail).toBe("none");
+  });
+
+  it("opens the tail at a signature above the quoted mail", () => {
+    const body = "Works for us.\n\n-- \nDana Roe\n\n> Friday?";
+    const parts = splitEmailBody(body);
+    expect(parts.main).toBe("Works for us.");
+    expect(parts.trimmed).toBe("-- \nDana Roe\n\n> Friday?");
+    expect(parts.tail).toBe("signature");
+  });
+});
