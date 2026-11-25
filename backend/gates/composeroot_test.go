@@ -80,11 +80,11 @@ const (
 	// Raised by 6 production lines for the signals and initiatives carriers
 	// every contact merge door is wired with. Raised by 6 test lines for the
 	// seat without an introduction grant that the preview refusal case needs.
-	// Raised by 240 production and 258 test lines for the extension card's setup
+	// Raised by 240 production and 260 test lines for the extension card's setup
 	// state and the schedule book's time zone. Both drive the unexported
 	// inventory handler, schedule book and catch-up schedule.
 	composeRootProductionLines = 231_059
-	composeRootTestLines       = 361_291
+	composeRootTestLines       = 361_293
 )
 
 // A read under these floors stopped early or read the wrong place, and would

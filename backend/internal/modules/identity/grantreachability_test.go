@@ -74,7 +74,9 @@ var grantedToNobody = gatekit.Waive(map[string]string{})
 // 102: removing a custom-field choice asks update on the object the field is attached to.
 // 103: a Done for you placement asks read on its parent and child, both literals in
 // magic's placements table.
-const dynamicObjectCeiling = 103
+// 104: removing a record link asks update on the type the link starts on, which
+// the record link vocabulary holds.
+const dynamicObjectCeiling = 104
 
 // dynamicActionCeiling is the same bound for the OTHER unresolved argument: a
 // call site naming a known object and an action computed at runtime, as
