@@ -128,7 +128,7 @@ The **Show individual performance** switch, on the **Forecast** tab of **Deals**
 
 **Currency rates** are the exchange rates that turn money in another currency into the base currency. A new rate usually starts today or later. A past date works in two cases: the currency has no rate yet, or the date is before its first rate. A rate dated today can be corrected the same day. An older rate never changes, so a new rate never changes a figure that a past month already had.
 
-Seeing the rates needs the permission to read exchange rates. The Admin and Ops roles hold it by default, and a custom role can get it too.
+Seeing the rates needs the permission to read exchange rates. The Admin and Ops roles hold it by default, and a custom role can get it too. Choose **Remove** on a currency's row to take it off the sheet. Deals in that currency then show no base value until you set a rate again, and figures already calculated keep their rate. The base currency changes only once every currency is removed, and never after a closed deal or sent offer has frozen a rate.
 
 **Company context** is what Margince knows about your own company, where it read it, and a place to tell it facts yourself. Only an Admin sees this card and edits it; Ops finds the page without it.
 

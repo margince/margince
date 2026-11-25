@@ -193,6 +193,7 @@ Every field of `Extension` that brings something to the core.
 | `SignalTypes` | Kinds of signal this unit adds beside core's own, each with an evidence layout declared as data. |
 | `FinanceSources` | Accounting systems this unit can read into the core's finance mirror. |
 | `Secrets` | Secret keys the unit declares it will use, by name and scope. |
+| `MailHooks` | Two mail-capture hooks. |
 | `Jobs` | Scheduled background jobs the unit contributes: named cadenced passes that fan out over the fleet, one workspace per tick. |
 | `Subscriptions` | Events the unit reacts to: named listeners over the installation's own event bus, each naming the types it wants and the function one delivery runs. |
 | `Ingress` | Providers this unit brings records IN from, and the record kinds it lands through the core's own capture pipeline. |
@@ -205,7 +206,7 @@ Every field of `Extension` that brings something to the core.
 | `Entries` | Unit's ways into its own screen from core screens: the Log activity form and the contact, company and deal headers. |
 | `Settings` | Values an admin can change for the unit, drawn by the core on the unit's card of the Extensions page. |
 | `Panels` | Unit's components drawn inline on core pages, such as a deal page's side column. |
-| `App` | Unit's own screen offered in the home side drawer, apart from its sub-setting under Settings. |
+| `App` | Unit's own screen in the home side drawer. |
 | `Instrumentation` | Instrumentation observes the whole process and the browser: logs, requests, jobs, panics, errors and navigation. |
 
 ### Slots on a core page
