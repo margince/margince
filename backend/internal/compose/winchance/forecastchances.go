@@ -203,6 +203,7 @@ var forecastStageEntriesSQL = `
 		       h.deal_id, h.to_stage_id AS stage_id, h.pipeline_id_at_change AS pipeline_id, h.changed_at
 		  FROM deal_stage_history h
 		 WHERE h.provenance = '` + stagemove.Recorded + `' AND h.semantic_at_change = 'open'
+		   AND NOT EXISTS (SELECT 1 FROM deal m WHERE m.id = h.deal_id AND m.merged_into_id IS NOT NULL)
 		   AND h.pipeline_id_at_change IS NOT NULL
 		   AND h.changed_at >= $1 AND h.changed_at < $2
 		 ORDER BY h.deal_id, h.to_stage_id, h.changed_at, COALESCE(h.write_seq, 0), h.id

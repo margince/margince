@@ -16,6 +16,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/compose/weekly"
 	"github.com/margince/margince/backend/internal/modules/collections"
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/deals"
@@ -188,5 +189,59 @@ func TestTwoOppositeDealMergesLeaveOneWinner(t *testing.T) {
 	}
 	if n := e.WsCount(t, `SELECT count(*) FROM deal WHERE merged_into_id IS NOT NULL AND id IN ($1, $2)`, a, b); n != 1 {
 		t.Errorf("%d deals are merged away, want exactly 1", n)
+	}
+}
+
+// An accepted offer that moved with the merge prices the deal that carries on,
+// and never the merged-away one it came from.
+func TestAnOfferMovedByTheMergeRepricesTheSurvivorOnly(t *testing.T) {
+	e := Setup(t)
+	admin := e.Admin()
+	_, source, target := twoDealsOnOneCompany(t, e)
+	description, price, taxRate := "Implementation", int64(10000), "19.00"
+	created, err := e.Deals.CreateOffer(admin, source, deals.CreateOfferInput{
+		Currency: "EUR", Source: "manual",
+		LineItems: []deals.OfferLineInputRow{{Description: &description, Quantity: "1", UnitPriceMinor: &price, TaxRate: &taxRate}},
+	})
+	if err != nil {
+		t.Fatalf("create offer: %v", err)
+	}
+	offer := ids.From[ids.OfferKind](ids.UUID(created.Id))
+	if _, err := e.Deals.MergeDeal(admin, source, target, nil); err != nil {
+		t.Fatalf("merge: %v", err)
+	}
+	if _, err := e.Deals.SendOffer(admin, offer, nil); err != nil {
+		t.Fatalf("send offer: %v", err)
+	}
+	if _, err := e.Deals.AcceptOffer(admin, offer, nil); err != nil {
+		t.Fatalf("accept offer: %v", err)
+	}
+	if n := e.WsCount(t, `SELECT count(*) FROM deal WHERE id = $1 AND amount_minor = 10000`, target); n != 1 {
+		t.Errorf("the survivor was not priced by the moved offer")
+	}
+	if n := e.WsCount(t, `SELECT count(*) FROM deal WHERE id = $1 AND amount_minor IS NULL`, source); n != 1 {
+		t.Errorf("the merged-away deal was repriced by an offer it no longer holds")
+	}
+}
+
+// The weekly funnel and the stage cohort read stage entries through one query.
+// A merged-away duplicate's entry would count one opportunity twice.
+func TestAMergedAwayDealLeavesTheStageEntriesTheReportsCount(t *testing.T) {
+	e := Setup(t)
+	_, source, target := twoDealsOnOneCompany(t, e)
+	entries := func(deal ids.DealID) int {
+		return e.WsCount(t, `SELECT count(*) FROM (`+weekly.StageEntriesSQL("now() - interval '1 day'", "now() + interval '1 day'", "true")+`) s WHERE s.deal_id = $1`, deal)
+	}
+	if entries(source) == 0 {
+		t.Fatal("the duplicate has no stage entry before the merge, so this test proves nothing")
+	}
+	if _, err := e.Deals.MergeDeal(e.Admin(), source, target, nil); err != nil {
+		t.Fatalf("merge: %v", err)
+	}
+	if got := entries(source); got != 0 {
+		t.Errorf("the merged-away deal still has %d stage entries in the funnel's query", got)
+	}
+	if entries(target) == 0 {
+		t.Errorf("the survivor lost its own stage entry")
 	}
 }

@@ -39,6 +39,7 @@ var forecastSettledChancesSQL = `
 	  JOIN forecast_snapshot s ON s.id = c.snapshot_id
 	  CROSS JOIN LATERAL (` + forecastStandingSQL("c.deal_id", "$2") + `) standing
 	 WHERE c.in_open AND c.stage_probability IS NOT NULL
+	   AND NOT EXISTS (SELECT 1 FROM deal m WHERE m.id = c.deal_id AND m.merged_into_id IS NOT NULL)
 	   AND s.scope_kind = $1 AND s.taken_at < $2
 	   AND standing.semantic IN ('won', 'lost')
 	   AND standing.at - s.taken_at >= make_interval(days => $3)
