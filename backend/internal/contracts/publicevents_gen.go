@@ -356,6 +356,7 @@ const (
 	ResolvedNotRelevant      PublicEventForecastExceptionResolvedOutcome = "not_relevant"
 	ResolvedReassign         PublicEventForecastExceptionResolvedOutcome = "reassign"
 	ResolvedRemindLater      PublicEventForecastExceptionResolvedOutcome = "remind_later"
+	ResolvedSeparate         PublicEventForecastExceptionResolvedOutcome = "separate"
 	ResolvedValueCorrect     PublicEventForecastExceptionResolvedOutcome = "value_correct"
 )
 
@@ -373,6 +374,8 @@ func (e PublicEventForecastExceptionResolvedOutcome) Valid() bool {
 	case ResolvedReassign:
 		return true
 	case ResolvedRemindLater:
+		return true
+	case ResolvedSeparate:
 		return true
 	case ResolvedValueCorrect:
 		return true
@@ -2143,7 +2146,7 @@ type PublicEventForecastCreated struct {
 	SupersedesId *openapi_types.UUID `json:"supersedes_id,omitempty"`
 }
 
-// PublicEventForecastExceptionResolved Payload for forecast.exception_resolved. Somebody answered a finding from the nightly input check. The entity is the author, because an answer is attributable to whoever gave it. The `outcome` field says what kind of answer it was, and consumers must not treat the seven alike. The `value_correct` and `not_relevant` outcomes hide the finding from the screens a revenue commitment is made from. So a surface counting open findings has to drop them. The `remind_later` outcome leaves the finding open, and it comes back. The reason does not ride along. It is prose one user wrote for another, and a subscriber acting on it acts on text the author may edit.
+// PublicEventForecastExceptionResolved Payload for forecast.exception_resolved. Somebody answered a finding from the nightly input check. The entity is the author, because an answer is attributable to whoever gave it. The `outcome` field says what kind of answer it was, and consumers must not treat the eight alike. The `value_correct` and `not_relevant` outcomes hide the finding from the screens a revenue commitment is made from. So a surface counting open findings has to drop them. The `remind_later` outcome leaves the finding open, and it comes back. The reason does not ride along. It is prose one user wrote for another, and a subscriber acting on it acts on text the author may edit.
 type PublicEventForecastExceptionResolved struct {
 	ActorUserId openapi_types.UUID `json:"actor_user_id"`
 	ExceptionId openapi_types.UUID `json:"exception_id"`

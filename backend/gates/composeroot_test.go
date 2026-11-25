@@ -34,7 +34,9 @@ const composeRootDir = "internal/compose"
 // The ceilings below hold develop and main together: each side's additions
 // stayed under its own ceilings, and the two sets of additions sum to these.
 const (
-	composeRootProductionFiles = 1384
+	// Raised by 1 for the history-narrowing fleet worker, which binds each
+	// workspace through this package's unexported job helpers.
+	composeRootProductionFiles = 1385
 	// Raised by 2 files for the extension mail-file read cases and the purge
 	// receipt cases, which drive this package's unexported seams. Raised by 1
 	// production and 1 test file for the series-split fold and its cases.
@@ -74,8 +76,12 @@ const (
 	// extractor and transcript proposer.
 	// Raised by 244 test lines for the data reset cases of an event the sweep
 	// orphaned, which drive the unexported reset handlers.
-	composeRootProductionLines = 230_745
-	composeRootTestLines       = 360_931
+	// Raised by 68 production and 96 test lines for path ids in extension routes
+	// and the mail hooks in the extension inventory. They extend the unexported
+	// route argument reader and inventory builder, and their cases drive them.
+	// Raised by 61 production lines for the history-narrowing fleet worker.
+	composeRootProductionLines = 230_874
+	composeRootTestLines       = 361_027
 )
 
 // A read under these floors stopped early or read the wrong place, and would

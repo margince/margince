@@ -3,44 +3,26 @@
 
 package telegram
 
-// The pure Telegram → activity mapping (design §6.3): no provider handle, no
-// I/O — Normalize maps the envelope connector.go's BuildRawEnvelope built
-// (the bot id joined with one verbatim Telegram update) onto a
-// provenance-stamped NormalizedRecord. This is the test-guarded surface a
-// table-driven fixture proves without a live bot or a database, mirroring
-// mailmap.ToRecord's role for the mail connectors.
+// The pure Telegram → chat message mapping (no provider handle, no
+// I/O). ParseChatMessage maps the envelope connector.go's BuildRawEnvelope built
+// (the bot id joined with one verbatim Telegram update) onto the binding and the
+// message that capture.FileChatMessage files. This is the test-guarded surface a
+// table-driven fixture proves without a live bot or a database.
 
 import (
-	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"strings"
 	"time"
 
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
-	"github.com/margince/margince/backend/internal/shared/ports/datasource"
 )
 
-// ActivityFields is the pure Telegram-side mirror of capture.ActivityFields
-// (Kind/ChannelProvider/Body/OccurredAt/Direction) — a duplicate shape, not an
-// oversight: package capture already imports capture/telegram (channelconn.go's
-// Bot API client for Connect), so this package importing capture back would
-// cycle. The ingest worker (compose, which legitimately imports both) converts
-// this 1:1 into capture.ActivityFields immediately before handing the record to
-// the Sink, which is the one place that type actually has to exist.
-type ActivityFields struct {
-	Kind            string
-	ChannelProvider string
-	Body            string
-	OccurredAt      time.Time
-	Direction       string
-}
-
 // Provider is the source_system / NaturalKey namespace every Telegram record
-// carries — capture.ProviderTelegram's value, restated here for the same
-// import-cycle reason ActivityFields is: the two packages cannot reference
-// one spelling directly, so keep them equal if either ever changes.
+// carries. It restates capture.ProviderTelegram, because capture already
+// imports this package. Keep the two equal.
 const Provider = "telegram"
 
 // BusinessProvider is the provider of a Telegram Business link, the row an
@@ -83,9 +65,11 @@ const chatTypePrivate = "private"
 // present because for a private chat the chat IS that user, which is what lets
 // a membership update read an identity straight out of it (membership.go).
 type telegramChat struct {
-	ID       int64  `json:"id"`
-	Type     string `json:"type"`
-	Username string `json:"username"`
+	ID        int64  `json:"id"`
+	Type      string `json:"type"`
+	Username  string `json:"username"`
+	FirstName string `json:"first_name"`
+	LastName  string `json:"last_name"`
 }
 
 // isPrivate reports whether this chat is the 1:1 bot conversation. A missing
@@ -128,12 +112,15 @@ type telegramMedia struct {
 // Telegram puts the words of a message whose payload is media, embedded
 // alongside the media set so one struct decodes the whole message.
 type telegramMessage struct {
-	MessageID int64        `json:"message_id"`
-	Chat      telegramChat `json:"chat"`
-	From      telegramUser `json:"from"`
-	Date      int64        `json:"date"`
-	Text      string       `json:"text"`
-	Caption   string       `json:"caption"`
+	// BusinessConnectionID is set on a business_message and names the link the
+	// message arrived through.
+	BusinessConnectionID string       `json:"business_connection_id"`
+	MessageID            int64        `json:"message_id"`
+	Chat                 telegramChat `json:"chat"`
+	From                 telegramUser `json:"from"`
+	Date                 int64        `json:"date"`
+	Text                 string       `json:"text"`
+	Caption              string       `json:"caption"`
 	telegramMedia
 }
 
@@ -142,8 +129,9 @@ type telegramMessage struct {
 // the block/unblock signal) carries none; a nil Message is how Normalize tells
 // "not a message" from "a message with no text".
 type telegramUpdate struct {
-	UpdateID int64            `json:"update_id"`
-	Message  *telegramMessage `json:"message"`
+	UpdateID        int64            `json:"update_id"`
+	Message         *telegramMessage `json:"message"`
+	BusinessMessage *telegramMessage `json:"business_message"`
 }
 
 // ingestEnvelope is the raw record Normalize actually maps: the connected
@@ -157,110 +145,85 @@ type ingestEnvelope struct {
 	Update json.RawMessage `json:"update"`
 }
 
-// Normalize maps one raw envelope (connector.go's BuildRawEnvelope) to the
-// activity record it captures. The ingest worker classifies a my_chat_member
-// update via ParseMembership and handles it directly (design §4.2 D9) before
-// Normalize ever sees it, so a nil Message reaching here means an update kind
-// neither function parses (an edited_message, say) — a deliberate exclusion,
-// ErrSkip, never an error.
-func Normalize(_ context.Context, raw connector.RawRecord) ([]connector.NormalizedRecord, error) {
+// BusinessLink is what the capture side knows about the approved Telegram
+// Business link a business_message arrived through. The poller resolved it from
+// the message's connection id before anything was stored.
+type BusinessLink struct {
+	// AccountID is the owner's Telegram user id, the stable account. The
+	// connection id changes whenever the owner links the bot again.
+	AccountID   string
+	Ownership   connector.ChatOwnership
+	OwnerUserID ids.UUID
+	// SeatID is the seat the link's messages file through.
+	SeatID ids.UUID
+}
+
+// ParseChatMessage maps one raw envelope (connector.go's BuildRawEnvelope) to the
+// chat message it carries and the binding it files under. link is nil for a
+// message to the bot itself and set for one that arrived through a business
+// link. The worker classifies a my_chat_member update before it gets here.
+// A shape this function does not map (an edited_message, or a message kind that
+// does not match link) answers ErrSkip.
+func ParseChatMessage(raw connector.RawRecord, link *BusinessLink) (connector.ChatBinding, connector.ChatMessage, error) {
 	var env ingestEnvelope
 	if err := json.Unmarshal(raw, &env); err != nil {
-		return nil, fmt.Errorf("telegram: decoding the ingest envelope: %w", err)
+		return connector.ChatBinding{}, connector.ChatMessage{}, fmt.Errorf("telegram: decoding the ingest envelope: %w", err)
 	}
 	if env.BotID == "" {
-		return nil, errors.New("telegram: normalize envelope carries no bot id")
+		return connector.ChatBinding{}, connector.ChatMessage{}, errors.New("telegram: normalize envelope carries no bot id")
 	}
-
 	var update telegramUpdate
 	if err := json.Unmarshal(env.Update, &update); err != nil {
-		return nil, fmt.Errorf("telegram: decoding the update: %w", err)
+		return connector.ChatBinding{}, connector.ChatMessage{}, fmt.Errorf("telegram: decoding the update: %w", err)
 	}
-	if update.Message == nil {
-		return nil, fmt.Errorf("telegram: update %d carries no message: %w", update.UpdateID, connector.ErrSkip)
+	if strings.Contains(env.BotID, ":") || (link != nil && (link.AccountID == "" || strings.Contains(link.AccountID, ":"))) {
+		return connector.ChatBinding{}, connector.ChatMessage{}, errors.New("telegram: a bot or account id is empty or holds a colon, so the message key would be ambiguous")
 	}
-
-	msg := update.Message
-	if !msg.Chat.isPrivate() {
-		return nil, fmt.Errorf("telegram: update %d is in a %q chat, not a private one: %w",
-			update.UpdateID, msg.Chat.Type, connector.ErrSkip)
+	msg, binding := update.Message, botBinding(env.BotID)
+	if link != nil {
+		msg, binding = update.BusinessMessage, businessBinding(env.BotID, *link)
 	}
-	// A Telegram account id is POSITIVE. A message Telegram delivers with no
-	// `from` at all — an anonymous group admin posts under `sender_chat`
-	// instead — decodes to sender id 0, which is not an account: it is a valid,
-	// non-empty key that every such sender shares, so they would collapse onto
-	// ONE Contact, one identity row, and one conversation reading as reachable at
-	// chat 0. A negative id is not an account either — that is how Telegram
-	// numbers chats, not users. The identity is minted a few lines below, so the
-	// rule about what counts as an account belongs here — the chat-scope gate
-	// above narrows which update shapes arrive, it does not decide whether the
-	// sender is addressable.
-	if msg.From.ID <= 0 {
-		return nil, fmt.Errorf("telegram: update %d carries no addressable sender: %w",
+	if msg == nil {
+		return connector.ChatBinding{}, connector.ChatMessage{}, fmt.Errorf("telegram: update %d carries no message of the kind its link names: %w",
 			update.UpdateID, connector.ErrSkip)
 	}
-	chatID := fmt.Sprintf("%d", msg.Chat.ID)
-	// The natural key is chat-scoped and that is load-bearing (design §6.3):
-	// Telegram's message_id is unique only WITHIN a chat, and a private
-	// chat's id is the user's own id — shared across every bot that human
-	// talks to — so omitting the bot would collide two different customers'
-	// (or two different bots') conversations into one activity.
-	naturalID := fmt.Sprintf("%s:%s:%d", env.BotID, chatID, msg.MessageID)
-
-	return []connector.NormalizedRecord{{
-		EntityType: datasource.EntityActivity,
-		NaturalKey: connector.NaturalKey{
-			SourceSystem: Provider,
-			SourceID:     naturalID,
-			// A private chat's id IS the human's own Telegram account id, which
-			// this key embeds — so the pipeline trace stores a hash of it. Set
-			// unconditionally rather than per chat type: a group chat's id is
-			// not an account, but a connector that hashed only some of its keys
-			// would answer "was this hashed" with the chat's shape, which is
-			// the inference this field exists to replace.
-			SourceIDNamesAContact: true,
-		},
-		Fields: ActivityFields{
-			// The two axes, stated separately (ADR-0107/A158): WHAT happened is
-			// a message, WHAT CARRIED IT is telegram. They were briefly spelled
-			// the same because the kind vocabulary had borrowed the provider's
-			// name, and that coincidence is exactly what the narrowing removed —
-			// every connector now files the one message kind and names its own
-			// transport beside it.
-			Kind:            KindMessage,
-			ChannelProvider: Provider,
-			Body:            messageBody(msg),
-			OccurredAt:      time.Unix(msg.Date, 0).UTC(),
-			Direction:       connector.DirectionInbound,
-		},
-		Source:     Provider + ":" + naturalID,
-		CapturedBy: CapturedByTelegram,
-		// Raw is deliberately EMPTY, unlike every mail connector's record. The poll
-		// that read this update already persisted it as the only-copy evidence row,
-		// in the same transaction that acknowledged it, keyed on the per-bot
-		// update_id; handing the same bytes to the Sink would store the message a
-		// SECOND time under a chat-scoped key with the opposite conflict rule — an
-		// append-once evidence table half of whose Telegram rows are rewritable, an
-		// unbounded second copy of the largest column, and a subject access request
-		// that hands the human every message twice. The erasure purge and the SAR
-		// section both match raw_capture by JSONB path, so they reach the poll's row
-		// without this one.
-		Counterparty: connector.Counterparty{
-			// No outbound echo (design §6.4): a bot has no companion app a
-			// human types into, so every update this connector ever reads
-			// originates with the human, never with us.
-			Direction:   connector.DirectionInbound,
+	if !msg.Chat.isPrivate() {
+		return connector.ChatBinding{}, connector.ChatMessage{}, fmt.Errorf("telegram: update %d is in a %q chat, not a private one: %w",
+			update.UpdateID, msg.Chat.Type, connector.ErrSkip)
+	}
+	// A Telegram account id is positive. A message with no `from` (an anonymous
+	// group admin posts under `sender_chat`) decodes to sender id 0. Every such
+	// sender would share that key and collapse onto one Contact. A negative id is
+	// a chat, not a user. The chat-scope gate above does not decide whether the
+	// sender is addressable.
+	if msg.From.ID <= 0 {
+		return connector.ChatBinding{}, connector.ChatMessage{}, fmt.Errorf("telegram: update %d carries no addressable sender: %w",
+			update.UpdateID, connector.ErrSkip)
+	}
+	chat := connector.ChatMessage{
+		ConversationID: fmt.Sprintf("%d", msg.Chat.ID),
+		IdempotencyKey: fmt.Sprintf("%d", msg.MessageID),
+		Direction:      connector.DirectionInbound,
+		Counterparty: connector.ChatParty{
+			UserID:      fmt.Sprintf("%d", msg.From.ID),
 			DisplayName: telegramDisplayName(msg.From),
-			ChannelIdentity: connector.ChannelIdentity{
-				Provider:      Provider,
-				ChannelUserID: fmt.Sprintf("%d", msg.From.ID),
-				Username:      msg.From.Username,
-			},
+			Username:    msg.From.Username,
 		},
-		// The conversation IS the chat for a channel (connector.go's amended
-		// ThreadKey comment): design §6.3's thread_key spelling.
-		ThreadKey: fmt.Sprintf("%s:%s:%s", Provider, env.BotID, chatID),
-	}}, nil
+		Body:       messageBody(msg),
+		OccurredAt: time.Unix(msg.Date, 0).UTC(),
+	}
+	if link != nil {
+		// Through a business link the other end of the private chat is the chat
+		// itself, whoever typed. The customer typed, or the owner did in their
+		// own Telegram app.
+		chat.Counterparty.UserID = chat.ConversationID
+		if fmt.Sprintf("%d", msg.From.ID) == link.AccountID {
+			chat.Direction = connector.DirectionOutbound
+			chat.Counterparty.DisplayName = chatDisplayName(msg.Chat)
+			chat.Counterparty.Username = msg.Chat.Username
+		}
+	}
+	return binding, chat, nil
 }
 
 // messageBody is what the timeline shows for one message. Telegram carries a
@@ -315,6 +278,11 @@ func (m telegramMedia) mediaKind() string {
 	// this package cannot name is still a customer reaching out, so it reads as
 	// an unnamed attachment rather than as an empty activity.
 	return "attachment"
+}
+
+// chatDisplayName is telegramDisplayName for the private chat's own name fields.
+func chatDisplayName(c telegramChat) string {
+	return telegramDisplayName(telegramUser{FirstName: c.FirstName, LastName: c.LastName, Username: c.Username})
 }
 
 // telegramDisplayName renders the sender's name from Telegram's separate

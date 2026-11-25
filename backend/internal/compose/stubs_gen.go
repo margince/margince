@@ -1131,6 +1131,10 @@ func (stubs) ApproveTelegramBusinessConnection(w nethttp.ResponseWriter, r *neth
 	httperr.NotImplemented(w, r, "ApproveTelegramBusinessConnection")
 }
 
+func (stubs) UpdateTelegramBusinessConnectionVisibility(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
+	httperr.NotImplemented(w, r, "UpdateTelegramBusinessConnectionVisibility")
+}
+
 func (stubs) DisconnectChannel(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
 	httperr.NotImplemented(w, r, "DisconnectChannel")
 }
@@ -2497,6 +2501,10 @@ func (stubs) ListFxRateCurrencies(w nethttp.ResponseWriter, r *nethttp.Request) 
 
 func (stubs) ProposeFxRateRefresh(w nethttp.ResponseWriter, r *nethttp.Request) {
 	httperr.NotImplemented(w, r, "ProposeFxRateRefresh")
+}
+
+func (stubs) RemoveFxRate(w nethttp.ResponseWriter, r *nethttp.Request, from string) {
+	httperr.NotImplemented(w, r, "RemoveFxRate")
 }
 
 func (stubs) ListImportRuns(w nethttp.ResponseWriter, r *nethttp.Request, params crmcontracts.ListImportRunsParams) {

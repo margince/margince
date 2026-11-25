@@ -11,7 +11,7 @@ import "time"
 // would believe. It says nothing about the file on disk — a pair
 // regenerated TOGETHER from a stale contract matches here, and the drift
 // gate is what catches that.
-const JobContractHash = "2087bb98c17fc84c1931f6f1a0a42a13f5bfb1f04ecf5a3cdf994e95b27a6e6d"
+const JobContractHash = "d00d88e8efcd0945e7ff27807239a538db8485bb1af878ee76e0b963f8875929"
 
 // specs is every declared kind. A kind absent from this table is a kind
 // nobody declared, and MustBeTotal is what names them: the runner calls it
@@ -1069,7 +1069,7 @@ var specs = map[string]Spec{
 		Queue:     "default",
 		Timeout:   TimeoutPolicy{Fixed: 2 * time.Minute},
 		OptsOwner: OptsCaller,
-		Args:      []ArgField{{Name: "BotID"}, {Name: "ConnectionID"}, {Name: "RawCaptureID"}, {Name: "Workspace"}},
+		Args:      []ArgField{{Name: "BotID"}, {Name: "BusinessLinkID", Scalar: true, Reason: "The approved business link row id the poll admitted the update through; empty for a message sent to the bot itself. It names no contact and carries no message content."}, {Name: "ConnectionID"}, {Name: "RawCaptureID"}, {Name: "Workspace"}},
 	},
 	"telegram_poll": {
 		Kind:         "telegram_poll",

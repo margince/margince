@@ -2238,6 +2238,7 @@ kinds:
       ConnectionID: id
       BotID: id
       RawCaptureID: id
+      BusinessLinkID: {scalar: true, reason: "The approved business link row id the poll admitted the update through; empty for a message sent to the bot itself. It names no contact and carries no message content."}
     reason: >-
       One raw payload read back, normalized, and put through the capture sink —
       database-only, one update at a time, with no provider call in it at all.
