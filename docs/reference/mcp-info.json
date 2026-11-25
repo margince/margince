@@ -9675,7 +9675,7 @@
               "type": "string"
             },
             "why": {
-              "description": "Why you are making this change, in one sentence the user reads beside it. Name the person, record or message and the fact that prompted it, for example: Anna Weber wrote on 14 Nov that the rollout moves to March.",
+              "description": "Why you are making this change, in one sentence the user reads beside it. Name who, which record or message, and the fact that prompted it, for example: Anna Weber wrote on 14 Nov that the rollout moves to March.",
               "maxLength": 600,
               "minLength": 1,
               "type": "string"

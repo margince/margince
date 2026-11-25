@@ -92,6 +92,7 @@ func (a approvalsAdapter) StageVolumeRelease(ctx context.Context, in agents.Volu
 		return ids.ApprovalID{}, false, fmt.Errorf("compose: hashing a step-up proposal: %w", err)
 	}
 	return a.svc.StageUnlessDeclined(ctx, approvals.StageInput{
+		Why:            approvals.HeadlineSaysWhy,
 		Kind:           approvals.KindVolumeRelease,
 		ProposedChange: payload,
 		DiffHash:       diffHash,

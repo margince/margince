@@ -53,7 +53,8 @@ const staged: DecisionApproval = {
 
 describe("DecisionCard — a proposal with its reason", () => {
   it("says why the proposal exists right under its headline", () => {
-    const reason = "Anna Weber wrote on 14 Nov that the rollout moves to March.";
+    const reason =
+      "Anna Weber wrote on 14 Nov that the rollout moves to March.";
     render(
       <DecisionCard
         approval={{ ...staged, why: { text: reason } }}

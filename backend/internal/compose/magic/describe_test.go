@@ -10,6 +10,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/margince/margince/backend/internal/platform/clocktest"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -91,7 +92,7 @@ func TestAFieldChangeNamesTheFieldsAndTheSource(t *testing.T) {
 func TestAnAgentsFieldChangeGivesTheReasonItStated(t *testing.T) {
 	line, _, ok := lineOf(unmasked(t), auditRow("agent:deepread",
 		`{"title": "Analyst"}`, `{"title": "CTO"}`,
-		`{"stated_reason": "Her signature on 14 Nov names her CTO."}`, time.Now()))
+		`{"stated_reason": "Her signature on 14 Nov names her CTO."}`, clocktest.Now(t)))
 	if !ok {
 		t.Fatal("a field change was not shown")
 	}

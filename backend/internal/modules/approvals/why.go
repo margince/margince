@@ -21,14 +21,20 @@ const whyLimit = 600
 // Grounds is why a proposal exists: who did or said what, about which record,
 // and when. Sentence is Margince's own words, shown in each reader's language.
 // Text is someone else's words, such as an agent's stated reason, shown as
-// written. A proposal sets one of them.
+// written. A proposal sets one of them, or says its headline already does.
 type Grounds struct {
 	Sentence *systemtext.Component
 	Text     string
+	// InHeadline marks a proposal whose headline names who, which record and
+	// the trigger, so a reason beneath it would only repeat it.
+	InHeadline bool
 }
 
-// storedWhy is the reason as the summary envelope keeps it: the words in the
-// language they were stored in, and Margince's sentence when it wrote them.
+// HeadlineSaysWhy is the reason of a proposal whose headline states it.
+var HeadlineSaysWhy = Grounds{InHeadline: true}
+
+// storedWhy is the reason as the summary envelope keeps it. It holds the words
+// in their stored language, and Margince's sentence when Margince wrote them.
 type storedWhy struct {
 	Text     string                `json:"text"`
 	Sentence *systemtext.Component `json:"sentence,omitempty"`

@@ -21424,7 +21424,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "worklist.manager.kind.next_step": "Bước tiếp theo của deal",
   "worklist.manager.kind.review_backlog": "Tồn đọng cần xem lại",
   "worklist.manager.kind.general": "Khác",
-  "worklist.manager.coachDeal": "Deal",
+  "worklist.manager.coachDeal": "Deal liên quan",
   "worklist.manager.coachNoDeal":
     "Không có deal nào trong ngày của họ để chọn.",
   "worklist.board.title": "Việc của nhóm cần chú ý",
