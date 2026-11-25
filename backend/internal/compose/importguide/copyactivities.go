@@ -21,7 +21,7 @@ var activityColumns = map[string]Column{
 		En: "What the activity is: note, call, meeting or email. A message needs a channel and a task is a to-do, so neither is imported.",
 		De: "Was die Aktivität ist: note, call, meeting oder email. Eine Nachricht braucht einen Kanal und eine Aufgabe ist eine To-do, daher wird keine von beiden importiert.",
 		Vi: "Loại hoạt động: note, call, meeting hoặc email. Tin nhắn cần một kênh và nhiệm vụ là việc cần làm, nên cả hai đều không được nhập.",
-	}, Example: same("note · call · meeting · email"), RequiredOnNew: true},
+	}, Example: same("note · call · meeting · email"), RequiredOnNew: true, Aliases: []string{"Art der Aktivität"}},
 	"subject": {Description: langcopy.Phrase{
 		En: "A short title for the activity, such as an email's subject line.",
 		De: "Ein kurzer Titel für die Aktivität, etwa die Betreffzeile einer E-Mail.",

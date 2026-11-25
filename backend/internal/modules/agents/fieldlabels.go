@@ -208,7 +208,7 @@ var fieldLabelsByLang = map[textlang.Lang]map[string]string{
 		"role":                         "Rolle",
 		"score":                        "Score",
 		"score_override_reason":        "Grund für die Score-Anpassung",
-		"size_band":                    "Mitarbeitende",
+		"size_band":                    "Beschäftigtenzahl",
 		"sku":                          "Artikelnummer",
 		"social":                       "Social-Profile",
 		"source":                       "Quelle",

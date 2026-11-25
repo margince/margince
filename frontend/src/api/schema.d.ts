@@ -79,9 +79,10 @@ export interface paths {
          * Which authentication methods are operational (drives the login UI).
          * @description Anonymous, minimal capability probe (ADR-0061). The login UI renders exactly
          *     the methods reported here — a disabled provider button or a dead "Forgot password?"
-         *     link is a misleading affordance. `password_reset` is true only when the operator's
-         *     system-email channel (ADR-0056) is configured and healthy. An OIDC provider is
-         *     listed only when its end-to-end flow is wired and healthy. Discloses nothing beyond
+         *     link is a misleading affordance. `password_reset` is true when password sign-in is on
+         *     and the operator's system-email channel (ADR-0056) is configured: a mailer and a link
+         *     base URL are set. Nothing checks that the channel delivers mail. An OIDC provider is
+         *     listed when the admin policy enables it and a client is configured for it. Discloses nothing beyond
          *     what the login UI needs — no secrets, endpoints, allowlists, or bootstrap state.
          *
          *     It also reports the release this api was built from, which a client compares
@@ -51138,7 +51139,7 @@ export interface components {
         AuthCapabilities: {
             /** @description Email + password login is enabled. */
             password: boolean;
-            /** @description The A74 reset flow can complete end to end (outbound email configured + healthy). */
+            /** @description Password sign-in is on and the reset mail channel is configured. Nothing checks that mail is delivered. */
             password_reset: boolean;
             /** @description Whether this installation has yet to finish its setup, so an unconfigured one can be greeted rather than only asked for credentials. Deliberately readable without a session, which is the narrowest form of a fact `/installation/setup` reports in full to a human session: it says that setup is unfinished and nothing else. It names no account, no step, no configured value, and says nothing about any credential. */
             first_run: boolean;

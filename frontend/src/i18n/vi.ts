@@ -6332,7 +6332,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "deal.standing.risk.replyOwed": "Phản hồi của nhóm còn chờ xử lý",
   "deal.standing.risk.closePassed": "Quá hạn chốt",
   "deal.details.closingFootnote":
-    "Các giai đoạn chốt sẽ hỏi trước: Thắng và Thua mở một hộp thoại ngắn.",
+    "Giai đoạn chốt sẽ hỏi trước và mở một hộp thoại ngắn.",
   "deal.timeline.empty": "Chưa có hoạt động nào trên deal này.",
   "legalEntities.title": "Pháp nhân",
   "legalEntities.sub":
@@ -7863,6 +7863,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "docs.category.message": "Tệp đính kèm tin nhắn",
   "docs.category.other": "Khác",
   "docs.category.link": "Liên kết đã gửi",
+  "docs.source.upload": "Đã tải lên",
+  "docs.source.link": "Đã thêm liên kết",
   "docs.view.label": "Hiển thị tài liệu dưới dạng",
   "docs.view.grid": "Lưới",
   "docs.view.list": "Danh sách",
@@ -18325,6 +18327,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "webForms.rotateConfirm.body":
     "Khóa hiện tại ngừng hoạt động ngay và khóa mới chỉ hiện một lần. Hãy dán nó vào chỗ của khóa cũ ngay.",
   "webForms.archive": "Lưu trữ",
+  "webForms.archiveTitle": "Lưu trữ {name}?",
   "webForms.archiveConfirm":
     "Sau khi lưu trữ, biểu mẫu này không nhận bài gửi nữa. Không thể hoàn tác.",
   "webForms.archiveDone": "Đã lưu trữ biểu mẫu trang web",
@@ -18707,7 +18710,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Các trường của deal thay đổi, trừ giai đoạn và người chịu trách nhiệm.",
   "webhooks.event.deal.stage_changed.label": "Deal đã chuyển giai đoạn",
   "webhooks.event.deal.stage_changed.when":
-    "Deal chuyển sang giai đoạn mới, kể cả Thắng và Thua.",
+    "Deal chuyển sang giai đoạn mới, kể cả các giai đoạn chốt.",
   "webhooks.event.deal.owner_changed.label": "Đã giao lại deal",
   "webhooks.event.deal.owner_changed.when":
     "Deal được giao cho người chịu trách nhiệm khác.",

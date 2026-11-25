@@ -130,6 +130,21 @@ func committedWinProbability(in UpdateStageInput) *int {
 	return in.WinProbability
 }
 
+// renamedTranslations answers the translations the update stores, and false
+// when it leaves them as they are. Renaming a stage drops the seeded
+// translations unless the request sends others. The admin's new name then
+// shows in every language. Translations an admin wrote stay.
+func renamedTranslations(current stageConfig, in UpdateStageInput) (map[string]string, bool) {
+	renamed := in.Name != nil && *in.Name != current.name && carriesSeededTranslations(current.name, current.translations)
+	switch {
+	case renamed && (in.NameTranslations == nil || maps.Equal(in.NameTranslations, current.translations)):
+		return map[string]string{}, true
+	case in.NameTranslations != nil:
+		return in.NameTranslations, true
+	}
+	return nil, false
+}
+
 // stageUpdatePatch folds the caller's sparse update onto the row that was just
 // read, so the audit diff spans exactly the columns this save touches.
 func stageUpdatePatch(current stageConfig, in UpdateStageInput) *storekit.Patch {
@@ -137,8 +152,8 @@ func stageUpdatePatch(current stageConfig, in UpdateStageInput) *storekit.Patch 
 	if in.Name != nil {
 		patch.Set("name", current.name, *in.Name)
 	}
-	if in.NameTranslations != nil && !maps.Equal(in.NameTranslations, current.translations) {
-		patch.Set(stageNameTranslationsField, current.translations, in.NameTranslations)
+	if translations, ok := renamedTranslations(current, in); ok && !maps.Equal(translations, current.translations) {
+		patch.Set(stageNameTranslationsField, current.translations, translations)
 	}
 	if in.Position != nil {
 		patch.Set(positionField, current.position, *in.Position)
