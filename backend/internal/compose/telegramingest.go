@@ -167,7 +167,7 @@ func (w *telegramIngestWorker) fileChatUpdate(actorCtx context.Context, business
 	if businessLinkID == "" {
 		return w.parseAndFile(actorCtx, raw, nil, rawID)
 	}
-	live, err := capture.FileThroughLiveBusinessLink(actorCtx, w.pool, businessLinkID, rawID, func(link telegram.BusinessLink) error {
+	live, err := capture.FileThroughLiveChatLink(actorCtx, w.pool, businessLinkID, rawID, func(link connector.ChatLink) error {
 		return w.parseAndFile(actorCtx, raw, &link, rawID)
 	})
 	if err == nil && !live {
@@ -252,12 +252,17 @@ func (w *telegramIngestWorker) applyMembership(actorCtx context.Context, botID s
 	return nil
 }
 
-// telegramChannelPrincipal keeps channel capture workspace-scoped, without impersonating the admin who connected it.
-// Its grants cover captured activity, contacts and employer resolution.
+// telegramChannelPrincipal is the principal Telegram capture files as.
 func telegramChannelPrincipal() principal.Principal {
+	return chatChannelPrincipal(telegram.CapturedByTelegram)
+}
+
+// chatChannelPrincipal keeps channel capture workspace-scoped, without impersonating the admin who connected it.
+// Its grants cover captured activity, contacts and employer resolution.
+func chatChannelPrincipal(id string) principal.Principal {
 	return principal.Principal{
 		Type: principal.PrincipalConnector,
-		ID:   telegram.CapturedByTelegram,
+		ID:   id,
 		Permissions: principal.Permissions{
 			RoleKeys: []string{"channel"},
 			Objects: map[string]principal.ObjectGrant{

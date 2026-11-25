@@ -11,7 +11,7 @@ import (
 // jobContractHash is the sha256 of api/jobs.yaml this file was generated
 // from — the same fingerprint jobs.JobContractHash carries, so a stale
 // half of the pair is visible without diffing the two tables.
-const jobContractHash = "d00d88e8efcd0945e7ff27807239a538db8485bb1af878ee76e0b963f8875929"
+const jobContractHash = "8fa45ae6db4509d01e500fb70049f6e12799de9c421d9641bf64f55cd665d38e"
 
 // declaredJobArgs requires the generated registration marker for the exact args type.
 // Handwritten markers are refused by the registration census.
@@ -133,6 +133,7 @@ func (VoiceBuildRetryArgs) declaredJobType(VoiceBuildRetryArgs)                 
 func (WaitingHorizonRefreshArgs) declaredJobType(WaitingHorizonRefreshArgs)           {}
 func (WebhookRetryArgs) declaredJobType(WebhookRetryArgs)                             {}
 func (WeeklyReviewGenerateArgs) declaredJobType(WeeklyReviewGenerateArgs)             {}
+func (WhatsAppIngestArgs) declaredJobType(WhatsAppIngestArgs)                         {}
 
 // addDeclaredWorker is the sanctioned registration path. Its type parameter
 // is constrained to the declared set, so a kind absent from api/jobs.yaml
@@ -243,4 +244,5 @@ var (
 	_ jobs.WorkspaceScoped = TranscriptProposeArgs{}
 	_ jobs.WorkspaceScoped = VCardIngestArgs{}
 	_ jobs.WorkspaceScoped = VoiceBuildArgs{}
+	_ jobs.WorkspaceScoped = WhatsAppIngestArgs{}
 )
