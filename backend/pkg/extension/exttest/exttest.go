@@ -10,6 +10,7 @@
 // method, the kit grows it once and no unit's fake stops compiling.
 //
 //margince:extension-surface
+//nolint:ireturn // each method must return the interface extension.Runtime declares.
 package exttest
 
 import (
