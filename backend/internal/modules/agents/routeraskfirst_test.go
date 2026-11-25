@@ -41,7 +41,7 @@ func TestARouterWithoutAnActionFieldNamesTheArgumentsThatPickEachTarget(t *testi
 			if action.PickedBy == "" {
 				t.Errorf("%s: choice %s names no argument that picks it", spec.Name, action.Action)
 			}
-			for _, word := range strings.Fields(action.PickedBy) {
+			for word := range strings.FieldsSeq(action.PickedBy) {
 				if _, ok := schema.Properties[word]; !ok && word != "or" && word != "and" {
 					t.Errorf("%s: choice %s is picked by %q, which the router's schema does not take", spec.Name, action.Action, word)
 				}
