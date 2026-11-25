@@ -100,7 +100,7 @@ var growthCopies = []growthCopy{
 	      LEFT JOIN bench_growth_contact c ON c.orig = src.contact_id
 	      WHERE src.entity_type IN ('contact', 'company', 'deal')`,
 		set:      map[string]string{"id": "public.uuidv7()", "activity_id": "m.fresh", "contact_id": "coalesce(c.fresh, src.contact_id)"},
-		deferred: []string{"activity_link_last_activity", settlementEvidenceTrigger},
+		deferred: []string{"activity_link_last_activity_added", settlementEvidenceTrigger},
 	},
 }
 

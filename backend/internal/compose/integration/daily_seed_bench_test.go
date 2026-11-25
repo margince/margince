@@ -520,7 +520,7 @@ func (s dailySeeder) participants() {
 // links file every activity under its contact, email/notes/tasks also under the employer,
 // and 30% under its first deal. Meetings and calls never link a company: a trigger refuses it.
 func (s dailySeeder) links() {
-	s.execDeferringTriggers("activity_link", "activity_link", []string{"activity_link_last_activity", settlementEvidenceTrigger}, `INSERT INTO activity_link (activity_id, entity_type, contact_id, company_id, deal_id)
+	s.execDeferringTriggers("activity_link", "activity_link", []string{"activity_link_last_activity_added", settlementEvidenceTrigger}, `INSERT INTO activity_link (activity_id, entity_type, contact_id, company_id, deal_id)
 	      SELECT a.id, 'contact', p.id, NULL::uuid, NULL::uuid
 	      FROM daily_seed_activity a JOIN daily_seed_contact p ON p.i = a.contact_i
 	      UNION ALL

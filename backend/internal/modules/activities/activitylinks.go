@@ -114,7 +114,7 @@ func insertActivityLinks(ctx context.Context, tx pgx.Tx, activityID ids.Activity
 	}
 	// SORTED, and the order is the one the last-activity trigger locks in.
 	//
-	// Each link's insert fires refresh_last_activity_for_link, which takes a
+	// Each link's insert fires the last-activity trigger, which takes a
 	// FOR UPDATE on every record it reaches. Inserting in the caller's order
 	// meant two writers naming the same records through different lists locked
 	// them in different sequences — one logging [deal D, contact X] and another
