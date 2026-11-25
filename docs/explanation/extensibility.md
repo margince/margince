@@ -529,7 +529,7 @@ The fitness tests and `scripts/` checks guard the tier, so the promises cannot d
 | The surface mark exists only under `pkg/`, so nothing adds to the allowlist from any other place | `backend/gates/extensions_arch_test.go` |
 | The composed set is wired only at the role `main.go` files, and each required role wires it | `backend/gates/extensions_arch_test.go` |
 | The plain composition gives the committed stub again, with no change at all | `make check-composition` |
-| The public surface keeps working for code built against it (advisory before the first release tag, enforced after) | `scripts/check-pkg-freeze.sh` |
+| The public surface keeps working for code built against it (advisory before the first release tag, enforced after), and each exported name has a caller in this tree or a written reason | `scripts/check-pkg-freeze.sh`, `backend/gates/extensionexportuse_test.go` |
 | The core stays free of any one jurisdiction | `scripts/check-no-jurisdiction.sh` |
 | No unit table carries a workspace column, row-level security or a policy, and none touches anything in `public` | `make check-ext-migrations` (applies the migrations of each unit as a new role with limited rights) |
 | Every unit table grants the runtime role `SELECT, INSERT, UPDATE, DELETE` and no other set; a table that grants *nothing* would answer `permission denied` at the first call | `make check-ext-migrations` |

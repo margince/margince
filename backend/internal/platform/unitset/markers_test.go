@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-package main
+package unitset
 
 import (
 	"strings"
@@ -20,9 +20,8 @@ func TestMisplacedDevelopmentMarkersRefuseProductionComposition(t *testing.T) {
 		"unknown":       "require example.test/demo v1.0.0 // margince:development",
 	} {
 		t.Run(name, func(t *testing.T) {
-			root := t.TempDir()
-			writeTree(t, root, map[string]string{"instance/go.mod": "module example.test/instance\n\n" + source + "\n"})
-			if _, err := instanceUnits(root); err == nil || !strings.Contains(err.Error(), developmentOnlyMarker) {
+			root := writeInstance(t, "module example.test/instance\n\n"+source+"\n")
+			if _, err := Selected(root, false); err == nil || !strings.Contains(err.Error(), DevelopmentOnlyMarker) {
 				t.Fatalf("marker admission = %v, want explicit placement error", err)
 			}
 		})
