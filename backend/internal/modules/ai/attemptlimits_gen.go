@@ -66,8 +66,9 @@ var certifiedAttemptTimeouts = map[Task]certifiedLimit{
 		{provider: "openai_compatible", model: "openai/gpt-oss-120b"},
 		{provider: "openai_compatible", model: "qwen/qwen3.8-27b"},
 	}},
-	// records/nl_search/gemini_gemini-3.8-flash_cloud_frontier.json: p95 20.661s
-	"nl_search": {limit: 31 * time.Second, measured: []boundModel{
+	// records/nl_search/openai_compatible_qwen_qwen3.8-27b_cloud_frontier.json: p95 19.151s
+	"nl_search": {limit: 30 * time.Second, measured: []boundModel{
+		{provider: "gemini", model: "gemini-3.1-flash-lite"},
 		{provider: "gemini", model: "gemini-3.5-flash"},
 		{provider: "gemini", model: "gemini-3.5-flash-lite"},
 		{provider: "gemini", model: "gemini-3.6-flash"},
