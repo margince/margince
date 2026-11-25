@@ -20,13 +20,15 @@ var blockedWords = struct{ SeatReadsOnly, RoleReadsOnly, ActionRefused, Complete
 	Settle:          langcopy.Phrase{En: "You do not have permission to settle commitments", De: "Sie haben keine Berechtigung, Zusagen abzuschließen", Vi: "Bạn không có quyền hoàn tất cam kết"},
 }
 
-// SeatReadsOnly, RoleReadsOnly and ActionRefused are the refusals the record
-// pages show for the same causes. gates/frontendrolereadsonly_test.go holds
-// them equal to settings.seatRefused, record.roleReadsOnly and record.actionRefused.
+// SeatReadsOnly is the refusal for a read seat. gates/frontendrolereadsonly_test.go
+// holds it, RoleReadsOnly and ActionRefused equal to settings.seatRefused,
+// record.roleReadsOnly and record.actionRefused.
 func SeatReadsOnly() langcopy.Phrase { return blockedWords.SeatReadsOnly }
 
+// RoleReadsOnly is the refusal for a role that can only read.
 func RoleReadsOnly() langcopy.Phrase { return blockedWords.RoleReadsOnly }
 
+// ActionRefused is the refusal for an action the role does not include.
 func ActionRefused() langcopy.Phrase { return blockedWords.ActionRefused }
 
 // writeRefusal words a refused write in the record pages' order. The seat comes

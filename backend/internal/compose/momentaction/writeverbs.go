@@ -40,10 +40,11 @@ var suggestionVerbWrites = map[crmcontracts.Company360SuggestionActionKind]bool{
 func MoveRefusal(ctx context.Context, record string, action crmcontracts.WorklistMoveAction) *string {
 	// Asking the manager changes the deal, not an activity, so it asks the deal grant.
 	if action == crmcontracts.WorklistMoveActionBringInManager {
-		if auth.AllowsWrite(ctx, "deal", principal.ActionUpdate) {
+		const dealGrant = "deal"
+		if auth.AllowsWrite(ctx, dealGrant, principal.ActionUpdate) {
 			return nil
 		}
-		reason := writeRefusal(ctx, langcopy.For(string(systemtext.Locale(ctx))), "deal", blockedWords.ActionRefused)
+		reason := writeRefusal(ctx, langcopy.For(string(systemtext.Locale(ctx))), dealGrant, blockedWords.ActionRefused)
 		return &reason
 	}
 	return refusal(ctx, record, worklistVerbWrites, action)

@@ -69,7 +69,7 @@ func TestAWonDealNamesItselfAsTheCauseOfTheDeliveryMove(t *testing.T) {
 }
 
 // wonCause is the cause on the project's last move, as this reader is served it.
-func wonCause(t *testing.T, e *Env, reader context.Context, project ids.ProjectID) *crmcontracts.Project360PhaseCause {
+func wonCause(reader context.Context, t *testing.T, e *Env, project ids.ProjectID) *crmcontracts.Project360PhaseCause {
 	t.Helper()
 	page, err := project360Service(e, clocktest.Now(t).UTC()).Assemble(reader, project)
 	if err != nil {
@@ -91,7 +91,7 @@ func TestTheCauseLeavesTheDealUnnamedForAReaderWithoutTheDealGrant(t *testing.T)
 	e := Setup(t)
 	f := pursuedThenWon(t, e, "Hidden pursuit")
 
-	cause := wonCause(t, e, e.As(e.Rep1, []ids.UUID{e.Team1}, withoutGrant(project360RepPerms, "deal")), f.project)
+	cause := wonCause(e.As(e.Rep1, []ids.UUID{e.Team1}, withoutGrant(project360RepPerms, "deal")), t, e, f.project)
 	if cause.DealId != nil || cause.DealName != nil {
 		t.Errorf("cause names deal %v %v, want both null for a reader without the deal grant", cause.DealId, cause.DealName)
 	}
@@ -110,7 +110,7 @@ func TestTheCauseNamesTheDealForASeatOnAnotherTeam(t *testing.T) {
 		t.Fatalf("GetDeal refuses the seat (%v), and the page must agree with it", err)
 	}
 
-	cause := wonCause(t, e, reader, f.project)
+	cause := wonCause(reader, t, e, f.project)
 	if cause.DealId == nil || cause.DealName == nil || *cause.DealName != "Scoped pursuit phase one" {
 		t.Errorf("cause names deal %v %v, want the deal GetDeal shows this seat", cause.DealId, cause.DealName)
 	}
@@ -124,7 +124,7 @@ func TestTheCauseStillNamesAnArchivedDeal(t *testing.T) {
 		t.Fatalf("archive the won deal: %v", err)
 	}
 
-	cause := wonCause(t, e, e.Admin(), f.project)
+	cause := wonCause(e.Admin(), t, e, f.project)
 	if cause.DealId == nil || ids.UUID(*cause.DealId) != f.deal.UUID {
 		t.Errorf("cause deal_id = %v, want the archived deal %s", cause.DealId, f.deal.UUID)
 	}
