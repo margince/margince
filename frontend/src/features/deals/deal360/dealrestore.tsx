@@ -3,6 +3,7 @@
 
 import { useQueryClient } from "@tanstack/react-query";
 import type { components } from "../../../api/schema";
+import { MergedIntoSentence } from "../../../components/historymergedref";
 import { Button } from "../../../design-system/atoms";
 import { Callout } from "../../../design-system/callout";
 import { useToast } from "../../../design-system/toast";
@@ -38,9 +39,13 @@ export function ArchivedDealBand({
   const entry = archives.data?.pages[0]?.data?.[0];
   // Offered only when the history says the archive can be put back. When it
   // says why not, the band says so instead of drawing a dead button.
-  const undoable = canRestore && entry?.undoable?.undoable === true;
+  // A merged-away deal is never restored: its offers and contracts now belong
+  // to the deal it merged into, so the band says where it went instead.
+  const mergedInto = deal.merged_into_id ?? undefined;
+  const undoable =
+    !mergedInto && canRestore && entry?.undoable?.undoable === true;
   const refusal =
-    canRestore && entry?.undoable?.undoable === false
+    !mergedInto && canRestore && entry?.undoable?.undoable === false
       ? undoRefusalKey(entry.undoable.reason)
       : undefined;
   return (
@@ -53,6 +58,7 @@ export function ArchivedDealBand({
         ) : undefined
       }
     >
+      {mergedInto && <MergedIntoSentence kind="deal" id={mergedInto} />}
       {refusal && t(refusal)}
     </Callout>
   );

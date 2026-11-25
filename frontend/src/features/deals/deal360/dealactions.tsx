@@ -12,7 +12,9 @@
 
 import { CalendarPlus, FileText, Phone } from "lucide-react";
 import { useCallback, useState } from "react";
+import { api } from "../../../api/client";
 import type { components } from "../../../api/schema";
+import { ifMatch, requireVersion } from "../../../api/version";
 import {
   type ActivityGate,
   useActivityGate,
@@ -22,11 +24,14 @@ import { ArchiveAction } from "../../../components/archive";
 import { ExtensionEntries } from "../../../components/extensionentries";
 import { LogActivityAction } from "../../../components/logactivity.action";
 import { searchCompanyContacts } from "../../../components/meetingattendees";
+import { MergeAction } from "../../../components/merge";
 import { Button, OverflowMenu } from "../../../design-system/atoms";
 import { tipText, VerbWord } from "../../../design-system/iconaction";
 import { ListPopover } from "../../../design-system/listpopover";
+import type { RecordPickerCandidate } from "../../../design-system/recordpicker";
 import { useT } from "../../../i18n";
 import { useCanWriteRecord } from "../../../lib/capability";
+import { unwrap } from "../../../lib/problem";
 import { navigate } from "../../../lib/router";
 import { useShortcut } from "../../../lib/shortcuts";
 import { RecordEmailVerb } from "../../records/recordemail";
@@ -38,7 +43,6 @@ import { useDealRecipientAddress } from "./usedealrecipient";
 import "./deal360.css";
 import { AddToShortlistAction } from "../../../components/addtoshortlist";
 import { RequestLegalReviewAction } from "./deallegaltab";
-import { DealMergeAction } from "./dealmerge.action";
 import { ReopenAction } from "./dealreopen";
 import { MovePipelineAction } from "./movepipeline";
 
@@ -116,6 +120,60 @@ function DealArchiveAction({
       invalidate="deals"
       recordKey="deal"
       onArchived={(from) => from.closeOnto({ screen: "deals" })}
+    />
+  );
+}
+
+// The "Merge into…" verb of a deal: folds this deal into another open deal of
+// the same account. The server refuses deals of two companies, so the picker
+// offers only this account's, and a deal on no account has nobody to merge with.
+function DealMergeAction({
+  deal,
+  disabledReasonId,
+}: Readonly<{ deal: Deal; disabledReasonId?: string }>) {
+  const t = useT();
+  const companyId = deal.company_id;
+  if (!companyId) {
+    return null;
+  }
+  const searchTargets = async (q: string): Promise<RecordPickerCandidate[]> => {
+    const data = unwrap(
+      await api.GET("/deals", {
+        params: {
+          query: { q, company_id: companyId, status: "open", limit: 10 },
+        },
+      }),
+      t,
+    );
+    return data.data.map((candidate) => ({
+      id: candidate.id,
+      name: candidate.name,
+      writable: candidate.writable,
+    }));
+  };
+  return (
+    <MergeAction
+      requires={{ object: "deal", action: "update" }}
+      disabledReasonId={disabledReasonId}
+      label={t("merge.deal")}
+      sourceId={deal.id}
+      sourceName={deal.name}
+      searchTargets={searchTargets}
+      merge={async (targetId) =>
+        unwrap(
+          await api.POST("/deals/{id}/merge", {
+            params: {
+              path: { id: deal.id },
+              ...ifMatch(requireVersion(deal.version)),
+            },
+            body: { target_id: targetId },
+          }),
+          t,
+        )
+      }
+      invalidate="deals"
+      recordKey="deal"
+      survivorRoute={(targetId) => ({ screen: "deals", id: targetId })}
     />
   );
 }
