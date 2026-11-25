@@ -208,6 +208,9 @@ func apiFaults(c *config.Config, posture runtimeenv.Environment) []error {
 	if err := ps.FakeModelFault(c, posture); err != nil {
 		faults = append(faults, err)
 	}
+	if err := ps.CallLogFault(c, posture); err != nil {
+		faults = append(faults, err)
+	}
 	if _, err := trustedProxies(c); err != nil {
 		faults = append(faults, err)
 	}
