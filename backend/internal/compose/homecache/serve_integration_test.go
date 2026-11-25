@@ -8,6 +8,7 @@ package homecache_test
 import (
 	"context"
 	"log/slog"
+	"strconv"
 	"strings"
 	"sync"
 	"testing"
@@ -122,5 +123,54 @@ func TestAWriterWhoLeftAfterTheCommitStillHasTheirHomeMarkedBehind(t *testing.T)
 	}
 	if _, standing, hit, err := homecache.Lookup[crmcontracts.Worklist](ctx, c, e.Rep1, homecache.Worklist, "home"); err != nil || !hit || !standing.Written {
 		t.Errorf("the kept answer: hit %v, written %v (err %v); a departed client left it unmarked", hit, standing.Written, err)
+	}
+}
+
+// worklistReads is the counted worklist reads with this outcome so far.
+func worklistReads(t *testing.T, outcome string) int {
+	t.Helper()
+	var out strings.Builder
+	homecache.WriteMetrics(&out)
+	prefix := `margince_home_cache_reads_total{read="worklist",outcome="` + outcome + `"} `
+	for line := range strings.Lines(out.String()) {
+		if rest, ok := strings.CutPrefix(line, prefix); ok {
+			n, err := strconv.Atoi(strings.TrimSpace(rest))
+			if err != nil {
+				t.Fatalf("metric line %q: %v", line, err)
+			}
+			return n
+		}
+	}
+	t.Fatalf("no %q line in the metrics", prefix)
+	return 0
+}
+
+// A read of a question no answer was kept under counts as first. A read whose
+// kept answer ended counts as a miss. The two apart measure slow first reads.
+func TestAFreshReadIsFirstOnlyWhenNoAnswerWasKeptUnderTheQuestion(t *testing.T) {
+	e := integration.Setup(t)
+	c := homecache.New(e.Pool)
+	ctx := e.As(e.Rep1, []ids.UUID{e.Team1}, integration.RepPerms)
+
+	first, miss := worklistReads(t, "first"), worklistReads(t, "miss")
+	if err := serveWorklist(ctx, c, e.Rep1); err != nil {
+		t.Fatal(err)
+	}
+	c.Settle()
+	if got := worklistReads(t, "first") - first; got != 1 {
+		t.Errorf("the first read of the question counted %d first reads, want 1", got)
+	}
+
+	e.WsExec(t, `UPDATE home_read_cache SET valid_until = now() - interval '1 second' WHERE reader_id = $1`, e.Rep1)
+	first = worklistReads(t, "first")
+	if err := serveWorklist(ctx, c, e.Rep1); err != nil {
+		t.Fatal(err)
+	}
+	c.Settle()
+	if got := worklistReads(t, "first") - first; got != 0 {
+		t.Errorf("a read after the kept answer ended counted %d first reads, want 0", got)
+	}
+	if got := worklistReads(t, "miss") - miss; got != 1 {
+		t.Errorf("a read after the kept answer ended counted %d misses, want 1", got)
 	}
 }

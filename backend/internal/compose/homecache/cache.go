@@ -121,10 +121,26 @@ func NoWalk[A Answer]() Walk[A] {
 // and says so in Kept.Written, and one whose walk has ended says so in
 // Kept.WalkEnded. The access fence, expiry and a lifted snooze end it.
 func Lookup[A Answer](ctx context.Context, c *Cache, reader ids.UUID, read Read, key string) (A, Kept, bool, error) {
+	out, standing, found, err := lookup[A](ctx, c, reader, read, key)
+	return out, standing, found == foundValid, err
+}
+
+// found is what Lookup found under a question: nothing ever kept, an answer
+// that has ended, or one still valid.
+type found int
+
+const (
+	foundNone found = iota
+	foundEnded
+	foundValid
+)
+
+func lookup[A Answer](ctx context.Context, c *Cache, reader ids.UUID, read Read, key string) (A, Kept, found, error) {
 	var out A
 	var payload []byte
 	var ageSeconds float64
 	var standing Kept
+	var valid bool
 	err := database.WithWorkspaceTx(ctx, c.pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(ctx, `
 			SELECT c.payload, extract(epoch FROM now() - c.computed_at)::float8,
@@ -132,25 +148,28 @@ func Lookup[A Answer](ctx context.Context, c *Cache, reader ids.UUID, read Read,
 			                WHERE fg.reader_id = c.reader_id AND fg.at >= c.computed_at),
 			       c.walk_id IS NOT NULL AND NOT EXISTS (
 			         SELECT 1 FROM worklist_snapshot w
-			          WHERE w.id = c.walk_id AND w.reader_id = c.reader_id AND w.expires_at > now())
+			          WHERE w.id = c.walk_id AND w.reader_id = c.reader_id AND w.expires_at > now()),
+			       c.valid_until > now()
+			         AND EXISTS (SELECT 1 FROM home_read_fence f WHERE f.generation = c.fence)
+			         AND c.lifted_snooze_digest IS NOT DISTINCT FROM `+briefs.LiftedSnoozesDigestSQL("c.reader_id", "now()")+`
 			  FROM home_read_cache c
-			  JOIN home_read_fence f ON f.generation = c.fence
-			 WHERE c.reader_id = $1 AND c.read = $2 AND c.request_key = $3
-			   AND c.valid_until > now()
-			   AND c.lifted_snooze_digest IS NOT DISTINCT FROM `+briefs.LiftedSnoozesDigestSQL("c.reader_id", "now()"),
-			reader, string(read), key).Scan(&payload, &ageSeconds, &standing.Written, &standing.WalkEnded)
+			 WHERE c.reader_id = $1 AND c.read = $2 AND c.request_key = $3`,
+			reader, string(read), key).Scan(&payload, &ageSeconds, &standing.Written, &standing.WalkEnded, &valid)
 	})
 	if errors.Is(err, pgx.ErrNoRows) {
-		return out, Kept{}, false, nil
+		return out, Kept{}, foundNone, nil
 	}
 	if err != nil {
-		return out, Kept{}, false, fmt.Errorf("homecache: reading a cached %s: %w", read, err)
+		return out, Kept{}, foundNone, fmt.Errorf("homecache: reading a cached %s: %w", read, err)
+	}
+	if !valid {
+		return out, Kept{}, foundEnded, nil
 	}
 	if err := json.Unmarshal(payload, &out); err != nil {
-		return out, Kept{}, false, fmt.Errorf("homecache: decoding a cached %s: %w", read, err)
+		return out, Kept{}, foundEnded, fmt.Errorf("homecache: decoding a cached %s: %w", read, err)
 	}
 	standing.Age = time.Duration(ageSeconds * float64(time.Second))
-	return out, standing, true, nil
+	return out, standing, foundValid, nil
 }
 
 // Serve answers read from the reader's kept answer while it holds, and from
@@ -162,7 +181,8 @@ func Serve[A Answer](
 	ctx context.Context, c *Cache, reader ids.UUID, read Read, key string,
 	fresh func(context.Context) (A, error), walk Walk[A],
 ) (answer A, stale bool, err error) {
-	kept, standing, hit, err := Lookup[A](ctx, c, reader, read, key)
+	kept, standing, found, err := lookup[A](ctx, c, reader, read, key)
+	hit := found == foundValid
 	if err != nil {
 		logFault(ctx, "a kept Home answer could not be read; reading it fresh", read, err)
 	}
@@ -177,6 +197,8 @@ func Serve[A Answer](
 	stale = hit && (standing.Age > Life || standing.Written)
 	served := hit && (!stale || read == Worklist)
 	switch {
+	case !served && found == foundNone:
+		countServed(read, outcomeFirst)
 	case !served:
 		countServed(read, outcomeMiss)
 	case stale:
