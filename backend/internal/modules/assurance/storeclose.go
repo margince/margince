@@ -53,10 +53,6 @@ func (s *Store) CloseCleared(ctx context.Context, tx pgx.Tx, types []string, sub
 		// exactly the night everything should clear.
 		seen = []string{}
 	}
-	// The deferral carve-out compares against OutcomeRemindLater, spelled from
-	// the constant rather than written into the SQL: a literal here agrees with
-	// the writer of the outcome only until one of them is renamed, and the
-	// clause that stops matching clears every deferred finding silently.
 	tag, err := tx.Exec(ctx, `
 		UPDATE assurance_exception
 		SET status = $1, updated_at = now()
@@ -65,15 +61,23 @@ func (s *Store) CloseCleared(ctx context.Context, tx pgx.Tx, types []string, sub
 		  AND subject_id = ANY($2::uuid[])
 		  AND type = ANY($3)
 		  AND NOT (logical_key = ANY($4))
-		  AND NOT EXISTS (SELECT 1 FROM assurance_resolution r
-		                   WHERE r.exception_id = assurance_exception.id
-		                     AND r.outcome = $5
-		                     AND `+LiveRemindAtSQL("r", "$6")+` > now())`,
+		  AND `+notDeferredSQL("$5", "$6"),
 		ExceptionConditionCleared, subjects, types, seen, OutcomeRemindLater, MaxSuppressionDays())
 	if err != nil {
 		return 0, fmt.Errorf("assurance: closing cleared findings: %w", err)
 	}
 	return tag.RowsAffected(), nil
+}
+
+// notDeferredSQL is the carve-out the clearing sweeps share: a finding under a
+// live remind-later answer is left alone. The arguments are SQL placeholders.
+// Callers bind the outcome from OutcomeRemindLater: a literal that stopped
+// matching would clear every deferred finding silently.
+func notDeferredSQL(outcome, days string) string {
+	return `NOT EXISTS (SELECT 1 FROM assurance_resolution r
+		                   WHERE r.exception_id = assurance_exception.id
+		                     AND r.outcome = ` + outcome + `
+		                     AND ` + LiveRemindAtSQL("r", days) + ` > now())`
 }
 
 // CloseDeparted closes every open finding whose subject is no longer in the

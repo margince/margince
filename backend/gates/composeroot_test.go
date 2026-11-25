@@ -76,8 +76,10 @@ const (
 	// extractor and transcript proposer.
 	// Raised by 244 test lines for the data reset cases of an event the sweep
 	// orphaned, which drive the unexported reset handlers.
+	// Raised by 21 test lines when main's root compose cases met develop's in the
+	// back-sync; each side stayed under its own ceiling.
 	composeRootProductionLines = 230_732
-	composeRootTestLines       = 360_919
+	composeRootTestLines       = 360_940
 )
 
 // A read under these floors stopped early or read the wrong place, and would

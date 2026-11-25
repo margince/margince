@@ -88,3 +88,5 @@ a0d9e91c17fd307fdee4e1dc3c7d993eb3527a6e 66e94e0036aa15f2214b7dd2bb5e162a0e67e8b
 1ed7352e2f2239fd8010a4dafeb276f305c904d6 abd3f2ea96d9ceac4bdc8e31c08fd828caf96ff6 ratified-main-s-contract-changes-carried-into-develop-in-the-back-sync
 26b95b4eda08202007a7d925e49e44834815a4a8 0a764fe2217c5bc2822149c53fa902ec1048d284 ratified-develop-s-company-status-carried-into-develop-in-the-back-sync
 3bcf60b24985f23a699900622d8388d2696be10c 0a764fe2217c5bc2822149c53fa902ec1048d284 ratified-main-s-contract-changes-carried-into-develop-in-the-back-sync
+d72248c5d90040c69ff1059af7f90065ec4361c7 6764fa4a04a088ede190d98e4c25741faacb73b8 ratified-develop-s-company-status-carried-into-develop-in-the-back-sync
+3bcf60b24985f23a699900622d8388d2696be10c 6764fa4a04a088ede190d98e4c25741faacb73b8 ratified-main-s-contract-changes-carried-into-develop-in-the-back-sync
