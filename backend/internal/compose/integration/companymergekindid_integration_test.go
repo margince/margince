@@ -53,13 +53,14 @@ var kindIDPairsTheMergeLeaves = gatekit.Waive(map[string]string{
 func TestEveryCompanyKindIDReferenceJoinsTheMerge(t *testing.T) {
 	defer kindIDPairsTheMergeLeaves.AssertAllMatched(t)
 
-	assertEveryKindIDReferenceJoinsTheMerge(t, reach.Company, mergePathFiles)
+	assertEveryKindIDReferenceJoinsTheMerge(t, reach.Company, mergePathFiles, nil)
 }
 
-// assertEveryKindIDReferenceJoinsTheMerge is the census for one record kind. The
+// assertEveryKindIDReferenceJoinsTheMerge is the census for one record kind; own
+// holds the pairs only that kind's vocabulary reaches. The
 // kind-and-id rows are moved by the one recordmerge path every merge shares, so
 // the pairs a merge leaves are the same for every kind and read the same map.
-func assertEveryKindIDReferenceJoinsTheMerge(t *testing.T, kind reach.Record, files []string) {
+func assertEveryKindIDReferenceJoinsTheMerge(t *testing.T, kind reach.Record, files []string, own *gatekit.Waivers[string]) {
 	t.Helper()
 	written := tablesTheMergeWrites(t, files, kind)
 	if len(written) == 0 {
@@ -99,7 +100,7 @@ func assertEveryKindIDReferenceJoinsTheMerge(t *testing.T, kind reach.Record, fi
 		}
 		seen++
 		key := table + "." + column
-		if written[key] || kindIDPairsTheMergeLeaves.Waived(t, key) {
+		if written[key] || kindIDPairsTheMergeLeaves.Waived(t, key) || (own != nil && own.Waived(t, key)) {
 			continue
 		}
 		t.Errorf("%s can name a "+string(kind)+" by kind and id and the merge never moves it.\n"+

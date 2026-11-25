@@ -28,6 +28,7 @@ var dealMergePathFiles = []string{
 	"internal/modules/deals/dealmerge.go",
 	"internal/modules/deals/dealmergerelink.go",
 	"internal/platform/recordmerge/links.go",
+	"internal/platform/recordmerge/pair.go",
 	"internal/platform/recordmerge/kindid.go",
 	"internal/modules/identity/grantmerge.go",
 }
@@ -50,9 +51,9 @@ var dealFKsTheMergeLeaves = gatekit.Waive(map[string]string{
 	"sales_initiative_baseline.deal_id":     "the figure an initiative counted for the retired deal when its baseline was taken; moving it would change a number already reported",
 	"deal_line_item.deal_id":                "the retired deal's own price composition; lines moved onto a survivor would change its mode and amount without anyone saying so, and its position order is unique per deal",
 	"deal_product.deal_id":                  "the retired deal's products, the companion of its lines and left with them for the same reason",
+	"deal.merged_into_id":                   "the redirect pointer, set on the retired deal by recordmerge.ArchiveMergedAway, whose statement takes its table as a parameter and so cannot be read as a deal write; TestDealMergeMovesTheFactsAndLeavesThePathOnTheLoser asserts it lands",
 	"signal.entity_deal_id":                 "a trigger fills it from entity_type and entity_id, and the shared kind-and-id move carries that pair, so the key follows it to the survivor",
 	"weekly_plan_commitment.linked_deal_id": "a trigger fills it from linked_record_type and linked_record_id, and the weekly plan's sweep reach declaration moves that pair, so the key follows it to the survivor",
-	"record_grant.deal_id":                  "set by identity's grant carry, which folds two grants of one grantee into one and writes the audit shape of a grant change; the merge calls it rather than updating the column",
 })
 
 // TestEveryDealForeignKeyJoinsTheMerge fails when a table carrying a deal
@@ -70,5 +71,17 @@ func TestEveryDealForeignKeyJoinsTheMerge(t *testing.T) {
 // TestEveryDealKindIDReferenceJoinsTheMerge is the same census for the rows
 // that name a deal by kind and id, which no foreign key shows.
 func TestEveryDealKindIDReferenceJoinsTheMerge(t *testing.T) {
-	assertEveryKindIDReferenceJoinsTheMerge(t, reach.Deal, dealMergePathFiles)
+	defer dealKindIDPairsTheMergeLeaves.AssertAllMatched(t)
+
+	assertEveryKindIDReferenceJoinsTheMerge(t, reach.Deal, dealMergePathFiles, dealKindIDPairsTheMergeLeaves)
 }
+
+// dealKindIDPairsTheMergeLeaves are the pairs only a deal can sit in, because
+// their closed vocabularies include deal and exclude company. The pairs every
+// merge leaves are kindIDPairsTheMergeLeaves.
+var dealKindIDPairsTheMergeLeaves = gatekit.Waive(map[string]string{
+	"contact_acquisition_evidence.source_entity_id": "records which entity a contact was first seen through, as it was when the contact was acquired; moving it would rewrite where the contact came from",
+	"sales_initiative_enrolment.record_id":          "an initiative's enrolment of the retired deal, counted against its baseline when it was taken; a moved row would collide with the survivor's own enrolment and change a figure already reported",
+	"sales_initiative_member.record_id":             "the member row of an initiative for the retired deal, the companion of the enrolment above and left with it for the same reason",
+	"weekly_review_learning_citation.subject_id":    "a citation of the retired deal in a weekly review's learning, frozen with the review it was written for",
+})
