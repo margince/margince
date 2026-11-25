@@ -192,6 +192,28 @@ func TestAJoinedIntroductionWithASuppressedOutsiderStaysUnfiledAfterTheSweep(t *
 	}
 }
 
+// A mail that only copies an address the ladder once suppressed is not itself
+// suppressed. A join still files it under the joining seat's own contact.
+func TestAJoinedMailCopyingASuppressedAddressIsStillFiled(t *testing.T) {
+	env := newCaptureEnv(t)
+	e, sync := env.e, env.sync
+	syncSecond := secondMailbox(t, e, e.Rep3)
+	sync(t, email("dse@eu.docusign.net", "DocuSign EU", captureOwner, "ds-earlier@docusign.net", ""))
+	store := contacts.NewStore(e.DB())
+	private, err := store.EnsureContactByEmail(contactCreator(e), "Private Contact", "private@partner.example", "manual", storekit.RefuseErased)
+	if err != nil {
+		t.Fatalf("seeding the second seat's contact: %v", err)
+	}
+	ownerExec(t, e, `UPDATE contact SET owner_id = $2, visibility = 'owner' WHERE id = $1`, private, e.Rep3)
+	mail := emailCC("sender@partner.example", "Sender", captureOwner,
+		secondSeatAddress+", dse@eu.docusign.net, private@partner.example", "copies-sup@partner.example")
+	sync(t, mail)
+	syncSecond(t, mail)
+	if filed := contactsFiledUnder(t, e, "copies-sup@partner.example"); !slices.Contains(filed, private) {
+		t.Fatalf("the mail is filed under %v, want the second seat's private contact among them", filed)
+	}
+}
+
 // A join leaves the links the project and deal attribution after it may still
 // need, as a new capture does. A mail copying more contacts than the ceiling
 // holds is filed up to that reservation, and the join adds nothing past it.

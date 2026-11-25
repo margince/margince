@@ -43,7 +43,7 @@ var leadFilingCandidatesSQL = `
 	 WHERE a.captured_by LIKE 'connector:%'
 	   AND a.archived_at IS NULL AND a.restricted_at IS NULL
 	   AND a.audience_reason IS DISTINCT FROM 'no_record'
-	   AND NOT ` + ladderSuppressedClause + `
+	   AND NOT ` + ladderSuppressedClause("a.counterparty_email") + `
 	   AND EXISTS (SELECT 1 FROM activity_participant ap
 	                 JOIN lead ld ON ` + storekit.LeadEmailMatchClause("ld", "ap.address") + `
 	                WHERE ap.activity_id = a.id AND ap.address IS NOT NULL AND NOT ap.past_party_cap
