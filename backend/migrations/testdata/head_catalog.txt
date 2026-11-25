@@ -8722,16 +8722,20 @@ public.project_health_assessment_pkey CREATE UNIQUE INDEX project_health_assessm
 public.project_health_assessment_project_id_key CREATE UNIQUE INDEX project_health_assessment_project_id_key ON public.project_health_assessment USING btree (project_id, id)
 public.project_phase_history acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.project_phase_history.audit_log_id uuid gen=- def=-
+public.project_phase_history.cause_deal_id uuid gen=- def=-
+public.project_phase_history.cause_kind text gen=- def=-
 public.project_phase_history.changed_by text NOT NULL gen=- def=-
 public.project_phase_history.from_phase text gen=- def=-
 public.project_phase_history.id uuid NOT NULL gen=- def=uuidv7()
 public.project_phase_history.occurred_at timestamp with time zone NOT NULL gen=- def=now()
 public.project_phase_history.project_id uuid NOT NULL gen=- def=-
+public.project_phase_history.project_phase_history_cause_kind_check CHECK ((cause_kind = ANY (ARRAY['deal_won'::text])))
+public.project_phase_history.project_phase_history_cause_pairs CHECK (((cause_kind IS NULL) = (cause_deal_id IS NULL)))
 public.project_phase_history.project_phase_history_pkey PRIMARY KEY (id)
 public.project_phase_history.project_phase_history_project_id_fkey FOREIGN KEY (project_id) REFERENCES project(id) ON DELETE CASCADE
 public.project_phase_history.reason text gen=- def=-
-public.project_phase_history.text_bound_insert CREATE TRIGGER text_bound_insert AFTER INSERT ON public.project_phase_history FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"reason": 2000, "to_phase": 20000, "changed_by": 20000, "from_phase": 20000}'::jsonb)) EXECUTE FUNCTION refuse_oversized_text('{"changed_by":20000,"from_phase":20000,"reason":2000,"to_phase":20000}')
-public.project_phase_history.text_bound_update CREATE TRIGGER text_bound_update AFTER UPDATE ON public.project_phase_history FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"reason": 2000, "to_phase": 20000, "changed_by": 20000, "from_phase": 20000}'::jsonb)) EXECUTE FUNCTION refuse_oversized_text('{"changed_by":20000,"from_phase":20000,"reason":2000,"to_phase":20000}')
+public.project_phase_history.text_bound_insert CREATE TRIGGER text_bound_insert AFTER INSERT ON public.project_phase_history FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"reason": 2000, "to_phase": 20000, "cause_kind": 120, "changed_by": 20000, "from_phase": 20000}'::jsonb)) EXECUTE FUNCTION refuse_oversized_text('{"cause_kind":120,"changed_by":20000,"from_phase":20000,"reason":2000,"to_phase":20000}')
+public.project_phase_history.text_bound_update CREATE TRIGGER text_bound_update AFTER UPDATE ON public.project_phase_history FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"reason": 2000, "to_phase": 20000, "cause_kind": 120, "changed_by": 20000, "from_phase": 20000}'::jsonb)) EXECUTE FUNCTION refuse_oversized_text('{"cause_kind":120,"changed_by":20000,"from_phase":20000,"reason":2000,"to_phase":20000}')
 public.project_phase_history.to_phase text NOT NULL gen=- def=-
 public.project_phase_history_pkey CREATE UNIQUE INDEX project_phase_history_pkey ON public.project_phase_history USING btree (id)
 public.project_pkey CREATE UNIQUE INDEX project_pkey ON public.project USING btree (id)

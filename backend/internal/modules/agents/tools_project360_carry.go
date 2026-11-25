@@ -45,6 +45,7 @@ func project360History(h crmcontracts.Project360PhaseHistory) *Project360PhaseHi
 			FromPhase: orBlank(t.FromPhase),
 			ToPhase:   t.ToPhase,
 			Reason:    orBlank(t.Reason),
+			Cause:     project360Cause(t.Cause),
 			ChangedAt: t.ChangedAt,
 			ChangedBy: project360Attribution(t.ChangedBy),
 		})
@@ -53,6 +54,18 @@ func project360History(h crmcontracts.Project360PhaseHistory) *Project360PhaseHi
 		out.Durations = append(out.Durations, Project360PhaseDuration{
 			Phase: d.Phase, Seconds: d.Seconds, Current: d.Current,
 		})
+	}
+	return out
+}
+
+func project360Cause(c *crmcontracts.Project360PhaseCause) *Project360Cause {
+	if c == nil {
+		return nil
+	}
+	out := &Project360Cause{Kind: string(c.Kind), DealName: orBlank(c.DealName)}
+	if c.DealId != nil {
+		id := ids.UUID(*c.DealId)
+		out.DealID = &id
 	}
 	return out
 }

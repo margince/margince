@@ -16137,6 +16137,24 @@
                 "items": {
                   "type": "object",
                   "properties": {
+                    "cause": {
+                      "type": "object",
+                      "properties": {
+                        "deal_id": {
+                          "type": "string",
+                          "format": "uuid"
+                        },
+                        "deal_name": {
+                          "type": "string"
+                        },
+                        "kind": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "kind"
+                      ]
+                    },
                     "changed_at": {
                       "type": "string",
                       "format": "date-time"

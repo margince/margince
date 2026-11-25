@@ -26,12 +26,29 @@ type PhaseTransition struct {
 	FromPhase *string
 	ToPhase   string
 	Reason    *string
+	// Cause is what moved the project when no one chose the phase by hand;
+	// nil on a move a person made.
+	Cause *PhaseCause
 	// AuditLogID is the audit row the writer wrote in the same transaction; it
 	// holds who moved the project. Nil when the link is unknown, for a row older
 	// than the column that no backfill could match. A reader shows that as
 	// unknown, never as the system.
 	AuditLogID *ids.UUID
 	OccurredAt time.Time
+}
+
+// ProjectPhaseHistoryCauseKind is the closed code project_phase_history.cause_kind
+// holds. A client words it; the row stores no prose.
+type ProjectPhaseHistoryCauseKind string
+
+// PhaseCauseDealWon marks the move a won deal made into delivering.
+const PhaseCauseDealWon ProjectPhaseHistoryCauseKind = "deal_won"
+
+// PhaseCause names what caused an automatic phase move. DealID is the deal
+// whose win caused it; the row keeps the id, never a copy of the deal's name.
+type PhaseCause struct {
+	Kind   ProjectPhaseHistoryCauseKind
+	DealID ids.UUID
 }
 
 // PhaseDuration is the time a project has spent in one phase so far, summed
@@ -57,7 +74,8 @@ func (s *Store) ListProjectPhaseHistoryTx(ctx context.Context, tx pgx.Tx, id ids
 		return nil, err
 	}
 	rows, err := tx.Query(ctx, `
-		SELECT h.id, h.from_phase, h.to_phase, h.reason, h.audit_log_id, h.occurred_at
+		SELECT h.id, h.from_phase, h.to_phase, h.reason, h.cause_kind, h.cause_deal_id,
+		       h.audit_log_id, h.occurred_at
 		FROM project_phase_history h
 		WHERE h.project_id = $1
 		ORDER BY h.occurred_at ASC, h.id ASC`, id)
@@ -66,8 +84,16 @@ func (s *Store) ListProjectPhaseHistoryTx(ctx context.Context, tx pgx.Tx, id ids
 	}
 	history, err := pgx.CollectRows(rows, func(row pgx.CollectableRow) (PhaseTransition, error) {
 		var t PhaseTransition
-		err := row.Scan(&t.ID, &t.FromPhase, &t.ToPhase, &t.Reason, &t.AuditLogID, &t.OccurredAt)
-		return t, err
+		var causeKind *string
+		var causeDeal *ids.UUID
+		if err := row.Scan(&t.ID, &t.FromPhase, &t.ToPhase, &t.Reason, &causeKind, &causeDeal,
+			&t.AuditLogID, &t.OccurredAt); err != nil {
+			return t, err
+		}
+		if causeKind != nil && causeDeal != nil {
+			t.Cause = &PhaseCause{Kind: ProjectPhaseHistoryCauseKind(*causeKind), DealID: *causeDeal}
+		}
+		return t, nil
 	})
 	if err != nil {
 		return nil, err

@@ -42774,7 +42774,13 @@ export interface components {
             /** @description Null on the birth row. */
             from_phase: string | null;
             to_phase: string;
+            /** @description What the person who made the move typed. */
             reason: string | null;
+            /**
+             * @description What caused a move no one chose by hand. Absent on a move a person made, and on
+             *     every move recorded before causes were stored. A client words the cause itself.
+             */
+            cause?: components["schemas"]["Project360PhaseCause"];
             /** Format: date-time */
             changed_at: string;
             /**
@@ -42785,6 +42791,25 @@ export interface components {
              *     system principal is `actor_type: system`.
              */
             changed_by?: components["schemas"]["PrincipalAttribution"];
+        };
+        /**
+         * @description Why the project moved, as a code and the record behind it. `deal_won`: winning the
+         *     deal moved the project into delivering.
+         */
+        Project360PhaseCause: {
+            /** @enum {string} */
+            kind: "deal_won";
+            /**
+             * Format: uuid
+             * @description The deal whose win moved the project. Null when the caller may not see that deal,
+             *     or it no longer exists.
+             */
+            deal_id: string | null;
+            /**
+             * @description The deal's name now, read under the caller's deal grant and row scope, archived
+             *     deals included. Null exactly when `deal_id` is.
+             */
+            deal_name: string | null;
         };
         Project360PhaseDuration: {
             phase: string;

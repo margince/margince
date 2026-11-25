@@ -136,7 +136,10 @@ func StartDeliveryForWonDeal(ctx context.Context, tx pgx.Tx, dealID ids.DealID, 
 		return nil
 	}
 	return recordPhaseTransition(ctx, tx, id, current, fromPhase,
-		AdvanceProjectPhaseInput{ToPhase: PhaseDelivering}, by, deliveryEvidence)
+		AdvanceProjectPhaseInput{ToPhase: PhaseDelivering}, by, &automaticMove{
+			evidence: deliveryEvidence,
+			cause:    PhaseCause{Kind: PhaseCauseDealWon, DealID: dealID.UUID},
+		})
 }
 
 // EnsureAttachable is the gate every path that points a deal at a

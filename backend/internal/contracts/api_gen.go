@@ -20194,6 +20194,21 @@ func (e ProjectPhase) Valid() bool {
 	}
 }
 
+// Defines values for Project360PhaseCauseKind.
+const (
+	Project360PhaseCauseKindDealWon Project360PhaseCauseKind = "deal_won"
+)
+
+// Valid indicates whether the value is a known member of the Project360PhaseCauseKind enum.
+func (e Project360PhaseCauseKind) Valid() bool {
+	switch e {
+	case Project360PhaseCauseKindDealWon:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for Project360Section.
 const (
 	Project360SectionActivities   Project360Section = "activities"
@@ -62221,6 +62236,22 @@ type Project360Health struct {
 	Current *ProjectHealthAssessment `json:"current,omitempty"`
 }
 
+// Project360PhaseCause Why the project moved, as a code and the record behind it. `deal_won`: winning the
+// deal moved the project into delivering.
+type Project360PhaseCause struct {
+	// DealId The deal whose win moved the project. Null when the caller may not see that deal,
+	// or it no longer exists.
+	DealId *openapi_types.UUID `json:"deal_id"`
+
+	// DealName The deal's name now, read under the caller's deal grant and row scope, archived
+	// deals included. Null exactly when `deal_id` is.
+	DealName *string                  `json:"deal_name"`
+	Kind     Project360PhaseCauseKind `json:"kind"`
+}
+
+// Project360PhaseCauseKind defines model for Project360PhaseCause.Kind.
+type Project360PhaseCauseKind string
+
 // Project360PhaseDuration defines model for Project360PhaseDuration.
 type Project360PhaseDuration struct {
 	// Current True for the phase the project is in at `as_of`.
@@ -62242,7 +62273,10 @@ type Project360PhaseHistory struct {
 
 // Project360PhaseTransition defines model for Project360PhaseTransition.
 type Project360PhaseTransition struct {
-	ChangedAt time.Time `json:"changed_at"`
+	// Cause What caused a move no one chose by hand. Absent on a move a person made, and on
+	// every move recorded before causes were stored. A client words the cause itself.
+	Cause     *Project360PhaseCause `json:"cause,omitempty"`
+	ChangedAt time.Time             `json:"changed_at"`
 
 	// ChangedBy Who made the move, from the audit row written in the same transaction.
 	// Absent when that row is not known: a move recorded before the link existed
@@ -62254,8 +62288,10 @@ type Project360PhaseTransition struct {
 	// FromPhase Null on the birth row.
 	FromPhase *string            `json:"from_phase"`
 	Id        openapi_types.UUID `json:"id"`
-	Reason    *string            `json:"reason"`
-	ToPhase   string             `json:"to_phase"`
+
+	// Reason What the person who made the move typed.
+	Reason  *string `json:"reason"`
+	ToPhase string  `json:"to_phase"`
 }
 
 // Project360Rollups The header figures. Open deals use the latest base-currency rate on or before today;
