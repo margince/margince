@@ -20,6 +20,7 @@ import (
 	"testing"
 
 	"github.com/margince/margince/backend/internal/modules/deals"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -356,5 +357,91 @@ func TestClearingTheRecurringFigureTakesTheCurrencyOnlyWhenNothingIsLeftToPrice(
 	if emptied.ExpectedArrMinor != nil || emptied.Currency != nil {
 		t.Fatalf("clearing the only figure left arr=%v currency=%v, want both null",
 			emptied.ExpectedArrMinor, emptied.Currency)
+	}
+}
+
+// An open deal's price can be removed. The currency goes with it unless the
+// recurring figure still needs it.
+func TestClearingTheAmountOfAnOpenDeal(t *testing.T) {
+	e := Setup(t)
+	pipeline, open, _ := DealFixture(t, e)
+	admin := e.Admin()
+	amount, arr, currency := int64(500000), int64(1200000), "EUR"
+	create := func(name string, withArr bool) ids.DealID {
+		in := deals.CreateDealInput{
+			Name: name, PipelineID: pipeline, StageID: open, Source: "manual",
+			AmountMinor: &amount, Currency: &currency,
+		}
+		if withArr {
+			in.ExpectedArrMinor = &arr
+		}
+		d, err := e.Deals.CreateDeal(admin, in)
+		if err != nil {
+			t.Fatal(err)
+		}
+		return ids.From[ids.DealKind](ids.UUID(d.Id))
+	}
+
+	alone, err := e.Deals.UpdateDeal(admin, create("Price only", false), deals.UpdateDealInput{Clear: []string{"amount_minor"}})
+	if err != nil {
+		t.Fatalf("clearing the only figure of an open deal: %v", err)
+	}
+	if alone.AmountMinor != nil || alone.Currency != nil {
+		t.Errorf("amount=%v currency=%v, want both null", alone.AmountMinor, alone.Currency)
+	}
+
+	both, err := e.Deals.UpdateDeal(admin, create("Price and ARR", true), deals.UpdateDealInput{Clear: []string{"amount_minor"}})
+	if err != nil {
+		t.Fatalf("clearing the amount beside an ARR: %v", err)
+	}
+	if both.AmountMinor != nil || both.ExpectedArrMinor == nil || both.Currency == nil || *both.Currency != currency {
+		t.Errorf("amount=%v arr=%v currency=%v, want the ARR and EUR kept", both.AmountMinor, both.ExpectedArrMinor, both.Currency)
+	}
+
+	// The client sends the currency as a clear beside the amount; both land.
+	paired, err := e.Deals.UpdateDeal(admin, create("Price and currency", false),
+		deals.UpdateDealInput{Clear: []string{"amount_minor", "currency"}})
+	if err != nil {
+		t.Fatalf("clearing amount and currency together: %v", err)
+	}
+	if paired.AmountMinor != nil || paired.Currency != nil {
+		t.Errorf("amount=%v currency=%v, want both null", paired.AmountMinor, paired.Currency)
+	}
+
+	_, err = e.Deals.UpdateDeal(admin, create("Currency alone", false), deals.UpdateDealInput{Clear: []string{"currency"}})
+	var pairErr *deals.AmountCurrencyPairError
+	if !errors.As(err, &pairErr) {
+		t.Errorf("clearing the currency under an amount = %v, want deals.AmountCurrencyPairError", err)
+	}
+}
+
+// A won deal keeps its price: the refusal names the reopen, and nothing moves.
+func TestClearingTheAmountOfAWonDealIsRefused(t *testing.T) {
+	e := Setup(t)
+	pipeline, open, won := DealFixture(t, e)
+	admin := e.Admin()
+	amount, currency := int64(500000), "EUR"
+	d, err := e.Deals.CreateDeal(admin, deals.CreateDealInput{
+		Name: "Closed", PipelineID: pipeline, StageID: open, Source: "manual",
+		AmountMinor: &amount, Currency: &currency,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	id := ids.From[ids.DealKind](ids.UUID(d.Id))
+	if _, err := e.Deals.AdvanceDeal(admin, id, deals.AdvanceDealInput{ToStageID: won, WonWithoutContractReason: WonByImport()}); err != nil {
+		t.Fatalf("winning the deal: %v", err)
+	}
+	_, err = e.Deals.UpdateDeal(admin, id, deals.UpdateDealInput{Clear: []string{"amount_minor"}})
+	var closed *deals.ClosedDealAmountError
+	if !errors.As(err, &closed) {
+		t.Fatalf("clearing a won deal's amount = %v, want deals.ClosedDealAmountError", err)
+	}
+	after, err := e.Deals.GetDeal(admin, id, storekit.LiveOnly)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if after.AmountMinor == nil || *after.AmountMinor != amount || after.Currency == nil {
+		t.Errorf("the refused clear changed the deal: amount=%v currency=%v", after.AmountMinor, after.Currency)
 	}
 }

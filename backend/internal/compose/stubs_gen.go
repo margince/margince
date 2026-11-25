@@ -2503,6 +2503,10 @@ func (stubs) ProposeFxRateRefresh(w nethttp.ResponseWriter, r *nethttp.Request) 
 	httperr.NotImplemented(w, r, "ProposeFxRateRefresh")
 }
 
+func (stubs) RemoveFxRate(w nethttp.ResponseWriter, r *nethttp.Request, from string) {
+	httperr.NotImplemented(w, r, "RemoveFxRate")
+}
+
 func (stubs) ListImportRuns(w nethttp.ResponseWriter, r *nethttp.Request, params crmcontracts.ListImportRunsParams) {
 	httperr.NotImplemented(w, r, "ListImportRuns")
 }

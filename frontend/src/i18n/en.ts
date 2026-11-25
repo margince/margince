@@ -6667,6 +6667,8 @@ export const en = {
   "outcomeReview.notes": "Other notes",
   "deal.commercialContext": "Commercial context",
 
+  "deal.closedAmountKept":
+    "A won or lost deal keeps its price. Reopen it first to remove it.",
   "deal.arrFromOffer":
     "Expected ARR comes from the accepted offer and is not edited here.",
   "deal.brief": "Deal brief",
@@ -15891,6 +15893,11 @@ export const en = {
   "settings.rates.fxTableLabel": "Rates in force",
   "settings.rates.fxAdd": "Set rate",
   "settings.rates.fxEmpty": "No currency rates yet.",
+  "settings.rates.fxRemoveVerb": "Remove {currency}",
+  "settings.rates.fxRemoveTitle": "Remove the {currency} rate?",
+  "settings.rates.fxRemoveBody":
+    "Deals in {currency} show no value in the base currency until a new rate is set. Figures already calculated keep the rate they used.",
+  "settings.rates.fxRemoveConfirm": "Remove",
   "settings.rates.fxModalTitle": "Set currency rate",
   "settings.rates.rateToBase": "Rate (to base currency)",
   "settings.rates.modelTableLabel": "Prices in force",
@@ -17210,13 +17217,13 @@ export const en = {
   "installationSettings.baseCurrencyLock.ratesFrozen_other":
     "{count} records have frozen a conversion rate against this currency, so it cannot change.",
   "installationSettings.baseCurrencyLock.rateSheet_one":
-    "{count} currency rate converts into {base}. Clear the currency rates first to change the base currency.",
+    "{count} currency rate converts into {base}. Remove every currency from the rate sheet first to change the base currency.",
   "installationSettings.baseCurrencyLock.rateSheet_other":
-    "{count} currency rates convert into {base}. Clear the currency rates first to change the base currency.",
+    "{count} currency rates convert into {base}. Remove every currency from the rate sheet first to change the base currency.",
   "installationSettings.baseCurrencyLock.rateSheetUnnamed_one":
-    "{count} currency rate converts into a base currency that is not on record. Clear the currency rates first to change the base currency.",
+    "{count} currency rate converts into a base currency that is not on record. Remove every currency from the rate sheet first to change the base currency.",
   "installationSettings.baseCurrencyLock.rateSheetUnnamed_other":
-    "{count} currency rates convert into a base currency that is not on record. Clear the currency rates first to change the base currency.",
+    "{count} currency rates convert into a base currency that is not on record. Remove every currency from the rate sheet first to change the base currency.",
   "installationSettings.baseLanguage": "Base language",
   "installationSettings.baseLanguageHint":
     "Language AI writes in when the whole team reads the text. Display language is separate, and customer replies follow the language of the thread.",
