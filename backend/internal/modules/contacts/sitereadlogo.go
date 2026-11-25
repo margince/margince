@@ -37,9 +37,9 @@ import (
 // Postgres type the CASE arms from bound parameters.
 const siteReadLogoWrite = `UPDATE site_read SET
 		logo_object_key      = CASE WHEN $5::boolean THEN $2::text ELSE logo_object_key END,
-		logo_origin          = CASE WHEN $5::boolean THEN $3::text ELSE logo_origin END,
+		logo_source          = CASE WHEN $5::boolean THEN $3::text ELSE logo_source END,
 		logo_icon_object_key = CASE WHEN $5::boolean THEN logo_icon_object_key ELSE $2::text END,
-		logo_icon_origin     = CASE WHEN $5::boolean THEN logo_icon_origin ELSE $3::text END,
+		logo_icon_source     = CASE WHEN $5::boolean THEN logo_icon_source ELSE $3::text END,
 		updated_at = now()
 	WHERE id = $1 AND status = 'running' AND started_at = $4
 	  AND company_id IS NULL AND confirmed_at IS NULL
@@ -69,9 +69,9 @@ const logoUnwornByAnyCompany = `NOT EXISTS (
 // says WHEN a reference may go; the unworn proof is always part of it.
 const siteReadLogoRelease = `UPDATE site_read sr SET
 		logo_object_key      = CASE WHEN $2::boolean THEN NULL ELSE logo_object_key END,
-		logo_origin          = CASE WHEN $2::boolean THEN NULL ELSE logo_origin END,
+		logo_source          = CASE WHEN $2::boolean THEN NULL ELSE logo_source END,
 		logo_icon_object_key = CASE WHEN $2::boolean THEN logo_icon_object_key ELSE NULL END,
-		logo_icon_origin     = CASE WHEN $2::boolean THEN logo_icon_origin ELSE NULL END,
+		logo_icon_source     = CASE WHEN $2::boolean THEN logo_icon_source ELSE NULL END,
 		updated_at = now()
 	WHERE sr.id = $1 AND ` + siteReadLogoSlotKey + ` IS NOT NULL
 	  AND ` + logoUnwornByAnyCompany

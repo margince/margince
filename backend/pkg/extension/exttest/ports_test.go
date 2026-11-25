@@ -30,7 +30,7 @@ func callEvery(ctx context.Context, v reflect.Value) map[string]error {
 		}
 		out := m.Call(args)
 		if last := out[len(out)-1]; last.Type() == errType && !last.IsNil() {
-			answers[v.Type().Method(i).Name], _ = last.Interface().(error)
+			answers[v.Type().Method(i).Name], _ = reflect.TypeAssert[error](last)
 		}
 	}
 	return answers

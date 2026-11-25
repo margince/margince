@@ -352,9 +352,9 @@ Also called: bulk edit a list, reassign everyone on a list, export a list.
 ### What does "Uses a retired field" mean on a list?
 A Live List's row in the library shows **Uses a retired field** when its filter names a custom field that has been archived. Its page says "This filter uses a retired field". The list still works on the values already stored, but nothing new is recorded in that field. Its steward should change the clause with **Edit filter** on the notice. Before you archive a custom field, Margince names the Live Lists that filter on it.
 
-In the library, **Filter no longer works** means a field the filter names has changed, so the filter cannot run. The list's page says "This filter no longer works". Its steward fixes it the same way, with **Edit filter**.
+In the library, **Filter no longer works** means a field the filter names has changed, so the filter cannot run. The list's page says "This filter no longer works". Its steward fixes it the same way, with **Edit filter**. **Records unavailable** means the extension that added the list's records was removed. The list shows no members and cannot be exported, and its page says "These records are unavailable". It works again once the extension is back.
 
-Also called: broken list, list warning, archived custom field.
+Also called: broken list, list warning, archived custom field, removed extension.
 
 ### How do I change a Live List's filter?
 To change which records a Margince Live List holds, open the list and press **Edit filter**. Or choose **Edit filter** under **⋯** on its row in the library. Its conditions open with a notice that names the list.

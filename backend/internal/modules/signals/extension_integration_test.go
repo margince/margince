@@ -25,6 +25,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/testdb"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/ports/extregistrytest"
 	"github.com/margince/margince/backend/internal/shared/ports/signaltypes"
 	"github.com/margince/margince/backend/pkg/extension"
 )
@@ -76,6 +77,7 @@ func newExtensionSignalFixture(t *testing.T) extensionSignalFixture {
 	}
 	testdb.AssertPoolsQuiesced(t)
 
+	extregistrytest.Reset(t)
 	signaltypes.Register("sigtest", []extension.SignalTypeDeclaration{{
 		Kind: "loss", Label: "Loss reported",
 		Evidence: []extension.SignalEvidenceField{

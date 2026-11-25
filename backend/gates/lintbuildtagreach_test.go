@@ -43,8 +43,12 @@ package gates
 // file can be linted and still be wrong, which is what the linters are for.
 
 import (
+	"fmt"
 	"go/build"
 	"io/fs"
+	"maps"
+	"os"
+	"os/exec"
 	"path/filepath"
 	"slices"
 	"strings"
@@ -147,9 +151,8 @@ func mergeGatePasses(t *testing.T) []compilingPass {
 // unreadFiles ratifies a file the merge gate does not fully read, with what that
 // costs. It is empty: every Go file in the tree is compiled and linted at the
 // one GOOS the merge gate runs. A file selected by another GOOS, or by a tag no
-// golangci config carries, has to argue for itself here. The wider count,
-// including the `//go:build !integration` files this gate cannot help with, is
-// issue #2920.
+// golangci config carries, has to argue for itself here. A file the configs'
+// tags drop is TestEveryFileOnlyTheUntaggedBuildReadsIsLinted's subject.
 var unreadFiles = gatekit.Waive(map[string]string{})
 
 func TestEveryGoFileIsCompiledAndAnalysedBySomePass(t *testing.T) {
@@ -194,6 +197,144 @@ func TestEveryGoFileIsCompiledAndAnalysedBySomePass(t *testing.T) {
 	if seen == 0 {
 		t.Fatal("the walk found no Go file at all — a census that recognises nothing reports PASS over every " +
 			"unread lane there is, so the walk is broken rather than the tree clean")
+	}
+}
+
+// untaggedLintExempt names a directory `make lint-untagged` leaves out.
+// scripts/untagged-lint-packages.sh skips the same one, and the test below
+// fails when the two disagree.
+var untaggedLintExempt = gatekit.Waive(map[string]string{
+	"backend/gates": "the gate suite's own test-only files: `make vet` reads them, and a second golangci pass over the whole package costs more than its findings would be worth",
+})
+
+// The golangci configs build with tags, so they never read a file guarded
+// `//go:build !integration`, although it ships in every binary.
+// `make lint-untagged` lints the packages that hold one. This holds its list to
+// what go/build says, so a new such file in another package fails here.
+func TestEveryFileOnlyTheUntaggedBuildReadsIsLinted(t *testing.T) {
+	t.Parallel()
+	defer untaggedLintExempt.AssertAllMatched(t)
+
+	configs := make([]compilingPass, 0, len(lintConfigs))
+	for _, path := range lintConfigs {
+		configs = append(configs, compilingPass{name: path, goos: "linux", tags: readGolangciConfig(t, path).Run.BuildTags, cgo: true})
+	}
+	needed := map[string]string{}
+	forEachGoFile(t, func(rel, dir, name string) {
+		only, err := onlyTheUntaggedBuildReads(dir, name, configs)
+		if err != nil {
+			t.Errorf("%s: %v", rel, err)
+			return
+		}
+		if only {
+			needed[filepath.ToSlash(filepath.Dir(rel))] = rel
+		}
+	})
+	for _, gap := range untaggedLintGaps(needed, untaggedLintPackages(t), func(dir string) bool {
+		return untaggedLintExempt.Waived(t, dir)
+	}) {
+		t.Error(gap)
+	}
+}
+
+// onlyTheUntaggedBuildReads reports whether the untagged build compiles a file
+// that no golangci config's tags admit.
+func onlyTheUntaggedBuildReads(dir, name string, configs []compilingPass) (bool, error) {
+	untagged := compilingPass{name: "untagged", goos: "linux", cgo: true}
+	if ok, err := untagged.admits(dir, name); err != nil || !ok {
+		return false, err
+	}
+	for _, cfg := range configs {
+		if ok, err := cfg.admits(dir, name); err != nil || ok {
+			return false, err
+		}
+	}
+	return true, nil
+}
+
+// untaggedLintPackages runs the script `make lint-untagged` takes its packages
+// from, and answers them as repository-relative directories.
+func untaggedLintPackages(t *testing.T) map[string]bool {
+	t.Helper()
+	out, err := exec.Command("bash", filepath.Join(repoRoot, "scripts", "untagged-lint-packages.sh")).Output()
+	if err != nil {
+		t.Fatalf("running scripts/untagged-lint-packages.sh: %v", err)
+	}
+	listed := map[string]bool{}
+	for line := range strings.FieldsSeq(string(out)) {
+		listed[filepath.ToSlash(filepath.Join("backend", line))] = true
+	}
+	return listed
+}
+
+// untaggedLintGaps compares the directories that hold a file only the untagged
+// build reads (each with one such file) against the ones the script lists.
+func untaggedLintGaps(needed map[string]string, listed map[string]bool, exempt func(dir string) bool) []string {
+	var gaps []string
+	for _, dir := range slices.Sorted(maps.Keys(needed)) {
+		switch {
+		case listed[dir] && exempt(dir):
+			gaps = append(gaps, fmt.Sprintf("%s is exempt in untaggedLintExempt and listed by "+
+				"scripts/untagged-lint-packages.sh: the two exclusions disagree, so drop one", dir))
+		case listed[dir], exempt(dir):
+		default:
+			gaps = append(gaps, fmt.Sprintf("%s compiles only without build tags, and "+
+				"scripts/untagged-lint-packages.sh does not list %s, so no golangci pass reads it. "+
+				"The script covers the backend module; make it list this package, or exempt the "+
+				"directory in untaggedLintExempt with what leaving it unlinted costs", needed[dir], dir))
+		}
+	}
+	for _, dir := range slices.Sorted(maps.Keys(listed)) {
+		if _, ok := needed[dir]; !ok {
+			gaps = append(gaps, fmt.Sprintf("scripts/untagged-lint-packages.sh lists %s, which holds no "+
+				"file only the untagged build compiles: the script and go/build disagree", dir))
+		}
+	}
+	return gaps
+}
+
+func TestUntaggedLintGapsNamesEveryMismatch(t *testing.T) {
+	t.Parallel()
+	exempt := func(dir string) bool { return dir == "backend/gates" }
+	for _, c := range []struct {
+		name   string
+		needed map[string]string
+		listed map[string]bool
+		gaps   int
+	}{
+		{"every needed package listed", map[string]string{"backend/a": "backend/a/x.go"}, map[string]bool{"backend/a": true}, 0},
+		{"a needed package the script misses", map[string]string{"backend/a": "backend/a/x.go", "backend/b": "backend/b/y.go"}, map[string]bool{"backend/a": true}, 1},
+		{"an exempt package left out", map[string]string{"backend/gates": "backend/gates/g_test.go"}, map[string]bool{}, 0},
+		{"an exempt package listed anyway", map[string]string{"backend/gates": "backend/gates/g_test.go"}, map[string]bool{"backend/gates": true}, 1},
+		{"a listed package holding no such file", map[string]string{}, map[string]bool{"backend/a": true}, 1},
+	} {
+		t.Run(c.name, func(t *testing.T) {
+			if gaps := untaggedLintGaps(c.needed, c.listed, exempt); len(gaps) != c.gaps {
+				t.Errorf("got %d gap(s) %q, want %d", len(gaps), gaps, c.gaps)
+			}
+		})
+	}
+}
+
+func TestOnlyTheUntaggedBuildReadsANegatedTagFile(t *testing.T) {
+	t.Parallel()
+	dir := t.TempDir()
+	for name, body := range map[string]string{
+		"product.go":     "//go:build !integration\n\npackage p\n",
+		"tagged.go":      "//go:build integration\n\npackage p\n",
+		"plain.go":       "package p\n",
+		"product_win.go": "//go:build !integration && windows\n\npackage p\n",
+	} {
+		if err := os.WriteFile(filepath.Join(dir, name), []byte(body), 0o600); err != nil {
+			t.Fatal(err)
+		}
+	}
+	configs := []compilingPass{{name: "fixture", goos: "linux", tags: []string{"integration"}, cgo: true}}
+	for name, want := range map[string]bool{"product.go": true, "tagged.go": false, "plain.go": false, "product_win.go": false} {
+		got, err := onlyTheUntaggedBuildReads(dir, name, configs)
+		if err != nil || got != want {
+			t.Errorf("%s: only the untagged build reads it = %v (err %v), want %v", name, got, err, want)
+		}
 	}
 }
 

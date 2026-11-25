@@ -51,6 +51,16 @@ func (Runtime) IngestPosition(context.Context, extension.SourceName) (extension.
 	return "", extension.ErrNotDeclared
 }
 
+// IngestMemberBatch answers as the core answers a unit that holds nothing.
+func (Runtime) IngestMemberBatch(context.Context, extension.UserID, extension.SourceName, []extension.Record, extension.BatchPosition, extension.PositionVersion) (extension.MemberBatchResult, error) {
+	return extension.MemberBatchResult{}, extension.ErrAttendedIngest
+}
+
+// MemberIngestPosition answers as the core answers a unit that holds nothing.
+func (Runtime) MemberIngestPosition(context.Context, extension.UserID, extension.SourceName) (extension.MemberPosition, error) {
+	return extension.MemberPosition{}, extension.ErrNotDeclared
+}
+
 // SyncNow answers as the core answers a unit that holds nothing.
 func (Runtime) SyncNow(context.Context, extension.JobName) error { return extension.ErrNoSuchJob }
 

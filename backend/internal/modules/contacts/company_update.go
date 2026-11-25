@@ -56,9 +56,9 @@ type UpdateCompanyInput struct {
 	// add missing, archive removed, flip is_primary). nil leaves domains
 	// untouched; an empty slice clears them.
 	Domains *[]CompanyDomainInput
-	// Lifecycle, when non-nil, moves where the account stands with us
+	// Status, when non-nil, moves where the account stands with us
 	// (ADR-0079/A124). nil leaves it untouched.
-	Lifecycle *string
+	Status *string
 	// Phone and Email, when non-nil, set or (when empty) clear the main number
 	// and the general address. nil leaves them untouched.
 	Phone *string
@@ -233,8 +233,7 @@ func recordCompanyUpdate(
 	if err != nil {
 		return fmt.Errorf("audit company update: %w", err)
 	}
-	if err := storekit.EmitEvent(ctx, tx, auditID, id.UUID,
-		crmcontracts.PublicEventCompanyUpdated{ChangedFields: after}); err != nil {
+	if err := storekit.EmitEvent(ctx, tx, auditID, id.UUID, companyUpdatedEvent(after)); err != nil {
 		return fmt.Errorf("emit company.updated: %w", err)
 	}
 	return nil

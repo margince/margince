@@ -94,7 +94,7 @@ func (d offlineDemoDirectory) accounts(ctx context.Context, tx pgx.Tx, userID st
 		       coalesce(o.display_name, o.legal_name, ''),
 		       coalesce((SELECT domain FROM company_domain
 		                  WHERE company_id = o.id ORDER BY created_at LIMIT 1), ''),
-		       coalesce(o.lifecycle, 'unknown'),
+		       coalesce(o.status, 'unknown'),
 		       coalesce((SELECT contract_number FROM contract
 		                  WHERE company_id = o.id AND archived_at IS NULL
 		                  ORDER BY created_at DESC LIMIT 1), '')

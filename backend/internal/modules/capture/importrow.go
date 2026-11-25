@@ -63,6 +63,14 @@ func recordImportTx(
 	if !sourceAt.IsZero() && datasource.InstantInRange(sourceAt) {
 		occurred = &sourceAt
 	}
+	deliveringProvider, deliveringConnection := provider, runConnection(ctx)
+	if seat, onSeat := chatSeatOf(ctx); onSeat {
+		var err error
+		if deliveringProvider, err = chatSeatProviderTx(ctx, tx, seat); err != nil {
+			return err
+		}
+		deliveringConnection = &seat
+	}
 	query := `
         INSERT INTO capture_import (activity_id, ` + who.column + `, posture_at_import, verdict_status, verdict_reason, verdict_reasons,
                                     provider_received_at, source_occurred_at, delivered_by, bcc_only, provider_message_ids, legal_entity_id)
@@ -85,7 +93,7 @@ func recordImportTx(
 	args := pgx.NamedArgs{
 		"activity": activityID, "importer": who.id, "import_posture": birth.posture,
 		"verdict_status": birth.verdictStatus, "verdict_reason": birth.reason, "verdict_reasons": birth.reasons,
-		"received": received, "occurred": occurred, "delivering_provider": provider, "delivering_connection": runConnection(ctx),
+		"received": received, "occurred": occurred, "delivering_provider": deliveringProvider, "delivering_connection": deliveringConnection,
 		"bcc": bccOnly, "message": providerMessageID,
 	}
 	if _, err := tx.Exec(ctx, query, args); err != nil {
@@ -256,6 +264,11 @@ func seatDeliveredTx(
 	ctx context.Context, tx pgx.Tx, id ids.ActivityID,
 	rec connector.NormalizedRecord, memberBound bool,
 ) (bool, error) {
+	if _, onSeat := chatSeatOf(ctx); onSeat && !memberBound {
+		// A company account's link was approved for this seat, and the capture
+		// reached it through that link. No colleague's mailbox is at stake.
+		return true, nil
+	}
 	if !memberBound {
 		return mailboxWasARecipientTx(ctx, tx, rec)
 	}

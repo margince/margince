@@ -36,7 +36,7 @@ func TestAGhostedSignalCountsCalendarDaysInTheInstallationZone(t *testing.T) {
 	now := time.Date(2026, 9, 16, 1, 0, 0, 0, zone)
 
 	company := e.SeedCompany(t, "Zone Ghost Co", nil)
-	e.WsExec(t, `UPDATE company SET lifecycle = 'opportunity' WHERE id = $1`, company)
+	e.WsExec(t, `UPDATE company SET status = 'opportunity' WHERE id = $1`, company)
 	contact := employedAt(t, e, company, "Zoe Ghost")
 	logMail(t, e, contact, "inbound", wrote.AddDate(0, 0, -5))
 	logMail(t, e, contact, "outbound", wrote)
@@ -73,7 +73,7 @@ func TestAGhostedSignalCountsADayMailFromItsDate(t *testing.T) {
 	now := time.Date(2026, 9, 16, 9, 0, 0, 0, zone)
 
 	company := e.SeedCompany(t, "Day Ghost Co", nil)
-	e.WsExec(t, `UPDATE company SET lifecycle = 'opportunity' WHERE id = $1`, company)
+	e.WsExec(t, `UPDATE company SET status = 'opportunity' WHERE id = $1`, company)
 	contact := employedAt(t, e, company, "Dana Ghost")
 	logMail(t, e, contact, "inbound", dated.AddDate(0, 0, -5))
 	subject, outbound := "Proposal", "outbound"
@@ -170,7 +170,7 @@ func TestALaterScanKeepsOneGhostedSignalWhoseSummaryStillHolds(t *testing.T) {
 	e := integration.Setup(t)
 	wrote := time.Date(2026, 9, 1, 10, 0, 0, 0, time.UTC)
 	company := e.SeedCompany(t, "Later Ghost Co", nil)
-	e.WsExec(t, `UPDATE company SET lifecycle = 'opportunity' WHERE id = $1`, company)
+	e.WsExec(t, `UPDATE company SET status = 'opportunity' WHERE id = $1`, company)
 	contact := employedAt(t, e, company, "Lee Ghost")
 	logMail(t, e, contact, "inbound", wrote.AddDate(0, 0, -5))
 	logMail(t, e, contact, "outbound", wrote)

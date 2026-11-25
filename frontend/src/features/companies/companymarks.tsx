@@ -65,7 +65,7 @@ export function CompanyRoleMarks({ company }: Readonly<{ company: Company }>) {
   const t = useT();
   const types = company.relationship_types ?? [];
   const isPartner = types.includes("partner") || company.partner !== undefined;
-  const formerCustomer = company.lifecycle === "former_customer";
+  const formerCustomer = company.status === "former_customer";
   return (
     <>
       {types.includes("customer") && !formerCustomer && (

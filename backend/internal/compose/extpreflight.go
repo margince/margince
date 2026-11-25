@@ -14,6 +14,7 @@ package compose
 
 import (
 	"fmt"
+	"github.com/margince/margince/backend/internal/compose/extingress"
 
 	"github.com/margince/margince/backend/pkg/extension"
 )
@@ -38,7 +39,7 @@ func preflightIngress(e extension.Extension) error {
 		}
 		seen[source.System] = true
 	}
-	return nil
+	return extingress.RefusePinWithoutMemberChannel(e.Ingress, e.Channels)
 }
 
 // preflightJobs validates one unit's scheduled jobs through the same published

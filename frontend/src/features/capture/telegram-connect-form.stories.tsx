@@ -23,7 +23,7 @@ const pendingConnection: ChannelConnection = {
   provider: "telegram",
   channelId: "555000111",
   channelLabel: "acme_sales_bot",
-  status: "pending",
+  status: "pending_approval",
   version: 1,
 };
 

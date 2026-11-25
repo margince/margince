@@ -37,7 +37,7 @@ func TestTheSystemMailLetterheadIsTheInstallationsOwnCompany(t *testing.T) {
 	logoKey := "logos/" + ids.NewV7().String() + ".png"
 	putPNG(t, blob, logoKey)
 	anchor := ids.NewV7()
-	e.WsExec(t, `INSERT INTO company (id, display_name, is_anchor, logo_object_key, logo_origin, source, captured_by)
+	e.WsExec(t, `INSERT INTO company (id, display_name, is_anchor, logo_object_key, logo_source, source, captured_by)
 		VALUES ($1, 'Northstar GmbH', true, $2, 'upload', 'manual', 'human:x')`, anchor, logoKey)
 	source := newMailLetterhead(e.Pool, blob)
 
@@ -51,7 +51,7 @@ func TestTheSystemMailLetterheadIsTheInstallationsOwnCompany(t *testing.T) {
 	}
 
 	// The logo removed from the company: the name heads the mail alone.
-	e.WsExec(t, `UPDATE company SET logo_object_key = NULL, logo_origin = NULL WHERE id = $1`, anchor)
+	e.WsExec(t, `UPDATE company SET logo_object_key = NULL, logo_source = NULL WHERE id = $1`, anchor)
 	head, inline = source.Letterhead(context.Background(), "en")
 	if head.Name != "Northstar GmbH" || head.LogoContentID != "" || len(inline) != 0 {
 		t.Fatalf("without a logo the letterhead is %+v with %d parts, want the name alone", head, len(inline))
@@ -59,7 +59,7 @@ func TestTheSystemMailLetterheadIsTheInstallationsOwnCompany(t *testing.T) {
 
 	// A key whose object is gone from the store reads as no logo, not as a
 	// refused send.
-	e.WsExec(t, `UPDATE company SET logo_object_key = $2, logo_origin = 'upload' WHERE id = $1`, anchor, "logos/missing.png")
+	e.WsExec(t, `UPDATE company SET logo_object_key = $2, logo_source = 'upload' WHERE id = $1`, anchor, "logos/missing.png")
 	head, inline = source.Letterhead(context.Background(), "en")
 	if head.Name != "Northstar GmbH" || head.LogoContentID != "" || len(inline) != 0 {
 		t.Fatalf("with its object gone the letterhead is %+v with %d parts, want the name alone", head, len(inline))
@@ -97,7 +97,7 @@ func (failingBlob) Get(context.Context, string) (io.ReadCloser, blobstore.Object
 func TestAResetMailGoesOutWhenTheLogoStoreFails(t *testing.T) {
 	e := integration.Setup(t)
 	logoKey := "logos/" + ids.NewV7().String() + ".png"
-	e.WsExec(t, `INSERT INTO company (id, display_name, is_anchor, logo_object_key, logo_origin, source, captured_by)
+	e.WsExec(t, `INSERT INTO company (id, display_name, is_anchor, logo_object_key, logo_source, source, captured_by)
 		VALUES ($1, 'Northstar GmbH', true, $2, 'upload', 'manual', 'human:x')`, ids.NewV7(), logoKey)
 	relay := testsmtp.Start(t, false)
 	host, port := relay.Address(t)
@@ -126,7 +126,7 @@ func TestOnlyTheAnchorCompanysLogoHeadsTheMail(t *testing.T) {
 	anchorKey, otherKey := "logos/anchor.png", "logos/other.png"
 	putPNG(t, blob, anchorKey)
 	putWidePNG(t, blob, otherKey)
-	e.WsExec(t, `INSERT INTO company (id, display_name, is_anchor, logo_object_key, logo_origin, source, captured_by)
+	e.WsExec(t, `INSERT INTO company (id, display_name, is_anchor, logo_object_key, logo_source, source, captured_by)
 		VALUES ($1, 'Northstar GmbH', true, $2, 'upload', 'manual', 'human:x'),
 		       ($3, 'Southwind Ltd', false, $4, 'upload', 'manual', 'human:x')`, ids.NewV7(), anchorKey, ids.NewV7(), otherKey)
 	want, ok, err := newSignatureLogo(blob).SignatureLogo(context.Background(), anchorKey)
@@ -184,7 +184,7 @@ func TestAControllerMailIsHeadedByTheControllerItNames(t *testing.T) {
 	blob := blobstore.NewMemory()
 	logoKey := "logos/" + ids.NewV7().String() + ".png"
 	putPNG(t, blob, logoKey)
-	e.WsExec(t, `INSERT INTO company (id, display_name, is_anchor, logo_object_key, logo_origin, source, captured_by)
+	e.WsExec(t, `INSERT INTO company (id, display_name, is_anchor, logo_object_key, logo_source, source, captured_by)
 		VALUES ($1, 'Northstar GmbH', true, $2, 'upload', 'manual', 'human:x')`, ids.NewV7(), logoKey)
 	e.WsExec(t, `INSERT INTO setting (key, value) VALUES ('consent.controller_particulars', '{"LegalName": "Example Trading GmbH"}'::jsonb)
 		ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value`)

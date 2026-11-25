@@ -40,8 +40,9 @@ type Subject struct {
 	// or its creation when it never moved.
 	StageID        string
 	StageEnteredAt time.Time
-	// The total of the most recent sent or accepted offer, when there is one.
-	OfferTotalMinor *int64
+	// The net total of the most recent sent or accepted offer, when there is one.
+	// A deal's value has no tax, so the offer is compared without it.
+	OfferNetMinor *int64
 	// The total of the signed contract, when there is one.
 	ContractTotalMinor *int64
 	// How many times the close date has been pushed within this period.
@@ -89,6 +90,9 @@ type Finding struct {
 	// — different from zero, which would claim nothing is at stake.
 	AffectedMinor *int64
 	Currency      string
+	// OtherID is the second deal of a finding about a pair of deals, empty for
+	// every other. SubjectID stays the one deal the finding is filed on.
+	OtherID string
 }
 
 // The exception types, and the one place they are named.
@@ -102,7 +106,15 @@ const (
 	TypeNoEconomicBuyer  = "no_economic_buyer"
 	TypeCommitUnpriced   = "commit_unpriced"
 	TypeStageExitUnmet   = "stage_exit_unmet"
+	// TypeDuplicateMotion is a pair finding: two open deals of one account that
+	// read as one buying motion. It is asked of a PairSubject, not of a Subject,
+	// so it is not in Rules().
+	TypeDuplicateMotion = "duplicate_motion"
 )
+
+// DuplicateMotionWindowDays is how far apart two deals' close dates may lie and
+// still be one buying motion.
+const DuplicateMotionWindowDays = 60
 
 // TypeBuyerSilent is a RETIRED type. Stored findings keep it for their
 // history. A pass that read the mailbox clears the open ones, because no rule
@@ -282,11 +294,12 @@ func closePushed() Rule {
 	}}
 }
 
-// The deal says one number and the offer that was sent says another. The buyer
-// is looking at the offer.
+// The deal says one number and the offer that was sent says another. Both are
+// without tax: the deal's value never carries it, and the offer's net is the
+// figure that compares. The buyer is looking at the offer.
 func amountVsOffer() Rule {
 	return Rule{Type: TypeAmountVsOffer, Needs: []string{"offers"}, Ask: func(_ time.Time, s Subject, cfg Config) *Finding {
-		return amountDisagreement(TypeAmountVsOffer, s, s.OfferTotalMinor, "offer_total", cfg)
+		return amountDisagreement(TypeAmountVsOffer, s, s.OfferNetMinor, "offer_net", cfg)
 	}}
 }
 
@@ -384,6 +397,10 @@ func commitUnpriced() Rule {
 // Keyed on the value, a close date that moved twice would be three exceptions
 // and somebody would resolve the same finding three times.
 func LogicalKey(f Finding) string {
+	// A pair names both deals in id order, one identity whichever it is filed on.
+	if f.OtherID != "" {
+		return fmt.Sprintf("%s:%s:%s", f.Type, min(f.SubjectID, f.OtherID), max(f.SubjectID, f.OtherID))
+	}
 	return fmt.Sprintf("%s:%s", f.Type, f.SubjectID)
 }
 

@@ -315,6 +315,47 @@ schema: { $ref: '#/components/schemas/Kind' }
 	}
 }
 
+// A list carries its members' words, so a caller learns which values the route
+// takes before the route refuses one.
+func TestAListParameterCarriesItsMembersWords(t *testing.T) {
+	var param queryParameter
+	if err := yaml.Unmarshal([]byte(`
+name: state
+in: query
+schema: { type: array, items: { $ref: '#/components/schemas/State' } }
+style: form
+explode: true
+`), &param); err != nil {
+		t.Fatal(err)
+	}
+	schemas := map[string]schemaNode{"State": {Type: "string", Enum: []string{"open", "closed"}}}
+	got, err := queryOf(param, schemas)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if want := `{Name: "state", Type: "array", Enum: []string{"open", "closed"}}`; got.literal() != want {
+		t.Errorf("the list renders as %s, want %s", got.literal(), want)
+	}
+	param.Schema.Items = &parameterSet{Format: "uuid"}
+	if got, _ := queryOf(param, schemas); got.literal() != `{Name: "state", Type: "array", Format: "uuid"}` {
+		t.Errorf("a list of uuids renders as %s", got.literal())
+	}
+}
+
+// The door sends one key per member, so a route reading a list another way
+// fails generation instead of answering a request it misreads.
+func TestAListTheDoorCannotSendFailsGeneration(t *testing.T) {
+	for _, encoding := range []string{"style: form\nexplode: false", "style: spaceDelimited"} {
+		var param queryParameter
+		if err := yaml.Unmarshal([]byte("name: types\nin: query\nschema: { type: array, items: { type: string } }\n"+encoding), &param); err != nil {
+			t.Fatal(err)
+		}
+		if _, err := queryOf(param, nil); err == nil || !strings.Contains(err.Error(), "one key per member") {
+			t.Errorf("a list read as %q generated (%v), want it refused", encoding, err)
+		}
+	}
+}
+
 // A member an answer may hold as null, or a route may leave out, must not fail the
 // check that withholds a client's structured answer. A field named required stays.
 func TestAnAnswerSchemaRequiresNoNestedMember(t *testing.T) {

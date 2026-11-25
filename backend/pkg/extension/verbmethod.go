@@ -140,8 +140,7 @@ func validateQueryEncodable(method string, raw json.RawMessage) error {
 	// rather than the fault. `required` below is a slice and already deterministic,
 	// and querySchema sorts what it emits for the same reason.
 	for _, name := range slices.Sorted(maps.Keys(doc.Properties)) {
-		switch doc.Properties[name].Type {
-		case "string", "number", "integer", "boolean":
+		if flatArgumentType(doc.Properties[name].Type) {
 			continue
 		}
 		return fmt.Errorf("operation declares %s but its argument %q is of type %q — a query string carries flat "+
@@ -162,4 +161,14 @@ func validateQueryEncodable(method string, raw json.RawMessage) error {
 		}
 	}
 	return nil
+}
+
+// flatArgumentType reports whether an argument of this JSON type fits in one
+// query or path value.
+func flatArgumentType(jsonType string) bool {
+	switch jsonType {
+	case "string", "number", "integer", "boolean":
+		return true
+	}
+	return false
 }

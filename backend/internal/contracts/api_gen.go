@@ -5310,8 +5310,11 @@ func (e ChangeContractStatusRequestStatus) Valid() bool {
 
 // Defines values for ChannelConnectionProvider.
 const (
-	ChannelConnectionProviderDispact  ChannelConnectionProvider = "dispact"
-	ChannelConnectionProviderTelegram ChannelConnectionProvider = "telegram"
+	ChannelConnectionProviderDispact          ChannelConnectionProvider = "dispact"
+	ChannelConnectionProviderTelegram         ChannelConnectionProvider = "telegram"
+	ChannelConnectionProviderTelegramBusiness ChannelConnectionProvider = "telegram_business"
+	ChannelConnectionProviderWhatsapp         ChannelConnectionProvider = "whatsapp"
+	ChannelConnectionProviderZaloOa           ChannelConnectionProvider = "zalo_oa"
 )
 
 // Valid indicates whether the value is a known member of the ChannelConnectionProvider enum.
@@ -5321,6 +5324,12 @@ func (e ChannelConnectionProvider) Valid() bool {
 		return true
 	case ChannelConnectionProviderTelegram:
 		return true
+	case ChannelConnectionProviderTelegramBusiness:
+		return true
+	case ChannelConnectionProviderWhatsapp:
+		return true
+	case ChannelConnectionProviderZaloOa:
+		return true
 	default:
 		return false
 	}
@@ -5328,11 +5337,11 @@ func (e ChannelConnectionProvider) Valid() bool {
 
 // Defines values for ChannelConnectionStatus.
 const (
-	ChannelConnectionStatusConnected      ChannelConnectionStatus = "connected"
-	ChannelConnectionStatusDisconnected   ChannelConnectionStatus = "disconnected"
-	ChannelConnectionStatusError          ChannelConnectionStatus = "error"
-	ChannelConnectionStatusPending        ChannelConnectionStatus = "pending"
-	ChannelConnectionStatusReauthRequired ChannelConnectionStatus = "reauth_required"
+	ChannelConnectionStatusConnected       ChannelConnectionStatus = "connected"
+	ChannelConnectionStatusDisconnected    ChannelConnectionStatus = "disconnected"
+	ChannelConnectionStatusError           ChannelConnectionStatus = "error"
+	ChannelConnectionStatusPendingApproval ChannelConnectionStatus = "pending_approval"
+	ChannelConnectionStatusReauthRequired  ChannelConnectionStatus = "reauth_required"
 )
 
 // Valid indicates whether the value is a known member of the ChannelConnectionStatus enum.
@@ -5344,7 +5353,7 @@ func (e ChannelConnectionStatus) Valid() bool {
 		return true
 	case ChannelConnectionStatusError:
 		return true
-	case ChannelConnectionStatusPending:
+	case ChannelConnectionStatusPendingApproval:
 		return true
 	case ChannelConnectionStatusReauthRequired:
 		return true
@@ -5875,45 +5884,6 @@ func (e CompanyIndustry) Valid() bool {
 	}
 }
 
-// Defines values for CompanyLifecycle.
-const (
-	CompanyLifecycleCustomer       CompanyLifecycle = "customer"
-	CompanyLifecycleDisqualified   CompanyLifecycle = "disqualified"
-	CompanyLifecycleFormerCustomer CompanyLifecycle = "former_customer"
-	CompanyLifecycleLive           CompanyLifecycle = "live"
-	CompanyLifecycleOnboarding     CompanyLifecycle = "onboarding"
-	CompanyLifecycleOpportunity    CompanyLifecycle = "opportunity"
-	CompanyLifecycleProspect       CompanyLifecycle = "prospect"
-	CompanyLifecycleTarget         CompanyLifecycle = "target"
-	CompanyLifecycleUnknown        CompanyLifecycle = "unknown"
-)
-
-// Valid indicates whether the value is a known member of the CompanyLifecycle enum.
-func (e CompanyLifecycle) Valid() bool {
-	switch e {
-	case CompanyLifecycleCustomer:
-		return true
-	case CompanyLifecycleDisqualified:
-		return true
-	case CompanyLifecycleFormerCustomer:
-		return true
-	case CompanyLifecycleLive:
-		return true
-	case CompanyLifecycleOnboarding:
-		return true
-	case CompanyLifecycleOpportunity:
-		return true
-	case CompanyLifecycleProspect:
-		return true
-	case CompanyLifecycleTarget:
-		return true
-	case CompanyLifecycleUnknown:
-		return true
-	default:
-		return false
-	}
-}
-
 // Defines values for CompanyRelationshipTypes.
 const (
 	CompanyRelationshipTypesCompetitor       CompanyRelationshipTypes = "competitor"
@@ -5974,6 +5944,45 @@ func (e CompanySizeBand) Valid() bool {
 	case CompanySizeBandN5011000:
 		return true
 	case CompanySizeBandN51200:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for CompanyStatus.
+const (
+	CompanyStatusCustomer       CompanyStatus = "customer"
+	CompanyStatusDisqualified   CompanyStatus = "disqualified"
+	CompanyStatusFormerCustomer CompanyStatus = "former_customer"
+	CompanyStatusLive           CompanyStatus = "live"
+	CompanyStatusOnboarding     CompanyStatus = "onboarding"
+	CompanyStatusOpportunity    CompanyStatus = "opportunity"
+	CompanyStatusProspect       CompanyStatus = "prospect"
+	CompanyStatusTarget         CompanyStatus = "target"
+	CompanyStatusUnknown        CompanyStatus = "unknown"
+)
+
+// Valid indicates whether the value is a known member of the CompanyStatus enum.
+func (e CompanyStatus) Valid() bool {
+	switch e {
+	case CompanyStatusCustomer:
+		return true
+	case CompanyStatusDisqualified:
+		return true
+	case CompanyStatusFormerCustomer:
+		return true
+	case CompanyStatusLive:
+		return true
+	case CompanyStatusOnboarding:
+		return true
+	case CompanyStatusOpportunity:
+		return true
+	case CompanyStatusProspect:
+		return true
+	case CompanyStatusTarget:
+		return true
+	case CompanyStatusUnknown:
 		return true
 	default:
 		return false
@@ -6229,45 +6238,6 @@ func (e Company360RouteStrengthBucket) Valid() bool {
 	}
 }
 
-// Defines values for Company360StateStripAccountLifecycle.
-const (
-	Company360StateStripAccountLifecycleCustomer       Company360StateStripAccountLifecycle = "customer"
-	Company360StateStripAccountLifecycleDisqualified   Company360StateStripAccountLifecycle = "disqualified"
-	Company360StateStripAccountLifecycleFormerCustomer Company360StateStripAccountLifecycle = "former_customer"
-	Company360StateStripAccountLifecycleLive           Company360StateStripAccountLifecycle = "live"
-	Company360StateStripAccountLifecycleOnboarding     Company360StateStripAccountLifecycle = "onboarding"
-	Company360StateStripAccountLifecycleOpportunity    Company360StateStripAccountLifecycle = "opportunity"
-	Company360StateStripAccountLifecycleProspect       Company360StateStripAccountLifecycle = "prospect"
-	Company360StateStripAccountLifecycleTarget         Company360StateStripAccountLifecycle = "target"
-	Company360StateStripAccountLifecycleUnknown        Company360StateStripAccountLifecycle = "unknown"
-)
-
-// Valid indicates whether the value is a known member of the Company360StateStripAccountLifecycle enum.
-func (e Company360StateStripAccountLifecycle) Valid() bool {
-	switch e {
-	case Company360StateStripAccountLifecycleCustomer:
-		return true
-	case Company360StateStripAccountLifecycleDisqualified:
-		return true
-	case Company360StateStripAccountLifecycleFormerCustomer:
-		return true
-	case Company360StateStripAccountLifecycleLive:
-		return true
-	case Company360StateStripAccountLifecycleOnboarding:
-		return true
-	case Company360StateStripAccountLifecycleOpportunity:
-		return true
-	case Company360StateStripAccountLifecycleProspect:
-		return true
-	case Company360StateStripAccountLifecycleTarget:
-		return true
-	case Company360StateStripAccountLifecycleUnknown:
-		return true
-	default:
-		return false
-	}
-}
-
 // Defines values for Company360StateStripAccountRelationshipTypes.
 const (
 	Company360StateStripAccountRelationshipTypesCompetitor       Company360StateStripAccountRelationshipTypes = "competitor"
@@ -6295,6 +6265,45 @@ func (e Company360StateStripAccountRelationshipTypes) Valid() bool {
 	case Company360StateStripAccountRelationshipTypesPortfolioCompany:
 		return true
 	case Company360StateStripAccountRelationshipTypesSupplier:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for Company360StateStripAccountStatus.
+const (
+	Company360StateStripAccountStatusCustomer       Company360StateStripAccountStatus = "customer"
+	Company360StateStripAccountStatusDisqualified   Company360StateStripAccountStatus = "disqualified"
+	Company360StateStripAccountStatusFormerCustomer Company360StateStripAccountStatus = "former_customer"
+	Company360StateStripAccountStatusLive           Company360StateStripAccountStatus = "live"
+	Company360StateStripAccountStatusOnboarding     Company360StateStripAccountStatus = "onboarding"
+	Company360StateStripAccountStatusOpportunity    Company360StateStripAccountStatus = "opportunity"
+	Company360StateStripAccountStatusProspect       Company360StateStripAccountStatus = "prospect"
+	Company360StateStripAccountStatusTarget         Company360StateStripAccountStatus = "target"
+	Company360StateStripAccountStatusUnknown        Company360StateStripAccountStatus = "unknown"
+)
+
+// Valid indicates whether the value is a known member of the Company360StateStripAccountStatus enum.
+func (e Company360StateStripAccountStatus) Valid() bool {
+	switch e {
+	case Company360StateStripAccountStatusCustomer:
+		return true
+	case Company360StateStripAccountStatusDisqualified:
+		return true
+	case Company360StateStripAccountStatusFormerCustomer:
+		return true
+	case Company360StateStripAccountStatusLive:
+		return true
+	case Company360StateStripAccountStatusOnboarding:
+		return true
+	case Company360StateStripAccountStatusOpportunity:
+		return true
+	case Company360StateStripAccountStatusProspect:
+		return true
+	case Company360StateStripAccountStatusTarget:
+		return true
+	case Company360StateStripAccountStatusUnknown:
 		return true
 	default:
 		return false
@@ -7756,6 +7765,45 @@ func (e CompanyVatCheckStatus) Valid() bool {
 	case CompanyVatCheckStatusCompanyVatCheckStatusUnavailable:
 		return true
 	case CompanyVatCheckStatusCompanyVatCheckStatusValid:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ComposedExtensionMailHooksReads.
+const (
+	ComposedExtensionMailHooksReadsAddresses ComposedExtensionMailHooksReads = "addresses"
+	ComposedExtensionMailHooksReadsBody      ComposedExtensionMailHooksReads = "body"
+	ComposedExtensionMailHooksReadsSubject   ComposedExtensionMailHooksReads = "subject"
+)
+
+// Valid indicates whether the value is a known member of the ComposedExtensionMailHooksReads enum.
+func (e ComposedExtensionMailHooksReads) Valid() bool {
+	switch e {
+	case ComposedExtensionMailHooksReadsAddresses:
+		return true
+	case ComposedExtensionMailHooksReadsBody:
+		return true
+	case ComposedExtensionMailHooksReadsSubject:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ComposedExtensionSetupItemKind.
+const (
+	ComposedExtensionSetupItemKindOauthApp        ComposedExtensionSetupItemKind = "oauth_app"
+	ComposedExtensionSetupItemKindWorkspaceSecret ComposedExtensionSetupItemKind = "workspace_secret"
+)
+
+// Valid indicates whether the value is a known member of the ComposedExtensionSetupItemKind enum.
+func (e ComposedExtensionSetupItemKind) Valid() bool {
+	switch e {
+	case ComposedExtensionSetupItemKindOauthApp:
+		return true
+	case ComposedExtensionSetupItemKindWorkspaceSecret:
 		return true
 	default:
 		return false
@@ -11649,6 +11697,7 @@ const (
 	DealCommercialAmountBasisEstimate          DealCommercialAmountBasis = "estimate"
 	DealCommercialAmountBasisLinesNetCommitted DealCommercialAmountBasis = "lines_net_committed"
 	DealCommercialAmountBasisOfferGross        DealCommercialAmountBasis = "offer_gross"
+	DealCommercialAmountBasisOfferNet          DealCommercialAmountBasis = "offer_net"
 	DealCommercialAmountBasisUnknown           DealCommercialAmountBasis = "unknown"
 )
 
@@ -11660,6 +11709,8 @@ func (e DealCommercialAmountBasis) Valid() bool {
 	case DealCommercialAmountBasisLinesNetCommitted:
 		return true
 	case DealCommercialAmountBasisOfferGross:
+		return true
+	case DealCommercialAmountBasisOfferNet:
 		return true
 	case DealCommercialAmountBasisUnknown:
 		return true
@@ -13426,6 +13477,24 @@ func (e ExtensionReportKind) Valid() bool {
 	case ExtensionReportKindBreakdown:
 		return true
 	case ExtensionReportKindCount:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ExtensionReportStatus.
+const (
+	ExtensionReportStatusOk          ExtensionReportStatus = "ok"
+	ExtensionReportStatusUnavailable ExtensionReportStatus = "unavailable"
+)
+
+// Valid indicates whether the value is a known member of the ExtensionReportStatus enum.
+func (e ExtensionReportStatus) Valid() bool {
+	switch e {
+	case ExtensionReportStatusOk:
+		return true
+	case ExtensionReportStatusUnavailable:
 		return true
 	default:
 		return false
@@ -17456,6 +17525,7 @@ const (
 	ListHealthOwnerless    ListHealth = "ownerless"
 	ListHealthRetiredField ListHealth = "retired_field"
 	ListHealthRetiredTag   ListHealth = "retired_tag"
+	ListHealthUnavailable  ListHealth = "unavailable"
 )
 
 // Valid indicates whether the value is a known member of the ListHealth enum.
@@ -17470,6 +17540,8 @@ func (e ListHealth) Valid() bool {
 	case ListHealthRetiredField:
 		return true
 	case ListHealthRetiredTag:
+		return true
+	case ListHealthUnavailable:
 		return true
 	default:
 		return false
@@ -22520,6 +22592,7 @@ const (
 	ResolveInputCheckOutcomeNotRelevant   ResolveInputCheckOutcome = "not_relevant"
 	ResolveInputCheckOutcomeReassign      ResolveInputCheckOutcome = "reassign"
 	ResolveInputCheckOutcomeRemindLater   ResolveInputCheckOutcome = "remind_later"
+	ResolveInputCheckOutcomeSeparate      ResolveInputCheckOutcome = "separate"
 	ResolveInputCheckOutcomeValueCorrect  ResolveInputCheckOutcome = "value_correct"
 )
 
@@ -22535,6 +22608,8 @@ func (e ResolveInputCheckOutcome) Valid() bool {
 	case ResolveInputCheckOutcomeReassign:
 		return true
 	case ResolveInputCheckOutcomeRemindLater:
+		return true
+	case ResolveInputCheckOutcomeSeparate:
 		return true
 	case ResolveInputCheckOutcomeValueCorrect:
 		return true
@@ -25888,6 +25963,48 @@ func (e TechnicalEnrichStartedStatus) Valid() bool {
 	}
 }
 
+// Defines values for TelegramBusinessConnectionMailVisibility.
+const (
+	TelegramBusinessConnectionMailVisibilityClassified TelegramBusinessConnectionMailVisibility = "classified"
+	TelegramBusinessConnectionMailVisibilityHeld       TelegramBusinessConnectionMailVisibility = "held"
+	TelegramBusinessConnectionMailVisibilityShared     TelegramBusinessConnectionMailVisibility = "shared"
+)
+
+// Valid indicates whether the value is a known member of the TelegramBusinessConnectionMailVisibility enum.
+func (e TelegramBusinessConnectionMailVisibility) Valid() bool {
+	switch e {
+	case TelegramBusinessConnectionMailVisibilityClassified:
+		return true
+	case TelegramBusinessConnectionMailVisibilityHeld:
+		return true
+	case TelegramBusinessConnectionMailVisibilityShared:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for TelegramBusinessConnectionStatus.
+const (
+	TelegramBusinessConnectionStatusConnected       TelegramBusinessConnectionStatus = "connected"
+	TelegramBusinessConnectionStatusDisconnected    TelegramBusinessConnectionStatus = "disconnected"
+	TelegramBusinessConnectionStatusPendingApproval TelegramBusinessConnectionStatus = "pending_approval"
+)
+
+// Valid indicates whether the value is a known member of the TelegramBusinessConnectionStatus enum.
+func (e TelegramBusinessConnectionStatus) Valid() bool {
+	switch e {
+	case TelegramBusinessConnectionStatusConnected:
+		return true
+	case TelegramBusinessConnectionStatusDisconnected:
+		return true
+	case TelegramBusinessConnectionStatusPendingApproval:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for TranscriptReadReportStatus.
 const (
 	TranscriptReadReportStatusDone    TranscriptReadReportStatus = "done"
@@ -26182,45 +26299,6 @@ func (e UpdateAutomationRequestStatus) Valid() bool {
 	}
 }
 
-// Defines values for UpdateCompanyRequestLifecycle.
-const (
-	UpdateCompanyRequestLifecycleCustomer       UpdateCompanyRequestLifecycle = "customer"
-	UpdateCompanyRequestLifecycleDisqualified   UpdateCompanyRequestLifecycle = "disqualified"
-	UpdateCompanyRequestLifecycleFormerCustomer UpdateCompanyRequestLifecycle = "former_customer"
-	UpdateCompanyRequestLifecycleLive           UpdateCompanyRequestLifecycle = "live"
-	UpdateCompanyRequestLifecycleOnboarding     UpdateCompanyRequestLifecycle = "onboarding"
-	UpdateCompanyRequestLifecycleOpportunity    UpdateCompanyRequestLifecycle = "opportunity"
-	UpdateCompanyRequestLifecycleProspect       UpdateCompanyRequestLifecycle = "prospect"
-	UpdateCompanyRequestLifecycleTarget         UpdateCompanyRequestLifecycle = "target"
-	UpdateCompanyRequestLifecycleUnknown        UpdateCompanyRequestLifecycle = "unknown"
-)
-
-// Valid indicates whether the value is a known member of the UpdateCompanyRequestLifecycle enum.
-func (e UpdateCompanyRequestLifecycle) Valid() bool {
-	switch e {
-	case UpdateCompanyRequestLifecycleCustomer:
-		return true
-	case UpdateCompanyRequestLifecycleDisqualified:
-		return true
-	case UpdateCompanyRequestLifecycleFormerCustomer:
-		return true
-	case UpdateCompanyRequestLifecycleLive:
-		return true
-	case UpdateCompanyRequestLifecycleOnboarding:
-		return true
-	case UpdateCompanyRequestLifecycleOpportunity:
-		return true
-	case UpdateCompanyRequestLifecycleProspect:
-		return true
-	case UpdateCompanyRequestLifecycleTarget:
-		return true
-	case UpdateCompanyRequestLifecycleUnknown:
-		return true
-	default:
-		return false
-	}
-}
-
 // Defines values for UpdateCompanyRequestRelationshipTypes.
 const (
 	UpdateCompanyRequestRelationshipTypesCompetitor       UpdateCompanyRequestRelationshipTypes = "competitor"
@@ -26281,6 +26359,45 @@ func (e UpdateCompanyRequestSizeBand) Valid() bool {
 	case UpdateCompanyRequestSizeBandN5011000:
 		return true
 	case UpdateCompanyRequestSizeBandN51200:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for UpdateCompanyRequestStatus.
+const (
+	UpdateCompanyRequestStatusCustomer       UpdateCompanyRequestStatus = "customer"
+	UpdateCompanyRequestStatusDisqualified   UpdateCompanyRequestStatus = "disqualified"
+	UpdateCompanyRequestStatusFormerCustomer UpdateCompanyRequestStatus = "former_customer"
+	UpdateCompanyRequestStatusLive           UpdateCompanyRequestStatus = "live"
+	UpdateCompanyRequestStatusOnboarding     UpdateCompanyRequestStatus = "onboarding"
+	UpdateCompanyRequestStatusOpportunity    UpdateCompanyRequestStatus = "opportunity"
+	UpdateCompanyRequestStatusProspect       UpdateCompanyRequestStatus = "prospect"
+	UpdateCompanyRequestStatusTarget         UpdateCompanyRequestStatus = "target"
+	UpdateCompanyRequestStatusUnknown        UpdateCompanyRequestStatus = "unknown"
+)
+
+// Valid indicates whether the value is a known member of the UpdateCompanyRequestStatus enum.
+func (e UpdateCompanyRequestStatus) Valid() bool {
+	switch e {
+	case UpdateCompanyRequestStatusCustomer:
+		return true
+	case UpdateCompanyRequestStatusDisqualified:
+		return true
+	case UpdateCompanyRequestStatusFormerCustomer:
+		return true
+	case UpdateCompanyRequestStatusLive:
+		return true
+	case UpdateCompanyRequestStatusOnboarding:
+		return true
+	case UpdateCompanyRequestStatusOpportunity:
+		return true
+	case UpdateCompanyRequestStatusProspect:
+		return true
+	case UpdateCompanyRequestStatusTarget:
+		return true
+	case UpdateCompanyRequestStatusUnknown:
 		return true
 	default:
 		return false
@@ -27088,6 +27205,27 @@ func (e UpdateTagRequestColor) Valid() bool {
 	case UpdateTagRequestColorTeal:
 		return true
 	case UpdateTagRequestColorViolet:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for UpdateTelegramBusinessConnectionVisibilityRequestMailVisibility.
+const (
+	UpdateTelegramBusinessConnectionVisibilityRequestMailVisibilityClassified UpdateTelegramBusinessConnectionVisibilityRequestMailVisibility = "classified"
+	UpdateTelegramBusinessConnectionVisibilityRequestMailVisibilityHeld       UpdateTelegramBusinessConnectionVisibilityRequestMailVisibility = "held"
+	UpdateTelegramBusinessConnectionVisibilityRequestMailVisibilityShared     UpdateTelegramBusinessConnectionVisibilityRequestMailVisibility = "shared"
+)
+
+// Valid indicates whether the value is a known member of the UpdateTelegramBusinessConnectionVisibilityRequestMailVisibility enum.
+func (e UpdateTelegramBusinessConnectionVisibilityRequestMailVisibility) Valid() bool {
+	switch e {
+	case UpdateTelegramBusinessConnectionVisibilityRequestMailVisibilityClassified:
+		return true
+	case UpdateTelegramBusinessConnectionVisibilityRequestMailVisibilityHeld:
+		return true
+	case UpdateTelegramBusinessConnectionVisibilityRequestMailVisibilityShared:
 		return true
 	default:
 		return false
@@ -31078,39 +31216,39 @@ func (e ListCompaniesParamsCapturedByKind) Valid() bool {
 	}
 }
 
-// Defines values for ListCompaniesParamsLifecycle.
+// Defines values for ListCompaniesParamsStatus.
 const (
-	ListCompaniesParamsLifecycleCustomer       ListCompaniesParamsLifecycle = "customer"
-	ListCompaniesParamsLifecycleDisqualified   ListCompaniesParamsLifecycle = "disqualified"
-	ListCompaniesParamsLifecycleFormerCustomer ListCompaniesParamsLifecycle = "former_customer"
-	ListCompaniesParamsLifecycleLive           ListCompaniesParamsLifecycle = "live"
-	ListCompaniesParamsLifecycleOnboarding     ListCompaniesParamsLifecycle = "onboarding"
-	ListCompaniesParamsLifecycleOpportunity    ListCompaniesParamsLifecycle = "opportunity"
-	ListCompaniesParamsLifecycleProspect       ListCompaniesParamsLifecycle = "prospect"
-	ListCompaniesParamsLifecycleTarget         ListCompaniesParamsLifecycle = "target"
-	ListCompaniesParamsLifecycleUnknown        ListCompaniesParamsLifecycle = "unknown"
+	ListCompaniesParamsStatusCustomer       ListCompaniesParamsStatus = "customer"
+	ListCompaniesParamsStatusDisqualified   ListCompaniesParamsStatus = "disqualified"
+	ListCompaniesParamsStatusFormerCustomer ListCompaniesParamsStatus = "former_customer"
+	ListCompaniesParamsStatusLive           ListCompaniesParamsStatus = "live"
+	ListCompaniesParamsStatusOnboarding     ListCompaniesParamsStatus = "onboarding"
+	ListCompaniesParamsStatusOpportunity    ListCompaniesParamsStatus = "opportunity"
+	ListCompaniesParamsStatusProspect       ListCompaniesParamsStatus = "prospect"
+	ListCompaniesParamsStatusTarget         ListCompaniesParamsStatus = "target"
+	ListCompaniesParamsStatusUnknown        ListCompaniesParamsStatus = "unknown"
 )
 
-// Valid indicates whether the value is a known member of the ListCompaniesParamsLifecycle enum.
-func (e ListCompaniesParamsLifecycle) Valid() bool {
+// Valid indicates whether the value is a known member of the ListCompaniesParamsStatus enum.
+func (e ListCompaniesParamsStatus) Valid() bool {
 	switch e {
-	case ListCompaniesParamsLifecycleCustomer:
+	case ListCompaniesParamsStatusCustomer:
 		return true
-	case ListCompaniesParamsLifecycleDisqualified:
+	case ListCompaniesParamsStatusDisqualified:
 		return true
-	case ListCompaniesParamsLifecycleFormerCustomer:
+	case ListCompaniesParamsStatusFormerCustomer:
 		return true
-	case ListCompaniesParamsLifecycleLive:
+	case ListCompaniesParamsStatusLive:
 		return true
-	case ListCompaniesParamsLifecycleOnboarding:
+	case ListCompaniesParamsStatusOnboarding:
 		return true
-	case ListCompaniesParamsLifecycleOpportunity:
+	case ListCompaniesParamsStatusOpportunity:
 		return true
-	case ListCompaniesParamsLifecycleProspect:
+	case ListCompaniesParamsStatusProspect:
 		return true
-	case ListCompaniesParamsLifecycleTarget:
+	case ListCompaniesParamsStatusTarget:
 		return true
-	case ListCompaniesParamsLifecycleUnknown:
+	case ListCompaniesParamsStatusUnknown:
 		return true
 	default:
 		return false
@@ -37182,6 +37320,12 @@ type ApproveRequest struct {
 	Reason *string `json:"reason,omitempty"`
 }
 
+// ApproveTelegramBusinessConnectionRequest defines model for ApproveTelegramBusinessConnectionRequest.
+type ApproveTelegramBusinessConnectionRequest struct {
+	// ReaderTeamId The team that reads the account's messages.
+	ReaderTeamId *openapi_types.UUID `json:"readerTeamId,omitempty"`
+}
+
 // ArchiveDeletionRequest defines model for ArchiveDeletionRequest.
 type ArchiveDeletionRequest struct {
 	// ActivityIds The archived activity to delete, at most 100 per request.
@@ -37260,7 +37404,7 @@ type AssessNoticeSource struct {
 	MetInPerson *bool `json:"met_in_person,omitempty"`
 
 	// Note Evidence in the officer's words. Required when no existing evidence is selected.
-	Note       string     `json:"note"`
+	Note       *string    `json:"note,omitempty"`
 	ObtainedAt *time.Time `json:"obtained_at,omitempty"`
 
 	// PreviewToken When provided, refuses a confirmation if the case, selected evidence or proposed assessment changed since preview.
@@ -38870,7 +39014,7 @@ type AuthCapabilities struct {
 	// Password Email + password login is enabled.
 	Password bool `json:"password"`
 
-	// PasswordReset The A74 reset flow can complete end to end (outbound email configured + healthy).
+	// PasswordReset Password sign-in is on and the reset mail channel is configured. Nothing checks that mail is delivered.
 	PasswordReset bool `json:"password_reset"`
 
 	// ReleaseVersion The release this api was built from (`YYYY.<edition>`). A client compares it against its OWN release and refuses to run against a different one — a mixed-release set must not serve. ABSENT is not a mismatch: it means this api carries no release version (a build that was not published as one), and a client MUST then make no comparison rather than treat the absence as a difference.
@@ -41196,7 +41340,7 @@ type ChannelConnection struct {
 	Id              openapi_types.UUID        `json:"id"`
 	Provider        ChannelConnectionProvider `json:"provider"`
 
-	// Status Only `connected` is live, and it is the only state a connect can produce: a pull ingress makes no provider call after the write, so there is no half-connected state. `error` and `reauth_required` are where ingress parks a binding it can no longer poll (another consumer holds the bot's updates; the token was refused), and neither is polled again until an operator acts. `pending` is a value NO server produces: it is retained because the code generator disambiguates enum member names across the whole document, so dropping it renames unrelated generated constants in other schemas.
+	// Status Only `connected` is live, and it is the only state a connect can produce: a pull ingress makes no provider call after the write, so there is no half-connected state. `error` and `reauth_required` are where ingress parks a binding it can no longer poll (another consumer holds the bot's updates; the token was refused), and neither is polled again until an operator acts. `pending_approval` is the state of a Telegram Business link nobody has approved. It is served by the telegram-business operations and never appears on a bot connection.
 	Status    ChannelConnectionStatus `json:"status"`
 	UpdatedAt *time.Time              `json:"updatedAt,omitempty"`
 	Version   int64                   `json:"version"`
@@ -41205,7 +41349,7 @@ type ChannelConnection struct {
 // ChannelConnectionProvider defines model for ChannelConnection.Provider.
 type ChannelConnectionProvider string
 
-// ChannelConnectionStatus Only `connected` is live, and it is the only state a connect can produce: a pull ingress makes no provider call after the write, so there is no half-connected state. `error` and `reauth_required` are where ingress parks a binding it can no longer poll (another consumer holds the bot's updates; the token was refused), and neither is polled again until an operator acts. `pending` is a value NO server produces: it is retained because the code generator disambiguates enum member names across the whole document, so dropping it renames unrelated generated constants in other schemas.
+// ChannelConnectionStatus Only `connected` is live, and it is the only state a connect can produce: a pull ingress makes no provider call after the write, so there is no half-connected state. `error` and `reauth_required` are where ingress parks a binding it can no longer poll (another consumer holds the bot's updates; the token was refused), and neither is polled again until an operator acts. `pending_approval` is the state of a Telegram Business link nobody has approved. It is served by the telegram-business operations and never appears on a bot connection.
 type ChannelConnectionStatus string
 
 // ChannelConnectionListResponse defines model for ChannelConnectionListResponse.
@@ -41866,9 +42010,6 @@ type Company struct {
 	LegalHold *bool   `json:"legal_hold,omitempty"`
 	LegalName *string `json:"legal_name,omitempty"`
 
-	// Lifecycle Where the account stands with us. Single-valued: an account is at one point in a sales motion at a time. `unknown` is the default and means it — the retired `classification` defaulted to `prospect` and, having no writer, rendered that default on every unassessed account as though someone had judged it. `onboarding` means the contract is signed and set-up runs. `live` means the agreed first scope is in use, and only a signed-in user may set it: an agent, automation, approval or import gets 422 `lifecycle_live_needs_a_human`.
-	Lifecycle *CompanyLifecycle `json:"lifecycle,omitempty"`
-
 	// LinkedinUrl Canonical LinkedIn company URL. A validated column rather than a governed custom field, because it bears identity semantics — matching, dedupe, enrichment — a custom field cannot express. Unique among live rows.
 	LinkedinUrl *string `json:"linkedin_url,omitempty"`
 
@@ -41912,6 +42053,9 @@ type Company struct {
 	// SourceSystem The system or connector the company came from, such as `gmail` for one read out of a mailbox. Empty when a member or an API client wrote it and named none.
 	SourceSystem *string `json:"source_system,omitempty"`
 
+	// Status Where the account stands with us. Single-valued: an account is at one point in a sales motion at a time. `unknown` is the default and means it — the retired `classification` defaulted to `prospect` and, having no writer, rendered that default on every unassessed account as though someone had judged it. `onboarding` means the contract is signed and set-up runs. `live` means the agreed first scope is in use, and only a signed-in user may set it: an agent, automation, approval or import gets 422 `lifecycle_live_needs_a_human`.
+	Status *CompanyStatus `json:"status,omitempty"`
+
 	// Strength Deterministic company-level relationship-strength roll-up (features/07 §4). Read-only derived view; NULL until capture has interactions.
 	Strength  *RelationshipStrength `json:"strength,omitempty"`
 	Tags      *[]RowTag             `json:"tags,omitempty"`
@@ -41937,14 +42081,14 @@ type Company struct {
 // CompanyIndustry One of the fixed industry codes, or null. The server maps imported, read and typed text onto a code; text that names no code stores none.
 type CompanyIndustry string
 
-// CompanyLifecycle Where the account stands with us. Single-valued: an account is at one point in a sales motion at a time. `unknown` is the default and means it — the retired `classification` defaulted to `prospect` and, having no writer, rendered that default on every unassessed account as though someone had judged it. `onboarding` means the contract is signed and set-up runs. `live` means the agreed first scope is in use, and only a signed-in user may set it: an agent, automation, approval or import gets 422 `lifecycle_live_needs_a_human`.
-type CompanyLifecycle string
-
 // CompanyRelationshipTypes defines model for Company.RelationshipTypes.
 type CompanyRelationshipTypes string
 
 // CompanySizeBand defines model for Company.SizeBand.
 type CompanySizeBand string
+
+// CompanyStatus Where the account stands with us. Single-valued: an account is at one point in a sales motion at a time. `unknown` is the default and means it — the retired `classification` defaulted to `prospect` and, having no writer, rendered that default on every unassessed account as though someone had judged it. `onboarding` means the contract is signed and set-up runs. `live` means the agreed first scope is in use, and only a signed-in user may set it: an agent, automation, approval or import gets 422 `lifecycle_live_needs_a_human`.
+type CompanyStatus string
 
 // CompanyVisibility Who this record is for. `workspace` is every seat that holds the read grant. `owner` is capture privacy: a connector made this record from a message nothing had judged yet, and it belongs to the mailbox owner alone until something does — not to their team, their manager, or an admin. You are only ever sent a row you may already read, so this discloses nothing new; it says WHY you can see it, which is what lets a page tell "private to you" from "shared with everybody" instead of leaving the owner to guess. An `owner` row reaches the workspace through a sender verdict, or through `visibility` on `PATCH /companies/{id}`, which moves it BOTH ways for anybody the write gate admits. Read-only HERE, on the read schema, the same as the contact column beside it: the update request carries the writable copy.
 type CompanyVisibility string
@@ -42458,8 +42602,8 @@ type Company360SinceLastVisit struct {
 // would be a conclusion the page has no basis for — and it is the one a rep would act on.
 type Company360StateStrip struct {
 	Account struct {
-		Lifecycle         Company360StateStripAccountLifecycle           `json:"lifecycle"`
 		RelationshipTypes []Company360StateStripAccountRelationshipTypes `json:"relationship_types"`
+		Status            Company360StateStripAccountStatus              `json:"status"`
 	} `json:"account"`
 
 	// Commercial Null when the caller has no deal grant.
@@ -42541,11 +42685,11 @@ type Company360StateStrip struct {
 	} `json:"signal,omitempty"`
 }
 
-// Company360StateStripAccountLifecycle defines model for Company360StateStrip.Account.Lifecycle.
-type Company360StateStripAccountLifecycle string
-
 // Company360StateStripAccountRelationshipTypes defines model for Company360StateStrip.Account.RelationshipTypes.
 type Company360StateStripAccountRelationshipTypes string
+
+// Company360StateStripAccountStatus defines model for Company360StateStrip.Account.Status.
+type Company360StateStripAccountStatus string
 
 // Company360StateStripEngagementState PO-F-4, evaluated in the order the spec fixes so the states stay mutually exclusive. `waiting_on_them` shares its threshold and its inputs with the `no_reply` suggestion by construction, so the strip and the nudge below it cannot disagree about whether an account is waiting. `dormant` is the dormancy ladder's `dormant` or `stale` rung, so the strip and `dormancy` cannot disagree either.
 type Company360StateStripEngagementState string
@@ -43456,7 +43600,7 @@ type CompanyFinanceSummary struct {
 	OpenBalance *Money `json:"open_balance,omitempty"`
 
 	// Overdue The share of the open balance already past its due date.
-	// ABSENT on an account whose relationship has ended (`lifecycle: former_customer`), and a client should expect the null. An overdue figure reads as an outstanding collection, and a rep acting on the most natural reading makes a collection call about a relationship that finished — a customer-facing mistake rather than a display nit. The figure it would carry is one nobody can state a window for, which is the same "cannot be honestly computed" this schema already answers with absence rather than zero.
+	// ABSENT on an account whose relationship has ended (`status: former_customer`), and a client should expect the null. An overdue figure reads as an outstanding collection, and a rep acting on the most natural reading makes a collection call about a relationship that finished — a customer-facing mistake rather than a display nit. The figure it would carry is one nobody can state a window for, which is the same "cannot be honestly computed" this schema already answers with absence rather than zero.
 	// `open_balance` is unaffected: what is still open is a fact about the ledger whatever the relationship is now, and it carries no call to action.
 	Overdue *Money `json:"overdue,omitempty"`
 
@@ -44580,6 +44724,9 @@ type ComposedExtension struct {
 	// Jobs The scheduled jobs this boot actually RUNS for the unit — a job the unit declared with no handler ticks nothing and is deliberately absent, because an operator reading this list is asking what runs, not what was written down. Sorted.
 	Jobs []string `json:"jobs"`
 
+	// MailHooks The unit's mail-capture hooks and what of each captured mail they read. Absent for a unit with no hook. A unit may send what a hook read to its own provider.
+	MailHooks *ComposedExtensionMailHooks `json:"mail_hooks,omitempty"`
+
 	// Name The unit name — its `extensions/<name>` directory, and the namespace token in `ext_<name>_…` objects and `/ext/<name>/…` routes. This is what joins an entry here to a grant in `Role.objects`.
 	Name string `json:"name"`
 
@@ -44592,9 +44739,33 @@ type ComposedExtension struct {
 	// Routes The unit's published operations, one entry per method+path pair. Sorted by path then method. A bare path would under-report the surface — one path serving GET and DELETE is two capabilities to an operator auditing what a unit can do, and collapsing them hides the destructive one behind the harmless one.
 	Routes []ComposedExtensionRoute `json:"routes"`
 
+	// SetupMissing What an admin still has to set before the unit can work: each workspace secret the unit declares that holds no value, then each OAuth app it declares with no stored client. Empty means the unit is ready. Worked out on each read from the declaration and the stored values; nothing about it is stored. Each part needs the caller's right to read that setting: admin for a workspace secret, capture_settings.read for an OAuth app. A part the caller may not read is left out. The field is absent when that hides a part and nothing visible is missing, and from an older server.
+	SetupMissing *[]ComposedExtensionSetupItem `json:"setup_missing,omitempty"`
+
 	// Version The unit's own declared version. It carries NO authority (ADR-0120 §7): operator decisions bind to manifest digests, never to this string. Display only.
 	Version string `json:"version"`
 }
+
+// ComposedExtensionMailHooks The unit's mail-capture hooks and what of each captured mail they read. Absent for a unit with no hook. A unit may send what a hook read to its own provider.
+type ComposedExtensionMailHooks struct {
+	// BodyCharacters How many characters of the mail's text a hook reads.
+	BodyCharacters int `json:"body_characters"`
+
+	// Deal True when the unit may change the deal core files a mail on.
+	Deal bool `json:"deal"`
+
+	// Parties True when the unit may change the contacts and companies core found for a mail.
+	Parties bool `json:"parties"`
+
+	// Reads The parts of every captured mail the hooks read.
+	Reads []ComposedExtensionMailHooksReads `json:"reads"`
+
+	// Reasons The reason keys the unit's answers may give, sorted.
+	Reasons []string `json:"reasons"`
+}
+
+// ComposedExtensionMailHooksReads defines model for ComposedExtensionMailHooks.Reads.
+type ComposedExtensionMailHooksReads string
 
 // ComposedExtensionNeed One core capability a unit declares it uses.
 type ComposedExtensionNeed struct {
@@ -44613,6 +44784,18 @@ type ComposedExtensionRoute struct {
 	// Path The path AS THE CONTRACT SPELLS IT — `/ext/<unit>/…`, relative to the server url that already ends in `/v1`, so it is the spelling a reader can find by opening the published document rather than the path the router mounts.
 	Path string `json:"path"`
 }
+
+// ComposedExtensionSetupItem One piece of setup a composed unit still needs.
+type ComposedExtensionSetupItem struct {
+	// Kind `workspace_secret` is a key the installation shares, set on Settings → Integrations. `oauth_app` is a vendor app whose client an admin stores on Settings → Sign-in and security.
+	Kind ComposedExtensionSetupItemKind `json:"kind"`
+
+	// Name The secret's key as the unit declares it, or the OAuth app's title.
+	Name string `json:"name"`
+}
+
+// ComposedExtensionSetupItemKind `workspace_secret` is a key the installation shares, set on Settings → Integrations. `oauth_app` is a vendor app whose client an admin stores on Settings → Sign-in and security.
+type ComposedExtensionSetupItemKind string
 
 // ComputedField S-E15.8c formula-field display row (RD-AC-6/RD-AC-7/RD-AC-N-1) — a read-only,
 // database-computed value, never a runtime-authored expression. `computable: false` +
@@ -49151,7 +49334,10 @@ type Deal struct {
 	LostReasonCode *string `json:"lost_reason_code,omitempty"`
 
 	// MaskedFields The fields of THIS row withheld from the caller (a field mask — e.g. `amount_minor` for a rep on a deal they may read but not change), or pointing at a record they may not open. A named field is null because it is withheld, not because it is empty; absent or empty means nothing is withheld. Every withheld field is named, including one withheld only because another was: masking either money figure withholds both and the currency with them, and a withheld partner takes its attribution along. Sorting or filtering the list by any of them is refused (422).
-	MaskedFields *[]string           `json:"masked_fields,omitempty"`
+	MaskedFields *[]string `json:"masked_fields,omitempty"`
+
+	// MergedIntoId Set when this deal was merged away into another, and null otherwise. It separates a merged-away deal from one that was only archived: both are hidden from lists, but a merged one cannot be restored, and its id names the surviving deal to read instead. `contact`, `company` and `lead` carry the same field for the same reason.
+	MergedIntoId *openapi_types.UUID `json:"merged_into_id,omitempty"`
 	Name         string              `json:"name"`
 	OwnerId      *openapi_types.UUID `json:"owner_id,omitempty"`
 
@@ -49327,7 +49513,10 @@ type DealAdvanced struct {
 	LostReasonCode *string `json:"lost_reason_code,omitempty"`
 
 	// MaskedFields The fields of THIS row withheld from the caller (a field mask — e.g. `amount_minor` for a rep on a deal they may read but not change), or pointing at a record they may not open. A named field is null because it is withheld, not because it is empty; absent or empty means nothing is withheld. Every withheld field is named, including one withheld only because another was: masking either money figure withholds both and the currency with them, and a withheld partner takes its attribution along. Sorting or filtering the list by any of them is refused (422).
-	MaskedFields *[]string           `json:"masked_fields,omitempty"`
+	MaskedFields *[]string `json:"masked_fields,omitempty"`
+
+	// MergedIntoId Set when this deal was merged away into another, and null otherwise. It separates a merged-away deal from one that was only archived: both are hidden from lists, but a merged one cannot be restored, and its id names the surviving deal to read instead. `contact`, `company` and `lead` carry the same field for the same reason.
+	MergedIntoId *openapi_types.UUID `json:"merged_into_id,omitempty"`
 	Name         string              `json:"name"`
 	OwnerId      *openapi_types.UUID `json:"owner_id,omitempty"`
 
@@ -49426,7 +49615,7 @@ type DealAdvancedWonWithoutContractReason string
 // excluding tax, with each recurring line counted for its committed periods. It is null until
 // every line is complete; `known_committed_net_minor` is the part already known.
 type DealCommercial struct {
-	// AmountBasis What the deal's amount means. Null while the deal has no amount.
+	// AmountBasis What the deal's amount means. `offer_net` is an accepted offer's figure without tax. `offer_gross` is an older amount that took an accepted offer's gross with tax. Null while the deal has no amount.
 	AmountBasis *DealCommercialAmountBasis `json:"amount_basis,omitempty"`
 	ArrMinor    *int64                     `json:"arr_minor,omitempty"`
 
@@ -49454,7 +49643,7 @@ type DealCommercial struct {
 	Writable bool `json:"writable"`
 }
 
-// DealCommercialAmountBasis What the deal's amount means. Null while the deal has no amount.
+// DealCommercialAmountBasis What the deal's amount means. `offer_net` is an accepted offer's figure without tax. `offer_gross` is an older amount that took an accepted offer's gross with tax. Null while the deal has no amount.
 type DealCommercialAmountBasis string
 
 // DealCommercialMissing defines model for DealCommercial.Missing.
@@ -52243,6 +52432,9 @@ type ExtensionReport struct {
 	// Population What is counted, a record kind (`ext:<unit>:<kind>`) or a core report population.
 	Population string `json:"population"`
 
+	// Status `unavailable` when the report could not run. It then carries no groups, no total and no exclusion count, and the other reports still answer. The cause is logged on the server, never sent.
+	Status ExtensionReportStatus `json:"status"`
+
 	// Total The whole count. Null once anything is withheld, because total minus the shown groups would be the withheld one.
 	Total *int `json:"total"`
 
@@ -52255,6 +52447,9 @@ type ExtensionReport struct {
 
 // ExtensionReportKind defines model for ExtensionReport.Kind.
 type ExtensionReportKind string
+
+// ExtensionReportStatus `unavailable` when the report could not run. It then carries no groups, no total and no exclusion count, and the other reports still answer. The cause is logged on the server, never sent.
+type ExtensionReportStatus string
 
 // ExtensionReportDirectory The counts and breakdowns installed extensions add that this caller may read, ordered by name.
 type ExtensionReportDirectory struct {
@@ -57950,7 +58145,7 @@ type List struct {
 	// EntityType A record type a filter may be built over: one of core's five, or `ext:<unit>:<kind>` for a kind an extension declared. A kind no installed extension declares answers 404 on the vocabulary and 422 on a preview.
 	EntityType FilterResource `json:"entity_type"`
 
-	// Health `ownerless` when nobody looks after the list — no steward, or one who can no longer sign in — so somebody should take it over. `invalid` when a Live List's filter no longer compiles. `retired_field` when a Live List's filter names a custom field that has been retired: the list still evaluates on the kept values, and its steward should replace the clause. `retired_tag` when a Live List's filter names a tag that has been archived or merged away: that tag no longer matches any record, so a clause on it selects nothing, and its steward should name the tag that took its place. `invalid` outranks `ownerless`, which outranks `retired_field`, which outranks `retired_tag`.
+	// Health `unavailable` when no installed extension declares the list's record kind any more. Such a list has no count, no members, no filter definition and no export, and comes back when the extension is installed again; it outranks every other value. A list over a declared kind the caller may not read is left out of the library instead. `ownerless` when nobody looks after the list — no steward, or one who can no longer sign in — so somebody should take it over. `invalid` when a Live List's filter no longer compiles. `retired_field` when a Live List's filter names a custom field that has been retired: the list still evaluates on the kept values, and its steward should replace the clause. `retired_tag` when a Live List's filter names a tag that has been archived or merged away: that tag no longer matches any record, so a clause on it selects nothing, and its steward should name the tag that took its place. `invalid` outranks `ownerless`, which outranks `retired_field`, which outranks `retired_tag`.
 	Health ListHealth         `json:"health"`
 	Id     openapi_types.UUID `json:"id"`
 
@@ -57985,11 +58180,11 @@ type List struct {
 	UpdatedAt *time.Time          `json:"updated_at,omitempty"`
 	Version   int64               `json:"version"`
 
-	// VisibleCount How many members this caller may see. Null when the list's filter can no longer be evaluated (health `invalid`). Never the list's whole size.
+	// VisibleCount How many members this caller may see. Null when the list's filter can no longer be evaluated (health `invalid`) or its records are unavailable (health `unavailable`). Never the list's whole size.
 	VisibleCount *int `json:"visible_count,omitempty"`
 }
 
-// ListHealth `ownerless` when nobody looks after the list — no steward, or one who can no longer sign in — so somebody should take it over. `invalid` when a Live List's filter no longer compiles. `retired_field` when a Live List's filter names a custom field that has been retired: the list still evaluates on the kept values, and its steward should replace the clause. `retired_tag` when a Live List's filter names a tag that has been archived or merged away: that tag no longer matches any record, so a clause on it selects nothing, and its steward should name the tag that took its place. `invalid` outranks `ownerless`, which outranks `retired_field`, which outranks `retired_tag`.
+// ListHealth `unavailable` when no installed extension declares the list's record kind any more. Such a list has no count, no members, no filter definition and no export, and comes back when the extension is installed again; it outranks every other value. A list over a declared kind the caller may not read is left out of the library instead. `ownerless` when nobody looks after the list — no steward, or one who can no longer sign in — so somebody should take it over. `invalid` when a Live List's filter no longer compiles. `retired_field` when a Live List's filter names a custom field that has been retired: the list still evaluates on the kept values, and its steward should replace the clause. `retired_tag` when a Live List's filter names a tag that has been archived or merged away: that tag no longer matches any record, so a clause on it selects nothing, and its steward should name the tag that took its place. `invalid` outranks `ownerless`, which outranks `retired_field`, which outranks `retired_tag`.
 type ListHealth string
 
 // ListListType defines model for List.ListType.
@@ -61692,7 +61887,10 @@ type PreviewAccountSendRequest struct {
 
 	// Links The records the message would be filed under. They are read through the caller's
 	// own row scope before the engine sees them, so naming a record the caller cannot
-	// open is refused here rather than answered about.
+	// open is refused here rather than answered about. A project is REFUSED here
+	// (project_filing_needs_approval), because filing there marks commercial
+	// correspondence: add it afterwards with relink, which stages an approval that waits
+	// for the user's yes before it takes effect.
 	Links            []ActivityLinkInput `json:"links"`
 	MarketingPurpose *string             `json:"marketing_purpose,omitempty"`
 
@@ -63805,7 +64003,10 @@ type RecordLink struct {
 	FromType LinkedRecordType   `json:"from_type"`
 	Id       openapi_types.UUID `json:"id"`
 	LinkType string             `json:"link_type"`
-	ToId     openapi_types.UUID `json:"to_id"`
+
+	// Removable True when this reader may remove the link: they may change the record it starts on and see the one it ends on. Set on a list read, absent on a write's answer.
+	Removable *bool              `json:"removable,omitempty"`
+	ToId      openapi_types.UUID `json:"to_id"`
 
 	// ToName The name of the record the link ends on, for the screen. Absent on a write's answer.
 	ToName *string          `json:"to_name,omitempty"`
@@ -65843,7 +66044,7 @@ type ResolveInputCheck struct {
 	// ExpiresAt When a suppressing answer stops holding. Omitted, it is the 90-day ceiling; beyond the ceiling it is refused rather than shortened.
 	ExpiresAt *time.Time `json:"expires_at,omitempty"`
 
-	// Outcome What kind of answer this is. `condition_cleared` is absent on purpose: it is the check's own, and a contact naming it would be saying the condition stopped being true without anything having looked.
+	// Outcome What kind of answer this is. `condition_cleared` is absent on purpose: it is the check's own, and a contact naming it would be saying the condition stopped being true without anything having looked. `separate` answers only a `duplicate_motion` finding, says its two deals are not one buying motion, and has no expiry: the pair is not flagged again.
 	Outcome ResolveInputCheckOutcome `json:"outcome"`
 
 	// Reason Required for `value_correct` and `not_relevant`. Those hide the finding, and the next contact to see the number is owed the reason it is not flagged.
@@ -65853,7 +66054,7 @@ type ResolveInputCheck struct {
 	RemindAt *time.Time `json:"remind_at,omitempty"`
 }
 
-// ResolveInputCheckOutcome What kind of answer this is. `condition_cleared` is absent on purpose: it is the check's own, and a contact naming it would be saying the condition stopped being true without anything having looked.
+// ResolveInputCheckOutcome What kind of answer this is. `condition_cleared` is absent on purpose: it is the check's own, and a contact naming it would be saying the condition stopped being true without anything having looked. `separate` answers only a `duplicate_motion` finding, says its two deals are not one buying motion, and has no expiry: the pair is not flagged again.
 type ResolveInputCheckOutcome string
 
 // ResponseMetrics What the workspace did with its work over one window. Three questions: how fast it
@@ -70821,6 +71022,45 @@ type TechnicalEnrichStatus struct {
 	Lanes     []TechnicalEnrichLane `json:"lanes"`
 }
 
+// TelegramBusinessConnection One Telegram Business account the owner linked to the workspace's bot. Nothing from the account is stored until an admin approves it.
+type TelegramBusinessConnection struct {
+	// AccountId The owner's Telegram user id, the key a repeated link keeps its row by.
+	AccountId string `json:"accountId"`
+
+	// ApprovedAt When an admin approved the link; absent until then.
+	ApprovedAt *time.Time `json:"approvedAt,omitempty"`
+
+	// ConnectedAt When the owner first linked the bot.
+	ConnectedAt time.Time          `json:"connectedAt"`
+	Id          openapi_types.UUID `json:"id"`
+
+	// MailVisibility What the seat asks of the account's messages. `held` keeps them from colleagues outside the reader team and `shared` opens them as the contact's sharing allows. A member's own account starts `classified`, which holds a chat.
+	MailVisibility *TelegramBusinessConnectionMailVisibility `json:"mailVisibility,omitempty"`
+
+	// OwnerLabel The owner's name as Telegram last reported it. Display only, since a name is mutable and identifies nothing.
+	OwnerLabel string `json:"ownerLabel"`
+
+	// ReaderTeamId The team that reads a company account's messages. Null for a member's own account and before approval.
+	ReaderTeamId *openapi_types.UUID `json:"readerTeamId,omitempty"`
+
+	// SeatId The seat the account's messages file through. Its mail visibility is changed with `PATCH /channel-connections/telegram-business/{id}/visibility`. Null until an admin approves the link.
+	SeatId *openapi_types.UUID `json:"seatId,omitempty"`
+
+	// Status `pending_approval` waits for an admin; `disconnected` means the owner switched the link off in Telegram.
+	Status TelegramBusinessConnectionStatus `json:"status"`
+}
+
+// TelegramBusinessConnectionMailVisibility What the seat asks of the account's messages. `held` keeps them from colleagues outside the reader team and `shared` opens them as the contact's sharing allows. A member's own account starts `classified`, which holds a chat.
+type TelegramBusinessConnectionMailVisibility string
+
+// TelegramBusinessConnectionStatus `pending_approval` waits for an admin; `disconnected` means the owner switched the link off in Telegram.
+type TelegramBusinessConnectionStatus string
+
+// TelegramBusinessConnectionListResponse defines model for TelegramBusinessConnectionListResponse.
+type TelegramBusinessConnectionListResponse struct {
+	Data []TelegramBusinessConnection `json:"data"`
+}
+
 // ThreadAudienceOutcome What an owner's decision about a thread reached.
 type ThreadAudienceOutcome struct {
 	// ActivityIds Which of your own messages the decision reached, so a client can refresh exactly
@@ -71369,9 +71609,6 @@ type UpdateCompanyRequest struct {
 	Industry  *string `json:"industry,omitempty"`
 	LegalName *string `json:"legal_name,omitempty" singleline:"true"`
 
-	// Lifecycle Where the account stands with us (ADR-0079). Absent = untouched. `live` (the agreed first scope is in use) is accepted only from a signed-in user; any other caller gets 422 `lifecycle_live_needs_a_human`.
-	Lifecycle *UpdateCompanyRequestLifecycle `json:"lifecycle,omitempty"`
-
 	// LinkedinUrl Canonical LinkedIn company URL. Null clears it. website_url is derived and refused here.
 	LinkedinUrl     *string             `json:"linkedin_url,omitempty"`
 	OwnerId         *openapi_types.UUID `json:"owner_id,omitempty"`
@@ -71383,6 +71620,9 @@ type UpdateCompanyRequest struct {
 	// RelationshipTypes Replace-set of what the company is to us (add new, archive removed), the same shape as `domains`. Absent = untouched; an empty array clears every type. Removing `partner` while the company still has a `partner` extension row is refused with 422 — the invariant binds both ways, and an invariant nothing enforces is a comment.
 	RelationshipTypes *[]UpdateCompanyRequestRelationshipTypes `json:"relationship_types,omitempty"`
 	SizeBand          *UpdateCompanyRequestSizeBand            `json:"size_band,omitempty"`
+
+	// Status Where the account stands with us (ADR-0079). Absent = untouched. `live` (the agreed first scope is in use) is accepted only from a signed-in user; any other caller gets 422 `lifecycle_live_needs_a_human`.
+	Status *UpdateCompanyRequestStatus `json:"status,omitempty"`
 
 	// Visibility Who may see this company: `workspace` for everyone holding the read grant, `owner` for
 	// the seat named by `owner_id` alone. Absent = untouched.
@@ -71407,14 +71647,14 @@ type UpdateCompanyRequest struct {
 	AdditionalProperties map[string]interface{}          `json:"-"`
 }
 
-// UpdateCompanyRequestLifecycle Where the account stands with us (ADR-0079). Absent = untouched. `live` (the agreed first scope is in use) is accepted only from a signed-in user; any other caller gets 422 `lifecycle_live_needs_a_human`.
-type UpdateCompanyRequestLifecycle string
-
 // UpdateCompanyRequestRelationshipTypes defines model for UpdateCompanyRequest.RelationshipTypes.
 type UpdateCompanyRequestRelationshipTypes string
 
 // UpdateCompanyRequestSizeBand defines model for UpdateCompanyRequest.SizeBand.
 type UpdateCompanyRequestSizeBand string
+
+// UpdateCompanyRequestStatus Where the account stands with us (ADR-0079). Absent = untouched. `live` (the agreed first scope is in use) is accepted only from a signed-in user; any other caller gets 422 `lifecycle_live_needs_a_human`.
+type UpdateCompanyRequestStatus string
 
 // UpdateCompanyRequestVisibility Who may see this company: `workspace` for everyone holding the read grant, `owner` for
 // the seat named by `owner_id` alone. Absent = untouched.
@@ -72593,6 +72833,18 @@ type UpdateTeamRequest struct {
 	Archived *bool   `json:"archived,omitempty"`
 	Name     *string `json:"name,omitempty"`
 }
+
+// UpdateTelegramBusinessConnectionVisibilityRequest defines model for UpdateTelegramBusinessConnectionVisibilityRequest.
+type UpdateTelegramBusinessConnectionVisibilityRequest struct {
+	// Confirm Must be true: the change decides what every reader of the seat sees.
+	Confirm bool `json:"confirm"`
+
+	// MailVisibility `classified` is refused with `422`.
+	MailVisibility UpdateTelegramBusinessConnectionVisibilityRequestMailVisibility `json:"mail_visibility"`
+}
+
+// UpdateTelegramBusinessConnectionVisibilityRequestMailVisibility `classified` is refused with `422`.
+type UpdateTelegramBusinessConnectionVisibilityRequestMailVisibility string
 
 // UpdateVoiceCorpusSourceRequest defines model for UpdateVoiceCorpusSourceRequest.
 type UpdateVoiceCorpusSourceRequest struct {
@@ -78654,8 +78906,8 @@ type ListCompaniesParams struct {
 	// Domain Lookup by normalized domain (the employer-inference index).
 	Domain *string `form:"domain,omitempty" json:"domain,omitempty"`
 
-	// Lifecycle Where the account stands with us (DM-VOCAB-2, ADR-0079).
-	Lifecycle *ListCompaniesParamsLifecycle `form:"lifecycle,omitempty" json:"lifecycle,omitempty"`
+	// Status Where the account stands with us (DM-VOCAB-2, ADR-0079).
+	Status *ListCompaniesParamsStatus `form:"status,omitempty" json:"status,omitempty"`
 
 	// RelationshipType Accounts carrying this relationship type. Multi-valued per account, so this selects accounts that are AT LEAST this — a partner that is also a customer matches both.
 	RelationshipType *ListCompaniesParamsRelationshipType `form:"relationship_type,omitempty" json:"relationship_type,omitempty"`
@@ -78727,8 +78979,8 @@ type ListCompaniesParams struct {
 // ListCompaniesParamsCapturedByKind defines parameters for ListCompanies.
 type ListCompaniesParamsCapturedByKind string
 
-// ListCompaniesParamsLifecycle defines parameters for ListCompanies.
-type ListCompaniesParamsLifecycle string
+// ListCompaniesParamsStatus defines parameters for ListCompanies.
+type ListCompaniesParamsStatus string
 
 // ListCompaniesParamsRelationshipType defines parameters for ListCompanies.
 type ListCompaniesParamsRelationshipType string
@@ -81258,6 +81510,56 @@ type ListDealMarginceChangesParams struct {
 
 	// ChangeKind Only changes of these correction kinds, such as close_lost, deal_open or deal_revive.
 	ChangeKind *[]string `form:"change_kind,omitempty" json:"change_kind,omitempty"`
+}
+
+// MergeDealJSONBody defines parameters for MergeDeal.
+type MergeDealJSONBody struct {
+	// TargetId The surviving deal (B). This row (A) is archived.
+	TargetId openapi_types.UUID `json:"target_id"`
+}
+
+// MergeDealParams defines parameters for MergeDeal.
+type MergeDealParams struct {
+	// IdempotencyKey Client-supplied key making a mutation safe to retry — an update exactly as much as a
+	// create (API-CC-6). **Scope:** the key is unique within
+	// `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
+	// returns the original status + body. A connected agent's principal is its connection, so a
+	// retry on a refreshed token replays too. An agent tool that runs this route takes the same
+	// key as its `idempotency_key`. Reusing the same key with a *different* request body
+	// returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
+	// do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
+	// means the first request under the key is still running and carries `Retry-After`;
+	// resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
+	// request under the key failed after it had started, so check whether it took effect before
+	// retrying under a new key.
+	// A request the server stopped for time answers `503 code: request_timed_out` with
+	// `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+	// If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
+	// **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
+	// answer lost": without it the blind retry answers `409 version_skew`, because the first
+	// attempt already bumped the version.
+	// **Precedence vs natural keys:** on `logActivity`/`createLead`, the Idempotency-Key (transport
+	// retry-safety) is checked first; if absent, the `(source_system, source_id)` natural key
+	// (data-model dedupe) governs. The two never both create a row. **Declaring this parameter is
+	// what makes an operation replay-safe** — an operation that omits it ignores the header rather
+	// than half-honouring it, so read this contract, not the client, to know which calls are safe
+	// to retry blind.
+	IdempotencyKey *IdempotencyKey `json:"Idempotency-Key,omitempty"`
+
+	// XApprovalToken The id of the approval that authorizes this one 🟡 call — the id the `403 approval_required`
+	// answer named. MCP takes the same id as `approval_id`. The server checks it against the
+	// stored approval: same tool, same diff hash, same staging passport, decided as approved,
+	// not yet used, and within 15 minutes of the decision. Anything else is refused with
+	// `403 code: approval_token_invalid`. Required when an AGENT principal repeats a 🟡 call; a
+	// human's direct call is itself the approval.
+	XApprovalToken *ApprovalToken `json:"X-Approval-Token,omitempty"`
+
+	// IfMatch Optional optimistic-concurrency precondition for a mutating request (PATCH/advance/merge):
+	// the last-seen entity `version`. If the row's current `version` differs, the write is
+	// rejected with `409 code: version_skew` (ErrVersionSkew) and no change is made — re-read,
+	// re-apply, retry. Omitting it is last-write-wins (discouraged for agent/automated writers).
+	// Accepted on every native (SoR-mode) mutating endpoint that returns a versioned entity.
+	IfMatch *IfMatch `json:"If-Match,omitempty"`
 }
 
 // MoveDealPipelineParams defines parameters for MoveDealPipeline.
@@ -86439,6 +86741,12 @@ type UpdateCaptureSettingsJSONRequestBody = UpdateCaptureSettingsRequest
 // ConnectChannelJSONRequestBody defines body for ConnectChannel for application/json ContentType.
 type ConnectChannelJSONRequestBody = ConnectChannelRequest
 
+// ApproveTelegramBusinessConnectionJSONRequestBody defines body for ApproveTelegramBusinessConnection for application/json ContentType.
+type ApproveTelegramBusinessConnectionJSONRequestBody = ApproveTelegramBusinessConnectionRequest
+
+// UpdateTelegramBusinessConnectionVisibilityJSONRequestBody defines body for UpdateTelegramBusinessConnectionVisibility for application/json ContentType.
+type UpdateTelegramBusinessConnectionVisibilityJSONRequestBody = UpdateTelegramBusinessConnectionVisibilityRequest
+
 // ReplaceChannelTokenJSONRequestBody defines body for ReplaceChannelToken for application/json ContentType.
 type ReplaceChannelTokenJSONRequestBody = ReplaceChannelTokenRequest
 
@@ -86756,6 +87064,9 @@ type UpdateDealLineJSONRequestBody = UpdateDealLineRequest
 
 // RequestDealManagerJSONRequestBody defines body for RequestDealManager for application/json ContentType.
 type RequestDealManagerJSONRequestBody = RequestDealManagerRequest
+
+// MergeDealJSONRequestBody defines body for MergeDeal for application/json ContentType.
+type MergeDealJSONRequestBody MergeDealJSONBody
 
 // MoveDealPipelineJSONRequestBody defines body for MoveDealPipeline for application/json ContentType.
 type MoveDealPipelineJSONRequestBody = MoveDealPipelineRequest
@@ -88977,14 +89288,6 @@ func (a *Company) UnmarshalJSON(b []byte) error {
 		delete(object, "legal_name")
 	}
 
-	if raw, found := object["lifecycle"]; found {
-		err = json.Unmarshal(raw, &a.Lifecycle)
-		if err != nil {
-			return fmt.Errorf("error reading 'lifecycle': %w", err)
-		}
-		delete(object, "lifecycle")
-	}
-
 	if raw, found := object["linkedin_url"]; found {
 		err = json.Unmarshal(raw, &a.LinkedinUrl)
 		if err != nil {
@@ -89087,6 +89390,14 @@ func (a *Company) UnmarshalJSON(b []byte) error {
 			return fmt.Errorf("error reading 'source_system': %w", err)
 		}
 		delete(object, "source_system")
+	}
+
+	if raw, found := object["status"]; found {
+		err = json.Unmarshal(raw, &a.Status)
+		if err != nil {
+			return fmt.Errorf("error reading 'status': %w", err)
+		}
+		delete(object, "status")
 	}
 
 	if raw, found := object["strength"]; found {
@@ -89317,13 +89628,6 @@ func (a Company) MarshalJSON() ([]byte, error) {
 		}
 	}
 
-	if a.Lifecycle != nil {
-		object["lifecycle"], err = json.Marshal(a.Lifecycle)
-		if err != nil {
-			return nil, fmt.Errorf("error marshaling 'lifecycle': %w", err)
-		}
-	}
-
 	if a.LinkedinUrl != nil {
 		object["linkedin_url"], err = json.Marshal(a.LinkedinUrl)
 		if err != nil {
@@ -89410,6 +89714,13 @@ func (a Company) MarshalJSON() ([]byte, error) {
 		object["source_system"], err = json.Marshal(a.SourceSystem)
 		if err != nil {
 			return nil, fmt.Errorf("error marshaling 'source_system': %w", err)
+		}
+	}
+
+	if a.Status != nil {
+		object["status"], err = json.Marshal(a.Status)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'status': %w", err)
 		}
 	}
 
@@ -93552,6 +93863,14 @@ func (a *Deal) UnmarshalJSON(b []byte) error {
 		delete(object, "masked_fields")
 	}
 
+	if raw, found := object["merged_into_id"]; found {
+		err = json.Unmarshal(raw, &a.MergedIntoId)
+		if err != nil {
+			return fmt.Errorf("error reading 'merged_into_id': %w", err)
+		}
+		delete(object, "merged_into_id")
+	}
+
 	if raw, found := object["name"]; found {
 		err = json.Unmarshal(raw, &a.Name)
 		if err != nil {
@@ -93980,6 +94299,13 @@ func (a Deal) MarshalJSON() ([]byte, error) {
 		object["masked_fields"], err = json.Marshal(a.MaskedFields)
 		if err != nil {
 			return nil, fmt.Errorf("error marshaling 'masked_fields': %w", err)
+		}
+	}
+
+	if a.MergedIntoId != nil {
+		object["merged_into_id"], err = json.Marshal(a.MergedIntoId)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'merged_into_id': %w", err)
 		}
 	}
 
@@ -94427,6 +94753,14 @@ func (a *DealAdvanced) UnmarshalJSON(b []byte) error {
 		delete(object, "masked_fields")
 	}
 
+	if raw, found := object["merged_into_id"]; found {
+		err = json.Unmarshal(raw, &a.MergedIntoId)
+		if err != nil {
+			return fmt.Errorf("error reading 'merged_into_id': %w", err)
+		}
+		delete(object, "merged_into_id")
+	}
+
 	if raw, found := object["name"]; found {
 		err = json.Unmarshal(raw, &a.Name)
 		if err != nil {
@@ -94863,6 +95197,13 @@ func (a DealAdvanced) MarshalJSON() ([]byte, error) {
 		object["masked_fields"], err = json.Marshal(a.MaskedFields)
 		if err != nil {
 			return nil, fmt.Errorf("error marshaling 'masked_fields': %w", err)
+		}
+	}
+
+	if a.MergedIntoId != nil {
+		object["merged_into_id"], err = json.Marshal(a.MergedIntoId)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'merged_into_id': %w", err)
 		}
 	}
 
@@ -99004,14 +99345,6 @@ func (a *UpdateCompanyRequest) UnmarshalJSON(b []byte) error {
 		delete(object, "legal_name")
 	}
 
-	if raw, found := object["lifecycle"]; found {
-		err = json.Unmarshal(raw, &a.Lifecycle)
-		if err != nil {
-			return fmt.Errorf("error reading 'lifecycle': %w", err)
-		}
-		delete(object, "lifecycle")
-	}
-
 	if raw, found := object["linkedin_url"]; found {
 		err = json.Unmarshal(raw, &a.LinkedinUrl)
 		if err != nil {
@@ -99058,6 +99391,14 @@ func (a *UpdateCompanyRequest) UnmarshalJSON(b []byte) error {
 			return fmt.Errorf("error reading 'size_band': %w", err)
 		}
 		delete(object, "size_band")
+	}
+
+	if raw, found := object["status"]; found {
+		err = json.Unmarshal(raw, &a.Status)
+		if err != nil {
+			return fmt.Errorf("error reading 'status': %w", err)
+		}
+		delete(object, "status")
 	}
 
 	if raw, found := object["visibility"]; found {
@@ -99150,13 +99491,6 @@ func (a UpdateCompanyRequest) MarshalJSON() ([]byte, error) {
 		}
 	}
 
-	if a.Lifecycle != nil {
-		object["lifecycle"], err = json.Marshal(a.Lifecycle)
-		if err != nil {
-			return nil, fmt.Errorf("error marshaling 'lifecycle': %w", err)
-		}
-	}
-
 	if a.LinkedinUrl != nil {
 		object["linkedin_url"], err = json.Marshal(a.LinkedinUrl)
 		if err != nil {
@@ -99196,6 +99530,13 @@ func (a UpdateCompanyRequest) MarshalJSON() ([]byte, error) {
 		object["size_band"], err = json.Marshal(a.SizeBand)
 		if err != nil {
 			return nil, fmt.Errorf("error marshaling 'size_band': %w", err)
+		}
+	}
+
+	if a.Status != nil {
+		object["status"], err = json.Marshal(a.Status)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'status': %w", err)
 		}
 	}
 
@@ -102017,6 +102358,18 @@ type ServerInterface interface {
 	// Connect a messaging-channel bot for the whole workspace.
 	// (POST /channel-connections)
 	ConnectChannel(w http.ResponseWriter, r *http.Request)
+	// List the Telegram Business accounts linked to the workspace's bot.
+	// (GET /channel-connections/telegram-business)
+	ListTelegramBusinessConnections(w http.ResponseWriter, r *http.Request)
+	// Disconnect a Telegram Business account from the workspace.
+	// (DELETE /channel-connections/telegram-business/{id})
+	DisconnectTelegramBusinessConnection(w http.ResponseWriter, r *http.Request, id Id)
+	// Approve a Telegram Business account for the workspace.
+	// (POST /channel-connections/telegram-business/{id}/approve)
+	ApproveTelegramBusinessConnection(w http.ResponseWriter, r *http.Request, id Id)
+	// Change who may read a business account's messages.
+	// (PATCH /channel-connections/telegram-business/{id}/visibility)
+	UpdateTelegramBusinessConnectionVisibility(w http.ResponseWriter, r *http.Request, id Id)
 	// Disconnect a messaging channel (archives the binding and destroys the credential).
 	// (DELETE /channel-connections/{id})
 	DisconnectChannel(w http.ResponseWriter, r *http.Request, id Id)
@@ -102773,6 +103126,9 @@ type ServerInterface interface {
 	// Every change Margince made to this deal, newest first.
 	// (GET /deals/{id}/margince-changes)
 	ListDealMarginceChanges(w http.ResponseWriter, r *http.Request, id Id, params ListDealMarginceChangesParams)
+	// Merge this deal into a target deal.
+	// (POST /deals/{id}/merge)
+	MergeDeal(w http.ResponseWriter, r *http.Request, id Id, params MergeDealParams)
 	// Move an open deal to another pipeline, onto its first open stage.
 	// (POST /deals/{id}/move-pipeline)
 	MoveDealPipeline(w http.ResponseWriter, r *http.Request, id Id, params MoveDealPipelineParams)
@@ -103040,6 +103396,9 @@ type ServerInterface interface {
 	// Enqueue an async FX-rate refresh (stages 🟡 proposals).
 	// (POST /fx-rates/propose-refresh)
 	ProposeFxRateRefresh(w http.ResponseWriter, r *http.Request)
+	// Remove a currency from the FX rate sheet.
+	// (DELETE /fx-rates/{from})
+	RemoveFxRate(w http.ResponseWriter, r *http.Request, from string)
 	// List this workspace's recent CSV import runs, newest first.
 	// (GET /imports)
 	ListImportRuns(w http.ResponseWriter, r *http.Request, params ListImportRunsParams)
@@ -103577,7 +103936,7 @@ type ServerInterface interface {
 	// Update offer header fields — allowed only while status=draft.
 	// (PATCH /offers/{id})
 	UpdateOffer(w http.ResponseWriter, r *http.Request, id Id, params UpdateOfferParams)
-	// Record the buyer's acceptance — syncs the deal's amount from the offer's gross.
+	// Record the buyer's acceptance — syncs the deal's amount from the offer's net.
 	// (POST /offers/{id}/accept)
 	AcceptOffer(w http.ResponseWriter, r *http.Request, id Id, params AcceptOfferParams)
 	// Add a line item to a draft offer (position defaults to next; totals recomputed).
@@ -106265,6 +106624,30 @@ func (_ Unimplemented) ConnectChannel(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
+// List the Telegram Business accounts linked to the workspace's bot.
+// (GET /channel-connections/telegram-business)
+func (_ Unimplemented) ListTelegramBusinessConnections(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Disconnect a Telegram Business account from the workspace.
+// (DELETE /channel-connections/telegram-business/{id})
+func (_ Unimplemented) DisconnectTelegramBusinessConnection(w http.ResponseWriter, r *http.Request, id Id) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Approve a Telegram Business account for the workspace.
+// (POST /channel-connections/telegram-business/{id}/approve)
+func (_ Unimplemented) ApproveTelegramBusinessConnection(w http.ResponseWriter, r *http.Request, id Id) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Change who may read a business account's messages.
+// (PATCH /channel-connections/telegram-business/{id}/visibility)
+func (_ Unimplemented) UpdateTelegramBusinessConnectionVisibility(w http.ResponseWriter, r *http.Request, id Id) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
 // Disconnect a messaging channel (archives the binding and destroys the credential).
 // (DELETE /channel-connections/{id})
 func (_ Unimplemented) DisconnectChannel(w http.ResponseWriter, r *http.Request, id Id) {
@@ -107777,6 +108160,12 @@ func (_ Unimplemented) ListDealMarginceChanges(w http.ResponseWriter, r *http.Re
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
+// Merge this deal into a target deal.
+// (POST /deals/{id}/merge)
+func (_ Unimplemented) MergeDeal(w http.ResponseWriter, r *http.Request, id Id, params MergeDealParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
 // Move an open deal to another pipeline, onto its first open stage.
 // (POST /deals/{id}/move-pipeline)
 func (_ Unimplemented) MoveDealPipeline(w http.ResponseWriter, r *http.Request, id Id, params MoveDealPipelineParams) {
@@ -108308,6 +108697,12 @@ func (_ Unimplemented) ListFxRateCurrencies(w http.ResponseWriter, r *http.Reque
 // Enqueue an async FX-rate refresh (stages 🟡 proposals).
 // (POST /fx-rates/propose-refresh)
 func (_ Unimplemented) ProposeFxRateRefresh(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Remove a currency from the FX rate sheet.
+// (DELETE /fx-rates/{from})
+func (_ Unimplemented) RemoveFxRate(w http.ResponseWriter, r *http.Request, from string) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -109385,7 +109780,7 @@ func (_ Unimplemented) UpdateOffer(w http.ResponseWriter, r *http.Request, id Id
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
-// Record the buyer's acceptance — syncs the deal's amount from the offer's gross.
+// Record the buyer's acceptance — syncs the deal's amount from the offer's net.
 // (POST /offers/{id}/accept)
 func (_ Unimplemented) AcceptOffer(w http.ResponseWriter, r *http.Request, id Id, params AcceptOfferParams) {
 	w.WriteHeader(http.StatusNotImplemented)
@@ -123766,6 +124161,122 @@ func (siw *ServerInterfaceWrapper) ConnectChannel(w http.ResponseWriter, r *http
 	handler.ServeHTTP(w, r)
 }
 
+// ListTelegramBusinessConnections operation middleware
+func (siw *ServerInterfaceWrapper) ListTelegramBusinessConnections(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListTelegramBusinessConnections(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// DisconnectTelegramBusinessConnection operation middleware
+func (siw *ServerInterfaceWrapper) DisconnectTelegramBusinessConnection(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.DisconnectTelegramBusinessConnection(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ApproveTelegramBusinessConnection operation middleware
+func (siw *ServerInterfaceWrapper) ApproveTelegramBusinessConnection(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ApproveTelegramBusinessConnection(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// UpdateTelegramBusinessConnectionVisibility operation middleware
+func (siw *ServerInterfaceWrapper) UpdateTelegramBusinessConnectionVisibility(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.UpdateTelegramBusinessConnectionVisibility(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // DisconnectChannel operation middleware
 func (siw *ServerInterfaceWrapper) DisconnectChannel(w http.ResponseWriter, r *http.Request) {
 
@@ -124841,15 +125352,15 @@ func (siw *ServerInterfaceWrapper) ListCompanies(w http.ResponseWriter, r *http.
 		return
 	}
 
-	// ------------- Optional query parameter "lifecycle" -------------
+	// ------------- Optional query parameter "status" -------------
 
-	err = runtime.BindQueryParameterWithOptions("form", true, false, "lifecycle", r.URL.Query(), &params.Lifecycle, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "status", r.URL.Query(), &params.Status, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
 	if err != nil {
 		var requiredError *runtime.RequiredParameterError
 		if errors.As(err, &requiredError) {
-			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "lifecycle"})
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "status"})
 		} else {
-			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "lifecycle", Err: err})
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "status", Err: err})
 		}
 		return
 	}
@@ -136395,6 +136906,100 @@ func (siw *ServerInterfaceWrapper) ListDealMarginceChanges(w http.ResponseWriter
 	handler.ServeHTTP(w, r)
 }
 
+// MergeDeal operation middleware
+func (siw *ServerInterfaceWrapper) MergeDeal(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params MergeDealParams
+
+	headers := r.Header
+
+	// ------------- Optional header parameter "Idempotency-Key" -------------
+	if valueList, found := headers[http.CanonicalHeaderKey("Idempotency-Key")]; found {
+		var IdempotencyKey IdempotencyKey
+		n := len(valueList)
+		if n != 1 {
+			siw.ErrorHandlerFunc(w, r, &TooManyValuesForParamError{ParamName: "Idempotency-Key", Count: n})
+			return
+		}
+
+		err = runtime.BindStyledParameterWithOptions("simple", "Idempotency-Key", valueList[0], &IdempotencyKey, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "string", Format: ""})
+		if err != nil {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "Idempotency-Key", Err: err})
+			return
+		}
+
+		params.IdempotencyKey = &IdempotencyKey
+
+	}
+
+	// ------------- Optional header parameter "X-Approval-Token" -------------
+	if valueList, found := headers[http.CanonicalHeaderKey("X-Approval-Token")]; found {
+		var XApprovalToken ApprovalToken
+		n := len(valueList)
+		if n != 1 {
+			siw.ErrorHandlerFunc(w, r, &TooManyValuesForParamError{ParamName: "X-Approval-Token", Count: n})
+			return
+		}
+
+		err = runtime.BindStyledParameterWithOptions("simple", "X-Approval-Token", valueList[0], &XApprovalToken, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "string", Format: ""})
+		if err != nil {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "X-Approval-Token", Err: err})
+			return
+		}
+
+		params.XApprovalToken = &XApprovalToken
+
+	}
+
+	// ------------- Optional header parameter "If-Match" -------------
+	if valueList, found := headers[http.CanonicalHeaderKey("If-Match")]; found {
+		var IfMatch IfMatch
+		n := len(valueList)
+		if n != 1 {
+			siw.ErrorHandlerFunc(w, r, &TooManyValuesForParamError{ParamName: "If-Match", Count: n})
+			return
+		}
+
+		err = runtime.BindStyledParameterWithOptions("simple", "If-Match", valueList[0], &IfMatch, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "string", Format: ""})
+		if err != nil {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "If-Match", Err: err})
+			return
+		}
+
+		params.IfMatch = &IfMatch
+
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.MergeDeal(w, r, id, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // MoveDealPipeline operation middleware
 func (siw *ServerInterfaceWrapper) MoveDealPipeline(w http.ResponseWriter, r *http.Request) {
 
@@ -139706,6 +140311,38 @@ func (siw *ServerInterfaceWrapper) ProposeFxRateRefresh(w http.ResponseWriter, r
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.ProposeFxRateRefresh(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// RemoveFxRate operation middleware
+func (siw *ServerInterfaceWrapper) RemoveFxRate(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "from" -------------
+	var from string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "from", chi.URLParam(r, "from"), &from, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "from", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.RemoveFxRate(w, r, from)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -162587,6 +163224,18 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 		r.Post(options.BaseURL+"/channel-connections", wrapper.ConnectChannel)
 	})
 	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/channel-connections/telegram-business", wrapper.ListTelegramBusinessConnections)
+	})
+	r.Group(func(r chi.Router) {
+		r.Delete(options.BaseURL+"/channel-connections/telegram-business/{id}", wrapper.DisconnectTelegramBusinessConnection)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/channel-connections/telegram-business/{id}/approve", wrapper.ApproveTelegramBusinessConnection)
+	})
+	r.Group(func(r chi.Router) {
+		r.Patch(options.BaseURL+"/channel-connections/telegram-business/{id}/visibility", wrapper.UpdateTelegramBusinessConnectionVisibility)
+	})
+	r.Group(func(r chi.Router) {
 		r.Delete(options.BaseURL+"/channel-connections/{id}", wrapper.DisconnectChannel)
 	})
 	r.Group(func(r chi.Router) {
@@ -163343,6 +163992,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 		r.Get(options.BaseURL+"/deals/{id}/margince-changes", wrapper.ListDealMarginceChanges)
 	})
 	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/deals/{id}/merge", wrapper.MergeDeal)
+	})
+	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/deals/{id}/move-pipeline", wrapper.MoveDealPipeline)
 	})
 	r.Group(func(r chi.Router) {
@@ -163608,6 +164260,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/fx-rates/propose-refresh", wrapper.ProposeFxRateRefresh)
+	})
+	r.Group(func(r chi.Router) {
+		r.Delete(options.BaseURL+"/fx-rates/{from}", wrapper.RemoveFxRate)
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/imports", wrapper.ListImportRuns)

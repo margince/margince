@@ -51,7 +51,7 @@ type financeEnv struct {
 // out from under a card that has already been read once.
 func (e *financeEnv) setLifecycle(t *testing.T, state string) {
 	t.Helper()
-	e.ownerExec(t, `UPDATE company SET lifecycle = $2 WHERE id = $1`, e.company, state)
+	e.ownerExec(t, `UPDATE company SET status = $2 WHERE id = $1`, e.company, state)
 }
 
 // ownerExec runs one statement as the database owner, for the fixture rows the
@@ -109,7 +109,7 @@ func setupFinance(t *testing.T) *financeEnv {
 		t.Fatal(err)
 	}
 	if _, err := owner.Exec(ctx,
-		`INSERT INTO company (id, display_name, lifecycle, source, captured_by)
+		`INSERT INTO company (id, display_name, status, source, captured_by)
 		 VALUES ($1, 'Ledger GmbH', 'customer', 'manual', 'human:test')`,
 		e.company); err != nil {
 		t.Fatal(err)

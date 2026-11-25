@@ -168,8 +168,8 @@ function CompanyCard({
   const t = useT();
   const summary = useEmployerSummary(companyId).data;
   const lifecycle =
-    summary?.lifecycle && summary.lifecycle !== "unknown"
-      ? t(labelFor(LIFECYCLE_LABELS, summary.lifecycle))
+    summary?.status && summary.status !== "unknown"
+      ? t(labelFor(LIFECYCLE_LABELS, summary.status))
       : undefined;
   const facts = [
     lifecycle,

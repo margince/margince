@@ -215,6 +215,7 @@ var enumBindings = map[string]struct{ pkgDir, typeName string }{
 	"capture_sender_override.decision":             {"internal/contracts", "CaptureSenderDecisionDecision"},
 	"capture_sweep_run.sweep":                      {"internal/modules/capture", "Sweep"},
 	"capture_sync_state.last_error_class":          {"internal/modules/capture", "errorClass"},
+	"channel_connection.ownership":                 {"internal/shared/ports/connector", "ChatOwnership"},
 	"channel_provider.credential_model":            {"pkg/extension", "CredentialModel"},
 	"commission_entry.attribution_at_accrual":      {"internal/contracts", "CommissionAttribution"},
 	"comms_outbound.bounce_kind":                   {"internal/shared/ports/connector", "BounceKind"},

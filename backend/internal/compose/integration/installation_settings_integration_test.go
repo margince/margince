@@ -512,7 +512,7 @@ func TestBaseCurrencyWillNotMoveOutFromUnderAPricedRateSheet(t *testing.T) {
 	}
 	// Repairable, so the reason names the repair. A message that only said "no"
 	// would leave an operator with a currency they cannot correct and no idea why.
-	if !strings.Contains(message, "clear the rate sheet") {
+	if !strings.Contains(message, "remove every currency from the rate sheet") {
 		t.Errorf("reason = %q, want it to name the repair", message)
 	}
 

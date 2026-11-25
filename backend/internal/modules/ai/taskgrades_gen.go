@@ -298,7 +298,7 @@ var taskGrades = map[CertKey]CertGrade{
 	// records/deal_verdict/openai_compatible_qwen_qwen3.8-27b_cloud_frontier.json
 	{Task: "deal_verdict", Provider: "openai_compatible", Model: "qwen/qwen3.8-27b", Profile: "cloud_frontier", ThinkingLevel: "", SiteThinking: "", Upstream: "{\"only\":[\"deepinfra\"],\"ignore\":null,\"quantizations\":[\"bf16\"],\"sort\":\"\",\"require_parameters\":null,\"allow_fallbacks\":null,\"preferred_max_latency_p90\":0,\"reasoning_effort\":\"\"}"}: {Verdict: "certified", State: "stale"},
 	// records/document_extract/anthropic_claude-sonnet-5-5_cloud_frontier.json
-	{Task: "document_extract", Provider: "anthropic", Model: "claude-sonnet-5-5", Profile: "cloud_frontier", ThinkingLevel: "", SiteThinking: "", Upstream: ""}: {Verdict: "certified", State: "current"},
+	{Task: "document_extract", Provider: "anthropic", Model: "claude-sonnet-5-5", Profile: "cloud_frontier", ThinkingLevel: "", SiteThinking: "", Upstream: ""}: {Verdict: "certified", State: "stale"},
 	// records/document_extract/gemini_gemini-3.5-flash_cloud_frontier.json
 	{Task: "document_extract", Provider: "gemini", Model: "gemini-3.5-flash", Profile: "cloud_frontier", ThinkingLevel: "low", SiteThinking: "", Upstream: ""}: {Verdict: "not_supported", State: "absent"},
 	// records/document_extract/gemini_gemini-3.6-flash_cloud_frontier.json
@@ -418,9 +418,9 @@ var taskGrades = map[CertKey]CertGrade{
 	// records/nl_search/openai_compatible_qwen_qwen3.8-27b_cloud_frontier.json
 	{Task: "nl_search", Provider: "openai_compatible", Model: "qwen/qwen3.8-27b", Profile: "cloud_frontier", ThinkingLevel: "", SiteThinking: "", Upstream: "{\"only\":[\"deepinfra\"],\"ignore\":null,\"quantizations\":[\"bf16\"],\"sort\":\"\",\"require_parameters\":null,\"allow_fallbacks\":null,\"preferred_max_latency_p90\":0,\"reasoning_effort\":\"\"}"}: {Verdict: "not_supported", State: "absent"},
 	// records/offer_draft/anthropic_claude-haiku-5-5_cloud_frontier.json
-	{Task: "offer_draft", Provider: "anthropic", Model: "claude-haiku-5-5", Profile: "cloud_frontier", ThinkingLevel: "", SiteThinking: "", Upstream: ""}: {Verdict: "certified", State: "current"},
+	{Task: "offer_draft", Provider: "anthropic", Model: "claude-haiku-5-5", Profile: "cloud_frontier", ThinkingLevel: "", SiteThinking: "", Upstream: ""}: {Verdict: "certified", State: "stale"},
 	// records/offer_draft/anthropic_claude-sonnet-5-5_cloud_frontier.json
-	{Task: "offer_draft", Provider: "anthropic", Model: "claude-sonnet-5-5", Profile: "cloud_frontier", ThinkingLevel: "", SiteThinking: "", Upstream: ""}: {Verdict: "certified", State: "current"},
+	{Task: "offer_draft", Provider: "anthropic", Model: "claude-sonnet-5-5", Profile: "cloud_frontier", ThinkingLevel: "", SiteThinking: "", Upstream: ""}: {Verdict: "certified", State: "stale"},
 	// records/offer_draft/gemini_gemini-3.1-flash-lite_cloud_frontier.json
 	{Task: "offer_draft", Provider: "gemini", Model: "gemini-3.1-flash-lite", Profile: "cloud_frontier", ThinkingLevel: "", SiteThinking: "", Upstream: ""}: {Verdict: "certified", State: "current"},
 	// records/offer_draft/gemini_gemini-3.5-flash_cloud_frontier.json

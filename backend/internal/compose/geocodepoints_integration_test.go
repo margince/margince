@@ -31,7 +31,7 @@ func TestTheCopyTaskMovesEachPointBesideItsCompany(t *testing.T) {
 			t.Fatalf("reading %s's address: ok=%v err=%v", name, ok, err)
 		}
 		e.WsExec(t, `UPDATE company SET geocode_lat = 52.5, geocode_lon = 13.4, geocode_status = 'ok',
-			geocode_provider = 'test', geocode_input_hash = $2, geocoded_at = now() WHERE id = $1`,
+			geocode_source = 'test', geocode_input_hash = $2, geocoded_at = now() WHERE id = $1`,
 			company, address.InputHash)
 		return company
 	}

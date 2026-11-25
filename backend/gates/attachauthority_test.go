@@ -41,10 +41,10 @@ var readProbeCallers = gatekit.Waive(map[string]string{
 	"capture.Sink.linkActivity":       "capture: files captured mail under the records its addresses resolve to",
 	"capture.stampTheProjectOnTheRow": "capture: re-checks the project a captured message is filed under before the stamp",
 
+	"extingress.CheckSubject": "read: asks whether the ingesting member may see the contact or lead they chose, before capture files on it; the capture transaction asks again",
+
 	"collections.admitMemberChange": "reference: a list entry is the list owner's bookmark and changes nothing on the record; list authority gates the write",
 	"collections.holdTagTarget":     "read: holds the record FOR SHARE, then takes auth.EnsureWritableLive itself",
-
-	"commissions.accrueTx": "reference: the commission entry names the deal and partner company; neither changes",
 
 	"consent.refuseUnreadableEvidence": "reference: a consent record cites a deal as evidence; the deal does not change",
 	"consent.writeExchangeTx":          "reference: a qualifying exchange names the deal it was about; the deal does not change",

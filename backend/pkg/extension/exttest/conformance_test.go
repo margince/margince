@@ -45,6 +45,14 @@ var probes = map[string]func(ctx context.Context, rt extension.Runtime) error{
 		_, err := rt.IngestPosition(ctx, "s")
 		return err
 	},
+	"IngestMemberBatch": func(ctx context.Context, rt extension.Runtime) error {
+		_, err := rt.IngestMemberBatch(ctx, "u", "s", nil, "", 0)
+		return err
+	},
+	"MemberIngestPosition": func(ctx context.Context, rt extension.Runtime) error {
+		_, err := rt.MemberIngestPosition(ctx, "u", "s")
+		return err
+	},
 	"SyncNow": func(ctx context.Context, rt extension.Runtime) error { return rt.SyncNow(ctx, "j") },
 	"OAuthAccessToken": func(ctx context.Context, rt extension.Runtime) error {
 		_, err := rt.OAuthAccessToken(ctx, "p")
@@ -93,7 +101,8 @@ var probes = map[string]func(ctx context.Context, rt extension.Runtime) error{
 var refused = map[string]error{
 	"Secrets": extension.ErrSecretNotFound, "Tx": extension.ErrRuntimeExpired, "Caller": extension.ErrNotDeclared,
 	"Ingest": extension.ErrAttendedIngest, "IngestBatch": extension.ErrAttendedIngest,
-	"IngestPosition": extension.ErrNotDeclared, "SyncNow": extension.ErrNoSuchJob,
+	"IngestPosition":    extension.ErrNotDeclared,
+	"IngestMemberBatch": extension.ErrAttendedIngest, "MemberIngestPosition": extension.ErrNotDeclared, "SyncNow": extension.ErrNoSuchJob,
 	"OAuthAccessToken": extension.ErrNoSuchOAuthApp, "OAuthDisconnect": extension.ErrNoSuchOAuthApp,
 	"Deals": extension.ErrAttendedRead, "Authority": extension.ErrAttendedRead, "Directory": extension.ErrAttendedRead,
 	"Activities": extension.ErrAttendedRead, "SetAside": extension.ErrAttendedRead,
