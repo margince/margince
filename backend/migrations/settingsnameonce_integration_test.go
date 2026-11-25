@@ -16,10 +16,10 @@ import (
 )
 
 const (
-	settingsNameOnceUp   = "core/1795573384_a_settings_list_holds_each_name_once.up.sql"
-	settingsNameOnceDown = "core/1795573384_a_settings_list_holds_each_name_once.down.sql"
-	leadNameBoundUp      = "core/1795573385_a_lead_name_holds_at_most_a_label.up.sql"
-	leadNameBoundDown    = "core/1795573385_a_lead_name_holds_at_most_a_label.down.sql"
+	settingsNameOnceUp   = "core/1795590821_a_settings_list_holds_each_name_once.up.sql"
+	settingsNameOnceDown = "core/1795590821_a_settings_list_holds_each_name_once.down.sql"
+	leadNameBoundUp      = "core/1795590822_a_lead_name_holds_at_most_a_label.up.sql"
+	leadNameBoundDown    = "core/1795590822_a_lead_name_holds_at_most_a_label.down.sql"
 )
 
 // settingsList is one list the migration holds to a name once. release is what
