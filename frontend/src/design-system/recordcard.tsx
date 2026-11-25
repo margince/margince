@@ -24,16 +24,27 @@
  * generous target, and every other affordance is its own.
  */
 
+import type { LucideIcon } from "lucide-react";
 import type { ReactNode } from "react";
 import { AppLink } from "./applink";
 import { Avatar } from "./atoms";
 import { ContactLink } from "./contactlink";
 import "./recordcard.css";
 
+/**
+ * The way in: the record's own page, or, for a record with no page (an
+ * activity), the panel the caller opens beside the list.
+ */
+type RecordCardWay =
+  | Readonly<{ href: string; onOpen?: never }>
+  | Readonly<{ href?: never; onOpen: () => void }>;
+
 export function RecordCard({
   kind,
   name,
   href,
+  onOpen,
+  icon: Icon,
   identity,
   logo,
   position,
@@ -41,61 +52,85 @@ export function RecordCard({
   aside,
 }: Readonly<{
   // What the card stands for, and so what a message to its address is filed
-  // under.
-  kind: "contact" | "company";
+  // under. A deal and an activity have no address, so only these two take one.
+  kind: "contact" | "company" | "deal" | "activity";
   name: string;
-  // The record's own page.
-  href: string;
   /**
-   * The record's own id. It keys the mark's mesh through `Avatar`, which
-   * explains why a name is the poor key: renaming a record moves it to another
-   * colour on every screen at once. It is also what a message to the card's
-   * address is filed under, which is why it is not optional.
+   * A record with no face (a deal, an activity) wears its kind's icon in place
+   * of the avatar, so a list of found records reads as one stack.
    */
-  identity: string;
-  // A company's resolved logo, drawn on the mark. `Avatar` keeps the monogram
-  // under it while it loads, if it fails, and when there is none.
-  logo?: string | null;
-  /**
-   * What this record is to the one listing it — a job title, what somebody
-   * was at a former employer. A node rather than a string because the value
-   * can carry its own provenance: a bought title says so where it stands.
-   *
-   * Not `role`: on a component that name reads as the ARIA attribute, to a
-   * linter and to the next author alike.
-   */
-  position?: ReactNode;
-  email?: string;
-  /**
-   * What the surrounding surface knows that the record itself does not — which
-   * colleagues are already in touch, whether an employment is the current one.
-   * It sits at the trailing edge, away from the record's own facts.
-   */
-  aside?: ReactNode;
-}>) {
+  icon?: LucideIcon;
+}> &
+  RecordCardWay &
+  Readonly<{
+    /**
+     * The record's own id. It keys the mark's mesh through `Avatar`, which
+     * explains why a name is the poor key: renaming a record moves it to another
+     * colour on every screen at once. It is also what a message to the card's
+     * address is filed under, which is why it is not optional.
+     */
+    identity: string;
+    // A company's resolved logo, drawn on the mark. `Avatar` keeps the monogram
+    // under it while it loads, if it fails, and when there is none.
+    logo?: string | null;
+    /**
+     * What this record is to the one listing it — a job title, what somebody
+     * was at a former employer. A node rather than a string because the value
+     * can carry its own provenance: a bought title says so where it stands.
+     *
+     * Not `role`: on a component that name reads as the ARIA attribute, to a
+     * linter and to the next author alike.
+     */
+    position?: ReactNode;
+    email?: string;
+    /**
+     * What the surrounding surface knows that the record itself does not — which
+     * colleagues are already in touch, whether an employment is the current one.
+     * It sits at the trailing edge, away from the record's own facts.
+     */
+    aside?: ReactNode;
+  }>) {
   // One target for the mark and the name together: a monogram beside a link
   // that goes to the same place is a second, smaller version of the same
   // target, and a reader who aims at the face gets nothing.
   const mark = (
     <>
-      <Avatar name={name} identity={identity} src={logo} />
+      {Icon ? (
+        <span className="record-card-icon">
+          <Icon aria-hidden="true" />
+        </span>
+      ) : (
+        <Avatar name={name} identity={identity} src={logo} />
+      )}
       <span className="record-card-name">{name}</span>
     </>
   );
+  const addressed = kind === "contact" || kind === "company" ? kind : null;
   return (
     <div className="record-card">
-      <AppLink className="record-card-open" href={href}>
-        {mark}
-      </AppLink>
+      {href !== undefined ? (
+        <AppLink className="record-card-open" href={href}>
+          {mark}
+        </AppLink>
+      ) : (
+        <button
+          type="button"
+          className="record-card-open"
+          aria-haspopup="dialog"
+          onClick={onOpen}
+        >
+          {mark}
+        </button>
+      )}
       {(position || email) && (
         <div className="record-card-facts">
           {position && <p className="record-card-position">{position}</p>}
-          {email && (
+          {email && addressed && (
             <p className="record-card-handles">
               <ContactLink
                 kind="email"
                 value={email}
-                record={{ entityType: kind, entityId: identity }}
+                record={{ entityType: addressed, entityId: identity }}
               />
             </p>
           )}

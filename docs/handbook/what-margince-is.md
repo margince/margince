@@ -155,6 +155,10 @@ the line **Works at** and the company's name. They come after the contacts whose
 own name matched. A result that came from a connected system is marked **From a
 connected system**.
 
+Each contact, company, deal and activity stands in its own box. A deal shows its
+stage, amount and close date. An activity shows the words that matched, and opens
+beside the results.
+
 An email is found by its subject and by the words its sender wrote. An email quoted under a reply
 does not find it, and neither does an email it forwards. Two cases still find an email through
 quoted text:
@@ -164,6 +168,7 @@ quoted text:
 
 When nothing matches, the **Search results** page offers **Did you mean:** with up to five
 names that are written close to what you typed. It lists only names you may open.
+A long search term is cut short in the line that says nothing matched.
 
 ### What is the command palette?
 The command palette is the Margince box that finds any screen, action, setting or record from one place. It opens over the page you are on, and its empty field reads **Search or ask Margince**.
