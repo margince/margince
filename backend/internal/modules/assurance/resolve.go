@@ -31,6 +31,9 @@ const (
 	OutcomeNotRelevant   = "not_relevant"
 	OutcomeRemindLater   = "remind_later"
 	OutcomeReassign      = "reassign"
+	// OutcomeSeparate says two deals of a pair finding are not one buying
+	// motion. It hides nothing that carries money, so it has no expiry.
+	OutcomeSeparate = "separate"
 	// OutcomeConditionCleared is the SYSTEM's, never a contact's: a finding
 	// whose condition stopped being true resolves itself.
 	OutcomeConditionCleared = "condition_cleared"
@@ -151,6 +154,9 @@ func (s *Store) resolveIn(
 	if err := ensureAnswerable(ctx, tx, exceptionID); err != nil {
 		return err
 	}
+	if err := requireSeparable(ctx, tx, exceptionID, in.Outcome); err != nil {
+		return err
+	}
 	if err := s.applySignalDecision(ctx, tx, exceptionID, in); err != nil {
 		return err
 	}
@@ -260,6 +266,34 @@ func ensureAnswerable(ctx context.Context, tx pgx.Tx, exceptionID ids.UUID) erro
 	return auth.EnsureWritable(ctx, tx, subjectKindDeal, subjectID)
 }
 
+// requireSeparable refuses "separate" on any finding but a pair of deals. Only
+// there does the answer say anything, and elsewhere it would close a finding
+// without naming a reason or an expiry.
+func requireSeparable(ctx context.Context, tx pgx.Tx, exceptionID ids.UUID, outcome string) error {
+	if outcome != OutcomeSeparate {
+		return nil
+	}
+	var findingType string
+	var partner *ids.UUID
+	if err := tx.QueryRow(ctx, `SELECT type, (observed ->> $2)::uuid FROM assurance_exception WHERE id = $1`,
+		exceptionID, SlotOtherDealID).Scan(&findingType, &partner); err != nil {
+		return fmt.Errorf("assurance: reading the finding's type: %w", err)
+	}
+	if findingType != TypeDuplicateMotion {
+		return &values.ParseError{
+			Field: slotOutcome, Code: "not_allowed",
+			Message: "separate answers only a finding about two deals that may be one buying motion",
+		}
+	}
+	// The answer silences the pair for good, so it needs the same authority
+	// over the second deal as the subject. A deal out of the caller's scope
+	// answers not found, so nothing leaks.
+	if partner == nil {
+		return apperrors.ErrNotFound
+	}
+	return auth.EnsureWritable(ctx, tx, subjectKindDeal, *partner)
+}
+
 // ensureCallAnswerable admits the call's own author: an answer about a call
 // is the author saying the number still stands, or that they called again.
 func ensureCallAnswerable(ctx context.Context, tx pgx.Tx, callID ids.UUID) error {
@@ -288,7 +322,7 @@ func ensureCallAnswerable(ctx context.Context, tx pgx.Tx, callID ids.UUID) error
 func checkResolution(in Resolution, now time.Time) (*time.Time, error) {
 	switch in.Outcome {
 	case OutcomeFixedRecord, OutcomeAddedEvidence, OutcomeValueCorrect,
-		OutcomeNotRelevant, OutcomeRemindLater, OutcomeReassign:
+		OutcomeNotRelevant, OutcomeRemindLater, OutcomeReassign, OutcomeSeparate:
 	case OutcomeConditionCleared:
 		// The system's own. A contact claiming it would be saying the condition
 		// stopped being true without anything having checked.

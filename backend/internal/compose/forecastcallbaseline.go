@@ -20,6 +20,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
+	"github.com/margince/margince/backend/internal/compose/assurancepair"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/assurance"
 	"github.com/margince/margince/backend/internal/modules/forecasting"
@@ -172,10 +173,11 @@ func assuranceDealSubjects(
 	return assuranceSubjects(ctx, tx, asOf, coverage, []ids.UUID{deal})
 }
 
-// assuranceScanner is the input check as every caller runs it.
-func assuranceScanner(pool *pgxpool.Pool, store *assurance.Store) *assurance.Scanner {
+// AssuranceScanner is the input check as every caller runs it.
+func AssuranceScanner(pool *pgxpool.Pool, store *assurance.Store) *assurance.Scanner {
 	return assurance.NewScanner(store, AssuranceSubjects, AssuranceCoverage, assurance.DefaultConfig()).
 		WithSignalSubjects(AssuranceSignalSubjects).
 		WithCallSubjects(assuranceCallSubjects(pool)).
+		WithPairSubjects(assurancepair.Subjects).
 		WithDealSubjects(assuranceDealSubjects)
 }
