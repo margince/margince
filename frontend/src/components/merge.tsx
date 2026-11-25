@@ -66,6 +66,10 @@ export function MergeAction<Survivor extends { id: string }>({
 }>) {
   const t = useT();
   const refused = useGrantRefused(requires);
+  const readOnlyRole = useGrantRefused({
+    object: requires.object,
+    action: "update",
+  });
   const queryClient = useQueryClient();
   const toast = useToast();
   const headingId = useId();
@@ -104,7 +108,11 @@ export function MergeAction<Survivor extends { id: string }>({
     <>
       <Button
         reasonId={disabledReasonId}
-        reason={refused ? t("record.actionRefused") : undefined}
+        reason={
+          refused
+            ? t(readOnlyRole ? "record.roleReadsOnly" : "record.actionRefused")
+            : undefined
+        }
         onClick={() => setOpen(true)}
         data-testid="merge-record"
       >

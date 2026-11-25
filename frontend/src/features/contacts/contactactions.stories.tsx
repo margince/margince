@@ -257,7 +257,7 @@ export const LogRefused: Story = {
     });
     await waitFor(() =>
       expect(email).toHaveAccessibleDescription(
-        "You do not have permission to log activities on this record.",
+        "Your role can only read. Ask an administrator for another role.",
       ),
     );
     await expect(email).toBeDisabled();

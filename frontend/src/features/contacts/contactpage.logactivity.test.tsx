@@ -98,7 +98,7 @@ describe("logging an activity", () => {
       button.getAttribute("aria-describedby") ?? "",
     );
     expect(reason?.textContent).toBe(
-      "You do not have permission to log activities on this record.",
+      "Your role can only read. Ask an administrator for another role.",
     );
     expect(reason?.closest(".record-aside")).not.toBeNull();
   });
@@ -126,7 +126,7 @@ describe("logging an activity", () => {
     // refused rows, which is the menu's own rule.
     expect(
       screen.getAllByText(
-        "You do not have permission to log activities on this record.",
+        "Your role can only read. Ask an administrator for another role.",
       ),
     ).toHaveLength(1);
     const addTask = await addTaskRow(header);
@@ -157,7 +157,7 @@ describe("logging an activity", () => {
     expect(logActivity).toHaveProperty("disabled", true);
     expect(
       within(header).queryByText(
-        "You do not have permission to log activities on this record.",
+        "Your role can only read. Ask an administrator for another role.",
       ),
     ).toBeNull();
   });
@@ -394,7 +394,7 @@ describe("logging a call started on the page", () => {
       inShell,
     );
     await screen.findByText(
-      "You do not have permission to log activities on this record.",
+      "Your role can only read. Ask an administrator for another role.",
     );
 
     const [number] = await screen.findAllByRole("link", { name: NUMBER });

@@ -3,7 +3,7 @@
 
 import { useId } from "react";
 import type { MessageKey } from "../i18n/en";
-import { useCanWrite } from "../lib/capability";
+import { useGrantRefused } from "../lib/capability";
 import { useMe } from "../lib/session";
 import type { WritingMomentVerb } from "../lib/writeverbs";
 
@@ -41,18 +41,19 @@ export function writableTarget(
     : record;
 }
 
-export function useActivityGate(
-  record?: AttachTarget | null,
-  permissionRefusal: MessageKey = "record.logActivityRefused",
-): ActivityGate {
-  // useCanWrite, not useCan: Log and Add task issue the same POST, and a read
-  // seat is refused before RBAC is consulted.
+/** What the gate says when the role or the seat may not write activities. */
+export const ACTIVITY_ROLE_REFUSAL: MessageKey = "record.roleReadsOnly";
+
+export function useActivityGate(record?: AttachTarget | null): ActivityGate {
+  // Log, Add task and Book issue the same POST, and a read seat is refused
+  // before RBAC is consulted. Either way only an administrator can lift it.
   const me = useMe();
-  const canLog = useCanWrite("activity", "create");
+  const roleRefused = useGrantRefused({ object: "activity", action: "create" });
   const sentenceId = useId();
   const known = me.data?.authorization !== undefined;
-  const refusalKey =
-    known && !canLog ? permissionRefusal : attachRefusal(record);
+  const refusalKey = roleRefused
+    ? ACTIVITY_ROLE_REFUSAL
+    : attachRefusal(record);
   return {
     refusedId: refusalKey ? sentenceId : undefined,
     refusalKey,

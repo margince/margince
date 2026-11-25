@@ -22,11 +22,11 @@ import {
   subjectIsRequired,
   todayDay,
 } from "../lib/activitybody";
-import { useCanWrite } from "../lib/capability";
+import { useGrantRefused } from "../lib/capability";
 import type { EntityKind } from "../lib/entity";
 import { unwrap } from "../lib/problem";
-import { useMe } from "../lib/session";
 import { ActivityBodyField } from "./activitybodyfield";
+import { ACTIVITY_ROLE_REFUSAL } from "./activitygate";
 import { TaskAssigneeField } from "./assigneepicker";
 import { LogActivityEntries } from "./extensionentries";
 import { dueBoundsOf, latestDayOf } from "./logactivity.days";
@@ -474,14 +474,12 @@ export function LogActivity({
   askedKind?: OpeningKind;
 }>) {
   const t = useT();
-  const me = useMe();
-  const canLog = useCanWrite("activity", "create");
-  const logRefused = me.data?.authorization !== undefined && !canLog;
+  const logRefused = useGrantRefused({ object: "activity", action: "create" });
   return (
     <Panel title={t("log.title")}>
       <PanelBody>
         {logRefused ? (
-          <p>{t("record.logActivityRefused")}</p>
+          <p>{t(ACTIVITY_ROLE_REFUSAL)}</p>
         ) : (
           <LogActivityForm
             entityType={entityType}

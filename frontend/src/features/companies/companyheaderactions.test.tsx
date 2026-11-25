@@ -14,7 +14,7 @@ import userEvent from "@testing-library/user-event";
 import { type ReactNode, useState } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../../api/schema";
-import { useActivityGate } from "../../components/activitygate";
+import { useActivityGate, writableTarget } from "../../components/activitygate";
 import { SEARCH_DEBOUNCE_MS } from "../../design-system/debouncedsearch";
 import { armHoverIntent } from "../../design-system/hoverintent-testing";
 import { UTC_ZONE } from "../../format/timezone";
@@ -165,13 +165,16 @@ function ActionsHost({
   company = COMPANY,
   view,
   onComposerOpen = () => undefined,
+  filesOnto,
 }: Readonly<{
   company?: Company;
   view?: Company360;
   onComposerOpen?: (open: boolean) => void;
+  // The row the activity files onto, where the test asks the server's answer.
+  filesOnto?: Company;
 }>) {
   const [drawer, setDrawer] = useState<ActivityDrawer>(null);
-  const activity = useActivityGate();
+  const activity = useActivityGate(writableTarget(filesOnto));
   return (
     <>
       <CompanyHeaderActions
@@ -231,7 +234,7 @@ describe("Log activity and Add task, gated on the create grant", () => {
     const user = userEvent.setup();
     armHoverIntent();
     renderActions();
-    const why = en["record.logActivityRefused"];
+    const why = en["record.roleReadsOnly"];
 
     const log = await screen.findByRole("button", { name: "Log activity" });
     const email = screen.getByRole("button", {
@@ -247,7 +250,7 @@ describe("Log activity and Add task, gated on the create grant", () => {
       name: BOOK_NAME,
     });
     expect(book.getAttribute("title")).toBe(
-      `${en["scheduling.bookContact"]}. ${en["scheduling.bookRefused"]}`,
+      `${en["scheduling.bookContact"]}. ${en["record.roleReadsOnly"]}`,
     );
 
     const host = email.closest(".icon-action");
@@ -273,7 +276,7 @@ describe("Log activity and Add task, gated on the create grant", () => {
     expect(describedBy).toBeTruthy();
     expect(task.getAttribute("aria-describedby")).toBe(describedBy);
     expect(document.getElementById(describedBy ?? "")?.textContent).toBe(
-      "You do not have permission to log activities on this record.",
+      "Your role can only read. Ask an administrator for another role.",
     );
 
     // Both refused for the SAME reason, so the reader reads it once: pressing
@@ -282,7 +285,7 @@ describe("Log activity and Add task, gated on the create grant", () => {
     await user.click(log);
     expect(screen.queryByRole("dialog")).toBeNull();
 
-    // Booking needs the same grant, and says so in the booking screen's words.
+    // Booking needs the same grant, so it names the role too.
     const book = screen.getByRole("button", {
       name: BOOK_NAME,
     });
@@ -290,7 +293,26 @@ describe("Log activity and Add task, gated on the create grant", () => {
     expect(
       document.getElementById(book.getAttribute("aria-describedby") ?? "")
         ?.textContent,
-    ).toBe(en["scheduling.bookRefused"]);
+    ).toBe(en["record.roleReadsOnly"]);
+  });
+
+  it("keeps the booking sentence for a writing role on a row it may not file onto", async () => {
+    stubGrants({ activity: ["create"] });
+    const notTheirs = { ...COMPANY, writable: false };
+    renderInApp(<ActionsHost company={notTheirs} filesOnto={notTheirs} />);
+
+    const book = await screen.findByRole("button", { name: BOOK_NAME });
+    await waitFor(() =>
+      expect(
+        document.getElementById(book.getAttribute("aria-describedby") ?? "")
+          ?.textContent,
+      ).toBe(en["scheduling.bookRefused"]),
+    );
+    const log = screen.getByRole("button", { name: "Log activity" });
+    expect(
+      document.getElementById(log.getAttribute("aria-describedby") ?? "")
+        ?.textContent,
+    ).toBe(en["record.attachRefused"]);
   });
 
   it("presses both, with the grant", async () => {
@@ -323,7 +345,7 @@ describe("Log activity and Add task, gated on the create grant", () => {
     ).toBe(true);
     expect(
       screen.queryByText(
-        "You do not have permission to log activities on this record.",
+        "Your role can only read. Ask an administrator for another role.",
       ),
     ).toBeNull();
 
@@ -570,9 +592,7 @@ describe("the record keys", () => {
     renderHook(() => useShortcutDispatcher());
     const onComposerOpen = vi.fn();
     renderInApp(<ActionsHost onComposerOpen={onComposerOpen} />);
-    await screen.findByText(
-      "You do not have permission to log activities on this record.",
-    );
+    await screen.findAllByText(en["record.roleReadsOnly"]);
 
     await user.keyboard("ntm");
     expect(screen.queryByRole("dialog")).toBeNull();

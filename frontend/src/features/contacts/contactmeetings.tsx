@@ -174,7 +174,7 @@ function BookMeeting({
   ref: Ref<HTMLButtonElement>;
 }>) {
   const t = useT();
-  const gate = useActivityGate(view?.contact ?? null, "scheduling.bookRefused");
+  const gate = useActivityGate(view?.contact ?? null);
   return (
     <Button
       ref={ref}

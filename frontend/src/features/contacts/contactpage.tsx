@@ -95,7 +95,7 @@ function refusalsOf(
       {readOnlyReason && activityRefused && " "}
       {activityRefused && (
         <span id={activity.sentenceId}>
-          {t(activity.refusalKey ?? "record.logActivityRefused")}
+          {activity.refusalKey && t(activity.refusalKey)}
         </span>
       )}
       {readOnlyReason && row && (

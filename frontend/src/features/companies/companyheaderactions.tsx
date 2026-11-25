@@ -4,7 +4,10 @@
 import { CalendarPlus, FileText } from "lucide-react";
 import { useCallback, useId, useMemo, useRef } from "react";
 import type { components } from "../../api/schema";
-import type { ActivityGate } from "../../components/activitygate";
+import {
+  ACTIVITY_ROLE_REFUSAL,
+  type ActivityGate,
+} from "../../components/activitygate";
 import { ExtensionEntries } from "../../components/extensionentries";
 import { LogActivityAction } from "../../components/logactivity.action";
 import { searchCompanyContacts } from "../../components/meetingattendees";
@@ -58,12 +61,16 @@ function stripRefusals(
       ? {}
       : { ownArchived: t("record.archivedReadOnly") };
   }
-  return state.activityRefusalKey
-    ? {
-        activityRefusal: t(state.activityRefusalKey),
-        bookRefusal: t("scheduling.bookRefused"),
-      }
-    : {};
+  const key = state.activityRefusalKey;
+  if (!key) {
+    return {};
+  }
+  return {
+    activityRefusal: t(key),
+    bookRefusal: t(
+      key === ACTIVITY_ROLE_REFUSAL ? key : "scheduling.bookRefused",
+    ),
+  };
 }
 
 export function CompanyHeaderActions({

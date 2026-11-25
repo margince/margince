@@ -82,7 +82,7 @@ describe("a reader whose role only reads", () => {
     };
     mount("overview", readOnly, [], {}, { contact: ["read"] });
 
-    await screen.findByText(en["record.roleReadsOnly"]);
+    await screen.findAllByText(en["record.roleReadsOnly"]);
     expect(screen.queryByText(en["contact.notYoursToChange"])).toBeNull();
     await openRecordMenu();
     const verb = await screen.findByTestId("archive-record");

@@ -105,7 +105,7 @@ export const LogRefused: Story = {
     );
   },
   play: async ({ canvasElement }) => {
-    const why = en["record.logActivityRefused"];
+    const why = en["record.roleReadsOnly"];
     const log = await within(canvasElement).findByRole("button", {
       name: en["log.title"],
     });

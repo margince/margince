@@ -313,7 +313,7 @@ it("does not ask for proposals when the reader may not book", async () => {
   mount(asked, {}, {});
   expect(
     await screen.findByText(
-      "An administrator must grant permission to book meetings.",
+      "Your role can only read. Ask an administrator for another role.",
     ),
   ).toBeTruthy();
   expect(asked).not.toHaveBeenCalled();
