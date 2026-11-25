@@ -1,4 +1,4 @@
--- Reverses 1795590821. A twin the up step renamed keeps its new name.
+-- Reverses 1795603730. A twin the up step renamed keeps its new name.
 SET LOCAL lock_timeout = '3s';
 
 DROP INDEX IF EXISTS deal_acquisition_source_label_once;
