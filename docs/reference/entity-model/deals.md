@@ -76,7 +76,7 @@ The 26 tables owned by `deals`, as the migrations build them. [Back to the entit
 
 ## deal
 
-52 columns · primary key `(id)` · referenced by 30 foreign keys
+53 columns · primary key `(id)` · referenced by 31 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -105,6 +105,7 @@ The 26 tables owned by `deals`, as the migrations build them. [Back to the entit
 | `manager_request_reasons` | `text[]` |  |  |
 | `manager_requested_at` | `timestamp with time zone` |  |  |
 | `manager_requested_by` | `uuid` |  |  |
+| `merged_into_id` | `uuid` |  | Set when this deal was merged away into another, and null otherwise. |
 | `name` | `text` | yes |  |
 | `owner_id` | `uuid` |  | Points at `app_user.id`. |
 | `partner_attribution` | `text` |  | What the partner named by `partner_company_id` did: `sourced` (brought the deal) or `influenced` (helped one we had). |
@@ -141,6 +142,7 @@ The 26 tables owned by `deals`, as the migrations build them. [Back to the entit
 | `id, arr_source_offer_id` | `offer` | deleting the parent keeps this row and clears the link |
 | `company_id` | `company` | deleting the parent keeps this row and clears the link |
 | `lost_reason_code` | `deal_loss_reason` | the parent cannot be deleted while this row points at it |
+| `merged_into_id` | `deal` | deleting the parent keeps this row and clears the link |
 | `owner_id` | `app_user` | deleting the parent keeps this row and clears the link |
 | `partner_company_id` | `company` | deleting the parent keeps this row and clears the link |
 | `pipeline_id` | `pipeline` | the parent cannot be deleted while this row points at it |
@@ -192,6 +194,7 @@ The 26 tables owned by `deals`, as the migrations build them. [Back to the entit
 - `idx_deal_live_newest`: `btree (created_at DESC, id DESC) WHERE (archived_at IS NULL)`
 - `idx_deal_lost_reason_code`: `btree (lost_reason_code) WHERE (lost_reason_code IS NOT NULL)`
 - `idx_deal_lost_reason_note_key`: `btree (md5(lower(btrim(lost_reason)))) WHERE (lost_reason IS NOT NULL)`
+- `idx_deal_merged_into`: `btree (merged_into_id) WHERE (merged_into_id IS NOT NULL)`
 - `idx_deal_name_trgm`: `gin (f_fold_apostrophes(lower(name)) gin_trgm_ops)`
 - `idx_deal_owner`: `btree (owner_id) WHERE (archived_at IS NULL)`
 - `idx_deal_partner`: `btree (partner_company_id) WHERE ((partner_company_id IS NOT NULL) AND (archived_at IS NULL))`

@@ -262,7 +262,7 @@ var taskGrades = map[CertKey]CertGrade{
 	// records/document_extract/gemini_gemini-3.6-flash_cloud_frontier.json
 	{Task: "document_extract", Provider: "gemini", Model: "gemini-3.6-flash", Profile: "cloud_frontier", ThinkingLevel: "low", SiteThinking: "", Upstream: ""}: {Verdict: "certified", State: "stale"},
 	// records/document_extract/gemini_gemini-3.8-flash_cloud_frontier.json
-	{Task: "document_extract", Provider: "gemini", Model: "gemini-3.8-flash", Profile: "cloud_frontier", ThinkingLevel: "low", SiteThinking: "", Upstream: ""}: {Verdict: "certified", State: "current"},
+	{Task: "document_extract", Provider: "gemini", Model: "gemini-3.8-flash", Profile: "cloud_frontier", ThinkingLevel: "low", SiteThinking: "", Upstream: ""}: {Verdict: "certified", State: "stale"},
 	// records/draft_reply/gemini_gemini-3.1-flash-lite_cloud_frontier.json
 	{Task: "draft_reply", Provider: "gemini", Model: "gemini-3.1-flash-lite", Profile: "cloud_frontier", ThinkingLevel: "", SiteThinking: "", Upstream: ""}: {Verdict: "supported_degraded", State: "current"},
 	// records/draft_reply/gemini_gemini-3.1-pro-preview_cloud_frontier.json

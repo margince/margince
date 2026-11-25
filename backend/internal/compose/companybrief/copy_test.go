@@ -17,6 +17,7 @@ import (
 func TestEveryShippedLanguageWritesTheCompanyFloor(t *testing.T) {
 	t.Parallel()
 	langcopytest.Census(t, floor)
+	langcopytest.GermanStyle(t, floor)
 }
 
 // englishMonths are what time.Format writes for the `Jan` token — in English,
