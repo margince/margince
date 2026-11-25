@@ -5,6 +5,7 @@ package storekit
 
 import (
 	"context"
+	"errors"
 	"testing"
 
 	"github.com/margince/margince/backend/internal/shared/ports/fieldcatalog"
@@ -28,5 +29,23 @@ func TestRecordTargetsSkipWhatIsNotAWellFormedRecordValue(t *testing.T) {
 	}
 	if err := EnsureRecordTargets(context.Background(), nil, active, map[string]any{"cf_visit": nil}); err != nil {
 		t.Fatalf("a cleared record field: %v", err)
+	}
+}
+
+// A caller with no read right on the target kind is told the record does not
+// exist, so the answer is the same as for a missing one. No transaction is used.
+func TestRecordTargetsAnswerNotFoundWhenTheCallerCannotReadTheKind(t *testing.T) {
+	active := []fieldcatalog.Column{{Name: "cf_contact", Type: fieldcatalog.TypeRecord, Options: []string{"contact"}}}
+	values := map[string]any{"cf_contact": "0194f3a0-0000-7000-8000-000000000001"}
+	err := EnsureRecordTargets(context.Background(), nil, active, values)
+	var refused CustomFieldErrors
+	if !errors.As(err, &refused) || len(refused) != 1 || refused[0].Code != CustomFieldTargetMissing || refused[0].Field != "cf_contact" {
+		t.Fatalf("EnsureRecordTargets = %v, want one %s error on cf_contact", err, CustomFieldTargetMissing)
+	}
+	if _, _, _, err = InsertFragmentsIn(context.Background(), nil, active, values, nil); !errors.As(err, &refused) {
+		t.Errorf("InsertFragmentsIn = %v, want the record-target refusal", err)
+	}
+	if err = SetCustomFieldPatchIn(context.Background(), nil, nil, active, values, nil); !errors.As(err, &refused) {
+		t.Errorf("SetCustomFieldPatchIn = %v, want the record-target refusal", err)
 	}
 }
