@@ -6697,6 +6697,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "outcomeReview.notes": "Weitere Notizen",
   "deal.commercialContext": "Kaufmännischer Kontext",
 
+  "deal.closedAmountKept":
+    "Ein gewonnener oder verlorener Deal behält seinen Preis. Öffne ihn zuerst wieder, um ihn zu entfernen.",
   "deal.arrFromOffer":
     "Der erwartete ARR stammt aus dem angenommenen Angebot und wird hier nicht bearbeitet.",
   "deal.brief": "Deal-Bericht",
@@ -15978,6 +15980,11 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Nur Lesezugriff. Deine Rolle darf keine Kurse ändern.",
   "settings.rates.fxTableLabel": "Geltende Kurse",
   "settings.rates.fxAdd": "Kurs festlegen",
+  "settings.rates.fxRemoveVerb": "{currency} entfernen",
+  "settings.rates.fxRemoveTitle": "Kurs für {currency} entfernen?",
+  "settings.rates.fxRemoveBody":
+    "Deals in {currency} zeigen keinen Wert in der Basiswährung, bis ein neuer Kurs festgelegt ist. Bereits berechnete Zahlen behalten den Kurs, mit dem sie berechnet wurden.",
+  "settings.rates.fxRemoveConfirm": "Entfernen",
   "settings.rates.fxEmpty": "Noch keine Wechselkurse.",
   "settings.rates.fxModalTitle": "Wechselkurs festlegen",
   "settings.rates.rateToBase": "Kurs (zur Basiswährung)",
@@ -17342,13 +17349,13 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "installationSettings.baseCurrencyLock.ratesFrozen_other":
     "Für {count} Einträge ist bereits jeweils ein Wechselkurs zu dieser Währung festgeschrieben, daher ist sie nicht mehr änderbar.",
   "installationSettings.baseCurrencyLock.rateSheet_one":
-    "{count} Wechselkurs rechnet in {base} um. Entferne zuerst die Wechselkurse, um die Basiswährung zu ändern.",
+    "{count} Wechselkurs rechnet in {base} um. Entferne zuerst alle Währungen aus der Kurstabelle, um die Basiswährung zu ändern.",
   "installationSettings.baseCurrencyLock.rateSheet_other":
-    "{count} Wechselkurse rechnen in {base} um. Entferne zuerst die Wechselkurse, um die Basiswährung zu ändern.",
+    "{count} Wechselkurse rechnen in {base} um. Entferne zuerst alle Währungen aus der Kurstabelle, um die Basiswährung zu ändern.",
   "installationSettings.baseCurrencyLock.rateSheetUnnamed_one":
-    "{count} Wechselkurs rechnet in eine Basiswährung um, die nicht hinterlegt ist. Entferne zuerst die Wechselkurse, um die Basiswährung zu ändern.",
+    "{count} Wechselkurs rechnet in eine Basiswährung um, die nicht hinterlegt ist. Entferne zuerst alle Währungen aus der Kurstabelle, um die Basiswährung zu ändern.",
   "installationSettings.baseCurrencyLock.rateSheetUnnamed_other":
-    "{count} Wechselkurse rechnen in eine Basiswährung um, die nicht hinterlegt ist. Entferne zuerst die Wechselkurse, um die Basiswährung zu ändern.",
+    "{count} Wechselkurse rechnen in eine Basiswährung um, die nicht hinterlegt ist. Entferne zuerst alle Währungen aus der Kurstabelle, um die Basiswährung zu ändern.",
   "installationSettings.baseLanguage": "Basissprache",
   "installationSettings.baseLanguageHint":
     "Sprache, in der die KI schreibt, wenn das ganze Team den Text liest. Die Anzeigesprache ist davon getrennt, und Antworten nach außen folgen der Sprache des Threads.",

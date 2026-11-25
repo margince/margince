@@ -612,6 +612,36 @@ describe("the rate sheets", () => {
 
   // The button runs the refresh inline, so its answer lands on the sheet it
   // wrote: how many prices moved, and which vendors could not be asked.
+  it("asks before removing a currency, then sends the delete", async () => {
+    const user = userEvent.setup();
+    const backend = ratesBackend(
+      { fx_rate: ["read", "create", "update"] },
+      "full",
+      [],
+    );
+    vi.stubGlobal("fetch", backend);
+    render(<FxRatesCard />);
+    await user.click(await screen.findByRole("button", { name: "Remove USD" }));
+    const deletes = () =>
+      backend.mock.calls.filter(
+        ([input]) => input instanceof Request && input.method === "DELETE",
+      );
+    expect(deletes()).toHaveLength(0);
+    expect(screen.getByText("Remove the USD rate?")).toBeTruthy();
+    await user.click(screen.getByRole("button", { name: "Remove" }));
+    await waitFor(() => expect(deletes()).toHaveLength(1));
+    const [sent] = deletes()[0] ?? [];
+    expect(sent instanceof Request ? sent.url : "").toMatch(
+      /\/v1\/fx-rates\/USD$/,
+    );
+  });
+
+  it("offers no Remove on a rate-setter without the update grant", async () => {
+    mount(RATE_SETTER);
+    await waitFor(() => expect(screen.getByText("USD")).toBeTruthy());
+    expect(screen.queryByRole("button", { name: "Remove USD" })).toBeNull();
+  });
+
   it("reports what a refresh wrote and which vendors it could not reach", async () => {
     const user = userEvent.setup();
     mount(PRICE_ADMIN);

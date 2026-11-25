@@ -48,12 +48,13 @@ func AdmitTelegramUpdateTx(ctx context.Context, tx pgx.Tx, bot ids.UUID, update 
 
 // connectedBusinessLinkTx resolves the connection id a business_message names to
 // the approved link of this bot. It answers false for an unknown id, a link
-// waiting for an admin, and a link switched off.
+// waiting for an admin and a link switched off. It also answers false for a
+// connected link with no seat, because nothing could file its messages.
 func connectedBusinessLinkTx(ctx context.Context, tx pgx.Tx, bot ids.UUID, businessConnectionID string) (ids.UUID, bool, error) {
 	id, _, err := scanBusinessLink(tx.QueryRow(ctx, `
 		SELECT `+businessLinkColumns+` FROM channel_connection
 		 WHERE provider = $1 AND channel_id = $2 AND parent_connection_id = $3
-		   AND status = $4 AND archived_at IS NULL`,
+		   AND status = $4 AND seat_id IS NOT NULL AND archived_at IS NULL`,
 		telegram.BusinessProvider, businessConnectionID, bot, channelStatusConnected))
 	if errors.Is(err, pgx.ErrNoRows) {
 		return ids.Nil, false, nil
@@ -68,13 +69,13 @@ func connectedBusinessLinkTx(ctx context.Context, tx pgx.Tx, bot ids.UUID, busin
 // message was admitted through. It holds the row FOR SHARE until the caller's
 // transaction ends. Every writer that disconnects, disables or archives the link
 // updates the row and waits on that lock. It answers false for a link that is no
-// longer connected, because a link switched off after admission must not file
-// what it queued.
+// longer connected or has no seat. A link switched off after admission must not
+// file what it queued.
 func LockLiveBusinessLinkTx(ctx context.Context, tx pgx.Tx, linkID ids.UUID) (telegram.BusinessLink, bool, error) {
 	_, link, err := scanBusinessLink(tx.QueryRow(ctx, `
 		SELECT `+businessLinkColumns+` FROM channel_connection
 		 WHERE id = $1 AND provider = $2 AND parent_connection_id IS NOT NULL
-		   AND status = $3 AND archived_at IS NULL FOR SHARE`,
+		   AND status = $3 AND seat_id IS NOT NULL AND archived_at IS NULL FOR SHARE`,
 		linkID, telegram.BusinessProvider, channelStatusConnected))
 	if errors.Is(err, pgx.ErrNoRows) {
 		return telegram.BusinessLink{}, false, nil
@@ -85,19 +86,22 @@ func LockLiveBusinessLinkTx(ctx context.Context, tx pgx.Tx, linkID ids.UUID) (te
 	return link, true, nil
 }
 
-const businessLinkColumns = `id, account_id, ownership, owner_user_id`
+const businessLinkColumns = `id, account_id, ownership, owner_user_id, seat_id`
 
 func scanBusinessLink(row pgx.Row) (ids.UUID, telegram.BusinessLink, error) {
 	var id ids.UUID
 	var link telegram.BusinessLink
 	var ownership string
-	var owner *ids.UUID
-	if err := row.Scan(&id, &link.AccountID, &ownership, &owner); err != nil {
+	var owner, seat *ids.UUID
+	if err := row.Scan(&id, &link.AccountID, &ownership, &owner, &seat); err != nil {
 		return ids.Nil, telegram.BusinessLink{}, err
 	}
 	link.Ownership = connector.ChatOwnership(ownership)
 	if owner != nil {
 		link.OwnerUserID = *owner
+	}
+	if seat != nil {
+		link.SeatID = *seat
 	}
 	return id, link, nil
 }

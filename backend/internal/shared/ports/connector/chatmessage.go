@@ -48,6 +48,10 @@ type ChatBinding struct {
 	Ownership    ChatOwnership
 	// OwnerUserID is the member behind a member-owned connection.
 	OwnerUserID ids.UUID
+	// SeatID is the capture_connection seat the account files through. Its
+	// posture decides who reads a message, as a mailbox's does for mail. Zero
+	// for the workspace's own bot, which belongs to no account.
+	SeatID ids.UUID
 }
 
 // ChatParty is the contact on the other side of a conversation.
