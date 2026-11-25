@@ -134,7 +134,9 @@ func accrueTx(ctx context.Context, tx pgx.Tx, in AccrueInput, by string) (crmcon
 	}); err != nil {
 		return crmcontracts.CommissionEntry{}, fmt.Errorf("emit commission.accrued: %w", err)
 	}
-	return readEntry(ctx, tx, id)
+	// Read back under the retractable scope: the deal may be archived, and the
+	// live-anchor read would answer ErrNotFound for the row just written.
+	return readRetractableEntry(ctx, tx, id)
 }
 
 // commissionAmount applies a basis-point rate to a minor-unit amount.
