@@ -4712,6 +4712,7 @@ public.custom_field.created_at timestamp with time zone NOT NULL gen=- def=now()
 public.custom_field.created_by uuid NOT NULL gen=- def=-
 public.custom_field.currency currency_code gen=- def=-
 public.custom_field.custom_field_activity_kinds_check CHECK (((activity_kinds IS NULL) OR ((object = 'activity'::text) AND (cardinality(activity_kinds) > 0))))
+public.custom_field.custom_field_activity_kinds_vocabulary CHECK ((activity_kinds <@ ARRAY['call'::text, 'email'::text, 'meeting'::text, 'message'::text, 'note'::text, 'task'::text]))
 public.custom_field.custom_field_created_by_fkey FOREIGN KEY (created_by) REFERENCES app_user(id) ON DELETE RESTRICT
 public.custom_field.custom_field_object_check CHECK ((object = ANY (ARRAY['contact'::text, 'company'::text, 'deal'::text, 'lead'::text, 'activity'::text, 'project'::text, 'relationship'::text, 'partner'::text, 'contract'::text])))
 public.custom_field.custom_field_pkey PRIMARY KEY (id)
@@ -4855,6 +4856,7 @@ public.deal.deal_lost_reason_basis_check CHECK ((((lost_reason_code IS NULL) = (
 public.deal.deal_lost_reason_code_fkey FOREIGN KEY (lost_reason_code) REFERENCES deal_loss_reason(key) ON UPDATE RESTRICT ON DELETE RESTRICT
 public.deal.deal_lost_reason_code_only_when_lost CHECK (((lost_reason_code IS NULL) OR (status = 'lost'::text)))
 public.deal.deal_lost_reason_only_when_lost CHECK (((lost_reason IS NULL) OR (status = 'lost'::text)))
+public.deal.deal_manager_request_reasons_vocabulary CHECK ((manager_request_reasons <@ ARRAY['big_deal'::text, 'single_contact'::text, 'stuck'::text]))
 public.deal.deal_money_currency_pair CHECK ((((amount_minor IS NULL) AND (expected_arr_minor IS NULL)) = (currency IS NULL)))
 public.deal.deal_owner_id_fkey FOREIGN KEY (owner_id) REFERENCES app_user(id) ON DELETE SET NULL (owner_id)
 public.deal.deal_owner_id_retirement_guard CREATE TRIGGER deal_owner_id_retirement_guard BEFORE INSERT OR UPDATE ON public.deal FOR EACH ROW WHEN (((new.owner_id IS NOT NULL) AND (new.archived_at IS NULL))) EXECUTE FUNCTION refuse_retired_member_work('owner_id')
@@ -8073,6 +8075,7 @@ public.oauth_authorization_code.lent_passport_id uuid gen=- def=-
 public.oauth_authorization_code.oauth_authorization_code_code_hash_check CHECK ((code_hash ~ '^[0-9a-f]{64}$'::text))
 public.oauth_authorization_code.oauth_authorization_code_expires_after_creation CHECK ((expires_at > created_at))
 public.oauth_authorization_code.oauth_authorization_code_pkey PRIMARY KEY (id)
+public.oauth_authorization_code.oauth_authorization_code_work_areas_vocabulary CHECK ((work_areas <@ ARRAY['business'::text, 'compliance'::text, 'capture'::text, 'workspace_settings'::text, 'admin_settings'::text, 'own_account'::text, 'agent_governance'::text, 'operator'::text, 'public'::text]))
 public.oauth_authorization_code.oauth_code_lent_passport_fkey FOREIGN KEY (lent_passport_id) REFERENCES passport(id) ON DELETE SET NULL (lent_passport_id)
 public.oauth_authorization_code.oauth_code_unique UNIQUE (code_hash)
 public.oauth_authorization_code.oauth_code_user_fkey FOREIGN KEY (user_id) REFERENCES app_user(id) ON DELETE CASCADE
@@ -8114,7 +8117,9 @@ public.oauth_grant.lent_passport_id uuid gen=- def=-
 public.oauth_grant.oauth_grant_client_fkey FOREIGN KEY (client_id) REFERENCES oauth_client(client_id) ON DELETE RESTRICT
 public.oauth_grant.oauth_grant_lent_passport_fkey FOREIGN KEY (lent_passport_id) REFERENCES passport(id) ON DELETE SET NULL (lent_passport_id)
 public.oauth_grant.oauth_grant_pkey PRIMARY KEY (id)
+public.oauth_grant.oauth_grant_scopes_vocabulary CHECK ((scopes <@ ARRAY['read'::text, 'draft'::text, 'write'::text, 'send'::text, 'enrich'::text]))
 public.oauth_grant.oauth_grant_user_fkey FOREIGN KEY (user_id) REFERENCES app_user(id) ON DELETE CASCADE
+public.oauth_grant.oauth_grant_work_areas_vocabulary CHECK ((work_areas <@ ARRAY['business'::text, 'compliance'::text, 'capture'::text, 'workspace_settings'::text, 'admin_settings'::text, 'own_account'::text, 'agent_governance'::text, 'operator'::text, 'public'::text]))
 public.oauth_grant.refresh_allowed boolean NOT NULL gen=- def=false
 public.oauth_grant.resource text gen=- def=-
 public.oauth_grant.revoked_at timestamp with time zone gen=- def=-
@@ -8396,8 +8401,10 @@ public.passport.passport_grant_fkey FOREIGN KEY (oauth_grant_id) REFERENCES oaut
 public.passport.passport_granted_by_fkey FOREIGN KEY (granted_by) REFERENCES app_user(id) ON DELETE RESTRICT
 public.passport.passport_on_behalf_of_fkey FOREIGN KEY (on_behalf_of) REFERENCES app_user(id) ON DELETE CASCADE
 public.passport.passport_pkey PRIMARY KEY (id)
+public.passport.passport_scopes_vocabulary CHECK ((scopes <@ ARRAY['read'::text, 'draft'::text, 'write'::text, 'send'::text, 'enrich'::text]))
 public.passport.passport_token_hash_check CHECK ((token_hash ~ '^[0-9a-f]{64}$'::text))
 public.passport.passport_token_hash_key UNIQUE (token_hash)
+public.passport.passport_work_areas_vocabulary CHECK ((work_areas <@ ARRAY['business'::text, 'compliance'::text, 'capture'::text, 'workspace_settings'::text, 'admin_settings'::text, 'own_account'::text, 'agent_governance'::text, 'operator'::text, 'public'::text]))
 public.passport.revoked_at timestamp with time zone gen=- def=-
 public.passport.scopes text[] NOT NULL gen=- def=-
 public.passport.text_bound_insert CREATE TRIGGER text_bound_insert AFTER INSERT ON public.passport FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"label": 120, "scopes": 20000, "app_issuer": 500, "token_hash": 20000, "work_areas": 20000, "app_subject": 500}'::jsonb)) EXECUTE FUNCTION refuse_oversized_text('{"app_issuer":500,"app_subject":500,"label":120,"scopes":20000,"token_hash":20000,"work_areas":20000}')
