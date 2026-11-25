@@ -379,14 +379,7 @@ func TestARelistWaitsForTheSeatsOtherCalendarImportingTheMeeting(t *testing.T) {
 // the import's backend holds.
 func waitUntilBlockedBy(t *testing.T, done <-chan struct{}, importer uint32) {
 	t.Helper()
-	owner := integration.FreshOwnerConn(t)
-	testdb.WaitForContention(t, done, "the re-list finished without waiting for the import in flight",
-		"the re-list never waited on the import's locks", func(ctx context.Context) (bool, error) {
-			var waiting bool
-			err := owner.QueryRow(ctx, `SELECT EXISTS (SELECT 1 FROM pg_stat_activity a
-				 WHERE a.datname = current_database() AND $1::int = ANY(pg_blocking_pids(a.pid)))`, int32(importer)).Scan(&waiting)
-			return waiting, err
-		})
+	testdb.AwaitQueuedBehind(t, integration.FreshOwnerConn(t), int32(importer), 1, done, "the re-list")
 }
 
 // omit takes every event off one calendar of the pair and expires its token.
