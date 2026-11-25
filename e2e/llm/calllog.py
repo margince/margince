@@ -42,6 +42,14 @@ def read(path):
     return calls
 
 
+def door_refusals(path):
+    """How many requests the server refused at the door, before it read which
+    method they asked for: a missing or failed credential, or pacing."""
+    with open(path, encoding="utf-8") as handle:
+        records = [json.loads(line) for line in handle if line.strip()]
+    return sum(1 for record in records if record.get("outcome") == "refused" and not record.get("method"))
+
+
 def worked(record):
     """Whether the server ran the call. A confirm-first answer is a tool error
     the caller tells apart by its words, as it does in a transcript."""

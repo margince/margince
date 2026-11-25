@@ -91,6 +91,13 @@ class ServerRecordTest(unittest.TestCase):
         server_saw(path, ("tool_error", PREVIEW))
         self.assertEqual(len(check.read_run(path).calls), 2)
 
+    def test_a_call_the_server_refused_at_the_door_is_not_the_clients_refusal(self):
+        path = client_run([(PREVIEW, True), ("authentication_unavailable", True)])
+        server_saw(path, ("tool_error", PREVIEW))
+        with open(calllog.path_for(path), "a", encoding="utf-8") as handle:
+            handle.write(json.dumps({"outcome": "refused", "http_status": 503}) + "\n")
+        self.assertEqual(check.read_effort(path)["client_refused"], 0)
+
     def test_a_run_with_no_log_reports_no_client_refusals(self):
         self.assertNotIn("client_refused", check.read_effort(client_run([(PREVIEW, True)])))
 

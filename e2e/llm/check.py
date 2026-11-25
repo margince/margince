@@ -960,7 +960,9 @@ def read_effort(path):
     server = server_calls(path)
     if server is not None:
         # Attempts the server never received: the client refused them itself.
-        effort["client_refused"] = max(calls - len(server), 0)
+        # A refusal at the door was the server's, though its record names no method.
+        door = calllog.door_refusals(checked_path(calllog.path_for(path)))
+        effort["client_refused"] = max(calls - len(server) - door, 0)
     for field in ("num_turns", "duration_ms"):
         if isinstance(result.get(field), int):
             effort["turns" if field == "num_turns" else field] = result[field]
