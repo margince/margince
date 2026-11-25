@@ -196,10 +196,8 @@ export function WorklistBody({
           behind a disclosure they were a rule and a word of chrome standing
           between the head and the queue the drawer exists to show. */}
           {!embedded && <WorklistReadings day={day} onLane={onFilter} />}
-          {/* The reason a lead opened somebody else's day, at the head of that
-          day in every state. Placed below, the block would move as its own form
-          opened, and a lead would read three panels of that morning first. Only
-          on a named queue. */}
+          {/* A lead's note heads a named queue, so opening its form does not
+          move the panels below it. */}
           {owner !== "" && (
             <CoachControl
               owner={owner}
