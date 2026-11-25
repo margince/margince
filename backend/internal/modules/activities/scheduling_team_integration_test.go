@@ -50,8 +50,9 @@ func (c *teamCalendarFake) Blocker(ctx context.Context, user ids.UserID, provide
 
 // teamRequestLog records who a save asks to confirm, and whose request settles.
 type teamRequestLog struct {
-	asked   []TeamRequest
-	settled []ids.UserID
+	asked    []TeamRequest
+	settled  []ids.UserID
+	retitled []TeamRequest
 }
 
 func (l *teamRequestLog) TeamRequestTx(_ context.Context, _ pgx.Tx, request TeamRequest) error {
@@ -59,8 +60,13 @@ func (l *teamRequestLog) TeamRequestTx(_ context.Context, _ pgx.Tx, request Team
 	return nil
 }
 
-func (l *teamRequestLog) TeamRequestSettledTx(_ context.Context, _ pgx.Tx, _, member ids.UserID) error {
+func (l *teamRequestLog) TeamRequestSettledTx(_ context.Context, _ pgx.Tx, _ ids.UUID, member ids.UserID) error {
 	l.settled = append(l.settled, member)
+	return nil
+}
+
+func (l *teamRequestLog) TeamRequestRetitledTx(_ context.Context, _ pgx.Tx, request TeamRequest) error {
+	l.retitled = append(l.retitled, request)
 	return nil
 }
 
@@ -80,6 +86,8 @@ type teamFixture struct {
 	calendar *teamCalendarFake
 	hours    map[ids.UserID]WorkingHours
 	host     ids.UserID
+	// link is the host's team link, once name made it.
+	link ids.UUID
 }
 
 func newTeamFixture(t *testing.T) *teamFixture {
@@ -134,26 +142,32 @@ func (f *teamFixture) door() context.Context {
 	return principal.SystemActing(f.ctx, "system:public_booking")
 }
 
-// name puts members on the host's link; each confirms when confirm says so.
-func (f *teamFixture) name(t *testing.T, confirm bool, members ...ids.UserID) {
-	t.Helper()
-	profile, err := f.store.SchedulingProfile(f.ctx)
-	if err != nil {
-		t.Fatal(err)
-	}
+func teamLinkRequest(members ...ids.UserID) crmcontracts.SchedulingTeamLinkRequest {
 	team := []crmcontracts.SchedulingTeamMember{}
 	for _, member := range members {
 		team = append(team, crmcontracts.SchedulingTeamMember{UserId: openapi_types.UUID(member.UUID)})
 	}
-	profile.TeamMembers = &team
-	if _, err := f.store.SaveSchedulingProfile(f.ctx, profile); err != nil {
+	return crmcontracts.SchedulingTeamLinkRequest{Title: "Meet the team", TeamMembers: team}
+}
+
+// name puts members on the host's team link, making it the first time; each
+// confirms when confirm says so.
+func (f *teamFixture) name(t *testing.T, confirm bool, members ...ids.UserID) {
+	t.Helper()
+	if f.link == ids.Nil {
+		link, err := f.store.CreateSchedulingTeamLink(f.ctx, teamLinkRequest(members...))
+		if err != nil {
+			t.Fatal(err)
+		}
+		f.link = ids.UUID(link.Id)
+	} else if _, err := f.store.UpdateSchedulingTeamLink(f.ctx, f.link, teamLinkRequest(members...)); err != nil {
 		t.Fatal(err)
 	}
 	if !confirm {
 		return
 	}
 	for _, member := range members {
-		if err := f.store.AnswerSchedulingTeamRequest(f.as(member), f.host, crmcontracts.SchedulingTeamAnswerStateConfirmed); err != nil {
+		if err := f.store.AnswerSchedulingTeamRequest(f.as(member), f.link, crmcontracts.SchedulingTeamAnswerStateConfirmed); err != nil {
 			t.Fatal(err)
 		}
 	}
@@ -161,7 +175,7 @@ func (f *teamFixture) name(t *testing.T, confirm bool, members ...ids.UserID) {
 
 func (f *teamFixture) slots(t *testing.T, from, to time.Time) []slot {
 	t.Helper()
-	_, open := f.store.openForBooking(f.door(), BookingPage{HostUserID: f.host})
+	_, open := f.store.openForBooking(f.door(), f.page())
 	if open.err != nil || open.paused {
 		t.Fatalf("the page is not open: paused=%v err=%v", open.paused, open.err)
 	}
@@ -172,17 +186,34 @@ func (f *teamFixture) slots(t *testing.T, from, to time.Time) []slot {
 	return free
 }
 
-func (f *teamFixture) blocker(t *testing.T) crmcontracts.SchedulingProfileBlocker {
+// page is the host's team link, or their personal page before name made one.
+func (f *teamFixture) page() BookingPage {
+	return BookingPage{HostUserID: f.host, ID: f.link, TeamLink: f.link != ids.Nil}
+}
+
+// teamLink is the host's team link as Settings shows it.
+func (f *teamFixture) teamLink(t *testing.T) crmcontracts.SchedulingTeamLink {
 	t.Helper()
-	profile, err := f.store.SchedulingProfile(f.ctx)
+	link, err := f.store.ownTeamLink(f.ctx, f.host, f.link)
 	if err != nil {
 		t.Fatal(err)
 	}
-	return *profile.Blocker
+	return link
 }
 
-// book books start through the public page and answers the HTTP status.
+func (f *teamFixture) blocker(t *testing.T) crmcontracts.SchedulingProfileBlocker {
+	t.Helper()
+	return crmcontracts.SchedulingProfileBlocker(f.teamLink(t).Blocker)
+}
+
+// book books start through the host's team link and answers the HTTP status.
 func (f *teamFixture) book(t *testing.T, start time.Time) (int, crmcontracts.MeetingInvitation) {
+	t.Helper()
+	return f.bookOn(t, f.page(), start)
+}
+
+// bookOn books start through page and answers the HTTP status.
+func (f *teamFixture) bookOn(t *testing.T, page BookingPage, start time.Time) (int, crmcontracts.MeetingInvitation) {
 	t.Helper()
 	var req crmcontracts.BookPublicMeetingJSONRequestBody
 	body := fmt.Sprintf(`{"booker":{"name":"Guest","email":"guest@example.test"},"start":%q,"end":%q,"consent":{"policy_version":"1"}}`,
@@ -192,7 +223,7 @@ func (f *teamFixture) book(t *testing.T, start time.Time) (int, crmcontracts.Mee
 	}
 	response := httptest.NewRecorder()
 	request := httptest.NewRequest(http.MethodPost, "/", nil).WithContext(f.door())
-	out, ok := Handlers{store: f.store}.reservePublicInvitation(response, request, BookingPage{HostUserID: f.host}, req, ids.UUID(f.request.ContactId), invitationIntent{DescriptionFromBooker: true}, MarketingNotRequested, nil)
+	out, ok := Handlers{store: f.store}.reservePublicInvitation(response, request, page, req, ids.UUID(f.request.ContactId), invitationIntent{DescriptionFromBooker: true}, MarketingNotRequested, nil)
 	if ok {
 		return http.StatusCreated, out
 	}
@@ -286,14 +317,14 @@ func TestATeamLinkWaitsForEveryMemberToConfirm(t *testing.T) {
 	if got := f.blocker(t); got != crmcontracts.SchedulingProfileBlockerTeamNotReady {
 		t.Fatalf("a link no member confirmed reads %q", got)
 	}
-	if _, open := f.store.openForBooking(f.door(), BookingPage{HostUserID: f.host}); open.err != nil || !open.paused {
+	if _, open := f.store.openForBooking(f.door(), f.page()); open.err != nil || !open.paused {
 		t.Fatalf("an unconfirmed team link is open: %+v", open)
 	}
 	asked := f.requests.askedOf(second)
-	if len(asked) != 1 || asked[0].Host != f.host || asked[0].HostName == "" || asked[0].Title == "" {
+	if len(asked) != 1 || asked[0].Host != f.host || asked[0].Page != f.link || asked[0].HostName == "" || asked[0].Title != "Meet the team" {
 		t.Fatalf("the save asked the second member %+v, want one request naming the host and the link", asked)
 	}
-	if err := f.store.AnswerSchedulingTeamRequest(f.as(first), f.host, crmcontracts.SchedulingTeamAnswerStateConfirmed); err != nil {
+	if err := f.store.AnswerSchedulingTeamRequest(f.as(first), f.link, crmcontracts.SchedulingTeamAnswerStateConfirmed); err != nil {
 		t.Fatal(err)
 	}
 	if !slices.Contains(f.requests.settled, first) {
@@ -306,18 +337,19 @@ func TestATeamLinkWaitsForEveryMemberToConfirm(t *testing.T) {
 	if got := f.blocker(t); got != crmcontracts.SchedulingProfileBlockerTeamNotReady {
 		t.Fatalf("a link one of two members confirmed reads %q", got)
 	}
-	if err := f.store.AnswerSchedulingTeamRequest(f.as(second), f.host, crmcontracts.SchedulingTeamAnswerStateConfirmed); err != nil {
+	if err := f.store.AnswerSchedulingTeamRequest(f.as(second), f.link, crmcontracts.SchedulingTeamAnswerStateConfirmed); err != nil {
 		t.Fatal(err)
 	}
 	if got := f.blocker(t); got != crmcontracts.SchedulingProfileBlockerNone {
 		t.Fatalf("a link every member confirmed reads %q", got)
 	}
 	requests, err := f.store.SchedulingTeamRequests(f.as(first))
-	if err != nil || len(requests) != 1 || requests[0].State != crmcontracts.SchedulingTeamRequestStateConfirmed || ids.UUID(requests[0].HostUserId) != f.host.UUID {
+	if err != nil || len(requests) != 1 || requests[0].State != crmcontracts.SchedulingTeamRequestStateConfirmed ||
+		ids.UUID(requests[0].PageId) != f.link || ids.UUID(requests[0].HostUserId) != f.host.UUID {
 		t.Fatalf("the member's requests: %+v %v", requests, err)
 	}
 
-	if err := f.store.AnswerSchedulingTeamRequest(f.as(second), f.host, crmcontracts.SchedulingTeamAnswerStateLeft); err != nil {
+	if err := f.store.AnswerSchedulingTeamRequest(f.as(second), f.link, crmcontracts.SchedulingTeamAnswerStateLeft); err != nil {
 		t.Fatal(err)
 	}
 	if !slices.Contains(f.requests.settled, second) {
@@ -326,11 +358,7 @@ func TestATeamLinkWaitsForEveryMemberToConfirm(t *testing.T) {
 	if got := f.blocker(t); got != crmcontracts.SchedulingProfileBlockerTeamNotReady {
 		t.Fatalf("a link a member left reads %q", got)
 	}
-	profile, err := f.store.SchedulingProfile(f.ctx)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if states := memberStates(profile); !slices.Equal(states, []string{"confirmed", "left"}) {
+	if states := memberStates(f.teamLink(t).TeamMembers); !slices.Equal(states, []string{"confirmed", "left"}) {
 		t.Fatalf("the owner sees %v", states)
 	}
 	if requests, err := f.store.SchedulingTeamRequests(f.as(second)); err != nil || len(requests) != 0 {
@@ -354,9 +382,9 @@ func TestAMemberTakenOffTheLinkHasTheRequestSettled(t *testing.T) {
 	}
 }
 
-func memberStates(profile crmcontracts.SchedulingProfile) []string {
+func memberStates(members []crmcontracts.SchedulingTeamMember) []string {
 	out := []string{}
-	for _, m := range teamMembers(profile) {
+	for _, m := range members {
 		out = append(out, string(memberState(m)))
 	}
 	return out
@@ -366,25 +394,20 @@ func TestTheOwnerCannotConfirmForAMember(t *testing.T) {
 	f := newTeamFixture(t)
 	member := f.colleague(t, "Member")
 	f.name(t, false, member)
-	profile, err := f.store.SchedulingProfile(f.ctx)
-	if err != nil {
-		t.Fatal(err)
-	}
 	confirmed := crmcontracts.SchedulingTeamMemberStateConfirmed
-	(*profile.TeamMembers)[0].State = &confirmed
 	added := f.colleague(t, "Added")
-	*profile.TeamMembers = append(*profile.TeamMembers, crmcontracts.SchedulingTeamMember{UserId: openapi_types.UUID(added.UUID), State: &confirmed})
-	if _, err := f.store.SaveSchedulingProfile(f.ctx, profile); err != nil {
-		t.Fatal(err)
+	request := teamLinkRequest(member, added)
+	for i := range request.TeamMembers {
+		request.TeamMembers[i].State = &confirmed
 	}
-	saved, err := f.store.SchedulingProfile(f.ctx)
+	saved, err := f.store.UpdateSchedulingTeamLink(f.ctx, f.link, request)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if states := memberStates(saved); !slices.Equal(states, []string{"pending", "pending"}) {
+	if states := memberStates(saved.TeamMembers); !slices.Equal(states, []string{"pending", "pending"}) {
 		t.Fatalf("the owner's own write answered for its members: %v", states)
 	}
-	if err := f.store.AnswerSchedulingTeamRequest(f.ctx, f.host, crmcontracts.SchedulingTeamAnswerStateConfirmed); !errors.Is(err, apperrors.ErrNotFound) {
+	if err := f.store.AnswerSchedulingTeamRequest(f.ctx, f.link, crmcontracts.SchedulingTeamAnswerStateConfirmed); !errors.Is(err, apperrors.ErrNotFound) {
 		t.Fatalf("the owner answered as a member: %v", err)
 	}
 }
@@ -399,12 +422,9 @@ func TestAMemberWhoLeftTheWorkspaceStopsTheLink(t *testing.T) {
 	if got := f.blocker(t); got != crmcontracts.SchedulingProfileBlockerTeamNotReady {
 		t.Fatalf("a link whose member left the workspace reads %q", got)
 	}
-	profile, err := f.store.SchedulingProfile(f.ctx)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if states := memberStates(profile); !slices.Equal(states, []string{"unavailable"}) || *(*profile.TeamMembers)[0].Name != "Leaver" {
-		t.Fatalf("the owner sees %v", *profile.TeamMembers)
+	members := f.teamLink(t).TeamMembers
+	if states := memberStates(members); !slices.Equal(states, []string{"unavailable"}) || *members[0].Name != "Leaver" {
+		t.Fatalf("the owner sees %v", members)
 	}
 	if code, _ := f.book(t, monday(11)); code != http.StatusNotFound {
 		t.Fatalf("a booking on the stopped link answered %d", code)
@@ -422,12 +442,7 @@ func TestOnlyAColleagueWithAReadableCalendarCanBeNamed(t *testing.T) {
 	if len(candidates) != 1 || ids.UUID(candidates[0].UserId) != readable.UUID {
 		t.Fatalf("candidates=%+v", candidates)
 	}
-	profile, err := f.store.SchedulingProfile(f.ctx)
-	if err != nil {
-		t.Fatal(err)
-	}
-	profile.TeamMembers = &[]crmcontracts.SchedulingTeamMember{{UserId: openapi_types.UUID(unreadable.UUID)}}
-	_, err = f.store.SaveSchedulingProfile(f.ctx, profile)
+	_, err = f.store.CreateSchedulingTeamLink(f.ctx, teamLinkRequest(unreadable))
 	if refusal, ok := errors.AsType[*SchedulingArgumentError](err); !ok || refusal.Field != fieldTeamMembers || refusal.Code != "unavailable" {
 		t.Fatalf("naming an unreadable colleague: %v", err)
 	}
@@ -598,7 +613,7 @@ func TestABookingOutsideAColleaguesHoursIsRefusedWithoutNamingThem(t *testing.T)
 
 func (f *teamFixture) openTeam(t *testing.T) []teamCalendar {
 	t.Helper()
-	_, open := f.store.openForBooking(f.door(), BookingPage{HostUserID: f.host})
+	_, open := f.store.openForBooking(f.door(), f.page())
 	if open.err != nil || open.paused {
 		t.Fatalf("the page is not open: %+v", open)
 	}
@@ -613,7 +628,7 @@ func TestADepartingColleagueIsMarkedOnEveryLinkThatNamesThem(t *testing.T) {
 		t.Fatal(err)
 	}
 	var stored string
-	if err := f.env.owner.QueryRow(f.ctx, `SELECT scheduling_policy->'team_members'->0->>'state' FROM booking_page WHERE host_user_id=$1 AND revoked_at IS NULL`, f.host.UUID).Scan(&stored); err != nil {
+	if err := f.env.owner.QueryRow(f.ctx, `SELECT scheduling_policy->'team_members'->0->>'state' FROM booking_page WHERE id=$1`, f.link).Scan(&stored); err != nil {
 		t.Fatal(err)
 	}
 	if stored != string(crmcontracts.SchedulingTeamMemberStateUnavailable) {
@@ -630,7 +645,7 @@ func TestARescheduleReadsOnlyTheMembersStillOnTheLink(t *testing.T) {
 	f.name(t, true, member)
 	meeting := f.bookAndDeliver(t, monday(11))
 	f.calendar.busyOf[member] = []connector.CalendarInterval{{Start: monday(13), End: monday(14)}}
-	if err := f.store.AnswerSchedulingTeamRequest(f.as(member), f.host, crmcontracts.SchedulingTeamAnswerStateLeft); err != nil {
+	if err := f.store.AnswerSchedulingTeamRequest(f.as(member), f.link, crmcontracts.SchedulingTeamAnswerStateLeft); err != nil {
 		t.Fatal(err)
 	}
 	free, _, err := f.store.invitationAvailability(f.ctx, f.host, ids.UUID(meeting.Id), monday(12), monday(15))
@@ -649,12 +664,12 @@ func TestABookingRefusesAMemberWhoLeftAfterThePageOpened(t *testing.T) {
 	member := f.colleague(t, "Leaver")
 	f.name(t, true, member)
 	team := f.openTeam(t)
-	if err := f.store.AnswerSchedulingTeamRequest(f.as(member), f.host, crmcontracts.SchedulingTeamAnswerStateLeft); err != nil {
+	if err := f.store.AnswerSchedulingTeamRequest(f.as(member), f.link, crmcontracts.SchedulingTeamAnswerStateLeft); err != nil {
 		t.Fatal(err)
 	}
 	request := f.request
 	request.Start, request.End = monday(11), monday(11).Add(30*time.Minute)
-	_, err := f.store.reserveAndQueueInvitation(f.door(), f.host, request, invitationIntent{DescriptionFromBooker: true, Team: team})
+	_, err := f.store.reserveAndQueueInvitation(f.door(), f.host, request, invitationIntent{DescriptionFromBooker: true, Team: team, Page: f.link})
 	if !errors.Is(err, apperrors.ErrNotFound) {
 		t.Fatalf("a booking with a member who left: %v", err)
 	}
@@ -713,7 +728,7 @@ func TestOnlyTheNamedColleagueReadsTheirRequest(t *testing.T) {
 		var standing TeamRequestStanding
 		err := f.store.tx(ctx, func(tx pgx.Tx) error {
 			var err error
-			standing, err = ReadTeamRequestTx(ctx, tx, f.host, member)
+			standing, err = ReadTeamRequestTx(ctx, tx, f.link, member)
 			return err
 		})
 		return standing, err
