@@ -23,6 +23,12 @@ const maxSummaryLen = 240
 // SanitizeSummary bounds untrusted approval captions and removes characters
 // that can hide or reverse the action a reader is deciding.
 func SanitizeSummary(s string) string {
+	return boundRunes(cleanCaption(s), maxSummaryLen)
+}
+
+// cleanCaption removes what can hide or reverse a caption and folds its
+// whitespace, without bounding it.
+func cleanCaption(s string) string {
 	var b strings.Builder
 	b.Grow(len(s))
 	lastWasSpace := false
@@ -45,7 +51,7 @@ func SanitizeSummary(s string) string {
 			lastWasSpace = false
 		}
 	}
-	return boundRunes(strings.TrimSpace(b.String()), maxSummaryLen)
+	return strings.TrimSpace(b.String())
 }
 
 // SanitizeSummaryParts applies SanitizeSummary to every piece. A field whose

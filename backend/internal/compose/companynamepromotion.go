@@ -355,7 +355,7 @@ func (p *CompanyNamePromoter) stageCompanyNameReview(ctx context.Context, cand c
 	// the first time either did, re-offering the same rename every night until
 	// someone clicked approve.
 	_, _, err = p.approvals.StageUnlessDeclined(ctx, approvals.StageInput{
-		Why:            approvals.HeadlineSaysWhy,
+		Why:            approvals.Grounds{Sentence: systemtext.Sentence("approval.why.signature_name", systemtext.Label(verdict.Name))},
 		Kind:           companyNameProposalKind,
 		ProposedChange: body,
 		DiffHash:       hex.EncodeToString(digest[:]),

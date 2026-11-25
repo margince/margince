@@ -277,7 +277,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `approvalconstruction_test.go` | H3 | _(no doc comment)_ |
 | `approvalselfonlyreaders_test.go` | H2 | Staging needs action authority before a proposal exists. |
 | `approvalsummarycopy_test.go` | H1 | An approval's summary is written through a per-language copy table, never as an English sentence in product code. |
-| `approvalwhy_test.go` | H1 | Every approval says why it was staged: the reason in words, or the quoted evidence it rests on. |
+| `approvalwhy_test.go` | H1 | Every approval but a rule's says why it was staged: the reason in words, or the quoted evidence it rests on. |
 | `assigneeeligibility_test.go` | H2 | A seat's fitness to receive work has one spelling, wherever it is asked. |
 | `assurancerules_test.go` | H3 | Every assurance rule proves both halves of its judgement. |
 | `attachauthority_test.go` | H3 | A path that hangs a child row onto a record (an activity, a note, a task, a file) must ask auth.EnsureAttachTarget. |

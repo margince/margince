@@ -209,7 +209,6 @@ export function DecisionHead({
   const named = cardName(approval, draft);
   const sentence = summarySentence(approval);
   const headline = named ?? sentence;
-  const grounds = approval.why?.text.trim() || null;
   const chips = (
     <div className="dcard-meta">
       {meta}
@@ -252,9 +251,17 @@ export function DecisionHead({
         </p>
       )}
       {/* Why the proposal exists leads what the card says about it. */}
-      {grounds && <p className="approval-why">{grounds}</p>}
+      <ApprovalGrounds approval={approval} />
       {named && sentence && <p className="approval-why">{sentence}</p>}
       <SummaryFields parts={listed} words={labels.summaryWords} />
     </>
   );
+}
+
+/** Why the proposal exists, when its maker said; nothing when it did not. */
+export function ApprovalGrounds({
+  approval,
+}: Readonly<{ approval: DecisionApproval }>) {
+  const grounds = approval.why?.text.trim();
+  return grounds ? <p className="approval-why">{grounds}</p> : null;
 }

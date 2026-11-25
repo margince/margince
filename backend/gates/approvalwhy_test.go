@@ -5,16 +5,18 @@
 
 package gates
 
-// Every approval says why it was staged: the reason in words, or the quoted
-// evidence it rests on. A card with neither leads with its headline alone.
+// Every approval but a rule's says why it was staged: the reason in words, or
+// the quoted evidence it rests on. A card with neither leads with its headline alone.
 //
 // It reads each approvals.StageInput literal that names a Summary, the shape
-// every producer stages through. The literal sets Why or Evidence, or its
-// function assigns one of them before it stages.
+// every producer stages through. The literal itself sets Why or Evidence.
+// Rule-staged actions in internal/compose/workflows.go are waived until they
+// know the rule that fired them.
 
 import (
 	"go/ast"
 	"go/parser"
+	"go/token"
 	"io/fs"
 	"path/filepath"
 	"slices"
@@ -85,15 +87,13 @@ func TestEveryStagedApprovalCarriesAReason(t *testing.T) {
 		if parseErr != nil {
 			return parseErr
 		}
-		for _, decl := range file.Decls {
-			for _, lit := range stageInputLiterals(decl) {
-				producers++
-				if !literalKeys(lit)["Why"] && !literalKeys(lit)["Evidence"] && !assignsReason(decl) &&
-					!approvalWhyWaived.Waived(t, filepath.ToSlash(p)) {
-					t.Errorf("%s: this approval is staged with neither Why nor Evidence, so its card cannot say "+
-						"why it exists. Set Why to the trigger in words that name who and which record, or "+
-						"Evidence to the quote it rests on", gatekit.SourceFileSet().Position(lit.Pos()))
-				}
+		staged, unreasoned := stagedWithoutReason(file)
+		producers += staged
+		for _, lit := range unreasoned {
+			if !approvalWhyWaived.Waived(t, filepath.ToSlash(p)) {
+				t.Errorf("%s: this approval is staged with neither Why nor Evidence, so its card cannot say "+
+					"why it exists. Set Why to the trigger in words that name who and which record, or "+
+					"Evidence to the quote it rests on", gatekit.SourceFileSet().Position(lit.Pos()))
 			}
 		}
 		return nil
@@ -122,16 +122,45 @@ func compositesNamed(node ast.Node, name string) []*ast.CompositeLit {
 	return found
 }
 
-// stageInputLiterals finds the StageInput literals in decl that stage
-// something: an empty one is an error return.
-func stageInputLiterals(decl ast.Decl) []*ast.CompositeLit {
-	var found []*ast.CompositeLit
-	for _, lit := range compositesNamed(decl, "StageInput") {
-		if literalKeys(lit)["Summary"] {
-			found = append(found, lit)
+// stagedWithoutReason counts the StageInput literals in file that stage
+// something; an empty one is an error return. It lists those that set neither
+// Why nor Evidence.
+func stagedWithoutReason(file *ast.File) (int, []*ast.CompositeLit) {
+	var staged int
+	var unreasoned []*ast.CompositeLit
+	for _, lit := range compositesNamed(file, "StageInput") {
+		keys := literalKeys(lit)
+		if !keys["Summary"] {
+			continue
+		}
+		staged++
+		if !keys["Why"] && !keys["Evidence"] {
+			unreasoned = append(unreasoned, lit)
 		}
 	}
-	return found
+	return staged, unreasoned
+}
+
+// A reason set on one input does not cover another staged beside it.
+func TestEachStagedApprovalCarriesItsOwnReason(t *testing.T) {
+	t.Parallel()
+	const planted = `package planted
+
+func stage() {
+	first := approvals.StageInput{Summary: "a", Why: approvals.HeadlineSaysWhy}
+	second := approvals.StageInput{Summary: "b"}
+	second.Why = first.Why
+	_ = approvals.StageInput{}
+}
+`
+	file, err := parser.ParseFile(token.NewFileSet(), "planted.go", planted, parser.SkipObjectResolution)
+	if err != nil {
+		t.Fatal(err)
+	}
+	staged, unreasoned := stagedWithoutReason(file)
+	if staged != 2 || len(unreasoned) != 1 || literalKeys(unreasoned[0])["Why"] {
+		t.Errorf("staged %d with %d unreasoned, want 2 with the second alone unreasoned", staged, len(unreasoned))
+	}
 }
 
 func literalKeys(lit *ast.CompositeLit) map[string]bool {
@@ -144,22 +173,4 @@ func literalKeys(lit *ast.CompositeLit) map[string]bool {
 		}
 	}
 	return keys
-}
-
-// assignsReason reports an `in.Why = …` or `in.Evidence = …` in decl.
-func assignsReason(decl ast.Decl) bool {
-	assigned := false
-	ast.Inspect(decl, func(n ast.Node) bool {
-		as, ok := n.(*ast.AssignStmt)
-		if !ok {
-			return true
-		}
-		for _, lhs := range as.Lhs {
-			if sel, ok := lhs.(*ast.SelectorExpr); ok && (sel.Sel.Name == "Why" || sel.Sel.Name == "Evidence") {
-				assigned = true
-			}
-		}
-		return true
-	})
-	return assigned
 }

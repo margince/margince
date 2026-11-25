@@ -75,6 +75,9 @@ func (t updateRecord) StageInfo(ctx context.Context, in json.RawMessage) (StageI
 	if err := decodeArgs(in, &args); err != nil {
 		return StageInfo{}, err
 	}
+	if err := checkStatedWhy(args.Why); err != nil {
+		return StageInfo{}, err
+	}
 	// Named field-by-field rather than a bare conversion: PatchCommand
 	// deliberately does not carry if_version (command.go's own doc comment
 	// says why), so its shape no longer matches updateRecordArgs' and a
@@ -89,6 +92,9 @@ func (t updateRecord) StageInfo(ctx context.Context, in json.RawMessage) (StageI
 func (t updateRecord) Handle(ctx context.Context, in json.RawMessage) (json.RawMessage, error) {
 	var args updateRecordArgs
 	if err := decodeArgs(in, &args); err != nil {
+		return nil, err
+	}
+	if err := checkStatedWhy(args.Why); err != nil {
 		return nil, err
 	}
 	if err := rejectUnknownFields(updateWriteShapes, args.RecordType, args.Fields); err != nil {

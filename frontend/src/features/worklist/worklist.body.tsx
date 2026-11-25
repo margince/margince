@@ -200,6 +200,7 @@ export function WorklistBody({
           move the panels below it. */}
           {owner !== "" && (
             <CoachControl
+              key={owner}
               owner={owner}
               name={colleague}
               deals={coachableDeals(queue)}

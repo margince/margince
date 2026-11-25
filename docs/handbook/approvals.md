@@ -9,7 +9,7 @@ An approval in Margince is a change an agent proposed but was not allowed to mak
 A deal-stage, owner or company-lifecycle proposal shows the record and the values before and after the change. Owners and stages have names. **Review authority** explains why you can answer it.
 A deal win also names its effects on linked correspondence and eligible delivery projects. **Set when applied** means Margince records that value when the change takes effect.
 
-Under its title, a card says why it exists: an agent's own stated reason, or for a drafted reply, who wrote last and when. Source evidence appears when it is available. A linked proposal remains a separate decision. If the record changed or the full change cannot be shown, you cannot approve it. Request a new proposal with current context, or reject the old one.
+Under its title, a card says why it exists: an agent's own stated reason, or for a drafted reply, when the last message came. Source evidence appears when it is available. A linked proposal remains a separate decision. If the record changed or the full change cannot be shown, you cannot approve it. Request a new proposal with current context, or reject the old one.
 
 Every agent proposal shows what the agent's own run will do, read with the agent's access. If that run touches or names a record you cannot open, the card shows none of the plan. It says that "A colleague who can see them must decide it," and you cannot approve it. Fields your role hides stay hidden on the card. A proposal that Margince itself or a colleague made shows what it will do when you approve it, read with your access.
 

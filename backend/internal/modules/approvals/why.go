@@ -52,7 +52,7 @@ func storedGrounds(ctx context.Context, why Grounds) *storedWhy {
 		return &storedWhy{Text: textcut.Runes(text, whyLimit), Sentence: why.Sentence}
 	}
 	if text := strings.TrimSpace(why.Text); text != "" {
-		return &storedWhy{Text: textcut.Runes(SanitizeSummary(text), whyLimit)}
+		return &storedWhy{Text: textcut.Runes(cleanCaption(text), whyLimit)}
 	}
 	return nil
 }
@@ -73,5 +73,5 @@ func readWhy(ctx context.Context, stored json.RawMessage) *crmcontracts.WorkGrou
 	if text == "" {
 		return nil
 	}
-	return &crmcontracts.WorkGrounds{Text: text}
+	return &crmcontracts.WorkGrounds{Text: textcut.Runes(text, whyLimit)}
 }

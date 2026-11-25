@@ -4,6 +4,7 @@
 /** @vitest-environment happy-dom */
 import "@testing-library/jest-dom/vitest";
 import { cleanup, render, screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it } from "vitest";
 import { PLAIN_SUMMARY_WORDS } from "./approvalsummary.testkit";
 import {
@@ -66,6 +67,24 @@ describe("DecisionCard — a proposal with its reason", () => {
     );
     const headline = screen.getByText("Update record deal");
     expect(headline.nextElementSibling?.textContent).toBe(reason);
+  });
+
+  it("keeps the reason in the proposal a list row folds away", async () => {
+    const user = userEvent.setup();
+    const reason = "The last message in “Depot” came on 2026-11-12.";
+    render(
+      <DecisionCard
+        approval={{ ...staged, why: { text: reason } }}
+        now={NOW}
+        labels={LABELS}
+        layout="row"
+        compact={{ detail: "Proposal", more: "More options" }}
+        onAccept={() => undefined}
+        onReject={() => undefined}
+      />,
+    );
+    await user.click(screen.getByRole("button", { name: "Proposal" }));
+    expect(await screen.findByText(reason)).toBeInTheDocument();
   });
 });
 
