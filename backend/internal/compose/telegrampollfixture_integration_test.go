@@ -325,6 +325,13 @@ func workOneIngestJob(t *testing.T, e *integration.Env, worker *telegramIngestWo
 		TelegramIngestArgs{}.Kind(), rawID).Scan(&args); err != nil {
 		t.Fatalf("reading the enqueued args for raw row %s: %v", rawID, err)
 	}
+	workIngestArgs(t, worker, args)
+}
+
+// workIngestArgs runs the worker on args with no workspace on the context, as a
+// queued job has none.
+func workIngestArgs(t *testing.T, worker *telegramIngestWorker, args TelegramIngestArgs) {
+	t.Helper()
 	if err := worker.Work(context.Background(), &river.Job[TelegramIngestArgs]{Args: args}); err != nil {
 		t.Fatalf("ingest Work: %v", err)
 	}
