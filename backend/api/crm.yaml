@@ -4079,7 +4079,7 @@ paths:
       x-mcp-tool: { verb: get_company_logo, router: read_details, action: company_logo, tier: auto_execute, scope: read, served_by: route }
       summary: Stream a company's logo image.
       description: |
-        The bytes behind `Company.logo_url` (A55): the company logo resolved from its
+        The bytes behind `Company.logo_url`: the company logo resolved from its
         own website during enrichment or uploaded by a contact, normalized once at store time
         to PNG. Resolved site marks are square; uploaded wordmarks keep their aspect ratio.
         The response is always `image/png` — whatever the source format was, what is served
@@ -5125,7 +5125,7 @@ paths:
         only mention account records that caller could open themselves. The model also
         receives the installation's own company profile (what we sell, our positioning and
         proof), which every member may read, so a first email to a company knows our offer
-        as well as the account. Grounding order is A132's: the caller's intent, then the recipient and
+        as well as the account. Grounding order: the caller's intent, then the recipient and
         our relationship with them, then the deal and what we last committed to, then the
         recent conversation, then the dossier, then the writer's voice. Every input but
         the intent is untrusted text and is fenced.
@@ -5362,7 +5362,7 @@ paths:
       operationId: deepReadCompany
       summary: Read the company's WHOLE site in the background — a crawl that ends in staged 🟡 proposals.
       description: |
-        The deep read (founder ratification R2, the A102 crawl seam): discovers up to 12 pages of the
+        The deep read: discovers up to 12 pages of the
         company's own site — well-known paths, sitemap, same-registrable-domain nav links, every
         one robots-checked and SSRF-guarded, discovery is deterministic code and NEVER model-chosen —
         extracts each page through the shared evidence gate, and stages the merged findings as 🟡
@@ -7897,7 +7897,7 @@ paths:
         `PUT /projects/{id}/companies`; this one is required because a project starts with a client.
         `key` is optional. Without it the server mints one from the name: the initials alone
         (`ERA`) when no live project uses those letters, else the letters plus the lowest free
-        number from 2 (`ERA-2`). `getProjectKeyPreview` answers the key a create would mint.
+        number from 2. `getProjectKeyPreview` answers the key a create would mint.
         A sent key is stored in upper case and is refused with 422 naming `key` when it does not
         fit the key shape (`invalid_key`), is a word often bracketed in subject lines
         (`key_is_common_word`), is a word of a colleague's name (`key_is_colleague_name`), or is
@@ -15775,7 +15775,7 @@ paths:
       # write one per keystroke. An agent's preview is a bulk read of records, so
       # it leaves a system_log row.
       x-mcp-tool: { verb: preview_filter, router: read_details, action: filter_preview, tier: auto_execute, scope: read, served_by: route }
-      summary: Count and sample what a filter would select, before it is saved (LVS-EXT-9).
+      summary: Count and sample what a filter would select, before it is saved.
       description: |
         The match count and one bounded page for a candidate filter tree —
         the filter a user is still editing, which nothing else in the contract
@@ -19294,7 +19294,7 @@ paths:
     post:
       tags: [Reports]
       operationId: runReport
-      summary: Run a report (the `run_report` MCP verb) and return aggregate rows.
+      summary: Run a report (the `run_report` MCP verb) and return aggregate rows. It keeps nothing; to keep figures others can reopen, ask runAnalyticsQuery with `save`.
       description: |
         Executes a validated, typed query plan (NOT free-form SQL). Every aggregate cell is
         reconcilable via the `derivation` for "Explain This Number" (features/03 §1.3).
@@ -21008,7 +21008,7 @@ paths:
       operationId: listConnectors
       summary: List the calling user's capture connections + sync state.
       description: |
-        The per-user mail/calendar connections this user has established (RC-8), each with its
+        The per-user mail/calendar connections this user has established, each with its
         status and sync watermark. Never returns the credential — it lives encrypted in the vault
         (`credential_ref`); this row carries only status + cursor (capture.md CAP-DDL-2).
       x-mcp-tool: { verb: list_connectors, router: read_workspace, action: connectors, tier: auto_execute, scope: read, served_by: route }
@@ -21840,7 +21840,7 @@ paths:
       operationId: connectConnector
       summary: Connect (or re-authorize) the calling user's mail/calendar for capture.
       description: |
-        Per-user, consent-driven connect (RC-8). For an OAuth provider (`gmail`/`gcal`/`graph`/`graphcal`)
+        Per-user, consent-driven connect. For an OAuth provider (`gmail`/`gcal`/`graph`/`graphcal`)
         returns the provider `authorize_url` to redirect the user to; the flow completes at
         `GET /connectors/{provider}/callback`. The refresh token is written to the vault on
         callback, NEVER to the row or a response. Human-only: an agent connecting a human's mailbox
@@ -21984,7 +21984,7 @@ paths:
       summary: Disconnect the calling user's mail/calendar capture.
       description: |
         Disconnects the caller's connection: capture stops immediately (the connection flips to
-        `disconnected`, RC-8) and the poller no longer selects it. No upstream token revocation is
+        `disconnected`) and the poller no longer selects it. No upstream token revocation is
         performed — the user removes the grant at the provider themselves. The stored credential
         IS deleted from the vault as part of this call, not merely retired for a later sweep.
         Idempotent. Already-captured activities are retained — they are real history; capture
@@ -24426,7 +24426,7 @@ paths:
       operationId: listConsumerMailDomains
       security: [ { bearerAuth: [] }, { cookieAuth: [] } ]
       x-mcp-tool: { verb: list_consumer_mail_domains, router: read_workspace, action: consumer_mail_domains, tier: auto_execute, scope: read, served_by: route }
-      summary: The workspace's own consumer-mail domain list (CAP-PARAM-5).
+      summary: The workspace's own consumer-mail domain list.
       description: |
         The workspace's additions to and carve-outs from the shipped consumer-mail baseline.
         Mail from a consumer domain still creates the contact; what it never creates is a
@@ -24779,7 +24779,7 @@ paths:
       operationId: listConsumerMailBaseline
       security: [ { bearerAuth: [] }, { cookieAuth: [] } ]
       x-mcp-tool: { verb: list_consumer_mail_baseline, router: read_workspace, action: consumer_mail_baseline, tier: auto_execute, scope: read, served_by: route }
-      summary: Search the shipped consumer-mail baseline (CAP-PARAM-5).
+      summary: Search the shipped consumer-mail baseline.
       description: |
         The vendored consumer-domain dataset the installation ships with, as a searchable read.
         The workspace's own list is only ever a delta against this baseline, so deciding whether
@@ -25829,7 +25829,7 @@ paths:
         `merge` requires `winner_id` (one of the pair) and executes `mergeContact`/
         `mergeCompany` server-side — one merge in the system, no second verb.
         `not_a_duplicate` flips the row and suppresses the pair from every future
-        sweep (AC-dedupe-7). `409 already_disposed`; `422` when `winner_id` is not
+        sweep. `409 already_disposed`; `422` when `winner_id` is not
         one of the pair. Deciding a pair CHANGES both records, so the caller needs
         write authority over each of them and not merely the object grant — a seat
         that can read the pair but change neither gets `403`.
@@ -26501,7 +26501,7 @@ paths:
     get:
       tags: [Compliance]
       operationId: listDataSubjectRequests
-      summary: List GDPR data-subject requests (B-E11.30).
+      summary: List GDPR data-subject requests.
       security: [ { bearerAuth: [] }, { cookieAuth: [] } ]
       x-mcp-tool: { verb: list_data_subject_requests, router: read_workspace, action: data_subject_requests, tier: auto_execute, scope: read, served_by: route }
       parameters:
@@ -27366,7 +27366,7 @@ paths:
       summary: Read the human+agent-attributable audit log (Settings governance view).
       description: |
         Cursor-paginated read over `audit_log` (feedback/13, un-defers the fast-follow stub). Powers
-        AC-settings-16 (B-EP09.13b) — the live-filterable audit view. Every entry attributes the actor
+        The live-filterable audit view. Every entry attributes the actor
         (`human:*` / `agent:*` + `passport_id`), the action, and the target. Admin/compliance scope;
         read-only.
 
@@ -34046,7 +34046,7 @@ paths:
     get:
       tags: [Brief]
       operationId: getMorningBrief
-      summary: The acting rep's latest Morning-Brief run (the on-open read-model re-read; never re-ranks).
+      summary: Your morning brief for today, its ranked items. 404 means none has been made yet; generateMorningBrief makes one.
       # Agent-readable (A139): every input to the brief — the deals, their
       # activities, the relationships behind them — is already agent-readable,
       # so withholding the assembled answer while granting all of its parts is a
@@ -34268,7 +34268,7 @@ paths:
       tags: [Brief]
       operationId: markBriefItemActed
       security: [ { bearerAuth: [] }, { cookieAuth: [] } ]
-      summary: Mark a brief item acted (B-E05.13) — the deal drops from the next run until it materially changes.
+      summary: Mark a brief item acted — the deal drops from the next run until it materially changes.
       # Per-rep queue state on the human home surface; a second mark on an
       # already-marked item is a 409 conflict, never a silent overwrite.
       x-mcp-tool: { verb: mark_brief_item_acted, router: change_attention, action: brief_item_done, tier: auto_execute, scope: write, served_by: route }
@@ -35304,7 +35304,7 @@ paths:
     post:
       tags: [Reports]
       operationId: runAnalyticsQuery
-      summary: Answer a question nobody wrote a report for.
+      summary: Answer a question nobody wrote a report for. With `save` the answer is kept as a saved question, which `GET /analytics/runs` lists and others reopen by its `run_id`.
       description: |
         A typed query over the vocabulary `/analytics/schema` returns. The caller names a
         population, what to group by, what to measure and how to narrow — never SQL, and
@@ -36103,7 +36103,7 @@ paths:
       tags: [Brief]
       operationId: markBriefItemDismissed
       security: [ { bearerAuth: [] }, { cookieAuth: [] } ]
-      summary: Dismiss a brief item (B-E05.13) — it does not reappear unless a new linked activity arrives after the mark.
+      summary: Dismiss a brief item — it does not reappear unless a new linked activity arrives after the mark.
       x-mcp-tool: { verb: mark_brief_item_dismissed, router: change_attention, action: dismiss_brief_item, tier: auto_execute, scope: write, served_by: route }
       responses:
         '200':
@@ -36134,7 +36134,7 @@ paths:
       tags: [Brief]
       operationId: snoozeBriefItem
       security: [ { bearerAuth: [] }, { cookieAuth: [] } ]
-      summary: Snooze a brief item (A77/AC-home-6) — hidden until `snoozed_until` passes, then it re-surfaces as actionable.
+      summary: Snooze a brief item — hidden until `snoozed_until` passes, then it re-surfaces as actionable.
       description: |
         Sets the item to `state=snoozed` with the given `snoozed_until`. While the instant has not
         passed, the item is hidden from the home read AND the deal is suppressed from freshly
@@ -37766,7 +37766,7 @@ paths:
       operationId: listCompanyContracts
       security: [ { bearerAuth: [] }, { cookieAuth: [] } ]
       x-mcp-tool: { verb: list_company_contracts, router: read_details, action: company_contracts, tier: auto_execute, scope: read, served_by: route }
-      summary: The agreements this company holds, newest first (CONTRACT-WIRE-1).
+      summary: The agreements this company holds, newest first.
       description: |
         Every contract anchored to this company, whatever its status.
 
@@ -37803,7 +37803,7 @@ paths:
       operationId: createContract
       security: [ { bearerAuth: [] }, { cookieAuth: [] } ]
       x-mcp-tool: { verb: create_contract, router: change_offers, action: record_contract, tier: auto_execute, scope: write, served_by: route }
-      summary: Record an agreement (CONTRACT-WIRE-2).
+      summary: Record an agreement.
       description: |
         `signed_on` is never defaulted from a deal's close time: that timestamp records
         when somebody moved a stage, which is not evidence that anything was signed.
@@ -37834,7 +37834,7 @@ paths:
       operationId: getContract
       security: [ { bearerAuth: [] }, { cookieAuth: [] } ]
       x-mcp-tool: { verb: get_contract, router: read_details, action: contract, tier: auto_execute, scope: read, served_by: route }
-      summary: One contract (CONTRACT-WIRE-3).
+      summary: One agreement with a company, with its terms, value, dates and status.
       parameters:
         - $ref: '#/components/parameters/Id'
       responses:
@@ -37851,7 +37851,7 @@ paths:
       operationId: updateContract
       security: [ { bearerAuth: [] }, { cookieAuth: [] } ]
       x-mcp-tool: { verb: update_contract, router: change_offers, action: update_contract, tier: auto_execute, scope: write, served_by: route }
-      summary: Change an agreement's recorded terms (CONTRACT-WIRE-4).
+      summary: Change an agreement's recorded terms.
       description: |
         Status is NOT patchable here. A status moves through its own transitions so the
         proposal and event that belong to it are written from the same transaction, and
@@ -37881,7 +37881,7 @@ paths:
       operationId: archiveContract
       security: [ { bearerAuth: [] }, { cookieAuth: [] } ]
       x-mcp-tool: { verb: archive_contract, router: change_offers, action: archive_contract, tier: auto_execute, scope: write, served_by: route, ask_user_first: true }
-      summary: Archive an agreement (CONTRACT-WIRE-5).
+      summary: Archive an agreement.
       description: |
         Archive is the delete. The row and its history stay, because deleting a contract
         would silently change whether an account ever counted as a customer and destroy
@@ -37900,7 +37900,7 @@ paths:
       operationId: changeContractStatus
       security: [ { bearerAuth: [] }, { cookieAuth: [] } ]
       x-mcp-tool: { verb: change_contract_status, router: change_offers, action: set_contract_status, tier: auto_execute, scope: write, served_by: route }
-      summary: Assert a new contract status (CONTRACT-PARAM-1).
+      summary: Assert a new contract status.
       description: |
         A status moves because a human said so. No date moves it, here or anywhere:
         the data that would drive an inference is exactly the data most likely to be
@@ -37934,7 +37934,7 @@ paths:
       operationId: cancelContract
       security: [ { bearerAuth: [] }, { cookieAuth: [] } ]
       x-mcp-tool: { verb: cancel_contract, router: change_offers, action: cancel_contract, tier: auto_execute, scope: write, served_by: route, ask_user_first: true }
-      summary: Record notice of cancellation and when it takes effect (CONTRACT-WIRE-6).
+      summary: Record notice of cancellation and when it takes effect.
       description: |
         Cancellation is two facts and NO state change. Notice given and effective date
         are recorded; the status stays as it is and the customer stays under contract
@@ -37968,7 +37968,7 @@ paths:
       operationId: renewContract
       security: [ { bearerAuth: [] }, { cookieAuth: [] } ]
       x-mcp-tool: { verb: renew_contract, router: change_offers, action: renew_contract, tier: auto_execute, scope: write, served_by: route }
-      summary: Create the successor agreement and supersede this one (CONTRACT-WIRE-7).
+      summary: Create the successor agreement and supersede this one.
       description: |
         A renewal never mutates the agreement it replaces. The successor is created and
         the predecessor is marked superseded, pointing at it, in ONE transaction — so an
@@ -38051,7 +38051,7 @@ paths:
       operationId: updateAttachmentMetadata
       security: [ { bearerAuth: [] }, { cookieAuth: [] } ]
       x-mcp-tool: { verb: update_attachment_metadata, router: change_activities, action: set_document_details, tier: auto_execute, scope: write, served_by: route }
-      summary: Set a document's category, title, state or supersedes pointer (DOC-WIRE-2).
+      summary: Set a document's category, title, state or supersedes pointer.
       description: |
         The bytes, the filename and the checksum are NOT patchable here —
         they are what arrived, and a surface that let a human edit them would make the
@@ -38893,7 +38893,7 @@ paths:
       x-mcp-tool: { verb: undo_import_run, router: change_capture, action: undo_import_run, tier: auto_execute, scope: write, served_by: route, ask_user_first: true }
       summary: Reverse a completed CSV import run.
       description: |
-        IEM-WIRE-9 (A93; S-E15.4c). Valid from `complete` (starting a fresh
+        Valid from `complete` (starting a fresh
         reversal) or `undoing` (resuming one already under way, from its
         persisted checkpoint) — and only for the `csv` connector. Undoing a
         run that is still in flight, was never approved, has already failed,
@@ -38901,8 +38901,8 @@ paths:
         `undoing` state carries no recorded progress to resume; the
         the `salesforce` connector has no reversal path — it is unbuilt.
 
-        Reverses only the rows this run created that nobody has touched since
-        (A93): never an all-or-nothing hard rollback that clobbers a later
+        Reverses only the rows this run created that nobody has touched since:
+        never an all-or-nothing hard rollback that clobbers a later
         edit. A row a human touched after import is left exactly as they left
         it and named in the report's `kept` list, not silently skipped — and
         a row that cannot be reversed for any other reason (a business rule
@@ -40367,7 +40367,7 @@ components:
       required: true
       schema: { type: string, enum: [gmail, gcal, gdocs, graph, graphcal, imap, test_mailbox] }
       description: |
-        The mail/calendar provider (A51 email+calendar parity). Every provider connects through
+        The mail/calendar provider. Every provider connects through
         the same operation; gmail/gcal/gdocs/graph/graphcal authorize by OAuth redirect, imap by
         credential submission, and test_mailbox connects immediately with neither (a QC-only
         connector, reachable only when the deployment armed operations.allow_test_mailbox — a
@@ -44520,7 +44520,7 @@ components:
     ConsumerMailDomain:
       type: object
       description: |
-        One entry on the workspace's own consumer-mail list (CAP-PARAM-5). `extra` marks a
+        One entry on the workspace's own consumer-mail list. `extra` marks a
         consumer domain the shipped baseline missed; `never` takes one back out of the baseline
         that claimed it. Either way the domain is stored in its registrable form, which is what
         the matcher keys on.
@@ -44617,7 +44617,7 @@ components:
       required: [id, provider, status, scopes, can_backfill]
       properties:
         id: { type: string, format: uuid }
-        provider: { type: string, enum: [gmail, gcal, gdocs, graph, graphcal, imap, test_mailbox], x-extensible-enum: true, description: The mail/calendar/meeting-notes provider (A51 email+calendar parity). }
+        provider: { type: string, enum: [gmail, gcal, gdocs, graph, graphcal, imap, test_mailbox], x-extensible-enum: true, description: The mail/calendar/meeting-notes provider. }
         can_backfill:
           type: boolean
           description: |
@@ -48718,7 +48718,7 @@ components:
     ImportUndoReport:
       type: object
       description: |
-        The result of undoing a committed import run (IEM-WIRE-9; A93). Every
+        The result of undoing a committed import run. Every
         import-created row lands in exactly one of three buckets: reversed,
         kept because a human edited it since (the "kept — you edited these"
         list S-E15.4c requires, not a diff of what changed), or errored
@@ -48746,7 +48746,7 @@ components:
             `errored`.
         kept:
           type: array
-          description: 'Import-created rows left in place: a human edited them since import (A93), or a live record still names the company.'
+          description: 'Import-created rows left in place: a human edited them since import, or a live record still names the company.'
           items:
             type: object
             required: [object, id]
@@ -50895,7 +50895,7 @@ components:
           type: [string, 'null']
           readOnly: true
           description: |
-            Where to fetch the company's logo image (A55) — the `getCompanyLogo`
+            Where to fetch the company's logo image — the `getCompanyLogo`
             path for this record, cookie-authenticated and same-origin. A revision query changes
             with the stored image so a replacement cannot remain hidden behind an older cached
             response. The key is ABSENT entirely (not null) when no logo is stored, which is the
@@ -52245,7 +52245,7 @@ components:
     Company360Health:
       type: object
       description: |
-        How the relationship stands, in the parts a reader can act on (AC-company-3).
+        How the relationship stands, in the parts a reader can act on.
 
         It replaces a single 0–100 score. That number was PO-F-3's MAX over the account's
         contacts, so one talkative contact spoke for the whole account and a long, low-volume
@@ -52967,7 +52967,7 @@ components:
           type: [object, 'null']
           description: |
             What performing this advice means, named by the server rather than inferred by the
-            client from the evidence order (AC-company-14). A rule that cannot name an action
+            client from the evidence order. A rule that cannot name an action
             carries null and the card advises without offering a button, which is honest — a
             control that does nothing teaches the reader to stop pressing them.
 
@@ -53318,7 +53318,7 @@ components:
         logo_url:
           type: [string, 'null']
           description: |
-            The company node's resolved logo (A55), same value `Company.logo_url` carries.
+            The company node's resolved logo, same value `Company.logo_url` carries.
             Absent on a company with no resolved logo and on every contact or deal node —
             a client draws the node's monogram or its token-coloured circle instead.
 
@@ -53870,7 +53870,7 @@ components:
     ConversationClaimKind:
       type: string
       description: |
-        The eight kinds one extraction mechanism produces (ADR-0097 D1). They share a
+        The eight kinds one extraction mechanism produces. They share a
         lifecycle — extracted → cited → correctable → dismissible — and differ only here.
 
         `commitment_ours` / `commitment_theirs` — a promise, by us or by them.
@@ -57381,7 +57381,7 @@ components:
             `deal_stakeholder` — the contact holds a stakeholder seat on the deal.
             `parent_of` — `from` is the parent company of `to` (the account's parent
             points at it; the account points at each child).
-            `partner_of` / `referred_by` / `co_sell_with` — the A41 partner edges, from
+            `partner_of` / `referred_by` / `co_sell_with` — the partner edges, from
             the company that records the edge to its counterparty.
             `owns` — `from` is the workspace member who owns the account.
             `in_contact_with` — `from` is the workspace member who has been IN recorded
@@ -59123,7 +59123,7 @@ components:
         signed_on:
           type: [string, 'null']
           format: date
-          description: 'When a human asserts it was signed. Never derived from a deal close time, and never a signing ceremony — in-product e-signature stays removed (A94).'
+          description: 'When a human asserts it was signed. Never derived from a deal close time, and never a signing ceremony — in-product e-signature stays removed.'
         cancellation_notice_on: { type: [string, 'null'], format: date }
         cancellation_effective_on:
           type: [string, 'null']
@@ -62953,8 +62953,8 @@ components:
             `AttachmentExtraction` the human was actually shown. Required, and not
             inferable: resolving "the newest reading" instead would let a reading started
             by someone else between the display and the click decide what gets written,
-            which is precisely the divergence storing the fields exists to prevent
-            (RD-AC-N-5). A reading belonging to another attachment, or one that never
+            which is precisely the divergence storing the fields exists to prevent.
+            A reading belonging to another attachment, or one that never
             existed, is a 404. A reading not read for deal facts is a 422 `not_deal_facts`.
         field_keys:
           type: array
@@ -63281,7 +63281,7 @@ components:
           enum: [intent, recipient, relationship, deal, commitment, conversation, dossier]
           x-extensible-enum: true
           description: |
-            Which grounding input this came from, in A132's order.
+            Which grounding input this came from, in the grounding order.
 
             `intent` — the caller's own steering. `recipient` / `relationship` — who they are
             and how we stand with them. `deal` — the open opportunity the message is about.
@@ -66755,7 +66755,7 @@ components:
     FilterPreview:
       type: object
       description: |
-        What a candidate filter would select for this caller (LVS-EXT-9).
+        What a candidate filter would select for this caller.
       required: [resource, match_count, columns, rows, truncated]
       properties:
         resource: { $ref: '#/components/schemas/FilterResource' }
@@ -69571,6 +69571,12 @@ components:
         blockers:
           type: array
           items: { $ref: '#/components/schemas/MemberRetirementBlocker' }
+        blocking_records:
+          type: array
+          description: |
+            The records behind each blocker that is about records, such as `deal_rooms` or
+            `webhooks`. A blocker that is a state, such as `deactivate_first`, has no entry.
+          items: { $ref: '#/components/schemas/MemberRetirementBlockingRecords' }
         consequences:
           type: array
           items: { $ref: '#/components/schemas/MemberRetirementConsequence' }
@@ -69579,6 +69585,30 @@ components:
         source_email: { type: string, format: email }
         survivor_name: { type: string }
         survivor_email: { type: string, format: email }
+    MemberRetirementBlockingRecords:
+      type: object
+      description: |
+        The records that hold one blocker. `total` counts every one of them. `records` lists the
+        ones you may open, up to 25, and `visible` says how many those are in all. A record kept
+        to its owner, or one with no screen you may open, counts in `total` only.
+      required: [blocker, total, visible, records]
+      properties:
+        blocker: { $ref: '#/components/schemas/MemberRetirementBlocker' }
+        total: { type: integer, minimum: 0 }
+        visible: { type: integer, minimum: 0 }
+        records:
+          type: array
+          maxItems: 25
+          items: { $ref: '#/components/schemas/MemberRetirementBlockingRecord' }
+    MemberRetirementBlockingRecord:
+      type: object
+      required: [id, name]
+      properties:
+        id: { type: string, format: uuid }
+        name: { type: string }
+        web_url:
+          type: string
+          description: Where the record opens in the app, such as the deal a Deal Room belongs to. Absent when it has no page of its own.
     MergeMembersRequest:
       type: object
       additionalProperties: false

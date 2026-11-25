@@ -84,8 +84,8 @@ const (
 	// and the mail hooks in the extension inventory. They extend the unexported
 	// route argument reader and inventory builder, and their cases drive them.
 	// Raised by 9 test lines when the back-sync met develop's extension route cases.
-	composeRootProductionLines = 230_813
-	composeRootTestLines       = 361_036
+	composeRootProductionLines = 230_808
+	composeRootTestLines       = 361_023
 )
 
 // A read under these floors stopped early or read the wrong place, and would

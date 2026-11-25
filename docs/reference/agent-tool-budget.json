@@ -31,9 +31,9 @@
   "catalog": {
     "tools": 48,
     "system_frame_tokens": 730,
-    "tokens": 53834,
+    "tokens": 53796,
     "median_tool_tokens": 806,
-    "mean_tool_tokens": 1121
+    "mean_tool_tokens": 1120
   },
   "agents": [
     {
@@ -68,11 +68,11 @@
         "whats_slipping_this_week"
       ],
       "of_served_tools": 48,
-      "tokens": 6696,
-      "listing_tokens": 3350,
-      "step_schema_tokens": 2616,
+      "tokens": 6722,
+      "listing_tokens": 3363,
+      "step_schema_tokens": 2629,
       "percent_of_ceiling": 20,
-      "headroom_tokens": 9688,
+      "headroom_tokens": 9662,
       "dangling_cross_references": [
         "at_risk_relationships → read_relationships",
         "log_activity → draft_outbound",
@@ -85,7 +85,7 @@
   "tool_cost": [
     {
       "name": "read_details",
-      "tokens": 4604
+      "tokens": 4606
     },
     {
       "name": "read_reports",
@@ -101,7 +101,7 @@
     },
     {
       "name": "change_activities",
-      "tokens": 2980
+      "tokens": 2977
     },
     {
       "name": "change_state",
@@ -125,7 +125,7 @@
     },
     {
       "name": "change_attention",
-      "tokens": 1842
+      "tokens": 1833
     },
     {
       "name": "send_outbound",
@@ -149,7 +149,7 @@
     },
     {
       "name": "change_offers",
-      "tokens": 1096
+      "tokens": 1068
     },
     {
       "name": "change_record_parts",
