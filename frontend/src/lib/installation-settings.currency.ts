@@ -77,6 +77,15 @@ export function useCurrencyNote(): (settings: InstallationSettings) => string {
   return (settings) => currencyNote(settings, { t, locale });
 }
 
+// A locked currency shows and sends the stored code. A code typed before the
+// lock arrived can no longer be saved, and the disabled field cannot undo it.
+export function currencyDraft(
+  settings: InstallationSettings,
+  typed: string,
+): string {
+  return settings.base_currency_locked ? settings.base_currency : typed;
+}
+
 const BASE_CURRENCY_SETTING = "installation.base_currency";
 const LOCK_REASONS: readonly BaseCurrencyLock["reason"][] = [
   "rates_frozen",

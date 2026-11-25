@@ -48,6 +48,7 @@ function renderRefused(
   lockAfter?: components["schemas"]["BaseCurrencyLock"],
 ) {
   let refused = false;
+  const patches: unknown[] = [];
   installFetchStub({
     "GET /me": meRoute({ installation_settings: ["update"] }),
     "GET /installation/settings": () =>
@@ -60,7 +61,8 @@ function renderRefused(
             }
           : settings,
       ),
-    "PATCH /installation/settings": () => {
+    "PATCH /installation/settings": (body: unknown) => {
+      patches.push(body);
       refused = true;
       return jsonResponse(
         {
@@ -72,7 +74,7 @@ function renderRefused(
       );
     },
   });
-  return mountBasis(locale);
+  return { ...mountBasis(locale), patches };
 }
 
 function mountBasis(locale: Locale) {
@@ -158,8 +160,8 @@ describe("BasisAct", () => {
     expect(dispatch).not.toHaveBeenCalled();
   });
 
-  it("words a currency frozen after the step loaded as its lock, once, beside the field", async () => {
-    const { dispatch } = renderRefused(
+  it("words a currency frozen after the step loaded as its lock, once, then moves on", async () => {
+    const { dispatch, patches } = renderRefused(
       [
         {
           field: "installation.base_currency",
@@ -188,6 +190,14 @@ describe("BasisAct", () => {
     expect(screen.getAllByText(sentence)).toHaveLength(1);
     expect(screen.queryByText(/convert into EUR/)).toBeNull();
     expect(dispatch).not.toHaveBeenCalled();
+    expect(currency).toHaveValue("EUR");
+
+    // Nothing else changed, so the second Continue writes nothing.
+    await user.click(screen.getByRole("button", { name: "Weiter" }));
+    await waitFor(() =>
+      expect(dispatch).toHaveBeenCalledWith({ type: "BASIS_DONE" }),
+    );
+    expect(patches).toEqual([{ base_currency: "CHF" }]);
   });
 
   it("puts a refused time zone beside its field, not at the foot", async () => {

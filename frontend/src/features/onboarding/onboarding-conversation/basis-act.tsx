@@ -11,7 +11,10 @@ import { QueryGate } from "../../../design-system/querystates";
 import { ordinalNumber } from "../../../format/format";
 import { useT } from "../../../i18n";
 import { useCanWrite } from "../../../lib/capability";
-import { useCurrencyNote } from "../../../lib/installation-settings.currency";
+import {
+  currencyDraft,
+  useCurrencyNote,
+} from "../../../lib/installation-settings.currency";
 import {
   installationRefusal,
   refusalWordsLock,
@@ -78,7 +81,10 @@ export function BasisAct({ state, dispatch }: BasisActProps) {
   const [leaving, setLeaving] = useState(false);
 
   const stored = settings.data;
-  const currency = currencyEdit ?? stored?.base_currency ?? "";
+  const currency =
+    stored === undefined
+      ? (currencyEdit ?? "")
+      : currencyDraft(stored, currencyEdit ?? stored.base_currency);
   const timezone = timezoneEdit ?? stored?.timezone ?? "";
   const reportingShown = canManage && stored !== undefined;
   const blockers = reportingShown

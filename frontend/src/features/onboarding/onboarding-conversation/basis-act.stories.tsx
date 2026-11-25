@@ -12,6 +12,9 @@ import {
 import { BasisAct } from "./basis-act";
 import { initialConversationState } from "./conversation-machine";
 import type { ConversationState } from "./conversation-types";
+// The app loads the scene's sheet with the conversation; the story draws the
+// section as the app does.
+import "./conversation.css";
 
 // The basis step: base currency and reporting timezone, prefilled from the
 // installation. Stories cover a locked currency and a refused save.

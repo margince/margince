@@ -25,10 +25,8 @@ import { InstallationSettingsCard } from "./installation-settings";
 // installation_settings:update opens the dialog that changes them, so the verb
 // is refused with a reason (never hidden) for everyone else.
 //
-// The case worth proving beyond that is the base currency's lock: once deals
-// have converted against it the server reports it frozen WITH a reason, and
-// both the row and the field must carry that reason — otherwise an operator
-// types a value they cannot save and learns why only from a 422.
+// Beyond that, the base currency's lock: the row and the field both carry the
+// reason the server reports, so nobody types a value they cannot save.
 
 function jsonResponse(body: unknown, status = 200) {
   return new Response(JSON.stringify(body), {
@@ -94,7 +92,12 @@ function backendFor(allow: GrantSpec, opts: BackendOptions = {}) {
       if (url.pathname.endsWith("/installation/settings")) {
         if (req.method === "PATCH") {
           capturedPatch = await req.json();
-          if (opts.refuse) {
+          // Once the currency locked, only a patch still carrying it is refused.
+          const sendsCurrency = Object.hasOwn(
+            capturedPatch as object,
+            "base_currency",
+          );
+          if (opts.refuse && (!opts.lockAfterRefusal || sendsCurrency)) {
             if (opts.lockAfterRefusal) {
               state = {
                 ...state,
@@ -577,10 +580,6 @@ describe("InstallationSettingsCard", () => {
   });
 
   it("puts a refused value's reason on the field it is about", async () => {
-    // The defect: the mutation wrapped the server's answer in `new Error`, which
-    // discarded `details.errors[]` — so a 422 naming the reporting zone arrived
-    // as one paragraph under the base-currency field, and an operator had three
-    // inputs and no way to tell which one the installation refused.
     const user = userEvent.setup();
     const { fetchMock } = backendFor(SETTINGS_EDITOR, {
       refuse: [
@@ -661,9 +660,9 @@ describe("InstallationSettingsCard", () => {
     expect(dialog.querySelector('[aria-invalid="true"]')).toBeNull();
   });
 
-  it("words a currency frozen after the page loaded as its lock, once, in the reader's language", async () => {
+  it("words a currency frozen after the page loaded as its lock, once, then saves the rest", async () => {
     const user = userEvent.setup();
-    const { fetchMock } = backendFor(SETTINGS_EDITOR, {
+    const { fetchMock, patch } = backendFor(SETTINGS_EDITOR, {
       refuse: [
         {
           field: "installation.base_currency",
@@ -683,6 +682,9 @@ describe("InstallationSettingsCard", () => {
     ) as HTMLInputElement;
     await user.clear(currency);
     await user.type(currency, "CHF");
+    const zone = within(dialog).getByLabelText("Zeitzone des Unternehmens");
+    await user.clear(zone);
+    await user.type(zone, "Europe/Vienna");
     await user.click(within(dialog).getByRole("button", { name: "Speichern" }));
 
     const sentence =
@@ -694,6 +696,11 @@ describe("InstallationSettingsCard", () => {
     // The read after the refusal locks the field, and its hint holds the same sentence.
     await waitFor(() => expect(currency.disabled).toBe(true));
     expect(within(dialog).getAllByText(sentence)).toHaveLength(1);
+    expect(currency.value).toBe("EUR");
+
+    await user.click(within(dialog).getByRole("button", { name: "Speichern" }));
+    await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+    expect(patch()).toEqual({ timezone: "Europe/Vienna" });
   });
 
   it("says a refusal once — on the field, or in the summary, never both", async () => {
@@ -719,10 +726,8 @@ describe("InstallationSettingsCard", () => {
     const refusal = await screen.findByText(
       "Company time zone: at most 64 characters.",
     );
-    // One occurrence, and it is the FIELD's. A refusal drawn on the input AND
-    // repeated in a paragraph below states one problem twice, and the paragraph
-    // is the copy a reader learns to skip — so the blanket summary carries only
-    // what no field claimed.
+    // One occurrence, the field's: the summary carries only what no field
+    // claimed.
     expect(
       screen.getAllByText("Company time zone: at most 64 characters."),
     ).toHaveLength(1);

@@ -22,7 +22,10 @@ import {
 import { useCanWrite } from "../../lib/capability";
 // Installation facts are readable by every role; only admin/ops may change them.
 // Each row opens the shared sparse-patch form with its own field focused.
-import { useCurrencyNote } from "../../lib/installation-settings.currency";
+import {
+  currencyDraft,
+  useCurrencyNote,
+} from "../../lib/installation-settings.currency";
 import {
   installationRefusal,
   refusalWordsLock,
@@ -245,7 +248,11 @@ function InstallationSettingsForm({
   const calling = useUpdateInstallationSettings();
   const individual = useUpdateInstallationSettings();
   const selfCorrecting = useUpdateInstallationSettings();
-  const [draft, setDraft] = useState(settings);
+  const [typed, setDraft] = useState(settings);
+  const draft = {
+    ...typed,
+    base_currency: currencyDraft(settings, typed.base_currency),
+  };
   const seeded = useRef(serverSignature(settings));
 
   // Re-seed only when the server's values differ from the draft's source. A
@@ -260,12 +267,8 @@ function InstallationSettingsForm({
     setDraft(settings);
   }, [settings]);
 
-  // The denial, said once and POINTED AT, from every control it refuses. It
-  // refuses three Edit verbs on the card and — if the grant is withdrawn while
-  // the dialog is open, which /me's focus refetch can do — the three fields
-  // inside it. `Button`'s `reasonId` and a field's `aria-describedby` are the
-  // same wiring: name the sentence once, point every refused control at it.
-  // Printing it beside each of them would state one fact three times.
+  // The denial is said once, and every control it refuses points at it: the
+  // Edit verbs, and the fields when /me's refetch withdraws the grant.
   const denialId = useId();
   const describe = (control: FieldControl): string | undefined =>
     describedByIds(control["aria-describedby"], !canManage && denialId);
