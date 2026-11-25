@@ -6323,6 +6323,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "deals.confirmAdvance": "In die Phase {stage} verschieben?",
   "deals.confirmTerminal":
     "Damit wird der Deal als {status} abgeschlossen. Bis du bestätigst, ändert sich nichts.",
+  "deals.confirmMovesProject": "Damit wechselt auch {project} zu {phase}.",
   "deals.lostReason": "Verlustgrund",
   "deals.lostReasonNeeded": "Wähle, warum der Deal verloren ging.",
   "deals.lostReasonCode": "Warum verloren?",
@@ -9918,7 +9919,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "rbac.masked": "Verborgener Wert",
   "settings.passports": "Passports",
   "settings.passportsSub":
-    "Ein Passport ist dein persönlicher API-Schlüssel für Skripte und eigenen Code. Was ihn nutzt, handelt als du, mit den Berechtigungen, die du auswählst, und nie darüber hinaus. Um Margince in einem KI-Tool zu nutzen, verbinde das Tool stattdessen oben.",
+    "Ein Passport ist für Skripte und eigenen Code. Was ihn nutzt, handelt als du, mit den Berechtigungen, die du auswählst, und nie darüber hinaus. Um Margince in einem KI-Tool zu nutzen, verbinde das Tool stattdessen oben.",
   "passport.scope.read": "Datensätze lesen",
   "passport.scope.draft": "Nachrichten entwerfen",
   "passport.scope.write": "Datensätze ändern",
@@ -9999,8 +10000,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "settings.passportUnnamed": "Passport ohne Namen",
   "settings.passportNameRequired": "Gib dem Agenten einen Namen",
   "settings.passportNameTooLong": "Verwende höchstens 120 Zeichen.",
-  "settings.mint": "Passport ausstellen",
-  "settings.minting": "Wird ausgestellt…",
+  "settings.mint": "Passport erstellen",
+  "settings.minting": "Wird erstellt…",
   "settings.mintCancel": "Abbrechen",
   "settings.mintDone": "Fertig",
   "settings.mintOpen": "Neuer Passport",
@@ -10449,7 +10450,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "aiAccess.connect.help": "Hilfe von {vendor}",
   "aiAccess.connect.helpAdmin": "Hilfe von {vendor} für deine Admins",
   "aiAccess.connect.devHint":
-    "Schreibst du eigenen Code? Erstelle unten im Bereich Für die Entwicklung einen API-Schlüssel.",
+    "Schreibst du eigenen Code? Erstelle unten im Bereich Für die Entwicklung einen Passport.",
   "aiAccess.step.allow":
     "Margince öffnet sich. Melde dich an und wähle Autorisieren. Fertig.",
   "aiAccess.claude.openConnectors":
@@ -10529,9 +10530,10 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "aiAccess.guide.officialHead": "Offizielle Anleitung",
   "aiAccess.guide.checked": "Diese Schritte wurden am {date} geprüft.",
   "aiAccess.dev.title": "Für die Entwicklung",
+  "aiAccess.yourAgent.title": "Dein Agent",
   "aiAccess.dev.sub":
-    "API-Schlüssel für eigenen Code und was Agenten ohne dich tun dürfen.",
-  "aiAccess.dev.tab.passports": "API-Schlüssel",
+    "Passports für eigenen Code und was Agenten ohne dich tun dürfen.",
+  "aiAccess.dev.tab.passports": "Passports (API-Schlüssel)",
   "aiAccess.dev.tab.rules": "Regeln für Agenten",
   "aiAccess.connect.placeQuestion": "Wo nutzt du sie?",
   "aiAccess.connect.copy": "Kopieren",
@@ -10596,7 +10598,9 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "aiAccess.other.signIn":
     "OAuth im Browser. Die meisten Tools starten sie bei der ersten Verbindung.",
   "aiAccess.other.apiKey":
-    "Kein Anmelden im Tool möglich? Erstelle in den Einstellungen unter KI-Assistenten, Für die Entwicklung, einen API-Schlüssel und sende ihn als Header „Authorization: Bearer“ mit dem Schlüssel dahinter.",
+    "Kein Anmelden im Tool möglich? Erstelle in den Einstellungen unter KI-Assistenten, Für die Entwicklung, einen Passport und sende ihn als Header „Authorization: Bearer“ mit dem Passport dahinter.",
+  "aiAccess.other.apiKeyBelow":
+    "Kein Anmelden im Tool möglich? Erstelle unten im Bereich Für die Entwicklung einen Passport und sende ihn als Header „Authorization: Bearer“ mit dem Passport dahinter.",
   "aiAccess.other.notAllowed":
     "Meldet die Anmeldung, dass das Tool nicht erlaubt ist, legt ein Admin in den Einstellungen unter Zugang für KI-Tools fest, welche Tools sich verbinden dürfen.",
   "setup.step.ai": "KI-Tool verbinden",
@@ -15248,8 +15252,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "settings.page.model-calls.sub": "Jede Modellanfrage und ihre Antwort.",
   "settings.page.privacy.sub":
     "Betroffenenanfragen, Einwilligungszwecke und Aufbewahrung von Datensätzen.",
-  "settings.page.audit.sub":
-    "Alle Handelnden und jeder Datensatz, auf den sie zugegriffen haben.",
+  "settings.page.audit.sub": "Jede Änderung und wer sie gemacht hat.",
   "settings.page.system-health.sub":
     "Ob die Hintergrundverarbeitung Schritt hält.",
   "settings.page.extensions.sub":
@@ -16484,7 +16487,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "extAccess.need.objects": "Dateispeicher",
   "extAccess.brings.none": "Keine",
   "extAccess.noObjects":
-    "Es gibt nichts zu vergeben, da diese Einheit keine Berechtigungsobjekte registriert.",
+    "Diese Erweiterung hat keine Berechtigungen zu vergeben.",
   "extAccess.roleColumn": "Rolle",
   "extAccess.action.read": "Lesen",
   "extAccess.action.create": "Erstellen",
@@ -21272,11 +21275,9 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "projectRole.subcontractor": "Subunternehmen",
   "projectLinks.attach": "Projekt verknüpfen",
   "projectLinks.move": "Zu anderem Projekt verschieben",
-  "projectLinks.detach": "Verknüpfung lösen",
-  "projectLinks.detachConfirm": "Vom Projekt lösen",
-  "projectLinks.detachNamed": "Verknüpfung zu {name} lösen",
+  "projectLinks.detachConfirm": "Vom Projekt entfernen",
   "projectLinks.roleLabel": "Als",
-  "projectLinks.detachTitle": "Verknüpfung zu diesem Projekt lösen?",
+  "projectLinks.detachTitle": "Vom Projekt entfernen?",
   "projectLinks.detachBody":
     "{name} bleibt unverändert. Nur die Verknüpfung mit diesem Datensatz endet. Gelöscht wird nichts.",
   "projectLinks.emptyTitle": "Noch keine Projekte",
@@ -21315,7 +21316,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "project.ownerMe": "Selbst",
   "project.assignOwner": "Einem Teammitglied zuweisen",
   "project.description": "Beschreibung",
-  "project.targetEnd": "Geplantes Enddatum",
+  "project.targetEnd": "Geplantes Ende",
   "project.startDate": "Startdatum",
   "project.endDate": "Enddatum",
   "project.noCustomer": "Kein Kundenunternehmen",
@@ -21367,7 +21368,6 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "project.stakeholders.removeTitle": "Stakeholder entfernen?",
   "project.stakeholders.removeConfirm":
     "{name} ist nicht mehr Stakeholder dieses Projekts. Die zugehörigen Aktivitäten bleiben, wo sie sind.",
-  "project.stakeholders.removeOne": "{name} aus dem Projekt entfernen",
   "project.role.sponsor": "Projektpatenschaft",
   "project.role.project_lead": "Projektleitung",
   "project.role.delivery_lead": "Umsetzungsleitung",
@@ -21403,6 +21403,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "project.history.openedBy": "{subject} hat das Projekt erstellt",
   "project.history.unknown":
     "Wer diesen Wechsel vorgenommen hat, wurde nicht erfasst",
+  "project.history.dealWon": "Deal {name} gewonnen",
+  "project.history.dealWonUnnamed": "Ein Deal wurde gewonnen",
   "project.standing.unassessed":
     "Noch hat niemand erfasst, wie die Umsetzung läuft.",
   "project.standing.assessedBy": "Bewertet am {date} von {author}.",
@@ -21424,7 +21426,6 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "project.standing.event.opened": "{phase} begonnen",
   "project.standing.event.signed": "Vertrag unterschrieben",
   "project.standing.event.won": "{name} gewonnen",
-  "project.standing.event.end": "Geplantes Ende",
   "project.standing.event.dueLate": "fällig am {date} · verspätet",
   "project.standing.event.due": "fällig am {date}",
   "project.standing.event.lastUpdate": "{date} · letzte Aktualisierung",
@@ -21443,7 +21444,6 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "record.details.notShared": "Nicht geteilt",
   "project.visibility.sharedWith_one": "Mit {count} geteilt",
   "project.visibility.sharedWith_other": "Mit {count} geteilt",
-  "project.aside.targetEnd": "Zielende",
   "project.aside.ended": "Beendet",
   "project.aside.closedReason": "Abschlussgrund",
   "project.standing.lastUpdate": "Letzte Aktualisierung",

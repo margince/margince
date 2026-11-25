@@ -6241,6 +6241,7 @@ export const en = {
   "deals.confirmAdvance": "Move to {stage}?",
   "deals.confirmTerminal":
     "This closes the deal as {status}. Nothing changes until you confirm.",
+  "deals.confirmMovesProject": "This also moves {project} to {phase}.",
   "deals.lostReason": "Lost reason",
   "deals.lostReasonNeeded": "Pick why the deal was lost.",
   "deals.lostReasonCode": "Why was it lost?",
@@ -9855,7 +9856,7 @@ export const en = {
   "rbac.masked": "Masked value",
   "settings.passports": "Passports",
   "settings.passportsSub":
-    "A passport is your personal API key for scripts and your own code. Whatever uses it acts as you, with the permissions you tick, and never more. To use Margince in an AI tool, connect the tool above instead.",
+    "A passport is for scripts and your own code. Whatever uses it acts as you, with the permissions you tick, and never more. To use Margince in an AI tool, connect the tool above instead.",
   // What each passport scope admits, in words. The wire carries `read`/`draft`/
   // `write`/`send`/`enrich`; a human granting them is choosing what an agent may
   // do on their behalf, and the protocol token alone does not say — "write" and
@@ -9937,8 +9938,8 @@ export const en = {
   "settings.passportUnnamed": "Unnamed passport",
   "settings.passportNameRequired": "Give the agent a name",
   "settings.passportNameTooLong": "Use at most 120 characters.",
-  "settings.mint": "Mint passport",
-  "settings.minting": "Minting…",
+  "settings.mint": "Create passport",
+  "settings.minting": "Creating…",
   "settings.mintCancel": "Cancel",
   "settings.mintDone": "Done",
   "settings.mintOpen": "New passport",
@@ -10429,7 +10430,7 @@ export const en = {
   "aiAccess.connect.help": "Help from {vendor}",
   "aiAccess.connect.helpAdmin": "Help from {vendor} for your admin",
   "aiAccess.connect.devHint":
-    "Writing your own code? Create an API key under For developers below.",
+    "Writing your own code? Create a passport under For developers below.",
   "aiAccess.step.allow": "Margince opens. Sign in and choose Authorize. Done.",
   "aiAccess.claude.openConnectors":
     "In Claude, open “Customize”, then “Connectors”.",
@@ -10507,9 +10508,10 @@ export const en = {
   "aiAccess.guide.officialHead": "Official guide",
   "aiAccess.guide.checked": "These steps were checked on {date}.",
   "aiAccess.dev.title": "For developers",
+  "aiAccess.yourAgent.title": "Your agent",
   "aiAccess.dev.sub":
-    "API keys for your own code, and what agents may do without you.",
-  "aiAccess.dev.tab.passports": "API keys",
+    "Passports for your own code, and what agents may do without you.",
+  "aiAccess.dev.tab.passports": "Passports (API keys)",
   "aiAccess.dev.tab.rules": "Agent rules",
   "aiAccess.connect.placeQuestion": "Where do you use it?",
   "aiAccess.connect.copy": "Copy",
@@ -10572,7 +10574,9 @@ export const en = {
   "aiAccess.other.signIn":
     "OAuth in your browser. Most tools start it the first time they connect.",
   "aiAccess.other.apiKey":
-    "No sign-in in the tool? Create an API key in Settings under AI assistants, For developers, and send it as the header “Authorization: Bearer” followed by the key.",
+    "No sign-in in the tool? Create a passport in Settings under AI assistants, For developers, and send it as the header “Authorization: Bearer” followed by the passport.",
+  "aiAccess.other.apiKeyBelow":
+    "No sign-in in the tool? Create a passport under For developers below, and send it as the header “Authorization: Bearer” followed by the passport.",
   "aiAccess.other.notAllowed":
     "If sign-in says the tool is not allowed, an administrator chooses which tools may connect in Settings under AI tool access.",
   "setup.step.ai": "Connect your AI tool",
@@ -15167,7 +15171,7 @@ export const en = {
   "settings.page.model-calls.sub": "Each model request and its response.",
   "settings.page.privacy.sub":
     "Data subject requests, consent purposes and record retention.",
-  "settings.page.audit.sub": "Every actor and every record they accessed.",
+  "settings.page.audit.sub": "Every change and who made it.",
   "settings.page.system-health.sub":
     "Whether background processing is keeping up.",
   "settings.page.extensions.sub":
@@ -16356,8 +16360,7 @@ export const en = {
   "extAccess.need.models": "AI models",
   "extAccess.need.objects": "File storage",
   "extAccess.brings.none": "None",
-  "extAccess.noObjects":
-    "This unit registers no permission objects, so there is nothing to grant.",
+  "extAccess.noObjects": "This extension has no permissions to grant.",
   "extAccess.roleColumn": "Role",
   "extAccess.action.read": "Read",
   "extAccess.action.create": "Create",
@@ -21041,11 +21044,9 @@ export const en = {
   "projectRole.subcontractor": "Subcontractor",
   "projectLinks.attach": "Attach project",
   "projectLinks.move": "Move to another project",
-  "projectLinks.detach": "Detach",
-  "projectLinks.detachConfirm": "Detach project",
-  "projectLinks.detachNamed": "Detach {name}",
+  "projectLinks.detachConfirm": "Remove from project",
   "projectLinks.roleLabel": "As",
-  "projectLinks.detachTitle": "Detach this project?",
+  "projectLinks.detachTitle": "Remove from project?",
   "projectLinks.detachBody":
     "{name} is unchanged. Only its link to this record ends; nothing is deleted.",
   "projectLinks.emptyTitle": "No projects yet",
@@ -21083,7 +21084,7 @@ export const en = {
   "project.ownerMe": "Me",
   "project.assignOwner": "Assign to a colleague",
   "project.description": "Description",
-  "project.targetEnd": "Target end date",
+  "project.targetEnd": "Target end",
   "project.startDate": "Start date",
   "project.endDate": "End date",
   "project.noCustomer": "No customer company",
@@ -21104,7 +21105,7 @@ export const en = {
     "You cannot edit this project. Ask its owner to share it, or an administrator for edit rights.",
   "project.phaseLabel": "Phase",
   "project.filterPhaseAll": "All phases",
-  "project.viewDelivering": "In delivery",
+  "project.viewDelivering": "Delivering",
   "project.phase.initiative": "Initiative",
   "project.phase.pursuing": "Pursuing",
   "project.phase.delivering": "Delivering",
@@ -21132,7 +21133,6 @@ export const en = {
   "project.stakeholders.removeTitle": "Remove stakeholder?",
   "project.stakeholders.removeConfirm":
     "{name} is no longer a stakeholder on this project. Their activity stays where it is.",
-  "project.stakeholders.removeOne": "Remove {name} from project",
   "project.role.sponsor": "Sponsor",
   "project.role.project_lead": "Project lead",
   "project.role.delivery_lead": "Delivery lead",
@@ -21177,13 +21177,14 @@ export const en = {
   "record.details.notShared": "Not shared",
   "project.visibility.sharedWith_one": "Shared with {count}",
   "project.visibility.sharedWith_other": "Shared with {count}",
-  "project.aside.targetEnd": "Target end",
   "project.aside.ended": "Ended",
   "project.aside.closedReason": "Closing reason",
   "project.history.since": "Since {date}",
   "project.history.movedBy": "{subject} moved it",
   "project.history.openedBy": "{subject} opened it",
   "project.history.unknown": "Who made this move was not recorded",
+  "project.history.dealWon": "Deal {name} won",
+  "project.history.dealWonUnnamed": "A deal was won",
   "project.standing.unassessed":
     "Nobody has recorded how delivery is going yet.",
   "project.standing.assessedBy": "Assessed {date} by {author}.",
@@ -21205,7 +21206,6 @@ export const en = {
   "project.standing.event.opened": "{phase} opened",
   "project.standing.event.signed": "Contract signed",
   "project.standing.event.won": "{name} won",
-  "project.standing.event.end": "Target end",
   "project.standing.event.dueLate": "due {date} · late",
   "project.standing.event.due": "due {date}",
   "project.standing.lastUpdate": "Last update",

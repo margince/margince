@@ -211,7 +211,15 @@ describe("ContactsScreen (B-EP09.10a)", () => {
                 company_name: "Brandt AG",
               },
             },
-            { ...anna, id: "p-2", full_name: "Bruno Klein" },
+            // Dated, so the row's one empty cell is the employer's: an empty
+            // date cell shows the list's absent mark.
+            {
+              ...anna,
+              id: "p-2",
+              full_name: "Bruno Klein",
+              last_activity_at: "2026-07-01T09:00:00Z",
+              created_at: "2026-06-01T09:00:00Z",
+            },
           ],
           page: { next_cursor: null },
         });

@@ -15,7 +15,11 @@ import {
   useListQuery,
 } from "../../components/listquery";
 import { useOwnerChips } from "../../components/ownerdials";
-import { lastActivityColumn, ownerColumn } from "../../components/recordlist";
+import {
+  ABSENT_CELL,
+  lastActivityColumn,
+  ownerColumn,
+} from "../../components/recordlist";
 import { Badge, EmptyState } from "../../design-system/atoms";
 import { Heading } from "../../design-system/heading";
 import { Chip } from "../../design-system/readings";
@@ -99,7 +103,7 @@ function ProjectCompanyCell({
   return project.masked_fields?.includes("company_id") ? (
     <span data-testid="project-company-withheld">{t("state.withheld")}</span>
   ) : asText ? null : (
-    <span data-testid="project-company-none">—</span>
+    <span data-testid="project-company-none">{ABSENT_CELL}</span>
   );
 }
 

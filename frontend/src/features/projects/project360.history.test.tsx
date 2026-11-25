@@ -101,3 +101,100 @@ describe("a project's change history", () => {
     expect(within(drawer).queryByText(after)).toBeNull();
   });
 });
+
+// A phase the server moved because a deal was won names that cause, so the row
+// does not read as a move someone chose.
+describe("a phase move a won deal caused", () => {
+  const visit = (cause: unknown) => ({
+    id: "ph-2",
+    from_phase: "pursuing",
+    to_phase: "delivering",
+    reason: null,
+    changed_at: "2026-06-10T09:00:00Z",
+    cause,
+  });
+
+  function showHistory(cause: unknown) {
+    projectsBackend({
+      view: project360({
+        phase_history: {
+          data: [
+            {
+              id: "ph-1",
+              from_phase: null,
+              to_phase: "pursuing",
+              reason: null,
+              changed_at: "2026-06-01T09:00:00Z",
+            },
+            visit(cause) as never,
+          ],
+          phase_durations: [],
+        },
+      }),
+    });
+    render(<ProjectScreen id="pr-1" />);
+  }
+
+  it("names the deal and links to it", async () => {
+    showHistory({
+      kind: "deal_won",
+      deal_id: "d-1",
+      deal_name: "Wendt renewal",
+    });
+    const link = await screen.findByRole("link", { name: "Wendt renewal" });
+    expect(link.getAttribute("href")).toContain("#/deals/d-1");
+    expect(link.closest(".overviewrow-sub")?.textContent).toContain(
+      "· Deal Wendt renewal won",
+    );
+  });
+
+  it("says a deal was won when the reader may not see which", async () => {
+    showHistory({ kind: "deal_won", deal_id: null, deal_name: null });
+    expect(await screen.findByText(/· A deal was won$/)).toBeTruthy();
+  });
+
+  it("says nothing of a cause this build has no words for", async () => {
+    showHistory({ kind: "contract_signed", deal_id: null, deal_name: null });
+    await screen.findByText(/^Since 10 Jun/);
+    expect(screen.queryByText(/deal was won|won$/)).toBeNull();
+  });
+});
+
+describe("the All tasks drawer", () => {
+  it("is titled All tasks, and the history drawer Full history", async () => {
+    projectsBackend({
+      view: project360({
+        commitments: {
+          data: [
+            {
+              activity_id: "a-1",
+              subject: "Confirm the depot slot",
+              due_at: null,
+              due_has_time: false,
+              assignee_id: null,
+              assignee_name: null,
+              version: 1,
+              overdue: false,
+            },
+          ],
+          page: { has_more: false },
+        } as never,
+      }),
+    });
+    render(<ProjectScreen id="pr-1" />);
+    await screen.findByRole("heading", { name: "CRM rollout" });
+
+    const user = userEvent.setup();
+    await user.click(
+      screen.getByRole("button", { name: en["project.commitments.all"] }),
+    );
+    expect(
+      await screen.findByRole("dialog", {
+        name: en["project.commitments.all"],
+      }),
+    ).toBeTruthy();
+    expect(
+      screen.queryByRole("dialog", { name: en["record.fullHistory"] }),
+    ).toBeNull();
+  });
+});

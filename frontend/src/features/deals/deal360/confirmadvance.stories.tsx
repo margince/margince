@@ -88,6 +88,8 @@ function advance(
     // Whether the deal has a signed contract. Left out, the read answers
     // nothing usable and the dialog asks only if the server refuses.
     signed?: boolean;
+    // The phase of the project the deal belongs to. Left out, it has none.
+    projectPhase?: string;
   }>,
 ) {
   return () => {
@@ -99,6 +101,18 @@ function advance(
       "GET /activities": () =>
         jsonResponse(args.tasks ?? { data: [], page: { has_more: false } }),
       "GET /loss-reasons": () => jsonResponse({ data: LOSS_REASONS }),
+      ...(args.projectPhase === undefined
+        ? {}
+        : {
+            "GET /deals/deal-1": () =>
+              jsonResponse({ id: "deal-1", project_id: "pr-1" }),
+            "GET /projects/pr-1": () =>
+              jsonResponse({
+                id: "pr-1",
+                name: "Depot fit-out",
+                phase: args.projectPhase,
+              }),
+          }),
       ...(args.signed === undefined
         ? {}
         : {
@@ -168,6 +182,20 @@ export const ClosingWon: Story = {
     await waitFor(() =>
       expect(dialog.getByRole("button", { name: "Confirm" })).toBeEnabled(),
     );
+  },
+};
+
+/** A win that also moves the deal's project, still in pursuing, to Delivering. */
+export const ClosingWonMovesProject: Story = {
+  render: advance({
+    stage: terminal("Won", "won"),
+    onConfirm: () => Promise.resolve(SAVED),
+    signed: true,
+    projectPhase: "pursuing",
+  }),
+  play: async () => {
+    const dialog = within(await screen.findByRole("dialog"));
+    await dialog.findByText("This also moves Depot fit-out to Delivering.");
   },
 };
 

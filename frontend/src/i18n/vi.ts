@@ -6156,6 +6156,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "deals.confirmAdvance": "Chuyển sang {stage}?",
   "deals.confirmTerminal":
     "Thao tác này sẽ đóng deal với trạng thái {status}. Chưa có gì thay đổi cho đến khi bạn xác nhận.",
+  "deals.confirmMovesProject":
+    "Thao tác này cũng chuyển {project} sang {phase}.",
   "deals.lostReason": "Lý do thua",
   "deals.lostReasonNeeded": "Hãy chọn lý do deal bị thua.",
   "deals.lostReasonCode": "Vì sao thua?",
@@ -9648,7 +9650,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "rbac.masked": "Giá trị đã che",
   "settings.passports": "Passport",
   "settings.passportsSub":
-    "Passport là khóa API cá nhân cho script và mã của riêng bạn. Bất kỳ thứ gì dùng passport đều hành động với tư cách của bạn, trong phạm vi các quyền đã chọn và không bao giờ vượt quá. Để dùng Margince trong công cụ AI, hãy kết nối công cụ ở phía trên.",
+    "Passport dành cho script và mã của riêng bạn. Bất kỳ thứ gì dùng passport đều hành động với tư cách của bạn, trong phạm vi các quyền đã chọn và không bao giờ vượt quá. Để dùng Margince trong công cụ AI, hãy kết nối công cụ ở phía trên.",
   "passport.scope.read": "Đọc hồ sơ",
   "passport.scope.draft": "Soạn nháp tin nhắn",
   "passport.scope.write": "Sửa hồ sơ",
@@ -10153,7 +10155,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "aiAccess.connect.help": "Trợ giúp từ {vendor}",
   "aiAccess.connect.helpAdmin": "Trợ giúp từ {vendor} cho quản trị viên",
   "aiAccess.connect.devHint":
-    "Bạn tự viết mã? Tạo khóa API trong mục Dành cho nhà phát triển bên dưới.",
+    "Bạn tự viết mã? Tạo passport trong mục Dành cho nhà phát triển bên dưới.",
   "aiAccess.step.allow": "Margince mở ra. Đăng nhập và chọn Cấp quyền. Xong.",
   "aiAccess.claude.openConnectors":
     "Trong Claude, mở “Customize”, rồi “Connectors”.",
@@ -10232,9 +10234,10 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "aiAccess.guide.officialHead": "Hướng dẫn chính thức",
   "aiAccess.guide.checked": "Các bước này được kiểm tra vào {date}.",
   "aiAccess.dev.title": "Dành cho nhà phát triển",
+  "aiAccess.yourAgent.title": "Trợ lý AI của bạn",
   "aiAccess.dev.sub":
-    "Khóa API cho mã của riêng bạn, và những gì agent được làm khi không có bạn.",
-  "aiAccess.dev.tab.passports": "Khóa API",
+    "Passport cho mã của riêng bạn, và những gì agent được làm khi không có bạn.",
+  "aiAccess.dev.tab.passports": "Passport (khóa API)",
   "aiAccess.dev.tab.rules": "Quy tắc cho agent",
   "aiAccess.connect.placeQuestion": "Bạn dùng nó ở đâu?",
   "aiAccess.connect.copy": "Sao chép",
@@ -10299,7 +10302,9 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "aiAccess.other.signIn":
     "OAuth trong trình duyệt. Hầu hết công cụ tự bắt đầu ở lần kết nối đầu tiên.",
   "aiAccess.other.apiKey":
-    "Công cụ không đăng nhập được? Tạo khóa API trong Cài đặt, mục Trợ lý AI, Dành cho nhà phát triển, rồi gửi nó trong header “Authorization: Bearer” kèm khóa phía sau.",
+    "Công cụ không đăng nhập được? Tạo passport trong Cài đặt, mục Trợ lý AI, Dành cho nhà phát triển, rồi gửi nó trong header “Authorization: Bearer” kèm passport phía sau.",
+  "aiAccess.other.apiKeyBelow":
+    "Công cụ không đăng nhập được? Tạo passport trong mục Dành cho nhà phát triển bên dưới, rồi gửi nó trong header “Authorization: Bearer” kèm passport phía sau.",
   "aiAccess.other.notAllowed":
     "Nếu khi đăng nhập có thông báo công cụ không được phép, quản trị viên chọn các công cụ được phép kết nối trong Cài đặt, mục Quyền cho công cụ AI.",
   "setup.step.ai": "Kết nối công cụ AI của bạn",
@@ -14824,8 +14829,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Từng yêu cầu gửi đến mô hình và phản hồi tương ứng.",
   "settings.page.privacy.sub":
     "Yêu cầu của chủ thể dữ liệu, mục đích xin sự đồng ý và thời hạn lưu trữ hồ sơ.",
-  "settings.page.audit.sub":
-    "Mọi tác nhân và mọi hồ sơ mà tác nhân đó đã truy cập.",
+  "settings.page.audit.sub": "Mọi thay đổi và ai đã thực hiện.",
   "settings.page.system-health.sub": "Xử lý nền có theo kịp hay không.",
   "settings.page.extensions.sub":
     "Tiện ích mở rộng trong bản dựng này, và vai trò nào truy cập được.",
@@ -16026,8 +16030,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "extAccess.need.models": "Mô hình AI",
   "extAccess.need.objects": "Lưu trữ tệp",
   "extAccess.brings.none": "Không có",
-  "extAccess.noObjects":
-    "Đơn vị này không đăng ký đối tượng phân quyền nào, nên không có gì để cấp.",
+  "extAccess.noObjects": "Tiện ích mở rộng này không có quyền nào để cấp.",
   "extAccess.roleColumn": "Vai trò",
   "extAccess.action.read": "Đọc",
   "extAccess.action.create": "Tạo",
@@ -20713,11 +20716,9 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "projectRole.subcontractor": "Nhà thầu phụ",
   "projectLinks.attach": "Gắn dự án",
   "projectLinks.move": "Chuyển sang dự án khác",
-  "projectLinks.detach": "Bỏ liên kết",
-  "projectLinks.detachConfirm": "Bỏ liên kết dự án",
-  "projectLinks.detachNamed": "Bỏ liên kết {name}",
+  "projectLinks.detachConfirm": "Gỡ khỏi dự án",
   "projectLinks.roleLabel": "Vai trò",
-  "projectLinks.detachTitle": "Bỏ liên kết dự án này?",
+  "projectLinks.detachTitle": "Gỡ khỏi dự án?",
   "projectLinks.detachBody":
     "{name} vẫn giữ nguyên. Chỉ gỡ liên kết với hồ sơ này; không có gì bị xóa.",
   "projectLinks.emptyTitle": "Chưa có dự án nào",
@@ -20756,7 +20757,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "project.ownerMe": "Tôi",
   "project.assignOwner": "Giao cho một đồng nghiệp",
   "project.description": "Mô tả",
-  "project.targetEnd": "Ngày kết thúc dự kiến",
+  "project.targetEnd": "Ngày kết thúc mục tiêu",
   "project.startDate": "Ngày bắt đầu",
   "project.endDate": "Ngày kết thúc",
   "project.noCustomer": "Chưa có công ty khách hàng",
@@ -20807,7 +20808,6 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "project.stakeholders.removeTitle": "Gỡ bên liên quan?",
   "project.stakeholders.removeConfirm":
     "{name} không còn là bên liên quan của dự án này. Hoạt động của liên hệ này vẫn giữ nguyên.",
-  "project.stakeholders.removeOne": "Gỡ {name} khỏi dự án",
   "project.role.sponsor": "Nhà tài trợ",
   "project.role.project_lead": "Trưởng dự án",
   "project.role.delivery_lead": "Trưởng triển khai",
@@ -20841,6 +20841,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "project.history.movedBy": "{subject} đã chuyển giai đoạn",
   "project.history.openedBy": "{subject} đã tạo dự án",
   "project.history.unknown": "Không ghi nhận ai đã thực hiện thay đổi này",
+  "project.history.dealWon": "Đã thắng deal {name}",
+  "project.history.dealWonUnnamed": "Đã thắng một deal",
   "project.standing.unassessed": "Chưa ai ghi nhận tình hình triển khai.",
   "project.standing.assessedBy": "{author} đánh giá ngày {date}.",
   "project.standing.assessedOn": "Đánh giá ngày {date}.",
@@ -20861,7 +20863,6 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "project.standing.event.opened": "Mở {phase}",
   "project.standing.event.signed": "Đã ký hợp đồng",
   "project.standing.event.won": "Thắng {name}",
-  "project.standing.event.end": "Kết thúc dự kiến",
   "project.standing.event.dueLate": "hạn {date} · trễ",
   "project.standing.event.due": "hạn {date}",
   "project.standing.event.lastUpdate": "{date} · cập nhật gần nhất",
@@ -20879,7 +20880,6 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "record.details.notShared": "Chưa chia sẻ",
   "project.visibility.sharedWith_one": "Chia sẻ với {count}",
   "project.visibility.sharedWith_other": "Chia sẻ với {count}",
-  "project.aside.targetEnd": "Dự kiến kết thúc",
   "project.aside.ended": "Kết thúc",
   "project.aside.closedReason": "Lý do đóng",
   "project.standing.lastUpdate": "Cập nhật gần nhất",

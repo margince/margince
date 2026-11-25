@@ -3,7 +3,8 @@
 
 import { StatCard } from "../../design-system/atoms";
 import { StatStrip } from "../../design-system/statstrip";
-import { formatMoneyOrAbsent, formatNumber } from "../../format/format";
+import { formatMoneyWhole, formatNumber } from "../../format/format";
+import { formatMoneyOrWord, MONEY_ABSENT } from "../../format/moneyword";
 import { useLocale, usePlural, useT } from "../../i18n";
 import { attachmentTitle } from "../../lib/attachmentlink";
 import { reveal } from "../../lib/reveal";
@@ -57,7 +58,13 @@ function DealValueCell({
       )}
       value={
         totals
-          ? formatMoneyOrAbsent(money?.amount_minor, money?.currency, locale)
+          ? formatMoneyOrWord(
+              money?.amount_minor,
+              money?.currency,
+              locale,
+              MONEY_ABSENT,
+              formatMoneyWhole,
+            )
           : t("state.withheld")
       }
       detail={

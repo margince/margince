@@ -121,6 +121,19 @@ export function ProjectScreen({
 // The drawers the page opens; "tasks" is the history narrowed to tasks.
 type ProjectDrawerKind = "history" | "tasks" | "documents" | "contacts";
 
+// The history drawer's title, kept past closing so it does not change while
+// the drawer animates out.
+function useHistoryDrawerTitle(drawer: ProjectDrawerKind | null): string {
+  const t = useT();
+  const [kind, setKind] = useState<"history" | "tasks">("history");
+  if ((drawer === "history" || drawer === "tasks") && drawer !== kind) {
+    setKind(drawer);
+  }
+  return kind === "tasks"
+    ? t("project.commitments.all")
+    : t("record.fullHistory");
+}
+
 function ProjectPage({ view }: Readonly<{ view: Project360 }>) {
   const t = useT();
   const readerZone = useViewerZone();
@@ -128,6 +141,7 @@ function ProjectPage({ view }: Readonly<{ view: Project360 }>) {
   const readOnlyReasonId = useId();
   const [moveTo, setMoveTo] = useState<ProjectPhase | null>(null);
   const [drawer, setDrawer] = useState<ProjectDrawerKind | null>(null);
+  const historyTitle = useHistoryDrawerTitle(drawer);
   // Every write affordance on this page answers one question, asked once. An
   // archived project takes no changes, and one this caller cannot write takes
   // none from them. One answer and one rendered sentence, so every disabled
@@ -261,7 +275,7 @@ function ProjectPage({ view }: Readonly<{ view: Project360 }>) {
       />
       <ProjectDrawer
         open={drawer === "history" || drawer === "tasks"}
-        title={t("record.fullHistory")}
+        title={historyTitle}
         onClose={() => setDrawer(null)}
       >
         <ProjectHistory

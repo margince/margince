@@ -4108,7 +4108,7 @@
   "settings.page.mcp.sub": "Welche KI-Tools sich über MCP mit Margince verbinden dürfen und wie.",
   "settings.page.model-calls.sub": "Jede Modellanfrage und ihre Antwort.",
   "settings.page.privacy.sub": "Betroffenenanfragen, Einwilligungszwecke und Aufbewahrung von Datensätzen.",
-  "settings.page.audit.sub": "Alle Handelnden und jeder Datensatz, auf den sie zugegriffen haben.",
+  "settings.page.audit.sub": "Jede Änderung und wer sie gemacht hat.",
   "settings.page.system-health.sub": "Ob die Hintergrundverarbeitung Schritt hält.",
   "settings.page.extensions.sub": "Erweiterungen in diesem Build und welche Rollen darauf zugreifen können.",
   "settings.page.reset.sub": "Daten dieser Installation löschen. Das kann nicht rückgängig gemacht werden.",

@@ -20,6 +20,7 @@ import { problemMessageOf } from "../lib/problem";
 import { AppLink } from "./applink";
 import { Button, EmptyState, Field } from "./atoms";
 import { ConfirmModal } from "./confirmmodal";
+import { OverflowMenu } from "./overflowmenu";
 import { Panel, PanelBody, PanelGroupHead, PanelRow } from "./panel";
 import { RecordPicker, type RecordPickerCandidate } from "./recordpicker";
 import { Select } from "./select";
@@ -50,7 +51,8 @@ export type LinkedProject = Readonly<{
   // Where the name points. Defaults to the project page, which is right for
   // every caller listing PROJECTS; the mirror listing companies overrides it.
   href?: string;
-  key?: string | null;
+  // The record's key as the caller draws it, for the reason `phase` is a node.
+  key?: ReactNode;
   // The phase as the CALLER draws it. A node rather than the phase string,
   // because the badge that renders a phase lives with the projects screen and
   // this tier may not reach into a screen — and a second badge drawn here would
@@ -284,7 +286,6 @@ function LinkedRows({
   adapter: ProjectLinksAdapter;
   onDetach: (project: LinkedProject) => void;
 }>) {
-  const t = useT();
   const onDetach = adapter.detach && !adapter.readOnly ? detach : undefined;
   if (adapter.card) {
     return (
@@ -306,23 +307,36 @@ function LinkedRows({
         <AppLink href={project.href ?? `#/projects/${project.project_id}`}>
           {project.name}
         </AppLink>
-        {project.key && <span>{project.key}</span>}
+        {project.key}
         {project.phase}
         {onDetach && (
-          <Button
-            variant="ghost"
-            onClick={() => onDetach(project)}
-            // Every row's verb reads the same to the eye. A screen reader
-            // needs the name, because five "Detach" buttons cannot say which
-            // record each one takes off.
-            aria-label={t("projectLinks.detachNamed", { name: project.name })}
-          >
-            {t("projectLinks.detach")}
-          </Button>
+          <RemoveLinkMenu
+            name={project.name}
+            onRemove={() => onDetach(project)}
+          />
         )}
       </div>
     </PanelRow>
   ));
+}
+
+/**
+ * The verb that takes one linked record off this one: a "Remove" item in the
+ * row's overflow menu, which stays in view. The caller asks before removing.
+ */
+export function RemoveLinkMenu({
+  name,
+  onRemove,
+}: Readonly<{ name: string; onRemove: () => void }>) {
+  const t = useT();
+  return (
+    // Named for the record, because every row's menu looks the same.
+    <OverflowMenu label={t("record.moreActionsFor", { subject: name })}>
+      <Button variant="danger" onClick={onRemove}>
+        {t("rel.remove")}
+      </Button>
+    </OverflowMenu>
+  );
 }
 
 // The pick dialog, lifted out of the section: it carries a role, a search and a

@@ -4108,7 +4108,7 @@
   "settings.page.mcp.sub": "Which AI tools may connect to Margince over MCP, and how.",
   "settings.page.model-calls.sub": "Each model request and its response.",
   "settings.page.privacy.sub": "Data subject requests, consent purposes and record retention.",
-  "settings.page.audit.sub": "Every actor and every record they accessed.",
+  "settings.page.audit.sub": "Every change and who made it.",
   "settings.page.system-health.sub": "Whether background processing is keeping up.",
   "settings.page.extensions.sub": "Extensions in this build, and which roles can access them.",
   "settings.page.reset.sub": "Delete this installation’s data. Cannot be undone.",

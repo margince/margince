@@ -2,6 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { components } from "../../api/schema";
+import { EntityRef } from "../../components/entityref";
 import { Badge } from "../../design-system/atoms";
 import { OverviewRow } from "../../design-system/overviewcard";
 import { formatNumber } from "../../format/format";
@@ -14,6 +15,10 @@ import { OverviewSection, type Project360, stateOf } from "./projectsections";
 import { phaseName } from "./projectstanding.words";
 
 type PhaseTransition = components["schemas"]["Project360PhaseTransition"];
+type PhaseCause = components["schemas"]["Project360PhaseCause"];
+
+// Splits a sentence around the deal's name, which is drawn as a link.
+const NAME_SLOT = "\u0000";
 
 /**
  * Every visit to a phase, oldest first: when it began and ended, why or by
@@ -79,8 +84,36 @@ function VisitRow({
   return (
     <OverviewRow
       title={phaseName(visit.to_phase, t)}
-      sub={`${span} · ${why}`}
+      sub={
+        <>
+          {`${span} · ${why}`}
+          <PhaseCauseWords cause={visit.cause} />
+        </>
+      }
       right={leftAt ? length : <Badge>{length}</Badge>}
     />
+  );
+}
+
+// What moved the project when no one chose the phase. A cause kind this build
+// has no words for says nothing rather than something wrong.
+function PhaseCauseWords({ cause }: Readonly<{ cause?: PhaseCause }>) {
+  const t = useT();
+  if (cause?.kind !== "deal_won") {
+    return null;
+  }
+  if (!cause.deal_id || !cause.deal_name) {
+    return <> · {t("project.history.dealWonUnnamed")}</>;
+  }
+  const [before, after] = t("project.history.dealWon", {
+    name: NAME_SLOT,
+  }).split(NAME_SLOT);
+  return (
+    <>
+      {" · "}
+      {before}
+      <EntityRef kind="deal" id={cause.deal_id} name={cause.deal_name} />
+      {after}
+    </>
   );
 }

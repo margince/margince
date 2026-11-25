@@ -2,6 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
+import { Hash } from "lucide-react";
 import { useState } from "react";
 import { screen, userEvent, within } from "storybook/test";
 import { LocaleProvider } from "../i18n";
@@ -11,6 +12,7 @@ import {
   ProjectLinks,
   type ProjectLinksAdapter,
 } from "./projectlinks";
+import { Chip } from "./readings";
 import type { RecordPickerCandidate } from "./recordpicker";
 
 const meta: Meta<typeof ProjectLinks> = {
@@ -31,18 +33,26 @@ type Story = StoryObj<typeof ProjectLinks>;
 // The phase arrives as a NODE, which is the whole reason the prop is one: the
 // badge that renders a project phase belongs to the projects screen, and this
 // tier may not reach into a screen. A caller hands in whatever it already
-// draws; here that is a plain Badge.
+// draws; here that is a plain Badge, and the key as the projects screen's chip.
 const LINKED: readonly LinkedProject[] = [
   {
     project_id: "p-1",
     name: "Warehouse rollout",
-    key: "WH-14",
+    key: (
+      <Chip icon={Hash} dense>
+        WH-14
+      </Chip>
+    ),
     phase: <Badge tone="info">Delivery</Badge>,
   },
   {
     project_id: "p-2",
     name: "Q3 data migration",
-    key: "DM-7",
+    key: (
+      <Chip icon={Hash} dense>
+        DM-7
+      </Chip>
+    ),
     phase: <Badge>Discovery</Badge>,
   },
 ];
@@ -153,4 +163,23 @@ export const Attaching: Story = {
     );
     await screen.findByRole("dialog");
   },
+};
+
+/** A row's overflow menu open, holding Remove. It stays in view at rest. */
+export const RemoveMenuOpen: Story = {
+  render: () => <Live />,
+  play: async ({ canvasElement }) => {
+    await userEvent.click(
+      await within(canvasElement).findByRole("button", {
+        name: "More actions for Warehouse rollout",
+      }),
+    );
+    await screen.findByRole("button", { name: "Remove" });
+  },
+};
+
+/** The same row at phone width, where the menu still sits at the row's end. */
+export const RemoveMenuPhone: Story = {
+  tags: ["uat-phone"],
+  render: () => <Live />,
 };

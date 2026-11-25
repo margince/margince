@@ -225,7 +225,7 @@ export function ProjectDetails({ view }: Readonly<{ view: Project360 }>) {
     },
     {
       key: "target",
-      term: t("project.aside.targetEnd"),
+      term: t("project.targetEnd"),
       value: day(project.target_end_date),
       empty: !project.target_end_date,
     },

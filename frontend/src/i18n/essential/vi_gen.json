@@ -4108,7 +4108,7 @@
   "settings.page.mcp.sub": "Những công cụ AI nào được kết nối với Margince qua MCP, và bằng cách nào.",
   "settings.page.model-calls.sub": "Từng yêu cầu gửi đến mô hình và phản hồi tương ứng.",
   "settings.page.privacy.sub": "Yêu cầu của chủ thể dữ liệu, mục đích xin sự đồng ý và thời hạn lưu trữ hồ sơ.",
-  "settings.page.audit.sub": "Mọi tác nhân và mọi hồ sơ mà tác nhân đó đã truy cập.",
+  "settings.page.audit.sub": "Mọi thay đổi và ai đã thực hiện.",
   "settings.page.system-health.sub": "Xử lý nền có theo kịp hay không.",
   "settings.page.extensions.sub": "Tiện ích mở rộng trong bản dựng này, và vai trò nào truy cập được.",
   "settings.page.reset.sub": "Xóa dữ liệu của bản cài đặt này. Không thể hoàn tác.",

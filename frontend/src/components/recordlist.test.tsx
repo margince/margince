@@ -3,7 +3,7 @@ import "@testing-library/jest-dom/vitest";
 import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { cleanup, screen } from "@testing-library/react";
+import { cleanup, render as renderNode, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it } from "vitest";
 import { useT } from "../i18n";
@@ -15,7 +15,9 @@ import {
   useListQuery,
 } from "./listquery";
 import {
+  ABSENT_CELL,
   createdColumn,
+  lastActivityCell,
   mineEmptyLine,
   ownerColumn,
   sharedEmptyLine,
@@ -79,6 +81,28 @@ describe("one record list, three record types", () => {
       { label: "list.viewMine", sort: "" },
       { label: "list.viewAll", sort: "" },
     ]);
+  });
+});
+
+describe("an empty date cell", () => {
+  afterEach(cleanup);
+
+  // The same mark the other empty cells show, so a blank cell never reads as
+  // a value that failed to load.
+  it("shows the absent mark for a row with no last activity and no created date", () => {
+    const t = ((key: string) => key) as Parameters<typeof createdColumn>[0];
+    const row = { last_activity_at: null };
+    const created = createdColumn<typeof row>(t, "en", "UTC");
+    renderNode(
+      <>
+        <p data-testid="last">
+          {lastActivityCell<typeof row>("en", "UTC")(row)}
+        </p>
+        <p data-testid="created">{created.cell(row)}</p>
+      </>,
+    );
+    expect(screen.getByTestId("last").textContent).toBe(ABSENT_CELL);
+    expect(screen.getByTestId("created").textContent).toBe(ABSENT_CELL);
   });
 });
 

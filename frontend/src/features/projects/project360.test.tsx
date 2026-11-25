@@ -102,9 +102,10 @@ describe("ProjectScreen", () => {
     expect(
       screen.getAllByRole("button", { name: "Move to Pursuing" }),
     ).toContain(screen.getByTestId("project-step-pursuing"));
-    expect(screen.getByRole("button", { name: "Move to Closed" })).toBe(
+    expect(screen.getByRole("button", { name: "Close project" })).toBe(
       screen.getByTestId("project-step-closed"),
     );
+    expect(screen.queryByText("Closed")).toBeNull();
 
     // The figures: the phase's days, the open tasks, no file attached.
     const figures = screen.getByTestId("project-figures");
@@ -415,7 +416,9 @@ describe("ProjectScreen", () => {
 
     await user.click(screen.getByTestId("project-step-closed"));
     const dialog = await screen.findByRole("dialog");
-    expect(within(dialog).getByText("Move to Closed")).toBeTruthy();
+    expect(
+      within(dialog).getByRole("heading", { name: "Close project" }),
+    ).toBeTruthy();
     const confirm = within(dialog).getByRole("button", {
       name: "Close project",
     });
