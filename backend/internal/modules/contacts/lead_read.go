@@ -15,6 +15,7 @@ import (
 	"time"
 
 	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgtype"
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
@@ -49,9 +50,7 @@ const leadSourceLabelSQL = `(SELECT s.label FROM lead_source s WHERE s.key = lea
 // through. A deleted form leaves it NULL, and the lead still reads as a web form.
 var leadWebFormNameSQL = `(SELECT f.name FROM web_form f WHERE f.id::text = ` + provenance.WebFormIDSQL("lead") + `)`
 
-// leadNextTaskDueSQL is when the next open task a reader may open falls due —
-// the deadline the Next task column prints, taking the audience for the reason
-// the pair beside it does.
+// leadTaskWorkSQL narrows a lead's open tasks to the work that is still current.
 func leadTaskWorkSQL(ctx context.Context, arg func(any) int) (string, error) {
 	identities, err := leadTaskIdentitiesSQL(ctx, arg)
 	if err != nil {
@@ -60,11 +59,40 @@ func leadTaskWorkSQL(ctx context.Context, arg func(any) int) (string, error) {
 	return " AND " + auth.LiveIntakeTaskClause("a") + " AND " + storekit.CurrentTaskClause("a", slaNow(ctx), identities, arg), nil
 }
 
+// leadOpenTasksSQL is the lead's open current tasks, one row each. work is the
+// largest clause of the lead read, and Postgres plans each copy of it, so the
+// count, the next task and its deadline all read this one table.
+//
+// readable is the audience. A limited task is not the "next task" of a card
+// every seat reads; the card names the next one its reader may open. The count
+// is an aggregate marker over all tasks and owes the audience nothing.
+func leadOpenTasksSQL(work string) string {
+	return `(SELECT a.id, a.created_at, ` + storekit.TaskDueOrderSQL("a") + ` AS due_order, ` + storekit.TaskDueSQL("a") + ` AS due,
+	        jsonb_build_object('subject', a.subject, 'system_text', a.system_text,
+	          'due_has_time', a.due_has_time, 'due_intent', ` + storekit.IntentWireSQL("a", "due") + `) AS descriptor,
+	        (true ` + auth.AudienceWorkspaceOnly("a") + `) AS readable
+	   FROM activity_link l JOIN activity a ON a.id = l.activity_id
+	   WHERE l.lead_id = lead.id AND a.archived_at IS NULL AND a.restricted_at IS NULL AND a.kind = 'task' AND NOT a.is_done ` + work + `) task`
+}
+
+// nextLeadTaskSQL is one column of the next readable row of leadOpenTasksSQL.
+// The title and the deadline describe one task, so both take it by this order:
+// two orders could put one task's title beside another task's deadline.
+func nextLeadTaskSQL(column string) string {
+	return `(array_agg(task.` + column + ` ORDER BY task.due_order NULLS LAST, task.created_at, task.id) FILTER (WHERE task.readable))[1]`
+}
+
+// leadNextTaskDueSQL is when the next open task a reader may open falls due:
+// the deadline the Next task column prints and sorts by.
 func leadNextTaskDueSQL(work string) string {
-	return `(SELECT ` + storekit.TaskDueSQL("a") + ` FROM activity_link l JOIN activity a ON a.id = l.activity_id
-	   WHERE l.lead_id = lead.id AND a.archived_at IS NULL AND a.restricted_at IS NULL AND a.kind = 'task' AND NOT a.is_done ` + work + `
-	     ` + auth.AudienceWorkspaceOnly("a") + `
-	   ORDER BY ` + storekit.TaskDueOrderSQL("a") + ` NULLS LAST, a.created_at, a.id LIMIT 1)`
+	return `(SELECT ` + nextLeadTaskSQL("due") + ` FROM ` + leadOpenTasksSQL(work) + `)`
+}
+
+// leadTaskSummarySQL is one record of the open task count, the next task's
+// descriptor (its title in the reader's language, as History names it) and
+// its deadline.
+func leadTaskSummarySQL(work string) string {
+	return `(SELECT ROW(count(*), ` + nextLeadTaskSQL("descriptor") + `, ` + nextLeadTaskSQL("due") + `) FROM ` + leadOpenTasksSQL(work) + `)`
 }
 
 // leadLastActivitySQL is the last-touch clock. Like last_activity_of_contact, it
@@ -110,29 +138,7 @@ func leadColumns(ctx context.Context, arg func(any) int) (string, error) {
 	status_set_by, qualified_deal_id,
 	` + leadQualificationEvidenceSQL(slaNow(ctx), arg) + `,
 	` + leadLastActivitySQL() + `, ` + leadLastActivityPrecisionSQL() + `,
-	(SELECT count(*) FROM activity_link l JOIN activity a ON a.id = l.activity_id
-	   WHERE l.lead_id = lead.id AND a.archived_at IS NULL AND a.restricted_at IS NULL AND a.kind = 'task' AND NOT a.is_done ` + work + `),
-	-- The next open task, as the pair it is: its title and its deadline
-	-- describe ONE task, so they select one row. The subject is content and
-	-- the due date is a marker, but splitting them by that distinction would
-	-- let the two subqueries land on different tasks — a limited task skipped
-	-- by one and taken by the other — and the card would show one task's title
-	-- beside another's deadline, which is worse than showing neither.
-	--
-	-- So both take the audience. A limited task is not the "next task" for a
-	-- lead card every seat reads; the card names the next one its reader may
-	-- actually open. The count and the max beside them are aggregate markers
-	-- over all tasks and owe nothing.
-	--
-	-- The descriptor rides with the subject so a task Margince wrote is named
-	-- in the reader's language, as History names it.
-	(SELECT jsonb_build_object('subject', a.subject, 'system_text', a.system_text,
-	          'due_has_time', a.due_has_time, 'due_intent', ` + storekit.IntentWireSQL("a", "due") + `)
-	   FROM activity_link l JOIN activity a ON a.id = l.activity_id
-	   WHERE l.lead_id = lead.id AND a.archived_at IS NULL AND a.restricted_at IS NULL AND a.kind = 'task' AND NOT a.is_done ` + work + `
-	     ` + auth.AudienceWorkspaceOnly("a") + `
-	   ORDER BY ` + storekit.TaskDueOrderSQL("a") + ` NULLS LAST, a.created_at, a.id LIMIT 1),
-	` + leadNextTaskDueSQL(work) + `,
+	` + leadTaskSummarySQL(work) + `,
 	(SELECT factor.value->>'factor'
 	   FROM LATERAL (
 	     SELECT factors FROM lead_score_history
@@ -279,8 +285,8 @@ func scanLead(row pgx.Row, active []fieldcatalog.Column, policy leadSLAPolicy, n
 		&version, &l.CreatedAt, &l.UpdatedAt, &l.ArchivedAt,
 		&l.RoutedAt, &l.FirstResponseAt, &markedBy, &l.SourceLabel, &l.WebFormName, &l.Origin, &l.OriginDetail, &l.OriginLabel, &refs.disqualifyReason, &l.DisqualifyNote, &l.DisqualifyReason,
 		&statusSetBy, &refs.qualifiedDeal, &evidence,
-		&l.LastActivityAt, &lastActivityPrecision, &openTasks,
-		&nextTask, &l.NextTaskDueAt, &l.ScoreReason, &l.LegalHold, &hasInbound, &refs.company,
+		&l.LastActivityAt, &lastActivityPrecision,
+		pgtype.CompositeFields{&openTasks, &nextTask, &l.NextTaskDueAt}, &l.ScoreReason, &l.LegalHold, &hasInbound, &refs.company,
 		&l.Industry, &companyFacts, &refs.partner, &l.PartnerAcceptedAt, &l.PartnerAcceptedBy,
 	}
 	cf := storekit.ScanDests(active)
