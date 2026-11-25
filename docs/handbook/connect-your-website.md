@@ -65,7 +65,7 @@ An existing owner keeps the lead or contact. A new or unowned lead follows the p
 
 For a form with no handling plan, **Owner of new leads** still sets who gets new leads. Its value stops deciding who gets new work once you save a handling plan.
 
-To work on past questions, save the plan first. Open **Inquiry handling**, then **Handle existing inquiries**. Choose up to 50 posts and **Review selected inquiries**. Check who gets the task and when it is due. **Create the reviewed tasks** acts only on posts shown as ready.
+To work on past questions, save the plan first. Open **Inquiry handling**, then **Handle existing inquiries**. Each post shows who sent it, their email and the first line of what they wrote. Choose up to 50 posts and **Review selected inquiries**. Check who gets the task and when it is due. **Create the reviewed tasks** acts only on posts shown as ready.
 
 A post that changed, or that you can no longer read, needs a new review. The result names each task made. This leaves a paused plan off and does not change future work.
 
