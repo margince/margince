@@ -23,12 +23,12 @@ type BackendOptions = {
   locked?: boolean;
   lockedReason?: string;
   /** What the server refuses the PATCH with, as an RFC-7807 validation body. */
-  refuse?: {
+  refuse?: readonly {
     field: string;
     code: string;
     message: string;
     max?: number;
-    params?: Record<string, string>;
+    params?: Readonly<Record<string, string>>;
   }[];
   /** The lock the read reports once the PATCH was refused: a rate froze it meanwhile. */
   lockAfterRefusal?: components["schemas"]["BaseCurrencyLock"];
