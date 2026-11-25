@@ -8,11 +8,12 @@ ALTER TABLE company ADD CONSTRAINT company_source_check
     CHECK (source IN ('api', 'automation', 'capture', 'import', 'manual', 'webform')) NOT VALID;
 
 -- Names the connector or writer an older source spelled, or NULL when it named none.
--- An import's stamp is <system>:<object>:<id>, and the system is kept.
+-- An import's stamp is <system>:<object>:<id>, and the system is kept. Each
+-- writer name it returns maps to itself, so a reader can tell one in source_system.
 CREATE FUNCTION party_source_producer(source text) RETURNS text
 LANGUAGE sql IMMUTABLE AS $$
  SELECT CASE
-  WHEN source LIKE 'domain_triage:%' THEN 'domain_triage'
+  WHEN source = 'domain_triage' OR source LIKE 'domain_triage:%' THEN 'domain_triage'
   WHEN source LIKE 'mirror:%' THEN substring(source FROM '^(mirror:.*?):(?:company|contact|lead):')
   WHEN source LIKE 'ext:%' THEN source
   WHEN split_part(source, ':', 1) IN ('dispact', 'gcal', 'gdocs', 'gmail', 'graph', 'graphcal', 'imap',

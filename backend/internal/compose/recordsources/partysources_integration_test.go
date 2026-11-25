@@ -167,7 +167,7 @@ func TestTheMailboxPurgeFindsCapturedContactsBeforeAndAfterTheTask(t *testing.T)
 }
 
 // A feed may adopt a company capture made, whose source_system names only the
-// connector. One an import wrote stays refused.
+// connector. One an import or an integration named stays refused.
 func TestAFeedAdoptsACapturedCompanyAndNotAnImportedOne(t *testing.T) {
 	e := integration.Setup(t)
 	captured, err := e.Contacts.CreateCompany(e.Admin(), contacts.CreateCompanyInput{DisplayName: "Captured Co", Source: "gmail:msg-6"})
@@ -178,6 +178,11 @@ func TestAFeedAdoptsACapturedCompanyAndNotAnImportedOne(t *testing.T) {
 	imported, err := e.Contacts.CreateCompany(e.Admin(), contacts.CreateCompanyInput{DisplayName: "Imported Co", Source: "import", SourceSystem: &csv})
 	if err != nil {
 		t.Fatalf("creating an imported company: %v", err)
+	}
+	hubspot := "hubspot"
+	named, err := e.Contacts.CreateCompany(e.Admin(), contacts.CreateCompanyInput{DisplayName: "Named Co", Source: "api", SourceSystem: &hubspot})
+	if err != nil {
+		t.Fatalf("creating a company an integration named: %v", err)
 	}
 	adopt := func(id ids.UUID, key string) error {
 		_, err := e.Contacts.UpdateCompany(e.Admin(), ids.From[ids.CompanyKind](id), contacts.UpdateCompanyInput{
@@ -190,5 +195,8 @@ func TestAFeedAdoptsACapturedCompanyAndNotAnImportedOne(t *testing.T) {
 	}
 	if err := adopt(ids.UUID(imported.Id), "c-2"); err == nil {
 		t.Error("an imported company was adopted by a feed, want a conflict")
+	}
+	if err := adopt(ids.UUID(named.Id), "c-3"); err == nil {
+		t.Error("a company an integration named was adopted by a feed, want a conflict")
 	}
 }

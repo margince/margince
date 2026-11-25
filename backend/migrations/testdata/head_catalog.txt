@@ -8428,7 +8428,7 @@ public.party_source_channel(source text, source_system text) secdef=false cfg=- 
 
 public.party_source_producer(source text) secdef=false cfg=- acl=- 
  SELECT CASE
-  WHEN source LIKE 'domain_triage:%' THEN 'domain_triage'
+  WHEN source = 'domain_triage' OR source LIKE 'domain_triage:%' THEN 'domain_triage'
   WHEN source LIKE 'mirror:%' THEN substring(source FROM '^(mirror:.*?):(?:company|contact|lead):')
   WHEN source LIKE 'ext:%' THEN source
   WHEN split_part(source, ':', 1) IN ('dispact', 'gcal', 'gdocs', 'gmail', 'graph', 'graphcal', 'imap',

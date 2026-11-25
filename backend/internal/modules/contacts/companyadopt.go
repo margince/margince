@@ -28,9 +28,9 @@ type OutsideID struct {
 }
 
 // stageAdoptedSource stages an outside id onto a hand-made company. A company
-// that holds one, or that an import wrote, is refused. Stamping over it would
-// take the record from the system that owns it. A connector named in
-// source_system owns nothing, so a captured company can be adopted.
+// that holds one, or names another system, is refused. Stamping over it would
+// take the record from the system that owns it. A connector or writer the
+// source mapping put in source_system owns nothing, so a captured company can be adopted.
 func stageAdoptedSource(ctx context.Context, tx pgx.Tx, id ids.CompanyID, p *storekit.Patch, adopt *OutsideID) error {
 	if adopt == nil {
 		return nil
@@ -43,8 +43,9 @@ func stageAdoptedSource(ctx context.Context, tx pgx.Tx, id ids.CompanyID, p *sto
 	}
 	var held bool
 	if err := tx.QueryRow(ctx,
-		`SELECT source_id IS NOT NULL OR starts_with(COALESCE(source_system, ''), $2) FROM company WHERE id = $1 FOR UPDATE`,
-		id.UUID, provenance.ReservedSourceSystemPrefix).Scan(&held); err != nil {
+		`SELECT source_id IS NOT NULL
+		        OR (source_system IS NOT NULL AND source_system IS DISTINCT FROM party_source_producer(source_system))
+		   FROM company WHERE id = $1 FOR UPDATE`, id.UUID).Scan(&held); err != nil {
 		return fmt.Errorf("read the company's outside id: %w", err)
 	}
 	if held {
