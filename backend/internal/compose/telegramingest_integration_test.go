@@ -48,7 +48,7 @@ func telegramIngestFixture(t *testing.T, e *integration.Env) (connID, rawID ids.
 	if err != nil {
 		t.Fatalf("seeding the channel connection: %v", err)
 	}
-	return connID, seedTelegramRawUpdate(t, e, "100", telegramIngestUpdateJSON)
+	return connID, e.SeedRawCapture(t, "telegram", "100", []byte(telegramIngestUpdateJSON))
 }
 
 const telegramIngestUpdateJSON = `{
@@ -77,31 +77,6 @@ const telegramIngestKickedJSON = `{
 	}
 }`
 
-// seedTelegramRawUpdate stores one raw update and returns the id a job names.
-func seedTelegramRawUpdate(t *testing.T, e *integration.Env, sourceID, payload string) ids.UUID {
-	t.Helper()
-	rawID := ids.NewV7()
-	ctx := principal.WithWorkspaceID(context.Background(), e.WS)
-	err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
-		_, err := tx.Exec(ctx, `INSERT INTO raw_capture (id, source_system, source_id, payload) VALUES ($1, 'telegram', $2, $3)`,
-			rawID, sourceID, []byte(payload))
-		return err
-	})
-	if err != nil {
-		t.Fatalf("seeding raw update %s: %v", sourceID, err)
-	}
-	return rawID
-}
-
-// workTelegramIngest runs the real worker on bot 42's raw update, with no
-// ambient workspace on the context, as a queued job has none.
-func workTelegramIngest(e *integration.Env, connID, rawID ids.UUID) error {
-	worker := newTelegramIngestWorker(e.Pool, CaptureConfig{}, slog.New(slog.NewTextHandler(io.Discard, nil)))
-	return worker.Work(context.Background(), &river.Job[TelegramIngestArgs]{
-		Args: TelegramIngestArgs{Workspace: e.WS, ConnectionID: connID.String(), BotID: "42", RawCaptureID: rawID.String()},
-	})
-}
-
 // The job queue is not a request.
 // The worker must build its tenant context from job.Args alone, or it lands the activity in the wrong tenant.
 func TestIngestWorkerReestablishesWorkspaceContextFromArgs(t *testing.T) {
@@ -110,16 +85,14 @@ func TestIngestWorkerReestablishesWorkspaceContextFromArgs(t *testing.T) {
 
 	// No principal.WithWorkspaceID on the context: the worker itself must resolve
 	// the tenant from job.Args, not from whatever the caller had bound.
-	err := workTelegramIngest(e, connID, rawID)
-	if err != nil {
-		t.Fatalf("Work: %v", err)
-	}
+	workIngestArgs(t, newTelegramIngestWorker(e.Pool, CaptureConfig{}, quietTestLogger()),
+		TelegramIngestArgs{Workspace: e.WS, ConnectionID: connID.String(), BotID: "42", RawCaptureID: rawID.String()})
 
 	// Read back under the SAME workspace the args named — if the worker had
 	// resolved the wrong tenant (or none), this activity would not be here.
 	ctx := principal.WithWorkspaceID(context.Background(), e.WS)
 	var id ids.UUID
-	err = database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
+	err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(ctx, `SELECT id FROM activity WHERE source_system = 'telegram'`).Scan(&id)
 	})
 	if err != nil {
@@ -137,8 +110,6 @@ func TestIngestWorkerReestablishesWorkspaceContextFromArgs(t *testing.T) {
 	counts := map[string]string{
 		"audit_log":    `SELECT count(*) FROM audit_log WHERE entity_type = 'activity' AND entity_id = $1`,
 		"event_outbox": `SELECT count(*) FROM event_outbox WHERE envelope->'entity'->>'id' = $1::text`,
-		"contact_channel_identity": `SELECT count(*) FROM contact_channel_identity i JOIN activity a ON a.id = $1
-			WHERE i.provider = 'telegram' AND i.channel_user_id = '555' AND i.archived_at IS NULL AND i.contact_id IS NOT NULL`,
 	}
 	for table, query := range counts {
 		if n := e.WsCount(t, query, id); n != 1 {
@@ -146,10 +117,24 @@ func TestIngestWorkerReestablishesWorkspaceContextFromArgs(t *testing.T) {
 		}
 	}
 
-	// A redelivery of the same raw update lands nothing new.
-	if err = workTelegramIngest(e, connID, rawID); err != nil {
-		t.Fatalf("redelivered Work: %v", err)
+	// The one identity row is the live binding of the contact the activity is filed on.
+	const identityOfActivity = `
+		SELECT i.id::text FROM contact_channel_identity i
+		  JOIN activity_link l ON l.activity_id = $1 AND l.entity_type = 'contact' AND l.contact_id = i.contact_id
+		 WHERE i.provider = 'telegram' AND i.channel_user_id = '555' AND i.archived_at IS NULL`
+	identity := e.WsScalar(t, identityOfActivity, id)
+	if identity == "" {
+		t.Fatal("no live telegram identity for sender 555 on the contact the activity is filed on")
 	}
+	const identityRows = `SELECT count(*) FROM contact_channel_identity`
+	rowsBefore := e.WsCount(t, identityRows)
+	if rowsBefore != 1 {
+		t.Errorf("contact_channel_identity holds %d rows after one message, want 1", rowsBefore)
+	}
+
+	// A redelivery of the same raw update lands nothing new.
+	workIngestArgs(t, newTelegramIngestWorker(e.Pool, CaptureConfig{}, quietTestLogger()),
+		TelegramIngestArgs{Workspace: e.WS, ConnectionID: connID.String(), BotID: "42", RawCaptureID: rawID.String()})
 	if n := e.WsCount(t, `SELECT count(*) FROM activity WHERE source_system = 'telegram'`); n != 1 {
 		t.Errorf("%d telegram activities after a redelivery, want 1", n)
 	}
@@ -157,6 +142,12 @@ func TestIngestWorkerReestablishesWorkspaceContextFromArgs(t *testing.T) {
 		if n := e.WsCount(t, query, id); n != 1 {
 			t.Errorf("%s holds %d rows after a redelivery, want still 1", table, n)
 		}
+	}
+	if n := e.WsCount(t, identityRows); n != rowsBefore {
+		t.Errorf("contact_channel_identity holds %d rows after a redelivery, want still %d", n, rowsBefore)
+	}
+	if got := e.WsScalar(t, identityOfActivity, id); got != identity {
+		t.Errorf("live identity is %q after a redelivery, want the original %q", got, identity)
 	}
 }
 
@@ -212,10 +203,9 @@ func TestIngestWorkerAppliesMembershipWithoutCapturingAnActivity(t *testing.T) {
 		        $1, 'telegram', '556', 'blockeduser', 'telegram', 'connector:telegram')`,
 		contact)
 
-	rawID := seedTelegramRawUpdate(t, e, "200", telegramIngestKickedJSON)
-	if err := workTelegramIngest(e, connID, rawID); err != nil {
-		t.Fatalf("Work: %v", err)
-	}
+	rawID := e.SeedRawCapture(t, "telegram", "200", []byte(telegramIngestKickedJSON))
+	workIngestArgs(t, newTelegramIngestWorker(e.Pool, CaptureConfig{}, quietTestLogger()),
+		TelegramIngestArgs{Workspace: e.WS, ConnectionID: connID.String(), BotID: "42", RawCaptureID: rawID.String()})
 
 	if n := e.WsCount(t, `SELECT count(*) FROM activity WHERE source_system = 'telegram'`); n != 0 {
 		t.Errorf("%d activity rows after a my_chat_member update, want 0 — it is a reachability signal, never a message", n)
@@ -248,12 +238,11 @@ const telegramIngestGroupJSON = `{
 func TestIngestWorkerCapturesNothingFromAGroupChat(t *testing.T) {
 	e := integration.Setup(t)
 	connID, _ := telegramIngestFixture(t, e)
-	rawID := seedTelegramRawUpdate(t, e, "300", telegramIngestGroupJSON)
+	rawID := e.SeedRawCapture(t, "telegram", "300", []byte(telegramIngestGroupJSON))
 	// nil, not an error: a scope exclusion is a deliberate skip, and River
 	// retrying it forever would be a fault report for working as designed.
-	if err := workTelegramIngest(e, connID, rawID); err != nil {
-		t.Fatalf("Work: %v", err)
-	}
+	workIngestArgs(t, newTelegramIngestWorker(e.Pool, CaptureConfig{}, quietTestLogger()),
+		TelegramIngestArgs{Workspace: e.WS, ConnectionID: connID.String(), BotID: "42", RawCaptureID: rawID.String()})
 
 	if n := e.WsCount(t, `SELECT count(*) FROM activity WHERE source_system = 'telegram'`); n != 0 {
 		t.Errorf("%d activity rows after a group-chat message, want 0", n)

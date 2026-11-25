@@ -380,11 +380,13 @@ func TestAUnitsChannelMessageLandsAsARepliableConversation(t *testing.T) {
 	}
 
 	// The binding names the account the UNIT reported, not one derived from the address.
-	if got := e.countAsWorkspace(t, `
-		SELECT count(*) FROM contact_channel_identity
-		 WHERE provider = $1 AND channel_user_id = $2 AND archived_at IS NULL AND contact_id IS NOT NULL`,
+	const channelRows = `SELECT count(*) FROM contact_channel_identity WHERE provider = $1 AND channel_user_id = $2`
+	if got := e.countAsWorkspace(t, channelRows, ingressProbeProvider, "probe-channel-1"); got != 1 {
+		t.Errorf("channel identity rows = %d, want exactly the one the reply path resolves its recipient from", got)
+	}
+	if got := e.countAsWorkspace(t, channelRows+` AND archived_at IS NULL AND contact_id IS NOT NULL`,
 		ingressProbeProvider, "probe-channel-1"); got != 1 {
-		t.Errorf("live channel identity bindings = %d, want the one the reply path resolves its recipient from", got)
+		t.Errorf("live bound channel identity rows = %d, want the one row to be live and bound to a contact", got)
 	}
 }
 

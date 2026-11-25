@@ -19,6 +19,7 @@ package channels
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"io"
 	"log/slog"
@@ -218,17 +219,26 @@ func TestArchivingAContactArchivesTheChannelIdentity(t *testing.T) {
 // over-deletion guard test below needs.
 func seedTelegramMessageRaw(t *testing.T, e *integration.Env, sourceID string, messageID int64, senderID, text string) {
 	t.Helper()
-	e.WsExec(t, `
-		INSERT INTO raw_capture (source_system, source_id, payload)
-		VALUES ('telegram', $1,
-		  jsonb_build_object('update_id', $2::bigint,
-		    'message', jsonb_build_object(
-		      'message_id', $2::bigint,
-		      'chat', jsonb_build_object('id', 555),
-		      'from', jsonb_build_object('id', $3::bigint, 'username', 'seed'),
-		      'date', 1700000000,
-		      'text', $4::text)))`,
-		sourceID, messageID, senderID, text)
+	e.SeedRawCapture(t, "telegram", sourceID, telegramPayload(t, map[string]any{
+		"update_id": messageID,
+		"message": map[string]any{
+			"message_id": messageID,
+			"chat":       map[string]any{"id": 555},
+			"from":       map[string]any{"id": json.Number(senderID), "username": "seed"},
+			"date":       1700000000,
+			"text":       text,
+		},
+	}))
+}
+
+// telegramPayload encodes an update fixture as the JSON the receiver stores.
+func telegramPayload(t *testing.T, update map[string]any) []byte {
+	t.Helper()
+	payload, err := json.Marshal(update)
+	if err != nil {
+		t.Fatalf("encoding the telegram update: %v", err)
+	}
+	return payload
 }
 
 // seedTelegramMembershipRaw plants one raw_capture row shaped like a real
@@ -245,16 +255,16 @@ func seedTelegramMessageRaw(t *testing.T, e *integration.Env, sourceID string, m
 // production, where such a matcher purges and exports nothing at all.
 func seedTelegramMembershipRaw(t *testing.T, e *integration.Env, sourceID string, updateID int64, senderID, status string) {
 	t.Helper()
-	e.WsExec(t, `
-		INSERT INTO raw_capture (source_system, source_id, payload)
-		VALUES ('telegram', $1,
-		  jsonb_build_object('update_id', $2::bigint,
-		    'my_chat_member', jsonb_build_object(
-		      'chat', jsonb_build_object('id', $3::bigint, 'type', 'private', 'username', 'seed'),
-		      'new_chat_member', jsonb_build_object(
-		        'user', jsonb_build_object('id', 99, 'is_bot', true, 'username', 'acme_bot'),
-		        'status', $4::text))))`,
-		sourceID, updateID, senderID, status)
+	e.SeedRawCapture(t, "telegram", sourceID, telegramPayload(t, map[string]any{
+		"update_id": updateID,
+		"my_chat_member": map[string]any{
+			"chat": map[string]any{"id": json.Number(senderID), "type": "private", "username": "seed"},
+			"new_chat_member": map[string]any{
+				"user":   map[string]any{"id": 99, "is_bot": true, "username": "acme_bot"},
+				"status": status,
+			},
+		},
+	}))
 }
 
 // rawCaptureSurvives reports whether exactly one raw_capture row still holds
