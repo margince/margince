@@ -104,8 +104,10 @@ func BackfillLeadOriginTx(ctx context.Context, tx pgx.Tx, after ids.UUID, limit 
 	return scanned, changed, nil
 }
 
+// setBackfilledOrigin also records the origin as the one the lead arrived with:
+// the lead had none before, so the repaired one is its first.
 func setBackfilledOrigin(ctx context.Context, tx pgx.Tx, id ids.UUID, key string) error {
-	tag, err := tx.Exec(ctx, `UPDATE lead SET origin = $2 WHERE id = $1 AND origin IS NULL AND archived_at IS NULL`, id, key)
+	tag, err := tx.Exec(ctx, `UPDATE lead SET origin = $2, arrival_origin = COALESCE(arrival_origin, $2) WHERE id = $1 AND origin IS NULL AND archived_at IS NULL`, id, key)
 	if err != nil {
 		return fmt.Errorf("contacts: giving a lead its origin: %w", err)
 	}

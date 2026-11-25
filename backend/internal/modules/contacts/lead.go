@@ -221,7 +221,7 @@ func insertLeadRow(ctx context.Context, tx pgx.Tx, in CreateLeadInput, active []
 		id, in.FullName, in.Email, in.Title, in.CompanyName, foldedCompanyKey(in.CandidateCompanyKey),
 		in.LinkedInURL, in.Status, fit.Score, in.OwnerID, in.ProjectID, in.SourceSystem, in.SourceID, in.Source, by,
 		in.Phone, in.Origin, in.OriginDetail, leadEmailDomain(in.Email), in.Industry, in.OwnerID, in.PartnerCompanyID,
-		in.ProductID,
+		in.ProductID, in.Origin,
 	}
 	holders := strings.Split(storekit.Placeholders(fixed), ",")
 	// The email is the third bind: lower() holds the dedupe key's spelling at the column, whatever door wrote it.
@@ -234,7 +234,7 @@ func insertLeadRow(ctx context.Context, tx pgx.Tx, in CreateLeadInput, active []
 	_, err = tx.Exec(ctx,
 		`INSERT INTO lead (id, full_name, email, title, company_name, candidate_company_key,
 		                   linkedin_url, status, score, owner_id, project_id, source_system, source_id, source, captured_by,
-		                   phone, origin, origin_detail, email_domain_folded, `+leadIndustryField+`, `+arrivalOwnerColumn+`, `+leadPartnerField+`, `+leadProductField+authorCols+cfCols+`)
+		                   phone, origin, origin_detail, email_domain_folded, `+leadIndustryField+`, `+arrivalOwnerColumn+`, `+leadPartnerField+`, `+leadProductField+`, `+arrivalOriginColumn+authorCols+cfCols+`)
 		 VALUES (`+strings.Join(holders, ", ")+authorHolders+cfHolders+`)`,
 		args...)
 	if err != nil {

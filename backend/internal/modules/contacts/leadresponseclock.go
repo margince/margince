@@ -90,6 +90,10 @@ func firstResponseStamp(now, created time.Time) time.Time {
 // reassignment therefore keeps the lead's arrival with its first owner.
 const arrivalOwnerColumn = "arrival_owner_id"
 
+// arrivalOriginColumn is the origin a lead arrived with. Both lead inserts set
+// it and the origin repair fills it; an edit of the origin never touches it.
+const arrivalOriginColumn = "arrival_origin"
+
 // stampArrival starts the response clock for a lead's first owner. It records
 // that owner as the one the lead arrived with.
 func stampArrival(p *storekit.Patch, owner ids.UserID, at time.Time) {

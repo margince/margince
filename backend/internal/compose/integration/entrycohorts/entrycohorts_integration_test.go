@@ -382,6 +382,37 @@ func TestTheEntryCohortReadsAsCompaniesAndAsSources(t *testing.T) {
 	}
 }
 
+// A lead counts under the origin it arrived with, so editing its origin later
+// does not move it to another source. A lead whose arrival origin was never
+// recorded counts under the origin it has now.
+func TestASourceKeepsTheLeadsThatArrivedFromIt(t *testing.T) {
+	e := integration.Setup(t)
+	w := seedCohort(t, e)
+	website := "website"
+	edited := ids.MustParse(e.WsScalar(t, `SELECT id::text FROM lead WHERE origin = 'website:campaign' ORDER BY id LIMIT 1`))
+	if _, err := e.Contacts.UpdateLead(e.Admin(), ids.From[ids.LeadKind](edited), contacts.UpdateLeadInput{Origin: &website}); err != nil {
+		t.Fatal(err)
+	}
+	result, err := w.service.Evaluate(readerOf(e), w.selection)
+	if err != nil {
+		t.Fatal(err)
+	}
+	sources := chartsOf(result)["source_quality"].Points
+	if len(sources) != 2 || *sources[0].Observations != 3 || *sources[1].Observations != 2 {
+		t.Fatalf("source points %+v, want Website with 3 entrants and Website campaign with 2 after an origin edit", sources)
+	}
+
+	e.WsExec(t, `UPDATE lead SET arrival_origin = NULL WHERE id = $1`, edited)
+	result, err = w.service.Evaluate(readerOf(e), w.selection)
+	if err != nil {
+		t.Fatal(err)
+	}
+	sources = chartsOf(result)["source_quality"].Points
+	if len(sources) != 2 || *sources[0].Observations != 4 || *sources[1].Observations != 1 {
+		t.Fatalf("source points %+v, want a lead with no recorded arrival origin under its current Website origin", sources)
+	}
+}
+
 // A scheduled edition freezes both new cards. An admin reads them back whole.
 // A rep without company read gets the edition with the company card withheld.
 func TestAnEditionWithTheEntryCohortCardsReadsBack(t *testing.T) {
