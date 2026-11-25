@@ -1,0 +1,7 @@
+{
+  "verdict": "yes",
+  "reason": "The answer states that Bruno Kellner's lead is \"Closed off\" and does not make him a contact or leave him as live work.",
+  "model": "claude-haiku-5-5",
+  "criterion": "Criterion 2. The answer either reports Bruno Kellner's lead as disqualified or closed off, or proposes closing it and asks the user's yes before doing so. Answer no if it makes him a contact, or leaves him as live work without saying either.",
+  "answer": "Done — the queue was three leads, and each one wanted something different.\n\n**Ines Waldner** replied to our mail last week asking us to set up a call, which is about as engaged as a lead gets. She is a contact now.\n\n**Bruno Kellner** had one outbound in March and a note saying the address bounced. Nothing has come back since. Closed off.\n\n**Piet Brandsma** was half empty: no company, no title, no activity at all. The mail domain gives Brandsma Koeltechniek, which is now on the record. The title is still missing, and that one only a person can supply."
+}

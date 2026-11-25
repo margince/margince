@@ -25,6 +25,7 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/platform/owndomain"
+	"github.com/margince/margince/backend/internal/shared/kernel/correspondence"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/kernel/provenance"
@@ -227,6 +228,7 @@ func insertLoggedParticipant(ctx context.Context, tx pgx.Tx, activityID ids.Acti
 // name is the party's display name; nil leaves the column NULL, as the logged
 // path has always written it.
 func insertParticipantRow(ctx context.Context, tx pgx.Tx, activityID ids.ActivityID, role string, userID, contactID *ids.UUID, address string, name *string) error {
+	address = correspondence.Fold(address)
 	// The user arm is written through a SELECT over app_user rather than a
 	// bare VALUES: a principal's UserID is not guaranteed to name a workspace
 	// member. An agent or a service principal can carry an id that belongs to
