@@ -12,7 +12,7 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
-	"github.com/margince/margince/backend/internal/platform/httperr"
+	"github.com/margince/margince/backend/internal/platform/database/textbounds"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/kernel/values"
@@ -191,8 +191,8 @@ func (s *Store) FillEmptyLeadFieldsTx(ctx context.Context, tx pgx.Tx, id ids.Lea
 	return err
 }
 
-// emptyFieldPatch is the sparse patch: a captured value for every field the
-// lead lacks, and nothing for the rest.
+// emptyFieldPatch is the sparse patch: a captured value, cut to its column's
+// limit, for every field the lead lacks, and nothing for the rest.
 //
 // Email is deliberately absent. It is the lead's dedupe key and the reason this
 // collision was detected at all, so the incumbent necessarily has one — a
@@ -200,14 +200,14 @@ func (s *Store) FillEmptyLeadFieldsTx(ctx context.Context, tx pgx.Tx, id ids.Lea
 // question rather than a blank to fill.
 func emptyFieldPatch(current crmcontracts.Lead, in CapturedLeadFields) UpdateLeadInput {
 	var patch UpdateLeadInput
-	if name := strings.TrimSpace(in.FullName); name != "" && blank(current.FullName) {
+	if name := textbounds.Fit("public.lead.full_name", strings.TrimSpace(in.FullName)); name != "" && blank(current.FullName) {
 		patch.FullName = &name
 	}
-	if in.CompanyName != "" && blank(current.CompanyName) {
-		patch.CompanyName = &in.CompanyName
+	if company := textbounds.Fit("public.lead.company_name", in.CompanyName); company != "" && blank(current.CompanyName) {
+		patch.CompanyName = &company
 	}
-	if in.Title != "" && blank(current.Title) {
-		patch.Title = &in.Title
+	if title := textbounds.Fit("public.lead.title", in.Title); title != "" && blank(current.Title) {
+		patch.Title = &title
 	}
 	return patch
 }
@@ -382,7 +382,7 @@ func buildLeadPatch(current crmcontracts.Lead, in UpdateLeadInput) (*storekit.Pa
 		return nil, false, err
 	}
 	if in.FullName != nil {
-		name, err := httperr.RequireNonBlank("full_name", *in.FullName)
+		name, err := requireLeadName(*in.FullName)
 		if err != nil {
 			return nil, false, err
 		}

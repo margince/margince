@@ -3779,6 +3779,7 @@
   "notice.excuseConfirm": "Ghi nhận lý do",
   "pipeline.defaultTaken": "Một pipeline khác đang là mặc định. Tạo pipeline này với “Không mặc định”, rồi dùng “Đặt làm mặc định” cho nó.",
   "pipeline.nameTaken": "Đã có pipeline mang tên này.",
+  "stage.nameTaken": "Pipeline này đã có giai đoạn mang tên này. Hãy chọn tên khác.",
   "stage.lastClosing": "Pipeline cần một giai đoạn Thắng và một giai đoạn Thua. Hãy thêm một giai đoạn cùng loại trước.",
   "ob.field.display_name": "Tên công ty",
   "ob.field.offer_summary": "Sản phẩm và dịch vụ",

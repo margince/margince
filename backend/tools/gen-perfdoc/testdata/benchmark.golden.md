@@ -13,6 +13,7 @@ many tries, and the time shown is one that nearly every try beat.
 | 🔴 Too slow | Over the promise with no fix under way yet. |
 | 🔴 Failed | Some tries got no answer, so no time can be trusted. |
 | ⚪ Not measured | The screen had nothing to show yet, or the run cannot prove it. |
+| ⚪ with a time | Measured, but we make no promise for it yet. |
 
 <details>
 <summary>How this page is made</summary>
@@ -58,6 +59,10 @@ The first open after a restart is slower, because nothing is warmed up yet:
 Not measured in the last run.
 
 ## How fast do lists and records open?
+
+Not measured in the last run.
+
+## How fast does a record with a long history open?
 
 Not measured in the last run.
 

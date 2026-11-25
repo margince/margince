@@ -932,7 +932,7 @@ public.lead.company_name label
 public.lead.disqualify_note note
 public.lead.email document
 public.lead.email_domain_folded document
-public.lead.full_name exempt imported lead identities retain the source name rules
+public.lead.full_name label
 public.lead.industry document
 public.lead.linkedin_url document checked: typed, or a page quote a user accepts; a CSV cell is refused at the test run
 public.lead.origin document

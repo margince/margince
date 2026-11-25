@@ -65,6 +65,7 @@ The 3 tables owned by `knowledge`, as the migrations build them. [Back to the en
 
 **Indexes**
 
+- `knowledge_corpus_name_once`: `unique, btree (lower(btrim(name))) WHERE ((archived_at IS NULL) AND (managed_source IS NULL))`
 - `knowledge_corpus_one_default`: `unique, btree (default_ask) WHERE (default_ask AND (archived_at IS NULL))`
 - `knowledge_corpus_one_per_managed_source`: `unique, btree (managed_source) WHERE ((managed_source IS NOT NULL) AND (archived_at IS NULL))`
 - `knowledge_corpus_pkey`: `unique, btree (id)`

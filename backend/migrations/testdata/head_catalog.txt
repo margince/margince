@@ -4968,6 +4968,7 @@ public.deal_acquisition_source.trg_deal_acquisition_source_updated CREATE TRIGGE
 public.deal_acquisition_source.updated_at timestamp with time zone NOT NULL gen=- def=now()
 public.deal_acquisition_source.version bigint NOT NULL gen=- def=1
 public.deal_acquisition_source_key_key CREATE UNIQUE INDEX deal_acquisition_source_key_key ON public.deal_acquisition_source USING btree (key)
+public.deal_acquisition_source_label_once CREATE UNIQUE INDEX deal_acquisition_source_label_once ON public.deal_acquisition_source USING btree (lower(btrim(label)))
 public.deal_acquisition_source_pkey CREATE UNIQUE INDEX deal_acquisition_source_pkey ON public.deal_acquisition_source USING btree (id)
 public.deal_clear_partner_attribution_on_company_delete() secdef=false cfg=- acl=- 
 BEGIN
@@ -5100,6 +5101,7 @@ public.deal_loss_reason.trg_deal_loss_reason_updated CREATE TRIGGER trg_deal_los
 public.deal_loss_reason.updated_at timestamp with time zone NOT NULL gen=- def=now()
 public.deal_loss_reason.version bigint NOT NULL gen=- def=1
 public.deal_loss_reason_key_key CREATE UNIQUE INDEX deal_loss_reason_key_key ON public.deal_loss_reason USING btree (key)
+public.deal_loss_reason_label_once CREATE UNIQUE INDEX deal_loss_reason_label_once ON public.deal_loss_reason USING btree (lower(btrim(label)))
 public.deal_loss_reason_mapping acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.deal_loss_reason_mapping.created_at timestamp with time zone NOT NULL gen=- def=now()
 public.deal_loss_reason_mapping.deal_loss_reason_mapping_key_shape CHECK ((note_key ~ '^[0-9a-f]{32}$'::text))
@@ -6992,6 +6994,7 @@ public.knowledge_corpus.text_bound_insert CREATE TRIGGER text_bound_insert AFTER
 public.knowledge_corpus.text_bound_update CREATE TRIGGER text_bound_update AFTER UPDATE ON public.knowledge_corpus FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"name": 120, "captured_by": 20000, "description": 20000, "managed_source": 20000, "topic_statement": 20000}'::jsonb)) EXECUTE FUNCTION refuse_oversized_text('{"captured_by":20000,"description":20000,"managed_source":20000,"name":120,"topic_statement":20000}')
 public.knowledge_corpus.topic_statement text NOT NULL gen=- def=-
 public.knowledge_corpus.updated_at timestamp with time zone NOT NULL gen=- def=now()
+public.knowledge_corpus_name_once CREATE UNIQUE INDEX knowledge_corpus_name_once ON public.knowledge_corpus USING btree (lower(btrim(name))) WHERE ((archived_at IS NULL) AND (managed_source IS NULL))
 public.knowledge_corpus_one_default CREATE UNIQUE INDEX knowledge_corpus_one_default ON public.knowledge_corpus USING btree (default_ask) WHERE (default_ask AND (archived_at IS NULL))
 public.knowledge_corpus_one_per_managed_source CREATE UNIQUE INDEX knowledge_corpus_one_per_managed_source ON public.knowledge_corpus USING btree (managed_source) WHERE ((managed_source IS NOT NULL) AND (archived_at IS NULL))
 public.knowledge_corpus_pkey CREATE UNIQUE INDEX knowledge_corpus_pkey ON public.knowledge_corpus USING btree (id)
@@ -7294,8 +7297,8 @@ public.lead.source_id text gen=- def=-
 public.lead.source_system text gen=- def=-
 public.lead.status text NOT NULL gen=- def='new'::text
 public.lead.status_set_by text gen=- def=-
-public.lead.text_bound_insert CREATE TRIGGER text_bound_insert AFTER INSERT ON public.lead FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"email": 20000, "phone": 20000, "title": 120, "origin": 20000, "source": 20000, "status": 20000, "industry": 20000, "source_id": 20000, "captured_by": 20000, "company_name": 120, "linkedin_url": 20000, "origin_detail": 500, "source_system": 20000, "status_set_by": 20000, "disqualify_note": 2000, "email_domain_folded": 20000, "partner_accepted_by": 20000, "candidate_company_key": 20000, "score_override_reason": 2000}'::jsonb)) EXECUTE FUNCTION refuse_oversized_text('{"candidate_company_key":20000,"captured_by":20000,"company_name":120,"disqualify_note":2000,"email":20000,"email_domain_folded":20000,"industry":20000,"linkedin_url":20000,"origin":20000,"origin_detail":500,"partner_accepted_by":20000,"phone":20000,"score_override_reason":2000,"source":20000,"source_id":20000,"source_system":20000,"status":20000,"status_set_by":20000,"title":120}')
-public.lead.text_bound_update CREATE TRIGGER text_bound_update AFTER UPDATE ON public.lead FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"email": 20000, "phone": 20000, "title": 120, "origin": 20000, "source": 20000, "status": 20000, "industry": 20000, "source_id": 20000, "captured_by": 20000, "company_name": 120, "linkedin_url": 20000, "origin_detail": 500, "source_system": 20000, "status_set_by": 20000, "disqualify_note": 2000, "email_domain_folded": 20000, "partner_accepted_by": 20000, "candidate_company_key": 20000, "score_override_reason": 2000}'::jsonb)) EXECUTE FUNCTION refuse_oversized_text('{"candidate_company_key":20000,"captured_by":20000,"company_name":120,"disqualify_note":2000,"email":20000,"email_domain_folded":20000,"industry":20000,"linkedin_url":20000,"origin":20000,"origin_detail":500,"partner_accepted_by":20000,"phone":20000,"score_override_reason":2000,"source":20000,"source_id":20000,"source_system":20000,"status":20000,"status_set_by":20000,"title":120}')
+public.lead.text_bound_insert CREATE TRIGGER text_bound_insert AFTER INSERT ON public.lead FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"email": 20000, "phone": 20000, "title": 120, "origin": 20000, "source": 20000, "status": 20000, "industry": 20000, "full_name": 120, "source_id": 20000, "captured_by": 20000, "company_name": 120, "linkedin_url": 20000, "origin_detail": 500, "source_system": 20000, "status_set_by": 20000, "disqualify_note": 2000, "email_domain_folded": 20000, "partner_accepted_by": 20000, "candidate_company_key": 20000, "score_override_reason": 2000}'::jsonb)) EXECUTE FUNCTION refuse_oversized_text('{"candidate_company_key":20000,"captured_by":20000,"company_name":120,"disqualify_note":2000,"email":20000,"email_domain_folded":20000,"full_name":120,"industry":20000,"linkedin_url":20000,"origin":20000,"origin_detail":500,"partner_accepted_by":20000,"phone":20000,"score_override_reason":2000,"source":20000,"source_id":20000,"source_system":20000,"status":20000,"status_set_by":20000,"title":120}')
+public.lead.text_bound_update CREATE TRIGGER text_bound_update AFTER UPDATE ON public.lead FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"email": 20000, "phone": 20000, "title": 120, "origin": 20000, "source": 20000, "status": 20000, "industry": 20000, "full_name": 120, "source_id": 20000, "captured_by": 20000, "company_name": 120, "linkedin_url": 20000, "origin_detail": 500, "source_system": 20000, "status_set_by": 20000, "disqualify_note": 2000, "email_domain_folded": 20000, "partner_accepted_by": 20000, "candidate_company_key": 20000, "score_override_reason": 2000}'::jsonb)) EXECUTE FUNCTION refuse_oversized_text('{"candidate_company_key":20000,"captured_by":20000,"company_name":120,"disqualify_note":2000,"email":20000,"email_domain_folded":20000,"full_name":120,"industry":20000,"linkedin_url":20000,"origin":20000,"origin_detail":500,"partner_accepted_by":20000,"phone":20000,"score_override_reason":2000,"source":20000,"source_id":20000,"source_system":20000,"status":20000,"status_set_by":20000,"title":120}')
 public.lead.title text gen=- def=-
 public.lead.trg_lead_updated CREATE TRIGGER trg_lead_updated BEFORE UPDATE ON public.lead FOR EACH ROW EXECUTE FUNCTION set_updated_at_bump_version()
 public.lead.updated_at timestamp with time zone NOT NULL gen=- def=now()
@@ -7370,6 +7373,7 @@ public.lead_origin.trg_lead_origin_updated CREATE TRIGGER trg_lead_origin_update
 public.lead_origin.updated_at timestamp with time zone NOT NULL gen=- def=now()
 public.lead_origin.version bigint NOT NULL gen=- def=1
 public.lead_origin_key_key CREATE UNIQUE INDEX lead_origin_key_key ON public.lead_origin USING btree (key)
+public.lead_origin_label_once CREATE UNIQUE INDEX lead_origin_label_once ON public.lead_origin USING btree (lower(btrim(label)))
 public.lead_origin_pkey CREATE UNIQUE INDEX lead_origin_pkey ON public.lead_origin USING btree (id)
 public.lead_pkey CREATE UNIQUE INDEX lead_pkey ON public.lead USING btree (id)
 public.lead_privacy_notice acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
@@ -8402,6 +8406,7 @@ public.partner_stage.trg_partner_stage_updated CREATE TRIGGER trg_partner_stage_
 public.partner_stage.updated_at timestamp with time zone NOT NULL gen=- def=now()
 public.partner_stage.version bigint NOT NULL gen=- def=1
 public.partner_stage_key_key CREATE UNIQUE INDEX partner_stage_key_key ON public.partner_stage USING btree (key)
+public.partner_stage_label_once CREATE UNIQUE INDEX partner_stage_label_once ON public.partner_stage USING btree (lower(btrim(label)))
 public.partner_stage_pkey CREATE UNIQUE INDEX partner_stage_pkey ON public.partner_stage USING btree (id)
 public.passport acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.passport.app_issuer text gen=- def=-
@@ -8446,7 +8451,7 @@ public.pipeline.text_bound_update CREATE TRIGGER text_bound_update AFTER UPDATE 
 public.pipeline.trg_pipeline_updated CREATE TRIGGER trg_pipeline_updated BEFORE UPDATE ON public.pipeline FOR EACH ROW EXECUTE FUNCTION set_updated_at_bump_version()
 public.pipeline.updated_at timestamp with time zone NOT NULL gen=- def=now()
 public.pipeline.version bigint NOT NULL gen=- def=1
-public.pipeline_name_unique CREATE UNIQUE INDEX pipeline_name_unique ON public.pipeline USING btree (name) WHERE (archived_at IS NULL)
+public.pipeline_name_unique CREATE UNIQUE INDEX pipeline_name_unique ON public.pipeline USING btree (lower(btrim(name))) WHERE (archived_at IS NULL)
 public.pipeline_pkey CREATE UNIQUE INDEX pipeline_pkey ON public.pipeline USING btree (id)
 public.preference_token acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.preference_token.contact_email_id uuid gen=- def=-
@@ -9064,6 +9069,7 @@ public.record_role.trg_record_role_updated CREATE TRIGGER trg_record_role_update
 public.record_role.updated_at timestamp with time zone NOT NULL gen=- def=now()
 public.record_role.version bigint NOT NULL gen=- def=1
 public.record_role_key_key CREATE UNIQUE INDEX record_role_key_key ON public.record_role USING btree (key)
+public.record_role_label_once CREATE UNIQUE INDEX record_role_label_once ON public.record_role USING btree (lower(btrim(label)))
 public.record_role_pkey CREATE UNIQUE INDEX record_role_pkey ON public.record_role USING btree (id)
 public.record_source_channel(source text) secdef=false cfg=- acl=- 
  SELECT CASE
@@ -10351,6 +10357,7 @@ public.stage_exit_criterion_pkey CREATE UNIQUE INDEX stage_exit_criterion_pkey O
 public.stage_exit_criterion_stage_ix CREATE INDEX stage_exit_criterion_stage_ix ON public.stage_exit_criterion USING btree (stage_id)
 public.stage_exit_criterion_stage_key_live_ux CREATE UNIQUE INDEX stage_exit_criterion_stage_key_live_ux ON public.stage_exit_criterion USING btree (stage_id, key) WHERE (archived_at IS NULL)
 public.stage_id_pipeline_unique CREATE UNIQUE INDEX stage_id_pipeline_unique ON public.stage USING btree (id, pipeline_id)
+public.stage_name_once CREATE UNIQUE INDEX stage_name_once ON public.stage USING btree (pipeline_id, lower(btrim(name))) WHERE (archived_at IS NULL)
 public.stage_pkey CREATE UNIQUE INDEX stage_pkey ON public.stage USING btree (id)
 public.stamp_participant_domain_evidence() secdef=false cfg=- acl=- 
 BEGIN
@@ -10623,7 +10630,7 @@ public.team_membership.updated_at timestamp with time zone NOT NULL gen=- def=no
 public.team_membership.user_id uuid NOT NULL gen=- def=-
 public.team_membership_pkey CREATE UNIQUE INDEX team_membership_pkey ON public.team_membership USING btree (id)
 public.team_membership_unique CREATE UNIQUE INDEX team_membership_unique ON public.team_membership USING btree (team_id, user_id)
-public.team_name_unique CREATE UNIQUE INDEX team_name_unique ON public.team USING btree (name) WHERE (archived_at IS NULL)
+public.team_name_unique CREATE UNIQUE INDEX team_name_unique ON public.team USING btree (lower(btrim(name))) WHERE (archived_at IS NULL)
 public.team_pkey CREATE UNIQUE INDEX team_pkey ON public.team USING btree (id)
 public.team_weekly_review acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.team_weekly_review.as_of timestamp with time zone NOT NULL gen=- def=-
