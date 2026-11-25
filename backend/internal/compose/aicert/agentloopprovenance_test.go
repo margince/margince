@@ -3,7 +3,7 @@
 
 package aicert_test
 
-// The scenario that holds a captured_by value beside a record id, graded from
+// The scenario that holds a source value beside a record id, graded from
 // the committed corpus file. The grader is proved against the fixture the
 // certification lane sends, not a copy of it.
 
@@ -39,9 +39,14 @@ func (s *provenanceScript) Complete(context.Context, model.Request) (model.Respo
 
 func provenanceNote(t *testing.T, linked string) string {
 	t.Helper()
+	return provenanceNoteBody(t, linked, "No recorded activity for 27 days (deal.last_activity_at).")
+}
+
+func provenanceNoteBody(t *testing.T, linked, body string) string {
+	t.Helper()
 	raw, err := json.Marshal(map[string]any{"tool": "log_activity", "args": map[string]any{
 		"kind": "note", "subject": "Gone quiet",
-		"body":  "No recorded activity for 27 days (deal.last_activity_at).",
+		"body":  body,
 		"links": []map[string]string{{"entity_type": "deal", "entity_id": linked}},
 	}})
 	if err != nil {
@@ -50,7 +55,7 @@ func provenanceNote(t *testing.T, linked string) string {
 	return string(raw)
 }
 
-func runProvenanceScenario(t *testing.T, replies ...string) aitasks.Outcome {
+func provenanceCensus(t *testing.T) (*aitasks.Registry, aicert.Scenario) {
 	t.Helper()
 	census, err := compose.NewTaskCensus()
 	if err != nil {
@@ -61,46 +66,76 @@ func runProvenanceScenario(t *testing.T, replies ...string) aitasks.Outcome {
 		t.Fatalf("loading the corpus: %v", err)
 	}
 	for _, sc := range scenarios {
-		if sc.Name != provenanceScenario {
-			continue
+		if sc.Name == provenanceScenario {
+			return census, sc
 		}
-		factory, bound := census.CaseFor(ai.Task(sc.Task), sc.Site)
-		if !bound {
-			t.Fatalf("site %s/%s binds no certification case", sc.Task, sc.Site)
-		}
-		prepared, err := factory.Prepare(json.RawMessage(sc.Fixture), json.RawMessage(sc.Expect.Answer))
-		if err != nil {
-			t.Fatalf("preparing %s: %v", sc.Name, err)
-		}
-		trace, err := prepared.Run(context.Background(), &provenanceScript{replies: replies})
-		if err != nil {
-			t.Fatalf("running %s: %v", sc.Name, err)
-		}
-		return prepared.Evaluate(trace)
 	}
 	t.Fatalf("the corpus holds no scenario %s", provenanceScenario)
-	return aitasks.Outcome{}
+	return nil, aicert.Scenario{}
+}
+
+func provenanceScenarioNamed(t *testing.T) aicert.Scenario {
+	t.Helper()
+	_, sc := provenanceCensus(t)
+	return sc
+}
+
+func runProvenanceScenario(t *testing.T, replies ...string) aitasks.Outcome {
+	t.Helper()
+	census, sc := provenanceCensus(t)
+	factory, bound := census.CaseFor(ai.Task(sc.Task), sc.Site)
+	if !bound {
+		t.Fatalf("site %s/%s binds no certification case", sc.Task, sc.Site)
+	}
+	prepared, err := factory.Prepare(json.RawMessage(sc.Fixture), json.RawMessage(sc.Expect.Answer))
+	if err != nil {
+		t.Fatalf("preparing %s: %v", sc.Name, err)
+	}
+	trace, err := prepared.Run(context.Background(), &provenanceScript{replies: replies})
+	if err != nil {
+		t.Fatalf("running %s: %v", sc.Name, err)
+	}
+	return prepared.Evaluate(trace)
 }
 
 func TestAProvenanceRefIsGradedAsNotARecordId(t *testing.T) {
-	list := `{"tool":"whats_slipping_this_week","args":{}}`
 	done := `{"final":{"summary":"done"}}`
+	list := `{"tool":"whats_slipping_this_week","args":{}}`
+	reads := []string{
+		`{"tool":"read_record","args":{"record_type":"deal","id":"` + provenanceDeal + `"}}`,
+		`{"tool":"catch_me_up_on","args":{"record_type":"deal","record_id":"` + provenanceDeal + `"}}`,
+	}
+	run := func(steps ...string) aitasks.Outcome {
+		return runProvenanceScenario(t, append(append([]string{list}, steps...), done)...)
+	}
 	t.Run("a note on the listed deal", func(t *testing.T) {
-		got := runProvenanceScenario(t, list, provenanceNote(t, provenanceDeal), done)
+		got := run(append(reads, provenanceNote(t, provenanceDeal))...)
 		if got.Result != aitasks.OutcomeAccepted {
 			t.Fatalf("Result = %q (%s), want accepted", got.Result, got.Detail)
 		}
 	})
-	t.Run("a note linked to the captured_by value", func(t *testing.T) {
-		got := runProvenanceScenario(t, list, provenanceNote(t, provenanceCalendar), done)
+	t.Run("a note linked to the source value", func(t *testing.T) {
+		got := run(append(reads, provenanceNote(t, provenanceCalendar))...)
 		if got.Result != aitasks.OutcomeWrongAnswer ||
 			!strings.Contains(got.Detail, "is not on the whats_slipping_this_week list") {
 			t.Fatalf("Result = %q (%s), want wrong_answer naming the list", got.Result, got.Detail)
 		}
 	})
-	t.Run("a read of the captured_by value is a 404 the run recovers from", func(t *testing.T) {
+	// The mechanical grader checks only which deal a note is linked to, so a
+	// body that names the calendar value passes it. The rubric is what scores
+	// that note low, so the test holds the rubric to saying so.
+	t.Run("a note naming the calendar value in its body is left to the rubric", func(t *testing.T) {
+		body := "See record " + provenanceCalendar + " for the last contact."
+		if got := run(append(reads, provenanceNoteBody(t, provenanceDeal, body))...); got.Result != aitasks.OutcomeAccepted {
+			t.Fatalf("Result = %q (%s), want accepted before the judge reads it", got.Result, got.Detail)
+		}
+		if !strings.Contains(provenanceScenarioNamed(t).Expect.Rubric, "its subject or body names that value") {
+			t.Error("the scenario rubric no longer scores a note that names the source value as a record low")
+		}
+	})
+	t.Run("a read of the source value is a 404 the run recovers from", func(t *testing.T) {
 		read := `{"tool":"read_record","args":{"record_type":"deal","id":"` + provenanceCalendar + `"}}`
-		got := runProvenanceScenario(t, list, read, provenanceNote(t, provenanceDeal), done)
+		got := run(append(append([]string{}, reads...), read, provenanceNote(t, provenanceDeal))...)
 		if got.Result != aitasks.OutcomeAccepted {
 			t.Fatalf("Result = %q (%s), want accepted", got.Result, got.Detail)
 		}
