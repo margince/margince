@@ -461,7 +461,12 @@ func scopeClaims(path string, patterns []string) bool {
 	for _, pattern := range patterns {
 		pattern = strings.Trim(pattern, "'")
 		switch {
-		case coveredBy(pattern, path):
+		case pattern == path:
+			return true
+		case strings.HasSuffix(pattern, "/**") &&
+			strings.HasPrefix(path, strings.TrimSuffix(pattern, "**")):
+			return true
+		case globInOneDirectory(pattern, path):
 			return true
 		case strings.HasPrefix(pattern, "**/") &&
 			(path == strings.TrimPrefix(pattern, "**/") ||
@@ -470,6 +475,16 @@ func scopeClaims(path string, patterns []string) bool {
 		}
 	}
 	return false
+}
+
+// globInOneDirectory matches `scripts/release*` the way paths-filter does: the
+// star stops at a slash.
+func globInOneDirectory(pattern, path string) bool {
+	if strings.Contains(pattern, "**") {
+		return false
+	}
+	matched, err := filepath.Match(pattern, path)
+	return err == nil && matched
 }
 
 func TestEveryFilteredLaneRunsOnAChangeToTheScriptsItExecutes(t *testing.T) {

@@ -39,7 +39,7 @@ ROOT_SCRIPT_GATES := check-craft-doc test-dev-isolation test-dev-dsn test-dev-en
   no-jurisdiction test-no-jurisdiction \
   pkg-freeze test-pkg-freeze \
   test-dev-postgres-container test-e2e-llm-check test-gate-slot \
-  test-closing-declaration test-release-notes test-docs-describing test-craft-review test-build-revision \
+  test-closing-declaration test-docs-describing test-craft-review test-build-revision \
   test-backend-notices embedded-binary-licenses third-party-files test-third-party-files \
   test-strict-lint-packages
 

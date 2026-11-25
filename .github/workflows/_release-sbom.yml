@@ -42,7 +42,7 @@ jobs:
       # `make check` leaves the release scripts' tests out, so the release
       # proves the scripts it calls before it uses them.
       - name: The release scripts pass their own tests
-        run: echo skipped
+        run: make check-release
       # The version is given, so the shallow checkout needs no tags for git describe.
       # Make expands SBOM_VERSION inside a recipe, so only a tag in the release grammar may reach it.
       - name: Generate the SBOMs at the release commit
