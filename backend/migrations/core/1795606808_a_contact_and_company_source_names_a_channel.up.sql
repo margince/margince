@@ -13,7 +13,7 @@ ALTER TABLE company ADD CONSTRAINT company_source_check
 CREATE FUNCTION party_source_producer(source text) RETURNS text
 LANGUAGE sql IMMUTABLE AS $$
  SELECT CASE
-  WHEN source = 'domain_triage' OR source LIKE 'domain_triage:%' THEN 'domain_triage'
+  WHEN source = 'domain_triage' OR starts_with(source, 'domain_triage:') THEN 'domain_triage'
   WHEN source LIKE 'mirror:%' THEN substring(source FROM '^(mirror:.*?):(?:company|contact|lead):')
   WHEN source LIKE 'ext:%' THEN source
   WHEN split_part(source, ':', 1) IN ('dispact', 'gcal', 'gdocs', 'gmail', 'graph', 'graphcal', 'imap',

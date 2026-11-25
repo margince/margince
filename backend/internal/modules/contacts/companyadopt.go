@@ -44,15 +44,21 @@ func stageAdoptedSource(ctx context.Context, tx pgx.Tx, id ids.CompanyID, p *sto
 		return err
 	}
 	var held bool
+	var connector *string
 	if err := tx.QueryRow(ctx,
-		`SELECT source_id IS NOT NULL OR NOT `+captureorigin.NoOtherSystemSQL("source_system")+`
-		   FROM company WHERE id = $1 FOR UPDATE`, id.UUID).Scan(&held); err != nil {
+		`SELECT source_id IS NOT NULL OR NOT `+captureorigin.NoOtherSystemSQL("source_system")+`, source_system
+		   FROM company WHERE id = $1 FOR UPDATE`, id.UUID).Scan(&held, &connector); err != nil {
 		return fmt.Errorf("read the company's outside id: %w", err)
 	}
 	if held {
 		return fmt.Errorf("this company already has an id from another system: %w", apperrors.ErrConflict)
 	}
-	p.Set("source_system", nil, adopt.System)
+	// The connector a captured company named is replaced, and the audit keeps it.
+	var before any
+	if connector != nil {
+		before = *connector
+	}
+	p.Set("source_system", before, adopt.System)
 	p.Set("source_id", nil, adopt.ID)
 	return nil
 }

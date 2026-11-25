@@ -195,6 +195,10 @@ func TestAFeedAdoptsACapturedCompanyAndNotAnImportedOne(t *testing.T) {
 	if err := adopt(ids.UUID(captured.Id), "c-1"); err != nil {
 		t.Errorf("adopting a captured company: %v, want it adopted", err)
 	}
+	if n := e.WsCount(t, `SELECT count(*) FROM audit_log WHERE entity_type = 'company' AND entity_id = $1
+		AND before->>'source_system' = 'gmail' AND after->>'source_system' = 'erp'`, captured.Id); n != 1 {
+		t.Errorf("%d audit row(s) keep the connector the adoption replaced, want 1", n)
+	}
 	if err := adopt(ids.UUID(imported.Id), "c-2"); err == nil {
 		t.Error("an imported company was adopted by a feed, want a conflict")
 	}
