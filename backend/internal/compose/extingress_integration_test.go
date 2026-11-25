@@ -340,13 +340,9 @@ func registerProbeTransport(t *testing.T, e *ingressEnv) {
 // A unit's captured chat message lands as a MESSAGE on the unit's own transport,
 // with the account it can be answered at bound to the contact behind it.
 //
-// This is the whole point of the slice, and each half is separately load-bearing.
-// The kind and the provider are the two axes stated separately (ADR-0107/A158):
-// the send path reads the PROVIDER column, so a message filed as a `note` — which
-// is what this unit landed before it supplied a channel — is a conversation
-// nothing can reply on. And the identity binding is what the reply path resolves
-// its recipient FROM: without it the message is repliable in principle and
-// answers "nobody on this conversation can be reached" in practice.
+// The send path reads the provider column.
+// A message filed as a `note` is a conversation nothing can reply on.
+// The identity binding is what the reply path resolves its recipient from.
 func TestAUnitsChannelMessageLandsAsARepliableConversation(t *testing.T) {
 	e := setupIngress(t)
 	registerProbeTransport(t, e)
@@ -361,37 +357,41 @@ func TestAUnitsChannelMessageLandsAsARepliableConversation(t *testing.T) {
 		t.Fatalf("disposition = %q, want accepted", result.Disposition)
 	}
 
-	var kind, provider string
-	e.readAsWorkspace(t, func(ctx context.Context, tx pgx.Tx) error {
-		return tx.QueryRow(ctx,
-			`SELECT kind, coalesce(channel_provider, '') FROM activity WHERE id = $1`,
-			ids.MustParse(result.Ref.ID)).Scan(&kind, &provider)
-	})
-	if kind != extension.ActivityKindMessage {
-		t.Errorf("kind = %q, want %q — the timeline must know this was a message at all", kind, extension.ActivityKindMessage)
+	id := ids.MustParse(result.Ref.ID)
+	for column, want := range map[string]string{
+		"kind": extension.ActivityKindMessage, "channel_provider": ingressProbeProvider, "audience": "workspace",
+		"source_system": ingressProbeSource, "source_id": "ws-7:3001", "source": ingressProbeSource,
+	} {
+		var got string
+		e.readAsWorkspace(t, func(ctx context.Context, tx pgx.Tx) error {
+			return tx.QueryRow(ctx, `SELECT coalesce(`+column+`::text, '') FROM activity WHERE id = $1`, id).Scan(&got)
+		})
+		if got != want {
+			t.Errorf("activity.%s = %q, want %q", column, got, want)
+		}
 	}
-	if provider != ingressProbeProvider {
-		t.Errorf("channel_provider = %q, want %q — the send path reads this column, and an empty one is a conversation no reply can leave on",
-			provider, ingressProbeProvider)
+	for what, query := range map[string]string{
+		"audit rows":    `SELECT count(*) FROM audit_log WHERE entity_type = 'activity' AND entity_id = $1`,
+		"outbox events": `SELECT count(*) FROM event_outbox WHERE envelope->'entity'->>'id' = $1::text`,
+	} {
+		if n := e.countAsWorkspace(t, query, id); n != 1 {
+			t.Errorf("%d %s for the new activity, want 1", n, what)
+		}
 	}
 
-	// The binding, which is what makes the recipient resolvable — and it names
-	// the account the UNIT reported, not one derived from the address.
-	if got := e.countAsWorkspace(t,
-		`SELECT count(*) FROM contact_channel_identity WHERE provider = $1 AND channel_user_id = $2`,
+	// The binding names the account the UNIT reported, not one derived from the address.
+	if got := e.countAsWorkspace(t, `
+		SELECT count(*) FROM contact_channel_identity
+		 WHERE provider = $1 AND channel_user_id = $2 AND archived_at IS NULL AND contact_id IS NOT NULL`,
 		ingressProbeProvider, "probe-channel-1"); got != 1 {
-		t.Errorf("channel identity bindings = %d, want the one the reply path resolves its recipient from", got)
+		t.Errorf("live channel identity bindings = %d, want the one the reply path resolves its recipient from", got)
 	}
 }
 
-// A unit naming a transport it does NOT supply is refused, and nothing lands.
-//
-// This is the sharpest refusal on the write door: `telegram` is a real
-// registered transport with a real workspace bot behind it, so the row would be
-// a valid SEND ANCHOR for a conversation the unit does not own — a rep replying
-// on it would transmit a message from the workspace's own bot to whoever the
-// unit linked, the unit choosing the target and the human supplying the
-// authority.
+// A unit naming a transport it does not supply is refused, and nothing lands.
+// `telegram` has a real workspace bot behind it, so the row would be a valid
+// send anchor. A rep replying on it would transmit from that bot to whoever
+// the unit linked.
 func TestAUnitCannotFileAMessageOnACoreConnectorsTransport(t *testing.T) {
 	e := setupIngress(t)
 	rt := e.ingestingRuntime()
@@ -422,6 +422,11 @@ func TestASecondIngestOfTheSameRecordLandsNothingNew(t *testing.T) {
 	if err != nil {
 		t.Fatalf("the first ingest: %v", err)
 	}
+	tables := []string{"audit_log", "event_outbox", "contact", "contact_channel_identity"}
+	before := make([]int, len(tables))
+	for i, table := range tables {
+		before[i] = e.countAsWorkspace(t, `SELECT count(*) FROM `+table)
+	}
 	second, err := rt.Ingest(context.Background(), extension.UserID(e.member.String()), record)
 	if err != nil {
 		t.Fatalf("the replay: %v", err)
@@ -435,6 +440,11 @@ func TestASecondIngestOfTheSameRecordLandsNothingNew(t *testing.T) {
 	if got := e.countAsWorkspace(t,
 		`SELECT count(*) FROM activity WHERE source = $1`, ingressProbeSource); got != 1 {
 		t.Fatalf("activity rows = %d, want one — the natural key is what makes a replay free", got)
+	}
+	for i, table := range tables {
+		if after := e.countAsWorkspace(t, `SELECT count(*) FROM `+table); after != before[i] {
+			t.Errorf("%s holds %d rows after a replay, want the %d it held before", table, after, before[i])
+		}
 	}
 }
 
