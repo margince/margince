@@ -343,9 +343,9 @@ missing returns `events.ErrUnactionable`, never a plain error. The subscriber ac
 with one ERROR log. A plain error leaves the entry pending, so it comes back on every pass.
 
 An archived record is not a missing one. Some work is still owed once the record is restored, such
-as commission on a won deal. For that work the handler keeps the error or reads the archived row. In
-`compose`, `unactionableIfGone` turns a store's `ErrNotFound` into `ErrUnactionable`.
-`unactionableIfDealAbsent` does so only when the deal row no longer exists.
+as commission on a won deal. For that work the handler reads the archived row. A handler never keeps
+an entry pending until a restore, because a record can stay archived for good. In `compose`,
+`unactionableIfGone` turns a store's `ErrNotFound` into `ErrUnactionable`.
 
 ---
 

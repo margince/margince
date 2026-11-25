@@ -171,22 +171,24 @@ func TestADealEventTheResetOrphanedIsSkippedByCommissionsAndTheRoomTimeline(t *t
 	}
 }
 
-// An archived deal still exists and can be restored, so a room note about it
-// stays owed. The entry is retried rather than acked away.
-func TestARoomCommentOnAnArchivedDealIsRetriedNotSkipped(t *testing.T) {
+// An archived deal is frozen, so the note cannot be added to it. A retry would
+// stay pending for as long as the deal stays archived, so the entry is acked
+// and the note is dropped.
+func TestARoomCommentOnAnArchivedDealIsAckedNotLeftPending(t *testing.T) {
 	e := integration.Setup(t)
 	fx := seedStrayDeal(t, e)
 	if _, err := e.Deals.ArchiveDeal(e.As(e.AdminUser, nil, strayEventPerms), fx.deal, nil); err != nil {
 		t.Fatalf("archiving the deal: %v", err)
 	}
 
+	comment := orphanedRoomComment(t, fx.deal)
 	timeline := NewDealRoomTimeline(e.Pool, activities.NewStore(e.DB()), slog.New(slog.DiscardHandler))
-	err := timeline.HandleEvent(context.Background(), orphanedRoomComment(t, fx.deal))
-	if err == nil {
-		t.Fatal("a note was written onto an archived deal, which is frozen")
+	if err := timeline.HandleEvent(context.Background(), comment); !errors.Is(err, events.ErrUnactionable) {
+		t.Errorf("the room timeline answered %v for an archived deal, want ErrUnactionable — any other error stays pending while the deal is archived", err)
 	}
-	if errors.Is(err, events.ErrUnactionable) {
-		t.Errorf("the room timeline answered %v for an archived deal — the entry is acked and the note is lost for good, though the deal can be restored", err)
+	if n := e.WsCount(t, `SELECT count(*) FROM activity WHERE source_system = 'deal_room' AND source_id = $1`,
+		comment.EventID.String()); n != 0 {
+		t.Errorf("%d notes were written onto an archived deal, want 0", n)
 	}
 }
 
