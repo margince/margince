@@ -1,7 +1,7 @@
 /* "For developers" stands in the page column, so its cards keep their own
-   panes and only the summary reads as a heading. */
+   panes and only the summary reads as a heading, at "Your agent"'s size. */
 .aiaccess-dev-title {
-  font: var(--fontHeadingSmall);
+  font: var(--fontHeadingMedium);
 }
 
 .aiaccess-dev {

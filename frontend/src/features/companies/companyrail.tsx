@@ -28,7 +28,6 @@ import { postalLines } from "../../format/address";
 import { useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import { ADDRESS_KEYS } from "../../lib/addresscolumns";
-import { useCanWriteRecord } from "../../lib/capability";
 import { useIndustryOptions } from "../../lib/industryoptions";
 import { labelFor } from "../../lib/labelfor";
 import { useListsAvailable, useRecordLists } from "../../lib/lists.queries";
@@ -37,7 +36,7 @@ import { CompanyContactCard } from "./companycontactcard";
 import {
   companyWebsite,
   displayHost,
-  useCompanyReadOnlyReason,
+  useCompanyVerbRefusal,
 } from "./companyheader";
 import { useCompanyEdit, useCompanyFieldSave } from "./companyrailedit";
 import {
@@ -153,13 +152,8 @@ export type Edit = Readonly<{ canEdit: boolean; reason?: string }>;
  * checklist) refuses with this one answer.
  */
 export function useCompanyEditGate(company: Company): Edit {
-  const t = useT();
-  const writable = useCanWriteRecord("company", company);
-  const reason = useCompanyReadOnlyReason(company);
-  return {
-    canEdit: writable && !reason,
-    reason: reason ?? (writable ? undefined : t("record.notYoursToChange")),
-  };
+  const reason = useCompanyVerbRefusal(company);
+  return { canEdit: !reason, reason };
 }
 
 /** The account's name as the record's head renames it, with the rail's gate. */

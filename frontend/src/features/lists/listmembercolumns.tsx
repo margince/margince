@@ -9,7 +9,8 @@
 import { EntityRef } from "../../components/entityref";
 import { Badge } from "../../design-system/atoms";
 import type { ListColumn } from "../../design-system/listtable";
-import { formatDate } from "../../format/format";
+import { ABSENT } from "../../format/absent";
+import { formatDateAbbrev } from "../../format/format";
 import { useLocale, useT } from "../../i18n";
 import {
   fieldLabel,
@@ -80,7 +81,7 @@ function useFilterColumns(list: List): ListColumn<MemberRow>[] {
           return linkedText(held.linked, t, held.linked_truncated);
         }
         if (held?.value == null) {
-          return "—";
+          return ABSENT;
         }
         if (held.label == null && known?.references === "app_user") {
           return <EntityRef kind="user" id={held.value} />;
@@ -101,7 +102,7 @@ function useChosenColumns(): ListColumn<MemberRow>[] {
       key: "added_by",
       header: t("lists.members.addedBy"),
       holds: "colleague",
-      cell: (row) => row.listing?.added_by_name ?? "—",
+      cell: (row) => row.listing?.added_by_name ?? ABSENT,
     },
     {
       key: "added_at",
@@ -109,13 +110,13 @@ function useChosenColumns(): ListColumn<MemberRow>[] {
       holds: "date",
       cell: (row) =>
         row.listing?.created_at
-          ? formatDate(row.listing.created_at, locale, readerZone)
-          : "—",
+          ? formatDateAbbrev(row.listing.created_at, locale, readerZone)
+          : ABSENT,
     },
     {
       key: "note",
       header: t("lists.members.note"),
-      cell: (row) => row.listing?.note ?? "—",
+      cell: (row) => row.listing?.note ?? ABSENT,
     },
   ];
 }

@@ -31,7 +31,7 @@ module to put a change in, read [modules.md](../modules.md).
 | | |
 |---|--:|
 | Tables | 354 |
-| Columns | 4348 |
+| Columns | 4350 |
 | Foreign keys | 617 |
 | Owning areas | 40 |
 
@@ -389,7 +389,7 @@ erDiagram
 | [`product_translation`](deals.md#product_translation) | deals | 7 | 0 |
 | [`project`](projects.md#project) | projects | 24 | 13 |
 | [`project_health_assessment`](projects.md#project_health_assessment) | projects | 10 | 1 |
-| [`project_phase_history`](projects.md#project_phase_history) | projects | 8 | 0 |
+| [`project_phase_history`](projects.md#project_phase_history) | projects | 10 | 0 |
 | [`provider_applied_field`](contacts.md#provider_applied_field) | contacts | 10 | 0 |
 | [`provider_connection`](integrations.md#provider_connection) | integrations | 20 | 1 |
 | [`provider_connection_budget`](integrations.md#provider_connection_budget) | integrations | 6 | 0 |

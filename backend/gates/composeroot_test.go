@@ -99,7 +99,7 @@ const (
 	// state and the schedule book's time zone. Both drive the unexported
 	// inventory handler, schedule book and catch-up schedule.
 	composeRootProductionLines = 231_243
-	composeRootTestLines       = 361_811
+	composeRootTestLines       = 361_808
 )
 
 // A read under these floors stopped early or read the wrong place, and would

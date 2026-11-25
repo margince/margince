@@ -142,12 +142,13 @@ Only the owner can offer a record. A manager who does not own it changes the own
 Also called: give away a record, hand over an account, offer a contact, reassign to a colleague.
 
 ### How do I stop Margince making automatic changes?
-To make Margince ask before changing close dates, company names or lifecycle stages, open **Settings → AI assistants**, then **For developers**, then **Agent rules**. Turn off the matching switch under **Automatic changes**. The switches apply to your work only. A kind you switch off comes back to your Worklist as an approval. An administrator can stop all automatic changes with **Automatic changes for everyone**; your own switches stay as you set them.
+<!-- opens: settings/agents -->
+To make Margince ask before changing close dates, company names or lifecycle stages, open **Settings → AI assistants**. Under **Your agent**, turn off the matching switch on the **Automatic changes** card. The switches apply to your work only. A kind you switch off comes back to your Worklist as an approval. An administrator can stop all automatic changes with **Automatic changes for everyone**; your own switches stay as you set them.
 Also called: autopilot, auto-apply, stop the AI editing my records.
 
 ### How do I hide a kind of proposal from my own queue?
-Open **Settings → AI assistants**, then **For developers**, then **Agent rules**, then
-**Personal approval mutes**.
+<!-- opens: settings/agents -->
+Open **Settings → AI assistants**. Under **Your agent**, find the **Personal approval mutes** card.
 Turn on a kind to hide it from your own queue. Other readers keep their proposals, and nobody has accepted or rejected anything.
 
 Both hiding and showing a kind turn off your automatic changes for that kind. Showing it again does not restore an old automatic choice.
@@ -234,11 +235,10 @@ probabilities**, **Stage moves**, **New deals**, **Reopened deals**,
 **Company names** and **Lifecycle stages**. They land
 under **Handled for you** on the Worklist rather than as an approval.
 
-This is set per seat, and it is **on by default**. The switches
-are at **Settings → AI assistants**, on the **Agent rules** tab under **For developers**. The **Automatic
-changes** card says: "Each switch
-lets one kind of change run without your review. It applies to your work, not
-the whole team."
+This is set per seat, and it is **on by default**. The switches are at
+**Settings → AI assistants**, under **Your agent**. The **Automatic changes**
+card says: "Each switch lets one kind of change run without your review. It
+applies to your work, not the whole team."
 
 Each switch shows how you have answered that kind of proposal so far.
 It reads: "So far: {clean} approved as proposed, {edited} approved after edits, {rejected}

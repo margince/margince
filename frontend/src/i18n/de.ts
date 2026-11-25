@@ -1828,7 +1828,6 @@ export const de: Readonly<Record<MessageKey, string>> = {
 
   "scheduling.readOnlyCalendar":
     "Dein Kalender ist zum Lesen verbunden. Verbinde den Kalender erneut und erlaube den Zugriff für Einladungen, um Termine zu erstellen, zu verschieben und abzusagen.",
-  "scheduling.bookRefused": "Ein Admin muss die Terminbuchung erlauben.",
   "scheduling.meetingChanged":
     "Der Termin wurde geändert. Prüfe die aktuellen Details und versuche es erneut.",
   "scheduling.previewCalendarSetup":
@@ -2780,7 +2779,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "history.field.resolved_category": "Nachrichtenkategorie",
   "history.field.score": "Score",
   "history.field.score_override_reason": "Grund für die Score-Anpassung",
-  "history.field.size_band": "Beschäftigtenzahl",
+  "history.field.size_band": "Unternehmensgröße",
   "history.field.social": "Social-Profile",
   "history.field.source": "Quelle",
   "history.field.origin": "Herkunft",
@@ -2941,7 +2940,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "search.group.project": "Projekte",
   "search.group.product": "Produkte",
   "search.group.offerTemplate": "Angebotsvorlagen",
-  "search.group.activity": "Aktivitäten",
+  "search.group.activity": "E-Mails und Aktivitäten",
   "search.group.lead": "Leads",
   "search.group.tag": "Tags",
   "search.group.email": "E-Mails",
@@ -3194,14 +3193,16 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Du kannst dieses Unternehmen nicht bearbeiten. Frage die verantwortliche Person, ob sie es dir übergibt oder mit dir teilt, oder frage einen Admin.",
   "record.actionRefused":
     "Deine Rolle enthält diese Aktion nicht. Frage einen Admin nach dem Recht.",
+  "record.roleReadsOnly":
+    "Deine Rolle erlaubt nur das Lesen. Frage einen Admin nach einer anderen Rolle.",
+  "record.archiveRefused":
+    "Nur Verantwortliche oder Führungskräfte können diesen Eintrag archivieren.",
   "record.accessUnknown":
     "Dein Zugriff konnte nicht gelesen werden. Lade die Seite neu, um ihn erneut zu prüfen.",
   "contact.attachRefused":
     "Du kannst diesen Kontakt nur lesen. Frage das zuständige Teammitglied nach Schreibzugriff.",
   "record.attachRefused":
     "Du kannst diesen Datensatz nur lesen. Frage das zuständige Teammitglied nach Schreibzugriff.",
-  "record.logActivityRefused":
-    "Du hast keine Berechtigung, Aktivitäten zu diesem Datensatz zu erfassen.",
   "record.share": "Teilen",
   "record.moreActions": "Weitere Aktionen",
   "record.moreActionsFor": "Weitere Aktionen für {subject}",
@@ -3946,7 +3947,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   // die die abgelöste Einstufung mit einem Wert beantworten wollte.
   "company.lifecycle": "Lebenszyklus",
   "company.relationshipTypes": "Beziehungstyp",
-  "company.sizeBand": "Beschäftigtenzahl",
+  "company.sizeBand": "Unternehmensgröße",
   "company.sizeBandValue": "{band} Mitarbeitende",
   "company.lifecycle.unknown": "Unbekannt",
   "company.lifecycle.target": "Zielunternehmen",
@@ -4034,7 +4035,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "record.details.about": "Überblick",
   "section.help": "Über diesen Bereich",
   "record.details.ownership": "Zuständigkeit",
-  "co.aside.size": "Beschäftigtenzahl",
+  "co.aside.size": "Unternehmensgröße",
   "co.aside.wayIn": "Zugang",
   "record.details.visibleTo": "Sichtbar für",
   "co.aside.visibleEveryone": "Alle",
@@ -6325,6 +6326,9 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "deals.confirmAdvance": "In die Phase {stage} verschieben?",
   "deals.confirmTerminal":
     "Damit wird der Deal als {status} abgeschlossen. Bis du bestätigst, ändert sich nichts.",
+  "deals.confirmMovesProject": "Damit wechselt auch {project} zu {phase}.",
+  "deals.confirmMovesUnreadProject":
+    "Damit wechselt auch das zugehörige Projekt zu {phase}.",
   "deals.lostReason": "Verlustgrund",
   "deals.lostReasonNeeded": "Wähle, warum der Deal verloren ging.",
   "deals.lostReasonCode": "Warum verloren?",
@@ -6800,14 +6804,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "deal.acquisitionRetired": "(stillgelegt)",
   "deal.waitUntil": "Warten bis",
   "deal.fxBase": "{value} · Kurs {rate} vom {date}",
-  "deal.archiveRefused":
-    "Nur der Verantwortliche des Deals oder eine Führungskraft kann diesen Deal archivieren.",
-  "contact.archiveRefused":
-    "Nur der Verantwortliche des Kontakts oder eine Führungskraft kann diesen Kontakt archivieren.",
   "contact.undoArchiveNothing":
     "Das Archivieren ließ sich nicht rückgängig machen, weil der Verlauf des Kontakts kein Archivieren zum Zurücknehmen enthält. Öffne den Kontakt, um zu sehen, ob er noch archiviert ist.",
-  "company.archiveRefused":
-    "Nur der Verantwortliche des Unternehmens oder eine Führungskraft kann dieses Unternehmen archivieren.",
   "deal.archive": "Deal archivieren",
   "deal.restore": "Deal wiederherstellen",
   "deal.archiveConfirm":
@@ -7740,7 +7738,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "create.displayName": "Unternehmensname",
   "create.legalName": "Rechtlicher Name",
   "create.industry": "Branche",
-  "create.sizeBand": "Beschäftigtenzahl",
+  "create.sizeBand": "Unternehmensgröße",
   "co.address.summary": "Adresse",
   "co.address.countryMismatch": "Postleitzahl und Ort liegen in {country}",
 
@@ -9327,7 +9325,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "analytics.field.project": "Projektkennung",
   "analytics.field.project_id": "Projekt",
   "analytics.field.quiet_since": "Ruhig seit",
-  "analytics.field.size_band": "Beschäftigtenzahl",
+  "analytics.field.size_band": "Unternehmensgröße",
   "analytics.field.source": "Quelle",
   "analytics.field.origin": "Herkunft",
   "analytics.field.stage_id": "Phase",
@@ -9946,7 +9944,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "rbac.masked": "Verborgener Wert",
   "settings.passports": "Passports",
   "settings.passportsSub":
-    "Ein Passport ist dein persönlicher API-Schlüssel für Skripte und eigenen Code. Was ihn nutzt, handelt als du, mit den Berechtigungen, die du auswählst, und nie darüber hinaus. Um Margince in einem KI-Tool zu nutzen, verbinde das Tool stattdessen oben.",
+    "Ein Passport ist für Skripte und eigenen Code. Was ihn nutzt, handelt als du, mit den Berechtigungen, die du auswählst, und nie darüber hinaus. Um Margince in einem KI-Tool zu nutzen, verbinde das Tool stattdessen oben.",
   "passport.scope.read": "Datensätze lesen",
   "passport.scope.draft": "Nachrichten entwerfen",
   "passport.scope.write": "Datensätze ändern",
@@ -10027,8 +10025,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "settings.passportUnnamed": "Passport ohne Namen",
   "settings.passportNameRequired": "Gib dem Agenten einen Namen",
   "settings.passportNameTooLong": "Verwende höchstens 120 Zeichen.",
-  "settings.mint": "Passport ausstellen",
-  "settings.minting": "Wird ausgestellt…",
+  "settings.mint": "Passport erstellen",
+  "settings.minting": "Wird erstellt…",
   "settings.mintCancel": "Abbrechen",
   "settings.mintDone": "Fertig",
   "settings.mintOpen": "Neuer Passport",
@@ -10477,7 +10475,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "aiAccess.connect.help": "Hilfe von {vendor}",
   "aiAccess.connect.helpAdmin": "Hilfe von {vendor} für deine Admins",
   "aiAccess.connect.devHint":
-    "Schreibst du eigenen Code? Erstelle unten im Bereich Für die Entwicklung einen API-Schlüssel.",
+    "Schreibst du eigenen Code? Erstelle unten im Bereich Für die Entwicklung einen Passport.",
   "aiAccess.step.allow":
     "Margince öffnet sich. Melde dich an und wähle Autorisieren. Fertig.",
   "aiAccess.claude.openConnectors":
@@ -10557,9 +10555,10 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "aiAccess.guide.officialHead": "Offizielle Anleitung",
   "aiAccess.guide.checked": "Diese Schritte wurden am {date} geprüft.",
   "aiAccess.dev.title": "Für die Entwicklung",
+  "aiAccess.yourAgent.title": "Dein Agent",
   "aiAccess.dev.sub":
-    "API-Schlüssel für eigenen Code und was Agenten ohne dich tun dürfen.",
-  "aiAccess.dev.tab.passports": "API-Schlüssel",
+    "Passports für eigenen Code und was Agenten ohne dich tun dürfen.",
+  "aiAccess.dev.tab.passports": "Passports (API-Schlüssel)",
   "aiAccess.dev.tab.rules": "Regeln für Agenten",
   "aiAccess.connect.placeQuestion": "Wo nutzt du sie?",
   "aiAccess.connect.copy": "Kopieren",
@@ -10634,7 +10633,9 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "aiAccess.other.signIn":
     "OAuth im Browser. Die meisten Tools starten sie bei der ersten Verbindung.",
   "aiAccess.other.apiKey":
-    "Kein Anmelden im Tool möglich? Erstelle in den Einstellungen unter KI-Assistenten, Für die Entwicklung, einen API-Schlüssel und sende ihn als Header „Authorization: Bearer“ mit dem Schlüssel dahinter.",
+    "Kein Anmelden im Tool möglich? Erstelle in den Einstellungen unter KI-Assistenten, Für die Entwicklung, einen Passport und sende ihn als Header „Authorization: Bearer“ mit dem Passport dahinter.",
+  "aiAccess.other.apiKeyBelow":
+    "Kein Anmelden im Tool möglich? Erstelle unten im Bereich Für die Entwicklung einen Passport und sende ihn als Header „Authorization: Bearer“ mit dem Passport dahinter.",
   "aiAccess.other.notAllowed":
     "Meldet die Anmeldung, dass das Tool nicht erlaubt ist, legt ein Admin in den Einstellungen unter Zugang für KI-Tools fest, welche Tools sich verbinden dürfen.",
   "setup.step.ai": "KI-Tool verbinden",
@@ -15337,8 +15338,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "settings.page.model-calls.sub": "Jede Modellanfrage und ihre Antwort.",
   "settings.page.privacy.sub":
     "Betroffenenanfragen, Einwilligungszwecke und Aufbewahrung von Datensätzen.",
-  "settings.page.audit.sub":
-    "Alle Handelnden und jeder Datensatz, auf den sie zugegriffen haben.",
+  "settings.page.audit.sub": "Jede Änderung und wer sie gemacht hat.",
   "settings.page.system-health.sub":
     "Ob die Hintergrundverarbeitung Schritt hält.",
   "settings.page.extensions.sub":
@@ -16585,7 +16585,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "extAccess.need.objects": "Dateispeicher",
   "extAccess.brings.none": "Keine",
   "extAccess.noObjects":
-    "Es gibt nichts zu vergeben, da diese Einheit keine Berechtigungsobjekte registriert.",
+    "Diese Erweiterung hat keine Berechtigungen zu vergeben.",
   "extAccess.roleColumn": "Rolle",
   "extAccess.action.read": "Lesen",
   "extAccess.action.create": "Erstellen",
@@ -20819,7 +20819,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "filters.field.company_country": "Land des Unternehmens",
   "filters.field.company_industry": "Branche des Unternehmens",
   "filters.field.company_lifecycle": "Lebenszyklus des Unternehmens",
-  "filters.field.company_size_band": "Beschäftigtenzahl",
+  "filters.field.company_size_band": "Unternehmensgröße",
   "filters.field.country": "Ländercode",
   "filters.field.created_at": "Erstellt",
   "filters.field.hosting_provider": "Hosting",
@@ -20832,7 +20832,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "filters.field.pipeline_id": "Pipeline",
   "filters.field.relationship_type": "Beziehungstyp",
   "filters.field.stage_id": "Phase",
-  "filters.field.tag": "Tag",
+  "filters.field.tag": "Tags",
   "filters.field.technology": "Technologie",
   "filters.choosePlaceholder": "Feld ausw\u00e4hlen",
   "filters.customBadge": "Eigenes Feld",
@@ -20841,6 +20841,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "filters.values": "Werte",
   "filters.addValue": "Wert hinzuf\u00fcgen",
   "filters.removeClause": "Bedingung {field} entfernen",
+  "filters.removeEmptyClause": "Bedingung entfernen",
   "filters.existsLabel": "Feld hat einen Wert",
   "filters.hasValue": "hat einen Wert",
   "filters.isEmpty": "ist leer",
@@ -20860,6 +20861,12 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "filters.op.lessThan": "ist kleiner als",
   "filters.op.atMost": "ist h\u00f6chstens",
   "filters.op.withinRadius": "liegt im Umkreis von",
+  "filters.op.include": "enthalten",
+  "filters.op.notInclude": "enthalten nicht",
+  "filters.op.includeAny": "enthalten mindestens eines von",
+  "filters.op.includeSome": "enthalten mindestens eines",
+  "filters.op.includeNone": "enthalten keines",
+  "filters.op.includeSomeOrNone": "enthalten welche oder keine",
   "filters.sentence.radiusOf": "{km} km um {place}",
   "filters.radius.km": "Entfernung (km)",
   "filters.radius.place": "Ortsname (optional)",
@@ -21245,13 +21252,19 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "filters.noFields": "Keine filterbaren Felder f\u00fcr diesen Datensatztyp.",
   "filters.resultsTitle": "Passende Datens\u00e4tze",
   "filters.resultRefGone": "Entfernt oder für dich nicht sichtbar",
-  "filters.resultsCaption":
-    "Erste Seite der Treffer, zum Prüfen des Filters. Nicht die vollständige Auswahl.",
+  "filters.resultsCaption": "Ein Ausschnitt der Treffer",
   "filters.noMatches":
     "Keine {records} passen zu diesen Bedingungen. Lockere eine: Stelle eine Verknüpfung auf „oder“ um oder entferne die genaueste Bedingung.",
   "filters.noMatchesLoosen":
     "Keine {records} passen zu diesem Filter. Lockere oder entferne eine Bedingung.",
-  "filters.pickRecord": "Datensatz auswählen",
+  "filters.pickTag": "Tag auswählen",
+  "filters.pickOwner": "Verantwortliche Person auswählen",
+  "filters.pickTeam": "Team auswählen",
+  "filters.pickCompany": "Unternehmen auswählen",
+  "filters.pickPipeline": "Pipeline auswählen",
+  "filters.pickStage": "Phase auswählen",
+  "filters.pickProject": "Projekt auswählen",
+  "filters.pickProduct": "Produkt auswählen",
   "filters.searchRecords": "Unternehmen durchsuchen",
   "filters.typeToSearch": "Zum Suchen tippen",
   "filters.searching": "Wird gesucht…",
@@ -21261,6 +21274,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "filters.removeRecord": "{record} entfernen",
   "filters.loadingRecords": "Auswahl wird geladen…",
   "filters.pickValue": "Wert auswählen",
+  "filters.you": "Du",
   "filters.amountUnpriced":
     "Dieser Betrag hat keine bekannte Währung und kann deshalb weder angezeigt noch geändert werden.",
   "filters.exportCsv": "CSV exportieren",
@@ -21380,11 +21394,9 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "projectRole.subcontractor": "Subunternehmen",
   "projectLinks.attach": "Projekt verknüpfen",
   "projectLinks.move": "Zu anderem Projekt verschieben",
-  "projectLinks.detach": "Verknüpfung lösen",
-  "projectLinks.detachConfirm": "Vom Projekt lösen",
-  "projectLinks.detachNamed": "Verknüpfung zu {name} lösen",
+  "projectLinks.detachConfirm": "Vom Projekt entfernen",
   "projectLinks.roleLabel": "Als",
-  "projectLinks.detachTitle": "Verknüpfung zu diesem Projekt lösen?",
+  "projectLinks.detachTitle": "Vom Projekt entfernen?",
   "projectLinks.detachBody":
     "{name} bleibt unverändert. Nur die Verknüpfung mit diesem Datensatz endet. Gelöscht wird nichts.",
   "projectLinks.emptyTitle": "Noch keine Projekte",
@@ -21423,7 +21435,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "project.ownerMe": "Selbst",
   "project.assignOwner": "Einem Teammitglied zuweisen",
   "project.description": "Beschreibung",
-  "project.targetEnd": "Geplantes Enddatum",
+  "project.targetEnd": "Geplantes Ende",
   "project.startDate": "Startdatum",
   "project.endDate": "Enddatum",
   "project.noCustomer": "Kein Kundenunternehmen",
@@ -21475,7 +21487,6 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "project.stakeholders.removeTitle": "Stakeholder entfernen?",
   "project.stakeholders.removeConfirm":
     "{name} ist nicht mehr Stakeholder dieses Projekts. Die zugehörigen Aktivitäten bleiben, wo sie sind.",
-  "project.stakeholders.removeOne": "{name} aus dem Projekt entfernen",
   "project.role.sponsor": "Projektpatenschaft",
   "project.role.project_lead": "Projektleitung",
   "project.role.delivery_lead": "Umsetzungsleitung",
@@ -21511,6 +21522,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "project.history.openedBy": "{subject} hat das Projekt erstellt",
   "project.history.unknown":
     "Wer diesen Wechsel vorgenommen hat, wurde nicht erfasst",
+  "project.history.dealWon": "Deal {name} gewonnen",
+  "project.history.dealWonUnnamed": "Ein Deal wurde gewonnen",
   "project.standing.unassessed":
     "Noch hat niemand erfasst, wie die Umsetzung läuft.",
   "project.standing.assessedBy": "Bewertet am {date} von {author}.",
@@ -21532,7 +21545,6 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "project.standing.event.opened": "{phase} begonnen",
   "project.standing.event.signed": "Vertrag unterschrieben",
   "project.standing.event.won": "{name} gewonnen",
-  "project.standing.event.end": "Geplantes Ende",
   "project.standing.event.dueLate": "fällig am {date} · verspätet",
   "project.standing.event.due": "fällig am {date}",
   "project.standing.event.lastUpdate": "{date} · letzte Aktualisierung",
@@ -21551,7 +21563,6 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "record.details.notShared": "Nicht geteilt",
   "project.visibility.sharedWith_one": "Mit {count} geteilt",
   "project.visibility.sharedWith_other": "Mit {count} geteilt",
-  "project.aside.targetEnd": "Zielende",
   "project.aside.ended": "Beendet",
   "project.aside.closedReason": "Abschlussgrund",
   "project.standing.lastUpdate": "Letzte Aktualisierung",
@@ -24323,7 +24334,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "contactCase.prefer.name": "Name",
   "contactCase.prefer.email": "Primäre E-Mail-Adresse",
   "contactCase.prefer.employment": "Aktueller Arbeitgeber",
-  "contactCase.prefer.title": "Position",
+  "contactCase.prefer.title": "Jobtitel",
   "contactCase.prefer.placeholder": "Wert wählen",
   "contactCase.previewVerb": "Vorschau anzeigen",
   "contactCase.merge_one": "{count} Kontakt zusammenführen",

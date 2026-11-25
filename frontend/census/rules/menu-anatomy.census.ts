@@ -142,6 +142,22 @@ const OPTION_ROLES = new Set(["menu", "listbox", "menuitem", "option"]);
 const STATES = /^(is-|active$|selected$|open$|right$)/;
 const PLACEMENTS = new Set(["topbar-popover"]);
 
+/** Every role a `role` attribute may take, literals inside an expression
+ *  (`role={open ? "menu" : undefined}`) included. */
+function roleWords(initializer: ts.JsxAttributeValue | undefined): string[] {
+  const words: string[] = [];
+  const visit = (node: ts.Node) => {
+    if (ts.isStringLiteralLike(node)) {
+      words.push(node.text);
+    }
+    ts.forEachChild(node, visit);
+  };
+  if (initializer) {
+    visit(initializer);
+  }
+  return words;
+}
+
 /** Every class one module puts on an element claiming a menu-ish role. */
 export function classesUnderAnOptionRole(source: ts.SourceFile): string[] {
   const found = new Set<string>();
@@ -151,11 +167,7 @@ export function classesUnderAnOptionRole(source: ts.SourceFile): string[] {
       const role = attributes.find(
         (attribute) => attribute.name.getText(source) === "role",
       );
-      const roleValue =
-        role?.initializer && ts.isStringLiteral(role.initializer)
-          ? role.initializer.text
-          : undefined;
-      if (roleValue && OPTION_ROLES.has(roleValue)) {
+      if (roleWords(role?.initializer).some((word) => OPTION_ROLES.has(word))) {
         const className = attributes.find(
           (attribute) => attribute.name.getText(source) === "className",
         );

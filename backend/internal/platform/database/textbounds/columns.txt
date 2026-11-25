@@ -1166,6 +1166,7 @@ public.project_health_assessment.note note
 public.project_health_assessment.source document
 public.project_health_assessment.source_author document
 public.project_health_assessment.state document
+public.project_phase_history.cause_kind label
 public.project_phase_history.changed_by document
 public.project_phase_history.from_phase document
 public.project_phase_history.reason note

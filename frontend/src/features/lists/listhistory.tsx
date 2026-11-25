@@ -14,7 +14,7 @@ import { Popover } from "../../design-system/popover";
 import { provenanceLabel } from "../../design-system/provenance";
 import { provenanceOf } from "../../design-system/provenanceof";
 import { SurfaceState } from "../../design-system/surfacestate";
-import { formatDateTime } from "../../format/format";
+import { formatDateTimeAbbrev } from "../../format/format";
 import { useLocale, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import { recordRoute } from "../../lib/entity";
@@ -98,7 +98,7 @@ export function ListHistoryPanel({ list }: Readonly<{ list: List }>) {
   const live = list.list_type === "dynamic";
   const rows = history.data?.data ?? [];
   const when = (row: ListHistoryEntry) =>
-    formatDateTime(row.occurred_at, locale, readerZone);
+    formatDateTimeAbbrev(row.occurred_at, locale, readerZone);
   const reasonOf = (row: ListHistoryEntry) => {
     const key = row.reason ? REASON_LABEL[row.reason] : null;
     return key ? ` · ${t(key)}` : "";
@@ -178,7 +178,7 @@ function ListCheckIntro({ check }: Readonly<{ check: List["last_check"] }>) {
   const { locale } = useLocale();
   let sentence = t("lists.history.notChecked");
   if (check) {
-    const when = formatDateTime(check.checked_at, locale, readerZone);
+    const when = formatDateTimeAbbrev(check.checked_at, locale, readerZone);
     sentence =
       check.outcome === "too_large"
         ? t("lists.history.tooLarge", { when })

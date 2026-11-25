@@ -123,7 +123,7 @@ export function CompanyPage({
   // The daily brief's leading card opens the same drawer from its own verb, so
   // the header strip is not the only door into it.
   const [activityDrawer, setActivityDrawer] = useState<ActivityDrawer>(null);
-  const activity = useActivityGate(writableTarget(company));
+  const activity = useActivityGate("company", writableTarget(company));
   const [auditOpen, setAuditOpen] = useState(false);
   // Which open task the Tasks tab has expanded into its detail modal. Keyed by
   // activity id rather than a boolean, because the modal reads that row.
