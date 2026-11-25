@@ -1,0 +1,9 @@
+{"object":"whatsapp_business_account","entry":[{"id":"WABA1","changes":[
+{"field":"messages","value":{"metadata":{"display_phone_number":"15550001111","phone_number_id":"PNID1"},"contacts":[{"user_id":"BR.BOB","profile":{"name":"bob_the_builder"}}],"messages":[
+{"from_user_id":"BR.BOB","id":"wamid.USR1","timestamp":"1764000400","type":"text","text":{"body":"hi from a username"}},
+{"id":"wamid.NOID","timestamp":"1764000401","type":"text","text":{"body":"nobody"}}]}},
+{"field":"smb_message_echoes","value":{"metadata":{"display_phone_number":"15550001111","phone_number_id":"PNID1"},"contacts":[{"user_id":"BR.BOB","profile":{"name":"bob_the_builder"}}],"message_echoes":[
+{"from":"15550001111","to_user_id":"BR.BOB","id":"wamid.E4","timestamp":1764000402,"type":"text","text":{"body":"reply to username"}},
+{"from":"15550001111","to":"491701234567","id":"wamid.E5","timestamp":1764000403,"type":"edit","edit":{"original_message_id":"wamid.E1","message":{"type":"image","image":{"id":"M7","mime_type":"image/jpeg","sha256":"e=","caption":"fixed caption","url":"https://lookaside.fbsbx.com/x"}}}},
+{"from":"15550001111","to":"491701234567","id":"wamid.E6","timestamp":1764000404,"type":"edit","edit":{"original_message_id":"wamid.E2","text":{"body":"corrected text"}}},
+{"from":"15550001111","to":"491701234567","id":"wamid.E7","timestamp":1764000405,"type":"revoke","revoke":{"original_message_id":"wamid.E1"}}]}}]}]}

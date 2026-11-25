@@ -125,7 +125,7 @@ func communicationStopKeysTx(ctx context.Context, tx pgx.Tx, recipients []connec
 	}
 	for _, recipient := range recipients {
 		if recipient.Channel != nil {
-			channels = append(channels, storekit.ChannelIdentityKey{Provider: recipient.Channel.Provider, ChannelUserID: recipient.Channel.ChannelUserID})
+			channels = append(channels, storekit.ChannelIdentityKey{Provider: recipient.Channel.Provider, ChannelUserID: storekit.ChannelSuppressionAccount(recipient.Channel.AccountScope, recipient.Channel.ChannelUserID)})
 		} else {
 			keys = append(keys, normalizeAddress(recipient.Email))
 			emails = append(emails, recipient.Email)

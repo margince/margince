@@ -16,7 +16,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
 )
 
@@ -148,15 +147,7 @@ type ingestEnvelope struct {
 // BusinessLink is what the capture side knows about the approved Telegram
 // Business link a business_message arrived through. The poller resolved it from
 // the message's connection id before anything was stored.
-type BusinessLink struct {
-	// AccountID is the owner's Telegram user id, the stable account. The
-	// connection id changes whenever the owner links the bot again.
-	AccountID   string
-	Ownership   connector.ChatOwnership
-	OwnerUserID ids.UUID
-	// SeatID is the seat the link's messages file through.
-	SeatID ids.UUID
-}
+type BusinessLink = connector.ChatLink
 
 // ParseChatMessage maps one raw envelope (connector.go's BuildRawEnvelope) to the
 // chat message it carries and the binding it files under. link is nil for a

@@ -11125,6 +11125,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "jobs.kind.technical_enrich_backfill": "Tra cứu kỹ thuật còn tồn đọng",
   "jobs.kind.technical_enrich_company": "Tra cứu kỹ thuật công ty",
   "jobs.kind.telegram_ingest": "Tiếp nhận tin nhắn Telegram",
+  "jobs.kind.whatsapp_ingest": "Tiếp nhận tin nhắn WhatsApp",
   "jobs.kind.telegram_poll": "Lấy tin nhắn Telegram",
   "jobs.kind.chat_link_flush": "Đăng vào kênh chat",
   "jobs.kind.chat_pull": "Tóm tắt kênh chat",

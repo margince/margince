@@ -9,8 +9,8 @@ Counting what another tool covers, it is 83.3%. Once every pending operation ope
 
 | Counted over | Operations | Open to an agent | Parity |
 |---|---:|---:|---:|
-| Every operation in the contract | 1146 | 882 | 76.9% |
-| Operations a signed-in user reaches | 1101 | 882 | 80.1% |
+| Every operation in the contract | 1152 | 882 | 76.5% |
+| Operations a signed-in user reaches | 1105 | 882 | 79.8% |
 | Operations the web app calls for a signed-in user | 967 | 779 | 80.5% |
 
 The last count answers the question of parity with the web app, so it leads this page. The first adds pages for visitors with no account, where no agent acts because no signed-in user does. The second adds routes where the scan found no web app call: 103 of those are open, so an agent can do them.
@@ -48,13 +48,13 @@ Each operation is in one group. Ask first is a part of Open, so leave it out of 
 |---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
 | [Business operations](#business-operations) | Sales work | 620 | 554 | 43 | 0 | 38 | 28 | 529 | 89.9% | 89.3% |
 | [Compliance and privacy](#compliance-and-privacy) | Compliance and privacy | 73 | 49 | 20 | 0 | 24 | 0 | 63 | 65.0% | 67.1% |
-| [Capture and connectors](#capture-and-connectors) | Email and calendar capture | 70 | 47 | 12 | 0 | 22 | 1 | 66 | 68.1% | 67.1% |
+| [Capture and connectors](#capture-and-connectors) | Email and calendar capture | 74 | 47 | 12 | 0 | 26 | 1 | 66 | 68.1% | 63.5% |
 | [Workspace settings a non-admin can reach](#workspace-settings-a-non-admin-can-reach) | Company settings | 89 | 69 | 5 | 0 | 12 | 8 | 75 | 82.6% | 77.5% |
 | [Admin settings](#admin-settings) | Admin settings | 163 | 120 | 33 | 0 | 42 | 1 | 152 | 75.6% | 73.6% |
 | [The user's own account and security](#the-users-own-account-and-security) | My account | 32 | 18 | 5 | 0 | 11 | 2 | 31 | 54.8% | 56.2% |
 | [Agent governance](#agent-governance) | every passport, in no area | 29 | 8 | 0 | 0 | 20 | 1 | 29 | 27.5% | 27.5% |
 | [Operator and system](#operator-and-system) | Admin settings, held as that area | 25 | 17 | 3 | 0 | 8 | 0 | 22 | 68.1% | 68.0% |
-| [Public, with no signed-in user](#public-with-no-signed-in-user) | none: no agent acts here | 45 | 0 | 0 | 0 | 0 | 0 | 34 | n/a | n/a |
+| [Public, with no signed-in user](#public-with-no-signed-in-user) | none: no agent acts here | 47 | 0 | 0 | 0 | 0 | 0 | 34 | n/a | n/a |
 
 ## Business operations
 
@@ -117,7 +117,7 @@ Passport area: Email and calendar capture.
 | Area | Operations | Open | Ask first | Pending | Security | Covered | Web app calls | Parity (web app) | Parity (signed-in) |
 |---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
 | Capture review | 22 | 18 | 3 | 0 | 4 | 0 | 20 | 85.0% | 81.8% |
-| Connectors and provider connections | 39 | 21 | 7 | 0 | 17 | 1 | 37 | 54.0% | 53.8% |
+| Connectors and provider connections | 43 | 21 | 7 | 0 | 21 | 1 | 37 | 54.0% | 48.8% |
 | Accounting source | 9 | 8 | 2 | 0 | 1 | 0 | 9 | 88.8% | 88.8% |
 
 ## Workspace settings a non-admin can reach
@@ -215,7 +215,7 @@ Passport area: none: no agent acts here.
 | Buyer deal rooms | 10 | 0 | 0 | 0 | 0 | 0 | 9 | n/a | n/a |
 | Booking and meeting pages | 14 | 0 | 0 | 0 | 0 | 0 | 12 | n/a | n/a |
 | Forms, confirmations and preference links | 8 | 0 | 0 | 0 | 0 | 0 | 6 | n/a | n/a |
-| Signed notices from connected chats | 1 | 0 | 0 | 0 | 0 | 0 | 0 | n/a | n/a |
+| Signed notices from connected chats | 3 | 0 | 0 | 0 | 0 | 0 | 0 | n/a | n/a |
 
 ## How an operation gets its group
 

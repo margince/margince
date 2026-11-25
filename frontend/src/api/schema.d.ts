@@ -11728,6 +11728,87 @@ export interface paths {
         patch: operations["updateTelegramBusinessConnectionVisibility"];
         trace?: never;
     };
+    "/channel-connections/whatsapp": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List the WhatsApp Business numbers connected to the workspace.
+         * @description Newest first. No secret is returned.
+         */
+        get: operations["listWhatsAppConnections"];
+        put?: never;
+        /**
+         * Connect a WhatsApp Business number to the workspace.
+         * @description Seals the access token and the app secret in the credential store and makes a live
+         *     connection for the phone number. No call to Meta is made. The response carries the
+         *     webhook verify token once; paste it into the Meta app's webhook settings together with
+         *     `<public_base_url>/v1/channel-events/whatsapp`. Margince keeps no copy the admin can read
+         *     again, so a lost verify token means disconnecting the number and connecting it again.
+         *
+         *     One live connection exists per phone number: connecting a number that is already
+         *     connected is a `409`.
+         */
+        post: operations["createWhatsAppConnection"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/channel-connections/whatsapp/{id}/visibility": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /**
+         * Change who may read a WhatsApp number's messages.
+         * @description Sets the mail visibility of the number's seat, as `PATCH /shared-mailboxes/{id}` does for a
+         *     shared mailbox and the Telegram Business route does for its accounts: the next message
+         *     follows it. `shared` needs `capture.shared_posture_allowed` and `classified` is refused,
+         *     both with `422`. The request must carry `confirm: true`. Admin only, in a signed-in session.
+         */
+        patch: operations["updateWhatsAppConnectionVisibility"];
+        trace?: never;
+    };
+    "/channel-connections/whatsapp/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /**
+         * Disconnect a WhatsApp Business number from the workspace.
+         * @description Archives the connection and destroys the sealed secrets. From then on the webhook route
+         *     stores nothing for the number. What its chats already filed stays.
+         */
+        delete: operations["disconnectWhatsAppConnection"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/channel-links/{record_type}/{id}": {
         parameters: {
             query?: never;
@@ -11880,6 +11961,40 @@ export interface paths {
          *     answered `200` `already_taken`, so Dispact stops retrying a notice whose answer it lost.
          */
         post: operations["receiveDispactChannelEvent"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/channel-events/whatsapp": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Answer Meta's webhook subscription check (anonymous).
+         * @description Meta calls this with `hub.mode=subscribe`, `hub.verify_token` and `hub.challenge` when
+         *     the webhook is saved. The answer is the challenge as plain text when the token is the
+         *     verify token of a connected number, and `403` otherwise, whether or not any number is
+         *     connected.
+         */
+        get: operations["verifyWhatsAppWebhook"];
+        put?: never;
+        /**
+         * Take a signed WhatsApp Business webhook delivery (anonymous).
+         * @description Meta posts a batch of messages, message echoes and delivery statuses, signed in
+         *     `X-Hub-Signature-256` (`sha256=<hex HMAC-SHA256 of the raw body>`) with the app secret.
+         *     The signature is checked against every connected number's app secret before the body is
+         *     read. Only items for a number whose own secret verified are kept: each is stored once
+         *     and queued for filing, in one transaction. An item for a number that is not connected, a
+         *     field this version does not handle and an item that cannot be decoded are skipped, and
+         *     the answer is still `200`, so Meta does not retry them. A redelivered item is stored
+         *     once.
+         */
+        post: operations["receiveWhatsAppWebhook"];
         delete?: never;
         options?: never;
         head?: never;
@@ -33631,6 +33746,72 @@ export interface components {
         };
         TelegramBusinessConnectionListResponse: {
             data: components["schemas"]["TelegramBusinessConnection"][];
+        };
+        /** @description One WhatsApp Business phone number connected to the workspace. No secret is part of it. */
+        WhatsAppConnection: {
+            /** Format: uuid */
+            id: string;
+            /** @description The WhatsApp Business Account id. */
+            wabaId: string;
+            /** @description Meta's id of the phone number, the key a webhook item is matched to its connection by. */
+            phoneNumberId: string;
+            /** @description The number in the form WhatsApp shows it. Display only. */
+            displayPhoneNumber: string;
+            /** @enum {string} */
+            status: "connected" | "disconnected";
+            /** Format: date-time */
+            connectedAt: string;
+            /**
+             * Format: uuid
+             * @description The seat the number's messages file through.
+             */
+            seatId?: string | null;
+            /**
+             * Format: uuid
+             * @description The team that reads the number's messages.
+             */
+            readerTeamId?: string | null;
+            /**
+             * @description What the seat asks of the number's messages. Changed with `PATCH /channel-connections/whatsapp/{id}/visibility`.
+             * @enum {string|null}
+             */
+            mailVisibility?: "held" | "shared" | null;
+        };
+        WhatsAppConnectionListResponse: {
+            data: components["schemas"]["WhatsAppConnection"][];
+        };
+        CreateWhatsAppConnectionRequest: {
+            /**
+             * Format: uuid
+             * @description The team that reads the number's messages. The number's seat starts `held`: only this team reads them until an admin shares them.
+             */
+            readerTeamId: string;
+            wabaId: string;
+            phoneNumberId: string;
+            displayPhoneNumber: string;
+            /** @description The system-user access token for the WhatsApp Business Account. Sealed into the credential store on arrival and never echoed back. */
+            accessToken: string;
+            /** @description The Meta app's secret, which signs each webhook delivery. Sealed into the credential store on arrival and never echoed back. */
+            appSecret: string;
+        };
+        WhatsAppConnectionCreated: {
+            connection: components["schemas"]["WhatsAppConnection"];
+            /** @description The token Meta sends in the webhook subscription check. Made by the server and shown only in this response. */
+            verifyToken: string;
+        };
+        /** @description One batch of changes from Meta, as the signature covers it. The route reads the raw body, so the items inside `entry` are decoded by the server and not described here. */
+        WhatsAppWebhookDelivery: {
+            /** @description Always `whatsapp_business_account`. */
+            object: string;
+            entry: {
+                [key: string]: unknown;
+            }[];
+        };
+        WhatsAppWebhookReceipt: {
+            /** @description Items kept and queued for filing. A redelivered item counts again and is stored once. */
+            stored: number;
+            /** @description Items not kept: a number that is not connected, a field not handled, or an item that could not be decoded. */
+            skipped: number;
         };
         ChannelConnectionListResponse: {
             data: components["schemas"]["ChannelConnection"][];
@@ -85843,6 +86024,149 @@ export interface operations {
             };
         };
     };
+    listWhatsAppConnections: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description WhatsApp connections. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WhatsAppConnectionListResponse"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["PermissionDenied"];
+            /** @description This deployment serves no messaging channels (`code: channel_connections_not_configured`). */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    createWhatsAppConnection: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateWhatsAppConnectionRequest"];
+            };
+        };
+        responses: {
+            /** @description The connection and its verify token. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WhatsAppConnectionCreated"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["PermissionDenied"];
+            409: components["responses"]["Conflict"];
+            422: components["responses"]["ValidationError"];
+            /** @description This deployment serves no messaging channels (`code: channel_connections_not_configured`), or has no credential store configured to seal the secrets in (`code: channel_credentials_not_configured`). */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    updateWhatsAppConnectionVisibility: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateTelegramBusinessConnectionVisibilityRequest"];
+            };
+        };
+        responses: {
+            /** @description The connection as it now stands. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WhatsAppConnection"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["PermissionDenied"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            422: components["responses"]["ValidationError"];
+            /** @description This deployment serves no messaging channels (`code: channel_connections_not_configured`). */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    disconnectWhatsAppConnection: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Disconnected. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["PermissionDenied"];
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
+            /** @description This deployment serves no messaging channels (`code: channel_connections_not_configured`), or has no credential store configured (`code: channel_credentials_not_configured`). */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
     getChannelLink: {
         parameters: {
             query?: never;
@@ -86213,6 +86537,118 @@ export interface operations {
                 };
             };
             /** @description This deployment takes no chat notices, or could not record the notice id (`code: channel_events_unavailable`); Dispact retries. */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    verifyWhatsAppWebhook: {
+        parameters: {
+            query?: {
+                /** @description Always `subscribe`. */
+                "hub.mode"?: string;
+                "hub.verify_token"?: string;
+                "hub.challenge"?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The challenge, echoed. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": string;
+                };
+            };
+            /** @description The token matches no connected number (`code: channel_event_rejected`). */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Rate-limited. */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description This deployment takes no WhatsApp events (`code: channel_events_unavailable`). */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    receiveWhatsAppWebhook: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["WhatsAppWebhookDelivery"];
+            };
+        };
+        responses: {
+            /** @description The delivery was taken. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WhatsAppWebhookReceipt"];
+                };
+            };
+            /** @description The body is signed by no connected number (`code: channel_event_rejected`). The answer is the same for each cause. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description The body is larger than a delivery can be (`code: channel_event_too_large`). */
+            413: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Rate-limited; Meta retries. */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description This deployment takes no WhatsApp events, or could not store the delivery (`code: channel_events_unavailable`); Meta retries. */
             503: {
                 headers: {
                     [name: string]: unknown;
