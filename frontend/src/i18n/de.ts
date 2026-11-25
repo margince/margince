@@ -3152,7 +3152,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "amount.refused.grouping":
     "Gib den Betrag ohne Tausendertrennzeichen ein, etwa {example}.",
   "amount.refused.notNumber": "Gib den Betrag in Ziffern ein, etwa {example}.",
-  "amount.refused.tooLarge": "Dieser Betrag ist zu groß zum Speichern.",
+  "amount.refused.tooLarge": "Gib einen Betrag von höchstens {max} ein.",
   "amount.refused.noCurrency": "Dieser Betrag braucht zuerst eine Währung.",
   "amount.waitsForCurrency": "Eingabe möglich, sobald eine Währung feststeht.",
   "amount.currencyUnread":

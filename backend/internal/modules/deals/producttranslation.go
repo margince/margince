@@ -22,6 +22,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/platform/httperr"
+	"github.com/margince/margince/backend/internal/platform/langcode"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -37,12 +38,26 @@ const (
 
 var languageShape = regexp.MustCompile(`^[a-z]{2}$`)
 
-// checkLanguage refuses anything but a lower-case ISO 639-1 code.
+// checkLanguage refuses anything but a lower-case ISO 639-1 code that names a
+// language, for a language about to be stored.
 func checkLanguage(language string) error {
-	if !languageShape.MatchString(language) {
-		return &values.ParseError{Field: languageField, Code: "invalid_language", Message: "language is an ISO 639-1 code, for example de"}
+	if !langcode.Known(language) {
+		return languageRefusal()
 	}
 	return nil
+}
+
+// checkLanguageShape takes any code of the stored shape, so a translation
+// stored before the registry check can still be named and deleted.
+func checkLanguageShape(language string) error {
+	if !languageShape.MatchString(language) {
+		return languageRefusal()
+	}
+	return nil
+}
+
+func languageRefusal() error {
+	return &values.ParseError{Field: languageField, Code: "invalid_language", Message: "language is an ISO 639-1 code, for example de"}
 }
 
 // ListProductTranslations answers a product's text in every further language.
@@ -137,7 +152,7 @@ func (s *Store) DeleteProductTranslation(ctx context.Context, id ids.ProductID, 
 	if err := auth.Require(ctx, "product", principal.ActionUpdate); err != nil {
 		return err
 	}
-	if err := checkLanguage(language); err != nil {
+	if err := checkLanguageShape(language); err != nil {
 		return err
 	}
 	return s.Tx(ctx, func(tx pgx.Tx) error {

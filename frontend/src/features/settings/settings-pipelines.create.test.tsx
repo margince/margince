@@ -251,6 +251,14 @@ describe("PipelinesCard: a new stage's win probability", () => {
     return { user, form };
   }
 
+  it("asks for the win probability of an open stage before sending", async () => {
+    const posted: unknown[] = [];
+    const { user, form } = await openNewStage(posted);
+    await user.click(form.getByRole("button", { name: "Create" }));
+    expect(await form.findByText("Win probability is required.")).toBeTruthy();
+    expect(posted).toEqual([]);
+  });
+
   it("asks for a whole number before sending", async () => {
     const posted: unknown[] = [];
     const { user, form } = await openNewStage(posted);

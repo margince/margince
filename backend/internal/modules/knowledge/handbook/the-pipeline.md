@@ -60,7 +60,7 @@ Any real activity clears the mark; opening the record does not. If the deal was 
 
 ### How do I change the pipeline stages?
 To add, rename, reorder or remove stages, open the account menu → **Settings** → **Deals** (in the **Sales** group). With more than one pipeline, choose it under **All pipelines**.
-1. To add a stage, choose **New stage**. Fill in **Name**, **Stage type** (Open, Won or Lost) and **Win probability** (0 to 100).
+1. To add a stage, choose **New stage**. Fill in **Name**, **Stage type** (Open, Won or Lost) and **Win probability** (0 to 100). An open stage needs a win probability.
 2. A new open stage goes after the other open stages.
 3. To change a stage, open the **…** menu on its row and choose **Edit stage**. **Name in English**, **Name in German** and **Name in Vietnamese** give the stage a name per language. A colleague whose Margince is in that language sees it on deals and reports. The others see **Name**, and the row lists the names given.
 4. To reorder, drag an open stage by its handle, or select the handle and press the up or down arrow.
