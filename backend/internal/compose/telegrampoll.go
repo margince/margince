@@ -304,6 +304,17 @@ func (w *telegramPollWorker) persist(wsCtx context.Context, target capture.Chann
 					"connection", target.ID.String(), "update_id", update.updateID)
 				continue
 			}
+			// A business message is stored only through an approved link. Nothing of
+			// one that is not is kept, and the log carries no content.
+			linkID, admitted, err := capture.AdmitTelegramUpdateTx(wsCtx, tx, target.ID, update.raw)
+			if err != nil {
+				return err
+			}
+			if !admitted {
+				w.log.InfoContext(wsCtx, "telegram_poll: refused a business message that no approved link carries",
+					"connection", target.ID.String(), "update_id", update.updateID)
+				continue
+			}
 			rawID, err := capture.InsertRawCaptureTx(wsCtx, tx, capture.RawRecord{
 				SourceSystem: capture.ProviderTelegram,
 				SourceID:     telegram.RawSourceID(target.ChannelID, update.updateID),
@@ -313,10 +324,11 @@ func (w *telegramPollWorker) persist(wsCtx context.Context, target capture.Chann
 				return err
 			}
 			if err := w.inserter.EnqueueTx(wsCtx, tx, TelegramIngestArgs{
-				Workspace:    target.WorkspaceID,
-				ConnectionID: target.ID.String(),
-				BotID:        target.ChannelID,
-				RawCaptureID: rawID.String(),
+				Workspace:      target.WorkspaceID,
+				ConnectionID:   target.ID.String(),
+				BotID:          target.ChannelID,
+				RawCaptureID:   rawID.String(),
+				BusinessLinkID: linkID,
 			}, &river.InsertOpts{
 				// One-off: this raw payload arrived once and no scan re-ingests
 				// it, so the ladder carries the database blip alone.
