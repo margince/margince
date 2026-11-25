@@ -252,3 +252,5 @@
 1795388888_the_basis_vocabulary_names_no_country_validated.down.sql | * | the down migration is a single SELECT 1 that changes nothing
 1795449105_an_archived_record_leaves_its_chat_channel.up.sql | *, audit_log, chat_link | touches only live chat links whose deal or project is archived, with one audit row each; a link is a channel a member chose by hand for one deal or project, so the set is the links people made
 1795449105_an_archived_record_leaves_its_chat_channel.down.sql | * | the down migration is a single SELECT 1 that changes nothing
+1795540594_a_host_keeps_team_links_beside_the_personal_link.up.sql | booking_page | revokes a host's older live booking pages; every writer kept one live page per host, so the set is empty or a handful
+1795540594_a_host_keeps_team_links_beside_the_personal_link.down.sql | booking_page | revokes the live team links, at most a few per member

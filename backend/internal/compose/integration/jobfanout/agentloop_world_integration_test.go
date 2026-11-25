@@ -145,20 +145,34 @@ func wallNow() time.Time { return time.Now().UTC() }
 // clock as they run, so a case that straddles midnight reads another day.
 const dayHeadroom = 10 * time.Minute
 
-// requireDayHeadroom fails as a harness error when a day boundary a case depends
-// on is too close. The sweep counts a note per UTC day. The brief is one run per
-// local day. Rerunning a few minutes later is the whole remedy.
+// requireDayHeadroom waits out a day boundary a case depends on when it is too
+// close. The sweep counts a note per UTC day. The brief is one run per local
+// day. Waiting at most dayHeadroom for the next day is what a rerun would do,
+// so callers ask before they seed anything dated by the day.
 func (re *runnerEnv) requireDayHeadroom(t *testing.T, sc agentloope2e.Scenario) {
 	t.Helper()
-	now := wallNow()
 	loc := time.UTC
 	if sc.Agent == agentloope2e.MorningBrief {
 		loc = re.installationZone(t)
 	}
+	waitOutDayEnd(t, wallNow(), loc, time.After)
+}
+
+// waitOutDayEnd waits on after until the day in loc that now falls in is over,
+// when less than dayHeadroom of it is left.
+func waitOutDayEnd(t *testing.T, now time.Time, loc *time.Location, after func(time.Duration) <-chan time.Time) {
+	t.Helper()
 	local := now.In(loc)
 	midnight := time.Date(local.Year(), local.Month(), local.Day()+1, 0, 0, 0, 0, loc)
-	if left := midnight.Sub(now); left < dayHeadroom {
-		t.Fatalf("harness: only %s remain of the day this case reads, and it needs %s; rerun", left.Round(time.Second), dayHeadroom)
+	left := midnight.Sub(now)
+	if left >= dayHeadroom {
+		return
+	}
+	t.Logf("harness: only %s remain of the day this case reads; it waits for the next day", left.Round(time.Second))
+	select {
+	case <-after(left + time.Second):
+	case <-t.Context().Done():
+		t.Fatal("harness: the test ended while it waited for the next day")
 	}
 }
 
@@ -195,5 +209,30 @@ func (re *runnerEnv) assertDayHeld(t *testing.T, sc agentloope2e.Scenario, world
 	}
 	if status := re.Call(t, "GET", "/v1/brief", nil, nil, &run); status != http.StatusOK || run.LocalDay != world.day {
 		t.Fatalf("harness: the brief was seeded for %s and now reads %q (status %d); rerun the case", world.day, run.LocalDay, status)
+	}
+}
+
+// A case that starts too close to midnight waits for the next day instead of
+// failing. One with the day ahead of it does not wait.
+func TestACaseNearMidnightWaitsForTheNextDay(t *testing.T) {
+	for name, tc := range map[string]struct {
+		now  time.Time
+		wait time.Duration
+	}{
+		"two minutes left": {time.Date(2025, 3, 10, 23, 58, 0, 0, time.UTC), 2*time.Minute + time.Second},
+		"the day ahead":    {time.Date(2025, 3, 10, 9, 0, 0, 0, time.UTC), 0},
+	} {
+		t.Run(name, func(t *testing.T) {
+			var asked time.Duration
+			waitOutDayEnd(t, tc.now, time.UTC, func(d time.Duration) <-chan time.Time {
+				asked = d
+				done := make(chan time.Time, 1)
+				done <- tc.now.Add(d)
+				return done
+			})
+			if asked != tc.wait {
+				t.Errorf("waited %s, want %s", asked, tc.wait)
+			}
+		})
 	}
 }

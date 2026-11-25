@@ -37,7 +37,7 @@ func servedSelections(t *testing.T, tool string) []selectionFields {
 		t.Fatalf("%s is not served", tool)
 	}
 	var listed selectionFields
-	if err := json.Unmarshal(spec.InputSchema, &listed); err != nil {
+	if err := json.Unmarshal(registry.ForListing(spec).InputSchema, &listed); err != nil {
 		t.Fatalf("%s: %v", tool, err)
 	}
 	if listed.Properties.Selection.Properties != nil {

@@ -114,7 +114,10 @@ func RegisterRouteVerbs(r *Registry, verbs []RouteVerb, run RouteRunner) {
 	if len(verbs) == 0 {
 		return
 	}
-	r.Register(describeRouterActions{verbs: verbs, runs: r.routerRunSpec, choices: r.routerChoices, offered: r.offeredActions})
+	r.Register(describeRouterActions{
+		verbs: verbs, runs: r.routerRunSpec, choices: r.routerChoices, offered: r.offeredActions,
+		wording: r.lister, selector: r.actionField,
+	})
 	r.mu.Lock()
 	r.routeActions[readWorkspaceName] = map[string]string{routeActionsTopic: describeRouterActionsName}
 	r.mu.Unlock()
@@ -412,6 +415,10 @@ type describeRouterActions struct {
 	// offered says which of a router's actions the caller's tools/list offers,
 	// and false when it offers the router not at all.
 	offered func(ctx context.Context, router string) (func(action string) bool, bool)
+	// wording words a target's spec as the listing words it, built once per answer.
+	wording func() lister
+	// selector names the member a router picks its action by.
+	selector func(router string) string
 }
 
 func (d describeRouterActions) routers() []string {
