@@ -134,6 +134,7 @@ func TestAMisusedCommandSaysWhy(t *testing.T) {
 	}
 	for _, args := range [][]string{
 		nil, {"stamps"}, {"current"}, {"newly-stale"}, {"made-up"}, {"report", "-no-such-flag"},
+		{"current", "-root", dir, "-out", filepath.Join(dir, "current.json")},
 		{"newly-stale", "-base-current", filepath.Join(dir, "missing.json")},
 		{"newly-stale", "-base-current", notJSON},
 		{"newly-stale", "-base-current", null},
