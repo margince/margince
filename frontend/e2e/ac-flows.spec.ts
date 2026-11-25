@@ -563,11 +563,7 @@ test.describe("filters and views", () => {
     await expect(page.getByRole("cell", { name: "logistics" })).toHaveCount(0);
     // The caption says 812 match and two are shown, so the reader knows this
     // is a sample rather than the whole selection.
-    await expect(
-      page.getByText(
-        "Erste Seite der Treffer, zum Prüfen des Filters. Nicht die vollständige Auswahl.",
-      ),
-    ).toBeVisible();
+    await expect(page.getByText(de["filters.resultsCaption"])).toBeVisible();
   });
 
   // The 390px sweep visits the library. A written condition adds a clause row

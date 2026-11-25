@@ -20731,6 +20731,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "filters.values": "Werte",
   "filters.addValue": "Wert hinzuf\u00fcgen",
   "filters.removeClause": "Bedingung {field} entfernen",
+  "filters.removeEmptyClause": "Bedingung entfernen",
   "filters.existsLabel": "Feld hat einen Wert",
   "filters.hasValue": "hat einen Wert",
   "filters.isEmpty": "ist leer",
@@ -21131,13 +21132,19 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "filters.noFields": "Keine filterbaren Felder f\u00fcr diesen Datensatztyp.",
   "filters.resultsTitle": "Passende Datens\u00e4tze",
   "filters.resultRefGone": "Entfernt oder für dich nicht sichtbar",
-  "filters.resultsCaption":
-    "Erste Seite der Treffer, zum Prüfen des Filters. Nicht die vollständige Auswahl.",
+  "filters.resultsCaption": "Ein Ausschnitt der Treffer",
   "filters.noMatches":
     "Keine {records} passen zu diesen Bedingungen. Lockere eine: Stelle eine Verknüpfung auf „oder“ um oder entferne die genaueste Bedingung.",
   "filters.noMatchesLoosen":
     "Keine {records} passen zu diesem Filter. Lockere oder entferne eine Bedingung.",
-  "filters.pickRecord": "Datensatz auswählen",
+  "filters.pickTag": "Tag auswählen",
+  "filters.pickOwner": "Verantwortung auswählen",
+  "filters.pickTeam": "Team auswählen",
+  "filters.pickCompany": "Unternehmen auswählen",
+  "filters.pickPipeline": "Pipeline auswählen",
+  "filters.pickStage": "Phase auswählen",
+  "filters.pickProject": "Projekt auswählen",
+  "filters.pickProduct": "Produkt auswählen",
   "filters.searchRecords": "Unternehmen durchsuchen",
   "filters.typeToSearch": "Zum Suchen tippen",
   "filters.searching": "Wird gesucht…",
@@ -21147,6 +21154,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "filters.removeRecord": "{record} entfernen",
   "filters.loadingRecords": "Auswahl wird geladen…",
   "filters.pickValue": "Wert auswählen",
+  "filters.you": "Du",
   "filters.amountUnpriced":
     "Dieser Betrag hat keine bekannte Währung und kann deshalb weder angezeigt noch geändert werden.",
   "filters.exportCsv": "CSV exportieren",

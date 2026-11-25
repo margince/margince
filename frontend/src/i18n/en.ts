@@ -20497,6 +20497,7 @@ export const en = {
   "filters.values": "Values",
   "filters.addValue": "Add value",
   "filters.removeClause": "Remove {field} condition",
+  "filters.removeEmptyClause": "Remove condition",
   "filters.existsLabel": "Field has value",
   "filters.hasValue": "has a value",
   "filters.isEmpty": "is empty",
@@ -20889,13 +20890,19 @@ export const en = {
   "filters.noFields": "No filterable fields for this record type.",
   "filters.resultsTitle": "Matching records",
   "filters.resultRefGone": "Removed, or hidden from you",
-  "filters.resultsCaption":
-    "First page of matches, for checking the filter. Not the full selection.",
+  "filters.resultsCaption": "A sample of the matches",
   "filters.noMatches":
     "No {records} match these conditions. Loosen one: switch a connector to “or”, or remove the most specific condition.",
   "filters.noMatchesLoosen":
     "No {records} match this filter. Loosen or remove a condition.",
-  "filters.pickRecord": "Select record",
+  "filters.pickTag": "Select tag",
+  "filters.pickOwner": "Select owner",
+  "filters.pickTeam": "Select team",
+  "filters.pickCompany": "Select company",
+  "filters.pickPipeline": "Select pipeline",
+  "filters.pickStage": "Select stage",
+  "filters.pickProject": "Select project",
+  "filters.pickProduct": "Select product",
   "filters.searchRecords": "Search companies",
   "filters.typeToSearch": "Type to search",
   "filters.searching": "Searching…",
@@ -20905,6 +20912,7 @@ export const en = {
   "filters.removeRecord": "Remove {record}",
   "filters.loadingRecords": "Loading choices…",
   "filters.pickValue": "Select value",
+  "filters.you": "You",
   "filters.amountUnpriced":
     "This amount has no known currency, so it cannot be shown or changed.",
   "filters.exportCsv": "Export CSV",

@@ -751,6 +751,7 @@ const HUMAN_SENSE_KEYS: Record<string, readonly string[]> = {
     "files.originUnknown",
     "lead.boardCountsOwnerNotMeasurable",
     "lead.bulkOwnerPick",
+    "filters.pickOwner",
     "log.transcriptHint",
     "ob.manual.buying_centerHint",
     "contact.intro.answerSuggest",

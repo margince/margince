@@ -6,12 +6,14 @@
 // than in scalars.
 
 import { X } from "lucide-react";
-import { useState } from "react";
+import { useLayoutEffect, useRef, useState } from "react";
 import { useEntityName } from "../../components/entityref.queries";
+import { Button } from "../../design-system/atoms";
 import {
   type SearchResult,
   useDebouncedSearch,
 } from "../../design-system/debouncedsearch";
+import { SuggestPopup, useSuggestList } from "../../design-system/suggestlist";
 import { useT } from "../../i18n";
 import "./filterbuilder.css";
 import { searchCompanies } from "../../components/filterreference";
@@ -94,31 +96,17 @@ export function chosenIDs(value: LeafValue): readonly string[] {
   return typeof value === "string" && value !== "" ? [value] : [];
 }
 
-/**
- * The one reference too large to list: a company, found by typing part of
- * its name.
- *
- * A box was the previous answer and it was the wrong one for the reason this
- * whole surface exists: a uuid typed wrong compiles, matches nothing, and reads
- * as "no companies match" rather than as a mistake. Nobody types a uuid
- * correctly from memory anyway, so the box was asking for a paste from another
- * screen.
- *
- * The typed words are NEVER the value. The input searches and the value is only
- * ever an id the reader picked out of an answer, which is what makes it
- * impossible to compose a clause the engine would refuse.
- *
- * Once chosen, the name stands in place of the search box with a way back to it:
- * a picker that kept showing its search box would leave the reader unsure
- * whether their choice took.
- */
+/** The typed words are never the value, only an id picked from an answer, so
+ *  no clause written here is one the engine would refuse. */
 export function SearchedRecordValue({
   many,
   value,
   onChange,
   label,
+  placeholder,
 }: Readonly<{
   label?: string;
+  placeholder: string;
   many: boolean;
   value: LeafValue;
   onChange: (next: LeafValue) => void;
@@ -128,17 +116,21 @@ export function SearchedRecordValue({
   const [query, setQuery] = useState("");
   // Names the reader just picked, shown before the name lookup has answered.
   const [names, setNames] = useState<ReadonlyMap<string, string>>(new Map());
+  // Only the reader's own pick moves focus; a clause restored from a saved
+  // view takes none.
+  const [picked, setPicked] = useState(false);
+  const box = useRef<HTMLInputElement>(null);
+  const change = useRef<HTMLButtonElement>(null);
+  const popup = useRef<HTMLDivElement>(null);
   const { results, pending, failed } = useDebouncedSearch(
     searchCompanies,
     query,
   );
   const ids = chosenIDs(value);
 
-  function remember(option: SearchResult) {
-    setNames((was) => new Map(was).set(option.value, option.label));
-  }
   function pick(option: SearchResult) {
-    remember(option);
+    setNames((was) => new Map(was).set(option.value, option.label));
+    setPicked(true);
     setQuery("");
     onChange(many ? [...ids, option.value] : option.value);
   }
@@ -146,10 +138,31 @@ export function SearchedRecordValue({
     onChange(many ? ids.filter((held) => held !== id) : "");
   }
 
+  const list = useSuggestList({
+    anchorRef: box,
+    popupRef: popup,
+    suggestions: query ? results : [],
+    // Not the typed words: the server matched them by more than the name. A
+    // second match here would hide the companies it found that way.
+    typed: "",
+    taken: (id) => ids.includes(id),
+    onPick: (id) => {
+      const option = results.find((result) => result.value === id);
+      if (option) {
+        pick(option);
+      }
+    },
+  });
+
   // A single comparison names one record, so once it is named the search box
   // has nothing left to do and the name stands in its place. A list keeps the
   // box open beneath what it already holds, because the next pick is the point.
   const closed = !many && ids.length > 0;
+  useLayoutEffect(() => {
+    if (picked) {
+      (closed ? change : box).current?.focus();
+    }
+  }, [closed, picked]);
 
   return (
     <div className="filter-value">
@@ -160,49 +173,51 @@ export function SearchedRecordValue({
         lookup="company"
       />
       {closed ? (
-        <button
-          type="button"
-          className="btn-link"
+        <Button
+          ref={change}
+          variant="link"
           onClick={() => {
             setQuery("");
             onChange("");
           }}
         >
           {t("filters.changeRecord")}
-        </button>
+        </Button>
       ) : (
         <>
           <label>
             <span className="sr-only">{searchName}</span>
             <input
+              ref={box}
               className="input"
+              {...list.fieldAria}
+              autoComplete="off"
               value={query}
-              placeholder={t("filters.searchRecords")}
-              onChange={(event) => setQuery(event.target.value)}
+              placeholder={placeholder}
+              onChange={(event) => {
+                setQuery(event.target.value);
+                list.retype();
+              }}
+              onFocus={list.show}
+              onBlur={list.close}
+              onKeyDown={list.navigate}
             />
           </label>
+          <SuggestPopup list={list} />
           {/* Each state says which one it is. An empty list with no line above
               it is the failure this control exists to avoid: it reads as a
               confident "this workspace has none" for a question that never got
               an answer. */}
-          {!query && <p>{t("filters.typeToSearch")}</p>}
-          {query && pending && <p>{t("filters.searching")}</p>}
+          {!query && <p className="t-caption">{t("filters.typeToSearch")}</p>}
+          {query && pending && (
+            <p className="t-caption">{t("filters.searching")}</p>
+          )}
           {query && failed && (
             <p className="error">{t("filters.searchFailed")}</p>
           )}
           {query && !pending && !failed && results.length === 0 && (
-            <p>{t("filters.noRecordMatches")}</p>
+            <p className="t-caption">{t("filters.noRecordMatches")}</p>
           )}
-          {results.map((option) => (
-            <button
-              type="button"
-              key={option.value}
-              className="btn-link"
-              onClick={() => pick(option)}
-            >
-              {option.label}
-            </button>
-          ))}
         </>
       )}
     </div>

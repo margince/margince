@@ -11,7 +11,9 @@ import { Select } from "../../design-system/select";
 import { formatNumber } from "../../format/format";
 import { INDUSTRY_FIELD, industryWords } from "../../format/industry";
 import { useLocale, useT } from "../../i18n";
+import type { MessageKey } from "../../i18n/en";
 import "./filterbuilder.css";
+import { youThenByName } from "../../components/assigneepicker";
 import { RosterPartialNote } from "../../components/entityref";
 import {
   boundedReference,
@@ -25,6 +27,7 @@ import {
   type LeafValue,
   MAX_DAYS_AGO,
 } from "../../lib/segmentpredicate";
+import { useMe } from "../../lib/session";
 import { MoneyControl } from "./filtervalue.money";
 import { ListValue, NumberValue } from "./filtervalue.number";
 import { RadiusValue } from "./filtervalue.radius";
@@ -156,13 +159,23 @@ export function ValueControl({
   );
 }
 
+/** What an empty picker asks for, named by the kind of record it lists. */
+const PICK_PROMPT: Readonly<Record<Reference, MessageKey>> = {
+  tag: "filters.pickTag",
+  app_user: "filters.pickOwner",
+  team: "filters.pickTeam",
+  company: "filters.pickCompany",
+  pipeline: "filters.pickPipeline",
+  stage: "filters.pickStage",
+  project: "filters.pickProject",
+  product: "filters.pickProduct",
+};
+
 /**
  * An id comparison as the RECORDS it names, whether it names one or a list.
  *
- * Which control depends on the target and not on the operator: a set this
- * module can read whole is a list to pick from, and the one that cannot be —
- * companies, as many as the workspace has customers — is searched. `many`
- * only decides whether picking replaces the value or appends to it.
+ * Which control depends on the target (`boundedReference`), not on the
+ * operator. `many` only decides whether picking replaces the value or appends.
  */
 function ReferenceValue({
   reference,
@@ -179,6 +192,7 @@ function ReferenceValue({
   value: LeafValue;
   onChange: (next: LeafValue) => void;
 }>) {
+  const t = useT();
   if (boundedReference(reference)) {
     return (
       <RecordValue
@@ -197,6 +211,7 @@ function ReferenceValue({
       value={value}
       onChange={onChange}
       label={label}
+      placeholder={t(PICK_PROMPT[reference])}
     />
   );
 }
@@ -204,10 +219,7 @@ function ReferenceValue({
 /**
  * An id comparison as the RECORD it names, not its uuid.
  *
- * Only for a target the options module can enumerate. A company reference
- * falls through to the plain box, because a workspace's accounts are as many as
- * its customers and a dropdown cannot hold them — the async picker that case
- * needs is its own change, and a half-filled list would be worse than a box.
+ * A member list starts with the reader.
  *
  * A stored id whose record is gone still shows: Select renders its placeholder
  * for a value matching no option, so the clause reads as needing attention
@@ -222,16 +234,23 @@ function RecordValue({
   label,
 }: Readonly<{
   label?: string;
-  reference: Reference | undefined;
+  reference: Reference;
   type: VocabularyField["type"];
   many: boolean;
   value: LeafValue;
   onChange: (next: LeafValue) => void;
 }>) {
   const t = useT();
+  const { locale } = useLocale();
   const noteId = useId();
+  const viewerId = useMe().data?.user.id;
   const name = label ?? t("filters.value");
-  const { options, loading, failed, partial } = useReferenceOptions(reference);
+  const read = useReferenceOptions(reference);
+  const { loading, failed, partial } = read;
+  const options =
+    reference === "app_user"
+      ? youThenByName(read.options, viewerId, t("filters.you"), locale)
+      : read.options;
   const ids = chosenIDs(value);
   // A read that failed falls back to the plain box rather than to an empty
   // dropdown. An empty list would tell the reader this workspace has no such
@@ -268,7 +287,7 @@ function RecordValue({
         onChange={(next) => onChange(many ? [...ids, String(next)] : next)}
         disabled={loading}
         placeholder={
-          loading ? t("filters.loadingRecords") : t("filters.pickRecord")
+          loading ? t("filters.loadingRecords") : t(PICK_PROMPT[reference])
         }
         aria-label={name}
         aria-describedby={partial ? noteId : undefined}

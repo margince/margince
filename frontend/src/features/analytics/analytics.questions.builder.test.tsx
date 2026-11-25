@@ -263,10 +263,10 @@ describe("the question builder", () => {
       );
     }
     expect(
-      screen.getByRole("textbox", { name: "Value, filter 1" }),
+      screen.getByRole("combobox", { name: "Value, filter 1" }),
     ).toBeTruthy();
     expect(
-      screen.getByRole("textbox", { name: "Value, filter 2" }),
+      screen.getByRole("combobox", { name: "Value, filter 2" }),
     ).toBeTruthy();
   });
 });

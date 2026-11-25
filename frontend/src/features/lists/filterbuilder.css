@@ -114,6 +114,11 @@
   margin: 0;
 }
 
+/* The way back to the search box is a word, not a full-width bar. */
+.filter-value > .btn-link {
+  align-self: flex-start;
+}
+
 /* A chosen record reads as the name it was picked under, not as a control that
  * still looks unanswered. */
 .filter-picked {

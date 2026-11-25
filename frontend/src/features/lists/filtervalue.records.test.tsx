@@ -4,11 +4,16 @@
 
 import "@testing-library/jest-dom/vitest";
 
-import { cleanup, render, screen } from "@testing-library/react";
+import { cleanup, render, screen, within } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
+import { useState } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { en } from "../../i18n/en";
+import type { LeafValue } from "../../lib/segmentpredicate";
 import { recordNamesRoutes } from "../../testing/recordnames.testkit";
 import {
   installFetchStub,
+  jsonResponse,
   meRoute,
   StoryProviders,
 } from "../../testing/story-utils";
@@ -26,7 +31,12 @@ describe("a company clause restored from a saved view", () => {
     });
     render(
       <StoryProviders>
-        <SearchedRecordValue many value={[ID]} onChange={vi.fn()} />
+        <SearchedRecordValue
+          many
+          value={[ID]}
+          onChange={vi.fn()}
+          placeholder={en["filters.pickCompany"]}
+        />
       </StoryProviders>,
     );
     expect(await screen.findByText("Demo GmbH")).toBeInTheDocument();
@@ -34,5 +44,72 @@ describe("a company clause restored from a saved view", () => {
       screen.getByRole("button", { name: "Remove Demo GmbH" }),
     ).toBeInTheDocument();
     expect(screen.queryByText(ID)).not.toBeInTheDocument();
+  });
+});
+
+function OneCompany() {
+  const [value, setValue] = useState<LeafValue>("");
+  return (
+    <>
+      <SearchedRecordValue
+        many={false}
+        value={value}
+        onChange={setValue}
+        placeholder={en["filters.pickCompany"]}
+      />
+      <output>{JSON.stringify(value)}</output>
+    </>
+  );
+}
+
+describe("searching for a company", () => {
+  it("offers the answers as a suggestion list the keyboard walks", async () => {
+    installFetchStub({
+      "GET /me": meRoute({ company: ["read"] }),
+      "GET /companies": () =>
+        jsonResponse({
+          data: [
+            { id: ID, display_name: "Demo GmbH" },
+            { id: "c-2", display_name: "Demo Labs" },
+          ],
+          page: { next_cursor: null, has_more: false },
+        }),
+      ...recordNamesRoutes({ company: { [ID]: "Demo GmbH" } }),
+    });
+    const user = userEvent.setup();
+    render(
+      <StoryProviders>
+        <OneCompany />
+      </StoryProviders>,
+    );
+
+    const box = screen.getByRole("combobox", {
+      name: en["filters.searchRecords"],
+    });
+    expect(box).toHaveAttribute("placeholder", en["filters.pickCompany"]);
+    await user.type(box, "Demo");
+    const list = await screen.findByRole("listbox");
+    expect(
+      within(list)
+        .getAllByRole("option")
+        .map((option) => option.textContent),
+    ).toEqual(["Demo GmbH", "Demo Labs"]);
+
+    await user.keyboard("{Escape}");
+    expect(screen.queryByRole("listbox")).toBeNull();
+    expect(box).toHaveValue("Demo");
+    expect(screen.getByRole("status", { hidden: true })).toHaveTextContent(
+      '""',
+    );
+
+    await user.keyboard("{ArrowDown}{Enter}");
+    expect(screen.getByRole("status", { hidden: true })).toHaveTextContent(
+      JSON.stringify(ID),
+    );
+    // The name stands where the box was, and focus moves to the way back.
+    expect(screen.getByText("Demo GmbH")).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: en["filters.changeRecord"] }),
+    ).toHaveFocus();
   });
 });

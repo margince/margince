@@ -20166,6 +20166,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "filters.values": "Danh sách giá trị",
   "filters.addValue": "Th\u00eam gi\u00e1 tr\u1ecb",
   "filters.removeClause": "Gỡ điều kiện {field}",
+  "filters.removeEmptyClause": "Gỡ điều kiện",
   "filters.existsLabel": "Trường có giá trị",
   "filters.hasValue": "c\u00f3 gi\u00e1 tr\u1ecb",
   "filters.isEmpty": "trống",
@@ -20573,13 +20574,19 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "filters.noFields": "Loại hồ sơ này không có trường nào lọc được.",
   "filters.resultsTitle": "Hồ sơ khớp",
   "filters.resultRefGone": "Đã bị xóa hoặc bạn không xem được",
-  "filters.resultsCaption":
-    "Trang đầu của kết quả khớp, để kiểm tra bộ lọc. Không phải toàn bộ lựa chọn.",
+  "filters.resultsCaption": "Một phần kết quả khớp",
   "filters.noMatches":
     "Không có {records} nào khớp các điều kiện này. Nới lỏng một điều kiện: đổi một “và” thành “hoặc”, hoặc gỡ điều kiện cụ thể nhất.",
   "filters.noMatchesLoosen":
     "Không có {records} nào khớp bộ lọc này. Nới lỏng hoặc gỡ một điều kiện.",
-  "filters.pickRecord": "Chọn hồ sơ",
+  "filters.pickTag": "Chọn thẻ",
+  "filters.pickOwner": "Chọn người chịu trách nhiệm",
+  "filters.pickTeam": "Chọn nhóm",
+  "filters.pickCompany": "Chọn công ty",
+  "filters.pickPipeline": "Chọn quy trình bán hàng",
+  "filters.pickStage": "Chọn giai đoạn",
+  "filters.pickProject": "Chọn dự án",
+  "filters.pickProduct": "Chọn sản phẩm",
   "filters.searchRecords": "Tìm công ty",
   "filters.typeToSearch": "Nhập để tìm",
   "filters.searching": "Đang tìm…",
@@ -20589,6 +20596,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "filters.removeRecord": "Gỡ {record}",
   "filters.loadingRecords": "\u0110ang t\u1ea3i l\u1ef1a ch\u1ecdn\u2026",
   "filters.pickValue": "Ch\u1ecdn gi\u00e1 tr\u1ecb",
+  "filters.you": "Bạn",
   "filters.amountUnpriced":
     "Số tiền này không có loại tiền xác định nên không thể hiển thị hoặc thay đổi.",
   "filters.exportCsv": "Xu\u1ea5t CSV",
