@@ -297,7 +297,9 @@ func TestRemovingALinkDeletesTheRowAndAuditsIt(t *testing.T) {
 
 func TestALinkIsRemovableExactlyWhereDeleteSucceeds(t *testing.T) {
 	e := setupLinks(t)
-	incoming, err := e.store.Create(e.seat(e.other, false, full()),
+	// The colleague who owns the first deal links it to the caller's renewal; an
+	// all-rows seat may add to a deal it does not own.
+	incoming, err := e.store.Create(e.seat(e.other, true, full()),
 		NewLink{FromType: "deal", FromID: e.theirs, ToType: "deal", ToID: e.renewal, LinkType: "related_to"})
 	if err != nil {
 		t.Fatal(err)

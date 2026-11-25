@@ -904,12 +904,12 @@ Ship two more indexes in the unit's migrations, because core's reads over your t
 
 | Read | Index the table must hold |
 |---|---|
-| Search | A trigram index over the lower-cased title column: `CREATE INDEX ON ext.<table> USING gin (lower(<title>) public.gin_trgm_ops)`. The title column is the `LabelField` of the `Timeline`, or else the first `NaturalKey` field. |
-| History, for each entry of `Timeline.Subjects` | A btree index whose first column is the subject's `Column` and whose second is the `AtColumn`: `CREATE INDEX ON ext.<table> (<column>, <at column>)`. |
+| Search | A text search index over the lower-cased title column: `CREATE INDEX ON ext.<table> USING gin (lower(<title>) public.gin_trgm_ops)`. The title column is the `LabelField` of the `Timeline`, or else the first `NaturalKey` field. |
+| History, for each entry of `Timeline.Subjects` | An index whose first column is the subject's `Column` and whose second is the `AtColumn`: `CREATE INDEX ON ext.<table> (<column>, <at column>)`. |
 
-Each index covers every row, so give it no `WHERE` clause. The service reports itself unready while your table, a
-column, the unique index or one of these indexes is missing, and while such an index is not valid, as after a failed
-`CREATE INDEX CONCURRENTLY`.
+Each index covers every row, so give it no `WHERE`. The service reports itself unready while your table, a column,
+the unique index or one of these indexes is missing. It does the same while such an index is not valid, as after a
+failed `CREATE INDEX CONCURRENTLY`.
 The message names the statement that adds a missing index. It does the same while `margince_app` holds fewer than the
 four rights on the table.
 

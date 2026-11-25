@@ -215,7 +215,9 @@ func (s *Store) ListLinkSuggestions(ctx context.Context) ([]crmcontracts.LinkSug
 		return nil, err
 	}
 	out := []crmcontracts.LinkSuggestion{}
-	if actor, ok := principal.Actor(ctx); !ok || !actor.SeatType.CanMutate() {
+	// The HTTP admission refuses a mutation only to a read seat, so only a read
+	// seat is told it may decide nothing.
+	if actor, ok := principal.Actor(ctx); !ok || actor.SeatType == principal.SeatRead {
 		return out, nil
 	}
 	// A "no" below is the answer for one row, not the call's refusal, so the
@@ -340,11 +342,13 @@ func pendingSuggestions(ctx context.Context, tx pgx.Tx, after *crmcontracts.Link
 	if after != nil {
 		keyset = fmt.Sprintf("(s.created_at, s.id) > ($%d, $%d)", arg(after.CreatedAt), arg(ids.UUID(after.Id)))
 	}
-	rows, err := tx.Query(ctx, storekit.SQLf(`
+	status, limit := arg(suggestionPending), arg(suggestionQueueScan)
+	query := storekit.SQLf(`
 		SELECT %s FROM activity_link_suggestion s JOIN activity a ON a.id = s.activity_id
 		 WHERE s.status = $%d AND a.archived_at IS NULL AND %s AND %s
 		 ORDER BY s.created_at, s.id LIMIT $%d`,
-		suggestionColumns, arg(suggestionPending), scope, keyset, arg(suggestionQueueScan)), args...)
+		suggestionColumns, status, scope, keyset, limit)
+	rows, err := tx.Query(ctx, query, args...)
 	if err != nil {
 		return nil, fmt.Errorf("activities: reading the link suggestions: %w", err)
 	}

@@ -159,7 +159,7 @@ ready before we need it, because the first date comes 24 hours after we learn of
   (`make bench-daily`).
 - [register-a-webhook.md](how-to/register-a-webhook.md): send events to your own HTTPS endpoint.
 - [add-an-extension.md](how-to/add-an-extension.md): add an extension under `extensions/`. Also [update-a-messaging-policy-pack.md](how-to/update-a-messaging-policy-pack.md): change the mail rules in `extensions/eu` or `extensions/apac`.
-- Extension text: [override core wording](how-to/override-core-wording-from-an-extension.md). Extension use of core's AI models and files: [what it can use](reference/extension-capabilities.md), [why](explanation/extension-capability-grants.md). Extension apps: [why](explanation/extension-apps-in-the-drawer.md).
+- Extension text: [change core text](how-to/override-core-wording-from-an-extension.md). Extension use of core's AI models and files: [what it can use](reference/extension-capabilities.md), [why](explanation/extension-capability-grants.md). Extension apps: [why](explanation/extension-apps-in-the-drawer.md).
 - [install-extensions-as-go-modules.md](how-to/install-extensions-as-go-modules.md): turn
   extensions on from `instance/go.mod`, here or in a client's own repository.
 - [declare-a-service-member.md](how-to/declare-a-service-member.md): make the account that a timed job
@@ -236,7 +236,7 @@ ready before we need it, because the first date comes 24 hours after we learn of
   [data-reset.md](reference/data-reset.md) and [model-binding.md](reference/model-binding.md): how each
   feature reads its settings.
 - [extension-doors-for-core-data.md](reference/extension-doors-for-core-data.md): what an extension can read
-  and write in core records, and the page for each door.
+  and write in core records, and the page for each feature.
 - [rest-api.md](reference/rest-api.md): the rules every REST call follows, and where its OpenAPI document is.
 - [ai-provider-key-test.md](reference/ai-provider-key-test.md): what the Test button on the Models page
   checks.

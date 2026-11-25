@@ -102,7 +102,7 @@ func nameOtherEnd(ctx context.Context, tx pgx.Tx, link crmcontracts.RecordLink,
 // clamp refuses its DELETE before Delete runs.
 func removable(ctx context.Context, tx pgx.Tx, link crmcontracts.RecordLink) (*bool, error) {
 	answer := false
-	if actor, ok := principal.Actor(ctx); !ok || !actor.SeatType.CanMutate() {
+	if actor, ok := principal.Actor(ctx); !ok || actor.SeatType == principal.SeatRead {
 		return &answer, nil
 	}
 	quiet, err := auth.Unrecorded(ctx, string(link.FromType), principal.ActionUpdate)
