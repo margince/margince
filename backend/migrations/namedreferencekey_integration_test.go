@@ -7,15 +7,11 @@ package migrations_test
 
 // A uuid column named after a table references it, or says why it does not.
 //
-// A column read to find a live row and carrying no key returns nothing once
-// its row is gone, and the caller cannot tell that from an empty answer. A
-// column that must outlive its row (a trace, a frozen snapshot, an erasure
-// record) is right to carry no key, and the waiver below holds its reason.
+// A column with no key returns nothing once its row is gone, and a caller
+// cannot tell that from an empty answer. A trace, a frozen snapshot or an
+// erasure record must outlive its row, so its waiver below holds that reason.
 //
-// The corpus is read from pg_attribute. A column names a table when it is
-// `<table>_id`, or `<prefix>_<table>_id`, or a person column that names a
-// seat. A sibling `<x>_type` or `<x>_kind` column makes the reference
-// polymorphic, and no key can span several tables.
+// The corpus comes from pg_attribute; namedReferenceSQL states which names count.
 
 import (
 	"context"
@@ -62,9 +58,10 @@ var unkeyedReferences = gatekit.Waive(map[string]string{
 	"weekly_review_driver.deal_id":              "the week keeps the deals that drove it even after they change or go",
 })
 
-// namedReferenceSQL answers every uuid column that names a table and is
-// covered by no foreign key, skipping a reference made polymorphic by a
-// sibling type column.
+// namedReferenceSQL answers every uuid column that names a table and carries
+// no foreign key. A column is `<table>_id`, `<prefix>_<table>_id` or a person
+// column naming a seat. A sibling type or kind column makes it polymorphic, so
+// no key can hold it, and the query skips it.
 const namedReferenceSQL = `
 WITH cols AS (
   SELECT c.oid, c.relname AS tbl, a.attname AS col, a.attnum
