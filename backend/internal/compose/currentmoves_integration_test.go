@@ -29,7 +29,7 @@ func TestCurrentMovesFollowTheOwnerWithoutAWrittenOrReadableCache(t *testing.T) 
 				}
 			}
 			if cache == "unreadable" {
-				e.WsExec(t, `UPDATE deal_status_card SET payload='{"card":true}'::jsonb WHERE deal_id=$1`, e.calm)
+				e.WsExec(t, `UPDATE generated_summary SET payload='{"card":true}'::jsonb WHERE deal_id=$1`, e.calm)
 			}
 			subject := "Send the agreed scope"
 			task, _, err := activities.NewStore(e.DB()).WithClock(func() time.Time { return at }).LogActivity(reader, activities.LogActivityInput{
@@ -48,7 +48,7 @@ func TestCurrentMovesFollowTheOwnerWithoutAWrittenOrReadableCache(t *testing.T) 
 			if !found || move.Action != dealstatus.ActionOpenTask || !present || named != ids.UUID(task.Id) || move.Recommendation == nil {
 				t.Fatalf("current owner work was replaced by cached advice: %+v", moves)
 			}
-			if cache == "absent" && e.WsCount(t, "SELECT count(*) FROM deal_status_card WHERE deal_id=$1", e.calm) != 0 {
+			if cache == "absent" && e.WsCount(t, "SELECT count(*) FROM generated_summary WHERE deal_id=$1", e.calm) != 0 {
 				t.Fatal("current action selection wrote an unnecessary model card")
 			}
 		})

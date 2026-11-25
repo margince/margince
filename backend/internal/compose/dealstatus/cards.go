@@ -154,41 +154,23 @@ func firstSentence(
 }
 
 // readCachedCards takes the stored cards for these deals, for this reader.
-//
-// Collect rows before checking citation audiences on the same transaction;
-// pgx cannot query while the first result remains open.
 func readCachedCards(
 	ctx context.Context, tx pgx.Tx, userID ids.UserID, dealIDs []ids.UUID,
 ) (map[ids.UUID]CachedCard, error) {
-	if err := auth.Require(ctx, "deal", principal.ActionRead); err != nil {
-		return nil, err
-	}
-	found := map[ids.UUID]CachedCard{}
-	where, args, err := cachedDealScope(ctx, userID, dealIDs)
+	stored, err := readableCards(ctx, tx, userID, dealIDs)
 	if err != nil {
 		return nil, err
 	}
-	rows, err := tx.Query(ctx, `SELECT c.deal_id, c.payload, c.generated_at FROM deal_status_card c
-		JOIN deal d ON d.id = c.deal_id WHERE `+where, args...)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	for rows.Next() {
-		var dealID ids.UUID
-		var payload []byte
-		var generatedAt time.Time
-		if err := rows.Scan(&dealID, &payload, &generatedAt); err != nil {
-			return nil, err
-		}
-		card, ok := cardFromPayload(payload)
-		if !ok || card.access == nil || !cardSafeForDeal(card, dealID) || generatedAt.IsZero() {
+	found := make(map[ids.UUID]CachedCard, len(stored))
+	for dealID, row := range stored {
+		card, ok := cardFromPayload(row.Payload)
+		if !ok || card.access == nil || !cardSafeForDeal(card, dealID) || row.GeneratedAt.IsZero() {
 			continue
 		}
-		card.GeneratedAt = generatedAt
+		card.GeneratedAt = row.GeneratedAt
 		found[dealID] = card
 	}
-	return found, rows.Err()
+	return found, nil
 }
 
 // citedActivities collects the messages these standings were written from,

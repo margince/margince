@@ -87,6 +87,13 @@ func (h Handlers) WithInstallationName(r InstallationNameReader) Handlers {
 	return h
 }
 
+// WithClock sets the clock every store reading of now goes through. All copies
+// share that store, so the clock holds across later With* copies.
+func (h Handlers) WithClock(now func() time.Time) Handlers {
+	h.store.now = now
+	return h
+}
+
 // WithEraser returns a copy wired to the erase path.
 func (h Handlers) WithEraser(e Eraser) Handlers {
 	h.eraser = e
