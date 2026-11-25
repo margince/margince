@@ -4,8 +4,8 @@
 package compose
 
 // The outbound draft surfaces come from the task census, not from the files that
-// mention the rules, so a drafter that never composes them is still found. Each
-// census site needs a request builder here, and that request has to carry them.
+// mention the rules. So a drafter that never composes them is still found. Each
+// census site needs a request builder here, and its request has to carry them.
 
 import (
 	"context"
