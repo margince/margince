@@ -127,6 +127,7 @@ const (
 	fieldSourceSystem = "source_system"
 	fieldSourceID     = "source_id"
 	fieldReason       = "reason"
+	fieldOutcome      = "outcome"
 	// fieldError carries the cause on a fault breadcrumb. Named once because
 	// two post-commit steps record one, and an operator filtering system_log
 	// must not have to know which of them spelled the key.

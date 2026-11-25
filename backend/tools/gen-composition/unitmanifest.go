@@ -115,6 +115,7 @@ type unitManifest struct {
 	// SystemReads are the deals and colleagues' details the unit reads.
 	SystemReads []string       `json:"system_reads,omitempty"`
 	Needs       []declaredNeed `json:"needs,omitempty"`
+	mailHooksDecl
 }
 
 // inboundEndpoint is one declared anonymous edge (see

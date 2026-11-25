@@ -31,6 +31,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"regexp"
 
 	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/pkg/extension"
@@ -61,6 +62,9 @@ type MountedRoute struct {
 	// whether the unit shipped a Handle for it.
 	Implemented bool
 }
+
+// pathWildcard matches a `{name}` segment of a served pattern.
+var pathWildcard = regexp.MustCompile(`\{[^}]*\}`)
 
 // MountExtensionRoutes mounts one route per declared extension operation onto
 // mux and reports the patterns it registered.
@@ -96,7 +100,7 @@ func MountExtensionRoutes(mux *http.ServeMux, verbs []extension.Verb, served map
 		return nil, errors.New("compose: extension routes need a tool registry to invoke through — mounting them without one would publish routes that answer nothing")
 	}
 	mounted := make([]MountedRoute, 0, len(verbs))
-	seen := make(map[string]extension.Name, len(verbs))
+	seen := make(map[string]MountedRoute, len(verbs))
 	for _, v := range verbs {
 		if err := v.Validate(); err != nil {
 			return nil, fmt.Errorf("compose: extension %q: %w", v.Unit, err)
@@ -110,12 +114,14 @@ func MountExtensionRoutes(mux *http.ServeMux, verbs []extension.Verb, served map
 		// and the reason Verb carries the contract's spelling rather than two
 		// spellings that could disagree.
 		pattern := v.Method + " " + v.ServedPath()
-		if owner, dup := seen[pattern]; dup {
-			// ServeMux PANICS on a duplicate pattern. That panic would be a
-			// boot crash naming a path and nothing else; this names both units.
-			return nil, fmt.Errorf("compose: extensions %q and %q both declare %s", owner, v.Unit, pattern)
+		// Keyed by shape, path argument names blanked: ServeMux PANICS on two
+		// patterns that differ only in those names, as on a duplicate. That panic
+		// would be a boot crash naming a path and nothing else; this names both.
+		shape := pathWildcard.ReplaceAllString(pattern, "{}")
+		if first, dup := seen[shape]; dup {
+			return nil, fmt.Errorf("compose: extensions %q and %q both declare %s (%s)", first.Verb.Unit, v.Unit, pattern, first.Pattern)
 		}
-		seen[pattern] = v.Unit
+		seen[shape] = MountedRoute{Pattern: pattern, Verb: v}
 		implemented := served[verbKey(v.Unit, v.Tool)]
 		// Resolved HERE rather than inside the handler: this is the one place that
 		// can still refuse, and a declaration whose arguments cannot be described
