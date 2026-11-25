@@ -17515,6 +17515,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "firstRun.ai.chatModel": "Mô hình",
   "firstRun.ai.modelHint":
     "Mô hình nào nhà cung cấp phục vụ cũng dùng được. Các bài kiểm tra đã chấm bộ mô hình ở trên, không phải một mô hình cho mọi tầng.",
+  "firstRun.ai.setupTitle.anthropic_cloud": "Anthropic Claude",
   "firstRun.ai.setupTitle.consumer_class_brokered":
     "Gemma 4 bạn có thể tự chạy, qua OpenRouter",
   "firstRun.ai.setupTitle.gemini_cloud": "Google Gemini",

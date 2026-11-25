@@ -17,7 +17,7 @@ may_call:
   - whoami
 
 must_mention:
-  - "(?i)in the app|settings|yourself|cannot|can't|not able|n['’]t able"
+  - "(?i)in the app|settings|yourself|cannot|can't|not able|n['’]t able|unable|no (?:tool|way)|(?:do not|don['’]t) have (?:a |the )?(?:way|tool|access)"
 
 must_not_mention:
   - "(?i)(?:are|is) now (?:off|disabled|turned off|switched off)|(?:have|has) been (?:now )?(?:off|disabled|turned off|switched off)|\b(?:i|we)(?:\s+have|['’]ve)?\s+(?:turned|switched|disabled)\b"

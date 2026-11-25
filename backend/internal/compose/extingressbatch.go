@@ -74,7 +74,7 @@ func (r *callRuntime) savePosition(ctx context.Context, system extension.SourceN
 			INSERT INTO extension_ingest_position (unit, source_system, position)
 			VALUES ($1, $2, $3)
 			ON CONFLICT (unit, source_system) DO UPDATE
-			   SET position = EXCLUDED.position, saved_at = now()`,
+			   SET position = EXCLUDED.position`,
 			r.unit, string(system), string(position))
 		return err
 	})

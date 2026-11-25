@@ -76,8 +76,8 @@ func TestTheNotSalesRuleNamesTheRowItHeldBack(t *testing.T) {
 	judged := e.seedPersonalWait(t, "Newsletter", contact)
 	// Keyed on the THREAD, the way SetThreadNotSales writes it — an activity id
 	// here would be judged by a rule that reads thread_key and match nothing.
-	e.exec(t, `INSERT INTO activity_sales_state (thread_key, kind, channel_provider, set_by)
-		SELECT a.thread_key, a.kind, coalesce(a.channel_provider, ''), 'system'
+	e.exec(t, `INSERT INTO activity_sales_state (thread_key, kind, channel_provider)
+		SELECT a.thread_key, a.kind, coalesce(a.channel_provider, '')
 		  FROM activity a WHERE a.id = $1`, judged)
 
 	rows := hiddenRows(t, e, HiddenRuleNotSales)

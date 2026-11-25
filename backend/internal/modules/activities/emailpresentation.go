@@ -225,7 +225,7 @@ func availableSummary(
 		summary.Direction = &d
 	}
 	if activity.Body != nil {
-		if preview := EmailSummaryText(*activity.Body); preview != "" {
+		if preview := EmailSummaryText(*activity.Body, deref(activity.Subject)); preview != "" {
 			summary.Preview = &preview
 		}
 	}

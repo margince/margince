@@ -324,7 +324,6 @@ func MarkTriageQueuedTx(ctx context.Context, tx pgx.Tx, domain string) error {
 	if _, err := tx.Exec(ctx, `
 		UPDATE company_domain_disposition
 		   SET attempts = attempts + 1,
-		       last_attempt_at = now(),
 		       next_attempt_at = now() + $2::interval,
 		       updated_at = now()
 		 WHERE domain = $1 AND status = 'pending'`,

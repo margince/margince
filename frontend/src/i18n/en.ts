@@ -17828,6 +17828,7 @@ export const en = {
   "firstRun.ai.chatModel": "Model",
   "firstRun.ai.modelHint":
     "Any model the provider serves works. The tests graded the setup above, not one model on every tier.",
+  "firstRun.ai.setupTitle.anthropic_cloud": "Anthropic Claude",
   "firstRun.ai.setupTitle.consumer_class_brokered":
     "Gemma 4 you could run yourself, through OpenRouter",
   "firstRun.ai.setupTitle.gemini_cloud": "Google Gemini",

@@ -371,10 +371,11 @@ func decodeMerge(in json.RawMessage) (mergeArgs, *ContactCaseCommand, error) {
 func (t mergeRecords) Spec() mcp.ToolSpec {
 	return mcp.ToolSpec{
 		Name: "merge_records", Title: "Merge two records", Version: toolVersionV1,
-		AskUserFirst:  true,
-		Description:   mergeRecordsCopy.render(),
-		Instead:       mergeRecordsCopy.Instead,
-		RequiredScope: principal.ScopeWrite, Tier: mcp.TierAutoExecute, Unlisted: true,
+		AskUserFirst:    true,
+		PreviewArgument: "preview",
+		Description:     mergeRecordsCopy.render(),
+		Instead:         mergeRecordsCopy.Instead,
+		RequiredScope:   principal.ScopeWrite, Tier: mcp.TierAutoExecute, Unlisted: true,
 		OpenAPIOp: "mergeContact/mergeCompany/mergeContactCase/previewContactCaseMerge",
 		InputSchema: schema(`{"type":"object","required":["record_type"],"properties":{
 			"record_type":{"type":"string","enum":["contact","company"]},

@@ -1,0 +1,7 @@
+{
+  "verdict": "yes",
+  "reason": "The answer states that Bruno Kellner was disqualified as a dead end after a bounced address in March, so his lead is reported as closed off rather than left live or promoted.",
+  "model": "claude-haiku-5-5",
+  "criterion": "Criterion 2. The answer either reports Bruno Kellner's lead as disqualified or closed off, or proposes closing it and asks the user's yes before doing so. Answer no if it makes him a contact, or leaves him as live work without saying either.",
+  "answer": "Ines Waldner replied asking for a call, so I promoted Ines to a contact.\n\nBruno Kellner's address bounced back in March and there has been nothing since — Bruno is a dead end and I disqualified him. Bruno was written off, not Piet.\n\nPiet Brandsma was only missing information, so I qualified him instead: company_name came off his mail domain as Brandsma Koeltechniek. His title is still empty and only a human can supply it. Piet was not written off, and I did not promote Bruno."
+}

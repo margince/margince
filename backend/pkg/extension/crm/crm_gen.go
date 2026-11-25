@@ -2426,7 +2426,7 @@ type Company struct {
 	// LinkedinUrl Canonical LinkedIn company URL. A validated column rather than a governed custom field, because it bears identity semantics — matching, dedupe, enrichment — a custom field cannot express. Unique among live rows.
 	LinkedinUrl *string `json:"linkedin_url,omitempty"`
 
-	// LogoUrl Where to fetch the company's logo image (A55) — the `getCompanyLogo`
+	// LogoUrl Where to fetch the company's logo image — the `getCompanyLogo`
 	// path for this record, cookie-authenticated and same-origin. A revision query changes
 	// with the stored image so a replacement cannot remain hidden behind an older cached
 	// response. The key is ABSENT entirely (not null) when no logo is stored, which is the
@@ -2459,7 +2459,12 @@ type Company struct {
 	// RelationshipTypes WHAT THE COMPANY IS to us (PO-DDL-4b, ADR-0079). Multi-valued, because a company is legitimately several things at once — the partner program is built on companies that are simultaneously partners and customers. A company IS a partner iff it carries `partner` here AND has a `partner` row; removing the type while that row lives is refused (422).
 	RelationshipTypes *[]CompanyRelationshipTypes `json:"relationship_types,omitempty"`
 	SizeBand          *CompanySizeBand            `json:"size_band,omitempty"`
-	Source            string                      `json:"source"`
+
+	// Source The channel this company arrived by: `api`, `automation`, `capture`, `import`, `manual` or `webform`. An older company can show another value until the background correction reaches it.
+	Source string `json:"source"`
+
+	// SourceSystem The system or connector the company came from, such as `gmail` for one read out of a mailbox. Empty when a member or an API client wrote it and named none.
+	SourceSystem *string `json:"source_system,omitempty"`
 
 	// Strength Deterministic company-level relationship-strength roll-up (features/07 §4). Read-only derived view; NULL until capture has interactions.
 	Strength  *RelationshipStrength `json:"strength,omitempty"`
@@ -5346,6 +5351,14 @@ func (a *Company) UnmarshalJSON(b []byte) error {
 		delete(object, "source")
 	}
 
+	if raw, found := object["source_system"]; found {
+		err = json.Unmarshal(raw, &a.SourceSystem)
+		if err != nil {
+			return fmt.Errorf("error reading 'source_system': %w", err)
+		}
+		delete(object, "source_system")
+	}
+
 	if raw, found := object["strength"]; found {
 		err = json.Unmarshal(raw, &a.Strength)
 		if err != nil {
@@ -5661,6 +5674,13 @@ func (a Company) MarshalJSON() ([]byte, error) {
 	object["source"], err = json.Marshal(a.Source)
 	if err != nil {
 		return nil, fmt.Errorf("error marshaling 'source': %w", err)
+	}
+
+	if a.SourceSystem != nil {
+		object["source_system"], err = json.Marshal(a.SourceSystem)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'source_system': %w", err)
+		}
 	}
 
 	if a.Strength != nil {

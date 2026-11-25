@@ -37,8 +37,7 @@ import (
 // record (datasource.RecordType) never names an activity, while a thing
 // hung OFF an object (datasource.EntityType) can.
 var enumBindings = map[string]struct{ pkgDir, typeName string }{
-	"activity.capture_label":                          {"internal/contracts", "ActivityCaptureLabel"},
-	"contact_signature_enrich_state.last_skip_reason": {"internal/modules/contacts", "SignatureSkipReason"},
+	"activity.capture_label": {"internal/contracts", "ActivityCaptureLabel"},
 	// Which check the ingress grammar refused a record on. The core writes the
 	// class and the column holds the vocabulary, so a class Go learned and the
 	// schema did not must fail the insert rather than land a value nothing can
@@ -234,6 +233,8 @@ var enumBindings = map[string]struct{ pkgDir, typeName string }{
 	"company_technical_state.lane":                 {"internal/modules/contacts", "TechnicalLane"},
 	"company_technical_state.last_outcome":         {"internal/contracts", "TechnicalEnrichLaneOutcome"},
 	"contact.narrowing_reason":                     {"internal/modules/contacts", "NarrowingReason"},
+	"company.source":                               {"internal/shared/kernel/provenance", "RecordSource"},
+	"contact.source":                               {"internal/shared/kernel/provenance", "RecordSource"},
 	"deal.source":                                  {"internal/shared/kernel/provenance", "RecordSource"},
 	"offer.source":                                 {"internal/shared/kernel/provenance", "RecordSource"},
 	"partner.source":                               {"internal/shared/kernel/provenance", "RecordSource"},

@@ -34,11 +34,11 @@ const composeRootDir = "internal/compose"
 // The ceilings below hold develop and main together: each side's additions
 // stayed under its own ceilings, and the two sets of additions sum to these.
 const (
-	composeRootProductionFiles = 1384
+	composeRootProductionFiles = 1383
 	// Raised by 2 files for the extension mail-file read cases and the purge
 	// receipt cases, which drive this package's unexported seams. Raised by 1
 	// production and 1 test file for the series-split fold and its cases.
-	composeRootTestFiles = 1911
+	composeRootTestFiles = 1914
 	// Raised by 107 for the floor of a figure every reader is shown alike. Raised
 	// by 1 for the import that binds one zone lookup to each attention read.
 	// Raised by 249 production and 62 test lines for the full-path certification
@@ -61,16 +61,24 @@ const (
 	// case, which drives the unexported mail worker over two team links.
 	// Raised by 2 production lines for the stage-evidence prompt rule on a
 	// document a criterion asks to be sent, which is the site's own prompt text.
-	composeRootProductionLines = 230_699
-	composeRootTestLines       = 360_128
+	// Raised by 4 production lines for prompt rules the Anthropic certification
+	// found missing. Those are the close date, a refused injection, the card's
+	// lengths and a confidence under a floor. Raised by 2 test files and 118 test
+	// lines for the gate that runs every expected set_amount through the real
+	// decider. That gate and the prompt-length test drive unexported compose code.
+	// Raised by 1 test file, 166 test lines and about 90 production lines for the
+	// sweep's outcome check. It is wired into this package's runner service and
+	// resume path, and it needs their unexported run types.
+	composeRootProductionLines = 230_802
+	composeRootTestLines       = 360_439
 )
 
 // A read under these floors stopped early or read the wrong place, and would
 // pass every ceiling. They sit near 90% of the package; lower them with the
 // ceilings when code moves out.
 const (
-	composeRootFloorFiles = 2900
-	composeRootFloorLines = 520_000
+	composeRootFloorFiles = 2960
+	composeRootFloorLines = 530_000
 )
 
 // composeRootGenerated grows with the contract, not with hand-written code, so

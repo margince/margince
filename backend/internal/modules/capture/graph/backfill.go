@@ -12,6 +12,7 @@ package graph
 import (
 	"context"
 	"errors"
+	"log/slog"
 	"time"
 
 	"golang.org/x/sync/semaphore"
@@ -30,6 +31,18 @@ const backfillPageSize = 100
 // mailbox. Live sync and a send need requests of their own, so the built-in
 // two leave room for both; a setting may use all four.
 const maxBackfillFetchWorkers = 4
+
+// failedInARowEndsPage ends a page whose messages keep failing one after
+// another: a run of them is almost always the database, not the messages.
+const failedInARowEndsPage = 5
+
+// endsPage reports a failure that belongs to the page, not to one message.
+func endsPage(ctx context.Context, err error) bool {
+	return ctx.Err() != nil ||
+		errors.Is(err, context.Canceled) || errors.Is(err, context.DeadlineExceeded) ||
+		errors.Is(err, connector.ErrRateLimited) || errors.Is(err, connector.ErrAuthRejected) ||
+		errors.Is(err, connector.ErrUnreachable) || errors.Is(err, connector.ErrCursorGone)
+}
 
 // walk answers the page's page size and its walk, tuned by the installation.
 func (c *Connector) walk() (pageSize int, walk orderedfetch.Walk[[]byte]) {
@@ -95,6 +108,7 @@ func (c *Connector) backfillPageWith(
 	// token. Mail outside the synced folders is not counted, as in the estimate.
 	progress := connector.BackfillProgressFrom(ctx)
 	var walked []MessageRef
+	failedInRow := 0
 	for _, msg := range msgs {
 		if _, synced := folders[msg.ParentFolderID]; synced {
 			walked = append(walked, msg)
@@ -109,16 +123,29 @@ func (c *Connector) backfillPageWith(
 		func(i int, raw []byte, err error) error {
 			msg := walked[i]
 			captured, err := c.backfillOne(ctx, raw, err, msg, sink, owner, folders[msg.ParentFolderID] == folderSent)
-			if err != nil {
+			switch {
+			case err == nil:
+				failedInRow = 0
+			case endsPage(ctx, err):
 				return err
+			default:
+				// One message the capture refuses is walked past and counted;
+				// a run of them ends the page, as in the Gmail walk.
+				failedInRow++
+				if failedInRow >= failedInARowEndsPage {
+					return err
+				}
+				res.Failed++
+				slog.WarnContext(ctx, "graph: backfill walked past a message it could not capture",
+					"message", msg.ID, "error_class", "internal", "err", err)
 			}
 			res.Scanned++
 			if captured {
 				res.Captured++
-			} else {
+			} else if err == nil {
 				res.Skipped++
 			}
-			progress.Observed(ctx, res.Scanned, res.Captured, res.Skipped)
+			progress.Observed(ctx, res.Scanned, res.Captured, res.Skipped+res.Failed)
 			return nil
 		})
 	if err != nil {
