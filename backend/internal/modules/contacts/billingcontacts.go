@@ -46,40 +46,22 @@ type BillingContact struct {
 // reader cannot open anywhere else in the product, which is how an edge becomes
 // a way to enumerate a restricted roster.
 //
-// A contact hidden by that scope is simply absent. The count is of what the
-// reader may see, never of the row total: reporting "4 billing contacts" over a
-// list of two states the size of a set the reader was refused.
+// A contact hidden by that scope is not listed. HiddenBillingContactsFor
+// states how many were withheld and who owns them, never who they are.
 func (s *Store) BillingContactsFor(
 	ctx context.Context, tx pgx.Tx, companyID ids.CompanyID,
 ) ([]BillingContact, error) {
-	if err := auth.Require(ctx, "relationship", principal.ActionRead); err != nil {
-		return nil, err
-	}
-	if err := auth.Require(ctx, anchorContact, principal.ActionRead); err != nil {
-		return nil, err
-	}
 	var args []any
 	arg := func(v any) int { args = append(args, v); return len(args) }
-	companyPos := arg(companyID)
-	scope, err := auth.ScopeClauseFor(ctx, "contact", "c", arg)
+	section, err := billingContactsSection(ctx, companyID, arg)
 	if err != nil {
 		return nil, err
 	}
-	sql := storekit.SQLf(`
-		SELECT r.id, c.id, c.full_name, r.role, c.title,
+	sql := section.ListSQL(`r.id, c.id, c.full_name, r.role, c.title,
 		       (SELECT e.email FROM contact_email e
 		         WHERE e.contact_id = c.id AND e.archived_at IS NULL`+
 		ReachableEmailOrder+`
-		         LIMIT 1)
-		  FROM relationship r
-		  JOIN contact c ON c.id = r.contact_id
-		 WHERE r.kind = '`+BillingContactKind+`'
-		   AND r.company_id = $%d
-		   AND r.archived_at IS NULL
-		   AND c.archived_at IS NULL`, companyPos)
-	if scope != "" {
-		sql += " AND " + scope
-	}
+		         LIMIT 1)`, "")
 	// Ordered by the role vocabulary's own sense — addressed, approved, paid —
 	// rather than alphabetically, which would open the list on
 	// accounts_payable. Then by name, so two contacts in one capacity hold a
@@ -104,6 +86,48 @@ func (s *Store) BillingContactsFor(
 		out = append(out, b)
 	}
 	return out, rows.Err()
+}
+
+// HiddenBillingContactsFor is what the contact row scope withheld from
+// BillingContactsFor: how many billing roles, and which colleagues own the
+// contacts behind them.
+func (s *Store) HiddenBillingContactsFor(
+	ctx context.Context, tx pgx.Tx, companyID ids.CompanyID,
+) (storekit.HiddenRows, error) {
+	var args []any
+	arg := func(v any) int { args = append(args, v); return len(args) }
+	section, err := billingContactsSection(ctx, companyID, arg)
+	if err != nil {
+		return storekit.HiddenRows{}, err
+	}
+	return storekit.ReadHiddenRows(ctx, tx, section, args)
+}
+
+// billingContactsSection is the one statement both billing reads share, so the
+// withheld count is always of rows the list would have shown.
+func billingContactsSection(
+	ctx context.Context, companyID ids.CompanyID, arg func(any) int,
+) (storekit.HiddenSection, error) {
+	if err := auth.Require(ctx, "relationship", principal.ActionRead); err != nil {
+		return storekit.HiddenSection{}, err
+	}
+	if err := auth.Require(ctx, anchorContact, principal.ActionRead); err != nil {
+		return storekit.HiddenSection{}, err
+	}
+	companyPos := arg(companyID)
+	scope, err := auth.ScopeClauseFor(ctx, "contact", "c", arg)
+	if err != nil {
+		return storekit.HiddenSection{}, err
+	}
+	return storekit.HiddenSection{
+		From: "relationship r JOIN contact c ON c.id = r.contact_id",
+		Where: storekit.SQLf(`r.kind = '`+BillingContactKind+`'
+		   AND r.company_id = $%d
+		   AND r.archived_at IS NULL
+		   AND c.archived_at IS NULL`, companyPos),
+		Owner:   "c.owner_id",
+		Visible: scope,
+	}, nil
 }
 
 // BillingCompany is one company a contact bills for, for the contact's own page:

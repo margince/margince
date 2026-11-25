@@ -17,11 +17,13 @@ func (a *assembly) readProjects() error {
 	if err := auth.Require(a.ctx, "project", principal.ActionRead); err != nil {
 		return err
 	}
-	projects, hasMore, err := a.svc.projects.ListProjectsForCompanyTx(a.ctx, a.tx, a.companyID)
+	section, err := a.svc.projects.ListProjectsForCompanyTx(a.ctx, a.tx, a.companyID)
 	if err != nil {
 		return err
 	}
-	a.out.Projects = &projects
-	a.out.ProjectsPage = &crmcontracts.PageInfo{HasMore: hasMore}
+	a.out.Projects = &section.Cards
+	a.out.ProjectsPage = &crmcontracts.PageInfo{HasMore: section.MoreInFlight}
+	hidden := hiddenRecordsPayload(section.Hidden)
+	a.out.ProjectsHidden = &hidden
 	return nil
 }

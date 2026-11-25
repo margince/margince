@@ -46,3 +46,16 @@ func accountStrengthToWire(account contacts.AccountStrength, now time.Time) *crm
 	}
 	return &out
 }
+
+// hiddenRecordsPayload carries what row scope withheld from a section onto the
+// wire: a count and who to ask, never a hidden record's own fields.
+func hiddenRecordsPayload(hidden storekit.HiddenRows) crmcontracts.HiddenRecords {
+	holders := make([]crmcontracts.HiddenRecordHolder, 0, len(hidden.Holders))
+	for _, h := range hidden.Holders {
+		holders = append(holders, crmcontracts.HiddenRecordHolder{
+			UserId:      openapi_types.UUID(h.UserID),
+			DisplayName: h.DisplayName,
+		})
+	}
+	return crmcontracts.HiddenRecords{Count: hidden.Count, Holders: holders}
+}

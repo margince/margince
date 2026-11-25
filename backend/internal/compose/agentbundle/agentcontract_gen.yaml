@@ -32253,6 +32253,27 @@ components:
             code names other values carries them in `params`, an object of text values by
             name, so a screen can word the code in the reader's language; `message` stays
             the English sentence.
+    HiddenRecords:
+      type: object
+      description: >-
+        What the caller's row scope withheld from one list on a record page, so a short list never reads as the whole one. It states how many entries were withheld and which live colleagues own them, so the reader knows whom to ask. A withheld record's name, value and every other field stay withheld. Count 0 with no holders when nothing was withheld.
+      required: [count, holders]
+      properties:
+        count:
+          type: integer
+          minimum: 0
+          description: >-
+            How many entries the list would have shown under an unbounded scope and did not. It includes entries owned by a colleague who has left, who is not in `holders`.
+        holders:
+          type: array
+          description: The live colleagues who own at least one withheld entry, each once, by name.
+          items: {$ref: '#/components/schemas/HiddenRecordHolder'}
+    HiddenRecordHolder:
+      type: object
+      required: [user_id, display_name]
+      properties:
+        user_id: {type: string, format: uuid}
+        display_name: {type: string}
     PageInfo:
       type: object
       required: [has_more]
@@ -35112,8 +35133,12 @@ components:
         billing_contacts:
           type: array
           description: >-
-            Who handles this account's invoices, ordered by capacity: addressed, approved, paid. Each entry is one edge, so the panel can change or archive a single role without touching the others. Empty means nobody is named — which for a paying customer is a gap worth showing, not a blank. Absent when the caller lacks the contact or relationship grant, named in `sections_omitted` as `billing_contacts`; a contact outside the caller's row scope is simply not listed, and no count states how many were withheld.
+            Who handles this account's invoices, ordered by capacity: addressed, approved, paid. Each entry is one edge, so the panel can change or archive a single role without touching the others. Empty means nobody is named — which for a paying customer is a gap worth showing, not a blank. Absent when the caller lacks the contact or relationship grant, named in `sections_omitted` as `billing_contacts`. A contact outside the caller's row scope is not listed; `billing_contacts_hidden` says how many entries were withheld and who owns them.
           items: {$ref: '#/components/schemas/BillingContact'}
+        billing_contacts_hidden:
+          allOf: [{$ref: '#/components/schemas/HiddenRecords'}]
+          description: >-
+            The billing entries the caller's contact row scope withheld from `billing_contacts`. Absent exactly when `billing_contacts` is.
         deals: {$ref: '#/components/schemas/Company360Deals'}
         projects:
           type: array
@@ -35124,6 +35149,10 @@ components:
           allOf: [{$ref: '#/components/schemas/PageInfo'}]
           description: >-
             Whether `projects` was cut short. The list is capped, and a card that counted the rows and said "3 in flight" would state a number the account does not have. Absent exactly when `projects` is.
+        projects_hidden:
+          allOf: [{$ref: '#/components/schemas/HiddenRecords'}]
+          description: >-
+            The projects the caller may not see on this account, by the project row scope or by the company-project tie's own read scope. Absent exactly when `projects` is.
         attention_withheld:
           type: boolean
           description: >-

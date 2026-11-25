@@ -34751,6 +34751,18 @@ export interface components {
                 [key: string]: unknown;
             };
         };
+        /** @description What the caller's row scope withheld from one list on a record page, so a short list never reads as the whole one. It states how many entries were withheld and which live colleagues own them, so the reader knows whom to ask. A withheld record's name, value and every other field stay withheld. Count 0 with no holders when nothing was withheld. */
+        HiddenRecords: {
+            /** @description How many entries the list would have shown under an unbounded scope and did not. It includes entries owned by a colleague who has left, who is not in `holders`. */
+            count: number;
+            /** @description The live colleagues who own at least one withheld entry, each once, by name. */
+            holders: components["schemas"]["HiddenRecordHolder"][];
+        };
+        HiddenRecordHolder: {
+            /** Format: uuid */
+            user_id: string;
+            display_name: string;
+        };
         PageInfo: {
             /** @description Opaque cursor for the next page, or null if none. */
             next_cursor?: string | null;
@@ -37734,13 +37746,17 @@ export interface components {
                 data: components["schemas"]["Company360Contact"][];
                 page: components["schemas"]["PageInfo"];
             };
-            /** @description Who handles this account's invoices, ordered by capacity: addressed, approved, paid. Each entry is one edge, so the panel can change or archive a single role without touching the others. Empty means nobody is named — which for a paying customer is a gap worth showing, not a blank. Absent when the caller lacks the contact or relationship grant, named in `sections_omitted` as `billing_contacts`; a contact outside the caller's row scope is simply not listed, and no count states how many were withheld. */
+            /** @description Who handles this account's invoices, ordered by capacity: addressed, approved, paid. Each entry is one edge, so the panel can change or archive a single role without touching the others. Empty means nobody is named — which for a paying customer is a gap worth showing, not a blank. Absent when the caller lacks the contact or relationship grant, named in `sections_omitted` as `billing_contacts`. A contact outside the caller's row scope is not listed; `billing_contacts_hidden` says how many entries were withheld and who owns them. */
             billing_contacts?: components["schemas"]["BillingContact"][];
+            /** @description The billing entries the caller's contact row scope withheld from `billing_contacts`. Absent exactly when `billing_contacts` is. */
+            billing_contacts_hidden?: components["schemas"]["HiddenRecords"];
             deals?: components["schemas"]["Company360Deals"];
             /** @description The company's unarchived projects, work in motion first (delivering, pursuing, initiative, then closed), under the caller's project row scope. Absent when the caller has no project grant, named in `sections_omitted` as `projects`. */
             projects?: components["schemas"]["Company360Project"][];
             /** @description Whether `projects` was cut short. The list is capped, and a card that counted the rows and said "3 in flight" would state a number the account does not have. Absent exactly when `projects` is. */
             projects_page?: components["schemas"]["PageInfo"];
+            /** @description The projects the caller may not see on this account, by the project row scope or by the company-project tie's own read scope. Absent exactly when `projects` is. */
+            projects_hidden?: components["schemas"]["HiddenRecords"];
             /** @description The reader may not read this account's activities, so no `attention` was derived on any deal or project row. The rows themselves are still listed and still true — this says the reasons behind them are missing, which a card must show rather than let an unexplained row read as a settled one. */
             attention_withheld?: boolean;
             strength?: components["schemas"]["CompanyStrength"];

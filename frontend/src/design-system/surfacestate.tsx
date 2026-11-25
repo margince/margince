@@ -3,6 +3,7 @@
 
 import type { ReactNode } from "react";
 import { formatNumber } from "../format/format";
+import { listFormat } from "../format/formatters";
 import { useLocale, useT } from "../i18n";
 import { Button, PendingBody } from "./atoms";
 import { Eyebrow, type EyebrowElement } from "./eyebrow";
@@ -344,5 +345,40 @@ export function SurfaceState({
       <Eyebrow as={labelLevel}>{label}</Eyebrow>
       {body}
     </section>
+  );
+}
+
+/** What the reader's row scope withheld from a list, as the server states it. */
+export type HiddenRecords = Readonly<{
+  count: number;
+  holders: readonly Readonly<{ user_id: string; display_name: string }>[];
+}>;
+
+/**
+ * HiddenRecordsFoot says under a list how many entries the reader may not see,
+ * and whom to ask. Then a short list does not read as the whole one. It draws
+ * nothing when nothing was withheld. Holders who left are not named, so a
+ * count can stand without anyone to ask.
+ */
+export function HiddenRecordsFoot({
+  hidden,
+}: Readonly<{ hidden: HiddenRecords | undefined }>) {
+  const t = useT();
+  const { locale } = useLocale();
+  if (!hidden || hidden.count === 0) {
+    return null;
+  }
+  const count = formatNumber(hidden.count, locale);
+  const names = listFormat(locale, { type: "disjunction" }).format(
+    hidden.holders.map((holder) => holder.display_name),
+  );
+  return (
+    <div className="surfacestate-partial-foot">
+      <p className="surfacestate-empty surfacestate-info">
+        {hidden.holders.length > 0
+          ? t("state.hiddenAsk", { count, names })
+          : t("state.hidden", { count })}
+      </p>
+    </div>
   );
 }

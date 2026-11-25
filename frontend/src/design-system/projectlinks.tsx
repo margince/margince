@@ -98,6 +98,9 @@ export type ProjectLinksAdapter = Readonly<{
   // callback: the create form, its fields and its write are the page's, and a
   // callback would leave this section owning a button with no form behind it.
   create?: ReactNode;
+  // What the reader's scope withheld from `linked`, drawn under the rows so a
+  // short list does not read as the whole one.
+  withheld?: ReactNode;
   // Draw each linked record as the caller's own card instead of the plain row.
   // It suits a target worth a mark and facts of its own, such as a company.
   // `onDetach` is absent when the link cannot be removed from here, so the
@@ -260,6 +263,7 @@ export function ProjectLinks({
       <div ref={section}>
         <PanelGroupHead title={t(titleKey)} level="h3" action={verbs} />
         {rows}
+        {adapter.withheld}
         {dialogs}
       </div>
     );
@@ -268,6 +272,7 @@ export function ProjectLinks({
     <div ref={section}>
       <Panel title={t(titleKey)} titleAction={verbs}>
         {rows}
+        {adapter.withheld}
         {dialogs}
       </Panel>
     </div>

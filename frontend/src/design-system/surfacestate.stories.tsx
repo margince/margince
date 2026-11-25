@@ -7,7 +7,11 @@ import { Card } from "./atoms";
 import { Eyebrow } from "./eyebrow";
 import { Panel, PanelBody } from "./panel";
 import { Stack } from "./stack";
-import { type SectionState, SurfaceState } from "./surfacestate";
+import {
+  HiddenRecordsFoot,
+  type SectionState,
+  SurfaceState,
+} from "./surfacestate";
 
 // The nine states a surface can be in. They are drawn together because that is
 // the only way to judge the thing they exist for: an empty card and a withheld
@@ -261,6 +265,41 @@ export const StaleInBothHosts: Story = {
           <p className="t-body">Next review in March.</p>
         </div>
       </Card>
+    </Stack>
+  ),
+};
+
+// Under a list the reader's row scope shortened: whom to ask, and a count
+// alone when every holder has left. Nothing is drawn when none was withheld.
+export const HiddenUnderAList: Story = {
+  render: () => (
+    <Stack gap="4">
+      <Panel title="Projects, two holders">
+        <PanelBody>
+          {ROWS}
+          <HiddenRecordsFoot
+            hidden={{
+              count: 3,
+              holders: [
+                { user_id: "u-dana", display_name: "Dana" },
+                { user_id: "u-minh", display_name: "Minh" },
+              ],
+            }}
+          />
+        </PanelBody>
+      </Panel>
+      <Panel title="Projects, holders left">
+        <PanelBody>
+          {ROWS}
+          <HiddenRecordsFoot hidden={{ count: 1, holders: [] }} />
+        </PanelBody>
+      </Panel>
+      <Panel title="Projects, nothing hidden">
+        <PanelBody>
+          {ROWS}
+          <HiddenRecordsFoot hidden={{ count: 0, holders: [] }} />
+        </PanelBody>
+      </Panel>
     </Stack>
   ),
 };

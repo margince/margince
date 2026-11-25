@@ -326,25 +326,59 @@ func principalFieldType(lit *ast.CompositeLit) string {
 	return ""
 }
 
-// connectorKinds pairs an actor-id prefix with the type that may carry it.
-// Only the connector kind is here. The test below says why.
+// actorKinds pairs an actor-id prefix with the one principal type that may
+// carry it.
 //
 // gatekit:fixture the actor kinds whose prefix and principal type must agree
-var connectorKinds = map[string]string{connectorActorPrefix: "PrincipalConnector"}
+var actorKinds = map[string]string{
+	connectorActorPrefix: "PrincipalConnector",
+	"agent:":             "PrincipalAgent",
+	"system:":            "PrincipalSystem",
+}
 
-// TestAConnectorIDIsCarriedOnlyByAConnectorPrincipal holds both directions of
-// one pairing.
+// agentJobsStillSystemTyped are the AI jobs that still bind PrincipalSystem
+// under their `agent:` id, keyed by file. auth.Require admits PrincipalSystem
+// without reading grants. A job converted to PrincipalAgent answers to the
+// grants it is given, and stops with no sound when they fall short. So each
+// converts on its own with a test through the real gate. A converted file that
+// keeps its entry fails AssertAllMatched.
+var agentJobsStillSystemTyped = gatekit.Waive(map[string]string{
+	"internal/compose/approvalpreviewcommitment.go":   forAPerson,
+	"internal/compose/chatcapturefile.go":             forAPerson,
+	"internal/compose/coldstartaccept.go":             forAPerson,
+	"internal/compose/companynamepromotion.go":        forAPerson,
+	"internal/compose/deepreadaccept.go":              forAPerson,
+	"internal/compose/deepreadprincipal.go":           forAPerson,
+	"internal/compose/extractionaccept.go":            forAPerson,
+	"internal/compose/fxrefresh.go":                   forAPerson,
+	"internal/compose/jobs_documentextract.go":        forAPerson,
+	"internal/compose/jobs_transcript.go":             forAPerson,
+	"internal/compose/offerdraft.go":                  forAPerson,
+	"internal/compose/onboardingsitereadtransport.go": forAPerson,
+	"internal/compose/rateproposals.go":               forAPerson,
+	"internal/compose/reconcile.go":                   forAPerson,
+	"internal/compose/scrapeaccept.go":                forAPerson,
+	"internal/compose/signalproposals.go":             forAPerson,
+	"internal/compose/voicebuild.go":                  forAPerson,
+	"internal/compose/commitmenttask.go":              forNoOne,
+	"internal/compose/jobs_knowledgeingest.go":        forNoOne,
+})
+
+const (
+	forAPerson = "acts for a named person; until it runs as an agent under that person's live grants, " +
+		"audit_log records it as a system act and no grant bounds what it writes"
+	forNoOne = "acts for no one; it needs a fixed grant set of its own before it can run as an agent, " +
+		"and until then audit_log records it as a system act"
+)
+
+// TestAnActorIDIsCarriedOnlyByItsKindsPrincipal holds both directions of one
+// pairing for every actor kind.
 //
-// storekit writes actor_type from the type and actor_id from the id. A
-// `connector:` id under any other type writes an audit row that contradicts
+// storekit writes actor_type from the type and actor_id from the id. An
+// `agent:` id under PrincipalSystem writes an audit row that contradicts
 // itself, and audit_log admits no correction. The reverse is the same
 // disagreement seen from the other side.
-//
-// The connector kind alone, because the agent spelling is still being decided.
-// Twenty jobs bind PrincipalSystem with an `agent:` id, and the direction
-// changes whether they answer to RBAC at all. Widening this map is the whole
-// change once that is settled.
-func TestAConnectorIDIsCarriedOnlyByAConnectorPrincipal(t *testing.T) {
+func TestAnActorIDIsCarriedOnlyByItsKindsPrincipal(t *testing.T) {
 	t.Parallel()
 	read := 0
 	err := gatekit.WalkDir("internal", func(dir string, d fs.DirEntry, err error) error {
@@ -357,17 +391,16 @@ func TestAConnectorIDIsCarriedOnlyByAConnectorPrincipal(t *testing.T) {
 				continue
 			}
 			read++
-			for prefix, wantType := range connectorKinds {
-				idSays := named.kind == prefix
-				typeSays := named.typ == wantType
-				if idSays == typeSays {
-					continue
-				}
-				t.Errorf("%s: binds %s with an id of kind %q. storekit stamps actor_type from the type and actor_id "+
-					"from the id, so this writes an audit row naming two kinds of actor for one act, and "+
-					"audit_log admits no correction. Make the two name one kind",
-					named.file, named.typ, named.kind)
+			if kindAgreesWithType(named.kind, named.typ) {
+				continue
 			}
+			if agentJobsStillSystemTyped.Waived(t, named.file) {
+				continue
+			}
+			t.Errorf("%s: binds %s with an id of kind %q. storekit stamps actor_type from the type and actor_id "+
+				"from the id, so this writes an audit row naming two kinds of actor for one act, and "+
+				"audit_log admits no correction. Make the two name one kind",
+				named.file, named.typ, named.kind)
 		}
 		return nil
 	})
@@ -378,6 +411,19 @@ func TestAConnectorIDIsCarriedOnlyByAConnectorPrincipal(t *testing.T) {
 		t.Fatal("this census read no principal that names both a type and a written id, and this tree has many: " +
 			"the reader has stopped matching rather than the tree having changed")
 	}
+	agentJobsStillSystemTyped.AssertAllMatched(t)
+}
+
+// kindAgreesWithType is false when the id's kind names another type, or the
+// type belongs to another kind. A kind outside actorKinds (`user:`) is not this
+// gate's to judge from the id side.
+func kindAgreesWithType(kind, typ string) bool {
+	for prefix, wantType := range actorKinds {
+		if (kind == prefix) != (typ == wantType) {
+			return false
+		}
+	}
+	return true
 }
 
 // actorKindPrefix is the actor kind an ID expression starts with.
@@ -397,7 +443,7 @@ func actorKindPrefix(expr ast.Expr, constants map[string]string) string {
 	if !ok {
 		return ""
 	}
-	for prefix := range connectorKinds {
+	for prefix := range actorKinds {
 		if strings.HasPrefix(text, prefix) {
 			return prefix
 		}

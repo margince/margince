@@ -260,6 +260,7 @@ export function CompanyRecordBody({
           {!view?.sections_omitted?.includes("billing_contacts") && (
             <BillingContactsPanel
               contacts={view?.billing_contacts}
+              hidden={view?.billing_contacts_hidden}
               companyId={company.id}
             />
           )}

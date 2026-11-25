@@ -15,7 +15,12 @@ import {
   type ProjectLinksAdapter,
 } from "../../design-system/projectlinks";
 import type { RecordPickerCandidate } from "../../design-system/recordpicker";
-import { SurfaceState, sectionState } from "../../design-system/surfacestate";
+import {
+  type HiddenRecords,
+  HiddenRecordsFoot,
+  SurfaceState,
+  sectionState,
+} from "../../design-system/surfacestate";
 import { useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import { unwrap } from "../../lib/problem";
@@ -58,11 +63,13 @@ export function companyRoleLabel(role: string): MessageKey | undefined {
 export function CompanyProjects({
   companyId,
   projects,
+  hidden,
   create,
   bare,
 }: Readonly<{
   companyId: string;
   projects: readonly Company360Project[] | undefined;
+  hidden?: HiddenRecords;
   // The create verb, handed to the section's own verb row.
   create?: ReactNode;
   // As a group inside the pane the caller holds — see ProjectLinks.
@@ -135,6 +142,7 @@ export function CompanyProjects({
     attach: (projectId, role) => attach.mutateAsync({ projectId, role }),
     detach: (projectId) => detach.mutateAsync(projectId),
     create,
+    withheld: <HiddenRecordsFoot hidden={hidden} />,
   };
 
   return (
@@ -193,6 +201,7 @@ export function CompanyProjectsPanel({
       <CompanyProjects
         companyId={companyId}
         projects={projects}
+        hidden={view?.projects_hidden}
         create={
           company && (
             <NewProjectAction
