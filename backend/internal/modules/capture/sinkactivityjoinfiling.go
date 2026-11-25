@@ -51,21 +51,21 @@ func seatHoldsImportTx(ctx context.Context, tx pgx.Tx, id ids.ActivityID, seat i
 }
 
 // fileJoinedMailForSeatTx files a mail another mailbox captured first under
-// the records that already hold its counterparty's address and that this seat
-// may see. The first mailbox filed it under its own seat's authority, which
-// cannot see a contact private to this seat. Without this, the order of two
-// syncs decides whether the mail reaches this seat's contact. A join creates
-// no record: the first capture's ladder already judged the party.
+// the records that hold an address on it and that this seat may see. The first
+// mailbox filed it under its own seat's authority, which cannot see a contact
+// private to this seat. Without this, the order of two syncs decides whether
+// the mail reaches this seat's contact. A join creates no record: the first
+// capture's ladder already judged the parties.
 func (s *Sink) fileJoinedMailForSeatTx(
 	ctx context.Context, tx pgx.Tx, id ids.ActivityID, rec connector.NormalizedRecord, fields ActivityFields,
 ) error {
-	subject, files, err := s.joinedMailFilesTx(ctx, tx, id, rec, fields)
-	if err != nil || !files {
+	addresses, err := joinedMailAddressesTx(ctx, tx, id, rec, fields)
+	if err != nil || len(addresses) == 0 {
 		return err
 	}
-	holders, err := storekit.LockIdentityHolders(ctx, tx, storekit.IdentityKeys{Emails: []string{normalizeEmail(subject)}})
+	holders, err := storekit.LockIdentityHolders(ctx, tx, storekit.IdentityKeys{Emails: addresses})
 	if err != nil {
-		return fmt.Errorf("capture: locking the counterparty's address: %w", err)
+		return fmt.Errorf("capture: locking the addresses on a joined mail: %w", err)
 	}
 	var targets storekit.LastActivityTargets
 	records := make([]participantRecord, 0, len(holders.Contacts)+len(holders.Leads))
@@ -89,31 +89,33 @@ func (s *Sink) fileJoinedMailForSeatTx(
 	return err
 }
 
-// joinedMailFilesTx answers whether a joined mail is filed for this seat, and
-// the counterparty address it is filed by. A meeting, internal mail, a notes
-// mail, a private thread, a restricted mail and a mail the ladder suppressed
-// file nothing.
-func (s *Sink) joinedMailFilesTx(
+// joinedMailAddressesTx answers the addresses a joined mail is filed by for
+// this seat. A meeting, internal mail, a notes mail, a private thread, a
+// restricted mail and a mail the ladder suppressed answer none.
+func joinedMailAddressesTx(
 	ctx context.Context, tx pgx.Tx, id ids.ActivityID, rec connector.NormalizedRecord, fields ActivityFields,
-) (string, bool, error) {
+) ([]string, error) {
 	if fields.Kind == meetingKind || internalMailAdmitted(ctx) || isMeetingNotesMail(rec) {
-		return "", false, nil
+		return nil, nil
 	}
 	joined, err := seatHoldsImportTx(ctx, tx, id, actorUserID(ctx))
 	if err != nil || !joined {
-		return "", false, err
-	}
-	subject, err := s.ladderSubjectTx(ctx, tx, rec)
-	if err != nil || subject.Email == "" {
-		return "", false, err
+		return nil, err
 	}
 	if private, err := capturedThreadIsPrivateTx(ctx, tx, rec); err != nil || private {
-		return "", false, err
+		return nil, err
 	}
-	var files bool
-	if err := tx.QueryRow(ctx, `SELECT EXISTS (SELECT 1 FROM activity a
-		WHERE a.id = $1 AND a.restricted_at IS NULL AND NOT `+ladderSuppressedClause+`)`, id).Scan(&files); err != nil {
-		return "", false, fmt.Errorf("capture: reading whether a joined activity may be filed: %w", err)
+	rows, err := tx.Query(ctx, `
+		SELECT DISTINCT lower(ap.address) FROM activity a
+		  JOIN activity_participant ap ON ap.activity_id = a.id
+		 WHERE a.id = $1 AND a.restricted_at IS NULL AND NOT `+ladderSuppressedClause+`
+		   AND ap.address IS NOT NULL AND NOT ap.past_party_cap`, id)
+	if err != nil {
+		return nil, fmt.Errorf("capture: reading the addresses on a joined mail: %w", err)
 	}
-	return subject.Email, files, nil
+	addresses, err := pgx.CollectRows(rows, pgx.RowTo[string])
+	if err != nil {
+		return nil, fmt.Errorf("capture: reading the addresses on a joined mail: %w", err)
+	}
+	return addresses, nil
 }
