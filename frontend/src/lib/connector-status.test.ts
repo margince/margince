@@ -49,14 +49,12 @@ describe("statusTone", () => {
     expect(statusTone("disconnected")).toBe(undefined);
   });
 
-  // A channel connection whose webhook registration hasn't landed yet is a
-  // half-registration, not a live channel — it must read as "needs a look"
-  // (the same tone as reauth_required), never as the "success" tone a
-  // healthy connected row gets (§9.1).
-  it("renders pending as a warning tone, distinct from connected", () => {
-    expect(statusTone("pending")).toBe("warning");
-    expect(statusLabel("pending")).toBe("connectors.statusPending");
-    expect(statusLabel("pending")).not.toBe(statusLabel("connected"));
+  // A Telegram Business link nobody has approved is not a live channel. It reads
+  // as "needs a look", the tone of reauth_required, never as success.
+  it("renders pending_approval as a warning tone, distinct from connected", () => {
+    expect(statusTone("pending_approval")).toBe("warning");
+    expect(statusLabel("pending_approval")).toBe("connectors.statusPending");
+    expect(statusLabel("pending_approval")).not.toBe(statusLabel("connected"));
   });
 });
 
@@ -186,7 +184,7 @@ describe("healthBadge", () => {
   it("uses no key the shared status vocabulary uses", () => {
     const shared: readonly ConnectorStatus[] = [
       "connected",
-      "pending",
+      "pending_approval",
       "reauth_required",
       "error",
       "disconnected",

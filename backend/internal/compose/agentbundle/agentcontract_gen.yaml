@@ -31334,7 +31334,7 @@ components:
       required: [id, provider, channelId, channelLabel, status, version]
       properties:
         id: {type: string, format: uuid}
-        provider: {type: string, enum: [telegram, dispact, whatsapp, zalo_oa]}
+        provider: {type: string, enum: [telegram, telegram_business, dispact, whatsapp, zalo_oa]}
         channelId:
           type: string
           description: The provider's own id for the bot — the key the binding is unique on. For Dispact it is the chat's team id.

@@ -31,9 +31,9 @@ import (
 // channelStatusPendingApproval: the owner linked the bot and no admin has approved it.
 const channelStatusPendingApproval = "pending_approval"
 
-// businessConnectionRow selects the account connections, the complement of
-// botConnectionRow.
-const businessConnectionRow = "parent_connection_id IS NOT NULL"
+// businessConnectionRow selects the Telegram Business links. The provider is named
+// so a child row of another provider never reads as a Telegram link.
+const businessConnectionRow = "provider = '" + telegram.BusinessProvider + "' AND parent_connection_id IS NOT NULL"
 
 // BusinessConnection is one Telegram Business account link as an admin reads it.
 type BusinessConnection struct {
@@ -59,10 +59,10 @@ func scanBusinessConnection(r pgx.Row) (BusinessConnection, error) {
 
 func businessAuditImage(c BusinessConnection, parent ids.UUID) map[string]any {
 	return map[string]any{
-		"provider":             telegram.Provider,
+		detailProvider:         telegram.BusinessProvider,
 		"account_id":           c.AccountID,
 		"channel_label":        c.OwnerLabel,
-		"status":               c.Status,
+		columnStatus:           c.Status,
 		"parent_connection_id": parent.String(),
 		"approved":             c.ApprovedAt != nil,
 	}
@@ -93,7 +93,8 @@ func recordTelegramBusinessConnection(ctx context.Context, tx pgx.Tx, botConnect
 	var connectedBy ids.UUID
 	if err := tx.QueryRow(ctx, `
 		SELECT connected_by FROM channel_connection
-		 WHERE id = $1 AND archived_at IS NULL AND `+botConnectionRow+` FOR SHARE`, botConnection).Scan(&connectedBy); err != nil {
+		 WHERE id = $1 AND provider = $2 AND archived_at IS NULL AND `+botConnectionRow+` FOR SHARE`,
+		botConnection, telegram.Provider).Scan(&connectedBy); err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			// Disconnected while the batch was in flight; its links went with it.
 			return nil
@@ -105,7 +106,7 @@ func recordTelegramBusinessConnection(ctx context.Context, tx pgx.Tx, botConnect
 	err := tx.QueryRow(ctx, `
 		SELECT `+businessConnectionColumns+`, channel_id FROM channel_connection
 		 WHERE provider = $1 AND account_id = $2 AND archived_at IS NULL FOR UPDATE`,
-		telegram.Provider, bc.OwnerID).
+		telegram.BusinessProvider, bc.OwnerID).
 		Scan(&current.ID, &current.AccountID, &current.OwnerLabel, &current.Status, &current.Version,
 			&current.ConnectedAt, &current.ApprovedAt, &storedID)
 	if errors.Is(err, pgx.ErrNoRows) {
@@ -160,7 +161,7 @@ func insertBusinessConnection(ctx context.Context, tx pgx.Tx, botConnection, con
 		  (provider, channel_id, channel_label, credential_ref, status, connected_by, account_id, parent_connection_id)
 		VALUES ($1, $2, $3, '', $4, $5, $6, $7)
 		RETURNING `+businessConnectionColumns,
-		telegram.Provider, bc.ID, bc.OwnerLabel, channelStatusPendingApproval, connectedBy, bc.OwnerID, botConnection))
+		telegram.BusinessProvider, bc.ID, bc.OwnerLabel, channelStatusPendingApproval, connectedBy, bc.OwnerID, botConnection))
 	if err != nil {
 		return fmt.Errorf("capture: recording a new business connection: %w", err)
 	}
@@ -172,7 +173,7 @@ func insertBusinessConnection(ctx context.Context, tx pgx.Tx, botConnection, con
 func archiveBusinessConnectionsOfTx(ctx context.Context, tx pgx.Tx, bot ids.UUID) error {
 	rows, err := tx.Query(ctx, `
 		SELECT `+businessConnectionColumns+` FROM channel_connection
-		 WHERE parent_connection_id = $1 AND archived_at IS NULL FOR UPDATE`, bot)
+		 WHERE parent_connection_id = $1 AND archived_at IS NULL AND `+businessConnectionRow+` FOR UPDATE`, bot)
 	if err != nil {
 		return fmt.Errorf("capture: reading the business connections of a bot: %w", err)
 	}

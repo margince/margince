@@ -11,7 +11,10 @@ SET LOCAL lock_timeout = '3s';
 -- approved_at is set when a workspace admin accepts the link. Until then the
 -- row is `pending_approval` and nothing from that account is stored.
 --
--- A row with no account_id and no parent is a bot connection, as before.
+-- A row with no account_id and no parent is a bot connection, as before. The link
+-- row has a provider of its own, `telegram_business`, so a binary from before this
+-- migration, which reads and polls every `telegram` row as the one live bot, never
+-- sees a link.
 ALTER TABLE channel_connection ADD COLUMN IF NOT EXISTS account_id text;
 ALTER TABLE channel_connection ADD COLUMN IF NOT EXISTS parent_connection_id uuid
     REFERENCES channel_connection(id) ON DELETE RESTRICT;
@@ -27,7 +30,7 @@ CREATE INDEX IF NOT EXISTS channel_connection_owner_idx ON channel_connection (o
 
 ALTER TABLE channel_connection DROP CONSTRAINT IF EXISTS channel_connection_provider_check;
 ALTER TABLE channel_connection ADD CONSTRAINT channel_connection_provider_check
-    CHECK (provider IN ('telegram', 'dispact', 'whatsapp', 'zalo_oa')) NOT VALID;
+    CHECK (provider IN ('telegram', 'telegram_business', 'dispact', 'whatsapp', 'zalo_oa')) NOT VALID;
 ALTER TABLE channel_connection DROP CONSTRAINT IF EXISTS channel_connection_status_check;
 ALTER TABLE channel_connection ADD CONSTRAINT channel_connection_status_check
     CHECK (status IN ('connected', 'disconnected', 'error', 'reauth_required', 'pending_approval')) NOT VALID;

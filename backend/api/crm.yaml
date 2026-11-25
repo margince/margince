@@ -17933,6 +17933,7 @@ paths:
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/PermissionDenied' }
         '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/ValidationError' }
         '503':
           description: 'This deployment serves no messaging channels (`code: channel_connections_not_configured`).'
           content:
@@ -17961,6 +17962,7 @@ paths:
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/PermissionDenied' }
         '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/ValidationError' }
         '409': { $ref: '#/components/responses/Conflict' }
         '503':
           description: 'This deployment serves no messaging channels (`code: channel_connections_not_configured`).'
@@ -47665,7 +47667,7 @@ components:
       required: [id, provider, channelId, channelLabel, status, version]
       properties:
         id: { type: string, format: uuid }
-        provider: { type: string, enum: [telegram, dispact, whatsapp, zalo_oa], x-extensible-enum: true }
+        provider: { type: string, enum: [telegram, telegram_business, dispact, whatsapp, zalo_oa], x-extensible-enum: true }
         channelId:
           type: string
           description: The provider's own id for the bot — the key the binding is unique on. For Dispact it is the chat's team id.

@@ -296,7 +296,7 @@ var contractFieldEnums = map[string]contractFieldEnum{
 	"CaptureTraceFiling.result":                                  {Values: []string{"linked", "none", "ambiguous", "parties_changed", "failed", "ignored", "moved", "retracted"}, ResponseOnly: []string{}, Description: ""},
 	"CaptureTraceResolution.status":                              {Values: []string{"pending", "unsure", "real", "noise", "rejected", "suppressed"}, ResponseOnly: []string{}, Description: ""},
 	"ChangeContractStatusRequest.status":                         {Values: []string{"draft", "active", "expired", "cancelled", "superseded"}, ResponseOnly: []string{}, Description: "The asserted new status. `superseded` is set by renewContract, not here."},
-	"ChannelConnection.provider":                                 {Values: []string{"telegram", "dispact", "whatsapp", "zalo_oa"}, ResponseOnly: []string{}, Description: ""},
+	"ChannelConnection.provider":                                 {Values: []string{"telegram", "telegram_business", "dispact", "whatsapp", "zalo_oa"}, ResponseOnly: []string{}, Description: ""},
 	"ChannelConnection.status":                                   {Values: []string{"pending_approval", "connected", "disconnected", "error", "reauth_required"}, ResponseOnly: []string{}, Description: "Only `connected` is live, and it is the only state a connect can produce: a pull ingress makes no provider call after the write, so there is no half-connected state."},
 	"ChannelLink.provider":                                       {Values: []string{"dispact"}, ResponseOnly: []string{}, Description: ""},
 	"ChannelLink.status":                                         {Values: []string{"active", "channel_gone"}, ResponseOnly: []string{}, Description: ""},

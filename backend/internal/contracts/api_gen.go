@@ -5310,10 +5310,11 @@ func (e ChangeContractStatusRequestStatus) Valid() bool {
 
 // Defines values for ChannelConnectionProvider.
 const (
-	ChannelConnectionProviderDispact  ChannelConnectionProvider = "dispact"
-	ChannelConnectionProviderTelegram ChannelConnectionProvider = "telegram"
-	ChannelConnectionProviderWhatsapp ChannelConnectionProvider = "whatsapp"
-	ChannelConnectionProviderZaloOa   ChannelConnectionProvider = "zalo_oa"
+	ChannelConnectionProviderDispact          ChannelConnectionProvider = "dispact"
+	ChannelConnectionProviderTelegram         ChannelConnectionProvider = "telegram"
+	ChannelConnectionProviderTelegramBusiness ChannelConnectionProvider = "telegram_business"
+	ChannelConnectionProviderWhatsapp         ChannelConnectionProvider = "whatsapp"
+	ChannelConnectionProviderZaloOa           ChannelConnectionProvider = "zalo_oa"
 )
 
 // Valid indicates whether the value is a known member of the ChannelConnectionProvider enum.
@@ -5322,6 +5323,8 @@ func (e ChannelConnectionProvider) Valid() bool {
 	case ChannelConnectionProviderDispact:
 		return true
 	case ChannelConnectionProviderTelegram:
+		return true
+	case ChannelConnectionProviderTelegramBusiness:
 		return true
 	case ChannelConnectionProviderWhatsapp:
 		return true

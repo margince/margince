@@ -17,6 +17,7 @@ import (
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
 )
@@ -26,6 +27,13 @@ import (
 // read projects it under (contact_children.go's attachContactReachability), so
 // a human reading the trail and a human reading the record see one name.
 const fieldReachability = "reachability"
+
+// ErrChannelIdentityInOtherScope reports that the channel user is already bound to
+// a contact through another account scope. The older (provider, channel_user_id)
+// index still lets one user id bind once across scopes. So the call neither binds
+// nor adopts a contact seen through a different account. It is an ErrConflict, and
+// the caller leaves the message unlinked for the reconcile sweep.
+var ErrChannelIdentityInOtherScope = fmt.Errorf("this chat user is already linked to a contact through another account: %w", apperrors.ErrConflict)
 
 // ResolveOrCreateChannelIdentity binds ci to contactID and returns the contact
 // the identity ACTUALLY belongs to once the dust settles — contactID when this
@@ -42,6 +50,9 @@ const fieldReachability = "reachability"
 // returned id different from contactID as having lost the race: its own contact
 // row is speculative and must not survive the transaction, or the human ends
 // up on two records with the conversation on one of them.
+//
+// It returns ErrChannelIdentityInOtherScope when the user id is bound under a
+// different account scope, which the older unique index still refuses.
 //
 // The row carries no audit entry of its own, by the same rule as contact_email
 // and contact_phone: it is a satellite of the contact write that encloses it,
@@ -63,8 +74,7 @@ func ResolveOrCreateChannelIdentity(ctx context.Context, tx pgx.Tx, contactID id
 	tag, err := tx.Exec(ctx, `
 		INSERT INTO contact_channel_identity (contact_id, provider, account_scope, channel_user_id, username, source, captured_by)
 		VALUES ($1, $2, $6, $3, NULLIF($4, ''), $2, $5)
-		ON CONFLICT (provider, account_scope, channel_user_id) WHERE archived_at IS NULL
-		DO NOTHING`,
+		ON CONFLICT DO NOTHING`,
 		contactID, ci.Provider, ci.ChannelUserID, ci.Username, by, ci.AccountScope)
 	if err != nil {
 		return ids.ContactID{}, fmt.Errorf("contacts: binding channel identity: %w", err)
@@ -74,13 +84,18 @@ func ResolveOrCreateChannelIdentity(ctx context.Context, tx pgx.Tx, contactID id
 	}
 
 	// Zero rows means a live binding already exists — either it predates this
-	// call or the concurrent winner has now committed. A fresh statement takes
+	// call or the concurrent winner has now committed. Without a conflict target
+	// the insert yields to either unique index, so it may be another scope's.
+	// A fresh statement takes
 	// a fresh snapshot under READ COMMITTED, so this read sees it.
 	var winner ids.ContactID
 	err = tx.QueryRow(ctx, `
 		SELECT contact_id FROM contact_channel_identity
 		WHERE provider = $1 AND channel_user_id = $2 AND account_scope = $3 AND archived_at IS NULL`,
 		ci.Provider, ci.ChannelUserID, ci.AccountScope).Scan(&winner)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return ids.ContactID{}, ErrChannelIdentityInOtherScope
+	}
 	if err != nil {
 		return ids.ContactID{}, fmt.Errorf("contacts: reading the channel identity that won the bind: %w", err)
 	}

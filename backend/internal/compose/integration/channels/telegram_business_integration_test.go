@@ -74,7 +74,7 @@ func (c *telegramEnv) businessRow(t *testing.T, accountID string) (businessRow, 
 	var parent *string
 	rows, err := c.Owner.Query(context.Background(), `
 		SELECT id::text, status, channel_id, channel_label, parent_connection_id::text, credential_ref, approved_at IS NOT NULL, version
-		  FROM channel_connection WHERE provider = 'telegram' AND account_id = $1 AND archived_at IS NULL`, accountID)
+		  FROM channel_connection WHERE provider = 'telegram_business' AND account_id = $1 AND archived_at IS NULL`, accountID)
 	if err != nil {
 		t.Fatalf("reading the business connection: %v", err)
 	}
@@ -131,7 +131,7 @@ func TestABusinessConnectionWaitsForApprovalAndStoresNothing(t *testing.T) {
 	if again.version != row.version || c.connectionAudits(t, row.id) != 1 {
 		t.Errorf("a repeated update changed the link (version %d -> %d, %d audit rows)", row.version, again.version, c.connectionAudits(t, row.id))
 	}
-	if n := c.count(t, `SELECT count(*) FROM channel_connection WHERE provider = 'telegram' AND archived_at IS NULL AND account_id IS NOT NULL`); n != 1 {
+	if n := c.count(t, `SELECT count(*) FROM channel_connection WHERE provider = 'telegram_business' AND archived_at IS NULL`); n != 1 {
 		t.Errorf("%d live account connections after a repeat, want 1", n)
 	}
 	if bot, ok := c.liveBot(t); !ok || bot != c.conn.ID.String() {
@@ -301,5 +301,50 @@ func TestBusinessConnectionsLeaveTheBotConnectionsUntouched(t *testing.T) {
 	}
 	if _, ok := c.businessRow(t, "880401"); ok {
 		t.Error("a business link outlived the bot it rides on")
+	}
+}
+
+// A link has its own provider, so a binary that reads every `telegram` row as the
+// one live bot never meets it. A child row of another provider is not a Telegram
+// link either, and the business endpoints neither list nor touch it.
+func TestTheBusinessEndpointsServeOnlyTelegramBusinessRows(t *testing.T) {
+	c := setupTelegramConnected(t)
+	runner, sub := newTelegramWorker(t, c, compose.JobRunnerConfig{})
+	startTelegramWorker(t, runner)
+	c.deliver(t, sub, businessUpdate{updateID: 6501, connectionID: "bc-w", ownerID: 880501, firstName: "Fay", enabled: true})
+	if n := c.count(t, `SELECT count(*) FROM channel_connection WHERE provider = 'telegram' AND archived_at IS NULL`); n != 1 {
+		t.Fatalf("%d live telegram rows, want the bot alone: a link is a telegram_business row", n)
+	}
+
+	var foreign string
+	if err := c.Owner.QueryRow(context.Background(), `
+		INSERT INTO channel_connection
+		  (provider, channel_id, channel_label, credential_ref, status, connected_by, account_id, parent_connection_id)
+		SELECT 'whatsapp', 'wa-child', 'Other', '', 'pending_approval', connected_by, '990001', id
+		  FROM channel_connection WHERE id = $1
+		RETURNING id::text`, c.conn.ID).Scan(&foreign); err != nil {
+		t.Fatalf("seeding a child row of another provider: %v", err)
+	}
+	foreignID := ids.MustParse(foreign)
+	store := c.channelStore()
+
+	listed, err := store.ListBusinessConnections(c.adminCtx(t))
+	if err != nil {
+		t.Fatalf("listing: %v", err)
+	}
+	if len(listed) != 1 || listed[0].AccountID != "880501" {
+		t.Errorf("the Telegram list holds %+v, want the Telegram link alone", listed)
+	}
+	if _, err := store.ApproveBusinessConnection(c.adminCtx(t), foreignID); !errors.Is(err, apperrors.ErrNotFound) {
+		t.Errorf("approving another provider's child row = %v, want not found", err)
+	}
+	if err := store.DisconnectBusinessConnection(c.adminCtx(t), foreignID); !errors.Is(err, apperrors.ErrNotFound) {
+		t.Errorf("disconnecting another provider's child row = %v, want not found", err)
+	}
+	if err := store.Disconnect(c.adminCtx(t), c.conn.ID); err != nil {
+		t.Fatalf("disconnecting the bot: %v", err)
+	}
+	if n := c.count(t, `SELECT count(*) FROM channel_connection WHERE id = $1 AND archived_at IS NULL AND status = 'pending_approval'`, foreign); n != 1 {
+		t.Errorf("the other provider's child row was changed by Telegram operations")
 	}
 }

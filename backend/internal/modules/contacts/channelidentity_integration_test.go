@@ -12,11 +12,13 @@ package contacts
 
 import (
 	"context"
+	"errors"
 	"sync"
 	"testing"
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
 )
@@ -179,5 +181,32 @@ func TestAnIdentityIsBoundOncePerAccountScope(t *testing.T) {
 	resolved, err := e.resolveOrCreateContactForIdentity(ctx, "Resolver", inFirst)
 	if err != nil || resolved != first {
 		t.Fatalf("resolving the user in the scope = %s, %v, want %s", resolved, err, first)
+	}
+}
+
+// The older (provider, channel_user_id) index still refuses a second scope for one
+// user id. The bind reports that as ErrChannelIdentityInOtherScope and neither
+// raises a unique violation nor hands back the other scope's contact.
+func TestAnIdentityBoundInAnotherScopeIsRefusedAsAConflict(t *testing.T) {
+	e := setupDedupe(t)
+	ctx := e.as()
+	first := e.seedContact(ctx, t, "Scope Holder", []string{"holder@scope.test"}, nil)
+	other := e.seedContact(ctx, t, "Scope Visitor", []string{"visitor@scope.test"}, nil)
+	const user = "770602"
+	if bound := e.bindIdentity(ctx, t, first, connector.ChannelIdentity{Provider: telegramProvider, AccountScope: "880002", ChannelUserID: user}); bound != first {
+		t.Fatalf("the first bind returned %s, want %s", bound, first)
+	}
+
+	err := e.store.tx(ctx, func(tx pgx.Tx) error {
+		_, err := ResolveOrCreateChannelIdentity(ctx, tx, other,
+			connector.ChannelIdentity{Provider: telegramProvider, AccountScope: "880003", ChannelUserID: user})
+		return err
+	})
+	if !errors.Is(err, ErrChannelIdentityInOtherScope) || !errors.Is(err, apperrors.ErrConflict) {
+		t.Fatalf("binding the user in a second scope = %v, want ErrChannelIdentityInOtherScope as a conflict", err)
+	}
+	if n := e.countInWorkspace(ctx, t,
+		`SELECT count(*) FROM contact_channel_identity WHERE channel_user_id = $1 AND archived_at IS NULL`, user); n != 1 {
+		t.Fatalf("%d live bindings, want the first scope's alone", n)
 	}
 }

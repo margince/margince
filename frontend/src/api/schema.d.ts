@@ -33451,7 +33451,7 @@ export interface components {
             /** Format: uuid */
             id: string;
             /** @enum {string} */
-            provider: "telegram" | "dispact" | "whatsapp" | "zalo_oa";
+            provider: "telegram" | "telegram_business" | "dispact" | "whatsapp" | "zalo_oa";
             /** @description The provider's own id for the bot — the key the binding is unique on. For Dispact it is the chat's team id. */
             channelId: string;
             /** @description The bot's @username. Display only — a username is mutable and re-assignable, so it identifies nothing. */
@@ -85414,6 +85414,7 @@ export interface operations {
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["PermissionDenied"];
             404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
             /** @description This deployment serves no messaging channels (`code: channel_connections_not_configured`). */
             503: {
                 headers: {
@@ -85450,6 +85451,7 @@ export interface operations {
             403: components["responses"]["PermissionDenied"];
             404: components["responses"]["NotFound"];
             409: components["responses"]["Conflict"];
+            422: components["responses"]["ValidationError"];
             /** @description This deployment serves no messaging channels (`code: channel_connections_not_configured`). */
             503: {
                 headers: {
