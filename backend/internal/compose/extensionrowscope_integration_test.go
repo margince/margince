@@ -5,9 +5,9 @@
 
 package compose
 
-// A kind that names an owner column is read under each role's own, team or all
-// row scope, as a deal is, by every core reader: search, the row check, a Live
-// List's engine, a report count and a contact's History. A row with no owner is
+// A kind that names an owner column is read under the role's row scope, as a
+// deal is. Every core reader applies it: search, the row check, a Live List's
+// engine, a report count and a contact's History. A row with no owner is
 // everyone's. A kind without an owner column stays all or nothing.
 
 import (

@@ -6,12 +6,10 @@
 package gates
 
 // Every core read of an extension kind's rows carries the kind's row scope. A
-// reader that names a table in the ext schema and forgets the scope still
-// answers plausible rows, only a colleague's ones too. The corpus is every
-// function under internal/ that names the ext schema in a file that imports the
-// record-kind registry, so a new reader is read without being listed here. A
-// file without that import cannot tell a kind's table from the unit's others:
-// those are the privacy and reach plumbing, which run as the system.
+// reader without it still answers plausible rows, a colleague's ones too. The
+// corpus is each function naming the ext schema in a file that imports the
+// record-kind registry. Only those files can tell a kind's table from a unit's
+// other tables; the rest is privacy and reach plumbing that runs as system.
 
 import (
 	"go/ast"

@@ -175,8 +175,7 @@ func EnsureLinkTarget(ctx context.Context, tx pgx.Tx, table string, id ids.UUID)
 
 // ensureExtensionRecord is the row probe for a kind an extension declared, live
 // or not as the caller asks. A caller without the kind's read right, or outside
-// its row scope, gets the answer a missing row gets, so the probe does not
-// disclose that the id exists.
+// its row scope, gets the answer a missing row gets. So the id is not disclosed.
 // The share lock is the one a core target takes: an archive between the probe
 // and the write must wait.
 func ensureExtensionRecord(ctx context.Context, tx pgx.Tx, kind string, id ids.UUID, live bool) error {

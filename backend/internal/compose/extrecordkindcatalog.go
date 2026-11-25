@@ -111,8 +111,8 @@ func VerifyRecordKinds(ctx context.Context, q recordKindQuerier, kinds []recordk
 	return nil
 }
 
-// verifyKindOwner refuses a declared owner column that core cannot scope rows
-// by: one missing, of another type than uuid, or with no index to filter on.
+// verifyKindOwner refuses an owner column core cannot scope rows by. It may be
+// missing, of a type other than uuid, or without an index to filter on.
 func verifyKindOwner(ctx context.Context, q recordKindQuerier, k recordkinds.Declared, qualified string) error {
 	if k.OwnerColumn == "" {
 		return nil

@@ -73,8 +73,8 @@ func (h analyticsQueryHandlers) ListExtensionHistory(w http.ResponseWriter, r *h
 }
 
 // extensionRecordEntries reads, kind by kind, the rows that reference the
-// record. A kind the caller may not read is left out, as in the kind directory,
-// and of a kind they may read they see the rows inside its row scope.
+// record. A kind the caller may not read is left out, as in the kind directory.
+// Of a kind they may read, they see the rows inside its row scope.
 func extensionRecordEntries(ctx context.Context, tx pgx.Tx, entity string, id ids.UUID) ([]crmcontracts.ExtensionHistoryEntry, error) {
 	var out []crmcontracts.ExtensionHistoryEntry
 	for _, d := range recordkinds.All() {

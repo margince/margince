@@ -78,9 +78,9 @@ type RecordKindDeclaration struct {
 	// `#/ext/<unit>/<View>` with the record's kind and id in the query.
 	View string
 	// OwnerColumn, when set, is the `uuid` column that holds the member who owns
-	// a row. Core then reads the kind under each role's own, team or all row
-	// scope, as it reads deals, and a row with no owner is everyone's. Empty
-	// leaves the kind all or nothing: the read right on it shows every row.
+	// a row. Core then reads the kind under the role's own, team or all row
+	// scope, as it reads deals. A row with no owner is everyone's. Empty leaves
+	// the kind all or nothing: the read right on it shows every row.
 	OwnerColumn string
 }
 

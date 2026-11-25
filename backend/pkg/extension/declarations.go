@@ -6,9 +6,9 @@ package extension
 import "fmt"
 
 // ValidateDeclarations refuses the record kinds, link types and signal types of
-// one unit that core could not carry: each by its own Validate, and a name the
-// unit declares twice. Core's boot runs it for every unit, and a unit's tests
-// run it through extensiontest, so both answer by one set of rules.
+// one unit that core could not carry. It runs each one's Validate and refuses a
+// name the unit declares twice. Core's boot runs it for every unit. A unit's
+// tests run it through extensiontest, so both answer by one set of rules.
 func (e Extension) ValidateDeclarations() error {
 	if err := declaredOnce("link type", e.LinkTypes, func(t LinkType) (string, error) { return t.Type, t.Validate() }); err != nil {
 		return err

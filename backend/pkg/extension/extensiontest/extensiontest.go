@@ -25,8 +25,8 @@ func Check(t testing.TB, ext extension.Extension) {
 	}
 }
 
-// CheckSignal fails the test when the unit declares no signal type kind, or
-// when core would refuse fields as the evidence of a signal of it.
+// CheckSignal fails the test when the unit declares no signal type kind. It
+// also fails when core would refuse fields as the evidence of such a signal.
 func CheckSignal(t testing.TB, ext extension.Extension, kind string, fields map[string]any) {
 	t.Helper()
 	i := slices.IndexFunc(ext.SignalTypes, func(d extension.SignalTypeDeclaration) bool { return d.Kind == kind })
@@ -39,9 +39,8 @@ func CheckSignal(t testing.TB, ext extension.Extension, kind string, fields map[
 	}
 }
 
-// CheckLink fails the test when the unit declares no link type linkType, or
-// when core would refuse a link of it from a record of kind from to one of kind
-// to.
+// CheckLink fails the test when the unit declares no link type linkType. It
+// also fails when a link of it may not start on from and end on to.
 func CheckLink(t testing.TB, ext extension.Extension, linkType, from, to string) {
 	t.Helper()
 	i := slices.IndexFunc(ext.LinkTypes, func(l extension.LinkType) bool { return l.Type == linkType })
