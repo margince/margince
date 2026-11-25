@@ -347,6 +347,29 @@
   );
   min-block-size: var(--modal-close-reason-clearance, 0);
 }
+/* A title with a mark: the line clears the corner, and the mark follows the
+   title's last word instead of the padding the corner rule gives a heading.
+   The line keeps the title's own space below it. */
+.modal > .drawer-head > .drawer-head-line {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+  padding-inline-end: calc(
+    var(--modal-corner, var(--controlHeight)) +
+    var(--space-4)
+  );
+}
+.modal > .drawer-head > .drawer-head-line:has(> .modal-title) {
+  margin-bottom: var(--space-3);
+}
+.modal
+  > .drawer-head
+  > .drawer-head-line
+  > :is(h1, h2, h3, .modal-title):first-child {
+  margin-block: 0;
+  padding-inline-end: 0;
+}
 /* A close control with a reason hangs up to two caption lines under the
    button, so the first line of content starts below them. */
 .modal:has(> .modal-close .btn-with-reason) {

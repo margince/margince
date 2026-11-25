@@ -1,16 +1,34 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import type { ReactNode, Ref, UIEventHandler } from "react";
+import { Children, type ReactNode, type Ref, type UIEventHandler } from "react";
 
 type Band = Readonly<{ children: ReactNode; className?: string }>;
 
 // Its first child is the `Heading` the Modal's `labelledBy` names. The drawer
 // keeps this band and the foot in view while the body scrolls.
-export function DrawerHead({ children, className }: Band) {
+//
+// `mark` is a short fact about the whole drawer (a `Badge`), drawn on the
+// title's own line, after its last word.
+export function DrawerHead({
+  children,
+  className,
+  mark,
+}: Band & Readonly<{ mark?: ReactNode }>) {
+  const [title, ...rest] = Children.toArray(children);
   return (
     <div className={["drawer-head", className ?? ""].filter(Boolean).join(" ")}>
-      {children}
+      {mark ? (
+        <>
+          <div className="drawer-head-line">
+            {title}
+            {mark}
+          </div>
+          {rest}
+        </>
+      ) : (
+        children
+      )}
     </div>
   );
 }
