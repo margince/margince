@@ -9,11 +9,13 @@ import type { components } from "../../api/schema";
 import { Button, Field } from "../../design-system/atoms";
 import { Callout } from "../../design-system/callout";
 import { ConfirmModal } from "../../design-system/confirmmodal";
+import { ErrorLine } from "../../design-system/errorline";
 import { QueryStates } from "../../design-system/querystates";
 import { RecordPicker } from "../../design-system/recordpicker";
 import { useToast } from "../../design-system/toast";
 import { usePlural, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
+import { labelFor } from "../../lib/labelfor";
 import {
   memberRetirementBlocker,
   memberRetirementConsequence,
@@ -250,7 +252,7 @@ function MergeConfirmations({
       <ul>
         {sides.map((side) => (
           <li key={side.user_id}>
-            {side.display_name}: {t(CONFIRMATION_STATE[side.state])}
+            {side.display_name}: {t(labelFor(CONFIRMATION_STATE, side.state))}
           </li>
         ))}
       </ul>
@@ -262,7 +264,7 @@ function MergeConfirmations({
           {t(asked ? "users.merge.askAgain" : "users.merge.ask")}
         </Button>
       )}
-      {ask.error && <p role="alert">{problemMessageOf(ask.error, t)}</p>}
+      <ErrorLine error={ask.error} />
     </div>
   );
 }

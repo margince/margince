@@ -10,6 +10,7 @@ import {
   Skeleton,
   TextInput,
 } from "../../design-system/atoms";
+
 import { ErrorLine } from "../../design-system/errorline";
 import { Heading } from "../../design-system/heading";
 import { INTL_LOCALE } from "../../format/intllocale";
@@ -134,7 +135,7 @@ export function MergeConfirmScreen() {
           <>
             <p>{t("users.mergeConfirm.body")}</p>
             {confirm.isError && (
-              <p role="alert">{t("users.mergeConfirm.failed")}</p>
+              <ErrorLine>{t("users.mergeConfirm.failed")}</ErrorLine>
             )}
             <Button
               disabled={confirm.isPending}

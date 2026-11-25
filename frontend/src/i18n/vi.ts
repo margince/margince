@@ -118,7 +118,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "users.mergeConfirm.done":
     "Đã xác nhận. Quản trị viên có thể hoàn tất việc gộp. Bạn có thể đóng trang này.",
   "users.mergeConfirm.dead":
-    "Liên kết này không còn hiệu lực. Có thể nó đã hết hạn, đã dùng hoặc đã được thay. Hãy nhờ quản trị viên gửi liên kết mới.",
+    "Liên kết này không còn hiệu lực. Có thể nó đã hết hạn, đã dùng hoặc đã được thay. Liên hệ quản trị viên để nhận liên kết mới.",
   "users.mergeConfirm.failed": "Chưa xác nhận được. Hãy thử lại sau ít phút.",
   "users.retirement.suspended_side":
     "Tài khoản bị tạm khóa không thể xác nhận. Hãy bật lại hoặc vô hiệu hóa nó trước.",
