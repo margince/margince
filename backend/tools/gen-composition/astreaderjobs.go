@@ -179,6 +179,12 @@ func jobRequests(decls []extension.JobDeclaration) ([]riskTierRequest, error) {
 // on and how often — a job an operator resolved at six-hourly should not
 // silently become one running every minute.
 func jobDeclarationHash(d extension.JobDeclaration) string {
-	return digestBytes(fmt.Appendf(nil, "%s\x00%s\x00%d\x00%d\x00%d\x00%d",
-		d.Queue, d.Job, int64(d.Cadence), int64(d.DispatcherTimeout), int64(d.Timeout), d.MaxAttempts))
+	fields := fmt.Appendf(nil, "%s\x00%s\x00%d\x00%d\x00%d\x00%d",
+		d.Queue, d.Job, int64(d.Cadence), int64(d.DispatcherTimeout), int64(d.Timeout), d.MaxAttempts)
+	// Appended only for a clock-time job, so an interval job keeps the digest
+	// an operator already resolved.
+	if d.At != nil {
+		fields = fmt.Appendf(fields, "\x00at=%d\x00days=%v", d.At.Minute, d.At.Days)
+	}
+	return digestBytes(fields)
 }

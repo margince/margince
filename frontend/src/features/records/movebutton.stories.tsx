@@ -42,8 +42,10 @@ export const CreateTask: Story = {
   args: CREATE_TASK,
 };
 
-const TASK_REFUSAL = "You do not have permission to add tasks";
-const EMAIL_REFUSAL = "You do not have permission to send email";
+const TASK_REFUSAL =
+  "Your role can only read. Ask an administrator for another role.";
+const EMAIL_REFUSAL =
+  "Your role can only read. Ask an administrator for another role.";
 
 /** A move the server marked blocked stays on the card, disabled, with its reason. */
 export const CreateTaskBlocked: Story = {

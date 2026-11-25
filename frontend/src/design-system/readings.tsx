@@ -331,6 +331,7 @@ export function BarList({
             {onSelect ? (
               <Button
                 variant="link"
+                align="start"
                 className="barlist-row barlist-action"
                 onClick={() => onSelect(row.key)}
                 aria-label={`${row.label}: ${row.amount}`}

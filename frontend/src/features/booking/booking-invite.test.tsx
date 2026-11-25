@@ -8,6 +8,7 @@ import type { components } from "../../api/schema";
 import { formatDateTime } from "../../format/format";
 import { browserZone, wallClockIntent } from "../../format/timezone";
 import { LocaleProvider } from "../../i18n";
+import { en } from "../../i18n/en";
 import { watchAddress } from "../../lib/router";
 import {
   bookingConnection,
@@ -88,7 +89,9 @@ function mount(
       paths.push(path);
       let body: unknown;
       if (path === "/v1/me") {
-        body = meFixture({ allow: { activity: ["read", "create"] } });
+        body = meFixture({
+          allow: { activity: ["read", "create"], contact: ["read", "update"] },
+        });
       } else if (request.method === "POST" && path.endsWith("/invitations")) {
         invitations.push(await request.json());
         body = { ...bookingInvitation, id: "meeting-1" };
@@ -524,11 +527,7 @@ it.each([false, undefined])(
     const { proposals } = mount(true, 30, () => bookingSlots, bookingHours, {
       attachable,
     });
-    expect(
-      await screen.findByText(
-        "You can only read this contact. Ask its owner for write access.",
-      ),
-    ).toBeTruthy();
+    expect(await screen.findByText(en["contact.attachRefused"])).toBeTruthy();
     for (const slot of bookingSlots) {
       await user.click(
         await screen.findByRole("button", { name: slotName(slot.start) }),

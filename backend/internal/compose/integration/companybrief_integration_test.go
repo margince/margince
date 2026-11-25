@@ -190,8 +190,9 @@ func TestCompanyBriefIsCachedPerReader(t *testing.T) {
 	if lane.calls != 2 {
 		t.Errorf("model calls = %d for two readers, want one brief each", lane.calls)
 	}
-	if rows := e.WsCount(t, `SELECT count(*) FROM company_brief WHERE company_id = $1`, company.UUID); rows != 2 {
-		t.Errorf("company_brief rows = %d, want one per reader", rows)
+	if rows := e.WsCount(t, `SELECT count(*) FROM generated_summary
+		  WHERE kind = 'company_brief' AND company_id = $1`, company.UUID); rows != 2 {
+		t.Errorf("stored company brief rows = %d, want one per reader", rows)
 	}
 }
 
@@ -354,8 +355,8 @@ func TestCompanyBriefHidesAnAccountOutOfRowScope(t *testing.T) {
 	if !errors.Is(err, apperrors.ErrNotFound) {
 		t.Errorf("brief for an out-of-scope account → %v, want ErrNotFound", err)
 	}
-	if rows := e.WsCount(t, `SELECT count(*) FROM company_brief`); rows != 0 {
-		t.Errorf("company_brief rows = %d after a refused read, want 0", rows)
+	if rows := e.WsCount(t, `SELECT count(*) FROM generated_summary WHERE kind = 'company_brief'`); rows != 0 {
+		t.Errorf("stored company brief rows = %d after a refused read, want 0", rows)
 	}
 }
 

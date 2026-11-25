@@ -176,7 +176,7 @@ func (s *Store) storeVectors(ctx context.Context, batch []pendingChunk, vectors 
 		for i, c := range batch {
 			tag, err := tx.Exec(ctx,
 				`UPDATE knowledge_chunk
-				 SET embedding = $2::vector, embed_identity = $3, embedded_at = now()
+				 SET embedding = $2::vector, embed_identity = $3
 				 WHERE id = $1 AND chunk_hash = $4 AND archived_at IS NULL
 				   AND embed_identity IS NOT DISTINCT FROM $5`,
 				c.id, vectorkit.Literal(vectors[i]), identity, c.hash, storedIdentityArg(c))

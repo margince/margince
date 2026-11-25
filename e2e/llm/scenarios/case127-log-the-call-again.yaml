@@ -24,7 +24,7 @@ may_call:
   - create_record
 
 must_mention:
-  - "(?i)already|bereits"
+  - "(?i)already|bereits|twice|duplicate|second time"
 
 must_end_with:
   - contact "Hilke Janssen" activities=1

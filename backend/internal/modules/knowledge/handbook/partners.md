@@ -117,6 +117,7 @@ A partner's own **Partner** tab lists **Partner deals**: the deals of other comp
 ## Commission
 
 Commission in Margince is added on its own when a deal that a partner **sourced** is won; nobody creates it by hand. A deal the partner only influenced earns nothing.
+The win still earns it if the deal or the partner company is archived soon after. Commission on an archived deal shows again once the deal is restored.
 
 The partner's margin tier is fixed on the commission when it is added. So changing a partner's tier later does not change what they have already earned. A partner with no tier earns nothing, and no commission line shows at all. A zero would say "we owe them nothing"; no line says "we owe them nothing yet".
 

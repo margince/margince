@@ -58,8 +58,8 @@ export function useCompanyEdit(company: Company, canEdit: boolean): RailEdit {
     if (field.key === "industry") return [{ ...field, options: industries }];
     // The wire may omit the stage, and a required blank would hold every
     // other About field hostage to it.
-    if (field.key === "lifecycle")
-      return [{ ...field, required: Boolean(company.lifecycle) }];
+    if (field.key === "status")
+      return [{ ...field, required: Boolean(company.status) }];
     return [field];
   });
   return {

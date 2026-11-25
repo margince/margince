@@ -271,3 +271,38 @@ describe("RoleDetail permission grid", () => {
     }
   });
 });
+
+describe("RoleDetail rename", () => {
+  it("says a taken name on the name field and bounds the box", async () => {
+    const user = userEvent.setup();
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(
+        async () =>
+          new Response(
+            JSON.stringify({
+              status: 409,
+              code: "role_name_taken",
+              detail:
+                "another role already has this name; choose a different one",
+            }),
+            {
+              status: 409,
+              headers: { "Content-Type": "application/problem+json" },
+            },
+          ),
+      ),
+    );
+    render();
+    await user.click(screen.getByRole("button", { name: en["roles.rename"] }));
+    const field = await screen.findByRole("textbox", {
+      name: en["roles.nameLabel"],
+    });
+    expect(field.getAttribute("data-character-limit")).toBe("120");
+    await user.clear(field);
+    await user.type(field, "Inside sales{Enter}");
+    await waitFor(() =>
+      expect(description(field)).toContain(en["roles.refusal.nameTaken"]),
+    );
+  });
+});

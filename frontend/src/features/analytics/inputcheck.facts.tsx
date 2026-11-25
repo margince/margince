@@ -47,6 +47,7 @@ export function checkLabel(
     commit_unpriced: "review.commitUnpriced",
     stage_exit_unmet: "review.stageExitUnmet",
     forecast_call_moved: "review.forecastCallMoved",
+    duplicate_motion: "review.duplicateMotion",
   };
   return (known[type] ?? "review.unknownCheck") as Parameters<
     ReturnType<typeof useT>

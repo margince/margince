@@ -77,7 +77,8 @@ it("names the follow-up it created and opens that task, not the deal", async () 
 // The server's MoveRefusal is the one answer to whether a seat may take the
 // move. The card draws its refusal, with its reason, as a control that is off.
 it("draws the follow-up the server refused as off, with its reason, and writes no task", async () => {
-  const reason = "You do not have permission to add tasks";
+  const reason =
+    "Your role can only read. Ask an administrator for another role.";
   const writes: string[] = [];
   installFetchStub({
     "GET /me": meRoute({ activity: ["read"] }),
@@ -122,7 +123,8 @@ it("draws the follow-up the server refused as off, with its reason, and writes n
 });
 
 it("draws the follow-up draft the server refused as off, with its reason", async () => {
-  const reason = "You do not have permission to send email";
+  const reason =
+    "Your role can only read. Ask an administrator for another role.";
   installFetchStub({
     "GET /me": meRoute({ activity: ["read"] }),
     "GET /deals/demo-deal/status": () =>

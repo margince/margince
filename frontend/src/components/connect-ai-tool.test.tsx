@@ -14,7 +14,7 @@ import { pickOption } from "../design-system/select-testing";
 import { LocaleProvider } from "../i18n";
 import { AI_CHOICE_MARKS, AI_PLACES } from "../lib/aiconnect";
 import * as download from "../lib/download";
-import { ConnectAiToolCard } from "./connect-ai-tool";
+import { ConnectAiTool, ConnectAiToolCard } from "./connect-ai-tool";
 
 const MCP_URL = "https://crm.acme.test/mcp";
 
@@ -283,6 +283,23 @@ describe("ConnectAiToolCard", () => {
     ).toBe(`{ "mcpServers": { "margince": { "url": "${MCP_URL}" } } }`);
   });
 
+  it("gives Lumo the desktop-app steps with the address to paste, and says the website cannot connect", async () => {
+    renderCard();
+    const user = userEvent.setup();
+    await pick(user, "Lumo");
+    expect(
+      screen.queryByRole("combobox", { name: "Where do you use it?" }),
+    ).toBeNull();
+    expect(steps()).toHaveLength(4);
+    expect(steps()[1]).toContain("“Remote (HTTP)”");
+    const address = screen.getByRole("textbox", { name: "Margince address" });
+    expect(address.textContent).toBe(MCP_URL);
+    expect(
+      within(pathBox()).getAllByRole("listitem")[2].contains(address),
+    ).toBe(true);
+    expect(screen.getByText(/Lumo on the web cannot connect/)).toBeTruthy();
+  });
+
   it("gives any other tool the address and how it signs in", async () => {
     renderCard();
     const user = userEvent.setup();
@@ -295,6 +312,29 @@ describe("ConnectAiToolCard", () => {
     ).toBe(MCP_URL);
     expect(screen.getByText(/OAuth in your browser/)).toBeTruthy();
     expect(screen.getByText(/Authorization: Bearer/)).toBeTruthy();
+    // The card stands on AI assistants, so it points down the page.
+    expect(
+      screen.getByText(/No sign-in in the tool\? Create a passport under/),
+    ).toBeTruthy();
+  });
+
+  it("sends a dialog away from settings to where passports are created", async () => {
+    vi.stubGlobal("fetch", discovery(200));
+    render(
+      <QueryClientProvider
+        client={
+          new QueryClient({ defaultOptions: { queries: { retry: false } } })
+        }
+      >
+        <LocaleProvider initial="en">
+          <ConnectAiTool />
+        </LocaleProvider>
+      </QueryClientProvider>,
+    );
+    await pick(userEvent.setup(), "Another AI tool");
+    expect(
+      screen.getByText(/in Settings under AI assistants, For developers/),
+    ).toBeTruthy();
   });
 
   it("says AI tools cannot connect yet instead of giving steps", async () => {
@@ -345,6 +385,7 @@ describe("the picker's marks", () => {
       ["Copilot", "github-copilot"],
       ["Gemini", "gemini"],
       ["Cursor", "cursor"],
+      ["Lumo", "other"],
       ["Another AI tool", "other"],
     ];
     for (const [name, mark] of expected) {

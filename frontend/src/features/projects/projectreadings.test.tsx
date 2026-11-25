@@ -102,8 +102,9 @@ it("shows the server deal values and names an unpriced shortfall", () => {
       },
     }),
   );
+  // Whole units, as the Deals card beside the strip writes the same money.
   expect(
-    within(cell(strip, en["project.openDealValue"])).getByText("€1,250.00"),
+    within(cell(strip, en["project.openDealValue"])).getByText("€1,250"),
   ).toBeTruthy();
   expect(
     within(cell(strip, en["project.openDealValue"])).getByText(

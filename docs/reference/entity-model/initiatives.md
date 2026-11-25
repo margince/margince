@@ -6,7 +6,7 @@ The 5 tables owned by `initiatives`, as the migrations build them. [Back to the 
 
 ## sales_initiative
 
-18 columns · primary key `(id)` · referenced by 4 foreign keys
+17 columns · primary key `(id)` · referenced by 4 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -25,7 +25,6 @@ The 5 tables owned by `initiatives`, as the migrations build them. [Back to the 
 | `archived_at` | `timestamp with time zone` |  | Soft-delete marker. `NULL` means live, and nearly every read filters on it. |
 | `captured_by` | `text` | yes | Who or what wrote the row. Stamped by the server from the authenticated principal, never taken from the request body. |
 | `created_at` | `timestamp with time zone`, default `now()` | yes | When the row was created. Set once. |
-| `source` | `text` | yes | Which internal channel the record arrived by. |
 | `updated_at` | `timestamp with time zone`, default `now()` | yes | When the row last changed. Refreshed on every write. |
 | `version` | `bigint`, default `1` | yes | Optimistic-concurrency counter. Every write bumps it, so an update built on a stale read is refused instead of overwriting. |
 
@@ -51,21 +50,17 @@ The 5 tables owned by `initiatives`, as the migrations build them. [Back to the 
 **Triggers**
 
 - `sales_initiative_owner_id_retirement_guard`: `BEFORE INSERT OR UPDATE FOR EACH ROW WHEN (((new.owner_id IS NOT NULL) AND (new.archived_at IS NULL))) EXECUTE FUNCTION refuse_retired_member_work('owner_id')`
-- `text_bound_insert`: `AFTER INSERT FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL, '{"name": 120, "source": 20000, "status": 20000, "captured_by": 20000, "description": 20000, "objective_metric": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"captured_by":20000,"description":20000,"name":120,"objective_metric":20000,"source":20000,"status":20000}')`
-- `text_bound_update`: `AFTER UPDATE FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"name": 120, "source": 20000, "status": 20000, "captured_by": 20000, "description": 20000, "objective_metric": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"captured_by":20000,"description":20000,"name":120,"objective_metric":20000,"source":20000,"status":20000}')`
+- `text_bound_insert`: `AFTER INSERT FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL, '{"name": 120, "status": 20000, "captured_by": 20000, "description": 20000, "objective_metric": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"captured_by":20000,"description":20000,"name":120,"objective_metric":20000,"status":20000}')`
+- `text_bound_update`: `AFTER UPDATE FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"name": 120, "status": 20000, "captured_by": 20000, "description": 20000, "objective_metric": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"captured_by":20000,"description":20000,"name":120,"objective_metric":20000,"status":20000}')`
 
 ## sales_initiative_baseline
 
-6 columns · primary key `(initiative_id, deal_id)` · referenced by 0 foreign keys
+2 columns · primary key `(initiative_id, deal_id)` · referenced by 0 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
-| `amount_minor_base` | `bigint` |  |  |
-| `captured_at` | `timestamp with time zone`, default `now()` | yes |  |
 | `deal_id` | `uuid` | yes | Points at `deal.id`. |
 | `initiative_id` | `uuid` | yes | Points at `sales_initiative.id`. |
-| `stage_id` | `uuid` |  |  |
-| `status` | `text` | yes |  |
 
 **Points at**
 
@@ -74,19 +69,10 @@ The 5 tables owned by `initiatives`, as the migrations build them. [Back to the 
 | `deal_id` | `deal` | deleting the parent deletes this row |
 | `initiative_id` | `sales_initiative` | deleting the parent deletes this row |
 
-**Rules**
-
-- `sales_initiative_baseline_amount_exact`: `CHECK (((amount_minor_base >= '-9007199254740991'::bigint) AND (amount_minor_base <= '9007199254740991'::bigint)))`
-
 **Indexes**
 
 - `sales_initiative_baseline_deal_idx`: `btree (deal_id)`
 - `sales_initiative_baseline_pkey`: `unique, btree (initiative_id, deal_id)`
-
-**Triggers**
-
-- `text_bound_insert`: `AFTER INSERT FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL, '{"status": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"status":20000}')`
-- `text_bound_update`: `AFTER UPDATE FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"status": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"status":20000}')`
 
 ## sales_initiative_enrolment
 

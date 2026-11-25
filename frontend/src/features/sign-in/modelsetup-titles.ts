@@ -10,6 +10,7 @@ import type { ModelSetupId } from "../../lib/modelsetups.gen";
  * de and vi.
  */
 export const MODEL_SETUP_TITLES = {
+  anthropic_cloud: "firstRun.ai.setupTitle.anthropic_cloud",
   consumer_class_brokered: "firstRun.ai.setupTitle.consumer_class_brokered",
   gemini_cloud: "firstRun.ai.setupTitle.gemini_cloud",
   gemini_vertex_eu: "firstRun.ai.setupTitle.gemini_vertex_eu",

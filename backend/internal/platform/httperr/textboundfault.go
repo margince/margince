@@ -18,7 +18,7 @@ func textBoundFault(err error) (Fault, bool) {
 		return Fault{}, false
 	}
 	switch limit {
-	case values.TextLabelCharacters, values.TextLineCharacters, values.TextNoteCharacters, values.TextDocumentCharacters:
+	case values.TextLabelCharacters, values.TextIdentityCharacters, values.TextLineCharacters, values.TextNoteCharacters, values.TextDocumentCharacters:
 	default:
 		return Fault{}, false
 	}

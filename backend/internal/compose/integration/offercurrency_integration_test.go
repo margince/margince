@@ -33,7 +33,7 @@ func draftOfferWithLine(t *testing.T, e *Env) (ids.OfferID, string, context.Cont
 	t.Helper()
 	pipeline, open, _ := DealFixture(t, e)
 	deal := e.SeedDeal(t, "Repricing probe", pipeline, open, &e.Rep1)
-	desk := e.As(e.Rep1, []ids.UUID{e.Team1}, offerDeskPerms)
+	desk := e.As(e.Rep1, []ids.UUID{e.Team1}, OfferDeskPerms)
 
 	description, price, taxRate := "Implementation", int64(9500), "19.00"
 	created, err := e.Deals.CreateOffer(desk, ids.From[ids.DealKind](deal), deals.CreateOfferInput{
@@ -99,7 +99,7 @@ func TestAnUnpricedDraftChangesCurrencyFreely(t *testing.T) {
 	e := Setup(t)
 	pipeline, open, _ := DealFixture(t, e)
 	deal := e.SeedDeal(t, "Unpriced probe", pipeline, open, &e.Rep1)
-	desk := e.As(e.Rep1, []ids.UUID{e.Team1}, offerDeskPerms)
+	desk := e.As(e.Rep1, []ids.UUID{e.Team1}, OfferDeskPerms)
 
 	created, err := e.Deals.CreateOffer(desk, ids.From[ids.DealKind](deal), deals.CreateOfferInput{
 		Currency: "EUR", Source: "manual",
@@ -129,7 +129,7 @@ func TestADraftWhoseOnlyPriceIsZeroChangesCurrencyFreely(t *testing.T) {
 	e := Setup(t)
 	pipeline, open, _ := DealFixture(t, e)
 	deal := e.SeedDeal(t, "Zero probe", pipeline, open, &e.Rep1)
-	desk := e.As(e.Rep1, []ids.UUID{e.Team1}, offerDeskPerms)
+	desk := e.As(e.Rep1, []ids.UUID{e.Team1}, OfferDeskPerms)
 
 	description, zero, taxRate := "Included in onboarding", int64(0), "19.00"
 	created, err := e.Deals.CreateOffer(desk, ids.From[ids.DealKind](deal), deals.CreateOfferInput{

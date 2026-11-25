@@ -137,8 +137,8 @@ func (s *VoiceStore) RecordDraftedSignal(ctx context.Context, profileID ids.UUID
 		err := tx.QueryRow(ctx, `
 			INSERT INTO voice_learning_signal
 			  (voice_profile_id, profile_version, draft_ref_hash, outcome,
-			   generated_original, retention_until, source, captured_by, updated_at)
-			VALUES ($1, $2, $3, 'drafted', $4, now() + $5::interval, 'draft', $6, $7)
+			   generated_original, retention_until, captured_by, updated_at)
+			VALUES ($1, $2, $3, 'drafted', $4, now() + $5::interval, $6, $7)
 			ON CONFLICT (draft_ref_hash) DO NOTHING
 			RETURNING id`, profileID, profileVersion, hash[:], generatedOriginal,
 			voiceLearningSignalRetention.String(), actor.ID, now).Scan(&signalID)

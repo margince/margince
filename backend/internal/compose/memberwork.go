@@ -86,7 +86,7 @@ func (s memberWork) Inspect(ctx context.Context, tx pgx.Tx, source ids.UUID, tar
 	}
 	report.VisibleOwned = visible
 	blockers, err := memberRetirementBlockers(ctx, tx, source)
-	report.Blockers = blockers
+	report.Blockers, report.BlockingRecords = blockers.Blockers, blockers.Records
 	slices.Sort(stamp)
 	report.Stamp = strings.Join(stamp, ";")
 	return report, err

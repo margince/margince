@@ -158,6 +158,18 @@ type Cadence struct {
 	// OffAtZero lets Setting switch the schedule off by holding zero: the
 	// workers stay registered and only the tick goes away.
 	OffAtZero bool
+	// ClockGap is set, alone, for a pass that runs at a local clock time: the
+	// longest wait between two of its runs.
+	ClockGap time.Duration
+}
+
+// Expected is how long a pass may go without a run before it is overdue, or
+// zero when no clock of the repo's own says.
+func (c Cadence) Expected() time.Duration {
+	if c.Fixed > 0 {
+		return c.Fixed
+	}
+	return c.ClockGap
 }
 
 // Registration is what a kind's wiring depends on, and what happens when the

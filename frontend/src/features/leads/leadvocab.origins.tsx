@@ -50,6 +50,7 @@ import {
 } from "../../lib/leadorigins";
 import { isOption } from "../../lib/options";
 import { blankRequired, problemMessageOf } from "../../lib/problem";
+import { TEXT_LIMITS } from "../../lib/textlimits_gen";
 import {
   leadsColumn,
   useRemovalFocus,
@@ -90,7 +91,10 @@ function AddOriginDialog({
   const [label, setLabel] = useState("");
   const [intent, setIntent] = useState<LeadOriginIntent>("neutral");
   const name = label.trim();
-  const refused = nameRefusal(create.error, t, "leadOrigins.duplicate");
+  const refused = nameRefusal(create.error, t, {
+    label: labelLabel,
+    duplicate: "leadOrigins.duplicate",
+  });
   const { refusedName, markSent } = useRefusedName(name, refused.nameProblem);
   const singlePress = useSinglePress(create.isPending);
   return (
@@ -136,6 +140,7 @@ function AddOriginDialog({
               data-testid="lead-origin-new-label"
               placeholder={t("leadOrigins.newPlaceholder")}
               value={label}
+              maxLength={TEXT_LIMITS.label}
               onChange={(e) => {
                 setLabel(e.target.value);
                 faults.edited("label");
@@ -279,6 +284,10 @@ export function LeadOriginsCard() {
   const refusalId = useId();
   const refusedPatch = failure ? update.variables : undefined;
   const administered = rowsOf(query.data);
+  const renameRefused = nameRefusal(rename.error, t, {
+    label: t("leadSources.labelField"),
+    duplicate: "leadOrigins.duplicate",
+  });
   const columns = originColumns({
     t,
     plural,
@@ -356,7 +365,6 @@ export function LeadOriginsCard() {
           }}
         />
       )}
-      {/* A rename cannot collide: only the key is unique, and it never changes. */}
       <NameDialog
         open={renaming !== null}
         onClose={() => setRenaming(null)}
@@ -365,7 +373,9 @@ export function LeadOriginsCard() {
         initial={renaming?.label ?? ""}
         confirmLabel={t("leadSources.renameSave")}
         pending={rename.isPending}
-        problem={rename.isError ? problemMessageOf(rename.error, t) : null}
+        problem={renameRefused.problem}
+        nameProblem={renameRefused.nameProblem}
+        maxLength={TEXT_LIMITS.label}
         onSave={(label) => {
           if (renaming) {
             rename.mutate(

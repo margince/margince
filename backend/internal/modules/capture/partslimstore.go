@@ -379,7 +379,7 @@ func (s *PartSlimStore) write(ctx context.Context, id ids.UUID, was, now []byte)
 		if err != nil {
 			return err
 		}
-		args["payload"], args["object"], args["outcome"] = inline, ref, string(outcomeSlimmed)
+		args["payload"], args["object"], args[fieldOutcome] = inline, ref, string(outcomeSlimmed)
 		tag, err := tx.Exec(ctx, `UPDATE raw_capture
  SET payload = @payload::jsonb, payload_object = @object::jsonb, payload_offload_checked_at = now(),
      parts_slimmed_at = now(), parts_slim_outcome = @outcome

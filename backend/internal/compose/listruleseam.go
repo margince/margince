@@ -38,7 +38,7 @@ func (a ListRules) Find(ctx context.Context, id ids.UUID) (automation.ListRef, e
 	}
 	return automation.ListRef{
 		ID: l.ID.UUID, Name: l.Name, EntityType: l.EntityType, Live: l.Live,
-		Archived: l.Archived, Version: l.Version, Invalid: l.Invalid,
+		Archived: l.Archived, Version: l.Version, Invalid: l.Invalid, Unavailable: l.Unavailable,
 	}, nil
 }
 

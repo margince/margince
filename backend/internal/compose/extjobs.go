@@ -165,7 +165,7 @@ func composedJobSpecs(set []composedJob) []jobs.Spec {
 				// anything but `default`.
 				Queue:     river.QueueDefault,
 				OptsOwner: jobs.OptsCaller,
-				Cadence:   jobs.Cadence{Fixed: j.decl.Cadence},
+				Cadence:   composedCadence(j.decl),
 				Args:      []jobs.ArgField{{Name: "JobKind", Scalar: true, Reason: "the composed kind this row dispatches; one args type serves every extension job, so the kind is data rather than a Go type"}},
 			},
 			jobs.Spec{
@@ -249,9 +249,21 @@ func addExtensionJobs(reg *jobRegistry, pool *pgxpool.Pool, book *ScheduleBook, 
 // give that guarantee up for every caller.
 func periodicForComposed(book *ScheduleBook, d extension.JobDeclaration) *river.PeriodicJob {
 	args := extJobDispatcherArgs{JobKind: d.DispatcherKind()}
-	job, _ := book.periodicJob(args.JobKind, "", river.PeriodicInterval(d.Cadence),
-		func() (river.JobArgs, *river.InsertOpts) { return args, periodicInsertOpts(args) })
+	ctor := func() (river.JobArgs, *river.InsertOpts) { return args, periodicInsertOpts(args) }
+	if d.At != nil {
+		return book.scheduleClockTime(args.JobKind, *d.At, ctor)
+	}
+	job, _ := book.periodicJob(args.JobKind, "", river.PeriodicInterval(d.Cadence), ctor)
 	return job
+}
+
+// composedCadence is the census form of a job's schedule. A clock-time job has
+// no fixed interval; its longest gap is how job health tells late from on time.
+func composedCadence(d extension.JobDeclaration) jobs.Cadence {
+	if d.At != nil {
+		return jobs.Cadence{ClockGap: d.At.LongestGap()}
+	}
+	return jobs.Cadence{Fixed: d.Cadence}
 }
 
 // addComposedWorker is addGovernedWorker for a kind that is not in

@@ -391,9 +391,9 @@ func RebuildEdges(ctx context.Context, tx pgx.Tx) error {
 		)
 		INSERT INTO graph_interaction_edge
 		    (user_id, contact_id, last_at, last_inbound_at, last_outbound_at, last_met_at,
-		     count_90d, in_count_90d, out_count_90d, sent_count_90d, late_count_90d, late_out_count_90d, count_total, computed_at, read_snapshot)
+		     count_90d, in_count_90d, out_count_90d, sent_count_90d, late_count_90d, late_out_count_90d, count_total, read_snapshot)
 		SELECT f.user_id, f.contact_id, f.last_at, f.last_inbound_at, f.last_outbound_at, f.last_met_at,
-		       f.count_90d, f.in_90d, f.out_90d, f.sent_90d, f.late_90d, f.late_out_90d, f.count_total, now(), pg_current_snapshot()
+		       f.count_90d, f.in_90d, f.out_90d, f.sent_90d, f.late_90d, f.late_out_90d, f.count_total, pg_current_snapshot()
 		  FROM (SELECT a.edge_user AS user_id, a.edge_contact AS contact_id, `+graphFoldColumns(window)+`
 		          FROM (`+graphEngagedRows+`) a
 		         GROUP BY a.edge_user, a.edge_contact) f`); err != nil {
@@ -412,12 +412,12 @@ func rebuildContactEdges(ctx context.Context, tx pgx.Tx, window string) error {
 	}
 	if _, err := tx.Exec(ctx, `
 		INSERT INTO graph_contact_edge
-		    (contact_a, contact_b, last_at, count_90d, count_total, computed_at, read_snapshot)
+		    (contact_a, contact_b, last_at, count_90d, count_total, read_snapshot)
 		SELECT pa.contact_id, pb.contact_id,
 		       max(a.occurred_at),
 		       count(DISTINCT `+graphInteractionUnit+`) FILTER (WHERE `+occurredday.FromSQL("a", window)+`),
 		       count(DISTINCT `+graphInteractionUnit+`),
-		       now(), pg_current_snapshot()
+		       pg_current_snapshot()
 		  FROM activity_participant pa
 		  JOIN activity_participant pb
 		    ON pb.activity_id = pa.activity_id AND pb.contact_id > pa.contact_id

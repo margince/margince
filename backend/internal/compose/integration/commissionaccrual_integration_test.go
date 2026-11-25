@@ -231,6 +231,55 @@ func TestReopeningAWonDealReversesWhatItEarned(t *testing.T) {
 	}
 }
 
+// Whether a sourced win earns commission must not depend on when the event is
+// delivered. A deal archived after its win and before the accrual still accrues.
+func TestAWinWhoseDealWasArchivedBeforeDeliveryStillAccrues(t *testing.T) {
+	e := Setup(t)
+	fx := seedAccrualFixture(t, e, "tier2_20")
+	admin := e.As(e.AdminUser, nil, commissionAdminPerms)
+	if _, err := e.Deals.AdvanceDeal(admin, fx.deal, deals.AdvanceDealInput{
+		ToStageID: fx.won, WonWithoutContractReason: WonByImport(),
+	}); err != nil {
+		t.Fatalf("winning the deal: %v", err)
+	}
+	if _, err := e.Deals.ArchiveDeal(admin, fx.deal, nil); err != nil {
+		t.Fatalf("archiving the won deal: %v", err)
+	}
+
+	if err := fx.gen.HandleEvent(context.Background(), lastStageChanged(t, e, fx.deal)); err != nil {
+		t.Fatalf("the consumer refused a win on an archived deal: %v", err)
+	}
+	// Counted in the table: the ledger's list hides an archived deal's entries
+	// until the deal is restored, and restoring must find the entry there.
+	if n := e.WsCount(t, `SELECT count(*) FROM commission_entry
+		WHERE deal_id = $1 AND status <> 'void' AND amount_minor = 20000`, fx.deal); n != 1 {
+		t.Errorf("%d accruals of 20000 exist on a deal archived before delivery, want 1", n)
+	}
+}
+
+// An archived partner keeps what it earned on a deal it sourced. Archiving the
+// partner company before the win is priced must not turn it into "no tier".
+func TestAWinWhosePartnerWasArchivedBeforeDeliveryStillAccrues(t *testing.T) {
+	e := Setup(t)
+	fx := seedAccrualFixture(t, e, "tier2_20")
+	admin := e.As(e.AdminUser, nil, commissionAdminPerms)
+	if _, err := e.Deals.AdvanceDeal(admin, fx.deal, deals.AdvanceDealInput{
+		ToStageID: fx.won, WonWithoutContractReason: WonByImport(),
+	}); err != nil {
+		t.Fatalf("winning the deal: %v", err)
+	}
+	if _, err := e.Contacts.ArchiveCompany(admin, fx.partner, nil); err != nil {
+		t.Fatalf("archiving the partner company: %v", err)
+	}
+
+	if err := fx.gen.HandleEvent(context.Background(), lastStageChanged(t, e, fx.deal)); err != nil {
+		t.Fatalf("the consumer refused a win whose partner was archived: %v", err)
+	}
+	if got := liveEntries(t, e, fx); len(got) != 1 || got[0] != 20_000 {
+		t.Errorf("live entries = %v for a partner archived before delivery, want [20000]", got)
+	}
+}
+
 // A partner with no tier has no arrangement, so there is nothing to pay. The
 // win must still be recorded as won — a refusal here would wedge the consumer
 // group on a deal that will never become accruable by itself.

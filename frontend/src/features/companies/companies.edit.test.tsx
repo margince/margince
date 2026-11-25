@@ -69,7 +69,7 @@ describe("CompanyScreen — edit with If-Match (P-1)", () => {
     let patchBody: unknown = null;
     const partner = {
       ...company,
-      lifecycle: "customer",
+      status: "customer",
       relationship_types: ["partner", "supplier"],
     };
     stubFetch(async (url, method, request) => {

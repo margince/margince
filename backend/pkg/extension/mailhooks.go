@@ -27,12 +27,23 @@ type MailView struct {
 	Subject string
 	// Addresses are the participants' addresses, lower case, in order.
 	Addresses []string
-	// Body is the start of the text, at most 8000 characters.
+	// Body is the start of the text, at most MailBodyCharacters characters.
 	Body string
 	// Lookup reads one row of the unit's own tables, for example the customer
 	// a reference in the subject belongs to. It cannot write, and it ends after
 	// 250 milliseconds. Pass the statement and its arguments as for Tx.QueryRow.
 	Lookup func(sql string, args ...any) Row
+}
+
+// MailBodyCharacters is how many characters of a mail's text MailView.Body
+// holds.
+const MailBodyCharacters = 8000
+
+// MailViewReads names the parts of a mail a hook reads, in the words the
+// manifest and Settings show an operator. The id and the meeting flag are left
+// out: they say nothing about what the mail holds.
+func MailViewReads() []string {
+	return []string{"subject", "addresses", "body"}
 }
 
 // MailParties is the contacts and companies core derived for a mail, as ids.

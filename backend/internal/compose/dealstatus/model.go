@@ -82,7 +82,7 @@ Never write the same fact in two sections. Each one answers a different question
 // installation's shared language rather than the language the buyer's mail
 // happened to be in — which is what an unruled prompt would have followed.
 func statusSystemFor(fence promptfence.Fence, lang string) string {
-	return statusSystem + "\n" + promptvoice.Rule + "\n" + promptlang.Rule(lang) + "\n" +
+	return statusSystem + sentenceBoundsRule + "\n" + promptvoice.Rule + "\n" + promptlang.Rule(lang) + "\n" +
 		fence.Rule("deal timeline and buyer conversation")
 }
 
@@ -111,6 +111,13 @@ const (
 	// maxThreadRows bounds the buyer conversation the same way.
 	maxThreadRows = 6
 )
+
+// sentenceBoundsRule states the bounds keepGrounded refuses a whole reply over.
+// Built from those constants, the prompt names the same limit the filter applies.
+var sentenceBoundsRule = fmt.Sprintf(
+	`Each "text" is at most %d characters, and the "move_reason" "text" at most %d: one longer "text" gets the whole reply refused. `+
+		`Where a section takes more than one object, give a further sentence its own {"text","evidence"} object rather than lengthening one "text".`,
+	maxSentenceLen, maxMoveReason)
 
 // StatusInput is the prompt's projection of the facts: only what the CALLER
 // may read, because the facts were gathered under their row scope. A row whose

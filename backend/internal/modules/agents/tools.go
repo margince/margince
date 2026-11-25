@@ -270,7 +270,7 @@ func (t createRecord) Handle(ctx context.Context, in json.RawMessage) (json.RawM
 	}
 	return marshalResult(createdRecord{
 		wireRecord:          rec,
-		Changes:             t.words.describeCreate(ctx, summaryIn(ctx, t.language).lang, args.Fields, rec.Fields),
+		Changes:             t.words.describeCreate(ctx, summaryIn(ctx, t.language).lang, args.RecordType, args.Fields, rec.Fields),
 		DuplicateCandidates: t.reportCreateDuplicates(ctx, args.RecordType, args.Fields, ref.ID, filed.IDs()),
 		TagOffer:            t.offerTag(ctx, args.RecordType, args.OfferTag),
 	}, nil)
@@ -403,7 +403,7 @@ func (t logActivity) Spec() mcp.ToolSpec {
 			"source_activity_id":{"type":"string","format":"uuid","description":` + followUpSourceDescription + `},
 			"follow_up_task":` + string(argumentSchemaFor[crmcontracts.ActivityFollowUpTask](timestampRule)) + `,
 			"source_system":{"type":"string"},"source_id":{"type":"string"}},
-			"patternProperties":{"^cf_[a-z0-9_]+$":{"description":"An activity custom field, by its cf_ key from describe_vocabulary. A key no active activity field names is refused."}},
+			"patternProperties":{"^cf_[a-z0-9_]+$":{"description":"An activity custom field, by its cf_ key: the column_name read_view lists with view custom_fields and object activity. A key no active activity field names is refused."}},
 			"additionalProperties":false}`),
 		OutputSchema: schemaFor[wireRecord](),
 	}

@@ -121,8 +121,9 @@ func readEntry(ctx context.Context, tx pgx.Tx, id ids.CommissionEntryID) (crmcon
 	return entryUnder(ctx, tx, idPos, scope, args)
 }
 
-// readRetractableEntry is readEntry for the void, which has to reach an entry
-// whose deal has since been archived — a row the default scope refuses.
+// readRetractableEntry is readEntry for the void and for the accrual's read
+// back. Both must reach an entry whose deal is archived, which the default
+// scope refuses.
 //
 // A second small function rather than a scope argument, because the censuses
 // that hold this package read the call graph: a clause reached through a

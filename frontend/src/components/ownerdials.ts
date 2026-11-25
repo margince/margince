@@ -7,7 +7,7 @@ import { useLocale, useT } from "../i18n";
 import { useMemberNames } from "../lib/membernames";
 import { useMe } from "../lib/session";
 import { useUrlParams } from "../lib/urlstate";
-import { useMemberFilterOptions } from "./assigneepicker";
+import { useMemberFilterOptions, youThenByName } from "./assigneepicker";
 import { rosterReading, useRoster, useRosterPartial } from "./entityref";
 import { isClearedFilterMarker } from "./listqueryparams";
 
@@ -71,19 +71,15 @@ function useOwnerDial(t: Translate): ListChip | undefined {
   if (!viewerId) {
     return undefined;
   }
-  const others: Option[] = colleagues
-    .filter((option) => option.value !== viewerId)
-    .map((option) => ({
-      value: `owner_id:${option.value}`,
-      label: option.label,
-    }));
-  if (stray) {
-    others.push({
-      value: `owner_id:${stray}`,
-      label: strayName ?? t("common.loading"),
-    });
-  }
-  others.sort((a, b) => forReader(a.label, b.label, locale));
+  const members = stray
+    ? [...colleagues, { value: stray, label: strayName ?? t("common.loading") }]
+    : colleagues;
+  const ordered = youThenByName(
+    members,
+    viewerId,
+    t("list.filterOwnerMe"),
+    locale,
+  );
   return {
     key: "owner",
     label: t("list.owner"),
@@ -91,8 +87,10 @@ function useOwnerDial(t: Translate): ListChip | undefined {
     filterable: true,
     excludes: TEAM_PARAMS,
     options: [
-      { value: `owner_id:${viewerId}`, label: t("list.filterOwnerMe") },
-      ...others,
+      ...ordered.map((option) => ({
+        value: `owner_id:${option.value}`,
+        label: option.label,
+      })),
       { value: "unassigned:true", label: t("list.filterOwnerUnassigned") },
     ],
   };
