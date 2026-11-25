@@ -1785,6 +1785,8 @@ span.error-line {
   width: 14px;
   height: 14px;
   flex: none;
+  /* Centred on the summary's first line, also where a summary aligns to start. */
+  margin-block: calc((1lh - 14px) / 2);
 }
 .disclosure-body {
   margin-top: var(--space-3);
