@@ -287,7 +287,7 @@ func replaceMachineDeal(f dealFiling, tx pgx.Tx, mail ids.ActivityID, current id
 			return "", err
 		}
 	}
-	retracted, err := retractMachineDealLink(f, tx, mail, current)
+	retracted, err := retractMachineDealLink(f, tx, mail, current, verdict.Hooks)
 	if err != nil || !retracted {
 		return DealNotWritable, err
 	}

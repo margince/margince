@@ -252,11 +252,16 @@ Copy `extensions/openchannel/api/crm.yaml`. These rules fail you if you miss the
 - **Paths start from the `servers` URL**, which already ends in `/v1`. Write `/ext/<name>/inbound`, never
   `/v1/ext/...`. The server puts the base path back when it mounts the route. Written twice, it publishes
   `/v1/v1/ext/...` to every generated client (the `composition` tool refuses it).
-- **Every path must be under `/ext/<your-unit>/`.** Another unit's space, a core path, or a path template
-  (`{id}`) are all refused.
+- **Every path must be under `/ext/<your-unit>/`.** Another unit's space or a core path is refused.
+- **A path may name a record by its id**, as in `GET /ext/<unit>/orders/{order_id}`. The first segment after
+  the unit is fixed, so `/ext/<unit>/{id}` is refused. Declare each id as a parameter with `in: path`,
+  `required: true` and a string, number, integer or boolean schema. The tool takes it as an argument of that
+  name, so an agent passes the id the same way. A body or query argument of the same name is refused, by
+  `make gen` in the contract and with a 422 on a call. Two routes that differ only in the id's name are refused
+  when the server starts.
 - **Arguments live where the method puts them.** A served extension operation *is* a tool call under the
   rules, so the seam reads its arguments from one place. That is the request body for POST, PUT and PATCH, and
-  the query for GET. If you declare them on the other side, the generator fails with a named error. The seam
+  the query for GET. Path ids join either. If you declare them on the other side, the generator fails with a named error. The seam
   would publish that shape to every client, then drop it on every call (`gen-composition/extverbschemas.go`).
   A GET that only reads and takes no arguments is allowed, and one ships: `openchannelReadEndpoint`.
 - **`x-mcp-tool` is where the rules live**: `verb`, `version`, `title`, `tier`, `scope`, `description`. The

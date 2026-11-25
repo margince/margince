@@ -16484,6 +16484,9 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "extAccess.brings.routes": "Routen",
   "extAccess.brings.jobs": "Hintergrund-Jobs",
   "extAccess.brings.needs": "Nutzt vom Kern",
+  "extAccess.brings.mail": "Erfasste E-Mails",
+  "extAccess.mail.reads":
+    "Liest Betreff, Adressen und den Anfang des Textes jeder erfassten E-Mail.",
   "extAccess.need.models": "KI-Modelle",
   "extAccess.need.objects": "Dateispeicher",
   "extAccess.brings.none": "Keine",

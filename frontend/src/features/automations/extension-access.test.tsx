@@ -90,6 +90,13 @@ const EXTENSIONS = {
         { capability: "models", reason: "Writes the one-line summaries." },
         { capability: "objects", reason: "Keeps the summaries it writes." },
       ],
+      mail_hooks: {
+        parties: false,
+        deal: true,
+        reads: ["subject", "addresses", "body"],
+        body_characters: 8000,
+        reasons: ["po_number"],
+      },
     },
     {
       name: "quiet",
@@ -351,6 +358,14 @@ describe("ExtensionAccessCard", () => {
       "AI models — Writes the one-line summaries.",
       "File storage — Keeps the summaries it writes.",
     ]);
+
+    // A unit with a mail hook says so; a unit without one has no mail row.
+    expect(
+      screen.getByText("Captured mail").closest(".factlist-row")?.textContent,
+    ).toContain(
+      "Reads the subject, the addresses and the start of the text of every captured mail.",
+    );
+    expect(screen.getAllByText("Captured mail")).toHaveLength(1);
 
     // The grants, read straight off the fixture: admin reads and creates the
     // note object and does neither of the other two verbs.

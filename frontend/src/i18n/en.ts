@@ -16358,6 +16358,9 @@ export const en = {
   "extAccess.brings.routes": "Routes",
   "extAccess.brings.jobs": "Background jobs",
   "extAccess.brings.needs": "Uses from the core",
+  "extAccess.brings.mail": "Captured mail",
+  "extAccess.mail.reads":
+    "Reads the subject, the addresses and the start of the text of every captured mail.",
   "extAccess.need.models": "AI models",
   "extAccess.need.objects": "File storage",
   "extAccess.brings.none": "None",

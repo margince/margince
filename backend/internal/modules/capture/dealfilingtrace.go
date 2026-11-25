@@ -14,6 +14,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -67,7 +68,7 @@ func filingOf(verdict DealVerdict, result string) *Filing {
 		return &Filing{Actor: changed.Unit, Hook: changed.Hook, Result: changedResult(*changed, verdict, result), Reason: changed.Reason}
 	case ignored != nil:
 		return &Filing{Actor: ignored.Unit, Hook: ignored.Hook, Result: string(HookIgnored), Reason: ignored.Reason}
-	case verdict.Outcome == DealLinked:
+	case verdict.Outcome == DealLinked, result != "":
 		return &Filing{Actor: FilingActorCore, Result: orElse(result, string(DealLinked)), Reason: string(verdict.Basis)}
 	}
 	return nil
@@ -93,12 +94,41 @@ func orElse(value, fallback string) string {
 // recordFiling stores the filing on the mail's trace rows. A mail with no trace
 // row, because the day's window passed, has nothing to update.
 func recordFiling(ctx context.Context, tx pgx.Tx, mail ids.ActivityID, verdict DealVerdict, result string) error {
+	if err := logUnauditedHookAnswers(ctx, tx, mail, verdict, result); err != nil {
+		return err
+	}
 	filing := filingOf(verdict, result)
 	if filing == nil {
 		return nil
 	}
 	if _, err := tx.Exec(ctx, `UPDATE capture_trace SET filing = $2 WHERE activity_id = $1`, mail, filing); err != nil {
 		return fmt.Errorf("capture: recording who filed a mail on its deal: %w", err)
+	}
+	return nil
+}
+
+// actionExtensionMailHook is the system log action of a hook answer that no
+// audit row names. It is kept for good, unlike the swept capture trace.
+const actionExtensionMailHook = "extension_mail_hook"
+
+// logUnauditedHookAnswers keeps a lasting record of each hook answer that no
+// audit row names. A written link or unlink names the changes that took effect
+// (withHookEvidence), so only a failed or ignored answer is logged then. When
+// nothing was written, as for a `none` answer, every answer is logged. result is
+// set only by a repair, and a repair sets it only after it wrote.
+func logUnauditedHookAnswers(ctx context.Context, tx pgx.Tx, mail ids.ActivityID, verdict DealVerdict, result string) error {
+	written := result != "" || verdict.Outcome == DealLinked
+	for _, c := range verdict.Hooks {
+		if written && c.Result == HookChanged {
+			continue
+		}
+		detail := map[string]any{
+			"activity_id": mail, "unit": c.Unit, "hook": c.Hook, fieldReason: c.Reason,
+			"result": string(c.Result), "outcome": string(verdict.Outcome),
+		}
+		if _, err := storekit.LogSystem(ctx, tx, actionExtensionMailHook, detail); err != nil {
+			return fmt.Errorf("capture: recording a mail hook answer: %w", err)
+		}
 	}
 	return nil
 }

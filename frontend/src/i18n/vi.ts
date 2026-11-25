@@ -16027,6 +16027,9 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "extAccess.brings.routes": "Đường dẫn",
   "extAccess.brings.jobs": "Tác vụ nền",
   "extAccess.brings.needs": "Dùng từ lõi",
+  "extAccess.brings.mail": "Thư đã thu thập",
+  "extAccess.mail.reads":
+    "Đọc tiêu đề, các địa chỉ và phần đầu nội dung của mọi thư đã thu thập.",
   "extAccess.need.models": "Mô hình AI",
   "extAccess.need.objects": "Lưu trữ tệp",
   "extAccess.brings.none": "Không có",

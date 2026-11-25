@@ -22,6 +22,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/compose"
 	"github.com/margince/margince/backend/internal/compose/integration"
+	"github.com/margince/margince/backend/internal/compose/mailhooks"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/pkg/extension"
@@ -60,7 +61,10 @@ func TestADealHookCanKeepAMailOffTheOnlyOpenDeal(t *testing.T) {
 	if calls.Load() == 0 {
 		t.Fatal("the hook was never called")
 	}
-	wantFiling(t, e, activityOf(t, e, "hook1@acme.example"), "none", "credit_hold")
+	mail := activityOf(t, e, "hook1@acme.example")
+	wantFiling(t, e, mail, "none", "credit_hold")
+	// No link was written, so no audit row names the unit. The system log does.
+	wantHookLog(t, e, mail, "changed", "credit_hold", 1)
 }
 
 // A deal hook names a deal. The link lands and its audit evidence names the
@@ -85,6 +89,7 @@ func TestADealHookDealDoesNotSurviveAColleaguesDecline(t *testing.T) {
 		AND evidence::text LIKE '%deal-rules%' AND evidence::text LIKE '%names_reporting%'`); n != 1 {
 		t.Fatalf("%d audit rows name the unit and its reason, want 1", n)
 	}
+	wantHookLog(t, e, mail, "changed", "names_reporting", 0)
 
 	if status, _ := decline(w.ctx, t, e, mail, dealBody(chosen)); status != http.StatusOK {
 		t.Fatalf("the decline answered %d", status)
@@ -224,6 +229,7 @@ func TestAFailedHookLeavesTheMailUndecidedAndItIsFiledOnceTheHookWorks(t *testin
 	env.sync(t, raw)
 	wantDeals(t, e, "hook7@acme.example")
 	wantFiling(t, e, activityOf(t, e, "hook7@acme.example"), "failed", "")
+	wantHookLog(t, e, activityOf(t, e, "hook7@acme.example"), "failed", "", 1)
 
 	registerMailHooks(t, extension.MailHooks{Deal: func(_ context.Context, _ extension.MailView, d extension.MailDeal) (extension.MailDeal, error) {
 		return d, nil
@@ -244,7 +250,37 @@ func TestADealHookChangeWithoutADeclaredReasonIsIgnored(t *testing.T) {
 	}})
 	env.sync(t, mailFrom("alice@acme.example", "hook8@acme.example", "", "invoice"))
 	wantDeals(t, e, "hook8@acme.example", only)
-	wantFiling(t, e, activityOf(t, e, "hook8@acme.example"), "ignored", "not declared")
+	mail := activityOf(t, e, "hook8@acme.example")
+	wantFiling(t, e, mail, "ignored", "not declared")
+	// Core's own link was written, and its audit row names no refused answer.
+	wantHookLog(t, e, mail, "ignored", "not declared", 1)
+}
+
+// A hook now answers `none` on a mail the rule filed, and the repair takes the
+// link back. The unlink's audit row names the unit, and so does the trace.
+func TestARepairThatAHookMakesTakeALinkBackNamesTheUnit(t *testing.T) {
+	env := newCaptureEnv(t)
+	e := env.e
+	w := newDealWorld(t, e)
+	w.employee(t, "alice@acme.example", w.customer)
+	only := w.deal(t, "Acme rollout")
+	env.sync(t, mailFrom("alice@acme.example", "hook10@acme.example", "", "invoice"))
+	wantDeals(t, e, "hook10@acme.example", only)
+
+	registerMailHooks(t, extension.MailHooks{Deal: func(_ context.Context, _ extension.MailView, d extension.MailDeal) (extension.MailDeal, error) {
+		return extension.MailDeal{Outcome: "none", Reason: "credit_hold"}, nil
+	}})
+	r := newRepairer(e, w)
+	r.repair.Hooks = mailhooks.New(compose.ComposedExtensions, e.Pool)
+	r.run(t)
+	wantDeals(t, e, "hook10@acme.example")
+	mail := activityOf(t, e, "hook10@acme.example")
+	if n := countRows(t, e, `SELECT count(*) FROM audit_log WHERE entity_id = '`+mail.String()+`'
+		AND evidence::text LIKE '%deal-rules%' AND evidence::text LIKE '%credit_hold%'`); n != 1 {
+		t.Fatalf("%d audit rows name the unit that took the link back, want 1", n)
+	}
+	wantFiling(t, e, mail, "retracted", "credit_hold")
+	wantHookLog(t, e, mail, "changed", "credit_hold", 0)
 }
 
 // A parties hook cannot name a company the mailbox owner may not see. The
@@ -275,6 +311,17 @@ func TestAPartiesHookCannotNameACompanyTheMailboxOwnerCannotSee(t *testing.T) {
 		t.Fatal("the mail was filed on a deal of a company its mailbox owner cannot see")
 	}
 	wantFiling(t, e, activityOf(t, e, "hook9@acme.example"), "ignored", "other_account")
+}
+
+// wantHookLog asserts how many system log rows record a deal-rules answer of
+// this result and reason on the mail.
+func wantHookLog(t *testing.T, e *integration.SearchEnv, mail ids.UUID, result, reason string, want int) {
+	t.Helper()
+	if n := countRows(t, e, `SELECT count(*) FROM system_log WHERE action = 'extension_mail_hook'
+		AND detail->>'activity_id' = '`+mail.String()+`' AND detail->>'unit' = 'deal-rules'
+		AND detail->>'result' = '`+result+`' AND coalesce(detail->>'reason', '') = '`+reason+`'`); n != want {
+		t.Fatalf("%d system log rows record deal-rules %s the mail (reason %q), want %d", n, result, reason, want)
+	}
 }
 
 // wantFiling asserts what the mail's capture trace says the deal-rules unit did.

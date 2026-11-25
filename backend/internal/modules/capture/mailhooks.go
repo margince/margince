@@ -14,15 +14,14 @@ import (
 	"fmt"
 	"maps"
 	"slices"
+	"strconv"
 
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/pkg/extension"
 )
-
-// mailBodyLimit is how many characters of the text a hook reads.
-const mailBodyLimit = "8000"
 
 // DealBasisExtension is the verdict of an extension that linked a deal. No topic
 // check follows it, because the extension decided on its own rules.
@@ -91,6 +90,7 @@ type MailHooks struct {
 func mailView(ctx context.Context, tx pgx.Tx, facts dealFacts) (MailView, bool, error) {
 	args := []any{facts.activity}
 	arg := func(v any) int { args = append(args, v); return len(args) }
+	bodyLimit := arg(extension.MailBodyCharacters)
 	scope, err := auth.ActivityContentClause(ctx, "a", arg)
 	if err != nil {
 		return MailView{}, false, err
@@ -100,7 +100,7 @@ func mailView(ctx context.Context, tx pgx.Tx, facts dealFacts) (MailView, bool, 
 	}
 	view := MailView{Activity: facts.activity, Meeting: facts.meeting}
 	err = tx.QueryRow(ctx, `
-		SELECT coalesce(a.subject, ''), coalesce(left(a.body, `+mailBodyLimit+`), ''),
+		SELECT coalesce(a.subject, ''), coalesce(left(a.body, $`+strconv.Itoa(bodyLimit)+`), ''),
 		       coalesce((SELECT array_agg(DISTINCT lower(p.address) ORDER BY lower(p.address))
 		                   FROM activity_participant p WHERE p.activity_id = a.id AND p.address IS NOT NULL), '{}')
 		  FROM activity a WHERE a.id = $1 AND (`+scope+`)`, args...).Scan(&view.Subject, &view.Body, &view.Addresses)
