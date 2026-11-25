@@ -361,11 +361,12 @@ var rowScopedFKDecisions = gatekit.Waive(map[string]string{
 	"contact.merged_into_id":   "server-derived: stamped by MergeContact",
 	"company.merged_into_id":   "server-derived: stamped by MergeCompany",
 	// The same shape as its two siblings above, through the same writer
-	// (archiveMergedAway) and the same admission (mergePair): the survivor id
+	// (recordmerge.ArchiveMergedAway) and the same admission (recordmerge.Pair): the survivor id
 	// arrives from the caller, and is stamped only after auth.EnsureWritable
 	// has admitted the loser and auth.WritableBy the survivor. A lead either
 	// end of the pair cannot be written to answers before the pointer is set.
-	"lead.merged_into_id":               "gated then stamped: MergeLead puts BOTH leads through mergePair's row-scope writability probes before archiveMergedAway writes the pointer",
+	"lead.merged_into_id":               "gated then stamped: MergeLead puts BOTH leads through recordmerge.Pair's row-scope writability probes before ArchiveMergedAway writes the pointer",
+	"deal.merged_into_id":               "gated then stamped: MergeDeal puts BOTH deals through recordmerge.Pair's row-scope writability probes before ArchiveMergedAway writes the pointer",
 	"contact.converted_from_lead_id":    "server-derived: stamped by PromoteLead",
 	"deal_stage_history.deal_id":        "server-derived: appended by CreateDeal/AdvanceDeal",
 	"project_phase_history.project_id":  "server-derived: appended by CreateProject/AdvanceProjectPhase from the project row they just wrote or advanced, never from a request body",
