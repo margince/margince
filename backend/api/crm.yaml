@@ -57735,7 +57735,7 @@ components:
           x-extensible-enum: true
         metrics:
           type: array
-          maxItems: 12
+          maxItems: 8
           items: { $ref: '#/components/schemas/ReportingMetricID' }
         blocks:
           type: array

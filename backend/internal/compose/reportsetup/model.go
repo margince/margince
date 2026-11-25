@@ -23,7 +23,6 @@ import (
 	"github.com/margince/margince/backend/internal/compose/claims"
 	"github.com/margince/margince/backend/internal/compose/promptlang"
 	"github.com/margince/margince/backend/internal/modules/ai"
-	"github.com/margince/margince/backend/internal/modules/reporting"
 	"github.com/margince/margince/backend/internal/shared/kernel/promptfence"
 	"github.com/margince/margince/backend/internal/shared/kernel/promptref"
 	"github.com/margince/margince/backend/internal/shared/kernel/textcut"
@@ -42,7 +41,7 @@ const (
 	maxPhraseRunes    = 240
 	maxClarifications = 4
 	maxUnsupported    = 8
-	maxMetrics        = reporting.MaxSelectionMetrics
+	maxMetrics        = 8
 	maxCharts         = 20
 )
 

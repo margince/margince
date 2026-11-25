@@ -6,9 +6,9 @@
 package gates
 
 // One reporting selection holds at most reporting.MaxSelectionMetrics metrics.
-// The contract's `maxItems` on every list of metric ids must say the same. A
-// lower Go bound refuses a request the contract calls legal. An Analytics view
-// then fails to load with a refusal its reader cannot act on.
+// The contract's ReportingSelection must say the same, or a view the contract
+// allows is refused. No other metric list may exceed it, because each one is
+// later sent as a selection.
 
 import (
 	"regexp"
@@ -24,6 +24,9 @@ const (
 	// selectionMetricLists is how many bounded metric lists the contract has
 	// today. A floor: fewer means the scan stopped seeing them.
 	selectionMetricLists = 4
+	// selectionSchema is the selection the evaluation validates; its bound is
+	// the one a view is measured against.
+	selectionSchema = "    ReportingSelection:"
 )
 
 var (
@@ -47,22 +50,24 @@ func TestTheSelectionMetricsCapMatchesTheContract(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	caps := contractMetricListCaps(t)
+	caps, selectionLine := contractMetricListCaps(t)
 	if len(caps) < selectionMetricLists {
 		t.Errorf("found %d bounded lists of metric ids in the contract, want at least %d", len(caps), selectionMetricLists)
 	}
+	if caps[selectionLine] != want {
+		t.Errorf("ReportingSelection.metrics allows %d (crm.yaml line %d) and MaxSelectionMetrics is %d", caps[selectionLine], selectionLine, want)
+	}
 	for line, got := range caps {
-		if got != want {
-			t.Errorf("crm.yaml line %d bounds a metric list at %d and MaxSelectionMetrics is %d", line, got, want)
+		if got > want {
+			t.Errorf("crm.yaml line %d bounds a metric list at %d, above MaxSelectionMetrics %d", line, got, want)
 		}
 	}
 }
 
-// contractMetricListCaps finds each array whose items are metric ids and that
-// declares a maxItems, keyed by the line of that maxItems. The bound sits
-// within two lines of the items' $ref, on either side, in every spelling the
-// contract uses.
-func contractMetricListCaps(t *testing.T) map[int]int {
+// contractMetricListCaps keys each bounded list of metric ids by the line of
+// its maxItems. It also returns the line of the first one in ReportingSelection.
+// The bound sits within two lines of the items' $ref, in every spelling used.
+func contractMetricListCaps(t *testing.T) (map[int]int, int) {
 	t.Helper()
 	raw, err := gatekit.ReadFile(contractPath)
 	if err != nil {
@@ -70,7 +75,11 @@ func contractMetricListCaps(t *testing.T) map[int]int {
 	}
 	lines := strings.Split(string(raw), "\n")
 	caps := map[int]int{}
+	selectionStart, selectionLine := -1, 0
 	for i, line := range lines {
+		if line == selectionSchema {
+			selectionStart = i
+		}
 		if !metricIDItems.MatchString(line) {
 			continue
 		}
@@ -84,7 +93,13 @@ func contractMetricListCaps(t *testing.T) map[int]int {
 				t.Fatal(convErr)
 			}
 			caps[j+1] = value
+			if selectionStart >= 0 && selectionLine == 0 {
+				selectionLine = j + 1
+			}
 		}
 	}
-	return caps
+	if selectionStart < 0 || selectionLine == 0 {
+		t.Fatal("crm.yaml has no bounded metric list in ReportingSelection")
+	}
+	return caps, selectionLine
 }

@@ -39045,7 +39045,7 @@ components:
           enum: [this_week, this_month, last_month, last_week, this_quarter, last_quarter, last_year]
         metrics:
           type: array
-          maxItems: 12
+          maxItems: 8
           items: {$ref: '#/components/schemas/ReportingMetricID'}
         blocks:
           type: array
