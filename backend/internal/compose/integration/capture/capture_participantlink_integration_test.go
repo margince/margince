@@ -122,6 +122,32 @@ func TestASuppressedMessageIsFiledUnderNobodyItCopies(t *testing.T) {
 	}
 }
 
+// A second mailbox joining a suppressed message files it under nobody either,
+// even where a record holds the suppressed sender's address.
+func TestASecondMailboxJoiningASuppressedMessageFilesItUnderNobody(t *testing.T) {
+	env := newCaptureEnv(t)
+	e, sync := env.e, env.sync
+	syncSecond := secondMailbox(t, e, e.Rep3)
+	store := contacts.NewStore(e.DB())
+	if _, err := store.EnsureContactByEmail(contactCreator(e), "Gitex Events", "hello@event.gitex.com", "manual", storekit.RefuseErased); err != nil {
+		t.Fatalf("seeding a contact at the sender's address: %v", err)
+	}
+	// A conference blast on a prefix subdomain with List-Unsubscribe, which the ladder suppresses.
+	mail := []byte(strings.Join([]string{
+		"From: GITEX <hello@event.gitex.com>", "To: " + captureOwner, "Cc: " + secondSeatAddress,
+		"Subject: newsletter", "Date: Wed, 04 Jun 2026 08:00:00 +0000", "Message-ID: <gx2@event.gitex.com>",
+		"List-Unsubscribe: <https://example.com/unsub>", "Content-Type: text/plain", "", "hello", "",
+	}, "\r\n"))
+	sync(t, mail)
+	if n := countRows(t, e, `SELECT count(*) FROM capture_trace WHERE source_id = 'gx2@event.gitex.com' AND stage = 'tier_ladder' AND outcome = 'suppressed'`); n == 0 {
+		t.Fatal("the first mailbox's ladder did not suppress the blast, so this test proves nothing")
+	}
+	syncSecond(t, mail)
+	if filed := contactsFiledUnder(t, e, "gx2@event.gitex.com"); len(filed) != 0 {
+		t.Fatalf("a suppressed message is filed under %v once a second mailbox joined it, want nobody", filed)
+	}
+}
+
 // The filing does not widen who may READ the message.
 //
 // This is the invariant the whole change turns on. A message the sender marked

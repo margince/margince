@@ -33,6 +33,13 @@ func (s *Sink) joinActivityTx(
 	return s.fileJoinedMailForSeatTx(ctx, tx, id, rec, fields)
 }
 
+// ladderSuppressedClause holds for activity a when the counterparty ladder
+// suppressed its message. Such a message is filed under nobody, whichever
+// mailbox delivers it.
+const ladderSuppressedClause = `EXISTS (SELECT 1 FROM capture_trace t
+	WHERE t.source_system = a.source_system AND t.source_id = a.source_id
+	  AND t.stage = 'tier_ladder' AND t.outcome = 'suppressed')`
+
 // seatHoldsImportTx answers whether the seat has an import row on the activity.
 func seatHoldsImportTx(ctx context.Context, tx pgx.Tx, id ids.ActivityID, seat ids.UUID) (bool, error) {
 	var held bool
@@ -65,6 +72,13 @@ func (s *Sink) fileJoinedMailForSeatTx(
 	}
 	if private, err := capturedThreadIsPrivateTx(ctx, tx, rec); err != nil || private {
 		return err
+	}
+	var suppressed bool
+	if err := tx.QueryRow(ctx, `SELECT `+ladderSuppressedClause+` FROM activity a WHERE a.id = $1`, id).Scan(&suppressed); err != nil {
+		return fmt.Errorf("capture: reading whether the ladder suppressed a joined activity: %w", err)
+	}
+	if suppressed {
+		return nil
 	}
 	holders, err := storekit.LockIdentityHolders(ctx, tx, storekit.IdentityKeys{Emails: []string{normalizeEmail(subject.Email)}})
 	if err != nil {
