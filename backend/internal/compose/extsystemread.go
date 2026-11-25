@@ -25,6 +25,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/compose/companyscan"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database"
@@ -205,13 +206,13 @@ func readDealSummary(ctx context.Context, pool *pgxpool.Pool, id ids.UUID) (exte
 	out := extension.DealSummary{ID: id.String()}
 	var (
 		owner      *ids.UUID
-		mergedInto *ids.UUID
+		mergedInto string
 		archivedAt *time.Time
 	)
 	err := database.WithWorkspaceTx(ctx, pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(ctx, `
 			SELECT d.name, s.name, d.status, d.amount_minor, d.currency, d.expected_close_date,
-			       d.owner_id, d.archived_at, d.merged_into_id
+			       d.owner_id, d.archived_at, COALESCE(d.merged_into_id::text, '')
 			  FROM deal d
 			  JOIN stage s ON s.id = d.stage_id
 			 WHERE d.id = $1`, id).
@@ -231,9 +232,7 @@ func readDealSummary(ctx context.Context, pool *pgxpool.Pool, id ids.UUID) (exte
 		out.AmountDisplay = mailcopy.For(string(mailcopy.English)).Money(*out.AmountMinor, *out.Currency)
 	}
 	out.Archived = archivedAt != nil
-	if mergedInto != nil {
-		out.MergedIntoID = mergedInto.String()
-	}
+	out.MergedIntoID = mergedInto
 	return out, nil
 }
 
@@ -248,38 +247,13 @@ const dealResponsibleQuery = `
 	 ORDER BY 2 DESC, u.email
 	 LIMIT $2`
 
-// maxMergeHops bounds how far a merged-away deal's redirect is followed. A
-// survivor can itself be merged later, so the answer is the end of the chain.
-const maxMergeHops = 8
-
-// followDealMerge answers the deal that carries on for a deal merged away, and
-// the deal itself when it was not. Who is responsible for a retired duplicate is
-// whoever is responsible for the deal that replaced it.
-func followDealMerge(ctx context.Context, tx pgx.Tx, id ids.UUID) (ids.UUID, error) {
-	for range maxMergeHops {
-		var next *ids.UUID
-		if err := tx.QueryRow(ctx, `SELECT merged_into_id FROM deal WHERE id = $1`, id).Scan(&next); err != nil {
-			return id, err
-		}
-		if next == nil {
-			return id, nil
-		}
-		id = *next
-	}
-	return id, nil
-}
-
 func readDealResponsible(ctx context.Context, pool *pgxpool.Pool, id ids.UUID) ([]extension.Responsible, error) {
 	var out []extension.Responsible
 	err := database.WithWorkspaceTx(ctx, pool, func(tx pgx.Tx) error {
-		var exists bool
-		if err := tx.QueryRow(ctx, `SELECT EXISTS (SELECT 1 FROM deal WHERE id = $1)`, id).Scan(&exists); err != nil {
-			return err
-		}
-		if !exists {
+		survivor, err := deals.FollowMergeTx(ctx, tx, id)
+		if errors.Is(err, pgx.ErrNoRows) {
 			return extension.ErrNotFound
 		}
-		survivor, err := followDealMerge(ctx, tx, id)
 		if err != nil {
 			return err
 		}

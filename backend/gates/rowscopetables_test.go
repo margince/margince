@@ -693,5 +693,9 @@ const (
 	// 169: forecasting.addTeamStandings reads a team freeze's deal ids and hands
 	// them to the snapshot lens before any caller sees one. The lens applies the
 	// reader's deal row scope and the team's assertion check, as FocusLists does.
-	modulesTierUnscopedCeiling = 169
+	//
+	// 170: deals.FollowMergeTx reads the id a merged-away deal redirects to, for the
+	// extension's system read of who is responsible. It hands the id to a query
+	// that names the deal's owner and assignees and returns it to no caller.
+	modulesTierUnscopedCeiling = 170
 )

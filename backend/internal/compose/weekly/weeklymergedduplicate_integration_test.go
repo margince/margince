@@ -29,9 +29,9 @@ func TestTwoWonDuplicatesMergedCountAsOneWin(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	e.WsExec(t, `UPDATE deal SET owner_id = $1, status = 'won', closed_at = now() WHERE id IN ($2, $3)`, e.Rep1, first, second)
+	e.WsExec(t, `UPDATE deal SET owner_id = $1, status = 'won', closed_at = $4 WHERE id IN ($2, $3)`, e.Rep1, first, second, weekClock)
 
-	start, end := time.Now().Add(-time.Hour), time.Now().Add(time.Hour)
+	start, end := weekClock.Add(-time.Hour), weekClock.Add(time.Hour)
 	wins := func() int {
 		var n int
 		err := database.WithWorkspaceTx(e.repCtx, e.Pool, func(tx pgx.Tx) error {
