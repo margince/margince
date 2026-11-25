@@ -17,6 +17,8 @@ import (
 
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/riverqueue/river"
+
+	"github.com/margince/margince/backend/internal/compose/clocktime"
 )
 
 // startupSpread bounds the delay a pass's first run takes after a start. A
@@ -45,6 +47,9 @@ func (s *catchUpSchedule) Next(current time.Time) time.Time {
 	if !s.armed.CompareAndSwap(true, false) {
 		return s.every.Next(current)
 	}
+	if clock, ok := s.every.(clocktime.Schedule); ok {
+		return s.firstClockRun(clock, current)
+	}
 	first := current
 	if !s.lastRun.IsZero() {
 		if next := s.every.Next(s.lastRun); next.After(first) {
@@ -52,6 +57,26 @@ func (s *catchUpSchedule) Next(current time.Time) time.Time {
 		}
 	}
 	return first.Add(startupDelay(s.kind, s.every.Next(current).Sub(current), s.spread))
+}
+
+// replayedSlotMargin tells River's placement, which asks Next with the moment
+// it starts, from a stored past slot River has already enqueued.
+const replayedSlotMargin = 5 * time.Second
+
+// firstClockRun is a clock-time pass's first run after a start: at most one
+// catch-up, for a slot missed while the worker was down. A pass that never ran,
+// or whose last run is after its latest slot, waits for its next slot.
+func (s *catchUpSchedule) firstClockRun(clock clocktime.Schedule, current time.Time) time.Time {
+	now := clock.Now()
+	if current.Before(now.Add(-replayedSlotMargin)) {
+		// River restored a stored slot and enqueued it; that run is the catch-up.
+		return clock.Next(current)
+	}
+	missed := !s.lastRun.IsZero() && !clock.SlotAfter(s.lastRun).After(now)
+	if !missed {
+		return clock.Next(current)
+	}
+	return current.Add(startupDelay(s.kind, clock.Next(current).Sub(current), s.spread))
 }
 
 // rearm makes the next Next catch up again. A schedule handed back to River
@@ -75,11 +100,12 @@ func startupDelay(kind string, interval, spread time.Duration) time.Duration {
 }
 
 // periodicJob builds one pass's River entry. A book with no run history keeps
-// RunOnStart: the defaults and the books tests build have none.
+// RunOnStart: the defaults and the books tests build have none. A clock-time
+// pass never runs at start, so it always waits through a catch-up schedule.
 func (b *ScheduleBook) periodicJob(
 	kind, id string, every river.PeriodicSchedule, ctor river.PeriodicJobConstructor,
 ) (*river.PeriodicJob, *catchUpSchedule) {
-	if b.lastRuns == nil {
+	if b.lastRuns == nil && !runsAtClockTimes(every) {
 		return river.NewPeriodicJob(every, ctor, &river.PeriodicJobOpts{ID: id, RunOnStart: true}), nil
 	}
 	s := newCatchUpSchedule(kind, every, b.lastRuns[kind], b.spread)

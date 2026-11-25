@@ -40,8 +40,9 @@ const (
 	// production and 1 test file for the series-split fold and its cases.
 	// Raised by 1 for the removed-unit list cases, which drive the unexported
 	// Live List check and list export over a kind no unit declares. Raised by 1
-	// test file for the data reset cases of an event the sweep orphaned.
-	composeRootTestFiles = 1917
+	// test file for the data reset cases of an event the sweep orphaned. Raised by
+	// 1 test file for the extension notice kind cases.
+	composeRootTestFiles = 1918
 	// Raised by 107 for the floor of a figure every reader is shown alike. Raised
 	// by 1 for the import that binds one zone lookup to each attention read.
 	// Raised by 249 production and 62 test lines for the full-path certification
@@ -94,8 +95,11 @@ const (
 	// unexported History query, and their cases drive the History query plan.
 	// Raised by 14 production and 42 test lines, and 1 test file, for main's
 	// signal evidence and correction cases, met in the back-sync.
-	composeRootProductionLines = 230_994
-	composeRootTestLines       = 361_436
+	// Raised by 240 production and 260 test lines for the extension card's setup
+	// state and the schedule book's time zone. Both drive the unexported
+	// inventory handler, schedule book and catch-up schedule.
+	composeRootProductionLines = 231_243
+	composeRootTestLines       = 361_811
 )
 
 // A read under these floors stopped early or read the wrong place, and would

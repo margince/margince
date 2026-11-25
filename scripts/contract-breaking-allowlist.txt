@@ -101,3 +101,5 @@ e587f3dd6eb8994139ca8b45b9e69bd633c72da7 6b23582352599475e663101c7288659675b94c4
 e587f3dd6eb8994139ca8b45b9e69bd633c72da7 30608ced46758ce36aab603e2a52447eb4bbaeff ratified-a-contact-and-company-source-is-one-of-six-channels
 30608ced46758ce36aab603e2a52447eb4bbaeff 7968540155b32bef2d4262ca9709e6f7aea072ac ratified-develop-s-company-status-carried-into-develop-in-the-back-sync
 80b857de890d5cb7e1f4f3ad92fa16a2598aa90f 7968540155b32bef2d4262ca9709e6f7aea072ac ratified-main-s-contact-and-company-source-of-six-channels-carried-into-develop-in-the-back-sync
+30608ced46758ce36aab603e2a52447eb4bbaeff af19cd0b55a219d8e9ee75896295e19f9e939c77 ratified-develop-s-company-status-carried-into-develop-in-the-back-sync
+ca2dff47337700f3b566fb5f2e334bf0716ec0de af19cd0b55a219d8e9ee75896295e19f9e939c77 ratified-main-s-contract-changes-carried-into-develop-in-the-back-sync
