@@ -61,16 +61,35 @@ func (s *Store) AnswerHostTeamRequests(ctx context.Context, host ids.UserID, ans
 			if !answerChanges(page.Policy.SchedulingProfile, me, answer) {
 				continue
 			}
-			if err := s.answerTeamLinkTx(ctx, tx, page.ID, me, answer); err != nil {
+			written, err := s.answerTeamLinkIfItChangesTx(ctx, tx, page.ID, me, answer)
+			if err != nil {
 				return err
 			}
-			answered++
+			if written {
+				answered++
+			}
 		}
 		if answered == 0 {
 			return apperrors.ErrNotFound
 		}
 		return nil
 	})
+}
+
+// answerTeamLinkIfItChangesTx is answerTeamLinkTx for the host-wide answer. It
+// asks answerChanges again under the lock, since an answer on that one link
+// may have committed after the pages were read.
+func (s *Store) answerTeamLinkIfItChangesTx(
+	ctx context.Context, tx pgx.Tx, page ids.UUID, me ids.UserID, answer crmcontracts.SchedulingTeamAnswerState,
+) (bool, error) {
+	stored, err := lockLivePageTx(ctx, tx, page)
+	if errors.Is(err, apperrors.ErrNotFound) || (err == nil && (stored == nil || !answerChanges(stored.SchedulingProfile, me, answer))) {
+		return false, nil
+	}
+	if err != nil {
+		return false, err
+	}
+	return true, s.writeTeamAnswerTx(ctx, tx, page, stored, me, answer)
 }
 
 // answerChanges is whether answer moves member on a page: confirming a pending
@@ -117,6 +136,12 @@ func (s *Store) answerTeamLinkTx(ctx context.Context, tx pgx.Tx, page ids.UUID, 
 	if stored == nil {
 		return apperrors.ErrNotFound
 	}
+	return s.writeTeamAnswerTx(ctx, tx, page, stored, me, answer)
+}
+
+// writeTeamAnswerTx writes answer on a page the caller holds the lock of, and
+// settles the request it answers.
+func (s *Store) writeTeamAnswerTx(ctx context.Context, tx pgx.Tx, page ids.UUID, stored *storedSchedulingProfile, me ids.UserID, answer crmcontracts.SchedulingTeamAnswerState) error {
 	if err := writeMemberStateTx(ctx, tx, page, stored, me, crmcontracts.SchedulingTeamMemberState(answer)); err != nil || s.teamRequests == nil {
 		return err
 	}
