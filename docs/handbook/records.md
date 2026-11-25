@@ -356,6 +356,8 @@ Renaming a field changes its label and keeps your reports working. To name a fie
 
 A deal or company picklist or yes/no field has a switch under **In reports**. Turn it on to group and filter deal reports by that field. A company field groups each deal by its company's value. Everyone who reads deal reports then sees the field's name and choices.
 
+**Recent field changes** under the list shows who changed a field and on which record type. Each row says what the change did, such as **Renamed** or **Hidden from create forms**. You see its rows only with the right to read the audit log.
+
 ### How do I change the choices of a field?
 To change the choices of a **picklist** or **multiple choice** field, choose **Edit choices** in its row menu in Settings → **Records and fields**. Each choice shows how many records hold it, and before you save Margince says how many lose a removed choice. Add one with **Add option**, take one away with **Remove option**, and choose **Save**; a field keeps at least one choice. Saving takes a removed choice off each record: a picklist record has no value left, and a **multiple choice** record keeps the rest. Each record's history shows the change, and a saved filter that names the removed choice finds no record by it.
 Also called: delete a picklist value, retire an option.

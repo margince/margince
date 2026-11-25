@@ -28,6 +28,7 @@ import { useLocale, useT } from "../../i18n";
 import type { CfObject, CfType } from "../../lib/customfields.logic";
 import { useViewerZone } from "../../lib/viewerzone";
 import { AuditEntryLine } from "../settings/audit";
+import { fieldChangeKeys, fieldTarget } from "./customfields.changes";
 import { CustomFieldChoices } from "./customfields.choices";
 import { ActivityKindsSelect } from "./customfields.kinds";
 import { objectLabels, typeLabels } from "./customfields.labels";
@@ -318,19 +319,23 @@ function FieldMenu({
 }
 
 // The audit rows this screen's changes emit, newest first (AC-custom-fields-6/7).
-// Only what AuditLogEntry carries is drawn, never an invented display name.
+// A row names its field from `fields`, the catalog rows by id, and falls back
+// to what the entry itself carries; it never invents a name.
 export function AuditRail({
   entries,
+  fields,
   state,
   meUserId,
   onRetry,
 }: Readonly<{
   entries: AuditLogEntry[];
+  fields?: ReadonlyMap<string, CustomField>;
   state: SectionState;
   meUserId?: string;
   onRetry: () => void;
 }>) {
   const t = useT();
+  const { locale } = useLocale();
   const recentFirst = [...entries].sort((a, b) =>
     stable(b.occurred_at, a.occurred_at),
   );
@@ -345,7 +350,17 @@ export function AuditRail({
       <ul className="cf-audit">
         {recentFirst.map((entry) => (
           <li key={entry.id}>
-            <AuditEntryLine entry={entry} meUserId={meUserId} />
+            <AuditEntryLine
+              entry={entry}
+              meUserId={meUserId}
+              changes={fieldChangeKeys(entry).map((key) => t(key))}
+              target={fieldTarget(
+                entry,
+                fields?.get(entry.entity_id),
+                t,
+                locale,
+              )}
+            />
           </li>
         ))}
       </ul>
