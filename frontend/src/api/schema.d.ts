@@ -33248,8 +33248,9 @@ export interface components {
              * @description Calls this step answered with another model than the one bound, by the provider's own report; out of `answered`.
              */
             switched: number;
-            /** @description The model the provider named most often on those calls; absent when switched is 0. */
+            /** @description The model the provider named most often on those calls; absent when switched is 0. `switched_to_certification` grades it for this task with the step's own binding settings, and is absent on a decision step and when no record measured it. */
             switched_to?: string;
+            switched_to_certification?: components["schemas"]["AiRouteCertification"];
         };
         AiDeferredWork: {
             carrier: string;

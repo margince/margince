@@ -5,16 +5,19 @@ import type { components } from "../../api/schema";
 import type { useT } from "../../i18n";
 
 type T = ReturnType<typeof useT>;
-type Candidate = components["schemas"]["AiRouteCandidate"];
+type Certification = components["schemas"]["AiRouteCertification"];
 
 /**
- * What the certification records say about the model a tier binding serves for
- * one task. The sentence follows the record's verdict, so it never states a
- * failure the records no longer show. A model no record measured says so.
+ * What the certification records say about a model for one task: the one a
+ * tier binding serves, or the one a provider switched it to. The sentence
+ * follows the record's verdict, so it never states a failure the records no
+ * longer show. A model no record measured says so.
  */
-export function certificationNote(candidate: Candidate, t: T): string {
-  const model = candidate.model;
-  const cert = candidate.certification;
+export function certificationNote(
+  model: string,
+  cert: Certification | undefined,
+  t: T,
+): string {
   if (!cert) return t("aiAdmin.certification.unrecorded", { model });
   let head: string;
   switch (cert.verdict) {

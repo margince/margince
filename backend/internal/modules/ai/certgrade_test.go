@@ -229,3 +229,38 @@ func TestTheTaskGradeAndTheLeadVerdictReadOneRecord(t *testing.T) {
 		}
 	}
 }
+
+// The model a provider switched a step to is graded with that step's binding
+// settings. A record of the model under other settings does not grade it.
+func TestASwitchedModelIsGradedWithTheBindingItAnsweredFor(t *testing.T) {
+	bound := ProviderConfig{Provider: "gemini", Model: "gemini-3.1-flash-lite", ThinkingLevel: "low"}
+	cfg := RoutingConfig{
+		Profile: ProfileCloudFrontier,
+		Tiers:   map[Tier]ProviderConfig{TierLocalSmall: bound, TierCheapCloud: bound, TierPremium: bound, TierFrontier: bound},
+	}
+	lead := TaskLadder(TaskSummarize)[0]
+	servedAtLow := bound
+	servedAtLow.Model = "gemini-3.8-flash"
+	servedAtDefault := servedAtLow
+	servedAtDefault.ThinkingLevel = ""
+	withTaskGrades(t, map[CertKey]CertGrade{
+		CertKeyFor(TaskSummarize, servedAtLow, ProfileCloudFrontier):                                    {Verdict: "not_supported", State: "stale"},
+		CertKeyFor(TaskSummarize, servedAtDefault, ProfileCloudFrontier):                                {Verdict: "certified", State: "current"},
+		CertKeyFor(TaskSummarize, ProviderConfig{Provider: "gemini", Model: "m"}, ProfileCloudFrontier): {Verdict: "certified", State: "current"},
+	})
+
+	got := switchedCertification(cfg, TaskSummarize, lead, "gemini-3.8-flash")
+	want := crmcontracts.AiRouteCertification{Verdict: "not_supported", Current: false}
+	if got == nil || *got != want {
+		t.Errorf("a switch to a model measured with the binding's settings = %+v, want %+v", got, want)
+	}
+	if got := switchedCertification(cfg, TaskSummarize, lead, "m"); got != nil {
+		t.Errorf("a switch to a model measured only under other settings = %+v, want no grade", *got)
+	}
+	if got := switchedCertification(cfg, TaskSummarize, lead, "gemini-9-unknown"); got != nil {
+		t.Errorf("a switch to a model no record measured = %+v, want no grade", *got)
+	}
+	if got := switchedCertification(cfg, TaskSummarize, Tier("not-on-the-ladder"), "gemini-3.8-flash"); got != nil {
+		t.Errorf("a switch on a tier the task no longer walks = %+v, want no grade", *got)
+	}
+}

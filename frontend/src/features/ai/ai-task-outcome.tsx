@@ -11,6 +11,7 @@ import { formatNumber, formatPercent } from "../../format/format";
 import { type Locale, useLocale, usePlural, useT } from "../../i18n";
 import { tierLabel } from "../../lib/ai-tier-label";
 import { formatSeconds, switchedSentence } from "./ai-call-figures";
+import { certificationNote } from "./ai-certification-note";
 import { gaveUpLabel } from "./ai-decision-labels";
 import "./ai-settings.css";
 
@@ -139,6 +140,15 @@ function StepCard({
                 step.switched_to,
                 plural,
                 locale,
+              )}
+            </span>
+          ) : null}
+          {step.switched && step.switched_to && !step.decision ? (
+            <span className="t-caption">
+              {certificationNote(
+                step.switched_to,
+                step.switched_to_certification,
+                t,
               )}
             </span>
           ) : null}
