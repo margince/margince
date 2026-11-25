@@ -29,7 +29,13 @@ const EDIT_ACCESS_WORDS: AskWords = {
 export function EditAccessRequest({
   kind,
   record,
-}: Readonly<{ kind: EditAccessRecordType; record: AskedRecord }>) {
+  variant = "primary",
+}: Readonly<{
+  kind: EditAccessRecordType;
+  record: AskedRecord;
+  // Ghost where another panel on the page already carries the filled ask.
+  variant?: "primary" | "ghost";
+}>) {
   const ownerId = useOwnerToAsk(kind, record);
   const id = record.id ?? "";
   const open = useEditAccessRequest(kind, id, ownerId !== undefined);
@@ -42,7 +48,7 @@ export function EditAccessRequest({
       open={open}
       actions={actions}
       words={EDIT_ACCESS_WORDS}
-      variant="primary"
+      variant={variant}
     />
   );
 }

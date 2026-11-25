@@ -10,7 +10,6 @@ import {
   writableTarget,
 } from "../../components/activitygate";
 import { ArchiveAction } from "../../components/archive";
-import { EditAccessRequest } from "../../components/editaccessrequest";
 import { useRailRename } from "../../components/railfield";
 import { RecordTeam } from "../../components/recordteam";
 import { useFieldsDialog } from "../../components/sectionedit";
@@ -74,6 +73,7 @@ import { ProjectTabs } from "./projecttabs";
 import "./projects.css";
 import { RecordGone } from "../../components/recordgone";
 import { useViewerZone } from "../../lib/viewerzone";
+import { ViewOnly } from "../records/viewonly";
 import { ProjectHistory, ProjectLatestInbound } from "./project360.chronology";
 import { ProjectCards } from "./projectcards";
 import { useProjectEdit } from "./projectedit";
@@ -176,6 +176,12 @@ function ProjectPage({ view }: Readonly<{ view: Project360 }>) {
           <Badge>{t(labelFor(PHASE_LABEL, project.phase))}</Badge>
           {project.key && <ProjectKeyChip projectKey={project.key} dense />}
           <ProjectSharedPill projectId={project.id} />
+          <ViewOnly
+            kind="project"
+            record={project}
+            name={project.name}
+            reasonId={readOnlyReasonId}
+          />
         </>
       }
       actions={
@@ -203,13 +209,10 @@ function ProjectPage({ view }: Readonly<{ view: Project360 }>) {
       }
       tabs={<ProjectTabs />}
       band={
-        // One sentence and nothing else: why this record takes no changes, so
-        // every control it refuses points at it.
-        readOnlyReason ? (
-          <>
-            <p id={readOnlyReasonId}>{readOnlyReason}</p>
-            <EditAccessRequest kind="project" record={project} />
-          </>
+        // Why an archived project takes no changes, so every control it
+        // refuses points at it. A live one says so in the View only pill.
+        readOnlyReason && project.archived_at ? (
+          <p id={readOnlyReasonId}>{readOnlyReason}</p>
         ) : undefined
       }
     >

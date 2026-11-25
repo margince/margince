@@ -36,6 +36,7 @@ import { useMe, useViewerId } from "../../lib/session";
 import { useViewerZone } from "../../lib/viewerzone";
 import { useKindWriteRefusal } from "../../lib/writerefusal";
 import { OpenEmailDrawer } from "../mail/openemaildrawer";
+import { ViewOnly } from "../records/viewonly";
 import {
   type ClosedDeal,
   CloseReviewOffer,
@@ -299,13 +300,21 @@ export function DealScreen({ id }: Readonly<{ id: string }>) {
               }
               zone={readerZone}
               pulse={
-                <DealPulsePills
-                  status={deal.status}
-                  archived={Boolean(deal.archived_at)}
-                  yourMove={Boolean(
-                    statusQuery.data && currentReplyTarget(statusQuery.data),
-                  )}
-                />
+                <>
+                  <DealPulsePills
+                    status={deal.status}
+                    archived={Boolean(deal.archived_at)}
+                    yourMove={Boolean(
+                      statusQuery.data && currentReplyTarget(statusQuery.data),
+                    )}
+                  />
+                  <ViewOnly
+                    kind="deal"
+                    record={deal}
+                    name={deal.name}
+                    reasonId={readOnlyReasonId}
+                  />
+                </>
               }
               latest={
                 shownTab !== "overview" && (
@@ -324,8 +333,7 @@ export function DealScreen({ id }: Readonly<{ id: string }>) {
                   onEditDetails={() => setEditingDetails(true)}
                 />
               }
-              // The sentence naming why this deal takes no changes, while
-              // it does not.
+              // The sentence naming why an archived deal takes no changes.
               band={dealBand({
                 deal,
                 reason: readOnlyReason,

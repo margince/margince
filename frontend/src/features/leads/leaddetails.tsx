@@ -32,6 +32,7 @@ import {
 } from "../../lib/leadorigins";
 import { useListsAvailable, useRecordLists } from "../../lib/lists.queries";
 import { useViewerZone } from "../../lib/viewerzone";
+import { useViewOnlyAccess } from "../records/viewonly";
 import { LeadCompany, useLeadCompanyFactsSection } from "./leadcompany";
 import { useLeadPickerFlows } from "./leaddetailsflows";
 import { useLeadEdit } from "./leadedit";
@@ -349,6 +350,7 @@ function LeadDetailsBody({
     flows: owner.flow && { owner: owner.flow },
   });
   const setBy = statusSetBy(lead, t);
+  const access = useViewOnlyAccess("lead", lead);
   const companyFacts = useLeadCompanyFactsSection(lead);
   const sections: DetailSection[] = [
     { ...aboutPart.part, rows: shown(about), edit: aboutEdit.edit },
@@ -388,7 +390,11 @@ function LeadDetailsBody({
   ];
   return (
     <>
-      <RecordDetails sections={sections} footnote={t("lead.aside.footnote")} />
+      <RecordDetails
+        sections={sections}
+        footnote={t("lead.aside.footnote")}
+        access={access}
+      />
       <RecordCustomFields kind="lead" record={lead} />
       {aboutEdit.element}
       {reachEdit.element}

@@ -3,6 +3,7 @@
 
 import {
   ChevronDown,
+  Eye,
   EyeOff,
   Lock,
   type LucideIcon,
@@ -27,8 +28,8 @@ import "./visibility.css";
 //
 // It is a fact, not a status, which is why it is not a `Badge`: `Badge`'s
 // tones say whether something is going well, and a message limited to its
-// participants is a message working exactly as intended. Only `withheld` takes
-// a tone, because it is the one state about the READER rather than the thing.
+// participants is a message working exactly as intended. `withheld` and
+// `viewOnly` are about the READER; only `withheld` takes a tone, since it hides content.
 
 /**
  * The closed vocabulary. `team` is what a MAIL row means — everyone the linked
@@ -48,7 +49,8 @@ export type Visibility =
   | "participants"
   | "selected"
   | "private"
-  | "withheld";
+  | "withheld"
+  | "viewOnly";
 
 const WORD: Record<Visibility, MessageKey> = {
   team: "visibility.team",
@@ -57,6 +59,7 @@ const WORD: Record<Visibility, MessageKey> = {
   selected: "visibility.selected",
   private: "visibility.private",
   withheld: "visibility.withheld",
+  viewOnly: "viewOnly.pill",
 };
 
 // `Lock` twice on purpose: "participants" and "private" are both a sealed
@@ -71,6 +74,7 @@ const ICON: Record<Visibility, LucideIcon> = {
   selected: UserRoundCheck,
   private: Lock,
   withheld: EyeOff,
+  viewOnly: Eye,
 };
 
 // Three looks for six states. Open is outlined and quiet: the sheet's own

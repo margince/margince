@@ -48,6 +48,7 @@ import { DealPartner } from "./dealpartner";
 import { ProbabilityHint } from "./dealprobabilityhint";
 import type { Deal, Stage } from "./deals";
 import "./deal360/deal360.css";
+import { useViewOnlyAccess } from "../records/viewonly";
 
 type AsideProps = Readonly<{
   deal: Deal;
@@ -96,6 +97,7 @@ function DealAsideBody({
   const tagRows = useTagsRow("deal", deal);
   const change = useSectionEdits(deal, edit, locale, tagRows.length > 0);
   const owner = useMemberName(deal.owner_id).data;
+  const access = useViewOnlyAccess("deal", deal);
   const cf = useObjectCustomFields("deal");
   const display = useCustomFieldDisplay();
   const reads = {
@@ -160,6 +162,7 @@ function DealAsideBody({
       <RecordDetails
         sections={sections}
         footnote={t("deal.details.closingFootnote")}
+        access={access}
       />
       {change.element}
     </>

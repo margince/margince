@@ -28,6 +28,7 @@ import { useLocale, usePlural, useT } from "../../i18n";
 import { labelFor } from "../../lib/labelfor";
 import { unwrap } from "../../lib/problem";
 import { useViewerZone } from "../../lib/viewerzone";
+import { useViewOnlyAccess } from "../records/viewonly";
 import { useProjectEdit } from "./projectedit";
 import { PHASE_LABEL, type Project } from "./projects.form";
 import { timeUsed } from "./projectstanding";
@@ -204,6 +205,7 @@ export function ProjectDetails({ view }: Readonly<{ view: Project360 }>) {
     date ? formatDateAbbrev(date, locale, zone) : unset;
   const closed = project.phase === "closed";
   const edits = useSectionEdits(project);
+  const access = useViewOnlyAccess("project", project);
   const about: DetailRow[] = [
     {
       key: "company",
@@ -294,6 +296,7 @@ export function ProjectDetails({ view }: Readonly<{ view: Project360 }>) {
           },
         ]}
         footnote={closed ? undefined : t("project.aside.closeNote")}
+        access={access}
       />
       {edits.element}
     </>
