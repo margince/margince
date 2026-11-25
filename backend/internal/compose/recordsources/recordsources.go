@@ -59,9 +59,9 @@ func SignalDataTask() datatask.Task {
 // source named moves to source_system, so a captured row keeps its mailbox.
 func PartyDataTask() datatask.Task {
 	return datatask.Task{
-		ID: "core/1795606808_party_source_channels", Version: 1,
-		Title:    systemtext.Literal("datatask.title.core.1795606808_party_source_channels"),
-		Requires: []string{"core/1795606808"},
+		ID: "core/1795624398_party_source_channels", Version: 1,
+		Title:    systemtext.Literal("datatask.title.core.1795624398_party_source_channels"),
+		Requires: []string{"core/1795624398"},
 		Steps: []datatask.Step{
 			step("contact_sources", contacts.CorrectContactSourcesTx, contacts.CountUnlistedContactSources),
 			step("company_sources", contacts.CorrectCompanySourcesTx, contacts.CountUnlistedCompanySources),
