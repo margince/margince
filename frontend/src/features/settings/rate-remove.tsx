@@ -8,9 +8,52 @@ import { ConfirmModal } from "../../design-system/confirmmodal";
 import { useT } from "../../i18n";
 import { labelFor } from "../../lib/labelfor";
 import { problemMessageOf, unwrap } from "../../lib/problem";
+import { INSTALLATION_SETTINGS_KEY } from "../../lib/uploadlimit";
 import { LANE_LABEL } from "./rate-manual";
 
 type SheetRow = components["schemas"]["AiModelRate"];
+type FxRate = components["schemas"]["FxRate"];
+
+/**
+ * RemoveFxRateDialog asks before a currency leaves the rate sheet. Deals in it
+ * read as unconverted afterwards, and the base currency lock stops counting it.
+ * The server keeps the removed rows, so a figure already computed keeps its rate.
+ */
+export function RemoveFxRateDialog({
+  row,
+  onClose,
+}: Readonly<{ row: FxRate; onClose: () => void }>) {
+  const t = useT();
+  const qc = useQueryClient();
+  const remove = useMutation({
+    mutationFn: async (from: string) => {
+      unwrap(
+        await api.DELETE("/fx-rates/{from}", { params: { path: { from } } }),
+      );
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["fx-rates"] });
+      qc.invalidateQueries({ queryKey: INSTALLATION_SETTINGS_KEY });
+      onClose();
+    },
+  });
+  const named = { currency: row.from_currency };
+  return (
+    <ConfirmModal
+      open
+      onClose={onClose}
+      title={t("settings.rates.fxRemoveTitle", named)}
+      confirmLabel={t("settings.rates.fxRemoveConfirm")}
+      confirmVariant="danger"
+      pending={remove.isPending}
+      error={remove.error ? problemMessageOf(remove.error, t) : null}
+      returnFocusTo={() => null}
+      onConfirm={() => remove.mutate(row.from_currency)}
+    >
+      <p>{t("settings.rates.fxRemoveBody", named)}</p>
+    </ConfirmModal>
+  );
+}
 
 /**
  * RemovePriceDialog asks before a model's entry leaves the sheet. Every date of

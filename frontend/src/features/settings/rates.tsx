@@ -29,7 +29,7 @@ import { typedDecimalText, typedNumberFault } from "../../format/decimalinput";
 import { formatDate, formatUsdPerMTok } from "../../format/format";
 import { useLocale, useT } from "../../i18n";
 import { providerName } from "../../lib/ai-provider-names";
-import { useCan, useCanUpsert } from "../../lib/capability";
+import { useCan, useCanUpsert, useCanWrite } from "../../lib/capability";
 import { useCompanyZone } from "../../lib/companyzone";
 import {
   fieldCheckSentence,
@@ -41,6 +41,7 @@ import { useInstallationSettings } from "../../lib/uploadlimit";
 import { useViewerZone } from "../../lib/viewerzone";
 import { isPricedProvider } from "./rate-manual";
 import { RefreshFromSources } from "./rate-refresh";
+import { RemoveFxRateDialog } from "./rate-remove";
 import "./rates.css";
 
 type FxRate = components["schemas"]["FxRate"];
@@ -98,7 +99,10 @@ export function FxRatesCard() {
   // the transaction, so asking for one here would hide the editor from a
   // principal the server would have let write.
   const canManage = useCanUpsert("fx_rate");
+  // Removing a currency takes the update grant, as correcting a rate does.
+  const canRemove = useCanWrite("fx_rate", "update");
   const [open, setOpen] = useState(false);
+  const [removing, setRemoving] = useState<FxRate | null>(null);
   const query = useQuery({
     queryKey: ["fx-rates"],
     enabled: canRead,
@@ -168,6 +172,12 @@ export function FxRatesCard() {
           </QueryGate>
         )}
         {open ? <FxRateModal onClose={() => setOpen(false)} /> : null}
+        {removing ? (
+          <RemoveFxRateDialog
+            row={removing}
+            onClose={() => setRemoving(null)}
+          />
+        ) : null}
       </PanelBody>
       {/* The sheet is the panel's subject, so it runs edge to edge. */}
       {rates?.length ? (
@@ -195,6 +205,22 @@ export function FxRatesCard() {
               render: (row) =>
                 formatDate(row.effective_date, locale, readerZone),
             },
+            ...(canRemove
+              ? [
+                  {
+                    key: "verbs",
+                    header: t("settings.rates.fxRemoveConfirm"),
+                    headerHidden: true,
+                    render: (row: FxRate) => (
+                      <Button onClick={() => setRemoving(row)}>
+                        {t("settings.rates.fxRemoveVerb", {
+                          currency: row.from_currency,
+                        })}
+                      </Button>
+                    ),
+                  },
+                ]
+              : []),
           ]}
         />
       ) : null}

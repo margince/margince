@@ -97,3 +97,38 @@ func TestASnapshotPinsTheRateRevisionItSawAcrossACommittedCorrection(t *testing.
 		t.Fatal(err)
 	}
 }
+
+// Removing a currency keeps its versions, so a figure pinned to a revision
+// from before the removal still finds the rate it used.
+func TestARemovedCurrencyKeepsTheRateAPinnedFigureUsed(t *testing.T) {
+	e := Setup(t)
+	ctx := e.Admin()
+	if _, err := e.Deals.SetFxRate(ctx, deals.SetFxRateInput{FromCurrency: "JPY", Rate: "0.0060"}); err != nil {
+		t.Fatal(err)
+	}
+	var pinned time.Time
+	if err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) (err error) {
+		pinned, err = deals.RateSheetRevision(ctx, tx)
+		return err
+	}); err != nil {
+		t.Fatal(err)
+	}
+	if err := e.Deals.RemoveFxRate(ctx, "JPY"); err != nil {
+		t.Fatal(err)
+	}
+	var atPinned string
+	var live int
+	if err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
+		if err := tx.QueryRow(ctx, `SELECT count(*) FROM fx_rate WHERE from_currency = 'JPY' AND `+
+			deals.RateVersionSQL("", "")).Scan(&live); err != nil {
+			return err
+		}
+		return tx.QueryRow(ctx, `SELECT rate::text FROM fx_rate WHERE from_currency = 'JPY' AND `+
+			deals.RateVersionSQL("", "$1"), pinned).Scan(&atPinned)
+	}); err != nil {
+		t.Fatalf("a figure pinned before the removal lost its rate: %v", err)
+	}
+	if atPinned != "0.0060000000" || live != 0 {
+		t.Errorf("pinned read %q with %d live rows, want 0.0060000000 and none", atPinned, live)
+	}
+}

@@ -6517,6 +6517,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "outcomeReview.notes": "Ghi chú khác",
   "deal.commercialContext": "Bối cảnh thương mại",
 
+  "deal.closedAmountKept":
+    "Deal đã thắng hoặc thua giữ nguyên giá. Hãy mở lại deal trước khi gỡ giá.",
   "deal.arrFromOffer":
     "ARR dự kiến lấy từ báo giá đã chấp nhận và không thể sửa ở đây.",
   "deal.brief": "Tóm tắt deal",
@@ -15535,6 +15537,11 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Chỉ đọc. Vai trò hiện tại không có quyền thay đổi tỷ giá và giá mô hình.",
   "settings.rates.fxTableLabel": "Tỷ giá đang áp dụng",
   "settings.rates.fxAdd": "Nhập tỷ giá",
+  "settings.rates.fxRemoveVerb": "Gỡ {currency}",
+  "settings.rates.fxRemoveTitle": "Gỡ tỷ giá {currency}?",
+  "settings.rates.fxRemoveBody":
+    "Các deal bằng {currency} không hiển thị giá trị theo loại tiền cơ sở cho đến khi nhập tỷ giá mới. Các số liệu đã tính vẫn giữ tỷ giá đã dùng.",
+  "settings.rates.fxRemoveConfirm": "Gỡ",
   "settings.rates.fxEmpty": "Chưa có tỷ giá nào.",
   "settings.rates.fxModalTitle": "Nhập tỷ giá",
   "settings.rates.rateToBase": "Tỷ giá (quy đổi sang loại tiền cơ sở)",
@@ -16862,13 +16869,13 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "installationSettings.baseCurrencyLock.ratesFrozen_other":
     "{count} hồ sơ đã cố định tỷ giá quy đổi theo loại tiền này, nên không thể thay đổi.",
   "installationSettings.baseCurrencyLock.rateSheet_one":
-    "{count} tỷ giá đang quy đổi sang {base}. Cần xóa các tỷ giá trước khi đổi loại tiền cơ sở.",
+    "{count} tỷ giá đang quy đổi sang {base}. Cần gỡ mọi loại tiền khỏi bảng tỷ giá trước khi đổi loại tiền cơ sở.",
   "installationSettings.baseCurrencyLock.rateSheet_other":
-    "{count} tỷ giá đang quy đổi sang {base}. Cần xóa các tỷ giá trước khi đổi loại tiền cơ sở.",
+    "{count} tỷ giá đang quy đổi sang {base}. Cần gỡ mọi loại tiền khỏi bảng tỷ giá trước khi đổi loại tiền cơ sở.",
   "installationSettings.baseCurrencyLock.rateSheetUnnamed_one":
-    "{count} tỷ giá đang quy đổi sang một loại tiền cơ sở chưa được ghi nhận. Cần xóa các tỷ giá trước khi đổi loại tiền cơ sở.",
+    "{count} tỷ giá đang quy đổi sang một loại tiền cơ sở chưa được ghi nhận. Cần gỡ mọi loại tiền khỏi bảng tỷ giá trước khi đổi loại tiền cơ sở.",
   "installationSettings.baseCurrencyLock.rateSheetUnnamed_other":
-    "{count} tỷ giá đang quy đổi sang một loại tiền cơ sở chưa được ghi nhận. Cần xóa các tỷ giá trước khi đổi loại tiền cơ sở.",
+    "{count} tỷ giá đang quy đổi sang một loại tiền cơ sở chưa được ghi nhận. Cần gỡ mọi loại tiền khỏi bảng tỷ giá trước khi đổi loại tiền cơ sở.",
   "installationSettings.baseLanguage": "Ngôn ngữ cơ sở",
   "installationSettings.baseLanguageHint":
     "Ngôn ngữ AI dùng để viết khi cả nhóm cùng đọc văn bản. Ngôn ngữ hiển thị là cài đặt riêng, và thư trả lời khách hàng theo ngôn ngữ của chuỗi thư.",
