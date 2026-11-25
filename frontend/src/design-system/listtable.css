@@ -1410,10 +1410,8 @@
   /* The identity cell is the card's heading: no label, full width, and it reads
    * as the thing you tapped rather than as one field among several.
    *
-   * Nothing is frozen in a stack — there is no sideways scroll for a cell to
-   * slide under — so the desktop column's chrome comes off here. Its opaque
-   * ground was still being painted over the card's translucent one, which put a
-   * patch of a slightly different white behind every card's title. */
+   * A stack scrolls nothing sideways, so nothing is frozen and the desktop
+   * column's chrome comes off here. */
   .lt-table:where(:not(.lt-phonerows)) td.lt-identity {
     display: block;
     position: static;

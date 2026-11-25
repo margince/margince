@@ -60,6 +60,9 @@ package gates
 // same thing the first time they grew a second.
 
 import (
+	"go/ast"
+	"go/parser"
+	"go/token"
 	"io/fs"
 	"regexp"
 	"slices"
@@ -169,6 +172,18 @@ var carriedThroughAPort = map[string]portCarry{
 	"consent_qualifying_event":  {consentPkg, "Store.CarrySatellitesTx", "holdsAConsentSatellite"},
 	"consent_doi_token":         {consentPkg, "Store.CarrySatellitesTx", "holdsAConsentSatellite"},
 	"intro_request":             {introductionsPkg, "Store.CarryIntrosTx", "refuseUnwiredIntroCarry"},
+}
+
+// carriedByItsStore names the satellites a platform store handles for the
+// merge, by the store function the merge calls in its own transaction.
+var carriedByItsStore = map[string]storeCarry{
+	"generated_summary": {generatedSummaryStoreDir, "ForgetContacts"},
+}
+
+// storeCarry is the store package and the function of it that writes the table.
+type storeCarry struct {
+	pkg     string
+	carrier string
 }
 
 var (
@@ -298,6 +313,11 @@ func TestEveryContactSatelliteJoinsEveryLifecyclePathThatApplies(t *testing.T) {
 			if _, ported := carriedThroughAPort[table]; ported && path.name == mergeRelinkPath {
 				continue
 			}
+			if store, stored := carriedByItsStore[table]; stored && path.name == mergeRelinkPath &&
+				reachesStoreCall(t, path.pkg, path.from, store) &&
+				reachedWrites(t, store.pkg, store.carrier)[table] {
+				continue
+			}
 			missing = append(missing, "contact satellite "+table+" is not handled by the "+path.name+
 				" path ("+path.where()+") — "+path.remedy)
 		}
@@ -305,6 +325,11 @@ func TestEveryContactSatelliteJoinsEveryLifecyclePathThatApplies(t *testing.T) {
 	sort.Strings(missing)
 	for _, m := range missing {
 		t.Error(m)
+	}
+	for table := range carriedByItsStore {
+		if satellites[table] == nil {
+			t.Errorf("carriedByItsStore names %s, which no migration gives a contact_id column", table)
+		}
 	}
 }
 
@@ -363,6 +388,97 @@ func reachedWrites(t *testing.T, dir, from string) map[string]bool {
 	}
 	walk(from)
 	return writes
+}
+
+// reachesStoreCall reports whether `from`, or anything it calls in its package,
+// calls the store's carrier through the store's own import.
+func reachesStoreCall(t *testing.T, dir, from string, store storeCarry) bool {
+	t.Helper()
+	graph := packageCallGraph(t, dir)
+	callers := map[string]bool{}
+	for _, file := range parsePackageFiles(t, dir) {
+		for _, decl := range file.Decls {
+			if fn, isFunc := decl.(*ast.FuncDecl); isFunc && callsStore(file, fn, store) {
+				callers[scrubKey(receiverTypeName(fn), fn.Name.Name)] = true
+			}
+		}
+	}
+	seen := map[string]bool{}
+	var walk func(string) bool
+	walk = func(current string) bool {
+		fn, known := graph[current]
+		if !known || seen[current] {
+			return false
+		}
+		seen[current] = true
+		if callers[current] {
+			return true
+		}
+		for called := range fn.calls {
+			if walk(called) {
+				return true
+			}
+		}
+		return false
+	}
+	return walk(from)
+}
+
+// callsStore reports whether fn calls the carrier, qualified by the name its
+// file imports the store under. A bare reference to the function is no call.
+func callsStore(file *ast.File, fn *ast.FuncDecl, store storeCarry) bool {
+	qualifier, _ := gatekit.ImportedAs(file, backendModulePath+"/"+store.pkg)
+	if qualifier == "" || fn.Body == nil {
+		return false
+	}
+	called := false
+	ast.Inspect(fn.Body, func(node ast.Node) bool {
+		call, isCall := node.(*ast.CallExpr)
+		if !isCall {
+			return !called
+		}
+		selector, isSelector := call.Fun.(*ast.SelectorExpr)
+		if !isSelector || selector.Sel.Name != store.carrier {
+			return !called
+		}
+		if pkg, isIdent := selector.X.(*ast.Ident); isIdent && pkg.Name == qualifier {
+			called = true
+		}
+		return !called
+	})
+	return called
+}
+
+// A merge that only names the carrier, or calls a namesake, has not called the store.
+func TestOnlyACallThroughTheStoreImportCountsAsAStoreCall(t *testing.T) {
+	t.Parallel()
+	store := carriedByItsStore["generated_summary"]
+	const storeImport = `import "` + backendModulePath + `/internal/platform/generatedsummary"`
+	for name, c := range map[string]struct {
+		source string
+		want   bool
+	}{
+		"a direct call":            {storeImport + "\nfunc merge() { generatedsummary.ForgetContacts() }", true},
+		"a call under an alias":    {"import gs \"" + backendModulePath + "/internal/platform/generatedsummary\"\nfunc merge() { gs.ForgetContacts() }", true},
+		"a reference never called": {storeImport + "\nfunc merge() { _ = generatedsummary.ForgetContacts }", false},
+		"another carrier":          {storeImport + "\nfunc merge() { generatedsummary.CarryCompany() }", false},
+		"a namesake elsewhere":     {"import \"example.test/other\"\nfunc merge() { other.ForgetContacts() }", false},
+		"a local namesake":         {"func ForgetContacts() {}\nfunc merge() { ForgetContacts() }", false},
+	} {
+		file, err := parser.ParseFile(token.NewFileSet(), "probe.go", "package p\n"+c.source, 0)
+		if err != nil {
+			t.Fatalf("%s: %v", name, err)
+		}
+		var merge *ast.FuncDecl
+		for _, decl := range file.Decls {
+			if fn, isFunc := decl.(*ast.FuncDecl); isFunc && fn.Name.Name == "merge" {
+				merge = fn
+			}
+		}
+		if got := callsStore(file, merge, store); got != c.want {
+			t.Errorf("%s read as a store call = %t, want %t", name, got, c.want)
+		}
+	}
 }
 
 // TestEveryPortCarriesTheTablesItsRegisterEntryClaims holds carriedThroughAPort
