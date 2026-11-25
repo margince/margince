@@ -7,6 +7,7 @@ package compose
 // is found by name, the amount in minor units, the close date as a day.
 
 import (
+	"strconv"
 	"strings"
 	"time"
 
@@ -68,6 +69,11 @@ func checkDealMoney(fields map[string]string, typed map[string]any) *cellProblem
 			return problemOf(dealTargetCurrency, fields[dealTargetCurrency],
 				migration.Why(migration.ReasonCurrencyNotACode, "value", currency))
 		}
+		// Only the import refuses these: in a file they are slips for a real code.
+		if !values.NamesMoney(currency) {
+			return problemOf(dealTargetCurrency, fields[dealTargetCurrency],
+				migration.Why(migration.ReasonCurrencyNotMoney, "value", currency))
+		}
 		typed[dealTargetCurrency] = currency
 	}
 	if amount == "" {
@@ -83,6 +89,38 @@ func checkDealMoney(fields map[string]string, typed map[string]any) *cellProblem
 	}
 	typed[dealTargetAmount] = minor
 	return nil
+}
+
+// closeDateHorizonYears is how far ahead a close date lies before the import
+// asks whether it is a typing slip, such as 9999-12-31 for 2029-12-31.
+const closeDateHorizonYears = 50
+
+// farCloseDate is the warning a deal row lands with when its close date lies
+// past the horizon. The row still lands: only its reader knows the date is wrong.
+func (d dealStages) farCloseDate(fields map[string]string) *cellProblem {
+	text := strings.TrimSpace(fields[dealTargetCloseDate])
+	date, err := time.Parse(time.DateOnly, text)
+	if err != nil || !date.After(d.today.AddDate(closeDateHorizonYears, 0, 0)) {
+		return nil
+	}
+	return problemOf(dealTargetCloseDate, fields[dealTargetCloseDate],
+		migration.Why(migration.ReasonCloseDateFar, "value", text, "years", strconv.Itoa(closeDateHorizonYears)))
+}
+
+// farCloseDateWarning is farCloseDate for one of this part's rows, as the
+// warning the row lands with. Rows of other types have none.
+func (w *csvWriters) farCloseDateWarning(row migration.Row) []migration.SkippedRow {
+	if w.object != migration.ObjectDeal {
+		return nil
+	}
+	problem := w.dealStages.farCloseDate(textFields(row.Fields))
+	if problem == nil {
+		return nil
+	}
+	return []migration.SkippedRow{{
+		ExternalID: row.ExternalID, Line: row.Line, Column: w.headerFor(problem.Target), Value: problem.Value,
+		Reason: problem.Message, Code: problem.Why.Code, Params: problem.Why.Params,
+	}}
 }
 
 // closedSemantic is whether a stage ends a deal; the zero semantic of a row

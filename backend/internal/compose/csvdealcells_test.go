@@ -93,6 +93,9 @@ func TestAnAmountIsReadInItsCurrencysMinorUnits(t *testing.T) {
 		{"12.000,50", "EUR", dealTargetAmount, "is not an amount in EUR. Write it like 12000.50."},
 		{"12000", "", dealTargetAmount, "Fill the currency column"},
 		{"12000", "Euro", dealTargetCurrency, "three letters"},
+		{"100", "XXX", dealTargetCurrency, "“XXX” is the code for no currency or for tests"},
+		{"", "xts", dealTargetCurrency, "“XTS” is the code for no currency or for tests"},
+		{"100", "XAU", dealTargetAmount, ""},
 	} {
 		_, problem := firstOf(stages.checkCells(map[string]string{dealTargetAmount: tc.amount, dealTargetCurrency: tc.currency}, nil))
 		if tc.says == "" {
@@ -156,5 +159,30 @@ func TestADealRowNamesEveryCellAtFault(t *testing.T) {
 	typed, problems := testDealStages().checkCells(fields, nil)
 	if typed != nil || len(problems) != 2 || problems[0].Target != dealTargetAmount || problems[1].Target != dealTargetCloseDate {
 		t.Fatalf("typed = %v, problems = %+v; want the amount and the close date refused", typed, problems)
+	}
+}
+
+// A close date past the horizon is no refusal, since the row's reader alone
+// knows it is wrong. The row lands and the warning asks them to check it.
+func TestAFarCloseDateLandsWithAWarning(t *testing.T) {
+	stages := testDealStages()
+	horizon := importToday.AddDate(closeDateHorizonYears, 0, 0).Format("2006-01-02")
+	for date, warned := range map[string]bool{"9999-12-31": true, horizon: false, "2027-03-31": false, "31.03.2027": false} {
+		fields := map[string]string{dealTargetStage: "Qualified", dealTargetCloseDate: date}
+		if _, problem := firstOf(stages.checkCells(fields, nil)); date != "31.03.2027" && problem != nil {
+			t.Errorf("%s: problem = %+v, want the row to land", date, problem)
+		}
+		warning := stages.farCloseDate(fields)
+		if (warning != nil) != warned {
+			t.Errorf("%s: warning = %+v, want one: %v", date, warning, warned)
+		}
+		if warning != nil && (warning.Why.Code != migration.ReasonCloseDateFar || !strings.Contains(warning.Message, "more than 50 years away")) {
+			t.Errorf("%s: warning = %+v, want the date called more than 50 years away", date, warning)
+		}
+	}
+	w := &csvWriters{object: migration.ObjectDeal, dealStages: stages, columns: map[string]string{"Close": dealTargetCloseDate}}
+	got := w.farCloseDateWarning(migration.Row{ExternalID: "D-1", Line: 5, Fields: map[string]any{dealTargetCloseDate: "9999-12-31"}})
+	if len(got) != 1 || got[0].Column != "Close" || got[0].Line != 5 || got[0].Kind != "" {
+		t.Errorf("warning = %+v, want one on the file's Close column of line 5, of no skipping kind", got)
 	}
 }

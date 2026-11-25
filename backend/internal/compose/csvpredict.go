@@ -78,6 +78,7 @@ func (w *csvWriters) predictRow(ctx context.Context, row migration.Row) (predict
 		w.predictedFaults = invalid[1:]
 		return predictUnwritable, &invalid[0], nil
 	}
+	w.predictedWarnings = append(w.predictedWarnings, w.farCloseDateWarning(row)...)
 	link, err := w.linkProblemOf(ctx, row)
 	if err != nil {
 		return predictCreate, nil, err

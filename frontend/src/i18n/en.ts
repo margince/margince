@@ -11170,6 +11170,10 @@ export const en = {
     "“{value}” is not a stage of pipeline “{pipeline}”. Its stages are: {names}.",
   "import.reason.currency_not_a_code":
     "“{value}” is not a currency code. Write its three letters, like EUR.",
+  "import.reason.currency_not_money":
+    "“{value}” is the code for no currency or for tests, so it prices no deal. Write the deal’s currency, like EUR.",
+  "import.reason.close_date_far":
+    "“{value}” is more than {years} years away. Check that this close date is right.",
   "import.reason.close_date_future":
     "“{value}” is in the future, and a closed deal’s close date cannot be.",
   "import.reason.close_date_past":

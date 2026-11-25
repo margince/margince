@@ -46,22 +46,22 @@ func splitsAddressLine(object string, mapping map[string]string) bool {
 	return line1
 }
 
-// shapeAddressCells sets the cell rewrites a part's mapping asks for: the line 1
-// split, and a country name read as its code.
-func shapeAddressCells(source *migration.CSVSource, object string, mapping map[string]string) {
+// addressShape is the cell rewrite a part's mapping asks for: the line 1
+// split, and a country name read as its code. It is nil when it asks for none.
+func addressShape(object string, mapping map[string]string) migration.RowShape {
 	split := splitsAddressLine(object, mapping)
 	country := object != migration.ObjectLead && slices.Contains(slices.Collect(maps.Values(mapping)), fieldAddressCountry)
 	if !split && !country {
-		return
+		return nil
 	}
-	source.ShapeRows(func(fields map[string]any) {
+	return func(fields map[string]any) {
 		if split {
 			splitAddressCell(fields)
 		}
 		if country {
 			resolveCountryCell(fields)
 		}
-	})
+	}
 }
 
 // resolveCountryCell turns a country written as a name into its code. A value
