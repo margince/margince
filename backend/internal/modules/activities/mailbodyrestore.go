@@ -15,6 +15,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/mailquote"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
@@ -87,7 +88,7 @@ func RestoreMailBodyTx(ctx context.Context, tx pgx.Tx, r MailBodyRestoration) (b
 	err := tx.QueryRow(ctx, `
 		WITH old AS (SELECT body_completeness, owed_verdict_ruleset, reply_verdict FROM activity
 		              WHERE id = $1 AND restricted_at IS NULL)
-		UPDATE activity a SET body = $2, body_completeness = $3, language = NULL,
+		UPDATE activity a SET body = $2, body_own_end = $7, body_completeness = $3, language = NULL,
 		       -- A cleared label returns the row to the classify backlog. The stamp
 		       -- goes with it: activity_capture_label_stamped holds the two together.
 		       capture_label = NULL, capture_labeled_at = NULL,
@@ -106,7 +107,8 @@ func RestoreMailBodyTx(ctx context.Context, tx pgx.Tx, r MailBodyRestoration) (b
 		   AND `+mailTextIsTheirsSQL(r.Subject != nil)+`
 		RETURNING old.body_completeness, old.owed_verdict_ruleset, a.body_completeness, a.owed_verdict_ruleset, a.thread_key,
 		          old.reply_verdict IS NOT NULL AND a.reply_verdict IS NULL`,
-		r.Activity, r.Body, r.Completeness, r.Version, r.StoredBody, r.Subject).
+		r.Activity, r.Body, r.Completeness, r.Version, r.StoredBody, r.Subject,
+		mailquote.OwnEnd(mailquote.MailKind, &r.Body)).
 		Scan(&before.completeness, &before.ruleset, &after.completeness, &after.ruleset, &threadKey, &replyCleared)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return false, nil, nil

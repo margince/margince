@@ -11042,7 +11042,7 @@ paths:
             type: array
             items:
               $ref: '#/components/schemas/ReportingMetricID'
-            maxItems: 8
+            maxItems: 12
         - name: blocks
           in: query
           required: false
@@ -11221,7 +11221,7 @@ paths:
             type: array
             items:
               $ref: '#/components/schemas/ReportingMetricID'
-            maxItems: 8
+            maxItems: 12
         - name: blocks
           in: query
           required: false
@@ -11382,7 +11382,7 @@ paths:
             type: array
             items:
               $ref: '#/components/schemas/ReportingMetricID'
-            maxItems: 8
+            maxItems: 12
         - name: blocks
           in: query
           required: false
@@ -24543,12 +24543,14 @@ paths:
             application/problem+json:
               schema: {$ref: '#/components/schemas/Problem'}
         '404':
-          description: No such live contact to address (a departed or unknown recipient reads the same).
+          description: >-
+            No such live contact to address (a departed or unknown recipient reads the same), or no deal of that id the caller can read.
           content:
             application/problem+json:
               schema: {$ref: '#/components/schemas/Problem'}
         '422':
-          description: An unknown kind, or a note past its ceiling.
+          description: >-
+            An unknown kind, a note past its ceiling, a next-step notice without its deal, a deal on any other kind, or a deal that is closed or owned by someone else.
           content:
             application/problem+json:
               schema: {$ref: '#/components/schemas/Problem'}
@@ -32094,6 +32096,15 @@ components:
           description: |-
             The coach's own words, shown beneath the kind's headline. Optional: without one the
             notice still says what it is about, which is why the kind is closed and this is not.
+        deal_id:
+          type: string
+          format: uuid
+          description: |-
+            The deal the notice is about. Required for `coach_deal_needs_next_step`, and refused on
+            every other kind. The deal must be open, owned by the recipient, and one the caller
+            can read. The headline then names the deal and what Margince sees on it: whether a
+            next step is planned, and the day of its last activity. The recipient's row links to
+            the deal.
     Notice:
       type: object
       description: One durable line addressed to one contact, as the raising call returns it.
@@ -44912,7 +44923,8 @@ components:
           description: Per-claim evidence; a claim without evidence is omitted.
         status: {type: string, enum: [open, acknowledged, resolved, dismissed], default: open}
         detected_at: {type: string, format: date-time}
-        source: {type: string}
+        source: {type: string, description: 'The channel this signal arrived by: `api`, `automation`, `capture`, `import`, `manual` or `webform`. An older signal can show another value until the background correction reaches it.'}
+        source_system: {type: [string, 'null'], readOnly: true, description: 'The producer that wrote the signal, such as `signal-scan` or the name of an extension. Empty when a member or an API client filed it.'}
         captured_by: {type: string, readOnly: true, description: 'Server-stamped from the authenticated principal; never client-supplied.'}
         version: {$ref: '#/components/schemas/RowVersion'}
         created_at: {type: string, format: date-time}
@@ -45085,7 +45097,7 @@ components:
           type: array
           items: {$ref: '#/components/schemas/SignalEvidence'}
         detected_at: {type: [string, 'null'], format: date-time, description: When the underlying observation happened (defaults to now).}
-        source: {type: string}
+        source: {type: string, enum: [api, automation, capture, import, manual, webform], description: 'The channel this signal arrived by. A client that files it for a member sends `manual`; an integration sends `api`. Any other value is 422 `invalid_source`.'}
     SignalListResponse:
       type: object
       required: [data, page]
@@ -46344,7 +46356,7 @@ components:
           items:
             $ref: '#/components/schemas/ReportingMetricID'
           minItems: 1
-          maxItems: 8
+          maxItems: 12
         blocks:
           type: array
           items:
@@ -53258,6 +53270,11 @@ components:
           allOf: [{$ref: '#/components/schemas/ApprovalSummaryParts'}]
           description: >-
             The summary's sentence and the field values it lists, apart, so a client can show the values as a list instead of the joined key=value text. Absent on a proposal whose summary is a sentence alone, and on one staged before the parts were kept. Withheld with the summary.
+        why:
+          allOf: [{$ref: '#/components/schemas/WorkGrounds'}]
+          readOnly: true
+          description: >-
+            Why this proposal exists, as whoever staged it said it: the record and the fact that prompted it. A card leads with it. Absent when its maker gave none, never filled with a stock sentence, and withheld with the summary.
         proposed_change:
           type: object
           additionalProperties: true
@@ -58449,6 +58466,9 @@ components:
         due_at: {type: string, format: date-time, description: 'When this is due, or when the meeting starts.'}
         due_has_time: {type: boolean, description: 'On a task row: true when `due_at` names an agreed time of day, false when the task is due by that day. Absent on other rows.'}
         due_intent: {$ref: '#/components/schemas/IntentTime'}
+        task_type:
+          allOf: [{$ref: '#/components/schemas/TaskType'}]
+          description: 'On a task row: the kind of work it asks for, so a card names it without reading the task. Absent on other rows.'
         overdue: {type: boolean, description: 'Past due at the read instant, resolved server-side so every surface agrees.'}
         due_group:
           type: string

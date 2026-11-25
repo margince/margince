@@ -7,11 +7,11 @@ import {
   AI_PLACES,
   AI_PLANS,
   AI_TOOLS,
-  adminGuide,
   CLI_PATHS,
   CONNECT_PATHS,
   connectPath,
 } from "./aiconnect";
+import { adminGuide } from "./aiconnectguide";
 
 const URL_FROM_SERVER = "https://crm.acme.test/mcp";
 const translatorFor =
@@ -43,7 +43,7 @@ describe("AI connect paths", () => {
     }
   });
 
-  it("gives every available path one to three steps for the reader", () => {
+  it("gives every available path two to four steps for the reader", () => {
     for (const path of Object.values(CONNECT_PATHS)) {
       if (path.unavailable === undefined) {
         expect(path.steps.length).toBeGreaterThanOrEqual(1);
@@ -77,6 +77,7 @@ describe("AI connect paths", () => {
       "antigravity.google",
       "visualstudio.com",
       "cursor.com",
+      "proton.me",
     ];
     const links = [
       ...Object.values(CONNECT_PATHS).map((path) => path.help),
@@ -106,6 +107,7 @@ describe("AI connect paths", () => {
       "visual-studio",
       "cursor",
       "antigravity",
+      "lumo",
     ]);
     expect(copies).toEqual([
       [
@@ -120,14 +122,15 @@ describe("AI connect paths", () => {
       [
         '{ "mcpServers": { "margince": { "serverUrl": "https://crm.acme.test/mcp" } } }',
       ],
+      [],
     ]);
   });
 
-  it("gives every local tool something to copy, and one to three steps", () => {
+  it("gives every local tool something to copy, and two to four steps", () => {
     for (const path of CLI_PATHS) {
       expect(path.steps.some((step) => step.copy !== undefined)).toBe(true);
       expect(path.steps.length).toBeGreaterThanOrEqual(2);
-      expect(path.steps.length).toBeLessThanOrEqual(3);
+      expect(path.steps.length).toBeLessThanOrEqual(4);
     }
   });
 });
@@ -166,6 +169,7 @@ describe("which AI, and where", () => {
         copilot: ["app:copilot", "local:vscode", "local:visual-studio"],
         gemini: ["app:gemini", "local:antigravity"],
         cursor: ["local:cursor"],
+        lumo: ["local:lumo"],
         other: [],
       },
     );
