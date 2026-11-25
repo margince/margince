@@ -3536,6 +3536,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "common.errorReference": "Referenz",
   "common.assistantUnavailable":
     "Die KI hat nicht geantwortet. Bitte versuche es noch mal, oder frage deinen Admin nach Einstellungen → KI.",
+  "common.teamRulesUnavailable":
+    "Die Teamregeln konnten nicht gelesen werden, deshalb wurde kein Entwurf geschrieben. Bitte versuche es gleich noch mal.",
   "common.providerOutOfCredit":
     "Beim KI-Anbieter ist kein Guthaben mehr vorhanden. Bitte wende dich an die Systemadministration.",
   "common.providerUnauthorized":
@@ -15240,6 +15242,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "audit.kind.workspace": "Unternehmensprofil",
   "audit.kind.agent_client": "Verbundenes KI-Tool",
   "audit.kind.ai_budget": "KI-Kontingent",
+  "audit.kind.ai_team_rules": "Teamregeln",
   "audit.kind.ai_call_payload": "Inhalt eines KI-Aufrufs",
   "audit.kind.ai_routing": "KI-Modellzuordnung",
   "audit.kind.authentication_policy": "Anmelderichtlinie",
@@ -15523,6 +15526,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "settings.part.models.tiers": "Modellstufen",
   "settings.part.models.tasks": "KI-Aufgaben",
   "settings.part.models.prices": "Preise",
+  "settings.part.models.rules": "Regeln",
   "settings.part.usage.allowance": "Kontingent",
   "settings.part.usage.agents": "Agentenlimits",
   "settings.part.usage.spend": "Ausgaben",
@@ -16211,7 +16215,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Je mehr eigene Texte es liest, desto näher kommt es dir.",
   "settings.voice.rulesTitle": "Deine Regeln",
   "settings.voice.rulesIntro":
-    "Margince überschreibt diese Regeln nie, und jeder Entwurf folgt ihnen.",
+    "Margince überschreibt diese Regeln nie, und jeder Entwurf folgt ihnen. Wo sie den Teamregeln widersprechen, gelten die Teamregeln.",
   "voice.insights.themesLabel": "Darauf kommst du immer wieder",
   "voice.insights.figKept": "Behaltene Entwürfe",
   "voice.insights.figKeptValue": "{kept} von {drafted}",
@@ -16511,6 +16515,22 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "roles.object.voice_profile": "Schreibstil",
   "roles.object.ai_routing": "KI-Routing",
   "roles.object.ai_budget": "KI-Kontingent",
+  "roles.object.ai_team_rules": "Teamregeln",
+  "teamRules.title": "Teamregeln",
+  "teamRules.intro":
+    "Ein Text, dem jeder KI-Entwurf in deinem Unternehmen folgt: was gesagt werden darf und welche Formulierung gilt. Er hat Vorrang vor den eigenen Regeln einzelner Mitglieder in Voice DNA. Er erlaubt nie, dass ein Entwurf eine Tatsache nennt, die der Datensatz nicht enthält.",
+  "teamRules.label": "Regeln für jeden Entwurf",
+  "teamRules.length":
+    "{used} von {max} Zeichen. Jeder Entwurf trägt diesen Text.",
+  "teamRules.savedBy": "Zuletzt gespeichert von {who} am {when}.",
+  "teamRules.unknownEditor": "jemandem",
+  "teamRules.none": "Noch keine Teamregeln gespeichert.",
+  "teamRules.conflictTitle":
+    "Ein Mitglied hat die Teamregeln gespeichert, während du sie bearbeitet hast",
+  "teamRules.conflictBody":
+    "Lade neu, um ihre Fassung zu sehen und deine Änderung zu verwerfen, oder behalte deinen Text und speichere ihn über ihre.",
+  "teamRules.reload": "Neue Fassung laden",
+  "teamRules.keepMine": "Meinen Text behalten",
   "roles.object.ai_diagnostics": "KI-Nutzung",
   "roles.object.ai_model_rate": "Modellpreise",
   "roles.object.embedding_reindex": "Suchindex",

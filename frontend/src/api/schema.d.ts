@@ -16911,6 +16911,33 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/ai/team-rules": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Read the team rules every AI draft follows (ai_team_rules read).
+         * @description The one text the whole workspace's drafts follow. It outranks the sender's own rules.
+         *     Every seat reads it; admin and ops write it.
+         */
+        get: operations["getAiTeamRules"];
+        /**
+         * Replace the team rules every AI draft follows (ai_team_rules update).
+         * @description `expected_updated_at` is the `updated_at` the editor read, left out when it read no saved
+         *     version. A save over a newer version answers 409. Text longer than 20000 characters is
+         *     refused with 422. Empty text removes the rules.
+         */
+        put: operations["replaceAiTeamRules"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/ai/budget": {
         parameters: {
             query?: never;
@@ -33176,6 +33203,24 @@ export interface components {
             tokens_per_full_user: number;
             /** Format: int64 */
             company_monthly_tokens: number | null;
+        };
+        AiTeamRules: {
+            text: string;
+            /**
+             * Format: date-time
+             * @description When the text was last saved. Left out while none was saved.
+             */
+            updated_at?: string;
+            /** @description Who saved it last. Left out while none was saved. */
+            updated_by?: string;
+        };
+        AiTeamRulesChange: {
+            text: string;
+            /**
+             * Format: date-time
+             * @description The updated_at the editor read. Left out when the editor read no saved version.
+             */
+            expected_updated_at?: string;
         };
         AiBudgetChange: {
             config: components["schemas"]["AiBudgetConfig"];
@@ -53158,7 +53203,7 @@ export interface components {
          *     The SERVER does not derive from it. `identity/internal/policy.coreObjects` is maintained separately (oapi-codegen emits nothing for a top-level standalone string enum, so there are no generated Go constants to derive from), and a typo there is an ordinary runtime value, not a compile error. What keeps the two honest is a merge-blocking parity test, `backend/gates/rbacvocabulary_test.go`, which holds this enum equal to that list. Editing this enum alone changes what clients can express, never what the server enforces — change both, and the gate will say so if you do not.
          * @enum {string}
          */
-        RbacObject: "contact" | "company" | "deal" | "lead" | "activity" | "pipeline" | "list" | "tag" | "relationship" | "partner" | "automation" | "voice_profile" | "product" | "offer" | "signal" | "saved_view" | "custom_field" | "computed_field" | "offer_template" | "embedding_reindex" | "webhook_subscription" | "fx_rate" | "ai_model_rate" | "capture_settings" | "project" | "channel_connection" | "import_run" | "installation_settings" | "finance" | "integrations" | "retention_policy" | "capture_trace" | "license" | "contract" | "ai_routing" | "ai_budget" | "commission" | "deal_room" | "knowledge_corpus" | "knowledge_document" | "introduction" | "weekly_plan" | "forecast" | "data_coverage" | "user_admin" | "role_admin" | "team_admin" | "privacy_request" | "audit_log" | "job_health" | "data_task" | "extension_access" | "system_reset" | "ai_diagnostics" | "consent_config" | "communication_exception" | "authentication_policy" | "oauth_application" | "agent_client" | "seat_usage" | "team_oversight" | "team_lead" | "report_definition" | "sales_target" | "reporting_framework" | "report_schedule" | "report_edition" | "reporting_credit" | "legal_review" | "legal_entity" | "sales_initiative" | "tax_rate";
+        RbacObject: "contact" | "company" | "deal" | "lead" | "activity" | "pipeline" | "list" | "tag" | "relationship" | "partner" | "automation" | "voice_profile" | "product" | "offer" | "signal" | "saved_view" | "custom_field" | "computed_field" | "offer_template" | "embedding_reindex" | "webhook_subscription" | "fx_rate" | "ai_model_rate" | "capture_settings" | "project" | "channel_connection" | "import_run" | "installation_settings" | "finance" | "integrations" | "retention_policy" | "capture_trace" | "license" | "contract" | "ai_routing" | "ai_budget" | "ai_team_rules" | "commission" | "deal_room" | "knowledge_corpus" | "knowledge_document" | "introduction" | "weekly_plan" | "forecast" | "data_coverage" | "user_admin" | "role_admin" | "team_admin" | "privacy_request" | "audit_log" | "job_health" | "data_task" | "extension_access" | "system_reset" | "ai_diagnostics" | "consent_config" | "communication_exception" | "authentication_policy" | "oauth_application" | "agent_client" | "seat_usage" | "team_oversight" | "team_lead" | "report_definition" | "sales_target" | "reporting_framework" | "report_schedule" | "report_edition" | "reporting_credit" | "legal_review" | "legal_entity" | "sales_initiative" | "tax_rate";
         /**
          * @description The four object-level verbs a grant carries (data-model §2.4). These are RBAC actions, not HTTP methods: the seat ceiling is clamped on the method independently, and the two diverge in both directions — a read-seat GET that the object grants, and a mutating route whose RBAC action is `read`.
          * @enum {string}
@@ -92827,6 +92872,64 @@ export interface operations {
             };
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["PermissionDenied"];
+        };
+    };
+    getAiTeamRules: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The saved team rules, empty text when none were saved. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AiTeamRules"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["PermissionDenied"];
+        };
+    };
+    replaceAiTeamRules: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AiTeamRulesChange"];
+            };
+        };
+        responses: {
+            /** @description The saved team rules. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AiTeamRules"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["PermissionDenied"];
+            /** @description The team rules changed since the editor read them; reload before saving. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            422: components["responses"]["ValidationError"];
         };
     };
     getAiBudget: {

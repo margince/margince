@@ -103,6 +103,7 @@ type Server struct {
 	backfillHandlers
 	aiRoutingHandlers
 	aiAdminHandlers
+	teamRulesHandlers
 	captureSettingsHandlers
 	integrationsSettingsHandlers
 	ownDomainHandlers
@@ -265,7 +266,6 @@ type Server struct {
 	// believes, from WithTrustedProxies. The zero value trusts nobody.
 	trustedProxies httpserver.TrustedProxies
 	apiBaseURL     string // --api-base-url, from WithAPIBaseURL; empty where the public origin serves the API
-
 	// metricsOpen serves /metrics to any caller, set by WithOpenMetrics from an
 	// explicit --metrics-access=open for a deployment whose network boundary
 	// already contains the port.

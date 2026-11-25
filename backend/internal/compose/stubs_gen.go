@@ -395,6 +395,14 @@ func (stubs) PreviewAiTaskOverrides(w nethttp.ResponseWriter, r *nethttp.Request
 	httperr.NotImplemented(w, r, "PreviewAiTaskOverrides")
 }
 
+func (stubs) GetAiTeamRules(w nethttp.ResponseWriter, r *nethttp.Request) {
+	httperr.NotImplemented(w, r, "GetAiTeamRules")
+}
+
+func (stubs) ReplaceAiTeamRules(w nethttp.ResponseWriter, r *nethttp.Request) {
+	httperr.NotImplemented(w, r, "ReplaceAiTeamRules")
+}
+
 func (stubs) GetAiUsage(w nethttp.ResponseWriter, r *nethttp.Request, params crmcontracts.GetAiUsageParams) {
 	httperr.NotImplemented(w, r, "GetAiUsage")
 }

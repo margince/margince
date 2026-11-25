@@ -3435,6 +3435,8 @@ export const en = {
   "common.errorReference": "Reference",
   "common.assistantUnavailable":
     "The AI did not answer. Try again, or ask your admin to check Settings → AI.",
+  "common.teamRulesUnavailable":
+    "The team rules could not be read, so no draft was written. Try again in a moment.",
   "common.providerOutOfCredit":
     "The AI provider has no credit left. Contact your system administrator.",
   "common.providerUnauthorized":
@@ -15156,6 +15158,7 @@ export const en = {
   "audit.kind.workspace": "Company profile",
   "audit.kind.agent_client": "Connected AI tool",
   "audit.kind.ai_budget": "AI allowance",
+  "audit.kind.ai_team_rules": "Team rules",
   "audit.kind.ai_call_payload": "AI call content",
   "audit.kind.ai_routing": "AI model routing",
   "audit.kind.authentication_policy": "Sign-in policy",
@@ -15438,6 +15441,7 @@ export const en = {
   "settings.part.models.tiers": "Model tiers",
   "settings.part.models.tasks": "AI tasks",
   "settings.part.models.prices": "Prices",
+  "settings.part.models.rules": "Rules",
   "settings.part.usage.allowance": "Allowance",
   "settings.part.usage.agents": "Agent limits",
   "settings.part.usage.spend": "Spend",
@@ -16095,7 +16099,7 @@ export const en = {
     "The more of your own writing it reads, the closer it gets.",
   "settings.voice.rulesTitle": "Your rules",
   "settings.voice.rulesIntro":
-    "Margince never overwrites these. They steer every draft.",
+    "Margince never overwrites these. They steer every draft. Where they disagree with the team rules, the team rules win.",
   "voice.insights.themesLabel": "You keep coming back to",
   "voice.insights.figKept": "Drafts you kept",
   "voice.insights.figKeptValue": "{kept} of {drafted}",
@@ -16386,6 +16390,22 @@ export const en = {
   "roles.object.voice_profile": "Writing voice",
   "roles.object.ai_routing": "AI routing",
   "roles.object.ai_budget": "AI allowance",
+  "roles.object.ai_team_rules": "Team rules",
+  "teamRules.title": "Team rules",
+  "teamRules.intro":
+    "One text that every AI draft in your company follows: what may be said and which wording to use. It wins over a colleague’s own rules in Voice DNA. It never lets a draft state a fact the record does not hold.",
+  "teamRules.label": "Rules for every draft",
+  "teamRules.length":
+    "{used} of {max} characters. Every draft carries this text.",
+  "teamRules.savedBy": "Last saved by {who} on {when}.",
+  "teamRules.unknownEditor": "someone",
+  "teamRules.none": "No team rules saved yet.",
+  "teamRules.conflictTitle":
+    "A colleague saved the team rules while you were editing",
+  "teamRules.conflictBody":
+    "Reload to see their version and drop your edit, or keep your text and save it over theirs.",
+  "teamRules.reload": "Reload their version",
+  "teamRules.keepMine": "Keep my text",
   "roles.object.ai_diagnostics": "AI usage",
   "roles.object.ai_model_rate": "Model prices",
   "roles.object.embedding_reindex": "Search index",

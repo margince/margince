@@ -25084,6 +25084,56 @@ paths:
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/PermissionDenied' }
 
+  /ai/team-rules:
+    get:
+      tags: [AI]
+      operationId: getAiTeamRules
+      security: [ { cookieAuth: [] } ]
+      x-agent-access: human-only
+      x-human-only-reason: security
+      summary: Read the team rules every AI draft follows (ai_team_rules read).
+      description: |
+        The one text the whole workspace's drafts follow. It outranks the sender's own rules.
+        Every seat reads it; admin and ops write it.
+      responses:
+        '200':
+          description: The saved team rules, empty text when none were saved.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AiTeamRules' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/PermissionDenied' }
+    put:
+      tags: [AI]
+      operationId: replaceAiTeamRules
+      security: [ { cookieAuth: [] } ]
+      x-agent-access: human-only
+      x-human-only-reason: security
+      summary: Replace the team rules every AI draft follows (ai_team_rules update).
+      description: |
+        `expected_updated_at` is the `updated_at` the editor read, left out when it read no saved
+        version. A save over a newer version answers 409. Text longer than 20000 characters is
+        refused with 422. Empty text removes the rules.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/AiTeamRulesChange' }
+      responses:
+        '200':
+          description: The saved team rules.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AiTeamRules' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/PermissionDenied' }
+        '409':
+          description: The team rules changed since the editor read them; reload before saving.
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
   /ai/budget:
     get:
       tags: [AI]
@@ -47544,6 +47594,19 @@ components:
       properties:
         tokens_per_full_user: { type: integer, format: int64, minimum: 1, maximum: 1000000000000 }
         company_monthly_tokens: { type: [integer, 'null'], format: int64, minimum: 1, maximum: 1000000000000 }
+    AiTeamRules:
+      type: object
+      required: [text]
+      properties:
+        text: { type: string, maxLength: 20000 }
+        updated_at: { type: string, format: date-time, description: When the text was last saved. Left out while none was saved. }
+        updated_by: { type: string, description: Who saved it last. Left out while none was saved. }
+    AiTeamRulesChange:
+      type: object
+      required: [text]
+      properties:
+        text: { type: string, maxLength: 20000 }
+        expected_updated_at: { type: string, format: date-time, description: The updated_at the editor read. Left out when the editor read no saved version. }
     AiBudgetChange:
       type: object
       required: [config, expected_revision]
@@ -72819,7 +72882,7 @@ components:
          computed_field, offer_template, embedding_reindex,
          webhook_subscription, fx_rate, ai_model_rate, capture_settings, project,
          channel_connection, import_run, installation_settings, finance, integrations,
-         retention_policy, capture_trace, license, contract, ai_routing, ai_budget, commission, deal_room,
+         retention_policy, capture_trace, license, contract, ai_routing, ai_budget, ai_team_rules, commission, deal_room,
          knowledge_corpus, knowledge_document, introduction, weekly_plan, forecast, data_coverage,
          user_admin, role_admin, team_admin, privacy_request, audit_log, job_health, data_task,
          extension_access, system_reset, ai_diagnostics, consent_config, communication_exception,

@@ -3431,6 +3431,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "common.errorReference": "Mã tham chiếu",
   "common.assistantUnavailable":
     "AI không phản hồi. Hãy thử lại, hoặc liên hệ quản trị viên để kiểm tra Cài đặt, mục AI.",
+  "common.teamRulesUnavailable":
+    "Không đọc được quy tắc của nhóm nên chưa có bản nháp nào được viết. Hãy thử lại sau giây lát.",
   "common.providerOutOfCredit":
     "Dịch vụ AI đã hết số dư. Liên hệ quản trị viên.",
   "common.providerUnauthorized":
@@ -14819,6 +14821,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "audit.kind.workspace": "Hồ sơ công ty",
   "audit.kind.agent_client": "Công cụ AI đã kết nối",
   "audit.kind.ai_budget": "Hạn mức AI",
+  "audit.kind.ai_team_rules": "Quy tắc của nhóm",
   "audit.kind.ai_call_payload": "Nội dung lượt gọi AI",
   "audit.kind.ai_routing": "Định tuyến mô hình AI",
   "audit.kind.authentication_policy": "Chính sách đăng nhập",
@@ -15098,6 +15101,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "settings.part.models.tiers": "Cấp mô hình",
   "settings.part.models.tasks": "Tác vụ AI",
   "settings.part.models.prices": "Giá",
+  "settings.part.models.rules": "Quy tắc",
   "settings.part.usage.allowance": "Hạn mức",
   "settings.part.usage.agents": "Giới hạn agent",
   "settings.part.usage.spend": "Chi phí",
@@ -15766,7 +15770,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Càng đọc nhiều bài viết của bạn, nó càng giống bạn.",
   "settings.voice.rulesTitle": "Quy tắc của bạn",
   "settings.voice.rulesIntro":
-    "Margince không bao giờ ghi đè. Chúng định hướng mọi bản nháp.",
+    "Margince không bao giờ ghi đè. Chúng định hướng mọi bản nháp. Khi chúng mâu thuẫn với quy tắc của nhóm, quy tắc của nhóm được ưu tiên.",
   "voice.insights.themesLabel": "Chủ đề bạn hay nhắc đến",
   "voice.insights.figKept": "Bản nháp bạn giữ",
   "voice.insights.figKeptValue": "{kept} trên {drafted}",
@@ -16058,6 +16062,22 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "roles.object.voice_profile": "Giọng văn",
   "roles.object.ai_routing": "Định tuyến AI",
   "roles.object.ai_budget": "Hạn mức AI",
+  "roles.object.ai_team_rules": "Quy tắc của nhóm",
+  "teamRules.title": "Quy tắc của nhóm",
+  "teamRules.intro":
+    "Một văn bản duy nhất mà mọi bản nháp AI trong công ty của bạn đều tuân theo: điều được phép nói và cách diễn đạt cần dùng. Văn bản này được ưu tiên hơn quy tắc riêng của từng đồng nghiệp trong Voice DNA. Nó không bao giờ cho phép bản nháp nêu một sự kiện mà hồ sơ không có.",
+  "teamRules.label": "Quy tắc cho mọi bản nháp",
+  "teamRules.length":
+    "{used} trên {max} ký tự. Mọi bản nháp đều mang văn bản này.",
+  "teamRules.savedBy": "Lưu lần cuối bởi {who} vào {when}.",
+  "teamRules.unknownEditor": "ai đó",
+  "teamRules.none": "Chưa lưu quy tắc nhóm nào.",
+  "teamRules.conflictTitle":
+    "Một đồng nghiệp đã lưu quy tắc của nhóm trong lúc bạn đang sửa",
+  "teamRules.conflictBody":
+    "Tải lại để xem bản của họ và bỏ phần bạn sửa, hoặc giữ văn bản của bạn và lưu đè lên bản của họ.",
+  "teamRules.reload": "Tải bản của họ",
+  "teamRules.keepMine": "Giữ văn bản của tôi",
   "roles.object.ai_diagnostics": "Mức sử dụng AI",
   "roles.object.ai_model_rate": "Giá mô hình",
   "roles.object.embedding_reindex": "Chỉ mục tìm kiếm",
