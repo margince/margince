@@ -2762,6 +2762,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Erfasster Austausch zurückgenommen",
   "history.field.acquisition_request_retracted":
     "Anfrage aus der Herkunft zurückgenommen",
+  "history.field.impersonation_warning_raised":
+    "Warnung vor möglicher Täuschung durch spätere E-Mail ausgelöst",
   "history.field.impersonation_warning_cleared":
     "Warnung vor möglicher Täuschung aufgehoben",
   "history.field.impersonation_warning_carried":
@@ -22022,6 +22024,9 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "worklist.manager.kind.next_step": "Nächster Schritt im Deal",
   "worklist.manager.kind.review_backlog": "Offene Prüfungen",
   "worklist.manager.kind.general": "Sonstiges",
+  "worklist.manager.coachDeal": "Deal",
+  "worklist.manager.coachNoDeal":
+    "In ihrem Tag steht kein Deal, den du nennen kannst.",
   "worklist.board.title": "Teamarbeit mit Handlungsbedarf",
   "worklist.gap.rankedOn": "Gereiht am {date}.",
   "worklist.gap.masked_one":
@@ -23180,6 +23185,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "magic.why.site_read_each":
     "Aus der Analyse der jeweiligen Unternehmenswebsite.",
   "magic.why.signature": "Aus einer E-Mail-Signatur übernommen.",
+  "magic.why.stated": "Angegebener Grund: {why}",
   "magic.why.retention": "Aufbewahrungsregel: nach {days} Tagen.",
   "magic.by.retention": "Aufbewahrung",
   "magic.by.mail_filing": "E-Mail-Zuordnung",

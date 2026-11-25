@@ -187,7 +187,7 @@
 }
 /* The filled tones are FLAT: a fill and its ink, no shadow under it and no
    lift on hover. A button that casts a shadow sits above the pane it belongs
-   to, and the panes of this language are translucent ground that nothing
+   to, and the panes of this language are flat ground that nothing
    floats over. The hover is a shade of the same fill, which is feedback
    without a third dimension. */
 .btn-primary {
@@ -231,7 +231,7 @@
   color: var(--aiText);
 }
 
-/* The outlined verb: the pane's own ground with a hairline, in the primary
+/* The outlined verb: a control face with a hairline, in the primary
    ink. Not transparent: a see-through button reads as a label, and four of
    them as a sentence. */
 .btn-ghost {
