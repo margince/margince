@@ -174,9 +174,10 @@ type subscriptionRequest struct {
 // field a unit does not use must not rewrite its committed manifest, which is
 // what lets this land without a schema bump.
 type ingressSource struct {
-	System string   `json:"system"`
-	Lands  []string `json:"lands"`
-	Merges []string `json:"merges,omitempty"`
+	System        string   `json:"system"`
+	Lands         []string `json:"lands"`
+	Merges        []string `json:"merges,omitempty"`
+	PinnedPosture string   `json:"pinned_posture,omitempty"`
 }
 
 // declaredChannel is one messaging transport the unit supplies, as an operator

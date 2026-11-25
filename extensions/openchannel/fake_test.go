@@ -113,6 +113,14 @@ func (r *fakeRuntime) IngestPosition(context.Context, extension.SourceName) (ext
 	return "", nil
 }
 
+func (r *fakeRuntime) IngestMemberBatch(context.Context, extension.UserID, extension.SourceName, []extension.Record, extension.BatchPosition, extension.PositionVersion) (extension.MemberBatchResult, error) {
+	return extension.MemberBatchResult{}, nil
+}
+
+func (r *fakeRuntime) MemberIngestPosition(context.Context, extension.UserID, extension.SourceName) (extension.MemberPosition, error) {
+	return extension.MemberPosition{}, nil
+}
+
 func (r *fakeRuntime) Tx(ctx context.Context, fn func(context.Context, extension.Tx) error) error {
 	if r.txErr != nil {
 		return r.txErr

@@ -185,9 +185,9 @@ func decideBirthTx(
 		decision = decision.hold(audienceReasonConfidentialMarker)
 	}
 
-	// A chat has no thread verdict to inherit, and its seat answers step 5.
+	// A chat has no thread verdict to inherit, and its seat or pin answers step 5.
 	if _, onSeat := chatSeatOf(ctx); fields.memberOwned || onSeat {
-		return chatPostureTx(ctx, tx, decision)
+		return chatPostureTx(ctx, tx, decision, fields.pinnedPosture)
 	}
 	if fields.Kind != kindEmail {
 		return decision, nil

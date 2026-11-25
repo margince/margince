@@ -294,3 +294,59 @@ func TestRemovingALinkDeletesTheRowAndAuditsIt(t *testing.T) {
 		t.Errorf("audit rows = %d, want one for the link and one for its removal", n)
 	}
 }
+
+func TestALinkIsRemovableExactlyWhereDeleteSucceeds(t *testing.T) {
+	e := setupLinks(t)
+	// The colleague who owns the first deal links it to the caller's renewal; an
+	// all-rows seat may add to a deal it does not own.
+	incoming, err := e.store.Create(e.seat(e.other, true, full()),
+		NewLink{FromType: "deal", FromID: e.theirs, ToType: "deal", ToID: e.renewal, LinkType: "related_to"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	own := e.seat(e.rep, false, full())
+	outgoing, err := e.store.Create(own, e.dealLink(e.deal, "renews"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	got, err := e.store.List(own, "deal", e.renewal)
+	if err != nil || len(got) != 2 {
+		t.Fatalf("List = %+v, %v; want both links", got, err)
+	}
+	removable := map[ids.UUID]bool{}
+	for _, link := range got {
+		if link.Removable == nil {
+			t.Fatalf("link %s carries no removable answer", link.Id)
+		}
+		removable[ids.UUID(link.Id)] = *link.Removable
+	}
+	if removable[ids.UUID(incoming.Id)] {
+		t.Error("a link from a colleague's deal reads as removable")
+	}
+	if !removable[ids.UUID(outgoing.Id)] {
+		t.Error("a link from the caller's own deal reads as not removable")
+	}
+	if err := e.store.Delete(own, ids.UUID(incoming.Id)); !errors.Is(err, apperrors.ErrPermissionDenied) {
+		t.Errorf("removing the colleague's link gave %v, want permission denied", err)
+	}
+	if err := e.store.Delete(own, ids.UUID(outgoing.Id)); err != nil {
+		t.Errorf("removing the caller's own link was refused: %v", err)
+	}
+}
+
+func TestAReadOnlySeatSeesNoLinkAsRemovable(t *testing.T) {
+	e := setupLinks(t)
+	if _, err := e.store.Create(e.seat(e.rep, true, full()), e.dealLink(e.deal, "renews")); err != nil {
+		t.Fatal(err)
+	}
+	ctx := e.seat(e.rep, true, full())
+	actor, ok := principal.Actor(ctx)
+	if !ok {
+		t.Fatal("the seat context carries no actor")
+	}
+	actor.SeatType = principal.SeatRead
+	got, err := e.store.List(principal.WithActor(ctx, actor), "deal", e.renewal)
+	if err != nil || len(got) != 1 || got[0].Removable == nil || *got[0].Removable {
+		t.Fatalf("a read seat's List = %+v, %v; want one link that is not removable", got, err)
+	}
+}

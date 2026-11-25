@@ -19465,6 +19465,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "linkSuggestions.kind.project": "Projekt",
   "linkSuggestions.accept": "Dort ablegen",
   "linkSuggestions.reject": "Nicht dort",
+  "linkSuggestions.noAccess":
+    "Du hast keinen Zugriff auf Verknüpfungsvorschläge.",
   "linkSuggestions.unavailable":
     "Die Verknüpfungsvorschläge konnten nicht gelesen werden. Versuche es später erneut.",
   "webhooks.event.activity.readiness_recorded.label":
@@ -21608,6 +21610,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "deal.links.outgoing": "Von diesem Deal: {type}",
   "deal.links.incoming": "Zu diesem Deal: {type}",
   "deal.links.remove": "Entfernen",
+  "deal.links.unknownType": "Verknüpfung",
   "deal.links.type": "Verknüpfungsart",
   "deal.links.typePlaceholder": "Art wählen",
   "deal.links.search": "Datensatz zum Verknüpfen suchen",
