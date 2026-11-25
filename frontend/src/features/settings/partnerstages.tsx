@@ -183,7 +183,7 @@ function StageNameDialog({
   const renaming = naming.mode === "rename" ? naming.stage : null;
   const write = renaming ? rename : create;
   const refused = nameRefusal(write.error, t, {
-    label: t("acqSources.addLabel"),
+    label: t("partnerStages.labelField"),
     duplicate: "partnerStages.duplicate",
   });
   const done = { onSuccess: onClose };
@@ -194,7 +194,7 @@ function StageNameDialog({
       title={t(
         renaming ? "partnerStages.renameTitle" : "partnerStages.addTitle",
       )}
-      label={t("acqSources.addLabel")}
+      label={t("partnerStages.labelField")}
       initial={renaming?.label ?? ""}
       confirmLabel={t(
         renaming ? "leadSources.renameSave" : "partnerStages.addConfirm",

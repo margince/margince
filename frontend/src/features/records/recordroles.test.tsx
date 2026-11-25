@@ -93,12 +93,12 @@ it.each([
 
 const ADMIN: GrantSpec = { custom_field: ["read", "create", "update"] };
 
-const CONFLICT = {
+const NAME_TAKEN = {
   type: "about:blank",
   title: "Conflict",
   status: 409,
-  code: "conflict",
-  detail: "conflict",
+  code: "name_taken",
+  detail: "name taken",
 };
 
 const TECHNICAL_CONTACT = {
@@ -134,7 +134,7 @@ function rolesBackend(
     }
     if (request.method !== "GET") {
       return refuseWrite
-        ? jsonResponse(CONFLICT, 409)
+        ? jsonResponse(NAME_TAKEN, 409)
         : jsonResponse(TECHNICAL_CONTACT);
     }
     return jsonResponse({

@@ -144,7 +144,7 @@ export function LossReasonsCard() {
   const reasons = rowsOf(query.data);
   const write = naming.mode === "rename" ? rename : create;
   const refused = nameRefusal(write.error, t, {
-    label: t("acqSources.addLabel"),
+    label: t("lossReasons.labelField"),
     duplicate: "lossReasons.duplicate",
   });
   const open = (next: Naming) => {
@@ -222,7 +222,7 @@ export function LossReasonsCard() {
             ? "lossReasons.renameTitle"
             : "lossReasons.addTitle",
         )}
-        label={t("acqSources.addLabel")}
+        label={t("lossReasons.labelField")}
         initial={naming.mode === "rename" ? naming.reason.label : ""}
         confirmLabel={t(
           naming.mode === "rename"

@@ -92,7 +92,7 @@ function backend(allow: GrantSpec, calls: Call[] = []) {
     }
     if (request.method === "PATCH" && raw.includes('"label":"Price"')) {
       return jsonResponse(
-        { status: 409, code: "conflict", detail: "conflict" },
+        { status: 409, code: "name_taken", detail: "name taken" },
         409,
       );
     }
@@ -152,7 +152,7 @@ it("says a rename to a taken name on the field", async () => {
   );
   await user.click(screen.getByRole("button", { name: "Rename" }));
   const dialog = within(await screen.findByRole("dialog"));
-  const field = dialog.getByLabelText(en["acqSources.addLabel"]);
+  const field = dialog.getByLabelText(en["lossReasons.labelField"]);
   expect(field).toHaveAttribute("data-character-limit", "120");
   await user.clear(field);
   await user.type(field, "Price{Enter}");

@@ -3424,6 +3424,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "partnerStages.addOpen": "Neue Phase",
   "partnerStages.addTitle": "Neue Partnerphase",
   "partnerStages.addConfirm": "Phase hinzufügen",
+  "partnerStages.labelField": "Bezeichnung",
   "partnerStages.renameTitle": "Phase umbenennen",
   "partnerStages.colStage": "Phase",
   "partnerStages.colMeaning": "Bedeutung",
@@ -6612,6 +6613,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "lossReasons.addOpen": "Neuer Grund",
   "lossReasons.addTitle": "Neuer Verlustgrund",
   "lossReasons.addConfirm": "Grund hinzufügen",
+  "lossReasons.labelField": "Bezeichnung",
   "lossReasons.renameTitle": "Grund umbenennen",
   "lossReasons.activeFor":
     "{label} kann gewählt werden, wenn ein Deal verloren geht",

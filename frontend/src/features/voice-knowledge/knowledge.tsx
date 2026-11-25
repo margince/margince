@@ -330,7 +330,11 @@ function NewDocumentSet() {
       screen="settings"
       stay
       testId="new-document-set"
-      conflict={{ field: "name", sentence: t("knowledge.new.nameTaken") }}
+      conflict={{
+        field: "name",
+        code: "name_taken",
+        sentence: t("knowledge.new.nameTaken"),
+      }}
       fields={[
         {
           key: "name",

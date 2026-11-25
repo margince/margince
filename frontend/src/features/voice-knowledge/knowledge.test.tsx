@@ -360,7 +360,7 @@ describe("KnowledgeCard", () => {
       refuse: {
         create: () =>
           jsonResponse(
-            { status: 409, code: "conflict", detail: "conflict" },
+            { status: 409, code: "name_taken", detail: "name taken" },
             409,
           ),
       },

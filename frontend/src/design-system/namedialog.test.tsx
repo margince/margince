@@ -250,15 +250,27 @@ describe("nameRefusal", () => {
     duplicate: "users.teamDuplicate",
   } as const;
 
-  it("puts a conflict on the name, in the caller's words", () => {
+  it("puts a taken name on the name, in the caller's words", () => {
     const taken = new ProblemError({
       status: 409,
-      code: "conflict",
-      detail: 'a team named "Ops" already exists: conflict',
+      code: "name_taken",
+      detail: 'a team called "Ops" already exists',
     });
     expect(nameRefusal(taken, t, team)).toEqual({
       problem: null,
       nameProblem: t("users.teamDuplicate"),
+    });
+  });
+
+  it("leaves a plain conflict under the form, never claiming the name is taken", () => {
+    const stale = new ProblemError({
+      status: 409,
+      code: "conflict",
+      detail: "The team changed since you opened it. Reload and try again.",
+    });
+    expect(nameRefusal(stale, t, team)).toEqual({
+      problem: "The team changed since you opened it. Reload and try again.",
+      nameProblem: null,
     });
   });
 

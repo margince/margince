@@ -139,7 +139,7 @@ export const DuplicateName: Story = {
   },
 };
 
-// The server refused the name as too long. The box takes no more than its bound.
+// The server refused the name as too long.
 export const NameTooLong: Story = {
   args: {
     title: "Rename reason",

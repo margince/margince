@@ -58,12 +58,12 @@ function source(
 
 type Call = { url: string; method: string; body: unknown };
 
-const CONFLICT = {
+const NAME_TAKEN = {
   type: "about:blank",
   title: "Conflict",
   status: 409,
-  code: "conflict",
-  detail: "conflict",
+  code: "name_taken",
+  detail: "name taken",
 };
 
 // `slaOn` seeds the stored first-response posture. The target box is inert
@@ -88,7 +88,7 @@ function backend(
     if (url.endsWith("/v1/me")) {
       body = meFixture({ allow });
     } else if (options.refuseWrite && method !== "GET") {
-      body = CONFLICT;
+      body = NAME_TAKEN;
       status = 409;
     } else if (method === "DELETE") {
       status = 204;
@@ -424,7 +424,7 @@ describe("LeadOriginsCard", () => {
     await user.type(field, "Trade show{Enter}");
     expect(await dialog.findByText(en["leadOrigins.duplicate"])).toBeTruthy();
     expect(field.getAttribute("aria-invalid")).toBe("true");
-    expect(dialog.queryByText(CONFLICT.detail)).toBeNull();
+    expect(dialog.queryByText(NAME_TAKEN.detail)).toBeNull();
   });
 
   it("says a rename to a taken origin name on the field", async () => {

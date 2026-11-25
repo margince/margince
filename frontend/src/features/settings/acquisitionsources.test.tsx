@@ -15,13 +15,15 @@ import { AcquisitionSourcesCard } from "./acquisitionsources";
 const ADMIN: GrantSpec = { custom_field: ["read", "create", "update"] };
 const READER: GrantSpec = { custom_field: ["read"] };
 
-const CONFLICT = {
+const NAME_TAKEN = {
   type: "about:blank",
   title: "Conflict",
   status: 409,
-  code: "conflict",
-  detail: "conflict",
+  code: "name_taken",
+  detail: "name taken",
 };
+
+const STALE_DETAIL = "The source changed since you opened it.";
 
 const TOO_LONG = {
   type: "about:blank",
@@ -66,6 +68,7 @@ function backend(
     counted?: boolean;
     refuseWrite?: boolean;
     refuseLength?: boolean;
+    refuseStale?: boolean;
     denyWrite?: boolean;
   }> = {},
 ) {
@@ -73,6 +76,7 @@ function backend(
     counted = true,
     refuseWrite = false,
     refuseLength = false,
+    refuseStale = false,
     denyWrite = false,
   } = options;
   return vi.fn(async (request: Request) => {
@@ -88,12 +92,18 @@ function backend(
     if (request.method !== "GET" && denyWrite) {
       return permissionDenied();
     }
+    if (request.method !== "GET" && refuseStale) {
+      return jsonResponse(
+        { status: 409, code: "conflict", detail: STALE_DETAIL },
+        409,
+      );
+    }
     if (request.method !== "GET" && refuseLength) {
       return jsonResponse(TOO_LONG, 422);
     }
     if (request.method !== "GET") {
       return refuseWrite
-        ? jsonResponse(CONFLICT, 409)
+        ? jsonResponse(NAME_TAKEN, 409)
         : jsonResponse(source("partner", "Partner"));
     }
     const rows = [
@@ -239,6 +249,22 @@ it("says a rename to a taken name on the field", async () => {
     expect(field).toHaveAccessibleDescription(en["acqSources.duplicate"]),
   );
   expect(field).toHaveAttribute("aria-invalid", "true");
+});
+
+it("leaves a rename refused for another reason under the form, not on the name", async () => {
+  const user = userEvent.setup();
+  vi.stubGlobal("fetch", backend(ADMIN, [], { refuseStale: true }));
+  render(<AcquisitionSourcesCard />);
+  await user.click(
+    await screen.findByRole("button", { name: actionsFor("Partner") }),
+  );
+  await user.click(screen.getByRole("button", { name: "Rename" }));
+  const dialog = within(await screen.findByRole("dialog"));
+  const field = dialog.getByLabelText(en["acqSources.addLabel"]);
+  await user.type(field, " network{Enter}");
+  expect(await dialog.findByText(STALE_DETAIL)).toBeVisible();
+  expect(dialog.queryByText(en["acqSources.duplicate"])).toBeNull();
+  expect(field).not.toHaveAttribute("aria-invalid", "true");
 });
 
 it("says a label the server finds too long on the field, and bounds the box", async () => {

@@ -22,7 +22,7 @@ const TAKEN = {
   type: "about:blank",
   title: "Conflict",
   status: 409,
-  code: "conflict",
+  code: "name_taken",
   detail: 'conflict: a team named "Nord" already exists',
 };
 

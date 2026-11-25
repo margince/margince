@@ -63,7 +63,7 @@ function backend(allow: GrantSpec, calls: Call[] = []) {
     }
     if (request.method === "PATCH" && raw.includes('"label":"Research"')) {
       return jsonResponse(
-        { status: 409, code: "conflict", detail: "conflict" },
+        { status: 409, code: "name_taken", detail: "name taken" },
         409,
       );
     }

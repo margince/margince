@@ -18,7 +18,7 @@ export function nameRefusal(
     /** The field's label, which a too-long refusal names. */
     label: string;
     duplicate: MessageKey;
-    /** The code of the 409 that means the name is taken; "conflict" by default. */
+    /** The code of the 409 that means the name is taken; `name_taken` by default. */
     code?: string;
   }>,
 ): { problem: string | null; nameProblem: string | null } {
@@ -30,7 +30,7 @@ export function nameRefusal(
       conflict: {
         field: NAME_FIELD,
         sentence: t(words.duplicate),
-        code: words.code,
+        code: words.code ?? NAME_TAKEN,
       },
     },
   );
@@ -43,6 +43,8 @@ export function nameRefusal(
   };
 }
 
+// Not `conflict`: a stale version answers that too, and says nothing of the name.
+const NAME_TAKEN = "name_taken";
 const NAME_FIELD = "name";
 // Some lists send their name on the wire as `label`.
 const LABEL_FIELD = "label";
