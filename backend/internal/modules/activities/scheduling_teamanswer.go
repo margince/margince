@@ -35,7 +35,7 @@ func (s *Store) AnswerSchedulingTeamRequest(ctx context.Context, page ids.UUID, 
 // team link of host that names them and that the answer changes. Confirming
 // answers each pending one, and leaving each one not yet left. It serves
 // clients that answer a host rather than a link. A repeat that changes no link
-// succeeds, as it does on one link; only a host with no live link naming the
+// succeeds, as it does on one link. Only a host with no live link naming the
 // caller is not found.
 func (s *Store) AnswerHostTeamRequests(ctx context.Context, host ids.UserID, answer crmcontracts.SchedulingTeamAnswerState) error {
 	me, err := s.admitTeamAnswer(ctx, answer)

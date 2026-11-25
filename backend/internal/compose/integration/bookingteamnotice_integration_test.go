@@ -187,8 +187,8 @@ func TestOnlyTheOwnerChangesATeamLink(t *testing.T) {
 }
 
 // A client that answers by host, as it did when a host had one link, still
-// works. Its answer confirms every team link of that host that waits for it, and
-// only a caller no link of that host names is not found.
+// works. Its answer confirms every team link of that host that waits for it.
+// Only a caller that no link of that host names is not found.
 func TestTheAnswerByHostConfirmsEveryTeamLinkOfThatHost(t *testing.T) {
 	e := apptest.SetupBookingApp(t)
 	e.DescribeCompany(t)

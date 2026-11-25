@@ -200,18 +200,17 @@ func TestEveryGoFileIsCompiledAndAnalysedBySomePass(t *testing.T) {
 	}
 }
 
-// untaggedLintExempt names a directory `make lint-untagged` leaves out on
-// purpose. scripts/untagged-lint-packages.sh skips the same one, and the test
-// below fails when the two disagree.
+// untaggedLintExempt names a directory `make lint-untagged` leaves out.
+// scripts/untagged-lint-packages.sh skips the same one, and the test below
+// fails when the two disagree.
 var untaggedLintExempt = gatekit.Waive(map[string]string{
 	"backend/gates": "the gate suite's own test-only files: `make vet` reads them, and a second golangci pass over the whole package costs more than its findings would be worth",
 })
 
-// The golangci configs build with tags, so a file guarded `//go:build
-// !integration` is one they never read, although it ships in every binary.
-// `make lint-untagged` lints the packages that hold one; this holds its list to
-// what go/build says, so a new such file in another package fails here instead
-// of going unread.
+// The golangci configs build with tags, so they never read a file guarded
+// `//go:build !integration`, although it ships in every binary.
+// `make lint-untagged` lints the packages that hold one. This holds its list to
+// what go/build says, so a new such file in another package fails here.
 func TestEveryFileOnlyTheUntaggedBuildReadsIsLinted(t *testing.T) {
 	t.Parallel()
 	defer untaggedLintExempt.AssertAllMatched(t)

@@ -3,16 +3,11 @@
 
 package migrations
 
-// An index on a table this file did not create is built CONCURRENTLY.
-//
-// A plain CREATE INDEX takes SHARE on the table and holds it until the build ends,
-// so every write to that table waits for a scan of all its rows. `lock_timeout`
-// bounds only the wait for that lock, never how long it is held. The concurrent
-// build takes SHARE UPDATE EXCLUSIVE, which writers pass; it cannot run in a
-// transaction, so its file carries dbmigrate.NoTransactionMarker, which
-// notransactionshape_test.go holds.
-//
-// A table the file creates earlier is exempt: it has no rows and no writer yet.
+// An index on a table this file did not create is built CONCURRENTLY. A plain
+// build holds SHARE until it has read every row, and every write waits for it.
+// The concurrent build takes SHARE UPDATE EXCLUSIVE, which writers pass.
+// notransactionshape_test.go holds the marker that the concurrent form needs.
+// A table the file creates earlier has no rows and no writer yet, so it is exempt.
 
 import (
 	"io/fs"
@@ -23,11 +18,11 @@ import (
 
 // concurrentIndexBaseline is where this obligation starts in each namespace.
 //
-// Pinned at the second this gate was written, because dozens of shipped files build
-// a plain index on a live table and a shipped migration is never edited.
+// Pinned at the second this gate was written. Dozens of shipped files build a
+// plain index on a live table, and a shipped migration is never edited.
 //
-// gatekit:fixture the oldest version this gate binds in each namespace — data, not a
-// cost: a namespace's entry names where the rule starts applying.
+// gatekit:fixture the oldest version this gate binds in each namespace. It is data,
+// not a cost: a namespace's entry names where the rule starts applying.
 var concurrentIndexBaseline = map[string]string{
 	"core":   "1795632000",
 	"custom": "20261125190000",
