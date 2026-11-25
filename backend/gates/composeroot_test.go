@@ -74,10 +74,10 @@ const (
 	// extractor and transcript proposer.
 	// Raised by 244 test lines for the data reset cases of an event the sweep
 	// orphaned, which drive the unexported reset handlers.
-	// Raised by 4 production lines for the signals and initiatives carriers
+	// Raised by 5 production lines for the signals and initiatives carriers
 	// every contact merge door is wired with. Raised by 6 test lines for the
 	// seat without an introduction grant that the preview refusal case needs.
-	composeRootProductionLines = 230_749
+	composeRootProductionLines = 230_750
 	composeRootTestLines       = 360_937
 )
 

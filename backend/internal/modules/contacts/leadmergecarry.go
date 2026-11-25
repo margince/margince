@@ -24,11 +24,15 @@ func carryLeadWorkToLead(ctx context.Context, tx pgx.Tx, sourceID, targetID ids.
 	}
 	args := pgx.NamedArgs{mergeSourceKey: sourceID, mergeTargetKey: targetID}
 	for _, step := range []struct{ what, entity, column, stmt string }{
-		{"hand-offs", tableSDRHandoff, "lead_id",
-			`UPDATE sdr_handoff SET lead_id = @target WHERE lead_id = @source RETURNING id`},
+		{
+			"hand-offs", tableSDRHandoff, "lead_id",
+			`UPDATE sdr_handoff SET lead_id = @target WHERE lead_id = @source RETURNING id`,
+		},
 		// The redirect chain stays one hop deep, as the contact merge keeps it.
-		{"earlier merges", entityLead, "merged_into_id",
-			`UPDATE lead SET merged_into_id = @target WHERE merged_into_id = @source RETURNING id`},
+		{
+			"earlier merges", entityLead, "merged_into_id",
+			`UPDATE lead SET merged_into_id = @target WHERE merged_into_id = @source RETURNING id`,
+		},
 	} {
 		rows, err := tx.Query(ctx, step.stmt, args)
 		if err != nil {
