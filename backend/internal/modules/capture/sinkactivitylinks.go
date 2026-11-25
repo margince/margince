@@ -41,6 +41,7 @@ func (s *Sink) linkActivity(ctx context.Context, tx pgx.Tx, activityID ids.Activ
 			datasource.EntityContact: "contact_id",
 			datasource.EntityCompany: "company_id",
 			datasource.EntityDeal:    "deal_id",
+			datasource.EntityLead:    "lead_id",
 		}[link.Type]
 		if !ok {
 			return fmt.Errorf("capture: activities cannot link a %s", link.Type)

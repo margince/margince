@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/ports/datasource"
 )
 
 // What every chat network hands the core, split by who may state it.
@@ -52,7 +53,23 @@ type ChatBinding struct {
 	// posture decides who reads a message, as a mailbox's does for mail. Zero
 	// for the workspace's own bot, which belongs to no account.
 	SeatID ids.UUID
+	// SourceSystem is the natural key's source system when it is not the
+	// provider. An extension unit's records are keyed under the source the unit
+	// declared, so its messages and its other records share one namespace. Empty
+	// means Provider.
+	SourceSystem string
+	// PinnedPosture is the posture a member-owned source declared for everything
+	// it files: PostureClassified or PostureHeld, never shared. A seat answers
+	// first. The pin answers for a source with no seat. Empty holds.
+	PinnedPosture string
 }
+
+// The postures a member-owned chat source may pin. A pin may only narrow who
+// reads a message, so shared is not offered.
+const (
+	ChatPostureClassified = "classified"
+	ChatPostureHeld       = "held"
+)
 
 // ChatParty is the contact on the other side of a conversation.
 type ChatParty struct {
@@ -60,6 +77,26 @@ type ChatParty struct {
 	UserID      string
 	DisplayName string
 	Username    string
+	// Email is an address the provider vouches for this party. It corroborates
+	// the account and never names the party. The capture ladder reads it only
+	// when EmailMayMatch says the source declared the email merge key.
+	Email string
+	// Domain is Email's lower-cased domain, which the internal-domain gates key on.
+	Domain        string
+	EmailMayMatch bool
+}
+
+// ChatOwnKeys are keys a source persisted itself. They are used as given where
+// an adapter would derive them from the connection's scopes. A source whose
+// records exist keeps the keys they were stored under.
+type ChatOwnKeys struct {
+	// SourceID is the whole source id of the natural key.
+	SourceID string
+	// ThreadKey is the conversation key, namespaced by the source.
+	ThreadKey string
+	// SourceIDNamesAContact is true when SourceID embeds a human's account id,
+	// so the pipeline trace stores a hash of it.
+	SourceIDNamesAContact bool
 }
 
 // ChatMessage is one message as the provider stated it.
@@ -81,6 +118,31 @@ type ChatMessage struct {
 	// carries the bytes when it has not.
 	StoredOriginal ids.UUID
 	Raw            []byte
+
+	// Keys, when set, replaces the keys derived from the binding's scopes and
+	// the ConversationID and IdempotencyKey above, which a message with Keys
+	// need not carry.
+	Keys *ChatOwnKeys
+	// OccurredDay says OccurredAt is a date's anchor and not a moment. The
+	// provider, or the member who filed the message by hand, knows the day only.
+	OccurredDay bool
+	// Subject is a subject line, for a source whose messages have one.
+	Subject string
+	// ProviderPrivate is the provider's own statement that the message is private.
+	ProviderPrivate bool
+	// Addresses lists the addresses the message names. Empty means the source
+	// cannot enumerate its parties, which is never read as "internal".
+	Addresses []string
+	// Participants is the roster of a group conversation beyond the two ends.
+	Participants []MessageParticipant
+	// ChosenSubject is the contact or lead a member filed this message on. The
+	// message is linked to it directly and its counterparty is not resolved by
+	// identity. The caller has already checked the member may see it.
+	ChosenSubject *datasource.EntityRef
+	// Parts and PartDrops are the files the message carried and the ones the
+	// source refused, already bounded and typed as the mail parser's are.
+	Parts     []Part
+	PartDrops []PartDrop
 }
 
 // CaptureOnlyThreadScope is the thread scope of a conversation that is read and

@@ -43,14 +43,18 @@ func chatSeatOf(ctx context.Context) (ids.UUID, bool) {
 	return seat, ok && !seat.IsZero()
 }
 
-// chatPostureTx gives a chat message the posture of its seat. A shared seat
-// leaves the decision as it stands, and anything else holds the message. A chat
-// with no seat is held, as mail from a mailbox with no live connection is.
+// chatPostureTx gives a chat message its posture. The seat's posture answers
+// first. A source that pinned classified or held answers when there is no seat.
+// Anything else is held, as mail from a mailbox with no live connection is.
+// A shared seat leaves the decision as it stands.
 //
 // A classified chat stays held: the confidentiality ledger judges a thread once,
 // and a chat is one long thread.
-func chatPostureTx(ctx context.Context, tx pgx.Tx, decision birthDecision) (birthDecision, error) {
+func chatPostureTx(ctx context.Context, tx pgx.Tx, decision birthDecision, pinned string) (birthDecision, error) {
 	posture := PostureHeld
+	if pinned != "" {
+		posture = pinned
+	}
 	if seat, ok := chatSeatOf(ctx); ok {
 		read, err := storekit.RememberCaptureFact(ctx, tx, mailboxPostureMemo+seat.String(), func() (string, error) {
 			return connectionPostureTx(ctx, tx, connectionMatch{where: "id = $1", args: []any{seat}, id: seat})
