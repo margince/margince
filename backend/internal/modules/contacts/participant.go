@@ -24,7 +24,6 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
-	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/relstrength"
 )
@@ -67,12 +66,18 @@ func (s *Store) stampProvenSenders(ctx context.Context, tx pgx.Tx, activities []
 // an address-only row the promotion names @cohort_contact on. The address must
 // prove the contact, as it must for a stamped sender: a live address no other
 // contact ever held.
+//
+// An activity that still holds an address as an older writer stored it waits
+// for the data task. Two spellings promoted together would meet on the
+// identity key; the nightly reconcile promotes the row once they are one.
 func promotableParticipantSQL(alias string) string {
 	return alias + `.contact_id IS NULL
 		   AND ` + alias + `.user_id IS NULL
 		   AND ` + alias + `.address IS NOT NULL
 		   AND NOT ` + alias + `.past_party_cap
-		   AND ` + relstrength.AddressProvesSQL("@cohort_contact", alias+".address")
+		   AND ` + relstrength.AddressProvesSQL("@cohort_contact", alias+".address") + `
+		   AND NOT EXISTS (SELECT 1 FROM activity_participant older
+		        WHERE older.activity_id = ` + alias + `.activity_id AND older.address <> lower(btrim(older.address)))`
 }
 
 // promoteParticipantsToContact is that update over the given activities: the
@@ -83,9 +88,6 @@ func promotableParticipantSQL(alias string) string {
 func promoteParticipantsToContact(
 	ctx context.Context, tx pgx.Tx, activities []ids.UUID, contactID ids.ContactID, batch *int,
 ) ([]ids.UUID, error) {
-	if _, err := storekit.LowercaseOlderParticipantAddresses(ctx, tx, `ap.activity_id = ANY($1)`, activities); err != nil {
-		return nil, err
-	}
 	// The WHERE clause carries the idempotence: a row that already names a
 	// contact is left alone, so a second pass cannot repoint a participant that
 	// a merge or a human has since settled differently.
