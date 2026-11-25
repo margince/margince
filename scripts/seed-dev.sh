@@ -369,15 +369,15 @@ ensure() { # ensure <label> <path> <json-body>
 
 echo "== seed-dev: demo contacts =="
 ensure "contact Alice Müller" /contacts \
-  '{"full_name":"Alice Müller","emails":[{"email":"alice@demo.test","is_primary":true}],"source":"seed"}'
+  '{"full_name":"Alice Müller","emails":[{"email":"alice@demo.test","is_primary":true}],"source":"api"}'
 ensure "contact Bob Schmidt" /contacts \
-  '{"full_name":"Bob Schmidt","emails":[{"email":"bob@demo.test","is_primary":true}],"source":"seed"}'
+  '{"full_name":"Bob Schmidt","emails":[{"email":"bob@demo.test","is_primary":true}],"source":"api"}'
 ensure "contact Carol Wagner" /contacts \
-  '{"full_name":"Carol Wagner","emails":[{"email":"carol@demo.test","is_primary":true}],"source":"seed"}'
+  '{"full_name":"Carol Wagner","emails":[{"email":"carol@demo.test","is_primary":true}],"source":"api"}'
 
 echo "== seed-dev: demo company =="
 ensure "company Demo GmbH" /companies \
-  '{"display_name":"Demo GmbH","domains":[{"domain":"demo.test","is_primary":true}],"source":"seed"}'
+  '{"display_name":"Demo GmbH","domains":[{"domain":"demo.test","is_primary":true}],"source":"api"}'
 
 # What these records are FOR is being looked at, so they are held to the bar the
 # demo dataset's own verify pass states: every contact employed somewhere, every

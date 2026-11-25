@@ -102,6 +102,24 @@ func TestAUnitThatSendsTooManyNoticesIsRefused(t *testing.T) {
 	}
 }
 
+// Past the ceiling every send is refused, and the refusal is the unit's own: a
+// neighbouring unit still sends.
+func TestTheNoticeCeilingHoldsPastTheLimitAndOnlyForTheUnitThatReachedIt(t *testing.T) {
+	const unit, neighbour = "past-limit-unit", "quiet-unit"
+	for range extensionNoticesPerMinute {
+		extensionNotices.Allow(unit)
+	}
+	core := extensionCore{unit: unit, authority: func(ctx context.Context) (context.Context, error) { return ctx, nil }}
+	for i := range 3 {
+		if _, err := core.Notices().Send(context.Background(), validNotice()); !errors.Is(err, extension.ErrRateLimited) {
+			t.Fatalf("send %d past the limit = %v, want ErrRateLimited", i+1, err)
+		}
+	}
+	if !extensionNotices.Allow(neighbour) {
+		t.Error("a unit under its limit was refused for another unit's flood")
+	}
+}
+
 func validNotice() extension.NoticeRequest {
 	return extension.NoticeRequest{
 		Member:  ids.NewV7().String(),
