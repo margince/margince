@@ -140,6 +140,8 @@ linters:
             - $gostd
             - github.com/margince/margince/backend/internal/shared
             - github.com/margince/margince/backend/pkg
+            # values composes an identifier to NFC, a transform the stdlib lacks.
+            - golang.org/x/text/unicode/norm
         # The published extension surface (backend/pkg, ADR-0120 §3) is the
         # outermost Tier-0 leaf: stdlib + itself, nothing else — anything
         # else it imported would become transitively-frozen published API.

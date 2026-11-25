@@ -129,6 +129,10 @@ func TestNoSiblingModuleImports(t *testing.T) {
 // surface beneath it (ports alias published seam types so a core module
 // and an extension register the same type, ADR-0120 §3). Anything else
 // is an architecture defect.
+// sharedUnicodeForms is the one outside package shared may use: values composes
+// an identifier to NFC, which the stdlib cannot.
+const sharedUnicodeForms = "golang.org/x/text/unicode/norm"
+
 func TestSharedIsPure(t *testing.T) {
 	t.Parallel()
 	for _, dir := range packagesUnder(t, "internal/shared") {
@@ -138,6 +142,9 @@ func TestSharedIsPure(t *testing.T) {
 			}
 			if strings.HasPrefix(imp, modulePath+"/pkg/") {
 				continue // the published surface sits below shared
+			}
+			if imp == sharedUnicodeForms && strings.HasSuffix(dir, "/kernel/values") {
+				continue
 			}
 			t.Errorf("%s imports %s: shared packages must be stdlib-only", dir, imp)
 		}

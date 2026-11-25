@@ -55,7 +55,7 @@ func newSeparatorStripper() *strings.Replacer {
 }
 
 func ParsePhone(raw string) (Phone, error) {
-	cleaned := phoneSeparators.Replace(nationalTrunkMark.ReplaceAllString(strings.TrimSpace(raw), "$1$2"))
+	cleaned := phoneSeparators.Replace(nationalTrunkMark.ReplaceAllString(identifierText(raw), "$1$2"))
 	if cleaned == "" {
 		return Phone{}, &ParseError{Field: "phone", Code: "phone_empty", Message: "a phone number is required"}
 	}
