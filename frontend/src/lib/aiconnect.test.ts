@@ -7,11 +7,11 @@ import {
   AI_PLACES,
   AI_PLANS,
   AI_TOOLS,
-  adminGuide,
   CLI_PATHS,
   CONNECT_PATHS,
   connectPath,
 } from "./aiconnect";
+import { adminGuide } from "./aiconnectguide";
 
 const URL_FROM_SERVER = "https://crm.acme.test/mcp";
 const translatorFor =
