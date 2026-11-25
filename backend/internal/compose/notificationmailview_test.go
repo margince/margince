@@ -117,3 +117,17 @@ func TestARichApprovalEmailWithALongSubjectCarriesTheFullSentence(t *testing.T) 
 		last = at
 	}
 }
+
+// A booking link's team request is answered under Settings, Meetings, so its
+// mail opens there and not on the Worklist.
+func TestATeamRequestMailOpensTheMeetingSettings(t *testing.T) {
+	words := mailcopy.For("en")
+	request := notificationMessage(notices.Notice{Kind: notices.KindMeetingTeamRequest, Subject: "Ada added you"}, approvalMailFacts{}, "https://example.test", words).Text
+	if !strings.Contains(request, "https://example.test/#/settings/meetings") || strings.Contains(request, "/#/worklist") {
+		t.Fatalf("the team request mail does not open the meeting settings:\n%s", request)
+	}
+	other := notificationMessage(notices.Notice{Kind: notices.KindApprovalPending, Subject: "Approve"}, approvalMailFacts{}, "https://example.test", words).Text
+	if !strings.Contains(other, "https://example.test/#/worklist") {
+		t.Fatalf("an approval mail no longer opens the Worklist:\n%s", other)
+	}
+}

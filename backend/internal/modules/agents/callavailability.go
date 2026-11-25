@@ -61,7 +61,7 @@ func (r *Registry) withAvailableActions(spec mcp.ToolSpec, kept []mcp.ToolAction
 	}
 	hidden := hiddenActions(spec.Actions, kept)
 	spec.Actions = kept
-	schema, err := r.narrowedRouterSchema(spec.Name, spec.InputSchema, kept, hidden)
+	schema, err := r.narrowedRouterSchema(spec.Name, spec.InputSchema, kept, hidden, nil)
 	if err != nil {
 		slog.Warn("router schema could not be narrowed, so it is not offered", "tool", spec.Name, "err", err)
 		return spec, false

@@ -109,9 +109,9 @@ func writeMCPInfoHead(page *strings.Builder, doc mcpInfo) {
 	writeMCPInfoComposition(page, doc.Totals)
 }
 
-// writeMCPInfoComposition prints what the wire total is made of: the largest
-// component is the one no prompt carries, so the headline total overstates
-// what a run pays.
+// writeMCPInfoComposition prints what the wire total is made of. The output
+// schemas are in it and in no prompt, so the headline total overstates what a
+// run pays.
 func writeMCPInfoComposition(page *strings.Builder, totals mcpInfoTotals) {
 	split := totals.Composition
 	page.WriteString("### What the tool catalog is made of\n\n")
@@ -133,7 +133,7 @@ func writeMCPInfoComposition(page *strings.Builder, totals mcpInfoTotals) {
 		(totals.ToolBytes-split.OutputSchemaBytes-split.DescAndInputBytes)*100/totals.ToolBytes)
 	fmt.Fprintf(page, "| **Description + input schema** | **%s** | **%d%%** | **the recurring cost** |\n\n",
 		humanBytes(split.DescAndInputBytes), split.DescAndInputBytes*100/totals.ToolBytes)
-	page.WriteString("Output schemas are the largest part of the total and are never sent to a model;\n")
+	page.WriteString("Output schemas count in the total but are never sent to a model;\n")
 	page.WriteString("descriptions and input schemas are what each step pays for.\n\n")
 }
 

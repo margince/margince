@@ -19,6 +19,7 @@ import (
 	"time"
 
 	"github.com/margince/margince/backend/internal/compose/readerlocale"
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/platform/httperr"
@@ -139,7 +140,7 @@ func publicBooking(store *activities.Store, svc *identity.Service, limits public
 				ID:   "system:public_booking",
 			})
 			if preview {
-				srv.GetPublicBookingPreview(w, r.WithContext(ctx), slug)
+				srv.GetPublicBookingPreview(w, r.WithContext(ctx), slug, crmcontracts.GetPublicBookingPreviewParams{L: linkLength(r.URL.Query())})
 				return
 			}
 			next.ServeHTTP(w, r.WithContext(ctx))

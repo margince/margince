@@ -21,6 +21,22 @@ func TestTheBookingLengthUsesOnlyOfferedLengths(t *testing.T) {
 	}
 }
 
+func TestAChosenLengthThePageDoesNotOfferIsRefused(t *testing.T) {
+	profile := defaultSchedulingProfile()
+	profile.OfferedLengths = new([]int{45})
+	for _, test := range []struct {
+		chosen *int
+		want   int
+	}{{nil, 30}, {new(30), 30}, {new(45), 45}} {
+		if got, err := chosenLength(profile, test.chosen); err != nil || got.DurationMinutes != test.want {
+			t.Errorf("chosen %v: %d, %v; want %d", test.chosen, got.DurationMinutes, err, test.want)
+		}
+	}
+	if _, err := chosenLength(profile, new(60)); err == nil {
+		t.Fatal("a length the page does not offer was accepted")
+	}
+}
+
 func TestOfferedMeetingLengthsAreDistinctAndBounded(t *testing.T) {
 	for _, lengths := range [][]int{{0}, {481}, {30, 30}} {
 		profile := defaultSchedulingProfile()
