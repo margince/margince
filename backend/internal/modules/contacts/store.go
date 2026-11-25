@@ -32,6 +32,7 @@ type Store struct {
 	floorCarry              FloorCarry
 	mergeSignalReader       MergeSignalReader
 	signalCarrier           SignalCarrier
+	initiativeCarrier       InitiativeCarrier
 	mergeCommitmentReader   MergeCommitmentReader
 	mergeNoticeReader       MergeNoticeReader
 	mergeContentReader      MergeContentReader

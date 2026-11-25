@@ -115,6 +115,7 @@ type portCarry struct {
 const (
 	consentPkg       = "internal/modules/consent"
 	identityPkg      = "internal/modules/identity"
+	initiativesPkg   = "internal/modules/initiatives"
 	introductionsPkg = "internal/modules/introductions"
 	signalsPkg       = "internal/modules/signals"
 )
@@ -122,18 +123,20 @@ const (
 // carriedThroughAPort names the satellites another module moves inside the
 // merge's own transaction.
 var carriedThroughAPort = map[string]portCarry{
-	"communication_suppression": {consentPkg, "Store.CarryStopsTx", "holdsALiveStop"},
-	"communication_override":    {consentPkg, "Store.CarryOverridesTx", "holdsALiveOverride"},
-	"withdrawal_credential":     {consentPkg, "Store.CarrySatellitesTx", "holdsAConsentSatellite"},
-	"preference_token":          {consentPkg, "Store.CarrySatellitesTx", "holdsAConsentSatellite"},
-	"confirm_token":             {consentPkg, "Store.CarrySatellitesTx", "holdsAConsentSatellite"},
-	"communication_basis":       {consentPkg, "Store.CarrySatellitesTx", "holdsAConsentSatellite"},
-	"consent_qualifying_event":  {consentPkg, "Store.CarrySatellitesTx", "holdsAConsentSatellite"},
-	"consent_doi_token":         {consentPkg, "Store.CarrySatellitesTx", "holdsAConsentSatellite"},
-	"data_subject_request":      {consentPkg, "Store.BindRequestsToAddressesTx", "holdsAConsentSatellite"},
-	"signal":                    {signalsPkg, "CarryResolutionsTx", "refuseUnwiredSignalCarry"},
-	"intro_request":             {introductionsPkg, "Store.CarryIntrosTx", "refuseUnwiredIntroCarry"},
-	"record_grant":              {identityPkg, "Service.CarryGrantsTx", "refuseUnwiredGrantCarry"},
+	"communication_suppression":  {consentPkg, "Store.CarryStopsTx", "holdsALiveStop"},
+	"communication_override":     {consentPkg, "Store.CarryOverridesTx", "holdsALiveOverride"},
+	"withdrawal_credential":      {consentPkg, "Store.CarrySatellitesTx", "holdsAConsentSatellite"},
+	"preference_token":           {consentPkg, "Store.CarrySatellitesTx", "holdsAConsentSatellite"},
+	"confirm_token":              {consentPkg, "Store.CarrySatellitesTx", "holdsAConsentSatellite"},
+	"communication_basis":        {consentPkg, "Store.CarrySatellitesTx", "holdsAConsentSatellite"},
+	"consent_qualifying_event":   {consentPkg, "Store.CarrySatellitesTx", "holdsAConsentSatellite"},
+	"consent_doi_token":          {consentPkg, "Store.CarrySatellitesTx", "holdsAConsentSatellite"},
+	"data_subject_request":       {consentPkg, "Store.BindRequestsToAddressesTx", "holdsAConsentSatellite"},
+	"signal":                     {signalsPkg, "CarryResolutionsTx", "refuseUnwiredSignalCarry"},
+	"intro_request":              {introductionsPkg, "Store.CarryIntrosTx", "refuseUnwiredIntroCarry"},
+	"record_grant":               {identityPkg, "Service.CarryGrantsTx", "refuseUnwiredGrantCarry"},
+	"sales_initiative_member":    {initiativesPkg, "CarryLeadMergeTx", "refuseUnwiredInitiativeCarry"},
+	"sales_initiative_enrolment": {initiativesPkg, "CarryLeadMergeTx", "refuseUnwiredInitiativeCarry"},
 }
 
 var (

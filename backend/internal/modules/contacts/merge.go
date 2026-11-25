@@ -251,6 +251,9 @@ func settleContactMerge(ctx context.Context, tx pgx.Tx, tgtLock storekit.RowLock
 	} else if err := storekit.TouchLocked(ctx, tx, tgtLock); err != nil {
 		return fmt.Errorf("move the survivor's version: %w", err)
 	}
+	if err := carryKeptProvenance(ctx, tx, contactEntity, sourceID.UUID, targetID.UUID, p.After()); err != nil {
+		return err
+	}
 	if err := archiveMergedAway(ctx, tx, contactEntity, sourceID.UUID, targetID.UUID); err != nil {
 		return fmt.Errorf("retire merged-away contact: %w", err)
 	}

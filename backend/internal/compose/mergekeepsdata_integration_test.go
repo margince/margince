@@ -13,8 +13,15 @@ import (
 	"context"
 	"testing"
 
+	"github.com/jackc/pgx/v5"
+	openapi_types "github.com/oapi-codegen/runtime/types"
+
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/consent"
 	"github.com/margince/margince/backend/internal/modules/contacts"
+	"github.com/margince/margince/backend/internal/modules/initiatives"
+	"github.com/margince/margince/backend/internal/platform/clocktest"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/erasureaccount"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
@@ -165,4 +172,93 @@ func (c *carryEnv) erasureRequest(t *testing.T, contact ids.ContactID) ids.UUID 
 	}
 	c.e.WsExec(t, `UPDATE data_subject_request SET contact_id = $2 WHERE id = $1`, row.ID, contact)
 	return row.ID
+}
+
+// A lead in a sales initiative stays in it after a merge, as the survivor.
+// Where both leads hold a place in one initiative, the survivor's stands and
+// the retired lead's rows survive only as the audit's before-image.
+func TestALeadMergeKeepsTheRetiredLeadInItsInitiatives(t *testing.T) {
+	c := setupCarry(t)
+	store := NewInitiativeStore(c.e.Pool)
+	loser := c.lead(t, "Ida Berg", "ida@berg.test", "Berg AB")
+	live := c.lead(t, "Ida Bergh", "", "Berg AB")
+	launch := func(name string, picked ...ids.LeadID) ids.UUID {
+		t.Helper()
+		draft, err := store.Create(c.admin, initiatives.Definition{
+			Name: name, Objective: "qualified_opportunities_created", Deadline: clocktest.Now(t).UTC().AddDate(0, 3, 0),
+		})
+		if err != nil {
+			t.Fatalf("defining %s: %v", name, err)
+		}
+		id := ids.UUID(draft.Id)
+		var refs []crmcontracts.SalesInitiativeMemberRef
+		for _, lead := range picked {
+			refs = append(refs, crmcontracts.SalesInitiativeMemberRef{RecordType: "lead", RecordId: openapi_types.UUID(lead.UUID)})
+		}
+		if _, err := store.ReplaceMembers(c.admin, id, refs, nil); err != nil {
+			t.Fatalf("picking the leads for %s: %v", name, err)
+		}
+		if _, err := store.Launch(c.admin, id, nil); err != nil {
+			t.Fatalf("launching %s: %v", name, err)
+		}
+		return id
+	}
+	shared, own := launch("Both leads", loser, live), launch("Retired lead only", loser)
+	const openEnrolments = `SELECT count(*) FROM sales_initiative_enrolment
+		WHERE initiative_id = $1 AND record_type = 'lead' AND record_id = $2 AND left_at IS NULL`
+	if c.count(t, openEnrolments, own, loser) != 1 {
+		t.Fatal("precondition: the launch did not enrol the retired lead")
+	}
+
+	if _, err := c.contacts.MergeLead(c.admin, loser, live); err != nil {
+		t.Fatalf("lead merge: %v", err)
+	}
+
+	const members = `SELECT count(*) FROM sales_initiative_member WHERE initiative_id = $1 AND record_type = 'lead' AND record_id = $2`
+	for _, initiative := range []ids.UUID{shared, own} {
+		if n := c.count(t, members, initiative, live); n != 1 {
+			t.Errorf("the survivor holds %d member rows in initiative %s, want 1", n, initiative)
+		}
+		if n := c.count(t, openEnrolments, initiative, live); n != 1 {
+			t.Errorf("the survivor holds %d open enrolments in initiative %s, want 1", n, initiative)
+		}
+		if n := c.count(t, members, initiative, loser) + c.count(t, `SELECT count(*) FROM sales_initiative_enrolment
+			WHERE initiative_id = $1 AND record_type = 'lead' AND record_id = $2`, initiative, loser); n != 0 {
+			t.Errorf("%d rows of initiative %s still name the retired lead", n, initiative)
+		}
+	}
+	if n := c.count(t, `SELECT count(*) FROM audit_log WHERE entity_type = 'sales_initiative' AND entity_id = $1
+		AND before->'merged_lead_rows'->'members'->0->>'lead' = $2::text AND after->'merged_lead_rows' = 'null'::jsonb`, shared, loser); n != 1 {
+		t.Errorf("%d audit rows on the shared initiative keep the dropped rows as the before-image, want 1", n)
+	}
+}
+
+// The provenance of a field the survivor took from the retired contact moves
+// with the value. The provenance of a field the survivor kept its own value
+// for describes a value the merge did not keep, and stays.
+func TestAContactMergeMovesTheProvenanceOfTheValuesTheSurvivorTook(t *testing.T) {
+	c := setupCarry(t)
+	title := "Head of Purchasing"
+	created, err := c.e.Contacts.CreateContact(c.admin, contacts.CreateContactInput{FullName: "Tor Lund", Title: &title, Source: "manual"})
+	if err != nil {
+		t.Fatalf("creating the retired contact: %v", err)
+	}
+	retired := ids.From[ids.ContactKind](ids.UUID(created.Id))
+	survivor := c.contactAt(t, "Tor Lunde", "tor.lunde@lund.test")
+	if err := c.e.DB().Tx(c.admin, func(tx pgx.Tx) error {
+		return storekit.StampFields(c.admin, tx, "contact", retired.UUID, "signature", "agent:enrich",
+			[]storekit.FieldStamp{{Field: "title"}, {Field: "full_name"}})
+	}); err != nil {
+		t.Fatalf("stamping the retired contact's provenance: %v", err)
+	}
+
+	c.merge(t, retired, survivor)
+
+	const provenance = `SELECT count(*) FROM field_provenance WHERE object_type = 'contact' AND object_id = $1 AND field_name = $2`
+	if n := c.count(t, provenance, survivor, "title"); n != 1 {
+		t.Errorf("the survivor holds %d provenance rows for the title it took, want 1", n)
+	}
+	if n := c.count(t, provenance, retired, "full_name"); n != 1 {
+		t.Errorf("the retired contact holds %d provenance rows for the name the survivor kept, want 1", n)
+	}
 }

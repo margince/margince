@@ -33,6 +33,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/consent"
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/identity"
+	"github.com/margince/margince/backend/internal/modules/initiatives"
 	"github.com/margince/margince/backend/internal/modules/introductions"
 	"github.com/margince/margince/backend/internal/modules/signals"
 	"github.com/margince/margince/backend/internal/platform/jobs"
@@ -64,6 +65,7 @@ func setupCarry(t *testing.T) *carryEnv {
 		contacts: contacts.NewStore(e.DB()).WithStopCarrier(consentStore).
 			WithSatelliteCarriers(consentStore, intros).WithGrantCarrier(grants).
 			WithSignalCarrier(signals.CarryResolutionsTx).
+			WithInitiativeCarrier(initiatives.CarryLeadMergeTx).
 			WithParticipantRosterReader(activities.EnsureParticipantRosterVisibleTx),
 	}
 	c.admin = c.asker()

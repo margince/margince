@@ -12,6 +12,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/consent"
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/identity"
+	"github.com/margince/margince/backend/internal/modules/initiatives"
 	"github.com/margince/margince/backend/internal/modules/integrations"
 	"github.com/margince/margince/backend/internal/modules/introductions"
 	"github.com/margince/margince/backend/internal/modules/notices"
@@ -30,6 +31,7 @@ type contactMergeDoor[T any] interface {
 	WithProviderRunReader(read contacts.ProviderRunReader) T
 	WithMergeSignalReader(read contacts.MergeSignalReader) T
 	WithSignalCarrier(carry contacts.SignalCarrier) T
+	WithInitiativeCarrier(carry contacts.InitiativeCarrier) T
 	WithMergeCommitmentReader(read contacts.MergeCommitmentReader) T
 	WithMergeNoticeReader(read contacts.MergeNoticeReader) T
 	WithMergeContentReader(read contacts.MergeContentReader) T
@@ -53,6 +55,7 @@ func withContactMergeCarriers[T contactMergeDoor[T]](db *database.DB, door T) T 
 		WithProviderRunReader(integrations.ReadRunForContactTx).
 		WithMergeSignalReader(signals.PreviewSignalCarry(signalSummaryWords)).
 		WithSignalCarrier(signals.CarryResolutionsTx).
+		WithInitiativeCarrier(initiatives.CarryLeadMergeTx).
 		WithMergeCommitmentReader(WeeklyPlanStore(pool).PreviewCommitmentCarryTx).
 		WithMergeNoticeReader(notices.PreviewNoticeCarryTx).
 		WithMergeContentReader(activities.NewStore(db)).

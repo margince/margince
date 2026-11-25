@@ -52,9 +52,14 @@ var mergedRecords = []struct {
 }
 
 // carriedOutOfSight names, for each column a merge moves in a statement this
-// scan cannot read, the contacts function holding that statement. The
-// function must be one the merge reaches and must name the table.
+// scan cannot read, the function holding that statement. A contacts function
+// must be one the merge reaches and must name the table. A "pkg:Func" entry is
+// another package's function: a function the merge reaches names it, and its
+// statements write the table.
 var carriedOutOfSight = map[string]string{
+	// Only the provenance of the fields the survivor took from the retired
+	// record moves. The rest describes a value the merge did not keep.
+	"field_provenance.object_id":                storekitOwned + ":MoveFieldProvenance",
 	"activity_link.contact_id":                  "relinkLinkRows",
 	"consent_event.contact_id":                  "carryConsent",
 	"consent_event.lead_id":                     "carryConsent",
@@ -95,13 +100,10 @@ var stayOnTheRetiredRecord = gatekit.Waive(map[string]string{
 	"chat_post_item.event_id":                  "names a posted event, not a record. The kind column holds event types, and no CHECK lists them, so the census asks",
 	"communication_decision.subject_id":        "what the send engine decided for the retired record at the time: " + mergeHistory,
 	"embedding.entity_id":                      "the search index's vector of the retired record's text. The indexer embeds the survivor from its own text, and a moved row would index the retired record's text under the survivor",
-	"field_provenance.object_id":               "where each of the retired record's own field values came from. Open question for the maintainers: whether the provenance of a value the survivorship fill copies should follow it",
 	"list_live_member.entity_id":               "the cached result of a live list's filter. collections evaluates the list again from the records as they now are, so the survivor is a member when it matches",
 	"list_member_event.entity_id":              "the log of the retired record's list membership changes: " + mergeHistory + ". The membership itself moves (list_member)",
 	"report_edition_contribution.source_id":    "what a report edition was built from: " + mergeHistory,
 	"report_edition_question_source.source_id": "what a report edition's questions were built from: " + mergeHistory,
-	"sales_initiative_enrolment.record_id":     "Open question for the maintainers: whether a merged-away lead's enrolment in a sales initiative should follow it to the survivor, which may hold its own. The initiatives module owns the table and has no merge carry",
-	"sales_initiative_member.record_id":        "Open question for the maintainers: whether a merged-away lead's place in a sales initiative should follow it to the survivor, which may hold its own. The initiatives module owns the table and has no merge carry",
 	"webhook_delivery.entity_id":               "the log of webhook deliveries already sent about the retired record: " + mergeHistory,
 	"webhook_delivery.event_id":                "names a delivered event, not a record. The kind column holds event types, and no CHECK lists them, so the census asks",
 })
@@ -138,7 +140,7 @@ func TestEveryReferenceToAMergedRecordFollowsTheMerge(t *testing.T) {
 			}
 			if by, ok := carriedOutOfSight[column]; ok {
 				outOfSight[column] = true
-				if err := movesOutOfSight(contacts, reached, by, column); err != nil {
+				if err := movesOutOfSight(t, contacts, reached, by, column); err != nil {
 					t.Errorf("carriedOutOfSight[%q]: %v", column, err)
 				}
 				continue
@@ -174,17 +176,25 @@ func obligationsOf(references []string, mirrors map[string]string) []string {
 
 // movesOutOfSight checks a carriedOutOfSight entry: the merge reaches the
 // function, and one of its statements writes the table.
-func movesOutOfSight(contacts map[string]*graphFunc, reached map[string]bool, by, column string) error {
-	if !reached[by] {
+func movesOutOfSight(t *testing.T, contacts map[string]*graphFunc, reached map[string]bool, by, column string) error {
+	table, _, _ := strings.Cut(column, ".")
+	var statements []string
+	if pkg, fn, elsewhere := strings.Cut(by, ":"); elsewhere {
+		if !slices.ContainsFunc(slices.Collect(maps.Keys(reached)), func(name string) bool { return contacts[name].reads[fn] }) {
+			return fmt.Errorf("no function the merge reaches names %s", fn)
+		}
+		statements = reachedStatements(t, pkg, fn)
+	} else if reached[by] {
+		statements = contacts[by].statements
+	} else {
 		return fmt.Errorf("the merge never reaches contacts.%s", by)
 	}
-	table, _, _ := strings.Cut(column, ".")
-	for _, statement := range contacts[by].statements {
+	for _, statement := range statements {
 		if slices.Contains(sqlWriteTargets(statement), table) {
 			return nil
 		}
 	}
-	return fmt.Errorf("contacts.%s writes no %s statement", by, table)
+	return fmt.Errorf("%s writes no %s statement", by, table)
 }
 
 // headCatalogLines reads the head catalog with each multi-line definition

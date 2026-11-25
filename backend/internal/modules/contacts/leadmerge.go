@@ -110,6 +110,9 @@ func (s *Store) mergeLeadTx(ctx context.Context, tx pgx.Tx, sourceID, targetID i
 			return crmcontracts.Lead{}, fmt.Errorf("apply lead survivorship fill: %w", err)
 		}
 	}
+	if err := carryKeptProvenance(ctx, tx, entityLead, sourceID.UUID, targetID.UUID, p.After()); err != nil {
+		return crmcontracts.Lead{}, err
+	}
 	auditID, err := storekit.Audit(ctx, tx, "merge", entityLead, sourceID.UUID,
 		map[string]any{auditKeyMergedInto: nil},
 		map[string]any{auditKeyMergedInto: targetID, auditKeyFilled: filledColumns(p.After())})
@@ -163,6 +166,9 @@ func (s *Store) carryLeadToLeadTx(ctx context.Context, tx pgx.Tx, sourceID, targ
 	}
 	if err := carryLeadWorkToLead(ctx, tx, sourceID, targetID); err != nil {
 		return err
+	}
+	if err := s.carryInitiativePlacesTx(ctx, tx, sourceID, targetID); err != nil {
+		return fmt.Errorf("carry the merged-away lead's initiative places: %w", err)
 	}
 	if err := s.carryGrantsTx(ctx, tx, entityLead, sourceID.UUID, targetID.UUID); err != nil {
 		return fmt.Errorf("carry the merged-away lead's grants: %w", err)

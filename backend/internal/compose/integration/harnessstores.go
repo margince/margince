@@ -18,6 +18,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/modules/identity"
+	"github.com/margince/margince/backend/internal/modules/initiatives"
 	"github.com/margince/margince/backend/internal/modules/integrations"
 	"github.com/margince/margince/backend/internal/modules/notices"
 	"github.com/margince/margince/backend/internal/modules/signals"
@@ -37,6 +38,7 @@ func (e *Env) bindStores(db *database.DB) {
 		WithProviderRunReader(integrations.ReadRunForContactTx).
 		WithMergeSignalReader(signals.PreviewSignalCarry(nil)).
 		WithSignalCarrier(signals.CarryResolutionsTx).
+		WithInitiativeCarrier(initiatives.CarryLeadMergeTx).
 		WithMergeCommitmentReader(weeklyplan.NewStore(db, nil, identityTeammates{svc: identity.NewServiceFor(db)}).PreviewCommitmentCarryTx).
 		WithMergeNoticeReader(notices.PreviewNoticeCarryTx).
 		WithMergeContentReader(e.Activities).
