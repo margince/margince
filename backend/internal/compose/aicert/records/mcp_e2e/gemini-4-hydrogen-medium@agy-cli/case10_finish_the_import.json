@@ -13,21 +13,25 @@
   "search": "semantic",
   "self_judged": false,
   "stamp": {
-    "scenario": "a07831aa1b353c64",
-    "tools": "bb43c0cbad588045",
-    "instructions": "c5c644eee9719be0",
+    "scenario": "ec71bd9972b5a8d6",
+    "tools": "9d4410975f078007",
+    "instructions": "4eab26d5fff0793f",
     "judge": "",
-    "harness": "024566e70b0c3db3",
-    "commit": "1d06e4e790e4733576f87296a1fcadc09dafe0ae",
-    "ran_at": "2026-11-22T05:03:05Z",
-    "graded_commit": "43efe5d1f04ce6aea932838d625278cfa438cc2f",
-    "graded_at": "2026-11-22T15:29:43Z"
+    "harness": "ae24b6799c8461d2",
+    "parsers": {
+      "gemini:cli": "fa1db64bc14e971b",
+      "gpt:cli": "d48ca27c983f8b3f"
+    },
+    "commit": "6d3a5be8c69b862c6c7db3c3534ac5fd705dd41e",
+    "ran_at": "2026-11-25T07:40:06Z",
+    "graded_commit": "6d3a5be8c69b862c6c7db3c3534ac5fd705dd41e",
+    "graded_at": "2026-11-25T07:40:06Z"
   },
   "usage": {
-    "input_tokens": 76444,
-    "output_tokens": 12053,
+    "input_tokens": 77909,
+    "output_tokens": 11912,
     "cache_creation_input_tokens": 0,
-    "cache_read_input_tokens": 244370,
+    "cache_read_input_tokens": 253264,
     "runs_measured": 2,
     "runs_costed": 0,
     "cost_usd": null
@@ -54,20 +58,21 @@
         "list_records",
         "preview_import",
         "read_import",
-        "read_import_report"
+        "read_import_report",
+        "whoami"
       ]
     }
   ],
   "efficiency": {
     "runs": 2,
     "calls": {
-      "median": 6,
+      "median": 6.5,
       "min": 6,
-      "max": 6
+      "max": 7
     },
     "turns": {
-      "median": 10.5,
-      "min": 10,
+      "median": 11,
+      "min": 11,
       "max": 11
     },
     "refused": {
@@ -76,14 +81,14 @@
       "max": 0
     },
     "prompt_tokens": {
-      "median": 160407,
-      "min": 154245,
-      "max": 166569
+      "median": 165586.5,
+      "min": 163617,
+      "max": 167556
     },
     "output_tokens": {
-      "median": 6026.5,
-      "min": 5942,
-      "max": 6111
+      "median": 5956,
+      "min": 5861,
+      "max": 6051
     }
   }
 }

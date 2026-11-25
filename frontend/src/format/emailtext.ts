@@ -139,7 +139,7 @@ function isSignOff(line: string): boolean {
   return SIGN_OFF_PREFIXES.some((prefix) => normalized.startsWith(prefix));
 }
 
-function isQuoteStart(lines: readonly string[], index: number): boolean {
+function startsQuote(lines: readonly string[], index: number): boolean {
   const line = lines[index] ?? "";
   if (line.startsWith(">")) {
     return true;
@@ -157,13 +157,77 @@ function isQuoteStart(lines: readonly string[], index: number): boolean {
   return false;
 }
 
+const isBlank = (line: string | undefined): boolean => !line?.trim();
+
+// The index after the ">" lines a quote at `index` opens, or -1 when the quote
+// carries no ">" lines.
+function markedRunEnd(lines: readonly string[], index: number): number {
+  let first = index;
+  if (!lines[first]?.startsWith(">")) {
+    first += 1;
+    while (first < lines.length && isBlank(lines[first])) {
+      first += 1;
+    }
+    if (!lines[first]?.startsWith(">")) {
+      return -1;
+    }
+  }
+  let after = first;
+  while (
+    after < lines.length &&
+    (lines[after]?.startsWith(">") || isBlank(lines[after]))
+  ) {
+    after += 1;
+  }
+  return after;
+}
+
+function isBlankFrom(lines: readonly string[], from: number): boolean {
+  for (let i = from; i < lines.length; i += 1) {
+    if (!isBlank(lines[i])) {
+      return false;
+    }
+  }
+  return true;
+}
+
+// The attribution line directly above a quoted block introduces it, so it
+// travels with the quote rather than trailing the message.
+function attributedStart(lines: readonly string[], index: number): number {
+  const above = lines[index - 1]?.trim() ?? "";
+  const marked = lines[index]?.startsWith(">") ?? false;
+  return marked && index > 0 && above.endsWith(":") ? index - 1 : index;
+}
+
+/**
+ * ownTextEnd is the index of the first line of quoted or forwarded mail, or
+ * `lines.length` when the sender wrote every line.
+ *
+ * A line a mail program writes above quoted mail ends the text. A quote marked
+ * with ">" ends it only when nothing follows, so an inline reply stays whole.
+ * The server stores the same boundary for search.
+ */
+function ownTextEnd(lines: readonly string[]): number {
+  for (let i = 0; i < lines.length; i += 1) {
+    if (!startsQuote(lines, i)) {
+      continue;
+    }
+    const after = markedRunEnd(lines, i);
+    if (after < 0) {
+      return i;
+    }
+    if (isBlankFrom(lines, after)) {
+      return attributedStart(lines, i);
+    }
+    i = after - 1;
+  }
+  return lines.length;
+}
+
 /**
  * boundaryIndex is the first line that belongs to the tail rather than the
- * message, and WHICH KIND of tail it opens.
- *
- * The kind is not decoration. A sign-off and a quoted reply are both trimmed,
- * and a caller that folds them behind one control saying "show quoted history"
- * hides a sender's own name under a promise of history that is not there.
+ * message, and which kind of tail it opens. A sign-off counts only above the
+ * quoted earlier mail.
  *
  * `at` is -1 when the whole body is the message.
  */
@@ -171,26 +235,18 @@ function boundaryIndex(lines: readonly string[]): {
   at: number;
   kind: "signature" | "quote";
 } {
+  const quote = ownTextEnd(lines);
   const signOffFloor = Math.max(0, lines.length - TRAILING_SCAN_LINES);
-  for (let i = 0; i < lines.length; i += 1) {
+  for (let i = 0; i < quote; i += 1) {
     const line = lines[i] ?? "";
-    if (SIGNATURE_DELIMITER.test(line)) {
-      return { at: i, kind: "signature" };
-    }
-    if (isQuoteStart(lines, i)) {
-      // The attribution line directly above a quoted block introduces it, so it
-      // travels with the quote rather than trailing the message.
-      const above = lines[i - 1]?.trim() ?? "";
-      if (line.startsWith(">") && i > 0 && above.endsWith(":")) {
-        return { at: i - 1, kind: "quote" };
-      }
-      return { at: i, kind: "quote" };
-    }
-    if (i >= signOffFloor && isSignOff(line)) {
+    if (
+      SIGNATURE_DELIMITER.test(line) ||
+      (i >= signOffFloor && isSignOff(line))
+    ) {
       return { at: i, kind: "signature" };
     }
   }
-  return { at: -1, kind: "quote" };
+  return { at: quote < lines.length ? quote : -1, kind: "quote" };
 }
 
 /**

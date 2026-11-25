@@ -145,6 +145,7 @@ func base(
 		DueAt:       item.DueAt,
 		DueHasTime:  item.DueHasTime,
 		DueIntent:   item.DueIntent,
+		TaskType:    item.TaskType,
 		Overdue:     item.Overdue,
 		// Carried rather than recomputed, for the reason the deadline itself
 		// is: the group was resolved against the assembly's own boundary and

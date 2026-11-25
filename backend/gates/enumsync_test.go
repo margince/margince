@@ -238,6 +238,7 @@ var enumBindings = map[string]struct{ pkgDir, typeName string }{
 	"offer.source":                                 {"internal/shared/kernel/provenance", "RecordSource"},
 	"partner.source":                               {"internal/shared/kernel/provenance", "RecordSource"},
 	"project.source":                               {"internal/shared/kernel/provenance", "RecordSource"},
+	"signal.source":                                {"internal/shared/kernel/provenance", "RecordSource"},
 	"contact.quarantine_reason":                    {"internal/contracts", "ContactImpersonationWarningReason"},
 	"contact.visibility":                           {"internal/contracts", "RecordAccessVisibility"},
 	"contact_confirm_submission.resolution":        {"internal/contracts", "ConfirmSubmissionResolution"},

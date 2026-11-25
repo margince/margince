@@ -14,20 +14,24 @@
   "self_judged": false,
   "stamp": {
     "scenario": "e64b1e840f9a659d",
-    "tools": "3e7244bead932e3a",
-    "instructions": "c5c644eee9719be0",
+    "tools": "9e784fcb85bfc56c",
+    "instructions": "4eab26d5fff0793f",
     "judge": "",
-    "harness": "024566e70b0c3db3",
-    "commit": "1d06e4e790e4733576f87296a1fcadc09dafe0ae",
-    "ran_at": "2026-11-22T05:05:30Z",
-    "graded_commit": "c7d8c959b7e859b9765ae0637afffe55d0de36a2",
-    "graded_at": "2026-11-22T14:05:05Z"
+    "harness": "ae24b6799c8461d2",
+    "parsers": {
+      "gemini:cli": "fa1db64bc14e971b",
+      "gpt:cli": "d48ca27c983f8b3f"
+    },
+    "commit": "6d3a5be8c69b862c6c7db3c3534ac5fd705dd41e",
+    "ran_at": "2026-11-25T08:01:37Z",
+    "graded_commit": "6d3a5be8c69b862c6c7db3c3534ac5fd705dd41e",
+    "graded_at": "2026-11-25T08:01:37Z"
   },
   "usage": {
-    "input_tokens": 65360,
-    "output_tokens": 23594,
+    "input_tokens": 93353,
+    "output_tokens": 26841,
     "cache_creation_input_tokens": 0,
-    "cache_read_input_tokens": 268742,
+    "cache_read_input_tokens": 451281,
     "runs_measured": 2,
     "runs_costed": 0,
     "cost_usd": null
@@ -44,7 +48,6 @@
         "describe_router_actions",
         "forecast_readings",
         "list_pipelines",
-        "list_report_runs",
         "read_analytics",
         "read_forecast",
         "read_reporting",
@@ -57,46 +60,50 @@
     {
       "passed": true,
       "tools": [
+        "change_reports",
         "compose_analytics_report",
+        "create_reporting_report",
         "describe_analytics_vocabulary",
         "describe_report_blocks",
+        "describe_router_actions",
         "forecast_readings",
+        "get_analytics_schema",
+        "list_pipelines",
         "read_analytics",
         "read_forecast",
         "read_reporting",
         "read_reports",
         "read_workspace",
-        "run_analytics_query",
-        "whoami"
+        "run_analytics_query"
       ]
     }
   ],
   "efficiency": {
     "runs": 2,
     "calls": {
-      "median": 13,
-      "min": 11,
-      "max": 15
+      "median": 18,
+      "min": 18,
+      "max": 18
     },
     "turns": {
-      "median": 8.5,
-      "min": 7,
+      "median": 10,
+      "min": 10,
       "max": 10
     },
     "refused": {
       "median": 2.5,
-      "min": 2,
-      "max": 3
+      "min": 1,
+      "max": 4
     },
     "prompt_tokens": {
-      "median": 167051,
-      "min": 120320,
-      "max": 213782
+      "median": 272317,
+      "min": 240254,
+      "max": 304380
     },
     "output_tokens": {
-      "median": 11797,
-      "min": 11470,
-      "max": 12124
+      "median": 13420.5,
+      "min": 13215,
+      "max": 13626
     }
   }
 }

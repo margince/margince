@@ -4,7 +4,7 @@
     1
   ],
   "passed": 2,
-  "runs": 3,
+  "runs": 2,
   "pass_at": 2,
   "driver": "gemini:cli",
   "effort": "reasoning medium",
@@ -13,35 +13,43 @@
   "self_judged": false,
   "stamp": {
     "scenario": "92d778d1da3a10e0",
-    "tools": "90c67b7411dbee7c",
-    "instructions": "c5c644eee9719be0",
+    "tools": "096dd9c5377757f7",
+    "instructions": "4eab26d5fff0793f",
     "judge": "",
-    "harness": "024566e70b0c3db3",
-    "commit": "7298bf32321832a612835d4cf164580ffabfeb92",
-    "ran_at": "2026-11-22T09:44:11Z",
-    "graded_commit": "a5805302daaf514720917d1768dd8ecc376bee69",
-    "graded_at": "2026-11-22T09:55:20Z"
+    "harness": "ae24b6799c8461d2",
+    "parsers": {
+      "gemini:cli": "fa1db64bc14e971b",
+      "gpt:cli": "d48ca27c983f8b3f"
+    },
+    "commit": "5dfb7ceebe8ce1b1607ab3992fb9d36b3ac8208f",
+    "ran_at": "2026-11-25T07:03:30Z",
+    "graded_commit": "8d1a2e3f3d0e19ca67b1a23f47f3c2d8686628c3",
+    "graded_at": "2026-11-25T10:49:09Z"
   },
   "usage": {
-    "input_tokens": 164995,
-    "output_tokens": 28983,
+    "input_tokens": 115971,
+    "output_tokens": 22728,
     "cache_creation_input_tokens": 0,
-    "cache_read_input_tokens": 495268,
-    "runs_measured": 3,
+    "cache_read_input_tokens": 549345,
+    "runs_measured": 2,
     "runs_costed": 0,
     "cost_usd": null
   },
   "tools_by_run": [
     {
-      "passed": false,
+      "passed": true,
       "tools": [
         "catch_me_up_on",
         "describe_router_actions",
         "find_records",
+        "get_contact_case_settings",
+        "get_contact_consent",
         "get_contact_consent_guard",
         "get_controller_particulars",
+        "get_legal_review_settings",
         "get_notice_case_review",
         "get_notice_source_evidence",
+        "list_import_runs",
         "list_notice_case_reviews",
         "list_notice_cases",
         "preview_notice_source",
@@ -60,11 +68,17 @@
         "catch_me_up_on",
         "describe_router_actions",
         "find_records",
+        "get_contact_case_settings",
         "get_contact_consent",
         "get_contact_consent_guard",
         "get_controller_particulars",
         "get_notice_case_review",
         "get_notice_source_evidence",
+        "list_contact_stops",
+        "list_data_subject_requests",
+        "list_import_runs",
+        "list_legal_entities",
+        "list_legal_holds",
         "list_notice_case_reviews",
         "list_notice_cases",
         "preview_notice_source",
@@ -72,29 +86,7 @@
         "read_details",
         "read_installation_jurisdiction",
         "read_record",
-        "read_workspace",
-        "search_records",
-        "whoami"
-      ]
-    },
-    {
-      "passed": true,
-      "tools": [
-        "catch_me_up_on",
-        "describe_router_actions",
-        "find_records",
-        "get_contact_consent",
-        "get_contact_consent_guard",
-        "get_controller_particulars",
-        "get_notice_case_review",
-        "get_notice_source_evidence",
-        "list_notice_case_reviews",
-        "list_notice_cases",
-        "preview_notice_source",
-        "read_context",
-        "read_details",
-        "read_installation_jurisdiction",
-        "read_record",
+        "read_retention_settings",
         "read_workspace",
         "search_records",
         "whoami"
@@ -102,31 +94,31 @@
     }
   ],
   "efficiency": {
-    "runs": 3,
+    "runs": 2,
     "calls": {
-      "median": 21,
-      "min": 20,
-      "max": 22
+      "median": 28.5,
+      "min": 27,
+      "max": 30
     },
     "turns": {
-      "median": 9,
-      "min": 8,
-      "max": 9
+      "median": 10,
+      "min": 9,
+      "max": 11
     },
     "refused": {
-      "median": 6,
-      "min": 1,
-      "max": 7
+      "median": 3.5,
+      "min": 3,
+      "max": 4
     },
     "prompt_tokens": {
-      "median": 229212,
-      "min": 194326,
-      "max": 236725
+      "median": 332658,
+      "min": 290570,
+      "max": 374746
     },
     "output_tokens": {
-      "median": 9664,
-      "min": 8457,
-      "max": 10862
+      "median": 11364,
+      "min": 11349,
+      "max": 11379
     }
   }
 }

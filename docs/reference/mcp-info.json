@@ -10,16 +10,16 @@
   "totals": {
     "tools": 48,
     "resources": 14,
-    "tool_catalog_bytes": 249249,
+    "tool_catalog_bytes": 249836,
     "resource_catalog_bytes": 5622,
-    "approx_wire_tokens_total": 63717,
-    "largest_tool_bytes": 16204,
+    "approx_wire_tokens_total": 63864,
+    "largest_tool_bytes": 16173,
     "largest_tool": "read_details",
     "tool_catalog_composition": {
-      "description_bytes": 52248,
-      "input_schema_bytes": 150682,
+      "description_bytes": 52275,
+      "input_schema_bytes": 151242,
       "output_schema_bytes": 34465,
-      "description_plus_input_schema_bytes": 202930
+      "description_plus_input_schema_bytes": 203517
     }
   },
   "tools": {
@@ -467,6 +467,11 @@
               "format": "uuid",
               "type": "string"
             },
+            "assignee_id": {
+              "description": "task only: Defaults to the human you act for.",
+              "format": "uuid",
+              "type": "string"
+            },
             "attendee_user_ids": {
               "description": "log only: Meeting or call only: the workspace members who attended besides you, ids from the colleague roster. An id that is not an active member is refused.",
               "items": {
@@ -514,6 +519,10 @@
               "description": "log, task only: RFC 3339 WITH Z or the user's offset (…T14:35:00Z); never invent an hour or offset.",
               "format": "date-time",
               "type": "string"
+            },
+            "due_has_time": {
+              "description": "task only: True when due_at is an agreed time of day, such as a callback hour; the reminder is then set to it. Leave out for a day.",
+              "type": "boolean"
             },
             "entity_id": {
               "description": "attach, relink, relink_many only",
@@ -676,6 +685,18 @@
             },
             "subject": {
               "description": "log, task only: Prose a colleague reads. Write it in whoami's prose_language, whatever language this conversation is in; do not translate names or quoted text.",
+              "type": "string"
+            },
+            "task_type": {
+              "description": "task only: The work it asks for; it decides the one button the task shows. reply answers a message the way it came in, reach_out contacts someone by email or phone, do is work outside Margince.",
+              "enum": [
+                "reply",
+                "reach_out",
+                "meet",
+                "review",
+                "decide",
+                "do"
+              ],
               "type": "string"
             }
           },
@@ -6527,6 +6548,11 @@
               },
               "type": "array"
             },
+            "contact_id": {
+              "description": "meeting_proposals only",
+              "format": "uuid",
+              "type": "string"
+            },
             "create_company": {
               "description": "lead_promotion_preview only",
               "type": "boolean"
@@ -6591,11 +6617,6 @@
             "request_body": {
               "description": "ai_budget_preview, ai_routing_preview, ai_task_overrides_preview, automation_preview, backfill_preview, filter_preview, mail_deal_repair_preview, notice_source_preview, voice_source_preview, website_inquiry_preview only: The chosen action's request body; read_workspace topic actions lists its shape",
               "type": "object"
-            },
-            "since": {
-              "description": "magic, magic_line_records, team_margince_changes only",
-              "format": "date-time",
-              "type": "string"
             },
             "stage_history_id": {
               "description": "deal_margince_changes only",
@@ -8653,7 +8674,7 @@
           "readOnlyHint": true,
           "title": "Read how this workspace is set up"
         },
-        "description": "Read how this workspace is set up. colleagues: the seats that can receive work, not the contacts stored as records; q narrows by name. pipelines: every pipeline with its stages, each open, won or lost. channel_providers: the messaging transports. The other topics name what a tool accepts: query (find_records engine query), analytics (read_analytics), record_fields (create_record and update_record), list_filters (find_records engine list), report_vocabulary (read_reports kind run), report_blocks (read_analytics step compose). data_subject_requests, notice_cases, audit_log, legal_holds, restricted_records and record_history are the privacy queues and trail; a project's phase moves and their reasons are in read_project overview. capture_senders, held_threads, counterparty_holds, owner_identities and contacts_awaiting_decision are the user's own mail decisions. my_working_hours and my_brief_delivery are the user's own settings. system_health, job_health, capture_health, recovery_health, automatic_work_health and data_tasks are health and operations pages, each under its own grant. ai_routing, ai_calls, retention_settings, tax_rates, fx_rates and ai_model_rates are separate settings, traces and rates; ask first before ai_calls and ai_call. member_retirement previews a member removal, or a merge when mode is merge and to_user_id names the survivor. A q matching nobody answers with every colleague and a warning. A stage's semantic, not its name, says whether it closes a deal, and only a user changes it, in the app. None of the name topics is a prerequisite: each tool refuses an unknown name with the accepted list. Use find_records to find a customer contact; colleagues are seats here. Use read_forecast with view=input_sources to learn whether a number can be trusted: how complete and current the data is. user_id is what assignee_id and owner_id take; never assign to an is_agent seat. Keep pipeline_id and stage_id for a deal. Take every name verbatim; a custom field is spelled cf_\u003cslug\u003e. (Ask the user first for the actions ai_call, ai_calls, member_retirement.)",
+        "description": "Read how this workspace is set up. colleagues: the seats that can receive work, not the contacts stored as records; q narrows by name. pipelines: every pipeline with its stages, each open, won or lost. channel_providers: the messaging transports. The other topics name what a tool accepts: query (find_records engine query), analytics (read_analytics), record_fields (create_record and update_record), list_filters (find_records engine list), report_vocabulary (read_reports kind run), report_blocks (read_analytics step compose). data_subject_requests, notice_cases, audit_log, legal_holds, restricted_records and record_history are the privacy queues and trail; a project's phase moves and their reasons are in read_project overview. capture_senders, held_threads, counterparty_holds, owner_identities and contacts_awaiting_decision are the user's own mail decisions. my_working_hours and my_brief_delivery are the user's own settings. system_health, job_health, capture_health, recovery_health, automatic_work_health and data_tasks are health and operations pages, each under its own grant. ai_routing, ai_calls, retention_settings, tax_rates, fx_rates and ai_model_rates are separate settings, traces and rates; ask first before ai_calls and ai_call. member_retirement previews a member removal, or a merge when mode is merge and to_user_id names the survivor. A q matching nobody answers with every colleague and a warning. A stage's semantic, not its name, says whether it closes a deal, and only a user changes it, in the app. None of the name topics is a prerequisite: each tool refuses an unknown name with the accepted list. Use find_records to find a customer contact; colleagues are seats here. Use read_forecast with view=input_sources to learn whether a number can be trusted: how complete and current the data is. user_id is what assignee_id and owner_id take; never assign to an is_agent seat. Keep pipeline_id and stage_id for a deal. Take every name verbatim; a custom field is spelled cf_\u003cslug\u003e. (Ask the user first for the actions ai_call, ai_calls.)",
         "inputSchema": {
           "properties": {
             "action": {
@@ -9303,7 +9324,7 @@
           "readOnlyHint": false,
           "title": "Invite to a meeting"
         },
-        "description": "Put a meeting on the host's calendar. invite creates the calendar event and the provider sends the invitation to every attendee: the contact, and any further addresses. invite reaches attendees outside the workspace. The call queues it and returns it pending, so name them and the time and get the user's yes first. Read check_availability before choosing a time. A start_intent (the user's local time) replaces start, and end moves with it so the meeting keeps its length. Use change_activities with log to record a meeting without inviting anyone, or one that already happened. Keep the invitation id and inspect its status before claiming it was delivered. A refused or failed invite invited nobody. (Governance: a human approves every call before it runs; requires passport scope \"send\".)",
+        "description": "Put a meeting on the host's calendar. invite creates the calendar event and the provider sends the invitation to every attendee: the contact, and any further addresses. invite reaches attendees outside the workspace. The call queues it and returns it pending, so name them and the time and get the user's yes first, unless they asked for this invite themselves. Read check_availability before choosing a time. A start_intent (the user's local time) replaces start, and end moves with it so the meeting keeps its length. Use change_activities with log to record a meeting without inviting anyone, or one that already happened. Keep the invitation id and inspect its status before claiming it was delivered. A refused or failed invite invited nobody. (Governance: a human approves every call before it runs; requires passport scope \"send\".)",
         "inputSchema": {
           "properties": {
             "action": {
@@ -12722,6 +12743,15 @@
                 "type": "string"
               },
               "source": {
+                "description": "The channel this signal arrived by. A client that files it for a member sends `manual`; an integration sends `api`. Any other value is 422 `invalid_source`.",
+                "enum": [
+                  "api",
+                  "automation",
+                  "capture",
+                  "import",
+                  "manual",
+                  "webform"
+                ],
                 "type": "string"
               },
               "source_channel": {
@@ -17217,7 +17247,7 @@
                       "type": "string",
                       "x-extensible-enum": true
                     },
-                    "maxItems": 8,
+                    "maxItems": 12,
                     "minItems": 1,
                     "type": "array"
                   },
@@ -18630,7 +18660,7 @@
                       "type": "string",
                       "x-extensible-enum": true
                     },
-                    "maxItems": 8,
+                    "maxItems": 12,
                     "minItems": 1,
                     "type": "array"
                   },
@@ -19467,6 +19497,7 @@
                 "type": "string"
               },
               "label": {
+                "maxLength": 120,
                 "type": "string"
               },
               "object": {
@@ -19526,6 +19557,7 @@
           "body": {
             "properties": {
               "label": {
+                "maxLength": 120,
                 "minLength": 1,
                 "type": "string"
               },
@@ -19610,6 +19642,7 @@
                 "type": "string"
               },
               "label": {
+                "maxLength": 120,
                 "minLength": 1,
                 "type": "string",
                 "x-single-line": true
@@ -19822,6 +19855,7 @@
                 "type": "string"
               },
               "label": {
+                "maxLength": 120,
                 "minLength": 1,
                 "type": "string"
               },
@@ -19860,6 +19894,7 @@
                 "type": "boolean"
               },
               "name": {
+                "maxLength": 120,
                 "type": "string"
               },
               "position": {
@@ -19871,6 +19906,7 @@
                 "items": {
                   "properties": {
                     "name": {
+                      "maxLength": 120,
                       "type": "string"
                     },
                     "pipeline_id": {
@@ -20036,6 +20072,7 @@
           "body": {
             "properties": {
               "name": {
+                "maxLength": 120,
                 "type": "string"
               },
               "name_translations": {
@@ -20445,6 +20482,7 @@
                 "type": "array"
               },
               "label": {
+                "maxLength": 120,
                 "type": "string"
               },
               "label_translations": {
@@ -21097,6 +21135,7 @@
                 "type": "boolean"
               },
               "label": {
+                "maxLength": 120,
                 "minLength": 1,
                 "type": "string"
               },
@@ -21311,6 +21350,7 @@
                 "x-extensible-enum": true
               },
               "label": {
+                "maxLength": 120,
                 "minLength": 1,
                 "type": "string",
                 "x-single-line": true
@@ -21606,6 +21646,7 @@
                 "type": "boolean"
               },
               "label": {
+                "maxLength": 120,
                 "minLength": 1,
                 "type": "string"
               },
@@ -21642,6 +21683,7 @@
                 "type": "boolean"
               },
               "name": {
+                "maxLength": 120,
                 "type": "string"
               },
               "position": {
@@ -21756,6 +21798,7 @@
           "body": {
             "properties": {
               "name": {
+                "maxLength": 120,
                 "type": "string"
               },
               "name_translations": {
@@ -27619,7 +27662,6 @@
         },
         {
           "action": "member_retirement",
-          "ask_user_first": true,
           "body": {
             "additionalProperties": false,
             "properties": {
@@ -28599,7 +28641,7 @@
                       "type": "string",
                       "x-extensible-enum": true
                     },
-                    "maxItems": 8,
+                    "maxItems": 12,
                     "minItems": 1,
                     "type": "array"
                   },

@@ -19,11 +19,9 @@ import (
 	"strings"
 )
 
-// maxTranscriptBytes bounds the raw paste, well under the ~950 KB a body can
-// reach before Postgres's tsvector output (activity.search_tsv is a
-// GENERATED column over subject+body) exceeds its own 1,048,575-byte limit
-// and the write fails with an unmapped 54000 — a bound the request-size
-// chassis cap (1 MiB) does not itself prevent.
+// maxTranscriptBytes bounds the raw paste. A trigger builds activity.search_tsv
+// from the body, and a tsvector holds at most 1,048,575 bytes. A body near 950 KB
+// passes the 1 MiB request cap and fails that write with an unmapped 54000.
 const maxTranscriptBytes = 256 * 1024
 
 // utf8BOM is a leading byte-order mark, stripped rather than treated as

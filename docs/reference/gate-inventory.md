@@ -225,6 +225,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `searchtypeenum_test.go` | H3 | GET /search spells its record types three times, and each must be the search module's branch table. |
 | `seedemploymentpredicate_test.go` | H2 | The dev seeder and the boot proof ask "is this contact currently employed?" the way the product asks it, and they ask it in the same words. |
 | `seedresetparity_test.go` | H3 | "What survives a reset" is one decision, and it is written down twice: the in-product data reset applies it in Go (internal/compose/datasweep.go's preservedResetTables), and the developer's `make seed-reset` applies it in SQL (scripts/seed-reset.sql). |
+| `selectionmetricscap_test.go` | H3 | One reporting selection holds at most reporting.MaxSelectionMetrics metrics. |
 | `sendattachmentcap_test.go` | H3 | The attachment-per-message cap is the same number in the contract, the send's Go bound and each sending connector's carriage. |
 | `serverroutes_test.go` | H2 | The server bundle's front nginx sends every path the api mounts to the api. |
 | `servertrimparity_test.go` | H3 | The browser and the server must agree on which values are empty, or a form refuses what the save would have taken. |
@@ -257,6 +258,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | Gate | Hardness | What it holds |
 |---|---|---|
 | `acquisitiontime_test.go` | H2 | Every contact-creation door decides, out loud, when the acquisition happened. |
+| `activitybodyownend_test.go` | H3 | bodyWriterFloor is the number of body-writing clauses the tree held when this gate was written. |
 | `activitycontentfinisher_test.go` | H2 | Every arm outside privacy that empties an activity's text also destroys the copies derived from it. |
 | `activityidentityspine_test.go` | H2 | Every door that mints an activity asks whether the record already has one. |
 | `activitykindsets_test.go` | H3 | The two activity-kind sets relstrength holds, against the vocabulary the contract actually publishes. |

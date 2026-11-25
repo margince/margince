@@ -6,6 +6,7 @@
 
 import { ArrowRight } from "lucide-react";
 import { useRef } from "react";
+import { TaskMeta } from "../../components/taskmeta";
 import {
   TaskNextStepsPending,
   useTaskNextSteps,
@@ -23,7 +24,7 @@ import { emailNamesRow } from "../../lib/worklistemailrow";
 import type { WorklistItem } from "../worklist/worklist.queries";
 import { OneRowWrite, useRowDone, WorklistRow } from "../worklist/worklist.row";
 import { useListed } from "../worklist/worklist.row.captions";
-import { TaskCard, TaskMeta, TaskTick, taskName } from "./brief.taskcard";
+import { TaskCard, TaskTick, taskName } from "./brief.taskcard";
 
 import "./brief.feed.css";
 import { identity } from "./brief.focuslink";
