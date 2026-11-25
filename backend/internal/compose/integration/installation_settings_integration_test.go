@@ -551,22 +551,62 @@ func TestBaseCurrencyWillNotMoveOutFromUnderAPricedRateSheet(t *testing.T) {
 }
 
 // The refusal's params and the read's base_currency_lock spell one lock, so on
-// the wire they hold the same keys with the same values.
+// the wire they hold the same keys with the same values, for every reason.
 func TestARefusedBaseCurrencyCarriesTheFactsTheReadShows(t *testing.T) {
-	e := apptest.SetupApp(t)
-	e.BootstrapWorkspace(t)
-	base, from, to := baseCurrency(t, e), "USD", "CHF"
-	if base == from {
-		from = "GBP"
-	}
-	if base == to {
-		to = "JPY"
-	}
-	if status := e.Call(t, http.MethodPost, "/v1/fx-rates",
-		map[string]any{"from_currency": from, "rate": "0.92"}, nil, nil); status != http.StatusCreated {
-		t.Fatalf("POST /fx-rates → %d, want 201", status)
-	}
+	for name, tc := range map[string]struct {
+		lock    func(*testing.T, *apptest.AppEnv, string)
+		reason  string
+		named   bool
+		message string
+	}{
+		"a converted deal": {convertADeal, "rates_frozen", false, "1 record(s) (closed deals: 1) have already frozen"},
+		"a priced sheet":   {priceTheSheet, "rate_sheet", true, "clear the rate sheet"},
+	} {
+		t.Run(name, func(t *testing.T) {
+			e := apptest.SetupApp(t)
+			e.BootstrapWorkspace(t)
+			base, to := baseCurrency(t, e), "CHF"
+			if base == to {
+				to = "JPY"
+			}
+			tc.lock(t, e, base)
 
+			lock := wireBaseCurrencyLock(t, e)
+			want := map[string]string{"reason": tc.reason, "count": "1"}
+			if tc.named {
+				want["base_currency"] = base
+			}
+			if !maps.Equal(lock, want) {
+				t.Fatalf("base_currency_lock = %v, want %v", lock, want)
+			}
+
+			var refused struct {
+				Details struct {
+					Errors []httperr.FieldError `json:"errors"`
+				} `json:"details"`
+			}
+			if status := e.Call(t, http.MethodPatch, "/v1/installation/settings",
+				map[string]any{"base_currency": to}, nil, &refused); status != http.StatusUnprocessableEntity {
+				t.Fatalf("PATCH base_currency under a lock → %d, want 422", status)
+			}
+			faults := refused.Details.Errors
+			if len(faults) != 1 || faults[0].Field != "installation.base_currency" || faults[0].Code != "setting_frozen" {
+				t.Fatalf("field errors = %+v, want one setting_frozen on installation.base_currency", faults)
+			}
+			if !strings.Contains(faults[0].Message, tc.message) {
+				t.Errorf("message = %q, want the English reason %q kept beside the facts", faults[0].Message, tc.message)
+			}
+			if !maps.Equal(faults[0].Params, lock) {
+				t.Errorf("params = %v, want the read's base_currency_lock %v", faults[0].Params, lock)
+			}
+		})
+	}
+}
+
+// wireBaseCurrencyLock is the GET's base_currency_lock with every value as the
+// text a refusal's params would carry.
+func wireBaseCurrencyLock(t *testing.T, e *apptest.AppEnv) map[string]string {
+	t.Helper()
 	var read struct {
 		Lock map[string]json.RawMessage `json:"base_currency_lock"`
 	}
@@ -581,28 +621,35 @@ func TestARefusedBaseCurrencyCarriesTheFactsTheReadShows(t *testing.T) {
 		}
 		lock[key] = text
 	}
-	if want := map[string]string{"reason": "rate_sheet", "count": "1", "base_currency": base}; !maps.Equal(lock, want) {
-		t.Fatalf("base_currency_lock = %v, want %v", lock, want)
-	}
+	return lock
+}
 
-	var refused struct {
-		Details struct {
-			Errors []httperr.FieldError `json:"errors"`
-		} `json:"details"`
+func priceTheSheet(t *testing.T, e *apptest.AppEnv, base string) {
+	t.Helper()
+	from := "USD"
+	if base == from {
+		from = "GBP"
 	}
-	if status := e.Call(t, http.MethodPatch, "/v1/installation/settings",
-		map[string]any{"base_currency": to}, nil, &refused); status != http.StatusUnprocessableEntity {
-		t.Fatalf("PATCH base_currency under a priced sheet → %d, want 422", status)
+	if status := e.Call(t, http.MethodPost, "/v1/fx-rates",
+		map[string]any{"from_currency": from, "rate": "0.92"}, nil, nil); status != http.StatusCreated {
+		t.Fatalf("POST /fx-rates → %d, want 201", status)
 	}
-	faults := refused.Details.Errors
-	if len(faults) != 1 || faults[0].Field != "installation.base_currency" || faults[0].Code != "setting_frozen" {
-		t.Fatalf("field errors = %+v, want one setting_frozen on installation.base_currency", faults)
-	}
-	if !strings.Contains(faults[0].Message, "clear the rate sheet") {
-		t.Errorf("message = %q, want the English reason kept beside the facts", faults[0].Message)
-	}
-	if !maps.Equal(faults[0].Params, lock) {
-		t.Errorf("params = %v, want the read's base_currency_lock %v", faults[0].Params, lock)
+}
+
+func convertADeal(t *testing.T, e *apptest.AppEnv, _ string) {
+	t.Helper()
+	tag, err := e.Owner.Exec(context.Background(), `
+		WITH pipeline AS (
+		    INSERT INTO pipeline (id, name, is_default) VALUES ($1, 'Freeze fixture', false) RETURNING id
+		), stage AS (
+		    INSERT INTO stage (id, pipeline_id, name, position, semantic, win_probability)
+		    SELECT $2, id, 'Won', 1, 'won', 100 FROM pipeline RETURNING id, pipeline_id
+		)
+		INSERT INTO deal (id, name, pipeline_id, stage_id, source, captured_by, amount_minor, currency, fx_rate_to_base, status, closed_at)
+		SELECT $3, 'Converted deal', pipeline_id, id, 'manual', 'system:test', 100000, 'EUR', 1.0850000000, 'won', now()
+		FROM stage`, ids.NewV7(), ids.NewV7(), ids.NewV7())
+	if err != nil || tag.RowsAffected() != 1 {
+		t.Fatalf("seeding a converted deal: %d rows, %v", tag.RowsAffected(), err)
 	}
 }
 

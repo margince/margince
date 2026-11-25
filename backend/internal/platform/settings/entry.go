@@ -61,10 +61,8 @@ type Definition interface {
 	// are encoded by Go, stored values come back from Postgres, and jsonb
 	// normalization is its choice of key order and whitespace, not ours.
 	CanonicalJSON(json.RawMessage) (json.RawMessage, error)
-	// Frozen reports whether the setting has stopped being changeable, and
-	// why. The reason is the owning module's own sentence — a refusal that
-	// says "3 deals have already frozen a rate against it" tells the operator
-	// something "immutable" does not.
+	// Frozen reports whether the setting has stopped being changeable, and why:
+	// the owning module's sentence, and any facts a client words the refusal from.
 	Frozen(context.Context, pgx.Tx) (bool, Freeze, error)
 	// HasFreezeProbe reports whether an immutability probe is attached.
 	HasFreezeProbe() bool
