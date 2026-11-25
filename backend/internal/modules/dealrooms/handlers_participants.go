@@ -118,7 +118,8 @@ func credentialFor(r *http.Request, credential string) string {
 }
 
 // recordSendOutcome stamps what the relay did onto the invitation it carried,
-// and logs the relay's refusal, which the row keeps only as `failed_at`. It runs after the issuing transaction committed, so a slow relay never rolls
+// and logs the relay's refusal, which the row keeps only as `failed_at`. It
+// runs after the issuing transaction committed, so a slow relay never rolls
 // back a participant. A failure to record is logged and swallowed: the
 // credential is valid either way, and only the roster chip is lost.
 func (h Handlers) recordSendOutcome(ctx context.Context, issued IssuedInvitation, sendErr error) {
