@@ -40,7 +40,14 @@ export function ForecastShareActions({
   target,
   scope,
   snapshotId,
-}: Readonly<{ target: string; scope: AnalyticsScope; snapshotId?: string }>) {
+  shareRefusal,
+}: Readonly<{
+  target: string;
+  scope: AnalyticsScope;
+  snapshotId?: string;
+  // Why Share view cannot issue a link for what is on screen, shown on it.
+  shareRefusal?: string;
+}>) {
   const canList = useCan("forecast", "create");
   const canIssue = useCanWrite("forecast", "create");
   // Closing a link needs no population; issuing one names it, so a scope the
@@ -56,6 +63,7 @@ export function ForecastShareActions({
           target={target}
           scope={scope}
           snapshotId={snapshotId}
+          refusal={shareRefusal}
         />
       )}
       <SharedLinksButton canClose={canIssue} />
@@ -67,6 +75,7 @@ export function ShareViewButton({
   target,
   scope,
   snapshotId,
+  refusal,
 }: Readonly<{
   target: string;
   // The population the issuer is LOOKING at. A share carrying a different one
@@ -76,12 +85,15 @@ export function ShareViewButton({
   // to freeze yet, and the snapshot choice is unavailable rather than offered
   // and then refused by the server.
   snapshotId?: string;
+  refusal?: string;
 }>) {
   const t = useT();
   const [open, setOpen] = useState(false);
   return (
     <>
-      <Button onClick={() => setOpen(true)}>{t("analytics.share.open")}</Button>
+      <Button reason={refusal} onClick={() => setOpen(true)}>
+        {t("analytics.share.open")}
+      </Button>
       {open && (
         <ShareDialog
           target={target}

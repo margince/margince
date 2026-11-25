@@ -179,9 +179,11 @@ export function ForecastView({
                     <ForecastReview scope={selection.scope} />
                   </CallEditorProvider>
                   <ForecastDeals scope={selection.scope} period={period} />
-                  {period === "quarter" && (
-                    <ReportingForecastGraphs scope={selection.scope} inSheet />
-                  )}
+                  <ReportingForecastGraphs
+                    scope={selection.scope}
+                    period={period}
+                    inSheet
+                  />
                 </AnalyticsSheet>
               }
               rail={
