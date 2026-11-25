@@ -5,11 +5,13 @@ package compose
 
 import (
 	"context"
-	"errors"
+	"fmt"
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/compose/extingress"
 	"github.com/margince/margince/backend/internal/platform/database"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/pkg/extension"
 )
 
@@ -21,10 +23,84 @@ import (
 // A refusal ends the batch where it happened. The results answered so far come
 // back with the error and the position stays where it was.
 func (r *callRuntime) IngestBatch(ctx context.Context, on extension.UserID, system extension.SourceName, recs []extension.Record, position extension.BatchPosition) ([]extension.Result, error) {
+	results, err := r.landBatch(ctx, on, system, recs, position, false)
+	if err != nil {
+		return results, err
+	}
+	return results, r.inPositionTx(ctx, func(ctx context.Context, tx pgx.Tx) error {
+		return extingress.SavePosition(ctx, tx, r.unit, string(system), position)
+	})
+}
+
+func (r *callRuntime) IngestPosition(ctx context.Context, system extension.SourceName) (extension.BatchPosition, error) {
+	if err := r.refusePositionKind(system, false); err != nil {
+		return "", err
+	}
+	var saved extension.MemberPosition
+	err := r.inPositionTx(ctx, func(ctx context.Context, tx pgx.Tx) (err error) {
+		saved, err = extingress.ReadPosition(ctx, tx, r.unit, string(system), extingress.NoMember)
+		return err
+	})
+	return saved.Position, err
+}
+
+func (r *callRuntime) IngestMemberBatch(ctx context.Context, on extension.UserID, system extension.SourceName, recs []extension.Record, position extension.BatchPosition, expected extension.PositionVersion) (extension.MemberBatchResult, error) {
+	member, err := r.consentedMember(ctx, on)
+	if err != nil {
+		return extension.MemberBatchResult{}, err
+	}
+	results, err := r.landBatch(ctx, on, system, recs, position, true)
+	out := extension.MemberBatchResult{Results: results}
+	if err != nil {
+		return out, err
+	}
+	err = r.inPositionTx(ctx, func(ctx context.Context, tx pgx.Tx) (err error) {
+		out.Position, err = extingress.SaveMemberPosition(ctx, tx, r.unit, string(system), member, position, expected)
+		return err
+	})
+	return out, err
+}
+
+func (r *callRuntime) MemberIngestPosition(ctx context.Context, on extension.UserID, system extension.SourceName) (extension.MemberPosition, error) {
+	if err := r.refusePositionKind(system, true); err != nil {
+		return extension.MemberPosition{}, err
+	}
+	if !r.unattended {
+		return extension.MemberPosition{}, extension.ErrAttendedIngest
+	}
+	member, err := r.consentedMember(ctx, on)
+	if err != nil {
+		return extension.MemberPosition{}, err
+	}
+	var saved extension.MemberPosition
+	err = r.inPositionTx(ctx, func(ctx context.Context, tx pgx.Tx) (err error) {
+		saved, err = extingress.ReadPosition(ctx, tx, r.unit, string(system), member)
+		return err
+	})
+	return saved, err
+}
+
+func (r *callRuntime) consentedMember(ctx context.Context, on extension.UserID) (ids.UUID, error) {
+	member := extingress.UserUUID(on)
+	if member == extingress.NoMember {
+		return member, fmt.Errorf("%w: the member id is not a canonical UUID", extension.ErrInvalid)
+	}
+	scoped, err := r.scoped(ctx)
+	if err != nil {
+		return member, err
+	}
+	consented, err := extensionMemberConsented(scoped, r.deps.pool, r.unit, member)
+	if err == nil && !consented {
+		err = fmt.Errorf("%w: that member has deposited no credential with this unit", extension.ErrForbidden)
+	}
+	return member, err
+}
+
+func (r *callRuntime) landBatch(ctx context.Context, on extension.UserID, system extension.SourceName, recs []extension.Record, position extension.BatchPosition, perMember bool) ([]extension.Result, error) {
 	if err := extension.ValidateBatch(system, recs, position); err != nil {
 		return nil, err
 	}
-	if _, err := r.declaredIngress(string(system)); err != nil {
+	if err := r.refusePositionKind(system, perMember); err != nil {
 		return nil, err
 	}
 	if !r.unattended {
@@ -38,44 +114,24 @@ func (r *callRuntime) IngestBatch(ctx context.Context, on extension.UserID, syst
 		}
 		results = append(results, result)
 	}
-	return results, r.savePosition(ctx, system, position)
+	return results, nil
 }
 
-// IngestPosition answers the position the last saved batch for this source
-// ended at, or empty when none was saved.
-func (r *callRuntime) IngestPosition(ctx context.Context, system extension.SourceName) (extension.BatchPosition, error) {
-	if _, err := r.declaredIngress(string(system)); err != nil {
-		return "", err
-	}
-	scoped, err := r.scoped(ctx)
+func (r *callRuntime) refusePositionKind(system extension.SourceName, perMember bool) error {
+	declared, err := r.declaredIngress(string(system))
 	if err != nil {
-		return "", err
-	}
-	var position string
-	err = database.WithWorkspaceTx(scoped, r.deps.pool, func(tx pgx.Tx) error {
-		err := tx.QueryRow(scoped,
-			`SELECT position FROM extension_ingest_position WHERE unit = $1 AND source_system = $2`,
-			r.unit, string(system)).Scan(&position)
-		if errors.Is(err, pgx.ErrNoRows) {
-			return nil
-		}
 		return err
-	})
-	return extension.BatchPosition(position), err
+	}
+	if memberOwned := declared.PinnedPosture != ""; memberOwned != perMember {
+		return fmt.Errorf("%w: source %q keeps a position per member only if it is member-owned, and one for the stream if it is not", extension.ErrInvalid, system)
+	}
+	return nil
 }
 
-func (r *callRuntime) savePosition(ctx context.Context, system extension.SourceName, position extension.BatchPosition) error {
+func (r *callRuntime) inPositionTx(ctx context.Context, fn func(context.Context, pgx.Tx) error) error {
 	scoped, err := r.scoped(ctx)
 	if err != nil {
 		return err
 	}
-	return database.WithWorkspaceTx(scoped, r.deps.pool, func(tx pgx.Tx) error {
-		_, err := tx.Exec(scoped, `
-			INSERT INTO extension_ingest_position (unit, source_system, position)
-			VALUES ($1, $2, $3)
-			ON CONFLICT (unit, source_system) DO UPDATE
-			   SET position = EXCLUDED.position, saved_at = now()`,
-			r.unit, string(system), string(position))
-		return err
-	})
+	return database.WithWorkspaceTx(scoped, r.deps.pool, func(tx pgx.Tx) error { return fn(scoped, tx) })
 }

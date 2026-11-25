@@ -82,9 +82,13 @@ const (
 	// Raised by 6 production lines for the signals and initiatives carriers
 	// every contact merge door is wired with. Raised by 6 test lines for the
 	// seat without an introduction grant that the preview refusal case needs.
-	// Raised by 61 production lines for the history-narrowing fleet worker.
-	composeRootProductionLines = 230_880
-	composeRootTestLines       = 361_033
+	// Raised by 60 production and 65 test lines for the record kind index checks
+	// and the History type check. They extend VerifyRecordKinds and the
+	// unexported History query, and their cases drive the History query plan.
+	// Raised by 61 production and 2 test lines for the history-narrowing fleet
+	// worker.
+	composeRootProductionLines = 230_940
+	composeRootTestLines       = 361_100
 )
 
 // A read under these floors stopped early or read the wrong place, and would
