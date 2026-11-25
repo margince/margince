@@ -234,7 +234,7 @@ A case that writes can name the state it must leave behind:
 
 ```yaml
 must_end_with:
-  - company "Emsland Ventilbau GmbH" lifecycle=prospect
+  - company "Emsland Ventilbau GmbH" status=prospect
 ```
 
 After each run, `e2e/llm/endstate.py` reads the records back before the lane puts back the snapshot.
@@ -328,7 +328,7 @@ The stamp then holds `graded_commit` and `graded_at` too. Where the two commits 
 A verdict whose stamp no longer matches the tree, or that has none, is stale.
 `make e2e-llm-report` names what moved. A pull request that makes a verdict
 stale gets a comment that lists it (`mcp-e2e-stale.yml`). List those verdicts in the PR body when you
-do not run them again.
+do not run them again. The coverage page still shows a stale verdict, marked `earlier listing`, and its case table names what moved. So a change that makes a verdict stale also generates the page again, with the command above.
 
 `mcp-sweep.yml` sweeps every case in parts, side by side, with `claude-sonnet-5-5` over the Claude CLI. Its header comment says what it needs.
 It uploads verdicts only when every case has a new one from a stack whose search ranks by meaning. Each part keeps its transcripts as an `e2e-llm-transcripts-*` artifact.

@@ -177,7 +177,7 @@ func TestACanceledMeetingIsNotTheGhostedScansNewestInteraction(t *testing.T) {
 	e := integration.Setup(t)
 	now := time.Now().UTC()
 	company := e.SeedCompany(t, "Fold Ghost Co", nil)
-	e.WsExec(t, `UPDATE company SET lifecycle = 'opportunity' WHERE id = $1`, company)
+	e.WsExec(t, `UPDATE company SET status = 'opportunity' WHERE id = $1`, company)
 	contact := employedAt(t, e, company, "Gale Ghost")
 	logMail(t, e, contact, "inbound", now.AddDate(0, 0, -20))
 	ours := logMeeting(t, e, onContact(contact), "outbound", now.AddDate(0, 0, -16))

@@ -75,11 +75,11 @@ func setCompanyCheckedFields(ctx context.Context, tx pgx.Tx, p *storekit.Patch, 
 		}
 		p.Set("size_band", current.SizeBand, *in.SizeBand)
 	}
-	if in.Lifecycle != nil {
-		if err := checkLifecycleWriter(ctx, *in.Lifecycle); err != nil {
+	if in.Status != nil {
+		if err := checkLifecycleWriter(ctx, *in.Status); err != nil {
 			return err
 		}
-		p.Set("lifecycle", lifecycleValue(current.Lifecycle), *in.Lifecycle)
+		p.Set(filterStatus, lifecycleValue(current.Status), *in.Status)
 	}
 	if in.ParentCompanyID != nil {
 		if err := auth.EnsureReferenceTarget(ctx, tx, "parent_company_id", "company", in.ParentCompanyID.UUID); err != nil {

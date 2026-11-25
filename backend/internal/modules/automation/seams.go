@@ -209,6 +209,8 @@ type ListRef struct {
 	Version    int64
 	// Invalid says the list's latest check could not evaluate its filter.
 	Invalid bool
+	// Unavailable says no installed extension declares the list's kind.
+	Unavailable bool
 }
 
 // ListChange is one record a Live List's check saw joining or leaving.

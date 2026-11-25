@@ -156,7 +156,7 @@ func TestFocusPrioritizesOnlyAVerifiedAccountTerminationDecision(t *testing.T) {
 		t.Run(state, func(t *testing.T) {
 			approval := crmcontracts.Approval{
 				Kind: "lifecycle_change", Summary: new("Review account termination"), RequestedDeciderId: &owner,
-				Preview: &crmcontracts.ApprovalPreview{Version: 1, State: state, Changes: []crmcontracts.ApprovalPreviewChange{{Field: "lifecycle", After: crmcontracts.ApprovalPreviewValue{Kind: "enum", Text: "former_customer"}}}},
+				Preview: &crmcontracts.ApprovalPreview{Version: 1, State: state, Changes: []crmcontracts.ApprovalPreviewChange{{Field: "status", After: crmcontracts.ApprovalPreviewValue{Kind: "enum", Text: "former_customer"}}}},
 			}
 			termination := approvalItem(approval, nil)
 			row := classifyDecision(termination, rankInstant)
@@ -179,7 +179,7 @@ func TestFocusPrioritizesOnlyAVerifiedAccountTerminationDecision(t *testing.T) {
 
 func TestFocusRequiresTerminationResponsibilityAndAnAvailableDecision(t *testing.T) {
 	for _, approval := range []crmcontracts.Approval{
-		{Kind: "lifecycle_change", Preview: &crmcontracts.ApprovalPreview{Version: 1, State: "ready", Changes: []crmcontracts.ApprovalPreviewChange{{Field: "lifecycle", After: crmcontracts.ApprovalPreviewValue{Kind: "enum", Text: "former_customer"}}}}},
+		{Kind: "lifecycle_change", Preview: &crmcontracts.ApprovalPreview{Version: 1, State: "ready", Changes: []crmcontracts.ApprovalPreviewChange{{Field: "status", After: crmcontracts.ApprovalPreviewValue{Kind: "enum", Text: "former_customer"}}}}},
 		{Kind: "lifecycle_change", RequestedDeciderId: new(crmcontracts.Approval{}.Id)},
 	} {
 		if focusEligible(classifyDecision(approvalItem(approval, nil), rankInstant), rankInstant) {
@@ -195,7 +195,7 @@ func TestTerminationFocusKeepsPreviewConflictsAndOtherTransitionsInReview(t *tes
 	}{{"customer", false}, {"former_customer", true}} {
 		approval := crmcontracts.Approval{
 			Kind: "lifecycle_change", RequestedDeciderId: new(crmcontracts.Approval{Id: [16]byte{1}}.Id),
-			Preview: &crmcontracts.ApprovalPreview{Version: 1, State: "ready", Changes: []crmcontracts.ApprovalPreviewChange{{Field: "lifecycle", After: crmcontracts.ApprovalPreviewValue{Kind: "enum", Text: test.target}}}},
+			Preview: &crmcontracts.ApprovalPreview{Version: 1, State: "ready", Changes: []crmcontracts.ApprovalPreviewChange{{Field: "status", After: crmcontracts.ApprovalPreviewValue{Kind: "enum", Text: test.target}}}},
 		}
 		if test.blocked {
 			approval.Preview.Conflicts = &[]crmcontracts.ApprovalPreviewConflict{{BlocksApproval: true}}

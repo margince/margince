@@ -540,7 +540,7 @@ Payload for company.updated, an open envelope. Eight emit sites carry different 
 
 | Field | Type | Always present | What it is |
 |---|---|---|---|
-| `data.changed_fields` | object | yes | What this update touched, incl. runtime cf_* custom fields. The value shape depends on the emit site: a column patch carries a flat field → new-value entry, while the recompute/routing/relationship sites carry a `{delta: {...}}` sub-object (occasionally with a sibling `source`). Read a key's value as either form. |
+| `data.changed_fields` | object | yes | What this update touched, incl. runtime cf_* custom fields. The value shape depends on the emit site. A column patch carries a flat field → new-value entry. The recompute/routing/relationship sites carry a `{delta: {...}}` sub-object, sometimes with a sibling `source`. Read a key's value as either form. A change to the company's `status` also carries the value under `lifecycle`, the key this version first gave it. `lifecycle` is deprecated; read `status`. |
 
 ### `consent.changed`
 
@@ -1026,14 +1026,14 @@ Payload for forecast.created, somebody accountable for a number said what they b
 
 Record: `user` · version 1
 
-Payload for forecast.exception_resolved. Somebody answered a finding from the nightly input check. The entity is the author, because an answer is attributable to whoever gave it. The `outcome` field says what kind of answer it was, and consumers must not treat the seven alike. The `value_correct` and `not_relevant` outcomes hide the finding from the screens a revenue commitment is made from. So a surface counting open findings has to drop them. The `remind_later` outcome leaves the finding open, and it comes back. The reason does not ride along. It is prose one user wrote for another, and a subscriber acting on it acts on text the author may edit.
+Payload for forecast.exception_resolved. Somebody answered a finding from the nightly input check. The entity is the author, because an answer is attributable to whoever gave it. The `outcome` field says what kind of answer it was, and consumers must not treat the eight alike. The `value_correct` and `not_relevant` outcomes hide the finding from the screens a revenue commitment is made from. So a surface counting open findings has to drop them. The `remind_later` outcome leaves the finding open, and it comes back. The reason does not ride along. It is prose one user wrote for another, and a subscriber acting on it acts on text the author may edit.
 
 | Field | Type | Always present | What it is |
 |---|---|---|---|
 | `data.actor_user_id` | string (uuid) | yes |  |
 | `data.exception_id` | string (uuid) | yes |  |
 | `data.expires_at` | string (date-time) | no | When a suppressing answer stops holding. Present only for the two outcomes that hide a finding, a consumer that re-surfaces findings needs the date. |
-| `data.outcome` | string: `fixed_record`, `added_evidence`, `value_correct`, `not_relevant`, `remind_later`, `reassign`, `condition_cleared` | yes |  |
+| `data.outcome` | string: `fixed_record`, `added_evidence`, `value_correct`, `not_relevant`, `remind_later`, `reassign`, `condition_cleared`, `separate` | yes |  |
 
 ### `forecast.share_issued`
 
@@ -1425,7 +1425,7 @@ Payload for notification.preference_changed, one seat decided how a class of not
 
 Record: `offer` · version 1
 
-Payload for offer.accepted, a sent offer was accepted. The deal's headline amount is synced from this offer's gross in the same transaction (see deal.updated on the paired deal entity).
+Payload for offer.accepted: a sent offer was accepted. The deal's headline amount is synced from this offer's net, the figure without tax, in the same transaction. The paired deal.updated carries that net. This payload still states the offer's own gross.
 
 | Field | Type | Always present | What it is |
 |---|---|---|---|

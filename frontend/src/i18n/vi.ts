@@ -3194,6 +3194,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
 
   "merge.contact": "Gộp liên hệ",
   "merge.company": "Gộp công ty",
+  "merge.deal": "Gộp deal",
   "merge.searchPlaceholder": "Tìm kiếm…",
   "merge.pickTarget": "Chọn hồ sơ giữ lại",
   "merge.confirm":
@@ -6340,7 +6341,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "deal.standing.risk.replyOwed": "Phản hồi của nhóm còn chờ xử lý",
   "deal.standing.risk.closePassed": "Quá hạn chốt",
   "deal.details.closingFootnote":
-    "Các giai đoạn chốt sẽ hỏi trước: Thắng và Thua mở một hộp thoại ngắn.",
+    "Giai đoạn chốt sẽ hỏi trước và mở một hộp thoại ngắn.",
   "deal.timeline.empty": "Chưa có hoạt động nào trên deal này.",
   "legalEntities.title": "Pháp nhân",
   "legalEntities.sub":
@@ -6525,6 +6526,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "outcomeReview.notes": "Ghi chú khác",
   "deal.commercialContext": "Bối cảnh thương mại",
 
+  "deal.closedAmountKept":
+    "Deal đã thắng hoặc thua giữ nguyên giá. Hãy mở lại deal trước khi gỡ giá.",
   "deal.arrFromOffer":
     "ARR dự kiến lấy từ báo giá đã chấp nhận và không thể sửa ở đây.",
   "deal.brief": "Tóm tắt deal",
@@ -7353,6 +7356,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "brief.rail": "Ngữ cảnh",
   "brief.rail.numbers": "Số liệu",
   "extensionReports.withheld": "Đã ẩn: quá ít bản ghi để hiển thị",
+  "extensionReports.unavailable": "Không tải được báo cáo này.",
   "extensionReports.noValue": "Không có giá trị",
   "extensionReports.excluded_one":
     "{count} bản ghi bị ẩn với bạn do quyền trên trường.",
@@ -7866,6 +7870,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "docs.category.message": "Tệp đính kèm tin nhắn",
   "docs.category.other": "Khác",
   "docs.category.link": "Liên kết đã gửi",
+  "docs.source.upload": "Đã tải lên",
+  "docs.source.link": "Đã thêm liên kết",
   "docs.view.label": "Hiển thị tài liệu dưới dạng",
   "docs.view.grid": "Lưới",
   "docs.view.list": "Danh sách",
@@ -9398,6 +9404,14 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Chỉ quản lý đã chốt dự báo này mới có thể chốt dự báo mới.",
   "review.submitNewCall": "Chốt dự báo mới",
   "review.forecastCallMoved": "Cần xem lại dự báo đã chốt",
+  "review.duplicateMotion": "Có thể là cùng một đợt mua",
+  "review.duplicateHelp":
+    "Hai deal đang mở của một khách hàng này có chung thư, cuộc họp hoặc liên hệ, cùng một pipeline và ngày chốt cách nhau không quá 60 ngày.",
+  "review.duplicateThisDeal": "Deal này",
+  "review.duplicateOtherDeal": "Có vẻ giống",
+  "review.duplicateOtherWithheld": "Một deal bạn không mở được",
+  "review.duplicateSwap": "Giữ deal kia thay vào đó",
+  "review.duplicateSeparate": "Hai deal này tách biệt",
   "review.unknownCheck": "Kiểm tra chưa đặt tên",
   "review.sheetTitle": "Trả lời kiểm tra",
   "review.outcomeLegend": "Loại câu trả lời",
@@ -12913,6 +12927,48 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "connectors.telegramConnectedAs": "Đã kết nối với tên @{username}.",
   "connectors.telegramConnectFailed": "Không thể kết nối bot",
 
+  "connectors.tgbiz.title": "Telegram cho doanh nghiệp",
+  "connectors.tgbiz.intro":
+    "Liên kết tài khoản Telegram Business của công ty với bot. Tin nhắn của khách và phản hồi của chủ tài khoản sẽ xuất hiện trong Lịch sử của từng liên hệ. Nhân viên vẫn trả lời trong Telegram.",
+  "connectors.tgbiz.stepsTitle": "Để liên kết tài khoản, chủ tài khoản:",
+  "connectors.tgbiz.step1":
+    "Mở Telegram, rồi Cài đặt, Telegram Business, Chatbots.",
+  "connectors.tgbiz.step2":
+    "Nhập @{username} và chọn các cuộc trò chuyện bot được xem.",
+  "connectors.tgbiz.step3":
+    "Tài khoản sẽ hiện ở đây với trạng thái Chờ phê duyệt. Không có gì được ghi nhận cho đến khi quản trị viên phê duyệt.",
+  "connectors.tgbiz.emptyTitle": "Chưa liên kết tài khoản doanh nghiệp",
+  "connectors.tgbiz.emptyNote":
+    "Khi chủ tài khoản liên kết bot trong Telegram, tài khoản sẽ xuất hiện ở đây.",
+  "connectors.tgbiz.statusPending": "Chờ phê duyệt",
+  "connectors.tgbiz.statusConnected": "Đã kết nối",
+  "connectors.tgbiz.statusOff": "Đã tắt trong Telegram",
+  "connectors.tgbiz.linked": "Liên kết {date}",
+  "connectors.tgbiz.approvedOn": "Phê duyệt {date}",
+  "connectors.tgbiz.offReason":
+    "Chủ tài khoản đã tắt liên kết này trong Telegram. Không có gì mới được ghi nhận. Nếu họ liên kết lại bot, tài khoản sẽ lại chờ phê duyệt.",
+  "connectors.tgbiz.approve": "Phê duyệt làm tài khoản công ty",
+  "connectors.tgbiz.approveTitle": "Phê duyệt {owner} làm tài khoản công ty?",
+  "connectors.tgbiz.approveBody":
+    "Tin nhắn của khách và phản hồi của chủ tài khoản từ ứng dụng Telegram xuất hiện trong Lịch sử của khách. Cho đến khi bạn đổi chế độ hiển thị, chỉ nhóm bạn chọn được đọc chúng. Trước khi bạn phê duyệt, không có gì được ghi nhận.",
+  "connectors.tgbiz.ownAccount":
+    "Tài khoản riêng của thành viên · mỗi cuộc trò chuyện được giữ riêng",
+  "connectors.tgbiz.changeReaders": "Đổi nhóm đọc",
+  "connectors.tgbiz.readerTeamRequired":
+    "Hãy chọn nhóm đọc tin nhắn của tài khoản này.",
+  "connectors.tgbiz.visibilityTitle": "Đổi nhóm đọc tin nhắn của {owner}",
+  "connectors.tgbiz.visibilityWarning":
+    "Thay đổi này áp dụng cho tin nhắn tài khoản ghi nhận sau thay đổi. Tin nhắn đã được giữ riêng trước đó vẫn được giữ riêng.",
+  "connectors.tgbiz.visibilityHeldHint": "Chỉ nhóm đọc được đọc tin nhắn.",
+  "connectors.tgbiz.visibilitySharedHint":
+    "Tin nhắn theo chế độ chia sẻ của liên hệ mà nó được gắn vào.",
+  "connectors.tgbiz.visibilityConfirm": "Đổi chế độ hiển thị",
+  "connectors.tgbiz.approveConflict":
+    "Không thể phê duyệt tài khoản này. Hoặc chủ tài khoản đã tắt liên kết trong Telegram (hãy nhờ họ liên kết lại bot), hoặc nhóm này khác với nhóm đang đọc tài khoản. Danh sách đã được tải lại.",
+  "connectors.tgbiz.disconnectTitle": "Ngắt kết nối tài khoản của {owner}?",
+  "connectors.tgbiz.disconnectBody":
+    "Margince ngừng ghi nhận từ tài khoản này. Những gì đã ghi nhận vẫn nằm trong CRM. Nếu chủ tài khoản liên kết lại bot, tài khoản sẽ chờ phê duyệt.",
+
   "connectors.bot.provDispact": "Dispact",
   "connectors.bot.dispactTitle": "Bot Dispact",
   "connectors.bot.dispactSub":
@@ -14630,6 +14686,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "cf.removedFromReports": "Đã gỡ “{label}” khỏi báo cáo",
   "cf.audit.title": "Thay đổi trường gần đây",
   "audit.kind.customField": "Trường tùy chỉnh",
+  "audit.kind.activity_retention_evidence": "Bằng chứng lưu giữ",
   "audit.kind.activity_review_template": "Mẫu đánh giá hoạt động",
   "audit.kind.agent_standing_grant": "Quyền thường trực của trợ lý AI",
   "audit.kind.ai_feedback": "Phản hồi về AI",
@@ -14662,12 +14719,14 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "audit.kind.confirm_token": "Liên kết xác nhận",
   "audit.kind.consent_text_version": "Phiên bản nội dung đồng ý",
   "audit.kind.contact_acquisition_evidence": "Bằng chứng nguồn liên hệ",
+  "audit.kind.commission_entry": "Khoản hoa hồng",
   "audit.kind.contract": "Hợp đồng",
   "audit.kind.data_subject_request": "Yêu cầu của chủ thể dữ liệu",
   "audit.kind.deal_acquisition_source": "Nguồn deal",
   "audit.kind.deal_loss_reason": "Lý do thua",
   "audit.kind.deal_loss_reason_mapping": "Ánh xạ lý do thua",
   "audit.kind.deal_risk_day": "Kiểm tra rủi ro deal",
+  "audit.kind.deal_document_hide": "Tệp deal bị ẩn",
   "audit.kind.deal_room": "Trang Deal Room",
   "audit.kind.deal_room_comment": "Bình luận trong Deal Room",
   "audit.kind.deal_room_document": "Tài liệu trong Deal Room",
@@ -14678,6 +14737,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "audit.kind.deal_suggestion": "Đề xuất deal",
   "audit.kind.dedupe_candidate": "Hồ sơ có thể trùng",
   "audit.kind.existing_customer_notice": "Thông báo khách hàng hiện có",
+  "audit.kind.field_provenance": "Nguồn của trường",
   "audit.kind.finance_connection": "Kết nối kế toán",
   "audit.kind.finance_customer_link": "Liên kết khách hàng kế toán",
   "audit.kind.finance_external_customer": "Khách hàng kế toán",
@@ -14727,6 +14787,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "audit.kind.scheduled_send": "Email đã lên lịch",
   "audit.kind.sdr_handoff": "Bàn giao từ SDR",
   "audit.kind.signal": "Tín hiệu",
+  "audit.kind.signal_resolution": "Kết quả khớp tín hiệu",
   "audit.kind.site_read": "Lần đọc trang web",
   "audit.kind.stage": "Giai đoạn",
   "audit.kind.stage_exit_criterion": "Tiêu chí rời giai đoạn",
@@ -15545,6 +15606,11 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Chỉ đọc. Vai trò hiện tại không có quyền thay đổi tỷ giá và giá mô hình.",
   "settings.rates.fxTableLabel": "Tỷ giá đang áp dụng",
   "settings.rates.fxAdd": "Nhập tỷ giá",
+  "settings.rates.fxRemoveVerb": "Gỡ {currency}",
+  "settings.rates.fxRemoveTitle": "Gỡ tỷ giá {currency}?",
+  "settings.rates.fxRemoveBody":
+    "Các deal bằng {currency} không hiển thị giá trị theo loại tiền cơ sở cho đến khi nhập tỷ giá mới. Các số liệu đã tính vẫn giữ tỷ giá đã dùng.",
+  "settings.rates.fxRemoveConfirm": "Gỡ",
   "settings.rates.fxEmpty": "Chưa có tỷ giá nào.",
   "settings.rates.fxModalTitle": "Nhập tỷ giá",
   "settings.rates.rateToBase": "Tỷ giá (quy đổi sang loại tiền cơ sở)",
@@ -16052,6 +16118,11 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "extAccess.brings.routes": "Đường dẫn",
   "extAccess.brings.jobs": "Tác vụ nền",
   "extAccess.brings.needs": "Dùng từ lõi",
+  "extAccess.brings.mail": "Đọc từ thư đã thu thập",
+  "extAccess.mail.subject": "Tiêu đề",
+  "extAccess.mail.addresses": "Các địa chỉ email trong thư",
+  "extAccess.mail.body_one": "{count} ký tự đầu của nội dung",
+  "extAccess.mail.body_other": "{count} ký tự đầu của nội dung",
   "extAccess.need.models": "Mô hình AI",
   "extAccess.need.objects": "Lưu trữ tệp",
   "extAccess.brings.none": "Không có",
@@ -16077,6 +16148,12 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Tắt: tiện ích mở rộng này giữ nguyên trường công ty hoặc deal mà một thành viên đã sửa gần nhất và báo là đã giữ lại. Bật: nó thay thế trường đó.",
   "extGovernance.readOnly": "Quản trị viên thay đổi cài đặt này.",
   "extGovernance.notSaved": "Chưa lưu được cài đặt.",
+  "extAccess.setupReady": "Sẵn sàng",
+  "extAccess.needsSetup": "Cần thiết lập",
+  "extAccess.setupMissing": "Còn thiếu: {items}.",
+  "extAccess.setupSecret": "khóa “{name}” trong Cài đặt, mục Tích hợp",
+  "extAccess.setupApp":
+    "ứng dụng “{name}” trong Cài đặt, mục Đăng nhập và bảo mật",
   "users.empty": "Chưa có thành viên nào.",
   "users.inviteTitle": "Mời thành viên",
   "users.teamsLabel": "Nhóm",
@@ -16871,13 +16948,13 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "installationSettings.baseCurrencyLock.ratesFrozen_other":
     "{count} hồ sơ đã cố định tỷ giá quy đổi theo loại tiền này, nên không thể thay đổi.",
   "installationSettings.baseCurrencyLock.rateSheet_one":
-    "{count} tỷ giá đang quy đổi sang {base}. Cần xóa các tỷ giá trước khi đổi loại tiền cơ sở.",
+    "{count} tỷ giá đang quy đổi sang {base}. Cần gỡ mọi loại tiền khỏi bảng tỷ giá trước khi đổi loại tiền cơ sở.",
   "installationSettings.baseCurrencyLock.rateSheet_other":
-    "{count} tỷ giá đang quy đổi sang {base}. Cần xóa các tỷ giá trước khi đổi loại tiền cơ sở.",
+    "{count} tỷ giá đang quy đổi sang {base}. Cần gỡ mọi loại tiền khỏi bảng tỷ giá trước khi đổi loại tiền cơ sở.",
   "installationSettings.baseCurrencyLock.rateSheetUnnamed_one":
-    "{count} tỷ giá đang quy đổi sang một loại tiền cơ sở chưa được ghi nhận. Cần xóa các tỷ giá trước khi đổi loại tiền cơ sở.",
+    "{count} tỷ giá đang quy đổi sang một loại tiền cơ sở chưa được ghi nhận. Cần gỡ mọi loại tiền khỏi bảng tỷ giá trước khi đổi loại tiền cơ sở.",
   "installationSettings.baseCurrencyLock.rateSheetUnnamed_other":
-    "{count} tỷ giá đang quy đổi sang một loại tiền cơ sở chưa được ghi nhận. Cần xóa các tỷ giá trước khi đổi loại tiền cơ sở.",
+    "{count} tỷ giá đang quy đổi sang một loại tiền cơ sở chưa được ghi nhận. Cần gỡ mọi loại tiền khỏi bảng tỷ giá trước khi đổi loại tiền cơ sở.",
   "installationSettings.baseLanguage": "Ngôn ngữ cơ sở",
   "installationSettings.baseLanguageHint":
     "Ngôn ngữ AI dùng để viết khi cả nhóm cùng đọc văn bản. Ngôn ngữ hiển thị là cài đặt riêng, và thư trả lời khách hàng theo ngôn ngữ của chuỗi thư.",
@@ -18350,6 +18427,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "webForms.rotateConfirm.body":
     "Khóa hiện tại ngừng hoạt động ngay và khóa mới chỉ hiện một lần. Hãy dán nó vào chỗ của khóa cũ ngay.",
   "webForms.archive": "Lưu trữ",
+  "webForms.archiveTitle": "Lưu trữ {name}?",
   "webForms.archiveConfirm":
     "Sau khi lưu trữ, biểu mẫu này không nhận bài gửi nữa. Không thể hoàn tác.",
   "webForms.archiveDone": "Đã lưu trữ biểu mẫu trang web",
@@ -18732,7 +18810,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Các trường của deal thay đổi, trừ giai đoạn và người chịu trách nhiệm.",
   "webhooks.event.deal.stage_changed.label": "Deal đã chuyển giai đoạn",
   "webhooks.event.deal.stage_changed.when":
-    "Deal chuyển sang giai đoạn mới, kể cả Thắng và Thua.",
+    "Deal chuyển sang giai đoạn mới, kể cả các giai đoạn chốt.",
   "webhooks.event.deal.owner_changed.label": "Đã giao lại deal",
   "webhooks.event.deal.owner_changed.when":
     "Deal được giao cho người chịu trách nhiệm khác.",
@@ -18891,6 +18969,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "linkSuggestions.kind.project": "dự án",
   "linkSuggestions.accept": "Gắn vào đó",
   "linkSuggestions.reject": "Không phải đó",
+  "linkSuggestions.noAccess": "Bạn không có quyền xem các liên kết gợi ý.",
   "linkSuggestions.unavailable":
     "Không đọc được các liên kết gợi ý. Hãy thử lại sau.",
   "webhooks.event.activity.readiness_recorded.label":
@@ -20342,6 +20421,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "lists.audience.ownerAndSteward": "Người chịu trách nhiệm và người phụ trách",
   "lists.audience.unknownTeam":
     "M\u1ed9t nh\u00f3m b\u1ea1n kh\u00f4ng xem \u0111\u01b0\u1ee3c",
+  "lists.health.unavailable": "Bản ghi không khả dụng",
   "lists.health.ownerless": "Chưa ai phụ trách",
   "lists.health.invalid":
     "B\u1ed9 l\u1ecdc kh\u00f4ng c\u00f2n d\u00f9ng \u0111\u01b0\u1ee3c",
@@ -20390,6 +20470,9 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "B\u1ed9 l\u1ecdc n\u00e0y kh\u00f4ng c\u00f2n d\u00f9ng \u0111\u01b0\u1ee3c",
   "lists.invalid.body":
     "Một trường trong bộ lọc đã thay đổi. Người phụ trách danh sách có thể sửa bộ lọc trong trình tạo bộ lọc.",
+  "lists.unavailable.title": "Các bản ghi này không khả dụng",
+  "lists.unavailable.body":
+    "Danh sách này chứa bản ghi do một tiện ích mở rộng thêm vào, và tiện ích đó chưa được cài đặt. Danh sách sẽ hoạt động lại khi tiện ích được cài đặt lại.",
   "lists.ownerless.title":
     "Kh\u00f4ng ai ph\u1ee5 tr\u00e1ch danh s\u00e1ch n\u00e0y",
   "lists.ownerless.body":
@@ -21000,6 +21083,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "deal.links.outgoing": "Từ deal này: {type}",
   "deal.links.incoming": "Tới deal này: {type}",
   "deal.links.remove": "Gỡ",
+  "deal.links.unknownType": "Liên kết",
   "deal.links.type": "Loại liên kết",
   "deal.links.typePlaceholder": "Chọn loại",
   "deal.links.search": "Tìm bản ghi cần liên kết",

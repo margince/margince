@@ -159,6 +159,7 @@ SELECT o.id, left(COALESCE(o.subject, ''), %d), COALESCE(o.%s, ''), o.%s, l.cont
       LEFT JOIN contact_channel_identity cci
         ON cci.provider = o.provider
        AND cci.channel_user_id = o.channel_user_id
+       AND cci.account_scope = ''
        AND cci.archived_at IS NULL
      LIMIT 1
   ) p ON true

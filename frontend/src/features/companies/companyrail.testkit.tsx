@@ -28,7 +28,7 @@ export const company = {
   workspace_id: "w",
   display_name: "Brandt Automotive GmbH",
   legal_name: "Brandt Automotive GmbH",
-  lifecycle: "customer" as const,
+  status: "customer" as const,
   owner_id: "u-1",
   industry: "automotive" as const,
   size_band: "51-200" as const,

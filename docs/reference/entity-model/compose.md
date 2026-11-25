@@ -574,21 +574,24 @@ The 42 tables owned by `compose`, as the migrations build them. [Back to the ent
 
 ## extension_ingest_position
 
-3 columns · primary key `(unit, source_system)` · referenced by 0 foreign keys
+5 columns · primary key `(unit, source_system, member_id)` · referenced by 0 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
+| `member_id` | `uuid`, default `'00000000-0000-0000-0000-000000000000'::uuid` | yes |  |
 | `position` | `text` | yes |  |
 | `unit` | `text` | yes |  |
 | `source_system` | `text` | yes | The outside system the record came from, when it came from one. |
+| `version` | `bigint`, default `1` | yes | Optimistic-concurrency counter. Every write bumps it, so an update built on a stale read is refused instead of overwriting. |
 
 **Rules**
 
 - `extension_ingest_position_size`: `CHECK ((("position" <> '') AND (octet_length("position") <= 512)))`
+- `extension_ingest_position_version_bound`: `CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))`
 
 **Indexes**
 
-- `extension_ingest_position_pkey`: `unique, btree (unit, source_system)`
+- `extension_ingest_position_pkey`: `unique, btree (unit, source_system, member_id)`
 
 **Triggers**
 
@@ -1172,7 +1175,7 @@ The 42 tables owned by `compose`, as the migrations build them. [Back to the ent
 | `entity_company_id` | `uuid` |  | Points at `company.id`. |
 | `entity_contact_id` | `uuid` |  | Points at `contact.id`. |
 | `entity_id` | `uuid` | yes |  |
-| `entity_type` | `text` | yes |  |
+| `entity_type` | `text` | yes | One of `company`, `contact`. |
 | `entity_unkeyed` | `boolean`, default `false` | yes |  |
 | `last_viewed_at` | `timestamp with time zone` | yes |  |
 | `user_id` | `uuid` | yes | Points at `app_user.id`. |
@@ -1190,7 +1193,7 @@ The 42 tables owned by `compose`, as the migrations build them. [Back to the ent
 - `user_record_view_entity_company_id_bound`: `CHECK ((entity_unkeyed OR (NOT (entity_company_id IS DISTINCT FROM CASE WHEN (entity_type = 'company') THEN entity_id ELSE NULL::uuid END))))`
 - `user_record_view_entity_contact_id_bound`: `CHECK ((entity_unkeyed OR (NOT (entity_contact_id IS DISTINCT FROM CASE WHEN (entity_type = 'contact') THEN entity_id ELSE NULL::uuid END))))`
 - `user_record_view_entity_shape`: `CHECK ((entity_unkeyed OR (num_nonnulls(entity_company_id, entity_contact_id) = 1)))`
-- `user_record_view_entity_type_check`: `CHECK (((entity_type = ANY (ARRAY['company', 'contact'])) OR (entity_type ~ '^ext:[a-z0-9]+(-[a-z0-9]+)*:[a-z][a-z0-9_]{0,31}$')))`
+- `user_record_view_entity_type_check`: `CHECK ((entity_type = ANY (ARRAY['company', 'contact'])))`
 - `user_record_view_user_id_entity_type_entity_id_key`: `UNIQUE (user_id, entity_type, entity_id)`
 
 **Indexes**

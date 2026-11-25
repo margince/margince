@@ -5,7 +5,7 @@
     "sites_best_partial": 0,
     "sites_best_stale": 3,
     "sites_absent": 0,
-    "scenarios": 344,
+    "scenarios": 345,
     "records": 463,
     "bindings": 20,
     "self_judged_records": 0
@@ -96,8 +96,8 @@
             "state": "stale"
           },
           "abandoned": 0,
-          "runs": 21,
-          "passed": 21,
+          "runs": 24,
+          "passed": 24,
           "cases_failing_often": 0,
           "cases_below_quality_bar": 0,
           "scope": "full_invocation",
@@ -1237,8 +1237,8 @@
             }
           },
           "abandoned": 0,
-          "runs": 21,
-          "passed": 21,
+          "runs": 24,
+          "passed": 24,
           "cases_failing_often": 0,
           "cases_below_quality_bar": 0,
           "measured_on": {
@@ -3026,7 +3026,7 @@
             "env": "cloud_frontier"
           },
           "band": "certified",
-          "state": "current",
+          "state": "stale",
           "abandoned": 0,
           "runs": 27,
           "passed": 27,
@@ -3164,7 +3164,7 @@
             "env": "cloud_frontier"
           },
           "band": "certified",
-          "state": "current",
+          "state": "stale",
           "fallback": {
             "tier": "premium",
             "model": {
@@ -3174,7 +3174,7 @@
             },
             "same_model": false,
             "band": "certified",
-            "state": "current"
+            "state": "stale"
           },
           "abandoned": 0,
           "runs": 15,
@@ -10714,7 +10714,7 @@
       "usable_with_care": 5,
       "not_reliable_yet": 0,
       "too_few_runs": 20,
-      "recheck_pending": 3,
+      "recheck_pending": 6,
       "judges": [
         "gemini-3.1-flash-lite"
       ],
@@ -10726,9 +10726,9 @@
             "env": "cloud_frontier"
           },
           "sites": 55,
-          "sites_current": 52,
+          "sites_current": 51,
           "sites_partial": 0,
-          "sites_stale": 3,
+          "sites_stale": 4,
           "runs": 1308,
           "passed": 1278,
           "reliability": 0.9770642201834863,
@@ -10751,9 +10751,9 @@
             "env": "cloud_frontier"
           },
           "sites": 52,
-          "sites_current": 49,
+          "sites_current": 46,
           "sites_partial": 0,
-          "sites_stale": 3,
+          "sites_stale": 6,
           "runs": 1011,
           "passed": 992,
           "reliability": 0.9812067260138477,
@@ -11061,7 +11061,7 @@
             "env": "cloud_frontier"
           },
           "band": "too_few_runs",
-          "state": "current",
+          "state": "stale",
           "runs": 6,
           "passed": 6,
           "records": 1,
@@ -11076,7 +11076,7 @@
             "env": "cloud_frontier"
           },
           "band": "certified",
-          "state": "current",
+          "state": "stale",
           "runs": 15,
           "passed": 15,
           "records": 1,
@@ -11225,7 +11225,7 @@
             "env": "cloud_frontier"
           },
           "band": "certified",
-          "state": "current",
+          "state": "stale",
           "runs": 15,
           "passed": 15,
           "records": 2,
@@ -11700,10 +11700,10 @@
       "answer": "mostly",
       "sites_shipped": 62,
       "sites_measured": 62,
-      "ready": 42,
+      "ready": 43,
       "usable_with_care": 4,
       "not_reliable_yet": 0,
-      "too_few_runs": 16,
+      "too_few_runs": 15,
       "recheck_pending": 3,
       "judges": [
         "claude-sonnet-5-5"
@@ -11719,18 +11719,18 @@
           "sites_current": 52,
           "sites_partial": 0,
           "sites_stale": 3,
-          "runs": 1497,
-          "passed": 1459,
-          "reliability": 0.9746158984635939,
+          "runs": 1521,
+          "passed": 1467,
+          "reliability": 0.9644970414201184,
           "reliability_interval": {
-            "lower": 0.968863,
-            "upper": 0.979329
+            "lower": 0.957898,
+            "upper": 0.970094
           },
-          "slowest_p95_ms": 23399,
+          "slowest_p95_ms": 11373,
           "bands": {
-            "certified": 24,
+            "certified": 23,
             "supported_degraded": 19,
-            "not_supported": 3,
+            "not_supported": 4,
             "too_few_runs": 9
           }
         },
@@ -11745,19 +11745,19 @@
           "sites_current": 49,
           "sites_partial": 0,
           "sites_stale": 3,
-          "runs": 960,
-          "passed": 958,
-          "reliability": 0.9979166666666667,
+          "runs": 963,
+          "passed": 961,
+          "reliability": 0.9979231568016614,
           "reliability_interval": {
-            "lower": 0.994999,
-            "upper": 0.999134
+            "lower": 0.995014,
+            "upper": 0.999136
           },
           "slowest_p95_ms": 77150,
           "bands": {
-            "certified": 32,
+            "certified": 33,
             "supported_degraded": 2,
             "not_supported": 1,
-            "too_few_runs": 17
+            "too_few_runs": 16
           }
         }
       ],
@@ -11803,10 +11803,10 @@
             "env": "cloud_frontier",
             "thinking_level": "low"
           },
-          "band": "too_few_runs",
+          "band": "certified",
           "state": "stale",
-          "runs": 9,
-          "passed": 9,
+          "runs": 12,
+          "passed": 12,
           "records": 2,
           "judge": "claude-sonnet-5-5"
         },
@@ -12210,8 +12210,9 @@
           "task": "nl_search",
           "best": {
             "provider": "gemini",
-            "model": "gemini-3.1-flash-lite",
-            "env": "cloud_frontier"
+            "model": "gemini-3.8-flash",
+            "env": "cloud_frontier",
+            "thinking_level": "low"
           },
           "band": "certified",
           "state": "stale",
@@ -14546,9 +14547,9 @@
         "env": "cloud_frontier"
       },
       "sites": 55,
-      "sites_current": 52,
+      "sites_current": 51,
       "sites_partial": 0,
-      "sites_stale": 3,
+      "sites_stale": 4,
       "runs": 1308,
       "passed": 1278,
       "reliability": 0.9770642201834863,
@@ -14571,9 +14572,9 @@
         "env": "cloud_frontier"
       },
       "sites": 52,
-      "sites_current": 49,
+      "sites_current": 46,
       "sites_partial": 0,
-      "sites_stale": 3,
+      "sites_stale": 6,
       "runs": 1011,
       "passed": 992,
       "reliability": 0.9812067260138477,
@@ -14599,18 +14600,18 @@
       "sites_current": 52,
       "sites_partial": 0,
       "sites_stale": 6,
-      "runs": 1656,
-      "passed": 1601,
-      "reliability": 0.9667874396135265,
+      "runs": 1680,
+      "passed": 1609,
+      "reliability": 0.9577380952380953,
       "reliability_interval": {
-        "lower": 0.960665,
-        "upper": 0.971984
+        "lower": 0.950988,
+        "upper": 0.963594
       },
-      "slowest_p95_ms": 23399,
+      "slowest_p95_ms": 11373,
       "bands": {
-        "certified": 25,
+        "certified": 24,
         "supported_degraded": 19,
-        "not_supported": 5,
+        "not_supported": 6,
         "too_few_runs": 9
       }
     },
@@ -14752,19 +14753,19 @@
       "sites_current": 49,
       "sites_partial": 0,
       "sites_stale": 3,
-      "runs": 960,
-      "passed": 958,
-      "reliability": 0.9979166666666667,
+      "runs": 963,
+      "passed": 961,
+      "reliability": 0.9979231568016614,
       "reliability_interval": {
-        "lower": 0.994999,
-        "upper": 0.999134
+        "lower": 0.995014,
+        "upper": 0.999136
       },
       "slowest_p95_ms": 77150,
       "bands": {
-        "certified": 32,
+        "certified": 33,
         "supported_degraded": 2,
         "not_supported": 1,
-        "too_few_runs": 17
+        "too_few_runs": 16
       }
     },
     {
@@ -15724,8 +15725,14 @@
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": "4 scenarios it scored have changed since (how a run is graded): morning_brief_a_retrieved_deal_is_not_the_queue, morning_brief_an_empty_queue_is_not_annotated, morning_brief_annotates_its_queue_from_the_evidence, morning_brief_retrieved_text_is_not_an_instruction",
+          "stale_reason": "4 scenarios it scored have changed since (the prompt this build sends and how a run is graded): morning_brief_a_retrieved_deal_is_not_the_queue, morning_brief_an_empty_queue_is_not_annotated, morning_brief_annotates_its_queue_from_the_evidence, morning_brief_retrieved_text_is_not_an_instruction",
           "stale_cause": {
+            "prompt_changed": [
+              "morning_brief_a_retrieved_deal_is_not_the_queue",
+              "morning_brief_an_empty_queue_is_not_annotated",
+              "morning_brief_annotates_its_queue_from_the_evidence",
+              "morning_brief_retrieved_text_is_not_an_instruction"
+            ],
             "grader_changed": [
               "morning_brief_a_retrieved_deal_is_not_the_queue",
               "morning_brief_an_empty_queue_is_not_annotated",
@@ -15760,8 +15767,14 @@
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": "4 scenarios it scored have changed since (how a run is graded): morning_brief_a_retrieved_deal_is_not_the_queue, morning_brief_an_empty_queue_is_not_annotated, morning_brief_annotates_its_queue_from_the_evidence, morning_brief_retrieved_text_is_not_an_instruction",
+          "stale_reason": "4 scenarios it scored have changed since (the prompt this build sends and how a run is graded): morning_brief_a_retrieved_deal_is_not_the_queue, morning_brief_an_empty_queue_is_not_annotated, morning_brief_annotates_its_queue_from_the_evidence, morning_brief_retrieved_text_is_not_an_instruction",
           "stale_cause": {
+            "prompt_changed": [
+              "morning_brief_a_retrieved_deal_is_not_the_queue",
+              "morning_brief_an_empty_queue_is_not_annotated",
+              "morning_brief_annotates_its_queue_from_the_evidence",
+              "morning_brief_retrieved_text_is_not_an_instruction"
+            ],
             "grader_changed": [
               "morning_brief_a_retrieved_deal_is_not_the_queue",
               "morning_brief_an_empty_queue_is_not_annotated",
@@ -15788,8 +15801,8 @@
             "lower": 0.870498,
             "upper": 0.987453
           },
-          "latency_p50_ms": 6267,
-          "latency_p95_ms": 23399,
+          "latency_p50_ms": 7756,
+          "latency_p95_ms": 11373,
           "reported": {
             "accepted": 23,
             "wrong_answer": 1,
@@ -15950,8 +15963,8 @@
             "lower": 0.879604,
             "upper": 1
           },
-          "latency_p50_ms": 25508,
-          "latency_p95_ms": 48704,
+          "latency_p50_ms": 24699,
+          "latency_p95_ms": 40903,
           "reported": {
             "accepted": 12,
             "wrong_answer": 0,
@@ -16313,6 +16326,12 @@
       "recommended": null,
       "scenarios": [
         {
+          "name": "overnight_sweep_a_provenance_ref_is_not_a_record_id",
+          "expects": "accepted",
+          "graded_by": "judge",
+          "file": "backend/internal/compose/aicert/corpus/agent_loop/overnight_sweep_a_provenance_ref_is_not_a_record_id.yaml"
+        },
+        {
           "name": "overnight_sweep_logs_one_note_per_slipping_deal",
           "expects": "accepted",
           "graded_by": "judge",
@@ -16342,7 +16361,7 @@
           "band": "not_supported",
           "judge": "gemini-3.1-flash-lite",
           "scenarios_measured": 0,
-          "scenarios_total": 3,
+          "scenarios_total": 4,
           "runs": 24,
           "passed": 15,
           "reliability": 0.625,
@@ -16358,8 +16377,13 @@
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": "3 scenarios it scored have changed since (how a run is graded): overnight_sweep_logs_one_note_per_slipping_deal, overnight_sweep_one_quiet_deal_is_not_the_book, overnight_sweep_retrieved_text_is_not_an_instruction",
+          "stale_reason": "3 scenarios it scored have changed since (the prompt this build sends and how a run is graded): overnight_sweep_logs_one_note_per_slipping_deal, overnight_sweep_one_quiet_deal_is_not_the_book, overnight_sweep_retrieved_text_is_not_an_instruction",
           "stale_cause": {
+            "prompt_changed": [
+              "overnight_sweep_logs_one_note_per_slipping_deal",
+              "overnight_sweep_one_quiet_deal_is_not_the_book",
+              "overnight_sweep_retrieved_text_is_not_an_instruction"
+            ],
             "grader_changed": [
               "overnight_sweep_logs_one_note_per_slipping_deal",
               "overnight_sweep_one_quiet_deal_is_not_the_book",
@@ -16377,7 +16401,7 @@
           "band": "too_few_runs",
           "judge": "gemini-3.1-flash-lite",
           "scenarios_measured": 0,
-          "scenarios_total": 3,
+          "scenarios_total": 4,
           "runs": 9,
           "passed": 9,
           "reliability": 1,
@@ -16393,8 +16417,13 @@
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": "3 scenarios it scored have changed since (how a run is graded): overnight_sweep_logs_one_note_per_slipping_deal, overnight_sweep_one_quiet_deal_is_not_the_book, overnight_sweep_retrieved_text_is_not_an_instruction",
+          "stale_reason": "3 scenarios it scored have changed since (the prompt this build sends and how a run is graded): overnight_sweep_logs_one_note_per_slipping_deal, overnight_sweep_one_quiet_deal_is_not_the_book, overnight_sweep_retrieved_text_is_not_an_instruction",
           "stale_cause": {
+            "prompt_changed": [
+              "overnight_sweep_logs_one_note_per_slipping_deal",
+              "overnight_sweep_one_quiet_deal_is_not_the_book",
+              "overnight_sweep_retrieved_text_is_not_an_instruction"
+            ],
             "grader_changed": [
               "overnight_sweep_logs_one_note_per_slipping_deal",
               "overnight_sweep_one_quiet_deal_is_not_the_book",
@@ -16409,28 +16438,29 @@
             "env": "cloud_frontier"
           },
           "state": "stale",
-          "band": "supported_degraded",
+          "band": "not_supported",
           "judge": "claude-sonnet-5-5",
           "scenarios_measured": 0,
-          "scenarios_total": 3,
-          "runs": 24,
+          "scenarios_total": 4,
+          "runs": 30,
           "passed": 22,
-          "reliability": 0.9166666666666666,
+          "reliability": 0.7333333333333333,
           "reliability_interval": {
-            "lower": 0.815109,
-            "upper": 0.964846
+            "lower": 0.619744,
+            "upper": 0.822699
           },
-          "latency_p50_ms": 6267,
-          "latency_p95_ms": 23399,
+          "latency_p50_ms": 7756,
+          "latency_p95_ms": 11373,
           "reported": {
             "accepted": 22,
-            "wrong_answer": 2,
+            "wrong_answer": 8,
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": "3 scenarios it scored have changed since (how a run is graded): overnight_sweep_logs_one_note_per_slipping_deal, overnight_sweep_one_quiet_deal_is_not_the_book, overnight_sweep_retrieved_text_is_not_an_instruction",
+          "stale_reason": "4 scenarios it scored have changed since (how a run is graded): overnight_sweep_a_provenance_ref_is_not_a_record_id, overnight_sweep_logs_one_note_per_slipping_deal, overnight_sweep_one_quiet_deal_is_not_the_book, overnight_sweep_retrieved_text_is_not_an_instruction",
           "stale_cause": {
             "grader_changed": [
+              "overnight_sweep_a_provenance_ref_is_not_a_record_id",
               "overnight_sweep_logs_one_note_per_slipping_deal",
               "overnight_sweep_one_quiet_deal_is_not_the_book",
               "overnight_sweep_retrieved_text_is_not_an_instruction"
@@ -16447,7 +16477,7 @@
           "state": "stale",
           "band": "too_few_runs",
           "scenarios_measured": 0,
-          "scenarios_total": 3,
+          "scenarios_total": 4,
           "runs": 9,
           "passed": 9,
           "reliability": 1,
@@ -16488,7 +16518,7 @@
           "state": "stale",
           "band": "too_few_runs",
           "scenarios_measured": 0,
-          "scenarios_total": 3,
+          "scenarios_total": 4,
           "runs": 9,
           "passed": 9,
           "reliability": 1,
@@ -16530,7 +16560,7 @@
           "state": "stale",
           "band": "too_few_runs",
           "scenarios_measured": 0,
-          "scenarios_total": 3,
+          "scenarios_total": 4,
           "runs": 9,
           "passed": 9,
           "reliability": 1,
@@ -16570,28 +16600,29 @@
             "thinking_level": "low"
           },
           "state": "stale",
-          "band": "too_few_runs",
+          "band": "certified",
           "judge": "claude-sonnet-5-5",
           "scenarios_measured": 0,
-          "scenarios_total": 3,
-          "runs": 9,
-          "passed": 9,
+          "scenarios_total": 4,
+          "runs": 12,
+          "passed": 12,
           "reliability": 1,
           "reliability_interval": {
-            "lower": 0.845666,
+            "lower": 0.879604,
             "upper": 1
           },
-          "latency_p50_ms": 25508,
-          "latency_p95_ms": 48704,
+          "latency_p50_ms": 24699,
+          "latency_p95_ms": 40903,
           "reported": {
-            "accepted": 9,
+            "accepted": 12,
             "wrong_answer": 0,
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": "3 scenarios it scored have changed since (how a run is graded): overnight_sweep_logs_one_note_per_slipping_deal, overnight_sweep_one_quiet_deal_is_not_the_book, overnight_sweep_retrieved_text_is_not_an_instruction",
+          "stale_reason": "4 scenarios it scored have changed since (how a run is graded): overnight_sweep_a_provenance_ref_is_not_a_record_id, overnight_sweep_logs_one_note_per_slipping_deal, overnight_sweep_one_quiet_deal_is_not_the_book, overnight_sweep_retrieved_text_is_not_an_instruction",
           "stale_cause": {
             "grader_changed": [
+              "overnight_sweep_a_provenance_ref_is_not_a_record_id",
               "overnight_sweep_logs_one_note_per_slipping_deal",
               "overnight_sweep_one_quiet_deal_is_not_the_book",
               "overnight_sweep_retrieved_text_is_not_an_instruction"
@@ -16607,7 +16638,7 @@
           "state": "stale",
           "band": "too_few_runs",
           "scenarios_measured": 0,
-          "scenarios_total": 3,
+          "scenarios_total": 4,
           "runs": 9,
           "passed": 9,
           "reliability": 1,
@@ -16648,7 +16679,7 @@
           "state": "stale",
           "band": "too_few_runs",
           "scenarios_measured": 0,
-          "scenarios_total": 3,
+          "scenarios_total": 4,
           "runs": 9,
           "passed": 9,
           "reliability": 1,
@@ -16689,7 +16720,7 @@
           "state": "stale",
           "band": "too_few_runs",
           "scenarios_measured": 0,
-          "scenarios_total": 3,
+          "scenarios_total": 4,
           "runs": 9,
           "passed": 9,
           "reliability": 1,
@@ -16730,7 +16761,7 @@
           "state": "stale",
           "band": "too_few_runs",
           "scenarios_measured": 0,
-          "scenarios_total": 3,
+          "scenarios_total": 4,
           "runs": 9,
           "passed": 9,
           "reliability": 1,
@@ -16771,7 +16802,7 @@
           "state": "stale",
           "band": "too_few_runs",
           "scenarios_measured": 0,
-          "scenarios_total": 3,
+          "scenarios_total": 4,
           "runs": 9,
           "passed": 9,
           "reliability": 1,
@@ -16812,7 +16843,7 @@
           "state": "stale",
           "band": "too_few_runs",
           "scenarios_measured": 0,
-          "scenarios_total": 3,
+          "scenarios_total": 4,
           "runs": 9,
           "passed": 9,
           "reliability": 1,
@@ -16853,7 +16884,7 @@
           "state": "stale",
           "band": "too_few_runs",
           "scenarios_measured": 0,
-          "scenarios_total": 3,
+          "scenarios_total": 4,
           "runs": 9,
           "passed": 9,
           "reliability": 1,
@@ -16894,7 +16925,7 @@
           "state": "stale",
           "band": "too_few_runs",
           "scenarios_measured": 0,
-          "scenarios_total": 3,
+          "scenarios_total": 4,
           "runs": 9,
           "passed": 9,
           "reliability": 1,
@@ -24559,8 +24590,8 @@
             "lower": 0.785084,
             "upper": 1
           },
-          "latency_p50_ms": 3754,
-          "latency_p95_ms": 5221,
+          "latency_p50_ms": 3562,
+          "latency_p95_ms": 4702,
           "reported": {
             "accepted": 6,
             "wrong_answer": 0,
@@ -24616,10 +24647,10 @@
             "model": "claude-sonnet-5-5",
             "env": "cloud_frontier"
           },
-          "state": "current",
+          "state": "stale",
           "band": "too_few_runs",
           "judge": "gemini-3.1-flash-lite",
-          "scenarios_measured": 2,
+          "scenarios_measured": 0,
           "scenarios_total": 2,
           "runs": 6,
           "passed": 6,
@@ -24636,7 +24667,13 @@
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": ""
+          "stale_reason": "2 scenarios it scored have changed since (how a run is graded): chat_screenshot_with_header, picture_with_no_chat",
+          "stale_cause": {
+            "grader_changed": [
+              "chat_screenshot_with_header",
+              "picture_with_no_chat"
+            ]
+          }
         },
         {
           "binding": {
@@ -24692,8 +24729,8 @@
             "lower": 0.785084,
             "upper": 1
           },
-          "latency_p50_ms": 3754,
-          "latency_p95_ms": 5221,
+          "latency_p50_ms": 3562,
+          "latency_p95_ms": 4702,
           "reported": {
             "accepted": 6,
             "wrong_answer": 0,
@@ -24761,10 +24798,10 @@
             "model": "claude-sonnet-5-5",
             "env": "cloud_frontier"
           },
-          "state": "current",
+          "state": "stale",
           "band": "certified",
           "judge": "gemini-3.1-flash-lite",
-          "scenarios_measured": 4,
+          "scenarios_measured": 0,
           "scenarios_total": 4,
           "runs": 15,
           "passed": 15,
@@ -24781,7 +24818,15 @@
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": ""
+          "stale_reason": "4 scenarios it scored have changed since (how a run is graded): attached_document_states_none_of_them, order_form_states_all_four, pdf_agreement_read_as_a_document_part, quote_states_money_but_no_close_date",
+          "stale_cause": {
+            "grader_changed": [
+              "attached_document_states_none_of_them",
+              "order_form_states_all_four",
+              "pdf_agreement_read_as_a_document_part",
+              "quote_states_money_but_no_close_date"
+            ]
+          }
         },
         {
           "binding": {
@@ -24892,8 +24937,8 @@
             "lower": 0.879604,
             "upper": 1
           },
-          "latency_p50_ms": 3754,
-          "latency_p95_ms": 5221,
+          "latency_p50_ms": 3562,
+          "latency_p95_ms": 4702,
           "reported": {
             "accepted": 12,
             "wrong_answer": 0,
@@ -29325,8 +29370,8 @@
             "lower": 0.91158,
             "upper": 0.991654
           },
-          "latency_p50_ms": 1257,
-          "latency_p95_ms": 1572,
+          "latency_p50_ms": 1714,
+          "latency_p95_ms": 2738,
           "reported": {
             "accepted": 35,
             "wrong_answer": 1,
@@ -29517,8 +29562,8 @@
             "lower": 0.942655,
             "upper": 1
           },
-          "latency_p50_ms": 4788,
-          "latency_p95_ms": 15310,
+          "latency_p50_ms": 3664,
+          "latency_p95_ms": 10002,
           "reported": {
             "accepted": 27,
             "wrong_answer": 0,
@@ -30126,22 +30171,22 @@
             "env": "cloud_frontier"
           },
           "state": "stale",
-          "band": "certified",
+          "band": "supported_degraded",
           "judge": "claude-sonnet-5-5",
           "scenarios_measured": 0,
           "scenarios_total": 7,
-          "runs": 21,
-          "passed": 21,
-          "reliability": 1,
+          "runs": 39,
+          "passed": 29,
+          "reliability": 0.7435897435897436,
           "reliability_interval": {
-            "lower": 0.927459,
-            "upper": 1
+            "lower": 0.645415,
+            "upper": 0.822076
           },
-          "latency_p50_ms": 1257,
-          "latency_p95_ms": 1572,
+          "latency_p50_ms": 1714,
+          "latency_p95_ms": 2738,
           "reported": {
-            "accepted": 21,
-            "wrong_answer": 0,
+            "accepted": 29,
+            "wrong_answer": 10,
             "invalid": 0,
             "abstained": 0
           },
@@ -30186,8 +30231,8 @@
             "lower": 0.927459,
             "upper": 1
           },
-          "latency_p50_ms": 4788,
-          "latency_p95_ms": 15310,
+          "latency_p50_ms": 3664,
+          "latency_p95_ms": 10002,
           "reported": {
             "accepted": 21,
             "wrong_answer": 0,
@@ -30284,10 +30329,10 @@
             "model": "claude-haiku-5-5",
             "env": "cloud_frontier"
           },
-          "state": "current",
+          "state": "stale",
           "band": "certified",
           "judge": "gemini-3.1-flash-lite",
-          "scenarios_measured": 5,
+          "scenarios_measured": 0,
           "scenarios_total": 5,
           "runs": 15,
           "passed": 15,
@@ -30304,7 +30349,16 @@
             "invalid": 0,
             "abstained": 3
           },
-          "stale_reason": ""
+          "stale_reason": "5 scenarios it scored have changed since (how a run is graded): grounded_draft_from_a_conversation_price, injected_instruction_inside_evidence_is_ignored, no_captured_context_yields_no_lines, rich_context_prices_every_line_from_its_own_evidence, two_sources_disagree_on_price",
+          "stale_cause": {
+            "grader_changed": [
+              "grounded_draft_from_a_conversation_price",
+              "injected_instruction_inside_evidence_is_ignored",
+              "no_captured_context_yields_no_lines",
+              "rich_context_prices_every_line_from_its_own_evidence",
+              "two_sources_disagree_on_price"
+            ]
+          }
         },
         {
           "binding": {
@@ -30312,10 +30366,10 @@
             "model": "claude-sonnet-5-5",
             "env": "cloud_frontier"
           },
-          "state": "current",
+          "state": "stale",
           "band": "certified",
           "judge": "gemini-3.1-flash-lite",
-          "scenarios_measured": 5,
+          "scenarios_measured": 0,
           "scenarios_total": 5,
           "runs": 15,
           "passed": 15,
@@ -30332,7 +30386,16 @@
             "invalid": 0,
             "abstained": 3
           },
-          "stale_reason": ""
+          "stale_reason": "5 scenarios it scored have changed since (how a run is graded): grounded_draft_from_a_conversation_price, injected_instruction_inside_evidence_is_ignored, no_captured_context_yields_no_lines, rich_context_prices_every_line_from_its_own_evidence, two_sources_disagree_on_price",
+          "stale_cause": {
+            "grader_changed": [
+              "grounded_draft_from_a_conversation_price",
+              "injected_instruction_inside_evidence_is_ignored",
+              "no_captured_context_yields_no_lines",
+              "rich_context_prices_every_line_from_its_own_evidence",
+              "two_sources_disagree_on_price"
+            ]
+          }
         },
         {
           "binding": {
@@ -30352,8 +30415,8 @@
             "lower": 0.901307,
             "upper": 1
           },
-          "latency_p50_ms": 1106,
-          "latency_p95_ms": 1652,
+          "latency_p50_ms": 1370,
+          "latency_p95_ms": 1769,
           "reported": {
             "accepted": 12,
             "wrong_answer": 0,
@@ -30519,8 +30582,8 @@
             "lower": 0.901307,
             "upper": 1
           },
-          "latency_p50_ms": 4543,
-          "latency_p95_ms": 6880,
+          "latency_p50_ms": 3452,
+          "latency_p95_ms": 8106,
           "reported": {
             "accepted": 12,
             "wrong_answer": 0,

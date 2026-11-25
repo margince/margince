@@ -38,6 +38,13 @@ const extensionHistoryCap = 50
 // where the report directory, the other read over extension tables, lives. The
 // record is probed first, so a record outside the caller's row scope is a 404.
 func (h analyticsQueryHandlers) ListExtensionHistory(w http.ResponseWriter, r *http.Request, params crmcontracts.ListExtensionHistoryParams) {
+	// The type names an auth object and a table, so an unknown one stops here
+	// instead of reaching the row probe.
+	if !params.EntityType.Valid() {
+		httperr.Write(w, r, httperr.Validation("entity_type", "invalid_parameter",
+			"entity_type must be one of contact, company, deal"))
+		return
+	}
 	ctx := r.Context()
 	entity, id := string(params.EntityType), ids.UUID(params.EntityId)
 	entries := []crmcontracts.ExtensionHistoryEntry{}

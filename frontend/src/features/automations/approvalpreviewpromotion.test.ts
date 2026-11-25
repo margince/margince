@@ -37,3 +37,30 @@ it.each(LOCALES)(
     expect(rows.some((row) => row.value === "logistics_transport")).toBe(false);
   },
 );
+
+it.each(LOCALES)(
+  "words a company status, not a deal status, in %s",
+  (locale) => {
+    const t = (key: Parameters<typeof translate>[1]) => translate(locale, key);
+    const rows = commercialPreviewDisplay(
+      {
+        version: 1,
+        state: "ready",
+        reviewer_reason: "record_authority",
+        changes: [
+          {
+            field: "status",
+            before: { kind: "lifecycle", text: "customer" },
+            after: { kind: "lifecycle", text: "former_customer" },
+          },
+        ],
+      },
+      (key, params) => translate(locale, key, params),
+      locale,
+    );
+    expect(rows[0].comparison).toEqual({
+      from: t("company.lifecycle.customer"),
+      to: t("company.lifecycle.former_customer"),
+    });
+  },
+);

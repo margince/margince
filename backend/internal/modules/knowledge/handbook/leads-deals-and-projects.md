@@ -199,7 +199,7 @@ Also called: update an opportunity, rename a deal, change deal details.
 
 ### How do I change a deal's value or currency?
 To change a deal's value or currency, press **Edit** in the **Value** section of the deal's **Details** panel, change them and choose **Save**.
-Value and currency go together: a value with no currency is refused, and so is a currency with no value. Changing the currency keeps the figures as typed, now in the new currency; nothing is turned into the new currency.
+Value and currency go together: a value with no currency is refused, and so is a currency with no value. Changing the currency keeps the figures as typed and converts nothing; empty **Value** on an open deal to remove its price.
 The recurring value may come from an accepted offer. Then the row reads **Expected ARR**, "comes from the accepted offer and is not edited here"; accepting another offer replaces it.
 Also called: change the amount, update deal size, switch to dollars.
 
@@ -226,7 +226,7 @@ The new owner must be "an active colleague you may assign work to". That is any 
 Also called: hand over a deal, change deal owner, transfer an opportunity.
 
 ### Can I edit a closed or archived deal?
-A won or lost deal in Margince can still be edited: only its **Stage** ladder and its **Probability** are locked until you reopen it. Changing a closed deal's value or currency fixes its exchange rate again.
+A won or lost deal in Margince can still be edited: only its **Stage** ladder and its **Probability** are locked until you reopen it. Changing a closed deal's value or currency fixes its exchange rate again, and its price stays until you reopen it.
 An archived deal cannot be edited: "This deal is archived and takes no changes." Without edit rights you see "You can log activity and add tasks. Changing this deal needs its owner to share it."
 Also called: change a won deal, fix a lost deal.
 

@@ -44,6 +44,16 @@ func (e *Env) WsExec(t *testing.T, sql string, args ...any) {
 	}
 }
 
+// SeedRawCapture stores one raw_capture row as the connector's receiver would
+// have left it and returns its id, which an ingest job names.
+func (e *Env) SeedRawCapture(t *testing.T, sourceSystem, sourceID string, payload []byte) ids.UUID {
+	t.Helper()
+	rawID := ids.NewV7()
+	e.WsExec(t, `INSERT INTO raw_capture (id, source_system, source_id, payload) VALUES ($1, $2, $3, $4)`,
+		rawID, sourceSystem, sourceID, payload)
+	return rawID
+}
+
 // VaultHolds reports whether the vault still resolves ref in the test workspace.
 func (e *Env) VaultHolds(v keyvault.Vault, ref string) bool {
 	_, err := v.Get(context.Background(), ids.From[ids.WorkspaceKind](e.WS), keyvault.Ref(ref))

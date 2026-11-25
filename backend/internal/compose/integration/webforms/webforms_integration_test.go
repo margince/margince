@@ -550,6 +550,30 @@ func TestAPausedFormIsGoneAndAnArchivedOneIsAbsent(t *testing.T) {
 	}
 }
 
+// A form left on a German page after it was archived answers the visitor's
+// browser with a page they can read. A script still gets the problem.
+func TestAPlainPostToAnArchivedFormGetsAPageInTheVisitorsLanguage(t *testing.T) {
+	e := setupFormsApp(t)
+	form := createForm(t, e, integration.AnyMap{"name": "Contact", "sender": "browser", "allowed_origins": []string{siteOrigin}})
+	if status := e.Call(t, "DELETE", "/v1/web-forms/"+form.ID, nil, nil, nil); status != http.StatusOK {
+		t.Fatalf("archive → %d", status)
+	}
+	body := []byte(withRenderTime(t, url.Values{"email": {"late@visitor.example"}}).Encode())
+	for _, key := range []string{form.FormKey, "short"} {
+		page := postForm(t, e, "POST", key, "application/x-www-form-urlencoded", body,
+			map[string]string{"Origin": siteOrigin, "Accept": "text/html", "Accept-Language": "de-DE,de;q=0.9"})
+		if page.Status != http.StatusNotFound || !strings.HasPrefix(page.Header.Get("Content-Type"), "text/html") ||
+			!strings.Contains(page.Body, "Dieses Formular ist nicht mehr verfügbar.") {
+			t.Fatalf("plain post to %q → %d %q:\n%s", key, page.Status, page.Header.Get("Content-Type"), page.Body)
+		}
+	}
+	script := postForm(t, e, "POST", form.FormKey, "application/json", []byte(`{"email":"late@visitor.example"}`),
+		map[string]string{"Origin": siteOrigin, "Accept": "text/html", "Accept-Language": "de"})
+	if script.Status != http.StatusNotFound || !strings.Contains(script.Header.Get("Content-Type"), "problem+json") {
+		t.Fatalf("a script's post to an archived form → %d %q, want the 404 problem", script.Status, script.Header.Get("Content-Type"))
+	}
+}
+
 func TestAFormNeverAnswersItsSecretOnARead(t *testing.T) {
 	e := setupFormsApp(t)
 	form := createForm(t, e, integration.AnyMap{"name": "Backend", "sender": "server"})

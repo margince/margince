@@ -10,7 +10,7 @@ import (
 // labels is what the mapping step calls each core target, in the words the
 // record pages use for the same field. A target with no entry here would show
 // its internal name, so withLabels refuses one at start-up.
-var companyName = langcopy.Phrase{En: "Company name", De: "Firmenname", Vi: "Tên công ty"}
+var companyName = langcopy.Phrase{En: "Company name", De: "Unternehmensname", Vi: "Tên công ty"}
 
 var labels = map[string]langcopy.Phrase{
 	"activity.owner_email": {En: "Owner (email)", De: "Verantwortlich (E-Mail)", Vi: "Người chịu trách nhiệm (email)"},
@@ -25,14 +25,14 @@ var labels = map[string]langcopy.Phrase{
 	"body":                 {En: "Notes", De: "Notizen", Vi: "Ghi chú"},
 	"close_date":           {En: "Expected close date", De: "Erwartetes Abschlussdatum", Vi: "Ngày dự kiến chốt"},
 	"company_name":         companyName,
-	"company_ref":          {En: "Company ref", De: "Firmen-Ref", Vi: "Ref công ty"},
+	"company_ref":          {En: "Company ref", De: "Unternehmens-Ref", Vi: "Ref công ty"},
 	"company.display_name": companyName,
 	"company.email":        {En: "General email address", De: "Allgemeine E-Mail-Adresse", Vi: "Địa chỉ email chung"},
 	"company.linkedin_url": {En: "LinkedIn page", De: "LinkedIn-Seite", Vi: "Trang LinkedIn"},
 	"contact_ref":          {En: "Contact ref", De: "Kontakt-Ref", Vi: "Ref liên hệ"},
 	"contact.company_name": companyName,
 	"currency":             {En: "Currency", De: "Währung", Vi: "Tiền tệ"},
-	"deal.company_ref":     {En: "Company ref", De: "Firmen-Ref", Vi: "Ref công ty"},
+	"deal.company_ref":     {En: "Company ref", De: "Unternehmens-Ref", Vi: "Ref công ty"},
 	"deal.description":     {En: "Description", De: "Beschreibung", Vi: "Mô tả"},
 	"deal.name":            {En: "Deal name", De: "Name des Deals", Vi: "Tên giao dịch"},
 	"deal.ref":             {En: "Deal ref", De: "Deal-Ref", Vi: "Ref giao dịch"},
@@ -63,8 +63,8 @@ var labels = map[string]langcopy.Phrase{
 	"stage":                {En: "Stage", De: "Phase", Vi: "Giai đoạn"},
 	"subject":              {En: "Subject", De: "Betreff", Vi: "Tiêu đề"},
 	"tags":                 {En: "Tags", De: "Tags", Vi: "Thẻ"},
-	"title":                {En: "Job title", De: "Position", Vi: "Chức danh"},
-	"type":                 {En: "Activity type", De: "Art der Aktivität", Vi: "Loại hoạt động"},
+	"title":                {En: "Job title", De: "Jobtitel", Vi: "Chức danh"},
+	"type":                 {En: "Activity type", De: "Aktivitätstyp", Vi: "Loại hoạt động"},
 }
 
 // withLabels gives every column its label. It panics at start-up on a column

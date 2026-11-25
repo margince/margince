@@ -268,6 +268,7 @@ func WithKeyvault(vault keyvault.Vault) Option {
 		// the option orders where keyvault happens to run last, which nothing
 		// holds.
 		s.connectorAppHandlers.store = connectorApps.WithUnitApps(composedUnitApp)
+		s.apps = s.connectorAppHandlers.store
 		// And the connect transport resolves the STORED app per request, so an
 		// app set through Settings works without restarting the api. The worker
 		// resolves it the same way for the sync poll's token refresh, which is

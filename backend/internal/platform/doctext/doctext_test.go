@@ -10,6 +10,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"runtime"
 	"strings"
 	"testing"
 	"unicode/utf8"
@@ -121,6 +122,53 @@ func TestAnArchiveThatInflatesPastItsBoundIsRefused(t *testing.T) {
 	}
 	if _, err := Read(context.Background(), raw, 1500); !errors.Is(err, ErrUnreadable) {
 		t.Errorf("Read = %v, want ErrUnreadable for an archive past its inflation bound", err)
+	}
+}
+
+func TestARowNamingOneLargeStringManyTimesStaysInsideTheExcerptBudget(t *testing.T) {
+	const cells = 4000
+	shared := `<sst><si><t>` + strings.Repeat("A", 64<<10) + `</t></si></sst>`
+	sheet := `<worksheet><sheetData><row>` + strings.Repeat(`<c t="s"><v>0</v></c>`, cells) + `</row></sheetData></worksheet>`
+	raw := archive(t,
+		[2]string{"xl/workbook.xml", `<workbook/>`},
+		[2]string{"xl/sharedStrings.xml", shared},
+		[2]string{"xl/worksheets/sheet1.xml", sheet},
+	)
+	var before, after runtime.MemStats
+	runtime.ReadMemStats(&before)
+	got, err := Read(context.Background(), raw, 200)
+	runtime.ReadMemStats(&after)
+	if err != nil {
+		t.Fatalf("Read: %v", err)
+	}
+	// Joining the row whole would allocate cells x 64 KiB, about 250 MiB.
+	if grew := after.TotalAlloc - before.TotalAlloc; grew > 16<<20 {
+		t.Errorf("reading the row allocated %d bytes; the row must be clipped to the excerpt budget before it is joined", grew)
+	}
+	if n := utf8.RuneCountInString(got.Text); n > 200 || !got.Truncated {
+		t.Errorf("excerpt holds %d runes, truncated=%v; want at most 200 and truncated", n, got.Truncated)
+	}
+	if !strings.HasPrefix(got.Text, "Sheet: sheet1.xml\nAAAA") {
+		t.Errorf("excerpt = %q, want the sheet header and the row's first cell", got.Text)
+	}
+}
+
+func TestARowThatFitsTheBudgetExactlyIsNotTruncatedAndOneRuneOverIs(t *testing.T) {
+	sheet := `<worksheet><sheetData>` +
+		`<row><c t="inlineStr"><is><t>a</t></is></c><c t="inlineStr"><is><t>b</t></is></c></row>` +
+		`<row><c t="inlineStr"><is><t>ccc</t></is></c><c t="inlineStr"><is><t>ddd</t></is></c></row>` +
+		`</sheetData></worksheet>`
+	raw := archive(t, [2]string{"xl/workbook.xml", `<workbook/>`}, [2]string{"xl/worksheets/sheet1.xml", sheet})
+	// "Sheet: sheet1.xml\n" is 18 runes, "a | b\n" 6 and "ccc | ddd\n" 10.
+	for budget, wantTruncated := range map[int]bool{34: false, 33: true} {
+		got, err := Read(context.Background(), raw, budget)
+		if err != nil || got.Truncated != wantTruncated {
+			t.Errorf("budget %d: Read = %+v, %v; want truncated=%v", budget, got, err, wantTruncated)
+		}
+	}
+	got, err := Read(context.Background(), raw, 34)
+	if err != nil || got.Text != "Sheet: sheet1.xml\na | b\nccc | ddd" {
+		t.Errorf("Read = %q, %v; want both rows whole", got.Text, err)
 	}
 }
 

@@ -81,6 +81,7 @@ var probedRequiredIDBodies = map[string]bool{
 	"LinkFinanceSourceCustomerRequest":  true,
 	"RecordConversationClaimRequest":    true,
 	"MergeCompanyJSONBody":              true,
+	"MergeDealJSONBody":                 true,
 	"RelinkActivityJSONBody":            true,
 	"RelinkThreadRequest":               true,
 	"RelinkActivitiesRequest":           true,

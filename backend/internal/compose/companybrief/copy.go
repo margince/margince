@@ -178,12 +178,12 @@ var floor = companyPhrases{
 		Vi: " trị giá khoảng %s %s",
 	},
 	WonToDate: phrase{
-		En: "; %s %s won to date", De: "; %s %s bisher gewonnen",
+		En: "; %s %s won to date", De: ". Bisher gewonnen: %s %s",
 		Vi: "; đã thắng %s %s đến nay",
 	},
 	StalledDeal: phrase{
 		En: "%s is stalled with no recent activity.",
-		De: "%s stockt, ohne jüngste Aktivität.",
+		De: "%s stockt. Es gibt keine aktuelle Aktivität.",
 		Vi: "%s đang chững lại, không có hoạt động gần đây.",
 	},
 
@@ -247,10 +247,10 @@ var floor = companyPhrases{
 	OpenCommitmentOne:  phrase{En: "1 open commitment", De: "1 offene Zusage", Vi: "1 cam kết đang mở"},
 	OpenCommitmentMany: phrase{En: "%d open commitments", De: "%d offene Zusagen", Vi: "%d cam kết đang mở"},
 	OpenCommitmentOurs: phrase{
-		En: "Our commitment: “%s”.", De: "Unsere Zusage: „%s“.", Vi: "Cam kết của chúng ta: “%s”.",
+		En: "Our commitment: “%s”.", De: "Eigene Zusage: „%s“.", Vi: "Cam kết của chúng ta: “%s”.",
 	},
 	OpenCommitmentOursDue: phrase{
-		En: "Our commitment: “%s”, due %s.", De: "Unsere Zusage: „%s“, fällig am %s.",
+		En: "Our commitment: “%s”, due %s.", De: "Eigene Zusage: „%s“, fällig am %s.",
 		Vi: "Cam kết của chúng ta: “%s”, đến hạn %s.",
 	},
 	OpenCommitmentTheirs: phrase{
@@ -263,7 +263,7 @@ var floor = companyPhrases{
 	OpenCommitmentUnnamed: phrase{En: "the contact", De: "dem Kontakt", Vi: "liên hệ"},
 	OpenWorkIncomplete: phrase{
 		En: "This list may not show everything that is open: some records are hidden from you or lie beyond the first page.",
-		De: "Diese Liste zeigt womöglich nicht alles Offene: Manches ist für Sie nicht sichtbar oder steht jenseits der ersten Seite.",
+		De: "Diese Liste zeigt womöglich nicht alles Offene. Manches ist für dich nicht sichtbar oder steht erst nach der ersten Seite.",
 		Vi: "Danh sách này có thể chưa đầy đủ: một số mục bị ẩn với bạn hoặc nằm ngoài trang đầu.",
 	},
 

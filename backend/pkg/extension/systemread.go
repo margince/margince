@@ -89,6 +89,9 @@ type DealSummary struct {
 	// OwnerID is empty for a deal with no owner.
 	OwnerID  UserID
 	Archived bool
+	// MergedIntoID names the deal this one was merged into, and is empty for a
+	// deal that was not. A reader follows it to the deal that carries on.
+	MergedIntoID string
 }
 
 // Responsible is one colleague a deal names.
@@ -292,7 +295,7 @@ type CompanySummary struct {
 	ID           string
 	Name         string
 	LegalName    string
-	Lifecycle    string
+	Status       string
 	OwnerID      UserID
 	SourceSystem string
 	SourceID     string

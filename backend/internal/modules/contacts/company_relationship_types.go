@@ -350,9 +350,9 @@ func moveCompanyRelationshipTypes(ctx context.Context, tx pgx.Tx, from, to ids.C
 // compares against. The column is NOT NULL, so a read always carries one; the
 // pointer is the contract's shape, not a real absence, and an empty before
 // image would make every first edit look like a change from nothing.
-func lifecycleValue(l *crmcontracts.CompanyLifecycle) string {
+func lifecycleValue(l *crmcontracts.CompanyStatus) string {
 	if l == nil {
-		return string(crmcontracts.CompanyLifecycleUnknown)
+		return string(crmcontracts.CompanyStatusUnknown)
 	}
 	return string(*l)
 }
@@ -361,15 +361,15 @@ func lifecycleValue(l *crmcontracts.CompanyLifecycle) string {
 // it so a bad value is a 422 naming the field rather than a CHECK violation.
 // Held by: TestEveryClosedVocabularyOverAContractEnumHoldsAllOfIt (backend/gates/contractvocabulary_test.go)
 var validLifecycles = map[string]bool{
-	string(crmcontracts.CompanyLifecycleUnknown):        true,
-	string(crmcontracts.CompanyLifecycleTarget):         true,
-	string(crmcontracts.CompanyLifecycleProspect):       true,
-	string(crmcontracts.CompanyLifecycleOpportunity):    true,
-	string(crmcontracts.CompanyLifecycleOnboarding):     true,
-	string(crmcontracts.CompanyLifecycleLive):           true,
-	string(crmcontracts.CompanyLifecycleCustomer):       true,
-	string(crmcontracts.CompanyLifecycleFormerCustomer): true,
-	string(crmcontracts.CompanyLifecycleDisqualified):   true,
+	string(crmcontracts.CompanyStatusUnknown):        true,
+	string(crmcontracts.CompanyStatusTarget):         true,
+	string(crmcontracts.CompanyStatusProspect):       true,
+	string(crmcontracts.CompanyStatusOpportunity):    true,
+	string(crmcontracts.CompanyStatusOnboarding):     true,
+	string(crmcontracts.CompanyStatusLive):           true,
+	string(crmcontracts.CompanyStatusCustomer):       true,
+	string(crmcontracts.CompanyStatusFormerCustomer): true,
+	string(crmcontracts.CompanyStatusDisqualified):   true,
 }
 
 // checkLifecycle refuses a value outside the vocabulary.
@@ -377,7 +377,7 @@ func checkLifecycle(value string) error {
 	if validLifecycles[value] {
 		return nil
 	}
-	return httperr.Validation("lifecycle", "invalid_enum",
+	return httperr.Validation(filterStatus, "invalid_enum",
 		fmt.Sprintf("%q is not a lifecycle; %s", value, vocabularyOf(validLifecycles)))
 }
 
