@@ -11,27 +11,20 @@ import {
   Disclosure,
   EmptyState,
   Field,
-  Textarea,
   TextInput,
 } from "../../design-system/atoms";
 import { Callout } from "../../design-system/callout";
 import { Heading } from "../../design-system/heading";
 import { Panel, PanelBody, PanelIntro } from "../../design-system/panel";
-import { QueryGate, QueryStates } from "../../design-system/querystates";
+import { QueryStates } from "../../design-system/querystates";
 import { Meter } from "../../design-system/readings";
 import { RecordFormDialog } from "../../design-system/recordformdialog";
-import { useSaveDraft } from "../../design-system/savepage";
 import { SettingList, SettingRow } from "../../design-system/settingrow";
 import { formatDateTime, formatNumber } from "../../format/format";
 import { lockFor } from "../../format/settinglocks";
 import { useLocale, usePlural, useT } from "../../i18n";
 import { useCan, useCanWrite } from "../../lib/capability";
-import {
-  isVersionSkewOf,
-  problemFieldSentencesOf,
-  problemMessageOf,
-  unwrap,
-} from "../../lib/problem";
+import { problemMessageOf, unwrap } from "../../lib/problem";
 import { wholeNumberFault } from "../../lib/wholenumber";
 import { AiFeatureTable } from "./ai-feature-table";
 import { formatTokens } from "./tokens";
@@ -40,11 +33,6 @@ import "./ai-admin.css";
 type Budget = components["schemas"]["AiBudgetSnapshot"];
 type Change = components["schemas"]["AiBudgetChange"];
 type Deferred = components["schemas"]["AiDeferredWork"];
-type TeamRules = components["schemas"]["AiTeamRules"];
-
-const TEAM_RULES_KEY = ["ai-team-rules"];
-// The maxLength of text in crm.yaml (AiTeamRules).
-const TEAM_RULES_MAX_LENGTH = 20000;
 
 export function useAiStatus(enabled: boolean) {
   return useQuery({
@@ -470,141 +458,5 @@ function DeferredWork({ rows }: Readonly<{ rows: Deferred[] }>) {
       </ul>
       <p>{t("aiAdmin.recovery")}</p>
     </Disclosure>
-  );
-}
-
-/** Settings → AI → Rules: the one text every AI draft in the workspace follows. */
-export function TeamRulesCard() {
-  const t = useT();
-  const query = useQuery({
-    queryKey: TEAM_RULES_KEY,
-    queryFn: async () => {
-      const data = unwrap(await api.GET("/ai/team-rules"));
-      if (!data) throw new Error("Team rules are unavailable");
-      return data;
-    },
-  });
-  return (
-    <QueryGate query={query} pendingLabel={t("teamRules.title")}>
-      {(rules) => <TeamRulesEditor rules={rules} />}
-    </QueryGate>
-  );
-}
-
-// What the editor opened on, kept apart from the latest server answer. A save
-// is judged against the version the text was edited from, never a newer one.
-type TeamRulesEdit = Readonly<{
-  text: string;
-  baseText: string;
-  baseUpdatedAt: string | undefined;
-}>;
-
-function TeamRulesEditor({ rules }: Readonly<{ rules: TeamRules }>) {
-  const t = useT();
-  const { locale } = useLocale();
-  const client = useQueryClient();
-  const canEdit = useCanWrite("ai_team_rules", "update");
-  const [edit, setEdit] = useState<TeamRulesEdit | null>(null);
-  const [skewed, setSkewed] = useState(false);
-  const text = edit?.text ?? rules.text;
-  const dirty = edit !== null && edit.text !== edit.baseText;
-  // Somebody saved while this text was being edited: the server moved on, or a
-  // save was refused as stale.
-  const conflict = dirty && (skewed || edit.baseUpdatedAt !== rules.updated_at);
-  const settle = () => {
-    setEdit(null);
-    setSkewed(false);
-  };
-  const save = useMutation({
-    mutationFn: async (from: TeamRulesEdit) =>
-      unwrap(
-        await api.PUT("/ai/team-rules", {
-          body: { text: from.text, expected_updated_at: from.baseUpdatedAt },
-        }),
-      ),
-    onSuccess: (data) => client.setQueryData(TEAM_RULES_KEY, data),
-    onError: (error) => {
-      if (isVersionSkewOf(error)) {
-        setSkewed(true);
-        void client.invalidateQueries({ queryKey: TEAM_RULES_KEY });
-      }
-    },
-  });
-  useSaveDraft({
-    dirty,
-    save: async () => {
-      if (edit === null) return;
-      await save.mutateAsync(edit);
-      settle();
-    },
-    placed: ["text"],
-    discard: settle,
-  });
-  const faults = problemFieldSentencesOf(save.error, locale);
-  return (
-    <Panel title={t("teamRules.title")}>
-      <PanelBody className="form-stack">
-        <PanelIntro>{t("teamRules.intro")}</PanelIntro>
-        <Field
-          label={t("teamRules.label")}
-          hint={t("teamRules.length", {
-            used: formatNumber(text.length, locale),
-            max: formatNumber(TEAM_RULES_MAX_LENGTH, locale),
-          })}
-          error={faults.get("text")}
-        >
-          {(control) => (
-            <Textarea
-              {...control}
-              rows={12}
-              maxLength={TEAM_RULES_MAX_LENGTH}
-              disabled={!canEdit || save.isPending}
-              value={text}
-              onChange={(event) =>
-                setEdit({
-                  text: event.target.value,
-                  baseText: edit?.baseText ?? rules.text,
-                  baseUpdatedAt: edit ? edit.baseUpdatedAt : rules.updated_at,
-                })
-              }
-            />
-          )}
-        </Field>
-        {conflict && (
-          <Callout
-            kind="outcome"
-            tone="warning"
-            title={t("teamRules.conflictTitle")}
-            actions={
-              <>
-                <Button onClick={settle}>{t("teamRules.reload")}</Button>
-                <Button
-                  onClick={() => {
-                    setEdit({
-                      text,
-                      baseText: rules.text,
-                      baseUpdatedAt: rules.updated_at,
-                    });
-                    setSkewed(false);
-                  }}
-                >
-                  {t("teamRules.keepMine")}
-                </Button>
-              </>
-            }
-          >
-            {t("teamRules.conflictBody")}
-          </Callout>
-        )}
-        <p className="t-caption">
-          {rules.updated_at
-            ? t("teamRules.savedBy", {
-                who: rules.updated_by ?? t("teamRules.unknownEditor"),
-                when: formatDateTime(rules.updated_at, locale, "UTC"),
-              })
-            : t("teamRules.none")}
-        </p>
-      </PanelBody>
-    </Panel>
   );
 }

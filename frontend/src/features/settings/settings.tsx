@@ -352,16 +352,14 @@ export const SETTINGS_PAGE_VIEWS = {
         import("./followupsettings"),
         import("../ai/ai-price-sync"),
         import("../ai/ai-provider-keys"),
-        import("../ai/ai-admin"),
       ]),
     (
       [
         { AiRoutingCard },
-        { AiTasksCard },
+        { AiTasksCard, TeamRulesCard },
         { PrivateMailRequestsCard },
         { ModelPricesCard },
         { AiProviderKeysCard },
-        { TeamRulesCard },
       ],
       { tab },
     ) =>

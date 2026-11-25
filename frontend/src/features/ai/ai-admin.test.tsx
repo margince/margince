@@ -19,9 +19,10 @@ import { PageSaveBar, SavePageProvider } from "../../design-system/savepage";
 import { LocaleProvider } from "../../i18n";
 import { allowance, feature, status } from "../../testing/ai-admin.testkit";
 import { type GrantSpec, meFixture } from "../../testing/mefixture";
-import { AiBudgetCard, TeamRulesCard } from "./ai-admin";
+import { AiBudgetCard } from "./ai-admin";
 import { AiFeatureTable } from "./ai-feature-table";
 import { openTaskDetails } from "./ai-task-details-testing";
+import { TeamRulesCard } from "./ai-tasks";
 
 afterEach(() => {
   cleanup();

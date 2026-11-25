@@ -30,6 +30,7 @@ import (
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
 	"github.com/margince/margince/backend/internal/compose/draftvoice"
+	"github.com/margince/margince/backend/internal/compose/modelfailure"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/ai"
 	"github.com/margince/margince/backend/internal/platform/auth"
@@ -127,7 +128,7 @@ func (h Reads) DraftIntroNote(w http.ResponseWriter, r *http.Request, id crmcont
 	ctx := ai.WithSubject(r.Context(), contactID.Ref(), facts.contact)
 	draft, err := writeIntroNote(ctx, h.introNoteLane, h.introNoteRules, facts)
 	if err != nil {
-		httperr.Write(w, r, err)
+		modelfailure.Write(w, r, err)
 		return
 	}
 	httperr.WriteJSON(w, http.StatusOK, draft)

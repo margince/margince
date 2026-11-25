@@ -16498,7 +16498,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Ein Mitglied hat die Teamregeln gespeichert, während du sie bearbeitet hast",
   "teamRules.conflictBody":
     "Lade neu, um ihre Fassung zu sehen und deine Änderung zu verwerfen, oder behalte deinen Text und speichere ihn über ihre.",
-  "teamRules.reload": "Ihre Fassung laden",
+  "teamRules.reload": "Neue Fassung laden",
   "teamRules.keepMine": "Meinen Text behalten",
   "roles.object.ai_diagnostics": "KI-Nutzung",
   "roles.object.ai_model_rate": "Modellpreise",
