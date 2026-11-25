@@ -356,8 +356,8 @@ func (s *Store) resolveConversation(ctx context.Context, anchorID ids.ActivityID
 			}
 			return err
 		}
-		if connector.IsCaptureOnlyThread(provider, out.threadKey) {
-			return &CaptureOnlyConversationError{Provider: provider}
+		if err := connector.RefuseCaptureOnlyThread(provider, out.threadKey); err != nil {
+			return err
 		}
 		reachable, err := s.reachableOnConversation(ctx, tx, anchorID, provider)
 		if err != nil {

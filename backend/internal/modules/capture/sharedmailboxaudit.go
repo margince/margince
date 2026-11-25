@@ -78,9 +78,12 @@ func RequireSharedMailboxAdmin(ctx context.Context) (principal.Principal, error)
 
 // ReaderTeamError refuses a reader team that cannot read: unknown, archived,
 // or with no live member.
-type ReaderTeamError struct{ empty bool }
+type ReaderTeamError struct{ empty, missing bool }
 
 func (e *ReaderTeamError) Error() string {
+	if e.missing {
+		return "name the team that reads this account's messages"
+	}
 	if e.empty {
 		return "the reader team has no active member, so nobody could read this mailbox"
 	}
@@ -89,6 +92,9 @@ func (e *ReaderTeamError) Error() string {
 
 // FieldFault answers the refusal on the field that named the team.
 func (e *ReaderTeamError) FieldFault() (field, code, message string) {
+	if e.missing {
+		return fieldReaderTeam, "reader_team_required", e.Error()
+	}
 	if e.empty {
 		return fieldReaderTeam, "reader_team_has_no_member", e.Error()
 	}

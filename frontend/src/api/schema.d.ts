@@ -11683,14 +11683,49 @@ export interface paths {
         put?: never;
         /**
          * Approve a Telegram Business account for the workspace.
-         * @description Moves a `pending_approval` link to `connected`. Approving a link that is already
-         *     `connected` changes nothing. A `409` means the owner switched the link off in Telegram.
+         * @description Moves a `pending_approval` link to `connected` and gives the account its seat. A company
+         *     account's seat is read by the team in `readerTeamId` and starts `held`, as a shared
+         *     mailbox does; an admin then opens it with `PATCH /channel-connections/telegram-business/{id}/visibility`. The team is
+         *     required the first time an account is approved (`422 reader_team_required`) and is
+         *     optional when the account comes back to a seat it already had. A member's own account
+         *     takes no team and starts `classified`. Approving a link that is already `connected` changes
+         *     nothing except that it makes a missing seat. A `409` means the owner switched the link off
+         *     in Telegram, or `readerTeamId` names another team than the seat already has.
          */
         post: operations["approveTelegramBusinessConnection"];
         delete?: never;
         options?: never;
         head?: never;
         patch?: never;
+        trace?: never;
+    };
+    "/channel-connections/telegram-business/{id}/visibility": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /**
+         * Change who may read a business account's messages.
+         * @description Sets the mail visibility of the account's seat, as `PATCH /shared-mailboxes/{id}` does for a
+         *     shared mailbox: the next message follows it. `shared` needs `capture.shared_posture_allowed`
+         *     and `classified` is refused, both with `422`. The request must carry `confirm: true`, because
+         *     the change decides what every reader of the seat sees. A link nobody has approved has no seat
+         *     and answers `409`. A member's own account has no team seat and answers `404`.
+         *
+         *     Admin only, in a signed-in session.
+         */
+        patch: operations["updateTelegramBusinessConnectionVisibility"];
         trace?: never;
     };
     "/channel-links/{record_type}/{id}": {
@@ -33535,6 +33570,37 @@ export interface components {
              * @description When an admin approved the link; absent until then.
              */
             approvedAt?: string | null;
+            /**
+             * Format: uuid
+             * @description The seat the account's messages file through. Its mail visibility is changed with `PATCH /channel-connections/telegram-business/{id}/visibility`. Null until an admin approves the link.
+             */
+            seatId?: string | null;
+            /**
+             * Format: uuid
+             * @description The team that reads a company account's messages. Null for a member's own account and before approval.
+             */
+            readerTeamId?: string | null;
+            /**
+             * @description What the seat asks of the account's messages. `held` keeps them from colleagues outside the reader team and `shared` opens them as the contact's sharing allows. A member's own account starts `classified`, which holds a chat.
+             * @enum {string|null}
+             */
+            mailVisibility?: "held" | "shared" | "classified" | null;
+        };
+        ApproveTelegramBusinessConnectionRequest: {
+            /**
+             * Format: uuid
+             * @description The team that reads the account's messages.
+             */
+            readerTeamId?: string;
+        };
+        UpdateTelegramBusinessConnectionVisibilityRequest: {
+            /**
+             * @description `classified` is refused with `422`.
+             * @enum {string}
+             */
+            mail_visibility: "held" | "shared" | "classified";
+            /** @description Must be true: the change decides what every reader of the seat sees. */
+            confirm: boolean;
         };
         TelegramBusinessConnectionListResponse: {
             data: components["schemas"]["TelegramBusinessConnection"][];
@@ -85569,9 +85635,54 @@ export interface operations {
             };
             cookie?: never;
         };
-        requestBody?: never;
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["ApproveTelegramBusinessConnectionRequest"];
+            };
+        };
         responses: {
             /** @description The approved connection. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TelegramBusinessConnection"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["PermissionDenied"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            422: components["responses"]["ValidationError"];
+            /** @description This deployment serves no messaging channels (`code: channel_connections_not_configured`). */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    updateTelegramBusinessConnectionVisibility: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateTelegramBusinessConnectionVisibilityRequest"];
+            };
+        };
+        responses: {
+            /** @description The connection as it now stands. */
             200: {
                 headers: {
                     [name: string]: unknown;
