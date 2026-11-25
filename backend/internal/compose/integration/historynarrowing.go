@@ -19,8 +19,7 @@ import (
 func NarrowHistoryBatch(t *testing.T, workspace ids.UUID, registry *capture.Registry) bool {
 	t.Helper()
 	ctx := principal.WithWorkspaceID(context.Background(), workspace)
-	ctx = principal.WithActor(ctx, principal.Principal{Type: principal.PrincipalSystem, ID: "system:history_narrowing"})
-	worked, err := registry.NarrowPendingHistory(principal.WithCorrelationID(ctx, ids.NewV7()))
+	worked, err := registry.NarrowPendingHistory(principal.SystemActing(ctx, "system:history_narrowing"))
 	if err != nil {
 		t.Fatalf("narrowing a batch of history: %v", err)
 	}

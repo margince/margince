@@ -149,14 +149,20 @@ func (r *Registry) NarrowPendingHistory(ctx context.Context) (bool, error) {
 			return nil
 		}
 		var p pendingNarrowing
-		var held, archived bool
-		err := tx.QueryRow(ctx, `SELECT id, user_id, history_narrowing_held, archived_at IS NOT NULL FROM capture_connection
-			 WHERE history_narrowing_held IS NOT NULL ORDER BY id LIMIT 1 FOR UPDATE`).Scan(&p.connection, &p.seat, &held, &archived)
+		var held, archived, shared bool
+		// A shared mailbox has no user, and its pending narrowing is carried out
+		// over the mailbox's own rows.
+		err := tx.QueryRow(ctx, `SELECT id, user_id, user_id IS NULL, history_narrowing_held, archived_at IS NOT NULL
+			 FROM capture_connection WHERE history_narrowing_held IS NOT NULL ORDER BY id LIMIT 1 FOR UPDATE`).
+			Scan(&p.connection, &p.seat, &shared, &held, &archived)
 		if errors.Is(err, pgx.ErrNoRows) {
 			return nil
 		}
 		if err != nil {
 			return fmt.Errorf("capture: finding a pending history narrowing: %w", err)
+		}
+		if shared {
+			p.seat = nil
 		}
 		found, p.posture = true, narrowingPosture(held)
 		if archived {
