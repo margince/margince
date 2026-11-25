@@ -24,6 +24,7 @@ import (
 	"github.com/margince/margince/backend/internal/compose/integration"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/collections"
+	"github.com/margince/margince/backend/internal/platform/clocktest"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/ports/recordkinds"
@@ -37,7 +38,7 @@ type kindLists struct {
 	visit                 ids.UUID
 }
 
-func seedKindLists(t *testing.T, e *integration.Env, store *collections.Store, ctx context.Context) kindLists {
+func seedKindLists(ctx context.Context, t *testing.T, e *integration.Env, store *collections.Store) kindLists {
 	t.Helper()
 	e.WsExec(t, `INSERT INTO ext.`+historyDemoTable+` (code, site) VALUES ('v1', 'Berlin site')`)
 	visit, err := ids.Parse(e.WsScalar(t, `SELECT id::text FROM ext.`+historyDemoTable+` WHERE code = 'v1'`))
@@ -69,7 +70,7 @@ func seedKindLists(t *testing.T, e *integration.Env, store *collections.Store, c
 
 // assertRemovedKindListsUnavailable checks every list and view surface once the
 // unit is gone.
-func assertRemovedKindListsUnavailable(t *testing.T, e *integration.Env, store *collections.Store, ctx context.Context, seeded kindLists) {
+func assertRemovedKindListsUnavailable(ctx context.Context, t *testing.T, e *integration.Env, store *collections.Store, seeded kindLists) {
 	t.Helper()
 	page, err := store.ListsPage(ctx, collections.ListFilter{})
 	if err != nil {
@@ -108,7 +109,7 @@ func assertRemovedKindListsUnavailable(t *testing.T, e *integration.Env, store *
 				t.Errorf("history of %s returned the filter of a removed kind", id)
 			}
 		}
-		if code := exportListStatus(e, store, ctx, id); code != http.StatusUnprocessableEntity {
+		if code := exportListStatus(ctx, e, store, id); code != http.StatusUnprocessableEntity {
 			t.Errorf("export of %s = %d, want 422", id, code)
 		}
 	}
@@ -123,7 +124,7 @@ func assertRemovedKindListsUnavailable(t *testing.T, e *integration.Env, store *
 	}
 }
 
-func exportListStatus(e *integration.Env, store *collections.Store, ctx context.Context, id ids.ListID) int {
+func exportListStatus(ctx context.Context, e *integration.Env, store *collections.Store, id ids.ListID) int {
 	rec := httptest.NewRecorder()
 	req := httptest.NewRequest(http.MethodPost, "/v1/exports/filtered",
 		strings.NewReader(`{"list_id":"`+id.String()+`","format":"csv"}`)).WithContext(ctx)
@@ -136,7 +137,7 @@ func exportListStatus(e *integration.Env, store *collections.Store, ctx context.
 // failing on any error the pass or that list reports.
 func checkOf(t *testing.T, e *integration.Env, list ids.ListID) collections.LiveCheck {
 	t.Helper()
-	checks, err := CheckLiveLists(context.Background(), e.Pool, e.WS, time.Now)
+	checks, err := CheckLiveLists(context.Background(), e.Pool, e.WS, func() time.Time { return clocktest.Now(t) })
 	if err != nil {
 		t.Fatalf("check pass: %v", err)
 	}
@@ -157,7 +158,7 @@ func TestRemovingAUnitLeavesItsListsUnavailableAndComposingItAgainResumes(t *tes
 	registerHistoryVisits(t)
 	store := collections.NewStore(e.DB())
 	ctx := e.As(e.Rep1, []ids.UUID{e.Team1}, listingPerms(true))
-	seeded := seedKindLists(t, e, store, ctx)
+	seeded := seedKindLists(ctx, t, e, store)
 	if first := checkOf(t, e, seeded.live); first.Outcome != collections.CheckComplete || first.Members != 1 {
 		t.Fatalf("first check = %+v, want complete with the one Berlin visit", first)
 	}
@@ -168,7 +169,7 @@ func TestRemovingAUnitLeavesItsListsUnavailableAndComposingItAgainResumes(t *tes
 
 	recordkinds.Reset()
 
-	assertRemovedKindListsUnavailable(t, e, store, ctx, seeded)
+	assertRemovedKindListsUnavailable(ctx, t, e, store, seeded)
 	if removed := checkOf(t, e, seeded.live); removed.Outcome != collections.CheckInvalid || !removed.KindRemoved {
 		t.Errorf("check after the removal = %+v, want invalid with the kind removed", removed)
 	}
@@ -197,7 +198,7 @@ func TestAMemberWithoutTheKindsReadRightIsToldNothingAboutItsLists(t *testing.T)
 	e := integration.Setup(t)
 	registerHistoryVisits(t)
 	store := collections.NewStore(e.DB())
-	seeded := seedKindLists(t, e, store, e.As(e.Rep1, []ids.UUID{e.Team1}, listingPerms(true)))
+	seeded := seedKindLists(e.As(e.Rep1, []ids.UUID{e.Team1}, listingPerms(true)), t, e, store)
 	colleague := e.As(e.Rep2, []ids.UUID{e.Team1}, listingPerms(false))
 
 	page, err := store.ListsPage(colleague, collections.ListFilter{})
@@ -224,7 +225,7 @@ func TestAMemberWithoutTheKindsReadRightIsToldNothingAboutItsLists(t *testing.T)
 		if _, err := store.MembersPage(colleague, id, collections.MemberRead{}); !errors.Is(err, apperrors.ErrPermissionDenied) {
 			t.Errorf("members of %s = %v, want permission denied", id, err)
 		}
-		if code := exportListStatus(e, store, colleague, id); code != http.StatusForbidden {
+		if code := exportListStatus(colleague, e, store, id); code != http.StatusForbidden {
 			t.Errorf("export of %s = %d, want 403", id, code)
 		}
 	}

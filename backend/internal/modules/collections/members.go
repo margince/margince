@@ -50,6 +50,10 @@ type MemberRead struct {
 const memberIDsField = "entity_id"
 
 // checked bounds Only by the largest page and settles the page size.
+
+// sqlFalse is the predicate that admits no row.
+const sqlFalse = "FALSE"
+
 func (r MemberRead) checked() (MemberRead, error) {
 	if len(r.Only) == 0 {
 		r.Only, r.Limit = nil, pageSize(r.Limit)
@@ -138,7 +142,7 @@ func visibleMemberClause(ctx context.Context, entityType string, arg func(any) i
 func extensionMemberClause(ctx context.Context, kind, idColumn string) string {
 	declared, ok := auth.ReadableKind(ctx, kind)
 	if !ok {
-		return "FALSE"
+		return sqlFalse
 	}
 	return fmt.Sprintf("EXISTS (SELECT 1 FROM %s e WHERE e.id = %s AND e.archived_at IS NULL)",
 		pgx.Identifier{"ext", declared.Table}.Sanitize(), idColumn)
@@ -331,7 +335,7 @@ func (s *Store) MemberFilter(ctx context.Context, listID ids.UUID, entityType st
 		return nil, &BadInputError{Field: listIDField, Reason: "names a list of " + list.EntityType + ", not of " + entityType}
 	}
 	if kindRemoved(list.EntityType) {
-		return func(string, func(any) int) (string, error) { return "FALSE", nil }, nil
+		return func(string, func(any) int) (string, error) { return sqlFalse, nil }, nil
 	}
 	if list.ListType == listTypeDynamic {
 		engine, pred, err := s.liveFilter(ctx, list)

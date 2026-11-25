@@ -219,7 +219,7 @@ func observedVisibleClause(ctx context.Context, entityType string, arg func(any)
 	if recordkinds.IsExtensionName(entityType) {
 		return extensionMemberClause(ctx, entityType, "ev.entity_id"), nil
 	}
-	visible := "FALSE"
+	visible := sqlFalse
 	if auth.Allows(ctx, entityType, principal.ActionRead) {
 		scope, err := recordScope(ctx, entityType, "e", arg)
 		if err != nil {
