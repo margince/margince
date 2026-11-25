@@ -484,7 +484,7 @@ describe("Ledger-Green token layer (B-EP09.1)", () => {
         // it carries whatever the chip's rule sets, so every role that lands
         // on one is measured over it.
         ...chipInks.map((ink) => [ink, "--bgChip"]),
-        // A control face carries its label on every ground.
+        // A control face is a light wash in dark, so it composites like a tint.
         ["--textPrimary", "--bgControl"],
         ["--accentText", "--bgControl"],
       ] as const;

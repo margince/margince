@@ -15,10 +15,8 @@ type StripVars = CSSProperties & Record<`--${string}`, string | number>;
 // this one number, so the span is always taken against the columns drawn.
 const fullRow = 6;
 
-// StatStrip is the record page's readings row: ONE comparison of equal slots,
-// each a reading pane, with air between them and no plate around them. The
-// row is read across as a single comparison, which is what the equal slots
-// hold.
+// StatStrip is the record page's readings row: equal reading panes with air
+// between them and no plate, so the row reads across as one comparison.
 //
 // It takes StatCards as children and owns only the row: the slot count, the
 // gaps between slots, and the fold when the row stops being legible. A slot

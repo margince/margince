@@ -290,7 +290,7 @@
   --discoveryBorder: #d8a0f7;
 
   /* A notice card's ground and the borders on it, per callout tone. Mixed into
-   * the opaque --bgElevated: over a translucent pane the wash would shift. */
+   * the opaque --bgElevated, so the wash reads the same on any pane. */
   --bgNoticeInfo: color-mix(in oklab, var(--info) 12%, var(--bgElevated));
   --borderNoticeInfo: color-mix(in oklab, var(--info) 30%, var(--bgElevated));
   --bgNoticeSuccess: color-mix(in oklab, var(--success) 12%, var(--bgElevated));
@@ -839,7 +839,8 @@
   --pane: #1d2422;
   --paneEdge: #2f3835;
   --bgField: #161d1b;
-  --bgControl: #202826;
+  /* A light wash, so a control face lifts off whatever ground it lands on. */
+  --bgControl: rgba(239, 247, 244, 0.045);
   --textInverse: #19211f;
   /* Every ground is opaque and faintly brand-tinted, level 1 too, so a sticky
      cell on --ground matches its row. Level 4 stops where a state ink clears AA. */
@@ -890,8 +891,8 @@
 
   --borderSubtle: #2f3937;
   --borderStrong: #3f4b48;
-  /* The 1.4.11 floor of 3:1 on every ground: 3.12:1 on --ladder4, the lightest. */
-  --borderControl: #748480;
+  /* The 1.4.11 floor of 3:1 on every ground and on --bgControl over it. */
+  --borderControl: #7c8c88;
 
   /* Themed, because a 5% black is invisible on a near-black page: any surface
      whose face depends on this simply loses its top side in dark. Only the INK
@@ -912,12 +913,11 @@
   --aiText: #a7adfe;
 
   /* The five states on a dark ground. Information keeps its light base, a hue
-   * that reads on both papers. Success steps yellower and brighter, so it parts
-   * from the teal accent. Warning, danger and discovery step to one this ground
-   * can carry. The light amber and red go shrill against near-black, and the
-   * light violet disappears into it. All five bases are STATED here, even where
-   * the value is unchanged. So a call site reads the role and never has to know
-   * which of them a theme leaves where it was.
+   * that reads on both papers; success steps yellower, apart from the teal.
+   * Warning, danger and discovery step to one this ground can carry. The light
+   * amber and red go shrill against near-black, and the light violet
+   * disappears into it. All five bases are STATED here, so a call site reads
+   * the role and never has to know which of them a theme moves.
    *
    * The Text tokens walk the other way from light: UP in lightness until the
    * hue clears 4.5:1 on every dark ground and on its own tint. Success and
@@ -1007,7 +1007,7 @@
     --pane: #1d2422;
     --paneEdge: #2f3835;
     --bgField: #161d1b;
-    --bgControl: #202826;
+    --bgControl: rgba(239, 247, 244, 0.045);
     --textInverse: #19211f;
     --ladder1Solid: #1d2422;
     --ladder2: #212927;
@@ -1042,7 +1042,7 @@
     --borderSubtle: #2f3937;
     --borderStrong: #3f4b48;
 
-    --borderControl: #748480;
+    --borderControl: #7c8c88;
 
     --shadow-rest: 0 1px 2px 0 rgb(0 0 0 / 0.4);
     --shadow-well: inset 0 1px 2px 0 rgb(0 0 0 / 0.4);
