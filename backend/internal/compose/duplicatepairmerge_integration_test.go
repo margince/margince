@@ -144,8 +144,8 @@ func isMergeDirection(err error) bool {
 	return errors.Is(err, apperrors.ErrPermissionDenied) && caseCode(err) == "merge_direction"
 }
 
-// isMergeTargetReadOnly is the refusal of a merge into a record the caller can
-// read but not change: a 403 that says so, never a 409 that invites a retry.
+// isMergeTargetReadOnly is the 403 for a merge into a record the caller can
+// read but not change. A 409 there would invite a retry.
 func isMergeTargetReadOnly(err error) bool {
 	return errors.Is(err, apperrors.ErrPermissionDenied) && caseCode(err) == "merge_target_read_only"
 }
