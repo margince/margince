@@ -37,20 +37,15 @@ func seedLossPipeline(t *testing.T, e *configEnv) lossPipeline {
 	}
 	out := lossPipeline{pipeline: ids.From[ids.PipelineKind](ids.UUID(pipeline.Id))}
 	zero := 0
-	for position, stage := range []struct {
-		name     string
-		semantic StageSemantic
-		into     *ids.StageID
-	}{{"Discovery", SemanticOpen, &out.open}, {"Lost", SemanticLost, &out.lost}} {
-		made, err := e.store.CreateStage(ctx, CreateStageInput{
-			PipelineID: out.pipeline, Name: stage.name, Position: position,
-			Semantic: string(stage.semantic), WinProbability: &zero,
-		})
-		if err != nil {
-			t.Fatalf("seeding stage %s: %v", stage.name, err)
-		}
-		*stage.into = ids.From[ids.StageKind](ids.UUID(made.Id))
+	made, err := e.store.CreateStage(ctx, CreateStageInput{
+		PipelineID: out.pipeline, Name: "Discovery", Position: 0,
+		Semantic: string(SemanticOpen), WinProbability: &zero,
+	})
+	if err != nil {
+		t.Fatalf("seeding the open stage: %v", err)
 	}
+	out.open = ids.From[ids.StageKind](ids.UUID(made.Id))
+	_, out.lost = closingStageIDs(t, e, out.pipeline)
 	return out
 }
 
@@ -551,7 +546,7 @@ type dealList struct {
 	retire func(id ids.UUID) error
 }
 
-func dealLists(e *configEnv, ctx context.Context) []dealList {
+func dealLists(ctx context.Context, e *configEnv) []dealList {
 	return []dealList{{
 		name: "loss reason",
 		create: func(key, label string) (ids.UUID, error) {
@@ -587,7 +582,7 @@ func dealLists(e *configEnv, ctx context.Context) []dealList {
 // retired entry keeps its label. Create and rename answer the same conflict.
 func TestADealListHoldsEachLabelOnce(t *testing.T) {
 	e := setupConfigEnv(t)
-	for _, list := range dealLists(e, e.asLossAdmin()) {
+	for _, list := range dealLists(e.asLossAdmin(), e) {
 		t.Run(list.name, func(t *testing.T) {
 			suffix := ids.NewV7().String()[24:]
 			held, err := list.create("", "Freeze "+suffix)
@@ -634,7 +629,7 @@ func TestADealListHoldsEachLabelOnce(t *testing.T) {
 func TestADealListRefusesALabelPastTheLimitBeforeTheWrite(t *testing.T) {
 	e := setupConfigEnv(t)
 	long := strings.Repeat("a", values.TextLabelCharacters+1)
-	for _, list := range dealLists(e, e.asLossAdmin()) {
+	for _, list := range dealLists(e.asLossAdmin(), e) {
 		t.Run(list.name, func(t *testing.T) {
 			_, err := list.create("", long)
 			assertLabelTooLong(t, err, "label")

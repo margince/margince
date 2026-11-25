@@ -33,34 +33,52 @@ func settingsLists(pipelineID string) []settingsList {
 	retire := func(table string) string { return `UPDATE ` + table + ` SET active = false WHERE id = $1` }
 	archive := func(table string) string { return `UPDATE ` + table + ` SET archived_at = now() WHERE id = $1` }
 	return []settingsList{
-		{"deal_acquisition_source", "label", "deal_acquisition_source_label_once",
+		{
+			"deal_acquisition_source", "label", "deal_acquisition_source_label_once",
 			`INSERT INTO deal_acquisition_source (key, label, created_at) VALUES ('twin_' || @n::int, @name, @created_at)`,
-			retire("deal_acquisition_source"), false},
-		{"deal_loss_reason", "label", "deal_loss_reason_label_once",
+			retire("deal_acquisition_source"), false,
+		},
+		{
+			"deal_loss_reason", "label", "deal_loss_reason_label_once",
 			`INSERT INTO deal_loss_reason (key, label, created_at) VALUES ('twin_' || @n::int, @name, @created_at)`,
-			retire("deal_loss_reason"), false},
-		{"partner_stage", "label", "partner_stage_label_once",
+			retire("deal_loss_reason"), false,
+		},
+		{
+			"partner_stage", "label", "partner_stage_label_once",
 			`INSERT INTO partner_stage (key, label, meaning, created_at) VALUES ('twin_' || @n::int, @name, 'candidate', @created_at)`,
-			retire("partner_stage"), false},
-		{"record_role", "label", "record_role_label_once",
+			retire("partner_stage"), false,
+		},
+		{
+			"record_role", "label", "record_role_label_once",
 			`INSERT INTO record_role (key, label, assignee_kinds, record_types, created_at)
 			 VALUES ('twin_' || @n::int, @name, '{user}', '{deal}', @created_at)`,
-			retire("record_role"), false},
-		{"lead_origin", "label", "lead_origin_label_once",
+			retire("record_role"), false,
+		},
+		{
+			"lead_origin", "label", "lead_origin_label_once",
 			`INSERT INTO lead_origin (key, label, created_at) VALUES ('twin_' || @n::int, @name, @created_at)`,
-			retire("lead_origin"), false},
-		{"team", "name", "team_name_unique",
+			retire("lead_origin"), false,
+		},
+		{
+			"team", "name", "team_name_unique",
 			`INSERT INTO team (name, created_at) VALUES (@name, @created_at)`,
-			archive("team"), true},
-		{"pipeline", "name", "pipeline_name_unique",
+			archive("team"), true,
+		},
+		{
+			"pipeline", "name", "pipeline_name_unique",
 			`INSERT INTO pipeline (name, created_at) VALUES (@name, @created_at)`,
-			archive("pipeline"), true},
-		{"stage", "name", "stage_name_once",
+			archive("pipeline"), true,
+		},
+		{
+			"stage", "name", "stage_name_once",
 			`INSERT INTO stage (pipeline_id, name, position, created_at) VALUES ('` + pipelineID + `', @name, @n, @created_at)`,
-			archive("stage"), true},
-		{"knowledge_corpus", "name", "knowledge_corpus_name_once",
+			archive("stage"), true,
+		},
+		{
+			"knowledge_corpus", "name", "knowledge_corpus_name_once",
 			`INSERT INTO knowledge_corpus (name, topic_statement, captured_by, created_at) VALUES (@name, 'Twins', 'test', @created_at)`,
-			archive("knowledge_corpus"), true},
+			archive("knowledge_corpus"), true,
+		},
 	}
 }
 
@@ -128,8 +146,10 @@ func TestSettingsListTwinsAreRenamedBeforeEachNameIsHeldOnce(t *testing.T) {
 	seeded["knowledge_corpus"] = append(seeded["knowledge_corpus"], managed)
 	corpora := lists[len(lists)-1]
 	userTwin := seed(corpora, " margince HANDBOOK", "2026-01-01T00:00:00Z")
-	expected = append(expected, expectation{corpora, userTwin, "margince HANDBOOK (duplicate 1)",
-		"a user's set named like the managed one is renamed, however old"})
+	expected = append(expected, expectation{
+		corpora, userTwin, "margince HANDBOOK (duplicate 1)",
+		"a user's set named like the managed one is renamed, however old",
+	})
 
 	applyMigrationFile(t, conn, settingsNameOnceUp)
 
