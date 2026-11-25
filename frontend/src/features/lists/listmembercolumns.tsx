@@ -9,7 +9,7 @@
 import { EntityRef } from "../../components/entityref";
 import { Badge } from "../../design-system/atoms";
 import type { ListColumn } from "../../design-system/listtable";
-import { formatDate } from "../../format/format";
+import { formatDateAbbrev } from "../../format/format";
 import { useLocale, useT } from "../../i18n";
 import {
   fieldLabel,
@@ -109,7 +109,7 @@ function useChosenColumns(): ListColumn<MemberRow>[] {
       holds: "date",
       cell: (row) =>
         row.listing?.created_at
-          ? formatDate(row.listing.created_at, locale, readerZone)
+          ? formatDateAbbrev(row.listing.created_at, locale, readerZone)
           : "—",
     },
     {

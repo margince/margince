@@ -323,7 +323,7 @@ describe("VCardImport", () => {
     };
     expect(row("+49301234567")).toHaveTextContent("Phone");
     expect(row("+49301234567")).toHaveTextContent("Imported");
-    expect(row("VP Finance")).toHaveTextContent("Title");
+    expect(row("VP Finance")).toHaveTextContent("Job title");
     expect(row("VP Finance")).toHaveTextContent(
       "Replaced, old value can be restored",
     );

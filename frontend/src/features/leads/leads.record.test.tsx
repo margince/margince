@@ -79,7 +79,7 @@ describe("LeadScreen — edit with If-Match (P-1)", () => {
     const user = userEvent.setup();
     const about = await editSection(user, "About");
     await user.type(
-      within(about).getByRole("textbox", { name: "Title" }),
+      within(about).getByRole("textbox", { name: "Job title" }),
       "VP Sales",
     );
     await user.click(within(about).getByRole("button", { name: "Save" }));

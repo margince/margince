@@ -370,7 +370,7 @@ describe("CompaniesScreen — list dials reach the server (P-14)", () => {
     render(<CompaniesScreen />);
     await waitFor(() => expect(urls.length).toBeGreaterThan(0));
 
-    const values = await openFilterValues(user, "Employees");
+    const values = await openFilterValues(user, "Company size");
     await user.click(
       within(values).getByRole("radio", { name: "51–200 employees" }),
     );
@@ -449,7 +449,7 @@ describe("CompaniesScreen — rich create (P-15)", () => {
     );
     await pickOption(
       user,
-      screen.getByLabelText("Employees"),
+      screen.getByLabelText("Company size"),
       "11–50 employees",
     );
     await user.click(screen.getByText("Add domain"));

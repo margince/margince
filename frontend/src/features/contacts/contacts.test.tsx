@@ -425,7 +425,7 @@ describe("ContactsScreen — rich create (P-15)", () => {
     stubFetch(async () => emptyPage());
     render(<ContactsScreen />);
     await userEvent.click(screen.getByTestId("new-record"));
-    expect(screen.getByLabelText("Title")).toBeTruthy();
+    expect(screen.getByLabelText("Job title")).toBeTruthy();
     expect(screen.getByLabelText("LinkedIn")).toBeTruthy();
     expect(screen.getByText("Add email")).toBeTruthy();
     expect(screen.getByText("Add phone")).toBeTruthy();
@@ -705,7 +705,9 @@ describe("ContactsScreen — a row on a phone", () => {
     listContacts([employed]);
     const row = await phoneRowOf("Anna Weber");
     expect(row.identity).toHaveTextContent("Anna Weber · Head of Procurement");
-    expect(screen.queryByRole("columnheader", { name: "Title" })).toBeNull();
+    expect(
+      screen.queryByRole("columnheader", { name: "Job title" }),
+    ).toBeNull();
   });
 
   it("draws the contact's monogram before the name at every width", async () => {

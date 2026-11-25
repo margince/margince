@@ -268,7 +268,7 @@ describe("an opened list", () => {
     expect(
       within(row).getByText("Signed the quote for the launch deck"),
     ).toBeInTheDocument();
-    expect(within(row).getByText(/2026/)).toBeInTheDocument();
+    expect(within(row).getByText(/^20 Sept? 2026$/)).toBeInTheDocument();
     for (const header of [
       en["lists.members.addedBy"],
       en["lists.members.addedOn"],

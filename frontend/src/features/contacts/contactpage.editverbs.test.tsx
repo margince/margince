@@ -131,9 +131,9 @@ describe("the header's core record verbs — edit, merge, archive", () => {
       document.querySelector(".record-split-lines")?.textContent ?? "";
     await waitFor(() => expect(subtitle()).toContain("Old title"));
     await userEvent.click(
-      await screen.findByRole("button", { name: /^Change Title/ }),
+      await screen.findByRole("button", { name: /^Change Job title/ }),
     );
-    const title = await screen.findByRole("textbox", { name: "Title" });
+    const title = await screen.findByRole("textbox", { name: "Job title" });
     await userEvent.clear(title);
     await userEvent.type(title, "New title{Enter}");
 
@@ -313,7 +313,7 @@ describe("the left column edits a contact's fields", () => {
       await left.findByRole("button", { name: "Edit About" }),
     );
     const about = within(await screen.findByRole("dialog", { name: "About" }));
-    const title = about.getByRole("textbox", { name: "Title" });
+    const title = about.getByRole("textbox", { name: "Job title" });
     await userEvent.clear(title);
     await userEvent.type(title, "New title");
     await userEvent.click(about.getByRole("button", { name: "Save" }));
