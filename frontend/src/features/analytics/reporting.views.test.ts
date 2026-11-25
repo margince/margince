@@ -77,7 +77,8 @@ function selectionMetricsCap(): number {
 }
 
 // A seat that may read every metric the contract names, each drawing every
-// chart, asks the most any view can ask.
+// chart. Preset views ask the server's presets, which reportingpresets_test.go
+// holds to the same bound.
 function everyMetricCatalog(): components["schemas"]["ReportingCatalog"] {
   const ids = schemaLines("ReportingMetricID").flatMap((line) => {
     const id = /^ {6}- (\w+)$/.exec(line)?.[1];
