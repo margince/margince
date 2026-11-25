@@ -239,7 +239,7 @@ A case that writes can name the state it must leave behind:
 
 ```yaml
 must_end_with:
-  - company "Emsland Ventilbau GmbH" lifecycle=prospect
+  - company "Emsland Ventilbau GmbH" status=prospect
 ```
 
 After each run, `e2e/llm/endstate.py` reads the records back before the lane puts back the snapshot.

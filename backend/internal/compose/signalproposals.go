@@ -168,11 +168,11 @@ func readContradictions(ctx context.Context, tx pgx.Tx, now time.Time) ([]contra
 	// to be first standing and the rest never asked about at all.
 	args := []any{values.EngagedLifecycles()}
 	rows, err := tx.Query(ctx, storekit.SQLf(`
-		SELECT DISTINCT ON (o.id) o.id, o.lifecycle, s.id, s.summary
+		SELECT DISTINCT ON (o.id) o.id, o.status, s.id, s.summary
 		  FROM signal s
 		  JOIN company o ON o.id = s.resolved_company_id AND o.archived_at IS NULL
 		 WHERE s.kind = '`+signalKindContractEnded+`' AND s.status = 'open'
-		   AND s.archived_at IS NULL AND o.lifecycle = ANY($%d)
+		   AND s.archived_at IS NULL AND o.status = ANY($%d)
 		 ORDER BY o.id, s.detected_at DESC, s.id DESC`, len(args)), args...)
 	if err != nil {
 		return nil, err

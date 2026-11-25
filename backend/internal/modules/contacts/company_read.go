@@ -177,8 +177,8 @@ func scanCompany(row pgx.Row, active []fieldcatalog.Column, extra ...any) (crmco
 	}
 	o.ParentCompanyId = uuidPtr(parentID)
 	o.MergedIntoId = uuidPtr(mergedInto)
-	lc := crmcontracts.CompanyLifecycle(lifecycle)
-	o.Lifecycle = &lc
+	lc := crmcontracts.CompanyStatus(lifecycle)
+	o.Status = &lc
 	o.LogoUrl = LogoURL(id, logoObjectKey, LogoWide)
 	o.LinkedinUrl = linkedinURL
 	if email != nil {

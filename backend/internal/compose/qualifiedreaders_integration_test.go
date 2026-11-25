@@ -44,7 +44,7 @@ func (f *relationshipFixture) reply(t *testing.T, key, root, from, to string, da
 
 func (f *relationshipFixture) awaited(t *testing.T, activity ids.UUID) bool {
 	t.Helper()
-	f.e.WsExec(t, `UPDATE company SET lifecycle = 'customer' WHERE id = $1`, f.company)
+	f.e.WsExec(t, `UPDATE company SET status = 'customer' WHERE id = $1`, f.company)
 	rows, _, err := activities.NewStore(f.e.DB()).AwaitingReplies(f.e.As(f.seat, nil, integration.AdminPerms), f.now)
 	if err != nil {
 		t.Fatal(err)

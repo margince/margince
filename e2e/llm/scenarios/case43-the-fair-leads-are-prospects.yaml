@@ -53,10 +53,10 @@ must_not_call_with:
 # snapshot is restored. A run that approved and stopped, or wrote some other
 # company, ends with one of these unmoved whatever its answer reports.
 must_end_with:
-  - company "Kieler Pumpenwerk GmbH" lifecycle=prospect
-  - company "Rhön Hydraulik AG" lifecycle=prospect
-  - company "Altmark Fördertechnik GmbH" lifecycle=prospect
-  - company "Emsland Ventilbau GmbH" lifecycle=prospect
+  - company "Kieler Pumpenwerk GmbH" status=prospect
+  - company "Rhön Hydraulik AG" status=prospect
+  - company "Altmark Fördertechnik GmbH" status=prospect
+  - company "Emsland Ventilbau GmbH" status=prospect
 
 must_mention:
   # The company whose earlier value the prompt asks for is named at all. Whether

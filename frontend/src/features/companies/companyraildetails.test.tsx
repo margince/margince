@@ -38,7 +38,7 @@ const COMPANY: Company = {
   // edit affordances these tests are about.
   writable: true,
   display_name: "Brandt Automotive GmbH",
-  lifecycle: "customer",
+  status: "customer",
   owner_id: "u-1",
   industry: "automotive",
   captured_by: "human:u-author",

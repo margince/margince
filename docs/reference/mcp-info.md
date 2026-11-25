@@ -17,7 +17,7 @@ input and output schema in folds below it. What a tool may do and whether a huma
 | Resources | 14 |
 | Tool catalog | 243.9 KB |
 | Resource catalog | 5.5 KB |
-| Approx. wire tokens | 63851 |
+| Approx. wire tokens | 63844 |
 | Largest tool | `read_details` (15.8 KB) |
 | Scopes rendered | `read`, `draft`, `write`, `send`, `enrich` |
 
@@ -34,7 +34,7 @@ tool adds to that listing, and what it costs each scheduled agent, agent by agen
 |---|---:|---:|---|
 | Output schemas | 33.7 KB | 13% | **No**: a result's shape, never listed to a model |
 | Descriptions (incl. governance clause) | 51.0 KB | 20% | Yes, every step |
-| Input schemas | 147.7 KB | 60% | Yes, every step |
+| Input schemas | 147.6 KB | 60% | Yes, every step |
 | _Names, annotations, punctuation_ | 11.6 KB | 4% | Partly |
 | **Description + input schema** | **198.7 KB** | **81%** | **the recurring cost** |
 
@@ -87,7 +87,7 @@ descriptions and input schemas are what each step pays for.
 | [`decide_approvals`](#decide_approvals) | Approve or reject staged actions |  |  | 465 |
 | [`draft_outbound`](#draft_outbound) | Draft an email or follow-ups |  |  | 524 |
 | [`enrich`](#enrich) | Enrich a company from its website |  |  | 448 |
-| [`find_records`](#find_records) | Find records | yes |  | 2057 |
+| [`find_records`](#find_records) | Find records | yes |  | 2050 |
 | [`list_approvals`](#list_approvals) | List what is waiting for a decision | yes | [`ui://margince/approval-queue.html`](#approval_queue_view) | 474 |
 | [`list_documents`](#list_documents) | List a record's documents or read one | yes |  | 331 |
 | [`preview_import`](#preview_import) | Preview an import |  |  | 1012 |
@@ -3402,9 +3402,6 @@ next_cursor to read on.
           "type": "string"
         },
         "kind": {
-          "type": "string"
-        },
-        "lifecycle": {
           "type": "string"
         },
         "link_type": {

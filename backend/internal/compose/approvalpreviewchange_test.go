@@ -52,7 +52,7 @@ func TestCommercialPreviewNormalizesTheStagedEffect(t *testing.T) {
 		{"automation owner", "assign_owner", `{"owner_id":"next"}`, "owner_id", `"next"`},
 		{"tool stage", "advance_deal", `{"deal_id":"record","to_stage_id":"next"}`, "stage_id", `"next"`},
 		{"REST stage", "advance_deal", `{"operation":"advanceDeal","path":"/v1/deals/record/advance","body":{"to_stage_id":"next"}}`, "stage_id", `"next"`},
-		{"lifecycle", "lifecycle_change", `{"company_id":"record","current_lifecycle":"customer","proposed_lifecycle":"former_customer"}`, "lifecycle", `"former_customer"`},
+		{"lifecycle", "lifecycle_change", `{"company_id":"record","current_lifecycle":"customer","proposed_lifecycle":"former_customer"}`, "status", `"former_customer"`},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
@@ -152,6 +152,23 @@ func TestPreviewDatesAreTypedAndValidated(t *testing.T) {
 		}
 		if _, err := (approvalPreviewReader{}).value(context.Background(), field, json.RawMessage(`"not a date"`)); !errors.Is(err, apperrors.ErrInvalidArgument) {
 			t.Fatalf("invalid %s: %v", field, err)
+		}
+	}
+}
+
+func TestOnlyACompanyStatusReadsAsAFunnelPosition(t *testing.T) {
+	for _, tc := range []struct {
+		recordType, field, want string
+	}{
+		{"company", "status", "lifecycle"},
+		{"deal", "status", "text"},
+		{"lead", "status", "text"},
+		{"company", "industry", "text"},
+	} {
+		value := crmcontracts.ApprovalPreviewValue{Kind: "text", Text: "customer"}
+		markCompanyStatus(tc.recordType, tc.field, &value)
+		if value.Kind != tc.want {
+			t.Errorf("%s.%s reads as %q, want %q", tc.recordType, tc.field, value.Kind, tc.want)
 		}
 	}
 }
