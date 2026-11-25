@@ -75,6 +75,12 @@ extend the seed with the same care:
 - **Names appear where the mail is about them**: the contact in an email's greeting, the company in some
   subjects.
 - **Months are uneven.** A flat spread hides the busy month a date-ranged query lands in.
+- **A few records have a long history.** The corpus spreads its mail evenly, so no record of it has a
+  history long enough for a read that follows one record to show its cost. The seed gives one company of
+  the median rep a long history, with a deal, a contact and one mail conversation inside it, each at a
+  size `dailyHistoryTier` states. The `history_*` flows open those records as the daily flows open
+  the corpus's own, and the run fails when a history is shorter than its stated size. The record states
+  the longest history of each kind, as counted in the database.
 - **The census is asserted.** After seeding, the bench counts each table and fails on a short count, so a
   seed step that silently inserts nothing cannot pass as a fast screen.
 
@@ -105,6 +111,10 @@ Use a published ID from [performance-budgets.md](../reference/performance-budget
 When no budget covers a screen, add a new ID beside the others in `daily_budgets_bench_test.go` and in
 `backend/tools/gen-perfdoc/main.go`, then regenerate the page. A journey that spans
 two budgets is recorded as one row per budget, plus an ungated row for the whole journey.
+
+A flow marked `Recorded` is timed beside its budget and never judged by it: its rows read "not gated",
+and the plain page shows their time beside a white dot. Use it for a read whose cost no bound holds yet, such
+as the `history_*` flows, and drop the mark once a bound makes the read pass.
 
 An over-budget row fails the run. If an open issue already tracks it, add an entry to the known-issues
 table: the flow and the issue number, plus the row name when only that row is slow. An entry naming a row
