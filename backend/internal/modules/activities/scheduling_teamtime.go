@@ -238,9 +238,8 @@ func (s *Store) teamOf(ctx context.Context, host ids.UserID, page *ids.UUID, mem
 }
 
 // confirmedOnLinks are the members confirmed on the live team link page, or on
-// any live page of host when page is nil. A personal page names no team since
-// its team moved to a team link, so a meeting it booked with a team reads every
-// live page too.
+// any live page of host when page is nil. A personal page's team has moved to a
+// team link. So a meeting it booked with a team reads every live page too.
 func (s *Store) confirmedOnLinks(ctx context.Context, host ids.UserID, page *ids.UUID) (map[ids.UUID]bool, error) {
 	confirmed := map[ids.UUID]bool{}
 	err := s.tx(ctx, func(tx pgx.Tx) error {
