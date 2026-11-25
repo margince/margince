@@ -186,7 +186,8 @@ func (s dailySeeder) pickHistory(c DailyCorpus) (dailyHistory, int, []int) {
 	                          WHERE p.company_i = sc.i AND NOT p.private AND p.id <> ALL($3::uuid[])
 	                          ORDER BY p.i LIMIT 1) p
 	      CROSS JOIN LATERAL (SELECT array_agg(o.i ORDER BY o.i) AS i FROM daily_seed_contact o
-	                          WHERE o.company_i = sc.i AND NOT o.private AND o.i <> p.i) others
+	                          WHERE o.company_i = sc.i AND NOT o.private AND o.i <> p.i
+	                            AND o.id <> ALL($3::uuid[])) others
 	      WHERE sc.owner_id = $1::uuid AND sc.id <> ALL($2::uuid[]) AND sd.id <> ALL($4::uuid[])
 	        AND cardinality(others.i) > 0
 	      ORDER BY sd.status = 'open' DESC, sc.i LIMIT 1`,
