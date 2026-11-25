@@ -127,10 +127,15 @@ function DealArchiveAction({
 // The "Merge into…" verb of a deal: folds this deal into another open deal of
 // the same account. The server refuses deals of two companies, so the picker
 // offers only this account's, and a deal on no account has nobody to merge with.
-function DealMergeAction({
+export function DealMergeAction({
   deal,
   disabledReasonId,
-}: Readonly<{ deal: Deal; disabledReasonId?: string }>) {
+  initialTarget,
+}: Readonly<{
+  deal: Deal;
+  disabledReasonId?: string;
+  initialTarget?: RecordPickerCandidate;
+}>) {
   const t = useT();
   const companyId = deal.company_id;
   if (!companyId) {
@@ -155,6 +160,7 @@ function DealMergeAction({
     <MergeAction
       requires={{ object: "deal", action: "update" }}
       disabledReasonId={disabledReasonId}
+      initialTarget={initialTarget}
       label={t("merge.deal")}
       sourceId={deal.id}
       sourceName={deal.name}

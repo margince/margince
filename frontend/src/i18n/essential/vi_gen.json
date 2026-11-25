@@ -3444,6 +3444,7 @@
   "review.commitUnpriced": "Commit nhưng chưa có số tiền",
   "review.stageExitUnmet": "Chưa đạt tiêu chí để rời giai đoạn",
   "review.forecastCallMoved": "Cần xem lại dự báo đã chốt",
+  "review.duplicateMotion": "Có thể là cùng một đợt mua",
   "review.unknownCheck": "Kiểm tra chưa đặt tên",
   "analytics.scopeLabel": "Phạm vi hồ sơ",
   "analytics.scopeFixed": "Các số liệu này bao gồm {scope}.",

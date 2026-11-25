@@ -210,8 +210,7 @@ func (e *ChannelRecipientError) Code() string {
 // record they may not read.
 //
 // Recipient resolution precedes the consent gate because the gate is asked about
-// the recipient: default-deny cannot answer about a subject nobody has named
-// yet, and a gate handed an empty list refuses nobody.
+// the recipient, and a gate handed an empty list refuses nobody.
 func (s *Store) SendMessage(ctx context.Context, anchorID ids.ActivityID, in SendMessageInput, gate ConsentGate, stager ChannelDeliveryStager) (crmcontracts.Activity, error) {
 	anchor, err := s.GetActivity(ctx, anchorID, storekit.LiveOnly)
 	if err != nil {
@@ -344,11 +343,9 @@ func (s *Store) channelProviderOf(ctx context.Context, anchorID ids.ActivityID) 
 func (s *Store) resolveConversation(ctx context.Context, anchorID ids.ActivityID, provider string) (channelConversation, error) {
 	var out channelConversation
 	err := s.tx(ctx, func(tx pgx.Tx) error {
-		// The probe is repeated rather than inherited from the caller's earlier
-		// read: what this returns is the conversation's own counterparty, and
-		// anything that reads a record carries the row-scope gate — an
-		// out-of-scope anchor reads as ErrNotFound, the answer a missing one
-		// gives.
+		// The probe is repeated, not inherited from the caller's earlier read.
+		// This returns the conversation's counterparty, so an out-of-scope anchor
+		// reads as ErrNotFound.
 		if err := auth.EnsureActivityContentVisible(ctx, tx, anchorID.UUID); err != nil {
 			return err
 		}
@@ -358,6 +355,9 @@ func (s *Store) resolveConversation(ctx context.Context, anchorID ids.ActivityID
 				return apperrors.ErrNotFound
 			}
 			return err
+		}
+		if connector.IsCaptureOnlyThread(provider, out.threadKey) {
+			return &CaptureOnlyConversationError{Provider: provider}
 		}
 		reachable, err := s.reachableOnConversation(ctx, tx, anchorID, provider)
 		if err != nil {

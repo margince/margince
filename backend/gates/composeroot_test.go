@@ -76,10 +76,8 @@ const (
 	// extractor and transcript proposer.
 	// Raised by 244 test lines for the data reset cases of an event the sweep
 	// orphaned, which drive the unexported reset handlers.
-	// Raised by 2 production lines for the brief items compose adds to the
-	// deal merge, since briefs' tests build on the installation seam.
-	composeRootProductionLines = 230_729
-	composeRootTestLines       = 360_922
+	composeRootProductionLines = 230_732
+	composeRootTestLines       = 360_919
 )
 
 // A read under these floors stopped early or read the wrong place, and would

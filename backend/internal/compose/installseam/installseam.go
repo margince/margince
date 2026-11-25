@@ -19,6 +19,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/compose/briefmerge"
 	"github.com/margince/margince/backend/internal/compose/editaccess"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/activities"
@@ -57,12 +58,11 @@ func Deals() deals.Installation {
 		// there and the edge is injected here.
 		CarryGrants: identity.CarryGrantsTx,
 		// Each module that keeps rows about a deal moves its own onto a merge
-		// survivor, so the deals module writes none of them. compose adds the
-		// brief items, because briefs' own tests build on this package.
+		// survivor, so the deals module writes none of them.
 		MoveDealRefs: []deals.MoveDealRefs{
 			contacts.MoveDealRefsTx, contracts.MoveDealRefsTx, assignments.MoveDealRefsTx,
 			activities.MoveDealRefsTx, dealrooms.MoveDealRefsTx, chatlinks.MoveDealRefsTx,
-			commissions.MoveDealRefsTx,
+			commissions.MoveDealRefsTx, briefmerge.MoveDealRefsTx,
 		},
 		// The Value sort reads both ungated: a seat that may read deals may
 		// order them, whatever its installation_settings grant.

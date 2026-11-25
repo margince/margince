@@ -267,3 +267,5 @@
 1795614888_the_connection_checks_are_validated.down.sql | * | the down migration is a single SELECT 1 that changes nothing
 1795614889_the_new_connection_columns_check_their_text_limits.up.sql | * | the file only replaces trigger definitions and writes no row
 1795614889_the_new_connection_columns_check_their_text_limits.down.sql | * | the file only replaces trigger definitions and writes no row
+1795608722_a_finding_about_two_deals_can_be_answered_separate.down.sql | assurance_exception, assurance_resolution | runs only on a rollback and touches only findings somebody answered separate, at most one per pair of deals, which people answered by hand
+1795608723_the_separate_answer_check_is_validated.down.sql | * | the down migration is a single SELECT 1 that changes nothing

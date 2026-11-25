@@ -18,7 +18,6 @@ import (
 
 	"github.com/jackc/pgx/v5/pgxpool"
 
-	"github.com/margince/margince/backend/internal/compose/briefs"
 	"github.com/margince/margince/backend/internal/compose/installseam"
 	"github.com/margince/margince/backend/internal/modules/ai"
 	"github.com/margince/margince/backend/internal/modules/capture"
@@ -158,7 +157,6 @@ func yamlPaths(t reflect.Type, prefix string) map[string]bool {
 // notifier in compose; the harness keeps installseam's hand-over without it.
 func DealsInstallation() deals.Installation {
 	inst := installseam.Deals()
-	inst.MoveDealRefs = append(inst.MoveDealRefs, briefs.MoveDealRefsTx)
 	inst.FollowOwner = followDealOwnerAndTell
 	inst.WinChances = chances.WinChances
 	inst.WinChanceSQL = chances.WinChanceSQL

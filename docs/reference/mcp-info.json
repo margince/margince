@@ -18188,14 +18188,15 @@
                 "type": "string"
               },
               "outcome": {
-                "description": "What kind of answer this is. `condition_cleared` is absent on purpose: it is the check's own, and a contact naming it would be saying the condition stopped being true without anything having looked.",
+                "description": "What kind of answer this is. `condition_cleared` is absent on purpose: it is the check's own, and a contact naming it would be saying the condition stopped being true without anything having looked. `separate` answers only a `duplicate_motion` finding, says its two deals are not one buying motion, and has no expiry: the pair is not flagged again.",
                 "enum": [
                   "fixed_record",
                   "added_evidence",
                   "value_correct",
                   "not_relevant",
                   "remind_later",
-                  "reassign"
+                  "reassign",
+                  "separate"
                 ],
                 "type": "string"
               },

@@ -48,13 +48,15 @@ func (s *Sink) captureActivity(ctx context.Context, tx pgx.Tx, rec connector.Nor
 	if fields, err = settledFields(ctx, tx, rec, fields); err != nil {
 		return datasource.EntityRef{}, false, counterpartyDecision{}, err
 	}
-	// Whose credential carried this record, asked ONCE and carried to both the
-	// birth decision and this seat's import row — the two readers of it, and the
-	// same argument the birth decision makes for itself below.
+	// Whose credential carried this record, asked once for its two readers: the
+	// birth decision and this seat's import row.
 	memberBound, err := memberBoundCredentialTx(ctx, tx, fields.ChannelProvider)
 	if err != nil {
 		return datasource.EntityRef{}, false, counterpartyDecision{}, err
 	}
+	// A transport the installation shares can still carry one member's own
+	// account, which makes the message that member's correspondence.
+	memberBound = memberBound || fields.memberOwned
 	// ONE decision per capture, taken before the row exists and carried to both
 	// the insert and this seat's import row. Asking twice would not merely cost
 	// two reads: the marker step RE-OPENS a settled thread verdict as it
