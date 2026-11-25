@@ -36929,6 +36929,9 @@ type Approval struct {
 
 	// TargetVersion The `version` of the target row when the diff was staged. On approve-execute the server RE-READS the row; if its current version ≠ target_version the execution is rejected with 409 ErrVersionSkew (the world changed since the human last saw the diff — re-stage). This closes the stage→approval race (ADR-0036).
 	TargetVersion *int `json:"target_version,omitempty"`
+
+	// Why Why this proposal exists, as whoever staged it said it: the record and the fact that prompted it. A card leads with it. Absent when its maker gave none, never filled with a stock sentence, and withheld with the summary.
+	Why *WorkGrounds `json:"why,omitempty"`
 }
 
 // ApprovalStatus defines model for Approval.Status.
@@ -63107,6 +63110,13 @@ type QuickCaptureContactResult struct {
 
 // RaiseNoticeRequest defines model for RaiseNoticeRequest.
 type RaiseNoticeRequest struct {
+	// DealId The deal the notice is about. Required for `coach_deal_needs_next_step`, and refused on
+	// every other kind. The deal must be open, owned by the recipient, and one the caller
+	// can read. The headline then names the deal and what Margince sees on it: whether a
+	// next step is planned, and the day of its last activity. The recipient's row links to
+	// the deal.
+	DealId *openapi_types.UUID `json:"deal_id,omitempty"`
+
 	// Kind What a coaching notice is about. A closed vocabulary, because a notice addressed to a
 	// colleague is words in their queue: the kind is what the recipient reads as the headline,
 	// and the coach supplies only the note beneath it.

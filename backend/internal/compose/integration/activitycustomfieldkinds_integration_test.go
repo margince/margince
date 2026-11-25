@@ -97,7 +97,7 @@ func TestAMeetingOnlyFieldIsRefusedOnACallAtEveryDoor(t *testing.T) {
 	}
 	refusedForKind(t, "a call patched over REST", d.restStatus(t, "PATCH", "/v1/activities/"+heldID, AnyMap{column: "changed"}, http.StatusUnprocessableEntity))
 	if refused := d.toolRefused(t, "update_record", map[string]any{
-		"record_type": "activity", "id": heldID, "fields": map[string]any{column: "changed"},
+		"record_type": "activity", "id": heldID, "fields": map[string]any{column: "changed"}, "why": "A test asks for this change.",
 	}); !strings.Contains(refused, column) {
 		t.Errorf("update_record refused a call's value without naming %s: %s", column, refused)
 	}

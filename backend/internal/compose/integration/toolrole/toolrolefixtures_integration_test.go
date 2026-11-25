@@ -32,7 +32,7 @@ var toolRoleFixtures = map[string]func(p *recordPool) map[string]any{
 		return map[string]any{"fields": map[string]any{"display_name": "Role Sweep", "source": "manual"}}
 	},
 	"update_record": func(*recordPool) map[string]any {
-		return map[string]any{"fields": map[string]any{"display_name": "Role Sweep Renamed"}}
+		return map[string]any{"fields": map[string]any{"display_name": "Role Sweep Renamed"}, "why": "A test asks for this change."}
 	},
 	"bulk_update_records": func(p *recordPool) map[string]any {
 		return map[string]any{"record_type": "company", "verb": "archive", "items": []any{map[string]any{"id": p.take("company"), "version": 1}}}

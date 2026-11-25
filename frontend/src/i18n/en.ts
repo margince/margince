@@ -21688,6 +21688,9 @@ export const en = {
   "worklist.manager.kind.next_step": "Deal next step",
   "worklist.manager.kind.review_backlog": "Review backlog",
   "worklist.manager.kind.general": "Other",
+  "worklist.manager.coachDeal": "Deal",
+  "worklist.manager.coachNoDeal":
+    "No deal is in their day, so there is none to name.",
   "worklist.board.title": "Team work needing attention",
   "worklist.gap.rankedOn": "Ranked on {date}.",
   "worklist.gap.masked_one":
@@ -22840,6 +22843,7 @@ export const en = {
   "magic.why.site_read_unnamed": "Read on the company’s website.",
   "magic.why.site_read_each": "Read on each company’s own website.",
   "magic.why.signature": "Taken from an email signature.",
+  "magic.why.stated": "Reason given: {why}",
   "magic.why.retention": "Retention rule: after {days} days.",
   "magic.by.retention": "Retention",
   "magic.by.mail_filing": "Mail filing",

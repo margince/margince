@@ -73,18 +73,10 @@ func stageRateProposal(ctx context.Context, svc *approvals.Service, kind, target
 	}
 	digest := sha256.Sum256(raw)
 	hash := hex.EncodeToString(digest[:])
-	// StageUnlessDeclined rather than Stage, and the difference is a rejection
-	// rather than a duplicate. JoinPending collapses a proposal that is still
-	// waiting; the moment a human turns one down there is no pending row left to
-	// join, so a plain Stage puts the refused figure straight back. And it comes
-	// back on every refresh after that: the diff is computed against the RATE
-	// SHEET, which a rejection does not change, so the same click re-derives the
-	// same proposal from the same source indefinitely.
-	//
-	// The identity was already declared for the join, and it is what makes the
-	// memory precise: a refused $5 stays refused while a genuine move to $6 is
-	// still offered.
+	// A refused figure stays refused: every refresh re-derives it from the rate
+	// sheet, and the identity still offers a move to a new figure.
 	_, _, err = svc.StageUnlessDeclined(ctx, approvals.StageInput{
+		Why:  approvals.HeadlineSaysWhy,
 		Kind: kind, ProposedChange: raw, DiffHash: hash,
 		TargetType: targetType, TargetID: ws, Summary: summary, SystemText: metadata,
 		JoinPending: true, Identity: identity,
