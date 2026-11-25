@@ -110,6 +110,15 @@ func NameTaken(err error, entry, name string, indexes ...string) error {
 	return err
 }
 
+// NameAfter is the name a sparse patch leaves: the trimmed one the caller sent,
+// or the held one. NameTaken then quotes what the caller asked for.
+func NameAfter(held string, sent *string) string {
+	if sent == nil {
+		return held
+	}
+	return strings.TrimSpace(*sent)
+}
+
 // NameHeld is the 409 NameTaken answers, for a name clash a store finds by its
 // own check where no index covers the pair.
 func NameHeld(entry, name string) error {

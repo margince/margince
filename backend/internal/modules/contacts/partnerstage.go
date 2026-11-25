@@ -37,16 +37,16 @@ const (
 		(SELECT count(*) FROM partner WHERE partner.relationship_stage = partner_stage.key)`
 )
 
-// partnerStageKeyShape is partner_stage_key_shape, checked before the insert so
-// a bad key is a 422 that names the field.
-// The indexes holding one stage per key and per label (trimmed, case-folded,
-// retired stages included), and the noun their refusal names.
+// The indexes holding one partner stage per key and per label (trimmed,
+// case-folded, retired stages included), and the noun their refusal names.
 const (
 	partnerStageKeyIndex   = "partner_stage_key_key"
 	partnerStageLabelIndex = "partner_stage_label_once"
 	partnerStageEntry      = "a partner stage"
 )
 
+// partnerStageKeyShape is partner_stage_key_shape, checked before the insert so
+// a bad key is a 422 that names the field.
 var partnerStageKeyShape = regexp.MustCompile(`^[a-z][a-z0-9_]{0,63}$`)
 
 // CreatePartnerStageInput is one new stage.
@@ -185,7 +185,7 @@ func (s *Store) UpdatePartnerStage(ctx context.Context, id ids.UUID, in UpdatePa
 		p := partnerStagePatch(before, in)
 		if !p.Empty() {
 			if err := p.ApplyLocked(ctx, tx, lock); err != nil {
-				return storekit.NameTaken(err, partnerStageEntry, labelAfter(before.Label, in.Label), partnerStageLabelIndex)
+				return storekit.NameTaken(err, partnerStageEntry, storekit.NameAfter(before.Label, in.Label), partnerStageLabelIndex)
 			}
 			auditID, err := storekit.Audit(ctx, tx, "update", partnerStageObject, id, p.Before(), p.After())
 			if err != nil {

@@ -9,7 +9,6 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
-	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -64,12 +63,4 @@ func refuseShippedCorpusName(ctx context.Context, tx pgx.Tx, id ids.UUID, shippe
 		return storekit.NameHeld(corpusEntry, name)
 	}
 	return nil
-}
-
-// corpusNameAfter is the name an edit leaves the set with.
-func corpusNameAfter(current crmcontracts.KnowledgeCorpus, in UpdateCorpus) string {
-	if in.Name == nil {
-		return current.Name
-	}
-	return *in.Name
 }

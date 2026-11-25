@@ -66,14 +66,6 @@ const (
 	sourceEntry      = "an acquisition source"
 )
 
-// labelAfter is the label a patch leaves: the trimmed new one, or the held one.
-func labelAfter(held string, label *string) string {
-	if label == nil {
-		return held
-	}
-	return strings.TrimSpace(*label)
-}
-
 // acquisitionSourceColumns is the catalog's wire projection.
 const acquisitionSourceColumns = `id, key, label, label_key, sort_order, active, system, version, created_at, updated_at`
 
@@ -301,7 +293,7 @@ func (s *Store) UpdateAcquisitionSource(
 			return err
 		}
 		if err := patch.ApplyLocked(ctx, tx, lock); err != nil {
-			return storekit.NameTaken(err, sourceEntry, labelAfter(before.Label, in.Label), sourceLabelIndex)
+			return storekit.NameTaken(err, sourceEntry, storekit.NameAfter(before.Label, in.Label), sourceLabelIndex)
 		}
 		if _, err := storekit.Audit(ctx, tx, "update", "deal_acquisition_source", id,
 			patch.Before(), patch.After()); err != nil {

@@ -214,7 +214,7 @@ func (s *Store) EditCorpus(ctx context.Context, id ids.UUID, in UpdateCorpus) (c
 			return nil
 		}
 		if err := p.ApplyLocked(ctx, tx, lock); err != nil {
-			return storekit.NameTaken(fmt.Errorf("apply knowledge corpus patch: %w", err), corpusEntry, corpusNameAfter(current, in), corpusNameIndex)
+			return storekit.NameTaken(fmt.Errorf("apply knowledge corpus patch: %w", err), corpusEntry, storekit.NameAfter(current.Name, in.Name), corpusNameIndex)
 		}
 		if _, err := storekit.Audit(ctx, tx, "update", "knowledge_corpus", id, p.Before(), p.After()); err != nil {
 			return fmt.Errorf("audit knowledge corpus update: %w", err)

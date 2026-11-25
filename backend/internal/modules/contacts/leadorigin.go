@@ -52,14 +52,6 @@ const (
 	leadOriginEntry      = "a lead origin"
 )
 
-// labelAfter is the label a patch leaves: the trimmed new one, or the held one.
-func labelAfter(held string, label *string) string {
-	if label == nil {
-		return held
-	}
-	return strings.TrimSpace(*label)
-}
-
 // requireVocabularyLabelWithin refuses a lead list's label past the label
 // limit, measured trimmed as it is stored.
 func requireVocabularyLabelWithin(label string) error {
@@ -383,7 +375,7 @@ func (s *Store) UpdateLeadOrigin(ctx context.Context, id ids.UUID, in UpdateLead
 			return err
 		}
 		if err := p.ApplyLocked(ctx, tx, lock); err != nil {
-			return storekit.NameTaken(err, leadOriginEntry, labelAfter(before.Label, in.Label), leadOriginLabelIndex)
+			return storekit.NameTaken(err, leadOriginEntry, storekit.NameAfter(before.Label, in.Label), leadOriginLabelIndex)
 		}
 		if _, err := storekit.Audit(ctx, tx, "update", "lead_origin", id, p.Before(), p.After()); err != nil {
 			return err

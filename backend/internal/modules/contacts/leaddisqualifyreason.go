@@ -237,7 +237,7 @@ func (s *Store) UpdateLeadDisqualifyReason(ctx context.Context, id ids.UUID, in 
 		// The label AFTER the patch: it is this reason's only identity, so an
 		// event carrying the old one would name something that no longer
 		// exists. readLeadDisqualifyReason below re-reads the row anyway.
-		label := labelAfter(before.Label, in.Label)
+		label := storekit.NameAfter(before.Label, in.Label)
 		if err := p.ApplyLocked(ctx, tx, lock); err != nil {
 			return disqualifyLabelTaken(err, label)
 		}

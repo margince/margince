@@ -233,7 +233,7 @@ func (s *Store) UpdateLossReason(ctx context.Context, id ids.UUID, in UpdateLoss
 		patch := lossReasonPatch(before, in)
 		if !patch.Empty() {
 			if err := patch.ApplyLocked(ctx, tx, lock); err != nil {
-				return storekit.NameTaken(err, lossReasonEntry, labelAfter(before.Label, in.Label), lossReasonLabelIndex)
+				return storekit.NameTaken(err, lossReasonEntry, storekit.NameAfter(before.Label, in.Label), lossReasonLabelIndex)
 			}
 			auditID, err := storekit.Audit(ctx, tx, "update", "deal_loss_reason", id, patch.Before(), patch.After())
 			if err != nil {

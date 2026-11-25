@@ -83,11 +83,8 @@ func requireNameWithin(field, name string) error {
 	return nil
 }
 
-// nameFits reports whether a name is within ContactNameLimit.
 func nameFits(name string) bool { return utf8.RuneCountInString(name) <= ContactNameLimit }
 
-// requireLeadName is the rule for a lead's changed name: visible text within
-// ContactNameLimit, answered trimmed as it is stored.
 func requireLeadName(raw string) (string, error) {
 	name, err := httperr.RequireNonBlank(contactNameColumn, raw)
 	if err != nil {

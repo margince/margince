@@ -480,8 +480,8 @@ func TestADisqualifyReasonLabelIsHeldOnce(t *testing.T) {
 	}
 }
 
-// vocabularyList is one administered list as a test drives it. keyed lists
-// take a caller's own key beside the label.
+// vocabularyList drives one administered list. A keyed list takes a caller's own
+// key beside the label.
 type vocabularyList struct {
 	name   string
 	keyed  bool
@@ -558,8 +558,6 @@ func requireLabelHeldOnce(t *testing.T, list vocabularyList) {
 	}
 }
 
-// requireLongLabelRefused proves a label past the limit is refused as too long.
-// The refusal names label and comes before a key is derived or a row written.
 func requireLongLabelRefused(t *testing.T, list vocabularyList) {
 	t.Helper()
 	long := strings.Repeat("a", values.TextLabelCharacters+1)

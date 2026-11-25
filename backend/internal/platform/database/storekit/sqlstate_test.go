@@ -86,3 +86,13 @@ func TestNameTakenAnswersOnlyTheNamedIndexes(t *testing.T) {
 		t.Error("no error answered an error")
 	}
 }
+
+func TestNameAfterIsTheTrimmedSentNameOrTheHeldOne(t *testing.T) {
+	sent := "  Renewal lead "
+	if got := NameAfter("Owner", &sent); got != "Renewal lead" {
+		t.Errorf("a sent name reads %q, want it trimmed", got)
+	}
+	if got := NameAfter("Owner", nil); got != "Owner" {
+		t.Errorf("no sent name reads %q, want the held one", got)
+	}
+}

@@ -43,14 +43,6 @@ const (
 	roleEntry      = "a record role"
 )
 
-// roleLabelAfter is the label a patch leaves: the trimmed new one, or the held one.
-func roleLabelAfter(held string, label *string) string {
-	if label == nil {
-		return held
-	}
-	return strings.TrimSpace(*label)
-}
-
 const roleColumns = `id, key, label, label_key, record_types, assignee_kinds, sort_order, active, system, version, created_at, updated_at`
 
 // CreateRecordRoleInput is the create call's arguments.
@@ -215,7 +207,7 @@ func (s *Store) UpdateRecordRole(
 			return err
 		}
 		if err := patch.ApplyLocked(ctx, tx, lock); err != nil {
-			return storekit.NameTaken(err, roleEntry, roleLabelAfter(before.Label, in.Label), roleLabelIndex)
+			return storekit.NameTaken(err, roleEntry, storekit.NameAfter(before.Label, in.Label), roleLabelIndex)
 		}
 		if _, err := storekit.Audit(ctx, tx, "update", auditentity.RecordRole, id,
 			patch.Before(), patch.After()); err != nil {

@@ -544,7 +544,6 @@ func TestARedecisionWaitsForTheApplyThatReadsIt(t *testing.T) {
 	}
 }
 
-// dealList is one administered deal list as a test drives it.
 type dealList struct {
 	name   string
 	create func(key, label string) (ids.UUID, error)
@@ -648,8 +647,6 @@ func TestADealListRefusesALabelPastTheLimitBeforeTheWrite(t *testing.T) {
 	}
 }
 
-// assertLabelTooLong holds err to the 422 too_long refusal naming field and the
-// label limit.
 func assertLabelTooLong(t *testing.T, err error, field string) {
 	t.Helper()
 	fault, _ := httperr.Classify(err)
