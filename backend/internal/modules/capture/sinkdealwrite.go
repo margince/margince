@@ -70,15 +70,16 @@ func linkActivityToDeal(f dealFiling, tx pgx.Tx, activityID ids.ActivityID, deal
 }
 
 // retractMachineDealLink takes a deal link the rule wrote off the activity,
-// when the rule no longer finds that deal. Only the repair calls it.
-func retractMachineDealLink(f dealFiling, tx pgx.Tx, activityID ids.ActivityID, dealID ids.UUID) (bool, error) {
+// when the rule no longer finds that deal. Only the repair calls it. The unlink's
+// audit row names the hooks that changed the answer, as the link's row does.
+func retractMachineDealLink(f dealFiling, tx pgx.Tx, activityID ids.ActivityID, dealID ids.UUID, hooks []HookChange) (bool, error) {
 	if err := auth.Require(f.decider, "activity", principal.ActionUpdate); err != nil {
 		if errors.Is(err, apperrors.ErrPermissionDenied) {
 			return false, nil
 		}
 		return false, err
 	}
-	return f.filer.RetractMachineDeal(f.writer, tx, activityID, dealID, f.evidence)
+	return f.filer.RetractMachineDeal(f.writer, tx, activityID, dealID, withHookEvidence(f.evidence, hooks))
 }
 
 // markMachineDealLink records the topic check's mark on a link the rule

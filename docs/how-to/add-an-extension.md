@@ -252,8 +252,12 @@ Copy `extensions/openchannel/api/crm.yaml`. These rules fail you if you miss the
 - **Paths start from the `servers` URL**, which already ends in `/v1`. Write `/ext/<name>/inbound`, never
   `/v1/ext/...`. The server puts the base path back when it mounts the route. Written twice, it publishes
   `/v1/v1/ext/...` to every generated client (the `composition` tool refuses it).
-- **Every path must be under `/ext/<your-unit>/`.** Another unit's space, a core path, or a path template
-  (`{id}`) are all refused.
+- Every path must be under `/ext/<your-unit>/`. Another unit's space or a core path is refused.
+- A path may name a record by its id, as in `GET /ext/<unit>/orders/{order_id}`. The part right after the
+  unit is fixed, so `/ext/<unit>/{id}` is refused. Declare each id as a parameter with `in: path`,
+  `required: true` and a plain schema: text, a number or true/false. The tool takes the id as an argument of
+  that name, for any method, so an agent passes it the same way. The same name again in the body or query is
+  refused, by `make gen` and with a 422 on a call.
 - **Arguments live where the method puts them.** A served extension operation *is* a tool call under the
   rules, so the seam reads its arguments from one place. That is the request body for POST, PUT and PATCH, and
   the query for GET. If you declare them on the other side, the generator fails with a named error. The seam
@@ -457,9 +461,8 @@ So the static check below also refuses role changes (`SET ROLE`, `RESET ROLE`, `
 `DO` blocks. It refuses `EXECUTE`, `PREPARE`, `CREATE FUNCTION` and functions that run a query string, such as
 `query_to_xml`.
 
-A separate database login for each unit would make the limit hold against such code. That is
-[issue 628](https://github.com/margince/margince/issues/628), closed until a unit from outside the first-party
-set is planned.
+A separate database login for each unit would make the limit hold against such code. Core has none
+([issue 628](https://github.com/margince/margince/issues/628)).
 
 `ErrCoreTableRefused` also appears when the role holds no rights on one of your own tables. That happens when a
 role other than the migrate role (`margince_owner`) created the table, because only its tables get the rights
@@ -842,7 +845,7 @@ Only an admin sees these settings, and only an admin can change them. Each chang
 
 An admin changes them with `PUT /v1/extensions/{name}/settings`. Send `overwrites_edited_fields` and a `declared` list of `key` and `value` pairs, for example `{"overwrites_edited_fields": false, "declared": [{"key": "region", "value": "eu-west"}]}`. A setting left out of the list keeps its value. A key the unit did not declare, or a value its kind cannot hold, is a 422 and saves nothing. A switch value is the text `true` or `false`.
 
-The core stores the values and does not yet hand them to the unit's code. Only core code reads them today. A unit that needs to read its own setting has to wait for that.
+The core stores the values and does not hand them to the unit's code. Only core code reads them.
 
 ## Declare a company type
 
@@ -897,8 +900,18 @@ The kind is gated on the RBAC object `ext_<unit>_<kind>`. The unit's hyphens bec
 tags or lists a record, it checks the `read` right and a live row. A caller without the right gets `404`. The start
 refuses a declaration that breaks the table above.
 
-The service reports itself unready while your table, a column or the unique index is missing. It does the same while
-`margince_app` holds fewer than the four rights on the table.
+Ship two more indexes in the unit's migrations, because core's reads over your table use them:
+
+| Read | Index the table must hold |
+|---|---|
+| Search | A text search index over the lower-cased title column: `CREATE INDEX ON ext.<table> USING gin (lower(<title>) public.gin_trgm_ops)`. The title column is the `LabelField` of the `Timeline`, or else the first `NaturalKey` field. |
+| History, for each entry of `Timeline.Subjects` | An index whose first column is the subject's `Column` and whose second is the `AtColumn`: `CREATE INDEX ON ext.<table> (<column>, <at column>)`. |
+
+Each index covers every row, so give it no `WHERE`. The service reports itself unready while your table, a column,
+the unique index or one of these indexes is missing. It does the same while such an index is not valid, as after a
+failed `CREATE INDEX CONCURRENTLY`.
+The message names the statement that adds a missing index. It does the same while `margince_app` holds fewer than the
+four rights on the table.
 
 `GET /v1/record-kinds` lists the kinds a seat may read. The reference page
 [extension record kinds, links, signals and reports](../reference/extension-record-kinds-links-signals-and-reports.md#extension-record-kinds-and-link-registry)
@@ -1579,6 +1592,50 @@ Give every field your provider gives you, and decide nothing about who a contact
 fields its matching ladder may use, from your declaration. What each field must hold, and what breaks when it
 does not, is the connector contract in
 [explanation/ingress-gate-and-auto-capture.md](../explanation/ingress-gate-and-auto-capture.md).
+
+### A member-owned chat source
+
+A chat account belongs to one member. Pin a posture on the source to say so:
+
+```go
+Ingress: []extension.IngressSource{{
+	System:        "relay",
+	Lands:         []extension.RecordKind{extension.KindActivity},
+	PinnedPosture: extension.PostureClassified, // or PostureHeld; never wider
+}},
+```
+
+The member puts in the connection as a user-scoped secret for their own account. Your unit has no `channel_connection` row.
+A member asks you for something on your own HTTP route. The route stores the request in your own table and calls
+`rt.SyncNow`. Your job ingests it later, because a call with a caller never ingests.
+
+A chat message is kind `message`, with a counterparty named by an account on your own channel. It goes through the
+function every chat network shares. The pin is written as the import's `posture_at_import`. So the audience of the
+message and the check for private threads work as they do for mail in a member's mailbox. The pin replaces the posture
+derived from the member's mailboxes.
+
+A source with a pin lands chat messages only. Any other record answers `DispositionUnrepresentable`.
+
+Four things are new on this path:
+
+- **`Record.ChosenSubject`** names a contact or a lead that the member picked (`extension.ChosenSubject`). The core
+  checks it on the member's live rights. The message is linked to it directly, and nothing matches its counterparty by
+  identity. A subject the member cannot see answers `DispositionSubjectNotFound`, the same as one that does not exist.
+  It stores nothing, and the other records of the batch go on. Your cursor moves past it like past any answer.
+- **`Record.OccurredPrecision`** is `PrecisionInstant` (the default), `PrecisionDay` or `PrecisionUnknown`. The core
+  stores a day as a date with no time of day. With an unknown time you may leave `Activity.OccurredAt` zero.
+  The core then dates the record on the day it takes it in, as a day. The timeline has no separate stored "unknown", so it reads like a
+  day. The time the core takes a record in is never one you state.
+- **`Record.Parts` and `Record.PartDrops`** carry files, within `MaxInboundFiles`, `MaxInboundFileBytes` and
+  `MaxInboundMessageBytes`. The core reads each type again from the bytes. A retry keeps one copy of a file, as for
+  mail, and an erasure removes it.
+- **One saved place per member.** `rt.MemberIngestPosition(ctx, member, source)` answers the member's `MemberPosition`.
+  `rt.IngestMemberBatch(ctx, member, source, recs, position, version)` lands the records, then saves the place only
+  if `version` is still the one you read. A stale writer gets `ErrPositionConflict`, which is also an `ErrConflict`,
+  and reads the place again.
+
+Two members of one source never see each other's place. A source with a pin keeps a place per member, so `IngestBatch`
+and `IngestPosition` refuse it with `ErrInvalid`. They stay as they were for a source with no pin.
 
 ## Carry replies: give a transport
 

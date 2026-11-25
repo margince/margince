@@ -95,8 +95,7 @@ func (d replyDrafter) voicedDraft(ctx context.Context, anchor ids.UUID, data rep
 		}
 		retried, retryErr := d.completeWith(ctx, data, voice.TeamRules, withFeedback, "")
 		if retryErr != nil {
-			// This is the one call in the lane that goes to d.completeWith rather
-			// than completeChecked, so draftRetryLog never sees it: unlogged,
+			// This call goes to d.completeWith, not completeChecked, so draftRetryLog never sees it: unlogged,
 			// the failure is recorded nowhere at all. Keeping the first draft
 			// is the right answer — the re-check below still decides whether
 			// it may be served — but that decision is then made on a retry

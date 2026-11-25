@@ -25,7 +25,7 @@ const (
 )
 
 // TeamRules is the one text every AI draft in the workspace follows, ranked
-// above a person's own rules. Empty until an admin writes it.
+// above the sender's own rules. Empty until an admin writes it.
 //
 // MachineryApplied because a draft must follow the rules whoever asked for it.
 // An agent or an automation drafting under the system principal holds no

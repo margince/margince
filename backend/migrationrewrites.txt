@@ -268,5 +268,7 @@
 1795620142_the_seat_provider_check_is_validated.down.sql | * | the down migration is a single SELECT 1 that changes nothing
 1795620144_a_business_link_without_a_seat_waits_for_approval.up.sql | channel_connection | moves only the Telegram Business link rows that are connected with no seat, a handful per business account, and the table holds one row per connection
 1795620144_a_business_link_without_a_seat_waits_for_approval.down.sql | * | the down migration is a single SELECT 1 that changes nothing
-1795622925_the_ai_team_rules_have_their_own_grant.up.sql | role | updates only the fixed set of system roles, one grant each, at most six rows per workspace
-1795622925_the_ai_team_rules_have_their_own_grant.down.sql | role | removes that one grant from the same fixed set of system roles
+1795634878_the_ai_team_rules_have_their_own_grant.up.sql | role | updates only the fixed set of system roles, one grant each, at most six rows per workspace
+1795634878_the_ai_team_rules_have_their_own_grant.down.sql | role | removes that one grant from the same fixed set of system roles
+1795621300_a_member_keeps_their_own_ingest_position.down.sql | extension_ingest_position | one row per unit and source, and the dev-only rollback drops the per-member rows
+1795621301_the_ingest_position_version_check_is_validated.down.sql | * | the down migration is a single SELECT 1 that changes nothing

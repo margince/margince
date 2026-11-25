@@ -173,6 +173,10 @@ var (
 			// mirrored here so the fixture matches production rather than a
 			// narrower admin that would make a suite pass for the wrong reason.
 			"contract": {Create: true, Read: true, Update: true, Delete: true},
+			// Every seeded role holds introductions (migration
+			// 1788230541_an_introduction_is_a_grant_of_its_own), and a contact
+			// merge preview asks for it before it looks for asks to carry.
+			"introduction": {Create: true, Read: true, Update: true},
 			// The legal entities the installation trades as, which admin describes.
 			"legal_entity": {Create: true, Read: true, Update: true, Delete: true},
 			"lead":         {Create: true, Read: true, Update: true, Delete: true},

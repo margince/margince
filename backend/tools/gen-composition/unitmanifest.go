@@ -115,6 +115,7 @@ type unitManifest struct {
 	// SystemReads are the deals and colleagues' details the unit reads.
 	SystemReads []string       `json:"system_reads,omitempty"`
 	Needs       []declaredNeed `json:"needs,omitempty"`
+	mailHooksDecl
 }
 
 // inboundEndpoint is one declared anonymous edge (see
@@ -175,9 +176,10 @@ type subscriptionRequest struct {
 // field a unit does not use must not rewrite its committed manifest, which is
 // what lets this land without a schema bump.
 type ingressSource struct {
-	System string   `json:"system"`
-	Lands  []string `json:"lands"`
-	Merges []string `json:"merges,omitempty"`
+	System        string   `json:"system"`
+	Lands         []string `json:"lands"`
+	Merges        []string `json:"merges,omitempty"`
+	PinnedPosture string   `json:"pinned_posture,omitempty"`
 }
 
 // declaredChannel is one messaging transport the unit supplies, as an operator

@@ -266,7 +266,10 @@ func recheckMachineDeal(f dealFiling, tx pgx.Tx, mail ids.ActivityID, current id
 	if verdict.Outcome == DealLinked && verdict.Deal == current {
 		return DealMachineConfirmed, nil
 	}
-	if verdict.Basis.NeedsTopicCheck() {
+	// A hook's `none` is the unit's ruling, not a suggestion waiting for a topic
+	// check, so it may take the link back. A narrowed question is still one.
+	ruled := verdict.Outcome != DealAmbiguous && len(hookChanges(verdict.Hooks)) > 0
+	if verdict.Basis.NeedsTopicCheck() && !ruled {
 		return DealNone, nil
 	}
 	outcome, err := replaceMachineDeal(f, tx, mail, current, verdict, candidates)
@@ -287,7 +290,7 @@ func replaceMachineDeal(f dealFiling, tx pgx.Tx, mail ids.ActivityID, current id
 			return "", err
 		}
 	}
-	retracted, err := retractMachineDealLink(f, tx, mail, current)
+	retracted, err := retractMachineDealLink(f, tx, mail, current, verdict.Hooks)
 	if err != nil || !retracted {
 		return DealNotWritable, err
 	}

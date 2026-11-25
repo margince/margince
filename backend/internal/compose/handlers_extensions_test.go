@@ -193,3 +193,27 @@ func TestExtensionInventoryListsWhatAUnitBorrowsFromTheCore(t *testing.T) {
 		t.Errorf("needs = %+v, want %+v sorted by capability", got[1].Needs, want)
 	}
 }
+
+// An operator sees that a unit reads captured mail before granting it anything.
+func TestExtensionInventoryNamesAUnitsMailHooks(t *testing.T) {
+	t.Parallel()
+	deal := func(context.Context, extension.MailView, extension.MailDeal) (extension.MailDeal, error) {
+		return extension.MailDeal{}, nil
+	}
+	exts := []extension.Extension{
+		{Name: "deal-rules", MailHooks: extension.MailHooks{Deal: deal, Reasons: []string{"po_number", "credit_hold"}}},
+		{Name: "plain"},
+	}
+	got := composedExtensionInventory(exts, nil, nil)
+	if got[1].Name != "plain" || got[1].MailHooks != nil {
+		t.Errorf("a unit with no hook = %+v, want MailHooks absent", got[1])
+	}
+	hooks := got[0].MailHooks
+	if hooks == nil {
+		t.Fatal("the inventory does not name the unit's mail hooks")
+	}
+	if hooks.Parties || !hooks.Deal || hooks.BodyCharacters != extension.MailBodyCharacters ||
+		!slices.Equal(hooks.Reasons, []string{"credit_hold", "po_number"}) || len(hooks.Reads) != 3 {
+		t.Errorf("mail hooks = %+v, want the deal hook, both reasons sorted and three reads", *hooks)
+	}
+}

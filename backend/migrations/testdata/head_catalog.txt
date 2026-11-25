@@ -5792,15 +5792,18 @@ public.existing_customer_notice_purpose.notice_id uuid NOT NULL gen=- def=-
 public.existing_customer_notice_purpose.purpose_id uuid NOT NULL gen=- def=-
 public.existing_customer_notice_purpose_pkey CREATE UNIQUE INDEX existing_customer_notice_purpose_pkey ON public.existing_customer_notice_purpose USING btree (notice_id, purpose_id)
 public.extension_ingest_position acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
-public.extension_ingest_position.extension_ingest_position_pkey PRIMARY KEY (unit, source_system)
+public.extension_ingest_position.extension_ingest_position_pkey PRIMARY KEY (unit, source_system, member_id)
 public.extension_ingest_position.extension_ingest_position_size CHECK ((("position" <> ''::text) AND (octet_length("position") <= 512)))
+public.extension_ingest_position.extension_ingest_position_version_bound CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))
+public.extension_ingest_position.member_id uuid NOT NULL gen=- def='00000000-0000-0000-0000-000000000000'::uuid
 public.extension_ingest_position.position text NOT NULL gen=- def=-
 public.extension_ingest_position.saved_at timestamp with time zone NOT NULL gen=- def=now()
 public.extension_ingest_position.source_system text NOT NULL gen=- def=-
 public.extension_ingest_position.text_bound_insert CREATE TRIGGER text_bound_insert AFTER INSERT ON public.extension_ingest_position FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"unit": 20000, "position": 20000, "source_system": 20000}'::jsonb)) EXECUTE FUNCTION refuse_oversized_text('{"position":20000,"source_system":20000,"unit":20000}')
 public.extension_ingest_position.text_bound_update CREATE TRIGGER text_bound_update AFTER UPDATE ON public.extension_ingest_position FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"unit": 20000, "position": 20000, "source_system": 20000}'::jsonb)) EXECUTE FUNCTION refuse_oversized_text('{"position":20000,"source_system":20000,"unit":20000}')
 public.extension_ingest_position.unit text NOT NULL gen=- def=-
-public.extension_ingest_position_pkey CREATE UNIQUE INDEX extension_ingest_position_pkey ON public.extension_ingest_position USING btree (unit, source_system)
+public.extension_ingest_position.version bigint NOT NULL gen=- def=1
+public.extension_ingest_position_pkey CREATE UNIQUE INDEX extension_ingest_position_pkey ON public.extension_ingest_position USING btree (unit, source_system, member_id)
 public.extension_ingest_refusal acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.extension_ingest_refusal.day date NOT NULL gen=- def=-
 public.extension_ingest_refusal.extension_ingest_refusal_class CHECK ((refusal = ANY (ARRAY['key'::text, 'activity'::text, 'addresses'::text, 'counterparty'::text, 'participants'::text, 'size'::text])))
