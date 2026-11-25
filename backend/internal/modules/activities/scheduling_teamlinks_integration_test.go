@@ -19,7 +19,9 @@ import (
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/platform/datatask"
+	"github.com/margince/margince/backend/internal/platform/testdb"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -417,5 +419,43 @@ func TestAMeetingBookedOnTheOldPersonalTeamKeepsItsColleaguesAfterTheMove(t *tes
 	}
 	if slices.ContainsFunc(starts(free), monday(13).Equal) {
 		t.Fatalf("a move offers a time the booked colleague is busy in: %v", starts(free))
+	}
+}
+
+// A colleague who leaves one link while an answer by host waits for that host's
+// lock stays off it. The answer by host reads the link again under the lock.
+func TestAnAnswerByHostDoesNotConfirmALinkTheColleagueLeftMeanwhile(t *testing.T) {
+	f := newTeamFixture(t)
+	member := f.colleague(t, "Member")
+	f.name(t, false, member)
+	holder, err := f.env.owner.Begin(f.ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	release := func() error { return holder.Commit(f.ctx) }
+	var pid int32
+	if err := holder.QueryRow(f.ctx, `SELECT pg_backend_pid()`).Scan(&pid); err != nil {
+		t.Fatal(err)
+	}
+	if err := storekit.LockWriteIdentity(f.ctx, holder, "booking_page", f.host.String()); err != nil {
+		t.Fatal(err)
+	}
+	answered, returned := startRacer(t, release, func() error {
+		return f.store.AnswerHostTeamRequests(f.as(member), f.host, crmcontracts.SchedulingTeamAnswerStateConfirmed)
+	})
+	testdb.AwaitQueuedBehind(t, f.env.owner, pid, 1, returned, "the answer by host")
+	if _, err := holder.Exec(f.ctx, `UPDATE booking_page SET scheduling_policy =
+ jsonb_set(scheduling_policy, '{team_members,0,state}', '"left"') WHERE id=$1`, f.link); err != nil {
+		t.Fatal(err)
+	}
+	if err := release(); err != nil {
+		t.Fatal(err)
+	}
+	if err := <-answered; !errors.Is(err, apperrors.ErrNotFound) {
+		t.Fatalf("the answer by host on a link the colleague left meanwhile: %v, want not found", err)
+	}
+	var state string
+	if err := f.env.owner.QueryRow(f.ctx, `SELECT scheduling_policy->'team_members'->0->>'state' FROM booking_page WHERE id=$1`, f.link).Scan(&state); err != nil || state != "left" {
+		t.Fatalf("the link reads the colleague as %q (%v), want left", state, err)
 	}
 }
