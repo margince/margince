@@ -140,7 +140,7 @@ func TestAcceptingAnOlderSnapshotLeavesTheDealsValue(t *testing.T) {
 }
 
 // A deal not priced from lines keeps the offer it always had: typed lines,
-// and the accepted gross on the deal.
+// and the accepted net, without tax, on the deal.
 func TestADealWithoutLinesKeepsItsOfferBehaviour(t *testing.T) {
 	e := setupReviewEnv(t)
 	dealID, _, _ := twoStagePipeline(t, e.configEnv)
@@ -156,7 +156,7 @@ func TestADealWithoutLinesKeepsItsOfferBehaviour(t *testing.T) {
 		t.Fatalf("creating a typed offer: %v", err)
 	}
 	acceptOfferOf(t, e, offer)
-	wantDealAmount(t, e, dealID, 23_800)
+	wantDealAmount(t, e, dealID, 20_000)
 }
 
 // The approval preview of an offer from the deal shows the lines and totals
