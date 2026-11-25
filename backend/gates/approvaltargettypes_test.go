@@ -171,7 +171,7 @@ var noticeSiteWaivers = gatekit.Waive(map[string]string{
 	"internal/compose/approvalnotify.go: staged.TargetEntityType":      "an approval's own target type, which the approval staging refuses unless targettype.Type holds it",
 	"internal/compose/dealownernotify.go: request.TargetType":          "an approval's own target type, which the approval staging refuses unless targettype.Type holds it",
 	"internal/compose/editaccess/effect.go: ask.RecordType":            "the record type of an edit-access request, one of the contract's five record types, all of them in targettype.Type",
-	"internal/compose/extnotice.go: in.Record.Type":                    "a record type an extension sends a notice about; the test below reads extension.NoticeRecordTypes, and notices.requireKnownTarget refuses anything else",
+	"internal/compose/extnotice.go: noticeTargetType(in.Record.Type)":  "the object of a record kind an extension sends a notice about; the test below reads extension.NoticeRecordTypes, and notices.requireKnownTarget refuses anything else",
 	"internal/compose/noticesseam.go: string(target.Type)":             "a datasource.EntityType, every value of which TestEveryApprovalStagerNamesAnApprovalTargetType holds inside targettype.Type",
 	"internal/compose/notificationdigestrender.go: targetType":         "a key of a lookup built from a stored notice's own target type; it writes no notice",
 	"internal/compose/ownershiptransfernotice.go: transfer.RecordType": "company or contact, the two record types an ownership transfer moves",
