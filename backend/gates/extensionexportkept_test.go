@@ -3,6 +3,8 @@
 
 package gates
 
+import "github.com/margince/margince/backend/internal/shared/gatekit"
+
 // exportCensusFloor is the fewest exported names the census read when it was
 // written; fewer means the walk or the surface changed shape.
 const exportCensusFloor = 633
@@ -13,7 +15,7 @@ const publishedInV1 = "released in v1.0.0, so code outside this tree may call it
 
 // exportWaivers are the exported pkg/extension names with no caller in this
 // tree, each with why it stays.
-var exportWaivers = map[string]string{
+var exportWaivers = gatekit.Waive(map[string]string{
 	"extension/crm.CreateActivityRequest.LinkTo":     publishedInV1,
 	"extension.APIBasePath":                          publishedInV1,
 	"extension.Activities.Mail":                      publishedInV1,
@@ -134,5 +136,6 @@ var exportWaivers = map[string]string{
 	"extension.MailPartiesHook":                      "the hook type a unit declares to adjust a mail's parties; no unit in this tree declares one",
 	"extension.MailReasonLimit":                      "the bound a unit's mail hook reason is held to; no unit in this tree declares a mail hook",
 	"extension.Runtime.MailContent":                  "the door a unit reads a mail's words through; no unit in this tree reads one",
+	"extension/reach.Deal":                           "a unit declares a column holding deal ids so a deal merge moves it; no unit in this tree has one",
 	"extension/messaging.Rules.ResolveCitation":      "a rule pack outside this tree fills a citation through it; Rules.Validate calls it inside the package",
-}
+})

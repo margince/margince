@@ -28,8 +28,9 @@ var kindListCheck = regexp.MustCompile(`^public\.(\w+)\.\w+ CHECK .*?\b(entity_t
 const extensionKindPattern = "^ext:"
 
 // acceptsExtensionKind are the columns that accept `ext:<unit>:<kind>`, each
-// with the writer that puts one there.
-var acceptsExtensionKind = map[string]string{
+// with the writer that puts one there. A listed column whose CHECK refuses the
+// form matches nothing, and AssertAllMatched fails it.
+var acceptsExtensionKind = gatekit.Waive(map[string]string{
 	"list.entity_type":              "collections.Store.CreateList admits a declared kind through acceptsEntityType",
 	"list_member.entity_type":       "collections adds members of the list's kind",
 	"list_live_member.entity_type":  "collections' live evaluation writes members of the list's kind",
@@ -37,10 +38,11 @@ var acceptsExtensionKind = map[string]string{
 	"taggable.entity_type":          "collections.Store.ApplyTag admits a declared kind through acceptsEntityType",
 	"saved_view.resource":           "collections saves a view over a declared kind (extvocab.go)",
 	"record_grant.record_type":      "row access for extension records is not decided, so the column stays open",
-}
+})
 
 func TestOnlyTheNamedColumnsAcceptAnExtensionKind(t *testing.T) {
 	t.Parallel()
+	defer acceptsExtensionKind.AssertAllMatched(t)
 	body, err := gatekit.ReadFile(filepath.Join(gatekit.ModuleRoot(t), "migrations", "testdata", "head_catalog.txt"))
 	if err != nil {
 		t.Fatalf("reading the head catalog: %v", err)
@@ -53,18 +55,9 @@ func TestOnlyTheNamedColumnsAcceptAnExtensionKind(t *testing.T) {
 		}
 		subject := found[1] + "." + found[2]
 		seen[subject] = true
-		writer, listed := acceptsExtensionKind[subject]
-		switch accepts := strings.Contains(line, extensionKindPattern); {
-		case accepts && !listed:
+		if strings.Contains(line, extensionKindPattern) && !acceptsExtensionKind.Waived(t, subject) {
 			t.Errorf("%s accepts an extension's `ext:<unit>:<kind>`, and no writer is named for it: keep core's "+
 				"closed list, or add the column to acceptsExtensionKind with the writer that fills it.\n\t%s", subject, line)
-		case !accepts && listed:
-			t.Errorf("%s is named as accepting an extension kind (%s), and its CHECK refuses one.\n\t%s", subject, writer, line)
-		}
-	}
-	for subject := range acceptsExtensionKind {
-		if !seen[subject] {
-			t.Errorf("%s is named as accepting an extension kind, and the catalog has no kind CHECK on it", subject)
 		}
 	}
 	if len(seen) < 14 {

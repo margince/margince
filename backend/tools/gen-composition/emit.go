@@ -5,7 +5,6 @@ package main
 
 import (
 	"bytes"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"go/format"
@@ -321,37 +320,6 @@ func composedFiles(root string) (composition, error) {
 		files["api/"+base] = content
 	}
 	return composition{Files: files, Verbs: verbs, Jobs: jobDecls, AITasks: taskDecls, Manifests: manifests}, nil
-}
-
-// unitListFile names the composed units and where each one's manifest is,
-// relative to the root. scripts/verify-boot.sh reads it instead of guessing
-// the set from the folders under extensions/.
-const unitListFile = "units.json"
-
-// composedUnit is one row of unitListFile.
-type composedUnit struct {
-	Name     string `json:"name"`
-	Manifest string `json:"manifest"`
-}
-
-// composedUnitList encodes the selected units sorted by name, and an empty
-// array for a core-only build, so a reader can tell "no units" from a file
-// nobody wrote.
-func composedUnitList(root string, units []extensionUnit) ([]byte, error) {
-	rows := make([]composedUnit, 0, len(units))
-	for _, u := range units {
-		rel, err := filepath.Rel(root, filepath.Join(u.Dir, unitManifestFile))
-		if err != nil {
-			return nil, err
-		}
-		rows = append(rows, composedUnit{Name: u.Name, Manifest: filepath.ToSlash(rel)})
-	}
-	sort.Slice(rows, func(i, j int) bool { return rows[i].Name < rows[j].Name })
-	encoded, err := json.MarshalIndent(rows, "", "  ")
-	if err != nil {
-		return nil, err
-	}
-	return append(encoded, '\n'), nil
 }
 
 // canonicalGoSource parses emitted Go source and requires it to already

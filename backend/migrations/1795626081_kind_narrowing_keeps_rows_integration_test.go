@@ -26,7 +26,7 @@ func TestNarrowingTheKindColumnsKeepsStoredExtensionRows(t *testing.T) {
 	if err != nil {
 		t.Fatalf("loading core: %v", err)
 	}
-	through := namespaceThroughVersion(t, core, "1795605561")
+	through := namespaceThroughVersion(t, core, "1795626082")
 	if _, err := dbmigrate.Up(ctx, conn, through); err != nil {
 		t.Fatalf("up: %v", err)
 	}

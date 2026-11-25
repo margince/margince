@@ -11,9 +11,9 @@ import (
 	"testing"
 )
 
-// coverageFixture writes an instance that requires a production unit and a
+// unitToolFixture writes an instance that requires a production unit and a
 // development-only unit, each with a manifest declaring one agent tool.
-func coverageFixture(t *testing.T) string {
+func unitToolFixture(t *testing.T) string {
 	t.Helper()
 	root := t.TempDir()
 	files := map[string]string{
@@ -38,7 +38,7 @@ func coverageFixture(t *testing.T) string {
 }
 
 func TestTheToolCensusCountsOnlyTheUnitsAProductionBuildComposes(t *testing.T) {
-	tools, err := extensionTools(coverageFixture(t))
+	tools, err := extensionTools(unitToolFixture(t))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -52,7 +52,7 @@ func TestTheToolCensusCountsOnlyTheUnitsAProductionBuildComposes(t *testing.T) {
 }
 
 func TestTheToolCensusFailsOnAComposedUnitWithNoManifest(t *testing.T) {
-	root := coverageFixture(t)
+	root := unitToolFixture(t)
 	if err := os.Remove(filepath.Join(root, "units", "shipped", "manifest.generated.json")); err != nil {
 		t.Fatal(err)
 	}

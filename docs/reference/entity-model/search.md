@@ -43,13 +43,13 @@ The 4 tables owned by `search`, as the migrations build them. [Back to the entit
 | `embedding` | `vector` |  |  |
 | `embedding_half` | `halfvec` |  |  |
 | `entity_id` | `uuid` | yes |  |
-| `entity_type` | `text` | yes |  |
+| `entity_type` | `text` | yes | One of `contact`, `company`, `deal`, `lead`, `activity`, `project` and 11 more. |
 | `model` | `text` | yes |  |
 | `created_at` | `timestamp with time zone`, default `now()` | yes | When the row was created. Set once. |
 
 **Rules**
 
-- `embedding_entity_type_check`: `CHECK (((entity_type = ANY (ARRAY['contact', 'company', 'deal', 'lead', 'activity', 'project', 'relationship', 'partner', 'product', 'offer_template', 'offer', 'commission', 'deal_room', 'deal_room_thread', 'deal_room_comment', 'deal_room_document', 'deal_room_participant'])) OR (entity_type ~ '^ext:[a-z0-9]+(-[a-z0-9]+)*:[a-z][a-z0-9_]{0,31}$')))`
+- `embedding_entity_type_check`: `CHECK ((entity_type = ANY (ARRAY['contact', 'company', 'deal', 'lead', 'activity', 'project', 'relationship', 'partner', 'product', 'offer_template', 'offer', 'commission', 'deal_room', 'deal_room_thread', 'deal_room_comment', 'deal_room_document', 'deal_room_participant'])))`
 - `embedding_holds_one_vector`: `CHECK ((num_nonnulls(embedding, embedding_half) = 1))`
 
 **Indexes**

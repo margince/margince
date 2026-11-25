@@ -45,6 +45,7 @@ type surfaceFile struct {
 
 func TestEveryExportedExtensionNameHasACallerOrAReason(t *testing.T) {
 	t.Parallel()
+	defer exportWaivers.AssertAllMatched(t)
 	surface := parseSurface(t)
 	exported := surfaceExports(surface)
 	if len(exported) < exportCensusFloor {
@@ -53,17 +54,9 @@ func TestEveryExportedExtensionNameHasACallerOrAReason(t *testing.T) {
 	}
 	unused := unusedExports(exported, parseExportUsers(t))
 	for _, name := range unused {
-		if _, kept := exportWaivers[name]; !kept {
+		if !exportWaivers.Waived(t, name) {
 			t.Errorf("%s is exported from %s and nothing outside it uses it: give it a caller in the same change, "+
 				"or unexport it. A name kept for code outside this tree needs a line in exportWaivers saying why.", name, extensionSurfaceDir)
-		}
-	}
-	for name := range exportWaivers {
-		switch {
-		case !slices.Contains(exported, name):
-			t.Errorf("exportWaivers names %s, which %s no longer exports: remove the line", name, extensionSurfaceDir)
-		case !slices.Contains(unused, name):
-			t.Errorf("exportWaivers names %s, which now has a caller: remove the line", name)
 		}
 	}
 }
