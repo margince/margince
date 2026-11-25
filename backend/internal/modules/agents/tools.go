@@ -270,7 +270,7 @@ func (t createRecord) Handle(ctx context.Context, in json.RawMessage) (json.RawM
 	}
 	return marshalResult(createdRecord{
 		wireRecord:          rec,
-		Changes:             t.words.describeCreate(ctx, summaryIn(ctx, t.language).lang, args.Fields, rec.Fields),
+		Changes:             t.words.describeCreate(ctx, summaryIn(ctx, t.language).lang, args.RecordType, args.Fields, rec.Fields),
 		DuplicateCandidates: t.reportCreateDuplicates(ctx, args.RecordType, args.Fields, ref.ID, filed.IDs()),
 		TagOffer:            t.offerTag(ctx, args.RecordType, args.OfferTag),
 	}, nil)

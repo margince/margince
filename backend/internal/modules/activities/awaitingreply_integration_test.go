@@ -31,7 +31,7 @@ const readerAddress = "rep@ourco.test"
 func (e *loadEnv) customerAt(t *testing.T, lifecycle string) ids.UUID {
 	t.Helper()
 	contact, company := e.buyer(t), ids.NewV7()
-	e.exec(t, `INSERT INTO company (id, display_name, owner_id, lifecycle, source, captured_by)
+	e.exec(t, `INSERT INTO company (id, display_name, owner_id, status, source, captured_by)
 		VALUES ($1, 'Company A', $2, $3, 'seed', 'system')`, company, e.rep, lifecycle)
 	e.exec(t, `INSERT INTO relationship (id, kind, contact_id, company_id, source, captured_by)
 		VALUES ($1, 'employment', $2, $3, 'seed', 'system')`, ids.NewV7(), contact, company)

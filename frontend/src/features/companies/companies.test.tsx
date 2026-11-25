@@ -94,7 +94,7 @@ describe("CompaniesScreen — what an account is to us", () => {
         data: [
           {
             ...company,
-            lifecycle: "prospect",
+            status: "prospect",
             relationship_types: ["partner", "supplier"],
           },
         ],
@@ -360,7 +360,7 @@ describe("CompaniesScreen — list dials reach the server (P-14)", () => {
     await user.click(screen.getByRole("button", { name: "Customers" }));
 
     await waitFor(() =>
-      expect(urls.some((url) => url.includes("lifecycle=customer"))).toBe(true),
+      expect(urls.some((url) => url.includes("status=customer"))).toBe(true),
     );
   });
 
@@ -531,7 +531,7 @@ describe("CompaniesScreen — a row on a phone", () => {
     listCompanies([
       {
         ...company,
-        lifecycle: "customer",
+        status: "customer",
         website_url: "https://www.brandt.example/de",
         description: "Fleet retrofits",
       },
@@ -547,7 +547,7 @@ describe("CompaniesScreen — a row on a phone", () => {
 
   it("leaves out a lifecycle nobody set and a website nobody recorded", async () => {
     stubWindowWidth(390);
-    listCompanies([{ ...company, lifecycle: "unknown", website_url: null }]);
+    listCompanies([{ ...company, status: "unknown", website_url: null }]);
     const row = await phoneRowOf("Brandt Automotive GmbH");
     expect(row.end).toEqual([]);
     expect(row.caption).toEqual([]);

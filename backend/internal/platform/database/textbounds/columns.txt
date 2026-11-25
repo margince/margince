@@ -456,23 +456,23 @@ public.company.description document checked: every writer checks 20000 (companyd
 public.company.display_name exempt imported business identities retain their source names
 public.company.email document
 public.company.geocode_input_hash document
-public.company.geocode_provider document
+public.company.geocode_source document
 public.company.geocode_status document
-public.company.industry document
+public.company.industry note
 public.company.legal_name line
-public.company.lifecycle document
 public.company.linkedin_url document checked: normalized to one profile slug
 public.company.logo_icon_object_key document
-public.company.logo_icon_origin document
+public.company.logo_icon_source document
 public.company.logo_object_key document
-public.company.logo_origin document
+public.company.logo_source document
 public.company.name_source document
 public.company.phone document
 public.company.size_band document
 public.company.source document
 public.company.source_author_name exempt imported source attribution retains the original author identity
 public.company.source_id exempt bounded imported identities keep the existing indexed wire contract
-public.company.source_system document
+public.company.source_system identity
+public.company.status document
 public.company.visibility document
 public.company_address_country.countries document
 public.company_domain.captured_by document
@@ -1333,9 +1333,9 @@ public.signal_resolution.outcome document
 public.signal_resolution.source document
 public.signal_thread_scan.thread_key document
 public.site_read.logo_icon_object_key document
-public.site_read.logo_icon_origin document
+public.site_read.logo_icon_source document
 public.site_read.logo_object_key document
-public.site_read.logo_origin document
+public.site_read.logo_source document
 public.site_read.phase document
 public.site_read.proposal_hash document
 public.site_read.requested_by document

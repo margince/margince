@@ -303,15 +303,13 @@ export function CompaniesScreen({
           {
             key: "class",
             header: t("company.lifecycle"),
-            sort: "lifecycle",
+            sort: "status",
             phone: "end",
-            // Reads lifecycle, because nothing writes classification. A column
+            // Reads status, because nothing writes classification. A column
             // on classification would show stale values forever.
             cell: (company: Company) =>
-              company.lifecycle && company.lifecycle !== "unknown" ? (
-                <Badge>
-                  {t(labelFor(LIFECYCLE_LABELS, company.lifecycle))}
-                </Badge>
+              company.status && company.status !== "unknown" ? (
+                <Badge>{t(labelFor(LIFECYCLE_LABELS, company.status))}</Badge>
               ) : null,
           },
           {
@@ -355,7 +353,7 @@ export function CompaniesScreen({
         dataChips={[...ownerChips, ...sizeChip, ...partnerChips, ...tagChips]}
         chips={[
           {
-            key: "lifecycle",
+            key: "status",
             label: "company.lifecycle",
             allLabel: "company.filterLifecycleAll",
             options: LIFECYCLE_OPTIONS.filter(
@@ -401,12 +399,12 @@ export function CompaniesScreen({
           {
             label: "list.viewCustomers",
             sort: "display_name",
-            filters: { lifecycle: "customer" },
+            filters: { status: "customer" },
           },
           {
             label: "list.viewProspects",
             sort: "display_name",
-            filters: { lifecycle: "prospect" },
+            filters: { status: "prospect" },
           },
         ]}
       />

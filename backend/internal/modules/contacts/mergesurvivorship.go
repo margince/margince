@@ -13,7 +13,7 @@ func buildCompanySurvivorshipPatch(target, source crmcontracts.Company) *storeki
 	fillString(p, fieldLegalName, target.LegalName, source.LegalName)
 	fillString(p, "description", target.Description, source.Description)
 	fillIndustry(p, target, source)
-	fillLifecycle(p, target.Lifecycle, source.Lifecycle)
+	fillLifecycle(p, target.Status, source.Status)
 	if target.SizeBand == nil && source.SizeBand != nil {
 		p.Set(columnSizeBand, nil, string(*source.SizeBand))
 	}
@@ -26,10 +26,10 @@ func buildCompanySurvivorshipPatch(target, source crmcontracts.Company) *storeki
 
 // fillLifecycle reads "unknown" as empty, since the column is never NULL. A
 // carried "live" passes no human check: the merge moves a judgement, it makes none.
-func fillLifecycle(p *storekit.Patch, target, source *crmcontracts.CompanyLifecycle) {
-	unknown := string(crmcontracts.CompanyLifecycleUnknown)
+func fillLifecycle(p *storekit.Patch, target, source *crmcontracts.CompanyStatus) {
+	unknown := string(crmcontracts.CompanyStatusUnknown)
 	if lifecycleValue(target) == unknown && lifecycleValue(source) != unknown {
-		p.Set("lifecycle", unknown, string(*source))
+		p.Set(filterStatus, unknown, string(*source))
 	}
 }
 

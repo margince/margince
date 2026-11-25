@@ -50,6 +50,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `companyindustry_test.go` | H3 | The industry list lives in the contract, the vocabulary owner in the contacts module and its wording in the frontend. |
 | `companylifecycleengaged_test.go` | H3 | Every company lifecycle the contract publishes is judged engaged or not engaged, once. |
 | `companyprofilevocabulary_test.go` | H3 | The company-profile vocabulary is spelled in eight places, and widening seven of them without the eighth fails here. |
+| `companytextlimits_test.go` | H2 | A company text field the contract bounds and the column the database guard bounds must name one limit. |
 | `composedfrontendbuilders_test.go` | H3 | Two builders compile the composed SPA (the make lane and the release image), and each of them must install the composed workspace before it does. |
 | `configgenerated_test.go` | H3 | The configuration files written from the settings registry are the ones its generator writes now. |
 | `configpresets_test.go` | H3 | Every preset under config/presets/ is a binding the parser accepts. |

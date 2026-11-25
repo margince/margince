@@ -540,7 +540,7 @@ Payload for company.updated, an open envelope. Eight emit sites carry different 
 
 | Field | Type | Always present | What it is |
 |---|---|---|---|
-| `data.changed_fields` | object | yes | What this update touched, incl. runtime cf_* custom fields. The value shape depends on the emit site: a column patch carries a flat field → new-value entry, while the recompute/routing/relationship sites carry a `{delta: {...}}` sub-object (occasionally with a sibling `source`). Read a key's value as either form. |
+| `data.changed_fields` | object | yes | What this update touched, incl. runtime cf_* custom fields. The value shape depends on the emit site. A column patch carries a flat field → new-value entry. The recompute/routing/relationship sites carry a `{delta: {...}}` sub-object, sometimes with a sibling `source`. Read a key's value as either form. A change to the company's `status` also carries the value under `lifecycle`, the key this version first gave it. `lifecycle` is deprecated; read `status`. |
 
 ### `consent.changed`
 
