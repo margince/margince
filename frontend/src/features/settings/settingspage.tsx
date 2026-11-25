@@ -17,7 +17,7 @@ import { useUrlParams } from "../../lib/urlstate";
 import { RetainedSignaturePanel } from "./retainedsignature";
 import { useSettingsDestination } from "./settingsdestination";
 import { SettingsBoundary, SettingsHome } from "./settingshome";
-import { useSettingsReach } from "./settingsnav";
+import { useSettingsReach } from "../../lib/settingsreach";
 import { SettingsSavePage } from "./settingssavepage";
 import { SettingsTabStrip } from "./settingstabs";
 

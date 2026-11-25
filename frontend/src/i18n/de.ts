@@ -7538,6 +7538,17 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "brief.readings.leadsBasis": "Geplante Aufgaben für Leads",
   "brief.readings.leadsDue": "Nächste Fälligkeit {value}",
   "brief.rail": "Kontext",
+  "brief.firstDay.title": "Dein erster Tag auf Home",
+  "brief.firstDay.what":
+    "Home zeigt, was heute auf dich wartet, was Margince für dich erledigt hat und deine Termine. Jeden Morgen beginnt Home mit deinem Morgenbericht.",
+  "brief.firstDay.briefTonight":
+    "Dein erster Morgenbericht wird über Nacht vorbereitet und erscheint morgen auf Home.",
+  "brief.firstDay.briefOff":
+    "Margince bereitet einen Morgenbericht über Nacht erst vor, wenn du es erlaubst.",
+  "brief.firstDay.turnOn": "Vorbereitung über Nacht einschalten",
+  "brief.firstDay.briefLater":
+    "Dein Morgenbericht erscheint auf Home, sobald einer für dich vorbereitet wurde.",
+  "brief.firstDay.setup": "Als Nächstes einrichten",
   "brief.rail.numbers": "Kennzahlen",
   "extensionReports.withheld":
     "Zurückgehalten: zu wenige Datensätze für eine Anzeige",
@@ -23107,6 +23118,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "JJJJ-MM oder JJJJ-MM-TT. Lass das Feld leer, wenn das Datum unbekannt ist.",
   "employment.more": "Weitere Anstellungen anzeigen",
 
+  "magic.heading.firstBrief": "Vor deinem ersten Morgenbericht",
   "magic.heading.brief": "Seit deinem letzten Morgenbericht",
   "magic.loading": "Blick in den Maschinenraum",
   "magic.lane.done": "Für dich erledigt",

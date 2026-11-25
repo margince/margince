@@ -7351,6 +7351,17 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "brief.readings.leadsBasis": "Việc cần làm đã lên kế hoạch cho lead",
   "brief.readings.leadsDue": "Hạn tiếp theo {value}",
   "brief.rail": "Ngữ cảnh",
+  "brief.firstDay.title": "Ngày đầu tiên của bạn trên Trang chủ",
+  "brief.firstDay.what":
+    "Trang chủ cho thấy việc cần bạn hôm nay, những gì Margince đã làm cho bạn và các cuộc họp của bạn. Mỗi sáng, trang mở đầu bằng Bản tin sáng của bạn.",
+  "brief.firstDay.briefTonight":
+    "Bản tin sáng đầu tiên của bạn được chuẩn bị qua đêm và hiện trên Trang chủ vào sáng mai.",
+  "brief.firstDay.briefOff":
+    "Margince chỉ chuẩn bị Bản tin sáng qua đêm khi bạn cho phép.",
+  "brief.firstDay.turnOn": "Bật chuẩn bị qua đêm",
+  "brief.firstDay.briefLater":
+    "Bản tin sáng của bạn sẽ hiện trên Trang chủ khi đã được chuẩn bị.",
+  "brief.firstDay.setup": "Việc cần thiết lập tiếp theo",
   "brief.rail.numbers": "Số liệu",
   "extensionReports.withheld": "Đã ẩn: quá ít bản ghi để hiển thị",
   "extensionReports.noValue": "Không có giá trị",
@@ -22486,6 +22497,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "employment.dateHint": "YYYY-MM hoặc YYYY-MM-DD. Để trống nếu chưa biết.",
   "employment.more": "Xem thêm vị trí công tác",
 
+  "magic.heading.firstBrief": "Trước bản tin sáng đầu tiên",
   "magic.heading.brief": "Kể từ bản tin sáng gần nhất",
   "magic.loading": "Đang đọc những gì hệ thống đã làm",
   "magic.lane.done": "Margince đã làm giúp bạn",

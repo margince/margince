@@ -19,7 +19,7 @@ import {
 import { settingsHref } from "../../lib/settingsrouting";
 import { meFixture } from "../../testing/mefixture";
 import * as stories from "./settings.stories";
-import { catalogContext } from "./settingsnav";
+import { catalogContext } from "../../lib/settingsreach";
 import { COMPANY_CONTEXT_OFF, EVERY_GRANT } from "./settingspages.fixtures";
 import {
   COMPANY_CONTEXT_SECTIONS,

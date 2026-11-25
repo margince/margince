@@ -14,6 +14,7 @@ import {
 import { activityStartsIn, activityTimeOfDay } from "../../format/activitywhen";
 import { useNow } from "../../format/now";
 import { type Locale, useLocale, useT } from "../../i18n";
+import { captureRefusalOf, useConnectors } from "../../lib/connectors";
 import { ENTITY } from "../../lib/entity";
 import { isUnprepared } from "../../lib/meetingreadiness";
 import { routeHash } from "../../lib/router";
@@ -270,15 +271,25 @@ function CalendarRow({
   sentence,
   verb,
 }: Readonly<{ sentence: string; verb: string }>) {
+  const t = useT();
+  // A seat or role that may not capture connects nothing: it is told why, and
+  // never sent to a setting it cannot change.
+  const refusal = captureRefusalOf(useConnectors().data);
   return (
     <PanelRow>
-      {sentence}{" "}
-      <AppLink
-        className="link-button"
-        href={routeHash(settingsHref("connections"))}
-      >
-        {verb}
-      </AppLink>
+      {sentence}
+      {refusal !== null && ` ${t(refusal)}`}
+      {refusal === null && (
+        <>
+          {" "}
+          <AppLink
+            className="link-button"
+            href={routeHash(settingsHref("connections"))}
+          >
+            {verb}
+          </AppLink>
+        </>
+      )}
     </PanelRow>
   );
 }

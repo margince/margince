@@ -7533,6 +7533,17 @@ export const en = {
   "brief.readings.leadsBasis": "Planned tasks for prospects",
   "brief.readings.leadsDue": "Next due {value}",
   "brief.rail": "Context",
+  "brief.firstDay.title": "Your first day on Home",
+  "brief.firstDay.what":
+    "Home shows what needs you today, what Margince did for you and your meetings. Each morning it opens with your Morning brief.",
+  "brief.firstDay.briefTonight":
+    "Your first Morning brief is prepared overnight and opens Home tomorrow.",
+  "brief.firstDay.briefOff":
+    "Margince prepares a Morning brief overnight only once you allow it.",
+  "brief.firstDay.turnOn": "Turn on overnight preparation",
+  "brief.firstDay.briefLater":
+    "Your Morning brief opens Home once one has been prepared for you.",
+  "brief.firstDay.setup": "Set up next",
   "brief.rail.numbers": "Numbers",
   "extensionReports.withheld": "Withheld: too few records to show",
   "extensionReports.noValue": "No value",
@@ -22772,6 +22783,7 @@ export const en = {
   // four lanes. The `magic.action.*` and `magic.consequence.*` families are
   // the client half of a mirror the server sends keys against. So the set is
   // the contract (src/lib/magickeys.ts), not one screen's copy.
+  "magic.heading.firstBrief": "Before your first brief",
   "magic.heading.brief": "Since your last brief",
   "magic.loading": "Reading what the machinery did",
   "magic.lane.done": "Done for you",

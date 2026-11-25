@@ -7,7 +7,7 @@ import {
   screen,
   within,
 } from "@testing-library/react";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { formatDateAbbrev, formatTimeOfDay } from "../../format/format";
 import { browserZone } from "../../format/timezone";
 import { LocaleProvider } from "../../i18n";
@@ -35,9 +35,21 @@ function taskRow(id: string, title: string): WorklistItem {
 
 // A QueryClient because the next meeting names its records through
 // `EntityRef`, which reads a name it is not handed.
-function draw(node: React.ReactNode) {
+// The mailbox roster says whether this reader may connect a calendar at all.
+function draw(node: React.ReactNode, captures = true) {
+  vi.stubGlobal(
+    "fetch",
+    vi.fn(async () =>
+      Response.json({
+        data: [],
+        providers: [],
+        seat_capture: captures ? { allowed: true } : { allowed: false },
+      }),
+    ),
+  );
+  const client = new QueryClient();
   return render(
-    <QueryClientProvider client={new QueryClient()}>
+    <QueryClientProvider client={client}>
       <LocaleProvider initial="en">{node}</LocaleProvider>
     </QueryClientProvider>,
   );
@@ -55,7 +67,10 @@ const NEXT = {
 // Before the fixtures' default meeting start, 2026-09-03T09:30Z.
 const EARLY = Date.parse("2026-09-03T03:00:00Z");
 
-afterEach(cleanup);
+afterEach(() => {
+  cleanup();
+  vi.unstubAllGlobals();
+});
 
 describe("the schedule panel", () => {
   it("lays the day's meetings on the line by start, whatever the rank", () => {
@@ -333,6 +348,26 @@ describe("the schedule panel", () => {
           .getByRole("link", { name: en[verb] })
           .getAttribute("href"),
       ).toBe("/#/settings/connections");
+    },
+  );
+
+  // A seat or role that may not capture, Read-only among them, hears why the
+  // panel is empty and is not sent to a setting it cannot change.
+  it.each([
+    ["not_connected", "brief.schedule.notConnected"],
+    ["unreadable", "brief.schedule.unreadable"],
+  ] as const)(
+    "offers a reader who may not connect no link for a %s calendar",
+    async (calendar, sentence) => {
+      const day = { ...readingsDay({}, []), calendar };
+      draw(<SchedulePanel day={day} state="ready" />, false);
+
+      const panel = screen.getByRole("region");
+      expect(panel.textContent).toContain(en[sentence]);
+      await within(panel).findByText(en["connectors.roleCannotCapture"], {
+        exact: false,
+      });
+      expect(within(panel).queryByRole("link")).toBeNull();
     },
   );
 

@@ -18,6 +18,7 @@ import { FlatPanelHeads, Panel, PanelBody } from "../../design-system/panel";
 import { greetingNameOf } from "../../format/greetingname";
 import { useNow } from "../../format/now";
 import { useLocale, useT } from "../../i18n";
+import type { MessageKey } from "../../i18n/en";
 import { lazy } from "../../i18n/lazy";
 import { APPROVAL_PARAM } from "../../lib/approvalhref";
 import { useCan, useCanWrite } from "../../lib/capability";
@@ -51,6 +52,7 @@ import { DoneForYou } from "./brief.doneforyou";
 import { shownReceiptIds } from "./brief.doneforyou.groups";
 import { briefDay } from "./brief.facts";
 import { BriefFeed } from "./brief.feed";
+import { FirstDayPanel } from "./brief.firstday";
 import {
   dayRows,
   FOCUS_PARAM,
@@ -192,6 +194,8 @@ function useDealReads() {
     magic,
     pendingChanges,
     dealReads: readsDeals ? [brief, magic] : [],
+    // No run yet answers 404, which the read turns into null.
+    firstDay: readsDeals && brief.isSuccess && brief.data === null,
   };
 }
 
@@ -233,7 +237,7 @@ function PersonalMorning({
     : query.isError && !day
       ? "failed"
       : "ready";
-  const { readsDeals, brief, magic, pendingChanges, dealReads } =
+  const { readsDeals, brief, magic, pendingChanges, dealReads, firstDay } =
     useDealReads();
   const settled =
     handled.isSuccess && dealReads.every((read) => read.isSuccess);
@@ -261,6 +265,7 @@ function PersonalMorning({
         asideLabel={t("brief.rail")}
         main={
           <>
+            {firstDay && <FirstDayPanel />}
             <BriefFeed
               day={day}
               onContext={(item) => setSelected(identity(item))}
@@ -293,6 +298,7 @@ function PersonalMorning({
                 <BriefSuggestions />
                 <MagicPanel
                   lanes={WAITING_LANES}
+                  heading={waitingHeading(firstDay)}
                   visibleApprovalIds={day?.focus?.items
                     .filter(
                       (item) =>
@@ -494,4 +500,9 @@ function LinkedApprovalDrawer() {
   const [asked, setAsked] = useState(false);
   if (params.get(APPROVAL_PARAM) && !asked) setAsked(true);
   return asked ? <ApprovalDrawer /> : null;
+}
+
+/** What the waiting lanes are counted since: no last brief exists before the first. */
+function waitingHeading(firstDay: boolean): MessageKey {
+  return firstDay ? "magic.heading.firstBrief" : "magic.heading.brief";
 }
