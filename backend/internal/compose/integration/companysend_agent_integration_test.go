@@ -31,6 +31,7 @@ import (
 	"encoding/json"
 	"io"
 	"log/slog"
+	"maps"
 	"net/http"
 	"strings"
 	"testing"
@@ -393,9 +394,7 @@ func TestAnAgentsPreviewAndSendAgreeOnAProjectLink(t *testing.T) {
 			body := accountSendBody(a.company, a.deal, "Hello from an agent")
 			body["links"] = []AnyMap{{"entity_type": "company", "entity_id": a.company}, {"entity_type": "project", "entity_id": tc.project}}
 			send := map[string]any{"as": "email_new"}
-			for key, value := range body {
-				send[key] = value
-			}
+			maps.Copy(send, body)
 			answers := map[string]apptest.MCPResult{
 				"preview": agent.Call(t, "change_activities", map[string]any{"action": "check_new_send", "request_body": body}),
 				"send":    agent.Call(t, "send_outbound", send),

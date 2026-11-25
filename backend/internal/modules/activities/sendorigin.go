@@ -203,7 +203,7 @@ func (o SendOrigin) lockAnchorLive(ctx context.Context, tx pgx.Tx) error {
 // probeLinkTargets refuses an account-started send whose named records the
 // caller cannot read, before any later guard can answer about anyone else. It
 // asks ProbeLinkWrites, the questions the staged send's link inserts ask, so
-// the preview and the send cannot disagree about a link.
+// the preview answers about a link what the send does.
 func (s *Store) probeLinkTargets(ctx context.Context, links []ActivityLinkInput) error {
 	return linkRefusal(true, s.ProbeLinkWrites(ctx, links))
 }

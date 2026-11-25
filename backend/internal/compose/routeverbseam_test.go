@@ -134,7 +134,7 @@ func TestNoTwoActionsOfOneRouterSayTheSameThing(t *testing.T) {
 
 // A route-backed verb's links description is written in crm.yaml, which cannot
 // name a Go constant. Each one that names the project refusal says it in the
-// words the registry verbs use, so the two cannot drift apart.
+// words the registry verbs use, and this test fails when one of them changes.
 func TestARouteVerbStatesTheProjectRefusalInTheRegistrysWords(t *testing.T) {
 	stated := 0
 	for route, shape := range routeVerbShapes {
