@@ -1,4 +1,4 @@
--- 1795590657: an_array_of_known_words_holds_only_those_words.
+-- 1795608586: an_array_of_known_words_holds_only_those_words.
 SET LOCAL lock_timeout = '3s';
 
 -- Each of these arrays draws from a fixed list the Go code owns, and until now
