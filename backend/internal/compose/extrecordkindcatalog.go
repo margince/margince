@@ -39,10 +39,13 @@ SELECT to_regclass($1) IS NOT NULL,
             AND has_table_privilege(current_user, to_regclass($1), 'DELETE'), false)`
 
 // kindTitleIndexed reads whether a trigram index over lower(title) exists on
-// one ext table. Search matches each word with a LIKE on that expression.
+// one ext table. Search matches each word with a LIKE on that expression. Both
+// index checks count only a valid index over every row: a failed concurrent
+// build or a partial index serves no read of the whole kind.
 const kindTitleIndexed = `
 SELECT EXISTS (SELECT 1 FROM pg_index i JOIN pg_opclass o ON o.oid = i.indclass[0]
                 WHERE i.indrelid = to_regclass($1) AND o.opcname = 'gin_trgm_ops'
+                  AND i.indisvalid AND i.indisready AND i.indpred IS NULL
                   AND pg_get_indexdef(i.indexrelid, 1, true) = 'lower(' || quote_ident($2) || ')')`
 
 // kindTimelineIndexed reads whether a btree index on one ext table starts with
@@ -51,6 +54,7 @@ SELECT EXISTS (SELECT 1 FROM pg_index i JOIN pg_opclass o ON o.oid = i.indclass[
 const kindTimelineIndexed = `
 SELECT EXISTS (SELECT 1 FROM pg_index i JOIN pg_class c ON c.oid = i.indexrelid JOIN pg_am am ON am.oid = c.relam
                 WHERE i.indrelid = to_regclass($1) AND am.amname = 'btree' AND i.indnkeyatts >= 2
+                  AND i.indisvalid AND i.indisready AND i.indpred IS NULL
                   AND i.indkey[0] = (SELECT attnum FROM pg_attribute WHERE attrelid = i.indrelid AND attname = $2)
                   AND i.indkey[1] = (SELECT attnum FROM pg_attribute WHERE attrelid = i.indrelid AND attname = $3))`
 

@@ -225,6 +225,28 @@ func TestTheQueueShowsOnlySuggestionsTheReaderMayDecide(t *testing.T) {
 	}
 }
 
+func TestUndecidableSuggestionsDoNotHideALaterOneTheReaderMayDecide(t *testing.T) {
+	f := newSuggestionFixture(t)
+	pipeline, stage := ids.NewV7(), ids.NewV7()
+	f.e.exec(t, `INSERT INTO pipeline (id, name) VALUES ($1, $2)`, pipeline, "Gone "+pipeline.String())
+	f.e.exec(t, `INSERT INTO stage (id, pipeline_id, name, "position") VALUES ($1, $2, 'Qualified', 1)`, stage, pipeline)
+	gone := make([]ids.UUID, suggestionQueueScan+1)
+	for i := range gone {
+		gone[i] = ids.NewV7()
+		f.e.exec(t, `INSERT INTO deal (id, name, status, owner_id, pipeline_id, stage_id, source, captured_by)
+			VALUES ($1, 'Gone', 'open', $2, $3, $4, 'manual', 'system')`, gone[i], f.e.rep, pipeline, stage)
+		f.propose(t, "deal", gone[i])
+	}
+	// An archived target is one no reader may decide; its rows stay pending.
+	f.e.exec(t, `UPDATE deal SET archived_at = now() WHERE id = ANY($1)`, gone)
+	f.propose(t, "deal", f.deal)
+
+	queue, err := f.queue()
+	if err != nil || len(queue) != 1 || ids.UUID(queue[0].EntityId) != f.deal {
+		t.Fatalf("queue behind %d undecidable suggestions = %+v, %v; want only the live deal", len(gone), queue, err)
+	}
+}
+
 // pendingID reads the message's one pending suggestion past the store, for a
 // caller whose queue does not show it.
 func (f suggestionFixture) pendingID(t *testing.T) ids.UUID {

@@ -59,6 +59,7 @@ func TestADeclaredKindMustHaveItsTableColumnsAndAUniqueNaturalKey(t *testing.T) 
 	}{
 		{"complete", good, "ext_kindcat_ok", []string{"code"}, ""},
 		{"no trigram index for search", good, "ext_kindcat_notrgm", []string{"code"}, "trigram"},
+		{"a trigram index over some rows only", good, "ext_kindcat_parttrgm", []string{"code"}, "trigram"},
 		{"no table", "", "ext_kindcat_absent", []string{"code"}, "does not exist"},
 		{"no archived_at", `id uuid PRIMARY KEY, code text UNIQUE, site text`, "ext_kindcat_noarchive", []string{"code"}, "archived_at"},
 		{"no declared field", `id uuid PRIMARY KEY, archived_at timestamptz, code text UNIQUE`, "ext_kindcat_nofield", []string{"code"}, `"site"`},
@@ -74,6 +75,11 @@ func TestADeclaredKindMustHaveItsTableColumnsAndAUniqueNaturalKey(t *testing.T) 
 		}
 		if c.name == "complete" {
 			titleIndex(t, c.table)
+		}
+		if c.name == "a trigram index over some rows only" {
+			if _, err := OwnerConn(t).Exec(ctx, `CREATE INDEX ON ext.ext_kindcat_parttrgm USING gin (lower(code) public.gin_trgm_ops) WHERE false`); err != nil {
+				t.Fatal(err)
+			}
 		}
 		if c.name == "unique only for some rows" {
 			if _, err := OwnerConn(t).Exec(ctx, `CREATE UNIQUE INDEX ext_kindcat_partial_code ON ext.ext_kindcat_partial (code) WHERE archived_at IS NULL`); err != nil {
@@ -131,6 +137,12 @@ func TestAKindWithAHistoryNeedsAnIndexPerSubject(t *testing.T) {
 	}
 	if err := verify(); err == nil || !strings.Contains(err.Error(), "contact History") {
 		t.Fatalf("with the columns the wrong way round: err = %v, want one naming the contact History", err)
+	}
+	if _, err := OwnerConn(t).Exec(ctx, `CREATE INDEX ON ext.`+table+` (contact_id, visited_at) WHERE false`); err != nil {
+		t.Fatal(err)
+	}
+	if err := verify(); err == nil || !strings.Contains(err.Error(), "contact History") {
+		t.Fatalf("with an index over some rows only: err = %v, want one naming the contact History", err)
 	}
 	if _, err := OwnerConn(t).Exec(ctx, `CREATE INDEX ON ext.`+table+` (contact_id, visited_at)`); err != nil {
 		t.Fatal(err)
