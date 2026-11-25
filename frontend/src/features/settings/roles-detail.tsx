@@ -3,6 +3,7 @@
 
 import { useState } from "react";
 import { Disclosure, Radio } from "../../design-system/atoms";
+import { nameRefusal } from "../../design-system/namedialog";
 import { NamePrompt } from "../../design-system/nameprompt";
 import { SettingList, SettingRow } from "../../design-system/settingrow";
 import { Switch } from "../../design-system/switch";
@@ -19,11 +20,13 @@ import {
   type Role,
   type RowScope,
   roleLabel,
+  roleRefusalOf,
   useMoveRole,
   useRestoreRoleGrants,
   useSetRoleGrant,
   useUpdateRole,
 } from "../../lib/roles.queries";
+import { TEXT_LIMITS } from "../../lib/textlimits_gen";
 import {
   CRUD,
   type CrudAction,
@@ -163,6 +166,14 @@ export function RoleDetail({
   // it is restored, so its controls are read-only here.
   const editable = canUpdate && !archived;
   const { update, setGrant, busy } = writes;
+  // A scope pick shares this write, and its refusal is not the name's.
+  const renameError =
+    update.variables?.name === undefined ? null : update.error;
+  const renamed = nameRefusal(renameError, t, {
+    label: t("roles.nameLabel"),
+    duplicate: "roles.refusal.nameTaken",
+    code: "role_name_taken",
+  });
   // The preview is a server read, asked for once the reader opens it.
   const [previewAsked, setPreviewAsked] = useState(false);
 
@@ -181,6 +192,13 @@ export function RoleDetail({
                 label={t("roles.nameLabel")}
                 confirmLabel={t("roles.renameSubmit")}
                 pending={busy}
+                problem={
+                  renamed.problem === null
+                    ? null
+                    : roleRefusalOf(renameError, t)
+                }
+                nameProblem={renamed.nameProblem}
+                maxLength={TEXT_LIMITS.label}
                 onSave={(next, done) =>
                   update.mutate(
                     { roleKey: role.key, version: role.version, name: next },

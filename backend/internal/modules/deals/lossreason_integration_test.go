@@ -8,15 +8,18 @@ package deals
 import (
 	"context"
 	"errors"
+	"net/http"
 	"strings"
 	"testing"
 
 	"github.com/jackc/pgx/v5"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/kernel/values"
 )
 
 // lossPipeline is a pipeline with one open and one lost stage.
@@ -34,20 +37,15 @@ func seedLossPipeline(t *testing.T, e *configEnv) lossPipeline {
 	}
 	out := lossPipeline{pipeline: ids.From[ids.PipelineKind](ids.UUID(pipeline.Id))}
 	zero := 0
-	for position, stage := range []struct {
-		name     string
-		semantic StageSemantic
-		into     *ids.StageID
-	}{{"Discovery", SemanticOpen, &out.open}, {"Lost", SemanticLost, &out.lost}} {
-		made, err := e.store.CreateStage(ctx, CreateStageInput{
-			PipelineID: out.pipeline, Name: stage.name, Position: position,
-			Semantic: string(stage.semantic), WinProbability: &zero,
-		})
-		if err != nil {
-			t.Fatalf("seeding stage %s: %v", stage.name, err)
-		}
-		*stage.into = ids.From[ids.StageKind](ids.UUID(made.Id))
+	made, err := e.store.CreateStage(ctx, CreateStageInput{
+		PipelineID: out.pipeline, Name: "Discovery", Position: 0,
+		Semantic: string(SemanticOpen), WinProbability: &zero,
+	})
+	if err != nil {
+		t.Fatalf("seeding the open stage: %v", err)
 	}
+	out.open = ids.From[ids.StageKind](ids.UUID(made.Id))
+	_, out.lost = closingStageIDs(t, e, out.pipeline)
 	return out
 }
 
@@ -302,11 +300,15 @@ func TestAReviewedMappingAppliesOnceAndNeverOverwritesAChoice(t *testing.T) {
 		}
 		return deal
 	}
-	first := lose("North", "Far too expensive", nil)
-	second := lose("South", "  far too EXPENSIVE ", nil)
-	chosen := lose("East", "far too expensive", new("competitor"))
+	// The note is this run's own: notes are counted across every deal the
+	// database holds, and a repeated run must not count the last one's.
+	run := ids.NewV7().String()[24:]
+	text := "far too expensive " + run
+	first := lose("North", "Far too expensive "+run, nil)
+	second := lose("South", "  far too EXPENSIVE "+strings.ToUpper(run)+" ", nil)
+	chosen := lose("East", text, new("competitor"))
 
-	note := legacyNote(t, e, "far too expensive")
+	note := legacyNote(t, e, text)
 	if note.DealCount != 2 {
 		t.Fatalf("the note counts %d deals, want the two with no code", note.DealCount)
 	}
@@ -329,21 +331,21 @@ func TestAReviewedMappingAppliesOnceAndNeverOverwritesAChoice(t *testing.T) {
 	if err := e.owner.QueryRow(context.Background(), `SELECT lost_reason FROM deal WHERE id = $1`, second).Scan(&kept); err != nil {
 		t.Fatal(err)
 	}
-	if kept != "far too EXPENSIVE" {
+	if kept != "far too EXPENSIVE "+strings.ToUpper(run) {
 		t.Errorf("the note became %q, want it as the closer wrote it", kept)
 	}
 	if changed := applyMappings(t, e, decided); changed != 0 {
 		t.Errorf("a second run changed %d deals, want none", changed)
 	}
 
-	if applied := legacyNote(t, e, "far too expensive"); applied.Mapping == nil || applied.PendingCount != 0 || applied.DealCount != 2 {
+	if applied := legacyNote(t, e, text); applied.Mapping == nil || applied.PendingCount != 0 || applied.DealCount != 2 {
 		t.Errorf("an applied decision lists as %+v, want it kept with nothing pending", applied)
 	}
 	corrected, err := e.store.DecideLegacyLossReason(ctx, note.TextHash, "no_budget")
 	if err != nil {
 		t.Fatalf("correcting the decision: %v", err)
 	}
-	if listed := legacyNote(t, e, "far too expensive"); listed.PendingCount != 2 {
+	if listed := legacyNote(t, e, text); listed.PendingCount != 2 {
 		t.Errorf("a corrected decision lists %d deals pending, want the 2 it mapped", listed.PendingCount)
 	}
 	if changed := applyMappings(t, e, corrected); changed != 2 {
@@ -400,10 +402,12 @@ func TestTheApplyCountsWhatTheOperatorMayReadAndMapsOnlyWhatItMayWrite(t *testin
 	p := seedLossPipeline(t, e)
 	ctx := e.asLossAdmin()
 	deal := p.deal(t, e, "Someone else's loss")
-	if _, err := e.store.AdvanceDeal(ctx, deal, AdvanceDealInput{ToStageID: p.lost, LostReason: new("Out of scope entirely")}); err != nil {
+	// This run's own note, so a repeated run counts only the deal it lost.
+	text := "out of scope entirely " + ids.NewV7().String()[24:]
+	if _, err := e.store.AdvanceDeal(ctx, deal, AdvanceDealInput{ToStageID: p.lost, LostReason: new(text)}); err != nil {
 		t.Fatal(err)
 	}
-	decided, err := e.store.DecideLegacyLossReason(ctx, legacyNote(t, e, "out of scope entirely").TextHash, "price")
+	decided, err := e.store.DecideLegacyLossReason(ctx, legacyNote(t, e, text).TextHash, "price")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -538,5 +542,145 @@ func TestARedecisionWaitsForTheApplyThatReadsIt(t *testing.T) {
 	}
 	if _, err := e.owner.Exec(context.Background(), `SET lock_timeout = 0`); err != nil {
 		t.Fatal(err)
+	}
+}
+
+type dealList struct {
+	name   string
+	create func(key, label string) (ids.UUID, error)
+	rename func(id ids.UUID, label string) error
+	retire func(id ids.UUID) error
+}
+
+func dealLists(ctx context.Context, e *configEnv) []dealList {
+	return []dealList{{
+		name: "loss reason",
+		create: func(key, label string) (ids.UUID, error) {
+			made, err := e.store.CreateLossReason(ctx, CreateLossReasonInput{Key: key, Label: label})
+			return ids.UUID(made.Id), err
+		},
+		rename: func(id ids.UUID, label string) error {
+			_, err := e.store.UpdateLossReason(ctx, id, UpdateLossReasonInput{Label: &label})
+			return err
+		},
+		retire: func(id ids.UUID) error {
+			_, err := e.store.UpdateLossReason(ctx, id, UpdateLossReasonInput{Active: new(false)})
+			return err
+		},
+	}, {
+		name: "acquisition source",
+		create: func(key, label string) (ids.UUID, error) {
+			made, err := e.store.CreateAcquisitionSource(ctx, CreateAcquisitionSourceInput{Key: key, Label: label})
+			return ids.UUID(made.Id), err
+		},
+		rename: func(id ids.UUID, label string) error {
+			_, err := e.store.UpdateAcquisitionSource(ctx, id, UpdateAcquisitionSourceInput{Label: &label})
+			return err
+		},
+		retire: func(id ids.UUID) error {
+			_, err := e.store.UpdateAcquisitionSource(ctx, id, UpdateAcquisitionSourceInput{Active: new(false)})
+			return err
+		},
+	}}
+}
+
+// A deal list holds each label once, compared trimmed and ignoring case, and a
+// retired entry keeps its label. Create and rename answer the same conflict.
+func TestADealListHoldsEachLabelOnce(t *testing.T) {
+	e := setupConfigEnv(t)
+	for _, list := range dealLists(e.asLossAdmin(), e) {
+		t.Run(list.name, func(t *testing.T) {
+			suffix := ids.NewV7().String()[24:]
+			held, err := list.create("", "Freeze "+suffix)
+			if err != nil {
+				t.Fatalf("creating the first entry: %v", err)
+			}
+			if err := list.retire(held); err != nil {
+				t.Fatalf("retiring it: %v", err)
+			}
+			for name, attempt := range map[string]func() error{
+				"a create deriving the same key": func() error {
+					_, err := list.create("", "  FREEZE "+strings.ToUpper(suffix)+" ")
+					return err
+				},
+				"a create under its own key": func() error {
+					_, err := list.create("other_"+suffix, "freeze "+suffix)
+					return err
+				},
+			} {
+				if err := attempt(); !errors.Is(err, apperrors.ErrConflict) {
+					t.Errorf("%s answered %v, want a conflict", name, err)
+				}
+			}
+			other, err := list.create("", "Thaw "+suffix)
+			if err != nil {
+				t.Fatalf("creating a second entry: %v", err)
+			}
+			err = list.rename(other, " freeze "+strings.ToUpper(suffix))
+			if !errors.Is(err, apperrors.ErrConflict) {
+				t.Fatalf("a rename onto the retired entry's label answered %v, want a conflict", err)
+			}
+			if fault, _ := httperr.Classify(err); fault.Status != http.StatusConflict || fault.Code != "name_taken" {
+				t.Errorf("the conflict reads %d %s %q, want 409 name_taken", fault.Status, fault.Code, fault.Detail)
+			}
+			if err := list.rename(other, "THAW "+suffix); err != nil {
+				t.Errorf("a rename that changes only the case of its own label: %v", err)
+			}
+		})
+	}
+}
+
+// A label past the limit is refused as too long, naming label, before a key is
+// derived from it or a row is written.
+func TestADealListRefusesALabelPastTheLimitBeforeTheWrite(t *testing.T) {
+	e := setupConfigEnv(t)
+	long := strings.Repeat("a", values.TextLabelCharacters+1)
+	for _, list := range dealLists(e.asLossAdmin(), e) {
+		t.Run(list.name, func(t *testing.T) {
+			_, err := list.create("", long)
+			assertLabelTooLong(t, err, "label")
+			kept, err := list.create("", "Kept "+ids.NewV7().String()[24:])
+			if err != nil {
+				t.Fatalf("creating an entry to rename: %v", err)
+			}
+			assertLabelTooLong(t, list.rename(kept, long), "label")
+		})
+	}
+}
+
+func assertLabelTooLong(t *testing.T, err error, field string) {
+	t.Helper()
+	fault, _ := httperr.Classify(err)
+	if fault.Status != http.StatusUnprocessableEntity || len(fault.Fields) != 1 {
+		t.Fatalf("answered %v (status %d), want one 422 field refusal", err, fault.Status)
+	}
+	got := fault.Fields[0]
+	if got.Field != field || got.Code != "too_long" || got.Max != values.TextLabelCharacters {
+		t.Errorf("refusal = %+v, want %s too_long with max %d", got, field, values.TextLabelCharacters)
+	}
+}
+
+// A rename sent against an older version is a version skew, never a name clash.
+func TestADealListRenameAgainstAnOlderVersionIsAVersionSkew(t *testing.T) {
+	e := setupConfigEnv(t)
+	ctx := e.asLossAdmin()
+	suffix := ids.NewV7().String()[24:]
+	stale := int64(-1)
+	label := "Fresh " + suffix
+	reason, err := e.store.CreateLossReason(ctx, CreateLossReasonInput{Label: "Stale reason " + suffix})
+	if err != nil {
+		t.Fatal(err)
+	}
+	_, err = e.store.UpdateLossReason(ctx, ids.UUID(reason.Id), UpdateLossReasonInput{Label: &label, IfVersion: &stale})
+	if !errors.Is(err, apperrors.ErrVersionSkew) {
+		t.Errorf("a stale loss reason rename answered %v, want a version skew", err)
+	}
+	source, err := e.store.CreateAcquisitionSource(ctx, CreateAcquisitionSourceInput{Label: "Stale source " + suffix})
+	if err != nil {
+		t.Fatal(err)
+	}
+	_, err = e.store.UpdateAcquisitionSource(ctx, ids.UUID(source.Id), UpdateAcquisitionSourceInput{Label: &label, IfVersion: &stale})
+	if !errors.Is(err, apperrors.ErrVersionSkew) {
+		t.Errorf("a stale acquisition source rename answered %v, want a version skew", err)
 	}
 }

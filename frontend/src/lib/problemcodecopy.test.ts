@@ -141,6 +141,7 @@ describe("a name or membership clash", () => {
   it.each([
     ["pipeline_name_taken", "pipeline.nameTaken"],
     ["pipeline_default_taken", "pipeline.defaultTaken"],
+    ["stage_name_taken", "stage.nameTaken"],
     ["custom_field_label_taken", "cf.labelTaken"],
     ["already_on_list", "lists.alreadyOnShortlist"],
   ] as const)("words %s in each language", (code, key) => {

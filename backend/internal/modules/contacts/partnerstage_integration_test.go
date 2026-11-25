@@ -349,3 +349,28 @@ func TestASeatThatCannotReadPartnersSeesCompaniesWithoutTheirProgramme(t *testin
 		t.Errorf("a partner reader's company read: partner %+v, err %v; want the programme on research", withPartner.Partner, err)
 	}
 }
+
+func TestThePartnerStageListHoldsEachLabelOnce(t *testing.T) {
+	e := setupDedupe(t)
+	keepPartnerStagesAsSeeded(t, e)
+	ctx := asStageAdmin(e, stageAdminGrants())
+	stages := vocabularyList{
+		name: "partner stage", keyed: true,
+		create: func(key, label string) (ids.UUID, error) {
+			made, err := e.store.CreatePartnerStage(ctx, CreatePartnerStageInput{
+				Key: key, Label: label, Meaning: crmcontracts.PartnerStageMeaningCandidate,
+			})
+			return ids.UUID(made.Id), err
+		},
+		rename: func(id ids.UUID, label string) error {
+			_, err := e.store.UpdatePartnerStage(ctx, id, UpdatePartnerStageInput{Label: &label})
+			return err
+		},
+		retire: func(id ids.UUID) error {
+			_, err := e.store.UpdatePartnerStage(ctx, id, UpdatePartnerStageInput{Active: new(false)})
+			return err
+		},
+	}
+	requireLabelHeldOnce(t, stages)
+	requireLongLabelRefused(t, stages)
+}

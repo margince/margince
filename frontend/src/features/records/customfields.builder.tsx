@@ -21,6 +21,7 @@ import {
 } from "../../lib/customfields.logic";
 import { fieldCheckSentence, refusalSentences } from "../../lib/problem";
 import { useRecordKindDirectory } from "../../lib/recordkinds";
+import { TEXT_LIMITS } from "../../lib/textlimits_gen";
 import { ActivityKindsSelect } from "./customfields.kinds";
 import { typeLabels } from "./customfields.labels";
 import { OptionRows } from "./customfields.optionrows";
@@ -147,6 +148,7 @@ export function FieldBuilder({
               <TextInput
                 {...control}
                 value={label}
+                maxLength={TEXT_LIMITS.label}
                 onChange={(event) => {
                   setLabel(event.target.value);
                   faults.edited("label");

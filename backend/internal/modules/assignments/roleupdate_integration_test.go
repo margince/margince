@@ -17,7 +17,10 @@ package assignments
 
 import (
 	"context"
+	"errors"
+	"net/http"
 	"os"
+	"strings"
 	"testing"
 
 	"github.com/jackc/pgx/v5"
@@ -25,9 +28,12 @@ import (
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/database"
+	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/platform/testdb"
+	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/kernel/values"
 )
 
 type roleEnv struct {
@@ -174,5 +180,60 @@ func TestTheSeededVocabularyIsReadable(t *testing.T) {
 	}
 	if !found {
 		t.Fatal("account_manager is missing from the seeded vocabulary")
+	}
+}
+
+// A role's label is held once, compared trimmed and ignoring case, and a
+// retired role keeps it. A label past the limit is refused before any write.
+func TestARoleLabelIsHeldOnce(t *testing.T) {
+	e := setupRoleEnv(t)
+	ctx := e.as()
+	create := func(key, label string) (ids.UUID, error) {
+		made, err := e.store.CreateRecordRole(ctx, CreateRecordRoleInput{
+			Key: key, Label: label,
+			RecordTypes:   []crmcontracts.AssignmentRecordType{crmcontracts.AssignmentRecordTypeDeal},
+			AssigneeKinds: []crmcontracts.AssignmentSubjectKind{crmcontracts.AssignmentSubjectKindUser},
+		})
+		return ids.UUID(made.Id), err
+	}
+	rename := func(id ids.UUID, label string) error {
+		_, err := e.store.UpdateRecordRole(ctx, id, UpdateRecordRoleInput{Label: &label})
+		return err
+	}
+	suffix := ids.NewV7().String()[24:]
+	held, err := create("", "Sponsor "+suffix)
+	if err != nil {
+		t.Fatalf("creating the first role: %v", err)
+	}
+	if _, err := e.store.UpdateRecordRole(ctx, held, UpdateRecordRoleInput{Active: new(false)}); err != nil {
+		t.Fatalf("retiring it: %v", err)
+	}
+	for name, key := range map[string]string{"a derived key": "", "a key of its own": "patron_" + suffix} {
+		if _, err := create(key, " SPONSOR "+strings.ToUpper(suffix)+" "); !errors.Is(err, apperrors.ErrConflict) {
+			t.Errorf("a second spelling under %s answered %v, want a conflict", name, err)
+		}
+	}
+	other, err := create("", "Patron "+suffix)
+	if err != nil {
+		t.Fatalf("creating a second role: %v", err)
+	}
+	if err := rename(other, "sponsor "+suffix); !errors.Is(err, apperrors.ErrConflict) {
+		t.Errorf("a rename onto a retired role's label answered %v, want a conflict", err)
+	}
+
+	long := strings.Repeat("r", values.TextLabelCharacters+1)
+	_, err = create("", long)
+	requireLabelTooLong(t, err)
+	requireLabelTooLong(t, rename(other, long))
+}
+
+func requireLabelTooLong(t *testing.T, err error) {
+	t.Helper()
+	fault, _ := httperr.Classify(err)
+	if fault.Status != http.StatusUnprocessableEntity || len(fault.Fields) != 1 {
+		t.Fatalf("answered %v (status %d), want one 422 field refusal", err, fault.Status)
+	}
+	if got := fault.Fields[0]; got.Field != roleLabelColumn || got.Code != "too_long" || got.Max != values.TextLabelCharacters {
+		t.Errorf("refusal = %+v, want label too_long with max %d", got, values.TextLabelCharacters)
 	}
 }
