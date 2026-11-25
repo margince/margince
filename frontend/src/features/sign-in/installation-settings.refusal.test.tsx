@@ -58,14 +58,11 @@ describe("a refused installation save", () => {
     await user.click(within(dialog).getByRole("button", { name: /^save$/i }));
 
     const refusal = await screen.findByText("Not an IANA time zone.");
-    // ON the field: named by the control, so a screen reader hears the refusal
-    // when it lands on the input rather than only if the reader wanders past a
-    // paragraph at the foot of the form.
+    // The control names the refusal, so a screen reader hears it on the input.
     expect(zone.getAttribute("aria-invalid")).toBe("true");
     expect(refusal.id).not.toBe("");
     expect(zone.getAttribute("aria-describedby") ?? "").toContain(refusal.id);
-    // A refused save leaves the form open with what was typed still in it —
-    // dismissing it on a refusal would discard the edit AND the reason for it.
+    // A refused save keeps the form open, with the edit and the reason for it.
     expect(screen.getByRole("dialog")).toBeTruthy();
   });
 

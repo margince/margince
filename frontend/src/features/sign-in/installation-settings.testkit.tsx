@@ -131,14 +131,7 @@ export function render(
   );
 }
 
-/**
- * Opens the profile dialog from one row's own Edit verb, and answers with the
- * dialog.
- *
- * Through the row rather than by rendering the dialog directly: the verb IS the
- * only way in, and a test that reached past it would prove nothing about
- * whether a reader can.
- */
+// Opens the dialog through a row's own Edit verb, the only way a reader gets in.
 export async function openFrom(
   user: ReturnType<typeof userEvent.setup>,
   fact: RegExp,
