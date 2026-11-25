@@ -269,9 +269,11 @@ seed_everything
 
 # --- the credential the assistant presents -----------------------------------
 #
-# A passport, minted the production way over REST. It skips OAuth, which is
-# what makes this lane runnable without a tunnel: the assistant is a local
-# process talking to a local stack.
+# A passport connected the way an AI client connects one, through OAuth
+# (e2e/llm/oauthconnect.py). The lane plays the browser's half of the consent
+# with a seat's session, so no tunnel or browser is needed. A passport minted
+# over REST has no connection, and a call that waits for its own user would then
+# stage instead of asking the user in the conversation, as a chat client is asked.
 COOKIES="$WORK/cookies"
 MCP_CONFIG="$WORK/mcp.json"
 
@@ -293,11 +295,11 @@ MCP_CONFIG="$WORK/mcp.json"
 # name nobody would hand-wire, and the guard in run_once catches the next cause.
 MCP_SERVER=margince_e2e_llm
 
-# mint_passport signs in and writes the MCP config.
+# connect_passports signs in and writes the MCP config.
 #
 # It runs ONCE, and what makes that safe is that the snapshot below is taken
-# after it: the passport row is inside the template, so every restore hands the
-# assistant back the same working credential.
+# after it: the passport and connection rows are inside the template, so every
+# restore hands the assistant back the same working credential.
 #
 # It could not be once while the reset was a `dev-fresh`, and the failure was
 # expensive to read. That rebuild dropped the database and the passport row with
@@ -308,7 +310,7 @@ MCP_SERVER=margince_e2e_llm
 # guard in run_once now catches that shape whatever causes it.
 #
 # It also runs AFTER seeding, because the seed lifts the admin's first-login
-# hold, and a passport cannot be minted by an account that is still held.
+# hold, and an account that is still held cannot consent to a connection.
 # write_mcp_config points the claude CLI at the stack where it is NOW. Every
 # restart below re-asks for the stack's address and calls this again: a stop
 # releases the port claim, and the stack may come back on another one.
@@ -374,13 +376,11 @@ restart_stack() {
   write_mcp_config
 }
 
-# mint_with SESSION_JAR LABEL SCOPES_JSON prints the token of a passport minted
-# by the seat signed in to that jar, or nothing when the mint was refused.
-mint_with() {
-  curl -sS -b "$1" -X POST -H 'Content-Type: application/json' \
-    -d "{\"label\":\"$2\",\"scopes\":$3}" "$APP_BASE/v1/passports" | python3 -c 'import json,sys
-try: print(json.load(sys.stdin).get("token",""))
-except Exception: print("")'
+# connect_with SESSION_JAR CLIENT_NAME SCOPE... prints the token of a passport
+# connected for the seat signed in to that jar; when the handshake fails it names
+# the step on stderr and exits 1.
+connect_with() {
+  python3 "$ROOT/e2e/llm/oauthconnect.py" "$APP_BASE" "$@"
 }
 
 # THE REP IS LENA FISCHER, a seeded seat with the rep role whose row scope is
@@ -388,26 +388,27 @@ except Exception: print("")'
 # write on a colleague's record, which the rep role refuses.
 REP_EMAIL=lena.fischer@demo.test
 
-mint_passport() {
+# EVERY PASSPORT IS CONNECTED. A user reaches Margince from a chat client, and
+# every chat client connects through OAuth; a minted passport is a script's. So
+# the narrow, wide, research, read-only and rep passports are all measured as a
+# person in a conversation, and a call that waits for its own user asks that user
+# in the chat on each of them. casesetup.py still mints one where a case needs a
+# call an earlier credential staged.
+connect_passports() {
   curl -sS -c "$COOKIES" -X POST -H 'Content-Type: application/json' \
     -d '{"email":"admin@demo.test","password":"demo-password-123"}' \
     "$APP_BASE/v1/auth/login" >/dev/null
 
-  PASSPORT_NARROW="$(mint_with "$COOKIES" e2e-llm '["read","write"]')"
-  [[ -n "$PASSPORT_NARROW" ]] || { echo "could not mint a passport" >&2; exit 1; }
+  PASSPORT_NARROW="$(connect_with "$COOKIES" e2e-llm read write)" || exit 1
   PASSPORT="$PASSPORT_NARROW"
-  PASSPORT_WIDE="$(mint_with "$COOKIES" e2e-llm-send '["read","write","draft","send"]')"
-  [[ -n "$PASSPORT_WIDE" ]] || { echo "could not mint the draft+send passport" >&2; exit 1; }
-  PASSPORT_RESEARCH="$(mint_with "$COOKIES" e2e-llm-research '["read","write","enrich"]')"
-  [[ -n "$PASSPORT_RESEARCH" ]] || { echo "could not mint the enrich passport" >&2; exit 1; }
-  PASSPORT_READONLY="$(mint_with "$COOKIES" e2e-llm-readonly '["read"]')"
-  [[ -n "$PASSPORT_READONLY" ]] || { echo "could not mint the read-only passport" >&2; exit 1; }
+  PASSPORT_WIDE="$(connect_with "$COOKIES" e2e-llm-send read write draft send)" || exit 1
+  PASSPORT_RESEARCH="$(connect_with "$COOKIES" e2e-llm-research read write enrich)" || exit 1
+  PASSPORT_READONLY="$(connect_with "$COOKIES" e2e-llm-readonly read)" || exit 1
   # The seed sets every colleague's password to this one.
   curl -sS -c "$WORK/rep.cookies" -X POST -H 'Content-Type: application/json' \
     -d "{\"email\":\"$REP_EMAIL\",\"password\":\"colleague-password-123\"}" \
     "$APP_BASE/v1/auth/login" >/dev/null
-  PASSPORT_REP="$(mint_with "$WORK/rep.cookies" e2e-llm-rep '["read","write"]')"
-  [[ -n "$PASSPORT_REP" ]] || { echo "could not mint the passport of the rep seat $REP_EMAIL" >&2; exit 1; }
+  PASSPORT_REP="$(connect_with "$WORK/rep.cookies" e2e-llm-rep read write)" || exit 1
 
   [[ "$DOOR" = rest ]] && fetch_skill
   write_mcp_config
@@ -422,12 +423,12 @@ mint_passport() {
       -H 'Accept: application/json, text/event-stream' \
       -d '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-06-18","capabilities":{},"clientInfo":{"name":"e2e-llm","version":"1"}}}')"
     [[ "$probe" = "200" ]] || {
-      echo "a freshly minted passport cannot reach $APP_BASE/mcp (HTTP $probe)" >&2
+      echo "a freshly connected passport cannot reach $APP_BASE/mcp (HTTP $probe)" >&2
       exit 1
     }
   done
 }
-mint_passport
+connect_passports
 
 # --- the search the answers depend on ----------------------------------------
 #
@@ -514,7 +515,7 @@ echo "==> search $SEARCH"
 # stack's database to a template and `dev-restore` clones it back — about a
 # second — which is the shape the integration lanes have used all along
 # (scripts/lib-testdb.sh). What is different here is that the snapshot is taken
-# AFTER the seed and after the passport is minted, so a restore returns the
+# AFTER the seed and after the passports are connected, so a restore returns the
 # records and the credential together and neither has to be rebuilt.
 #
 # The stack comes down for the copy and straight back up, because Postgres will
