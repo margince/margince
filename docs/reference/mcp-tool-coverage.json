@@ -8652,7 +8652,7 @@
     },
     {
       "name": "find_records",
-      "tokens": 2057,
+      "tokens": 2050,
       "agents": [
         "morning_brief",
         "overnight_at_risk_sweep"

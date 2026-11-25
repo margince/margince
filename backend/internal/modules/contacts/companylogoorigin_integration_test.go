@@ -30,19 +30,19 @@ func TestACompanyLogoKeyWithoutAnOriginIsRefused(t *testing.T) {
 		{
 			name:       "the wide logo",
 			statement:  `UPDATE company SET logo_object_key = 'logos/orphan.png' WHERE id = $1`,
-			constraint: "company_logo_names_its_origin",
+			constraint: "company_logo_names_its_source",
 		},
 		{
 			name:       "the icon",
 			statement:  `UPDATE company SET logo_icon_object_key = 'logos/orphan-icon.png' WHERE id = $1`,
-			constraint: "company_logo_icon_names_its_origin",
+			constraint: "company_logo_icon_names_its_source",
 		},
 		// The other direction: an origin with no key is the same half-written
 		// row read from the other side, and names the same pair.
 		{
 			name:       "an origin with no key",
 			statement:  `UPDATE company SET logo_source = 'upload' WHERE id = $1`,
-			constraint: "company_logo_names_its_origin",
+			constraint: "company_logo_names_its_source",
 		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {

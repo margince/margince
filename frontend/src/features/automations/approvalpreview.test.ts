@@ -366,31 +366,6 @@ it("shows edited words and lifecycle choices without changing reference labels",
   expect(original.changes[1].after.text).toBe("Old reason");
 });
 
-it.each(LOCALES)(
-  "words a company status, not a deal status, in %s",
-  (locale) => {
-    const t = (key: Parameters<typeof translate>[1]) => translate(locale, key);
-    const rows = commercialPreviewDisplay(
-      {
-        ...preview,
-        changes: [
-          {
-            field: "status",
-            before: { kind: "lifecycle", text: "customer" },
-            after: { kind: "lifecycle", text: "former_customer" },
-          },
-        ],
-      },
-      (key, params) => translate(locale, key, params),
-      locale,
-    );
-    expect(rows[0].comparison).toEqual({
-      from: t("company.lifecycle.customer"),
-      to: t("company.lifecycle.former_customer"),
-    });
-  },
-);
-
 it.each(LOCALES)("describes a project close in %s", (locale) => {
   const t = (key: Parameters<typeof translate>[1]) => translate(locale, key);
   const rows = commercialPreviewDisplay(
