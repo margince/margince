@@ -4,7 +4,7 @@
 A passport minted over REST has no connection, so the server takes every call
 on it for a script's, with nobody in a conversation to ask. A call that waits
 for its own user then waits in the approval inbox, where a connected client
-would be answered a preview and a confirm_code. The lane stands for a person in
+would be answered a preview and a confirm_code. The lane stands for a user in
 a chat, so its passports are connected: it registers a client, plays the
 browser's half of the consent with a seat's session, and redeems the code.
 

@@ -391,7 +391,7 @@ REP_EMAIL=lena.fischer@demo.test
 # EVERY PASSPORT IS CONNECTED. A user reaches Margince from a chat client, and
 # every chat client connects through OAuth; a minted passport is a script's. So
 # the narrow, wide, research, read-only and rep passports are all measured as a
-# person in a conversation, and a call that waits for its own user asks that user
+# user in a conversation, and a call that waits for its own user asks that user
 # in the chat on each of them. casesetup.py still mints one where a case needs a
 # call an earlier credential staged.
 connect_passports() {
