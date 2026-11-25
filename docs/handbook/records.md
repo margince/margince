@@ -138,7 +138,7 @@ A company needs a display name and a source.
 ### How do I add a company?
 To add a company (a new customer, client or account) in Margince, open **Companies** in the sidebar and choose **New company**.
 1. Enter the **Company name** (required).
-2. If you like, fill **Legal name**, **Industry**, **Employees**, **Phone** and **Email**. You pick **Industry** from a list.
+2. If you like, fill **Legal name**, **Industry**, **Company size**, **Phone** and **Email**. You pick **Industry** from a list.
 3. Choose **Add domain** for each domain; a domain row you add must be filled.
 4. Fill any custom fields, then choose **Create**. If another company holds the same domain, **View existing record** opens it instead and nothing is created. If a company with the same name exists, Margince still creates yours and shows a notice with **View existing record**. Your company's page then shows **Possible duplicates** and a count. The website address comes from the main domain, so there is no website box.
 
@@ -149,7 +149,7 @@ To edit a company in Margince, open it and press **Edit** in a section of the pa
 1. If the panel beside the tabs is hidden, choose **Show details**.
 2. Press **Edit** in the section, change the fields in the dialog, and press **Save**. Nothing is stored until **Save**; **Cancel** or `Esc` closes without saving.
 
-**About** holds **Domain**, **Industry**, **Employees** and **Lifecycle**; **Address**, **Ownership** and **Registration** hold the address, **Owner** and **VAT ID**. The **Profile** tab holds **Legal name**, **Relationship type**, **Parent company**, **LinkedIn URL**, **Phone**, **Email** and **Registered address** under **Details**, and custom fields. There you press a value to change it; **Parent company** and **Relationship type** open a dialog with several fields. To rename the company, press its name at the top, type the new **Company name** and press **Save**; the website follows the main domain. **Industry** is a fixed list, and an import's text that names none of it goes into the **Description**.
+**About** holds **Domain**, **Industry**, **Company size** and **Lifecycle**; **Address**, **Ownership** and **Registration** hold the address, **Owner** and **VAT ID**. The **Profile** tab holds **Legal name**, **Relationship type**, **Parent company**, **LinkedIn URL**, **Phone**, **Email** and **Registered address** under **Details**, and custom fields. There you press a value to change it; **Parent company** and **Relationship type** open a dialog with several fields. To rename the company, press its name at the top, type the new **Company name** and press **Save**; the website follows the main domain. **Industry** is a fixed list, and an import's text that names none of it goes into the **Description**.
 Also called: rename a company, update an account.
 
 ### How do I check a company's VAT number?
@@ -190,7 +190,7 @@ A company may have a parent company, and that parent may have a parent of its ow
 To merge two duplicate companies in Margince, open the company you want to remove, choose **More actions**, then **Merge company**.
 1. Search for the other company and pick it under **Select record to keep**.
 2. Read the question. It says what the record you keep takes over, and that a merge cannot be undone. Each name carries its main domain, so two companies with one name stay apart.
-3. Choose **Merge**. Margince opens the company you kept and says "{source} was merged into {target}." The company you kept takes each empty field from the other, such as **Industry**, **Employees** or the address. Its **Lifecycle** is taken when it was still **Unknown**.
+3. Choose **Merge**. Margince opens the company you kept and says "{source} was merged into {target}." The company you kept takes each empty field from the other, such as **Industry**, **Company size** or the address. Its **Lifecycle** is taken when it was still **Unknown**.
 
 The company you merged away is archived, not deleted. You cannot merge an archived company. Its **Overview** says that it is archived, and **Merged into** links the company you kept. Some contacts work at both companies, with the merged-away company as current employer. They keep the company you kept as current employer.
 
