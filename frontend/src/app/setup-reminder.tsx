@@ -6,11 +6,11 @@ import { Badge, Button } from "../design-system/atoms";
 import { Heading } from "../design-system/heading";
 import { Popover } from "../design-system/popover";
 import { Meter } from "../design-system/readings";
-import { useSettingsReach } from "../lib/settingsreach";
 import { formatNumber } from "../format/format";
 import { useLocale, useT } from "../i18n";
 import { routeHash } from "../lib/router";
 import type { SettingsReach } from "../lib/settingscatalog";
+import { useSettingsReach } from "../lib/settingsreach";
 import { settingsHref } from "../lib/settingsrouting";
 import {
   type SetupChecklist,

@@ -11,13 +11,13 @@ import {
 } from "../../lib/reviewactions";
 import type { Route } from "../../lib/router";
 import type { SettingsPageId } from "../../lib/settingscatalog";
+import { useSettingsReach } from "../../lib/settingsreach";
 import { settingsRouteTarget } from "../../lib/settingsrouting";
 import { SIGNATURE_REVIEW_PARAM } from "../../lib/signaturereviewlink";
 import { useUrlParams } from "../../lib/urlstate";
 import { RetainedSignaturePanel } from "./retainedsignature";
 import { useSettingsDestination } from "./settingsdestination";
 import { SettingsBoundary, SettingsHome } from "./settingshome";
-import { useSettingsReach } from "../../lib/settingsreach";
 import { SettingsSavePage } from "./settingssavepage";
 import { SettingsTabStrip } from "./settingstabs";
 
