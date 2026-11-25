@@ -251,9 +251,12 @@ func (h *httpMCPHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		})
 		return
 	}
+	start := time.Now()
 	ctx, err := h.authenticate(r)
 	if refusal, refused := errors.AsType[EdgeRefusal](err); refused {
-		refusal.WriteRefusal(w, r)
+		sw := &statusWriter{ResponseWriter: w, status: http.StatusOK}
+		refusal.WriteRefusal(sw, r)
+		h.recordRefusal(r, start, sw.status)
 		return
 	}
 	if errors.Is(err, ErrAuthUnavailable) {
@@ -268,6 +271,7 @@ func (h *httpMCPHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			Code:   "authentication_unavailable",
 			Detail: "This server cannot verify credentials right now. Retry with the same token.",
 		})
+		h.recordRefusal(r, start, http.StatusServiceUnavailable)
 		return
 	}
 	if err != nil {
@@ -276,6 +280,7 @@ func (h *httpMCPHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		// there is no unauthenticated teardown path.
 		w.Header().Set("WWW-Authenticate", h.challenge(r))
 		httperr.WriteJSON(w, http.StatusUnauthorized, map[string]string{"error": "invalid_token"})
+		h.recordRefusal(r, start, http.StatusUnauthorized)
 		return
 	}
 
@@ -403,8 +408,11 @@ func (h *httpMCPHandler) legacyVersionServed(w http.ResponseWriter, r *http.Requ
 // exchange dispatches one request and writes its answer under the status its
 // framing pins.
 func (h *httpMCPHandler) exchange(w http.ResponseWriter, r *http.Request, req rpcRequest, fr framing) {
+	start := time.Now()
 	if refusal := seatlessRefusal(r.Context(), req.Method); refusal != nil {
-		refusal.WriteRefusal(w, r)
+		sw := &statusWriter{ResponseWriter: w, status: http.StatusOK}
+		refusal.WriteRefusal(sw, r)
+		h.recordRefusal(r, start, sw.status)
 		return
 	}
 	// A dynamic tool call can block on a model call, which modules/ai
@@ -440,4 +448,5 @@ func (h *httpMCPHandler) exchange(w http.ResponseWriter, r *http.Request, req rp
 	// now bounded per Passport in Redis (ADR-0092 §6). What the header cost was
 	// real: it pinned a conversation to the process that answered initialize.
 	writeRPCResponse(w, r, resp, status)
+	h.recordExchange(ctx, start, req, resp, status)
 }

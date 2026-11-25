@@ -1950,6 +1950,13 @@
       ],
       "additionalProperties": false,
       "properties": {
+        "call_log": {
+          "description": "File the api adds one JSON line to for each /mcp call: caller, tool, arguments, outcome and the answer, secrets stripped. It holds personal data; unset writes none.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
         "client_registration": {
           "type": [
             "object",

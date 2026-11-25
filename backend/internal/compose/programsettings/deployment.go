@@ -26,6 +26,10 @@ var (
 		Key: "ai.capture_payloads", Env: "MARGINCE_AI_CAPTURE_PAYLOADS", Type: config.Bool, Default: config.Some(false), Roles: both,
 		Doc: "Keep each AI call's request and answer in ai_call_payload, aged by its retention policy; set it on the api and the worker together.",
 	})
+	MCPCallLog = config.Define(config.Spec[string]{
+		Key: "mcp.call_log", Env: "MARGINCE_MCP_CALL_LOG", Type: config.String, Roles: apiOnly,
+		Doc: "File the api adds one JSON line to for each /mcp call: caller, tool, arguments, outcome and the answer, secrets stripped. It holds personal data; unset writes none.",
+	})
 	MCPConnector = config.Define(config.Spec[bool]{
 		Key: "mcp.connector_enabled", Env: "MARGINCE_MCP_CONNECTOR_ENABLED", Type: config.Bool, Default: config.Some(false), Roles: apiOnly,
 		Doc: "Serve /mcp and the OAuth authorization server to outside agent clients; needs --public-base-url.",
@@ -111,7 +115,7 @@ func distinctCurrencies(codes []string) error {
 
 // FileSettings lists the margince.yaml switches above.
 func FileSettings() []config.Any {
-	return []config.Any{PasswordLogin, CapturePayloads, MCPConnector, MCPDynamicRegistration, MCPMetadataDocument, MCPUnusedClientLimit, MCPUnusedClientRetention, AnalyticsPerformance, CoreFeaturesDisabled, ListsEnabled, AllowDataReset, AllowTestMailbox, RatesFxSource, RatesFxCurrencies}
+	return []config.Any{PasswordLogin, CapturePayloads, MCPCallLog, MCPConnector, MCPDynamicRegistration, MCPMetadataDocument, MCPUnusedClientLimit, MCPUnusedClientRetention, AnalyticsPerformance, CoreFeaturesDisabled, ListsEnabled, AllowDataReset, AllowTestMailbox, RatesFxSource, RatesFxCurrencies}
 }
 
 // atLeastOne refuses a limit that would refuse every registration: an install

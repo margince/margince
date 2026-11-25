@@ -215,23 +215,21 @@ A scenario that fails lists what failed to hold. That can be a tool it never cal
 a fact it never said, or something it must not say. It can be a judged criterion, with the
 reason of the judge in one sentence. It can also be a record that the run put in the wrong state.
 
+### The server's record of each call
+
+The lane starts its stack with `mcp.call_log` set to a file in its work folder. The api writes one JSON line there for each `/mcp` call, with secrets stripped. A line holds the caller, the tool, the arguments, the outcome and the answer. Each run's lines are cut out beside its transcript as `<transcript>.calls`, and a stopped run keeps them in `e2e/llm/records/` too.
+
+Where that file is there, `check.py` reads from it which calls were made, which worked and what each answered. A client that drops `isError` or moves a long answer to a file can then no longer change a verdict. The judge also reads the server's answers, cut to size, to tell whether what the answer states is true. The REST way in writes no such file, so its runs are graded from the transcript as before. Each line's `correlation_id` is the one in the `trace` of its `event_outbox` rows, which name their `audit_log` rows. So a write can be followed after a restore.
+
 ### How directly a run finished
 
-A good model needs fewer rounds, so the lane counts them. After each scenario it prints an
-`efficiency:` line, and the verdict keeps an `efficiency` object. Each count is given as the middle
-value of the runs, with the least and the most.
+A good model needs fewer rounds, so the lane counts them. After each scenario it prints an `efficiency:` line, and the verdict keeps an `efficiency` object. Each count is given as the middle value of the runs, with the least and the most.
 
-The counts are tool calls, model turns, refused calls, prompt tokens and output tokens. How long a
-run lasted is there too when the transcript carries `duration_ms`. A refused call includes a bare tool
-name that the CLI turned away. A run with no last result is left out, and `runs` says how many runs
-are behind the numbers.
+The counts are tool calls, model turns, refused calls, prompt tokens and output tokens. How long a run lasted is there too when the transcript carries `duration_ms`. A refused call includes a bare tool name that the CLI turned away. Where the server's record is there, `refused by the client` counts the calls in the transcript that never reached the server. A run with no last result is left out, and `runs` says how many runs are behind the numbers.
 
 A turn is one request to the model, and a Gemini run counts its agent's answers. The codex CLI reports no such count. So a GPT verdict has no turns, and the page shows `-`.
 
-These numbers never fail a case and never change the exit code. A scenario can set
-`expected_calls: 4`. When the middle value of the calls goes past it, the verdict says `"slow": true`
-and the `efficiency:` line ends with `slow`. The page shows the calls and turns for each case and
-model, and the calls per case for each model. A verdict from before this measure shows `-`.
+These numbers never fail a case and never change the exit code. A scenario can set `expected_calls: 4`. When the middle value of the calls goes past it, the verdict says `"slow": true` and the `efficiency:` line ends with `slow`. The page shows the calls and turns for each case and model, and the calls per case for each model. A verdict from before this measure shows `-`.
 
 ### The end state
 
