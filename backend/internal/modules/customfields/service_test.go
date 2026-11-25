@@ -7,11 +7,14 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strings"
 	"testing"
 
+	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/kernel/values"
 )
 
 // ctxAs binds a workspace-scoped human principal with the given
@@ -72,6 +75,23 @@ func TestCreate_UnwiredSchemaPoolRefusesSchemaChange(t *testing.T) {
 	svc := NewService(nil, nil)
 	if _, err := svc.Create(ctxAs(fullGrant()), validSpec()); !errors.Is(err, ErrSchemaChangesUnavailable) {
 		t.Fatalf("nil schema pool must refuse with ErrSchemaChangesUnavailable, got %v", err)
+	}
+}
+
+// A label past the label limit is refused before the schema is touched, on
+// create and on rename alike, naming label and the limit.
+func TestALabelPastTheLimitIsRefusedBeforeTheWrite(t *testing.T) {
+	svc := NewService(nil, nil)
+	spec := validSpec()
+	spec.Label = strings.Repeat("l", values.TextLabelCharacters+1)
+	_, created := svc.Create(ctxAs(fullGrant()), spec)
+	_, renamed := svc.Update(ctxAs(fullGrant()), ids.NewV7(), labelPatch(spec.Label), nil)
+	for name, err := range map[string]error{"create": created, "rename": renamed} {
+		fault, _ := httperr.Classify(err)
+		if len(fault.Fields) != 1 || fault.Fields[0].Field != fieldLabel || fault.Fields[0].Code != "too_long" ||
+			fault.Fields[0].Max != values.TextLabelCharacters {
+			t.Errorf("%s answered %v (%+v), want label too_long with its max", name, err, fault.Fields)
+		}
 	}
 }
 
