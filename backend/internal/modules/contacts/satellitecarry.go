@@ -123,9 +123,12 @@ func holdsAConsentSatellite(ctx context.Context, tx pgx.Tx, subject commsauthz.S
 		    OR EXISTS (SELECT 1 FROM communication_basis
 		                WHERE ($1::uuid IS NOT NULL AND contact_id = $1) OR ($2::uuid IS NOT NULL AND lead_id = $2))
 		    OR EXISTS (SELECT 1 FROM preference_token WHERE contact_id = $1)
-		    OR EXISTS (SELECT 1 FROM confirm_token WHERE contact_id = $1)
-		    OR EXISTS (SELECT 1 FROM consent_qualifying_event WHERE contact_id = $1)
-		    OR EXISTS (SELECT 1 FROM consent_doi_token WHERE contact_id = $1)`,
+		    OR EXISTS (SELECT 1 FROM confirm_token
+		                WHERE ($1::uuid IS NOT NULL AND contact_id = $1) OR ($2::uuid IS NOT NULL AND lead_id = $2))
+		    OR EXISTS (SELECT 1 FROM consent_qualifying_event
+		                WHERE ($1::uuid IS NOT NULL AND contact_id = $1) OR ($2::uuid IS NOT NULL AND lead_id = $2))
+		    OR EXISTS (SELECT 1 FROM consent_doi_token WHERE contact_id = $1)
+		    OR EXISTS (SELECT 1 FROM data_subject_request WHERE contact_id = $1 AND status IN ('open', 'in_progress'))`,
 		zeroAsNull(subject.ContactID.UUID), zeroAsNull(subject.LeadID.UUID)).Scan(&held)
 	if err != nil {
 		return false, fmt.Errorf("contacts: checking whether the retiring record holds consent links: %w", err)

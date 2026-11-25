@@ -72,10 +72,14 @@ func (s *Store) CarrySatellitesTx(ctx context.Context, tx pgx.Tx, from, to comms
 	if err := carryQualifyingEvents(ctx, tx, from, to, carry); err != nil {
 		return err
 	}
-	// The remaining tables name contacts only, so a lead has none to carry.
 	// admitACarry refuses contact to lead, so a contact source has a contact survivor.
 	if !from.ContactID.IsZero() {
 		if err := carryContactOnlyRows(ctx, tx, from.ContactID, to.ContactID, carry); err != nil {
+			return err
+		}
+	}
+	if !from.LeadID.IsZero() && !to.LeadID.IsZero() {
+		if err := carryLeadConfirmLinks(ctx, tx, from.LeadID, to.LeadID, carry); err != nil {
 			return err
 		}
 	}
@@ -148,12 +152,21 @@ func carrySubjectArmRows(ctx context.Context, tx pgx.Tx, from, to commsauthz.Sto
 	return nil
 }
 
-// carryContactOnlyRows moves the four tables that name a contact and nothing
-// else.
+// carryContactOnlyRows moves the tables that name a contact and nothing else.
 func carryContactOnlyRows(ctx context.Context, tx pgx.Tx, from, to ids.ContactID, carry satelliteCarry) error {
 	if err := carryPreferenceTokens(ctx, tx, from, to, carry); err != nil {
 		return err
 	}
+	// A request still being answered follows the person, so the answer reaches
+	// the data now held on the survivor. A closed one stays on the record it
+	// acted on.
+	requests, err := collectIDs(ctx, tx,
+		`UPDATE data_subject_request SET contact_id = @target WHERE `+contactCarrySource+` AND status IN ('open', 'in_progress') RETURNING id`,
+		pgx.NamedArgs{carrySourceArg: from, carryTargetArg: to})
+	if err != nil {
+		return fmt.Errorf("consent: carrying the open privacy requests: %w", err)
+	}
+	noteRows(carry.moved, "data_subject_request", requests)
 	confirm, err := collectIDs(ctx, tx,
 		`UPDATE confirm_token SET contact_id = @target WHERE `+contactCarrySource+` RETURNING id`, pgx.NamedArgs{carrySourceArg: from, carryTargetArg: to})
 	if err != nil {
@@ -166,6 +179,19 @@ func carryContactOnlyRows(ctx context.Context, tx pgx.Tx, from, to ids.ContactID
 	}
 	noteRows(carry.moved, "confirm_token", confirm)
 	noteRows(carry.moved, "consent_doi_token", doi)
+	return nil
+}
+
+// carryLeadConfirmLinks moves the links a lead was sent onto the surviving
+// lead. A link only resolves against a live lead, so one left on the archived
+// half stops working for the person who holds it.
+func carryLeadConfirmLinks(ctx context.Context, tx pgx.Tx, from, to ids.LeadID, carry satelliteCarry) error {
+	confirm, err := collectIDs(ctx, tx,
+		`UPDATE confirm_token SET lead_id = @target WHERE lead_id = @source RETURNING id`, pgx.NamedArgs{carrySourceArg: from, carryTargetArg: to})
+	if err != nil {
+		return fmt.Errorf("consent: carrying the lead's confirm links: %w", err)
+	}
+	noteRows(carry.moved, "confirm_token", confirm)
 	return nil
 }
 

@@ -11,10 +11,9 @@ package contacts
 // of either kind stranded on the merged-away contact is worse than invisible,
 // because it silently changes what the product does next.
 //
-// Nothing here is reached by file name. The lifecycle census
-// (gates/satellite_lifecycle_test.go) walks what relinkContactReferences can
-// CALL, so a satellite joins the merge by being written somewhere under it,
-// wherever that happens to live.
+// Nothing here is reached by file name. The merge census
+// (gates/mergereferences_test.go) walks what MergeContact can CALL. A
+// satellite joins the merge by being written somewhere under it.
 
 import (
 	"context"
@@ -26,8 +25,8 @@ import (
 )
 
 // relinkStrandedSatellites is the one call the merge makes for both halves
-// below and the LinkedIn connections, so relinkContactReferences names this
-// concern once.
+// below, the resolved signals and the LinkedIn connections, so
+// relinkContactReferences names this concern once.
 func relinkStrandedSatellites(ctx context.Context, tx pgx.Tx, sourceID, targetID ids.ContactID) error {
 	if err := relinkReaderJudgements(ctx, tx, sourceID, targetID); err != nil {
 		return err
@@ -35,7 +34,22 @@ func relinkStrandedSatellites(ctx context.Context, tx pgx.Tx, sourceID, targetID
 	if err := relinkWorkInFlight(ctx, tx, sourceID, targetID); err != nil {
 		return err
 	}
+	if err := repointResolvedSignals(ctx, tx, sourceID, targetID); err != nil {
+		return err
+	}
 	return relinkLinkedInConnections(ctx, tx, sourceID, targetID)
+}
+
+// repointResolvedSignals moves the signals that resolved to the merged-away
+// contact, as repointCompanyReferences does for a company. The resolution is
+// still true of the survivor, and one left on the retired id stops matching.
+func repointResolvedSignals(ctx context.Context, tx pgx.Tx, sourceID, targetID ids.ContactID) error {
+	if _, err := tx.Exec(ctx,
+		`UPDATE signal SET resolved_contact_id = $2 WHERE resolved_contact_id = $1`,
+		sourceID, targetID); err != nil {
+		return fmt.Errorf("repoint the signals resolved to this contact: %w", err)
+	}
+	return nil
 }
 
 // relinkReaderJudgements moves what a READER decided about this contact, and
