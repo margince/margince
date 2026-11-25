@@ -15,30 +15,22 @@ import { DrawerBody, DrawerHead } from "../../design-system/drawerbands";
 import { Heading } from "../../design-system/heading";
 import { PageZones } from "../../design-system/pagezones";
 import { FlatPanelHeads, Panel, PanelBody } from "../../design-system/panel";
-import { floorFigure } from "../../format/figure";
-import { formatNumber } from "../../format/format";
 import { greetingNameOf } from "../../format/greetingname";
 import { useNow } from "../../format/now";
-import { useLocale, usePlural, useT } from "../../i18n";
-import type { MessageKey } from "../../i18n/en";
+import { useLocale, useT } from "../../i18n";
 import { lazy } from "../../i18n/lazy";
 import { APPROVAL_PARAM } from "../../lib/approvalhref";
 import { useCan, useCanWrite } from "../../lib/capability";
 import { markJourney } from "../../lib/journeymarks";
-import { useMagic } from "../../lib/magic.queries";
-import { usePendingMarginceChanges } from "../../lib/marginchanges";
 import { useMe } from "../../lib/session";
 import { TASK_PARAM } from "../../lib/taskreminders";
 import { replaceDial, useUrlParams } from "../../lib/urlstate";
 import { readerTask } from "../../lib/worklistcopy";
-import { pillFigure } from "../../lib/worklistcounts";
-import { DEFAULT_VIEW } from "../../lib/worklistviews";
 import { MagicPanel, WAITING_LANES } from "../sign-in/magic";
 import {
   useHandledForYou,
   useHomeDay,
   type useWorklist,
-  type Worklist,
   type WorklistItem,
   worklistKey,
 } from "../worklist/worklist.queries";
@@ -64,6 +56,11 @@ import {
   useStaleFocusCleared,
 } from "./brief.focuslink";
 import { BriefGlance } from "./brief.glance";
+import {
+  useDealReads,
+  useQueueFigure,
+  waitingHeading,
+} from "./brief.homereads";
 import { homeJourneyMarks } from "./brief.journey";
 import { CustomerPaymentsCard } from "./brief.payments";
 import { useMorningBrief, useWeeklyReview } from "./brief.queries";
@@ -183,24 +180,6 @@ function dayAnswered(
   reads: readonly Readonly<{ isPending: boolean }>[],
 ): boolean {
   return state !== "loading" && reads.every((read) => !read.isPending);
-}
-
-// The deal reads never start for a reader without `deal.read`, so their
-// sections are not drawn and nothing waits for them.
-function useDealReads() {
-  const readsDeals = useCan("deal", "read");
-  const brief = useMorningBrief(readsDeals);
-  const magic = useMagic(readsDeals);
-  const pendingChanges = usePendingMarginceChanges(readsDeals);
-  return {
-    readsDeals,
-    brief,
-    magic,
-    pendingChanges,
-    dealReads: readsDeals ? [brief, magic] : [],
-    // No run yet answers 404, which the read turns into null.
-    firstDay: readsDeals && brief.isSuccess && brief.data === null,
-  };
 }
 
 function PersonalMorning({
@@ -504,26 +483,4 @@ function LinkedApprovalDrawer() {
   const [asked, setAsked] = useState(false);
   if (params.get(APPROVAL_PARAM) && !asked) setAsked(true);
   return asked ? <ApprovalDrawer /> : null;
-}
-
-/** What the waiting lanes are counted since: no last brief exists before the first. */
-function waitingHeading(firstDay: boolean): MessageKey {
-  return firstDay ? "magic.heading.firstBrief" : "magic.heading.brief";
-}
-
-/** The Worklist's own total, and what it counts, for the switch that opens it. */
-function useQueueFigure(day: Worklist | undefined) {
-  const plural = usePlural();
-  const { locale } = useLocale();
-  const figure = day && pillFigure(day, "all", DEFAULT_VIEW);
-  if (!figure) return undefined;
-  const count = floorFigure(
-    formatNumber(figure.count, locale),
-    figure.floor,
-    figure.count,
-  );
-  return {
-    ...figure,
-    countLabel: plural("brief.queue.count", figure.count, { count }),
-  };
 }
