@@ -5,6 +5,7 @@ package collections
 
 import (
 	"context"
+	"errors"
 	"sort"
 
 	"github.com/jackc/pgx/v5"
@@ -45,8 +46,8 @@ func extensionVocabulary(engine storekit.Query) []VocabularyField {
 // Its rows carry no owner, so the kind's read right (Object) is the whole row
 // scope. A kind the caller may not read answers as no kind at all.
 func extensionEngine(ctx context.Context, kind string) (storekit.Query, bool) {
-	declared, ok := recordkinds.Lookup(kind)
-	if !ok || !auth.Allows(ctx, kind, principal.ActionRead) {
+	declared, ok := readableKind(ctx, kind)
+	if !ok {
 		return storekit.Query{}, false
 	}
 	fields := make(map[string]storekit.Field, len(declared.Fields))
@@ -69,4 +70,30 @@ func extensionEngine(ctx context.Context, kind string) (storekit.Query, bool) {
 		BaseWhere: whereArchivedNull,
 		Fields:    fields,
 	}, true
+}
+
+// errKindUnavailable is a list or view over an extension kind this caller
+// cannot read. Its readers answer it as empty or unavailable, never as a fault,
+// so the lists and views over every other kind keep working.
+var errKindUnavailable = errors.New("the record kind of this list is unavailable")
+
+// readableKind is an extension kind this caller can read: a unit still declares
+// it and the caller holds its read right. The two cases answer alike, so a
+// reader cannot tell a removed unit from a right it lacks.
+func readableKind(ctx context.Context, kind string) (recordkinds.Declared, bool) {
+	declared, ok := recordkinds.Lookup(kind)
+	if !ok || !auth.Allows(ctx, kind, principal.ActionRead) {
+		return recordkinds.Declared{}, false
+	}
+	return declared, true
+}
+
+// kindUnavailable is true for an extension kind readableKind refuses. A core
+// record type is never unavailable: its own gates answer for it.
+func kindUnavailable(ctx context.Context, kind string) bool {
+	if !recordkinds.IsExtensionName(kind) {
+		return false
+	}
+	_, ok := readableKind(ctx, kind)
+	return !ok
 }

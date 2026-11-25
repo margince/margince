@@ -20,6 +20,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/ports/recordkinds"
 )
 
 // listCheck is a Live List's latest check.
@@ -215,6 +216,9 @@ func (s *Store) joinedSinceVisit(ctx context.Context, l listRow) ([]ids.UUID, er
 // the record type sees none; the choice is made before the scope is built, so
 // its arguments are registered only when its SQL is used.
 func observedVisibleClause(ctx context.Context, entityType string, arg func(any) int) (string, error) {
+	if recordkinds.IsExtensionName(entityType) {
+		return extensionMemberClause(ctx, entityType, "ev.entity_id"), nil
+	}
 	visible := "FALSE"
 	if auth.Allows(ctx, entityType, principal.ActionRead) {
 		scope, err := recordScope(ctx, entityType, "e", arg)

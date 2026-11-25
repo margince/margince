@@ -252,6 +252,9 @@ func (s *Store) validateViewFilter(ctx context.Context, resource string, query m
 	if !isTree {
 		return &BadInputError{Field: viewQueryField, Reason: "filter state must be a filter tree"}
 	}
+	if kindUnavailable(ctx, engineKey) {
+		return &BadInputError{Field: viewQueryField, Reason: "the records of this view are unavailable"}
+	}
 	engine, ok, err := s.SegmentEngine(ctx, engineKey)
 	if err != nil {
 		return err

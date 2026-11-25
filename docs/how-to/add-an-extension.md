@@ -1899,3 +1899,14 @@ At the next boot the core deletes the objects the removed unit kept with `rt.Obj
 No other core file or core test needs an edit. Removing it *turns the unit off* (routes answer 404, the list leaves
 the unit out, migrations skip it), but it does **not erase**. The unit's tables and rows, its `extension_secret`
 rows and any grants of its RBAC objects inside `role.permissions` all stay. There is no tool to erase them.
+
+Lists, saved views and reports over the unit's record kinds stay, and nothing else breaks:
+
+- A list over one of its kinds reads as health `unavailable`, with no count and no members. Its export
+  answers 422. The Live List check stores it as `invalid`, which pauses the rules that watch it. It keeps the
+  list's last members, so no one is recorded as having left.
+- A saved view over one of its kinds keeps its row. A change to its filter answers 422.
+- Its reports leave the report directory, because they are no longer registered.
+
+All of these come back when the unit is composed again. A member who may not read a kind sees its
+lists the same way, so they cannot tell a removed unit from a right they lack.

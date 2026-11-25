@@ -44422,6 +44422,11 @@ export interface components {
             data: components["schemas"]["ExtensionReport"][];
         };
         ExtensionReport: {
+            /**
+             * @description `unavailable` when the report could not run. It then carries no groups, no total and no exclusion count, and the other reports still answer. The cause is logged on the server, never sent.
+             * @enum {string}
+             */
+            status: "ok" | "unavailable";
             /** @description The report as `ext:<unit>:<name>`. */
             name: string;
             /** @description The extension that declared it. */
@@ -48483,13 +48488,13 @@ export interface components {
             steward_name?: string | null;
             /** Format: int64 */
             version: number;
-            /** @description How many members this caller may see. Null when the list's filter can no longer be evaluated (health `invalid`). Never the list's whole size. */
+            /** @description How many members this caller may see. Null when the list's filter can no longer be evaluated (health `invalid`) or its records are unavailable (health `unavailable`). Never the list's whole size. */
             visible_count?: number | null;
             /**
-             * @description `ownerless` when nobody looks after the list — no steward, or one who can no longer sign in — so somebody should take it over. `invalid` when a Live List's filter no longer compiles. `retired_field` when a Live List's filter names a custom field that has been retired: the list still evaluates on the kept values, and its steward should replace the clause. `retired_tag` when a Live List's filter names a tag that has been archived or merged away: that tag no longer matches any record, so a clause on it selects nothing, and its steward should name the tag that took its place. `invalid` outranks `ownerless`, which outranks `retired_field`, which outranks `retired_tag`.
+             * @description `unavailable` when the list holds records of an extension kind this caller cannot read: no installed extension declares the kind, or the caller lacks its read right. Such a list has no count, no members and no export, and comes back when both hold again; it outranks every other value. `ownerless` when nobody looks after the list — no steward, or one who can no longer sign in — so somebody should take it over. `invalid` when a Live List's filter no longer compiles. `retired_field` when a Live List's filter names a custom field that has been retired: the list still evaluates on the kept values, and its steward should replace the clause. `retired_tag` when a Live List's filter names a tag that has been archived or merged away: that tag no longer matches any record, so a clause on it selects nothing, and its steward should name the tag that took its place. `invalid` outranks `ownerless`, which outranks `retired_field`, which outranks `retired_tag`.
              * @enum {string}
              */
-            health: "ok" | "ownerless" | "invalid" | "retired_field" | "retired_tag";
+            health: "ok" | "ownerless" | "invalid" | "retired_field" | "retired_tag" | "unavailable";
             /** @description The archived or merged-away tags a Live List's filter names. Absent when it names none. */
             retired_tags?: string[];
             /** @description The retired custom fields a Live List's filter names, by column name. Absent when it names none. */

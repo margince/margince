@@ -13432,6 +13432,24 @@ func (e ExtensionReportKind) Valid() bool {
 	}
 }
 
+// Defines values for ExtensionReportStatus.
+const (
+	ExtensionReportStatusOk          ExtensionReportStatus = "ok"
+	ExtensionReportStatusUnavailable ExtensionReportStatus = "unavailable"
+)
+
+// Valid indicates whether the value is a known member of the ExtensionReportStatus enum.
+func (e ExtensionReportStatus) Valid() bool {
+	switch e {
+	case ExtensionReportStatusOk:
+		return true
+	case ExtensionReportStatusUnavailable:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for ExtractedFieldConfidence.
 const (
 	ExtractedFieldConfidenceHigh   ExtractedFieldConfidence = "high"
@@ -17456,6 +17474,7 @@ const (
 	ListHealthOwnerless    ListHealth = "ownerless"
 	ListHealthRetiredField ListHealth = "retired_field"
 	ListHealthRetiredTag   ListHealth = "retired_tag"
+	ListHealthUnavailable  ListHealth = "unavailable"
 )
 
 // Valid indicates whether the value is a known member of the ListHealth enum.
@@ -17470,6 +17489,8 @@ func (e ListHealth) Valid() bool {
 	case ListHealthRetiredField:
 		return true
 	case ListHealthRetiredTag:
+		return true
+	case ListHealthUnavailable:
 		return true
 	default:
 		return false
@@ -52206,6 +52227,9 @@ type ExtensionReport struct {
 	// Population What is counted, a record kind (`ext:<unit>:<kind>`) or a core report population.
 	Population string `json:"population"`
 
+	// Status `unavailable` when the report could not run. It then carries no groups, no total and no exclusion count, and the other reports still answer. The cause is logged on the server, never sent.
+	Status ExtensionReportStatus `json:"status"`
+
 	// Total The whole count. Null once anything is withheld, because total minus the shown groups would be the withheld one.
 	Total *int `json:"total"`
 
@@ -52218,6 +52242,9 @@ type ExtensionReport struct {
 
 // ExtensionReportKind defines model for ExtensionReport.Kind.
 type ExtensionReportKind string
+
+// ExtensionReportStatus `unavailable` when the report could not run. It then carries no groups, no total and no exclusion count, and the other reports still answer. The cause is logged on the server, never sent.
+type ExtensionReportStatus string
 
 // ExtensionReportDirectory The counts and breakdowns installed extensions add that this caller may read, ordered by name.
 type ExtensionReportDirectory struct {
@@ -57913,7 +57940,7 @@ type List struct {
 	// EntityType A record type a filter may be built over: one of core's five, or `ext:<unit>:<kind>` for a kind an extension declared. A kind no installed extension declares answers 404 on the vocabulary and 422 on a preview.
 	EntityType FilterResource `json:"entity_type"`
 
-	// Health `ownerless` when nobody looks after the list — no steward, or one who can no longer sign in — so somebody should take it over. `invalid` when a Live List's filter no longer compiles. `retired_field` when a Live List's filter names a custom field that has been retired: the list still evaluates on the kept values, and its steward should replace the clause. `retired_tag` when a Live List's filter names a tag that has been archived or merged away: that tag no longer matches any record, so a clause on it selects nothing, and its steward should name the tag that took its place. `invalid` outranks `ownerless`, which outranks `retired_field`, which outranks `retired_tag`.
+	// Health `unavailable` when the list holds records of an extension kind this caller cannot read: no installed extension declares the kind, or the caller lacks its read right. Such a list has no count, no members and no export, and comes back when both hold again; it outranks every other value. `ownerless` when nobody looks after the list — no steward, or one who can no longer sign in — so somebody should take it over. `invalid` when a Live List's filter no longer compiles. `retired_field` when a Live List's filter names a custom field that has been retired: the list still evaluates on the kept values, and its steward should replace the clause. `retired_tag` when a Live List's filter names a tag that has been archived or merged away: that tag no longer matches any record, so a clause on it selects nothing, and its steward should name the tag that took its place. `invalid` outranks `ownerless`, which outranks `retired_field`, which outranks `retired_tag`.
 	Health ListHealth         `json:"health"`
 	Id     openapi_types.UUID `json:"id"`
 
@@ -57948,11 +57975,11 @@ type List struct {
 	UpdatedAt *time.Time          `json:"updated_at,omitempty"`
 	Version   int64               `json:"version"`
 
-	// VisibleCount How many members this caller may see. Null when the list's filter can no longer be evaluated (health `invalid`). Never the list's whole size.
+	// VisibleCount How many members this caller may see. Null when the list's filter can no longer be evaluated (health `invalid`) or its records are unavailable (health `unavailable`). Never the list's whole size.
 	VisibleCount *int `json:"visible_count,omitempty"`
 }
 
-// ListHealth `ownerless` when nobody looks after the list — no steward, or one who can no longer sign in — so somebody should take it over. `invalid` when a Live List's filter no longer compiles. `retired_field` when a Live List's filter names a custom field that has been retired: the list still evaluates on the kept values, and its steward should replace the clause. `retired_tag` when a Live List's filter names a tag that has been archived or merged away: that tag no longer matches any record, so a clause on it selects nothing, and its steward should name the tag that took its place. `invalid` outranks `ownerless`, which outranks `retired_field`, which outranks `retired_tag`.
+// ListHealth `unavailable` when the list holds records of an extension kind this caller cannot read: no installed extension declares the kind, or the caller lacks its read right. Such a list has no count, no members and no export, and comes back when both hold again; it outranks every other value. `ownerless` when nobody looks after the list — no steward, or one who can no longer sign in — so somebody should take it over. `invalid` when a Live List's filter no longer compiles. `retired_field` when a Live List's filter names a custom field that has been retired: the list still evaluates on the kept values, and its steward should replace the clause. `retired_tag` when a Live List's filter names a tag that has been archived or merged away: that tag no longer matches any record, so a clause on it selects nothing, and its steward should name the tag that took its place. `invalid` outranks `ownerless`, which outranks `retired_field`, which outranks `retired_tag`.
 type ListHealth string
 
 // ListListType defines model for List.ListType.

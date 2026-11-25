@@ -17,6 +17,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -32,6 +33,9 @@ const (
 	// healthRetiredTag is a Live List whose filter names an archived tag, which
 	// no longer matches any record, so its steward should name the live one.
 	healthRetiredTag = "retired_tag"
+	// healthUnavailable is a list over an extension kind this reader cannot
+	// read: its unit was removed, or the reader lacks the kind's read right.
+	healthUnavailable = "unavailable"
 )
 
 // ExportDetailListID is the system_log detail key a filtered export of a list
@@ -146,6 +150,10 @@ func (s *Store) ExplainMember(ctx context.Context, listID ids.ListID, entityID i
 	list, err := s.GetList(ctx, listID)
 	if err != nil {
 		return MemberExplanation{}, err
+	}
+	// The reader cannot see a record of a kind they cannot read.
+	if kindUnavailable(ctx, list.EntityType) {
+		return MemberExplanation{}, apperrors.ErrNotFound
 	}
 	if list.ListType == listTypeDynamic {
 		engine, pred, err := s.liveFilter(ctx, list)

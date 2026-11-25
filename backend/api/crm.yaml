@@ -61224,8 +61224,16 @@ components:
           items: { $ref: '#/components/schemas/ExtensionReport' }
     ExtensionReport:
       type: object
-      required: [name, unit, label, kind, population, groups, withheld, total, excluded_by_permission]
+      required: [name, unit, label, kind, population, status, groups, withheld, total, excluded_by_permission]
       properties:
+        status:
+          type: string
+          enum: [ok, unavailable]
+          x-extensible-enum: true
+          description: >-
+            `unavailable` when the report could not run. It then carries no groups, no total and
+            no exclusion count, and the other reports still answer. The cause is logged on the
+            server, never sent.
         name:
           type: string
           description: The report as `ext:<unit>:<name>`.
@@ -66079,13 +66087,17 @@ components:
           type: [integer, 'null']
           description: >-
             How many members this caller may see. Null when the list's filter can no longer be
-            evaluated (health `invalid`). Never the list's whole size.
+            evaluated (health `invalid`) or its records are unavailable (health `unavailable`).
+            Never the list's whole size.
         health:
           type: string
-          enum: [ok, ownerless, invalid, retired_field, retired_tag]
+          enum: [ok, ownerless, invalid, retired_field, retired_tag, unavailable]
           x-extensible-enum: true
           description: >-
-            `ownerless` when nobody looks after the list — no steward, or one who can no longer
+            `unavailable` when the list holds records of an extension kind this caller cannot read:
+            no installed extension declares the kind, or the caller lacks its read right. Such a
+            list has no count, no members and no export, and comes back when both hold again; it
+            outranks every other value. `ownerless` when nobody looks after the list — no steward, or one who can no longer
             sign in — so somebody should take it over. `invalid` when a Live List's filter no
             longer compiles. `retired_field` when a Live List's filter names a custom field that
             has been retired: the list still evaluates on the kept values, and its steward should

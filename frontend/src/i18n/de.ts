@@ -7538,6 +7538,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "brief.rail.numbers": "Kennzahlen",
   "extensionReports.withheld":
     "Zurückgehalten: zu wenige Datensätze für eine Anzeige",
+  "extensionReports.unavailable": "Dieser Bericht konnte nicht geladen werden.",
   "extensionReports.noValue": "Kein Wert",
   "extensionReports.excluded_one":
     "{count} Datensatz ist für dich durch eine Feldberechtigung ausgeblendet.",
@@ -20874,6 +20875,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "lists.audience.ownerAndSteward":
     "Die verantwortliche und die zuständige Person",
   "lists.audience.unknownTeam": "Ein Team, das du nicht sehen kannst",
+  "lists.health.unavailable": "Datensätze nicht verfügbar",
   "lists.health.ownerless": "Niemand zuständig",
   "lists.health.invalid": "Filter funktioniert nicht mehr",
   "lists.health.retiredField": "Nutzt ein stillgelegtes Feld",
@@ -20920,6 +20922,9 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "lists.invalid.title": "Dieser Filter funktioniert nicht mehr",
   "lists.invalid.body":
     "Ein Feld im Filter hat sich geändert. Wer für die Liste zuständig ist, kann den Filter im Editor korrigieren.",
+  "lists.unavailable.title": "Diese Datensätze sind nicht verfügbar",
+  "lists.unavailable.body":
+    "Diese Liste enthält Datensätze einer Erweiterung. Die Erweiterung ist nicht installiert, oder du darfst ihre Datensätze nicht lesen. Die Liste funktioniert wieder, sobald die Erweiterung installiert ist und du ihre Datensätze lesen darfst.",
   "lists.ownerless.title": "Niemand ist für diese Liste zuständig",
   "lists.ownerless.body":
     "Für diese Liste ist niemand mehr zuständig, oder es wurde nie jemand festgelegt. Wer die Liste ändern darf, sollte sie übernehmen.",

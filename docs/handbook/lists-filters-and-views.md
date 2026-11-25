@@ -354,7 +354,9 @@ A Live List's row in the library shows **Uses a retired field** when its filter 
 
 In the library, **Filter no longer works** means a field the filter names has changed, so the filter cannot run. The list's page says "This filter no longer works". Its steward fixes it the same way, with **Edit filter**.
 
-Also called: broken list, list warning, archived custom field.
+**Records unavailable** means the list holds records an extension adds, and you cannot read them now. Either the extension was removed, or your role may not read its records. The list shows no members and cannot be exported. Its page says "These records are unavailable". The list works again when the extension is back and you may read its records.
+
+Also called: broken list, list warning, archived custom field, removed extension.
 
 ### How do I change a Live List's filter?
 To change which records a Margince Live List holds, open the list and press **Edit filter**. Or choose **Edit filter** under **⋯** on its row in the library. Its conditions open with a notice that names the list.

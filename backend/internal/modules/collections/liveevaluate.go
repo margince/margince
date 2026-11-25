@@ -88,10 +88,13 @@ func (s *Store) CheckLiveLists(ctx context.Context, now func() time.Time) ([]Liv
 	return out, nil
 }
 
-// invalidFilter says the stored filter can no longer be evaluated: it does not
-// decode, or it names what the vocabulary no longer holds.
+// invalidFilter says the stored filter can no longer be evaluated. It does not
+// decode, it names what the vocabulary no longer holds, or no unit declares its
+// record kind any more. The last good check stays the snapshot, so a unit
+// composed again does not report every member as gone.
 func invalidFilter(err error) bool {
-	return errors.As(err, new(*storekit.PredicateError)) || errors.Is(err, errNotAFilterTree)
+	return errors.As(err, new(*storekit.PredicateError)) || errors.Is(err, errNotAFilterTree) ||
+		errors.Is(err, errKindUnavailable)
 }
 
 // dueLiveLists reads the live, non-archived Live Lists, never-checked first

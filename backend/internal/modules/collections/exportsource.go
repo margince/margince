@@ -99,6 +99,9 @@ func (s *Store) ListFilterSource(ctx context.Context, id ids.ListID) (FilterSour
 	if err != nil {
 		return FilterSource{}, err
 	}
+	if kindUnavailable(ctx, list.EntityType) {
+		return FilterSource{}, &BadInputError{Field: listIDField, Reason: "the records of this list are unavailable"}
+	}
 	if list.ListType != listTypeDynamic {
 		members, err := s.MemberFilter(ctx, list.ID.UUID, list.EntityType)
 		return FilterSource{Name: list.Name, Resource: list.EntityType, Members: members}, err
