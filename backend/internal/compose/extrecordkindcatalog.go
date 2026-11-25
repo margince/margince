@@ -40,7 +40,7 @@ SELECT to_regclass($1) IS NOT NULL,
 
 // kindTitleIndexed reads whether a trigram index over lower(title) exists on
 // one ext table. Search matches each word with a LIKE on that expression. Both
-// index checks count only a valid index over every row: a failed concurrent
+// index checks count only a valid index over every row. A failed concurrent
 // build or a partial index serves no read of the whole kind.
 const kindTitleIndexed = `
 SELECT EXISTS (SELECT 1 FROM pg_index i JOIN pg_opclass o ON o.oid = i.indclass[0]

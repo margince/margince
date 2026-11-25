@@ -235,9 +235,9 @@ func (s *Store) ListLinkSuggestions(ctx context.Context) ([]crmcontracts.LinkSug
 }
 
 // decidableSuggestions pages through the pending suggestions the caller may
-// read, oldest first, until it holds a full queue of ones they may decide or
-// the rows run out. Read scope is wider than write authority, so a fixed scan
-// could fill with rows the caller may only read and hide the rest for good.
+// read, oldest first. It stops at a full queue of ones they may decide, or
+// when the rows run out. Read scope is wider than write authority. A fixed
+// scan could fill with rows the caller may only read and hide the rest.
 // quiet is the unrecorded context the per-row checks run under.
 func decidableSuggestions(ctx, quiet context.Context, tx pgx.Tx) ([]crmcontracts.LinkSuggestion, error) {
 	out := []crmcontracts.LinkSuggestion{}
@@ -274,7 +274,7 @@ func decidableSuggestions(ctx, quiet context.Context, tx pgx.Tx) ([]crmcontracts
 }
 
 // writableMessages narrows a page in one statement to the messages the caller
-// may change, so a long run of rows they may only read costs one query per
+// may change. A long run of rows they may only read then costs one query per
 // page. mayDecide still decides each row that is left.
 func writableMessages(ctx context.Context, tx pgx.Tx, page []crmcontracts.LinkSuggestion) (map[ids.UUID]bool, error) {
 	messages := make([]ids.UUID, len(page))
@@ -285,7 +285,7 @@ func writableMessages(ctx context.Context, tx pgx.Tx, page []crmcontracts.LinkSu
 }
 
 // decidable answers the suggestion with its target's name when the caller may
-// decide it, and false when mayDecide refuses or the target is gone.
+// decide it. It answers false when mayDecide refuses or the target is gone.
 func decidable(ctx, quiet context.Context, tx pgx.Tx, suggestion crmcontracts.LinkSuggestion) (crmcontracts.LinkSuggestion, bool, error) {
 	err := mayDecide(quiet, tx, suggestion)
 	if errors.Is(err, apperrors.ErrPermissionDenied) || errors.Is(err, apperrors.ErrNotFound) {
