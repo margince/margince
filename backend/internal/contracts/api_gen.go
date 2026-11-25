@@ -42091,6 +42091,9 @@ type Company360 struct {
 		Page PageInfo            `json:"page"`
 	} `json:"contacts,omitempty"`
 
+	// ContactsHidden The account's current employees the caller may not see, by the contact row scope or by the employment tie's own read scope. Absent exactly when `contacts` is.
+	ContactsHidden *HiddenRecords `json:"contacts_hidden,omitempty"`
+
 	// Deals The account's open deals plus the two lifetime figures the header needs.
 	Deals *Company360Deals `json:"deals,omitempty"`
 
@@ -42167,9 +42170,6 @@ type Company360 struct {
 
 	// Projects The company's unarchived projects, work in motion first (delivering, pursuing, initiative, then closed), under the caller's project row scope. Absent when the caller has no project grant, named in `sections_omitted` as `projects`.
 	Projects *[]Company360Project `json:"projects,omitempty"`
-
-	// ProjectsHidden The projects the caller may not see on this account, by the project row scope or by the company-project tie's own read scope. Absent exactly when `projects` is.
-	ProjectsHidden *HiddenRecords `json:"projects_hidden,omitempty"`
 
 	// ProjectsPage Whether `projects` was cut short. The list is capped, and a card that counted the rows and said "3 in flight" would state a number the account does not have. Absent exactly when `projects` is.
 	ProjectsPage *PageInfo `json:"projects_page,omitempty"`
@@ -43542,9 +43542,12 @@ type CompanyFactListResponse struct {
 // account is healthy on the strength of a missing connector.
 type CompanyFinanceSummary struct {
 	// BillingContacts Who to send this customer's invoices to, beside the figures — the one question a reader of this card asks that the accounting mirror cannot answer. Read from the installation's own relationships, NOT from the accounting source: it states who we record as handling the invoices, which the connector neither supplies nor is told.
-	// Absent when the caller lacks the contact or relationship grant, so an empty array means nobody is named rather than nobody may be seen. Contacts outside the caller's row scope are not listed, and no count says how many were withheld.
-	BillingContacts *[]BillingContact  `json:"billing_contacts,omitempty"`
-	CompanyId       openapi_types.UUID `json:"company_id"`
+	// Absent when the caller lacks the contact or relationship grant, so an empty array means nobody is named rather than nobody may be seen. Contacts outside the caller's row scope are not listed; `billing_contacts_hidden` says how many entries were withheld and who owns them.
+	BillingContacts *[]BillingContact `json:"billing_contacts,omitempty"`
+
+	// BillingContactsHidden The billing entries the caller's contact row scope withheld from `billing_contacts`, the same answer the company page gives. Absent exactly when `billing_contacts` is.
+	BillingContactsHidden *HiddenRecords     `json:"billing_contacts_hidden,omitempty"`
+	CompanyId             openapi_types.UUID `json:"company_id"`
 
 	// CoverageEnd The issue date of the NEWEST mirrored invoice. On a live account it is recent and the trailing windows below mean what they say; on an account that stopped buying it is the answer to "when did this end", and it is what makes a 365-day figure readable as the historical number it is.
 	CoverageEnd *openapi_types.Date `json:"coverage_end,omitempty"`

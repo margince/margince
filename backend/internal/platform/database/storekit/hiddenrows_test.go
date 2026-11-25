@@ -22,7 +22,7 @@ func TestAnUnboundedSectionWithholdsNothingAndReadsNothing(t *testing.T) {
 }
 
 func TestTheListReadsTheSectionsBaseUnderItsVisibility(t *testing.T) {
-	section := HiddenSection{From: "project p", Where: "p.archived_at IS NULL", Owner: "p.owner_id", Visible: "p.owner_id = $1"}
+	section := HiddenSection{From: "project p", Where: "p.archived_at IS NULL", Entry: "p.id", Owner: "p.owner_id", Visible: "p.owner_id = $1"}
 	got := section.ListSQL("p.id", "LEFT JOIN app_user u ON u.id = p.owner_id")
 	want := "SELECT p.id FROM project p LEFT JOIN app_user u ON u.id = p.owner_id WHERE p.archived_at IS NULL AND (p.owner_id = $1)"
 	if strings.Join(strings.Fields(got), " ") != want {

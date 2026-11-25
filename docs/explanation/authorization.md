@@ -339,10 +339,11 @@ See [write-backbone.md](write-backbone.md) for the write path that runs inside t
 - **An object denial answers 403** (`apperrors.ErrPermissionDenied`): your role cannot do this at all.
 - **A row scope miss answers 404** (`apperrors.ErrNotFound`). A record you cannot see looks the same as
   one that does not exist. So a leaked UUID buys nothing (it hides that the record exists).
-- A record page states what row scope cut from a list. On the company page, the projects and
-  billing contacts sections carry a `HiddenRecords` object: how many entries the reader may not see,
-  and the live colleagues who own them. It never carries a hidden record's name, value or any other
-  field. So a short list does not read as the whole one, and the reader knows whom to ask.
-  `storekit.ReadHiddenRows` counts from the same statement the list reads.
+- A record page states what row scope cut from a list. On the company page, the contacts and billing
+  contacts lists leave out a capture-private contact the reader may not see. So they, and the finance
+  card's billing contacts, carry a `HiddenRecords` object. It states how many entries the reader may
+  not see, and the live colleagues who own them. It never carries a hidden record's name, value or
+  any other field. So a short list does not read as the whole one, and the reader knows whom to
+  ask. `storekit.ReadHiddenRows` counts from the same statement the list reads.
 - **REST, MCP, agents and workers share one gate.** An agent under a passport is capped by the current
   seat and RBAC of the granting human, at the same store entry point.

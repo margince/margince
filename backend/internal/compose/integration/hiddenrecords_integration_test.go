@@ -5,8 +5,10 @@
 
 package integration
 
-// A company page section that row scope shortens says how many entries it
+// A company page list that row scope shortens says how many entries it
 // withheld and which colleagues own them, and nothing a withheld entry holds.
+// Contacts are read by every seat unless capture-private, so each hidden
+// contact here is made capture-private to its owner.
 
 import (
 	"context"
@@ -14,11 +16,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/jackc/pgx/v5"
-
-	"github.com/margince/margince/backend/internal/modules/projects"
-	"github.com/margince/margince/backend/internal/platform/database"
-	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -30,7 +28,6 @@ var hiddenReaderPerms = principal.Permissions{
 	Objects: map[string]principal.ObjectGrant{
 		"contact":      {Read: true},
 		"company":      {Read: true},
-		"project":      {Read: true},
 		"relationship": {Read: true},
 	},
 	RowScope: principal.RowScopeTeam,
@@ -49,48 +46,57 @@ func seedDepartedSeat(t *testing.T) ids.UUID {
 	return id
 }
 
-func seedOwnedProject(t *testing.T, e *Env, company ids.UUID, name string, owner ids.UUID) {
+// seedEmployee makes a contact owned by owner a current employee of company.
+// A private one is capture-private to owner, so other seats may not see it.
+func seedEmployee(t *testing.T, e *Env, company ids.UUID, name string, owner ids.UUID, private bool) ids.UUID {
 	t.Helper()
-	if _, err := e.Projects.CreateProject(e.Admin(), projects.CreateProjectInput{
-		Name: name, CompanyID: companyIDOf(company), OwnerID: userIDPtr(&owner), Source: "manual",
-	}); err != nil {
-		t.Fatalf("creating project %q: %v", name, err)
+	contact := e.SeedContact(t, name, &owner)
+	if private {
+		e.MakeCapturePrivate(t, "contact", contact, owner)
 	}
+	contactID, companyID := ContactIDOf(contact), companyIDOf(company)
+	primary := true
+	if _, err := e.Contacts.CreateRelationship(e.Admin(), contacts.CreateRelationshipInput{
+		Kind: "employment", ContactID: &contactID, CompanyID: &companyID, IsCurrentPrimary: &primary,
+	}); err != nil {
+		t.Fatalf("employing %s: %v", name, err)
+	}
+	return contact
 }
 
-func TestCompanyProjectsStateHowManyAreHiddenAndWhoHoldsThem(t *testing.T) {
+func TestCompanyContactsStateHowManyAreHiddenAndWhoHoldsThem(t *testing.T) {
 	e := Setup(t)
 	company := e.SeedCompany(t, "Shared Account", &e.Rep1)
-	seedOwnedProject(t, e, company, "Visible rollout", e.Rep1)
-	seedOwnedProject(t, e, company, "Hidden audit", e.Rep3)
-	seedOwnedProject(t, e, company, "Hidden migration", e.Rep3)
-	seedOwnedProject(t, e, company, "Orphaned pilot", seedDepartedSeat(t))
+	seedEmployee(t, e, company, "Visible Buyer", e.Rep1, false)
+	seedEmployee(t, e, company, "Hidden Sponsor", e.Rep3, true)
+	seedEmployee(t, e, company, "Hidden Engineer", e.Rep3, true)
+	seedEmployee(t, e, company, "Orphaned Champion", seedDepartedSeat(t), true)
 
 	rep := e.As(e.Rep1, []ids.UUID{e.Team1}, hiddenReaderPerms)
 	page, err := companySurfaceService(e).Assemble(rep, companyIDOf(company))
 	if err != nil {
 		t.Fatalf("assemble: %v", err)
 	}
-	if page.Projects == nil || len(*page.Projects) != 1 || (*page.Projects)[0].Name != "Visible rollout" {
-		t.Fatalf("projects = %+v, want only the rep's own", page.Projects)
+	if page.Contacts == nil || len(page.Contacts.Data) != 1 {
+		t.Fatalf("contacts = %+v, want only the one the rep may see", page.Contacts)
 	}
-	if page.ProjectsHidden == nil {
-		t.Fatal("projects_hidden is absent beside a listed projects section")
+	hidden := page.ContactsHidden
+	if hidden == nil {
+		t.Fatal("contacts_hidden is absent beside a listed contacts section")
 	}
-	if page.ProjectsHidden.Count != 3 {
-		t.Errorf("projects_hidden.count = %d, want 3: two of Rep3's and the departed seat's", page.ProjectsHidden.Count)
+	if hidden.Count != 3 {
+		t.Errorf("contacts_hidden.count = %d, want 3: two of Rep3's and the departed seat's", hidden.Count)
 	}
-	holders := page.ProjectsHidden.Holders
-	if len(holders) != 1 || ids.UUID(holders[0].UserId) != e.Rep3 {
-		t.Errorf("holders = %+v, want Rep3 once and never the departed seat", holders)
+	if len(hidden.Holders) != 1 || ids.UUID(hidden.Holders[0].UserId) != e.Rep3 {
+		t.Errorf("holders = %+v, want Rep3 once and never the departed seat", hidden.Holders)
 	}
 	wire, err := json.Marshal(page)
 	if err != nil {
 		t.Fatal(err)
 	}
-	for _, withheld := range []string{"Hidden audit", "Hidden migration", "Orphaned pilot"} {
+	for _, withheld := range []string{"Hidden Sponsor", "Hidden Engineer", "Orphaned Champion"} {
 		if strings.Contains(string(wire), withheld) {
-			t.Errorf("the page carries the withheld project name %q", withheld)
+			t.Errorf("the page carries the withheld contact name %q", withheld)
 		}
 	}
 }
@@ -98,14 +104,14 @@ func TestCompanyProjectsStateHowManyAreHiddenAndWhoHoldsThem(t *testing.T) {
 func TestAnUnboundedReaderIsToldNothingIsHidden(t *testing.T) {
 	e := Setup(t)
 	company := e.SeedCompany(t, "Shared Account", &e.Rep1)
-	seedOwnedProject(t, e, company, "Rep3's work", e.Rep3)
+	seedEmployee(t, e, company, "Rep3's Contact", e.Rep3, true)
 
 	page, err := companySurfaceService(e).Assemble(e.Admin(), companyIDOf(company))
 	if err != nil {
 		t.Fatalf("assemble: %v", err)
 	}
-	if page.ProjectsHidden == nil || page.ProjectsHidden.Count != 0 || len(page.ProjectsHidden.Holders) != 0 {
-		t.Errorf("projects_hidden = %+v, want count 0 and no holders for an unbounded reader", page.ProjectsHidden)
+	if page.ContactsHidden == nil || page.ContactsHidden.Count != 0 || len(page.ContactsHidden.Holders) != 0 {
+		t.Errorf("contacts_hidden = %+v, want count 0 and no holders for an unbounded reader", page.ContactsHidden)
 	}
 }
 
@@ -114,20 +120,17 @@ func TestHiddenBillingContactsNameTheirOwnerNotThemselves(t *testing.T) {
 	company := e.SeedCompany(t, "Shared Account", &e.Rep1)
 	mine := e.SeedContact(t, "Visible Payer", &e.Rep1)
 	theirs := e.SeedContact(t, "Hidden Payer", &e.Rep3)
+	e.MakeCapturePrivate(t, "contact", theirs, e.Rep3)
 	seedBillingEdge(t, mine, company, "recipient")
 	seedBillingEdge(t, theirs, company, "approver")
 
 	rep := e.As(e.Rep1, []ids.UUID{e.Team1}, billingReaderPerms)
-	var hidden storekit.HiddenRows
-	err := database.WithWorkspaceTx(rep, e.Pool, func(tx pgx.Tx) error {
-		var err error
-		hidden, err = e.Contacts.HiddenBillingContactsFor(rep, tx, ids.From[ids.CompanyKind](company))
-		return err
-	})
+	page, err := companySurfaceService(e).Assemble(rep, companyIDOf(company))
 	if err != nil {
-		t.Fatalf("reading hidden billing contacts: %v", err)
+		t.Fatalf("assemble: %v", err)
 	}
-	if hidden.Count != 1 || len(hidden.Holders) != 1 || hidden.Holders[0].UserID != e.Rep3 {
-		t.Errorf("hidden = %+v, want one entry held by Rep3", hidden)
+	hidden := page.BillingContactsHidden
+	if hidden == nil || hidden.Count != 1 || len(hidden.Holders) != 1 || ids.UUID(hidden.Holders[0].UserId) != e.Rep3 {
+		t.Errorf("billing_contacts_hidden = %+v, want one entry held by Rep3", hidden)
 	}
 }

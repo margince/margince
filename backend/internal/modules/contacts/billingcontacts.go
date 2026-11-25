@@ -125,6 +125,7 @@ func billingContactsSection(
 		   AND r.company_id = $%d
 		   AND r.archived_at IS NULL
 		   AND c.archived_at IS NULL`, companyPos),
+		Entry:   "r.id",
 		Owner:   "c.owner_id",
 		Visible: scope,
 	}, nil

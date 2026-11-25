@@ -14,6 +14,10 @@ import { QuickCaptureAction } from "../../../components/quickcapture";
 import { CompanyVCardImport } from "../../../components/vcardimportlink";
 import { Badge } from "../../../design-system/atoms";
 import {
+  type HiddenRecords,
+  HiddenRecordsFoot,
+} from "../../../design-system/surfacestate";
+import {
   type ActivityMoment,
   activityAnswers,
   activityDay,
@@ -94,9 +98,12 @@ export const ENGAGEMENT_LABELS: Record<
 export function CompanyContactsList({
   companyId,
   bandSlot,
+  hidden,
   mayCreate = false,
 }: Readonly<{
   companyId: string;
+  /** The current employees the reader's scope withheld, from the company 360. */
+  hidden?: HiddenRecords;
   /** Whether the reader may write the company, and so file a new contact under it. */
   mayCreate?: boolean;
   /**
@@ -256,6 +263,7 @@ export function CompanyContactsList({
           id: contact.contact_id,
         })}
       />
+      <HiddenRecordsFoot hidden={hidden} />
     </>
   );
 }

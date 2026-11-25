@@ -34313,6 +34313,10 @@ components:
           description: >-
             Who to send this customer's invoices to, beside the figures — the one question a reader of this card asks that the accounting mirror cannot answer. Read from the installation's own relationships, NOT from the accounting source: it states who we record as handling the invoices, which the connector neither supplies nor is told.
           items: {$ref: '#/components/schemas/BillingContact'}
+        billing_contacts_hidden:
+          allOf: [{$ref: '#/components/schemas/HiddenRecords'}]
+          description: >-
+            The billing entries the caller's contact row scope withheld from `billing_contacts`, the same answer the company page gives. Absent exactly when `billing_contacts` is.
         provider:
           type: [string, 'null']
           description: >-
@@ -35130,6 +35134,10 @@ components:
           properties:
             data: {type: array, items: {$ref: '#/components/schemas/Company360Contact'}}
             page: {$ref: '#/components/schemas/PageInfo'}
+        contacts_hidden:
+          allOf: [{$ref: '#/components/schemas/HiddenRecords'}]
+          description: >-
+            The account's current employees the caller may not see, by the contact row scope or by the employment tie's own read scope. Absent exactly when `contacts` is.
         billing_contacts:
           type: array
           description: >-
@@ -35149,10 +35157,6 @@ components:
           allOf: [{$ref: '#/components/schemas/PageInfo'}]
           description: >-
             Whether `projects` was cut short. The list is capped, and a card that counted the rows and said "3 in flight" would state a number the account does not have. Absent exactly when `projects` is.
-        projects_hidden:
-          allOf: [{$ref: '#/components/schemas/HiddenRecords'}]
-          description: >-
-            The projects the caller may not see on this account, by the project row scope or by the company-project tie's own read scope. Absent exactly when `projects` is.
         attention_withheld:
           type: boolean
           description: >-

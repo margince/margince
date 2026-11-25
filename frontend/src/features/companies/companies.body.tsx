@@ -241,6 +241,7 @@ export function CompanyRecordBody({
           {!view?.sections_omitted?.includes("contacts") && (
             <CompanyContactsList
               companyId={company.id}
+              hidden={view?.contacts_hidden}
               mayCreate={canWriteCompany}
               bandSlot={(narrow) => (
                 <CoverageBand

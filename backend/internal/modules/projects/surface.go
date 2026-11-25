@@ -11,7 +11,6 @@ package projects
 import (
 	"context"
 	"fmt"
-	"slices"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -19,7 +18,6 @@ import (
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/auth"
-	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/employment"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -68,88 +66,66 @@ func phaseRank(alias string) string {
 var projectCardOrder = `ORDER BY ` + phaseRank("p") + `,
 	p.last_activity_at DESC NULLS LAST, p.created_at DESC, p.id`
 
-// CompanyProjects is the company page's project section. MoreInFlight is
-// whether the cap cut a project that is still in flight. Without it, a reader
-// counting the cards reports a portfolio account's live work as the cap.
-// Hidden is what the caller's scope withheld, so a short list never reads as
-// the whole one.
-type CompanyProjects struct {
-	Cards        []ProjectCard
-	MoreInFlight bool
-	Hidden       storekit.HiddenRows
-}
-
-// ListProjectsForCompanyTx lists the company's unarchived projects under the
-// caller's project row scope, work in motion first.
-func (s *Store) ListProjectsForCompanyTx(ctx context.Context, tx pgx.Tx, companyID ids.CompanyID) (CompanyProjects, error) {
+// ListProjectsForCompanyTx lists the company's unarchived projects under
+// the caller's project row scope, work in motion first. The bool is whether
+// the cap cut a project that is still IN FLIGHT — a reader counting the
+// returned rows would otherwise report a portfolio account's live work as
+// exactly the cap, which is a number that account does not have.
+func (s *Store) ListProjectsForCompanyTx(ctx context.Context, tx pgx.Tx, companyID ids.CompanyID) ([]ProjectCard, bool, error) {
 	if err := auth.Require(ctx, projectObject, principal.ActionRead); err != nil {
-		return CompanyProjects{}, err
+		return nil, false, err
 	}
 	var args []any
 	arg := func(v any) int { args = append(args, v); return len(args) }
-	section, err := companyProjectsSection(ctx, arg(companyID), arg)
+	companyPos := arg(companyID)
+	scope, err := projectScopeBound(ctx, arg)
 	if err != nil {
-		return CompanyProjects{}, err
+		return nil, false, err
 	}
-	hidden, err := storekit.ReadHiddenRows(ctx, tx, section, slices.Clone(args))
+	// A card under a company DISCLOSES that this company and this project are
+	// working together, which is what the edge's own admission governs — the
+	// project's read grant does not cover the pair. Without this a seat denied
+	// relationship reads still learns every company-project association from
+	// the company page.
+	edge, err := edgeBound(ctx, "c", arg)
 	if err != nil {
-		return CompanyProjects{}, err
+		return nil, false, err
 	}
 	// Bound BEFORE the query call rather than inside it: `arg` appends to
 	// `args`, and Go does not order that append against the `args...`
-	// expansion in the same call.
+	// expansion in the same call. It appends first today; a compiler free to
+	// expand first would hand pgx one argument fewer than the statement's
+	// placeholders name.
 	columns := projectCardColumns(arg(DefaultProjectQuietDays))
-	rows, err := tx.Query(ctx, section.ListSQL(columns,
-		`LEFT JOIN app_user u ON u.id = p.owner_id AND `+workforce.LiveMemberSQL("u"))+`
-		 `+projectCardOrder+fmt.Sprintf(` LIMIT %d`, projectSurfaceCap+1), args...)
+	rows, err := tx.Query(ctx, fmt.Sprintf(`
+		SELECT `+columns+`
+		  FROM project p
+		  LEFT JOIN app_user u ON u.id = p.owner_id AND `+workforce.LiveMemberSQL("u")+`
+		 WHERE EXISTS (
+		           SELECT 1 FROM relationship c
+		            WHERE c.kind = '`+auth.ProjectCompanyKind+`' AND c.project_id = p.id
+		              AND c.company_id = $%d AND c.archived_at IS NULL
+		              AND (`+edge+`))
+		   AND p.archived_at IS NULL AND (%s)
+		 `+projectCardOrder+`
+		 LIMIT %d`, companyPos, scope, projectSurfaceCap+1), args...)
 	if err != nil {
-		return CompanyProjects{}, err
+		return nil, false, err
 	}
 	cards, err := collectProjectCards(rows)
 	if err != nil {
-		return CompanyProjects{}, err
+		return nil, false, err
 	}
 	if len(cards) <= projectSurfaceCap {
-		return CompanyProjects{Cards: cards, Hidden: hidden}, nil
+		return cards, false, nil
 	}
-	// What was cut, not only that something was. projectCardOrder puts closed
-	// projects last. So one live project and twenty-five closed ones overflow
-	// the cap without dropping anything in flight.
+	// What was cut, not merely THAT something was. projectCardOrder puts the
+	// closed projects last, so a portfolio account with one live project and
+	// twenty-five closed ones overflows the cap without dropping a single
+	// thing in flight — and a caller reporting "1+ in flight" off a bare
+	// overflow flag would overstate the work on the account.
 	dropped := cards[projectSurfaceCap]
-	return CompanyProjects{
-		Cards:        cards[:projectSurfaceCap],
-		MoreInFlight: dropped.Phase != crmcontracts.Company360ProjectPhaseClosed,
-		Hidden:       hidden,
-	}, nil
-}
-
-// companyProjectsSection is the company's unarchived projects, split by what
-// the caller may see. Two bounds make a card visible: the project row scope,
-// and the edge's own admission. A card under a company discloses that the two
-// work together, and the project's read grant does not cover the pair.
-// A project either bound rejects counts as hidden.
-func companyProjectsSection(ctx context.Context, companyPos int, arg func(any) int) (storekit.HiddenSection, error) {
-	scope, err := projectScopeBound(ctx, arg)
-	if err != nil {
-		return storekit.HiddenSection{}, err
-	}
-	edge, err := edgeBound(ctx, "c", arg)
-	if err != nil {
-		return storekit.HiddenSection{}, err
-	}
-	tie := fmt.Sprintf(`EXISTS (
-		           SELECT 1 FROM relationship c
-		            WHERE c.kind = '`+auth.ProjectCompanyKind+`' AND c.project_id = p.id
-		              AND c.company_id = $%d AND c.archived_at IS NULL AND (%%s))`, companyPos)
-	section := storekit.HiddenSection{
-		From:  "project p",
-		Where: "p.archived_at IS NULL AND " + fmt.Sprintf(tie, predicateAlways),
-		Owner: "p.owner_id",
-	}
-	if scope != predicateAlways || edge != predicateAlways {
-		section.Visible = "(" + scope + ") AND " + fmt.Sprintf(tie, edge)
-	}
-	return section, nil
+	return cards[:projectSurfaceCap], dropped.Phase != crmcontracts.Company360ProjectPhaseClosed, nil
 }
 
 // ListProjectsForContactTx lists the unarchived projects a contact is part of:

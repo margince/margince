@@ -36902,9 +36902,11 @@ export interface components {
             state: components["schemas"]["FinanceSummaryState"];
             /**
              * @description Who to send this customer's invoices to, beside the figures — the one question a reader of this card asks that the accounting mirror cannot answer. Read from the installation's own relationships, NOT from the accounting source: it states who we record as handling the invoices, which the connector neither supplies nor is told.
-             *     Absent when the caller lacks the contact or relationship grant, so an empty array means nobody is named rather than nobody may be seen. Contacts outside the caller's row scope are not listed, and no count says how many were withheld.
+             *     Absent when the caller lacks the contact or relationship grant, so an empty array means nobody is named rather than nobody may be seen. Contacts outside the caller's row scope are not listed; `billing_contacts_hidden` says how many entries were withheld and who owns them.
              */
             billing_contacts?: components["schemas"]["BillingContact"][];
+            /** @description The billing entries the caller's contact row scope withheld from `billing_contacts`, the same answer the company page gives. Absent exactly when `billing_contacts` is. */
+            billing_contacts_hidden?: components["schemas"]["HiddenRecords"];
             /** @description Which accounting source this came from, by its key ("offline_demo"). A key, not a name for a reader: show `provider_name`. Absent when nothing is connected. */
             provider?: string | null;
             /** @description The accounting source's name for a reader ("Demo accounting"), as the unit that supplies it declares it. Absent when nothing is connected, or when that unit declares no name; a client then names no source rather than show the key. */
@@ -37746,6 +37748,8 @@ export interface components {
                 data: components["schemas"]["Company360Contact"][];
                 page: components["schemas"]["PageInfo"];
             };
+            /** @description The account's current employees the caller may not see, by the contact row scope or by the employment tie's own read scope. Absent exactly when `contacts` is. */
+            contacts_hidden?: components["schemas"]["HiddenRecords"];
             /** @description Who handles this account's invoices, ordered by capacity: addressed, approved, paid. Each entry is one edge, so the panel can change or archive a single role without touching the others. Empty means nobody is named — which for a paying customer is a gap worth showing, not a blank. Absent when the caller lacks the contact or relationship grant, named in `sections_omitted` as `billing_contacts`. A contact outside the caller's row scope is not listed; `billing_contacts_hidden` says how many entries were withheld and who owns them. */
             billing_contacts?: components["schemas"]["BillingContact"][];
             /** @description The billing entries the caller's contact row scope withheld from `billing_contacts`. Absent exactly when `billing_contacts` is. */
@@ -37755,8 +37759,6 @@ export interface components {
             projects?: components["schemas"]["Company360Project"][];
             /** @description Whether `projects` was cut short. The list is capped, and a card that counted the rows and said "3 in flight" would state a number the account does not have. Absent exactly when `projects` is. */
             projects_page?: components["schemas"]["PageInfo"];
-            /** @description The projects the caller may not see on this account, by the project row scope or by the company-project tie's own read scope. Absent exactly when `projects` is. */
-            projects_hidden?: components["schemas"]["HiddenRecords"];
             /** @description The reader may not read this account's activities, so no `attention` was derived on any deal or project row. The rows themselves are still listed and still true — this says the reasons behind them are missing, which a card must show rather than let an unexplained row read as a settled one. */
             attention_withheld?: boolean;
             strength?: components["schemas"]["CompanyStrength"];

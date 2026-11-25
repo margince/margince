@@ -36,7 +36,7 @@ func (a *assembly) readBillingContacts() error {
 	if err != nil {
 		return err
 	}
-	hidden := hiddenRecordsPayload(withheld)
+	hidden := withheld.Wire()
 	a.out.BillingContactsHidden = &hidden
 	return nil
 }

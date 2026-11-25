@@ -274,7 +274,7 @@ export const StaleInBothHosts: Story = {
 export const HiddenUnderAList: Story = {
   render: () => (
     <Stack gap="4">
-      <Panel title="Projects, two holders">
+      <Panel title="Contacts, two holders">
         <PanelBody>
           {ROWS}
           <HiddenRecordsFoot
@@ -288,13 +288,13 @@ export const HiddenUnderAList: Story = {
           />
         </PanelBody>
       </Panel>
-      <Panel title="Projects, holders left">
+      <Panel title="Contacts, holders left">
         <PanelBody>
           {ROWS}
           <HiddenRecordsFoot hidden={{ count: 1, holders: [] }} />
         </PanelBody>
       </Panel>
-      <Panel title="Projects, nothing hidden">
+      <Panel title="Contacts, nothing hidden">
         <PanelBody>
           {ROWS}
           <HiddenRecordsFoot hidden={{ count: 0, holders: [] }} />
