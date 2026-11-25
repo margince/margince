@@ -286,6 +286,7 @@ function OpenMessage({
         activityId={presentation.id}
         language={presentation.language}
         body={presentation.body}
+        subject={presentation.summary.subject}
         textUnreadable={presentation.body_completeness === "unreadable"}
       />
       <EmailAttachments files={presentation.attachments} />

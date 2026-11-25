@@ -52,6 +52,13 @@ describe("ListHistoryPanel", () => {
     expect(screen.getByRole("button", { name: "Krones" })).toBeInTheDocument();
   });
 
+  it("dates a change in the short form with its time", async () => {
+    panel(liveHistory);
+    expect(
+      await screen.findByText(/^29 Sept? 2026, 08:15$/),
+    ).toBeInTheDocument();
+  });
+
   it("says what a revision changed, the filter before and after in words", async () => {
     panel(revisionHistory);
     expect(

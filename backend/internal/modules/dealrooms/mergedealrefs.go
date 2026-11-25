@@ -24,7 +24,7 @@ func MoveDealRefsTx(ctx context.Context, tx pgx.Tx, from, to ids.UUID) ([]record
 		return nil, err
 	}
 	if err := storekit.AuditEach(ctx, tx, "update", "deal_room", rooms,
-		map[string]any{"deal_id": from}, map[string]any{"deal_id": to}); err != nil {
+		map[string]any{filterDealID: from}, map[string]any{filterDealID: to}); err != nil {
 		return nil, fmt.Errorf("audit the deal_room rows of the merge: %w", err)
 	}
 	moved = append(moved, recordmerge.Moved{Table: "deal_room", IDs: rooms})

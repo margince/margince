@@ -74,7 +74,7 @@ var (
 // the answer. Its per-driver parsers are digested apart (routeParsers).
 // TestTheHarnessHoldsEveryModuleTheGraderImports holds the list.
 var harnessFiles = []string{
-	"e2e/llm/check.py", "e2e/llm/judge.py", "e2e/llm/endstate.py",
+	"e2e/llm/check.py", "e2e/llm/calllog.py", "e2e/llm/judge.py", "e2e/llm/endstate.py",
 	"e2e/llm/casesetup.py", "e2e/llm/seed-llm-fixtures.sh",
 	"e2e/llm/transcript.py", "e2e/llm/mcpclient.py", "e2e/llm/candidates.py",
 }

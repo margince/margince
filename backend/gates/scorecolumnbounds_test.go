@@ -238,7 +238,7 @@ func TestTheBoundedQuantityReaderSeesEachShape(t *testing.T) {
 		{"public.product.default_tax_rate numeric(5,2) NOT NULL gen=- def=0", true},
 		// An exchange rate is a ratio with no ceiling, in either spelling.
 		{"public.deal.fx_rate_to_base numeric(20,10) gen=- def=-", false},
-		{"public.deal_stage_history.fx_rate_at_change numeric gen=- def=-", false},
+		{"public.forecast_contribution.fx_rate numeric(20,10) gen=- def=-", false},
 	} {
 		if _, got := readsABoundedQuantity(c.line); got != c.want {
 			t.Errorf("the bounded-quantity reader matched %q = %v, want %v", c.line, got, c.want)

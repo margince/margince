@@ -20,14 +20,13 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"regexp"
 )
 
 // providerGrammar and maxProviderLength are `channel_provider.provider`'s own
 // CHECK, restated here so a unit's declaration is refused at boot with an
 // explanation rather than at the first write with a constraint name. The two
 // are the same rule in two places on purpose; a fitness test holds them equal.
-var providerGrammar = regexp.MustCompile(`^[a-z][a-z0-9_]*$`)
+var providerGrammar = shortNameGrammar
 
 const maxProviderLength = 32
 

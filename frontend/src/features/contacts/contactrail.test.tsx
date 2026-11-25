@@ -734,7 +734,11 @@ describe("which employer is the current one", () => {
     );
     await screen.findAllByText("Brandt Automotive GmbH");
 
-    await user.click(screen.getByRole("button", { name: "More actions" }));
+    await user.click(
+      screen.getByRole("button", {
+        name: "More actions for Brandt Automotive GmbH",
+      }),
+    );
     await user.click(screen.getByRole("button", { name: "Mark as ended" }));
 
     await waitFor(() => {
@@ -768,7 +772,11 @@ describe("which employer is the current one", () => {
         ).length;
     const before = companyReads();
 
-    await user.click(screen.getByRole("button", { name: "More actions" }));
+    await user.click(
+      screen.getByRole("button", {
+        name: "More actions for Brandt Automotive GmbH",
+      }),
+    );
     await user.click(screen.getByRole("button", { name: "Mark as ended" }));
 
     await waitFor(() => expect(companyReads()).toBeGreaterThan(before));

@@ -78,6 +78,8 @@ type StageRequest struct {
 	Summary      string
 	// SummaryParts is Summary taken apart, nil when Summary is a sentence alone.
 	SummaryParts *crmcontracts.ApprovalSummaryParts
+	// Why is the reason the call gave for itself, in the agent's words.
+	Why string
 }
 
 // StageInfo is what a 🟡-capable tool contributes to its own staging: the

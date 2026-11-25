@@ -94,7 +94,7 @@ import (
 // prose lives on Name. The generator (tools/gen-composition) validates
 // through this same method, so scan-time acceptance can never drift from
 // boot-time validation.
-var nameGrammar = regexp.MustCompile(`^[a-z0-9]+(-[a-z0-9]+)*$`)
+var nameGrammar = regexp.MustCompile(`^` + unitNamePart + `$`)
 
 // maxNameLength bounds the unit name's SHARE of PostgreSQL's 63-byte
 // identifier budget — a longer name would be silently TRUNCATED there,

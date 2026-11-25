@@ -107,6 +107,8 @@ var exempt = gatekit.Waive(map[string]string{
 	"docs/explanation/plain-words.txt": "the same, for the explanation pages",
 	"docs/reference/plain-words.txt":   "the same, for the reference pages",
 	"sbom-schemas":                     "a vendored SPDX schema, not ours to rename",
+	"MAINTAINERS.md": "github.com/orgs/ is GitHub's own path to the public roadmap project; " +
+		"the README links this page instead of the project, so only here does the path appear",
 	"backend/internal/modules/capture/graphcal/data/README.md": "unicode-org is the GitHub owner of " +
 		"the copied zone files, named in their source links",
 	"backend/internal/platform/cldrzone/data/README.md": "unicode-org is the GitHub owner of " +

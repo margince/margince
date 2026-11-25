@@ -84,9 +84,24 @@ func missingClosingStages(stages []StageInput) []StageInput {
 		}
 		last++
 		closing.Position = last
+		closing.Name = freeStageName(closing.Name, stages)
 		missing = append(missing, closing)
 	}
 	return missing
+}
+
+// freeStageName answers base, or base numbered, so the added stage never takes
+// a name an open stage of the ladder already holds.
+func freeStageName(base string, stages []StageInput) string {
+	held := make(map[string]bool, len(stages))
+	for _, st := range stages {
+		held[strings.ToLower(strings.TrimSpace(st.Name))] = true
+	}
+	name := base
+	for n := 2; held[strings.ToLower(name)]; n++ {
+		name = fmt.Sprintf("%s %d", base, n)
+	}
+	return name
 }
 
 // withClosingPair answers the ladder with the Won and Lost stage it lacks
@@ -103,13 +118,13 @@ func withClosingPair(stages []StageInput) []StageInput {
 // costs one read and no write.
 func ensureClosingPair(ctx context.Context, tx pgx.Tx, pipelineID ids.PipelineID) error {
 	rows, err := tx.Query(ctx,
-		`SELECT semantic, position FROM stage WHERE pipeline_id = $1 AND archived_at IS NULL`, pipelineID)
+		`SELECT name, semantic, position FROM stage WHERE pipeline_id = $1 AND archived_at IS NULL`, pipelineID)
 	if err != nil {
 		return fmt.Errorf("read the ladder to check its closing stages: %w", err)
 	}
 	live, err := pgx.CollectRows(rows, func(row pgx.CollectableRow) (StageInput, error) {
 		var st StageInput
-		err := row.Scan(&st.Semantic, &st.Position)
+		err := row.Scan(&st.Name, &st.Semantic, &st.Position)
 		return st, err
 	})
 	if err != nil {

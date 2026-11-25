@@ -36,6 +36,8 @@ const mergeQueueTrigger = "merge_group"
 // advisoryPullRequestWorkflows run on pull requests, report a check that always
 // succeeds, and are not required, so the queue never waits for them.
 var advisoryPullRequestWorkflows = gatekit.Waive(map[string]string{
+	"ai-records-stale.yml": "advisory: it lists stale AI certification records in a comment and its job " +
+		"always succeeds, so no ruleset requires it and the queue never asks for it",
 	"closing-declaration.yml": "advisory: it warns in a comment and its job always succeeds, " +
 		"so no ruleset requires it and the queue never asks for it",
 	"docs-describing.yml": "advisory: it warns in a comment and its job always succeeds, " +

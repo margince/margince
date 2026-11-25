@@ -408,9 +408,9 @@ func TestTheMCPToolCoverageIsPublished(t *testing.T) {
 	}
 	sort.Slice(agentSurface, func(i, j int) bool { return agentSurface[i].Name < agentSurface[j].Name })
 
-	units, err := extensionTools(extensionsDir)
+	units, err := extensionTools(repoRoot)
 	if err != nil {
-		t.Fatalf("reading the unit manifests under %s: %v", extensionsDir, err)
+		t.Fatalf("reading the composed units' manifests: %v", err)
 	}
 
 	names := make([]string, 0, len(specs))

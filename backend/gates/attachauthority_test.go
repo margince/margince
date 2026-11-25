@@ -103,6 +103,8 @@ var readProbeCallers = gatekit.Waive(map[string]string{
 	"signals.Store.CreateSignal":       "reference: a signal names the record it is about; signals are their own rows with their own gate",
 	"signals.Store.IntroPath":          "read: reads the introduction path to a visible company",
 	"signals.visibleCandidates":        "read: a resolver reads which companies a signal may name",
+
+	"storekit.EnsureRecordTargets": "reference: a record-typed custom field names a record; the row that holds the field is the one written",
 })
 
 // readProbes are the platform/auth functions that ask about sight alone.

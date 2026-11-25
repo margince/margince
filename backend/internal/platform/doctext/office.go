@@ -152,12 +152,18 @@ func workbookTargets(ctx context.Context, parts *archiveParts) (map[string]strin
 	return targets, err
 }
 
+// cellSeparator joins the cells of one row in the excerpt.
+const cellSeparator = " | "
+
 // readSheet writes one worksheet's non-empty rows, cells joined by " | ",
-// under the sheet's name. An empty sheet writes nothing.
+// under the sheet's name. An empty sheet writes nothing. A row never holds
+// more than the excerpt's remaining budget. Cells may all name one large
+// shared string, and the joined row would multiply it.
 func readSheet(ctx context.Context, parts *archiveParts, sheet sheetPart, shared []string, out *excerptWriter) error {
 	header := "Sheet: " + sheet.name + "\n"
 	var (
 		row       []string
+		rowRunes  int
 		cell      strings.Builder
 		cellType  string
 		inValue   bool
@@ -182,12 +188,26 @@ func readSheet(ctx context.Context, parts *archiveParts, sheet sheetPart, shared
 			case "t":
 				inlineTxt = false
 			case "c":
-				if value := cellValue(cellType, cell.String(), shared); value != "" {
-					row = append(row, value)
+				value := cellValue(cellType, cell.String(), shared)
+				if value == "" {
+					return nil
 				}
+				separator := 0
+				if len(row) > 0 {
+					separator = len(cellSeparator)
+				}
+				// One rune past the room keeps a row that overflows reading as
+				// overflowing once clipped.
+				room := out.room() + 1 - rowRunes - separator
+				if room <= 0 {
+					return nil
+				}
+				value, runes := clipRunes(value, room)
+				row = append(row, value)
+				rowRunes += separator + runes
 			case "row":
-				line := strings.Join(row, " | ")
-				row = row[:0]
+				line := strings.Join(row, cellSeparator)
+				row, rowRunes = row[:0], 0
 				if line == "" {
 					return nil
 				}
@@ -201,6 +221,19 @@ func readSheet(ctx context.Context, parts *archiveParts, sheet sheetPart, shared
 		}
 		return nil
 	})
+}
+
+// clipRunes returns s cut to at most n runes and the runes it kept, reading
+// no further into s than the cut.
+func clipRunes(s string, n int) (string, int) {
+	kept := 0
+	for i := range s {
+		if kept == n {
+			return s[:i], kept
+		}
+		kept++
+	}
+	return s, kept
 }
 
 // cellValue resolves a shared-string cell to its string and keeps every other

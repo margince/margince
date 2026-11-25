@@ -24,3 +24,24 @@ const leadingPrefixes = new RegExp(
 export function withoutSubjectPrefixes(subject: string): string {
   return subject.replace(leadingPrefixes, "");
 }
+
+/**
+ * The forward markers alone. A declared mirror of `mailsubject.ForwardPrefixes`,
+ * held by the same gate.
+ */
+export const MAIL_FORWARD_PREFIXES: readonly string[] = ["fwd", "fw", "wg"];
+
+// The outermost prefix is the first one. The spaces are those Go's `\s` reads,
+// and U+00A0, so both sides read one subject alike.
+const outerForward = new RegExp(
+  `^[\\t\\n\\f\\r \\u00a0]*(${MAIL_FORWARD_PREFIXES.join("|")})[\\t\\n\\f\\r \\u00a0]*:`,
+  "i",
+);
+
+/**
+ * Whether the subject's outermost prefix marks a forward. "Re: Fwd:" answers
+ * a forward, so it is a reply.
+ */
+export function isForwardSubject(subject: string): boolean {
+  return outerForward.test(subject);
+}

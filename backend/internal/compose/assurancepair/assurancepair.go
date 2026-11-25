@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
+// Package assurancepair holds the pairs of open deals the input check asks
+// about one buying motion, and the reader's view of such a finding. A subpackage
+// of compose because the root package may not grow; it imports nothing from the
+// root.
 package assurancepair
-
-// The pairs of open deals the input check asks about one buying motion, and the
-// reader's view of such a finding. A subpackage of compose because the root
-// package may not grow; it imports nothing from the root.
 
 import (
 	"context"

@@ -17,7 +17,7 @@ func TestProductionAndDevelopmentComposeTheDeclaredUnitSets(t *testing.T) {
 	}
 	examples := 0
 	for _, source := range sources {
-		if source.developmentOnly {
+		if source.DevelopmentOnly {
 			examples++
 		}
 	}
@@ -38,14 +38,14 @@ func TestProductionAndDevelopmentComposeTheDeclaredUnitSets(t *testing.T) {
 			actual[manifest.Unit.Name] = true
 		}
 		for _, source := range sources {
-			want := !source.developmentOnly || development
-			if actual[source.name] != want {
-				t.Errorf("development=%t unit=%s included=%t, want %t", development, source.name, actual[source.name], want)
+			want := !source.DevelopmentOnly || development
+			if actual[source.Name] != want {
+				t.Errorf("development=%t unit=%s included=%t, want %t", development, source.Name, actual[source.Name], want)
 			}
-			if source.developmentOnly && !development {
+			if source.DevelopmentOnly && !development {
 				for path, content := range composed.Files {
-					if strings.Contains(string(content), source.modulePath) {
-						t.Errorf("production %s imports development module %s", path, source.modulePath)
+					if strings.Contains(string(content), source.ModulePath) {
+						t.Errorf("production %s imports development module %s", path, source.ModulePath)
 					}
 				}
 			}

@@ -145,8 +145,8 @@ func TestASignatureAboveALongFooterLandsItsTitleAndBothNumbers(t *testing.T) {
 
 // signatureReadState is the read cursor one contact's row holds.
 type signatureReadState struct {
-	watermark, outcome, reason string
-	retries                    int
+	watermark string
+	retries   int
 }
 
 func readSignatureState(t *testing.T, e *Env, contact ids.UUID) signatureReadState {
@@ -154,9 +154,9 @@ func readSignatureState(t *testing.T, e *Env, contact ids.UUID) signatureReadSta
 	var state signatureReadState
 	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(), `
-			SELECT coalesce(activity_id::text, ''), coalesce(last_outcome, ''), coalesce(last_skip_reason, ''), retry_count
+			SELECT coalesce(activity_id::text, ''), retry_count
 			  FROM contact_signature_enrich_state WHERE contact_id = $1`, contact).
-			Scan(&state.watermark, &state.outcome, &state.reason, &state.retries)
+			Scan(&state.watermark, &state.retries)
 	}); err != nil {
 		t.Fatalf("reading the signature state: %v", err)
 	}
@@ -173,7 +173,7 @@ func TestARejectedReadIsAskedAgainUntilItsCapConsumesTheMail(t *testing.T) {
 	for attempt := 1; attempt < contacts.SignatureReadAttempts; attempt++ {
 		runSignaturePass(t, e, brain)
 		state := readSignatureState(t, e, bob)
-		if state.watermark != "" || state.retries != attempt || state.reason != "evidence_gate" {
+		if state.watermark != "" || state.retries != attempt {
 			t.Fatalf("after rejected read %d the state is %+v, want no watermark and the retry counted", attempt, state)
 		}
 		runSignaturePass(t, e, brain)
@@ -183,9 +183,9 @@ func TestARejectedReadIsAskedAgainUntilItsCapConsumesTheMail(t *testing.T) {
 		e.WsExec(t, `UPDATE contact_signature_enrich_state SET attempted_at = '-infinity' WHERE contact_id = $1`, bob)
 	}
 	runSignaturePass(t, e, brain)
-	want := signatureReadState{watermark: mail, outcome: "skipped", reason: "evidence_gate", retries: contacts.SignatureReadAttempts}
+	want := signatureReadState{watermark: mail, retries: contacts.SignatureReadAttempts}
 	if state := readSignatureState(t, e, bob); state != want {
-		t.Fatalf("after the capped read the state is %+v, want the mail consumed with its reason %+v", state, want)
+		t.Fatalf("after the capped read the state is %+v, want the mail consumed %+v", state, want)
 	}
 	runSignaturePass(t, e, brain)
 	if brain.calls != contacts.SignatureReadAttempts {
@@ -205,12 +205,13 @@ func TestAPassOfOnlyRejectedReadsQueuesNoContinuation(t *testing.T) {
 	if runSignaturePass(t, e, brain) {
 		t.Error("a full pass that moved nobody asked for a continuation")
 	}
-	reasons := make([]string, 0, len(signers))
+	states := make([]signatureReadState, 0, len(signers))
 	for _, signer := range signers {
-		reasons = append(reasons, readSignatureState(t, e, signer).reason)
+		states = append(states, readSignatureState(t, e, signer))
 	}
-	if slices.ContainsFunc(reasons, func(reason string) bool { return reason != "evidence_gate" }) {
-		t.Errorf("skip reasons = %v, want every read refused by the evidence gate", reasons)
+	retried := signatureReadState{retries: 1}
+	if slices.ContainsFunc(states, func(state signatureReadState) bool { return state != retried }) {
+		t.Errorf("read states = %v, want every read refused and kept for a retry", states)
 	}
 }
 
@@ -221,9 +222,9 @@ func TestSomebodyElsesSignatureIsReadOnce(t *testing.T) {
 	brain := &signatureFieldsBrain{}
 
 	runSignaturePass(t, e, brain)
-	want := signatureReadState{watermark: mail, outcome: "skipped", reason: "name_gate"}
+	want := signatureReadState{watermark: mail}
 	if state := readSignatureState(t, e, bob); state != want {
-		t.Fatalf("the state is %+v, want the mail consumed with the name gate's reason %+v", state, want)
+		t.Fatalf("the state is %+v, want the mail consumed without a retry %+v", state, want)
 	}
 	if brain.calls != 0 {
 		t.Errorf("the model was asked %d times about a signature that is not the contact's", brain.calls)

@@ -69,7 +69,6 @@ type VoiceProfile struct {
 	ID                  ids.UUID
 	OwnerID             *ids.UserID
 	Scope               string
-	ModelRef            *string
 	Status              string
 	VoiceProfileMD      string
 	ProfileVersion      int
@@ -106,11 +105,11 @@ type UpdateVoiceProfileInput struct {
 	IfVersion           *int64
 }
 
-const voiceProfileColumns = `id, owner_id, scope, model_ref, status, voice_profile_md, profile_version, personality_md, auto_learning_enabled, active_source_hash, last_built_at, source, captured_by, version, created_at, updated_at, archived_at`
+const voiceProfileColumns = `id, owner_id, scope, status, voice_profile_md, profile_version, personality_md, auto_learning_enabled, active_source_hash, last_built_at, source, captured_by, version, created_at, updated_at, archived_at`
 
 func scanVoiceProfile(row pgx.Row) (VoiceProfile, error) {
 	var p VoiceProfile
-	err := row.Scan(&p.ID, &p.OwnerID, &p.Scope, &p.ModelRef, &p.Status, &p.VoiceProfileMD,
+	err := row.Scan(&p.ID, &p.OwnerID, &p.Scope, &p.Status, &p.VoiceProfileMD,
 		&p.ProfileVersion, &p.PersonalityMD, &p.AutoLearningEnabled, &p.ActiveSourceHash,
 		&p.LastBuiltAt, &p.Source, &p.CapturedBy, &p.Version, &p.CreatedAt, &p.UpdatedAt, &p.ArchivedAt)
 	return p, err

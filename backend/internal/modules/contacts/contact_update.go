@@ -155,7 +155,7 @@ func (s *Store) writeContactInTx(
 	if err := storekit.EnsureVersionMatches(current.Version, in.IfVersion); err != nil {
 		return out, err
 	}
-	if err := storekit.SetCustomFieldPatch(p, active, in.CustomFields, current.AdditionalProperties); err != nil {
+	if err := storekit.SetCustomFieldPatchIn(ctx, tx, p, active, in.CustomFields, current.AdditionalProperties); err != nil {
 		return out, err
 	}
 	if err := admitEditLeadHolders(ctx, tx, id, current, &in); err != nil {

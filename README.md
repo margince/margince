@@ -92,6 +92,8 @@ Each model and each AI tool a user can connect has a test score in
 Open work is in [GitHub issues](https://github.com/margince/margince/issues), and past releases are on the
 [releases page](https://github.com/margince/margince/releases).
 
+Who decides what, and the plan for what comes next, are in [MAINTAINERS.md](MAINTAINERS.md).
+
 ## Security
 
 Using Margince and something is wrong? The handbook's

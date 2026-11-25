@@ -113,18 +113,6 @@
   font: var(--fontBody);
   color: var(--textSecondary);
 }
-/* The state stands at the far end of the chips' line. */
-.brief-task-status {
-  margin-inline-start: auto;
-}
-.brief-task-meta {
-  align-self: stretch;
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: var(--space-2);
-  margin-block-start: var(--space-2);
-}
 
 /* ── The card in hand ─────────────────────────────────────────────────────
  * One thing to answer, drawn whole: the name, what to do and the words, then
@@ -242,7 +230,7 @@
 .brief-triage-lead-head > .heading {
   order: 1;
 }
-.brief-triage-lead-head > .brief-task-meta {
+.brief-triage-lead-head > .task-meta {
   order: 3;
   margin: 0;
 }

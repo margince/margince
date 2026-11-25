@@ -194,7 +194,7 @@ func TestTheRegistryAnswersNothingForAnUnregisteredVerb(t *testing.T) {
 func TestAStagedUpdateRefusesARecordItCannotRead(t *testing.T) {
 	tool := updateRecord{p: unreadableProvider{}}
 	_, err := tool.StageInfo(context.Background(), json.RawMessage(
-		`{"record_type":"contact","id":"`+ids.NewV7().String()+`","fields":{"full_name":"X"}}`))
+		`{"record_type":"contact","id":"`+ids.NewV7().String()+`","fields":{"full_name":"X"},"why":"A test asks for this change."}`))
 	if !errors.Is(err, apperrors.ErrNotFound) {
 		t.Errorf("staging a patch against an unreadable record answered %v, want not-found — "+
 			"otherwise the inbox shows a change against a row the approver cannot see", err)

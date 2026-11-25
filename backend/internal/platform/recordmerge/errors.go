@@ -7,7 +7,10 @@
 // merges call it, and each module keeps what its own kind moves beyond that.
 package recordmerge
 
-import "github.com/margince/margince/backend/internal/shared/kernel/ids"
+import (
+	"github.com/margince/margince/backend/internal/shared/apperrors"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+)
 
 // MergeSelfError maps to 422: a record cannot merge into itself.
 type MergeSelfError struct{}
@@ -40,3 +43,19 @@ func (e *MergedTargetError) Error() string {
 func (e *MergedTargetError) FieldFault() (field, code, message string) {
 	return "target_id", "merged_target", e.Error()
 }
+
+// errTargetReadOnly refuses a merge into a record the caller may read but not
+// change. Its sentence is the one the merge picker shows for that record.
+var errTargetReadOnly = &targetReadOnlyError{}
+
+type targetReadOnlyError struct{}
+
+func (*targetReadOnlyError) Error() string {
+	return "recordmerge: the merge target is read-only to the caller, so it cannot survive a merge"
+}
+
+func (*targetReadOnlyError) MessageFault() (code, message string) {
+	return "merge_target_read_only", "You can only read the record to keep, so it cannot be kept. Keep a record you can change, or ask its owner to merge."
+}
+
+func (*targetReadOnlyError) Unwrap() error { return apperrors.ErrPermissionDenied }

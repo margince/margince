@@ -31,6 +31,8 @@ REPO_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 . "$(git rev-parse --show-toplevel)/scripts/lib-devstate.sh"
 # shellcheck source=scripts/lib-devready.sh
 . "$(git rev-parse --show-toplevel)/scripts/lib-devready.sh"
+# shellcheck source=scripts/lib-composedunits.sh
+. "$(git rev-parse --show-toplevel)/scripts/lib-composedunits.sh"
 API_BASE="${API_BASE:-$(dev_app_base_url)}"
 ADMIN_EMAIL="${ADMIN_EMAIL:-admin@demo.test}"
 ADMIN_PASSWORD="${ADMIN_PASSWORD:-demo-password-123}"
@@ -310,10 +312,11 @@ echo "== verify-boot 5/6: every composed unit's transport is registered =="
 # write used to be skipped entirely — a unit's transport went unregistered, and
 # its captured messages then failed activity's channel_provider foreign key.
 #
-# The expectation is DERIVED from the composed manifests rather than listed
-# here, so a unit that starts (or stops) declaring a channel needs no edit to
-# this script, and a list that quietly went stale cannot report success.
-expected_transports="$(jq -r '.channels // [] | .[].provider' "$REPO_DIR"/extensions/*/manifest.generated.json | sort -u)"
+# The expectation is DERIVED from the manifests of the units the composer
+# selected (build/composition/units.json), so a development-only unit is not
+# expected and a fetched one is.
+expected_transports="$(composed_unit_transports "$REPO_DIR")" \
+  || fail "cannot read the composed units' manifests (see above)"
 providers_status="$(curl -sS --max-time 15 -o "$workdir/providers.json" -w '%{http_code}' \
   "$API_BASE/v1/channel-providers" \
   --cookie "crm_session=$session" || true)"

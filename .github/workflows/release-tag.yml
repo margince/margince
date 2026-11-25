@@ -34,6 +34,11 @@ on:
 permissions:
   contents: read
 
+# A module the proxy cannot serve falls through to the source, as in every
+# workflow that installs Go (backend/gates/buildinputfetch_test.go).
+env:
+  GOPROXY: https://proxy.golang.org|direct
+
 # Serialize, never cancel: by the release job this workflow is creating a
 # release and writing its notes, and a killed run leaves that half done.
 concurrency:
@@ -113,6 +118,38 @@ jobs:
         env:
           TAG: ${{ github.ref_name }}
         run: bash scripts/release-version-file.sh "$TAG" VERSION
+
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version-file: backend/go.mod
+          cache-dependency-path: backend/go.sum
+
+      - name: Every task of the default Gemini setup has a current AI record
+        env:
+          TAG: ${{ github.ref_name }}
+          PRERELEASE: ${{ steps.v.outputs.prerelease }}
+        run: |
+          set -euo pipefail
+          # The setup a new installation is offered, so the grades it shows are
+          # measured on the product this tag ships. A candidate ships before its
+          # records are refreshed on purpose, so it only reports.
+          status=0
+          behind="$(cd backend && go run ./internal/compose/aicert/reportcmd -require-current gemini_cloud.yaml 2>&1 >/dev/null)" || status=$?
+          # The exit status decides. Go prints "go: downloading" on a cold module
+          # cache even when the command succeeds, so the text never does.
+          if [ "$status" -eq 0 ]; then
+            echo "release-tag: every task of gemini_cloud.yaml has a current record."
+          elif [ "$PRERELEASE" = true ]; then
+            echo "release-tag: $TAG is a pre-release; these records are not current:"
+            printf '%s\n' "$behind" | grep -v ' WARN ' || true
+          else
+            echo "release-tag: $TAG is blocked; these records of gemini_cloud.yaml are not current:" >&2
+            { printf '%s\n' "$behind" | grep -v ' WARN ' || true; } >&2
+            echo "  Run the sweep in docs/how-to/re-certify-the-whole-corpus.md and merge the records." >&2
+            echo "  A re-run reads the same commit, so delete the tag and tag the new main:" >&2
+            echo "  docs/how-to/cut-a-release.md." >&2
+            exit 1
+          fi
 
       - name: No open issue blocks a release
         env:

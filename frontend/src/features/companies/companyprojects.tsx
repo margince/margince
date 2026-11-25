@@ -19,7 +19,7 @@ import { SurfaceState, sectionState } from "../../design-system/surfacestate";
 import { useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import { unwrap } from "../../lib/problem";
-import { PhaseBadge } from "../projects/projects";
+import { PhaseBadge, ProjectKeyChip } from "../projects/projects";
 import type { ProjectPhase } from "../projects/projects.form";
 import { NewProjectAction } from "./companyactions";
 
@@ -119,7 +119,9 @@ export function CompanyProjects({
     linked: (projects ?? []).map((project) => ({
       project_id: project.project_id,
       name: project.name,
-      key: project.key,
+      key: project.key ? (
+        <ProjectKeyChip projectKey={project.key} dense />
+      ) : null,
       phase: project.phase ? (
         <PhaseBadge phase={project.phase as ProjectPhase} />
       ) : null,

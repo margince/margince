@@ -487,7 +487,7 @@ export const AddressSection: Story = {
       within(dialog).getByRole("textbox", { name: "City" }),
     ).toHaveValue("Berlin");
     await expect(
-      within(dialog).queryByRole("textbox", { name: "Title" }),
+      within(dialog).queryByRole("textbox", { name: "Job title" }),
     ).toBeNull();
   },
 };

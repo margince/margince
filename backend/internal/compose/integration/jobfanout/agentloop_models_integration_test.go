@@ -165,8 +165,18 @@ var loopModels = []scriptedModel{
 	{
 		want: loopExpectation{
 			name:       "writes_nothing_when_writes_were_due",
-			applies:    func(sc agentloope2e.Scenario) bool { return !sc.NoWrites },
+			applies:    func(sc agentloope2e.Scenario) bool { return isBrief(sc) && !sc.NoWrites },
 			wantFailed: []string{agentloope2e.CheckOnceEach},
+		},
+		script: func(t *testing.T, run loopRun) []string { return append(readSteps(t, run), finalStep) },
+	},
+	{
+		// The sweep's outcome check sends this answer back until the budget ends, so the
+		// run ends degraded as well as short of its notes.
+		want: loopExpectation{
+			name:       "writes_nothing_on_the_sweep",
+			applies:    func(sc agentloope2e.Scenario) bool { return !isBrief(sc) && !sc.NoWrites },
+			wantFailed: []string{agentloope2e.CheckOnceEach, agentloope2e.CheckRunCompleted},
 		},
 		script: func(t *testing.T, run loopRun) []string { return append(readSteps(t, run), finalStep) },
 	},

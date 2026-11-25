@@ -86,7 +86,7 @@ describe("the research tab's enrichment evidence", () => {
       />,
     );
     // The details card below carries the same field labels.
-    expect(screen.getAllByText("Title").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("Job title").length).toBeGreaterThan(0);
     expect(screen.getByText("Head of Fleet")).toBeTruthy();
     expect(screen.getAllByText("Phone").length).toBeGreaterThan(0);
     expect(screen.getByText("+493012345678")).toBeTruthy();

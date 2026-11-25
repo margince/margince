@@ -309,8 +309,9 @@ When at least half of a file comes from named speakers, Margince reads it as a c
 ## AI assistants
 
 The AI assistants page in Settings is where you connect your AI tool, such as
-Claude or ChatGPT, to Margince. Under **For developers** you also make and take
-back **passports**: the keys that let a script or your own code work as you.
+Claude or ChatGPT, to Margince. Under **Your agent** you choose which changes run
+without your review, and which proposals leave your own queue. Under **For developers**
+you create and revoke **passports**, which let a script or your own code work as you.
 Every member can open this page.
 
 To connect your AI tool, see [How do I connect my AI tool to Margince?](agents-and-passports.md#how-do-i-connect-my-ai-tool-to-margince).

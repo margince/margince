@@ -17,6 +17,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/ports/extregistrytest"
 	"github.com/margince/margince/backend/internal/shared/ports/signaltypes"
 	"github.com/margince/margince/backend/pkg/extension"
 )
@@ -73,6 +74,7 @@ func TestErasingAContactWithholdsTheKeptEvidenceOfTheirSignals(t *testing.T) {
 func TestErasingAContactRedactsTheExtensionEvidenceAboutThem(t *testing.T) {
 	ctx := context.Background()
 	tx := subjectColumnsTx(ctx, t)
+	extregistrytest.Reset(t)
 	signaltypes.Register("erasetest", []extension.SignalTypeDeclaration{{
 		Kind: "loss", Label: "Loss",
 		Evidence: []extension.SignalEvidenceField{
@@ -93,7 +95,7 @@ func TestErasingAContactRedactsTheExtensionEvidenceAboutThem(t *testing.T) {
 			                     summary, evidence, status, detected_at, source, captured_by)
 			 VALUES ($1, $2, 'derived', 'contact', $3, 'resolved', 'info', 'Hedda reported a loss',
 			         '[{"snippet":"Hedda reported a loss","fields":{"amount":12,"reporter":"Hedda"},"provenance":{"unit":"erasetest","captured_by":"human:x"}}]'::jsonb,
-			         'open', now(), 'erasetest', 'test')`, id, kind, about)
+			         'open', now(), 'automation', 'test')`, id, kind, about)
 		return id
 	}
 	declared, undeclared, theirs := seed("ext:erasetest:loss", subject), seed("ext:erasetest:gone", subject), seed("ext:erasetest:loss", other)
