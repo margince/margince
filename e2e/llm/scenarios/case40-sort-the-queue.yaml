@@ -27,7 +27,9 @@
 #                   enrich reaches outside the workspace and needs approval,
 #                   and update_record would be inventing a value.
 #   Bruno Kellner — status contacted, one outbound in March and a note recording
-#                   that the address bounced. disqualify_lead.
+#                   that the address bounced. disqualify_lead, which says to ask
+#                   the user first: the user named the policy, not Bruno, so
+#                   closing him or asking for the yes are both right.
 #
 # The three leads are seeded in e2e/llm/seed-llm-fixtures.sh.
 name: case40_sort_the_queue
@@ -158,14 +160,18 @@ must_not_mention:
   - "no way to (?:promote|disqualify|qualify)|(?:cannot|can't|does not|doesn't) (?:promote|disqualify|qualify) leads|(?:CRM|Margince|workspace) (?:has no|does not have a|doesn['’]t have a) lead"
 
 
-# The three verbs, read from the world. Promoting and disqualifying both take
-# the lead out of list_records, so each is told by what else exists: Ines as a
-# contact, Bruno as nothing. qualify derives Piet's company from his mail
-# domain, so that value is the server's and not the model's wording.
+# Bruno closed off, or offered for the user's yes: the end state cannot say
+# "either", so the judge reads which one the answer reports.
+judge:
+  - "Criterion 2. The answer either reports Bruno Kellner's lead as disqualified or closed off, or proposes closing it and asks the user's yes before doing so. Answer no if it makes him a contact, or leaves him as live work without saying either."
+
+# The verbs, read from the world. Promoting takes the lead out of list_records,
+# so Ines is told by her new contact; Bruno is never a contact. qualify derives
+# Piet's company from his mail domain, so that value is the server's and not
+# the model's wording.
 must_end_with:
   - lead "Ines Waldner" records=0
   - contact "Ines Waldner" records=1
-  - lead "Bruno Kellner" records=0
   - contact "Bruno Kellner" records=0
   - lead "Piet Brandsma" company_name=Brandsma Koeltechniek
 

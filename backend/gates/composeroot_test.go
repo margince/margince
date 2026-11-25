@@ -61,8 +61,8 @@ const (
 	// case, which drives the unexported mail worker over two team links.
 	// Raised by 2 production lines for the stage-evidence prompt rule on a
 	// document a criterion asks to be sent, which is the site's own prompt text.
-	composeRootProductionLines = 230_684
-	composeRootTestLines       = 360_104
+	composeRootProductionLines = 230_699
+	composeRootTestLines       = 360_140
 )
 
 // A read under these floors stopped early or read the wrong place, and would
