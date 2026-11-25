@@ -56,7 +56,9 @@ const (
 	// repair task. Their cases drive the unexported Home meeting lane and fold.
 	// Raised by 43 test lines for the refold cases of a transaction still open,
 	// which drive the unexported clock refold worker.
-	composeRootProductionLines = 230_690
+	// Raised by 2 production lines for the stage-evidence prompt rule on a
+	// document a criterion asks to be sent, which is the site's own prompt text.
+	composeRootProductionLines = 230_692
 	composeRootTestLines       = 360_124
 )
 
