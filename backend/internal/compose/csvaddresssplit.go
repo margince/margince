@@ -3,10 +3,10 @@
 
 package compose
 
-// A file whose only address column is mapped to line 1 usually holds the whole
-// address in it. The cell is split with the splitter the company writers use.
-// The split happens before any reader sees the row, so the dry run, the review
-// and the commit compare and write the same parts.
+// A part's cells are shaped before any reader sees the row. The dry run, the
+// review and the commit then compare and write the same text. A name folds onto
+// one line. A file whose only address column is mapped to line 1 usually holds
+// the whole address in it, which is split with the company writers' splitter.
 
 import (
 	"encoding/json"
@@ -18,7 +18,34 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/migration"
+	"github.com/margince/margince/backend/internal/shared/kernel/values"
 )
+
+// shapeCells sets the rewrites every reader of a part's rows sees, so the
+// test run and the commit check and write one spelling. Names fold first, then
+// the address cells change as the mapping asks.
+func shapeCells(source *migration.CSVSource, object string, mapping map[string]string) {
+	address := addressShape(object, mapping)
+	source.ShapeRows(func(fields map[string]any) {
+		foldNameCells(fields)
+		if address != nil {
+			address(fields)
+		}
+	})
+}
+
+// importNameTargets are the cells that name a record, for every type a file
+// may hold. A line break or a run of spaces in one is a slip in the file.
+var importNameTargets = []string{fieldFullName, "first_name", "last_name", fieldDisplayName, fieldLegalName, dealTargetName}
+
+// foldNameCells folds each run of white space in a name cell to one space.
+func foldNameCells(fields map[string]any) {
+	for _, target := range importNameTargets {
+		if name, ok := fields[target].(string); ok {
+			fields[target] = values.CollapseSpace(name)
+		}
+	}
+}
 
 const (
 	addressLine1Target      = "address.line1"

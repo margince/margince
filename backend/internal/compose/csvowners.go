@@ -16,6 +16,7 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	"github.com/margince/margince/backend/internal/compose/importwire"
 	"github.com/margince/margince/backend/internal/compose/recordexport"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/migration"
@@ -181,7 +182,7 @@ func collapseUnknownOwners(issues []crmcontracts.ImportRowIssue) []crmcontracts.
 		was := out[at]
 		out[at] = crmcontracts.ImportRowIssue{
 			Line: was.Line, File: was.File, Column: was.Column, Kind: was.Kind, Value: was.Value,
-			Reason: why.English(), ReasonCode: reasonCodeOrAbsent(why.Code), Params: paramsOrAbsent(why.Params),
+			Reason: why.English(), ReasonCode: importwire.ReasonCodeOrAbsent(why.Code), Params: importwire.ParamsOrAbsent(why.Params),
 		}
 	}
 	return out

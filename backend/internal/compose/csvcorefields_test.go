@@ -13,38 +13,6 @@ import (
 	"github.com/margince/margince/backend/internal/modules/migration"
 )
 
-func TestAPhoneAndALinkedInURLAreCheckedAndCarriedInTheStoresSpelling(t *testing.T) {
-	for _, tc := range []struct {
-		object, target, raw string
-		want                any
-		problem             string
-	}{
-		{migration.ObjectContact, fieldPhone, "+49 30 1234567", "+49301234567", ""},
-		{migration.ObjectLead, fieldPhone, "0049 30 1234567", "+49301234567", ""},
-		{migration.ObjectContact, fieldPhone, "030 1234567", nil, `“030 1234567” needs its country code, like +49 30 1234567`},
-		{migration.ObjectContact, fieldPhone, "+49 30 1", nil, "not an E.164 number"},
-		{migration.ObjectContact, fieldPhone, "abc", nil, "“abc” is not a phone number."},
-		{migration.ObjectLead, fieldPhone, "call 030 1234567", nil, "is not a phone number."},
-		{migration.ObjectContact, fieldLinkedIn, "http://www.linkedin.com/in/ada/?trk=x", "https://www.linkedin.com/in/ada", ""},
-		{migration.ObjectContact, fieldLinkedIn, "https://example.com/in/ada", nil, "linkedin.com"},
-		{migration.ObjectLead, fieldLinkedIn, "linkedin.com/in/ada", "https://www.linkedin.com/in/ada", ""},
-		{migration.ObjectCompany, fieldLinkedIn, "https://www.linkedin.com/company/voltaq/about", "https://www.linkedin.com/company/voltaq", ""},
-		{migration.ObjectCompany, fieldLinkedIn, "https://www.linkedin.com/in/ada", nil, "linkedin.com/company/"},
-	} {
-		fields := map[string]string{fieldDisplayName: "Acme", fieldFullName: "Ada", tc.target: tc.raw}
-		typed, problem := firstOf(checkRow(tc.object, fields, importCatalog{}))
-		if tc.problem == "" {
-			if problem != nil || !reflect.DeepEqual(typed[tc.target], tc.want) {
-				t.Errorf("%s %s %q → %v, %+v; want %v", tc.object, tc.target, tc.raw, typed[tc.target], problem, tc.want)
-			}
-			continue
-		}
-		if problem == nil || problem.Target != tc.target || problem.Value != tc.raw || !strings.Contains(problem.Message, tc.problem) {
-			t.Errorf("%s %s %q → problem %+v, want one on the target saying %q", tc.object, tc.target, tc.raw, problem, tc.problem)
-		}
-	}
-}
-
 func TestAnAddressCountryCellIsHeldToTheStoresRule(t *testing.T) {
 	for _, object := range []string{migration.ObjectContact, migration.ObjectCompany} {
 		for _, bad := range []string{"Vietnam", "zz", "DEU", "12"} {

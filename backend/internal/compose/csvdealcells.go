@@ -13,6 +13,7 @@ import (
 
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
+	"github.com/margince/margince/backend/internal/compose/importcells"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/modules/migration"
@@ -85,7 +86,7 @@ func checkDealMoney(fields map[string]string, typed map[string]any) *cellProblem
 	}
 	minor, ok := values.MinorUnits(amount, currency)
 	if !ok {
-		return problemOf(dealTargetAmount, fields[dealTargetAmount], amountReason(amount, currency))
+		return problemOf(dealTargetAmount, fields[dealTargetAmount], importcells.AmountReason(amount, currency))
 	}
 	typed[dealTargetAmount] = minor
 	return nil

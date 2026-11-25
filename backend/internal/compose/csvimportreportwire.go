@@ -14,11 +14,10 @@ package compose
 
 import (
 	"fmt"
-	"regexp"
-	"strconv"
 
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
+	"github.com/margince/margince/backend/internal/compose/importwire"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/migration"
 )
@@ -65,15 +64,15 @@ func toContractImportReport(run migration.Run) crmcontracts.ImportRunReport {
 			RowsRead: rowsRead, Disposition: d,
 			ClosedWon: countOrAbsent(o.ClosedWon), ClosedLost: countOrAbsent(o.ClosedLost),
 		})
-		appendIssues(&out.Issues, seen, skipKey, o, o.Skipped)
+		importwire.AppendIssues(&out.Issues, seen, importwire.SkipKey, o, o.Skipped)
 		// A collision is reported the same way a skip is — by line, in the
 		// file's own terms — but it does NOT touch Disposition.Skipped: the
 		// row is counted in Created, and adding it here too would report two
 		// outcomes for one row and leave `unchanged` short by the difference.
-		appendIssues(&out.Issues, seen, issueKey, o, o.Collisions)
+		importwire.AppendIssues(&out.Issues, seen, importwire.IssueKey, o, o.Collisions)
 		// A warning is a row that lands with something to say about it, so it
 		// is named the same way and counted nowhere.
-		appendIssues(&out.Issues, seenWarnings, warningKey, o, o.Warnings)
+		importwire.AppendIssues(&out.Issues, seenWarnings, importwire.WarningKey, o, o.Warnings)
 	}
 	out.Parts = &parts
 	out.Issues = collapseUnknownOwners(out.Issues)
@@ -151,8 +150,8 @@ func retell(issues []crmcontracts.ImportRowIssue, tense runTense) {
 			continue
 		}
 		issues[i].Reason = why.English()
-		issues[i].ReasonCode = reasonCodeOrAbsent(why.Code)
-		issues[i].Params = paramsOrAbsent(why.Params)
+		issues[i].ReasonCode = importwire.ReasonCodeOrAbsent(why.Code)
+		issues[i].Params = importwire.ParamsOrAbsent(why.Params)
 	}
 }
 
@@ -191,7 +190,7 @@ func importDispositionOf(o migration.ObjectReport, committed bool) crmcontracts.
 		d.Created, d.Updated, duplicates = o.Created, o.Updated, o.Duplicated
 	}
 	d.Duplicates = &duplicates
-	d.Skipped = distinctIssues(o, o.Skipped)
+	d.Skipped = importwire.DistinctIssues(o, o.Skipped)
 	d.Unchanged = unchangedOf(d, o.MirrorCount)
 	return d
 }
@@ -266,7 +265,7 @@ func linksOf(rep *migration.Report, committed bool) *crmcontracts.ImportRunLinks
 		}
 		unresolved = append(unresolved, crmcontracts.ImportUnresolvedLink{
 			From: s.From, To: s.To, Reason: s.Reason,
-			ReasonCode: reasonCodeOrAbsent(s.Code), Params: paramsOrAbsent(s.Params),
+			ReasonCode: importwire.ReasonCodeOrAbsent(s.Code), Params: importwire.ParamsOrAbsent(s.Params),
 		})
 	}
 	links.Unresolved = &unresolved
@@ -278,132 +277,6 @@ func linksOf(rep *migration.Report, committed bool) *crmcontracts.ImportRunLinks
 var linkOfAnUnlandedRow = map[migration.ReasonCode]bool{
 	migration.ReasonLinkRowNotImported: true, migration.ReasonLinkContactNotImported: true,
 }
-
-// lineOf is the file line a skip names, from the row itself.
-//
-// The fallback is for reports STORED before the line was carried. Their JSON
-// has no `line` field, so it decodes as zero — and for the skips the source
-// disclosed, the id still spells "line N", which is where the line used to be
-// read from for every skip. Deriving it only when the carried one is absent
-// keeps those reports readable through a rollout without putting the old
-// parse back in the path: a row that carries its own id answers 0 there, which
-// is the defect this replaced.
-func lineOf(skip migration.SkippedRow) int {
-	if skip.Line != 0 {
-		return skip.Line
-	}
-	match := disclosedLine.FindStringSubmatch(skip.ExternalID)
-	if match == nil {
-		return 0
-	}
-	line, err := strconv.Atoi(match[1])
-	if err != nil {
-		return 0
-	}
-	return line
-}
-
-// appendIssues adds one object's refused rows to the report's issues and
-// answers how many were new, so the caller can count the ones that are skips.
-//
-// The same row skipped by the dry run and again by the commit is ONE row the
-// human must go fix. Keyed on the EXTERNAL ID, which is what identifies a row.
-// Keyed on the line instead, every skipped row in a file that carries its own
-// key column collapsed onto the first — the line was derived from the id's text
-// shape back then and answered 0 for all of them — so two refused rows were
-// reported as one skip and one phantom `unchanged`, and the four counts summed
-// to less than rows_read. The line is carried now and would no longer collide,
-// but the id is still the right key: it is what a row IS, where a line is where
-// it happened to sit.
-//
-// The LINE joins it, because the id alone is not always this source's. A row the
-// source could not identify is disclosed as `line 7`, and a file whose key
-// column legitimately holds the text "line 7" would collide with it and lose a
-// row from the report. The pair separates them, and it folds the dry run's skip
-// onto the commit's exactly as before: one row keeps one line across both.
-func appendIssues(
-	issues *[]crmcontracts.ImportRowIssue, seen map[string]bool,
-	keyOf func(migration.ObjectReport, migration.SkippedRow) string, o migration.ObjectReport, rows []migration.SkippedRow,
-) {
-	for _, row := range rows {
-		key := keyOf(o, row)
-		if seen[key] {
-			continue
-		}
-		seen[key] = true
-		*issues = append(*issues, crmcontracts.ImportRowIssue{
-			Line:       lineOrAbsent(lineOf(row)),
-			Reason:     row.Reason,
-			ReasonCode: reasonCodeOrAbsent(row.Code),
-			Params:     paramsOrAbsent(row.Params),
-			File:       textOrAbsent(o.File),
-			Column:     textOrAbsent(row.Column),
-			Kind:       kindOrAbsent(row.Kind),
-			Value:      textOrAbsent(row.Value),
-		})
-	}
-}
-
-// distinctIssues counts the rows appendIssues names once each.
-func distinctIssues(o migration.ObjectReport, rows []migration.SkippedRow) int {
-	seen := map[string]bool{}
-	for _, row := range rows {
-		seen[issueKey(o, row)] = true
-	}
-	return len(seen)
-}
-
-// issueKey is what makes two reported rows one. The object joins it because
-// two files of a ZIP may each have a row `line 7`.
-func issueKey(o migration.ObjectReport, row migration.SkippedRow) string {
-	return o.Object + "\x00" + row.ExternalID + "\x00" + strconv.Itoa(row.Line)
-}
-
-// skipKey is issueKey with the column, so each cell a skipped row has to have
-// corrected is named. The dry run's skip and the commit's still fold to one.
-func skipKey(o migration.ObjectReport, row migration.SkippedRow) string {
-	return issueKey(o, row) + "\x00" + row.Column
-}
-
-// warningKey is issueKey with the kind and value. One row may carry several
-// warnings, and a part's new tags belong to no row at all.
-func warningKey(o migration.ObjectReport, row migration.SkippedRow) string {
-	return issueKey(o, row) + "\x00" + row.Kind + "\x00" + row.Value
-}
-
-// lineOrAbsent leaves out the line of a problem that names no row, such as a
-// tag the whole file refers to.
-func lineOrAbsent(line int) *int {
-	if line == 0 {
-		return nil
-	}
-	return &line
-}
-
-func textOrAbsent(text string) *string {
-	if text == "" {
-		return nil
-	}
-	return &text
-}
-
-func kindOrAbsent(kind string) *crmcontracts.ImportProblemKind {
-	if kind == "" {
-		return nil
-	}
-	k := crmcontracts.ImportProblemKind(kind)
-	return &k
-}
-
-// disclosedLine is the WHOLE id the source writes for a row it could not
-// identify, anchored at both ends.
-//
-// Anchored because the id is not always one of ours: a mirror source's rows
-// carry the incumbent's id, and a prefix match would read "line 7 of the
-// export" as line 7. That was already true of the parse this replaces; what is
-// left after the anchors is an incumbent id spelled exactly `line 7`, on a
-// report stored before the line was carried.
-var disclosedLine = regexp.MustCompile(`^line ([0-9]+)$`)
 
 // undoErroredRow is the generated ImportUndoReport.Errored item, declared here
 // for the slice and the literals that fill it.
@@ -430,14 +303,14 @@ func toContractUndoReport(id migration.RunID, status string, rep migration.UndoR
 	for _, k := range rep.Kept {
 		kept = append(kept, undoKeptRow{
 			Id: openapi_types.UUID(k.ID), Object: crmcontracts.ImportObject(k.Object),
-			Reason: textOrAbsent(k.Reason), ReasonCode: reasonCodeOrAbsent(k.Code), Params: paramsOrAbsent(k.Params),
+			Reason: importwire.TextOrAbsent(k.Reason), ReasonCode: importwire.ReasonCodeOrAbsent(k.Code), Params: importwire.ParamsOrAbsent(k.Params),
 		})
 	}
 	errored := make([]undoErroredRow, 0, len(rep.Errored))
 	for _, e := range rep.Errored {
 		errored = append(errored, undoErroredRow{
 			Id: openapi_types.UUID(e.ID), Object: crmcontracts.ImportObject(e.Object),
-			Reason: e.Reason, ReasonCode: reasonCodeOrAbsent(e.Code),
+			Reason: e.Reason, ReasonCode: importwire.ReasonCodeOrAbsent(e.Code),
 		})
 	}
 	out := &crmcontracts.ImportUndoReport{
