@@ -69,8 +69,8 @@ func TestEveryReleaseScriptTestRunsInCheckReleaseAndNotInCheck(t *testing.T) {
 	inRelease := scriptsUnder(targets, vars, releaseLane)
 	inCheck := scriptsUnder(targets, vars, "check")
 
-	// A walk from `check` that lost its way to the root gates would find no
-	// release test there and pass the second half below having read nothing.
+	// A walk from `check` that misses the root gates finds no release test.
+	// The second half below would then pass having read nothing.
 	rootGates := scriptsUnder(targets, vars, "check-root-gates")
 	if len(rootGates) == 0 {
 		t.Fatalf("the walk from `make check-root-gates` found no script — the recipe reading broke")
@@ -93,9 +93,9 @@ func TestEveryReleaseScriptTestRunsInCheckReleaseAndNotInCheck(t *testing.T) {
 	}
 }
 
-// releaseLaneInputs is what the job that runs `make check-release` must run on:
-// what laneinputscope finds through the Makefile, the files each test opens next
-// to itself, and every workflow that calls a release script.
+// releaseLaneInputs lists the paths that must trigger `make check-release`.
+// These are the scripts the Makefile names, the files each test opens next to
+// itself, and the workflows that call a release script.
 func releaseLaneInputs(t *testing.T, lane filteredLane) []string {
 	t.Helper()
 	inputs := map[string]bool{}
@@ -206,8 +206,8 @@ func testsFirst(job releaseJob) (tested, calls bool) {
 	return false, false
 }
 
-// untestedReleaseJobs names each job that calls a release script with no run of
-// the lane before it, in its own steps or in a job it needs.
+// untestedReleaseJobs names each job that calls a release script too early.
+// Neither its own steps nor a job it needs ran the lane before the call.
 func untestedReleaseJobs(jobs map[string]releaseJob) (untested []string, calls int) {
 	var covered func(name string, seen map[string]bool) bool
 	covered = func(name string, seen map[string]bool) bool {
