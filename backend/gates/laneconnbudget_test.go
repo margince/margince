@@ -168,9 +168,9 @@ func readRepoFile(t *testing.T, path string) string {
 // laneConnectionDemand asks the lane's own declaration for the number, by
 // running declare_lane_budget the way every lane runs it.
 //
-// It deliberately does NOT re-implement `jobs * (perPackage + 1) + fixed`. A
-// second spelling of one formula is the defect this whole gate is about: drop
-// the `+1` in the shell and a Go copy would go on asserting the old arithmetic
+// It deliberately does NOT re-implement `jobs * (perPackage + admin) + fixed`.
+// A second spelling of one formula is the defect this whole gate is about: drop
+// the admin term in the shell and a Go copy would go on asserting the old arithmetic
 // and passing, while the runtime guard in the integration lane compared against
 // a different number. There is one expression, and this reads it.
 //
@@ -203,6 +203,7 @@ func TestTheLaneFitsInsideTheClusterItRunsAgainst(t *testing.T) {
 	perPool := laneTerm(t, script, "LANE_POOL_MAX_CONNS")
 	perPackage := laneTerm(t, script, "LANE_CONNS_PER_PACKAGE")
 	fixed := laneTerm(t, script, "LANE_FIXED_CONNS")
+	admin := laneTerm(t, script, "LANE_ADMIN_CONNS")
 	maxConns := composeMaxConnections(t, readRepoFile(t, composeDevYML))
 
 	// A per-package allowance below a single pool's ceiling is not a budget: one
@@ -227,7 +228,7 @@ func TestTheLaneFitsInsideTheClusterItRunsAgainst(t *testing.T) {
 
     INTEGRATION_JOBS                 %3d   %s
   x LANE_CONNS_PER_PACKAGE           %3d   %s
-  + one admin connection per slot      1   CREATE/DROP DATABASE at a handover
+  + LANE_ADMIN_CONNS per slot       %3d   %s
   + LANE_FIXED_CONNS                 %3d   %s
   ----------------------------------------
                                      %3d   demanded
@@ -239,6 +240,7 @@ different package set every run (#1109).`,
 			demand, composeDevYML, maxConns,
 			jobs, gateWorkflowLabel,
 			perPackage, laneScriptPath,
+			admin, laneScriptPath,
 			fixed, laneScriptPath,
 			demand, maxConns,
 			composeDevYML, demand)

@@ -168,14 +168,13 @@ func create(t testing.TB, inPlace bool) Database {
 	if inPlace {
 		return laneDatabase(t)
 	}
-	db, err := copyTemplate(t.Context(), processTemplate())
+	db, err := nextCopy(t.Context(), processTemplate())
 	if err != nil {
 		t.Fatalf("testdb: %v", err)
 	}
 	t.Cleanup(func() {
-		if err := release(context.Background(), t.Name(), db); err != nil {
-			t.Errorf("testdb: %v", err)
-		}
+		forget(t.Name(), db)
+		dropBehind(db)
 	})
 	databasesMu.Lock()
 	current[t.Name()] = db
@@ -283,8 +282,8 @@ func copyWithRetry(ctx context.Context, ownerDSN, name, template string) error {
 	}
 }
 
-// adminPool is one connection to the maintenance database, where CREATE and
-// DROP DATABASE run. It lives as long as the process.
+// adminPool holds the connections to the maintenance database, where CREATE
+// and DROP DATABASE run. It lives as long as the process.
 func adminPool(ctx context.Context, ownerDSN string) (*pgxpool.Pool, error) {
 	adminOnce.Do(func() {
 		maintenance, err := withDatabase(ownerDSN, "postgres")
@@ -292,8 +291,13 @@ func adminPool(ctx context.Context, ownerDSN string) (*pgxpool.Pool, error) {
 			adminErr = err
 			return
 		}
+		conns, err := adminConns()
+		if err != nil {
+			adminErr = err
+			return
+		}
 		admin, adminErr = OwnPoolWith(ctx, maintenance, func(cfg *pgxpool.Config) {
-			cfg.MaxConns = 1
+			cfg.MaxConns = conns
 			cfg.ConnConfig.RuntimeParams["statement_timeout"] = strconv.FormatInt(adminStatementCeiling.Milliseconds(), 10)
 		})
 	})
@@ -340,8 +344,15 @@ func verifyCopy(ctx context.Context, owner *pgx.Conn) error {
 	return nil
 }
 
-// release forgets db, closes every shared pool on it and drops it.
+// release forgets db and drops it before it returns.
 func release(ctx context.Context, test string, db Database) error {
+	forget(test, db)
+	return drop(ctx, db.Name)
+}
+
+// forget removes db from what this process hands out and closes every shared
+// pool on it, so nothing reaches it after its test.
+func forget(test string, db Database) {
 	databasesMu.Lock()
 	if test != "" && current[test] == db {
 		delete(current, test)
@@ -350,11 +361,15 @@ func release(ctx context.Context, test string, db Database) error {
 	delete(seeded, db.Name)
 	databasesMu.Unlock()
 	closePoolsOn(db.Name)
-	if err := awaitDisconnect(ctx, db.Name); err != nil {
+}
+
+// drop waits for the sessions on name to end and drops it.
+func drop(ctx context.Context, name string) error {
+	if err := awaitDisconnect(ctx, name); err != nil {
 		return err
 	}
-	if _, err := admin.Exec(ctx, "DROP DATABASE "+pgx.Identifier{db.Name}.Sanitize()+" WITH (FORCE)"); err != nil {
-		return fmt.Errorf("dropping %s, which stays on the test cluster: %w", db.Name, err)
+	if _, err := admin.Exec(ctx, "DROP DATABASE "+pgx.Identifier{name}.Sanitize()+" WITH (FORCE)"); err != nil {
+		return fmt.Errorf("dropping %s, which stays on the test cluster: %w", name, err)
 	}
 	return nil
 }

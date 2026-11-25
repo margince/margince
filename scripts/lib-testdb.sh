@@ -167,18 +167,22 @@ db_admin() {
 #                           = 3 x (2 x 8 + 8) = 72. Per test that is the owner
 #                           and app pools testdb keys by DSN, plus 8 for the
 #                           connections a fixture dials itself.
-#   LANE_FIXED_CONNS      what the lane costs beyond the packages: one admin
-#                         connection per slot for CREATE/DROP DATABASE is counted
-#                         per job below; this covers the template migrate (2),
-#                         superuser_reserved_connections (3), and an operator's
-#                         own psql or a metrics scrape while the lane runs (3).
+#   LANE_ADMIN_CONNS      the admin connections one package holds for CREATE
+#                         and DROP DATABASE: one copies the next test's database
+#                         while one drops the last one's. Handed to testdb as
+#                         MARGINCE_TEST_ADMIN_CONNS.
+#   LANE_FIXED_CONNS      what the lane costs beyond the packages: the template
+#                         migrate (2), superuser_reserved_connections (3), and an
+#                         operator's own psql or a metrics scrape while the lane
+#                         runs (3).
 #
-# At 8 jobs: 8 x (72 + 1) + 8 = 592, under the 600 postgres-test allows.
+# At 8 jobs: 8 x (72 + 2) + 8 = 600, which the 600 postgres-test allows.
 # Raise the concurrency and every term moves with it. That is the point: the
 # guard reads these, not a number somebody wrote down once.
 LANE_POOL_MAX_CONNS=8
 LANE_TEST_PARALLEL_MAX=3
 LANE_CONNS_PER_PACKAGE=72
+LANE_ADMIN_CONNS=2
 LANE_FIXED_CONNS=8
 
 # declare_lane_budget <jobs> — export the ceiling the harness applies and the
@@ -199,9 +203,10 @@ declare_lane_budget() {
     echo "LANE_TEST_PARALLEL=$LANE_TEST_PARALLEL must be a count from 1 to $LANE_TEST_PARALLEL_MAX: the connection budget is sized for that ceiling" >&2
     exit 1
   fi
-  LANE_CONN_BUDGET=$(( jobs * (LANE_CONNS_PER_PACKAGE + 1) + LANE_FIXED_CONNS ))
+  LANE_CONN_BUDGET=$(( jobs * (LANE_CONNS_PER_PACKAGE + LANE_ADMIN_CONNS) + LANE_FIXED_CONNS ))
   export LANE_CONN_BUDGET
   export MARGINCE_TEST_POOL_MAX_CONNS="$LANE_POOL_MAX_CONNS"
+  export MARGINCE_TEST_ADMIN_CONNS="$LANE_ADMIN_CONNS"
   export LANE_TEST_PARALLEL
 }
 # ---------------------------------------------------------------------------
