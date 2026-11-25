@@ -90,7 +90,12 @@ func main() {
 	}
 	readiness := aicert.Census{Sites: census.All(), Scopes: census.Scopes()}
 	if *newlyStaleAgainst != "" || *requireCurrent != "" || *totalsOnly {
-		os.Exit(answer(*newlyStaleAgainst, *requireCurrent, *totalsOnly, *presetDir, readiness, stamps, perScenario, records, corpus, census))
+		out, problems, code := answer(*newlyStaleAgainst, *requireCurrent, *totalsOnly, *presetDir, readiness, stamps, perScenario, records, corpus, census)
+		emit(out)
+		for _, line := range problems {
+			fmt.Fprintln(os.Stderr, line)
+		}
+		os.Exit(code)
 	}
 	emit(renderReadiness(readiness, stamps, perScenario, records, contextOwed))
 	emit(renderDecisions(decisionRows))
@@ -114,50 +119,30 @@ func main() {
 	emit(renderAgentLoop(verdicts))
 }
 
-// answer prints what one of the CI flags asked and returns the exit code: 0,
-// except for -require-current naming a rung that is not current.
+// answer is what one of the CI flags asked: the text for stdout, the lines for
+// stderr and the exit code. It is 0, except for -require-current naming a rung
+// that is not current.
 func answer(base, preset string, onlyTotals bool, presetDir string, readiness aicert.Census, stamps map[string]string,
 	perScenario map[string]map[string]string, records []aicert.Record, corpus []aicert.Scenario, census *aitasks.Registry,
-) int {
+) (out string, problems []string, code int) {
 	rows, _ := aicert.Readiness(readiness, stamps, perScenario, records)
 	switch {
 	case onlyTotals:
-		emit(totals(rows) + "\n")
+		return totals(rows) + "\n", nil, 0
 	case base != "":
-		raw, err := os.ReadFile(base) // #nosec G304 -- the saved report the operator named
+		comment, err := newlyStaleFromFile(base, rows)
 		if err != nil {
-			fmt.Fprintf(os.Stderr, "reportcmd: reading the base report: %v\n", err)
-			return 1
+			return "", []string{"reportcmd: " + err.Error()}, 1
 		}
-		emit(renderNewlyStale(newlyStale(statusesOf(string(raw)), rows)))
+		return comment, nil, 0
 	default:
-		return requireCurrentPreset(preset, presetDir, corpus, census, records)
-	}
-	return 0
-}
-
-// requireCurrentPreset lists the rungs of one preset that are not current.
-func requireCurrentPreset(file, dir string, corpus []aicert.Scenario, census *aitasks.Registry, records []aicert.Record) int {
-	reports, err := presetReports(context.Background(), dir, corpus, census, records)
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "reportcmd: %v\n", err)
-		return 1
-	}
-	for _, report := range reports {
-		if report.File != file {
-			continue
+		reports, err := presetReports(context.Background(), presetDir, corpus, census, records)
+		if err != nil {
+			return "", []string{"reportcmd: " + err.Error()}, 1
 		}
-		behind := notCurrentRungs(report)
-		for _, line := range behind {
-			fmt.Fprintln(os.Stderr, line)
-		}
-		if len(behind) > 0 {
-			return 1
-		}
-		return 0
+		problems, code = requireCurrent(reports, preset)
+		return "", problems, code
 	}
-	fmt.Fprintf(os.Stderr, "reportcmd: no preset file %q under %s\n", file, dir)
-	return 1
 }
 
 // presetReports reads the rung states of the presets under dir over the committed records.

@@ -10,6 +10,7 @@ package main
 
 import (
 	"fmt"
+	"os"
 	"regexp"
 	"slices"
 	"strings"
@@ -116,4 +117,30 @@ func notCurrentRungs(report presetReport) []string {
 		}
 	}
 	return out
+}
+
+// newlyStaleFromFile reads the base tree's printed report from path and renders
+// the pull request comment against rows.
+func newlyStaleFromFile(path string, rows []aicert.ReadinessRow) (string, error) {
+	raw, err := os.ReadFile(path) // #nosec G304 -- the saved report the operator named
+	if err != nil {
+		return "", fmt.Errorf("reading the base report: %w", err)
+	}
+	return renderNewlyStale(newlyStale(statusesOf(string(raw)), rows)), nil
+}
+
+// requireCurrent answers the release question for one preset file: the lines to
+// print and the exit code. A file that is not among the reports fails, so a
+// renamed preset cannot pass the release check by being absent.
+func requireCurrent(reports []presetReport, file string) (problems []string, code int) {
+	for _, report := range reports {
+		if report.File != file {
+			continue
+		}
+		if behind := notCurrentRungs(report); len(behind) > 0 {
+			return behind, 1
+		}
+		return nil, 0
+	}
+	return []string{fmt.Sprintf("reportcmd: no preset file %q among the presets read", file)}, 1
 }
