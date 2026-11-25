@@ -17,6 +17,7 @@ package integration
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"log/slog"
 	"testing"
 
@@ -228,6 +229,31 @@ func TestReopeningAWonDealReversesWhatItEarned(t *testing.T) {
 	}
 	if len(page.Data) < 2 {
 		t.Errorf("ledger holds %d rows, want the voided original AND its reversal", len(page.Data))
+	}
+}
+
+// A deal archived between its win and the delivery cannot be accrued, and
+// restoring it does not replay the win. The consumer must skip the entry, not
+// leave it pending in front of every later event on cg:commissions.
+func TestAWinWhoseDealWasArchivedBeforeDeliveryIsSkipped(t *testing.T) {
+	e := Setup(t)
+	fx := seedAccrualFixture(t, e, "tier2_20")
+	admin := e.As(e.AdminUser, nil, commissionAdminPerms)
+	if _, err := e.Deals.AdvanceDeal(admin, fx.deal, deals.AdvanceDealInput{
+		ToStageID: fx.won, WonWithoutContractReason: WonByImport(),
+	}); err != nil {
+		t.Fatalf("winning the deal: %v", err)
+	}
+	if _, err := e.Deals.ArchiveDeal(admin, fx.deal, nil); err != nil {
+		t.Fatalf("archiving the won deal: %v", err)
+	}
+
+	err := fx.gen.HandleEvent(context.Background(), lastStageChanged(t, e, fx.deal))
+	if !errors.Is(err, kevents.ErrUnactionable) {
+		t.Errorf("the consumer answered %v for a win on an archived deal, want ErrUnactionable", err)
+	}
+	if got := liveEntries(t, e, fx); len(got) != 0 {
+		t.Errorf("live entries = %v on an archived deal, want none", got)
 	}
 }
 

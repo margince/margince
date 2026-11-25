@@ -88,7 +88,7 @@ func (g *ContactDataEnrich) HandleEvent(ctx context.Context, env events.Envelope
 		ContactID: env.Entity.ID.String(),
 		Trigger:   trigger,
 	})
-	return g.swallowConfiguration(err)
+	return unactionableIfGone(g.swallowConfiguration(err), "contact", env.Entity.ID)
 }
 
 // triggerFor decides which toggle this arrival is governed by, from WHO

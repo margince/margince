@@ -201,7 +201,9 @@ func (w *DealRoomTimeline) write(ctx context.Context, env events.Envelope, note 
 		Source: roomTimelineSource,
 	})
 	if err != nil {
-		return fmt.Errorf("deal room timeline: writing the note for %s: %w", env.Type, err)
+		// A gone or archived deal: restoring it does not replay this event.
+		return fmt.Errorf("deal room timeline: writing the note for %s: %w", env.Type,
+			unactionableIfGone(err, "deal", note.deal))
 	}
 	return nil
 }

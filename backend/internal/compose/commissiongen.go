@@ -140,10 +140,10 @@ func (g *CommissionGen) accrue(ctx context.Context, env events.Envelope, moved d
 			"deal", env.Entity.ID.String(),
 			"attribution", *moved.PartnerAttribution, "tier_set", tier != nil)
 		return nil
-	case err != nil:
-		return err
 	}
-	return nil
+	// The deal or the partner is gone or archived. Restoring one does not
+	// replay this event, so a retry would never succeed.
+	return unactionableIfGone(err, "deal", env.Entity.ID)
 }
 
 // reverse voids whatever live entry the undone win produced.
@@ -151,7 +151,7 @@ func (g *CommissionGen) reverse(ctx context.Context, deal ids.UUID, toStatus str
 	reversed, err := g.ledger.ReverseForDeal(ctx, ids.From[ids.DealKind](deal),
 		"the deal left won ("+toStatus+"), so the commission it earned is undone")
 	if err != nil {
-		return err
+		return unactionableIfGone(err, "deal", deal)
 	}
 	if reversed > 0 {
 		g.log.InfoContext(ctx, "commission: a reopened deal's entries were reversed",
