@@ -4,6 +4,7 @@
 package compose
 
 import (
+	"maps"
 	"strings"
 	"testing"
 
@@ -20,10 +21,7 @@ func TestCheckReadColumnTypes(t *testing.T) {
 	}
 	ok := map[string]string{"code": "text", "seen_at": tz, "contact_id": id}
 	with := func(col, typ string) map[string]string {
-		m := map[string]string{}
-		for k, v := range ok {
-			m[k] = v
-		}
+		m := maps.Clone(ok)
 		if typ == "" {
 			delete(m, col)
 		} else {
