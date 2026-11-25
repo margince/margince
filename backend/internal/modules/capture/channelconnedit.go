@@ -229,8 +229,11 @@ func (s *ChannelStore) archiveDisconnected(ctx context.Context, current channelR
 		if err != nil {
 			return err
 		}
-		return auditLifecycle(ctx, tx, "archive", channelConnectionObject, after.ID,
-			channelAuditImage(current.ChannelConnection), channelAuditImage(after))
+		if err := auditLifecycle(ctx, tx, "archive", channelConnectionObject, after.ID,
+			channelAuditImage(current.ChannelConnection), channelAuditImage(after)); err != nil {
+			return err
+		}
+		return archiveBusinessConnectionsOfTx(ctx, tx, after.ID)
 	})
 	if errors.Is(err, pgx.ErrNoRows) {
 		// The lock resolved a LIVE row — an already-archived or absent one fails
@@ -249,7 +252,7 @@ func (s *ChannelStore) readChannelRow(ctx context.Context, id ids.UUID) (channel
 	var credentialRef, eventsRef string
 	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
 		row := tx.QueryRow(ctx, `SELECT `+channelConnectionColumns+`, credential_ref, coalesce(events_credential_ref, '')
-			 FROM channel_connection WHERE id = $1 AND archived_at IS NULL`, id)
+			 FROM channel_connection WHERE id = $1 AND archived_at IS NULL AND `+botConnectionRow, id)
 		var address *string
 		if err := row.Scan(&out.ID, &out.Provider, &out.ChannelID, &out.ChannelLabel, &address,
 			&out.Status, &out.Version, &out.CreatedAt, &out.UpdatedAt, &out.EventsSecretSet, &credentialRef, &eventsRef); err != nil {

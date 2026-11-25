@@ -71,7 +71,7 @@ function view(
     sections_omitted: [],
     contacts: { data: [contact], page },
     state_strip: {
-      account: { lifecycle: "customer", relationship_types: ["customer"] },
+      account: { status: "customer", relationship_types: ["customer"] },
       ...(engagement ? { engagement: { state: engagement } } : {}),
     },
     ...rest,

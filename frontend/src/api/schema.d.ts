@@ -79,9 +79,10 @@ export interface paths {
          * Which authentication methods are operational (drives the login UI).
          * @description Anonymous, minimal capability probe (ADR-0061). The login UI renders exactly
          *     the methods reported here — a disabled provider button or a dead "Forgot password?"
-         *     link is a misleading affordance. `password_reset` is true only when the operator's
-         *     system-email channel (ADR-0056) is configured and healthy. An OIDC provider is
-         *     listed only when its end-to-end flow is wired and healthy. Discloses nothing beyond
+         *     link is a misleading affordance. `password_reset` is true when password sign-in is on
+         *     and the operator's system-email channel (ADR-0056) is configured: a mailer and a link
+         *     base URL are set. Nothing checks that the channel delivers mail. An OIDC provider is
+         *     listed when the admin policy enables it and a client is configured for it. Discloses nothing beyond
          *     what the login UI needs — no secrets, endpoints, allowlists, or bootstrap state.
          *
          *     It also reports the release this api was built from, which a client compares
@@ -4782,6 +4783,43 @@ export interface paths {
          *     nothing. An `Idempotency-Key` header is taken as that key.
          */
         post: operations["progressDeal"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/deals/{id}/merge": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Merge this deal into a target deal.
+         * @description Merge A->B moves the facts about the opportunity from A to B and archives A with
+         *     `merged_into_id = B`, in one transaction under both rows' locks. Moved: offers, activity
+         *     links, stakeholders, contracts, brief items, qualified leads, list and tag membership,
+         *     grants and assignments, and the rest of the rows that name the deal. Not moved: the
+         *     stage and forecast history and the closing review, which describe the path A took and stay
+         *     on A so B's stage age is not read younger. A scalar B leaves empty is filled from A.
+         *
+         *     The caller must be able to change both deals. The merge is refused with `409` when the
+         *     deals name different companies (merge the companies first), when both hold a live
+         *     commission, an open legal review, a live chat link or an open Deal Room, or when A is
+         *     already merged away (the answer names where it went). It answers `422` for a merge into
+         *     itself or into a deal that is archived.
+         *
+         *     **Not reversible.** A merged-away deal cannot be restored: its offers and contracts now
+         *     belong to the survivor.
+         */
+        post: operations["mergeDeal"];
         delete?: never;
         options?: never;
         head?: never;
@@ -11584,6 +11622,75 @@ export interface paths {
          *     anything it has ever sent, and every message it received would be skipped silently.
          */
         patch: operations["replaceChannelToken"];
+        trace?: never;
+    };
+    "/channel-connections/telegram-business": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List the Telegram Business accounts linked to the workspace's bot.
+         * @description Newest first. Each is `pending_approval` until an admin approves it.
+         */
+        get: operations["listTelegramBusinessConnections"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/channel-connections/telegram-business/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /**
+         * Disconnect a Telegram Business account from the workspace.
+         * @description Archives the link. It holds no credential, so nothing is destroyed, and what the
+         *     account's chats already filed stays. If the owner links the bot again, the new link
+         *     waits for approval.
+         */
+        delete: operations["disconnectTelegramBusinessConnection"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/channel-connections/telegram-business/{id}/approve": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Approve a Telegram Business account for the workspace.
+         * @description Moves a `pending_approval` link to `connected`. Approving a link that is already
+         *     `connected` changes nothing. A `409` means the owner switched the link off in Telegram.
+         */
+        post: operations["approveTelegramBusinessConnection"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
         trace?: never;
     };
     "/channel-links/{record_type}/{id}": {
@@ -22675,9 +22782,10 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * Record the buyer's acceptance — syncs the deal's amount from the offer's gross.
+         * Record the buyer's acceptance — syncs the deal's amount from the offer's net.
          * @description sent → accepted; sets `accepted_at`, syncs `deal.amount_minor`/`currency` from the
-         *     accepted offer's `gross_minor` (the offer becomes the deal's value source) and emits
+         *     accepted offer's `net_minor`, the figure without tax, because a deal's value never
+         *     carries tax (the offer becomes the deal's value source), and emits
          *     `offer.accepted`. An offer whose `valid_until` day has passed is refused
          *     422 `offer_lapsed`, since accepting it would re-price the deal from a lapsed quote.
          */
@@ -33381,7 +33489,7 @@ export interface components {
             /** Format: uuid */
             id: string;
             /** @enum {string} */
-            provider: "telegram" | "dispact";
+            provider: "telegram" | "telegram_business" | "dispact" | "whatsapp" | "zalo_oa";
             /** @description The provider's own id for the bot — the key the binding is unique on. For Dispact it is the chat's team id. */
             channelId: string;
             /** @description The bot's @username. Display only — a username is mutable and re-assignable, so it identifies nothing. */
@@ -33389,10 +33497,10 @@ export interface components {
             /** @description The web address of a self-hosted provider's install (Dispact). Absent for Telegram. */
             address?: string;
             /**
-             * @description Only `connected` is live, and it is the only state a connect can produce: a pull ingress makes no provider call after the write, so there is no half-connected state. `error` and `reauth_required` are where ingress parks a binding it can no longer poll (another consumer holds the bot's updates; the token was refused), and neither is polled again until an operator acts. `pending` is a value NO server produces: it is retained because the code generator disambiguates enum member names across the whole document, so dropping it renames unrelated generated constants in other schemas.
+             * @description Only `connected` is live, and it is the only state a connect can produce: a pull ingress makes no provider call after the write, so there is no half-connected state. `error` and `reauth_required` are where ingress parks a binding it can no longer poll (another consumer holds the bot's updates; the token was refused), and neither is polled again until an operator acts. `pending_approval` is the state of a Telegram Business link nobody has approved. It is served by the telegram-business operations and never appears on a bot connection.
              * @enum {string}
              */
-            status: "pending" | "connected" | "disconnected" | "error" | "reauth_required";
+            status: "pending_approval" | "connected" | "disconnected" | "error" | "reauth_required";
             /** @description Whether a Dispact events secret is sealed for this connection, so signed notices of new messages are taken. The secret itself is never shown. */
             readonly eventsSecretSet?: boolean;
             /** Format: int64 */
@@ -33401,6 +33509,33 @@ export interface components {
             createdAt?: string;
             /** Format: date-time */
             updatedAt?: string;
+        };
+        /** @description One Telegram Business account the owner linked to the workspace's bot. Nothing from the account is stored until an admin approves it. */
+        TelegramBusinessConnection: {
+            /** Format: uuid */
+            id: string;
+            /** @description The owner's Telegram user id, the key a repeated link keeps its row by. */
+            accountId: string;
+            /** @description The owner's name as Telegram last reported it. Display only, since a name is mutable and identifies nothing. */
+            ownerLabel: string;
+            /**
+             * @description `pending_approval` waits for an admin; `disconnected` means the owner switched the link off in Telegram.
+             * @enum {string}
+             */
+            status: "pending_approval" | "connected" | "disconnected";
+            /**
+             * Format: date-time
+             * @description When the owner first linked the bot.
+             */
+            connectedAt: string;
+            /**
+             * Format: date-time
+             * @description When an admin approved the link; absent until then.
+             */
+            approvedAt?: string | null;
+        };
+        TelegramBusinessConnectionListResponse: {
+            data: components["schemas"]["TelegramBusinessConnection"][];
         };
         ChannelConnectionListResponse: {
             data: components["schemas"]["ChannelConnection"][];
@@ -35757,7 +35892,7 @@ export interface components {
              * @description Where the account stands with us. Single-valued: an account is at one point in a sales motion at a time. `unknown` is the default and means it — the retired `classification` defaulted to `prospect` and, having no writer, rendered that default on every unassessed account as though someone had judged it. `onboarding` means the contract is signed and set-up runs. `live` means the agreed first scope is in use, and only a signed-in user may set it: an agent, automation, approval or import gets 422 `lifecycle_live_needs_a_human`.
              * @enum {string}
              */
-            lifecycle?: "unknown" | "target" | "prospect" | "opportunity" | "onboarding" | "live" | "customer" | "former_customer" | "disqualified";
+            status?: "unknown" | "target" | "prospect" | "opportunity" | "onboarding" | "live" | "customer" | "former_customer" | "disqualified";
             /** @description WHAT THE COMPANY IS to us (PO-DDL-4b, ADR-0079). Multi-valued, because a company is legitimately several things at once — the partner program is built on companies that are simultaneously partners and customers. A company IS a partner iff it carries `partner` here AND has a `partner` row; removing the type while that row lives is refused (422). */
             relationship_types?: ("customer" | "partner" | "supplier" | "investor" | "portfolio_company" | "competitor" | "other")[];
             /** @description The types an installed extension adds, as `ext:<unit>:<type>`. Kept apart from `relationship_types`, whose list stays the closed set above. Each value is declared by the extension it names; a value no extension declares is refused (422, `invalid_enum`). */
@@ -35922,7 +36057,7 @@ export interface components {
              * @description Where the account stands with us (ADR-0079). Absent = untouched. `live` (the agreed first scope is in use) is accepted only from a signed-in user; any other caller gets 422 `lifecycle_live_needs_a_human`.
              * @enum {string}
              */
-            lifecycle?: "unknown" | "target" | "prospect" | "opportunity" | "onboarding" | "live" | "customer" | "former_customer" | "disqualified";
+            status?: "unknown" | "target" | "prospect" | "opportunity" | "onboarding" | "live" | "customer" | "former_customer" | "disqualified";
             /** @description Replace-set of what the company is to us (add new, archive removed), the same shape as `domains`. Absent = untouched; an empty array clears every type. Removing `partner` while the company still has a `partner` extension row is refused with 422 — the invariant binds both ways, and an invariant nothing enforces is a comment. */
             relationship_types?: ("customer" | "partner" | "supplier" | "investor" | "portfolio_company" | "competitor" | "other")[];
             /** @description Replace-set of the types an installed extension adds (`ext:<unit>:<type>`), applied like `relationship_types`. Absent = untouched; an empty array clears them. A value no extension declares is refused with 422. */
@@ -36694,7 +36829,7 @@ export interface components {
             open_balance?: components["schemas"]["Money"];
             /**
              * @description The share of the open balance already past its due date.
-             *     ABSENT on an account whose relationship has ended (`lifecycle: former_customer`), and a client should expect the null. An overdue figure reads as an outstanding collection, and a rep acting on the most natural reading makes a collection call about a relationship that finished — a customer-facing mistake rather than a display nit. The figure it would carry is one nobody can state a window for, which is the same "cannot be honestly computed" this schema already answers with absence rather than zero.
+             *     ABSENT on an account whose relationship has ended (`status: former_customer`), and a client should expect the null. An overdue figure reads as an outstanding collection, and a rep acting on the most natural reading makes a collection call about a relationship that finished — a customer-facing mistake rather than a display nit. The figure it would carry is one nobody can state a window for, which is the same "cannot be honestly computed" this schema already answers with absence rather than zero.
              *     `open_balance` is unaffected: what is still open is a fact about the ledger whatever the relationship is now, and it carries no call to action.
              */
             overdue?: components["schemas"]["Money"];
@@ -36892,7 +37027,7 @@ export interface components {
         Company360StateStrip: {
             account: {
                 /** @enum {string} */
-                lifecycle: "unknown" | "target" | "prospect" | "opportunity" | "onboarding" | "live" | "customer" | "former_customer" | "disqualified";
+                status: "unknown" | "target" | "prospect" | "opportunity" | "onboarding" | "live" | "customer" | "former_customer" | "disqualified";
                 relationship_types: ("customer" | "partner" | "supplier" | "investor" | "portfolio_company" | "competitor" | "other")[];
             };
             /** @description How cold the account has gone, read from its stored `last_activity_at`. */
@@ -41499,10 +41634,10 @@ export interface components {
              */
             mode: "estimate" | "lines" | "legacy";
             /**
-             * @description What the deal's amount means. Null while the deal has no amount.
+             * @description What the deal's amount means. `offer_net` is an accepted offer's figure without tax. `offer_gross` is an older amount that took an accepted offer's gross with tax. Null while the deal has no amount.
              * @enum {string|null}
              */
-            amount_basis?: "lines_net_committed" | "offer_gross" | "estimate" | "unknown" | null;
+            amount_basis?: "lines_net_committed" | "offer_net" | "offer_gross" | "estimate" | "unknown" | null;
             /**
              * Format: int64
              * @description Counts the accepted changes to the lines. Send it back as `expected_revision`.
@@ -41797,6 +41932,11 @@ export interface components {
              * @description Expected annual recurring revenue in minor units of `currency`. Null means the deal carries no recurring component, which is not the same as zero. `currency` is present exactly when `amount_minor` or `expected_arr_minor` is.
              */
             expected_arr_minor?: number | null;
+            /**
+             * Format: uuid
+             * @description Set when this deal was merged away into another, and null otherwise. It separates a merged-away deal from one that was only archived: both are hidden from lists, but a merged one cannot be restored, and its id names the surviving deal to read instead. `contact`, `company` and `lead` carry the same field for the same reason.
+             */
+            readonly merged_into_id?: string | null;
             /**
              * Format: uuid
              * @description The accepted offer `expected_arr_minor` came from, or null where a human set the figure. While it is set the recurring figure is the offer's to state: an ordinary edit that would change or clear it is refused, and accepting another offer replaces both together.
@@ -44422,6 +44562,11 @@ export interface components {
             data: components["schemas"]["ExtensionReport"][];
         };
         ExtensionReport: {
+            /**
+             * @description `unavailable` when the report could not run. It then carries no groups, no total and no exclusion count, and the other reports still answer. The cause is logged on the server, never sent.
+             * @enum {string}
+             */
+            status: "ok" | "unavailable";
             /** @description The report as `ext:<unit>:<name>`. */
             name: string;
             /** @description The extension that declared it. */
@@ -48486,13 +48631,13 @@ export interface components {
             steward_name?: string | null;
             /** Format: int64 */
             version: number;
-            /** @description How many members this caller may see. Null when the list's filter can no longer be evaluated (health `invalid`). Never the list's whole size. */
+            /** @description How many members this caller may see. Null when the list's filter can no longer be evaluated (health `invalid`) or its records are unavailable (health `unavailable`). Never the list's whole size. */
             visible_count?: number | null;
             /**
-             * @description `ownerless` when nobody looks after the list — no steward, or one who can no longer sign in — so somebody should take it over. `invalid` when a Live List's filter no longer compiles. `retired_field` when a Live List's filter names a custom field that has been retired: the list still evaluates on the kept values, and its steward should replace the clause. `retired_tag` when a Live List's filter names a tag that has been archived or merged away: that tag no longer matches any record, so a clause on it selects nothing, and its steward should name the tag that took its place. `invalid` outranks `ownerless`, which outranks `retired_field`, which outranks `retired_tag`.
+             * @description `unavailable` when no installed extension declares the list's record kind any more. Such a list has no count, no members, no filter definition and no export, and comes back when the extension is installed again; it outranks every other value. A list over a declared kind the caller may not read is left out of the library instead. `ownerless` when nobody looks after the list — no steward, or one who can no longer sign in — so somebody should take it over. `invalid` when a Live List's filter no longer compiles. `retired_field` when a Live List's filter names a custom field that has been retired: the list still evaluates on the kept values, and its steward should replace the clause. `retired_tag` when a Live List's filter names a tag that has been archived or merged away: that tag no longer matches any record, so a clause on it selects nothing, and its steward should name the tag that took its place. `invalid` outranks `ownerless`, which outranks `retired_field`, which outranks `retired_tag`.
              * @enum {string}
              */
-            health: "ok" | "ownerless" | "invalid" | "retired_field" | "retired_tag";
+            health: "ok" | "ownerless" | "invalid" | "retired_field" | "retired_tag" | "unavailable";
             /** @description The archived or merged-away tags a Live List's filter names. Absent when it names none. */
             retired_tags?: string[];
             /** @description The retired custom fields a Live List's filter names, by column name. Absent when it names none. */
@@ -51141,7 +51286,7 @@ export interface components {
         AuthCapabilities: {
             /** @description Email + password login is enabled. */
             password: boolean;
-            /** @description The A74 reset flow can complete end to end (outbound email configured + healthy). */
+            /** @description Password sign-in is on and the reset mail channel is configured. Nothing checks that mail is delivered. */
             password_reset: boolean;
             /** @description Whether this installation has yet to finish its setup, so an unconfigured one can be greeted rather than only asked for credentials. Deliberately readable without a session, which is the narrowest form of a fact `/installation/setup` reports in full to a human session: it says that setup is unfinished and nothing else. It names no account, no step, no configured value, and says nothing about any credential. */
             first_run: boolean;
@@ -69052,7 +69197,7 @@ export interface operations {
                 /** @description Lookup by normalized domain (the employer-inference index). */
                 domain?: string;
                 /** @description Where the account stands with us (DM-VOCAB-2, ADR-0079). */
-                lifecycle?: "unknown" | "target" | "prospect" | "opportunity" | "onboarding" | "live" | "customer" | "former_customer" | "disqualified";
+                status?: "unknown" | "target" | "prospect" | "opportunity" | "onboarding" | "live" | "customer" | "former_customer" | "disqualified";
                 /** @description Accounts carrying this relationship type. Multi-valued per account, so this selects accounts that are AT LEAST this — a partner that is also a customer matches both. */
                 relationship_type?: "customer" | "partner" | "supplier" | "investor" | "portfolio_company" | "competitor" | "other";
                 /** @description Accounts carrying this extension type (`ext:<unit>:<type>`, from `extension_relationship_types`). It is a separate parameter so the closed `relationship_type` list stays as it is. A value no installed extension declares answers 422. Both parameters together select accounts that carry both. */
@@ -72867,6 +73012,89 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ProgressDealResult"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    mergeDeal: {
+        parameters: {
+            query?: never;
+            header?: {
+                /**
+                 * @description Client-supplied key making a mutation safe to retry — an update exactly as much as a
+                 *     create (API-CC-6). **Scope:** the key is unique within
+                 *     `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
+                 *     returns the original status + body. A connected agent's principal is its connection, so a
+                 *     retry on a refreshed token replays too. An agent tool that runs this route takes the same
+                 *     key as its `idempotency_key`. Reusing the same key with a *different* request body
+                 *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
+                 *     do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
+                 *     means the first request under the key is still running and carries `Retry-After`;
+                 *     resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
+                 *     request under the key failed after it had started, so check whether it took effect before
+                 *     retrying under a new key.
+                 *     A request the server stopped for time answers `503 code: request_timed_out` with
+                 *     `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+                 *     If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
+                 *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
+                 *     answer lost": without it the blind retry answers `409 version_skew`, because the first
+                 *     attempt already bumped the version.
+                 *     **Precedence vs natural keys:** on `logActivity`/`createLead`, the Idempotency-Key (transport
+                 *     retry-safety) is checked first; if absent, the `(source_system, source_id)` natural key
+                 *     (data-model dedupe) governs. The two never both create a row. **Declaring this parameter is
+                 *     what makes an operation replay-safe** — an operation that omits it ignores the header rather
+                 *     than half-honouring it, so read this contract, not the client, to know which calls are safe
+                 *     to retry blind.
+                 */
+                "Idempotency-Key"?: components["parameters"]["IdempotencyKey"];
+                /**
+                 * @description The id of the approval that authorizes this one 🟡 call — the id the `403 approval_required`
+                 *     answer named. MCP takes the same id as `approval_id`. The server checks it against the
+                 *     stored approval: same tool, same diff hash, same staging passport, decided as approved,
+                 *     not yet used, and within 15 minutes of the decision. Anything else is refused with
+                 *     `403 code: approval_token_invalid`. Required when an AGENT principal repeats a 🟡 call; a
+                 *     human's direct call is itself the approval.
+                 */
+                "X-Approval-Token"?: components["parameters"]["ApprovalToken"];
+                /**
+                 * @description Optional optimistic-concurrency precondition for a mutating request (PATCH/advance/merge):
+                 *     the last-seen entity `version`. If the row's current `version` differs, the write is
+                 *     rejected with `409 code: version_skew` (ErrVersionSkew) and no change is made — re-read,
+                 *     re-apply, retry. Omitting it is last-write-wins (discouraged for agent/automated writers).
+                 *     Accepted on every native (SoR-mode) mutating endpoint that returns a versioned entity.
+                 */
+                "If-Match"?: components["parameters"]["IfMatch"];
+            };
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /**
+                     * Format: uuid
+                     * @description The surviving deal (B). This row (A) is archived.
+                     */
+                    target_id: string;
+                };
+            };
+        };
+        responses: {
+            /** @description The surviving (target) deal after the merge. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Deal"];
                 };
             };
             401: components["responses"]["Unauthorized"];
@@ -85268,6 +85496,108 @@ export interface operations {
                 };
             };
             /** @description This deployment serves no messaging channels (`code: channel_connections_not_configured`), or has no credential store configured to seal a bot token in (`code: channel_credentials_not_configured`). */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    listTelegramBusinessConnections: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Telegram Business connections. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TelegramBusinessConnectionListResponse"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["PermissionDenied"];
+            /** @description This deployment serves no messaging channels (`code: channel_connections_not_configured`). */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    disconnectTelegramBusinessConnection: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Disconnected. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["PermissionDenied"];
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
+            /** @description This deployment serves no messaging channels (`code: channel_connections_not_configured`). */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    approveTelegramBusinessConnection: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The approved connection. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TelegramBusinessConnection"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["PermissionDenied"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            422: components["responses"]["ValidationError"];
+            /** @description This deployment serves no messaging channels (`code: channel_connections_not_configured`). */
             503: {
                 headers: {
                     [name: string]: unknown;

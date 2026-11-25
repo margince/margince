@@ -113,7 +113,7 @@ func TestACoreColumnIsItsTargetWithNoHeaderLabelAndAFieldLabelInTheCallersLangua
 		t.Fatal(err)
 	}
 	name := columnOf(t, f, crmcontracts.ImportObjectCompany, fieldDisplayName)
-	if name.Label != nil || name.FieldLabel == nil || *name.FieldLabel != "Firmenname" || name.Custom || !name.RequiredOnNewRow ||
+	if name.Label != nil || name.FieldLabel == nil || *name.FieldLabel != "Unternehmensname" || name.Custom || !name.RequiredOnNewRow ||
 		name.Description != importguide.Columns["company.display_name"].Description.De {
 		t.Fatalf("display_name = %+v, want the German company guide and field label, no header label, needed on a new row", name)
 	}

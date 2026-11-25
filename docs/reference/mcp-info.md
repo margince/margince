@@ -17,7 +17,7 @@ input and output schema in folds below it. What a tool may do and whether a huma
 | Resources | 14 |
 | Tool catalog | 243.9 KB |
 | Resource catalog | 5.5 KB |
-| Approx. wire tokens | 63852 |
+| Approx. wire tokens | 63844 |
 | Largest tool | `read_details` (15.8 KB) |
 | Scopes rendered | `read`, `draft`, `write`, `send`, `enrich` |
 
@@ -34,7 +34,7 @@ tool adds to that listing, and what it costs each scheduled agent, agent by agen
 |---|---:|---:|---|
 | Output schemas | 33.7 KB | 13% | **No**: a result's shape, never listed to a model |
 | Descriptions (incl. governance clause) | 51.0 KB | 20% | Yes, every step |
-| Input schemas | 147.7 KB | 60% | Yes, every step |
+| Input schemas | 147.6 KB | 60% | Yes, every step |
 | _Names, annotations, punctuation_ | 11.6 KB | 4% | Partly |
 | **Description + input schema** | **198.7 KB** | **81%** | **the recurring cost** |
 
@@ -87,7 +87,7 @@ descriptions and input schemas are what each step pays for.
 | [`decide_approvals`](#decide_approvals) | Approve or reject staged actions |  |  | 465 |
 | [`draft_outbound`](#draft_outbound) | Draft an email or follow-ups |  |  | 524 |
 | [`enrich`](#enrich) | Enrich a company from its website |  |  | 448 |
-| [`find_records`](#find_records) | Find records | yes |  | 2057 |
+| [`find_records`](#find_records) | Find records | yes |  | 2050 |
 | [`list_approvals`](#list_approvals) | List what is waiting for a decision | yes | [`ui://margince/approval-queue.html`](#approval_queue_view) | 474 |
 | [`list_documents`](#list_documents) | List a record's documents or read one | yes |  | 331 |
 | [`preview_import`](#preview_import) | Preview an import |  |  | 1012 |
@@ -1651,7 +1651,7 @@ archive_contract, archive_room, cancel_contract, reject_offer, send_offer.)
 {
   "properties": {
     "action": {
-      "description": "read_workspace topic actions lists each action's body\naccept_offer: Record the buyer's acceptance — syncs the deal's amount from the offer's gross\nadd_deal_line: Add a product or a custom item to a deal; the deal's value follows its lines\narchive_contract: Archive an agreement (CONTRACT-WIRE-5)\narchive_room: Archive a Deal Room, ending buyer access\ncancel_contract: Record notice of cancellation and when it takes effect (CONTRACT-WIRE-6)\nclose_room: Freeze the room's content, keeping buyer access\npause_room: Pause buyer access without ending it\nrecord_contract: Record an agreement (CONTRACT-WIRE-2)\nrefresh_offer_from_deal: Replace a draft offer's lines with the deal's current lines; the header stays\nreject_offer: Record the buyer's decline (sent → rejected; emits offer.rejected)\nremove_deal_line: Remove one line of a deal\nrender_offer: Render the offer's branded PDF (sets pdf_asset_ref)\nrenew_contract: Create the successor agreement and supersede this one (CONTRACT-WIRE-7)\nresolve_room_thread: Close a thread — the seller's side saying the point is settled\nrevoke_room_participant: Take a contact's access away\nsend_offer: Move a draft offer to sent — the transition that freezes its commercial terms (FX + buyer/issuer snapshot)\nset_contract_status: Assert a new contract status (CONTRACT-PARAM-1)\nset_deal_products: Set a deal's products by hand, replacing every allocation it had\nupdate_contract: Change an agreement's recorded terms (CONTRACT-WIRE-4)\nupdate_deal_line: Change one line of a deal; omit a field to leave it as it is, send null to clear it\nupdate_room_participant: Correct a participant's name, address or capability\nuse_deal_estimate: Return a deal with no lines to a typed estimate",
+      "description": "read_workspace topic actions lists each action's body\naccept_offer: Record the buyer's acceptance — syncs the deal's amount from the offer's net\nadd_deal_line: Add a product or a custom item to a deal; the deal's value follows its lines\narchive_contract: Archive an agreement (CONTRACT-WIRE-5)\narchive_room: Archive a Deal Room, ending buyer access\ncancel_contract: Record notice of cancellation and when it takes effect (CONTRACT-WIRE-6)\nclose_room: Freeze the room's content, keeping buyer access\npause_room: Pause buyer access without ending it\nrecord_contract: Record an agreement (CONTRACT-WIRE-2)\nrefresh_offer_from_deal: Replace a draft offer's lines with the deal's current lines; the header stays\nreject_offer: Record the buyer's decline (sent → rejected; emits offer.rejected)\nremove_deal_line: Remove one line of a deal\nrender_offer: Render the offer's branded PDF (sets pdf_asset_ref)\nrenew_contract: Create the successor agreement and supersede this one (CONTRACT-WIRE-7)\nresolve_room_thread: Close a thread — the seller's side saying the point is settled\nrevoke_room_participant: Take a contact's access away\nsend_offer: Move a draft offer to sent — the transition that freezes its commercial terms (FX + buyer/issuer snapshot)\nset_contract_status: Assert a new contract status (CONTRACT-PARAM-1)\nset_deal_products: Set a deal's products by hand, replacing every allocation it had\nupdate_contract: Change an agreement's recorded terms (CONTRACT-WIRE-4)\nupdate_deal_line: Change one line of a deal; omit a field to leave it as it is, send null to clear it\nupdate_room_participant: Correct a participant's name, address or capability\nuse_deal_estimate: Return a deal with no lines to a typed estimate",
       "enum": [
         "accept_offer",
         "add_deal_line",
@@ -3402,9 +3402,6 @@ next_cursor to read on.
           "type": "string"
         },
         "kind": {
-          "type": "string"
-        },
-        "lifecycle": {
           "type": "string"
         },
         "link_type": {

@@ -30,6 +30,7 @@ const checkedMarker = "checked:"
 
 var limits = map[string]int{
 	"label":    values.TextLabelCharacters,
+	"identity": values.TextIdentityCharacters,
 	"line":     values.TextLineCharacters,
 	"note":     values.TextNoteCharacters,
 	"document": values.TextDocumentCharacters,

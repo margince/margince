@@ -3,6 +3,8 @@
 
 package contacts
 
+import "github.com/margince/margince/backend/internal/platform/recordmerge"
+
 const (
 	columnContactID    = "contact_id"
 	columnCompanyID    = "company_id"
@@ -15,11 +17,11 @@ const (
 const (
 	archiveStateKey   = "archived"
 	archiveRecordKey  = "record"
-	mergeSourceKey    = "source"
-	mergeTargetKey    = "target"
+	mergeSourceKey    = recordmerge.SourceKey
+	mergeTargetKey    = recordmerge.TargetKey
 	mergeSubjectKey   = "subject"
 	mergeOtherKey     = "other"
 	mergeEntityKey    = "entity"
-	recordKindParam   = "kind"
+	recordKindParam   = recordmerge.KindKey
 	factValueKeyParam = "key"
 )

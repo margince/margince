@@ -218,8 +218,8 @@ seeded_company_bodies="$(seeded_payloads company)"
 # The stage the seeder actually writes, read from the seeder. "Anything but the
 # default" would accept a stage nobody wrote — a boot proof reads the state the
 # seed produces, not a range of states it might have.
-seeded_lifecycle="$(sed -n 's/.*{"lifecycle":"\([a-z_]*\)"}.*/\1/p' "$REPO_DIR/scripts/seed-dev.sh" | sed -n 1p)"
-[[ -n "$seeded_lifecycle" ]] || fail "scripts/seed-dev.sh writes no {\"lifecycle\":\"…\"} body — this check has no stage to hold the account to"
+seeded_status="$(sed -n 's/.*{"status":"\([a-z_]*\)"}.*/\1/p' "$REPO_DIR/scripts/seed-dev.sh" | sed -n 1p)"
+[[ -n "$seeded_status" ]] || fail "scripts/seed-dev.sh writes no {\"status\":\"…\"} body — this check has no stage to hold the account to"
 
 while IFS= read -r body; do
   company_name="$(printf '%s' "$body" | jq -r '.display_name')"
@@ -230,9 +230,9 @@ while IFS= read -r body; do
   if [[ -z "$company" ]]; then
     fail "seeded account '$company_name' missing from GET /v1/companies — seed absent or stale (make seed-dev)"
   fi
-  lifecycle="$(printf '%s' "$company" | jq -r '.lifecycle // "unknown"')"
-  [[ "$lifecycle" = "$seeded_lifecycle" ]] || fail "seeded account '$company_name' stands at '$lifecycle' where the seed writes '$seeded_lifecycle' — an account off the stage it was seeded to answers the wrong question about who the customers are, and the demo dataset's verify pass refuses a default lifecycle outright"
-  echo "  OK: '$company_name' stands at '$lifecycle'"
+  company_status="$(printf '%s' "$company" | jq -r '.status // "unknown"')"
+  [[ "$company_status" = "$seeded_status" ]] || fail "seeded account '$company_name' stands at '$company_status' where the seed writes '$seeded_status' — an account off the stage it was seeded to answers the wrong question about who the customers are, and the demo dataset's verify pass refuses a default lifecycle outright"
+  echo "  OK: '$company_name' stands at '$company_status'"
 done <<< "$seeded_company_bodies"
 
 echo "== verify-boot 4/6: the seeded conversations are conversations =="

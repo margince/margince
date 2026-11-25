@@ -51,6 +51,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `companyindustry_test.go` | H3 | The industry list lives in the contract, the vocabulary owner in the contacts module and its wording in the frontend. |
 | `companylifecycleengaged_test.go` | H3 | Every company lifecycle the contract publishes is judged engaged or not engaged, once. |
 | `companyprofilevocabulary_test.go` | H3 | The company-profile vocabulary is spelled in eight places, and widening seven of them without the eighth fails here. |
+| `companytextlimits_test.go` | H2 | A company text field the contract bounds and the column the database guard bounds must name one limit. |
 | `composedfrontendbuilders_test.go` | H3 | Two builders compile the composed SPA (the make lane and the release image), and each of them must install the composed workspace before it does. |
 | `configgenerated_test.go` | H3 | The configuration files written from the settings registry are the ones its generator writes now. |
 | `configpresets_test.go` | H3 | Every preset under config/presets/ is a binding the parser accepts. |
@@ -557,7 +558,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `bounceobserver_test.go` | H2 | The bounce sink stops the address it just marked dead. |
 | `commsreconciler_test.go` | H2 | No role this repository assembles builds a delivery store without the seam that re-keys a sent message's timeline row. |
 | `companyrenamerecheck_test.go` | H2 | A company's name is the axis on which two records of one company converge, so every rename has to ask whether it just created a duplicate. |
-| `composerowscope_test.go` | H2 | Anything in the compose tier that returns a record is a read, so a query that hands back a reference to a row-scoped record applies that record's row scope. |
+| `composerowscope_test.go` | H2 | Anything in the compose tier that returns a record is a read. |
 | `consentproof_test.go` | H2 | Every write that sets a contact\_consent state appends a consent\_event proof row in the same function, so the current state is always backed by an append-only event saying when, how, and by whom. |
 | `contactemployer_test.go` | H2 | TestEveryContactInsertResolvesItsEmployer derives the obligation from the actual insert statements. |
 | `contactscrub_test.go` | H2 | Erasing a contact and anonymizing one are the same act with one difference: the erased subject goes on a suppression list, and the anonymized subject may lawfully return. |

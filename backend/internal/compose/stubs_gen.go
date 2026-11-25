@@ -1119,6 +1119,18 @@ func (stubs) ConnectChannel(w nethttp.ResponseWriter, r *nethttp.Request) {
 	httperr.NotImplemented(w, r, "ConnectChannel")
 }
 
+func (stubs) ListTelegramBusinessConnections(w nethttp.ResponseWriter, r *nethttp.Request) {
+	httperr.NotImplemented(w, r, "ListTelegramBusinessConnections")
+}
+
+func (stubs) DisconnectTelegramBusinessConnection(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
+	httperr.NotImplemented(w, r, "DisconnectTelegramBusinessConnection")
+}
+
+func (stubs) ApproveTelegramBusinessConnection(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
+	httperr.NotImplemented(w, r, "ApproveTelegramBusinessConnection")
+}
+
 func (stubs) DisconnectChannel(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
 	httperr.NotImplemented(w, r, "DisconnectChannel")
 }
@@ -2125,6 +2137,10 @@ func (stubs) RequestDealManager(w nethttp.ResponseWriter, r *nethttp.Request, id
 
 func (stubs) ListDealMarginceChanges(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id, params crmcontracts.ListDealMarginceChangesParams) {
 	httperr.NotImplemented(w, r, "ListDealMarginceChanges")
+}
+
+func (stubs) MergeDeal(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id, params crmcontracts.MergeDealParams) {
+	httperr.NotImplemented(w, r, "MergeDeal")
 }
 
 func (stubs) MoveDealPipeline(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id, params crmcontracts.MoveDealPipelineParams) {

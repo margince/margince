@@ -299,7 +299,7 @@ describe("CompanyRail", () => {
     );
     await user.click(within(about).getByRole("button", { name: "Save" }));
     await waitFor(() =>
-      expect(patchBody).toMatchObject({ lifecycle: "prospect" }),
+      expect(patchBody).toMatchObject({ status: "prospect" }),
     );
   });
 

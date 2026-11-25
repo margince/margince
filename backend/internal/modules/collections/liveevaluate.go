@@ -64,6 +64,9 @@ type LiveCheck struct {
 	Entered int
 	Left    int
 	Err     error
+	// KindRemoved says an invalid check found no unit declaring the list's
+	// kind, so the rules on it pause as unavailable rather than invalid.
+	KindRemoved bool
 }
 
 // CheckLiveLists checks the Live Lists checked longest ago, up to the pass's
@@ -88,10 +91,13 @@ func (s *Store) CheckLiveLists(ctx context.Context, now func() time.Time) ([]Liv
 	return out, nil
 }
 
-// invalidFilter says the stored filter can no longer be evaluated: it does not
-// decode, or it names what the vocabulary no longer holds.
+// invalidFilter says the stored filter can no longer be evaluated. It does not
+// decode, it names what the vocabulary no longer holds, or no unit declares its
+// record kind any more. The last good check stays the snapshot, so a unit
+// composed again does not report every member as gone.
 func invalidFilter(err error) bool {
-	return errors.As(err, new(*storekit.PredicateError)) || errors.Is(err, errNotAFilterTree)
+	return errors.As(err, new(*storekit.PredicateError)) || errors.Is(err, errNotAFilterTree) ||
+		errors.Is(err, errKindRemoved)
 }
 
 // dueLiveLists reads the live, non-archived Live Lists, never-checked first
@@ -121,7 +127,7 @@ func (s *Store) checkLiveList(ctx context.Context, l listRow, at time.Time) (Liv
 	if !invalidFilter(err) {
 		return check, err
 	}
-	check = LiveCheck{ListID: l.ID, Outcome: CheckInvalid}
+	check = LiveCheck{ListID: l.ID, Outcome: CheckInvalid, KindRemoved: errors.Is(err, errKindRemoved)}
 	return check, s.db.Tx(ctx, func(tx pgx.Tx) error {
 		return writeCheckpoint(ctx, tx, l, at, check, nil)
 	})
@@ -148,7 +154,7 @@ func (s *Store) compareLiveList(ctx context.Context, l listRow, at time.Time) (L
 			return writeCheckpoint(ctx, tx, l, at, check, nil)
 		}
 		check.Outcome = CheckComplete
-		return s.compareSnapshot(ctx, tx, l, matched, at, &check)
+		return s.compareSnapshot(ctx, tx, l, engine.Table, matched, at, &check)
 	})
 	return check, err
 }
@@ -176,7 +182,7 @@ func matchAll(ctx context.Context, tx pgx.Tx, engine storekit.Query, pred storek
 // and replaces the held members. The first complete check only takes the
 // snapshot: a list that existed before anyone watched it has no changes to
 // report, only members.
-func (s *Store) compareSnapshot(ctx context.Context, tx pgx.Tx, l listRow, matched []ids.UUID, at time.Time, check *LiveCheck) error {
+func (s *Store) compareSnapshot(ctx context.Context, tx pgx.Tx, l listRow, table string, matched []ids.UUID, at time.Time, check *LiveCheck) error {
 	prior, held, err := readSnapshotVersion(ctx, tx, l.ID)
 	if err != nil {
 		return err
@@ -199,7 +205,7 @@ func (s *Store) compareSnapshot(ctx context.Context, tx pgx.Tx, l listRow, match
 	if err != nil {
 		return err
 	}
-	if err := lockChangedRecords(ctx, tx, l.EntityType, came, gone); err != nil {
+	if err := lockChangedRecords(ctx, tx, table, came, gone); err != nil {
 		return err
 	}
 	args := pgx.StrictNamedArgs{
@@ -261,16 +267,17 @@ func nonNil(set []ids.UUID) []ids.UUID {
 
 // lockChangedRecords takes a share lock on every record about to be written
 // as entered or left. Erasure updates the record before it clears the list
-// rows, so either it waits for this check and then clears what it wrote, or
-// it got there first and this REPEATABLE READ check fails on the lock instead
-// of writing an erased record back.
-func lockChangedRecords(ctx context.Context, tx pgx.Tx, entityType string, came, gone []ids.UUID) error {
+// rows. Either it waits for this check and clears what it wrote, or it got
+// there first and this `REPEATABLE READ` check fails on the lock. An erased
+// record is never written back. The table is the engine's own, already quoted:
+// a core type's literal or an extension kind's declared table.
+func lockChangedRecords(ctx context.Context, tx pgx.Tx, table string, came, gone []ids.UUID) error {
 	if len(came)+len(gone) == 0 {
 		return nil
 	}
 	rows, err := tx.Query(ctx, fmt.Sprintf(
 		`SELECT e.id FROM %s e WHERE e.id = ANY(@came) OR e.id = ANY(@gone) ORDER BY e.id FOR SHARE`,
-		pgx.Identifier{entityType}.Sanitize()), pgx.StrictNamedArgs{"came": came, "gone": gone})
+		table), pgx.StrictNamedArgs{"came": came, "gone": gone})
 	if err != nil {
 		return err
 	}

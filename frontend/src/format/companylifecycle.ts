@@ -2,7 +2,7 @@ import type { components } from "../api/schema";
 import type { MessageKey } from "../i18n/en";
 
 type Company = components["schemas"]["Company"];
-export type Lifecycle = NonNullable<Company["lifecycle"]>;
+export type Lifecycle = NonNullable<Company["status"]>;
 
 // Where the account stands with us, in wire order, so a picker reads as a
 // progression rather than an alphabet. The one list every lifecycle picker,

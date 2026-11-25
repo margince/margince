@@ -74,7 +74,7 @@ func TestAMaskedReaderIsListedNoFindingMoneyOnADealTheyCannotChange(t *testing.T
 			     (logical_key, type, subject_kind, subject_id, severity, owner_id,
 			      affected_minor, currency, claim, observed, captured_by)
 			 VALUES ($1, $2, 'deal', $3, 'medium', $4, 200000, 'EUR',
-			         '{"amount_minor":500000}', '{"offer_total":300000}', 'test')`,
+			         '{"amount_minor":500000}', '{"offer_net":300000}', 'test')`,
 			assurance.TypeAmountVsOffer+":"+deal.String(), assurance.TypeAmountVsOffer, deal, dealOwner)
 		exec(`INSERT INTO assurance_exception
 			     (logical_key, type, subject_kind, subject_id, severity, owner_id,

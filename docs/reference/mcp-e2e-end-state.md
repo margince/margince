@@ -8,7 +8,7 @@ A case that writes can name the state it must leave behind:
 
 ```yaml
 must_end_with:
-  - company "Emsland Ventilbau GmbH" lifecycle=prospect
+  - company "Emsland Ventilbau GmbH" status=prospect
 ```
 
 After each run, `e2e/llm/endstate.py` finds the record by its type and its whole name, as the app shows it
@@ -16,7 +16,7 @@ After each run, `e2e/llm/endstate.py` finds the record by its type and its whole
 
 It reads the field with `read_record`, through a passport the lane's admin minted, and compares. A wrong value, a
 missing record, or two records with one name fail the run, such as
-`ended with company "Emsland Ventilbau GmbH" lifecycle=target, wanted prospect`.
+`ended with company "Emsland Ventilbau GmbH" status=target, wanted prospect`.
 A read that cannot be made (an error, a field the read does not carry, or a reader that fails) is a
 harness stop. The outcome goes at the end of the transcript as an `end_state` event. A `company`,
 `contact`, `deal`, `deal_room`, `lead` or `project` can be read by name; another type is one line in

@@ -35,7 +35,7 @@ import (
 // checkable by eye in every caller below.
 func recurringOffer(t *testing.T, e *Env, deal ids.UUID) ids.OfferID {
 	t.Helper()
-	ctx := e.As(e.Rep1, []ids.UUID{e.Team1}, offerDeskPerms)
+	ctx := e.As(e.Rep1, []ids.UUID{e.Team1}, OfferDeskPerms)
 	description, taxRate := "Subscription", "0.00"
 	perPeriodMinor := int64(100_000)
 	months, count := 1, 12
@@ -65,7 +65,7 @@ func TestAcceptingAClassifiedOfferStatesTheDealsRecurringRevenue(t *testing.T) {
 	e := Setup(t)
 	pipeline, open, _ := DealFixture(t, e)
 	deal := e.SeedDeal(t, "Subscription sale", pipeline, open, &e.Rep1)
-	ctx := e.As(e.Rep1, []ids.UUID{e.Team1}, offerDeskPerms)
+	ctx := e.As(e.Rep1, []ids.UUID{e.Team1}, OfferDeskPerms)
 
 	offer := recurringOffer(t, e, deal)
 	if _, err := e.Deals.AcceptOffer(ctx, offer, nil); err != nil {
@@ -86,7 +86,7 @@ func TestAnOfferDerivedRecurringFigureRefusesAManualEdit(t *testing.T) {
 	e := Setup(t)
 	pipeline, open, _ := DealFixture(t, e)
 	deal := e.SeedDeal(t, "Locked subscription", pipeline, open, &e.Rep1)
-	ctx := e.As(e.Rep1, []ids.UUID{e.Team1}, offerDeskPerms)
+	ctx := e.As(e.Rep1, []ids.UUID{e.Team1}, OfferDeskPerms)
 	admin := e.Admin()
 	id := ids.From[ids.DealKind](deal)
 
@@ -135,7 +135,7 @@ func TestAnUnclassifiedOfferStillRefusesToRedenominateAHumansFigure(t *testing.T
 	e := Setup(t)
 	pipeline, open, _ := DealFixture(t, e)
 	deal := e.SeedDeal(t, "Historic offer", pipeline, open, &e.Rep1)
-	ctx := e.As(e.Rep1, []ids.UUID{e.Team1}, offerDeskPerms)
+	ctx := e.As(e.Rep1, []ids.UUID{e.Team1}, OfferDeskPerms)
 	admin := e.Admin()
 
 	amount, arr, currency := int64(500_000), int64(1_200_000), "EUR"
@@ -177,7 +177,7 @@ func TestSendingRefusesARecurringLineWithNoSettledTerm(t *testing.T) {
 	e := Setup(t)
 	pipeline, open, _ := DealFixture(t, e)
 	deal := e.SeedDeal(t, "Untermed subscription", pipeline, open, &e.Rep1)
-	ctx := e.As(e.Rep1, []ids.UUID{e.Team1}, offerDeskPerms)
+	ctx := e.As(e.Rep1, []ids.UUID{e.Team1}, OfferDeskPerms)
 
 	description, price, taxRate := "Subscription", int64(100_000), "0.00"
 	months := 1
@@ -216,7 +216,7 @@ func TestAnOfferDerivedFigureCannotBeRedenominatedByRestatingIt(t *testing.T) {
 	e := Setup(t)
 	pipeline, open, _ := DealFixture(t, e)
 	deal := e.SeedDeal(t, "Redenomination probe", pipeline, open, &e.Rep1)
-	ctx := e.As(e.Rep1, []ids.UUID{e.Team1}, offerDeskPerms)
+	ctx := e.As(e.Rep1, []ids.UUID{e.Team1}, OfferDeskPerms)
 	admin := e.Admin()
 
 	offer := recurringOffer(t, e, deal)
@@ -253,7 +253,7 @@ func TestRegeneratingAnOfferKeepsWhatItsLinesSaidAboutRepeating(t *testing.T) {
 	e := Setup(t)
 	pipeline, open, _ := DealFixture(t, e)
 	deal := e.SeedDeal(t, "Regenerated subscription", pipeline, open, &e.Rep1)
-	ctx := e.As(e.Rep1, []ids.UUID{e.Team1}, offerDeskPerms)
+	ctx := e.As(e.Rep1, []ids.UUID{e.Team1}, OfferDeskPerms)
 
 	offer := recurringOffer(t, e, deal)
 	next, err := e.Deals.RegenerateOffer(ctx, offer)

@@ -174,9 +174,9 @@ func offerAcceptedPayload(current crmcontracts.Offer) crmcontracts.PublicEventOf
 }
 
 // AcceptOffer runs sent → accepted: sets accepted_at, SYNCS the deal's
-// amount_minor/currency from the accepted offer's gross (P12: one audit
-// row; the paired deal.updated event rides the same correlation), and
-// emits offer.accepted. Accepting re-prices the deal, so the caller
+// amount_minor/currency from the accepted offer's net, and emits offer.accepted.
+// The deal's change has one audit row, and the paired deal.updated event rides
+// the same correlation (P12). Accepting re-prices the deal, so the caller
 // needs the deal update grant as well as the offer's.
 func (s *Store) AcceptOffer(ctx context.Context, id ids.OfferID, ifVersion *int64) (crmcontracts.Offer, error) {
 	if err := auth.Require(ctx, "offer", principal.ActionUpdate); err != nil {

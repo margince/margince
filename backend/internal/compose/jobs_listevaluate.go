@@ -90,7 +90,11 @@ func CheckLiveLists(ctx context.Context, pool *pgxpool.Pool, workspace ids.UUID,
 		if check.Outcome != collections.CheckInvalid {
 			continue
 		}
-		if pauseErr := pauser.PauseRulesOnList(wsCtx, check.ListID.UUID, automation.PausedListInvalid); pauseErr != nil {
+		reason := automation.PausedListInvalid
+		if check.KindRemoved {
+			reason = automation.PausedListUnavailable
+		}
+		if pauseErr := pauser.PauseRulesOnList(wsCtx, check.ListID.UUID, reason); pauseErr != nil {
 			err = errors.Join(err, fmt.Errorf("pause the rules on list %s: %w", check.ListID, pauseErr))
 		}
 	}

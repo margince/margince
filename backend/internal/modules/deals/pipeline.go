@@ -14,6 +14,7 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/platform/labeltranslation"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -24,6 +25,8 @@ type StageInput struct {
 	Position       int
 	Semantic       string
 	WinProbability int
+	// NameTranslations is the name in further UI languages, nil for none.
+	NameTranslations map[string]string
 }
 
 type CreatePipelineInput struct {
@@ -77,10 +80,14 @@ func createPipelineTx(ctx context.Context, tx pgx.Tx, in CreatePipelineInput) (c
 	}
 
 	for _, st := range in.Stages {
+		translations, err := labeltranslation.Normalize(stageNameTranslationsField, st.NameTranslations)
+		if err != nil {
+			return crmcontracts.Pipeline{}, err
+		}
 		if _, err := tx.Exec(ctx,
-			`INSERT INTO stage (pipeline_id, name, position, semantic, win_probability)
-			 VALUES ($1, $2, $3, $4, $5)`,
-			id, st.Name, st.Position, st.Semantic, st.WinProbability); err != nil {
+			`INSERT INTO stage (pipeline_id, name, position, semantic, win_probability, name_translations)
+			 VALUES ($1, $2, $3, $4, $5, $6)`,
+			id, st.Name, st.Position, st.Semantic, st.WinProbability, translations); err != nil {
 			return crmcontracts.Pipeline{}, fmt.Errorf("insert stage: %w", err)
 		}
 	}
@@ -253,12 +260,12 @@ func readPipelines(ctx context.Context, tx pgx.Tx, where string, args []any) ([]
 
 // defaultStages is the seeded pipeline shape a fresh workspace gets.
 var defaultStages = []StageInput{
-	{Name: "Qualified", Position: 1, Semantic: string(DealOpen), WinProbability: 10},
-	{Name: "Discovery", Position: 2, Semantic: string(DealOpen), WinProbability: 25},
-	{Name: "Proposal", Position: 3, Semantic: string(DealOpen), WinProbability: 50},
-	{Name: "Negotiation", Position: 4, Semantic: string(DealOpen), WinProbability: 75},
-	{Name: defaultWonStageName, Position: 5, Semantic: string(SemanticWon), WinProbability: 100},
-	{Name: defaultLostStageName, Position: 6, Semantic: string(SemanticLost), WinProbability: 0},
+	{Name: "Qualified", Position: 1, Semantic: string(DealOpen), WinProbability: 10, NameTranslations: seededTranslations("Qualified")},
+	{Name: "Discovery", Position: 2, Semantic: string(DealOpen), WinProbability: 25, NameTranslations: seededTranslations("Discovery")},
+	{Name: "Proposal", Position: 3, Semantic: string(DealOpen), WinProbability: 50, NameTranslations: seededTranslations("Proposal")},
+	{Name: "Negotiation", Position: 4, Semantic: string(DealOpen), WinProbability: 75, NameTranslations: seededTranslations("Negotiation")},
+	{Name: defaultWonStageName, Position: 5, Semantic: string(SemanticWon), WinProbability: 100, NameTranslations: seededTranslations(defaultWonStageName)},
+	{Name: defaultLostStageName, Position: 6, Semantic: string(SemanticLost), WinProbability: 0, NameTranslations: seededTranslations(defaultLostStageName)},
 }
 
 // SeedDefaults provisions a fresh workspace's default pipeline. Called by
