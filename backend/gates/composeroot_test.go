@@ -69,7 +69,7 @@ const (
 	// Raised by 1 test file, 166 test lines and about 90 production lines for the
 	// sweep's outcome check. It is wired into this package's runner service and
 	// resume path, and it needs their unexported run types.
-	composeRootProductionLines = 230_808
+	composeRootProductionLines = 230_815
 	composeRootTestLines       = 360_466
 )
 
