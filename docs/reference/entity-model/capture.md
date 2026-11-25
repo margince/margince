@@ -228,7 +228,7 @@ The 25 tables owned by `capture`, as the migrations build them. [Back to the ent
 | `keys_by_provider` | `boolean`, default `false` | yes |  |
 | `legal_entity_id` | `uuid` |  | Points at `legal_entity.id`. |
 | `mail_posture` | `text`, default `'classified'::text` | yes | What this mailbox asks of the mail it brings in. |
-| `provider` | `text` | yes | The mail/calendar/meeting-notes provider (A51 email+calendar parity). |
+| `provider` | `text` | yes | The mail/calendar/meeting-notes provider. |
 | `provider_scopes` | `text[]` |  |  |
 | `reader_team_id` | `uuid` |  | Points at `team.id`. |
 | `share_acknowledged_at` | `timestamp with time zone` |  |  |

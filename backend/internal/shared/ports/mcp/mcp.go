@@ -144,6 +144,9 @@ type ToolSpec struct {
 	// the user's yes first. Nothing enforces that; a human-approved call already
 	// has its yes.
 	AskUserFirst bool
+	// PreviewArgument names a boolean argument that, sent true, makes the call
+	// write nothing. Such a call needs no yes, so the ask-first note exempts it.
+	PreviewArgument string
 	// UI names the interactive view that renders this tool's result, and is
 	// nil on a tool that has none. It carries no authority: a view is a second
 	// renderer for an answer this tool already gives in text, never a second
@@ -179,6 +182,11 @@ type ToolAction struct {
 	Verb         string
 	Tier         RiskTier
 	AskUserFirst bool
+	// PreviewArgument is the verb's own (ToolSpec.PreviewArgument).
+	PreviewArgument string
+	// PickedBy names the arguments that choose this action, for a router that
+	// has no action field and picks by which arguments a call names.
+	PickedBy string
 }
 
 // ReadOnly reports whether the tool only reads — the protocol's

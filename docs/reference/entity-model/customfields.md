@@ -39,6 +39,7 @@ The 1 table owned by `customfields`, as the migrations build them. [Back to the 
 **Rules**
 
 - `custom_field_activity_kinds_check`: `CHECK (((activity_kinds IS NULL) OR ((object = 'activity') AND (cardinality(activity_kinds) > 0))))`
+- `custom_field_activity_kinds_vocabulary`: `CHECK ((activity_kinds <@ ARRAY['call', 'email', 'meeting', 'message', 'note', 'task']))`
 - `custom_field_object_check`: `CHECK ((object = ANY (ARRAY['contact', 'company', 'deal', 'lead', 'activity', 'project', 'relationship', 'partner', 'contract'])))`
 - `custom_field_reportable_type_check`: `CHECK (((NOT reportable) OR ((object = ANY (ARRAY['deal', 'company'])) AND (type = ANY (ARRAY['picklist', 'boolean'])))))`
 - `custom_field_status_check`: `CHECK ((status = ANY (ARRAY['active', 'retired'])))`
