@@ -89,7 +89,7 @@ must_mention:
   # cell, so "Would create 4 companies" and "ready to commit once you
   # confirm" reach nothing while "4 companies created", "the partner list is
   # committed" and "vier Firmen angelegt" all land.
-  - "(?:^|[.;:!?\n|])(?:(?!\b(?:would|will|going to|about to|once|after|if|before|not|nothing|no|never|shall|should|ready|awaiting|waiting|pending|to|\w*n['’]t)\b)[^.;:!?\n|])*?(?:(?:I |we |)(?:have |'ve |has |had |)(?:committed|imported|created|added|landed)\b|(?:is|are) (?:now )?(?:committed|imported|in (?:the (?:CRM|workspace|system)|Margince))|\bdrin\b|angelegt|eingelesen)"
+  - "(?:^|[.;:!?\n|])(?:(?!\b(?:would|will|going to|about to|once|after|if|before|not|nothing|no|never|shall|should|ready|awaiting|waiting|pending|to|\w*n['’]t)\b)[^.;:!?\n|])*?(?:(?:I |we |)(?:have |'ve |has |had |)(?:committed|imported|created|added|landed)\b|(?:is|are) (?:now )?(?:committed|imported|in (?:the (?:CRM|workspace|system)|Margince)|in as (?:new )?(?:compan|contact|record))|\bdrin\b|angelegt|eingelesen)"
 
   # CRITERION 2, AND THE PART OF "WHAT ACTUALLY LANDED" NOTHING ELSE ASKED FOR.
   # `name,city,size,country` places NOTHING on its own, so every run, by the
