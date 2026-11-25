@@ -79,7 +79,7 @@ func assuranceCallSubjects(pool *pgxpool.Pool) assurance.CallSubjectsFunc {
 		}
 		out := make([]assurance.CallSubject, 0, len(calls))
 		for _, call := range calls {
-			subject, compared, err := compareCall(ctx, tx, store, call, now)
+			subject, compared, err := compareCall(ctx, tx, store, zone, call, now)
 			if err != nil {
 				return nil, err
 			}
@@ -101,7 +101,7 @@ func scanStandingCall(row pgx.CollectableRow) (forecasting.Call, error) {
 // compareCall answers one call's subject. compared is false for a call with
 // no baseline.
 func compareCall(
-	ctx context.Context, tx pgx.Tx, store *forecasting.Store, call forecasting.Call, now time.Time,
+	ctx context.Context, tx pgx.Tx, store *forecasting.Store, zone *time.Location, call forecasting.Call, now time.Time,
 ) (assurance.CallSubject, bool, error) {
 	baseline, found, err := store.CallBaselineTx(ctx, tx, call.ID)
 	if err != nil || !found {
@@ -116,7 +116,7 @@ func compareCall(
 	if call.Scope.ID != nil {
 		subject.ScopeID = call.Scope.ID.String()
 	}
-	period, same, err := callWindow(ctx, tx, call)
+	period, same, err := callWindow(ctx, tx, zone, call)
 	if err != nil {
 		return assurance.CallSubject{}, false, err
 	}
@@ -145,11 +145,7 @@ func compareCall(
 // asked at its middle day so no zone moves it across a boundary. same is
 // false when the calendar no longer has it, such as after the financial year
 // was moved. No reading can then be taken over the call's period.
-func callWindow(ctx context.Context, tx pgx.Tx, call forecasting.Call) (forecasting.Period, bool, error) {
-	zone, err := installationZoneTx(ctx, tx)
-	if err != nil {
-		return forecasting.Period{}, false, err
-	}
+func callWindow(ctx context.Context, tx pgx.Tx, zone *time.Location, call forecasting.Call) (forecasting.Period, bool, error) {
 	days := elapsed.Days(call.PeriodStart, call.PeriodEnd, zone)
 	middle := call.PeriodStart.AddDate(0, 0, days/2)
 	for _, kind := range []forecasting.PeriodKind{forecasting.PeriodQuarter, forecasting.PeriodMonth, forecasting.PeriodWeek} {
