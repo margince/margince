@@ -18,12 +18,9 @@ import (
 	"github.com/margince/margince/backend/pkg/extension"
 )
 
-// unitManifestFile is the per-unit generated manifest: what
-// the unit declares that an OPERATOR must resolve, derived from the
-// declaration and written next to the unit, so preflight, permission
-// review, and the boot inventory read it WITHOUT compiling or executing
-// the code. The drift gate (-verify), not a signature, binds it to the
-// source for in-repo units.
+// unitManifestFile is the per-unit generated manifest of what an operator must
+// resolve. It stays a literal so check-generators-twice ties the committed
+// manifests to this tool. A test holds it equal to unitset.ManifestFile.
 const unitManifestFile = "manifest.generated.json"
 
 // opAgentToolInvoke is the operation a governed agent tool performs; the

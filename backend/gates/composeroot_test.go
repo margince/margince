@@ -41,8 +41,9 @@ const (
 	// Raised by 1 for the removed-unit list cases, which drive the unexported
 	// Live List check and list export over a kind no unit declares. Raised by 1
 	// test file for the data reset cases of an event the sweep orphaned. Raised by
-	// 1 test file for the extension notice kind cases.
-	composeRootTestFiles = 1918
+	// 1 test file for the extension notice kind cases. Raised by 1 test file for
+	// the unit tool coverage cases, which read the unexported tool coverage census.
+	composeRootTestFiles = 1919
 	// Raised by 107 for the floor of a figure every reader is shown alike. Raised
 	// by 1 for the import that binds one zone lookup to each attention read.
 	// Raised by 249 production and 62 test lines for the full-path certification
@@ -99,7 +100,7 @@ const (
 	// state and the schedule book's time zone. Both drive the unexported
 	// inventory handler, schedule book and catch-up schedule.
 	composeRootProductionLines = 231_243
-	composeRootTestLines       = 361_808
+	composeRootTestLines       = 361_804
 )
 
 // A read under these floors stopped early or read the wrong place, and would

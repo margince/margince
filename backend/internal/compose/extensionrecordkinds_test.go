@@ -7,6 +7,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/margince/margince/backend/internal/shared/ports/extregistrytest"
 	"github.com/margince/margince/backend/internal/shared/ports/recordkinds"
 	"github.com/margince/margince/backend/pkg/extension"
 )
@@ -20,8 +21,7 @@ func visitKind(unitNS string) extension.RecordKindDeclaration {
 }
 
 func TestRegisterExtensionsRegistersDeclaredRecordKinds(t *testing.T) {
-	recordkinds.Reset()
-	t.Cleanup(recordkinds.Reset)
+	extregistrytest.Reset(t)
 	err := RegisterExtensions(composableAll([]extension.Extension{{
 		Name: "kinds-ok", Version: "0.0.1",
 		RecordKinds: []extension.RecordKindDeclaration{visitKind("ext_kinds_ok")},
@@ -36,6 +36,7 @@ func TestRegisterExtensionsRegistersDeclaredRecordKinds(t *testing.T) {
 }
 
 func TestABadRecordKindDeclarationAbortsTheBoot(t *testing.T) {
+	extregistrytest.Reset(t)
 	twice := []extension.RecordKindDeclaration{visitKind("ext_kinds_bad"), visitKind("ext_kinds_bad")}
 	noKey := visitKind("ext_kinds_bad")
 	noKey.NaturalKey = nil
@@ -59,7 +60,6 @@ func TestABadRecordKindDeclarationAbortsTheBoot(t *testing.T) {
 			t.Errorf("%s: %d kinds registered by a refused set", c.name, len(got))
 		}
 	}
-	t.Cleanup(recordkinds.Reset)
 }
 
 func TestARecordKindGatesOnItsOwnRbacObjectWithNoGrantByDefault(t *testing.T) {

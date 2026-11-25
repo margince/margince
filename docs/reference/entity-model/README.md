@@ -31,7 +31,7 @@ module to put a change in, read [modules.md](../modules.md).
 | | |
 |---|--:|
 | Tables | 354 |
-| Columns | 4350 |
+| Columns | 4348 |
 | Foreign keys | 617 |
 | Owning areas | 40 |
 
@@ -297,7 +297,7 @@ erDiagram
 | [`deal_stage_history`](deals.md#deal_stage_history) | deals | 24 | 3 |
 | [`deal_suggestion`](deals.md#deal_suggestion) | deals | 19 | 1 |
 | [`deal_suggestion_evidence`](deals.md#deal_suggestion_evidence) | deals | 8 | 0 |
-| [`dedupe_candidate`](contacts.md#dedupe_candidate) | contacts | 21 | 0 |
+| [`dedupe_candidate`](contacts.md#dedupe_candidate) | contacts | 19 | 0 |
 | [`dedupe_scan_state`](contacts.md#dedupe_scan_state) | contacts | 3 | 0 |
 | [`email_signature`](contacts.md#email_signature) | contacts | 10 | 0 |
 | [`embed_store_binding`](search.md#embed_store_binding) | search | 6 | 0 |
