@@ -6,6 +6,7 @@
 package activities
 
 import (
+	"slices"
 	"testing"
 
 	"github.com/jackc/pgx/v5"
@@ -238,4 +239,31 @@ func partyContacts(parties []crmcontracts.EmailParty) map[ids.UUID]bool {
 		}
 	}
 	return named
+}
+
+// An imported email names a party no contact holds by the address its header
+// gave. The row stores that address lowercase, whatever case the header used.
+func TestAHeaderAddressNoContactHoldsIsStoredLowercase(t *testing.T) {
+	e := setupLoad(t)
+	subject, direction := "Send the report", "inbound"
+	logged, _, err := storeKnowing(e).LogActivity(asClassifier(e), LogActivityInput{
+		Kind: "email", Subject: &subject, Direction: &direction, ThreadKey: ids.NewV7().String(), Source: "test",
+		OccurredAt: &requestInstant, CounterpartyEmail: "stranger@unknown.test",
+		EmailFrom: " Stranger@Unknown.TEST", EmailCc: []string{"Copied@Unknown.Test"},
+	})
+	if err != nil {
+		t.Fatalf("logging the imported email: %v", err)
+	}
+	rows, err := e.owner.Query(e.as(), `SELECT role || ' ' || address FROM activity_participant
+		 WHERE activity_id = $1 AND address IS NOT NULL ORDER BY 1`, ids.UUID(logged.Id))
+	if err != nil {
+		t.Fatal(err)
+	}
+	stored, err := pgx.CollectRows(rows, pgx.RowTo[string])
+	if err != nil {
+		t.Fatal(err)
+	}
+	if want := []string{"cc copied@unknown.test", "from stranger@unknown.test"}; !slices.Equal(stored, want) {
+		t.Fatalf("the header parties are stored as %q, want %q", stored, want)
+	}
 }
