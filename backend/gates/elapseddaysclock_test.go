@@ -5,16 +5,12 @@
 
 package gates
 
-// A day count from an activity's time reads that time's precision.
+// A day count from an activity's time reads that time's precision. A day entry
+// is stored at noon UTC, which far east of UTC is already the next day.
+// occurredday.DaysSince counts it from its own date; elapsed.Days does not.
 //
-// A day entry is stored at noon UTC of its date. elapsed.Days counts calendar
-// days from the instant it is given, and far east of UTC that noon is already
-// the next day, so a count from a stored activity clock comes out a day short.
-// occurredday.DaysSince counts a day entry from its own date.
-//
-// The census is every function that calls elapsed.Days. Each one states that
-// its start is not an activity's time, or is listed as a stored clock that
-// still counts without its precision.
+// The census is every function that calls elapsed.Days. Each one says its
+// start is not an activity's time, or is listed as still counting without it.
 
 import (
 	"go/ast"

@@ -37,8 +37,8 @@ func TestAProjectWithADateOnlyActivityGoesQuietByItsDate(t *testing.T) {
 		t.Fatalf("logging the visit: %v", err)
 	}
 
-	// At 11:00 UTC on the 29th day after the visit it is already the 30th in
-	// Kiritimati, while fewer than 30 times 24 hours have passed since noon UTC.
+	// At 11:00 UTC on the 29th day after the visit it is the 30th in Kiritimati.
+	// Fewer than 30 times 24 hours have passed since noon UTC.
 	quietDay := visited.AddDate(0, 0, projects.DefaultProjectQuietDays-1).Add(-time.Hour)
 	if pass := quietProjectPass(t, e, quietDay); pass.Considered != 1 {
 		t.Errorf("on the date the quiet period ends, %d project(s) were considered, want the rollout", pass.Considered)

@@ -39,10 +39,8 @@ func ProjectInFlightSQL(alias string) string {
 // clock — and daysPos is the bind position holding the integer day count.
 func ProjectQuietSQL(alias, nowSQL string, daysPos int) string {
 	// nowSQL is cast so a bound parameter is typed by the comparison rather
-	// than guessed as an interval from the subtraction beside it.
-	//
-	// A date-only newest activity is quiet from its own date, counted on the
-	// installation's calendar. Its noon-UTC anchor is the next day far east of UTC.
+	// than guessed as an interval from the subtraction beside it. A date-only
+	// newest activity counts from its own date on the installation's calendar.
 	anchor := ProjectQuietAnchorSQL(alias)
 	return fmt.Sprintf(`(CASE WHEN %[4]s
 		THEN %[5]s <= %[6]s - $%[3]d

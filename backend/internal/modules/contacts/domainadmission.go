@@ -143,6 +143,7 @@ func recordHumanDomainAdmissionTx(
 	// surface exists to answer. Without it admission_source says "human"
 	// but never WHICH human, and admission_at is overwritten on every
 	// change.
+	//
 	// A decision that repeats the stored one changes nothing. Writing it would
 	// restamp admission_at and, for an unblock, ask about the domain again.
 	current, err := readDomainAdmissionTx(ctx, tx, domain)

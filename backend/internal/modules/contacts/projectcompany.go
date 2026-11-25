@@ -274,8 +274,8 @@ func setCompanyRoleTx(
 		 RETURNING `+relationshipColumns+`, (SELECT was.role FROM was), xmax = 0`,
 		projectID, companyID, role, projectCompanySource, by)
 	row, err := scanRelationshipWithPrior(scan, &priorRole, &inserted)
-	// No row back is an edge that already held this role: the conflict
-	// matched and the WHERE left it alone, so there is nothing to record.
+	// No row back is an edge that already held this role. The conflict matched
+	// and the update's condition left it alone, so there is nothing to record.
 	if errors.Is(err, pgx.ErrNoRows) {
 		return nil
 	}

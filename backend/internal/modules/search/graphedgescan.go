@@ -12,8 +12,8 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/occurredday"
 )
 
-// edgeLastIsDaySQL says the activity an edge's last_at names is a day entry:
-// one the member and the contact both took part in, as the fold counts them.
+// edgeLastIsDaySQL says the activity an edge's last_at names is a day entry.
+// The activity is one the member and the contact both took part in.
 var edgeLastIsDaySQL = occurredday.ClockIsDaySQL(`FROM activity_participant clock_up
 		JOIN activity_participant clock_pp ON clock_pp.activity_id = clock_up.activity_id
 		JOIN activity clock_row ON clock_row.id = clock_up.activity_id

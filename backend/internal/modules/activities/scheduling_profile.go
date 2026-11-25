@@ -309,20 +309,6 @@ func (s *Store) checkBookingCalendar(ctx context.Context, host ids.UserID, store
 	return s.validateBookingCalendars(ctx, host, profile)
 }
 
-// bookingCalendarChanged compares what the provider check vouches for. An
-// absent blocking list and an empty one block the same nothing.
-func bookingCalendarChanged(stored, next crmcontracts.SchedulingProfile) bool {
-	return stored.Provider != next.Provider || stored.CalendarId != next.CalendarId ||
-		!slices.Equal(blockingCalendars(stored), blockingCalendars(next))
-}
-
-func blockingCalendars(p crmcontracts.SchedulingProfile) []string {
-	if p.BlockingCalendars == nil {
-		return nil
-	}
-	return *p.BlockingCalendars
-}
-
 func (s *Store) validateBookingCalendars(ctx context.Context, host ids.UserID, profile *crmcontracts.SchedulingProfile) error {
 	if s.calendar == nil {
 		return apperrors.ErrPermissionDenied

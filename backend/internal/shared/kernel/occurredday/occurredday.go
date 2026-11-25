@@ -392,16 +392,16 @@ func AheadAtSQL(at, precision, now string) string {
 const InstallationZoneSQL = `COALESCE((SELECT st.value #>> '{}' FROM setting st WHERE st.key = 'installation.timezone'), 'UTC')`
 
 // ClockPrecisionSQL is the precision of the activity a stored activity clock
-// names, null when no row matches. rowsSQL is a FROM ... WHERE over the activity
-// rows the clock was folded from, aliased clock_row. An instant at the same
-// stored instant as a day entry wins, as LatestPrecisionSQL rules.
+// names, null when no row matches. rowsSQL is a `FROM ... WHERE` over the
+// activity rows the clock was folded from, aliased clock_row. An instant at the
+// same stored instant as a day entry wins, as LatestPrecisionSQL rules.
 func ClockPrecisionSQL(rowsSQL, clock string) string {
 	return `(SELECT ` + LatestPrecisionSQL("clock_row", "") + ` ` + rowsSQL +
 		` AND clock_row.archived_at IS NULL AND clock_row.occurred_at = ` + clock + `)`
 }
 
-// ClockIsDaySQL is true when the activity a stored clock names is a day entry,
-// and false when it is an instant or the clock names nothing.
+// ClockIsDaySQL says the activity a stored clock names is a day entry. It is
+// false for an instant, and for a clock that names nothing.
 func ClockIsDaySQL(rowsSQL, clock string) string {
 	return `coalesce(` + ClockPrecisionSQL(rowsSQL, clock) + ` = 'day', false)`
 }

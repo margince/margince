@@ -208,11 +208,9 @@ func (s *Service) SaveMyWorkingHours(ctx context.Context, in WorkingHours) (Work
 			if tag.RowsAffected() == 0 {
 				return apperrors.ErrNotFound
 			}
-			// Audit-only: the closed event catalog carries no working-hours verb,
-			// and there is nothing downstream waiting on one — availability reads
-			// the row on the next question, which no subscriber could do sooner.
-			// The images carry both windows, which is what answers "why did my
-			// bookings halve".
+			// Audit-only: the closed event catalog carries no working-hours verb.
+			// Availability reads the row on the next question, so no subscriber
+			// waits on one. The images carry both windows.
 			if _, err := storekit.Audit(ctx, tx, "update", "user", human,
 				workingHoursImage(before), workingHoursImage(normalized)); err != nil {
 				return err
