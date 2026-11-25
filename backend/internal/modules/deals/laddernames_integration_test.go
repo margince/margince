@@ -9,12 +9,18 @@ package deals
 // compared trimmed and ignoring case, against the real indexes.
 
 import (
+	"context"
+	"errors"
 	"net/http"
+	"slices"
 	"strings"
 	"testing"
 
+	"github.com/jackc/pgx/v5"
+
 	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/kernel/values"
 )
 
@@ -89,4 +95,40 @@ func TestAStageNameIsHeldOncePerPipeline(t *testing.T) {
 
 	// Another pipeline holds its own ladder, so the name is free there.
 	e.seedStage(ctx, t, "Discovery", 20)
+}
+
+// errSeedRolledBack ends the seeding transaction once its ladder is read, so
+// the configured default pipeline does not outlive the test.
+var errSeedRolledBack = errors.New("the seeded ladder was read")
+
+// A configured open stage named like the closing pair does not stop bootstrap:
+// the pair the seed appends takes the next free name.
+func TestASeededLadderBesideAnOpenStageNamedWonNumbersTheClosingStage(t *testing.T) {
+	e := setupConfigEnv(t)
+	ctx := principal.SystemActing(principal.WithCorrelationID(principal.WithWorkspaceID(context.Background(), e.ws), ids.NewV7()), "system:test")
+	var names []string
+	err := e.store.Tx(ctx, func(tx pgx.Tx) error {
+		if _, err := tx.Exec(ctx, `UPDATE pipeline SET is_default = false WHERE is_default`); err != nil {
+			return err
+		}
+		name := "Seeded " + ids.NewV7().String()
+		if err := e.store.SeedPipelineTx(ctx, tx, name, []StageSeed{{Name: "won", WinProbability: 60}}); err != nil {
+			return err
+		}
+		rows, err := tx.Query(ctx, `SELECT s.name FROM stage s JOIN pipeline p ON p.id = s.pipeline_id
+			WHERE p.name = $1 ORDER BY s.position`, name)
+		if err != nil {
+			return err
+		}
+		if names, err = pgx.CollectRows(rows, pgx.RowTo[string]); err != nil {
+			return err
+		}
+		return errSeedRolledBack
+	})
+	if !errors.Is(err, errSeedRolledBack) {
+		t.Fatalf("seeding the configured pipeline: %v", err)
+	}
+	if !slices.Equal(names, []string{"won", "Won 2", "Lost"}) {
+		t.Errorf("the seeded ladder is %v, want the open stage, then Won 2 and Lost", names)
+	}
 }

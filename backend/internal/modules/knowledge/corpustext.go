@@ -60,7 +60,7 @@ func refuseShippedCorpusName(ctx context.Context, tx pgx.Tx, id ids.UUID, shippe
 		return fmt.Errorf("check the shipped document set's name: %w", err)
 	}
 	if held {
-		return storekit.NameHeld(corpusEntry, name)
+		return &storekit.NameTakenError{Entry: corpusEntry, Name: name}
 	}
 	return nil
 }

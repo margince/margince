@@ -248,8 +248,9 @@ func TestATeamNameIsHeldOnceAmongLiveTeams(t *testing.T) {
 	if err != nil {
 		t.Fatalf("creating the team: %v", err)
 	}
-	if _, err := e.svc.CreateTeam(ctx, e.admin, "  dach SALES "); !errors.Is(err, apperrors.ErrConflict) {
-		t.Errorf("a second spelling of a live team's name answered %v, want a conflict", err)
+	_, err = e.svc.CreateTeam(ctx, e.admin, "  dach SALES ")
+	if fault, _ := httperr.Classify(err); !errors.Is(err, apperrors.ErrConflict) || fault.Code != "name_taken" {
+		t.Errorf("a second spelling of a live team's name answered %v (code %q), want name_taken", err, fault.Code)
 	}
 	support, err := e.svc.CreateTeam(ctx, e.admin, "Support")
 	if err != nil {

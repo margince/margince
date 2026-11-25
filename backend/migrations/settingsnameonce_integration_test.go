@@ -121,10 +121,15 @@ func TestSettingsListTwinsAreRenamedBeforeEachNameIsHeldOnce(t *testing.T) {
 	}
 	var managed string
 	if err := conn.QueryRow(ctx, `
-		INSERT INTO knowledge_corpus (name, topic_statement, captured_by, managed_source)
-		VALUES ('Gone dark', 'Handbook', 'system', 'handbook') RETURNING id::text`).Scan(&managed); err != nil {
+		INSERT INTO knowledge_corpus (name, topic_statement, captured_by, managed_source, created_at)
+		VALUES ('Margince handbook', 'Handbook', 'system', 'handbook', '2026-05-01T00:00:00Z') RETURNING id::text`).Scan(&managed); err != nil {
 		t.Fatalf("seeding a managed document set: %v", err)
 	}
+	seeded["knowledge_corpus"] = append(seeded["knowledge_corpus"], managed)
+	corpora := lists[len(lists)-1]
+	userTwin := seed(corpora, " margince HANDBOOK", "2026-01-01T00:00:00Z")
+	expected = append(expected, expectation{corpora, userTwin, "margince HANDBOOK (duplicate 1)",
+		"a user's set named like the managed one is renamed, however old"})
 
 	applyMigrationFile(t, conn, settingsNameOnceUp)
 
@@ -138,8 +143,8 @@ func TestSettingsListTwinsAreRenamedBeforeEachNameIsHeldOnce(t *testing.T) {
 		}
 	}
 	var managedName string
-	if err := conn.QueryRow(ctx, `SELECT name FROM knowledge_corpus WHERE id = $1`, managed).Scan(&managedName); err != nil || managedName != "Gone dark" {
-		t.Errorf("a managed document set was renamed beside a user set (%q, %v)", managedName, err)
+	if err := conn.QueryRow(ctx, `SELECT name FROM knowledge_corpus WHERE id = $1`, managed).Scan(&managedName); err != nil || managedName != "Margince handbook" {
+		t.Errorf("the managed document set did not keep its name beside a user's twin (%q, %v)", managedName, err)
 	}
 
 	for _, list := range lists {

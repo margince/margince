@@ -228,7 +228,7 @@ func (s *Store) UpdateLossReason(ctx context.Context, id ids.UUID, in UpdateLoss
 			return err
 		}
 		if in.IfVersion != nil && before.Version != nil && *in.IfVersion != *before.Version {
-			return apperrors.ErrConflict
+			return apperrors.ErrVersionSkew
 		}
 		patch := lossReasonPatch(before, in)
 		if !patch.Empty() {

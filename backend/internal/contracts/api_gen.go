@@ -76425,6 +76425,9 @@ type FileNotFound = Problem
 // Forbidden RFC 7807 problem+json with a stable machine `code` and structured `details`.
 type Forbidden = Problem
 
+// NameTakenConflict RFC 7807 problem+json with a stable machine `code` and structured `details`.
+type NameTakenConflict = Problem
+
 // NotFound RFC 7807 problem+json with a stable machine `code` and structured `details`.
 type NotFound = Problem
 

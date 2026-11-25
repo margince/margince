@@ -6105,7 +6105,7 @@ paths:
             application/json:
               schema: { $ref: '#/components/schemas/PartnerStage' }
         '403': { $ref: '#/components/responses/Forbidden' }
-        '409': { $ref: '#/components/responses/Conflict' }
+        '409': { $ref: '#/components/responses/NameTakenConflict' }
         '422': { $ref: '#/components/responses/ValidationError' }
 
   /partner-stages/{id}:
@@ -6136,7 +6136,7 @@ paths:
               schema: { $ref: '#/components/schemas/PartnerStage' }
         '403': { $ref: '#/components/responses/Forbidden' }
         '404': { $ref: '#/components/responses/NotFound' }
-        '409': { $ref: '#/components/responses/Conflict' }
+        '409': { $ref: '#/components/responses/NameTakenConflict' }
         '422': { $ref: '#/components/responses/ValidationError' }
     delete:
       tags: [Partners]
@@ -14464,7 +14464,7 @@ paths:
             application/json:
               schema: { $ref: '#/components/schemas/LeadOrigin' }
         '403': { $ref: '#/components/responses/Forbidden' }
-        '409': { $ref: '#/components/responses/Conflict' }
+        '409': { $ref: '#/components/responses/NameTakenConflict' }
         '422': { $ref: '#/components/responses/ValidationError' }
 
   /lead-origins/{id}:
@@ -14495,7 +14495,7 @@ paths:
               schema: { $ref: '#/components/schemas/LeadOrigin' }
         '403': { $ref: '#/components/responses/Forbidden' }
         '404': { $ref: '#/components/responses/NotFound' }
-        '409': { $ref: '#/components/responses/Conflict' }
+        '409': { $ref: '#/components/responses/NameTakenConflict' }
         '422': { $ref: '#/components/responses/ValidationError' }
     delete:
       tags: [Leads]
@@ -14554,7 +14554,7 @@ paths:
             application/json:
               schema: { $ref: '#/components/schemas/AcquisitionSource' }
         '403': { $ref: '#/components/responses/Forbidden' }
-        '409': { $ref: '#/components/responses/Conflict' }
+        '409': { $ref: '#/components/responses/NameTakenConflict' }
         '422': { $ref: '#/components/responses/ValidationError' }
 
   /acquisition-sources/{id}:
@@ -14587,7 +14587,7 @@ paths:
               schema: { $ref: '#/components/schemas/AcquisitionSource' }
         '403': { $ref: '#/components/responses/Forbidden' }
         '404': { $ref: '#/components/responses/NotFound' }
-        '409': { $ref: '#/components/responses/Conflict' }
+        '409': { $ref: '#/components/responses/NameTakenConflict' }
         '422': { $ref: '#/components/responses/ValidationError' }
 
   /loss-reasons:
@@ -14627,7 +14627,7 @@ paths:
             application/json:
               schema: { $ref: '#/components/schemas/LossReason' }
         '403': { $ref: '#/components/responses/Forbidden' }
-        '409': { $ref: '#/components/responses/Conflict' }
+        '409': { $ref: '#/components/responses/NameTakenConflict' }
         '422': { $ref: '#/components/responses/ValidationError' }
 
   /loss-reasons/{id}:
@@ -14659,7 +14659,7 @@ paths:
               schema: { $ref: '#/components/schemas/LossReason' }
         '403': { $ref: '#/components/responses/Forbidden' }
         '404': { $ref: '#/components/responses/NotFound' }
-        '409': { $ref: '#/components/responses/Conflict' }
+        '409': { $ref: '#/components/responses/NameTakenConflict' }
         '422': { $ref: '#/components/responses/ValidationError' }
 
   /loss-reasons/legacy:
@@ -14790,7 +14790,7 @@ paths:
             application/json:
               schema: { $ref: '#/components/schemas/RecordRole' }
         '403': { $ref: '#/components/responses/Forbidden' }
-        '409': { $ref: '#/components/responses/Conflict' }
+        '409': { $ref: '#/components/responses/NameTakenConflict' }
         '422': { $ref: '#/components/responses/ValidationError' }
 
   /record-roles/{id}:
@@ -14822,7 +14822,7 @@ paths:
               schema: { $ref: '#/components/schemas/RecordRole' }
         '403': { $ref: '#/components/responses/Forbidden' }
         '404': { $ref: '#/components/responses/NotFound' }
-        '409': { $ref: '#/components/responses/Conflict' }
+        '409': { $ref: '#/components/responses/NameTakenConflict' }
         '422': { $ref: '#/components/responses/ValidationError' }
 
   /records/{record_type}/{record_id}/assignments:
@@ -14959,11 +14959,7 @@ paths:
             application/json:
               schema: { $ref: '#/components/schemas/LeadDisqualifyReason' }
         '403': { $ref: '#/components/responses/Forbidden' }
-        '409':
-          description: Another reason already holds this label, compared trimmed and ignoring case.
-          content:
-            application/problem+json:
-              schema: { $ref: '#/components/schemas/Problem' }
+        '409': { $ref: '#/components/responses/NameTakenConflict' }
         '422': { $ref: '#/components/responses/ValidationError' }
 
   /lead-disqualify-reasons/{id}:
@@ -14990,11 +14986,7 @@ paths:
               schema: { $ref: '#/components/schemas/LeadDisqualifyReason' }
         '403': { $ref: '#/components/responses/Forbidden' }
         '404': { $ref: '#/components/responses/NotFound' }
-        '409':
-          description: Another reason already holds this label, compared trimmed and ignoring case.
-          content:
-            application/problem+json:
-              schema: { $ref: '#/components/schemas/Problem' }
+        '409': { $ref: '#/components/responses/NameTakenConflict' }
         '422': { $ref: '#/components/responses/ValidationError' }
     delete:
       tags: [Leads]
@@ -31233,7 +31225,7 @@ paths:
               schema: { $ref: '#/components/schemas/Team' }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
-        '409': { $ref: '#/components/responses/Conflict' }
+        '409': { $ref: '#/components/responses/NameTakenConflict' }
         '422': { $ref: '#/components/responses/ValidationError' }
 
   /teams/{id}:
@@ -31265,7 +31257,7 @@ paths:
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
         '404': { $ref: '#/components/responses/NotFound' }
-        '409': { $ref: '#/components/responses/Conflict' }
+        '409': { $ref: '#/components/responses/NameTakenConflict' }
         '422': { $ref: '#/components/responses/ValidationError' }
 
   /teams/{id}/members/{userId}:
@@ -39201,11 +39193,7 @@ paths:
               schema: { $ref: '#/components/schemas/KnowledgeCorpus' }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/PermissionDenied' }
-        '409':
-          description: Another live document set already holds this name, compared trimmed and ignoring case.
-          content:
-            application/problem+json:
-              schema: { $ref: '#/components/schemas/Problem' }
+        '409': { $ref: '#/components/responses/NameTakenConflict' }
         '422': { $ref: '#/components/responses/ValidationError' }
 
   /knowledge/corpora/{id}:
@@ -39261,11 +39249,7 @@ paths:
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/PermissionDenied' }
         '404': { $ref: '#/components/responses/NotFound' }
-        '409':
-          description: Another live document set already holds this name, compared trimmed and ignoring case.
-          content:
-            application/problem+json:
-              schema: { $ref: '#/components/schemas/Problem' }
+        '409': { $ref: '#/components/responses/NameTakenConflict' }
         '422': { $ref: '#/components/responses/ValidationError' }
     delete:
       tags: [Knowledge]
@@ -40377,6 +40361,13 @@ components:
           examples:
             held:
               value: { type: 'https://errors.gradion.com/locked', title: Locked, status: 423, code: locked, detail: The record is held under a statutory retention obligation. }
+    NameTakenConflict:
+      description: >-
+        `name_taken`: another entry of this list already holds the name, compared trimmed and
+        ignoring case; the detail names it. Any other state conflict answers its own code.
+      content:
+        application/problem+json:
+          schema: { $ref: '#/components/schemas/Problem' }
     Conflict:
       description: State conflict (duplicate key, concurrent edit, already-decided, default-pipeline collision).
       content:

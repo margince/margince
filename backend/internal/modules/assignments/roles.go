@@ -33,8 +33,6 @@ const (
 	codeRequired    = "required"
 )
 
-// roleColumns is what a role read returns, shared by the list and the single
-// read.
 // The indexes holding one role per key and per label (trimmed, case-folded,
 // retired roles included), and the noun their refusal names.
 const (
@@ -43,6 +41,8 @@ const (
 	roleEntry      = "a record role"
 )
 
+// roleColumns is what a role read returns, shared by the list and the single
+// read.
 const roleColumns = `id, key, label, label_key, record_types, assignee_kinds, sort_order, active, system, version, created_at, updated_at`
 
 // CreateRecordRoleInput is the create call's arguments.

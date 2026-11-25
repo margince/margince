@@ -619,8 +619,8 @@ func TestADealListHoldsEachLabelOnce(t *testing.T) {
 			if !errors.Is(err, apperrors.ErrConflict) {
 				t.Fatalf("a rename onto the retired entry's label answered %v, want a conflict", err)
 			}
-			if fault, _ := httperr.Classify(err); !strings.Contains(fault.Detail, "already exists") {
-				t.Errorf("the conflict reads %q, want it to say the label is taken", fault.Detail)
+			if fault, _ := httperr.Classify(err); fault.Status != http.StatusConflict || fault.Code != "name_taken" {
+				t.Errorf("the conflict reads %d %s %q, want 409 name_taken", fault.Status, fault.Code, fault.Detail)
 			}
 			if err := list.rename(other, "THAW "+suffix); err != nil {
 				t.Errorf("a rename that changes only the case of its own label: %v", err)
@@ -656,5 +656,30 @@ func assertLabelTooLong(t *testing.T, err error, field string) {
 	got := fault.Fields[0]
 	if got.Field != field || got.Code != "too_long" || got.Max != values.TextLabelCharacters {
 		t.Errorf("refusal = %+v, want %s too_long with max %d", got, field, values.TextLabelCharacters)
+	}
+}
+
+// A rename sent against an older version is a version skew, never a name clash.
+func TestADealListRenameAgainstAnOlderVersionIsAVersionSkew(t *testing.T) {
+	e := setupConfigEnv(t)
+	ctx := e.asLossAdmin()
+	suffix := ids.NewV7().String()[24:]
+	stale := int64(-1)
+	label := "Fresh " + suffix
+	reason, err := e.store.CreateLossReason(ctx, CreateLossReasonInput{Label: "Stale reason " + suffix})
+	if err != nil {
+		t.Fatal(err)
+	}
+	_, err = e.store.UpdateLossReason(ctx, ids.UUID(reason.Id), UpdateLossReasonInput{Label: &label, IfVersion: &stale})
+	if !errors.Is(err, apperrors.ErrVersionSkew) {
+		t.Errorf("a stale loss reason rename answered %v, want a version skew", err)
+	}
+	source, err := e.store.CreateAcquisitionSource(ctx, CreateAcquisitionSourceInput{Label: "Stale source " + suffix})
+	if err != nil {
+		t.Fatal(err)
+	}
+	_, err = e.store.UpdateAcquisitionSource(ctx, ids.UUID(source.Id), UpdateAcquisitionSourceInput{Label: &label, IfVersion: &stale})
+	if !errors.Is(err, apperrors.ErrVersionSkew) {
+		t.Errorf("a stale acquisition source rename answered %v, want a version skew", err)
 	}
 }

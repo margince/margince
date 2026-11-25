@@ -132,15 +132,17 @@ func (p PipelineSeed) validate() []fault {
 	if len(p.Stages) == 0 {
 		add("stages must name at least one open stage")
 	}
+	// Folded as the database's one-name-per-pipeline index folds them.
 	var seen []string
 	for _, st := range p.Stages {
+		folded := strings.ToLower(strings.TrimSpace(st.Name))
 		switch {
 		case st.Name == "":
 			add("each stage needs a name")
-		case slices.Contains(seen, st.Name):
-			add(fmt.Sprintf("stage %q is listed twice", st.Name))
+		case slices.Contains(seen, folded):
+			add(fmt.Sprintf("stage %q is listed twice, compared ignoring case and spaces", st.Name))
 		}
-		seen = append(seen, st.Name)
+		seen = append(seen, folded)
 		if st.Probability < 0 || st.Probability > 100 {
 			add(fmt.Sprintf("stage %q probability %d is outside 0–100", st.Name, st.Probability))
 		}

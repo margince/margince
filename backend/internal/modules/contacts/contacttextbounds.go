@@ -83,8 +83,6 @@ func requireNameWithin(field, name string) error {
 	return nil
 }
 
-func nameFits(name string) bool { return utf8.RuneCountInString(name) <= ContactNameLimit }
-
 func requireLeadName(raw string) (string, error) {
 	name, err := httperr.RequireNonBlank(contactNameColumn, raw)
 	if err != nil {

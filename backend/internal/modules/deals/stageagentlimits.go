@@ -39,7 +39,7 @@ func stagePositionTaken(position int) error {
 	}
 }
 
-// stageNameTaken says which name the pipeline already holds and what frees it.
+// stageNameTaken names the stage name the pipeline already holds.
 func stageNameTaken(name string) error {
 	return &httperr.DetailedError{
 		Status: http.StatusConflict, Code: "stage_name_taken",

@@ -1,6 +1,7 @@
--- A retired lookup entry keeps its name because it can be restored; an archived
--- team, pipeline, stage or document set cannot, so it releases its name.
--- A managed document set stays out, so a user's set never makes the boot seed fail.
+-- A retired lookup entry keeps its name because it can be restored. An archived
+-- team, pipeline, stage or document set releases its name; a restore checks it again.
+-- A managed document set stays out of the index, so a user's set never makes the
+-- boot seed fail. A user's set already named like it is the twin that is renamed.
 -- Stored twins are renamed, not merged: records point at them by id.
 SET LOCAL lock_timeout = '3s';
 
@@ -18,7 +19,7 @@ BEGIN
    ('team', 'name', NULL, 'archived_at IS NULL', 'created_at, id'),
    ('pipeline', 'name', NULL, 'archived_at IS NULL', 'is_default DESC, created_at, id'),
    ('stage', 'name', 'pipeline_id', 'archived_at IS NULL', 'created_at, id'),
-   ('knowledge_corpus', 'name', NULL, 'archived_at IS NULL AND managed_source IS NULL', 'created_at, id')
+   ('knowledge_corpus', 'name', NULL, 'archived_at IS NULL', '(managed_source IS NOT NULL) DESC, created_at, id')
   ) AS target(relation, name_column, scope_column, held, keeper_first)
  LOOP
   EXECUTE format($sql$

@@ -3769,7 +3769,7 @@ paths:
             application/json:
               schema: {$ref: '#/components/schemas/PartnerStage'}
         '403': {$ref: '#/components/responses/Forbidden'}
-        '409': {$ref: '#/components/responses/Conflict'}
+        '409': {$ref: '#/components/responses/NameTakenConflict'}
         '422': {$ref: '#/components/responses/ValidationError'}
       description: |-
         Add a partner stage.
@@ -3808,7 +3808,7 @@ paths:
               schema: {$ref: '#/components/schemas/PartnerStage'}
         '403': {$ref: '#/components/responses/Forbidden'}
         '404': {$ref: '#/components/responses/NotFound'}
-        '409': {$ref: '#/components/responses/Conflict'}
+        '409': {$ref: '#/components/responses/NameTakenConflict'}
         '422': {$ref: '#/components/responses/ValidationError'}
   /commissions:
     get:
@@ -9694,7 +9694,7 @@ paths:
             application/json:
               schema: {$ref: '#/components/schemas/LeadOrigin'}
         '403': {$ref: '#/components/responses/Forbidden'}
-        '409': {$ref: '#/components/responses/Conflict'}
+        '409': {$ref: '#/components/responses/NameTakenConflict'}
         '422': {$ref: '#/components/responses/ValidationError'}
       description: |-
         Add a lead origin.
@@ -9733,7 +9733,7 @@ paths:
               schema: {$ref: '#/components/schemas/LeadOrigin'}
         '403': {$ref: '#/components/responses/Forbidden'}
         '404': {$ref: '#/components/responses/NotFound'}
-        '409': {$ref: '#/components/responses/Conflict'}
+        '409': {$ref: '#/components/responses/NameTakenConflict'}
         '422': {$ref: '#/components/responses/ValidationError'}
     delete:
       tags: [Leads]
@@ -9792,7 +9792,7 @@ paths:
             application/json:
               schema: {$ref: '#/components/schemas/AcquisitionSource'}
         '403': {$ref: '#/components/responses/Forbidden'}
-        '409': {$ref: '#/components/responses/Conflict'}
+        '409': {$ref: '#/components/responses/NameTakenConflict'}
         '422': {$ref: '#/components/responses/ValidationError'}
       description: |-
         Add an acquisition source.
@@ -9833,7 +9833,7 @@ paths:
               schema: {$ref: '#/components/schemas/AcquisitionSource'}
         '403': {$ref: '#/components/responses/Forbidden'}
         '404': {$ref: '#/components/responses/NotFound'}
-        '409': {$ref: '#/components/responses/Conflict'}
+        '409': {$ref: '#/components/responses/NameTakenConflict'}
         '422': {$ref: '#/components/responses/ValidationError'}
   /loss-reasons:
     get:
@@ -9870,7 +9870,7 @@ paths:
             application/json:
               schema: {$ref: '#/components/schemas/LossReason'}
         '403': {$ref: '#/components/responses/Forbidden'}
-        '409': {$ref: '#/components/responses/Conflict'}
+        '409': {$ref: '#/components/responses/NameTakenConflict'}
         '422': {$ref: '#/components/responses/ValidationError'}
       description: |-
         Add a loss reason.
@@ -9910,7 +9910,7 @@ paths:
               schema: {$ref: '#/components/schemas/LossReason'}
         '403': {$ref: '#/components/responses/Forbidden'}
         '404': {$ref: '#/components/responses/NotFound'}
-        '409': {$ref: '#/components/responses/Conflict'}
+        '409': {$ref: '#/components/responses/NameTakenConflict'}
         '422': {$ref: '#/components/responses/ValidationError'}
   /loss-reasons/legacy:
     get:
@@ -10040,7 +10040,7 @@ paths:
             application/json:
               schema: {$ref: '#/components/schemas/RecordRole'}
         '403': {$ref: '#/components/responses/Forbidden'}
-        '409': {$ref: '#/components/responses/Conflict'}
+        '409': {$ref: '#/components/responses/NameTakenConflict'}
         '422': {$ref: '#/components/responses/ValidationError'}
       description: |-
         Add a responsibility role.
@@ -10080,7 +10080,7 @@ paths:
               schema: {$ref: '#/components/schemas/RecordRole'}
         '403': {$ref: '#/components/responses/Forbidden'}
         '404': {$ref: '#/components/responses/NotFound'}
-        '409': {$ref: '#/components/responses/Conflict'}
+        '409': {$ref: '#/components/responses/NameTakenConflict'}
         '422': {$ref: '#/components/responses/ValidationError'}
   /records/{record_type}/{record_id}/assignments:
     parameters:
@@ -10221,11 +10221,7 @@ paths:
             application/json:
               schema: {$ref: '#/components/schemas/LeadDisqualifyReason'}
         '403': {$ref: '#/components/responses/Forbidden'}
-        '409':
-          description: Another reason already holds this label, compared trimmed and ignoring case.
-          content:
-            application/problem+json:
-              schema: {$ref: '#/components/schemas/Problem'}
+        '409': {$ref: '#/components/responses/NameTakenConflict'}
         '422': {$ref: '#/components/responses/ValidationError'}
       description: |-
         Add a disqualification reason.
@@ -10256,11 +10252,7 @@ paths:
               schema: {$ref: '#/components/schemas/LeadDisqualifyReason'}
         '403': {$ref: '#/components/responses/Forbidden'}
         '404': {$ref: '#/components/responses/NotFound'}
-        '409':
-          description: Another reason already holds this label, compared trimmed and ignoring case.
-          content:
-            application/problem+json:
-              schema: {$ref: '#/components/schemas/Problem'}
+        '409': {$ref: '#/components/responses/NameTakenConflict'}
         '422': {$ref: '#/components/responses/ValidationError'}
       description: |-
         Rename, reorder or (de)activate a disqualification reason.
@@ -20679,7 +20671,7 @@ paths:
               schema: {$ref: '#/components/schemas/Team'}
         '401': {$ref: '#/components/responses/Unauthorized'}
         '403': {$ref: '#/components/responses/Forbidden'}
-        '409': {$ref: '#/components/responses/Conflict'}
+        '409': {$ref: '#/components/responses/NameTakenConflict'}
         '422': {$ref: '#/components/responses/ValidationError'}
   /teams/{id}:
     parameters:
@@ -20713,7 +20705,7 @@ paths:
         '401': {$ref: '#/components/responses/Unauthorized'}
         '403': {$ref: '#/components/responses/Forbidden'}
         '404': {$ref: '#/components/responses/NotFound'}
-        '409': {$ref: '#/components/responses/Conflict'}
+        '409': {$ref: '#/components/responses/NameTakenConflict'}
         '422': {$ref: '#/components/responses/ValidationError'}
   /teams/{id}/members/{userId}:
     parameters:
@@ -26865,11 +26857,7 @@ paths:
               schema: {$ref: '#/components/schemas/KnowledgeCorpus'}
         '401': {$ref: '#/components/responses/Unauthorized'}
         '403': {$ref: '#/components/responses/PermissionDenied'}
-        '409':
-          description: Another live document set already holds this name, compared trimmed and ignoring case.
-          content:
-            application/problem+json:
-              schema: {$ref: '#/components/schemas/Problem'}
+        '409': {$ref: '#/components/responses/NameTakenConflict'}
         '422': {$ref: '#/components/responses/ValidationError'}
       description: |-
         Define a document corpus.
@@ -26922,11 +26910,7 @@ paths:
         '401': {$ref: '#/components/responses/Unauthorized'}
         '403': {$ref: '#/components/responses/PermissionDenied'}
         '404': {$ref: '#/components/responses/NotFound'}
-        '409':
-          description: Another live document set already holds this name, compared trimmed and ignoring case.
-          content:
-            application/problem+json:
-              schema: {$ref: '#/components/schemas/Problem'}
+        '409': {$ref: '#/components/responses/NameTakenConflict'}
         '422': {$ref: '#/components/responses/ValidationError'}
       description: |-
         Edit a corpus — its words, its floor, or which one the palette asks.
@@ -27413,6 +27397,12 @@ components:
           examples:
             held:
               value: {type: 'https://errors.gradion.com/locked', title: Locked, status: 423, code: locked, detail: The record is held under a statutory retention obligation.}
+    NameTakenConflict:
+      description: >-
+        `name_taken`: another entry of this list already holds the name, compared trimmed and ignoring case; the detail names it. Any other state conflict answers its own code.
+      content:
+        application/problem+json:
+          schema: {$ref: '#/components/schemas/Problem'}
     Conflict:
       description: State conflict (duplicate key, concurrent edit, already-decided, default-pipeline collision).
       content:

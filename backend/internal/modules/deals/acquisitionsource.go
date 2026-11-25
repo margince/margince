@@ -275,7 +275,7 @@ func (s *Store) UpdateAcquisitionSource(
 			patch.Set("active", before.Active, *in.Active)
 		}
 		if in.IfVersion != nil && *in.IfVersion != before.Version {
-			return apperrors.ErrConflict
+			return apperrors.ErrVersionSkew
 		}
 		if patch.Empty() {
 			out, err = readAcquisitionSource(ctx, tx, id)

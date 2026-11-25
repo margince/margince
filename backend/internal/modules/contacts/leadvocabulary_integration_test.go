@@ -453,9 +453,9 @@ func TestADisqualifyReasonLabelIsHeldOnce(t *testing.T) {
 	if !errors.Is(err, apperrors.ErrConflict) {
 		t.Fatalf("a second spelling of the stock \"No budget\" answered %v, want a conflict", err)
 	}
-	want := `conflict: a disqualification reason called "no budget" already exists`
-	if fault, _ := httperr.Classify(err); fault.Detail != want {
-		t.Errorf("the conflict reads %q, want %q", fault.Detail, want)
+	want := `a disqualification reason called "no budget" already exists; choose a different name`
+	if fault, _ := httperr.Classify(err); fault.Status != http.StatusConflict || fault.Code != "name_taken" || fault.Detail != want {
+		t.Errorf("the conflict reads %d %s %q, want 409 name_taken %q", fault.Status, fault.Code, fault.Detail, want)
 	}
 	custom, err := e.store.CreateLeadDisqualifyReason(e.ctx, CreateLeadDisqualifyReasonInput{Label: "Procurement freeze"})
 	if err != nil {
@@ -550,8 +550,8 @@ func requireLabelHeldOnce(t *testing.T, list vocabularyList) {
 	if !errors.Is(err, apperrors.ErrConflict) {
 		t.Fatalf("a rename onto a held label answered %v, want a conflict", err)
 	}
-	if fault, _ := httperr.Classify(err); !strings.Contains(fault.Detail, "already exists") {
-		t.Errorf("the conflict reads %q, want it to say the label is taken", fault.Detail)
+	if fault, _ := httperr.Classify(err); fault.Status != http.StatusConflict || fault.Code != "name_taken" {
+		t.Errorf("the conflict reads %d %s %q, want 409 name_taken", fault.Status, fault.Code, fault.Detail)
 	}
 	if err := list.rename(other, "THAW "+suffix); err != nil {
 		t.Errorf("a rename that changes only the case of its own label: %v", err)

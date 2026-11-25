@@ -33,6 +33,12 @@ import (
 // maxTeamName mirrors the contract's maxLength.
 const maxTeamName = values.TextLabelCharacters
 
+// teamNameIndex holds one live team per name, compared trimmed and case-folded.
+const (
+	teamNameIndex = "team_name_unique"
+	teamEntry     = "a team"
+)
+
 // Team is one team row as the admin surface returns it.
 type Team struct {
 	ID         ids.UUID
@@ -55,11 +61,8 @@ func (s *Service) CreateTeam(ctx context.Context, actor Identity, name string) (
 	err = s.db.Tx(ctx, func(tx pgx.Tx) error {
 		err := tx.QueryRow(ctx, `INSERT INTO team (name) VALUES ($1) RETURNING id, name`, name).
 			Scan(&out.ID, &out.Name)
-		if storekit.IsUniqueViolation(err) {
-			return fmt.Errorf("%w: a team named %q already exists", apperrors.ErrConflict, name)
-		}
 		if err != nil {
-			return err
+			return storekit.NameTaken(err, teamEntry, name, teamNameIndex)
 		}
 		return s.recordTeamChange(ctx, tx, actor, out.ID, nil, "created", nil, map[string]any{"name": name})
 	})
@@ -111,11 +114,8 @@ func (s *Service) UpdateTeam(ctx context.Context, actor Identity, id ids.UUID, i
 		out = before
 		if name != nil && *name != before.Name {
 			err := tx.QueryRow(ctx, `UPDATE team SET name = $2 WHERE id = $1 RETURNING name`, id, *name).Scan(&out.Name)
-			if storekit.IsUniqueViolation(err) {
-				return fmt.Errorf("%w: a team named %q already exists", apperrors.ErrConflict, *name)
-			}
 			if err != nil {
-				return err
+				return storekit.NameTaken(err, teamEntry, *name, teamNameIndex)
 			}
 			if err := s.recordTeamChange(ctx, tx, actor, id, nil, "renamed",
 				map[string]any{"name": before.Name}, map[string]any{"name": out.Name}); err != nil {
@@ -138,11 +138,8 @@ func (s *Service) UpdateTeam(ctx context.Context, actor Identity, id ids.UUID, i
 				}
 			}
 			err := tx.QueryRow(ctx, `UPDATE team SET `+set+` WHERE id = $1 RETURNING archived_at`, id).Scan(&out.ArchivedAt)
-			if storekit.IsUniqueViolation(err) {
-				return fmt.Errorf("%w: a team named %q already exists", apperrors.ErrConflict, out.Name)
-			}
 			if err != nil {
-				return err
+				return storekit.NameTaken(err, teamEntry, out.Name, teamNameIndex)
 			}
 			if err := s.recordTeamChange(ctx, tx, actor, id, nil, change,
 				map[string]any{"archived": before.ArchivedAt != nil}, map[string]any{"archived": *in.Archived}); err != nil {
