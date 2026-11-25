@@ -1131,6 +1131,10 @@ func (stubs) ApproveTelegramBusinessConnection(w nethttp.ResponseWriter, r *neth
 	httperr.NotImplemented(w, r, "ApproveTelegramBusinessConnection")
 }
 
+func (stubs) UpdateTelegramBusinessConnectionVisibility(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
+	httperr.NotImplemented(w, r, "UpdateTelegramBusinessConnectionVisibility")
+}
+
 func (stubs) DisconnectChannel(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
 	httperr.NotImplemented(w, r, "DisconnectChannel")
 }
