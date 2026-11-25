@@ -197,13 +197,17 @@ func (s *Service) validateRevision(ctx context.Context, tx pgx.Tx, selection *cr
 	return refuse("selection.close_window", "invalid", "choose the expected-close window")
 }
 
+// MaxSelectionMetrics bounds the metrics of one selection. Every Analytics view
+// asks all of its metrics in one selection, so it is at least the largest view.
+const MaxSelectionMetrics = 12
+
 func (s *Service) validateSelection(ctx context.Context, selection crmcontracts.ReportingSelection) error {
 	catalog, err := s.evaluator.Catalog(ctx, textlang.English)
 	if err != nil {
 		return err
 	}
-	if len(selection.Metrics) == 0 || len(selection.Metrics) > 8 {
-		return refuse("selection.metrics", "out_of_range", "choose between one and eight supported metrics")
+	if len(selection.Metrics) == 0 || len(selection.Metrics) > MaxSelectionMetrics {
+		return refuse("selection.metrics", "out_of_range", fmt.Sprintf("choose between one and %d supported metrics", MaxSelectionMetrics))
 	}
 	if len(selection.Blocks) > 20 {
 		return refuse("selection.blocks", "out_of_range", "choose at most twenty charts")
