@@ -17,6 +17,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "systemJob.proposal_stage": "Hỏi có chuyển deal sau khi gửi đề xuất không",
   "systemJob.legal_review_desk": "Rà soát pháp lý",
   "systemJob.import_identity_links": "Liên kết email đã nhập",
+  "systemJob.history_narrowing": "Thu hẹp thư trước đó",
   "systemJob.promise_kept": "Đóng cam kết mà cuộc họp cho thấy đã thực hiện",
   "systemJob.transcript_audience": "Cập nhật quyền xem ghi chú theo cuộc họp",
   "systemJob.meeting_profile": "Gỡ giá trị công ty từ cuộc họp đã bị giới hạn",
@@ -11061,6 +11062,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "jobs.kind.capture_auto_enrich_sweep": "Bổ sung dữ liệu công ty từ thư",
   "jobs.kind.capture_backfill": "Nhập thư cũ",
   "jobs.kind.capture_backfill_reconcile": "Khôi phục lượt nhập thư cũ",
+  "jobs.kind.capture_history_narrowing": "Thu hẹp thư trước đó",
   "jobs.kind.capture_confidentiality_verdict": "Kiểm tra tính bảo mật của thư",
   "jobs.kind.capture_counterparty_verdict": "Kiểm tra bên gửi thư",
   "jobs.kind.capture_enrich": "Lấy thông tin liên hệ từ chữ ký thư",
@@ -12802,6 +12804,10 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "connectors.mailPosture.historyBody":
     "Cài đặt này áp dụng cho thư thu thập từ giờ trở đi. Thư đã có trong CRM giữ nguyên phạm vi hiển thị, trừ khi thu hẹp lại cho khớp.",
   "connectors.mailPosture.historyApply": "Thu hẹp cả thư đã thu thập",
+  "connectors.mailPosture.historyNarrowing_one":
+    "Thư trước đó đang được thu hẹp trong nền: còn {count} thư. Mỗi thư giữ mức hiển thị hiện tại cho đến khi được xử lý.",
+  "connectors.mailPosture.historyNarrowing_other":
+    "Thư trước đó đang được thu hẹp trong nền: còn {count} thư. Mỗi thư giữ mức hiển thị hiện tại cho đến khi được xử lý.",
   "connectors.disconnectBodyGoogleNote":
     "Google có thể vẫn liệt kê Margince trong phần quyền truy cập của bên thứ ba trên tài khoản Google. Gỡ ở đó để thu hồi hoàn toàn quyền truy cập.",
   "connectors.disconnectBodyMicrosoftNote":

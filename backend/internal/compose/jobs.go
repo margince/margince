@@ -443,7 +443,6 @@ func wireJobs(pool *pgxpool.Pool, log *slog.Logger, cfg JobRunnerConfig) (*jobRe
 		addExtensionJobs(reg, pool, schedulesOf(cfg), log),
 		placedSchedules(cfg),
 	)
-
 	return reg, periodic
 }
 
@@ -489,6 +488,7 @@ func placedSchedules(cfg JobRunnerConfig) []*river.PeriodicJob {
 		periodicFor(cfg, CapturedDealRefileSweepArgs{}),
 		periodicFor(cfg, CompanyNamePromotionArgs{}),
 		periodicFor(cfg, CaptureBackfillReconcileArgs{}),
+		periodicFor(cfg, CaptureHistoryNarrowingArgs{}),
 		periodicFor(cfg, BriefGenerateArgs{}),
 		periodicFor(cfg, NotificationDigestArgs{}),
 		periodicFor(cfg, WeeklyReviewGenerateArgs{}),

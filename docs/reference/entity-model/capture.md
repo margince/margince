@@ -206,7 +206,7 @@ The 25 tables owned by `capture`, as the migrations build them. [Back to the ent
 
 ## capture_connection
 
-35 columns · primary key `(id)` · referenced by 6 foreign keys
+36 columns · primary key `(id)` · referenced by 6 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -225,6 +225,7 @@ The 25 tables owned by `capture`, as the migrations build them. [Back to the ent
 | `history_baseline_set_at` | `timestamp with time zone` |  |  |
 | `history_baseline_set_by` | `text` |  |  |
 | `history_baseline_tz` | `text` |  |  |
+| `history_narrowing_held` | `boolean` |  |  |
 | `keys_by_provider` | `boolean`, default `false` | yes |  |
 | `legal_entity_id` | `uuid` |  | Points at `legal_entity.id`. |
 | `mail_posture` | `text`, default `'classified'::text` | yes | What this mailbox asks of the mail it brings in. |

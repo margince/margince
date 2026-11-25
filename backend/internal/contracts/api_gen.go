@@ -18085,6 +18085,24 @@ func (e MailDraftEditorStateLanguage) Valid() bool {
 	}
 }
 
+// Defines values for MailHistoryNarrowingPosture.
+const (
+	MailHistoryNarrowingPostureClassified MailHistoryNarrowingPosture = "classified"
+	MailHistoryNarrowingPostureHeld       MailHistoryNarrowingPosture = "held"
+)
+
+// Valid indicates whether the value is a known member of the MailHistoryNarrowingPosture enum.
+func (e MailHistoryNarrowingPosture) Valid() bool {
+	switch e {
+	case MailHistoryNarrowingPostureClassified:
+		return true
+	case MailHistoryNarrowingPostureHeld:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for MailLanguage.
 const (
 	MailLanguageDe MailLanguage = "de"
@@ -40547,7 +40565,12 @@ type CaptureConnection struct {
 	// owner chose none, which keeps the normal policy. Set and cleared through
 	// PUT /connectors/{provider}/history-baseline.
 	HistoryBaseline *MailHistoryBaseline `json:"history_baseline,omitempty"`
-	Id              openapi_types.UUID   `json:"id"`
+
+	// HistoryNarrowing Earlier mail of this mailbox that a background job is still narrowing, after a change
+	// asked for `apply_to_history`. Absent when nothing is pending. Mail the job has not reached
+	// yet keeps the audience it had.
+	HistoryNarrowing *MailHistoryNarrowing `json:"history_narrowing,omitempty"`
+	Id               openapi_types.UUID    `json:"id"`
 
 	// LastSuccessAt Last successful sync for this mailbox; null before one succeeds.
 	LastSuccessAt *time.Time `json:"last_success_at,omitempty"`
@@ -59102,6 +59125,20 @@ type MailHistoryBaseline struct {
 	Timezone string `json:"timezone"`
 }
 
+// MailHistoryNarrowing Earlier mail of this mailbox that a background job is still narrowing, after a change
+// asked for `apply_to_history`. Absent when nothing is pending. Mail the job has not reached
+// yet keeps the audience it had.
+type MailHistoryNarrowing struct {
+	// Posture What the earlier mail is narrowed to.
+	Posture MailHistoryNarrowingPosture `json:"posture"`
+
+	// Remaining Messages still to narrow.
+	Remaining int `json:"remaining" minimum:"0"`
+}
+
+// MailHistoryNarrowingPosture What the earlier mail is narrowed to.
+type MailHistoryNarrowingPosture string
+
 // MailLanguage A language this build writes the installation's own mail in.
 type MailLanguage string
 
@@ -69148,7 +69185,8 @@ type SetMailPostureRequest struct {
 	// ApplyToHistory Also narrow the mail this mailbox ALREADY brought in, to match the new posture. Only
 	// narrows: a move towards `shared` leaves history where it is, because opening what was
 	// captured under a stricter answer is a separate decision from what to do next. Rows a
-	// human set to `selected` are never touched.
+	// human set to `selected` are never touched. A background job does the narrowing after
+	// the answer; a narrowing to `held` still pending is never loosened to `classified`.
 	ApplyToHistory *bool `json:"apply_to_history,omitempty"`
 
 	// DefaultSender `true` makes this mailbox the one the caller's new mail goes out from, and unmarks the
@@ -69427,6 +69465,11 @@ type SharedMailbox struct {
 
 	// ConnectedBy The admin who last connected it.
 	ConnectedBy *openapi_types.UUID `json:"connected_by,omitempty"`
+
+	// HistoryNarrowing Earlier mail of this mailbox that a background job is still narrowing, after a change
+	// asked for `apply_to_history`. Absent when nothing is pending. Mail the job has not reached
+	// yet keeps the audience it had.
+	HistoryNarrowing *MailHistoryNarrowing `json:"history_narrowing,omitempty"`
 
 	// Id The connection id. It stays the same across a disconnect and a reconnect.
 	Id openapi_types.UUID `json:"id"`

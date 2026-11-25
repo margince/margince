@@ -34,7 +34,9 @@ const composeRootDir = "internal/compose"
 // The ceilings below hold develop and main together: each side's additions
 // stayed under its own ceilings, and the two sets of additions sum to these.
 const (
-	composeRootProductionFiles = 1384
+	// Raised by 1 for the history-narrowing fleet worker, which binds each
+	// workspace through this package's unexported job helpers.
+	composeRootProductionFiles = 1385
 	// Raised by 2 files for the extension mail-file read cases and the purge
 	// receipt cases, which drive this package's unexported seams. Raised by 1
 	// production and 1 test file for the series-split fold and its cases.
@@ -101,8 +103,10 @@ const (
 	// inventory handler, schedule book and catch-up schedule.
 	// Raised by 79 production lines for the WhatsApp ingest args, its server option and
 	// the raw subjects a polled Telegram update records.
-	composeRootProductionLines = 231_322
-	composeRootTestLines       = 361_804
+	// Raised by 61 production and 2 test lines for the history-narrowing fleet
+	// worker.
+	composeRootProductionLines = 231_383
+	composeRootTestLines       = 361_806
 )
 
 // A read under these floors stopped early or read the wrong place, and would

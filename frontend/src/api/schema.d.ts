@@ -14662,7 +14662,9 @@ export interface paths {
          *     brought in, and the old one stops. So the request must carry `confirm: true`. The new team
          *     must have at least one active member. `shared` needs `capture.shared_posture_allowed`;
          *     `classified` is refused. `apply_to_history` also narrows mail already captured when the
-         *     visibility moves to `held`.
+         *     visibility moves to `held`. The answer comes before that mail is narrowed: a background
+         *     job narrows it in batches, `history_narrowing` shows what is left, and mail the job has not
+         *     reached keeps the audience it had.
          *
          *     Admin only, in a signed-in session.
          */
@@ -14918,7 +14920,9 @@ export interface paths {
          *
          *     The posture governs mail captured AFTERWARDS. `apply_to_history` additionally narrows what
          *     this mailbox already brought in, which emits one `activity.updated` per row whose audience
-         *     moved; it never widens, and `selected` rows are left alone. Widening history back is a
+         *     moved; it never widens, and `selected` rows are left alone. The answer comes before that
+         *     mail is narrowed: a background job narrows it in batches, `history_narrowing` on the
+         *     connection shows what is left, and mail the job has not reached keeps the audience it had. Widening history back is a
          *     separate, deliberate call. It decides what the owner's colleagues may read of their
          *     correspondence, so an agent asks its user first.
          */
@@ -30738,6 +30742,7 @@ export interface components {
              * @enum {string}
              */
             readonly mail_posture?: "shared" | "classified" | "held";
+            history_narrowing?: components["schemas"]["MailHistoryNarrowing"];
             context_tag?: components["schemas"]["ConnectorContextTag"];
             history_baseline?: components["schemas"]["MailHistoryBaseline"];
             /** Format: date-time */
@@ -30836,10 +30841,25 @@ export interface components {
              * @description Also narrow the mail this mailbox ALREADY brought in, to match the new posture. Only
              *     narrows: a move towards `shared` leaves history where it is, because opening what was
              *     captured under a stricter answer is a separate decision from what to do next. Rows a
-             *     human set to `selected` are never touched.
+             *     human set to `selected` are never touched. A background job does the narrowing after
+             *     the answer; a narrowing to `held` still pending is never loosened to `classified`.
              * @default false
              */
             apply_to_history: boolean;
+        };
+        /**
+         * @description Earlier mail of this mailbox that a background job is still narrowing, after a change
+         *     asked for `apply_to_history`. Absent when nothing is pending. Mail the job has not reached
+         *     yet keeps the audience it had.
+         */
+        MailHistoryNarrowing: {
+            /**
+             * @description What the earlier mail is narrowed to.
+             * @enum {string}
+             */
+            posture: "classified" | "held";
+            /** @description Messages still to narrow. */
+            remaining: number;
         };
         WorkspaceEmailDomain: {
             /** @description The domain, IDNA-folded and lowercased. Covers its subdomains. */
@@ -32076,6 +32096,7 @@ export interface components {
             backup_owner_id?: string | null;
             /** @description A period no sync read: a first sync failed for longer than its held point, or the mailbox held more mail than one round can read. Importing the mailbox's history over it clears it. Absent when there is none. */
             unread_period?: components["schemas"]["CaptureUnreadPeriod"];
+            history_narrowing?: components["schemas"]["MailHistoryNarrowing"];
         };
         SharedMailboxList: {
             items: components["schemas"]["SharedMailbox"][];

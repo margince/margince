@@ -2,6 +2,7 @@
   "systemJob.proposal_stage": "Hỏi có chuyển deal sau khi gửi đề xuất không",
   "systemJob.legal_review_desk": "Rà soát pháp lý",
   "systemJob.import_identity_links": "Liên kết email đã nhập",
+  "systemJob.history_narrowing": "Thu hẹp thư trước đó",
   "systemJob.promise_kept": "Đóng cam kết mà cuộc họp cho thấy đã thực hiện",
   "systemJob.transcript_audience": "Cập nhật quyền xem ghi chú theo cuộc họp",
   "systemJob.meeting_profile": "Gỡ giá trị công ty từ cuộc họp đã bị giới hạn",
