@@ -7,6 +7,7 @@ package integration
 
 import (
 	"context"
+	"testing"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -26,11 +27,12 @@ import (
 	"github.com/margince/margince/backend/internal/modules/notices"
 	"github.com/margince/margince/backend/internal/modules/signals"
 	"github.com/margince/margince/backend/internal/modules/weeklyplan"
+	"github.com/margince/margince/backend/internal/platform/clocktest"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
-func (e *Env) bindStores(db *database.DB) {
+func (e *Env) bindStores(t testing.TB, db *database.DB) {
 	e.Activities = activities.NewStore(db).WithIdentityProver(capture.ProvedUnambiguouslyTx)
 	// A no-op rename: the installation-name edge is compose's, which this package
 	// cannot import, and compose's installationname suites prove it.
@@ -51,7 +53,7 @@ func (e *Env) bindStores(db *database.DB) {
 		// carries what consent, introductions, signals and initiatives keep.
 		WithGrantCarrier(identity.NewServiceFor(db)).
 		WithStopCarrier(consent.NewStore(db)).
-		WithSatelliteCarriers(consent.NewStore(db), introductions.NewStore(db, time.Now)).
+		WithSatelliteCarriers(consent.NewStore(db), introductions.NewStore(db, func() time.Time { return clocktest.Now(t) })).
 		WithInstallationRenamer(func(context.Context, pgx.Tx, string) error { return nil })
 	e.Deals = deals.NewStore(db, installseam.Deals())
 	e.Projects = ProjectsStore(db)
