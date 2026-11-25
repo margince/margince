@@ -361,29 +361,52 @@ const rulesFoot = ({ width, style, color }: Side) =>
   color === CONTROL;
 const ruled = (rule: Rule) => rulesFoot(footOf(rule, UNDRAWN));
 
-// A field's rule starts from the foot its bare classes or bare element leave,
-// or from none. A base under an at-rule still counts.
-function startOf(rules: readonly Rule[], rule: Rule, subject: string): Side {
+type Base = { rule: Rule; at: number; classes: string[]; type?: string };
+const elementKey = (type: string) => `<${type}>`;
+
+// A base is a rest rule of bare classes or a bare element; one under an
+// at-rule still counts. Keyed by its first class, or by its element.
+function basesOf(rules: readonly Rule[]): Map<string, Base[]> {
+  const keyed = new Map<string, Base[]>();
+  rules.forEach((rule, at) => {
+    for (const alternative of alternativesOf(rule.selector)) {
+      const simple = [...simpleSelectorsOf(alternative)];
+      const type = TYPE.exec(alternative)?.[0];
+      if (
+        compounds(alternative).length !== 1 ||
+        !atRest(alternative) ||
+        simple.length + (type ? 1 : 0) === 0 ||
+        !simple.every((name) => /^\.[\w-]+$/.test(name))
+      ) {
+        continue;
+      }
+      const classes = simple.map((name) => name.slice(1));
+      const key = classes[0] ?? elementKey(type ?? "");
+      keyed.set(key, [...(keyed.get(key) ?? []), { rule, at, classes, type }]);
+    }
+  });
+  return keyed;
+}
+
+// A field's rule starts from the foot its bases leave, in source order, or
+// from none.
+function startOf(bases: Map<string, Base[]>, rule: Rule, subject: string) {
   const own = ownClasses(subject);
   const element = TYPE.exec(subject)?.[0];
-  const base = (alternative: string) => {
-    const simple = [...simpleSelectorsOf(alternative)];
-    const type = TYPE.exec(alternative)?.[0];
-    return (
-      compounds(alternative).length === 1 &&
-      atRest(alternative) &&
-      (type === undefined || type === element) &&
-      simple.length + (type ? 1 : 0) > 0 &&
-      simple.every(
-        (name) => /^\.[\w-]+$/.test(name) && own.includes(name.slice(1)),
-      )
-    );
-  };
-  return rules
-    .filter(
-      (other) => other !== rule && alternativesOf(other.selector).some(base),
-    )
-    .reduce((foot, other) => footOf(other, foot), UNDRAWN);
+  const keys = element ? [...own, elementKey(element)] : own;
+  const found = new Map<number, Rule>();
+  for (const base of keys.flatMap((key) => bases.get(key) ?? [])) {
+    if (
+      base.rule !== rule &&
+      (base.type === undefined || base.type === element) &&
+      base.classes.every((name) => own.includes(name))
+    ) {
+      found.set(base.at, base.rule);
+    }
+  }
+  return [...found]
+    .sort(([a], [b]) => a - b)
+    .reduce((foot, [, other]) => footOf(other, foot), UNDRAWN);
 }
 
 // A row is a box named by a class. Any rule on a box with those classes that
@@ -421,6 +444,7 @@ function weakEdges(
 ) {
   const frames = { fields, framed, rows: ruledRows(rules) };
   const litInContext = new Set([...framed].map(loose));
+  const bases = basesOf(rules);
   return rules.flatMap((rule) =>
     alternativesOf(rule.selector).flatMap((alternative) => {
       const subject = subjectOf(alternative);
@@ -433,7 +457,7 @@ function weakEdges(
         rule,
         alternative,
         frames,
-        startOf(rules, rule, subject),
+        startOf(bases, rule, subject),
       );
     }),
   );
@@ -444,12 +468,22 @@ const isAppModule = (file: CensusFile) =>
   file.path.endsWith(".tsx") &&
   !/\.(?:test|stories)\.tsx$/.test(file.path);
 
-const fieldsOf = (corpus: readonly CensusFile[]) => {
+const readFields = (corpus: readonly CensusFile[]) => {
   const rules = sheetRules(corpus.filter(isAppSheet));
   return {
     rules,
     ...fieldClasses(rules, entryClasses(corpus.filter(isAppModule))),
   };
+};
+// The floors and the findings read one corpus, so its fields are read once.
+const readings = new WeakMap<
+  readonly CensusFile[],
+  ReturnType<typeof readFields>
+>();
+const fieldsOf = (corpus: readonly CensusFile[]) => {
+  const known = readings.get(corpus) ?? readFields(corpus);
+  readings.set(corpus, known);
+  return known;
 };
 
 export const rule: CensusRule = {
