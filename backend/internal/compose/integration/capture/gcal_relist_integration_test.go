@@ -271,8 +271,8 @@ func TestARelistKeepsAMeetingASharedMailboxGuestImports(t *testing.T) {
 	}
 }
 
-// heldImport is an import of the meeting that has taken the meeting's locks,
-// written its rows and not yet committed, as an import in flight has.
+// heldImport is an import in flight. It holds the meeting's locks and has
+// written its rows, and it has not committed.
 type heldImport struct {
 	tx  pgx.Tx
 	pid uint32
