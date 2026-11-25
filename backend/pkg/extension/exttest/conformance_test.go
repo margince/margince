@@ -104,9 +104,9 @@ var refused = map[string]error{
 func TestEveryRuntimeCapabilityHasAProbe(t *testing.T) {
 	t.Parallel()
 	rt := reflect.TypeFor[extension.Runtime]()
-	for i := range rt.NumMethod() {
-		if _, ok := probes[rt.Method(i).Name]; !ok {
-			t.Errorf("Runtime.%s has no conformance probe: add one to probes and refused", rt.Method(i).Name)
+	for m := range rt.Methods() {
+		if _, ok := probes[m.Name]; !ok {
+			t.Errorf("Runtime.%s has no conformance probe: add one to probes and refused", m.Name)
 		}
 	}
 	if len(probes) != rt.NumMethod() || len(refused) != rt.NumMethod() {
