@@ -278,24 +278,47 @@ jobs:
   # scripts/clock-drift-host.sh says why no other shift reaches both Go and
   # Postgres.
   #
-  # Order matters: checkout, module download, the gate binaries and the compose
-  # pull all finish at the real date, because a 200-day jump expires the TLS
-  # certificates they verify. Only then does the clock move.
-  backend-clock-drift:
+  # One job per suite slice. A runner whose clock is moved stops renewing its
+  # job lock, and GitHub drops it about an hour after the job started, so no
+  # runner may live that long; scripts/clock-drift-host.sh says why.
+  backend-clock-drift-slices:
     # The DAILY cadence, spelled per job: a job with no `if` runs on every
     # trigger the workflow has, so the weekly perf cron would run this too.
     if: github.event_name == 'workflow_dispatch' || github.event.schedule == '0 1 * * *'
-    name: backend clock drift (main, +200 days)
+    name: backend clock drift slices (main)
     runs-on: ubuntu-latest
-    # This runs the integration lane too, on one
-    # runner rather than across the shards ci.yml splits it into.
-    # Nine slices at 15 minutes plus 30s kill grace, and eight 60s gaps, take
-    # up to 148 minutes; the rest covers setup and the clock restore.
-    timeout-minutes: 170
+    timeout-minutes: 5
     permissions:
       contents: read
     outputs:
-      outcome: ${{ steps.suites.outputs.outcome }}
+      matrix: ${{ steps.list.outputs.matrix }}
+    defaults:
+      run:
+        working-directory: .
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: List the suite slices
+        id: list
+        run: echo "matrix=$(./scripts/backend-clock-drift.sh matrix)" >> "$GITHUB_OUTPUT"
+
+  # Order matters: checkout, module download, the gate binaries and the compose
+  # pull all finish at the real date, because a 200-day jump expires the TLS
+  # certificates they verify. Only then does the clock move.
+  backend-clock-drift-slice:
+    needs: backend-clock-drift-slices
+    name: backend clock drift ${{ matrix.slice }} (main, +200 days)
+    runs-on: ubuntu-latest
+    # Setup plus clock-drift-host.sh's 30-minute slice budget and its 30 s kill
+    # grace, well short of the hour after which a moved runner is dropped.
+    timeout-minutes: 45
+    permissions:
+      contents: read
+    strategy:
+      fail-fast: false
+      matrix:
+        include: ${{ fromJSON(needs.backend-clock-drift-slices.outputs.matrix) }}
     env:
       BACKEND_CLOCK_SKEW: machine:200
     defaults:
@@ -328,28 +351,77 @@ jobs:
       # package that reads as a finding about the tree.
       - name: Fetch what only the tagged tests import
         run: make -C backend fetch-test-deps
-      # Keep the clock jump, suites and recovery in one shell: the runner's
+      # Keep the clock jump, the slice and recovery in one shell: the runner's
       # control-plane credentials must be valid before it starts another step.
-      # The script moves the clock once per suite slice and restores it after each,
-      # so the runner agent sees real time between slices.
-      # outcome=calendar only on the line scripts/backend-clock-drift.sh prints
-      # after the suites failed under a shift it proved still in force.
-      - name: The backend suites at the moved clock
-        id: suites
+      # The verdict file says `calendar` only on the line
+      # scripts/backend-clock-drift.sh prints after the suites failed under a
+      # shift it proved still in force, and no file means no verdict.
+      - name: The slice at the moved clock
+        env:
+          SLICE: ${{ matrix.slice }}
+          VERDICT: ${{ runner.temp }}/clock-drift-verdict/${{ matrix.key }}
         run: |
-          if ./scripts/clock-drift-host.sh run "${BACKEND_CLOCK_SKEW##*:}" 2>&1 | tee clock-drift.log; then
+          set -o pipefail
+          mkdir -p "$(dirname "$VERDICT")"
+          if ./scripts/clock-drift-host.sh run "${BACKEND_CLOCK_SKEW##*:}" "$SLICE" 2>&1 | tee clock-drift.log; then
+            echo pass > "$VERDICT"
             exit 0
           fi
           if grep -q '^backend-clock-drift: the suites failed at ' clock-drift.log; then
-            echo "outcome=calendar" >> "$GITHUB_OUTPUT"
+            echo calendar > "$VERDICT"
           fi
           exit 1
-      # The clock goes back even when the suites failed. A runner handed back to
+      # The clock goes back even when the slice failed. A runner handed back to
       # the pool 200 days ahead poisons whatever runs on it next, and that
       # failure would surface in someone else's lane with nothing to point at.
       - name: Restore the clock
         if: always()
         run: ./scripts/clock-drift-host.sh restore "${BACKEND_CLOCK_SKEW##*:}"
+      # After the restore, because the upload verifies certificates.
+      - name: Keep the slice's verdict
+        if: always()
+        uses: ./.github/actions/upload-artifact-retried
+        with:
+          name: clock-drift-verdict-${{ matrix.key }}
+          path: ${{ runner.temp }}/clock-drift-verdict/
+          if-no-files-found: ignore
+          retention-days: 1
+
+  # One verdict for the report: every slice passed, a suite failed at the moved
+  # clock (outcome=calendar), or a slice gave none.
+  backend-clock-drift:
+    needs: [backend-clock-drift-slices, backend-clock-drift-slice]
+    if: >-
+      !cancelled()
+      && (github.event_name == 'workflow_dispatch' || github.event.schedule == '0 1 * * *')
+    name: backend clock drift (main, +200 days)
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+    outputs:
+      outcome: ${{ steps.verdict.outputs.outcome }}
+    defaults:
+      run:
+        working-directory: .
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          pattern: clock-drift-verdict-*
+          path: ${{ runner.temp }}/clock-drift-verdict
+          merge-multiple: true
+      - name: Combine the slice verdicts
+        id: verdict
+        run: |
+          status=0
+          ./scripts/backend-clock-drift.sh verdict "$RUNNER_TEMP/clock-drift-verdict" || status=$?
+          if [ "$status" -eq 1 ]; then
+            echo "outcome=calendar" >> "$GITHUB_OUTPUT"
+          fi
+          exit "$status"
 
   # PERF-3/PERF-7 on the SMB tier, weekly. It is the only job here gated on a
   # cadence rather than running every time the workflow fires: the daily lane
@@ -990,7 +1062,7 @@ jobs:
   # fails, so it is guarded on !cancelled() rather than needs alone.
   report:
     name: report
-    needs: [vuln, quality-gate, renovate-liveness, backend-clock-drift, fe-clock-drift, fe-all-stories, perf-budgets, perf-mid-market, perf-mobile, records, reap-caches, slop-trend, vendor-live, role-sweep, home-growth]
+    needs: [vuln, quality-gate, renovate-liveness, backend-clock-drift-slices, backend-clock-drift-slice, backend-clock-drift, fe-clock-drift, fe-all-stories, perf-budgets, perf-mid-market, perf-mobile, records, reap-caches, slop-trend, vendor-live, role-sweep, home-growth]
     # Every result, not only the failures — see the same condition in
     # main-health.yml for why. In short: the reporter now retracts a finding
     # whose check came back green, and a job gated on a failure is never reached

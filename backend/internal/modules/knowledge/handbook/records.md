@@ -314,7 +314,7 @@ To undo a change in Margince, open the record's history and choose **Undo** on t
 1. Find the entry and choose **Undo**.
 <!-- prose:allow residue quotes the Undo this change? dialog title as the screen shows it -->
 2. If it changed more than one field, or a link between records, confirm in **Undo this change?**.
-An undone change folds into one line with its undo; press **Show both changes**, then **Redo** on the undo. If it changed more than one field, confirm the question that names them. Where **Undo** is refused, the button says why before you press it. Only a human can undo; an agent cannot.
+An undone change folds into one line with **Redo** and **Show both changes** on it. If it changed more than one field, confirm the question that names them. Where **Undo** is refused, the button says why before you press it. Only a human can undo; an agent cannot.
 Also called: revert, roll back, put a change back.
 
 Every Margince record keeps a history of what changed, who changed it and when. You can put back a single **entry** as a whole; you cannot take the record back to a point in time. There is no undo for a single field: if one change changed four fields, all four go back together, and the question lists them:
