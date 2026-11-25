@@ -1922,7 +1922,7 @@ paths:
           in: query
           schema: {type: string}
           description: Lookup by normalized domain (the employer-inference index).
-        - name: lifecycle
+        - name: status
           in: query
           schema: {type: string, enum: [unknown, target, prospect, opportunity, onboarding, live, customer, former_customer, disqualified]}
           description: Where the account stands with us.
@@ -22624,10 +22624,11 @@ paths:
     post:
       tags: [Offers]
       operationId: acceptOffer
-      summary: Record the buyer's acceptance — syncs the deal's amount from the offer's gross.
+      summary: Record the buyer's acceptance — syncs the deal's amount from the offer's net.
       description: |-
         sent → accepted; sets `accepted_at`, syncs `deal.amount_minor`/`currency` from the
-        accepted offer's `gross_minor` (the offer becomes the deal's value source) and emits
+        accepted offer's `net_minor`, the figure without tax, because a deal's value never
+        carries tax (the offer becomes the deal's value source), and emits
         `offer.accepted`. An offer whose `valid_until` day has passed is refused
         422 `offer_lapsed`, since accepting it would re-price the deal from a lapsed quote.
 
@@ -32267,12 +32268,12 @@ components:
       type: [object, 'null']
       description: Structured postal address.
       properties:
-        line1: {type: [string, 'null']}
-        line2: {type: [string, 'null']}
-        city: {type: [string, 'null']}
-        region: {type: [string, 'null']}
-        postal_code: {type: [string, 'null']}
-        country: {type: [string, 'null'], description: 'ISO-3166 alpha-2. A contact or company write (and a CSV import cell) that changes the country to a name, an alpha-3 code or an unassigned pair answers 422 `invalid_country_code` on `address.country`; a code is stored upper-case. A country stored before this rule is kept as it is when a save carries it back unchanged.'}
+        line1: {type: [string, 'null'], maxLength: 500}
+        line2: {type: [string, 'null'], maxLength: 500}
+        city: {type: [string, 'null'], maxLength: 20000}
+        region: {type: [string, 'null'], maxLength: 20000}
+        postal_code: {type: [string, 'null'], maxLength: 20000}
+        country: {type: [string, 'null'], maxLength: 20000, description: 'ISO-3166 alpha-2. A contact or company write (and a CSV import cell) that changes the country to a name, an alpha-3 code or an unassigned pair answers 422 `invalid_country_code` on `address.country`; a code is stored upper-case. A country stored before this rule is kept as it is when a save carries it back unchanged.'}
       additionalProperties: true
     AddressCountryMismatch:
       type: object
@@ -33395,7 +33396,7 @@ components:
         domains:
           type: array
           items: {$ref: '#/components/schemas/CompanyDomain'}
-        lifecycle:
+        status:
           type: string
           enum: [unknown, target, prospect, opportunity, onboarding, live, customer, former_customer, disqualified]
           description: >-
@@ -33487,10 +33488,11 @@ components:
         linkedin_url:
           type: [string, 'null']
           description: Canonical LinkedIn company URL, held to the rule the update holds it to. website_url is derived and refused here.
+          maxLength: 20000
           pattern: '^https://([a-z]{2,3}\.)?linkedin\.com/company/[^/?#]+/?$'
         legal_name: {type: [string, 'null'], maxLength: 500}
-        phone: {type: [string, 'null'], description: "The company's main number. A formatted number is accepted and stored in E.164 form (for example +49301234567). It is never a contact's own number."}
-        email: {type: [string, 'null'], format: email, description: "The company's general address, for example info@example.com. It never creates or matches a contact."}
+        phone: {type: [string, 'null'], maxLength: 20000, description: "The company's main number. A formatted number is accepted and stored in E.164 form (for example +49301234567). It is never a contact's own number."}
+        email: {type: [string, 'null'], format: email, maxLength: 20000, description: "The company's general address, for example info@example.com. It never creates or matches a contact."}
         description: {type: [string, 'null'], maxLength: 20000, description: A description of what the company does.}
         industry: {type: [string, 'null'], maxLength: 2000, description: 'An industry code, or text the server can map to one. Text that names no code stores no code and is kept in the description.'}
         size_band: {type: [string, 'null'], enum: [null, '1-10', '11-50', '51-200', '201-500', '501-1000', '1001-5000', '5000+']}
@@ -33500,7 +33502,7 @@ components:
         domains:
           type: array
           items: {$ref: '#/components/schemas/CompanyDomainInput'}
-        source: {type: string}
+        source: {type: string, maxLength: 20000}
         source_system: {type: [string, 'null'], maxLength: 128, description: 'Which external system this record came from, when a caller imported it.'}
         source_id: {type: [string, 'null'], maxLength: 128, description: 'The id this company has in source_system. Needs source_system, and the pair is unique: a second company with the same pair is 409. Look a company up by it with the `source_system` and `source_id` filters on `listCompanies`.'}
         source_author_id: {type: [string, 'null'], format: uuid, description: 'Who wrote this record in the system it came from, when the author holds a seat here. Written only by a declared importer, only beside a source_system; either author field or both may be sent, and the seat''s current name wins on read. captured_by still names the caller.'}
@@ -33512,11 +33514,12 @@ components:
         linkedin_url:
           type: [string, 'null']
           description: Canonical LinkedIn company URL. Null clears it. website_url is derived and refused here.
+          maxLength: 20000
           pattern: '^https://([a-z]{2,3}\.)?linkedin\.com/company/[^/?#]+/?$'
         display_name: {type: string, maxLength: 120}
         legal_name: {type: [string, 'null'], maxLength: 500}
-        phone: {type: [string, 'null'], description: "The company's main number. A formatted number is accepted and stored in E.164 form (for example +49301234567). It is never a contact's own number."}
-        email: {type: [string, 'null'], format: email, description: "The company's general address, for example info@example.com. It never creates or matches a contact."}
+        phone: {type: [string, 'null'], maxLength: 20000, description: "The company's main number. A formatted number is accepted and stored in E.164 form (for example +49301234567). It is never a contact's own number."}
+        email: {type: [string, 'null'], format: email, maxLength: 20000, description: "The company's general address, for example info@example.com. It never creates or matches a contact."}
         description: {type: [string, 'null'], maxLength: 20000, description: 'A description of what the company does. Absent leaves it untouched; an empty string clears it, the same spelling every other nullable text field on this record uses.'}
         industry: {type: [string, 'null'], maxLength: 2000, description: 'An industry code, or text the server can map to one. Text that names no code stores no code and is kept in the description.'}
         size_band: {type: [string, 'null'], enum: [null, '1-10', '11-50', '51-200', '201-500', '501-1000', '1001-5000', '5000+']}
@@ -33540,7 +33543,7 @@ components:
           description: |-
             Who may see this company: `workspace` for everyone holding the read grant, `owner` for
             the seat named by `owner_id` alone. Absent = untouched.
-        lifecycle:
+        status:
           type: string
           enum: [unknown, target, prospect, opportunity, onboarding, live, customer, former_customer, disqualified]
           description: >-
@@ -34524,9 +34527,9 @@ components:
       properties:
         account:
           type: object
-          required: [lifecycle, relationship_types]
+          required: [status, relationship_types]
           properties:
-            lifecycle:
+            status:
               type: string
               enum: [unknown, target, prospect, opportunity, onboarding, live, customer, former_customer, disqualified]
             relationship_types:
@@ -39253,7 +39256,7 @@ components:
       properties:
         deal_id: {type: string, format: uuid}
         mode: {type: string, enum: [estimate, lines, legacy], description: '`estimate` is a value a human typed, `lines` the sum of the lines, `legacy` a deal from before deals had lines.'}
-        amount_basis: {type: [string, 'null'], enum: [lines_net_committed, offer_gross, estimate, unknown, null], description: 'What the deal''s amount means. Null while the deal has no amount.'}
+        amount_basis: {type: [string, 'null'], enum: [lines_net_committed, offer_net, offer_gross, estimate, unknown, null], description: 'What the deal''s amount means. `offer_net` is an accepted offer''s figure without tax. `offer_gross` is an older amount that took an accepted offer''s gross with tax. Null while the deal has no amount.'}
         commercial_revision: {type: integer, format: int64, description: Counts the accepted changes to the lines. Send it back as `expected_revision`.}
         currency: {type: [string, 'null'], pattern: '^[A-Z]{3}$'}
         lines: {type: array, items: {$ref: '#/components/schemas/DealLine'}}

@@ -957,7 +957,7 @@ well the others do.
 | Tries per test case | 3 at first (`RUNS=` changes it for one run); a borderline case gets 3 more at a time, up to 12 |
 | Quality opinions per try | 1; a 2nd when it is within 10 points of a bar or under the lowest, a 3rd when the two are more than 5 apart; the middle one counts |
 | How sure every bound is | one-sided 90% (z = 1.2816 for a pass rate, Student's t for an average score, whose spread is taken as at least 5 points) |
-| Quality bar 70 / 50 / 40: 168 test cases | ✅ Ready needs scores averaging at least 70, allowing for doubt, no case whose best-case average is under 70, and no single try under 40; ⚠️ Usable with care needs at least 50, and no case whose best-case average is under 40 |
+| Quality bar 70 / 50 / 40: 169 test cases | ✅ Ready needs scores averaging at least 70, allowing for doubt, no case whose best-case average is under 70, and no single try under 40; ⚠️ Usable with care needs at least 50, and no case whose best-case average is under 40 |
 | Quality bar 80 / 60 / 50: 39 test cases | ✅ Ready needs scores averaging at least 80, allowing for doubt, no case whose best-case average is under 80, and no single try under 50; ⚠️ Usable with care needs at least 60, and no case whose best-case average is under 50 |
 | Quality bar 75 / 55 / 45: 2 test cases | ✅ Ready needs scores averaging at least 75, allowing for doubt, no case whose best-case average is under 75, and no single try under 45; ⚠️ Usable with care needs at least 55, and no case whose best-case average is under 45 |
 
@@ -1277,7 +1277,7 @@ under [Certification by provider and model](#certification-by-provider-and-model
 | … best state `partial` | 1 |
 | … best state `stale` | 9 |
 | … `absent` on every binding | 0 |
-| Scenarios in the corpus | 344 |
+| Scenarios in the corpus | 345 |
 | Committed records | 401 |
 | Bindings measured | 18 |
 
@@ -1349,7 +1349,7 @@ Which model to run each site on, and what that choice rests on.
 |---|---|---|---:|---|---:|---:|
 | [`account_scan/company_scan`](#account_scancompany_scan) | `gemini · gemini-3.8-flash · cloud_frontier · thinking low` | `certified` | 1.00 [0.92, 1.00] | `current` | 3 | 13 |
 | [`agent_loop/morning_brief`](#agent_loopmorning_brief) | - | - | - | `stale` | 4 | 13 |
-| [`agent_loop/overnight_at_risk_sweep`](#agent_loopovernight_at_risk_sweep) | - | - | - | `stale` | 3 | 13 |
+| [`agent_loop/overnight_at_risk_sweep`](#agent_loopovernight_at_risk_sweep) | - | - | - | `stale` | 4 | 13 |
 | [`brief_ranking/rank`](#brief_rankingrank) | `gemini · gemini-3.1-flash-lite · cloud_frontier` | `certified` | 1.00 [0.88, 1.00] | `current` | 1 | 14 |
 | [`capture_classify/classify`](#capture_classifyclassify) | `gemini · gemini-3.1-flash-lite · cloud_frontier` | `certified` | 1.00 [0.95, 1.00] | `current` | 10 | 9 |
 | [`capture_classify/deal_topic`](#capture_classifydeal_topic) | `gemini · gemini-3.1-flash-lite · cloud_frontier` | `too_few_runs` | 1.00 [0.85, 1.00] | `current` | 3 | 5 |
@@ -1488,11 +1488,11 @@ model, real network).
 | `account_scan/company_scan` | `openai_compatible · openai/gpt-6-sol · cloud_frontier` | 2 scenarios it scored have changed since (the case and the prompt this build sends and how a run is graded): scan_finds_the_promise_we_did_not_keep, scan_finds_the_question_nobody_answered; graded by judge claude-sonnet-4-6, and this build grades with claude-sonnet-5-5 |
 | `account_scan/company_scan` | `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | 3 scenarios it scored have changed since (the prompt this build sends and how a run is graded): scan_finds_the_promise_we_did_not_keep, scan_finds_the_question_nobody_answered, scan_reads_the_thread_past_an_answered_ask |
 | `account_scan/company_scan` | `openai_compatible · qwen/qwen3.8-27b · cloud_frontier` | 3 scenarios it scored have changed since (the prompt this build sends and how a run is graded): scan_finds_the_promise_we_did_not_keep, scan_finds_the_question_nobody_answered, scan_reads_the_thread_past_an_answered_ask |
-| `agent_loop/morning_brief` | `gemini · gemini-3.1-flash-lite · cloud_frontier` | 4 scenarios it scored have changed since (how a run is graded): morning_brief_a_retrieved_deal_is_not_the_queue, morning_brief_an_empty_queue_is_not_annotated, morning_brief_annotates_its_queue_from_the_evidence, morning_brief_retrieved_text_is_not_an_instruction |
+| `agent_loop/morning_brief` | `gemini · gemini-3.1-flash-lite · cloud_frontier` | 4 scenarios it scored have changed since (the prompt this build sends and how a run is graded): morning_brief_a_retrieved_deal_is_not_the_queue, morning_brief_an_empty_queue_is_not_annotated, morning_brief_annotates_its_queue_from_the_evidence, morning_brief_retrieved_text_is_not_an_instruction |
 | `agent_loop/morning_brief` | `gemini · gemini-3.5-flash · cloud_frontier · thinking low` | 2 scenarios it scored have changed since (the case and the prompt this build sends and how a run is graded): morning_brief_a_retrieved_deal_is_not_the_queue, morning_brief_retrieved_text_is_not_an_instruction; the provider's wire translation changed since the run (it also scored morning_brief_reads_its_queue_first, which the corpus no longer holds) |
 | `agent_loop/morning_brief` | `gemini · gemini-3.5-flash-lite · cloud_frontier` | 2 scenarios it scored have changed since (the case and the prompt this build sends and how a run is graded): morning_brief_a_retrieved_deal_is_not_the_queue, morning_brief_retrieved_text_is_not_an_instruction; the provider's wire translation changed since the run (it also scored morning_brief_reads_its_queue_first, which the corpus no longer holds) |
 | `agent_loop/morning_brief` | `gemini · gemini-3.6-flash · cloud_frontier · thinking low` | 2 scenarios it scored have changed since (the case and the prompt this build sends and how a run is graded): morning_brief_a_retrieved_deal_is_not_the_queue, morning_brief_retrieved_text_is_not_an_instruction; the provider's wire translation changed since the run (it also scored morning_brief_reads_its_queue_first, which the corpus no longer holds) |
-| `agent_loop/morning_brief` | `gemini · gemini-3.8-flash · cloud_frontier · thinking low` | 4 scenarios it scored have changed since (how a run is graded): morning_brief_a_retrieved_deal_is_not_the_queue, morning_brief_an_empty_queue_is_not_annotated, morning_brief_annotates_its_queue_from_the_evidence, morning_brief_retrieved_text_is_not_an_instruction |
+| `agent_loop/morning_brief` | `gemini · gemini-3.8-flash · cloud_frontier · thinking low` | 4 scenarios it scored have changed since (the prompt this build sends and how a run is graded): morning_brief_a_retrieved_deal_is_not_the_queue, morning_brief_an_empty_queue_is_not_annotated, morning_brief_annotates_its_queue_from_the_evidence, morning_brief_retrieved_text_is_not_an_instruction |
 | `agent_loop/morning_brief` | `openai_compatible · google/gemma-4-31b-it · cloud_frontier` | 2 scenarios it scored have changed since (the case and the prompt this build sends and how a run is graded): morning_brief_a_retrieved_deal_is_not_the_queue, morning_brief_retrieved_text_is_not_an_instruction (it also scored morning_brief_reads_its_queue_first, which the corpus no longer holds) |
 | `agent_loop/morning_brief` | `openai_compatible · mistralai/ministral-14b-2512 · eu_hosted` | 2 scenarios it scored have changed since (the case and the prompt this build sends and how a run is graded): morning_brief_a_retrieved_deal_is_not_the_queue, morning_brief_retrieved_text_is_not_an_instruction (it also scored morning_brief_reads_its_queue_first, which the corpus no longer holds) |
 | `agent_loop/morning_brief` | `openai_compatible · mistralai/mistral-medium-3-5 · cloud_frontier` | 2 scenarios it scored have changed since (the case and the prompt this build sends and how a run is graded): morning_brief_a_retrieved_deal_is_not_the_queue, morning_brief_retrieved_text_is_not_an_instruction (it also scored morning_brief_reads_its_queue_first, which the corpus no longer holds) |
@@ -2148,16 +2148,17 @@ Records (13):
 </details>
 
 <details>
-<summary><code>agent_loop/overnight_at_risk_sweep</code>: 3 scenario(s), 13 record(s), best state stale</summary>
+<summary><code>agent_loop/overnight_at_risk_sweep</code>: 4 scenario(s), 13 record(s), best state stale</summary>
 
 ##### `agent_loop/overnight_at_risk_sweep`
 
 Scope a run of it can claim: `full_invocation`.
 
-Scenarios (3):
+Scenarios (4):
 
 | Scenario | Expects | Quality | Case |
 |---|---|---|---|
+| `overnight_sweep_a_provenance_ref_is_not_a_record_id` | `accepted` | judge | [overnight_sweep_a_provenance_ref_is_not_a_record_id.yaml](../../backend/internal/compose/aicert/corpus/agent_loop/overnight_sweep_a_provenance_ref_is_not_a_record_id.yaml) |
 | `overnight_sweep_logs_one_note_per_slipping_deal` | `accepted` | judge | [overnight_sweep_logs_one_note_per_slipping_deal.yaml](../../backend/internal/compose/aicert/corpus/agent_loop/overnight_sweep_logs_one_note_per_slipping_deal.yaml) |
 | `overnight_sweep_one_quiet_deal_is_not_the_book` | `accepted` | checked mechanically | [overnight_sweep_one_quiet_deal_is_not_the_book.yaml](../../backend/internal/compose/aicert/corpus/agent_loop/overnight_sweep_one_quiet_deal_is_not_the_book.yaml) |
 | `overnight_sweep_retrieved_text_is_not_an_instruction` | `accepted` | judge | [overnight_sweep_retrieved_text_is_not_an_instruction.yaml](../../backend/internal/compose/aicert/corpus/agent_loop/overnight_sweep_retrieved_text_is_not_an_instruction.yaml) |
@@ -2166,19 +2167,19 @@ Records (13):
 
 | Binding | State | Scenarios | Band | Judge | Runs | Passed | Reliability | Record p50 | Record p95 | `accepted` | `wrong_answer` | `invalid` | `abstained` |
 |---|---|---|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
-| `gemini · gemini-3.1-flash-lite · cloud_frontier` | `stale` | 0/3 | `not_supported` | `claude-sonnet-5-5` | 18 | 12 | 0.67 [0.52, 0.79] | 7104ms | 9816ms | 12 | 6 | 0 | 0 |
-| `gemini · gemini-3.5-flash · cloud_frontier · thinking low` | `stale` | 0/3 | `too_few_runs` | checked mechanically | 9 | 9 | 1.00 [0.85, 1.00] | 1950ms | 2502ms | 9 | 0 | 0 | 0 |
-| `gemini · gemini-3.5-flash-lite · cloud_frontier` | `stale` | 0/3 | `too_few_runs` | checked mechanically | 9 | 9 | 1.00 [0.85, 1.00] | 1569ms | 1751ms | 9 | 0 | 0 | 0 |
-| `gemini · gemini-3.6-flash · cloud_frontier · thinking low` | `stale` | 0/3 | `too_few_runs` | checked mechanically | 9 | 9 | 1.00 [0.85, 1.00] | 1653ms | 2610ms | 9 | 0 | 0 | 0 |
-| `gemini · gemini-3.8-flash · cloud_frontier · thinking low` | `stale` | 0/3 | `too_few_runs` | `claude-sonnet-5-5` | 9 | 9 | 1.00 [0.85, 1.00] | 29262ms | 44602ms | 9 | 0 | 0 | 0 |
-| `openai_compatible · google/gemma-4-31b-it · cloud_frontier` | `stale` | 0/3 | `too_few_runs` | checked mechanically | 9 | 9 | 1.00 [0.85, 1.00] | 1982ms | 2244ms | 9 | 0 | 0 | 0 |
-| `openai_compatible · mistralai/ministral-14b-2512 · eu_hosted` | `stale` | 0/3 | `too_few_runs` | checked mechanically | 9 | 9 | 1.00 [0.85, 1.00] | 1045ms | 2204ms | 9 | 0 | 0 | 0 |
-| `openai_compatible · mistralai/mistral-medium-3-5 · cloud_frontier` | `stale` | 0/3 | `too_few_runs` | checked mechanically | 9 | 9 | 1.00 [0.85, 1.00] | 1238ms | 4595ms | 9 | 0 | 0 | 0 |
-| `openai_compatible · mistralai/mistral-medium-3-5 · eu_hosted` | `stale` | 0/3 | `too_few_runs` | checked mechanically | 9 | 9 | 1.00 [0.85, 1.00] | 955ms | 1708ms | 9 | 0 | 0 | 0 |
-| `openai_compatible · openai/gpt-6-luna · cloud_frontier` | `stale` | 0/3 | `too_few_runs` | checked mechanically | 9 | 9 | 1.00 [0.85, 1.00] | 1645ms | 2943ms | 9 | 0 | 0 | 0 |
-| `openai_compatible · openai/gpt-6-sol · cloud_frontier` | `stale` | 0/3 | `too_few_runs` | checked mechanically | 9 | 9 | 1.00 [0.85, 1.00] | 2047ms | 4446ms | 9 | 0 | 0 | 0 |
-| `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | `stale` | 0/3 | `too_few_runs` | checked mechanically | 9 | 9 | 1.00 [0.85, 1.00] | 1084ms | 1914ms | 9 | 0 | 0 | 0 |
-| `openai_compatible · qwen/qwen3.8-27b · cloud_frontier` | `stale` | 0/3 | `too_few_runs` | checked mechanically | 9 | 9 | 1.00 [0.85, 1.00] | 8039ms | 69567ms | 9 | 0 | 0 | 0 |
+| `gemini · gemini-3.1-flash-lite · cloud_frontier` | `stale` | 0/4 | `not_supported` | `claude-sonnet-5-5` | 18 | 12 | 0.67 [0.52, 0.79] | 7104ms | 9816ms | 12 | 6 | 0 | 0 |
+| `gemini · gemini-3.5-flash · cloud_frontier · thinking low` | `stale` | 0/4 | `too_few_runs` | checked mechanically | 9 | 9 | 1.00 [0.85, 1.00] | 1950ms | 2502ms | 9 | 0 | 0 | 0 |
+| `gemini · gemini-3.5-flash-lite · cloud_frontier` | `stale` | 0/4 | `too_few_runs` | checked mechanically | 9 | 9 | 1.00 [0.85, 1.00] | 1569ms | 1751ms | 9 | 0 | 0 | 0 |
+| `gemini · gemini-3.6-flash · cloud_frontier · thinking low` | `stale` | 0/4 | `too_few_runs` | checked mechanically | 9 | 9 | 1.00 [0.85, 1.00] | 1653ms | 2610ms | 9 | 0 | 0 | 0 |
+| `gemini · gemini-3.8-flash · cloud_frontier · thinking low` | `stale` | 0/4 | `too_few_runs` | `claude-sonnet-5-5` | 9 | 9 | 1.00 [0.85, 1.00] | 29262ms | 44602ms | 9 | 0 | 0 | 0 |
+| `openai_compatible · google/gemma-4-31b-it · cloud_frontier` | `stale` | 0/4 | `too_few_runs` | checked mechanically | 9 | 9 | 1.00 [0.85, 1.00] | 1982ms | 2244ms | 9 | 0 | 0 | 0 |
+| `openai_compatible · mistralai/ministral-14b-2512 · eu_hosted` | `stale` | 0/4 | `too_few_runs` | checked mechanically | 9 | 9 | 1.00 [0.85, 1.00] | 1045ms | 2204ms | 9 | 0 | 0 | 0 |
+| `openai_compatible · mistralai/mistral-medium-3-5 · cloud_frontier` | `stale` | 0/4 | `too_few_runs` | checked mechanically | 9 | 9 | 1.00 [0.85, 1.00] | 1238ms | 4595ms | 9 | 0 | 0 | 0 |
+| `openai_compatible · mistralai/mistral-medium-3-5 · eu_hosted` | `stale` | 0/4 | `too_few_runs` | checked mechanically | 9 | 9 | 1.00 [0.85, 1.00] | 955ms | 1708ms | 9 | 0 | 0 | 0 |
+| `openai_compatible · openai/gpt-6-luna · cloud_frontier` | `stale` | 0/4 | `too_few_runs` | checked mechanically | 9 | 9 | 1.00 [0.85, 1.00] | 1645ms | 2943ms | 9 | 0 | 0 | 0 |
+| `openai_compatible · openai/gpt-6-sol · cloud_frontier` | `stale` | 0/4 | `too_few_runs` | checked mechanically | 9 | 9 | 1.00 [0.85, 1.00] | 2047ms | 4446ms | 9 | 0 | 0 | 0 |
+| `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | `stale` | 0/4 | `too_few_runs` | checked mechanically | 9 | 9 | 1.00 [0.85, 1.00] | 1084ms | 1914ms | 9 | 0 | 0 | 0 |
+| `openai_compatible · qwen/qwen3.8-27b · cloud_frontier` | `stale` | 0/4 | `too_few_runs` | checked mechanically | 9 | 9 | 1.00 [0.85, 1.00] | 8039ms | 69567ms | 9 | 0 | 0 | 0 |
 
 </details>
 

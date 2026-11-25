@@ -28,17 +28,17 @@ def _is_list_read(call):
 
 
 TOOLS = [{"name": name, "inputSchema": {"type": "object"}} for name in ("list_records", "read_record")]
-EMSLAND = 'company "Emsland Ventilbau GmbH" lifecycle=prospect'
+EMSLAND = 'company "Emsland Ventilbau GmbH" status=prospect'
 
 
 def world(companies, page_size=2):
-    """list_records and read_record answering over {display_name: lifecycle}.
+    """list_records and read_record answering over {display_name: status}.
 
     Paged on purpose, smaller than the world: a reader that stopped at the first
     page would miss the record and report it absent.
     """
-    rows = [(f"00000000-0000-0000-0000-{i:012d}", name, lifecycle)
-            for i, (name, lifecycle) in enumerate(companies)]
+    rows = [(f"00000000-0000-0000-0000-{i:012d}", name, status)
+            for i, (name, status) in enumerate(companies)]
 
     def list_records(arguments):
         start = int(arguments.get("cursor") or 0)
@@ -50,9 +50,9 @@ def world(companies, page_size=2):
         return json.dumps({"data": data}), False
 
     def read_record(arguments):
-        for row_id, name, lifecycle in rows:
+        for row_id, name, status in rows:
             if row_id == arguments.get("id"):
-                fields = {"display_name": name, "lifecycle": lifecycle}
+                fields = {"display_name": name, "status": status}
                 return json.dumps({"data": {"record_type": "company", "id": row_id, "fields": fields}}), False
         return "not found", True
 
@@ -78,14 +78,14 @@ class EndStateTest(unittest.TestCase):
         changed = SEEDED[:3] + [("Emsland Ventilbau GmbH", "target")]
         held, problems = self.read(world(changed))
         self.assertEqual(held, [])
-        self.assertEqual(problems, ['ended with company "Emsland Ventilbau GmbH" lifecycle=target, wanted prospect'])
+        self.assertEqual(problems, ['ended with company "Emsland Ventilbau GmbH" status=target, wanted prospect'])
 
     def test_a_record_that_is_not_there_is_a_scored_failure(self):
         held, problems = self.read(world(SEEDED[:3]))
         self.assertEqual(problems, ['ended with no company named "Emsland Ventilbau GmbH"'])
 
     def test_a_name_is_matched_whole_not_by_prefix(self):
-        _, problems = self.read(world(SEEDED[:3]), ['company "Emsland" lifecycle=customer'])
+        _, problems = self.read(world(SEEDED[:3]), ['company "Emsland" status=customer'])
         self.assertEqual(problems, ['ended with no company named "Emsland"'])
 
     def test_two_records_of_one_name_are_a_scored_failure(self):
@@ -848,11 +848,11 @@ class PanelReadersTest(unittest.TestCase):
 class ParseTest(unittest.TestCase):
     def test_an_entry_reads_as_type_name_field_and_value(self):
         self.assertEqual(endstate.parse(EMSLAND),
-                         endstate.Expectation("company", "Emsland Ventilbau GmbH", "lifecycle", "prospect"))
+                         endstate.Expectation("company", "Emsland Ventilbau GmbH", "status", "prospect"))
 
     def test_a_malformed_entry_is_refused(self):
-        for entry in ('company Emsland lifecycle=prospect', 'company "Emsland" lifecycle',
-                      'planet "Mars" lifecycle=prospect'):
+        for entry in ('company Emsland status=prospect', 'company "Emsland" status',
+                      'planet "Mars" status=prospect'):
             with self.assertRaises(ValueError, msg=entry):
                 endstate.parse(entry)
 
@@ -917,9 +917,9 @@ class MainTest(unittest.TestCase):
         with FakeMcp(TOOLS, replies=world(changed)) as server:
             code, out, events = self.run_main(server.url)
         self.assertEqual(code, endstate.FAILED)
-        self.assertIn("lifecycle=target, wanted prospect", out)
+        self.assertIn("status=target, wanted prospect", out)
         self.assertEqual(events[-1]["type"], "end_state")
-        self.assertEqual(events[-1]["failed"], ['ended with company "Emsland Ventilbau GmbH" lifecycle=target, wanted prospect'])
+        self.assertEqual(events[-1]["failed"], ['ended with company "Emsland Ventilbau GmbH" status=target, wanted prospect'])
         # The appended line changes nothing the scorer reads.
         self.assertEqual(check.read_transcript(self.run_path), self.read_before)
 

@@ -102,7 +102,7 @@ func (t updateRecord) apply(ctx context.Context, args updateRecordArgs, patch js
 	}
 	return json.Marshal(UpdateResult{
 		wireRecord: rec,
-		Changes:    t.words.describeUpdate(ctx, summaryIn(ctx, t.language).lang, patch, before.Fields, rec.Fields),
+		Changes:    t.words.describeUpdate(ctx, summaryIn(ctx, t.language).lang, args.RecordType, patch, before.Fields, rec.Fields),
 	})
 }
 

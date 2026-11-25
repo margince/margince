@@ -18,10 +18,10 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/textlang"
 )
 
-// ChangeWords renders the fields a write sets as a reader reads them. current is
+// ChangeWords renders the fields a write to a record of recordType sets as a reader reads them. current is
 // the whole record before the write, with every field in changes present, and
 // changes holds each field's value after it.
-type ChangeWords func(ctx context.Context, current, changes map[string]json.RawMessage) ([]crmcontracts.ApprovalPreviewChange, error)
+type ChangeWords func(ctx context.Context, recordType string, current, changes map[string]json.RawMessage) ([]crmcontracts.ApprovalPreviewChange, error)
 
 // WithChangeWords injects the renderer the write tools describe their changes
 // with. A registry composed without one answers no changes.
@@ -48,20 +48,20 @@ const changesUnnamedMessage = "The write succeeded, but its changed fields could
 
 // describeCreate names every field a create set, each from nothing to what
 // the created record holds.
-func (words ChangeWords) describeCreate(ctx context.Context, lang textlang.Lang, sent, created json.RawMessage) []FieldChange {
-	return words.describe(ctx, lang, sent, created, created, true)
+func (words ChangeWords) describeCreate(ctx context.Context, lang textlang.Lang, recordType string, sent, created json.RawMessage) []FieldChange {
+	return words.describe(ctx, lang, recordType, sent, created, created, true)
 }
 
 // describeUpdate names every field an update set, from what the record held
 // before the write to what it holds after.
-func (words ChangeWords) describeUpdate(ctx context.Context, lang textlang.Lang, sent, before, after json.RawMessage) []FieldChange {
-	return words.describe(ctx, lang, sent, before, after, false)
+func (words ChangeWords) describeUpdate(ctx context.Context, lang textlang.Lang, recordType string, sent, before, after json.RawMessage) []FieldChange {
+	return words.describe(ctx, lang, recordType, sent, before, after, false)
 }
 
 // describe renders the fields sent names. The write has already landed, so a
 // failure to name it does not fail the call. The answer then carries no
 // changes, and a warning says why.
-func (words ChangeWords) describe(ctx context.Context, lang textlang.Lang, sent, before, after json.RawMessage, created bool) []FieldChange {
+func (words ChangeWords) describe(ctx context.Context, lang textlang.Lang, recordType string, sent, before, after json.RawMessage, created bool) []FieldChange {
 	if words == nil {
 		return nil
 	}
@@ -71,7 +71,7 @@ func (words ChangeWords) describe(ctx context.Context, lang textlang.Lang, sent,
 	}
 	var rendered []crmcontracts.ApprovalPreviewChange
 	if err == nil {
-		rendered, err = words(ctx, current, changes)
+		rendered, err = words(ctx, recordType, current, changes)
 	}
 	if err != nil {
 		noteWarning(ctx, warningChangesUnnamed, changesUnnamedMessage)

@@ -61,8 +61,10 @@ const (
 	// case, which drives the unexported mail worker over two team links.
 	// Raised by 7 production and 106 test lines for the route answer that keeps
 	// its field errors, and the route cases that read the unexported verb shapes.
-	composeRootProductionLines = 230_704
-	composeRootTestLines       = 360_234
+	// Raised by 9 production and 17 test lines for the company status rename,
+	// whose webhook and preview keys sit in this package's unexported maps.
+	composeRootProductionLines = 230_713
+	composeRootTestLines       = 360_251
 )
 
 // A read under these floors stopped early or read the wrong place, and would

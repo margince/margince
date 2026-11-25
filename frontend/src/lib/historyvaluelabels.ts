@@ -96,9 +96,10 @@ const VISIBILITY_WORDS: Readonly<
   owner: "visibility.private",
 };
 
-// A lead and a deal both store a `status`, and no code of one is a code of the
-// other, so one field name reads both.
+// A lead, a deal and a company all store a `status`. Only `disqualified` is a
+// code of two of them, and the lead's word for it reads right for a company too.
 const STATUS_WORDS: Readonly<Record<string, MessageKey>> = {
+  ...LIFECYCLE_LABELS,
   ...LEAD_STATUS_LABEL,
   ...DEAL_STATUS_LABEL,
 };

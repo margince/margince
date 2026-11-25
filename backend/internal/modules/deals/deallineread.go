@@ -235,12 +235,14 @@ func commercialCurrency(head dealCommercialHead, lines []dealLineRow) *string {
 	return head.Currency
 }
 
-// dealAmountBasis says what the deal's amount means. A legacy amount equal to
-// an accepted offer's gross came from that offer; any other legacy amount was
-// typed by somebody whose basis nobody recorded. A reader the amount is
-// masked from learns only what the mode says: comparing the amount to an
-// offer's gross would tell them the amount. It reports false when the reader
-// is told no basis at all.
+// dealAmountBasis says what the deal's amount means.
+// A legacy amount equal to an accepted offer's net came from its figure without tax.
+// One equal to its gross predates that rule, and the repair task has not
+// corrected it yet. Any other legacy amount was typed by somebody whose basis
+// nobody recorded.
+// A reader the amount is masked from learns only what the mode says.
+// Comparing the amount to an offer's figures would tell them the amount.
+// It reports false when the reader is told no basis at all.
 func dealAmountBasis(ctx context.Context, tx pgx.Tx, dealID ids.DealID, head dealCommercialHead, readable bool) (crmcontracts.DealCommercialAmountBasis, bool, error) {
 	switch {
 	case head.Mode == modeLines:
@@ -250,14 +252,17 @@ func dealAmountBasis(ctx context.Context, tx pgx.Tx, dealID ids.DealID, head dea
 	case head.Mode == modeEstimate:
 		return crmcontracts.DealCommercialAmountBasisEstimate, true, nil
 	}
-	var fromOffer bool
+	var fromNet, fromGross bool
 	if err := tx.QueryRow(ctx,
-		`SELECT EXISTS (SELECT 1 FROM offer WHERE deal_id = $1 AND status = 'accepted' AND archived_at IS NULL
-		                 AND gross_minor = $2 AND currency = $3)`,
-		dealID, *head.AmountMinor, head.Currency).Scan(&fromOffer); err != nil {
+		`SELECT coalesce(bool_or(net_minor = $2), false), coalesce(bool_or(gross_minor = $2), false)
+		   FROM offer WHERE deal_id = $1 AND status = 'accepted' AND archived_at IS NULL AND currency = $3`,
+		dealID, *head.AmountMinor, head.Currency).Scan(&fromNet, &fromGross); err != nil {
 		return "", false, fmt.Errorf("read the deal's amount basis: %w", err)
 	}
-	if fromOffer {
+	switch {
+	case fromNet:
+		return crmcontracts.DealCommercialAmountBasisOfferNet, true, nil
+	case fromGross:
 		return crmcontracts.DealCommercialAmountBasisOfferGross, true, nil
 	}
 	return crmcontracts.DealCommercialAmountBasisUnknown, true, nil

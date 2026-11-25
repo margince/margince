@@ -65,8 +65,8 @@ func TestTheAccountsListSortsByTheDescriptionAndLifecycleItDraws(t *testing.T) {
 
 	assertIDOrder(t, companyIDsIn(ctx, t, e, "description"), []ids.UUID{zeta, alma},
 		"description ascending")
-	assertIDOrder(t, companyIDsIn(ctx, t, e, "lifecycle"), []ids.UUID{zeta, alma},
-		"lifecycle ascending — customer before target")
+	assertIDOrder(t, companyIDsIn(ctx, t, e, "status"), []ids.UUID{zeta, alma},
+		"status ascending — customer before target")
 }
 
 // The Website header orders by the HOST it prints, off the primary domain row
@@ -195,7 +195,7 @@ func seedAccount(t *testing.T, e *Env, in contacts.CreateCompanyInput) ids.UUID 
 func setLifecycle(t *testing.T, e *Env, company ids.UUID, to string) {
 	t.Helper()
 	if _, err := e.Contacts.UpdateCompany(e.Admin(), ids.From[ids.CompanyKind](company),
-		contacts.UpdateCompanyInput{Lifecycle: &to}); err != nil {
+		contacts.UpdateCompanyInput{Status: &to}); err != nil {
 		t.Fatalf("setting the lifecycle to %q: %v", to, err)
 	}
 }

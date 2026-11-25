@@ -33,10 +33,10 @@ func decideAmount(in Input, state State, action Action, rates Rates, change *dea
 	}
 	change.Evidence["amount_currency"] = target
 	if offer := state.AcceptedOffer; offer != nil {
-		if currency != offer.Currency || quotedMinor != offer.GrossMinor || target != offer.Currency {
+		if currency != offer.Currency || quotedMinor != offer.NetMinor || target != offer.Currency {
 			return DroppedOfferFixes, nil
 		}
-		return setAmount(state, change, offer.GrossMinor), nil
+		return setAmount(state, change, offer.NetMinor), nil
 	}
 	if target == currency {
 		return setAmount(state, change, quotedMinor), nil

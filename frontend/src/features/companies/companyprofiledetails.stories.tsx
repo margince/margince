@@ -40,7 +40,7 @@ const company: Company = {
   linkedin_url: LINKEDIN,
   phone: "+49 89 1234567",
   email: "info@brandt.example",
-  lifecycle: "customer",
+  status: "customer",
   captured_by: "human:u1",
   source: "manual",
   version: 1,

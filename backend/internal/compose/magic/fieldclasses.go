@@ -64,9 +64,9 @@ var internalColumns = map[string]map[string]bool{
 		"strength_last_interaction_at", "strength_last_outbound_at", "strength_last_outbound_day",
 	),
 	typeCompany: setOf(
-		"geocode_input_hash", "geocode_lat", "geocode_lon", "geocode_provider", "geocode_status",
-		"geocoded_at", "is_anchor", "logo_icon_object_key", "logo_icon_origin", "logo_object_key",
-		"logo_origin", "name_source",
+		"geocode_input_hash", "geocode_lat", "geocode_lon", "geocode_source", "geocode_status",
+		"geocoded_at", "is_anchor", "logo_icon_object_key", "logo_icon_source", "logo_object_key",
+		"logo_source", "name_source",
 	),
 	typeLead: setOf(
 		"arrival_owner_id", "company_id", "disqualify_note", "disqualify_reason_id",
