@@ -361,6 +361,20 @@ func TestAForwardKeepsTheMailItForwards(t *testing.T) {
 			tail:    TailQuote,
 		},
 		{
+			name:    "an inline reply in the note does not hide the forwarded mail",
+			subject: "FW: Pricing",
+			body:    "Regarding this:\n> Please send the terms\nHere they are.\n\nFrom: Dana\nSent: Monday\nTo: Sales\n\nNet thirty.",
+			main:    "Regarding this:\n> Please send the terms\nHere they are.\n\nFrom: Dana\nSent: Monday\nTo: Sales\n\nNet thirty.",
+		},
+		{
+			name:    "a second header right under the forwarded block opens the history",
+			subject: "FW: Pricing",
+			body:    "FYI\n\nFrom: Dana\nSent: Monday\nTo: Sales\nTerms.\nFrom: Sales\nSent: Friday\nTo: Dana\nOld terms.",
+			main:    "FYI\n\nFrom: Dana\nSent: Monday\nTo: Sales\nTerms.",
+			trimmed: "From: Sales\nSent: Friday\nTo: Dana\nOld terms.",
+			tail:    TailQuote,
+		},
+		{
 			name:    "a sign-off above the forwarded block closes only the note",
 			subject: "FW: Pricing",
 			body:    "FYI\n\nBest regards\nAlice\n\nFrom: Dana\nSent: Monday\nTo: Sales\n\nTerms.",

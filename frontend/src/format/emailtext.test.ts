@@ -443,6 +443,31 @@ describe("splitEmailBody on a forward", () => {
     expect(parts.tail).toBe("quote");
   });
 
+  it("keeps the forwarded mail under an inline reply in the note", () => {
+    const parts = splitEmailBody(
+      "Regarding this:\n> Please send the terms\nHere they are.\n\nFrom: Dana\nSent: Monday\nTo: Sales\n\nNet thirty.",
+      "FW: Pricing",
+    );
+    expect(parts.main).toBe(
+      "Regarding this:\n> Please send the terms\nHere they are.\n\nFrom: Dana\nSent: Monday\nTo: Sales\n\nNet thirty.",
+    );
+    expect(parts.tail).toBe("none");
+  });
+
+  it("opens the history at a second header right under the forwarded block", () => {
+    const parts = splitEmailBody(
+      "FYI\n\nFrom: Dana\nSent: Monday\nTo: Sales\nTerms.\nFrom: Sales\nSent: Friday\nTo: Dana\nOld terms.",
+      "FW: Pricing",
+    );
+    expect(parts.main).toBe(
+      "FYI\n\nFrom: Dana\nSent: Monday\nTo: Sales\nTerms.",
+    );
+    expect(parts.trimmed).toBe(
+      "From: Sales\nSent: Friday\nTo: Dana\nOld terms.",
+    );
+    expect(parts.tail).toBe("quote");
+  });
+
   it("closes only the note at a sign-off above the forwarded block", () => {
     const parts = splitEmailBody(
       "FYI\n\nBest regards\nAlice\n\nFrom: Dana\nSent: Monday\nTo: Sales\n\nTerms.",

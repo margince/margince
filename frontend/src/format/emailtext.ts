@@ -215,34 +215,46 @@ function forwardedBlockEnd(lines: readonly string[], subject: string): number {
   if (!isForwardSubject(subject)) {
     return 0;
   }
-  const first = lines.findIndex(
-    (_, i) => startsQuote(lines, i) || opensReplyHeader(lines, i),
-  );
-  if (first < 0) {
+  const header = forwardedHeader(lines);
+  if (header < 0) {
     return 0;
-  }
-  let header = first;
-  if (!opensReplyHeader(lines, header)) {
-    if (lines[first]?.startsWith(">")) {
-      return 0;
-    }
-    header += 1;
-    while (header < lines.length && isBlank(lines[header])) {
-      header += 1;
-    }
-    if (header === lines.length || !opensReplyHeader(lines, header)) {
-      return 0;
-    }
   }
   let end = header + 1;
   while (
     end < lines.length &&
     !isBlank(lines[end]) &&
-    !lines[end]?.startsWith(">")
+    !startsQuote(lines, end)
   ) {
     end += 1;
   }
   return end;
+}
+
+// The line the forwarded mail's header block opens on, or -1 when there is
+// none. An inline reply in the note is the note's own text.
+function forwardedHeader(lines: readonly string[]): number {
+  for (let i = 0; i < lines.length; i += 1) {
+    if (!startsQuote(lines, i) && !opensReplyHeader(lines, i)) {
+      continue;
+    }
+    const after = markedRunEnd(lines, i);
+    if (after >= 0) {
+      if (isBlankFrom(lines, after)) {
+        return -1;
+      }
+      i = after - 1;
+      continue;
+    }
+    let header = i;
+    while (header < lines.length && !opensReplyHeader(lines, header)) {
+      if (header > i && !isBlank(lines[header])) {
+        return -1;
+      }
+      header += 1;
+    }
+    return header === lines.length ? -1 : header;
+  }
+  return -1;
 }
 
 /**

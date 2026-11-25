@@ -58,28 +58,44 @@ func ForwardedBlockEnd(lines []string, subject string) int {
 	if !mailsubject.IsForward(subject) {
 		return 0
 	}
-	for i := range lines {
+	header := forwardedHeader(lines)
+	if header < 0 {
+		return 0
+	}
+	end := header + 1
+	for end < len(lines) && strings.TrimSpace(lines[end]) != "" && !startsQuote(lines, end) {
+		end++
+	}
+	return end
+}
+
+// forwardedHeader is the line the forwarded mail's header block opens on, or
+// -1 when there is none. An inline reply in the note is the note's own text.
+func forwardedHeader(lines []string) int {
+	for i := 0; i < len(lines); i++ {
 		if !startsQuote(lines, i) && !OpensReplyHeader(lines[i], lines[i+1:]) {
 			continue
 		}
+		if after, marked := markedRunEnd(lines, i); marked {
+			if !hasText(lines[after:]) {
+				return -1
+			}
+			i = after - 1
+			continue
+		}
 		header := i
-		if !OpensReplyHeader(lines[header], lines[header+1:]) {
-			if strings.HasPrefix(lines[i], ">") {
-				return 0
+		for header < len(lines) && !OpensReplyHeader(lines[header], lines[header+1:]) {
+			if header > i && strings.TrimSpace(lines[header]) != "" {
+				return -1
 			}
-			for header++; header < len(lines) && strings.TrimSpace(lines[header]) == ""; header++ {
-			}
-			if header == len(lines) || !OpensReplyHeader(lines[header], lines[header+1:]) {
-				return 0
-			}
+			header++
 		}
-		end := header + 1
-		for end < len(lines) && strings.TrimSpace(lines[end]) != "" && !strings.HasPrefix(lines[end], ">") {
-			end++
+		if header == len(lines) {
+			return -1
 		}
-		return end
+		return header
 	}
-	return 0
+	return -1
 }
 
 // OwnEnd is what a writer of an activity body stores beside it: how many
