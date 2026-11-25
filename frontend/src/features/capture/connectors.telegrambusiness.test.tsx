@@ -76,7 +76,6 @@ type StubOpts = {
   accounts?: BusinessConnection[];
   me?: components["schemas"]["MeResponse"];
   approveStatus?: number;
-  approveProblem?: { code: string };
   visibilityStatus?: number;
   visibilityDetail?: string;
 };
@@ -106,31 +105,37 @@ function stubApi(opts: StubOpts) {
         return jsonResponse({ data: opts.accounts ?? [] });
       }
       if (key.endsWith("/approve")) {
-        const status = opts.approveStatus ?? 200;
-        return status === 200
-          ? jsonResponse({ ...pending, status: "connected" })
-          : jsonResponse(
-              {
-                status,
-                code: opts.approveProblem?.code ?? "conflict",
-                title: status === 409 ? "Conflict" : "Unprocessable Entity",
-              },
-              status,
-            );
+        if (opts.approveStatus === 409) {
+          return jsonResponse(
+            { status: 409, code: "conflict", title: "Conflict" },
+            409,
+          );
+        }
+        if (opts.approveStatus === 422) {
+          return jsonResponse(
+            {
+              status: 422,
+              code: "reader_team_required",
+              title: "Unprocessable Entity",
+            },
+            422,
+          );
+        }
+        return jsonResponse({ ...pending, status: "connected" });
       }
       if (key.endsWith("/visibility")) {
-        const status = opts.visibilityStatus ?? 200;
-        return status === 200
-          ? jsonResponse(live)
-          : jsonResponse(
-              {
-                status,
-                code: "validation_failed",
-                title: status === 409 ? "Conflict" : "Unprocessable Entity",
-                detail: opts.visibilityDetail,
-              },
-              status,
-            );
+        if (opts.visibilityStatus === 422) {
+          return jsonResponse(
+            {
+              status: 422,
+              code: "shared_posture_not_allowed",
+              title: "Unprocessable Entity",
+              detail: opts.visibilityDetail,
+            },
+            422,
+          );
+        }
+        return jsonResponse(live);
       }
       if (key.startsWith("DELETE")) {
         return new Response(null, { status: 204 });
@@ -278,7 +283,6 @@ describe("the Telegram Business panel", () => {
     stubApi({
       accounts: [pending],
       approveStatus: 422,
-      approveProblem: { code: "reader_team_required" },
     });
     const user = userEvent.setup();
     render();
