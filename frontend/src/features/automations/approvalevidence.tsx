@@ -31,6 +31,8 @@ function ApprovalMessage({
   if (preview?.version !== 2 || preview.state !== "ready") return null;
   const body = preview.details?.find((detail) => detail.field === "body")?.value
     .text;
+  const subject = preview.details?.find((detail) => detail.field === "subject")
+    ?.value.text;
   const html = preview.details?.find((detail) => detail.field === "html_body")
     ?.value.text;
   const signature = preview.details?.find(
@@ -41,7 +43,7 @@ function ApprovalMessage({
   )?.value.text;
   return (
     <>
-      {body && <EmailText body={body} />}
+      {body && <EmailText body={body} subject={subject} />}
       {html && (
         <SignatureHtml html={html} title={t("approval.preview.htmlBody")} />
       )}

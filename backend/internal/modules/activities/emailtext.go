@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"github.com/margince/margince/backend/internal/shared/kernel/mailquote"
+	"github.com/margince/margince/backend/internal/shared/kernel/mailsubject"
 )
 
 // Stored mail retains its signature for enrichment; previews remove it for reading.
@@ -133,22 +134,75 @@ func isQuoteStart(lines []string, index int) bool {
 	return index > 0 && mailquote.OpensReplyHeader(line, lines[index+1:])
 }
 
+// forwardedBlockEnd is the line after the sender block that opens at start,
+// or -1 when none does. Gmail and Apple Mail write that block under an
+// attribution line, and Outlook writes it bare.
+func forwardedBlockEnd(lines []string, start int) int {
+	from := start
+	if !mailquote.OpensReplyHeader(lines[from], lines[from+1:]) {
+		from++
+		for from < len(lines) && strings.TrimSpace(lines[from]) == "" {
+			from++
+		}
+		if from == len(lines) || !mailquote.OpensReplyHeader(lines[from], lines[from+1:]) {
+			return -1
+		}
+	}
+	end := from + 1
+	for end < len(lines) && strings.TrimSpace(lines[end]) != "" {
+		end++
+	}
+	return end
+}
+
+// forwardedBlock is the forward's first header block, as the line it opens on
+// and the line after it; from is -1 when there is none. A forward's own block
+// may open the body, where a reply's never does.
+func forwardedBlock(lines []string) (from, to int) {
+	for i, line := range lines {
+		if isQuoteStart(lines, i) || mailquote.OpensReplyHeader(line, lines[i+1:]) {
+			if end := forwardedBlockEnd(lines, i); end > 0 {
+				return i, end
+			}
+			break
+		}
+	}
+	return -1, -1
+}
+
+// quoteCut is where a quote opening at index starts. The attribution line
+// directly above a quoted block introduces it, so it travels with the quote.
+func quoteCut(lines []string, index int) int {
+	if strings.HasPrefix(lines[index], ">") && index > 0 && strings.HasSuffix(strings.TrimSpace(lines[index-1]), ":") {
+		return index - 1
+	}
+	return index
+}
+
 // boundaryIndex is the first line belonging to the tail rather than the
 // message, and WHICH KIND of tail it opens. The index is -1 when the whole
 // body is the message.
-func boundaryIndex(lines []string) (int, EmailBodyTail) {
+//
+// In a forward the first header block opens the forwarded mail, which is the
+// message too. An Outlook forward and reply look alike, so only the subject
+// can say which one this is.
+func boundaryIndex(lines []string, forward bool) (int, EmailBodyTail) {
 	signOffFloor := max(0, len(lines)-trailingScanLines)
-	for i, line := range lines {
+	from, to := -1, -1
+	if forward {
+		from, to = forwardedBlock(lines)
+	}
+	for i := 0; i < len(lines); i++ {
+		line := lines[i]
 		if signatureDelimiter.MatchString(line) {
 			return i, TailSignature
 		}
+		if i == from {
+			i = to - 1
+			continue
+		}
 		if isQuoteStart(lines, i) {
-			// The attribution line directly above a quoted block introduces it,
-			// so it travels with the quote rather than trailing the message.
-			if strings.HasPrefix(line, ">") && i > 0 && strings.HasSuffix(strings.TrimSpace(lines[i-1]), ":") {
-				return i - 1, TailQuote
-			}
-			return i, TailQuote
+			return quoteCut(lines, i), TailQuote
 		}
 		if i >= signOffFloor && isSignOff(line) {
 			return i, TailSignature
@@ -158,12 +212,13 @@ func boundaryIndex(lines []string) (int, EmailBodyTail) {
 }
 
 // SplitEmailBody separates a stored mail body into the part worth reading on a
-// row and the tail worth keeping but not showing.
+// row and the tail worth keeping but not showing. The subject is the mail's
+// own, which says whether it forwards.
 //
 // The message is never allowed to become empty: a body that is nothing but a
 // greeting is a real message, and a heuristic that folds it away has hidden the
 // mail rather than tidied it.
-func SplitEmailBody(body string) EmailBodyParts {
+func SplitEmailBody(body, subject string) EmailBodyParts {
 	if strings.TrimSpace(body) == "" {
 		return EmailBodyParts{Tail: TailNone}
 	}
@@ -183,7 +238,7 @@ func SplitEmailBody(body string) EmailBodyParts {
 	}
 
 	lines := strings.Split(rest, "\n")
-	cut, tail := boundaryIndex(lines)
+	cut, tail := boundaryIndex(lines, mailsubject.IsForward(subject))
 	if cut < 0 {
 		return EmailBodyParts{Header: header, Main: strings.TrimSpace(rest), Tail: TailNone}
 	}
@@ -205,8 +260,8 @@ var collapseWhitespace = regexp.MustCompile(`\s+`)
 
 // EmailSummaryText is the message on one line, for a row preview: the sender's
 // own words, never their sign-off and never the `From:` preamble.
-func EmailSummaryText(body string) string {
-	collapsed := strings.TrimSpace(collapseWhitespace.ReplaceAllString(SplitEmailBody(body).Main, " "))
+func EmailSummaryText(body, subject string) string {
+	collapsed := strings.TrimSpace(collapseWhitespace.ReplaceAllString(SplitEmailBody(body, subject).Main, " "))
 	// A body that is only a quoted forward has no message of its own. The whole
 	// text is a better preview than an empty one.
 	if collapsed != "" {

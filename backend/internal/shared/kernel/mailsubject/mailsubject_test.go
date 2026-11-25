@@ -69,3 +69,25 @@ func TestTopicStripsRepliesAndForwards(t *testing.T) {
 		}
 	}
 }
+
+// A subject forwards when its outermost prefix does: an answer to a forward is
+// a reply, and a word that only starts like a prefix is the subject.
+func TestIsForwardReadsTheOutermostPrefix(t *testing.T) {
+	cases := map[string]bool{
+		"WG: Angebot":       true,
+		"  fwd:Angebot":     true,
+		"FW : Angebot":      true,
+		"Fwd: Re: Angebot":  true,
+		"Re: Fwd: Angebot":  false,
+		"AW: WG: Angebot":   false,
+		"Forward planning":  false,
+		"Fwdx: Angebot":     false,
+		"Angebot WG: Lager": false,
+		"":                  false,
+	}
+	for subject, want := range cases {
+		if got := mailsubject.IsForward(subject); got != want {
+			t.Errorf("IsForward(%q) = %t, want %t", subject, got, want)
+		}
+	}
+}

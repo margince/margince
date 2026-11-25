@@ -22,7 +22,7 @@ func TestARequestKeepsOnlyTheSendersOwnWords(t *testing.T) {
 	} {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
-			if got := VerbatimAsk(c.verdict, c.ask, body); got != c.want {
+			if got := VerbatimAsk(c.verdict, c.ask, body, ""); got != c.want {
 				t.Fatalf("ask %q, want %q", got, c.want)
 			}
 		})

@@ -338,3 +338,105 @@ describe("the bodies the server's table holds", () => {
     expect(parts.tail).toBe("none");
   });
 });
+
+// A forward's first header block opens the forwarded mail, which stays in the
+// message. The same block under a reply's subject is older mail and folds.
+describe("splitEmailBody on a forward", () => {
+  it("keeps the forwarded mail of a German Outlook forward with no forward line", () => {
+    const parts = splitEmailBody(
+      "Zur Info.\n\nVon: Max Muster <max@kunde.de>\nGesendet: Dienstag, 12. August 2026 09:14\nAn: Lars\nBetreff: Angebot\n\nPasst Dienstag?",
+      "WG: Angebot",
+    );
+    expect(parts.main).toBe(
+      "Zur Info.\n\nVon: Max Muster <max@kunde.de>\nGesendet: Dienstag, 12. August 2026 09:14\nAn: Lars\nBetreff: Angebot\n\nPasst Dienstag?",
+    );
+    expect(parts.tail).toBe("none");
+  });
+
+  it("folds the same block under a reply subject", () => {
+    const parts = splitEmailBody(
+      "Zur Info.\n\nVon: Max Muster <max@kunde.de>\nGesendet: Dienstag, 12. August 2026 09:14\nAn: Lars\nBetreff: Angebot\n\nPasst Dienstag?",
+      "AW: Angebot",
+    );
+    expect(parts.main).toBe("Zur Info.");
+    expect(parts.tail).toBe("quote");
+  });
+
+  it("reads a reply to a forward as a reply", () => {
+    const parts = splitEmailBody(
+      "Gut, dann so.\n\nFrom: Max Muster\nSent: Tuesday, 12 August 2026\nTo: Lars\n\nPasst Dienstag?",
+      "Re: Fwd: Angebot",
+    );
+    expect(parts.main).toBe("Gut, dann so.");
+    expect(parts.trimmed).toBe(
+      "From: Max Muster\nSent: Tuesday, 12 August 2026\nTo: Lars\n\nPasst Dienstag?",
+    );
+    expect(parts.tail).toBe("quote");
+  });
+
+  it("keeps a Gmail forward line and its sender block", () => {
+    const parts = splitEmailBody(
+      "Siehe unten.\n\n---------- Forwarded message ---------\nFrom: Max Muster <max@kunde.de>\nDate: Tue, 12 Aug 2026 09:14\nSubject: Angebot\nTo: Lars\n\nPasst Dienstag?",
+      "Fwd: Angebot",
+    );
+    expect(parts.main).toBe(
+      "Siehe unten.\n\n---------- Forwarded message ---------\nFrom: Max Muster <max@kunde.de>\nDate: Tue, 12 Aug 2026 09:14\nSubject: Angebot\nTo: Lars\n\nPasst Dienstag?",
+    );
+    expect(parts.tail).toBe("none");
+  });
+
+  it("keeps an Apple Mail block under its blank line", () => {
+    const parts = splitEmailBody(
+      "FYI\n\nBegin forwarded message:\n\nFrom: Max Muster <max@kunde.de>\nSubject: Angebot\nDate: 12 August 2026\nTo: Lars\n\nPasst Dienstag?",
+      "Fwd: Angebot",
+    );
+    expect(parts.main).toBe(
+      "FYI\n\nBegin forwarded message:\n\nFrom: Max Muster <max@kunde.de>\nSubject: Angebot\nDate: 12 August 2026\nTo: Lars\n\nPasst Dienstag?",
+    );
+    expect(parts.tail).toBe("none");
+  });
+
+  it("keeps an Outlook divider with the block under it", () => {
+    const parts = splitEmailBody(
+      "Zur Info.\n\n________________________________\nVon: Max Muster\nGesendet: Dienstag\nAn: Lars\n\nPasst Dienstag?",
+      "WG: Angebot",
+    );
+    expect(parts.main).toBe(
+      "Zur Info.\n\n________________________________\nVon: Max Muster\nGesendet: Dienstag\nAn: Lars\n\nPasst Dienstag?",
+    );
+    expect(parts.tail).toBe("none");
+  });
+
+  it("still folds the history the forwarded mail quotes", () => {
+    const parts = splitEmailBody(
+      "Zur Info.\n\nVon: Max Muster\nGesendet: Dienstag\nAn: Lars\n\nPasst Dienstag?\n\nVon: Lars\nGesendet: Montag\nAn: Max Muster\n\nWann passt es?",
+      "WG: Angebot",
+    );
+    expect(parts.main).toBe(
+      "Zur Info.\n\nVon: Max Muster\nGesendet: Dienstag\nAn: Lars\n\nPasst Dienstag?",
+    );
+    expect(parts.trimmed).toBe(
+      "Von: Lars\nGesendet: Montag\nAn: Max Muster\n\nWann passt es?",
+    );
+  });
+
+  it("opens on the forwarded block when the forward has no note", () => {
+    const parts = splitEmailBody(
+      "Von: Max Muster\nGesendet: Dienstag\nAn: Lars\n\nPasst Dienstag?\n\nVon: Lars\nGesendet: Montag\nAn: Max Muster\n\nWann passt es?",
+      "FW: Angebot",
+    );
+    expect(parts.main).toBe(
+      "Von: Max Muster\nGesendet: Dienstag\nAn: Lars\n\nPasst Dienstag?",
+    );
+    expect(parts.tail).toBe("quote");
+  });
+
+  it("still folds a quote marker in a forward", () => {
+    const parts = splitEmailBody(
+      "Ja, passt.\n\n> Passt Dienstag?",
+      "Fwd: Angebot",
+    );
+    expect(parts.main).toBe("Ja, passt.");
+    expect(parts.trimmed).toBe("> Passt Dienstag?");
+  });
+});

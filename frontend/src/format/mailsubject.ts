@@ -24,3 +24,25 @@ const leadingPrefixes = new RegExp(
 export function withoutSubjectPrefixes(subject: string): string {
   return subject.replace(leadingPrefixes, "");
 }
+
+/**
+ * The forward markers alone. A declared mirror of `mailsubject.ForwardPrefixes`,
+ * held by the same gate.
+ */
+export const MAIL_FORWARD_PREFIXES: readonly string[] = ["fwd", "fw", "wg"];
+
+const outerPrefix = new RegExp(
+  `^\\s*(${MAIL_SUBJECT_PREFIXES.join("|")})\\s*:`,
+  "i",
+);
+
+/**
+ * Whether the subject's outermost prefix marks a forward. "Re: Fwd:" answers
+ * a forward, so it is a reply.
+ */
+export function isForwardSubject(subject: string): boolean {
+  const prefix = outerPrefix.exec(subject)?.[1];
+  return (
+    prefix !== undefined && MAIL_FORWARD_PREFIXES.includes(prefix.toLowerCase())
+  );
+}

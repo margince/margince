@@ -56,17 +56,33 @@ const quotedString = `"(?:[^"\\]|\\.)*"`
 // to a `const body` first when the same string is asserted against twice. Both
 // are read: a case this pattern cannot see is a case the gate silently agrees
 // with, which is the failure direction a census must not have.
+//
+// A case that turns on the mail's subject names it, the Go table on the line
+// above the body and the TypeScript call as its second argument. The subject
+// joins the body in the key, so a forward case run without its subject on one
+// side is drift too. A const body takes no subject, so a forward case passes
+// its body inline.
 var (
-	goCaseBody = regexp.MustCompile(`(?m)^\s*body:\s*(` + quotedString + `)\s*,\s*$`)
+	goCaseBody = regexp.MustCompile(`(?m)^\s*(?:subject:\s*(` + quotedString + `)\s*,\s*\n\s*)?` +
+		`body:\s*(` + quotedString + `)\s*,\s*$`)
 	tsCaseBody = regexp.MustCompile(
-		`splitEmailBody\(\s*(` + quotedString + `)` +
+		`splitEmailBody\(\s*(` + quotedString + `)(?:\s*,\s*(` + quotedString + `))?` +
 			`|(?m)^\s*const body\s*=\s*\n?\s*(` + quotedString + `)\s*;`)
+)
+
+// caseGroup names the submatch groups of one alternative: the body, and the
+// subject beside it, 0 where the alternative has none.
+type caseGroup struct{ body, subject int }
+
+var (
+	goCaseGroups = []caseGroup{{body: 2, subject: 1}}
+	tsCaseGroups = []caseGroup{{body: 1, subject: 2}, {body: 3}}
 )
 
 func TestBothEmailSplittersAreHeldToTheSameBodies(t *testing.T) {
 	t.Parallel()
-	goBodies := bodiesIn(t, goEmailTextTable, goCaseBody)
-	tsBodies := bodiesIn(t, tsEmailTextTable, tsCaseBody)
+	goBodies := bodiesIn(t, goEmailTextTable, goCaseBody, goCaseGroups)
+	tsBodies := bodiesIn(t, tsEmailTextTable, tsCaseBody, tsCaseGroups)
 
 	// A census that can fail short has already failed: a table this cannot
 	// parse reads as an empty set, and an empty set agrees with everything.
@@ -99,7 +115,7 @@ func TestBothEmailSplittersAreHeldToTheSameBodies(t *testing.T) {
 // Comments are stripped first: a body quoted inside prose — "the case
 // \"Viele Grüße\" covers this" — would otherwise count as a case that exists,
 // and this gate would report parity that the tables do not have.
-func bodiesIn(t *testing.T, path string, pattern *regexp.Regexp) map[string]bool {
+func bodiesIn(t *testing.T, path string, pattern *regexp.Regexp, groups []caseGroup) map[string]bool {
 	t.Helper()
 	source, err := gatekit.ReadFile(path)
 	if err != nil {
@@ -108,12 +124,15 @@ func bodiesIn(t *testing.T, path string, pattern *regexp.Regexp) map[string]bool
 	text := commentPattern.ReplaceAllString(string(source), "")
 	out := map[string]bool{}
 	for _, match := range pattern.FindAllStringSubmatch(text, -1) {
-		// Whichever alternative matched: the TypeScript pattern has two, and
-		// reading only the first would drop every body bound to a const.
-		body := ""
-		for _, group := range match[1:] {
-			if group != "" {
-				body = strings.TrimSpace(group)
+		// Whichever alternative matched: reading only the first would drop
+		// every TypeScript body bound to a const.
+		body, subject := "", ""
+		for _, group := range groups {
+			if match[group.body] != "" {
+				body = strings.TrimSpace(match[group.body])
+				if group.subject > 0 {
+					subject = strings.TrimSpace(match[group.subject])
+				}
 				break
 			}
 		}
@@ -123,6 +142,9 @@ func bodiesIn(t *testing.T, path string, pattern *regexp.Regexp) map[string]bool
 		// and neither spelling is more correct than the other.
 		if len(body) <= 2 {
 			continue
+		}
+		if subject != "" {
+			body = "subject " + subject + ": " + body
 		}
 		out[body] = true
 	}

@@ -12,6 +12,8 @@
 // backend/gates/emailsplitterparity_test.go compares the two in both
 // directions — an entry added on one side and not the other is a red build.
 
+import { isForwardSubject } from "./mailsubject";
+
 export type EmailBodyParts = {
   /** The `From:/To:` preamble capture folds into the body, when present. */
   header: string;
@@ -149,12 +151,63 @@ function isQuoteStart(lines: readonly string[], index: number): boolean {
   }
   // The Outlook block: the sent-date field within the next few lines is what
   // separates a reply header from a sentence that opens "Von:".
-  if (index > 0 && REPLY_HEADER_FROM.test(line)) {
-    return lines
-      .slice(index + 1, index + 5)
-      .some((next) => REPLY_HEADER_SENT.test(next));
+  return index > 0 && opensReplyHeader(lines, index);
+}
+
+function opensReplyHeader(lines: readonly string[], index: number): boolean {
+  if (!REPLY_HEADER_FROM.test(lines[index] ?? "")) {
+    return false;
   }
-  return false;
+  return lines
+    .slice(index + 1, index + 5)
+    .some((next) => REPLY_HEADER_SENT.test(next));
+}
+
+/**
+ * forwardedBlockEnd is the line after the sender block that opens at start,
+ * or -1 when none does. Gmail and Apple Mail write that block under an
+ * attribution line, and Outlook writes it bare.
+ */
+function forwardedBlockEnd(lines: readonly string[], start: number): number {
+  let from = start;
+  if (!opensReplyHeader(lines, from)) {
+    from += 1;
+    while (from < lines.length && !(lines[from] ?? "").trim()) {
+      from += 1;
+    }
+    if (from === lines.length || !opensReplyHeader(lines, from)) {
+      return -1;
+    }
+  }
+  let end = from + 1;
+  while (end < lines.length && (lines[end] ?? "").trim()) {
+    end += 1;
+  }
+  return end;
+}
+
+/**
+ * forwardedBlock is the forward's first header block, as the line it opens on
+ * and the line after it; `from` is -1 when there is none. A forward's own block
+ * may open the body, where a reply's never does.
+ */
+function forwardedBlock(lines: readonly string[]): {
+  from: number;
+  to: number;
+} {
+  const from = lines.findIndex(
+    (_, i) => isQuoteStart(lines, i) || opensReplyHeader(lines, i),
+  );
+  const to = from < 0 ? -1 : forwardedBlockEnd(lines, from);
+  return to < 0 ? { from: -1, to: -1 } : { from, to };
+}
+
+// The attribution line directly above a quoted block introduces it, so it
+// travels with the quote rather than trailing the message.
+function quoteCut(lines: readonly string[], index: number): number {
+  const above = lines[index - 1]?.trim() ?? "";
+  const opensQuote = (lines[index] ?? "").startsWith(">");
+  return opensQuote && index > 0 && above.endsWith(":") ? index - 1 : index;
 }
 
 /**
@@ -165,26 +218,30 @@ function isQuoteStart(lines: readonly string[], index: number): boolean {
  * and a caller that folds them behind one control saying "show quoted history"
  * hides a sender's own name under a promise of history that is not there.
  *
- * `at` is -1 when the whole body is the message.
+ * `at` is -1 when the whole body is the message. In a forward the first header
+ * block opens the forwarded mail, which is the message too. An Outlook forward
+ * and reply look alike, so only the subject can say which one this is.
  */
-function boundaryIndex(lines: readonly string[]): {
+function boundaryIndex(
+  lines: readonly string[],
+  forwards: boolean,
+): {
   at: number;
   kind: "signature" | "quote";
 } {
   const signOffFloor = Math.max(0, lines.length - TRAILING_SCAN_LINES);
+  const forwarded = forwards ? forwardedBlock(lines) : { from: -1, to: -1 };
   for (let i = 0; i < lines.length; i += 1) {
     const line = lines[i] ?? "";
     if (SIGNATURE_DELIMITER.test(line)) {
       return { at: i, kind: "signature" };
     }
+    if (i === forwarded.from) {
+      i = forwarded.to - 1;
+      continue;
+    }
     if (isQuoteStart(lines, i)) {
-      // The attribution line directly above a quoted block introduces it, so it
-      // travels with the quote rather than trailing the message.
-      const above = lines[i - 1]?.trim() ?? "";
-      if (line.startsWith(">") && i > 0 && above.endsWith(":")) {
-        return { at: i - 1, kind: "quote" };
-      }
-      return { at: i, kind: "quote" };
+      return { at: quoteCut(lines, i), kind: "quote" };
     }
     if (i >= signOffFloor && isSignOff(line)) {
       return { at: i, kind: "signature" };
@@ -195,13 +252,14 @@ function boundaryIndex(lines: readonly string[]): {
 
 /**
  * splitEmailBody separates a stored mail body into the part worth reading on a
- * row and the tail worth keeping but not showing.
+ * row and the tail worth keeping but not showing. The subject is the mail's
+ * own, which says whether it forwards.
  *
  * The message is never allowed to become empty: a body that is nothing but a
  * greeting is a real message, and a heuristic that folds it away has hidden the
  * mail rather than tidied it.
  */
-export function splitEmailBody(body: string): EmailBodyParts {
+export function splitEmailBody(body: string, subject = ""): EmailBodyParts {
   if (!body.trim()) {
     return { header: "", main: "", trimmed: "", tail: "none" };
   }
@@ -217,7 +275,7 @@ export function splitEmailBody(body: string): EmailBodyParts {
   }
 
   const lines = rest.split("\n");
-  const cut = boundaryIndex(lines);
+  const cut = boundaryIndex(lines, isForwardSubject(subject));
   if (cut.at < 0) {
     return { header, main: rest.trim(), trimmed: "", tail: "none" };
   }
@@ -238,8 +296,8 @@ export function splitEmailBody(body: string): EmailBodyParts {
  * entry: the sender's own words, never their sign-off and never the `From:`
  * preamble.
  */
-export function emailSummaryText(body: string): string {
-  const { main } = splitEmailBody(body);
+export function emailSummaryText(body: string, subject = ""): string {
+  const { main } = splitEmailBody(body, subject);
   const collapsed = main.replace(/\s+/g, " ").trim();
   // A body that is only a quoted forward has no message of its own. The whole
   // text is a better title than an empty one.

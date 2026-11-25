@@ -99,7 +99,7 @@ func newText(item Item) string {
 	if item.Kind != string(crmcontracts.ActivityKindEmail) {
 		return item.Body
 	}
-	return activities.SplitEmailBody(item.Body).Main
+	return activities.SplitEmailBody(item.Body, item.Subject).Main
 }
 
 // Fixed in every field so the digest is a property of the code, never of a
