@@ -111,7 +111,7 @@ func TestReportingSharedManagersCanReviseOnlyVisibleReports(t *testing.T) {
 		if err != nil || replay.Version != archived.Version {
 			t.Fatalf("archive replay changed version: %+v %v", replay, err)
 		}
-		if _, err := f.service.UpdateReport(manager, ids.UUID(report.Id), archived.Version, input); !errors.Is(err, apperrors.ErrNotFound) {
+		if _, err := f.service.UpdateReport(manager, ids.UUID(report.Id), archived.Version, input); !errors.Is(err, apperrors.ErrArchived) {
 			t.Fatalf("archived report was writable: %v", err)
 		}
 	}

@@ -158,11 +158,14 @@ func TestEveryAttachmentMutationStatesItselfOnTheBus(t *testing.T) {
 			len(events), lastEventType(events))
 	}
 
-	// Archiving an archived file is refused before any write. The double-emit
-	// the row lock in ArchiveAttachment guards against is reachable only when
-	// two archives overlap, which this sequential path cannot observe.
-	if err := e.Activities.ArchiveAttachment(ctx, id); !errors.Is(err, apperrors.ErrNotFound) {
-		t.Errorf("archiving an archived file answered %v, want ErrNotFound", err)
+	// Archiving an archived file changes nothing and emits nothing. The
+	// double-emit the row lock in ArchiveAttachment guards against is reachable
+	// only when two archives overlap, which this sequential path cannot observe.
+	if err := e.Activities.ArchiveAttachment(ctx, id); err != nil {
+		t.Errorf("archiving an archived file answered %v, want a no-op", err)
+	}
+	if again := attachmentEvents(t, e, contact.String()); len(again) != len(events) {
+		t.Errorf("archiving an archived file emitted %d more event(s)", len(again)-len(events))
 	}
 	archived, _ := events[2]["payload"].(map[string]any)
 	if archived["parent_id"] != contact.String() || archived["parent_type"] != "contact" {

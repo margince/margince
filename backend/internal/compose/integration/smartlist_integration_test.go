@@ -321,13 +321,9 @@ func TestSavedView_filterIsValidatedWhenWrittenNotWhenExported(t *testing.T) {
 	}
 }
 
-// An ARCHIVED view refuses a query replacement as not-found, and does it BEFORE
-// the filter is examined. The order is the point: refusing the filter first
-// would answer 422 for a view whose existence the caller is not entitled to
-// learn, so a 422 here would be an existence oracle for archived views.
-//
-// This is the branch the update path's own comment claims and nothing exercised.
-func TestSavedView_anArchivedViewIsNotFoundBeforeItsFilterIsJudged(t *testing.T) {
+// An ARCHIVED view refuses a query replacement as archived, and does it BEFORE
+// the filter is examined: a view that takes no edit has no filter to judge.
+func TestSavedView_anArchivedViewIsRefusedBeforeItsFilterIsJudged(t *testing.T) {
 	e := Setup(t)
 	store := collections.NewStore(e.DB())
 	rep := e.As(e.Rep1, []ids.UUID{e.Team1}, collectionsPerms())
@@ -348,8 +344,8 @@ func TestSavedView_anArchivedViewIsNotFoundBeforeItsFilterIsJudged(t *testing.T)
 	unfilterable := map[string]any{"filter": map[string]any{"field": "secret_salary", "op": "eq", "value": "x"}}
 	_, err = store.UpdateSavedView(rep, view.ID, collections.UpdateSavedViewInput{Query: &unfilterable})
 
-	if !errors.Is(err, apperrors.ErrNotFound) {
-		t.Fatalf("err = %v, want ErrNotFound — a 422 here tells the caller an archived view exists", err)
+	if !errors.Is(err, apperrors.ErrArchived) {
+		t.Fatalf("err = %v, want ErrArchived — a 422 here judges a filter the view will never run", err)
 	}
 }
 

@@ -125,8 +125,8 @@ func TestAServiceMemberIsArchivedAndNeverDeleted(t *testing.T) {
 	if after := fullSeatsInUse(t, e); after != declared {
 		t.Errorf("seats in use %d -> %d after archiving, want no change", declared, after)
 	}
-	if status := e.Call(t, "POST", "/v1/users/service-members/"+member.ID+"/archive", nil, nil, nil); status != http.StatusNotFound {
-		t.Errorf("archiving it twice -> %d, want 404", status)
+	if status := e.Call(t, "POST", "/v1/users/service-members/"+member.ID+"/archive", nil, nil, nil); status != http.StatusNoContent {
+		t.Errorf("archiving it twice -> %d, want 204 with nothing changed", status)
 	}
 }
 
