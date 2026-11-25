@@ -11,7 +11,7 @@ import { afterEach, describe, expect, it } from "vitest";
 import type { Locale } from "../../i18n/locale";
 import { StoryProviders } from "../../testing/story-utils";
 import { UndoErrors } from "./import.notices";
-import { ProblemTable, problemsHref } from "./import.testrun";
+import { ProblemTable, problemsHref } from "./import.problems";
 import type { ImportRowIssue } from "./importtypes";
 
 afterEach(cleanup);
