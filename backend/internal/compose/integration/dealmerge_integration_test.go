@@ -23,6 +23,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/platform/recordmerge"
+	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -144,10 +145,11 @@ func TestDealMergeRefusesWhatCannotJoin(t *testing.T) {
 		t.Errorf("deals of two companies → %v, want MergeRefusedError different_company", err)
 	}
 
-	e.WsExec(t, `UPDATE deal SET legal_hold = true WHERE id = $1`, elsewhere)
-	if _, err := e.Deals.MergeDeal(admin, elsewhere, target, nil); !errors.As(err, &refused) {
-		t.Errorf("a deal under legal hold → %v, want a refusal", err)
+	e.WsExec(t, `UPDATE deal SET legal_hold = true WHERE id = $1`, source)
+	if _, err := e.Deals.MergeDeal(admin, source, target, nil); !errors.As(err, &refused) || refused.Code != "legal_hold" {
+		t.Errorf("a same-company deal under legal hold → %v, want MergeRefusedError legal_hold", err)
 	}
+	e.WsExec(t, `UPDATE deal SET legal_hold = false WHERE id = $1`, source)
 
 	if _, err := e.Deals.MergeDeal(admin, source, target, nil); err != nil {
 		t.Fatalf("merge: %v", err)
@@ -280,5 +282,27 @@ func TestAMergedAwayDealLeavesTheStageEntriesTheReportsCount(t *testing.T) {
 	}
 	if entries(target) == 0 {
 		t.Errorf("the survivor lost its own stage entry")
+	}
+}
+
+// A target that does not exist and a target out of the caller's scope answer
+// the same conflict, so a merge cannot be used to ask which ids exist.
+func TestAMergeIntoAMissingTargetAnswersLikeOneOutOfScope(t *testing.T) {
+	e := Setup(t)
+	_, source, target := twoDealsOnOneCompany(t, e)
+	e.WsExec(t, `UPDATE deal SET owner_id = $2 WHERE id = $1`, source, e.Rep1)
+	rep := e.As(e.Rep1, nil, principal.Permissions{
+		Objects:  map[string]principal.ObjectGrant{"deal": {Read: true, Update: true}},
+		RowScope: principal.RowScopeOwn,
+	})
+	_, outOfScope := e.Deals.MergeDeal(rep, source, target, nil)
+	_, missing := e.Deals.MergeDeal(rep, source, ids.New[ids.DealKind](), nil)
+	if !errors.Is(outOfScope, apperrors.ErrConflict) || !errors.Is(missing, apperrors.ErrConflict) {
+		t.Fatalf("out of scope → %v, missing → %v; both want a conflict", outOfScope, missing)
+	}
+	one := e.SeedContact(t, "Merge Subject", nil)
+	_, err := e.Contacts.MergeContact(e.Admin(), ContactIDOf(one), ids.New[ids.ContactKind](), nil)
+	if !errors.Is(err, apperrors.ErrConflict) {
+		t.Fatalf("contact merge into a missing target → %v, want the same conflict", err)
 	}
 }

@@ -1,0 +1,45 @@
+// SPDX-License-Identifier: BUSL-1.1
+// SPDX-FileCopyrightText: 2026 Gradion
+
+package recordmerge
+
+import (
+	"context"
+	"errors"
+
+	"github.com/jackc/pgx/v5"
+
+	"github.com/margince/margince/backend/internal/platform/auth"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/shared/apperrors"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+)
+
+// Screen answers, before any row lock is taken, the refusal Pair would give for
+// a source the caller cannot write or a target the caller cannot change. A
+// target that does not exist answers the same conflict as one out of the
+// caller's scope, so the merge is no way to probe which ids exist. Pair asks
+// again under the lock.
+func Screen(ctx context.Context, tx pgx.Tx, kind string, sourceID, targetID ids.UUID) error {
+	if err := auth.EnsureWritable(ctx, tx, kind, sourceID); err != nil {
+		return err
+	}
+	writable, err := auth.WritableBy(ctx, tx, kind, targetID)
+	if err != nil {
+		return err
+	}
+	if !writable {
+		return apperrors.ErrConflict
+	}
+	return nil
+}
+
+// LockPair locks both ends in id order. A row that vanished since Screen
+// answers the same conflict a target out of scope does.
+func LockPair(ctx context.Context, tx pgx.Tx, kind string, sourceID, targetID ids.UUID) (source, target storekit.RowLock, err error) {
+	source, target, err = storekit.LockPair(ctx, tx, kind, sourceID, targetID)
+	if errors.Is(err, apperrors.ErrNotFound) {
+		return storekit.RowLock{}, storekit.RowLock{}, apperrors.ErrConflict
+	}
+	return source, target, err
+}

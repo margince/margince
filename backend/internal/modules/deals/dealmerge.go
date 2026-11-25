@@ -104,7 +104,10 @@ func (s *Store) MergeDeal(ctx context.Context, sourceID, targetID ids.DealID, if
 func (s *Store) mergeDealTx(ctx context.Context, tx pgx.Tx, sourceID, targetID ids.DealID, ifVersion *int64,
 	active []fieldcatalog.Column,
 ) (crmcontracts.Deal, error) {
-	srcLock, tgtLock, err := storekit.LockPair(ctx, tx, dealTable, sourceID.UUID, targetID.UUID)
+	if err := recordmerge.Screen(ctx, tx, dealTable, sourceID.UUID, targetID.UUID); err != nil {
+		return crmcontracts.Deal{}, err
+	}
+	srcLock, tgtLock, err := recordmerge.LockPair(ctx, tx, dealTable, sourceID.UUID, targetID.UUID)
 	if err != nil {
 		return crmcontracts.Deal{}, err
 	}

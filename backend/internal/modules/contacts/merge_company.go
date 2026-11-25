@@ -80,7 +80,10 @@ func (s *Store) mergeCompanyTx(
 	// The pair lock keeps BOTH endpoints held to commit: without it a
 	// concurrent merge(target→elsewhere) archives the survivor
 	// mid-merge and the relinked children point at a dead record.
-	_, tgtLock, err := storekit.LockPair(ctx, tx, "company", sourceID.UUID, targetID.UUID)
+	if err := screenPairMerge(ctx, tx, "company", sourceID.UUID, targetID.UUID); err != nil {
+		return crmcontracts.Company{}, err
+	}
+	_, tgtLock, err := recordmerge.LockPair(ctx, tx, "company", sourceID.UUID, targetID.UUID)
 	if err != nil {
 		return crmcontracts.Company{}, err
 	}

@@ -155,7 +155,10 @@ func (s *Store) mergeContactCarryingTx(ctx context.Context, tx pgx.Tx, sourceID,
 	if err := s.lockMergeSubjects(ctx, tx, []ids.UUID{sourceID.UUID, targetID.UUID}); err != nil {
 		return crmcontracts.Contact{}, nil, err
 	}
-	_, tgtLock, err := storekit.LockPair(ctx, tx, contactEntity, sourceID.UUID, targetID.UUID)
+	if err := screenPairMerge(ctx, tx, contactEntity, sourceID.UUID, targetID.UUID); err != nil {
+		return crmcontracts.Contact{}, nil, err
+	}
+	_, tgtLock, err := recordmerge.LockPair(ctx, tx, contactEntity, sourceID.UUID, targetID.UUID)
 	if err != nil {
 		return crmcontracts.Contact{}, nil, err
 	}
