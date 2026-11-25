@@ -27,16 +27,16 @@ import (
 )
 
 const (
-	laterMailSeatAddr = "rep@authz.test"
-	laterMailSender   = "pat@acme.test"
-	cleanSenderName   = "Pat Example"
+	laterMailSeatAddr  = "rep@authz.test"
+	laterMailSender    = "pat@acme.test"
+	laterMailCleanName = "Pat Example"
 	// A display name holding an address on another domain than the sender's.
-	spoofedSenderName = "ceo@real-corp.example"
+	laterMailSpoofedName = "ceo@real-corp.example"
 )
 
-// correspondWith connects the seat's mailbox and records that the workspace
+// correspondWithLaterSender connects the seat's mailbox and records that the workspace
 // wrote to the address, so capture's ladder files the sender's replies under a contact.
-func correspondWith(t *testing.T, e *integration.Env, address string) {
+func correspondWithLaterSender(t *testing.T, e *integration.Env, address string) {
 	t.Helper()
 	e.GrantRole(t, e.Rep1, "rep")
 	e.WsExec(t, `INSERT INTO capture_connection
@@ -48,23 +48,23 @@ func correspondWith(t *testing.T, e *integration.Env, address string) {
 		source, captured_by, thread_key, counterparty_email, counterparty_outbound_attested)
 		VALUES ('email', 'Angebot', 'Anbei.', 'outbound', 'gmail', @source, 'gmail:'||@source,
 		        'connector:gmail', @thread, @address, true)`,
-		pgx.NamedArgs{"source": ids.NewV7().String(), "thread": threadOf(address), "address": address})
+		pgx.NamedArgs{"source": ids.NewV7().String(), "thread": laterMailThread(address), "address": address})
 }
 
-// threadOf is the one thread the workspace and the sender write on.
-func threadOf(address string) string { return "thread-" + address }
+// laterMailThread is the one thread the workspace and the sender write on.
+func laterMailThread(address string) string { return "thread-" + address }
 
-// captureMailFrom lands one reply from the sender, under the display name,
+// captureLaterMailFrom lands one reply from the sender, under the display name,
 // through the sink production composes with the counterparty ensure wired.
-func captureMailFrom(t *testing.T, e *integration.Env, displayName, address string) {
+func captureLaterMailFrom(t *testing.T, e *integration.Env, displayName, address string) {
 	t.Helper()
-	if err := captureMail(e, displayName, address); err != nil {
+	if err := captureLaterMail(e, displayName, address); err != nil {
 		t.Fatalf("capturing the mail from %s: %v", address, err)
 	}
 }
 
-// captureMail is the capture itself, answering its error so a goroutine can report it.
-func captureMail(e *integration.Env, displayName, address string) error {
+// captureLaterMail is the capture itself, answering its error so a goroutine can report it.
+func captureLaterMail(e *integration.Env, displayName, address string) error {
 	sourceID := ids.NewV7().String()
 	sink := compose.NewCaptureSink(e.Pool, compose.CaptureConfig{})
 	_, err := sink.Upsert(connectorCtx(e, "gmail", e.Rep1), connector.NormalizedRecord{
@@ -77,31 +77,31 @@ func captureMail(e *integration.Env, displayName, address string) error {
 		Fields: capture.ActivityFields{
 			Kind: "email", Subject: "Rechnung", Body: "Bitte zahlen.", Direction: connector.DirectionInbound,
 		},
-		ThreadKey: threadOf(address),
+		ThreadKey: laterMailThread(address),
 		Addresses: []string{address, laterMailSeatAddr},
 		Source:    "gmail:" + sourceID, CapturedBy: "connector:gmail",
 	})
 	return err
 }
 
-// contactOf answers the live contact capture filed the address under.
-func contactOf(t *testing.T, e *integration.Env, address string) ids.ContactID {
+// laterMailContact answers the live contact capture filed the address under.
+func laterMailContact(t *testing.T, e *integration.Env, address string) ids.ContactID {
 	t.Helper()
 	id := scalar[ids.UUID](t, e, `SELECT c.id FROM contact c JOIN contact_email ce ON ce.contact_id = c.id
 		WHERE ce.email = $1 AND c.merged_into_id IS NULL`, address)
 	return ids.From[ids.ContactKind](id)
 }
 
-// mailboxOwner is the seat whose mailbox captured the mail, and who alone may
+// laterMailOwner is the seat whose mailbox captured the mail, and who alone may
 // read a contact capture has not yet judged the workspace's.
-func mailboxOwner(e *integration.Env) context.Context {
+func laterMailOwner(e *integration.Env) context.Context {
 	return e.As(e.Rep1, []ids.UUID{e.Team1}, integration.RepPerms)
 }
 
 // laterWarningOn reads the warning the contact read serves the mailbox owner.
 func laterWarningOn(t *testing.T, e *integration.Env, contact ids.ContactID) *crmcontracts.ContactImpersonationWarning {
 	t.Helper()
-	read, err := e.Contacts.GetContact(mailboxOwner(e), contact, storekit.LiveOnly)
+	read, err := e.Contacts.GetContact(laterMailOwner(e), contact, storekit.LiveOnly)
 	if err != nil {
 		t.Fatalf("reading the contact: %v", err)
 	}
@@ -126,21 +126,21 @@ func clearAsOwner(t *testing.T, e *integration.Env, contact ids.ContactID) {
 	if shown == nil {
 		t.Fatal("the contact serves no warning to clear")
 	}
-	if err := e.Contacts.ClearImpersonationWarning(mailboxOwner(e), contact, shown.DetectedAt); err != nil {
+	if err := e.Contacts.ClearImpersonationWarning(laterMailOwner(e), contact, shown.DetectedAt); err != nil {
 		t.Fatalf("clearing the warning: %v", err)
 	}
 }
 
 func TestALaterMailShowingASignLabelsAContactWithNoVerdict(t *testing.T) {
 	e := integration.Setup(t)
-	correspondWith(t, e, laterMailSender)
-	captureMailFrom(t, e, cleanSenderName, laterMailSender)
-	contact := contactOf(t, e, laterMailSender)
+	correspondWithLaterSender(t, e, laterMailSender)
+	captureLaterMailFrom(t, e, laterMailCleanName, laterMailSender)
+	contact := laterMailContact(t, e, laterMailSender)
 	if got := laterWarningOn(t, e, contact); got != nil {
 		t.Fatalf("a clean first mail left warning %+v, want none", got)
 	}
 
-	captureMailFrom(t, e, spoofedSenderName, laterMailSender)
+	captureLaterMailFrom(t, e, laterMailSpoofedName, laterMailSender)
 
 	got := laterWarningOn(t, e, contact)
 	if got == nil || got.Reason == nil ||
@@ -154,13 +154,13 @@ func TestALaterMailShowingASignLabelsAContactWithNoVerdict(t *testing.T) {
 
 func TestAContactAUserClearedStaysClearedAfterAnotherMailWithASign(t *testing.T) {
 	e := integration.Setup(t)
-	correspondWith(t, e, laterMailSender)
-	captureMailFrom(t, e, cleanSenderName, laterMailSender)
-	captureMailFrom(t, e, spoofedSenderName, laterMailSender)
-	contact := contactOf(t, e, laterMailSender)
+	correspondWithLaterSender(t, e, laterMailSender)
+	captureLaterMailFrom(t, e, laterMailCleanName, laterMailSender)
+	captureLaterMailFrom(t, e, laterMailSpoofedName, laterMailSender)
+	contact := laterMailContact(t, e, laterMailSender)
 	clearAsOwner(t, e, contact)
 
-	captureMailFrom(t, e, spoofedSenderName, laterMailSender)
+	captureLaterMailFrom(t, e, laterMailSpoofedName, laterMailSender)
 
 	if got := laterWarningOn(t, e, contact); got != nil {
 		t.Fatalf("the cleared contact serves warning %+v again, want none", got)
@@ -172,15 +172,15 @@ func TestAContactAUserClearedStaysClearedAfterAnotherMailWithASign(t *testing.T)
 
 func TestAMailWithASignLeavesALabelledContactUntouched(t *testing.T) {
 	e := integration.Setup(t)
-	correspondWith(t, e, laterMailSender)
-	captureMailFrom(t, e, spoofedSenderName, laterMailSender)
-	contact := contactOf(t, e, laterMailSender)
+	correspondWithLaterSender(t, e, laterMailSender)
+	captureLaterMailFrom(t, e, laterMailSpoofedName, laterMailSender)
+	contact := laterMailContact(t, e, laterMailSender)
 	first := laterWarningOn(t, e, contact)
 	if first == nil {
 		t.Fatal("a first mail with a sign left no warning")
 	}
 
-	captureMailFrom(t, e, spoofedSenderName, laterMailSender)
+	captureLaterMailFrom(t, e, laterMailSpoofedName, laterMailSender)
 
 	got := laterWarningOn(t, e, contact)
 	if got == nil || !got.DetectedAt.Equal(first.DetectedAt) {
@@ -191,17 +191,17 @@ func TestAMailWithASignLeavesALabelledContactUntouched(t *testing.T) {
 	}
 }
 
-// Two mails with a sign captured at once write one label between them.
+// Two mails with a sign captured side by side write one label between them.
 func TestTwoMailsWithASignCapturedAtOnceRaiseOneWarning(t *testing.T) {
 	e := integration.Setup(t)
-	correspondWith(t, e, laterMailSender)
-	captureMailFrom(t, e, cleanSenderName, laterMailSender)
-	contact := contactOf(t, e, laterMailSender)
+	correspondWithLaterSender(t, e, laterMailSender)
+	captureLaterMailFrom(t, e, laterMailCleanName, laterMailSender)
+	contact := laterMailContact(t, e, laterMailSender)
 
 	var wg sync.WaitGroup
 	errs := make([]error, 2)
 	for i := range errs {
-		wg.Go(func() { errs[i] = captureMail(e, spoofedSenderName, laterMailSender) })
+		wg.Go(func() { errs[i] = captureLaterMail(e, laterMailSpoofedName, laterMailSender) })
 	}
 	wg.Wait()
 	for _, err := range errs {
@@ -223,13 +223,13 @@ func TestTwoMailsWithASignCapturedAtOnceRaiseOneWarning(t *testing.T) {
 func TestAMailWithASignLeavesASurvivorThatCarriedAWarningUntouched(t *testing.T) {
 	const suspect = "boss@spoof.test"
 	e := integration.Setup(t)
-	correspondWith(t, e, suspect)
-	correspondWith(t, e, laterMailSender)
-	captureMailFrom(t, e, spoofedSenderName, suspect)
-	captureMailFrom(t, e, cleanSenderName, laterMailSender)
-	survivor := contactOf(t, e, laterMailSender)
+	correspondWithLaterSender(t, e, suspect)
+	correspondWithLaterSender(t, e, laterMailSender)
+	captureLaterMailFrom(t, e, laterMailSpoofedName, suspect)
+	captureLaterMailFrom(t, e, laterMailCleanName, laterMailSender)
+	survivor := laterMailContact(t, e, laterMailSender)
 	agent := e.AgentFor(t, e.Rep1, []ids.UUID{e.Team1}, integration.RepPerms)
-	if _, err := e.Contacts.MergeContact(agent, contactOf(t, e, suspect), survivor, nil); err != nil {
+	if _, err := e.Contacts.MergeContact(agent, laterMailContact(t, e, suspect), survivor, nil); err != nil {
 		t.Fatalf("merging: %v", err)
 	}
 	carried := laterWarningOn(t, e, survivor)
@@ -237,7 +237,7 @@ func TestAMailWithASignLeavesASurvivorThatCarriedAWarningUntouched(t *testing.T)
 		t.Fatal("the survivor carries no warning after the merge")
 	}
 
-	captureMailFrom(t, e, spoofedSenderName, suspect)
+	captureLaterMailFrom(t, e, laterMailSpoofedName, suspect)
 
 	got := laterWarningOn(t, e, survivor)
 	if got == nil || !got.DetectedAt.Equal(carried.DetectedAt) {
