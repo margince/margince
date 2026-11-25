@@ -12,7 +12,7 @@ import (
 	"github.com/jackc/pgx/v5"
 )
 
-const claudeFivePrice = "core/1795606883_claude_five_models_are_priced"
+const claudeFivePrice = "core/1795621953_claude_five_models_are_priced"
 
 // claudeRate reads the in-force input price and the long-context line of an
 // Anthropic model; -1 for no row, and a nil line for a flat price.
