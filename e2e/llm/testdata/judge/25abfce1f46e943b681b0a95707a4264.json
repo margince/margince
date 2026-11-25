@@ -1,0 +1,7 @@
+{
+  "verdict": "yes",
+  "reason": "The answer says the Nordholz dossier was generated from the company record itself and holds only a markets section with the industry field, which matches the criterion of a dossier built only from the record's own fields with no research findings.",
+  "model": "claude-haiku-5-5",
+  "criterion": "Criterion 1. The answer says the Nordholz Anlagenbau GmbH dossier holds no research yet: that it is empty, or only built from the company record's own fields (such as its industry). Answer no if it reports research findings about the company, or says a dossier was refreshed or created.",
+  "answer": "You do not have a weekly plan right now. The dossier on Nordholz Anlagenbau GmbH was generated from the company record itself and holds one section, markets: Industry: Manufacturing."
+}

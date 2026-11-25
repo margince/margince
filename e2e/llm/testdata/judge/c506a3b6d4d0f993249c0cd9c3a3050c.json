@@ -1,0 +1,7 @@
+{
+  "verdict": "yes",
+  "reason": "The answer states that the Nordholz Anlagenbau GmbH dossier is empty, reports no research findings, and does not claim the dossier was refreshed or created.",
+  "model": "claude-haiku-5-5",
+  "criterion": "Criterion 1. The answer says the Nordholz Anlagenbau GmbH dossier holds no research yet: that it is empty, or only built from the company record's own fields (such as its industry). Answer no if it reports research findings about the company, or says a dossier was refreshed or created.",
+  "answer": "Your weekly plan has three calls on it. The dossier on Nordholz Anlagenbau GmbH is empty."
+}
