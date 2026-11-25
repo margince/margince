@@ -218,8 +218,8 @@ func TestTwoMailsWithASignCapturedAtOnceRaiseOneWarning(t *testing.T) {
 	}
 }
 
-// A survivor that took a merged-away contact's open warning has a verdict, so
-// a later mail with a sign from the suspect address writes nothing more.
+// A survivor that took a merged-away contact's open warning has a verdict. A
+// later mail with a sign from the suspect address writes nothing more.
 func TestAMailWithASignLeavesASurvivorThatCarriedAWarningUntouched(t *testing.T) {
 	const suspect = "boss@spoof.test"
 	e := integration.Setup(t)

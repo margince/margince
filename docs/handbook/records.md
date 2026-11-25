@@ -74,7 +74,7 @@ Where you cannot edit, a section shows no **Edit**, a field shows no box or mark
 Also called: read-only record, edit greyed out, cannot change.
 
 ### What does "This sender may be pretending to be someone else" mean?
-The warning shows on a contact when an email from one of its addresses carried a sign that the sender is someone else. A later email can raise it on a contact that showed no sign before. The warning names the sign when one was recorded, such as a mail domain in a coded spelling that can look like another domain. Check the address, then press **Looks fine** if the sender is right. The warning then goes for all users, and the **History** tab records who cleared it. Once cleared, a later email does not raise it again. Only a user who can edit the contact can clear it, and an agent cannot.
+The warning shows on a contact when any email from its addresses carried a sign that the sender is someone else. The warning names the sign when one was recorded, such as a mail domain in a coded spelling that can look like another domain. Check the address, then press **Looks fine** if the sender is right. The warning then goes for all users, even when a later email shows a sign, and the **History** tab records who cleared it. Only a user who can edit the contact can clear it, and an agent cannot.
 Also called: wrong sender, sender warning.
 ### How do I link a contact to a company?
 New contacts use the same company check from every source. A company name can find or create the employer; a work address can find a company or wait for a site check. Personal email domains create no company.
