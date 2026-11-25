@@ -252,3 +252,6 @@
 1795388888_the_basis_vocabulary_names_no_country_validated.down.sql | * | the down migration is a single SELECT 1 that changes nothing
 1795449105_an_archived_record_leaves_its_chat_channel.up.sql | *, audit_log, chat_link | touches only live chat links whose deal or project is archived, with one audit row each; a link is a channel a member chose by hand for one deal or project, so the set is the links people made
 1795449105_an_archived_record_leaves_its_chat_channel.down.sql | * | the down migration is a single SELECT 1 that changes nothing
+1795573384_a_settings_list_holds_each_name_once.up.sql | * | the procedural body renames only the second and later spellings of one name in nine settings lists, which an admin keeps by hand, so the set is empty or a handful of rows
+1795573385_a_lead_name_holds_at_most_a_label.up.sql | * | replaces the two text-bound triggers on lead, which act on later writes only; no existing row is changed
+1795573385_a_lead_name_holds_at_most_a_label.down.sql | * | restores the two text-bound triggers on lead as they stood before; no existing row is changed

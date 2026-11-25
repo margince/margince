@@ -756,7 +756,7 @@ The 22 tables owned by `identity`, as the migrations build them. [Back to the en
 
 **Indexes**
 
-- `team_name_unique`: `unique, btree (name) WHERE (archived_at IS NULL)`
+- `team_name_unique`: `unique, btree (lower(btrim(name))) WHERE (archived_at IS NULL)`
 - `team_pkey`: `unique, btree (id)`
 
 **Triggers**
