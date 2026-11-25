@@ -1,24 +1,21 @@
 /** @vitest-environment happy-dom */
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import {
-  cleanup,
-  render as rtlRender,
-  screen,
-  waitFor,
-  within,
-} from "@testing-library/react";
+import { QueryClient } from "@tanstack/react-query";
+import { cleanup, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, type MockInstance, vi } from "vitest";
-import type { components } from "../../api/schema";
 import { DateFormatsProvider } from "../../app/dateformats";
 import { UnsavedGuard, useHasUnsavedChanges } from "../../components/unsaved";
 import { pickOption } from "../../design-system/select-testing";
 import { formatDate } from "../../format/format";
-import { type Locale, LocaleProvider, useLocale } from "../../i18n";
-import { type GrantSpec, meFixture } from "../../testing/mefixture";
+import { useLocale } from "../../i18n";
 import { LANGUAGE_DEPENDENT_QUERY_PREFIXES } from "./aicaches";
 import { InstallationSettingsCard } from "./installation-settings";
+import {
+  backendFor,
+  openFrom,
+  render,
+  SETTINGS_EDITOR,
+} from "./installation-settings.testkit";
 
 // Settings → Installation: the company's name, reporting zone and base
 // currency. Every role READS them as three rows showing what is set; only
@@ -27,133 +24,6 @@ import { InstallationSettingsCard } from "./installation-settings";
 //
 // The base currency's lock: the row and the field both carry the server's
 // reason. So nobody types a value they cannot save.
-
-function jsonResponse(body: unknown, status = 200) {
-  return new Response(JSON.stringify(body), {
-    status,
-    headers: { "Content-Type": "application/json" },
-  });
-}
-
-const SETTINGS_EDITOR: GrantSpec = { installation_settings: ["update"] };
-
-type BackendOptions = {
-  locked?: boolean;
-  lockedReason?: string;
-  /** What the server refuses the PATCH with, as an RFC-7807 validation body. */
-  refuse?: {
-    field: string;
-    code: string;
-    message: string;
-    max?: number;
-    params?: Record<string, string>;
-  }[];
-  /** The lock the read reports once the PATCH was refused: a rate froze it meanwhile. */
-  lockAfterRefusal?: components["schemas"]["BaseCurrencyLock"];
-  /** The settings a boot source sets, as the read reports them. */
-  locks?: unknown[];
-};
-
-// backendFor answers /me with the given grants and /installation/settings with
-// the given state, capturing any PATCH body so the wire shape is assertable.
-function backendFor(allow: GrantSpec, opts: BackendOptions = {}) {
-  let state: Record<string, unknown> = {
-    name: "Brandt Automotive",
-    timezone: "Europe/Berlin",
-    base_currency: "EUR",
-    base_currency_locked: opts.locked ?? false,
-    call_whatsapp: true,
-    call_telegram: true,
-    call_zalo: true,
-    individual_performance: true,
-    forecast_self_correcting: true,
-    forecast_likely_threshold: 90,
-    ...(opts.lockedReason
-      ? { base_currency_locked_reason: opts.lockedReason }
-      : {}),
-    ...(opts.locks ? { locks: opts.locks } : {}),
-  };
-  let capturedPatch: unknown = null;
-  const fetchMock = vi.fn(
-    async (input: RequestInfo | URL, init?: RequestInit) => {
-      const req =
-        input instanceof Request ? input : new Request(String(input), init);
-      const url = new URL(req.url, "http://localhost");
-      if (url.pathname.endsWith("/me")) {
-        return jsonResponse(meFixture({ allow }));
-      }
-      if (url.pathname.endsWith("/installation/settings/fiscal-year-impact")) {
-        return jsonResponse({
-          saved_questions: 14,
-          reports_with_kept_periods: 1,
-          reports_with_relative_periods: 3,
-        });
-      }
-      if (url.pathname.endsWith("/installation/settings")) {
-        if (req.method === "PATCH") {
-          capturedPatch = await req.json();
-          // Once the currency locked, only a patch still carrying it is refused.
-          const sendsCurrency = Object.hasOwn(
-            capturedPatch as object,
-            "base_currency",
-          );
-          if (opts.refuse && (!opts.lockAfterRefusal || sendsCurrency)) {
-            if (opts.lockAfterRefusal) {
-              state = {
-                ...state,
-                base_currency_locked: true,
-                base_currency_lock: opts.lockAfterRefusal,
-              };
-            }
-            // The shape httperr.Validation actually emits: one top-level code
-            // for every 422, and the rule that fired named per field.
-            return jsonResponse(
-              {
-                code: "validation_error",
-                detail: "The installation could not be saved.",
-                details: { errors: opts.refuse },
-              },
-              422,
-            );
-          }
-          state = { ...state, ...(capturedPatch as object) };
-        }
-        return jsonResponse(state);
-      }
-      throw new Error(`unexpected request: ${req.method} ${url.pathname}`);
-    },
-  );
-  return { fetchMock, patch: () => capturedPatch };
-}
-
-function render(
-  node: ReactNode,
-  client = new QueryClient({ defaultOptions: { queries: { retry: false } } }),
-  locale?: Locale,
-) {
-  return rtlRender(
-    <QueryClientProvider client={client}>
-      <LocaleProvider initial={locale}>{node}</LocaleProvider>
-    </QueryClientProvider>,
-  );
-}
-
-/**
- * Opens the profile dialog from one row's own Edit verb, and answers with the
- * dialog.
- *
- * Through the row rather than by rendering the dialog directly: the verb IS the
- * only way in, and a test that reached past it would prove nothing about
- * whether a reader can.
- */
-async function openFrom(
-  user: ReturnType<typeof userEvent.setup>,
-  fact: RegExp,
-): Promise<HTMLElement> {
-  const edit = await screen.findByRole("button", { name: fact });
-  await user.click(edit);
-  return screen.getByRole("dialog");
-}
 
 function UnsavedProbe() {
   return (
@@ -577,163 +447,6 @@ describe("InstallationSettingsCard", () => {
       const control = within(dialog).getByLabelText(label);
       expect(control.className.split(/\s+/)).toContain("input");
     }
-  });
-
-  it("puts a refused value's reason on the field it is about", async () => {
-    const user = userEvent.setup();
-    const { fetchMock } = backendFor(SETTINGS_EDITOR, {
-      refuse: [
-        {
-          field: "timezone",
-          code: "unknown_zone",
-          message: "Not an IANA time zone.",
-        },
-      ],
-    });
-    vi.stubGlobal("fetch", fetchMock);
-    render(<InstallationSettingsCard />);
-
-    const dialog = await openFrom(user, /edit company time zone/i);
-    const zone = within(dialog).getByLabelText(/company time zone/i);
-    await user.clear(zone);
-    await user.type(zone, "Europe/Berlim");
-    await user.click(within(dialog).getByRole("button", { name: /^save$/i }));
-
-    const refusal = await screen.findByText("Not an IANA time zone.");
-    // ON the field: named by the control, so a screen reader hears the refusal
-    // when it lands on the input rather than only if the reader wanders past a
-    // paragraph at the foot of the form.
-    expect(zone.getAttribute("aria-invalid")).toBe("true");
-    expect(refusal.id).not.toBe("");
-    expect(zone.getAttribute("aria-describedby") ?? "").toContain(refusal.id);
-    // A refused save leaves the form open with what was typed still in it —
-    // dismissing it on a refusal would discard the edit AND the reason for it.
-    expect(screen.getByRole("dialog")).toBeTruthy();
-  });
-
-  it("marks the field a server refusal names by its setting key", async () => {
-    const user = userEvent.setup();
-    const sentence =
-      '"Mars/Olympus" is not an IANA zone name this server knows — use one like Europe/Berlin';
-    const { fetchMock } = backendFor(SETTINGS_EDITOR, {
-      refuse: [
-        {
-          field: "installation.timezone",
-          code: "setting_invalid",
-          message: sentence,
-        },
-      ],
-    });
-    vi.stubGlobal("fetch", fetchMock);
-    render(<InstallationSettingsCard />);
-
-    const dialog = await openFrom(user, /edit company time zone/i);
-    const zone = within(dialog).getByLabelText(/company time zone/i);
-    await user.clear(zone);
-    await user.type(zone, "Mars/Olympus");
-    await user.click(within(dialog).getByRole("button", { name: /^save$/i }));
-
-    await within(dialog).findByText(/use one like Europe\/Berlin/);
-    expect(zone.getAttribute("aria-invalid")).toBe("true");
-  });
-
-  it("shows a refusal naming a field the dialog does not draw", async () => {
-    const user = userEvent.setup();
-    const { fetchMock } = backendFor(SETTINGS_EDITOR, {
-      refuse: [
-        {
-          field: "installation.forecast_likely_threshold",
-          code: "setting_invalid",
-          message: "Threshold out of range.",
-        },
-      ],
-    });
-    vi.stubGlobal("fetch", fetchMock);
-    render(<InstallationSettingsCard />);
-
-    const dialog = await openFrom(user, /edit company time zone/i);
-    const zone = within(dialog).getByLabelText(/company time zone/i);
-    await user.type(zone, "x");
-    await user.click(within(dialog).getByRole("button", { name: /^save$/i }));
-
-    await within(dialog).findByText("Settings not saved");
-    expect(dialog.querySelector('[aria-invalid="true"]')).toBeNull();
-  });
-
-  it("words a currency frozen after the page loaded as its lock, once, then saves the rest", async () => {
-    const user = userEvent.setup();
-    const { fetchMock, patch } = backendFor(SETTINGS_EDITOR, {
-      refuse: [
-        {
-          field: "installation.base_currency",
-          code: "setting_frozen",
-          message: "3 deal(s) have already frozen a conversion rate against it",
-          params: { reason: "rates_frozen", count: "3" },
-        },
-      ],
-      lockAfterRefusal: { reason: "rates_frozen", count: 3 },
-    });
-    vi.stubGlobal("fetch", fetchMock);
-    render(<InstallationSettingsCard />, undefined, "de");
-
-    const dialog = await openFrom(user, /basiswährung bearbeiten/i);
-    const currency = within(dialog).getByLabelText(
-      "Basiswährung",
-    ) as HTMLInputElement;
-    await user.clear(currency);
-    await user.type(currency, "CHF");
-    const zone = within(dialog).getByLabelText("Zeitzone des Unternehmens");
-    await user.clear(zone);
-    await user.type(zone, "Europe/Vienna");
-    await user.click(within(dialog).getByRole("button", { name: "Speichern" }));
-
-    const sentence =
-      "Für 3 Einträge ist bereits jeweils ein Wechselkurs zu dieser Währung festgeschrieben, daher ist sie nicht mehr änderbar.";
-    const refusal = await within(dialog).findByText(sentence);
-    expect(refusal.className).toContain("field-error");
-    expect(currency.getAttribute("aria-invalid")).toBe("true");
-    expect(within(dialog).queryByText(/frozen a conversion rate/)).toBeNull();
-    // The read after the refusal locks the field, and its hint holds the same sentence.
-    await waitFor(() => expect(currency.disabled).toBe(true));
-    expect(within(dialog).getAllByText(sentence)).toHaveLength(1);
-    expect(currency.value).toBe("EUR");
-
-    await user.click(within(dialog).getByRole("button", { name: "Speichern" }));
-    await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
-    expect(patch()).toEqual({ timezone: "Europe/Vienna" });
-  });
-
-  it("says a refusal once — on the field, or in the summary, never both", async () => {
-    const user = userEvent.setup();
-    const { fetchMock } = backendFor(SETTINGS_EDITOR, {
-      refuse: [
-        {
-          field: "timezone",
-          code: "too_long",
-          message: "That zone is too long.",
-          max: 64,
-        },
-      ],
-    });
-    vi.stubGlobal("fetch", fetchMock);
-    render(<InstallationSettingsCard />);
-
-    const dialog = await openFrom(user, /edit company time zone/i);
-    const zone = within(dialog).getByLabelText(/company time zone/i);
-    await user.type(zone, "/Extra");
-    await user.click(within(dialog).getByRole("button", { name: /^save$/i }));
-
-    const refusal = await screen.findByText(
-      "Company time zone: at most 64 characters.",
-    );
-    // One occurrence, the field's: the summary carries only what no field
-    // claimed.
-    expect(
-      screen.getAllByText("Company time zone: at most 64 characters."),
-    ).toHaveLength(1);
-    await waitFor(() => expect(document.activeElement).toBe(zone));
-    expect(refusal.className).toContain("field-error");
-    expect(screen.getAllByRole("alert")).toHaveLength(1);
   });
 });
 

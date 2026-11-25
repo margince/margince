@@ -23,8 +23,8 @@ import { useCanWrite } from "../../lib/capability";
 // Installation facts are readable by every role; only admin/ops may change them.
 // Each row opens the shared sparse-patch form with its own field focused.
 import {
-  currencyDraft,
   useCurrencyNote,
+  useLockDropsTypedCurrency,
 } from "../../lib/installation-settings.currency";
 import {
   installationRefusal,
@@ -248,11 +248,10 @@ function InstallationSettingsForm({
   const calling = useUpdateInstallationSettings();
   const individual = useUpdateInstallationSettings();
   const selfCorrecting = useUpdateInstallationSettings();
-  const [typed, setDraft] = useState(settings);
-  const draft = {
-    ...typed,
-    base_currency: currencyDraft(settings, typed.base_currency),
-  };
+  const [draft, setDraft] = useState(settings);
+  useLockDropsTypedCurrency(settings.base_currency_locked, () =>
+    setDraft({ ...draft, base_currency: settings.base_currency }),
+  );
   const seeded = useRef(serverSignature(settings));
 
   // Re-seed only when the server's values differ from the draft's source. A
@@ -284,10 +283,10 @@ function InstallationSettingsForm({
     }),
   );
   const blanket = installationRefusal(update.error, t, labels).rest;
-  const lockRefused = refusalWordsLock(
-    update.error,
-    refused.get("base_currency"),
-  );
+  // Kept with the field's sentence, not read off `update.error`, which a
+  // second save clears while the sentence stays.
+  const [lockWorded, setLockWorded] = useState(false);
+  const lockRefused = lockWorded && refused.has("base_currency");
   const edit = (next: InstallationSettings) => {
     for (const fact of EDITABLE_FACTS) {
       if (next[fact] !== draft[fact]) faults.edited(fact);
@@ -328,8 +327,10 @@ function InstallationSettingsForm({
       return;
     }
     update.mutate(patch, {
-      onError: (error) =>
-        faults.show(installationRefusal(error, t, labels).byField),
+      onError: (error) => {
+        faults.show(installationRefusal(error, t, labels).byField);
+        setLockWorded(refusalWordsLock(error));
+      },
     });
   };
 

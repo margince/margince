@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
+import { useState } from "react";
 import type { components } from "../api/schema";
 import { formatNumber } from "../format/format";
 import {
@@ -77,13 +78,17 @@ export function useCurrencyNote(): (settings: InstallationSettings) => string {
   return (settings) => currencyNote(settings, { t, locale });
 }
 
-// A locked currency shows and sends the stored code. A code typed before the
-// lock arrived can no longer be saved, and the disabled field cannot undo it.
-export function currencyDraft(
-  settings: InstallationSettings,
-  typed: string,
-): string {
-  return settings.base_currency_locked ? settings.base_currency : typed;
+// The lock's arrival drops a code typed before it, which the server refuses
+// and the disabled field cannot undo. An unlock then shows the stored code.
+export function useLockDropsTypedCurrency(
+  locked: boolean,
+  drop: () => void,
+): void {
+  const [seen, setSeen] = useState(locked);
+  if (seen !== locked) {
+    setSeen(locked);
+    if (locked) drop();
+  }
 }
 
 const BASE_CURRENCY_SETTING = "installation.base_currency";

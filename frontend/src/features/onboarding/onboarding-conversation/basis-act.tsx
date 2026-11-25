@@ -12,8 +12,8 @@ import { ordinalNumber } from "../../../format/format";
 import { useT } from "../../../i18n";
 import { useCanWrite } from "../../../lib/capability";
 import {
-  currencyDraft,
   useCurrencyNote,
+  useLockDropsTypedCurrency,
 } from "../../../lib/installation-settings.currency";
 import {
   installationRefusal,
@@ -81,10 +81,10 @@ export function BasisAct({ state, dispatch }: BasisActProps) {
   const [leaving, setLeaving] = useState(false);
 
   const stored = settings.data;
-  const currency =
-    stored === undefined
-      ? (currencyEdit ?? "")
-      : currencyDraft(stored, currencyEdit ?? stored.base_currency);
+  useLockDropsTypedCurrency(stored?.base_currency_locked === true, () =>
+    setCurrencyEdit(null),
+  );
+  const currency = currencyEdit ?? stored?.base_currency ?? "";
   const timezone = timezoneEdit ?? stored?.timezone ?? "";
   const reportingShown = canManage && stored !== undefined;
   const blockers = reportingShown
@@ -147,7 +147,8 @@ export function BasisAct({ state, dispatch }: BasisActProps) {
                 <Field
                   label={t("installationSettings.baseCurrency")}
                   hint={
-                    refusalWordsLock(update.error, currencyRefused)
+                    currencyRefused !== undefined &&
+                    refusalWordsLock(update.error)
                       ? undefined
                       : currencyNote(current)
                   }

@@ -183,9 +183,10 @@ describe("BasisAct", () => {
     const sentence =
       "2 Wechselkurse rechnen in EUR um. Entferne zuerst die Wechselkurse, um die Basiswährung zu ändern.";
     const refusal = await screen.findByText(sentence);
+    expect(refusal).toHaveClass("field-error");
     expect(currency).toHaveAttribute("aria-invalid", "true");
     expect(currency.getAttribute("aria-describedby")).toContain(refusal.id);
-    // The read after the refusal locks the field, and its hint holds the same sentence.
+    // The read after the refusal locks the field, and its hint stays hidden.
     await waitFor(() => expect(currency).toBeDisabled());
     expect(screen.getAllByText(sentence)).toHaveLength(1);
     expect(screen.queryByText(/convert into EUR/)).toBeNull();

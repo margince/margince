@@ -38,16 +38,10 @@ export function installationRefusal(
   };
 }
 
-// A refusal at the field (`atField`) that words the lock replaces the base
-// currency's hint, which states the same lock.
-export function refusalWordsLock(
-  error: unknown,
-  atField: string | undefined,
-): boolean {
-  return (
-    atField !== undefined &&
-    problemFieldErrorsOf(error).some(
-      (fault) => refusedLock(fault) !== undefined,
-    )
+// A refusal that words the lock stands in for the base currency's hint, which
+// states the same lock.
+export function refusalWordsLock(error: unknown): boolean {
+  return problemFieldErrorsOf(error).some(
+    (fault) => refusedLock(fault) !== undefined,
   );
 }
