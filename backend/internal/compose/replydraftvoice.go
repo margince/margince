@@ -31,9 +31,9 @@ import (
 // A nil store is a deployment with no voice lane; a lookup failure degrades to
 // the plain draft with the reason logged, because a broken voice read must
 // never take reply drafting down with it.
-func (d replyDrafter) loadVoice(ctx context.Context) draftvoice.Context {
+func (d replyDrafter) loadVoice(ctx context.Context) (draftvoice.Context, error) {
 	if d.voice == nil {
-		return draftvoice.Context{}
+		return draftvoice.Context{}, nil
 	}
 	return draftvoice.Load(ctx, d.voice, d.logger())
 }
@@ -95,11 +95,9 @@ func (d replyDrafter) voicedDraft(ctx context.Context, anchor ids.UUID, data rep
 		}
 		retried, retryErr := d.completeWith(ctx, data, voice.TeamRules, withFeedback, "")
 		if retryErr != nil {
-			// This call goes to d.completeWith, not completeChecked, so draftRetryLog never sees it: unlogged,
-			// the failure is recorded nowhere at all. Keeping the first draft
-			// is the right answer — the re-check below still decides whether
-			// it may be served — but that decision is then made on a retry
-			// nobody can see happened.
+			// This call bypasses completeChecked, so draftRetryLog never sees it and
+			// the failure would be recorded nowhere. Keeping the first draft is right,
+			// since the re-check below still decides whether it may be served.
 			d.logger().WarnContext(ctx, "voice critic retry failed; keeping the first draft with its violations",
 				"err", retryErr, "violations", len(violations))
 		} else {

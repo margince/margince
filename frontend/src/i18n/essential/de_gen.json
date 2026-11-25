@@ -1798,6 +1798,7 @@
   "common.errorNoCause": "Die Anfrage ist fehlgeschlagen. Es wurde keine Ursache gemeldet.",
   "common.errorReference": "Referenz",
   "common.assistantUnavailable": "Die KI hat nicht geantwortet. Bitte versuche es noch mal, oder frage deinen Admin nach Einstellungen → KI.",
+  "common.teamRulesUnavailable": "Die Teamregeln konnten nicht gelesen werden, deshalb wurde kein Entwurf geschrieben. Bitte versuche es gleich noch mal.",
   "common.providerOutOfCredit": "Beim KI-Anbieter ist kein Guthaben mehr vorhanden. Bitte wende dich an die Systemadministration.",
   "common.providerUnauthorized": "Die hinterlegten Anmeldedaten wurden vom KI-Anbieter abgelehnt. Bitte wende dich an die Systemadministration.",
   "common.providerUnavailable": "Der KI-Anbieter antwortet gerade nicht. Bitte versuche es später erneut oder wende dich an die Systemadministration.",

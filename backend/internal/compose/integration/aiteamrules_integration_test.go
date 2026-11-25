@@ -90,7 +90,7 @@ func TestADraftLoadsTheTeamRulesWithoutHoldingTheirGrant(t *testing.T) {
 	}
 	voices := ai.NewVoiceStore(e.DB())
 	for name, ctx := range map[string]context.Context{"agent": e.AgentCtx(), "system": e.AutomationCtx(e.Rep1)} {
-		if loaded := draftvoice.Load(ctx, voices, nil); loaded.TeamRules != "Never quote a discount." {
+		if loaded, _ := draftvoice.Load(ctx, voices, nil); loaded.TeamRules != "Never quote a discount." {
 			t.Errorf("%s draft loaded team rules %q, want the saved text", name, loaded.TeamRules)
 		}
 	}

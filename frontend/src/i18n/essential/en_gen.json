@@ -1798,6 +1798,7 @@
   "common.errorNoCause": "The request failed. No cause reported.",
   "common.errorReference": "Reference",
   "common.assistantUnavailable": "The AI did not answer. Try again, or ask your admin to check Settings → AI.",
+  "common.teamRulesUnavailable": "The team rules could not be read, so no draft was written. Try again in a moment.",
   "common.providerOutOfCredit": "The AI provider has no credit left. Contact your system administrator.",
   "common.providerUnauthorized": "The AI provider refused the configured credential. Contact your system administrator.",
   "common.providerUnavailable": "The AI provider is not answering right now. Try again later or contact your system administrator.",

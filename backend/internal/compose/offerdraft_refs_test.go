@@ -29,7 +29,7 @@ func TestOfferDraftNamesRecordsByRefAndReadsThemBack(t *testing.T) {
 		{"description":"Other","quantity":"1","tax_rate":"19.00","evidence_snippet":"wants the support plan","source_id":"s2","product_id":"p2"}]}`}}
 
 	candidates, err := offerDrafter{brain: brain}.draftCandidates(
-		context.Background(), dealContext, []crmcontracts.Product{product}, string(textlang.English), "")
+		context.Background(), dealContext, []crmcontracts.Product{product}, string(textlang.English))
 	if err != nil {
 		t.Fatalf("draftCandidates: %v", err)
 	}

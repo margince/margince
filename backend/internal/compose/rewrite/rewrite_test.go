@@ -258,3 +258,15 @@ func TestTeamRulesReachAnEmailRewriteAndNotANote(t *testing.T) {
 		t.Error("a note rewrite is read inside the team, so it carries no team rules")
 	}
 }
+
+// The team rules are workspace policy: an email rewrite with the setting
+// unreadable is refused, and a note rewrite, which takes no rules, is not.
+func TestAnEmailRewriteIsRefusedWhenTheTeamRulesCannotBeRead(t *testing.T) {
+	lane := &recordingLane{reply: `{"subject": "", "body": "Hello Anna."}`}
+	_, err := NewService(lane, asCompany).WithVoice(ai.NewVoiceStore(nil)).Rewrite(rep(true), Ask{
+		Envelope: EnvelopeEmail, Verb: VerbPolish, Body: "hello anna", Reader: textlang.English, About: onCompany,
+	})
+	if !errors.Is(err, draftvoice.ErrRulesUnavailable) || len(lane.sent) != 0 {
+		t.Fatalf("an unreadable team rules setting must refuse before the model is asked: %v, %d calls", err, len(lane.sent))
+	}
+}

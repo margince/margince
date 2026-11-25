@@ -3432,6 +3432,8 @@ export const en = {
   "common.errorReference": "Reference",
   "common.assistantUnavailable":
     "The AI did not answer. Try again, or ask your admin to check Settings → AI.",
+  "common.teamRulesUnavailable":
+    "The team rules could not be read, so no draft was written. Try again in a moment.",
   "common.providerOutOfCredit":
     "The AI provider has no credit left. Contact your system administrator.",
   "common.providerUnauthorized":
@@ -16369,6 +16371,12 @@ export const en = {
   "teamRules.savedBy": "Last saved by {who} on {when}.",
   "teamRules.unknownEditor": "someone",
   "teamRules.none": "No team rules saved yet.",
+  "teamRules.conflictTitle":
+    "A colleague saved the team rules while you were editing",
+  "teamRules.conflictBody":
+    "Reload to see their version and drop your edit, or keep your text and save it over theirs.",
+  "teamRules.reload": "Reload their version",
+  "teamRules.keepMine": "Keep my text",
   "roles.object.ai_diagnostics": "AI usage",
   "roles.object.ai_model_rate": "Model prices",
   "roles.object.embedding_reindex": "Search index",

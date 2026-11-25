@@ -69,7 +69,7 @@ func Request(in Input, about *model.Subjects, voice draftvoice.Context) model.Re
 	// Only an email goes out over the sender's name, so only it takes their voice
 	// and the team rules.
 	if in.Envelope == EnvelopeEmail {
-		system += "\n\n" + draftrules.TeamRules
+		system += "\n\n" + draftrules.TeamRules + "\n" + fence.PolicyRule()
 		if voice.OK {
 			system += "\n\n" + draftvoice.SystemRule
 		}

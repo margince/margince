@@ -185,7 +185,10 @@ func (d replyDrafter) DraftEmailWithProvenance(ctx context.Context, anchor ids.U
 		RewriteOf:         textcut.Runes(steering.RewriteOf, replyActivityMaxRunes),
 	}
 
-	voice := d.loadVoice(ctx)
+	voice, err := d.loadVoice(ctx)
+	if err != nil {
+		return activities.DraftResult{}, err
+	}
 	draft, voiceVersion, draftRef, err := d.completeVoiced(ctx, anchor, data, voice)
 	if err != nil {
 		// Drafting is an assistive read, not the authority to send. Preserve

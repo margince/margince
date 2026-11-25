@@ -13,6 +13,8 @@ import (
 	"time"
 
 	"github.com/margince/margince/backend/internal/compose/draftreply"
+	"github.com/margince/margince/backend/internal/compose/draftrules"
+	"github.com/margince/margince/backend/internal/compose/draftvoice"
 	"github.com/margince/margince/backend/internal/compose/promptlang"
 	"github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/ai"
@@ -38,19 +40,24 @@ type introDraft struct {
 // than an apology. What the model buys is phrasing, and generated_by says which
 // one wrote it.
 func writeIntroRequest(
-	ctx context.Context, lane Completer, facts introFacts,
-) crmcontracts.CompanyEmailDraft {
+	ctx context.Context, lane Completer, rules draftvoice.RulesReader, facts introFacts,
+) (crmcontracts.CompanyEmailDraft, error) {
 	floor := introFloor(facts)
 	if lane == nil {
-		return wireIntroRequest(floor, crmcontracts.WrittenByDeterministic, facts)
+		return wireIntroRequest(floor, crmcontracts.WrittenByDeterministic, facts), nil
 	}
-	written, err := introFromModel(ctx, lane, facts)
+	// Workspace policy: no model draft without it, so a failed read refuses.
+	teamRules, err := draftvoice.LoadTeamRules(ctx, rules, nil)
+	if err != nil {
+		return crmcontracts.CompanyEmailDraft{}, err
+	}
+	written, err := introFromModel(ctx, lane, facts, teamRules)
 	if err != nil {
 		// Degrading to the floor IS the answer: the reader gets a sendable
 		// message rather than an error about a lane they cannot configure.
-		return wireIntroRequest(floor, crmcontracts.WrittenByDeterministic, facts)
+		return wireIntroRequest(floor, crmcontracts.WrittenByDeterministic, facts), nil
 	}
-	return wireIntroRequest(written, crmcontracts.WrittenByModel, facts)
+	return wireIntroRequest(written, crmcontracts.WrittenByModel, facts), nil
 }
 
 // introFromModel writes the ask and checks what came back.
@@ -58,9 +65,9 @@ func writeIntroRequest(
 // ai.Ask re-asks through the SAME parse the answer path runs, so a
 // reply this site would refuse goes back to the model with the reason.
 func introFromModel(
-	ctx context.Context, lane Completer, facts introFacts,
+	ctx context.Context, lane Completer, facts introFacts, teamRules string,
 ) (introDraft, error) {
-	res, err := ai.Ask(ctx, lane, introRequest(facts), func(text string) error {
+	res, err := ai.Ask(ctx, lane, introRequest(facts, teamRules), func(text string) error {
 		_, parseErr := parseIntroDraft(text, facts)
 		return parseErr
 	})
@@ -91,7 +98,7 @@ Rules you must not break:
 // came from a human.
 //
 //promptvoice:exempt the ask goes out under the rep's own name to a colleague; Margince's register ("no greetings", "say I for what you did") would contradict the greeting this message opens with.
-func introRequest(facts introFacts) model.Request {
+func introRequest(facts introFacts, teamRules string) model.Request {
 	fence := promptfence.New()
 	payload, err := json.Marshal(map[string]string{
 		"colleague":          facts.colleague,
@@ -110,10 +117,10 @@ func introRequest(facts introFacts) model.Request {
 		payload = []byte("{}")
 	}
 	return model.Request{
-		System: introSystem + "\n" +
+		System: introSystem + "\n\n" + draftrules.TeamRules + "\n" +
 			promptlang.Rule(string(introLang(facts.lang))) + "\n\n" +
-			fence.Rule("the facts of the introduction"),
-		Messages:       []model.Message{{Role: "user", Content: fence.Wrap(string(payload))}},
+			fence.Rule("the facts of the introduction") + "\n" + fence.PolicyRule(),
+		Messages:       []model.Message{{Role: "user", Content: draftvoice.WithTeamRules(fence, teamRules, fence.Wrap(string(payload)))}},
 		MaxTokens:      ai.ReasoningOutputMaxTokens,
 		ResponseSchema: introSchema(),
 		SecretStripper: ai.NewSecretStripper(),
@@ -299,7 +306,12 @@ type IntroFixture struct {
 
 // IntroRequestFor builds the model call this site sends, from a fixture.
 func IntroRequestFor(fixture IntroFixture) model.Request {
-	return introRequest(introFactsFromFixture(fixture))
+	return IntroRequestWithRules(fixture, "")
+}
+
+// IntroRequestWithRules is IntroRequestFor for a workspace that saved team rules.
+func IntroRequestWithRules(fixture IntroFixture, teamRules string) model.Request {
+	return introRequest(introFactsFromFixture(fixture), teamRules)
 }
 
 // CheckIntroDraft runs the production check over a reply.

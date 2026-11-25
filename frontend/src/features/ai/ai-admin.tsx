@@ -27,6 +27,7 @@ import { lockFor } from "../../format/settinglocks";
 import { useLocale, usePlural, useT } from "../../i18n";
 import { useCan, useCanWrite } from "../../lib/capability";
 import {
+  isVersionSkewOf,
   problemFieldSentencesOf,
   problemMessageOf,
   unwrap,
@@ -490,30 +491,54 @@ export function TeamRulesCard() {
   );
 }
 
+// What the editor opened on, kept apart from the latest server answer. A save
+// is judged against the version the text was edited from, never a newer one.
+type TeamRulesEdit = Readonly<{
+  text: string;
+  baseText: string;
+  baseUpdatedAt: string | undefined;
+}>;
+
 function TeamRulesEditor({ rules }: Readonly<{ rules: TeamRules }>) {
   const t = useT();
   const { locale } = useLocale();
   const client = useQueryClient();
   const canEdit = useCanWrite("ai_team_rules", "update");
-  const [draft, setDraft] = useState<string | null>(null);
-  const text = draft ?? rules.text;
+  const [edit, setEdit] = useState<TeamRulesEdit | null>(null);
+  const [skewed, setSkewed] = useState(false);
+  const text = edit?.text ?? rules.text;
+  const dirty = edit !== null && edit.text !== edit.baseText;
+  // Somebody saved while this text was being edited: the server moved on, or a
+  // save was refused as stale.
+  const conflict = dirty && (skewed || edit.baseUpdatedAt !== rules.updated_at);
+  const settle = () => {
+    setEdit(null);
+    setSkewed(false);
+  };
   const save = useMutation({
-    mutationFn: async (next: string) =>
+    mutationFn: async (from: TeamRulesEdit) =>
       unwrap(
         await api.PUT("/ai/team-rules", {
-          body: { text: next, expected_updated_at: rules.updated_at },
+          body: { text: from.text, expected_updated_at: from.baseUpdatedAt },
         }),
       ),
     onSuccess: (data) => client.setQueryData(TEAM_RULES_KEY, data),
+    onError: (error) => {
+      if (isVersionSkewOf(error)) {
+        setSkewed(true);
+        void client.invalidateQueries({ queryKey: TEAM_RULES_KEY });
+      }
+    },
   });
   useSaveDraft({
-    dirty: text !== rules.text,
+    dirty,
     save: async () => {
-      await save.mutateAsync(text);
-      setDraft(null);
+      if (edit === null) return;
+      await save.mutateAsync(edit);
+      settle();
     },
     placed: ["text"],
-    discard: () => setDraft(null),
+    discard: settle,
   });
   const faults = problemFieldSentencesOf(save.error, locale);
   return (
@@ -535,10 +560,42 @@ function TeamRulesEditor({ rules }: Readonly<{ rules: TeamRules }>) {
               maxLength={TEAM_RULES_MAX_LENGTH}
               disabled={!canEdit || save.isPending}
               value={text}
-              onChange={(event) => setDraft(event.target.value)}
+              onChange={(event) =>
+                setEdit({
+                  text: event.target.value,
+                  baseText: edit?.baseText ?? rules.text,
+                  baseUpdatedAt: edit ? edit.baseUpdatedAt : rules.updated_at,
+                })
+              }
             />
           )}
         </Field>
+        {conflict && (
+          <Callout
+            kind="outcome"
+            tone="warning"
+            title={t("teamRules.conflictTitle")}
+            actions={
+              <>
+                <Button onClick={settle}>{t("teamRules.reload")}</Button>
+                <Button
+                  onClick={() => {
+                    setEdit({
+                      text,
+                      baseText: rules.text,
+                      baseUpdatedAt: rules.updated_at,
+                    });
+                    setSkewed(false);
+                  }}
+                >
+                  {t("teamRules.keepMine")}
+                </Button>
+              </>
+            }
+          >
+            {t("teamRules.conflictBody")}
+          </Callout>
+        )}
         <p className="t-caption">
           {rules.updated_at
             ? t("teamRules.savedBy", {

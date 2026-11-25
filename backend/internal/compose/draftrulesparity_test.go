@@ -214,8 +214,7 @@ func TestAnExemptWriterStillWritesWithoutTheSharedRules(t *testing.T) {
 }
 
 // filesComposingTheSharedRules sweeps the compose tree for the production files
-// that read draftrules.Shared, or the other named rules, reported relative to
-// internal/compose.
+// that READ draftrules.Shared, reported relative to internal/compose.
 //
 // Off the syntax, not the text. promptlang's docblock names draftrules.Shared
 // in prose — the two blocks share a heading and it says so — and a text search
@@ -225,9 +224,8 @@ func TestAnExemptWriterStillWritesWithoutTheSharedRules(t *testing.T) {
 //
 // draftrules' own package is skipped for the same reason one step up: it
 // DECLARES the block rather than composing it.
-func filesComposingTheSharedRules(t *testing.T, others ...string) []string {
+func filesComposingTheSharedRules(t *testing.T) []string {
 	t.Helper()
-	names := append([]string{"Shared"}, others...)
 	const root = "."
 	var out []string
 	var dotImports []string
@@ -250,7 +248,7 @@ func filesComposingTheSharedRules(t *testing.T, others ...string) []string {
 		if dotImportsDraftRules(parsed) {
 			dotImports = append(dotImports, rel)
 		}
-		if readsDraftRule(parsed, names) {
+		if readsTheSharedRules(parsed) {
 			out = append(out, rel)
 		}
 		return nil
@@ -296,10 +294,10 @@ func importsDraftRules(imported *ast.ImportSpec) bool {
 	return strings.HasSuffix(unquoted, path)
 }
 
-// readsDraftRule reports whether the file holds a `draftrules.<name>` selector
-// in its code, for one of the names. An alias is honoured, because the local
-// name for an imported package is whatever the file says it is.
-func readsDraftRule(file *ast.File, names []string) bool {
+// readsTheSharedRules reports whether the file holds a `draftrules.Shared`
+// selector in its code — an alias honoured, because the local name for an
+// imported package is whatever the file says it is.
+func readsTheSharedRules(file *ast.File) bool {
 	local, imported := localNameForDraftRules(file)
 	if !imported {
 		return false
@@ -310,7 +308,7 @@ func readsDraftRule(file *ast.File, names []string) bool {
 			return false
 		}
 		selector, ok := n.(*ast.SelectorExpr)
-		if !ok || !slicesContains(names, selector.Sel.Name) {
+		if !ok || selector.Sel.Name != "Shared" {
 			return true
 		}
 		if pkg, ok := selector.X.(*ast.Ident); ok && pkg.Name == local {

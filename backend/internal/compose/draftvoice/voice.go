@@ -10,6 +10,7 @@ import (
 	"strings"
 
 	"github.com/margince/margince/backend/internal/modules/ai"
+	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/shared/kernel/promptfence"
 )
 
@@ -19,7 +20,13 @@ import (
 // also hand them writes their packages promise not to have. TeamRules is read
 // ungated, because a draft follows them whoever asked for it.
 type Reader interface {
+	RulesReader
 	ActiveVoiceForActor(ctx context.Context) (ai.VoiceProfile, ai.VoiceProfileVersion, bool, error)
+}
+
+// RulesReader is the team-rules half of Reader, for a surface that takes no
+// voice.
+type RulesReader interface {
 	TeamRules(ctx context.Context) (string, error)
 }
 
@@ -50,20 +57,23 @@ type Context struct {
 // for and the voice is how it is phrased — but the caller's response must be
 // able to say the voice was lost rather than absent. reader may be nil, which
 // is a deployment that wired no voice lane and degrades nothing.
-func Load(ctx context.Context, reader Reader, log *slog.Logger) Context {
+func Load(ctx context.Context, reader Reader, log *slog.Logger) (Context, error) {
 	if reader == nil {
-		return Context{}
+		return Context{}, nil
 	}
-	rules, rulesRead := readTeamRules(ctx, reader, log)
-	loaded := Context{TeamRules: rules, Degraded: !rulesRead}
+	rules, err := LoadTeamRules(ctx, reader, log)
+	if err != nil {
+		return Context{}, err
+	}
+	loaded := Context{TeamRules: rules}
 	profile, version, ok, err := reader.ActiveVoiceForActor(ctx)
 	if err != nil {
 		loggerOr(log).WarnContext(ctx, "voice profile lookup failed; drafting without voice", "err", err)
 		loaded.Degraded = true
-		return loaded
+		return loaded, nil
 	}
 	loaded.Profile, loaded.Version, loaded.OK = profile, version, ok
-	return loaded
+	return loaded, nil
 }
 
 func loggerOr(log *slog.Logger) *slog.Logger {
@@ -73,24 +83,25 @@ func loggerOr(log *slog.Logger) *slog.Logger {
 	return log
 }
 
-// LoadTeamRules loads the workspace's team rules alone, for a draft that takes
-// no voice. A failed read drafts without them and logs it. reader may be nil.
-func LoadTeamRules(ctx context.Context, reader Reader, log *slog.Logger) string {
-	if reader == nil {
-		return ""
-	}
-	rules, _ := readTeamRules(ctx, reader, log)
-	return rules
-}
+// ErrRulesUnavailable is the refusal a surface answers when the team rules
+// cannot be read. The rules are workspace policy, so a draft written without
+// them is not served: the voice may degrade, the policy may not.
+var ErrRulesUnavailable = httperr.UnavailableProblem("team_rules_unavailable",
+	"The team rules could not be read, so no draft was written. Try again in a moment.")
 
-// readTeamRules reports whether the read worked, so Load can mark the loss.
-func readTeamRules(ctx context.Context, reader Reader, log *slog.Logger) (string, bool) {
+// LoadTeamRules loads the workspace's team rules, trimmed. A failed read returns
+// ErrRulesUnavailable wrapping the cause, and the caller must not draft. reader
+// may be nil, a deployment with no rules lane, which has none.
+func LoadTeamRules(ctx context.Context, reader RulesReader, log *slog.Logger) (string, error) {
+	if reader == nil {
+		return "", nil
+	}
 	rules, err := reader.TeamRules(ctx)
 	if err != nil {
-		loggerOr(log).WarnContext(ctx, "team rules lookup failed; drafting without them", "err", err)
-		return "", false
+		loggerOr(log).WarnContext(ctx, "team rules lookup failed; refusing to draft", "err", err)
+		return "", fmt.Errorf("%w: %w", ErrRulesUnavailable, err)
 	}
-	return strings.TrimSpace(rules), true
+	return strings.TrimSpace(rules), nil
 }
 
 // WithTeamRules puts the team rules block ahead of a user turn, or leaves the
@@ -103,14 +114,14 @@ func WithTeamRules(fence promptfence.Fence, rules, turn string) string {
 }
 
 // TeamRulesBlock renders the workspace's rules for the user turn, inside the
-// calling call's fence, or nothing when none are saved. A surface puts it ahead
+// calling call's policy block, or nothing when none are saved. A surface puts it ahead
 // of the voice block, and draftrules.TeamRules tells the model what it outranks.
 func TeamRulesBlock(fence promptfence.Fence, rules string) string {
 	rules = strings.TrimSpace(rules)
 	if rules == "" {
 		return ""
 	}
-	return "Team rules:\n" + fence.Wrap(rules)
+	return "Team rules:\n" + fence.WrapPolicy(rules)
 }
 
 // Preamble is what a surface prepends to its user turn: the team rules, then the

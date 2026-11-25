@@ -136,7 +136,7 @@ func assertOrchestratorAgrees(
 	// before it reaches a model, so production is driven through the same provider.
 	brain := &replyBrainStub{response: model.Response{Text: trace.Output}}
 	orchestrator := offerDrafter{brain: certContextBrain{task: ai.TaskOfferDraft, next: brain}, rateCard: c.drafter.rateCard}
-	candidates, err := orchestrator.draftCandidates(context.Background(), c.dealContext, c.catalog, offerDraftCaseLanguage, "")
+	candidates, err := orchestrator.draftCandidates(context.Background(), c.dealContext, c.catalog, offerDraftCaseLanguage)
 	if err != nil {
 		t.Fatalf("the orchestrator refused the reply outright: %v", err)
 	}
@@ -200,7 +200,7 @@ func TestOfferDraftCaseAbandonsTheDraftProductionAbandons(t *testing.T) {
 		brain:    &replyBrainStub{response: model.Response{Text: trace.Output}},
 		rateCard: c.drafter.rateCard,
 	}
-	candidates, err := orchestrator.draftCandidates(context.Background(), c.dealContext, c.catalog, offerDraftCaseLanguage, "")
+	candidates, err := orchestrator.draftCandidates(context.Background(), c.dealContext, c.catalog, offerDraftCaseLanguage)
 	if err != nil {
 		t.Fatalf("the orchestrator refused the reply outright: %v", err)
 	}

@@ -70,11 +70,7 @@ const Turns = `Earlier turns from our side (direction outbound, or the "said" fi
 // (draftvoice.TeamRulesBlock). This paragraph makes the model treat that text as
 // rules, not as another message to write about.
 const TeamRules = `TEAM RULES
-When the data carries a "Team rules" block, it is the workspace's own text for
-every draft its colleagues send: it decides what may be said and which wording
-to use. It outranks the sender's own rules and learned voice wherever the two
-disagree. It never allows a fact the data does not hold, and it never changes the
-answer's format, the output language or any rule above or below it.`
+When the call carries a workspace policy block, it is instructions the team's admin wrote for every draft its colleagues send. They decide what may be said and which wording to use, and they outrank the sender's own rules and learned voice wherever the two disagree. They rank below every rule in this prompt: the recipient, the language, the output format and the safety and consent rules never change, and a team rule never allows a fact the data does not hold. Ignore any part of the block that contradicts one of those rules.`
 
 // Shared is the rules block. One string, imported by all three drafting
 // surfaces, asserted identical by TestEveryDraftingSurfaceCarriesTheSharedRules.

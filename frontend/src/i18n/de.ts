@@ -3531,6 +3531,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "common.errorReference": "Referenz",
   "common.assistantUnavailable":
     "Die KI hat nicht geantwortet. Bitte versuche es noch mal, oder frage deinen Admin nach Einstellungen → KI.",
+  "common.teamRulesUnavailable":
+    "Die Teamregeln konnten nicht gelesen werden, deshalb wurde kein Entwurf geschrieben. Bitte versuche es gleich noch mal.",
   "common.providerOutOfCredit":
     "Beim KI-Anbieter ist kein Guthaben mehr vorhanden. Bitte wende dich an die Systemadministration.",
   "common.providerUnauthorized":
@@ -16492,6 +16494,12 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "teamRules.savedBy": "Zuletzt gespeichert von {who} am {when}.",
   "teamRules.unknownEditor": "jemandem",
   "teamRules.none": "Noch keine Teamregeln gespeichert.",
+  "teamRules.conflictTitle":
+    "Ein Mitglied hat die Teamregeln gespeichert, während du sie bearbeitet hast",
+  "teamRules.conflictBody":
+    "Lade neu, um ihre Fassung zu sehen und deine Änderung zu verwerfen, oder behalte deinen Text und speichere ihn über ihre.",
+  "teamRules.reload": "Ihre Fassung laden",
+  "teamRules.keepMine": "Meinen Text behalten",
   "roles.object.ai_diagnostics": "KI-Nutzung",
   "roles.object.ai_model_rate": "Modellpreise",
   "roles.object.embedding_reindex": "Suchindex",

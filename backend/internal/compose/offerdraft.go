@@ -23,15 +23,10 @@ package compose
 // rate card, or left at the honest zero sentinel — never guessed
 // (features/07 §8b, mirrored from poc-1's price_grounded convention).
 //
-// Context source decision: "the deal's captured context" resolves to
-// shared/ports/retrieval.Retriever.AssembleContext over the deal anchor —
-// the SAME seam runner.go's Surface-B loop and the intent tools already
-// ride (compose/runnerservice.go, compose/registry.go), backed by
-// modules/search's fixed-depth graph walk (activities linked to the deal,
-// plus the contacts/companies/deals those activities also touch). This file
-// invents no new context store: it is the one retrieval seam every other
-// AI consumer already shares, so "grounded in the deal's context" means
-// the same thing everywhere in the codebase.
+// The deal's captured context is shared/ports/retrieval.Retriever
+// .AssembleContext over the deal anchor. runner.go's Surface-B loop and the
+// intent tools ride the same seam, backed by modules/search's graph walk. This
+// file invents no new context store.
 //
 // The model call: same optional-CompleteValidated capability probe as
 // ai.Ask — a router-backed brain gets the §5.2
@@ -106,7 +101,7 @@ Return ONLY a JSON object: {"lines":[{"description":...,"quantity":"1","tax_rate
 // The line descriptions are prose on a document the customer receives and the
 // team reads, so they take the installation's base language.
 func offerDraftSystemFor(fence promptfence.Fence, lang string) string {
-	return offerDraftSystem + "\n\n" + draftrules.TeamRules + "\n" + promptlang.Rule(lang) + "\n" + fence.Rule("workspace")
+	return offerDraftSystem + "\n\n" + draftrules.TeamRules + "\n" + promptlang.Rule(lang) + "\n" + fence.Rule("workspace") + "\n" + fence.PolicyRule()
 }
 
 // offerLineCandidate is the JSON shape the drafting prompt demands, one
@@ -213,7 +208,7 @@ func (d offerDrafter) DraftOfferLines(ctx context.Context, offerID ids.OfferID) 
 		return DraftResult{}, err
 	}
 
-	candidates, err := d.draftCandidates(ctx, dealContext, catalog, language, draftvoice.LoadTeamRules(ctx, d.rules, nil))
+	candidates, err := d.draftCandidates(ctx, dealContext, catalog, language)
 	if err != nil {
 		return DraftResult{}, err
 	}
@@ -325,7 +320,11 @@ func offerDraftRequest(dealContext []dealContextItem, catalog []crmcontracts.Pro
 
 // draftCandidates asks the model for offer-line candidates over the
 // gathered context and the rate card the caller read for it.
-func (d offerDrafter) draftCandidates(ctx context.Context, dealContext []dealContextItem, catalog []crmcontracts.Product, language, teamRules string) ([]offerLineCandidate, error) {
+func (d offerDrafter) draftCandidates(ctx context.Context, dealContext []dealContextItem, catalog []crmcontracts.Product, language string) ([]offerLineCandidate, error) {
+	teamRules, err := draftvoice.LoadTeamRules(ctx, d.rules, nil)
+	if err != nil {
+		return nil, err
+	}
 	req := offerDraftRequest(dealContext, catalog, language, teamRules)
 
 	resp, err := ai.Ask(ctx, d.brain, req, offerDraftShapeValid)

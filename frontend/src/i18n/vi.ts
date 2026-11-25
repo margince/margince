@@ -3426,6 +3426,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "common.errorReference": "Mã tham chiếu",
   "common.assistantUnavailable":
     "AI không phản hồi. Hãy thử lại, hoặc liên hệ quản trị viên để kiểm tra Cài đặt, mục AI.",
+  "common.teamRulesUnavailable":
+    "Không đọc được quy tắc của nhóm nên chưa có bản nháp nào được viết. Hãy thử lại sau giây lát.",
   "common.providerOutOfCredit":
     "Dịch vụ AI đã hết số dư. Liên hệ quản trị viên.",
   "common.providerUnauthorized":
@@ -16038,6 +16040,12 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "teamRules.savedBy": "Lưu lần cuối bởi {who} vào {when}.",
   "teamRules.unknownEditor": "ai đó",
   "teamRules.none": "Chưa lưu quy tắc nhóm nào.",
+  "teamRules.conflictTitle":
+    "Một đồng nghiệp đã lưu quy tắc của nhóm trong lúc bạn đang sửa",
+  "teamRules.conflictBody":
+    "Tải lại để xem bản của họ và bỏ phần bạn sửa, hoặc giữ văn bản của bạn và lưu đè lên bản của họ.",
+  "teamRules.reload": "Tải bản của họ",
+  "teamRules.keepMine": "Giữ văn bản của tôi",
   "roles.object.ai_diagnostics": "Mức sử dụng AI",
   "roles.object.ai_model_rate": "Giá mô hình",
   "roles.object.embedding_reindex": "Chỉ mục tìm kiếm",

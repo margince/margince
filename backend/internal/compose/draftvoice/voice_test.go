@@ -9,6 +9,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/margince/margince/backend/internal/compose/draftrules"
 	"github.com/margince/margince/backend/internal/modules/ai"
 	"github.com/margince/margince/backend/internal/shared/kernel/promptfence"
 )
@@ -43,7 +44,7 @@ func TestLoadTellsAFailedLookupFromAnAbsentProfile(t *testing.T) {
 	failing := readerFunc(func(context.Context) (ai.VoiceProfile, ai.VoiceProfileVersion, bool, error) {
 		return ai.VoiceProfile{}, ai.VoiceProfileVersion{}, false, errors.New("connection refused")
 	})
-	got := Load(ctx, failing, nil)
+	got, _ := Load(ctx, failing, nil)
 	if !got.Degraded {
 		t.Fatal("a lookup error must mark the context Degraded, or the loss is invisible on the wire")
 	}
@@ -54,11 +55,11 @@ func TestLoadTellsAFailedLookupFromAnAbsentProfile(t *testing.T) {
 	absent := readerFunc(func(context.Context) (ai.VoiceProfile, ai.VoiceProfileVersion, bool, error) {
 		return ai.VoiceProfile{}, ai.VoiceProfileVersion{}, false, nil
 	})
-	if got := Load(ctx, absent, nil); got.Degraded || got.OK {
+	if got, _ := Load(ctx, absent, nil); got.Degraded || got.OK {
 		t.Fatal("no profile is the product working: neither OK nor Degraded")
 	}
 
-	if got := Load(ctx, nil, nil); got.Degraded || got.OK {
+	if got, _ := Load(ctx, nil, nil); got.Degraded || got.OK {
 		t.Fatal("a deployment with no voice lane degrades nothing")
 	}
 }
@@ -71,7 +72,7 @@ func TestTeamRulesReachTheUserTurnWithoutAVoiceProfile(t *testing.T) {
 	ctx := context.Background()
 	fence := promptfence.New()
 
-	got := Load(ctx, rulesReader{rules: "Never offer a discount in writing."}, nil)
+	got, _ := Load(ctx, rulesReader{rules: "Never offer a discount in writing."}, nil)
 	if got.OK || got.Degraded {
 		t.Fatalf("a workspace with rules and a rep with no profile is neither voiced nor degraded: %+v", got)
 	}
@@ -80,7 +81,8 @@ func TestTeamRulesReachTheUserTurnWithoutAVoiceProfile(t *testing.T) {
 		t.Errorf("the team rules are missing from the user turn: %q", preamble)
 	}
 
-	if empty := Load(ctx, rulesReader{rules: "  \n"}, nil).Preamble(fence); empty != "" {
+	blank, _ := Load(ctx, rulesReader{rules: "  \n"}, nil)
+	if empty := blank.Preamble(fence); empty != "" {
 		t.Errorf("blank rules must add nothing to the user turn, got %q", empty)
 	}
 
@@ -92,12 +94,33 @@ func TestTeamRulesReachTheUserTurnWithoutAVoiceProfile(t *testing.T) {
 	}
 }
 
-// A failed rules read drafts without them and says so on the wire, as a failed
-// voice read does.
-func TestAFailedTeamRulesReadDegradesTheContextButKeepsTheVoice(t *testing.T) {
+// A failed rules read refuses to draft, wrapping the cause under the 503 the
+// caller answers; a failed voice read only degrades.
+func TestAFailedTeamRulesReadRefusesWhileAFailedVoiceReadOnlyDegrades(t *testing.T) {
 	t.Parallel()
-	got := Load(context.Background(), rulesReader{err: errors.New("connection refused")}, nil)
-	if !got.Degraded || got.TeamRules != "" {
-		t.Errorf("a failed rules read must mark the context Degraded with no rules: %+v", got)
+	cause := errors.New("connection refused")
+	_, err := Load(context.Background(), rulesReader{err: cause}, nil)
+	if !errors.Is(err, ErrRulesUnavailable) || !errors.Is(err, cause) {
+		t.Fatalf("an unreadable team rules setting must refuse with ErrRulesUnavailable: %v", err)
+	}
+	if _, err := LoadTeamRules(context.Background(), rulesReader{err: cause}, nil); !errors.Is(err, ErrRulesUnavailable) {
+		t.Fatalf("LoadTeamRules must refuse too: %v", err)
+	}
+	voiceDown := readerFunc(func(context.Context) (ai.VoiceProfile, ai.VoiceProfileVersion, bool, error) {
+		return ai.VoiceProfile{}, ai.VoiceProfileVersion{}, false, cause
+	})
+	got, err := Load(context.Background(), voiceDown, nil)
+	if err != nil || !got.Degraded {
+		t.Fatalf("a failed voice read degrades the voice only: %+v %v", got, err)
+	}
+}
+
+func TestTheTeamRulesParagraphIsInsideTheSharedRulesAndTheProfileRanksBelowIt(t *testing.T) {
+	t.Parallel()
+	if !strings.Contains(draftrules.Shared, draftrules.TeamRules) {
+		t.Error("the shared rules do not carry the team rules paragraph, so four of the surfaces would not either")
+	}
+	if !strings.Contains(SystemRule, "the team rules win") {
+		t.Error("a voiced system turn no longer ranks the profile's human-authored rules below the team rules")
 	}
 }

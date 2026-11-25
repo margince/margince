@@ -67,7 +67,7 @@ func replyDraftSystemFor(fence promptfence.Fence, voiced bool) string {
 	if voiced {
 		system += "\n\n" + draftvoice.SystemRule
 	}
-	return system + "\n\n" + draftrules.Shared + "\n" + fence.Rule("activity")
+	return system + "\n\n" + draftrules.Shared + "\n" + fence.Rule("activity") + "\n" + fence.PolicyRule()
 }
 
 // replyDraftRequest builds the one request a draft call sends, in whichever of

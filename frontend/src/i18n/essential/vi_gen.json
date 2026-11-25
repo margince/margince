@@ -1798,6 +1798,7 @@
   "common.errorNoCause": "Yêu cầu không thành công. Không rõ nguyên nhân.",
   "common.errorReference": "Mã tham chiếu",
   "common.assistantUnavailable": "AI không phản hồi. Hãy thử lại, hoặc liên hệ quản trị viên để kiểm tra Cài đặt, mục AI.",
+  "common.teamRulesUnavailable": "Không đọc được quy tắc của nhóm nên chưa có bản nháp nào được viết. Hãy thử lại sau giây lát.",
   "common.providerOutOfCredit": "Dịch vụ AI đã hết số dư. Liên hệ quản trị viên.",
   "common.providerUnauthorized": "Mã kết nối AI không hợp lệ. Liên hệ quản trị viên.",
   "common.providerUnavailable": "AI hiện không phản hồi. Thử lại sau hoặc liên hệ quản trị viên.",

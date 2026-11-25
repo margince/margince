@@ -5,6 +5,7 @@
 import "@testing-library/jest-dom/vitest";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import {
+  act,
   cleanup,
   render,
   screen,
@@ -676,17 +677,28 @@ const savedRules = {
 
 function mountTeamRules(allow: GrantSpec) {
   const writes: unknown[] = [];
+  const server = { rules: { ...savedRules }, skew: false };
   vi.stubGlobal(
     "fetch",
     vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
       const req = new Request(input, init);
       const path = new URL(req.url).pathname;
-      let body: unknown = savedRules;
+      let body: unknown = server.rules;
       if (path.endsWith("/me")) body = meFixture({ allow });
       else if (req.method === "PUT") {
         const sent = (await req.json()) as { text: string };
         writes.push(sent);
-        body = { ...savedRules, text: sent.text };
+        if (server.skew)
+          return new Response(
+            JSON.stringify({
+              type: "about:blank",
+              title: "Changed",
+              status: 409,
+              code: "version_skew",
+            }),
+            { status: 409, headers: { "Content-Type": "application/json" } },
+          );
+        body = { ...server.rules, text: sent.text };
       }
       return new Response(JSON.stringify(body), {
         headers: { "Content-Type": "application/json" },
@@ -706,12 +718,12 @@ function mountTeamRules(allow: GrantSpec) {
       </LocaleProvider>
     </QueryClientProvider>,
   );
-  return writes;
+  return { writes, server, client };
 }
 
 it("saves the team rules against the version the editor read", async () => {
   const user = userEvent.setup();
-  const writes = mountTeamRules({ ai_team_rules: ["read", "update"] });
+  const { writes } = mountTeamRules({ ai_team_rules: ["read", "update"] });
   const box = await screen.findByRole("textbox", {
     name: "Rules for every draft",
   });
@@ -735,4 +747,73 @@ it("shows the team rules read-only to a seat that cannot update them", async () 
   expect(
     await screen.findByRole("textbox", { name: "Rules for every draft" }),
   ).toBeDisabled();
+});
+
+const theirs = {
+  text: "Their text.",
+  updated_at: "2026-11-21T09:00:00Z",
+  updated_by: "Bo Colleague",
+};
+
+it("shows a conflict when the server changes under a draft, saves against the version the draft started from, and Discard shows the fresh text", async () => {
+  const user = userEvent.setup();
+  const { writes, server, client } = mountTeamRules({
+    ai_team_rules: ["read", "update"],
+  });
+  const box = await screen.findByRole("textbox", {
+    name: "Rules for every draft",
+  });
+  await waitFor(() => expect(box).toBeEnabled());
+  await user.type(box, " Mine.");
+  server.rules = { ...theirs };
+  server.skew = true;
+  act(() => client.setQueryData(["ai-team-rules"], { ...theirs }));
+  expect(
+    await screen.findByText(/A colleague saved the team rules/),
+  ).toBeInTheDocument();
+
+  await user.click(screen.getByRole("button", { name: "Save" }));
+  await waitFor(() =>
+    expect(writes).toEqual([
+      {
+        text: "Never quote a discount. Mine.",
+        expected_updated_at: "2026-11-20T10:00:00Z",
+      },
+    ]),
+  );
+  expect(
+    screen.getByText(/A colleague saved the team rules/),
+  ).toBeInTheDocument();
+
+  await user.click(screen.getByRole("button", { name: "Discard" }));
+  await waitFor(() => expect(box).toHaveValue("Their text."));
+  expect(screen.queryByText(/A colleague saved the team rules/)).toBeNull();
+});
+
+it("shows the conflict after a refused save, and Keep my text saves over the fresh version", async () => {
+  const user = userEvent.setup();
+  const { writes, server } = mountTeamRules({
+    ai_team_rules: ["read", "update"],
+  });
+  const box = await screen.findByRole("textbox", {
+    name: "Rules for every draft",
+  });
+  await waitFor(() => expect(box).toBeEnabled());
+  await user.type(box, " Mine.");
+  server.rules = { ...theirs };
+  server.skew = true;
+  await user.click(screen.getByRole("button", { name: "Save" }));
+  expect(
+    await screen.findByText(/A colleague saved the team rules/),
+  ).toBeInTheDocument();
+
+  server.skew = false;
+  await user.click(screen.getByRole("button", { name: "Keep my text" }));
+  await user.click(screen.getByRole("button", { name: "Save" }));
+  await waitFor(() =>
+    expect(writes.at(-1)).toEqual({
+      text: "Never quote a discount. Mine.",
+      expected_updated_at: "2026-11-21T09:00:00Z",
+    }),
+  );
 });
