@@ -42571,6 +42571,9 @@ type Company360Route struct {
 	DisplayName       string     `json:"display_name"`
 	LastInteractionAt *time.Time `json:"last_interaction_at,omitempty"`
 
+	// LastInteractionPrecision How to read `last_interaction_at`, from the activity it names. Absent when that is null.
+	LastInteractionPrecision *OccurredPrecision `json:"last_interaction_precision,omitempty"`
+
 	// StrengthBucket The band, never the number — the score is a decayed count, and showing it invites a precision it does not have.
 	StrengthBucket Company360RouteStrengthBucket `json:"strength_bucket"`
 	UserId         openapi_types.UUID            `json:"user_id"`

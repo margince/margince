@@ -186,8 +186,8 @@ func (s *Service) SaveMyWorkingHours(ctx context.Context, in WorkingHours) (Work
 		}
 	}
 	err = s.db.Tx(ctx, func(tx pgx.Tx) error {
-		// Locked before the read, so the comparison below is with the hours this
-		// save replaces and not with ones a concurrent save is about to change.
+		// Locked before the read, so the comparison below sees the hours this
+		// save replaces. A concurrent save waits until this one commits.
 		if _, err := tx.Exec(ctx, `SELECT 1 FROM app_user WHERE id = $1 FOR UPDATE`, human); err != nil {
 			return fmt.Errorf("identity: locking the seat for its working hours: %w", err)
 		}

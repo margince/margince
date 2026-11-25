@@ -34727,6 +34727,10 @@ components:
         last_interaction_at:
           type: [string, 'null']
           format: date-time
+        last_interaction_precision:
+          allOf: [{$ref: '#/components/schemas/OccurredPrecision'}]
+          readOnly: true
+          description: How to read `last_interaction_at`, from the activity it names. Absent when that is null.
     Company360DealRole:
       type: object
       description: One contact's stakeholder role on one of the account's deals.

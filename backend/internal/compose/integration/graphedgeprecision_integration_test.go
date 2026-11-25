@@ -5,8 +5,8 @@
 
 package integration
 
-// An edge says how to read its last_at from the rows the fold counts: a row
-// the edge does not count, tied at the same instant, says nothing about it.
+// An edge says how to read its last_at from the rows the fold counts. A row the
+// edge does not count says nothing about it, even at the same instant.
 
 import (
 	"context"

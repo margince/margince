@@ -170,8 +170,8 @@ func anyPathMatches(paths []string, pattern string) bool {
 	return false
 }
 
-// The match is what the census leans on, so it must refuse a test that probes
-// another route and accept one that probes this one through a helper.
+// The census leans on the match. It must refuse a test that probes another
+// route, and accept one that probes this route through a helper.
 func TestTheProbeMatchRefusesATestThatProbesAnotherRoute(t *testing.T) {
 	t.Parallel()
 	const source = `package integration

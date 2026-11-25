@@ -58,10 +58,25 @@ func TestASettingsSaveSentTwiceWritesHistoryOnce(t *testing.T) {
 		assertRepeatWritesNothing(t, e.AppEnv, "POST", "/v1/fx-rates", AnyMap{"from_currency": "CHF", "rate": "1.05"}, http.StatusCreated)
 	})
 	t.Run("model rate", func(t *testing.T) {
-		assertRepeatWritesNothing(t, e.AppEnv, "POST", "/v1/ai-model-rates", AnyMap{
+		price := AnyMap{
 			"provider": "anthropic", "model_id": "twice-model", "input_per_mtok": "3", "output_per_mtok": "15",
 			"cache_read_per_mtok": "0.3", "cache_write_per_mtok": "3.75",
-		}, http.StatusCreated)
+		}
+		mustCall(t, e.AppEnv, "POST", "/v1/ai-model-rates", price, http.StatusCreated, nil)
+		// The price table has no version, so the row's own xmin is what shows a rewrite.
+		rowVersion := func() string {
+			var xmin string
+			if err := e.Owner.QueryRow(t.Context(),
+				`SELECT xmin::text FROM ai_model_rate WHERE model_id = 'twice-model'`).Scan(&xmin); err != nil {
+				t.Fatal(err)
+			}
+			return xmin
+		}
+		stored := rowVersion()
+		assertRepeatWritesNothing(t, e.AppEnv, "POST", "/v1/ai-model-rates", price, http.StatusCreated)
+		if again := rowVersion(); again != stored {
+			t.Errorf("the price sent again rewrote its row: xmin %s -> %s", stored, again)
+		}
 	})
 	t.Run("working hours", func(t *testing.T) {
 		assertRepeatWritesNothing(t, e.AppEnv, "PUT", "/v1/me/working-hours",

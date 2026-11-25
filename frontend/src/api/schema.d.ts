@@ -37291,6 +37291,8 @@ export interface components {
             strength_bucket: "strong" | "developing" | "cold";
             /** Format: date-time */
             last_interaction_at?: string | null;
+            /** @description How to read `last_interaction_at`, from the activity it names. Absent when that is null. */
+            readonly last_interaction_precision?: components["schemas"]["OccurredPrecision"];
         };
         /** @description One contact's stakeholder role on one of the account's deals. */
         Company360DealRole: {

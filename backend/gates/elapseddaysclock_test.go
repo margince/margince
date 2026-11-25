@@ -43,7 +43,6 @@ var notAnActivityTime = gatekit.Waive(map[string]string{
 var storedClockStillCounted = gatekit.Waive(map[string]string{
 	"internal/shared/kernel/convstate/convstate.go:Classify": storedClock,
 	"internal/shared/kernel/dormancy/dormancy.go:Read":       storedClock,
-	"internal/modules/deals/quietreason.go:quietFor":         storedClock,
 	"internal/modules/deals/viability.go:AssessViability":    storedClock,
 	"internal/compose/dealcloselost.go:daysSince":            "the newest customer progress, read without the precision of the activity it names",
 })
