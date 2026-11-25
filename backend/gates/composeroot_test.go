@@ -38,7 +38,7 @@ const (
 	// Raised by 2 files for the extension mail-file read cases and the purge
 	// receipt cases, which drive this package's unexported seams. Raised by 1
 	// production and 1 test file for the series-split fold and its cases.
-	composeRootTestFiles = 1912
+	composeRootTestFiles = 1911
 	// Raised by 107 for the floor of a figure every reader is shown alike. Raised
 	// by 1 for the import that binds one zone lookup to each attention read.
 	// Raised by 249 production and 62 test lines for the full-path certification
@@ -56,8 +56,11 @@ const (
 	// repair task. Their cases drive the unexported Home meeting lane and fold.
 	// Raised by 43 test lines for the refold cases of a transaction still open,
 	// which drive the unexported clock refold worker.
-	composeRootProductionLines = 230_690
-	composeRootTestLines       = 360_124
+	// Raised by 7 production lines for the team request reword and the paused
+	// team link's title on Home. Raised by 64 test lines for the team-link mail
+	// case, which drives the unexported mail worker over two team links.
+	composeRootProductionLines = 230_697
+	composeRootTestLines       = 360_128
 )
 
 // A read under these floors stopped early or read the wrong place, and would

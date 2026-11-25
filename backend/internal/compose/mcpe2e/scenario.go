@@ -42,6 +42,7 @@ var toolKeys = map[string]struct{ anyOf, nameEnd string }{
 	"must_call_with":      {"|", "."},
 	"must_not_call_with":  {"", "~"},
 	"must_call_matching":  {" || ", "~"},
+	"must_return":         {" || ", "~"},
 	"counts_when_refused": {"", ""},
 }
 
