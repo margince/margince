@@ -116,8 +116,8 @@ func setupFinance(t *testing.T) *financeEnv {
 	}
 	if _, err := owner.Exec(ctx, `
 		INSERT INTO finance_connection
-		       (id, provider, status, credential_ref, source, captured_by)
-		VALUES ($1, $2, 'active', 'offline://test', 'system', 'system:test')`,
+		       (id, provider, status, captured_by)
+		VALUES ($1, $2, 'active', 'system:test')`,
 		connID, fixtureProviderName); err != nil {
 		t.Fatal(err)
 	}
@@ -129,9 +129,8 @@ func setupFinance(t *testing.T) *financeEnv {
 	}
 	if _, err := owner.Exec(ctx, `
 		INSERT INTO finance_customer_link
-		       (connection_id, company_id, external_customer_id,
-		        sync_hash, source, captured_by)
-		VALUES ($1, $2, $3, 'seed', 'system', 'system:test')`,
+		       (connection_id, company_id, external_customer_id, captured_by)
+		VALUES ($1, $2, $3, 'system:test')`,
 		connID, e.company, e.external); err != nil {
 		t.Fatal(err)
 	}
@@ -763,8 +762,8 @@ func (e *financeEnv) plantSecondConnection(t *testing.T) ids.UUID {
 	if err := e.store.tx(e.ctx, func(tx pgx.Tx) error {
 		_, err := tx.Exec(e.ctx, `
 			INSERT INTO finance_connection
-			       (id, provider, status, credential_ref, source, captured_by, created_at)
-			VALUES ($1, $2, 'active', 'offline://bystander', 'system', 'system:test', now() - interval '1 day')`,
+			       (id, provider, status, captured_by, created_at)
+			VALUES ($1, $2, 'active', 'system:test', now() - interval '1 day')`,
 			id, fixtureProviderName)
 		return err
 	}); err != nil {

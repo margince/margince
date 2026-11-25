@@ -217,8 +217,8 @@ if [[ -n "$live" && "${live#* }" != "offline_demo" ]]; then
 fi
 if [[ -z "$conn_id" ]]; then
   conn_id="$(psql_one "INSERT INTO finance_connection
-      (provider, status, credential_ref, source, captured_by)
-    VALUES ('offline_demo', 'active', 'extension:offline_demo', 'system', 'system:seed')
+      (provider, status, captured_by)
+    VALUES ('offline_demo', 'active', 'system:seed')
     RETURNING id")"
   echo "  OK: connected the finance-demo source"
 else
@@ -250,8 +250,8 @@ if [[ -z "$(psql_one "SELECT 1 FROM finance_customer_link WHERE company_id = '$c
            jsonb_build_object('display_name', display_name, 'sync_hash', sync_hash)
       FROM entry" >/dev/null
   psql_one "INSERT INTO finance_customer_link
-      (connection_id, company_id, external_customer_id, sync_hash, source, captured_by)
-    VALUES ('$conn_id', '$company_id', '$linked', 'seed', 'system', 'system:seed')" >/dev/null
+      (connection_id, company_id, external_customer_id, captured_by)
+    VALUES ('$conn_id', '$company_id', '$linked', 'system:seed')" >/dev/null
   echo "  OK: matched $COMPANY to customer $linked in the source"
 else
   echo "  OK: $COMPANY is already matched"

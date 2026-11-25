@@ -201,7 +201,7 @@ The 49 tables owned by `contacts`, as the migrations build them. [Back to the en
 
 ## company_domain_disposition
 
-24 columns · primary key `(id)` · referenced by 0 foreign keys
+23 columns · primary key `(id)` · referenced by 0 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -218,7 +218,6 @@ The 49 tables owned by `contacts`, as the migrations build them. [Back to the en
 | `company_id` | `uuid` |  | Points at `company.id`. |
 | `domain` | `text` | yes |  |
 | `evidence` | `text` |  |  |
-| `last_attempt_at` | `timestamp with time zone` |  |  |
 | `last_evidence_at` | `timestamp with time zone` |  |  |
 | `next_attempt_at` | `timestamp with time zone`, default `now()` |  |  |
 | `owner_id` | `uuid` |  | Points at `app_user.id`. |
@@ -348,7 +347,7 @@ The 49 tables owned by `contacts`, as the migrations build them. [Back to the en
 
 ## company_geocode_state
 
-11 columns · primary key `(company_id)` · referenced by 0 foreign keys
+10 columns · primary key `(company_id)` · referenced by 0 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -356,7 +355,6 @@ The 49 tables owned by `contacts`, as the migrations build them. [Back to the en
 | `company_id` | `uuid` | yes | Points at `company.id`. |
 | `geocoded_at` | `timestamp with time zone` |  |  |
 | `input_hash` | `text` |  |  |
-| `last_outcome` | `text` |  |  |
 | `lat` | `double precision` |  |  |
 | `lon` | `double precision` |  |  |
 | `next_attempt_at` | `timestamp with time zone` |  |  |
@@ -381,8 +379,8 @@ The 49 tables owned by `contacts`, as the migrations build them. [Back to the en
 
 **Triggers**
 
-- `text_bound_insert`: `AFTER INSERT FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL, '{"status": 20000, "provider": 20000, "input_hash": 20000, "last_outcome": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"input_hash":20000,"last_outcome":20000,"provider":20000,"status":20000}')`
-- `text_bound_update`: `AFTER UPDATE FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"status": 20000, "provider": 20000, "input_hash": 20000, "last_outcome": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"input_hash":20000,"last_outcome":20000,"provider":20000,"status":20000}')`
+- `text_bound_insert`: `AFTER INSERT FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL, '{"status": 20000, "provider": 20000, "input_hash": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"input_hash":20000,"provider":20000,"status":20000}')`
+- `text_bound_update`: `AFTER UPDATE FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"status": 20000, "provider": 20000, "input_hash": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"input_hash":20000,"provider":20000,"status":20000}')`
 
 ## company_offered_value
 
@@ -1032,7 +1030,7 @@ The 49 tables owned by `contacts`, as the migrations build them. [Back to the en
 
 ## contact_signature_enrich_state
 
-15 columns · primary key `(contact_id)` · referenced by 0 foreign keys
+13 columns · primary key `(contact_id)` · referenced by 0 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -1043,8 +1041,6 @@ The 49 tables owned by `contacts`, as the migrations build them. [Back to the en
 | `due_at` | `timestamp with time zone`, default `now()` | yes |  |
 | `history_depth` | `smallint` |  |  |
 | `last_activity_at` | `timestamp with time zone` |  |  |
-| `last_outcome` | `text` |  | One of `applied`, `nothing_to_apply`, `skipped`. |
-| `last_skip_reason` | `text` |  | One of `name_gate`, `evidence_gate`, `confidence`, `narrowed`. |
 | `live_generation` | `bigint`, default `0` | yes |  |
 | `processed_generation` | `bigint`, default `0` | yes |  |
 | `read_snapshot` | `pg_snapshot` |  |  |
@@ -1063,8 +1059,6 @@ The 49 tables owned by `contacts`, as the migrations build them. [Back to the en
 
 **Rules**
 
-- `contact_signature_enrich_state_last_outcome_check`: `CHECK ((last_outcome = ANY (ARRAY['applied', 'nothing_to_apply', 'skipped'])))`
-- `contact_signature_enrich_state_last_skip_reason_check`: `CHECK ((last_skip_reason = ANY (ARRAY['name_gate', 'evidence_gate', 'confidence', 'narrowed'])))`
 - `contact_signature_enrich_state_retry_count_check`: `CHECK ((retry_count >= 0))`
 - `signature_work_generations`: `CHECK (((processed_generation >= 0) AND (requested_generation >= processed_generation) AND (live_generation >= 0) AND (live_generation <= requested_generation)))`
 
@@ -1076,11 +1070,6 @@ The 49 tables owned by `contacts`, as the migrations build them. [Back to the en
 - `idx_signature_live_work_due`: `btree (due_at, contact_id) WHERE ((requested_generation > processed_generation) AND (live_generation > processed_generation))`
 - `idx_signature_work_deferred`: `btree (deferred_run_id) WHERE (deferred_run_id IS NOT NULL)`
 - `idx_signature_work_due`: `btree (due_at, contact_id) WHERE ((requested_generation > processed_generation) AND (live_generation <= processed_generation) AND (deferred_run_id IS NULL))`
-
-**Triggers**
-
-- `text_bound_insert`: `AFTER INSERT FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL, '{"last_outcome": 120, "last_skip_reason": 120}')) EXECUTE FUNCTION refuse_oversized_text('{"last_outcome":120,"last_skip_reason":120}')`
-- `text_bound_update`: `AFTER UPDATE FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"last_outcome": 120, "last_skip_reason": 120}')) EXECUTE FUNCTION refuse_oversized_text('{"last_outcome":120,"last_skip_reason":120}')`
 
 ## contact_social
 
@@ -2300,7 +2289,7 @@ The 49 tables owned by `contacts`, as the migrations build them. [Back to the en
 
 ## site_read
 
-36 columns · primary key `(id)` · referenced by 3 foreign keys
+35 columns · primary key `(id)` · referenced by 3 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -2315,7 +2304,6 @@ The 49 tables owned by `contacts`, as the migrations build them. [Back to the en
 | `fact_count` | `integer`, default `0` | yes |  |
 | `facts` | `jsonb`, default `'[]'::jsonb` | yes |  |
 | `finished_at` | `timestamp with time zone` |  |  |
-| `first_grounded_at` | `timestamp with time zone` |  |  |
 | `legal_entities` | `jsonb`, default `'[]'::jsonb` | yes |  |
 | `logo_icon_object_key` | `text` |  |  |
 | `logo_icon_origin` | `text` |  |  |

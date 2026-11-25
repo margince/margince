@@ -227,9 +227,7 @@ func (s *Store) EditCorpus(ctx context.Context, id ids.UUID, in UpdateCorpus) (c
 }
 
 // buildCorpusPatch folds the sparse edit into a patch carrying each set
-// field's before/after image. updated_at is absent on purpose: the table's
-// BEFORE UPDATE trigger owns it, so a patch that named it would be the second
-// writer of one value.
+// field's before/after image.
 func buildCorpusPatch(current crmcontracts.KnowledgeCorpus, override *float64, in UpdateCorpus) *storekit.Patch {
 	p := storekit.NewPatch()
 	if in.Name != nil {

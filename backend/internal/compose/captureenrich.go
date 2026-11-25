@@ -294,7 +294,7 @@ func (e *CaptureEnricher) readSignature(ctx context.Context, cand contacts.Signa
 		return contacts.SignatureRead{}, titled, err
 	}
 	res, err := e.store.ApplySignatureFields(ctx, mail.ContactID, mail.ActivityID, fields, options.DefaultEnrich)
-	read := contacts.SignatureRead{Applied: res.Applied > 0}
+	var read contacts.SignatureRead
 	if res.SourceLimited {
 		read.Skip = contacts.SignatureSkipNarrowed
 	}
