@@ -44,9 +44,9 @@ func (t TimeOfDay) RunsOn(d time.Weekday) bool {
 	return len(t.Days) == 0 || slices.Contains(t.Days, d)
 }
 
-// LongestGap is the longest wait between two runs: a day for a daily job, three
-// days for one that skips the weekend, a week for a weekly one. Job health
-// reads it as the time after which a missing run is overdue.
+// LongestGap is the longest wait between two runs. That is a day for a daily
+// job, three days for one that skips the weekend, a week for a weekly one. Job
+// health reads it as the time after which a missing run is overdue.
 func (t TimeOfDay) LongestGap() time.Duration {
 	longest, gap := 0, 0
 	// Two weeks, so the gap that wraps from Saturday into Sunday is counted.

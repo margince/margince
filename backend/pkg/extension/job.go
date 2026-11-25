@@ -98,7 +98,7 @@ type JobDeclaration struct {
 	// one. See the composer's ownership rule.
 	Queue string
 	// Cadence is the dispatcher's tick interval, the contract's `cadence:`.
-	// Zero when At is set; a job has exactly one of the two.
+	// Zero when At is set; a job has one of the two, never both.
 	Cadence time.Duration
 	// At is the local clock time the dispatcher ticks at instead, the
 	// contract's `at:` and `days:`.
@@ -205,8 +205,8 @@ func (d JobDeclaration) Validate() error {
 	return nil
 }
 
-// validateSchedule holds a job to exactly one schedule: a positive interval or
-// a clock time.
+// validateSchedule holds a job to one schedule: a positive interval or a
+// clock time.
 func (d JobDeclaration) validateSchedule() error {
 	if d.At != nil {
 		if d.Cadence != 0 {

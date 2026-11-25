@@ -90,7 +90,7 @@ func (b *ScheduleBook) scheduleClockTime(kind string, at extension.TimeOfDay, ct
 }
 
 // applyZone moves every clock-time pass to a changed zone. It hands each back
-// to River without a catch-up, so the move itself runs nothing: the next run
+// to River without a catch-up, so the move itself runs nothing. The next run
 // is the next slot in the new zone.
 func (b *ScheduleBook) applyZone(zone *time.Location, runner periodicRegistry) error {
 	b.mu.Lock()

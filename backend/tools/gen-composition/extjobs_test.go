@@ -333,7 +333,7 @@ func TestTheVanillaCompositionImportsNoTime(t *testing.T) {
 }
 
 // An operator resolved a job at its schedule, so moving the clock time asks
-// again, while an interval job keeps the digest it was resolved under.
+// again. An interval job keeps the digest it was resolved under.
 func TestTheJobDigestCoversTheClockTimeAndKeepsTheIntervalDigest(t *testing.T) {
 	interval, err := extensionJobs(demoUnits(), jobsContract(wellFormedPair))
 	if err != nil {

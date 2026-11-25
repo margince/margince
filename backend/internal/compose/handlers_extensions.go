@@ -39,7 +39,7 @@ import (
 )
 
 // extensionsHandlers serves the inventory. What a unit is comes from the
-// process-level accessors; the pool and the app store only answer which of its
+// process-level accessors. The pool and the app store answer only which
 // declared setup an admin has done (setupMissing).
 type extensionsHandlers struct {
 	pool *pgxpool.Pool
