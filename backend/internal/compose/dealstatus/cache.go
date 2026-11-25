@@ -6,7 +6,6 @@ package dealstatus
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"time"
 
@@ -16,6 +15,7 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database"
+	"github.com/margince/margince/backend/internal/platform/generatedsummary"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -35,27 +35,21 @@ type stored struct {
 
 // The reader key prevents one seat from receiving another seat’s derived content.
 func (s *Service) cached(ctx context.Context, userID ids.UserID, dealID ids.DealID) (stored, bool, error) {
-	if err := auth.Require(ctx, "deal", principal.ActionRead); err != nil {
-		return stored{}, false, err
-	}
-	var out stored
-	var payload []byte
+	var found map[ids.UUID]generatedsummary.Entry
 	err := database.WithWorkspaceTx(ctx, s.pool, func(tx pgx.Tx) error {
-		where, args, err := cachedDealScope(ctx, userID, []ids.UUID{dealID.UUID})
-		if err != nil {
-			return err
-		}
-		return tx.QueryRow(ctx, `SELECT c.fingerprint, c.generated_at, c.generated_by, c.payload
-			FROM deal_status_card c JOIN deal d ON d.id = c.deal_id WHERE `+where, args...).
-			Scan(&out.Fingerprint, &out.GeneratedAt, &out.GeneratedBy, &payload)
+		var err error
+		found, err = readableCards(ctx, tx, userID, []ids.UUID{dealID.UUID})
+		return err
 	})
-	if errors.Is(err, pgx.ErrNoRows) {
-		return stored{}, false, nil
-	}
-	if err != nil {
+	row, cached := found[dealID.UUID]
+	if err != nil || !cached {
 		return stored{}, false, err
 	}
-	if !decodeStored(payload, &out) {
+	out := stored{
+		Fingerprint: row.Fingerprint, GeneratedAt: row.GeneratedAt,
+		GeneratedBy: crmcontracts.WrittenBy(row.GeneratedBy),
+	}
+	if !decodeStored(row.Payload, &out) {
 		return stored{}, false, nil
 	}
 	return out, true, nil
@@ -69,19 +63,13 @@ func (s *Service) save(ctx context.Context, userID ids.UserID, dealID ids.DealID
 	if err != nil {
 		return fmt.Errorf("encode the deal status payload: %w", err)
 	}
-	return database.WithWorkspaceTx(ctx, s.pool, func(tx pgx.Tx) error {
-		_, err := tx.Exec(ctx, `
-			INSERT INTO deal_status_card (user_id, deal_id, fingerprint,
-			                              generated_at, generated_by, payload)
-			VALUES ($1, $2, $3, $4, $5, $6)
-			ON CONFLICT (user_id, deal_id) DO UPDATE
-			SET fingerprint = EXCLUDED.fingerprint,
-			    generated_at = EXCLUDED.generated_at,
-			    generated_by = EXCLUDED.generated_by,
-			    payload = EXCLUDED.payload`,
-			userID, dealID, card.Fingerprint, card.GeneratedAt, card.GeneratedBy, payload)
-		return err
-	})
+	return generatedsummary.Save(ctx, s.pool, userID, generatedsummary.DealStatusCard(dealID),
+		generatedsummary.Entry{
+			Fingerprint: card.Fingerprint,
+			GeneratedAt: card.GeneratedAt,
+			GeneratedBy: string(card.GeneratedBy),
+			Payload:     payload,
+		})
 }
 
 func decodeStored(payload []byte, into *stored) bool {
@@ -91,13 +79,34 @@ func decodeStored(payload []byte, into *stored) bool {
 	return into.ProjectionVersion == ProjectionVersion
 }
 
-func cachedDealScope(ctx context.Context, userID ids.UserID, dealIDs []ids.UUID) (string, []any, error) {
+// readableCards answers the reader's stored cards for the deals that are live
+// and inside the reader's row scope. A card outlives neither.
+func readableCards(
+	ctx context.Context, tx pgx.Tx, userID ids.UserID, dealIDs []ids.UUID,
+) (map[ids.UUID]generatedsummary.Entry, error) {
+	if err := auth.Require(ctx, "deal", principal.ActionRead); err != nil {
+		return nil, err
+	}
 	var args []any
 	arg := func(v any) int { args = append(args, v); return len(args) }
-	where := fmt.Sprintf("c.user_id = $%d AND d.id = ANY($%d) AND d.archived_at IS NULL", arg(userID), arg(dealIDs))
+	where := fmt.Sprintf("d.id = ANY($%d) AND d.archived_at IS NULL", arg(dealIDs))
 	scope, err := auth.ScopeClauseFor(ctx, "deal", "d", arg)
+	if err != nil {
+		return nil, fmt.Errorf("scope the deals this reader may see: %w", err)
+	}
 	if scope != "" {
 		where += " AND " + scope
 	}
-	return where, args, err
+	rows, err := tx.Query(ctx, `SELECT d.id FROM deal d WHERE `+where, args...)
+	if err != nil {
+		return nil, fmt.Errorf("read the deals this reader may see: %w", err)
+	}
+	readable, err := pgx.CollectRows(rows, pgx.RowTo[ids.UUID])
+	if err != nil {
+		return nil, fmt.Errorf("read the deals this reader may see: %w", err)
+	}
+	if len(readable) == 0 {
+		return map[ids.UUID]generatedsummary.Entry{}, nil
+	}
+	return generatedsummary.ReadEachTx(ctx, tx, userID, generatedsummary.KindDealStatusCard, readable)
 }

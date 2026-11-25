@@ -2653,6 +2653,8 @@ export const en = {
   "history.field.qualifying_event_retracted": "Recorded exchange withdrawn",
   "history.field.acquisition_request_retracted":
     "Acquisition request withdrawn",
+  "history.field.impersonation_warning_raised":
+    "Impersonation warning raised by a later email",
   "history.field.impersonation_warning_cleared":
     "Impersonation warning cleared",
   "history.field.impersonation_warning_carried":
@@ -8231,6 +8233,12 @@ export const en = {
   "editAccess.withdraw": "Withdraw edit access request",
   "editAccess.sent": "Edit access requested from {owner}",
   "editAccess.withdrawn": "Edit access request withdrawn",
+  // A record this reader may view but not change. The head's pill and the
+  // Ownership row say so, and the panel names the owner.
+  "viewOnly.pill": "View only",
+  "viewOnly.label": "Your access",
+  "viewOnly.owns": "{owner} owns {name}",
+  "record.details.access": "Access",
   // The owner offering a record to a colleague, from the access panel.
   "handover.offer": "Hand over to…",
   "handover.offerTo": "Hand over to",
@@ -10565,6 +10573,16 @@ export const en = {
     "Put this text in ~/.gemini/config/mcp_config.json. If the file already lists servers, add only the margince entry beside them.",
   "aiAccess.local.antigravity.signIn":
     "Open the agent settings, then “Customizations”, and choose “Authenticate” next to margince.",
+  "aiAccess.place.lumoNote":
+    "Lumo on the web cannot connect to other apps yet. Use the Lumo desktop app, which you can download from proton.me/lumo/download.",
+  "aiAccess.local.lumo.open":
+    "In Lumo Desktop, choose “Settings” at the bottom of the sidebar, then “Desktop app” and “Connectors”.",
+  "aiAccess.local.lumo.add":
+    "Choose “Add MCP server…” and set “Transport” to “Remote (HTTP)”.",
+  "aiAccess.local.lumo.fill":
+    "Enter margince as the ID and Margince as the Display name, add a short description, and paste the address.",
+  "aiAccess.local.lumo.signIn":
+    "Choose “Add server”. Margince opens when Lumo asks: sign in and choose Authorize.",
   "aiAccess.other.sub":
     "Margince works with any AI tool that can add a remote MCP server. Look for “MCP”, “connectors” or “tools” in its settings.",
   "aiAccess.other.typeLabel": "Type",
@@ -21689,6 +21707,9 @@ export const en = {
   "worklist.manager.kind.next_step": "Deal next step",
   "worklist.manager.kind.review_backlog": "Review backlog",
   "worklist.manager.kind.general": "Other",
+  "worklist.manager.coachDeal": "Deal",
+  "worklist.manager.coachNoDeal":
+    "No deal is in their day, so there is none to name.",
   "worklist.board.title": "Team work needing attention",
   "worklist.gap.rankedOn": "Ranked on {date}.",
   "worklist.gap.masked_one":
@@ -22841,6 +22862,7 @@ export const en = {
   "magic.why.site_read_unnamed": "Read on the company’s website.",
   "magic.why.site_read_each": "Read on each company’s own website.",
   "magic.why.signature": "Taken from an email signature.",
+  "magic.why.stated": "Reason given: {why}",
   "magic.why.retention": "Retention rule: after {days} days.",
   "magic.by.retention": "Retention",
   "magic.by.mail_filing": "Mail filing",

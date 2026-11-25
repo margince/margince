@@ -178,7 +178,7 @@ func TestTheToolSurfaceRefusesAnUnknownEmploymentStatus(t *testing.T) {
 		args string
 	}{
 		{"create_record", fmt.Sprintf(`{"record_type":"relationship","fields":{"kind":"employment","contact_id":%q,"company_id":%q,"source":"manual","employment_status":"unknown"}}`, contact, company)},
-		{"update_record", fmt.Sprintf(`{"record_type":"relationship","id":%q,"fields":{"employment_status":"unknown"}}`, edge)},
+		{"update_record", fmt.Sprintf(`{"why":"A test asks for this change.","record_type":"relationship","id":%q,"fields":{"employment_status":"unknown"}}`, edge)},
 	} {
 		_, err := registry.Invoke(agent, request.tool, json.RawMessage(request.args))
 		if err == nil || !strings.Contains(err.Error(), "employment_status") {

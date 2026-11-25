@@ -6,7 +6,6 @@ package compose
 import (
 	"context"
 	"fmt"
-	"slices"
 
 	"github.com/jackc/pgx/v5"
 
@@ -25,7 +24,7 @@ type recordKindQuerier interface {
 // expression index does not count, because it lets two live rows share a key.
 const kindTableShape = `
 SELECT to_regclass($1) IS NOT NULL,
-       COALESCE((SELECT array_agg(a.attname::text) FROM pg_attribute a
+       COALESCE((SELECT jsonb_object_agg(a.attname, format_type(a.atttypid, NULL)) FROM pg_attribute a
                   WHERE a.attrelid = to_regclass($1) AND a.attnum > 0 AND NOT a.attisdropped), '{}'),
        EXISTS (SELECT 1 FROM pg_index i
                 WHERE i.indrelid = to_regclass($1) AND i.indisunique AND i.indpred IS NULL AND i.indexprs IS NULL
@@ -46,7 +45,7 @@ SELECT to_regclass($1) IS NOT NULL,
 func VerifyRecordKinds(ctx context.Context, q recordKindQuerier, kinds []recordkinds.Declared) error {
 	for _, k := range kinds {
 		var exists, unique, granted bool
-		var columns []string
+		var columns map[string]string
 		qualified := pgx.Identifier{"ext", k.Table}.Sanitize()
 		if err := q.QueryRow(ctx, kindTableShape, qualified, k.NaturalKey).Scan(&exists, &columns, &unique, &granted); err != nil {
 			return fmt.Errorf("record kind %s: reading %s: %w", k.Name, qualified, err)
@@ -57,14 +56,8 @@ func VerifyRecordKinds(ctx context.Context, q recordKindQuerier, kinds []recordk
 		if !granted {
 			return fmt.Errorf("record kind %s: the application role lacks select, insert, update or delete on %s; grant all four to it", k.Name, qualified)
 		}
-		required := []string{"id", "archived_at"}
-		for _, f := range k.Fields {
-			required = append(required, f.Name)
-		}
-		for _, c := range required {
-			if !slices.Contains(columns, c) {
-				return fmt.Errorf("record kind %s: table %s has no column %q", k.Name, qualified, c)
-			}
+		if err := recordkinds.CheckColumns(k, qualified, columns); err != nil {
+			return err
 		}
 		if !unique {
 			return fmt.Errorf("record kind %s: table %s has no unique index over exactly its natural key %v", k.Name, qualified, k.NaturalKey)

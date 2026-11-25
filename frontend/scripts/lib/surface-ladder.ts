@@ -54,7 +54,7 @@ export const PINNED_RUNGS = [
 ] as const;
 
 // A host with a layer under its panes: a ring, a glow, the waves, a gradient.
-// Level 1's paint is see-through in dark, so a pane on it paints its ground.
+// A pane on one of these paints its solid ground, so the layer never shows through.
 export const UNDERLAY_HOSTS = [
   ".analytics-body .analytics-hero-aside .meterbar span",
   ".analytics-body .meterbar-flat span",

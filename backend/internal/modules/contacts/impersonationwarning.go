@@ -24,7 +24,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
-// The signs of impersonation capture screens a new sender for. The contract
+// The signs of impersonation capture screens a sender for. The contract
 // enum spells them, and contact.quarantine_reason stores the same codes.
 const (
 	impersonationPunycodeDomain         = string(crmcontracts.ContactImpersonationWarningReasonPunycodeDomain)
@@ -146,6 +146,35 @@ func (s *Store) ClearImpersonationWarning(ctx context.Context, id ids.ContactID,
 		return storekit.EmitEvent(ctx, tx, auditID, id.UUID, crmcontracts.PublicEventContactUpdated{
 			ChangedFields: map[string]any{fieldImpersonationWarning: nil},
 		})
+	})
+}
+
+// auditImpersonationWarningRaised keys the audit image of a warning a later
+// mail put on a contact that already existed. Its value is the reason.
+const auditImpersonationWarningRaised = "impersonation_warning_raised"
+
+// raiseImpersonationWarningTx labels a contact a later mail showed a sign on,
+// when the live contact carries no verdict. An open warning and a cleared one stay.
+//
+// The guard settles two captures at once: the second waits on the row lock,
+// then reads the verdict the first one wrote and matches nothing.
+func raiseImpersonationWarningTx(ctx context.Context, tx pgx.Tx, id ids.ContactID, reason string) error {
+	tag, err := tx.Exec(ctx, `
+		UPDATE contact SET quarantined_at = now(), quarantine_reason = $2
+		 WHERE id = $1 AND quarantined_at IS NULL AND archived_at IS NULL`, id, reason)
+	if err != nil {
+		return fmt.Errorf("contacts: raising the impersonation warning: %w", err)
+	}
+	if tag.RowsAffected() == 0 {
+		return nil
+	}
+	auditID, err := storekit.AuditEvent(ctx, tx, "update", entityContact, id.UUID,
+		map[string]any{auditImpersonationWarningRaised: reason})
+	if err != nil {
+		return fmt.Errorf("contacts: recording the raised impersonation warning: %w", err)
+	}
+	return storekit.EmitEvent(ctx, tx, auditID, id.UUID, crmcontracts.PublicEventContactUpdated{
+		ChangedFields: map[string]any{fieldImpersonationWarning: reason},
 	})
 }
 

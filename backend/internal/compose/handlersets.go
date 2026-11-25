@@ -22,6 +22,7 @@ import (
 	"github.com/margince/margince/backend/internal/compose/leaddraft"
 	"github.com/margince/margince/backend/internal/compose/loggedtouch"
 	"github.com/margince/margince/backend/internal/compose/meetingbrief"
+	"github.com/margince/margince/backend/internal/compose/memberhandoff"
 	"github.com/margince/margince/backend/internal/compose/pipelinetrace"
 	"github.com/margince/margince/backend/internal/compose/project360"
 	"github.com/margince/margince/backend/internal/compose/readerrendering"
@@ -81,6 +82,7 @@ type (
 	approvalsHandlers       = approvals.Handlers
 	searchHandlers          = search.Handlers
 	consentHandlers         = consent.Handlers
+	handoffHandlers         = memberhandoff.Handlers
 	collectionsHandlers     = collections.Handlers
 	signalsHandlers         = signals.Handlers
 	privacyHandlers         = privacy.Handlers

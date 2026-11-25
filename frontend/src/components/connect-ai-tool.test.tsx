@@ -283,6 +283,23 @@ describe("ConnectAiToolCard", () => {
     ).toBe(`{ "mcpServers": { "margince": { "url": "${MCP_URL}" } } }`);
   });
 
+  it("gives Lumo the desktop-app steps with the address to paste, and says the website cannot connect", async () => {
+    renderCard();
+    const user = userEvent.setup();
+    await pick(user, "Lumo");
+    expect(
+      screen.queryByRole("combobox", { name: "Where do you use it?" }),
+    ).toBeNull();
+    expect(steps()).toHaveLength(4);
+    expect(steps()[1]).toContain("“Remote (HTTP)”");
+    const address = screen.getByRole("textbox", { name: "Margince address" });
+    expect(address.textContent).toBe(MCP_URL);
+    expect(
+      within(pathBox()).getAllByRole("listitem")[2].contains(address),
+    ).toBe(true);
+    expect(screen.getByText(/Lumo on the web cannot connect/)).toBeTruthy();
+  });
+
   it("gives any other tool the address and how it signs in", async () => {
     renderCard();
     const user = userEvent.setup();
@@ -368,6 +385,7 @@ describe("the picker's marks", () => {
       ["Copilot", "github-copilot"],
       ["Gemini", "gemini"],
       ["Cursor", "cursor"],
+      ["Lumo", "other"],
       ["Another AI tool", "other"],
     ];
     for (const [name, mark] of expected) {

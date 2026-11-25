@@ -42,7 +42,6 @@ The eight shapes, what each is for, and how each one silently passes:
 | `backfillwindow_test.go` | H3 | The capture backfill window set is the same in the contract's four enums, the Go validator and the capture\_backfill CHECK, derived from the tree rather than remembered here. |
 | `benchrecordswitch_test.go` | H2 | Both bench harnesses ask the same variable whether to publish a record, and both answer only to the same value. |
 | `bookinginvite_test.go` | H2 | A booking's attendee addresses reach the calendar invitation, and the contract says the booking queues one. |
-| `briefcachemirror_test.go` | H2 | The brief cache's upsert is spelled in two places and they must stay one statement. |
 | `capturedmeetingpast_test.go` | H2 | The mail permission check and consent count a captured meeting only once its time has passed and nobody called it off. |
 | `captureledgerstatuses_test.go` | H2 | The disposition ledger's status vocabulary is defined by the column's own constraint, and nowhere else. |
 | `checklanes_test.go` | H3 | `make check` runs every leg its two halves, check-backend and check-fe, run. |
@@ -278,6 +277,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `approvalconstruction_test.go` | H3 | _(no doc comment)_ |
 | `approvalselfonlyreaders_test.go` | H2 | Staging needs action authority before a proposal exists. |
 | `approvalsummarycopy_test.go` | H1 | An approval's summary is written through a per-language copy table, never as an English sentence in product code. |
+| `approvalwhy_test.go` | H1 | Every approval but a rule's says why it was staged: the reason in words, or the quoted evidence it rests on. |
 | `assigneeeligibility_test.go` | H2 | A seat's fitness to receive work has one spelling, wherever it is asked. |
 | `assurancerules_test.go` | H3 | Every assurance rule proves both halves of its judgement. |
 | `attachauthority_test.go` | H3 | A path that hangs a child row onto a record (an activity, a note, a task, a file) must ask auth.EnsureAttachTarget. |

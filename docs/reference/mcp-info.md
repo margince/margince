@@ -15,9 +15,9 @@ input and output schema in folds below it. What a tool may do and whether a huma
 |---|---:|
 | Tools | 48 |
 | Resources | 14 |
-| Tool catalog | 243.1 KB |
+| Tool catalog | 243.4 KB |
 | Resource catalog | 5.5 KB |
-| Approx. wire tokens | 63630 |
+| Approx. wire tokens | 63717 |
 | Largest tool | `read_details` (15.8 KB) |
 | Scopes rendered | `read`, `draft`, `write`, `send`, `enrich` |
 
@@ -34,9 +34,9 @@ tool adds to that listing, and what it costs each scheduled agent, agent by agen
 |---|---:|---:|---|
 | Output schemas | 33.7 KB | 13% | **No**: a result's shape, never listed to a model |
 | Descriptions (incl. governance clause) | 51.0 KB | 20% | Yes, every step |
-| Input schemas | 146.8 KB | 60% | Yes, every step |
+| Input schemas | 147.2 KB | 60% | Yes, every step |
 | _Names, annotations, punctuation_ | 11.6 KB | 4% | Partly |
-| **Description + input schema** | **197.8 KB** | **81%** | **the recurring cost** |
+| **Description + input schema** | **198.2 KB** | **81%** | **the recurring cost** |
 
 Output schemas count in the total but are never sent to a model;
 descriptions and input schemas are what each step pays for.
@@ -71,7 +71,7 @@ descriptions and input schemas are what each step pays for.
 | [`change_activities`](#change_activities) | Log, plan and file activities |  |  | 2977 |
 | [`change_attention`](#change_attention) | Act on proposals, notices and the weekly plan |  |  | 1842 |
 | [`change_capture`](#change_capture) | Decide what comes into the CRM |  |  | 1891 |
-| [`change_compliance`](#change_compliance) | Record consent, stops, holds and privacy work |  |  | 1274 |
+| [`change_compliance`](#change_compliance) | Record consent, stops, holds and privacy work |  |  | 1289 |
 | [`change_lists`](#change_lists) | Make and change lists |  |  | 620 |
 | [`change_my_settings`](#change_my_settings) | Change the user's own preferences and voice |  |  | 867 |
 | [`change_offers`](#change_offers) | Work offers, contracts and deal rooms |  |  | 1096 |
@@ -110,7 +110,7 @@ descriptions and input schemas are what each step pays for.
 | [`run_research`](#run_research) | Run AI work for your user |  |  | 1365 |
 | [`schedule_meeting`](#schedule_meeting) | Invite to a meeting |  |  | 515 |
 | [`send_outbound`](#send_outbound) | Send a message |  |  | 1678 |
-| [`update_record`](#update_record) | Update a record |  | [`ui://margince/update.html`](#update_view) | 626 |
+| [`update_record`](#update_record) | Update a record |  | [`ui://margince/update.html`](#update_view) | 698 |
 | [`whoami`](#whoami) | Who this passport acts for | yes |  | 129 |
 
 ## Resources
@@ -1340,7 +1340,7 @@ retract_qualifying_event, revoke_override, suppress_contact, update_data_subject
 {
   "properties": {
     "action": {
-      "description": "read_workspace topic actions lists each action's body\nassign_notice_case: Give a privacy notice already owed (from notice_cases) an owner\nassign_notice_case_review: Give a contact's privacy-notice case (from notice_case_reviews) an owner\nconfirm_notice_source: Confirm where a contact came from (bought list, import, their own enquiry), which decides whether a privacy notice is owed\nlift_lead_suppression: Take back a stop on a lead, if you outrank the level that set it\nlift_suppression: Take back a stop, if you outrank the level that set it\nopen_data_subject_request: Open a data-subject request (access/rectify/erasure)\npin_activity_to_floor: Pin an activity to the retention floor, restricting it\nplace_legal_hold: Place a legal hold on a record\nrecord_communication_context: Answer a refusal by saying what happened away from the system\nrecord_consent: Grant or withdraw consent for one purpose — writes an append-only proof row\nrecord_lead_qualifying_event: Record an exchange with a lead\nrecord_qualifying_event: Record an exchange for scoped correspondence\nresolve_confirm_submission: Accept or decline what a subject proposed\nretract_acquisition_request: Take back the request the contact's acquisition records\nretract_lead_qualifying_event: Take back a recorded lead exchange\nretract_qualifying_event: Take back an exchange a colleague recorded by hand\nrevoke_override: Take back a standing override, if your level may revoke the one that recorded it\nsuppress_contact: Record that this contact asked us to stop writing to them\nupdate_data_subject_request: Update a data-subject request's status / assignee / resolution",
+      "description": "read_workspace topic actions lists each action's body\nassign_notice_case: Give a privacy notice already owed (from notice_cases, GET /privacy/notice-cases) an owner\nassign_notice_case_review: Give a contact's privacy-notice case (from notice_case_reviews, GET /privacy/notice-case-reviews) an owner\nconfirm_notice_source: Confirm where a contact came from (bought list, import, their own enquiry), which decides whether a privacy notice is owed\nlift_lead_suppression: Take back a stop on a lead, if you outrank the level that set it\nlift_suppression: Take back a stop, if you outrank the level that set it\nopen_data_subject_request: Open a data-subject request (access/rectify/erasure)\npin_activity_to_floor: Pin an activity to the retention floor, restricting it\nplace_legal_hold: Place a legal hold on a record\nrecord_communication_context: Answer a refusal by saying what happened away from the system\nrecord_consent: Grant or withdraw consent for one purpose — writes an append-only proof row\nrecord_lead_qualifying_event: Record an exchange with a lead\nrecord_qualifying_event: Record an exchange for scoped correspondence\nresolve_confirm_submission: Accept or decline what a subject proposed\nretract_acquisition_request: Take back the request the contact's acquisition records\nretract_lead_qualifying_event: Take back a recorded lead exchange\nretract_qualifying_event: Take back an exchange a colleague recorded by hand\nrevoke_override: Take back a standing override, if your level may revoke the one that recorded it\nsuppress_contact: Record that this contact asked us to stop writing to them\nupdate_data_subject_request: Update a data-subject request's status / assignee / resolution",
       "enum": [
         "assign_notice_case",
         "assign_notice_case_review",
@@ -10528,12 +10528,19 @@ Renders its result in [`ui://margince/update.html`](#update_view), visible to `m
         "offer"
       ],
       "type": "string"
+    },
+    "why": {
+      "description": "Why you are making this change, in one sentence the user reads beside it. Name who, which record or message, and the fact that prompted it, for example: Anna Weber wrote on 14 Nov that the rollout moves to March.",
+      "maxLength": 600,
+      "minLength": 1,
+      "type": "string"
     }
   },
   "required": [
     "record_type",
     "id",
-    "fields"
+    "fields",
+    "why"
   ],
   "type": "object"
 }
