@@ -51,16 +51,18 @@ const NOT_REST =
 const SIDES = ["top", "right", "bottom", "left"].concat(
   ["block", "inline"].flatMap((axis) => [axis, `${axis}-start`, `${axis}-end`]),
 );
-const EDGES = ["border", ...SIDES.map((side) => `border-${side}`)].flatMap(
-  (property) => [property, `${property}-color`],
+const EDGE_SIDES = ["border", ...SIDES.map((side) => `border-${side}`)];
+const INKED = EDGE_SIDES.flatMap((property) => [property, `${property}-color`]);
+const EDGES = INKED.concat(
+  EDGE_SIDES.flatMap((property) => [`${property}-width`, `${property}-style`]),
 );
+// A longhand names its sides as a box list; a shorthand draws one line.
+const LONGHAND = /-(?:color|width|style)$/;
+const PSEUDO_ELEMENT = /::[\w-]+|:(?:before|after)\b/;
 const CONTROL = "var(--borderControl)";
 const DRAWN = /^\d+(?:\.\d+)?px\s+(?:solid|dashed|dotted)\s+(.+)$/;
-// A row rules a bare field when its rest rule draws a solid line in the
-// control token all round it or along its foot.
 const FOOT_SIDES = ["border-bottom", "border-block-end"];
 const FOOT = ["border", ...FOOT_SIDES];
-const RULED = /^\d+(?:\.\d+)?px\s+solid\s+var\(--borderControl\)$/;
 // Every declaration that can take a foot away again.
 const UNDRAWS = [
   ...FOOT,
@@ -77,9 +79,9 @@ const RING =
 
 const relative = (rule: Rule) => rule.file.slice(frontendRoot.length + 1);
 const edgesOf = (rule: Rule) =>
-  EDGES.flatMap((property) => declaredValues(rule.body, property));
+  INKED.flatMap((property) => declaredValues(rule.body, property));
 const noEdge = (value: string) =>
-  /^(?:0(?:px)?|none|transparent)$/.test(value) ||
+  /^(?:0(?:px)?|none|hidden|transparent)$/.test(value) ||
   DRAWN.exec(value)?.[1] === "transparent";
 const ownClasses = (compound: string) =>
   [...classesOf(compound)].filter((name) => !STATE_CLASS.test(name));
@@ -99,11 +101,14 @@ const runsEndingAt = (selector: string, end: number) => {
 };
 const wholeRun = (selector: string) =>
   runsEndingAt(selector, compounds(selector).length - 1)[0];
+// Child and descendant steps compare alike: reading more boxes as framed
+// fields only widens what is checked.
+const loose = (selector: string) => selector.replaceAll(" > ", " ");
 
 type Frames = {
   /** Classes a field carries wherever it is written. */
   fields: ReadonlySet<string>;
-  /** Whole selectors of fields a focus rule names only inside some context. */
+  /** Loosened whole selectors of fields a focus rule lights only in some context. */
   framed: ReadonlySet<string>;
   /** Whole selectors of rows ruled in the control token. */
   rows: ReadonlySet<string>;
@@ -246,7 +251,7 @@ function enclosed(alternative: string, { fields, framed, rows }: Frames) {
       ownClasses(compound).some((name) => fields.has(name)),
     ) ||
     ancestors.some((_, at) =>
-      runsEndingAt(alternative, at).some((run) => framed.has(run)),
+      runsEndingAt(alternative, at).some((run) => framed.has(loose(run))),
     )
   ) {
     return true;
@@ -258,26 +263,40 @@ function enclosed(alternative: string, { fields, framed, rows }: Frames) {
   );
 }
 
-function findingsOf(rule: Rule, alternative: string, frames: Frames): string[] {
+function findingsOf(
+  rule: Rule,
+  alternative: string,
+  frames: Frames,
+  start: Side,
+): string[] {
   const where = `${relative(rule)}: ${alternative}`;
   const edges = EDGES.flatMap((property) =>
     declaredValues(rule.body, property).map((value) => ({ property, value })),
   );
+  const sidesOf = (property: string, value: string) =>
+    LONGHAND.test(property) ? splitTopLevel(value, " ") : [value];
+  const cleared = edges.some(({ property, value }) =>
+    sidesOf(property, value).some(noEdge),
+  );
+  const bare =
+    cleared &&
+    !rulesFoot(footOf(rule, start)) &&
+    !(alternative in EDGELESS) &&
+    !enclosed(alternative, frames);
   return [
-    ...edges.flatMap(({ property, value }) => {
-      if (noEdge(value)) {
-        return rulesOwnFoot(rule) ||
-          alternative in EDGELESS ||
-          enclosed(alternative, frames)
-          ? []
-          : [
-              `${where} draws no edge of its own and names no field or ruled row around it`,
-            ];
-      }
-      return inkOf(property, value) === CONTROL
-        ? []
-        : [`${where} draws ${value}`];
-    }),
+    ...(bare
+      ? [
+          `${where} draws no edge of its own and names no field or ruled row around it`,
+        ]
+      : []),
+    ...edges
+      .filter(({ property }) => INKED.includes(property))
+      .filter(({ property, value }) =>
+        sidesOf(property, value).some(
+          (side) => !noEdge(side) && inkOf(property, side) !== CONTROL,
+        ),
+      )
+      .map(({ value }) => `${where} draws ${value}`),
     ...ringsOf(rule)
       .filter((ink) => ink !== CONTROL)
       .map((ink) => `${where} rings itself in ${ink}`),
@@ -286,10 +305,9 @@ function findingsOf(rule: Rule, alternative: string, frames: Frames): string[] {
 
 const valuesOf = (rule: Rule, properties: readonly string[]) =>
   properties.flatMap((property) => declaredValues(rule.body, property));
-const ruled = (rule: Rule) =>
-  valuesOf(rule, FOOT).some((value) => RULED.test(value));
 
 type Side = { width: string; style: string; color: string };
+const UNDRAWN: Side = { width: "medium", style: "none", color: "" };
 const STYLE =
   /^(?:none|hidden|solid|dashed|dotted|double|groove|ridge|inset|outset)$/;
 const WIDTH = /^(?:\d+(?:\.\d+)?(?:px|r?em)?|thin|medium|thick)$/;
@@ -308,10 +326,9 @@ function sideOf(value: string): Side {
   return side;
 }
 
-// The foot a rule leaves, read in declaration order. It starts as the field's
-// own solid line, so a rule that only recolours the foot draws it.
-function footOf(rule: Rule): Side {
-  let foot: Side = { width: "1px", style: "solid", color: "" };
+// The foot a rule leaves on `start`, read in declaration order.
+function footOf(rule: Rule, start: Side): Side {
+  let foot = start;
   for (const declaration of splitTopLevel(rule.body, ";")) {
     const at = declaration.indexOf(":");
     const property = declaration.slice(0, at).trim();
@@ -333,15 +350,31 @@ function footOf(rule: Rule): Side {
   return foot;
 }
 
-// A field may clear its other sides when the foot it leaves is a solid line in
-// the control token.
-function rulesOwnFoot(rule: Rule): boolean {
-  const { width, style, color } = footOf(rule);
-  return (
-    !/^0(?:\.0+)?(?:px|r?em)?$/.test(width) &&
-    style === "solid" &&
-    color === CONTROL
-  );
+// A field may clear its other sides, and a row seats a bare field, when the
+// foot is a solid line in the control token.
+const rulesFoot = ({ width, style, color }: Side) =>
+  !/^0(?:\.0+)?(?:px|r?em)?$/.test(width) &&
+  style === "solid" &&
+  color === CONTROL;
+const ruled = (rule: Rule) => rulesFoot(footOf(rule, UNDRAWN));
+
+// A field's rule starts from the foot its own rest rules leave, or from none.
+function startOf(rules: readonly Rule[], rule: Rule, subject: string): Side {
+  const own = ownClasses(subject);
+  const base = (alternative: string) => {
+    const named = ownClasses(alternative);
+    return (
+      compounds(alternative).length === 1 &&
+      atRest(alternative) &&
+      named.length > 0 &&
+      named.every((name) => own.includes(name))
+    );
+  };
+  return rules
+    .filter(
+      (other) => other !== rule && alternativesOf(other.selector).some(base),
+    )
+    .reduce((foot, other) => footOf(other, foot), UNDRAWN);
 }
 
 // A row is a box named by a class. Any rule on a box with those classes that
@@ -351,7 +384,7 @@ function ruledRows(rules: readonly Rule[]) {
     .filter((rule) => valuesOf(rule, UNDRAWS).some(noEdge))
     .flatMap((rule) =>
       subjectsOf(rule)
-        .filter((subject) => !subject.includes("::"))
+        .filter((subject) => !PSEUDO_ELEMENT.test(subject))
         .map(ownClasses),
     );
   const seated = (alternative: string) => {
@@ -377,11 +410,8 @@ function weakEdges(
   rules: readonly Rule[],
   { fields, framed }: Omit<Frames, "rows">,
 ) {
-  const frames = { fields, framed, rows: ruledRows(rules) };
-  // Child and descendant steps compare alike here: reading more boxes as
-  // fields only widens what is checked.
-  const loose = (selector: string) => selector.replaceAll(" > ", " ");
   const litInContext = new Set([...framed].map(loose));
+  const frames = { fields, framed: litInContext, rows: ruledRows(rules) };
   return rules.flatMap((rule) =>
     alternativesOf(rule.selector).flatMap((alternative) => {
       const subject = subjectOf(alternative);
@@ -390,7 +420,12 @@ function weakEdges(
         ownClasses(subject).some((name) => fields.has(name)) ||
         litInContext.has(loose(wholeRun(alternative)));
       if (!field || !atRest(subject)) return [];
-      return findingsOf(rule, alternative, frames);
+      return findingsOf(
+        rule,
+        alternative,
+        frames,
+        startOf(rules, rule, subject),
+      );
     }),
   );
 }

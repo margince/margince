@@ -230,6 +230,7 @@ describe("a text field's resting edge", () => {
         ".c .d > .box { border: 0; }",
         ".e .f:focus-within { border-color: var(--accent); }",
         `.e > .f { border: ${faint}; }`,
+        ".e > .f .box { border: 0; }",
       ]),
     ).toEqual([
       `${SHEET}: .a .b draws ${faint}`,
@@ -251,6 +252,9 @@ describe("a text field's resting edge", () => {
         ".marked { border-bottom: 1px solid var(--borderControl); }",
         ".marked::after { border: 0; }",
         ".marked .box { border: 0; }",
+        ".legacy { border-bottom: 1px solid var(--borderControl); }",
+        ".legacy:after { border: 0; }",
+        ".legacy .box { border: 0; }",
       ]),
     ).toEqual([bare(".row .box"), bare(".row.flat .box")]);
   });
@@ -258,6 +262,7 @@ describe("a text field's resting edge", () => {
   it("passes a field that clears its sides and rules its foot in the control edge", () => {
     expect(
       findings(markup('<input className="box" />'), [
+        ".box { border: 1px solid var(--borderControl); }",
         ".ruled .box { border-color: transparent; border-block-end-color: var(--borderControl); }",
         ".faint .box { border-color: transparent; border-block-end-color: var(--borderSubtle); }",
         ".zero .box { border: 0; border-block-end-color: var(--borderControl); }",
@@ -274,6 +279,51 @@ describe("a text field's resting edge", () => {
       ...[".zero", ".top", ".side", ".dotted", ".thin", ".late"].map((row) =>
         bare(`${row} .box`),
       ),
+    ]);
+  });
+
+  it("reads a field's cleared width or style as no edge", () => {
+    expect(
+      findings(markup('<input className="box" />'), [
+        ".z .box { border-width: 0; }",
+        ".z2 .box { border-style: none; }",
+        ".wide .box { border-width: 2px; }",
+      ]),
+    ).toEqual([bare(".z .box"), bare(".z2 .box")]);
+  });
+
+  it("seats a field only on a row whose last word leaves a control foot", () => {
+    expect(
+      findings(markup('<input className="box" />'), [
+        ".rowd { border-bottom: 1px solid var(--borderControl); border-bottom-style: dashed; }",
+        ".rowc { border-bottom: 1px solid var(--borderControl); border-bottom-color: var(--borderSubtle); }",
+        ".rowk { border-bottom: 1px solid var(--borderControl); border-bottom-width: 2px; }",
+        ".rowd .box, .rowc .box, .rowk .box { border: 0; }",
+      ]),
+    ).toEqual([bare(".rowd .box"), bare(".rowc .box")]);
+  });
+
+  it("starts a field's foot from its own rest rule, or from none", () => {
+    expect(
+      findings(markup('<input className="box" />'), [
+        ".box { border-width: 0; }",
+        ".y .box { border-top-color: transparent; border-bottom-color: var(--borderControl); }",
+      ]),
+    ).toEqual([bare(".box"), bare(".y .box")]);
+  });
+
+  it("reads a colour box list side by side", () => {
+    expect(
+      findings(markup('<input className="box" />'), [
+        ".box { border: 1px solid var(--borderControl); }",
+        ".y .box { border-color: transparent transparent var(--borderControl); }",
+        ".v .box { border-color: var(--borderControl) transparent; }",
+        ".w .box { border-color: transparent var(--borderSubtle) var(--borderControl); }",
+        ".u .box { border-color: transparent var(--borderControl); }",
+      ]),
+    ).toEqual([
+      `${SHEET}: .w .box draws transparent var(--borderSubtle) var(--borderControl)`,
+      bare(".u .box"),
     ]);
   });
 

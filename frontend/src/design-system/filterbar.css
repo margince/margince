@@ -120,7 +120,9 @@
   border-color: var(--danger);
 }
 .filter-bar[data-labels="inside"]
-  .field:has([aria-invalid="true"]):focus-within {
+  .field:has([aria-invalid="true"]):not(
+    :has(.input:disabled, .input[aria-disabled="true"])
+  ):focus-within {
   box-shadow: var(--focus-field-danger);
 }
 /* Read off the chip's own control, not a button beside it. `:where` lets
