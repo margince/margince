@@ -263,9 +263,9 @@ To create a project in Margince, open **Projects** in the sidebar and choose **N
 1. Enter the **Project name** (required).
 2. Pick the **Company** (required): the client the work is for.
 3. Pick the **Owner**. You are picked first; you may pick a colleague instead.
-4. You may add a **Description** and a **Target end date**.
+4. You may add a **Description** and a **Target end**.
 5. Under **Key**, Margince shows the key it suggests from the name. Leave it empty to use that key, or type your own.
-6. Pick the **Starting phase**: **Initiative**, **Pursuing** or **Delivering**. A new project cannot start closed.
+6. The **Starting phase** is **Initiative**. You may pick **Pursuing** or **Delivering** instead. A new project cannot start closed.
 7. Under **Deal**, you may pick an open deal of the company that has no project yet. The deal then belongs to the new project.
 8. Fill any custom fields, then choose **Create**.
 The owner must be "an active colleague you may assign work to", the same rule as **Assign to a colleague**. Linking a deal needs the right to edit that deal. Read-only seats cannot create projects.
@@ -295,7 +295,7 @@ Yes. In Margince, what you log on a deal, or relink onto it, also goes under the
 
 ### How do I edit or rename a project?
 To rename a project in Margince, open it from **Projects**, press its name at the top, type the new name and press **Save**. To edit the rest, choose **More actions** → **Edit project**, change the fields and choose **Save**.
-You can change **Project name** (required), **Owner**, **Description**, **Target end date** and custom fields. It confirms "“{name}” saved". Emptying **Description** or **Target end date** clears it. For only **Target end date** or **Description**, press **Edit** in **About** in the project's **Details** panel; for **Owner**, in **Ownership**.
+You can change **Project name** (required), **Owner**, **Description**, **Target end** and custom fields. It confirms "“{name}” saved". Emptying **Description** or **Target end** clears it. For only **Target end** or **Description**, press **Edit** in **About** in the project's **Details** panel; for **Owner**, in **Ownership**.
 
 The company is not in this form: add or take off companies under **More actions** → **Companies and contacts**. The phase moves on the **Phase** bar. An archived project takes no changes.
 Also called: update a project, change the project's end date.
@@ -308,12 +308,12 @@ Also called: hand over a project, change project lead, transfer a project, relea
 ### How do I add or remove a company on a project?
 To add a company to a project in Margince, open the project and choose **More actions** → **Companies and contacts**, then **Attach company** under **Companies**. Search under **Search companies by name** and pick the company. Pick its role under **As** (**Customer**, **Partner** or **Subcontractor**), then choose **Attach company**.
 
-To take one off, open **More actions** → **Companies and contacts** in the same way. On the company's card, choose **More actions** → **Detach**, then **Remove company** in "Remove company from project?". The only company on a project has no **Detach**. A company that still has deals on the project is refused until those deals move to another project or are archived.
+To take one off, open **More actions** → **Companies and contacts** in the same way. On the company's card, choose **More actions** → **Remove**, then **Remove company** in "Remove company from project?". The only company on a project has no **More actions**. A company that still has deals on the project is refused until those deals move to another project or are archived.
 Also called: add a partner to a project, link a client to a project.
 
 ### How do I move a project to another phase or close it?
-To move a project in Margince, open it and click the phase you need on its **Phase** bar: **Initiative**, **Pursuing**, **Delivering** or **Closed**.
-In **Move to {phase}**, add a **Reason** and choose **Move**. For **Closed** the button is **Close project**, and the reason is required: "A closed project needs a reason."
+To move a project in Margince, open it and click the phase you need on its **Phase** bar: **Initiative**, **Pursuing** or **Delivering**. To close it, click **Close project** on the same bar.
+In **Move to {phase}**, add a **Reason** and choose **Move**. In **Close project** the button is **Close project**, and the reason is required: "A closed project needs a reason."
 Click another phase on a closed project to reopen it.
 Also called: close a project, finish delivery, reopen a project.
 
@@ -337,8 +337,7 @@ move it on the **Phase** bar.
 Pursuing. A project already in delivery stays where it is, and a win never
 reopens a closed project. Only a human can reopen one.
 
-Every phase move is recorded, including the automatic one. That one is put
-under the name of the colleague whose action caused it.
+Every phase move is recorded, including the automatic one. That one is put under the name of the colleague whose action caused it, and names the deal, as in "Deal Wendt renewal won". When you win the deal, the dialog says so first: "This also moves {project} to Delivering."
 
 ### The key
 
@@ -368,7 +367,7 @@ Ask the customer in your first mail to keep `[NER]` in the subject. See [Capture
 
 ### Companies and stakeholders
 
-A project always has at least one company, so the only one has no **Detach**. A company with deals still on the project cannot be removed either: "This company still has 1 deal on the project. Move it to another project or archive it before you take the company off."
+A project always has at least one company, so the only one has no **Remove**. A company with deals still on the project cannot be removed either: "This company still has 1 deal on the project. Move it to another project or archive it before you take the company off."
 
 Companies on a project can be a customer, partner or subcontractor. These are labels only; a project can have several customers or none.
 
@@ -381,7 +380,7 @@ To add a contact to a project in Margince, open the project, choose **More actio
 1. Search under **Search contacts by name** and pick the contact.
 2. Pick the **Role**: one of those listed above.
 3. Choose **Add**. A contact already on the project takes the new role instead: one role per contact.
-To take someone off, choose **Remove** on the row, then **Remove** in the **Remove stakeholder?** dialog. Their activity stays where it is.
+To take someone off, choose **More actions** → **Remove** on the row, then **Remove** in the **Remove stakeholder?** dialog. Their activity stays where it is.
 Also called: add a sponsor, add a project lead, add someone to a project team.
 
 ### Who may do what

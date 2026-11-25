@@ -65,17 +65,18 @@ func TestParseAcceptsTheFullDocumentedShape(t *testing.T) {
 
 func TestParseValidatesFailClosed(t *testing.T) {
 	cases := map[string]string{ // #nosec G101 -- yaml documents that must FAIL validation, not credentials
-		"unsupported version":     "version: 2\n",
-		"bad timezone":            "version: 1\nworkspace: { name: X, timezone: Mars/Olympus }\n",
-		"bad currency":            "version: 1\nworkspace: { name: X, base_currency: euros }\n",
-		"upper-case country":      "version: 1\nworkspace: { name: X, country: DE }\n",
-		"three-letter country":    "version: 1\nworkspace: { name: X, country: deu }\n",
-		"admin without password":  "version: 1\nbootstrap_admin: { email: a@b.co, display_name: A }\n",
-		"inline secret refused":   "version: 1\nbootstrap_admin: { email: a@b.co, display_name: A, password: hunter2hunter2 }\n",
-		"empty pipeline":          "version: 1\nseeds: { pipeline: { name: Sales, stages: [] } }\n",
-		"duplicate stage":         "version: 1\nseeds: { pipeline: { name: S, stages: [ { name: A, probability: 10 }, { name: A, probability: 20 } ] } }\n",
-		"probability out of band": "version: 1\nseeds: { pipeline: { name: S, stages: [ { name: A, probability: 140 } ] } }\n",
-		"purpose without label":   "version: 1\nseeds: { consent_purposes: [ { key: marketing_email } ] }\n",
+		"unsupported version":      "version: 2\n",
+		"bad timezone":             "version: 1\nworkspace: { name: X, timezone: Mars/Olympus }\n",
+		"bad currency":             "version: 1\nworkspace: { name: X, base_currency: euros }\n",
+		"upper-case country":       "version: 1\nworkspace: { name: X, country: DE }\n",
+		"three-letter country":     "version: 1\nworkspace: { name: X, country: deu }\n",
+		"admin without password":   "version: 1\nbootstrap_admin: { email: a@b.co, display_name: A }\n",
+		"inline secret refused":    "version: 1\nbootstrap_admin: { email: a@b.co, display_name: A, password: hunter2hunter2 }\n",
+		"empty pipeline":           "version: 1\nseeds: { pipeline: { name: Sales, stages: [] } }\n",
+		"duplicate stage":          "version: 1\nseeds: { pipeline: { name: S, stages: [ { name: A, probability: 10 }, { name: A, probability: 20 } ] } }\n",
+		"stage twice in two cases": "version: 1\nseeds: { pipeline: { name: S, stages: [ { name: Demo, probability: 10 }, { name: ' demo', probability: 20 } ] } }\n",
+		"probability out of band":  "version: 1\nseeds: { pipeline: { name: S, stages: [ { name: A, probability: 140 } ] } }\n",
+		"purpose without label":    "version: 1\nseeds: { consent_purposes: [ { key: marketing_email } ] }\n",
 	}
 	for name, doc := range cases {
 		if _, err := LoadBootstrap(writeTemp(t, doc)); err == nil {

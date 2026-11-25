@@ -90,7 +90,7 @@ func TestContactWritesLeaveTheSameOnEitherDoor(t *testing.T) {
 	version := versionOf(t, d.storedContact(t, viaREST))
 	d.restPinned(t, "PATCH", "/v1/contacts/"+viaREST, AnyMap{"title": "Head of Buying"}, version)
 	d.tool(t, "update_record", map[string]any{
-		"record_type": "contact", "id": viaTool, "fields": map[string]any{"title": "Head of Buying"},
+		"record_type": "contact", "id": viaTool, "fields": map[string]any{"title": "Head of Buying"}, "why": "A test asks for this change.",
 		"if_version": versionOf(t, d.storedContact(t, viaTool)),
 	})
 	sameStored(t, "update", d.storedContact(t, viaREST), d.storedContact(t, viaTool), viaREST, viaTool, "full_name", "social")
@@ -99,6 +99,9 @@ func TestContactWritesLeaveTheSameOnEitherDoor(t *testing.T) {
 		t.Errorf("the edited contact carries title %v, want the new one", edited.Title)
 	}
 	d.sameEffect(t, "update", viaREST, viaTool, "full_name", "social")
+	if reasons := d.effectOf(t, viaTool, nil).Reasons; reasons[len(reasons)-1] != "A test asks for this change." {
+		t.Errorf("the tool's update kept reasons %q, want the one the agent stated", reasons)
+	}
 
 	d.restPinned(t, "DELETE", "/v1/contacts/"+viaREST, nil, versionOf(t, d.storedContact(t, viaREST)))
 	d.tool(t, "archive_record", map[string]any{"record_type": "contact", "id": viaTool})

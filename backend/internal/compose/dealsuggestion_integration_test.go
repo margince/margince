@@ -71,11 +71,9 @@ func TestADismissalHidesTheSuggestionFromEveryoneAndIsAudited(t *testing.T) {
 		}
 	}
 	if n := e.WsCount(t, `SELECT count(*) FROM audit_log WHERE entity_type = 'deal_suggestion' AND entity_id = $1
-		AND action = 'update' AND after->>'state' = 'dismissed'`, suggestion.ID); n != 1 {
-		t.Fatalf("%d audit rows record the dismissal, want 1", n)
-	}
-	if by := e.WsScalar(t, `SELECT decided_by::text FROM deal_suggestion WHERE id = $1`, suggestion.ID); by != e.Rep1.String() {
-		t.Fatalf("decided_by = %s, want the rep who dismissed it", by)
+		AND action = 'update' AND after->>'state' = 'dismissed' AND position($2::text IN actor_id) > 0`,
+		suggestion.ID, e.Rep1.String()); n != 1 {
+		t.Fatalf("%d audit rows record the rep's dismissal, want 1", n)
 	}
 }
 

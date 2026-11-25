@@ -352,7 +352,7 @@ describe("the details' Edit", () => {
     render(<LeadScreen id="l-1" />);
     const about = await editSection(user, "About");
     expect(within(about).queryByRole("combobox", { name: "Owner" })).toBeNull();
-    const title = within(about).getByRole("textbox", { name: "Title" });
+    const title = within(about).getByRole("textbox", { name: "Job title" });
     await user.type(title, "Head of fleet");
     await user.click(within(about).getByRole("button", { name: "Save" }));
     await waitFor(() =>
@@ -377,7 +377,7 @@ describe("the details' Edit", () => {
       within(about).getByRole("textbox", { name: "Full name" }),
     ).toHaveValue("");
     await user.type(
-      within(about).getByRole("textbox", { name: "Title" }),
+      within(about).getByRole("textbox", { name: "Job title" }),
       "Fleet manager",
     );
     await user.click(within(about).getByRole("button", { name: "Save" }));

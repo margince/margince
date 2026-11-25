@@ -90,8 +90,18 @@ type Project360Transition struct {
 	FromPhase string                 `json:"from_phase"`
 	ToPhase   string                 `json:"to_phase"`
 	Reason    string                 `json:"reason"`
+	Cause     *Project360Cause       `json:"cause,omitempty"`
 	ChangedAt time.Time              `json:"changed_at"`
 	ChangedBy *Project360Attribution `json:"changed_by,omitempty"`
+}
+
+// Project360Cause is what caused a move no one chose by hand: deal_won names
+// the deal whose win moved the project into delivering. The deal fields are
+// empty when the caller may not see that deal.
+type Project360Cause struct {
+	Kind     string    `json:"kind"`
+	DealID   *ids.UUID `json:"deal_id,omitempty"`
+	DealName string    `json:"deal_name,omitempty"`
 }
 
 // Project360Attribution is who made a move: the actor kind, the colleague an

@@ -72,6 +72,11 @@ function story(props: Parameters<typeof Editing>[0]) {
           data: [{ id: "c-1", display_name: "Brandt Maschinenbau" }],
           page: { next_cursor: null, has_more: false },
         }),
+      "GET /tags": () =>
+        jsonResponse({
+          data: [{ id: "t-1", name: "VIP" }],
+          page: { next_cursor: null, has_more: false },
+        }),
     });
     return (
       <StoryProviders>
@@ -86,7 +91,15 @@ export const ReferencePicker: Story = {
   render: story({ type: "id", references: "app_user", op: "eq", start: "u-2" }),
 };
 
-// Companies are as many as the customers, so they are searched, not listed.
+// Nothing picked yet: the picker names the kind of record it lists.
+export const EmptyOwnerPicker: Story = {
+  render: story({ type: "id", references: "app_user", op: "eq", start: "" }),
+};
+
+export const EmptyTagPicker: Story = {
+  render: story({ type: "id", references: "tag", op: "eq", start: "" }),
+};
+
 export const CompanySearch: Story = {
   render: story({ type: "id", references: "company", op: "eq", start: "" }),
 };
@@ -137,6 +150,12 @@ export const OperatorOnly: Story = {
 
 export const Phone: Story = {
   ...CompanySearch,
+  globals: { viewport: { value: "phone" } },
+  tags: ["uat-phone"],
+};
+
+export const EmptyOwnerPickerPhone: Story = {
+  ...EmptyOwnerPicker,
   globals: { viewport: { value: "phone" } },
   tags: ["uat-phone"],
 };

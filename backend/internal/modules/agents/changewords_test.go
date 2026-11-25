@@ -89,6 +89,7 @@ func promoteToCTO(t *testing.T, p *patchingProvider) json.RawMessage {
 	t.Helper()
 	in, err := json.Marshal(map[string]any{
 		"record_type": "contact", "id": p.record.Ref.ID, "fields": map[string]any{"title": "CTO"},
+		"why": "Her signature on 14 Nov names her CTO.",
 	})
 	if err != nil {
 		t.Fatal(err)

@@ -161,8 +161,8 @@ func (e *Edge) Authenticate(ctx context.Context, seats Seats, bearer string) (co
 	case err != nil:
 		return nil, fmt.Errorf("dispactapp: binding the caller's passport: %w: %w", err, agents.ErrAuthUnavailable)
 	}
-	ctx = principal.WithActor(agents.WithAppSurface(ctx, surface), agent.Principal())
-	return principal.WithCorrelationID(ctx, ids.NewV7()), nil
+	// The request keeps the chassis's correlation id, as mcpAuthenticate does.
+	return principal.WithActor(agents.WithAppSurface(ctx, surface), agent.Principal()), nil
 }
 
 // verifierFor returns the verifier for the install at address, building a new

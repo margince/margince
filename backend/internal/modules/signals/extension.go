@@ -24,6 +24,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/kernel/provenance"
 	"github.com/margince/margince/backend/internal/shared/ports/signaltypes"
 	"github.com/margince/margince/backend/pkg/extension"
 )
@@ -108,12 +109,12 @@ func RecordExtensionTx(ctx context.Context, tx pgx.Tx, in ExtensionSignal) (sig 
 	var id ids.UUID
 	err = tx.QueryRow(ctx,
 		`INSERT INTO signal (kind, source_channel, entity_type, entity_id, resolution_state, severity,
-		                     summary, evidence, fingerprint, detected_at, source, captured_by)
-		 VALUES ($1, 'derived', $2, $3, 'resolved', 'info', $4, $5, $6, $7, $8, $9)
+		                     summary, evidence, fingerprint, detected_at, source, source_system, captured_by)
+		 VALUES ($1, 'derived', $2, $3, 'resolved', 'info', $4, $5, $6, $7, $8, $9, $10)
 		 ON CONFLICT DO NOTHING
 		 RETURNING id`,
 		in.Kind, in.EntityType, in.EntityID, summary, evidence, stored,
-		time.Now().UTC(), string(in.Unit), by).Scan(&id)
+		time.Now().UTC(), provenance.RecordSourceAutomation, string(in.Unit), by).Scan(&id)
 	if errors.Is(err, pgx.ErrNoRows) {
 		sig, err = readByFingerprint(ctx, tx, stored)
 		return sig, false, err
@@ -144,6 +145,9 @@ func declaredType(in ExtensionSignal) (signaltypes.Declared, error) {
 	}
 	if strings.TrimSpace(in.Fingerprint) == "" {
 		return signaltypes.Declared{}, &InvalidExtensionSignalError{Field: "fingerprint", Reason: "a fingerprint is required, so the same event is recorded once"}
+	}
+	if len(in.Fingerprint) > extension.MaxKeyLength {
+		return signaltypes.Declared{}, &InvalidExtensionSignalError{Field: "fingerprint", Reason: fmt.Sprintf("a fingerprint may be at most %d bytes", extension.MaxKeyLength)}
 	}
 	if err := declared.CheckFields(in.Fields); err != nil {
 		return signaltypes.Declared{}, &InvalidExtensionSignalError{Field: signalEvidenceArg, Reason: err.Error()}

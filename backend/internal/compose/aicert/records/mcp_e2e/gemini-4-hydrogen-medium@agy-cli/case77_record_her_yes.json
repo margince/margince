@@ -4,7 +4,7 @@
     1
   ],
   "passed": 2,
-  "runs": 2,
+  "runs": 3,
   "pass_at": 2,
   "driver": "gemini:cli",
   "effort": "reasoning medium",
@@ -12,28 +12,32 @@
   "search": "semantic",
   "self_judged": false,
   "stamp": {
-    "scenario": "6b94d627bb2b88e4",
-    "tools": "c118b782ecf4f275",
-    "instructions": "c5c644eee9719be0",
+    "scenario": "d8f24d5003ecb1df",
+    "tools": "3476edcf432066d8",
+    "instructions": "4eab26d5fff0793f",
     "judge": "claude-haiku-5-5",
-    "harness": "024566e70b0c3db3",
-    "commit": "d76651445fdbe7445b1318837cd33cb56282f221",
-    "ran_at": "2026-11-21T19:14:37Z",
-    "graded_commit": "5808d1c0d9c1a63a8e4b2a14495d96f45c40c7fd",
-    "graded_at": "2026-11-21T23:34:37Z"
+    "harness": "ae24b6799c8461d2",
+    "parsers": {
+      "gemini:cli": "fa1db64bc14e971b",
+      "gpt:cli": "d48ca27c983f8b3f"
+    },
+    "commit": "6d3a5be8c69b862c6c7db3c3534ac5fd705dd41e",
+    "ran_at": "2026-11-25T10:25:00Z",
+    "graded_commit": "e78e69d3f41bf45bbc08207d2d75a94ae33d19f4",
+    "graded_at": "2026-11-25T11:03:12Z"
   },
   "usage": {
-    "input_tokens": 51670,
-    "output_tokens": 10475,
+    "input_tokens": 80773,
+    "output_tokens": 19572,
     "cache_creation_input_tokens": 0,
-    "cache_read_input_tokens": 145713,
-    "runs_measured": 2,
+    "cache_read_input_tokens": 236235,
+    "runs_measured": 3,
     "runs_costed": 0,
     "cost_usd": null
   },
   "tools_by_run": [
     {
-      "passed": true,
+      "passed": false,
       "tools": [
         "describe_router_actions",
         "find_records",
@@ -42,7 +46,6 @@
         "list_contact_stops",
         "read_details",
         "read_workspace",
-        "resolve_entities",
         "search_records",
         "whoami"
       ]
@@ -54,6 +57,19 @@
         "find_records",
         "get_contact_consent",
         "get_contact_consent_guard",
+        "list_contact_stops",
+        "read_details",
+        "read_workspace",
+        "search_records",
+        "whoami"
+      ]
+    },
+    {
+      "passed": true,
+      "tools": [
+        "describe_router_actions",
+        "find_records",
+        "get_contact_consent",
         "list_contact_stops",
         "read_details",
         "read_workspace",
@@ -63,15 +79,15 @@
     }
   ],
   "efficiency": {
-    "runs": 2,
+    "runs": 3,
     "calls": {
-      "median": 8.5,
-      "min": 7,
+      "median": 9,
+      "min": 6,
       "max": 10
     },
     "turns": {
       "median": 6,
-      "min": 5,
+      "min": 6,
       "max": 7
     },
     "refused": {
@@ -80,14 +96,14 @@
       "max": 1
     },
     "prompt_tokens": {
-      "median": 98691.5,
-      "min": 72014,
-      "max": 125369
+      "median": 99043,
+      "min": 96288,
+      "max": 121677
     },
     "output_tokens": {
-      "median": 5237.5,
-      "min": 4516,
-      "max": 5959
+      "median": 6588,
+      "min": 6081,
+      "max": 6903
     }
   }
 }

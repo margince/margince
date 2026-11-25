@@ -40,7 +40,6 @@ var (
 // notAnAddress records each such column that needs no canonical-form CHECK,
 // with why. An unlisted column must carry the CHECK.
 var notAnAddress = gatekit.Waive(map[string]string{
-	"activity_participant.address":             "the party as its writer named it. Capture folds it and the table holds no writer to that, so readers compare lower(address), which idx_aparticipant_address serves. The key keeps one row per stored identity and no reader takes it for one row per mailbox",
 	"communication_decision.recipient_address": "a recipient key of two shapes: a folded address, or a channel id whose case its provider may tell apart. decisionRecipientKey folds the address shape at the write",
 })
 

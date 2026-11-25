@@ -634,7 +634,6 @@ export const TodayPhone: Story = {
   tags: ["uat-phone"],
 };
 
-// A dark pane is see-through; the focus card on it stays opaque over its ring.
 export const TodayDark: Story = {
   globals: { theme: "dark" },
   render: brief({ approvals: [...singles] }),

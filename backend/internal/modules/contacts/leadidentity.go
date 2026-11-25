@@ -146,3 +146,14 @@ func refuseErasedLeadEmail(ctx context.Context, tx pgx.Tx, current crmcontracts.
 	}
 	return storekit.RefuseErasedEmail(ctx, tx, leadEmailColumn, *in.Email)
 }
+
+// hasLeadIdentity reports whether a lead names someone: a row with none of
+// these fields could never be recognised, worked or matched.
+func hasLeadIdentity(in CreateLeadInput) bool {
+	for _, field := range []*string{in.FullName, in.Email, in.Phone, in.LinkedInURL, in.CompanyName} {
+		if field != nil && strings.TrimSpace(*field) != "" {
+			return true
+		}
+	}
+	return false
+}

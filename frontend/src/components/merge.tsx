@@ -12,9 +12,14 @@ import {
 } from "../design-system/recordpicker";
 import { useToast } from "../design-system/toast";
 import { useT } from "../i18n";
-import { type RequiredGrant, useGrantRefused } from "../lib/capability";
+import {
+  type RequiredGrant,
+  useGrantRefused,
+  useWriteBlock,
+} from "../lib/capability";
 import { fromHere } from "../lib/navigatefrom";
 import type { Route } from "../lib/router";
+import { WRITE_BLOCK_REFUSAL } from "../lib/writerefusal";
 import { mergeSentence } from "./merge.sentence";
 import "../design-system/querystates.css";
 
@@ -70,6 +75,7 @@ export function MergeAction<Survivor extends { id: string }>({
 }>) {
   const t = useT();
   const refused = useGrantRefused(requires);
+  const block = useWriteBlock(requires.object);
   const queryClient = useQueryClient();
   const toast = useToast();
   const headingId = useId();
@@ -110,7 +116,11 @@ export function MergeAction<Survivor extends { id: string }>({
     <>
       <Button
         reasonId={disabledReasonId}
-        reason={refused ? t("record.actionRefused") : undefined}
+        reason={
+          refused
+            ? t(block ? WRITE_BLOCK_REFUSAL[block] : "record.actionRefused")
+            : undefined
+        }
         onClick={() => setOpen(true)}
         data-testid="merge-record"
       >

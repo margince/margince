@@ -90,7 +90,7 @@ const (
 func VerbatimAsk(verdict, ask, body string) string {
 	ask = oneSpaced(ask)
 	if verdict != activities.OwedVerdictAsksUs || ask == "" || utf8.RuneCountInString(ask) > AskLimit ||
-		!strings.Contains(oneSpaced(activities.SplitEmailBody(body).Main), ask) {
+		!strings.Contains(oneSpaced(judgedText(body)), ask) {
 		return ""
 	}
 	return ask
@@ -129,7 +129,7 @@ func Prompt(fence promptfence.Fence, batch []activities.OwedCandidate) string {
 			context.WriteString("Our earlier message in this thread (context only, not judged):\n")
 			fmt.Fprintf(&context, "Subject: %s\n", prior.Subject)
 			fmt.Fprintf(&context, "Sent: %s\n", prior.At.Format(time.DateOnly))
-			context.WriteString("\n" + activities.SplitEmailBody(prior.Body).Main)
+			context.WriteString("\n" + judgedText(prior.Body))
 			prompt.WriteString(fence.WrapAttr("context_for", refs.For(m.ID.String()), context.String()) + "\n")
 		}
 		var message strings.Builder
@@ -148,7 +148,7 @@ func Prompt(fence promptfence.Fence, batch []activities.OwedCandidate) string {
 		case m.HasCalendarPart:
 			message.WriteString("This message carried a calendar invitation.\n")
 		}
-		message.WriteString("\n" + activities.SplitEmailBody(m.Body).Main)
+		message.WriteString("\n" + judgedText(m.Body))
 		prompt.WriteString(fence.WrapAttr("source_id", refs.For(m.ID.String()), message.String()) + "\n")
 	}
 	prompt.WriteString(`Return JSON: { "results": [ { "id", "verdict", "ask", "confidence" } ] } — one entry per supplied id.`)
@@ -216,3 +216,9 @@ var rulesetSamples = []activities.OwedCandidate{{
 var Ruleset = ai.PromptDigest(func(fence promptfence.Fence) string {
 	return SystemFor(fence) + "\n" + Prompt(fence, rulesetSamples)
 })
+
+// judgedText is the sender's own words, read as a reply even under a forward
+// subject. Ruleset was sampled on that reading.
+func judgedText(body string) string {
+	return activities.SplitEmailBody(body, "").Main
+}

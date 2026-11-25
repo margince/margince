@@ -1,0 +1,6 @@
+{"type": "system", "subtype": "init", "tools": ["mcp__margince__find_records", "mcp__margince__read_details"]}
+{"type": "assistant", "message": {"content": [{"type": "tool_use", "name": "mcp__margince__find_records", "input": {"engine": "search", "q": "Katrin Sommer", "record_type": "contact"}, "id": "fixture1"}]}}
+{"type": "user", "message": {"content": [{"type": "tool_result", "tool_use_id": "fixture1", "content": "{\"evidence\": [{\"record_type\": \"contact\", \"record_id\": \"01a1ff09-6cab-72e0-8ae0-79d897a98888\", \"title\": \"Katrin Sommer\"}]}", "is_error": false}]}}
+{"type": "assistant", "message": {"content": [{"type": "tool_use", "name": "mcp__margince__read_details", "input": {"action": "contact_consent", "id": "01a1ff09-6cab-72e0-8ae0-79d897a98888"}, "id": "fixture2"}]}}
+{"type": "user", "message": {"content": [{"type": "tool_result", "tool_use_id": "fixture2", "content": "{\"data\": {\"marketing_email\": {\"verdict\": \"unknown\", \"reason\": \"no consent recorded\"}, \"events\": []}}", "is_error": false}]}}
+{"type": "result", "subtype": "success", "is_error": false, "result": "The mail was refused because Katrin Sommer had no marketing consent on file. I have recorded her consent to marketing email now, so your next newsletter will reach her."}

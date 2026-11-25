@@ -19,6 +19,7 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -35,6 +36,14 @@ const (
 	// names them.
 	lossBasisRecorded = "recorded"
 	lossBasisMapped   = "mapped"
+)
+
+// The indexes holding one reason per key and per label (trimmed, case-folded,
+// retired reasons included), and the noun their refusal names.
+const (
+	lossReasonKeyIndex   = "deal_loss_reason_key_key"
+	lossReasonLabelIndex = "deal_loss_reason_label_once"
+	lossReasonEntry      = "a loss reason"
 )
 
 // UnknownLossReasonError refuses a code the catalog does not hold.
@@ -158,6 +167,9 @@ func (s *Store) CreateLossReason(ctx context.Context, in CreateLossReasonInput) 
 	if label == "" {
 		return crmcontracts.LossReason{}, &values.ParseError{Field: sourceLabelColumn, Code: codeRequired, Message: "label is required"}
 	}
+	if err := httperr.RequireWithin(sourceLabelColumn, label, values.TextLabelCharacters); err != nil {
+		return crmcontracts.LossReason{}, err
+	}
 	key := strings.TrimSpace(in.Key)
 	if key == "" {
 		key = values.CatalogKey(label)
@@ -174,11 +186,8 @@ func (s *Store) CreateLossReason(ctx context.Context, in CreateLossReasonInput) 
 		_, err := tx.Exec(ctx,
 			`INSERT INTO deal_loss_reason (id, key, label, sort_order) VALUES ($1, $2, $3, $4)`,
 			id, key, label, in.SortOrder)
-		if storekit.IsUniqueViolation(err) {
-			return apperrors.ErrConflict
-		}
 		if err != nil {
-			return fmt.Errorf("insert loss reason: %w", err)
+			return storekit.NameTaken(fmt.Errorf("insert loss reason: %w", err), lossReasonEntry, label, lossReasonKeyIndex, lossReasonLabelIndex)
 		}
 		auditID, err := storekit.Audit(ctx, tx, "create", "deal_loss_reason", id, nil,
 			map[string]any{sourceKeyColumn: key, sourceLabelColumn: label})
@@ -203,6 +212,11 @@ func (s *Store) UpdateLossReason(ctx context.Context, id ids.UUID, in UpdateLoss
 	if in.Label != nil && strings.TrimSpace(*in.Label) == "" {
 		return crmcontracts.LossReason{}, &values.ParseError{Field: sourceLabelColumn, Code: codeRequired, Message: "label cannot be blank"}
 	}
+	if in.Label != nil {
+		if err := httperr.RequireWithin(sourceLabelColumn, strings.TrimSpace(*in.Label), values.TextLabelCharacters); err != nil {
+			return crmcontracts.LossReason{}, err
+		}
+	}
 	var out crmcontracts.LossReason
 	err := s.Tx(ctx, func(tx pgx.Tx) error {
 		lock, err := storekit.LockRow(ctx, tx, lossReasonTable, id, storekit.NoArchiveColumn)
@@ -214,12 +228,12 @@ func (s *Store) UpdateLossReason(ctx context.Context, id ids.UUID, in UpdateLoss
 			return err
 		}
 		if in.IfVersion != nil && before.Version != nil && *in.IfVersion != *before.Version {
-			return apperrors.ErrConflict
+			return apperrors.ErrVersionSkew
 		}
 		patch := lossReasonPatch(before, in)
 		if !patch.Empty() {
 			if err := patch.ApplyLocked(ctx, tx, lock); err != nil {
-				return err
+				return storekit.NameTaken(err, lossReasonEntry, storekit.NameAfter(before.Label, in.Label), lossReasonLabelIndex)
 			}
 			auditID, err := storekit.Audit(ctx, tx, "update", "deal_loss_reason", id, patch.Before(), patch.After())
 			if err != nil {

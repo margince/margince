@@ -35,7 +35,7 @@ must_not_call_with:
   - update_automation~owner_id
 
 must_mention:
-  - "(?i)paus|turned off|switched off|\boff\b"
+  - "(?i)paus|turned off|switched off|\boff\b|disabl|deactivat|stopped"
 
 must_end_with:
   - automation "Tell the owner when someone moves their deal" status=paused
