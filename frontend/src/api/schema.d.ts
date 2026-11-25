@@ -97042,7 +97042,15 @@ export interface operations {
     getEditAccessRequest: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                /**
+                 * @description An RFC 7240 preference. `absent=204` asks for `204 No Content` instead of `404` when the
+                 *     read finds nothing yet. The token is matched without case, and every other preference is
+                 *     ignored. A row the caller may not see still answers `404`. Every answer of an operation
+                 *     that takes this header carries `Vary: Prefer`.
+                 */
+                Prefer?: components["parameters"]["PreferAbsent"];
+            };
             path: {
                 record_type: "contact" | "company" | "deal" | "lead" | "project";
                 /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
@@ -97061,6 +97069,7 @@ export interface operations {
                     "application/json": components["schemas"]["EditAccessRequest"];
                 };
             };
+            204: components["responses"]["NothingYet"];
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
             422: components["responses"]["ValidationError"];

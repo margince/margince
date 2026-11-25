@@ -72,7 +72,7 @@ function stubDeepRead(options: {
   report?: (pathname: string) => Response;
   /**
    * What `/site-reads/latest` answers before anything is started. The default is
-   * 404 — this account has never been read — because that is the state the
+   * 204 — this account has never been read — because that is the state the
    * offer is written for, and it is what decides whether the panel pitches the
    * capability or reports on a read that already ran.
    */
@@ -92,7 +92,7 @@ function stubDeepRead(options: {
       )();
     }
     if (pathname.endsWith("/site-reads/latest")) {
-      return (options.latest ?? (() => new Response(null, { status: 404 })))();
+      return (options.latest ?? (() => new Response(null, { status: 204 })))();
     }
     if (pathname.includes("/site-reads/")) {
       return (options.report ?? (() => jsonResponse(runningRead)))(pathname);
@@ -333,7 +333,7 @@ describe("company-360 deep read", () => {
     // a panel with no report to show promises something that never arrives.
     //
     // The lookup is held OPEN rather than failed, because that is the state
-    // that tells the two rules apart: a settled failure and a settled 404 both
+    // that tells the two rules apart: a settled failure and a settled 204 both
     // leave the query idle, and only a request still in flight distinguishes
     // "no read exists" from "we have not asked yet".
     let answerLatest: (() => void) | undefined;
@@ -343,7 +343,7 @@ describe("company-360 deep read", () => {
     stubDeepRead({
       latest: async () => {
         await held;
-        return new Response(null, { status: 404 });
+        return new Response(null, { status: 204 });
       },
     });
     render(<CompanyScreen id="o-1" />);

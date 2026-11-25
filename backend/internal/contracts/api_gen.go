@@ -84682,6 +84682,15 @@ type ClaimRecordParams struct {
 	IfMatch *IfMatch `json:"If-Match,omitempty"`
 }
 
+// GetEditAccessRequestParams defines parameters for GetEditAccessRequest.
+type GetEditAccessRequestParams struct {
+	// Prefer An RFC 7240 preference. `absent=204` asks for `204 No Content` instead of `404` when the
+	// read finds nothing yet. The token is matched without case, and every other preference is
+	// ignored. A row the caller may not see still answers `404`. Every answer of an operation
+	// that takes this header carries `Vary: Prefer`.
+	Prefer *PreferAbsent `json:"Prefer,omitempty"`
+}
+
 // RequestEditAccessParams defines parameters for RequestEditAccess.
 type RequestEditAccessParams struct {
 	// IdempotencyKey Client-supplied key making a mutation safe to retry — an update exactly as much as a
@@ -104472,7 +104481,7 @@ type ServerInterface interface {
 	WithdrawEditAccessRequest(w http.ResponseWriter, r *http.Request, recordType string, id Id)
 	// The caller's open request for edit access to this record.
 	// (GET /records/{record_type}/{id}/edit-access-request)
-	GetEditAccessRequest(w http.ResponseWriter, r *http.Request, recordType string, id Id)
+	GetEditAccessRequest(w http.ResponseWriter, r *http.Request, recordType string, id Id, params GetEditAccessRequestParams)
 	// Ask a record's owner for edit access.
 	// (POST /records/{record_type}/{id}/edit-access-request)
 	RequestEditAccess(w http.ResponseWriter, r *http.Request, recordType string, id Id, params RequestEditAccessParams)
@@ -110697,7 +110706,7 @@ func (_ Unimplemented) WithdrawEditAccessRequest(w http.ResponseWriter, r *http.
 
 // The caller's open request for edit access to this record.
 // (GET /records/{record_type}/{id}/edit-access-request)
-func (_ Unimplemented) GetEditAccessRequest(w http.ResponseWriter, r *http.Request, recordType string, id Id) {
+func (_ Unimplemented) GetEditAccessRequest(w http.ResponseWriter, r *http.Request, recordType string, id Id, params GetEditAccessRequestParams) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -153469,8 +153478,32 @@ func (siw *ServerInterfaceWrapper) GetEditAccessRequest(w http.ResponseWriter, r
 
 	r = r.WithContext(ctx)
 
+	// Parameter object where we will unmarshal all parameters from the context
+	var params GetEditAccessRequestParams
+
+	headers := r.Header
+
+	// ------------- Optional header parameter "Prefer" -------------
+	if valueList, found := headers[http.CanonicalHeaderKey("Prefer")]; found {
+		var Prefer PreferAbsent
+		n := len(valueList)
+		if n != 1 {
+			siw.ErrorHandlerFunc(w, r, &TooManyValuesForParamError{ParamName: "Prefer", Count: n})
+			return
+		}
+
+		err = runtime.BindStyledParameterWithOptions("simple", "Prefer", valueList[0], &Prefer, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "string", Format: ""})
+		if err != nil {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "Prefer", Err: err})
+			return
+		}
+
+		params.Prefer = &Prefer
+
+	}
+
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.GetEditAccessRequest(w, r, recordType, id)
+		siw.Handler.GetEditAccessRequest(w, r, recordType, id, params)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {

@@ -338,14 +338,13 @@ export function useCompanyRead({
   const proposal = useQuery({
     queryKey: ["onboarding-company-proposal", readId, promptLocale],
     enabled: proposalArmed && proposalJoin === "ready",
-    queryFn: async (): Promise<Proposal> => {
+    queryFn: async (): Promise<Proposal | null> => {
       // The open questions' copy speaks the user's language; option values
       // stay locale-invariant server-side.
-      return unwrap(
-        await api.GET("/onboarding/company/proposal", {
-          params: { query: { locale: promptLocale } },
-        }),
-      );
+      const answer = await api.GET("/onboarding/company/proposal", {
+        params: { query: { locale: promptLocale } },
+      });
+      return answer.response.status === 204 ? null : (unwrap(answer) ?? null);
     },
   });
 
@@ -379,8 +378,13 @@ export function useCompanyRead({
       return;
     }
     // A failed wizard-state join means the proposal can only answer for a
-    // PREVIOUS read; the snapshot fallback is the honest source then.
-    if (proposal.isError || proposalJoin === "failed") {
+    // PREVIOUS read; the snapshot fallback is the honest source then, as it is
+    // when the server has no proposal yet (null).
+    if (
+      proposal.isError ||
+      proposalJoin === "failed" ||
+      proposal.data === null
+    ) {
       pendingTerminal.current = null;
       dispatch({
         type: "NARRATION",

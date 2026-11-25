@@ -32,7 +32,7 @@ function installAppStub() {
     }
     // The shell's brand block draws the installation's OWN company, read off
     // GET /company. The list-shaped fallback below answers that read with a
-    // page envelope, which is not a 404 — so the app reads the installation as
+    // page envelope, which is not a 204 — so the app reads the installation as
     // described, the block renders it, and the name it draws with is missing.
     // A story of the authenticated app is a story of a described installation,
     // so it says which company that is.
@@ -58,7 +58,7 @@ function installAppStub() {
     // The installation's own company, for the same reason: the brand block
     // draws a monogram from `display_name`, and the list-shaped fallback is an
     // OBJECT — truthy, so the shell reads it as a saved profile and then splits
-    // a name that is not there. A 404 is the other real answer here and the
+    // a name that is not there. A 204 is the other real answer here and the
     // wrong one for this story: it is the signal that nobody has onboarded, and
     // the gate would send this frame to the wizard.
     if (url.endsWith("/v1/company")) {

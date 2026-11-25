@@ -63,6 +63,7 @@ function dealSummaryQuery(dealId: string) {
         params: { path: { id: dealId } },
       });
       if (error) {
+        // absent-404: a record out of reach or gone draws as nothing to show.
         if (response.status === 403 || response.status === 404) {
           return null;
         }
@@ -92,6 +93,7 @@ function useDealCompany(companyId: string | null | undefined) {
         params: { path: { id: companyId } },
       });
       if (error) {
+        // absent-404: a record out of reach or gone draws as nothing to show.
         if (response.status === 403 || response.status === 404) {
           return null;
         }

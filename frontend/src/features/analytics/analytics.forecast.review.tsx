@@ -42,13 +42,11 @@ export function ForecastReview({
         "/forecast/assurance",
         {},
       );
-      // 404 is this endpoint's ANSWER, not its failure: the contract says "no
-      // run has completed yet. A fresh installation has not been checked."
-      // Thrown as a problem it reached the error gate and the panel read
-      // "Couldn't load this view. not found" — which tells a reader the screen
-      // is broken when what happened is that nothing has looked yet, and those
-      // are opposite instructions about whether to trust the numbers above.
-      if (response.status === 404) {
+      // 204 is this endpoint's ANSWER, not its failure: no run has completed
+      // yet. Shown as an error, it would tell the reader the screen is broken
+      // when nothing has looked yet, an opposite instruction about whether to
+      // trust the numbers above.
+      if (response.status === 204) {
         return null;
       }
       if (error) {
@@ -62,7 +60,7 @@ export function ForecastReview({
     <QueryGate query={assurance} pendingLabel={t("review.title")}>
       {(run) =>
         run === null ? (
-          // 404 here is a workspace nobody has started, not a wait: the nightly
+          // No run here is a workspace nobody has started, not a wait: the nightly
           // pass skips it until somebody does. So the panel ASKS, with the
           // preview that makes the ask answerable.
           <FirstCheck title={t("review.title")} />

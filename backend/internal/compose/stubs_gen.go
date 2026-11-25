@@ -3743,7 +3743,7 @@ func (stubs) WithdrawEditAccessRequest(w nethttp.ResponseWriter, r *nethttp.Requ
 	httperr.NotImplemented(w, r, "WithdrawEditAccessRequest")
 }
 
-func (stubs) GetEditAccessRequest(w nethttp.ResponseWriter, r *nethttp.Request, recordType string, id crmcontracts.Id) {
+func (stubs) GetEditAccessRequest(w nethttp.ResponseWriter, r *nethttp.Request, recordType string, id crmcontracts.Id, params crmcontracts.GetEditAccessRequestParams) {
 	httperr.NotImplemented(w, r, "GetEditAccessRequest")
 }
 

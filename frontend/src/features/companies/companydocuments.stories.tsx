@@ -105,11 +105,11 @@ function Documents({
     // that left /me unrouted would draw the refused branch it is not named for.
     "GET /me": meRoute(allow, { seat }),
     "GET /deals": () => jsonResponse({ data: [deal], page }),
-    // 404 is the honest "nobody has read this file yet", which is the state a
+    // 204 is the honest "nobody has read this file yet", which is the state a
     // freshly added document is in and the one the offer to read is drawn
     // from — not a failure, and not something the panel can invent.
     "GET /attachments/d-4/extraction": () =>
-      jsonResponse({ title: "Not Found", status: 404 }, 404),
+      new Response(null, { status: 204 }),
   });
   return (
     <StoryProviders>

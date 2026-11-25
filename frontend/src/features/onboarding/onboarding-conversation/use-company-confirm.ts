@@ -89,7 +89,7 @@ type CompanyConfirmArgs = Readonly<{
   selectedFactKeys: string[];
   prevSnapshot: Readonly<{ current: CompanySiteRead | null }>;
   siteRead: UseQueryResult<CompanySiteRead, Error>;
-  proposal: UseQueryResult<Proposal, Error>;
+  proposal: UseQueryResult<Proposal | null, Error>;
   answers: readonly ClarifyAnswer[];
   t: ReturnType<typeof useT>;
 }>;
@@ -141,7 +141,7 @@ export function useCompanyConfirm({
       submitConfirm({
         values: draftRef.current.values,
         read: prevSnapshot.current,
-        proposal: proposal.data,
+        proposal: proposal.data ?? undefined,
         selectedFactKeys,
         answers,
         onSubmitted: recovery.recordSubmitted,

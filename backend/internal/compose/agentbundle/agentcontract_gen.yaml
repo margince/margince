@@ -19684,12 +19684,15 @@ paths:
       operationId: getEditAccessRequest
       security: [{bearerAuth: []}]
       summary: The caller's open request for edit access to this record.
+      parameters:
+        - $ref: '#/components/parameters/PreferAbsent'
       responses:
         '200':
           description: The caller's open request.
           content:
             application/json:
               schema: {$ref: '#/components/schemas/EditAccessRequest'}
+        '204': {$ref: '#/components/responses/NothingYet'}
         '403': {$ref: '#/components/responses/Forbidden'}
         '404': {$ref: '#/components/responses/NotFound'}
         '422': {$ref: '#/components/responses/ValidationError'}

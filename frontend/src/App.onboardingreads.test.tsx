@@ -105,7 +105,7 @@ describe("the reads of a member held on onboarding", () => {
           return json({ ...wizardRow("voice"), ...Object(body), version });
         }
         if (path === "/onboarding/state") {
-          return row === null ? json({ code: "not_found" }, 404) : json(row);
+          return row === null ? new Response(null, { status: 204 }) : json(row);
         }
         // Home fails each of its reads on its own card rather than on a fixture.
         if (path === "/worklist" || SIDE_READS.includes(path)) {

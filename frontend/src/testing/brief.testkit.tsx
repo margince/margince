@@ -84,7 +84,7 @@ const DEFAULTS: Routes = {
   "GET /finance/customer-payments": () => jsonResponse(noCustomerPayments),
   "GET /link-suggestions": () => jsonResponse({ data: [] }),
   "GET /me": () => jsonResponse(meFixture({ allow: READS_RECORDS })),
-  "GET /brief": () => jsonResponse({ title: "Not Found" }, 404),
+  "GET /brief": () => new Response(null, { status: 204 }),
   // With no run yet Home draws its first-day panel, which reads the overnight
   // answer and the setup steps this reader can act on.
   "GET /me/agent-grants": () => jsonResponse({ data: [] }),
@@ -134,18 +134,11 @@ const DEFAULTS: Routes = {
       sources_unavailable: [],
     }),
   // The plan panel reads `commitments` off this, which the contract marks
-  // required. The generic empty page carries none, so an unrouted read would
-  // fail the panel in a way no server could produce — the same reason
-  // /worklist is answered above. 404 is the honest default: most screens under
-  // test have not started a week.
-  // The plan panel reads `commitments` off this, which the contract marks
   // required, so an unrouted read fails it in a way no server could produce —
   // the same reason /worklist is answered above.
   //
-  // A STARTED-BUT-EMPTY week rather than a 404: the shape is what the panel
-  // needs, and a 404 puts every screen that merely mounts the panel through an
-  // error path, which moved the timing of nine tests in screens with nothing to
-  // do with planning.
+  // A STARTED-BUT-EMPTY week rather than none, so a screen that merely mounts
+  // the panel does not draw its offer to start one.
   "GET /weekly-plans/current": () =>
     jsonResponse({
       id: "00000000-0000-0000-0000-000000000001",
@@ -156,12 +149,11 @@ const DEFAULTS: Routes = {
   // The archive's index, as the weeks this rep has a review for. `weeks` is
   // what the hook reads; the generic empty page carries none.
   "GET /weekly-reviews": () => jsonResponse({ weeks: [] }),
-  // 404 and not an empty body: a rep whose first Monday has not come round has
-  // no review, and the hook reads that status as "no review yet" rather than as
-  // a failure. An empty 200 would reach the branch that checks
-  // `local_week_start` instead, which is the same answer by a path no server
-  // takes.
-  "GET /weekly-reviews/latest": () => jsonResponse({ title: "Not Found" }, 404),
+  // 204 and not an empty 200: a rep whose first Monday has not come round has
+  // no review, and the hook reads that status as "no review yet". An empty 200
+  // would reach the branch that checks `local_week_start` instead, which is the
+  // same answer by a path no server takes.
+  "GET /weekly-reviews/latest": () => new Response(null, { status: 204 }),
   // Both answer `{ data, page }`, which the empty page already is — declared
   // anyway, because the point of this table is that every read Brief makes is
   // one somebody chose to answer. A read that arrives by accident and is served

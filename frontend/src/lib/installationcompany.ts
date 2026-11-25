@@ -23,8 +23,8 @@ import { useMe } from "./session";
 type CompanyProfile = components["schemas"]["CompanyProfile"];
 
 // useCompany reads the installation's own company, or null when it has not
-// saved one yet: GET /company 404s until a human does, and that 404 IS the
-// onboarding signal — there is no separate "onboarded" flag that could drift
+// saved one yet: GET /company answers 204 until a human does, and that 204 IS
+// the onboarding signal — there is no separate "onboarded" flag that could drift
 // from the records it claims to describe. The app shell's gate, the journey
 // and the settings card share it, so one cache entry answers all of them.
 // The rail's brand block does not: it reads /me's installation_brand, which
@@ -34,11 +34,9 @@ export const companyOptions = queryOptions({
   queryKey: ["company"],
   queryFn: async (): Promise<CompanyProfile | null> => {
     const { data, error, response } = await api.GET("/company");
-    if (error) {
-      if (response.status === 404) return null;
-      throwProblem(error);
-    }
-    return data;
+    if (response.status === 204) return null;
+    if (error) throwProblem(error);
+    return data ?? null;
   },
 });
 

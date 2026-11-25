@@ -150,7 +150,7 @@ export function VatMark({
   const { locale } = useLocale();
   const zone = useViewerZone();
 
-  // 404 is the honest "never consulted", and leaves the mark saying so rather
+  // 204 is the honest "never consulted", and leaves the mark saying so rather
   // than reporting a failure nobody caused.
   const check = useQuery({
     queryKey: vatCheckKey(companyId),
@@ -159,7 +159,7 @@ export function VatMark({
         "/companies/{id}/vat-check",
         { params: { path: { id: companyId } } },
       );
-      if (response.status === 404) {
+      if (response.status === 204) {
         return null;
       }
       if (error) {

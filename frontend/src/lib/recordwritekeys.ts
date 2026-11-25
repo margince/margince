@@ -1,18 +1,20 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import type {
-  InvalidateQueryFilters,
-  QueryClient,
-  QueryKey,
+import {
+  type InvalidateQueryFilters,
+  partialMatchKey,
+  type QueryClient,
+  type QueryKey,
 } from "@tanstack/react-query";
 import {
   dealRecordKeys,
   dealStageHistoryKey,
   derivedRecordKeys,
+  recordListsKey,
 } from "./activitykeys";
 import type { EntityKind } from "./entity";
-import { leadWriteKeys } from "./leadkeys";
+import { leadScoreKey, leadWriteKeys } from "./leadkeys";
 
 // Which cached reads a write to ONE record makes stale, by record kind.
 //
@@ -86,6 +88,39 @@ export function invalidateRecord(
   return Promise.all(
     filters.map((filter) => client.invalidateQueries(filter)),
   ).then(() => undefined);
+}
+
+// The reads the server refuses once a record is archived or merged away.
+const RETIRED_REFUSED_KEYS: Partial<
+  Record<EntityKind, (id: string) => QueryKey[]>
+> = {
+  contact: (id) => [["contact360", id], recordListsKey("contact", id)],
+  lead: (id) => [leadScoreKey(id), recordListsKey("lead", id)],
+};
+
+// invalidateRecord for a record just archived or merged away, less the reads
+// the server now refuses. Their readers still hold the live row in the beat
+// after the write, so a refresh then would only fail; they stop asking once
+// the archived row arrives.
+export async function invalidateRetiredRecord(
+  client: QueryClient,
+  kind: EntityKind,
+  id: string,
+): Promise<void> {
+  const refused = RETIRED_REFUSED_KEYS[kind]?.(id) ?? [];
+  await Promise.all(
+    refused.map((queryKey) => client.cancelQueries({ queryKey })),
+  );
+  const askable = (queryKey: QueryKey) =>
+    !refused.some((key) => partialMatchKey(queryKey, key));
+  await Promise.all(
+    recordWriteKeys(kind, id).map((queryKey) =>
+      client.invalidateQueries({
+        queryKey,
+        predicate: (query) => askable(query.queryKey),
+      }),
+    ),
+  );
 }
 
 export function invalidateCompany(

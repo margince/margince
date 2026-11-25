@@ -89,7 +89,7 @@ function report(overrides: Partial<Report>): Report {
  *
  * `stored` is the reading this activity already has, served by BOTH the latest
  * read and the read-by-id — one reading behind two doors, which is what the
- * card joins them into. Absent, the latest read answers 404: the honest "never
+ * card joins them into. Absent, the latest read answers 204: the honest "never
  * read", and the state a rep meets on a transcript nobody has looked at.
  */
 function stubReads(options: {
@@ -142,7 +142,7 @@ function stubReads(options: {
         }
         return options.stored
           ? jsonResponse(options.stored)
-          : jsonResponse({}, 404);
+          : new Response(null, { status: 204 });
       }
       return (
         options.read ?? (() => jsonResponse(options.stored ?? report({})))

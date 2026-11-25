@@ -227,10 +227,10 @@ const routes: RouteMap = {
     run("open-deals-per-company", companyRows),
   "GET /reports/pipeline-current/derivation": () => jsonResponse(derivation),
   // The Forecast section's own reads: the period's readings, no check run yet
-  // (the assurance read answers 404, its ordinary first state), and the size
+  // (the assurance read answers 204, its ordinary first state), and the size
   // the first check would have.
   "GET /forecast": () => jsonResponse(forecastReadings),
-  "GET /forecast/assurance": () => jsonResponse({}, 404),
+  "GET /forecast/assurance": () => new Response(null, { status: 204 }),
   "GET /forecast/assurance/preview": () =>
     jsonResponse({
       started: false,
