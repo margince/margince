@@ -31,7 +31,7 @@ func claudeRate(ctx context.Context, t *testing.T, conn *pgx.Conn, model string)
 }
 
 // An installed sheet gains the two Claude 5.5 rows the seed carries, Haiku with
-// its 100k band; a price an admin set and an empty sheet are left as they are.
+// its 100k band. A price an admin set and an empty sheet are left as they are.
 func TestAnInstalledSheetGainsTheSeededClaudeFivePrices(t *testing.T) {
 	dsn, _ := dsns(t)
 	ctx := context.Background()
