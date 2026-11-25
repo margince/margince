@@ -67,3 +67,22 @@ func TestAcceptingATaxedOfferOntoAClosedDealFreezesItsNet(t *testing.T) {
 		t.Fatalf("closed deal = %d (base %d, %s), want the offer's net %d on both", got, base, status, *accepted.NetMinor)
 	}
 }
+
+// A legacy-mode deal that took an accepted taxed offer's net reads that basis,
+// not "unknown". Only legacy-mode deals are read against their offers.
+func TestADealPricedFromATaxedAcceptedOfferReadsTheNetBasis(t *testing.T) {
+	e := Setup(t)
+	pipeline, open, _ := DealFixture(t, e)
+	deal := e.SeedDeal(t, "Net basis", pipeline, open, &e.Rep1)
+
+	taxedOffer(t, e, deal)
+	e.WsExec(t, `UPDATE deal SET commercial_mode = 'legacy' WHERE id = $1`, deal)
+
+	commercial, err := e.Deals.GetDealLines(e.As(e.Rep1, []ids.UUID{e.Team1}, OfferDeskPerms), ids.From[ids.DealKind](deal))
+	if err != nil {
+		t.Fatalf("reading the deal's commercial view: %v", err)
+	}
+	if commercial.AmountBasis == nil || *commercial.AmountBasis != crmcontracts.DealCommercialAmountBasisOfferNet {
+		t.Fatalf("amount basis = %v, want %q", commercial.AmountBasis, crmcontracts.DealCommercialAmountBasisOfferNet)
+	}
+}

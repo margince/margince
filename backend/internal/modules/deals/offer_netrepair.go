@@ -8,6 +8,7 @@ package deals
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"time"
 
@@ -21,9 +22,10 @@ import (
 )
 
 // grossPricedDealsSQL selects the deals whose amount is the gross of their
-// latest accepted offer. Its accept row must say the accept wrote that figure.
-// A figure someone typed by hand leaves no such row.
-// A deal in lines mode takes its value from its lines.
+// latest accepted offer, written by that offer's accept and by nobody since.
+// The anchor is the deal audit row the accept wrote for the re-price. A later
+// deal audit row that changed the amount means someone retyped it, even to the
+// same figure. A deal in lines mode takes its value from its lines.
 const grossPricedDealsSQL = `
 	FROM deal d
 	JOIN LATERAL (
@@ -38,20 +40,26 @@ const grossPricedDealsSQL = `
 	  AND d.amount_minor = o.gross_minor
 	  AND EXISTS (
 	      SELECT 1 FROM audit_log a
-	       WHERE a.entity_type = 'offer' AND a.entity_id = o.id AND a.action = 'update'
-	         AND a.after ->> 'status' = 'accepted'
-	         AND a.after -> 'deal_amount_minor' = to_jsonb(o.gross_minor))`
+	       WHERE a.entity_type = 'deal' AND a.entity_id = d.id AND a.action = 'update'
+	         AND a.evidence ->> 'offer_id' = o.id::text
+	         AND a.after -> 'amount_minor' = to_jsonb(o.gross_minor)
+	         AND NOT EXISTS (
+	             SELECT 1 FROM audit_log later
+	              WHERE later.entity_type = 'deal' AND later.entity_id = d.id
+	                AND later.after ? 'amount_minor'
+	                AND (later.occurred_at, later.id) > (a.occurred_at, a.id)))`
 
 // NetCorrection is one deal re-priced from its accepted offer's gross to the net.
+// Every field is read under the deal's lock, so the owner and name are the
+// ones the deal has when it is corrected.
 type NetCorrection struct {
-	Deal       ids.DealID
-	Name       string
-	Owner      *ids.UUID
-	Currency   string
-	FromMinor  int64
-	ToMinor    int64
-	offerID    ids.OfferID
-	grossMinor int64
+	Deal      ids.DealID
+	Name      string
+	Owner     *ids.UUID
+	Currency  string
+	FromMinor int64
+	ToMinor   int64
+	offerID   ids.OfferID
 }
 
 // NetCorrectionPage is one inspected page: the deals looked at, and the ones
@@ -71,63 +79,70 @@ func (s *Store) RepriceFromAcceptedOfferNetTx(ctx context.Context, tx pgx.Tx, af
 	if err := auth.RequireSystem(ctx); err != nil {
 		return NetCorrectionPage{}, err
 	}
-	rows, err := tx.Query(ctx, `
-		SELECT d.id, d.name, d.owner_id, d.currency, d.amount_minor, o.id, o.net_minor, o.gross_minor `+
-		grossPricedDealsSQL+` AND d.id > $1
-		ORDER BY d.id LIMIT $2`, after, limit)
+	rows, err := tx.Query(ctx, `SELECT d.id `+grossPricedDealsSQL+` AND d.id > $1 ORDER BY d.id LIMIT $2`, after, limit)
 	if err != nil {
 		return NetCorrectionPage{}, fmt.Errorf("deals: listing gross-priced deals: %w", err)
 	}
-	candidates, err := pgx.CollectRows(rows, func(row pgx.CollectableRow) (NetCorrection, error) {
-		var c NetCorrection
-		err := row.Scan(&c.Deal, &c.Name, &c.Owner, &c.Currency, &c.FromMinor, &c.offerID, &c.ToMinor, &c.grossMinor)
-		return c, err
-	})
+	candidates, err := pgx.CollectRows(rows, pgx.RowTo[ids.DealID])
 	if err != nil {
 		return NetCorrectionPage{}, fmt.Errorf("deals: reading gross-priced deals: %w", err)
 	}
 	var page NetCorrectionPage
-	for _, c := range candidates {
-		page.Scanned = append(page.Scanned, c.Deal.UUID)
-		done, err := s.repriceOneToNet(ctx, tx, &c)
+	for _, id := range candidates {
+		page.Scanned = append(page.Scanned, id.UUID)
+		corrected, done, err := s.repriceOneToNet(ctx, tx, id)
 		if err != nil {
 			return NetCorrectionPage{}, err
 		}
 		if done {
-			page.Corrected = append(page.Corrected, c)
+			page.Corrected = append(page.Corrected, corrected)
 		}
 	}
 	return page, nil
 }
 
-// repriceOneToNet re-reads the deal under its lock, because someone may have
-// retyped the amount since the page was listed. It answers whether it wrote.
-func (s *Store) repriceOneToNet(ctx context.Context, tx pgx.Tx, c *NetCorrection) (bool, error) {
+// repriceOneToNet locks the deal, then reads everything it acts on under that
+// lock. Someone may have reassigned, retyped or re-priced the deal since the
+// page was listed. The rule is asked again about the deal as it is now.
+// It answers whether it wrote.
+func (s *Store) repriceOneToNet(ctx context.Context, tx pgx.Tx, id ids.DealID) (NetCorrection, bool, error) {
+	lock, err := storekit.LockRow(ctx, tx, dealTable, id.UUID, storekit.IncludeArchived)
+	if err != nil {
+		return NetCorrection{}, false, fmt.Errorf("deals: locking deal %s for its net value: %w", id, err)
+	}
+	if err := auth.EnsureWritableLive(ctx, tx, dealTable, id.UUID); err != nil {
+		return NetCorrection{}, false, err
+	}
+	c := NetCorrection{Deal: id}
 	var status string
 	var closedAt *time.Time
 	var amount *int64
-	lock, err := storekit.LockRowReading(ctx, tx, dealTable, c.Deal.UUID, storekit.IncludeArchived,
-		"status, closed_at, amount_minor", &status, &closedAt, &amount)
+	var gross int64
+	err = tx.QueryRow(ctx, `
+		SELECT d.name, d.owner_id, d.currency, d.status, d.closed_at, d.amount_minor, o.id, o.net_minor, o.gross_minor `+
+		grossPricedDealsSQL+` AND d.id = $1`, id).
+		Scan(&c.Name, &c.Owner, &c.Currency, &status, &closedAt, &amount, &c.offerID, &c.ToMinor, &gross)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return NetCorrection{}, false, nil
+	}
 	if err != nil {
-		return false, fmt.Errorf("deals: locking deal %s for its net value: %w", c.Deal, err)
+		return NetCorrection{}, false, fmt.Errorf("deals: re-reading deal %s under its lock: %w", id, err)
 	}
-	if amount == nil || *amount != c.grossMinor {
-		return false, nil
-	}
+	c.FromMinor = gross
 	p := storekit.NewPatch()
 	p.Set(amountField, amount, c.ToMinor)
 	if DealStatus(status) != DealOpen {
-		if err := s.freezeBaseRate(ctx, tx, p, openapi_types.UUID(c.Deal.UUID), c.Currency, c.ToMinor, *closedAt); err != nil {
-			return false, fmt.Errorf("deals: re-freezing closed deal %s on its net value: %w", c.Deal, err)
+		if err := s.freezeBaseRate(ctx, tx, p, openapi_types.UUID(id.UUID), c.Currency, c.ToMinor, *closedAt); err != nil {
+			return NetCorrection{}, false, fmt.Errorf("deals: re-freezing closed deal %s on its net value: %w", id, err)
 		}
 	}
 	if err := applyDealPatchLocked(ctx, tx, p, lock); err != nil {
-		return false, fmt.Errorf("deals: pricing deal %s at its offer's net: %w", c.Deal, err)
+		return NetCorrection{}, false, fmt.Errorf("deals: pricing deal %s at its offer's net: %w", id, err)
 	}
-	if err := auditDealRepricing(ctx, tx, c.Deal, c.offerID, p.Before(), p.After()); err != nil {
-		return false, err
+	if err := auditDealRepricing(ctx, tx, id, c.offerID, p.Before(), p.After()); err != nil {
+		return NetCorrection{}, false, err
 	}
-	return true, nil
+	return c, true, nil
 }
 
 // EstimateGrossPricedDeals counts, up to limit+1, the deals a correction

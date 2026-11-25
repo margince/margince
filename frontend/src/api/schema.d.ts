@@ -22675,9 +22675,10 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * Record the buyer's acceptance — syncs the deal's amount from the offer's gross.
+         * Record the buyer's acceptance — syncs the deal's amount from the offer's net.
          * @description sent → accepted; sets `accepted_at`, syncs `deal.amount_minor`/`currency` from the
-         *     accepted offer's `gross_minor` (the offer becomes the deal's value source) and emits
+         *     accepted offer's `net_minor`, the figure without tax, because a deal's value never
+         *     carries tax (the offer becomes the deal's value source), and emits
          *     `offer.accepted`. An offer whose `valid_until` day has passed is refused
          *     422 `offer_lapsed`, since accepting it would re-price the deal from a lapsed quote.
          */
@@ -41499,10 +41500,10 @@ export interface components {
              */
             mode: "estimate" | "lines" | "legacy";
             /**
-             * @description What the deal's amount means. Null while the deal has no amount.
+             * @description What the deal's amount means. `offer_net` is an accepted offer's figure without tax. `offer_gross` is an older amount that took an accepted offer's gross with tax. Null while the deal has no amount.
              * @enum {string|null}
              */
-            amount_basis?: "lines_net_committed" | "offer_gross" | "estimate" | "unknown" | null;
+            amount_basis?: "lines_net_committed" | "offer_net" | "offer_gross" | "estimate" | "unknown" | null;
             /**
              * Format: int64
              * @description Counts the accepted changes to the lines. Send it back as `expected_revision`.
