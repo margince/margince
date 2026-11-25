@@ -153,7 +153,7 @@ BEGIN
   -- statement that repeats its WHERE.
   INSERT INTO team (name)
   VALUES ('DACH Sales')
-  ON CONFLICT (name) WHERE archived_at IS NULL DO NOTHING;
+  ON CONFLICT (lower(btrim(name))) WHERE archived_at IS NULL DO NOTHING;
 
   -- Live only, for the same reason the upsert above says archived_at IS NULL: the
   -- name is unique among live rows now, so a name alone can match an archived team

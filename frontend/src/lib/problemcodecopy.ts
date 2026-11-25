@@ -111,6 +111,7 @@ export const PROBLEM_CODE_COPY = new Map<string, MessageKey>([
   // A name or membership clash a screen words as its own field's refusal.
   ["pipeline_name_taken", "pipeline.nameTaken"],
   ["pipeline_default_taken", "pipeline.defaultTaken"],
+  ["stage_name_taken", "stage.nameTaken"],
   ["custom_field_label_taken", "cf.labelTaken"],
   ["already_on_list", "lists.alreadyOnShortlist"],
   // The currency rate refusals name wire fields and the server's digit limits.
