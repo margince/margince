@@ -25,6 +25,7 @@ import (
 	"go/ast"
 	"go/parser"
 	"go/token"
+	"path/filepath"
 	"sort"
 	"strconv"
 	"strings"
@@ -186,30 +187,9 @@ func calledMethodIn(call *ast.CallExpr, names map[string]bool) bool {
 const noOpProbeFile = "internal/compose/integration/nosavechanges_http_integration_test.go"
 
 // unprobedSaveRoutes ratifies the versioned save routes no HTTP probe sends a
-// save of the stored values yet, keyed by `METHOD path`. The follow-up names
-// them all, so the register shrinks as each is probed or ruled out.
+// save of the stored values, keyed by `METHOD path`, each with why.
 var unprobedSaveRoutes = gatekit.Waive(map[string]string{
-	"PATCH /activities/{id}/audience":                 "margince#8133 probes it",
-	"PATCH /companies/{id}/facts/{factKey}":           "margince#8133 probes it",
-	"PATCH /companies/{id}/profile-fields/{field}":    "margince#8133 probes it",
-	"PATCH /custom-fields/{id}":                       "margince#8133 probes it",
-	"PATCH /deal-rooms/{id}":                          "margince#8133 probes it",
-	"PATCH /deal-rooms/{id}/documents/{documentId}":   "margince#8133 probes it",
-	"PATCH /provider-connections/{provider}":          "held by TestAConfigurationSaveOfTheStoredSettingsChangesNothing at the store, which needs a registered provider the HTTP harness lacks",
-	"PATCH /roles/{key}":                              "margince#8133 probes it",
-	"PATCH /roles/{key}/objects/{object}":             "margince#8133 probes it",
-	"PATCH /scheduled-sends/{id}":                     "margince#8133 probes it",
-	"PATCH /signals/{id}":                             "margince#8133 probes it",
-	"PATCH /stages/{id}":                              "margince#8133 probes it",
-	"PATCH /stages/{id}/exit-criteria/{criterion_id}": "margince#8133 probes it",
-	"PATCH /views/{id}":                               "margince#8133 probes it",
-	"PATCH /voice-profiles/{id}":                      "margince#8133 probes it",
-	"PATCH /voice-profiles/{id}/sources/{sourceId}":   "margince#8133 probes it",
-	"PATCH /automations/{id}":                         "held by the automation store tests at the store; margince#8133 adds the HTTP probe",
-	"PATCH /offers/{id}":                              "margince#8133 probes it",
-	"PATCH /analytics/initiatives/{id}":               "margince#8133 probes it",
-	"PUT /mail-drafts":                                "margince#8133 probes it",
-	"PUT /pipelines/{id}/stage-order":                 "margince#8133 probes it",
+	"PATCH /provider-connections/{provider}": "held by TestAConfigurationSaveOfTheStoredSettingsChangesNothing at the store, which needs a registered provider the HTTP harness lacks",
 })
 
 // TestEveryVersionedSaveRouteIsProbedForANoOp derives the client save routes
@@ -255,19 +235,15 @@ func TestEveryVersionedSaveRouteIsProbedForANoOp(t *testing.T) {
 }
 
 // noOpProbedRoutesFromSource reads the probe table out of the integration test
-// file, and checks each value names a test function declared beside it.
+// file, and checks each value names a test function declared in that package.
+// The probes outgrow one file, so any integration test file there may hold one.
 func noOpProbedRoutesFromSource(t *testing.T) map[string]string {
 	t.Helper()
 	file, err := parser.ParseFile(token.NewFileSet(), noOpProbeFile, nil, 0)
 	if err != nil {
 		t.Fatalf("reading the probe table: %v", err)
 	}
-	declared := map[string]bool{}
-	for _, decl := range file.Decls {
-		if fn, ok := decl.(*ast.FuncDecl); ok {
-			declared[fn.Name.Name] = true
-		}
-	}
+	declared := integrationTestsBeside(t, filepath.Dir(noOpProbeFile))
 	out := map[string]string{}
 	ast.Inspect(file, func(n ast.Node) bool {
 		spec, ok := n.(*ast.ValueSpec)
@@ -290,7 +266,8 @@ func noOpProbedRoutesFromSource(t *testing.T) map[string]string {
 				continue
 			}
 			if !declared[test] {
-				t.Errorf("%s names %s, which %s does not declare", route, test, noOpProbeFile)
+				t.Errorf("%s names %s, which no integration test file in %s declares",
+					route, test, filepath.Dir(noOpProbeFile))
 			}
 			out[route] = test
 		}
@@ -300,6 +277,29 @@ func noOpProbedRoutesFromSource(t *testing.T) map[string]string {
 		t.Fatalf("%s declares no noOpProbedRoutes table, or it is empty", noOpProbeFile)
 	}
 	return out
+}
+
+// integrationTestsBeside names the test functions the integration test files
+// in dir declare.
+func integrationTestsBeside(t *testing.T, dir string) map[string]bool {
+	t.Helper()
+	paths, err := filepath.Glob(filepath.Join(dir, "*_integration_test.go"))
+	if err != nil || len(paths) == 0 {
+		t.Fatalf("finding the integration test files in %s: %v (%d found)", dir, err, len(paths))
+	}
+	declared := map[string]bool{}
+	for _, path := range paths {
+		file, err := parser.ParseFile(token.NewFileSet(), path, nil, 0)
+		if err != nil {
+			t.Fatalf("reading %s: %v", path, err)
+		}
+		for _, decl := range file.Decls {
+			if fn, ok := decl.(*ast.FuncDecl); ok && fn.Recv == nil && strings.HasPrefix(fn.Name.Name, "Test") {
+				declared[fn.Name.Name] = true
+			}
+		}
+	}
+	return declared
 }
 
 func stringLiteralOf(expr ast.Expr) (string, error) {

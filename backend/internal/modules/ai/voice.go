@@ -312,6 +312,10 @@ func (s *VoiceStore) updateVoiceProfile(ctx context.Context, tx pgx.Tx, id ids.U
 	if in.IfVersion != nil && *in.IfVersion != before.Version {
 		return VoiceProfile{}, apperrors.ErrVersionSkew
 	}
+	if (in.PersonalityMD == nil || *in.PersonalityMD == before.PersonalityMD) &&
+		(in.AutoLearningEnabled == nil || *in.AutoLearningEnabled == before.AutoLearningEnabled) {
+		return before, nil
+	}
 	p, err := scanVoiceProfile(tx.QueryRow(ctx, storekit.SQLf(`
 			UPDATE voice_profile SET
 			  personality_md = coalesce($2, personality_md),

@@ -258,6 +258,14 @@ func insertMailDraft(ctx context.Context, tx pgx.Tx, author ids.UUID, anchor Mai
 func replaceMailDraft(ctx context.Context, tx pgx.Tx, author ids.UUID, anchor MailDraftAnchor, content MailDraftContent, expected int64) (MailDraft, error) {
 	args := mailDraftArgs(author, anchor, content)
 	args[fieldVersion], args["editor"] = expected, content.EditorState
+	unchanged, err := draftHoldsContent(ctx, tx, args)
+	if err != nil {
+		return MailDraft{}, err
+	}
+	if unchanged {
+		return scanMailDraft(tx.QueryRow(ctx, `SELECT `+mailDraftColumns+` FROM mail_draft
+ WHERE author_id=@author AND anchor_type=@anchor_type AND anchor_id=@anchor_id`, args))
+	}
 	row := tx.QueryRow(ctx, `
  UPDATE mail_draft
  SET to_addresses=@to,cc_addresses=@cc,bcc_addresses=@bcc,
@@ -284,6 +292,33 @@ func replaceMailDraft(ctx context.Context, tx pgx.Tx, author ids.UUID, anchor Ma
 		return MailDraft{}, err
 	}
 	return saved, nil
+}
+
+// draftHoldsContent reports a draft at the expected version that already holds
+// what the replace would write. The moment comes from the same
+// update_intent_time the replace uses. An agent's draft never holds it, because
+// a human's save is what takes the draft over from the agent.
+func draftHoldsContent(ctx context.Context, tx pgx.Tx, args pgx.NamedArgs) (bool, error) {
+	var holds bool
+	err := tx.QueryRow(ctx, `
+ SELECT NOT m.agent_drafted
+    AND (m.to_addresses, m.cc_addresses, m.bcc_addresses, m.subject, m.body, m.html_body, m.attachment_ids,
+         m.communication_context, m.editor_state, m.override_explanation, m.recipient_countries,
+         m.scheduled_at, m.scheduled_tz, m.scheduled_wall)
+    IS NOT DISTINCT FROM
+        (@to::text[], @cc::text[], @bcc::text[], @subject::text, @body::text, @html::text, @attachments::uuid[],
+         @context::text, @editor::jsonb, @override_explanation::text, @recipient_countries::jsonb, planned.instant, COALESCE(planned.timezone, @zone), planned.wall_time)
+   FROM mail_draft m,
+        public.update_intent_time(m.scheduled_wall, m.scheduled_tz, m.scheduled_at, @wall::text::timestamp, @zone, @at) AS planned
+  WHERE m.author_id = @author AND m.anchor_type = @anchor_type AND m.anchor_id = @anchor_id AND m.version = @version
+    FOR UPDATE OF m`, args).Scan(&holds)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return false, nil
+	}
+	if err != nil {
+		return false, fmt.Errorf("mail draft: comparing the saved content: %w", err)
+	}
+	return holds, nil
 }
 
 // DiscardMailDraft deletes one of the caller's drafts.

@@ -147,6 +147,11 @@ func (s *Service) Update(ctx context.Context, id ids.UUID, patch FieldPatch, ifV
 		if err != nil {
 			return err
 		}
+		before, after := patch.auditDiff(f, next)
+		if moved, _ := storekit.ChangedColumns(before, after); len(moved) == 0 {
+			out, err = readField(ctx, tx, id)
+			return err
+		}
 		if _, err := tx.Exec(ctx,
 			`UPDATE custom_field SET label = $1, show_in_create = $2, reportable = $3, activity_kinds = $4,
 			        label_translations = $5, option_translations = $6 WHERE id = $7`,
@@ -158,7 +163,6 @@ func (s *Service) Update(ctx context.Context, id ids.UUID, patch FieldPatch, ifV
 		if out, err = readField(ctx, tx, id); err != nil {
 			return err
 		}
-		before, after := patch.auditDiff(f, next)
 		if _, err := storekit.Audit(ctx, tx, "update", rbacObject, id, before, after); err != nil {
 			return fmt.Errorf("customfields: audit write: %w", err)
 		}
