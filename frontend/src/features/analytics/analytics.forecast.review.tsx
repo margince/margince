@@ -42,9 +42,9 @@ export function ForecastReview({
         "/forecast/assurance",
         {},
       );
-      // 204 is this endpoint's ANSWER, not its failure: no run has completed
+      // 204 is this endpoint's answer, not its failure: no run has completed
       // yet. Shown as an error, it would tell the reader the screen is broken
-      // when nothing has looked yet, an opposite instruction about whether to
+      // when nothing has looked yet. That is the opposite advice on whether to
       // trust the numbers above.
       if (response.status === 204) {
         return null;

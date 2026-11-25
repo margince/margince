@@ -378,8 +378,8 @@ export function useCompanyRead({
       return;
     }
     // A failed wizard-state join means the proposal can only answer for a
-    // PREVIOUS read; the snapshot fallback is the honest source then, as it is
-    // when the server has no proposal yet (null).
+    // previous read. The snapshot fallback is the source then, as it is when
+    // the server has no proposal yet (null).
     if (
       proposal.isError ||
       proposalJoin === "failed" ||

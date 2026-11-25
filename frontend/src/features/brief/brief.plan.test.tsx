@@ -77,8 +77,8 @@ const OPENS_BUT_CANNOT_EDIT = planner(["read", "create"]);
 
 describe("the week ahead", () => {
   // The rep has not planned yet. A read that created a plan would put an empty
-  // week in everyone's history the first time they opened the page, so the
-  // server answers 204 and the panel offers rather than assumes.
+  // week in everyone's history on first open. So the server answers 204 and
+  // the panel offers a plan.
   it("offers to open a plan when there is none, and opening one is the only write", async () => {
     const calls = stubApi({
       ...KEEPS_A_PLAN,

@@ -45,8 +45,8 @@ const meta: Meta<typeof TranscriptReadCard> = {
 export default meta;
 type Story = StoryObj<typeof TranscriptReadCard>;
 
-// A transcript nobody has read yet: 204 on the latest read is the honest
-// "never tried", and the card offers a first reading and states nothing else.
+// A transcript nobody has read yet. A 204 on the latest read means "never
+// tried", so the card offers a first reading and states nothing else.
 export const NeverRead: Story = {
   render: () => {
     installFetchStub({

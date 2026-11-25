@@ -99,9 +99,9 @@ const RETIRED_REFUSED_KEYS: Partial<
 };
 
 // invalidateRecord for a record just archived or merged away, less the reads
-// the server now refuses. Their readers still hold the live row in the beat
-// after the write, so a refresh then would only fail; they stop asking once
-// the archived row arrives.
+// the server now refuses. Their readers still hold the live row just after
+// the write, so a refresh then would only fail. They stop asking once the
+// archived row arrives.
 export async function invalidateRetiredRecord(
   client: QueryClient,
   kind: EntityKind,

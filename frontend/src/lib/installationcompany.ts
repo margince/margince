@@ -23,10 +23,10 @@ import { useMe } from "./session";
 type CompanyProfile = components["schemas"]["CompanyProfile"];
 
 // useCompany reads the installation's own company, or null when it has not
-// saved one yet: GET /company answers 204 until a human does, and that 204 IS
-// the onboarding signal — there is no separate "onboarded" flag that could drift
-// from the records it claims to describe. The app shell's gate, the journey
-// and the settings card share it, so one cache entry answers all of them.
+// saved one yet. GET /company answers 204 until a human does. That 204 is the
+// onboarding signal, so no separate "onboarded" flag can drift from the
+// records it claims to describe. The app shell's gate, the journey and the
+// settings card share it, so one cache entry answers all of them.
 // The rail's brand block does not: it reads /me's installation_brand, which
 // every seat receives. Only an admin asks: the read is admin-only (contacts'
 // requireAnchorAdministrator), so any other seat's request can only be refused.

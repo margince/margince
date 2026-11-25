@@ -67,14 +67,14 @@ const runningRead = {
 function stubDeepRead(options: {
   post?: () => Response;
   // Takes the polled path so a suite can tell one read's report apart from
-  // another's — the second-read tests need that to prove the NEW read's own
-  // poll drove an assertion, rather than one already in flight before it.
+  // another's. The second-read tests need that to prove the new read's own
+  // poll drove an assertion, not one already in flight before it.
   report?: (pathname: string) => Response;
   /**
-   * What `/site-reads/latest` answers before anything is started. The default is
-   * 204 — this account has never been read — because that is the state the
-   * offer is written for, and it is what decides whether the panel pitches the
-   * capability or reports on a read that already ran.
+   * What `/site-reads/latest` answers before anything is started. The default
+   * is 204 (this account has never been read), the state the offer is written
+   * for. It decides whether the panel pitches the capability or reports on a
+   * read that already ran.
    */
   latest?: () => Response | Promise<Response>;
 }) {
@@ -328,14 +328,14 @@ describe("company-360 deep read", () => {
   });
 
   it("keeps offering while the last-read lookup is still unanswered", async () => {
-    // A pitch is the safe thing to draw when nothing is known yet: one extra
-    // sentence costs a reader nothing, while a "Website research" header over
-    // a panel with no report to show promises something that never arrives.
+    // A pitch is the safe thing to draw when nothing is known yet. One extra
+    // sentence costs a reader nothing. A "Website research" header over a
+    // panel with no report promises something that never arrives.
     //
-    // The lookup is held OPEN rather than failed, because that is the state
-    // that tells the two rules apart: a settled failure and a settled 204 both
-    // leave the query idle, and only a request still in flight distinguishes
-    // "no read exists" from "we have not asked yet".
+    // The lookup is held open rather than failed, because that state tells the
+    // two rules apart. A settled failure and a settled 204 both leave the query
+    // idle. Only a request still in flight separates "no read exists" from "we
+    // have not asked yet".
     let answerLatest: (() => void) | undefined;
     const held = new Promise<void>((resolve) => {
       answerLatest = resolve;

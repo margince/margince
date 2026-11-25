@@ -13,9 +13,9 @@ import {
 } from "../../testing/story-utils";
 import { PartnersScreen, PartnerTab } from "./partners";
 
-// PartnerTab treats GET /companies/{id}/partner's 204 as "not a partner
-// yet" (an honest empty state + setup form), never as an error — the
-// NotYetPartner story exercises that branch directly via a 204 stub.
+// PartnerTab treats a 204 from GET /companies/{id}/partner as "not a partner
+// yet" (an empty state and setup form), never as an error. The NotYetPartner
+// story exercises that branch directly via a 204 stub.
 // PartnersScreen is the flat #/partners list read straight off GET /partners.
 const meta: Meta = {
   title: "Records/Partners",

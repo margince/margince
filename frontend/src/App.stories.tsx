@@ -30,12 +30,12 @@ function installAppStub() {
         { status: 200, headers: { "Content-Type": "application/json" } },
       );
     }
-    // The shell's brand block draws the installation's OWN company, read off
-    // GET /company. The list-shaped fallback below answers that read with a
-    // page envelope, which is not a 204 — so the app reads the installation as
-    // described, the block renders it, and the name it draws with is missing.
-    // A story of the authenticated app is a story of a described installation,
-    // so it says which company that is.
+    // The shell's brand block draws the installation's own company, read off
+    // GET /company. The list-shaped fallback below answers with a page
+    // envelope, not a 204. The app then reads the installation as described,
+    // and the name the block draws with is missing. A story of the
+    // authenticated app is a story of a described installation, so it routes
+    // that company.
     if (url.endsWith("/v1/company")) {
       return new Response(
         JSON.stringify({
@@ -46,9 +46,9 @@ function installAppStub() {
       );
     }
     // The record zone reads the installation's timezone, and the contract makes
-    // that field REQUIRED — so a settled answer without one is a server this
-    // bundle does not match, which the app reports rather than papers over. The
-    // list-shaped fallback below is exactly that answer, so this one is routed.
+    // that field required. A settled answer without one is a server this bundle
+    // does not match, and the app reports it. The list-shaped fallback below is
+    // such an answer, so this read is routed.
     if (url.endsWith("/v1/installation/settings")) {
       return new Response(JSON.stringify({ timezone: "Europe/Berlin" }), {
         status: 200,
@@ -56,11 +56,10 @@ function installAppStub() {
       });
     }
     // The installation's own company, for the same reason: the brand block
-    // draws a monogram from `display_name`, and the list-shaped fallback is an
-    // OBJECT — truthy, so the shell reads it as a saved profile and then splits
-    // a name that is not there. A 204 is the other real answer here and the
-    // wrong one for this story: it is the signal that nobody has onboarded, and
-    // the gate would send this frame to the wizard.
+    // draws a monogram from `display_name`. The list-shaped fallback is a
+    // truthy object, so the shell reads it as a saved profile and splits a name
+    // that is not there. A 204 is wrong for this story: it signals that nobody
+    // has onboarded, and the gate would send this frame to the wizard.
     if (url.endsWith("/v1/company")) {
       return new Response(
         JSON.stringify({

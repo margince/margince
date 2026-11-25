@@ -245,9 +245,9 @@ export const ArchiveOfWeeks: Story = {
   },
 };
 
-// The rep whose first Monday has not come round yet. A 204 is the honest answer
-// here rather than a failure, and the panel says so in a sentence: a page of
-// zeroes would claim a week that was measured and empty.
+// The rep whose first Monday has not come round yet. A 204 is the answer here,
+// not a failure, and the panel says so in a sentence. A page of zeroes would
+// claim a week that was measured and empty.
 export const NoReviewYet: Story = {
   render: panel(weekly(() => new Response(null, { status: 204 }), [])),
 };

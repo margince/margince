@@ -7,12 +7,12 @@ package gates
 
 // A screen that reads a 404 as "nothing here yet" fills the browser console
 // with failed requests on ordinary pages, and JavaScript cannot silence them.
-// A read whose empty state is normal declares `Prefer: absent=204` in the
-// contract and answers 204, and the client sends that preference on every
-// read. So a production source that turns a 404 into null, undefined, an empty
-// list or an absent state is either such a read not yet moved to 204, or a
-// row-scope miss the screen must keep quiet about. The second kind says why in
-// an `absent-404:` comment on one of the three lines above the comparison.
+// A read whose empty state is normal declares `Prefer: absent=204` and answers
+// 204, and the client sends that preference on every read. A source that turns
+// a 404 into null, undefined, an empty list or an absent state is one of two
+// things. It is such a read not yet moved to 204, or a row-scope miss the
+// screen keeps quiet about. The second kind says why in an `absent-404:`
+// comment on one of the three lines above the comparison.
 
 import (
 	"fmt"
@@ -27,7 +27,7 @@ import (
 
 const absent404Frontend = "../frontend/src"
 
-// absent404Reason is the comment that keeps a 404 mapped to "none" on purpose.
+// absent404Reason is the comment that keeps a 404 mapped to "none" with a reason.
 const absent404Reason = "absent-404:"
 
 // absent404Mapping matches a 404 comparison whose branch answers a none shape:
@@ -72,7 +72,7 @@ func TestNoFrontendReadMapsA404ToNoneWithoutAReason(t *testing.T) {
 }
 
 // isProductionFrontendSource is a shipped .ts/.tsx file. Tests, stories and
-// fixtures stub a 404 on purpose and ship nothing.
+// fixtures stub a 404 to test it, and ship nothing.
 func isProductionFrontendSource(path string) bool {
 	if !strings.HasSuffix(path, ".ts") && !strings.HasSuffix(path, ".tsx") {
 		return false

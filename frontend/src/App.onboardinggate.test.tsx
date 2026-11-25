@@ -45,11 +45,11 @@ import "./features/settings/settings";
 // half alone passes while the pair loops.
 
 type InstallShape = Readonly<{
-  /** GET /company; null answers 204 — the profile the gate looks for is absent. */
+  /** GET /company; null answers 204: the profile the gate looks for is absent. */
   companySaved: boolean;
   /**
-   * GET /onboarding/state; false answers 204 — no wizard row has been written
-   * at all, which is what a first deployment has before anyone touches it.
+   * GET /onboarding/state; false answers 204: no wizard row has been written
+   * yet. A first deployment is in that state until someone touches it.
    */
   wizardStarted?: boolean;
 }>;
@@ -302,12 +302,12 @@ describe("the onboarding gate and the wizard's restore", () => {
   });
 });
 
-// The onboarding gate: an installation that has not saved its own company has
-// nothing for any other screen to show, so an admin is sent to the company form
-// (GET /company answers 204 until then). Any other seat implies a described
-// installation, and every full seat is walked through its own journey until
-// that is recorded as finished. The gate lives in the shell, not on the login
-// path, because a live session never passes through login.
+// The onboarding gate: an installation without a saved company has nothing to
+// show on any other screen. An admin goes to the company form (GET /company
+// answers 204 until then). Any other seat implies a described installation.
+// Every full seat walks its own journey until that is recorded as finished.
+// The gate lives in the shell, not on the login path, because a live session
+// never passes through login.
 describe("onboarding gate", () => {
   const mount = () => {
     const client = new QueryClient({

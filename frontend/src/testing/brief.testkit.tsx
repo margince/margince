@@ -151,8 +151,7 @@ const DEFAULTS: Routes = {
   "GET /weekly-reviews": () => jsonResponse({ weeks: [] }),
   // 204 and not an empty 200: a rep whose first Monday has not come round has
   // no review, and the hook reads that status as "no review yet". An empty 200
-  // would reach the branch that checks `local_week_start` instead, which is the
-  // same answer by a path no server takes.
+  // would reach the `local_week_start` branch, a path no server takes.
   "GET /weekly-reviews/latest": () => new Response(null, { status: 204 }),
   // Both answer `{ data, page }`, which the empty page already is — declared
   // anyway, because the point of this table is that every read Brief makes is

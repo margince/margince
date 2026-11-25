@@ -150,8 +150,8 @@ export function VatMark({
   const { locale } = useLocale();
   const zone = useViewerZone();
 
-  // 204 is the honest "never consulted", and leaves the mark saying so rather
-  // than reporting a failure nobody caused.
+  // 204 means "never consulted". The mark says so rather than reporting a
+  // failure nobody caused.
   const check = useQuery({
     queryKey: vatCheckKey(companyId),
     queryFn: async () => {

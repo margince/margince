@@ -120,8 +120,8 @@ export const StatusFromAnOlderBuild: Story = {
   },
 };
 
-/** Never consulted. The server answers 204 and the mark offers the honest
- * absence rather than reporting a failure nobody caused. */
+/** Never consulted. The server answers 204 and the mark shows the absence
+ * rather than reporting a failure nobody caused. */
 export const NeverConsulted: Story = {
   render: () => {
     installFetchStub({

@@ -5,12 +5,11 @@
 
 package gates
 
-// The absent preference is two halves of one promise in the contract: an
-// operation that takes `Prefer` (PreferAbsent) may answer the 204 NothingYet
-// response, and only such an operation does. The server serves the preference
-// on exactly the operations that declare the header, so a 204 declared without
-// the header is an answer no request can get, and a header without the 204 is
-// an answer no client was told about.
+// An operation that takes `Prefer` (PreferAbsent) may answer the 204
+// NothingYet response, and only such an operation does. The server serves the
+// preference on the operations that declare the header. A 204 without the
+// header is an answer no request can get. A header without the 204 is an
+// answer no client was told about.
 
 import (
 	"sort"

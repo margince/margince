@@ -14,8 +14,9 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
-// getPreferring reads path over the wire, with Prefer set when prefer is not empty.
-func getPreferring(t *testing.T, e *apptest.AppEnv, path, prefer string) *http.Response {
+// answerTo reads path over the wire, with Prefer set when prefer is not
+// empty, and returns its status and headers.
+func answerTo(t *testing.T, e *apptest.AppEnv, path, prefer string) (int, http.Header) {
 	t.Helper()
 	req, err := http.NewRequestWithContext(t.Context(), http.MethodGet, e.TS.URL+path, nil)
 	if err != nil {
@@ -28,21 +29,21 @@ func getPreferring(t *testing.T, e *apptest.AppEnv, path, prefer string) *http.R
 	if err != nil {
 		t.Fatalf("GET %s: %v", path, err)
 	}
-	t.Cleanup(func() { apptest.CloseBody(t, res) })
-	return res
+	defer apptest.CloseBody(t, res)
+	return res.StatusCode, res.Header
 }
 
-func wantAnswer(t *testing.T, res *http.Response, status int, applied string) {
+func wantAnswer(t *testing.T, e *apptest.AppEnv, path, prefer string, status int, applied string) {
 	t.Helper()
-	path := res.Request.URL.Path
-	if res.StatusCode != status {
-		t.Fatalf("GET %s → %d, want %d", path, res.StatusCode, status)
+	got, header := answerTo(t, e, path, prefer)
+	if got != status {
+		t.Fatalf("GET %s with Prefer %q → %d, want %d", path, prefer, got, status)
 	}
-	if got := res.Header.Get("Preference-Applied"); got != applied {
-		t.Errorf("GET %s: Preference-Applied %q, want %q", path, got, applied)
+	if value := header.Get("Preference-Applied"); value != applied {
+		t.Errorf("GET %s: Preference-Applied %q, want %q", path, value, applied)
 	}
-	if got := res.Header.Values("Vary"); !containsToken(got, "Prefer") {
-		t.Errorf("GET %s: Vary %q, want it to name Prefer", path, got)
+	if !containsToken(header.Values("Vary"), "Prefer") {
+		t.Errorf("GET %s: Vary %q, want it to name Prefer", path, header.Values("Vary"))
 	}
 }
 
@@ -61,10 +62,10 @@ func TestAReadWithNothingYetAnswers204OnlyWhenTheClientPrefersIt(t *testing.T) {
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 
-	wantAnswer(t, getPreferring(t, e, "/v1/brief", "absent=204"), http.StatusNoContent, "absent=204")
-	wantAnswer(t, getPreferring(t, e, "/v1/brief", "respond-async, ABSENT=\"204\""), http.StatusNoContent, "absent=204")
-	wantAnswer(t, getPreferring(t, e, "/v1/brief", ""), http.StatusNotFound, "")
-	wantAnswer(t, getPreferring(t, e, "/v1/brief", "return=minimal"), http.StatusNotFound, "")
+	wantAnswer(t, e, "/v1/brief", "absent=204", http.StatusNoContent, "absent=204")
+	wantAnswer(t, e, "/v1/brief", "respond-async, ABSENT=\"204\"", http.StatusNoContent, "absent=204")
+	wantAnswer(t, e, "/v1/brief", "", http.StatusNotFound, "")
+	wantAnswer(t, e, "/v1/brief", "return=minimal", http.StatusNotFound, "")
 
 	var company AnyMap
 	mustCall(t, e, "POST", "/v1/companies", AnyMap{"display_name": "Never Checked", "source": "manual"}, http.StatusCreated, &company)
@@ -72,8 +73,8 @@ func TestAReadWithNothingYetAnswers204OnlyWhenTheClientPrefersIt(t *testing.T) {
 	if !ok {
 		t.Fatalf("the created company carries no id: %v", company)
 	}
-	wantAnswer(t, getPreferring(t, e, "/v1/companies/"+companyID+"/vat-check", "absent=204"), http.StatusNoContent, "absent=204")
-	wantAnswer(t, getPreferring(t, e, "/v1/companies/"+companyID+"/vat-check", ""), http.StatusNotFound, "")
+	wantAnswer(t, e, "/v1/companies/"+companyID+"/vat-check", "absent=204", http.StatusNoContent, "absent=204")
+	wantAnswer(t, e, "/v1/companies/"+companyID+"/vat-check", "", http.StatusNotFound, "")
 }
 
 // A company the reader cannot reach answers what a company that does not exist
@@ -89,7 +90,7 @@ func TestARowScopeMissStays404WhenTheClientPrefersAbsent(t *testing.T) {
 		"/v1/dedupe/contact-cases/" + missing,
 		"/v1/records/contact/" + missing + "/ownership-offer",
 	} {
-		wantAnswer(t, getPreferring(t, e, path, "absent=204"), http.StatusNotFound, "")
+		wantAnswer(t, e, path, "absent=204", http.StatusNotFound, "")
 	}
 }
 
@@ -99,12 +100,12 @@ func TestAnUndeclaredReadIgnoresTheAbsentPreference(t *testing.T) {
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 
-	res := getPreferring(t, e, "/v1/contacts/"+ids.NewV7().String(), "absent=204")
-	if res.StatusCode != http.StatusNotFound || res.Header.Get("Preference-Applied") != "" {
+	status, header := answerTo(t, e, "/v1/contacts/"+ids.NewV7().String(), "absent=204")
+	if status != http.StatusNotFound || header.Get("Preference-Applied") != "" {
 		t.Fatalf("an undeclared read → %d, Preference-Applied %q; want 404 and none",
-			res.StatusCode, res.Header.Get("Preference-Applied"))
+			status, header.Get("Preference-Applied"))
 	}
-	if containsToken(res.Header.Values("Vary"), "Prefer") {
-		t.Errorf("an undeclared read varies on Prefer: %q", res.Header.Values("Vary"))
+	if containsToken(header.Values("Vary"), "Prefer") {
+		t.Errorf("an undeclared read varies on Prefer: %q", header.Values("Vary"))
 	}
 }

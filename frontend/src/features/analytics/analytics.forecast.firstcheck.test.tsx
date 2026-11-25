@@ -13,10 +13,10 @@ import { ForecastReview } from "./analytics.forecast.review";
 
 // The check a workspace has not had yet.
 //
-// What these hold is the honesty of the panel in the one state it used to have
-// nothing to say in. A 204 from the assurance read means nobody has started
-// this workspace — the nightly pass skips it — and a panel that drew that as an
-// ordinary empty state would tell a reader the pipeline was found clean.
+// These tests hold the panel's wording in the one state it used to say nothing
+// in. A 204 from the assurance read means nobody has started this workspace,
+// and the nightly pass skips it. A panel that drew that as an ordinary empty
+// state would tell a reader the pipeline was found clean.
 
 const PREVIEW = {
   started: false,
