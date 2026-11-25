@@ -57,9 +57,13 @@ var forbidden = []struct {
 	// workflow name these sources functionally, while a page only cites them.
 	docsOnly bool
 }{
+	// The publisher's source repository is matched only without a leading slash.
+	// The release workflow pulls an image from a registry path of that name, and
+	// that is a pull target, not a mention. The name is built from parts so this
+	// file does not spell it out.
 	{
 		name:    "private repository name",
-		pattern: regexp.MustCompile(`margince-(foundation|principles|business)`),
+		pattern: regexp.MustCompile(`margince-(foundation|principles|business)|(^|[^/])margince-` + "constel" + "lation"),
 		why:     "name the thing, not the repository — a reader here cannot open it",
 	},
 	{
