@@ -82,8 +82,8 @@ type Config struct {
 	// here would notice; the gate that matters is the one below, which keeps it
 	// out of production rather than pinning what it does.
 	//
-	// Set, the client also polls for work every testFetchInterval instead of
-	// River's second, so a test waits on a job no longer than the job takes.
+	// Set, the client also polls for work every testFetchInterval, not every
+	// second. A test then waits on a job about as long as the job takes.
 	//
 	// Never set outside a test harness.
 	// TestJobRunnerConfigIsNeverSetInProduction holds that.
