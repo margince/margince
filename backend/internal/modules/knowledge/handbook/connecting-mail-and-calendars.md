@@ -117,7 +117,7 @@ A colleague on the invitation can read the meeting. A colleague who declined is 
 
 A guest added to the invitation later joins the meeting at the next calendar sync. A guest taken off the invitation leaves it, and a colleague taken off can no longer read it. When the calendars of several colleagues show the same guest, the guest stays until the last of those calendars drops them. Whoever set the meeting up decides alone: a guest or colleague they take off leaves it at their next calendar sync. The calendar of a colleague they took off does not need to sync first.
 
-If a colleague deletes the meeting from their own calendar, they leave it, and so does each colleague only their calendar showed. A guest from outside the team whom only their calendar showed stays on the meeting, as a record of who was invited.
+If a colleague deletes the meeting from their own calendar, they leave it, and so does each colleague no other connected calendar shows. A guest from outside the team whom only their calendar showed stays on the meeting, as a record of who was invited.
 
 If someone set who can see the meeting by hand, a colleague added later is shown but cannot read it unless they are picked. A meeting you imported from another CRM gets its guests from your calendar the same way.
 

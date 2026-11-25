@@ -152,8 +152,14 @@ func (s sharedGuests) reads(t *testing.T, seat, meeting ids.UUID) bool {
 // answers counts the outside guest's rows that hold the accepted answer.
 func (s sharedGuests) answers(t *testing.T, meeting ids.UUID) int {
 	t.Helper()
+	return s.answersOf(t, meeting, sharedGuestBuyer)
+}
+
+// answersOf counts address's rows that hold the accepted answer.
+func (s sharedGuests) answersOf(t *testing.T, meeting ids.UUID, address string) int {
+	t.Helper()
 	return s.e.WsCount(t, `SELECT count(*) FROM activity_participant
-		WHERE activity_id=$1 AND address=$2 AND response='accepted'`, meeting, sharedGuestBuyer)
+		WHERE activity_id=$1 AND address=$2 AND response='accepted'`, meeting, address)
 }
 
 // calendars counts the calendars the outside guest's row names.
@@ -317,8 +323,7 @@ func TestACalendarThatLeftTakesTheColleaguesOnlyItListed(t *testing.T) {
 	if !s.reads(t, e.AdminUser, meeting) {
 		t.Error("a colleague another calendar still lists lost the meeting")
 	}
-	if got := e.WsCount(t, `SELECT count(*) FROM activity_participant
-		WHERE activity_id=$1 AND address=$2 AND response='accepted'`, meeting, visitor); got != 1 {
+	if got := s.answersOf(t, meeting, visitor); got != 1 {
 		t.Errorf("the outside guest only the calendar that left listed holds %d answered rows, want 1", got)
 	}
 	if got := s.calendars(t, meeting); got != 1 {
