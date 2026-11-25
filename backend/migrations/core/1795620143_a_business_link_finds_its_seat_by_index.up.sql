@@ -1,4 +1,4 @@
--- 1795605946: a_business_link_finds_its_seat_by_index.
+-- 1795620143: a_business_link_finds_its_seat_by_index.
 SET LOCAL lock_timeout = '3s';
 
 -- A seat cannot be deleted while a link names it, and the foreign key checks

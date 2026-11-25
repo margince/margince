@@ -1,4 +1,4 @@
--- 1795605944: a_chat_business_account_has_a_seat.
+-- 1795620141: a_chat_business_account_has_a_seat.
 SET LOCAL lock_timeout = '3s';
 
 -- A business chat account (Telegram Business, WhatsApp Business, Zalo OA) files
