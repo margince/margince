@@ -64,7 +64,7 @@ const (
 	// Raised by 7 production and 106 test lines for the route answer that keeps
 	// its field errors, and the route cases that read the unexported verb shapes.
 	// Raised by 30 production and 363 test lines for lists over a removed
-	// extension kind and the failing-report directory; the cases drive the
+	// extension kind and the failing-report directory. The cases drive the
 	// unexported Live List check, the list export and the report directory.
 	composeRootProductionLines = 230_734
 	composeRootTestLines       = 360_597
