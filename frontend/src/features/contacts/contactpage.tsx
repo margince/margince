@@ -51,10 +51,7 @@ import { RecordGone } from "../../components/recordgone";
 import { useHiddenCoreFeatures } from "../../lib/corefeatures";
 import { isGone } from "../../lib/problem";
 import { useViewerZone } from "../../lib/viewerzone";
-import {
-  openContactTab,
-  WorklistReturnLink,
-} from "../worklist/worklist.return";
+import { openContactTab } from "../worklist/worklist.return";
 import {
   ContactActivityDrawer,
   ContactCallStart,
@@ -283,7 +280,6 @@ export function ContactPageV2({
         >
           <ContactRecordView
             contact={contact}
-            back={<WorklistReturnLink />}
             // The contact's details, under the head in the left card. They hold
             // for the contact, not the open tab, so a tab change leaves them put.
             // The split folds them above the feed once the row has no room.

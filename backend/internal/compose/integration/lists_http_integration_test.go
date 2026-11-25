@@ -48,13 +48,18 @@ func TestListsAreAbsentWhenAnOperatorSwitchesThemOff(t *testing.T) {
 		{"POST", "/v1/lists/" + someList + "/members/restore"},
 		{"GET", "/v1/lists/" + someList + "/members/" + someList + "/why"},
 		{"GET", "/v1/lists/" + someList + "/history"},
-		{"GET", "/v1/contacts?list_id=" + someList},
-		{"GET", "/v1/companies?list_id=" + someList},
-		{"GET", "/v1/leads?list_id=" + someList},
-		{"GET", "/v1/deals?list_id=" + someList},
 	} {
 		if status := e.Call(t, call.method, call.path, AnyMap{"name": "x", "entity_type": "contact"}, nil, nil); status != http.StatusNotFound {
 			t.Errorf("%s %s = %d, want 404 while lists are off", call.method, call.path, status)
+		}
+	}
+	seedBulkContacts(t, e, 1)
+	for _, route := range []string{"contacts", "companies", "leads", "deals"} {
+		var page struct {
+			Data []json.RawMessage `json:"data"`
+		}
+		if status := e.Call(t, "GET", "/v1/"+route+"?list_id="+someList, nil, nil, &page); status != http.StatusOK || len(page.Data) != 0 {
+			t.Errorf("GET /v1/%s?list_id= = %d with %d rows, want 200 with none while lists are off", route, status, len(page.Data))
 		}
 	}
 	var me struct {

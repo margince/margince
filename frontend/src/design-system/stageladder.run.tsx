@@ -7,7 +7,11 @@ import { useT } from "../i18n";
 import { useScrollRegion } from "./atoms";
 import { IconAction } from "./iconaction";
 import { usePrefersReducedMotion } from "./motion";
-import { type ClippedEdges, useClippedEdges } from "./scrollregion";
+import {
+  type ClippedEdges,
+  clippedClass,
+  useClippedEdges,
+} from "./scrollregion";
 import type { StageStep } from "./stageladder";
 
 /**
@@ -88,13 +92,7 @@ function restingShift(rungBox: DOMRect, scroller: HTMLElement): number {
 }
 
 function runClass(edges: ClippedEdges) {
-  return [
-    "stage-ladder-run",
-    edges.start ? "is-clipped-start" : "",
-    edges.end ? "is-clipped-end" : "",
-  ]
-    .filter(Boolean)
-    .join(" ");
+  return clippedClass("stage-ladder-run", edges);
 }
 
 // Most of a row per press, so the last rung in view stays in view as the

@@ -20,6 +20,10 @@ import {
   TaskQuickActions,
   useTaskUpdate,
 } from "../../components/taskactions";
+import {
+  currentDueFields,
+  useMoveTask,
+} from "../../components/taskduedatepick";
 import { TaskWriteFailure } from "../../components/taskwritefailure";
 import { Badge, Button, OverflowMenu } from "../../design-system/atoms";
 import { QueryGate } from "../../design-system/querystates";
@@ -313,6 +317,7 @@ function useNextTaskVerbs(
   enabled: boolean,
 ) {
   const zone = useViewerZone();
+  const move = useMoveTask(update);
   const next = nextCommitment(view);
   if (!next || !enabled) {
     return {};
@@ -341,10 +346,16 @@ function useNextTaskVerbs(
               next.dueIntent,
             );
             if (nextDue)
-              update.mutate({
+              void move({
                 id: next.activityId,
                 version: next.version,
-                body: nextDue,
+                to: nextDue,
+                back: currentDueFields(
+                  next.dueAt,
+                  next.dueHasTime,
+                  zone,
+                  next.dueIntent,
+                ),
               });
           },
           pending: update.isPending,

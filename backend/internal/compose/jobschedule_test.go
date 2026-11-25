@@ -378,8 +378,11 @@ func TestTheSuppressionJournalNeedsAnObjectStoreForBothHalves(t *testing.T) {
 	}
 
 	blob := blobstore.NewMemory()
-	if got := periodicFor(JobRunnerConfig{Blobstore: blob}, SuppressionJournalArgs{}); len(got) != 1 {
-		t.Errorf("with an object store: got %d periodic jobs, want 1", len(got))
+	if got := periodicFor(JobRunnerConfig{Blobstore: blob}, SuppressionJournalArgs{}); len(got) != 0 {
+		t.Errorf("with only the main store, unresolved: got %d periodic jobs, want 0", len(got))
+	}
+	if got := periodicFor(JobRunnerConfig{JournalBlobstore: blob}, SuppressionJournalArgs{}); len(got) != 1 {
+		t.Errorf("with a journal store and no main store: got %d periodic jobs, want 1", len(got))
 	}
 	if got := suppressionJournalExporterFor(nil, blob, log); got == nil {
 		t.Error("with an object store: got no worker, want one")

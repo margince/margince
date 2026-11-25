@@ -85,6 +85,8 @@ Each document is read once. Margince also does this for notes it already read. M
 
 Connect meeting notes with the same Google account as your calendar. Notes are read only for meetings in that account's calendar, and the row says so when the two accounts differ.
 
+Google may show **Error 400: redirect_uri_mismatch** when you connect meeting notes. Then ask your admin to add the meeting-notes address to the Google app and turn on the Google Docs API. The admin finds the addresses under Settings → **Sign-in and security** → **Sign-in apps** → **Set up Google app**. Reconnecting your account does not help until then.
+
 If you untick the permission on the Google screen, the row says **Cannot read meeting notes** and the account offers **Reconnect**. The same happens when Google later refuses it.
 
 To stop it, choose **Stop reading meeting notes** in the row. Mail and calendar keep running, and notes already on a meeting stay. Disconnecting the whole account stops it too.
@@ -113,7 +115,9 @@ A colleague's own calendar decides their answer while it is connected. Once they
 
 A colleague on the invitation can read the meeting. A colleague who declined is shown under **Attendees** and cannot read it.
 
-A guest added to the invitation later joins the meeting at the next calendar sync. A guest taken off the invitation leaves it, and a colleague taken off can no longer read it. When the calendars of several colleagues show the same guest, the guest stays until the last of those calendars drops them. Whoever set the meeting up decides alone: a guest or colleague they take off leaves it at their next calendar sync. The calendar of a colleague they took off does not need to sync first. If a colleague deletes the meeting from their own calendar, only they leave it.
+A guest added to the invitation later joins the meeting at the next calendar sync. A guest taken off the invitation leaves it, and a colleague taken off can no longer read it. When the calendars of several colleagues show the same guest, the guest stays until the last of those calendars drops them. Whoever set the meeting up decides alone: a guest or colleague they take off leaves it at their next calendar sync. The calendar of a colleague they took off does not need to sync first.
+
+If a colleague deletes the meeting from their own calendar, they leave it, and so does each colleague no other connected calendar shows. The colleague whose calendar first filed the meeting stays on it. A guest from outside the team whom only their calendar showed stays on the meeting, as a record of who was invited.
 
 If someone set who can see the meeting by hand, a colleague added later is shown but cannot read it unless they are picked. A meeting you imported from another CRM gets its guests from your calendar the same way.
 

@@ -37,7 +37,7 @@ var publicRequests = map[string]map[string]bool{
 	"/v1/auth/mfa": {http.MethodPost: true},
 	// The reachability probe external uptime monitors call: a fixed body,
 	// no dependency work, nothing disclosed (see compose.Server.GetStatus).
-	"/v1/status": {http.MethodGet: true},
+	"/v1/status": {http.MethodGet: true, http.MethodHead: true},
 	// Dispact's push receiver: the signature with the sealed events secret is
 	// the credential, and the handler checks it before reading anything.
 	"/v1/channel-events/dispact": {http.MethodPost: true},

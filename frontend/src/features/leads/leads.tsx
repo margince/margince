@@ -49,7 +49,6 @@ import { leadKey, leadWriteKeys } from "../../lib/leadkeys";
 import type { RecordTabId } from "../../lib/recordtaborder";
 import { useViewerZone } from "../../lib/viewerzone";
 import { useAddressedTab } from "../records/recordtab";
-import { WorklistReturnLink } from "../worklist/worklist.return";
 
 /**
  * The shared write, as the panels that call it see it: the mutation's STATE
@@ -166,7 +165,6 @@ function LeadRecord({ lead, id }: Readonly<{ lead: Lead; id: string }>) {
 
   return (
     <RecordView
-      back={<WorklistReturnLink />}
       aside={
         <LeadDetails
           lead={lead}

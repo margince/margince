@@ -87,10 +87,6 @@ The shell comes last in this group: it is the part users see most, and the safes
    All three read `--r-sm`, 8px, which a chip also takes, so every box has the same corner.
    `--r-xs` is 4px for a key, and `--r-full` is for a pill or a monogram (`DESIGN.md` section 5).
 
-   Where a browser has `corner-shape: squircle`, every step but `--r-full` is twice its size. A superellipse of
-   radius `R` looks about as round as a round corner of `R/2`. One `@supports` block in `tokens.css` does this, and no
-   call site touches it.
-
    There are three shadow tokens. `--shadow-rest` is one 1px/2px layer, used by every surface at rest and every
    filled control. `--shadow-well` is the same layer turned `inset`, used by every field, because a field has a
    floor instead of a top. `--shadow-pop` is for each popover and the drawer. A control drops its layer on hover,
@@ -140,18 +136,18 @@ Stories: update every changed story. The catalog test needs no new rows unless a
 ### Step 4: The shell (`shell.css`, `shell.tsx`, `topbar.css`, `agentrail.css`, `agent-edge.css`, `navlevel.tsx`)
 
 1. **The ground.** `.app` draws `--bgPage`, one flat colour.
-2. **Rail.** `glass` (`--pane` and `blur`) over the ground, a hairline on the right, no dark ground.
+2. **Rail.** Above the phone layout it has no ground of its own, so `--bgPage` shows. It has no edge. Hover is the neutral `--railHover`.
    Closed, it is **56px**; open, 256px (`--railW` in `shell.css`). The tooltip rule in `shell.css`
    depends on the closed width.
 
    Rows are 34px, group labels are `.t-eyebrow` with only the first letter capital, and the orb sits
    last. `rail.test.tsx` and `ac-shell.spec.ts` pin the 10 rows and their order, and those do not change.
-3. **Top bar.** It stays 50px, `glass`, with a hairline under it.
-   The breadcrumb sits left, the account menu right, and the `⌘K` field between them.
-   **Nothing from a record sits in it.**
+3. **Top bar.** It is 50px with no ground of its own and no hairline above the phone layout, beside the `--pageCard` card. At phone width it is `glass` with a hairline under it.
+   A record page's Back control comes first. The `⌘K` field follows, then the actions at the right.
+   Settings uses the same bar, and **nothing from a record sits in it.**
 4. **Settings second level.** On a settings route, the sidebar itself becomes the 210px column that carries the
    level (`SettingsRail`/`navlevel.tsx`).
-   It uses the same `glass`.
+   It uses the same surface.
 
    It still shows one level at a time. The rail's places step aside for the section's entries, with Back above
    them. `rail.test.tsx` and `ac-shell.spec.ts` hold one level in the sidebar. The two columns side by side in the mock

@@ -12,6 +12,7 @@ require (
 	github.com/margince/margince/extensions/eu v0.0.0
 	github.com/margince/margince/extensions/finance-demo v0.0.0 // margince:development-only
 	github.com/margince/margince/extensions/openchannel v0.0.0
+	github.com/margince/margince/extensions/us v0.0.0
 )
 
 replace (
@@ -21,4 +22,5 @@ replace (
 	github.com/margince/margince/extensions/eu => ../extensions/eu
 	github.com/margince/margince/extensions/finance-demo => ../extensions/finance-demo
 	github.com/margince/margince/extensions/openchannel => ../extensions/openchannel
+	github.com/margince/margince/extensions/us => ../extensions/us
 )

@@ -6,46 +6,16 @@ import { useCoreEngine } from "./margince-core-engine";
 import "./margince-core.css";
 
 /**
- * The Margince Core — WDS-CORE-1..4 (ADR-0076).
+ * The Margince Core: the product's one AI identity, a glass ball the shader
+ * draws and the engine moves. A caller passes `state` and never restyles it.
  *
- * The product's one piece of AI identity, shown by the unauthenticated surface,
- * the session splash, onboarding and the workspace rail: a glass ball with four
- * ribbons turning inside it, all threaded through one shared focus, which is
- * why they cross at a single hot point. The ribbons are drawn on the GPU
- * (`margince-core-shader.ts`), moved by the engine beside it, and what each
- * state DOES is one table (`margince-core-motion.ts`).
+ * The state list is closed: idle, ingest and working are the agent's work.
+ * `warning` is a stop a human must look at, and `error` a broken run.
+ * An open list is a status channel nobody can test. It is `aria-hidden`: the
+ * surface around it states every state in text and owns the click.
  *
- * Four things about it are load-bearing rather than stylistic:
- *
- *  - **One implementation** (WDS-CORE-1). A caller passes `state` and never
- *    restyles. Sizing through the documented `--coreSize` / `--coreGlass`
- *    custom properties is configuration; anything past that is a caller
- *    restyling a shared primitive.
- *  - **The state list is closed** (WDS-CORE-2), and it is the AGENT'S WORK
- *    LIFECYCLE: idle → ingest → working, and back to idle when a run settles.
- *    `warning` covers every way the agent stops on something a human must
- *    look at — a contradiction, an unreachable source, a licence it lacks —
- *    and `error` is the one way a run breaks outright. Callers use the Core as
- *    a status channel, and a status channel with an open vocabulary is one
- *    nobody can test and no second caller can reuse. There is no `listening` or
- *    `speaking`: Margince's agent runs overnight over captured activity and
- *    stages proposals a human confirms — it never holds a conversation, and a
- *    state naming one would be the product claiming something it does not do.
- *  - **State is MOTION first**, colour second. One behaviour per state, so the
- *    three that share the palette's indigo (idle, ingest and working) are still
- *    three distinguishable things. Only the two that stop leave the indigo:
- *    amber for `warning`, red for `error`.
- *  - **It is `aria-hidden`** (WDS-CORE-4). Every state it shows is also stated
- *    in text by the surface around it, which is what makes it safe to be this
- *    decorative — and why it carries no click: the caller's own button owns
- *    that.
- *
- * WHAT A HOST WITHOUT WEBGL2 GETS. The static dress below: the same ball, the
- * same state colour, no motion. That is not a courtesy path, it is what jsdom
- * renders in every test, what a locked-down browser renders, and what a context
- * lost to a GPU reset falls back to. `data-core-state` is on the root either
- * way, so a surface reading the Core's state off the DOM cannot tell the
- * difference.
+ * A host without WebGL2 gets a static dress in the state's colour, with the
+ * same `data-core-state`, so nothing reading the DOM can tell the difference.
  */
 export type MarginceCoreState =
   | "idle"

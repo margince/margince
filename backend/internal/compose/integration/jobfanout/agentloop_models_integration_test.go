@@ -48,7 +48,9 @@ func (m scriptedModel) driver() loopDriver {
 	return func(t *testing.T, re *runnerEnv, run loopRun) { re.brain.Script(m.script(t, run)...) }
 }
 
-const finalStep = `{"final":{"summary":"done"}}`
+const finalSummary = "SCRIPTED-FINAL-SUMMARY-9F2"
+
+const finalStep = `{"final":{"summary":"` + finalSummary + `"}}`
 
 func toolStep(t *testing.T, tool string, args integration.AnyMap) string {
 	t.Helper()

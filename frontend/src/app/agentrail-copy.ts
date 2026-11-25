@@ -2,6 +2,9 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { MarginceCoreState } from "../design-system/margince-core";
+import { formatMoney } from "../format/format";
+import { numberFormat } from "../format/formatters";
+import type { Locale } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 
 /**
@@ -28,6 +31,37 @@ export const VOCABULARY: readonly MarginceCoreState[] = [
   "warning",
   "error",
 ];
+
+/** The state in the reader's word, total so a sixth state cannot arrive
+ *  unnamed; printed raw, a broken installation would say "error". */
+export const STATE_WORD: Readonly<Record<MarginceCoreState, MessageKey>> = {
+  idle: "agent.state.idle",
+  ingest: "agent.state.ingest",
+  working: "agent.state.working",
+  warning: "agent.state.warning",
+  error: "agent.state.error",
+};
+
+function currencySymbol(currency: string, locale: Locale): string | undefined {
+  return numberFormat(locale, { style: "currency", currency })
+    .formatToParts(0)
+    .find((part) => part.type === "currency")?.value;
+}
+
+/** The month's spend in the reader's number format with English's symbol:
+ *  "0,00 US$" beside "US$0.00", where German alone prints a bare "$". */
+export function spendFigure(
+  minor: number,
+  currency: string,
+  locale: Locale,
+): string {
+  const figure = formatMoney(minor, currency, locale);
+  const theirs = currencySymbol(currency, locale);
+  const english = currencySymbol(currency, "en");
+  return theirs === undefined || english === undefined
+    ? figure
+    : figure.replace(theirs, english);
+}
 
 /** The states whose line describes work still running. */
 export const RUNNING: ReadonlySet<MarginceCoreState> = new Set([

@@ -48,6 +48,7 @@ function Dialog({
         pending={false}
         error={refused ?? null}
         refusedAt={refused ? 1 : undefined}
+        dirty={false}
         onChange={setForm}
         onClose={vi.fn()}
         onSubmit={onSubmit}

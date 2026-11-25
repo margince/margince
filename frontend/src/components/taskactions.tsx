@@ -32,7 +32,11 @@ import { useTaskContact } from "../lib/taskcontact";
 import { useViewerZone } from "../lib/viewerzone";
 import { CallLogInline, useCallLogFor } from "./calllog.host";
 import { useCompleteTask } from "./taskcomplete";
-import { TaskDueDatePick } from "./taskduedatepick";
+import {
+  currentDueFields,
+  TaskDueDatePick,
+  useMoveTask,
+} from "./taskduedatepick";
 import { useTaskNextSteps } from "./tasknextsteps";
 import { taskOriginKey } from "./taskorigin";
 import { TaskOutcomeForm } from "./taskoutcome";
@@ -150,6 +154,7 @@ export function TaskQuickActions({
   // old next task until the reads land; a press then acts on a stale row.
   const pending = update.isPending;
   const complete = useCompleteTask(update);
+  const move = useMoveTask(update);
   return (
     <>
       {showComplete && (
@@ -173,7 +178,17 @@ export function TaskQuickActions({
               dueIntent,
             );
             if (nextDue)
-              update.mutate({ id: activityId, version, body: nextDue });
+              void move({
+                id: activityId,
+                version,
+                to: nextDue,
+                back: currentDueFields(
+                  dueAt,
+                  dueHasTime,
+                  readerZone,
+                  dueIntent,
+                ),
+              });
           }}
         >
           {t("tasks.snooze")}
@@ -390,16 +405,14 @@ function TaskDetailActions({
             <TaskRemindMenu task={task} update={update} />
           </div>
           {/* After the buttons in reading order, as on screen. */}
-          <div className="task-detail-due">
-            <TaskDueDatePick
-              activityId={task.id}
-              version={task.version}
-              dueAt={task.due_at}
-              dueHasTime={task.due_has_time}
-              dueIntent={task.due_intent}
-              update={update}
-            />
-          </div>
+          <TaskDueDatePick
+            activityId={task.id}
+            version={task.version}
+            dueAt={task.due_at}
+            dueHasTime={task.due_has_time}
+            dueIntent={task.due_intent}
+            update={update}
+          />
         </div>
       )}
       {!logging && <TaskWriteFailure taskId={task.id} update={update} />}

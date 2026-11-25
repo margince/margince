@@ -339,6 +339,26 @@ paths:
           content:
             application/problem+json:
               schema: { $ref: '#/components/schemas/Problem' }
+    head:
+      tags: [Identity]
+      operationId: headStatus
+      security: []
+      x-agent-access: human-only
+      summary: Reachability probe for a monitor that sends HEAD.
+      description: |
+        `getStatus` without a body, for a monitor that probes with HEAD. It answers what
+        `getStatus` answers, and does no more work.
+      responses:
+        '200':
+          description: The api is reachable through the public path.
+          headers:
+            Cache-Control:
+              schema: { type: string, enum: [no-store], x-extensible-enum: true }
+        '503':
+          description: The installation is not bootstrapped yet.
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
 
   /auth/login:
     post:
@@ -697,8 +717,8 @@ paths:
           description: >
             Installation reset to first-boot state.
 
-            Five of these fields — `jobs_deleted`, `streams_purged`, `cache_keys_deleted`,
-            `objects_deleted` and `drain_timed_out` — exist here and not in the retired upstream
+            Four of these fields — `jobs_deleted`, `streams_purged`, `cache_keys_deleted`
+            and `objects_deleted` — exist here and not in the retired upstream
             copy of this contract, and that is deliberate rather than drift anyone should
             reconcile away. A reset clears the job queue, the event bus, the Redis counters and
             the object bytes, and an operator who is told only how many table rows went has no way
@@ -741,10 +761,10 @@ paths:
                     description: Objects removed from the blob store under this workspace's key prefix.
                   drain_timed_out:
                     type: boolean
+                    deprecated: true
                     description: >
-                      True when a job was still running when the bounded drain window expired. The reset
-                      proceeded — a long pass must not make an installation unresettable — and the surviving
-                      job's completion write will fail against rows that no longer exist.
+                      Always false. A reset whose job drain timed out is refused with 409 before anything is
+                      deleted, so a successful reset never has this state. Kept so existing clients keep parsing.
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403':
           description: >
@@ -760,6 +780,15 @@ paths:
             does not exist here. Checked before authentication, so it is a 404 rather than
             a 403 for every caller — the answer discloses nothing about who asked. The body
             is the standard problem document.
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+        '409':
+          description: >
+            Refused with nothing deleted: another reset is running, or a background job was still
+            running when the bounded drain window expired (the queues run again; run the reset again), or the
+            queues could not be resumed after the reset (code `reset_queues_not_resumed`; the body says whether
+            the reset had finished).
           content:
             application/problem+json:
               schema: { $ref: '#/components/schemas/Problem' }
@@ -1356,7 +1385,7 @@ paths:
             application/zip:
               schema: { type: string, format: binary }
         '401': { $ref: '#/components/responses/Unauthorized' }
-        '403': { $ref: '#/components/responses/Forbidden' }
+        '403': { $ref: '#/components/responses/FileForbidden' }
 
   /openapi.json:
     get:
@@ -3809,6 +3838,9 @@ paths:
         past 120 characters (`too_long`), the limit of every company name typed by hand.
         A `parent_company_id` that names a company the caller cannot read answers 422 naming
         `parent_company_id`, the same for a missing record and for one hidden by row scope.
+        A parent that already sits below this company answers 422 `parent_company_below` on
+        `parent_company_id`, with `params.name` naming that company. A parent that is the company itself
+        answers 422 `parent_company_self` on `parent_company_id`.
       x-mcp-tool: { verb: update_record, record_type: company, tier: auto_execute, scope: write }
       parameters:
         - $ref: '#/components/parameters/IdempotencyKey'
@@ -4061,8 +4093,8 @@ paths:
             image/png:
               schema: { type: string, format: binary }
         '401': { $ref: '#/components/responses/Unauthorized' }
-        '403': { $ref: '#/components/responses/Forbidden' }
-        '404': { $ref: '#/components/responses/NotFound' }
+        '403': { $ref: '#/components/responses/FileForbidden' }
+        '404': { $ref: '#/components/responses/FileNotFound' }
         '422': { $ref: '#/components/responses/ValidationError' }
         '501':
           description: The deployment has no object store configured, so no logo can be stored or served.
@@ -4099,8 +4131,8 @@ paths:
             image/png:
               schema: { type: string, format: binary }
         '401': { $ref: '#/components/responses/Unauthorized' }
-        '403': { $ref: '#/components/responses/Forbidden' }
-        '404': { $ref: '#/components/responses/NotFound' }
+        '403': { $ref: '#/components/responses/FileForbidden' }
+        '404': { $ref: '#/components/responses/FileNotFound' }
         '422': { $ref: '#/components/responses/ValidationError' }
         '501':
           description: The deployment has no object store configured, so no logo can be stored or served.
@@ -5699,8 +5731,8 @@ paths:
           content:
             application/pdf:
               schema: { type: string, format: binary }
-        '403': { $ref: '#/components/responses/Forbidden' }
-        '404': { $ref: '#/components/responses/NotFound' }
+        '403': { $ref: '#/components/responses/FileForbidden' }
+        '404': { $ref: '#/components/responses/FileNotFound' }
         '422': { $ref: '#/components/responses/ValidationError' }
         '429':
           description: The caller fetched 20 invoice documents in the current one-minute window.
@@ -11516,7 +11548,7 @@ paths:
           content:
             image/png:
               schema: { type: string, format: binary }
-        '404': { $ref: '#/components/responses/NotFound' }
+        '404': { $ref: '#/components/responses/FileNotFound' }
         '422': { $ref: '#/components/responses/ValidationError' }
         default:
           description: The logo could not be read.
@@ -11547,6 +11579,7 @@ paths:
   /public/booking/{host_slug}/preview:
     parameters:
       - { name: host_slug, in: path, required: true, schema: { type: string } }
+      - { name: l, in: query, required: false, description: "Meeting length in minutes the shared link asks for. The card names it, links to it and gives it as the canonical address when the page offers it; otherwise the card names the default length.", schema: { type: integer } }
     get:
       tags: [Public]
       operationId: getPublicBookingPreview
@@ -11557,7 +11590,8 @@ paths:
         preview reads the page without running the app. The HTML carries the host's name,
         company, meeting title and duration as escaped title, description, Open Graph and
         Twitter card fields. The canonical URL and `og:url` are the absolute `/book/{host_slug}`
-        address on the configured public origin, and are omitted when no usable origin is
+        address on the configured public origin, with `?l=` when the card names an offered
+        length the link asked for, and are omitted when no usable origin is
         configured. The company logo is the card image when there is one; otherwise the card
         has no image. A paused page answers generic metadata that names no host. A missing
         or revoked page answers 404 with no host metadata. Responses are `no-store` and
@@ -11569,6 +11603,7 @@ paths:
           content:
             text/html:
               schema: { type: string }
+        '422': { $ref: '#/components/responses/ValidationError' }
         default:
           description: The page is missing, revoked or unavailable; the HTML names no host.
           content:
@@ -11953,6 +11988,109 @@ paths:
               schema:
                 type: array
                 items: { $ref: '#/components/schemas/SchedulingTeamCandidate' }
+  /scheduling/team-links:
+    get:
+      tags: [Activities]
+      operationId: listSchedulingTeamLinks
+      x-mcp-tool: { verb: read_view, tier: auto_execute, scope: read }
+      summary: List the caller's team booking links.
+      description: |
+        Each live team link the caller owns, oldest first. A team link sits beside the caller's
+        personal booking page, which always offers the caller's own free time alone.
+      responses:
+        default:
+          description: The operation could not be completed.
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+        '200':
+          description: The caller's team links.
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/SchedulingTeamLink' }
+    post:
+      tags: [Activities]
+      operationId: createSchedulingTeamLink
+      security: [ { cookieAuth: [] } ]   # human session only: a team link publishes colleagues' joint free time
+      x-agent-access: human-only
+      x-human-only-reason: security
+      summary: Create a team booking link that names colleagues.
+      description: |
+        Creates a link with its own address. Guests see only the times when the caller and every
+        member are free, inside each one's own working hours, and each booking invites every
+        member. The link uses the calendar and booking settings of the caller's personal page.
+        Each member starts as `pending`, and the link takes no bookings until every member has
+        confirmed. Name one to five colleagues offered by `GET /scheduling/team-candidates`;
+        anything else answers 422 on `team_members`.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/SchedulingTeamLinkRequest' }
+      responses:
+        default:
+          description: The operation could not be completed.
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+        '201':
+          description: The new team link.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/SchedulingTeamLink' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+  /scheduling/team-links/{page_id}:
+    parameters:
+      - { name: page_id, in: path, required: true, schema: { type: string, format: uuid } }
+    put:
+      tags: [Activities]
+      operationId: updateSchedulingTeamLink
+      security: [ { cookieAuth: [] } ]   # human session only: a team link publishes colleagues' joint free time
+      x-agent-access: human-only
+      x-human-only-reason: security
+      summary: Rename a team link, switch it on or off, or change its members.
+      description: |
+        Only the link's owner may change it; anyone else gets 404. A member kept on the list keeps
+        their own answer, and a member new to it starts as `pending`.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/SchedulingTeamLinkRequest' }
+      responses:
+        default:
+          description: The operation could not be completed.
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+        '200':
+          description: The changed team link.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/SchedulingTeamLink' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+    delete:
+      tags: [Activities]
+      operationId: deleteSchedulingTeamLink
+      security: [ { cookieAuth: [] } ]   # human session only: a team link publishes colleagues' joint free time
+      x-agent-access: human-only
+      x-human-only-reason: security
+      summary: Delete a team link.
+      description: |
+        The link's address stops working. Meetings already booked through it stand. The owner's
+        personal page does not change. Only the link's owner may delete it; anyone else gets 404.
+      responses:
+        default:
+          description: The operation could not be completed.
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+        '204': { description: The team link is deleted. }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/ValidationError' }
   /scheduling/team-requests:
     get:
       tags: [Activities]
@@ -11981,15 +12119,47 @@ paths:
     put:
       tags: [Activities]
       operationId: answerSchedulingTeamRequest
+      # A host may have several team links. Kept for clients built before
+      # them; it answers every live team link of the host that names the caller.
+      deprecated: true
       security: [ { cookieAuth: [] } ]   # human session only: a member's consent to share free time
       x-agent-access: human-only
       x-human-only-reason: security
-      summary: Confirm or leave a colleague's booking link that names the caller.
+      summary: Confirm or leave every team link of a colleague that names the caller.
+      description: |
+        Use `PUT /scheduling/team-links/{page_id}/answer` instead, which answers one team link.
+        This answers each live team link of that colleague that names the caller. `confirmed`
+        confirms each one still pending. `left` takes the caller off each one they have not left.
+        Answers 404 when no live team link of that colleague names the caller.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/SchedulingTeamAnswer' }
+      responses:
+        default:
+          description: The operation could not be completed.
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+        '204': { description: The answer is recorded. }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+  /scheduling/team-links/{page_id}/answer:
+    parameters:
+      - { name: page_id, in: path, required: true, schema: { type: string, format: uuid }, description: 'The `page_id` of a team request, from `GET /scheduling/team-requests`.' }
+    put:
+      tags: [Activities]
+      operationId: answerSchedulingTeamLink
+      security: [ { cookieAuth: [] } ]   # human session only: a member's consent to share free time
+      x-agent-access: human-only
+      x-human-only-reason: security
+      summary: Confirm or leave a colleague's team link that names the caller.
       description: |
         `confirmed` lets the link read the caller's free time and put the caller on each meeting
         booked through it. `left` takes the caller off: the link stops taking bookings until its
-        owner removes the caller, and the owner sees why. Answers 404 when no live link of that
-        colleague names the caller.
+        owner removes the caller, and the owner sees why. Answers 404 when no live team link with
+        this id names the caller.
       requestBody:
         required: true
         content:
@@ -12237,7 +12407,7 @@ paths:
   /public/booking/{host_slug}/availability:
     parameters:
       - { name: host_slug, in: path, required: true, schema: { type: string }, description: The host's unguessable public booking slug (not the user uuid). }
-      - { name: l, in: query, required: false, description: Offered meeting length in minutes. Unknown lengths use the default., schema: { type: integer } }
+      - { name: l, in: query, required: false, description: "Offered meeting length in minutes. A length the page does not offer is refused with 422 `length_not_offered`; read the profile again for the lengths on offer.", schema: { type: integer } }
     get:
       tags: [Public]
       operationId: getPublicAvailability
@@ -12282,7 +12452,7 @@ paths:
   /public/booking/{host_slug}:
     parameters:
       - { name: host_slug, in: path, required: true, schema: { type: string } }
-      - { name: l, in: query, required: false, description: Offered meeting length in minutes. Unknown lengths use the default., schema: { type: integer } }
+      - { name: l, in: query, required: false, description: "Offered meeting length in minutes. A length the page does not offer is refused with 422 `length_not_offered`; read the profile again for the lengths on offer.", schema: { type: integer } }
     post:
       tags: [Public]
       operationId: bookPublicMeeting
@@ -12700,7 +12870,7 @@ paths:
             application/octet-stream:
               schema: { type: string, format: binary }
         '401': { $ref: '#/components/responses/Unauthorized' }
-        '404': { $ref: '#/components/responses/NotFound' }
+        '404': { $ref: '#/components/responses/FileNotFound' }
         '422': { $ref: '#/components/responses/ValidationError' }
         '429':
           description: Rate-limited.
@@ -15712,9 +15882,9 @@ paths:
         '401':
           $ref: '#/components/responses/Unauthorized'
         '403':
-          $ref: '#/components/responses/Forbidden'
+          $ref: '#/components/responses/FileForbidden'
         '404':
-          $ref: '#/components/responses/NotFound'
+          $ref: '#/components/responses/FileNotFound'
         '422':
           $ref: '#/components/responses/ValidationError'
       parameters:
@@ -15858,8 +16028,8 @@ paths:
             text/csv:
               schema: { type: string }
         '401': { $ref: '#/components/responses/Unauthorized' }
-        '403': { $ref: '#/components/responses/Forbidden' }
-        '404': { $ref: '#/components/responses/NotFound' }
+        '403': { $ref: '#/components/responses/FileForbidden' }
+        '404': { $ref: '#/components/responses/FileNotFound' }
         '422': { $ref: '#/components/responses/ValidationError' }
   /search/data-answer:
     post:
@@ -17556,7 +17726,7 @@ paths:
             application/zip:
               schema: { type: string, format: binary }
         '401': { $ref: '#/components/responses/Unauthorized' }
-        '403': { $ref: '#/components/responses/PermissionDenied' }
+        '403': { $ref: '#/components/responses/FileForbidden' }
 
   # ------------------------ /channel-connections ----------------------------
   # Workspace-level messaging-channel bindings (telegram-oa design §5, §9.1/§9.2).
@@ -18059,15 +18229,19 @@ paths:
     post:
       tags: [WebForms]
       operationId: createWebForm
-      security: [ { cookieAuth: [] } ]   # human session only — rejects agent bearer/Passport (x-agent-access: human-only)
-      x-agent-access: human-only
-      x-human-only-reason: security
-      summary: Create a website form (returns a minted signing secret once).
+      security: [ { bearerAuth: [] }, { cookieAuth: [] } ]
+      x-mcp-tool: { verb: create_web_form, router: change_settings, action: create_web_form, tier: auto_execute, scope: write, served_by: route, ask_user_first: true }
+      summary: Create a website form; a human sees its minted signing secret once.
       description: |
         Mints the form's public key, the last segment of its intake address
         `POST /v1/public/forms/{form_key}`. A `server` form answers its own signing secret in
         `signing_secret`, once; no read returns it again. So does a `typeform` or `tally` form
-        sent without `sender_secret`: the secret is then typed into the builder's webhook. A
+        sent without `sender_secret`: the secret is then typed into the builder's webhook. Only a
+        human gets that secret: an agent's answer leaves `signing_secret` out, so no secret
+        enters a model transcript. Its user then shows one with Make a new secret on the form in
+        Settings > Website forms (`POST /v1/web-forms/{id}/rotate-secret`). An agent that sends
+        `sender_secret`, websites, consent or a privacy notice is refused with `403`, as on an
+        update: those stay with its user. A
         `webflow` form stores the secret Webflow issued, sent in `sender_secret` now or on a
         later update; until then it refuses every post. Every signed
         sender needs a secret store on this installation; without one it answers 422 on `sender`.
@@ -20360,8 +20534,8 @@ paths:
             image/png:
               schema: { type: string, format: binary }
         '401': { $ref: '#/components/responses/Unauthorized' }
-        '403': { $ref: '#/components/responses/Forbidden' }
-        '404': { $ref: '#/components/responses/NotFound' }
+        '403': { $ref: '#/components/responses/FileForbidden' }
+        '404': { $ref: '#/components/responses/FileNotFound' }
         '422': { $ref: '#/components/responses/ValidationError' }
         '501':
           description: The deployment has no object store configured, so no logo can be stored or served.
@@ -20543,8 +20717,8 @@ paths:
             image/png:
               schema: { type: string, format: binary }
         '401': { $ref: '#/components/responses/Unauthorized' }
-        '403': { $ref: '#/components/responses/Forbidden' }
-        '404': { $ref: '#/components/responses/NotFound' }
+        '403': { $ref: '#/components/responses/FileForbidden' }
+        '404': { $ref: '#/components/responses/FileNotFound' }
         '422': { $ref: '#/components/responses/ValidationError' }
         '501':
           description: The deployment has no object store configured, so no logo can be stored or served.
@@ -23702,8 +23876,8 @@ paths:
             application/octet-stream:
               schema: { type: string, format: binary }
         '401': { $ref: '#/components/responses/Unauthorized' }
-        '403': { $ref: '#/components/responses/Forbidden' }
-        '404': { $ref: '#/components/responses/NotFound' }
+        '403': { $ref: '#/components/responses/FileForbidden' }
+        '404': { $ref: '#/components/responses/FileNotFound' }
   /installation/license:
     get:
       tags: [Identity]
@@ -27028,7 +27202,7 @@ paths:
         - { name: actor, in: query, schema: { type: string }, description: 'Typed principal filter, e.g. human:<uuid> or agent:sdr.' }
         - { name: entity_type, in: query, schema: { type: string } }
         - { name: entity_id, in: query, schema: { type: string, format: uuid } }
-        - { name: batch_id, in: query, schema: { type: string, format: uuid }, description: 'Only the rows one bulk change wrote (`executeBulkChange` answers the id).' }
+        - { name: batch_id, in: query, schema: { type: string, format: uuid }, description: 'Only the rows one operation group wrote: a bulk change (`executeBulkChange` answers the id) or one run of a capture purge.' }
         - { name: action, in: query, schema: { type: string }, description: 'One of the AuditLogEntry.action values.' }
         - { name: from, in: query, schema: { type: string, format: date-time } }
         - { name: to, in: query, schema: { type: string, format: date-time } }
@@ -30251,8 +30425,8 @@ paths:
               description: The freshness a 200 for the same request would carry.
               schema: { type: string }
         '401': { $ref: '#/components/responses/Unauthorized' }
-        '403': { $ref: '#/components/responses/Forbidden' }
-        '404': { $ref: '#/components/responses/NotFound' }
+        '403': { $ref: '#/components/responses/FileForbidden' }
+        '404': { $ref: '#/components/responses/FileNotFound' }
         '422': { $ref: '#/components/responses/ValidationError' }
         '501':
           description: The deployment has no object store configured, so no picture can be stored or served.
@@ -33409,7 +33583,7 @@ paths:
           content:
             application/pdf:
               schema: { type: string, format: binary }
-        '404': { $ref: '#/components/responses/NotFound' }
+        '404': { $ref: '#/components/responses/FileNotFound' }
         '422': { $ref: '#/components/responses/ValidationError' }
         '501':
           description: >-
@@ -34656,8 +34830,8 @@ paths:
             text/csv:
               schema: { type: string, format: binary }
         '401': { $ref: '#/components/responses/Unauthorized' }
-        '403': { $ref: '#/components/responses/Forbidden' }
-        '404': { $ref: '#/components/responses/NotFound' }
+        '403': { $ref: '#/components/responses/FileForbidden' }
+        '404': { $ref: '#/components/responses/FileNotFound' }
   /analytics/context:
     get:
       tags: [Reports]
@@ -37746,7 +37920,7 @@ paths:
           content:
             application/octet-stream:
               schema: { type: string, format: binary }
-        '404': { $ref: '#/components/responses/NotFound' }
+        '404': { $ref: '#/components/responses/FileNotFound' }
         '422': { $ref: '#/components/responses/ValidationError' }
     delete:
       tags: [Attachments]
@@ -38266,7 +38440,7 @@ paths:
             application/zip:
               schema: { type: string, format: binary }
         '401': { $ref: '#/components/responses/Unauthorized' }
-        '403': { $ref: '#/components/responses/PermissionDenied' }
+        '403': { $ref: '#/components/responses/FileForbidden' }
 
   /imports/{id}:
     parameters:
@@ -38462,8 +38636,8 @@ paths:
             text/csv:
               schema: { type: string }
         '401': { $ref: '#/components/responses/Unauthorized' }
-        '403': { $ref: '#/components/responses/PermissionDenied' }
-        '404': { $ref: '#/components/responses/NotFound' }
+        '403': { $ref: '#/components/responses/FileForbidden' }
+        '404': { $ref: '#/components/responses/FileNotFound' }
         '409': { $ref: '#/components/responses/Conflict' }   # the validation pass has not produced a report yet
         '422': { $ref: '#/components/responses/ValidationError' }
 
@@ -39338,8 +39512,8 @@ paths:
             application/octet-stream:
               schema: { type: string, format: binary }
         '401': { $ref: '#/components/responses/Unauthorized' }
-        '403': { $ref: '#/components/responses/PermissionDenied' }
-        '404': { $ref: '#/components/responses/NotFound' }
+        '403': { $ref: '#/components/responses/FileForbidden' }
+        '404': { $ref: '#/components/responses/FileNotFound' }
         '422': { $ref: '#/components/responses/ValidationError' }
     delete:
       tags: [Knowledge]
@@ -40058,9 +40232,10 @@ components:
       description: |
         Only the members of this list — a Shortlist's chosen records, or the records a Live List's
         filter selects now — narrowed before sorting and paging, so the page is the list's members
-        in the record list's own columns. The list must be one the caller may find and of this
-        record type; otherwise `404` or `422`. Sharing a list never widens what the read shows:
-        the caller's row scope still applies to every row.
+        in the record list's own columns. A list the caller cannot find, or any list while lists
+        are off, narrows to no rows, as an unknown `tag_id` or `owner_id` does. A list of another
+        record type answers `422`. Sharing a list never widens what the read shows: the caller's
+        row scope still applies to every row.
     IncludeArchived:
       name: include_archived
       in: query
@@ -40269,6 +40444,32 @@ components:
       content:
         application/problem+json:
           schema: { $ref: '#/components/schemas/Problem' }
+    FileNotFound:
+      description: |
+        No such file in this workspace, or out of RBAC scope. A browser tab that opened the file's
+        link (an `Accept` that prefers `text/html`) reads a short page in the reader's language
+        instead of the problem; every other caller gets the problem.
+      content:
+        application/problem+json:
+          schema: { $ref: '#/components/schemas/Problem' }
+          examples:
+            notFound:
+              value: { type: 'https://errors.gradion.com/not_found', title: Not found, status: 404, code: not_found, detail: Resource not found. }
+        text/html:
+          schema: { type: string }
+    FileForbidden:
+      description: |
+        Authenticated, but the role lacks the grant for this file (`code: permission_denied`). A
+        browser tab that opened the file's link (an `Accept` that prefers `text/html`) reads a short
+        page in the reader's language instead of the problem; every other caller gets the problem.
+      content:
+        application/problem+json:
+          schema: { $ref: '#/components/schemas/Problem' }
+          examples:
+            denied:
+              value: { type: 'https://errors.gradion.com/permission_denied', title: Forbidden, status: 403, code: permission_denied, detail: Your role does not permit this action. }
+        text/html:
+          schema: { type: string }
     NotFound:
       description: No such resource in this workspace (or out of RBAC scope).
       content:
@@ -41270,7 +41471,7 @@ components:
           properties:
             signing_secret:
               type: string
-              description: The signing secret this installation minted for a `server`, `typeform` or `tally` form, shown this once.
+              description: The signing secret this installation minted for a `server`, `typeform` or `tally` form, shown this once and only to a human, never to an agent.
 
     WebFormListResponse:
       type: object
@@ -46919,7 +47120,7 @@ components:
     AiRouteCertification:
       type: object
       required: [verdict, current]
-      description: 'What the certification records say about this model for this task. Absent on a candidate no record measured, which the screen reads as not certified.'
+      description: 'What the certification records say about this model for this task, read by the same rule as the feature''s `certification` grade, so the lead candidate and the feature never disagree. Absent on a candidate that grade calls not_measured.'
       properties:
         verdict: { type: string, enum: [certified, supported_degraded, not_supported], x-extensible-enum: true, x-go-type: string, description: 'The worst verdict across the task''s sites and across the records of this model.' }
         current: { type: boolean, description: 'Every record behind the verdict still describes the prompts this build sends.' }
@@ -46955,9 +47156,9 @@ components:
       required: [grade, model, recheck_pending]
       description: |
         The certification grade of the model that answers this feature first (the lead of
-        `normal_candidates`), read from the committed certification records by the readiness
+        `effective_candidates`), read from the committed certification records by the readiness
         report's rule: the worst grade over every site the feature ships, and not measured when
-        any site has no record for that model. Absent when no model is bound, and for embeddings.
+        any site has no record for that model. Absent when no model is bound or the budget blocks the feature, and for embeddings.
       properties:
         grade:
           type: string
@@ -51357,6 +51558,11 @@ components:
       required: [provider, description]
       properties:
         provider: { type: string, description: "The source's key, stored on every mirrored row." }
+        provider_name:
+          type: string
+          description: >-
+            The source's name for a reader, as its unit declares it. Absent when the unit
+            declares none; a client then names it another way, never by the key.
         description: { type: string, description: "What the extension unit supplying it says it is for." }
 
     FinanceConnection:
@@ -51364,7 +51570,12 @@ components:
       required: [id, provider, status, connected_at]
       properties:
         id: { type: string, format: uuid }
-        provider: { type: string }
+        provider: { type: string, description: "The source's key. Show `provider_name` to a reader." }
+        provider_name:
+          type: string
+          description: >-
+            The source's name for a reader, as its unit declares it. Absent when the unit
+            declares none; a client then names it another way, never by the key.
         status:
           type: string
           enum: [connecting, active, error]
@@ -51419,7 +51630,12 @@ components:
         access_scope:
           type: string
           description: Opaque revision of readable companies and the imported snapshot. Pages with different revisions must not be combined.
-        provider: { type: string }
+        provider: { type: string, description: 'The accounting source''s key. Show `provider_name` to a reader.' }
+        provider_name:
+          type: string
+          description: >-
+            The accounting source's name for a reader, as its unit declares it. Absent when the
+            unit declares none; a client then names no source rather than show the key.
         last_synced_at: { type: string, format: date-time }
         linked_companies:
           type: integer
@@ -51497,9 +51713,14 @@ components:
         provider:
           type: [string, 'null']
           description: >-
-            Which accounting source this came from, in the source's own words
-            ("offline_demo"). Rendered as a label beside the figures so a reader
-            knows what they are looking at; absent when nothing is connected.
+            Which accounting source this came from, by its key ("offline_demo"). A key,
+            not a name for a reader: show `provider_name`. Absent when nothing is connected.
+        provider_name:
+          type: [string, 'null']
+          description: >-
+            The accounting source's name for a reader ("Demo accounting"), as the unit that
+            supplies it declares it. Absent when nothing is connected, or when that unit
+            declares no name; a client then names no source rather than show the key.
         last_synced_at:
           type: [string, 'null']
           format: date-time
@@ -53248,6 +53469,8 @@ components:
           type: array
           description: Unresolved disclosure work for this contact, in deadline order. Absent when privacy-request read authority is withheld.
           items: { $ref: '#/components/schemas/ContactNoticeDuty' }
+        privacy_confirmed_source:
+          $ref: '#/components/schemas/ContactConfirmedSource'
         consent:
           type: object
           description: Per-purpose state. The proof log stays at `GET /contacts/{id}/consent` — this is the guard, not the ledger.
@@ -54138,6 +54361,7 @@ components:
             - no_consent_exception_not_offered
             - no_consent
             - existing_customer
+            - opt_out_allowed
           x-extensible-enum: true
         reason_at:
           type: [string, 'null']
@@ -59038,6 +59262,22 @@ components:
         data: { type: array, items: { $ref: '#/components/schemas/Project360PhaseTransition' } }
         phase_durations: { type: array, items: { $ref: '#/components/schemas/Project360PhaseDuration' } }
 
+    ContactConfirmedSource:
+      type: object
+      description: |
+        The source a reviewer last confirmed for this contact, from the newest confirmed
+        privacy-notice case. Absent when no source was ever confirmed, and withheld with the
+        privacy_notice_duties section.
+      required: [case_id, source_kind, source_obtained_at, confirmed_at]
+      properties:
+        case_id: { type: string, format: uuid }
+        source_kind: { type: string, description: 'The confirmed kind: one of `AssessNoticeSource.kind`.' }
+        source_obtained_at: { type: [string, 'null'], format: date-time, description: 'The acquisition date the reviewer confirmed; null when they confirmed none.' }
+        confirmed_at: { type: string, format: date-time }
+        confirmed_by:
+          allOf: [{ $ref: '#/components/schemas/PrincipalAttribution' }]
+          description: Read from the confirm's audit row. Absent for an agent reader, and when that row no longer exists.
+
     PrincipalAttribution:
       type: object
       description: |
@@ -60102,7 +60342,11 @@ components:
         logo_url: { type: string, description: Absolute public logo URL when the public origin is configured; otherwise relative to the API origin. }
         title: { type: string }
         location: { type: string }
-        duration_minutes: { type: integer }
+        duration_minutes: { type: integer, description: "The length this page books: the one `l` asked for when the page offers it, else the default." }
+        offered_lengths:
+          type: array
+          items: { type: integer }
+          description: Every meeting length the host's booking page offers, the default first. Pass one as `l` to book at that length. Absent on a paused page and on a meeting proposal.
         enabled: { type: boolean }
         paused: { type: boolean, description: "True when the page takes no bookings now: the host turned bookings off, or the calendar behind it cannot take them. The availability and booking calls then answer as for an unknown page." }
         video_app: { type: string, enum: [google_meet, microsoft_teams], x-extensible-enum: true, description: Present when new meetings get a video call link from the host's calendar. }
@@ -60146,18 +60390,18 @@ components:
             the page names no calendar (a page saved before the profile existed reads this way).
             `calendar_read_only`: the connection lacks the calendar write grant. `calendar_unavailable`:
             the connection is gone or refused. `team_not_ready`: a team member has not confirmed, has
-            left, or has no calendar Margince can read; `team_members` says which. Answered on the
-            host's own profile read only.
+            left, or has no calendar Margince can read; the team link's `team_members` says which.
+            Answered on the host's own reads only.
         team_members:
           type: array
           maxItems: 5
+          deprecated: true
           items: { $ref: '#/components/schemas/SchedulingTeamMember' }
           description: |
-            Colleagues who must attend every meeting booked through this page. Guests see only the
-            times when the host and every member are free, inside each one's own working hours, and
-            each booking invites every member. A member named here starts as `pending` and the page
-            takes no bookings until every member has confirmed. Only `user_id` is read from a
-            request; a colleague not offered by `GET /scheduling/team-candidates` is refused.
+            The personal page names no colleagues: it offers the host's own free time alone. A
+            request naming a member answers 422 on `team_members`; an empty list is accepted. A
+            response does not carry the field. Colleagues are named on a team link
+            (`POST /scheduling/team-links`).
     SchedulingTeamMember:
       type: object
       required: [user_id]
@@ -60181,12 +60425,47 @@ components:
         name: { type: string }
     SchedulingTeamRequest:
       type: object
-      required: [host_user_id, host_name, title, state]
+      required: [page_id, host_user_id, host_name, title, state]
       properties:
+        page_id: { type: string, format: uuid, description: 'The team link that names the caller; answer it with `PUT /scheduling/team-links/{page_id}/answer`.' }
         host_user_id: { type: string, format: uuid }
         host_name: { type: string }
-        title: { type: string, description: The meeting title the link offers. }
+        title: { type: string, description: "The team link's name, which is the meeting title it offers." }
         state: { type: string, enum: [pending, confirmed], x-extensible-enum: true }
+    SchedulingTeamLink:
+      type: object
+      required: [id, title, enabled, team_members, slug, blocker]
+      description: |
+        A booking link that names colleagues who attend every meeting booked through it. It uses
+        the calendar and booking settings of its owner's personal page, and has its own address.
+      properties:
+        id: { type: string, format: uuid }
+        title: { type: string, maxLength: 200, description: "The link's name, which is also the meeting title guests see." }
+        enabled: { type: boolean, description: Whether the owner switched the link on. }
+        team_members:
+          type: array
+          maxItems: 5
+          items: { $ref: '#/components/schemas/SchedulingTeamMember' }
+        slug: { type: string }
+        public_url: { type: string, description: 'The address to share, `/book/{slug}` on the configured public origin. Absent when no usable public origin is configured.' }
+        blocker:
+          type: string
+          enum: [none, no_calendar, calendar_read_only, calendar_unavailable, team_not_ready]
+          x-extensible-enum: true
+          description: Why the link takes no bookings now, with the meanings `SchedulingProfile.blocker` gives them.
+    SchedulingTeamLinkRequest:
+      type: object
+      additionalProperties: false
+      required: [title, team_members]
+      properties:
+        title: { type: string, maxLength: 200 }
+        enabled: { type: boolean, description: Absent means on. }
+        team_members:
+          type: array
+          minItems: 1
+          maxItems: 5
+          items: { $ref: '#/components/schemas/SchedulingTeamMember' }
+          description: Only `user_id` is read. A member's answer is theirs to give.
     SchedulingTeamAnswer:
       type: object
       additionalProperties: false
@@ -60477,7 +60756,9 @@ components:
             Worklist's outcome lane asks: a meeting linked to a customer record the caller may
             see, with no `meeting_status` or `booked`, whose start has passed (a date-only
             meeting once its date is over in the installation's timezone) by the server's clock,
-            and whose content the caller may read. Unlike the lane it has no look-back window, so
+            and whose content the caller may read. A meeting whose subject names travel logistics
+            (a flight, an airport, a pickup) asks only when it links a deal, lead or project the
+            caller may see. Unlike the lane it has no look-back window, so
             an old booked meeting still asks. Every read that carries `writable` carries this.
             A client offers the outcome control when this and `writable` are both true. Absent
             means false.
@@ -63714,6 +63995,14 @@ components:
             their consent nor an agreement with them. A privacy notice they were sent is neither.
             Not a refusal: a surface shows a warning and records the sender's confirmation through
             `POST /lawful-basis-confirmations` before the send. Absent or false otherwise.
+        ask_country:
+          type: boolean
+          description: |
+            The record states no country for this recipient, the refusal is for want of marketing
+            consent, and an installed pack allows advertising until the recipient refuses. A composer
+            asks the sender for the country, saves it on the contact with `PATCH /contacts/{id}`
+            (`address_country`) and asks the preview again. Absent or false when no answer could
+            change the decision, and for a recipient the caller cannot read.
         consent_purpose_id:
           type: string
           format: uuid
@@ -69725,7 +70014,16 @@ components:
         routine_mail_team_id:
           type: string
           format: uuid
-          description: The selected live team for team or combined scope. Personal scope ignores a retained selection.
+          description: >
+            The selected live team for team or combined scope. Personal scope ignores a retained
+            selection. A team that does not exist, is archived or is not one the caller may
+            review is refused with 422 `delivery_team_gone` on this field.
+        clear_routine_mail_team:
+          type: boolean
+          writeOnly: true
+          description: >
+            True removes the selected team, and a team or combined scope falls back to
+            `personal`. Sent together with `routine_mail_team_id` it is refused with 422.
         weekly_delivery_day:
           type: integer
           minimum: 1
@@ -72030,6 +72328,12 @@ components:
         reporting:
           type: boolean
           description: Whether reporting is enabled in this installation.
+        vat_register:
+          type: boolean
+          description: >
+            True when this installation consults the EU VAT register, so
+            `POST /companies/{id}/vat-check` can queue a check. Absent or false means that
+            request answers 404, and a client offers no check.
         lists:
           type: boolean
           description: >
@@ -72979,7 +73283,7 @@ components:
         assessment: {type: string, enum: [attention, checked, incomplete], x-extensible-enum: true}
         sources:
           type: array
-          maxItems: 10
+          maxItems: 11
           items: {$ref: '#/components/schemas/HealthSource'}
         findings:
           type: array
@@ -73050,17 +73354,40 @@ components:
         first_observed_at: {type: string, format: date-time}
         next_attempt_at: {type: string, format: date-time}
         count: {type: integer, minimum: 0}
-        unit: {type: string, enum: [runs, mailboxes, records, updates, items, threads], x-extensible-enum: true}
+        unit: {type: string, enum: [runs, mailboxes, records, updates, items, threads, messages], x-extensible-enum: true}
         window_start: {type: string, format: date-time}
         window_end: {type: string, format: date-time}
+        footer_gap:
+          $ref: '#/components/schemas/HealthFooterGap'
         action:
           $ref: '#/components/schemas/HealthAction'
+    HealthFooterGap:
+      type: object
+      additionalProperties: false
+      description: >
+        A legal entity whose mail owes a company detail nobody stated. A send that owes it is held
+        for review with `footer_incomplete`, and a background send is dropped. The finding goes once
+        the details are complete.
+      required: [legal_entity_id, legal_entity_name, is_default, missing, held_by_user, held_in_background]
+      properties:
+        legal_entity_id: {type: string, format: uuid}
+        legal_entity_name: {type: string, description: Empty for a default entity that states no name.}
+        is_default: {type: boolean}
+        missing:
+          type: array
+          minItems: 1
+          description: >
+            The owed disclosure kinds with no text, then `entity_name` for a default entity with
+            neither a display name nor a legal name.
+          items: {type: string, enum: [controller_identity, privacy_contact, objection_route, advertiser_contact, advertisement, entity_name], x-extensible-enum: true}
+        held_by_user: {type: integer, minimum: 0, description: 'Sends a user pressed that were held for this since the details last changed.'}
+        held_in_background: {type: integer, minimum: 0, description: 'Background sends, such as a meeting reminder, that were held or dropped for this since the details last changed.'}
     HealthAction:
       type: object
       additionalProperties: false
       required: [destination, available]
       properties:
-        destination: {type: string, enum: [diagnostics, connections, models, search, updates, configuration, regional], x-extensible-enum: true, description: 'Where the finding is acted on. `regional` is the Company settings part that holds the installation timezone.'}
+        destination: {type: string, enum: [diagnostics, connections, models, search, updates, configuration, regional, legal_entities, company_profile, disclosures], x-extensible-enum: true, description: 'Where the finding is acted on. `regional` is the Company settings part that holds the installation timezone. `legal_entities` is the Company settings part that lists the legal entities, and `company_profile` the one that names the company. `disclosures` is the jurisdiction page that holds the company details every mail discloses.'}
         available: {type: boolean}
         reason: {type: string}
 
@@ -73262,7 +73589,7 @@ components:
             when no user row resolves — a deactivated or deleted member still has
             audit rows, and an honest identifier is better than an invented name.
         on_behalf_of_name: { type: [string, 'null'], description: Resolved display name for on_behalf_of. }
-        batch_id: { type: [string, 'null'], format: uuid, description: 'The bulk change that wrote this row; null for a change made on its own.' }
+        batch_id: { type: [string, 'null'], format: uuid, description: 'The operation group that wrote this row: a bulk change, or one run of a capture purge. Null for a change made on its own.' }
         action:
           $ref: '#/components/schemas/AuditAction'
         entity_type: { type: string }
@@ -74331,7 +74658,6 @@ components:
         - document_extract
         - draft_reply
         - enrich
-        - extension_task
         - growth_fit
         - nl_search
         - offer_draft
@@ -74388,6 +74714,9 @@ components:
         also what a caller may FILTER on, and rows written before they were retired are served
         until the projection's retention window closes over them — narrowing the filter would
         refuse a query that still has answers.
+
+        `extension_task` is RETIRED for the same reason: the task was removed, and an extension's
+        AI task now reports under its own `ext_<unit>_<task>` name. `ai.RetiredTasks` lists it.
 
         Its own schema because the item that reports a kind and the query that asks for kinds
         must be ONE list — two copies of a vocabulary are two vocabularies as soon as somebody
@@ -74531,11 +74860,12 @@ components:
 
     RouterActions:
       type: object
-      description: The actions of one MCP router whose actions run REST routes.
-      required: [router, actions]
+      description: The actions of one MCP router, with the arguments each takes.
+      required: [router, actions, how_to_call]
       properties:
         router: { type: string }
         ask_user_first_means: { type: string, description: 'What ask_user_first asks of the model; present when an action here has it.' }
+        how_to_call: { type: string, description: 'Where an action''s arguments go in the router call: top-level members beside action, a routed body in request_body.' }
         actions:
           type: array
           items:
@@ -74543,14 +74873,25 @@ components:
             required: [action, does, route]
             properties:
               action: { type: string, description: 'The value the router''s action argument takes.' }
-              does: { type: string, description: 'The route''s summary.' }
+              does: { type: string, description: 'What the action does.' }
               route: { type: string, description: 'The method and route, for example POST /v1/record-grants.' }
               ids: { type: array, items: { type: string }, description: The path ids the action takes as arguments. }
-              query: { type: array, items: { type: string }, description: The query parameters it takes as arguments. }
+              query:
+                type: array
+                description: The query parameters it takes as arguments, each with its type and any closed values.
+                items:
+                  type: object
+                  required: [name, type]
+                  properties:
+                    name: { type: string }
+                    type: { type: string }
+                    required: { type: boolean }
+                    enum: { type: array, items: { type: string } }
+                    format: { type: string }
               if_version: { type: boolean, description: 'Whether it takes if_version: the version you last read.' }
               ask_user_first: { type: boolean, description: Whether the app asks its user to confirm it first. }
               uploads_a_file: { type: boolean, description: 'Whether it takes filename, content_type and content_base64.' }
-              body: { type: object, description: The JSON schema of its body argument. }
+              body: { type: object, additionalProperties: true, description: The JSON schema of its body argument. }
 
     AgentAdmissionPolicy:
       type: object

@@ -17,7 +17,6 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/margince/margince/backend/internal/compose"
-	"github.com/margince/margince/backend/internal/compose/extai"
 	ps "github.com/margince/margince/backend/internal/compose/programsettings"
 	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/modules/contacts"
@@ -111,7 +110,6 @@ func startJobRunner(ctx context.Context, pool *pgxpool.Pool, vault keyvault.Vaul
 	// already nil where none is configured, and it is the same value
 	// startRunnerLane passes — so the two bindings are idempotent.
 	compose.BindExtensionRuntime(pool, vault)
-	extai.Bind(pool, modelPath.ExtensionTask)
 	// The capture pipeline a unit's ingress lands through. Units ingest only from
 	// job ticks and subscription deliveries, and both run in this role. It shares
 	// cfg.captureConfig with the sweep registry, so both reach one attachment store.
@@ -337,7 +335,8 @@ func newJobRunner(ctx context.Context, pool *pgxpool.Pool, logger *slog.Logger, 
 		// the company's logo out of the site it just crawled and stores the
 		// normalized bytes here. Nil (no blobstore configured) leaves every
 		// company on its monogram — the read itself is unaffected.
-		Blobstore: lanes.blob,
+		Blobstore:        lanes.blob,
+		JournalBlobstore: lanes.journal,
 		// An import commit reads its upload from the same store, under the
 		// upload's own cap.
 		ImportUploadCap: cfg.csvImportCap,

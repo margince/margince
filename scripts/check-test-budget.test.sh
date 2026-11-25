@@ -85,7 +85,8 @@ if run; then fail "a log with no timed package line passed"; fi
 log example.com/fast 3.200s
 printf 'FAIL\texample.com/slow\t97.377s\n' >>"$LOG"
 if run "50 example.com/slow"; then fail "a waived package whose tests failed passed"; fi
-if TEST_PACKAGE_BUDGET=10 TEST_BUDGET_WAIVERS="$WAIVERS" bash "$GATE" "$LOG" 2>&1 | grep -q 'never ran'; then
+budget_out="$(TEST_PACKAGE_BUDGET=10 TEST_BUDGET_WAIVERS="$WAIVERS" bash "$GATE" "$LOG" 2>&1 || true)"
+if grep -q 'never ran' <<<"$budget_out"; then
   fail "a waived package whose tests failed was reported as never run"
 fi
 

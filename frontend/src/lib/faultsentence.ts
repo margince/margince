@@ -137,7 +137,7 @@ export function faultSentence(
   const serverWords =
     locale === "en" && !wordsFaultInEnglish(fault, labels) && fault.message;
   const message = key
-    ? translate(locale, key)
+    ? translate(locale, key, fault.params)
     : serverWords ||
       (codeMessage(fault, locale, label) ?? worded(INVALID, locale, label));
   const sentence = openingCase(message, locale);

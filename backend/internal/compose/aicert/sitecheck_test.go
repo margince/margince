@@ -29,7 +29,10 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/jackc/pgx/v5"
+
 	"github.com/margince/margince/backend/internal/compose"
+	"github.com/margince/margince/backend/internal/compose/agentloope2e/live"
 	"github.com/margince/margince/backend/internal/compose/aitasks"
 	"github.com/margince/margince/backend/internal/modules/ai"
 )
@@ -66,6 +69,7 @@ func TestEverySiteCheckIsStamped(t *testing.T) {
 			t.Errorf("site %s has no scenario to prepare its case from, so its check cannot be found", key)
 			continue
 		}
+		index.declared = declaredDependencies(t, site)
 		lines = append(lines, key+" "+index.checkDigest(t, root))
 	}
 	slices.Sort(lines)
@@ -81,6 +85,48 @@ func TestEverySiteCheckIsStamped(t *testing.T) {
 			"run this test with -update-site-checks, which turns that site's records stale:\n%s",
 			siteChecksPath, firstLineDiff(siteChecksGolden, want))
 	}
+}
+
+// declaredDependencies are what a site's check takes as one dependency.
+//
+// The replay of an agent_loop run reads the tool surface through the specs the
+// registry publishes, so the registry's builder is hashed as those specs. Walking
+// it instead reaches every store and service the registry wires, which no
+// grading depends on.
+//
+// A certification run of the counterparty site settles through an in-memory
+// ledger. The database ledger is a type it never builds, so its transactions are
+// no part of the grade.
+func declaredDependencies(t *testing.T, site aitasks.Site) map[string]string {
+	t.Helper()
+	switch {
+	case site.Kind == ai.SiteKindAgentLoop:
+		return map[string]string{modulePath + "/internal/compose.agentLoopRegistry": agentToolSpecsDigest(t, site.Variant)}
+	case site.Task == ai.TaskCaptureCounterpartyVerdict:
+		return map[string]string{modulePath + "/internal/compose.databaseVerdictLedger": "not built by a certification run"}
+	}
+	return nil
+}
+
+// agentToolSpecsDigest is the digest of an agent's goal, its tools' specs and its
+// step budget, which the replay of its run reads.
+func agentToolSpecsDigest(t *testing.T, agent string) string {
+	t.Helper()
+	goal, tools, err := live.ToolFacts(agent)
+	if err != nil {
+		t.Fatalf("agent %s: %v", agent, err)
+	}
+	spec, _ := compose.ScheduledAgentSpecByName(agent)
+	body, err := json.Marshal(struct {
+		Goal   string          `json:"goal"`
+		Budget any             `json:"budget"`
+		Tools  []live.ToolFact `json:"tools"`
+	}{goal, spec.Budget, tools})
+	if err != nil {
+		t.Fatal(err)
+	}
+	sum := sha256.Sum256(body)
+	return hex.EncodeToString(sum[:])
 }
 
 // caseTypeOf prepares site's case from its first scenario and answers the
@@ -137,6 +183,14 @@ type sourcePackage struct {
 type sourceIndex struct {
 	fset *token.FileSet
 	pkgs map[string]*sourcePackage
+	// declared names a function the walk takes as one dependency, as
+	// "package.name". Its body is not walked, and the digest it maps to is hashed
+	// instead. A tool registry builder is one: a check reads the tools only
+	// through the specs they publish.
+	declared map[string]string
+	// overlay serves a file's text from here instead of from disk, by the path
+	// load reads it at. A test changes a function this way and watches a digest.
+	overlay map[string]string
 }
 
 func newSourceIndex(t *testing.T) *sourceIndex {
@@ -169,7 +223,11 @@ func (x *sourceIndex) load(t *testing.T, path string) *sourcePackage {
 		if entry.IsDir() || !strings.HasSuffix(name, ".go") || strings.HasSuffix(name, "_test.go") {
 			continue
 		}
-		file, err := parser.ParseFile(x.fset, filepath.Join(dir, name), nil, parser.SkipObjectResolution)
+		var text any
+		if over, ok := x.overlay[filepath.Join(dir, name)]; ok {
+			text = over
+		}
+		file, err := parser.ParseFile(x.fset, filepath.Join(dir, name), text, parser.SkipObjectResolution)
 		if err != nil {
 			t.Fatalf("parsing %s: %v", name, err)
 		}
@@ -220,15 +278,32 @@ func (x *sourceIndex) checkDigest(t *testing.T, root reflect.Type) string {
 	return x.digestOf(t, pkg, named.Name())
 }
 
-// digestOf is the digest of what the Evaluate of typeName in pkg reaches.
-func (x *sourceIndex) digestOf(t *testing.T, pkg *sourcePackage, typeName string) string {
+// runWalked are the cases whose grade turns on code only their Run reaches. A
+// full-path case records what the production pass stored, and Evaluate reads that
+// record. So the floors and the re-ask the pass applies decide the grade.
+var runWalked = map[string][]string{
+	"captureClassifyCase":     {"Run"},
+	"counterpartyVerdictCase": {"Run"},
+}
+
+// walkOf is everything the Evaluate of typeName in pkg reaches, and the Run of a
+// case in runWalked.
+func (x *sourceIndex) walkOf(t *testing.T, pkg *sourcePackage, typeName string) *checkWalk {
 	t.Helper()
-	walk := checkWalk{
+	walk := &checkWalk{
 		index: x, seen: map[ast.Node]string{}, types: map[string]bool{}, selected: map[string]bool{},
-		fieldTypes: map[string][]string{}, fieldCalls: map[string]map[string]bool{},
+		fieldTypes: map[string][]string{}, fieldCalls: map[string]map[string]bool{}, declaredHit: map[string]string{},
+		storage: map[ast.Node]bool{},
 	}
-	for _, method := range pkg.methods["Evaluate"] {
-		if receiverName(method) == typeName {
+	for _, name := range append([]string{"Evaluate"}, runWalked[typeName]...) {
+		for _, method := range pkg.methods[name] {
+			if receiverName(method) != typeName {
+				continue
+			}
+			if namesTheDriver(pkg, method) {
+				t.Fatalf("%s.%s is storage by namesTheDriver, so its digest would hash none of it; "+
+					"move the database call into a method of its own", typeName, name)
+			}
 			walk.visit(t, pkg, method)
 		}
 	}
@@ -237,6 +312,19 @@ func (x *sourceIndex) digestOf(t *testing.T, pkg *sourcePackage, typeName string
 	}
 	walk.visitFuncFields(t, pkg, typeName)
 	walk.resolveMethods(t)
+	return walk
+}
+
+// digestOf is the digest of what the Evaluate of typeName in pkg reaches.
+func (x *sourceIndex) digestOf(t *testing.T, pkg *sourcePackage, typeName string) string {
+	t.Helper()
+	return x.hashWalk(t, x.walkOf(t, pkg, typeName))
+}
+
+// hashWalk is the digest of every declaration a walk reached and every
+// dependency it took as declared.
+func (x *sourceIndex) hashWalk(t *testing.T, walk *checkWalk) string {
+	t.Helper()
 	var material []string
 	for node, id := range walk.seen {
 		var src bytes.Buffer
@@ -244,6 +332,9 @@ func (x *sourceIndex) digestOf(t *testing.T, pkg *sourcePackage, typeName string
 			t.Fatalf("formatting %s: %v", id, err)
 		}
 		material = append(material, id+"\n"+src.String())
+	}
+	for key, digest := range walk.declaredHit {
+		material = append(material, "declared "+key+"\n"+digest)
 	}
 	slices.Sort(material)
 	sum := sha256.Sum256([]byte(strings.Join(material, "\n")))
@@ -279,11 +370,24 @@ type checkWalk struct {
 	fieldTypes map[string][]string
 	fieldCalls map[string]map[string]bool
 	selected   map[string]bool
+	// declaredHit holds the declared dependencies the walk reached, with their
+	// digests; each is hashed into the check.
+	declaredHit map[string]string
+	// storage holds the functions and values the walk stopped at because they
+	// reach the database driver. None is hashed.
+	storage map[ast.Node]bool
 }
 
 func (w *checkWalk) visit(t *testing.T, pkg *sourcePackage, node ast.Node) {
 	t.Helper()
 	if _, done := w.seen[node]; done {
+		return
+	}
+	if w.storage[node] {
+		return
+	}
+	if namesTheDriver(pkg, node) {
+		w.storage[node] = true
 		return
 	}
 	w.seen[node] = pkg.path + "." + declName(node)
@@ -319,6 +423,84 @@ func (w *checkWalk) visit(t *testing.T, pkg *sourcePackage, node ast.Node) {
 		}
 		return true
 	})
+}
+
+// driverPath is the import path of the database driver; its subpackages share
+// it as a prefix.
+var driverPath = reflect.TypeFor[pgx.Tx]().PkgPath()
+
+// namesTheDriver answers whether a function or value declaration is storage. A
+// function is when its signature names a driver type, or it calls through a
+// receiver field of one. A value is when it names the driver at all. A
+// certification run builds no database, so such code never runs in one. A
+// function that only checks a driver error in its body stays in the digest.
+func namesTheDriver(pkg *sourcePackage, node ast.Node) bool {
+	file := pkg.fileOf[node]
+	switch d := node.(type) {
+	case *ast.ValueSpec:
+		return selectsTheDriver(file, d, "", nil)
+	case *ast.FuncDecl:
+		if selectsTheDriver(file, d.Type, "", nil) {
+			return true
+		}
+		if d.Recv == nil || len(d.Recv.List[0].Names) == 0 || d.Body == nil {
+			return false
+		}
+		return selectsTheDriver(file, d.Body, d.Recv.List[0].Names[0].Name, driverFields(pkg, receiverName(d)))
+	}
+	return false
+}
+
+// selectsTheDriver answers whether node selects from a driver package, or
+// selects one of fields on recv.
+func selectsTheDriver(file *ast.File, node ast.Node, recv string, fields map[string]bool) bool {
+	found := false
+	ast.Inspect(node, func(n ast.Node) bool {
+		if sel, ok := n.(*ast.SelectorExpr); ok && !found {
+			if ident, ok := sel.X.(*ast.Ident); ok {
+				found = isDriver(importPath(file, ident.Name)) || (ident.Name == recv && fields[sel.Sel.Name])
+			}
+		}
+		return !found
+	})
+	return found
+}
+
+// driverFields are the fields of typeName in pkg whose type a driver package
+// declares, through a pointer. An embedded field is named by its type.
+func driverFields(pkg *sourcePackage, typeName string) map[string]bool {
+	spec, ok := pkg.values[typeName].(*ast.TypeSpec)
+	if !ok {
+		return nil
+	}
+	fields, ok := spec.Type.(*ast.StructType)
+	if !ok {
+		return nil
+	}
+	found := map[string]bool{}
+	for _, field := range fields.Fields.List {
+		expr := field.Type
+		if star, isPointer := expr.(*ast.StarExpr); isPointer {
+			expr = star.X
+		}
+		sel, isSelector := expr.(*ast.SelectorExpr)
+		if !isSelector {
+			continue
+		}
+		if ident, isIdent := sel.X.(*ast.Ident); isIdent && isDriver(importPath(pkg.fileOf[spec], ident.Name)) {
+			if len(field.Names) == 0 {
+				found[sel.Sel.Name] = true
+			}
+			for _, name := range field.Names {
+				found[name.Name] = true
+			}
+		}
+	}
+	return found
+}
+
+func isDriver(path string) bool {
+	return path == driverPath || strings.HasPrefix(path, driverPath+"/")
 }
 
 // noteFieldTypes keeps the named type of each field of spec, through a pointer.
@@ -398,6 +580,10 @@ func (w *checkWalk) visitName(t *testing.T, pkg *sourcePackage, name string) {
 	t.Helper()
 	// The blank name declares nothing a check can call.
 	if name == "_" {
+		return
+	}
+	if digest, declared := w.index.declared[pkg.path+"."+name]; declared {
+		w.declaredHit[pkg.path+"."+name] = digest
 		return
 	}
 	if fn, ok := pkg.funcs[name]; ok {
@@ -506,6 +692,25 @@ func declName(node ast.Node) string {
 	return fmt.Sprintf("%T", node)
 }
 
+// defaultImportName is the name an unaliased import of path binds. A major
+// version element, as in pgx/v5, names no package, so the element before it
+// does; a gopkg.in element drops its .vN suffix.
+func defaultImportName(path string) string {
+	elems := strings.Split(path, "/")
+	last := elems[len(elems)-1]
+	if major, isVersion := strings.CutPrefix(last, "v"); isVersion && len(elems) > 1 && isDigits(major) {
+		last = elems[len(elems)-2]
+	}
+	if base, major, isVersioned := strings.Cut(last, ".v"); isVersioned && isDigits(major) {
+		last = base
+	}
+	return last
+}
+
+func isDigits(text string) bool {
+	return text != "" && strings.Trim(text, "0123456789") == ""
+}
+
 // importPath is the path name imports in file, or empty when it names none.
 func importPath(file *ast.File, name string) string {
 	if file == nil {
@@ -513,7 +718,7 @@ func importPath(file *ast.File, name string) string {
 	}
 	for _, spec := range file.Imports {
 		path := strings.Trim(spec.Path.Value, `"`)
-		alias := path[strings.LastIndex(path, "/")+1:]
+		alias := defaultImportName(path)
 		if spec.Name != nil {
 			alias = spec.Name.Name
 		}
@@ -613,4 +818,70 @@ func TestAnEditToAMethodTheCaseCallsThroughAFieldMovesTheSiteCheck(t *testing.T)
 	if fixtureDigest(t, edited) == before {
 		t.Error("an edit to the field's method Evaluate judges through left the digest unchanged")
 	}
+}
+
+// A case that judges through a store for each way the walk stops at the driver.
+// One helper only compares a driver error, and it still counts.
+const storageFixture = `
+import driver "github.com/jackc/pgx/v5"
+const loadRows = "SELECT rows FROM store"
+var errGone = driver.ErrNoRows
+type store struct{ db driver.Tx }
+func (s store) load() string { return s.db.Conn().Config().Database + loadRows }
+type ledger struct{ driver.Tx }
+func (l ledger) owner() string { return l.Tx.Conn().Config().User }
+func scan(row driver.Row) int { return 1 }
+func absent(err error) bool { return err == errGone }
+type judgeCase struct {
+	want   int
+	cache  store
+	ledger ledger
+}
+func (c judgeCase) Evaluate(got int) bool {
+	return c.cache.load() != "" && c.ledger.owner() != "" && scan(nil) == 1 && !absent(nil) && sameRows(c.want, got)
+}
+func sameRows(want, got int) bool { return want == got }
+`
+
+func TestAStatementTheStoreRunsMovesNoSiteCheckAndTheJudgingCodeStillDoes(t *testing.T) {
+	before := fixtureDigest(t, storageFixture)
+	for name, edited := range map[string]string{
+		"the statement":                  strings.Replace(storageFixture, "SELECT rows FROM store", "SELECT pages FROM store", 1),
+		"a body behind a driver field":   strings.Replace(storageFixture, "Config().Database + loadRows", "Config().Host + loadRows", 1),
+		"a body behind an embedded one":  strings.Replace(storageFixture, "Config().User }", "Config().Host }", 1),
+		"a function taking a driver row": strings.Replace(storageFixture, "row driver.Row) int { return 1 }", "row driver.Row) int { return 2 }", 1),
+		"a value naming the driver":      strings.Replace(storageFixture, "errGone = driver.ErrNoRows", "errGone = driver.ErrTxClosed", 1),
+	} {
+		if fixtureDigest(t, edited) != before {
+			t.Errorf("an edit to %s, which only the driver runs, moved the digest", name)
+		}
+	}
+	for name, edited := range map[string]string{
+		"the helper Evaluate judges through":    strings.Replace(storageFixture, "return want == got", "return want <= got", 1),
+		"a helper that compares a driver error": strings.Replace(storageFixture, "return err == errGone", "return err != errGone", 1),
+	} {
+		if fixtureDigest(t, edited) == before {
+			t.Errorf("an edit to %s left the digest unchanged", name)
+		}
+	}
+}
+
+func TestAnImportBindsTheNameGoGivesIt(t *testing.T) {
+	for path, want := range map[string]string{
+		"github.com/jackc/pgx/v5":                  "pgx",
+		"github.com/jackc/pgx/v5/pgxpool":          "pgxpool",
+		"gopkg.in/yaml.v3":                         "yaml",
+		"github.com/margince/margince/backend/v2x": "v2x",
+		"strings": "strings",
+	} {
+		if got := defaultImportName(path); got != want {
+			t.Errorf("defaultImportName(%q) = %q, want %q", path, got, want)
+		}
+	}
+}
+
+// readSource is a source file's text.
+func readSource(path string) (string, error) {
+	body, err := os.ReadFile(path)
+	return string(body), err
 }

@@ -14,7 +14,6 @@ import { OwnerPick } from "../../components/ownerpick";
 import type { SectionFlow } from "../../components/sectionedit";
 import { fetchGrants } from "../../components/share.parts";
 import { Badge } from "../../design-system/atoms";
-import { IdentityLine } from "../../design-system/identityline";
 import { ReadOnlyValue } from "../../design-system/readonlyvalue";
 import { useT } from "../../i18n";
 import { useCanWrite, useWriteRefusal } from "../../lib/capability";
@@ -105,10 +104,9 @@ function LeadSharePill({ lead }: Readonly<{ lead: Lead }>): ReactNode {
 export function LeadPulse({ lead }: Readonly<{ lead: Lead }>): ReactNode {
   const t = useT();
   const label = leadStatusLabel(lead.status);
-  // The same row shape the contact's marks take: pills side by side with a
-  // space between, never stretched across the head.
+  // Bare pills, as the contact's marks are: the head's pill row spaces them.
   return (
-    <IdentityLine separator="space">
+    <>
       {/* Plain, not a state colour: that this is a lead is a kind, not a
           reading. */}
       <Badge>{t("lead.marker")}</Badge>
@@ -116,7 +114,7 @@ export function LeadPulse({ lead }: Readonly<{ lead: Lead }>): ReactNode {
         {label ? t(label) : lead.status}
       </Badge>
       <LeadSharePill lead={lead} />
-    </IdentityLine>
+    </>
   );
 }
 

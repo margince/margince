@@ -154,6 +154,11 @@
 .settings-home-row:hover {
   background: var(--groundHover);
 }
+/* Inside the row, where its hover ground is: the panel clips past the inset. */
+.settings-home-row:focus-visible {
+  outline: var(--focus-ring);
+  outline-offset: -2px;
+}
 .settings-home-glyph {
   align-self: center;
   color: var(--textSecondary);

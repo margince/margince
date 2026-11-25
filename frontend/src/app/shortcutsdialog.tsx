@@ -150,19 +150,15 @@ function ShortcutKeys({ ways }: Readonly<{ ways: readonly ShortcutWay[] }>) {
           {at > 0 && (
             <span className="t-caption">{t("shell.shortcuts.or")}</span>
           )}
-          {way.caps.map((cap, step) => {
-            // A sequence may repeat a key (G, then G), so a step is named by
-            // the keys pressed up to it.
-            const pressedSoFar = way.caps.slice(0, step + 1).join(" ");
-            return (
-              <Fragment key={pressedSoFar}>
-                {way.sequence && step > 0 && (
-                  <span className="t-caption">{t("shell.shortcuts.then")}</span>
-                )}
-                <Kbd>{cap}</Kbd>
-              </Fragment>
-            );
-          })}
+          {way.caps.map((cap, step) => (
+            // The keys pressed so far: a sequence may press one key twice.
+            <Fragment key={way.caps.slice(0, step + 1).join(" ")}>
+              {way.sequence && step > 0 && (
+                <span className="t-caption">{t("shell.shortcuts.then")}</span>
+              )}
+              <Kbd>{cap}</Kbd>
+            </Fragment>
+          ))}
         </Fragment>
       ))}
     </span>

@@ -80,7 +80,7 @@ func TagFilterClause(ctx context.Context, taggableType, idColumn string, tagIDs 
 	// page shrink. Rendering nothing would WIDEN the answer, so the refusal is
 	// a predicate that selects no rows.
 	if !auth.Allows(ctx, "tag", principal.ActionRead) {
-		return "FALSE"
+		return matchesNoRow
 	}
 	switch mode {
 	case TagModeAll:

@@ -2120,8 +2120,10 @@ public.booking_page.id uuid NOT NULL gen=- def=uuidv7()
 public.booking_page.revoked_at timestamp with time zone gen=- def=-
 public.booking_page.scheduling_policy jsonb gen=- def=-
 public.booking_page.slug text NOT NULL gen=- def=-
+public.booking_page.team_link boolean NOT NULL gen=- def=false
 public.booking_page.text_bound_insert CREATE TRIGGER text_bound_insert AFTER INSERT ON public.booking_page FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"slug": 20000}'::jsonb)) EXECUTE FUNCTION refuse_oversized_text('{"slug":20000}')
 public.booking_page.text_bound_update CREATE TRIGGER text_bound_update AFTER UPDATE ON public.booking_page FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"slug": 20000}'::jsonb)) EXECUTE FUNCTION refuse_oversized_text('{"slug":20000}')
+public.booking_page_one_personal_per_host CREATE UNIQUE INDEX booking_page_one_personal_per_host ON public.booking_page USING btree (host_user_id) WHERE ((revoked_at IS NULL) AND (NOT team_link))
 public.booking_page_pkey CREATE UNIQUE INDEX booking_page_pkey ON public.booking_page USING btree (id)
 public.booking_page_slug_key CREATE UNIQUE INDEX booking_page_slug_key ON public.booking_page USING btree (slug)
 public.brief_item acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
@@ -7818,6 +7820,7 @@ public.meeting_invitation.appointment jsonb NOT NULL gen=- def=-
 public.meeting_invitation.attempts integer NOT NULL gen=- def=0
 public.meeting_invitation.attention_episode uuid gen=- def=-
 public.meeting_invitation.attention_reason text gen=- def=-
+public.meeting_invitation.booking_page_id uuid gen=- def=-
 public.meeting_invitation.calendar_id text NOT NULL gen=- def=-
 public.meeting_invitation.cleanup_complete boolean NOT NULL gen=- def=false
 public.meeting_invitation.command text NOT NULL gen=- def='create'::text
@@ -7829,6 +7832,7 @@ public.meeting_invitation.management_ref text NOT NULL gen=- def=-
 public.meeting_invitation.meeting_invitation_activity_id_fkey FOREIGN KEY (activity_id) REFERENCES activity(id) ON DELETE CASCADE
 public.meeting_invitation.meeting_invitation_attention_follows_status CREATE TRIGGER meeting_invitation_attention_follows_status BEFORE INSERT OR UPDATE ON public.meeting_invitation FOR EACH ROW EXECUTE FUNCTION meeting_invitation_attention_follows_status()
 public.meeting_invitation.meeting_invitation_attention_reason_check CHECK ((attention_reason = ANY (ARRAY['delivery_failed'::text, 'calendar_disconnected'::text])))
+public.meeting_invitation.meeting_invitation_booking_page_id_fkey FOREIGN KEY (booking_page_id) REFERENCES booking_page(id) ON DELETE SET NULL
 public.meeting_invitation.meeting_invitation_command_check CHECK ((command = ANY (ARRAY['create'::text, 'update'::text, 'cancel'::text])))
 public.meeting_invitation.meeting_invitation_host_user_id_fkey FOREIGN KEY (host_user_id) REFERENCES app_user(id) ON DELETE RESTRICT
 public.meeting_invitation.meeting_invitation_host_user_id_retirement_guard CREATE TRIGGER meeting_invitation_host_user_id_retirement_guard BEFORE INSERT OR UPDATE ON public.meeting_invitation FOR EACH ROW WHEN (((new.host_user_id IS NOT NULL) AND ((new.status <> ALL (ARRAY['canceled'::text, 'erased'::text])) OR (NOT new.cleanup_complete)))) EXECUTE FUNCTION refuse_retired_member_work('host_user_id')
@@ -7858,6 +7862,7 @@ BEGIN
   RETURN NEW;
 END;
 
+public.meeting_invitation_booking_page_idx CREATE INDEX meeting_invitation_booking_page_idx ON public.meeting_invitation USING btree (booking_page_id)
 public.meeting_invitation_due CREATE INDEX meeting_invitation_due ON public.meeting_invitation USING btree (next_attempt_at) WHERE (status = ANY (ARRAY['pending'::text, 'rescheduling'::text, 'canceling'::text]))
 public.meeting_invitation_management_hash_key CREATE UNIQUE INDEX meeting_invitation_management_hash_key ON public.meeting_invitation USING btree (management_hash)
 public.meeting_invitation_pkey CREATE UNIQUE INDEX meeting_invitation_pkey ON public.meeting_invitation USING btree (activity_id)

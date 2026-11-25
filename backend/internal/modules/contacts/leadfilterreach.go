@@ -8,12 +8,10 @@ package contacts
 
 import (
 	"context"
-	"errors"
 	"strconv"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
-	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -30,10 +28,6 @@ var leadProbeOperands = []string{
 func LeadListFilterReach(ctx context.Context, members storekit.ListMemberFilterResolver) ([]storekit.FilterReach, error) {
 	return storekit.ProbeFilterReach(ctx, leadListFilters, leadProbeOperands, func(ctx context.Context, in *ListLeadsInput) error {
 		membership, err := storekit.ResolveListMembership(ctx, in.MemberOf, members, leadEntity)
-		// The probe's list id names no list. Not found answers for that id and refuses no dial.
-		if errors.Is(err, apperrors.ErrNotFound) {
-			return nil
-		}
 		if err != nil {
 			return err
 		}

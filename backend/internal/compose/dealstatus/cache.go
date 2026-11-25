@@ -106,7 +106,7 @@ func readableCards(
 		return nil, fmt.Errorf("read the deals this reader may see: %w", err)
 	}
 	if len(readable) == 0 {
-		return nil, nil
+		return map[ids.UUID]generatedsummary.Entry{}, nil
 	}
 	return generatedsummary.ReadEachTx(ctx, tx, userID, generatedsummary.KindDealStatusCard, readable)
 }

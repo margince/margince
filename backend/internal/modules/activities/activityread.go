@@ -475,15 +475,10 @@ func (s *Store) CountActivities(ctx context.Context, in ListActivitiesInput) (in
 		if err != nil {
 			return err
 		}
-		columns, err := activityCountColumns(ctx, content, func(v any) int { args = append(args, v); return len(args) })
-		if err != nil {
-			return err
-		}
-		// The list's own projection, counted. Not `count(*)` over the join
-		// directly: the content clauses put placeholders in the SELECT list, and
-		// a statement that binds an argument it never mentions is one Postgres
-		// refuses outright ("could not determine data type of parameter"). The
-		// planner reads the wrapper for what it is.
+		columns := activityCountColumns(content)
+		// The decision column binds the placeholders the filter rendered for it.
+		// Postgres refuses a statement with an unmentioned argument ("could not
+		// determine data type of parameter").
 		return tx.QueryRow(ctx,
 			`SELECT count(*) FROM (SELECT `+columns+
 				` FROM activity a WHERE `+strings.Join(where, " AND ")+`) counted`, waitingListArgs(ctx, in, args)...).Scan(&total)

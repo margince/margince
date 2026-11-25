@@ -10,7 +10,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 import type { components } from "../../api/schema";
 import { LocaleProvider } from "../../i18n";
-import { LISTS_KEY } from "../../lib/lists.queries";
+import { LISTS_KEY } from "../../lib/listkeys";
 import { jsonResponse } from "../../testing/story-utils";
 import { RetireFieldConfirm } from "./customfields.retire";
 

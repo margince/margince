@@ -42,7 +42,7 @@ func (s *Store) stopsOfSubject(ctx context.Context, in RecordInput) ([]crmcontra
 	asksLift := admitRestriction(ctx) == nil
 	var out []crmcontracts.ContactStop
 	err = s.db.Tx(ctx, func(tx pgx.Tx) error {
-		if err := auth.EnsureReadable(ctx, tx, sub.entityType, sub.id); err != nil {
+		if err := auth.EnsureVisibleExisting(ctx, tx, sub.entityType, sub.id); err != nil {
 			return err
 		}
 		admitted, err := mayLiftOn(ctx, tx, sub)

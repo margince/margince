@@ -83,15 +83,11 @@ func New() extension.Extension {
 		Migrations: migrations,
 		FinanceSources: []extension.FinanceSource{{
 			Provider:        "offline_demo",
+			DisplayName:     "Demo accounting",
 			Check:           check,
 			Customers:       customers,
 			InvoicesFor:     invoicesFor,
 			InvoiceDocument: invoiceDocument,
-		}},
-		AITasks: []extension.AITask{{
-			Name:      "describe_invoice",
-			Prompt:    "Describe the invoice text in one sentence.",
-			Documents: true,
 		}},
 		OAuthApps: []extension.OAuthApp{{ //nolint:gosec // G101: TokenURL is an endpoint address, not a credential
 			Provider: "offline_demo",

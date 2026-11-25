@@ -196,6 +196,7 @@
     "createTeam": "admin_settings",
     "createVoiceBuild": "business",
     "createVoiceProfile": "business",
+    "createWebForm": "admin_settings",
     "createWorkspaceEmailDomain": "admin_settings",
     "deactivateUser": "admin_settings",
     "decideCommissionEntry": "business",
@@ -622,6 +623,7 @@
     "listSavedViews": "business",
     "listScheduledSends": "business",
     "listSchedulingTeamCandidates": "business",
+    "listSchedulingTeamLinks": "business",
     "listSchedulingTeamRequests": "business",
     "listSdrUpcomingMeetings": "business",
     "listSdrWaitingHandoffs": "business",
@@ -961,6 +963,7 @@
     "annotateMorningBrief": "worklist",
     "answerCalendarInvitation": "activities",
     "answerReportingQuestionCard": "reports",
+    "answerSchedulingTeamLink": "scheduling",
     "answerSchedulingTeamRequest": "scheduling",
     "answerWeeklyPlanCommitment": "worklist",
     "applyContactEmploymentImport": "contacts",
@@ -1106,6 +1109,7 @@
     "createRole": "members",
     "createSalesInitiative": "reports",
     "createSavedView": "lists",
+    "createSchedulingTeamLink": "scheduling",
     "createSignal": "signals",
     "createStage": "pipelines",
     "createStageExitCriterion": "pipelines",
@@ -1151,6 +1155,7 @@
     "deleteProviderData": "connectors",
     "deleteRecordLink": "search",
     "deleteRetentionPolicy": "retention",
+    "deleteSchedulingTeamLink": "scheduling",
     "deleteVoiceCorpusSource": "voice",
     "deleteVoiceProfile": "voice",
     "deleteWorkspaceEmailDomain": "capture_rules",
@@ -1468,6 +1473,7 @@
     "getWorklist": "worklist",
     "handOverUserWork": "members",
     "handleExistingWebFormInquiries": "web_forms",
+    "headStatus": "sign_in",
     "hideDealDocument": "documents",
     "importCardPhoto": "contacts",
     "importLinkedInConnections": "own_profile",
@@ -1646,6 +1652,7 @@
     "listSavedViews": "lists",
     "listScheduledSends": "activities",
     "listSchedulingTeamCandidates": "scheduling",
+    "listSchedulingTeamLinks": "scheduling",
     "listSchedulingTeamRequests": "scheduling",
     "listSdrUpcomingMeetings": "reports",
     "listSdrWaitingHandoffs": "reports",
@@ -2038,6 +2045,7 @@
     "updateRole": "members",
     "updateSalesInitiative": "reports",
     "updateSavedView": "lists",
+    "updateSchedulingTeamLink": "scheduling",
     "updateSharedMailbox": "connectors",
     "updateSignal": "signals",
     "updateStage": "pipelines",
@@ -2451,6 +2459,9 @@
     ],
     "create_voice_profile": [
       "voice"
+    ],
+    "create_web_form": [
+      "web_forms"
     ],
     "data_coverage": [
       "reports"
@@ -4591,6 +4602,9 @@
     ],
     "create_voice_profile": [
       "business"
+    ],
+    "create_web_form": [
+      "admin_settings"
     ],
     "data_coverage": [
       "business"

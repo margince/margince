@@ -13,7 +13,9 @@ import (
 
 type batchKey struct{}
 
-// WithBatch marks every audit row written under ctx as part of one bulk change.
+// WithBatch marks every audit row written under ctx as part of one operation
+// group: a bulk change, or one run of a capture purge. Only a bulk change has
+// a bulk_operation row, so only it can be undone.
 //
 // It travels on the context for the reason extension attribution does: a bulk
 // change drives each module's own single-record write, and threading a batch

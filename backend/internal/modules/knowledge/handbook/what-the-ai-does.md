@@ -177,7 +177,7 @@ Where Margince can say who put a value there, it does. The trust marks are:
 - "Source not recorded": when nobody knows where it came from
 
 ## What your agent can set up, and what stays yours
-An agent acting for you can set up pipelines and open stages, custom fields and automations, and change an existing web form. Creating a web form stays yours. It can change price and tax sheets, and your own name, language, hours and voice.
+An agent acting for you can set up pipelines and open stages, custom fields and automations, and create or change a web form. It never sees a web form's secret: choose **Make a new secret** on the form to see one. It can change price and tax sheets, and your own name, language, hours and voice.
 
 It can upload a logo, a vCard or your LinkedIn export. A vCard from your agent fills blanks and replaces nothing a contact already holds. It asks you first where its tool says so. That covers a custom field, a removal, a change to your name and a rule it turns on.
 

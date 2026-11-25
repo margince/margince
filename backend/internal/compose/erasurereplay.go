@@ -30,7 +30,7 @@ const erasureReplayActor = "erasure_replay"
 // own list no longer names the subject. A run without the journal would report
 // a clean pass it cannot vouch for.
 var ErrReplayNeedsObjectStore = errors.New(
-	"the erasure replay needs the object store: set MARGINCE_BLOBSTORE_ENDPOINT or MARGINCE_BLOBSTORE_PATH as the api has them")
+	"the erasure replay needs the object store: set MARGINCE_BLOBSTORE_ENDPOINT or MARGINCE_BLOBSTORE_PATH as the api has them, or MARGINCE_ERASURE_JOURNAL_ENDPOINT or _PATH")
 
 // ErrReplayJournalEmpty refuses a replay whose journal holds no entry. That
 // means a store pointed at the wrong place or an export that never ran. Only
@@ -52,13 +52,13 @@ type ErasureReplay struct {
 }
 
 // ReplayErasureSuppressions re-erases each live contact the suppression list
-// or its exported journal names. A contact the eraser refuses, such as one
-// under legal hold, does not stop the others. The refusals come back beside
-// the count of what was done.
+// or its exported journal names. journal is blobstore.ResolveJournal's answer.
+// A contact the eraser refuses, such as one under legal hold, does not stop the
+// others. The refusals come back beside the count of what was done.
 func ReplayErasureSuppressions(
-	ctx context.Context, pool *pgxpool.Pool, blob blobstore.Store, emptyJournalOK bool,
+	ctx context.Context, pool *pgxpool.Pool, blob, journal blobstore.Store, emptyJournalOK bool,
 ) (ErasureReplay, error) {
-	if blob == nil {
+	if journal == nil {
 		return ErasureReplay{}, ErrReplayNeedsObjectStore
 	}
 	workspace, err := InstallationDB(pool).Workspace(ctx)
@@ -66,7 +66,7 @@ func ReplayErasureSuppressions(
 		return ErasureReplay{}, fmt.Errorf("replaying erasures: %w", err)
 	}
 	ctx = principal.SystemActing(principal.WithWorkspaceID(ctx, workspace.UUID), erasureReplayActor)
-	eraser := ComposedEraser(pool, blob)
+	eraser := ComposedEraser(pool, blob).WithJournalStore(journal)
 
 	var replay ErasureReplay
 	replay.Journal, err = eraser.ReadJournalManifest(ctx)

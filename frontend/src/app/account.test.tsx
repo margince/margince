@@ -397,6 +397,23 @@ describe("AccountMenu", () => {
     expect(document.activeElement).toBe(row("Sign out"));
   });
 
+  // The menu-button keys on the trigger itself: Down opens on the first row,
+  // Up on the last.
+  it.each([
+    ["{ArrowDown}", () => head()],
+    ["{ArrowUp}", () => row("Sign out")],
+  ])("opens from the trigger on %s", async (key, lands) => {
+    const user = userEvent.setup();
+    render(<AccountMenu />);
+    railTrigger().focus();
+
+    await user.keyboard(key);
+
+    await screen.findByRole("menu", { name: "Account" });
+    expect(railTrigger().getAttribute("aria-expanded")).toBe("true");
+    expect(document.activeElement).toBe(lands());
+  });
+
   // A roving tabstop: exactly one row is in the tab order at a time, so Tab
   // leaves the menu rather than walking it.
   it("keeps one tabstop among the rows, on whichever holds focus", async () => {
