@@ -10303,7 +10303,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "aiAccess.local.lumo.fill":
     "Nhập margince làm ID và Margince làm Display name, thêm mô tả ngắn rồi dán địa chỉ.",
   "aiAccess.local.lumo.signIn":
-    "Chọn “Add server”. Khi Lumo yêu cầu, Margince mở ra: hãy đăng nhập và chọn Authorize.",
+    "Chọn “Add server”. Khi Lumo yêu cầu, Margince mở ra: hãy đăng nhập và chọn Cấp quyền.",
   "aiAccess.other.sub":
     "Margince hoạt động với mọi công cụ AI có thể thêm máy chủ MCP từ xa. Hãy tìm “MCP”, “connectors” hoặc “tools” trong phần cài đặt của nó.",
   "aiAccess.other.typeLabel": "Loại",

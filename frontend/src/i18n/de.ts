@@ -10600,7 +10600,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "aiAccess.local.lumo.fill":
     "Gib margince als ID und Margince als Display name ein, ergänze eine kurze Beschreibung und füge die Adresse ein.",
   "aiAccess.local.lumo.signIn":
-    "Wähle „Add server“. Wenn Lumo dazu auffordert, öffnet sich Margince: melde dich an und wähle Authorize.",
+    "Wähle „Add server“. Wenn Lumo dazu auffordert, öffnet sich Margince: melde dich an und wähle Autorisieren.",
   "aiAccess.other.sub":
     "Margince funktioniert mit jedem KI-Tool, das einen entfernten MCP-Server hinzufügen kann. Suche in seinen Einstellungen nach „MCP“, „Connectors“ oder „Tools“.",
   "aiAccess.other.typeLabel": "Typ",

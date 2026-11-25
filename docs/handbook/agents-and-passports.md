@@ -64,8 +64,8 @@ The `openapi.yaml` file in the skill lists every call a passport can make.
 Also called: REST API, API key, script, access token, integration.
 
 ### How do I connect a coding agent to Margince?
-Use the **Connect your AI tool** card in **Settings → AI assistants** for Claude Code, Codex, GitHub Copilot in an editor, Cursor, Antigravity or Lumo. The Lumo website cannot connect yet, so use the Lumo app for your computer.
-Run the command or add the text the card shows, then sign in and choose **Authorize**; no passport is needed.
+Use the **Connect your AI tool** card in **Settings → AI assistants** for Claude Code, Codex, GitHub Copilot in an editor, Cursor, Antigravity or Lumo. The Lumo website cannot connect yet, so for Lumo follow the steps the card shows in the Lumo app.
+For the others, run the command or add the text the card shows, then sign in and choose **Authorize**; no passport is needed.
 If the page says AI tools "cannot connect to Margince yet", an administrator or operations user must turn it on first.
 Also called: MCP client, MCP server, command line, AI assistant integration.
 
