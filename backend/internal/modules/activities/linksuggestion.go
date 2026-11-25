@@ -207,15 +207,28 @@ func scanSuggestion(row pgx.Row) (crmcontracts.LinkSuggestion, error) {
 	return out, nil
 }
 
-// ListLinkSuggestions answers the pending suggestions the caller may see,
-// oldest first. A suggestion whose message or target the caller cannot read is
-// left out.
+// ListLinkSuggestions answers, oldest first, the pending suggestions the caller
+// may decide (mayDecide), so the queue shows no row whose buttons the server
+// refuses. A caller who may decide none, a read-only seat among them, gets an
+// empty queue rather than a refusal.
 func (s *Store) ListLinkSuggestions(ctx context.Context) ([]crmcontracts.LinkSuggestion, error) {
 	if err := auth.Require(ctx, "activity", principal.ActionRead); err != nil {
 		return nil, err
 	}
 	out := []crmcontracts.LinkSuggestion{}
-	err := s.tx(ctx, func(tx pgx.Tx) error {
+	if actor, ok := principal.Actor(ctx); !ok || !actor.SeatType.CanMutate() {
+		return out, nil
+	}
+	// A "no" below is the answer for one row, not the call's refusal, so the
+	// checks run unrecorded.
+	quiet, err := auth.Unrecorded(ctx, "activity", principal.ActionUpdate)
+	if errors.Is(err, apperrors.ErrPermissionDenied) {
+		return out, nil
+	}
+	if err != nil {
+		return nil, err
+	}
+	err = s.tx(ctx, func(tx pgx.Tx) error {
 		pending, err := pendingSuggestions(ctx, tx)
 		if err != nil {
 			return err
@@ -223,6 +236,13 @@ func (s *Store) ListLinkSuggestions(ctx context.Context) ([]crmcontracts.LinkSug
 		for _, suggestion := range pending {
 			if len(out) == suggestionQueueSize {
 				break
+			}
+			err := mayDecide(quiet, tx, suggestion)
+			if errors.Is(err, apperrors.ErrPermissionDenied) || errors.Is(err, apperrors.ErrNotFound) {
+				continue
+			}
+			if err != nil {
+				return err
 			}
 			name, seen, err := visibleTargetName(ctx, tx, string(suggestion.EntityType), ids.UUID(suggestion.EntityId))
 			if err != nil {
@@ -236,6 +256,28 @@ func (s *Store) ListLinkSuggestions(ctx context.Context) ([]crmcontracts.LinkSug
 		return nil
 	})
 	return out, err
+}
+
+// mayDecide is the one bar for accepting or rejecting a suggestion, asked by
+// the decision and by the queue read. The caller updates messages, may change
+// this one (the write scope the relink applies, so a reject cannot decide a
+// message an accept would be refused for), and may read the target the answer
+// names. A target they cannot read is not found.
+func mayDecide(ctx context.Context, tx pgx.Tx, suggestion crmcontracts.LinkSuggestion) error {
+	if err := auth.Require(ctx, "activity", principal.ActionUpdate); err != nil {
+		return err
+	}
+	if err := auth.EnsureActivityWritable(ctx, tx, ids.UUID(suggestion.ActivityId)); err != nil {
+		return err
+	}
+	seen, err := auth.VisibleTo(ctx, tx, string(suggestion.EntityType), ids.UUID(suggestion.EntityId))
+	if err != nil {
+		return err
+	}
+	if !seen {
+		return apperrors.ErrNotFound
+	}
+	return nil
 }
 
 func pendingSuggestions(ctx context.Context, tx pgx.Tx) ([]crmcontracts.LinkSuggestion, error) {
@@ -303,19 +345,8 @@ func (s *Store) decideLinkSuggestion(ctx context.Context, id ids.UUID, decision 
 			return err
 		}
 		activity := ids.From[ids.ActivityKind](ids.UUID(out.ActivityId))
-		// The same write scope the relink applies, so a reject cannot decide a
-		// message an accept would be refused for.
-		if err := auth.EnsureActivityWritable(ctx, tx, activity.UUID); err != nil {
+		if err := mayDecide(ctx, tx, out); err != nil {
 			return err
-		}
-		// The answer names the target, so a target the caller cannot read is a
-		// suggestion they cannot decide.
-		seen, err := auth.VisibleTo(ctx, tx, string(out.EntityType), ids.UUID(out.EntityId))
-		if err != nil {
-			return err
-		}
-		if !seen {
-			return apperrors.ErrNotFound
 		}
 		if string(out.Status) == decision {
 			return nil

@@ -164,9 +164,8 @@ func readLink(ctx context.Context, tx pgx.Tx, id ids.UUID) (crmcontracts.RecordL
 	return scanLink(tx.QueryRow(ctx, `SELECT `+linkColumns+` FROM record_link WHERE id = $1`, id))
 }
 
-// Delete removes a link. The bar is Create's: the caller updates the record the
-// link starts on and can see the one it ends on. A link the caller may not see
-// answers not found, as it would have on a read.
+// Delete removes a link the caller may remove (mayRemove). A link the caller
+// may not see answers not found, as it would have on a read.
 func (s *Store) Delete(ctx context.Context, id ids.UUID) error {
 	return s.tx(ctx, func(tx pgx.Tx) error {
 		link, err := scanLink(tx.QueryRow(ctx,
@@ -177,25 +176,36 @@ func (s *Store) Delete(ctx context.Context, id ids.UUID) error {
 		if err != nil {
 			return err
 		}
-		from, to := string(link.FromType), string(link.ToType)
-		if err := auth.Require(ctx, from, principal.ActionUpdate); err != nil {
+		if err := mayRemove(ctx, tx, link); err != nil {
 			return err
-		}
-		if err := auth.EnsureWritable(ctx, tx, from, ids.UUID(link.FromId)); err != nil {
-			return err
-		}
-		seen, err := auth.VisibleTo(ctx, tx, to, ids.UUID(link.ToId))
-		if err != nil {
-			return err
-		}
-		if !seen {
-			return apperrors.ErrNotFound
 		}
 		if _, err := tx.Exec(ctx, `DELETE FROM record_link WHERE id = $1`, id); err != nil {
 			return fmt.Errorf("recordlinks: removing a link: %w", err)
 		}
 		return recordLinkChange(ctx, tx, link, linkRemoved)
 	})
+}
+
+// mayRemove is the one bar for removing a link, and List asks it too, so the
+// screen offers Remove exactly where Delete succeeds. The bar is Create's: the
+// caller updates the record the link starts on and can see the one it ends on.
+// A denial is ErrPermissionDenied; an end the caller cannot see is ErrNotFound.
+func mayRemove(ctx context.Context, tx pgx.Tx, link crmcontracts.RecordLink) error {
+	from, to := string(link.FromType), string(link.ToType)
+	if err := auth.Require(ctx, from, principal.ActionUpdate); err != nil {
+		return err
+	}
+	if err := auth.EnsureWritable(ctx, tx, from, ids.UUID(link.FromId)); err != nil {
+		return err
+	}
+	seen, err := auth.VisibleTo(ctx, tx, to, ids.UUID(link.ToId))
+	if err != nil {
+		return err
+	}
+	if !seen {
+		return apperrors.ErrNotFound
+	}
+	return nil
 }
 
 // recordLinkChange is the write shape's second half. The audit row and the

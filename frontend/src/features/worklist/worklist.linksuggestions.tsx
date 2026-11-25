@@ -10,7 +10,9 @@ import { Button } from "../../design-system/atoms";
 import { ErrorLine } from "../../design-system/errorline";
 import { Panel, PanelRow } from "../../design-system/panel";
 import { Row, Stack } from "../../design-system/stack";
-import { useT } from "../../i18n";
+import { useLocale, useT } from "../../i18n";
+import { extensionTitle } from "../../lib/extensions";
+import { problemStatus } from "../../lib/problem";
 import {
   type LinkSuggestion,
   useDecideLinkSuggestion,
@@ -22,7 +24,12 @@ export function LinkSuggestionsPanel() {
   const t = useT();
   const suggestions = useLinkSuggestions();
   if (suggestions.isError) {
-    return <p className="t-caption">{t("linkSuggestions.unavailable")}</p>;
+    const refused = problemStatus(suggestions.error) === 403;
+    return (
+      <p className="t-caption">
+        {t(refused ? "linkSuggestions.noAccess" : "linkSuggestions.unavailable")}
+      </p>
+    );
   }
   if (!suggestions.data || suggestions.data.length === 0) {
     return null;
@@ -40,6 +47,7 @@ function LinkSuggestionRow({
   suggestion,
 }: Readonly<{ suggestion: LinkSuggestion }>) {
   const t = useT();
+  const { locale } = useLocale();
   const decide = useDecideLinkSuggestion();
   const deciding = (verb: "accept" | "reject") =>
     decide.isPending && decide.variables?.verb === verb;
@@ -56,7 +64,7 @@ function LinkSuggestionRow({
         </p>
         <p className="t-caption">
           {t("linkSuggestions.reason", {
-            unit: suggestion.unit,
+            unit: extensionTitle(suggestion.unit, locale),
             reason: suggestion.reason,
           })}
         </p>

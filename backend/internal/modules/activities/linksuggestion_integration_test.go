@@ -208,6 +208,35 @@ func TestASuggestionForARecordTheReaderCannotSeeCannotBeDecided(t *testing.T) {
 	}
 }
 
+func TestTheQueueShowsOnlySuggestionsTheReaderMayDecide(t *testing.T) {
+	f := newSuggestionFixture(t)
+	f.propose(t, "deal", f.deal)
+	if queue, err := f.queue(); err != nil || len(queue) != 1 {
+		t.Fatalf("the proposer's queue = %+v, %v; want the suggestion", queue, err)
+	}
+
+	f.ctx = readOnlySeat(f.e, f.e.rep)
+	queue, err := f.queue()
+	if err != nil || len(queue) != 0 {
+		t.Errorf("a seat that may read but not update messages sees %+v, %v; want an empty queue", queue, err)
+	}
+	if _, err := f.store.RejectLinkSuggestion(f.ctx, f.pendingID(t)); !errors.Is(err, apperrors.ErrPermissionDenied) {
+		t.Errorf("the same seat deciding it gave %v, want permission denied", err)
+	}
+}
+
+// pendingID reads the message's one pending suggestion past the store, for a
+// caller whose queue does not show it.
+func (f suggestionFixture) pendingID(t *testing.T) ids.UUID {
+	t.Helper()
+	var id ids.UUID
+	if err := f.e.owner.QueryRow(context.Background(), `SELECT id FROM activity_link_suggestion
+		WHERE activity_id = $1 AND status = 'pending'`, f.message).Scan(&id); err != nil {
+		t.Fatalf("reading the pending suggestion: %v", err)
+	}
+	return id
+}
+
 func TestRejectingAttachesNothing(t *testing.T) {
 	f := newSuggestionFixture(t)
 	f.propose(t, "deal", f.deal)

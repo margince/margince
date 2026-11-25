@@ -62172,6 +62172,11 @@ components:
           description: The name of the record the link ends on, for the screen. Absent on a write's answer.
         link_type: { type: string }
         created_at: { type: string, format: date-time }
+        removable:
+          type: boolean
+          description: >-
+            True when this reader may remove the link: they may change the record it starts on and see
+            the one it ends on. Set on a list read, absent on a write's answer.
 
     RecordLinkList:
       type: object

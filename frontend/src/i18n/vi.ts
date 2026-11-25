@@ -18874,6 +18874,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "linkSuggestions.kind.project": "dự án",
   "linkSuggestions.accept": "Gắn vào đó",
   "linkSuggestions.reject": "Không phải đó",
+  "linkSuggestions.noAccess": "Bạn không có quyền xem các liên kết gợi ý.",
   "linkSuggestions.unavailable":
     "Không đọc được các liên kết gợi ý. Hãy thử lại sau.",
   "webhooks.event.activity.readiness_recorded.label":
@@ -20976,6 +20977,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "deal.links.outgoing": "Từ deal này: {type}",
   "deal.links.incoming": "Tới deal này: {type}",
   "deal.links.remove": "Gỡ",
+  "deal.links.unknownType": "Liên kết",
   "deal.links.type": "Loại liên kết",
   "deal.links.typePlaceholder": "Chọn loại",
   "deal.links.search": "Tìm bản ghi cần liên kết",

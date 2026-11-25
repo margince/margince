@@ -58,9 +58,13 @@ func (s *Store) List(ctx context.Context, recordType string, recordID ids.UUID) 
 			if err != nil {
 				return err
 			}
-			if seen {
-				out = append(out, named)
+			if !seen {
+				continue
 			}
+			if named.Removable, err = removable(ctx, tx, named); err != nil {
+				return err
+			}
+			out = append(out, named)
 		}
 		return nil
 	})
@@ -91,6 +95,27 @@ func nameOtherEnd(ctx context.Context, tx pgx.Tx, link crmcontracts.RecordLink,
 		link.FromName, link.ToName = &other, &own
 	}
 	return link, true, nil
+}
+
+// removable answers mayRemove as a yes or no, asked unrecorded because a "no"
+// is part of the read and not a refusal. A read-only seat gets no: the HTTP
+// clamp refuses its DELETE before Delete runs.
+func removable(ctx context.Context, tx pgx.Tx, link crmcontracts.RecordLink) (*bool, error) {
+	answer := false
+	if actor, ok := principal.Actor(ctx); !ok || !actor.SeatType.CanMutate() {
+		return &answer, nil
+	}
+	quiet, err := auth.Unrecorded(ctx, string(link.FromType), principal.ActionUpdate)
+	if err == nil {
+		err = mayRemove(quiet, tx, link)
+	}
+	switch {
+	case err == nil:
+		answer = true
+	case !errors.Is(err, apperrors.ErrPermissionDenied) && !errors.Is(err, apperrors.ErrNotFound):
+		return nil, err
+	}
+	return &answer, nil
 }
 
 // liveName answers a record's name, and false when it is archived or gone.
