@@ -316,6 +316,7 @@ The 23 tables owned by `consent`, as the migrations build them. [Back to the ent
 **Rules**
 
 - `communication_suppression_address_is_canonical`: `CHECK ((address = lower(btrim(address))))`
+- `communication_suppression_address_one_spelling`: `CHECK (is_identifier_text(address))`
 - `communication_suppression_decided_by_level`: `CHECK ((decided_by_level = ANY (ARRAY['machine', 'user', 'admin', 'subject'])))`
 - `communication_suppression_kind`: `CHECK ((kind = ANY (ARRAY['marketing_objection', 'processing_restriction', 'hard_bounce', 'subject_request'])))`
 - `communication_suppression_names_a_target`: `CHECK (((contact_id IS NOT NULL) OR (lead_id IS NOT NULL) OR (address IS NOT NULL) OR (address_hash IS NOT NULL)))`
