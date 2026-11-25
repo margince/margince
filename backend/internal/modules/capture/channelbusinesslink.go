@@ -69,8 +69,8 @@ func connectedBusinessLinkTx(ctx context.Context, tx pgx.Tx, bot ids.UUID, busin
 // message was admitted through. It holds the row FOR SHARE until the caller's
 // transaction ends. Every writer that disconnects, disables or archives the link
 // updates the row and waits on that lock. It answers false for a link that is no
-// longer connected or has no seat, because a link switched off after admission
-// must not file what it queued.
+// longer connected or has no seat. A link switched off after admission must not
+// file what it queued.
 func LockLiveBusinessLinkTx(ctx context.Context, tx pgx.Tx, linkID ids.UUID) (telegram.BusinessLink, bool, error) {
 	_, link, err := scanBusinessLink(tx.QueryRow(ctx, `
 		SELECT `+businessLinkColumns+` FROM channel_connection
