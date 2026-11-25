@@ -17,6 +17,7 @@ package agents
 import (
 	"encoding/json"
 	"fmt"
+	"sync"
 
 	"github.com/margince/margince/backend/internal/shared/ports/mcp"
 )
@@ -56,33 +57,50 @@ func assertObjectSchemas(spec mcp.ToolSpec) error {
 		if s.raw == nil {
 			continue
 		}
-		// Decoded ONCE, as members, because two things are judged from it: the
-		// declared type and whether the schema composes. Decoding twice would
-		// mean a second error to either report redundantly or swallow.
-		var declared map[string]json.RawMessage
-		if err := json.Unmarshal(s.raw, &declared); err != nil {
-			return fmt.Errorf("%s has an %s that is not valid JSON, which makes the whole tools/list response unencodable: %w",
-				spec.Name, s.field, err)
-		}
-		var declaredType string
-		if raw, stated := declared["type"]; stated {
-			if err := json.Unmarshal(raw, &declaredType); err != nil {
-				return fmt.Errorf("%s's %s declares a `type` that is not a string: %w", spec.Name, s.field, err)
-			}
-		}
-		if declaredType != "object" {
-			return fmt.Errorf("%s declares %s type %q; this surface serves object schemas only",
-				spec.Name, s.field, declaredType)
-		}
-		// A COMPOSING schema is refused for EVERY served spec, mutating or not.
-		// The runner's listing renderer reaches an object schema only through the
-		// keys assertNoSchemaComposition walks, so a composed branch keeps its
-		// closed form and the headroom the budget page publishes is larger than
-		// the headroom that exists — with nothing failing.
-		if err := assertNoSchemaComposition(spec.Name, s.field, declared); err != nil {
+		if err := assertObjectSchema(spec.Name, s.field, s.raw); err != nil {
 			return err
 		}
 	}
+	return nil
+}
+
+// servableSchemas holds the text of every schema assertObjectSchema has passed.
+// The check reads nothing but the text, so a passed text passes again, and each
+// composition of the tool surface skips the schemas an earlier one decoded.
+var servableSchemas sync.Map
+
+// assertObjectSchema judges one schema of tool, named by field in the refusal.
+func assertObjectSchema(tool, field string, raw json.RawMessage) error {
+	if _, passed := servableSchemas.Load(string(raw)); passed {
+		return nil
+	}
+	// Decoded ONCE, as members, because two things are judged from it: the
+	// declared type and whether the schema composes. Decoding twice would
+	// mean a second error to either report redundantly or swallow.
+	var declared map[string]json.RawMessage
+	if err := json.Unmarshal(raw, &declared); err != nil {
+		return fmt.Errorf("%s has an %s that is not valid JSON, which makes the whole tools/list response unencodable: %w",
+			tool, field, err)
+	}
+	var declaredType string
+	if typ, stated := declared["type"]; stated {
+		if err := json.Unmarshal(typ, &declaredType); err != nil {
+			return fmt.Errorf("%s's %s declares a `type` that is not a string: %w", tool, field, err)
+		}
+	}
+	if declaredType != "object" {
+		return fmt.Errorf("%s declares %s type %q; this surface serves object schemas only",
+			tool, field, declaredType)
+	}
+	// A COMPOSING schema is refused for EVERY served spec, mutating or not.
+	// The runner's listing renderer reaches an object schema only through the
+	// keys assertNoSchemaComposition walks, so a composed branch keeps its
+	// closed form and the headroom the budget page publishes is larger than
+	// the headroom that exists — with nothing failing.
+	if err := assertNoSchemaComposition(tool, field, declared); err != nil {
+		return err
+	}
+	servableSchemas.Store(string(raw), struct{}{})
 	return nil
 }
 

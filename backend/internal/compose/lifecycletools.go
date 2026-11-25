@@ -101,7 +101,7 @@ func (p projectPhaseAdvancer) AdvanceProjectPhase(
 // each side calls the same entry point its handler calls.
 //
 // The engines are read from the server LAZILY, at call time, for the reason
-// rebuildToolRegistry reads the vault lazily: WithScrape and WithDeepRead each
+// buildToolRegistry reads the vault lazily: WithScrape and WithDeepRead each
 // install one, and a snapshot taken at registry-construction time would see
 // whichever ran first and silently drop the other.
 //

@@ -14,6 +14,7 @@ import (
 	"slices"
 	"strconv"
 	"strings"
+	"sync"
 
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/ports/mcp"
@@ -108,6 +109,29 @@ func writeAnswerSchema(answer json.RawMessage) json.RawMessage {
 	return mustMarshal(shape)
 }
 
+// routeAnswer is what a verb's spec reads off its route's answer schema.
+type routeAnswer struct {
+	write    string
+	freeText bool
+}
+
+// routeAnswers holds a routeAnswer per answer schema text. Both members are read
+// off the text alone, and a router asks each target's spec again, so every
+// composition of the surface and every routed call would otherwise decode the
+// same schemas once more.
+var routeAnswers sync.Map
+
+func routeAnswerOf(schema json.RawMessage) routeAnswer {
+	if known, ok := routeAnswers.Load(string(schema)); ok {
+		if facts, ok := known.(routeAnswer); ok {
+			return facts
+		}
+	}
+	facts := routeAnswer{write: string(writeAnswerSchema(schema)), freeText: CarriesFreeText(schema)}
+	routeAnswers.Store(string(schema), facts)
+	return facts
+}
+
 // RegisterRouteVerbs registers every route-backed verb, unlisted, and records
 // which router fronts each. It runs before the routers register.
 func RegisterRouteVerbs(r *Registry, verbs []RouteVerb, run RouteRunner) {
@@ -172,9 +196,9 @@ func (t routeVerbTool) Spec() mcp.ToolSpec {
 	for _, name := range slices.Sorted(maps.Keys(properties)) {
 		members = append(members, strconv.Quote(name)+":"+properties[name])
 	}
-	answer := v.AnswerSchema
+	facts, answer := routeAnswerOf(v.AnswerSchema), v.AnswerSchema
 	if v.Method != http.MethodGet {
-		answer = writeAnswerSchema(answer)
+		answer = json.RawMessage(facts.write)
 	}
 	return mcp.ToolSpec{
 		Name: v.Verb, Title: v.Summary, Version: toolVersionV1,
@@ -183,7 +207,7 @@ func (t routeVerbTool) Spec() mcp.ToolSpec {
 		Unlisted: true,
 		// The route's own answer schema decides: one that names only ids, numbers,
 		// dates and closed sets of words holds nothing someone wrote.
-		ProductMadeAnswer: !CarriesFreeText(v.AnswerSchema),
+		ProductMadeAnswer: !facts.freeText,
 		OpenAPIOp:         v.Op,
 		UnkeyedArguments:  unkeyed,
 		MaxArgsBytes:      maxArgs,
