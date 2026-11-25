@@ -21,6 +21,8 @@ const (
 	ReasonPipelineUnknown        ReasonCode = "pipeline_unknown"
 	ReasonStageUnknown           ReasonCode = "stage_unknown"
 	ReasonCurrencyNotACode       ReasonCode = "currency_not_a_code"
+	ReasonCurrencyNotMoney       ReasonCode = "currency_not_money"
+	ReasonCloseDateFar           ReasonCode = "close_date_far"
 	ReasonAmountNegative         ReasonCode = "amount_negative"
 	ReasonCloseDatePast          ReasonCode = "close_date_past"
 	ReasonCloseDateFuture        ReasonCode = "close_date_future"
@@ -73,6 +75,16 @@ var dealReasons = map[ReasonCode]reasonEntry{
 		textlang.English:    "“{value}” is not a currency code. Write its three letters, like EUR.",
 		textlang.German:     "{value:q} ist kein Währungscode. Schreiben Sie die drei Buchstaben, etwa EUR.",
 		textlang.Vietnamese: "{value:q} không phải mã tiền tệ. Hãy viết ba chữ cái, ví dụ EUR.",
+	}},
+	ReasonCurrencyNotMoney: {params: []string{paramValue}, text: map[textlang.Lang]string{
+		textlang.English:    "“{value}” is the code for no currency or for tests, so it prices no deal. Write the deal’s currency, like EUR.",
+		textlang.German:     "{value:q} ist der Code für keine Währung oder für Tests und gibt keinem Deal einen Preis. Schreiben Sie die Währung des Deals, etwa EUR.",
+		textlang.Vietnamese: "{value:q} là mã cho “không có tiền tệ” hoặc để thử nghiệm, nên không định giá được deal. Hãy viết loại tiền của deal, ví dụ EUR.",
+	}},
+	ReasonCloseDateFar: {params: []string{paramValue, "years"}, text: map[textlang.Lang]string{
+		textlang.English:    "“{value}” is more than {years} years away. Check that this close date is right.",
+		textlang.German:     "{value:q} liegt mehr als {years} Jahre in der Zukunft. Prüfen Sie, ob dieses Abschlussdatum stimmt.",
+		textlang.Vietnamese: "{value:q} cách hơn {years} năm nữa. Hãy kiểm tra lại ngày chốt này.",
 	}},
 	ReasonAmountNegative: {params: []string{paramValue}, text: map[textlang.Lang]string{
 		textlang.English:    "“{value}” is below zero, and an imported amount cannot be.",

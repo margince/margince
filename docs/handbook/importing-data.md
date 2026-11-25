@@ -65,7 +65,7 @@ These skip the row:
 
 A company row whose domain belongs to one company you may edit lands on that company. Its `ref` then names that company. Contacts that link to the `ref` keep their employer. The row fills only the fields that company has empty. It never renames the company or changes a stored value, also on a later import. The test run lists what it kept.
 
-A contact row with **First name** and **Last name** filled takes its full name from those two. This holds even when the file also has a **Full name** column. A contact you add or edit in Margince keeps the full name you type. A name-only CSV contact is kept, with a warning to add an email, phone or LinkedIn profile link; the import summary counts that warning.
+A contact row with **First name** and **Last name** filled takes its full name from those two. This holds even when the file also has a **Full name** column. A contact you add or edit in Margince keeps the full name you type. A name from a file that runs over two lines is read as one line. A name-only CSV contact is kept, with a warning to add an email, phone or LinkedIn profile link; the import summary counts that warning.
 
 These stop nothing. The row lands, and the problem is listed:
 - an owner email that no user has (**Unknown owner**): you become the owner, except for a lead, which stays unassigned;
@@ -141,8 +141,8 @@ A `deals.csv` row is one deal. Each row needs a `ref`. A new deal also needs a `
 |---|---|
 | `pipeline` | The pipeline's name. Empty means the default pipeline. |
 | `stage` | The stage's name in that pipeline. Case does not matter. |
-| `amount` and `currency` | The value as a plain number, and its three-letter currency code. An amount needs a currency. It cannot be below zero, and it is written the way its currency counts, such as `12000.50` in `EUR` and `12000` in `JPY`. |
-| `close_date` | `YYYY-MM-DD`. An open deal's date cannot be in the past. |
+| `amount` and `currency` | The value as a plain number, and its three-letter currency code. An amount needs a currency. It cannot be below zero, and it is written the way its currency counts, such as `12000.50` in `EUR` and `12000` in `JPY`. `XXX` and `XTS` are refused: they are the codes for no currency and for tests. |
+| `close_date` | `YYYY-MM-DD`. An open deal's date cannot be in the past. A date more than 50 years away lands, and the test run asks you to check it. |
 | `company_ref` | The deal's company, found as a contact's is. |
 | `contact_ref` | A contact on the deal, by `ref`, email or Margince ID. The contact becomes a stakeholder. |
 | `lost_reason` | Needed when the stage is a lost one. Written only when the row creates the deal. |

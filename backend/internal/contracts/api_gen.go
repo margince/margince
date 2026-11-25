@@ -15415,6 +15415,7 @@ const (
 	ImportReasonCodeCannotReadPipelines           ImportReasonCode = "cannot_read_pipelines"
 	ImportReasonCodeCannotReadTags                ImportReasonCode = "cannot_read_tags"
 	ImportReasonCodeCannotWriteType               ImportReasonCode = "cannot_write_type"
+	ImportReasonCodeCloseDateFar                  ImportReasonCode = "close_date_far"
 	ImportReasonCodeCloseDateFuture               ImportReasonCode = "close_date_future"
 	ImportReasonCodeCloseDatePast                 ImportReasonCode = "close_date_past"
 	ImportReasonCodeCompanyDomainMatched          ImportReasonCode = "company_domain_matched"
@@ -15432,6 +15433,7 @@ const (
 	ImportReasonCodeContactNotFoundWillDrop       ImportReasonCode = "contact_not_found_will_drop"
 	ImportReasonCodeContactUnnamed                ImportReasonCode = "contact_unnamed"
 	ImportReasonCodeCurrencyNotACode              ImportReasonCode = "currency_not_a_code"
+	ImportReasonCodeCurrencyNotMoney              ImportReasonCode = "currency_not_money"
 	ImportReasonCodeCurrencyUnset                 ImportReasonCode = "currency_unset"
 	ImportReasonCodeDealAlreadyClosed             ImportReasonCode = "deal_already_closed"
 	ImportReasonCodeDealCompanyHasContracts       ImportReasonCode = "deal_company_has_contracts"
@@ -15583,6 +15585,8 @@ func (e ImportReasonCode) Valid() bool {
 		return true
 	case ImportReasonCodeCannotWriteType:
 		return true
+	case ImportReasonCodeCloseDateFar:
+		return true
 	case ImportReasonCodeCloseDateFuture:
 		return true
 	case ImportReasonCodeCloseDatePast:
@@ -15616,6 +15620,8 @@ func (e ImportReasonCode) Valid() bool {
 	case ImportReasonCodeContactUnnamed:
 		return true
 	case ImportReasonCodeCurrencyNotACode:
+		return true
+	case ImportReasonCodeCurrencyNotMoney:
 		return true
 	case ImportReasonCodeCurrencyUnset:
 		return true

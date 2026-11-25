@@ -238,6 +238,7 @@ func (w *csvWriters) ensureOne(ctx context.Context, object string, row migration
 	landed, err := w.ensureRow(ctx, object, row, link.into(typed))
 	if err == nil && !landed.Skipped {
 		landed.Problem = cmp.Or(link.problem, unknownOwner)
+		landed.Warnings = append(landed.Warnings, w.farCloseDateWarning(row)...)
 		w.claimRow(row, typed)
 	}
 	return landed, err
