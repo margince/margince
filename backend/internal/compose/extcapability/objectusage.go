@@ -62,13 +62,13 @@ type Ledger func(ctx context.Context, unit string, plan func(Usage) (ObjectChang
 // stays locked until the store write returns, so two calls of one unit cannot
 // both count against the same room.
 //
-// The store and the database cannot commit together, so every failure leaves
-// the count high rather than low. A Put whose count does not commit answers
-// ErrWrittenNotRecorded, and Objects deletes the object at that name, so an
-// object it replaced stays counted with nothing behind it. A Delete
-// whose count does not commit leaves the object counted, and a later
-// decrement stops at zero. A process that stops between a Put's store call and
-// its commit still leaves that object uncounted until a removal sweeps it.
+// The store and the database cannot commit together, so a failure leaves the
+// count too high. A Put whose count does not commit answers
+// ErrWrittenNotRecorded, and Objects deletes the object at that name. An
+// object it replaced then stays counted with nothing behind it. A Delete whose
+// count does not commit leaves the object counted, and a later decrement stops
+// at zero. A process that stops between a Put's store call and its commit
+// leaves that object uncounted until a removal sweeps it.
 func PoolLedger(pool *pgxpool.Pool) Ledger {
 	return func(ctx context.Context, unit string, plan func(Usage) (ObjectChange, error), write func() error) error {
 		var refused error

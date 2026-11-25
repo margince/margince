@@ -213,6 +213,7 @@ the harm could go before turning the unit on:
 | `entries` | `Entries` | Which core screens offer a way into the unit, and the object a reader needs `read` on to see it |
 | `oauth_apps` | `OAuthApps` | Which vendors an admin is sent to, the scopes asked for, and the token URL that receives the client secret |
 | `instrumentation` | `Instrumentation` | Which of its three parts the unit has: `start` (a backend part), `browser` (the named export the SPA calls) and `edge` (a session-less path under `/v1/public/instrument/<unit>/`) |
+| `mail_hooks` | `MailHooks` | Which mail-capture hooks it sets, what of each captured mail they read, and the reasons its answers may give |
 
 The `extension.Extension` value the unit returns, and every field the manifest derives, must be written
 out in full in the source. A field the generate step does not know fails it, with the place in the file.

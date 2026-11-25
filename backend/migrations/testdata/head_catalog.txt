@@ -1586,7 +1586,7 @@ public.assurance_resolution.assurance_resolution_actor_fkey FOREIGN KEY (actor_i
 public.assurance_resolution.assurance_resolution_deferral_returns CHECK (((outcome <> 'remind_later'::text) OR (remind_at IS NOT NULL)))
 public.assurance_resolution.assurance_resolution_exception_fkey FOREIGN KEY (exception_id) REFERENCES assurance_exception(id) ON DELETE CASCADE
 public.assurance_resolution.assurance_resolution_expiry_after_creation CHECK (((expires_at IS NULL) OR (expires_at > created_at)))
-public.assurance_resolution.assurance_resolution_outcome_check CHECK ((outcome = ANY (ARRAY['fixed_record'::text, 'added_evidence'::text, 'value_correct'::text, 'not_relevant'::text, 'remind_later'::text, 'reassign'::text, 'condition_cleared'::text])))
+public.assurance_resolution.assurance_resolution_outcome_check CHECK ((outcome = ANY (ARRAY['fixed_record'::text, 'added_evidence'::text, 'value_correct'::text, 'not_relevant'::text, 'remind_later'::text, 'reassign'::text, 'condition_cleared'::text, 'separate'::text])))
 public.assurance_resolution.assurance_resolution_pkey PRIMARY KEY (id)
 public.assurance_resolution.assurance_resolution_suppression_expires CHECK (((outcome <> ALL (ARRAY['value_correct'::text, 'not_relevant'::text])) OR (expires_at IS NOT NULL)))
 public.assurance_resolution.assurance_resolution_version_js_safe CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))
@@ -2333,7 +2333,7 @@ public.capture_connection.capture_connection_context_tag_id_fkey FOREIGN KEY (co
 public.capture_connection.capture_connection_history_baseline_check CHECK ((((history_baseline_date IS NULL) = (history_baseline_tz IS NULL)) AND ((history_baseline_date IS NULL) = (history_baseline_set_by IS NULL)) AND ((history_baseline_date IS NULL) = (history_baseline_set_at IS NULL))))
 public.capture_connection.capture_connection_legal_entity_id_fkey FOREIGN KEY (legal_entity_id) REFERENCES legal_entity(id) ON DELETE RESTRICT
 public.capture_connection.capture_connection_mail_posture_check CHECK ((mail_posture = ANY (ARRAY['shared'::text, 'classified'::text, 'held'::text])))
-public.capture_connection.capture_connection_provider_check CHECK ((provider = ANY (ARRAY['gmail'::text, 'gcal'::text, 'gdocs'::text, 'imap'::text, 'graph'::text, 'graphcal'::text, 'whatsapp'::text, 'telegram'::text, 'offline_demo'::text, 'test_mailbox'::text])))
+public.capture_connection.capture_connection_provider_check CHECK ((provider = ANY (ARRAY['gmail'::text, 'gcal'::text, 'gdocs'::text, 'imap'::text, 'graph'::text, 'graphcal'::text, 'whatsapp'::text, 'telegram'::text, 'offline_demo'::text, 'test_mailbox'::text, 'telegram_business'::text, 'zalo_oa'::text])))
 public.capture_connection.capture_connection_reader_team_id_fkey FOREIGN KEY (reader_team_id) REFERENCES team(id) ON DELETE RESTRICT
 public.capture_connection.capture_connection_shared_shape CHECK ((((user_id IS NOT NULL) AND (reader_team_id IS NULL)) OR ((user_id IS NULL) AND (reader_team_id IS NOT NULL) AND (account_label IS NOT NULL) AND (mail_posture <> 'classified'::text))))
 public.capture_connection.capture_connection_status_check CHECK ((status = ANY (ARRAY['connected'::text, 'disconnected'::text, 'error'::text, 'reauth_required'::text])))
@@ -2712,6 +2712,7 @@ public.channel_connection.channel_connection_ownership_check CHECK ((ownership =
 public.channel_connection.channel_connection_parent_connection_id_fkey FOREIGN KEY (parent_connection_id) REFERENCES channel_connection(id) ON DELETE RESTRICT
 public.channel_connection.channel_connection_pkey PRIMARY KEY (id)
 public.channel_connection.channel_connection_provider_check CHECK ((provider = ANY (ARRAY['telegram'::text, 'telegram_business'::text, 'dispact'::text, 'whatsapp'::text, 'zalo_oa'::text])))
+public.channel_connection.channel_connection_seat_id_fkey FOREIGN KEY (seat_id) REFERENCES capture_connection(id) ON DELETE RESTRICT
 public.channel_connection.channel_connection_status_check CHECK ((status = ANY (ARRAY['connected'::text, 'disconnected'::text, 'error'::text, 'reauth_required'::text, 'pending_approval'::text])))
 public.channel_connection.channel_connection_version_js_safe CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))
 public.channel_connection.channel_id text NOT NULL gen=- def=-
@@ -2726,6 +2727,7 @@ public.channel_connection.ownership text NOT NULL gen=- def='workspace'::text
 public.channel_connection.parent_connection_id uuid gen=- def=-
 public.channel_connection.poll_offset bigint NOT NULL gen=- def=0
 public.channel_connection.provider text NOT NULL gen=- def=-
+public.channel_connection.seat_id uuid gen=- def=-
 public.channel_connection.status text NOT NULL gen=- def=-
 public.channel_connection.text_bound_insert CREATE TRIGGER text_bound_insert AFTER INSERT ON public.channel_connection FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"status": 20000, "address": 500, "provider": 20000, "ownership": 20000, "account_id": 20000, "channel_id": 20000, "channel_label": 120, "credential_ref": 20000, "events_credential_ref": 20000}'::jsonb)) EXECUTE FUNCTION refuse_oversized_text('{"account_id":20000,"address":500,"channel_id":20000,"channel_label":120,"credential_ref":20000,"events_credential_ref":20000,"ownership":20000,"provider":20000,"status":20000}')
 public.channel_connection.text_bound_update CREATE TRIGGER text_bound_update AFTER UPDATE ON public.channel_connection FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"status": 20000, "address": 500, "provider": 20000, "ownership": 20000, "account_id": 20000, "channel_id": 20000, "channel_label": 120, "credential_ref": 20000, "events_credential_ref": 20000}'::jsonb)) EXECUTE FUNCTION refuse_oversized_text('{"account_id":20000,"address":500,"channel_id":20000,"channel_label":120,"credential_ref":20000,"events_credential_ref":20000,"ownership":20000,"provider":20000,"status":20000}')
@@ -2735,6 +2737,7 @@ public.channel_connection.version bigint NOT NULL gen=- def=1
 public.channel_connection_owner_idx CREATE INDEX channel_connection_owner_idx ON public.channel_connection USING btree (owner_user_id) WHERE (owner_user_id IS NOT NULL)
 public.channel_connection_parent_idx CREATE INDEX channel_connection_parent_idx ON public.channel_connection USING btree (parent_connection_id) WHERE (parent_connection_id IS NOT NULL)
 public.channel_connection_pkey CREATE UNIQUE INDEX channel_connection_pkey ON public.channel_connection USING btree (id)
+public.channel_connection_seat_idx CREATE INDEX channel_connection_seat_idx ON public.channel_connection USING btree (seat_id)
 public.channel_provider acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.channel_provider.channel_provider_credential_model_check CHECK ((credential_model = ANY (ARRAY['workspace_bot'::text, 'per_member'::text])))
 public.channel_provider.channel_provider_pkey PRIMARY KEY (provider)
@@ -11337,6 +11340,7 @@ public.uq_capture_exclusion CREATE UNIQUE INDEX uq_capture_exclusion ON public.c
 public.uq_capture_freemail_domain CREATE UNIQUE INDEX uq_capture_freemail_domain ON public.capture_freemail_domain USING btree (domain)
 public.uq_channel_connection_account CREATE UNIQUE INDEX uq_channel_connection_account ON public.channel_connection USING btree (provider, account_id) WHERE ((archived_at IS NULL) AND (account_id IS NOT NULL))
 public.uq_channel_connection_provider CREATE UNIQUE INDEX uq_channel_connection_provider ON public.channel_connection USING btree (provider) WHERE ((archived_at IS NULL) AND (account_id IS NULL))
+public.uq_channel_connection_seat CREATE UNIQUE INDEX uq_channel_connection_seat ON public.channel_connection USING btree (seat_id) WHERE ((seat_id IS NOT NULL) AND (archived_at IS NULL))
 public.uq_chat_link_channel CREATE UNIQUE INDEX uq_chat_link_channel ON public.chat_link USING btree (provider, channel_slug) WHERE (archived_at IS NULL)
 public.uq_chat_link_deal CREATE UNIQUE INDEX uq_chat_link_deal ON public.chat_link USING btree (deal_id) WHERE ((archived_at IS NULL) AND (deal_id IS NOT NULL))
 public.uq_chat_link_project CREATE UNIQUE INDEX uq_chat_link_project ON public.chat_link USING btree (project_id) WHERE ((archived_at IS NULL) AND (project_id IS NOT NULL))

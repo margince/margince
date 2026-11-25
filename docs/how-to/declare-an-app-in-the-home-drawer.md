@@ -8,7 +8,7 @@ Use this page to give a unit a row in the home side drawer, with its own icon an
 |---|---|---|
 | Count | At most one `extension.App` | The row appears once, for every reader who may open it |
 | Icon | One icon from `extension.EntryIcons()` | How the row is drawn |
-| Name | A copy key from the unit's own `frontend/i18n/` files, in `en`, `de` and `vi` | Which language the reader sees |
+| Name | Nothing, or a copy key from the unit's own `frontend/i18n/` files, in `en`, `de` and `vi` | With no key, the unit's title `ext<CamelUnit>.title`; and which language the reader sees |
 | Heading | `AppGroupRecords`, `AppGroupWork` or `AppGroupIntelligence` | The unit cannot add a heading |
 | Position | Nothing | The row sits after the product's own rows under its heading |
 | Who sees it | One of the unit's own RBAC objects | The row shows only to a role with `read` on that object |
@@ -34,7 +34,7 @@ An app and a setting page are two doors to one unit. They draw different compone
 ## Steps
 
 1. **Pick the RBAC object.** Use one of the unit's own objects, named `<namespace>_<object>`, that at least one of the unit's operations gates on. The generator refuses any other.
-2. **Add the label.** Put a key in `frontend/i18n/en.json`, `de.json` and `vi.json` of the unit, inside the unit's `ext<CamelUnit>.` space. A language without it fails `make gen`.
+2. **Check the name.** With no `Label`, the row shows the unit's title, `ext<CamelUnit>.title`. To show another name, put a key in `frontend/i18n/en.json`, `de.json` and `vi.json` of the unit, inside the unit's `ext<CamelUnit>.` space, and set it as `Label`. A language that lacks the key the row shows, the title or your label, fails `make gen`.
 3. **Export the component.** In the unit's frontend package, add a named export beside the default one:
 
    ```tsx
@@ -48,7 +48,6 @@ An app and a setting page are two doors to one unit. They draw different compone
    ```go
    App: &extension.App{
    	Icon:   extension.IconPlug,
-   	Label:  "extOpenchannel.title",
    	Group:  extension.AppGroupWork,
    	Object: "ext_openchannel_endpoint",
    	Export: "OpenchannelApp",
@@ -64,5 +63,6 @@ An app and a setting page are two doors to one unit. They draw different compone
 |---|---|
 | An icon outside the list, a group that is not a drawer heading | `App.Validate` |
 | A label that is not a key of the unit's own copy, or is missing from a language | `make gen` |
+| No label, and the unit's title is missing from a language | `make gen` |
 | An object that is not the unit's own, or that no operation gates on | `App.Validate` and `make gen` |
 | An export that is not a component name, or is missing from the frontend package | `App.Validate` and `make gen` |

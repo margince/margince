@@ -158,7 +158,7 @@ func decideBirthTx(
 	// posture_at_import, so the import contribution would re-pin the row to
 	// `participants` after any later widening (activities' contributionOf), and a
 	// meeting that got filed against a workspace record would never open.
-	if fields.Kind != kindEmail && !memberBound {
+	if _, onSeat := chatSeatOf(ctx); fields.Kind != kindEmail && !memberBound && !onSeat {
 		return birthDecision{}, nil
 	}
 
@@ -185,11 +185,10 @@ func decideBirthTx(
 		decision = decision.hold(audienceReasonConfidentialMarker)
 	}
 
-	// Steps 4 and 5 and no further for a chat. Both read capture_connection —
-	// the mailbox that delivered the message, its posture and the verdicts taken
-	// against its threads — and a channel transport has no row in it. Giving one
-	// a posture of its own is a product question about what a member may ask of
-	// their own transport, not a gap to fill in with mail's answer.
+	// A chat has no thread verdict to inherit, and its seat answers step 5.
+	if _, onSeat := chatSeatOf(ctx); fields.memberOwned || onSeat {
+		return chatPostureTx(ctx, tx, decision)
+	}
 	if fields.Kind != kindEmail {
 		return decision, nil
 	}

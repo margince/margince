@@ -309,7 +309,7 @@ export const SETTINGS_PAGE_VIEWS = {
       [
         { FinanceSourceCard },
         { WebhooksCard },
-        { WorkspaceBotPanel },
+        { WorkspaceBotPanel, TelegramBusinessPanel },
         { SharedMailboxesCard },
         { ExtensionUnitsCard },
         { ProviderCard },
@@ -322,6 +322,7 @@ export const SETTINGS_PAGE_VIEWS = {
         telegram: (
           <>
             <WorkspaceBotPanel provider="telegram" />
+            <TelegramBusinessPanel />
             <WorkspaceBotPanel provider="dispact" />
           </>
         ),

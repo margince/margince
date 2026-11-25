@@ -7771,6 +7771,27 @@ func (e CompanyVatCheckStatus) Valid() bool {
 	}
 }
 
+// Defines values for ComposedExtensionMailHooksReads.
+const (
+	ComposedExtensionMailHooksReadsAddresses ComposedExtensionMailHooksReads = "addresses"
+	ComposedExtensionMailHooksReadsBody      ComposedExtensionMailHooksReads = "body"
+	ComposedExtensionMailHooksReadsSubject   ComposedExtensionMailHooksReads = "subject"
+)
+
+// Valid indicates whether the value is a known member of the ComposedExtensionMailHooksReads enum.
+func (e ComposedExtensionMailHooksReads) Valid() bool {
+	switch e {
+	case ComposedExtensionMailHooksReadsAddresses:
+		return true
+	case ComposedExtensionMailHooksReadsBody:
+		return true
+	case ComposedExtensionMailHooksReadsSubject:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for ComputedFieldKind.
 const (
 	ComputedFieldKindCount          ComputedFieldKind = "count"
@@ -22556,6 +22577,7 @@ const (
 	ResolveInputCheckOutcomeNotRelevant   ResolveInputCheckOutcome = "not_relevant"
 	ResolveInputCheckOutcomeReassign      ResolveInputCheckOutcome = "reassign"
 	ResolveInputCheckOutcomeRemindLater   ResolveInputCheckOutcome = "remind_later"
+	ResolveInputCheckOutcomeSeparate      ResolveInputCheckOutcome = "separate"
 	ResolveInputCheckOutcomeValueCorrect  ResolveInputCheckOutcome = "value_correct"
 )
 
@@ -22571,6 +22593,8 @@ func (e ResolveInputCheckOutcome) Valid() bool {
 	case ResolveInputCheckOutcomeReassign:
 		return true
 	case ResolveInputCheckOutcomeRemindLater:
+		return true
+	case ResolveInputCheckOutcomeSeparate:
 		return true
 	case ResolveInputCheckOutcomeValueCorrect:
 		return true
@@ -25924,6 +25948,27 @@ func (e TechnicalEnrichStartedStatus) Valid() bool {
 	}
 }
 
+// Defines values for TelegramBusinessConnectionMailVisibility.
+const (
+	TelegramBusinessConnectionMailVisibilityClassified TelegramBusinessConnectionMailVisibility = "classified"
+	TelegramBusinessConnectionMailVisibilityHeld       TelegramBusinessConnectionMailVisibility = "held"
+	TelegramBusinessConnectionMailVisibilityShared     TelegramBusinessConnectionMailVisibility = "shared"
+)
+
+// Valid indicates whether the value is a known member of the TelegramBusinessConnectionMailVisibility enum.
+func (e TelegramBusinessConnectionMailVisibility) Valid() bool {
+	switch e {
+	case TelegramBusinessConnectionMailVisibilityClassified:
+		return true
+	case TelegramBusinessConnectionMailVisibilityHeld:
+		return true
+	case TelegramBusinessConnectionMailVisibilityShared:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for TelegramBusinessConnectionStatus.
 const (
 	TelegramBusinessConnectionStatusConnected       TelegramBusinessConnectionStatus = "connected"
@@ -27145,6 +27190,27 @@ func (e UpdateTagRequestColor) Valid() bool {
 	case UpdateTagRequestColorTeal:
 		return true
 	case UpdateTagRequestColorViolet:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for UpdateTelegramBusinessConnectionVisibilityRequestMailVisibility.
+const (
+	UpdateTelegramBusinessConnectionVisibilityRequestMailVisibilityClassified UpdateTelegramBusinessConnectionVisibilityRequestMailVisibility = "classified"
+	UpdateTelegramBusinessConnectionVisibilityRequestMailVisibilityHeld       UpdateTelegramBusinessConnectionVisibilityRequestMailVisibility = "held"
+	UpdateTelegramBusinessConnectionVisibilityRequestMailVisibilityShared     UpdateTelegramBusinessConnectionVisibilityRequestMailVisibility = "shared"
+)
+
+// Valid indicates whether the value is a known member of the UpdateTelegramBusinessConnectionVisibilityRequestMailVisibility enum.
+func (e UpdateTelegramBusinessConnectionVisibilityRequestMailVisibility) Valid() bool {
+	switch e {
+	case UpdateTelegramBusinessConnectionVisibilityRequestMailVisibilityClassified:
+		return true
+	case UpdateTelegramBusinessConnectionVisibilityRequestMailVisibilityHeld:
+		return true
+	case UpdateTelegramBusinessConnectionVisibilityRequestMailVisibilityShared:
 		return true
 	default:
 		return false
@@ -37239,6 +37305,12 @@ type ApproveRequest struct {
 	Reason *string `json:"reason,omitempty"`
 }
 
+// ApproveTelegramBusinessConnectionRequest defines model for ApproveTelegramBusinessConnectionRequest.
+type ApproveTelegramBusinessConnectionRequest struct {
+	// ReaderTeamId The team that reads the account's messages.
+	ReaderTeamId *openapi_types.UUID `json:"readerTeamId,omitempty"`
+}
+
 // ArchiveDeletionRequest defines model for ArchiveDeletionRequest.
 type ArchiveDeletionRequest struct {
 	// ActivityIds The archived activity to delete, at most 100 per request.
@@ -44629,6 +44701,9 @@ type ComposedExtension struct {
 	// Jobs The scheduled jobs this boot actually RUNS for the unit — a job the unit declared with no handler ticks nothing and is deliberately absent, because an operator reading this list is asking what runs, not what was written down. Sorted.
 	Jobs []string `json:"jobs"`
 
+	// MailHooks The unit's mail-capture hooks and what of each captured mail they read. Absent for a unit with no hook. A unit may send what a hook read to its own provider.
+	MailHooks *ComposedExtensionMailHooks `json:"mail_hooks,omitempty"`
+
 	// Name The unit name — its `extensions/<name>` directory, and the namespace token in `ext_<name>_…` objects and `/ext/<name>/…` routes. This is what joins an entry here to a grant in `Role.objects`.
 	Name string `json:"name"`
 
@@ -44644,6 +44719,27 @@ type ComposedExtension struct {
 	// Version The unit's own declared version. It carries NO authority (ADR-0120 §7): operator decisions bind to manifest digests, never to this string. Display only.
 	Version string `json:"version"`
 }
+
+// ComposedExtensionMailHooks The unit's mail-capture hooks and what of each captured mail they read. Absent for a unit with no hook. A unit may send what a hook read to its own provider.
+type ComposedExtensionMailHooks struct {
+	// BodyCharacters How many characters of the mail's text a hook reads.
+	BodyCharacters int `json:"body_characters"`
+
+	// Deal True when the unit may change the deal core files a mail on.
+	Deal bool `json:"deal"`
+
+	// Parties True when the unit may change the contacts and companies core found for a mail.
+	Parties bool `json:"parties"`
+
+	// Reads The parts of every captured mail the hooks read.
+	Reads []ComposedExtensionMailHooksReads `json:"reads"`
+
+	// Reasons The reason keys the unit's answers may give, sorted.
+	Reasons []string `json:"reasons"`
+}
+
+// ComposedExtensionMailHooksReads defines model for ComposedExtensionMailHooks.Reads.
+type ComposedExtensionMailHooksReads string
 
 // ComposedExtensionNeed One core capability a unit declares it uses.
 type ComposedExtensionNeed struct {
@@ -65856,7 +65952,7 @@ type ResolveInputCheck struct {
 	// ExpiresAt When a suppressing answer stops holding. Omitted, it is the 90-day ceiling; beyond the ceiling it is refused rather than shortened.
 	ExpiresAt *time.Time `json:"expires_at,omitempty"`
 
-	// Outcome What kind of answer this is. `condition_cleared` is absent on purpose: it is the check's own, and a contact naming it would be saying the condition stopped being true without anything having looked.
+	// Outcome What kind of answer this is. `condition_cleared` is absent on purpose: it is the check's own, and a contact naming it would be saying the condition stopped being true without anything having looked. `separate` answers only a `duplicate_motion` finding, says its two deals are not one buying motion, and has no expiry: the pair is not flagged again.
 	Outcome ResolveInputCheckOutcome `json:"outcome"`
 
 	// Reason Required for `value_correct` and `not_relevant`. Those hide the finding, and the next contact to see the number is owed the reason it is not flagged.
@@ -65866,7 +65962,7 @@ type ResolveInputCheck struct {
 	RemindAt *time.Time `json:"remind_at,omitempty"`
 }
 
-// ResolveInputCheckOutcome What kind of answer this is. `condition_cleared` is absent on purpose: it is the check's own, and a contact naming it would be saying the condition stopped being true without anything having looked.
+// ResolveInputCheckOutcome What kind of answer this is. `condition_cleared` is absent on purpose: it is the check's own, and a contact naming it would be saying the condition stopped being true without anything having looked. `separate` answers only a `duplicate_motion` finding, says its two deals are not one buying motion, and has no expiry: the pair is not flagged again.
 type ResolveInputCheckOutcome string
 
 // ResponseMetrics What the workspace did with its work over one window. Three questions: how fast it
@@ -70841,12 +70937,24 @@ type TelegramBusinessConnection struct {
 	ConnectedAt time.Time          `json:"connectedAt"`
 	Id          openapi_types.UUID `json:"id"`
 
+	// MailVisibility What the seat asks of the account's messages. `held` keeps them from colleagues outside the reader team and `shared` opens them as the contact's sharing allows. A member's own account starts `classified`, which holds a chat.
+	MailVisibility *TelegramBusinessConnectionMailVisibility `json:"mailVisibility,omitempty"`
+
 	// OwnerLabel The owner's name as Telegram last reported it. Display only, since a name is mutable and identifies nothing.
 	OwnerLabel string `json:"ownerLabel"`
+
+	// ReaderTeamId The team that reads a company account's messages. Null for a member's own account and before approval.
+	ReaderTeamId *openapi_types.UUID `json:"readerTeamId,omitempty"`
+
+	// SeatId The seat the account's messages file through. Its mail visibility is changed with `PATCH /channel-connections/telegram-business/{id}/visibility`. Null until an admin approves the link.
+	SeatId *openapi_types.UUID `json:"seatId,omitempty"`
 
 	// Status `pending_approval` waits for an admin; `disconnected` means the owner switched the link off in Telegram.
 	Status TelegramBusinessConnectionStatus `json:"status"`
 }
+
+// TelegramBusinessConnectionMailVisibility What the seat asks of the account's messages. `held` keeps them from colleagues outside the reader team and `shared` opens them as the contact's sharing allows. A member's own account starts `classified`, which holds a chat.
+type TelegramBusinessConnectionMailVisibility string
 
 // TelegramBusinessConnectionStatus `pending_approval` waits for an admin; `disconnected` means the owner switched the link off in Telegram.
 type TelegramBusinessConnectionStatus string
@@ -72628,6 +72736,18 @@ type UpdateTeamRequest struct {
 	Archived *bool   `json:"archived,omitempty"`
 	Name     *string `json:"name,omitempty"`
 }
+
+// UpdateTelegramBusinessConnectionVisibilityRequest defines model for UpdateTelegramBusinessConnectionVisibilityRequest.
+type UpdateTelegramBusinessConnectionVisibilityRequest struct {
+	// Confirm Must be true: the change decides what every reader of the seat sees.
+	Confirm bool `json:"confirm"`
+
+	// MailVisibility `classified` is refused with `422`.
+	MailVisibility UpdateTelegramBusinessConnectionVisibilityRequestMailVisibility `json:"mail_visibility"`
+}
+
+// UpdateTelegramBusinessConnectionVisibilityRequestMailVisibility `classified` is refused with `422`.
+type UpdateTelegramBusinessConnectionVisibilityRequestMailVisibility string
 
 // UpdateVoiceCorpusSourceRequest defines model for UpdateVoiceCorpusSourceRequest.
 type UpdateVoiceCorpusSourceRequest struct {
@@ -86517,6 +86637,12 @@ type UpdateCaptureSettingsJSONRequestBody = UpdateCaptureSettingsRequest
 
 // ConnectChannelJSONRequestBody defines body for ConnectChannel for application/json ContentType.
 type ConnectChannelJSONRequestBody = ConnectChannelRequest
+
+// ApproveTelegramBusinessConnectionJSONRequestBody defines body for ApproveTelegramBusinessConnection for application/json ContentType.
+type ApproveTelegramBusinessConnectionJSONRequestBody = ApproveTelegramBusinessConnectionRequest
+
+// UpdateTelegramBusinessConnectionVisibilityJSONRequestBody defines body for UpdateTelegramBusinessConnectionVisibility for application/json ContentType.
+type UpdateTelegramBusinessConnectionVisibilityJSONRequestBody = UpdateTelegramBusinessConnectionVisibilityRequest
 
 // ReplaceChannelTokenJSONRequestBody defines body for ReplaceChannelToken for application/json ContentType.
 type ReplaceChannelTokenJSONRequestBody = ReplaceChannelTokenRequest
@@ -102108,6 +102234,9 @@ type ServerInterface interface {
 	// Approve a Telegram Business account for the workspace.
 	// (POST /channel-connections/telegram-business/{id}/approve)
 	ApproveTelegramBusinessConnection(w http.ResponseWriter, r *http.Request, id Id)
+	// Change who may read a business account's messages.
+	// (PATCH /channel-connections/telegram-business/{id}/visibility)
+	UpdateTelegramBusinessConnectionVisibility(w http.ResponseWriter, r *http.Request, id Id)
 	// Disconnect a messaging channel (archives the binding and destroys the credential).
 	// (DELETE /channel-connections/{id})
 	DisconnectChannel(w http.ResponseWriter, r *http.Request, id Id)
@@ -103134,6 +103263,9 @@ type ServerInterface interface {
 	// Enqueue an async FX-rate refresh (stages 🟡 proposals).
 	// (POST /fx-rates/propose-refresh)
 	ProposeFxRateRefresh(w http.ResponseWriter, r *http.Request)
+	// Remove a currency from the FX rate sheet.
+	// (DELETE /fx-rates/{from})
+	RemoveFxRate(w http.ResponseWriter, r *http.Request, from string)
 	// List this workspace's recent CSV import runs, newest first.
 	// (GET /imports)
 	ListImportRuns(w http.ResponseWriter, r *http.Request, params ListImportRunsParams)
@@ -106377,6 +106509,12 @@ func (_ Unimplemented) ApproveTelegramBusinessConnection(w http.ResponseWriter, 
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
+// Change who may read a business account's messages.
+// (PATCH /channel-connections/telegram-business/{id}/visibility)
+func (_ Unimplemented) UpdateTelegramBusinessConnectionVisibility(w http.ResponseWriter, r *http.Request, id Id) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
 // Disconnect a messaging channel (archives the binding and destroys the credential).
 // (DELETE /channel-connections/{id})
 func (_ Unimplemented) DisconnectChannel(w http.ResponseWriter, r *http.Request, id Id) {
@@ -108426,6 +108564,12 @@ func (_ Unimplemented) ListFxRateCurrencies(w http.ResponseWriter, r *http.Reque
 // Enqueue an async FX-rate refresh (stages 🟡 proposals).
 // (POST /fx-rates/propose-refresh)
 func (_ Unimplemented) ProposeFxRateRefresh(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Remove a currency from the FX rate sheet.
+// (DELETE /fx-rates/{from})
+func (_ Unimplemented) RemoveFxRate(w http.ResponseWriter, r *http.Request, from string) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -123959,6 +124103,38 @@ func (siw *ServerInterfaceWrapper) ApproveTelegramBusinessConnection(w http.Resp
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.ApproveTelegramBusinessConnection(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// UpdateTelegramBusinessConnectionVisibility operation middleware
+func (siw *ServerInterfaceWrapper) UpdateTelegramBusinessConnectionVisibility(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.UpdateTelegramBusinessConnectionVisibility(w, r, id)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -140002,6 +140178,38 @@ func (siw *ServerInterfaceWrapper) ProposeFxRateRefresh(w http.ResponseWriter, r
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.ProposeFxRateRefresh(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// RemoveFxRate operation middleware
+func (siw *ServerInterfaceWrapper) RemoveFxRate(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "from" -------------
+	var from string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "from", chi.URLParam(r, "from"), &from, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "from", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.RemoveFxRate(w, r, from)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -162892,6 +163100,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 		r.Post(options.BaseURL+"/channel-connections/telegram-business/{id}/approve", wrapper.ApproveTelegramBusinessConnection)
 	})
 	r.Group(func(r chi.Router) {
+		r.Patch(options.BaseURL+"/channel-connections/telegram-business/{id}/visibility", wrapper.UpdateTelegramBusinessConnectionVisibility)
+	})
+	r.Group(func(r chi.Router) {
 		r.Delete(options.BaseURL+"/channel-connections/{id}", wrapper.DisconnectChannel)
 	})
 	r.Group(func(r chi.Router) {
@@ -163916,6 +164127,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/fx-rates/propose-refresh", wrapper.ProposeFxRateRefresh)
+	})
+	r.Group(func(r chi.Router) {
+		r.Delete(options.BaseURL+"/fx-rates/{from}", wrapper.RemoveFxRate)
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/imports", wrapper.ListImportRuns)

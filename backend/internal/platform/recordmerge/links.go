@@ -5,6 +5,7 @@ package recordmerge
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/jackc/pgx/v5"
 
@@ -67,8 +68,15 @@ func RelinkLinkRows(ctx context.Context, tx pgx.Tx, entityType string, sourceID,
 	if err != nil {
 		return 0, err
 	}
-	relinked := tag.RowsAffected()
+	return tag.RowsAffected(), RelinkMemberships(ctx, tx, entityType, sourceID, targetID)
+}
 
+// RelinkMemberships moves the merged-away record's list memberships and tags
+// onto the survivor. A membership or tag the survivor already holds stands,
+// and the retired copy is dropped. The lead merge, which moves its timeline on
+// its own, calls this alone.
+func RelinkMemberships(ctx context.Context, tx pgx.Tx, entityType string, sourceID, targetID ids.UUID) error {
+	args := pgx.NamedArgs{SourceKey: sourceID, TargetKey: targetID, KindKey: entityType}
 	// Spelled out per table: the company-merge coverage census reads these
 	// statements, and a table name assembled at runtime is invisible to it.
 	for _, stmt := range []string{
@@ -82,8 +90,8 @@ func RelinkLinkRows(ctx context.Context, tx pgx.Tx, entityType string, sourceID,
 		`UPDATE taggable a SET entity_id = @target WHERE ` + MembershipSource,
 	} {
 		if _, err := tx.Exec(ctx, stmt, args); err != nil {
-			return 0, err
+			return fmt.Errorf("move the merged-away record's lists and tags: %w", err)
 		}
 	}
-	return relinked, nil
+	return nil
 }

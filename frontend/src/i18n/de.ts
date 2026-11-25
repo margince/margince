@@ -6697,6 +6697,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "outcomeReview.notes": "Weitere Notizen",
   "deal.commercialContext": "Kaufmännischer Kontext",
 
+  "deal.closedAmountKept":
+    "Ein gewonnener oder verlorener Deal behält seinen Preis. Öffne ihn zuerst wieder, um ihn zu entfernen.",
   "deal.arrFromOffer":
     "Der erwartete ARR stammt aus dem angenommenen Angebot und wird hier nicht bearbeitet.",
   "deal.brief": "Deal-Bericht",
@@ -9656,6 +9658,14 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Nur die Führungskraft, die diese Prognose abgegeben hat, kann eine neue abgeben.",
   "review.submitNewCall": "Neue Prognose abgeben",
   "review.forecastCallMoved": "Abgegebene Prognose prüfen",
+  "review.duplicateMotion": "Möglicherweise ein Kaufvorhaben",
+  "review.duplicateHelp":
+    "Diese beiden offenen Deals eines Kunden teilen eine Mail, einen Termin oder einen Kontakt, liegen in einer Pipeline und schließen höchstens 60 Tage auseinander.",
+  "review.duplicateThisDeal": "Dieser Deal",
+  "review.duplicateOtherDeal": "Sieht aus wie",
+  "review.duplicateOtherWithheld": "Ein Deal, der sich nicht öffnen lässt",
+  "review.duplicateSwap": "Stattdessen den anderen Deal behalten",
+  "review.duplicateSeparate": "Das sind getrennte Deals",
   "review.unknownCheck": "Unbenannte Prüfung",
   "review.sheetTitle": "Prüfung beantworten",
   "review.outcomeLegend": "Antworttyp",
@@ -13245,6 +13255,50 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "connectors.telegramConnectedAs": "Verbunden als @{username}.",
   "connectors.telegramConnectFailed": "Bot nicht verbunden",
 
+  "connectors.tgbiz.title": "Telegram Business",
+  "connectors.tgbiz.intro":
+    "Verknüpfe ein Telegram-Business-Konto des Unternehmens mit dem Bot. Kundennachrichten und die Antworten aus diesem Konto erscheinen dann im Verlauf des jeweiligen Kontakts. Das Team antwortet weiter in Telegram.",
+  "connectors.tgbiz.stepsTitle": "So wird ein Konto verknüpft:",
+  "connectors.tgbiz.step1":
+    "Öffnet Telegram, dann Einstellungen, Telegram Business, Chatbots.",
+  "connectors.tgbiz.step2":
+    "Gibt @{username} ein und wählt, welche Chats der Bot sehen darf.",
+  "connectors.tgbiz.step3":
+    "Das Konto erscheint dann hier als Wartet auf Freigabe. Bis ein Admin es freigibt, wird nichts daraus erfasst.",
+  "connectors.tgbiz.emptyTitle": "Kein Business-Konto verknüpft",
+  "connectors.tgbiz.emptyNote":
+    "Sobald ein Konto in Telegram mit dem Bot verknüpft wird, erscheint es hier.",
+  "connectors.tgbiz.statusPending": "Wartet auf Freigabe",
+  "connectors.tgbiz.statusConnected": "Verbunden",
+  "connectors.tgbiz.statusOff": "In Telegram ausgeschaltet",
+  "connectors.tgbiz.linked": "Verknüpft am {date}",
+  "connectors.tgbiz.approvedOn": "Freigegeben am {date}",
+  "connectors.tgbiz.offReason":
+    "Diese Verknüpfung wurde in Telegram ausgeschaltet. Es wird nichts Neues erfasst. Wird der Bot erneut verknüpft, wartet das Konto wieder auf Freigabe.",
+  "connectors.tgbiz.approve": "Als Firmenkonto freigeben",
+  "connectors.tgbiz.approveTitle": "{owner} als Firmenkonto freigeben?",
+  "connectors.tgbiz.approveBody":
+    "Kundennachrichten und die Antworten aus der Telegram-App erscheinen im Verlauf des Kunden. Bis du die Sichtbarkeit änderst, kann nur das gewählte Team sie lesen. Vor deiner Freigabe wird nichts aus dem Konto erfasst.",
+  "connectors.tgbiz.ownAccount":
+    "Eigenes Konto eines Mitglieds · jeder Chat wird zurückgehalten",
+  "connectors.tgbiz.changeReaders": "Leserkreis ändern",
+  "connectors.tgbiz.readerTeamRequired":
+    "Wähle das Team, das die Nachrichten dieses Kontos liest.",
+  "connectors.tgbiz.visibilityTitle":
+    "Leserkreis für die Nachrichten von {owner} ändern",
+  "connectors.tgbiz.visibilityWarning":
+    "Das gilt für Nachrichten, die das Konto nach der Änderung erfasst. Bereits zurückgehaltene Nachrichten bleiben zurückgehalten.",
+  "connectors.tgbiz.visibilityHeldHint":
+    "Nur das Lese-Team kann eine Nachricht lesen.",
+  "connectors.tgbiz.visibilitySharedHint":
+    "Eine Nachricht ist so geteilt wie der Kontakt, bei dem sie abgelegt ist.",
+  "connectors.tgbiz.visibilityConfirm": "Sichtbarkeit ändern",
+  "connectors.tgbiz.approveConflict":
+    "Dieses Konto lässt sich nicht freigeben. Entweder wurde die Verknüpfung in Telegram ausgeschaltet (der Bot muss erneut verknüpft werden), oder das Team weicht von dem ab, das das Konto schon liest. Die Liste ist neu geladen.",
+  "connectors.tgbiz.disconnectTitle": "Konto von {owner} trennen?",
+  "connectors.tgbiz.disconnectBody":
+    "Margince erfasst nichts mehr aus diesem Konto. Was bereits erfasst wurde, bleibt im CRM. Wird der Bot erneut verknüpft, wartet das Konto auf Freigabe.",
+
   "connectors.bot.provDispact": "Dispact",
   "connectors.bot.dispactTitle": "Dispact-Bot",
   "connectors.bot.dispactSub":
@@ -15082,6 +15136,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "audit.kind.dedupe_candidate": "Mögliches Duplikat",
   "audit.kind.existing_customer_notice": "Hinweis auf Bestandskunden",
   "audit.kind.extension_object_usage": "Erweiterungsspeicher",
+  "audit.kind.field_provenance": "Herkunft eines Feldes",
   "audit.kind.finance_connection": "Buchhaltungsverbindung",
   "audit.kind.finance_customer_link": "Verknüpfung mit Buchhaltungskunden",
   "audit.kind.finance_external_customer": "Buchhaltungskunde",
@@ -15131,6 +15186,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "audit.kind.scheduled_send": "Geplante E-Mail",
   "audit.kind.sdr_handoff": "SDR-Übergabe",
   "audit.kind.signal": "Signal",
+  "audit.kind.signal_resolution": "Zuordnung eines Signals",
   "audit.kind.site_read": "Website-Analyse",
   "audit.kind.stage": "Phase",
   "audit.kind.stage_exit_criterion": "Ausstiegskriterium der Phase",
@@ -15969,6 +16025,11 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Nur Lesezugriff. Deine Rolle darf keine Kurse ändern.",
   "settings.rates.fxTableLabel": "Geltende Kurse",
   "settings.rates.fxAdd": "Kurs festlegen",
+  "settings.rates.fxRemoveVerb": "{currency} entfernen",
+  "settings.rates.fxRemoveTitle": "Kurs für {currency} entfernen?",
+  "settings.rates.fxRemoveBody":
+    "Deals in {currency} zeigen keinen Wert in der Basiswährung, bis ein neuer Kurs festgelegt ist. Bereits berechnete Zahlen behalten den Kurs, mit dem sie berechnet wurden.",
+  "settings.rates.fxRemoveConfirm": "Entfernen",
   "settings.rates.fxEmpty": "Noch keine Wechselkurse.",
   "settings.rates.fxModalTitle": "Wechselkurs festlegen",
   "settings.rates.rateToBase": "Kurs (zur Basiswährung)",
@@ -16492,6 +16553,11 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "extAccess.brings.routes": "Routen",
   "extAccess.brings.jobs": "Hintergrund-Jobs",
   "extAccess.brings.needs": "Nutzt vom Kern",
+  "extAccess.brings.mail": "Liest aus erfassten E-Mails",
+  "extAccess.mail.subject": "Den Betreff",
+  "extAccess.mail.addresses": "Die Adressen der Beteiligten",
+  "extAccess.mail.body_one": "Das erste {count} Zeichen des Textes",
+  "extAccess.mail.body_other": "Die ersten {count} Zeichen des Textes",
   "extAccess.need.models": "KI-Modelle",
   "extAccess.need.objects": "Dateispeicher",
   "extAccess.brings.none": "Keine",
@@ -17333,13 +17399,13 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "installationSettings.baseCurrencyLock.ratesFrozen_other":
     "Für {count} Einträge ist bereits jeweils ein Wechselkurs zu dieser Währung festgeschrieben, daher ist sie nicht mehr änderbar.",
   "installationSettings.baseCurrencyLock.rateSheet_one":
-    "{count} Wechselkurs rechnet in {base} um. Entferne zuerst die Wechselkurse, um die Basiswährung zu ändern.",
+    "{count} Wechselkurs rechnet in {base} um. Entferne zuerst alle Währungen aus der Kurstabelle, um die Basiswährung zu ändern.",
   "installationSettings.baseCurrencyLock.rateSheet_other":
-    "{count} Wechselkurse rechnen in {base} um. Entferne zuerst die Wechselkurse, um die Basiswährung zu ändern.",
+    "{count} Wechselkurse rechnen in {base} um. Entferne zuerst alle Währungen aus der Kurstabelle, um die Basiswährung zu ändern.",
   "installationSettings.baseCurrencyLock.rateSheetUnnamed_one":
-    "{count} Wechselkurs rechnet in eine Basiswährung um, die nicht hinterlegt ist. Entferne zuerst die Wechselkurse, um die Basiswährung zu ändern.",
+    "{count} Wechselkurs rechnet in eine Basiswährung um, die nicht hinterlegt ist. Entferne zuerst alle Währungen aus der Kurstabelle, um die Basiswährung zu ändern.",
   "installationSettings.baseCurrencyLock.rateSheetUnnamed_other":
-    "{count} Wechselkurse rechnen in eine Basiswährung um, die nicht hinterlegt ist. Entferne zuerst die Wechselkurse, um die Basiswährung zu ändern.",
+    "{count} Wechselkurse rechnen in eine Basiswährung um, die nicht hinterlegt ist. Entferne zuerst alle Währungen aus der Kurstabelle, um die Basiswährung zu ändern.",
   "installationSettings.baseLanguage": "Basissprache",
   "installationSettings.baseLanguageHint":
     "Sprache, in der die KI schreibt, wenn das ganze Team den Text liest. Die Anzeigesprache ist davon getrennt, und Antworten nach außen folgen der Sprache des Threads.",

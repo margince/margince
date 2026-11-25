@@ -6517,6 +6517,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "outcomeReview.notes": "Ghi chú khác",
   "deal.commercialContext": "Bối cảnh thương mại",
 
+  "deal.closedAmountKept":
+    "Deal đã thắng hoặc thua giữ nguyên giá. Hãy mở lại deal trước khi gỡ giá.",
   "deal.arrFromOffer":
     "ARR dự kiến lấy từ báo giá đã chấp nhận và không thể sửa ở đây.",
   "deal.brief": "Tóm tắt deal",
@@ -9393,6 +9395,14 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Chỉ quản lý đã chốt dự báo này mới có thể chốt dự báo mới.",
   "review.submitNewCall": "Chốt dự báo mới",
   "review.forecastCallMoved": "Cần xem lại dự báo đã chốt",
+  "review.duplicateMotion": "Có thể là cùng một đợt mua",
+  "review.duplicateHelp":
+    "Hai deal đang mở của một khách hàng này có chung thư, cuộc họp hoặc liên hệ, cùng một pipeline và ngày chốt cách nhau không quá 60 ngày.",
+  "review.duplicateThisDeal": "Deal này",
+  "review.duplicateOtherDeal": "Có vẻ giống",
+  "review.duplicateOtherWithheld": "Một deal bạn không mở được",
+  "review.duplicateSwap": "Giữ deal kia thay vào đó",
+  "review.duplicateSeparate": "Hai deal này tách biệt",
   "review.unknownCheck": "Kiểm tra chưa đặt tên",
   "review.sheetTitle": "Trả lời kiểm tra",
   "review.outcomeLegend": "Loại câu trả lời",
@@ -12893,6 +12903,48 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "connectors.telegramConnectedAs": "Đã kết nối với tên @{username}.",
   "connectors.telegramConnectFailed": "Không thể kết nối bot",
 
+  "connectors.tgbiz.title": "Telegram cho doanh nghiệp",
+  "connectors.tgbiz.intro":
+    "Liên kết tài khoản Telegram Business của công ty với bot. Tin nhắn của khách và phản hồi của chủ tài khoản sẽ xuất hiện trong Lịch sử của từng liên hệ. Nhân viên vẫn trả lời trong Telegram.",
+  "connectors.tgbiz.stepsTitle": "Để liên kết tài khoản, chủ tài khoản:",
+  "connectors.tgbiz.step1":
+    "Mở Telegram, rồi Cài đặt, Telegram Business, Chatbots.",
+  "connectors.tgbiz.step2":
+    "Nhập @{username} và chọn các cuộc trò chuyện bot được xem.",
+  "connectors.tgbiz.step3":
+    "Tài khoản sẽ hiện ở đây với trạng thái Chờ phê duyệt. Không có gì được ghi nhận cho đến khi quản trị viên phê duyệt.",
+  "connectors.tgbiz.emptyTitle": "Chưa liên kết tài khoản doanh nghiệp",
+  "connectors.tgbiz.emptyNote":
+    "Khi chủ tài khoản liên kết bot trong Telegram, tài khoản sẽ xuất hiện ở đây.",
+  "connectors.tgbiz.statusPending": "Chờ phê duyệt",
+  "connectors.tgbiz.statusConnected": "Đã kết nối",
+  "connectors.tgbiz.statusOff": "Đã tắt trong Telegram",
+  "connectors.tgbiz.linked": "Liên kết {date}",
+  "connectors.tgbiz.approvedOn": "Phê duyệt {date}",
+  "connectors.tgbiz.offReason":
+    "Chủ tài khoản đã tắt liên kết này trong Telegram. Không có gì mới được ghi nhận. Nếu họ liên kết lại bot, tài khoản sẽ lại chờ phê duyệt.",
+  "connectors.tgbiz.approve": "Phê duyệt làm tài khoản công ty",
+  "connectors.tgbiz.approveTitle": "Phê duyệt {owner} làm tài khoản công ty?",
+  "connectors.tgbiz.approveBody":
+    "Tin nhắn của khách và phản hồi của chủ tài khoản từ ứng dụng Telegram xuất hiện trong Lịch sử của khách. Cho đến khi bạn đổi chế độ hiển thị, chỉ nhóm bạn chọn được đọc chúng. Trước khi bạn phê duyệt, không có gì được ghi nhận.",
+  "connectors.tgbiz.ownAccount":
+    "Tài khoản riêng của thành viên · mỗi cuộc trò chuyện được giữ riêng",
+  "connectors.tgbiz.changeReaders": "Đổi nhóm đọc",
+  "connectors.tgbiz.readerTeamRequired":
+    "Hãy chọn nhóm đọc tin nhắn của tài khoản này.",
+  "connectors.tgbiz.visibilityTitle": "Đổi nhóm đọc tin nhắn của {owner}",
+  "connectors.tgbiz.visibilityWarning":
+    "Thay đổi này áp dụng cho tin nhắn tài khoản ghi nhận sau thay đổi. Tin nhắn đã được giữ riêng trước đó vẫn được giữ riêng.",
+  "connectors.tgbiz.visibilityHeldHint": "Chỉ nhóm đọc được đọc tin nhắn.",
+  "connectors.tgbiz.visibilitySharedHint":
+    "Tin nhắn theo chế độ chia sẻ của liên hệ mà nó được gắn vào.",
+  "connectors.tgbiz.visibilityConfirm": "Đổi chế độ hiển thị",
+  "connectors.tgbiz.approveConflict":
+    "Không thể phê duyệt tài khoản này. Hoặc chủ tài khoản đã tắt liên kết trong Telegram (hãy nhờ họ liên kết lại bot), hoặc nhóm này khác với nhóm đang đọc tài khoản. Danh sách đã được tải lại.",
+  "connectors.tgbiz.disconnectTitle": "Ngắt kết nối tài khoản của {owner}?",
+  "connectors.tgbiz.disconnectBody":
+    "Margince ngừng ghi nhận từ tài khoản này. Những gì đã ghi nhận vẫn nằm trong CRM. Nếu chủ tài khoản liên kết lại bot, tài khoản sẽ chờ phê duyệt.",
+
   "connectors.bot.provDispact": "Dispact",
   "connectors.bot.dispactTitle": "Bot Dispact",
   "connectors.bot.dispactSub":
@@ -14662,6 +14714,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "audit.kind.dedupe_candidate": "Hồ sơ có thể trùng",
   "audit.kind.existing_customer_notice": "Thông báo khách hàng hiện có",
   "audit.kind.extension_object_usage": "Bộ nhớ của tiện ích mở rộng",
+  "audit.kind.field_provenance": "Nguồn của trường",
   "audit.kind.finance_connection": "Kết nối kế toán",
   "audit.kind.finance_customer_link": "Liên kết khách hàng kế toán",
   "audit.kind.finance_external_customer": "Khách hàng kế toán",
@@ -14711,6 +14764,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "audit.kind.scheduled_send": "Email đã lên lịch",
   "audit.kind.sdr_handoff": "Bàn giao từ SDR",
   "audit.kind.signal": "Tín hiệu",
+  "audit.kind.signal_resolution": "Kết quả khớp tín hiệu",
   "audit.kind.site_read": "Lần đọc trang web",
   "audit.kind.stage": "Giai đoạn",
   "audit.kind.stage_exit_criterion": "Tiêu chí rời giai đoạn",
@@ -15528,6 +15582,11 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Chỉ đọc. Vai trò hiện tại không có quyền thay đổi tỷ giá và giá mô hình.",
   "settings.rates.fxTableLabel": "Tỷ giá đang áp dụng",
   "settings.rates.fxAdd": "Nhập tỷ giá",
+  "settings.rates.fxRemoveVerb": "Gỡ {currency}",
+  "settings.rates.fxRemoveTitle": "Gỡ tỷ giá {currency}?",
+  "settings.rates.fxRemoveBody":
+    "Các deal bằng {currency} không hiển thị giá trị theo loại tiền cơ sở cho đến khi nhập tỷ giá mới. Các số liệu đã tính vẫn giữ tỷ giá đã dùng.",
+  "settings.rates.fxRemoveConfirm": "Gỡ",
   "settings.rates.fxEmpty": "Chưa có tỷ giá nào.",
   "settings.rates.fxModalTitle": "Nhập tỷ giá",
   "settings.rates.rateToBase": "Tỷ giá (quy đổi sang loại tiền cơ sở)",
@@ -16035,6 +16094,11 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "extAccess.brings.routes": "Đường dẫn",
   "extAccess.brings.jobs": "Tác vụ nền",
   "extAccess.brings.needs": "Dùng từ lõi",
+  "extAccess.brings.mail": "Đọc từ thư đã thu thập",
+  "extAccess.mail.subject": "Tiêu đề",
+  "extAccess.mail.addresses": "Các địa chỉ email trong thư",
+  "extAccess.mail.body_one": "{count} ký tự đầu của nội dung",
+  "extAccess.mail.body_other": "{count} ký tự đầu của nội dung",
   "extAccess.need.models": "Mô hình AI",
   "extAccess.need.objects": "Lưu trữ tệp",
   "extAccess.brings.none": "Không có",
@@ -16855,13 +16919,13 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "installationSettings.baseCurrencyLock.ratesFrozen_other":
     "{count} hồ sơ đã cố định tỷ giá quy đổi theo loại tiền này, nên không thể thay đổi.",
   "installationSettings.baseCurrencyLock.rateSheet_one":
-    "{count} tỷ giá đang quy đổi sang {base}. Cần xóa các tỷ giá trước khi đổi loại tiền cơ sở.",
+    "{count} tỷ giá đang quy đổi sang {base}. Cần gỡ mọi loại tiền khỏi bảng tỷ giá trước khi đổi loại tiền cơ sở.",
   "installationSettings.baseCurrencyLock.rateSheet_other":
-    "{count} tỷ giá đang quy đổi sang {base}. Cần xóa các tỷ giá trước khi đổi loại tiền cơ sở.",
+    "{count} tỷ giá đang quy đổi sang {base}. Cần gỡ mọi loại tiền khỏi bảng tỷ giá trước khi đổi loại tiền cơ sở.",
   "installationSettings.baseCurrencyLock.rateSheetUnnamed_one":
-    "{count} tỷ giá đang quy đổi sang một loại tiền cơ sở chưa được ghi nhận. Cần xóa các tỷ giá trước khi đổi loại tiền cơ sở.",
+    "{count} tỷ giá đang quy đổi sang một loại tiền cơ sở chưa được ghi nhận. Cần gỡ mọi loại tiền khỏi bảng tỷ giá trước khi đổi loại tiền cơ sở.",
   "installationSettings.baseCurrencyLock.rateSheetUnnamed_other":
-    "{count} tỷ giá đang quy đổi sang một loại tiền cơ sở chưa được ghi nhận. Cần xóa các tỷ giá trước khi đổi loại tiền cơ sở.",
+    "{count} tỷ giá đang quy đổi sang một loại tiền cơ sở chưa được ghi nhận. Cần gỡ mọi loại tiền khỏi bảng tỷ giá trước khi đổi loại tiền cơ sở.",
   "installationSettings.baseLanguage": "Ngôn ngữ cơ sở",
   "installationSettings.baseLanguageHint":
     "Ngôn ngữ AI dùng để viết khi cả nhóm cùng đọc văn bản. Ngôn ngữ hiển thị là cài đặt riêng, và thư trả lời khách hàng theo ngôn ngữ của chuỗi thư.",
