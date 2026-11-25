@@ -13,6 +13,7 @@ import {
 } from "../../components/customfields.form";
 import { EntityRef, OwnerName } from "../../components/entityref";
 import { useSectionEdit } from "../../components/sectionedit";
+import { useViewOnlyAccess } from "../../components/viewonly";
 import { Badge } from "../../design-system/atoms";
 import { RecordCard } from "../../design-system/recordcard";
 import {
@@ -28,7 +29,6 @@ import { useLocale, usePlural, useT } from "../../i18n";
 import { labelFor } from "../../lib/labelfor";
 import { unwrap } from "../../lib/problem";
 import { useViewerZone } from "../../lib/viewerzone";
-import { useViewOnlyAccess } from "../records/viewonly";
 import { useProjectEdit } from "./projectedit";
 import { PHASE_LABEL, type Project } from "./projects.form";
 import { timeUsed } from "./projectstanding";

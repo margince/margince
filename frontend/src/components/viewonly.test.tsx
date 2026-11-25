@@ -4,10 +4,10 @@ import { cleanup, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import type { components } from "../../api/schema";
-import { RecordDetails } from "../../design-system/recorddetails";
-import { ToastProvider } from "../../design-system/toast";
-import { en } from "../../i18n/en";
+import type { components } from "../api/schema";
+import { RecordDetails } from "../design-system/recorddetails";
+import { ToastProvider } from "../design-system/toast";
+import { en } from "../i18n/en";
 import { useViewOnlyAccess, ViewOnly } from "./viewonly";
 
 type Contact = components["schemas"]["Contact"];

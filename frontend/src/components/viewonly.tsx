@@ -8,18 +8,18 @@
 // id every refused control points at, so a locked button stays described.
 
 import type { ReactNode } from "react";
-import { EditAccessRequest } from "../../components/editaccessrequest";
-import type { AskedRecord } from "../../components/ownerask";
-import { Avatar } from "../../design-system/avatar";
-import { Popover } from "../../design-system/popover";
-import type { DetailAccess } from "../../design-system/recorddetails";
-import { VisibilityBadge } from "../../design-system/visibility";
-import { useT } from "../../i18n";
-import type { EditAccessRecordType } from "../../lib/editaccessapi";
-import { useMemberName } from "../../lib/membernames";
-import { useMe, useViewerId } from "../../lib/session";
-import { useKindWriteRefusal } from "../../lib/writerefusal";
+import { Avatar } from "../design-system/avatar";
+import { Popover } from "../design-system/popover";
+import type { DetailAccess } from "../design-system/recorddetails";
+import { VisibilityBadge } from "../design-system/visibility";
+import { useT } from "../i18n";
+import type { EditAccessRecordType } from "../lib/editaccessapi";
+import { useMemberName } from "../lib/membernames";
+import { useViewerId } from "../lib/session";
+import { useKindWriteRefusal, useMeSettled } from "../lib/writerefusal";
+import { EditAccessRequest } from "./editaccessrequest";
 import { HandoverRequest } from "./handoverrequest";
+import type { AskedRecord } from "./ownerask";
 import "./viewonly.css";
 
 type ViewOnlyProps = Readonly<{
@@ -100,8 +100,8 @@ function useViewOnlyReason(
   record: AskedRecord | undefined,
 ): string | undefined {
   const reason = useKindWriteRefusal(kind, record);
-  const known = useMe().data?.authorization !== undefined;
-  return !known || record?.archived_at ? undefined : reason;
+  const settled = useMeSettled();
+  return !settled || record?.archived_at ? undefined : reason;
 }
 
 function OwnerLine({

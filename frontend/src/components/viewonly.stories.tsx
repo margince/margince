@@ -3,18 +3,18 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, screen, userEvent } from "storybook/test";
-import type { components } from "../../api/schema";
-import { Badge, Button } from "../../design-system/atoms";
-import { IdentityLine } from "../../design-system/identityline";
-import { RecordDetails } from "../../design-system/recorddetails";
-import { type GrantSpec, meFixture } from "../../testing/mefixture";
+import type { components } from "../api/schema";
+import { Badge, Button } from "../design-system/atoms";
+import { IdentityLine } from "../design-system/identityline";
+import { RecordDetails } from "../design-system/recorddetails";
+import { VisibilityBadge } from "../design-system/visibility";
+import { type GrantSpec, meFixture } from "../testing/mefixture";
 import {
   installFetchStub,
   jsonResponse,
   meRoute,
   StoryProviders,
-} from "../../testing/story-utils";
-import { RecordAccess } from "./recordaccess";
+} from "../testing/story-utils";
 import { useViewOnlyAccess, ViewOnly } from "./viewonly";
 
 type Contact = components["schemas"]["Contact"];
@@ -78,7 +78,7 @@ function Head({ contact }: Readonly<{ contact: Contact }>) {
   return (
     <IdentityLine separator="space">
       <Badge>Champion</Badge>
-      <RecordAccess kind="contact" record={contact} />
+      <VisibilityBadge state="private" opens />
       <ViewOnly
         kind="contact"
         record={contact}
@@ -178,8 +178,10 @@ export const ReadSeat: Story = {
     const own = { ...colleagues, owner_id: VIEWER, writable: true };
     return (
       <StoryProviders>
-        <Head contact={own} />
-        <Ownership contact={own} />
+        <div style={{ display: "grid", gap: "var(--space-4)" }}>
+          <Head contact={own} />
+          <Ownership contact={own} />
+        </div>
       </StoryProviders>
     );
   },

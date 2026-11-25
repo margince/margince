@@ -6,6 +6,7 @@ import {
   LatestInboundLine,
   useLatestInbound,
 } from "../../components/latestinbound";
+import { ViewOnly } from "../../components/viewonly";
 import { QueryGate } from "../../design-system/querystates";
 import { RecordTabs } from "../../design-system/recordtabs";
 import { useRecordTimeline } from "../../design-system/recordtimeline";
@@ -17,7 +18,6 @@ import { useOpenEmail } from "../../lib/openemail";
 import { unwrap } from "../../lib/problem";
 import { useAddressWriters, useUrlParams } from "../../lib/urlstate";
 import { OpenEmailDrawer } from "../mail/openemaildrawer";
-import { ViewOnly } from "../records/viewonly";
 import { leadBand } from "./leadband";
 import { LeadDetails } from "./leaddetails";
 import { useLeadRenameSave } from "./leadedit";

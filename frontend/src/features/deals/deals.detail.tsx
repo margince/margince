@@ -9,6 +9,7 @@ import {
 } from "../../components/latestinbound";
 import { useRailRename } from "../../components/railfield";
 import { RecordGone } from "../../components/recordgone";
+import { ViewOnly } from "../../components/viewonly";
 import { ErrorLine } from "../../design-system/errorline";
 import { QueryGate } from "../../design-system/querystates";
 import { RecordTabs } from "../../design-system/recordtabs";
@@ -36,7 +37,6 @@ import { useMe, useViewerId } from "../../lib/session";
 import { useViewerZone } from "../../lib/viewerzone";
 import { useKindWriteRefusal } from "../../lib/writerefusal";
 import { OpenEmailDrawer } from "../mail/openemaildrawer";
-import { ViewOnly } from "../records/viewonly";
 import {
   type ClosedDeal,
   CloseReviewOffer,

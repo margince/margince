@@ -3,6 +3,7 @@ import type { components } from "../../api/schema";
 import { RecordListsActions } from "../../components/addtoshortlist";
 import { ConversationSuggestionsCard } from "../../components/conversationsuggestions";
 import { CounterpartyHoldRow } from "../../components/counterparty-hold";
+import { useViewOnlyAccess } from "../../components/viewonly";
 import { Badge } from "../../design-system/atoms";
 import { Panel, PanelBody } from "../../design-system/panel";
 import {
@@ -17,7 +18,6 @@ import { useCanWriteRecord } from "../../lib/capability";
 import { labelFor } from "../../lib/labelfor";
 import { useListsAvailable, useRecordLists } from "../../lib/lists.queries";
 import { navigate } from "../../lib/router";
-import { useViewOnlyAccess } from "../records/viewonly";
 import { useWriteRefusal } from "./contactactions";
 import {
   type ConsentRead,

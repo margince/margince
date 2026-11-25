@@ -14,6 +14,7 @@ import {
 } from "../../components/companylookups";
 import { type RailEdit, RailField } from "../../components/railfield";
 import { useSectionEdit } from "../../components/sectionedit";
+import { useViewOnlyAccess } from "../../components/viewonly";
 import { Badge } from "../../design-system/atoms";
 import { InlineChoice } from "../../design-system/inlinechoice";
 import { InlineText } from "../../design-system/inlinetext";
@@ -32,7 +33,6 @@ import { useIndustryOptions } from "../../lib/industryoptions";
 import { labelFor } from "../../lib/labelfor";
 import { useListsAvailable, useRecordLists } from "../../lib/lists.queries";
 import { useRecordCarriesTags } from "../../lib/tags.queries";
-import { useViewOnlyAccess } from "../records/viewonly";
 import { CompanyContactCard } from "./companycontactcard";
 import {
   companyWebsite,

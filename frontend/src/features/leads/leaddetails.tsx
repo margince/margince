@@ -12,6 +12,7 @@ import { RecordCustomFields } from "../../components/recordcustomfields";
 import { type SectionLock, useSectionEdit } from "../../components/sectionedit";
 import { LeadStops } from "../../components/stops";
 import { useTagsRow } from "../../components/tagsflow";
+import { useViewOnlyAccess } from "../../components/viewonly";
 import { Badge, PendingBody } from "../../design-system/atoms";
 import { ContactLink } from "../../design-system/contactlink";
 import { InfoTip } from "../../design-system/infotip";
@@ -32,7 +33,6 @@ import {
 } from "../../lib/leadorigins";
 import { useListsAvailable, useRecordLists } from "../../lib/lists.queries";
 import { useViewerZone } from "../../lib/viewerzone";
-import { useViewOnlyAccess } from "../records/viewonly";
 import { LeadCompany, useLeadCompanyFactsSection } from "./leadcompany";
 import { useLeadPickerFlows } from "./leaddetailsflows";
 import { useLeadEdit } from "./leadedit";

@@ -48,7 +48,7 @@ import { DealPartner } from "./dealpartner";
 import { ProbabilityHint } from "./dealprobabilityhint";
 import type { Deal, Stage } from "./deals";
 import "./deal360/deal360.css";
-import { useViewOnlyAccess } from "../records/viewonly";
+import { useViewOnlyAccess } from "../../components/viewonly";
 
 type AsideProps = Readonly<{
   deal: Deal;

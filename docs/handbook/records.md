@@ -70,7 +70,7 @@ To edit a contact in Margince, open it and press **Edit** in a section of the **
 ### Why can't I edit a contact or company?
 A contact or company in Margince takes no edits when it is archived ("This contact is archived and takes no changes."). It also takes none when it is not yours to change: "You cannot edit this contact. Ask the owner to hand it over or share it, or ask an administrator."
 
-Where you cannot edit, a section shows no **Edit**, a field shows no box or mark, and other actions are greyed out. The page states the reason once, at the foot of the **Details** panel, or in the band at the top of an archived contact. Except on an archived record, pointing at a greyed-out **Email** or **Log** button in the header shows the same reason. If someone else changed the same field while you were editing, your edit is refused: "This record changed after you opened it. Reload it to see the change, then make yours again."
+Where you cannot edit, a section shows no **Edit**, a field shows no box or mark, and other actions show a lock. A **View only** chip under the record's name names the owner, gives the reason and offers **Ask … for edit access**; **Ownership** in **Details** shows **Access: View only** with the same ask. An archived record says why in the band at the top instead. Pointing at a locked button shows the reason. If someone else changed the same field while you were editing, your edit is refused: "This record changed after you opened it. Reload it to see the change, then make yours again."
 Also called: read-only record, edit greyed out, cannot change.
 
 ### What does "This sender may be pretending to be someone else" mean?

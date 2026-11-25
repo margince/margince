@@ -7,6 +7,7 @@ import {
   useLatestInbound,
 } from "../../components/latestinbound";
 import { useTaskUpdate } from "../../components/taskactions";
+import { ViewOnly } from "../../components/viewonly";
 import { Modal } from "../../design-system/atoms";
 import { DrawerBody, DrawerHead } from "../../design-system/drawerbands";
 import { Heading } from "../../design-system/heading";
@@ -19,7 +20,6 @@ import { navigate } from "../../lib/router";
 import { useViewerZone } from "../../lib/viewerzone";
 import { OpenEmailDrawer } from "../mail/openemaildrawer";
 import { RecordHistoryTab } from "../records/history";
-import { ViewOnly } from "../records/viewonly";
 import type { Company, Company360View } from "./companies";
 import {
   CompanyRecordBody,

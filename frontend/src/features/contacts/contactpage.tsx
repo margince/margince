@@ -47,10 +47,10 @@ import { ContactSubtitle } from "./contactsubtitle";
 import { ContactLatestInbound } from "./contacttabs";
 import "./contact360.css";
 import { RecordGone } from "../../components/recordgone";
+import { ViewOnly } from "../../components/viewonly";
 import { useHiddenCoreFeatures } from "../../lib/corefeatures";
 import { isGone } from "../../lib/problem";
 import { useViewerZone } from "../../lib/viewerzone";
-import { ViewOnly } from "../records/viewonly";
 import { openContactTab } from "../worklist/worklist.return";
 import {
   ContactActivityDrawer,
