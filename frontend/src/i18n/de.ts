@@ -19399,7 +19399,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "linkSuggestions.kind.project": "Projekt",
   "linkSuggestions.accept": "Dort ablegen",
   "linkSuggestions.reject": "Nicht dort",
-  "linkSuggestions.noAccess": "Sie haben keinen Zugriff auf Verknüpfungsvorschläge.",
+  "linkSuggestions.noAccess":
+    "Du hast keinen Zugriff auf Verknüpfungsvorschläge.",
   "linkSuggestions.unavailable":
     "Die Verknüpfungsvorschläge konnten nicht gelesen werden. Versuche es später erneut.",
   "webhooks.event.activity.readiness_recorded.label":

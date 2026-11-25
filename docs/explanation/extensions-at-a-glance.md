@@ -101,48 +101,48 @@ Door 3 differs from door 2 in who the call acts as. Door 2 acts as the signed-in
 
 A new core service for units is a new method on `Runtime`, a published port and a core side that holds the gate. The steps are in [expose-a-core-service-to-extensions.md](../how-to/expose-a-core-service-to-extensions.md).
 
-### What the core lends a unit, and what is built
+### What the core lends a unit
 
 One row for each thing a unit can ask of the core. The tool bag below lists which records `tx.Core()` reaches.
 
-| Core capability | A unit calls | Declared in | Decided by | State |
-|---|---|---|---|---|
-| Its own tables | `rt.Tx`, `tx.Exec`, `tx.Query` | `Migrations` | The `ext_runtime` role: unit tables only | Built |
-| Core records, read and write | `tx.Core()` | none | The caller's live rights | Built |
-| Tell a member about a record | `tx.Core().Notices()` | none | The member's own notification settings | Built |
-| Propose where a message belongs | `tx.Core().LinkSuggestions()` | none | The caller's live rights | Built |
-| Read for a job tick or a delivery | `rt.Deals`, `Authority`, `Directory`, `Activities`, `SetAside` | `SystemReads` | Nobody; an attended call is refused | Built |
-| Land records from its own system | `rt.Ingest`, `IngestBatch`, `IngestPosition` | `Ingress` | The member whose credential produced the record | Built |
-| Run its own job soon | `rt.SyncNow` | `Jobs` | The unit's own declared job | Built |
-| A vendor's access token | `rt.OAuthAccessToken`, `OAuthDisconnect` | `OAuthApps` | The admin's consent | Built |
-| Its own secrets | `rt.Secrets` | `Secrets` | The unit's own namespace | Built |
-| The installation's AI models | `rt.Models().Complete` | `Needs`, `models` | The installation's model choice and shared budget | Built |
-| The installation's file store | `rt.Objects().Put`, `Get`, `Delete` | `Needs`, `objects` | A key prefix of the unit's own | Built |
+| Core capability | A unit calls | Declared in | Decided by |
+|---|---|---|---|
+| Its own tables | `rt.Tx`, `tx.Exec`, `tx.Query` | `Migrations` | The `ext_runtime` role: unit tables only |
+| Core records, read and write | `tx.Core()` | none | The caller's live rights |
+| Tell a member about a record | `tx.Core().Notices()` | none | The member's own notification settings |
+| Propose where a message belongs | `tx.Core().LinkSuggestions()` | none | The caller's live rights |
+| Read for a job tick or a delivery | `rt.Deals`, `Authority`, `Directory`, `Activities`, `SetAside` | `SystemReads` | Nobody; an attended call is refused |
+| Land records from its own system | `rt.Ingest`, `IngestBatch`, `IngestPosition` | `Ingress` | The member whose credential produced the record |
+| Run its own job soon | `rt.SyncNow` | `Jobs` | The unit's own declared job |
+| A vendor's access token | `rt.OAuthAccessToken`, `OAuthDisconnect` | `OAuthApps` | The admin's consent |
+| Its own secrets | `rt.Secrets` | `Secrets` | The unit's own namespace |
+| The installation's AI models | `rt.Models().Complete` | `Needs`, `models` | The installation's model choice and shared budget |
+| The installation's file store | `rt.Objects().Put`, `Get`, `Delete` | `Needs`, `objects` | A key prefix of the unit's own |
 
 What a unit does not get:
 
-| Not offered | State | Why |
-|---|---|---|
-| The core vault | Never | It holds connector tokens and provider keys. A vendor token comes through `OAuthApps`. |
-| The bytes of a core attachment | Never | An attachment follows its record's row-level rights, which a read by key skips. |
-| Custom field values on a core write | Not yet | The write is refused with `ErrInvalid` until the field catalog is checked against it. |
-| A spend cap for each unit's model calls | Not yet | One shared budget serves all units, and the audit rows say which unit spent it. |
-| Expiry or an index of a unit's objects | Not yet | A unit deletes its own objects with `Delete`. |
+| Not offered | Why |
+|---|---|
+| The core vault | It holds connector tokens and provider keys. A vendor token comes through `OAuthApps`. |
+| The bytes of a core attachment | An attachment follows its record's row-level rights, which a read by key skips. |
+| Custom field values on a core write | The write is refused with `ErrInvalid`. |
+| A spend cap for each unit's model calls | One shared budget serves all units, and the audit rows say which unit spent it. |
+| Expiry or an index of a unit's objects | A unit deletes its own objects with `Delete`. |
 
 ### What a unit can change in the screens
 
-| Capability | Declared in | Where it shows | Decided by | State |
-|---|---|---|---|---|
-| Its own screen under Settings | The default export of its frontend package | `#/ext/<name>` | The settings rules of the page | Built |
-| An app in the home side drawer | `App` | A drawer row and `#/app/<name>` | `read` on the unit's RBAC object | Built |
-| A button or a note on a core screen | `Entries` | The log form, and the contact, company and deal pages | `read` on the unit's RBAC object | Built |
-| Other wording for a core key | Files in `frontend/i18n-overrides/` | Any frontend text of the core | The build checks only | Built |
+| Capability | Declared in | Where it shows | Decided by |
+|---|---|---|---|
+| Its own screen under Settings | The default export of its frontend package | `#/ext/<name>` | The settings rules of the page |
+| An app in the home side drawer | `App` | A drawer row and `#/app/<name>` | `read` on the unit's RBAC object |
+| A button or a note on a core screen | `Entries` | The log form, and the contact, company and deal pages | `read` on the unit's RBAC object |
+| Other wording for a core key | Files in `frontend/i18n-overrides/` | Any frontend text of the core | The build checks only |
 
-| Not offered | State | Why |
-|---|---|---|
-| A second app, a new drawer heading, or a row position | Never | The core draws the drawer, so a unit cannot restyle it. |
-| A path below `#/app/<name>` | Not yet | The app route holds the unit's name and nothing else. |
-| Overriding a record type's name, AI prompts, agent tools or text the backend writes | Not yet | An override changes frontend wording only. |
+| Not offered | Why |
+|---|---|
+| A second app, a new drawer heading, or a row position | The core draws the drawer, so a unit cannot restyle it. |
+| A path below `#/app/<name>` | The app route holds the unit's name and nothing else. |
+| Overriding a record type's name, AI prompts, agent tools or text the backend writes | An override changes frontend wording only. |
 
 How to do each: [declare-an-app-in-the-home-drawer.md](../how-to/declare-an-app-in-the-home-drawer.md), [Override core wording](../how-to/add-an-extension.md#override-core-wording) and [Offer an entry on a core screen](../how-to/add-an-extension.md#offer-an-entry-on-a-core-screen).
 

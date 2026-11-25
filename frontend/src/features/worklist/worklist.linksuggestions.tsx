@@ -27,7 +27,9 @@ export function LinkSuggestionsPanel() {
     const refused = problemStatus(suggestions.error) === 403;
     return (
       <p className="t-caption">
-        {t(refused ? "linkSuggestions.noAccess" : "linkSuggestions.unavailable")}
+        {t(
+          refused ? "linkSuggestions.noAccess" : "linkSuggestions.unavailable",
+        )}
       </p>
     );
   }
