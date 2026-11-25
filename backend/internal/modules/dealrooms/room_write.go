@@ -65,7 +65,9 @@ func createRoomTx(ctx context.Context, tx pgx.Tx, in CreateRoomInput, by string)
 	// Opening a room on a deal is a write against that deal's buyer-facing
 	// surface, so the caller needs write authority on the deal — seeing it is
 	// not enough to start showing it to an outside party.
-	if err := auth.EnsureWritableLive(ctx, tx, dealTable, in.DealID.UUID); err != nil {
+	// The deal row is held too, so a merge that retires the deal cannot slip in
+	// between this check and the room's insert.
+	if err := auth.HoldWritableLive(ctx, tx, dealTable, in.DealID.UUID); err != nil {
 		return crmcontracts.DealRoom{}, err
 	}
 
@@ -467,8 +469,12 @@ func changedFields(p *storekit.Patch) []string {
 // and a room is the sharpest form of that: it is buyer-facing access, and
 // handing out more of it after the deal was retired is what retiring the deal
 // meant to stop.
+//
+// It holds the deal row, before the room's own write takes the room's. The deal
+// merge locks the deal first and then moves the room, so every room write that
+// adds access takes the two in the same order.
 func ensureDealWritable(ctx context.Context, tx pgx.Tx, room crmcontracts.DealRoom) error {
-	return auth.EnsureWritableLive(ctx, tx, dealTable, ids.UUID(room.DealId))
+	return auth.HoldWritableLive(ctx, tx, dealTable, ids.UUID(room.DealId))
 }
 
 // ensureDealRetractable is its twin for the moves that TAKE ACCESS AWAY —
