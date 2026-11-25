@@ -142,6 +142,10 @@ class CutTest(unittest.TestCase):
         self.assertEqual(calllog.main(["calllog.py", "cut", log, str(offset), out]), 0)
         self.assertEqual([call["tool"] for call in calllog.read(out)], ["read_record"])
 
+    def test_a_cut_outside_the_repo_and_temp_directory_is_refused(self):
+        with self.assertRaises(ValueError):
+            calllog.cut("/etc/hostname", 0, os.path.join(tempfile.mkdtemp(), "out.calls"))
+
     def test_a_misused_command_says_how_to_use_it(self):
         self.assertEqual(calllog.main(["calllog.py", "slice"]), 2)
 

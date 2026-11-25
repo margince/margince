@@ -72,8 +72,11 @@ def evidence(calls):
 
 
 def cut(log_path, offset, out_path):
-    """Copy what log_path gained past byte offset into out_path."""
-    with open(log_path, "rb") as source, open(out_path, "wb") as out:
+    """Copy what log_path gained past byte offset into out_path. Both stay inside
+    the repo or the system temp directory, as every path the lane opens does."""
+    import check  # check reads cuts through this module, so it imports it first
+
+    with open(check.checked_path(log_path), "rb") as source, open(check.checked_path(out_path), "wb") as out:
         source.seek(offset)
         out.write(source.read())
 
