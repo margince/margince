@@ -50,8 +50,8 @@
 // same reason and under the same ratification. Every table carrying a
 // company_id names a record the merge is retiring. A row left behind points at
 // something no read returns. That reaches money (contract) and responsibility
-// (record_assignment). It also reaches the per-reader rows (company_brief,
-// company_dossier, company_growth_fit, company_scan, suggestion_dismissal) and
+// (record_assignment). It also reaches the per-reader rows (generated_summary,
+// company_scan, suggestion_dismissal) and
 // the resolution caches (signal, signal_resolution, signal_thread_scan, offer).
 // A table its owner declares (internal/platform/sweepreach) moves through that
 // declaration instead. The company-merge coverage gate keeps the list current:

@@ -28,6 +28,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/ai"
 	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/platform/auth"
+	"github.com/margince/margince/backend/internal/platform/generatedsummary"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -375,7 +376,7 @@ func wireEvidence(cited []claims.Evidence) ([]crmcontracts.CompanyBriefEvidence,
 
 // cached reads this READER's dossier out of the shared per-reader cache.
 func (s *Service) cached(ctx context.Context, userID ids.UserID, companyID ids.CompanyID) (stored, bool, error) {
-	row, found, err := dossierCache.load(ctx, s.pool, userID, companyID)
+	row, found, err := generatedsummary.Read(ctx, s.pool, userID, generatedsummary.CompanyDossier(companyID))
 	if err != nil || !found {
 		return stored{}, false, err
 	}
@@ -396,12 +397,13 @@ func (s *Service) save(ctx context.Context, userID ids.UserID, companyID ids.Com
 	if err != nil {
 		return fmt.Errorf("encode the dossier payload: %w", err)
 	}
-	return dossierCache.save(ctx, s.pool, userID, companyID, entry{
-		Fingerprint: dossier.Fingerprint,
-		GeneratedAt: dossier.GeneratedAt,
-		GeneratedBy: dossier.GeneratedBy,
-		Payload:     payload,
-	})
+	return generatedsummary.Save(ctx, s.pool, userID, generatedsummary.CompanyDossier(companyID),
+		generatedsummary.Entry{
+			Fingerprint: dossier.Fingerprint,
+			GeneratedAt: dossier.GeneratedAt,
+			GeneratedBy: dossier.GeneratedBy,
+			Payload:     payload,
+		})
 }
 
 // actingUser resolves the human an assembly belongs to. That these assemblies
