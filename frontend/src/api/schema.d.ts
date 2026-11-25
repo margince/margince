@@ -59982,7 +59982,7 @@ export interface components {
             /** Format: date-time */
             expires_at: string;
         };
-        /** @description The sign of impersonation the sender check saw when capture made this contact from a mail. */
+        /** @description The sign of impersonation the sender check saw on a captured mail from this contact. */
         ContactImpersonationWarning: {
             /**
              * @description Which sign it saw. `punycode_domain`: the mail domain is written in punycode, which can look like another domain. `display_name_other_domain`: the display name holds an address on a domain other than the one the mail came from. Absent on a warning recorded before the reason was stored.

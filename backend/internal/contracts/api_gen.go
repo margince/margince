@@ -46240,7 +46240,7 @@ type ContactGraphRouteEvidence struct {
 // ContactGraphRouteType `direct` is a colleague who corresponds with the contact themselves. `through_contact` goes via someone else at the contact's company.
 type ContactGraphRouteType string
 
-// ContactImpersonationWarning The sign of impersonation the sender check saw when capture made this contact from a mail.
+// ContactImpersonationWarning The sign of impersonation the sender check saw on a captured mail from this contact.
 type ContactImpersonationWarning struct {
 	// DetectedAt When the sender check recorded it.
 	DetectedAt time.Time `json:"detected_at"`
