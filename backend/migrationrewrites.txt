@@ -262,3 +262,4 @@
 1795597144_the_connection_checks_are_validated.down.sql | * | the down migration is a single SELECT 1 that changes nothing
 1795597145_the_new_connection_columns_check_their_text_limits.up.sql | * | the file only replaces trigger definitions and writes no row
 1795597145_the_new_connection_columns_check_their_text_limits.down.sql | * | the file only replaces trigger definitions and writes no row
+1795605561_core_only_kind_columns_are_validated.down.sql | * | the down migration is a single SELECT 1 that changes nothing

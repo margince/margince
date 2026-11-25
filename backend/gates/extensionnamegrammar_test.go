@@ -37,7 +37,7 @@ func TestEveryCopyOfTheExtensionNamePatternIsThePublishedOne(t *testing.T) {
 	t.Parallel()
 	root := gatekit.ModuleRoot(t)
 	for _, source := range []qualifiedCopySource{
-		{path: filepath.Join(root, "migrations", "testdata", "head_catalog.txt"), floor: 16,
+		{path: filepath.Join(root, "migrations", "testdata", "head_catalog.txt"), floor: 10,
 			copyLine: func(line string) bool { return strings.Contains(line, extension.QualifiedPrefix) }},
 		{path: filepath.Join(root, "api", "crm.yaml"), floor: 11,
 			copyLine: func(line string) bool { return strings.Contains(line, "pattern:") }},

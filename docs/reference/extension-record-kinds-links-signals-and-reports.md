@@ -95,8 +95,9 @@ a record in tags, Shortlists, the audit log and the places that name a kind, und
 declare one are in [Declare a record kind](../how-to/add-an-extension.md#declare-a-record-kind).
 
 A kind is named `ext:<unit>:<kind>`. The unit is the extension's name. The kind is a lower-case letter followed by up to
-31 lower-case letters, digits or underscores. The spelling is permanent once a row carries it, because every column
-that names a kind accepts it as a pattern.
+31 lower-case letters, digits or underscores. The spelling is permanent once a row carries it. The pattern is
+`extension.QualifiedNamePattern`, and `gates/extensionnamegrammar_test.go` holds every copy of it in the schema, the
+contract and the frontend to that source.
 
 | Part | What it does |
 |---|---|
@@ -110,16 +111,18 @@ that names a kind accepts it as a pattern.
 | Audit | A change to an extension record is written with the `ext:<unit>:<kind>` name as its entity type and the existing actions. No new action is needed. |
 | Frontend | `isExtensionEntityKind` reads the spelling and `useRecordKindDirectory` loads the declared kinds. A core page does not show an extension kind, so `recordRoute` names none. A notice about one opens the unit's screen at the kind's `view`. |
 
-The database accepts the spelling in every column that named a kind. The columns are listed in the table below. A gate
-fails a new column that restates a closed list.
+The database accepts the spelling only in the columns a writer fills with it. They are listed in the table below.
+`gates/recordkindopenlist_test.go` holds the list both ways: a kind column that accepts the spelling without a named
+writer fails, and so does a listed column that refuses it.
 
 | Table | Column |
 |---|---|
-| `attachment`, `embedding`, `list`, `list_member`, `list_live_member`, `list_member_event`, `taggable`, `user_record_view`, `signal` | `entity_type` |
-| `field_provenance` | `object_type` |
-| `record_grant` | `record_type` |
-| `dedupe_candidate` | `entity_type` (with `left_ext_id` and `right_ext_id`) |
+| `list`, `list_member`, `list_live_member`, `list_member_event`, `taggable` | `entity_type` |
 | `saved_view` | `resource` |
+| `record_grant` | `record_type` (kept open while row access for extension records is undecided) |
+
+The other kind columns keep core's closed list: `entity_type` on `attachment`, `embedding`, `dedupe_candidate`,
+`user_record_view` and `signal`, and `object_type` on `field_provenance`.
 
 No column gains a foreign key to an extension table, because an extension role cannot be referenced from core.
 
