@@ -223,6 +223,8 @@
 1795355021_the_sender_warning_columns_are_bounded.down.sql | * | restores the two earlier text guards on contact; it changes no existing row
 1795363335_a_record_source_names_a_channel.up.sql | *, partner | the UPDATE touches the partner table once, one row per partner company, and only rows whose source is off the list; the procedural body is a trigger function that acts on later updates of a deal, offer or project only, and those rows are left to a data task
 1795363336_the_partner_source_check_is_validated.down.sql | * | the down migration is a single SELECT 1 that changes nothing
+1795577705_generated_summaries_share_one_table.up.sql | *, generated_summary | copies the rows of five cache tables into a new table, one row per reader per record that reader opened, each a regenerable summary; the copy spares every reader a model call, and the procedural marker is the two trigger definitions on that new table
+1795577705_generated_summaries_share_one_table.down.sql | *, company_brief, company_dossier, company_growth_fit, contact_brief, deal_status_card | runs only on a rollback and copies the same cache rows back into five new tables; the procedural marker is the trigger definitions on those tables
 1795363368_a_rate_correction_keeps_the_rate_it_replaced.down.sql | fx_rate | restores the two read functions and deletes only superseded rate versions, at most the few corrections an operator typed by hand per currency and day
 1795363370_a_signature_may_state_a_second_email.down.sql | contact_profile_field | runs only on a rollback and deletes only email evidence rows, one per further address a signature stated, a handful per contact at most
 1795363371_a_second_email_evidence_check_is_validated.down.sql | * | the down migration is a single SELECT 1 that changes nothing
@@ -252,3 +254,5 @@
 1795388888_the_basis_vocabulary_names_no_country_validated.down.sql | * | the down migration is a single SELECT 1 that changes nothing
 1795449105_an_archived_record_leaves_its_chat_channel.up.sql | *, audit_log, chat_link | touches only live chat links whose deal or project is archived, with one audit row each; a link is a channel a member chose by hand for one deal or project, so the set is the links people made
 1795449105_an_archived_record_leaves_its_chat_channel.down.sql | * | the down migration is a single SELECT 1 that changes nothing
+1795540594_a_host_keeps_team_links_beside_the_personal_link.up.sql | booking_page | revokes a host's older live booking pages; every writer kept one live page per host, so the set is empty or a handful
+1795540594_a_host_keeps_team_links_beside_the_personal_link.down.sql | booking_page | revokes the live team links, at most a few per member

@@ -2672,6 +2672,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "history.field.qualifying_event_retracted": "Trao đổi đã ghi nhận bị rút lại",
   "history.field.acquisition_request_retracted":
     "Yêu cầu khi thu nhận đã bị rút lại",
+  "history.field.impersonation_warning_raised":
+    "Cảnh báo mạo danh do một email sau đó",
   "history.field.impersonation_warning_cleared": "Đã gỡ cảnh báo mạo danh",
   "history.field.impersonation_warning_carried":
     "Giữ cảnh báo mạo danh từ liên hệ đã gộp",
@@ -10294,6 +10296,16 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Thêm nội dung này vào ~/.gemini/config/mcp_config.json. Nếu tệp đã có máy chủ khác, chỉ thêm mục margince bên cạnh chúng.",
   "aiAccess.local.antigravity.signIn":
     "Mở cài đặt agent, rồi “Customizations”, và chọn “Authenticate” bên cạnh margince.",
+  "aiAccess.place.lumoNote":
+    "Lumo trên web chưa thể kết nối với ứng dụng khác. Hãy dùng ứng dụng Lumo cho máy tính, tải tại https://proton.me/lumo/download.",
+  "aiAccess.local.lumo.open":
+    "Trong Lumo Desktop, chọn “Settings” ở cuối thanh bên, rồi “Desktop app” và “Connectors”.",
+  "aiAccess.local.lumo.add":
+    "Chọn “Add MCP server…” và đặt “Transport” thành “Remote (HTTP)”.",
+  "aiAccess.local.lumo.fill":
+    "Nhập margince làm ID và Margince làm Display name, thêm mô tả ngắn rồi dán địa chỉ.",
+  "aiAccess.local.lumo.signIn":
+    "Chọn “Add server”. Khi Lumo yêu cầu, Margince mở ra: hãy đăng nhập và chọn Cấp quyền.",
   "aiAccess.other.sub":
     "Margince hoạt động với mọi công cụ AI có thể thêm máy chủ MCP từ xa. Hãy tìm “MCP”, “connectors” hoặc “tools” trong phần cài đặt của nó.",
   "aiAccess.other.typeLabel": "Loại",
@@ -21424,6 +21436,9 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "worklist.manager.kind.next_step": "Bước tiếp theo của deal",
   "worklist.manager.kind.review_backlog": "Tồn đọng cần xem lại",
   "worklist.manager.kind.general": "Khác",
+  "worklist.manager.coachDeal": "Deal liên quan",
+  "worklist.manager.coachNoDeal":
+    "Không có deal nào trong ngày của họ để chọn.",
   "worklist.board.title": "Việc của nhóm cần chú ý",
   "worklist.gap.rankedOn": "Xếp hạng ngày {date}.",
   "worklist.gap.masked_one":
@@ -22552,6 +22567,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "magic.why.site_read_unnamed": "Đọc trên trang web của công ty.",
   "magic.why.site_read_each": "Đọc trên trang web riêng của từng công ty.",
   "magic.why.signature": "Lấy từ chữ ký email.",
+  "magic.why.stated": "Lý do đã nêu: {why}",
   "magic.why.retention": "Quy tắc lưu trữ: sau {days} ngày.",
   "magic.by.retention": "Quy tắc lưu trữ",
   "magic.by.mail_filing": "Xếp email",
@@ -22735,9 +22751,24 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "scheduling.replaceAliasHelp":
     "Địa chỉ ngắn {url} của bạn cũng ngừng hoạt động. Bạn có thể chọn lại sau đó.",
   "scheduling.replaceConfirmTitle": "Thay địa chỉ liên kết?",
-  "scheduling.team.title": "Đồng nghiệp trên liên kết này",
-  "scheduling.team.foot":
-    "Khách chỉ thấy những khung giờ mà bạn và mọi đồng nghiệp ở đây đều rảnh, theo giờ làm việc riêng của từng đồng nghiệp. Mỗi lượt đặt lịch đều mời tất cả đồng nghiệp.",
+  "scheduling.teamLinks.title": "Liên kết nhóm",
+  "scheduling.teamLinks.foot":
+    "Liên kết nhóm chỉ hiện những khung giờ mà bạn và mọi đồng nghiệp trên đó đều rảnh, theo giờ làm việc riêng của từng đồng nghiệp, và mời tất cả đồng nghiệp vào mỗi cuộc họp. Liên kết dùng lịch và cài đặt của liên kết cá nhân, vốn luôn chỉ hiện thời gian rảnh của riêng bạn.",
+  "scheduling.teamLinks.create": "Liên kết nhóm mới với",
+  "scheduling.teamLinks.createHelp":
+    "Chọn một đồng nghiệp để tạo liên kết mới có địa chỉ riêng. Chỉ hiện những đồng nghiệp đã kết nối lịch. Mỗi đồng nghiệp phải xác nhận trước khi liên kết nhận lượt đặt lịch.",
+  "scheduling.teamLinks.defaultTitle": "Gặp {names}",
+  "scheduling.teamLinks.off": "Tắt: không nhận đặt lịch",
+  "scheduling.teamLinks.ready": "Đang nhận đặt lịch",
+  "scheduling.teamLinks.waiting": "Đang chờ đồng nghiệp",
+  "scheduling.teamLinks.paused":
+    "Tạm dừng: lịch của bạn không nhận được cuộc họp",
+  "scheduling.teamLinks.delete": "Xóa liên kết",
+  "scheduling.teamLinks.deleteTitle": "Xóa “{title}”?",
+  "scheduling.teamLinks.deleteHelp":
+    "Địa chỉ của liên kết sẽ ngừng hoạt động. Các cuộc họp đã đặt qua liên kết vẫn giữ nguyên. Liên kết cá nhân của bạn không thay đổi.",
+  "scheduling.teamLinks.lastMember":
+    "Liên kết nhóm cần ít nhất một đồng nghiệp. Hãy xóa liên kết.",
   "scheduling.team.add": "Thêm đồng nghiệp",
   "scheduling.team.addHelp":
     "Chỉ hiện những đồng nghiệp đã kết nối lịch. Mỗi đồng nghiệp phải xác nhận trước khi liên kết nhận lượt đặt lịch.",
@@ -22759,7 +22790,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "scheduling.team.confirm": "Xác nhận",
   "scheduling.team.leave": "Rời",
   "worklist.untitled.booking_health_team_not_ready":
-    "Trang đặt lịch của bạn đang tạm dừng: một đồng nghiệp trên đó chưa xác nhận, đã rời đi hoặc không có lịch đọc được",
+    "Liên kết nhóm của bạn đang tạm dừng: một đồng nghiệp trên đó chưa xác nhận, đã rời đi hoặc không có lịch đọc được",
   "scheduling.personalLinksFoot":
     "Hẹn với một người cụ thể? Mở liên hệ của họ và chọn Đặt cuộc hẹn để gửi vài khung giờ hoặc một liên kết riêng chỉ họ dùng được.",
   "scheduling.liveNoInvitesTitle":

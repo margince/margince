@@ -266,6 +266,7 @@ func approvalItem(approval crmcontracts.Approval, machine MachineSender) crmcont
 		Title:         approval.Summary,
 		SummaryParts:  approval.SummaryParts,
 		SystemDisplay: approval.SystemDisplay,
+		Why:           approval.Why,
 		Actions:       []crmcontracts.AttentionItemActions{"decide"},
 	}
 	if approvals.PreviewRefusal(approval.Preview) != nil {

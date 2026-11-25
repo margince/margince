@@ -200,6 +200,7 @@ func TestTheReaderTakesEveryToolKeyAndItsSpelling(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "s.yaml")
 	body := "name: s\n# a comment\nmust_call:\n  # why\n  - a|b\nmay_call: [c, d]\n" +
 		"must_call_with:\n  - e.x=1\nmust_not_call_with:\n  - 'f~g|h'\nmust_call_matching:\n  - 'i~j || k~l'\n" +
+		"must_return:\n  - 'm~n || o~p'\n" +
 		"prompt: |\n  must_call:\n  - not_a_tool\n"
 	if err := os.WriteFile(path, []byte(body), 0o600); err != nil {
 		t.Fatal(err)
@@ -209,7 +210,7 @@ func TestTheReaderTakesEveryToolKeyAndItsSpelling(t *testing.T) {
 		t.Fatal(err)
 	}
 	got := slices.Sorted(slices.Values(sc.tools))
-	if want := []string{"a", "b", "c", "d", "e", "f", "i", "k"}; !reflect.DeepEqual(got, want) {
+	if want := []string{"a", "b", "c", "d", "e", "f", "i", "k", "m", "o"}; !reflect.DeepEqual(got, want) {
 		t.Errorf("tools = %v, want %v", got, want)
 	}
 }

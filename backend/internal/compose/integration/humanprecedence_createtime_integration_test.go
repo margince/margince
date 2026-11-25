@@ -111,7 +111,7 @@ func TestAgentFillsAnEmptyFieldWithoutApproval(t *testing.T) {
 // refusal: the whole patch applies.
 func automaticPatch(t *testing.T, e *apptest.AppEnv, recordType, id string, fields AnyMap) {
 	t.Helper()
-	call, err := json.Marshal(AnyMap{"record_type": recordType, "id": id, "fields": fields})
+	call, err := json.Marshal(AnyMap{"record_type": recordType, "id": id, "fields": fields, "why": "A test asks for this change."})
 	if err != nil {
 		t.Fatal(err)
 	}

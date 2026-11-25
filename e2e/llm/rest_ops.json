@@ -417,6 +417,7 @@
     "GET /v1/scheduling/profile": "read_view",
     "GET /v1/scheduling/proposals": "list_meeting_proposals",
     "GET /v1/scheduling/team-candidates": "read_view",
+    "GET /v1/scheduling/team-links": "read_view",
     "GET /v1/scheduling/team-requests": "read_view",
     "GET /v1/sdr-handoffs/{id}/assignee": "get_handoff_assignee",
     "GET /v1/search": "search_records",
@@ -3728,7 +3729,8 @@
       "id",
       "idempotency_key",
       "if_version",
-      "record_type"
+      "record_type",
+      "why"
     ],
     "update_record_assignment": [
       "id",

@@ -307,9 +307,7 @@ export const SpendReported: Story = {
 
 /** The same figure in dark, and it is the money that needs looking at rather
  *  than the block: the figure and the scope beside it are both `--textMeta` at
- *  eyebrow size, on a rail whose ground is the translucent `--pane` over the
- *  page's glow — so the smallest type on the surface stands on a composite that
- *  each theme mixes differently. */
+ *  eyebrow size, the smallest type on the surface. */
 export const SpendReportedDark: Story = {
   globals: { theme: "dark" },
   render: story({ ...HEALTHY, pricedMinor: 1_240 }, "expanded", SPEND_READER),

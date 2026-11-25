@@ -67,8 +67,13 @@ func bookingItem(concern BookingConcern) crmcontracts.AttentionItem {
 		Kind:    &kind,
 		Actions: []crmcontracts.AttentionItemActions{},
 	}
-	cause := "booking_health:" + kind
+	// Each page is its own incident, so two paused team links never fold into
+	// one card. A team link is named by its title.
+	cause := "booking_health:" + kind + ":" + concern.PageID.String()
 	item.CauseRef = &cause
+	if concern.Title != "" {
+		item.CauseLabel = &concern.Title
+	}
 	return item
 }
 

@@ -139,8 +139,8 @@ one, or one in an inline style.
 
 **Two neutral inks.** `--textPrimary` carries a heading, a record's name and body prose.
 `--textSecondary` supports: a placeholder first, and each other role is decided at the element. Dark
-lifts both. `--textPrimary` goes from `#182c28` to `#edf6f4`, and `--textSecondary` from `#55645f`
-to `#9aa8a3`. Anything quieter than the second uses the same ink at a smaller
+lifts both. `--textPrimary` goes from `#182c28` to `#e1e8e6`, and `--textSecondary` from `#55645f`
+to `#adb9b6`. Anything quieter than the second uses the same ink at a smaller
 size or a lighter weight; there is no third neutral.
 
 `Foundations/Typography` in Storybook draws the body levels, the heading ladder and the pairs.
@@ -159,9 +159,10 @@ level 4 for anything deeper. `surfaces.css` paints every level, and a component 
 own. The one exception is a fixed state colour, such as a pressed reading or the selected row:
 `surfaces.ledger.txt` names each one with its reason.
 
-Each level also has its hairline (`--ladder1Edge` to `--ladder4Edge`). Level 2's is the weakest: 1.07:1 on
-its ground in both themes, since its ground already parts it from the card. Level 1 stands at
-1.32:1 in light, and from level 2 down each is stronger than the last, up to 1.51:1.
+Each level also has its hairline (`--ladder1Edge` to `--ladder4Edge`). Level 2's is the weakest, 1.07:1 on
+its ground in light and 1.12:1 in dark, since its ground already parts it from the card. Level 1
+stands at 1.32:1 in light and 1.31:1 in dark, and from level 2 down each is stronger than the last,
+up to 1.50:1 in light and 1.58:1 in dark.
 A pane's border and the rule under its head read it as `var(--groundEdge)`. A dialog, popover,
 menu or side sheet keeps its own surface, and a card in it starts again at level 2.
 `Foundations/Elevation` draws the ladder in both themes.
@@ -197,7 +198,7 @@ Five states, and a screen may not make up a new one.
 | State | What it says | Base (light / dark) |
 |---|---|---|
 | information | The neutral report, and work still running: an `info` mark, the ring of a spinner, a row a job is still writing. | `#0485f7` / `#0485f7` |
-| success | A good end: the thing finished the way the reader hoped. | `#17c964` / `#17c964` |
+| success | A good end: the thing finished the way the reader hoped. | `#17c964` / `#51d75e` |
 | warning | A note before the fact: the sentence that stops an error while it can still be stopped. | `#f5a524` / `#f7b750` |
 | danger | The serious one, or the one nobody can take back: the write that failed, the record that cannot come back. | `#ff383c` / `#db3b3e` |
 | discovery | What is new to this reader: onboarding, a feature they do not know yet. The one state that is not a verdict about the record. | `#964ac0` / `#b76be3` |
@@ -217,8 +218,8 @@ The ground of a filled control is the tone's `--<state>Text`, never its base. A 
 seen at the size of a bar or a dot, and no one ink sits on all five. White gives 2.04:1 on
 `--warning`, an almost black ink gives 3.19:1 on `--discovery`, and the dark danger base takes
 neither. The Text token carries ink, so it fills a button that deletes, a done disc and a `primary`
-badge. Their letters are in `--textOnStatusControl`. It is the one token in the palette that changes
-with the theme, because the ground under it does.
+badge. Their letters are in `--textOnStatusControl`. It changes with the theme, because the ground under
+it does.
 
 The light ink, surface and border of discovery are stated as hex values (`#48245d`, `#eed7fc`,
 `#d8a0f7`). The design source gives those values directly. No share of `#964ac0` over
@@ -271,7 +272,7 @@ Paint it where that is true and nowhere else. A card tinted indigo for looks tel
 that screen something false about who decided.
 
 It is a family of its own for the same reason the five states are: one meaning per colour.
-`--accent` (deep teal in light, green in dark) is the brand and the primary action. The state hues report how something
+`--accent` (deep teal in light, a lighter teal in dark) is the brand and the primary action. The state hues report how something
 went. None of them means "written by a model". The top of `tokens.css` states the split, and
 `tokens.test.ts` pins it.
 
@@ -283,7 +284,7 @@ the rule and the gate.
 | `--ai` | `#5b61d6` | The line and the mark: a solid border on a staged card the reader has focused or accepted, a focus ring, a hairline. The strongest of the four, so the rarest. |
 | `--aiLight` | `rgba(91, 97, 214, 0.08)` | The ground under text an agent wrote: staged cards, the wash of the onboarding stage, a `badge-ai` fill. |
 | `--aiMed` | `rgba(91, 97, 214, 0.3)` | The border of something staged. Most often `1.5px dashed`, which is half the signal (see below). |
-| `--aiText` | `#3f45b0` light, `#9ba0f0` dark | Text and glyphs on `--aiLight`. Never `--ai` for text over the tint: the two are so close that it fails AA on the ground its own family paints. |
+| `--aiText` | `#3f45b0` light, `#a7adfe` dark | Text and glyphs on `--aiLight`. Never `--ai` for text over the tint: the two are so close that it fails AA on the ground its own family paints. |
 
 **Dashed means proposed; solid means real.** `1.5px dashed var(--aiMed)` marks a thing an agent has
 staged and a human has not accepted yet. It marks `.staging-card`, `.deal-card.staged`,
@@ -674,7 +675,7 @@ saved text. This keeps the signed-in user's logo out of that preview.
 | `StagingCard` | The staged, not yet real, state, on the staged kind of the `panel-ai` family in `panel.css`: dashed until a human accepts it. `DecisionCard` and the deal board use this class | `trust.tsx` | ✅ |
 | `FieldDiff` | The old → new value change, in the line; a null side reads as a marker, never a blank | `trust.tsx` | ✅ |
 | `PassportChip` | An agent's passport id on a soft `ai` `Badge` | `trust.tsx` | ✅ |
-| `DecisionCard` | The card that asks a human to decide something an automation staged, in two layouts: `deck` (tall, the whole payload) and `row` (short list form). It shows the proposed content: a draft's `subject`/`body`, or `current_X`/`proposed_X` through `FieldDiff`. `expires_at` tints the edge in three bands from `decisionUrgency`, and past the deadline no verb is drawn. Every decision is a question with two answers in words, together on the end edge of `ActionRow`: `onReject` as a `danger` button, then `onAccept` as `primary`. Later and Edit are `IconAction` items on the start edge; in the `compact` row they go in its `OverflowMenu`, which is not drawn when neither is offered. While `pending`, Accept shows the turning mark and every other verb is disabled. `heldRejection` (`label`, `undo`, `onUndo`, `onPause`) takes the place of the verbs. Focus goes to its `label`, and an `undo` button follows it; pressed, focus goes back to the `onReject` button. `onPause` hears while a pointer or focus is on the `undo` button, and the wait stops for that time (WCAG 2.2.1). Without `onUndo` the `label` stays alone: the answer is on its way. The caller owns the wait and the send; `ApprovalRow` holds it for `ACTION_TOAST_MS`. Verbs are callbacks and words are `labels`; `meta`, `aside`, `editor`, `detail` and `display` (decided per kind in `features/automations/approvaldisplay.ts`) give the rest. The `display` gives before/after values the caller may see and a translated field label to the existing `FieldDiff`. When a `display` entry sets `comparison`, including `null`, the card does not derive changes from the raw payload. A `display` lead equal to the approval summary is not drawn a second time, and a declared field is never read a second time as a draft `subject` or `body`. Evidence names its source kind in words (`evidenceSourceLabel`). Preview quotes the reader may see stay visible in row decisions; older evidence uses the small disclosure. `compact` with `DecisionCompactWords` gives one line per decision, with the proposal in a `Popover`. Inner parts: `decisioncard.payload.ts` (`draftOf`, `diffsOf`, `restFields`), `decisioncard.content.tsx` (`DecisionContent`, `DraftBody`, `DecisionEvidence`) and `decisioncard.verbs.tsx` (`DecisionAnswers`, the verbs or `heldRejection`). Its head, `DecisionHead`, lives in `decisionhead.tsx` and serves it alone. | `decisioncard.tsx` | ✅ |
+| `DecisionCard` | The card that asks a human to decide something an automation staged, in two layouts: `deck` (tall, the whole payload) and `row` (short list form). It shows the proposed content: a draft's `subject`/`body`, or `current_X`/`proposed_X` through `FieldDiff`. `expires_at` tints the edge in three bands from `decisionUrgency`, and past the deadline no verb is drawn. Every decision is a question with two answers in words, together on the end edge of `ActionRow`: `onReject` as a `danger` button, then `onAccept` as `primary`. Later and Edit are `IconAction` items on the start edge; in the `compact` row they go in its `OverflowMenu`, which is not drawn when neither is offered. While `pending`, Accept shows the turning mark and every other verb is disabled. `heldRejection` (`label`, `undo`, `onUndo`, `onPause`) takes the place of the verbs. Focus goes to its `label`, and an `undo` button follows it; pressed, focus goes back to the `onReject` button. `onPause` hears while a pointer or focus is on the `undo` button, and the wait stops for that time (WCAG 2.2.1). Without `onUndo` the `label` stays alone: the answer is on its way. The caller owns the wait and the send; `ApprovalRow` holds it for `ACTION_TOAST_MS`. Verbs are callbacks and words are `labels`; `meta`, `aside`, `editor`, `detail` and `display` (decided per kind in `features/automations/approvaldisplay.ts`) give the rest. The `display` gives before/after values the caller may see and a translated field label to the existing `FieldDiff`. When a `display` entry sets `comparison`, including `null`, the card does not derive changes from the raw payload. A `display` lead equal to the approval summary is not drawn a second time, and a declared field is never read a second time as a draft `subject` or `body`. Evidence names its source kind in words (`evidenceSourceLabel`). Preview quotes the reader may see stay visible in row decisions; older evidence uses the small disclosure. `compact` with `DecisionCompactWords` gives one line per decision, with the proposal in a `Popover`. Inner parts: `decisioncard.payload.ts` (`draftOf`, `diffsOf`, `restFields`), `decisioncard.content.tsx` (`DecisionContent`, `DraftBody`, `DecisionEvidence`) and `decisioncard.verbs.tsx` (`DecisionAnswers`, the verbs or `heldRejection`). Its head, `DecisionHead`, lives in `decisionhead.tsx` and serves it alone. `ApprovalGrounds` there draws the stated reason, for the head and for the `compact` popover alike. | `decisioncard.tsx` | ✅ |
 | `DecisionProposal` | A staged proposal's body without its card: the same content `DecisionCard` draws (draft, field changes, declared facts) on the `.staging-card` ground, with no head, evidence or verbs. For a surface that asks the question itself and answers it in a `DecisionCard`, such as the Home task card. Draws nothing when the payload says nothing. | `decisioncard.tsx` | ✅ |
 | `DecisionStatusChip` | The decision's header chip: the verdict once answered, or else the live count down. It reads `decisionExpiryMs` / `decisionLapsed` / `decisionUrgency`, so it steps up on the same bands as the card's edge. A pending proposal that has run out of time gets no chip. `labels.expiresIn` builds the sentence; an unknown status reads as out of time. It takes a `DecisionDeadline` (`status`, `expires_at`) | `decisionstatus.tsx` | ✅ (in `Decision card`) |
 | `DecisionToolChip` | Names the tool that staged a proposal (`send_email`), apart from its kind (`advance_deal`). The verb and words come from the caller. No verb, no chip | `decisionstatus.tsx` | ✅ (in `Decision card`) |
