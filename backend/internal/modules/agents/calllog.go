@@ -6,6 +6,7 @@ package agents
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"strings"
 	"time"
@@ -37,6 +38,9 @@ const (
 	OutcomeToolError = "tool_error"
 	OutcomeRPCError  = "rpc_error"
 	OutcomeRefused   = "refused"
+	// OutcomeUnreadable is a tool answer the log could not read back; the
+	// cause goes to the server log, and the call never counts as worked.
+	OutcomeUnreadable = "unreadable"
 )
 
 // CallRecord is one exchange as the server saw it.
@@ -131,8 +135,13 @@ func (h *httpMCPHandler) recordExchange(ctx context.Context, start time.Time, re
 	}
 	if req.Method == methodToolsCall {
 		record.Tool, record.Action, record.Arguments = calledTool(req.Params)
-		answer, isError := toolAnswer(resp)
-		if isError && resp.Error == nil {
+		answer, isError, err := toolAnswer(resp)
+		switch {
+		case err != nil:
+			h.server.log.ErrorContext(ctx, "mcp call log: a tool answer could not be read back; it is logged as unreadable",
+				"tool", record.Tool, "error", err)
+			record.Outcome = OutcomeUnreadable
+		case isError && resp.Error == nil:
 			record.Outcome = OutcomeToolError
 		}
 		record.Answer = textcut.Bytes(answer, CallAnswerLimit)
@@ -161,10 +170,10 @@ func calledTool(params json.RawMessage) (tool, action string, arguments json.Raw
 
 // toolAnswer reads a tool result's text parts and its error flag through the
 // result's wire shape, the one a client reads.
-func toolAnswer(resp rpcResponse) (text string, isError bool) {
+func toolAnswer(resp rpcResponse) (text string, isError bool, err error) {
 	body, err := json.Marshal(resp.Result)
 	if err != nil {
-		return "", false
+		return "", false, fmt.Errorf("encoding the result: %w", err)
 	}
 	var wire struct {
 		//nolint:tagliatelle // isError is the MCP result's wire member, camelCase by the specification
@@ -174,7 +183,7 @@ func toolAnswer(resp rpcResponse) (text string, isError bool) {
 		} `json:"content"`
 	}
 	if err := json.Unmarshal(body, &wire); err != nil {
-		return "", false
+		return "", false, fmt.Errorf("reading the result's content: %w", err)
 	}
 	parts := make([]string, 0, len(wire.Content))
 	for _, part := range wire.Content {
@@ -182,7 +191,7 @@ func toolAnswer(resp rpcResponse) (text string, isError bool) {
 			parts = append(parts, part.Text)
 		}
 	}
-	return strings.Join(parts, "\n"), wire.IsError
+	return strings.Join(parts, "\n"), wire.IsError, nil
 }
 
 // statusWriter keeps the status a refusal was answered with.

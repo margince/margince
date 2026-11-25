@@ -11,6 +11,7 @@ import (
 	"net/http/httptest"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -198,5 +199,21 @@ func TestARequestRefusedBeforeDispatchIsRecordedOnce(t *testing.T) {
 	}
 	if unreadable.Outcome != OutcomeRPCError || unreadable.ErrorCode != codeParseError {
 		t.Errorf("a body that does not decode was recorded as %+v", unreadable)
+	}
+}
+
+func TestAToolAnswerTheLogCannotReadIsRecordedAsUnreadable(t *testing.T) {
+	door := &httpMCPHandler{server: &Dispatcher{log: discardLog()}}
+	kept := &keptCalls{}
+	door.server.callLog = kept
+	call := rpcRequest{Method: methodToolsCall, Params: json.RawMessage(`{"name":"read_record","arguments":{}}`)}
+	for name, result := range map[string]any{
+		"cannot be encoded":   make(chan int),
+		"content is no array": map[string]any{"content": "a string"},
+	} {
+		door.recordExchange(context.Background(), time.Now(), call, rpcResponse{Result: result}, http.StatusOK)
+		if got := kept.records[len(kept.records)-1]; got.Outcome != OutcomeUnreadable || got.Answer != "" {
+			t.Errorf("%s: recorded %+v, want an unreadable call with no answer", name, got)
+		}
 	}
 }
