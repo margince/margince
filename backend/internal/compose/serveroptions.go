@@ -88,18 +88,18 @@ func WithMCPInputStateKey(key string) Option {
 	return func(s *Server, _ *pgxpool.Pool) { s.mcpChat.inputStateKey = key }
 }
 
-// mcpChatSettings signs the questions a tool asks in the chat and spends the
-// codes of calls confirmed there.
+// mcpChatSettings signs the questions a tool asks in the chat, and spends each
+// answer and confirm code once.
 type mcpChatSettings struct {
 	inputStateKey string
-	confirmGuard  agents.ConfirmGuard
+	replayGuard   agents.ReplayGuard
 }
 
-// WithMCPConfirmGuard lets a call that waits for its own user be confirmed in
-// the MCP conversation, each code spent once through guard. Without it such
-// calls stage into the approval inbox.
-func WithMCPConfirmGuard(guard agents.ConfirmGuard) Option {
-	return func(s *Server, _ *pgxpool.Pool) { s.mcpChat.confirmGuard = guard }
+// WithMCPReplayGuard spends each confirm code and each answered chat question
+// once. Without it no tool asks in the chat, and a call that waits for its own
+// user stages into the approval inbox.
+func WithMCPReplayGuard(guard agents.ReplayGuard) Option {
+	return func(s *Server, _ *pgxpool.Pool) { s.mcpChat.replayGuard = guard }
 }
 
 // WithMCPConnector turns the remote MCP connector on: the /mcp transport,
