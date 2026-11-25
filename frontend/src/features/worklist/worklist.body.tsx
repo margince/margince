@@ -16,10 +16,10 @@ import {
 import { TeamBoard } from "./worklist.board";
 import { useWorklistPicks, WorklistBulkBar } from "./worklist.bulkdone";
 import { clearSentence, offersDecisions } from "./worklist.clear";
+import { CoachControl, coachableDeals } from "./worklist.coach";
 import { HandledForYouPanel } from "./worklist.handled";
 import { WorklistHeader } from "./worklist.header";
 import { LinkSuggestionsPanel } from "./worklist.linksuggestions";
-import { CoachControl } from "./worklist.manager";
 import { hasPane, WorklistPane } from "./worklist.pane";
 import type {
   Worklist,
@@ -196,11 +196,16 @@ export function WorklistBody({
           behind a disclosure they were a rule and a word of chrome standing
           between the head and the queue the drawer exists to show. */}
           {!embedded && <WorklistReadings day={day} onLane={onFilter} />}
-          {/* The reason a lead opened somebody else's day, at the head of that
-          day in every state. Placed below, the block would move as its own form
-          opened, and a lead would read three panels of that morning first. Only
-          on a named queue. */}
-          {owner !== "" && <CoachControl owner={owner} name={colleague} />}
+          {/* A lead's note heads a named queue, so opening its form does not
+          move the panels below it. */}
+          {owner !== "" && (
+            <CoachControl
+              key={owner}
+              owner={owner}
+              name={colleague}
+              deals={coachableDeals(queue)}
+            />
+          )}
           {/* What has moved since the reader started paging. An offer to refresh
           rather than a fault: the day on screen is correct, it is simply no
           longer complete. */}
