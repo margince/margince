@@ -139,7 +139,7 @@ func (h Handlers) reservePublicInvitation(w http.ResponseWriter, r *http.Request
 	if booking.Public != nil {
 		booking.Public.Marketing = marketing
 	}
-	booking.Team = team
+	booking.Team, booking.Page = team, page.ID
 	out, err := h.store.reserveAndQueueInvitation(r.Context(), page.HostUserID, in, booking)
 	if err != nil {
 		writeStoreErr(w, r, err)
@@ -183,7 +183,7 @@ type pageOpenness struct {
 }
 
 func (s *Store) openForBooking(ctx context.Context, page BookingPage) (crmcontracts.SchedulingProfile, pageOpenness) {
-	profile, err := s.hostSchedulingProfile(ctx, page.HostUserID)
+	profile, err := s.bookingPageProfile(ctx, page)
 	if err != nil {
 		return profile, pageOpenness{err: err}
 	}

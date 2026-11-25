@@ -21,7 +21,7 @@ import check  # noqa: E402
 LANE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 SCENARIOS = os.path.join(LANE, "scenarios")
 SURFACE = os.path.join(LANE, "..", "..", "docs", "reference", "mcp-info.json")
-FIELDS = ("must_call", "may_call", "must_call_with", "must_not_call_with", "must_call_matching")
+FIELDS = ("must_call", "may_call", "must_call_with", "must_not_call_with", "must_call_matching", "must_return")
 # The `tool~regex` fields' regex may hold a `|` of its own.
 # must_call_with alternatives each open with `tool.`.
 CALL_WITH = re.compile(r"(?:^|\|)\s*([a-z_]+)\.")
@@ -34,8 +34,10 @@ def listed():
 
 
 def named(field, entry):
-    if field in ("must_not_call_with", "must_call_matching"):
+    if field == "must_not_call_with":
         return [entry.split("~", 1)[0].strip()]
+    if field in ("must_call_matching", "must_return"):
+        return [alternative.split("~", 1)[0].strip() for alternative in entry.split(" || ")]
     if field == "must_call_with":
         return CALL_WITH.findall(entry)
     return [option.strip() for option in entry.split("|")]

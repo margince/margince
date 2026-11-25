@@ -3,14 +3,14 @@
   "provider": "gemini",
   "served_model": "gemini-3.8-flash",
   "env_class": "cloud_frontier",
-  "prompt_version": "p07789dacde34ef6402a4c822118baaa2",
+  "prompt_version": "pc02a52ad2bbdda9d0151380552b11eb6",
   "corpus_version": "v1",
   "verdict": "supported_degraded",
   "runs": 96,
-  "passed": 96,
-  "reliability": 1,
-  "reported_accepted": 96,
-  "reported_wrong_answer": 0,
+  "passed": 95,
+  "reliability": 0.9895833333333334,
+  "reported_accepted": 95,
+  "reported_wrong_answer": 1,
   "reported_invalid": 0,
   "reported_abstained": 0,
   "certified_scope": "full_invocation",
@@ -18,23 +18,24 @@
   "context_scopes": [
     "identity"
   ],
+  "context_owed": 0,
   "judge_score_p50": 90,
-  "judge_score_min": 32,
-  "latency_p50": 3371,
-  "latency_p95": 8840,
-  "mean_tokens": 1941,
-  "mean_tokens_in": 1666,
-  "mean_tokens_out": 274,
+  "judge_score_min": 38,
+  "latency_p50": 4997,
+  "latency_p95": 10869,
+  "mean_tokens": 1927,
+  "mean_tokens_in": 1671,
+  "mean_tokens_out": 255,
   "mean_cached_tokens": 0,
   "mean_cache_write_tokens": 0,
-  "est_cost_microusd": 2277,
+  "est_cost_microusd": 2209,
   "judge_served_model": "claude-sonnet-5-5",
   "judge_provider": "claude_cli",
   "self_judged": false,
   "served_identity_source": "response",
   "wire_rule": "gemini-wire-5",
   "thinking_level": "low",
-  "ran_at": "2026-11-22T23:02:27Z",
+  "ran_at": "2026-11-25T03:09:27Z",
   "scenarios": [
     {
       "scenario": "ask_meeting_prep_stays_silent_about_a_withheld_section",
@@ -46,20 +47,20 @@
       "passed": 15,
       "judge_scores": [
         97,
-        97,
-        97,
         96,
-        97,
         96,
         96,
         97,
         96,
         97,
+        97,
+        97,
+        97,
+        97,
         96,
         96,
         96,
-        96,
-        97
+        96
       ],
       "bands": {
         "certified_min": 70,
@@ -68,6 +69,7 @@
       },
       "privacy": true,
       "leaks": 0,
+      "context_owed": 0,
       "reported_accepted": 15,
       "reported_wrong_answer": 0,
       "reported_invalid": 0,
@@ -82,15 +84,16 @@
       "runs": 3,
       "passed": 3,
       "judge_scores": [
-        93,
-        96,
-        88
+        90,
+        90,
+        90
       ],
       "bands": {
         "certified_min": 70,
         "degraded_min": 50,
         "floor": 40
       },
+      "context_owed": 0,
       "reported_accepted": 3,
       "reported_wrong_answer": 0,
       "reported_invalid": 0,
@@ -105,15 +108,16 @@
       "runs": 3,
       "passed": 3,
       "judge_scores": [
-        78,
-        82,
-        82
+        80,
+        80,
+        72
       ],
       "bands": {
         "certified_min": 70,
         "degraded_min": 50,
         "floor": 40
       },
+      "context_owed": 0,
       "reported_accepted": 3,
       "reported_wrong_answer": 0,
       "reported_invalid": 0,
@@ -128,8 +132,8 @@
       "runs": 3,
       "passed": 3,
       "judge_scores": [
+        88,
         80,
-        82,
         81
       ],
       "bands": {
@@ -137,6 +141,7 @@
         "degraded_min": 50,
         "floor": 40
       },
+      "context_owed": 0,
       "reported_accepted": 3,
       "reported_wrong_answer": 0,
       "reported_invalid": 0,
@@ -151,15 +156,16 @@
       "runs": 3,
       "passed": 3,
       "judge_scores": [
+        90,
         88,
-        88,
-        90
+        88
       ],
       "bands": {
         "certified_min": 70,
         "degraded_min": 50,
         "floor": 40
       },
+      "context_owed": 0,
       "reported_accepted": 3,
       "reported_wrong_answer": 0,
       "reported_invalid": 0,
@@ -174,19 +180,19 @@
       "runs": 15,
       "passed": 15,
       "judge_scores": [
-        90,
+        93,
         88,
         90,
         90,
         88,
+        92,
+        90,
+        90,
         88,
-        85,
+        90,
         88,
         90,
         90,
-        85,
-        90,
-        88,
         88,
         90
       ],
@@ -197,6 +203,7 @@
       },
       "privacy": true,
       "leaks": 0,
+      "context_owed": 0,
       "reported_accepted": 15,
       "reported_wrong_answer": 0,
       "reported_invalid": 0,
@@ -205,21 +212,22 @@
     {
       "scenario": "deal_room_brief_names_the_buyer_who_set_it",
       "site": "deal_room_brief",
-      "stamp": "e3bcc04ff5fd63e8dbbd4196246d4fb995fcc051a1eddfeb5266b8798b447136cf0e182cdb1219036fc161a95f5e081450be572b288143fdffb3ff5fe9b9c6db09f63233bb36cce9110253fa93ce28a741229f6de1054e3ba67abc716d62de6d",
+      "stamp": "e3bcc04ff5fd63e8dbbd4196246d4fb995fcc051a1eddfeb5266b8798b447136765bcefccfb9c6d20162178dff83caf3738b0dcb45a65fdcdc59ccf58955f2d0b0af015d47f87720617bb605b683098e53768630e2fd90b7f4289904b5609366",
       "verdict": "certified",
       "judge_band": "certified",
       "runs": 3,
       "passed": 3,
       "judge_scores": [
-        90,
         95,
-        93
+        95,
+        96
       ],
       "bands": {
         "certified_min": 70,
         "degraded_min": 50,
         "floor": 40
       },
+      "context_owed": 0,
       "reported_accepted": 3,
       "reported_wrong_answer": 0,
       "reported_invalid": 0,
@@ -228,21 +236,22 @@
     {
       "scenario": "deal_room_brief_only_routine_asks",
       "site": "deal_room_brief",
-      "stamp": "125a9758f408f786021de041deb881e2089db88193ebe7d3e8d7e6cf6afdd0ca73ece6ad3071b9f056eca1d16ab7fbc4073be4906b5a5f2cf2b2cee777fa74ce01ab59ce9668ca3056c375cc835f9fd96edc256c8c814956f026c97c9ca2d7cf",
+      "stamp": "125a9758f408f786021de041deb881e2089db88193ebe7d3e8d7e6cf6afdd0cafeb017296ed975caf3c1fac113440c3415e7c2ee6628abd04668bc145e49fd43f2770be9cc7224529a9215853d1530c4850fadbe02c7363bb5070d054a1ce716",
       "verdict": "certified",
       "judge_band": "certified",
       "runs": 3,
       "passed": 3,
       "judge_scores": [
-        90,
-        92,
-        90
+        88,
+        88,
+        93
       ],
       "bands": {
         "certified_min": 70,
         "degraded_min": 50,
         "floor": 40
       },
+      "context_owed": 0,
       "reported_accepted": 3,
       "reported_wrong_answer": 0,
       "reported_invalid": 0,
@@ -251,21 +260,22 @@
     {
       "scenario": "deal_room_brief_reads_the_blocker",
       "site": "deal_room_brief",
-      "stamp": "e600136afe994feb5055fcdb3d8617756770eb34740602f71041ec6251c6585acb636ff131ab09f1bdcea1e722f70e232e0533b92c238b155acb873932e9b33cb88604f1899e3fd79df216be3d76e77bc79f362252315ea2c4d56e00b010d9f4",
+      "stamp": "e600136afe994feb5055fcdb3d8617756770eb34740602f71041ec6251c6585a4a0c1bf91f89272be231ebf807bbe45ba1e26e11ad1ccbb603f7346592ef726a4fd003c3e8fe579735373385f140eccd22c308a990c27f4e45b7d99f8e1665cc",
       "verdict": "certified",
       "judge_band": "certified",
       "runs": 3,
       "passed": 3,
       "judge_scores": [
+        90,
         80,
-        91,
-        93
+        80
       ],
       "bands": {
         "certified_min": 70,
         "degraded_min": 50,
         "floor": 40
       },
+      "context_owed": 0,
       "reported_accepted": 3,
       "reported_wrong_answer": 0,
       "reported_invalid": 0,
@@ -274,14 +284,14 @@
     {
       "scenario": "deal_room_brief_resolved_condition",
       "site": "deal_room_brief",
-      "stamp": "c93006605d5e9d3dbe78ab285bf53cba17469f96a2b2e8c585db852005997cfb7c549f6601713f8631b083d7bff98869c01132d5f8718ee8ab1d3f65f72de0352edc7bb621f97af4937395676c185b2654ab51b2d176aaea2b4eaeb0b25eaa76",
+      "stamp": "c93006605d5e9d3dbe78ab285bf53cba17469f96a2b2e8c585db852005997cfb7aeb469178c64ef726cfb73c607827bf35240036a1213ad3715dd077008fc6b60355b4301654753340cc35e101409a420e30265f7cbc565c04c13567d4f4c566",
       "verdict": "certified",
       "judge_band": "certified",
       "runs": 3,
       "passed": 3,
       "judge_scores": [
-        88,
-        93,
+        92,
+        95,
         88
       ],
       "bands": {
@@ -289,6 +299,7 @@
         "degraded_min": 50,
         "floor": 40
       },
+      "context_owed": 0,
       "reported_accepted": 3,
       "reported_wrong_answer": 0,
       "reported_invalid": 0,
@@ -297,14 +308,14 @@
     {
       "scenario": "deal_room_brief_seller_wrote_the_condition",
       "site": "deal_room_brief",
-      "stamp": "99722777c70acc8e484bf0d94426da688290598966e089f505667bc39686a4b25e11dced0fc8a7b631110d5045f906229b5e5430f946e1b883dc71b07cd031fd010757173de4377349421b6ae9c0e665ac0dbb65c79c7544f59bf9480c882e8f",
+      "stamp": "99722777c70acc8e484bf0d94426da688290598966e089f505667bc39686a4b2594f1201b625916bd8118f9ab5a76873050dcd64e2a5fdd016deac0eb246e20db334a01eb5b78f8ae8fcf7c837c8cb0e21499b8e95a03e662724349921fc08ab",
       "verdict": "certified",
       "judge_band": "certified",
       "runs": 3,
       "passed": 3,
       "judge_scores": [
-        90,
-        90,
+        85,
+        88,
         88
       ],
       "bands": {
@@ -312,6 +323,7 @@
         "degraded_min": 50,
         "floor": 40
       },
+      "context_owed": 0,
       "reported_accepted": 3,
       "reported_wrong_answer": 0,
       "reported_invalid": 0,
@@ -320,7 +332,7 @@
     {
       "scenario": "dossier_describes_the_company_not_the_relationship",
       "site": "company_dossier",
-      "stamp": "1e8127bc8b1742898698b80a8235ad643c8a813e3bced174f317de60236fa7b647d05ceb8dd48714f4580af1b95807f0bd9e30bd3a02b572fd9d8f6bd70d77a0633530620eada0d317695469e363a6e016522680802213d26dbc8b06e4f6ebf0",
+      "stamp": "1e8127bc8b1742898698b80a8235ad643c8a813e3bced174f317de60236fa7b6a32cec979dd9b449cda82ee166bcd185872ae22c3b4d0776763d5c5ee1e30fca1eaeb0fabc0e4796ca9bfae84e6d28de43e6d2c1a9f15c7898e179857cca8975",
       "verdict": "certified",
       "judge_band": "certified",
       "runs": 3,
@@ -328,13 +340,14 @@
       "judge_scores": [
         90,
         90,
-        90
+        93
       ],
       "bands": {
         "certified_min": 70,
         "degraded_min": 50,
         "floor": 40
       },
+      "context_owed": 0,
       "reported_accepted": 3,
       "reported_wrong_answer": 0,
       "reported_invalid": 0,
@@ -349,15 +362,16 @@
       "runs": 3,
       "passed": 3,
       "judge_scores": [
-        90,
+        88,
         80,
-        90
+        88
       ],
       "bands": {
         "certified_min": 70,
         "degraded_min": 50,
         "floor": 40
       },
+      "context_owed": 0,
       "reported_accepted": 3,
       "reported_wrong_answer": 0,
       "reported_invalid": 0,
@@ -373,14 +387,15 @@
       "passed": 3,
       "judge_scores": [
         80,
-        82,
-        81
+        81,
+        80
       ],
       "bands": {
         "certified_min": 70,
         "degraded_min": 50,
         "floor": 40
       },
+      "context_owed": 0,
       "reported_accepted": 3,
       "reported_wrong_answer": 0,
       "reported_invalid": 0,
@@ -395,15 +410,16 @@
       "runs": 3,
       "passed": 3,
       "judge_scores": [
+        96,
         95,
-        95,
-        92
+        95
       ],
       "bands": {
         "certified_min": 70,
         "degraded_min": 50,
         "floor": 40
       },
+      "context_owed": 0,
       "reported_accepted": 3,
       "reported_wrong_answer": 0,
       "reported_invalid": 0,
@@ -419,20 +435,20 @@
       "passed": 15,
       "judge_scores": [
         90,
-        90,
-        95,
+        80,
         88,
-        93,
-        90,
-        90,
-        96,
+        88,
         82,
         90,
+        90,
         93,
-        92,
+        90,
+        90,
+        90,
         88,
+        80,
         93,
-        90
+        88
       ],
       "bands": {
         "certified_min": 70,
@@ -441,6 +457,7 @@
       },
       "privacy": true,
       "leaks": 0,
+      "context_owed": 0,
       "reported_accepted": 15,
       "reported_wrong_answer": 0,
       "reported_invalid": 0,
@@ -453,28 +470,29 @@
       "verdict": "supported_degraded",
       "judge_band": "supported_degraded",
       "runs": 12,
-      "passed": 12,
+      "passed": 11,
       "judge_scores": [
-        72,
-        74,
-        40,
-        40,
+        80,
+        52,
+        76,
         86,
-        72,
+        86,
+        38,
+        64,
+        80,
+        78,
         62,
         82,
-        80,
-        32,
-        80,
-        47
+        62
       ],
       "bands": {
         "certified_min": 70,
         "degraded_min": 50,
         "floor": 40
       },
-      "reported_accepted": 12,
-      "reported_wrong_answer": 0,
+      "context_owed": 0,
+      "reported_accepted": 11,
+      "reported_wrong_answer": 1,
       "reported_invalid": 0,
       "reported_abstained": 0
     }
