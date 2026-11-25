@@ -12,6 +12,7 @@ import { useRecordTimeline } from "../../design-system/recordtimeline";
 import { RecordView } from "../../design-system/recordview";
 import { useToast } from "../../design-system/toast";
 import { useT } from "../../i18n";
+import { leadIdentityName } from "../../lib/leadname";
 import { ACTION_PARAM, QUALIFY_ACTION } from "../../lib/leads.address";
 import { useOpenEmail } from "../../lib/openemail";
 import { unwrap } from "../../lib/problem";
@@ -22,7 +23,6 @@ import { LeadDetails } from "./leaddetails";
 import { useLeadRenameSave } from "./leadedit";
 import { LeadPulse, LeadSubtitle } from "./leadheader";
 import { LeadHistoryTab, LeadLatestInbound } from "./leadhistory";
-import { leadIdentityName } from "./leadname";
 import { LeadDealsTab } from "./leadraillinks";
 import "./leads.css";
 
