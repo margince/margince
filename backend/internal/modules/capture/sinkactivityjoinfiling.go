@@ -91,7 +91,8 @@ func (s *Sink) fileJoinedMailForSeatTx(
 
 // joinedMailFilesTx answers whether a joined mail is filed for this seat, and
 // the counterparty address it is filed by. A meeting, internal mail, a notes
-// mail, a private thread and a mail the ladder suppressed file nothing.
+// mail, a private thread, a restricted mail and a mail the ladder suppressed
+// file nothing.
 func (s *Sink) joinedMailFilesTx(
 	ctx context.Context, tx pgx.Tx, id ids.ActivityID, rec connector.NormalizedRecord, fields ActivityFields,
 ) (string, bool, error) {
@@ -109,9 +110,10 @@ func (s *Sink) joinedMailFilesTx(
 	if private, err := capturedThreadIsPrivateTx(ctx, tx, rec); err != nil || private {
 		return "", false, err
 	}
-	var suppressed bool
-	if err := tx.QueryRow(ctx, `SELECT `+ladderSuppressedClause+` FROM activity a WHERE a.id = $1`, id).Scan(&suppressed); err != nil {
-		return "", false, fmt.Errorf("capture: reading whether the ladder suppressed a joined activity: %w", err)
+	var files bool
+	if err := tx.QueryRow(ctx, `SELECT EXISTS (SELECT 1 FROM activity a
+		WHERE a.id = $1 AND a.restricted_at IS NULL AND NOT `+ladderSuppressedClause+`)`, id).Scan(&files); err != nil {
+		return "", false, fmt.Errorf("capture: reading whether a joined activity may be filed: %w", err)
 	}
-	return subject.Email, !suppressed, nil
+	return subject.Email, files, nil
 }
