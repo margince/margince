@@ -59,9 +59,9 @@ const (
 	// Raised by 7 production lines for the team request reword and the paused
 	// team link's title on Home. Raised by 64 test lines for the team-link mail
 	// case, which drives the unexported mail worker over two team links.
-	// Raised by 3 production and 106 test lines for the route answer that keeps
+	// Raised by 7 production and 106 test lines for the route answer that keeps
 	// its field errors, and the route cases that read the unexported verb shapes.
-	composeRootProductionLines = 230_700
+	composeRootProductionLines = 230_704
 	composeRootTestLines       = 360_234
 )
 
