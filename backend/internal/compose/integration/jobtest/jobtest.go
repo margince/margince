@@ -184,7 +184,7 @@ func AwaitIdleBetweenPasses(ctx context.Context, t *testing.T, completed, snooze
 func StartTestJobRunner(t *testing.T, pool *pgxpool.Pool, cfg compose.JobRunnerConfig) (*jobs.Runner, <-chan *river.Event, <-chan *river.Event) {
 	t.Helper()
 	// Set here rather than left to each suite: a runner booted per test pays
-	// River's startup stagger per test, and a caller that forgot the flag would
+	// River's startup stagger and one-second poll per test, and a caller that forgot the flag would
 	// pay it silently — the suite still passes, only slower, which is the shape
 	// nobody investigates.
 	cfg.TestOnly = true

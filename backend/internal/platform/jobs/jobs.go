@@ -82,6 +82,9 @@ type Config struct {
 	// here would notice; the gate that matters is the one below, which keeps it
 	// out of production rather than pinning what it does.
 	//
+	// Set, the client also polls for work every testFetchInterval instead of
+	// River's second, so a test waits on a job no longer than the job takes.
+	//
 	// Never set outside a test harness.
 	// TestJobRunnerConfigIsNeverSetInProduction holds that.
 	TestOnly bool
@@ -131,7 +134,7 @@ func New(pool *pgxpool.Pool, cfg Config, log *slog.Logger) (*Runner, error) {
 // as the restricted application role, which holds no DDL, so every index would
 // answer a permission error each night. Rebuilding them is the owner role's job.
 func riverConfig(cfg Config, log *slog.Logger) *river.Config {
-	return &river.Config{
+	config := &river.Config{
 		Queues:            cfg.Queues,
 		Workers:           cfg.Workers,
 		PeriodicJobs:      cfg.PeriodicJobs,
@@ -140,7 +143,14 @@ func riverConfig(cfg Config, log *slog.Logger) *river.Config {
 		ReindexerSchedule: river.NeverSchedule(),
 		TestOnly:          cfg.TestOnly,
 	}
+	if cfg.TestOnly {
+		config.FetchCooldown, config.FetchPollInterval = testFetchInterval, testFetchInterval
+	}
+	return config
 }
+
+// testFetchInterval is how often a TestOnly client looks for work.
+const testFetchInterval = 50 * time.Millisecond
 
 // NewInserter builds an insert-only Runner for a role that enqueues jobs
 // but works none (the api): no queues, workers, or periodic jobs are
