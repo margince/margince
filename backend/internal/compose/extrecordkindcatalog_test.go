@@ -15,7 +15,8 @@ func TestCheckReadColumnTypes(t *testing.T) {
 	const tz, id = "timestamp with time zone", "uuid"
 	kind := func(label string) recordkinds.Declared {
 		return recordkinds.Declared{Name: "ext:u:k", NaturalKey: []string{"code"}, Timeline: &extension.RecordKindTimeline{
-			LabelField: label, AtColumn: "seen_at", Subjects: []extension.TimelineSubject{{Entity: "contact", Column: "contact_id"}}}}
+			LabelField: label, AtColumn: "seen_at", Subjects: []extension.TimelineSubject{{Entity: "contact", Column: "contact_id"}},
+		}}
 	}
 	ok := map[string]string{"code": "text", "seen_at": tz, "contact_id": id}
 	with := func(col, typ string) map[string]string {

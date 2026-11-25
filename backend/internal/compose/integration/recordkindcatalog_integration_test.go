@@ -112,8 +112,10 @@ func TestADeclaredKindTimelineColumnsMustExistWithTheRightTypes(t *testing.T) {
 	for _, c := range cases {
 		kindTable(t, c.table, c.ddl)
 		k := declaredKind(c.table, "code")
-		k.Timeline = &extension.RecordKindTimeline{LabelField: "code", AtColumn: c.at,
-			Subjects: []extension.TimelineSubject{{Entity: "contact", Column: c.subject}}}
+		k.Timeline = &extension.RecordKindTimeline{
+			LabelField: "code", AtColumn: c.at,
+			Subjects: []extension.TimelineSubject{{Entity: "contact", Column: c.subject}},
+		}
 		err := compose.VerifyRecordKinds(ctx, env.Pool, []recordkinds.Declared{k})
 		switch {
 		case c.want == "" && err != nil:
