@@ -7,12 +7,10 @@ package gates
 
 // A list's hidden count is read from the statement the list reads.
 //
-// A record page states how many entries row scope withheld from a section,
-// and whom to ask. If the count and the list each wrote their own `FROM`, the
-// two populations would drift, and the count would name entries the list never
-// had. So both are built from one storekit.HiddenSection, made by one builder
-// function. This holds that every builder feeds both a hidden count and a list,
-// and that a hidden count never reads a section written inline.
+// A count and a list that each wrote their own `FROM` would drift, and the
+// count would name entries the list never had. So both are built from one
+// storekit.HiddenSection, made by one builder. Every builder feeds both a
+// count and a list, and no count reads a section written inline.
 
 import (
 	"go/ast"
@@ -31,9 +29,9 @@ import (
 var sectionListMethods = []string{"ListSQL", "VisibleFrom"}
 
 // hiddenRecordsSections pairs each contract field of type HiddenRecords with
-// the builder whose section answers it. The pairing is the one fact neither
-// side states: both the contract's fields and the tree's builders are read
-// from their owners, and each must match this table exactly.
+// the builder whose section answers it. Neither side states the pairing. The
+// contract's fields and the tree's builders are each read from their owner,
+// and each must match this table.
 //
 // gatekit:fixture the contract fields a hidden-section builder answers
 var hiddenRecordsSections = map[string]string{
@@ -177,8 +175,8 @@ func builderCalled(expr ast.Expr, dir string, builders map[string]*sectionUse) s
 }
 
 // assertSectionsMatchTheContract fails when a HiddenRecords field has no
-// builder behind it, or a builder answers no field: a count the contract does
-// not carry, or a field nothing fills.
+// builder behind it, or a builder answers no field. Either is a count the
+// contract does not carry, or a field nothing fills.
 func assertSectionsMatchTheContract(t *testing.T, builders map[string]*sectionUse) {
 	t.Helper()
 	fields := hiddenRecordsFields(t)
@@ -225,6 +223,8 @@ func hiddenRecordsFields(t *testing.T) []string {
 
 // refersToHiddenRecords is whether a property node is a HiddenRecords, named
 // directly or through allOf.
+//
+//craft:ignore naked-any a decoded YAML document is map[string]any and []any, and the property this reads may be either
 func refersToHiddenRecords(node any) bool {
 	property, _ := node.(map[string]any)
 	if ref, _ := property["$ref"].(string); strings.HasSuffix(ref, "/HiddenRecords") {

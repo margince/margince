@@ -21,7 +21,7 @@ import (
 )
 
 // The company page and the finance card read who handles the invoices through
-// one store read, so a scoped reader is told the same withheld count and the
+// one store read. So a scoped reader is told the same withheld count and the
 // same colleagues on both.
 func TestTheFinanceCardAndTheCompanyPageWithholdTheSameBillingContacts(t *testing.T) {
 	e := integration.Setup(t)

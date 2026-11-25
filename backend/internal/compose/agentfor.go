@@ -66,8 +66,8 @@ func agentForTx(users *identity.Service, person ids.UUID, actorID string) func(c
 }
 
 // agentPrincipalFor is the agent acting for person under actorID. storekit
-// stamps actor_type from the type and actor_id from the id, so an id of any
-// other kind would write an audit row naming two actors; it is refused.
+// stamps actor_type from the type and actor_id from the id. An id of another
+// kind would write an audit row naming two actors, so it is refused.
 func agentPrincipalFor(person principal.Principal, actorID string) (principal.Principal, error) {
 	if !strings.HasPrefix(actorID, agentActorPrefix) || len(actorID) == len(agentActorPrefix) {
 		return principal.Principal{}, fmt.Errorf("compose: %q is not an agent id, so no agent may act under it", actorID)
