@@ -77,6 +77,11 @@ const (
 	ChannelPollStoppedByBadToken      = channelStatusReauthRequired
 )
 
+// botConnectionRow selects the bot connections: rows with no upstream account.
+// A Telegram Business link is a row of the same table. A reader that means the
+// workspace's bot names this. It never assumes one live row per provider.
+const botConnectionRow = "account_id IS NULL AND parent_connection_id IS NULL"
+
 // channelConnectionColumns is the read shape, spelled once so every scan
 // agrees with every select.
 const channelConnectionColumns = `id, provider, channel_id, channel_label, address, status, version, created_at, updated_at,

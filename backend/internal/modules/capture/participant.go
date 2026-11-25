@@ -336,7 +336,7 @@ func insertFurtherParticipants(ctx context.Context, tx pgx.Tx, kind string, part
 		           (SELECT c.contact_id
 		              FROM contact_channel_identity c
 		             WHERE inp.account <> '' AND c.provider = $7 AND c.channel_user_id = inp.account
-		               AND c.archived_at IS NULL
+		               AND c.account_scope = '' AND c.archived_at IS NULL
 		             ORDER BY c.contact_id
 		             LIMIT 1),
 		           (SELECT p.contact_id

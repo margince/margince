@@ -11586,6 +11586,75 @@ export interface paths {
         patch: operations["replaceChannelToken"];
         trace?: never;
     };
+    "/channel-connections/telegram-business": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List the Telegram Business accounts linked to the workspace's bot.
+         * @description Newest first. Each is `pending_approval` until an admin approves it.
+         */
+        get: operations["listTelegramBusinessConnections"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/channel-connections/telegram-business/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /**
+         * Disconnect a Telegram Business account from the workspace.
+         * @description Archives the link. It holds no credential, so nothing is destroyed, and what the
+         *     account's chats already filed stays. If the owner links the bot again, the new link
+         *     waits for approval.
+         */
+        delete: operations["disconnectTelegramBusinessConnection"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/channel-connections/telegram-business/{id}/approve": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Approve a Telegram Business account for the workspace.
+         * @description Moves a `pending_approval` link to `connected`. Approving a link that is already
+         *     `connected` changes nothing. A `409` means the owner switched the link off in Telegram.
+         */
+        post: operations["approveTelegramBusinessConnection"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/channel-links/{record_type}/{id}": {
         parameters: {
             query?: never;
@@ -33382,7 +33451,7 @@ export interface components {
             /** Format: uuid */
             id: string;
             /** @enum {string} */
-            provider: "telegram" | "dispact";
+            provider: "telegram" | "telegram_business" | "dispact" | "whatsapp" | "zalo_oa";
             /** @description The provider's own id for the bot — the key the binding is unique on. For Dispact it is the chat's team id. */
             channelId: string;
             /** @description The bot's @username. Display only — a username is mutable and re-assignable, so it identifies nothing. */
@@ -33390,10 +33459,10 @@ export interface components {
             /** @description The web address of a self-hosted provider's install (Dispact). Absent for Telegram. */
             address?: string;
             /**
-             * @description Only `connected` is live, and it is the only state a connect can produce: a pull ingress makes no provider call after the write, so there is no half-connected state. `error` and `reauth_required` are where ingress parks a binding it can no longer poll (another consumer holds the bot's updates; the token was refused), and neither is polled again until an operator acts. `pending` is a value NO server produces: it is retained because the code generator disambiguates enum member names across the whole document, so dropping it renames unrelated generated constants in other schemas.
+             * @description Only `connected` is live, and it is the only state a connect can produce: a pull ingress makes no provider call after the write, so there is no half-connected state. `error` and `reauth_required` are where ingress parks a binding it can no longer poll (another consumer holds the bot's updates; the token was refused), and neither is polled again until an operator acts. `pending_approval` is the state of a Telegram Business link nobody has approved. It is served by the telegram-business operations and never appears on a bot connection.
              * @enum {string}
              */
-            status: "pending" | "connected" | "disconnected" | "error" | "reauth_required";
+            status: "pending_approval" | "connected" | "disconnected" | "error" | "reauth_required";
             /** @description Whether a Dispact events secret is sealed for this connection, so signed notices of new messages are taken. The secret itself is never shown. */
             readonly eventsSecretSet?: boolean;
             /** Format: int64 */
@@ -33402,6 +33471,33 @@ export interface components {
             createdAt?: string;
             /** Format: date-time */
             updatedAt?: string;
+        };
+        /** @description One Telegram Business account the owner linked to the workspace's bot. Nothing from the account is stored until an admin approves it. */
+        TelegramBusinessConnection: {
+            /** Format: uuid */
+            id: string;
+            /** @description The owner's Telegram user id, the key a repeated link keeps its row by. */
+            accountId: string;
+            /** @description The owner's name as Telegram last reported it. Display only, since a name is mutable and identifies nothing. */
+            ownerLabel: string;
+            /**
+             * @description `pending_approval` waits for an admin; `disconnected` means the owner switched the link off in Telegram.
+             * @enum {string}
+             */
+            status: "pending_approval" | "connected" | "disconnected";
+            /**
+             * Format: date-time
+             * @description When the owner first linked the bot.
+             */
+            connectedAt: string;
+            /**
+             * Format: date-time
+             * @description When an admin approved the link; absent until then.
+             */
+            approvedAt?: string | null;
+        };
+        TelegramBusinessConnectionListResponse: {
+            data: components["schemas"]["TelegramBusinessConnection"][];
         };
         ChannelConnectionListResponse: {
             data: components["schemas"]["ChannelConnection"][];
@@ -85255,6 +85351,108 @@ export interface operations {
                 };
             };
             /** @description This deployment serves no messaging channels (`code: channel_connections_not_configured`), or has no credential store configured to seal a bot token in (`code: channel_credentials_not_configured`). */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    listTelegramBusinessConnections: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Telegram Business connections. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TelegramBusinessConnectionListResponse"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["PermissionDenied"];
+            /** @description This deployment serves no messaging channels (`code: channel_connections_not_configured`). */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    disconnectTelegramBusinessConnection: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Disconnected. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["PermissionDenied"];
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
+            /** @description This deployment serves no messaging channels (`code: channel_connections_not_configured`). */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    approveTelegramBusinessConnection: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The approved connection. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TelegramBusinessConnection"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["PermissionDenied"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            422: components["responses"]["ValidationError"];
+            /** @description This deployment serves no messaging channels (`code: channel_connections_not_configured`). */
             503: {
                 headers: {
                     [name: string]: unknown;

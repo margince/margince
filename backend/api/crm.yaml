@@ -17885,6 +17885,91 @@ paths:
             application/problem+json:
               schema: { $ref: '#/components/schemas/Problem' }
 
+  # ------------------- /channel-connections/telegram-business -------------------
+  # A Telegram Business account owner links the workspace's bot to their account inside
+  # Telegram, so the link exists before anyone here has seen it. It is not company
+  # correspondence until an admin approves it, and until then nothing from that account is
+  # stored. All three operations are admin-only and human-only: they decide whose chats are
+  # captured.
+  /channel-connections/telegram-business:
+    get:
+      tags: [Connectors]
+      operationId: listTelegramBusinessConnections
+      security: [ { cookieAuth: [] } ]
+      x-agent-access: human-only
+      x-human-only-reason: security
+      summary: List the Telegram Business accounts linked to the workspace's bot.
+      description: Newest first. Each is `pending_approval` until an admin approves it.
+      responses:
+        '200':
+          description: Telegram Business connections.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/TelegramBusinessConnectionListResponse' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/PermissionDenied' }
+        '503':
+          description: 'This deployment serves no messaging channels (`code: channel_connections_not_configured`).'
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+
+  /channel-connections/telegram-business/{id}:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+    delete:
+      tags: [Connectors]
+      operationId: disconnectTelegramBusinessConnection
+      security: [ { cookieAuth: [] } ]
+      x-agent-access: human-only
+      x-human-only-reason: security
+      summary: Disconnect a Telegram Business account from the workspace.
+      description: |
+        Archives the link. It holds no credential, so nothing is destroyed, and what the
+        account's chats already filed stays. If the owner links the bot again, the new link
+        waits for approval.
+      responses:
+        '204': { description: Disconnected. }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/PermissionDenied' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+        '503':
+          description: 'This deployment serves no messaging channels (`code: channel_connections_not_configured`).'
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+
+  /channel-connections/telegram-business/{id}/approve:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+    post:
+      tags: [Connectors]
+      operationId: approveTelegramBusinessConnection
+      security: [ { cookieAuth: [] } ]
+      x-agent-access: human-only
+      x-human-only-reason: security
+      summary: Approve a Telegram Business account for the workspace.
+      description: |
+        Moves a `pending_approval` link to `connected`. Approving a link that is already
+        `connected` changes nothing. A `409` means the owner switched the link off in Telegram.
+      responses:
+        '200':
+          description: The approved connection.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/TelegramBusinessConnection' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/PermissionDenied' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '503':
+          description: 'This deployment serves no messaging channels (`code: channel_connections_not_configured`).'
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+
   # --------------------------- /channel-links -------------------------------
   # A deal or a project linked to one channel of the team chat (Dispact). Margince
   # keeps a card in the channel and posts what happens on the record; what the
@@ -47582,7 +47667,7 @@ components:
       required: [id, provider, channelId, channelLabel, status, version]
       properties:
         id: { type: string, format: uuid }
-        provider: { type: string, enum: [telegram, dispact], x-extensible-enum: true }
+        provider: { type: string, enum: [telegram, telegram_business, dispact, whatsapp, zalo_oa], x-extensible-enum: true }
         channelId:
           type: string
           description: The provider's own id for the bot — the key the binding is unique on. For Dispact it is the chat's team id.
@@ -47594,15 +47679,15 @@ components:
           description: The web address of a self-hosted provider's install (Dispact). Absent for Telegram.
         status:
           type: string
-          enum: [pending, connected, disconnected, error, reauth_required]
+          enum: [pending_approval, connected, disconnected, error, reauth_required]
           x-extensible-enum: true
           description: >-
             Only `connected` is live, and it is the only state a connect can produce: a pull ingress makes no provider call after the write, so there is no half-connected state.
             `error` and `reauth_required` are where ingress parks a binding it can no longer poll
             (another consumer holds the bot's updates; the token was refused), and neither is
-            polled again until an operator acts. `pending` is a value NO server produces: it is
-            retained because the code generator disambiguates enum member names across the whole
-            document, so dropping it renames unrelated generated constants in other schemas.
+            polled again until an operator acts. `pending_approval` is the state of a Telegram
+            Business link nobody has approved. It is served by the telegram-business operations
+            and never appears on a bot connection.
         eventsSecretSet:
           type: boolean
           readOnly: true
@@ -47610,6 +47695,32 @@ components:
         version: { type: integer, format: int64 }
         createdAt: { type: string, format: date-time }
         updatedAt: { type: string, format: date-time }
+    TelegramBusinessConnection:
+      type: object
+      description: >-
+        One Telegram Business account the owner linked to the workspace's bot. Nothing from the
+        account is stored until an admin approves it.
+      required: [id, accountId, ownerLabel, status, connectedAt]
+      properties:
+        id: { type: string, format: uuid }
+        accountId:
+          type: string
+          description: The owner's Telegram user id, the key a repeated link keeps its row by.
+        ownerLabel:
+          type: string
+          description: The owner's name as Telegram last reported it. Display only, since a name is mutable and identifies nothing.
+        status:
+          type: string
+          enum: [pending_approval, connected, disconnected]
+          x-extensible-enum: true
+          description: '`pending_approval` waits for an admin; `disconnected` means the owner switched the link off in Telegram.'
+        connectedAt: { type: string, format: date-time, description: When the owner first linked the bot. }
+        approvedAt: { type: [string, 'null'], format: date-time, description: When an admin approved the link; absent until then. }
+    TelegramBusinessConnectionListResponse:
+      type: object
+      required: [data]
+      properties:
+        data: { type: array, items: { $ref: '#/components/schemas/TelegramBusinessConnection' } }
     ChannelConnectionListResponse:
       type: object
       required: [data]
