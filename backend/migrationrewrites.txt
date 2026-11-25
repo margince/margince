@@ -264,3 +264,5 @@
 1795603731_a_lead_name_holds_at_most_a_label.down.sql | * | restores the two text-bound triggers on lead as they stood before; no existing row is changed
 1795607704_an_edition_reader_key_is_validated.up.sql | * | the procedural body validates or drops the two report_edition keys the file before added; it reads editions and changes no row
 1795607704_an_edition_reader_key_is_validated.down.sql | * | the down migration is a single SELECT 1 that changes nothing
+1795608587_the_array_vocabularies_are_validated.up.sql | * | the procedural body validates or drops the seven array checks the file before added; it reads those tables and changes no row
+1795608587_the_array_vocabularies_are_validated.down.sql | * | the down migration is a single SELECT 1 that changes nothing

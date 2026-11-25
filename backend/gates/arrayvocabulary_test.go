@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
+//gate:kind census H3
+
 package gates
 
 // A text array either closes its set in the database or says why its set is open.
@@ -167,6 +169,7 @@ func readArrayCatalog(t *testing.T) arrayCatalog {
 }
 
 func TestATextArrayClosesItsSetOrSaysWhyItIsOpen(t *testing.T) {
+	t.Parallel()
 	catalog := readArrayCatalog(t)
 	for _, column := range catalog.columns {
 		if _, closed := catalog.contained[column]; closed || catalog.shaped[column] {
@@ -182,6 +185,7 @@ func TestATextArrayClosesItsSetOrSaysWhyItIsOpen(t *testing.T) {
 }
 
 func TestAnArrayVocabularyMatchesTheGoListItCopies(t *testing.T) {
+	t.Parallel()
 	catalog := readArrayCatalog(t)
 	for column, source := range arrayVocabularySources {
 		stored, ok := catalog.contained[column]
