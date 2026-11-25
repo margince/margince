@@ -444,3 +444,45 @@ func TestSeparateNeedsAuthorityOverBothDeals(t *testing.T) {
 		t.Fatal("the pair finding is offered as answerable to a reader who may not write its second deal")
 	}
 }
+
+// A pass over the deal the finding is filed on closes it when that deal stops
+// matching, whether its close date or its pipeline moved.
+func TestAPassOverTheFiledDealClosesItsPairWhenItStopsMatching(t *testing.T) {
+	for name, change := range map[string]func(*pairEnv){
+		"close date": func(e *pairEnv) { e.setClose(t, e.later, 200) },
+		"pipeline": func(e *pairEnv) {
+			owner := integration.OwnerConn(t)
+			other := integration.SeedIDRow(t, owner, `INSERT INTO pipeline (id, name) VALUES ($1, 'Other')`)
+			stage := integration.SeedIDRow(t, owner, `INSERT INTO stage (id, pipeline_id, name, "position") VALUES ($1, $2, 'Open', 0)`, other)
+			execSeed(t, owner, `UPDATE deal SET pipeline_id = $2, stage_id = $3 WHERE id = $1`, e.later, other, stage)
+		},
+	} {
+		t.Run(name, func(t *testing.T) {
+			e := setupPair(t)
+			e.run(t)
+			change(e)
+			e.rescan(t, e.later)
+			if _, status, _ := e.pairFinding(t); status != assurance.ExceptionConditionCleared {
+				t.Fatalf("status = %q, want condition_cleared", status)
+			}
+		})
+	}
+}
+
+// A pair somebody deferred stays open through a pass over one deal, even when
+// the pair no longer matches. The reminder fires over a clean record later.
+func TestAPassOverOneDealKeepsADeferredPairOpen(t *testing.T) {
+	e := setupPair(t)
+	e.run(t)
+	id, _, _ := e.pairFinding(t)
+	remind := clocktest.Now(t).Add(48 * time.Hour)
+	if err := assurance.NewStore(compose.InstallationDB(e.Pool)).Resolve(e.Admin(), id,
+		assurance.Resolution{Outcome: assurance.OutcomeRemindLater, RemindAt: &remind}, clocktest.Now(t)); err != nil {
+		t.Fatalf("deferring the pair: %v", err)
+	}
+	e.setClose(t, e.later, 200)
+	e.rescan(t, e.later)
+	if _, status, _ := e.pairFinding(t); status != "open" {
+		t.Fatalf("status = %q after a pass over a pair that stopped matching, want the deferral kept open", status)
+	}
+}
