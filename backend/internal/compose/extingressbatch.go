@@ -32,8 +32,6 @@ func (r *callRuntime) IngestBatch(ctx context.Context, on extension.UserID, syst
 	})
 }
 
-// IngestPosition answers the position the last saved batch for this source
-// ended at, or empty when none was saved.
 func (r *callRuntime) IngestPosition(ctx context.Context, system extension.SourceName) (extension.BatchPosition, error) {
 	if err := r.refusePositionKind(system, false); err != nil {
 		return "", err
@@ -46,9 +44,7 @@ func (r *callRuntime) IngestPosition(ctx context.Context, system extension.Sourc
 	return saved.Position, err
 }
 
-// IngestMemberBatch is IngestBatch for a member-owned source. The position it
-// saves is the member's own. The save fails with ErrPositionConflict when
-// another save moved it since the version the caller read.
+// IngestMemberBatch is IngestBatch for a member-owned source, saved per member.
 func (r *callRuntime) IngestMemberBatch(ctx context.Context, on extension.UserID, system extension.SourceName, recs []extension.Record, position extension.BatchPosition, expected extension.PositionVersion) (extension.MemberBatchResult, error) {
 	member, err := r.consentedMember(ctx, on)
 	if err != nil {
@@ -66,8 +62,7 @@ func (r *callRuntime) IngestMemberBatch(ctx context.Context, on extension.UserID
 	return out, err
 }
 
-// MemberIngestPosition answers one member's saved position for a member-owned
-// source.
+// MemberIngestPosition answers one member's saved position.
 func (r *callRuntime) MemberIngestPosition(ctx context.Context, on extension.UserID, system extension.SourceName) (extension.MemberPosition, error) {
 	if err := r.refusePositionKind(system, true); err != nil {
 		return extension.MemberPosition{}, err
@@ -84,10 +79,8 @@ func (r *callRuntime) MemberIngestPosition(ctx context.Context, on extension.Use
 	return saved, err
 }
 
-// consentedMember reads the member a position belongs to. The id must be a real
-// one, because the nil id is where a stream-wide position is kept. The member
-// must have deposited a credential with this unit. That says the unit may act
-// for them.
+// consentedMember reads the member a position belongs to. The nil id is where a
+// stream-wide position lives, and the member must have deposited a credential.
 func (r *callRuntime) consentedMember(ctx context.Context, on extension.UserID) (ids.UUID, error) {
 	member := extingress.UserUUID(on)
 	if member == extingress.NoMember {
@@ -104,8 +97,7 @@ func (r *callRuntime) consentedMember(ctx context.Context, on extension.UserID) 
 	return member, err
 }
 
-// landBatch is the part both batch calls share: the call's own rules, then each
-// record in order.
+// landBatch is what both batch calls share.
 func (r *callRuntime) landBatch(ctx context.Context, on extension.UserID, system extension.SourceName, recs []extension.Record, position extension.BatchPosition, perMember bool) ([]extension.Result, error) {
 	if err := extension.ValidateBatch(system, recs, position); err != nil {
 		return nil, err
@@ -127,8 +119,7 @@ func (r *callRuntime) landBatch(ctx context.Context, on extension.UserID, system
 	return results, nil
 }
 
-// refusePositionKind holds a source to the kind of position it keeps: a
-// member-owned source one per member, any other source one for the stream.
+// refusePositionKind keeps a member-owned source on per-member positions only.
 func (r *callRuntime) refusePositionKind(system extension.SourceName, perMember bool) error {
 	declared, err := r.declaredIngress(string(system))
 	if err != nil {
@@ -140,7 +131,6 @@ func (r *callRuntime) refusePositionKind(system extension.SourceName, perMember 
 	return nil
 }
 
-// inPositionTx runs one position statement in the invocation's workspace.
 func (r *callRuntime) inPositionTx(ctx context.Context, fn func(context.Context, pgx.Tx) error) error {
 	scoped, err := r.scoped(ctx)
 	if err != nil {

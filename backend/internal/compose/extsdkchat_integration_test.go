@@ -48,8 +48,7 @@ type filedMessage struct {
 	Files                      []extension.InboundFile
 }
 
-// fileByHand is the body of the unit's HTTP route: store the member's message,
-// then ask for the unattended run that ingests it.
+// fileByHand is the unit's route body: store the message, then ask for a run.
 func fileByHand(ctx context.Context, rt extension.Runtime, msg filedMessage) error {
 	body, err := json.Marshal(msg)
 	if err != nil {
@@ -245,8 +244,7 @@ func (e *chatEnv) links(t *testing.T, activity ids.UUID, column string) int {
 	return e.countAsWorkspace(t, `SELECT count(*) FROM activity_link WHERE activity_id = $1 AND `+column+` IS NOT NULL`, activity)
 }
 
-// A message filed on a contact the member can see is linked to it directly. It
-// is held under the pinned posture of the source and binds no identity.
+// A message filed on a visible contact is linked to it, held, and binds no identity.
 func TestAHandFiledMessageIsFiledOnTheChosenContactAndBornHeldUnderTheSourcesPosture(t *testing.T) {
 	e := setupMemberChat(t, extension.PostureClassified)
 	contact := e.SeedContact(t, "Chosen Contact", &e.member)

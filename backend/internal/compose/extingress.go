@@ -87,8 +87,7 @@ func (r *callRuntime) Ingest(ctx context.Context, on extension.UserID, rec exten
 	if err := rec.Validate(); err != nil {
 		return r.refusedRecord(ctx, extension.RefusalOf(err), err.Error()), nil
 	}
-	// A member-owned chat source lands that member's chat messages and nothing
-	// else, because its pinned posture is a statement about chat.
+	// A pinned posture is a statement about chat, so such a source lands chat only.
 	if declared.PinnedPosture != "" && !extingress.IsChatMessage(rec) {
 		return r.refusedRecord(ctx, extension.RefusalActivity, "a member-owned chat source lands chat messages only"), nil
 	}
@@ -120,9 +119,7 @@ func (r *callRuntime) Ingest(ctx context.Context, on extension.UserID, rec exten
 	return r.landRecord(runCtx, sink, rec, declared, on)
 }
 
-// refusedRecord answers a record the grammar refuses, after it leaves the
-// breadcrumb the core keeps. The unit knows it dropped the record. The
-// installation could not tell. See extingressrefusal.go.
+// refusedRecord answers a refused record after leaving the breadcrumb.
 func (r *callRuntime) refusedRecord(ctx context.Context, class extension.RecordRefusal, reason string) extension.Result {
 	r.noteRefusal(ctx, class)
 	return extension.Result{Disposition: extension.DispositionUnrepresentable, Refusal: class, Reason: reason}
@@ -152,7 +149,6 @@ func (r *callRuntime) landRecord(ctx context.Context, sink *capture.Sink, rec ex
 	case errors.Is(err, connector.ErrSkip):
 		return extension.Result{Disposition: extension.DispositionSkipped}, nil
 	case chosen != nil && errors.Is(err, apperrors.ErrNotFound):
-		// The subject changed under the capture transaction's own probe.
 		return r.subjectResult(ctx, extingress.ErrSubjectNotFound)
 	case err != nil:
 		return extension.Result{}, r.ingressRefusal(ctx, err)
@@ -163,8 +159,7 @@ func (r *callRuntime) landRecord(ctx context.Context, sink *capture.Sink, rec ex
 	}, nil
 }
 
-// subjectResult answers a chosen subject the member cannot see as a disposition
-// of its own, and lets any other fault through as an error.
+// subjectResult answers an unseen chosen subject as its own disposition.
 func (r *callRuntime) subjectResult(ctx context.Context, err error) (extension.Result, error) {
 	if errors.Is(err, extingress.ErrSubjectNotFound) {
 		return extension.Result{Disposition: extension.DispositionSubjectNotFound, Reason: "no such contact or lead"}, nil
@@ -172,8 +167,7 @@ func (r *callRuntime) subjectResult(ctx context.Context, err error) (extension.R
 	return extension.Result{}, r.ingressRefusal(ctx, err)
 }
 
-// fileRecord stores the record: a chat message through capture.FileChatMessage,
-// which every chat network shares, anything else through the general mapping.
+// fileRecord files a chat message through capture.FileChatMessage, the rest as before.
 func (r *callRuntime) fileRecord(
 	ctx context.Context, sink *capture.Sink, rec extension.Record, declared extension.IngressSource,
 	on extension.UserID, chosen *datasource.EntityRef,
