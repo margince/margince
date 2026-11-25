@@ -14,6 +14,7 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/platform/recordmerge"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -35,7 +36,7 @@ func (s *Store) MergeLead(ctx context.Context, sourceID, targetID ids.LeadID) (c
 		return crmcontracts.Lead{}, err
 	}
 	if sourceID == targetID {
-		return crmcontracts.Lead{}, &MergeSelfError{}
+		return crmcontracts.Lead{}, &recordmerge.MergeSelfError{}
 	}
 	by, err := storekit.CapturedBy(ctx)
 	if err != nil {
@@ -81,7 +82,7 @@ func (s *Store) mergeLeadTx(ctx context.Context, tx pgx.Tx, sourceID, targetID i
 	if err := s.refuseMergeWithDependents(ctx, tx, extdecl.Lead, sourceID.UUID); err != nil {
 		return crmcontracts.Lead{}, err
 	}
-	src, tgt, err := mergePair(ctx, tx, entityLead, sourceID, targetID, nil, readLeadMergeState)
+	src, tgt, err := recordmerge.Pair(ctx, tx, entityLead, sourceID, targetID, nil, readLeadMergeState)
 	if err != nil {
 		return crmcontracts.Lead{}, err
 	}
@@ -94,7 +95,7 @@ func (s *Store) mergeLeadTx(ctx context.Context, tx pgx.Tx, sourceID, targetID i
 	// The loser retires BEFORE the survivor takes its keys: email is unique
 	// among LIVE leads, so a fill that ran first would collide with the row
 	// about to be archived.
-	if err := archiveMergedAway(ctx, tx, entityLead, sourceID.UUID, targetID.UUID); err != nil {
+	if err := recordmerge.ArchiveMergedAway(ctx, tx, entityLead, sourceID.UUID, targetID.UUID); err != nil {
 		return crmcontracts.Lead{}, fmt.Errorf("retire merged-away lead: %w", err)
 	}
 	p := buildLeadSurvivorshipPatch(tgt, src)
@@ -161,7 +162,7 @@ func (s *Store) carryLeadToLeadTx(ctx context.Context, tx pgx.Tx, sourceID, targ
 	// The contact and company merges have always called this. The lead merge
 	// did not. So six kinds of row stayed where no read returns them: drafts,
 	// verdicts, notices, attachments, commitments and signals.
-	if err := moveKindIDRows(ctx, tx, entityLead, sourceID.UUID, targetID.UUID); err != nil {
+	if err := recordmerge.MoveKindIDRows(ctx, tx, entityLead, sourceID.UUID, targetID.UUID); err != nil {
 		return fmt.Errorf("carry the merged-away lead's references by kind and id: %w", err)
 	}
 	return carryLeadMembershipsToLead(ctx, tx, sourceID, targetID)

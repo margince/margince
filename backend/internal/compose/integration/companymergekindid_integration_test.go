@@ -95,7 +95,7 @@ func TestEveryCompanyKindIDReferenceJoinsTheMerge(t *testing.T) {
 		}
 		t.Errorf("%s can name a company by kind and id and the merge never moves it.\n"+
 			"Left alone it names an archived record: nothing errors and the row is gone from the "+
-			"survivor's view. Move it in internal/modules/contacts/mergekindid.go, or declare "+
+			"survivor's view. Move it in internal/platform/recordmerge/kindid.go, or declare "+
 			"it in kindIDPairsTheMergeLeaves with what moving it would cost.", key)
 	}
 	if err := rows.Err(); err != nil {

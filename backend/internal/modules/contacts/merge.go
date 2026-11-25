@@ -17,7 +17,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/platform/httperr"
-	"github.com/margince/margince/backend/internal/shared/apperrors"
+	"github.com/margince/margince/backend/internal/platform/recordmerge"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/ports/authz"
@@ -87,38 +87,6 @@ func heldNothing(filled map[string]any) map[string]any {
 	return before
 }
 
-// MergeSelfError maps to 422: a record cannot merge into itself.
-type MergeSelfError struct{}
-
-func (e *MergeSelfError) Error() string { return "source and target of a merge must differ" }
-
-// FieldFault refuses a merge whose source and target are the same record.
-func (e *MergeSelfError) FieldFault() (field, code, message string) {
-	return "target_id", "merge_self", e.Error()
-}
-
-// AlreadyMergedError maps to 409: the source was already merged away; the
-// pointer names where it went.
-type AlreadyMergedError struct {
-	Kind   string
-	IntoID ids.UUID
-}
-
-func (e *AlreadyMergedError) Error() string { return e.Kind + " is already merged" }
-
-// MergedTargetError maps to 422: the chosen survivor is itself archived
-// or merged away — nothing can merge INTO a dead record.
-type MergedTargetError struct{ Kind string }
-
-func (e *MergedTargetError) Error() string {
-	return "merge target " + e.Kind + " is archived; the survivor must be live"
-}
-
-// FieldFault refuses merging INTO a record that was itself already merged away.
-func (e *MergedTargetError) FieldFault() (field, code, message string) {
-	return "target_id", "merged_target", e.Error()
-}
-
 // relinkCounts is the event payload's accounting (events.md §contact.merged):
 // downstream consumers re-home their references from these numbers.
 type relinkCounts struct {
@@ -148,7 +116,7 @@ func (s *Store) MergeContact(ctx context.Context, sourceID, targetID ids.Contact
 		return crmcontracts.Contact{}, err
 	}
 	if sourceID == targetID {
-		return crmcontracts.Contact{}, &MergeSelfError{}
+		return crmcontracts.Contact{}, &recordmerge.MergeSelfError{}
 	}
 
 	var out crmcontracts.Contact
@@ -197,7 +165,7 @@ func (s *Store) mergeContactCarryingTx(ctx context.Context, tx pgx.Tx, sourceID,
 	if err := s.refuseMergeWithDependents(ctx, tx, extdecl.Contact, sourceID.UUID); err != nil {
 		return crmcontracts.Contact{}, nil, err
 	}
-	src, tgt, err := mergePair(ctx, tx, contactEntity, sourceID, targetID, ifVersion, readContactMergeState)
+	src, tgt, err := recordmerge.Pair(ctx, tx, contactEntity, sourceID, targetID, ifVersion, readContactMergeState)
 	if err != nil {
 		return crmcontracts.Contact{}, nil, err
 	}
@@ -251,7 +219,7 @@ func settleContactMerge(ctx context.Context, tx pgx.Tx, tgtLock storekit.RowLock
 	} else if err := storekit.TouchLocked(ctx, tx, tgtLock); err != nil {
 		return fmt.Errorf("move the survivor's version: %w", err)
 	}
-	if err := archiveMergedAway(ctx, tx, contactEntity, sourceID.UUID, targetID.UUID); err != nil {
+	if err := recordmerge.ArchiveMergedAway(ctx, tx, contactEntity, sourceID.UUID, targetID.UUID); err != nil {
 		return fmt.Errorf("retire merged-away contact: %w", err)
 	}
 	return auditContactMerge(ctx, tx, sourceID, targetID, counts, p, won)
@@ -376,45 +344,6 @@ func relinkWorksWithEdges(ctx context.Context, tx pgx.Tx, sourceID, targetID ids
 		mergeWorksWithSource, args)
 }
 
-// relinkLinkRows re-homes the pure link tables (activity_link,
-// list_member, taggable): a link the survivor already holds stands, and the
-// retired copy is dropped. activity_link has no provenance; the list note is
-// kept, and the earlier adder or tagger of a duplicate is not.
-func relinkLinkRows(ctx context.Context, tx pgx.Tx, entityType string, sourceID, targetID ids.UUID) (int64, error) {
-	column, source, duplicate, err := mergeActivityPredicates(entityType)
-	if err != nil {
-		return 0, err
-	}
-	args := pgx.NamedArgs{mergeSourceKey: sourceID, mergeTargetKey: targetID, recordKindParam: entityType}
-	if _, err := tx.Exec(ctx, `DELETE FROM activity_link a
- WHERE `+source+` AND `+duplicate, args); err != nil {
-		return 0, err
-	}
-	tag, err := tx.Exec(ctx, `UPDATE activity_link a SET `+column+` = @target WHERE `+source, args)
-	if err != nil {
-		return 0, err
-	}
-	relinked := tag.RowsAffected()
-
-	// Spelled out per table: the company-merge coverage census reads these
-	// statements, and a table name assembled at runtime is invisible to it.
-	for _, stmt := range []string{
-		`UPDATE list_member b SET note = a.note FROM list_member a
- WHERE ` + mergeMembershipSource + ` AND ` + mergeMembershipTarget + ` AND b.list_id = a.list_id AND ` + mergeListNoteFill,
-		`DELETE FROM list_member a
- WHERE ` + mergeMembershipSource + ` AND ` + mergeListDuplicate,
-		`UPDATE list_member a SET entity_id = @target WHERE ` + mergeMembershipSource,
-		`DELETE FROM taggable a
- WHERE ` + mergeMembershipSource + ` AND ` + mergeTagDuplicate,
-		`UPDATE taggable a SET entity_id = @target WHERE ` + mergeMembershipSource,
-	} {
-		if _, err := tx.Exec(ctx, stmt, args); err != nil {
-			return 0, err
-		}
-	}
-	return relinked, nil
-}
-
 // mergeConsent carries the merged-away contact's consent onto the survivor
 // (consentcarry.go). The contact merge re-homes the proof rows with the state:
 // the delivery gate reads the double-opt-in proof off the live record.
@@ -424,23 +353,6 @@ func mergeConsent(ctx context.Context, tx pgx.Tx, sourceID, targetID ids.Contact
 		return err
 	}
 	return carryConsent(ctx, tx, consentCarryContactMerge, sourceID.UUID, targetID.UUID, by)
-}
-
-// archiveMergedAway retires the source row: archived + the redirect
-// pointer, in one statement so a concurrent merge of the same source
-// loses the race instead of double-writing.
-func archiveMergedAway(ctx context.Context, tx pgx.Tx, table string, sourceID, targetID ids.UUID) error {
-	tag, err := tx.Exec(ctx,
-		`UPDATE `+table+` SET archived_at = $3, merged_into_id = $2
-		 WHERE id = $1 AND archived_at IS NULL`,
-		sourceID, targetID, time.Now().UTC())
-	if err != nil {
-		return err
-	}
-	if tag.RowsAffected() == 0 {
-		return apperrors.ErrConflict
-	}
-	return nil
 }
 
 // fillString sets a nullable text column from the source only when the

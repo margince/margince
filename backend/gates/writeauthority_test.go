@@ -592,6 +592,12 @@ func indexWriteAuthorityCall(call *ast.CallExpr, info *writeAuthorityFn, tables 
 			recordAuthCall(fun.Sel.Name, call, info, tables, consts, at, src)
 			return
 		}
+		// recordmerge.Pair takes EnsureWritable on the source and WritableBy on
+		// the target before it reads either end, so a merge reaching it holds
+		// the write probe on the table named in its third argument.
+		if pkg, isPkg := fun.X.(*ast.Ident); isPkg && pkg.Name == "recordmerge" && fun.Sel.Name == "Pair" {
+			recordAuthCall("EnsureWritable", call, info, tables, consts, at, src)
+		}
 		if mutationMarkers[fun.Sel.Name] {
 			info.mutates = true
 			if table, ok := patchTargetTable(fun.Sel.Name, call, consts); ok && tables[table] {

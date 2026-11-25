@@ -22,6 +22,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/platform/extprivacy"
 	"github.com/margince/margince/backend/internal/platform/httperr"
+	"github.com/margince/margince/backend/internal/platform/recordmerge"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/signature"
 )
@@ -321,7 +322,7 @@ func writeStoreErr(w http.ResponseWriter, r *http.Request, err error) {
 		})
 		return
 	}
-	if alreadyMerged, ok := errors.AsType[*AlreadyMergedError](err); ok {
+	if alreadyMerged, ok := errors.AsType[*recordmerge.AlreadyMergedError](err); ok {
 		e := &httperr.DetailedError{
 			Status: http.StatusConflict, Code: "already_merged", Detail: alreadyMerged.Error(),
 		}

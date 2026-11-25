@@ -49,7 +49,8 @@ var mergePathFiles = []string{
 	"internal/modules/contacts/merge_company.go",
 	"internal/modules/contacts/merge.go",
 	"internal/modules/contacts/mergecompanyedges.go",
-	"internal/modules/contacts/mergekindid.go",
+	"internal/platform/recordmerge/kindid.go",
+	"internal/platform/recordmerge/links.go",
 	"internal/modules/contacts/company_relationship_types.go",
 	"internal/modules/identity/grantmerge.go",
 }
@@ -273,7 +274,7 @@ func tablesTheMergeWrites(t *testing.T) map[string]bool {
 // still calls the registry, so dropping that call fails here too.
 func declaredCompanyLinks(t *testing.T) map[string]bool {
 	t.Helper()
-	body, err := os.ReadFile(filepath.Join("../../..", "internal/modules/contacts/mergekindid.go"))
+	body, err := os.ReadFile(filepath.Join("../../..", "internal/platform/recordmerge/kindid.go"))
 	if err != nil {
 		t.Fatalf("reading the merge's call into the declared tables: %v", err)
 	}
