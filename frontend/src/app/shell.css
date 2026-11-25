@@ -1702,7 +1702,7 @@
   width: 100%;
   height: var(--controlHeight);
   padding-inline: calc(var(--space-2) + 16px + var(--space-1)) var(--space-2);
-  border: 1px solid var(--borderStrong);
+  border: 1px solid var(--borderControl);
   border-radius: var(--r-sm);
   background: var(--bgField);
   color: var(--textPrimary);
@@ -1723,12 +1723,10 @@
   box-shadow: none;
 }
 
-.settingssearch input:focus-visible {
-  outline: var(--focus-ring);
-  outline-offset: 1px;
-  /* The ring is drawn outside the box and does not stand in for the floor the
-     way a glow does, so the floor goes rather than sitting under it. */
-  box-shadow: none;
+.settingssearch input:focus {
+  outline: none;
+  border-color: var(--focusEdge);
+  box-shadow: var(--focus-field);
 }
 
 /* Over the rows rather than pushing them down: a rail that grew by four rows

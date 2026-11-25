@@ -107,11 +107,17 @@
 .rdeck-card textarea {
   width: 100%;
   padding: var(--space-3);
-  border: 1px solid var(--borderStrong);
+  border: 1px solid var(--borderControl);
   border-radius: var(--r-sm);
   background: var(--bgField);
   color: var(--textPrimary);
   font-family: var(--fontFamilyBody);
+}
+.rdeck-card input:focus,
+.rdeck-card textarea:focus {
+  outline: none;
+  border-color: var(--focusEdge);
+  box-shadow: var(--focus-field);
 }
 .rdeck-card textarea {
   min-height: 6rem;

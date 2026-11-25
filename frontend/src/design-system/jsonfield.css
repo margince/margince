@@ -3,7 +3,7 @@
 .json-field {
   display: grid;
   grid-template-columns: auto 1fr;
-  border: 1px solid var(--borderSubtle);
+  border: 1px solid var(--borderControl);
   border-radius: var(--r-sm);
   background: var(--bgInset);
   overflow: hidden;
@@ -15,7 +15,8 @@
   max-height: 300px;
 }
 .json-field:focus-within {
-  border-color: var(--accent);
+  border-color: var(--focusEdge);
+  box-shadow: var(--focus-field);
 }
 .json-field-invalid {
   border-color: var(--danger);
@@ -39,7 +40,7 @@
   color: var(--dangerText);
   font-weight: var(--fontWeightMedium);
 }
-.json-field-text {
+.json-field .json-field-text {
   min-height: 12lh;
   font-size: inherit;
   line-height: inherit;

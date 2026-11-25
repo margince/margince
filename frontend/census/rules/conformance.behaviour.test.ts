@@ -60,6 +60,12 @@ describe("focus", () => {
     expect(
       handSpelledGlows("a.css", ".card { box-shadow: 0 1px 2px black; }"),
     ).toEqual([]);
+    expect(
+      handSpelledGlows(
+        "a.css",
+        ".x:focus { box-shadow: var(--focus-field-ai); }",
+      ),
+    ).toEqual([]);
   });
 });
 

@@ -170,11 +170,13 @@
   border-top: 1px solid var(--borderSubtle);
 }
 
+/* Ruled like the head's rows: the rule is the bare Purpose line's only edge. */
 .compose-draftbar {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
   gap: var(--space-2);
+  border-bottom: 1px solid var(--borderControl);
 }
 .compose-draftbar .input {
   flex: 1 1 12rem;
@@ -183,6 +185,12 @@
   background: transparent;
   box-shadow: none;
   padding-inline: 0;
+}
+/* The bare line still shows the caret's place: without this it would beat
+   `.input:focus` on source order and show no focus at all. */
+.compose-draftbar .input:focus {
+  border-color: var(--focusEdge);
+  box-shadow: var(--focus-field);
 }
 
 /* The AI provenance notice card: the offer surface's banner treatment, stacked to

@@ -159,7 +159,9 @@ export function handSpelledGlows(rel: string, text: string): string[] {
     [...rule[1].matchAll(/box-shadow:\s*([^;]+);/g)]
       .map((match) => match[1].trim())
       .filter((value) => !/^(none|0)$/.test(value))
-      .filter((value) => !/var\(--focus-glow(-danger|-ai)?\)/.test(value))
+      .filter(
+        (value) => !/var\(--focus-(glow|field)(-danger|-ai)?\)/.test(value),
+      )
       .map((value) => `${rel}: box-shadow: ${value}`),
   );
 }
@@ -272,7 +274,7 @@ function stylesheetPromises(corpus: readonly CensusFile[]): string[] {
     ...sheets.flatMap((file) =>
       handSpelledGlows(file.rel, file.text).map(
         (line) =>
-          `${line}: a focus glow reads \`var(--focus-glow)\` or its \`-danger\` / \`-ai\` variant`,
+          `${line}: a focus glow reads \`var(--focus-glow)\`, a field's \`var(--focus-field)\`, or their \`-danger\` / \`-ai\` variants`,
       ),
     ),
     ...onlyAt(

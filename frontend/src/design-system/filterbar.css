@@ -68,7 +68,7 @@
   padding-inline-start: var(--inputPaddingX);
   min-block-size: var(--inputHeight);
   background: var(--ground);
-  border: 1px solid var(--borderSubtle);
+  border: 1px solid var(--borderControl);
   border-radius: var(--r-control);
   box-shadow: var(--shadow-well);
   transition:
@@ -79,8 +79,8 @@
   box-shadow: none;
 }
 .filter-bar[data-labels="inside"] .field:focus-within {
-  border-color: var(--accent);
-  box-shadow: var(--focus-glow);
+  border-color: var(--focusEdge);
+  box-shadow: var(--focus-field);
 }
 .filter-bar[data-labels="inside"] .field > .t-label {
   margin: 0;
@@ -117,7 +117,7 @@
 }
 .filter-bar[data-labels="inside"]
   .field:has([aria-invalid="true"]):focus-within {
-  box-shadow: var(--focus-glow-danger);
+  box-shadow: var(--focus-field-danger);
 }
 
 /* On a phone the dials own the line: a labelled field spans the bar, so its
