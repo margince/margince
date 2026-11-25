@@ -15,8 +15,8 @@ import (
 	"github.com/margince/margince/backend/internal/shared/ports/fieldcatalog"
 )
 
-// CustomFieldTargetMissing is the code a record field answers with when the
-// record it names does not exist, is archived, or is not readable by the caller.
+// CustomFieldTargetMissing is the code a record field answers with when its
+// record does not exist, is archived, or is not readable by the caller.
 const CustomFieldTargetMissing = "record_not_found"
 
 // EnsureRecordTargets refuses a record-typed custom field whose value names no

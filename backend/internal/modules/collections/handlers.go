@@ -165,8 +165,7 @@ func (h Handlers) RestoreTagApplication(w http.ResponseWriter, r *http.Request, 
 // list the second, so it does not close the set. A kind no installed extension
 // declares, or one the caller may not read, answers 404 as the contract says.
 // Any other name no engine serves, such as a typo, earns a 422 naming the
-// parameter. A bare 404 for `?resource=peron` would say neither what went wrong
-// nor what to do.
+// parameter, because a bare 404 would not say what to do.
 func (h Handlers) GetFilterVocabulary(w http.ResponseWriter, r *http.Request, params crmcontracts.GetFilterVocabularyParams) {
 	resource := string(params.Resource)
 	fields, ok, err := h.store.FilterVocabulary(r.Context(), resource)
