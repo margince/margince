@@ -6,6 +6,7 @@ package activities
 import (
 	"context"
 	"errors"
+	"fmt"
 	"slices"
 
 	"github.com/jackc/pgx/v5"
@@ -55,7 +56,7 @@ func boundToKnownMessage(ctx context.Context, tx pgx.Tx, in LogActivityInput) (c
 	}
 	stated := append([]string{in.EmailFrom}, in.EmailTo...)
 	stated = append(stated, in.EmailCc...)
-	incumbent, found, err := bindableIdentityUnder(ctx, tx, kind, key, in.identityProver, stated)
+	incumbent, found, err := bindableIdentityUnder(ctx, tx, kind, key, in.identityProver, stated, in.Author.AuthorID)
 	if err != nil || !found {
 		return crmcontracts.Activity{}, false, err
 	}
@@ -207,4 +208,22 @@ func importNamesIncumbentSeat(ctx context.Context, tx pgx.Tx, incumbent ids.Acti
 		}
 	}
 	return false, nil
+}
+
+// importAuthorHoldsMeeting answers whether the incumbent meeting came from the
+// calendar or the hand of the seat a declared importer names as the author.
+// The author claim is admitted from a declared importer alone
+// (provenance.AdmitSourceAuthor), and the bind still returns the row only
+// when the importer may read it.
+func importAuthorHoldsMeeting(ctx context.Context, tx pgx.Tx, incumbent ids.ActivityID, author ids.UUID) (bool, error) {
+	var stamp string
+	args := schedulingArgs{}
+	err := tx.QueryRow(ctx, `SELECT captured_by FROM activity WHERE id=`+args.add(incumbent), args...).Scan(&stamp)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return false, nil
+	}
+	if err != nil {
+		return false, fmt.Errorf("activities: reading who holds a meeting: %w", err)
+	}
+	return actingHumanOf(stamp) == author.String(), nil
 }
