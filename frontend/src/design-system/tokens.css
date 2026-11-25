@@ -851,7 +851,7 @@
   --ladder3Edge: #3c4644;
   --ladder4Edge: #4a5552;
 
-  --accent: #62cdb7;
+  --accent: #48a58f;
   /* --textOnAccent stays light in dark mode: it is the shared ink for every
      fill that ISN'T --accent and doesn't lighten here (a toast on
      --bgInkField, the AI FAB on --ai, the voice orb over the Core's own glass,
@@ -861,9 +861,9 @@
      it flips here for the same reason --textOnAccentControl does — see its
      declaration below. */
   /* Lighter than --accent, so it reads on --accentLight over each dark ground. */
-  --accentText: #75dac4;
-  --accentLight: rgba(98, 205, 183, 0.16);
-  --accentMed: rgba(98, 205, 183, 0.28);
+  --accentText: #6dc8b1;
+  --accentLight: rgba(72, 165, 143, 0.18);
+  --accentMed: rgba(72, 165, 143, 0.3);
   /* Dark ink: white fails AA on the lifted dark-theme accent. Not --textOnAccent,
      which still inks fills that stay dark here (--bgInkField, --ai). */
   --textOnAccentControl: #062d26;
@@ -871,7 +871,7 @@
      tone's *Text token, and a Text red is DEEP in light and BRIGHT here — a
      near-black pane barely has to move a hue before it reads on it. So the ink
      that clears AA on that ground inverts with the theme rather than staying
-     put. Near-black gives 6.89:1 on --infoText, 7.57:1 on --successText,
+     put. Near-black gives 6.89:1 on --infoText, 8.88:1 on --successText,
      9.37:1 on --warningText, 6.86:1 on --dangerText and 7.04:1 on
      --discoveryText; white would give 2.42:1 on the red. */
   --textOnStatusControl: #04240f;
@@ -911,13 +911,13 @@
 
   --aiText: #a7adfe;
 
-  /* The five states on a dark ground. Information and success keep their light
-   * base — a hue that reads on both papers needs no second value — while
-   * warning, danger and discovery step to one this ground can carry: the light
-   * amber and red go shrill against near-black, and the light violet
-   * disappears into it. All five bases are STATED here even where the value is
-   * unchanged, so a call site reads the role and never has to know which of
-   * them a theme leaves where it was.
+  /* The five states on a dark ground. Information keeps its light base, a hue
+   * that reads on both papers. Success steps yellower and brighter, so it parts
+   * from the teal accent. Warning, danger and discovery step to one this ground
+   * can carry. The light amber and red go shrill against near-black, and the
+   * light violet disappears into it. All five bases are STATED here, even where
+   * the value is unchanged. So a call site reads the role and never has to know
+   * which of them a theme leaves where it was.
    *
    * The Text tokens walk the other way from light: UP in lightness until the
    * hue clears 4.5:1 on every dark ground and on its own tint. Success and
@@ -933,7 +933,7 @@
    * derivations of the dark base here. */
   --info: #0485f7;
   --infoText: #62aaff;
-  --success: #17c964;
+  --success: #51d75e;
   --successText: var(--success);
   --warning: #f7b750;
   --warningText: var(--warning);
@@ -1017,12 +1017,12 @@
     --ladder3Edge: #3c4644;
     --ladder4Edge: #4a5552;
 
-    --accent: #62cdb7;
+    --accent: #48a58f;
 
-    --accentText: #75dac4;
+    --accentText: #6dc8b1;
 
-    --accentLight: rgba(98, 205, 183, 0.16);
-    --accentMed: rgba(98, 205, 183, 0.28);
+    --accentLight: rgba(72, 165, 143, 0.18);
+    --accentMed: rgba(72, 165, 143, 0.3);
 
     --textOnAccentControl: #062d26;
     --textOnStatusControl: #04240f;
@@ -1055,7 +1055,7 @@
 
     --info: #0485f7;
     --infoText: #62aaff;
-    --success: #17c964;
+    --success: #51d75e;
     --successText: var(--success);
     --warning: #f7b750;
     --warningText: var(--warning);

@@ -198,7 +198,7 @@ Five states, and a screen may not make up a new one.
 | State | What it says | Base (light / dark) |
 |---|---|---|
 | information | The neutral report, and work still running: an `info` mark, the ring of a spinner, a row a job is still writing. | `#0485f7` / `#0485f7` |
-| success | A good end: the thing finished the way the reader hoped. | `#17c964` / `#17c964` |
+| success | A good end: the thing finished the way the reader hoped. | `#17c964` / `#51d75e` |
 | warning | A note before the fact: the sentence that stops an error while it can still be stopped. | `#f5a524` / `#f7b750` |
 | danger | The serious one, or the one nobody can take back: the write that failed, the record that cannot come back. | `#ff383c` / `#db3b3e` |
 | discovery | What is new to this reader: onboarding, a feature they do not know yet. The one state that is not a verdict about the record. | `#964ac0` / `#b76be3` |
