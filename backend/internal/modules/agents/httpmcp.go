@@ -205,6 +205,13 @@ func WithInputStateKey(key string) HTTPOption {
 	return func(d *Dispatcher) { d.inputState = newInputStateSigner([]byte(key)) }
 }
 
+// WithConfirmGuard lets a call that waits for its own user be confirmed in the
+// conversation, spending each code once through guard. It needs the input-state
+// key too; without either, such calls stage into the approval inbox.
+func WithConfirmGuard(guard ConfirmGuard) HTTPOption {
+	return func(d *Dispatcher) { d.confirmGuard = guard }
+}
+
 // WithHeldViews tells the tool surface which `ui://` documents are actually
 // being served, so a tool never names one this deployment does not publish.
 func WithHeldViews(held func(uri string) bool) HTTPOption {

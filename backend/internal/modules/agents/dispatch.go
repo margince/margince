@@ -24,9 +24,9 @@ package agents
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"log/slog"
 	"slices"
+	"time"
 
 	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/shared/ports/mcp"
@@ -143,6 +143,8 @@ type Dispatcher struct {
 	// inputState signs the questions a tool asks in the chat. Unarmed, no tool
 	// asks, and each does what it did before the question existed.
 	inputState inputStateSigner
+	// confirmGuard spends confirm codes (confirmcode.go); nil keeps the inbox.
+	confirmGuard ConfirmGuard
 	// log receives the true cause of failures the tool client only sees
 	// generically — the client is an untrusted agent, so infrastructure
 	// detail (DSNs, hosts, wrap chains) stays server-side.
@@ -392,6 +394,7 @@ func (s *Dispatcher) call(ctx context.Context, params json.RawMessage, fr framin
 			"mint a new passport or contact the workspace admin.")
 	}
 	callCtx = s.withChatInput(callCtx, fr, p.Name, p.Arguments, params)
+	callCtx = withConversationConfirm(callCtx, conversationConfirm{signer: s.inputState, guard: s.confirmGuard, now: time.Now})
 	spec, registered := s.registry.Spec(p.Name)
 	if registered && s.unoffered(callCtx, p.Name) {
 		return toolError(s.explain(p.Name, &UnknownToolError{Name: p.Name}))
@@ -408,8 +411,8 @@ func (s *Dispatcher) call(ctx context.Context, params json.RawMessage, fr framin
 			return asked
 		}
 		refusal := toolError(s.explain(served.Tool, err))
-		if _, inFlight := errors.AsType[*claimInFlightError](err); inFlight {
-			refusal["_meta"] = map[string]any{refusalCodeMeta: httperr.IdempotencyInProgressCode}
+		if meta := refusalMetaOf(err); meta != nil {
+			refusal["_meta"] = meta
 		}
 		if shown := shownAnswer(err); shown != nil {
 			if structured, ok := s.structuredContent(served.Tool, shown); ok {
@@ -423,12 +426,11 @@ func (s *Dispatcher) call(ctx context.Context, params json.RawMessage, fr framin
 
 // result renders one successful tool return.
 //
-// The serialized JSON travels in a TextContent block, and — for a tool that
-// declared an outputSchema, which every tool here does — ALSO as
-// structuredContent: the spec makes that a MUST ("Servers MUST provide
-// structured results that conform to this schema"). The text block stays
-// beside it on the spec's own advice, so a client that predates structured
-// content still reads the same answer rather than an empty result.
+// The serialized JSON travels in a TextContent block, and also as
+// structuredContent for a tool with an outputSchema. The spec requires that
+// where tools/list lists the schema, and allows it where the server keeps it
+// (listsOutputSchema). The text block stays beside it on the spec's own advice,
+// so a client that predates structured content still reads the same answer.
 //
 // What is checked is the DECLARED SCHEMA, not object-ness. Object-ness was
 // sufficient only while every outputSchema on this surface was the bare

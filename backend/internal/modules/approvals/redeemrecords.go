@@ -20,13 +20,10 @@ func (s *Service) RedeemRecords(ctx context.Context, id ids.ApprovalID, tool, di
 		if err != nil {
 			return err
 		}
-		pins.Target = releasedRecordPin(a.TargetType, a.TargetID, a.TargetVersion)
-		pins.CoTarget = releasedRecordPin(a.CoTargetType, a.CoTargetID, a.CoTargetVersion)
-		if pins.Target != nil && a.ContextDigest != nil {
-			pins.Target.ContextDigest = *a.ContextDigest
-		}
-		if a.Kind == previewMergeRecords && a.TargetType != nil && (*a.TargetType == "contact" || *a.TargetType == tableCompany) && (pins.Target == nil || pins.CoTarget == nil) {
-			return &PreviewContextError{State: previewIncomplete}
+		pins, err = releasedPinsOf(a.Kind, pinnedRow{a.TargetType, a.TargetID, a.TargetVersion},
+			pinnedRow{a.CoTargetType, a.CoTargetID, a.CoTargetVersion}, a.ContextDigest)
+		if err != nil {
+			return err
 		}
 		return nil
 	})
@@ -36,9 +33,29 @@ func (s *Service) RedeemRecords(ctx context.Context, id ids.ApprovalID, tool, di
 	return pins, nil
 }
 
-func releasedRecordPin(entityType *string, entityID *ids.UUID, version *int64) *auth.ReleasedRecordPin {
-	if entityType == nil || entityID == nil || version == nil {
+// pinnedRow is one row a release rests on, as staged or as a confirmation pinned it.
+type pinnedRow struct {
+	entityType *string
+	entityID   *ids.UUID
+	version    *int64
+}
+
+func (r pinnedRow) released() *auth.ReleasedRecordPin {
+	if r.entityType == nil || r.entityID == nil || r.version == nil {
 		return nil
 	}
-	return &auth.ReleasedRecordPin{EntityType: *entityType, EntityID: *entityID, Version: *version}
+	return &auth.ReleasedRecordPin{EntityType: *r.entityType, EntityID: *r.entityID, Version: *r.version}
+}
+
+// releasedPinsOf is the pins a release hands its writers, from a redeemed
+// approval or a call confirmed in the conversation alike.
+func releasedPinsOf(kind string, target, coTarget pinnedRow, contextDigest *string) (auth.ReleasedRecordPins, error) {
+	pins := auth.ReleasedRecordPins{Target: target.released(), CoTarget: coTarget.released()}
+	if pins.Target != nil && contextDigest != nil {
+		pins.Target.ContextDigest = *contextDigest
+	}
+	if kind == previewMergeRecords && target.entityType != nil && (*target.entityType == "contact" || *target.entityType == tableCompany) && (pins.Target == nil || pins.CoTarget == nil) {
+		return auth.ReleasedRecordPins{}, &PreviewContextError{State: previewIncomplete}
+	}
+	return pins, nil
 }

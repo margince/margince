@@ -68,6 +68,9 @@ func scanExtensions(root string) ([]extensionUnit, error) {
 		if err != nil {
 			return nil, err
 		}
+		if err := pinUnitRuntimeDeps(root, &unit); err != nil {
+			return nil, err
+		}
 		// A downloaded go.mod may name any module. Composed under another path,
 		// it would stand in for that module everywhere, core's imports included.
 		if src.fetched && unit.ModulePath != src.modulePath && unit.ModulePath != src.replacementPath() {

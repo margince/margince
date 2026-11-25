@@ -56,6 +56,9 @@ type SendPreview struct {
 	// them are the ones the contact the send makes will get.
 	NewContacts      map[string]bool
 	readableSubjects map[previewSubject]bool
+	// writableSubjects are the readable contacts the caller may also update,
+	// which is what saving an answered country needs.
+	writableSubjects map[previewSubject]bool
 	// ContentFindings are the content rules an advertising draft does not
 	// meet. Advice only: none of them changes a decision.
 	ContentFindings []DraftContentFinding

@@ -75,6 +75,7 @@ var allowed = gatekit.Waive(map[string]string{
 	"internal/compose/serverassembly.go":                      "binds the installation zone into the stores",
 	"internal/compose/settingswiring.go":                      "the settings page reads and writes the installation zone",
 	"internal/compose/stageevidencetrigger.go":                combined,
+	"internal/compose/systemmail/files.go":                    utcOnly,
 	"internal/compose/winchance/":                             combined,
 	"internal/compose/weekly/":                                "the weekly review job is one pass over all reps, on the installation's week",
 	"internal/compose/weeklyplanseam.go":                      "a plan's week is the installation's week",

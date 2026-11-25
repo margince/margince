@@ -138,6 +138,8 @@ type Store struct {
 	// invitationAttention tells a host, in the parking transaction, that their
 	// invitations wait for them.
 	invitationAttention InvitationAttention
+	// teamRequests tells a colleague named on a booking link; nil tells nobody.
+	teamRequests TeamRequestNotice
 }
 
 // LeadQualifyTasks writes the follow-up for a booking or a held meeting filed

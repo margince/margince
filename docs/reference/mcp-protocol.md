@@ -93,6 +93,22 @@ caller, tool or set of arguments, or one older than ten minutes, gets the questi
 through the client, so it only decides what the client could decide by itself. A change a human must approve still
 goes to the approval inbox. A client with no form support, or a server with no key, gets the answer it had before.
 
+**Confirming in the conversation.** A tool marked `WaitsEvenForItsUser` waits for a human even when the agent acts
+as its user. Over MCP, when that user is in the conversation, the call does not stage. Its first answer is a refusal
+that says what would change and carries a `confirm_code`, in the text and under `_meta` `margince/confirm` with
+`next_steps`. After the user says yes, the agent sends the same call again with `confirm_code`. It runs once.
+
+The code is signed with the `connector_state_key`. It binds the caller's principal, passport and connection, the
+tool, the argument digest and the rows a staging would pin. A code for another caller or call, a used code, or one
+older than 15 minutes is refused, and the agent asks for a new preview. Redis makes each code single-use, and a failed
+run spends it too.
+
+Only a call the passport could release from the inbox itself is confirmed this way. That needs a connected client
+outside a scheduled run, and a change the user can undo. Any other such call still waits in the approval inbox.
+
+No form is needed, so every client can confirm this way. Without the key or Redis, and over REST, such a call stages
+into the approval inbox as before.
+
 `check_client` measures whether a client can answer such a form. It is off until a seat with `agent_client` update
 turns it on in Settings → MCP. Then `tools/list` names it only for a passport whose human is an admin, and any other
 caller gets the unknown-tool answer. The tool has no REST route, because a REST caller cannot answer a form.
@@ -111,14 +127,23 @@ the same in either era. A missing or empty `uri` is `-32602`, and a read that fa
 later. That is also why the server reports `tools.listChanged: false`: the notice would go on a stream this transport
 does not open. The surface does change per caller, but this server cannot say so.
 
-**A tool result carries the answer twice.** A tool that declares an `outputSchema` returns the JSON of a `tools/call`
-that works both in a `TextContent` block and as `structuredContent`. Both are the same bytes, not a second copy built
-again. A router lists no `outputSchema`, because its actions answer different shapes, and a routed call is checked
-against the schema of the action it ran. Only a router bound to an app view lists one, built from its actions' shapes.
+**A tool result carries the answer twice.** A tool with an output schema returns the JSON of a `tools/call` that
+works both in a `TextContent` block and as `structuredContent`. Both are the same bytes, not a second copy built
+again. A router has no output schema, because its actions answer different shapes. A routed call is checked against
+the schema of the action it ran. Only a router bound to an app view has one, built from its actions' shapes.
 
-So a client that compares the two never finds a number changed or a key moved. Each tool lists the shape its handler
-writes. A result that misses its **declared schema** is kept out of `structuredContent`, and logged as a bug in this
-server.
+So a client that compares the two never finds a number changed or a key moved. A result that misses its schema is kept
+out of `structuredContent`, and logged as a bug in this server.
+
+`tools/list` names an `outputSchema` only where an app view reads the answer: the tool bound to a view, and a tool a
+view runs. Every other tool keeps its schema in the server, which checks each answer against it, and its answer
+still carries `structuredContent`. The protocol allows structured content without a listed schema. The rule is
+`listsOutputSchema` in `backend/internal/modules/agents/toollist.go`.
+
+Text every tool would repeat is in the server instructions. A tool's text names a tier only when the tool does not
+run at once. It names a scope only past the defaults: read for a tool that only reads, write for one that changes
+anything. An ask-first tool says "Ask the user first", and the instructions say what that asks for. No schema
+explains `idempotency_key`; the instructions say what it does.
 
 **No sessions, in either era.** `initialize` still answers a handshake-era client, and it makes no `Mcp-Session-Id`.
 If a client sends one, Margince does not use it or send it back, and `DELETE /mcp` answers `405`, since there is no

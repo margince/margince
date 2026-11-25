@@ -143,6 +143,9 @@ type MarketingContext struct {
 	// SendingEntity is the legal entity the message goes out for. The
 	// existing-customer route counts only a sale that entity made.
 	SendingEntity ids.UUID
+	// OptOut says the recipient's country allows advertising until they refuse.
+	// A refusal on record has already blocked before it is read.
+	OptOut bool
 }
 
 // VerdictForRecipient is the decision. The guard endpoint and the transmit gate
@@ -298,6 +301,9 @@ func marketingVerdict(ctx context.Context, tx pgx.Tx, contactID string, address 
 	}
 	if state == string(StateWithdrawn) {
 		return said(Verdict{State: VerdictBlocked, ReasonCode: ReasonConsentWithdrawn, Code: BlockWithdrawn}), nil
+	}
+	if marketing.OptOut {
+		return said(Verdict{State: VerdictAllowed, ReasonCode: ReasonOptOutAllowed}), nil
 	}
 	if state == string(StateGranted) && purpose.RequiresDOI {
 		// Granted but never confirmed. The BGH evidence standard is the whole

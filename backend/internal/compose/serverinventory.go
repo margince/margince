@@ -249,8 +249,8 @@ type Server struct {
 	// challenge points at. WithMCPResource sets both from --public-base-url,
 	// never from a request header a caller controls.
 	mcpResource, mcpAllowedOrigin string
-	// mcpInputStateKey signs the questions a tool asks in the chat.
-	mcpInputStateKey string
+	// mcpChat lets a tool ask in the chat, and a waiting call be confirmed there.
+	mcpChat mcpChatSettings
 	// dispactCalls checks the Dispact app's call tokens on /mcp; nil serves none.
 	dispactCalls *dispactapp.Edge
 	// chatPulls queues a chat_pull for a Dispact notice; WithChatLinks sets it.

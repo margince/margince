@@ -15,6 +15,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/compose/integration"
 	"github.com/margince/margince/backend/internal/compose/integration/apptest"
+	"github.com/margince/margince/backend/internal/modules/customfields"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -35,7 +36,14 @@ type sweepSeed struct {
 func (s sweepSeed) call(method, path string, body any, headers map[string]string, out any) {
 	s.t.Helper()
 	var raw json.RawMessage
-	if status := s.e.Call(s.t, method, path, body, headers, &raw); status < 200 || status >= 300 {
+	status := s.e.Call(s.t, method, path, body, headers, &raw)
+	// The roles seed in parallel, so a schema change can meet another role's
+	// writes. The server answers that it may be retried, and each try waits out
+	// its lock timeout first.
+	for try := 1; try < tableBusyTries && tableBusy(status, raw); try++ {
+		status = s.e.Call(s.t, method, path, body, headers, &raw)
+	}
+	if status < 200 || status >= 300 {
 		s.t.Fatalf("seeding %s %s → %d %s", method, path, status, raw)
 	}
 	if out != nil {
@@ -43,6 +51,17 @@ func (s sweepSeed) call(method, path string, body any, headers map[string]string
 			s.t.Fatalf("seeding %s %s answered %s: %v", method, path, raw, err)
 		}
 	}
+}
+
+const tableBusyTries = 10
+
+// tableBusy reports the custom-field answer that asks for the schema change again.
+func tableBusy(status int, raw json.RawMessage) bool {
+	var problem struct {
+		Detail string `json:"detail"`
+	}
+	return status == http.StatusConflict && json.Unmarshal(raw, &problem) == nil &&
+		problem.Detail == customfields.ErrTableBusy.Error()
 }
 
 // asCallerWhereItMay makes a record as the call's own passport. A role refused that

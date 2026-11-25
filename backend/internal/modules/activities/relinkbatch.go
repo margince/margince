@@ -163,10 +163,11 @@ func admitRelink(ctx context.Context, in RelinkActivityInput) (string, error) {
 
 // relinkActivityRow is the guarded write for ONE activity, inside the caller's
 // transaction, after the caller has probed the destination record. It answers
-// whether a link was actually written — replaying the same association is a
-// no-op, and a no-op writes no audit noise — and whether the row is held, so
-// a caller reading it back afterward (RelinkActivity's own final read) knows
-// which archived filter still finds a no-op's row.
+// whether a link was actually written. Replaying the same association writes
+// no link and no audit noise. The one exception is a colleague confirming a
+// deal link (confirmDealByHand). It also answers whether the row is held.
+// A caller reading it back afterward (RelinkActivity's own final read) then
+// knows which archived filter still finds a no-op's row.
 //
 // The write check is per row on purpose. Customer identity is workspace-
 // readable, so the write arm (auth.EnsureActivityWritable) is what keeps a
@@ -219,7 +220,7 @@ func relinkActivityRow(ctx context.Context, tx pgx.Tx, id ids.ActivityID, in Rel
 		return false, held, err
 	}
 	if tag.RowsAffected() == 0 {
-		return false, held, nil
+		return false, held, confirmDealByHand(ctx, tx, id, in, held)
 	}
 	return true, held, finalizeRelinkedActivity(ctx, tx, id, in, displaced)
 }

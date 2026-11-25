@@ -24,12 +24,16 @@ type previewSubject struct {
 
 func (s *Store) withReadablePreviewSubjects(ctx context.Context, preview SendPreview) (SendPreview, error) {
 	preview.readableSubjects = make(map[previewSubject]bool)
+	preview.writableSubjects = make(map[previewSubject]bool)
+	asking := map[previewSubject]bool{}
 	for _, decision := range preview.Decisions.Decisions {
 		if decision.SubjectID.IsZero() || preview.NewContacts[correspondence.Fold(decision.Recipient.Email)] {
 			continue
 		}
 		if decision.SubjectKind == roomContact || decision.SubjectKind == "lead" {
-			preview.readableSubjects[previewSubject{kind: decision.SubjectKind, id: decision.SubjectID}] = false
+			subject := previewSubject{kind: decision.SubjectKind, id: decision.SubjectID}
+			preview.readableSubjects[subject] = false
+			asking[subject] = asking[subject] || decision.AsksCountry
 		}
 	}
 	if len(preview.readableSubjects) == 0 {
@@ -50,8 +54,26 @@ func (s *Store) withReadablePreviewSubjects(ctx context.Context, preview SendPre
 				return fmt.Errorf("activities: read recipient evidence access: %w", err)
 			}
 			preview.readableSubjects[subject] = true
+			if asking[subject] {
+				preview.writableSubjects[subject], err = mayUpdate(ctx, tx, subject)
+				if err != nil {
+					return err
+				}
+			}
 		}
 		return nil
 	})
 	return preview, err
+}
+
+// mayUpdate asks the question a contact edit asks, without recording it.
+func mayUpdate(ctx context.Context, tx pgx.Tx, subject previewSubject) (bool, error) {
+	writeCtx, err := auth.Unrecorded(ctx, subject.kind, principal.ActionUpdate)
+	if err == nil {
+		err = auth.EnsureWritable(writeCtx, tx, subject.kind, subject.id)
+	}
+	if errors.Is(err, apperrors.ErrNotFound) || errors.Is(err, apperrors.ErrPermissionDenied) {
+		return false, nil
+	}
+	return err == nil, err
 }

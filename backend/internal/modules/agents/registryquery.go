@@ -155,11 +155,8 @@ func (r *Registry) Offered(ctx context.Context) []mcp.ToolSpec {
 	all := r.availableSpecs(r.Specs())
 	out := make([]mcp.ToolSpec, 0, len(all))
 	for _, spec := range all {
-		if spec.Unlisted || !invocableByCaller(ctx, spec) {
-			continue
-		}
-		if granted, ok := r.grantedTo(ctx, spec); ok {
-			out = append(out, r.asSeenBy(ctx, granted))
+		if offered, ok := r.offeredSpec(ctx, spec); ok {
+			out = append(out, offered)
 		}
 	}
 	words := listerOf(out)
@@ -169,6 +166,19 @@ func (r *Registry) Offered(ctx context.Context) []mcp.ToolSpec {
 	out = append(out, r.gatedFor(ctx, all)...)
 	sort.Slice(out, func(i, j int) bool { return out[i].Name < out[j].Name })
 	return out
+}
+
+// offeredSpec is one available spec as Offered shows it to this caller, and
+// false when Offered leaves it out.
+func (r *Registry) offeredSpec(ctx context.Context, spec mcp.ToolSpec) (mcp.ToolSpec, bool) {
+	if spec.Unlisted || !invocableByCaller(ctx, spec) {
+		return spec, false
+	}
+	granted, ok := r.grantedTo(ctx, spec)
+	if !ok {
+		return spec, false
+	}
+	return r.asSeenBy(ctx, granted), true
 }
 
 // OnSurface reports whether name is on the public MCP surface for this caller:
