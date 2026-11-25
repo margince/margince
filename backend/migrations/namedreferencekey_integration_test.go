@@ -59,7 +59,7 @@ var unkeyedReferences = gatekit.Waive(map[string]string{
 })
 
 // namedReferenceSQL answers every uuid column that names a table and carries
-// no foreign key. A column is `<table>_id`, `<prefix>_<table>_id` or a person
+// no foreign key. A column is `<table>_id`, `<prefix>_<table>_id` or a member
 // column naming a seat. A sibling type or kind column makes it polymorphic, so
 // no key can hold it, and the query skips it.
 const namedReferenceSQL = `
