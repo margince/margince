@@ -41,7 +41,7 @@ frames. A 0 means no fenced region was found in that call at all.
 |---|---|---|---:|---:|
 | `account_scan` | `company_scan` | several fenced items | 2 | 1 |
 | `agent_loop` | `morning_brief` | several fenced items | 2 | 3 |
-| `agent_loop` | `overnight_at_risk_sweep` | one fenced item | 1 | 3 |
+| `agent_loop` | `overnight_at_risk_sweep` | several fenced items | 2 | 3 |
 | `brief_ranking` | `rank` | one fenced item | 0 | 1 |
 | `capture_classify` | `classify` | one fenced item | 1 | 1 |
 | `capture_classify` | `deal_topic` | several fenced items | 7 | 1 |

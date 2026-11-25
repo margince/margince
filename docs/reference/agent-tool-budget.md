@@ -21,8 +21,8 @@ The heaviest menu is `overnight_at_risk_sweep`: 6696 of the window's 32768 token
 
 | Agent | Tools | Of served | Listing | Step schema | Per step | Of the window | Headroom | Dangling refs | Temptation |
 |---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
-| `morning_brief` | 5 | 5 of 48 | 2048 | 1646 | 4424 | 13% | 18786 | 0 | 4 |
-| `overnight_at_risk_sweep` | 7 | 7 of 48 | 3350 | 2616 | 6696 | 20% | 16514 | 4 | 4 |
+| `morning_brief` | 5 | 5 of 48 | 2048 | 1646 | 4424 | 13% | 11960 | 0 | 4 |
+| `overnight_at_risk_sweep` | 7 | 7 of 48 | 3350 | 2616 | 6696 | 20% | 9688 | 4 | 5 |
 | _whole served catalog's listing, for scale; no run is offered it_ | 48 |  | 53736 |  |  | 163% |  |  |  |
 
 ### `morning_brief`
@@ -41,7 +41,7 @@ saved: correct it before claiming completion.
 ```
 
 Attaches 5 tools and pays 4424 tokens on every step (2048 listing, 1646 step schema), leaving
-18786 of its budget and 28344 tokens of the
+11960 of its budget and 28344 tokens of the
 window for the goal, the grounding and everything it reads.
 
 - `annotate_brief`
@@ -66,7 +66,7 @@ refused. Do not advance stages, send anything, or archive anything.
 ```
 
 Attaches 7 tools and pays 6696 tokens on every step (3350 listing, 2616 step schema), leaving
-16514 of its budget and 26072 tokens of the
+9688 of its budget and 26072 tokens of the
 window for the goal, the grounding and everything it reads.
 
 - `at_risk_relationships`
@@ -100,7 +100,7 @@ the site's `tools:` are the only tools that run is offered. Read the numbers bel
 before adding one.
 
 The window is 32768 tokens. What an agent's step pays before its transcript (the frame,
-the listing and the step schema) may take 23210 of them (17/24).
+the listing and the step schema) may take 16384 of them (1/2).
 
 ## No run is offered the whole catalog
 
@@ -145,7 +145,7 @@ menu. Lowering it is not always an improvement either: a tool its goal needs rai
 this count whenever its copy names a neighbour.
 
 **Temptation weight** sums, over an agent's tools, how many of that agent's own
-certification scenarios (of 7 in the corpus) name the tool as the wrong reach. Each
+certification scenarios (of 8 in the corpus) name the tool as the wrong reach. Each
 scenario certifies one scheduled agent's window (its goal and its tools), so a near
 miss is a tool that run can see and reach for.
 
