@@ -30,6 +30,7 @@ import {
   useUpdatePartnerStage,
 } from "../../lib/partnerstages.queries";
 import { problemMessageOf } from "../../lib/problem";
+import { TEXT_LIMITS } from "../../lib/textlimits_gen";
 import { usePageReadOnly } from "./settingsnav";
 
 type RowVerbs = Readonly<{
@@ -180,12 +181,11 @@ function StageNameDialog({
   const create = useCreatePartnerStage();
   const rename = useUpdatePartnerStage();
   const renaming = naming.mode === "rename" ? naming.stage : null;
-  const refused = renaming
-    ? {
-        problem: rename.isError ? problemMessageOf(rename.error, t) : null,
-        nameProblem: null,
-      }
-    : nameRefusal(create.error, t, "partnerStages.duplicate");
+  const write = renaming ? rename : create;
+  const refused = nameRefusal(write.error, t, {
+    label: t("partnerStages.labelField"),
+    duplicate: "partnerStages.duplicate",
+  });
   const done = { onSuccess: onClose };
   return (
     <NameDialog
@@ -194,14 +194,15 @@ function StageNameDialog({
       title={t(
         renaming ? "partnerStages.renameTitle" : "partnerStages.addTitle",
       )}
-      label={t("acqSources.addLabel")}
+      label={t("partnerStages.labelField")}
       initial={renaming?.label ?? ""}
       confirmLabel={t(
         renaming ? "leadSources.renameSave" : "partnerStages.addConfirm",
       )}
-      pending={(renaming ? rename : create).isPending}
+      pending={write.isPending}
       problem={refused.problem}
       nameProblem={refused.nameProblem}
+      maxLength={TEXT_LIMITS.label}
       onSave={(label) => {
         if (renaming) {
           rename.mutate({ id: renaming.id, body: { label } }, done);
