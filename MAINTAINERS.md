@@ -14,6 +14,6 @@ next to a role only after its owner agrees to it. Who reviews which path is a se
 
 ## Where Margince is going
 
-The public [Margince roadmap](https://github.com/margince/margince/projects) groups issues by their
+The public [Margince roadmap](https://github.com/orgs/margince/projects/2) groups issues by their
 milestone into **Now**, **Next** and **Later**. A maintainer brings it up to date by hand, so it can lag
 behind. An issue's own milestone and state are the source of truth, and the board only sorts them.

@@ -90,9 +90,9 @@ Each model and each AI tool a user can connect has a test score in
 - A hosted service or many companies in one installation. One installation serves one company.
 
 Open work is in [GitHub issues](https://github.com/margince/margince/issues), and past releases are on the
-[releases page](https://github.com/margince/margince/releases). The
-[plan](https://github.com/margince/margince/projects) puts the open issues in order: now, next and later.
-[MAINTAINERS.md](MAINTAINERS.md) says who decides what.
+[releases page](https://github.com/margince/margince/releases).
+
+Who decides what, and the plan for what comes next, are in [MAINTAINERS.md](MAINTAINERS.md).
 
 ## Security
 
