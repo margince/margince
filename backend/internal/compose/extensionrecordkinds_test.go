@@ -7,6 +7,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/shared/ports/extregistrytest"
 	"github.com/margince/margince/backend/internal/shared/ports/recordkinds"
 	"github.com/margince/margince/backend/pkg/extension"
@@ -22,15 +23,14 @@ func visitKind(unitNS string) extension.RecordKindDeclaration {
 
 func TestRegisterExtensionsRegistersDeclaredRecordKinds(t *testing.T) {
 	extregistrytest.Reset(t)
-	err := RegisterExtensions(composableAll([]extension.Extension{{
+	t.Cleanup(identity.ResetRbacObjectsForTest)
+	if err := RegisterExtensions(composableAll([]extension.Extension{{
 		Name: "kinds-ok", Version: "0.0.1",
 		RecordKinds: []extension.RecordKindDeclaration{visitKind("ext_kinds_ok")},
-	}}), nil, nil)
-	if err != nil {
+	}}), nil, nil); err != nil {
 		t.Fatalf("RegisterExtensions: %v", err)
 	}
-	got, ok := recordkinds.Lookup("ext:kinds-ok:visit")
-	if !ok || got.Unit != "kinds-ok" || got.Table != "ext_kinds_ok_visit" {
+	if got, ok := recordkinds.Lookup("ext:kinds-ok:visit"); !ok || got.Unit != "kinds-ok" || got.Table != "ext_kinds_ok_visit" {
 		t.Fatalf("Lookup = %+v, %v; want the declared kind under its unit", got, ok)
 	}
 }

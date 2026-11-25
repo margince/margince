@@ -67,7 +67,7 @@ var dealFKsTheMergeLeaves = gatekit.Waive(map[string]string{
 	"close_date_run_member.deal_id":         "a close-date sweep run's record of what it proposed for the retired deal at the time",
 	"activity_review_response.deal_id":      "the closing review answered against one of the retired deal's closing occurrences; its composite foreign key to deal_stage_history cannot name another deal",
 	"deal_risk_verdict.deal_id":             "a verdict derived from the retired deal's own state on one day; the survivor gets its own on the next pass",
-	"deal_status_card.deal_id":              "a cached reading of the retired deal; the survivor's card is derived from the survivor",
+	"generated_summary.deal_id":             "the retired deal's cached status card; the survivor's card is derived from the survivor",
 	"deal_move_dismissal.deal_id":           "a reader's set-aside of a suggested move on the retired deal, keyed by a fingerprint over that deal's own state",
 	"assurance_task_item.subject_deal_id":   "an open finding on the retired deal closes as subject_departed once the deal is archived; the survivor is re-examined by the next scan",
 	"deal_suggestion.accepted_deal_id":      "the frozen record of which suggestion created the retired deal",
