@@ -154,6 +154,8 @@ type BusinessLink struct {
 	AccountID   string
 	Ownership   connector.ChatOwnership
 	OwnerUserID ids.UUID
+	// SeatID is the seat the link's messages file through.
+	SeatID ids.UUID
 }
 
 // ParseChatMessage maps one raw envelope (connector.go's BuildRawEnvelope) to the

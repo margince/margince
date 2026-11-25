@@ -107,3 +107,17 @@ func (h Handlers) SetFxRate(w http.ResponseWriter, r *http.Request) {
 	}
 	httperr.WriteJSON(w, http.StatusCreated, toContractFxRate(row))
 }
+
+// RemoveFxRate takes one currency off the sheet. A signed-in user only. 204 with
+// no body: the currency is gone from the sheet, and there is nothing left to show.
+func (h Handlers) RemoveFxRate(w http.ResponseWriter, r *http.Request, from string) {
+	if err := auth.RequireHuman(r.Context()); err != nil {
+		httperr.Write(w, r, err)
+		return
+	}
+	if err := h.store.RemoveFxRate(r.Context(), from); err != nil {
+		writeStoreErr(w, r, err)
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
+}

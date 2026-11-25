@@ -75,10 +75,8 @@ const EXTENSIONS = {
       description:
         "Notes a rep can attach to a record, with their own signing key.",
       rbac_objects: ["ext_notes_note", "ext_notes_signing_key"],
-      // One entry per OPERATION, sorted by path then method, exactly as the
-      // server composes it: /ext/notes/{id} carries both a GET and a DELETE,
-      // and the destructive verb must survive onto the screen rather than
-      // being deduplicated away behind the read on the same path.
+      // One entry per operation, sorted by path then method, as the server
+      // sends it: the DELETE on /ext/notes/{id} must not hide behind its GET.
       routes: [
         { method: "GET", path: "/ext/notes" },
         { method: "POST", path: "/ext/notes" },
@@ -90,10 +88,14 @@ const EXTENSIONS = {
         { capability: "models", reason: "Writes the one-line summaries." },
         { capability: "objects", reason: "Keeps the summaries it writes." },
       ],
-      setup_missing: [
-        { kind: "workspace_secret", name: "signing" },
-        { kind: "oauth_app", name: "Acme CRM" },
-      ],
+      mail_hooks: {
+        parties: false,
+        deal: true,
+        reads: ["subject", "addresses", "body"],
+        body_characters: 1234,
+        reasons: ["po_number"],
+      },
+      setup_missing: [{ kind: "oauth_app", name: "Acme CRM" }],
     },
     {
       name: "quiet",
@@ -108,9 +110,8 @@ const EXTENSIONS = {
       setup_missing: [],
     },
     {
-      // Composed by the running binary and absent from THIS bundle's registry:
-      // the version skew, which is a different fact from "has no page" and is
-      // said rather than silently omitted.
+      // Composed by the running binary and absent from this bundle's registry:
+      // the version skew, said rather than silently omitted. Its server is older.
       name: "stale",
       version: "2.0.0",
       description: "A unit this bundle predates.",
@@ -321,6 +322,12 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
+// The list items of the fact row under term.
+function rowItems(term: string) {
+  const row = screen.getByText(term).closest(".factlist-row");
+  return [...(row?.querySelectorAll("li") ?? [])].map((li) => li.textContent);
+}
+
 describe("ExtensionAccessCard", () => {
   it("renders each composed unit, what it brings, and the matrix from the fetched grants", async () => {
     vi.stubGlobal("fetch", backend([]));
@@ -344,17 +351,16 @@ describe("ExtensionAccessCard", () => {
     ]);
     expect(screen.getByText("ext_notes_digest")).toBeTruthy();
 
-    // What it borrows from the core, with the author's reason beside each.
-    const needs = screen
-      .getByText("Uses from the core")
-      .closest(".factlist-row");
-    expect(
-      [...(needs?.querySelectorAll("li") ?? [])].map(
-        (item) => item.textContent,
-      ),
-    ).toEqual([
+    // What it borrows from the core, with the author's reason beside each, and
+    // what of captured mail its hooks read, with the server's count.
+    expect(rowItems("Uses from the core")).toEqual([
       "AI models — Writes the one-line summaries.",
       "File storage — Keeps the summaries it writes.",
+    ]);
+    expect(rowItems("Reads from captured mail")).toEqual([
+      "The subject",
+      "The participants' addresses",
+      "The first 1,234 characters of the text",
     ]);
 
     // The grants, read straight off the fixture: admin reads and creates the
@@ -892,19 +898,7 @@ describe("ExtensionAccessCard", () => {
 // and three empty sections leave an admin deciding about "de" with no idea what
 // it is.
 describe("ExtensionAccessCard unit identity", () => {
-  it("says a unit is ready, or names what it still needs, and nothing for an older server", async () => {
-    vi.stubGlobal("fetch", backend([]));
-    render(<ExtensionAccessCard />);
-    const setup = async (name: string) =>
-      (await screen.findByText(name))
-        .closest("section.panel")
-        ?.querySelector("p[data-testid=ext-unit-setup]")?.textContent;
-    expect(await setup("Quiet")).toBe(en["extAccess.setupReady"]);
-    expect(await setup("Stale")).toBeUndefined();
-    expect(await setup("Notes")).toMatch(/^Needs setup.*“signing”.*“Acme CRM”/);
-  });
-
-  it("says what each unit is for, from the unit's own declaration", async () => {
+  it("says what each unit is for and whether it is ready, from the server", async () => {
     vi.stubGlobal("fetch", backend([]));
     render(<ExtensionAccessCard />);
 
@@ -918,6 +912,11 @@ describe("ExtensionAccessCard unit identity", () => {
         "Statutory retention floors the core applies. Registers nothing.",
       ),
     ).toBeTruthy();
+    const setups = screen.getAllByTestId("ext-unit-setup");
+    expect(setups.map((p) => p.textContent)).toEqual([
+      expect.stringMatching(/^Needs setup.*“Acme CRM”/),
+      en["extAccess.setupReady"],
+    ]);
   });
 
   it("offers no reference section for a unit that brought nothing", async () => {

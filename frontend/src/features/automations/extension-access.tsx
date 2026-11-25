@@ -54,7 +54,7 @@ import {
   nextGrant,
 } from "../settings/grantmatrix";
 import { UnitGovernance, UnitSetup } from "./extension-governance";
-import { bringsCount, needsFact } from "./extension-needs";
+import { borrowedFacts, bringsCount } from "./extension-needs";
 
 // Extension access (settings → Extensions): what the composed extension tier
 // brought into this installation, and who may use it.
@@ -393,7 +393,7 @@ function UnitBrings({ unit }: Readonly<{ unit: ExtensionUnit }>) {
           term: t("extAccess.brings.jobs"),
           value: list(unit.jobs),
         },
-        needsFact(unit.needs, t("extAccess.brings.needs")),
+        ...borrowedFacts(unit, t),
       ]}
     />
   );

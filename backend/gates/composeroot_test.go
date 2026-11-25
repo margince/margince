@@ -74,11 +74,17 @@ const (
 	// extractor and transcript proposer.
 	// Raised by 244 test lines for the data reset cases of an event the sweep
 	// orphaned, which drive the unexported reset handlers.
-	// Raised by 239 production and 255 test lines for the extension card's setup
+	// Raised by 68 production and 96 test lines for path ids in extension routes
+	// and the mail hooks in the extension inventory. They extend the unexported
+	// route argument reader and inventory builder, and their cases drive them.
+	// Raised by 6 production lines for the signals and initiatives carriers
+	// every contact merge door is wired with. Raised by 6 test lines for the
+	// seat without an introduction grant that the preview refusal case needs.
+	// Raised by 240 production and 258 test lines for the extension card's setup
 	// state and the schedule book's time zone. Both drive the unexported
 	// inventory handler, schedule book and catch-up schedule.
-	composeRootProductionLines = 230_984
-	composeRootTestLines       = 361_186
+	composeRootProductionLines = 231_059
+	composeRootTestLines       = 361_291
 )
 
 // A read under these floors stopped early or read the wrong place, and would

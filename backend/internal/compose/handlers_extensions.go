@@ -175,6 +175,7 @@ func composedExtensionInventory(exts []extension.Extension, verbs []extension.Ve
 			Routes:      unitRoutes(e.Name, verbs),
 			Jobs:        unitJobs(e.Name, jobs),
 			Needs:       unitNeeds(e),
+			MailHooks:   unitMailHooks(e.MailHooks),
 		})
 	}
 	slices.SortFunc(out, func(a, b crmcontracts.ComposedExtension) int {
@@ -196,6 +197,25 @@ func unitNeeds(e extension.Extension) *[]crmcontracts.ComposedExtensionNeed {
 	}
 	slices.SortFunc(needs, func(a, b crmcontracts.ComposedExtensionNeed) int { return strings.Compare(a.Capability, b.Capability) })
 	return &needs
+}
+
+// unitMailHooks is what of each captured mail the unit's hooks read, or nil
+// for a unit with no hook. The manifest records the same declaration.
+func unitMailHooks(h extension.MailHooks) *crmcontracts.ComposedExtensionMailHooks {
+	if h.Parties == nil && h.Deal == nil {
+		return nil
+	}
+	reads := extension.MailViewReads()
+	out := &crmcontracts.ComposedExtensionMailHooks{
+		Parties: h.Parties != nil, Deal: h.Deal != nil,
+		Reads:          make([]crmcontracts.ComposedExtensionMailHooksReads, len(reads)),
+		BodyCharacters: extension.MailBodyCharacters,
+		Reasons:        slices.Sorted(slices.Values(h.Reasons)),
+	}
+	for i, read := range reads {
+		out.Reads[i] = crmcontracts.ComposedExtensionMailHooksReads(read)
+	}
+	return out
 }
 
 // unitRbacObjects collects the distinct objects this unit's operations gate on.
