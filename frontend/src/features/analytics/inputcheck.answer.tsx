@@ -4,6 +4,8 @@ import { api } from "../../api/client";
 import type { components } from "../../api/schema";
 import { EntityRef } from "../../components/entityref";
 import { Button, Modal } from "../../design-system/atoms";
+import { ErrorLine } from "../../design-system/errorline";
+import { FieldGrid, FieldRow } from "../../design-system/fieldgrid";
 import { Heading } from "../../design-system/heading";
 import { QueryGate } from "../../design-system/querystates";
 import {
@@ -35,6 +37,20 @@ export function InputCheckAnswerSheet(props: Readonly<Props>) {
         onClose={props.onClose}
         returnFocusTo={props.returnFocusTo}
         closeLabel={props.labels.cancel}
+      />
+    );
+  }
+  if (props.check?.type === "duplicate_motion") {
+    return (
+      <DuplicateCheckSheet
+        check={props.check}
+        open={props.open}
+        onClose={props.onClose}
+        returnFocusTo={props.returnFocusTo}
+        closeLabel={props.labels.cancel}
+        pending={props.pending}
+        error={props.error}
+        onSeparate={() => props.onSubmit({ outcome: "separate" })}
       />
     );
   }
@@ -246,5 +262,123 @@ function SignalCheckAnswerSheet({
         onClose={() => setOpenedSource(null)}
       />
     </>
+  );
+}
+
+type Deal = components["schemas"]["Deal"];
+
+function useDeal(id: string | undefined, open: boolean) {
+  return useQuery({
+    queryKey: ["deal", id],
+    enabled: open && id !== undefined,
+    queryFn: async () =>
+      unwrap(
+        await api.GET("/deals/{id}", { params: { path: { id: id ?? "" } } }),
+      ),
+  });
+}
+
+// A finding about two open deals that read as one buying motion. The reader
+// merges them, or says they are separate, which the check remembers for the
+// pair. The other deal's id is absent for a reader who may not see it. That
+// reader is offered neither the merge nor its name.
+export function DuplicateCheckSheet({
+  check,
+  open,
+  onClose,
+  returnFocusTo,
+  closeLabel,
+  pending,
+  error,
+  onSeparate,
+}: Readonly<{
+  check: InputCheck;
+  open: boolean;
+  onClose: () => void;
+  returnFocusTo?: () => HTMLElement | null;
+  closeLabel: string;
+  pending?: boolean;
+  error?: unknown;
+  onSeparate: () => void;
+}>) {
+  const t = useT();
+  const headingId = useId();
+  const actions = useReviewActions();
+  const [keepOther, setKeepOther] = useState(true);
+  const otherId =
+    typeof check.observed?.other_deal_id === "string"
+      ? check.observed.other_deal_id
+      : undefined;
+  const subject = useDeal(check.subject_id, open);
+  const other = useDeal(otherId, open);
+  const mayAnswer = check.destination?.mode !== "read";
+  const ends: [Deal, Deal] | undefined =
+    subject.data && other.data
+      ? keepOther
+        ? [subject.data, other.data]
+        : [other.data, subject.data]
+      : undefined;
+  const mayMerge =
+    actions !== null &&
+    ends !== undefined &&
+    ends[0].writable === true &&
+    ends[1].writable === true;
+  return (
+    <Modal
+      intent="form"
+      open={open}
+      onClose={onClose}
+      labelledBy={headingId}
+      returnFocusTo={returnFocusTo}
+    >
+      <Heading id={headingId} size="large" className="modal-title">
+        {t("review.duplicateMotion")}
+      </Heading>
+      <p>{t("review.duplicateHelp")}</p>
+      <FieldGrid>
+        <FieldRow label={t("review.duplicateThisDeal")}>
+          {check.subject && (
+            <EntityRef
+              kind="deal"
+              id={check.subject.id}
+              name={check.subject.label}
+              newTab
+            />
+          )}
+        </FieldRow>
+        <FieldRow label={t("review.duplicateOtherDeal")}>
+          {otherId && other.data ? (
+            <EntityRef kind="deal" id={otherId} name={other.data.name} newTab />
+          ) : (
+            t("review.duplicateOtherWithheld")
+          )}
+        </FieldRow>
+      </FieldGrid>
+      <ErrorLine error={error} />
+      <div className="actions">
+        <Button onClick={onClose}>{closeLabel}</Button>
+        {mayMerge && ends && actions && (
+          <>
+            <Button onClick={() => setKeepOther((was) => !was)}>
+              {t("review.duplicateSwap")}
+            </Button>
+            <actions.DealMergeAction
+              key={ends[0].id}
+              deal={ends[0]}
+              initialTarget={{
+                id: ends[1].id,
+                name: ends[1].name,
+                writable: true,
+              }}
+            />
+          </>
+        )}
+        {mayAnswer && (
+          <Button variant="primary" disabled={pending} onClick={onSeparate}>
+            {t("review.duplicateSeparate")}
+          </Button>
+        )}
+      </div>
+    </Modal>
   );
 }

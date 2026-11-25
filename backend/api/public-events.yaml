@@ -2738,7 +2738,7 @@ components:
         Payload for forecast.exception_resolved. Somebody answered a finding
         from the nightly input check. The entity is the author, because an
         answer is attributable to whoever gave it. The `outcome` field says
-        what kind of answer it was, and consumers must not treat the seven
+        what kind of answer it was, and consumers must not treat the eight
         alike. The `value_correct` and `not_relevant` outcomes hide the
         finding from the screens a revenue commitment is made from. So a
         surface counting open findings has to drop them. The `remind_later`
@@ -2751,7 +2751,7 @@ components:
         outcome:
           type: string
           enum: [fixed_record, added_evidence, value_correct, not_relevant, remind_later,
-                 reassign, condition_cleared]
+                 reassign, condition_cleared, separate]
           x-enum-varnames:
             - ResolvedFixedRecord
             - ResolvedAddedEvidence
@@ -2760,6 +2760,7 @@ components:
             - ResolvedRemindLater
             - ResolvedReassign
             - ResolvedConditionCleared
+            - ResolvedSeparate
         actor_user_id: { type: string, format: uuid }
         expires_at:
           type: string

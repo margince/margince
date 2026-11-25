@@ -227,7 +227,7 @@ func TestACallSupersededDuringThePassLeavesNoOpenFinding(t *testing.T) {
 		e.recordCall(t, 7_000_000)
 		return subjects, err
 	}
-	scanner := assuranceScanner(e.Pool, assurance.NewStore(InstallationDB(e.Pool))).WithCallSubjects(duringRead)
+	scanner := AssuranceScanner(e.Pool, assurance.NewStore(InstallationDB(e.Pool))).WithCallSubjects(duringRead)
 	if _, err := scanner.Scan(e.passCtxFor(), e.at); err != nil {
 		t.Fatalf("the pass: %v", err)
 	}

@@ -1257,12 +1257,12 @@ export interface components {
              */
             deal_id?: string;
         };
-        /** @description Payload for forecast.exception_resolved. Somebody answered a finding from the nightly input check. The entity is the author, because an answer is attributable to whoever gave it. The `outcome` field says what kind of answer it was, and consumers must not treat the seven alike. The `value_correct` and `not_relevant` outcomes hide the finding from the screens a revenue commitment is made from. So a surface counting open findings has to drop them. The `remind_later` outcome leaves the finding open, and it comes back. The reason does not ride along. It is prose one user wrote for another, and a subscriber acting on it acts on text the author may edit. */
+        /** @description Payload for forecast.exception_resolved. Somebody answered a finding from the nightly input check. The entity is the author, because an answer is attributable to whoever gave it. The `outcome` field says what kind of answer it was, and consumers must not treat the eight alike. The `value_correct` and `not_relevant` outcomes hide the finding from the screens a revenue commitment is made from. So a surface counting open findings has to drop them. The `remind_later` outcome leaves the finding open, and it comes back. The reason does not ride along. It is prose one user wrote for another, and a subscriber acting on it acts on text the author may edit. */
         PublicEventForecastExceptionResolved: {
             /** Format: uuid */
             exception_id: string;
             /** @enum {string} */
-            outcome: "fixed_record" | "added_evidence" | "value_correct" | "not_relevant" | "remind_later" | "reassign" | "condition_cleared";
+            outcome: "fixed_record" | "added_evidence" | "value_correct" | "not_relevant" | "remind_later" | "reassign" | "condition_cleared" | "separate";
             /** Format: uuid */
             actor_user_id: string;
             /**
@@ -2160,7 +2160,7 @@ export const publicEventActivityChangedFieldsAudienceValues: ReadonlyArray<Flatt
 export const publicEventActivityChangedFieldsCalendar_methodValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["PublicEventActivityChangedFields"]["calendar_method"]> = ["PUBLISH", "REQUEST", "REPLY", "ADD", "CANCEL", "REFRESH", "COUNTER", "DECLINECOUNTER"];
 export const publicEventForecastAssuranceCreatedStatusValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["PublicEventForecastAssuranceCreated"]["status"]> = ["complete", "incomplete"];
 export const publicEventForecastAssuranceCreatedReadinessValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["PublicEventForecastAssuranceCreated"]["readiness"]> = ["ready", "ready_with_exceptions", "needs_review", "checks_incomplete"];
-export const publicEventForecastExceptionResolvedOutcomeValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["PublicEventForecastExceptionResolved"]["outcome"]> = ["fixed_record", "added_evidence", "value_correct", "not_relevant", "remind_later", "reassign", "condition_cleared"];
+export const publicEventForecastExceptionResolvedOutcomeValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["PublicEventForecastExceptionResolved"]["outcome"]> = ["fixed_record", "added_evidence", "value_correct", "not_relevant", "remind_later", "reassign", "condition_cleared", "separate"];
 export const publicEventForecastSnapshotCreatedTriggerValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["PublicEventForecastSnapshotCreated"]["trigger"]> = ["daily", "call", "period_close", "recheck"];
 export const publicEventForecastShareIssuedKindValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["PublicEventForecastShareIssued"]["kind"]> = ["live", "snapshot"];
 export const publicEventSalesInitiativeUpdatedStatusValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["PublicEventSalesInitiativeUpdated"]["status"]> = ["draft", "live", "ended"];

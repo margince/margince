@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
+import "@testing-library/jest-dom/vitest";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import {
   cleanup,
@@ -62,6 +63,7 @@ function show({
   dealActions = ["read", "update"],
   covered = false,
   signalActions = ["read", "update"],
+  dealRows = {},
 }: {
   refuse?: { status: number; detail: string };
   hold?: Promise<void>;
@@ -69,6 +71,7 @@ function show({
   dealActions?: ("read" | "update" | "create")[];
   covered?: boolean;
   signalActions?: ("read" | "update")[];
+  dealRows?: Record<string, Record<string, unknown>>;
 } = {}) {
   const posted: Posted[] = [];
   const reads = { assurance: 0 };
@@ -143,6 +146,8 @@ function show({
             },
           ],
         });
+      const dealRow = dealRows[/\/deals\/([^/?]+)$/.exec(url)?.[1] ?? ""];
+      if (dealRow) return jsonResponse(dealRow);
       if (url.includes("/deals?"))
         return jsonResponse({
           data: [{ id: "support", name: "Annual support" }],
@@ -497,4 +502,80 @@ it("explains when a signal reader cannot answer the finding", async () => {
   expect(
     within(sheet).queryByRole("button", { name: "Save answer" }),
   ).toBeNull();
+});
+
+function pairFinding(type: string, observed: InputCheck["observed"]) {
+  return { ...check("e-1", FIRST_DEAL), type, subject_id: "later", observed };
+}
+
+function dealRow(id: string, name: string, writable: boolean) {
+  return { id, name, company_id: "acme", version: 3, writable };
+}
+
+async function openPairSheet(
+  observed: InputCheck["observed"],
+  earlierWritable = true,
+  type = "duplicate_motion",
+) {
+  const { posted } = show({
+    findings: [pairFinding(type, observed)],
+    dealRows: {
+      later: dealRow("later", FIRST_DEAL, true),
+      earlier: dealRow("earlier", "Fleet retrofit, phase one", earlierWritable),
+    },
+  });
+  await userEvent.click(await answerButton(FIRST_DEAL));
+  return { posted, sheet: await screen.findByRole("dialog") };
+}
+
+describe("a finding about two deals that may be one buying motion", () => {
+  it("offers the merge and sends the answer separate", async () => {
+    const { posted, sheet } = await openPairSheet({ other_deal_id: "earlier" });
+    expect(
+      await within(sheet).findByRole("button", { name: "Merge deal" }),
+    ).toBeInTheDocument();
+    await userEvent.click(
+      within(sheet).getByRole("button", { name: "These are separate" }),
+    );
+    await waitFor(() =>
+      expect(posted.map((p) => p.body)).toEqual([{ outcome: "separate" }]),
+    );
+  });
+
+  it("offers no merge when the reader may not write the other deal", async () => {
+    const { sheet } = await openPairSheet({ other_deal_id: "earlier" }, false);
+    expect(
+      await within(sheet).findByText("Fleet retrofit, phase one"),
+    ).toBeInTheDocument();
+    expect(
+      within(sheet).queryByRole("button", { name: "Merge deal" }),
+    ).not.toBeInTheDocument();
+  });
+
+  it("names no second deal and offers no merge when the reader may not see it", async () => {
+    const { sheet } = await openPairSheet({ other_withheld: true });
+    expect(
+      await within(sheet).findByText("A deal you cannot open"),
+    ).toBeInTheDocument();
+    expect(
+      within(sheet).queryByRole("button", { name: "Merge deal" }),
+    ).not.toBeInTheDocument();
+    expect(
+      within(sheet).getByRole("button", { name: "These are separate" }),
+    ).toBeInTheDocument();
+  });
+
+  it("is the only finding that offers either", async () => {
+    const { sheet } = await openPairSheet(
+      { other_deal_id: "earlier" },
+      true,
+      "close_past",
+    );
+    expect(
+      within(sheet).queryByRole("button", { name: "These are separate" }),
+    ).not.toBeInTheDocument();
+    expect(
+      within(sheet).queryByRole("button", { name: "Merge deal" }),
+    ).not.toBeInTheDocument();
+  });
 });
