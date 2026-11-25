@@ -23,7 +23,7 @@ may_call:
 # The line is 31 to 34 bytes, with or without its full stop and a line end.
 must_mention:
   - 'handover\.txt'
-  - '(?i)\b3[1-4][\s-]?(?:bytes?|b)\b'
+  - '(?i)\b3[1-4][`*]{0,2}[\s-]?(?:bytes?|b)\b'
 
 must_end_with:
   - company "Nordholz Anlagenbau GmbH" documents=1
