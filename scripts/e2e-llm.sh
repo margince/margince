@@ -234,6 +234,12 @@ COMMIT="$(cat "$STAMP_DIR/commit")"
 # free to assert the absence of something — which the ordering could not
 # otherwise support, since scenarios are driven in the order the glob below
 # yields, filename order and not case number, with case10 second and case9 last.
+# THE SERVER'S OWN RECORD of each /mcp call (mcp.call_log). run_once cuts each
+# run's lines beside its transcript, and the checker grades the calls from them
+# (e2e/llm/calllog.py). A file outlives the restore before every run.
+CALL_LOG="$WORK/mcp-calls.jsonl"
+export MARGINCE_MCP_CALL_LOG="$CALL_LOG"
+
 echo "==> booting the $SLUG stack (never :8080)"
 # A previous run that was interrupted leaves its api holding :18081, and
 # dev-fresh refuses rather than attaching to the wrong stack. Stopping this
@@ -626,6 +632,9 @@ for line in open(sys.argv[1]):
 # keep_transcript copies a stopped run's transcript where the reader looks. It is
 # the only evidence of which failure this was, so a copy that fails says so.
 keep_transcript() {
+  if [[ -f "$1.calls" ]] && ! cp "$1.calls" "$RECORD_DIR/"; then
+    echo "  and the server's call log could not be kept: $1.calls" >&2
+  fi
   if ! cp "$1" "$RECORD_DIR/"; then
     echo "  and the transcript could not be kept: $1" >&2
   else
@@ -658,8 +667,14 @@ SQL
 # not run it at all — a harness stop, never a score. drive.py reads the
 # passport from the variable it is named, so it reaches no command line.
 run_once() {
-  local status=0
+  local status=0 at=0
+  [[ -f "$CALL_LOG" ]] && at=$(($(wc -c < "$CALL_LOG")))
   drive_once "$@" || status=$?
+  # Only the run's own calls: the REST door's are http, and restmap below reads
+  # the catalog over /mcp itself.
+  if [[ "$DOOR" = mcp ]]; then
+    python3 "$ROOT/e2e/llm/calllog.py" cut "$CALL_LOG" "$at" "$2.calls" 2>>"$2.err" || return 3
+  fi
   # On the REST door the run holds http calls; they are rewritten to the verbs
   # they ran, and the tools it was offered are the MCP surface's own, so the
   # checker reads the run as it reads one made over MCP.
@@ -980,9 +995,14 @@ for scenario in "$SCENARIO_DIR"/*.yaml; do
   python3 "$ROOT/e2e/llm/check.py" --efficiency "$scenario" \
     ${transcripts[@]+"${transcripts[@]}"} | tee -a "$REPORT"
 
-  # A settled scenario makes fewer runs than an earlier lane may have kept.
-  rm -f "$RECORD_DIR/$name".run*.jsonl
+  # A settled scenario makes fewer runs than an earlier lane may have kept. Each
+  # run's cut of the server's call log stays beside its transcript.
+  rm -f "$RECORD_DIR/$name".run*.jsonl "$RECORD_DIR/$name".run*.jsonl.calls
   cp "$WORK/$name".run*.jsonl "$RECORD_DIR/" 2>/dev/null || true
+  for calls in "$WORK/$name".run*.jsonl.calls; do
+    [[ -e "$calls" ]] || continue
+    cp "$calls" "$RECORD_DIR/" || echo "  the server's call log could not be kept: $calls" >&2
+  done
 done
 
 # A run that called nothing is scored on its answer, but a sweep in which no run
