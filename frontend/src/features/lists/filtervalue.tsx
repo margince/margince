@@ -21,6 +21,7 @@ import {
   useReferenceOptions,
 } from "../../components/filterreference";
 import type { VocabularyField } from "../../lib/filterdata";
+import { valueFor } from "../../lib/labelfor";
 import {
   type FilterOp,
   isRelativeDate,
@@ -89,13 +90,8 @@ export function ValueControl({
   if (op === "within_radius") {
     return <RadiusValue value={value} onChange={onChange} label={name} />;
   }
-  // A REFERENCE IS ANSWERED BEFORE THE OPERATOR IS, and the order is the whole
-  // point. `in` used to win, so every id field's list was a free-text token box
-  // — a uuid typed wrong there compiles, matches nothing, and reads as a
-  // settled "no rows" exactly as the single case did. The list operator changes
-  // how many records are named, not whether they are chosen.
-  // `exists` has already returned above, so every operator reaching here takes
-  // an operand and a reference answers all of them.
+  // Before `in`: a uuid typed into a token box matches nothing and reads as a
+  // settled "no rows". `in` changes how many records are named, not how.
   if (references !== undefined) {
     return (
       <ReferenceValue
@@ -160,7 +156,7 @@ export function ValueControl({
 }
 
 /** What an empty picker asks for, named by the kind of record it lists. */
-const PICK_PROMPT: Readonly<Record<Reference, MessageKey>> = {
+const PICK_PROMPTS: Readonly<Record<Reference, MessageKey>> = {
   tag: "filters.pickTag",
   app_user: "filters.pickOwner",
   team: "filters.pickTeam",
@@ -170,6 +166,10 @@ const PICK_PROMPT: Readonly<Record<Reference, MessageKey>> = {
   project: "filters.pickProject",
   product: "filters.pickProduct",
 };
+
+function pickPrompt(reference: Reference): MessageKey {
+  return valueFor(PICK_PROMPTS, reference, "filters.pickValue");
+}
 
 /**
  * An id comparison as the RECORDS it names, whether it names one or a list.
@@ -211,7 +211,7 @@ function ReferenceValue({
       value={value}
       onChange={onChange}
       label={label}
-      placeholder={t(PICK_PROMPT[reference])}
+      placeholder={t(pickPrompt(reference))}
     />
   );
 }
@@ -287,7 +287,7 @@ function RecordValue({
         onChange={(next) => onChange(many ? [...ids, String(next)] : next)}
         disabled={loading}
         placeholder={
-          loading ? t("filters.loadingRecords") : t(PICK_PROMPT[reference])
+          loading ? t("filters.loadingRecords") : t(pickPrompt(reference))
         }
         aria-label={name}
         aria-describedby={partial ? noteId : undefined}
