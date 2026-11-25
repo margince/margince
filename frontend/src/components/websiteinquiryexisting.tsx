@@ -12,13 +12,14 @@ import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { requireVersion } from "../api/version";
 import { Button } from "../design-system/atoms";
+import { CellStack } from "../design-system/cellstack";
 import { ErrorLine } from "../design-system/errorline";
 import { useRowSelection } from "../design-system/listselection";
 import { ListTable } from "../design-system/listtable";
 import { QueryStates } from "../design-system/querystates";
 import { RecordFormDialog } from "../design-system/recordformdialog";
 import { formatDateTime } from "../format/format";
-import { useLocale, useT } from "../i18n";
+import { type Translator, useLocale, useT } from "../i18n";
 import { useOpenSource } from "../lib/opensource";
 import { unwrap } from "../lib/problem";
 import { useViewerZone } from "../lib/viewerzone";
@@ -252,9 +253,7 @@ function InquirySourceTable({
       selection={{
         ...selection,
         label: (row) =>
-          t("inquiry.selectSource", {
-            subject: row.subject ?? t("inquiry.untitled"),
-          }),
+          t("inquiry.selectSource", { subject: senderOf(row, t) }),
         selectable: (row) => !!row.version,
         bar: <p>{t("inquiry.existingLimit")}</p>,
       }}
@@ -263,14 +262,7 @@ function InquirySourceTable({
           key: "source",
           header: t("inquiry.submission"),
           fixed: true,
-          cell: (row) =>
-            open ? (
-              <Button variant="link" onClick={() => open(row.id)}>
-                {row.subject ?? t("inquiry.untitled")}
-              </Button>
-            ) : (
-              (row.subject ?? t("inquiry.untitled"))
-            ),
+          cell: (row) => <InquirySource source={row} open={open} />,
         },
         {
           key: "received",
@@ -279,6 +271,49 @@ function InquirySourceTable({
         },
       ]}
     />
+  );
+}
+
+// Every note from one form carries the same subject, so a row is named by
+// who sent it. A note whose fields are withheld or were never kept keeps it.
+function senderOf(source: Activity, t: Translator): string {
+  const sent = source.web_form;
+  return (
+    sent?.full_name || sent?.email || source.subject || t("inquiry.untitled")
+  );
+}
+
+function InquirySource({
+  source,
+  open,
+}: Readonly<{ source: Activity; open: ReturnType<typeof useOpenSource> }>) {
+  const t = useT();
+  const name = senderOf(source, t);
+  const sent = source.web_form;
+  const email = sent?.full_name ? sent.email : "";
+  const opening = firstLine(sent?.message ?? "");
+  return (
+    <CellStack>
+      {open ? (
+        <Button variant="link" onClick={() => open(source.id)}>
+          {name}
+        </Button>
+      ) : (
+        <span>{name}</span>
+      )}
+      {email && <span className="t-caption">{email}</span>}
+      {opening && <span className="t-caption">{opening}</span>}
+    </CellStack>
+  );
+}
+
+// The visitor's own text, so it is read as plain lines and never as markdown.
+function firstLine(message: string): string {
+  return (
+    message
+      .split(/\r?\n/)
+      .map((line) => line.trim())
+      .find(Boolean) ?? ""
   );
 }
 
@@ -312,9 +347,10 @@ function InquirySelectionResults({
           key: "source",
           header: t("inquiry.submission"),
           fixed: true,
-          cell: (row) =>
-            sources.find((source) => source.id === row.id)?.subject ??
-            t("inquiry.untitled"),
+          cell: (row) => {
+            const source = sources.find((each) => each.id === row.id);
+            return source ? senderOf(source, t) : t("inquiry.untitled");
+          },
         },
         {
           key: "status",
