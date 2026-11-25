@@ -118,9 +118,9 @@ export const formatFixture: ImportFormat = {
   size_limit_mb: 10,
 };
 
-// The runs as the list answers them, newest first: a draft no test has read, a
-// tested run that waits for its reader, one complete ZIP that may still be
-// undone, and one CSV that already was.
+// The runs as the list answers them, newest first. A draft no test has read
+// and a tested run that waits for its reader come first. Then a complete ZIP
+// that may still be undone, and a CSV that already was.
 export const recentRunsFixture: ImportRun[] = [
   {
     id: "019ff-run-draft",
