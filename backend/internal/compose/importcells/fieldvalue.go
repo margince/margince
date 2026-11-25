@@ -94,8 +94,6 @@ func currencyValue(col fieldcatalog.Column, text string) (float64, migration.Rea
 }
 
 // spreadsheetBooleans are the spellings a spreadsheet uses for yes and no.
-//
-//nolint:goconst // a cell's spelling; the constant goconst offers names a query argument's
 var spreadsheetBooleans = map[string]bool{"true": true, "yes": true, "1": true, "false": false, "no": false, "0": false}
 
 // booleanValue reads a cell spelled as one of spreadsheetBooleans.
