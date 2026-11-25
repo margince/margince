@@ -17,7 +17,7 @@ input and output schema in folds below it. What a tool may do and whether a huma
 | Resources | 14 |
 | Tool catalog | 243.9 KB |
 | Resource catalog | 5.5 KB |
-| Approx. wire tokens | 63844 |
+| Approx. wire tokens | 63855 |
 | Largest tool | `read_details` (15.8 KB) |
 | Scopes rendered | `read`, `draft`, `write`, `send`, `enrich` |
 
@@ -34,7 +34,7 @@ tool adds to that listing, and what it costs each scheduled agent, agent by agen
 |---|---:|---:|---|
 | Output schemas | 33.7 KB | 13% | **No**: a result's shape, never listed to a model |
 | Descriptions (incl. governance clause) | 51.0 KB | 20% | Yes, every step |
-| Input schemas | 147.6 KB | 60% | Yes, every step |
+| Input schemas | 147.7 KB | 60% | Yes, every step |
 | _Names, annotations, punctuation_ | 11.6 KB | 4% | Partly |
 | **Description + input schema** | **198.7 KB** | **81%** | **the recurring cost** |
 
@@ -105,7 +105,7 @@ descriptions and input schemas are what each step pays for.
 | [`read_reports`](#read_reports) | Read sales reports | yes |  | 3353 |
 | [`read_tags`](#read_tags) | Read tags | yes |  | 358 |
 | [`read_view`](#read_view) | Read a view | yes |  | 1921 |
-| [`read_workspace`](#read_workspace) | Read how this workspace is set up | yes |  | 2994 |
+| [`read_workspace`](#read_workspace) | Read how this workspace is set up | yes |  | 3005 |
 | [`resolve_duplicates`](#resolve_duplicates) | Merge two records or dismiss a flagged pair |  |  | 618 |
 | [`run_research`](#run_research) | Run AI work for your user |  |  | 1365 |
 | [`schedule_meeting`](#schedule_meeting) | Invite to a meeting |  |  | 515 |
@@ -9871,6 +9871,7 @@ user first for the actions ai_call, ai_calls, member_retirement.)
         "channel_connections",
         "channel_providers",
         "colleagues",
+        "company_types",
         "confirm_submissions",
         "connector_containers",
         "connectors",
@@ -9908,6 +9909,7 @@ user first for the actions ai_call, ai_calls, member_retirement.)
         "legal_entity_members",
         "legal_holds",
         "legal_review_settings",
+        "link_types",
         "list_filters",
         "member",
         "member_retirement",
@@ -9929,6 +9931,7 @@ user first for the actions ai_call, ai_calls, member_retirement.)
         "query",
         "record_fields",
         "record_history",
+        "record_kinds",
         "recovery_health",
         "report_blocks",
         "report_vocabulary",

@@ -4,11 +4,13 @@
 package compose
 
 import (
+	"fmt"
 	"strings"
 	"testing"
 
 	"github.com/margince/margince/backend/internal/shared/ports/recordkinds"
 	"github.com/margince/margince/backend/pkg/extension"
+	"github.com/margince/margince/backend/pkg/extension/extensiontest"
 )
 
 func visitKind(unitNS string) extension.RecordKindDeclaration {
@@ -80,4 +82,27 @@ func TestARecordKindGatesOnItsOwnRbacObjectWithNoGrantByDefault(t *testing.T) {
 	if len(defaults) != 1 || defaults[0].Role != "rep" || defaults[0].Actions[0] != "read" {
 		t.Errorf("defaults = %+v, want the one declared grant", defaults)
 	}
+}
+
+func TestTheBootAndTheTestKitRefuseADeclarationAlike(t *testing.T) {
+	ext := extension.Extension{Name: "kinds-bad", RecordKinds: []extension.RecordKindDeclaration{visitKind("ext_kinds_bad"), visitKind("ext_kinds_bad")}}
+	boot := preflightKindsLinksSignals([]extension.Extension{ext})
+	kit := &kitReport{}
+	extensiontest.Check(kit, ext)
+	if boot == nil || len(kit.reported) != 1 || !strings.HasSuffix(boot.Error(), kit.reported[0]) {
+		t.Errorf("the boot refused with %v and the kit reported %q, want one message", boot, kit.reported)
+	}
+}
+
+// kitReport keeps what extensiontest reports, so a refusal does not fail the
+// test that expects it.
+type kitReport struct {
+	testing.TB
+	reported []string
+}
+
+func (k *kitReport) Helper() {}
+
+func (k *kitReport) Errorf(format string, args ...any) {
+	k.reported = append(k.reported, fmt.Sprintf(format, args...))
 }

@@ -56,7 +56,7 @@ carry both.
 | `Extension.CompanyTypes` | The unit declares the types and a label for each. The boot refuses a bad name or a duplicate. |
 | `SetExtensionTypes` | The unit sets its own types on a company. It leaves other units' types alone. |
 | `PATCH /v1/companies/{id}` | A user or an agent sets `extension_relationship_types`. A value no unit declares is a 422 with the code `invalid_enum`. |
-| `GET /v1/company-types` | Lists every declared value and its label, for any signed-in user. |
+| `GET /v1/company-types` | Lists every declared value and its label, for any signed-in user. Their agent reads the same list with the `read_workspace` action `company_types`. |
 | `extension_relationship_type` list filter | Takes a declared extension value. The `relationship_type` filter stays core's closed list, because narrowing a published parameter later breaks clients. |
 | Agent tools | The company update shape carries `extension_relationship_types`, the same as the REST body. |
 
@@ -83,7 +83,7 @@ that names a kind accepts it as a pattern.
 | Row scope | `OwnerColumn` names the `uuid` column that holds a row's owner. Core then reads the kind under the role's own, team or all row scope, as it reads deals, in every reader below: the row check, search, lists, saved views, the record picker, reports and History. A row with no owner is shown to every reader of the kind. A kind without `OwnerColumn` is all or nothing: the `read` right shows every row. A record grant does not reach an extension kind. `auth.ExtensionScopeClause` renders the scope, and `backend/gates/extensionrowscope_test.go` fails a core read of a kind's table without it. |
 | Natural key | The unit's table keeps a unique index over the declared fields and no others. The readiness probe fails while a declared table, a column or that index is missing, while the indexes search and History read are missing, and while a declared owner column is not a `uuid` or has no index that starts with it (see [Declare a record kind](../how-to/add-an-extension.md#declare-a-record-kind)). |
 | Delete policy | `archive_only` (the default) keeps the row. `erasable` lets the row be erased through the erasure path. |
-| `GET /v1/record-kinds` | Lists the kinds the signed-in seat may read, with fields, natural key, the `view` the unit declared, delete policy and the actions the seat holds. |
+| `GET /v1/record-kinds` | Lists the kinds the signed-in seat may read, with fields, natural key, the `view` the unit declared, delete policy and the actions the seat holds. The seat's agent reads the same list with the `read_workspace` action `record_kinds`. |
 | Audit | A change to an extension record is written with the `ext:<unit>:<kind>` name as its entity type and the existing actions. No new action is needed. |
 | Frontend | `isExtensionEntityKind` reads the spelling and `useRecordKindDirectory` loads the declared kinds. A core page does not show an extension kind, so `recordRoute` names none. A notice about one opens the unit's screen at the kind's `view`. |
 

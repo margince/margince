@@ -3634,6 +3634,7 @@ paths:
             Accounts carrying this extension type (`ext:<unit>:<type>`, from `extension_relationship_types`).
             It is a separate parameter so the closed `relationship_type` list stays as it is. A value
             no installed extension declares answers 422. Both parameters together select accounts that carry both.
+            `listCompanyTypes` lists the values, and an agent reads them with the `read_workspace` action `company_types`.
         - name: owner_team_id
           in: query
           schema: { type: string, format: uuid }
@@ -6724,7 +6725,8 @@ paths:
           description: >-
             A link type, core's or an extension's `ext:<unit>:<type>`. Keeps the deals that hold at
             least one link of that type to another live deal, from either end. Links to a company or
-            a contact are not read by this filter.
+            a contact are not read by this filter. `listLinkTypes` lists the values, and an agent
+            reads them with the `read_workspace` action `link_types`.
           schema: { type: string, maxLength: 68 }
         - name: tag_id
           in: query
@@ -9325,16 +9327,15 @@ paths:
     get:
       tags: [Companies]
       operationId: listCompanyTypes
-      security: [ { cookieAuth: [] } ]   # screens read it; an agent learns the values from the 422 that names them
-      x-agent-access: human-only
-      x-human-only-reason: covered
+      security: [ { bearerAuth: [] }, { cookieAuth: [] } ]
+      x-mcp-tool: { verb: read_company_types, router: read_workspace, action: company_types, tier: auto_execute, scope: read, served_by: route }
       summary: Which company types installed extensions add beside core's own.
       description: |
         The values a company can carry in `extension_relationship_types`, and the label a
         screen shows for each. Which extensions are installed is a fact of the binary, so the
         contract cannot list the values; this operation does.
 
-        Readable by any signed-in seat, because the company list shows these types and filters
+        Readable by any signed-in seat and its agent, because the company list shows these types and filters
         on them. Each value and label is declared in extension code, never typed by an
         administrator. Empty when no installed extension declares a type.
       responses:
@@ -9349,10 +9350,8 @@ paths:
     get:
       tags: [Extensions]
       operationId: listRecordKinds
-      security: [ { cookieAuth: [] } ]   # screens read it; an agent meets a kind through the record that carries it
-      x-agent-access: human-only
-      x-human-only-reason: covered
-      x-settings-audience: member
+      security: [ { bearerAuth: [] }, { cookieAuth: [] } ]
+      x-mcp-tool: { verb: read_record_kinds, router: read_workspace, action: record_kinds, tier: auto_execute, scope: read, served_by: route }
       summary: Which kinds of record installed extensions add beside core's own.
       description: |
         The record kinds this caller may read, each named `ext:<unit>:<kind>`, with the label a
@@ -10389,9 +10388,8 @@ paths:
     get:
       tags: [Links]
       operationId: listLinkTypes
-      x-agent-access: human-only
-      x-human-only-reason: security   # a reader decides which records are linked
-      security: [{ cookieAuth: [] }]
+      x-mcp-tool: { verb: read_link_types, router: read_workspace, action: link_types, tier: auto_execute, scope: read, served_by: route }
+      security: [ { bearerAuth: [] }, { cookieAuth: [] } ]
       summary: The types a link between two records may have.
       description: |
         Core's types, then each extension's, with the records each may start and end on. An
@@ -15762,7 +15760,10 @@ paths:
         - name: resource
           in: query
           required: true
-          description: The record type whose vocabulary to read, or `ext:<unit>:<kind>` for a kind an extension declared.
+          description: >-
+            The record type whose vocabulary to read, or `ext:<unit>:<kind>` for a kind an extension declared.
+            `listRecordKinds` lists the kinds the caller may read, and an agent reads them with the
+            `read_workspace` action `record_kinds`.
           schema: { $ref: '#/components/schemas/FilterResource' }
       responses:
         '200':

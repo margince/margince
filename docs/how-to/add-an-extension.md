@@ -1868,6 +1868,18 @@ func TestNewDeclaresTheFloors(t *testing.T) {
 
 Check the floors, not only that `New()` returns. A test with no check proves nothing (`P3`, `tests-as-spec`).
 
+A unit that declares record kinds, link types or signal types checks them with `backend/pkg/extension/extensiontest`.
+Each check runs the rule core's start runs, and fails the test with the start's own message. The shape is in
+`extensions/finance-demo/financedemo_test.go`.
+
+| Check | What it fails |
+|---|---|
+| `extensiontest.Check(t, ext)` | A record kind, link type or signal type the start refuses, and a name the unit declares twice. |
+| `extensiontest.CheckLink(t, ext, linkType, from, to)` | A link type the unit does not declare, or one that does not join a `from` record to a `to` record. |
+| `extensiontest.CheckSignal(t, ext, kind, fields)` | A signal type the unit does not declare, or evidence that does not fit its layout. |
+
+The kit does not see other units, so a clash between two units still shows only when the set is composed.
+
 ## Compose and check
 
 Add the unit to `instance/go.mod`, then run `make composition` again and run the gates. Do not run `go mod tidy`

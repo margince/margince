@@ -10,16 +10,16 @@
   "totals": {
     "tools": 48,
     "resources": 14,
-    "tool_catalog_bytes": 249754,
+    "tool_catalog_bytes": 249798,
     "resource_catalog_bytes": 5622,
-    "approx_wire_tokens_total": 63844,
+    "approx_wire_tokens_total": 63855,
     "largest_tool_bytes": 16220,
     "largest_tool": "read_details",
     "tool_catalog_composition": {
       "description_bytes": 52248,
-      "input_schema_bytes": 151187,
+      "input_schema_bytes": 151231,
       "output_schema_bytes": 34465,
-      "description_plus_input_schema_bytes": 203435
+      "description_plus_input_schema_bytes": 203479
     }
   },
   "tools": {
@@ -9077,6 +9077,7 @@
                 "channel_connections",
                 "channel_providers",
                 "colleagues",
+                "company_types",
                 "confirm_submissions",
                 "connector_containers",
                 "connectors",
@@ -9114,6 +9115,7 @@
                 "legal_entity_members",
                 "legal_holds",
                 "legal_review_settings",
+                "link_types",
                 "list_filters",
                 "member",
                 "member_retirement",
@@ -9135,6 +9137,7 @@
                 "query",
                 "record_fields",
                 "record_history",
+                "record_kinds",
                 "recovery_health",
                 "report_blocks",
                 "report_vocabulary",
@@ -27257,6 +27260,11 @@
           "route": "in process: send body's members at the top level, beside action"
         },
         {
+          "action": "company_types",
+          "does": "Which company types installed extensions add beside core's own.",
+          "route": "GET /v1/company-types"
+        },
+        {
           "action": "confirm_submissions",
           "does": "List what subjects sent through their own confirm links.",
           "query": [
@@ -27643,6 +27651,11 @@
           "route": "GET /v1/legal-reviews/settings"
         },
         {
+          "action": "link_types",
+          "does": "The types a link between two records may have.",
+          "route": "GET /v1/link-types"
+        },
+        {
           "action": "list_filters",
           "body": {
             "additionalProperties": false,
@@ -27943,6 +27956,11 @@
             }
           ],
           "route": "GET /v1/records/{entity_type}/{id}/history"
+        },
+        {
+          "action": "record_kinds",
+          "does": "Which kinds of record installed extensions add beside core's own.",
+          "route": "GET /v1/record-kinds"
         },
         {
           "action": "recovery_health",
