@@ -310,6 +310,9 @@ func (s *Store) carryContactSatellitesTx(ctx context.Context, tx pgx.Tx, sourceI
 		{"consent links", func() error { return s.carryConsentSatellitesTx(ctx, tx, from, to) }},
 		{"introduction asks", func() error { return s.carryIntrosTx(ctx, tx, sourceID, targetID) }},
 		{"grants", func() error { return s.carryGrantsTx(ctx, tx, contactEntity, sourceID.UUID, targetID.UUID) }},
+		{"resolved signals", func() error {
+			return s.carrySignalResolutionsTx(ctx, tx, contactEntity, sourceID.UUID, targetID.UUID)
+		}},
 	}
 	for _, step := range steps {
 		if err := step.run(); err != nil {
@@ -394,8 +397,13 @@ func relinkLinkRows(ctx context.Context, tx pgx.Tx, entityType string, sourceID,
 	if err != nil {
 		return 0, err
 	}
-	relinked := tag.RowsAffected()
+	return tag.RowsAffected(), relinkMemberships(ctx, tx, args)
+}
 
+// relinkMemberships moves the merged-away record's list memberships and tags
+// onto the survivor. A membership or tag the survivor already holds stands, and
+// the retired copy is dropped. args names the source, the target and the kind.
+func relinkMemberships(ctx context.Context, tx pgx.Tx, args pgx.NamedArgs) error {
 	// Spelled out per table: the company-merge coverage census reads these
 	// statements, and a table name assembled at runtime is invisible to it.
 	for _, stmt := range []string{
@@ -409,10 +417,10 @@ func relinkLinkRows(ctx context.Context, tx pgx.Tx, entityType string, sourceID,
 		`UPDATE taggable a SET entity_id = @target WHERE ` + mergeMembershipSource,
 	} {
 		if _, err := tx.Exec(ctx, stmt, args); err != nil {
-			return 0, err
+			return fmt.Errorf("move the merged-away record's lists and tags: %w", err)
 		}
 	}
-	return relinked, nil
+	return nil
 }
 
 // mergeConsent carries the merged-away contact's consent onto the survivor

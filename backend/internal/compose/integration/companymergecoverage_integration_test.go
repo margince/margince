@@ -52,6 +52,7 @@ var mergePathFiles = []string{
 	"internal/modules/contacts/mergekindid.go",
 	"internal/modules/contacts/company_relationship_types.go",
 	"internal/modules/identity/grantmerge.go",
+	"internal/modules/signals/mergecarry.go",
 }
 
 // companyFKsTheMergeLeaves are the company-pointing columns the merge

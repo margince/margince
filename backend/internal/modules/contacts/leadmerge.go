@@ -176,7 +176,7 @@ func (s *Store) carryLeadToLeadTx(ctx context.Context, tx pgx.Tx, sourceID, targ
 	if err := moveKindIDRows(ctx, tx, entityLead, sourceID.UUID, targetID.UUID); err != nil {
 		return fmt.Errorf("carry the merged-away lead's references by kind and id: %w", err)
 	}
-	return carryLeadMembershipsToLead(ctx, tx, sourceID, targetID)
+	return relinkMemberships(ctx, tx, pgx.NamedArgs{mergeSourceKey: sourceID, mergeTargetKey: targetID, recordKindParam: entityLead})
 }
 
 // readLeadMergeState reads one end of a lead merge: the live lead, or — for
@@ -267,26 +267,6 @@ func retireStaleCandidates(ctx context.Context, tx pgx.Tx, loser ids.LeadID) err
 		if _, err := archiveDedupeCandidateTx(ctx, tx, id, archiveReasonEndpointMerged,
 			map[string]any{auditKeyEntityType: entityLead}); err != nil {
 			return err
-		}
-	}
-	return nil
-}
-
-// carryLeadMembershipsToLead moves list memberships and tags the survivor
-// does not already have; the rest go with the archived row (§1.10 cleanup).
-func carryLeadMembershipsToLead(ctx context.Context, tx pgx.Tx, sourceID, targetID ids.LeadID) error {
-	for _, m := range []struct{ table, key string }{{"list_member", "list_id"}, {"taggable", "tag_id"}} {
-		if _, err := tx.Exec(ctx, `
-			DELETE FROM `+m.table+` a
-			WHERE a.entity_type = 'lead' AND a.entity_id = $1 AND EXISTS (
-			  SELECT 1 FROM `+m.table+` b
-			  WHERE b.entity_type = 'lead' AND b.entity_id = $2 AND b.`+m.key+` = a.`+m.key+`)`,
-			sourceID, targetID); err != nil {
-			return fmt.Errorf("drop colliding lead %s rows: %w", m.table, err)
-		}
-		if _, err := tx.Exec(ctx, `UPDATE `+m.table+` SET entity_id = $2 WHERE entity_type = 'lead' AND entity_id = $1`,
-			sourceID, targetID); err != nil {
-			return fmt.Errorf("carry lead %s rows: %w", m.table, err)
 		}
 	}
 	return nil

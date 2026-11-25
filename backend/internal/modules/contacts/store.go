@@ -31,6 +31,7 @@ type Store struct {
 	signaturePreview        func(string) (string, error)
 	floorCarry              FloorCarry
 	mergeSignalReader       MergeSignalReader
+	signalCarrier           SignalCarrier
 	mergeCommitmentReader   MergeCommitmentReader
 	mergeNoticeReader       MergeNoticeReader
 	mergeContentReader      MergeContentReader

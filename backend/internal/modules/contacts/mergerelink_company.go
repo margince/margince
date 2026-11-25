@@ -89,8 +89,6 @@ func repointCompanyReferences(ctx context.Context, tx pgx.Tx, sourceID, targetID
 		// counting.
 		`UPDATE linkedin_connection SET matched_company_id = $2 WHERE matched_company_id = $1`,
 		`UPDATE offer SET buyer_company_id = $2 WHERE buyer_company_id = $1`,
-		`UPDATE signal SET resolved_company_id = $2 WHERE resolved_company_id = $1`,
-		`UPDATE signal_resolution SET matched_company_id = $2 WHERE matched_company_id = $1`,
 		`UPDATE signal_thread_scan SET resolved_company_id = $2 WHERE resolved_company_id = $1`,
 	} {
 		if _, err := tx.Exec(ctx, stmt, sourceID, targetID); err != nil {

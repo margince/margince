@@ -116,6 +116,7 @@ const (
 	consentPkg       = "internal/modules/consent"
 	identityPkg      = "internal/modules/identity"
 	introductionsPkg = "internal/modules/introductions"
+	signalsPkg       = "internal/modules/signals"
 )
 
 // carriedThroughAPort names the satellites another module moves inside the
@@ -129,7 +130,8 @@ var carriedThroughAPort = map[string]portCarry{
 	"communication_basis":       {consentPkg, "Store.CarrySatellitesTx", "holdsAConsentSatellite"},
 	"consent_qualifying_event":  {consentPkg, "Store.CarrySatellitesTx", "holdsAConsentSatellite"},
 	"consent_doi_token":         {consentPkg, "Store.CarrySatellitesTx", "holdsAConsentSatellite"},
-	"data_subject_request":      {consentPkg, "Store.CarrySatellitesTx", "holdsAConsentSatellite"},
+	"data_subject_request":      {consentPkg, "Store.BindRequestsToAddressesTx", "holdsAConsentSatellite"},
+	"signal":                    {signalsPkg, "CarryResolutionsTx", "refuseUnwiredSignalCarry"},
 	"intro_request":             {introductionsPkg, "Store.CarryIntrosTx", "refuseUnwiredIntroCarry"},
 	"record_grant":              {identityPkg, "Service.CarryGrantsTx", "refuseUnwiredGrantCarry"},
 }

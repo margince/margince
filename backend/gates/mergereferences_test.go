@@ -12,19 +12,17 @@ package gates
 //
 // A row a merge leaves on the retired record is reachable from no read of the
 // survivor, and nothing fails. So the obligation comes from the catalog, one
-// column at a time. It takes every foreign key to the record, whatever its
-// name, and every column named for the record that has no foreign key. A
-// column counts as carried when:
+// column at a time (referencesTo). Some columns the catalog keeps equal to
+// another: a _bound CHECK, a generated column or an ON UPDATE CASCADE key.
+// Such a column is judged as that other column. A column counts as carried
+// when:
 //
 //   - an UPDATE, or an INSERT ... SELECT, that the merge reaches in contacts
 //     writes it;
 //   - a port in carriedThroughAPort writes it, and the merge reaches the
 //     contacts function that refuses when that port is not wired;
 //   - a declared link moves it (sweepreach);
-//   - carriedOutOfSight names the contacts function that moves it;
-//   - the catalog keeps it equal to another column of its row (a _bound CHECK,
-//     a generated column or an ON UPDATE CASCADE key), and that column is
-//     carried.
+//   - carriedOutOfSight names the contacts function that moves it.
 //
 // This proves a statement moves the column, not that it moves every row; the
 // owning module's tests hold that.
@@ -49,8 +47,8 @@ var mergedRecords = []struct {
 	record, entry string
 	floor         int
 }{
-	{"contact", "Store.MergeContact", 51},
-	{"lead", "Store.MergeLead", 20},
+	{"contact", "Store.MergeContact", 78},
+	{"lead", "Store.MergeLead", 45},
 }
 
 // carriedOutOfSight names, for each column a merge moves in a statement this
@@ -68,23 +66,44 @@ var carriedOutOfSight = map[string]string{
 	"relationship.counterparty_contact_id":      "mergeEdgeWrite",
 }
 
+// mergeHistory is the reason shared by the rows that record what happened to
+// the retired record.
+const mergeHistory = "history of the retired record, which is never rewritten"
+
 // stayOnTheRetiredRecord holds the columns a merge leaves where they are, and
 // why. Keys are table.column.
 var stayOnTheRetiredRecord = gatekit.Waive(map[string]string{
-	"contact_address_country.contact_id":   "a check of the merged-away contact's own postal code and city, which says nothing about the survivor's address. The survivor keeps its own check, and the trigger deletes it when the merge moves the survivor's address; the next sweep checks the address the survivor ends with",
-	"contact_brief.contact_id":             "a cached sentence about one record. relinkReaderJudgements deletes the briefs of both halves, so the next read writes one about the record that stands",
-	"contact.converted_from_lead_id":       "names the lead a contact was promoted from. Only an open lead merges, and a promoted lead is archived, so no contact names a lead that a merge retires",
-	"dedupe_candidate.left_contact_id":     "the duplicate pair the reviewer judged. The merge settles that pair and archives every other open pair naming the retired record, so each row stays the record of a decision about the two it named",
-	"dedupe_candidate.right_contact_id":    "the duplicate pair the reviewer judged. The merge settles that pair and archives every other open pair naming the retired record, so each row stays the record of a decision about the two it named",
-	"dedupe_candidate.left_lead_id":        "the duplicate pair the reviewer judged. retireStaleCandidates archives every other open pair naming the retired lead, so each row stays the record of a decision about the two it named",
-	"dedupe_candidate.right_lead_id":       "the duplicate pair the reviewer judged. retireStaleCandidates archives every other open pair naming the retired lead, so each row stays the record of a decision about the two it named",
-	"graph_interaction_edge.contact_id":    "search owns it and rebuilds it: graphedgegen.go consumes contact.merged and refolds the survivor's edges after dropping the source's. The table is derived from activities the merge has already moved, so a moved row would carry a fold of the old graph",
-	"lawful_basis_confirmation.contact_id": "a confirmation that lasts 15 minutes and is spent by the next send to that record. Left on the retired record it expires unspent, and a send to the survivor asks again. Moving it would let one confirmation answer a send to a record the user did not confirm",
-	"lawful_basis_confirmation.lead_id":    "a confirmation that lasts 15 minutes and is spent by the next send to that record. Left on the retired record it expires unspent, and a send to the survivor asks again. Moving it would let one confirmation answer a send to a record the user did not confirm",
-	"lead_privacy_notice.lead_id":          "the notice sent for the capture that made the retired lead. refuseWebsiteLeadNotYetTold refuses the merge until both leads are told, and the table holds one notice per lead, so the survivor's own notice is the one that speaks for it",
-	"lead_score_history.lead_id":           "the scores the retired lead had, each computed from what it held then. The merge scores the survivor again from what it now holds, and that score starts the survivor's own history",
-	"tag_suggestion.contact_id":            "the tag scout's reading of one record's evidence. The next scout pass reads the archived contact's suggestion as superseded, and the activities the merge moved raise the survivor's own. A moved row could collide with the survivor's open suggestion of the same tag",
-	"user_record_view.entity_contact_id":   "when one user last opened the retired record. The survivor keeps its own stamp, and a moved stamp would say the user saw the survivor's changes when they had opened another record",
+	"contact_address_country.contact_id":       "a check of the merged-away contact's own postal code and city, which says nothing about the survivor's address. The survivor keeps its own check, and the trigger deletes it when the merge moves the survivor's address; the next sweep checks the address the survivor ends with",
+	"contact_brief.contact_id":                 "a cached sentence about one record. relinkReaderJudgements deletes the briefs of both halves, so the next read writes one about the record that stands",
+	"contact.converted_from_lead_id":           "names the lead a contact was promoted from. Only an open lead merges, and a promoted lead is archived, so no contact names a lead that a merge retires",
+	"dedupe_candidate.left_contact_id":         "the duplicate pair the reviewer judged. The merge settles that pair and archives every other open pair naming the retired record, so each row stays the record of a decision about the two it named",
+	"dedupe_candidate.right_contact_id":        "the duplicate pair the reviewer judged. The merge settles that pair and archives every other open pair naming the retired record, so each row stays the record of a decision about the two it named",
+	"dedupe_candidate.left_lead_id":            "the duplicate pair the reviewer judged. retireStaleCandidates archives every other open pair naming the retired lead, so each row stays the record of a decision about the two it named",
+	"dedupe_candidate.right_lead_id":           "the duplicate pair the reviewer judged. retireStaleCandidates archives every other open pair naming the retired lead, so each row stays the record of a decision about the two it named",
+	"graph_interaction_edge.contact_id":        "search owns it and rebuilds it: graphedgegen.go consumes contact.merged and refolds the survivor's edges after dropping the source's. The table is derived from activities the merge has already moved, so a moved row would carry a fold of the old graph",
+	"lawful_basis_confirmation.contact_id":     "a confirmation that lasts 15 minutes and is spent by the next send to that record. Left on the retired record it expires unspent, and a send to the survivor asks again. Moving it would let one confirmation answer a send to a record the user did not confirm",
+	"lawful_basis_confirmation.lead_id":        "a confirmation that lasts 15 minutes and is spent by the next send to that record. Left on the retired record it expires unspent, and a send to the survivor asks again. Moving it would let one confirmation answer a send to a record the user did not confirm",
+	"lead_privacy_notice.lead_id":              "the notice sent for the capture that made the retired lead. refuseWebsiteLeadNotYetTold refuses the merge until both leads are told, and the table holds one notice per lead, so the survivor's own notice is the one that speaks for it",
+	"lead_score_history.lead_id":               "the scores the retired lead had, each computed from what it held then. The merge scores the survivor again from what it now holds, and that score starts the survivor's own history",
+	"tag_suggestion.contact_id":                "the tag scout's reading of one record's evidence. The next scout pass reads the archived contact's suggestion as superseded, and the activities the merge moved raise the survivor's own. A moved row could collide with the survivor's open suggestion of the same tag",
+	"user_record_view.entity_id":               "when one user last opened the retired record. The survivor keeps its own stamp, and a moved stamp would say the user saw the survivor's changes when they had opened another record",
+	"ai_call.subject_id":                       "the log of one model call made about the retired record: " + mergeHistory,
+	"ai_task_run.subject_id":                   "a run of an AI task about the retired record, computed from what it held then: " + mergeHistory,
+	"approval.target_entity_id":                "a person's approval of one action on the record it named. Moved, an approval given for the retired record would act on the survivor; confirm links are expired rather than moved for the same reason",
+	"approval.co_target_entity_id":             "a person's approval of one action on the records it named. Moved, an approval given for the retired record would act on the survivor; confirm links are expired rather than moved for the same reason",
+	"audit_log.entity_id":                      "the audit trail of the retired record: " + mergeHistory,
+	"chat_post_item.event_id":                  "names a posted event, not a record. The kind column holds event types, and no CHECK lists them, so the census asks",
+	"communication_decision.subject_id":        "what the send engine decided for the retired record at the time: " + mergeHistory,
+	"embedding.entity_id":                      "the search index's vector of the retired record's text. The indexer embeds the survivor from its own text, and a moved row would index the retired record's text under the survivor",
+	"field_provenance.object_id":               "where each of the retired record's own field values came from. Open question for the maintainers: whether the provenance of a value the survivorship fill copies should follow it",
+	"list_live_member.entity_id":               "the cached result of a live list's filter. collections evaluates the list again from the records as they now are, so the survivor is a member when it matches",
+	"list_member_event.entity_id":              "the log of the retired record's list membership changes: " + mergeHistory + ". The membership itself moves (list_member)",
+	"report_edition_contribution.source_id":    "what a report edition was built from: " + mergeHistory,
+	"report_edition_question_source.source_id": "what a report edition's questions were built from: " + mergeHistory,
+	"sales_initiative_enrolment.record_id":     "Open question for the maintainers: whether a merged-away lead's enrolment in a sales initiative should follow it to the survivor, which may hold its own. The initiatives module owns the table and has no merge carry",
+	"sales_initiative_member.record_id":        "Open question for the maintainers: whether a merged-away lead's place in a sales initiative should follow it to the survivor, which may hold its own. The initiatives module owns the table and has no merge carry",
+	"webhook_delivery.entity_id":               "the log of webhook deliveries already sent about the retired record: " + mergeHistory,
+	"webhook_delivery.event_id":                "names a delivered event, not a record. The kind column holds event types, and no CHECK lists them, so the census asks",
 })
 
 // The catalog keeps some columns equal to another column of the row. The
@@ -113,9 +132,8 @@ func TestEveryReferenceToAMergedRecordFollowsTheMerge(t *testing.T) {
 		}
 		carried := carriedBy(t, contacts, merged.entry, merged.record)
 		reached := reachedFunctions(t, contacts, contactsPkg, merged.entry)
-		mirrors := mirroredColumns(catalog, merged.record)
-		for _, column := range references {
-			if carried[column] || carried[mirrors[column]] {
+		for _, column := range obligationsOf(references, mirroredColumns(catalog, merged.record)) {
+			if carried[column] {
 				continue
 			}
 			if by, ok := carriedOutOfSight[column]; ok {
@@ -140,6 +158,20 @@ func TestEveryReferenceToAMergedRecordFollowsTheMerge(t *testing.T) {
 	}
 }
 
+// obligationsOf answers each reference by the column the catalog keeps it
+// equal to, when it has one. So a key and its source are judged once.
+func obligationsOf(references []string, mirrors map[string]string) []string {
+	var columns []string
+	for _, column := range references {
+		if source, ok := mirrors[column]; ok {
+			column = source
+		}
+		columns = append(columns, column)
+	}
+	slices.Sort(columns)
+	return slices.Compact(columns)
+}
+
 // movesOutOfSight checks a carriedOutOfSight entry: the merge reaches the
 // function, and one of its statements writes the table.
 func movesOutOfSight(contacts map[string]*graphFunc, reached map[string]bool, by, column string) error {
@@ -156,7 +188,7 @@ func movesOutOfSight(contacts map[string]*graphFunc, reached map[string]bool, by
 }
 
 // headCatalogLines reads the head catalog with each multi-line definition
-// folded onto the line that opens it.
+// folded onto the line that opens it (catalogEntryStart).
 func headCatalogLines(t *testing.T) []string {
 	t.Helper()
 	raw, err := gatekit.ReadFile("migrations/testdata/head_catalog.txt")
@@ -165,7 +197,7 @@ func headCatalogLines(t *testing.T) []string {
 	}
 	var lines []string
 	for line := range strings.SplitSeq(string(raw), "\n") {
-		if strings.HasPrefix(line, "public.") || len(lines) == 0 {
+		if catalogEntryStart.MatchString(line) || len(lines) == 0 {
 			lines = append(lines, line)
 			continue
 		}
@@ -174,8 +206,11 @@ func headCatalogLines(t *testing.T) []string {
 	return lines
 }
 
-// referencesTo returns every table.column with a foreign key to the record,
-// and every column named for it that has none.
+// referencesTo returns every table.column that can name the record:
+//   - a foreign key to it;
+//   - a column named for it with no key;
+//   - the id of a kind and id pair whose kind admits it;
+//   - a link a module declares for the merge.
 func referencesTo(catalog []string, record string) []string {
 	named := regexp.MustCompile(`^public\.(\w+)\.(` + record + `_id) uuid `)
 	var columns []string
@@ -187,8 +222,68 @@ func referencesTo(catalog []string, record string) []string {
 			columns = append(columns, m[1]+"."+m[2])
 		}
 	}
+	columns = append(columns, kindPairsAdmitting(catalog, record)...)
+	for _, o := range corereach.Tables() {
+		for _, l := range o.Table.Links {
+			if l.KindColumn != "" || string(l.Record) == record {
+				columns = append(columns, o.Table.Name+"."+l.Column)
+			}
+		}
+	}
 	slices.Sort(columns)
 	return slices.Compact(columns)
+}
+
+// kindPairsAdmitting returns the id column of every kind and id pair (a text
+// <name>_type or <name>_kind beside a uuid <name>_id) that can name the
+// record. A pair counts unless a CHECK on its kind column lists the kinds and
+// leaves the record out. So a pair with no such CHECK counts.
+func kindPairsAdmitting(catalog []string, record string) []string {
+	columns := map[string]map[string]string{}
+	checks := map[string][]string{}
+	for _, line := range catalog {
+		if m := catalogColumn.FindStringSubmatch(line); m != nil {
+			if columns[m[1]] == nil {
+				columns[m[1]] = map[string]string{}
+			}
+			columns[m[1]][m[2]] = strings.Fields(m[3])[0]
+		}
+		if m := catalogConstraint.FindStringSubmatch(line); m != nil && strings.HasPrefix(m[3], "CHECK") {
+			checks[m[1]] = append(checks[m[1]], m[3])
+		}
+	}
+	var pairs []string
+	for table, cols := range columns {
+		for kind, typ := range cols {
+			stem, isKind := strings.CutSuffix(kind, "_type")
+			if !isKind {
+				stem, isKind = strings.CutSuffix(kind, "_kind")
+			}
+			if !isKind || typ != "text" || cols[stem+"_id"] != "uuid" {
+				continue
+			}
+			if admitsKind(checks[table], kind, record) {
+				pairs = append(pairs, table+"."+stem+"_id")
+			}
+		}
+	}
+	return pairs
+}
+
+// admitsKind reports whether the kind column may hold the record: no CHECK
+// lists its values, or one that does names the record.
+func admitsKind(checks []string, kindColumn, record string) bool {
+	lists := regexp.MustCompile(`\b` + kindColumn + `\)? = (ANY|')`)
+	listed := false
+	for _, check := range checks {
+		if lists.MatchString(check) {
+			listed = true
+			if strings.Contains(check, "'"+record+"'") {
+				return true
+			}
+		}
+	}
+	return !listed
 }
 
 // mirroredColumns maps each column the catalog keeps equal to another column

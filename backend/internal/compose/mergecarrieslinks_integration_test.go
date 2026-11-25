@@ -34,6 +34,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/modules/introductions"
+	"github.com/margince/margince/backend/internal/modules/signals"
 	"github.com/margince/margince/backend/internal/platform/jobs"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -62,6 +63,7 @@ func setupCarry(t *testing.T) *carryEnv {
 		e: e, admin: e.Admin(), consent: consentStore, intros: intros, grants: grants,
 		contacts: contacts.NewStore(e.DB()).WithStopCarrier(consentStore).
 			WithSatelliteCarriers(consentStore, intros).WithGrantCarrier(grants).
+			WithSignalCarrier(signals.CarryResolutionsTx).
 			WithParticipantRosterReader(activities.EnsureParticipantRosterVisibleTx),
 	}
 	c.admin = c.asker()
@@ -314,9 +316,10 @@ func TestALinkToAnAddressLeftBehindOpensTheSurvivorsPageForThatAddress(t *testin
 	}
 }
 
-// A confirm link answers only for a live subject, so one left on the retired
-// record was dead. Carried, the answer lands on the survivor.
-func TestAMergedContactsConfirmLinkAnswersOnTheSurvivor(t *testing.T) {
+// A confirm link was mailed for one record. A merge expires it and moves the
+// row, so an answer through it acts on nothing. The person asks for a new link,
+// and the old one never answers for the survivor.
+func TestAConfirmLinkMailedToTheRetiredContactCannotActOnTheSurvivor(t *testing.T) {
 	c := setupCarry(t)
 	integration.ApplyRiverSchema(t)
 	lane := confirmLaneStore(t, c.e)
@@ -327,24 +330,19 @@ func TestAMergedContactsConfirmLinkAnswersOnTheSurvivor(t *testing.T) {
 	if err != nil {
 		t.Fatalf("issuing the confirm link: %v", err)
 	}
-
-	scope, previewErr := c.contacts.PreviewMergeSurvivorship(c.admin, "contact", retired.UUID, survivor.UUID, nil, nil)
-	if previewErr != nil {
-		t.Fatal(previewErr)
-	}
-	if len(scope.ConsentLinks.Confirmations) != 1 || scope.ConsentLinks.Confirmations[0].Address != "confirm@carry.test" {
-		t.Fatalf("carried links preview = %+v", scope)
-	}
 	c.merge(t, retired, survivor)
 
 	if _, err := lane.SubmitConfirmation(c.admin, issued.Token, consent.ConfirmSubmission{
 		MarketingChoice: "withdrawn", MarketingWording: "No news, thank you.",
-	}); err != nil {
-		t.Fatalf("answering through the carried link: %v", err)
+	}); err == nil {
+		t.Fatal("an answer through a link mailed to the retired contact was accepted after the merge")
 	}
 	if n := c.count(t, `SELECT count(*) FROM contact_consent WHERE contact_id = $1 AND purpose_id = $2 AND state = 'withdrawn'`,
-		survivor, marketing); n != 1 {
-		t.Fatalf("the survivor holds %d withdrawn marketing row(s) after answering through the carried link, want 1", n)
+		survivor, marketing); n != 0 {
+		t.Fatalf("the survivor holds %d withdrawn marketing row(s) from a link mailed to the retired contact, want 0", n)
+	}
+	if n := c.count(t, `SELECT count(*) FROM audit_log WHERE entity_id = $1 AND evidence->'expired' ? 'confirm_token'`, survivor); n != 1 {
+		t.Errorf("%d audit rows on the survivor record the expired link, want 1", n)
 	}
 }
 

@@ -29,6 +29,7 @@ type contactMergeDoor[T any] interface {
 	WithParticipantRosterReader(read contacts.ParticipantRosterReader) T
 	WithProviderRunReader(read contacts.ProviderRunReader) T
 	WithMergeSignalReader(read contacts.MergeSignalReader) T
+	WithSignalCarrier(carry contacts.SignalCarrier) T
 	WithMergeCommitmentReader(read contacts.MergeCommitmentReader) T
 	WithMergeNoticeReader(read contacts.MergeNoticeReader) T
 	WithMergeContentReader(read contacts.MergeContentReader) T
@@ -51,6 +52,7 @@ func withContactMergeCarriers[T contactMergeDoor[T]](db *database.DB, door T) T 
 		WithParticipantRosterReader(activities.EnsureParticipantRosterVisibleTx).
 		WithProviderRunReader(integrations.ReadRunForContactTx).
 		WithMergeSignalReader(signals.PreviewSignalCarry(signalSummaryWords)).
+		WithSignalCarrier(signals.CarryResolutionsTx).
 		WithMergeCommitmentReader(WeeklyPlanStore(pool).PreviewCommitmentCarryTx).
 		WithMergeNoticeReader(notices.PreviewNoticeCarryTx).
 		WithMergeContentReader(activities.NewStore(db)).
