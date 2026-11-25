@@ -59,6 +59,13 @@ func TestMeetingReminderQueuesOnceThroughTheEmailWriter(t *testing.T) {
 	if !strings.Contains(delivery.Body, "Reschedule or cancel\nhttps://") {
 		t.Fatalf("missing management link: %s", delivery.Body)
 	}
+	var recorded string
+	if err := f.env.owner.QueryRow(f.ctx, `SELECT body FROM activity WHERE kind='email'`).Scan(&recorded); err != nil {
+		t.Fatal(err)
+	}
+	if strings.Contains(recorded, "/#/book/manage-") || !strings.Contains(recorded, "Reschedule or cancel\n"+redactedMeetingLink) {
+		t.Fatalf("the activity any reader fetches must not hold the guest's management link: %s", recorded)
+	}
 	current, err := f.store.Invitation(f.ctx, ids.UUID(meeting.Id))
 	if err != nil {
 		t.Fatal(err)
