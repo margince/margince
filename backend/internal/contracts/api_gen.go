@@ -63879,7 +63879,10 @@ type RecordLink struct {
 	FromType LinkedRecordType   `json:"from_type"`
 	Id       openapi_types.UUID `json:"id"`
 	LinkType string             `json:"link_type"`
-	ToId     openapi_types.UUID `json:"to_id"`
+
+	// Removable True when this reader may remove the link: they may change the record it starts on and see the one it ends on. Set on a list read, absent on a write's answer.
+	Removable *bool              `json:"removable,omitempty"`
+	ToId      openapi_types.UUID `json:"to_id"`
 
 	// ToName The name of the record the link ends on, for the screen. Absent on a write's answer.
 	ToName *string          `json:"to_name,omitempty"`

@@ -41,7 +41,7 @@ The boot refuses a bad name, a missing label, an end that is not one of the thre
 |---|---|
 | Make a link | The `update` right on the type of the *from* record and write authority over that record. The right to attach to the *to* record, and the right to read its type. |
 | Remove a link | The same on the *from* record, and the *to* record must be readable. |
-| Read the links of a record | The `read` right and a record the caller may open. A link is left out when the caller may not read the other end, or the other end is archived. |
+| Read the links of a record | The `read` right and a record the caller may open. A link is left out when the caller may not read the other end, or the other end is archived. Each link carries `removable`, the answer of the remove check above for this caller; a read-only seat gets `false`. |
 
 A record the caller cannot open answers not found, so the id is not disclosed. Both ends are locked while the link is
 written, so an erasure of a contact waits for it.
