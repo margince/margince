@@ -20,6 +20,7 @@ import { QueryStates } from "../design-system/querystates";
 import { RecordFormDialog } from "../design-system/recordformdialog";
 import { formatDateTime } from "../format/format";
 import { type Translator, useLocale, useT } from "../i18n";
+import { leadIdentityName } from "../lib/leadname";
 import { useOpenSource } from "../lib/opensource";
 import { unwrap } from "../lib/problem";
 import { useViewerZone } from "../lib/viewerzone";
@@ -278,9 +279,8 @@ function InquirySourceTable({
 // who sent it. A note whose fields are withheld or were never kept keeps it.
 function senderOf(source: Activity, t: Translator): string {
   const sent = source.web_form;
-  return (
-    sent?.full_name || sent?.email || source.subject || t("inquiry.untitled")
-  );
+  const sender = sent ? leadIdentityName(sent) : "";
+  return sender || source.subject || t("inquiry.untitled");
 }
 
 function InquirySource({
@@ -290,7 +290,7 @@ function InquirySource({
   const t = useT();
   const name = senderOf(source, t);
   const sent = source.web_form;
-  const email = sent?.full_name ? sent.email : "";
+  const email = sent?.full_name?.trim() ? sent.email : "";
   const opening = firstLine(sent?.message ?? "");
   return (
     <CellStack>
