@@ -169,6 +169,7 @@ export function ListTable<Row>({
       onPerPage,
       hasMore,
       onLoadMore,
+      total: serverTotal,
       reachAsked: !bodyOwnsPaging,
       keepsPage,
     },
@@ -305,6 +306,8 @@ export function ListTable<Row>({
             <Pager
               current={paging.current}
               lastPage={paging.lastPage}
+              endKnown={paging.endKnown}
+              asked={paging.asked}
               hasMore={hasMore}
               perPage={paging.perPage}
               onGoto={paging.goto}

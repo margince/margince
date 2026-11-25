@@ -14,14 +14,16 @@ import { Select } from "./select";
  * `Pager` is exported for a table of another kind that holds all its rows and
  * pages them in memory, the way a list's own footer does.
  *
- * The pager: the pages in hand as numbers, prev/next either side, and the page
- * size on the right. Next stays enabled on the last loaded page while the
- * cursor still has rows to give, which is how the set grows without a total.
+ * The pager: the pages as numbers, prev/next either side, and the page size on
+ * the right. Next stays enabled on the last page while the cursor still has
+ * rows to give, which is how the set grows without a total.
  */
 export function Pager({
   current,
   lastPage,
   hasMore,
+  endKnown = !hasMore,
+  asked,
   perPage,
   onGoto,
   onPerPage,
@@ -29,6 +31,10 @@ export function Pager({
   current: number;
   lastPage: number;
   hasMore: boolean;
+  /** `lastPage` is the list's real end, so it is numbered. Default: no more rows. */
+  endKnown?: boolean;
+  /** The page being fetched; its number shows as busy until it is drawn. */
+  asked?: number;
   perPage: number;
   onGoto: (to: number) => void;
   onPerPage: (next: number) => void;
@@ -49,13 +55,14 @@ export function Pager({
         >
           {t("table.prev")}
         </button>
-        {pagerSlots(current, lastPage).map((slot, index) =>
+        {pagerSlots(current, lastPage, endKnown).map((slot, index) =>
           typeof slot === "number" ? (
             <button
               type="button"
               key={slot}
               className={slot === current ? "on" : undefined}
               aria-current={slot === current ? "page" : undefined}
+              aria-busy={slot === asked ? true : undefined}
               // "page 1.234" would read as a fraction of a page rather than
               // the 1234th of them.
               aria-label={t("table.page", { number: ordinalNumber(slot) })}

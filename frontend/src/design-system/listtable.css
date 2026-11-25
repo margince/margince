@@ -1276,6 +1276,13 @@
 .lt-pager button:disabled {
   cursor: default;
 }
+/* The page a press asked for, while the cursor walks to it: the ring of the
+   page in view without its fill, and the cursor that means wait. */
+.lt-pager button[aria-busy="true"] {
+  box-shadow: inset 0 0 0 1px var(--borderStrong);
+  color: var(--textPrimary);
+  cursor: progress;
+}
 /* The pages this row is not showing. Sized like a page button so the row keeps
    its rhythm, but flat and quiet — it is a statement, not a control, and a
    reader must not reach for it. */
