@@ -21,6 +21,7 @@
       "cases_with_a_committed_run": 81,
       "cases_that_reached_their_bar": 81,
       "cases_below_their_bar": 0,
+      "cases_measured_on_an_earlier_listing": 81,
       "runs": 167,
       "passed": 163,
       "reliability": 0.9760479041916168,
@@ -39,6 +40,7 @@
       "cases_with_a_committed_run": 2,
       "cases_that_reached_their_bar": 2,
       "cases_below_their_bar": 0,
+      "cases_measured_on_an_earlier_listing": 2,
       "runs": 5,
       "passed": 4,
       "reliability": 0.8,
@@ -57,6 +59,7 @@
       "cases_with_a_committed_run": 81,
       "cases_that_reached_their_bar": 81,
       "cases_below_their_bar": 0,
+      "cases_measured_on_an_earlier_listing": 81,
       "runs": 169,
       "passed": 164,
       "reliability": 0.9704142011834319,
@@ -75,6 +78,7 @@
       "cases_with_a_committed_run": 82,
       "cases_that_reached_their_bar": 74,
       "cases_below_their_bar": 8,
+      "cases_measured_on_an_earlier_listing": 82,
       "runs": 174,
       "passed": 150,
       "reliability": 0.8620689655172413,
@@ -105,6 +109,7 @@
         "cases_with_a_committed_run": 20,
         "cases_that_reached_their_bar": 18,
         "cases_below_their_bar": 2,
+        "cases_measured_on_an_earlier_listing": 20,
         "runs": 42,
         "passed": 38,
         "reliability": 0.9047619047619048,
@@ -157,7 +162,12 @@
                 "min": 26,
                 "max": 26
               }
-            }
+            },
+            "measured_on_an_earlier_listing": [
+              "tool copy",
+              "server instructions and resources",
+              "harness"
+            ]
           }
         ]
       },
@@ -194,7 +204,12 @@
                 "max": 16
               }
             },
-            "regraded": true
+            "regraded": true,
+            "measured_on_an_earlier_listing": [
+              "tool copy",
+              "server instructions and resources",
+              "harness"
+            ]
           }
         ]
       },
@@ -231,7 +246,12 @@
                 "min": 7,
                 "max": 8
               }
-            }
+            },
+            "measured_on_an_earlier_listing": [
+              "tool copy",
+              "server instructions and resources",
+              "harness"
+            ]
           }
         ]
       },
@@ -267,7 +287,12 @@
                 "min": 9,
                 "max": 12
               }
-            }
+            },
+            "measured_on_an_earlier_listing": [
+              "tool copy",
+              "server instructions and resources",
+              "harness"
+            ]
           }
         ]
       },
@@ -305,7 +330,12 @@
                 "min": 10,
                 "max": 11
               }
-            }
+            },
+            "measured_on_an_earlier_listing": [
+              "tool copy",
+              "server instructions and resources",
+              "harness"
+            ]
           }
         ]
       },
@@ -341,7 +371,12 @@
                 "min": 20,
                 "max": 21
               }
-            }
+            },
+            "measured_on_an_earlier_listing": [
+              "tool copy",
+              "server instructions and resources",
+              "harness"
+            ]
           }
         ]
       },
@@ -377,7 +412,12 @@
                 "min": 10,
                 "max": 11
               }
-            }
+            },
+            "measured_on_an_earlier_listing": [
+              "tool copy",
+              "server instructions and resources",
+              "harness"
+            ]
           }
         ]
       },
@@ -414,7 +454,12 @@
                 "min": 25,
                 "max": 29
               }
-            }
+            },
+            "measured_on_an_earlier_listing": [
+              "tool copy",
+              "server instructions and resources",
+              "harness"
+            ]
           }
         ]
       },
@@ -450,7 +495,13 @@
                 "min": 17,
                 "max": 20
               }
-            }
+            },
+            "measured_on_an_earlier_listing": [
+              "scenario",
+              "tool copy",
+              "server instructions and resources",
+              "harness"
+            ]
           }
         ]
       },
@@ -488,7 +539,12 @@
                 "min": 15,
                 "max": 15
               }
-            }
+            },
+            "measured_on_an_earlier_listing": [
+              "tool copy",
+              "server instructions and resources",
+              "harness"
+            ]
           }
         ]
       },
@@ -526,7 +582,12 @@
                 "min": 15,
                 "max": 15
               }
-            }
+            },
+            "measured_on_an_earlier_listing": [
+              "tool copy",
+              "server instructions and resources",
+              "harness"
+            ]
           }
         ]
       },
@@ -561,7 +622,12 @@
                 "min": 17,
                 "max": 19
               }
-            }
+            },
+            "measured_on_an_earlier_listing": [
+              "tool copy",
+              "server instructions and resources",
+              "harness"
+            ]
           }
         ]
       },
@@ -598,7 +664,12 @@
                 "min": 15,
                 "max": 16
               }
-            }
+            },
+            "measured_on_an_earlier_listing": [
+              "tool copy",
+              "server instructions and resources",
+              "harness"
+            ]
           }
         ]
       },
@@ -633,7 +704,12 @@
                 "min": 15,
                 "max": 18
               }
-            }
+            },
+            "measured_on_an_earlier_listing": [
+              "tool copy",
+              "server instructions and resources",
+              "harness"
+            ]
           }
         ]
       },
@@ -674,7 +750,12 @@
                 "min": 9,
                 "max": 16
               }
-            }
+            },
+            "measured_on_an_earlier_listing": [
+              "tool copy",
+              "server instructions and resources",
+              "harness"
+            ]
           }
         ]
       },
@@ -709,7 +790,12 @@
                 "min": 9,
                 "max": 9
               }
-            }
+            },
+            "measured_on_an_earlier_listing": [
+              "tool copy",
+              "server instructions and resources",
+              "harness"
+            ]
           }
         ]
       },
@@ -745,7 +831,12 @@
                 "max": 15
               }
             },
-            "regraded": true
+            "regraded": true,
+            "measured_on_an_earlier_listing": [
+              "tool copy",
+              "server instructions and resources",
+              "harness"
+            ]
           }
         ]
       },
@@ -781,7 +872,12 @@
                 "max": 12
               }
             },
-            "regraded": true
+            "regraded": true,
+            "measured_on_an_earlier_listing": [
+              "tool copy",
+              "server instructions and resources",
+              "harness"
+            ]
           }
         ]
       },
@@ -820,7 +916,12 @@
                 "min": 19,
                 "max": 22
               }
-            }
+            },
+            "measured_on_an_earlier_listing": [
+              "tool copy",
+              "server instructions and resources",
+              "harness"
+            ]
           }
         ]
       },
@@ -857,7 +958,12 @@
                 "min": 10,
                 "max": 13
               }
-            }
+            },
+            "measured_on_an_earlier_listing": [
+              "tool copy",
+              "server instructions and resources",
+              "harness"
+            ]
           }
         ]
       }
@@ -958,7 +1064,12 @@
               "min": 10,
               "max": 12
             }
-          }
+          },
+          "measured_on_an_earlier_listing": [
+            "tool copy",
+            "server instructions and resources",
+            "harness"
+          ]
         },
         {
           "model": "gemini-4-hydrogen-medium@agy-cli",
@@ -980,7 +1091,12 @@
               "min": 9,
               "max": 11
             }
-          }
+          },
+          "measured_on_an_earlier_listing": [
+            "tool copy",
+            "server instructions and resources",
+            "harness"
+          ]
         },
         {
           "model": "gpt-5.6-sol@codex-cli",
@@ -999,7 +1115,13 @@
             },
             "turns": null
           },
-          "regraded": true
+          "regraded": true,
+          "measured_on_an_earlier_listing": [
+            "tool copy",
+            "server instructions and resources",
+            "harness",
+            "transcript parser"
+          ]
         }
       ]
     },
@@ -1036,7 +1158,12 @@
               "max": 5
             }
           },
-          "regraded": true
+          "regraded": true,
+          "measured_on_an_earlier_listing": [
+            "tool copy",
+            "server instructions and resources",
+            "harness"
+          ]
         },
         {
           "model": "gemini-4-hydrogen-medium@agy-cli",
@@ -1058,7 +1185,12 @@
               "min": 11,
               "max": 11
             }
-          }
+          },
+          "measured_on_an_earlier_listing": [
+            "tool copy",
+            "server instructions and resources",
+            "harness"
+          ]
         },
         {
           "model": "gpt-5.6-sol@codex-cli",
@@ -1077,7 +1209,14 @@
             },
             "turns": null
           },
-          "regraded": true
+          "regraded": true,
+          "measured_on_an_earlier_listing": [
+            "scenario",
+            "tool copy",
+            "server instructions and resources",
+            "harness",
+            "transcript parser"
+          ]
         }
       ]
     },
@@ -1114,7 +1253,12 @@
               "min": 4,
               "max": 4
             }
-          }
+          },
+          "measured_on_an_earlier_listing": [
+            "tool copy",
+            "server instructions and resources",
+            "harness"
+          ]
         },
         {
           "model": "gemini-4-hydrogen-medium@agy-cli",
@@ -1136,7 +1280,12 @@
               "min": 4,
               "max": 5
             }
-          }
+          },
+          "measured_on_an_earlier_listing": [
+            "tool copy",
+            "server instructions and resources",
+            "harness"
+          ]
         },
         {
           "model": "gpt-5.6-sol@codex-cli",
@@ -1155,7 +1304,13 @@
             },
             "turns": null
           },
-          "regraded": true
+          "regraded": true,
+          "measured_on_an_earlier_listing": [
+            "tool copy",
+            "server instructions and resources",
+            "harness",
+            "transcript parser"
+          ]
         }
       ]
     },
@@ -1191,7 +1346,12 @@
               "max": 6
             }
           },
-          "regraded": true
+          "regraded": true,
+          "measured_on_an_earlier_listing": [
+            "tool copy",
+            "server instructions and resources",
+            "harness"
+          ]
         },
         {
           "model": "gemini-4-hydrogen-medium@agy-cli",
@@ -1214,7 +1374,12 @@
               "max": 4
             }
           },
-          "regraded": true
+          "regraded": true,
+          "measured_on_an_earlier_listing": [
+            "tool copy",
+            "server instructions and resources",
+            "harness"
+          ]
         },
         {
           "model": "gpt-5.6-sol@codex-cli",
@@ -1233,7 +1398,14 @@
             },
             "turns": null
           },
-          "regraded": true
+          "regraded": true,
+          "measured_on_an_earlier_listing": [
+            "scenario",
+            "tool copy",
+            "server instructions and resources",
+            "harness",
+            "transcript parser"
+          ]
         }
       ]
     },
@@ -1270,7 +1442,12 @@
               "min": 3,
               "max": 3
             }
-          }
+          },
+          "measured_on_an_earlier_listing": [
+            "tool copy",
+            "server instructions and resources",
+            "harness"
+          ]
         },
         {
           "model": "gemini-4-hydrogen-medium@agy-cli",
@@ -1292,7 +1469,12 @@
               "min": 5,
               "max": 5
             }
-          }
+          },
+          "measured_on_an_earlier_listing": [
+            "tool copy",
+            "server instructions and resources",
+            "harness"
+          ]
         },
         {
           "model": "gpt-5.6-sol@codex-cli",
@@ -1311,7 +1493,13 @@
             },
             "turns": null
           },
-          "regraded": true
+          "regraded": true,
+          "measured_on_an_earlier_listing": [
+            "tool copy",
+            "server instructions and resources",
+            "harness",
+            "transcript parser"
+          ]
         }
       ]
     },
@@ -1346,7 +1534,12 @@
               "min": 4,
               "max": 5
             }
-          }
+          },
+          "measured_on_an_earlier_listing": [
+            "tool copy",
+            "server instructions and resources",
+            "harness"
+          ]
         },
         {
           "model": "gemini-4-hydrogen-medium@agy-cli",
@@ -1368,7 +1561,12 @@
               "min": 6,
               "max": 7
             }
-          }
+          },
+          "measured_on_an_earlier_listing": [
+            "tool copy",
+            "server instructions and resources",
+            "harness"
+          ]
         },
         {
           "model": "gpt-5.6-sol@codex-cli",
@@ -1387,7 +1585,13 @@
             },
             "turns": null
           },
-          "regraded": true
+          "regraded": true,
+          "measured_on_an_earlier_listing": [
+            "tool copy",
+            "server instructions and resources",
+            "harness",
+            "transcript parser"
+          ]
         }
       ]
     },
@@ -1423,7 +1627,12 @@
               "max": 7
             }
           },
-          "regraded": true
+          "regraded": true,
+          "measured_on_an_earlier_listing": [
+            "tool copy",
+            "server instructions and resources",
+            "harness"
+          ]
         },
         {
           "model": "gemini-4-hydrogen-medium@agy-cli",
@@ -1446,7 +1655,12 @@
               "max": 9
             }
           },
-          "regraded": true
+          "regraded": true,
+          "measured_on_an_earlier_listing": [
+            "tool copy",
+            "server instructions and resources",
+            "harness"
+          ]
         },
         {
           "model": "gpt-5.6-sol@codex-cli",
@@ -1465,7 +1679,14 @@
             },
             "turns": null
           },
-          "regraded": true
+          "regraded": true,
+          "measured_on_an_earlier_listing": [
+            "scenario",
+            "tool copy",
+            "server instructions and resources",
+            "harness",
+            "transcript parser"
+          ]
         }
       ]
     },
@@ -1500,7 +1721,12 @@
               "min": 7,
               "max": 9
             }
-          }
+          },
+          "measured_on_an_earlier_listing": [
+            "tool copy",
+            "server instructions and resources",
+            "harness"
+          ]
         },
         {
           "model": "gemini-4-hydrogen-medium@agy-cli",
@@ -1522,7 +1748,12 @@
               "min": 6,
               "max": 7
             }
-          }
+          },
+          "measured_on_an_earlier_listing": [
+            "tool copy",
+            "server instructions and resources",
+            "harness"
+          ]
         },
         {
           "model": "gpt-5.6-sol@codex-cli",
@@ -1541,7 +1772,13 @@
             },
             "turns": null
           },
-          "regraded": true
+          "regraded": true,
+          "measured_on_an_earlier_listing": [
+            "tool copy",
+            "server instructions and resources",
+            "harness",
+            "transcript parser"
+          ]
         }
       ]
     },
@@ -1576,7 +1813,12 @@
               "min": 6,
               "max": 10
             }
-          }
+          },
+          "measured_on_an_earlier_listing": [
+            "tool copy",
+            "server instructions and resources",
+            "harness"
+          ]
         },
         {
           "model": "gemini-4-hydrogen-medium@agy-cli",
@@ -1599,7 +1841,12 @@
               "max": 9
             }
           },
-          "regraded": true
+          "regraded": true,
+          "measured_on_an_earlier_listing": [
+            "tool copy",
+            "server instructions and resources",
+            "harness"
+          ]
         },
         {
           "model": "gpt-5.6-sol@codex-cli",
@@ -1618,7 +1865,13 @@
             },
             "turns": null
           },
-          "regraded": true
+          "regraded": true,
+          "measured_on_an_earlier_listing": [
+            "tool copy",
+            "server instructions and resources",
+            "harness",
+            "transcript parser"
+          ]
         }
       ]
     },
@@ -1655,7 +1908,12 @@
               "min": 6,
               "max": 6
             }
-          }
+          },
+          "measured_on_an_earlier_listing": [
+            "tool copy",
+            "server instructions and resources",
+            "harness"
+          ]
         },
         {
           "model": "gemini-4-hydrogen-medium@agy-cli",
@@ -1677,7 +1935,12 @@
               "min": 5,
               "max": 6
             }
-          }
+          },
+          "measured_on_an_earlier_listing": [
+            "tool copy",
+            "server instructions and resources",
+            "harness"
+          ]
         },
         {
           "model": "gpt-5.6-sol@codex-cli",
@@ -1696,7 +1959,13 @@
             },
             "turns": null
           },
-          "regraded": true
+          "regraded": true,
+          "measured_on_an_earlier_listing": [
+            "tool copy",
+            "server instructions and resources",
+            "harness",
+            "transcript parser"
+          ]
         }
       ]
     },
@@ -1732,7 +2001,12 @@
               "max": 7
             }
           },
-          "regraded": true
+          "regraded": true,
+          "measured_on_an_earlier_listing": [
+            "tool copy",
+            "server instructions and resources",
+            "harness"
+          ]
         },
         {
           "model": "gemini-4-hydrogen-medium@agy-cli",
@@ -1755,7 +2029,12 @@
               "max": 8
             }
           },
-          "regraded": true
+          "regraded": true,
+          "measured_on_an_earlier_listing": [
+            "tool copy",
+            "server instructions and resources",
+            "harness"
+          ]
         },
         {
           "model": "gpt-5.6-sol@codex-cli",
@@ -1774,7 +2053,14 @@
             },
             "turns": null
           },
-          "regraded": true
+          "regraded": true,
+          "measured_on_an_earlier_listing": [
+            "scenario",
+            "tool copy",
+            "server instructions and resources",
+            "harness",
+            "transcript parser"
+          ]
         }
       ]
     },
@@ -1813,7 +2099,12 @@
               "min": 4,
               "max": 4
             }
-          }
+          },
+          "measured_on_an_earlier_listing": [
+            "tool copy",
+            "server instructions and resources",
+            "harness"
+          ]
         },
         {
           "model": "gemini-4-hydrogen-medium@agy-cli",
@@ -1835,7 +2126,12 @@
               "min": 5,
               "max": 5
             }
-          }
+          },
+          "measured_on_an_earlier_listing": [
+            "tool copy",
+            "server instructions and resources",
+            "harness"
+          ]
         },
         {
           "model": "gpt-5.6-sol@codex-cli",
@@ -1854,7 +2150,13 @@
             },
             "turns": null
           },
-          "regraded": true
+          "regraded": true,
+          "measured_on_an_earlier_listing": [
+            "tool copy",
+            "server instructions and resources",
+            "harness",
+            "transcript parser"
+          ]
         }
       ]
     },
@@ -1890,7 +2192,13 @@
               "max": 4
             }
           },
-          "regraded": true
+          "regraded": true,
+          "measured_on_an_earlier_listing": [
+            "scenario",
+            "tool copy",
+            "server instructions and resources",
+            "harness"
+          ]
         },
         {
           "model": "gemini-4-hydrogen-medium@agy-cli",
@@ -1913,7 +2221,13 @@
               "max": 4
             }
           },
-          "regraded": true
+          "regraded": true,
+          "measured_on_an_earlier_listing": [
+            "scenario",
+            "tool copy",
+            "server instructions and resources",
+            "harness"
+          ]
         },
         {
           "model": "gpt-5.6-sol@codex-cli",
@@ -1932,7 +2246,15 @@
             },
             "turns": null
           },
-          "regraded": true
+          "regraded": true,
+          "measured_on_an_earlier_listing": [
+            "scenario",
+            "tool copy",
+            "server instructions and resources",
+            "judge",
+            "harness",
+            "transcript parser"
+          ]
         }
       ]
     },
@@ -1970,7 +2292,12 @@
               "min": 9,
               "max": 10
             }
-          }
+          },
+          "measured_on_an_earlier_listing": [
+            "tool copy",
+            "server instructions and resources",
+            "harness"
+          ]
         },
         {
           "model": "gemini-4-hydrogen-medium@agy-cli",
@@ -1992,7 +2319,12 @@
               "min": 7,
               "max": 8
             }
-          }
+          },
+          "measured_on_an_earlier_listing": [
+            "tool copy",
+            "server instructions and resources",
+            "harness"
+          ]
         },
         {
           "model": "gpt-5.6-sol@codex-cli",
@@ -2011,7 +2343,13 @@
             },
             "turns": null
           },
-          "regraded": true
+          "regraded": true,
+          "measured_on_an_earlier_listing": [
+            "tool copy",
+            "server instructions and resources",
+            "harness",
+            "transcript parser"
+          ]
         }
       ]
     },
@@ -2049,7 +2387,12 @@
               "min": 8,
               "max": 9
             }
-          }
+          },
+          "measured_on_an_earlier_listing": [
+            "tool copy",
+            "server instructions and resources",
+            "harness"
+          ]
         },
         {
           "model": "gemini-4-hydrogen-medium@agy-cli",
@@ -2071,7 +2414,12 @@
               "min": 6,
               "max": 6
             }
-          }
+          },
+          "measured_on_an_earlier_listing": [
+            "tool copy",
+            "server instructions and resources",
+            "harness"
+          ]
         },
         {
           "model": "gpt-5.6-sol@codex-cli",
@@ -2090,7 +2438,13 @@
             },
             "turns": null
           },
-          "regraded": true
+          "regraded": true,
+          "measured_on_an_earlier_listing": [
+            "tool copy",
+            "server instructions and resources",
+            "harness",
+            "transcript parser"
+          ]
         }
       ]
     },
@@ -2128,7 +2482,12 @@
               "min": 5,
               "max": 5
             }
-          }
+          },
+          "measured_on_an_earlier_listing": [
+            "tool copy",
+            "server instructions and resources",
+            "harness"
+          ]
         },
         {
           "model": "gemini-4-hydrogen-medium@agy-cli",
@@ -2150,7 +2509,12 @@
               "min": 4,
               "max": 5
             }
-          }
+          },
+          "measured_on_an_earlier_listing": [
+            "tool copy",
+            "server instructions and resources",
+            "harness"
+          ]
         },
         {
           "model": "gpt-5.6-sol@codex-cli",
@@ -2169,7 +2533,13 @@
             },
             "turns": null
           },
-          "regraded": true
+          "regraded": true,
+          "measured_on_an_earlier_listing": [
+            "tool copy",
+            "server instructions and resources",
+            "harness",
+            "transcript parser"
+          ]
         }
       ]
     },
@@ -2204,7 +2574,12 @@
               "min": 6,
               "max": 6
             }
-          }
+          },
+          "measured_on_an_earlier_listing": [
+            "tool copy",
+            "server instructions and resources",
+            "harness"
+          ]
         },
         {
           "model": "gemini-4-hydrogen-medium@agy-cli",
@@ -2226,7 +2601,12 @@
               "min": 6,
               "max": 7
             }
-          }
+          },
+          "measured_on_an_earlier_listing": [
+            "tool copy",
+            "server instructions and resources",
+            "harness"
+          ]
         },
         {
           "model": "gpt-5.6-sol@codex-cli",
@@ -2245,7 +2625,13 @@
             },
             "turns": null
           },
-          "regraded": true
+          "regraded": true,
+          "measured_on_an_earlier_listing": [
+            "tool copy",
+            "server instructions and resources",
+            "harness",
+            "transcript parser"
+          ]
         }
       ]
     },
@@ -2280,7 +2666,12 @@
               "min": 3,
               "max": 5
             }
-          }
+          },
+          "measured_on_an_earlier_listing": [
+            "tool copy",
+            "server instructions and resources",
+            "harness"
+          ]
         },
         {
           "model": "gemini-4-hydrogen-medium@agy-cli",
@@ -2302,7 +2693,12 @@
               "min": 4,
               "max": 4
             }
-          }
+          },
+          "measured_on_an_earlier_listing": [
+            "tool copy",
+            "server instructions and resources",
+            "harness"
+          ]
         },
         {
           "model": "gpt-5.6-sol@codex-cli",
@@ -2321,7 +2717,13 @@
             },
             "turns": null
           },
-          "regraded": true
+          "regraded": true,
+          "measured_on_an_earlier_listing": [
+            "tool copy",
+            "server instructions and resources",
+            "harness",
+            "transcript parser"
+          ]
         }
       ]
     },
@@ -2356,7 +2758,12 @@
               "min": 4,
               "max": 6
             }
-          }
+          },
+          "measured_on_an_earlier_listing": [
+            "tool copy",
+            "server instructions and resources",
+            "harness"
+          ]
         },
         {
           "model": "gemini-4-hydrogen-medium@agy-cli",
@@ -2378,7 +2785,12 @@
               "min": 5,
               "max": 5
             }
-          }
+          },
+          "measured_on_an_earlier_listing": [
+            "tool copy",
+            "server instructions and resources",
+            "harness"
+          ]
         },
         {
           "model": "gpt-5.6-sol@codex-cli",
@@ -2397,7 +2809,13 @@
             },
             "turns": null
           },
-          "regraded": true
+          "regraded": true,
+          "measured_on_an_earlier_listing": [
+            "tool copy",
+            "server instructions and resources",
+            "harness",
+            "transcript parser"
+          ]
         }
       ]
     },
@@ -2432,7 +2850,12 @@
               "min": 5,
               "max": 6
             }
-          }
+          },
+          "measured_on_an_earlier_listing": [
+            "tool copy",
+            "server instructions and resources",
+            "harness"
+          ]
         },
         {
           "model": "gemini-4-hydrogen-medium@agy-cli",
@@ -2454,7 +2877,12 @@
               "min": 5,
               "max": 6
             }
-          }
+          },
+          "measured_on_an_earlier_listing": [
+            "tool copy",
+            "server instructions and resources",
+            "harness"
+          ]
         },
         {
           "model": "gpt-5.6-sol@codex-cli",
@@ -2473,7 +2901,13 @@
             },
             "turns": null
           },
-          "regraded": true
+          "regraded": true,
+          "measured_on_an_earlier_listing": [
+            "tool copy",
+            "server instructions and resources",
+            "harness",
+            "transcript parser"
+          ]
         }
       ]
     },
@@ -2508,7 +2942,12 @@
               "min": 4,
               "max": 4
             }
-          }
+          },
+          "measured_on_an_earlier_listing": [
+            "tool copy",
+            "server instructions and resources",
+            "harness"
+          ]
         },
         {
           "model": "gemini-4-hydrogen-medium@agy-cli",
@@ -2530,7 +2969,12 @@
               "min": 5,
               "max": 5
             }
-          }
+          },
+          "measured_on_an_earlier_listing": [
+            "tool copy",
+            "server instructions and resources",
+            "harness"
+          ]
         },
         {
           "model": "gpt-5.6-sol@codex-cli",
@@ -2549,7 +2993,13 @@
             },
             "turns": null
           },
-          "regraded": true
+          "regraded": true,
+          "measured_on_an_earlier_listing": [
+            "tool copy",
+            "server instructions and resources",
+            "harness",
+            "transcript parser"
+          ]
         }
       ]
     },
@@ -2589,7 +3039,12 @@
               "max": 6
             }
           },
-          "regraded": true
+          "regraded": true,
+          "measured_on_an_earlier_listing": [
+            "tool copy",
+            "server instructions and resources",
+            "harness"
+          ]
         },
         {
           "model": "gemini-4-hydrogen-medium@agy-cli",
@@ -2612,7 +3067,12 @@
               "max": 5
             }
           },
-          "regraded": true
+          "regraded": true,
+          "measured_on_an_earlier_listing": [
+            "tool copy",
+            "server instructions and resources",
+            "harness"
+          ]
         },
         {
           "model": "gpt-5.6-sol@codex-cli",
@@ -2631,7 +3091,14 @@
             },
             "turns": null
           },
-          "regraded": true
+          "regraded": true,
+          "measured_on_an_earlier_listing": [
+            "scenario",
+            "tool copy",
+            "server instructions and resources",
+            "harness",
+            "transcript parser"
+          ]
         }
       ]
     },
@@ -2666,7 +3133,12 @@
               "min": 8,
               "max": 8
             }
-          }
+          },
+          "measured_on_an_earlier_listing": [
+            "tool copy",
+            "server instructions and resources",
+            "harness"
+          ]
         },
         {
           "model": "gemini-4-hydrogen-medium@agy-cli",
@@ -2688,7 +3160,12 @@
               "min": 5,
               "max": 5
             }
-          }
+          },
+          "measured_on_an_earlier_listing": [
+            "tool copy",
+            "server instructions and resources",
+            "harness"
+          ]
         },
         {
           "model": "gpt-5.6-sol@codex-cli",
@@ -2707,7 +3184,13 @@
             },
             "turns": null
           },
-          "regraded": true
+          "regraded": true,
+          "measured_on_an_earlier_listing": [
+            "tool copy",
+            "server instructions and resources",
+            "harness",
+            "transcript parser"
+          ]
         }
       ]
     },
@@ -2742,7 +3225,12 @@
               "min": 5,
               "max": 5
             }
-          }
+          },
+          "measured_on_an_earlier_listing": [
+            "tool copy",
+            "server instructions and resources",
+            "harness"
+          ]
         },
         {
           "model": "gemini-4-hydrogen-medium@agy-cli",
@@ -2764,7 +3252,12 @@
               "min": 5,
               "max": 5
             }
-          }
+          },
+          "measured_on_an_earlier_listing": [
+            "tool copy",
+            "server instructions and resources",
+            "harness"
+          ]
         },
         {
           "model": "gpt-5.6-sol@codex-cli",
@@ -2783,7 +3276,13 @@
             },
             "turns": null
           },
-          "regraded": true
+          "regraded": true,
+          "measured_on_an_earlier_listing": [
+            "tool copy",
+            "server instructions and resources",
+            "harness",
+            "transcript parser"
+          ]
         }
       ]
     },
@@ -2823,7 +3322,12 @@
               "min": 3,
               "max": 3
             }
-          }
+          },
+          "measured_on_an_earlier_listing": [
+            "tool copy",
+            "server instructions and resources",
+            "harness"
+          ]
         },
         {
           "model": "gemini-4-hydrogen-medium@agy-cli",
@@ -2846,7 +3350,12 @@
               "max": 4
             }
           },
-          "regraded": true
+          "regraded": true,
+          "measured_on_an_earlier_listing": [
+            "tool copy",
+            "server instructions and resources",
+            "harness"
+          ]
         },
         {
           "model": "gpt-5.6-sol@codex-cli",
@@ -2865,7 +3374,13 @@
             },
             "turns": null
           },
-          "regraded": true
+          "regraded": true,
+          "measured_on_an_earlier_listing": [
+            "tool copy",
+            "server instructions and resources",
+            "harness",
+            "transcript parser"
+          ]
         }
       ]
     },
@@ -2900,7 +3415,12 @@
               "min": 7,
               "max": 9
             }
-          }
+          },
+          "measured_on_an_earlier_listing": [
+            "tool copy",
+            "server instructions and resources",
+            "harness"
+          ]
         },
         {
           "model": "gemini-4-hydrogen-medium@agy-cli",
@@ -2923,7 +3443,12 @@
               "max": 8
             }
           },
-          "regraded": true
+          "regraded": true,
+          "measured_on_an_earlier_listing": [
+            "tool copy",
+            "server instructions and resources",
+            "harness"
+          ]
         },
         {
           "model": "gpt-5.6-sol@codex-cli",
@@ -2942,7 +3467,14 @@
             },
             "turns": null
           },
-          "regraded": true
+          "regraded": true,
+          "measured_on_an_earlier_listing": [
+            "scenario",
+            "tool copy",
+            "server instructions and resources",
+            "harness",
+            "transcript parser"
+          ]
         }
       ]
     },
@@ -2978,7 +3510,12 @@
               "max": 5
             }
           },
-          "regraded": true
+          "regraded": true,
+          "measured_on_an_earlier_listing": [
+            "tool copy",
+            "server instructions and resources",
+            "harness"
+          ]
         },
         {
           "model": "gemini-4-hydrogen-medium@agy-cli",
@@ -3001,7 +3538,12 @@
               "max": 7
             }
           },
-          "regraded": true
+          "regraded": true,
+          "measured_on_an_earlier_listing": [
+            "tool copy",
+            "server instructions and resources",
+            "harness"
+          ]
         },
         {
           "model": "gpt-5.6-sol@codex-cli",
@@ -3020,7 +3562,14 @@
             },
             "turns": null
           },
-          "regraded": true
+          "regraded": true,
+          "measured_on_an_earlier_listing": [
+            "scenario",
+            "tool copy",
+            "server instructions and resources",
+            "harness",
+            "transcript parser"
+          ]
         }
       ]
     },
@@ -3055,7 +3604,12 @@
               "min": 4,
               "max": 5
             }
-          }
+          },
+          "measured_on_an_earlier_listing": [
+            "tool copy",
+            "server instructions and resources",
+            "harness"
+          ]
         },
         {
           "model": "gemini-4-hydrogen-medium@agy-cli",
@@ -3078,7 +3632,12 @@
               "max": 6
             }
           },
-          "regraded": true
+          "regraded": true,
+          "measured_on_an_earlier_listing": [
+            "tool copy",
+            "server instructions and resources",
+            "harness"
+          ]
         },
         {
           "model": "gpt-5.6-sol@codex-cli",
@@ -3097,7 +3656,13 @@
             },
             "turns": null
           },
-          "regraded": true
+          "regraded": true,
+          "measured_on_an_earlier_listing": [
+            "tool copy",
+            "server instructions and resources",
+            "harness",
+            "transcript parser"
+          ]
         }
       ]
     },
@@ -3132,7 +3697,12 @@
               "min": 4,
               "max": 4
             }
-          }
+          },
+          "measured_on_an_earlier_listing": [
+            "tool copy",
+            "server instructions and resources",
+            "harness"
+          ]
         },
         {
           "model": "gemini-4-hydrogen-medium@agy-cli",
@@ -3154,7 +3724,12 @@
               "min": 5,
               "max": 5
             }
-          }
+          },
+          "measured_on_an_earlier_listing": [
+            "tool copy",
+            "server instructions and resources",
+            "harness"
+          ]
         },
         {
           "model": "gpt-5.6-sol@codex-cli",
@@ -3173,7 +3748,13 @@
             },
             "turns": null
           },
-          "regraded": true
+          "regraded": true,
+          "measured_on_an_earlier_listing": [
+            "tool copy",
+            "server instructions and resources",
+            "harness",
+            "transcript parser"
+          ]
         }
       ]
     },
@@ -3208,7 +3789,12 @@
               "min": 4,
               "max": 5
             }
-          }
+          },
+          "measured_on_an_earlier_listing": [
+            "tool copy",
+            "server instructions and resources",
+            "harness"
+          ]
         },
         {
           "model": "gemini-4-hydrogen-medium@agy-cli",
@@ -3231,7 +3817,12 @@
               "max": 8
             }
           },
-          "regraded": true
+          "regraded": true,
+          "measured_on_an_earlier_listing": [
+            "tool copy",
+            "server instructions and resources",
+            "harness"
+          ]
         },
         {
           "model": "gpt-5.6-sol@codex-cli",
@@ -3250,7 +3841,13 @@
             },
             "turns": null
           },
-          "regraded": true
+          "regraded": true,
+          "measured_on_an_earlier_listing": [
+            "tool copy",
+            "server instructions and resources",
+            "harness",
+            "transcript parser"
+          ]
         }
       ]
     },
@@ -3288,7 +3885,12 @@
               "min": 7,
               "max": 7
             }
-          }
+          },
+          "measured_on_an_earlier_listing": [
+            "tool copy",
+            "server instructions and resources",
+            "harness"
+          ]
         }
       ]
     },
@@ -3324,7 +3926,12 @@
               "min": 5,
               "max": 6
             }
-          }
+          },
+          "measured_on_an_earlier_listing": [
+            "tool copy",
+            "server instructions and resources",
+            "harness"
+          ]
         },
         {
           "model": "gemini-4-hydrogen-medium@agy-cli",
@@ -3346,7 +3953,12 @@
               "min": 10,
               "max": 10
             }
-          }
+          },
+          "measured_on_an_earlier_listing": [
+            "tool copy",
+            "server instructions and resources",
+            "harness"
+          ]
         },
         {
           "model": "gpt-5.6-sol@codex-cli",
@@ -3365,7 +3977,13 @@
             },
             "turns": null
           },
-          "regraded": true
+          "regraded": true,
+          "measured_on_an_earlier_listing": [
+            "tool copy",
+            "server instructions and resources",
+            "harness",
+            "transcript parser"
+          ]
         }
       ]
     },
@@ -3401,7 +4019,12 @@
               "min": 6,
               "max": 8
             }
-          }
+          },
+          "measured_on_an_earlier_listing": [
+            "tool copy",
+            "server instructions and resources",
+            "harness"
+          ]
         },
         {
           "model": "gemini-4-hydrogen-medium@agy-cli",
@@ -3424,7 +4047,12 @@
               "max": 7
             }
           },
-          "regraded": true
+          "regraded": true,
+          "measured_on_an_earlier_listing": [
+            "tool copy",
+            "server instructions and resources",
+            "harness"
+          ]
         },
         {
           "model": "gpt-5.6-sol@codex-cli",
@@ -3443,7 +4071,13 @@
             },
             "turns": null
           },
-          "regraded": true
+          "regraded": true,
+          "measured_on_an_earlier_listing": [
+            "tool copy",
+            "server instructions and resources",
+            "harness",
+            "transcript parser"
+          ]
         }
       ]
     },
@@ -3481,7 +4115,12 @@
               "min": 5,
               "max": 5
             }
-          }
+          },
+          "measured_on_an_earlier_listing": [
+            "tool copy",
+            "server instructions and resources",
+            "harness"
+          ]
         },
         {
           "model": "gemini-4-hydrogen-medium@agy-cli",
@@ -3503,7 +4142,12 @@
               "min": 6,
               "max": 7
             }
-          }
+          },
+          "measured_on_an_earlier_listing": [
+            "tool copy",
+            "server instructions and resources",
+            "harness"
+          ]
         },
         {
           "model": "gpt-5.6-sol@codex-cli",
@@ -3522,7 +4166,13 @@
             },
             "turns": null
           },
-          "regraded": true
+          "regraded": true,
+          "measured_on_an_earlier_listing": [
+            "tool copy",
+            "server instructions and resources",
+            "harness",
+            "transcript parser"
+          ]
         }
       ]
     },
@@ -3558,7 +4208,12 @@
               "min": 3,
               "max": 3
             }
-          }
+          },
+          "measured_on_an_earlier_listing": [
+            "tool copy",
+            "server instructions and resources",
+            "harness"
+          ]
         },
         {
           "model": "gemini-4-hydrogen-medium@agy-cli",
@@ -3581,7 +4236,12 @@
               "max": 7
             }
           },
-          "regraded": true
+          "regraded": true,
+          "measured_on_an_earlier_listing": [
+            "tool copy",
+            "server instructions and resources",
+            "harness"
+          ]
         },
         {
           "model": "gpt-5.6-sol@codex-cli",
@@ -3600,7 +4260,13 @@
             },
             "turns": null
           },
-          "regraded": true
+          "regraded": true,
+          "measured_on_an_earlier_listing": [
+            "tool copy",
+            "server instructions and resources",
+            "harness",
+            "transcript parser"
+          ]
         }
       ]
     },
@@ -3636,7 +4302,12 @@
               "min": 15,
               "max": 15
             }
-          }
+          },
+          "measured_on_an_earlier_listing": [
+            "tool copy",
+            "server instructions and resources",
+            "harness"
+          ]
         },
         {
           "model": "gemini-4-hydrogen-medium@agy-cli",
@@ -3659,7 +4330,12 @@
               "max": 5
             }
           },
-          "regraded": true
+          "regraded": true,
+          "measured_on_an_earlier_listing": [
+            "tool copy",
+            "server instructions and resources",
+            "harness"
+          ]
         },
         {
           "model": "gpt-5.6-sol@codex-cli",
@@ -3678,7 +4354,13 @@
             },
             "turns": null
           },
-          "regraded": true
+          "regraded": true,
+          "measured_on_an_earlier_listing": [
+            "tool copy",
+            "server instructions and resources",
+            "harness",
+            "transcript parser"
+          ]
         }
       ]
     },
@@ -3714,7 +4396,12 @@
               "min": 7,
               "max": 8
             }
-          }
+          },
+          "measured_on_an_earlier_listing": [
+            "tool copy",
+            "server instructions and resources",
+            "harness"
+          ]
         },
         {
           "model": "gemini-4-hydrogen-medium@agy-cli",
@@ -3737,7 +4424,12 @@
               "max": 8
             }
           },
-          "regraded": true
+          "regraded": true,
+          "measured_on_an_earlier_listing": [
+            "tool copy",
+            "server instructions and resources",
+            "harness"
+          ]
         },
         {
           "model": "gpt-5.6-sol@codex-cli",
@@ -3756,7 +4448,14 @@
             },
             "turns": null
           },
-          "regraded": true
+          "regraded": true,
+          "measured_on_an_earlier_listing": [
+            "scenario",
+            "tool copy",
+            "server instructions and resources",
+            "harness",
+            "transcript parser"
+          ]
         }
       ]
     },
@@ -3795,7 +4494,12 @@
               "min": 4,
               "max": 4
             }
-          }
+          },
+          "measured_on_an_earlier_listing": [
+            "tool copy",
+            "server instructions and resources",
+            "harness"
+          ]
         },
         {
           "model": "gemini-4-hydrogen-medium@agy-cli",
@@ -3817,7 +4521,12 @@
               "min": 8,
               "max": 9
             }
-          }
+          },
+          "measured_on_an_earlier_listing": [
+            "tool copy",
+            "server instructions and resources",
+            "harness"
+          ]
         },
         {
           "model": "gpt-5.6-sol@codex-cli",
@@ -3836,7 +4545,13 @@
             },
             "turns": null
           },
-          "regraded": true
+          "regraded": true,
+          "measured_on_an_earlier_listing": [
+            "tool copy",
+            "server instructions and resources",
+            "harness",
+            "transcript parser"
+          ]
         }
       ]
     },
@@ -3876,7 +4591,12 @@
               "min": 8,
               "max": 13
             }
-          }
+          },
+          "measured_on_an_earlier_listing": [
+            "tool copy",
+            "server instructions and resources",
+            "harness"
+          ]
         },
         {
           "model": "gemini-4-hydrogen-medium@agy-cli",
@@ -3899,7 +4619,12 @@
               "max": 8
             }
           },
-          "regraded": true
+          "regraded": true,
+          "measured_on_an_earlier_listing": [
+            "tool copy",
+            "server instructions and resources",
+            "harness"
+          ]
         },
         {
           "model": "gpt-5.6-sol@codex-cli",
@@ -3918,7 +4643,13 @@
             },
             "turns": null
           },
-          "regraded": true
+          "regraded": true,
+          "measured_on_an_earlier_listing": [
+            "tool copy",
+            "server instructions and resources",
+            "harness",
+            "transcript parser"
+          ]
         }
       ]
     },
@@ -3954,7 +4685,12 @@
               "min": 9,
               "max": 10
             }
-          }
+          },
+          "measured_on_an_earlier_listing": [
+            "tool copy",
+            "server instructions and resources",
+            "harness"
+          ]
         },
         {
           "model": "gemini-4-hydrogen-medium@agy-cli",
@@ -3977,7 +4713,12 @@
               "max": 11
             }
           },
-          "regraded": true
+          "regraded": true,
+          "measured_on_an_earlier_listing": [
+            "tool copy",
+            "server instructions and resources",
+            "harness"
+          ]
         },
         {
           "model": "gpt-5.6-sol@codex-cli",
@@ -3996,7 +4737,13 @@
             },
             "turns": null
           },
-          "regraded": true
+          "regraded": true,
+          "measured_on_an_earlier_listing": [
+            "tool copy",
+            "server instructions and resources",
+            "harness",
+            "transcript parser"
+          ]
         }
       ]
     },
@@ -4034,7 +4781,12 @@
               "max": 16
             }
           },
-          "regraded": true
+          "regraded": true,
+          "measured_on_an_earlier_listing": [
+            "tool copy",
+            "server instructions and resources",
+            "harness"
+          ]
         },
         {
           "model": "gemini-4-hydrogen-medium@agy-cli",
@@ -4056,7 +4808,12 @@
               "min": 6,
               "max": 7
             }
-          }
+          },
+          "measured_on_an_earlier_listing": [
+            "tool copy",
+            "server instructions and resources",
+            "harness"
+          ]
         },
         {
           "model": "gpt-5.6-sol@codex-cli",
@@ -4075,7 +4832,15 @@
             },
             "turns": null
           },
-          "regraded": true
+          "regraded": true,
+          "measured_on_an_earlier_listing": [
+            "scenario",
+            "tool copy",
+            "server instructions and resources",
+            "judge",
+            "harness",
+            "transcript parser"
+          ]
         }
       ]
     },
@@ -4111,7 +4876,12 @@
               "min": 5,
               "max": 7
             }
-          }
+          },
+          "measured_on_an_earlier_listing": [
+            "tool copy",
+            "server instructions and resources",
+            "harness"
+          ]
         },
         {
           "model": "gemini-4-hydrogen-medium@agy-cli",
@@ -4134,7 +4904,12 @@
               "max": 6
             }
           },
-          "regraded": true
+          "regraded": true,
+          "measured_on_an_earlier_listing": [
+            "tool copy",
+            "server instructions and resources",
+            "harness"
+          ]
         },
         {
           "model": "gpt-5.6-sol@codex-cli",
@@ -4152,7 +4927,13 @@
               "max": 14
             },
             "turns": null
-          }
+          },
+          "measured_on_an_earlier_listing": [
+            "tool copy",
+            "server instructions and resources",
+            "harness",
+            "transcript parser"
+          ]
         }
       ]
     },
@@ -4193,7 +4974,12 @@
               "min": 6,
               "max": 7
             }
-          }
+          },
+          "measured_on_an_earlier_listing": [
+            "tool copy",
+            "server instructions and resources",
+            "harness"
+          ]
         },
         {
           "model": "gemini-4-hydrogen-medium@agy-cli",
@@ -4216,7 +5002,12 @@
               "max": 8
             }
           },
-          "regraded": true
+          "regraded": true,
+          "measured_on_an_earlier_listing": [
+            "tool copy",
+            "server instructions and resources",
+            "harness"
+          ]
         },
         {
           "model": "gpt-5.6-sol@codex-cli",
@@ -4234,7 +5025,13 @@
               "max": 10
             },
             "turns": null
-          }
+          },
+          "measured_on_an_earlier_listing": [
+            "tool copy",
+            "server instructions and resources",
+            "harness",
+            "transcript parser"
+          ]
         }
       ]
     },
@@ -4270,7 +5067,13 @@
               "min": 9,
               "max": 10
             }
-          }
+          },
+          "measured_on_an_earlier_listing": [
+            "scenario",
+            "tool copy",
+            "server instructions and resources",
+            "harness"
+          ]
         },
         {
           "model": "gemini-4-hydrogen-medium@agy-cli",
@@ -4292,7 +5095,13 @@
               "min": 6,
               "max": 6
             }
-          }
+          },
+          "measured_on_an_earlier_listing": [
+            "scenario",
+            "tool copy",
+            "server instructions and resources",
+            "harness"
+          ]
         },
         {
           "model": "gpt-5.6-sol@codex-cli",
@@ -4310,7 +5119,14 @@
               "max": 16
             },
             "turns": null
-          }
+          },
+          "measured_on_an_earlier_listing": [
+            "scenario",
+            "tool copy",
+            "server instructions and resources",
+            "harness",
+            "transcript parser"
+          ]
         }
       ]
     },
@@ -4349,7 +5165,12 @@
               "min": 16,
               "max": 16
             }
-          }
+          },
+          "measured_on_an_earlier_listing": [
+            "tool copy",
+            "server instructions and resources",
+            "harness"
+          ]
         },
         {
           "model": "gemini-4-hydrogen-medium@agy-cli",
@@ -4372,7 +5193,12 @@
               "max": 10
             }
           },
-          "regraded": true
+          "regraded": true,
+          "measured_on_an_earlier_listing": [
+            "tool copy",
+            "server instructions and resources",
+            "harness"
+          ]
         },
         {
           "model": "gpt-5.6-sol@codex-cli",
@@ -4390,7 +5216,13 @@
               "max": 26
             },
             "turns": null
-          }
+          },
+          "measured_on_an_earlier_listing": [
+            "tool copy",
+            "server instructions and resources",
+            "harness",
+            "transcript parser"
+          ]
         }
       ]
     },
@@ -4428,7 +5260,12 @@
               "min": 5,
               "max": 5
             }
-          }
+          },
+          "measured_on_an_earlier_listing": [
+            "tool copy",
+            "server instructions and resources",
+            "harness"
+          ]
         },
         {
           "model": "gemini-4-hydrogen-medium@agy-cli",
@@ -4451,7 +5288,12 @@
               "max": 7
             }
           },
-          "regraded": true
+          "regraded": true,
+          "measured_on_an_earlier_listing": [
+            "tool copy",
+            "server instructions and resources",
+            "harness"
+          ]
         },
         {
           "model": "gpt-5.6-sol@codex-cli",
@@ -4469,7 +5311,13 @@
               "max": 13
             },
             "turns": null
-          }
+          },
+          "measured_on_an_earlier_listing": [
+            "tool copy",
+            "server instructions and resources",
+            "harness",
+            "transcript parser"
+          ]
         }
       ]
     },
@@ -4508,7 +5356,12 @@
               "min": 9,
               "max": 9
             }
-          }
+          },
+          "measured_on_an_earlier_listing": [
+            "tool copy",
+            "server instructions and resources",
+            "harness"
+          ]
         },
         {
           "model": "gemini-4-hydrogen-medium@agy-cli",
@@ -4530,7 +5383,12 @@
               "min": 6,
               "max": 6
             }
-          }
+          },
+          "measured_on_an_earlier_listing": [
+            "tool copy",
+            "server instructions and resources",
+            "harness"
+          ]
         },
         {
           "model": "gpt-5.6-sol@codex-cli",
@@ -4548,7 +5406,13 @@
               "max": 15
             },
             "turns": null
-          }
+          },
+          "measured_on_an_earlier_listing": [
+            "tool copy",
+            "server instructions and resources",
+            "harness",
+            "transcript parser"
+          ]
         }
       ]
     },
@@ -4585,7 +5449,12 @@
               "min": 15,
               "max": 18
             }
-          }
+          },
+          "measured_on_an_earlier_listing": [
+            "tool copy",
+            "server instructions and resources",
+            "harness"
+          ]
         },
         {
           "model": "gpt-5.6-sol@codex-cli",
@@ -4603,7 +5472,13 @@
               "max": 25
             },
             "turns": null
-          }
+          },
+          "measured_on_an_earlier_listing": [
+            "tool copy",
+            "server instructions and resources",
+            "harness",
+            "transcript parser"
+          ]
         }
       ]
     },
@@ -4638,7 +5513,12 @@
               "min": 6,
               "max": 10
             }
-          }
+          },
+          "measured_on_an_earlier_listing": [
+            "tool copy",
+            "server instructions and resources",
+            "harness"
+          ]
         },
         {
           "model": "gemini-4-hydrogen-medium@agy-cli",
@@ -4661,7 +5541,12 @@
               "max": 6
             }
           },
-          "regraded": true
+          "regraded": true,
+          "measured_on_an_earlier_listing": [
+            "tool copy",
+            "server instructions and resources",
+            "harness"
+          ]
         },
         {
           "model": "gpt-5.6-sol@codex-cli",
@@ -4679,7 +5564,13 @@
               "max": 11
             },
             "turns": null
-          }
+          },
+          "measured_on_an_earlier_listing": [
+            "tool copy",
+            "server instructions and resources",
+            "harness",
+            "transcript parser"
+          ]
         }
       ]
     },
@@ -4719,7 +5610,12 @@
               "min": 10,
               "max": 10
             }
-          }
+          },
+          "measured_on_an_earlier_listing": [
+            "tool copy",
+            "server instructions and resources",
+            "harness"
+          ]
         },
         {
           "model": "gemini-4-hydrogen-medium@agy-cli",
@@ -4741,7 +5637,12 @@
               "min": 6,
               "max": 7
             }
-          }
+          },
+          "measured_on_an_earlier_listing": [
+            "tool copy",
+            "server instructions and resources",
+            "harness"
+          ]
         },
         {
           "model": "gpt-5.6-sol@codex-cli",
@@ -4760,7 +5661,13 @@
             },
             "turns": null
           },
-          "regraded": true
+          "regraded": true,
+          "measured_on_an_earlier_listing": [
+            "tool copy",
+            "server instructions and resources",
+            "harness",
+            "transcript parser"
+          ]
         }
       ]
     },
@@ -4798,7 +5705,12 @@
               "min": 11,
               "max": 12
             }
-          }
+          },
+          "measured_on_an_earlier_listing": [
+            "tool copy",
+            "server instructions and resources",
+            "harness"
+          ]
         },
         {
           "model": "gemini-4-hydrogen-medium@agy-cli",
@@ -4820,7 +5732,12 @@
               "min": 7,
               "max": 8
             }
-          }
+          },
+          "measured_on_an_earlier_listing": [
+            "tool copy",
+            "server instructions and resources",
+            "harness"
+          ]
         },
         {
           "model": "gpt-5.6-sol@codex-cli",
@@ -4838,7 +5755,13 @@
               "max": 24
             },
             "turns": null
-          }
+          },
+          "measured_on_an_earlier_listing": [
+            "tool copy",
+            "server instructions and resources",
+            "harness",
+            "transcript parser"
+          ]
         }
       ]
     },
@@ -4875,7 +5798,12 @@
               "min": 6,
               "max": 7
             }
-          }
+          },
+          "measured_on_an_earlier_listing": [
+            "tool copy",
+            "server instructions and resources",
+            "harness"
+          ]
         },
         {
           "model": "gemini-4-hydrogen-medium@agy-cli",
@@ -4897,7 +5825,12 @@
               "min": 6,
               "max": 7
             }
-          }
+          },
+          "measured_on_an_earlier_listing": [
+            "tool copy",
+            "server instructions and resources",
+            "harness"
+          ]
         },
         {
           "model": "gpt-5.6-sol@codex-cli",
@@ -4916,7 +5849,13 @@
             },
             "turns": null
           },
-          "regraded": true
+          "regraded": true,
+          "measured_on_an_earlier_listing": [
+            "tool copy",
+            "server instructions and resources",
+            "harness",
+            "transcript parser"
+          ]
         }
       ]
     },
@@ -4951,7 +5890,12 @@
               "min": 6,
               "max": 6
             }
-          }
+          },
+          "measured_on_an_earlier_listing": [
+            "tool copy",
+            "server instructions and resources",
+            "harness"
+          ]
         },
         {
           "model": "gemini-4-hydrogen-medium@agy-cli",
@@ -4973,7 +5917,12 @@
               "min": 5,
               "max": 6
             }
-          }
+          },
+          "measured_on_an_earlier_listing": [
+            "tool copy",
+            "server instructions and resources",
+            "harness"
+          ]
         },
         {
           "model": "gpt-5.6-sol@codex-cli",
@@ -4992,7 +5941,13 @@
             },
             "turns": null
           },
-          "regraded": true
+          "regraded": true,
+          "measured_on_an_earlier_listing": [
+            "tool copy",
+            "server instructions and resources",
+            "harness",
+            "transcript parser"
+          ]
         }
       ]
     },
@@ -5031,7 +5986,12 @@
               "min": 7,
               "max": 7
             }
-          }
+          },
+          "measured_on_an_earlier_listing": [
+            "tool copy",
+            "server instructions and resources",
+            "harness"
+          ]
         },
         {
           "model": "gemini-4-hydrogen-medium@agy-cli",
@@ -5053,7 +6013,12 @@
               "min": 8,
               "max": 9
             }
-          }
+          },
+          "measured_on_an_earlier_listing": [
+            "tool copy",
+            "server instructions and resources",
+            "harness"
+          ]
         },
         {
           "model": "gpt-5.6-sol@codex-cli",
@@ -5072,7 +6037,13 @@
             },
             "turns": null
           },
-          "regraded": true
+          "regraded": true,
+          "measured_on_an_earlier_listing": [
+            "tool copy",
+            "server instructions and resources",
+            "harness",
+            "transcript parser"
+          ]
         }
       ]
     },
@@ -5107,7 +6078,12 @@
               "min": 4,
               "max": 4
             }
-          }
+          },
+          "measured_on_an_earlier_listing": [
+            "tool copy",
+            "server instructions and resources",
+            "harness"
+          ]
         },
         {
           "model": "gemini-4-hydrogen-medium@agy-cli",
@@ -5129,7 +6105,12 @@
               "min": 5,
               "max": 6
             }
-          }
+          },
+          "measured_on_an_earlier_listing": [
+            "tool copy",
+            "server instructions and resources",
+            "harness"
+          ]
         },
         {
           "model": "gpt-5.6-sol@codex-cli",
@@ -5147,7 +6128,14 @@
               "max": 8
             },
             "turns": null
-          }
+          },
+          "measured_on_an_earlier_listing": [
+            "scenario",
+            "tool copy",
+            "server instructions and resources",
+            "harness",
+            "transcript parser"
+          ]
         }
       ]
     },
@@ -5183,7 +6171,12 @@
               "min": 6,
               "max": 9
             }
-          }
+          },
+          "measured_on_an_earlier_listing": [
+            "tool copy",
+            "server instructions and resources",
+            "harness"
+          ]
         },
         {
           "model": "gemini-4-hydrogen-medium@agy-cli",
@@ -5205,7 +6198,12 @@
               "min": 9,
               "max": 9
             }
-          }
+          },
+          "measured_on_an_earlier_listing": [
+            "tool copy",
+            "server instructions and resources",
+            "harness"
+          ]
         },
         {
           "model": "gpt-5.6-sol@codex-cli",
@@ -5224,7 +6222,13 @@
             },
             "turns": null
           },
-          "regraded": true
+          "regraded": true,
+          "measured_on_an_earlier_listing": [
+            "tool copy",
+            "server instructions and resources",
+            "harness",
+            "transcript parser"
+          ]
         }
       ]
     },
@@ -5261,7 +6265,12 @@
               "min": 11,
               "max": 15
             }
-          }
+          },
+          "measured_on_an_earlier_listing": [
+            "tool copy",
+            "server instructions and resources",
+            "harness"
+          ]
         },
         {
           "model": "gemini-4-hydrogen-medium@agy-cli",
@@ -5283,7 +6292,12 @@
               "min": 7,
               "max": 11
             }
-          }
+          },
+          "measured_on_an_earlier_listing": [
+            "tool copy",
+            "server instructions and resources",
+            "harness"
+          ]
         },
         {
           "model": "gpt-5.6-sol@codex-cli",
@@ -5302,7 +6316,13 @@
             },
             "turns": null
           },
-          "regraded": true
+          "regraded": true,
+          "measured_on_an_earlier_listing": [
+            "tool copy",
+            "server instructions and resources",
+            "harness",
+            "transcript parser"
+          ]
         }
       ]
     },
@@ -5345,7 +6365,12 @@
               "min": 11,
               "max": 12
             }
-          }
+          },
+          "measured_on_an_earlier_listing": [
+            "tool copy",
+            "server instructions and resources",
+            "harness"
+          ]
         },
         {
           "model": "gemini-4-hydrogen-medium@agy-cli",
@@ -5367,7 +6392,12 @@
               "min": 7,
               "max": 8
             }
-          }
+          },
+          "measured_on_an_earlier_listing": [
+            "tool copy",
+            "server instructions and resources",
+            "harness"
+          ]
         },
         {
           "model": "gpt-5.6-sol@codex-cli",
@@ -5386,7 +6416,13 @@
             },
             "turns": null
           },
-          "regraded": true
+          "regraded": true,
+          "measured_on_an_earlier_listing": [
+            "tool copy",
+            "server instructions and resources",
+            "harness",
+            "transcript parser"
+          ]
         }
       ]
     },
@@ -5421,7 +6457,12 @@
               "min": 3,
               "max": 3
             }
-          }
+          },
+          "measured_on_an_earlier_listing": [
+            "tool copy",
+            "server instructions and resources",
+            "harness"
+          ]
         },
         {
           "model": "gemini-4-hydrogen-medium@agy-cli",
@@ -5443,7 +6484,12 @@
               "min": 10,
               "max": 10
             }
-          }
+          },
+          "measured_on_an_earlier_listing": [
+            "tool copy",
+            "server instructions and resources",
+            "harness"
+          ]
         },
         {
           "model": "gpt-5.6-sol@codex-cli",
@@ -5462,7 +6508,13 @@
             },
             "turns": null
           },
-          "regraded": true
+          "regraded": true,
+          "measured_on_an_earlier_listing": [
+            "tool copy",
+            "server instructions and resources",
+            "harness",
+            "transcript parser"
+          ]
         }
       ]
     },
@@ -5502,7 +6554,12 @@
               "min": 5,
               "max": 5
             }
-          }
+          },
+          "measured_on_an_earlier_listing": [
+            "tool copy",
+            "server instructions and resources",
+            "harness"
+          ]
         },
         {
           "model": "gemini-4-hydrogen-medium@agy-cli",
@@ -5524,7 +6581,12 @@
               "min": 5,
               "max": 8
             }
-          }
+          },
+          "measured_on_an_earlier_listing": [
+            "tool copy",
+            "server instructions and resources",
+            "harness"
+          ]
         },
         {
           "model": "gpt-5.6-sol@codex-cli",
@@ -5543,7 +6605,14 @@
             },
             "turns": null
           },
-          "regraded": true
+          "regraded": true,
+          "measured_on_an_earlier_listing": [
+            "scenario",
+            "tool copy",
+            "server instructions and resources",
+            "harness",
+            "transcript parser"
+          ]
         }
       ]
     },
@@ -5578,7 +6647,12 @@
               "min": 4,
               "max": 4
             }
-          }
+          },
+          "measured_on_an_earlier_listing": [
+            "tool copy",
+            "server instructions and resources",
+            "harness"
+          ]
         },
         {
           "model": "gemini-4-hydrogen-medium@agy-cli",
@@ -5600,7 +6674,12 @@
               "min": 6,
               "max": 7
             }
-          }
+          },
+          "measured_on_an_earlier_listing": [
+            "tool copy",
+            "server instructions and resources",
+            "harness"
+          ]
         },
         {
           "model": "gpt-5.6-sol@codex-cli",
@@ -5619,7 +6698,13 @@
             },
             "turns": null
           },
-          "regraded": true
+          "regraded": true,
+          "measured_on_an_earlier_listing": [
+            "tool copy",
+            "server instructions and resources",
+            "harness",
+            "transcript parser"
+          ]
         }
       ]
     },
@@ -5655,7 +6740,12 @@
               "max": 8
             }
           },
-          "regraded": true
+          "regraded": true,
+          "measured_on_an_earlier_listing": [
+            "tool copy",
+            "server instructions and resources",
+            "harness"
+          ]
         },
         {
           "model": "gemini-4-hydrogen-medium@agy-cli",
@@ -5678,7 +6768,12 @@
               "max": 6
             }
           },
-          "regraded": true
+          "regraded": true,
+          "measured_on_an_earlier_listing": [
+            "tool copy",
+            "server instructions and resources",
+            "harness"
+          ]
         },
         {
           "model": "gpt-5.6-sol@codex-cli",
@@ -5697,7 +6792,14 @@
             },
             "turns": null
           },
-          "regraded": true
+          "regraded": true,
+          "measured_on_an_earlier_listing": [
+            "scenario",
+            "tool copy",
+            "server instructions and resources",
+            "harness",
+            "transcript parser"
+          ]
         }
       ]
     },
@@ -5732,7 +6834,12 @@
               "min": 7,
               "max": 9
             }
-          }
+          },
+          "measured_on_an_earlier_listing": [
+            "tool copy",
+            "server instructions and resources",
+            "harness"
+          ]
         },
         {
           "model": "gemini-4-hydrogen-medium@agy-cli",
@@ -5754,7 +6861,12 @@
               "min": 9,
               "max": 10
             }
-          }
+          },
+          "measured_on_an_earlier_listing": [
+            "tool copy",
+            "server instructions and resources",
+            "harness"
+          ]
         },
         {
           "model": "gpt-5.6-sol@codex-cli",
@@ -5773,7 +6885,13 @@
             },
             "turns": null
           },
-          "regraded": true
+          "regraded": true,
+          "measured_on_an_earlier_listing": [
+            "tool copy",
+            "server instructions and resources",
+            "harness",
+            "transcript parser"
+          ]
         }
       ]
     },
@@ -5810,7 +6928,12 @@
               "max": 3
             }
           },
-          "regraded": true
+          "regraded": true,
+          "measured_on_an_earlier_listing": [
+            "tool copy",
+            "server instructions and resources",
+            "harness"
+          ]
         },
         {
           "model": "gemini-4-hydrogen-medium@agy-cli",
@@ -5833,7 +6956,12 @@
               "max": 3
             }
           },
-          "regraded": true
+          "regraded": true,
+          "measured_on_an_earlier_listing": [
+            "tool copy",
+            "server instructions and resources",
+            "harness"
+          ]
         },
         {
           "model": "gpt-5.6-sol@codex-cli",
@@ -5852,7 +6980,14 @@
             },
             "turns": null
           },
-          "regraded": true
+          "regraded": true,
+          "measured_on_an_earlier_listing": [
+            "scenario",
+            "tool copy",
+            "server instructions and resources",
+            "harness",
+            "transcript parser"
+          ]
         }
       ]
     },
@@ -5887,7 +7022,12 @@
               "min": 2,
               "max": 2
             }
-          }
+          },
+          "measured_on_an_earlier_listing": [
+            "tool copy",
+            "server instructions and resources",
+            "harness"
+          ]
         },
         {
           "model": "gemini-4-hydrogen-medium@agy-cli",
@@ -5910,7 +7050,12 @@
               "max": 5
             }
           },
-          "regraded": true
+          "regraded": true,
+          "measured_on_an_earlier_listing": [
+            "tool copy",
+            "server instructions and resources",
+            "harness"
+          ]
         },
         {
           "model": "gpt-5.6-sol@codex-cli",
@@ -5929,7 +7074,13 @@
             },
             "turns": null
           },
-          "regraded": true
+          "regraded": true,
+          "measured_on_an_earlier_listing": [
+            "tool copy",
+            "server instructions and resources",
+            "harness",
+            "transcript parser"
+          ]
         }
       ]
     },
@@ -5964,7 +7115,12 @@
               "min": 6,
               "max": 6
             }
-          }
+          },
+          "measured_on_an_earlier_listing": [
+            "tool copy",
+            "server instructions and resources",
+            "harness"
+          ]
         },
         {
           "model": "gemini-4-hydrogen-medium@agy-cli",
@@ -5986,7 +7142,12 @@
               "min": 6,
               "max": 9
             }
-          }
+          },
+          "measured_on_an_earlier_listing": [
+            "tool copy",
+            "server instructions and resources",
+            "harness"
+          ]
         },
         {
           "model": "gpt-5.6-sol@codex-cli",
@@ -6005,7 +7166,13 @@
             },
             "turns": null
           },
-          "regraded": true
+          "regraded": true,
+          "measured_on_an_earlier_listing": [
+            "tool copy",
+            "server instructions and resources",
+            "harness",
+            "transcript parser"
+          ]
         }
       ]
     },
@@ -6041,7 +7208,12 @@
               "max": 4
             }
           },
-          "regraded": true
+          "regraded": true,
+          "measured_on_an_earlier_listing": [
+            "tool copy",
+            "server instructions and resources",
+            "harness"
+          ]
         },
         {
           "model": "gemini-4-hydrogen-medium@agy-cli",
@@ -6064,7 +7236,12 @@
               "max": 7
             }
           },
-          "regraded": true
+          "regraded": true,
+          "measured_on_an_earlier_listing": [
+            "tool copy",
+            "server instructions and resources",
+            "harness"
+          ]
         },
         {
           "model": "gpt-5.6-sol@codex-cli",
@@ -6083,7 +7260,14 @@
             },
             "turns": null
           },
-          "regraded": true
+          "regraded": true,
+          "measured_on_an_earlier_listing": [
+            "scenario",
+            "tool copy",
+            "server instructions and resources",
+            "harness",
+            "transcript parser"
+          ]
         }
       ]
     },
@@ -6119,7 +7303,12 @@
               "max": 5
             }
           },
-          "regraded": true
+          "regraded": true,
+          "measured_on_an_earlier_listing": [
+            "tool copy",
+            "server instructions and resources",
+            "harness"
+          ]
         },
         {
           "model": "gemini-4-hydrogen-medium@agy-cli",
@@ -6142,7 +7331,12 @@
               "max": 8
             }
           },
-          "regraded": true
+          "regraded": true,
+          "measured_on_an_earlier_listing": [
+            "tool copy",
+            "server instructions and resources",
+            "harness"
+          ]
         },
         {
           "model": "gpt-5.6-sol@codex-cli",
@@ -6161,7 +7355,14 @@
             },
             "turns": null
           },
-          "regraded": true
+          "regraded": true,
+          "measured_on_an_earlier_listing": [
+            "scenario",
+            "tool copy",
+            "server instructions and resources",
+            "harness",
+            "transcript parser"
+          ]
         }
       ]
     },
@@ -6196,7 +7397,12 @@
               "min": 4,
               "max": 5
             }
-          }
+          },
+          "measured_on_an_earlier_listing": [
+            "tool copy",
+            "server instructions and resources",
+            "harness"
+          ]
         },
         {
           "model": "gemini-4-hydrogen-medium@agy-cli",
@@ -6218,7 +7424,12 @@
               "min": 6,
               "max": 7
             }
-          }
+          },
+          "measured_on_an_earlier_listing": [
+            "tool copy",
+            "server instructions and resources",
+            "harness"
+          ]
         },
         {
           "model": "gpt-5.6-sol@codex-cli",
@@ -6237,7 +7448,13 @@
             },
             "turns": null
           },
-          "regraded": true
+          "regraded": true,
+          "measured_on_an_earlier_listing": [
+            "tool copy",
+            "server instructions and resources",
+            "harness",
+            "transcript parser"
+          ]
         }
       ]
     },
@@ -6273,7 +7490,12 @@
               "max": 5
             }
           },
-          "regraded": true
+          "regraded": true,
+          "measured_on_an_earlier_listing": [
+            "tool copy",
+            "server instructions and resources",
+            "harness"
+          ]
         },
         {
           "model": "gemini-4-hydrogen-medium@agy-cli",
@@ -6296,7 +7518,12 @@
               "max": 7
             }
           },
-          "regraded": true
+          "regraded": true,
+          "measured_on_an_earlier_listing": [
+            "tool copy",
+            "server instructions and resources",
+            "harness"
+          ]
         },
         {
           "model": "gpt-5.6-sol@codex-cli",
@@ -6315,7 +7542,14 @@
             },
             "turns": null
           },
-          "regraded": true
+          "regraded": true,
+          "measured_on_an_earlier_listing": [
+            "scenario",
+            "tool copy",
+            "server instructions and resources",
+            "harness",
+            "transcript parser"
+          ]
         }
       ]
     },
@@ -6350,7 +7584,12 @@
               "min": 5,
               "max": 6
             }
-          }
+          },
+          "measured_on_an_earlier_listing": [
+            "tool copy",
+            "server instructions and resources",
+            "harness"
+          ]
         },
         {
           "model": "gemini-4-hydrogen-medium@agy-cli",
@@ -6372,7 +7611,12 @@
               "min": 7,
               "max": 7
             }
-          }
+          },
+          "measured_on_an_earlier_listing": [
+            "tool copy",
+            "server instructions and resources",
+            "harness"
+          ]
         },
         {
           "model": "gpt-5.6-sol@codex-cli",
@@ -6391,7 +7635,13 @@
             },
             "turns": null
           },
-          "regraded": true
+          "regraded": true,
+          "measured_on_an_earlier_listing": [
+            "tool copy",
+            "server instructions and resources",
+            "harness",
+            "transcript parser"
+          ]
         }
       ]
     },
@@ -6427,7 +7677,12 @@
               "max": 7
             }
           },
-          "regraded": true
+          "regraded": true,
+          "measured_on_an_earlier_listing": [
+            "tool copy",
+            "server instructions and resources",
+            "harness"
+          ]
         },
         {
           "model": "gemini-4-hydrogen-medium@agy-cli",
@@ -6450,7 +7705,12 @@
               "max": 8
             }
           },
-          "regraded": true
+          "regraded": true,
+          "measured_on_an_earlier_listing": [
+            "tool copy",
+            "server instructions and resources",
+            "harness"
+          ]
         },
         {
           "model": "gpt-5.6-sol@codex-cli",
@@ -6469,7 +7729,15 @@
             },
             "turns": null
           },
-          "regraded": true
+          "regraded": true,
+          "measured_on_an_earlier_listing": [
+            "scenario",
+            "tool copy",
+            "server instructions and resources",
+            "judge",
+            "harness",
+            "transcript parser"
+          ]
         }
       ]
     },
@@ -6504,7 +7772,12 @@
               "min": 4,
               "max": 5
             }
-          }
+          },
+          "measured_on_an_earlier_listing": [
+            "tool copy",
+            "server instructions and resources",
+            "harness"
+          ]
         },
         {
           "model": "gemini-4-hydrogen-medium@agy-cli",
@@ -6526,7 +7799,12 @@
               "min": 5,
               "max": 5
             }
-          }
+          },
+          "measured_on_an_earlier_listing": [
+            "tool copy",
+            "server instructions and resources",
+            "harness"
+          ]
         },
         {
           "model": "gpt-5.6-sol@codex-cli",
@@ -6545,7 +7823,13 @@
             },
             "turns": null
           },
-          "regraded": true
+          "regraded": true,
+          "measured_on_an_earlier_listing": [
+            "tool copy",
+            "server instructions and resources",
+            "harness",
+            "transcript parser"
+          ]
         }
       ]
     },
@@ -6580,7 +7864,12 @@
               "min": 2,
               "max": 4
             }
-          }
+          },
+          "measured_on_an_earlier_listing": [
+            "tool copy",
+            "server instructions and resources",
+            "harness"
+          ]
         },
         {
           "model": "gemini-4-hydrogen-medium@agy-cli",
@@ -6602,7 +7891,12 @@
               "min": 4,
               "max": 5
             }
-          }
+          },
+          "measured_on_an_earlier_listing": [
+            "tool copy",
+            "server instructions and resources",
+            "harness"
+          ]
         },
         {
           "model": "gpt-5.6-sol@codex-cli",
@@ -6621,7 +7915,13 @@
             },
             "turns": null
           },
-          "regraded": true
+          "regraded": true,
+          "measured_on_an_earlier_listing": [
+            "tool copy",
+            "server instructions and resources",
+            "harness",
+            "transcript parser"
+          ]
         }
       ]
     },
@@ -6656,7 +7956,12 @@
               "min": 4,
               "max": 4
             }
-          }
+          },
+          "measured_on_an_earlier_listing": [
+            "tool copy",
+            "server instructions and resources",
+            "harness"
+          ]
         },
         {
           "model": "gemini-4-hydrogen-medium@agy-cli",
@@ -6678,7 +7983,12 @@
               "min": 5,
               "max": 5
             }
-          }
+          },
+          "measured_on_an_earlier_listing": [
+            "tool copy",
+            "server instructions and resources",
+            "harness"
+          ]
         },
         {
           "model": "gpt-5.6-sol@codex-cli",
@@ -6697,7 +8007,13 @@
             },
             "turns": null
           },
-          "regraded": true
+          "regraded": true,
+          "measured_on_an_earlier_listing": [
+            "tool copy",
+            "server instructions and resources",
+            "harness",
+            "transcript parser"
+          ]
         }
       ]
     },
@@ -6732,7 +8048,12 @@
               "min": 9,
               "max": 12
             }
-          }
+          },
+          "measured_on_an_earlier_listing": [
+            "tool copy",
+            "server instructions and resources",
+            "harness"
+          ]
         },
         {
           "model": "gemini-4-hydrogen-medium@agy-cli",
@@ -6755,7 +8076,12 @@
               "max": 11
             }
           },
-          "regraded": true
+          "regraded": true,
+          "measured_on_an_earlier_listing": [
+            "tool copy",
+            "server instructions and resources",
+            "harness"
+          ]
         },
         {
           "model": "gpt-5.6-sol@codex-cli",
@@ -6774,7 +8100,13 @@
             },
             "turns": null
           },
-          "regraded": true
+          "regraded": true,
+          "measured_on_an_earlier_listing": [
+            "tool copy",
+            "server instructions and resources",
+            "harness",
+            "transcript parser"
+          ]
         }
       ]
     },
@@ -6809,7 +8141,12 @@
               "min": 5,
               "max": 5
             }
-          }
+          },
+          "measured_on_an_earlier_listing": [
+            "tool copy",
+            "server instructions and resources",
+            "harness"
+          ]
         },
         {
           "model": "gemini-4-hydrogen-medium@agy-cli",
@@ -6831,7 +8168,12 @@
               "min": 7,
               "max": 8
             }
-          }
+          },
+          "measured_on_an_earlier_listing": [
+            "tool copy",
+            "server instructions and resources",
+            "harness"
+          ]
         },
         {
           "model": "gpt-5.6-sol@codex-cli",
@@ -6850,7 +8192,15 @@
             },
             "turns": null
           },
-          "regraded": true
+          "regraded": true,
+          "measured_on_an_earlier_listing": [
+            "scenario",
+            "tool copy",
+            "server instructions and resources",
+            "judge",
+            "harness",
+            "transcript parser"
+          ]
         }
       ]
     },
@@ -6889,7 +8239,12 @@
               "min": 10,
               "max": 14
             }
-          }
+          },
+          "measured_on_an_earlier_listing": [
+            "tool copy",
+            "server instructions and resources",
+            "harness"
+          ]
         },
         {
           "model": "gemini-4-hydrogen-medium@agy-cli",
@@ -6912,7 +8267,12 @@
               "max": 8
             }
           },
-          "regraded": true
+          "regraded": true,
+          "measured_on_an_earlier_listing": [
+            "tool copy",
+            "server instructions and resources",
+            "harness"
+          ]
         },
         {
           "model": "gpt-5.6-sol@codex-cli",
@@ -6931,7 +8291,13 @@
             },
             "turns": null
           },
-          "regraded": true
+          "regraded": true,
+          "measured_on_an_earlier_listing": [
+            "tool copy",
+            "server instructions and resources",
+            "harness",
+            "transcript parser"
+          ]
         }
       ]
     },
@@ -6968,7 +8334,12 @@
               "min": 8,
               "max": 8
             }
-          }
+          },
+          "measured_on_an_earlier_listing": [
+            "tool copy",
+            "server instructions and resources",
+            "harness"
+          ]
         },
         {
           "model": "gemini-4-hydrogen-medium@agy-cli",
@@ -6990,7 +8361,12 @@
               "min": 6,
               "max": 6
             }
-          }
+          },
+          "measured_on_an_earlier_listing": [
+            "tool copy",
+            "server instructions and resources",
+            "harness"
+          ]
         },
         {
           "model": "gpt-5.6-sol@codex-cli",
@@ -7009,7 +8385,13 @@
             },
             "turns": null
           },
-          "regraded": true
+          "regraded": true,
+          "measured_on_an_earlier_listing": [
+            "tool copy",
+            "server instructions and resources",
+            "harness",
+            "transcript parser"
+          ]
         }
       ]
     },
@@ -7044,7 +8426,12 @@
               "min": 1,
               "max": 2
             }
-          }
+          },
+          "measured_on_an_earlier_listing": [
+            "tool copy",
+            "server instructions and resources",
+            "harness"
+          ]
         },
         {
           "model": "gemini-4-hydrogen-medium@agy-cli",
@@ -7067,7 +8454,12 @@
               "max": 3
             }
           },
-          "regraded": true
+          "regraded": true,
+          "measured_on_an_earlier_listing": [
+            "tool copy",
+            "server instructions and resources",
+            "harness"
+          ]
         },
         {
           "model": "gpt-5.6-sol@codex-cli",
@@ -7086,7 +8478,13 @@
             },
             "turns": null
           },
-          "regraded": true
+          "regraded": true,
+          "measured_on_an_earlier_listing": [
+            "tool copy",
+            "server instructions and resources",
+            "harness",
+            "transcript parser"
+          ]
         }
       ]
     },
@@ -7121,7 +8519,12 @@
               "min": 3,
               "max": 6
             }
-          }
+          },
+          "measured_on_an_earlier_listing": [
+            "tool copy",
+            "server instructions and resources",
+            "harness"
+          ]
         },
         {
           "model": "gemini-4-hydrogen-medium@agy-cli",
@@ -7143,7 +8546,12 @@
               "min": 7,
               "max": 8
             }
-          }
+          },
+          "measured_on_an_earlier_listing": [
+            "tool copy",
+            "server instructions and resources",
+            "harness"
+          ]
         },
         {
           "model": "gpt-5.6-sol@codex-cli",
@@ -7162,7 +8570,13 @@
             },
             "turns": null
           },
-          "regraded": true
+          "regraded": true,
+          "measured_on_an_earlier_listing": [
+            "tool copy",
+            "server instructions and resources",
+            "harness",
+            "transcript parser"
+          ]
         }
       ]
     },
@@ -7197,7 +8611,12 @@
               "min": 2,
               "max": 2
             }
-          }
+          },
+          "measured_on_an_earlier_listing": [
+            "tool copy",
+            "server instructions and resources",
+            "harness"
+          ]
         },
         {
           "model": "gemini-4-hydrogen-medium@agy-cli",
@@ -7219,7 +8638,12 @@
               "min": 8,
               "max": 8
             }
-          }
+          },
+          "measured_on_an_earlier_listing": [
+            "tool copy",
+            "server instructions and resources",
+            "harness"
+          ]
         },
         {
           "model": "gpt-5.6-sol@codex-cli",
@@ -7238,7 +8662,13 @@
             },
             "turns": null
           },
-          "regraded": true
+          "regraded": true,
+          "measured_on_an_earlier_listing": [
+            "tool copy",
+            "server instructions and resources",
+            "harness",
+            "transcript parser"
+          ]
         }
       ]
     },
@@ -7273,7 +8703,12 @@
               "min": 4,
               "max": 4
             }
-          }
+          },
+          "measured_on_an_earlier_listing": [
+            "tool copy",
+            "server instructions and resources",
+            "harness"
+          ]
         },
         {
           "model": "gemini-4-hydrogen-medium@agy-cli",
@@ -7295,7 +8730,12 @@
               "min": 6,
               "max": 13
             }
-          }
+          },
+          "measured_on_an_earlier_listing": [
+            "tool copy",
+            "server instructions and resources",
+            "harness"
+          ]
         },
         {
           "model": "gpt-5.6-sol@codex-cli",
@@ -7314,7 +8754,13 @@
             },
             "turns": null
           },
-          "regraded": true
+          "regraded": true,
+          "measured_on_an_earlier_listing": [
+            "tool copy",
+            "server instructions and resources",
+            "harness",
+            "transcript parser"
+          ]
         }
       ]
     }
@@ -8184,7 +9630,7 @@
     },
     {
       "name": "read_details",
-      "tokens": 4600,
+      "tokens": 4604,
       "agents": [],
       "required_by_cases": [],
       "required_as_one_of_a_set_by_cases": [],
@@ -8324,76 +9770,8 @@
       }
     },
     {
-      "name": "change_activities",
-      "tokens": 2977,
-      "agents": [
-        "overnight_at_risk_sweep"
-      ],
-      "required_by_cases": [
-        "case9_filed_in_the_wrong_place"
-      ],
-      "required_as_one_of_a_set_by_cases": [
-        "case122_file_the_acceptance_report",
-        "case1_log_it",
-        "case42_can_i_answer_on_whatsapp",
-        "case60_send_one_draft_one"
-      ],
-      "permitted_in_cases": [
-        "case110_write_greta_a_thank_you",
-        "case117_log_it_and_say_what_waits",
-        "case126_file_it_i_approve",
-        "case127_log_the_call_again",
-        "case130_put_the_offer_link_on_the_deal",
-        "case46_get_us_in_a_room",
-        "case48_that_whole_thread_is_filed_wrong",
-        "case59_file_it_on_the_meeting_and_the_contract",
-        "case74_read_the_file_back"
-      ],
-      "called_in_held_runs": [
-        "case1_log_it",
-        "case117_log_it_and_say_what_waits",
-        "case122_file_the_acceptance_report",
-        "case126_file_it_i_approve",
-        "case130_put_the_offer_link_on_the_deal",
-        "case42_can_i_answer_on_whatsapp",
-        "case45_move_the_deal_on",
-        "case46_get_us_in_a_room",
-        "case48_that_whole_thread_is_filed_wrong",
-        "case59_file_it_on_the_meeting_and_the_contract",
-        "case60_send_one_draft_one",
-        "case74_read_the_file_back",
-        "case9_filed_in_the_wrong_place"
-      ],
-      "driven": true,
-      "required_only_as_one_of_a_set": false,
-      "graded_by_certification_tasks": [
-        "agent_loop"
-      ],
-      "near_miss_in_certification_tasks": [],
-      "measured_by_model": {
-        "claude-sonnet-5-5@claude-cli": {
-          "runs": 2,
-          "passed": 2,
-          "reliability": 1,
-          "cases_below_their_bar": []
-        },
-        "gemini-4-hydrogen-medium@agy-cli": {
-          "runs": 2,
-          "passed": 2,
-          "reliability": 1,
-          "cases_below_their_bar": []
-        },
-        "gpt-5.6-sol@codex-cli": {
-          "runs": 2,
-          "passed": 2,
-          "reliability": 1,
-          "cases_below_their_bar": []
-        }
-      }
-    },
-    {
       "name": "read_workspace",
-      "tokens": 2779,
+      "tokens": 2994,
       "agents": [],
       "required_by_cases": [
         "case111_how_is_the_workspace_doing"
@@ -8533,6 +9911,74 @@
       }
     },
     {
+      "name": "change_activities",
+      "tokens": 2980,
+      "agents": [
+        "overnight_at_risk_sweep"
+      ],
+      "required_by_cases": [
+        "case9_filed_in_the_wrong_place"
+      ],
+      "required_as_one_of_a_set_by_cases": [
+        "case122_file_the_acceptance_report",
+        "case1_log_it",
+        "case42_can_i_answer_on_whatsapp",
+        "case60_send_one_draft_one"
+      ],
+      "permitted_in_cases": [
+        "case110_write_greta_a_thank_you",
+        "case117_log_it_and_say_what_waits",
+        "case126_file_it_i_approve",
+        "case127_log_the_call_again",
+        "case130_put_the_offer_link_on_the_deal",
+        "case46_get_us_in_a_room",
+        "case48_that_whole_thread_is_filed_wrong",
+        "case59_file_it_on_the_meeting_and_the_contract",
+        "case74_read_the_file_back"
+      ],
+      "called_in_held_runs": [
+        "case1_log_it",
+        "case117_log_it_and_say_what_waits",
+        "case122_file_the_acceptance_report",
+        "case126_file_it_i_approve",
+        "case130_put_the_offer_link_on_the_deal",
+        "case42_can_i_answer_on_whatsapp",
+        "case45_move_the_deal_on",
+        "case46_get_us_in_a_room",
+        "case48_that_whole_thread_is_filed_wrong",
+        "case59_file_it_on_the_meeting_and_the_contract",
+        "case60_send_one_draft_one",
+        "case74_read_the_file_back",
+        "case9_filed_in_the_wrong_place"
+      ],
+      "driven": true,
+      "required_only_as_one_of_a_set": false,
+      "graded_by_certification_tasks": [
+        "agent_loop"
+      ],
+      "near_miss_in_certification_tasks": [],
+      "measured_by_model": {
+        "claude-sonnet-5-5@claude-cli": {
+          "runs": 2,
+          "passed": 2,
+          "reliability": 1,
+          "cases_below_their_bar": []
+        },
+        "gemini-4-hydrogen-medium@agy-cli": {
+          "runs": 2,
+          "passed": 2,
+          "reliability": 1,
+          "cases_below_their_bar": []
+        },
+        "gpt-5.6-sol@codex-cli": {
+          "runs": 2,
+          "passed": 2,
+          "reliability": 1,
+          "cases_below_their_bar": []
+        }
+      }
+    },
+    {
       "name": "change_state",
       "tokens": 2365,
       "agents": [],
@@ -8562,7 +10008,7 @@
     },
     {
       "name": "find_records",
-      "tokens": 2057,
+      "tokens": 2050,
       "agents": [
         "morning_brief",
         "overnight_at_risk_sweep"

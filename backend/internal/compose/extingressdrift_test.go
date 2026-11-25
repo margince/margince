@@ -166,6 +166,8 @@ var waivedActivityFields = gatekit.Waive(map[string]string{
 		"core never performed, and the flag decides which replay proof applies",
 	"judged": "unexported, and the sink sets it from Envelope. A unit stating it would state the " +
 		"conclusion the sink exists to draw",
+	"memberOwned": "unexported, and FileChatMessage derives it from the authenticated chat binding. A unit " +
+		"stating it would claim a member's own account the binding never proved",
 })
 
 // TestThePublishedActivityMirrorsTheCoreOne is the same rule one level in. The
