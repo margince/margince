@@ -133,7 +133,8 @@ export const ArchiveRefusedReadOnlyRole: Story = {
   },
   play: async () => {
     await userEvent.click(screen.getByRole("button", { name: "More actions" }));
-    await screen.findByText(
+    // Merge and Archive both name the role.
+    await screen.findAllByText(
       "Your role can only read. Ask an administrator for another role.",
     );
   },
