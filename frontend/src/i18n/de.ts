@@ -8233,8 +8233,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "editAccess.withdraw": "Anfrage zum Schreibzugriff zurückziehen",
   "editAccess.sent": "Schreibzugriff bei {owner} angefragt",
   "editAccess.withdrawn": "Anfrage zum Schreibzugriff zurückgezogen",
-  // A record this reader may view but not change: the head's pill and the
-  // Ownership row both say it, and the panel names who owns it.
+  // A record this reader may view but not change. The head's pill and the
+  // Ownership row say so, and the panel names the owner.
   "viewOnly.pill": "Nur lesen",
   "viewOnly.label": "Dein Zugriff",
   "viewOnly.owns": "{name} gehört {owner}",

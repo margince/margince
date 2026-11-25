@@ -19,9 +19,8 @@ import { useViewOnlyAccess, ViewOnly } from "./viewonly";
 
 type Contact = components["schemas"]["Contact"];
 
-// A record this reader may view but not change: the head's View only pill
-// beside who can see it, the panel behind it, and the Access row it adds to
-// Ownership. Every record type draws these two the same way.
+// A record this reader may view but not change. The head's View only pill
+// opens a panel, and Ownership gains an Access row. Every record type draws both.
 const meta: Meta = {
   title: "Records/Record 360/View only",
   parameters: { layout: "padded" },

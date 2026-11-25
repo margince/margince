@@ -1,11 +1,10 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-// A record this reader may view but not change says so in two places, the same
-// on every record type: a "View only" pill in the head, beside who can see it,
-// and an Access row in the Ownership group. Both name the owner and carry the
-// ask for edit access. The refusal sentence itself sits once, hidden, under the
-// id every refused control points at, so a locked button stays described.
+// A record this reader may view but not change says so in two places on every
+// record type. One is a "View only" pill in the head; one is an Access row in
+// Ownership. Both carry the ask for edit access. The refusal sentence sits once,
+// hidden, under the id every locked control points at.
 
 import type { ReactNode } from "react";
 import { Avatar } from "../design-system/avatar";

@@ -41,14 +41,10 @@ export function terminalSentence(
     : t("lead.terminalDisqualified");
 }
 
-// The band under the strip: a write the lead refused. A live lead that is not
-// this reader's to change says so in the head's View only pill; a closed lead
-// says so in the verdict of How it stands. The way back out of a
-// disqualification is in More.
-//
-// RecordView draws the band's element and its two intervals for anything it is
-// handed, so this answers `undefined` rather than a fragment that renders
-// nothing when there is nothing to say.
+// The band under the strip: a write the lead refused. A lead not this reader's
+// says so in the View only pill, and a closed lead in How it stands.
+// RecordView draws a band for anything it is handed, so nothing to say is
+// `undefined`, never an empty fragment.
 export function leadBand({
   writer,
 }: Readonly<{ writer: LeadWriter }>): ReactNode | undefined {

@@ -26,10 +26,9 @@ import "./visibility.css";
 // named, not yours) and a word that names it — so the state reads the same on
 // a row, in a drawer header and beside a contact.
 //
-// It is a fact, not a status, which is why it is not a `Badge`: `Badge`'s
-// tones say whether something is going well, and a message limited to its
-// participants is a message working exactly as intended. `withheld` and
-// `viewOnly` are about the READER; only `withheld` takes a tone, since it hides content.
+// It is a fact, not a status, so it is not a `Badge`: a tone says whether
+// something goes well. `withheld` and `viewOnly` describe the reader; only
+// `withheld` takes a tone, since it hides content.
 
 /**
  * The closed vocabulary. `team` is what a MAIL row means — everyone the linked

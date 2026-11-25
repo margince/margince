@@ -299,8 +299,8 @@ export function RefusalLines({ children }: Readonly<{ children: ReactNode }>) {
   );
 }
 
-// The mark before the label: a lock on a refused control, which base.css draws
-// locked by it, else the ✦ of an AI verb, which cannot run for this reader.
+// The mark before the label. A refused control gets a lock, which base.css
+// keys its locked face on. Otherwise an AI verb gets its ✦.
 function LeadingMark({
   refused,
   marked,

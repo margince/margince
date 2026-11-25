@@ -8235,8 +8235,8 @@ export const en = {
   "editAccess.withdraw": "Withdraw edit access request",
   "editAccess.sent": "Edit access requested from {owner}",
   "editAccess.withdrawn": "Edit access request withdrawn",
-  // A record this reader may view but not change: the head's pill and the
-  // Ownership row both say it, and the panel names who owns it.
+  // A record this reader may view but not change. The head's pill and the
+  // Ownership row say so, and the panel names the owner.
   "viewOnly.pill": "View only",
   "viewOnly.label": "Your access",
   "viewOnly.owns": "{owner} owns {name}",

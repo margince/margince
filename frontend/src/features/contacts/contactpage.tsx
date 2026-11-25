@@ -93,8 +93,8 @@ function activityRefusal(
   );
 }
 
-// Where the Log refusal sits: hidden beside the View only pill, which already
-// says it, or at the foot of the left card when the contact is the reader's.
+// Where the Log refusal sits. Beside the View only pill it is hidden, since the
+// pill says it. On the reader's own contact it sits under the left card.
 function placeLogRefusal(
   activity: ActivityGate,
   t: ReturnType<typeof useT>,
