@@ -17,7 +17,7 @@ input and output schema in folds below it. What a tool may do and whether a huma
 | Resources | 14 |
 | Tool catalog | 243.1 KB |
 | Resource catalog | 5.5 KB |
-| Approx. wire tokens | 63630 |
+| Approx. wire tokens | 63645 |
 | Largest tool | `read_details` (15.8 KB) |
 | Scopes rendered | `read`, `draft`, `write`, `send`, `enrich` |
 
@@ -34,9 +34,9 @@ tool adds to that listing, and what it costs each scheduled agent, agent by agen
 |---|---:|---:|---|
 | Output schemas | 33.7 KB | 13% | **No**: a result's shape, never listed to a model |
 | Descriptions (incl. governance clause) | 51.0 KB | 20% | Yes, every step |
-| Input schemas | 146.8 KB | 60% | Yes, every step |
+| Input schemas | 146.9 KB | 60% | Yes, every step |
 | _Names, annotations, punctuation_ | 11.6 KB | 4% | Partly |
-| **Description + input schema** | **197.8 KB** | **81%** | **the recurring cost** |
+| **Description + input schema** | **197.9 KB** | **81%** | **the recurring cost** |
 
 Output schemas count in the total but are never sent to a model;
 descriptions and input schemas are what each step pays for.
@@ -71,7 +71,7 @@ descriptions and input schemas are what each step pays for.
 | [`change_activities`](#change_activities) | Log, plan and file activities |  |  | 2977 |
 | [`change_attention`](#change_attention) | Act on proposals, notices and the weekly plan |  |  | 1842 |
 | [`change_capture`](#change_capture) | Decide what comes into the CRM |  |  | 1891 |
-| [`change_compliance`](#change_compliance) | Record consent, stops, holds and privacy work |  |  | 1274 |
+| [`change_compliance`](#change_compliance) | Record consent, stops, holds and privacy work |  |  | 1289 |
 | [`change_lists`](#change_lists) | Make and change lists |  |  | 620 |
 | [`change_my_settings`](#change_my_settings) | Change the user's own preferences and voice |  |  | 867 |
 | [`change_offers`](#change_offers) | Work offers, contracts and deal rooms |  |  | 1096 |
@@ -1340,7 +1340,7 @@ retract_qualifying_event, revoke_override, suppress_contact, update_data_subject
 {
   "properties": {
     "action": {
-      "description": "read_workspace topic actions lists each action's body\nassign_notice_case: Give a privacy notice already owed (from notice_cases) an owner\nassign_notice_case_review: Give a contact's privacy-notice case (from notice_case_reviews) an owner\nconfirm_notice_source: Confirm where a contact came from (bought list, import, their own enquiry), which decides whether a privacy notice is owed\nlift_lead_suppression: Take back a stop on a lead, if you outrank the level that set it\nlift_suppression: Take back a stop, if you outrank the level that set it\nopen_data_subject_request: Open a data-subject request (access/rectify/erasure)\npin_activity_to_floor: Pin an activity to the retention floor, restricting it\nplace_legal_hold: Place a legal hold on a record\nrecord_communication_context: Answer a refusal by saying what happened away from the system\nrecord_consent: Grant or withdraw consent for one purpose — writes an append-only proof row\nrecord_lead_qualifying_event: Record an exchange with a lead\nrecord_qualifying_event: Record an exchange for scoped correspondence\nresolve_confirm_submission: Accept or decline what a subject proposed\nretract_acquisition_request: Take back the request the contact's acquisition records\nretract_lead_qualifying_event: Take back a recorded lead exchange\nretract_qualifying_event: Take back an exchange a colleague recorded by hand\nrevoke_override: Take back a standing override, if your level may revoke the one that recorded it\nsuppress_contact: Record that this contact asked us to stop writing to them\nupdate_data_subject_request: Update a data-subject request's status / assignee / resolution",
+      "description": "read_workspace topic actions lists each action's body\nassign_notice_case: Give a privacy notice already owed (from notice_cases, GET /privacy/notice-cases) an owner\nassign_notice_case_review: Give a contact's privacy-notice case (from notice_case_reviews, GET /privacy/notice-case-reviews) an owner\nconfirm_notice_source: Confirm where a contact came from (bought list, import, their own enquiry), which decides whether a privacy notice is owed\nlift_lead_suppression: Take back a stop on a lead, if you outrank the level that set it\nlift_suppression: Take back a stop, if you outrank the level that set it\nopen_data_subject_request: Open a data-subject request (access/rectify/erasure)\npin_activity_to_floor: Pin an activity to the retention floor, restricting it\nplace_legal_hold: Place a legal hold on a record\nrecord_communication_context: Answer a refusal by saying what happened away from the system\nrecord_consent: Grant or withdraw consent for one purpose — writes an append-only proof row\nrecord_lead_qualifying_event: Record an exchange with a lead\nrecord_qualifying_event: Record an exchange for scoped correspondence\nresolve_confirm_submission: Accept or decline what a subject proposed\nretract_acquisition_request: Take back the request the contact's acquisition records\nretract_lead_qualifying_event: Take back a recorded lead exchange\nretract_qualifying_event: Take back an exchange a colleague recorded by hand\nrevoke_override: Take back a standing override, if your level may revoke the one that recorded it\nsuppress_contact: Record that this contact asked us to stop writing to them\nupdate_data_subject_request: Update a data-subject request's status / assignee / resolution",
       "enum": [
         "assign_notice_case",
         "assign_notice_case_review",

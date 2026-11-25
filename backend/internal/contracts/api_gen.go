@@ -103335,7 +103335,7 @@ type ServerInterface interface {
 	// Get ready for a meeting about one record.
 	// (GET /meeting-prep)
 	PrepForMeeting(w http.ResponseWriter, r *http.Request, params PrepForMeetingParams)
-	// The acting user's own in-app notifications, newest first. Not a privacy notice owed to a contact; those are notice_case_reviews.
+	// The acting user's own in-app notifications, newest first. Not a privacy notice owed to a contact; those are notice_case_reviews (GET /privacy/notice-case-reviews).
 	// (GET /notices)
 	ListNotices(w http.ResponseWriter, r *http.Request, params ListNoticesParams)
 	// Raise a coaching notice for a colleague. It lands in their Worklist's notices lane.
@@ -103482,16 +103482,16 @@ type ServerInterface interface {
 	// Every contact's privacy-notice case, including one whose source was never recorded (an older contact), soonest deadline first. Without state it lists unresolved cases only, so an empty page is not an empty notice history, and a contact imported moments ago may have no case yet. For one contact, read their contact_360 view (GET /contacts/{id}/360) instead; its privacy_source_reviews and privacy_notice_duties carry the case ids.
 	// (GET /privacy/notice-case-reviews)
 	ListNoticeCaseReviews(w http.ResponseWriter, r *http.Request, params ListNoticeCaseReviewsParams)
-	// One contact's privacy-notice case — its source, whether a notice is owed, and by when. The id comes from notice_case_reviews or the contact's contact_360 view, not the contact's id.
+	// One contact's privacy-notice case — its source, whether a notice is owed, and by when. The id comes from notice_case_reviews (GET /privacy/notice-case-reviews) or the contact's contact_360 view (GET /contacts/{id}/360), not the contact's id.
 	// (GET /privacy/notice-case-reviews/{id})
 	GetNoticeCaseReview(w http.ResponseWriter, r *http.Request, id openapi_types.UUID)
-	// Give a contact's privacy-notice case (from notice_case_reviews) an owner.
+	// Give a contact's privacy-notice case (from notice_case_reviews, GET /privacy/notice-case-reviews) an owner.
 	// (POST /privacy/notice-case-reviews/{id}/assign)
 	AssignNoticeCaseReview(w http.ResponseWriter, r *http.Request, id openapi_types.UUID)
 	// Read accessible evidence for a contact source assessment.
 	// (GET /privacy/notice-case-reviews/{id}/source)
 	GetNoticeSourceEvidence(w http.ResponseWriter, r *http.Request, id openapi_types.UUID, params GetNoticeSourceEvidenceParams)
-	// Confirm where a contact came from (bought list, import, their own enquiry), which decides whether a privacy notice is owed. Preview it first (POST /privacy/notice-case-reviews/{id}/source/preview). Only a contact with no recorded source is up for review; when its evidence does not name where the data first came from, ask the user rather than guessing a kind.
+	// Confirm where a contact came from (bought list, import, their own enquiry), which decides whether a privacy notice is owed. Preview it first (POST /privacy/notice-case-reviews/{id}/source/preview). Only a contact with no recorded source is up for review; when its evidence does not name where the data first came from (an import alone does not), ask the user rather than guessing a kind.
 	// (POST /privacy/notice-case-reviews/{id}/source)
 	AssessNoticeSource(w http.ResponseWriter, r *http.Request, id openapi_types.UUID)
 	// Preview what confirming a contact's source decides — whether a notice is owed and by when — without changing the case. Confirming is the user's decision, so offer confirm_notice_source (POST /privacy/notice-case-reviews/{id}/source) and ask them, unless they already named the source and asked you to confirm it.
@@ -103500,10 +103500,10 @@ type ServerInterface interface {
 	// Privacy notices already owed, where the source is confirmed, soonest deadline first. A contact whose source nobody has confirmed is in notice_case_reviews (GET /privacy/notice-case-reviews).
 	// (GET /privacy/notice-cases)
 	ListNoticeCases(w http.ResponseWriter, r *http.Request, params ListNoticeCasesParams)
-	// One privacy notice owed, where the source is confirmed. The case id comes from notice_cases, not the contact's id.
+	// One privacy notice owed, where the source is confirmed. The case id comes from notice_cases (GET /privacy/notice-cases), not the contact's id.
 	// (GET /privacy/notice-cases/{id})
 	GetNoticeCase(w http.ResponseWriter, r *http.Request, id openapi_types.UUID)
-	// Give a privacy notice already owed (from notice_cases) an owner.
+	// Give a privacy notice already owed (from notice_cases, GET /privacy/notice-cases) an owner.
 	// (POST /privacy/notice-cases/{id}/assign)
 	AssignNoticeCase(w http.ResponseWriter, r *http.Request, id openapi_types.UUID)
 	// End a disclosure duty on a stated ground, or record that it was met elsewhere.
@@ -109089,7 +109089,7 @@ func (_ Unimplemented) PrepForMeeting(w http.ResponseWriter, r *http.Request, pa
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
-// The acting user's own in-app notifications, newest first. Not a privacy notice owed to a contact; those are notice_case_reviews.
+// The acting user's own in-app notifications, newest first. Not a privacy notice owed to a contact; those are notice_case_reviews (GET /privacy/notice-case-reviews).
 // (GET /notices)
 func (_ Unimplemented) ListNotices(w http.ResponseWriter, r *http.Request, params ListNoticesParams) {
 	w.WriteHeader(http.StatusNotImplemented)
@@ -109383,13 +109383,13 @@ func (_ Unimplemented) ListNoticeCaseReviews(w http.ResponseWriter, r *http.Requ
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
-// One contact's privacy-notice case — its source, whether a notice is owed, and by when. The id comes from notice_case_reviews or the contact's contact_360 view, not the contact's id.
+// One contact's privacy-notice case — its source, whether a notice is owed, and by when. The id comes from notice_case_reviews (GET /privacy/notice-case-reviews) or the contact's contact_360 view (GET /contacts/{id}/360), not the contact's id.
 // (GET /privacy/notice-case-reviews/{id})
 func (_ Unimplemented) GetNoticeCaseReview(w http.ResponseWriter, r *http.Request, id openapi_types.UUID) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
-// Give a contact's privacy-notice case (from notice_case_reviews) an owner.
+// Give a contact's privacy-notice case (from notice_case_reviews, GET /privacy/notice-case-reviews) an owner.
 // (POST /privacy/notice-case-reviews/{id}/assign)
 func (_ Unimplemented) AssignNoticeCaseReview(w http.ResponseWriter, r *http.Request, id openapi_types.UUID) {
 	w.WriteHeader(http.StatusNotImplemented)
@@ -109401,7 +109401,7 @@ func (_ Unimplemented) GetNoticeSourceEvidence(w http.ResponseWriter, r *http.Re
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
-// Confirm where a contact came from (bought list, import, their own enquiry), which decides whether a privacy notice is owed. Preview it first (POST /privacy/notice-case-reviews/{id}/source/preview). Only a contact with no recorded source is up for review; when its evidence does not name where the data first came from, ask the user rather than guessing a kind.
+// Confirm where a contact came from (bought list, import, their own enquiry), which decides whether a privacy notice is owed. Preview it first (POST /privacy/notice-case-reviews/{id}/source/preview). Only a contact with no recorded source is up for review; when its evidence does not name where the data first came from (an import alone does not), ask the user rather than guessing a kind.
 // (POST /privacy/notice-case-reviews/{id}/source)
 func (_ Unimplemented) AssessNoticeSource(w http.ResponseWriter, r *http.Request, id openapi_types.UUID) {
 	w.WriteHeader(http.StatusNotImplemented)
@@ -109419,13 +109419,13 @@ func (_ Unimplemented) ListNoticeCases(w http.ResponseWriter, r *http.Request, p
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
-// One privacy notice owed, where the source is confirmed. The case id comes from notice_cases, not the contact's id.
+// One privacy notice owed, where the source is confirmed. The case id comes from notice_cases (GET /privacy/notice-cases), not the contact's id.
 // (GET /privacy/notice-cases/{id})
 func (_ Unimplemented) GetNoticeCase(w http.ResponseWriter, r *http.Request, id openapi_types.UUID) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
-// Give a privacy notice already owed (from notice_cases) an owner.
+// Give a privacy notice already owed (from notice_cases, GET /privacy/notice-cases) an owner.
 // (POST /privacy/notice-cases/{id}/assign)
 func (_ Unimplemented) AssignNoticeCase(w http.ResponseWriter, r *http.Request, id openapi_types.UUID) {
 	w.WriteHeader(http.StatusNotImplemented)

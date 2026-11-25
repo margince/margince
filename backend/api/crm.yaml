@@ -26395,7 +26395,7 @@ paths:
       operationId: getNoticeCase
       security: [ { bearerAuth: [] }, { cookieAuth: [] } ]
       x-mcp-tool: { verb: get_notice_case, router: read_details, action: notice_case, tier: auto_execute, scope: read, served_by: route }
-      summary: One privacy notice owed, where the source is confirmed. The case id comes from notice_cases, not the contact's id.
+      summary: One privacy notice owed, where the source is confirmed. The case id comes from notice_cases (GET /privacy/notice-cases), not the contact's id.
       description: |
         The same case the queue lists, read on its own, for a surface that opens one duty rather
         than working a page of them.
@@ -26427,7 +26427,7 @@ paths:
       operationId: assignNoticeCase
       security: [ { bearerAuth: [] }, { cookieAuth: [] } ]
       x-mcp-tool: { verb: assign_notice_case, router: change_compliance, action: assign_notice_case, tier: auto_execute, scope: write, served_by: route }
-      summary: Give a privacy notice already owed (from notice_cases) an owner.
+      summary: Give a privacy notice already owed (from notice_cases, GET /privacy/notice-cases) an owner.
       description: |
         Records who is working this duty, so the queue shows a claimed case rather than a pile
         nobody has taken.
@@ -26548,7 +26548,7 @@ paths:
       operationId: getNoticeCaseReview
       security: [ { bearerAuth: [] }, { cookieAuth: [] } ]
       x-mcp-tool: { verb: get_notice_case_review, router: read_details, action: notice_case_review, tier: auto_execute, scope: read, served_by: route }
-      summary: One contact's privacy-notice case — its source, whether a notice is owed, and by when. The id comes from notice_case_reviews or the contact's contact_360 view, not the contact's id.
+      summary: One contact's privacy-notice case — its source, whether a notice is owed, and by when. The id comes from notice_case_reviews (GET /privacy/notice-case-reviews) or the contact's contact_360 view (GET /contacts/{id}/360), not the contact's id.
       description: |
         The administrative record for a source review or notice duty. Human privacy-request read
         authority covers the record; contact names remain limited by ordinary contact visibility.
@@ -26570,7 +26570,7 @@ paths:
       operationId: assignNoticeCaseReview
       security: [ { bearerAuth: [] }, { cookieAuth: [] } ]
       x-mcp-tool: { verb: assign_notice_case_review, router: change_compliance, action: assign_notice_case_review, tier: auto_execute, scope: write, served_by: route }
-      summary: Give a contact's privacy-notice case (from notice_case_reviews) an owner.
+      summary: Give a contact's privacy-notice case (from notice_case_reviews, GET /privacy/notice-case-reviews) an owner.
       description: |
         Records who is working this duty, so the queue shows a claimed case rather than a pile
         nobody has taken.
@@ -26620,7 +26620,7 @@ paths:
       operationId: assessNoticeSource
       security: [ { bearerAuth: [] }, { cookieAuth: [] } ]
       x-mcp-tool: { verb: confirm_notice_source, router: change_compliance, action: confirm_notice_source, tier: auto_execute, scope: write, served_by: route, ask_user_first: true }
-      summary: Confirm where a contact came from (bought list, import, their own enquiry), which decides whether a privacy notice is owed. Preview it first (POST /privacy/notice-case-reviews/{id}/source/preview). Only a contact with no recorded source is up for review; when its evidence does not name where the data first came from, ask the user rather than guessing a kind.
+      summary: Confirm where a contact came from (bought list, import, their own enquiry), which decides whether a privacy notice is owed. Preview it first (POST /privacy/notice-case-reviews/{id}/source/preview). Only a contact with no recorded source is up for review; when its evidence does not name where the data first came from (an import alone does not), ask the user rather than guessing a kind.
       requestBody:
         required: true
         content:
@@ -35632,7 +35632,7 @@ paths:
       operationId: listNotices
       security: [ { bearerAuth: [] }, { cookieAuth: [] } ]
       x-mcp-tool: { verb: list_notices, router: read_details, action: notices, tier: auto_execute, scope: read, served_by: route }
-      summary: The acting user's own in-app notifications, newest first. Not a privacy notice owed to a contact; those are notice_case_reviews.
+      summary: The acting user's own in-app notifications, newest first. Not a privacy notice owed to a contact; those are notice_case_reviews (GET /privacy/notice-case-reviews).
       description: |
         The acting human's own notifications, newest first, read and unread; another seat's are
         not an error, they are absent.
