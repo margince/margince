@@ -236,15 +236,15 @@ func TestABookingPageConcernNeedsASwitchedOnUsedPausedPage(t *testing.T) {
 			if tc.block {
 				f.calendar.checkErr = connector.ErrAuthRejected
 			}
-			concern, paused, err := f.store.BookingPageConcern(f.ctx)
+			concerns, err := f.store.BookingPageConcerns(f.ctx)
 			if err != nil {
 				t.Fatal(err)
 			}
-			if paused != tc.want {
+			if paused := len(concerns) > 0; paused != tc.want {
 				t.Fatalf("paused = %v, want %v", paused, tc.want)
 			}
-			if tc.want && (concern.Blocker != crmcontracts.SchedulingProfileBlockerCalendarUnavailable || concern.PageID == ids.Nil) {
-				t.Errorf("concern = %+v, want the page and calendar_unavailable", concern)
+			if tc.want && (len(concerns) != 1 || concerns[0].Blocker != crmcontracts.SchedulingProfileBlockerCalendarUnavailable || concerns[0].PageID == ids.Nil) {
+				t.Errorf("concerns = %+v, want the page and calendar_unavailable", concerns)
 			}
 		})
 	}

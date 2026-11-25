@@ -191,3 +191,40 @@ func TestABurstLeavesARetractedApprovalUnclaimed(t *testing.T) {
 		t.Fatalf("the retracted approval's mail was claimed: %v %v", attempted, err)
 	}
 }
+
+// A reword gives a live line new words and leaves whether it was read alone. A
+// line taken back is left as it is.
+func TestARewordChangesOnlyALiveLine(t *testing.T) {
+	e := setupNotices(t)
+	for _, key := range []string{"team:live", "team:retracted"} {
+		if _, err := e.store.Create(e.engineCtx(), NewNotice{Recipient: e.recipient, Kind: KindMeetingTeamRequest, Subject: "Added to “Intro call”", DedupeKey: key}); err != nil {
+			t.Fatalf("recording the notice: %v", err)
+		}
+	}
+	if _, err := e.owner.Exec(context.Background(), `UPDATE notice SET read_at = now() WHERE dedupe_key = 'team:live'`); err != nil {
+		t.Fatal(err)
+	}
+	if err := e.store.db.Tx(e.engineCtx(), func(tx pgx.Tx) error {
+		if _, err := e.store.Retract(e.engineCtx(), tx, "team:retracted"); err != nil {
+			return err
+		}
+		for _, key := range []string{"team:live", "team:retracted"} {
+			if err := e.store.RewordLiveTx(e.engineCtx(), tx, NewNotice{Recipient: e.recipient, Kind: KindMeetingTeamRequest, Subject: "Added to “Renewal call”", DedupeKey: key}); err != nil {
+				return err
+			}
+		}
+		return nil
+	}); err != nil {
+		t.Fatalf("rewording: %v", err)
+	}
+	for key, want := range map[string]string{"team:live": "Added to “Renewal call”", "team:retracted": "Added to “Intro call”"} {
+		var subject string
+		var read bool
+		if err := e.owner.QueryRow(context.Background(), `SELECT subject, read_at IS NOT NULL FROM notice WHERE dedupe_key = $1`, key).Scan(&subject, &read); err != nil {
+			t.Fatal(err)
+		}
+		if subject != want || read != (key == "team:live") {
+			t.Errorf("%s reads %q (read %v), want %q with its read state kept", key, subject, read, want)
+		}
+	}
+}
