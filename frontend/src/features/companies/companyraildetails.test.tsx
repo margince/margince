@@ -510,7 +510,7 @@ describe("the grouped postal address", () => {
 describe("a choice that may be cleared", () => {
   it.each([
     ["Industry", "industry"],
-    ["Employees", "size_band"],
+    ["Company size", "size_band"],
   ])("clears %s to null", async (label, key) => {
     const user = userEvent.setup();
     const calls = await renderSettledGrid({ ...COMPANY, size_band: "11-50" });

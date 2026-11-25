@@ -16,6 +16,7 @@ import {
 } from "react";
 import { readStoredJson, STORAGE_KEYS, writeStored } from "../lib/storage";
 import { MIN_COLUMN_WIDTH } from "./listheader";
+import { splitFirstRoom } from "./listtable.firstroom";
 import { useColumnFloors } from "./listtable.floors";
 
 /**
@@ -33,7 +34,7 @@ type ColumnSize = Readonly<{
   // columns, or to the trailing gap once only capped columns are left.
   max?: number;
   // Taken from the room past every minimum before any other column grows, so a
-  // narrow page spends its spare pixels on the name. Columns carrying it split it.
+  // narrow page spends its spare pixels on what tells rows apart. Columns carrying it split it.
   first?: number;
 }>;
 
@@ -46,6 +47,7 @@ const COLUMN_SIZES: Readonly<
     | "date"
     | "colleague"
     | "score"
+    | "email"
     | "standard"
     | "verbs"
     | "menu",
@@ -60,6 +62,9 @@ const COLUMN_SIZES: Readonly<
   colleague: { share: 1, min: 150, max: 240 },
   // A score of up to three digits under a one-word header and its sort arrow.
   score: { share: null, min: 80 },
+  // The address tells two contacts apart, so it grows beside the name. The
+  // standard minimum leaves the German Contacts row room at 1024px.
+  email: { share: 1.8, min: 120, first: 240 },
   standard: { share: 1.3, min: 120 },
   // Two labelled ghost buttons side by side in the longest locale this tree
   // ships: German turns "Edit product" into "Produkt bearbeiten".
@@ -74,7 +79,7 @@ export type SizedColumn = Readonly<{
   fixed?: boolean;
   numeric?: boolean;
   verbs?: boolean | "menu";
-  holds?: "date" | "colleague" | "score";
+  holds?: "date" | "colleague" | "score" | "email";
 }>;
 
 /**
@@ -228,19 +233,24 @@ export function columnLayout(
   const shared = shown.filter((column) => fixedWidth(column) === undefined);
   const growsFirst = (column: SizedColumn) =>
     fixedWidth(column) === undefined && boundsAt(column).first !== undefined;
-  const takenFromRoom = (column: SizedColumn) =>
-    growsFirst(column)
-      ? boundsAt(column).min - sizeOf(column).min
-      : (fixedWidth(column) ?? boundsAt(column).min);
-  const roomFirst =
-    (available -
-      shown.reduce((total, column) => total + takenFromRoom(column), 0)) /
-    Math.max(1, shown.filter(growsFirst).length);
+  const firstWidths = splitFirstRoom(
+    shown.filter(growsFirst).map((column) => {
+      const { min, first } = boundsAt(column);
+      return { key: column.key, min, first: Math.max(first ?? min, min) };
+    }),
+    shown
+      .filter((column) => !growsFirst(column))
+      .reduce(
+        (room, column) => room - (fixedWidth(column) ?? boundsAt(column).min),
+        available,
+      ),
+  );
   const limitsOf = (column: SizedColumn): ColumnSize => {
     const size = boundsAt(column);
-    return size.first === undefined
+    const first = firstWidths.get(column.key);
+    return first === undefined
       ? size
-      : { ...size, min: Math.max(size.min, Math.min(size.first, roomFirst)) };
+      : { ...size, min: Math.max(size.min, first) };
   };
   const held = new Map<string, number>();
   const pinnedWidth = (column: SizedColumn) =>

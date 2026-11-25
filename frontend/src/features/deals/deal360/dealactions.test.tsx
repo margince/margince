@@ -81,14 +81,14 @@ describe("the deal header's Email verb", () => {
     expect(
       document.getElementById(email.getAttribute("aria-describedby") ?? "")
         ?.textContent,
-    ).toBe("You do not have permission to log activities on this record.");
+    ).toBe("Your role can only read. Ask an administrator for another role.");
   });
 
   it("names the refusal in its tooltip, described once by the header's sentence", async () => {
     const user = userEvent.setup();
     armHoverIntent();
     mount({ deal: ["read"] });
-    const why = en["record.logActivityRefused"];
+    const why = en["record.roleReadsOnly"];
 
     const email = screen.getByRole("button", { name: "Email" });
     const sentence = await screen.findByText(why);
@@ -212,7 +212,7 @@ describe("the deal's record keys", () => {
     renderHook(() => useShortcutDispatcher());
     mount({ deal: ["read"] });
     await screen.findByText(
-      "You do not have permission to log activities on this record.",
+      "Your role can only read. Ask an administrator for another role.",
     );
 
     await user.keyboard("ntm");

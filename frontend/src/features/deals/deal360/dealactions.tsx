@@ -29,6 +29,7 @@ import { useT } from "../../../i18n";
 import { useCanWriteRecord } from "../../../lib/capability";
 import { navigate } from "../../../lib/router";
 import { useShortcut } from "../../../lib/shortcuts";
+import { useArchiveRefusal } from "../../../lib/writerefusal";
 import { RecordEmailVerb } from "../../records/recordemail";
 import { ShareAction } from "../../records/share";
 import { archiveDeal } from "../deals.write";
@@ -102,11 +103,12 @@ function DealArchiveAction({
   refusedReasonId,
 }: Readonly<{ deal: Deal; refusedReasonId?: string }>) {
   const t = useT();
+  const refusedReason = useArchiveRefusal("deal");
   return (
     <ArchiveAction
       requires={{ object: "deal", action: "delete" }}
       archivable={deal.archivable ?? false}
-      refusedReason={t("deal.archiveRefused")}
+      refusedReason={refusedReason}
       disabledReasonId={refusedReasonId}
       label={t("deal.archive")}
       confirmText={t("deal.archiveConfirm")}
@@ -143,7 +145,7 @@ export function DealActions({
   // The log/task drawer's own state: one drawer with two doors, the same
   // shape companyheaderactions.tsx and leads.tsx keep for the identical pair.
   const [drawer, setDrawer] = useState<"log" | "task" | "call" | null>(null);
-  const activity = useActivityGate(writableTarget(deal));
+  const activity = useActivityGate("deal", writableTarget(deal));
   const logRefused = refusedByArchive ?? activity.refusedId;
   const logRefusal = activityRefusal(t, refusedByArchive, activity);
   const logPending = !refusedByArchive && activity.pending;

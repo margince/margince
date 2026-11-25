@@ -360,7 +360,7 @@ describe("claiming an unowned account", () => {
 // to tell a record that is closed from a build without an edit button.
 // The menu reads the page's activity gate for its Add task row.
 function MenuHost({ company }: Readonly<{ company: Company }>) {
-  const activity = useActivityGate();
+  const activity = useActivityGate("company");
   return (
     <CompanyActionBadges
       company={company}

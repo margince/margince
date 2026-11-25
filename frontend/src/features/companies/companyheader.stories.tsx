@@ -117,7 +117,7 @@ const roster = [
 // The strip and its menu share the page's activity gate, read inside the
 // providers the way the page reads it.
 function HeaderVerbs({ record }: Readonly<{ record: Company }>) {
-  const activity = useActivityGate();
+  const activity = useActivityGate("company");
   return (
     <>
       <CompanyHeaderActions

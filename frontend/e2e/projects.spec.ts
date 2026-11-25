@@ -180,6 +180,10 @@ test("a project is created, a deal is attached, the win starts delivery, the tim
     .getByRole("button", { name: "Won" })
     .click();
   await expect(page.getByText("In die Phase Won verschieben?")).toBeVisible();
+  // The dialog says before the win what it does to the deal's project.
+  await expect(
+    page.getByText("Damit wechselt auch Brandt ERP zu In Umsetzung."),
+  ).toBeVisible();
   // No contract is on the deal, so the dialog asks how it was won on opening.
   // The one Confirm that follows is the win.
   await choose(
@@ -202,6 +206,13 @@ test("a project is created, a deal is attached, the win starts delivery, the tim
   await expect(page).toHaveURL(/#\/projects\/pr-new-1$/);
   await expect(current).toContainText("In Umsetzung");
   await expect(visit(page, "In Umsetzung")).toBeVisible();
+  // Its history row names the win that moved it, linking to the deal.
+  await expect(
+    visit(page, "In Umsetzung").getByText(/Deal Fleet retrofit gewonnen/),
+  ).toBeVisible();
+  await expect(
+    visit(page, "In Umsetzung").getByRole("link", { name: "Fleet retrofit" }),
+  ).toHaveAttribute("href", /#\/deals\/d-fleet$/);
   // And the deal is listed on the project with its won status.
   await expect(
     page.getByRole("button", { name: "Fleet retrofit" }),
@@ -262,10 +273,10 @@ test("a project is created, a deal is attached, the win starts delivery, the tim
 
   // 7. Close with a reason. A close with no reason is refused on the reason
   // field, and the reason is what the history shows afterwards.
-  // The Closed step is named for the move it makes, as the dialog's heading is.
-  await phase.getByRole("button", { name: "Wechsel zu Abgeschlossen" }).click();
+  // The way out reads as the verb it is, as the dialog's heading does.
+  await phase.getByRole("button", { name: "Projekt abschließen" }).click();
   await expect(
-    page.getByRole("heading", { name: "Wechsel zu Abgeschlossen" }),
+    page.getByRole("heading", { name: "Projekt abschließen" }),
   ).toBeVisible();
   const close = page
     .getByRole("dialog")
@@ -276,7 +287,7 @@ test("a project is created, a deal is attached, the win starts delivery, the tim
     "true",
   );
   await expect(
-    page.getByRole("heading", { name: "Wechsel zu Abgeschlossen" }),
+    page.getByRole("heading", { name: "Projekt abschließen" }),
   ).toBeVisible();
   await page
     .getByTestId("project-advance-reason")

@@ -59,7 +59,7 @@ var labels = map[string]langcopy.Phrase{
 	"phone":                {En: "Phone", De: "Telefon", Vi: "Điện thoại"},
 	"pipeline":             same("Pipeline"),
 	"ref":                  {En: "Your own key (ref)", De: "Dein eigener Schlüssel (Ref)", Vi: "Khóa riêng của bạn (ref)"},
-	"size_band":            {En: "Employees", De: "Mitarbeitende", Vi: "Số nhân viên"},
+	"size_band":            {En: "Company size", De: "Unternehmensgröße", Vi: "Quy mô công ty"},
 	"stage":                {En: "Stage", De: "Phase", Vi: "Giai đoạn"},
 	"subject":              {En: "Subject", De: "Betreff", Vi: "Tiêu đề"},
 	"tags":                 {En: "Tags", De: "Tags", Vi: "Thẻ"},

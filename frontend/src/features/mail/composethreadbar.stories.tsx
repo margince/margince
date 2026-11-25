@@ -164,3 +164,36 @@ export const OnlyWithheldReadSoFar: StoryObj = {
     );
   },
 };
+
+/** Threads read without their summary: each is one row naming its subject,
+ *  who it was with and when, set from the row's start edge. */
+export const ThreadsWithoutSummary: StoryObj = {
+  render: () => {
+    installFetchStub({
+      "GET /me": meRoute({}),
+      "GET /activities": () =>
+        jsonResponse({
+          data: LONG.slice(0, 3).map(
+            ({ email_summary: _summary, ...row }) => row,
+          ),
+          page: { has_more: false },
+        }),
+    });
+    return (
+      <StoryProviders>
+        <ComposeWindow
+          entityType="contact"
+          entityId="ada"
+          open
+          onClose={() => undefined}
+        />
+      </StoryProviders>
+    );
+  },
+  play: async () => {
+    await userEvent.click(await threadBar());
+    await expect(
+      document.querySelectorAll('.compose-choice[data-align="start"]'),
+    ).toHaveLength(3);
+  },
+};

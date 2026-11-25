@@ -17,7 +17,12 @@ import { afterEach, expect, it } from "vitest";
 import { en } from "../../i18n/en";
 import type { FilterVocabulary } from "../../lib/filterdata";
 import { FiltersScreen } from "./filters";
-import { type FiltersServer, mountFilters, type Sent } from "./filters.testkit";
+import {
+  addCondition,
+  type FiltersServer,
+  mountFilters,
+  type Sent,
+} from "./filters.testkit";
 
 // A proposal lands as ordinary rows marked as proposed: these tests are about
 // where it lands, what the reader may do with it before, during and after, and
@@ -111,10 +116,7 @@ async function ask(user: User, text = ASKED) {
 
 /** One condition of the reader's own, written by hand. */
 async function addOwn(user: User, value: string) {
-  const adds = await screen.findAllByRole("button", {
-    name: en["filters.addClause"],
-  });
-  await user.click(adds[0]);
+  await addCondition(user, "Name");
   const inputs = screen.getAllByLabelText<HTMLInputElement>("Value");
   await user.type(inputs[inputs.length - 1], value);
 }
@@ -495,8 +497,6 @@ it("gives way to a line saying a model is needed, and building by hand still wor
   expect(screen.queryByLabelText("Describe the contacts you want")).toBeNull();
   // One way in is left, so nothing offers it as the other of two.
   expect(screen.queryByText(en["filters.startOr"])).toBeNull();
-  await user.click(
-    screen.getByRole("button", { name: en["filters.addClause"] }),
-  );
+  await addCondition(user, "Name");
   expect(values()).toEqual([""]);
 });
