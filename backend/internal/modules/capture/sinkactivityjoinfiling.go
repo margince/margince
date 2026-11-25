@@ -59,28 +59,11 @@ func seatHoldsImportTx(ctx context.Context, tx pgx.Tx, id ids.ActivityID, seat i
 func (s *Sink) fileJoinedMailForSeatTx(
 	ctx context.Context, tx pgx.Tx, id ids.ActivityID, rec connector.NormalizedRecord, fields ActivityFields,
 ) error {
-	if fields.Kind == meetingKind || internalMailAdmitted(ctx) || isMeetingNotesMail(rec) {
-		return nil
-	}
-	joined, err := seatHoldsImportTx(ctx, tx, id, actorUserID(ctx))
-	if err != nil || !joined {
+	subject, files, err := s.joinedMailFilesTx(ctx, tx, id, rec, fields)
+	if err != nil || !files {
 		return err
 	}
-	subject, err := s.ladderSubjectTx(ctx, tx, rec)
-	if err != nil || subject.Email == "" {
-		return err
-	}
-	if private, err := capturedThreadIsPrivateTx(ctx, tx, rec); err != nil || private {
-		return err
-	}
-	var suppressed bool
-	if err := tx.QueryRow(ctx, `SELECT `+ladderSuppressedClause+` FROM activity a WHERE a.id = $1`, id).Scan(&suppressed); err != nil {
-		return fmt.Errorf("capture: reading whether the ladder suppressed a joined activity: %w", err)
-	}
-	if suppressed {
-		return nil
-	}
-	holders, err := storekit.LockIdentityHolders(ctx, tx, storekit.IdentityKeys{Emails: []string{normalizeEmail(subject.Email)}})
+	holders, err := storekit.LockIdentityHolders(ctx, tx, storekit.IdentityKeys{Emails: []string{normalizeEmail(subject)}})
 	if err != nil {
 		return fmt.Errorf("capture: locking the counterparty's address: %w", err)
 	}
@@ -104,4 +87,31 @@ func (s *Sink) fileJoinedMailForSeatTx(
 		decider: ctx, budget: laterLinkReservation, private: private, write: insertParticipantLink(ctx, tx, id),
 	})
 	return err
+}
+
+// joinedMailFilesTx answers whether a joined mail is filed for this seat, and
+// the counterparty address it is filed by. A meeting, internal mail, a notes
+// mail, a private thread and a mail the ladder suppressed file nothing.
+func (s *Sink) joinedMailFilesTx(
+	ctx context.Context, tx pgx.Tx, id ids.ActivityID, rec connector.NormalizedRecord, fields ActivityFields,
+) (string, bool, error) {
+	if fields.Kind == meetingKind || internalMailAdmitted(ctx) || isMeetingNotesMail(rec) {
+		return "", false, nil
+	}
+	joined, err := seatHoldsImportTx(ctx, tx, id, actorUserID(ctx))
+	if err != nil || !joined {
+		return "", false, err
+	}
+	subject, err := s.ladderSubjectTx(ctx, tx, rec)
+	if err != nil || subject.Email == "" {
+		return "", false, err
+	}
+	if private, err := capturedThreadIsPrivateTx(ctx, tx, rec); err != nil || private {
+		return "", false, err
+	}
+	var suppressed bool
+	if err := tx.QueryRow(ctx, `SELECT `+ladderSuppressedClause+` FROM activity a WHERE a.id = $1`, id).Scan(&suppressed); err != nil {
+		return "", false, fmt.Errorf("capture: reading whether the ladder suppressed a joined activity: %w", err)
+	}
+	return subject.Email, !suppressed, nil
 }
