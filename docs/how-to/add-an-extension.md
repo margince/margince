@@ -457,9 +457,8 @@ So the static check below also refuses role changes (`SET ROLE`, `RESET ROLE`, `
 `DO` blocks. It refuses `EXECUTE`, `PREPARE`, `CREATE FUNCTION` and functions that run a query string, such as
 `query_to_xml`.
 
-A separate database login for each unit would make the limit hold against such code. That is
-[issue 628](https://github.com/margince/margince/issues/628), closed until a unit from outside the first-party
-set is planned.
+A separate database login for each unit would make the limit hold against such code. Core has none
+([issue 628](https://github.com/margince/margince/issues/628)).
 
 `ErrCoreTableRefused` also appears when the role holds no rights on one of your own tables. That happens when a
 role other than the migrate role (`margince_owner`) created the table, because only its tables get the rights
@@ -842,7 +841,7 @@ Only an admin sees these settings, and only an admin can change them. Each chang
 
 An admin changes them with `PUT /v1/extensions/{name}/settings`. Send `overwrites_edited_fields` and a `declared` list of `key` and `value` pairs, for example `{"overwrites_edited_fields": false, "declared": [{"key": "region", "value": "eu-west"}]}`. A setting left out of the list keeps its value. A key the unit did not declare, or a value its kind cannot hold, is a 422 and saves nothing. A switch value is the text `true` or `false`.
 
-The core stores the values and does not yet hand them to the unit's code. Only core code reads them today. A unit that needs to read its own setting has to wait for that.
+The core stores the values and does not hand them to the unit's code. Only core code reads them.
 
 ## Declare a company type
 
@@ -897,8 +896,16 @@ The kind is gated on the RBAC object `ext_<unit>_<kind>`. The unit's hyphens bec
 tags or lists a record, it checks the `read` right and a live row. A caller without the right gets `404`. The start
 refuses a declaration that breaks the table above.
 
-The service reports itself unready while your table, a column or the unique index is missing. It does the same while
-`margince_app` holds fewer than the four rights on the table.
+Ship two more indexes in the unit's migrations, because core's reads over your table use them:
+
+| Read | Index the table must hold |
+|---|---|
+| Search | A trigram index over the lower-cased title column: `CREATE INDEX ON ext.<table> USING gin (lower(<title>) public.gin_trgm_ops)`. The title column is the `LabelField` of the `Timeline`, or else the first `NaturalKey` field. |
+| History, for each entry of `Timeline.Subjects` | A btree index whose first column is the subject's `Column` and whose second is the `AtColumn`: `CREATE INDEX ON ext.<table> (<column>, <at column>)`. |
+
+The service reports itself unready while your table, a column, the unique index or one of these indexes is missing.
+The message names the statement that adds a missing index. It does the same while `margince_app` holds fewer than the
+four rights on the table.
 
 `GET /v1/record-kinds` lists the kinds a seat may read. The reference page
 [extension record kinds, links, signals and reports](../reference/extension-record-kinds-links-signals-and-reports.md#extension-record-kinds-and-link-registry)

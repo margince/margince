@@ -14,7 +14,10 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
+
+	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/compose/integration"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
@@ -148,5 +151,46 @@ func TestAContactsHistoryCarriesExtensionRowsAndSignalsNewestFirst(t *testing.T)
 	}
 	if code, _ := readExtensionHistory(reader, t, e, ids.NewV7()); code != http.StatusNotFound {
 		t.Errorf("a contact nobody holds = %d, want 404", code)
+	}
+}
+
+func TestTheExtensionHistoryReadUsesTheSubjectIndex(t *testing.T) {
+	integration.Setup(t)
+	registerHistoryVisits(t)
+	owner := integration.OwnerConn(t)
+	ctx := context.Background()
+	if _, err := owner.Exec(ctx, `CREATE INDEX ext_historydemo_visit_contact ON ext.`+historyDemoTable+` (contact_id, visited_at)`); err != nil {
+		t.Fatal(err)
+	}
+	kind, ok := recordkinds.Lookup("ext:historydemo:visit")
+	if !ok {
+		t.Fatal("the visit kind did not register")
+	}
+	query, ok := extensionHistoryQuery(kind, "contact")
+	if !ok {
+		t.Fatal("the visit kind has no contact History")
+	}
+	tx, err := owner.Begin(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() {
+		if err := tx.Rollback(context.Background()); err != nil {
+			t.Errorf("rolling back the plan transaction: %v", err)
+		}
+	})
+	if _, err := tx.Exec(ctx, `SET LOCAL enable_seqscan = off`); err != nil {
+		t.Fatal(err)
+	}
+	rows, err := tx.Query(ctx, "EXPLAIN "+query, ids.NewV7())
+	if err != nil {
+		t.Fatal(err)
+	}
+	plan, err := pgx.CollectRows(rows, pgx.RowTo[string])
+	if err != nil {
+		t.Fatal(err)
+	}
+	if text := strings.Join(plan, "\n"); !strings.Contains(text, "ext_historydemo_visit_contact") {
+		t.Fatalf("the History read does not use the subject index:\n%s", text)
 	}
 }
