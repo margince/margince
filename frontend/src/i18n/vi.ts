@@ -10295,7 +10295,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "aiAccess.local.antigravity.signIn":
     "Mở cài đặt agent, rồi “Customizations”, và chọn “Authenticate” bên cạnh margince.",
   "aiAccess.place.lumoNote":
-    "Lumo trên web chưa thể kết nối với ứng dụng khác. Hãy dùng ứng dụng Lumo cho máy tính, tải tại proton.me/lumo/download.",
+    "Lumo trên web chưa thể kết nối với ứng dụng khác. Hãy dùng ứng dụng Lumo cho máy tính, tải tại https://proton.me/lumo/download.",
   "aiAccess.local.lumo.open":
     "Trong Lumo Desktop, chọn “Settings” ở cuối thanh bên, rồi “Desktop app” và “Connectors”.",
   "aiAccess.local.lumo.add":
