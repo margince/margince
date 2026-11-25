@@ -115,8 +115,17 @@ function stubApi(opts: StubOpts) {
           return jsonResponse(
             {
               status: 422,
-              code: "reader_team_required",
+              code: "validation_error",
               title: "Unprocessable Entity",
+              details: {
+                errors: [
+                  {
+                    field: "reader_team_id",
+                    code: "reader_team_required",
+                    message: "a reader team is required",
+                  },
+                ],
+              },
             },
             422,
           );
@@ -128,9 +137,18 @@ function stubApi(opts: StubOpts) {
           return jsonResponse(
             {
               status: 422,
-              code: "shared_posture_not_allowed",
+              code: "validation_error",
               title: "Unprocessable Entity",
               detail: opts.visibilityDetail,
+              details: {
+                errors: [
+                  {
+                    field: "posture",
+                    code: "shared_posture_not_allowed",
+                    message: "this workspace does not allow a shared mailbox",
+                  },
+                ],
+              },
             },
             422,
           );
