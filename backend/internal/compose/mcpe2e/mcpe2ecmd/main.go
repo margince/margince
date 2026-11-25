@@ -92,11 +92,11 @@ func writeCurrency(root, path string) error {
 	if err != nil {
 		return err
 	}
-	return os.WriteFile(path, body, 0o600)
+	return os.WriteFile(path, body, 0o600) // #nosec G703 -- the output path IS this tool's -out flag
 }
 
 func newlyStale(baseCurrentPath, root string) ([]mcpe2e.Line, error) {
-	body, err := os.ReadFile(baseCurrentPath) // #nosec G304 -- a path the workflow passes, read by a developer tool
+	body, err := os.ReadFile(baseCurrentPath) // #nosec G304 G703 -- the path IS this tool's -base-current flag
 	if err != nil {
 		return nil, err
 	}
