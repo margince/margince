@@ -97,12 +97,15 @@ func refuseArchivedActivity(ctx context.Context, tx pgx.Tx, id ids.UUID) error {
 // activityArchivedAlready reports that an archive of the activity has nothing
 // to do: it is archived, no retention obligation holds it, and the caller may
 // change it. A held row goes on to the archive, whose write meets the hold.
+//
+// The write gate runs only for an archived row, so a live one meets the
+// archive's own gates and their own refusals.
 func activityArchivedAlready(ctx context.Context, tx pgx.Tx, id ids.UUID) (bool, error) {
-	if err := auth.EnsureActivityWritableIn(ctx, tx, id, false); err != nil {
+	archived, err := auth.RowArchived(ctx, tx, "activity", id)
+	if err != nil || !archived {
 		return false, err
 	}
-	archived, err := auth.ArchivedAlready(ctx, tx, "activity", id)
-	if err != nil || !archived {
+	if err := auth.EnsureActivityWritableIn(ctx, tx, id, false); err != nil {
 		return false, err
 	}
 	held, err := activityRetentionHeld(ctx, tx, id)
