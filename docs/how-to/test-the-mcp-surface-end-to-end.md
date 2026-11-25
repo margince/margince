@@ -94,10 +94,7 @@ candidate of the judge's own family says `self_judged: true`, and the coverage p
 
 ## 2. Give the stack a search that works
 
-The scenarios need `search_context`, and it ranks by meaning only when an
-embedding model serves the stack. In most cases, the `.env.local` of a worktree has no
-embedding key. The lane **refuses to sweep** a stack whose search now matches only shared words.
-Then every candidate would be measured on a degraded tool.
+The scenarios need `search_context`, and it ranks by meaning only when an embedding model serves the stack. In most cases, the `.env.local` of a worktree has no embedding key. The lane **refuses to sweep** a stack whose search now matches only shared words. Then every candidate would be measured on a degraded tool.
 
 Put `GEMINI_API_KEY` in the `.env.local` of the checkout you run from
 (the binding of the dev stack itself). Or set the binding of the stack of the lane to a committed preset:
@@ -272,6 +269,8 @@ PY
 
 `python3 e2e/llm/why.py <scenario>` puts the tools that a scenario requires next to
 what each run could call, and what it called.
+
+For a case with a `setup:`, each run also keeps `<scenario>.run<n>.world.txt` beside its transcript. It holds the approvals the run left, with their `audit_log` and `event_outbox` rows, read before the restore removes them. A setup that fails keeps one too.
 
 Before you call a red scenario a product regression, rule out the harness:
 
