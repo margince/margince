@@ -13,6 +13,7 @@ import (
 	"context"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"sync"
 	"testing"
 	"time"
@@ -20,6 +21,8 @@ import (
 	"github.com/margince/margince/backend/internal/compose/integration"
 	"github.com/margince/margince/backend/internal/modules/capture/gcal"
 	"github.com/margince/margince/backend/internal/modules/capture/gmail"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/platform/testdb"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -162,12 +165,35 @@ func TestAnInterruptedRelistRetiresNothing(t *testing.T) {
 	}
 }
 
-// A meeting another seat imports is still on that seat's calendar, so one
-// calendar leaving it out does not call it off.
+// droppedMeeting is the stored meeting of the event the re-list leaves out.
+func (r relistEnv) droppedMeeting(t *testing.T) ids.UUID {
+	t.Helper()
+	var id ids.UUID
+	if err := r.env.e.Owner.QueryRow(context.Background(),
+		`SELECT id FROM activity WHERE source_system = 'gcal' AND source_id = 'evt-dropped'`).Scan(&id); err != nil {
+		t.Fatal(err)
+	}
+	return id
+}
+
+// fixtureMailboxConnection is the env's shared mailbox.
+func (r relistEnv) fixtureMailboxConnection(t *testing.T) ids.UUID {
+	t.Helper()
+	var id ids.UUID
+	if err := r.env.e.Owner.QueryRow(context.Background(),
+		`SELECT id FROM capture_connection WHERE user_id IS NULL AND account_label = $1`, fixtureSharedMailbox).Scan(&id); err != nil {
+		t.Fatal(err)
+	}
+	return id
+}
+
+// Another seat imports the meeting and is still a guest. It is on that seat's
+// calendar, so one calendar leaving it out does not call it off.
 func TestARelistDoesNotCancelAMeetingAnotherSeatHolds(t *testing.T) {
 	r := newRelistEnv(t)
-	exec(t, r.env.e, `INSERT INTO capture_import (activity_id, user_id)
-		SELECT id, $1 FROM activity WHERE source_system = 'gcal' AND source_id = 'evt-dropped'`, r.env.e.Rep3)
+	meeting := r.droppedMeeting(t)
+	exec(t, r.env.e, `INSERT INTO capture_import (activity_id, user_id) VALUES ($1, $2)`, meeting, r.env.e.Rep3)
+	exec(t, r.env.e, `INSERT INTO activity_participant (activity_id, user_id, role) VALUES ($1, $2, 'attendee')`, meeting, r.env.e.Rep3)
 
 	if err := r.relist(false); err != nil {
 		t.Fatalf("the re-list: %v", err)
@@ -176,6 +202,119 @@ func TestARelistDoesNotCancelAMeetingAnotherSeatHolds(t *testing.T) {
 	if got := r.cancelled(t, "evt-dropped"); got != 0 {
 		t.Error("a meeting another seat imports was cancelled by one calendar's listing")
 	}
+}
+
+// A seat that left the guest list keeps its import row, which still decides
+// who reads the meeting, but no longer holds the meeting open.
+func TestARelistCancelsAMeetingWhoseOtherImporterLeftTheGuestList(t *testing.T) {
+	r := newRelistEnv(t)
+	meeting := r.droppedMeeting(t)
+	exec(t, r.env.e, `INSERT INTO capture_import (activity_id, user_id) VALUES ($1, $2)`, meeting, r.env.e.Rep3)
+
+	if err := r.relist(false); err != nil {
+		t.Fatalf("the re-list: %v", err)
+	}
+
+	if got := r.cancelled(t, "evt-dropped"); got != 1 {
+		t.Error("an importer no longer on the guest list kept the meeting open")
+	}
+	if countRows(t, r.env.e, `SELECT count(*) FROM capture_import
+		WHERE activity_id = '`+meeting.String()+`' AND user_id = '`+r.env.e.Rep3.String()+`'`) != 1 {
+		t.Error("the seat that left lost its import row")
+	}
+}
+
+// A shared mailbox has no seat on the guest list. It holds the meeting while
+// its address is a guest, and not once the address is gone.
+func TestARelistKeepsAMeetingASharedMailboxGuestImports(t *testing.T) {
+	for _, tc := range []struct {
+		name    string
+		guest   bool
+		retired int
+	}{
+		{"the mailbox is a guest", true, 0},
+		{"the mailbox is no guest", false, 1},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			r := newRelistEnv(t)
+			meeting := r.droppedMeeting(t)
+			exec(t, r.env.e, `INSERT INTO capture_import (activity_id, connection_id) VALUES ($1, $2)`, meeting, r.fixtureMailboxConnection(t))
+			if tc.guest {
+				exec(t, r.env.e, `INSERT INTO activity_participant (activity_id, address, role) VALUES ($1, $2, 'attendee')`,
+					meeting, strings.ToUpper(fixtureSharedMailbox))
+			}
+
+			if err := r.relist(false); err != nil {
+				t.Fatalf("the re-list: %v", err)
+			}
+
+			if got := r.cancelled(t, "evt-dropped"); got != tc.retired {
+				t.Errorf("the meeting was cancelled %d times, want %d", got, tc.retired)
+			}
+		})
+	}
+}
+
+// An import of the meeting still in flight when the re-list reads it holds the
+// meeting's locks. The re-list waits for it, and then sees the other seat and
+// takes only its own seat off the meeting.
+func TestARelistWaitsForAnImportOfTheMeetingInFlight(t *testing.T) {
+	r := newRelistEnv(t)
+	meeting := r.droppedMeeting(t)
+	ctx := context.Background()
+	importer, err := integration.FreshOwnerConn(t).Begin(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := storekit.LockMeetingAttendeePage(ctx, importer, []ids.UUID{meeting}); err != nil {
+		t.Fatal(err)
+	}
+	for _, sql := range []string{
+		`INSERT INTO capture_import (activity_id, user_id) VALUES ($1, $2)`,
+		`INSERT INTO activity_participant (activity_id, user_id, role) VALUES ($1, $2, 'attendee')`,
+	} {
+		if _, err := importer.Exec(ctx, sql, meeting, r.env.e.Rep3); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	done := make(chan struct{})
+	var relisted error
+	go func() {
+		defer close(done)
+		relisted = r.relist(false)
+	}()
+	waitForALockWaiter(t, done)
+	if err := importer.Commit(ctx); err != nil {
+		t.Fatal(err)
+	}
+	<-done
+
+	if relisted != nil {
+		t.Fatalf("the re-list: %v", relisted)
+	}
+	if r.cancelled(t, "evt-dropped") != 0 {
+		t.Error("the re-list cancelled a meeting an import in flight now holds")
+	}
+	if seatRowsOnMeeting(t, r.env.e, meeting, r.env.e.Rep1) != 0 {
+		t.Error("the seat whose calendar left the meeting out is still on it")
+	}
+	if seatRowsOnMeeting(t, r.env.e, meeting, r.env.e.Rep3) == 0 {
+		t.Error("the importing seat lost its place on the meeting")
+	}
+}
+
+// waitForALockWaiter returns once a backend of this database waits on a lock.
+func waitForALockWaiter(t *testing.T, done <-chan struct{}) {
+	t.Helper()
+	owner := integration.FreshOwnerConn(t)
+	testdb.WaitForContention(t, done, "the re-list finished without waiting for the import in flight",
+		"the re-list never waited on the meeting's locks", func(ctx context.Context) (bool, error) {
+			var waiting bool
+			err := owner.QueryRow(ctx, `SELECT EXISTS (SELECT 1 FROM pg_locks l JOIN pg_stat_activity a ON a.pid = l.pid
+				 WHERE NOT l.granted AND a.datname = current_database())`).Scan(&waiting)
+			return waiting, err
+		})
 }
 
 // omit takes every event off one calendar of the pair and expires its token.
@@ -224,7 +363,12 @@ func (p *pairEnv) connectSecondCalendar(t *testing.T, start time.Time, organizer
 // onMeeting counts the seat's own rows on the meeting.
 func (p *pairEnv) onMeeting(t *testing.T, meeting, seat ids.UUID) int {
 	t.Helper()
-	return countRows(t, p.env.e, `SELECT count(*) FROM activity_participant
+	return seatRowsOnMeeting(t, p.env.e, meeting, seat)
+}
+
+func seatRowsOnMeeting(t *testing.T, e *integration.SearchEnv, meeting, seat ids.UUID) int {
+	t.Helper()
+	return countRows(t, e, `SELECT count(*) FROM activity_participant
 		WHERE activity_id = '`+meeting.String()+`' AND user_id = '`+seat.String()+`'`)
 }
 
