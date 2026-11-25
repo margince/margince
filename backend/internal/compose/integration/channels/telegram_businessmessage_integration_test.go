@@ -62,32 +62,23 @@ func (m businessMessage) sourceID(account int64) string {
 // link writes one business link row of this bot. A connected link gets the seat
 // that approval would give it, shared. Cases that are not about a seat's posture
 // then read as they would on an opened account.
-func (c *telegramEnv) link(t *testing.T, account int64, connection, status, ownership string, owner *string) {
+func (c *telegramEnv) link(t *testing.T, account int64, connection, status string) {
 	t.Helper()
-	c.linkOnSeat(t, account, connection, status, ownership, owner, "shared")
+	c.linkOnSeat(t, account, connection, status, "shared")
 }
 
 // linkOnSeat is link with the posture the connected link's seat starts at.
-func (c *telegramEnv) linkOnSeat(t *testing.T, account int64, connection, status, ownership string, owner *string, posture string) {
+func (c *telegramEnv) linkOnSeat(t *testing.T, account int64, connection, status, posture string) {
 	t.Helper()
 	team := c.readerTeam(t)
 	if err := apptest.InWorkspace(c.AppEnv, t, func(tx pgx.Tx) error {
 		var seat *string
 		if status == "connected" {
 			var id string
-			var err error
-			if ownership == "member" {
-				err = tx.QueryRow(context.Background(), `
-					INSERT INTO capture_connection (provider, user_id, connected_by, account_label, mail_posture, status)
-					VALUES ('telegram_business', $1::uuid, $1::uuid, $2, $3, 'connected') RETURNING id::text`,
-					owner, fmt.Sprintf("%d", account), posture).Scan(&id)
-			} else {
-				err = tx.QueryRow(context.Background(), `
-					INSERT INTO capture_connection (provider, user_id, connected_by, reader_team_id, account_label, mail_posture, status)
-					VALUES ('telegram_business', NULL, $1::uuid, $2, $3, $4, 'connected') RETURNING id::text`,
-					c.admin, team, fmt.Sprintf("%d", account), posture).Scan(&id)
-			}
-			if err != nil {
+			if err := tx.QueryRow(context.Background(), `
+				INSERT INTO capture_connection (provider, user_id, connected_by, reader_team_id, account_label, mail_posture, status)
+				VALUES ('telegram_business', NULL, $1::uuid, $2, $3, $4, 'connected') RETURNING id::text`,
+				c.admin, team, fmt.Sprintf("%d", account), posture).Scan(&id); err != nil {
 				return err
 			}
 			seat = &id
@@ -95,9 +86,9 @@ func (c *telegramEnv) linkOnSeat(t *testing.T, account int64, connection, status
 		_, err := tx.Exec(context.Background(), `
 			INSERT INTO channel_connection
 			  (provider, channel_id, channel_label, credential_ref, status, connected_by, account_id,
-			   parent_connection_id, ownership, owner_user_id, approved_at, seat_id)
-			VALUES ('telegram_business', $1, 'Mia', '', $2, $3, $4, $5, $6, $7::uuid, now(), $8::uuid)`,
-			connection, status, c.admin, fmt.Sprintf("%d", account), c.conn.ID, ownership, owner, seat)
+			   parent_connection_id, ownership, approved_at, seat_id)
+			VALUES ('telegram_business', $1, 'Mia', '', $2, $3, $4, $5, 'workspace', now(), $6::uuid)`,
+			connection, status, c.admin, fmt.Sprintf("%d", account), c.conn.ID, seat)
 		return err
 	}); err != nil {
 		t.Fatalf("writing the business link: %v", err)

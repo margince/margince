@@ -88,7 +88,7 @@ func TestApprovingALinkMakesOneHeldTeamSeatAndAnotherApprovalMakesNoSecond(t *te
 	team := c.readerTeam(t)
 	var approved struct {
 		Status, MailVisibility string
-		SeatId, ReaderTeamId   string
+		SeatID, ReaderTeamID   string
 	}
 	if status := c.Call(t, http.MethodPost, path, integration.AnyMap{"readerTeamId": team.String()}, nil, &approved); status != http.StatusOK {
 		t.Fatalf("approving with a reader team → %d, want 200", status)
@@ -101,7 +101,7 @@ func TestApprovingALinkMakesOneHeldTeamSeatAndAnotherApprovalMakesNoSecond(t *te
 	if seat.status != "connected" || seat.posture != "held" || seat.label != "880501" || seat.user != nil || seat.team == nil || *seat.team != team.String() {
 		t.Errorf("seat = %+v, want a connected team seat for 880501 read by %s and held", seat, team)
 	}
-	if approved.SeatId != seat.id || approved.ReaderTeamId != team.String() || approved.MailVisibility != "held" {
+	if approved.SeatID != seat.id || approved.ReaderTeamID != team.String() || approved.MailVisibility != "held" {
 		t.Errorf("the approval answered %+v, want the seat, its team and held", approved)
 	}
 
@@ -153,7 +153,7 @@ func TestAMessageOnAHeldAccountStaysFromAnOutsiderAndASharedAccountOpensIt(t *te
 			c := setupTelegramConnected(t)
 			runner, sub := newTelegramWorker(t, c, compose.JobRunnerConfig{})
 			startTelegramWorker(t, runner)
-			c.linkOnSeat(t, 880701, "bc-posture", "connected", "workspace", nil, tc.posture)
+			c.linkOnSeat(t, 880701, "bc-posture", "connected", tc.posture)
 			m := businessMessage{updateID: 7801, messageID: 21, chatID: 990701, fromID: 990701, connection: "bc-posture", text: "price?"}
 
 			c.deliverMessage(t, sub, m)

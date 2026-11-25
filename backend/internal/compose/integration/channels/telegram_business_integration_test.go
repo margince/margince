@@ -336,7 +336,7 @@ func TestTheBusinessEndpointsServeOnlyTelegramBusinessRows(t *testing.T) {
 	if len(listed) != 1 || listed[0].AccountID != "880501" {
 		t.Errorf("the Telegram list holds %+v, want the Telegram link alone", listed)
 	}
-	if _, err := store.ApproveBusinessConnection(c.adminCtx(t), foreignID); !errors.Is(err, apperrors.ErrNotFound) {
+	if _, err := store.ApproveBusinessConnection(c.adminCtx(t), foreignID, ids.NewV7()); !errors.Is(err, apperrors.ErrNotFound) {
 		t.Errorf("approving another provider's child row = %v, want not found", err)
 	}
 	if err := store.DisconnectBusinessConnection(c.adminCtx(t), foreignID); !errors.Is(err, apperrors.ErrNotFound) {

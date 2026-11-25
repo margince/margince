@@ -157,7 +157,7 @@ func chatFollowsContactSharing(t *testing.T, posture string, team bool) {
 		connector.ChatMessage{
 			ConversationID: "990100", IdempotencyKey: "1", Direction: connector.DirectionInbound,
 			Counterparty: connector.ChatParty{UserID: "990100", DisplayName: "Buyer"},
-			Body:         "and the chat", OccurredAt: time.Date(2026, time.March, 31, 12, 0, 0, 0, time.UTC),
+			Body:         "and the chat", OccurredAt: clocktest.Now(t),
 		})
 	if err != nil {
 		t.Fatalf("filing the chat message: %v", err)
