@@ -20,11 +20,13 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { pickOption } from "../../design-system/select-testing";
 import { ToastProvider, ToastRegion } from "../../design-system/toast";
 import { LocaleProvider } from "../../i18n";
 import { en } from "../../i18n/en";
 import { findRowMenu, jsonResponse, row } from "../../testing/worklist.testkit";
-import { CoachControl, OwnerPicker } from "./worklist.manager";
+import { CoachControl, coachableDeals } from "./worklist.coach";
+import { OwnerPicker } from "./worklist.manager";
 import type { WorklistItem } from "./worklist.queries";
 import { WorklistRow } from "./worklist.row";
 import { RowActs } from "./worklist.rowverbs";
@@ -303,7 +305,7 @@ describe("leaving a note on somebody's queue", () => {
   it("AC-WORKLIST-MGR-03: writes the note to the contact it is about", async () => {
     const fetched = stubRosterAnd(() => jsonResponse({}));
     const user = userEvent.setup();
-    renderUnderAToastRegion(<CoachControl owner={LENA} />);
+    renderUnderAToastRegion(<CoachControl owner={LENA} deals={[]} />);
 
     await user.click(
       await screen.findByRole("button", { name: en["worklist.manager.coach"] }),
@@ -340,7 +342,7 @@ describe("leaving a note on somebody's queue", () => {
     stubRosterAnd(() => refusal("permission_denied"));
     const user = userEvent.setup();
     const { container } = renderUnderAToastRegion(
-      <CoachControl owner={LENA} name="Lena Fischer" />,
+      <CoachControl owner={LENA} name="Lena Fischer" deals={[]} />,
     );
 
     await user.click(
@@ -364,7 +366,9 @@ describe("leaving a note on somebody's queue", () => {
   it("falls back to the shared line where no code was stated", async () => {
     stubRosterAnd(() => refusal());
     const user = userEvent.setup();
-    renderUnderAToastRegion(<CoachControl owner={LENA} name="Lena Fischer" />);
+    renderUnderAToastRegion(
+      <CoachControl owner={LENA} name="Lena Fischer" deals={[]} />,
+    );
 
     await user.click(
       await screen.findByRole("button", { name: en["worklist.manager.coach"] }),
@@ -385,7 +389,7 @@ describe("leaving a note on somebody's queue", () => {
   it("sends no note field where the coach wrote nothing", async () => {
     const fetched = stubRosterAnd(() => jsonResponse({}));
     const user = userEvent.setup();
-    renderUnderAToastRegion(<CoachControl owner={LENA} />);
+    renderUnderAToastRegion(<CoachControl owner={LENA} deals={[]} />);
 
     await user.click(
       await screen.findByRole("button", { name: en["worklist.manager.coach"] }),
@@ -401,6 +405,66 @@ describe("leaving a note on somebody's queue", () => {
       recipient_user_id: LENA,
       kind: "coach_general",
     });
+  });
+
+  // The server words a next-step headline from its deal. So the note cannot
+  // leave without one, and it sends the deal the coach picked.
+  it("sends a next-step note only with the deal it names", async () => {
+    const fetched = stubRosterAnd(() => jsonResponse({}));
+    const user = userEvent.setup();
+    renderUnderAToastRegion(
+      <CoachControl
+        owner={LENA}
+        deals={[{ value: "d-7", label: "Depot rollout" }]}
+      />,
+    );
+
+    await user.click(
+      await screen.findByRole("button", { name: en["worklist.manager.coach"] }),
+    );
+    await user.click(
+      screen.getByRole("button", {
+        name: en["worklist.manager.kind.next_step"],
+      }),
+    );
+    const confirm = screen.getByRole("button", {
+      name: en["worklist.manager.coachConfirm"],
+    });
+    expect((confirm as HTMLButtonElement).disabled).toBe(true);
+    await pickOption(
+      user,
+      screen.getByRole("combobox", { name: en["worklist.manager.coachDeal"] }),
+      "Depot rollout",
+    );
+    await user.click(confirm);
+
+    const sent = await wrote(fetched);
+    expect(sent?.body).toEqual({
+      recipient_user_id: LENA,
+      kind: "coach_deal_needs_next_step",
+      deal_id: "d-7",
+    });
+  });
+});
+
+describe("the deals a next-step note can name", () => {
+  it("lists each named deal of the day once and skips other records", () => {
+    const deal = (id: string, label?: string) =>
+      row({
+        id: `r-${id}-${label ?? ""}`,
+        subject: { type: "deal", id, label },
+      });
+    expect(
+      coachableDeals([
+        deal("d-1", "Depot rollout"),
+        deal("d-1", "Depot rollout"),
+        deal("d-2"),
+        row({
+          id: "c",
+          subject: { type: "contact", id: "p-1", label: "Anna" },
+        }),
+      ]),
+    ).toEqual([{ value: "d-1", label: "Depot rollout" }]);
   });
 });
 

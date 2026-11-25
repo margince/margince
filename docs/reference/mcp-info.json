@@ -13042,6 +13042,11 @@
           "body": {
             "additionalProperties": false,
             "properties": {
+              "deal_id": {
+                "description": "The deal the notice is about. Required for `coach_deal_needs_next_step`, and refused on every other kind. The deal must be open, owned by the recipient, and one the caller can read. The headline then names the deal and what Margince sees on it: whether a next step is planned, and the day of its last activity. The recipient's row links to the deal.",
+                "format": "uuid",
+                "type": "string"
+              },
               "kind": {
                 "description": "What a coaching notice is about. A closed vocabulary, because a notice addressed to a colleague is words in their queue: the kind is what the recipient reads as the headline, and the coach supplies only the note beneath it. The kinds an automation raises under the system principal (`automation`, `lead_sla`) are deliberately absent — a contact may not raise a notice that looks like the system spoke.",
                 "enum": [

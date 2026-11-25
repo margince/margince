@@ -63078,6 +63078,13 @@ type QuickCaptureContactResult struct {
 
 // RaiseNoticeRequest defines model for RaiseNoticeRequest.
 type RaiseNoticeRequest struct {
+	// DealId The deal the notice is about. Required for `coach_deal_needs_next_step`, and refused on
+	// every other kind. The deal must be open, owned by the recipient, and one the caller
+	// can read. The headline then names the deal and what Margince sees on it: whether a
+	// next step is planned, and the day of its last activity. The recipient's row links to
+	// the deal.
+	DealId *openapi_types.UUID `json:"deal_id,omitempty"`
+
 	// Kind What a coaching notice is about. A closed vocabulary, because a notice addressed to a
 	// colleague is words in their queue: the kind is what the recipient reads as the headline,
 	// and the coach supplies only the note beneath it.

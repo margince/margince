@@ -16,10 +16,10 @@ import {
 import { TeamBoard } from "./worklist.board";
 import { useWorklistPicks, WorklistBulkBar } from "./worklist.bulkdone";
 import { clearSentence, offersDecisions } from "./worklist.clear";
+import { CoachControl, coachableDeals } from "./worklist.coach";
 import { HandledForYouPanel } from "./worklist.handled";
 import { WorklistHeader } from "./worklist.header";
 import { LinkSuggestionsPanel } from "./worklist.linksuggestions";
-import { CoachControl } from "./worklist.manager";
 import { hasPane, WorklistPane } from "./worklist.pane";
 import type {
   Worklist,
@@ -200,7 +200,13 @@ export function WorklistBody({
           day in every state. Placed below, the block would move as its own form
           opened, and a lead would read three panels of that morning first. Only
           on a named queue. */}
-          {owner !== "" && <CoachControl owner={owner} name={colleague} />}
+          {owner !== "" && (
+            <CoachControl
+              owner={owner}
+              name={colleague}
+              deals={coachableDeals(queue)}
+            />
+          )}
           {/* What has moved since the reader started paging. An offer to refresh
           rather than a fault: the day on screen is correct, it is simply no
           longer complete. */}

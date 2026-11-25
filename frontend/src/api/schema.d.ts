@@ -34234,6 +34234,15 @@ export interface components {
              *     notice still says what it is about, which is why the kind is closed and this is not.
              */
             note?: string;
+            /**
+             * Format: uuid
+             * @description The deal the notice is about. Required for `coach_deal_needs_next_step`, and refused on
+             *     every other kind. The deal must be open, owned by the recipient, and one the caller
+             *     can read. The headline then names the deal and what Margince sees on it: whether a
+             *     next step is planned, and the day of its last activity. The recipient's row links to
+             *     the deal.
+             */
+            deal_id?: string;
         };
         /** @description One durable line addressed to one contact, as the raising call returns it. */
         Notice: {
@@ -103355,7 +103364,7 @@ export interface operations {
                     "application/problem+json": components["schemas"]["Problem"];
                 };
             };
-            /** @description No such live contact to address (a departed or unknown recipient reads the same). */
+            /** @description No such live contact to address (a departed or unknown recipient reads the same), or no deal of that id the caller can read. */
             404: {
                 headers: {
                     [name: string]: unknown;
@@ -103364,7 +103373,7 @@ export interface operations {
                     "application/problem+json": components["schemas"]["Problem"];
                 };
             };
-            /** @description An unknown kind, or a note past its ceiling. */
+            /** @description An unknown kind, a note past its ceiling, a next-step notice without its deal, a deal on any other kind, or a deal that is closed or owned by someone else. */
             422: {
                 headers: {
                     [name: string]: unknown;

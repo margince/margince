@@ -22016,6 +22016,9 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "worklist.manager.kind.next_step": "Nächster Schritt im Deal",
   "worklist.manager.kind.review_backlog": "Offene Prüfungen",
   "worklist.manager.kind.general": "Sonstiges",
+  "worklist.manager.coachDeal": "Deal",
+  "worklist.manager.coachNoDeal":
+    "In ihrem Tag steht kein Deal, den du nennen kannst.",
   "worklist.board.title": "Teamarbeit mit Handlungsbedarf",
   "worklist.gap.rankedOn": "Gereiht am {date}.",
   "worklist.gap.masked_one":

@@ -21686,6 +21686,9 @@ export const en = {
   "worklist.manager.kind.next_step": "Deal next step",
   "worklist.manager.kind.review_backlog": "Review backlog",
   "worklist.manager.kind.general": "Other",
+  "worklist.manager.coachDeal": "Deal",
+  "worklist.manager.coachNoDeal":
+    "No deal is in their day, so there is none to name.",
   "worklist.board.title": "Team work needing attention",
   "worklist.gap.rankedOn": "Ranked on {date}.",
   "worklist.gap.masked_one":
