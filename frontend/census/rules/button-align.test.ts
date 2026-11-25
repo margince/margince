@@ -4,6 +4,7 @@
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { parseSource } from "../../scripts/lib/source-tree";
+import { stable } from "../../src/format/collate";
 import { plantedFindings, srcDir } from "../tree";
 import {
   alignedIn,
@@ -92,7 +93,7 @@ describe("the classes a Button is handed", () => {
     const read = buttonClassesIn([
       { path: "probe.tsx", rel: "probe.tsx", area: "src", text: "", source },
     ]);
-    expect([...read].sort()).toEqual(["btn", "pick-row"]);
+    expect([...read].sort(stable)).toEqual(["btn", "pick-row"]);
   });
 });
 

@@ -269,7 +269,6 @@ function SetPickerPanel({
         <Button
           variant="ghost"
           align="start"
-          className="set-picker-create"
           pending={create.pending}
           onClick={() => create.onCreate(name)}
         >
