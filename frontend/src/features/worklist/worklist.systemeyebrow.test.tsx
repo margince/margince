@@ -54,7 +54,7 @@ describe("the word above a system row", () => {
     // on one row would be the column saying the same thing twice. Scoped to the
     // ROW, because "System" is also a filter pill on this screen and a bare
     // query would find that instead and pass whatever the row drew.
-    const kind = eyebrow.closest(".worklist-row-kind");
+    const kind = eyebrow.closest(".task-meta > .chip");
     expect(kind).not.toBeNull();
     expect(kind?.textContent).toBe("Notify sales on a new lead");
   });
@@ -81,7 +81,7 @@ describe("the word above a system row", () => {
     renderWorklist();
 
     await screen.findByText("Reconnect the mailbox");
-    const kind = document.querySelector(".worklist-row-kind");
+    const kind = document.querySelector(".task-meta > .chip");
     expect(kind?.textContent).toBe(en["worklist.category.system"]);
   });
 });
@@ -121,7 +121,7 @@ describe.each(taskLocales)("AI incidents in $locale", ({ locale, label }) => {
     );
     renderWorklist(locale);
     await screen.findAllByText(label, { exact: false });
-    expect(document.querySelector(".worklist-row-kind")?.textContent).toBe(
+    expect(document.querySelector(".task-meta > .chip")?.textContent).toBe(
       label,
     );
     expect(document.body.textContent).not.toContain("site_triage");

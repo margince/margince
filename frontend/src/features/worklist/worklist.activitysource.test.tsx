@@ -64,8 +64,8 @@ it.each(["task", "meeting", "meeting_outcome", "conversation_claim"] as const)(
     const title = screen.getByRole("button", {
       name:
         source === "meeting_outcome"
-          ? "Record the outcome of Discuss pricing · Mira"
-          : "Discuss pricing · Mira",
+          ? "Record the outcome of Discuss pricing"
+          : "Discuss pricing",
     });
     title.focus();
     await user.keyboard("{Enter}");
@@ -162,6 +162,8 @@ it("opens a commitment's named evidence while retaining its counterparty", () =>
 it.each(["default", "compact"] as const)(
   "keeps the record link when a %s title opens source context",
   async (density) => {
+    const named =
+      density === "compact" ? "Send pricing · Mira" : "Send pricing";
     const user = userEvent.setup();
     installFetchStub({ "GET /me": meRoute({ activity: ["read"] }) });
     const item = row({
@@ -183,11 +185,12 @@ it.each(["default", "compact"] as const)(
       </StoryProviders>,
     );
     expect(
-      screen.getByRole("button", { name: "Send pricing · Mira" }),
+      // A compact row has no chip line, so its title still names Mira.
+      screen.getByRole("button", { name: named }),
     ).toBeTruthy();
     await user.click(
       screen.getByRole("button", {
-        name: "More actions for Send pricing · Mira",
+        name: `More actions for ${named}`,
       }),
     );
     expect(
