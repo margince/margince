@@ -319,7 +319,7 @@ func TestALinkToAnAddressLeftBehindOpensTheSurvivorsPageForThatAddress(t *testin
 }
 
 // A confirm link was mailed for one record. A merge expires it and moves the
-// row, so an answer through it acts on nothing. The person asks for a new link,
+// row, so an answer through it acts on nothing. The contact asks for a new link,
 // and the old one never answers for the survivor.
 func TestAConfirmLinkMailedToTheRetiredContactCannotActOnTheSurvivor(t *testing.T) {
 	c := setupCarry(t)

@@ -3,8 +3,6 @@
 
 //gate:kind census H2
 
-//go:build !integration
-
 package gates
 
 // A merge of a contact or a lead carries every column that references it, or
@@ -56,6 +54,8 @@ var mergedRecords = []struct {
 // must be one the merge reaches and must name the table. A "pkg:Func" entry is
 // another package's function: a function the merge reaches names it, and its
 // statements write the table.
+//
+// gatekit:fixture each column and the function that moves it, checked by movesOutOfSight
 var carriedOutOfSight = map[string]string{
 	// Only the provenance of the fields the survivor took from the retired
 	// record moves. The rest describes a value the merge did not keep.
@@ -94,8 +94,8 @@ var stayOnTheRetiredRecord = gatekit.Waive(map[string]string{
 	"user_record_view.entity_id":               "when one user last opened the retired record. The survivor keeps its own stamp, and a moved stamp would say the user saw the survivor's changes when they had opened another record",
 	"ai_call.subject_id":                       "the log of one model call made about the retired record: " + mergeHistory,
 	"ai_task_run.subject_id":                   "a run of an AI task about the retired record, computed from what it held then: " + mergeHistory,
-	"approval.target_entity_id":                "a person's approval of one action on the record it named. Moved, an approval given for the retired record would act on the survivor; confirm links are expired rather than moved for the same reason",
-	"approval.co_target_entity_id":             "a person's approval of one action on the records it named. Moved, an approval given for the retired record would act on the survivor; confirm links are expired rather than moved for the same reason",
+	"approval.target_entity_id":                "a user's approval of one action on the record it named. Moved, an approval given for the retired record would act on the survivor; confirm links are expired rather than moved for the same reason",
+	"approval.co_target_entity_id":             "a user's approval of one action on the records it named. Moved, an approval given for the retired record would act on the survivor; confirm links are expired rather than moved for the same reason",
 	"audit_log.entity_id":                      "the audit trail of the retired record: " + mergeHistory,
 	"chat_post_item.event_id":                  "names a posted event, not a record. The kind column holds event types, and no CHECK lists them, so the census asks",
 	"communication_decision.subject_id":        "what the send engine decided for the retired record at the time: " + mergeHistory,
@@ -107,6 +107,18 @@ var stayOnTheRetiredRecord = gatekit.Waive(map[string]string{
 	"webhook_delivery.entity_id":               "the log of webhook deliveries already sent about the retired record: " + mergeHistory,
 	"webhook_delivery.event_id":                "names a delivered event, not a record. The kind column holds event types, and no CHECK lists them, so the census asks",
 })
+
+// The catalog lines the census reads. The gates package builds them under
+// every tag set, so they are spelled here rather than borrowed from a gate
+// that builds under one.
+var (
+	// referenceKey is a single-column foreign key: table, column, target.
+	referenceKey = regexp.MustCompile(`^public\.(\w+)\.\w+ FOREIGN KEY \((\w+)\) REFERENCES (\w+)\(id\)`)
+	// referenceColumn is a uuid or text column: table, column, type.
+	referenceColumn = regexp.MustCompile(`^public\.(\w+)\.(\w+) (uuid|text)\b.* gen=`)
+	// referenceCheck is a CHECK constraint: table and expression.
+	referenceCheck = regexp.MustCompile(`^public\.(\w+)\.\w+ (CHECK .*)`)
+)
 
 // The catalog keeps some columns equal to another column of the row. The
 // caller joins each multi-line definition onto one line first.
@@ -225,7 +237,7 @@ func referencesTo(catalog []string, record string) []string {
 	named := regexp.MustCompile(`^public\.(\w+)\.(` + record + `_id) uuid `)
 	var columns []string
 	for _, line := range catalog {
-		if m := foreignKeyToRowScoped.FindStringSubmatch(line); m != nil && m[3] == record {
+		if m := referenceKey.FindStringSubmatch(line); m != nil && m[3] == record {
 			columns = append(columns, m[1]+"."+m[2])
 		}
 		if m := named.FindStringSubmatch(line); m != nil {
@@ -252,14 +264,14 @@ func kindPairsAdmitting(catalog []string, record string) []string {
 	columns := map[string]map[string]string{}
 	checks := map[string][]string{}
 	for _, line := range catalog {
-		if m := catalogColumn.FindStringSubmatch(line); m != nil {
+		if m := referenceColumn.FindStringSubmatch(line); m != nil {
 			if columns[m[1]] == nil {
 				columns[m[1]] = map[string]string{}
 			}
-			columns[m[1]][m[2]] = strings.Fields(m[3])[0]
+			columns[m[1]][m[2]] = m[3]
 		}
-		if m := catalogConstraint.FindStringSubmatch(line); m != nil && strings.HasPrefix(m[3], "CHECK") {
-			checks[m[1]] = append(checks[m[1]], m[3])
+		if m := referenceCheck.FindStringSubmatch(line); m != nil {
+			checks[m[1]] = append(checks[m[1]], m[2])
 		}
 	}
 	var pairs []string

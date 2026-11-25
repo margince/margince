@@ -19,30 +19,42 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
-// leadMergeCarries are the statements that keep a merged-away lead in its
-// initiatives, as the survivor. Where both leads hold a place in one
-// initiative, the survivor's stands and the retired row is dropped. The
-// tables allow one member row per initiative, and one open enrolment.
-var leadMergeCarries = []struct {
-	part, stmt string
-	moved      bool
-}{
-	{"members", `DELETE FROM sales_initiative_member a
-	  WHERE a.record_type = 'lead' AND a.record_id = @source AND EXISTS (
-	    SELECT 1 FROM sales_initiative_member b
-	     WHERE b.initiative_id = a.initiative_id AND b.record_type = 'lead' AND b.record_id = @target)
-	 RETURNING initiative_id, NULL::uuid, reason, entered_at, NULL::timestamptz`, false},
-	{"members", `UPDATE sales_initiative_member SET record_id = @target
-	  WHERE record_type = 'lead' AND record_id = @source
-	 RETURNING initiative_id, NULL::uuid, reason, entered_at, NULL::timestamptz`, true},
-	{"enrolments", `DELETE FROM sales_initiative_enrolment a
-	  WHERE a.record_type = 'lead' AND a.record_id = @source AND a.left_at IS NULL AND EXISTS (
-	    SELECT 1 FROM sales_initiative_enrolment b
-	     WHERE b.initiative_id = a.initiative_id AND b.record_type = 'lead' AND b.record_id = @target AND b.left_at IS NULL)
-	 RETURNING initiative_id, id, reason, joined_at, left_at`, false},
-	{"enrolments", `UPDATE sales_initiative_enrolment SET record_id = @target
-	  WHERE record_type = 'lead' AND record_id = @source
-	 RETURNING initiative_id, id, reason, joined_at, left_at`, true},
+// leadMergeCarries keep a merged-away lead in its initiatives, as the
+// survivor, one table at a time. read takes the retired lead's rows for the
+// audit, and whether the survivor already holds that place. Where it does, the
+// survivor's row stands and drop removes the retired one; move takes the rest.
+// The tables allow one member row per initiative, and one open enrolment.
+//
+// A moved row keeps the date it was entered under, because no statement here
+// sets it. A member row's entry date stays its insert default. Retention reads
+// the same date after the merge as before it.
+var leadMergeCarries = []struct{ part, read, drop, move string }{
+	{
+		"members",
+		`SELECT a.initiative_id, NULL::uuid, a.reason, a.entered_at, NULL::timestamptz, EXISTS (
+		    SELECT 1 FROM sales_initiative_member b
+		     WHERE b.initiative_id = a.initiative_id AND b.record_type = 'lead' AND b.record_id = @target)
+		   FROM sales_initiative_member a WHERE a.record_type = 'lead' AND a.record_id = @source
+		  ORDER BY a.initiative_id FOR UPDATE OF a`,
+		`DELETE FROM sales_initiative_member a
+		  WHERE a.record_type = 'lead' AND a.record_id = @source AND EXISTS (
+		    SELECT 1 FROM sales_initiative_member b
+		     WHERE b.initiative_id = a.initiative_id AND b.record_type = 'lead' AND b.record_id = @target)`,
+		`UPDATE sales_initiative_member SET record_id = @target WHERE record_type = 'lead' AND record_id = @source`,
+	},
+	{
+		"enrolments",
+		`SELECT a.initiative_id, a.id, a.reason, a.joined_at, a.left_at, a.left_at IS NULL AND EXISTS (
+		    SELECT 1 FROM sales_initiative_enrolment b
+		     WHERE b.initiative_id = a.initiative_id AND b.record_type = 'lead' AND b.record_id = @target AND b.left_at IS NULL)
+		   FROM sales_initiative_enrolment a WHERE a.record_type = 'lead' AND a.record_id = @source
+		  ORDER BY a.id FOR UPDATE OF a`,
+		`DELETE FROM sales_initiative_enrolment a
+		  WHERE a.record_type = 'lead' AND a.record_id = @source AND a.left_at IS NULL AND EXISTS (
+		    SELECT 1 FROM sales_initiative_enrolment b
+		     WHERE b.initiative_id = a.initiative_id AND b.record_type = 'lead' AND b.record_id = @target AND b.left_at IS NULL)`,
+		`UPDATE sales_initiative_enrolment SET record_id = @target WHERE record_type = 'lead' AND record_id = @source`,
+	},
 }
 
 // placesByInitiative holds row images by initiative, then by member or
@@ -56,6 +68,7 @@ type leadPlace struct {
 	Reason     string
 	Since      time.Time
 	Left       *time.Time
+	Collides   bool
 }
 
 // CarryLeadMergeTx moves a merged-away lead's places in sales initiatives onto
@@ -69,17 +82,22 @@ func CarryLeadMergeTx(ctx context.Context, tx pgx.Tx, from, to ids.UUID) error {
 	args := pgx.NamedArgs{"source": from, "target": to}
 	before, after := placesByInitiative{}, placesByInitiative{}
 	for _, carry := range leadMergeCarries {
-		rows, err := tx.Query(ctx, carry.stmt, args)
+		rows, err := tx.Query(ctx, carry.read, args)
 		if err != nil {
-			return fmt.Errorf("initiatives: carrying the merged-away lead's %s: %w", carry.part, err)
+			return fmt.Errorf("initiatives: reading the merged-away lead's %s: %w", carry.part, err)
 		}
 		places, err := pgx.CollectRows(rows, pgx.RowToStructByPos[leadPlace])
 		if err != nil {
-			return fmt.Errorf("initiatives: carrying the merged-away lead's %s: %w", carry.part, err)
+			return fmt.Errorf("initiatives: reading the merged-away lead's %s: %w", carry.part, err)
+		}
+		for _, stmt := range []string{carry.drop, carry.move} {
+			if _, err := tx.Exec(ctx, stmt, args); err != nil {
+				return fmt.Errorf("initiatives: carrying the merged-away lead's %s: %w", carry.part, err)
+			}
 		}
 		for _, place := range places {
 			noteLeadPlace(before, place, carry.part, from)
-			if carry.moved {
+			if !place.Collides {
 				noteLeadPlace(after, place, carry.part, to)
 			}
 		}

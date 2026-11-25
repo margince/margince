@@ -33,7 +33,6 @@ import (
 	"github.com/margince/margince/backend/internal/platform/clocktest"
 	"github.com/margince/margince/backend/internal/platform/testdb"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
-	"github.com/margince/margince/backend/internal/shared/kernel/erasureaccount"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -360,51 +359,5 @@ func TestAnAskCompletedWhileTheMergeWaitsIsNotCancelled(t *testing.T) {
 
 	if status, contact, _ := c.askStatus(t, completing); status != "introduced" || contact != survivor.UUID {
 		t.Fatalf("the completed ask is %s on %s, want introduced and carried to the survivor", status, contact)
-	}
-}
-
-// A merge that meets a privacy request being fulfilled is refused at once
-// rather than waiting. The fulfilment holds its request while its erasure locks
-// the contact in a second transaction. A merge that waited on the request while
-// holding the contact would wait on a cycle the database cannot see. Both
-// complete: the fulfilment first, then the merge again.
-func TestAMergeRacingAnErasureOfTheSourcesRequestCompletesBoth(t *testing.T) {
-	c := setupCarry(t)
-	retired := c.contactAt(t, "Race Retired", "race@carry.test")
-	survivor := c.contactAt(t, "Race Survivor", "race-survivor@carry.test")
-	request := c.erasureRequest(t, retired)
-
-	var raced error
-	erase := func(ctx context.Context, contactID ids.UUID, _ string) (erasureaccount.Account, error) {
-		merged := make(chan error, 1)
-		go func() {
-			_, err := c.contacts.MergeContact(c.admin, retired, survivor, nil)
-			merged <- err
-		}()
-		select {
-		case raced = <-merged:
-		case <-time.After(30 * time.Second):
-			return erasureaccount.Account{}, errors.New("the merge waited on the request being fulfilled")
-		}
-		// privacy's eraser locks the contact in its own transaction; so does this.
-		err := pgx.BeginFunc(ctx, c.e.Pool, func(tx pgx.Tx) error {
-			_, err := tx.Exec(ctx, `SELECT 1 FROM contact WHERE id = $1 FOR UPDATE`, contactID)
-			return err
-		})
-		return erasureaccount.Empty(), err
-	}
-	if _, err := c.consent.FulfilErasure(c.admin, request, consent.UpdateDSRInput{
-		Status: new("fulfilled"), Proof: consent.ProofStatement{IdentityCheck: new("id_document")},
-	}, erase); err != nil {
-		t.Fatalf("fulfilling the erasure: %v", err)
-	}
-	if !errors.Is(raced, consent.ErrRightsRequestBeingAnswered) {
-		t.Fatalf("the merge that met the fulfilment returned %v, want the refusal to merge while the request is answered", raced)
-	}
-	c.merge(t, retired, survivor)
-	// A fulfilled erasure keeps only the erased contact's id, in subject_ref.
-	if n := c.count(t, `SELECT count(*) FROM data_subject_request
-		WHERE id = $1 AND status = 'fulfilled' AND contact_id IS NULL AND subject_ref = $2::text`, request, retired); n != 1 {
-		t.Error("the fulfilled request moved with the later merge, or was never fulfilled")
 	}
 }

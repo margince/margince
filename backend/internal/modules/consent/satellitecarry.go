@@ -232,7 +232,7 @@ var confirmLinkCarries = map[string][2]string{
 // carryConfirmLinks moves the merged-away record's confirm links onto the
 // survivor, and first expires each one still live. An answer through a link
 // acts on the record it names. The link was mailed for the retired record
-// alone, so it gets no say over the survivor, and the person asks for a new one.
+// alone, so it gets no say over the survivor, and the contact asks for a new one.
 func carryConfirmLinks(ctx context.Context, tx pgx.Tx, subjectColumn string, from, to ids.UUID, carry satelliteCarry) error {
 	statements, ok := confirmLinkCarries[subjectColumn]
 	if !ok {

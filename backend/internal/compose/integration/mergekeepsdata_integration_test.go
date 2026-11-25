@@ -3,19 +3,23 @@
 
 //go:build integration
 
-package compose
+package integration
 
 // A merge leaves nothing a reader of the survivor needs on the retired record.
 // gates/mergereferences_test.go proves a statement moves each column; these
-// prove the rows land on the survivor, through the carriers compose wires.
+// prove the rows land on the survivor, through the carriers the harness wires
+// as compose does.
 
 import (
 	"context"
+	"errors"
 	"testing"
+	"time"
 
 	"github.com/jackc/pgx/v5"
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
+	"github.com/margince/margince/backend/internal/compose"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/consent"
 	"github.com/margince/margince/backend/internal/modules/contacts"
@@ -26,25 +30,63 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
+// mergeKeepsEnv is the harness with a consent store and the admin seat.
+type mergeKeepsEnv struct {
+	e       *Env
+	admin   context.Context
+	consent *consent.Store
+}
+
+func setupMergeKeeps(t *testing.T) mergeKeepsEnv {
+	t.Helper()
+	e := Setup(t)
+	return mergeKeepsEnv{e: e, admin: e.Admin(), consent: consent.NewStore(e.DB())}
+}
+
+// contactAt creates a contact holding one live primary address.
+func (c mergeKeepsEnv) contactAt(t *testing.T, name, address string) ids.ContactID {
+	t.Helper()
+	created, err := c.e.Contacts.CreateContact(c.admin, contacts.CreateContactInput{
+		FullName: name, Source: "manual",
+		Emails: []contacts.ContactEmailInput{{Email: address, EmailType: "work", IsPrimary: true, Position: 1}},
+	})
+	if err != nil {
+		t.Fatalf("creating %s: %v", name, err)
+	}
+	return ContactIDOf(ids.UUID(created.Id))
+}
+
+func (c mergeKeepsEnv) merge(t *testing.T, from, into ids.ContactID) {
+	t.Helper()
+	if _, err := c.e.Contacts.MergeContact(c.admin, from, into, nil); err != nil {
+		t.Fatalf("merging: %v", err)
+	}
+}
+
+func (c mergeKeepsEnv) count(t *testing.T, sql string, args ...any) int {
+	t.Helper()
+	return c.e.WsCount(t, sql, args...)
+}
+
 // The merged-away lead's hand-off, hand-set factors, send override and sent
 // links follow the survivor, and an earlier merge into it now points there. On
 // a factor both leads answered, the survivor's own answer stands. The sent
 // link arrives expired, and each dropped factor is audited with what it held.
 func TestALeadMergeCarriesTheRetiredLeadsOpenWork(t *testing.T) {
-	c := setupCarry(t)
-	older := c.lead(t, "Pia Lund", "pia@lund.test", "Lund AB")
-	loser := c.lead(t, "Pia Lunde", "pia.lunde@lund.test", "Lund AB")
-	live := c.lead(t, "Pia Lundt", "", "Lund AB")
-	if _, err := c.contacts.MergeLead(c.admin, older, loser); err != nil {
+	c := setupMergeKeeps(t)
+	older := seedLead(t, c.e, "Pia Lund", "pia@lund.test", nil)
+	loser := seedLead(t, c.e, "Pia Lunde", "pia.lunde@lund.test", nil)
+	live := seedLead(t, c.e, "Pia Lundt", "", nil)
+	if _, err := c.e.Contacts.MergeLead(c.admin, older, loser); err != nil {
 		t.Fatalf("merging the older lead: %v", err)
 	}
 	loserID := loser.UUID
-	if _, err := c.contacts.SubmitHandoff(c.admin, contacts.NewSDRHandoff{LeadID: &loserID, Note: "warm"}); err != nil {
+	if _, err := c.e.Contacts.SubmitHandoff(c.admin, contacts.NewSDRHandoff{LeadID: &loserID, Note: "warm"}); err != nil {
 		t.Fatalf("handing off the lead: %v", err)
 	}
 	setFactor := func(lead ids.LeadID, factor, band string) {
 		t.Helper()
-		if _, err := c.contacts.SetLeadManualSignal(c.admin, lead, contacts.SetLeadManualSignalInput{
+		if _, err := c.e.Contacts.SetLeadManualSignal(c.admin, lead, contacts.SetLeadManualSignalInput{
 			Factor: factor, Band: band, SignalKind: "judgement", Reason: "asked them",
 		}); err != nil {
 			t.Fatalf("setting %s on a lead: %v", factor, err)
@@ -63,7 +105,7 @@ func TestALeadMergeCarriesTheRetiredLeadsOpenWork(t *testing.T) {
 	c.e.WsExec(t, `INSERT INTO confirm_token (lead_id, token_hash, delivered_to, expires_at, kind)
 		VALUES ($1, repeat('a', 64), 'pia.lunde@lund.test', now() + interval '30 days', 'privacy_notice')`, loser)
 
-	if _, err := c.contacts.MergeLead(c.admin, loser, live); err != nil {
+	if _, err := c.e.Contacts.MergeLead(c.admin, loser, live); err != nil {
 		t.Fatalf("lead merge: %v", err)
 	}
 
@@ -100,7 +142,7 @@ func TestALeadMergeCarriesTheRetiredLeadsOpenWork(t *testing.T) {
 // moved request's audit names the merge. A closed request stays on the record
 // it acted on.
 func TestAContactMergeCarriesResolvedSignalsAndOpenRequests(t *testing.T) {
-	c := setupCarry(t)
+	c := setupMergeKeeps(t)
 	company := c.e.SeedCompany(t, "Lund Bau", nil)
 	retired := c.contactAt(t, "Jon Lund", "jon@lund.test")
 	survivor := c.contactAt(t, "Jon Lunde", "jon.lunde@lund.test")
@@ -137,15 +179,15 @@ func TestAContactMergeCarriesResolvedSignalsAndOpenRequests(t *testing.T) {
 }
 
 // An erasure request a merge moved is fulfilled against the survivor, which
-// now holds the person's data.
+// now holds the contact's data.
 func TestAnErasureRequestMovedByAMergeIsFulfilledOnTheSurvivor(t *testing.T) {
-	c := setupCarry(t)
+	c := setupMergeKeeps(t)
 	retired := c.contactAt(t, "Eva Lund", "eva@lund.test")
 	survivor := c.contactAt(t, "Eva Lunde", "eva.lunde@lund.test")
 	request := c.erasureRequest(t, retired)
 	c.merge(t, retired, survivor)
 
-	eraser := ComposedEraser(c.e.Pool, nil)
+	eraser := compose.ComposedEraser(c.e.Pool, nil)
 	var erased ids.UUID
 	erase := func(ctx context.Context, contactID ids.UUID, reason string) (erasureaccount.Account, error) {
 		erased = contactID
@@ -164,7 +206,7 @@ func TestAnErasureRequestMovedByAMergeIsFulfilledOnTheSurvivor(t *testing.T) {
 // erasureRequest files an erasure request through the queue and links it to
 // the contact, as a request filed through the contact's own confirm link is.
 // That door needs a mailed link, so the row is given the link it leaves.
-func (c *carryEnv) erasureRequest(t *testing.T, contact ids.ContactID) ids.UUID {
+func (c mergeKeepsEnv) erasureRequest(t *testing.T, contact ids.ContactID) ids.UUID {
 	t.Helper()
 	row, err := c.consent.CreateDSR(c.admin, consent.CreateDSRInput{Kind: "erasure", SubjectRef: contact.String()})
 	if err != nil {
@@ -178,10 +220,10 @@ func (c *carryEnv) erasureRequest(t *testing.T, contact ids.ContactID) ids.UUID 
 // Where both leads hold a place in one initiative, the survivor's stands and
 // the retired lead's rows survive only as the audit's before-image.
 func TestALeadMergeKeepsTheRetiredLeadInItsInitiatives(t *testing.T) {
-	c := setupCarry(t)
-	store := NewInitiativeStore(c.e.Pool)
-	loser := c.lead(t, "Ida Berg", "ida@berg.test", "Berg AB")
-	live := c.lead(t, "Ida Bergh", "", "Berg AB")
+	c := setupMergeKeeps(t)
+	store := compose.NewInitiativeStore(c.e.Pool)
+	loser := seedLead(t, c.e, "Ida Berg", "ida@berg.test", nil)
+	live := seedLead(t, c.e, "Ida Bergh", "", nil)
 	launch := func(name string, picked ...ids.LeadID) ids.UUID {
 		t.Helper()
 		draft, err := store.Create(c.admin, initiatives.Definition{
@@ -210,7 +252,7 @@ func TestALeadMergeKeepsTheRetiredLeadInItsInitiatives(t *testing.T) {
 		t.Fatal("precondition: the launch did not enrol the retired lead")
 	}
 
-	if _, err := c.contacts.MergeLead(c.admin, loser, live); err != nil {
+	if _, err := c.e.Contacts.MergeLead(c.admin, loser, live); err != nil {
 		t.Fatalf("lead merge: %v", err)
 	}
 
@@ -237,7 +279,7 @@ func TestALeadMergeKeepsTheRetiredLeadInItsInitiatives(t *testing.T) {
 // with the value. The provenance of a field the survivor kept its own value
 // for describes a value the merge did not keep, and stays.
 func TestAContactMergeMovesTheProvenanceOfTheValuesTheSurvivorTook(t *testing.T) {
-	c := setupCarry(t)
+	c := setupMergeKeeps(t)
 	title := "Head of Purchasing"
 	created, err := c.e.Contacts.CreateContact(c.admin, contacts.CreateContactInput{FullName: "Tor Lund", Title: &title, Source: "manual"})
 	if err != nil {
@@ -260,5 +302,51 @@ func TestAContactMergeMovesTheProvenanceOfTheValuesTheSurvivorTook(t *testing.T)
 	}
 	if n := c.count(t, provenance, retired, "full_name"); n != 1 {
 		t.Errorf("the retired contact holds %d provenance rows for the name the survivor kept, want 1", n)
+	}
+}
+
+// A merge that meets a privacy request being fulfilled is refused at once
+// rather than waiting. The fulfilment holds its request while its erasure locks
+// the contact in a second transaction. A merge that waited on the request while
+// holding the contact would wait on a cycle the database cannot see. Both
+// complete: the fulfilment first, then the merge again.
+func TestAMergeRacingAnErasureOfTheSourcesRequestCompletesBoth(t *testing.T) {
+	c := setupMergeKeeps(t)
+	retired := c.contactAt(t, "Race Retired", "race@carry.test")
+	survivor := c.contactAt(t, "Race Survivor", "race-survivor@carry.test")
+	request := c.erasureRequest(t, retired)
+
+	var raced error
+	erase := func(ctx context.Context, contactID ids.UUID, _ string) (erasureaccount.Account, error) {
+		merged := make(chan error, 1)
+		go func() {
+			_, err := c.e.Contacts.MergeContact(c.admin, retired, survivor, nil)
+			merged <- err
+		}()
+		select {
+		case raced = <-merged:
+		case <-time.After(30 * time.Second):
+			return erasureaccount.Account{}, errors.New("the merge waited on the request being fulfilled")
+		}
+		// privacy's eraser locks the contact in its own transaction; so does this.
+		err := pgx.BeginFunc(ctx, c.e.Pool, func(tx pgx.Tx) error {
+			_, err := tx.Exec(ctx, `SELECT 1 FROM contact WHERE id = $1 FOR UPDATE`, contactID)
+			return err
+		})
+		return erasureaccount.Empty(), err
+	}
+	if _, err := c.consent.FulfilErasure(c.admin, request, consent.UpdateDSRInput{
+		Status: new("fulfilled"), Proof: consent.ProofStatement{IdentityCheck: new("id_document")},
+	}, erase); err != nil {
+		t.Fatalf("fulfilling the erasure: %v", err)
+	}
+	if !errors.Is(raced, consent.ErrRightsRequestBeingAnswered) {
+		t.Fatalf("the merge that met the fulfilment returned %v, want the refusal to merge while the request is answered", raced)
+	}
+	c.merge(t, retired, survivor)
+	// A fulfilled erasure keeps only the erased contact's id, in subject_ref.
+	if n := c.count(t, `SELECT count(*) FROM data_subject_request
+		WHERE id = $1 AND status = 'fulfilled' AND contact_id IS NULL AND subject_ref = $2::text`, request, retired); n != 1 {
+		t.Error("the fulfilled request moved with the later merge, or was never fulfilled")
 	}
 }
