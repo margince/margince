@@ -132,3 +132,50 @@ func TestARemovedCurrencyKeepsTheRateAPinnedFigureUsed(t *testing.T) {
 		t.Errorf("pinned read %q with %d live rows, want 0.0060000000 and none", atPinned, live)
 	}
 }
+
+// Removing an older currency while a newer one stays must still move the sheet
+// revision. A new report then stops converting with the removed rate. A figure
+// pinned before the removal still does.
+func TestARemovalMovesTheSheetRevisionPastTheRemovedRate(t *testing.T) {
+	e := Setup(t)
+	ctx := e.Admin()
+	for _, in := range []deals.SetFxRateInput{{FromCurrency: "JPY", Rate: "0.0060"}, {FromCurrency: "USD", Rate: "0.9"}} {
+		if _, err := e.Deals.SetFxRate(ctx, in); err != nil {
+			t.Fatal(err)
+		}
+	}
+	revision := func() time.Time {
+		var at time.Time
+		if err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) (err error) {
+			at, err = deals.RateSheetRevision(ctx, tx)
+			return err
+		}); err != nil {
+			t.Fatal(err)
+		}
+		return at
+	}
+	before := revision()
+	if err := e.Deals.RemoveFxRate(ctx, "JPY"); err != nil {
+		t.Fatal(err)
+	}
+	after := revision()
+	if !after.After(before) {
+		t.Fatalf("the revision stayed at %s after a removal", before)
+	}
+	seen := func(at time.Time) int {
+		var n int
+		if err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
+			return tx.QueryRow(ctx, `SELECT count(*) FROM fx_rate WHERE from_currency = 'JPY' AND `+
+				deals.RateVersionSQL("", "$1"), at).Scan(&n)
+		}); err != nil {
+			t.Fatal(err)
+		}
+		return n
+	}
+	if seen(after) != 0 {
+		t.Error("a revision taken after the removal still sees the removed JPY rate")
+	}
+	if seen(before) != 1 {
+		t.Error("a revision pinned before the removal lost the JPY rate")
+	}
+}

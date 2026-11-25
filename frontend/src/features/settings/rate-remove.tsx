@@ -2,10 +2,14 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { type ReactNode, useState } from "react";
 import { api } from "../../api/client";
 import type { components } from "../../api/schema";
+import { Button } from "../../design-system/atoms";
 import { ConfirmModal } from "../../design-system/confirmmodal";
+import type { DataTableColumn } from "../../design-system/datatable";
 import { useT } from "../../i18n";
+import { useCanWrite } from "../../lib/capability";
 import { labelFor } from "../../lib/labelfor";
 import { problemMessageOf, unwrap } from "../../lib/problem";
 import { INSTALLATION_SETTINGS_KEY } from "../../lib/uploadlimit";
@@ -13,6 +17,40 @@ import { LANE_LABEL } from "./rate-manual";
 
 type SheetRow = components["schemas"]["AiModelRate"];
 type FxRate = components["schemas"]["FxRate"];
+
+/**
+ * The Remove column of the currency rate sheet and its confirm dialog. The
+ * column is empty without the update grant on a full seat.
+ */
+export function useRemoveFxRate(): {
+  columns: DataTableColumn<FxRate>[];
+  dialog: ReactNode;
+} {
+  const t = useT();
+  const canRemove = useCanWrite("fx_rate", "update");
+  const [removing, setRemoving] = useState<FxRate | null>(null);
+  return {
+    columns: canRemove
+      ? [
+          {
+            key: "verbs",
+            header: t("settings.rates.fxRemoveConfirm"),
+            headerHidden: true,
+            render: (row) => (
+              <Button onClick={() => setRemoving(row)}>
+                {t("settings.rates.fxRemoveVerb", {
+                  currency: row.from_currency,
+                })}
+              </Button>
+            ),
+          },
+        ]
+      : [],
+    dialog: removing ? (
+      <RemoveFxRateDialog row={removing} onClose={() => setRemoving(null)} />
+    ) : null,
+  };
+}
 
 /**
  * RemoveFxRateDialog asks before a currency leaves the rate sheet. Deals in it
