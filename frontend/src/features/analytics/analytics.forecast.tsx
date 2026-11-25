@@ -12,14 +12,8 @@ import { Callout } from "../../design-system/callout";
 import { EvidenceReceipt } from "../../design-system/evidencereceipt";
 import { FilterBar } from "../../design-system/filterbar";
 import { QueryGate } from "../../design-system/querystates";
-import {
-  formatAnalyticsNumber,
-  formatDateTime,
-  formatDayRange,
-} from "../../format/format";
-import { zoneLabelAt } from "../../format/timezone";
+import { formatAnalyticsNumber, formatDayRange } from "../../format/format";
 import { type Locale, type Translator, useLocale, useT } from "../../i18n";
-import { useCompanyZone } from "../../lib/companyzone";
 import { usePipelines } from "../../lib/pipelines.queries";
 import { unwrap } from "../../lib/problem";
 import {
@@ -37,6 +31,7 @@ import { ForecastDeals, openForecastDeals } from "./analytics.forecast.deals";
 import { forecastFit, periodDial } from "./analytics.forecast.fit";
 import { ForecastReview } from "./analytics.forecast.review";
 import { actualsThrough, PeriodCaption } from "./analytics.period";
+import { sharePopulation } from "./analytics.sharelist";
 import {
   FORECAST_PERIODS,
   type ForecastPeriod,
@@ -312,7 +307,6 @@ function forecastPeriod(
 export function SharedForecastView({ token }: Readonly<{ token: string }>) {
   const t = useT();
   const { locale } = useLocale();
-  const zone = useCompanyZone();
   const query = useQuery({
     queryKey: ["shared-forecast", token],
     queryFn: async () => {
@@ -332,13 +326,17 @@ export function SharedForecastView({ token }: Readonly<{ token: string }>) {
       >
         {(view) => (
           <>
+            {/* Whose records, which period and which moment, from the reading
+                itself: a recipient never saw the screen it was shared from. */}
             <p className="t-caption">
               {view.kind === "snapshot"
                 ? t("reporting.frozen")
                 : t("reporting.live")}
-              {view.as_of
-                ? ` · ${formatDateTime(view.as_of, locale, zone)} · ${zoneLabelAt(view.as_of, zone, locale)}`
-                : ""}
+              {" · "}
+              {sharePopulation(view.readings.scope_kind, view.scope_label, t)}
+            </p>
+            <p className="t-caption">
+              {forecastPeriod(view.readings, locale, t)}
             </p>
             {view.withheld && (
               <Callout tone="warning" title={t("reporting.restricted")}>

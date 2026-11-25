@@ -56,7 +56,7 @@ The **My outcomes** section shows your own targets, open deals and meetings, for
 ### How do I share a report view?
 To share a forecast view in Margince, open **Analytics** → **Forecast** and press **Share view**. Choose **Live view** or **Snapshot**, press **Create link**, then **Copy link**. A link always shows the quarter, so on **Month** or **Week** the button asks you to choose **Quarter** first. The link is shown only once and stops working after 30 days. Whoever opens it must sign in, and sees only what their own access allows.
 
-Only the Forecast section has **Share view**; Performance and saved sales reports offer CSV export. Opening a link shows the shared forecast under the current permissions of whoever opens it. Also called: send a report, share dashboard, report link.
+Only the Forecast section has **Share view**; Performance and saved sales reports offer CSV export. Opening a link shows the shared forecast under the current permissions of whoever opens it. The page names whose records it covers, the period and when it was read. A team member or team your access does not reach reads only as **Colleague** or **Team**. Also called: send a report, share dashboard, report link.
 
 ### How do I close a shared forecast link?
 To close a forecast link in Margince before its 30 days run out, open **Analytics** → **Forecast** and press **Shared links** beside **Share view**, on any period.

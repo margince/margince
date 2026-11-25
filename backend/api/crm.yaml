@@ -71281,6 +71281,13 @@ components:
           type: string
           format: date-time
           description: The instant a snapshot share's state describes. Absent on a live share.
+        scope_label:
+          type: string
+          description: >-
+            The name of the population the readings cover, as this reader's own lens names
+            it: the team, the team member, or the whole company. Absent when that lens does
+            not reach the team member or team, so a link never names a subject its reader
+            could not choose; `readings.scope_kind` still says which kind it is.
         readings: { $ref: '#/components/schemas/ForecastReadings' }
         withheld:
           type: boolean

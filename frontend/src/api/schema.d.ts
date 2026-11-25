@@ -52106,6 +52106,8 @@ export interface components {
              * @description The instant a snapshot share's state describes. Absent on a live share.
              */
             as_of?: string;
+            /** @description The name of the population the readings cover, as this reader's own lens names it: the team, the team member, or the whole company. Absent when that lens does not reach the team member or team, so a link never names a subject its reader could not choose; `readings.scope_kind` still says which kind it is. */
+            scope_label?: string;
             readings: components["schemas"]["ForecastReadings"];
             /** @description Whether anything was kept back from this reader. A boolean and never a count: a count of what somebody may not see states how much of it there is. */
             withheld: boolean;
