@@ -26,9 +26,9 @@ import "./worklist.css";
 //   · the count at the end is as quiet as the fragments and louder than
 //     nothing, and it opens beside the line rather than pushing it down.
 //
-// Both themes. The fragments are `--textMeta` over the panel's translucent
-// ground and the count is a ghost control on the same ground — both are
-// `color-mix()` over canonical tokens and both re-resolve on the flip.
+// Both themes. The fragments are `--textMeta` over the panel's ground, and the
+// count is a ghost control on it. Both are `color-mix()` over canonical tokens
+// and re-resolve on the flip.
 
 type WorklistItem = components["schemas"]["WorklistItem"];
 
