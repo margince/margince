@@ -314,7 +314,7 @@ function TestRunBody({
         className="import__footer"
         primary={
           <>
-            <Button variant="ghost" onClick={wizard.reset}>
+            <Button variant="ghost" onClick={wizard.reupload}>
               {t("import.test.reupload")}
             </Button>
             <PrimaryAction
