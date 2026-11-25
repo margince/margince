@@ -114,9 +114,8 @@ func New(pool *pgxpool.Pool, log *slog.Logger, opts ...Option) http.Handler {
 	srv.authHandlers = srv.WithAnalyticsStartup(srv.analyticsStartup)
 	// After the lists switch, so /me probes list_id through the resolvers the deal and lead lists hold.
 	srv.authHandlers = srv.WithRefusedDealFilters(srv.RefusedListFilters).WithRefusedLeadFilters(srv.RefusedLeadFilters)
-	// The tool registry is built HERE, once, after the options, on the Server
-	// that is actually served — so every engine an option installed is one the
-	// tools can reach, whatever order the options ran in.
+	// Built once, after the last option, on the Server that is served. So the
+	// tools reach every engine an option installed, in any option order.
 	srv.buildToolRegistry(pool)
 	srv.authHandlers = srv.WithReachableAreas(reachableAreasOf(srv.toolRegistry))
 	// Bound here for the same reason, and on the same Server: deactivation has

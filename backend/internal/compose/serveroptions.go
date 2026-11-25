@@ -328,10 +328,6 @@ func WithAgentVolume(meter *agentvolume.Meter) Option {
 // hybrid retrieval can use its vector half for a caller and not only for a
 // background job.
 //
-// The tool registry consumes the lane: the intent retriever, search_context and
-// the query executor are all constructed inside it. New builds that registry
-// after every option has run, so the tools rank with the lane bound here.
-//
 // Without this option the lane stays unbound, which is a real deployment (a role
 // with no model path, or a routing config that binds no embeddings model) rather
 // than a broken one: every ranked answer says which lane ranked it.

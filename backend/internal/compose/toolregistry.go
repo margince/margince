@@ -19,12 +19,10 @@ import (
 	"github.com/margince/margince/backend/internal/platform/auth"
 )
 
-// buildToolRegistry builds the agent tool surface from the server's CURRENT
-// state. An option that changes what the registry composes over — the reply
-// drafter, the send configuration — only records onto the Server, and New
-// calls this once after the last option, so no option's wiring is dropped.
+// buildToolRegistry builds the agent tool surface from the server's current
+// state. Options only record onto the Server, and New calls this after the
+// last one, so the surface holds the wiring of every option.
 func (s *Server) buildToolRegistry(pool *pgxpool.Pool) {
-	// The closure captures s and reads s.vault LAZILY at request time.
 	// The gate and the registry take the SAME meter pointer: one refuses on the
 	// bound, the other pays into it, and a surface where those were two
 	// counters would step an agent up against a number nothing was charging.

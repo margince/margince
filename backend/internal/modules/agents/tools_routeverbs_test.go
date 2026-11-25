@@ -226,8 +226,8 @@ func TestAWritesAnswerSchemaAdmitsTheCutAnswer(t *testing.T) {
 	}
 }
 
-// A write's spec owns the answer schema derived for it, so a holder that writes
-// into one does not change what the verb's next spec advertises.
+// A write's spec owns its derived answer schema. A holder that writes into it
+// does not change the verb's next spec.
 func TestAWriteVerbSpecOwnsItsAnswerSchema(t *testing.T) {
 	answer := json.RawMessage(`{"type":"object","required":["id"],"properties":{"id":{"type":"string"}}}`)
 	write := routeVerbTool{verb: RouteVerb{Verb: "w", Method: http.MethodPost, Pattern: "/v1/w", Scope: principal.ScopeWrite, AnswerSchema: answer}}
