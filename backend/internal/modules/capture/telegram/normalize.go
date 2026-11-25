@@ -43,6 +43,12 @@ type ActivityFields struct {
 // one spelling directly, so keep them equal if either ever changes.
 const Provider = "telegram"
 
+// BusinessProvider is the provider of a Telegram Business link, the row an
+// account owner's link of the bot gets in channel_connection. It differs from
+// Provider so a reader that polls or sends through "the telegram connection"
+// never meets a link, which holds no credential.
+const BusinessProvider = "telegram_business"
+
 // KindMessage is the interaction kind every captured channel message files
 // under. Restated here rather than imported from the activities module for the
 // same reason Provider is: a capture connector must not reach across to a

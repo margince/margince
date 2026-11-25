@@ -502,22 +502,22 @@ employ "Alice Müller" "alice@demo.test" "Head of Operations"
 employ "Bob Schmidt" "bob@demo.test" "Procurement Lead"
 employ "Carol Wagner" "carol@demo.test" "Managing Director"
 
-echo "== seed-dev: demo account lifecycle =="
+echo "== seed-dev: demo account status =="
 status="$(api GET "/companies/$company_id")"
 [[ "$status" = "200" ]] || fail "GET /v1/companies/$company_id returned HTTP $status"
-company_lifecycle="$(jq -r '.lifecycle // ""' "$workdir/body")"
+company_status="$(jq -r '.status // ""' "$workdir/body")"
 company_version="$(jq -r '.version // ""' "$workdir/body")"
-if [[ "$company_lifecycle" = "customer" ]]; then
+if [[ "$company_status" = "customer" ]]; then
   echo "  OK: Demo GmbH is already a customer"
 else
   [[ -n "$company_version" ]] || fail "GET /v1/companies/$company_id answered without a version to write against"
-  status="$(api_if_match PATCH "/companies/$company_id" "$company_version" '{"lifecycle":"customer"}')"
+  status="$(api_if_match PATCH "/companies/$company_id" "$company_version" '{"status":"customer"}')"
   case "$status" in
     200) echo "  OK: Demo GmbH is a customer" ;;
     *)
       echo "  response body:" >&2
       cat "$workdir/body" >&2
-      fail "PATCH /v1/companies/$company_id (lifecycle) returned HTTP $status"
+      fail "PATCH /v1/companies/$company_id (status) returned HTTP $status"
       ;;
   esac
 fi

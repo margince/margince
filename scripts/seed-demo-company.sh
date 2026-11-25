@@ -66,7 +66,7 @@ SESSION="$(sed -n 's/^[Ss]et-[Cc]ookie: crm_session=\([^;]*\).*/\1/p' "$workdir/
 echo "  OK: logged in as $ADMIN_EMAIL"
 
 # ---- the company -----------------------------------------------------------
-# A CUSTOMER, because that is the lifecycle the money readings are for: the
+# A CUSTOMER, because that is the status the money readings are for: the
 # finance section is absent by contract on a target or a prospect (FIN-AC-3),
 # so a demo account that is not one cannot show the cards this exists to show.
 echo "== the company =="
@@ -74,7 +74,7 @@ company_id="$(psql_one "SELECT id FROM company WHERE display_name = '$COMPANY' A
 if [[ -z "$company_id" ]]; then
   status="$(api POST /companies "$(jq -n --arg n "$COMPANY" '{
     display_name: $n,
-    lifecycle: "customer",
+    status: "customer",
     website: "https://glazedfrog.example",
     description: "Supplies architectural glazing, aluminium systems and modular walls to builders, architects and developers.",
     employee_band: "51_200",

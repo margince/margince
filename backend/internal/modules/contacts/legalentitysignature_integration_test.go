@@ -43,7 +43,7 @@ func setupSigning(t *testing.T, withWorkspaceTemplate bool) signingEnv {
 	if err != nil {
 		t.Fatalf("save the company: %v", err)
 	}
-	if _, err := e.owner.Exec(ctx, `UPDATE company SET logo_object_key = $2, logo_origin = 'upload' WHERE id = $1`,
+	if _, err := e.owner.Exec(ctx, `UPDATE company SET logo_object_key = $2, logo_source = 'upload' WHERE id = $1`,
 		company.CompanyID, anchorLogoKey); err != nil {
 		t.Fatalf("give the company a logo: %v", err)
 	}

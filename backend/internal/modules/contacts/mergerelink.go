@@ -95,11 +95,10 @@ func relinkContactReferences(ctx context.Context, tx pgx.Tx, sourceID, targetID 
 		return counts, fmt.Errorf("merge consent: %w", err)
 	}
 	// The channel identities follow the survivor, or the human behind them
-	// keeps writing into the record nobody reads any more. No survivor-wins
-	// rule is needed here, unlike the email and phone slots above: the unique
-	// key spans (provider, channel_user_id) WITHOUT contact_id, so the two
-	// halves cannot both hold the same identity live and the relink cannot
-	// collide.
+	// keeps writing into the record nobody reads any more. Unlike the email and
+	// phone slots above, no survivor-wins rule is needed. The unique key leaves out
+	// contact_id and names the provider, account scope and channel user id. So the
+	// two halves cannot hold the same identity live and the relink cannot collide.
 	if _, err := tx.Exec(ctx, `
 		UPDATE contact_channel_identity SET contact_id = @target
 		WHERE `+mergeLiveChannelIdentity, pgx.StrictNamedArgs{mergeSourceKey: sourceID, mergeTargetKey: targetID}); err != nil {

@@ -295,7 +295,7 @@ type CompanySummary struct {
 	ID           string
 	Name         string
 	LegalName    string
-	Lifecycle    string
+	Status       string
 	OwnerID      UserID
 	SourceSystem string
 	SourceID     string

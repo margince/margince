@@ -27,7 +27,7 @@ type wordsSeen struct {
 	err              error
 }
 
-func (w *wordsSeen) words(_ context.Context, current, changes map[string]json.RawMessage) ([]crmcontracts.ApprovalPreviewChange, error) {
+func (w *wordsSeen) words(_ context.Context, _ string, current, changes map[string]json.RawMessage) ([]crmcontracts.ApprovalPreviewChange, error) {
 	w.current, w.changes = current, changes
 	if w.err != nil {
 		return nil, w.err

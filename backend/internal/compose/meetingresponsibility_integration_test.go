@@ -183,7 +183,7 @@ func TestAMeetingIsHeldOnlyOnceItsOutcomeSaysSo(t *testing.T) {
 			t.Fatal(err)
 		}
 		account := ids.NewV7()
-		if _, err := conn.Exec(context.Background(), `INSERT INTO company (id, display_name, owner_id, lifecycle, source, captured_by)
+		if _, err := conn.Exec(context.Background(), `INSERT INTO company (id, display_name, owner_id, status, source, captured_by)
 			VALUES ($1, $2, $3, 'customer', 'seed', 'system')`, account, name+" Account", e.Rep1); err != nil {
 			t.Fatal(err)
 		}

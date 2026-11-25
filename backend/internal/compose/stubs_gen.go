@@ -1119,6 +1119,18 @@ func (stubs) ConnectChannel(w nethttp.ResponseWriter, r *nethttp.Request) {
 	httperr.NotImplemented(w, r, "ConnectChannel")
 }
 
+func (stubs) ListTelegramBusinessConnections(w nethttp.ResponseWriter, r *nethttp.Request) {
+	httperr.NotImplemented(w, r, "ListTelegramBusinessConnections")
+}
+
+func (stubs) DisconnectTelegramBusinessConnection(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
+	httperr.NotImplemented(w, r, "DisconnectTelegramBusinessConnection")
+}
+
+func (stubs) ApproveTelegramBusinessConnection(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
+	httperr.NotImplemented(w, r, "ApproveTelegramBusinessConnection")
+}
+
 func (stubs) DisconnectChannel(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
 	httperr.NotImplemented(w, r, "DisconnectChannel")
 }

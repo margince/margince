@@ -1,4 +1,4 @@
--- 1795590376: a_merged_deal_names_its_survivor.
+-- 1795604909: a_merged_deal_names_its_survivor.
 SET LOCAL lock_timeout = '3s';
 
 -- The survivor a merged-away deal points at, the same redirect contact, company

@@ -4,6 +4,7 @@
 
 export const TEXT_LIMITS = Object.freeze({
   label: 120,
+  identity: 128,
   line: 500,
   note: 2000,
   document: 20000,
