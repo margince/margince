@@ -94,7 +94,7 @@ func WriteNewsroomSignals(
 			// vocabulary is what a reader triages by.
 			Severity: severityInfo,
 			Channel:  newsroomChannel,
-			Source:   newsroomSource,
+			Producer: newsroomSource,
 			// The article's ADDRESS is the identity, and the kind is
 			// deliberately not in it: a headline the CMS rewords, or a rule
 			// that later places it differently, is the same announcement and

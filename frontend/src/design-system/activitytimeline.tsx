@@ -114,7 +114,9 @@ function kindWord(kind: string, t: ReturnType<typeof useT> | undefined) {
 // A written body is markdown, so its title is the text it renders, not its
 // syntax.
 function titleText(activity: Activity, raw: string): string {
-  if (activity.kind === "email") return emailSummaryText(raw);
+  if (activity.kind === "email") {
+    return emailSummaryText(raw, activity.subject ?? "");
+  }
   const written = writtenAsMarkdown({
     kind: timelineKind(activity.kind),
     transcript: isTranscriptActivity(activity),

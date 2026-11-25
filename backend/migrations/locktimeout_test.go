@@ -51,7 +51,7 @@ var (
 	// only the two files that named one and read green over everything else.
 	blockingStatements = []*regexp.Regexp{
 		regexp.MustCompile(`(?is)\bALTER\s+TABLE\s+(?:IF\s+EXISTS\s+)?(?:ONLY\s+)?([\w".]+)`),
-		regexp.MustCompile(`(?is)\bCREATE\s+(?:UNIQUE\s+)?INDEX\s+(?:IF\s+NOT\s+EXISTS\s+)?[\w".]+\s+ON\s+([\w".]+)`),
+		indexBuild,
 		regexp.MustCompile(`(?is)\bDROP\s+TABLE\s+(?:IF\s+EXISTS\s+)?([\w".]+)`),
 		regexp.MustCompile(`(?is)\bTRUNCATE\s+(?:TABLE\s+)?([\w".]+)`),
 		// LOCK TABLE only in its BLOCKING modes: `IN ACCESS SHARE MODE` conflicts
@@ -69,6 +69,16 @@ var (
 		// also matching the ACCESS SHARE form above.
 		regexp.MustCompile(`(?is)\bLOCK\s+(?:TABLE\s+)?(?:ONLY\s+)?([\w".]+)(?:\s*,\s*[\w".]+)*\s*;`),
 	}
+
+	// indexBuild is the one reading of CREATE INDEX that this gate and
+	// concurrentindex_test.go share. Group 1 is the table. Postgres allows the
+	// index name to be left out, and `ON ONLY` names the same table.
+	indexBuild = regexp.MustCompile(
+		`(?is)\bCREATE\s+(?:UNIQUE\s+)?INDEX\s+(?:CONCURRENTLY\s+)?(?:IF\s+NOT\s+EXISTS\s+)?(?:[\w".]+\s+)??ON\s+(?:ONLY\s+)?([\w".]+)`,
+	)
+
+	// buildsConcurrently tells an indexBuild match that blocks no writer.
+	buildsConcurrently = regexp.MustCompile(`(?is)^CREATE\s+(?:UNIQUE\s+)?INDEX\s+CONCURRENTLY\b`)
 
 	// unresolvableBlockers act on a pre-existing object whose table this cannot
 	// name — DROP INDEX names the index, not what it indexes. A migration only
@@ -279,6 +289,9 @@ func firstBlockingIndex(statements string, own map[string]int) int {
 	}
 	for _, pattern := range blockingStatements {
 		for _, loc := range pattern.FindAllStringSubmatchIndex(statements, -1) {
+			if pattern == indexBuild && buildsConcurrently.MatchString(statements[loc[0]:loc[1]]) {
+				continue
+			}
 			// EVERY relation the statement names, not just the captured one. A file
 			// that creates `scratch` skipped `LOCK TABLE scratch, relationship;` on
 			// the strength of its first table while the second was a live one.
@@ -308,7 +321,7 @@ func version(path string) string {
 	return name
 }
 
-// executableSQL is what the checks above run against: `--` comments removed, and
+// executableSQL is what the checks above run against: comments removed, and
 // the CONTENTS of every quoted string blanked while its quotes stay put.
 //
 // Both halves are load-bearing, in opposite directions. Comments must go or every
@@ -338,6 +351,8 @@ func executableSQL(sql string) string {
 			} else {
 				out.WriteByte(' ')
 			}
+		case sql[i] == '/' && i+1 < len(sql) && sql[i+1] == '*':
+			i = blankBlockComment(&out, sql, i)
 		case !inString && sql[i] == '-' && i+1 < len(sql) && sql[i+1] == '-':
 			// Skip to the end of the line, keeping the newline so statement
 			// boundaries and line structure survive.
@@ -354,6 +369,35 @@ func executableSQL(sql string) string {
 	return out.String()
 }
 
+// blankBlockComment blanks the block comment that opens at i, keeping its
+// newlines, and returns the index of its last byte. Postgres nests block
+// comments, so `/* a /* b */ c */` is one comment.
+func blankBlockComment(out *strings.Builder, sql string, i int) int {
+	depth := 0
+	for ; i < len(sql); i++ {
+		switch {
+		case sql[i] == '/' && i+1 < len(sql) && sql[i+1] == '*':
+			depth++
+			out.WriteString("  ")
+			i++
+			continue
+		case sql[i] == '*' && i+1 < len(sql) && sql[i+1] == '/':
+			depth--
+			out.WriteString("  ")
+			i++
+			if depth == 0 {
+				return i
+			}
+			continue
+		case sql[i] == '\n':
+			out.WriteByte('\n')
+		default:
+			out.WriteByte(' ')
+		}
+	}
+	return i
+}
+
 // The gate's own gate. Its first version passed over the whole tree while
 // matching almost nothing in it — a lock-level grep against statements that take
 // their locks implicitly — and nothing said so, because a fitness function that
@@ -368,6 +412,10 @@ func TestTheLockGateReportsWhatItClaimsTo(t *testing.T) {
 		// The whole class the first version missed: no lock level is spelled.
 		{"ALTER TABLE on a table it did not create", "ALTER TABLE relationship ADD COLUMN note text;", true},
 		{"CREATE INDEX on a table it did not create", "CREATE INDEX i ON relationship (contact_id);", true},
+		{"an unnamed index on a table it did not create", "CREATE INDEX ON relationship (contact_id);", true},
+		{"an index ON ONLY a table it did not create", "CREATE INDEX i ON ONLY relationship (contact_id);", true},
+		{"a concurrent index build blocks no writer", "CREATE INDEX CONCURRENTLY i ON relationship (contact_id);", false},
+		{"a block comment hides no blocking statement", "CREATE /* note */ INDEX i ON relationship (contact_id);", true},
 		{"DROP INDEX acts on something already shipped", "DROP INDEX IF EXISTS idx_old;", true},
 		{"a concurrent drop blocks no writer", "DROP INDEX CONCURRENTLY IF EXISTS idx_old;", false},
 		{"a concurrent reindex blocks no writer", "REINDEX INDEX CONCURRENTLY idx_old;", false},

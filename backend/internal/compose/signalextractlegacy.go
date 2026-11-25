@@ -157,7 +157,7 @@ func legacyCommitmentsOwed(ctx context.Context, tx pgx.Tx) ([]legacyCommitment, 
 		        WHERE item->>'source_type' = 'activity'
 		        LIMIT 1) cite ON true
 		 WHERE s.kind = $1 AND s.status = 'open' AND s.archived_at IS NULL
-		   AND s.source = 'signal-scan'
+		   AND `+signals.ScanWrittenSQL("s.")+`
 		   AND s.resolved_company_id IS NOT NULL
 		   AND NOT EXISTS (
 		         SELECT 1 FROM audit_log al

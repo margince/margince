@@ -38,7 +38,7 @@ func MoveDealRefsTx(ctx context.Context, tx pgx.Tx, from, to ids.UUID) ([]record
 		return nil, err
 	}
 	if err := storekit.AuditEach(ctx, tx, "update", "relationship", edges,
-		map[string]any{"deal_id": from}, map[string]any{"deal_id": to}); err != nil {
+		map[string]any{endDealColumn: from}, map[string]any{endDealColumn: to}); err != nil {
 		return nil, fmt.Errorf("audit the relationship rows of the merge: %w", err)
 	}
 	moved = append(moved, recordmerge.Moved{Table: "relationship", IDs: edges})
@@ -46,17 +46,17 @@ func MoveDealRefsTx(ctx context.Context, tx pgx.Tx, from, to ids.UUID) ([]record
 	if err != nil {
 		return nil, err
 	}
-	if err := storekit.AuditEach(ctx, tx, "update", "lead", leads,
+	if err := storekit.AuditEach(ctx, tx, "update", leadEntity, leads,
 		map[string]any{"qualified_deal_id": from}, map[string]any{"qualified_deal_id": to}); err != nil {
 		return nil, fmt.Errorf("audit the lead rows of the merge: %w", err)
 	}
-	moved = append(moved, recordmerge.Moved{Table: "lead", IDs: leads})
+	moved = append(moved, recordmerge.Moved{Table: leadEntity, IDs: leads})
 	handoffs, err := recordmerge.MovedIDs(ctx, tx, `UPDATE sdr_handoff SET deal_id = $2 WHERE deal_id = $1 RETURNING id`, from, to)
 	if err != nil {
 		return nil, err
 	}
 	if err := storekit.AuditEach(ctx, tx, "update", "sdr_handoff", handoffs,
-		map[string]any{"deal_id": from}, map[string]any{"deal_id": to}); err != nil {
+		map[string]any{endDealColumn: from}, map[string]any{endDealColumn: to}); err != nil {
 		return nil, fmt.Errorf("audit the sdr_handoff rows of the merge: %w", err)
 	}
 	moved = append(moved, recordmerge.Moved{Table: "sdr_handoff", IDs: handoffs})

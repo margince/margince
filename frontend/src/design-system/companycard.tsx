@@ -31,7 +31,7 @@ export function CompanyCard({
   // The rest of the tie, under the facts. Controls here stay above the stretched
   // link and keep their own press.
   children?: ReactNode;
-  // The verbs, revealed on hover or focus; use an `OverflowMenu`.
+  // The verbs, always in view; use an `OverflowMenu`.
   actions?: ReactNode;
   // `track` draws a run of cards as one timeline. It drops the frame and joins
   // each mark to the next.

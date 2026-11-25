@@ -319,6 +319,51 @@ it("a task lead holds its verbs' room until the task and its contact are read", 
   expect(article.querySelector(".task-next-pending")).toBeNull();
 });
 
+// Done's weight follows the task's type and contact, so it waits for both.
+// A filled Done that a filled step then quiets is a flash.
+it("a task lead draws Done only once the read that weighs it has landed", async () => {
+  let landTask: (response: Response) => void = () => {};
+  let landContact: ((response: Response) => void) | undefined;
+  installFetchStub({
+    "GET /me": meRoute({ activity: ["read"] }, { roles: ["rep"] }),
+    "GET /activities/task-1": () =>
+      new Promise<Response>((land) => {
+        landTask = land;
+      }),
+    "GET /contacts/c-1": () =>
+      new Promise<Response>((land) => {
+        landContact = land;
+      }),
+  });
+  render(triageOf([LEAD], 0));
+  const card = within(await screen.findByRole("article"));
+  const done = () => card.queryByRole("button", { name: en["tasks.complete"] });
+  expect(done()).toBeNull();
+
+  landTask(
+    jsonResponse({
+      id: "task-1",
+      kind: "task",
+      subject: LEAD.title,
+      occurred_at: "2026-09-08T09:00:00Z",
+      is_done: false,
+      task_type: "meet",
+      links: [{ entity_type: "contact", entity_id: "c-1" }],
+    }),
+  );
+  await vi.waitFor(() => expect(landContact).toBeDefined());
+  await card.findByText(en["task.type.meet"]);
+  expect(done()).toBeNull();
+
+  landContact?.(
+    jsonResponse({ id: "c-1", full_name: "Alice Brandt", phones: [] }),
+  );
+  const drawn = await card.findByRole("button", {
+    name: en["tasks.complete"],
+  });
+  expect(drawn.classList.contains("btn-primary")).toBe(false);
+});
+
 it("Next task opens the following card, wraps past the last, and is absent alone", async () => {
   const second = taskRow("task-2", "Send the sheet");
   stubReader();
@@ -368,7 +413,7 @@ it("a promise carrying its email is named once and drawn as a task", async () =>
   // The email is drawn under the promise; the card's own meta names a task.
   const meta = article.querySelector(".brief-triage-lead-head");
   expect(meta?.textContent).not.toContain(en["timeline.kind.email"]);
-  expect(article.querySelector(".brief-task-status")).toBeNull();
+  expect(article.querySelector(".task-meta-status")).toBeNull();
 });
 
 it("a card done from its own tick hands focus to the card that takes its place", () => {

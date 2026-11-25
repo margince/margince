@@ -10,11 +10,15 @@
 // the shell's unsaved guard, for a suite that leaves the page.
 
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { screen, within } from "@testing-library/react";
+import type { UserEvent } from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { vi } from "vitest";
 import { UnsavedGuard } from "../../components/unsaved";
+import { pickOption } from "../../design-system/select-testing";
 import { ToastProvider, ToastRegion } from "../../design-system/toast";
 import { LocaleProvider } from "../../i18n";
+import { en } from "../../i18n/en";
 import type { FilterResource, FilterVocabulary } from "../../lib/filterdata";
 import type { List } from "../../lib/lists.queries";
 import { useHash } from "../../lib/router";
@@ -513,6 +517,30 @@ export function GuardedFilters({
       </UnsavedGuard>
       <ToastRegion />
     </ToastProvider>
+  );
+}
+
+/** Adds a condition and picks its field. */
+export async function addCondition(
+  user: UserEvent,
+  field: string,
+): Promise<void> {
+  const [add] = await screen.findAllByRole("button", {
+    name: en["filters.addClause"],
+  });
+  if (!add) {
+    throw new Error("No Add condition button to press");
+  }
+  await user.click(add);
+  const rows = document.querySelectorAll<HTMLElement>(".filter-clause");
+  const row = rows[rows.length - 1];
+  if (!row) {
+    throw new Error("Add condition drew no row");
+  }
+  await pickOption(
+    user,
+    within(row).getByRole("combobox", { name: en["filters.field"] }),
+    field,
   );
 }
 

@@ -88,6 +88,9 @@ func createPipelineTx(ctx context.Context, tx pgx.Tx, in CreatePipelineInput) (c
 			`INSERT INTO stage (pipeline_id, name, position, semantic, win_probability, name_translations)
 			 VALUES ($1, $2, $3, $4, $5, $6)`,
 			id, st.Name, st.Position, st.Semantic, st.WinProbability, translations); err != nil {
+			if refused := stageUniqueRefusal(err, &st.Name, &st.Position); refused != nil {
+				return crmcontracts.Pipeline{}, refused
+			}
 			return crmcontracts.Pipeline{}, fmt.Errorf("insert stage: %w", err)
 		}
 	}
@@ -319,8 +322,8 @@ func (s *Store) SeedPipelineTx(ctx context.Context, tx pgx.Tx, name string, open
 	}
 	stages = append(
 		stages,
-		StageInput{Name: defaultWonStageName, Position: len(open) + 1, Semantic: string(SemanticWon), WinProbability: 100},
-		StageInput{Name: defaultLostStageName, Position: len(open) + 2, Semantic: string(SemanticLost), WinProbability: 0},
+		StageInput{Name: freeStageName(defaultWonStageName, stages), Position: len(open) + 1, Semantic: string(SemanticWon), WinProbability: 100},
+		StageInput{Name: freeStageName(defaultLostStageName, stages), Position: len(open) + 2, Semantic: string(SemanticLost), WinProbability: 0},
 	)
 	_, err := createPipelineTx(ctx, tx, CreatePipelineInput{
 		Name: name, IsDefault: true, Position: 0, Stages: stages,

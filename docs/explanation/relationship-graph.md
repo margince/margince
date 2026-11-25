@@ -79,7 +79,7 @@ three identity arms that do different jobs:
 |---|---|
 | `user_id` | **Our** side: the arm the interaction edge is keyed on. |
 | `contact_id` | A known counterparty, already a contact. |
-| `address` | A party who is not a record. Kept, not dropped, because an attendee nobody matched is a fact about the meeting. |
+| `address` | A party who is not a record. Kept, not dropped, because an attendee nobody matched is a fact about the meeting. Each writer stores it in lower case, so one address is one row in whatever case it was written. |
 
 A row must name someone (`activity_participant_identity` CHECK), and the set of roles is closed in the
 database (`from`, `to`, `cc`, `attendee`, `organizer`). An index allows one row per

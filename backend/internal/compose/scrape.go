@@ -96,11 +96,9 @@ func (e *scrapeEngine) Propose(ctx context.Context, companyID ids.UUID, override
 		return crmcontracts.EnrichmentProposal{}, err
 	}
 	digest := sha256.Sum256(proposedChange)
-	// No kind-specific announce event: the generic approval.requested marks
-	// the staging and company.updated fires on accept — both catalogued.
-	// There is no enrichment_proposed event in the events.md §5 catalog, and
-	// this build does not invent one (the spec owns the catalog).
+	// No kind-specific event: approval.requested and company.updated cover it.
 	approvalID, err := e.approvals.Stage(ctx, approvals.StageInput{
+		Why:            approvals.HeadlineSaysWhy,
 		Kind:           enrichProposalKind,
 		ProposedChange: proposedChange,
 		DiffHash:       hex.EncodeToString(digest[:]),

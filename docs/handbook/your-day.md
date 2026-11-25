@@ -385,7 +385,7 @@ Your brief and digest stay personal. **Team**, **All**, and teammate views show 
 
 When nothing is held back, it says: "Nothing is hidden. Every waiting customer reaches a Worklist." A line such as "2 private emails not checked by AI" counts waiting mail the AI may not read. That mail stays in the Worklist, ranked without the AI reading it.
 
-You can also add a note to a teammate's Worklist with **Add note** ("A short note that appears in their Worklist.").
+You can also add a note to a teammate's Worklist with **Add note** ("A short note that appears in their Worklist."). For **Deal next step**, pick one of the deals in their day. Their note then names the deal, says if a next step is planned, and gives the day of its last activity.
 
 ### What is in the morning email?
 

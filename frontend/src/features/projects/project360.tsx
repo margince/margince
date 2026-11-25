@@ -10,9 +10,7 @@ import {
   writableTarget,
 } from "../../components/activitygate";
 import { ArchiveAction } from "../../components/archive";
-import { EditAccessRequest } from "../../components/editaccessrequest";
 import { useRailRename } from "../../components/railfield";
-import { RecordTeam } from "../../components/recordteam";
 import { useFieldsDialog } from "../../components/sectionedit";
 import {
   snoozedDueAt,
@@ -36,6 +34,7 @@ import { catalogOfRecord } from "../../lib/customfields.logic";
 import { labelFor } from "../../lib/labelfor";
 import { unwrap } from "../../lib/problem";
 import { useShortcut } from "../../lib/shortcuts";
+import { useArchiveRefusal } from "../../lib/writerefusal";
 import { ShareAction } from "../records/share";
 import { TaskDetailModal } from "../worklist/taskdetailmodal";
 import { useProjectScreenReads } from "./project360.reads";
@@ -46,14 +45,11 @@ import {
   isMissingProject,
   ProjectNotFound,
 } from "./projectarchived";
-import { ProjectCompanies } from "./projectcompanies";
 import {
   ProjectDetails,
   ProjectSharedPill,
   ProjectSubtitle,
 } from "./projectdetails";
-import { ProjectDocuments } from "./projectdocuments";
-import { ProjectDrawer } from "./projectdrawer";
 import type { ProjectHealthAssessment } from "./projecthealth.queries";
 import { ProjectHealthModal } from "./projecthealthmodal";
 import { type LogDrawer, ProjectLogVerbs } from "./projectlogverbs";
@@ -63,18 +59,16 @@ import { AssignProjectOwnerAction } from "./projectowner";
 import { AdvanceProjectModal } from "./projectphase";
 import { ProjectKeyChip } from "./projects";
 import { PHASE_LABEL, type Project, type ProjectPhase } from "./projects.form";
-import {
-  type Commitment,
-  type Project360,
-  StakeholdersCard,
-} from "./projectsections";
+import type { Commitment, Project360 } from "./projectsections";
 import { nextCommitment } from "./projectstanding";
 import { ProjectStanding } from "./projectstandingcard";
 import { ProjectTabs } from "./projecttabs";
 import "./projects.css";
 import { RecordGone } from "../../components/recordgone";
+import { ViewOnly } from "../../components/viewonly";
 import { useViewerZone } from "../../lib/viewerzone";
-import { ProjectHistory, ProjectLatestInbound } from "./project360.chronology";
+import { ProjectLatestInbound } from "./project360.chronology";
+import { type ProjectDrawerKind, ProjectDrawers } from "./project360.drawers";
 import { ProjectCards } from "./projectcards";
 import { useProjectEdit } from "./projectedit";
 
@@ -117,9 +111,6 @@ export function ProjectScreen({
   );
 }
 
-// The drawers the page opens; "tasks" is the history narrowed to tasks.
-type ProjectDrawerKind = "history" | "tasks" | "documents" | "contacts";
-
 function ProjectPage({ view }: Readonly<{ view: Project360 }>) {
   const t = useT();
   const readerZone = useViewerZone();
@@ -150,7 +141,7 @@ function ProjectPage({ view }: Readonly<{ view: Project360 }>) {
   const nextVerbs = useNextTaskVerbs(view, taskUpdate, canUpdateTask);
   // Log in the strip and Add task in the menu open one drawer. The page holds
   // that drawer and the gate both verbs read.
-  const activity = useActivityGate(writableTarget(project));
+  const activity = useActivityGate("project", writableTarget(project));
   const [logDrawer, setLogDrawer] = useState<LogDrawer>(null);
   const edit = useProjectEdit(project);
   const rename = useRailRename(edit, "name", t("project.name"));
@@ -176,6 +167,12 @@ function ProjectPage({ view }: Readonly<{ view: Project360 }>) {
           <Badge>{t(labelFor(PHASE_LABEL, project.phase))}</Badge>
           {project.key && <ProjectKeyChip projectKey={project.key} dense />}
           <ProjectSharedPill projectId={project.id} />
+          <ViewOnly
+            kind="project"
+            record={project}
+            name={project.name}
+            reasonId={readOnlyReasonId}
+          />
         </>
       }
       actions={
@@ -203,13 +200,10 @@ function ProjectPage({ view }: Readonly<{ view: Project360 }>) {
       }
       tabs={<ProjectTabs />}
       band={
-        // One sentence and nothing else: why this record takes no changes, so
-        // every control it refuses points at it.
-        readOnlyReason ? (
-          <>
-            <p id={readOnlyReasonId}>{readOnlyReason}</p>
-            <EditAccessRequest kind="project" record={project} />
-          </>
+        // Why an archived project takes no changes, so every control it
+        // refuses points at it. A live one says so in the View only pill.
+        readOnlyReason && project.archived_at ? (
+          <p id={readOnlyReasonId}>{readOnlyReason}</p>
         ) : undefined
       }
     >
@@ -258,46 +252,12 @@ function ProjectPage({ view }: Readonly<{ view: Project360 }>) {
         projectId={project.id}
         correcting={healthEdit && healthEdit !== "new" ? healthEdit : undefined}
       />
-      <ProjectDrawer
-        open={drawer === "history" || drawer === "tasks"}
-        title={t("record.fullHistory")}
+      <ProjectDrawers
+        view={view}
+        drawer={drawer}
+        readOnly={readOnly}
         onClose={() => setDrawer(null)}
-      >
-        <ProjectHistory
-          view={view}
-          kind={drawer === "tasks" ? "task" : undefined}
-        />
-      </ProjectDrawer>
-      <ProjectDrawer
-        open={drawer === "documents"}
-        title={t("project.documents.title")}
-        onClose={() => setDrawer(null)}
-      >
-        <ProjectDocuments view={view} readOnly={readOnly} />
-      </ProjectDrawer>
-      <ProjectDrawer
-        open={drawer === "contacts"}
-        title={t("project.more.contacts")}
-        onClose={() => setDrawer(null)}
-      >
-        <div className="project-drawer-stack">
-          <ProjectCompanies
-            projectId={project.id}
-            companies={project.companies}
-            readOnly={readOnly}
-          />
-          <RecordTeam
-            recordType="project"
-            recordId={project.id}
-            readOnly={readOnly}
-          />
-          <StakeholdersCard
-            view={view}
-            projectId={project.id}
-            readOnly={readOnly}
-          />
-        </div>
-      </ProjectDrawer>
+      />
       {openTask && (
         <TaskDetailModal
           activityId={openTask}
@@ -413,6 +373,7 @@ function ProjectActions({
   onHealth: (edit: ProjectHealthAssessment | "new") => void;
 }>) {
   const t = useT();
+  const archiveRefusal = useArchiveRefusal("project");
   const taskRefusedId = logRefusedId ?? activity.refusedId;
   const taskKeys = useShortcut(
     "record.addTask",
@@ -462,6 +423,7 @@ function ProjectActions({
           verb a reader cannot walk back does not sit in the routine run. */}
       <ArchiveAction
         requires={{ object: "project", action: "delete" }}
+        refusedReason={archiveRefusal}
         disabledReasonId={refusedReasonId}
         label={t("project.archive")}
         confirmText={t("project.archiveConfirm")}

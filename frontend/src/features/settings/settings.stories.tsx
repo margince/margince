@@ -7,6 +7,7 @@ import { userEvent, within } from "storybook/test";
 import { pickOption } from "../../design-system/select-testing";
 import type { Route } from "../../lib/router";
 import type { SettingsPageId } from "../../lib/settingscatalog";
+import { AGENT_RULES_SUBPAGE, settingsHref } from "../../lib/settingsrouting";
 import { readingsDay } from "../../testing/brief.fixtures";
 import {
   FIXTURE_TIMEZONE,
@@ -267,6 +268,21 @@ export const AiAccessAgentRules: Story = {
     openDevelopers(canvasElement, "Agent rules"),
 };
 
+// Agent rules' own address opens the section on that tab, scrolled into view.
+export const AiAccessAgentRulesAddress: Story = {
+  name: "AI access — agent rules address",
+  args: { route: settingsHref("agents", AGENT_RULES_SUBPAGE) },
+  render: tab("agents", aiAccessRoutes),
+};
+
+export const AiAccessAgentRulesAddressPhone: Story = {
+  name: "AI access — agent rules address, phone",
+  globals: { viewport: { value: "phone" } },
+  tags: ["uat-phone"],
+  args: { route: settingsHref("agents", AGENT_RULES_SUBPAGE) },
+  render: tab("agents", aiAccessRoutes),
+};
+
 // The connector switched off: the picker says so and what still works. It is
 // the state a default install is in.
 export const AiAccessConnectorOff: Story = {
@@ -294,10 +310,10 @@ export const PassportRevokeConfirm: Story = {
   },
 };
 
-// Minting: a name and five scope ticks in a confirm-width dialog, where the
-// token is then shown once.
+// Creating one: a name and five scope ticks in a confirm-width dialog, where
+// the token is then shown once.
 export const PassportMintDialog: Story = {
-  name: "Mint a passport",
+  name: "Create a passport",
   render: tab("agents", aiAccessRoutes),
   play: async ({ canvasElement }) => {
     await openDevelopers(canvasElement);
@@ -308,7 +324,7 @@ export const PassportMintDialog: Story = {
   },
 };
 
-// After the mint: the passport once, with its own copy control, and the ways to
+// After it is created: the passport once, with its own copy control, and the ways to
 // use it under it. The example keeps the variable, never the new value.
 const mintedRoutes = {
   ...aiAccessRoutes,
@@ -341,18 +357,20 @@ const mintPassport = async ({
     dialog.getByRole("textbox", { name: /Agent name/ }),
     "Claude Code on my laptop",
   );
-  await userEvent.click(dialog.getByRole("button", { name: "Mint passport" }));
+  await userEvent.click(
+    dialog.getByRole("button", { name: "Create passport" }),
+  );
   await dialog.findByText("Next, use it");
 };
 
 export const PassportMinted: Story = {
-  name: "Mint a passport — minted",
+  name: "Create a passport — created",
   render: tab("agents", mintedRoutes),
   play: mintPassport,
 };
 
 export const PassportMintedDark: Story = {
-  name: "Mint a passport — minted, dark",
+  name: "Create a passport — created, dark",
   globals: { theme: "dark" },
   render: tab("agents", mintedRoutes),
   play: mintPassport,
@@ -362,7 +380,7 @@ export const PassportMintedDark: Story = {
 // the recessed token plate are three surfaces whose separation is carried by
 // tokens that move between themes.
 export const PassportMintDialogDark: Story = {
-  name: "Mint a passport — dark",
+  name: "Create a passport — dark",
   globals: { theme: "dark" },
   render: tab("agents", aiAccessRoutes),
   play: async ({ canvasElement }) => {
@@ -621,28 +639,40 @@ const everyGrantMe = () =>
     data_reset_available: true,
   });
 
+const SYSTEM_HEALTH_ROUTES: RouteMap = {
+  ...healthSessionRoutes("configure"),
+  "GET /admin/system-health": () => jsonResponse(healthReport),
+};
+
+const catalogRoutes = (page: SettingsPageId): RouteMap => ({
+  ...(page === "system-health" ? SYSTEM_HEALTH_ROUTES : {}),
+  ...UNUSED_INSTALLATION_ROUTES,
+  "GET /me": everyGrantMe,
+});
+
 function catalogPage(page: SettingsPageId): Story {
   return {
     parameters: { settingsPage: page },
     render:
       page === "system-health"
         ? () => {
-            installFetchStub({
-              ...healthSessionRoutes("configure"),
-              ...UNUSED_INSTALLATION_ROUTES,
-              "GET /me": everyGrantMe,
-              "GET /admin/system-health": () => jsonResponse(healthReport),
-            });
+            installFetchStub(catalogRoutes(page));
             return (
               <StoryProviders>
                 <HealthSessionPage />
               </StoryProviders>
             );
           }
-        : tab(page, {
-            "GET /me": everyGrantMe,
-            ...UNUSED_INSTALLATION_ROUTES,
-          }),
+        : tab(page, catalogRoutes(page)),
+  };
+}
+
+// A page's tab past its first, which the page story opens on its own.
+function catalogTab(page: SettingsPageId, tabId: string): Story {
+  return {
+    parameters: { settingsTab: `${page}/${tabId}` },
+    args: { route: settingsHref(page, tabId) },
+    render: tab(page, catalogRoutes(page)),
   };
 }
 
@@ -681,6 +711,86 @@ export const ConfigurationPage: Story = catalogPage("configuration");
 export const ExtensionsPage: Story = catalogPage("extensions");
 export const ResetPage: Story = catalogPage("reset");
 export const AboutPage: Story = catalogPage("about");
+
+export const MeetingsAvailabilityTab: Story = catalogTab(
+  "meetings",
+  "availability",
+);
+export const MeetingsGuestsTab: Story = catalogTab("meetings", "guests");
+export const VoiceSamplesTab: Story = catalogTab("voice", "samples");
+export const VoiceRulesTab: Story = catalogTab("voice", "rules");
+export const VoiceBuildsTab: Story = catalogTab("voice", "builds");
+export const ConnectionsAddressesTab: Story = catalogTab(
+  "connections",
+  "addresses",
+);
+export const ConnectionsLinkedinTab: Story = catalogTab(
+  "connections",
+  "linkedin",
+);
+export const ConnectionsActivityTab: Story = catalogTab(
+  "connections",
+  "activity",
+);
+export const CompanyEntitiesTab: Story = catalogTab("company", "entities");
+export const CompanyRegionalTab: Story = catalogTab("company", "regional");
+export const CompanyMoneyTab: Story = catalogTab("company", "money");
+export const CompanyEmailTab: Story = catalogTab("company", "email");
+export const AuthenticationAppsTab: Story = catalogTab(
+  "authentication",
+  "apps",
+);
+export const AuthenticationGrantsTab: Story = catalogTab(
+  "authentication",
+  "grants",
+);
+export const DealsSourcesTab: Story = catalogTab("deals", "sources");
+export const DealsLossTab: Story = catalogTab("deals", "loss");
+export const DealsReviewsTab: Story = catalogTab("deals", "reviews");
+export const DealsLegalTab: Story = catalogTab("deals", "legal");
+export const DealsForecastTab: Story = catalogTab("deals", "forecast");
+export const RecordsTagsTab: Story = catalogTab("records", "tags");
+export const RecordsRolesTab: Story = catalogTab("records", "roles");
+export const CaptureDomainsTab: Story = catalogTab("capture", "domains");
+export const CaptureEnrichmentTab: Story = catalogTab("capture", "enrichment");
+export const CaptureInternalTab: Story = catalogTab("capture", "internal");
+export const IntegrationsAccountingTab: Story = catalogTab(
+  "integrations",
+  "accounting",
+);
+export const IntegrationsWebhooksTab: Story = catalogTab(
+  "integrations",
+  "webhooks",
+);
+export const IntegrationsTelegramTab: Story = catalogTab(
+  "integrations",
+  "telegram",
+);
+export const IntegrationsSharedMailboxesTab: Story = catalogTab(
+  "integrations",
+  "shared-mailboxes",
+);
+export const ModelsTiersTab: Story = catalogTab("models", "tiers");
+export const ModelsTasksTab: Story = catalogTab("models", "tasks");
+export const ModelsPricesTab: Story = catalogTab("models", "prices");
+export const UsageAgentsTab: Story = catalogTab("usage", "agents");
+export const UsageSpendTab: Story = catalogTab("usage", "spend");
+export const AutomationsLibraryTab: Story = catalogTab(
+  "automations",
+  "library",
+);
+export const PrivacyCustomersTab: Story = catalogTab("privacy", "customers");
+export const PrivacyRetentionTab: Story = catalogTab("privacy", "retention");
+export const PrivacyRequestsTab: Story = catalogTab("privacy", "requests");
+export const PrivacyDutiesTab: Story = catalogTab("privacy", "duties");
+export const SystemHealthDiagnosticsTab: Story = catalogTab(
+  "system-health",
+  "diagnostics",
+);
+export const SystemHealthConfigurationTab: Story = catalogTab(
+  "system-health",
+  "configuration",
+);
 
 // Company profile while the rollout keeps the company context unread: the card
 // draws nothing, and search offers none of its names.

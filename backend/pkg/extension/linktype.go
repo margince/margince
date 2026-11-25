@@ -28,8 +28,8 @@ type LinkType struct {
 
 // Validate refuses a type a stored value or a screen could not carry.
 func (t LinkType) Validate() error {
-	if !recordKindGrammar.MatchString(t.Type) || len(t.Type) > maxRecordKindLength {
-		return fmt.Errorf("link type %q is not a valid type name (a lower-case letter, then lower-case letters, digits and underscores, at most %d characters)", t.Type, maxRecordKindLength)
+	if !shortNameGrammar.MatchString(t.Type) || len(t.Type) > maxShortNameLength {
+		return fmt.Errorf("link type %q is not a valid type name (a lower-case letter, then lower-case letters, digits and underscores, at most %d characters)", t.Type, maxShortNameLength)
 	}
 	if strings.TrimSpace(t.Label) == "" {
 		return fmt.Errorf("link type %q has no label", t.Type)
@@ -46,5 +46,5 @@ func (t LinkType) Validate() error {
 // place the form is built, so a unit can only ever name a value under its own
 // name.
 func LinkTypeValue(unit Name, typ string) string {
-	return RecordKindPrefix + string(unit) + ":" + typ
+	return QualifiedName(unit, typ)
 }

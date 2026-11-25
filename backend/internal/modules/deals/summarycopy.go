@@ -14,7 +14,6 @@ import (
 	"time"
 
 	"github.com/margince/margince/backend/internal/platform/mailcopy"
-
 	"github.com/margince/margince/backend/internal/shared/kernel/systemtext"
 	"github.com/margince/margince/backend/internal/shared/kernel/textlang"
 	"github.com/margince/margince/backend/internal/shared/ports/baselanguage"

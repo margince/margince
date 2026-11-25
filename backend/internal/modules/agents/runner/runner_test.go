@@ -199,7 +199,7 @@ func TestAResumedRunKeepsAttributingAToolItMayNoLongerCall(t *testing.T) {
 	staging := &fakeSurface{
 		results: map[string]json.RawMessage{
 			"read_record":   json.RawMessage(`{"record_type":"deal","fields":{"name":"Nordwind"}}`),
-			"update_record": json.RawMessage(`{"record_type":"deal","updated":true}`),
+			"update_record": json.RawMessage(`{"why":"A test asks for this change.","record_type":"deal","updated":true}`),
 		},
 		errs: map[string]error{
 			"send_email": &workflow.StagedApprovalError{ApprovalID: ids.New[ids.ApprovalKind]()},
@@ -207,7 +207,7 @@ func TestAResumedRunKeepsAttributingAToolItMayNoLongerCall(t *testing.T) {
 	}
 	suspended, err := New(staging, &scriptedBrain{texts: []string{
 		`{"tool":"read_record","args":{"record_type":"deal","id":"x"}}`,
-		`{"tool":"update_record","args":{"record_type":"deal","id":"x"}}`,
+		`{"tool":"update_record","args":{"why":"A test asks for this change.","record_type":"deal","id":"x"}}`,
 		`{"tool":"send_email","args":{"to":"a@b.c"}}`,
 	}}).Run(context.Background(), Job{Goal: "follow up", Tools: []string{"read_record", "update_record", "send_email"}})
 	if err != nil {

@@ -128,6 +128,7 @@ export const MAGIC_WHY_KEYS = [
   "magic.why.site_read_unnamed",
   "magic.why.site_read_each",
   "magic.why.signature",
+  "magic.why.stated",
   "magic.why.retention",
 ] as const satisfies readonly MessageKey[];
 

@@ -29,7 +29,7 @@ func MoveDealRefsTx(ctx context.Context, tx pgx.Tx, from, to ids.UUID) ([]record
 		return nil, err
 	}
 	if err := storekit.AuditEach(ctx, tx, "update", chatLinkEntity, movedIDs,
-		map[string]any{"deal_id": from}, map[string]any{"deal_id": to}); err != nil {
+		map[string]any{chatLinkDealColumn: from}, map[string]any{chatLinkDealColumn: to}); err != nil {
 		return nil, fmt.Errorf("audit the chat links moving to the merge survivor: %w", err)
 	}
 	_, project, err := linkedRecords(ctx, tx, RecordDeal, to)
@@ -43,8 +43,15 @@ func MoveDealRefsTx(ctx context.Context, tx pgx.Tx, from, to ids.UUID) ([]record
 		return nil, err
 	}
 	if err := storekit.AuditEach(ctx, tx, "update", chatLinkEntity, joined,
-		map[string]any{"project_id": nil}, map[string]any{"project_id": *project}); err != nil {
+		map[string]any{chatLinkProjectColumn: nil}, map[string]any{chatLinkProjectColumn: *project}); err != nil {
 		return nil, fmt.Errorf("audit the chat links taking the survivor's project: %w", err)
 	}
 	return []recordmerge.Moved{{Table: "chat_link", IDs: movedIDs}}, nil
 }
+
+// chatLinkDealColumn and chatLinkProjectColumn are the columns a chat link
+// names its deal and its project in.
+const (
+	chatLinkDealColumn    = "deal_id"
+	chatLinkProjectColumn = "project_id"
+)

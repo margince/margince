@@ -227,6 +227,10 @@ func vendorSheetRates(day time.Time) []ModelRate {
 		// uses — Anthropic prices per model family regardless of snapshot
 		// date, so the undated family's sheet price applies verbatim.
 		rateOn(day, providerAnthropic, "claude-haiku-4-5-20251001", 1_000_000, 5_000_000, 100_000, 1_250_000),
+		// The 5.5 family, per Anthropic's pricing page: Haiku bills a prompt over 100k at the upper band.
+		rateOn(day, providerAnthropic, "claude-sonnet-5-5", 2_000_000, 10_000_000, 100_000, 2_500_000),
+		withLongContext(rateOn(day, providerAnthropic, "claude-haiku-5-5", 100_000, 500_000, 10_000, 125_000),
+			100_000, 500_000, 2_500_000, 50_000, 625_000),
 
 		// Gemini: cache read = 0.1x input; Gemini's implicit context caching
 		// carries no separate write charge. Prices are

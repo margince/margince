@@ -11,27 +11,30 @@
   "effort": "thinking off",
   "system_prompt": "cli-default",
   "search": "semantic",
-  "door": "mcp",
   "self_judged": true,
   "stamp": {
     "scenario": "b64141641ea58f59",
-    "tools": "2a011441963defc4",
-    "instructions": "c5c644eee9719be0",
+    "tools": "9855e17f41f34145",
+    "instructions": "4eab26d5fff0793f",
     "judge": "claude-haiku-5-5",
-    "harness": "024566e70b0c3db3",
-    "commit": "bcf9db5be3820f3f7331a9b9b73120b83749f027",
-    "ran_at": "2026-11-21T08:31:20Z",
-    "graded_commit": "c7d8c959b7e859b9765ae0637afffe55d0de36a2",
-    "graded_at": "2026-11-22T14:04:30Z"
+    "harness": "ae24b6799c8461d2",
+    "parsers": {
+      "gemini:cli": "1796d51361de08d5",
+      "gpt:cli": "d48ca27c983f8b3f"
+    },
+    "commit": "85f521b0a8e383753f3d1cf2b46147ada28d8757",
+    "ran_at": "2026-11-25T05:38:14Z",
+    "graded_commit": "85f521b0a8e383753f3d1cf2b46147ada28d8757",
+    "graded_at": "2026-11-25T05:38:14Z"
   },
   "usage": {
-    "input_tokens": 24,
-    "output_tokens": 4776,
-    "cache_creation_input_tokens": 41439,
-    "cache_read_input_tokens": 1019755,
+    "input_tokens": 18,
+    "output_tokens": 4276,
+    "cache_creation_input_tokens": 39000,
+    "cache_read_input_tokens": 712079,
     "runs_measured": 2,
     "runs_costed": 2,
-    "cost_usd": 0.3155
+    "cost_usd": 0.27
   },
   "tools_by_run": [
     {
@@ -43,15 +46,17 @@
         "query_workspace",
         "read_context",
         "read_workspace",
-        "whoami"
+        "search_records"
       ]
     },
     {
       "passed": true,
       "tools": [
+        "catch_me_up_on",
         "describe_query_vocabulary",
         "find_records",
         "query_workspace",
+        "read_context",
         "read_workspace",
         "whoami"
       ]
@@ -60,34 +65,34 @@
   "efficiency": {
     "runs": 2,
     "calls": {
-      "median": 10.5,
-      "min": 10,
-      "max": 11
+      "median": 8.5,
+      "min": 8,
+      "max": 9
     },
     "turns": {
-      "median": 11.5,
-      "min": 11,
-      "max": 12
+      "median": 9.5,
+      "min": 9,
+      "max": 10
     },
     "refused": {
-      "median": 4,
-      "min": 4,
-      "max": 4
+      "median": 1,
+      "min": 0,
+      "max": 2
     },
     "prompt_tokens": {
-      "median": 530609,
-      "min": 529646,
-      "max": 531572
+      "median": 375548.5,
+      "min": 333231,
+      "max": 417866
     },
     "output_tokens": {
-      "median": 2388,
-      "min": 2324,
-      "max": 2452
+      "median": 2138,
+      "min": 1977,
+      "max": 2299
     },
     "duration_ms": {
-      "median": 20449.5,
-      "min": 20447,
-      "max": 20452
+      "median": 16481.5,
+      "min": 14992,
+      "max": 17971
     }
   }
 }

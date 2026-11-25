@@ -24,10 +24,7 @@ import (
 // 409 with the pointer, which discloses nothing new because the caller just
 // proved they can address the row.
 //
-// The target must be live too. A target the caller cannot change answers a bare
-// conflict and does not name itself, as an out-of-scope one does. Merging
-// returns the survivor, so the refusal discloses no more than the caller could
-// already read.
+// The target must be live and writable too (ensureTarget).
 func Pair[T any, K ids.EntityKind](ctx context.Context, tx pgx.Tx, kind string, sourceID, targetID ids.ID[K],
 	ifVersion *int64,
 	read func(context.Context, pgx.Tx, ids.ID[K]) (T, *ids.UUID, error),
@@ -48,12 +45,8 @@ func Pair[T any, K ids.EntityKind](ctx context.Context, tx pgx.Tx, kind string, 
 		return zero, zero, err
 	}
 
-	writable, err := auth.WritableBy(ctx, tx, kind, targetID.UUID)
-	if err != nil {
+	if err := ensureTarget(ctx, tx, kind, targetID.UUID); err != nil {
 		return zero, zero, err
-	}
-	if !writable {
-		return zero, zero, apperrors.ErrConflict
 	}
 	target, _, err = read(ctx, tx, targetID)
 	if err != nil {
@@ -68,6 +61,25 @@ func Pair[T any, K ids.EntityKind](ctx context.Context, tx pgx.Tx, kind string, 
 		}
 	}
 	return source, target, nil
+}
+
+// ensureTarget refuses a target the caller cannot change. One they cannot see
+// answers the bare conflict, since merging returns the survivor and the refusal
+// must not confirm that it exists. One they may read answers 403 with the
+// reason, which a retry with a fresh version can never cure.
+func ensureTarget(ctx context.Context, tx pgx.Tx, kind string, targetID ids.UUID) error {
+	writable, err := auth.WritableBy(ctx, tx, kind, targetID)
+	if err != nil || writable {
+		return err
+	}
+	visible, err := auth.VisibleTo(ctx, tx, kind, targetID)
+	switch {
+	case err != nil:
+		return err
+	case visible:
+		return errTargetReadOnly
+	}
+	return apperrors.ErrConflict
 }
 
 // requireSourceVersion refuses the merge when the source's version differs from
