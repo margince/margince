@@ -7977,6 +7977,13 @@ BEGIN
   PERFORM set_config('margince.last_activity_move', 'off', true);
 END;
 
+public.move_signal_source_onto_its_channel() secdef=false cfg=- acl=- 
+BEGIN
+ NEW.source_system := COALESCE(NEW.source_system, signal_source_producer(NEW.source, NEW.kind));
+ NEW.source := signal_source_channel(NEW.source, NEW.kind);
+ RETURN NEW;
+END;
+
 public.move_source_onto_its_channel() secdef=false cfg=- acl=- 
 BEGIN
  NEW.source := record_source_channel(NEW.source);
@@ -10131,17 +10138,20 @@ public.signal.signal_resolved_company_fkey FOREIGN KEY (resolved_company_id) REF
 public.signal.signal_resolved_contact_fkey FOREIGN KEY (resolved_contact_id) REFERENCES contact(id) ON DELETE SET NULL (resolved_contact_id)
 public.signal.signal_resolved_has_entity CHECK (((resolution_state <> 'resolved'::text) OR (entity_type IS NOT NULL)))
 public.signal.signal_severity_check CHECK ((severity = ANY (ARRAY['info'::text, 'warn'::text, 'urgent'::text])))
+public.signal.signal_source_channel CREATE TRIGGER signal_source_channel BEFORE UPDATE ON public.signal FOR EACH ROW WHEN (((new.source <> ALL (ARRAY['api'::text, 'automation'::text, 'capture'::text, 'import'::text, 'manual'::text, 'webform'::text])) OR ((new.kind ~~ 'ext:%'::text) AND (new.source_system IS NULL)))) EXECUTE FUNCTION move_signal_source_onto_its_channel()
 public.signal.signal_source_channel_check CHECK ((source_channel = ANY (ARRAY['derived'::text, 'inbound'::text, 'web'::text, 'social'::text, 'deal_room_engagement'::text])))
+public.signal.signal_source_check CHECK ((source = ANY (ARRAY['api'::text, 'automation'::text, 'capture'::text, 'import'::text, 'manual'::text, 'webform'::text]))) NOT VALID
 public.signal.signal_status_check CHECK ((status = ANY (ARRAY['open'::text, 'acknowledged'::text, 'resolved'::text, 'dismissed'::text])))
 public.signal.signal_version_js_safe CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))
 public.signal.signal_visibility_check CHECK ((visibility = ANY (ARRAY['workspace'::text, 'owner'::text])))
 public.signal.source text NOT NULL gen=- def=-
 public.signal.source_channel text NOT NULL gen=- def='derived'::text
+public.signal.source_system text gen=- def=-
 public.signal.status text NOT NULL gen=- def='open'::text
 public.signal.summary text NOT NULL gen=- def=-
 public.signal.summary_params jsonb gen=- def=-
-public.signal.text_bound_insert CREATE TRIGGER text_bound_insert AFTER INSERT ON public.signal FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"kind": 20000, "source": 20000, "status": 20000, "raw_ref": 20000, "summary": 500, "severity": 20000, "visibility": 20000, "captured_by": 20000, "entity_type": 20000, "fingerprint": 20000, "source_channel": 20000, "resolution_state": 20000}'::jsonb)) EXECUTE FUNCTION refuse_oversized_text('{"captured_by":20000,"entity_type":20000,"fingerprint":20000,"kind":20000,"raw_ref":20000,"resolution_state":20000,"severity":20000,"source":20000,"source_channel":20000,"status":20000,"summary":500,"visibility":20000}')
-public.signal.text_bound_update CREATE TRIGGER text_bound_update AFTER UPDATE ON public.signal FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"kind": 20000, "source": 20000, "status": 20000, "raw_ref": 20000, "summary": 500, "severity": 20000, "visibility": 20000, "captured_by": 20000, "entity_type": 20000, "fingerprint": 20000, "source_channel": 20000, "resolution_state": 20000}'::jsonb)) EXECUTE FUNCTION refuse_oversized_text('{"captured_by":20000,"entity_type":20000,"fingerprint":20000,"kind":20000,"raw_ref":20000,"resolution_state":20000,"severity":20000,"source":20000,"source_channel":20000,"status":20000,"summary":500,"visibility":20000}')
+public.signal.text_bound_insert CREATE TRIGGER text_bound_insert AFTER INSERT ON public.signal FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"kind": 20000, "source": 20000, "status": 20000, "raw_ref": 20000, "summary": 500, "severity": 20000, "visibility": 20000, "captured_by": 20000, "entity_type": 20000, "fingerprint": 20000, "source_system": 20000, "source_channel": 20000, "resolution_state": 20000}'::jsonb)) EXECUTE FUNCTION refuse_oversized_text('{"captured_by":20000,"entity_type":20000,"fingerprint":20000,"kind":20000,"raw_ref":20000,"resolution_state":20000,"severity":20000,"source":20000,"source_channel":20000,"source_system":20000,"status":20000,"summary":500,"visibility":20000}')
+public.signal.text_bound_update CREATE TRIGGER text_bound_update AFTER UPDATE ON public.signal FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"kind": 20000, "source": 20000, "status": 20000, "raw_ref": 20000, "summary": 500, "severity": 20000, "visibility": 20000, "captured_by": 20000, "entity_type": 20000, "fingerprint": 20000, "source_system": 20000, "source_channel": 20000, "resolution_state": 20000}'::jsonb)) EXECUTE FUNCTION refuse_oversized_text('{"captured_by":20000,"entity_type":20000,"fingerprint":20000,"kind":20000,"raw_ref":20000,"resolution_state":20000,"severity":20000,"source":20000,"source_channel":20000,"source_system":20000,"status":20000,"summary":500,"visibility":20000}')
 public.signal.trg_signal_entity_keys CREATE TRIGGER trg_signal_entity_keys BEFORE INSERT OR UPDATE ON public.signal FOR EACH ROW EXECUTE FUNCTION trg_signal_entity_keys()
 public.signal.trg_signal_updated CREATE TRIGGER trg_signal_updated BEFORE UPDATE ON public.signal FOR EACH ROW WHEN (((NOT (((((old.entity_unkeyed IS DISTINCT FROM new.entity_unkeyed) OR (old.entity_deal_id IS DISTINCT FROM new.entity_deal_id)) OR (old.entity_company_id IS DISTINCT FROM new.entity_company_id)) OR (old.entity_contact_id IS DISTINCT FROM new.entity_contact_id)) OR (old.entity_project_id IS DISTINCT FROM new.entity_project_id))) OR ((to_jsonb(old.*) - ARRAY['entity_unkeyed'::text, 'entity_deal_id'::text, 'entity_company_id'::text, 'entity_contact_id'::text, 'entity_project_id'::text]) IS DISTINCT FROM (to_jsonb(new.*) - ARRAY['entity_unkeyed'::text, 'entity_deal_id'::text, 'entity_company_id'::text, 'entity_contact_id'::text, 'entity_project_id'::text])))) EXECUTE FUNCTION set_updated_at_bump_version()
 public.signal.updated_at timestamp with time zone NOT NULL gen=- def=now()
@@ -10173,6 +10183,18 @@ public.signal_resolution.text_bound_insert CREATE TRIGGER text_bound_insert AFTE
 public.signal_resolution.text_bound_update CREATE TRIGGER text_bound_update AFTER UPDATE ON public.signal_resolution FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"note": 2000, "source": 20000, "outcome": 20000, "matched_on": 20000, "captured_by": 20000}'::jsonb)) EXECUTE FUNCTION refuse_oversized_text('{"captured_by":20000,"matched_on":20000,"note":2000,"outcome":20000,"source":20000}')
 public.signal_resolution_pkey CREATE UNIQUE INDEX signal_resolution_pkey ON public.signal_resolution USING btree (id)
 public.signal_resolved_company_ix CREATE INDEX signal_resolved_company_ix ON public.signal USING btree (resolved_company_id) WHERE (resolved_company_id IS NOT NULL)
+public.signal_source_channel(source text, kind text) secdef=false cfg=- acl=- 
+ SELECT CASE
+  WHEN signal_source_producer(source, kind) IS NOT NULL THEN 'automation'
+  ELSE record_source_channel(source)
+ END
+
+public.signal_source_producer(source text, kind text) secdef=false cfg=- acl=- 
+ SELECT CASE
+  WHEN source IN ('signal-scan', 'site-newsroom', 'technical-lookup') THEN source
+  WHEN kind LIKE 'ext:%' THEN source
+ END
+
 public.signal_thread_scan acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.signal_thread_scan.last_activity_at timestamp with time zone NOT NULL gen=- def=-
 public.signal_thread_scan.message_count integer NOT NULL gen=- def=0

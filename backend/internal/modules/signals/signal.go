@@ -29,6 +29,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/kernel/provenance"
 	"github.com/margince/margince/backend/internal/shared/ports/signaltypes"
 )
 
@@ -60,6 +61,9 @@ func (s *Store) CreateSignal(ctx context.Context, in CreateSignalInput) (crmcont
 		// The kind check admits the spelling, so this path must refuse it: only
 		// the declaring unit's seam checks the layout, owner and fingerprint.
 		return crmcontracts.Signal{}, &InvalidExtensionSignalError{Field: signalKindArg, Reason: "an extension kind is filed only by the extension that declares it"}
+	}
+	if err := provenance.AdmitRecordChannel(in.Source); err != nil {
+		return crmcontracts.Signal{}, err
 	}
 	if strings.TrimSpace(in.Summary) == "" {
 		return crmcontracts.Signal{}, &RequiredFieldError{Field: "summary"}
@@ -338,7 +342,7 @@ func signalColumns(alias string) string {
 	cols := []string{
 		"id", "kind", "source_channel", "raw_ref", "entity_type", "entity_id",
 		"resolution_state", "resolution_confidence::float8", "resolved_company_id", "resolved_contact_id",
-		"severity", "summary", "evidence", "status", "detected_at", "source", "captured_by",
+		"severity", "summary", "evidence", "status", "detected_at", "source", "source_system", "captured_by",
 		"version", "created_at", "updated_at", "archived_at", "summary_params",
 	}
 	for i, c := range cols {
@@ -400,7 +404,7 @@ func scanSignal(row pgx.Row) (crmcontracts.Signal, json.RawMessage, error) {
 
 	err := row.Scan(&id, &kind, &sourceChannel, &sig.RawRef, &entityType, &entityID,
 		&resolutionState, &confidence, &resolvedCompanyID, &resolvedContactID,
-		&severity, &sig.Summary, &evidenceJSON, &status, &sig.DetectedAt, &sig.Source, &capturedBy,
+		&severity, &sig.Summary, &evidenceJSON, &status, &sig.DetectedAt, &sig.Source, &sig.SourceSystem, &capturedBy,
 		&version, &sig.CreatedAt, &sig.UpdatedAt, &sig.ArchivedAt, &params,
 		&resolutionOutcome, &resolutionNote, &resolvedBy, &resolvedAt)
 	if err != nil {

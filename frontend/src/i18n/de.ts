@@ -8237,6 +8237,12 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "editAccess.withdraw": "Anfrage zum Schreibzugriff zurückziehen",
   "editAccess.sent": "Schreibzugriff bei {owner} angefragt",
   "editAccess.withdrawn": "Anfrage zum Schreibzugriff zurückgezogen",
+  // A record this reader may view but not change. The head's pill and the
+  // Ownership row say so, and the panel names the owner.
+  "viewOnly.pill": "Nur lesen",
+  "viewOnly.label": "Dein Zugriff",
+  "viewOnly.owns": "{name} gehört {owner}",
+  "record.details.access": "Zugriff",
   // The owner offering a record to a colleague, from the access panel.
   "handover.offer": "Übergeben an…",
   "handover.offerTo": "Übergeben an",
@@ -10595,6 +10601,16 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Füge diesen Text in ~/.gemini/config/mcp_config.json ein. Stehen in der Datei schon Server, füge nur den Eintrag margince daneben ein.",
   "aiAccess.local.antigravity.signIn":
     "Öffne die Agent-Einstellungen, dann „Customizations“, und wähle „Authenticate“ neben margince.",
+  "aiAccess.place.lumoNote":
+    "Lumo im Web kann noch keine anderen Apps verbinden. Nutze die Lumo-Desktop-App, die du unter proton.me/lumo/download herunterladen kannst.",
+  "aiAccess.local.lumo.open":
+    "Wähle in Lumo Desktop unten in der Seitenleiste „Settings“, dann „Desktop app“ und „Connectors“.",
+  "aiAccess.local.lumo.add":
+    "Wähle „Add MCP server…“ und stelle „Transport“ auf „Remote (HTTP)“.",
+  "aiAccess.local.lumo.fill":
+    "Gib margince als ID und Margince als Display name ein, ergänze eine kurze Beschreibung und füge die Adresse ein.",
+  "aiAccess.local.lumo.signIn":
+    "Wähle „Add server“. Wenn Lumo dazu auffordert, öffnet sich Margince: melde dich an und wähle Autorisieren.",
   "aiAccess.other.sub":
     "Margince funktioniert mit jedem KI-Tool, das einen entfernten MCP-Server hinzufügen kann. Suche in seinen Einstellungen nach „MCP“, „Connectors“ oder „Tools“.",
   "aiAccess.other.typeLabel": "Typ",
@@ -22024,6 +22040,9 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "worklist.manager.kind.next_step": "Nächster Schritt im Deal",
   "worklist.manager.kind.review_backlog": "Offene Prüfungen",
   "worklist.manager.kind.general": "Sonstiges",
+  "worklist.manager.coachDeal": "Deal",
+  "worklist.manager.coachNoDeal":
+    "In ihrem Tag steht kein Deal, den du nennen kannst.",
   "worklist.board.title": "Teamarbeit mit Handlungsbedarf",
   "worklist.gap.rankedOn": "Gereiht am {date}.",
   "worklist.gap.masked_one":
@@ -23182,6 +23201,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "magic.why.site_read_each":
     "Aus der Analyse der jeweiligen Unternehmenswebsite.",
   "magic.why.signature": "Aus einer E-Mail-Signatur übernommen.",
+  "magic.why.stated": "Angegebener Grund: {why}",
   "magic.why.retention": "Aufbewahrungsregel: nach {days} Tagen.",
   "magic.by.retention": "Aufbewahrung",
   "magic.by.mail_filing": "E-Mail-Zuordnung",

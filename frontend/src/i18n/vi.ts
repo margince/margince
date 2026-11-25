@@ -8033,6 +8033,12 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "editAccess.withdraw": "Rút yêu cầu quyền chỉnh sửa",
   "editAccess.sent": "Đã xin {owner} quyền chỉnh sửa",
   "editAccess.withdrawn": "Đã rút yêu cầu quyền chỉnh sửa",
+  // A record this reader may view but not change. The head's pill and the
+  // Ownership row say so, and the panel names the owner.
+  "viewOnly.pill": "Chỉ xem",
+  "viewOnly.label": "Quyền của bạn",
+  "viewOnly.owns": "{owner} phụ trách {name}",
+  "record.details.access": "Quyền truy cập",
   // The owner offering a record to a colleague, from the access panel.
   "handover.offer": "Chuyển giao cho…",
   "handover.offerTo": "Giao cho",
@@ -10298,6 +10304,16 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Thêm nội dung này vào ~/.gemini/config/mcp_config.json. Nếu tệp đã có máy chủ khác, chỉ thêm mục margince bên cạnh chúng.",
   "aiAccess.local.antigravity.signIn":
     "Mở cài đặt agent, rồi “Customizations”, và chọn “Authenticate” bên cạnh margince.",
+  "aiAccess.place.lumoNote":
+    "Lumo trên web chưa thể kết nối với ứng dụng khác. Hãy dùng ứng dụng Lumo cho máy tính, tải tại https://proton.me/lumo/download.",
+  "aiAccess.local.lumo.open":
+    "Trong Lumo Desktop, chọn “Settings” ở cuối thanh bên, rồi “Desktop app” và “Connectors”.",
+  "aiAccess.local.lumo.add":
+    "Chọn “Add MCP server…” và đặt “Transport” thành “Remote (HTTP)”.",
+  "aiAccess.local.lumo.fill":
+    "Nhập margince làm ID và Margince làm Display name, thêm mô tả ngắn rồi dán địa chỉ.",
+  "aiAccess.local.lumo.signIn":
+    "Chọn “Add server”. Khi Lumo yêu cầu, Margince mở ra: hãy đăng nhập và chọn Cấp quyền.",
   "aiAccess.other.sub":
     "Margince hoạt động với mọi công cụ AI có thể thêm máy chủ MCP từ xa. Hãy tìm “MCP”, “connectors” hoặc “tools” trong phần cài đặt của nó.",
   "aiAccess.other.typeLabel": "Loại",
@@ -21432,6 +21448,9 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "worklist.manager.kind.next_step": "Bước tiếp theo của deal",
   "worklist.manager.kind.review_backlog": "Tồn đọng cần xem lại",
   "worklist.manager.kind.general": "Khác",
+  "worklist.manager.coachDeal": "Deal liên quan",
+  "worklist.manager.coachNoDeal":
+    "Không có deal nào trong ngày của họ để chọn.",
   "worklist.board.title": "Việc của nhóm cần chú ý",
   "worklist.gap.rankedOn": "Xếp hạng ngày {date}.",
   "worklist.gap.masked_one":
@@ -22560,6 +22579,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "magic.why.site_read_unnamed": "Đọc trên trang web của công ty.",
   "magic.why.site_read_each": "Đọc trên trang web riêng của từng công ty.",
   "magic.why.signature": "Lấy từ chữ ký email.",
+  "magic.why.stated": "Lý do đã nêu: {why}",
   "magic.why.retention": "Quy tắc lưu trữ: sau {days} ngày.",
   "magic.by.retention": "Quy tắc lưu trữ",
   "magic.by.mail_filing": "Xếp email",
