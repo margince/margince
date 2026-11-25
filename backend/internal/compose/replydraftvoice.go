@@ -28,9 +28,8 @@ import (
 // for every surface composing draftrules.Shared and fails when one of them
 // reaches a model without calling draftvoice.Load.
 //
-// A nil store is a deployment with no voice lane; a lookup failure degrades to
-// the plain draft with the reason logged, because a broken voice read must
-// never take reply drafting down with it.
+// A nil store is a deployment with no voice lane. A failed voice read degrades
+// to the plain draft, logged. A failed team-rules read refuses.
 func (d replyDrafter) loadVoice(ctx context.Context) (draftvoice.Context, error) {
 	if d.voice == nil {
 		return draftvoice.Context{}, nil
