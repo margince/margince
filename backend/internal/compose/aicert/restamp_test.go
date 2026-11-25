@@ -31,7 +31,11 @@ func ruleOnlyRecord(t *testing.T, sc Scenario) Record {
 func restampBasis(t *testing.T, sc Scenario) RestampBasis {
 	t.Helper()
 	restampableRules[olderRule] = gradingRule
-	t.Cleanup(func() { delete(restampableRules, olderRule) })
+	collectionOfRule[olderRule] = collectionRule
+	t.Cleanup(func() {
+		delete(restampableRules, olderRule)
+		delete(collectionOfRule, olderRule)
+	})
 	basis, err := NewRestampBasis(wsContext(t), olderRule, []Scenario{sc}, testCensus(t))
 	if err != nil {
 		t.Fatalf("building the basis: %v", err)
@@ -177,6 +181,21 @@ func TestARuleNoReviewerClearedCannotBeRestampedFrom(t *testing.T) {
 		if _, err := NewRestampBasis(wsContext(t), from, nil, testCensus(t)); err == nil || !strings.Contains(err.Error(), "restampableRules") {
 			t.Errorf("from %q: err = %v, want a refusal naming restampableRules", from, err)
 		}
+	}
+}
+
+// A pair a reviewer cleared still has no re-stamp when other code collected the
+// runs. The stored rows are not what this build would record.
+func TestARuleThatCollectedItsRunsAnotherWayCannotBeRestampedFrom(t *testing.T) {
+	const from = "grading-rule-collected-otherwise"
+	restampableRules[from] = gradingRule
+	collectionOfRule[from] = collectionRule + "-older"
+	t.Cleanup(func() {
+		delete(restampableRules, from)
+		delete(collectionOfRule, from)
+	})
+	if _, err := NewRestampBasis(wsContext(t), from, nil, testCensus(t)); err == nil || !strings.Contains(err.Error(), "collected its runs") {
+		t.Errorf("err = %v, want a refusal naming the collection", err)
 	}
 }
 

@@ -101,7 +101,7 @@ func measureClient(ctx context.Context, facts requestFacts) (ClientCheckResult, 
 	if !canAskInChat(ctx) {
 		result.Reason = "the client declared no form elicitation"
 		if facts.elicit {
-			result.Reason = "the client declared form elicitation, but this server has no key to sign the question"
+			result.Reason = "the client declared form elicitation, but this server has no key to sign the question or no store to spend the answer"
 		}
 		result.Declared = boundedDeclared(facts.capabilities)
 		return result, nil

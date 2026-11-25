@@ -42,9 +42,9 @@ const (
 	// confirmCodeTTL is how long a user has between seeing a preview and saying
 	// yes. It matches the bulk change's window (compose/bulkconfirm.go).
 	confirmCodeTTL = 15 * time.Minute
-	// confirmGuardMargin covers a replica whose clock runs behind the minting one.
+	// replayGuardMargin covers a replica whose clock runs behind the minting one.
 	// The spent id is then still held while any replica accepts the code.
-	confirmGuardMargin = 5 * time.Minute
+	replayGuardMargin = 5 * time.Minute
 	// confirmOnceBytes is the entropy of the id the replay guard spends.
 	confirmOnceBytes = 16
 )
@@ -66,8 +66,9 @@ var errConfirmCodeNoLonger = fmt.Errorf("this call can no longer be confirmed in
 	"Call again without confirm_code, and it waits in the approval inbox for a colleague to decide: %w",
 	apperrors.ErrApprovalTokenInvalid)
 
-// ConfirmGuard spends one-use ids. platform/replayguard is the production one.
-type ConfirmGuard interface {
+// ReplayGuard spends one-use ids: a confirm code, and an answered chat question's
+// state. platform/replayguard is the production one.
+type ReplayGuard interface {
 	FirstUse(ctx context.Context, key string, ttl time.Duration) (bool, error)
 }
 
@@ -75,7 +76,7 @@ type ConfirmGuard interface {
 // signs codes and the guard that spends them.
 type conversationConfirm struct {
 	signer inputStateSigner
-	guard  ConfirmGuard
+	guard  ReplayGuard
 	now    func() time.Time
 }
 
@@ -226,7 +227,7 @@ func (c conversationConfirm) spend(ctx context.Context, tool, diffHash, code str
 	if !ok || got.Typ != confirmCodeTyp || got.Bind != bind || left <= 0 || got.Once == "" {
 		return ctx, confirmedCall{}, errConfirmCodeRefused
 	}
-	first, err := c.guard.FirstUse(ctx, confirmCodeTyp+":"+got.Once, confirmCodeTTL+confirmGuardMargin)
+	first, err := c.guard.FirstUse(ctx, confirmCodeTyp+":"+got.Once, confirmCodeTTL+replayGuardMargin)
 	if err != nil {
 		// Fail closed: a guard that cannot answer cannot prove this is the
 		// first use. Its own words stay in the log, never in the answer.
