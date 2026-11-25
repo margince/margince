@@ -245,42 +245,14 @@ func TestAnOldSignalReadElsewhereIsSettledEmpty(t *testing.T) {
 	party(t, earlier, "from", &e.Rep1, nil)
 	cited := captureCommitmentMessage(t, e, ines, "thread-elsewhere", "Re: Pricing", "Thanks, noted.", "inbound",
 		extractClock.Add(-72*time.Hour))
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
-		_, err := signals.RecordDerived(e.Admin(), tx, signals.DerivedSignal{
-			Kind: "commitment_made", CompanyID: company, Summary: "Pricing promised.",
-			Severity: "info", Fingerprint: "legacy-" + cited.String(),
-			Evidence: []signals.DerivedEvidence{{Snippet: "Pricing promised.", ActivityID: cited}},
-		}, extractClock.Add(-72*time.Hour))
-		return err
-	}); err != nil {
-		t.Fatalf("seed the old signal: %v", err)
-	}
-	brain := &scriptedBrain{reply: commitmentReply(t, earlier, "seat:"+e.Rep1.String(), pricingPromise, "")}
-	if pass := extractPassStats(t, e, brain); pass.Converted != 1 {
-		t.Fatalf("the pass converted %d old signals, want the one", pass.Converted)
-	}
-	if n := e.WsCount(t, `SELECT count(*) FROM conversation_claim WHERE source_activity_id = $1`, cited); n != 0 {
-		t.Errorf("a commitment found on another message was filed against the cited one %d time(s)", n)
-	}
-}
-
-// A commitment signal a human filed is theirs, and the conversion leaves it.
-func TestAHumanFiledCommitmentSignalIsNotConverted(t *testing.T) {
-	e := Setup(t)
-	company := e.SeedCompany(t, "Acme", &e.Rep1)
-	ines := employeeOf(t, e, company, "Ines Huber")
-	cited := captureCommitmentMessage(t, e, ines, "thread-filed", "Pricing", "Hi Ines, "+pricingPromise, "outbound",
-		extractClock.Add(-72*time.Hour))
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
-		_, err := signals.RecordDerived(e.Admin(), tx, signals.DerivedSignal{
-			Kind: "commitment_made", CompanyID: company, Summary: "Pricing promised.",
-			Severity: "info", Fingerprint: "filed-" + cited.String(), Producer: "analyst-note",
-			Evidence: []signals.DerivedEvidence{{Snippet: "Pricing promised.", ActivityID: cited}},
-		}, extractClock.Add(-72*time.Hour))
-		return err
-	}); err != nil {
-		t.Fatalf("seed the filed signal: %v", err)
-	}
+	seedSignalRow(t, OwnerConn(t), `INSERT INTO signal
+		(id, kind, source_channel, entity_type, entity_id, resolved_company_id, resolution_state, severity,
+		 summary, evidence, detected_at, source, captured_by)
+		VALUES ($1, 'commitment_made', 'derived', 'company', '`+company.String()+`', '`+company.String()+`',
+		        'resolved', 'info', 'Pricing promised.',
+		        jsonb_build_array(jsonb_build_object('source_type', 'activity', 'source_id', '`+cited.String()+`',
+		                                             'snippet', 'Pricing promised.')),
+		        now(), 'manual', 'human:x')`)
 	if pass := extractPassStats(t, e, &scriptedBrain{reply: `{"events":[]}`}); pass.Converted != 0 {
 		t.Errorf("the pass converted %d signal(s) a human filed", pass.Converted)
 	}

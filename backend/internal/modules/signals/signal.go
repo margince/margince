@@ -62,7 +62,7 @@ func (s *Store) CreateSignal(ctx context.Context, in CreateSignalInput) (crmcont
 		// the declaring unit's seam checks the layout, owner and fingerprint.
 		return crmcontracts.Signal{}, &InvalidExtensionSignalError{Field: signalKindArg, Reason: "an extension kind is filed only by the extension that declares it"}
 	}
-	if err := provenance.AdmitRecordSource(in.Source); err != nil {
+	if err := provenance.AdmitRecordChannel(in.Source); err != nil {
 		return crmcontracts.Signal{}, err
 	}
 	if strings.TrimSpace(in.Summary) == "" {

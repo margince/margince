@@ -10132,7 +10132,7 @@ public.signal.signal_resolved_company_fkey FOREIGN KEY (resolved_company_id) REF
 public.signal.signal_resolved_contact_fkey FOREIGN KEY (resolved_contact_id) REFERENCES contact(id) ON DELETE SET NULL (resolved_contact_id)
 public.signal.signal_resolved_has_entity CHECK (((resolution_state <> 'resolved'::text) OR (entity_type IS NOT NULL)))
 public.signal.signal_severity_check CHECK ((severity = ANY (ARRAY['info'::text, 'warn'::text, 'urgent'::text])))
-public.signal.signal_source_channel CREATE TRIGGER signal_source_channel BEFORE UPDATE ON public.signal FOR EACH ROW WHEN ((new.source <> ALL (ARRAY['api'::text, 'automation'::text, 'capture'::text, 'import'::text, 'manual'::text, 'webform'::text]))) EXECUTE FUNCTION move_signal_source_onto_its_channel()
+public.signal.signal_source_channel CREATE TRIGGER signal_source_channel BEFORE UPDATE ON public.signal FOR EACH ROW WHEN (((new.source <> ALL (ARRAY['api'::text, 'automation'::text, 'capture'::text, 'import'::text, 'manual'::text, 'webform'::text])) OR ((new.kind ~~ 'ext:%'::text) AND (new.source_system IS NULL)))) EXECUTE FUNCTION move_signal_source_onto_its_channel()
 public.signal.signal_source_channel_check CHECK ((source_channel = ANY (ARRAY['derived'::text, 'inbound'::text, 'web'::text, 'social'::text, 'deal_room_engagement'::text])))
 public.signal.signal_source_check CHECK ((source = ANY (ARRAY['api'::text, 'automation'::text, 'capture'::text, 'import'::text, 'manual'::text, 'webform'::text]))) NOT VALID
 public.signal.signal_status_check CHECK ((status = ANY (ARRAY['open'::text, 'acknowledged'::text, 'resolved'::text, 'dismissed'::text])))
@@ -10186,7 +10186,7 @@ public.signal_source_channel(source text, kind text) secdef=false cfg=- acl=-
 public.signal_source_producer(source text, kind text) secdef=false cfg=- acl=- 
  SELECT CASE
   WHEN source IN ('signal-scan', 'site-newsroom', 'technical-lookup') THEN source
-  WHEN kind LIKE 'ext:%' AND record_source_channel(source) <> source THEN source
+  WHEN kind LIKE 'ext:%' THEN source
  END
 
 public.signal_thread_scan acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false

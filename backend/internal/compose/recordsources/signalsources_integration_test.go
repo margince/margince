@@ -49,7 +49,7 @@ func TestTheTaskMovesAnOlderSignalsProducerIntoSourceSystem(t *testing.T) {
 		olderSignal(t, owner, "risk", "Budget freeze", "analyst-note"):             {"api", ""},
 		olderSignal(t, owner, "risk", "Their champion left", "ui"):                 {"manual", ""},
 		olderSignal(t, owner, "risk", "Filed by a member", "manual"):               {"manual", ""},
-		olderSignal(t, owner, "ext:billing:paid_late", "Filed on the list", "api"): {"api", ""},
+		olderSignal(t, owner, "ext:billing:paid_late", "Filed on the list", "api"): {"automation", "api"},
 	}
 	scan := ids.UUID{}
 	for id, origin := range want {
@@ -75,8 +75,8 @@ func TestTheTaskMovesAnOlderSignalsProducerIntoSourceSystem(t *testing.T) {
 		AND evidence ? 'data_task_run'`, scan); n != 1 {
 		t.Errorf("%d audit row(s) keep the scan signal's older source, want 1", n)
 	}
-	if n := e.WsCount(t, `SELECT count(*) FROM audit_log WHERE entity_type = 'signal' AND action = 'update'`); n != 6 {
-		t.Errorf("%d signal(s) were audited as moved, want the 6 off the list", n)
+	if n := e.WsCount(t, `SELECT count(*) FROM audit_log WHERE entity_type = 'signal' AND action = 'update'`); n != 7 {
+		t.Errorf("%d signal(s) were audited as moved, want all but the member's", n)
 	}
 	if n := e.WsCount(t, `SELECT count(*) FROM event_outbox WHERE envelope->'entity'->>'type' = 'signal'`); n != 0 {
 		t.Errorf("the corrected signals sent %d event(s), want none", n)
