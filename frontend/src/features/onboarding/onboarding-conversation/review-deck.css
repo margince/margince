@@ -115,7 +115,7 @@
 }
 .rdeck-card input:focus,
 .rdeck-card textarea:focus {
-  outline: none;
+  outline: var(--focus-ring-forced);
   border-color: var(--focusEdge);
   box-shadow: var(--focus-field);
 }

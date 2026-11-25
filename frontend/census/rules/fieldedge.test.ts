@@ -345,6 +345,64 @@ describe("a text field's resting edge", () => {
     ]);
   });
 
+  it("reads a zero-width line as no edge", () => {
+    expect(
+      findings(markup('<input className="box" />'), [
+        ".box { border: 0px solid var(--borderControl); }",
+        ".pad .box { border: 1px solid var(--borderControl); }",
+      ]),
+    ).toEqual([bare(".box")]);
+  });
+
+  it("reads a box readOnly leaves open as a field", () => {
+    expect(
+      findings(
+        markup(
+          '<input readOnly={false} className="typed" />',
+          '<input readOnly className="shown" />',
+          '<input readOnly={locked} className="held" />',
+        ),
+        [".typed", ".shown", ".held"].map(
+          (name) => `${name} { border: ${faint}; }`,
+        ),
+      ),
+    ).toEqual([`${SHEET}: .typed draws ${faint}`]);
+  });
+
+  it("never reads a box beside a field as round it", () => {
+    expect(
+      findings(markup('<input className="box" />'), [
+        ".shell:focus-within { border-color: var(--accent); }",
+        ".shell + .box { border: 0; }",
+        ".shell ~ .box { border: 0; }",
+        ".shell .x + .box { border: 0; }",
+        ".e .f:focus-within { border-color: var(--accent); }",
+        ".e .f ~ .box { border: 0; }",
+      ]),
+    ).toEqual([
+      bare(".shell + .box"),
+      bare(".shell ~ .box"),
+      bare(".e .f ~ .box"),
+    ]);
+  });
+
+  it("seats a row on the foot its rest rules leave, in order", () => {
+    const control = "1px solid var(--borderControl)";
+    expect(
+      findings(markup('<input className="box" />'), [
+        `.reset { border: 0; border-bottom: ${control}; }`,
+        `.recoloured { border-bottom: ${control}; }`,
+        ".recoloured { border-bottom-color: var(--borderSubtle); }",
+        `.restored { border-bottom: ${control}; }`,
+        ".restored { border-bottom-color: var(--borderSubtle); }",
+        ".restored { border-bottom-color: var(--borderControl); }",
+        ".back { border-bottom: 0; }",
+        `.back { border-bottom: ${control}; }`,
+        ".reset .box, .recoloured .box, .restored .box, .back .box { border: 0; }",
+      ]),
+    ).toEqual([bare(".recoloured .box")]);
+  });
+
   it("leaves out a button, a lit tile, a field's states and a shared class", () => {
     expect(
       findings(

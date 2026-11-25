@@ -62,28 +62,21 @@ const EDGES = INKED.concat(
 const LONGHAND = /-(?:color|width|style)$/;
 const CONTROL = "var(--borderControl)";
 const DRAWN = /^\d+(?:\.\d+)?px\s+(?:solid|dashed|dotted)\s+(.+)$/;
-const FOOT_SIDES = ["border-bottom", "border-block-end"];
-const FOOT = ["border", ...FOOT_SIDES];
-// Every declaration that can take a foot away again.
-const UNDRAWS = [
-  ...FOOT,
-  "border-color",
-  "border-width",
-  "border-style",
-].concat(
-  FOOT_SIDES.flatMap((side) =>
-    ["color", "width", "style"].map((part) => `${side}-${part}`),
-  ),
-);
+const FOOT = ["border", "border-bottom", "border-block-end"];
 const RING =
   /^inset\s+0(?:px)?\s+0(?:px)?\s+0(?:px)?\s+\d+(?:\.\d+)?px\s+(.+)$/;
 
 const relative = (rule: Rule) => rule.file.slice(frontendRoot.length + 1);
 const edgesOf = (rule: Rule) =>
   INKED.flatMap((property) => declaredValues(rule.body, property));
-const noEdge = (value: string) =>
-  /^(?:0(?:px)?|none|hidden|transparent)$/.test(value) ||
-  DRAWN.exec(value)?.[1] === "transparent";
+// A drawn line is no edge at zero width, with no style, or in transparent ink.
+const noEdge = (value: string) => {
+  if (/^(?:0(?:px)?|none|hidden|transparent)$/.test(value)) return true;
+  const tokens = splitTopLevel(value, " ");
+  return tokens.length > 1 && tokens.some((token) => STYLE.test(token))
+    ? removes(sideOf(value))
+    : false;
+};
 const ownClasses = (compound: string) =>
   [...classesOf(compound)].filter((name) => !STATE_CLASS.test(name));
 const atRest = (subject: string) =>
@@ -125,7 +118,11 @@ function isEntry(element: ts.JsxOpeningLikeElement): boolean {
     const value = said(name)?.initializer;
     return value && ts.isStringLiteral(value) ? value.text : undefined;
   };
-  if (literal("aria-readonly") === "true" || said("readOnly")) return false;
+  // Only a written `false` leaves `readOnly` open to typing.
+  const readOnly = said("readOnly");
+  const written = readOnly?.initializer?.getText().replace(/[{}\s]/g, "");
+  if (readOnly && written !== "false") return false;
+  if (literal("aria-readonly") === "true") return false;
   const editable = said("contentEditable");
   const off = editable?.initializer?.getText().replace(/[{}"\s]/g, "");
   if ((editable && off !== "false") || literal("role") === "textbox") {
@@ -246,15 +243,20 @@ const ringsOf = (rule: Rule) => [
 function enclosed(alternative: string, { fields, framed, rows }: Frames) {
   const { compounds: parts, combinators: links } = chain(alternative);
   const end = parts.length - 2;
+  // A compound followed by `+` or `~` names a box beside the field, not round it.
   const ancestors = parts.slice(0, -1);
+  const encloses = (at: number) => [" ", ">"].includes(links[at]);
   if (
-    ancestors.some((compound) =>
-      ownClasses(compound).some((name) => fields.has(name)),
+    ancestors.some(
+      (compound, at) =>
+        encloses(at) && ownClasses(compound).some((name) => fields.has(name)),
     ) ||
-    ancestors.some((_, at) =>
-      runsEndingAt(alternative, at).some(
-        (run) => framed.has(run) || framed.has(loose(run)),
-      ),
+    ancestors.some(
+      (_, at) =>
+        encloses(at) &&
+        runsEndingAt(alternative, at).some(
+          (run) => framed.has(run) || framed.has(loose(run)),
+        ),
     )
   ) {
     return true;
@@ -306,9 +308,6 @@ function findingsOf(
   ];
 }
 
-const valuesOf = (rule: Rule, properties: readonly string[]) =>
-  properties.flatMap((property) => declaredValues(rule.body, property));
-
 type Side = { width: string; style: string; color: string };
 const UNDRAWN: Side = { width: "medium", style: "none", color: "" };
 const STYLE =
@@ -355,11 +354,14 @@ function footOf(rule: Rule, start: Side): Side {
 
 // A field may clear its other sides, and a row seats a bare field, when the
 // foot is a solid line in the control token.
+const ZERO = /^0(?:\.0+)?(?:px|r?em)?$/;
 const rulesFoot = ({ width, style, color }: Side) =>
-  !/^0(?:\.0+)?(?:px|r?em)?$/.test(width) &&
-  style === "solid" &&
-  color === CONTROL;
-const ruled = (rule: Rule) => rulesFoot(footOf(rule, UNDRAWN));
+  !ZERO.test(width) && style === "solid" && color === CONTROL;
+const removes = ({ width, style, color }: Side) =>
+  ZERO.test(width) ||
+  /^(?:none|hidden)$/.test(style) ||
+  color === "transparent";
+const UNDERLINED: Side = { width: "1px", style: "solid", color: CONTROL };
 
 type Base = { rule: Rule; at: number; classes: string[]; type?: string };
 const elementKey = (type: string) => `<${type}>`;
@@ -409,32 +411,38 @@ function startOf(bases: Map<string, Base[]>, rule: Rule, subject: string) {
     .reduce((foot, [, other]) => footOf(other, foot), UNDRAWN);
 }
 
-// A row is a box named by a class. Any rule on a box with those classes that
-// takes the foot away, in any state, unseats it.
+// A row's rest rules, read in order, must leave a control foot. Another rule
+// that removes the foot from a box with its classes, in any state, unseats it.
 function ruledRows(rules: readonly Rule[]) {
-  const unseating = rules
-    .filter((rule) => valuesOf(rule, UNDRAWS).some(noEdge))
-    .flatMap((rule) =>
-      subjectsOf(rule)
-        .filter((subject) => !PSEUDO_ELEMENT.test(subject))
-        .map(ownClasses),
+  const rests = new Map<string, { classes: string[]; own: Rule[] }>();
+  const unseating: { run?: string; classes: string[] }[] = [];
+  for (const rule of rules) {
+    const unseats = removes(footOf(rule, UNDERLINED));
+    for (const alternative of alternativesOf(rule.selector)) {
+      const subject = subjectOf(alternative);
+      if (PSEUDO_ELEMENT.test(subject)) continue;
+      const classes = ownClasses(subject);
+      const rest = atRest(subject) && classes.length > 0;
+      const run = rest ? wholeRun(alternative) : undefined;
+      if (run !== undefined) {
+        const row = rests.get(run) ?? { classes, own: [] };
+        row.own.push(rule);
+        rests.set(run, row);
+      }
+      if (unseats) unseating.push({ run, classes });
+    }
+  }
+  const seated = ([run, { classes, own }]: [
+    string,
+    { classes: string[]; own: Rule[] },
+  ]) =>
+    rulesFoot(own.reduce((foot, rule) => footOf(rule, foot), UNDRAWN)) &&
+    !unseating.some(
+      (other) =>
+        other.run !== run &&
+        classes.every((name) => other.classes.includes(name)),
     );
-  const seated = (alternative: string) => {
-    const named = ownClasses(subjectOf(alternative));
-    return (
-      named.length > 0 &&
-      atRest(subjectOf(alternative)) &&
-      !unseating.some((classes) =>
-        named.every((name) => classes.includes(name)),
-      )
-    );
-  };
-  return new Set(
-    rules
-      .filter(ruled)
-      .flatMap((rule) => alternativesOf(rule.selector).filter(seated))
-      .map(wholeRun),
-  );
+  return new Set([...rests].filter(seated).map(([run]) => run));
 }
 
 // A field's rest rule that draws its edge in anything but --borderControl.

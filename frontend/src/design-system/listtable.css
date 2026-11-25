@@ -620,7 +620,7 @@
   color: var(--textSecondary);
 }
 .lt-fsearch-input:focus {
-  outline: 0;
+  outline: var(--focus-ring-forced);
   border-color: var(--focusEdge);
   box-shadow: var(--focus-field);
 }

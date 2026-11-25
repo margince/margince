@@ -1413,8 +1413,12 @@ span.error-line {
 }
 /* The shell owns the boundary for a field that has something inside it, so it
    is the shell that has to dim — the input within it draws no fill of its own. */
-.field-shell:has(:disabled),
-.field-shell:has([aria-disabled="true"]) {
+.field-shell:has(
+  .input:disabled,
+  .input[aria-disabled="true"],
+  .textarea:disabled,
+  .textarea[aria-disabled="true"]
+) {
   background: var(--bgInset);
   border-color: var(--borderStrong);
 }
