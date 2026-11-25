@@ -15,7 +15,6 @@ import (
 	"slices"
 	"strings"
 	"testing"
-	"time"
 
 	"github.com/jackc/pgx/v5"
 
@@ -25,6 +24,7 @@ import (
 	capturemod "github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/platform/auth"
+	"github.com/margince/margince/backend/internal/platform/clocktest"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -62,15 +62,53 @@ func readersOf(t *testing.T, e *integration.SearchEnv, activity ids.UUID) []ids.
 }
 
 func TestAChatMessageFollowsItsContactsSharingExactlyAsMailDoes(t *testing.T) {
-	for _, posture := range []string{"shared", "classified"} {
-		t.Run(posture, func(t *testing.T) { chatFollowsContactSharing(t, posture) })
+	for _, seat := range []struct {
+		name, posture string
+		team          bool
+	}{
+		{"member seat shared", "shared", false},
+		{"member seat classified", "classified", false},
+		{"team seat shared", "shared", true},
+	} {
+		t.Run(seat.name, func(t *testing.T) { chatFollowsContactSharing(t, seat.posture, seat.team) })
 	}
 }
 
-// chatFollowsContactSharing runs the sequence with the seat's mailbox under one
-// posture. Under shared, publishing the contact opens both activities to a
-// colleague. Under classified both stay held until a verdict judges them.
-func chatFollowsContactSharing(t *testing.T, posture string) {
+// chatSeatFor gives the chat account its seat under one posture. A team seat is
+// read by a team of the mail's owner alone. Until the contact is shared, the
+// seat and the owner's mail then have the same readers.
+func chatSeatFor(t *testing.T, e *integration.SearchEnv, posture string, team bool) ids.UUID {
+	t.Helper()
+	var seat ids.UUID
+	admin := principal.WithCorrelationID(e.Admin(), ids.NewV7())
+	err := database.WithWorkspaceTx(admin, e.Pool, func(tx pgx.Tx) error {
+		spec := capturemod.ChatSeat{Provider: "telegram_business", Account: "880001", Owner: e.Rep1, By: e.Rep1}
+		if team {
+			spec.Owner, spec.ReaderTeam = ids.Nil, ids.NewV7()
+			if _, err := tx.Exec(context.Background(), `INSERT INTO team (id, name) VALUES ($1, 'Chat desk')`, spec.ReaderTeam); err != nil {
+				return err
+			}
+			if _, err := tx.Exec(context.Background(), `INSERT INTO team_membership (team_id, user_id) VALUES ($1, $2)`, spec.ReaderTeam, e.Rep1); err != nil {
+				return err
+			}
+		}
+		var err error
+		if seat, err = capturemod.EnsureChatSeatTx(admin, tx, spec); err != nil {
+			return err
+		}
+		_, err = tx.Exec(context.Background(), `UPDATE capture_connection SET mail_posture = $2 WHERE id = $1`, seat, posture)
+		return err
+	})
+	if err != nil {
+		t.Fatalf("seating the chat account: %v", err)
+	}
+	return seat
+}
+
+// chatFollowsContactSharing runs the sequence with the mail and the chat seat
+// under one posture. Under shared, publishing the contact opens both activities
+// to a colleague. Under classified both stay held until a verdict judges them.
+func chatFollowsContactSharing(t *testing.T, posture string, team bool) {
 	env := newCaptureEnv(t)
 	e := env.e
 	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
@@ -104,12 +142,18 @@ func chatFollowsContactSharing(t *testing.T, posture string) {
 		t.Fatalf("binding the chat identity: %v", err)
 	}
 
-	chat, err := capturemod.FileChatMessage(connectorSeatCtx(e),
+	binding := connector.ChatBinding{
+		Provider: "telegram", CapturedBy: "connector:telegram", KeyScope: "42:biz:880001", ThreadScope: "biz:880001",
+		Ownership: connector.ChatOwnedByMember, OwnerUserID: e.Rep1, SeatID: chatSeatFor(t, e, posture, team),
+	}
+	ctx := connectorSeatCtx(e)
+	if team {
+		binding.Ownership, binding.OwnerUserID = connector.ChatOwnedByWorkspace, ids.Nil
+		ctx = workspaceConnectorCtx(e)
+	}
+	chat, err := capturemod.FileChatMessage(ctx,
 		compose.NewCaptureSink(e.Pool, compose.CaptureConfig{}),
-		connector.ChatBinding{
-			Provider: "telegram", CapturedBy: "connector:telegram", KeyScope: "42:biz:880001", ThreadScope: "biz:880001",
-			Ownership: connector.ChatOwnedByMember, OwnerUserID: e.Rep1,
-		},
+		binding,
 		connector.ChatMessage{
 			ConversationID: "990100", IdempotencyKey: "1", Direction: connector.DirectionInbound,
 			Counterparty: connector.ChatParty{UserID: "990100", DisplayName: "Buyer"},
@@ -176,6 +220,22 @@ func connectorSeatCtx(e *integration.SearchEnv) context.Context {
 				"activity": {Create: true, Read: true, Update: true},
 				"contact":  {Create: true, Read: true, Update: true},
 				"company":  {Create: true, Read: true, Update: true},
+			},
+			RowScope: principal.RowScopeAll,
+		},
+	})
+}
+
+// workspaceConnectorCtx is the connector principal the chat ingest runs as for a
+// company account: it acts for no member.
+func workspaceConnectorCtx(e *integration.SearchEnv) context.Context {
+	ctx := principal.WithWorkspaceID(context.Background(), e.WS)
+	ctx = principal.WithCorrelationID(ctx, ids.NewV7())
+	return principal.WithActor(ctx, principal.Principal{
+		Type: principal.PrincipalConnector, ID: "connector:telegram",
+		Permissions: principal.Permissions{
+			Objects: map[string]principal.ObjectGrant{
+				"activity": {Create: true}, "contact": {Create: true}, "company": {Create: true, Read: true},
 			},
 			RowScope: principal.RowScopeAll,
 		},

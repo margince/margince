@@ -28,15 +28,20 @@ const ChatMessageKind = "message"
 //
 // A message on a member-owned connection is that member's own correspondence.
 // The acting principal carries the member. The sink then handles it like a
-// message on a per-member transport and records the member's import. It derives
-// the audience from that, as for mail. A workspace-owned connection is the
-// company's. The adapter never states an audience.
+// message on a per-member transport and records the member's import. A message
+// on a company account is imported by the account's team seat, as a shared
+// mailbox's mail is. Either way the seat's posture and the recompute derive the
+// audience, as for mail, and the adapter never states one. A workspace-owned
+// connection with no seat is the company's own bot, and its messages are open.
 func FileChatMessage(
 	ctx context.Context, sink connector.Sink, binding connector.ChatBinding, msg connector.ChatMessage,
 ) (datasource.EntityRef, error) {
 	rec, err := chatRecord(binding, msg)
 	if err != nil {
 		return datasource.EntityRef{}, err
+	}
+	if binding.SeatID.IsZero() && connector.IsCaptureOnlyThread(binding.Provider, rec.ThreadKey) {
+		return datasource.EntityRef{}, fmt.Errorf("%w: a business account's message names no seat, so no posture could decide who reads it", apperrors.ErrInvalidArgument)
 	}
 	if binding.Ownership == connector.ChatOwnedByMember {
 		actor, ok := principal.Actor(ctx)
@@ -45,6 +50,13 @@ func FileChatMessage(
 		}
 		actor.UserID = binding.OwnerUserID
 		ctx = principal.WithActor(ctx, actor)
+	}
+	if !binding.SeatID.IsZero() {
+		ctx = withChatSeat(ctx, binding.SeatID)
+		if binding.Ownership == connector.ChatOwnedByWorkspace {
+			// A company account is a team seat, imported as a shared mailbox is.
+			ctx = withSharedMailbox(ctx, binding.SeatID)
+		}
 	}
 	return sink.Upsert(ctx, rec)
 }

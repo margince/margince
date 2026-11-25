@@ -51,7 +51,7 @@ func (r *Registry) SharedMailboxes(ctx context.Context) ([]SharedMailboxView, er
 	var out []SharedMailboxView
 	err := r.db.Tx(ctx, func(tx pgx.Tx) error {
 		rows, err := tx.Query(ctx, `SELECT `+sharedMailboxColumns+` FROM capture_connection
-		  WHERE user_id IS NULL AND archived_at IS NULL ORDER BY lower(account_label), provider`)
+		  WHERE user_id IS NULL AND archived_at IS NULL AND provider NOT IN `+chatSeatProviders+` ORDER BY lower(account_label), provider`)
 		if err != nil {
 			return err
 		}

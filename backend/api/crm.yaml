@@ -18003,8 +18003,19 @@ paths:
       x-human-only-reason: security
       summary: Approve a Telegram Business account for the workspace.
       description: |
-        Moves a `pending_approval` link to `connected`. Approving a link that is already
-        `connected` changes nothing. A `409` means the owner switched the link off in Telegram.
+        Moves a `pending_approval` link to `connected` and gives the account its seat. A company
+        account's seat is read by the team in `readerTeamId` and starts `held`, as a shared
+        mailbox does; an admin then opens it with `PATCH /shared-mailboxes/{seatId}`. The team is
+        required the first time an account is approved (`422 reader_team_required`) and is
+        optional when the account comes back to a seat it already had. A member's own account
+        takes no team and starts `classified`. Approving a link that is already `connected` changes
+        nothing except that it makes a missing seat. A `409` means the owner switched the link off
+        in Telegram, or `readerTeamId` names another team than the seat already has.
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/ApproveTelegramBusinessConnectionRequest' }
       responses:
         '200':
           description: The approved connection.
@@ -47770,6 +47781,20 @@ components:
           description: '`pending_approval` waits for an admin; `disconnected` means the owner switched the link off in Telegram.'
         connectedAt: { type: string, format: date-time, description: When the owner first linked the bot. }
         approvedAt: { type: [string, 'null'], format: date-time, description: When an admin approved the link; absent until then. }
+        seatId:
+          type: [string, 'null']
+          format: uuid
+          description: The seat the account's messages file through. Its mail visibility is changed with `PATCH /shared-mailboxes/{seatId}`. Null until an admin approves the link.
+        readerTeamId: { type: [string, 'null'], format: uuid, description: The team that reads a company account's messages. Null for a member's own account and before approval. }
+        mailVisibility:
+          type: [string, 'null']
+          enum: [held, shared, classified, null]
+          x-extensible-enum: true
+          description: What the seat asks of the account's messages. `held` keeps them from colleagues outside the reader team and `shared` opens them as the contact's sharing allows. A member's own account starts `classified`, which holds a chat.
+    ApproveTelegramBusinessConnectionRequest:
+      type: object
+      properties:
+        readerTeamId: { type: string, format: uuid, description: The team that reads the account's messages. }
     TelegramBusinessConnectionListResponse:
       type: object
       required: [data]

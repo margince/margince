@@ -11683,8 +11683,14 @@ export interface paths {
         put?: never;
         /**
          * Approve a Telegram Business account for the workspace.
-         * @description Moves a `pending_approval` link to `connected`. Approving a link that is already
-         *     `connected` changes nothing. A `409` means the owner switched the link off in Telegram.
+         * @description Moves a `pending_approval` link to `connected` and gives the account its seat. A company
+         *     account's seat is read by the team in `readerTeamId` and starts `held`, as a shared
+         *     mailbox does; an admin then opens it with `PATCH /shared-mailboxes/{seatId}`. The team is
+         *     required the first time an account is approved (`422 reader_team_required`) and is
+         *     optional when the account comes back to a seat it already had. A member's own account
+         *     takes no team and starts `classified`. Approving a link that is already `connected` changes
+         *     nothing except that it makes a missing seat. A `409` means the owner switched the link off
+         *     in Telegram, or `readerTeamId` names another team than the seat already has.
          */
         post: operations["approveTelegramBusinessConnection"];
         delete?: never;
@@ -33535,6 +33541,28 @@ export interface components {
              * @description When an admin approved the link; absent until then.
              */
             approvedAt?: string | null;
+            /**
+             * Format: uuid
+             * @description The seat the account's messages file through. Its mail visibility is changed with `PATCH /shared-mailboxes/{seatId}`. Null until an admin approves the link.
+             */
+            seatId?: string | null;
+            /**
+             * Format: uuid
+             * @description The team that reads a company account's messages. Null for a member's own account and before approval.
+             */
+            readerTeamId?: string | null;
+            /**
+             * @description What the seat asks of the account's messages. `held` keeps them from colleagues outside the reader team and `shared` opens them as the contact's sharing allows. A member's own account starts `classified`, which holds a chat.
+             * @enum {string|null}
+             */
+            mailVisibility?: "held" | "shared" | "classified" | null;
+        };
+        ApproveTelegramBusinessConnectionRequest: {
+            /**
+             * Format: uuid
+             * @description The team that reads the account's messages.
+             */
+            readerTeamId?: string;
         };
         TelegramBusinessConnectionListResponse: {
             data: components["schemas"]["TelegramBusinessConnection"][];
@@ -85569,7 +85597,11 @@ export interface operations {
             };
             cookie?: never;
         };
-        requestBody?: never;
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["ApproveTelegramBusinessConnectionRequest"];
+            };
+        };
         responses: {
             /** @description The approved connection. */
             200: {

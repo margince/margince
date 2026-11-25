@@ -25909,6 +25909,27 @@ func (e TechnicalEnrichStartedStatus) Valid() bool {
 	}
 }
 
+// Defines values for TelegramBusinessConnectionMailVisibility.
+const (
+	TelegramBusinessConnectionMailVisibilityClassified TelegramBusinessConnectionMailVisibility = "classified"
+	TelegramBusinessConnectionMailVisibilityHeld       TelegramBusinessConnectionMailVisibility = "held"
+	TelegramBusinessConnectionMailVisibilityShared     TelegramBusinessConnectionMailVisibility = "shared"
+)
+
+// Valid indicates whether the value is a known member of the TelegramBusinessConnectionMailVisibility enum.
+func (e TelegramBusinessConnectionMailVisibility) Valid() bool {
+	switch e {
+	case TelegramBusinessConnectionMailVisibilityClassified:
+		return true
+	case TelegramBusinessConnectionMailVisibilityHeld:
+		return true
+	case TelegramBusinessConnectionMailVisibilityShared:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for TelegramBusinessConnectionStatus.
 const (
 	TelegramBusinessConnectionStatusConnected       TelegramBusinessConnectionStatus = "connected"
@@ -37219,6 +37240,12 @@ type ApproveRequest struct {
 
 	// Reason Why, in the approver's own words. Recorded with the decision, as a rejection's reason is.
 	Reason *string `json:"reason,omitempty"`
+}
+
+// ApproveTelegramBusinessConnectionRequest defines model for ApproveTelegramBusinessConnectionRequest.
+type ApproveTelegramBusinessConnectionRequest struct {
+	// ReaderTeamId The team that reads the account's messages.
+	ReaderTeamId *openapi_types.UUID `json:"readerTeamId,omitempty"`
 }
 
 // ArchiveDeletionRequest defines model for ArchiveDeletionRequest.
@@ -70809,12 +70836,24 @@ type TelegramBusinessConnection struct {
 	ConnectedAt time.Time          `json:"connectedAt"`
 	Id          openapi_types.UUID `json:"id"`
 
+	// MailVisibility What the seat asks of the account's messages. `held` keeps them from colleagues outside the reader team and `shared` opens them as the contact's sharing allows. A member's own account starts `classified`, which holds a chat.
+	MailVisibility *TelegramBusinessConnectionMailVisibility `json:"mailVisibility,omitempty"`
+
 	// OwnerLabel The owner's name as Telegram last reported it. Display only, since a name is mutable and identifies nothing.
 	OwnerLabel string `json:"ownerLabel"`
+
+	// ReaderTeamId The team that reads a company account's messages. Null for a member's own account and before approval.
+	ReaderTeamId *openapi_types.UUID `json:"readerTeamId,omitempty"`
+
+	// SeatId The seat the account's messages file through. Its mail visibility is changed with `PATCH /shared-mailboxes/{seatId}`. Null until an admin approves the link.
+	SeatId *openapi_types.UUID `json:"seatId,omitempty"`
 
 	// Status `pending_approval` waits for an admin; `disconnected` means the owner switched the link off in Telegram.
 	Status TelegramBusinessConnectionStatus `json:"status"`
 }
+
+// TelegramBusinessConnectionMailVisibility What the seat asks of the account's messages. `held` keeps them from colleagues outside the reader team and `shared` opens them as the contact's sharing allows. A member's own account starts `classified`, which holds a chat.
+type TelegramBusinessConnectionMailVisibility string
 
 // TelegramBusinessConnectionStatus `pending_approval` waits for an admin; `disconnected` means the owner switched the link off in Telegram.
 type TelegramBusinessConnectionStatus string
@@ -86485,6 +86524,9 @@ type UpdateCaptureSettingsJSONRequestBody = UpdateCaptureSettingsRequest
 
 // ConnectChannelJSONRequestBody defines body for ConnectChannel for application/json ContentType.
 type ConnectChannelJSONRequestBody = ConnectChannelRequest
+
+// ApproveTelegramBusinessConnectionJSONRequestBody defines body for ApproveTelegramBusinessConnection for application/json ContentType.
+type ApproveTelegramBusinessConnectionJSONRequestBody = ApproveTelegramBusinessConnectionRequest
 
 // ReplaceChannelTokenJSONRequestBody defines body for ReplaceChannelToken for application/json ContentType.
 type ReplaceChannelTokenJSONRequestBody = ReplaceChannelTokenRequest

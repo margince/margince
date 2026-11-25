@@ -74,7 +74,7 @@ func LockLiveBusinessLinkTx(ctx context.Context, tx pgx.Tx, linkID ids.UUID) (te
 	_, link, err := scanBusinessLink(tx.QueryRow(ctx, `
 		SELECT `+businessLinkColumns+` FROM channel_connection
 		 WHERE id = $1 AND provider = $2 AND parent_connection_id IS NOT NULL
-		   AND status = $3 AND archived_at IS NULL FOR SHARE`,
+		   AND status = $3 AND seat_id IS NOT NULL AND archived_at IS NULL FOR SHARE`,
 		linkID, telegram.BusinessProvider, channelStatusConnected))
 	if errors.Is(err, pgx.ErrNoRows) {
 		return telegram.BusinessLink{}, false, nil
@@ -85,19 +85,22 @@ func LockLiveBusinessLinkTx(ctx context.Context, tx pgx.Tx, linkID ids.UUID) (te
 	return link, true, nil
 }
 
-const businessLinkColumns = `id, account_id, ownership, owner_user_id`
+const businessLinkColumns = `id, account_id, ownership, owner_user_id, seat_id`
 
 func scanBusinessLink(row pgx.Row) (ids.UUID, telegram.BusinessLink, error) {
 	var id ids.UUID
 	var link telegram.BusinessLink
 	var ownership string
-	var owner *ids.UUID
-	if err := row.Scan(&id, &link.AccountID, &ownership, &owner); err != nil {
+	var owner, seat *ids.UUID
+	if err := row.Scan(&id, &link.AccountID, &ownership, &owner, &seat); err != nil {
 		return ids.Nil, telegram.BusinessLink{}, err
 	}
 	link.Ownership = connector.ChatOwnership(ownership)
 	if owner != nil {
 		link.OwnerUserID = *owner
+	}
+	if seat != nil {
+		link.SeatID = *seat
 	}
 	return id, link, nil
 }

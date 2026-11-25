@@ -1,5 +1,5 @@
 <!-- prose:plain -->
-<!-- describes: backend/internal/modules/capture/birthdecision.go backend/internal/modules/capture/importrow.go backend/internal/modules/capture/widenhistory.go backend/internal/modules/capture/credentialmodel.go backend/internal/modules/capture/sinkchannel.go backend/internal/compose/channelprovider.go backend/internal/modules/activities/audience.go -->
+<!-- describes: backend/internal/modules/capture/chatseat.go backend/internal/modules/capture/birthdecision.go backend/internal/modules/capture/importrow.go backend/internal/modules/capture/widenhistory.go backend/internal/modules/capture/credentialmodel.go backend/internal/modules/capture/sinkchannel.go backend/internal/compose/channelprovider.go backend/internal/modules/activities/audience.go -->
 # Whose mail a chat is, and what follows from the answer
 
 A Telegram message and a Gmail message travel the same pipeline: one `connector.Sink`, one activity row,
@@ -35,11 +35,21 @@ meets depends on the credential model, not the kind:
 | 2. every party is a member (`members_only`) | the workspace's member addresses | yes | no | no |
 | 3. a marker set on the message | the message's own subject | yes | **yes** | no |
 | 4. thread verdict taken over from the thread | the delivering mailbox | yes | no | no |
-| 5. mailbox posture | the delivering mailbox | yes | no | no |
+| 5. mailbox posture | the delivering mailbox | yes | **yes**, from the account's seat | no |
 
-Rungs 4 and 5 read `capture_connection`: one human's own mailbox, its posture, and the verdict taken on
-each of its threads. A channel transport has no row in it. Whether a member may set a standing posture
-for their own transport is an open product question. The answer for mail does not apply to it.
+Rung 5 for a chat reads the account's seat, a `capture_connection` row
+(`backend/internal/modules/capture/chatseat.go`). A member's own chat account is a member seat that
+starts `classified`. A classified chat stays held, because the verdict ledger judges a thread once
+and a chat is one long thread. Rung 4 does not apply to a chat. A chat message with no seat is held.
+
+A company's business account (Telegram Business, WhatsApp Business, Zalo OA) is a team seat, as a
+shared mailbox is. It has no user, it has a reader team, and its posture is `held` or `shared`.
+Approving the account creates the seat, held. An admin opens it with
+`PATCH /v1/shared-mailboxes/{seatId}`.
+
+The seat's import row names the seat. So its reader team reads
+the account's messages even while the seat is held, and the contact's sharing decides who else may.
+A message that came in while the seat was held stays held after the admin opens it.
 
 A transport that declares `per_member` while its capture names no member is **declared wrong**. The
 capture is refused, with the transport named. Both ways to go on are wrong. Publishing goes against
@@ -114,8 +124,8 @@ cannot erase the message for every user: an audience write that leaves no reader
 
 ## Still open
 
-- **A member's own posture for their own transport** (rungs 4 and 5). It needs a place for a member to
-  say it, and `capture_connection` is not that place.
+- A member cannot yet set the posture of their own chat seat. The seat starts `classified`. The mail-posture
+  endpoint names a mailbox by its mail provider, and no endpoint names a chat seat.
 - **No audience shown on a chat row.** The audience and its reason are not shown on a chat row in the
   timeline. A member-bound chat can be held. So a reader can meet a message they cannot see, and be told
   nothing about why.
