@@ -38903,7 +38903,7 @@ type AuthCapabilities struct {
 	// Password Email + password login is enabled.
 	Password bool `json:"password"`
 
-	// PasswordReset The A74 reset flow can complete end to end (outbound email configured + healthy).
+	// PasswordReset Password sign-in is on and the reset mail channel is configured. Nothing checks that mail is delivered.
 	PasswordReset bool `json:"password_reset"`
 
 	// ReleaseVersion The release this api was built from (`YYYY.<edition>`). A client compares it against its OWN release and refuses to run against a different one — a mixed-release set must not serve. ABSENT is not a mismatch: it means this api carries no release version (a build that was not published as one), and a client MUST then make no comparison rather than treat the absence as a difference.

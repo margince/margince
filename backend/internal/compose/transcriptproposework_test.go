@@ -91,7 +91,7 @@ func TestAWorkerWithNoModelLaneFailsTheReadingInsteadOfLeavingItQueued(t *testin
 	if outcome.Status != activities.TranscriptReadFailed {
 		t.Errorf("want the reading failed, got %q", outcome.Status)
 	}
-	if !strings.Contains(outcome.Detail, "no AI model configured") {
+	if !strings.Contains(outcome.Detail, "no AI provider is set up") {
 		t.Errorf("the detail must say what is missing so an operator can act: %q", outcome.Detail)
 	}
 }

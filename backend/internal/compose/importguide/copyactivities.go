@@ -21,7 +21,7 @@ var activityColumns = map[string]Column{
 		En: "What the activity is: note, call, meeting or email. A message needs a channel and a task is a to-do, so neither is imported.",
 		De: "Was die Aktivität ist: note, call, meeting oder email. Eine Nachricht braucht einen Kanal und eine Aufgabe ist eine To-do, daher wird keine von beiden importiert.",
 		Vi: "Loại hoạt động: note, call, meeting hoặc email. Tin nhắn cần một kênh và nhiệm vụ là việc cần làm, nên cả hai đều không được nhập.",
-	}, Example: same("note · call · meeting · email"), RequiredOnNew: true},
+	}, Example: same("note · call · meeting · email"), RequiredOnNew: true, Aliases: []string{"Art der Aktivität"}},
 	"subject": {Description: langcopy.Phrase{
 		En: "A short title for the activity, such as an email's subject line.",
 		De: "Ein kurzer Titel für die Aktivität, etwa die Betreffzeile einer E-Mail.",
@@ -39,7 +39,7 @@ var activityColumns = map[string]Column{
 	}, Example: same("2026-03-02 · 2026-03-02T10:00:00+07:00"), RequiredOnNew: true},
 	"links": {Description: langcopy.Phrase{
 		En: "The records the activity is about, as type:key pairs separated by semicolons. The type is company, contact, lead or deal; the key is a ref, an email, a domain or a Margince ID. A call or meeting links to a contact, not a company.",
-		De: "Die Datensätze, um die es in der Aktivität geht, als Paare Typ:Schlüssel, durch Semikolons getrennt. Der Typ ist company, contact, lead oder deal; der Schlüssel ist eine Ref, eine E-Mail-Adresse, eine Domain oder eine Margince-ID. Ein Anruf oder Termin wird mit einem Kontakt verknüpft, nicht mit einem Unternehmen.",
+		De: "Die Datensätze, um die es in der Aktivität geht, als Paare Typ:Schlüssel, durch Semikolons getrennt. Der Typ ist company, contact, lead oder deal. Der Schlüssel ist eine Ref, eine E-Mail-Adresse, eine Domain oder eine Margince-ID. Ein Anruf oder Termin wird mit einem Kontakt verknüpft, nicht mit einem Unternehmen.",
 		Vi: "Các hồ sơ mà hoạt động nói đến, dạng cặp loại:khóa, phân cách bằng dấu chấm phẩy. Loại là company, contact, lead hoặc deal; khóa là ref, email, tên miền hoặc ID Margince. Cuộc gọi hoặc cuộc họp gắn với liên hệ, không gắn với công ty.",
 	}, Example: same("deal:D-1001; contact:jo@acme.com"), RequiredOnNew: true},
 	"duration_minutes": {Description: langcopy.Phrase{

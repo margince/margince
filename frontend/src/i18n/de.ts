@@ -2778,7 +2778,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "history.field.resolved_category": "Nachrichtenkategorie",
   "history.field.score": "Score",
   "history.field.score_override_reason": "Grund für die Score-Anpassung",
-  "history.field.size_band": "Mitarbeitende",
+  "history.field.size_band": "Beschäftigtenzahl",
   "history.field.social": "Social-Profile",
   "history.field.source": "Quelle",
   "history.field.origin": "Herkunft",
@@ -3942,7 +3942,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   // die die abgelöste Einstufung mit einem Wert beantworten wollte.
   "company.lifecycle": "Lebenszyklus",
   "company.relationshipTypes": "Beziehungstyp",
-  "company.sizeBand": "Mitarbeitende",
+  "company.sizeBand": "Beschäftigtenzahl",
   "company.sizeBandValue": "{band} Mitarbeitende",
   "company.lifecycle.unknown": "Unbekannt",
   "company.lifecycle.target": "Zielunternehmen",
@@ -4030,7 +4030,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "record.details.about": "Überblick",
   "section.help": "Über diesen Bereich",
   "record.details.ownership": "Zuständigkeit",
-  "co.aside.size": "Mitarbeitende",
+  "co.aside.size": "Beschäftigtenzahl",
   "co.aside.wayIn": "Zugang",
   "record.details.visibleTo": "Sichtbar für",
   "co.aside.visibleEveryone": "Alle",
@@ -6506,7 +6506,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "deal.standing.risk.replyOwed": "Antwort des Teams steht aus",
   "deal.standing.risk.closePassed": "Abschlussdatum überschritten",
   "deal.details.closingFootnote":
-    "Abschlussphasen fragen nach: Gewonnen und Verloren öffnen einen kurzen Dialog.",
+    "Eine Abschlussphase fragt zuerst nach und öffnet einen kurzen Dialog.",
   "deal.timeline.empty": "Noch keine Aktivität zu diesem Deal.",
   "legalEntities.title": "Rechtsträger",
   "legalEntities.sub":
@@ -7733,7 +7733,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "create.displayName": "Unternehmensname",
   "create.legalName": "Rechtlicher Name",
   "create.industry": "Branche",
-  "create.sizeBand": "Mitarbeitende",
+  "create.sizeBand": "Beschäftigtenzahl",
   "co.address.summary": "Adresse",
   "co.address.countryMismatch": "Postleitzahl und Ort liegen in {country}",
 
@@ -8064,6 +8064,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "docs.category.message": "Nachrichtenanhang",
   "docs.category.other": "Sonstiges",
   "docs.category.link": "Gesendete Links",
+  "docs.source.upload": "Hochgeladen",
+  "docs.source.link": "Link hinzugefügt",
   "docs.view.label": "Dokumentansicht",
   "docs.view.grid": "Raster",
   "docs.view.list": "Liste",
@@ -9312,7 +9314,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "analytics.field.project": "Projektkennung",
   "analytics.field.project_id": "Projekt",
   "analytics.field.quiet_since": "Ruhig seit",
-  "analytics.field.size_band": "Mitarbeitende",
+  "analytics.field.size_band": "Beschäftigtenzahl",
   "analytics.field.source": "Quelle",
   "analytics.field.origin": "Herkunft",
   "analytics.field.stage_id": "Phase",
@@ -18833,6 +18835,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "webForms.rotateConfirm.body":
     "Der aktuelle Signaturschlüssel gilt sofort nicht mehr, und der neue wird einmal angezeigt. Füge ihn gleich dort ein, wo der alte stand.",
   "webForms.archive": "Archivieren",
+  "webForms.archiveTitle": "{name} archivieren?",
   "webForms.archiveConfirm":
     "Nach dem Archivieren nimmt dieses Formular keine Sendungen mehr an. Das lässt sich nicht rückgängig machen.",
   "webForms.archiveDone": "Website-Formular archiviert",
@@ -19229,7 +19232,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Felder eines Deals ändern sich, außer Phase und Verantwortung.",
   "webhooks.event.deal.stage_changed.label": "Deal in andere Phase verschoben",
   "webhooks.event.deal.stage_changed.when":
-    "Ein Deal wechselt in eine neue Phase, Gewonnen und Verloren eingeschlossen.",
+    "Ein Deal wechselt in eine neue Phase, Abschlussphasen eingeschlossen.",
   "webhooks.event.deal.owner_changed.label": "Verantwortung für Deal geändert",
   "webhooks.event.deal.owner_changed.when":
     "Ein Deal wird einem anderen Teammitglied zugewiesen.",
@@ -20712,7 +20715,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "filters.field.company_country": "Land des Unternehmens",
   "filters.field.company_industry": "Branche des Unternehmens",
   "filters.field.company_lifecycle": "Lebenszyklus des Unternehmens",
-  "filters.field.company_size_band": "Mitarbeitende",
+  "filters.field.company_size_band": "Beschäftigtenzahl",
   "filters.field.country": "Ländercode",
   "filters.field.created_at": "Erstellt",
   "filters.field.hosting_provider": "Hosting",

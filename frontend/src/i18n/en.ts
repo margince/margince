@@ -6476,7 +6476,7 @@ export const en = {
   "deal.standing.risk.replyOwed": "Team reply owed",
   "deal.standing.risk.closePassed": "Close date passed",
   "deal.details.closingFootnote":
-    "Closing stages ask first: Won and Lost open a short dialog.",
+    "A closing stage asks first and opens a short dialog.",
   "deal.timeline.empty": "No activity on this deal yet.",
   "legalEntities.title": "Legal entities",
   "legalEntities.sub":
@@ -8068,6 +8068,8 @@ export const en = {
   "docs.category.message": "Message attachment",
   "docs.category.other": "Other",
   "docs.category.link": "Links sent",
+  "docs.source.upload": "Uploaded",
+  "docs.source.link": "Link added",
   "docs.view.label": "Show documents as",
   "docs.view.grid": "Grid",
   "docs.view.list": "List",
@@ -18639,6 +18641,7 @@ export const en = {
   "webForms.rotateConfirm.body":
     "The current secret stops working at once, and the new one is shown once. Paste it where the old one was right away.",
   "webForms.archive": "Archive",
+  "webForms.archiveTitle": "Archive {name}?",
   "webForms.archiveConfirm":
     "Archiving stops this form from taking submissions. This cannot be undone.",
   "webForms.archiveDone": "Website form archived",
@@ -19023,7 +19026,7 @@ export const en = {
     "A deal’s fields change, other than its stage or owner.",
   "webhooks.event.deal.stage_changed.label": "Deal moved to another stage",
   "webhooks.event.deal.stage_changed.when":
-    "A deal moves to a new stage, won and lost included.",
+    "A deal moves to a new stage, closing stages included.",
   "webhooks.event.deal.owner_changed.label": "Deal owner changed",
   "webhooks.event.deal.owner_changed.when":
     "A deal is reassigned to another owner.",

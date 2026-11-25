@@ -31,11 +31,11 @@ func TestEveryRecordedRoleHasWordsInEveryLanguage(t *testing.T) {
 		}
 	}
 	for _, spelled := range []string{"Champion", " champion ", "CHAMPION"} {
-		if Recorded(spelled) != Champion || Label(spelled, "de") != "Fürsprecher" {
+		if Recorded(spelled) != Champion || Label(spelled, "de") != "Champion" {
 			t.Errorf("stored %q is not read as the champion", spelled)
 		}
 	}
-	if Recorded(Champion) != Champion || Label(Champion, "de") != "Fürsprecher" {
+	if Recorded(Champion) != Champion || Label(Champion, "de") != "Champion" {
 		t.Fatal("built-in role lost its German label")
 	}
 	if Label(EconomicBuyer, "unknown") != "economic buyer" {

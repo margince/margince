@@ -68,8 +68,11 @@ const (
 	// Raised by 30 production and 363 test lines for lists over a removed
 	// extension kind and the failing-report directory. The cases drive the
 	// unexported Live List check, the list export and the report directory.
-	composeRootProductionLines = 230_733
-	composeRootTestLines       = 360_614
+	// Raised by 12 production and 73 test lines for the reading refusal that
+	// names its cause per question. Its cases drive the unexported document
+	// extractor and transcript proposer.
+	composeRootProductionLines = 230_745
+	composeRootTestLines       = 360_687
 )
 
 // A read under these floors stopped early or read the wrong place, and would
