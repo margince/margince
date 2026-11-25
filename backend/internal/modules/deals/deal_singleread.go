@@ -42,7 +42,7 @@ var dealColumns = `id, name, amount_minor, expected_arr_minor, arr_source_offer_
 	source, captured_by,
 	source_system, source_author_id, source_author_name,
 	` + sourceAuthorSeatNameSQL("deal") + `,
-	version, created_at, updated_at, archived_at, legal_hold`
+	version, created_at, updated_at, archived_at, legal_hold, merged_into_id`
 
 // readDeal resolves one deal row; active names the custom-field columns
 // to carry alongside the core ones — nil for internal decision reads
@@ -65,7 +65,7 @@ func readDeal(ctx context.Context, tx pgx.Tx, id ids.DealID, archived storekit.A
 func scanDeal(row pgx.Row, active []fieldcatalog.Column, extra ...any) (crmcontracts.Deal, error) {
 	var d crmcontracts.Deal
 	var id, pipelineID, stageID ids.UUID
-	var companyID, projectID, ownerID, partnerID, arrSource *ids.UUID
+	var companyID, projectID, ownerID, partnerID, arrSource, mergedInto *ids.UUID
 	var status string
 	var override *int
 	var overrideBy *string
@@ -87,7 +87,7 @@ func scanDeal(row pgx.Row, active []fieldcatalog.Column, extra ...any) (crmcontr
 		&meetingAhead,
 		&d.Source, &d.CapturedBy,
 		&sourceSystem, &authorID, &authorName, &authorSeatName,
-		&version, &d.CreatedAt, &d.UpdatedAt, &d.ArchivedAt, &d.LegalHold,
+		&version, &d.CreatedAt, &d.UpdatedAt, &d.ArchivedAt, &d.LegalHold, &mergedInto,
 	}
 	cf := storekit.ScanDests(active)
 	if err := row.Scan(append(append(dests, cf...), extra...)...); err != nil {
@@ -108,6 +108,7 @@ func scanDeal(row pgx.Row, active []fieldcatalog.Column, extra ...any) (crmcontr
 	d.StageId = &sid
 	d.CompanyId = uuidPtr(companyID)
 	d.ArrSourceOfferId = uuidPtr(arrSource)
+	d.MergedIntoId = uuidPtr(mergedInto)
 	d.ProjectId = uuidPtr(projectID)
 	d.OwnerId = uuidPtr(ownerID)
 	d.PartnerCompanyId = uuidPtr(partnerID)

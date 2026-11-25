@@ -153,6 +153,9 @@ type Installation struct {
 	// issued by, and what it prints about it. `contacts` owns the entities.
 	AuthorEntity AuthorEntity
 	IssuerEntity IssuerEntityReader
+	// CarryGrants moves the shares on a merged-away deal onto its survivor.
+	// `identity` owns the grants, so the edge is injected here.
+	CarryGrants CarryGrants
 }
 
 // EnsurePartner answers whether a company may be named as a deal's
@@ -231,6 +234,11 @@ func (i Installation) orRefusing() Installation {
 	if i.IssuerEntity == nil {
 		i.IssuerEntity = func(context.Context, pgx.Tx, *ids.LegalEntityID) (IssuerEntity, error) {
 			return IssuerEntity{}, errEntitySeamUnwired("IssuerEntity")
+		}
+	}
+	if i.CarryGrants == nil {
+		i.CarryGrants = func(context.Context, pgx.Tx, string, ids.UUID, ids.UUID) error {
+			return errEntitySeamUnwired("CarryGrants")
 		}
 	}
 	return i

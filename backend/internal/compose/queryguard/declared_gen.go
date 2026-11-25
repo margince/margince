@@ -830,6 +830,7 @@ var Declared = map[string][]string{
 	"POST /v1/deals/{id}/lines":                                                {},
 	"POST /v1/deals/{id}/lines/estimate":                                       {},
 	"POST /v1/deals/{id}/manager-request":                                      {},
+	"POST /v1/deals/{id}/merge":                                                {},
 	"POST /v1/deals/{id}/move-pipeline":                                        {},
 	"POST /v1/deals/{id}/move-pipeline/undo":                                   {},
 	"POST /v1/deals/{id}/move/dismiss":                                         {},

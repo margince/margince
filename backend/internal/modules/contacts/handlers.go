@@ -322,17 +322,7 @@ func writeStoreErr(w http.ResponseWriter, r *http.Request, err error) {
 		})
 		return
 	}
-	if alreadyMerged, ok := errors.AsType[*recordmerge.AlreadyMergedError](err); ok {
-		e := &httperr.DetailedError{
-			Status: http.StatusConflict, Code: "already_merged", Detail: alreadyMerged.Error(),
-		}
-		// The redirect pointer lives on the source row the caller just proved
-		// they can address, so echoing it discloses nothing new (the
-		// AlreadyPromoted precedent).
-		if !alreadyMerged.IntoID.IsZero() {
-			e.Details = map[string]any{auditKeyMergedInto: alreadyMerged.IntoID.String()}
-		}
-		httperr.Write(w, r, e)
+	if recordmerge.WriteAlreadyMerged(w, r, err) {
 		return
 	}
 	httperr.Write(w, r, err)

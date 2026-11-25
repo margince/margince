@@ -49,6 +49,9 @@ func Deals() deals.Installation {
 		// identity owns teams and leads, so whose requests a caller manages is
 		// read there and the edge is injected here.
 		ManagerOwners: identity.ManagerOwnersTx,
+		// identity owns the grants, so the carry onto a merge's survivor lives
+		// there and the edge is injected here.
+		CarryGrants: identity.CarryGrantsTx,
 		// The Value sort reads both ungated: a seat that may read deals may
 		// order them, whatever its installation_settings grant.
 		BaseCurrencyApplied: identity.BaseCurrencyAppliedTx,
