@@ -20,21 +20,32 @@ package compose
 // the wrong direction for a value that is fixed at build time.
 
 import (
+	"context"
 	"net/http"
 	"slices"
 	"strings"
 
+	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgxpool"
+
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/platform/auth"
+	"github.com/margince/margince/backend/internal/platform/database"
+	"github.com/margince/margince/backend/internal/platform/extsecrets"
 	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/pkg/extension"
 )
 
-// extensionsHandlers serves the inventory. It holds NO state: every value it
-// reports is process-level and already recorded by the boot, so a field here
-// would be a second copy that could go stale against the accessors.
-type extensionsHandlers struct{}
+// extensionsHandlers serves the inventory. What a unit is comes from the
+// process-level accessors. The pool and the app store answer only which
+// declared setup an admin has done (setupMissing).
+type extensionsHandlers struct {
+	pool *pgxpool.Pool
+	// apps is nil where no key vault is wired, so no OAuth app can be stored.
+	apps *capture.ConnectorAppStore
+}
 
 // ListExtensions (GET /v1/extensions). Gated on extension_access.read.
 //
@@ -52,13 +63,96 @@ type extensionsHandlers struct{}
 //
 // Agents never reach it at all: the operation is `x-agent-access: human-only`,
 // enforced by the generated policy table before this runs.
-func (extensionsHandlers) ListExtensions(w http.ResponseWriter, r *http.Request) {
+func (h extensionsHandlers) ListExtensions(w http.ResponseWriter, r *http.Request) {
 	if err := auth.Require(r.Context(), "extension_access", principal.ActionRead); err != nil {
 		httperr.Write(w, r, err)
 		return
 	}
-	units := composedExtensionInventory(ComposedExtensions(), ComposedVerbs(), servedExtensionJobs())
+	exts := ComposedExtensions()
+	missing := make(map[string]*[]crmcontracts.ComposedExtensionSetupItem, len(exts))
+	for _, e := range exts {
+		items, known, err := h.setupMissing(r.Context(), e)
+		if err != nil {
+			httperr.Write(w, r, err)
+			return
+		}
+		if known {
+			missing[string(e.Name)] = &items
+		}
+	}
+	units := composedExtensionInventory(exts, ComposedVerbs(), servedExtensionJobs())
+	for i := range units {
+		units[i].SetupMissing = missing[units[i].Name]
+	}
 	httperr.WriteJSON(w, http.StatusOK, crmcontracts.ExtensionDirectory{Extensions: units})
+}
+
+// setupMissing names what an admin still has to set for the unit. Each part
+// needs the caller's own right: admin for a workspace secret, as for the
+// unit's declared settings, and capture_settings.read for an OAuth app. A part
+// the caller may not read is left out. If one is left out and nothing visible
+// is missing, known is false, so the caller is never told the unit is ready.
+func (h extensionsHandlers) setupMissing(ctx context.Context, e extension.Extension) (missing []crmcontracts.ComposedExtensionSetupItem, known bool, err error) {
+	see := setupVisibility{
+		secrets: auth.AdminGranted(ctx),
+		apps:    auth.Require(ctx, "capture_settings", principal.ActionRead) == nil,
+	}
+	var keys []string
+	for _, s := range e.Secrets {
+		if see.secrets && s.Scope == extension.SecretScopeWorkspace {
+			keys = append(keys, s.Key)
+		}
+	}
+	stored := map[string]bool{}
+	if len(keys) > 0 {
+		if err := database.WithWorkspaceTx(ctx, h.pool, func(tx pgx.Tx) (err error) {
+			stored, err = extsecrets.WorkspaceKeysStored(ctx, tx, string(e.Name), keys)
+			return err
+		}); err != nil {
+			return nil, false, err
+		}
+	}
+	configured := map[string]bool{}
+	for _, app := range e.OAuthApps {
+		if h.apps == nil || !see.apps {
+			break
+		}
+		status, err := h.apps.Read(ctx, capture.AppProvider(app.Provider))
+		if err != nil {
+			return nil, false, err
+		}
+		configured[app.Provider] = status.Configured
+	}
+	missing = unitSetupMissing(e, see, stored, configured)
+	return missing, len(missing) > 0 || !see.hides(e), nil
+}
+
+// setupVisibility says which parts of a unit's setup the caller may read.
+type setupVisibility struct{ secrets, apps bool }
+
+// hides reports whether the unit declares a part of its setup the caller may
+// not read.
+func (see setupVisibility) hides(e extension.Extension) bool {
+	workspaceSecret := slices.ContainsFunc(e.Secrets, func(s extension.SecretsRequest) bool { return s.Scope == extension.SecretScopeWorkspace })
+	return (workspaceSecret && !see.secrets) || (len(e.OAuthApps) > 0 && !see.apps)
+}
+
+// unitSetupMissing lists, in declaration order, the visible parts still unset.
+// That is each workspace secret with no value, then each OAuth app with no
+// stored client. A user-scoped secret is each member's own and never counts.
+func unitSetupMissing(e extension.Extension, see setupVisibility, stored, configured map[string]bool) []crmcontracts.ComposedExtensionSetupItem {
+	out := []crmcontracts.ComposedExtensionSetupItem{}
+	for _, s := range e.Secrets {
+		if see.secrets && s.Scope == extension.SecretScopeWorkspace && !stored[s.Key] {
+			out = append(out, crmcontracts.ComposedExtensionSetupItem{Kind: crmcontracts.ComposedExtensionSetupItemKindWorkspaceSecret, Name: s.Key})
+		}
+	}
+	for _, app := range e.OAuthApps {
+		if see.apps && !configured[app.Provider] {
+			out = append(out, crmcontracts.ComposedExtensionSetupItem{Kind: crmcontracts.ComposedExtensionSetupItemKindOauthApp, Name: app.Title})
+		}
+	}
+	return out
 }
 
 // composedExtensionInventory joins the three composed facts into one entry per

@@ -16583,6 +16583,13 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Aus: Diese Erweiterung lässt ein Feld eines Unternehmens oder Deals, das zuletzt ein Mitglied bearbeitet hat, unverändert und meldet es als zurückgehalten. An: Die Erweiterung ersetzt das Feld.",
   "extGovernance.readOnly": "Diese Einstellung ändert ein Admin.",
   "extGovernance.notSaved": "Einstellung wurde nicht gespeichert.",
+  "extAccess.setupReady": "Bereit",
+  "extAccess.needsSetup": "Einrichtung nötig",
+  "extAccess.setupMissing": "Es fehlt noch: {items}.",
+  "extAccess.setupSecret":
+    "der Schlüssel „{name}“ in den Einstellungen unter Anbindungen",
+  "extAccess.setupApp":
+    "die App „{name}“ in den Einstellungen unter Anmeldung und Sicherheit",
   "users.empty": "Noch keine Mitglieder.",
   "users.inviteTitle": "Mitglied einladen",
   "users.teamsLabel": "Teams",
