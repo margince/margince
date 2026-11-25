@@ -135,12 +135,12 @@ func TestALeadCardCountsItsOpenTasksAndNamesTheNextReadableOne(t *testing.T) {
 	}
 	for name, reader := range readers {
 		t.Run(name, func(t *testing.T) {
-			f.assertReads(t, reader, want)
+			f.assertReads(reader, t, want)
 		})
 	}
 }
 
-func (f *leadTaskFixture) assertReads(t *testing.T, ctx context.Context, want map[ids.UUID]leadTaskCard) {
+func (f *leadTaskFixture) assertReads(ctx context.Context, t *testing.T, want map[ids.UUID]leadTaskCard) {
 	t.Helper()
 	for id, card := range want {
 		got, err := f.e.Contacts.GetLead(ctx, ids.From[ids.LeadKind](id), storekit.LiveOnly)

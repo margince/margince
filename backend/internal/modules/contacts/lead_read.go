@@ -286,7 +286,8 @@ func scanLead(row pgx.Row, active []fieldcatalog.Column, policy leadSLAPolicy, n
 		&l.RoutedAt, &l.FirstResponseAt, &markedBy, &l.SourceLabel, &l.WebFormName, &l.Origin, &l.OriginDetail, &l.OriginLabel, &refs.disqualifyReason, &l.DisqualifyNote, &l.DisqualifyReason,
 		&statusSetBy, &refs.qualifiedDeal, &evidence,
 		&l.LastActivityAt, &lastActivityPrecision,
-		pgtype.CompositeFields{&openTasks, &nextTask, &l.NextTaskDueAt}, &l.ScoreReason, &l.LegalHold, &hasInbound, &refs.company,
+		pgtype.CompositeFields{&openTasks, &nextTask, &l.NextTaskDueAt},
+		&l.ScoreReason, &l.LegalHold, &hasInbound, &refs.company,
 		&l.Industry, &companyFacts, &refs.partner, &l.PartnerAcceptedAt, &l.PartnerAcceptedBy,
 	}
 	cf := storekit.ScanDests(active)
