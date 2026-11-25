@@ -69,7 +69,7 @@ func unitChat(
 		},
 		ChosenSubject: &extension.ChosenSubject{Kind: extension.SubjectContact, ID: contact.String()},
 		Parts:         files,
-		Raw:           []byte(`{"id":"` + key + `","from":"erasure.subject@kunde.example"}`),
+		Raw:           []byte(`{"id":"` + key + `"}`),
 	}
 	binding, msg, err := extingress.ChatInput(extingress.ChatSource{
 		CapturedBy: unitCapturedBy, SourceSystem: "ext:memberchat:member-chat", Member: e.Rep1,
@@ -152,7 +152,7 @@ func TestAUnitsChatMessageFollowsItsContactsSharingExactlyAsMailDoes(t *testing.
 
 // One eligible file on a unit's message reaches the contact's History. A retry
 // keeps one copy. Erasing the contact removes the file rows, queues the object
-// for deletion, and removes the original whose payload names the contact.
+// for deletion, and removes the original even though its payload names nothing about the contact.
 func TestAFileOnAUnitsMessageIsKeptOnceAndErasedWithItsContact(t *testing.T) {
 	blob := blobstore.NewMemory()
 	env := newCaptureEnvWithBlob(t, captureNow, blob)
@@ -161,11 +161,6 @@ func TestAFileOnAUnitsMessageIsKeptOnceAndErasedWithItsContact(t *testing.T) {
 	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		_, err := tx.Exec(context.Background(),
 			`INSERT INTO contact (id, full_name, source, captured_by, owner_id) VALUES ($1, 'Erasure Subject', 'manual', 'human:x', $2)`, contact, e.Rep1)
-		if err != nil {
-			return err
-		}
-		_, err = tx.Exec(context.Background(),
-			`INSERT INTO contact_email (contact_id, email, source, captured_by) VALUES ($1, 'erasure.subject@kunde.example', 'manual', 'human:x')`, contact)
 		return err
 	}); err != nil {
 		t.Fatalf("seeding the contact: %v", err)

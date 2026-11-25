@@ -4,6 +4,7 @@
 package privacy
 
 import (
+	"context"
 	"fmt"
 	"strings"
 
@@ -11,6 +12,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/platform/originalstore"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
 const (
@@ -77,4 +79,41 @@ func externalOriginalCandidateSQL(scope rawSubjectScope, args pgx.NamedArgs) str
 		}
 	}
 	return `payload_object IS NOT NULL AND (` + strings.Join(clauses, ` OR `) + `)`
+}
+
+// linkedOriginalsSQL selects the raw_capture ids of originals whose activity is
+// filed on one record through activity_link. The column is contact_id or
+// lead_id, and @linked_subject is the record id.
+//
+// A member who chose the record for a message bound no identity to it. The
+// original may name no address or account the hint arms could find. The link
+// is then the only evidence of whom the message is about.
+//
+// The activity guards hold. A legal hold on the activity keeps its original.
+// So does another activity outside the record that names the same original.
+func linkedOriginalsSQL(column string) string {
+	return `SELECT a.raw_capture_id FROM activity a JOIN activity_link l ON l.activity_id = a.id
+	  WHERE l.` + column + ` = @linked_subject::uuid AND a.raw_capture_id IS NOT NULL` + notTransitivelyHeld("a.id") + `
+	    AND NOT EXISTS (SELECT 1 FROM activity o WHERE o.raw_capture_id = a.raw_capture_id
+	      AND NOT EXISTS (SELECT 1 FROM activity_link ol WHERE ol.activity_id = o.id AND ol.` + column + ` = @linked_subject::uuid))`
+}
+
+// deleteLinkedOriginalsTx destroys the originals of messages filed on one record.
+func deleteLinkedOriginalsTx(ctx context.Context, tx pgx.Tx, column string, record ids.UUID) (int64, error) {
+	return deleteRawOriginalsTx(ctx, tx, `r.id IN (`+linkedOriginalsSQL(column)+`)`,
+		pgx.NamedArgs{"linked_subject": record.String()})
+}
+
+// deleteSubjectOriginalsTx destroys the originals tied to a contact without an
+// address: those tagged with the contact, and those of messages filed on it by
+// choice.
+func deleteSubjectOriginalsTx(ctx context.Context, tx pgx.Tx, contact ids.ContactID) (int64, error) {
+	tagged, err := deleteRawOriginalsTx(ctx, tx,
+		`r.payload_object @> jsonb_build_object('matched_subjects', jsonb_build_array(@subject::text))`,
+		pgx.NamedArgs{sqlArgSubject: contact.String()})
+	if err != nil {
+		return 0, err
+	}
+	linked, err := deleteLinkedOriginalsTx(ctx, tx, "contact_id", contact.UUID)
+	return tagged + linked, err
 }
