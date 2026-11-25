@@ -6,7 +6,7 @@ package main
 // The three questions CI asks of the report instead of printing it. Which
 // records did a change make stale, how many are owed, and is every task of one
 // preset current? Each reads the same rows the printed table does, so a CI
-// answer and a table a person reads cannot disagree.
+// answer and a table a reader opens cannot disagree.
 
 import (
 	"fmt"
