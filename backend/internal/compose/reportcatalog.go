@@ -20,12 +20,12 @@ import (
 	"slices"
 	"strings"
 
-	"github.com/margince/margince/backend/internal/compose/scopesubjects"
 	"github.com/margince/margince/backend/internal/modules/agents"
 	"github.com/margince/margince/backend/internal/platform/corefeatures"
 	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/values"
+	"github.com/margince/margince/backend/internal/shared/ports/populationscope"
 )
 
 // reportToolCatalog publishes the prebuilt catalog to the run_report tool: the
@@ -129,7 +129,7 @@ func (e *reportEngine) Run(ctx context.Context, report string, req reportRequest
 		return reportOutcome{}, &UnknownReportError{Report: report, Served: slices.Sorted(maps.Keys(prebuiltReports))}
 	}
 	if req.Scope != nil && req.Scope.Kind != "" {
-		if fault := scopesubjects.ShapeFault(req.Scope.Kind, req.Scope.ID != nil); fault != nil {
+		if fault := populationscope.ShapeFault(req.Scope.Kind, req.Scope.ID != nil); fault != nil {
 			return reportOutcome{}, &values.ParseError{Field: reportingScope + "." + fault.Part, Code: codeInvalid, Message: fault.Sentence}
 		}
 	}

@@ -5,6 +5,7 @@ package compose
 
 import (
 	"context"
+	"errors"
 	"slices"
 
 	"github.com/jackc/pgx/v5"
@@ -20,6 +21,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/kernel/values"
 	"github.com/margince/margince/backend/internal/shared/ports/authz"
 )
 
@@ -56,6 +58,12 @@ func reportingScopeUnder(
 ) (crmcontracts.ReportingScope, error) {
 	resolved, err := resolve(ctx, tx, reportingRequested(scope))
 	if err != nil {
+		// Reporting carries a scope object where analytics queries use flat fields.
+		if refused, ok := errors.AsType[*values.ParseError](err); ok && (refused.Field == reportingScopeKind || refused.Field == scopeIDKey) {
+			nested := *refused
+			nested.Field = reportingScope
+			return crmcontracts.ReportingScope{}, &nested
+		}
 		return crmcontracts.ReportingScope{}, err
 	}
 	if scope.Kind == ScopeKindManagedTeams && resolved.Kind != ScopeKindManagedTeams {

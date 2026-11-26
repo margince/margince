@@ -15,6 +15,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/ports/populationscope"
 )
 
 func respond[T any](w http.ResponseWriter, r *http.Request, value T, err error) {
@@ -131,6 +132,11 @@ func SelectionFromQuery(q url.Values, opening OpeningSelection) (crmcontracts.Re
 			}
 			wire := openapi_types.UUID(id)
 			*binding.destination = &wire
+		}
+	}
+	if selection.Scope.Kind != "" || selection.Scope.Id != nil {
+		if fault := populationscope.ShapeFault(string(selection.Scope.Kind), selection.Scope.Id != nil); fault != nil {
+			return selection, refuse("scope_"+fault.Part, "invalid", fault.Sentence)
 		}
 	}
 	if value := q.Get("period"); value != "" {

@@ -1,7 +1,9 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-package scopesubjects
+// Package populationscope gives analytics and reporting the same kind/id rule
+// before their callers name the request field that broke it.
+package populationscope
 
 import (
 	"fmt"

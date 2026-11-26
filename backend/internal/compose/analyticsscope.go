@@ -39,13 +39,14 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/kernel/values"
+	"github.com/margince/margince/backend/internal/shared/ports/populationscope"
 )
 
 // The population kinds, spelled as the wire spells them.
 const (
-	ScopeKindWorkspace = scopesubjects.KindWorkspace
-	ScopeKindTeam      = scopesubjects.KindTeam
-	ScopeKindOwner     = scopesubjects.KindOwner
+	ScopeKindWorkspace = populationscope.KindWorkspace
+	ScopeKindTeam      = populationscope.KindTeam
+	ScopeKindOwner     = populationscope.KindOwner
 )
 
 // RequestedScope is what the caller asked for. A zero value means they asked
@@ -252,7 +253,7 @@ func resolveAnalyticsScope(
 		return defaultScopeFor(p, lens)
 	}
 
-	if fault := scopesubjects.ShapeFault(requested.Kind, requested.ID != nil); fault != nil {
+	if fault := populationscope.ShapeFault(requested.Kind, requested.ID != nil); fault != nil {
 		return ResolvedScope{}, &values.ParseError{Field: "scope_" + fault.Part, Code: codeInvalid, Message: fault.Sentence}
 	}
 	switch requested.Kind {
