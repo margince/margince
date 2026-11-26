@@ -9,7 +9,7 @@ package integration
 // partial update carrying every accepted field, then one audit activity
 // note per field (subject "Extraction accepted: <field>", body = the
 // grounding source quote, linked to the deal). Unedited fields carry the
-// machine stamp (captured_by agent:attachment-extractor); an edited field
+// machine stamp (captured_by system:extraction_accept); an edited field
 // is the human's own write (captured_by human:<uid>, provenance human).
 // Every refusal — non-deal parent, ungrounded key, missing grant,
 // invisible parent — is whole-request with ZERO writes.
@@ -224,7 +224,7 @@ func TestAcceptAttachmentExtractionPersistsFieldsAndAuditNotes(t *testing.T) {
 		"currency":            "all amounts in EUR",
 		"expected_close_date": "offer valid until " + a.closeDate,
 	} {
-		if n := a.acceptNoteCount(t, field, quote, "agent:attachment-extractor"); n != 1 {
+		if n := a.acceptNoteCount(t, field, quote, "system:extraction_accept"); n != 1 {
 			t.Errorf("audit notes for %s = %d, want exactly 1 (subject/body/captured_by/deal link all pinned)", field, n)
 		}
 	}
@@ -232,8 +232,8 @@ func TestAcceptAttachmentExtractionPersistsFieldsAndAuditNotes(t *testing.T) {
 		t.Errorf("total accept notes = %d, want 4", total)
 	}
 	if n := a.WsCount(t, `SELECT count(*) FROM audit_log WHERE entity_type = 'activity' AND action = 'create'
-		AND actor_type = 'agent' AND actor_id = 'agent:attachment-extractor' AND on_behalf_of IS NOT NULL`); n != 4 {
-		t.Errorf("%d notes written by agent:attachment-extractor for the accepter, want 4", n)
+		AND actor_type = 'system' AND actor_id = 'system:extraction_accept' AND on_behalf_of IS NOT NULL`); n != 4 {
+		t.Errorf("%d notes written by system:extraction_accept for the accepter, want 4", n)
 	}
 }
 
@@ -271,7 +271,7 @@ func TestAcceptAttachmentExtractionEditFlipsProvenanceAndCapturedBy(t *testing.T
 	if n := a.acceptNoteCount(t, "amount_minor", "Total: EUR 1,500.00", "human:"+a.Rep1.String()); n != 1 {
 		t.Errorf("edited-field notes with the human stamp = %d, want 1", n)
 	}
-	if n := a.acceptNoteCount(t, "currency", "all amounts in EUR", "agent:attachment-extractor"); n != 1 {
+	if n := a.acceptNoteCount(t, "currency", "all amounts in EUR", "system:extraction_accept"); n != 1 {
 		t.Errorf("unedited-field notes with the machine stamp = %d, want 1", n)
 	}
 }
@@ -397,7 +397,7 @@ func TestAcceptAttachmentExtractionEditedAcceptRequiresActivityGrant(t *testing.
 	}); err != nil {
 		t.Fatalf("unedited accept under the same rep grant: %v", err)
 	}
-	if n := a.acceptNoteCount(t, "amount_minor", "Total: EUR 1,500.00", "agent:attachment-extractor"); n != 1 {
+	if n := a.acceptNoteCount(t, "amount_minor", "Total: EUR 1,500.00", "system:extraction_accept"); n != 1 {
 		t.Errorf("machine-stamped notes after the unedited accept = %d, want 1", n)
 	}
 }
@@ -555,7 +555,7 @@ func TestAcceptAttachmentExtractionWritesTheReadingItWasShownNotTheNewest(t *tes
 	}
 	// The evidence has to match the value: a note quoting the newer reading
 	// beside the older reading's number is the same defect, half-landed.
-	if n := a.acceptNoteCount(t, "amount_minor", "Total: EUR 1,500.00", "agent:attachment-extractor"); n != 1 {
+	if n := a.acceptNoteCount(t, "amount_minor", "Total: EUR 1,500.00", "system:extraction_accept"); n != 1 {
 		t.Errorf("audit notes quoting the SHOWN reading's evidence = %d, want 1", n)
 	}
 }

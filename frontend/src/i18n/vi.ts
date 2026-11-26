@@ -2248,6 +2248,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "systemJob.agent_scheduler": "Lượt chạy trợ lý AI theo lịch",
   "systemJob.voice_build": "Tiến trình phân tích văn phong",
   "systemJob.document_read": "Tiến trình đọc tài liệu",
+  "systemJob.extraction_accept": "Ghi chú chấp nhận trích xuất",
   "systemJob.deep_read": "Đọc trang web",
   "systemJob.transcript_read": "Đọc bản chép lời cuộc họp",
   "systemJob.company_name_promotion": "Cập nhật tên công ty",

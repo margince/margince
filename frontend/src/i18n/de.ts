@@ -2311,6 +2311,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "systemJob.agent_scheduler": "Geplante Agentenläufe",
   "systemJob.voice_build": "Ablauf der Schreibstil-Analyse",
   "systemJob.document_read": "Ablauf des Dokument-Auslesens",
+  "systemJob.extraction_accept": "Notiz zur übernommenen Extraktion",
   "systemJob.deep_read": "Website-Analyse",
   "systemJob.transcript_read": "Lesen des Meeting-Transkripts",
   "systemJob.company_name_promotion": "Aktualisierung des Firmennamens",

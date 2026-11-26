@@ -187,8 +187,12 @@ func (e *stagingEnv) agentForRep() context.Context {
 	ctx := principal.WithWorkspaceID(context.Background(), e.ws)
 	ctx = principal.WithCorrelationID(ctx, ids.NewV7())
 	return principal.WithActor(ctx, principal.Principal{
-		Type: principal.PrincipalAgent, ID: "agent:job", UserID: e.rep, OnBehalfOf: e.rep,
+		Type: principal.PrincipalAgent, ID: "agent:job", UserID: e.rep, OnBehalfOf: e.rep, SeatType: principal.SeatFull,
 		Scopes: principal.NewScopeSet(principal.ScopeWrite),
+		// The rep's own grants, as agentFor carries them.
+		Permissions: grantsFor(map[string]principal.ObjectGrant{
+			"company": {Read: true, Update: true}, "tag": {Read: true, Update: true},
+		}),
 	})
 }
 

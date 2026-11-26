@@ -18,6 +18,7 @@ package compose
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"math"
 	"strconv"
@@ -40,8 +41,15 @@ import (
 	"github.com/margince/margince/backend/internal/shared/ports/extraction"
 )
 
-// extractionExecutorID stamps the note of a field accepted as extracted. The value is the machine's, and the human's accept released it.
+// extractionExecutorID is the reader agent a chat text it read is written by,
+// for the user who confirmed it.
 const extractionExecutorID = "agent:attachment-extractor"
+
+// extractionNoteActor writes the evidence note of a field accepted as
+// extracted. The note records the accept the human made, so it is the
+// system's bookkeeping on the human's behalf. Accepting needs the deal grant
+// and no activity grant, as it always did.
+const extractionNoteActor = "system:extraction_accept"
 
 // extractionAcceptSource marks the notes as this operation's effect —
 // greppable next to attachment_access_request, never mistakable for a
@@ -197,13 +205,17 @@ func (a *ExtractionAccept) Accept(ctx context.Context, attachmentID ids.UUID, re
 
 // auditAcceptedFieldsTx writes one timeline note per accepted field, linked to
 // the deal, in the deal update's own transaction. The body is the source quote
-// the value was grounded in. An unedited field is written by the extractor
-// agent under the accepting human's grants; an edited one is the human's own.
+// the value was grounded in. An unedited field's note is the system's, on the
+// accepting human's behalf; an edited one is the human's own.
 func (a *ExtractionAccept) auditAcceptedFieldsTx(ctx context.Context, tx pgx.Tx, dealID ids.UUID, accepted []acceptedExtractionField) error {
-	execCtx, err := agentForActor(ctx, extractionExecutorID)
-	if err != nil {
-		return err
+	human, ok := principal.Actor(ctx)
+	if !ok {
+		return errors.New("compose: extraction accept reached the audit step without an acting principal")
 	}
+	execCtx := principal.WithActor(ctx, principal.Principal{
+		Type: principal.PrincipalSystem, ID: extractionNoteActor, UserID: human.UserID, OnBehalfOf: human.UserID,
+	})
+	var err error
 	for _, f := range accepted {
 		noteCtx := execCtx
 		if f.Edited {

@@ -82,6 +82,9 @@ func (p *TranscriptProposer) readClaimed(ctx context.Context, store transcriptRe
 		// A transient fault is the job's to retry, not a verdict for the rep.
 		return err
 	}
+	if reading.Links, err = meetingFiledUnder(ctx, store, activityID); err != nil {
+		return err
+	}
 	// Checked again: the body can be edited between the request and the reading.
 	if err := activities.WithinReadingBounds(reading.Lines); err != nil {
 		if failure, terminal := unreadableTranscript(err); terminal {
@@ -292,4 +295,16 @@ func fileFor(ctx context.Context, c *Commitment) context.Context {
 		c.Extractor = system.ID
 	}
 	return books
+}
+
+// meetingFiledUnder is every record the meeting is filed under, read as the
+// run's bookkeeping. A proposal carries them all, and accepting it is refused
+// while any is one the decider cannot see. Read under the requester's scope,
+// the hidden ones would drop out and that refusal would never fire.
+func meetingFiledUnder(ctx context.Context, store transcriptReadStore, activityID ids.ActivityID) ([]activities.ActivityLinkInput, error) {
+	whole, err := store.ReadTranscript(runBooks(ctx), activityID)
+	if err != nil {
+		return nil, err
+	}
+	return whole.Links, nil
 }

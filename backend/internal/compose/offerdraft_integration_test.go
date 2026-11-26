@@ -67,7 +67,8 @@ func newOfferDrafterFixture(t *testing.T, e *integration.Env, brain *ai.FakeClie
 		// language through it. A fixture that left this nil panicked inside the
 		// call rather than failing an assertion, which read as a nil RESULT and
 		// sent the report looking at the wrong line entirely.
-		pool: e.Pool,
+		pool:  e.Pool,
+		rules: ai.NewVoiceStore(e.DB()),
 	}
 }
 

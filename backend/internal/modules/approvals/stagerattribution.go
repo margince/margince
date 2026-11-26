@@ -80,5 +80,5 @@ func attributableStager(p principal.Principal) error {
 // actsForItsOwnPerson is a passportless agent carrying one person as both its
 // user and the one it acts for.
 func actsForItsOwnPerson(p principal.Principal) bool {
-	return p.PassportID == ids.Nil && !p.OnBehalfOf.IsZero() && p.UserID == p.OnBehalfOf
+	return p.ProductAgentForItsUser()
 }
