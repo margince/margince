@@ -83,31 +83,38 @@ func TestARelativePathNamesTheFileUnderTheCurrentDirectory(t *testing.T) {
 	}
 }
 
-func TestEachParseModeGetsItsOwnTree(t *testing.T) {
+func TestEveryWholeFileParseSharesOneTreeWithItsComments(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "commented.go")
 	writeSource(t, path, "// Package commented says so.\npackage commented\n", time.Unix(1_700_000_000, 0))
 
-	bare, err := ParseFile(path, 0)
-	if err != nil {
-		t.Fatal(err)
+	shared := map[string]*ast.File{}
+	for name, mode := range map[string]parser.Mode{
+		"no mode":            0,
+		"comments":           parser.ParseComments,
+		"no resolution":      parser.SkipObjectResolution,
+		"every flag at once": parser.ParseComments | parser.SkipObjectResolution,
+	} {
+		file, err := ParseFile(path, mode)
+		if err != nil {
+			t.Fatal(err)
+		}
+		shared[name] = file
 	}
-	commented, err := ParseFile(path, parser.ParseComments)
-	if err != nil {
-		t.Fatal(err)
+	for name, file := range shared {
+		if file != shared["no mode"] {
+			t.Errorf("asking with %s parsed a second copy instead of sharing the one tree", name)
+		}
 	}
-	if bare.Doc != nil {
-		t.Error("a caller that did not ask for comments was handed a tree carrying them")
-	}
-	if commented.Doc == nil {
-		t.Error("a caller that asked for comments was handed a tree without them")
+	if shared["no mode"].Doc == nil {
+		t.Error("the shared tree dropped the comments a caller that asked for them needs")
 	}
 
-	unresolved, err := ParseFile(path, parser.SkipObjectResolution)
+	bare, err := ParseFileWithoutComments(path)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if unresolved != bare {
-		t.Error("skipping object resolution parsed a second copy instead of sharing the resolved tree")
+	if bare.Doc != nil || len(bare.Comments) != 0 {
+		t.Error("a caller that prints code was handed a tree carrying comments it would print")
 	}
 }
 
@@ -122,7 +129,7 @@ func TestACollectedTreeIsParsedAgainOnTheSamePositions(t *testing.T) {
 	writeSource(t, path, "package collected\n\nfunc First() {}\n\nfunc Second() {}\n", time.Unix(1_700_000_000, 0))
 
 	before := declarationPositions(t, path)
-	waitUntilCollected(t, path, 0)
+	waitUntilCollected(t, path, parser.ParseComments)
 	grown := sourceFiles.Base()
 	after := declarationPositions(t, path)
 
@@ -203,7 +210,7 @@ func TestAFileThatDoesNotParseIsNeverHeld(t *testing.T) {
 		t.Errorf("parsing a broken file again grew the shared FileSet from base %d to %d", grown, sourceFiles.Base())
 	}
 	parses.mu.Lock()
-	entry := parses.entries[parseKey{spelled: path, mode: 0}]
+	entry := parses.entries[parseKey{spelled: path, mode: parser.ParseComments}]
 	parses.mu.Unlock()
 	if entry.value.tree.Value() != nil {
 		t.Error("a tree that failed to parse is held, so its error would not be reported again")
