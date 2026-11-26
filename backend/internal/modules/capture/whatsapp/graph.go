@@ -242,7 +242,7 @@ func (c *Client) do(ctx context.Context, method, target, token string, body []by
 		return nil, fmt.Errorf("whatsapp: transport failure: %w", ErrUnreachable)
 	}
 	if resp.Status < 200 || resp.Status >= 300 {
-		return nil, classify(resp.Status, graphErrorOf(resp.Body), retryafter.Header(resp.Header.Get("Retry-After")))
+		return nil, classify(resp.Status, graphErrorOf(resp.Body), retryafter.FromHeader(resp.Header))
 	}
 	return resp.Body, nil
 }
