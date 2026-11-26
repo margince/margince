@@ -116,7 +116,7 @@ record stays readable by id. A few operations remove a part of a record, such as
 
 | Request on an archived record | Answer |
 |---|---|
-| The archive operation again | The same status as the first archive. Nothing changes, and no event is sent. `If-Match` is not checked, so a retry with the version you sent first still succeeds. |
+| The archive operation again | The same status as the first archive. Nothing changes, and no event is sent. `If-Match` is not checked, so a retry with the version you sent first gets the same answer. |
 | A change, such as `PATCH`, or a write that adds to the record | `409 record_archived`. Restore the record first. |
 | Any request on a record you cannot read | `404`, whether it is archived or not. |
 

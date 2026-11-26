@@ -321,8 +321,8 @@ func TestSavedView_filterIsValidatedWhenWrittenNotWhenExported(t *testing.T) {
 	}
 }
 
-// An ARCHIVED view refuses a query replacement as archived, and does it BEFORE
-// the filter is examined: a view that takes no edit has no filter to judge.
+// An archived view refuses a query replacement as archived. It does so before
+// the filter is judged, because a view that takes no edit has no filter.
 func TestSavedView_anArchivedViewIsRefusedBeforeItsFilterIsJudged(t *testing.T) {
 	e := Setup(t)
 	store := collections.NewStore(e.DB())

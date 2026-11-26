@@ -19,8 +19,8 @@ import (
 // exist is apperrors.ErrNotFound. table is a compile-time literal of the caller.
 //
 // It asks no row scope. The caller has already admitted a reader of the row,
-// archived rows included, so an archived row is never shown to a caller who
-// could not open it.
+// archived rows included. So no caller who could not open the row learns that
+// it is archived.
 func RowArchived(ctx context.Context, tx pgx.Tx, table string, id ids.UUID) (bool, error) {
 	var archived bool
 	err := tx.QueryRow(ctx,

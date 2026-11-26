@@ -169,7 +169,7 @@ func (s *Service) ArchiveServiceMember(ctx context.Context, actor Identity, memb
 			return err
 		}
 		if _, err := tx.Exec(ctx,
-			`UPDATE app_user SET status = 'deactivated', archived_at = now() WHERE id = $1`,
+			`UPDATE app_user SET status = 'deactivated', archived_at = now() WHERE id = $1 AND archived_at IS NULL`,
 			member); err != nil {
 			return err
 		}

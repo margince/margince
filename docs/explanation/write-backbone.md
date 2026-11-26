@@ -463,13 +463,13 @@ in the same run. It fails when the count starts to grow with the number of lanes
   a custom background job. `principal.SystemActing` binds it with the actor, which is both things such a
   path owes.
 - **Choose a side on archived records.** `auth.EnsureWritableLive` is what a write that adds to a
-  record owes: an archived record takes no more changes. It answers `409 record_archived` to a
-  caller who can see the record, and `404` to anyone else. A by-id update asks
-  `auth.RefuseArchived`, and an archive asks `auth.ArchivedAlready`, so a second archive changes
-  nothing. `auth.EnsureRetractable` is the matching
+  record owes: an archived record takes no more changes. `auth.EnsureRetractable` is the matching
   check for a write that revokes, ends, stops or takes back. An archived record must never freeze
   the steps that its own archive calls for. The two run the same checks. They only show a reader
   (and `writeliveness_test.go`) which one you use.
+- **Answer an archived record one way.** A write on an archived record answers `409 record_archived`
+  to a caller who can see it, and `404` to anyone else. A by-id update asks `auth.RefuseArchived`.
+  An archive asks `auth.ArchivedAlready`, so a second archive changes nothing.
 
 ## Where the code lives
 

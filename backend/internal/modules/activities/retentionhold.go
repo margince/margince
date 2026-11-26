@@ -85,8 +85,8 @@ func lockActivityForWrite(ctx context.Context, tx pgx.Tx, id ids.UUID) (held boo
 }
 
 // refuseArchivedActivity answers a change to an archived activity that no
-// retention obligation holds: ErrArchived to a caller who may change it, and
-// the write gate's own refusal to anyone else.
+// retention obligation holds. A caller who may change it gets ErrArchived.
+// Anyone else gets the write gate's own refusal.
 func refuseArchivedActivity(ctx context.Context, tx pgx.Tx, id ids.UUID) error {
 	if err := auth.EnsureActivityWritableIn(ctx, tx, id, false); err != nil {
 		return err
@@ -95,7 +95,7 @@ func refuseArchivedActivity(ctx context.Context, tx pgx.Tx, id ids.UUID) error {
 }
 
 // activityArchivedAlready reports that an archive of the activity has nothing
-// to do: it is archived, no retention obligation holds it, and the caller may
+// to do. It is archived, no retention obligation holds it, and the caller may
 // change it. A held row goes on to the archive, whose write meets the hold.
 //
 // The write gate runs only for an archived row, so a live one meets the

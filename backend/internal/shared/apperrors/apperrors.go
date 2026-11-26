@@ -87,6 +87,10 @@ var (
 	// path (data-model §3.2).
 	ErrConflict = errors.New("conflict")
 
+	// ErrArchived: a change to an archived record the caller can read (409
+	// record_archived). A record the caller cannot read stays ErrNotFound.
+	ErrArchived = errors.New("this record is archived: restore it before you change it")
+
 	// ErrInvalidArgument: the request contains invalid or malformed input that
 	// the caller must correct (400 invalid_argument).
 	ErrInvalidArgument = errors.New("invalid argument")
@@ -228,22 +232,4 @@ type ReferencedFault interface {
 	// Unreferenced is the refusal without the reference, which is what decides
 	// the status and the code. A type returning itself here would recurse.
 	Unreferenced() error
-}
-
-// ErrArchived refuses a change to an archived record the caller can read (409
-// record_archived). A record the caller cannot read stays ErrNotFound, so only
-// a caller who could open the record learns that it is archived.
-var ErrArchived error = archivedRefusal{}
-
-type archivedRefusal struct{}
-
-func (archivedRefusal) Error() string {
-	return "this record is archived: restore it before you change it"
-}
-
-func (archivedRefusal) Unwrap() error { return ErrConflict }
-
-// MessageFault answers the contract's record_archived code.
-func (r archivedRefusal) MessageFault() (code, message string) {
-	return "record_archived", r.Error()
 }

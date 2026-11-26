@@ -223,8 +223,8 @@ func TestArchivingAStaleTaskRefusesRatherThanHidingTheAnswer(t *testing.T) {
 //
 // The other half of what the compose-side sweep tolerates. A duplicate it read
 // a moment ago can be archived by anyone before the sweep reaches it. A second
-// archive is then a no-op, not skew, even with the version the sweep read
-// before the first archive moved it: that is the outcome the sweep wanted.
+// archive is then a no-op, not skew. That holds even for the version the sweep
+// read before the first archive. It is the outcome the sweep wanted.
 func TestArchivingATaskSomebodyAlreadyArchivedChangesNothing(t *testing.T) {
 	e := setupLoad(t)
 	store := storeKnowing(e)

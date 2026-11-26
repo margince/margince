@@ -433,6 +433,7 @@ type sentinelFault struct {
 // returns it.
 var vocabulary = []sentinelFault{
 	{apperrors.ErrNotFound, "record_gone", systemtext.Literal("jobs.record_gone.sentence"), systemtext.Literal("jobs.record_gone.remedy")},
+	{apperrors.ErrArchived, "record_archived", systemtext.Literal("jobs.record_archived.sentence"), systemtext.Literal("jobs.record_archived.remedy")},
 	{apperrors.ErrConflict, "write_conflict", systemtext.Literal("jobs.write_conflict.sentence"), systemtext.Literal("jobs.write_conflict.remedy")},
 	{apperrors.ErrVersionSkew, "version_skew", systemtext.Literal("jobs.version_skew.sentence"), systemtext.Literal("jobs.version_skew.remedy")},
 	{apperrors.ErrPermissionDenied, "principal_not_permitted", systemtext.Literal("jobs.principal_not_permitted.sentence"), systemtext.Literal("jobs.principal_not_permitted.remedy")},

@@ -205,69 +205,68 @@ func (s *Store) ArchiveProject(ctx context.Context, id ids.ProjectID, ifVersion 
 		if err != nil {
 			return err
 		}
-		if !archived {
-			if err := archiveProjectRows(ctx, tx, id, ifVersion); err != nil {
-				return err
-			}
+		if archived {
+			return s.readArchivedProject(ctx, tx, id, active, &out)
 		}
-		archivedRow, err := readProject(ctx, tx, id, storekit.IncludeArchived, active)
+		// A liveness probe, not a wire read — no custom columns needed.
+		current, err := readProject(ctx, tx, id, storekit.LiveOnly, nil)
 		if err != nil {
-			return fmt.Errorf("read archived project: %w", err)
+			return err
 		}
-		out, err = s.maskProjectForCaller(ctx, tx, archivedRow)
-		return err
-	})
-	return out, err
-}
-
-// archiveProjectRows archives a live project, its stakeholder edges, list
-// memberships and tags, and records the archive.
-func archiveProjectRows(ctx context.Context, tx pgx.Tx, id ids.ProjectID, ifVersion *int64) error {
-	// A liveness probe, not a wire read — no custom columns needed.
-	current, err := readProject(ctx, tx, id, storekit.LiveOnly, nil)
-	if err != nil {
-		return err
-	}
-	now := time.Now().UTC()
-	// The archive rides the same guarded patch every other by-id write
-	// uses, so the If-Match the contract accepts is actually honored:
-	// archiving a project someone else just re-phased is version skew,
-	// not a silent overwrite.
-	p := storekit.NewPatch()
-	p.Set("archived_at", current.ArchivedAt, now)
-	if err := p.ApplyGuarded(ctx, tx, projectObject, id.UUID, ifVersion); err != nil {
-		return fmt.Errorf("archive project: %w", err)
-	}
-	// The stakeholder edges are attributes of the grouping, so they go
-	// with it — the contacts themselves are untouched.
-	if _, err := tx.Exec(ctx,
-		`UPDATE relationship SET archived_at = @archived WHERE `+projectArchiveRelationships,
-		pgx.StrictNamedArgs{"record": id, "archived": now}); err != nil {
-		return fmt.Errorf("archive project stakeholder edges: %w", err)
-	}
-	var detached storekit.ArchiveCascade
-	if err := detached.DropMemberships(ctx, tx, `WITH gone AS (
+		now := time.Now().UTC()
+		// The archive rides the same guarded patch every other by-id write
+		// uses, so the If-Match the contract accepts is actually honored:
+		// archiving a project someone else just re-phased is version skew,
+		// not a silent overwrite.
+		p := storekit.NewPatch()
+		p.Set("archived_at", current.ArchivedAt, now)
+		if err := p.ApplyGuarded(ctx, tx, projectObject, id.UUID, ifVersion); err != nil {
+			return fmt.Errorf("archive project: %w", err)
+		}
+		// The stakeholder edges are attributes of the grouping, so they go
+		// with it — the contacts themselves are untouched.
+		if _, err := tx.Exec(ctx,
+			`UPDATE relationship SET archived_at = @archived WHERE `+projectArchiveRelationships,
+			pgx.StrictNamedArgs{"record": id, "archived": now}); err != nil {
+			return fmt.Errorf("archive project stakeholder edges: %w", err)
+		}
+		var detached storekit.ArchiveCascade
+		if err := detached.DropMemberships(ctx, tx, `WITH gone AS (
 			DELETE FROM list_member WHERE `+projectArchiveMemberships+`
 			RETURNING list_id, entity_type, entity_id, added_by, created_at, note),
 		logged AS (
 			INSERT INTO list_member_event (list_id, entity_type, entity_id, action, reason, actor)
 			SELECT list_id, entity_type, entity_id, 'removed', 'record_archived', @actor FROM gone)
 		SELECT list_id, added_by, created_at, note FROM gone`, id.UUID); err != nil {
-		return fmt.Errorf("detach list memberships: %w", err)
-	}
-	if _, err := tx.Exec(ctx,
-		`DELETE FROM taggable WHERE `+projectArchiveMemberships, pgx.StrictNamedArgs{"record": id}); err != nil {
-		return fmt.Errorf("detach tags: %w", err)
-	}
+			return fmt.Errorf("detach list memberships: %w", err)
+		}
+		if _, err := tx.Exec(ctx,
+			`DELETE FROM taggable WHERE `+projectArchiveMemberships, pgx.StrictNamedArgs{"record": id}); err != nil {
+			return fmt.Errorf("detach tags: %w", err)
+		}
 
-	auditID, err := storekit.Audit(ctx, tx, "archive", projectObject, id.UUID, p.Before(), p.After())
+		auditID, err := storekit.Audit(ctx, tx, "archive", projectObject, id.UUID, p.Before(), p.After())
+		if err != nil {
+			return fmt.Errorf("audit project archive: %w", err)
+		}
+		if err := storekit.EmitEvent(ctx, tx, auditID, id.UUID, crmcontracts.PublicEventProjectArchived{}); err != nil {
+			return fmt.Errorf("emit project.archived: %w", err)
+		}
+		return s.readArchivedProject(ctx, tx, id, active, &out)
+	})
+	return out, err
+}
+
+// readArchivedProject reads the archived project back as the caller may see it.
+func (s *Store) readArchivedProject(
+	ctx context.Context, tx pgx.Tx, id ids.ProjectID, active []fieldcatalog.Column, out *crmcontracts.Project,
+) error {
+	archivedRow, err := readProject(ctx, tx, id, storekit.IncludeArchived, active)
 	if err != nil {
-		return fmt.Errorf("audit project archive: %w", err)
+		return fmt.Errorf("read archived project: %w", err)
 	}
-	if err := storekit.EmitEvent(ctx, tx, auditID, id.UUID, crmcontracts.PublicEventProjectArchived{}); err != nil {
-		return fmt.Errorf("emit project.archived: %w", err)
-	}
-	return nil
+	*out, err = s.maskProjectForCaller(ctx, tx, archivedRow)
+	return err
 }
 
 // keyRaceLost answers whether this insert failed because another transaction

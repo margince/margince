@@ -370,41 +370,6 @@ func archiveActivityInTx(
 	return readActivityAt(ctx, tx, id, storekit.IncludeArchived, asOf)
 }
 
-// callOutcomeOf is the stored outcome of a call as the store's plain string,
-// nil when it has none.
-func callOutcomeOf(a crmcontracts.Activity) *string {
-	if a.CallOutcome == nil {
-		return nil
-	}
-	s := string(*a.CallOutcome)
-	return &s
-}
-
-// patchedCallOutcome is the outcome the row holds after the patch: none when
-// the patch clears it, the patched one when it names one, else the stored one.
-func (in UpdateActivityInput) patchedCallOutcome(current crmcontracts.Activity) *string {
-	if in.clears(fieldCallOutcome) {
-		return nil
-	}
-	return firstSet(in.CallOutcome, callOutcomeOf(current))
-}
-
-// clearableActivityColumns is what a restore (Undo) may set back to nothing on
-// an activity, and what the row holds there now. Only the call outcome: undoing
-// a first pick puts the call back to "no outcome". compose's clearableFields
-// names the same list, held equal by gates/clearablefields_test.go.
-func clearableActivityColumns(current crmcontracts.Activity) map[string]storekit.Clearable {
-	return map[string]storekit.Clearable{
-		"call_outcome": {Column: "call_outcome", Current: callOutcomeOf(current)},
-	}
-}
-
-// clearsDeclared is a clear of a field the store declares clearable.
-func (in UpdateActivityInput) clearsDeclared(field string, current crmcontracts.Activity) bool {
-	_, declared := clearableActivityColumns(current)[field]
-	return declared && in.clears(field)
-}
-
 func applyActivityPatch(ctx context.Context, tx pgx.Tx, id ids.ActivityID, in UpdateActivityInput, current crmcontracts.Activity) error {
 	// Every placeholder is derived from the argument slice rather than
 	// typed. Nothing checks that a hand-written $N still names the value a

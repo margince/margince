@@ -320,8 +320,8 @@ func (s *Store) UpdateTag(ctx context.Context, id ids.TagID, in TagUpdate, expec
 	}
 	var out tagRow
 	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
-		// IncludeArchived on purpose: an archived tag is the one record that
-		// takes an edit, because renaming it frees its name for a restore.
+		// IncludeArchived: an archived tag is the one record that takes an
+		// edit, because renaming it frees its name for a restore.
 		//
 		// Lock before reading: the version check below and the UPDATE that
 		// follows it are two statements, and without the lock another writer

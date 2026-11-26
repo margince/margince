@@ -5,10 +5,10 @@
 
 package integration
 
-// Every kind of record that can be archived answers the same three ways once
-// it is archived: a second archive is a no-op with the first archive's status
-// and no audit or event row, even with the If-Match the first one used; an edit
-// is 409 record_archived; and a caller who cannot see the record gets 404.
+// Every kind of record that can be archived answers the same way once it is
+// archived. A second archive is a no-op: the first status, no audit or event
+// row, even with the first If-Match. An edit is 409 record_archived. A caller
+// who cannot see the record gets 404.
 //
 // The kinds are the archive operations of crm.yaml, so a new one fails here
 // until it has a fixture.
