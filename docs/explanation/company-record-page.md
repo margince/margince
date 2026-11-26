@@ -356,9 +356,11 @@ the whole time (`companyscan.test.tsx`).
 ## The dossier and the growth fit: stored or written
 
 The dossier and the growth fit are stored per reader, in the reader's language. Without a model lane the
-dossier's floor also states the company's own fields: description, size, lifecycle, and the contact and
-open deal counts the reader may see (`companydossier/standing.go`). Its stored copy is kept only while
-those fields stay the same. A stored one answers in well under a second, and
+dossier's floor also states the company's own fields (`companydossier/standing.go`). Those are its
+description, size and lifecycle, and the contact and open deal counts the reader may see. Its stored copy
+is kept only while those fields stay the same.
+
+A stored reading answers in well under a second, and
 a missing or stale one is written on the request, in several seconds. The answer says which one it
 was in `served_from`: `cache` or `generated`. A refresh that the AI budget refused, answered with the
 stored reading, is `cache`. Count the two apart when you measure these reads, because a model call takes

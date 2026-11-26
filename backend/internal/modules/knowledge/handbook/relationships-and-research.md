@@ -362,7 +362,7 @@ The **Technology** card shows "What this company publicly runs, read from its DN
 2. Find **Technology** under the website research card.
 3. Read its parts: **Mail**, **Website technology**, **Services** and **Hosting**.
 4. Open a value's evidence mark to see the public record behind it.
-The card has no button. To refresh it, press **Read website again** on the website research card. A source that did not answer is named, and the card says the earlier result is unchanged only when there is one.
+The card has no button. To refresh it, press **Read website again** on the website research card. A source that did not answer is named. The card says its last result still stands only when there is one.
 Also called: tech stack, technographics, what software a company uses, mail provider, hosting provider.
 
 ## What a company publicly runs
