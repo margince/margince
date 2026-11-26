@@ -203,6 +203,8 @@ var heldScopeMarkers = []string{
 	// keptActivitySQL is the third floor predicate: it keeps a held row out of a
 	// destructive statement.
 	"keptActivitySQL",
+	// storekit.ThreadImportedByClause filters archived_at and restricted_at IS NULL.
+	"ThreadImportedByClause",
 	// judgeableAudienceSQL (activities/owedaudience.go) filters restricted_at IS NULL.
 	"judgeableAudienceSQL", "JudgeableAudienceTx", "ShareableAudience", "ShareableAudienceTx",
 }

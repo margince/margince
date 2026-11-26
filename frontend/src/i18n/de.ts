@@ -5225,7 +5225,6 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "compose.threadAudience": "Sichtbarkeit",
   "compose.threadAudienceTitle": "Wer darf dieses Gespräch lesen?",
   "compose.threadAudienceLegend": "Sichtbarkeit des Gesprächs",
-  "compose.threadAudiencePrivate": "Nur ich und die Beteiligten des Gesprächs",
   "compose.threadAudienceNote":
     "Das ändert, wer das ganze Gespräch lesen darf, nicht nur eine Nachricht.",
   "compose.threadStillHeld_one":

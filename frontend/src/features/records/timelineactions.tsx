@@ -33,7 +33,6 @@ import { labelFor } from "../../lib/labelfor";
 import { problemMessageOf, unwrap } from "../../lib/problem";
 import { navigate, routeHash } from "../../lib/router";
 import { hashWithParams } from "../../lib/urlstate";
-import { ThreadAudienceAction } from "../capture/emailaccesseditor";
 import {
   AUDIENCE_HINT,
   AUDIENCE_LABEL,
@@ -50,7 +49,7 @@ import {
   type RelinkKind,
   RelinkModal,
 } from "../mail/compose";
-import { ActivityFilesAction } from "./activityfiles";
+import { ActivityFilesAction, ThreadAudienceAction } from "./activityfiles";
 import { audienceWords } from "./audiencewords";
 import {
   DealFiledBy,

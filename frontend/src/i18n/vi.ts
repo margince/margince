@@ -5086,8 +5086,6 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "compose.threadAudience": "Phạm vi hiển thị",
   "compose.threadAudienceTitle": "Ai được đọc cuộc trò chuyện này?",
   "compose.threadAudienceLegend": "Phạm vi hiển thị cuộc trò chuyện",
-  "compose.threadAudiencePrivate":
-    "Chỉ tôi và những thành viên tham gia cuộc trò chuyện",
   "compose.threadAudienceNote":
     "Thay đổi này áp dụng cho cả cuộc trò chuyện, không chỉ một tin nhắn.",
   "compose.threadStillHeld_one":

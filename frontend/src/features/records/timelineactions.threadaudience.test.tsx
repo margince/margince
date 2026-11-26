@@ -79,7 +79,7 @@ it("narrows a captured chat thread from its row", async () => {
   expect(
     screen.getByText(/whole conversation, not one message/i),
   ).toBeInTheDocument();
-  await user.click(screen.getByLabelText(/only me and those/i));
+  await user.click(screen.getByLabelText(/participants only/i));
   await user.click(screen.getByRole("button", { name: "Save visibility" }));
   await vi.waitFor(() => expect(posts).toEqual([{ share: false }]));
 });

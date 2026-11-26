@@ -5158,7 +5158,6 @@ export const en = {
   "compose.threadAudience": "Visibility",
   "compose.threadAudienceTitle": "Who may read this conversation?",
   "compose.threadAudienceLegend": "Conversation visibility",
-  "compose.threadAudiencePrivate": "Only me and those in the conversation",
   "compose.threadAudienceNote":
     "This changes who can read the whole conversation, not one message.",
   "compose.threadStillHeld_one":
