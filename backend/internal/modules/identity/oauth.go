@@ -404,12 +404,12 @@ func oauthError(w http.ResponseWriter, status int, code, description string) {
 	httperr.WriteJSON(w, status, map[string]string{oauthParamError: code, "error_description": description})
 }
 
-// scopeOfflineAccess is the scope Claude appends to ask for a refresh
+// ScopeOfflineAccess is the scope Claude appends to ask for a refresh
 // token (§5.2). It requests session lifetime, not access: parseOAuthScopes
 // accepts it but never returns it as a passport scope — validScopes has
 // no entry for it, so the passport mint would reject it as unknown if it
 // ever got that far.
-const scopeOfflineAccess = "offline_access"
+const ScopeOfflineAccess = "offline_access"
 
 // parseOAuthScopes splits the space-delimited scope parameter and refuses
 // anything outside the closed read|draft|write|send|enrich vocabulary — the
@@ -429,7 +429,7 @@ func parseOAuthScopes(raw string) (scopes []string, offline bool, err error) {
 		return []string{string(principal.ScopeRead)}, false, nil
 	}
 	for sc := range strings.FieldsSeq(raw) {
-		if sc == scopeOfflineAccess {
+		if sc == ScopeOfflineAccess {
 			offline = true
 			continue
 		}

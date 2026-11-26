@@ -122,6 +122,16 @@ func msStub(t *testing.T) *httptest.Server {
 		_, _ = w.Write([]byte("Subject: hi\r\n\r\nbody"))
 	})
 
+	mux.HandleFunc("/me/messages/badmime/$value", func(w http.ResponseWriter, _ *http.Request) {
+		w.WriteHeader(http.StatusInternalServerError)
+		//craft:ignore swallowed-errors test stub write; a short write surfaces as the client-side assertion failure
+		_, _ = w.Write([]byte(`{"error":{"code":"ErrorMimeContentConversionFailed","message":"x"}}`))
+	})
+
+	mux.HandleFunc("/me/messages/boom/$value", func(w http.ResponseWriter, _ *http.Request) {
+		w.WriteHeader(http.StatusInternalServerError)
+	})
+
 	mux.HandleFunc("/me/messages/throttled/$value", func(w http.ResponseWriter, _ *http.Request) {
 		w.Header().Set("Retry-After", "17")
 		w.WriteHeader(http.StatusTooManyRequests)
