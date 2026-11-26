@@ -39,7 +39,8 @@ type MergeResult struct {
 }
 
 // MergeTags folds one tag into another: every record carrying the source ends
-// up carrying the target, the source is archived, and its name is released.
+// up carrying the target, the source is archived naming the target, and its
+// name is released.
 //
 // Moved and collapsed are counted separately because they are different facts.
 // A record that carried only the source is MOVED — the target gains it. One
@@ -119,9 +120,11 @@ func (s *Store) MergeTags(ctx context.Context, source, target ids.TagID, expecte
 		if _, err := tx.Exec(ctx, `DELETE FROM taggable WHERE tag_id = $1`, source); err != nil {
 			return err
 		}
+		// The survivor is kept on the row, so the merged tag reads as merged
+		// rather than retired and can point a reader at the word that took over.
 		if _, err := tx.Exec(ctx, `
-			UPDATE tag SET archived_at = now()
-			 WHERE id = $1 AND archived_at IS NULL`, source); err != nil {
+			UPDATE tag SET archived_at = now(), merged_into_id = $2
+			 WHERE id = $1 AND archived_at IS NULL`, source, target); err != nil {
 			return err
 		}
 		_, err = storekit.Audit(ctx, tx, "update", auditentity.Tag, source.UUID,

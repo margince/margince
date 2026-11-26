@@ -19071,7 +19071,9 @@ paths:
       description: |
         The undo for a retirement somebody regrets. It refuses when a LIVE tag has taken the
         name in the meantime: two words a reader cannot tell apart is the exact state the
-        vocabulary exists to prevent, and the caller has to rename one of them first.
+        vocabulary exists to prevent, and the caller has to rename one of them first. It also
+        refuses a tag that carries `merged_into`: the merge moved its records to the survivor
+        and cannot be undone.
       responses:
         '200':
           description: The restored tag.
@@ -67153,6 +67155,11 @@ components:
         created_at: { type: string, format: date-time }
         updated_at: { type: string, format: date-time }
         archived_at: { type: [string, 'null'], format: date-time }
+        merged_into:
+          allOf: [{ $ref: '#/components/schemas/RowTag' }]
+          description: |
+            The tag a merge folded this one into, named as it reads now. Present only on a tag
+            archived by a merge: such a tag cannot be restored, and its records carry this one.
         carried_by:
           type: integer
           readOnly: true
@@ -67243,6 +67250,11 @@ components:
         created_at: { type: string, format: date-time }
         updated_at: { type: string, format: date-time }
         archived_at: { type: [string, 'null'], format: date-time }
+        merged_into:
+          allOf: [{ $ref: '#/components/schemas/RowTag' }]
+          description: |
+            The tag a merge folded this one into, named as it reads now. Present only on a tag
+            archived by a merge: such a tag cannot be restored, and its records carry this one.
         usage: { $ref: '#/components/schemas/TagUsage' }
 
     TagSuggestion:
