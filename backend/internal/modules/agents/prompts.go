@@ -69,10 +69,10 @@ var starterPrompts = []starterPrompt{
 	},
 	{
 		Name: "open_promises", Title: "What did my team promise customers",
-		Description: "Promises made to customers that are still open.",
+		Description: "Commitments made to customers that are still open.",
 		Tools:       []string{readAttentionToolName},
 		Text: "What has my team promised customers that is still open? Call read_attention with view " +
-			"commitments, and list each promise with who owns it, when it is due and its link.",
+			"commitments, and list each commitment with who owns it, when it is due and its link.",
 	},
 	{
 		Name: "explain_forecast", Title: "Explain my forecast",

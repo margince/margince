@@ -26,7 +26,7 @@ func TestToolCopyRendersTheWrittenPartsInOrder(t *testing.T) {
 		t.Errorf("render() = %q, want %q", got, want)
 	}
 
-	// A tool with no confusable neighbour and nothing to carry forward says so
+	// A tool with no confusable neighbor and nothing to carry forward says so
 	// by omission. The result must still be exactly its purpose: an entry that
 	// rendered as "Does the thing.   " would put trailing whitespace on the
 	// wire for every such tool.
